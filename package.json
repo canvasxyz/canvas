@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "dependencies": {
+    "axios": "^0.26.0",
+    "better-sqlite3": "^7.5.0",
+    "express": "^4.17.2",
+    "knex": "^1.0.3"
+  }
+}
