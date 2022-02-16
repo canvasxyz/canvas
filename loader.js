@@ -1,33 +1,29 @@
-import axios from 'axios';
-import express from 'express';
 import crypto from 'crypto';
 import Knex from 'knex';
-import spec from './test.prologue.js';
 
-const knex = Knex({
-    client: 'better-sqlite3',
-    connection: {
-        //filename: './prologue.sqlite',
-        filename: ':memory:',
-    },
-    //debug: true,
-    useNullAsDefault: true,
-});
+const assert = (statement, errorMsg) => {
+    if (!statement) {
+        throw new Error(errorMsg);
+    }
+}
 
-class Prologue {
-    constructor(spec) {
+// spec harness
+class Loader {
+    constructor(express) {
         this.models = [];
         this.routes = [];
         this.actions = [];
         this.onready = null;
 
-        spec.call(null, this);
-
-        this.initializeModels().then(() => {
-            this.initialized = true;
-            if (this.onready) {
-                this.onready.call(this);
-            }
+        this.express = express;
+        this.knex = Knex({
+            client: 'better-sqlite3',
+            connection: {
+                //filename: './prologue.sqlite',
+                filename: ':memory:',
+            },
+            //debug: true,
+            useNullAsDefault: true,
         });
     }
 
@@ -42,7 +38,7 @@ class Prologue {
             cached[tableName] = {
                 create: async (args) => {
                     assert(tableName.match(/^[a-z0-9]+$/i), "table name must be alphanumeric");
-                    const returning = await knex(tableName).insert(args).returning('id');
+                    const returning = await this.knex(tableName).insert(args).returning('id');
                     const { id } = returning[0];
                     return id;
                 }
@@ -82,9 +78,12 @@ class Prologue {
         this.actions.push([name, args, fn]);
     }
 
-    async initializeModels() {
+    async syncDB() {
+        // TODO(v1): this should create a schema, and check it against
+        // the current database schema. if different it should print
+        // the schemas and quit
         for (const [tableName, fields] of this.models) {
-            await knex.schema.createTable(tableName, (table) => {
+            await this.knex.schema.createTable(tableName, (table) => {
                 fields.map(([fieldName, fieldType]) => {
                     switch (fieldType) {
                         case 'primary':
@@ -107,6 +106,7 @@ class Prologue {
                 });
             });
         }
+        return this;
     }
 
     async writeAction(name, ...args) {
@@ -125,7 +125,7 @@ class Prologue {
     }
 
     server() {
-        const server = express();
+        const server = this.express;
 
         for (const [route, query] of this.routes) {
             const acceptableParams = route.match(/:[a-z0-9]+/ig);
@@ -137,7 +137,7 @@ class Prologue {
                         .map((p) => [p, req.params[p]]));
 
                 // execute query
-                const result = await knex.raw(query, params);
+                const result = await this.knex.raw(query, params);
                 res.json(result);
             });
         }
@@ -162,25 +162,4 @@ const isValidColumnType = (c) => {
     }
 }
 
-const assert = (statement, errorMsg) => {
-    if (!statement) {
-        throw new Error(errorMsg);
-    }
-}
-
-const prologue = new Prologue(spec);
-
-prologue.ready(async () => {
-    const pollId = await prologue.writeAction('createPoll', 'Should Verses adopt a motto?');
-    const cardId1 = await prologue.writeAction('createCard', pollId, 'Yes, we should vote on one now');
-    const cardId2 = await prologue.writeAction('createCard', pollId, 'Yes, with modifications to the question');
-    const cardId3 = await prologue.writeAction('createCard', pollId, 'No, we should leave it open ended');
-    await prologue.writeAction('createVote', cardId1, false);
-    await prologue.writeAction('createVote', cardId1, true);
-
-    prologue.server().listen(3000, () => {
-        console.log('Server listening on port 3000');
-        axios.get('http://localhost:3000/polls').then((({ data }) => console.log(data)));
-        axios.get(`http://localhost:3000/polls/${pollId}`).then((({ data }) => console.log(data)));
-    });
-});
+export { Loader };

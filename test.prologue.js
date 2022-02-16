@@ -1,4 +1,4 @@
-export default (prologue) => {
+//export default (prologue) => {
     const polls = prologue.model('polls', {
         id: 'primary',
         title: 'text',
@@ -39,4 +39,4 @@ export default (prologue) => {
                                           isSkip: value === null,
                                           creator: this.origin });
     });
-};
+//};
