@@ -9,18 +9,18 @@ const assert = (statement, errorMsg) => {
 
 // spec harness
 class Loader {
-    constructor(express) {
+    constructor(app, multihash) {
         this.models = [];
         this.routes = [];
         this.actions = [];
         this.onready = null;
 
-        this.express = express;
+        this.express = app;
         this.knex = Knex({
             client: 'better-sqlite3',
             connection: {
-                //filename: './prologue.sqlite',
-                filename: ':memory:',
+                filename: `./db/${multihash}.sqlite`,
+                //filename: ':memory:',
             },
             //debug: true,
             useNullAsDefault: true,
@@ -79,33 +79,45 @@ class Loader {
     }
 
     async syncDB() {
-        // TODO(v1): this should create a schema, and check it against
-        // the current database schema. if different it should print
-        // the schemas and quit
-        for (const [tableName, fields] of this.models) {
-            await this.knex.schema.createTable(tableName, (table) => {
-                fields.map(([fieldName, fieldType]) => {
-                    switch (fieldType) {
-                        case 'primary':
-                            return table.string(fieldName).primary().notNullable();
-                        case 'text':
-                            return table.text(fieldName);
-                        case 'string':
-                            return table.string(fieldName);
-                        case 'datetime':
-                            return table.datetime(fieldName);
-                        case 'boolean':
-                            return table.boolean(fieldName);
-                        default:
-                            const fk = fieldType.split('.');
-                            assert(fk.length === 2, "column must be a valid primary type or foreign key");
-                            assert (fk[0].match(/^[a-z0-9]+$/), "foreign key table must be alphanumeric");
-                            assert (fk[1].match(/^[a-z0-9]+$/), "foreign key field must be alphanumeric");
-                            return table.string(fieldName).references(fk[1]).inTable(fk[0]).notNullable();
-                    }
+        // check against the current database schema
+        const matchesNoTables = this.models.every(([tableName, fields]) =>
+            !this.knex.schema.hasTable(tableName)
+        );
+        const matchesAllTables = this.models.every(([tableName, fields]) =>
+            this.knex.schema.hasTable(tableName)
+            // TODO: check for an exact schema match
+        );
+
+        // create tables if starting with a fresh db
+        if (!matchesNoTables && !matchesAllTables) {
+            throw new Error('Database schema out of sync');
+        } else if (matchesNoTables) {
+            for (const [tableName, fields] of this.models) {
+                await this.knex.schema.createTable(tableName, (table) => {
+                    fields.map(([fieldName, fieldType]) => {
+                        switch (fieldType) {
+                            case 'primary':
+                                return table.string(fieldName).primary().notNullable();
+                            case 'text':
+                                return table.text(fieldName);
+                            case 'string':
+                                return table.string(fieldName);
+                            case 'datetime':
+                                return table.datetime(fieldName);
+                            case 'boolean':
+                                return table.boolean(fieldName);
+                            default:
+                                const fk = fieldType.split('.');
+                                assert(fk.length === 2, "column must be a valid primary type or foreign key");
+                                assert (fk[0].match(/^[a-z0-9]+$/), "foreign key table must be alphanumeric");
+                                assert (fk[1].match(/^[a-z0-9]+$/), "foreign key field must be alphanumeric");
+                                return table.string(fieldName).references(fk[1]).inTable(fk[0]).notNullable();
+                        }
+                    });
                 });
-            });
+            }
         }
+
         return this;
     }
 

@@ -3,7 +3,12 @@ import fs from 'fs';
 import axios from 'axios';
 import express from 'express';
 import bodyParser from 'body-parser';
+
+import crypto from 'crypto';
+import bs58 from 'bs58';
+
 import { Loader } from './loader.js';
+
 
 const USAGE = `Prologue: everlasting decentralized applications, built on signed messages
 
@@ -48,7 +53,8 @@ if (specArg.startsWith('-')) {
   quit("IPNS not supported yet!");
 }
 
-const file = fs.readFile(process.argv[process.argv.length - 1], 'utf8', (err, spec) => {
+const filename = process.argv[process.argv.length - 1];
+const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   if (err) {
     return quit("Spec file not found, or could not be read");
   }
@@ -63,8 +69,18 @@ const file = fs.readFile(process.argv[process.argv.length - 1], 'utf8', (err, sp
   // Later we should use Deno or OS-level VMs to gain more security.
   lockdown();
   const app = express();
+
+  // Hash the spec, to get a multihash identifier
+  const hashFunction = Buffer.from('12', 'hex'); // 0x20
+  const digest = crypto.createHash('sha256').update(spec).digest();
+  const digestSize = Buffer.from(digest.byteLength.toString(16), 'hex'); // 20
+  const combined = Buffer.concat([hashFunction, digestSize, digest]);
+  const multihash = bs58.encode(combined);
+  console.log(filename, '=>', multihash);
+
+  // Install the spec inside an SES compartment
   app.use(bodyParser.json());
-  const loader = new Loader(app);
+  const loader = new Loader(app, multihash);
   const c = new Compartment({
     prologue: loader,
     // TODO(v1): these objects aren't hardened. We should refactor to only
@@ -74,7 +90,6 @@ const file = fs.readFile(process.argv[process.argv.length - 1], 'utf8', (err, sp
   c.evaluate(spec);
 
   loader.syncDB().then(async (loader) => {
-
     loader.server().listen(3000, async () => {
       console.log('Server listening on port 3000');
 
