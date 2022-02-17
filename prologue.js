@@ -93,17 +93,18 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
     loader.server().listen(3000, async () => {
       console.log('Server listening on port 3000');
 
-      const pollId = (await axios.post('http://localhost:3000/action/createPoll', { title: 'Should Verses adopt a motto?' })).data.id;
-      const cardId1 = (await axios.post('http://localhost:3000/action/createCard', { pollId, text: 'Yes, we should vote on one now' })).data.id;
-      const cardId2 = (await axios.post('http://localhost:3000/action/createCard', { pollId, text: 'Yes, with modifications to the question' })).data.id;
-      const cardId3 = (await axios.post('http://localhost:3000/action/createCard', { pollId, text: 'No, we should leave it open' })).data.id;
-      await axios.post('http://localhost:3000/action/createVote', { cardId: cardId1, value: false });
-      await axios.post('http://localhost:3000/action/createVote', { cardId: cardId1, value: true });
+      const ROOT_PATH = `http://localhost:3000/apps/${multihash}`;
+      const pollId = (await axios.post(`${ROOT_PATH}/createPoll`, { title: 'Should Verses adopt a motto?' })).data.id;
+      const cardId1 = (await axios.post(`${ROOT_PATH}/createCard`, { pollId, text: 'Yes, we should vote on one now' })).data.id;
+      const cardId2 = (await axios.post(`${ROOT_PATH}/createCard`, { pollId, text: 'Yes, with modifications to the question' })).data.id;
+      const cardId3 = (await axios.post(`${ROOT_PATH}/createCard`, { pollId, text: 'No, we should leave it open' })).data.id;
+      await axios.post(`${ROOT_PATH}/createVote`, { cardId: cardId1, value: false });
+      await axios.post(`${ROOT_PATH}/createVote`, { cardId: cardId1, value: true });
 
-      await axios.get('http://localhost:3000/polls').then((({ data }) => {
+      await axios.get(`${ROOT_PATH}/polls`).then((({ data }) => {
         console.log(data);
       }));
-      await axios.get(`http://localhost:3000/polls/${pollId}`).then((({ data }) => {
+      await axios.get(`${ROOT_PATH}/polls/${pollId}`).then((({ data }) => {
         console.log(data);
       }));
 

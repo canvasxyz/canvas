@@ -16,6 +16,7 @@ class Loader {
         this.onready = null;
 
         this.express = app;
+        this.multihash = multihash;
         this.knex = Knex({
             client: 'better-sqlite3',
             connection: {
@@ -137,15 +138,14 @@ class Loader {
     }
 
     server() {
-        const server = this.express;
-
         for (const [route, query] of this.routes) {
-            const acceptableParams = route.match(/:[a-z0-9]+/ig);
-            server.get(route, async (req, res) => {
+            assert(route.startsWith('/'), 'Spec routes must start with trailing slash');
+            const filterParams = route.match(/:[a-z0-9]+/ig);
+            this.express.get(`/apps/${this.multihash}${route}`, async (req, res) => {
                 // filter parameters before executing query
                 const params = Object.fromEntries(
                     Object.keys(req.params)
-                        .filter((p) => acceptableParams.includes(`:${p}`))
+                        .filter((p) => filterParams.includes(`:${p}`))
                         .map((p) => [p, req.params[p]]));
 
                 // execute query
@@ -154,7 +154,7 @@ class Loader {
             });
         }
 
-        server.post('/action/:action', async(req, res) => {
+        this.express.post(`/apps/${this.multihash}/:action`, async(req, res) => {
             const action = this.actions.find(([fnName, argNames]) => {
                 return fnName === req.params.action;
             });
@@ -177,7 +177,7 @@ class Loader {
             res.json({ status: "ok", id });
         });
 
-        return server;
+        return this.express;
     }
 }
 
