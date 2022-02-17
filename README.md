@@ -6,6 +6,7 @@ decentralized applications.
 ## Quick start
 
 ```
+brew install ipfs
 npm i
 node prologue.js test.prologue.js
 ```

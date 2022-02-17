@@ -2,6 +2,7 @@ import 'ses';
 import fs from 'fs';
 import axios from 'axios';
 import express from 'express';
+import bodyParser from 'body-parser';
 import { Loader } from './loader.js';
 
 const USAGE = `Prologue: everlasting decentralized applications, built on signed messages
@@ -61,8 +62,9 @@ const file = fs.readFile(process.argv[process.argv.length - 1], 'utf8', (err, sp
   //
   // Later we should use Deno or OS-level VMs to gain more security.
   lockdown();
-  const server = express();
-  const loader = new Loader(server);
+  const app = express();
+  app.use(bodyParser.json());
+  const loader = new Loader(app);
   const c = new Compartment({
     prologue: loader,
     // TODO(v1): these objects aren't hardened. We should refactor to only
@@ -72,17 +74,24 @@ const file = fs.readFile(process.argv[process.argv.length - 1], 'utf8', (err, sp
   c.evaluate(spec);
 
   loader.syncDB().then(async (loader) => {
-    const pollId = await loader.writeAction('createPoll', 'Should Verses adopt a motto?');
-    const cardId1 = await loader.writeAction('createCard', pollId, 'Yes, we should vote on one now');
-    const cardId2 = await loader.writeAction('createCard', pollId, 'Yes, with modifications to the question');
-    const cardId3 = await loader.writeAction('createCard', pollId, 'No, we should leave it open ended');
-    await loader.writeAction('createVote', cardId1, false);
-    await loader.writeAction('createVote', cardId1, true);
 
-    loader.server().listen(3000, () => {
+    loader.server().listen(3000, async () => {
       console.log('Server listening on port 3000');
-      axios.get('http://localhost:3000/polls').then((({ data }) => console.log(data)));
-      axios.get(`http://localhost:3000/polls/${pollId}`).then((({ data }) => console.log(data)));
+
+      const pollId = (await axios.post('http://localhost:3000/action/createPoll', { title: 'Should Verses adopt a motto?' })).data.id;
+      const cardId1 = (await axios.post('http://localhost:3000/action/createCard', { pollId, text: 'Yes, we should vote on one now' })).data.id;
+      const cardId2 = (await axios.post('http://localhost:3000/action/createCard', { pollId, text: 'Yes, with modifications to the question' })).data.id;
+      const cardId3 = (await axios.post('http://localhost:3000/action/createCard', { pollId, text: 'No, we should leave it open' })).data.id;
+      await axios.post('http://localhost:3000/action/createVote', { cardId: cardId1, value: false });
+      await axios.post('http://localhost:3000/action/createVote', { cardId: cardId1, value: true });
+
+      await axios.get('http://localhost:3000/polls').then((({ data }) => {
+        console.log(data);
+      }));
+      await axios.get(`http://localhost:3000/polls/${pollId}`).then((({ data }) => {
+        console.log(data);
+      }));
+
     });
   });
 });

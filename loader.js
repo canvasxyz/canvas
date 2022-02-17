@@ -142,6 +142,29 @@ class Loader {
             });
         }
 
+        server.post('/action/:action', async(req, res) => {
+            const action = this.actions.find(([fnName, argNames]) => {
+                return fnName === req.params.action;
+            });
+            if (!action) {
+                return res.status(400).json({ error: 'Invalid action' });
+            }
+
+            const [fnName, argNames] = action;
+            let args = []
+            for (const argName of argNames) {
+                if (req.body[argName] === undefined) {
+                    console.log(fnName, 'missing parameter:', argName);
+                    return res.status(400).json({ error: 'Missing parameter: ' + argName });
+                }
+                args.push(req.body[argName]);
+            }
+
+            console.log(fnName, argNames, args);
+            const id = await this.writeAction(fnName, ...args);
+            res.json({ status: "ok", id });
+        });
+
         return server;
     }
 }
