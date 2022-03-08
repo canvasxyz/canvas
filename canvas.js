@@ -10,19 +10,19 @@ import bs58 from 'bs58';
 import { Loader } from './loader.js';
 
 
-const USAGE = `Prologue: everlasting decentralized applications, built on signed messages
+const USAGE = `Canvas: everlasting decentralized applications, built on signed messages
 
-$ node prologue.js [spec]
+$ node canvas.js [spec]
 
-  Prologue accepts specs in a few formats:
-   test.prologue.js         Local spec.
+  Canvas accepts specs in a few formats:
+   test.canvas.js           Local spec.
    /ipfs/Qm...              Loads a spec from IPFS. This runs arbitrary code! (V2)
 
   Optional arguments:
    --reset-database         Resets the database, and then quits.    (TODO)
    --verbose                Prints SQL debug output to console.     (TODO: knex debug=true)
 
-  To upload a local spec to ipfs, run 'ipfs add test.prologue.js'.
+  To upload a local spec to ipfs, run 'ipfs add test.canvas.js'.
 `;
 
 const quit = (msg) => {
@@ -82,7 +82,7 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   app.use(bodyParser.json());
   const loader = new Loader(app, multihash);
   const c = new Compartment({
-    prologue: loader,
+    canvas: loader,
     // TODO(v1): these objects aren't hardened. We should refactor to only
     // expose a bidirectional message-passing interface to the spec,
     // for accessing or calling models, views, and action functions.

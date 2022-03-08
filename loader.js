@@ -81,18 +81,18 @@ class Loader {
 
     async syncDB() {
         // check against the current database schema
-        const matchesNoTables = this.models.every(([tableName, fields]) =>
-            !this.knex.schema.hasTable(tableName)
-        );
-        const matchesAllTables = this.models.every(([tableName, fields]) =>
-            this.knex.schema.hasTable(tableName)
-            // TODO: check for an exact schema match
-        );
+        const matches = await Promise.all(this.models.map(async ([tableName, fields]) =>
+            // TODO: check for an exact schema match, not just table name
+            await this.knex.schema.hasTable(tableName)
+        ));
+        const matchesAllTables = matches.every((i) => i)
+        const matchesNoTables = matches.every((i) => !i)
 
         // create tables if starting with a fresh db
         if (!matchesNoTables && !matchesAllTables) {
             throw new Error('Database schema out of sync');
         } else if (matchesNoTables) {
+            console.log('Initializing database');
             for (const [tableName, fields] of this.models) {
                 await this.knex.schema.createTable(tableName, (table) => {
                     fields.map(([fieldName, fieldType]) => {
