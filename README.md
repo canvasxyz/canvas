@@ -1,27 +1,31 @@
 ## Canvas
 
-A programmable append-only log.
+Canvas is a P2P protocol that allows developers to build
+decentralized, frontend-independent applications, where every action
+in the application is a signed message from an Ethereum address.
 
 ## Quick start
 
 ```
 brew install ipfs
 npm i
-node prologue.js test.prologue.js
+node canvas.js examples/polis.canvas.js
 ```
 
-### How it works
+## Directory structure
 
-Canvas is a P2P protocol that allows developers to build
-decentralized, frontend-independent applications, where every action
-in the application is a signed message from an Ethereum address.
+The project is structured as a monorepo.
 
-Each application defines a set of append-only logs, and a "spec" that
-checks signatures to decide what are valid actions to add to the log.
+- lib/ is the frontend module and React library
+- lib/index.js is the entry point for importing the frontend module
+- server/ includes modules used on the server
+- canvas.js is the entry point for running the server
 
-The spec also defines queries, which are executed over the log to
-generate views. Queries are defined over a sqlite database right now.
-We will support custom reducers and high-throughput CRDTs later.
+## Persistent installation
 
-Anyone can build a Canvas application or run a Canvas node without
-tokens or cryptocurrency.
+```
+cp node.service /etc/systemd/system/node.service
+systemctl daemon-reload
+systemctl enable node
+service node start
+```

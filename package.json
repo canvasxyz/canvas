@@ -1,5 +1,8 @@
 {
   "type": "module",
+  "exports": {
+    ".": "./lib/index.js"
+  },
   "dependencies": {
     "axios": "^0.26.0",
     "better-sqlite3": "^7.5.0",

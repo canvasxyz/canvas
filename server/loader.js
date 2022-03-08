@@ -9,7 +9,7 @@ const assert = (statement, errorMsg) => {
 
 // spec harness
 class Loader {
-    constructor(app, multihash) {
+    constructor(app, multihash, verbose) {
         this.models = [];
         this.routes = [];
         this.actions = [];
@@ -23,7 +23,7 @@ class Loader {
                 filename: `./db/${multihash}.sqlite`,
                 //filename: ':memory:',
             },
-            //debug: true,
+            debug: !!verbose,
             useNullAsDefault: true,
         });
     }
@@ -172,7 +172,7 @@ class Loader {
                 args.push(req.body[argName]);
             }
 
-            console.log(fnName, argNames, args);
+            console.log('writing action', fnName, argNames, args);
             const id = await this.writeAction(fnName, ...args);
             res.json({ status: "ok", id });
         });

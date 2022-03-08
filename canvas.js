@@ -7,20 +7,21 @@ import bodyParser from 'body-parser';
 import crypto from 'crypto';
 import bs58 from 'bs58';
 
-import { Loader } from './loader.js';
+import { Loader } from './server/loader.js';
 
 
-const USAGE = `Canvas: everlasting decentralized applications, built on signed messages
+const USAGE = `Canvas: everlasting applications
 
 $ node canvas.js [spec]
 
   Canvas accepts specs in a few formats:
    test.canvas.js           Local spec.
-   /ipfs/Qm...              Loads a spec from IPFS. This runs arbitrary code! (V2)
+   /ipfs/Qm...              Loads a spec from IPFS. Unsafe.
 
   Optional arguments:
-   --reset-database         Resets the database, and then quits.    (TODO)
-   --verbose                Prints SQL debug output to console.     (TODO: knex debug=true)
+   --run-tests              Runs some test, then quits.
+   --reset-database         Resets the database, and then quits.
+   --verbose                Prints SQL debug output to console.
 
   To upload a local spec to ipfs, run 'ipfs add test.canvas.js'.
 `;
@@ -37,20 +38,25 @@ if (process.argv.length < 3) {
   quit();
 }
 
+// TODO: use a proper argv parser
 const optionalArgs = process.argv.slice(2, process.argv.length - 1);
 optionalArgs.forEach((oarg) => {
-  if (!['--reset-database', '--verbose'].includes(oarg)) {
+  if (['--run-tests', '--reset-database', '--verbose'].indexOf(oarg) === -1) {
     quit('Invalid argument: ' + oarg);
   }
 });
+const shouldRunTests = optionalArgs.includes('--run-tests');
+const shouldResetDatabase = optionalArgs.includes('--reset-database'); // TODO: unimplemented
+const shouldRunVerboseMode = optionalArgs.includes('--verbose'); // TODO: unimplemented
+
 const specArg = process.argv[process.argv.length - 1];
 
 if (specArg.startsWith('-')) {
   quit("Must provide a valid spec filename!");
 } else if (specArg.startsWith('/ipfs/')) {
-  quit("IPFS not supported yet!");
+  quit("IPFS not supported yet!"); // TODO: unimplemented
 } else if (specArg.startsWith('/ipns/')) {
-  quit("IPNS not supported yet!");
+  quit("IPNS not supported yet!"); // TODO: unimplemented
 }
 
 const filename = process.argv[process.argv.length - 1];
@@ -70,22 +76,22 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   lockdown();
   const app = express();
 
-  // Hash the spec, to get a multihash identifier
+  // Get a multihash for the spec
   const hashFunction = Buffer.from('12', 'hex'); // 0x20
   const digest = crypto.createHash('sha256').update(spec).digest();
   const digestSize = Buffer.from(digest.byteLength.toString(16), 'hex'); // 20
   const combined = Buffer.concat([hashFunction, digestSize, digest]);
   const multihash = bs58.encode(combined);
-  console.log(filename, '=>', multihash);
+  console.log(`Serving ${filename} at /apps/${multihash}`);
 
   // Install the spec inside an SES compartment
   app.use(bodyParser.json());
-  const loader = new Loader(app, multihash);
+  const loader = new Loader(app, multihash, shouldRunVerboseMode);
   const c = new Compartment({
     canvas: loader,
-    // TODO(v1): these objects aren't hardened. We should refactor to only
-    // expose a bidirectional message-passing interface to the spec,
-    // for accessing or calling models, views, and action functions.
+    // TODO: these objects aren't hardened. We should refactor to only
+    // expose bidirectional message-passing calls to the spec for
+    // model setup, view setup, and action functions
   });
   c.evaluate(spec);
 
@@ -93,21 +99,23 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
     loader.server().listen(3000, async () => {
       console.log('Server listening on port 3000');
 
-      const ROOT_PATH = `http://localhost:3000/apps/${multihash}`;
-      const pollId = (await axios.post(`${ROOT_PATH}/createPoll`, { title: 'Should Verses adopt a motto?' })).data.id;
-      const cardId1 = (await axios.post(`${ROOT_PATH}/createCard`, { pollId, text: 'Yes, we should vote on one now' })).data.id;
-      const cardId2 = (await axios.post(`${ROOT_PATH}/createCard`, { pollId, text: 'Yes, with modifications to the question' })).data.id;
-      const cardId3 = (await axios.post(`${ROOT_PATH}/createCard`, { pollId, text: 'No, we should leave it open' })).data.id;
-      await axios.post(`${ROOT_PATH}/createVote`, { cardId: cardId1, value: false });
-      await axios.post(`${ROOT_PATH}/createVote`, { cardId: cardId1, value: true });
+      if (shouldRunTests) {
+        const ROOT_PATH = `http://localhost:3000/apps/${multihash}`;
+        const pollId = (await axios.post(`${ROOT_PATH}/createPoll`, { title: 'Should Verses adopt a motto?' })).data.id;
+        const cardId1 = (await axios.post(`${ROOT_PATH}/createCard`, { pollId, text: 'Yes, we should vote on one now' })).data.id;
+        const cardId2 = (await axios.post(`${ROOT_PATH}/createCard`, { pollId, text: 'Yes, with modifications to the question' })).data.id;
+        const cardId3 = (await axios.post(`${ROOT_PATH}/createCard`, { pollId, text: 'No, we should leave it open' })).data.id;
+        await axios.post(`${ROOT_PATH}/createVote`, { cardId: cardId1, value: false });
+        await axios.post(`${ROOT_PATH}/createVote`, { cardId: cardId1, value: true });
 
-      await axios.get(`${ROOT_PATH}/polls`).then((({ data }) => {
-        console.log(data);
-      }));
-      await axios.get(`${ROOT_PATH}/polls/${pollId}`).then((({ data }) => {
-        console.log(data);
-      }));
-
+        await axios.get(`${ROOT_PATH}/polls`).then((({ data }) => {
+          console.log(data);
+        }));
+        await axios.get(`${ROOT_PATH}/polls/${pollId}`).then((({ data }) => {
+          console.log(data);
+        }));
+        quit('Done');
+      }
     });
   });
 });
