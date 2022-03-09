@@ -21,8 +21,8 @@ const votes = canvas.model('votes', {
   createdAt: 'datetime',
 });
 
-canvas.route('/polls', 'SELECT * FROM polls ORDER BY createdAt DESC LIMIT 10');
-canvas.route('/polls/:id', 'SELECT cards.id, cards.pollId, cards.text, cards.creator, cards.createdAt, count(votes.id), group_concat(votes.creator) FROM cards LEFT JOIN votes ON cards.id = votes.cardId WHERE cards.pollId = :id GROUP BY cards.id');
+canvas.route('/polls/:page', 'SELECT * FROM polls ORDER BY createdAt DESC LIMIT 10 OFFSET (:page * 10)');
+canvas.route('/cards/:id/:page', 'SELECT cards.id, cards.pollId, cards.text, cards.creator, cards.createdAt, count(votes.id), group_concat(votes.creator) FROM cards LEFT JOIN votes ON cards.id = votes.cardId WHERE cards.pollId = :id GROUP BY cards.id OFFSET (:page * 10)');
 
 const createPoll = canvas.action('createPoll(title)', function (title) {
   return canvas.db.polls.create({ id: this.id, title, creator: this.origin });
