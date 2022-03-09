@@ -165,14 +165,24 @@ class Loader {
             }
 
             // check signature
-            const recoveredAddress = ethers.utils.verifyMessage(req.body.data, req.body.signature);
-            if (recoveredAddress !== req.body.from) {
-                console.log('Invalid signature:', call);
-                return res.status(400).json({ error: 'Invalid signature: ' + call });
+            let recoveredAddress;
+            let call;
+            let args;
+            try {
+                const parsed = JSON.parse(req.body.data);
+                call = parsed.call;
+                args = parsed.args;
+                recoveredAddress = ethers.utils.verifyMessage(req.body.data, req.body.signature);
+                if (recoveredAddress !== req.body.from) {
+                    console.log('Incorrect signature:', call);
+                    return res.status(400).json({ error: 'Incorrect signature: ' + call });
+                }
+            } catch (error) {
+                console.log('Badly formed signature:', error.toString());
+                return res.status(400).json({ error: 'Badly formed signature: ' + error.toString() });
             }
 
             // check data
-            const { call, args } = JSON.parse(req.body.data);
             if (call !== action[0]) {
                 console.log('Unexpected action:', call);
                 return res.status(400).json({ error: 'Unexpected action: ' + call });
