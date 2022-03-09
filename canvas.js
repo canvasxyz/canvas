@@ -3,6 +3,7 @@ import fs from 'fs';
 import axios from 'axios';
 import express from 'express';
 import bodyParser from 'body-parser';
+import cors from 'cors';
 
 import crypto from 'crypto';
 import bs58 from 'bs58';
@@ -75,6 +76,7 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   // Later we should use Deno or OS-level VMs to gain more security.
   lockdown();
   const app = express();
+  app.use(cors());
 
   // Get a multihash for the spec
   const hashFunction = Buffer.from('12', 'hex'); // 0x20
@@ -96,11 +98,11 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   c.evaluate(spec);
 
   loader.syncDB().then(async (loader) => {
-    loader.server().listen(3000, async () => {
-      console.log('Server listening on port 3000');
+    loader.server().listen(8000, async () => {
+      console.log('Server listening on port 8000');
 
       if (shouldRunTests) {
-        const ROOT_PATH = `http://localhost:3000/apps/${multihash}`;
+        const ROOT_PATH = `http://localhost:8000/apps/${multihash}`;
         const pollId = (await axios.post(`${ROOT_PATH}/createPoll`, { title: 'Should Verses adopt a motto?' })).data.id;
         const cardId1 = (await axios.post(`${ROOT_PATH}/createCard`, { pollId, text: 'Yes, we should vote on one now' })).data.id;
         const cardId2 = (await axios.post(`${ROOT_PATH}/createCard`, { pollId, text: 'Yes, with modifications to the question' })).data.id;
