@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import Knex from 'knex';
+import { ethers } from 'ethers';
 
 const assert = (statement, errorMsg) => {
     if (!statement) {
@@ -15,6 +16,7 @@ class Loader {
         this.actions = [];
         this.onready = null;
 
+        this.verbose = verbose;
         this.express = app;
         this.multihash = multihash;
         this.knex = Knex({
@@ -85,8 +87,8 @@ class Loader {
             // TODO: check for an exact schema match, not just table name
             await this.knex.schema.hasTable(tableName)
         ));
-        const matchesAllTables = matches.every((i) => i)
-        const matchesNoTables = matches.every((i) => !i)
+        const matchesAllTables = matches.every((i) => i);
+        const matchesNoTables = matches.every((i) => !i);
 
         // create tables if starting with a fresh db
         if (!matchesNoTables && !matchesAllTables) {
@@ -122,15 +124,15 @@ class Loader {
         return this;
     }
 
-    async writeAction(name, ...args) {
-        const [, argnames, fn] = this.actions.find((a) => a[0] === name);
+    async writeAction(actionName, from, ...args) {
+        const [, argnames, fn] = this.actions.find((a) => a[0] === actionName);
 
         // generate metadata for action handlers
         const meta = {
             chainId: null,
             blockhash: null,
-            timestamp: null, // TODO(v1): also retrieve the blockhash, chain id, and derive a timestamp
-            origin: "00000000000000000000000000000000", // TODO(v1): use origin address
+            timestamp: null,
+            origin: from,
             id: crypto.randomBytes(16).toString("hex"), // TODO(v1): derive from hash(calldata, blockhash)
         };
         const id = await fn.apply(meta, args);
@@ -158,23 +160,46 @@ class Loader {
             const action = this.actions.find(([fnName, argNames]) => {
                 return fnName === req.params.action;
             });
-            if (!action) {
+            if (!action || !req.body.data) {
                 return res.status(400).json({ error: 'Invalid action' });
             }
 
-            const [fnName, argNames] = action;
-            let args = []
-            for (const argName of argNames) {
-                if (req.body[argName] === undefined) {
-                    console.log(fnName, 'missing parameter:', argName);
-                    return res.status(400).json({ error: 'Missing parameter: ' + argName });
-                }
-                args.push(req.body[argName]);
+            // check signature
+            const recoveredAddress = ethers.utils.verifyMessage(req.body.data, req.body.signature);
+            if (recoveredAddress !== req.body.from) {
+                console.log('Invalid signature:', call);
+                return res.status(400).json({ error: 'Invalid signature: ' + call });
             }
 
-            console.log('writing action', fnName, argNames, args);
-            const id = await this.writeAction(fnName, ...args);
-            res.json({ status: "ok", id });
+            // check data
+            const { call, args } = JSON.parse(req.body.data);
+            if (call !== action[0]) {
+                console.log('Unexpected action:', call);
+                return res.status(400).json({ error: 'Unexpected action: ' + call });
+            }
+
+            const [actionName, argNames] = action;
+            let argslist = [];
+            for (const argName of argNames) {
+                if (args[argName] === undefined) {
+                    console.log(actionName, 'Missing parameter:', argName);
+                    return res.status(400).json({ error: 'Missing parameter: ' + argName });
+                }
+                argslist.push(args[argName]);
+            }
+
+            // print action
+            if (this.verbose) {
+                console.log(actionName, {
+                    data: { call, args },
+                    from: req.body.from,
+                    signature: req.body.signature.slice(0, 6) + '...',
+                });
+            }
+
+            // return id
+            const id = await this.writeAction(actionName, req.body.from, ...argslist);
+            return res.json({ status: "ok", id });
         });
 
         return this.express;
