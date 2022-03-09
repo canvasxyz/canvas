@@ -12,6 +12,13 @@ npm i
 node canvas.js examples/polis.canvas.js
 ```
 
+To auto-reload when a spec or core file is changed, use nodemon:
+
+```
+npm install -g nodemon
+nodemon canvas.js examples/polis.canvas.js
+```
+
 ## Directory structure
 
 The project is structured as a monorepo.
