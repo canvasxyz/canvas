@@ -1,11 +1,11 @@
 import 'ses';
 import fs from 'fs';
-import axios from 'axios';
 import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-
+import axios from 'axios';
 import { ethers } from "ethers";
+
 import crypto from 'crypto';
 import bs58 from 'bs58';
 
@@ -21,7 +21,7 @@ $ node canvas.js [spec]
    /ipfs/Qm...              Loads a spec from IPFS. Unsafe.
 
   Optional arguments:
-   --run-tests              Runs some test, then quits.
+   --run-tests              Looks for a corresponding .canvas.tests.js, runs them, and then quits.
    --reset-database         Resets the database, and then quits.
    --verbose                Prints SQL debug output to console.
 
@@ -62,6 +62,10 @@ if (specArg.startsWith('-')) {
 }
 
 const filename = process.argv[process.argv.length - 1];
+if (!filename.endsWith('.canvas.js')) {
+  quit("Spec names must end in .canvas.js");
+}
+
 const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   if (err) {
     return quit("Spec file not found, or could not be read");
@@ -96,42 +100,35 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
     // expose bidirectional message-passing calls to the spec for
     // model setup, view setup, and action functions
   });
-  c.evaluate(spec);
+  await c.evaluate(spec);
 
   loader.syncDB().then(async (loader) => {
     loader.server().listen(8000, async () => {
       console.log('Server listening on port 8000');
 
       if (shouldRunTests) {
-        const ROOT_PATH = `http://localhost:8000/apps/${multihash}`;
+          const testsFilename = filename.replace(/\.canvas\.js$/, '.canvas.tests.js');
+          console.log(testsFilename);
+          const testsFile = fs.readFile(testsFilename, 'utf8', async (err, tests) => {
+              if (err) {
+                  console.log("Test file not found, or could not be read");
+                  process.exit(1);
+              }
 
-        // create a test wallet, use that as our signer
-        const signer = new ethers.Wallet('0x111111111111111111111111111111111111');
-        const signAndPost = async (call, args) => {
-          const message = JSON.stringify({ call, args });
-          const signature = await signer.signMessage(message);
-          const ret = (await axios.post(`${ROOT_PATH}/${call}`, {
-            from: signer.address,
-            signature,
-            data: message
-          })).data.id;
-          return ret;
-        };
-
-        const pollId = await signAndPost('createPoll', { title: 'Should Verses adopt a motto?' });
-        const cardId1 = await signAndPost('createCard', { pollId, text: 'Yes, we should vote on one now' });
-        const cardId2 = await signAndPost('createCard', { pollId, text: 'Yes, with modifications to the question' });
-        const cardId3 = await signAndPost('createCard', { pollId, text: 'No, we should leave it open' });
-        await signAndPost('createVote', { cardId: cardId1, value: false });
-        await signAndPost('createVote', { cardId: cardId1, value: true });
-
-        await axios.get(`${ROOT_PATH}/polls/0`).then((({ data }) => {
-          console.log(data);
-        }));
-        await axios.get(`${ROOT_PATH}/polls/${pollId}`).then((({ data }) => {
-          console.log(data);
-        }));
-        process.exit(0);
+              const c = new Compartment({
+                  axios,
+                  ethers,
+                  console: {
+                      log: console.log
+                  },
+                  multihash,
+                  // TODO: these objects aren't hardened. We should refactor to only
+                  // expose bidirectional message-passing calls to the spec for
+                  // model setup, view setup, and action functions
+              });
+              await c.evaluate(tests);
+              process.exit(0);
+          });
       }
     });
   });
