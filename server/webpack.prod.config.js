@@ -64,7 +64,7 @@ const config = {
   },
   plugins: [
     new HtmlWebPackPlugin({
-      template: './server/html/index.html',
+      template: './server/static/index.html',
       filename: './index.html'
     }),
     new MiniCssExtractPlugin({

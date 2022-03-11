@@ -90,7 +90,7 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   app.use(webpackHotMiddleware(compiler));
 
   const DIST_DIR = path.dirname(fileURLToPath(import.meta.url));
-  const HTML_FILE = path.join(DIST_DIR, 'server/html/index.html');
+  const HTML_FILE = path.join(DIST_DIR, 'server/static/index.html');
   app.get('*', (req, res, next) => {
     compiler.outputFileSystem.readFile(HTML_FILE, (err, result) => {
       if (err) {
