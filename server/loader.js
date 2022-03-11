@@ -6,7 +6,7 @@ const assert = (statement, errorMsg) => {
     if (!statement) {
         throw new Error(errorMsg);
     }
-}
+};
 
 // spec harness
 class Loader {
@@ -153,12 +153,21 @@ class Loader {
                         .map((p) => [p, req.params[p]]));
 
                 // execute query
-                const result = await this.knex.raw(query, params);
-                res.json(result);
+                try {
+                    const result = await this.knex.raw(query, params);
+                    res.json(result);
+                } catch (err) {
+                    console.log('SQL error', err);
+                    res.status(400).json({ error: 'SQL error' });
+                }
             });
         }
 
         this.express.post(`/apps/${this.multihash}/:action`, async(req, res) => {
+            const signedMessageFrom = req.body.from;
+            const signedMessage = req.body.data;
+            const signature = req.body.signature;
+
             const action = this.actions.find(([fnName, argNames]) => {
                 return fnName === req.params.action;
             });
@@ -171,11 +180,11 @@ class Loader {
             let call;
             let args;
             try {
-                const parsed = JSON.parse(req.body.data);
+                const parsed = JSON.parse(signedMessage);
                 call = parsed.call;
                 args = parsed.args;
-                recoveredAddress = ethers.utils.verifyMessage(req.body.data, req.body.signature);
-                if (recoveredAddress !== req.body.from) {
+                recoveredAddress = ethers.utils.verifyMessage(signedMessage, signature);
+                if (recoveredAddress !== signedMessageFrom) {
                     console.log('Incorrect signature:', call);
                     return res.status(400).json({ error: 'Incorrect signature: ' + call });
                 }
@@ -204,9 +213,11 @@ class Loader {
             if (this.verbose) {
                 console.log(actionName, {
                     data: { call, args },
-                    from: req.body.from,
-                    signature: req.body.signature.slice(0, 6) + '...',
+                    from: signedMessageFrom,
+                    signature: signature.slice(0, 6) + '...',
                 });
+            } else {
+                console.log('valid', actionName);
             }
 
             // return id
