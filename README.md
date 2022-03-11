@@ -9,14 +9,14 @@ in the application is a signed message from an Ethereum address.
 ```
 brew install ipfs
 npm i
-node canvas.js examples/polis.canvas.js
+node canvas.js examples/polls.canvas.js
 ```
 
 To auto-reload when a spec or core file is changed, use nodemon:
 
 ```
 npm install -g nodemon
-nodemon canvas.js examples/polis.canvas.js
+nodemon canvas.js examples/polls.canvas.js
 ```
 
 ## Directory structure
