@@ -25,14 +25,10 @@ SELECT * FROM polls ORDER BY createdAt DESC LIMIT 10 OFFSET (:page * 10)
 `);
 canvas.route('/cards/:id/:page', `
 SELECT cards.id, cards.pollId, cards.text, cards.creator, cards.createdAt,
-    count(upvotes.id), count(downvotes.id),
-    group_concat(upvotes.creator), group_concat(downvotes.creator)
+    group_concat(votes.creator || ':' || IIF(votes.isAgree, 'true', 'false'), ';') AS votes
 FROM cards
-LEFT JOIN votes upvotes ON cards.id = upvotes.cardId
-LEFT JOIN votes downvotes ON cards.id = downvotes.cardId
+LEFT JOIN votes ON cards.id = votes.cardId
 WHERE cards.pollId = :id
-AND upvotes.isAgree = true
-AND downvotes.isAgree = false
 GROUP BY cards.id
 LIMIT 10 OFFSET (:page * 10)`);
 
@@ -46,8 +42,8 @@ const createVote = canvas.action('createVote(cardId, value)', function (cardId, 
   return canvas.db.votes.create({
     id: this.id,
     cardId,
-    isAgree: value === 'true',
-    isDisagree: value === 'false',
+    isAgree: value === true,
+    isDisagree: value === false,
     creator: this.origin
   });
 });
