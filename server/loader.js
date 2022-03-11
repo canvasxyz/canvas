@@ -54,7 +54,7 @@ class Loader {
         // check column types
         assert(table.match(/^[a-z0-9]+$/i), "table name must be alphanumeric");
         for (const [column, columnType] of Object.entries(fields)) {
-            assert(column.match(/^[a-z0-9]+$/i), "column name must be alphanumeric");
+            assert(column.match(/^[a-z0-9]+(\(now\))?$/i), "column name must be alphanumeric");
             assert(isValidColumnType(columnType), "column type must be valid");
         }
 
@@ -107,6 +107,8 @@ class Loader {
                                 return table.string(fieldName);
                             case 'datetime':
                                 return table.datetime(fieldName);
+                            case 'datetime(now)':
+                                return table.datetime(fieldName).defaultTo(this.knex.fn.now());
                             case 'boolean':
                                 return table.boolean(fieldName);
                             default:
@@ -222,6 +224,7 @@ const isValidColumnType = (c) => {
         case 'string': return true;
         case 'text': return true;
         case 'datetime': return true;
+        case 'datetime(now)': return true;
         case 'boolean': return true;
         default:
             const fk = c.split('.');

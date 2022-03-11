@@ -2,14 +2,14 @@ const polls = canvas.model('polls', {
   id: 'primary',
   title: 'text',
   creator: 'text',
-  createdAt: 'datetime',
+  createdAt: 'datetime(now)',
 });
 const cards = canvas.model('cards', {
   id: 'primary',
   pollId: 'polls.id',
   text: 'text',
   creator: 'text',
-  createdAt: 'datetime',
+  createdAt: 'datetime(now)',
 });
 const votes = canvas.model('votes', {
   id: 'primary',
@@ -18,7 +18,7 @@ const votes = canvas.model('votes', {
   isDisagree: 'boolean',
   isSkip: 'boolean',
   creator: 'text',
-  createdAt: 'datetime',
+  createdAt: 'datetime(now)',
 });
 
 canvas.route('/polls/:page', 'SELECT * FROM polls ORDER BY createdAt DESC LIMIT 10 OFFSET (:page * 10)');
@@ -31,10 +31,12 @@ const createCard = canvas.action('createCard(pollId, text)', function (pollId, t
   return canvas.db.cards.create({ id: this.id, pollId, text, creator: this.origin });
 });
 const createVote = canvas.action('createVote(cardId, value)', function (cardId, value) {
-  return canvas.db.votes.create({ id: this.id,
-                                    cardId,
-                                    isAgree: value === true,
-                                    isDisagree: value === false,
-                                    isSkip: value === null,
-                                    creator: this.origin });
+  return canvas.db.votes.create({
+    id: this.id,
+    cardId,
+    isAgree: value === true,
+    isDisagree: value === false,
+    isSkip: value === null,
+    creator: this.origin
+  });
 });
