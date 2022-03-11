@@ -5,7 +5,7 @@ import ReactDOM from 'react-dom';
 import './css/style.css';
 
 ReactDOM.render(
-    <>Hello world</>,
+    <div className="center text-gray-500">Hello world</div>,
     document.getElementById('react-container') // eslint-disable-line no-undef
 );
 

@@ -2,6 +2,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import webpack from 'webpack';
 import HtmlWebPackPlugin from 'html-webpack-plugin';
+import autoprefixer from 'autoprefixer';
+
+import tailwindcss from 'tailwindcss';
 
 const config = {
   entry: {
@@ -37,16 +40,31 @@ const config = {
         // Loads the javacript into html template provided.
         // Entry point is set below in HtmlWebPackPlugin in Plugins
         test: /\.html$/,
-        use: [
-          {
-            loader: "html-loader",
-            //options: { minimize: true }
-          }
-        ]
+        use: ['html-loader']
       },
       {
         test: /\.css$/,
-        use: [ 'style-loader', 'css-loader' ]
+        exclude: /node_modules/,
+          use: [{
+            loader: 'style-loader',
+          }, {
+            loader: 'css-loader',
+            options: {
+              importLoaders: 1
+            }
+          }, {
+            loader: 'postcss-loader',
+            options: {
+              postcssOptions: {
+                plugins: [
+                  "postcss-preset-env",
+                  tailwindcss,
+                  "autoprefixer"
+                ],
+              }
+            }
+          }
+        ]
       },
       {
        test: /\.(png|svg|jpg|gif)$/,
