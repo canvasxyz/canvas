@@ -23,9 +23,8 @@ nodemon canvas.js examples/polls.canvas.js
 
 The project is structured as a monorepo.
 
-- lib/ is the frontend module and React library
-- lib/index.js is the entry point for importing the frontend module
-- server/ includes modules used on the server
+- examples/ includes starter specs
+- server/ includes modules used to create an instance of Canvas
 - canvas.js is the entry point for running the server
 
 ## Persistent installation
