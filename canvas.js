@@ -6,6 +6,14 @@ import cors from 'cors';
 import axios from 'axios';
 import { ethers } from "ethers";
 
+// hub server related
+import path from 'path';
+import { fileURLToPath } from 'url';
+import webpack from 'webpack';
+import webpackDevMiddleware from 'webpack-dev-middleware';
+import webpackHotMiddleware from 'webpack-hot-middleware';
+import config from './server/webpack.dev.config.js';
+
 import crypto from 'crypto';
 import bs58 from 'bs58';
 
@@ -71,6 +79,30 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
     return quit("Spec file not found, or could not be read");
   }
 
+  const app = express();
+  app.use(cors());
+
+  // Set up application hub server
+  const compiler = webpack(config);
+  app.use(webpackDevMiddleware(compiler, {
+    publicPath: config.output.publicPath
+  }));
+  app.use(webpackHotMiddleware(compiler));
+
+  const DIST_DIR = path.dirname(fileURLToPath(import.meta.url));
+  const HTML_FILE = path.join(DIST_DIR, 'server/html/index.html');
+  app.get('*', (req, res, next) => {
+    compiler.outputFileSystem.readFile(HTML_FILE, (err, result) => {
+      if (err) {
+        next(err);
+        return;
+      }
+      res.set('content-type', 'text/html');
+      res.send(result);
+      res.end();
+    });
+  });
+
   // See https://github.com/endojs/endo/tree/master/packages/ses
   //
   // Lock down globals, then inject the loader into a new compartment
@@ -80,8 +112,6 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   //
   // Later we should use Deno or OS-level VMs to gain more security.
   lockdown();
-  const app = express();
-  app.use(cors());
 
   // Get a multihash for the spec
   const hashFunction = Buffer.from('12', 'hex'); // 0x20
