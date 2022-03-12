@@ -2,6 +2,7 @@
 import crypto from 'crypto';
 import Knex from 'knex';
 import { ethers } from 'ethers';
+import Hypercore from 'hypercore';
 
 const assert = (statement, errorMsg) => {
     if (!statement) {
@@ -29,11 +30,17 @@ class Loader {
             debug: !!verbose,
             useNullAsDefault: true,
         });
+
+        this.hypercore = new Hypercore(`./db/${multihash}.hypercore`, { valueEncoding: 'utf-8' });
     }
 
     ready(callback) {
-        assert(!this.onready, "attempted to override an existing onready handler");
-        this.onready = callback;
+        return new Promise((resolve, reject) => {
+            this.hypercore.on('ready', () => {
+                console.log('hypercore.ready:', this.hypercore.length);
+                resolve();
+            });
+        });
     }
 
     get db() {
@@ -131,15 +138,40 @@ class Loader {
         const [, argnames, fn] = this.actions.find((a) => a[0] === actionName);
 
         // generate metadata for action handlers
+        //
+        // TODO(v1): unique identifier should be shared across hypercore and sqlite, and
+        // derived from hash(calldata, blockhash), but not the signature, to prevent
+        // replay attacks
         const meta = {
+            call: actionName,
             chainId: null,
             blockhash: null,
             timestamp: null,
             origin: from,
-            id: crypto.randomBytes(16).toString("hex"), // TODO(v1): derive from hash(calldata, blockhash)
+            id: crypto.randomBytes(16).toString("hex"),
         };
+        const stringified = JSON.stringify({ meta, args });
+        const hash = crypto.createHash('sha256');
+        hash.update(stringified);
+        const digest = hash.digest('hex');
+
+        // add to sqlite
         const id = await fn.apply(meta, args);
-        return id;
+
+        // add to hypercore
+        return new Promise((resolve, reject) => {
+            this.hypercore.append(stringified, (err, seq) => {
+                console.log('hypercore.append:', seq);
+                if (err) {
+                    // TODO: rollback sql (actually, we should refactor to
+                    // apply the action inside the hypercore's onwrite hook)
+                    console.log('error appending to hypercore:', err);
+                    reject();
+                } else {
+                    resolve(id);
+                }
+            });
+        });
     }
 
     server() {

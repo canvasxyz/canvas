@@ -18,6 +18,8 @@
     "express": "^4.17.2",
     "html-loader": "^1.3.2",
     "html-webpack-plugin": "^4.5.2",
+    "hyperbee": "^1.7.0",
+    "hypercore": "^9.12.0",
     "knex": "^1.0.3",
     "mini-css-extract-plugin": "^1.6.2",
     "optimize-css-assets-webpack-plugin": "^6.0.1",

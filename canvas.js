@@ -13,7 +13,7 @@ import webpack from 'webpack';
 import webpackDevMiddleware from 'webpack-dev-middleware';
 import webpackHotMiddleware from 'webpack-hot-middleware';
 import config from './server/webpack.dev.config.js';
-import Knex from 'knex';
+import Hypercore from 'hypercore';
 
 import crypto from 'crypto';
 import bs58 from 'bs58';
@@ -99,19 +99,6 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
     });
   });
 
-  app.get('/actions/:multihash', (req, res, next) => {
-    const knex = Knex({
-        client: 'better-sqlite3',
-        connection: {
-            filename: `db/${multihash}.sqlite`
-        }
-    });
-    res.json({
-        multihash: req.params.multihash,
-        actions: [],
-    });
-  });
-
   // Serve static files for application hub
   const compiler = webpack(config);
   app.use(webpackDevMiddleware(compiler, {
@@ -146,6 +133,7 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   // Install the spec inside an SES compartment
   app.use(bodyParser.json());
   const loader = new Loader(app, multihash, shouldRunVerboseMode);
+  await loader.ready();
   const c = new Compartment({
     canvas: loader,
     // TODO: these objects aren't hardened. We should refactor to only
@@ -153,6 +141,29 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
     // model setup, view setup, and action functions
   });
   await c.evaluate(spec);
+
+  app.get('/actions/:multihash', (req, res, next) => {
+      const feed = loader.hypercore;
+      //feed.on('ready') unnecessary since we are binding this after loader.ready()
+
+      const start = Math.max(0, feed.length - 100);
+      const end = feed.length;
+      feed.getBatch(start, end, {
+          wait: true,
+          timeout: 2000,
+          valueEncoding: 'json', // decodes each entry for us
+      }, (error, data) => {
+          if (error) {
+              console.log(error);
+              res.status(400).json({ error });
+              return;
+          }
+          res.json({
+              multihash: req.params.multihash,
+              actions: data,
+          });
+      });
+  });
 
   loader.syncDB().then(async (loader) => {
     loader.server().listen(8000, async () => {
