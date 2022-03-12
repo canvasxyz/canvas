@@ -13,6 +13,7 @@ import webpack from 'webpack';
 import webpackDevMiddleware from 'webpack-dev-middleware';
 import webpackHotMiddleware from 'webpack-hot-middleware';
 import config from './server/webpack.dev.config.js';
+import Knex from 'knex';
 
 import crypto from 'crypto';
 import bs58 from 'bs58';
@@ -82,7 +83,36 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   const app = express();
   app.use(cors());
 
-  // Set up application hub server
+  // Get a multihash for the spec
+  const hashFunction = Buffer.from('12', 'hex'); // 0x20
+  const digest = crypto.createHash('sha256').update(spec).digest();
+  const digestSize = Buffer.from(digest.byteLength.toString(16), 'hex'); // 20
+  const combined = Buffer.concat([hashFunction, digestSize, digest]);
+  const multihash = bs58.encode(combined);
+  console.log(`Serving ${filename} at /apps/${multihash}`);
+
+  // Serve api routes for application hub
+  app.get('/info', (req, res, next) => {
+    res.json({
+        multihash,
+        specSize: spec.length,
+    });
+  });
+
+  app.get('/actions/:multihash', (req, res, next) => {
+    const knex = Knex({
+        client: 'better-sqlite3',
+        connection: {
+            filename: `db/${multihash}.sqlite`
+        }
+    });
+    res.json({
+        multihash: req.params.multihash,
+        actions: [],
+    });
+  });
+
+  // Serve static files for application hub
   const compiler = webpack(config);
   app.use(webpackDevMiddleware(compiler, {
     publicPath: config.output.publicPath
@@ -91,7 +121,7 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
 
   const DIST_DIR = path.dirname(fileURLToPath(import.meta.url));
   const HTML_FILE = path.join(DIST_DIR, 'server/static/index.html');
-  app.get('*', (req, res, next) => {
+  app.get('/', (req, res, next) => {
     compiler.outputFileSystem.readFile(HTML_FILE, (err, result) => {
       if (err) {
         next(err);
@@ -112,14 +142,6 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   //
   // Later we should use Deno or OS-level VMs to gain more security.
   lockdown();
-
-  // Get a multihash for the spec
-  const hashFunction = Buffer.from('12', 'hex'); // 0x20
-  const digest = crypto.createHash('sha256').update(spec).digest();
-  const digestSize = Buffer.from(digest.byteLength.toString(16), 'hex'); // 20
-  const combined = Buffer.concat([hashFunction, digestSize, digest]);
-  const multihash = bs58.encode(combined);
-  console.log(`Serving ${filename} at /apps/${multihash}`);
 
   // Install the spec inside an SES compartment
   app.use(bodyParser.json());

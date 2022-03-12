@@ -28,6 +28,7 @@
     "react-dom": "^17.0.2",
     "ses": "^0.15.7",
     "style-loader": "^2.0.0",
+    "swr": "^1.2.2",
     "uglifyjs-webpack-plugin": "^2.2.0",
     "web3": "^1.7.1",
     "webpack-dev-middleware": "^5.3.1",

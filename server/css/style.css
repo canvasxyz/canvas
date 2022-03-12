@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.btn-accent {
+  @apply bg-blue-500 hover:bg-blue-600 text-white py-1.5 px-2 rounded;
+}
+.btn-gray {
+  @apply bg-gray-200 hover:bg-gray-300 py-1.5 px-2 rounded;
+}
+input:disabled,
+button:disabled {
+  @apply pointer-events-none opacity-50;
+}
