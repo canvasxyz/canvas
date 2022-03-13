@@ -1,0 +1,3 @@
+{
+    "ignore": ["server/index.js", "server/App.js"]
+}
