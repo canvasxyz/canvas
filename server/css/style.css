@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  border-top: 6px solid green;
+}
 .btn-accent {
   @apply bg-blue-500 hover:bg-blue-600 text-white py-1.5 px-2 rounded;
 }
