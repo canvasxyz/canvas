@@ -6,32 +6,27 @@ in the application is a signed message from an Ethereum address.
 
 ## Quick start
 
-```
-brew install ipfs
-npm i
-node canvas.js examples/polls.canvas.js
-```
-
-To auto-reload when a spec or core file is changed, use nodemon:
+In a separate process, start an IPFS daemon
 
 ```
-npm install -g nodemon
-nodemon canvas.js examples/polls.canvas.js
+$ ipfs daemon --offline
 ```
 
-## Directory structure
-
-The project is structured as a monorepo.
-
-- examples/ includes starter specs
-- server/ includes modules used to create an instance of Canvas
-- canvas.js is the entry point for running the server
-
-## Persistent installation
+The hub application stores specs in a `db` directory. Initialize the directory using the folder of example specs with
 
 ```
-cp node.service /etc/systemd/system/node.service
-systemctl daemon-reload
-systemctl enable node
-service node start
+$ npm run init -- examples
+```
+
+If you change the specs, you can reset the `db` directory using
+
+```
+$ npm run clean
+$ npm run init -- examples
+```
+
+Run the dev server with
+
+```
+$ npm run dev
 ```
