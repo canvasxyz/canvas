@@ -136,6 +136,7 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   await loader.ready();
   const c = new Compartment({
     canvas: loader,
+    timestamp: +new Date(),
     // TODO: these objects aren't hardened. We should refactor to only
     // expose bidirectional message-passing calls to the spec for
     // model setup, view setup, and action functions
@@ -184,6 +185,7 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
                   console: {
                       log: console.log
                   },
+                  timestamp: +new Date(),
                   multihash,
                   // TODO: these objects aren't hardened. We should refactor to only
                   // expose bidirectional message-passing calls to the spec for
