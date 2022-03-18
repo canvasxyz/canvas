@@ -40,28 +40,34 @@ export const routes = {
 }
 
 export const actions = {
-	createThread: {
-		args: { title: "string", link: "string" },
-		handler({ db }, { from, timestamp, args: { title, link } }) {
-			db.threads({ creator: from, createdAt: timestamp, title, link })
-		},
+	createThread(title, link) {
+		this.db.threads.create({
+			creator: this.from,
+			createdAt: this.timestamp,
+			title,
+			link,
+		})
 	},
-	createComment: {
-		args: { threadId: "@threads", text: "string" },
-		handler({ db }, { from, timestamp, args: { threadId, text } }) {
-			db.comments({ creator: from, createdAt: timestamp, threadId, text })
-		},
+	createComment(threadId, text) {
+		this.db.comments.create({
+			creator: this.from,
+			createdAt: this.timestamp,
+			threadId,
+			text,
+		})
 	},
-	upvote: {
-		args: { threadId: "@threads" },
-		handler({ db }, { from, timestamp, args: { threadId } }) {
-			db.upvotes({ creator: from, createdAt: timestamp, threadId })
-		},
+	upvote(threadId) {
+		this.db.upvotes.create({
+			creator: this.from,
+			createdAt: this.timestamp,
+			threadId,
+		})
 	},
-	upvoteComment: {
-		args: { commentId: "@comments" },
-		handler({ db }, { from, timestamp, args: { commentId } }) {
-			db.commentUpvotes({ creator: from, createdAt: timestamp, commentId })
-		},
+	upvoteComment(commendId) {
+		this.db.commentUpvotes.create({
+			creator: this.from,
+			createdAt: this.timestamp,
+			commendId,
+		})
 	},
 }

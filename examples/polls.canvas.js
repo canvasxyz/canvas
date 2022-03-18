@@ -36,30 +36,28 @@ export const routes = {
 }
 
 export const actions = {
-	createPoll: {
-		args: { title: "string" },
-		handler({ db }, { from, timestamp, args: { title } }) {
-			db.poll({ creator: from, createdAt: timestamp, title })
-		},
+	createPoll(title) {
+		this.db.poll.create({
+			creator: this.from,
+			createdAt: this.timestamp,
+			title,
+		})
 	},
-
-	createCard: {
-		args: { pollId: "@poll", text: "string" },
-		handler({ db }, { from, timestamp, args: { pollId, text } }) {
-			db.card({ creator: from, createdAt: timestamp, pollId, text })
-		},
+	createCard(pollId, text) {
+		this.db.card({
+			creator: this.from,
+			createdAt: this.timestamp,
+			pollId,
+			text,
+		})
 	},
-
-	createVote: {
-		args: { cardId: "@card", value: "boolean" },
-		handler({ db }, { from, timestamp, args: { cardId, value } }) {
-			db.vote({
-				creator: from,
-				createdAt: timestamp,
-				cardId,
-				isAgree: value,
-				isDisagree: !value,
-			})
-		},
+	createVote(cardId, value) {
+		this.db.vote({
+			creator: this.from,
+			createdAt: this.timestamp,
+			cardId,
+			isAgree: value,
+			isDisagree: !value,
+		})
 	},
 }

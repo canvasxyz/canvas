@@ -2,63 +2,19 @@ import Database, * as sqlite3 from "better-sqlite3"
 import hypercore, { Feed } from "hypercore"
 
 import { assert, match } from "utils/server/assert"
-
-/**
- * A `Type` is a runtime representation of an abstract model field type,
- * ie string values that we use to set the sqlite schema and coerce
- * action arguments.
- *
- * A `Value` is a type-level representation of concrete action argument
- * types, ie TypeScript types that describe the possible JavaScript values that
- * we put into and get out of action calls.
- *
- * Below both of these are actually another implicit level of "just JSON" - we use
- * the combination of the two to know how to serialize and parse actions.
- *
- * In the future we should move the type definitions here into a library that can
- * be imported from specs so that authors can typecheck their definitions without
- * importing actual code.
- */
-
-export type Type =
-	| "boolean"
-	| "string"
-	| "integer"
-	| "float"
-	| "bytes"
-	| "datetime"
-	| `@${string}`
-
-export type Model = Record<string, Type>
-
-export type Value = null | boolean | number | Uint8Array | Date | string
-
-export type Context = {
-	// Context.models is an object of methods that specs can call to create model entries.
-	// For now we limit specs to one Context.model call per action but that can be relaxed in the future.
-	db: Record<string, (fields: Record<string, Value>) => void>
-	// light client etc goes here too...
-}
-
-/**
- * An Action is the thing that gets signed
- */
-export type Action = {
-	from: string
-	blockhash: string
-	timestamp: Date
-	args: Record<string, Value>
-}
-
-export type ActionHandler = (context: Context, action: Action) => Promise<void>
+import type {
+	Model,
+	ModelType,
+	ActionHandler,
+	ContextModel,
+	ModelValue,
+	Action,
+} from "./types"
 
 export interface SpecConstructor {
 	models: Record<string, Model>
 	routes: Record<string, string>
-	actions: Record<
-		string,
-		{ args: Record<string, Type>; handler: ActionHandler }
-	>
+	actions: Record<string, ActionHandler>
 }
 
 /**
@@ -69,15 +25,13 @@ export interface SpecConstructor {
 export class Spec {
 	private models: Record<string, Model> = {}
 	private routes: Record<string, sqlite3.Statement> = {}
-	private actions: Record<
-		string,
-		{ args: Record<string, Type>; handler: ActionHandler }
-	> = {}
+	private actions: Record<string, ActionHandler> = {}
+	private actionParameters: Record<string, string[]> = {}
 
 	private hypercore: Feed
 	private database: sqlite3.Database
 
-	private context: Context
+	private db: Record<string, ContextModel> = {}
 
 	constructor(
 		readonly multihash: string,
@@ -86,13 +40,14 @@ export class Spec {
 	) {
 		this.database = new Database(`${path}/db.sqlite`)
 
-		for (const [name, { args, handler }] of Object.entries(actions)) {
+		for (const [name, handler] of Object.entries(actions)) {
 			match(name, /^[a-zA-Z0-9]+$/, "action name must be alphanumeric")
-			this.actions[name] = { args, handler }
+			if (typeof handler !== "function") {
+				throw new Error("action handler must be a function")
+			}
+			this.actions[name] = handler
+			this.actionParameters[name] = Spec.parseHandlerParameters(handler)
 		}
-
-		this.context = { db: {} }
-		Object.freeze(this.context)
 
 		for (const [name, route] of Object.entries(routes)) {
 			// TODO: validate route query (???)
@@ -105,9 +60,11 @@ export class Spec {
 		}
 
 		this.hypercore = hypercore(`${path}/hypercore`, {
-			valueEncoding: "utf-8",
+			valueEncoding: "binary",
 		})
 	}
+
+	// Initialization methods
 
 	public initialize(): Promise<this> {
 		this.initializeDB()
@@ -148,26 +105,30 @@ export class Spec {
 				`INSERT INTO ${name} VALUES (:_id, ${fields.join(", ")})`
 			)
 
-			this.context.db[name] = (args) => {
-				for (const [name, type] of Object.entries(model)) {
-					// validate args
-					const value = args[name]
-					assert(value !== undefined, `missing value for argument ${name}`)
-					Spec.validateType(type, value)
-				}
+			this.db[name] = {
+				create(args) {
+					for (const [name, type] of Object.entries(model)) {
+						// validate args
+						const value = args[name]
+						assert(value !== undefined, `missing value for argument ${name}`)
+						Spec.validateType(type, value)
+					}
 
-				for (const name of Object.keys(args)) {
-					assert(name in model, `extraneous argument ${name}`)
-				}
+					for (const name of Object.keys(args)) {
+						assert(name in model, `extraneous argument ${name}`)
+					}
 
-				statement.run(args)
+					statement.run(args)
+				},
 			}
 		}
 
-		Object.freeze(this.context.db)
+		Object.freeze(this.db)
 	}
 
-	private static validateType(type: Type, value: Value) {
+	// Static utility methods
+
+	private static validateType(type: ModelType, value: ModelValue) {
 		if (type === "boolean") {
 			assert(typeof value === "boolean", "invalid type: expected boolean")
 		} else if (type === "string") {
@@ -186,7 +147,7 @@ export class Spec {
 		}
 	}
 
-	private static getColumnType(field: Type): string {
+	private static getColumnType(field: ModelType): string {
 		switch (field) {
 			case "boolean":
 				return "INTEGER"
@@ -209,5 +170,19 @@ export class Spec {
 
 				return `TEXT NOT NULL REFERENCES ${tableName}(_id)`
 		}
+	}
+
+	// https://stackoverflow.com/questions/1007981/how-to-get-function-parameter-names-values-dynamically
+	private static parseHandlerParameters(handler: ActionHandler): string[] {
+		return handler
+			.toString()
+			.replace(/[/][/].*$/gm, "") // strip single-line comments
+			.replace(/\s+/g, "") // strip white space
+			.replace(/[/][*][^/*]*[*][/]/g, "") // strip multi-line comments
+			.split("){", 1)[0]
+			.replace(/^[^(]*[(]/, "") // extract the parameters
+			.replace(/=[^,]+/g, "") // strip any ES6 defaults
+			.split(",")
+			.filter(Boolean) // split & filter [""]
 	}
 }
