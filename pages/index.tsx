@@ -6,26 +6,61 @@ import { loader } from "utils/server/services"
 
 // const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
+type SpecProps = { actions: Record<string, { parameters: string[] }> }
+
+interface IndexProps {
+	specs: Record<string, SpecProps>
+}
+
+export const getServerSideProps: GetServerSideProps<IndexProps> = async (
+	context
+) => {
 	await loader.initialized
 
-	console.log("got loader", Object.keys(loader.specs))
+	console.log("got loader", loader.specs)
 
 	return {
-		props: { specs: Object.keys(loader.specs) }, // will be passed to the page component as props
+		props: {
+			specs: Object.fromEntries(
+				Object.entries(loader.specs).map(([hash, spec]) => [
+					hash,
+					{
+						actions: Object.fromEntries(
+							Object.entries(spec.actionParameters).map(
+								([name, parameters]) => [name, { parameters }]
+							)
+						),
+					},
+				])
+			),
+		},
 	}
 }
 
-export default function Index(props: { specs: string[] }) {
+export default function Index(props: IndexProps) {
 	// const [spec, setSpec] = useState<null | string>(null);
 	// const { data: info } = useSWR(`/info`, fetcher);
 	// const { data: actionsData } = useSWR(() => spec && `/actions/${spec}`, fetcher);
+
 	return (
 		<div className="max-w-4xl m-auto">
 			<h1 className="text-3xl font-bold underline">Hello world</h1>
 			<ul>
-				{props.specs.map((spec) => (
-					<li key={spec}>{spec}</li>
+				{Object.entries(props.specs).map(([hash, spec]) => (
+					<li key={hash}>
+						<h3>
+							<code>{hash}</code>
+						</h3>
+						<div>
+							{Object.entries(spec.actions).map(([name, { parameters }]) => (
+								<div>
+									<code>
+										- {name}({parameters.join(", ")})
+									</code>
+								</div>
+							))}
+						</div>
+					</li>
 				))}
 			</ul>
 		</div>

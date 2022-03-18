@@ -26,7 +26,7 @@ export class Spec {
 	private models: Record<string, Model> = {}
 	private routes: Record<string, sqlite3.Statement> = {}
 	private actions: Record<string, ActionHandler> = {}
-	private actionParameters: Record<string, string[]> = {}
+	public actionParameters: Record<string, string[]> = {}
 
 	private hypercore: Feed
 	private database: sqlite3.Database
