@@ -5,17 +5,14 @@
 		"dev": "next dev",
 		"build": "next build",
 		"start": "next start",
-		"lint": "next lint",
-		"clean": "node scripts/clean.js",
-		"init": "node scripts/init.js"
+		"lint": "next lint"
 	},
 	"dependencies": {
+		"@prisma/client": "^3.11.0",
 		"@types/better-sqlite3": "^7.5.0",
 		"axios": "^0.26.0",
 		"better-sqlite3": "^7.5.0",
-		"bs58": "^5.0.0",
 		"cbor": "^8.1.0",
-		"cors": "^2.8.5",
 		"dotenv": "^16.0.0",
 		"ethers": "^5.5.4",
 		"fp-ts": "^2.11.9",
@@ -24,11 +21,10 @@
 		"hypercore": "^9.12.0",
 		"io-ts": "^2.2.16",
 		"ipfs-http-client": "^56.0.1",
-		"knex": "^1.0.3",
 		"next": "^12.1.0",
+		"prisma": "^3.11.0",
 		"react": "^17.0.2",
 		"react-dom": "^17.0.2",
-		"ses": "^0.15.7",
 		"swr": "^1.2.2",
 		"web3": "^1.7.1"
 	},

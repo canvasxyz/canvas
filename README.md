@@ -6,26 +6,31 @@ in the application is a signed message from an Ethereum address.
 
 ## Quick start
 
-In a separate process, start an IPFS daemon
+```
+$ npm i
+```
+
+Create a `.env` file in the repo root with `DATABASE_URL` and `APP_DIRECTORY` environement variables.
+
+```
+DATABASE_URL=file:./db.sqlite
+APP_DIRECTORY=./apps
+```
+
+Initialize the database.
+
+```
+$ npx prisma generate
+$ npx prisma db push
+```
+
+In a separate process, start an IPFS daemon.
 
 ```
 $ ipfs daemon --offline
 ```
 
-The hub application stores specs in a `db` directory. Initialize the directory using the folder of example specs with
-
-```
-$ npm run init -- examples
-```
-
-If you change the specs, you can reset the `db` directory using
-
-```
-$ npm run clean
-$ npm run init -- examples
-```
-
-Run the dev server with
+Run the dev server.
 
 ```
 $ npm run dev

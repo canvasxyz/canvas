@@ -1,18 +1,11 @@
-export function assert(condition: any, errorMsg: string) {
-	if (!condition) {
-		throw new Error(errorMsg)
-	}
-}
+import assert from "assert"
 
 export function match(
 	value: string,
 	pattern: RegExp,
-	errorMsg: string
+	errorMsg?: string
 ): RegExpExecArray {
 	const match = pattern.exec(value)
-	if (match === null) {
-		throw new Error(errorMsg)
-	}
-
+	assert(match !== null, errorMsg)
 	return match
 }
