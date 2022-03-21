@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { prisma } from "utils/server/services"
-import { defaultSpecTemplate } from "utils/server/defaultSpecTemplate"
+import { getDefaultSpecTemplate } from "utils/server/defaultSpecTemplate"
 import { alphanumeric } from "utils/shared/regexps"
 
 import * as t from "io-ts"
@@ -14,8 +14,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 		return res.status(StatusCodes.METHOD_NOT_ALLOWED).end()
 	}
 
-	console.log("request body", req.body)
-
 	if (!postRequestBody.is(req.body)) {
 		return res.status(StatusCodes.BAD_REQUEST).end()
 	}
@@ -24,10 +22,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 		return res.status(StatusCodes.BAD_REQUEST).end()
 	}
 
-	console.log("creating new app", req.body)
 	const { slug } = await prisma.app.create({
 		select: { slug: true },
-		data: { ...req.body, draft_spec: defaultSpecTemplate },
+		data: { ...req.body, draft_spec: getDefaultSpecTemplate() },
 	})
 
 	res.status(StatusCodes.CREATED).setHeader("Location", `/app/${slug}`).end()

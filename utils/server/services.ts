@@ -3,6 +3,7 @@
 import { PrismaClient } from "@prisma/client"
 // import Database, * as sqlite3 from "better-sqlite3"
 import { Loader } from "utils/server/loader"
+import * as IpfsHttpClient from "ipfs-http-client"
 
 /**
  * This is a next.js hack to prevent new services from accumulating during hot reloading.
@@ -15,6 +16,7 @@ declare global {
 	var loader: Loader
 	// var db: sqlite3.Database
 	var prisma: PrismaClient
+	var ipfs: IpfsHttpClient.IPFSHTTPClient
 }
 
 function getLoader(): Loader {
@@ -46,7 +48,7 @@ export const loader = getLoader()
 function getPrismaClient() {
 	if (process.env.NODE_ENV === "production") {
 		return new PrismaClient()
-	} else if (global.prisma instanceof PrismaClient) {
+	} else if (global.prisma !== undefined) {
 		return global.prisma
 	} else {
 		global.prisma = new PrismaClient()
@@ -55,3 +57,16 @@ function getPrismaClient() {
 }
 
 export const prisma = getPrismaClient()
+
+function getIpfsClient() {
+	if (process.env.NODE_ENV === "production") {
+		return IpfsHttpClient.create()
+	} else if (global.ipfs !== undefined) {
+		return global.ipfs
+	} else {
+		global.ipfs = IpfsHttpClient.create()
+		return global.ipfs
+	}
+}
+
+export const ipfs = getIpfsClient()

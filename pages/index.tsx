@@ -51,12 +51,18 @@ export default function IndexPage({ apps }: IndexPageProps) {
 	return (
 		<div className="max-w-xl my-8 mx-auto">
 			<h1 className="text-3xl my-2">My Projects</h1>
-			<div className="my-2">
+			<div className="my-2 flex flex-col gap-2">
 				{apps.map(({ id, slug, last_version_number }) => (
 					<div key={id} className="border border-gray">
-						<h2 className="m-2">{slug}</h2>
+						<h2 className="m-2">
+							<a href={`/app/${slug}`}>{slug}</a>
+						</h2>
 						<div className="m-2">
-							<span>v{last_version_number}</span>
+							{last_version_number === null ? (
+								<span className="italic">No versions</span>
+							) : (
+								<span>v{last_version_number}</span>
+							)}
 						</div>
 					</div>
 				))}

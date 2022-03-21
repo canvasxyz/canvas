@@ -8,6 +8,12 @@
 		"lint": "next lint"
 	},
 	"dependencies": {
+		"@codemirror/basic-setup": "^0.19.1",
+		"@codemirror/commands": "^0.19.8",
+		"@codemirror/lang-javascript": "^0.19.7",
+		"@codemirror/language": "^0.19.8",
+		"@codemirror/state": "^0.19.9",
+		"@codemirror/view": "^0.19.47",
 		"@prisma/client": "^3.11.0",
 		"@types/better-sqlite3": "^7.5.0",
 		"axios": "^0.26.0",
