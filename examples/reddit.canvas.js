@@ -11,7 +11,7 @@ export const models = {
 		creator: "string",
 		createdAt: "datetime",
 	},
-	upvotes: {
+	threadVotes: {
 		threadId: "@threads",
 		creator: "string",
 		createdAt: "datetime",
@@ -24,19 +24,36 @@ export const models = {
 }
 
 export const routes = {
-	// 	"/latest":
-	// 		"SELECT * FROM threads ORDER BY createdAt DESC OFFSET :offset LIMIT 30",
-	// 	"/top": `
-	// SELECT threads.*, SUM(MIN(1, 1 / (julianday('now') - julianday(upvotes.created)))) as score, group_concat(upvotes.creator)
-	// FROM threads JOIN upvotes ON thread.id = upvotes.threadId
-	// WHERE votes.createdAt > NOW() - 90
-	// ORDER BY score OFFSET :offset LIMIT 30
-	// `,
-	// 	"/:id/comments": `SELECT comments.*, COUNT(commentUpvotes), group_concat(commentUpvotes.creator) as upvotes FROM comments
-	// JOIN commentUpvotes ON comments.id=commentUpvotes.commentId
-	// ORDER BY upvotes DESC
-	// OFFSET :offset
-	// LIMIT 30`,
+	'/latest': `SELECT threads.*, COUNT(comments.id)
+		FROM threads
+			JOIN comments ON comments.threadId = threads.id
+		GROUP BY threads.id
+		ORDER BY threads.createdAt DESC
+		LIMIT 30`,
+	'/top': `SELECT
+			threads.*,
+			SUM(
+				1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.createdAt)
+			) AS score,
+			group_concat(threadVotes.creator)
+		FROM threads
+			LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
+			WHERE threadVotes.createdAt > datetime('now', '-90 days')
+		GROUP BY threads.id
+		ORDER BY score DESC
+		LIMIT 30`,
+	'/threads/:threadId/comments': `SELECT
+		comments.*,
+		SUM(
+			1 / (cast(strftime('%s','now') as float) * 1000 - commentVotes.createdAt)
+		) AS score,
+		group_concat(commentVotes.creator)
+	FROM comments
+		LEFT JOIN commentVotes ON comments.id = commentVotes.commentId
+		WHERE comments.threadId = :threadId
+	GROUP BY comments.id
+	ORDER BY score DESC
+	LIMIT 30`
 }
 
 export const actions = {
@@ -56,18 +73,22 @@ export const actions = {
 			text,
 		})
 	},
-	upvote(threadId) {
+	voteThread(threadId, value) {
+		//if (value !== 1 || value !== -1) return false
 		this.db.upvotes.create({
 			creator: this.from,
 			createdAt: this.timestamp,
 			threadId,
+			//value,
 		})
 	},
-	upvoteComment(commendId) {
+	voteComment(commentId, value) {
+		//if (value !== 1 || value !== -1) return false
 		this.db.commentUpvotes.create({
 			creator: this.from,
 			createdAt: this.timestamp,
-			commendId,
+			commentId,
+			//value,
 		})
 	},
 }
