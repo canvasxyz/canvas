@@ -1,0 +1,13 @@
+.viewer {
+	:global {
+		.cm-scroller {
+			max-height: 720px;
+			max-width: 640px;
+		}
+
+		.cm-editor {
+			width: max-content;
+			height: max-content;
+		}
+	}
+}
