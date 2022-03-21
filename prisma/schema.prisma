@@ -17,8 +17,8 @@ model App {
   versions        AppVersion[] @relation(name: "app_versions")
   last_version_id Int?         @unique
   last_version    AppVersion?  @relation(name: "last_app_version", fields: [last_version_id], references: [id])
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @default(now()) @updatedAt
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @default(now()) @updatedAt
 }
 
 model AppVersion {
@@ -29,7 +29,7 @@ model AppVersion {
   version_number  Int
   multihash       String   @unique
   spec            String
-  createdAt       DateTime @default(now())
+  created_at      DateTime @default(now())
 
   @@unique([app_id, version_number])
 }

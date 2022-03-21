@@ -11,9 +11,9 @@ interface IndexPageProps {
 	apps: {
 		id: number
 		slug: string
-		createdAt: string
-		updatedAt: string
-		last_version_number: string | null
+		created_at: string
+		updated_at: string
+		last_version_number: number | null
 	}[]
 }
 
@@ -24,19 +24,19 @@ export const getServerSideProps: GetServerSideProps<IndexPageProps> = async (
 		select: {
 			id: true,
 			slug: true,
-			createdAt: true,
-			updatedAt: true,
+			created_at: true,
+			updated_at: true,
 			last_version: { select: { version_number: true } },
 		},
 	})
 
 	return {
 		props: {
-			apps: apps.map(({ id, slug, createdAt, updatedAt, last_version }) => ({
+			apps: apps.map(({ id, slug, created_at, updated_at, last_version }) => ({
 				id,
 				slug,
-				createdAt: createdAt.toISOString(),
-				updatedAt: updatedAt.toISOString(),
+				created_at: created_at.toISOString(),
+				updated_at: updated_at.toISOString(),
 				last_version_number: last_version && last_version.version_number,
 			})),
 		},
@@ -56,7 +56,7 @@ export default function IndexPage({ apps }: IndexPageProps) {
 					<div key={id} className="border border-gray">
 						<h2 className="m-2">{slug}</h2>
 						<div className="m-2">
-							<span>{last_version_number}</span>
+							<span>v{last_version_number}</span>
 						</div>
 					</div>
 				))}
