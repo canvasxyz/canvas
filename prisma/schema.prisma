@@ -17,30 +17,19 @@ model App {
   versions        AppVersion[] @relation(name: "app_versions")
   last_version_id Int?         @unique
   last_version    AppVersion?  @relation(name: "last_app_version", fields: [last_version_id], references: [id])
-  deployment      Deployment?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @default(now()) @updatedAt
 }
 
 model AppVersion {
-  id              Int         @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   app_id          Int
-  app             App         @relation(name: "app_versions", fields: [app_id], references: [id])
-  is_last_version App?        @relation(name: "last_app_version")
+  app             App      @relation(name: "app_versions", fields: [app_id], references: [id])
+  is_last_version App?     @relation(name: "last_app_version")
   version_number  String
-  multihash       String
+  multihash       String   @unique
   spec            String
-  deployment      Deployment?
-  createdAt       DateTime    @default(now())
+  createdAt       DateTime @default(now())
 
   @@unique([app_id, version_number])
-}
-
-model Deployment {
-  id             String     @id @default(uuid())
-  app_id         Int        @unique
-  app            App        @relation(fields: [app_id], references: [id])
-  app_version_id Int        @unique
-  app_version    AppVersion @relation(fields: [app_version_id], references: [id])
-  createdAt      DateTime   @default(now())
 }
