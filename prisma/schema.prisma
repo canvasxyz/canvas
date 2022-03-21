@@ -26,7 +26,7 @@ model AppVersion {
   app_id          Int
   app             App      @relation(name: "app_versions", fields: [app_id], references: [id])
   is_last_version App?     @relation(name: "last_app_version")
-  version_number  String
+  version_number  Int
   multihash       String   @unique
   spec            String
   createdAt       DateTime @default(now())
