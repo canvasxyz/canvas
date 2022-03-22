@@ -19,19 +19,6 @@ declare global {
 	var ipfs: IpfsHttpClient.IPFSHTTPClient
 }
 
-function getLoader(): Loader {
-	if (process.env.NODE_ENV === "production") {
-		return new Loader()
-	} else if (global.loader !== undefined) {
-		return global.loader
-	} else {
-		global.loader = new Loader()
-		return global.loader
-	}
-}
-
-export const loader = getLoader()
-
 // function getDB(): sqlite3.Database {
 // 	if (process.env.NODE_ENV === "production") {
 // 		return new Database(dataPath)
@@ -70,3 +57,16 @@ function getIpfsClient() {
 }
 
 export const ipfs = getIpfsClient()
+
+function getLoader(): Loader {
+	if (process.env.NODE_ENV === "production") {
+		return new Loader()
+	} else if (global.loader !== undefined) {
+		return global.loader
+	} else {
+		global.loader = new Loader()
+		return global.loader
+	}
+}
+
+export const loader = getLoader()

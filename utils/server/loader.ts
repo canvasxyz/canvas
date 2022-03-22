@@ -1,5 +1,6 @@
 import path from "node:path"
 import { Worker, MessageChannel, MessagePort } from "node:worker_threads"
+import { prisma } from "utils/server/services"
 
 /**
  * A Loader holds and manages the worker threads running apps.
@@ -13,6 +14,22 @@ export class Loader {
 
 	constructor() {
 		console.log("initializing loader")
+		prisma.app
+			.findMany({
+				select: {
+					id: true,
+					last_version: { select: { version_number: true, multihash: true } },
+				},
+			})
+			.then((apps) => {
+				return Promise.all(
+					apps.map(({ last_version }) => {
+						if (!last_version) return
+						console.log(last_version.multihash)
+						return this.startApp(last_version.multihash)
+					})
+				)
+			})
 	}
 
 	public startApp(multihash: string): Promise<void> {

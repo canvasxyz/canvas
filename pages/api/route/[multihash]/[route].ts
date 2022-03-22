@@ -10,5 +10,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
 	console.log("not implememented", loader)
 
+	if (loader.apps[req.query.multihash] === undefined) {
+		return res
+			.status(StatusCodes.BAD_REQUEST)
+			.json({ error: "App not initialized" })
+	}
+
 	res.status(StatusCodes.OK).end()
 }

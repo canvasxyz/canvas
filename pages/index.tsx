@@ -26,7 +26,7 @@ export const getServerSideProps: GetServerSideProps<IndexPageProps> = async (
 			slug: true,
 			created_at: true,
 			updated_at: true,
-			last_version: { select: { version_number: true } },
+			last_version: { select: { version_number: true, multihash: true } },
 		},
 	})
 
@@ -38,21 +38,18 @@ export const getServerSideProps: GetServerSideProps<IndexPageProps> = async (
 				created_at: created_at.toISOString(),
 				updated_at: updated_at.toISOString(),
 				last_version_number: last_version && last_version.version_number,
+				last_multihash: last_version && last_version.multihash,
 			})),
 		},
 	}
 }
 
 export default function IndexPage({ apps }: IndexPageProps) {
-	// const [spec, setSpec] = useState<null | string>(null);
-	// const { data: info } = useSWR(`/info`, fetcher);
-	// const { data: actionsData } = useSWR(() => spec && `/actions/${spec}`, fetcher);
-
 	return (
 		<div className="max-w-xl my-8 mx-auto">
 			<h1 className="text-3xl my-2">My Projects</h1>
 			<div className="my-2 flex flex-col gap-2">
-				{apps.map(({ id, slug, last_version_number }) => (
+				{apps.map(({ id, slug, last_version_number, last_multihash }) => (
 					<div key={id} className="border border-gray">
 						<h2 className="m-2">
 							<a href={`/app/${slug}`}>{slug}</a>
@@ -61,7 +58,9 @@ export default function IndexPage({ apps }: IndexPageProps) {
 							{last_version_number === null ? (
 								<span className="italic">No versions</span>
 							) : (
-								<span>v{last_version_number}</span>
+								<span>
+									v{last_version_number}: {last_multihash}
+								</span>
 							)}
 						</div>
 					</div>
