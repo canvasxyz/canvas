@@ -15,6 +15,7 @@ Create a `.env` file in the repo root with `DATABASE_URL` and `APP_DIRECTORY` en
 ```
 DATABASE_URL=file:./db.sqlite
 APP_DIRECTORY=./apps
+DATA_DIRECOTRY=./db
 ```
 
 Initialize the database.

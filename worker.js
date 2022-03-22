@@ -60,7 +60,12 @@ class App {
 	}
 
 	async initialize() {
-		const appPath = path.resolve(dataDirectory, multihash)
+		const createDatadir = !fs.existsSync(dataDirectory)
+		if (createDatadir) {
+			fs.mkdirSync(dataDirectory)
+		}
+
+		const appPath = path.resolve(dataDirectory, this.multihash)
 		const specPath = path.resolve(appPath, "spec.js")
 
 		const create = !fs.existsSync(appPath)
