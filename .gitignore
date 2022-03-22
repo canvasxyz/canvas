@@ -3,6 +3,5 @@
 node_modules/
 
 # Databases
-db/*.hypercore
-db/*.sqlite
+db/
 prisma/db.sqlite
