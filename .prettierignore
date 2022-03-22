@@ -1,0 +1,10 @@
+# Config files
+*.json
+.env
+.next/
+node_modules/
+
+# Databases
+db/*
+db/*.sqlite
+prisma/*
