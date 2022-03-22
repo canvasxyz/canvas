@@ -24,13 +24,13 @@ export const models = {
 }
 
 export const routes = {
-	'/latest': `SELECT threads.*, COUNT(comments.id)
+	"/latest": `SELECT threads.*, COUNT(comments.id)
 		FROM threads
 			JOIN comments ON comments.threadId = threads.id
 		GROUP BY threads.id
 		ORDER BY threads.createdAt DESC
 		LIMIT 30`,
-	'/top': `SELECT
+	"/top": `SELECT
 			threads.*,
 			SUM(
 				1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.createdAt)
@@ -42,7 +42,7 @@ export const routes = {
 		GROUP BY threads.id
 		ORDER BY score DESC
 		LIMIT 30`,
-	'/threads/:threadId/comments': `SELECT
+	"/threads/:threadId/comments": `SELECT
 		comments.*,
 		SUM(
 			1 / (cast(strftime('%s','now') as float) * 1000 - commentVotes.createdAt)
@@ -53,7 +53,7 @@ export const routes = {
 		WHERE comments.threadId = :threadId
 	GROUP BY comments.id
 	ORDER BY score DESC
-	LIMIT 30`
+	LIMIT 30`,
 }
 
 export const actions = {
