@@ -89,7 +89,7 @@ const file = fs.readFile(filename, 'utf8', async (err, spec) => {
   const digestSize = Buffer.from(digest.byteLength.toString(16), 'hex'); // 20
   const combined = Buffer.concat([hashFunction, digestSize, digest]);
   const multihash = bs58.encode(combined);
-  console.log(`Serving ${filename} at /apps/${multihash}`);
+  console.log(`Serving ${filename} at ${multihash}`);
 
   // Serve api routes for application hub
   app.get('/info', (req, res, next) => {
