@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "dev-watch": "chokidar 'examples/*.js' 'utils/**/*.ts' worker.js -i '**/.#*' -i '**/*~' -c \"next dev\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -20,6 +21,7 @@
     "axios": "^0.26.0",
     "better-sqlite3": "^7.5.0",
     "cbor": "^8.1.0",
+    "chokidar-cli": "^3.0.0",
     "dotenv": "^16.0.0",
     "ethers": "^5.5.4",
     "fp-ts": "^2.11.9",
