@@ -38,6 +38,6 @@ export function getColumnType(type: ModelType): string {
 			return "TEXT"
 		default:
 			const [_, tableName] = match(type, /^@([a-z0-9]+)$/, "invalid field type")
-			return `TEXT NOT NULL REFERENCES ${tableName}(_id)`
+			return `TEXT NOT NULL REFERENCES ${tableName}(id)`
 	}
 }
