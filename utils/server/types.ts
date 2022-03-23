@@ -37,10 +37,10 @@ export type ActionArgument =
 
 export type Action = {
 	from: string
+	name: string
+	args: ActionArgument[]
 	blockhash: string
 	timestamp: Date
-	action: string
-	args: ActionArgument[]
 }
 
 export type ContextModel = {

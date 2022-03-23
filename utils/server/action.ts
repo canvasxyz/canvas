@@ -1,5 +1,5 @@
 import cbor from "cbor"
-import { Action } from "./types"
+import type { Action } from "./types"
 
 import * as t from "io-ts"
 
@@ -32,7 +32,7 @@ const action: t.Type<Action> = t.type({
 	from: t.string,
 	blockhash: t.string,
 	timestamp: date,
-	action: t.string,
+	name: t.string,
 	args: t.array(actionArgument),
 })
 
