@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
-import { prisma, ipfs } from "utils/server/services"
+import { prisma, ipfs, loader } from "utils/server/services"
 
 import * as t from "io-ts"
 
@@ -25,26 +25,43 @@ async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 
 	const app = await prisma.app.findUnique({
 		where: { slug },
-		select: { id: true, last_version: { select: { version_number: true } } },
+		select: {
+			id: true,
+			last_version: { select: { version_number: true, multihash: true } },
+		},
 	})
 
 	if (app === null) {
 		return res.status(StatusCodes.NOT_FOUND).end()
 	}
 
-	const version_number =
-		app.last_version === null ? 0 : app.last_version.version_number + 1
+	const last_multihash = app.last_version && app.last_version.multihash
 
-	// In order to update the last_version pointer in the same transaction we
-	// phrase this as an update to prisma.app that happens to create an app_version
-	await prisma.app.update({
-		where: { id: app.id },
+	const last_version_number =
+		app.last_version && app.last_version.version_number
+
+	const version_number =
+		last_version_number === null ? 0 : last_version_number + 1
+
+	await prisma.appVersion.create({
 		data: {
-			last_version: {
-				create: { app_id: app.id, spec, version_number, multihash },
-			},
+			app_id: app.id,
+			spec,
+			version_number,
+			multihash,
+			is_last_version: { connect: { id: app.id } },
 		},
 	})
+
+	// Stop the previous version, if it exists
+	if (last_multihash !== null) {
+		if (last_multihash in loader.apps) {
+			await loader.stopApp(last_multihash)
+		}
+	}
+
+	// Start the new app verion!!
+	await loader.startApp(multihash)
 
 	res
 		.status(StatusCodes.CREATED)
