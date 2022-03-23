@@ -69,6 +69,9 @@ export class Loader {
 	 * The return value here will be passed in the initial message to worker.js.
 	 */
 	private async initializeAppDirectory(multihash: string) {
+		if (!fs.existsSync(process.env.APP_DIRECTORY)) {
+			fs.mkdirSync(process.env.APP_DIRECTORY)
+		}
 		const appPath = path.resolve(process.env.APP_DIRECTORY!, multihash)
 		console.log("initializing app directory", appPath, fs.existsSync(appPath))
 		const specPath = path.resolve(appPath, "spec.js")
@@ -143,19 +146,21 @@ export class Loader {
 				console.log("preparing route statements...")
 				const routeStatements: Record<string, sqlite.Statement> = {}
 				for (const [name, route] of Object.entries<string>(routes)) {
-					console.log(name, route)
 					routeStatements[name] = database.prepare(route)
 				}
 
 				console.log("preparing model statements...")
 				const modelStatements: Record<string, sqlite.Statement> = {}
-				for (const [name, model] of models) {
+				for (const [name, model] of Object.entries(models)) {
 					// This assumes that the iteration order here with Object.keys(model)
 					// is the exact same as we had previously in Object.entries(models).
 					// This is true and guaranteed but not great practice.
-					const params = Object.keys(model).map((field) => `:${field}`)
+					const fields = Object.keys(model).join(", ")
+					const params = Object.keys(model)
+						.map((f) => `:${f}`)
+						.join(", ")
 					modelStatements[name] = database.prepare(
-						`INSERT INTO ${name} VALUES (:id, ${params.join(", ")})`
+						`INSERT INTO ${name} (id, ${fields}) VALUES (:id, ${params})`
 					)
 				}
 
