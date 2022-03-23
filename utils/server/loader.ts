@@ -69,7 +69,7 @@ export class Loader {
 	 * The return value here will be passed in the initial message to worker.js.
 	 */
 	private async initializeAppDirectory(multihash: string) {
-		if (!fs.existsSync(process.env.APP_DIRECTORY)) {
+		if (process.env.APP_DIRECTORY && !fs.existsSync(process.env.APP_DIRECTORY)) {
 			fs.mkdirSync(process.env.APP_DIRECTORY)
 		}
 		const appPath = path.resolve(process.env.APP_DIRECTORY!, multihash)
@@ -151,7 +151,7 @@ export class Loader {
 
 				console.log("preparing model statements...")
 				const modelStatements: Record<string, sqlite.Statement> = {}
-				for (const [name, model] of Object.entries(models)) {
+				for (const [name, model] of Object.entries<Model>(models)) {
 					// This assumes that the iteration order here with Object.keys(model)
 					// is the exact same as we had previously in Object.entries(models).
 					// This is true and guaranteed but not great practice.

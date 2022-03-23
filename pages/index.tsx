@@ -14,6 +14,7 @@ interface IndexPageProps {
 		created_at: string
 		updated_at: string
 		last_version_number: number | null
+		last_multihash: string | null
 	}[]
 }
 

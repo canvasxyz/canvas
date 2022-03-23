@@ -10,6 +10,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
 	console.log("not implememented", loader)
 
+	if (typeof req.query.multihash !== "string") {
+		return res.status(StatusCodes.BAD_REQUEST).end()
+	}
+
 	if (loader.apps[req.query.multihash] === undefined) {
 		return res
 			.status(StatusCodes.BAD_REQUEST)
