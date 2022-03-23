@@ -60,7 +60,7 @@ parentPort.once("message", async ({ multihash, actionPort, modelPort }) => {
 			console.log("got action!", id, name, args, context)
 			const db = makeDB(id)
 			try {
-				await actions[name].apply({ db, ...context })
+				await actions[name].apply({ db, ...context }, args)
 				console.log("success! posting result to main")
 				actionPort.postMessage({ id, status: "success" })
 			} catch (err) {
