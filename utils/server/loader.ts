@@ -31,7 +31,7 @@ export class Loader {
 	public readonly apps: Record<string, App> = {}
 
 	// TODO: actually generate IDs for real
-	private actionId = 0
+	private actionId = new Date().valueOf()
 	private actionResponsePool: Map<
 		number,
 		{ resolve: () => void; reject: (err: Error) => void }
