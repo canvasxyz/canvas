@@ -3,5 +3,8 @@
 node_modules/
 
 # Databases
-db/
+apps/
 prisma/db.sqlite
+
+# Previous db
+db/
