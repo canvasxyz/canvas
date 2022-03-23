@@ -10,7 +10,7 @@ import { loader } from "utils/server/services"
 // 	signature: t.string,
 // 	data: t.type({
 // 		app: t.string,
-// 		action: t.string,
+// 		name: t.string,
 // 		blockhash: t.union([t.string, t.null]), // TODO: make non-nullable
 // 		timestamp: t.number,
 // 		args: t.record(t.string, t.union([t.null, t.boolean, t.string, t.number])),
@@ -22,7 +22,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 		return res.status(StatusCodes.METHOD_NOT_ALLOWED).end()
 	}
 
-	console.log("not implememented", loader)
+	if (typeof req.query.multihash !== "string") {
+		return res.status(StatusCodes.BAD_REQUEST).end()
+	}
 
-	res.status(200).end()
+	await loader
+		.applyAction(req.query.multihash, req.body)
+		.then(() => res.status(StatusCodes.OK))
+		.catch((err) =>
+			res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
+		)
 }
