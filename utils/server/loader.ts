@@ -43,22 +43,22 @@ export class Loader {
 			throw new Error("Missing APP_DIRECTORY environment variable from .env")
 		}
 
-		prisma.app
-			.findMany({
-				select: {
-					id: true,
-					last_version: { select: { version_number: true, multihash: true } },
-				},
-			})
-			.then((apps) => {
-				return Promise.all(
-					apps.map(({ last_version }) => {
-						if (!last_version) return
-						console.log(last_version.multihash)
-						return this.startApp(last_version.multihash)
-					})
-				)
-			})
+		this.startAllApps()
+	}
+
+	private async startAllApps() {
+		const apps = await prisma.app.findMany({
+			select: {
+				id: true,
+				last_version: { select: { version_number: true, multihash: true } },
+			},
+		})
+		for (const { id, last_version } of apps) {
+			if (last_version !== null) {
+				console.log("starting app", id, "with last version", last_version)
+				await this.startApp(last_version.multihash)
+			}
+		}
 	}
 
 	/**
@@ -68,21 +68,19 @@ export class Loader {
 	 * This returns false if the app already exists, and true otherwise.
 	 * The return value here will be passed in the initial message to worker.js.
 	 */
-	private async initializeAppDirectory(multihash: string): Promise<boolean> {
+	private async initializeAppDirectory(multihash: string) {
 		const appPath = path.resolve(process.env.APP_DIRECTORY!, multihash)
+		console.log("initializing app directory", appPath, fs.existsSync(appPath))
 		const specPath = path.resolve(appPath, "spec.js")
-		if (fs.existsSync(appPath)) {
-			return false
-		} else {
+		if (!fs.existsSync(appPath)) {
 			fs.mkdirSync(appPath)
 			await fs.promises.writeFile(specPath, ipfs.cat(multihash))
-
-			return true
 		}
 	}
 
 	public async startApp(multihash: string): Promise<void> {
-		const create = await this.initializeAppDirectory(multihash)
+		await this.initializeAppDirectory(multihash)
+		console.log("initialized app directory")
 
 		const databasePath = path.resolve(
 			process.env.APP_DIRECTORY!,
@@ -109,6 +107,12 @@ export class Loader {
 			// The order of these next two blocks (attaching the message handler
 			// and posting the initial message) is logically important.
 			worker.once("message", ({ routes, models, actionParameters }) => {
+				console.log(
+					"received spec exports from worker",
+					routes,
+					models,
+					actionParameters
+				)
 				// Now that we have the parsed exports of the spec file, we use them
 				// to initialize the database schema (if necessary) and prepare statements
 				// for route queries and model creation.
@@ -117,26 +121,33 @@ export class Loader {
 
 				// It's a little awkward to do it like this but it's only here that we have
 				// all the necessary data in the same place.
-				if (create) {
-					const tables: string[] = []
 
-					for (const [name, model] of Object.entries<Model>(models)) {
-						const columns = ["_id TEXT PRIMARY KEY NOT NULL"]
-						for (const field of Object.keys(model)) {
-							columns.push(`${field} ${getColumnType(model[field])}`)
-						}
+				console.log("initializing database schema...")
+				const tables: string[] = []
 
-						tables.push(`CREATE TABLE ${name} (${columns.join(", ")});`)
+				for (const [name, model] of Object.entries<Model>(models)) {
+					const columns = ["id TEXT PRIMARY KEY NOT NULL"]
+					for (const field of Object.keys(model)) {
+						columns.push(`${field} ${getColumnType(model[field])}`)
 					}
 
-					database.exec(tables.join("\n"))
+					console.log("creating table", name, "with columns", columns)
+					tables.push(
+						`CREATE TABLE IF NOT EXISTS ${name} (${columns.join(", ")});`
+					)
 				}
 
+				console.log("creating tables", tables)
+				database.exec(tables.join("\n"))
+
+				console.log("preparing route statements...")
 				const routeStatements: Record<string, sqlite.Statement> = {}
-				for (const [name, route] of routes) {
+				for (const [name, route] of Object.entries<string>(routes)) {
+					console.log(name, route)
 					routeStatements[name] = database.prepare(route)
 				}
 
+				console.log("preparing model statements...")
 				const modelStatements: Record<string, sqlite.Statement> = {}
 				for (const [name, model] of models) {
 					// This assumes that the iteration order here with Object.keys(model)
@@ -144,19 +155,22 @@ export class Loader {
 					// This is true and guaranteed but not great practice.
 					const params = Object.keys(model).map((field) => `:${field}`)
 					modelStatements[name] = database.prepare(
-						`INSERT INTO ${name} VALUES (:_id, ${params.join(", ")})`
+						`INSERT INTO ${name} VALUES (:id, ${params.join(", ")})`
 					)
 				}
 
 				modelChannel.port1.on("message", ({ id, name, params }) => {
 					assert(name in modelStatements)
+					console.log("inserting into models!", name, params)
 					// TODO: validate params
-					modelStatements[name].run({ _id: id, ...params })
+					modelStatements[name].run({ id, ...params })
 				})
 
 				actionChannel.port1.on("message", ({ id, status, message }) => {
+					console.log("received action response", id, status, message)
 					assert(this.actionResponsePool.has(id))
 					const { resolve, reject } = this.actionResponsePool.get(id)!
+					this.actionResponsePool.delete(id)
 					if (status === "success") {
 						resolve()
 					} else {
@@ -177,6 +191,7 @@ export class Loader {
 				})
 			})
 
+			console.log("posting initial message to worker", multihash)
 			worker.postMessage(
 				{
 					multihash,
@@ -194,6 +209,7 @@ export class Loader {
 	}
 
 	public applyAction(multihash: string, action: Action): Promise<void> {
+		console.log("apply action", multihash, action)
 		assert(multihash in this.apps)
 		return new Promise((resolve, reject) => {
 			const id = this.actionId++

@@ -34,7 +34,7 @@ parentPort.once("message", async ({ multihash, actionPort, modelPort }) => {
 	assert(modelPort instanceof MessagePort)
 
 	const appPath = path.resolve(appDirectory, multihash)
-	const specPath = path.resolve(appPath, "spec.mjs")
+	const specPath = path.resolve(appPath, "spec.js")
 	const { actions, models, routes } = await import(specPath)
 
 	// This is a little extra factory step so that the
