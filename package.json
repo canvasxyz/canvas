@@ -1,7 +1,6 @@
 {
   "name": "canvas",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "next dev",
     "dev-watch": "chokidar 'examples/*.js' 'utils/**/*.ts' worker.js -i '**/.#*' -i '**/*~' -c \"next dev\"",
