@@ -17,7 +17,7 @@ export const models = {
 		createdAt: "datetime",
 		value: "integer",
 	},
-	commentUpvotes: {
+	commentVotes: {
 		commentId: "@comments",
 		creator: "string",
 		createdAt: "datetime",
@@ -107,7 +107,7 @@ export const actions = {
 	},
 	voteComment(commentId, value) {
 		if (value !== 1 || value !== -1) return false
-		this.db.commentUpvotes.create({
+		this.db.commentVotes.create({
 			creator: this.from,
 			createdAt: this.timestamp,
 			commentId,
