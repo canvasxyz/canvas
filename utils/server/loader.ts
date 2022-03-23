@@ -69,7 +69,10 @@ export class Loader {
 	 * The return value here will be passed in the initial message to worker.js.
 	 */
 	private async initializeAppDirectory(multihash: string) {
-		if (process.env.APP_DIRECTORY && !fs.existsSync(process.env.APP_DIRECTORY)) {
+		if (
+			process.env.APP_DIRECTORY &&
+			!fs.existsSync(process.env.APP_DIRECTORY)
+		) {
 			fs.mkdirSync(process.env.APP_DIRECTORY)
 		}
 		const appPath = path.resolve(process.env.APP_DIRECTORY!, multihash)
@@ -90,6 +93,7 @@ export class Loader {
 			multihash,
 			"db.sqlite"
 		)
+
 		const database = new Database(databasePath)
 
 		const feed = await new Promise<Feed>((resolve, reject) => {
@@ -146,6 +150,7 @@ export class Loader {
 				console.log("preparing route statements...")
 				const routeStatements: Record<string, sqlite.Statement> = {}
 				for (const [name, route] of Object.entries<string>(routes)) {
+					console.log("route query", name, route)
 					routeStatements[name] = database.prepare(route)
 				}
 
@@ -164,14 +169,14 @@ export class Loader {
 					)
 				}
 
-				modelChannel.port1.on("message", ({ id, name, params }) => {
+				modelChannel.port2.on("message", ({ id, name, params }) => {
 					assert(name in modelStatements)
 					console.log("inserting into models!", name, params)
 					// TODO: validate params
 					modelStatements[name].run({ id, ...params })
 				})
 
-				actionChannel.port1.on("message", ({ id, status, message }) => {
+				actionChannel.port2.on("message", ({ id, status, message }) => {
 					console.log("received action response", id, status, message)
 					assert(this.actionResponsePool.has(id))
 					const { resolve, reject } = this.actionResponsePool.get(id)!
