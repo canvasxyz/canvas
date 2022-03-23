@@ -7,7 +7,8 @@ in the application is a signed message from an Ethereum address.
 ## Quick start
 
 ```
-$ npm i
+npm i
+npm install -g next
 ```
 
 Create a `.env` file in the repo root with `DATABASE_URL` and `APP_DIRECTORY` environement variables.
@@ -20,18 +21,18 @@ APP_DIRECTORY=./apps
 Initialize the database.
 
 ```
-$ npx prisma generate
-$ npx prisma db push
+npx prisma generate
+npx prisma db push
 ```
 
 In a separate process, start an IPFS daemon.
 
 ```
-$ ipfs daemon --offline
+ipfs daemon --offline
 ```
 
 Run the dev server.
 
 ```
-$ npm run dev
+npm run dev
 ```
