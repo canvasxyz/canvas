@@ -47,7 +47,7 @@ export const getServerSideProps: GetServerSideProps<IndexPageProps> = async (
 
 export default function IndexPage({ apps }: IndexPageProps) {
 	return (
-		<div className="max-w-xl my-8 mx-auto">
+		<div className="">
 			<h1 className="text-3xl my-2">My Projects</h1>
 			<div className="my-2 flex flex-col gap-2">
 				{apps.map(({ id, slug, last_version_number, last_multihash }) => (

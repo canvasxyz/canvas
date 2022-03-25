@@ -34,7 +34,7 @@ export default function NewPage({}: NewPageProps) {
 	const disabled = loading || !alphanumeric.test(slug)
 
 	return (
-		<div className="max-w-xl my-8 mx-auto">
+		<div className="">
 			<h1 className="text-3xl my-2">New Project</h1>
 			<div className="border rounded bg-white px-2">
 				<div className="my-2 flex gap-2">

@@ -88,24 +88,51 @@ export const getServerSideProps: GetServerSideProps<
 
 export default function AppPage({ app }: AppPageProps) {
 	return (
-		<div className="max-w-5xl my-8 mx-auto">
-			<h1 className="text-3xl my-2">/app/{app.slug}</h1>
+		<div className="flex">
+			<div className="flex-1 pr-6">
+				<div className="font-semibold mb-3">Spec</div>
+				{app.version_number === null ? (
+					<Editor key="editor" slug={app.slug} initialValue={app.spec} />
+				) : (
+					<Viewer value={app.spec} />
+				)}
 
-			{app.version_number === null ? (
-				<Editor key="editor" slug={app.slug} initialValue={app.spec} />
-			) : (
-				<Viewer value={app.spec} />
-			)}
-
-			<ul>
-				{app.versions.map(({ version_number, created_at }) => (
-					<li key={version_number}>
-						<a href={`?version=v${version_number}`}>
-							v{version_number} published on {created_at}
-						</a>
-					</li>
-				))}
-			</ul>
+				<ul>
+					{app.versions.map(({ version_number, created_at }) => (
+						<li key={version_number}>
+							<a href={`?version=v${version_number}`}>
+								v{version_number} published on {created_at}
+							</a>
+						</li>
+					))}
+				</ul>
+			</div>
+			<div className="flex-1">
+				<div className="font-semibold mb-3">Actions</div>
+				<div className="">
+					<table className="table-auto text-left text-sm leading-snug w-full">
+						<thead className="border-b border-gray-300">
+							<tr>
+								<th className="pb-1.5">Col 1</th>
+								<th className="pb-1.5">Col 2</th>
+								<th className="pb-1.5">Col 3</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td className="pt-1.5">e...</td>
+								<td className="pt-1.5">0x100...</td>
+								<td className="pt-1.5">defgh...</td>
+							</tr>
+							<tr>
+								<td className="pt-1.5">abcde...</td>
+								<td className="pt-1.5">0x100...</td>
+								<td className="pt-1.5">defgh...</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
 		</div>
 	)
 }
