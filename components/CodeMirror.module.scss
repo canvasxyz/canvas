@@ -1,0 +1,22 @@
+.editor {
+	:global {
+		.cm-scroller {
+			max-height: calc(100vh - 14em);
+			max-width: 640px;
+		}
+
+		.cm-editor {
+			border: 1px solid #ddd;
+			border-radius: 6px;
+			overflow: hidden;
+			outline: none !important;
+		}
+
+		.cm-gutters,
+		.cm-content {
+			font-family: Menlo, Andale Mono, monospace;
+			font-size: 0.8rem;
+			line-height: 1.2rem !important;
+		}
+	}
+}

@@ -11,7 +11,7 @@ import { indentUnit } from "@codemirror/language"
 import { javascriptLanguage } from "@codemirror/lang-javascript"
 import { useCodeMirror } from "utils/client/codemirror"
 
-import styles from "./SpecEditor.module.scss"
+import styles from "./CodeMirror.module.scss"
 import { useDebouncedCallback } from "use-debounce"
 import { getReasonPhrase, StatusCodes } from "http-status-codes"
 import { useRouter } from "next/router"

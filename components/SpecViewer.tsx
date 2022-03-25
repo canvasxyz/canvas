@@ -7,7 +7,7 @@ import { EditorView } from "@codemirror/view"
 import { javascriptLanguage } from "@codemirror/lang-javascript"
 import { useCodeMirror } from "utils/client/codemirror"
 
-import styles from "./SpecViewer.module.scss"
+import styles from "./CodeMirror.module.scss"
 
 const extensions = [
 	basicSetup,
@@ -23,11 +23,10 @@ export const Viewer = dynamic(
 	async () =>
 		function ({ value }: ViewerProps) {
 			const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>(
-				{ doc: value, extensions },
-				true
+				{ doc: value, extensions }
 			)
 
-			return <div className={styles.viewer} ref={element}></div>
+			return <div className={styles.editor} ref={element}></div>
 		},
 	{ ssr: false }
 )
