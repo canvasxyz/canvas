@@ -6,20 +6,9 @@ import {
 	useState,
 } from "react"
 
-import {
-	EditorState,
-	Transaction,
-	Extension,
-	Text,
-	EditorStateConfig,
-} from "@codemirror/state"
+import { EditorState, Transaction, EditorStateConfig } from "@codemirror/state"
 
 import { EditorView } from "@codemirror/view"
-
-export interface CodeMirrorOptions {
-	doc?: string | Text
-	extensions?: Extension
-}
 
 export function useCodeMirror<T extends Element>(
 	config?: EditorStateConfig
