@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useCallback, useState } from "react"
 
 import type { GetServerSideProps } from "next"
 
@@ -76,6 +76,7 @@ export const getServerSideProps: GetServerSideProps<AppPageProps, AppPageParams>
 
 export default function AppPage({ version_number, app }: AppPageProps) {
 	const [edited, setEdited] = useState(false)
+	const onEdited = useCallback(() => setEdited(true), [])
 
 	// We have already checked that the version number exists in app.versions
 	// on the server side so it's safe to use the assert here
@@ -87,7 +88,7 @@ export default function AppPage({ version_number, app }: AppPageProps) {
 			<div className="w-60 pr-6">
 				<Sidebar version_number={version_number} app={app} edited={edited} />
 			</div>
-			{version === null ? <Editor key="editor" app={app} onEdited={() => setEdited(true)} /> : <Viewer {...version} />}
+			{version === null ? <Editor key="editor" app={app} onEdited={onEdited} /> : <Viewer {...version} />}
 			<div className="w-96 pl-6">
 				<div className="font-semibold mb-3">Actions</div>
 				<Actions app={app} />
