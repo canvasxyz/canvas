@@ -117,22 +117,20 @@ export default function AppPage({ app }: AppPageProps) {
 			<div className="w-60 pr-6">
 				<Sidebar app={app} />
 			</div>
-			<div className="flex-0 pr-6">
-				{app.version_number === null ? (
-					<Editor
-						key="editor"
-						slug={app.slug}
-						initialValue={app.spec}
-						latestVersion={latestVersion}
-						matchesPreviousVersion={matchesPreviousVersion}
-						onSaved={(draft) => saveLatestEdit(draft)}
-						onEdited={(draft) => saveLatestEdit(draft)}
-					/>
-				) : (
-					<Viewer value={app.spec} version={app.version_number} />
-				)}
-			</div>
-			<div className="w-96">
+			{app.version_number === null ? (
+				<Editor
+					key="editor"
+					slug={app.slug}
+					initialValue={app.spec}
+					latestVersion={latestVersion}
+					matchesPreviousVersion={matchesPreviousVersion}
+					onSaved={(draft) => saveLatestEdit(draft)}
+					onEdited={(draft) => saveLatestEdit(draft)}
+				/>
+			) : (
+				<Viewer value={app.spec} version={app.version_number} />
+			)}
+			<div className="w-96 pl-6">
 				<div className="font-semibold mb-3">Actions</div>
 				<Actions app={app} />
 			</div>
