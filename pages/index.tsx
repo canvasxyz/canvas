@@ -18,9 +18,7 @@ interface IndexPageProps {
 	}[]
 }
 
-export const getServerSideProps: GetServerSideProps<IndexPageProps> = async (
-	context
-) => {
+export const getServerSideProps: GetServerSideProps<IndexPageProps> = async (context) => {
 	const apps = await prisma.app.findMany({
 		select: {
 			id: true,
@@ -47,29 +45,36 @@ export const getServerSideProps: GetServerSideProps<IndexPageProps> = async (
 
 export default function IndexPage({ apps }: IndexPageProps) {
 	return (
-		<div className="">
-			<h1 className="text-3xl my-2">My Projects</h1>
-			<div className="my-2 flex flex-col gap-2">
+		<div className="w-96">
+			<h1 className="font-semibold mt-2 mb-4">My Projects</h1>
+			<div className="my-2">
 				{apps.map(({ id, slug, last_version_number, last_multihash }) => (
-					<div key={id} className="border border-gray">
-						<h2 className="m-2">
-							<a href={`/app/${slug}`}>{slug}</a>
-						</h2>
-						<div className="m-2">
+					<a
+						href={`/app/${slug}`}
+						key={id}
+						className="block px-4 py-2.5 mb-2 border border-gray-200 hover:border-gray-300 rounded bg-white shadow-sm"
+					>
+						<div className="mb-0.5 text-lg font-semibold">{slug}</div>
+						<div className="text-sm text-gray-500 mb-1">
 							{last_version_number === null ? (
-								<span className="italic">No versions</span>
+								<div className="leading-tight">
+									<div className="inline-block rounded px-1.5 py-0.5 mr-2 text-xs bg-red-500 text-white">Stopped</div>
+									<span>No versions</span>
+								</div>
 							) : (
-								<span>
-									v{last_version_number}: {last_multihash}
-								</span>
+								<div className="leading-tight">
+									<div className="inline-block rounded px-1.5 py-0.5 mr-2 text-xs bg-green-600 text-white">Running</div>
+									v{last_version_number}: {last_multihash.slice(0, 6)}
+									&hellip;
+								</div>
 							)}
 						</div>
-					</div>
+					</a>
 				))}
 			</div>
 
 			<Link href="/new">
-				<a className="block my-2 p-2 rounded bg-blue-600 text-center text-white">
+				<a className="block mt-4 p-2 rounded bg-blue-500 hover:bg-blue-500 font-semibold text-sm text-center text-white">
 					New project
 				</a>
 			</Link>

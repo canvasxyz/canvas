@@ -37,11 +37,9 @@ async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 
 	const last_multihash = app.last_version && app.last_version.multihash
 
-	const last_version_number =
-		app.last_version && app.last_version.version_number
+	const last_version_number = app.last_version && app.last_version.version_number
 
-	const version_number =
-		last_version_number === null ? 0 : last_version_number + 1
+	const version_number = last_version_number === null ? 0 : last_version_number + 1
 
 	await prisma.appVersion.create({
 		data: {

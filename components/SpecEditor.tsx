@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useMemo, useCallback, useEffect, useState } from "react"
 
 import dynamic from "next/dynamic"
 
@@ -34,12 +34,12 @@ interface EditorProps {
 			spec: string
 		}[]
 	}
-	onEdited: () => void
+	onEdited: (string) => void
 }
 
 export const Editor = dynamic(
 	async () =>
-		function Editor({ app, onEdited }: EditorProps) {
+		function ({ app, onEdited }: EditorProps) {
 			const [publishing, setPublishing] = useState(false)
 			const router = useRouter()
 
@@ -50,7 +50,6 @@ export const Editor = dynamic(
 				}
 
 				setPublishing(true)
-
 				const spec = state.doc.toJSON().join("\n")
 				fetch(`/api/app/${app.slug}`, {
 					method: "POST",
@@ -83,7 +82,6 @@ export const Editor = dynamic(
 				(state: EditorState) => {
 					setSaving(true)
 					const draft_spec = state.doc.toJSON().join("\n")
-
 					fetch(`/api/app/${app.slug}`, {
 						method: "PUT",
 						headers: { "content-type": "application/json" },
@@ -94,7 +92,6 @@ export const Editor = dynamic(
 							setClean(true)
 							setError(null)
 							setLastSavedValue(draft_spec)
-							onEdited()
 						} else {
 							setError(getReasonPhrase(res.status))
 						}
@@ -121,13 +118,13 @@ export const Editor = dynamic(
 						<div className="font-semibold mb-3">&nbsp;</div>
 						<div className="absolute top-0 right-0">
 							<span className="mr-2 text-sm text-gray-400">
-								{matchesPreviousVersion !== null
-									? `Saved as v${matchesPreviousVersion}`
+								{matchesPreviousVersion
+									? `Identical to v${matchesPreviousVersion}`
 									: clean
-									? "Up to date"
+									? "Saved as draft"
 									: saving
-									? "Saving..."
-									: "Unsaved changes"}
+									? "Saving as draft..."
+									: "Saving as draft..."}
 							</span>
 							<button
 								className={`text-sm px-2 py-1 ml-1.5 rounded bg-gray-200 hover:bg-gray-300 ${
@@ -136,7 +133,7 @@ export const Editor = dynamic(
 								disabled={publishingDisabled}
 								onClick={() => state && publish(state)}
 							>
-								{publishing ? <span>Publishing...</span> : <span>Save new version</span>}
+								{publishing ? <span>Publishing...</span> : <span>Publish</span>}
 							</button>
 						</div>
 					</div>

@@ -6,7 +6,7 @@ import { prisma } from "utils/server/services"
 import { Editor } from "components/SpecEditor"
 import { Viewer } from "components/SpecViewer"
 import { Actions } from "components/SpecActions"
-import { Sidebar } from "components/SpecSidebar"
+import Sidebar from "components/SpecSidebar"
 
 interface AppPageProps {
 	version_number: number | null
