@@ -94,6 +94,7 @@ export const Editor = dynamic(
 							setClean(true)
 							setError(null)
 							setLastSavedValue(draft_spec)
+							onEdited()
 						} else {
 							setError(getReasonPhrase(res.status))
 						}
