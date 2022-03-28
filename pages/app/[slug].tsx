@@ -15,6 +15,7 @@ interface AppPageProps {
 		spec: string
 		updated_at: number
 		versions: {
+			multihash: string
 			version_number: number
 			created_at: number
 			spec: string
@@ -40,7 +41,7 @@ export const getServerSideProps: GetServerSideProps<AppPageProps, AppPageParams>
 			draft_spec: true,
 			updated_at: true,
 			versions: {
-				select: { version_number: true, created_at: true, spec: true },
+				select: { multihash: true, version_number: true, created_at: true, spec: true },
 				orderBy: { version_number: "desc" },
 			},
 		},
@@ -53,9 +54,10 @@ export const getServerSideProps: GetServerSideProps<AppPageProps, AppPageParams>
 
 	const updated_at = app.updated_at.valueOf()
 
-	const versions = app.versions.map(({ version_number, created_at, spec }) => ({
+	const versions = app.versions.map(({ version_number, multihash, created_at, spec }) => ({
 		spec,
 		version_number,
+		multihash,
 		created_at: created_at.valueOf(),
 	}))
 
@@ -104,6 +106,7 @@ export const getServerSideProps: GetServerSideProps<AppPageProps, AppPageParams>
 }
 
 export default function AppPage({ app }: AppPageProps) {
+	const [edited, setEdited] = useState()
 	const [latestEdit, saveLatestEdit] = useState()
 	const latestVersion = Math.max.apply(
 		this,
@@ -115,7 +118,7 @@ export default function AppPage({ app }: AppPageProps) {
 	return (
 		<div className="flex">
 			<div className="w-60 pr-6">
-				<Sidebar app={app} />
+				<Sidebar app={app} edited={edited} />
 			</div>
 			{app.version_number === null ? (
 				<Editor
@@ -125,7 +128,10 @@ export default function AppPage({ app }: AppPageProps) {
 					latestVersion={latestVersion}
 					matchesPreviousVersion={matchesPreviousVersion}
 					onSaved={(draft) => saveLatestEdit(draft)}
-					onEdited={(draft) => saveLatestEdit(draft)}
+					onEdited={(draft) => {
+						if (draft !== app.spec) setEdited(true)
+						saveLatestEdit(draft)
+					}}
 				/>
 			) : (
 				<Viewer value={app.spec} version={app.version_number} />

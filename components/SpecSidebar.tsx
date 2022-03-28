@@ -1,4 +1,4 @@
-export function Sidebar({ app }) {
+export function Sidebar({ app, edited }) {
 	return (
 		<div className="">
 			<div className="font-semibold mb-3">Spec</div>
@@ -9,9 +9,10 @@ export function Sidebar({ app }) {
 					}`}
 					href="?"
 				>
-					<span className={`${app.version_number === null ? "font-bold" : ""}`}>Latest</span>
+					<span className={`flex-1 ${app.version_number === null ? "font-semibold" : ""}`}>Latest</span>
+					{edited && <span className="text-gray-400">Edited</span>}
 				</a>
-				{app.versions.map(({ version_number }, index) => {
+				{app.versions.map(({ version_number, multihash }, index) => {
 					return (
 						<a
 							key={version_number}
@@ -20,9 +21,10 @@ export function Sidebar({ app }) {
 							}`}
 							href={`?version=v${version_number}`}
 						>
-							<span className={`flex-1 ${app.version_number === version_number ? "font-bold" : ""}`}>
+							<span className={`flex-1 ${app.version_number === version_number ? "font-semibold" : ""}`}>
 								v{version_number}
 							</span>
+							<span className="text-gray-400">{multihash.slice(0, 6)}&hellip;</span>
 						</a>
 					)
 				})}
