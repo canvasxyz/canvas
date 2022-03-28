@@ -4,7 +4,7 @@ import dynamic from "next/dynamic"
 
 import type { EditorState } from "@codemirror/state"
 import { keymap } from "@codemirror/view"
-import { defaultKeymap } from "@codemirror/commands"
+import { defaultKeymap, indentWithTab } from "@codemirror/commands"
 import { basicSetup } from "@codemirror/basic-setup"
 import { indentUnit } from "@codemirror/language"
 
@@ -21,20 +21,25 @@ const extensions = [
 	basicSetup,
 	javascriptLanguage,
 	keymap.of(defaultKeymap),
+	keymap.of([indentWithTab]),
 ]
 
 interface EditorProps {
 	slug: string
 	initialValue: string
+	latestVersion: number
 }
 
 export const Editor = dynamic(
 	async () =>
-		function ({ slug, initialValue }: EditorProps) {
+		function ({ slug, initialValue, latestVersion }: EditorProps) {
 			const [publishing, setPublishing] = useState(false)
 			const router = useRouter()
 
 			const publish = useCallback((state: EditorState) => {
+				const confirmed = confirm("Publish a new version?")
+				if (!confirmed) return
+
 				setPublishing(true)
 				const spec = state.doc.toJSON().join("\n")
 				fetch(`/api/app/${slug}`, {
@@ -80,12 +85,10 @@ export const Editor = dynamic(
 				{ maxWait: 5000 }
 			)
 
-			const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>(
-				{
-					doc: initialValue,
-					extensions,
-				}
-			)
+			const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>({
+				doc: initialValue,
+				extensions,
+			})
 
 			useEffect(() => {
 				if (state !== null && transaction !== null && transaction.docChanged) {
@@ -96,42 +99,39 @@ export const Editor = dynamic(
 
 			return (
 				<div className="w-max h-max">
-					<div className={styles.editor} ref={element}></div>
-					<div className="my-2 flex flex-row place-content-between">
-						<button
-							className={
-								publishing || saving || clean
-									? "p-2 rounded bg-gray-200 text-center cursor-not-allowed"
-									: "p-2 rounded bg-pink-200 text-center cursor-pointer"
-							}
-							disabled={publishing || saving || clean}
-							onClick={() => state && saveDraft(state)}
-						>
-							{saving ? (
-								<span>⏳ Saving...</span>
-							) : clean ? (
-								<span>✅ Saved</span>
-							) : (
-								<span>💾 Save</span>
-							)}
-						</button>
-						<button
-							className={
-								publishing || saving || error !== null || !clean
-									? "p-2 rounded bg-gray-200 text-center cursor-not-allowed"
-									: "p-2 rounded bg-pink-200 text-center cursor-pointer"
-							}
-							disabled={publishing || saving || error !== null || !clean}
-							onClick={() => state && publish(state)}
-						>
-							{publishing ? <span>Publishing...</span> : <span>Publish</span>}
-						</button>
+					<div className="flex flex-row place-content-between relative w-full">
+						<div className="font-semibold mb-3">&nbsp;</div>
+						<div className="absolute top-0 right-0">
+							{/* save button */}
+							<button
+								className={`text-sm px-2 py-1 ml-1.5 rounded bg-gray-200 hover:bg-gray-300 ${
+									publishing || saving || clean ? "cursor-not-allowed pointer-events-none opacity-50" : "cursor-pointer"
+								}`}
+								disabled={publishing || saving || clean}
+								onClick={() => state && saveDraft(state)}
+							>
+								{saving ? <span>⏳ Saving...</span> : clean ? <span>✅ Saved</span> : <span>Save</span>}
+							</button>
+							{/* publish button */}
+							<button
+								className={`text-sm px-2 py-1 ml-1.5 rounded bg-gray-200 hover:bg-gray-300 ${
+									publishing || saving || error !== null || !clean
+										? "cursor-not-allowed pointer-events-none opacity-50"
+										: "cursor-pointer"
+								}`}
+								disabled={publishing || saving || error !== null || !clean}
+								onClick={() => state && publish(state)}
+							>
+								{publishing ? <span>Publishing...</span> : <span>Publish v{latestVersion + 1}</span>}
+							</button>
+						</div>
 					</div>
 					{error && (
 						<div>
 							⚠️ Error saving spec: <code>{error}</code>
 						</div>
 					)}
+					<div className={styles.editor} ref={element}></div>
 				</div>
 			)
 		},

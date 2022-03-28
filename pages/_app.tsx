@@ -10,13 +10,17 @@ export default function App({ Component, pageProps }: AppProps) {
 			<Head>
 				<title>Canvas Hub</title>
 			</Head>
-			<div className="app-header"></div>
-			<div className="app-body">
-				<div className="max-w-6xl my-6 mx-auto">
-					<div className="mb-10 text-xl">
-						<Link href="/">Canvas</Link>
+			<div className="app-container">
+				<div className="app-header"></div>
+				<div className="app-body">
+					<div className="my-4 pb-4 border-b border-gray-200">
+						<div className="max-w-6xl mx-auto text-lg">
+							<Link href="/">Canvas</Link>
+						</div>
 					</div>
-					<Component {...pageProps} />
+					<div className="max-w-6xl mx-auto">
+						<Component {...pageProps} />
+					</div>
 				</div>
 			</div>
 		</>

@@ -9,24 +9,27 @@ import { useCodeMirror } from "utils/client/codemirror"
 
 import styles from "./CodeMirror.module.scss"
 
-const extensions = [
-	basicSetup,
-	javascriptLanguage,
-	EditorView.editable.of(false),
-]
+const extensions = [basicSetup, javascriptLanguage, EditorView.editable.of(false)]
 
 interface ViewerProps {
 	value: string
+	version: number
 }
 
 export const Viewer = dynamic(
 	async () =>
-		function ({ value }: ViewerProps) {
-			const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>(
-				{ doc: value, extensions }
-			)
+		function ({ value, version }: ViewerProps) {
+			const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>({ doc: value, extensions })
 
-			return <div className={styles.editor} ref={element}></div>
+			return (
+				<div className="w-max h-max">
+					<div className="flex flex-row place-content-between relative w-full">
+						<div className="font-semibold mb-3">&nbsp;</div>
+						<div className="text-gray-400 text-sm pt-1">Saved as v{version}</div>
+					</div>
+					<div className={styles.editor} ref={element}></div>
+				</div>
+			)
 		},
 	{ ssr: false }
 )
