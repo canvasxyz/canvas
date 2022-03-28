@@ -28,11 +28,13 @@ interface EditorProps {
 	slug: string
 	initialValue: string
 	latestVersion: number
+	onSaved: (string) => void
+	onEdited: (string) => void
 }
 
 export const Editor = dynamic(
 	async () =>
-		function ({ slug, initialValue, latestVersion }: EditorProps) {
+		function ({ slug, initialValue, latestVersion, onSaved, onEdited }: EditorProps) {
 			const [publishing, setPublishing] = useState(false)
 			const router = useRouter()
 
@@ -54,7 +56,7 @@ export const Editor = dynamic(
 							router.push(location)
 						}
 					} else {
-						alert("Failed to publish version")
+						alert("Publishing failed")
 					}
 				})
 			}, [])
@@ -74,6 +76,7 @@ export const Editor = dynamic(
 					}).then((res) => {
 						setSaving(false)
 						if (res.status === StatusCodes.OK) {
+							onSaved(draft_spec)
 							setClean(true)
 							setError(null)
 						} else {
@@ -85,6 +88,11 @@ export const Editor = dynamic(
 				{ maxWait: 5000 }
 			)
 
+			const edited = useDebouncedCallback((state: EditorState) => {
+				const draft_spec = state.doc.toJSON().join("\n")
+				onEdited(draft_spec)
+			}, 100)
+
 			const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>({
 				doc: initialValue,
 				extensions,
@@ -94,6 +102,7 @@ export const Editor = dynamic(
 				if (state !== null && transaction !== null && transaction.docChanged) {
 					setClean(false)
 					saveDraft(state)
+					edited(state)
 				}
 			}, [state, transaction])
 
@@ -102,27 +111,21 @@ export const Editor = dynamic(
 					<div className="flex flex-row place-content-between relative w-full">
 						<div className="font-semibold mb-3">&nbsp;</div>
 						<div className="absolute top-0 right-0">
-							{/* save button */}
-							<button
-								className={`text-sm px-2 py-1 ml-1.5 rounded bg-gray-200 hover:bg-gray-300 ${
-									publishing || saving || clean ? "cursor-not-allowed pointer-events-none opacity-50" : "cursor-pointer"
-								}`}
-								disabled={publishing || saving || clean}
-								onClick={() => state && saveDraft(state)}
-							>
-								{saving ? <span>⏳ Saving...</span> : clean ? <span>✅ Saved</span> : <span>Save</span>}
-							</button>
-							{/* publish button */}
+							{
+								<span className="mr-2 text-sm text-gray-400">
+									{clean ? "Up to date" : saving ? "Saving..." : "Unsaved changes"}
+								</span>
+							}
 							<button
 								className={`text-sm px-2 py-1 ml-1.5 rounded bg-gray-200 hover:bg-gray-300 ${
 									publishing || saving || error !== null || !clean
-										? "cursor-not-allowed pointer-events-none opacity-50"
+										? "cursor-not-allowed pointer-events-none"
 										: "cursor-pointer"
 								}`}
 								disabled={publishing || saving || error !== null || !clean}
 								onClick={() => state && publish(state)}
 							>
-								{publishing ? <span>Publishing...</span> : <span>Publish v{latestVersion + 1}</span>}
+								{publishing ? <span>Publishing...</span> : <span>Save as v{latestVersion + 1}</span>}
 							</button>
 						</div>
 					</div>
