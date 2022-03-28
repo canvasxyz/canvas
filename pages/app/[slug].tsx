@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState } from "react"
 
 import type { GetServerSideProps } from "next"
 
@@ -17,6 +17,7 @@ interface AppPageProps {
 		versions: {
 			version_number: number
 			created_at: number
+			spec: string
 		}[]
 	}
 }
@@ -39,7 +40,7 @@ export const getServerSideProps: GetServerSideProps<AppPageProps, AppPageParams>
 			draft_spec: true,
 			updated_at: true,
 			versions: {
-				select: { version_number: true, created_at: true },
+				select: { version_number: true, created_at: true, spec: true },
 				orderBy: { version_number: "desc" },
 			},
 		},
@@ -52,7 +53,8 @@ export const getServerSideProps: GetServerSideProps<AppPageProps, AppPageParams>
 
 	const updated_at = app.updated_at.valueOf()
 
-	const versions = app.versions.map(({ version_number, created_at }) => ({
+	const versions = app.versions.map(({ version_number, created_at, spec }) => ({
+		spec,
 		version_number,
 		created_at: created_at.valueOf(),
 	}))
@@ -102,10 +104,13 @@ export const getServerSideProps: GetServerSideProps<AppPageProps, AppPageParams>
 }
 
 export default function AppPage({ app }: AppPageProps) {
+	const [latestEdit, saveLatestEdit] = useState()
 	const latestVersion = Math.max.apply(
 		this,
 		app.versions.map((v) => +v.version_number)
 	)
+	const matchesPreviousVersion =
+		app.version_number === null && app.versions.find((v) => v.spec === (latestEdit || app.spec))?.version_number
 
 	return (
 		<div className="flex">
@@ -119,8 +124,9 @@ export default function AppPage({ app }: AppPageProps) {
 						slug={app.slug}
 						initialValue={app.spec}
 						latestVersion={latestVersion}
-						onSaved={(draft) => {}}
-						onEdited={(draft) => {}}
+						matchesPreviousVersion={matchesPreviousVersion}
+						onSaved={(draft) => saveLatestEdit(draft)}
+						onEdited={(draft) => saveLatestEdit(draft)}
 					/>
 				) : (
 					<Viewer value={app.spec} version={app.version_number} />

@@ -28,13 +28,14 @@ interface EditorProps {
 	slug: string
 	initialValue: string
 	latestVersion: number
+	matchesPreviousVersion: number
 	onSaved: (string) => void
 	onEdited: (string) => void
 }
 
 export const Editor = dynamic(
 	async () =>
-		function ({ slug, initialValue, latestVersion, onSaved, onEdited }: EditorProps) {
+		function ({ slug, initialValue, latestVersion, matchesPreviousVersion, onSaved, onEdited }: EditorProps) {
 			const [publishing, setPublishing] = useState(false)
 			const router = useRouter()
 
@@ -113,19 +114,25 @@ export const Editor = dynamic(
 						<div className="absolute top-0 right-0">
 							{
 								<span className="mr-2 text-sm text-gray-400">
-									{clean ? "Up to date" : saving ? "Saving..." : "Unsaved changes"}
+									{matchesPreviousVersion
+										? `Saved as v${matchesPreviousVersion}`
+										: clean
+										? "Up to date"
+										: saving
+										? "Saving..."
+										: "Unsaved changes"}
 								</span>
 							}
 							<button
 								className={`text-sm px-2 py-1 ml-1.5 rounded bg-gray-200 hover:bg-gray-300 ${
-									publishing || saving || error !== null || !clean
-										? "cursor-not-allowed pointer-events-none"
+									publishing || saving || error !== null || !clean || matchesPreviousVersion
+										? "cursor-not-allowed pointer-events-none opacity-60"
 										: "cursor-pointer"
 								}`}
-								disabled={publishing || saving || error !== null || !clean}
+								disabled={publishing || saving || error !== null || !clean || matchesPreviousVersion}
 								onClick={() => state && publish(state)}
 							>
-								{publishing ? <span>Publishing...</span> : <span>Save as v{latestVersion + 1}</span>}
+								{publishing ? <span>Publishing...</span> : <span>Save new version</span>}
 							</button>
 						</div>
 					</div>
