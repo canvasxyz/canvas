@@ -24,6 +24,7 @@
     "chokidar-cli": "^3.0.0",
     "dotenv": "^16.0.0",
     "ethers": "^5.5.4",
+    "fork-ts-checker-webpack-plugin": "^7.2.1",
     "fp-ts": "^2.11.9",
     "http-status-codes": "^2.2.0",
     "hyperbee": "^1.7.0",
@@ -42,6 +43,7 @@
   },
   "devDependencies": {
     "@types/react": "^17.0.40",
+    "@types/react-dom": "^17.0.14",
     "autoprefixer": "^10.4.2",
     "eslint": "8.11.0",
     "eslint-config-next": "12.1.0",
