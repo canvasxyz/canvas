@@ -9,15 +9,13 @@ import { Actions } from "components/SpecActions"
 import { Sidebar } from "components/SpecSidebar"
 
 interface AppPageProps {
+	version_number: number | null
 	app: {
 		slug: string
-		version_number: number | null
-		spec: string
-		updated_at: number
+		draft_spec: string
 		versions: {
 			multihash: string
 			version_number: number
-			created_at: number
 			spec: string
 		}[]
 	}
@@ -38,10 +36,10 @@ export const getServerSideProps: GetServerSideProps<AppPageProps, AppPageParams>
 	const app = await prisma.app.findUnique({
 		select: {
 			id: true,
+			slug: true,
 			draft_spec: true,
-			updated_at: true,
 			versions: {
-				select: { multihash: true, version_number: true, created_at: true, spec: true },
+				select: { version_number: true, multihash: true, spec: true },
 				orderBy: { version_number: "desc" },
 			},
 		},
@@ -52,23 +50,9 @@ export const getServerSideProps: GetServerSideProps<AppPageProps, AppPageParams>
 		return { notFound: true }
 	}
 
-	const updated_at = app.updated_at.valueOf()
-
-	const versions = app.versions.map(({ version_number, multihash, created_at, spec }) => ({
-		spec,
-		version_number,
-		multihash,
-		created_at: created_at.valueOf(),
-	}))
-
 	const { version } = context.query
 	if (version === undefined) {
-		const spec = app.draft_spec
-		return {
-			props: {
-				app: { slug, version_number: null, spec, updated_at, versions },
-			},
-		}
+		return { props: { version_number: null, app } }
 	}
 
 	if (typeof version !== "string") {
@@ -80,62 +64,30 @@ export const getServerSideProps: GetServerSideProps<AppPageProps, AppPageParams>
 		return { notFound: true }
 	}
 
-	const [_, v] = match
-	const version_number = parseInt(v)
+	const [_, n] = match
+	const version_number = parseInt(n)
 
-	const appVersion = await prisma.appVersion.findUnique({
-		where: { app_id_version_number: { app_id: app.id, version_number } },
-		select: { spec: true },
-	})
-
-	if (appVersion === null) {
+	if (app.versions.some((version) => version.version_number === version_number)) {
+		return { props: { version_number, app } }
+	} else {
 		return { notFound: true }
-	}
-
-	return {
-		props: {
-			app: {
-				slug,
-				version_number,
-				spec: appVersion.spec,
-				updated_at,
-				versions,
-			},
-		},
 	}
 }
 
-export default function AppPage({ app }: AppPageProps) {
-	const [edited, setEdited] = useState()
-	const [latestEdit, saveLatestEdit] = useState()
-	const latestVersion = Math.max.apply(
-		this,
-		app.versions.map((v) => +v.version_number)
-	)
-	const matchesPreviousVersion =
-		app.version_number === null && app.versions.find((v) => v.spec === (latestEdit || app.spec))?.version_number
+export default function AppPage({ version_number, app }: AppPageProps) {
+	const [edited, setEdited] = useState(false)
+
+	// We have already checked that the version number exists in app.versions
+	// on the server side so it's safe to use the assert here
+	const version =
+		version_number === null ? null : app.versions.find((version) => version.version_number === version_number)!
 
 	return (
 		<div className="flex">
 			<div className="w-60 pr-6">
-				<Sidebar app={app} edited={edited} />
+				<Sidebar version_number={version_number} app={app} edited={edited} />
 			</div>
-			{app.version_number === null ? (
-				<Editor
-					key="editor"
-					slug={app.slug}
-					initialValue={app.spec}
-					latestVersion={latestVersion}
-					matchesPreviousVersion={matchesPreviousVersion}
-					onSaved={(draft) => saveLatestEdit(draft)}
-					onEdited={(draft) => {
-						if (draft !== app.spec) setEdited(true)
-						saveLatestEdit(draft)
-					}}
-				/>
-			) : (
-				<Viewer value={app.spec} version={app.version_number} />
-			)}
+			{version === null ? <Editor key="editor" app={app} onEdited={() => setEdited(true)} /> : <Viewer {...version} />}
 			<div className="w-96 pl-6">
 				<div className="font-semibold mb-3">Actions</div>
 				<Actions app={app} />

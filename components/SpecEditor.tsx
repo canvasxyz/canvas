@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 
 import dynamic from "next/dynamic"
 
@@ -25,27 +25,34 @@ const extensions = [
 ]
 
 interface EditorProps {
-	slug: string
-	initialValue: string
-	latestVersion: number
-	matchesPreviousVersion: number
-	onSaved: (string) => void
-	onEdited: (string) => void
+	app: {
+		slug: string
+		draft_spec: string
+		versions: {
+			multihash: string
+			version_number: number
+			spec: string
+		}[]
+	}
+	onEdited: () => void
 }
 
 export const Editor = dynamic(
 	async () =>
-		function ({ slug, initialValue, latestVersion, matchesPreviousVersion, onSaved, onEdited }: EditorProps) {
+		function Editor({ app, onEdited }: EditorProps) {
 			const [publishing, setPublishing] = useState(false)
 			const router = useRouter()
 
 			const publish = useCallback((state: EditorState) => {
 				const confirmed = confirm("Publish a new version?")
-				if (!confirmed) return
+				if (!confirmed) {
+					return
+				}
 
 				setPublishing(true)
+
 				const spec = state.doc.toJSON().join("\n")
-				fetch(`/api/app/${slug}`, {
+				fetch(`/api/app/${app.slug}`, {
 					method: "POST",
 					headers: { "content-type": "application/json" },
 					body: JSON.stringify({ spec }),
@@ -66,20 +73,27 @@ export const Editor = dynamic(
 			const [clean, setClean] = useState(true)
 			const [error, setError] = useState<null | string>(null)
 
+			const [lastSavedValue, setLastSavedValue] = useState(app.draft_spec)
+			const matchesPreviousVersion = useMemo<null | number>(() => {
+				const version = app.versions.find((version) => version.spec === lastSavedValue)
+				return version === undefined ? null : version.version_number
+			}, [lastSavedValue])
+
 			const saveDraft = useDebouncedCallback(
 				(state: EditorState) => {
 					setSaving(true)
 					const draft_spec = state.doc.toJSON().join("\n")
-					fetch(`/api/app/${slug}`, {
+
+					fetch(`/api/app/${app.slug}`, {
 						method: "PUT",
 						headers: { "content-type": "application/json" },
 						body: JSON.stringify({ draft_spec }),
 					}).then((res) => {
 						setSaving(false)
 						if (res.status === StatusCodes.OK) {
-							onSaved(draft_spec)
 							setClean(true)
 							setError(null)
+							setLastSavedValue(draft_spec)
 						} else {
 							setError(getReasonPhrase(res.status))
 						}
@@ -89,47 +103,36 @@ export const Editor = dynamic(
 				{ maxWait: 5000 }
 			)
 
-			const edited = useDebouncedCallback((state: EditorState) => {
-				const draft_spec = state.doc.toJSON().join("\n")
-				onEdited(draft_spec)
-			}, 100)
-
-			const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>({
-				doc: initialValue,
-				extensions,
-			})
+			const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>({ doc: app.draft_spec, extensions })
 
 			useEffect(() => {
 				if (state !== null && transaction !== null && transaction.docChanged) {
 					setClean(false)
 					saveDraft(state)
-					edited(state)
 				}
 			}, [state, transaction])
+
+			const publishingDisabled = publishing || saving || error !== null || !clean || matchesPreviousVersion !== null
 
 			return (
 				<div className="flex-1 w-max h-max">
 					<div className="flex flex-row place-content-between relative w-full">
 						<div className="font-semibold mb-3">&nbsp;</div>
 						<div className="absolute top-0 right-0">
-							{
-								<span className="mr-2 text-sm text-gray-400">
-									{matchesPreviousVersion
-										? `Saved as v${matchesPreviousVersion}`
-										: clean
-										? "Up to date"
-										: saving
-										? "Saving..."
-										: "Unsaved changes"}
-								</span>
-							}
+							<span className="mr-2 text-sm text-gray-400">
+								{matchesPreviousVersion !== null
+									? `Saved as v${matchesPreviousVersion}`
+									: clean
+									? "Up to date"
+									: saving
+									? "Saving..."
+									: "Unsaved changes"}
+							</span>
 							<button
 								className={`text-sm px-2 py-1 ml-1.5 rounded bg-gray-200 hover:bg-gray-300 ${
-									publishing || saving || error !== null || !clean || matchesPreviousVersion
-										? "cursor-not-allowed pointer-events-none opacity-60"
-										: "cursor-pointer"
+									publishingDisabled ? "cursor-not-allowed pointer-events-none opacity-60" : "cursor-pointer"
 								}`}
-								disabled={publishing || saving || error !== null || !clean || matchesPreviousVersion}
+								disabled={publishingDisabled}
 								onClick={() => state && publish(state)}
 							>
 								{publishing ? <span>Publishing...</span> : <span>Save new version</span>}
