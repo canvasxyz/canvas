@@ -2,9 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
 body {
+  width: 100%;
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
 	background-color: #fff;
 }
+.app-container {
+  height: calc(100% - 100px);
+  overflow: auto;
+}
+
 .app-header {
 	background-image: linear-gradient(
 		225deg,
