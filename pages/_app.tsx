@@ -13,12 +13,12 @@ export default function App({ Component, pageProps }: AppProps) {
 			<div className="app-container">
 				<div className="app-header"></div>
 				<div className="app-body">
-					<div className="my-4 pb-4 border-b border-gray-200">
-						<div className="max-w-6xl mx-auto text-lg">
+					<div className="my-4 pb-3.5 border-b border-gray-200">
+						<div className="px-10 mx-auto font-semibold">
 							<Link href="/">Canvas</Link>
 						</div>
 					</div>
-					<div className="max-w-6xl mx-auto">
+					<div className="px-10 mx-auto">
 						<Component {...pageProps} />
 					</div>
 				</div>

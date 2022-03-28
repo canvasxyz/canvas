@@ -108,7 +108,7 @@ export const Editor = dynamic(
 			}, [state, transaction])
 
 			return (
-				<div className="w-max h-max">
+				<div className="w-full h-max">
 					<div className="flex flex-row place-content-between relative w-full">
 						<div className="font-semibold mb-3">&nbsp;</div>
 						<div className="absolute top-0 right-0">

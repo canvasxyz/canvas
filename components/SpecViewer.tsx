@@ -22,7 +22,7 @@ export const Viewer = dynamic(
 			const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>({ doc: value, extensions })
 
 			return (
-				<div className="w-max h-max">
+				<div className="w-full h-max">
 					<div className="flex flex-row place-content-between relative w-full">
 						<div className="font-semibold mb-3">&nbsp;</div>
 						<div className="text-gray-400 text-sm pt-1">Saved as v{version}</div>

@@ -114,10 +114,10 @@ export default function AppPage({ app }: AppPageProps) {
 
 	return (
 		<div className="flex">
-			<div className="flex-1 pr-6">
+			<div className="w-60 pr-6">
 				<Sidebar app={app} />
 			</div>
-			<div className="flex-1 pr-6">
+			<div className="flex-0 pr-6">
 				{app.version_number === null ? (
 					<Editor
 						key="editor"
@@ -132,7 +132,7 @@ export default function AppPage({ app }: AppPageProps) {
 					<Viewer value={app.spec} version={app.version_number} />
 				)}
 			</div>
-			<div className="flex-1">
+			<div className="w-96">
 				<div className="font-semibold mb-3">Actions</div>
 				<Actions app={app} />
 			</div>
