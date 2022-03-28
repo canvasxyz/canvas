@@ -91,7 +91,7 @@ export default function AppPage({ version_number, app }: AppPageProps) {
 			{version === null ? <Editor key="editor" app={app} onEdited={onEdited} /> : <Viewer {...version} />}
 			<div className="w-96 pl-6">
 				<div className="font-semibold mb-3">Actions</div>
-				<Actions app={app} />
+				<Actions />
 			</div>
 		</div>
 	)

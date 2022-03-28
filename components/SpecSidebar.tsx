@@ -18,9 +18,13 @@ interface SidebarProps {
 	edited: boolean
 }
 
-function SidebarMenu({ active }) {
-	const [referenceElement, setReferenceElement] = useState()
-	const [popperElement, setPopperElement] = useState()
+interface SidebarMenuProps {
+	active: boolean
+}
+
+function SidebarMenu({ active }: SidebarMenuProps) {
+	const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null)
+	const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null)
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
 		placement: "bottom-end",
 		strategy: "absolute",
@@ -64,7 +68,7 @@ function SidebarMenu({ active }) {
 						  </a>*/}
 					</div>
 				</Popover.Panel>,
-				document.querySelector(".app-body")
+				document.querySelector(".app-body")!
 			)}
 		</Popover>
 	)

@@ -1,4 +1,4 @@
-export function Actions({ app }) {
+export function Actions({}) {
 	return (
 		<div className="">
 			<table className="table-auto text-left text-sm leading-snug w-full">

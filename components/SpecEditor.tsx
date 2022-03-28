@@ -34,7 +34,7 @@ interface EditorProps {
 			spec: string
 		}[]
 	}
-	onEdited: (string) => void
+	onEdited: (arg0: string) => void
 }
 
 export const Editor = dynamic(

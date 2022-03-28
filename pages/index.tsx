@@ -56,7 +56,7 @@ export default function IndexPage({ apps }: IndexPageProps) {
 					>
 						<div className="mb-0.5 text-lg font-semibold">{slug}</div>
 						<div className="text-sm text-gray-500 mb-1">
-							{last_version_number === null ? (
+							{last_version_number === null || last_multihash === null ? (
 								<div className="leading-tight">
 									<div className="inline-block rounded px-1.5 py-0.5 mr-2 text-xs bg-red-500 text-white">Stopped</div>
 									<span>No versions</span>
