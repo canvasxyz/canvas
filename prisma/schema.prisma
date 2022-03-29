@@ -29,6 +29,7 @@ model AppVersion {
   version_number  Int
   multihash       String   @unique
   spec            String
+  deployed        Boolean
   created_at      DateTime @default(now())
 
   @@unique([app_id, version_number])
