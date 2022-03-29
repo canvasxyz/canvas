@@ -21,7 +21,9 @@ function getPrismaClient() {
 	} else if (global.prisma !== undefined) {
 		return global.prisma
 	} else {
-		global.prisma = new PrismaClient()
+		global.prisma = new PrismaClient({
+			log: ["query", "info", "warn", "error"],
+		})
 		return global.prisma
 	}
 }
