@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import ReactDOM from "react-dom"
 import { usePopper } from "react-popper"
 import { Popover } from "@headlessui/react"
@@ -32,6 +32,10 @@ interface SidebarMenuItemProps {
 
 function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
 	const [shouldBeRunning, setShouldBeRunning] = useState<boolean>(running)
+	useEffect(() => {
+		setShouldBeRunning(running)
+	}, [running])
+
 	const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null)
 	const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null)
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -126,7 +130,6 @@ function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
 
 function Sidebar({ version_number, app, edited }: SidebarProps) {
 	const { data, error } = useSWR("/api/instance", fetcher, { refreshInterval: 1000 })
-	console.log(data, error)
 	const instances = useMemo<Set<string>>(() => (error ? new Set([]) : new Set(data)), [data])
 
 	return (
