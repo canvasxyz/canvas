@@ -2,10 +2,10 @@
 	:global {
 		.cm-scroller {
 			max-height: calc(100vh - 12em);
-			max-width: 640px;
 		}
 
 		.cm-editor {
+			width: 640px;
 			border: 1px solid #ddd;
 			border-radius: 6px;
 			overflow: hidden;
@@ -18,8 +18,8 @@
 			font-size: 0.8rem;
 			line-height: 1.2rem !important;
 		}
-    .cm-foldGutter {
-      line-height: 1;
-    }
+		.cm-foldGutter {
+			line-height: 1;
+		}
 	}
 }
