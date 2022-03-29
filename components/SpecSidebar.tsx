@@ -4,6 +4,8 @@ import { usePopper } from "react-popper"
 import { Popover } from "@headlessui/react"
 import dynamic from "next/dynamic"
 
+import ProjectMenu from "./ProjectMenu"
+
 interface SidebarProps {
 	version_number: null | number
 	app: {
@@ -79,6 +81,7 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 		<div className="">
 			<div className="font-semibold mb-3">
 				Projects <span className="text-gray-400 mx-0.25">/</span> {app.slug}
+				<ProjectMenu app={app} />
 			</div>
 			<div className="border rounded overflow-hidden">
 				<div className="flex">

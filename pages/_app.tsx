@@ -1,3 +1,6 @@
+import { Toaster } from "react-hot-toast"
+import { Transition } from "@tailwindui/react"
+
 import type { AppProps } from "next/app"
 import Head from "next/head"
 import Link from "next/link"
@@ -25,6 +28,23 @@ export default function App({ Component, pageProps }: AppProps) {
 					<div className="px-10 mx-auto">
 						<Component {...pageProps} />
 					</div>
+					<Toaster position="top-center" reverseOrder={false}>
+						{(t) => (
+							<Transition
+								appear
+								show={t.visible}
+								className="transform px-4 py-3 pb-2.5 mt-3 rounded shadow-lg bg-red-500 text-white"
+								enter="transition-all duration-150"
+								enterFrom="opacity-0 scale-50"
+								enterTo="opacity-100 scale-100"
+								leave="transition-all duration-150"
+								leaveFrom="opacity-100 scale-100"
+								leaveTo="opacity-0 scale-75"
+							>
+								{t.message}
+							</Transition>
+						)}
+					</Toaster>
 				</div>
 			</div>
 		</>

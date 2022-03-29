@@ -90,11 +90,47 @@ async function handlePutRequest(req: NextApiRequest, res: NextApiResponse) {
 		.catch(() => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end())
 }
 
+async function handleDeleteRequest(req: NextApiRequest, res: NextApiResponse) {
+	const { slug } = req.query
+	if (typeof slug !== "string") {
+		return res.status(StatusCodes.BAD_REQUEST).end()
+	}
+
+	const app = await prisma.app.findUnique({
+		where: { slug },
+		select: {
+			id: true,
+			versions: {
+				select: { version_number: true, multihash: true, spec: true, deployed: true },
+				orderBy: { version_number: "desc" },
+			},
+		},
+	})
+
+	if (app === null) {
+		return res.status(StatusCodes.NOT_FOUND).end()
+	}
+
+	// cannot delete apps with running specs
+	if (app.versions.some((version) => version.deployed)) {
+		return res.status(StatusCodes.CONFLICT).end()
+	}
+
+	await prisma.app
+		.delete({
+			where: { slug },
+		})
+		.then(() => res.status(StatusCodes.OK).end())
+		.catch(() => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end())
+}
+
 export default async (req: NextApiRequest, res: NextApiResponse) => {
 	if (req.method === "POST") {
 		await handlePostRequest(req, res)
 	} else if (req.method === "PUT") {
 		await handlePutRequest(req, res)
+	} else if (req.method === "DELETE") {
+		await handleDeleteRequest(req, res)
 	} else {
 		return res.status(StatusCodes.METHOD_NOT_ALLOWED).end()
 	}
