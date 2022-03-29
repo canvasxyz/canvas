@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback, useEffect, useState } from "react"
+import { DownloadIcon } from "@heroicons/react/solid"
 
 import dynamic from "next/dynamic"
 
@@ -127,6 +128,23 @@ export const Editor = dynamic(
 									? "Saving as draft..."
 									: "Saving as draft..."}
 							</span>
+							<button
+								className="text-sm px-2 py-1 ml-1.5 rounded bg-gray-200 hover:bg-gray-300"
+								onClick={() => {
+									if (state === null) return
+									const spec = state.doc.toJSON().join("\n")
+									const element = document.createElement("a")
+									element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(spec))
+									element.setAttribute("download", `${app.slug}.canvas.js`)
+
+									element.style.display = "none"
+									document.body.appendChild(element)
+									element.click()
+									document.body.removeChild(element)
+								}}
+							>
+								<DownloadIcon className="inline -mt-0.5 h-4 w-4" />
+							</button>
 							<button
 								className={`text-sm px-2 py-1 ml-1.5 rounded bg-gray-200 hover:bg-gray-300 ${
 									publishingDisabled ? "cursor-not-allowed pointer-events-none opacity-60" : "cursor-pointer"
