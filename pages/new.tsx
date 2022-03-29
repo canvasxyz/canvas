@@ -34,13 +34,14 @@ export default function NewPage({}: NewPageProps) {
 	const disabled = loading || !alphanumeric.test(slug)
 
 	return (
-		<div className="">
-			<h1 className="text-3xl my-2">New Project</h1>
-			<div className="border rounded bg-white px-2">
+		<div className="w-96">
+			<h1 className="font-semibold mt-2 mb-4">New Project</h1>
+
+			<div className="border rounded bg-white px-4 py-2 pb-5">
 				<div className="my-2 flex gap-2">
-					<label>Name</label>
+					<label className="py-1.5 mr-2">Name</label>
 					<input
-						className="border w-72"
+						className="border w-full px-3 py-1 rounded outline-none focus:border-blue-500"
 						type="text"
 						placeholder={alphanumeric.source}
 						value={slug}
@@ -49,11 +50,9 @@ export default function NewPage({}: NewPageProps) {
 				</div>
 
 				<button
-					className={
-						disabled
-							? "block w-full my-2 p-2 rounded bg-gray-300 text-center text-white cursor-not-allowed"
-							: "block w-full my-2 p-2 rounded bg-blue-600 text-center text-white cursor-pointer"
-					}
+					className={`block w-full mt-4 p-2 rounded bg-blue-500 hover:bg-blue-500 font-semibold text-sm text-center text-white cursor-pointer ${
+						disabled ? "pointer-events-none opacity-50" : ""
+					}`}
 					onClick={() => handleSubmit(slug)}
 					disabled={disabled}
 				>

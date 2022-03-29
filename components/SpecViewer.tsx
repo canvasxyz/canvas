@@ -24,6 +24,7 @@ export const Viewer = dynamic(
 			return (
 				<div className="flex-1 w-max h-max">
 					<div className="flex flex-row place-content-between relative w-full">
+						<div className="text-gray-400 text-sm pt-1">Read only</div>
 						<div className="font-semibold mb-3">&nbsp;</div>
 						<div className="text-gray-400 text-sm pt-1">Saved as v{version_number}</div>
 					</div>

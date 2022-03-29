@@ -1,24 +1,39 @@
 export function Actions({}) {
 	return (
-		<div className="">
-			<table className="table-auto text-left text-sm leading-snug w-full">
-				<thead className="border-b border-gray-300">
+		<div className="border border-gray-300 rounded overflow-scroll bg-gray-50 pb-3">
+			<table className="table-auto text-left text-xs leading-tight w-full">
+				<thead className="bg-white border-b border-gray-300">
 					<tr>
-						<th className="pb-1.5">Col 1</th>
-						<th className="pb-1.5">Col 2</th>
-						<th className="pb-1.5">Col 3</th>
+						<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">hash</th>
+						<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">from</th>
+						<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">call</th>
+						<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">data</th>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody className="">
 					<tr>
-						<td className="pt-1.5">e...</td>
-						<td className="pt-1.5">0x100...</td>
-						<td className="pt-1.5">defgh...</td>
+						<td className="pl-4 pr-3 pt-3 font-mono text-xs">000000</td>
+						<td className="pl-4 pr-3 pt-3 font-mono text-xs">0x10000</td>
+						<td className="pl-4 pr-3 pt-3 font-mono text-xs">call</td>
+						<td className="pl-4 pr-3 pt-3 font-mono text-xs">{"{x: 100000, y: 1}"}</td>
 					</tr>
 					<tr>
-						<td className="pt-1.5">abcde...</td>
-						<td className="pt-1.5">0x100...</td>
-						<td className="pt-1.5">defgh...</td>
+						<td className="pl-4 pr-3 pt-1.5 font-mono text-xs">000000</td>
+						<td className="pl-4 pr-3 pt-1.5 font-mono text-xs">0x10000</td>
+						<td className="pl-4 pr-3 pt-1.5 font-mono text-xs">call</td>
+						<td className="pl-4 pr-3 pt-1.5 font-mono text-xs">{"{x: 100000, y: 2}"}</td>
+					</tr>
+					<tr>
+						<td className="pl-4 pr-3 pt-1.5 font-mono text-xs">000000</td>
+						<td className="pl-4 pr-3 pt-1.5 font-mono text-xs">0x10000</td>
+						<td className="pl-4 pr-3 pt-1.5 font-mono text-xs">call</td>
+						<td className="pl-4 pr-3 pt-1.5 font-mono text-xs">{"{x: 100000, y: 2}"}</td>
+					</tr>
+					<tr>
+						<td className="pl-4 pr-3 pt-1.5 font-mono text-xs">000000</td>
+						<td className="pl-4 pr-3 pt-1.5 font-mono text-xs">0x10000</td>
+						<td className="pl-4 pr-3 pt-1.5 font-mono text-xs">call</td>
+						<td className="pl-4 pr-3 pt-1.5 font-mono text-xs">{"{x: 100000, y: 2}"}</td>
 					</tr>
 				</tbody>
 			</table>

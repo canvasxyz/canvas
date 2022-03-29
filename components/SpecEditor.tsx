@@ -115,6 +115,7 @@ export const Editor = dynamic(
 			return (
 				<div className="flex-1 w-max h-max">
 					<div className="flex flex-row place-content-between relative w-full">
+						<div className="text-gray-400 text-sm pt-1">Editing</div>
 						<div className="font-semibold mb-3">&nbsp;</div>
 						<div className="absolute top-0 right-0">
 							<span className="mr-2 text-sm text-gray-400">

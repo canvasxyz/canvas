@@ -77,7 +77,9 @@ function SidebarMenu({ active }: SidebarMenuProps) {
 function Sidebar({ version_number, app, edited }: SidebarProps) {
 	return (
 		<div className="">
-			<div className="font-semibold mb-3">Spec</div>
+			<div className="font-semibold mb-3">
+				Projects <span className="text-gray-400 mx-0.25">/</span> {app.slug}
+			</div>
 			<div className="border rounded overflow-hidden">
 				<div className="flex">
 					<a
