@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useEffect, useState } from "react"
-import { DownloadIcon } from "@heroicons/react/solid"
+import { DownloadIcon } from "@heroicons/react/outline"
 
 import dynamic from "next/dynamic"
 
@@ -116,18 +116,9 @@ export const Editor = dynamic(
 			return (
 				<div className="flex-1 w-max h-max">
 					<div className="flex flex-row place-content-between relative w-full">
-						<div className="text-gray-400 text-sm pt-1">Editing</div>
 						<div className="font-semibold mb-3">&nbsp;</div>
 						<div className="absolute top-0 right-0">
-							<span className="mr-2 text-sm text-gray-400">
-								{matchesPreviousVersion
-									? `Identical to v${matchesPreviousVersion}`
-									: clean
-									? "Saved as draft"
-									: saving
-									? "Saving as draft..."
-									: "Saving as draft..."}
-							</span>
+							<span className="mr-2 text-sm text-gray-400">{clean ? "Saved" : saving ? "Saving..." : "Saving..."}</span>
 							<button
 								className="text-sm px-2 py-1 ml-1.5 rounded bg-gray-200 hover:bg-gray-300"
 								onClick={() => {
@@ -143,7 +134,7 @@ export const Editor = dynamic(
 									document.body.removeChild(element)
 								}}
 							>
-								<DownloadIcon className="inline -mt-0.5 h-4 w-4" />
+								<DownloadIcon className="inline -mt-0.5 h-3.5 w-3.5" />
 							</button>
 							<button
 								className={`text-sm px-2 py-1 ml-1.5 rounded bg-gray-200 hover:bg-gray-300 ${
@@ -152,7 +143,13 @@ export const Editor = dynamic(
 								disabled={publishingDisabled}
 								onClick={() => state && publish(state)}
 							>
-								{publishing ? <span>Publishing...</span> : <span>Publish</span>}
+								{publishing ? (
+									<span>Publishing...</span>
+								) : matchesPreviousVersion ? (
+									<span>Published as v{matchesPreviousVersion}</span>
+								) : (
+									<span>Publish</span>
+								)}
 							</button>
 						</div>
 					</div>
