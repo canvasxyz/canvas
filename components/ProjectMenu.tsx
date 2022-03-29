@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import ReactDOM from "react-dom"
 import { usePopper } from "react-popper"
 import toast from "react-hot-toast"
@@ -35,7 +35,7 @@ function ProjectMenu({ app }: ProjectMenuProps) {
 		],
 	})
 
-	const deleteApp = () => {
+	const deleteApp = useCallback(() => {
 		if (!confirm("Really delete this app?")) return
 
 		fetch(`/api/app/${app.slug}`, {
@@ -48,7 +48,7 @@ function ProjectMenu({ app }: ProjectMenuProps) {
 				toast("Error deleting project.")
 			}
 		})
-	}
+	}, [app])
 
 	return (
 		<Popover className="inline text-sm">

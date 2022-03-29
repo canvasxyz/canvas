@@ -24,13 +24,14 @@ interface SidebarProps {
 	edited: boolean
 }
 
-interface SidebarMenuProps {
+interface SidebarMenuItemProps {
 	active: boolean
 	running: boolean
 	multihash: string
 }
 
-function SidebarMenu({ active, multihash, running }: SidebarMenuProps) {
+function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
+	const [shouldBeRunning, setShouldBeRunning] = useState<boolean>(running)
 	const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null)
 	const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null)
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -43,23 +44,35 @@ function SidebarMenu({ active, multihash, running }: SidebarMenuProps) {
 		],
 	})
 
-	const startApp = useCallback(() => {
-		console.log("starting app", multihash)
-		fetch(`/api/instance/${multihash}/start`, { method: "PUT" }).then((res) => {
-			if (res.status !== StatusCodes.OK) {
-				alert("Could not start app")
-			}
-		})
-	}, [])
+	const startApp = useCallback(
+		(close) => {
+			console.log("starting app", multihash)
+			fetch(`/api/instance/${multihash}/start`, { method: "PUT" }).then((res) => {
+				if (res.status !== StatusCodes.OK) {
+					alert("Could not start app")
+					setShouldBeRunning(running)
+				}
+			})
+			setShouldBeRunning(true)
+			close()
+		},
+		[multihash]
+	)
 
-	const stopApp = useCallback(() => {
-		console.log("stopping app", multihash)
-		fetch(`/api/instance/${multihash}/stop`, { method: "PUT" }).then((res) => {
-			if (res.status !== StatusCodes.OK) {
-				alert("Could not ststopart app")
-			}
-		})
-	}, [])
+	const stopApp = useCallback(
+		(close) => {
+			console.log("stopping app", multihash)
+			fetch(`/api/instance/${multihash}/stop`, { method: "PUT" }).then((res) => {
+				if (res.status !== StatusCodes.OK) {
+					alert("Could not stop app")
+					setShouldBeRunning(running)
+				}
+			})
+			setShouldBeRunning(false)
+			close()
+		},
+		[multihash]
+	)
 
 	return (
 		<Popover className={`border-l ${active ? "border-gray-400" : "border-gray-200"}`}>
@@ -67,9 +80,13 @@ function SidebarMenu({ active, multihash, running }: SidebarMenuProps) {
 				ref={setReferenceElement}
 				className={`flex-0 text-sm px-2 pb-5 flex gap-4 hover:bg-gray-100 cursor-pointer border-t outline-none ${
 					active ? "!bg-blue-500 text-white" : ""
-				}`}
+				} ${shouldBeRunning !== running ? "pointer-events-none " : ""}`}
 			>
-				<span className={`relative text-xl top-1 leading-3 ${active ? "text-gray-100" : "text-gray-400"}`}>
+				<span
+					className={`relative text-xl top-1 leading-3 ${active ? "text-gray-100" : "text-gray-400"} ${
+						shouldBeRunning !== running ? "opacity-50" : ""
+					}`}
+				>
 					&hellip;
 				</span>
 			</Popover.Button>
@@ -81,17 +98,25 @@ function SidebarMenu({ active, multihash, running }: SidebarMenuProps) {
 					style={styles.popper}
 					{...attributes.popper}
 				>
-					<div>
-						{running ? (
-							<button className="block px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200" onClick={stopApp}>
-								Stop
-							</button>
-						) : (
-							<button className="block px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200" onClick={startApp}>
-								Start
-							</button>
-						)}
-					</div>
+					{({ close }) => (
+						<div>
+							{running ? (
+								<button
+									className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
+									onClick={stopApp.bind(null, close)}
+								>
+									Stop
+								</button>
+							) : (
+								<button
+									className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
+									onClick={startApp.bind(null, close)}
+								>
+									Start
+								</button>
+							)}
+						</div>
+					)}
 				</Popover.Panel>,
 				document.querySelector(".app-body")!
 			)}
@@ -146,7 +171,7 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 									{version.multihash.slice(0, 6)}
 								</span>
 							</a>
-							<SidebarMenu
+							<SidebarMenuItem
 								multihash={version.multihash}
 								active={version.version_number === version_number}
 								running={instances.has(version.multihash)}
