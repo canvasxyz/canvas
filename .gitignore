@@ -5,6 +5,7 @@ node_modules/
 # Databases
 apps/
 prisma/db.sqlite
+prisma/db.sqlite-journal
 
 # Previous db
 db/
