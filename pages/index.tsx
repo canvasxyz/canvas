@@ -1,11 +1,9 @@
-import React, { useState } from "react"
-import useSWR from "swr"
+import React, { useContext } from "react"
+
 import type { GetServerSideProps } from "next"
 
-import { loader, prisma } from "utils/server/services"
+import { prisma } from "utils/server/services"
 import Link from "next/link"
-
-// const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 interface IndexPageProps {
 	apps: {

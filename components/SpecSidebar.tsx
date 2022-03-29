@@ -1,10 +1,14 @@
-import { useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import ReactDOM from "react-dom"
 import { usePopper } from "react-popper"
 import { Popover } from "@headlessui/react"
 import dynamic from "next/dynamic"
+import useSWR from "swr"
 
 import ProjectMenu from "./ProjectMenu"
+import { StatusCodes } from "http-status-codes"
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 interface SidebarProps {
 	version_number: null | number
@@ -22,9 +26,11 @@ interface SidebarProps {
 
 interface SidebarMenuProps {
 	active: boolean
+	running: boolean
+	multihash: string
 }
 
-function SidebarMenu({ active }: SidebarMenuProps) {
+function SidebarMenu({ active, multihash, running }: SidebarMenuProps) {
 	const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null)
 	const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null)
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -36,6 +42,24 @@ function SidebarMenu({ active }: SidebarMenuProps) {
 			},
 		],
 	})
+
+	const startApp = useCallback(() => {
+		console.log("starting app", multihash)
+		fetch(`/api/instance/${multihash}/start`, { method: "PUT" }).then((res) => {
+			if (res.status !== StatusCodes.OK) {
+				alert("Could not start app")
+			}
+		})
+	}, [])
+
+	const stopApp = useCallback(() => {
+		console.log("stopping app", multihash)
+		fetch(`/api/instance/${multihash}/stop`, { method: "PUT" }).then((res) => {
+			if (res.status !== StatusCodes.OK) {
+				alert("Could not ststopart app")
+			}
+		})
+	}, [])
 
 	return (
 		<Popover className={`border-l ${active ? "border-gray-400" : "border-gray-200"}`}>
@@ -58,16 +82,15 @@ function SidebarMenu({ active }: SidebarMenuProps) {
 					{...attributes.popper}
 				>
 					<div>
-						<a
-							className="block px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
-							href="#"
-							onClick={() => alert("unimplemented: start")}
-						>
-							Start
-						</a>
-						{/*<a className="block px-3 py-2 hover:bg-gray-100 text-sm" href="#" onClick={() => alert("unimplemented: stop")}>
-							Stop
-						  </a>*/}
+						{running ? (
+							<button className="block px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200" onClick={stopApp}>
+								Stop
+							</button>
+						) : (
+							<button className="block px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200" onClick={startApp}>
+								Start
+							</button>
+						)}
 					</div>
 				</Popover.Panel>,
 				document.querySelector(".app-body")!
@@ -77,6 +100,10 @@ function SidebarMenu({ active }: SidebarMenuProps) {
 }
 
 function Sidebar({ version_number, app, edited }: SidebarProps) {
+	const { data, error } = useSWR("/api/instance", fetcher, { refreshInterval: 1000 })
+	console.log(data, error)
+	const instances = useMemo<Set<string>>(() => (error ? new Set([]) : new Set(data)), [data])
+
 	return (
 		<div className="">
 			<div className="font-semibold mb-3">
@@ -106,8 +133,10 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 								href={`?version=v${version.version_number}`}
 							>
 								<span className={`flex-1`}>v{version.version_number}</span>
-								{index === 1 /* TODO */ && (
+								{instances.has(version.multihash) ? (
 									<div className="inline-block rounded px-1.5 py-0.5 mr-2 text-xs bg-green-600 text-white">Running</div>
+								) : (
+									<div className="inline-block rounded px-1.5 py-0.5 mr-2 text-xs bg-red-500 text-white">Stopped</div>
 								)}
 								<span
 									className={`text-gray-400 font-mono text-xs mt-0.5 ${
@@ -117,7 +146,11 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 									{version.multihash.slice(0, 6)}
 								</span>
 							</a>
-							<SidebarMenu active={version.version_number === version_number} />
+							<SidebarMenu
+								multihash={version.multihash}
+								active={version.version_number === version_number}
+								running={instances.has(version.multihash)}
+							/>
 						</div>
 					)
 				})}

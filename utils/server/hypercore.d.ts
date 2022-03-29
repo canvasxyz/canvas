@@ -1,29 +1,17 @@
 declare module "hypercore" {
-	interface Options {
+	interface HypercoreOptions {
 		createIfMissing: boolean
 		overwrite: boolean
 		valueEncoding: "json" | "utf-8" | "binary"
-		sparse: boolean
-		eagerUpdate: boolean
-		secretKey: Buffer
-		storeSecretKey: boolean
-		storageCacheSize: number
-		onwrite: (index, data, peer, cb) => void
-		stats: boolean
-		crypto: {
-			// sign (data, secretKey, cb(err, signature)) => void,
-			// verify (signature, data, key, cb(err, valid)) => void
-		}
-		noiseKeyPair: { publicKey: string; secretKey: string }
 	}
 
 	class Feed {
 		length: number
 		on(event: "ready", callback: () => void)
+		append(data: any, callback: (err: null | Error, seq: number) => void)
+		get(index: number, callback: (err: null | Error, data: any) => void)
+		close(callback: (err: null | Error) => void)
 	}
 
-	export default function hypercore(
-		storage: string,
-		options?: Partial<Options>
-	): Feed
+	export default function hypercore(storage: string, options?: Partial<HypercoreOptions>): Feed
 }

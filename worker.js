@@ -54,25 +54,22 @@ parentPort.once("message", async ({ multihash, actionPort, modelPort }) => {
 		return db
 	}
 
-	actionPort.on(
-		"message",
-		async ({ id, action: { name, args, ...context } }) => {
-			console.log("got action!", id, name, args, context)
-			const db = makeDB(id)
-			try {
-				await actions[name].apply({ db, ...context }, args)
-				console.log("success! posting result to main")
-				actionPort.postMessage({ id, status: "success" })
-			} catch (err) {
-				console.log("failure! posting error to main")
-				actionPort.postMessage({
-					id,
-					status: "failure",
-					message: err.toString(),
-				})
-			}
+	actionPort.on("message", async ({ id, action: { name, args, ...context } }) => {
+		console.log("got action!", id, name, args, context)
+		const db = makeDB(id)
+		try {
+			await actions[name].apply({ db, ...context }, args)
+			console.log("success! posting result to main")
+			actionPort.postMessage({ id, status: "success" })
+		} catch (err) {
+			console.log("failure! posting error to main")
+			actionPort.postMessage({
+				id,
+				status: "failure",
+				error: err.toString(),
+			})
 		}
-	)
+	})
 
 	const actionParameters = {}
 	for (const [name, handler] of Object.entries(actions)) {
