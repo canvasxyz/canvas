@@ -12,9 +12,13 @@ export function validateType(type: ModelType, value: ModelValue) {
 		assert(Number.isSafeInteger(value), "invalid type: expected integer")
 	} else if (type === "float") {
 		assert(typeof value === "number", "invalid type: expected number")
+		// @ts-ignore
 	} else if (type === "bytes") {
+		// @ts-ignore
 		assert(value instanceof Uint8Array, "invalid type: expected Uint8Array")
+		// @ts-ignore
 	} else if (type === "datetime") {
+		// @ts-ignore
 		assert(value instanceof Date, "invalid type: expected Date")
 	} else {
 		// reference values are represented as strings
