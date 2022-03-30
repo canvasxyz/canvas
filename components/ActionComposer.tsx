@@ -16,6 +16,7 @@ import { StatusCodes } from "http-status-codes"
 const extensions = [indentUnit.of("  "), basicSetup, jsonLanguage, keymap.of(defaultKeymap), keymap.of([indentWithTab])]
 
 const getInitialActionValue = () => `{
+	"from": null,
 	"name": "thread",
 	"args": ["this is the title", "http://example.com"],
 	"timestamp": ${new Date().valueOf()}
@@ -63,7 +64,9 @@ function ActionComposer(props: { multihash: string }) {
 		<div className="mt-4">
 			<div className={styles.editor} ref={element}></div>
 			<button
-				className="mt-2 block p-2 rounded bg-blue-500 hover:bg-blue-500 font-semibold text-sm text-center text-white"
+				className={`mt-2 block p-2 rounded bg-blue-500 hover:bg-blue-500 font-semibold text-sm text-center text-white ${
+					sending || state === null ? "pointer-events-none opacity-50" : ""
+				}`}
 				disabled={sending || state === null}
 				onClick={handleClick}
 			>

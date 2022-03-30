@@ -2,12 +2,12 @@ import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
-import { Action } from "utils/server/types"
-import { action } from "utils/server/action"
+import { Action, ActionPayload } from "utils/server/types"
+import { action, payload } from "utils/server/action"
 
 import * as t from "io-ts"
 
-const actionArray = t.array(action)
+const actionArray = t.array(payload)
 
 async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	if (typeof req.query.multihash !== "string") {
@@ -23,7 +23,7 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 		return res.status(StatusCodes.OK).json([])
 	}
 
-	const actions = await new Promise<Action[]>((resolve, reject) => {
+	const actions = await new Promise<ActionPayload[]>((resolve, reject) => {
 		const start = Math.max(app.feed.length - 10, 0)
 		app.feed.getBatch(start, app.feed.length, (err, data) => {
 			if (err !== null) {

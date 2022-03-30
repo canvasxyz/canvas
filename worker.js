@@ -22,7 +22,10 @@ if (appDirectory === undefined) {
  * uses to initialize the database, prepare route query statements, and so on.
  *
  * To apply an action, the main thread sends an { id, action } message on the actionPort
- * and expects a { id, status: "success" } | { id, status: "failure"; error: string } message in response.
+ * and expects a { id, status: "success" } | { id, status: "failure"; error: string }
+ * message in response.
+ *
+ * Actions should be verified *before* being sent to the worker.
  *
  * When an action handler wants to emit a model record, it calls this.db[name].create(params),
  * which gets forwarded on modelPort as a { id, name, params } message.

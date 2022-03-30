@@ -1,6 +1,6 @@
 /**
  *
- * A `ActionArgument` is a type-level representation of concrete action argument
+ * An `ActionArgument` is a type-level representation of concrete action argument
  * types, ie TypeScript types that describe the possible JavaScript values that
  * we put into and get out of action calls.
  *
@@ -22,10 +22,22 @@ export type Model = Record<string, ModelType>
 
 export type ActionArgument = null | boolean | number | string
 
-export type Action = {
+/**
+ * Actions and Payloads
+ */
+
+export type ActionPayload = {
+	from: string
 	name: string
 	args: ActionArgument[]
 	timestamp: number
+}
+
+export type Action = {
+	from: string
+	chainId: string
+	signature: string
+	payload: string
 }
 
 export type ContextModel = {

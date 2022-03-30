@@ -1,12 +1,12 @@
 import React, { useEffect } from "react"
 
 import useSWR from "swr"
-import { Action } from "utils/server/types"
+import { ActionPayload } from "utils/server/types"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export function Actions(props: { multihash: string }) {
-	const { data, error } = useSWR<Action[]>(`/api/instance/${props.multihash}/actions`, fetcher, {
+	const { data, error } = useSWR<ActionPayload[]>(`/api/instance/${props.multihash}/actions`, fetcher, {
 		refreshInterval: 1000,
 	})
 
@@ -25,7 +25,7 @@ export function Actions(props: { multihash: string }) {
 						</tr>
 					</thead>
 					<tbody>
-						{data.map((action: Action, index) => (
+						{data.map((action: ActionPayload, index) => (
 							<tr key={index}>
 								<td className="pl-4 pr-3 pt-3 font-mono text-xs">0x0000</td>
 								<td className="pl-4 pr-3 pt-3 font-mono text-xs">{action.timestamp}</td>

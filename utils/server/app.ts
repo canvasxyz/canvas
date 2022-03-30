@@ -8,7 +8,7 @@ import hypercore, { Feed } from "hypercore"
 import Database, * as sqlite from "better-sqlite3"
 import * as t from "io-ts"
 
-import type { Action, Model } from "./types"
+import type { Action, ActionPayload, Model } from "./types"
 import { getColumnType } from "./models"
 
 const appDirectory = process.env.APP_DIRECTORY!
@@ -224,8 +224,13 @@ export class App {
 	async apply(action: Action) {
 		await new Promise<void>((resolve, reject) => {
 			const id = this.actionId++
+
+			// There may be many outstanding actions, and actions are not guaranteed to execute in order.
 			this.actionPool.set(id, { resolve, reject })
-			this.actionPort.postMessage({ id, action })
+
+			console.log(id, action)
+			const payload = action.payload
+			this.actionPort.postMessage({ id, action: payload })
 		})
 
 		await new Promise<void>((resolve, reject) => {
