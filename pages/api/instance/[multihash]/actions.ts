@@ -7,7 +7,7 @@ import { action, payload } from "utils/server/action"
 
 import * as t from "io-ts"
 
-const actionArray = t.array(payload)
+const actionArray = t.array(action)
 
 async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	if (typeof req.query.multihash !== "string") {
@@ -23,7 +23,7 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 		return res.status(StatusCodes.OK).json([])
 	}
 
-	const actions = await new Promise<ActionPayload[]>((resolve, reject) => {
+	const actions = await new Promise<Action[]>((resolve, reject) => {
 		const start = Math.max(app.feed.length - 10, 0)
 		app.feed.getBatch(start, app.feed.length, (err, data) => {
 			if (err !== null) {
@@ -44,7 +44,6 @@ async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 		return res.status(StatusCodes.BAD_REQUEST).end()
 	}
 
-	console.log("holy shit")
 	console.log("posting action", req.query.multihash, req.body)
 
 	if (!action.is(req.body)) {

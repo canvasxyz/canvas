@@ -17,7 +17,7 @@ import { StatusCodes } from "http-status-codes"
 const extensions = [indentUnit.of("  "), basicSetup, jsonLanguage, keymap.of(defaultKeymap), keymap.of([indentWithTab])]
 
 const getInitialActionValue = () => `{
-	"from": null,
+	"from": "",
 	"name": "thread",
 	"args": ["this is the title", "http://example.com"],
 	"timestamp": ${new Date().valueOf()}
@@ -75,8 +75,8 @@ function ActionComposer(props: { multihash: string }) {
 			.signMessage(payloadString)
 			.then((result: string) => {
 				const action = {
-					from: null,
-					chainId: null,
+					from: "",
+					chainId: "",
 					signature: result,
 					payload: payloadString,
 				}

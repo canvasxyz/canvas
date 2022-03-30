@@ -227,10 +227,7 @@ export class App {
 
 			// There may be many outstanding actions, and actions are not guaranteed to execute in order.
 			this.actionPool.set(id, { resolve, reject })
-
-			console.log(id, action)
-			const payload = action.payload
-			this.actionPort.postMessage({ id, action: payload })
+			this.actionPort.postMessage({ id, action: JSON.parse(action.payload) })
 		})
 
 		await new Promise<void>((resolve, reject) => {
