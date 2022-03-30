@@ -7,6 +7,7 @@ import express from "express"
 import hypercore, { Feed } from "hypercore"
 import Database, * as sqlite from "better-sqlite3"
 import * as t from "io-ts"
+import { ethers } from "ethers"
 
 import type { Action, ActionPayload, Model } from "./types"
 import { getColumnType } from "./models"
@@ -222,13 +223,27 @@ export class App {
 	}
 
 	async apply(action: Action) {
-		await new Promise<void>((resolve, reject) => {
-			const id = this.actionId++
+		try {
+			await new Promise<void>((resolve, reject) => {
+				const id = this.actionId++
 
-			// There may be many outstanding actions, and actions are not guaranteed to execute in order.
-			this.actionPool.set(id, { resolve, reject })
-			this.actionPort.postMessage({ id, action: JSON.parse(action.payload) })
-		})
+				// Verify the action matches the payload
+				const payload = JSON.parse(action.payload)
+				assert(action.from === payload.from, "action origin doesn't match payload origin")
+				assert(action.chainId === payload.chainId, "action chainId doesn't match payload chainId")
+
+				// Verify the signature
+				const verifiedAddress = ethers.utils.verifyMessage(payload, action.signature)
+				assert(action.from === verifiedAddress, "action signed by wrong address")
+
+				// There may be many outstanding actions, and actions are not guaranteed to execute in order.
+				this.actionPool.set(id, { resolve, reject })
+				this.actionPort.postMessage({ id, action: payload })
+			})
+		} catch (err) {
+			console.log(err)
+			throw err
+		}
 
 		await new Promise<void>((resolve, reject) => {
 			this.feed.append(action, (err, seq) => {
