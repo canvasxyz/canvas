@@ -36,7 +36,7 @@ export function Actions(props: { multihash: string }) {
 								<tr key={index}>
 									<td className="pl-4 pr-1 pt-3 font-mono text-xs">{action.signature.slice(0, 7)}</td>
 									<td className="pl-4 pr-1 pt-3 font-mono text-xs">{payload.timestamp}</td>
-									<td className="pl-4 pr-1 pt-3 font-mono text-xs">{payload.name}</td>
+									<td className="pl-4 pr-1 pt-3 font-mono text-xs">{payload.call}</td>
 									<td className="pl-4 pr-4 pt-3 font-mono text-xs whitespace-pre">{JSON.stringify(payload.args)}</td>
 								</tr>
 							)

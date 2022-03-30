@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback, useMemo, useState } from "react"
+import toast from "react-hot-toast"
 import { ethers } from "ethers"
 
 import dynamic from "next/dynamic"
@@ -10,6 +11,7 @@ import { indentUnit } from "@codemirror/language"
 
 import { jsonLanguage } from "@codemirror/lang-json"
 import { useCodeMirror } from "utils/client/codemirror"
+import { ActionPayload } from "utils/server/types"
 
 import styles from "./ActionComposer.module.scss"
 import { StatusCodes } from "http-status-codes"
@@ -18,7 +20,7 @@ const extensions = [indentUnit.of("  "), basicSetup, jsonLanguage, keymap.of(def
 
 const getInitialActionValue = (from = "") => `{
 	"from": "${from}",
-	"name": "thread",
+	"call": "thread",
 	"args": ["this is the title", "http://example.com"],
 	"timestamp": ${new Date().valueOf()}
 }`
@@ -37,7 +39,7 @@ function ActionComposer(props: { multihash: string }) {
 				const t = state.update({
 					changes: { from: 0, to: state?.doc.length, insert: value },
 				})
-				view.current.update([t])
+				view.current.dispatch(t)
 			}
 		},
 		[state]
@@ -61,7 +63,7 @@ function ActionComposer(props: { multihash: string }) {
 				})
 			})
 			.catch(() => {
-				alert("Wallet provider did not return addresses")
+				toast("Wallet did not return an address")
 			})
 	}, [state === null])
 
@@ -69,20 +71,19 @@ function ActionComposer(props: { multihash: string }) {
 		if (state === null) {
 			return
 		}
-
 		const value = state.doc.toJSON().join("\n")
-		let payloadObject
+		let payloadObject: ActionPayload
 		try {
 			payloadObject = JSON.parse(value)
 		} catch (e) {
 			console.error(value, e)
-			alert("Invalid JSON")
+			toast("Invalid JSON")
 			return
 		}
 		const payloadString = JSON.stringify(payloadObject)
 
 		if (!currentSigner) {
-			alert("Signer not ready, try connecting Metamask")
+			toast("Signer not ready. Have you connected Metamask?")
 			return
 		}
 
@@ -91,7 +92,7 @@ function ActionComposer(props: { multihash: string }) {
 			.signMessage(payloadString)
 			.then((result: string) => {
 				const action = {
-					from: "",
+					from: payloadObject.from,
 					chainId: "",
 					signature: result,
 					payload: payloadString,
@@ -104,15 +105,15 @@ function ActionComposer(props: { multihash: string }) {
 				}).then((res) => {
 					setSending(false)
 					if (res.status === StatusCodes.OK) {
-						alert("Action sent successfully!")
+						toast("Action sent successfully!")
 					} else {
-						alert("Action evaluation failed")
+						toast("Action evaluation failed")
 					}
 				})
 			})
 			.catch(() => {
 				setSending(false)
-				alert("Signature rejected")
+				toast("Signature rejected")
 			})
 	}, [state, currentSigner])
 

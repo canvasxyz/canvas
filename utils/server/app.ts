@@ -230,10 +230,10 @@ export class App {
 				// Verify the action matches the payload
 				const payload = JSON.parse(action.payload)
 				assert(action.from === payload.from, "action origin doesn't match payload origin")
-				assert(action.chainId === payload.chainId, "action chainId doesn't match payload chainId")
+				// assert(action.chainId === payload.chainId, "action chainId doesn't match payload chainId")
 
 				// Verify the signature
-				const verifiedAddress = ethers.utils.verifyMessage(payload, action.signature)
+				const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
 				assert(action.from === verifiedAddress, "action signed by wrong address")
 
 				// There may be many outstanding actions, and actions are not guaranteed to execute in order.
