@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react"
+import React, { useEffect, useCallback, useMemo, useState } from "react"
+import { ethers } from "ethers"
 
 import dynamic from "next/dynamic"
 
@@ -30,35 +31,74 @@ function ActionComposer(props: { multihash: string }) {
 		extensions,
 	})
 
+	const [currentSigner, setCurrentSigner] = useState<any>()
+	useEffect(() => {
+		const provider = new ethers.providers.Web3Provider((window as any).ethereum)
+		if (!provider) {
+			// TODO handle error
+			return
+		}
+		provider
+			.send("eth_requestAccounts", [])
+			.then(() => {
+				const signer = provider.getSigner()
+				setCurrentSigner(signer)
+			})
+			.catch(() => {
+				// TODO handle error
+			})
+	}, [])
+
 	const handleClick = useCallback(() => {
 		if (state === null) {
 			return
 		}
 
 		const value = state.doc.toJSON().join("\n")
-		let action
+		let payloadObject
 		try {
-			action = JSON.parse(value)
+			payloadObject = JSON.parse(value)
 		} catch (e) {
 			console.error(value, e)
 			alert("Invalid JSON")
 			return
 		}
+		const payloadString = JSON.stringify(payloadObject)
+
+		if (!currentSigner) {
+			alert("Signer not ready, try connecting Metamask")
+			return
+		}
 
 		setSending(true)
-		fetch(`/api/instance/${props.multihash}/actions`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(action),
-		}).then((res) => {
-			setSending(false)
-			if (res.status === StatusCodes.OK) {
-				alert("Action sent successfully!")
-			} else {
-				alert("Action evaluation failed")
-			}
-		})
-	}, [state])
+		currentSigner
+			.signMessage(payloadString)
+			.then((result: string) => {
+				const action = {
+					from: null,
+					chainId: null,
+					signature: result,
+					payload: payloadString,
+				}
+
+				fetch(`/api/instance/${props.multihash}/actions`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(action),
+				}).then((res) => {
+					setSending(false)
+					if (res.status === StatusCodes.OK) {
+						alert("Action sent successfully!")
+					} else {
+						alert("Action evaluation failed")
+					}
+				})
+			})
+			.catch(() => {
+				setSending(false)
+				alert("Signature rejected")
+			})
+	}, [state, currentSigner])
 
 	return (
 		<div className="mt-4">
