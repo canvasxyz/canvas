@@ -14,33 +14,18 @@
  * at the moment, but this is a "coincidence", so they're named different things.
  */
 
-export type ModelType =
-	| "boolean"
-	| "string"
-	| "integer"
-	| "float"
-	| "bytes"
-	| "datetime"
-	| `@${string}`
+export type ModelType = "boolean" | "string" | "integer" | "float" | `@${string}`
 
-export type ModelValue = null | boolean | number | Uint8Array | Date | string
+export type ModelValue = null | boolean | number | string
 
 export type Model = Record<string, ModelType>
 
-export type ActionArgument =
-	| null
-	| boolean
-	| number
-	| Uint8Array
-	| Date
-	| string
+export type ActionArgument = null | boolean | number | string
 
 export type Action = {
-	from: string
 	name: string
 	args: ActionArgument[]
-	blockhash: string
-	timestamp: Date
+	timestamp: number
 }
 
 export type ContextModel = {
@@ -52,7 +37,4 @@ export type Context = {
 	// light client etc goes here too...
 }
 
-export type ActionHandler = (
-	this: Context,
-	...args: ActionArgument[]
-) => Promise<void>
+export type ActionHandler = (this: Context, ...args: ActionArgument[]) => Promise<void>

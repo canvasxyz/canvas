@@ -1,11 +1,13 @@
-import React, { useCallback, useState } from "react"
+import React, { useCallback, useMemo, useState } from "react"
 
 import type { GetServerSideProps } from "next"
+import useSWR from "swr"
 
 import { prisma } from "utils/server/services"
 import { Editor } from "components/SpecEditor"
 import { Viewer } from "components/SpecViewer"
 import { Actions } from "components/SpecActions"
+import ActionComposer from "components/ActionComposer"
 import Sidebar from "components/SpecSidebar"
 
 interface AppPageProps {
@@ -74,6 +76,8 @@ export const getServerSideProps: GetServerSideProps<AppPageProps, AppPageParams>
 	}
 }
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
+
 export default function AppPage({ version_number, app }: AppPageProps) {
 	const [edited, setEdited] = useState(false)
 	const onEdited = useCallback(() => setEdited(true), [])
@@ -83,6 +87,12 @@ export default function AppPage({ version_number, app }: AppPageProps) {
 	const version =
 		version_number === null ? null : app.versions.find((version) => version.version_number === version_number)!
 
+	const { data, error } = useSWR("/api/instance", fetcher, { refreshInterval: 1000 })
+	const instance = useMemo(
+		() => (version !== null && Array.isArray(data) && data.includes(version.multihash) ? version.multihash : null),
+		[data]
+	)
+
 	return (
 		<div className="flex">
 			<div className="w-60 pr-6">
@@ -91,7 +101,8 @@ export default function AppPage({ version_number, app }: AppPageProps) {
 			{version === null ? <Editor key="editor" app={app} onEdited={onEdited} /> : <Viewer {...version} />}
 			<div className="w-96 pl-6">
 				<div className="font-semibold mb-3">Actions</div>
-				<Actions />
+				{instance !== null && <Actions multihash={instance} />}
+				{instance !== null && <ActionComposer multihash={instance} />}
 			</div>
 		</div>
 	)

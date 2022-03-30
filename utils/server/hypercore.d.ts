@@ -10,6 +10,7 @@ declare module "hypercore" {
 		on(event: "ready", callback: () => void)
 		append(data: any, callback: (err: null | Error, seq: number) => void)
 		get(index: number, callback: (err: null | Error, data: any) => void)
+		getBatch(start: number, end: number, callback: (err: null | Error, data: any[]) => void)
 		close(callback: (err: null | Error) => void)
 	}
 

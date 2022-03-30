@@ -66,7 +66,7 @@ export class App {
 		const feed = hypercore(hypercorePath, {
 			createIfMissing: true,
 			overwrite: false,
-			valueEncoding: "binary",
+			valueEncoding: "json",
 		})
 
 		await new Promise<void>((resolve) => feed.on("ready", () => resolve()))
@@ -156,10 +156,10 @@ export class App {
 		}
 
 		// Attach model message listener
-		this.modelPort.on("message", this.handleModelMessage)
+		this.modelPort.on("message", (message) => this.handleModelMessage(message))
 
 		// Attach action message listener
-		this.actionPort.on("message", this.handleActionMessage)
+		this.actionPort.on("message", (message) => this.handleActionMessage(message))
 
 		// Remove the api socket, if it exists
 		const apiPath = path.resolve(appDirectory, this.multihash, "api.sock")
@@ -169,6 +169,16 @@ export class App {
 
 		// Create the API server
 		this.server = express()
+		this.server.get("/", (req, res) => {
+			console.log("handling api request")
+			res.send("hello world 2")
+		})
+
+		this.server.get("/route/:name", (req, res) => {
+			console.log(req.params.name)
+			// req.body
+		})
+
 		this.server.listen(apiPath, () => {
 			console.log("API server listening on socket", apiPath)
 		})
@@ -216,6 +226,17 @@ export class App {
 			const id = this.actionId++
 			this.actionPool.set(id, { resolve, reject })
 			this.actionPort.postMessage({ id, action })
+		})
+
+		await new Promise<void>((resolve, reject) => {
+			this.feed.append(action, (err, seq) => {
+				console.log("appended to hypercore", seq)
+				if (err === null) {
+					resolve()
+				} else {
+					reject(err)
+				}
+			})
 		})
 	}
 }
