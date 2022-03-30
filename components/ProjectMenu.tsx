@@ -43,9 +43,9 @@ function ProjectMenu({ app }: ProjectMenuProps) {
 		}).then((res) => {
 			if (res.status === StatusCodes.OK) {
 				router.push("/")
-				toast("App deleted.")
+				toast.error("App deleted.")
 			} else {
-				toast("Error deleting project.")
+				toast.error("Error deleting project.")
 			}
 		})
 	}, [app])

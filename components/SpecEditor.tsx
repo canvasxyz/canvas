@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback, useEffect, useState } from "react"
+import toast from "react-hot-toast"
 import { DownloadIcon } from "@heroicons/react/outline"
 
 import dynamic from "next/dynamic"
@@ -64,7 +65,7 @@ export const Editor = dynamic(
 							router.push(location)
 						}
 					} else {
-						alert("Publishing failed")
+						toast.error("Could not publish new version")
 					}
 				})
 			}, [])

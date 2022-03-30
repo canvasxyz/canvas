@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import ReactDOM from "react-dom"
 import { usePopper } from "react-popper"
+import toast from "react-hot-toast"
 import { Popover } from "@headlessui/react"
+
 import dynamic from "next/dynamic"
 import useSWR from "swr"
 
@@ -53,7 +55,7 @@ function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
 			console.log("starting app", multihash)
 			fetch(`/api/instance/${multihash}/start`, { method: "PUT" }).then((res) => {
 				if (res.status !== StatusCodes.OK) {
-					alert("Could not start app")
+					toast.error("Could not start app")
 					setShouldBeRunning(running)
 				}
 			})
@@ -68,7 +70,7 @@ function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
 			console.log("stopping app", multihash)
 			fetch(`/api/instance/${multihash}/stop`, { method: "PUT" }).then((res) => {
 				if (res.status !== StatusCodes.OK) {
-					alert("Could not stop app")
+					toast.error("Could not stop app")
 					setShouldBeRunning(running)
 				}
 			})

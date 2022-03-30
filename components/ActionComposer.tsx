@@ -63,7 +63,7 @@ function ActionComposer(props: { multihash: string }) {
 				})
 			})
 			.catch(() => {
-				toast("Wallet did not return an address")
+				toast.error("Wallet did not return an address")
 			})
 	}, [state === null])
 
@@ -77,13 +77,13 @@ function ActionComposer(props: { multihash: string }) {
 			payloadObject = JSON.parse(value)
 		} catch (e) {
 			console.error(value, e)
-			toast("Invalid JSON")
+			toast.error("Invalid JSON")
 			return
 		}
 		const payloadString = JSON.stringify(payloadObject)
 
 		if (!currentSigner) {
-			toast("Signer not ready. Have you connected Metamask?")
+			toast.error("Signer not ready. Have you connected Metamask?")
 			return
 		}
 
@@ -105,15 +105,15 @@ function ActionComposer(props: { multihash: string }) {
 				}).then((res) => {
 					setSending(false)
 					if (res.status === StatusCodes.OK) {
-						toast("Action sent successfully!")
+						toast.success("Action sent!")
 					} else {
-						toast("Action evaluation failed")
+						toast.error("Action evaluation failed")
 					}
 				})
 			})
 			.catch(() => {
 				setSending(false)
-				toast("Signature rejected")
+				toast.error("Signature rejected")
 			})
 	}, [state, currentSigner])
 

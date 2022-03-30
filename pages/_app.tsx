@@ -33,7 +33,9 @@ export default function App({ Component, pageProps }: AppProps) {
 							<Transition
 								appear
 								show={t.visible}
-								className="transform px-4 py-3 pb-2.5 mt-3 rounded shadow-lg bg-red-500 text-white"
+								className={`transform px-4 py-3 pb-2.5 mt-3 rounded shadow-lg ${
+									t.type === "error" ? "bg-red-500 text-white" : ""
+								} ${t.type === "success" ? "bg-green-600 text-white" : ""}`}
 								enter="transition-all duration-150"
 								enterFrom="opacity-0 scale-50"
 								enterTo="opacity-100 scale-100"

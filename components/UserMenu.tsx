@@ -1,7 +1,9 @@
 import { useState } from "react"
 import ReactDOM from "react-dom"
 import { usePopper } from "react-popper"
+import toast from "react-hot-toast"
 import { Popover } from "@headlessui/react"
+
 import Link from "next/link"
 import dynamic from "next/dynamic"
 
@@ -35,7 +37,7 @@ function UserMenu() {
 						<a
 							className="block px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
 							href="#"
-							onClick={() => alert("unimplemented: logout")}
+							onClick={() => toast("Unimplemented: logout")}
 						>
 							Logout
 						</a>
