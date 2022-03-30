@@ -18,7 +18,7 @@ export function Actions(props: { multihash: string }) {
 				<table className="table-auto text-left text-xs leading-tight w-full">
 					<thead className="bg-white border-b border-gray-300">
 						<tr>
-							<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">hash</th>
+							<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">sig</th>
 							<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">timestamp</th>
 							<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">call</th>
 							<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">args</th>
@@ -34,10 +34,10 @@ export function Actions(props: { multihash: string }) {
 							}
 							return (
 								<tr key={index}>
-									<td className="pl-4 pr-3 pt-3 font-mono text-xs">0x0000</td>
-									<td className="pl-4 pr-3 pt-3 font-mono text-xs">{payload.timestamp}</td>
-									<td className="pl-4 pr-3 pt-3 font-mono text-xs">{payload.name}</td>
-									<td className="pl-4 pr-3 pt-3 font-mono text-xs whitespace-pre">{JSON.stringify(payload.args)}</td>
+									<td className="pl-4 pr-1 pt-3 font-mono text-xs">{action.signature.slice(0, 7)}</td>
+									<td className="pl-4 pr-1 pt-3 font-mono text-xs">{payload.timestamp}</td>
+									<td className="pl-4 pr-1 pt-3 font-mono text-xs">{payload.name}</td>
+									<td className="pl-4 pr-4 pt-3 font-mono text-xs whitespace-pre">{JSON.stringify(payload.args)}</td>
 								</tr>
 							)
 						})}
