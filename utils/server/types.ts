@@ -28,7 +28,7 @@ export type ActionArgument = null | boolean | number | string
 
 export type ActionPayload = {
 	from: string
-	name: string
+	call: string
 	args: ActionArgument[]
 	timestamp: number
 }

@@ -57,12 +57,12 @@ parentPort.once("message", async ({ multihash, actionPort, modelPort }) => {
 		return db
 	}
 
-	actionPort.on("message", async ({ id, action: { name, args, ...context } }) => {
-		console.log("got action!", id, name, args, context)
+	actionPort.on("message", async ({ id, action: { call, args, ...context } }) => {
+		console.log("got action!", id, call, args, context)
 		const db = makeDB(id)
 		try {
-			assert(name in actions, `Invalid action name ${JSON.stringify(name)}`)
-			await actions[name].apply({ db, from: null, ...context }, args)
+			assert(call in actions, `Invalid action name ${JSON.stringify(call)}`)
+			await actions[call].apply({ db, from: null, ...context }, args)
 			console.log("success! posting result to main")
 			actionPort.postMessage({ id, status: "success" })
 		} catch (err) {
@@ -76,9 +76,9 @@ parentPort.once("message", async ({ multihash, actionPort, modelPort }) => {
 	})
 
 	const actionParameters = {}
-	for (const [name, handler] of Object.entries(actions)) {
+	for (const [call, handler] of Object.entries(actions)) {
 		assert(typeof handler === "function")
-		actionParameters[name] = parseHandlerParameters(handler)
+		actionParameters[call] = parseHandlerParameters(handler)
 	}
 
 	parentPort.postMessage({ models, routes, actionParameters })
