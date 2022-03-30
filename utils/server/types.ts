@@ -14,9 +14,9 @@
  * at the moment, but this is a "coincidence", so they're named different things.
  */
 
-export type ModelType = "boolean" | "string" | "integer" | "float" | `@${string}`
+export type ModelType = "boolean" | "string" | "integer" | "float" | "bytes" | "datetime" | `@${string}`
 
-export type ModelValue = null | boolean | number | string
+export type ModelValue = null | boolean | number | string | Uint8Array | Date
 
 export type Model = Record<string, ModelType>
 
