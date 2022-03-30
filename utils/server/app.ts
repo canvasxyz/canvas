@@ -4,6 +4,7 @@ import assert from "node:assert"
 import { Worker, MessageChannel, MessagePort } from "node:worker_threads"
 
 import express from "express"
+import bodyParser from "body-parser"
 import hypercore, { Feed } from "hypercore"
 import Database, * as sqlite from "better-sqlite3"
 import * as t from "io-ts"
@@ -11,6 +12,7 @@ import { ethers } from "ethers"
 
 import type { Action, ActionPayload, Model } from "./types"
 import { getColumnType } from "./models"
+import { StatusCodes } from "http-status-codes"
 
 const appDirectory = process.env.APP_DIRECTORY!
 
@@ -170,14 +172,18 @@ export class App {
 
 		// Create the API server
 		this.server = express()
-		this.server.get("/", (req, res) => {
-			console.log("handling api request")
-			res.send("hello world 2")
-		})
+		this.server.use(bodyParser.json())
 
-		this.server.get("/route/:name", (req, res) => {
-			console.log(req.params.name)
-			// req.body
+		for (const route of Object.keys(this.routes)) {
+			this.server.get(route, (req, res) => {
+				console.log(route, req.params)
+				const results = this.routeStatements[route].all(req.params)
+				res.status(StatusCodes.OK).json(results)
+			})
+		}
+
+		this.server.post("/", (req, res) => {
+			res.status(StatusCodes.NOT_IMPLEMENTED).end()
 		})
 
 		this.server.listen(apiPath, () => {
