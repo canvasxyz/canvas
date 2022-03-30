@@ -45,6 +45,7 @@ function ActionComposer(props: { multihash: string }) {
 
 	const [currentSigner, setCurrentSigner] = useState<any>()
 	useEffect(() => {
+		if (state === null) return
 		const provider = new ethers.providers.Web3Provider((window as any).ethereum)
 		if (!provider) {
 			// TODO handle error
@@ -62,7 +63,7 @@ function ActionComposer(props: { multihash: string }) {
 			.catch(() => {
 				alert("Wallet provider did not return addresses")
 			})
-	}, [state])
+	}, [state === null])
 
 	const handleClick = useCallback(() => {
 		if (state === null) {
