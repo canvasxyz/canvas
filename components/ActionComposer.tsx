@@ -16,8 +16,8 @@ import { StatusCodes } from "http-status-codes"
 
 const extensions = [indentUnit.of("  "), basicSetup, jsonLanguage, keymap.of(defaultKeymap), keymap.of([indentWithTab])]
 
-const getInitialActionValue = () => `{
-	"from": "",
+const getInitialActionValue = (from = "") => `{
+	"from": "${from}",
 	"name": "thread",
 	"args": ["this is the title", "http://example.com"],
 	"timestamp": ${new Date().valueOf()}
@@ -31,6 +31,18 @@ function ActionComposer(props: { multihash: string }) {
 		extensions,
 	})
 
+	const setEditorValue = useCallback(
+		(value: string) => {
+			if (view.current !== null && state !== null) {
+				const t = state.update({
+					changes: { from: 0, to: state?.doc.length, insert: value },
+				})
+				view.current.update([t])
+			}
+		},
+		[state]
+	)
+
 	const [currentSigner, setCurrentSigner] = useState<any>()
 	useEffect(() => {
 		const provider = new ethers.providers.Web3Provider((window as any).ethereum)
@@ -43,11 +55,14 @@ function ActionComposer(props: { multihash: string }) {
 			.then(() => {
 				const signer = provider.getSigner()
 				setCurrentSigner(signer)
+				signer.getAddress().then((address) => {
+					setEditorValue(getInitialActionValue(address))
+				})
 			})
 			.catch(() => {
-				// TODO handle error
+				alert("Wallet provider did not return addresses")
 			})
-	}, [])
+	}, [state])
 
 	const handleClick = useCallback(() => {
 		if (state === null) {

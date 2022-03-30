@@ -1,10 +1,4 @@
-import {
-	MutableRefObject,
-	useCallback,
-	useEffect,
-	useRef,
-	useState,
-} from "react"
+import { MutableRefObject, useCallback, useEffect, useRef, useState } from "react"
 
 import { EditorState, Transaction, EditorStateConfig } from "@codemirror/state"
 
@@ -12,12 +6,7 @@ import { EditorView } from "@codemirror/view"
 
 export function useCodeMirror<T extends Element>(
 	config?: EditorStateConfig
-): [
-	EditorState | null,
-	Transaction | null,
-	MutableRefObject<EditorView | null>,
-	MutableRefObject<T | null>
-] {
+): [EditorState | null, Transaction | null, MutableRefObject<EditorView | null>, MutableRefObject<T | null>] {
 	const element = useRef<T | null>(null)
 	const view = useRef<EditorView | null>(null)
 
