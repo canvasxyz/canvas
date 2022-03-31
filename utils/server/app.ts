@@ -38,7 +38,7 @@ const modelMessage = t.type({
 // Don't use the App constructor directly, use the static App.initialize method instead:
 // const app = await App.initialize(multihash, spec)
 export class App {
-	static async initialize(multihash: string, spec: string): Promise<App> {
+	static async initialize(multihash: string, spec: string, port: number): Promise<App> {
 		// App.initialize does the preiminary *async* tasks of starting an app:
 		// - creating the app directory and copying spec.js if necessary
 		// - creating the sqlite database
@@ -105,7 +105,8 @@ export class App {
 			modelChannel.port2,
 			routes,
 			models,
-			actionParameters
+			actionParameters,
+			port
 		)
 	}
 
@@ -125,7 +126,8 @@ export class App {
 		readonly modelPort: MessagePort,
 		readonly routes: Record<string, string>,
 		readonly models: Record<string, Model>,
-		readonly actionParameters: Record<string, string[]>
+		readonly actionParameters: Record<string, string[]>,
+		readonly port: number
 	) {
 		// Initialize the database schema
 		const tables: string[] = []
@@ -164,11 +166,11 @@ export class App {
 		// Attach action message listener
 		this.actionPort.on("message", (message) => this.handleActionMessage(message))
 
-		// Remove the api socket, if it exists
-		const apiPath = path.resolve(appDirectory, this.multihash, "api.sock")
-		if (fs.existsSync(apiPath)) {
-			fs.unlinkSync(apiPath)
-		}
+		// // Remove the api socket, if it exists
+		// const apiPath = path.resolve(appDirectory, this.multihash, "api.sock")
+		// if (fs.existsSync(apiPath)) {
+		// 	fs.unlinkSync(apiPath)
+		// }
 
 		// Create the API server
 		this.server = express()
@@ -186,8 +188,9 @@ export class App {
 			res.status(StatusCodes.NOT_IMPLEMENTED).end()
 		})
 
-		this.server.listen(apiPath, () => {
-			console.log("API server listening on socket", apiPath)
+		this.server.listen(port, () => {
+			console.log("API server listening on port", port)
+			// console.log("API server listening on socket", apiPath)
 		})
 	}
 

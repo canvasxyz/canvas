@@ -19,6 +19,7 @@ if (!fs.existsSync(appDirectory)) {
  */
 export class Loader {
 	public readonly apps = new Map<string, App>()
+	public readonly loadingApps = new Set<string>()
 
 	constructor() {
 		console.log("initializing loader")
@@ -47,7 +48,10 @@ export class Loader {
 			throw new Error("no app version with that multihash exists")
 		}
 
-		const app = await App.initialize(multihash, version.spec)
+		const port = 8000 + this.apps.size + this.loadingApps.size
+		this.loadingApps.add(multihash)
+		const app = await App.initialize(multihash, version.spec, port)
+		this.loadingApps.delete(multihash)
 		this.apps.set(multihash, app)
 	}
 
