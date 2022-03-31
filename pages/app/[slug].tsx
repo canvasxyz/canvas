@@ -4,6 +4,7 @@ import type { GetServerSideProps } from "next"
 import useSWR from "swr"
 
 import { prisma } from "utils/server/services"
+import { AppData } from "utils/server/types"
 import { Editor } from "components/SpecEditor"
 import { Viewer } from "components/SpecViewer"
 import { Actions } from "components/SpecActions"
@@ -89,7 +90,10 @@ export default function AppPage({ version_number, app }: AppPageProps) {
 
 	const { data, error } = useSWR("/api/instance", fetcher, { refreshInterval: 1000 })
 	const instance = useMemo(
-		() => (version !== null && Array.isArray(data) && data.includes(version.multihash) ? version.multihash : null),
+		() =>
+			version !== null && data && Object.keys(data).includes(version.multihash)
+				? { multihash: version.multihash, data: data[version.multihash] as AppData }
+				: null,
 		[data]
 	)
 
@@ -102,14 +106,14 @@ export default function AppPage({ version_number, app }: AppPageProps) {
 			<div className="w-96 pl-6">
 				<div className="font-semibold mb-3">Actions</div>
 				{instance !== null ? (
-					<Actions multihash={instance} />
+					<Actions multihash={instance.multihash} />
 				) : (
 					<div className="text-gray-400 text-sm">Select a running instance to see actions</div>
 				)}
 				{instance !== null && (
 					<>
 						<div className="font-semibold mt-5 mb-3">New Action</div>
-						<ActionComposer multihash={instance} />
+						<ActionComposer appData={instance.data} multihash={instance.multihash} />
 					</>
 				)}
 			</div>

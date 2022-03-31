@@ -41,6 +41,12 @@ export type Action = {
 	payload: string
 }
 
+export type AppData = {
+	actions: ActionParams[]
+}
+
+export type ActionParams = [string, string[]]
+
 export type ContextModel = {
 	create: (fields: Record<string, ModelValue>) => void
 }

@@ -132,7 +132,7 @@ function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
 
 function Sidebar({ version_number, app, edited }: SidebarProps) {
 	const { data, error } = useSWR("/api/instance", fetcher, { refreshInterval: 1000 })
-	const instances = useMemo<Set<string>>(() => (error ? new Set([]) : new Set(data)), [data])
+	const instances = useMemo<Set<string>>(() => (error ? new Set([]) : new Set(Object.keys(data || {}))), [data])
 
 	return (
 		<div className="">

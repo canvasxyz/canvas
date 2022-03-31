@@ -119,6 +119,8 @@ export class App {
 
 	private readonly server: express.Express
 
+	public actions: Record<string, string[]>
+
 	private constructor(
 		readonly multihash: string,
 		readonly database: sqlite.Database,
@@ -131,6 +133,10 @@ export class App {
 		readonly actionParameters: Record<string, string[]>,
 		readonly port: number
 	) {
+		// Save fields
+		this.actions = actionParameters
+		this.models = {}
+
 		// Initialize the database schema
 		const tables: string[] = []
 

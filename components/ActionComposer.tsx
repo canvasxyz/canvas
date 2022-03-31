@@ -11,25 +11,25 @@ import { indentUnit } from "@codemirror/language"
 
 import { jsonLanguage } from "@codemirror/lang-json"
 import { useCodeMirror } from "utils/client/codemirror"
-import { ActionPayload } from "utils/server/types"
+import { ActionPayload, AppData, ActionParams } from "utils/server/types"
 
 import styles from "./ActionComposer.module.scss"
 import { StatusCodes } from "http-status-codes"
 
 const extensions = [indentUnit.of("  "), basicSetup, jsonLanguage, keymap.of(defaultKeymap), keymap.of([indentWithTab])]
 
-const getInitialActionValue = (from = "") => `{
+const getInitialActionValue = (call: string, args: string[], from = "") => `{
 	"from": "${from}",
-	"call": "thread",
-	"args": ["this is the title", "http://example.com"],
+	"call": "${call}",
+	"args": [${args.length ? '"<' : ""}${args.join('>", "<')}${args.length ? '>"' : ""}],
 	"timestamp": ${new Date().valueOf()}
 }`
 
-function ActionComposer(props: { multihash: string }) {
+function ActionComposer(props: { appData: AppData; multihash: string }) {
 	const [sending, setSending] = useState(false)
 
 	const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>({
-		doc: getInitialActionValue(),
+		doc: getInitialActionValue("", []),
 		extensions,
 	})
 
@@ -46,6 +46,7 @@ function ActionComposer(props: { multihash: string }) {
 	)
 
 	const [currentSigner, setCurrentSigner] = useState<any>()
+	const [currentAddress, setCurrentAddress] = useState<string>()
 	useEffect(() => {
 		if (state === null) return
 		const provider = new ethers.providers.Web3Provider((window as any).ethereum)
@@ -59,7 +60,8 @@ function ActionComposer(props: { multihash: string }) {
 				const signer = provider.getSigner()
 				setCurrentSigner(signer)
 				signer.getAddress().then((address) => {
-					setEditorValue(getInitialActionValue(address))
+					setCurrentAddress(address)
+					setEditorValue(getInitialActionValue("", [], address))
 				})
 			})
 			.catch(() => {
@@ -118,7 +120,19 @@ function ActionComposer(props: { multihash: string }) {
 	}, [state, currentSigner])
 
 	return (
-		<div className="mt-4">
+		<div className="mt-2">
+			<div className="mb-3">
+				{props.appData.actions.map(([call, args]: ActionParams) => (
+					<div
+						className="inline-block text-sm px-2 py-0.5 mb-1 mr-1.5 rounded bg-gray-200 hover:bg-gray-300 cursor-pointer"
+						onClick={() => {
+							setEditorValue(getInitialActionValue(call, args, currentAddress))
+						}}
+					>
+						{call}
+					</div>
+				))}
+			</div>
 			<div className={styles.editor} ref={element}></div>
 			<button
 				className={`mt-2 block p-2 rounded bg-blue-500 hover:bg-blue-500 font-semibold text-sm text-center text-white ${
