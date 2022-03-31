@@ -1,3 +1,5 @@
+import crypto from "node:crypto"
+
 import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
@@ -31,7 +33,7 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 			} else if (!actionArray.is(data)) {
 				reject(new Error("got invalid data from hypercore feed"))
 			} else {
-				resolve(data)
+				resolve(data.map((d) => ({ id: crypto.createHash("sha256").update(d.signature).digest("hex"), ...d })))
 			}
 		})
 	})

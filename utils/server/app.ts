@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import assert from "node:assert"
+import crypto from "node:crypto"
 import { Worker, MessageChannel, MessagePort } from "node:worker_threads"
 
 import express from "express"
@@ -115,7 +116,6 @@ export class App {
 	private readonly routeStatements: Record<string, sqlite.Statement> = {}
 	private readonly modelStatements: Record<string, sqlite.Statement> = {}
 	private readonly actionPool: Map<string, { resolve: () => void; reject: (err: Error) => void }> = new Map()
-	private actionId = 0
 
 	private readonly server: express.Express
 
@@ -242,8 +242,6 @@ export class App {
 	async apply(action: Action) {
 		try {
 			await new Promise<void>((resolve, reject) => {
-				const id = this.actionId++
-
 				// Verify the action matches the payload
 				const payload = JSON.parse(action.payload)
 				assert(action.from === payload.from, "action origin doesn't match payload origin")
@@ -254,8 +252,9 @@ export class App {
 				assert(action.from === verifiedAddress, "action signed by wrong address")
 
 				// There may be many outstanding actions, and actions are not guaranteed to execute in order.
-				this.actionPool.set(action.signature, { resolve, reject })
-				this.actionPort.postMessage({ id: action.signature, action: payload })
+				const id = crypto.createHash("sha256").update(action.signature).digest("hex")
+				this.actionPool.set(id, { resolve, reject })
+				this.actionPort.postMessage({ id, action: payload })
 			})
 		} catch (err) {
 			console.log(err)
