@@ -23,7 +23,7 @@ function UserMenu() {
 	return (
 		<Popover className="">
 			<Popover.Button ref={setReferenceElement} className={`text-sm pt-0.25`}>
-				username
+				Menu
 			</Popover.Button>
 
 			{ReactDOM.createPortal(
