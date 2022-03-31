@@ -34,6 +34,7 @@ export type ActionPayload = {
 }
 
 export type Action = {
+	id?: string
 	from: string
 	chainId: string
 	signature: string
