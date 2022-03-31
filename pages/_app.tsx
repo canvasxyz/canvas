@@ -16,7 +16,7 @@ export default function App({ Component, pageProps }: AppProps) {
 			</Head>
 			<div className="app-container">
 				<div className="app-header"></div>
-				<div className="app-body">
+				<div className="app-body flex flex-col h-screen w-screen">
 					<div className="my-4 pb-3.5 border-b border-gray-200">
 						<div className="px-10 mx-auto flex">
 							<div className="flex-1 font-semibold">
@@ -25,7 +25,7 @@ export default function App({ Component, pageProps }: AppProps) {
 							<UserMenu />
 						</div>
 					</div>
-					<div className="px-10 mx-auto">
+					<div className="px-10 mx-auto flex-1 w-full overflow-x-scroll">
 						<Component {...pageProps} />
 					</div>
 					<Toaster position="top-center" reverseOrder={false}>
