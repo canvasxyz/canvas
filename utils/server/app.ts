@@ -12,6 +12,7 @@ import * as t from "io-ts"
 import { ethers } from "ethers"
 
 import type { Action, ActionPayload, Model } from "./types"
+import { action } from "./action"
 import { getColumnType } from "./models"
 import { StatusCodes } from "http-status-codes"
 
@@ -186,8 +187,13 @@ export class App {
 			})
 		}
 
-		this.server.post("/", (req, res) => {
-			res.status(StatusCodes.NOT_IMPLEMENTED).end()
+		this.server.post(`/action`, (req, res) => {
+			if (!action.is(req.body)) {
+				return res.status(StatusCodes.BAD_REQUEST).end()
+			}
+			this.apply(req.body)
+				.then(() => res.status(StatusCodes.OK).end())
+				.catch((err) => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString()))
 		})
 
 		this.server.listen(port, () => {
