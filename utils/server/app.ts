@@ -4,6 +4,7 @@ import assert from "node:assert"
 import { Worker, MessageChannel, MessagePort } from "node:worker_threads"
 
 import express from "express"
+import cors from "cors"
 import bodyParser from "body-parser"
 import hypercore, { Feed } from "hypercore"
 import Database, * as sqlite from "better-sqlite3"
@@ -174,6 +175,7 @@ export class App {
 
 		// Create the API server
 		this.server = express()
+		this.server.use(cors())
 		this.server.use(bodyParser.json())
 
 		for (const route of Object.keys(this.routes)) {
