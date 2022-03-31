@@ -36,3 +36,12 @@ Run the dev server.
 ```
 npm run dev
 ```
+
+## App API
+
+To bind a deployed instance's API to a port, install `socat` and forward from the appropriate domain socket in a separate thread:
+
+```
+$ brew install socat
+$ socat TCP-LISTEN:1234,reuseaddr,fork UNIX-CLIENT:./apps/QmSbY7RxTFjGcb8VuGYLPYshyqxDKD4TsSWEHxvPUARe2T/api.sock
+```
