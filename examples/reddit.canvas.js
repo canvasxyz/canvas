@@ -1,99 +1,115 @@
-const threads = canvas.model('threads', {
-  id: 'primary',
-  title: 'text',
-  link: 'text',
-  creator: 'text',
-  createdAt: 'datetime',
-});
-const comments = canvas.model('comments', {
-  id: 'primary',
-  threadId: 'threads.id',
-  text: 'text',
-  creator: 'text',
-  createdAt: 'datetime',
-});
-const threadVotes = canvas.model('threadVotes', {
-  id: 'primary',
-  threadId: 'threads.id',
-  creator: 'text',
-  createdAt: 'datetime',
-}); // canvas.uniqueIndex('threadId', 'creator')
-const commentVotes = canvas.model('commentVotes', {
-  id: 'primary',
-  commentId: 'comments.id',
-  creator: 'text',
-  createdAt: 'datetime',
-}); // canvas.uniqueIndex('commentId', 'creator')
+// Created on Wed Mar 30 2022 at 16:29:33 GMT-0400 (Eastern Daylight Time)
 
-canvas.route('/latest', `SELECT threads.*, COUNT(comments.id)
-FROM threads
-    JOIN comments ON comments.threadId = threads.id
-GROUP BY threads.id
-ORDER BY threads.createdAt DESC
-LIMIT 30
-`);
+export const models = {
+	threads: {
+		title: "string",
+		link: "string",
+		creator: "string",
+		createdAt: "datetime",
+	},
+	comments: {
+		threadId: "@threads",
+		text: "string",
+		creator: "string",
+		createdAt: "datetime",
+	},
+	threadVotes: {
+		threadId: "@threads",
+		creator: "string",
+		createdAt: "datetime",
+		value: "integer",
+	},
+	commentVotes: {
+		commentId: "@comments",
+		creator: "string",
+		createdAt: "datetime",
+		value: "integer",
+	},
+}
 
-canvas.route('/top', `SELECT
-    threads.*,
-    SUM(
-        1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.createdAt)
-    ) AS score,
-    group_concat(threadVotes.creator)
-FROM threads
-    LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
-    WHERE threadVotes.createdAt > datetime('now', '-90 days')
-GROUP BY threads.id
-ORDER BY score DESC
-LIMIT 30`);
+export const routes = {
+	"/latest": `SELECT
+            threads.*,
+            SUM(
+                1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.createdAt) *
+                CAST(threadVotes.value as INT)
+            ) AS score,
+            group_concat(threadVotes.creator) as voters
+        FROM threads
+            LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
+        GROUP BY threads.id
+        ORDER BY threads.createdAt DESC
+        LIMIT 30`,
+	"/top": `SELECT
+            threads.*,
+            SUM(
+                1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.createdAt) *
+                CAST(threadVotes.value as INT)
+            ) AS score,
+            group_concat(threadVotes.creator) as voters
+        FROM threads
+            LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
+        GROUP BY threads.id
+        ORDER BY score DESC
+        LIMIT 30`,
+	"/threads/:threadId": `SELECT
+            threads.*,
+            SUM(
+                1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.createdAt) * threadVotes.value
+            ) AS score,
+            group_concat(threadVotes.creator) as voters
+        FROM threads
+            LEFT JOIN comments ON comments.threadId = threads.id
+            LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
+            WHERE threads.id = :threadId
+        GROUP BY threads.id`,
+	"/threads/:threadId/comments": `SELECT
+            comments.*,
+            SUM(
+                1 / (cast(strftime('%s','now') as float) * 1000 - commentVotes.createdAt) * commentVotes.value
+            ) AS score,
+            group_concat(commentVotes.creator) as voters
+        FROM comments
+            LEFT JOIN commentVotes ON comments.id = commentVotes.commentId
+            WHERE comments.threadId = :threadId
+        GROUP BY comments.id
+        ORDER BY score DESC
+        LIMIT 30`,
+}
 
-canvas.route('/threads/:threadId/comments', `SELECT
-    comments.*,
-    SUM(
-        1 / (cast(strftime('%s','now') as float) * 1000 - commentVotes.createdAt)
-    ) AS score,
-    group_concat(commentVotes.creator)
-FROM comments
-    LEFT JOIN commentVotes ON comments.id = commentVotes.commentId
-    WHERE comments.threadId = :threadId
-GROUP BY comments.id
-ORDER BY score DESC
-LIMIT 30`);
-
-const thread = canvas.action('thread(title, link)', function (title, link) {
-    return canvas.db.threads.create({
-        id: this.id,
-        title,
-        link,
-        creator: this.origin,
-        createdAt: +new Date()
-    });
-});
-const comment = canvas.action('comment(threadId, text)', function (threadId, text) {
-    return canvas.db.comments.create({
-        id: this.id,
-        threadId,
-        text,
-        creator: this.origin,
-        createdAt: +new Date()
-    });
-});
-const voteThread = canvas.action('voteThread(threadId, value)', function (threadId, value) {
-    //if (value !== 1 || value !== -1) return false;
-    return canvas.db.threadVotes.create({
-        id: this.id,
-        threadId,
-        creator: this.origin,
-        // value,
-        createdAt: timestamp,
-    });
-});
-const voteComment = canvas.action('voteComment(commentId, value)', function (commentId, value) {
-    //if (value !== 1 || value !== -1) return false;
-    return canvas.db.commentVotes.create({
-        id: this.id,
-        commentId,
-        creator: this.origin,
-        // value,
-        createdAt: timestamp,
-    });
-});
+export const actions = {
+	thread(title, link) {
+		this.db.threads.create({
+			creator: this.from,
+			createdAt: this.timestamp,
+			title,
+			link,
+		})
+	},
+	comment(threadId, text) {
+		this.db.comments.create({
+			creator: this.from,
+			createdAt: this.timestamp,
+			threadId,
+			text,
+		})
+	},
+	voteThread(threadId, value) {
+		if (value !== 1 && value !== -1) return false
+		this.db.threadVotes.create({
+			creator: this.from,
+			createdAt: this.timestamp,
+			threadId,
+			value,
+		})
+	},
+	voteComment(commentId, value) {
+		if (value !== 1 && value !== -1) return false
+		this.db.commentVotes.create({
+			creator: this.from,
+			createdAt: this.timestamp,
+			commentId,
+			value,
+		})
+	},
+}

@@ -1,3 +1,11 @@
+.env
+.next/
 node_modules/
-db/*.sqlite
-db/*.hypercore
+
+# Databases
+apps/
+prisma/db.sqlite
+prisma/db.sqlite-journal
+
+# Previous db
+db/

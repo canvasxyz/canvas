@@ -7,31 +7,41 @@ in the application is a signed message from an Ethereum address.
 ## Quick start
 
 ```
-brew install ipfs
 npm i
-node canvas.js examples/polls.canvas.js
+npm install -g next
 ```
 
-To auto-reload when a spec or core file is changed, use nodemon:
+Create a `.env` file in the repo root with `DATABASE_URL` and `APP_DIRECTORY` environement variables.
 
 ```
-npm install -g nodemon
-nodemon canvas.js examples/polls.canvas.js
+DATABASE_URL=file:./db.sqlite
+APP_DIRECTORY=./apps
 ```
 
-## Directory structure
-
-The project is structured as a monorepo.
-
-- examples/ includes starter specs
-- server/ includes modules used to create an instance of Canvas
-- canvas.js is the entry point for running the server
-
-## Persistent installation
+Initialize the database.
 
 ```
-cp node.service /etc/systemd/system/node.service
-systemctl daemon-reload
-systemctl enable node
-service node start
+npx prisma generate
+npx prisma db push
+```
+
+In a separate process, start an IPFS daemon.
+
+```
+ipfs daemon --offline
+```
+
+Run the dev server.
+
+```
+npm run dev
+```
+
+## App API
+
+To bind a deployed instance's API to a port, install `socat` and forward from the appropriate domain socket in a separate thread:
+
+```
+$ brew install socat
+$ socat TCP-LISTEN:1234,reuseaddr,fork UNIX-CLIENT:./apps/QmSbY7RxTFjGcb8VuGYLPYshyqxDKD4TsSWEHxvPUARe2T/api.sock
 ```

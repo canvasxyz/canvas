@@ -1,0 +1,36 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model App {
+  id              Int          @id @default(autoincrement())
+  slug            String       @unique
+  draft_spec      String
+  versions        AppVersion[] @relation(name: "app_versions")
+  last_version_id Int?         @unique
+  last_version    AppVersion?  @relation(name: "last_app_version", fields: [last_version_id], references: [id])
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @default(now()) @updatedAt
+}
+
+model AppVersion {
+  id              Int      @id @default(autoincrement())
+  app_id          Int
+  app             App      @relation(name: "app_versions", fields: [app_id], references: [id])
+  is_last_version App?     @relation(name: "last_app_version")
+  version_number  Int
+  multihash       String   @unique
+  spec            String
+  deployed        Boolean
+  created_at      DateTime @default(now())
+
+  @@unique([app_id, version_number])
+}
