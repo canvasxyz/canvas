@@ -13,7 +13,7 @@ export function Actions(props: { multihash: string }) {
 	return (
 		<div className="border border-gray-300 rounded overflow-scroll bg-gray-50 pb-3 overflow-x-scroll">
 			{data === undefined ? null : data.length === 0 ? (
-				<div>No actions yet</div>
+				<div className="text-center text-xs mt-8 mb-4 font-mono text-gray-500">No actions yet</div>
 			) : (
 				<table className="table-auto text-left text-xs leading-tight w-full">
 					<thead className="bg-white border-b border-gray-300">

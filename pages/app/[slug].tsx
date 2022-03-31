@@ -101,8 +101,17 @@ export default function AppPage({ version_number, app }: AppPageProps) {
 			{version === null ? <Editor key="editor" app={app} onEdited={onEdited} /> : <Viewer {...version} />}
 			<div className="w-96 pl-6">
 				<div className="font-semibold mb-3">Actions</div>
-				{instance !== null && <Actions multihash={instance} />}
-				{instance !== null && <ActionComposer multihash={instance} />}
+				{instance !== null ? (
+					<Actions multihash={instance} />
+				) : (
+					<div className="text-gray-400 text-sm">Select a running instance to see actions</div>
+				)}
+				{instance !== null && (
+					<>
+						<div className="font-semibold mt-5 mb-3">New Action</div>
+						<ActionComposer multihash={instance} />
+					</>
+				)}
 			</div>
 		</div>
 	)
