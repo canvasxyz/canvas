@@ -1,3 +1,5 @@
+// Created on Wed Mar 30 2022 at 16:29:33 GMT-0400 (Eastern Daylight Time)
+
 export const models = {
 	threads: {
 		title: "string",
@@ -32,10 +34,8 @@ export const routes = {
                 1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.createdAt) *
                 CAST(threadVotes.value as INT)
             ) AS score,
-            group_concat(threadVotes.creator) as voters,
-            COUNT(comments.id) as comments
+            group_concat(threadVotes.creator) as voters
         FROM threads
-            LEFT JOIN comments ON comments.threadId = threads.id
             LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
         GROUP BY threads.id
         ORDER BY threads.createdAt DESC
@@ -46,10 +46,8 @@ export const routes = {
                 1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.createdAt) *
                 CAST(threadVotes.value as INT)
             ) AS score,
-            group_concat(threadVotes.creator) as voters,
-            COUNT(DISTINCT comments.id) as comments
+            group_concat(threadVotes.creator) as voters
         FROM threads
-            LEFT JOIN comments ON comments.threadId = threads.id
             LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
         GROUP BY threads.id
         ORDER BY score DESC
@@ -59,7 +57,7 @@ export const routes = {
             SUM(
                 1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.createdAt) * threadVotes.value
             ) AS score,
-            COUNT(DISTINCT comments.id)
+            group_concat(threadVotes.creator) as voters
         FROM threads
             LEFT JOIN comments ON comments.threadId = threads.id
             LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
@@ -70,7 +68,7 @@ export const routes = {
             SUM(
                 1 / (cast(strftime('%s','now') as float) * 1000 - commentVotes.createdAt) * commentVotes.value
             ) AS score,
-            group_concat(commentVotes.creator)
+            group_concat(commentVotes.creator) as voters
         FROM comments
             LEFT JOIN commentVotes ON comments.id = commentVotes.commentId
             WHERE comments.threadId = :threadId
@@ -97,8 +95,8 @@ export const actions = {
 		})
 	},
 	voteThread(threadId, value) {
-		if (value !== 1 || value !== -1) return false
-		this.db.upvotes.create({
+		if (value !== 1 && value !== -1) return false
+		this.db.threadVotes.create({
 			creator: this.from,
 			createdAt: this.timestamp,
 			threadId,
@@ -106,7 +104,7 @@ export const actions = {
 		})
 	},
 	voteComment(commentId, value) {
-		if (value !== 1 || value !== -1) return false
+		if (value !== 1 && value !== -1) return false
 		this.db.commentVotes.create({
 			creator: this.from,
 			createdAt: this.timestamp,
