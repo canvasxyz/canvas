@@ -27,12 +27,12 @@ if (!fs.existsSync(appDirectory)) {
 }
 
 const actionMessage = t.union([
-	t.type({ id: t.number, status: t.literal("success") }),
-	t.type({ id: t.number, status: t.literal("failure"), error: t.string }),
+	t.type({ id: t.string, status: t.literal("success") }),
+	t.type({ id: t.string, status: t.literal("failure"), error: t.string }),
 ])
 
 const modelMessage = t.type({
-	id: t.number,
+	id: t.string,
 	name: t.string,
 	params: t.record(t.string, t.union([t.null, t.number, t.string, t.boolean])),
 })
@@ -114,7 +114,7 @@ export class App {
 
 	private readonly routeStatements: Record<string, sqlite.Statement> = {}
 	private readonly modelStatements: Record<string, sqlite.Statement> = {}
-	private readonly actionPool: Map<number, { resolve: () => void; reject: (err: Error) => void }> = new Map()
+	private readonly actionPool: Map<string, { resolve: () => void; reject: (err: Error) => void }> = new Map()
 	private actionId = 0
 
 	private readonly server: express.Express
@@ -254,8 +254,8 @@ export class App {
 				assert(action.from === verifiedAddress, "action signed by wrong address")
 
 				// There may be many outstanding actions, and actions are not guaranteed to execute in order.
-				this.actionPool.set(id, { resolve, reject })
-				this.actionPort.postMessage({ id, action: payload })
+				this.actionPool.set(action.signature, { resolve, reject })
+				this.actionPort.postMessage({ id: action.signature, action: payload })
 			})
 		} catch (err) {
 			console.log(err)
