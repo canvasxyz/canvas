@@ -115,7 +115,7 @@ export const Editor = dynamic(
 			const publishingDisabled = publishing || saving || error !== null || !clean || matchesPreviousVersion !== null
 
 			return (
-				<div className="flex-1 w-max h-max">
+				<div>
 					<div className="flex flex-row place-content-between relative w-full">
 						<div className="font-semibold mb-3">&nbsp;</div>
 						<div className="absolute top-0 right-0">
