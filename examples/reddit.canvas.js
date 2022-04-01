@@ -30,8 +30,8 @@ export const routes = {
             ) AS score,
             group_concat(threadVotes.creator) as voters
         FROM threads
-            LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
-        GROUP BY threads.id
+            LEFT JOIN threadVotes ON threads.key = threadVotes.threadId
+        GROUP BY threads.key
         ORDER BY threads.timestamp DESC
         LIMIT 30`,
 	"/top": `SELECT
@@ -42,8 +42,8 @@ export const routes = {
             ) AS score,
             group_concat(threadVotes.creator) as voters
         FROM threads
-            LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
-        GROUP BY threads.id
+            LEFT JOIN threadVotes ON threads.key = threadVotes.threadId
+        GROUP BY threads.key
         ORDER BY score DESC
         LIMIT 30`,
 	"/threads/:threadId": `SELECT
@@ -53,10 +53,10 @@ export const routes = {
             ) AS score,
             group_concat(threadVotes.creator) as voters
         FROM threads
-            LEFT JOIN comments ON comments.threadId = threads.id
-            LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
-            WHERE threads.id = :threadId
-        GROUP BY threads.id`,
+            LEFT JOIN comments ON comments.threadId = threads.key
+            LEFT JOIN threadVotes ON threads.key = threadVotes.threadId
+            WHERE threads.key = :threadId
+        GROUP BY threads.key`,
 	"/threads/:threadId/comments": `SELECT
             comments.*,
             SUM(
@@ -64,9 +64,9 @@ export const routes = {
             ) AS score,
             group_concat(commentVotes.creator) as voters
         FROM comments
-            LEFT JOIN commentVotes ON comments.id = commentVotes.commentId
+            LEFT JOIN commentVotes ON comments.key = commentVotes.commentId
             WHERE comments.threadId = :threadId
-        GROUP BY comments.id
+        GROUP BY comments.key
         ORDER BY score DESC
         LIMIT 30`,
 }

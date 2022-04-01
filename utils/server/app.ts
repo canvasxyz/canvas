@@ -56,6 +56,8 @@ export class App {
 		// - preparing the model and action statements
 		// - attaching listeners to the message ports.
 
+		console.log("initializign", multihash)
+
 		// create the app path in the app directory if it doesn't exists,
 		// and writes the spec file from IPFS to ${APP_DIRECTORY}/[multihash]/spec.js.
 		const appPath = path.resolve(appDirectory, multihash)
@@ -102,6 +104,7 @@ export class App {
 			)
 		})
 
+		console.log("constructing...", multihash, "with models", models)
 		return new App(
 			multihash,
 			database,
@@ -141,14 +144,14 @@ export class App {
 	) {
 		// Save fields
 		this.actions = actionParameters
-		this.models = {}
 
 		// Initialize the database schema
 		const tables: string[] = []
 
 		for (const [name, model] of Object.entries(this.models)) {
-			const columns = ["id TEXT PRIMARY KEY NOT NULL", "timestamp INTEGER NOT NULL"]
+			const columns = ["key TEXT PRIMARY KEY NOT NULL", "timestamp INTEGER NOT NULL"]
 			for (const field of Object.keys(model)) {
+				assert(field !== "key" && field !== "timestamp", "fields can't be named 'key' or 'timestamp'")
 				columns.push(`${field} ${getColumnType(model[field])}`)
 			}
 
@@ -174,7 +177,7 @@ export class App {
 			const updates = keys.map(condition).join(", ")
 			this.statements.models[name] = {
 				set: this.database.prepare(
-					`INSERT INTO ${name} (id, ${fields}) VALUES (:id, ${params}) ON CONFLICT (id) DO UPDATE SET ${updates}`
+					`INSERT INTO ${name} (key, ${fields}) VALUES (:key, ${params}) ON CONFLICT (key) DO UPDATE SET ${updates}`
 				),
 			}
 		}
@@ -198,7 +201,6 @@ export class App {
 
 		for (const route of Object.keys(this.routes)) {
 			this.server.get(route, (req, res) => {
-				console.log(route, req.params)
 				const results = this.statements.routes[route].all(req.params)
 				res.status(StatusCodes.OK).json(results)
 			})
@@ -222,7 +224,6 @@ export class App {
 	private handleModelMessage(message: any) {
 		if (modelMessage.is(message)) {
 			assert(message.name in this.statements.models)
-			console.log("inserting into models!", message)
 
 			if (message.value === null) {
 				// DELETE
@@ -231,7 +232,7 @@ export class App {
 				// SET
 				// TODO: validate params
 				const model = this.statements.models[message.name]
-				model.set.run({ ...message.value, id: message.key, timestamp: message.timestamp })
+				model.set.run({ ...message.value, key: message.key, timestamp: message.timestamp })
 			}
 		} else {
 			console.error(message)
@@ -240,7 +241,6 @@ export class App {
 	}
 
 	private handleActionMessage(message: any) {
-		console.log("handling action response message", message)
 		if (actionMessage.is(message)) {
 			const call = this.callPool.get(message.id)
 			if (call === undefined) {
@@ -267,7 +267,6 @@ export class App {
 	}
 
 	async apply(action: Action) {
-		console.log("applying action")
 		try {
 			await new Promise<void>((resolve, reject) => {
 				// Verify the action matches the payload
@@ -283,14 +282,12 @@ export class App {
 				// There may be many outstanding actions, and actions are not guaranteed to execute in order.
 				const id = crypto.createHash("sha256").update(action.signature).digest("hex")
 				this.callPool.set(id, { resolve, reject })
-				console.log("posting the thing...", id)
 				this.actionPort.postMessage({ id, action: payload })
 			})
 		} catch (err) {
 			console.log(err)
 			throw err
 		}
-		console.log("applied...")
 
 		await new Promise<void>((resolve, reject) => {
 			this.feed.append(action, (err, seq) => {

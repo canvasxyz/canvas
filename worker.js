@@ -48,7 +48,6 @@ parentPort.once("message", async ({ multihash, actionPort, modelPort }) => {
 	const { actions, models, routes } = await import(specPath)
 
 	actionPort.on("message", async ({ id, action }) => {
-		console.log("got action!", action)
 		const { from, call, args, timestamp } = action
 
 		const db = {}

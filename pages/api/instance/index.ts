@@ -14,5 +14,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 		apps[key] = { models: app.models, actionParameters: app.actionParameters }
 	}
 
+	// console.log("returning apps", apps, loade)
+
 	res.status(StatusCodes.OK).json(apps)
 }

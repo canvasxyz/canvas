@@ -34,7 +34,7 @@ function ModelTable(props: { multihash: string; name: string; model: Record<stri
 			<table className="table-auto text-left text-xs leading-tight w-full">
 				<thead className="bg-white border-b border-gray-300">
 					<tr>
-						<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">id</th>
+						<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">key</th>
 						<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">timestamp</th>
 						{keys.map((key) => (
 							<th key={key} className="pl-4 pr-3 pt-2.5 pb-2 font-mono">
@@ -47,7 +47,7 @@ function ModelTable(props: { multihash: string; name: string; model: Record<stri
 					{rows.map((row, index) => {
 						return (
 							<tr key={index}>
-								<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{row.id}</td>
+								<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{row.key}</td>
 								<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{row.timestamp}</td>
 								{keys.map((key) => (
 									<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{JSON.stringify(row[key])}</td>
