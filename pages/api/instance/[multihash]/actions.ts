@@ -45,8 +45,6 @@ async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 		return res.status(StatusCodes.BAD_REQUEST).end()
 	}
 
-	console.log("posting action", req.query.multihash, req.body)
-
 	if (!actionType.is(req.body)) {
 		return res.status(StatusCodes.BAD_REQUEST).end()
 	}
