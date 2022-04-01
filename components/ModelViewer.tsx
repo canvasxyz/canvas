@@ -8,7 +8,7 @@ export function Models(props: { multihash: string; models: Record<string, Record
 		<div>
 			{Object.entries(props.models).map(([name, model]) => (
 				<div key={name}>
-					<div className="font-mono text-sm mt-4 mb-1">{name}</div>
+					<div className="font-mono text-xs text-gray-700 mt-4 mb-3">{name}</div>
 					<ModelTable multihash={props.multihash} name={name} model={model} />
 				</div>
 			))}
@@ -50,8 +50,13 @@ function ModelTable(props: { multihash: string; name: string; model: Record<stri
 								<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{row.id}</td>
 								<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{row.timestamp}</td>
 								{fields.map((key, fieldIndex) => (
-									<td key={fieldIndex} className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">
-										{JSON.stringify(row[key])}
+									<td
+										key={fieldIndex}
+										className={`pl-4 ${
+											fieldIndex === fields.length - 1 ? "pr-4" : "pr-1"
+										} pt-3 font-mono text-xs whitespace-pre`}
+									>
+										{typeof row[key] === "string" ? row[key] : JSON.stringify(row[key])}
 									</td>
 								))}
 							</tr>
