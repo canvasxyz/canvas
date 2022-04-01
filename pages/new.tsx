@@ -2,7 +2,7 @@ import { StatusCodes } from "http-status-codes"
 import { useRouter } from "next/router"
 import React, { useCallback, useState } from "react"
 
-import { alphanumeric } from "utils/shared/regexps"
+import { alphanumericWithDashes } from "utils/shared/regexps"
 
 interface NewPageProps {}
 
@@ -31,7 +31,7 @@ export default function NewPage({}: NewPageProps) {
 
 	const [slug, setSlug] = useState("")
 
-	const disabled = loading || !alphanumeric.test(slug)
+	const disabled = loading || !alphanumericWithDashes.test(slug)
 
 	return (
 		<div className="w-96">
@@ -43,7 +43,7 @@ export default function NewPage({}: NewPageProps) {
 					<input
 						className="border w-full px-3 py-1 rounded outline-none focus:border-blue-500"
 						type="text"
-						placeholder={alphanumeric.source}
+						placeholder="example-app"
 						value={slug}
 						onChange={({ target: { value } }) => setSlug(value)}
 					/>

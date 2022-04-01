@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes"
 
 import { prisma } from "utils/server/services"
 import { getDefaultSpec } from "utils/server/defaultSpecTemplate"
-import { alphanumeric } from "utils/shared/regexps"
+import { alphanumericWithDashes } from "utils/shared/regexps"
 
 import * as t from "io-ts"
 
@@ -18,7 +18,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 		return res.status(StatusCodes.BAD_REQUEST).end()
 	}
 
-	if (!alphanumeric.test(req.body.slug)) {
+	if (!alphanumericWithDashes.test(req.body.slug)) {
 		return res.status(StatusCodes.BAD_REQUEST).end()
 	}
 
