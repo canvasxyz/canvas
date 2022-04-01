@@ -49,8 +49,10 @@ function ModelTable(props: { multihash: string; name: string; model: Record<stri
 							<tr key={index}>
 								<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{row.id}</td>
 								<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{row.timestamp}</td>
-								{fields.map((key) => (
-									<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{JSON.stringify(row[key])}</td>
+								{fields.map((key, fieldIndex) => (
+									<td key={fieldIndex} className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">
+										{JSON.stringify(row[key])}
+									</td>
 								))}
 							</tr>
 						)

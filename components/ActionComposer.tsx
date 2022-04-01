@@ -23,7 +23,7 @@ const getInitialActionValue = (multihash: string, call: string, args: string[], 
 	"spec": "${multihash}",
 	"from": "${from}",
 	"call": "${call}",
-	"args": [${args.map((arg) => `<${arg}>`).join(", ")}],
+	"args": [${args.map((arg) => `${arg}`).join(", ")}],
 	"timestamp": ${new Date().valueOf()}
 }`
 
@@ -128,6 +128,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			<div className="mb-3">
 				{Object.entries(props.actionParameters).map(([call, parameters]) => (
 					<div
+						key={call}
 						className="inline-block text-sm px-2 py-0.5 mb-1 mr-1.5 rounded bg-gray-200 hover:bg-gray-300 cursor-pointer"
 						onClick={() => {
 							setEditorValue(getInitialActionValue(props.multihash, call, parameters, currentAddress))
