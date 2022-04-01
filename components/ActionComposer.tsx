@@ -15,7 +15,6 @@ import { ActionPayload } from "utils/server/types"
 
 import styles from "./ActionComposer.module.scss"
 import { StatusCodes } from "http-status-codes"
-import { nanoid } from "nanoid"
 
 const extensions = [indentUnit.of("  "), basicSetup, jsonLanguage, keymap.of(defaultKeymap), keymap.of([indentWithTab])]
 
@@ -23,7 +22,7 @@ const getInitialActionValue = (multihash: string, call: string, args: string[], 
 	"spec": "${multihash}",
 	"from": "${from}",
 	"call": "${call}",
-	"args": ["${nanoid()}"${args.map((arg) => `, <${arg}>`)}],
+	"args": [${args.map((arg) => `<${arg}>`).join(", ")}],
 	"timestamp": ${new Date().valueOf()}
 }`
 
