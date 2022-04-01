@@ -1,4 +1,6 @@
 import fs from "node:fs"
+import net from "node:net"
+import http from "node:http"
 import path from "node:path"
 import assert from "node:assert"
 import crypto from "node:crypto"
@@ -125,7 +127,9 @@ export class App {
 
 	private readonly callPool: Map<string, { resolve: () => void; reject: (err: Error) => void }> = new Map()
 
-	private readonly server: express.Express
+	private readonly api: express.Express
+	private readonly server: http.Server
+	private readonly connections: Set<net.Socket> = new Set()
 
 	public actions: Record<string, string[]>
 
@@ -194,29 +198,37 @@ export class App {
 		// }
 
 		// Create the API server
-		this.server = express()
-		this.server.use(cors())
-		this.server.use(bodyParser.json())
+		this.api = express()
+		this.api.use(cors())
+		this.api.use(bodyParser.json())
 
 		for (const route of Object.keys(this.routes)) {
-			this.server.get(route, (req, res) => {
+			this.api.get(route, (req, res) => {
 				const results = this.statements.routes[route].all(req.params)
 				res.status(StatusCodes.OK).json(results)
 			})
 		}
 
-		this.server.post(`/action`, (req, res) => {
+		this.api.post(`/action`, async (req, res) => {
 			if (!actionType.is(req.body)) {
 				return res.status(StatusCodes.BAD_REQUEST).end()
 			}
-			this.apply(req.body)
+			await this.apply(req.body)
 				.then(() => res.status(StatusCodes.OK).end())
-				.catch((err) => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString()))
+				.catch((err) => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message))
 		})
 
-		this.server.listen(port, () => {
+		this.server = this.api.listen(port, () => {
 			console.log("API server listening on port", port)
-			// console.log("API server listening on socket", apiPath)
+		})
+
+		this.server.on("connection", (socket) => {
+			console.log("adding connection to pool")
+			this.connections.add(socket)
+			socket.on("close", () => {
+				console.log("deleting connection from pool")
+				this.connections.delete(socket)
+			})
 		})
 	}
 
@@ -258,36 +270,37 @@ export class App {
 	}
 
 	async stop() {
-		await this.worker.terminate()
 		await new Promise<void>((resolve, reject) => {
-			this.feed.close((err) => (err === null ? resolve() : reject(err)))
+			this.server.close((err) => (err ? reject(err) : resolve()))
+			for (const socket of this.connections) {
+				socket.end()
+			}
+			this.connections.clear()
 		})
+
+		await this.worker.terminate()
+		await new Promise<void>((resolve, reject) => this.feed.close((err) => (err ? reject(err) : resolve())))
 		this.database.close()
 	}
 
 	async apply(action: Action) {
-		try {
-			await new Promise<void>((resolve, reject) => {
-				// Verify the action matches the payload
-				const payload = JSON.parse(action.payload)
-				assert(actionPayloadType.is(payload), "invalid message payload")
-				assert(action.from === payload.from, "action signed by wrong address")
-				assert(payload.spec === this.multihash, "action signed for wrong spec")
-				// assert(action.chainId === payload.chainId, "action chainId doesn't match payload chainId")
+		await new Promise<void>((resolve, reject) => {
+			// Verify the action matches the payload
+			const payload = JSON.parse(action.payload)
+			assert(actionPayloadType.is(payload), "invalid message payload")
+			assert(action.from === payload.from, "action signed by wrong address")
+			assert(payload.spec === this.multihash, "action signed for wrong spec")
+			assert(payload.call in this.actionParameters, "payload.call is not the name of an action")
 
-				// Verify the signature
-				const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
-				assert(action.from === verifiedAddress, "action signed by wrong address")
+			// Verify the signature
+			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
+			assert(action.from === verifiedAddress, "action signed by wrong address")
 
-				// There may be many outstanding actions, and actions are not guaranteed to execute in order.
-				const id = crypto.createHash("sha256").update(action.signature).digest("hex")
-				this.callPool.set(id, { resolve, reject })
-				this.actionPort.postMessage({ id, action: payload })
-			})
-		} catch (err) {
-			console.log(err)
-			throw err
-		}
+			// There may be many outstanding actions, and actions are not guaranteed to execute in order.
+			const id = crypto.createHash("sha256").update(action.signature).digest("hex")
+			this.callPool.set(id, { resolve, reject })
+			this.actionPort.postMessage({ id, action: payload })
+		})
 
 		await new Promise<void>((resolve, reject) => {
 			this.feed.append(action, (err, seq) => {
