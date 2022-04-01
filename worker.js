@@ -66,7 +66,10 @@ parentPort.once("message", async ({ multihash, actionPort, modelPort }) => {
 
 		try {
 			assert(call in actions, `Invalid action name ${JSON.stringify(call)}`)
-			await actions[call].apply(context, args)
+			const result = await actions[call].apply(context, args)
+			if (result === false) {
+				throw new Error("action returned false")
+			}
 			console.log("success! posting result to main")
 			actionPort.postMessage({ id, status: "success" })
 		} catch (err) {

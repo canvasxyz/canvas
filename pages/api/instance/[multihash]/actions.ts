@@ -59,7 +59,7 @@ async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 	await app
 		.apply(req.body)
 		.then(() => res.status(StatusCodes.OK).end())
-		.catch((err) => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString()))
+		.catch((err) => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message))
 }
 
 /**

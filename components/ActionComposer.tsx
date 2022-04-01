@@ -111,7 +111,9 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 					if (res.status === StatusCodes.OK) {
 						toast.success("Action sent!")
 					} else {
-						toast.error("Action evaluation failed")
+						res.text().then((err) => {
+							toast.error(`Action rejected: ${err}`)
+						})
 					}
 				})
 			})
