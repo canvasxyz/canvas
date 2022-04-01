@@ -7,15 +7,15 @@ import { Worker, MessageChannel, MessagePort } from "node:worker_threads"
 import express from "express"
 import cors from "cors"
 import bodyParser from "body-parser"
+import { StatusCodes } from "http-status-codes"
+
 import hypercore, { Feed } from "hypercore"
 import Database, * as sqlite from "better-sqlite3"
-import * as t from "io-ts"
 import { ethers } from "ethers"
+import * as t from "io-ts"
 
-import type { Action, Model } from "./types"
-import { action as actionType, payload as payloadType } from "./action"
-import { getColumnType } from "./models"
-import { StatusCodes } from "http-status-codes"
+import { Model, getColumnType } from "./models"
+import { Action, actionType, actionPayloadType } from "./actions"
 
 const appDirectory = process.env.APP_DIRECTORY!
 
@@ -270,7 +270,7 @@ export class App {
 			await new Promise<void>((resolve, reject) => {
 				// Verify the action matches the payload
 				const payload = JSON.parse(action.payload)
-				assert(payloadType.is(payload), "invalid message payload")
+				assert(actionPayloadType.is(payload), "invalid message payload")
 				assert(action.from === payload.from, "action origin doesn't match payload origin")
 				// assert(action.chainId === payload.chainId, "action chainId doesn't match payload chainId")
 

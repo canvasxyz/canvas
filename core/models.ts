@@ -1,6 +1,40 @@
 import assert from "node:assert"
 
-import { ModelType, ModelValue } from "./types"
+import * as t from "io-ts"
+
+/**
+ * A `ModelType` is a runtime representation of an abstract model field type,
+ * ie string values that we use to set the sqlite schema and coerce
+ * action arguments.
+ */
+export type ModelType = "boolean" | "string" | "integer" | "float" | "bytes" | "datetime"
+
+export const modelTypeType: t.Type<ModelType> = t.union([
+	t.literal("boolean"),
+	t.literal("string"),
+	t.literal("integer"),
+	t.literal("float"),
+	t.literal("bytes"),
+	t.literal("datetime"),
+])
+
+/**
+ *  A `ModelValue` is a type-level representation of concrete model field types, ie
+ * a TypeScript type that describes the possible JavaScript values that instantiate
+ * the various ModelType options.
+ */
+export type ModelValue = null | boolean | number | string | Buffer
+
+const bufferType = new t.Type(
+	"Buffer",
+	Buffer.isBuffer,
+	(i, context) => (Buffer.isBuffer(i) ? t.success(i) : t.failure(i, context)),
+	t.identity
+)
+
+export const modelValueType = t.union([t.null, t.boolean, t.number, t.string, bufferType])
+
+export type Model = Record<string, ModelType>
 
 export function validateType(type: ModelType, value: ModelValue) {
 	if (type === "boolean") {
@@ -17,8 +51,6 @@ export function validateType(type: ModelType, value: ModelValue) {
 		assert(typeof value === "number", "invalid type: expected number")
 	} else {
 		throw new Error("invalid model type", type)
-		// // reference values are represented as strings
-		// assert(typeof value === "string", "invalid type: expected string")
 	}
 }
 
@@ -38,7 +70,5 @@ export function getColumnType(type: ModelType): string {
 			return "INTEGER"
 		default:
 			throw new Error("invalid model type", type)
-		// const [_, tableName] = match(type, /^@([a-z0-9]+)$/, "invalid field type")
-		// return `TEXT NOT NULL REFERENCES ${tableName}(id)`
 	}
 }
