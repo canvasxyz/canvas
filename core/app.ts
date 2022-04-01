@@ -270,11 +270,7 @@ export class App {
 			await new Promise<void>((resolve, reject) => {
 				// Verify the action matches the payload
 				const payload = JSON.parse(action.payload)
-<<<<<<< HEAD:utils/server/app.ts
-				assert(payloadType.is(payload), "invalid message payload")
-=======
 				assert(actionPayloadType.is(payload), "invalid message payload")
->>>>>>> core-refactor:core/app.ts
 				assert(action.from === payload.from, "action origin doesn't match payload origin")
 				// assert(action.chainId === payload.chainId, "action chainId doesn't match payload chainId")
 
