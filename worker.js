@@ -48,6 +48,9 @@ async function initialize({ multihash, actionPort, modelPort }) {
 	const appPath = path.resolve(appDirectory, multihash)
 	const specPath = path.resolve(appPath, "spec.js")
 	const { actions, models, routes } = await import(specPath)
+	assert(actions !== undefined, "missing actions export from spec")
+	assert(models !== undefined, "missing models export from spec")
+	assert(routes !== undefined, "missing routes export from spec")
 
 	// Validate models
 	for (const [name, model] of Object.entries(models)) {
