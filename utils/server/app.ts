@@ -35,8 +35,8 @@ const actionMessage = t.union([
 const modelMessage = t.type({
 	timestamp: t.number,
 	name: t.string,
-	key: t.string,
-	value: t.union([t.null, t.record(t.string, t.union([t.null, t.number, t.string, t.boolean]))]),
+	id: t.string,
+	value: t.record(t.string, t.union([t.null, t.number, t.string, t.boolean])),
 })
 
 // Don't use the App constructor directly, use the static App.initialize method instead:
@@ -56,7 +56,7 @@ export class App {
 		// - preparing the model and action statements
 		// - attaching listeners to the message ports.
 
-		console.log("initializign", multihash)
+		console.log("initializing", multihash)
 
 		// create the app path in the app directory if it doesn't exists,
 		// and writes the spec file from IPFS to ${APP_DIRECTORY}/[multihash]/spec.js.
@@ -104,7 +104,6 @@ export class App {
 			)
 		})
 
-		console.log("constructing...", multihash, "with models", models)
 		return new App(
 			multihash,
 			database,
@@ -149,9 +148,9 @@ export class App {
 		const tables: string[] = []
 
 		for (const [name, model] of Object.entries(this.models)) {
-			const columns = ["key TEXT PRIMARY KEY NOT NULL", "timestamp INTEGER NOT NULL"]
+			const columns = ["id TEXT PRIMARY KEY NOT NULL", "timestamp INTEGER NOT NULL"]
 			for (const field of Object.keys(model)) {
-				assert(field !== "key" && field !== "timestamp", "fields can't be named 'key' or 'timestamp'")
+				assert(field !== "id" && field !== "timestamp", "fields can't be named 'id' or 'timestamp'")
 				columns.push(`${field} ${getColumnType(model[field])}`)
 			}
 
@@ -177,7 +176,7 @@ export class App {
 			const updates = keys.map(condition).join(", ")
 			this.statements.models[name] = {
 				set: this.database.prepare(
-					`INSERT INTO ${name} (key, ${fields}) VALUES (:key, ${params}) ON CONFLICT (key) DO UPDATE SET ${updates}`
+					`INSERT INTO ${name} (id, ${fields}) VALUES (:id, ${params}) ON CONFLICT (id) DO UPDATE SET ${updates}`
 				),
 			}
 		}
@@ -232,7 +231,7 @@ export class App {
 				// SET
 				// TODO: validate params
 				const model = this.statements.models[message.name]
-				model.set.run({ ...message.value, key: message.key, timestamp: message.timestamp })
+				model.set.run({ ...message.value, id: message.id, timestamp: message.timestamp })
 			}
 		} else {
 			console.error(message)

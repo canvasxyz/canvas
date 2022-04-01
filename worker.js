@@ -29,13 +29,13 @@ if (appDirectory === undefined) {
  *
  * Action handlers are called with a Context object bound to `this`, with type
  * type Context = { from: string; timestamp: number; db: Record<string, Model> }
- * type Model = { set: (key: string, params: {}) => void; delete: (key: string) => void	}
+ * type Model = { set: (id: string, params: {}) => void; delete: (id: string) => void	}
  *
  * Actions should be verified *before* being sent to the worker.
  *
  * VIEW STATE --------------
- * Calls to .set and .delete get forwarded on modelPort as { id, name, key, value } messages.
- * For .set(key, params), value is the params object, and for .delete, value is null.
+ * Calls to .set and .delete get forwarded on modelPort as { timestamp, name, id, value } messages.
+ * For .set(id, params), value is the params object, and for .delete, value is null.
  */
 
 parentPort.once("message", async ({ multihash, actionPort, modelPort }) => {
@@ -53,12 +53,12 @@ parentPort.once("message", async ({ multihash, actionPort, modelPort }) => {
 		const db = {}
 		for (const name of Object.keys(models)) {
 			db[name] = {
-				set(key, params) {
-					modelPort.postMessage({ timestamp, key, name, value: params })
+				set(id, value) {
+					modelPort.postMessage({ timestamp, name, id, value })
 				},
-				delete(key) {
-					modelPort.postMessage({ timestamp, key, name, value: null })
-				},
+				// delete(id) {
+				// 	modelPort.postMessage({ timestamp, name, id, value: null })
+				// },
 			}
 		}
 

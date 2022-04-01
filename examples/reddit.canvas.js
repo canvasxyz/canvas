@@ -30,8 +30,8 @@ export const routes = {
             ) AS score,
             group_concat(threadVotes.creator) as voters
         FROM threads
-            LEFT JOIN threadVotes ON threads.key = threadVotes.threadId
-        GROUP BY threads.key
+            LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
+        GROUP BY threads.id
         ORDER BY threads.timestamp DESC
         LIMIT 30`,
 	"/top": `SELECT
@@ -42,8 +42,8 @@ export const routes = {
             ) AS score,
             group_concat(threadVotes.creator) as voters
         FROM threads
-            LEFT JOIN threadVotes ON threads.key = threadVotes.threadId
-        GROUP BY threads.key
+            LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
+        GROUP BY threads.id
         ORDER BY score DESC
         LIMIT 30`,
 	"/threads/:threadId": `SELECT
@@ -53,10 +53,10 @@ export const routes = {
             ) AS score,
             group_concat(threadVotes.creator) as voters
         FROM threads
-            LEFT JOIN comments ON comments.threadId = threads.key
-            LEFT JOIN threadVotes ON threads.key = threadVotes.threadId
-            WHERE threads.key = :threadId
-        GROUP BY threads.key`,
+            LEFT JOIN comments ON comments.threadId = threads.id
+            LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
+            WHERE threads.id = :threadId
+        GROUP BY threads.id`,
 	"/threads/:threadId/comments": `SELECT
             comments.*,
             SUM(
@@ -64,26 +64,26 @@ export const routes = {
             ) AS score,
             group_concat(commentVotes.creator) as voters
         FROM comments
-            LEFT JOIN commentVotes ON comments.key = commentVotes.commentId
+            LEFT JOIN commentVotes ON comments.id = commentVotes.commentId
             WHERE comments.threadId = :threadId
-        GROUP BY comments.key
+        GROUP BY comments.id
         ORDER BY score DESC
         LIMIT 30`,
 }
 
 export const actions = {
-	thread(key, title, link) {
-		this.db.threads.set(key, { creator: this.from, title, link })
+	thread(id, title, link) {
+		this.db.threads.set(id, { creator: this.from, title, link })
 	},
-	comment(key, threadId, text) {
-		this.db.comments.set(key, { creator: this.from, threadId, text })
+	comment(id, threadId, text) {
+		this.db.comments.set(id, { creator: this.from, threadId, text })
 	},
 	voteThread(threadId, value) {
 		if (value !== 1 && value !== -1) return false
-		this.db.threadVotes.set(key, { creator: this.from, threadId, value })
+		this.db.threadVotes.set(id, { creator: this.from, threadId, value })
 	},
 	voteComment(commentId, value) {
 		if (value !== 1 && value !== -1) return false
-		this.db.commentVotes.set(key, { creator: this.from, commentId, value })
+		this.db.commentVotes.set(id, { creator: this.from, commentId, value })
 	},
 }
