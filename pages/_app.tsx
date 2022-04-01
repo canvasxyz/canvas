@@ -17,7 +17,7 @@ export default function App({ Component, pageProps }: AppProps) {
 			<div className="app-container">
 				<div className="app-header"></div>
 				<div className="app-body flex flex-col h-screen w-screen">
-					<div className="my-4 pb-3.5 border-b border-gray-200">
+					<div className="pt-4 pb-3.5 border-b border-gray-200">
 						<div className="px-10 mx-auto flex">
 							<div className="flex-1 font-semibold">
 								<Link href="/">Canvas</Link>
@@ -25,7 +25,7 @@ export default function App({ Component, pageProps }: AppProps) {
 							<UserMenu />
 						</div>
 					</div>
-					<div className="w-full flex-1 overflow-x-scroll">
+					<div className="w-full flex-1 overflow-x-scroll pt-4">
 						<div className="px-10 w-max">
 							<Component {...pageProps} />
 						</div>
