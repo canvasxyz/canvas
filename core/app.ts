@@ -271,7 +271,8 @@ export class App {
 				// Verify the action matches the payload
 				const payload = JSON.parse(action.payload)
 				assert(actionPayloadType.is(payload), "invalid message payload")
-				assert(action.from === payload.from, "action origin doesn't match payload origin")
+				assert(action.from === payload.from, "action signed by wrong address")
+				assert(payload.spec === this.multihash, "action signed for wrong spec")
 				// assert(action.chainId === payload.chainId, "action chainId doesn't match payload chainId")
 
 				// Verify the signature
