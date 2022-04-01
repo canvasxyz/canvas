@@ -3,18 +3,19 @@ import toast from "react-hot-toast"
 import { ethers } from "ethers"
 
 import dynamic from "next/dynamic"
+import { StatusCodes } from "http-status-codes"
 
 import { keymap } from "@codemirror/view"
 import { defaultKeymap, indentWithTab } from "@codemirror/commands"
 import { basicSetup } from "@codemirror/basic-setup"
 import { indentUnit } from "@codemirror/language"
-
 import { jsonLanguage } from "@codemirror/lang-json"
+
 import { useCodeMirror } from "utils/client/codemirror"
-import { ActionPayload } from "utils/server/types"
+
+import type { ActionPayload } from "core/actions"
 
 import styles from "./ActionComposer.module.scss"
-import { StatusCodes } from "http-status-codes"
 
 const extensions = [indentUnit.of("  "), basicSetup, jsonLanguage, keymap.of(defaultKeymap), keymap.of([indentWithTab])]
 

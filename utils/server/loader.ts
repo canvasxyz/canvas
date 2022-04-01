@@ -1,7 +1,7 @@
 import fs from "node:fs"
 
 import { prisma } from "./services"
-import { App } from "./app"
+import { App } from "core/app"
 
 const appDirectory = process.env.APP_DIRECTORY!
 

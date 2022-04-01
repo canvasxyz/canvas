@@ -1,7 +1,8 @@
-import React, { useEffect } from "react"
+import React from "react"
 
 import useSWR from "swr"
-import { Action, ActionPayload } from "utils/server/types"
+
+import type { Action } from "core/actions"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
