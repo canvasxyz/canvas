@@ -89,10 +89,14 @@ export class App {
 		const { routes, models, actionParameters } = await new Promise((resolve, reject) => {
 			// The order of these next two blocks (attaching the message handler
 			// and posting the initial message) is logically important.
-			worker.once("message", ({ routes, models, actionParameters }) => {
-				// TODO: validate routes and models
-				console.log("received initialization message from worker", multihash)
-				resolve({ routes, models, actionParameters })
+			worker.once("message", (message) => {
+				console.log("received initialization response from worker", multihash, message.status)
+				if (message.status === "success") {
+					const { routes, models, actionParameters } = message
+					resolve({ routes, models, actionParameters })
+				} else {
+					reject(new Error(message.error))
+				}
 			})
 
 			console.log("posting initialization message", multihash)
@@ -186,10 +190,14 @@ export class App {
 		}
 
 		// Attach model message listener
-		this.modelPort.on("message", (message) => this.handleModelMessage(message))
+		this.modelPort.on("message", (message) => {
+			this.handleModelMessage(message)
+		})
 
 		// Attach action message listener
-		this.actionPort.on("message", (message) => this.handleActionMessage(message))
+		this.actionPort.on("message", (message) => {
+			this.handleActionMessage(message)
+		})
 
 		// // Remove the api socket, if it exists
 		// const apiPath = path.resolve(appDirectory, this.multihash, "api.sock")
@@ -222,86 +230,119 @@ export class App {
 			console.log("API server listening on port", port)
 		})
 
+		// we need to explicitly track open connections
+		// in order to shut the api server down gracefully
 		this.server.on("connection", (socket) => {
-			console.log("adding connection to pool")
 			this.connections.add(socket)
-			socket.on("close", () => {
-				console.log("deleting connection from pool")
-				this.connections.delete(socket)
-			})
+			socket.on("close", () => this.connections.delete(socket))
 		})
 	}
 
 	private handleModelMessage(message: any) {
-		if (modelMessage.is(message)) {
-			assert(message.name in this.statements.models)
-
-			if (message.value === null) {
-				// DELETE
-				throw new Error(".delete() is not implemented yet")
-			} else {
-				// SET
-				// TODO: validate params
-				const model = this.statements.models[message.name]
-				model.set.run({ ...message.value, id: message.id, timestamp: message.timestamp })
-			}
-		} else {
+		// TODO: this validation should really happen in two stages since message
+		// contains a mix of spec-provided and worker-provided data. if the worker-
+		// provided data is invalid we should throw, but if the spec-provided data
+		// is invalid we should try to find the call pool callback and reject it.
+		if (!modelMessage.is(message)) {
 			console.error(message)
-			throw new Error("received invalid model message from worker")
+			throw new Error("internal error: received invalid model message from worker")
+		}
+
+		const { timestamp, name, id, value } = message
+		try {
+			assert(name in this.statements.models, `${JSON.stringify(name)} is not a model name`)
+			const model = this.statements.models[name]
+			model.set.run({ ...value, id, timestamp })
+		} catch (err) {
+			const call = this.callPool.get(message.id)
+			if (call === undefined) {
+				// TODO: since these messages are coming from the worker thread there's
+				// actually a chance that the handler in the worker exits successfully
+				// and the call in the call pool gets resolved *before* we actually process
+				// the view state side effects on modelPort...
+				throw new Error("internal error: message callbacks missing from call pool")
+			}
+
+			// However in the case that we do catch an error we would prefer to reject the
+			// .apply promise instead of throwing inside .handleModelMessage (crashes the app)
+			call.reject(err instanceof Error ? err : new Error((err as any).toString()))
 		}
 	}
 
 	private handleActionMessage(message: any) {
-		if (actionMessage.is(message)) {
-			const call = this.callPool.get(message.id)
-			if (call === undefined) {
-				throw new Error("internal error: missing promise callbacks for action response")
-			}
+		if (!actionMessage.is(message)) {
+			console.error(message)
+			throw new Error("internal error: received invalid action message from worker")
+		}
 
-			this.callPool.delete(message.id)
-			if (message.status === "success") {
-				call.resolve()
-			} else {
-				call.reject(new Error(message.error))
-			}
+		const call = this.callPool.get(message.id)
+		if (call === undefined) {
+			throw new Error("internal error: message callbacks missing from call pool")
+		}
+
+		this.callPool.delete(message.id)
+		if (message.status === "success") {
+			call.resolve()
 		} else {
-			console.error("unexpected action message", message)
+			call.reject(new Error(message.error))
 		}
 	}
 
+	/**
+	 * 1. stop accepting new actions and queries
+	 * 2. reject in-process calls in the call pool
+	 * 3.
+	 */
 	async stop() {
 		await new Promise<void>((resolve, reject) => {
+			// http.Server.close() stops new incoming connections
+			// but keeps existing ones open. the callback is only
+			// called when all connections are closed .
 			this.server.close((err) => (err ? reject(err) : resolve()))
-			for (const socket of this.connections) {
-				socket.end()
+
+			// reject calls in the action pool
+			for (const call of this.callPool.values()) {
+				call.reject(new Error("app was shut down before action resolved"))
 			}
+
+			// close open connections on the API server
+			// (this needs to happen here inside the promise executor)
+			this.connections.forEach((socket) => socket.end())
 			this.connections.clear()
 		})
 
+		// terminate the worker thread
 		await this.worker.terminate()
+
+		// close the hypercore feed
 		await new Promise<void>((resolve, reject) => this.feed.close((err) => (err ? reject(err) : resolve())))
+
+		// close the sqlite database
 		this.database.close()
 	}
 
 	async apply(action: Action) {
+		// Verify the action matches the payload
+		const payload = JSON.parse(action.payload)
+		assert(actionPayloadType.is(payload), "invalid message payload")
+		assert(action.from === payload.from, "action signed by wrong address")
+		assert(payload.spec === this.multihash, "action signed for wrong spec")
+		assert(payload.call in this.actionParameters, "payload.call is not the name of an action")
+
+		// Verify the signature
+		const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
+		assert(action.from === verifiedAddress, "action signed by wrong address")
+
+		// There may be many outstanding actions, and actions are not guaranteed to execute in order.
+		const id = crypto.createHash("sha256").update(action.signature).digest("hex")
+
+		// Await response from worker
 		await new Promise<void>((resolve, reject) => {
-			// Verify the action matches the payload
-			const payload = JSON.parse(action.payload)
-			assert(actionPayloadType.is(payload), "invalid message payload")
-			assert(action.from === payload.from, "action signed by wrong address")
-			assert(payload.spec === this.multihash, "action signed for wrong spec")
-			assert(payload.call in this.actionParameters, "payload.call is not the name of an action")
-
-			// Verify the signature
-			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
-			assert(action.from === verifiedAddress, "action signed by wrong address")
-
-			// There may be many outstanding actions, and actions are not guaranteed to execute in order.
-			const id = crypto.createHash("sha256").update(action.signature).digest("hex")
 			this.callPool.set(id, { resolve, reject })
 			this.actionPort.postMessage({ id, action: payload })
 		})
 
+		// Append to hypercore
 		await new Promise<void>((resolve, reject) => {
 			this.feed.append(action, (err, seq) => {
 				console.log("appended to hypercore", seq)

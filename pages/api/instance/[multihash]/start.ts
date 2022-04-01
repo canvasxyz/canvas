@@ -20,5 +20,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 	await loader
 		.start(req.query.multihash)
 		.then(() => res.status(StatusCodes.OK).end())
-		.catch(() => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end())
+		.catch((err) =>
+			res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err instanceof Error ? err.message : err.toString())
+		)
 }
