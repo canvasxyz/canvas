@@ -1,6 +1,5 @@
 import path from "node:path"
-import assert from "node:assert"
-import { MessagePort, parentPort } from "node:worker_threads"
+import { parentPort } from "node:worker_threads"
 
 import dotenv from "dotenv"
 dotenv.config({ path: ".env" })
@@ -38,58 +37,47 @@ if (appDirectory === undefined) {
  * For .set(id, params), value is the params object, and for .delete, value is null.
  */
 
-parentPort.once("message", async ({ multihash, actionPort, modelPort }) => {
-	assert(typeof multihash === "string")
-	assert(actionPort instanceof MessagePort)
-	assert(modelPort instanceof MessagePort)
+parentPort.once("message", (message) =>
+	initialize(message)
+		.then((app) => parentPort.postMessage({ status: "success", ...app }))
+		.catch((err) => parentPort.postMessage({ status: "failure", error: err.toString() }))
+)
 
+async function initialize({ multihash, actionPort, modelPort }) {
 	const appPath = path.resolve(appDirectory, multihash)
 	const specPath = path.resolve(appPath, "spec.js")
 	const { actions, models, routes } = await import(specPath)
 
-	actionPort.on("message", async ({ id, action }) => {
-		const { from, call, args, timestamp } = action
+	actionPort.on("message", ({ id, action }) =>
+		apply(action)
+			.then(() => actionPort.postMessage({ id, status: "success" }))
+			.catch((err) => actionPort.postMessage({ id, status: "failure", error: err.toString() }))
+	)
 
+	async function apply({ from, call, args, timestamp }) {
 		const db = {}
 		for (const name of Object.keys(models)) {
 			db[name] = {
 				set(id, value) {
 					modelPort.postMessage({ timestamp, name, id, value })
 				},
-				// delete(id) {
-				// 	modelPort.postMessage({ timestamp, name, id, value: null })
-				// },
 			}
 		}
 
 		const context = { db, from, timestamp }
-
-		try {
-			assert(call in actions, `Invalid action name ${JSON.stringify(call)}`)
-			const result = await actions[call].apply(context, args)
-			if (result === false) {
-				throw new Error("action returned false")
-			}
-			console.log("success! posting result to main")
-			actionPort.postMessage({ id, status: "success" })
-		} catch (err) {
-			console.log("failure! posting error to main", typeof err, err.toString())
-			actionPort.postMessage({
-				id,
-				status: "failure",
-				error: err.toString(),
-			})
+		const result = await actions[call].apply(context, args)
+		if (result === false) {
+			throw new Error("action handler returned false")
 		}
-	})
+	}
 
 	const actionParameters = {}
 	for (const [call, handler] of Object.entries(actions)) {
-		assert(typeof handler === "function")
 		actionParameters[call] = parseHandlerParameters(handler)
 	}
 
-	parentPort.postMessage({ models, routes, actionParameters })
-})
+	return { models, routes, actionParameters }
+}
 
 // https://stackoverflow.com/questions/1007981/how-to-get-function-parameter-names-values-dynamically
 function parseHandlerParameters(handler) {
