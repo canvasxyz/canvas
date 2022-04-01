@@ -6,6 +6,7 @@ const actionArgument = t.union([t.null, t.boolean, t.number, t.string])
 
 export const payload: t.Type<ActionPayload> = t.type({
 	from: t.string,
+	spec: t.string,
 	timestamp: t.number,
 	call: t.string,
 	args: t.array(actionArgument),

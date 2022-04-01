@@ -1,5 +1,4 @@
 import assert from "node:assert"
-import { match } from "./assert"
 
 import { ModelType, ModelValue } from "./types"
 
@@ -15,10 +14,11 @@ export function validateType(type: ModelType, value: ModelValue) {
 	} else if (type === "bytes") {
 		assert(value instanceof Uint8Array, "invalid type: expected Uint8Array")
 	} else if (type === "datetime") {
-		assert(value instanceof Date, "invalid type: expected Date")
+		assert(typeof value === "number", "invalid type: expected number")
 	} else {
-		// reference values are represented as strings
-		assert(typeof value === "string", "invalid type: expected string")
+		throw new Error("invalid model type", type)
+		// // reference values are represented as strings
+		// assert(typeof value === "string", "invalid type: expected string")
 	}
 }
 
@@ -35,9 +35,10 @@ export function getColumnType(type: ModelType): string {
 		case "bytes":
 			return "BLOB"
 		case "datetime":
-			return "TEXT"
+			return "INTEGER"
 		default:
-			const [_, tableName] = match(type, /^@([a-z0-9]+)$/, "invalid field type")
-			return `TEXT NOT NULL REFERENCES ${tableName}(id)`
+			throw new Error("invalid model type", type)
+		// const [_, tableName] = match(type, /^@([a-z0-9]+)$/, "invalid field type")
+		// return `TEXT NOT NULL REFERENCES ${tableName}(id)`
 	}
 }

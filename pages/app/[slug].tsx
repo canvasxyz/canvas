@@ -4,10 +4,11 @@ import type { GetServerSideProps } from "next"
 import useSWR from "swr"
 
 import { prisma } from "utils/server/services"
-import { AppData } from "utils/server/types"
+
 import { Editor } from "components/SpecEditor"
 import { Viewer } from "components/SpecViewer"
 import { Actions } from "components/SpecActions"
+import { Models } from "components/ModelViewer"
 import ActionComposer from "components/ActionComposer"
 import Sidebar from "components/SpecSidebar"
 
@@ -90,33 +91,36 @@ export default function AppPage({ version_number, app }: AppPageProps) {
 
 	const { data, error } = useSWR("/api/instance", fetcher, { refreshInterval: 1000 })
 	const instance = useMemo(
-		() =>
-			version !== null && data && Object.keys(data).includes(version.multihash)
-				? { multihash: version.multihash, data: data[version.multihash] as AppData }
-				: null,
+		() => (version !== null && data !== undefined && version.multihash in data ? version.multihash : null),
 		[data]
 	)
 
 	return (
-		<div className="flex">
-			<div className="w-60 pr-6">
+		<div className="flex ">
+			<div className="pr-6">
 				<Sidebar version_number={version_number} app={app} edited={edited} />
 			</div>
 			{version === null ? <Editor key="editor" app={app} onEdited={onEdited} /> : <Viewer {...version} />}
 			<div className="w-96 pl-6">
 				<div className="font-semibold mb-3">Actions</div>
 				{instance !== null ? (
-					<Actions multihash={instance.multihash} />
+					<Actions multihash={instance} />
 				) : (
 					<div className="text-gray-400 text-sm">Select a running instance to see actions</div>
 				)}
 				{instance !== null && (
 					<>
 						<div className="font-semibold mt-5 mb-3">New Action</div>
-						<ActionComposer appData={instance.data} multihash={instance.multihash} />
+						<ActionComposer actionParameters={data[instance].actionParameters} multihash={instance} />
 					</>
 				)}
 			</div>
+			{instance !== null && (
+				<div className="w-96 pl-6">
+					<div className="font-semibold mb-3">Models</div>
+					<Models multihash={instance} models={data[instance].models} />
+				</div>
+			)}
 		</div>
 	)
 }

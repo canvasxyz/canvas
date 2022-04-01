@@ -4,12 +4,12 @@ import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
-import { Action, ActionPayload } from "utils/server/types"
-import { action, payload } from "utils/server/action"
+import { Action } from "utils/server/types"
+import { action as actionType } from "utils/server/action"
 
 import * as t from "io-ts"
 
-const actionArray = t.array(action)
+const actionArray = t.array(actionType)
 
 async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	if (typeof req.query.multihash !== "string") {
@@ -25,7 +25,7 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 		return res.status(StatusCodes.OK).json([])
 	}
 
-	const actions = await new Promise<Action[]>((resolve, reject) => {
+	const actions = await new Promise<[string, Action][]>((resolve, reject) => {
 		const start = Math.max(app.feed.length - 10, 0)
 		app.feed.getBatch(start, app.feed.length, (err, data) => {
 			if (err !== null) {
@@ -33,7 +33,7 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 			} else if (!actionArray.is(data)) {
 				reject(new Error("got invalid data from hypercore feed"))
 			} else {
-				resolve(data.map((d) => ({ id: crypto.createHash("sha256").update(d.signature).digest("hex"), ...d })))
+				resolve(data.map((d) => [crypto.createHash("sha256").update(d.signature).digest("hex"), d]))
 			}
 		})
 	})
@@ -48,7 +48,7 @@ async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 
 	console.log("posting action", req.query.multihash, req.body)
 
-	if (!action.is(req.body)) {
+	if (!actionType.is(req.body)) {
 		return res.status(StatusCodes.BAD_REQUEST).end()
 	}
 
