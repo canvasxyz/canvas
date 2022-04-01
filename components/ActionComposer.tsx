@@ -11,25 +11,27 @@ import { indentUnit } from "@codemirror/language"
 
 import { jsonLanguage } from "@codemirror/lang-json"
 import { useCodeMirror } from "utils/client/codemirror"
-import { ActionPayload, AppData, ActionParams } from "utils/server/types"
+import { ActionPayload } from "utils/server/types"
 
 import styles from "./ActionComposer.module.scss"
 import { StatusCodes } from "http-status-codes"
+import { nanoid } from "nanoid"
 
 const extensions = [indentUnit.of("  "), basicSetup, jsonLanguage, keymap.of(defaultKeymap), keymap.of([indentWithTab])]
 
-const getInitialActionValue = (call: string, args: string[], from = "") => `{
+const getInitialActionValue = (multihash: string, call: string, args: string[], from = "") => `{
+	"spec": "${multihash}",
 	"from": "${from}",
 	"call": "${call}",
-	"args": [${args.length ? '"<' : ""}${args.join('>", "<')}${args.length ? '>"' : ""}],
+	"args": ["${nanoid()}"${args.map((arg) => `, <${arg}>`)}],
 	"timestamp": ${new Date().valueOf()}
 }`
 
-function ActionComposer(props: { appData: AppData; multihash: string }) {
+function ActionComposer(props: { multihash: string; actionParameters: Record<string, string[]> }) {
 	const [sending, setSending] = useState(false)
 
 	const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>({
-		doc: getInitialActionValue("", []),
+		doc: getInitialActionValue(props.multihash, "", []),
 		extensions,
 	})
 
@@ -61,7 +63,7 @@ function ActionComposer(props: { appData: AppData; multihash: string }) {
 				setCurrentSigner(signer)
 				signer.getAddress().then((address) => {
 					setCurrentAddress(address)
-					setEditorValue(getInitialActionValue("", [], address))
+					setEditorValue(getInitialActionValue(props.multihash, "", [], address))
 				})
 			})
 			.catch(() => {
@@ -122,11 +124,11 @@ function ActionComposer(props: { appData: AppData; multihash: string }) {
 	return (
 		<div className="mt-2">
 			<div className="mb-3">
-				{props.appData.actions.map(([call, args]: ActionParams) => (
+				{Object.entries(props.actionParameters).map(([call, parameters]) => (
 					<div
 						className="inline-block text-sm px-2 py-0.5 mb-1 mr-1.5 rounded bg-gray-200 hover:bg-gray-300 cursor-pointer"
 						onClick={() => {
-							setEditorValue(getInitialActionValue(call, args, currentAddress))
+							setEditorValue(getInitialActionValue(props.multihash, call, parameters, currentAddress))
 						}}
 					>
 						{call}

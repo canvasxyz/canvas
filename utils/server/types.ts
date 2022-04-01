@@ -14,7 +14,7 @@
  * at the moment, but this is a "coincidence", so they're named different things.
  */
 
-export type ModelType = "boolean" | "string" | "integer" | "float" | "bytes" | "datetime" | `@${string}`
+export type ModelType = "boolean" | "string" | "integer" | "float" | "bytes" | "datetime"
 
 export type ModelValue = null | boolean | number | string | Uint8Array | Date
 
@@ -28,24 +28,18 @@ export type ActionArgument = null | boolean | number | string
 
 export type ActionPayload = {
 	from: string
+	spec: string
 	call: string
 	args: ActionArgument[]
 	timestamp: number
 }
 
 export type Action = {
-	id?: string
 	from: string
 	chainId: string
 	signature: string
 	payload: string
 }
-
-export type AppData = {
-	actions: ActionParams[]
-}
-
-export type ActionParams = [string, string[]]
 
 export type ContextModel = {
 	create: (fields: Record<string, ModelValue>) => void

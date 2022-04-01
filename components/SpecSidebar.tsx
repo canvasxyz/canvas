@@ -132,7 +132,10 @@ function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
 
 function Sidebar({ version_number, app, edited }: SidebarProps) {
 	const { data, error } = useSWR("/api/instance", fetcher, { refreshInterval: 1000 })
-	const instances = useMemo<Set<string>>(() => (error ? new Set([]) : new Set(Object.keys(data || {}))), [data])
+	const instances = useMemo<Record<string, { models: Record<string, Record<string, string>> }>>(
+		() => data || {},
+		[data]
+	)
 
 	return (
 		<div className="">
@@ -140,7 +143,7 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 				Projects <span className="text-gray-400 mx-0.25">/</span> {app.slug}
 				<ProjectMenu app={app} />
 			</div>
-			<div className="border rounded overflow-hidden">
+			<div className="border rounded overflow-hidden w-60">
 				<div className="flex">
 					<a
 						className={`flex-1 text-sm px-3 py-1.5 flex gap-4 hover:bg-gray-100 ${
@@ -152,7 +155,7 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 						{edited && <span className="text-gray-400">Edited</span>}
 					</a>
 				</div>
-				{app.versions.map((version, index) => {
+				{app.versions.map((version) => {
 					return (
 						<div key={version.multihash} className="flex">
 							<a
@@ -163,7 +166,7 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 								href={`?version=v${version.version_number}`}
 							>
 								<span className={`flex-1`}>v{version.version_number}</span>
-								{instances.has(version.multihash) ? (
+								{version.multihash in instances ? (
 									<div className="inline-block rounded px-1.5 py-0.5 mr-2 text-xs bg-green-600 text-white">Running</div>
 								) : (
 									<div className="inline-block rounded px-1.5 py-0.5 mr-2 text-xs bg-red-500 text-white">Stopped</div>
@@ -179,7 +182,7 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 							<SidebarMenuItem
 								multihash={version.multihash}
 								active={version.version_number === version_number}
-								running={instances.has(version.multihash)}
+								running={version.multihash in instances}
 							/>
 						</div>
 					)

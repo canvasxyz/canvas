@@ -5,13 +5,13 @@ export const models = {
 		createdAt: "datetime",
 	},
 	card: {
-		pollId: "@poll",
+		pollId: "string",
 		text: "string",
 		creator: "string",
 		createdAt: "datetime",
 	},
 	vote: {
-		cardId: "@card",
+		cardId: "string",
 		isAgree: "boolean",
 		isDisagree: "boolean",
 		creator: "string",

@@ -25,8 +25,10 @@ export default function App({ Component, pageProps }: AppProps) {
 							<UserMenu />
 						</div>
 					</div>
-					<div className="px-10 mx-auto flex-1 w-full overflow-x-scroll">
-						<Component {...pageProps} />
+					<div className="w-full flex-1 overflow-x-scroll">
+						<div className="px-10 w-max">
+							<Component {...pageProps} />
+						</div>
 					</div>
 					<Toaster position="top-center" reverseOrder={false}>
 						{(t) => (

@@ -21,14 +21,21 @@ if (appDirectory === undefined) {
  * global port) a message { models, routes, actionParameters } that the main thread
  * uses to initialize the database, prepare route query statements, and so on.
  *
+ * ACTION APPLICATION ------
  * To apply an action, the main thread sends an { id, action } message on the actionPort
  * and expects a { id, status: "success" } | { id, status: "failure"; error: string }
- * message in response.
+ * message in response. The .action value is an ActionPayload with type
+ * { from: string; timestamp: number; call: string; args: ActionArgument[] }
+ *
+ * Action handlers are called with a Context object bound to `this`, with type
+ * type Context = { from: string; timestamp: number; db: Record<string, Model> }
+ * type Model = { set: (key: string, params: {}) => void; delete: (key: string) => void	}
  *
  * Actions should be verified *before* being sent to the worker.
  *
- * When an action handler wants to emit a model record, it calls this.db[name].create(params),
- * which gets forwarded on modelPort as a { id, name, params } message.
+ * VIEW STATE --------------
+ * Calls to .set and .delete get forwarded on modelPort as { id, name, key, value } messages.
+ * For .set(key, params), value is the params object, and for .delete, value is null.
  */
 
 parentPort.once("message", async ({ multihash, actionPort, modelPort }) => {
@@ -40,29 +47,27 @@ parentPort.once("message", async ({ multihash, actionPort, modelPort }) => {
 	const specPath = path.resolve(appPath, "spec.js")
 	const { actions, models, routes } = await import(specPath)
 
-	// This is a little extra factory step so that the
-	// db.[name].create(...) methods that the handler calls
-	// have access to the id of the action. Also this isolates
-	// the action handlers from each other. There's probably
-	// a better way to do this.
-	function makeDB(id) {
+	actionPort.on("message", async ({ id, action }) => {
+		console.log("got action!", action)
+		const { from, call, args, timestamp } = action
+
 		const db = {}
 		for (const name of Object.keys(models)) {
 			db[name] = {
-				create(params) {
-					modelPort.postMessage({ id, name, params })
+				set(key, params) {
+					modelPort.postMessage({ timestamp, key, name, value: params })
+				},
+				delete(key) {
+					modelPort.postMessage({ timestamp, key, name, value: null })
 				},
 			}
 		}
-		return db
-	}
 
-	actionPort.on("message", async ({ id, action: { call, args, ...context } }) => {
-		console.log("got action!", id, call, args, context)
-		const db = makeDB(id)
+		const context = { db, from, timestamp }
+
 		try {
 			assert(call in actions, `Invalid action name ${JSON.stringify(call)}`)
-			await actions[call].apply({ db, from: null, ...context }, args)
+			await actions[call].apply(context, args)
 			console.log("success! posting result to main")
 			actionPort.postMessage({ id, status: "success" })
 		} catch (err) {

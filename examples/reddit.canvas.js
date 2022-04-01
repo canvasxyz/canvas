@@ -1,28 +1,22 @@
-// Created on Wed Mar 30 2022 at 16:29:33 GMT-0400 (Eastern Daylight Time)
-
 export const models = {
 	threads: {
 		title: "string",
 		link: "string",
 		creator: "string",
-		createdAt: "datetime",
 	},
 	comments: {
-		threadId: "@threads",
+		threadId: "string",
 		text: "string",
 		creator: "string",
-		createdAt: "datetime",
 	},
 	threadVotes: {
-		threadId: "@threads",
+		threadId: "string",
 		creator: "string",
-		createdAt: "datetime",
 		value: "integer",
 	},
 	commentVotes: {
-		commentId: "@comments",
+		commentId: "string",
 		creator: "string",
-		createdAt: "datetime",
 		value: "integer",
 	},
 }
@@ -31,19 +25,19 @@ export const routes = {
 	"/latest": `SELECT
             threads.*,
             SUM(
-                1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.createdAt) *
+                1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.timestamp) *
                 CAST(threadVotes.value as INT)
             ) AS score,
             group_concat(threadVotes.creator) as voters
         FROM threads
             LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
         GROUP BY threads.id
-        ORDER BY threads.createdAt DESC
+        ORDER BY threads.timestamp DESC
         LIMIT 30`,
 	"/top": `SELECT
             threads.*,
             SUM(
-                1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.createdAt) *
+                1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.timestamp) *
                 CAST(threadVotes.value as INT)
             ) AS score,
             group_concat(threadVotes.creator) as voters
@@ -55,7 +49,7 @@ export const routes = {
 	"/threads/:threadId": `SELECT
             threads.*,
             SUM(
-                1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.createdAt) * threadVotes.value
+                1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.timestamp) * threadVotes.value
             ) AS score,
             group_concat(threadVotes.creator) as voters
         FROM threads
@@ -66,7 +60,7 @@ export const routes = {
 	"/threads/:threadId/comments": `SELECT
             comments.*,
             SUM(
-                1 / (cast(strftime('%s','now') as float) * 1000 - commentVotes.createdAt) * commentVotes.value
+                1 / (cast(strftime('%s','now') as float) * 1000 - commentVotes.timestamp) * commentVotes.value
             ) AS score,
             group_concat(commentVotes.creator) as voters
         FROM comments
@@ -78,38 +72,18 @@ export const routes = {
 }
 
 export const actions = {
-	thread(title, link) {
-		this.db.threads.create({
-			creator: this.from,
-			createdAt: this.timestamp,
-			title,
-			link,
-		})
+	thread(key, title, link) {
+		this.db.threads.set(key, { creator: this.from, title, link })
 	},
-	comment(threadId, text) {
-		this.db.comments.create({
-			creator: this.from,
-			createdAt: this.timestamp,
-			threadId,
-			text,
-		})
+	comment(key, threadId, text) {
+		this.db.comments.set(key, { creator: this.from, threadId, text })
 	},
 	voteThread(threadId, value) {
 		if (value !== 1 && value !== -1) return false
-		this.db.threadVotes.create({
-			creator: this.from,
-			createdAt: this.timestamp,
-			threadId,
-			value,
-		})
+		this.db.threadVotes.set(key, { creator: this.from, threadId, value })
 	},
 	voteComment(commentId, value) {
 		if (value !== 1 && value !== -1) return false
-		this.db.commentVotes.create({
-			creator: this.from,
-			createdAt: this.timestamp,
-			commentId,
-			value,
-		})
+		this.db.commentVotes.set(key, { creator: this.from, commentId, value })
 	},
 }

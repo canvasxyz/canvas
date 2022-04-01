@@ -12,8 +12,8 @@ import Database, * as sqlite from "better-sqlite3"
 import * as t from "io-ts"
 import { ethers } from "ethers"
 
-import type { Action, ActionPayload, Model } from "./types"
-import { action } from "./action"
+import type { Action, Model } from "./types"
+import { action as actionType, payload as payloadType } from "./action"
 import { getColumnType } from "./models"
 import { StatusCodes } from "http-status-codes"
 
@@ -33,9 +33,10 @@ const actionMessage = t.union([
 ])
 
 const modelMessage = t.type({
-	id: t.string,
+	timestamp: t.number,
 	name: t.string,
-	params: t.record(t.string, t.union([t.null, t.number, t.string, t.boolean])),
+	key: t.string,
+	value: t.union([t.null, t.record(t.string, t.union([t.null, t.number, t.string, t.boolean]))]),
 })
 
 // Don't use the App constructor directly, use the static App.initialize method instead:
@@ -86,9 +87,11 @@ export class App {
 			// and posting the initial message) is logically important.
 			worker.once("message", ({ routes, models, actionParameters }) => {
 				// TODO: validate routes and models
+				console.log("received initialization message from worker", multihash)
 				resolve({ routes, models, actionParameters })
 			})
 
+			console.log("posting initialization message", multihash)
 			worker.postMessage(
 				{
 					multihash: multihash,
@@ -113,9 +116,12 @@ export class App {
 		)
 	}
 
-	private readonly routeStatements: Record<string, sqlite.Statement> = {}
-	private readonly modelStatements: Record<string, sqlite.Statement> = {}
-	private readonly actionPool: Map<string, { resolve: () => void; reject: (err: Error) => void }> = new Map()
+	private readonly statements: {
+		routes: Record<string, sqlite.Statement>
+		models: Record<string, { set: sqlite.Statement }>
+	} = { routes: {}, models: {} }
+
+	private readonly callPool: Map<string, { resolve: () => void; reject: (err: Error) => void }> = new Map()
 
 	private readonly server: express.Express
 
@@ -141,7 +147,7 @@ export class App {
 		const tables: string[] = []
 
 		for (const [name, model] of Object.entries(this.models)) {
-			const columns = ["id TEXT PRIMARY KEY NOT NULL"]
+			const columns = ["id TEXT PRIMARY KEY NOT NULL", "timestamp INTEGER NOT NULL"]
 			for (const field of Object.keys(model)) {
 				columns.push(`${field} ${getColumnType(model[field])}`)
 			}
@@ -153,7 +159,7 @@ export class App {
 
 		// Prepare route statements
 		for (const [name, route] of Object.entries(this.routes)) {
-			this.routeStatements[name] = this.database.prepare(route)
+			this.statements.routes[name] = this.database.prepare(route)
 		}
 
 		// Prepare model statements
@@ -161,11 +167,16 @@ export class App {
 			// This assumes that the iteration order here with Object.keys(model)
 			// is the exact same as we had previously in Object.entries(models).
 			// This is true and guaranteed but not great practice.
-			const fields = Object.keys(model).join(", ")
-			const params = Object.keys(model)
-				.map((f) => `:${f}`)
-				.join(", ")
-			this.modelStatements[name] = this.database.prepare(`INSERT INTO ${name} (id, ${fields}) VALUES (:id, ${params})`)
+			const keys = ["timestamp", ...Object.keys(model)]
+			const fields = keys.join(", ")
+			const params = keys.map((key) => `:${key}`).join(", ")
+			const condition = (n: string) => `${n} = CASE WHEN timestamp < :timestamp THEN :${n} ELSE ${n} END`
+			const updates = keys.map(condition).join(", ")
+			this.statements.models[name] = {
+				set: this.database.prepare(
+					`INSERT INTO ${name} (id, ${fields}) VALUES (:id, ${params}) ON CONFLICT (id) DO UPDATE SET ${updates}`
+				),
+			}
 		}
 
 		// Attach model message listener
@@ -188,13 +199,13 @@ export class App {
 		for (const route of Object.keys(this.routes)) {
 			this.server.get(route, (req, res) => {
 				console.log(route, req.params)
-				const results = this.routeStatements[route].all(req.params)
+				const results = this.statements.routes[route].all(req.params)
 				res.status(StatusCodes.OK).json(results)
 			})
 		}
 
 		this.server.post(`/action`, (req, res) => {
-			if (!action.is(req.body)) {
+			if (!actionType.is(req.body)) {
 				return res.status(StatusCodes.BAD_REQUEST).end()
 			}
 			this.apply(req.body)
@@ -210,27 +221,37 @@ export class App {
 
 	private handleModelMessage(message: any) {
 		if (modelMessage.is(message)) {
-			assert(message.name in this.modelStatements)
-			console.log("inserting into models!", message.name, message.params)
-			// TODO: validate params
-			this.modelStatements[message.name].run({ id: message.id, ...message.params })
+			assert(message.name in this.statements.models)
+			console.log("inserting into models!", message)
+
+			if (message.value === null) {
+				// DELETE
+				throw new Error(".delete() is not implemented yet")
+			} else {
+				// SET
+				// TODO: validate params
+				const model = this.statements.models[message.name]
+				model.set.run({ ...message.value, id: message.key, timestamp: message.timestamp })
+			}
 		} else {
-			console.error("unexpected model message", message)
+			console.error(message)
+			throw new Error("received invalid model message from worker")
 		}
 	}
 
 	private handleActionMessage(message: any) {
+		console.log("handling action response message", message)
 		if (actionMessage.is(message)) {
-			const promise = this.actionPool.get(message.id)
-			if (promise === undefined) {
+			const call = this.callPool.get(message.id)
+			if (call === undefined) {
 				throw new Error("internal error: missing promise callbacks for action response")
 			}
 
-			this.actionPool.delete(message.id)
+			this.callPool.delete(message.id)
 			if (message.status === "success") {
-				promise.resolve()
+				call.resolve()
 			} else {
-				promise.reject(new Error(message.error))
+				call.reject(new Error(message.error))
 			}
 		} else {
 			console.error("unexpected action message", message)
@@ -246,10 +267,12 @@ export class App {
 	}
 
 	async apply(action: Action) {
+		console.log("applying action")
 		try {
 			await new Promise<void>((resolve, reject) => {
 				// Verify the action matches the payload
 				const payload = JSON.parse(action.payload)
+				assert(payloadType.is(payload), "invalid message payload")
 				assert(action.from === payload.from, "action origin doesn't match payload origin")
 				// assert(action.chainId === payload.chainId, "action chainId doesn't match payload chainId")
 
@@ -259,13 +282,15 @@ export class App {
 
 				// There may be many outstanding actions, and actions are not guaranteed to execute in order.
 				const id = crypto.createHash("sha256").update(action.signature).digest("hex")
-				this.actionPool.set(id, { resolve, reject })
+				this.callPool.set(id, { resolve, reject })
+				console.log("posting the thing...", id)
 				this.actionPort.postMessage({ id, action: payload })
 			})
 		} catch (err) {
 			console.log(err)
 			throw err
 		}
+		console.log("applied...")
 
 		await new Promise<void>((resolve, reject) => {
 			this.feed.append(action, (err, seq) => {
