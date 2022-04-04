@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useContext } from "react"
 import ReactDOM from "react-dom"
 import { usePopper } from "react-popper"
 import toast from "react-hot-toast"
@@ -7,6 +7,7 @@ import { Popover } from "@headlessui/react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/router"
 import { StatusCodes } from "http-status-codes"
+import { AppContext } from "utils/client/context"
 
 interface ProjectMenuProps {
 	app: {
@@ -20,18 +21,14 @@ interface ProjectMenuProps {
 	}
 }
 
-function ProjectMenu({ app }: ProjectMenuProps) {
+export default function ProjectMenu({ app }: ProjectMenuProps) {
 	const router = useRouter()
 	const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null)
 	const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null)
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
 		placement: "bottom-start",
 		strategy: "absolute",
-		modifiers: [
-			{
-				name: "arrow",
-			},
-		],
+		modifiers: [{ name: "arrow" }],
 	})
 
 	const deleteApp = useCallback(() => {
@@ -49,6 +46,8 @@ function ProjectMenu({ app }: ProjectMenuProps) {
 		})
 	}, [app])
 
+	const { appBody } = useContext(AppContext)
+
 	return (
 		<Popover className="inline text-sm">
 			<Popover.Button
@@ -58,23 +57,23 @@ function ProjectMenu({ app }: ProjectMenuProps) {
 				<span className="inline-block relative -top-0.5">&hellip;</span>
 			</Popover.Button>
 
-			{ReactDOM.createPortal(
-				<Popover.Panel
-					ref={setPopperElement}
-					className="absolute z-10 bg-white border border-gray-200 rounded shadow w-28 mt-2"
-					style={styles.popper}
-					{...attributes.popper}
-				>
-					<button
-						className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
-						onClick={deleteApp}
+			{appBody &&
+				ReactDOM.createPortal(
+					<Popover.Panel
+						ref={setPopperElement}
+						className="absolute z-10 bg-white border border-gray-200 rounded shadow w-28 mt-2"
+						style={styles.popper}
+						{...attributes.popper}
 					>
-						Delete
-					</button>
-				</Popover.Panel>,
-				document.querySelector(".app-body")!
-			)}
+						<button
+							className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
+							onClick={deleteApp}
+						>
+							Delete
+						</button>
+					</Popover.Panel>,
+					appBody
+				)}
 		</Popover>
 	)
 }
-export default dynamic(async () => ProjectMenu, { ssr: false })

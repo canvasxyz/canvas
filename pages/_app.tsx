@@ -7,16 +7,20 @@ import Link from "next/link"
 
 import UserMenu from "components/UserMenu"
 import "../styles/globals.css"
+import { useState } from "react"
+import { AppContext } from "utils/client/context"
 
 export default function App({ Component, pageProps }: AppProps) {
+	const [appBody, setAppBody] = useState<HTMLDivElement | null>(null)
+
 	return (
-		<>
+		<AppContext.Provider value={{ appBody }}>
 			<Head>
 				<title>Canvas Hub</title>
 			</Head>
 			<div className="app-container">
 				<div className="app-header"></div>
-				<div className="app-body flex flex-col h-screen w-screen">
+				<div className="app-body flex flex-col h-screen w-screen" ref={setAppBody}>
 					<div className="pt-4 pb-3.5 border-b border-gray-200">
 						<div className="px-10 mx-auto flex">
 							<div className="flex-1 font-semibold">
@@ -51,6 +55,6 @@ export default function App({ Component, pageProps }: AppProps) {
 					</Toaster>
 				</div>
 			</div>
-		</>
+		</AppContext.Provider>
 	)
 }

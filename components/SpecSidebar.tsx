@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useContext, useEffect, useMemo, useState } from "react"
 import ReactDOM from "react-dom"
 import { usePopper } from "react-popper"
 import toast from "react-hot-toast"
@@ -9,6 +9,7 @@ import useSWR from "swr"
 
 import ProjectMenu from "./ProjectMenu"
 import { StatusCodes } from "http-status-codes"
+import { AppContext } from "utils/client/context"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -80,6 +81,8 @@ function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
 		[multihash]
 	)
 
+	const { appBody } = useContext(AppContext)
+
 	return (
 		<Popover className={`border-l ${active ? "border-gray-400" : "border-gray-200"}`}>
 			<Popover.Button
@@ -97,35 +100,36 @@ function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
 				</span>
 			</Popover.Button>
 
-			{ReactDOM.createPortal(
-				<Popover.Panel
-					ref={setPopperElement}
-					className="absolute z-10 bg-white border border-gray-200 rounded shadow w-28"
-					style={styles.popper}
-					{...attributes.popper}
-				>
-					{({ close }) => (
-						<div>
-							{running ? (
-								<button
-									className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
-									onClick={stopApp.bind(null, close)}
-								>
-									Stop
-								</button>
-							) : (
-								<button
-									className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
-									onClick={startApp.bind(null, close)}
-								>
-									Start
-								</button>
-							)}
-						</div>
-					)}
-				</Popover.Panel>,
-				document.querySelector(".app-body")!
-			)}
+			{appBody &&
+				ReactDOM.createPortal(
+					<Popover.Panel
+						ref={setPopperElement}
+						className="absolute z-10 bg-white border border-gray-200 rounded shadow w-28"
+						style={styles.popper}
+						{...attributes.popper}
+					>
+						{({ close }) => (
+							<div>
+								{running ? (
+									<button
+										className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
+										onClick={stopApp.bind(null, close)}
+									>
+										Stop
+									</button>
+								) : (
+									<button
+										className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
+										onClick={startApp.bind(null, close)}
+									>
+										Start
+									</button>
+								)}
+							</div>
+						)}
+					</Popover.Panel>,
+					appBody
+				)}
 		</Popover>
 	)
 }
