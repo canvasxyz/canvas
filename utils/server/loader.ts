@@ -34,7 +34,9 @@ export class Loader {
 
 		for (const { multihash } of versions) {
 			console.log("starting app", multihash)
-			await this.start(multihash)
+			await this.start(multihash).catch((err) => {
+				console.error(err)
+			})
 		}
 	}
 
