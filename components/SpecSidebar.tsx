@@ -9,9 +9,8 @@ import useSWR from "swr"
 
 import ProjectMenu from "./ProjectMenu"
 import { StatusCodes } from "http-status-codes"
-import { AppContext } from "utils/client/context"
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+import { AppContext } from "utils/client/AppContext"
+import { fetcher } from "utils/client/fetcher"
 
 interface SidebarProps {
 	version_number: null | number

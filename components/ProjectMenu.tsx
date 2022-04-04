@@ -4,10 +4,9 @@ import { usePopper } from "react-popper"
 import toast from "react-hot-toast"
 import { Popover } from "@headlessui/react"
 
-import dynamic from "next/dynamic"
 import { useRouter } from "next/router"
 import { StatusCodes } from "http-status-codes"
-import { AppContext } from "utils/client/context"
+import { AppContext } from "utils/client/AppContext"
 
 interface ProjectMenuProps {
 	app: {

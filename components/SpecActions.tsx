@@ -3,8 +3,7 @@ import React from "react"
 import useSWR from "swr"
 
 import type { Action } from "core/actions"
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+import { fetcher } from "utils/client/fetcher"
 
 export default function Actions(props: { multihash: string }) {
 	const { data, error } = useSWR<[string, Action][]>(`/api/instance/${props.multihash}/actions`, fetcher, {

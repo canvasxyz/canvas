@@ -8,7 +8,7 @@ import Link from "next/link"
 import UserMenu from "components/UserMenu"
 import "../styles/globals.css"
 import { useState } from "react"
-import { AppContext } from "utils/client/context"
+import { AppContext } from "utils/client/AppContext"
 
 export default function App({ Component, pageProps }: AppProps) {
 	const [appBody, setAppBody] = useState<HTMLDivElement | null>(null)

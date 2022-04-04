@@ -11,6 +11,7 @@ import Actions from "components/SpecActions"
 import Models from "components/ModelViewer"
 import ActionComposer from "components/ActionComposer"
 import Sidebar from "components/SpecSidebar"
+import { fetcher } from "utils/client/fetcher"
 
 interface AppPageProps {
 	version_number: number | null
@@ -77,8 +78,6 @@ export const getServerSideProps: GetServerSideProps<AppPageProps, AppPageParams>
 		return { notFound: true }
 	}
 }
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export default function AppPage({ version_number, app }: AppPageProps) {
 	const [edited, setEdited] = useState(false)

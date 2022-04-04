@@ -3,9 +3,7 @@ import ReactDOM from "react-dom"
 import { usePopper } from "react-popper"
 import toast from "react-hot-toast"
 import { Popover } from "@headlessui/react"
-import { AppContext } from "utils/client/context"
-
-// import dynamic from "next/dynamic"
+import { AppContext } from "utils/client/AppContext"
 
 export default function UserMenu() {
 	const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null)

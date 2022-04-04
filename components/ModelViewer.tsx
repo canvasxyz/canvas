@@ -1,10 +1,15 @@
 import React, { useMemo } from "react"
 
 import useSWR from "swr"
+import { fetcher } from "utils/client/fetcher"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+interface ModelTableProps {
+	multihash: string
+	name: string
+	model: Record<string, string>
+}
 
-function ModelTable(props: { multihash: string; name: string; model: Record<string, string> }) {
+function ModelTable(props: ModelTableProps) {
 	const { data, error } = useSWR<Record<string, string | number | null>[]>(
 		`/api/instance/${props.multihash}/models/${props.name}`,
 		fetcher,
@@ -54,7 +59,12 @@ function ModelTable(props: { multihash: string; name: string; model: Record<stri
 	)
 }
 
-export default function Models(props: { multihash: string; models: Record<string, Record<string, string>> }) {
+interface ModelViewerProps {
+	multihash: string
+	models: Record<string, Record<string, string>>
+}
+
+export default function Models(props: ModelViewerProps) {
 	return (
 		<div>
 			{Object.entries(props.models).map(([name, model]) => (
