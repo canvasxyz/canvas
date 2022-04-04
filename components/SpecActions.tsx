@@ -6,7 +6,7 @@ import type { Action } from "core/actions"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
-export function Actions(props: { multihash: string }) {
+export default function Actions(props: { multihash: string }) {
 	const { data, error } = useSWR<[string, Action][]>(`/api/instance/${props.multihash}/actions`, fetcher, {
 		refreshInterval: 1000,
 	})

@@ -1,20 +1,6 @@
-import { string } from "fp-ts"
 import React, { useMemo } from "react"
 
 import useSWR from "swr"
-
-export function Models(props: { multihash: string; models: Record<string, Record<string, string>> }) {
-	return (
-		<div>
-			{Object.entries(props.models).map(([name, model]) => (
-				<div key={name}>
-					<div className="font-mono text-xs text-gray-700 mt-4 mb-3">{name}</div>
-					<ModelTable multihash={props.multihash} name={name} model={model} />
-				</div>
-			))}
-		</div>
-	)
-}
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -64,6 +50,19 @@ function ModelTable(props: { multihash: string; name: string; model: Record<stri
 					})}
 				</tbody>
 			</table>
+		</div>
+	)
+}
+
+export default function Models(props: { multihash: string; models: Record<string, Record<string, string>> }) {
+	return (
+		<div>
+			{Object.entries(props.models).map(([name, model]) => (
+				<div key={name}>
+					<div className="font-mono text-xs text-gray-700 mt-4 mb-3">{name}</div>
+					<ModelTable multihash={props.multihash} name={name} model={model} />
+				</div>
+			))}
 		</div>
 	)
 }

@@ -16,20 +16,18 @@ interface ViewerProps {
 	version_number: number
 }
 
-export const Viewer = dynamic(
-	async () =>
-		function Viewer({ spec, version_number }: ViewerProps) {
-			const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>({ doc: spec, extensions })
+function Viewer({ spec, version_number }: ViewerProps) {
+	const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>({ doc: spec, extensions })
 
-			return (
-				<div>
-					<div className="flex flex-row place-content-between relative w-full">
-						<div className="font-semibold mb-3">&nbsp;</div>
-						<div className="text-gray-400 text-sm pt-1">Read-only · Saved as v{version_number}</div>
-					</div>
-					<div className={styles.editor} ref={element}></div>
-				</div>
-			)
-		},
-	{ ssr: false }
-)
+	return (
+		<div>
+			<div className="flex flex-row place-content-between relative w-full">
+				<div className="font-semibold mb-3">&nbsp;</div>
+				<div className="text-gray-400 text-sm pt-1">Read-only · Saved as v{version_number}</div>
+			</div>
+			<div className={styles.editor} ref={element}></div>
+		</div>
+	)
+}
+
+export default dynamic(async () => Viewer, { ssr: false })

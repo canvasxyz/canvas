@@ -5,10 +5,10 @@ import useSWR from "swr"
 
 import { prisma } from "utils/server/services"
 
-import { Editor } from "components/SpecEditor"
-import { Viewer } from "components/SpecViewer"
-import { Actions } from "components/SpecActions"
-import { Models } from "components/ModelViewer"
+import Editor from "components/SpecEditor"
+import Viewer from "components/SpecViewer"
+import Actions from "components/SpecActions"
+import Models from "components/ModelViewer"
 import ActionComposer from "components/ActionComposer"
 import Sidebar from "components/SpecSidebar"
 
