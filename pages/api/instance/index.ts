@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
-import type { Model } from "core/models"
+import type { Model } from "core"
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
 	if (req.method !== "GET") {

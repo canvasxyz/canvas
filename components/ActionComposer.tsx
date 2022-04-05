@@ -13,7 +13,7 @@ import { jsonLanguage } from "@codemirror/lang-json"
 
 import { useCodeMirror } from "utils/client/codemirror"
 
-import type { ActionPayload } from "core/actions"
+import type { ActionPayload } from "core"
 
 import styles from "./ActionComposer.module.scss"
 

@@ -42,11 +42,7 @@ function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
 		placement: "bottom-end",
 		strategy: "absolute",
-		modifiers: [
-			{
-				name: "arrow",
-			},
-		],
+		modifiers: [{ name: "arrow" }],
 	})
 
 	const startApp = useCallback(

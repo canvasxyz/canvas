@@ -4,7 +4,7 @@ import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
-import { Action, actionType } from "core/actions"
+import { Action, actionType } from "core"
 
 import * as t from "io-ts"
 
