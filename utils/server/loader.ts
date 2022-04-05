@@ -1,7 +1,7 @@
 import fs from "node:fs"
 
 import { prisma } from "./services"
-import { App } from "core/app"
+import { App, AppStatus, AppStatusStopped } from "core"
 
 const appDirectory = process.env.APP_DIRECTORY!
 
@@ -19,7 +19,7 @@ if (!fs.existsSync(appDirectory)) {
  */
 export class Loader {
 	public readonly apps = new Map<string, App>()
-	public readonly loadingApps = new Set<string>()
+	private readonly statuses = new Map<string, Exclude<AppStatus, AppStatusStopped>>()
 
 	constructor() {
 		console.log("initializing loader")
@@ -41,8 +41,13 @@ export class Loader {
 	}
 
 	public async start(multihash: string): Promise<void> {
-		if (this.apps.has(multihash)) {
-			throw new Error("app already running")
+		const status = this.statuses.get(multihash)
+		if (status !== undefined) {
+			if (status.status === "starting") {
+				throw new Error("app already starting")
+			} else if (status.status === "running") {
+				throw new Error("app already running")
+			}
 		}
 
 		const version = await prisma.appVersion.findUnique({ where: { multihash }, select: { spec: true } })
@@ -50,11 +55,19 @@ export class Loader {
 			throw new Error("no app version with that multihash exists")
 		}
 
-		const port = 8000 + this.apps.size + this.loadingApps.size
-		this.loadingApps.add(multihash)
-		const app = await App.initialize(multihash, version.spec, port)
-		this.loadingApps.delete(multihash)
-		this.apps.set(multihash, app)
+		const port = 8000 + this.statuses.size
+		this.statuses.set(multihash, { status: "starting" })
+		await App.initialize(multihash, version.spec, port)
+			.then((app) => {
+				const { models, actionParameters } = app
+				this.statuses.set(multihash, { status: "running", models, actionParameters })
+				this.apps.set(multihash, app)
+			})
+			.catch((err: Error) => {
+				this.statuses.set(multihash, { status: "failed", error: err.message })
+				// TODO: think about whether this should actually re-throw the error or not
+				throw err
+			})
 	}
 
 	public async stop(multihash: string): Promise<void> {
@@ -66,7 +79,9 @@ export class Loader {
 		await app.stop()
 		this.apps.delete(multihash)
 	}
-}
 
-// const alphanumeric = /^[a-zA-Z0-9]+$/
-// const routePattern = /^(\/:?[a-zA-Z0-9]+)+$/
+	public status(multihash: string): AppStatus {
+		const status = this.statuses.get(multihash)
+		return status || { status: "stopped" }
+	}
+}
