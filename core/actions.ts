@@ -1,4 +1,5 @@
 import * as t from "io-ts"
+import { Model } from "./models"
 
 /**
  * An `ActionArgument` is a type-level representation of concrete action argument
@@ -39,3 +40,10 @@ export const actionType: t.Type<Action> = t.type({
 	signature: t.string,
 	payload: t.string,
 })
+
+export const _sessions: Model = {
+	session_public_key: "string",
+	timestamp: "integer",
+	metadata: "string",
+	signature: "string",
+}

@@ -22,8 +22,8 @@ function ModelTable(props: ModelTableProps) {
 			<table className="table-auto text-left text-xs leading-tight w-full">
 				<thead className="bg-white border-b border-gray-300">
 					<tr>
-						<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">id</th>
-						<th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">timestamp</th>
+						{props.name !== "_sessions" && <th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">id</th>}
+						{props.name !== "_sessions" && <th className="pl-4 pr-3 pt-2.5 pb-2 font-mono">timestamp</th>}
 						{fields.map((field) => (
 							<th key={field} className="pl-4 pr-3 pt-2.5 pb-2 font-mono">
 								{field}
@@ -35,8 +35,12 @@ function ModelTable(props: ModelTableProps) {
 					{rows.map((row, index) => {
 						return (
 							<tr key={index}>
-								<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{row.id}</td>
-								<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{row.timestamp}</td>
+								{props.name !== "_sessions" && (
+									<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{row.id}</td>
+								)}
+								{props.name !== "_sessions" && (
+									<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{row.timestamp}</td>
+								)}
 								{fields.map((key, fieldIndex) => (
 									<td
 										key={fieldIndex}

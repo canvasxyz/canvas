@@ -164,6 +164,11 @@ export class App {
 
 			tables.push(`CREATE TABLE IF NOT EXISTS ${name} (${columns.join(", ")});`)
 		}
+		tables.push(
+			"CREATE TABLE IF NOT EXISTS _sessions " +
+				"(session_public_key TEXT PRIMARY KEY NOT NULL, timestamp INTEGER NOT NULL, " +
+				"metadata TEXT, signature TEXT NOT NULL);"
+		)
 
 		this.database.exec(tables.join("\n"))
 
