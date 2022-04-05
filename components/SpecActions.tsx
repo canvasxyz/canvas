@@ -3,12 +3,9 @@ import React from "react"
 import useSWR from "swr"
 
 import type { Action } from "core/actions"
-import { fetcher } from "utils/client/fetcher"
 
 export default function Actions(props: { multihash: string }) {
-	const { data, error } = useSWR<[string, Action][]>(`/api/instance/${props.multihash}/actions`, fetcher, {
-		refreshInterval: 1000,
-	})
+	const { data, error } = useSWR<[string, Action][]>(`/api/instance/${props.multihash}/actions`)
 
 	return (
 		<div className="border border-gray-300 rounded overflow-scroll bg-gray-50 pb-3 overflow-x-scroll">

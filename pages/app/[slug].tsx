@@ -11,7 +11,6 @@ import Actions from "components/SpecActions"
 import Models from "components/ModelViewer"
 import ActionComposer from "components/ActionComposer"
 import Sidebar from "components/SpecSidebar"
-import { fetcher } from "utils/client/fetcher"
 
 interface AppPageProps {
 	version_number: number | null
@@ -88,7 +87,7 @@ export default function AppPage({ version_number, app }: AppPageProps) {
 	const version =
 		version_number === null ? null : app.versions.find((version) => version.version_number === version_number)!
 
-	const { data, error } = useSWR("/api/instance", fetcher, { refreshInterval: 1000 })
+	const { data, error } = useSWR("/api/instance")
 	const instance = useMemo(
 		() => (version !== null && data !== undefined && version.multihash in data ? version.multihash : null),
 		[data]

@@ -1,7 +1,6 @@
 import React, { useMemo } from "react"
 
 import useSWR from "swr"
-import { fetcher } from "utils/client/fetcher"
 
 interface ModelTableProps {
 	multihash: string
@@ -11,9 +10,7 @@ interface ModelTableProps {
 
 function ModelTable(props: ModelTableProps) {
 	const { data, error } = useSWR<Record<string, string | number | null>[]>(
-		`/api/instance/${props.multihash}/models/${props.name}`,
-		fetcher,
-		{ refreshInterval: 1000 }
+		`/api/instance/${props.multihash}/models/${props.name}`
 	)
 
 	const rows = data || []

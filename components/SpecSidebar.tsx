@@ -10,7 +10,6 @@ import useSWR from "swr"
 import ProjectMenu from "./ProjectMenu"
 import { StatusCodes } from "http-status-codes"
 import { AppContext } from "utils/client/AppContext"
-import { fetcher } from "utils/client/fetcher"
 
 interface SidebarProps {
 	version_number: null | number
@@ -134,7 +133,7 @@ function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
 }
 
 function Sidebar({ version_number, app, edited }: SidebarProps) {
-	const { data, error } = useSWR("/api/instance", fetcher, { refreshInterval: 1000 })
+	const { data, error } = useSWR("/api/instance")
 	const instances = useMemo<Record<string, { models: Record<string, Record<string, string>> }>>(
 		() => data || {},
 		[data]
