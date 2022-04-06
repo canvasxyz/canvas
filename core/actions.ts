@@ -47,6 +47,7 @@ export const actionPayloadType: t.Type<ActionPayload> = t.type({
 // TODO: add spec to action wrapper type
 export type Action = {
 	from: string
+	session: string | null
 	chainId: string
 	signature: string
 	payload: string
@@ -54,6 +55,7 @@ export type Action = {
 
 export const actionType: t.Type<Action> = t.type({
 	from: t.string,
+	session: t.union([t.string, t.null]),
 	chainId: t.string,
 	signature: t.string,
 	payload: t.string,
@@ -67,12 +69,14 @@ export type Session = {
 	from: string
 	signature: string
 	payload: string
+	session_public_key: string
 }
 
 export const sessionType: t.Type<Session> = t.type({
 	from: t.string,
 	signature: t.string,
 	payload: t.string,
+	session_public_key: t.string,
 })
 
 export type SessionPayload = {

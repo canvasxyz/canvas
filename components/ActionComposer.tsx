@@ -76,6 +76,9 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			})
 	}, [state === null])
 
+	/**
+	 * Sign with session key
+	 */
 	const handleSendSessionAction = useCallback(() => {
 		if (state === null) {
 			return
@@ -104,6 +107,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			.then((result: string) => {
 				const action: Action = {
 					from: payloadObject.from,
+					session: sessionSigner.address,
 					chainId: "",
 					signature: result,
 					payload: payloadString,
@@ -130,6 +134,9 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			})
 	}, [state, sessionPublicKey])
 
+	/**
+	 * Sign without session key
+	 */
 	const handleSendAction = useCallback(() => {
 		if (state === null) {
 			return
@@ -156,6 +163,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			.then((result: string) => {
 				const action: Action = {
 					from: payloadObject.from,
+					session: null,
 					chainId: "",
 					signature: result,
 					payload: payloadString,
@@ -182,6 +190,9 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			})
 	}, [state, currentSigner])
 
+	/**
+	 * Generate new session key
+	 */
 	const handleGenerateSession = useCallback(() => {
 		if (state === null) {
 			return
@@ -213,6 +224,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 					from: payloadObject.from,
 					signature: result,
 					payload,
+					session_public_key: sessionSigner.address,
 				}
 
 				fetch(`/api/instance/${props.multihash}/sessions`, {
