@@ -17,7 +17,15 @@ import { ethers } from "ethers"
 import * as t from "io-ts"
 
 import { Model, getColumnType } from "./models"
-import { Action, actionType, actionPayloadType } from "./actions"
+import {
+	Action,
+	actionType,
+	actionPayloadType,
+	Session,
+	SessionPayload,
+	sessionType,
+	sessionPayloadType,
+} from "./actions"
 
 const appDirectory = process.env.APP_DIRECTORY!
 
@@ -136,6 +144,7 @@ export class App {
 	private readonly connections: Set<net.Socket> = new Set()
 
 	public actions: Record<string, string[]>
+	public sessions: Session[]
 
 	private constructor(
 		readonly multihash: string,
@@ -151,6 +160,7 @@ export class App {
 	) {
 		// Save fields
 		this.actions = actionParameters
+		this.sessions = []
 
 		// Initialize the database schema
 		const tables: string[] = []
@@ -326,10 +336,30 @@ export class App {
 		this.database.close()
 	}
 
+	// Instantiate a session
+	async session(session: Session) {
+		// Verify the session matches the payload
+		const payload = JSON.parse(session.payload)
+		assert(sessionType.is(session), "invalid session")
+		assert(sessionPayloadType.is(payload), "invalid session payload")
+		assert(payload.from === session.from, "session signed by wrong address")
+		assert(payload.spec === this.multihash, "session signed for wrong spec")
+
+		// Verify the signature
+		const verifiedAddress = ethers.utils.verifyMessage(session.payload, session.signature)
+		assert(session.from === verifiedAddress, "session signed by wrong address")
+
+		// Push the session to `this.sessions`.
+		// TODO: This should be ordered by expiration time of each session
+		this.sessions.push(session)
+	}
+
+	// Apply an action
 	async apply(action: Action) {
 		// Verify the action matches the payload
 		const payload = JSON.parse(action.payload)
-		assert(actionPayloadType.is(payload), "invalid message payload")
+		assert(actionType.is(action), "invalid action")
+		assert(actionPayloadType.is(payload), "invalid action payload")
 		assert(action.from === payload.from, "action signed by wrong address")
 		assert(payload.spec === this.multihash, "action signed for wrong spec")
 		assert(payload.call in this.actionParameters, "payload.call is not the name of an action")

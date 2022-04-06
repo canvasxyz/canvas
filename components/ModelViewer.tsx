@@ -68,12 +68,14 @@ interface ModelViewerProps {
 export default function Models(props: ModelViewerProps) {
 	return (
 		<div>
-			{Object.entries(props.models).map(([name, model]) => (
-				<div key={name}>
-					<div className="font-mono text-xs text-gray-700 mt-4 mb-3">{name}</div>
-					<ModelTable multihash={props.multihash} name={name} model={model} />
-				</div>
-			))}
+			{Object.entries(props.models)
+				.filter(([name, model]) => !name.startsWith("_"))
+				.map(([name, model]) => (
+					<div key={name}>
+						<div className="font-mono text-xs text-gray-700 mt-4 mb-3">{name}</div>
+						<ModelTable multihash={props.multihash} name={name} model={model} />
+					</div>
+				))}
 		</div>
 	)
 }

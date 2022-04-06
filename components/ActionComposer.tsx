@@ -13,7 +13,8 @@ import { jsonLanguage } from "@codemirror/lang-json"
 
 import { useCodeMirror } from "utils/client/codemirror"
 
-import type { ActionPayload } from "core/actions"
+import Sessions from "components/SpecSessions"
+import type { Action, ActionPayload, Session, SessionPayload } from "core/actions"
 
 import styles from "./ActionComposer.module.scss"
 
@@ -29,6 +30,9 @@ const getInitialActionValue = (multihash: string, call: string, args: string[], 
 
 function ActionComposer(props: { multihash: string; actionParameters: Record<string, string[]> }) {
 	const [sending, setSending] = useState(false)
+	const [generatingSession, setGeneratingSession] = useState(false)
+	const [sessionPublicKey, setSessionPublicKey] = useState<string>()
+	const [sessionPrivateKey, setSessionPrivateKey] = useState<string>()
 
 	const [state, transaction, view, element] = useCodeMirror<HTMLDivElement>({
 		doc: getInitialActionValue(props.multihash, "", []),
@@ -47,6 +51,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 		[state]
 	)
 
+	// initialize a signer, and get wallet address
 	const [currentSigner, setCurrentSigner] = useState<any>()
 	const [currentAddress, setCurrentAddress] = useState<string>()
 	useEffect(() => {
@@ -71,7 +76,61 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			})
 	}, [state === null])
 
-	const handleClick = useCallback(() => {
+	const handleSendSessionAction = useCallback(() => {
+		if (state === null) {
+			return
+		}
+		const value = state.doc.toJSON().join("\n")
+		let payloadObject: ActionPayload
+		try {
+			payloadObject = JSON.parse(value)
+		} catch (e) {
+			console.error(value, e)
+			toast.error("Invalid JSON")
+			return
+		}
+		const payloadString = JSON.stringify(payloadObject)
+
+		if (!sessionPrivateKey) {
+			toast.error("Private key not found in localStorage! Try generating a new session key.")
+			return
+		}
+
+		const sessionSigner = new ethers.Wallet(sessionPrivateKey)
+
+		setSending(true)
+		sessionSigner
+			.signMessage(payloadString)
+			.then((result: string) => {
+				const action: Action = {
+					from: payloadObject.from,
+					chainId: "",
+					signature: result,
+					payload: payloadString,
+				}
+
+				fetch(`/api/instance/${props.multihash}/actions`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(action),
+				}).then((res) => {
+					setSending(false)
+					if (res.status === StatusCodes.OK) {
+						toast.success("Action sent!")
+					} else {
+						res.text().then((err) => {
+							toast.error(`Action rejected: ${err}`)
+						})
+					}
+				})
+			})
+			.catch(() => {
+				setSending(false)
+				toast.error("Signature rejected")
+			})
+	}, [state, sessionPublicKey])
+
+	const handleSendAction = useCallback(() => {
 		if (state === null) {
 			return
 		}
@@ -95,7 +154,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 		currentSigner
 			.signMessage(payloadString)
 			.then((result: string) => {
-				const action = {
+				const action: Action = {
 					from: payloadObject.from,
 					chainId: "",
 					signature: result,
@@ -123,8 +182,62 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			})
 	}, [state, currentSigner])
 
+	const handleGenerateSession = useCallback(() => {
+		if (state === null) {
+			return
+		}
+		if (!currentSigner || currentAddress === undefined) {
+			toast.error("Signer not ready. Have you connected Metamask?")
+			return
+		}
+		const timestamp = Math.round(+new Date())
+		const sessionSigner = ethers.Wallet.createRandom()
+		localStorage.setItem(sessionSigner.address, sessionSigner.privateKey) // store private key in localStorage
+
+		const payloadObject: SessionPayload = {
+			from: currentAddress,
+			spec: props.multihash,
+			timestamp,
+			metadata: JSON.stringify({ version: 1 }),
+			session_public_key: sessionSigner.address,
+		}
+		const payload = JSON.stringify(payloadObject)
+
+		setGeneratingSession(true)
+		currentSigner
+			.signMessage(payload)
+			.then((result: string) => {
+				setGeneratingSession(false)
+
+				const session: Session = {
+					from: payloadObject.from,
+					signature: result,
+					payload,
+				}
+
+				fetch(`/api/instance/${props.multihash}/sessions`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(session),
+				}).then((res) => {
+					setSending(false)
+					if (res.status === StatusCodes.OK) {
+						toast.success("Session saved!")
+					} else {
+						res.text().then((err) => {
+							toast.error(`Session rejected: ${err}`)
+						})
+					}
+				})
+			})
+			.catch(() => {
+				setGeneratingSession(false)
+				toast.error("Signature rejected")
+			})
+	}, [state, currentSigner])
+
 	return (
-		<div className="mt-2">
+		<div className="mt-2 mb-4">
 			<div className="mb-3">
 				{Object.entries(props.actionParameters).map(([call, parameters]) => (
 					<div
@@ -140,11 +253,41 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			</div>
 			<div className={styles.editor} ref={element}></div>
 			<button
-				className={`mt-2 block p-2 rounded bg-blue-500 hover:bg-blue-500 font-semibold text-sm text-center text-white ${
+				className={`mt-3 mr-2 p-2 rounded bg-blue-500 hover:bg-blue-500 font-semibold text-sm text-center text-white ${
 					sending || state === null ? "pointer-events-none opacity-50" : ""
 				}`}
 				disabled={sending || state === null}
-				onClick={handleClick}
+				onClick={handleSendAction}
+			>
+				{sending ? "Sending..." : "Send without session"}
+			</button>
+			<div className="mt-4">
+				<Sessions
+					multihash={props.multihash}
+					onSelect={(session_public_key: string) => {
+						setSessionPublicKey(session_public_key)
+						const privateKey = localStorage.getItem(session_public_key)
+						if (privateKey !== undefined && privateKey !== null) {
+							setSessionPrivateKey(privateKey)
+						}
+					}}
+				/>
+			</div>
+			<button
+				className={`mt-3 mr-2 p-2 rounded bg-blue-500 hover:bg-blue-500 font-semibold text-sm text-center text-white ${
+					generatingSession || state === null ? "pointer-events-none opacity-50" : ""
+				}`}
+				disabled={generatingSession || state === null}
+				onClick={handleGenerateSession}
+			>
+				{generatingSession ? "Generating session..." : "Generate session"}
+			</button>
+			<button
+				className={`mt-3 mr-2 p-2 rounded bg-blue-500 hover:bg-blue-500 font-semibold text-sm text-center text-white ${
+					!sessionPrivateKey || sending || state === null ? "pointer-events-none opacity-50" : ""
+				}`}
+				disabled={!sessionPrivateKey || sending || state === null}
+				onClick={handleSendSessionAction}
 			>
 				{sending ? "Sending..." : "Send"}
 			</button>
