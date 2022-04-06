@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
+import { _sessions } from "core"
 import type { Model } from "core"
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
@@ -11,7 +12,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
 	const apps: Record<string, { models: Record<string, Model>; actionParameters: Record<string, string[]> }> = {}
 	for (const [key, app] of loader.apps.entries()) {
-		apps[key] = { models: app.models, actionParameters: app.actionParameters }
+		apps[key] = { models: { ...app.models, _sessions }, actionParameters: app.actionParameters }
 	}
 
 	res.status(StatusCodes.OK).json(apps)

@@ -17,7 +17,15 @@ import { ethers } from "ethers"
 import * as t from "io-ts"
 
 import { Model, getColumnType } from "./models"
-import { Action, actionType, actionPayloadType } from "./actions"
+import {
+	Action,
+	actionType,
+	actionPayloadType,
+	Session,
+	SessionPayload,
+	sessionType,
+	sessionPayloadType,
+} from "./actions"
 
 const appDirectory = process.env.APP_DIRECTORY!
 
@@ -136,6 +144,7 @@ export class App {
 	private readonly connections: Set<net.Socket> = new Set()
 
 	public actions: Record<string, string[]>
+	public sessions: Session[]
 
 	private constructor(
 		readonly multihash: string,
@@ -151,6 +160,7 @@ export class App {
 	) {
 		// Save fields
 		this.actions = actionParameters
+		this.sessions = []
 
 		// Initialize the database schema
 		const tables: string[] = []
@@ -164,6 +174,11 @@ export class App {
 
 			tables.push(`CREATE TABLE IF NOT EXISTS ${name} (${columns.join(", ")});`)
 		}
+		tables.push(
+			"CREATE TABLE IF NOT EXISTS _sessions " +
+				"(session_public_key TEXT PRIMARY KEY NOT NULL, timestamp INTEGER NOT NULL, " +
+				"metadata TEXT, signature TEXT NOT NULL);"
+		)
 
 		this.database.exec(tables.join("\n"))
 
@@ -321,19 +336,57 @@ export class App {
 		this.database.close()
 	}
 
+	/**
+	 * Create a new session.
+	 */
+	async session(session: Session) {
+		const payload = JSON.parse(session.payload)
+		assert(sessionType.is(session), "invalid session")
+		assert(sessionPayloadType.is(payload), "invalid session payload")
+		assert(payload.from === session.from, "session signed by wrong address")
+		assert(payload.spec === this.multihash, "session signed for wrong spec")
+
+		const verifiedAddress = ethers.utils.verifyMessage(session.payload, session.signature)
+		assert(session.from === verifiedAddress, "session signed by wrong address")
+
+		this.sessions.push(session)
+	}
+
+	/**
+	 * Apply an action.
+	 * There may be many outstanding actions, and actions are not guaranteed to execute in order.
+	 */
 	async apply(action: Action) {
-		// Verify the action matches the payload
 		const payload = JSON.parse(action.payload)
-		assert(actionPayloadType.is(payload), "invalid message payload")
-		assert(action.from === payload.from, "action signed by wrong address")
+		assert(actionType.is(action), "invalid action")
+		assert(actionPayloadType.is(payload), "invalid action payload")
+
+		/**
+		 * Verify the action signature.
+		 *
+		 * If the action is signed by a session key, then:
+		 *  - `action.from` and `payload.from` and `session.from` are the key used to generate the session
+		 *  - `action.session` and `session.session_public_key` are the key used to sign the payload
+		 * It is assumed that any session found in `this.sessions` is valid.
+		 */
+		if (action.session !== null) {
+			const session = this.sessions.find((s) => s.session_public_key === action.session)
+
+			assert(session !== undefined, "action signed by invalid session")
+			assert(action.from === payload.from, "action signed by invalid session")
+			assert(action.from === session.from, "action signed by invalid session")
+			assert(action.session === session.session_public_key, "action signed by invalid session")
+			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
+			assert(action.session === verifiedAddress, "action signed by invalid session")
+		} else {
+			assert(action.from === payload.from, "action signed by wrong address")
+			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
+			assert(action.from === verifiedAddress, "action signed by wrong address")
+		}
+
 		assert(payload.spec === this.multihash, "action signed for wrong spec")
 		assert(payload.call in this.actionParameters, "payload.call is not the name of an action")
 
-		// Verify the signature
-		const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
-		assert(action.from === verifiedAddress, "action signed by wrong address")
-
-		// There may be many outstanding actions, and actions are not guaranteed to execute in order.
 		const id = crypto.createHash("sha256").update(action.signature).digest("hex")
 
 		// Await response from worker
