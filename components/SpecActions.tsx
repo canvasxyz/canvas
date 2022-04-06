@@ -2,7 +2,7 @@ import React from "react"
 
 import useSWR from "swr"
 
-import type { Action } from "core/actions"
+import type { Action } from "core"
 
 export default function Actions(props: { multihash: string }) {
 	const { data, error } = useSWR<[string, Action][]>(`/api/instance/${props.multihash}/actions`)

@@ -11,10 +11,11 @@ import { basicSetup } from "@codemirror/basic-setup"
 import { indentUnit } from "@codemirror/language"
 import { jsonLanguage } from "@codemirror/lang-json"
 
+import Sessions from "components/SpecSessions"
+
 import { useCodeMirror } from "utils/client/codemirror"
 
-import Sessions from "components/SpecSessions"
-import type { Action, ActionPayload, Session, SessionPayload } from "core/actions"
+import type { Action, ActionPayload, Session, SessionPayload } from "core"
 
 import styles from "./ActionComposer.module.scss"
 
