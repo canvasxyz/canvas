@@ -1,7 +1,7 @@
 import fs from "node:fs"
 
 import { prisma } from "./services"
-import { App, AppStatus, AppStatusStopped } from "core"
+import { App, AppStatus } from "core"
 
 const appDirectory = process.env.APP_DIRECTORY!
 
@@ -19,7 +19,7 @@ if (!fs.existsSync(appDirectory)) {
  */
 export class Loader {
 	public readonly apps = new Map<string, App>()
-	private readonly statuses = new Map<string, Exclude<AppStatus, AppStatusStopped>>()
+	public readonly status = new Map<string, AppStatus>()
 
 	constructor() {
 		console.log("initializing loader")
@@ -41,7 +41,7 @@ export class Loader {
 	}
 
 	public async start(multihash: string): Promise<void> {
-		const status = this.statuses.get(multihash)
+		const status = this.status.get(multihash)
 		if (status !== undefined) {
 			if (status.status === "starting") {
 				throw new Error("app already starting")
@@ -55,16 +55,16 @@ export class Loader {
 			throw new Error("no app version with that multihash exists")
 		}
 
-		const port = 8000 + this.statuses.size
-		this.statuses.set(multihash, { status: "starting" })
+		const port = 8000 + this.status.size
+		this.status.set(multihash, { status: "starting" })
 		await App.initialize(multihash, version.spec, port)
 			.then((app) => {
 				const { models, actionParameters } = app
-				this.statuses.set(multihash, { status: "running", models, actionParameters })
+				this.status.set(multihash, { status: "running", models, actionParameters })
 				this.apps.set(multihash, app)
 			})
 			.catch((err: Error) => {
-				this.statuses.set(multihash, { status: "failed", error: err.message })
+				this.status.set(multihash, { status: "failed", error: err.message })
 				// TODO: think about whether this should actually re-throw the error or not
 				throw err
 			})
@@ -78,10 +78,5 @@ export class Loader {
 
 		await app.stop()
 		this.apps.delete(multihash)
-	}
-
-	public status(multihash: string): AppStatus {
-		const status = this.statuses.get(multihash)
-		return status || { status: "stopped" }
 	}
 }
