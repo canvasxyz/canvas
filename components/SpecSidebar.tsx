@@ -29,9 +29,11 @@ interface SidebarMenuItemProps {
 	active: boolean
 	running: boolean
 	multihash: string
+	spec: string
+	slug: string
 }
 
-function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
+function SidebarMenuItem({ active, multihash, running, spec, slug }: SidebarMenuItemProps) {
 	const [shouldBeRunning, setShouldBeRunning] = useState<boolean>(running)
 	useEffect(() => {
 		setShouldBeRunning(running)
@@ -75,6 +77,26 @@ function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
 		[multihash]
 	)
 
+	const editApp = useCallback(
+		(slug) => {
+			if (!confirm("Overwrite your existing edits?")) {
+				return
+			}
+			fetch(`/api/app/${slug}`, {
+				method: "PUT",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ draft_spec: spec }),
+			}).then((res) => {
+				if (res.status === StatusCodes.OK) {
+					document.location = `/app/${slug}`
+				} else {
+					toast.error("Error editing spec")
+				}
+			})
+		},
+		[multihash]
+	)
+
 	const { appBody } = useContext(AppContext)
 
 	return (
@@ -103,23 +125,33 @@ function SidebarMenuItem({ active, multihash, running }: SidebarMenuItemProps) {
 						{...attributes.popper}
 					>
 						{({ close }) => (
-							<div>
-								{running ? (
+							<>
+								<div>
 									<button
 										className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
-										onClick={stopApp.bind(null, close)}
+										onClick={editApp.bind(null, slug)}
 									>
-										Stop
+										Edit
 									</button>
-								) : (
-									<button
-										className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
-										onClick={startApp.bind(null, close)}
-									>
-										Start
-									</button>
-								)}
-							</div>
+								</div>
+								<div>
+									{running ? (
+										<button
+											className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
+											onClick={stopApp.bind(null, close)}
+										>
+											Stop
+										</button>
+									) : (
+										<button
+											className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
+											onClick={startApp.bind(null, close)}
+										>
+											Start
+										</button>
+									)}
+								</div>
+							</>
 						)}
 					</Popover.Panel>,
 					appBody
@@ -141,7 +173,7 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 				Projects <span className="text-gray-400 mx-0.25">/</span> {app.slug}
 				<ProjectMenu app={app} />
 			</div>
-			<div className="border rounded overflow-hidden w-60">
+			<div className="border rounded overflow-hidden w-60 mb-3">
 				<div className="flex">
 					<a
 						className={`flex-1 text-sm px-3 py-1.5 flex gap-4 hover:bg-gray-100 ${
@@ -149,10 +181,13 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 						}`}
 						href="?"
 					>
-						<span className={`flex-1`}>Latest</span>
+						<span className={`flex-1`}>Editor</span>
 						{edited && <span className="text-gray-400">Edited</span>}
 					</a>
 				</div>
+			</div>
+			<div className="text-sm text-gray-400 mb-2">Deployments</div>
+			<div className="border border-t-0 rounded overflow-hidden w-60 mb-3">
 				{app.versions.map((version) => {
 					return (
 						<div key={version.multihash} className="flex">
@@ -165,22 +200,17 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 							>
 								<span className={`flex-1`}>v{version.version_number}</span>
 								{version.multihash in instances ? (
-									<div className="inline-block rounded px-1.5 py-0.5 mr-2 text-xs bg-green-600 text-white">Running</div>
+									<div className="inline-block rounded px-1.5 py-0.5 text-xs bg-green-600 text-white">Running</div>
 								) : (
-									<div className="inline-block rounded px-1.5 py-0.5 mr-2 text-xs bg-red-500 text-white">Stopped</div>
+									<div className="inline-block rounded px-1.5 py-0.5 text-xs bg-red-500 text-white">Stopped</div>
 								)}
-								<span
-									className={`text-gray-400 font-mono text-xs mt-0.5 ${
-										version.version_number === version_number ? "!text-gray-100" : ""
-									}`}
-								>
-									{version.multihash.slice(0, 6)}
-								</span>
 							</a>
 							<SidebarMenuItem
+								spec={version.spec}
 								multihash={version.multihash}
 								active={version.version_number === version_number}
 								running={version.multihash in instances}
+								slug={app.slug}
 							/>
 						</div>
 					)

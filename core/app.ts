@@ -385,7 +385,8 @@ export class App {
 		}
 
 		assert(payload.spec === this.multihash, "action signed for wrong spec")
-		assert(payload.call in this.actionParameters, "payload.call is not the name of an action")
+		assert(payload.call !== "", "attempted to call an empty action")
+		assert(payload.call in this.actionParameters, "attempted to call an invalid action")
 
 		const id = crypto.createHash("sha256").update(action.signature).digest("hex")
 
