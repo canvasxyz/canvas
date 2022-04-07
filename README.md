@@ -19,6 +19,14 @@ DATABASE_URL=file:./db.sqlite
 APP_DIRECTORY=./apps
 ```
 
+Generate the prisma client:
+
+```
+$ cd packages/canvas-hub
+$ npx prisma generate
+$ cd ../..
+```
+
 The `dev` script in the repo run runs the NextJS dev server and TypeScript compilers for canvas-core and canvas-cli, all in parallel:
 
 ```
@@ -33,7 +41,7 @@ Build the core, CLI, and hub projects:
 $ npm run build
 ```
 
-Then start the hub production NextJS server:
+Start the hub production NextJS server:
 
 ```
 $ npm run start
@@ -45,11 +53,12 @@ $ npm run start
 
 ## Canvas CLI
 
-## App API
-
-To bind a deployed instance's API to a port, install `socat` and forward from the appropriate domain socket in a separate thread:
+Install the CLI
 
 ```
-$ brew install socat
-$ socat TCP-LISTEN:1234,reuseaddr,fork UNIX-CLIENT:./apps/QmSbY7RxTFjGcb8VuGYLPYshyqxDKD4TsSWEHxvPUARe2T/api.sock
+./install.sh
 ```
+
+This just puts a stub shell script at `$(npm config get prefix)/bin/canvas` that calls `node ${PWD}/packages/canvas-cli/dist/index.js $@`.
+
+You must build the CLI before it will work (either running the dev server, running `npm run build` in the repo root, running `npm run build-cli` in the repo root, or running `npm run build` inside packages/canvas-cli), but once install, you should never have to think about it again.
