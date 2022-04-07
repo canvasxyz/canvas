@@ -1,0 +1,19 @@
+{
+  "name": "canvas-cli",
+  "private": true,
+  "type": "module",
+  "main": "dist/canvas.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "dev": "tsc -w"
+  },
+  "dependencies": {
+    "@types/node": "^17.0.23",
+    "@types/yargs": "^17.0.10",
+    "yargs": "^17.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.6.2"
+  }
+}

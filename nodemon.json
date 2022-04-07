@@ -1,6 +1,0 @@
-{
-    "ignore": ["node_modules", ".next", "pages", "components", "prisma", "apps"],
-    "watch": ["*"],
-    "ext": "js json ts tsx",
-    "exec": "next dev"
-}

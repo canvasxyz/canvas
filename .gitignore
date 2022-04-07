@@ -2,10 +2,10 @@
 .next/
 node_modules/
 
-# Databases
-apps/
-prisma/db.sqlite
-prisma/db.sqlite-journal
+packages/canvas-core/lib
+packages/canvas-cli/dist
 
-# Previous db
-db/
+# Databases
+packages/canvas-hub/apps
+packages/canvas-hub/prisma/db.sqlite
+packages/canvas-hub/prisma/db.sqlite-journal

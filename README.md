@@ -1,4 +1,4 @@
-## Canvas
+# Canvas
 
 Canvas is a P2P protocol that allows developers to build
 decentralized, frontend-independent applications, where every action
@@ -6,42 +6,59 @@ in the application is a signed message from an Ethereum address.
 
 ## Quick start
 
+Install dependencies and symlink the local packages:
+
 ```
-npm i
-npm install -g next
+$ npm i
 ```
 
-Create a `.env` file in the repo root with `DATABASE_URL` and `APP_DIRECTORY` environement variables.
+Create a `packages/canvas-hub/.env` file with `DATABASE_URL` and `APP_DIRECTORY` environement variables:
 
 ```
 DATABASE_URL=file:./db.sqlite
 APP_DIRECTORY=./apps
 ```
 
-Initialize the database.
+Generate the prisma client:
 
 ```
-npx prisma generate
-npx prisma db push
+$ cd packages/canvas-hub
+$ npx prisma generate
+$ cd ../..
 ```
 
-In a separate process, start an IPFS daemon.
+The `dev` script in the repo run runs the NextJS dev server and TypeScript compilers for canvas-core and canvas-cli, all in parallel:
 
 ```
-ipfs daemon --offline
+$ npm run dev
 ```
 
-Run the dev server.
+## Deploy hub
+
+Build the core, CLI, and hub projects:
 
 ```
-npm run dev
+$ npm run build
 ```
 
-## App API
-
-To bind a deployed instance's API to a port, install `socat` and forward from the appropriate domain socket in a separate thread:
+Start the hub production NextJS server:
 
 ```
-$ brew install socat
-$ socat TCP-LISTEN:1234,reuseaddr,fork UNIX-CLIENT:./apps/QmSbY7RxTFjGcb8VuGYLPYshyqxDKD4TsSWEHxvPUARe2T/api.sock
+$ npm run start
 ```
+
+## Canvas Core
+
+## Canvas Hub
+
+## Canvas CLI
+
+Install the CLI
+
+```
+./install.sh
+```
+
+This just puts a stub shell script at `$(npm config get prefix)/bin/canvas` that calls `node ${PWD}/packages/canvas-cli/dist/index.js $@`.
+
+You must build the CLI before it will work (either running the dev server, running `npm run build` in the repo root, running `npm run build-cli` in the repo root, or running `npm run build` inside packages/canvas-cli), but once install, you should never have to think about it again.
