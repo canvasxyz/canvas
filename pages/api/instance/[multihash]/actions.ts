@@ -4,7 +4,7 @@ import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
-import { Action, actionType } from "core"
+import { Action, actionType, sessionType } from "core"
 
 import * as t from "io-ts"
 
@@ -25,14 +25,18 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	}
 
 	const actions = await new Promise<[string, Action][]>((resolve, reject) => {
-		const start = Math.max(app.feed.length - 10, 0)
+		const start = Math.max(app.feed.length - 20, 0)
 		app.feed.getBatch(start, app.feed.length, (err, data) => {
 			if (err !== null) {
-				reject(err)
-			} else if (!actionArray.is(data)) {
+				return reject(err)
+			}
+
+			const filteredData = data.filter((d) => !sessionType.is(d))
+
+			if (!actionArray.is(filteredData)) {
 				reject(new Error("got invalid data from hypercore feed"))
 			} else {
-				resolve(data.map((d) => [crypto.createHash("sha256").update(d.signature).digest("hex"), d]))
+				resolve(filteredData.map((d) => [crypto.createHash("sha256").update(d.signature).digest("hex"), d]))
 			}
 		})
 	})
