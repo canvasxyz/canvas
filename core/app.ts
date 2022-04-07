@@ -135,7 +135,8 @@ export class App {
 	private readonly statements: {
 		routes: Record<string, sqlite.Statement>
 		models: Record<string, { set: sqlite.Statement }>
-	} = { routes: {}, models: {} }
+		sessions: { query?: sqlite.Statement; add?: sqlite.Statement }
+	} = { routes: {}, models: {}, sessions: {} }
 
 	private readonly callPool: Map<string, { resolve: () => void; reject: (err: Error) => void }> = new Map()
 
@@ -176,8 +177,8 @@ export class App {
 		}
 		tables.push(
 			"CREATE TABLE IF NOT EXISTS _sessions " +
-				"(session_public_key TEXT PRIMARY KEY NOT NULL, timestamp INTEGER NOT NULL, " +
-				"metadata TEXT, signature TEXT NOT NULL);"
+				"(session_public_key TEXT PRIMARY KEY NOT NULL, origin TEXT NOT NULL, " +
+				"signature TEXT NOT NULL, payload TEXT NOT NULL);"
 		)
 
 		this.database.exec(tables.join("\n"))
@@ -203,6 +204,25 @@ export class App {
 				),
 			}
 		}
+
+		// Prepare session archive statements
+		this.statements.sessions.query = this.database.prepare(
+			"SELECT origin AS 'from', signature, payload, session_public_key FROM _sessions"
+		)
+		this.statements.sessions.add = this.database.prepare(
+			"INSERT INTO _sessions (origin, signature, payload, session_public_key) " +
+				"VALUES (:from, :signature, :payload, :session_public_key)"
+		)
+
+		// Restore sessions from archive table
+		const sessions = this.statements.sessions.query.all()
+		sessions.forEach((session) => {
+			if (!sessionType.is(session)) {
+				console.log("Skipped invalid archived session:", session)
+				return
+			}
+			this.sessions.push(session)
+		})
 
 		// Attach model message listener
 		this.modelPort.on("message", (message) => {
@@ -350,6 +370,9 @@ export class App {
 		assert(session.from === verifiedAddress, "session signed by wrong address")
 
 		this.sessions.push(session)
+		this.statements.sessions.add?.run({
+			...session,
+		})
 	}
 
 	/**
