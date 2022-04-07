@@ -25,12 +25,13 @@ const getInitialActionValue = (multihash: string, call: string, args: string[], 
 	"spec": "${multihash}",
 	"from": "${from}",
 	"call": "${call}",
-	"args": [${args.map((arg) => `${arg}`).join(", ")}],
+	"args": [${args.map((arg) => `"${arg}"`).join(", ")}],
 	"timestamp": ${new Date().valueOf()}
 }`
 
 function ActionComposer(props: { multihash: string; actionParameters: Record<string, string[]> }) {
-	const [sending, setSending] = useState(false)
+	const [sendingSignedAction, setSendingSignedAction] = useState(false)
+	const [sendingSessionAction, setSendingSessionAction] = useState(false)
 	const [generatingSession, setGeneratingSession] = useState(false)
 	const [sessionPublicKey, setSessionPublicKey] = useState<string>()
 	const [sessionPrivateKey, setSessionPrivateKey] = useState<string>()
@@ -102,7 +103,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 
 		const sessionSigner = new ethers.Wallet(sessionPrivateKey)
 
-		setSending(true)
+		setSendingSessionAction(true)
 		sessionSigner
 			.signMessage(payloadString)
 			.then((result: string) => {
@@ -119,7 +120,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify(action),
 				}).then((res) => {
-					setSending(false)
+					setSendingSessionAction(false)
 					if (res.status === StatusCodes.OK) {
 						toast.success("Action sent!")
 					} else {
@@ -130,7 +131,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 				})
 			})
 			.catch(() => {
-				setSending(false)
+				setSendingSessionAction(false)
 				toast.error("Signature rejected")
 			})
 	}, [state, sessionPublicKey])
@@ -158,7 +159,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			return
 		}
 
-		setSending(true)
+		setSendingSignedAction(true)
 		currentSigner
 			.signMessage(payloadString)
 			.then((result: string) => {
@@ -175,7 +176,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify(action),
 				}).then((res) => {
-					setSending(false)
+					setSendingSignedAction(false)
 					if (res.status === StatusCodes.OK) {
 						toast.success("Action sent!")
 					} else {
@@ -186,7 +187,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 				})
 			})
 			.catch(() => {
-				setSending(false)
+				setSendingSignedAction(false)
 				toast.error("Signature rejected")
 			})
 	}, [state, currentSigner])
@@ -233,7 +234,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify(session),
 				}).then((res) => {
-					setSending(false)
+					setGeneratingSession(false)
 					if (res.status === StatusCodes.OK) {
 						toast.success("Session saved!")
 					} else {
@@ -267,12 +268,12 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			<div className={styles.editor} ref={element}></div>
 			<button
 				className={`mt-3 mr-2 p-2 rounded bg-blue-500 hover:bg-blue-500 font-semibold text-sm text-center text-white ${
-					sending || state === null ? "pointer-events-none opacity-50" : ""
+					sendingSignedAction || state === null ? "pointer-events-none opacity-50" : ""
 				}`}
-				disabled={sending || state === null}
+				disabled={sendingSignedAction || state === null}
 				onClick={handleSendAction}
 			>
-				{sending ? "Sending..." : "Send without session"}
+				{sendingSignedAction ? "Signing..." : "Sign and send"}
 			</button>
 			<div className="mt-4">
 				<Sessions
@@ -297,12 +298,12 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			</button>
 			<button
 				className={`mt-3 mr-2 p-2 rounded bg-blue-500 hover:bg-blue-500 font-semibold text-sm text-center text-white ${
-					!sessionPrivateKey || sending || state === null ? "pointer-events-none opacity-50" : ""
+					!sessionPrivateKey || sendingSessionAction || state === null ? "pointer-events-none opacity-50" : ""
 				}`}
-				disabled={!sessionPrivateKey || sending || state === null}
+				disabled={!sessionPrivateKey || sendingSessionAction || state === null}
 				onClick={handleSendSessionAction}
 			>
-				{sending ? "Sending..." : "Send"}
+				{sendingSessionAction ? "Sending..." : "Send"}
 			</button>
 		</div>
 	)
