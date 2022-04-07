@@ -6,7 +6,7 @@ import { Worker, MessageChannel, MessagePort } from "worker_threads"
 import type net from "net"
 import type http from "http"
 
-import express from "express"
+import type express from "express"
 import cors from "cors"
 import bodyParser from "body-parser"
 import { StatusCodes } from "http-status-codes"
@@ -149,8 +149,8 @@ export class App {
 
 	private readonly callPool: Map<string, { resolve: () => void; reject: (err: Error) => void }> = new Map()
 
-	private readonly api: express.Express
-	private readonly server: http.Server
+	private api?: express.Express
+	private server?: http.Server
 	private readonly connections: Set<net.Socket> = new Set()
 
 	public sessions: Session[] = []
@@ -244,36 +244,44 @@ export class App {
 		})
 
 		// Create the API server
-		this.api = express()
-		this.api.use(cors())
-		this.api.use(bodyParser.json())
+		import("express")
+			.then(({ default: express }) => {
+				this.api = express()
+				if (this.api === null || this.api === undefined) return // TODO: remove this line
 
-		for (const route of Object.keys(this.routes)) {
-			this.api.get(route, (req, res) => {
-				const results = this.statements.routes[route].all(req.params)
-				res.status(StatusCodes.OK).json(results)
+				this.api.use(cors())
+				this.api.use(bodyParser.json())
+
+				for (const route of Object.keys(this.routes)) {
+					this.api.get(route, (req, res) => {
+						const results = this.statements.routes[route].all(req.params)
+						res.status(StatusCodes.OK).json(results)
+					})
+				}
+
+				this.api.post(`/action`, async (req, res) => {
+					if (!actionType.is(req.body)) {
+						return res.status(StatusCodes.BAD_REQUEST).end()
+					}
+					await this.apply(req.body)
+						.then(() => res.status(StatusCodes.OK).end())
+						.catch((err) => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message))
+				})
+
+				this.server = this.api.listen(handle, () => {
+					console.log("API server listening on", handle)
+				})
+
+				// we need to explicitly track open connections
+				// in order to shut the api server down gracefully
+				this.server.on("connection", (socket) => {
+					this.connections.add(socket)
+					socket.on("close", () => this.connections.delete(socket))
+				})
 			})
-		}
-
-		this.api.post(`/action`, async (req, res) => {
-			if (!actionType.is(req.body)) {
-				return res.status(StatusCodes.BAD_REQUEST).end()
-			}
-			await this.apply(req.body)
-				.then(() => res.status(StatusCodes.OK).end())
-				.catch((err) => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message))
-		})
-
-		this.server = this.api.listen(handle, () => {
-			console.log("API server listening on", handle)
-		})
-
-		// we need to explicitly track open connections
-		// in order to shut the api server down gracefully
-		this.server.on("connection", (socket) => {
-			this.connections.add(socket)
-			socket.on("close", () => this.connections.delete(socket))
-		})
+			.catch((error) => {
+				console.log("Could not import express, skipping server binding")
+			})
 	}
 
 	private handleModelMessage(message: any) {
@@ -333,6 +341,12 @@ export class App {
 	 */
 	async stop() {
 		await new Promise<void>((resolve, reject) => {
+			// TODO: it's okay to throw an exception on stop() if this core
+			// is running in the browser, but we should be more explicit about it
+			if (this.server === null || this.server === undefined) {
+				reject()
+				return
+			}
 			// http.Server.close() stops new incoming connections
 			// but keeps existing ones open. the callback is only
 			// called when all connections are closed .
