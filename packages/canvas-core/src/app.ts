@@ -1,10 +1,10 @@
-import fs from "node:fs"
-import net from "node:net"
-import http from "node:http"
-import path from "node:path"
-import assert from "node:assert"
-import crypto from "node:crypto"
-import { Worker, MessageChannel, MessagePort } from "node:worker_threads"
+import fs from "fs"
+import path from "path"
+import assert from "assert"
+import crypto from "crypto"
+import { Worker, MessageChannel, MessagePort } from "worker_threads"
+import type net from "net"
+import type http from "http"
 
 import express from "express"
 import cors from "cors"
@@ -47,7 +47,7 @@ export class App {
 		const ipfs = options.ipfs || createIPFSHTTPClient()
 		const handle = options.port || path.resolve(options.path, "api.sock")
 
-		// App.initialize does the preiminary *async* tasks of starting an app:
+		// App.initialize does the preliminary *async* tasks of starting an app:
 		// - creating the app directory and copying spec.js if necessary
 		// - creating the sqlite database
 		// - creating the hypercore feed and awaiting its "ready" event

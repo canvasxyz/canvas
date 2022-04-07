@@ -1,5 +1,5 @@
-import assert from "node:assert"
-import { parentPort } from "node:worker_threads"
+import assert from "assert"
+import { parentPort } from "worker_threads"
 
 /**
  * https://nodejs.org/dist/latest-v16.x/docs/api/worker_threads.html#class-worker
