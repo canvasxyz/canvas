@@ -144,8 +144,8 @@ export class App {
 	private readonly statements: {
 		routes: Record<string, sqlite.Statement>
 		models: Record<string, { set: sqlite.Statement }>
-		sessions: { query?: sqlite.Statement; add?: sqlite.Statement }
-	} = { routes: {}, models: {}, sessions: {} }
+		sessions: { add: sqlite.Statement }
+	}
 
 	private readonly callPool: Map<string, { resolve: () => void; reject: (err: Error) => void }> = new Map()
 
@@ -187,6 +187,18 @@ export class App {
 
 		this.database.exec(tables.join("\n"))
 
+		// Prepare session archive statements
+		const addSession = this.database.prepare(
+			"INSERT INTO _sessions (origin, signature, payload, session_public_key) " +
+				"VALUES (:from, :signature, :payload, :session_public_key)"
+		)
+
+		this.statements = {
+			routes: {},
+			models: {},
+			sessions: { add: addSession },
+		}
+
 		// Prepare route statements
 		for (const [name, route] of Object.entries(this.routes)) {
 			this.statements.routes[name] = this.database.prepare(route)
@@ -209,17 +221,10 @@ export class App {
 			}
 		}
 
-		// Prepare session archive statements
-		this.statements.sessions.query = this.database.prepare(
-			"SELECT origin AS 'from', signature, payload, session_public_key FROM _sessions"
-		)
-		this.statements.sessions.add = this.database.prepare(
-			"INSERT INTO _sessions (origin, signature, payload, session_public_key) " +
-				"VALUES (:from, :signature, :payload, :session_public_key)"
-		)
-
 		// Restore sessions from archive table
-		const sessions = this.statements.sessions.query.all()
+		const sessions = this.database
+			.prepare("SELECT origin AS 'from', signature, payload, session_public_key FROM _sessions")
+			.all()
 		sessions.forEach((session) => {
 			if (!sessionType.is(session)) {
 				console.log("Skipped invalid archived session:", session)
@@ -368,9 +373,7 @@ export class App {
 		assert(session.from === verifiedAddress, "session signed by wrong address")
 
 		this.sessions.push(session)
-		this.statements.sessions.add?.run({
-			...session,
-		})
+		this.statements.sessions.add.run({ ...session })
 	}
 
 	/**
