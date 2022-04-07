@@ -78,5 +78,6 @@ export class Loader {
 
 		await app.stop()
 		this.apps.delete(multihash)
+		this.status.delete(multihash)
 	}
 }
