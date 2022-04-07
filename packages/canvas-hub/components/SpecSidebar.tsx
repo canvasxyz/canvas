@@ -31,9 +31,10 @@ interface SidebarMenuItemProps {
 	multihash: string
 	spec: string
 	slug: string
+	draft_spec: string
 }
 
-function SidebarMenuItem({ active, multihash, running, spec, slug }: SidebarMenuItemProps) {
+function SidebarMenuItem({ active, multihash, running, spec, slug, draft_spec }: SidebarMenuItemProps) {
 	const [shouldBeRunning, setShouldBeRunning] = useState<boolean>(running)
 	useEffect(() => {
 		setShouldBeRunning(running)
@@ -64,6 +65,7 @@ function SidebarMenuItem({ active, multihash, running, spec, slug }: SidebarMenu
 
 	const stopApp = useCallback(
 		(close) => {
+			if (!confirm("Stop the currently running instance?")) return
 			console.log("stopping app", multihash)
 			fetch(`/api/instance/${multihash}/stop`, { method: "PUT" }).then((res) => {
 				if (res.status !== StatusCodes.OK) {
@@ -79,6 +81,10 @@ function SidebarMenuItem({ active, multihash, running, spec, slug }: SidebarMenu
 
 	const editApp = useCallback(
 		(slug) => {
+			if (spec === draft_spec) {
+				document.location = `/app/${slug}`
+				return
+			}
 			if (!confirm("Overwrite your existing edits?")) {
 				return
 			}
@@ -211,6 +217,7 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 								active={version.version_number === version_number}
 								running={version.multihash in instances}
 								slug={app.slug}
+								draft_spec={app.draft_spec}
 							/>
 						</div>
 					)

@@ -104,7 +104,9 @@ export default function AppPage({ version_number, app }: AppPageProps) {
 				{instance !== null ? (
 					<Actions multihash={instance} />
 				) : (
-					<div className="text-gray-400 text-sm">Select a running instance to see actions</div>
+					<div className="text-gray-400 text-sm">
+						{version_number === null ? <>Select a running instance to see actions</> : <>Instance paused</>}
+					</div>
 				)}
 				{instance !== null && (
 					<>
