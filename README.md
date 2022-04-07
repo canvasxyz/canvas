@@ -6,6 +6,12 @@ in the application is a signed message from an Ethereum address.
 
 ## Quick start
 
+Start an IPFS daemon in a separate terminal
+
+```
+$ ipfs daemon --offline
+```
+
 Install dependencies and symlink the local packages:
 
 ```
