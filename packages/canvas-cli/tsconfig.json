@@ -1,0 +1,15 @@
+{ 
+  "include": ["src"],
+  "compilerOptions": {
+    "declaration": false,
+    "importHelpers": true,
+    "module": "esnext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "target": "es2019",
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true
+  }
+}

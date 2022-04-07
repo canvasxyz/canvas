@@ -1,4 +1,4 @@
-## Canvas
+# Canvas
 
 Canvas is a P2P protocol that allows developers to build
 decentralized, frontend-independent applications, where every action
@@ -6,36 +6,44 @@ in the application is a signed message from an Ethereum address.
 
 ## Quick start
 
+Install dependencies and symlink the local packages:
+
 ```
-npm i
-npm install -g next
+$ npm i
 ```
 
-Create a `.env` file in the repo root with `DATABASE_URL` and `APP_DIRECTORY` environement variables.
+Create a `packages/canvas-hub/.env` file with `DATABASE_URL` and `APP_DIRECTORY` environement variables:
 
 ```
 DATABASE_URL=file:./db.sqlite
 APP_DIRECTORY=./apps
 ```
 
-Initialize the database.
+The `dev` script in the repo run runs the NextJS dev server and TypeScript compilers for canvas-core and canvas-cli, all in parallel:
 
 ```
-npx prisma generate
-npx prisma db push
+$ npm run dev
 ```
 
-In a separate process, start an IPFS daemon.
+## Deploy hub
+
+Build the core, CLI, and hub projects:
 
 ```
-ipfs daemon --offline
+$ npm run build
 ```
 
-Run the dev server.
+Then start the hub production NextJS server:
 
 ```
-npm run dev
+$ npm run start
 ```
+
+## Canvas Core
+
+## Canvas Hub
+
+## Canvas CLI
 
 ## App API
 

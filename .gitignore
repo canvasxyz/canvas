@@ -2,10 +2,10 @@
 .next/
 node_modules/
 
+core/lib
+cli/dist
+
 # Databases
 apps/
 prisma/db.sqlite
 prisma/db.sqlite-journal
-
-# Previous db
-db/
