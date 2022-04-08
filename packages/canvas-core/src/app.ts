@@ -375,9 +375,10 @@ export class App {
 			const result = this.vm.evalCode(`apply(${JSON.stringify(id)}, ${JSON.stringify(payload)});`)
 
 			if (result.error) {
-				console.log("Action execution failed:", this.vm.dump(result.error))
+				const error = this.vm.dump(result.error)
 				result.error.dispose()
-				reject()
+				console.log("Action execution failed:", error.message)
+				reject(error)
 				return
 			}
 
