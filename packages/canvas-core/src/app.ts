@@ -2,6 +2,7 @@ import fs from "fs"
 import path from "path"
 import assert from "assert"
 import crypto from "crypto"
+import { getQuickJS } from "quickjs-emscripten"
 import { Worker, MessageChannel, MessagePort } from "worker_threads"
 import type net from "net"
 import type http from "http"
@@ -87,32 +88,38 @@ export class App {
 			fs.unlinkSync(apiPath)
 		}
 
-		const worker = new Worker(workerPath)
+		// Set up VM and worker
+		const quickJS: any = await getQuickJS()
+		const vm = quickJS.newContext()
+
+		const worker = vm.evalCode(workerPath)
+
 		const actionChannel = new MessageChannel()
 		const modelChannel = new MessageChannel()
 
 		const { routes, models, actionParameters } = await new Promise((resolve, reject) => {
 			// The order of these next two blocks (attaching the message handler
 			// and posting the initial message) is logically important.
-			worker.once("message", (message) => {
-				console.log("received initialization response from worker", options.multihash, message.status)
-				if (message.status === "success") {
-					const { routes, models, actionParameters } = message
-					resolve({ routes, models, actionParameters })
-				} else {
-					reject(new Error(message.error))
-				}
-			})
-
-			console.log("posting initialization message", options.multihash)
-			worker.postMessage(
-				{
-					path: specPath,
-					actionPort: actionChannel.port1,
-					modelPort: modelChannel.port1,
-				},
-				[actionChannel.port1, modelChannel.port1]
-			)
+			console.log("here")
+			resolve({ routes: [], models: [], actionParameters: [] })
+			// worker.once("message", (message) => {
+			// 	console.log("received initialization response from worker", options.multihash, message.status)
+			// 	if (message.status === "success") {
+			// 		const { routes, models, actionParameters } = message
+			// 		resolve({ routes, models, actionParameters })
+			// 	} else {
+			// 		reject(new Error(message.error))
+			// 	}
+			// })
+			// console.log("posting initialization message", options.multihash)
+			// worker.postMessage(
+			// 	{
+			// 		path: specPath,
+			// 		actionPort: actionChannel.port1,
+			// 		modelPort: modelChannel.port1,
+			// 	},
+			// 	[actionChannel.port1, modelChannel.port1]
+			// )
 		})
 
 		const hypercorePath = path.resolve(appPath, "hypercore")
@@ -137,7 +144,8 @@ export class App {
 			routes,
 			models,
 			actionParameters,
-			handle
+			handle,
+			quickJS
 		)
 	}
 
@@ -154,6 +162,7 @@ export class App {
 	private readonly connections: Set<net.Socket> = new Set()
 
 	public sessions: Session[] = []
+	public vm: any
 
 	private constructor(
 		readonly multihash: string,
@@ -165,7 +174,8 @@ export class App {
 		readonly routes: Record<string, string>,
 		readonly models: Record<string, Model>,
 		readonly actionParameters: Record<string, string[]>,
-		readonly handle: number | string
+		readonly handle: number | string,
+		readonly QuickJS: any
 	) {
 		// Initialize the database schema
 		const tables: string[] = []
@@ -242,6 +252,9 @@ export class App {
 		this.actionPort.on("message", (message) => {
 			this.handleActionMessage(message)
 		})
+
+		// Create QuickJS
+		this.vm = QuickJS.newContext()
 
 		// Create the API server
 		import("express")
@@ -364,7 +377,7 @@ export class App {
 		})
 
 		// terminate the worker thread
-		await this.worker.terminate()
+		// await this.worker.terminate()
 
 		// close the hypercore feed
 		await new Promise<void>((resolve, reject) => this.feed.close((err) => (err ? reject(err) : resolve())))
