@@ -1,5 +1,4 @@
-import assert from "assert"
-import { parentPort } from "worker_threads"
+import { actions, models, routes } from "spec"
 
 /**
  * https://nodejs.org/dist/latest-v16.x/docs/api/worker_threads.html#class-worker
@@ -28,80 +27,6 @@ import { parentPort } from "worker_threads"
  * Calls to .set and .delete get forwarded on modelPort as { timestamp, name, id, value } messages.
  * For .set(id, params), value is the params object, and for .delete, value is null.
  */
-
-parentPort.once("message", (message) =>
-	initialize(message)
-		.then((app) => parentPort.postMessage({ status: "success", ...app }))
-		.catch((err) => parentPort.postMessage({ status: "failure", error: err.toString() }))
-)
-
-async function initialize({ path, actionPort, modelPort }) {
-	const { actions, models, routes } = await import(path)
-	assert(actions !== undefined, "missing actions export from spec")
-	assert(models !== undefined, "missing models export from spec")
-	assert(routes !== undefined, "missing routes export from spec")
-
-	// Validate models
-	for (const [name, model] of Object.entries(models)) {
-		assert(name.match(/^[a-zA-Z0-9_]+$/), `invalid model name: ${JSON.stringify(name)}`)
-		for (const [field, type] of Object.entries(model)) {
-			assert(field.match(/^[a-zA-Z0-9_]+$/), `invalid model field name: ${JSON.stringify(field)}`)
-			assert(fieldTypes.has(type), `invalid model field type: ${JSON.stringify(type)}`)
-		}
-	}
-
-	// Validate actions
-	for (const [name, handler] of Object.entries(actions)) {
-		assert(name.match(/^[a-zA-Z0-9_]+$/), `invalid model name: ${JSON.stringify(name)}`)
-		assert(typeof handler === "function", "action handlers must be functions")
-	}
-
-	// Validate routes
-	for (const [name, route] of Object.entries(routes)) {
-		assert(name.match(/^(\/:?[a-zA-Z0-9_]+)+$/), `invalid route name: ${JSON.stringify(name)}`)
-		assert(typeof route === "string", "routes must be strings")
-	}
-
-	actionPort.on("message", ({ id, action }) =>
-		apply(action)
-			.then(() => actionPort.postMessage({ id, status: "success" }))
-			.catch((err) => actionPort.postMessage({ id, status: "failure", error: err.toString() }))
-	)
-
-	async function apply({ from, call, args, timestamp }) {
-		const db = {}
-		for (const [name, model] of Object.entries(models)) {
-			db[name] = {
-				set(id, value) {
-					assert(typeof id === "string", "model IDs must be strings")
-
-					const validatedValue = {}
-					for (const [field, fieldType] of Object.entries(model)) {
-						const fieldValue = value[field]
-						assert(fieldValue, `missing value for field ${JSON.stringify(field)}`)
-						validateType(fieldType, fieldValue)
-						validatedValue[field] = fieldValue
-					}
-
-					modelPort.postMessage({ timestamp, name, id, value: validatedValue })
-				},
-			}
-		}
-
-		const context = { db, from, timestamp }
-		const result = await actions[call].apply(context, args)
-		if (result === false) {
-			throw new Error("action handler returned false")
-		}
-	}
-
-	const actionParameters = {}
-	for (const [call, handler] of Object.entries(actions)) {
-		actionParameters[call] = parseHandlerParameters(handler)
-	}
-
-	return { models, routes, actionParameters }
-}
 
 // https://stackoverflow.com/questions/1007981/how-to-get-function-parameter-names-values-dynamically
 function parseHandlerParameters(handler) {
@@ -136,3 +61,70 @@ function validateType(type, value) {
 		throw new Error("internal error: invalid type")
 	}
 }
+
+assert(actions !== undefined, "missing actions export from spec")
+assert(models !== undefined, "missing models export from spec")
+assert(routes !== undefined, "missing routes export from spec")
+
+// Validate models
+for (const [name, model] of Object.entries(models)) {
+	assert(name.match(/^[a-zA-Z0-9_]+$/), `invalid model name: ${JSON.stringify(name)}`)
+	for (const [field, type] of Object.entries(model)) {
+		assert(field.match(/^[a-zA-Z0-9_]+$/), `invalid model field name: ${JSON.stringify(field)}`)
+		assert(fieldTypes.has(type), `invalid model field type: ${JSON.stringify(type)}`)
+	}
+}
+
+// Validate actions
+for (const [name, handler] of Object.entries(actions)) {
+	assert(name.match(/^[a-zA-Z0-9_]+$/), `invalid model name: ${JSON.stringify(name)}`)
+	assert(typeof handler === "function", "action handlers must be functions")
+}
+
+// Validate routes
+for (const [name, route] of Object.entries(routes)) {
+	assert(name.match(/^(\/:?[a-zA-Z0-9_]+)+$/), `invalid route name: ${JSON.stringify(name)}`)
+	assert(typeof route === "string", "routes must be strings")
+}
+
+const apply = (id, { from, call, args, timestamp }) => {
+	const db = {}
+	const updates = {}
+	for (const [name, model] of Object.entries(models)) {
+		db[name] = {
+			set(id, value) {
+				assert(typeof id === "string", "model IDs must be strings")
+
+				const validatedValue = {}
+				for (const [field, fieldType] of Object.entries(model)) {
+					const fieldValue = value[field]
+					assert(fieldValue, `missing value for field ${JSON.stringify(field)}`)
+					validateType(fieldType, fieldValue)
+					validatedValue[field] = fieldValue
+				}
+
+				if (updates[name] === undefined) {
+					updates[name] = []
+				}
+				updates[name].push({ timestamp, name, id, value: validatedValue })
+			},
+		}
+	}
+
+	const context = { db, from, timestamp }
+	const result = actions[call].apply(context, args)
+	if (result === false) {
+		throw new Error("action handler returned false")
+	}
+	return updates
+}
+
+const actionParameters = {}
+for (const [call, handler] of Object.entries(actions)) {
+	actionParameters[call] = parseHandlerParameters(handler)
+}
+
+globalThis.models = models
+globalThis.routes = routes
+globalThis.actionParameters = actionParameters
+globalThis.apply = apply

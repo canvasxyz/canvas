@@ -41,6 +41,8 @@ const modelMessage = t.type({
 	id: t.string,
 	value: t.record(t.string, t.union([t.null, t.number, t.string, t.boolean])),
 })
+const modelMessageArray = t.array(modelMessage)
+const modelMessageTree = t.record(t.string, modelMessageArray)
 
 // Don't use the App constructor directly, use the static App.initialize method instead
 export class App {
@@ -64,6 +66,7 @@ export class App {
 		console.log("initializing", options.multihash)
 		const { pathname } = new URL(import.meta.url)
 		const workerPath = path.resolve(pathname, "..", "../worker.js")
+		const workerCode = fs.readFileSync(workerPath).toString()
 
 		// create directory at appPath if it doesn't exist already
 		const appPath = path.resolve(options.path)
@@ -81,6 +84,7 @@ export class App {
 			await fs.promises.writeFile(specPath, ipfs.cat(options.multihash), { encoding: "utf-8" })
 			await fs.promises.writeFile(specCidPath, options.multihash, { encoding: "utf-8" })
 		}
+		const specCode = fs.readFileSync(specPath).toString()
 
 		// Remove the api socket, if it exists
 		const apiPath = path.resolve(appPath, "api.sock")
@@ -88,39 +92,40 @@ export class App {
 			fs.unlinkSync(apiPath)
 		}
 
-		// Set up VM and worker
+		// Set up VM and spec loader
 		const quickJS: any = await getQuickJS()
-		const vm = quickJS.newContext()
+		const runtime = quickJS.newRuntime()
+		runtime.setMemoryLimit(1024 * 640) // set memory limit
+		runtime.setModuleLoader((moduleName: string) => specCode) // return the spec for any(!) import
+		const vm = runtime.newContext()
 
-		const worker = vm.evalCode(workerPath)
-
-		const actionChannel = new MessageChannel()
-		const modelChannel = new MessageChannel()
-
-		const { routes, models, actionParameters } = await new Promise((resolve, reject) => {
-			// The order of these next two blocks (attaching the message handler
-			// and posting the initial message) is logically important.
-			console.log("here")
-			resolve({ routes: [], models: [], actionParameters: [] })
-			// worker.once("message", (message) => {
-			// 	console.log("received initialization response from worker", options.multihash, message.status)
-			// 	if (message.status === "success") {
-			// 		const { routes, models, actionParameters } = message
-			// 		resolve({ routes, models, actionParameters })
-			// 	} else {
-			// 		reject(new Error(message.error))
-			// 	}
-			// })
-			// console.log("posting initialization message", options.multihash)
-			// worker.postMessage(
-			// 	{
-			// 		path: specPath,
-			// 		actionPort: actionChannel.port1,
-			// 		modelPort: modelChannel.port1,
-			// 	},
-			// 	[actionChannel.port1, modelChannel.port1]
-			// )
+		// Set up: console.log
+		const logHandle = vm.newFunction("log", (...args: any) => {
+			const nativeArgs = args.map(vm.dump)
+			console.log("[worker]", ...nativeArgs)
 		})
+		const consoleHandle = vm.newObject()
+		vm.setProp(consoleHandle, "log", logHandle)
+		vm.setProp(vm.global, "console", consoleHandle)
+		consoleHandle.dispose()
+		logHandle.dispose()
+
+		// Set up: assert
+		const assertHandle = vm.newFunction("assert", (...args: any) => {
+			const [assertion, message] = args.map(vm.dump)
+			if (!assertion) {
+				console.log("[worker: EXCEPTION]", message)
+				throw new Error(message)
+			}
+		})
+		vm.setProp(vm.global, "assert", assertHandle)
+		assertHandle.dispose()
+
+		vm.evalCode(workerCode)
+		const models = vm.getProp(vm.global, "models").consume(vm.dump)
+		const routes = vm.getProp(vm.global, "routes").consume(vm.dump)
+		const actionParameters = vm.getProp(vm.global, "actionParameters").consume(vm.dump)
+		// TODO: typecheck for models, routes, and actionParameters
 
 		const hypercorePath = path.resolve(appPath, "hypercore")
 		const feed = hypercore(hypercorePath, {
@@ -138,9 +143,8 @@ export class App {
 			options.multihash,
 			database,
 			feed,
-			worker,
-			actionChannel.port2,
-			modelChannel.port2,
+			vm,
+			null, //modelChannel.port2,
 			routes,
 			models,
 			actionParameters,
@@ -162,21 +166,22 @@ export class App {
 	private readonly connections: Set<net.Socket> = new Set()
 
 	public sessions: Session[] = []
-	public vm: any
 
 	private constructor(
 		readonly multihash: string,
 		readonly database: sqlite.Database,
 		readonly feed: Feed,
-		readonly worker: Worker,
-		readonly actionPort: MessagePort,
-		readonly modelPort: MessagePort,
+		readonly vm: any, // TODO
+		readonly modelPort: MessagePort | null, // TODO
 		readonly routes: Record<string, string>,
 		readonly models: Record<string, Model>,
 		readonly actionParameters: Record<string, string[]>,
 		readonly handle: number | string,
 		readonly QuickJS: any
 	) {
+		// Initialize fields
+		this.vm = vm
+
 		// Initialize the database schema
 		const tables: string[] = []
 
@@ -243,19 +248,6 @@ export class App {
 			this.sessions.push(session)
 		})
 
-		// Attach model message listener
-		this.modelPort.on("message", (message) => {
-			this.handleModelMessage(message)
-		})
-
-		// Attach action message listener
-		this.actionPort.on("message", (message) => {
-			this.handleActionMessage(message)
-		})
-
-		// Create QuickJS
-		this.vm = QuickJS.newContext()
-
 		// Create the API server
 		import("express")
 			.then(({ default: express }) => {
@@ -297,56 +289,6 @@ export class App {
 			})
 	}
 
-	private handleModelMessage(message: any) {
-		// TODO: this validation should really happen in two stages since message
-		// contains a mix of spec-provided and worker-provided data. if the worker-
-		// provided data is invalid we should throw, but if the spec-provided data
-		// is invalid we should try to find the call pool callback and reject it.
-		if (!modelMessage.is(message)) {
-			console.error(message)
-			throw new Error("internal error: received invalid model message from worker")
-		}
-
-		const { timestamp, name, id, value } = message
-		try {
-			assert(name in this.statements.models, `${JSON.stringify(name)} is not a model name`)
-			const model = this.statements.models[name]
-			model.set.run({ ...value, id, timestamp })
-		} catch (err) {
-			const call = this.callPool.get(message.id)
-			if (call === undefined) {
-				// TODO: since these messages are coming from the worker thread there's
-				// actually a chance that the handler in the worker exits successfully
-				// and the call in the call pool gets resolved *before* we actually process
-				// the view state side effects on modelPort...
-				throw new Error("internal error: message callbacks missing from call pool")
-			}
-
-			// However in the case that we do catch an error we would prefer to reject the
-			// .apply promise instead of throwing inside .handleModelMessage (crashes the app)
-			call.reject(err instanceof Error ? err : new Error((err as any).toString()))
-		}
-	}
-
-	private handleActionMessage(message: any) {
-		if (!actionMessage.is(message)) {
-			console.error(message)
-			throw new Error("internal error: received invalid action message from worker")
-		}
-
-		const call = this.callPool.get(message.id)
-		if (call === undefined) {
-			throw new Error("internal error: message callbacks missing from call pool")
-		}
-
-		this.callPool.delete(message.id)
-		if (message.status === "success") {
-			call.resolve()
-		} else {
-			call.reject(new Error(message.error))
-		}
-	}
-
 	/**
 	 * 1. stop accepting new actions and queries
 	 * 2. reject in-process calls in the call pool
@@ -366,9 +308,9 @@ export class App {
 			this.server.close((err) => (err ? reject(err) : resolve()))
 
 			// reject calls in the action pool
-			for (const call of this.callPool.values()) {
-				call.reject(new Error("app was shut down before action resolved"))
-			}
+			// for (const call of this.callPool.values()) {
+			// 	call.reject(new Error("app was shut down before action resolved"))
+			// }
 
 			// close open connections on the API server
 			// (this needs to happen here inside the promise executor)
@@ -378,6 +320,10 @@ export class App {
 
 		// terminate the worker thread
 		// await this.worker.terminate()
+
+		// shut down the quickjs vm
+		// TODO: vm.dispose()
+		// TODO: runtime.dispose()
 
 		// close the hypercore feed
 		await new Promise<void>((resolve, reject) => this.feed.close((err) => (err ? reject(err) : resolve())))
@@ -445,7 +391,41 @@ export class App {
 		// Await response from worker
 		await new Promise<void>((resolve, reject) => {
 			this.callPool.set(id, { resolve, reject })
-			this.actionPort.postMessage({ id, action: payload })
+			const result = this.vm.evalCode(`apply(${JSON.stringify(id)}, ${JSON.stringify(payload)});`)
+
+			if (result.error) {
+				console.log("Action execution failed:", this.vm.dump(result.error))
+				result.error.dispose()
+				reject()
+				return
+			}
+
+			// Worker returns a list of updates to models, check them now
+			const updates = this.vm.dump(result.value)
+			result.value.dispose()
+
+			// TODO: this validation should really happen in two stages since message
+			// contains a mix of spec-provided and worker-provided data. if the worker-
+			// provided data is invalid we should throw, but if the spec-provided data
+			// is invalid we should try to find the call pool callback and reject it.
+			if (!modelMessageTree.is(updates)) {
+				console.error(updates)
+				throw new Error("internal error: received invalid model message from worker")
+			}
+
+			// Execute the updates
+			Object.entries(updates).forEach(([table, tableUpdates]) => {
+				tableUpdates.forEach((message) => {
+					const { timestamp, name, id, value } = message
+					try {
+						assert(name in this.statements.models, `${JSON.stringify(name)} is not a model name`)
+						const model = this.statements.models[name]
+						model.set.run({ ...value, id, timestamp })
+					} catch (err) {
+						reject(err instanceof Error ? err : new Error((err as any).toString()))
+					}
+				})
+			})
 		})
 
 		// Append to hypercore
