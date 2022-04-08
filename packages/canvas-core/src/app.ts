@@ -139,18 +139,7 @@ export class App {
 		const databasePath = path.resolve(appPath, "db.sqlite")
 		const database = new Database(databasePath)
 
-		return new App(
-			options.multihash,
-			database,
-			feed,
-			vm,
-			null, //modelChannel.port2,
-			routes,
-			models,
-			actionParameters,
-			handle,
-			quickJS
-		)
+		return new App(options.multihash, database, feed, runtime, vm, routes, models, actionParameters, handle)
 	}
 
 	private readonly statements: {
@@ -171,16 +160,16 @@ export class App {
 		readonly multihash: string,
 		readonly database: sqlite.Database,
 		readonly feed: Feed,
+		readonly runtime: any, // TODO
 		readonly vm: any, // TODO
-		readonly modelPort: MessagePort | null, // TODO
 		readonly routes: Record<string, string>,
 		readonly models: Record<string, Model>,
 		readonly actionParameters: Record<string, string[]>,
-		readonly handle: number | string,
-		readonly QuickJS: any
+		readonly handle: number | string
 	) {
 		// Initialize fields
 		this.vm = vm
+		this.runtime = runtime
 
 		// Initialize the database schema
 		const tables: string[] = []
@@ -322,8 +311,8 @@ export class App {
 		// await this.worker.terminate()
 
 		// shut down the quickjs vm
-		// TODO: vm.dispose()
-		// TODO: runtime.dispose()
+		this.vm.dispose()
+		this.runtime.dispose()
 
 		// close the hypercore feed
 		await new Promise<void>((resolve, reject) => this.feed.close((err) => (err ? reject(err) : resolve())))
