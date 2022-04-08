@@ -22,16 +22,6 @@ import { IPFSHTTPClient, create as createIPFSHTTPClient } from "ipfs-http-client
 import { Model, modelType, getColumnType } from "./models.js"
 import { Action, actionType, actionPayloadType, Session, sessionType, sessionPayloadType } from "./actions.js"
 
-const initializationResponseMessage = t.union([
-	t.type({
-		status: t.literal("success"),
-		routes: t.record(t.string, t.string),
-		models: t.record(t.string, modelType),
-		actionParameters: t.record(t.string, t.array(t.string)),
-	}),
-	t.type({ status: t.literal("failure"), error: t.string }),
-])
-
 const actionMessage = t.union([
 	t.type({ id: t.string, status: t.literal("success") }),
 	t.type({ id: t.string, status: t.literal("failure"), error: t.string }),
@@ -409,7 +399,9 @@ export class App {
 				tableUpdates.forEach((message) => {
 					const { timestamp, name, id, value } = message
 					try {
-						assert(name in this.statements.models, `${JSON.stringify(name)} is not a model name`)
+						if (!(name in this.statements.models)) {
+							throw new Error(`${JSON.stringify(name)} is not a model name`)
+						}
 						const model = this.statements.models[name]
 						model.set.run({ ...value, id, timestamp })
 					} catch (err) {
@@ -417,6 +409,8 @@ export class App {
 					}
 				})
 			})
+
+			resolve()
 		})
 
 		// Append to hypercore
