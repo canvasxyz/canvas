@@ -18,16 +18,18 @@ import * as t from "io-ts"
 
 import { IPFSHTTPClient, create as createIPFSHTTPClient } from "ipfs-http-client"
 
-import { Model, getColumnType } from "./models.js"
-import {
-	Action,
-	actionType,
-	actionPayloadType,
-	Session,
-	SessionPayload,
-	sessionType,
-	sessionPayloadType,
-} from "./actions.js"
+import { Model, modelType, getColumnType } from "./models.js"
+import { Action, actionType, actionPayloadType, Session, sessionType, sessionPayloadType } from "./actions.js"
+
+const initializationResponseMessage = t.union([
+	t.type({
+		status: t.literal("success"),
+		routes: t.record(t.string, t.string),
+		models: t.record(t.string, modelType),
+		actionParameters: t.record(t.string, t.array(t.string)),
+	}),
+	t.type({ status: t.literal("failure"), error: t.string }),
+])
 
 const actionMessage = t.union([
 	t.type({ id: t.string, status: t.literal("success") }),
@@ -91,12 +93,19 @@ export class App {
 		const actionChannel = new MessageChannel()
 		const modelChannel = new MessageChannel()
 
-		const { routes, models, actionParameters } = await new Promise((resolve, reject) => {
+		const { routes, models, actionParameters } = await new Promise<{
+			routes: Record<string, string>
+			models: Record<string, Model>
+			actionParameters: Record<string, string[]>
+		}>((resolve, reject) => {
 			// The order of these next two blocks (attaching the message handler
 			// and posting the initial message) is logically important.
 			worker.once("message", (message) => {
 				console.log("received initialization response from worker", options.multihash, message.status)
-				if (message.status === "success") {
+				if (!initializationResponseMessage.is(message)) {
+					console.error(message)
+					reject(new Error("received invalid response from worker"))
+				} else if (message.status === "success") {
 					const { routes, models, actionParameters } = message
 					resolve({ routes, models, actionParameters })
 				} else {
