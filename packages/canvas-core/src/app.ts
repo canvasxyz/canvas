@@ -19,16 +19,18 @@ import * as t from "io-ts"
 
 import { IPFSHTTPClient, create as createIPFSHTTPClient } from "ipfs-http-client"
 
-import { Model, getColumnType } from "./models.js"
-import {
-	Action,
-	actionType,
-	actionPayloadType,
-	Session,
-	SessionPayload,
-	sessionType,
-	sessionPayloadType,
-} from "./actions.js"
+import { Model, modelType, getColumnType } from "./models.js"
+import { Action, actionType, actionPayloadType, Session, sessionType, sessionPayloadType } from "./actions.js"
+
+const initializationResponseMessage = t.union([
+	t.type({
+		status: t.literal("success"),
+		routes: t.record(t.string, t.string),
+		models: t.record(t.string, modelType),
+		actionParameters: t.record(t.string, t.array(t.string)),
+	}),
+	t.type({ status: t.literal("failure"), error: t.string }),
+])
 
 const actionMessage = t.union([
 	t.type({ id: t.string, status: t.literal("success") }),

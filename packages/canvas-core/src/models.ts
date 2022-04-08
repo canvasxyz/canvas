@@ -36,6 +36,8 @@ export const modelValueType = t.union([t.null, t.boolean, t.number, t.string, bu
 
 export type Model = Record<string, ModelType>
 
+export const modelType = t.record(t.string, modelTypeType)
+
 export function validateType(type: ModelType, value: ModelValue) {
 	if (type === "boolean") {
 		assert(typeof value === "boolean", "invalid type: expected boolean")
