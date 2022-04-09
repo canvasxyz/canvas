@@ -1,14 +1,20 @@
-import * as fs from "node:fs"
-import * as path from "node:path"
+import fs from "node:fs"
+import path from "node:path"
 
 import { create as createIPFSHTTPClient } from "ipfs-http-client"
 
-export interface InitCommandArgs {
-	path: string
-	cid: string
+export const command = "init <path>"
+export const desc = "Initialize a Canvas app"
+export const builder = (yargs) => {
+	yargs
+		.positional("path", {
+			describe: "Path of the app data directory",
+			type: "string",
+		})
+		.option("cid", { type: "string", demandOption: true, desc: "Hash of the spec to fetch from IPFS" })
 }
 
-export default async function init(args: InitCommandArgs) {
+export async function handler(args) {
 	const ipfs = createIPFSHTTPClient()
 
 	const appPath = path.resolve(args.path)

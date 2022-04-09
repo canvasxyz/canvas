@@ -68,3 +68,12 @@ Install the CLI
 This just puts a stub shell script at `$(npm config get prefix)/bin/canvas` that calls `node ${PWD}/packages/canvas-cli/dist/index.js $@`.
 
 You must build the CLI before it will work (either running the dev server, running `npm run build` in the repo root, running `npm run build-cli` in the repo root, or running `npm run build` inside packages/canvas-cli), but once install, you should never have to think about it again.
+
+The basic CLI commands are
+
+```
+canvas init --cid QmFoo <path>
+canvas run --port 8000 <path>
+canvas action ls <path>
+canvas session ls <path>
+```
