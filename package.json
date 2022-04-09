@@ -3,13 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "run-p -l dev-core dev-cli dev-hub",
+    "dev": "run-p -l dev-core dev-hub",
     "dev-core": "npm run dev --workspace=canvas-core -- --preserveWatchOutput --pretty",
-    "dev-cli": "npm run dev --workspace=canvas-cli -- --preserveWatchOutput --pretty",
     "dev-hub": "export FORCE_COLOR=1 && npm run dev --workspace=canvas-hub",
-    "build": "run-s -l build-core build-cli build-hub",
+    "build": "run-s -l build-core build-hub",
     "build-core": "npm run build --workspace=canvas-core -- --pretty",
-    "build-cli": "npm run build --workspace=canvas-cli -- --pretty",
     "build-hub": "export FORCE_COLOR=1 && npm run build --workspace=canvas-hub",
     "start": "npm run start --workspace=canvas-hub"
   },

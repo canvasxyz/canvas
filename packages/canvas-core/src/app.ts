@@ -12,6 +12,7 @@ import bodyParser from "body-parser"
 import { StatusCodes } from "http-status-codes"
 
 import hypercore, { Feed } from "hypercore"
+import HyperBee from "hyperbee"
 import Database, * as sqlite from "better-sqlite3"
 import { ethers } from "ethers"
 import * as t from "io-ts"
@@ -20,6 +21,7 @@ import { IPFSHTTPClient, create as createIPFSHTTPClient } from "ipfs-http-client
 
 import { Model, modelType, getColumnType } from "./models.js"
 import { Action, actionType, actionPayloadType, Session, sessionType, sessionPayloadType } from "./actions.js"
+import { getActionKey, getSessionKey } from "./keys.js"
 
 const initializationResponseMessage = t.union([
 	t.type({
@@ -125,11 +127,9 @@ export class App {
 		})
 
 		const hypercorePath = path.resolve(appPath, "hypercore")
-		const feed = hypercore(hypercorePath, {
-			createIfMissing: true,
-			overwrite: false,
-			valueEncoding: "json",
-		})
+		const feed = hypercore(hypercorePath, { createIfMissing: true, overwrite: false })
+
+		const hyperbee = new HyperBee(feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
 
 		await new Promise<void>((resolve) => feed.on("ready", () => resolve()))
 
@@ -140,6 +140,7 @@ export class App {
 			options.multihash,
 			database,
 			feed,
+			hyperbee,
 			worker,
 			actionChannel.port2,
 			modelChannel.port2,
@@ -153,7 +154,7 @@ export class App {
 	private readonly statements: {
 		routes: Record<string, sqlite.Statement>
 		models: Record<string, { set: sqlite.Statement }>
-		sessions: { add: sqlite.Statement }
+		// sessions: { add: sqlite.Statement }
 	}
 
 	private readonly callPool: Map<string, { resolve: () => void; reject: (err: Error) => void }> = new Map()
@@ -162,12 +163,13 @@ export class App {
 	private readonly server: http.Server
 	private readonly connections: Set<net.Socket> = new Set()
 
-	public sessions: Session[] = []
+	// public sessions: Session[] = []
 
 	private constructor(
 		readonly multihash: string,
 		readonly database: sqlite.Database,
 		readonly feed: Feed,
+		readonly hyperbee: HyperBee,
 		readonly worker: Worker,
 		readonly actionPort: MessagePort,
 		readonly modelPort: MessagePort,
@@ -188,24 +190,24 @@ export class App {
 
 			tables.push(`CREATE TABLE IF NOT EXISTS ${name} (${columns.join(", ")});`)
 		}
-		tables.push(
-			"CREATE TABLE IF NOT EXISTS _sessions " +
-				"(session_public_key TEXT PRIMARY KEY NOT NULL, origin TEXT NOT NULL, " +
-				"signature TEXT NOT NULL, payload TEXT NOT NULL);"
-		)
+		// tables.push(
+		// 	"CREATE TABLE IF NOT EXISTS _sessions " +
+		// 		"(session_public_key TEXT PRIMARY KEY NOT NULL, origin TEXT NOT NULL, " +
+		// 		"signature TEXT NOT NULL, payload TEXT NOT NULL);"
+		// )
 
 		this.database.exec(tables.join("\n"))
 
-		// Prepare session archive statements
-		const addSession = this.database.prepare(
-			"INSERT INTO _sessions (origin, signature, payload, session_public_key) " +
-				"VALUES (:from, :signature, :payload, :session_public_key)"
-		)
+		// // Prepare session archive statements
+		// const addSession = this.database.prepare(
+		// 	"INSERT INTO _sessions (origin, signature, payload, session_public_key) " +
+		// 		"VALUES (:from, :signature, :payload, :session_public_key)"
+		// )
 
 		this.statements = {
 			routes: {},
 			models: {},
-			sessions: { add: addSession },
+			// sessions: { add: addSession },
 		}
 
 		// Prepare route statements
@@ -230,17 +232,17 @@ export class App {
 			}
 		}
 
-		// Restore sessions from archive table
-		const sessions = this.database
-			.prepare("SELECT origin AS 'from', signature, payload, session_public_key FROM _sessions")
-			.all()
-		sessions.forEach((session) => {
-			if (!sessionType.is(session)) {
-				console.log("Skipped invalid archived session:", session)
-				return
-			}
-			this.sessions.push(session)
-		})
+		// // Restore sessions from archive table
+		// const sessions = this.database
+		// 	.prepare("SELECT origin AS 'from', signature, payload, session_public_key FROM _sessions")
+		// 	.all()
+		// sessions.forEach((session) => {
+		// 	if (!sessionType.is(session)) {
+		// 		console.log("Skipped invalid archived session:", session)
+		// 		return
+		// 	}
+		// 	this.sessions.push(session)
+		// })
 
 		// Attach model message listener
 		this.modelPort.on("message", (message) => {
@@ -283,6 +285,46 @@ export class App {
 			this.connections.add(socket)
 			socket.on("close", () => this.connections.delete(socket))
 		})
+	}
+
+	private async *createPrefixStream(prefix: string, options: { limit?: number }): AsyncIterable<[string, string]> {
+		const limit = options.limit === undefined || options.limit === -1 ? Infinity : options.limit
+		if (limit === 0) {
+			return
+		}
+
+		const deletedKeys = new Set<string>()
+
+		let n = 0
+		for await (const entry of this.hyperbee.createHistoryStream<string, string>({ reverse: true })) {
+			if (entry.key.startsWith(prefix)) {
+				if (entry.type === "del") {
+					deletedKeys.add(entry.key)
+				} else if (entry.type === "put") {
+					if (deletedKeys.has(entry.key)) {
+						continue
+					} else {
+						yield [entry.key, entry.value]
+						n++
+						if (n >= limit) {
+							return
+						}
+					}
+				}
+			}
+		}
+	}
+
+	public async *sessions(options: { limit?: number } = {}): AsyncIterable<[string, Session]> {
+		for await (const [key, value] of this.createPrefixStream("s:", options)) {
+			yield [key, JSON.parse(value)]
+		}
+	}
+
+	public async *actions(options: { limit?: number } = {}): AsyncIterable<[string, Action]> {
+		for await (const [key, value] of this.createPrefixStream("a:", options)) {
+			yield [key, JSON.parse(value)]
+		}
 	}
 
 	private handleModelMessage(message: any) {
@@ -372,8 +414,8 @@ export class App {
 	 * Create a new session.
 	 */
 	async session(session: Session) {
-		const payload = JSON.parse(session.payload)
 		assert(sessionType.is(session), "invalid session")
+		const payload = JSON.parse(session.payload)
 		assert(sessionPayloadType.is(payload), "invalid session payload")
 		assert(payload.from === session.from, "session signed by wrong address")
 		assert(payload.spec === this.multihash, "session signed for wrong spec")
@@ -381,8 +423,8 @@ export class App {
 		const verifiedAddress = ethers.utils.verifyMessage(session.payload, session.signature)
 		assert(session.from === verifiedAddress, "session signed by wrong address")
 
-		this.sessions.push(session)
-		this.statements.sessions.add.run({ ...session })
+		// const id = crypto.createHash("sha256").update(session.signature).digest("hex")
+		await this.hyperbee.put(getSessionKey(session.session_public_key), JSON.stringify(session))
 	}
 
 	/**
@@ -404,9 +446,13 @@ export class App {
 		 * It is assumed that any session found in `this.sessions` is valid.
 		 */
 		if (action.session !== null) {
-			const session = this.sessions.find((s) => s.session_public_key === action.session)
-
-			assert(session !== undefined, "action signed by invalid session")
+			// TODO: VERIFY THAT THE SESSION HAS NOT EXPIRED
+			// const session = this.sessions.find((s) => s.session_public_key === action.session)
+			const record = await this.hyperbee.get(getSessionKey(action.session))
+			assert(record !== null, "action signed by invalid session")
+			assert(typeof record.value === "string", "got invalid session from HyperBee")
+			const session = JSON.parse(record.value)
+			assert(sessionType.is(session), "got invalid session from HyperBee")
 			assert(action.from === payload.from, "action signed by invalid session")
 			assert(action.from === session.from, "action signed by invalid session")
 			assert(action.session === session.session_public_key, "action signed by invalid session")
@@ -430,16 +476,8 @@ export class App {
 			this.actionPort.postMessage({ id, action: payload })
 		})
 
-		// Append to hypercore
-		await new Promise<void>((resolve, reject) => {
-			this.feed.append(action, (err, seq) => {
-				console.log("appended to hypercore", seq)
-				if (err === null) {
-					resolve()
-				} else {
-					reject(err)
-				}
-			})
-		})
+		// Insert into hyperbee
+		const key = getActionKey(action.signature)
+		await this.hyperbee.put(key, JSON.stringify(action))
 	}
 }
