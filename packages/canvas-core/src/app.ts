@@ -3,6 +3,7 @@ import path from "path"
 import assert from "assert"
 import crypto from "crypto"
 import { getQuickJS } from "quickjs-emscripten"
+import chalk from "chalk"
 import type net from "net"
 import type http from "http"
 
@@ -12,6 +13,7 @@ import bodyParser from "body-parser"
 import { StatusCodes } from "http-status-codes"
 
 import hypercore, { Feed } from "hypercore"
+import { Client as HyperspaceClient, Server as HyperspaceServer } from "hyperspace"
 import HyperBee from "hyperbee"
 import Database, * as sqlite from "better-sqlite3"
 import { ethers } from "ethers"
@@ -34,9 +36,16 @@ const modelMessageTree = t.record(t.string, modelMessageArray)
 
 // Don't use the App constructor directly, use the static App.initialize method instead
 export class App {
-	static async initialize(options: { path: string; multihash: string; port?: number; ipfs?: IPFSHTTPClient }) {
+	static async initialize(options: {
+		path: string
+		multihash: string
+		port?: number
+		ipfs?: IPFSHTTPClient
+		peers?: string[]
+	}) {
 		const ipfs = options.ipfs || createIPFSHTTPClient()
 		const handle = options.port || path.resolve(options.path, "api.sock")
+		const peers = options.peers || []
 
 		// App.initialize does the preliminary *async* tasks of starting an app:
 		// - creating the app directory and copying spec.js if necessary
@@ -51,12 +60,15 @@ export class App {
 		// - preparing the model and action statements
 		// - attaching listeners to the message ports.
 
-		console.log("initializing", options.multihash)
+		console.log(chalk.green("Initializing", options.multihash))
 		const { pathname } = new URL(import.meta.url)
 		const workerPath = path.resolve(pathname, "..", "../worker.js")
 		const workerCode = fs.readFileSync(workerPath).toString()
 
 		// create directory at appPath if it doesn't exist already
+		if (!fs.existsSync("./apps")) {
+			fs.mkdirSync("./apps")
+		}
 		const appPath = path.resolve(options.path)
 		if (!fs.existsSync(appPath)) {
 			fs.mkdirSync(appPath)
@@ -116,11 +128,53 @@ export class App {
 		// TODO: typecheck for models, routes, and actionParameters
 
 		const hypercorePath = path.resolve(appPath, "hypercore")
-		const feed = hypercore(hypercorePath, { createIfMissing: true, overwrite: false })
+
+		const serverPort = 9000 + Math.round(Math.random() * 1000)
+		const localServer = new HyperspaceServer({
+			storage: hypercorePath,
+			port: serverPort,
+		})
+		await localServer.ready()
+		localServer.on("client-open", () => {
+			// Only announce peers other than the local instance
+			if (localServer.networker.peers.size === 0) return
+			console.log(chalk.green("Connected new peer"))
+		})
+		localServer.on("client-close", () => {
+			console.log(chalk.green("Disconnected peer"))
+		})
+
+		const localClient = new HyperspaceClient({
+			port: serverPort,
+		})
+		const localStore = localClient.corestore()
+		const feed = localStore.get({ createIfMissing: true, overwrite: false })
 
 		const hyperbee = new HyperBee(feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
 
 		await new Promise<void>((resolve) => feed.on("ready", () => resolve()))
+		await hyperbee.ready()
+
+		console.log(chalk.green(`serving views at localhost:${serverPort}/${feed.key?.toString("hex")}`))
+
+		await Promise.all(
+			peers.map(
+				(peer: string) =>
+					new Promise<void>(async (resolve, reject) => {
+						const [remoteHost, remotePort] = peer.split("/")[0].split(":")
+						const remoteKey = peer.split("/")[1]
+						const remoteClient = new HyperspaceClient({
+							host: remoteHost,
+							port: remotePort,
+						})
+						const core = localClient.corestore().get({
+							key: remoteKey,
+						})
+						core.on("ready", () => resolve()).on("error", (err: any) => reject(err))
+					})
+			)
+		)
+		console.log(chalk.green(`Initialized with ${peers.length} upstream peers`))
 
 		const databasePath = path.resolve(appPath, "db.sqlite")
 		const database = new Database(databasePath)

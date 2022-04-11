@@ -3,7 +3,7 @@ import path from "node:path"
 
 import { App } from "canvas-core"
 
-export const command = "run <multihash> [--path=apps]"
+export const command = "run <multihash> [--path=apps] [--peer=localhost:9000/abc...]"
 export const desc = "Launch a Canvas app"
 
 export const builder = (yargs) => {
@@ -23,9 +23,13 @@ export const builder = (yargs) => {
 			default: 8000,
 			desc: "Port to bind the core API",
 		})
+		.option("peer", {
+			type: "string",
+			desc: "Peers to connect to",
+		})
 }
 
 export async function handler(args) {
 	const appPath = path.resolve(args.path, args.multihash)
-	await App.initialize({ multihash: args.multihash, path: appPath, port: args.port })
+	await App.initialize({ multihash: args.multihash, path: appPath, port: args.port, peers: [args.peer] })
 }
