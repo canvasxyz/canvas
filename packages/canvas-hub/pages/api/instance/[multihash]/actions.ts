@@ -1,10 +1,11 @@
 import crypto from "node:crypto"
+import assert from "node:assert"
 
 import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
-import { Action, actionType, sessionType } from "canvas-core"
+import { Action, actionType } from "canvas-core"
 
 import * as t from "io-ts"
 
@@ -25,7 +26,7 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	}
 
 	const actions: [string, Action][] = []
-	for await (const entry of app.actions({ limit: 10 })) {
+	for await (const entry of app.getActionStream({ limit: 10 })) {
 		actions.push(entry)
 	}
 

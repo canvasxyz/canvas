@@ -3,7 +3,6 @@ import path from "path"
 import assert from "assert"
 import crypto from "crypto"
 import { getQuickJS } from "quickjs-emscripten"
-import { Worker, MessageChannel, MessagePort } from "worker_threads"
 import type net from "net"
 import type http from "http"
 
@@ -20,14 +19,9 @@ import * as t from "io-ts"
 
 import { IPFSHTTPClient, create as createIPFSHTTPClient } from "ipfs-http-client"
 
-import { Model, modelType, getColumnType } from "./models.js"
+import { Model, getColumnType } from "./models.js"
 import { Action, actionType, actionPayloadType, Session, sessionType, sessionPayloadType } from "./actions.js"
 import { getActionKey, getSessionKey } from "./keys.js"
-
-const actionMessage = t.union([
-	t.type({ id: t.string, status: t.literal("success") }),
-	t.type({ id: t.string, status: t.literal("failure"), error: t.string }),
-])
 
 const modelMessage = t.type({
 	timestamp: t.number,
@@ -137,14 +131,11 @@ export class App {
 	private readonly statements: {
 		routes: Record<string, sqlite.Statement>
 		models: Record<string, { set: sqlite.Statement }>
-		// sessions: { add: sqlite.Statement }
 	}
 
 	private api?: express.Express
 	private server?: http.Server
 	private readonly connections: Set<net.Socket> = new Set()
-
-	// public sessions: Session[] = []
 
 	private constructor(
 		readonly multihash: string,
@@ -174,24 +165,12 @@ export class App {
 
 			tables.push(`CREATE TABLE IF NOT EXISTS ${name} (${columns.join(", ")});`)
 		}
-		// tables.push(
-		// 	"CREATE TABLE IF NOT EXISTS _sessions " +
-		// 		"(session_public_key TEXT PRIMARY KEY NOT NULL, origin TEXT NOT NULL, " +
-		// 		"signature TEXT NOT NULL, payload TEXT NOT NULL);"
-		// )
 
 		this.database.exec(tables.join("\n"))
-
-		// // Prepare session archive statements
-		// const addSession = this.database.prepare(
-		// 	"INSERT INTO _sessions (origin, signature, payload, session_public_key) " +
-		// 		"VALUES (:from, :signature, :payload, :session_public_key)"
-		// )
 
 		this.statements = {
 			routes: {},
 			models: {},
-			// sessions: { add: addSession },
 		}
 
 		// Prepare route statements
@@ -215,18 +194,6 @@ export class App {
 				),
 			}
 		}
-
-		// // Restore sessions from archive table
-		// const sessions = this.database
-		// 	.prepare("SELECT origin AS 'from', signature, payload, session_public_key FROM _sessions")
-		// 	.all()
-		// sessions.forEach((session) => {
-		// 	if (!sessionType.is(session)) {
-		// 		console.log("Skipped invalid archived session:", session)
-		// 		return
-		// 	}
-		// 	this.sessions.push(session)
-		// })
 
 		// Create the API server
 		import("express")
@@ -328,15 +295,15 @@ export class App {
 		}
 	}
 
-	public async *sessions(options: { limit?: number } = {}): AsyncIterable<[string, Session]> {
+	public async *getSessionStream(options: { limit?: number } = {}): AsyncIterable<[string, Session]> {
 		for await (const [key, value] of this.createPrefixStream("s:", options)) {
-			yield [key, JSON.parse(value)]
+			yield [key.replace(/^s:/, "0x"), JSON.parse(value)]
 		}
 	}
 
-	public async *actions(options: { limit?: number } = {}): AsyncIterable<[string, Action]> {
+	public async *getActionStream(options: { limit?: number } = {}): AsyncIterable<[string, Action]> {
 		for await (const [key, value] of this.createPrefixStream("a:", options)) {
-			yield [key, JSON.parse(value)]
+			yield [key.replace(/^a:/, "0x"), JSON.parse(value)]
 		}
 	}
 
@@ -437,48 +404,37 @@ export class App {
 
 		const id = crypto.createHash("sha256").update(action.signature).digest("hex")
 
-		// Await response from worker
-		await new Promise<void>((resolve, reject) => {
-			const result = this.vm.evalCode(`apply(${JSON.stringify(id)}, ${JSON.stringify(payload)});`)
+		const result = this.vm.evalCode(`apply(${JSON.stringify(id)}, ${JSON.stringify(payload)});`)
 
-			if (result.error) {
-				const error = this.vm.dump(result.error)
-				result.error.dispose()
-				console.log("Action execution failed:", error.message)
-				reject(error)
-				return
-			}
+		if (result.error) {
+			const error = this.vm.dump(result.error)
+			result.error.dispose()
+			throw new Error(`Action execution failed: ${error.message}`)
+		}
 
-			// Worker returns a list of updates to models, check them now
-			const updates = this.vm.dump(result.value)
-			result.value.dispose()
+		// Worker returns a list of updates to models, check them now
+		const updates = this.vm.dump(result.value)
+		result.value.dispose()
 
-			// TODO: this validation should really happen in two stages since message
-			// contains a mix of spec-provided and worker-provided data. if the worker-
-			// provided data is invalid we should throw, but if the spec-provided data
-			// is invalid we should try to find the call pool callback and reject it.
-			if (!modelMessageTree.is(updates)) {
-				console.error(updates)
-				throw new Error("internal error: received invalid model message from worker")
-			}
+		// TODO: this validation should really happen in two stages since message
+		// contains a mix of spec-provided and worker-provided data. if the worker-
+		// provided data is invalid we should throw, but if the spec-provided data
+		// is invalid we should try to find the call pool callback and reject it.
+		if (!modelMessageTree.is(updates)) {
+			console.error(updates)
+			throw new Error("internal error: received invalid model message from worker")
+		}
 
-			// Execute the updates
-			Object.entries(updates).forEach(([table, tableUpdates]) => {
-				tableUpdates.forEach((message) => {
-					const { timestamp, name, id, value } = message
-					try {
-						if (!(name in this.statements.models)) {
-							throw new Error(`${JSON.stringify(name)} is not a model name`)
-						}
-						const model = this.statements.models[name]
-						model.set.run({ ...value, id, timestamp })
-					} catch (err) {
-						reject(err instanceof Error ? err : new Error((err as any).toString()))
-					}
-				})
+		// Execute the updates
+		Object.entries(updates).forEach(([table, tableUpdates]) => {
+			tableUpdates.forEach((message) => {
+				const { timestamp, name, id, value } = message
+				if (!(name in this.statements.models)) {
+					throw new Error(`${JSON.stringify(name)} is not a model name`)
+				}
+				const model = this.statements.models[name]
+				model.set.run({ ...value, id, timestamp })
 			})
-
-			resolve()
 		})
 
 		// Insert into hyperbee

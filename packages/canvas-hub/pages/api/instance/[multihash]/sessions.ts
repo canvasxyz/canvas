@@ -15,7 +15,7 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	}
 
 	const sessions: [string, Session][] = []
-	for await (const entry of app.sessions({ limit: 10 })) {
+	for await (const entry of app.getSessionStream({ limit: 10 })) {
 		sessions.push(entry)
 	}
 
