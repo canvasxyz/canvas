@@ -5,7 +5,7 @@ import useSWR from "swr"
 import type { Session } from "canvas-core"
 
 export default function Sessions(props: { multihash: string; onSelect: Function }) {
-	const { data, error } = useSWR<Session[]>(`/api/instance/${props.multihash}/sessions`)
+	const { data, error } = useSWR<[string, Session][]>(`/api/instance/${props.multihash}/sessions`)
 
 	return (
 		<div className="border border-gray-300 rounded overflow-scroll bg-gray-50 pb-3 overflow-x-scroll">
@@ -20,10 +20,10 @@ export default function Sessions(props: { multihash: string; onSelect: Function 
 					</tr>
 				</thead>
 				<tbody>
-					{(data || []).map((session, index) => {
+					{(data || []).map(([key, session]) => {
 						const { timestamp, metadata, session_public_key } = JSON.parse(session.payload)
 						return (
-							<tr key={index}>
+							<tr key={key}>
 								<td className="pl-3 pt-3">
 									<input
 										type="radio"

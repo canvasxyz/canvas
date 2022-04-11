@@ -28,7 +28,7 @@ export default function Actions(props: { multihash: string }) {
 						}
 						return (
 							<tr key={index}>
-								<td className="pl-4 pr-1 pt-3 font-mono text-xs">{id.slice(0, 4)}&hellip;</td>
+								<td className="pl-4 pr-1 pt-3 font-mono text-xs">{id.slice(0, 6)}&hellip;</td>
 								<td className="pl-4 pr-1 pt-3 font-mono text-xs">{payload.call}</td>
 								<td className="pl-4 pr-1 pt-3 font-mono text-xs whitespace-pre">{JSON.stringify(payload.args)}</td>
 								<td className="pl-4 pr-4 pt-3 font-mono text-xs">{payload.timestamp}</td>

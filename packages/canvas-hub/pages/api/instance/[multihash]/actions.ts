@@ -1,10 +1,11 @@
 import crypto from "node:crypto"
+import assert from "node:assert"
 
 import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
-import { Action, actionType, sessionType } from "canvas-core"
+import { Action, actionType } from "canvas-core"
 
 import * as t from "io-ts"
 
@@ -24,22 +25,10 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 		return res.status(StatusCodes.OK).json([])
 	}
 
-	const actions = await new Promise<[string, Action][]>((resolve, reject) => {
-		const start = Math.max(app.feed.length - 20, 0)
-		app.feed.getBatch(start, app.feed.length, (err, data) => {
-			if (err !== null) {
-				return reject(err)
-			}
-
-			const filteredData = data.filter((d) => !sessionType.is(d))
-
-			if (!actionArray.is(filteredData)) {
-				reject(new Error("got invalid data from hypercore feed"))
-			} else {
-				resolve(filteredData.map((d) => [crypto.createHash("sha256").update(d.signature).digest("hex"), d]))
-			}
-		})
-	})
+	const actions: [string, Action][] = []
+	for await (const entry of app.getActionStream({ limit: 10 })) {
+		actions.push(entry)
+	}
 
 	return res.status(StatusCodes.OK).json(actions)
 }
