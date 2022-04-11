@@ -1,5 +1,5 @@
-import * as init from "./init.js"
+import * as download from "./download.js"
 import * as run from "./run.js"
-import * as action from "./action/index.js"
-import * as session from "./session/index.js"
-export const commands = [init, run, action, session]
+import * as actions from "./actions/index.js"
+import * as sessions from "./sessions/index.js"
+export const commands = [download, run, actions, sessions]

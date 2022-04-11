@@ -72,8 +72,8 @@ You must build the CLI before it will work (either running the dev server, runni
 The basic CLI commands are
 
 ```
-canvas init --cid QmFoo <path>
-canvas run --port 8000 <path>
-canvas action ls <path>
-canvas session ls <path>
+canvas download QmFoo
+canvas run QmFoo --port 8000
+canvas action ls QmFoo
+canvas session ls QmFoo
 ```
