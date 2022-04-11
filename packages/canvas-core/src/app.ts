@@ -42,10 +42,12 @@ export class App {
 		port?: number
 		ipfs?: IPFSHTTPClient
 		peers?: string[]
+		noServer?: boolean
 	}) {
 		const ipfs = options.ipfs || createIPFSHTTPClient()
 		const handle = options.port || path.resolve(options.path, "api.sock")
 		const peers = options.peers || []
+		const noServer = options.noServer || false
 
 		// App.initialize does the preliminary *async* tasks of starting an app:
 		// - creating the app directory and copying spec.js if necessary
@@ -179,7 +181,19 @@ export class App {
 		const databasePath = path.resolve(appPath, "db.sqlite")
 		const database = new Database(databasePath)
 
-		return new App(options.multihash, database, feed, hyperbee, runtime, vm, routes, models, actionParameters, handle)
+		return new App(
+			options.multihash,
+			database,
+			feed,
+			hyperbee,
+			runtime,
+			vm,
+			routes,
+			models,
+			actionParameters,
+			handle,
+			noServer
+		)
 	}
 
 	private readonly statements: {
@@ -201,7 +215,8 @@ export class App {
 		readonly routes: Record<string, string>,
 		readonly models: Record<string, Model>,
 		readonly actionParameters: Record<string, string[]>,
-		readonly handle: number | string
+		readonly handle: number | string,
+		readonly noServer: boolean
 	) {
 		// Initialize fields
 		this.vm = vm
@@ -250,6 +265,9 @@ export class App {
 		}
 
 		// Create the API server
+		if (noServer) {
+			return
+		}
 		import("express")
 			.then(({ default: express }) => {
 				this.api = express()

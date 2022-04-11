@@ -3,7 +3,7 @@ import path from "node:path"
 
 import { App } from "canvas-core"
 
-export const command = "run <multihash> [--path=apps] [--peer=localhost:9000/abc...]"
+export const command = "run <multihash> [--path=apps] [--peer=localhost:9000/abc...] [--noserver]"
 export const desc = "Launch a Canvas app"
 
 export const builder = (yargs) => {
@@ -27,9 +27,19 @@ export const builder = (yargs) => {
 			type: "string",
 			desc: "Peers to connect to",
 		})
+		.option("noserver", {
+			type: "boolean",
+			desc: "Don't bind an Express server to provide view APIs",
+		})
 }
 
 export async function handler(args) {
 	const appPath = path.resolve(args.path, args.multihash)
-	await App.initialize({ multihash: args.multihash, path: appPath, port: args.port, peers: [args.peer] })
+	await App.initialize({
+		multihash: args.multihash,
+		path: appPath,
+		port: args.port,
+		peers: [args.peer],
+		noServer: args.noserver,
+	})
 }
