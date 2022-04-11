@@ -4,9 +4,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
-    "dev": "tsc -w"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "hyperbee": "^1.8.0",
