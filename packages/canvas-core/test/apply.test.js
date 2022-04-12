@@ -13,7 +13,7 @@ const from = await signer.getAddress()
 
 test("Apply action", async (t) => {
 	const multihash = "QmMultihash"
-	const core = BrowserCore.initialize(multihash, spec, { storage: randomAccessMemory })
+	const core = await BrowserCore.initialize(multihash, spec, { storage: randomAccessMemory })
 
 	const timestamp = Date.now()
 
