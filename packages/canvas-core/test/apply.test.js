@@ -4,12 +4,6 @@ import fs from "node:fs"
 
 import { ethers } from "ethers"
 import randomAccessMemory from "random-access-memory"
-import initSqlJs from "sql.js"
-import { getQuickJS } from "quickjs-emscripten"
-
-const SQL = await initSqlJs()
-const quickJS = await getQuickJS()
-
 import { BrowserCore } from "../lib/core-browser.js"
 
 const spec = fs.readFileSync("../../examples/reddit.canvas.js", "utf-8")
@@ -19,7 +13,7 @@ const from = await signer.getAddress()
 
 test("Apply action", async (t) => {
 	const multihash = "QmMultihash"
-	const core = new BrowserCore(multihash, spec, { storage: randomAccessMemory, SQL, quickJS })
+	const core = BrowserCore.initialize(multihash, spec, { storage: randomAccessMemory })
 
 	const timestamp = Date.now()
 

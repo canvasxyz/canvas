@@ -52,7 +52,6 @@ export class NativeCore extends Core {
 			spec,
 			{
 				storage: (file: string) => randomAccessFile(path.resolve(options.directory, "hypercore", file)),
-				quickJS: options.quickJS,
 				peers: options.peers,
 			},
 			hyperspace,
