@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@types/sql.js": "^1.4.3",
-    "@types/varint": "^6.0.0",
     "better-sqlite3": "^7.5.0",
     "body-parse": "^0.1.0",
     "buffer": "^6.0.3",
