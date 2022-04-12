@@ -19,6 +19,7 @@ export class BrowserCore extends Core {
 			SQL: SqlJsStatic
 			quickJS: QuickJSWASMModule
 			storage: (file: string) => RandomAccessStorage
+			peers?: string[]
 		}
 	) {
 		super(multihash, spec, options)

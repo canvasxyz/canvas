@@ -19,11 +19,13 @@ export class NativeCore extends Core {
 			directory: string
 			port?: number
 			quickJS: QuickJSWASMModule
+			peers?: string[]
 		}
 	) {
 		super(multihash, spec, {
 			storage: (file: string) => randomAccessFile(path.resolve(options.directory, "hypercore", file)),
 			quickJS: options.quickJS,
+			peers: options.peers,
 		})
 
 		this.database = new Database(path.resolve(options.directory, "db.sqlite"))

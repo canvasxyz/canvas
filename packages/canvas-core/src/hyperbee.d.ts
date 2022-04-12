@@ -37,6 +37,15 @@ declare module "hyperbee" {
 		limit: number
 	}
 
+	interface CreateDiffStreamOptions {
+		gt: Key
+		gte: Key
+		lt: Key
+		lte: Key
+		reverse: boolean
+		limit: number
+	}
+
 	export default class HyperBee {
 		constructor(feed: Feed, options?: HyperBeeOptions)
 
@@ -46,6 +55,8 @@ declare module "hyperbee" {
 		get<K extends Key = Key, V extends Value = Value>(key: K): Promise<null | { seq: number; key: K; value: V }>
 		del(key: Key): Promise<void>
 		batch(): Batch
+		ready(): Promise<void>
+		checkout(version: number): HyperBee
 
 		createReadStream<K extends Key = Key, V extends Value = Value>(
 			options?: Partial<CreateReadStreamOptions>
@@ -55,5 +66,10 @@ declare module "hyperbee" {
 			options?: Partial<CreateHistoryStreamOptions>
 		): stream.Readable &
 			AsyncIterable<{ type: "put"; seq: number; key: K; value: V } | { type: "del"; seq: number; key: K; value: null }>
+
+		createDiffStream<K extends Key = Key, V extends Value = Value>(
+			otherVersion: HyperBee,
+			options?: Partial<CreateDiffStreamOptions>
+		): stream.Readable & AsyncIterable<{ seq: number; key: K; value: { left: V | null; right: V | null } }>
 	}
 }

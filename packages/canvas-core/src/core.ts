@@ -1,10 +1,12 @@
 import { Buffer } from "buffer"
 import { ethers } from "ethers"
+import chalk from "chalk"
 
 import type { QuickJSWASMModule, QuickJSRuntime, QuickJSContext, QuickJSHandle } from "quickjs-emscripten"
 import type { RandomAccessStorage } from "random-access-storage"
 import HyperBee from "hyperbee"
 import hypercore, { Feed } from "hypercore"
+import { Client as HyperspaceClient, Server as HyperspaceServer, CoreStore } from "hyperspace"
 
 import * as t from "io-ts"
 
@@ -35,6 +37,9 @@ export abstract class Core {
 
 	public readonly feed: Feed
 	public readonly hyperbee: HyperBee
+	public readonly hyperspaceServer: HyperspaceServer
+	public readonly hyperspaceClient: HyperspaceClient
+	public readonly peerstore: CoreStore
 
 	private readonly runtime: QuickJSRuntime
 	private readonly vm: QuickJSContext
@@ -49,9 +54,20 @@ export abstract class Core {
 	constructor(
 		readonly multihash: string,
 		spec: string,
-		options: { storage: (file: string) => RandomAccessStorage; quickJS: QuickJSWASMModule }
+		options: {
+			storage: (file: string) => RandomAccessStorage
+			quickJS: QuickJSWASMModule
+			peers?: string[]
+		}
 	) {
-		this.feed = hypercore(options.storage, { createIfMissing: true, overwrite: false })
+		const serverPort = 9000 + Math.round(Math.random() * 1000)
+
+		this.hyperspaceServer = new HyperspaceServer({ storage: options.storage, port: serverPort })
+		// await this.hyperspaceServer.ready() // wait for server to be ready before initializing client?
+		this.hyperspaceClient = new HyperspaceClient({ port: serverPort })
+		this.peerstore = this.hyperspaceClient.corestore()
+
+		this.feed = this.peerstore.get({ createIfMissing: true, overwrite: false })
 		this.hyperbee = new HyperBee(this.feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
 
 		this.runtime = options.quickJS.newRuntime()
@@ -75,6 +91,44 @@ export abstract class Core {
 		this.initializeModels()
 		this.initializeRoutes()
 		this.initializeActions()
+
+		if (options.peers !== undefined) {
+			this.initializePeering(serverPort, options.peers)
+		}
+	}
+
+	private async initializePeering(serverPort: number, peers: string[]) {
+		// Bind logging
+		this.hyperspaceServer.on("client-open", () => {
+			const numPeers = this.hyperspaceServer.networker.peers.size
+			if (numPeers === 0) return // Don't announce the local peer
+			console.log(chalk.green("Connected new peer"))
+		})
+		this.hyperspaceServer.on("client-close", () => {
+			console.log(chalk.green("Disconnected peer"))
+		})
+
+		await this.hyperbee.ready()
+
+		return Promise.all(
+			peers.map(
+				(peer: string) =>
+					new Promise<void>(async (resolve, reject) => {
+						const [remoteHost, remotePort] = peer.split("/")[0].split(":")
+						const remoteKey = peer.split("/")[1]
+						const remoteClient = new HyperspaceClient({
+							host: remoteHost,
+							port: remotePort,
+						})
+						// should we use localClient / this.peerstore?
+						const core = remoteClient.corestore().get({ key: remoteKey })
+						core.on("ready", () => resolve()).on("error", (err: any) => reject(err))
+					})
+			)
+		).then(() => {
+			console.log(chalk.green(`Initialized ${peers.length} upstream peers`))
+			console.log(chalk.green(`Open to connections at localhost:${serverPort}/${this.multihash}`))
+		})
 	}
 
 	private initializeGlobalVariables() {
