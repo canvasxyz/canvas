@@ -67,7 +67,10 @@ export abstract class Core {
 		this.hyperspaceClient = new HyperspaceClient({ port: serverPort })
 		this.peerstore = this.hyperspaceClient.corestore()
 
-		this.feed = this.peerstore.get({ createIfMissing: true, overwrite: false })
+		// NOTE: initializing the hypercore from the peerstore will fail because the server has
+		// not started up yet.
+		this.feed = hypercore(options.storage, { createIfMissing: true, overwrite: false })
+		//this.feed = this.peerstore.get({ createIfMissing: true, overwrite: false })
 		this.hyperbee = new HyperBee(this.feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
 
 		this.runtime = options.quickJS.newRuntime()
