@@ -31,7 +31,7 @@ declare module "hyperspace" {
 	 * Hyperspace server
 	 */
 	interface ServerOptions {
-		storage: string
+		storage: string | ((file: string) => RandomAccessStorage)
 		host?: string
 		port?: string | number
 	}
@@ -40,6 +40,7 @@ declare module "hyperspace" {
 		constructor(options?: ServerOptions)
 
 		ready(): Promise<void>
+		networker: any
 		on(event: "client-open" | "client-close", callback: (data: any) => void): Server
 	}
 }

@@ -7,14 +7,13 @@ import * as t from "io-ts"
  * ie string values that we use to set the sqlite schema and coerce
  * action arguments.
  */
-export type ModelType = "boolean" | "string" | "integer" | "float" | "bytes" | "datetime"
+export type ModelType = "boolean" | "string" | "integer" | "float" | "datetime"
 
 export const modelTypeType: t.Type<ModelType> = t.union([
 	t.literal("boolean"),
 	t.literal("string"),
 	t.literal("integer"),
 	t.literal("float"),
-	t.literal("bytes"),
 	t.literal("datetime"),
 ])
 
@@ -23,16 +22,9 @@ export const modelTypeType: t.Type<ModelType> = t.union([
  * a TypeScript type that describes the possible JavaScript values that instantiate
  * the various ModelType options.
  */
-export type ModelValue = null | boolean | number | string | Buffer
+export type ModelValue = null | boolean | number | string
 
-const bufferType = new t.Type(
-	"Buffer",
-	Buffer.isBuffer,
-	(i, context) => (Buffer.isBuffer(i) ? t.success(i) : t.failure(i, context)),
-	t.identity
-)
-
-export const modelValueType = t.union([t.null, t.boolean, t.number, t.string, bufferType])
+export const modelValueType = t.union([t.null, t.boolean, t.number, t.string])
 
 export type Model = Record<string, ModelType>
 
@@ -47,8 +39,6 @@ export function validateType(type: ModelType, value: ModelValue) {
 		assert(Number.isSafeInteger(value), "invalid type: expected integer")
 	} else if (type === "float") {
 		assert(typeof value === "number", "invalid type: expected number")
-	} else if (type === "bytes") {
-		assert(value instanceof Uint8Array, "invalid type: expected Uint8Array")
 	} else if (type === "datetime") {
 		assert(typeof value === "number", "invalid type: expected number")
 	} else {
@@ -67,8 +57,6 @@ export function getColumnType(type: ModelType): string {
 			return "INTEGER"
 		case "float":
 			return "FLOAT"
-		case "bytes":
-			return "BLOB"
 		case "datetime":
 			return "INTEGER"
 		default:

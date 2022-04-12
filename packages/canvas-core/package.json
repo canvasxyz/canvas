@@ -9,14 +9,16 @@
     "worker.js"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "ava",
     "build": "tsc",
     "dev": "tsc -w"
   },
   "dependencies": {
+    "@types/sql.js": "^1.4.3",
     "@types/varint": "^6.0.0",
     "better-sqlite3": "^7.5.0",
     "body-parse": "^0.1.0",
+    "buffer": "^6.0.3",
     "cors": "^2.8.5",
     "ethers": "^5.6.2",
     "express": "^4.17.3",
@@ -26,10 +28,16 @@
     "hypercore": "^9.12.0",
     "io-ts": "^2.2.16",
     "ipfs-http-client": "^56.0.2",
-    "quickjs-emscripten": "^0.20.0"
+    "quickjs-emscripten": "^0.20.0",
+    "random-access-file": "^2.2.1",
+    "random-access-idb": "^1.2.2",
+    "random-access-memory": "^4.0.0",
+    "random-access-storage": "^1.4.3",
+    "sql.js": "^1.6.2"
   },
   "devDependencies": {
     "@types/node": "^17.0.23",
+    "ava": "^4.2.0",
     "typescript": "^4.6.2"
   }
 }

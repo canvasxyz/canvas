@@ -15,7 +15,7 @@ declare module "hyperbee" {
 		get(key: Key): Promise<null | { seq: number; key: Key; value: Value }>
 		del(key: Key): Promise<void>
 		flush(): Promise<void>
-		destroy()
+		destroy(): void
 	}
 
 	interface CreateReadStreamOptions {
