@@ -1,4 +1,6 @@
 declare module "hypercore" {
+	import type { RandomAccessStorage } from "random-access-storage"
+
 	interface HypercoreOptions {
 		createIfMissing: boolean
 		overwrite: boolean
@@ -14,5 +16,8 @@ declare module "hypercore" {
 		close(callback: (err: null | Error) => void): void
 	}
 
-	export default function hypercore(storage: string, options?: Partial<HypercoreOptions>): Feed
+	export default function hypercore(
+		storage: string | ((file: string) => RandomAccessStorage),
+		options?: Partial<HypercoreOptions>
+	): Feed
 }

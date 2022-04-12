@@ -1,8 +1,10 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import { prisma, ipfs } from "./services"
-import { App, AppStatus } from "canvas-core"
+import { NativeCore } from "canvas-core"
+
+import { prisma, ipfs, quickJSPromise } from "./services"
+import { AppStatus } from "./status"
 
 const appDirectory = process.env.APP_DIRECTORY!
 
@@ -19,7 +21,7 @@ if (!fs.existsSync(appDirectory)) {
  * There's only one loader instance for the whole hub.
  */
 export class Loader {
-	public readonly apps = new Map<string, App>()
+	public readonly apps = new Map<string, NativeCore>()
 	public readonly status = new Map<string, AppStatus>()
 
 	constructor() {
@@ -55,17 +57,15 @@ export class Loader {
 		const appPath = path.resolve(appDirectory, multihash)
 
 		this.status.set(multihash, { status: "starting" })
-		await App.initialize({ multihash, path: appPath, ipfs, port })
-			.then((app) => {
-				const { models, actionParameters } = app
-				this.status.set(multihash, { status: "running", models, actionParameters })
-				this.apps.set(multihash, app)
-			})
-			.catch((err: Error) => {
-				this.status.set(multihash, { status: "failed", error: err.message })
-				// TODO: think about whether this should actually re-throw the error or not
-				throw err
-			})
+		const chunks: Uint8Array[] = []
+		for await (const chunk of ipfs.cat(multihash)) {
+			chunks.push(chunk)
+		}
+
+		const spec = Buffer.concat(chunks).toString("utf-8")
+		const quickJS = await quickJSPromise
+		const core = new NativeCore(multihash, spec, { quickJS, directory: appPath, port })
+		this.apps.set(multihash, core)
 	}
 
 	public async stop(multihash: string): Promise<void> {
@@ -74,7 +74,7 @@ export class Loader {
 			throw new Error("app not running")
 		}
 
-		await app.stop()
+		await app.close()
 		this.apps.delete(multihash)
 		this.status.delete(multihash)
 	}

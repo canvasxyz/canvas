@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
-import type { AppStatus } from "canvas-core"
+import { AppStatus } from "utils/server/status"
 
 export default async (req: NextApiRequest, res: NextApiResponse<AppStatus>) => {
 	if (req.method !== "GET") {
