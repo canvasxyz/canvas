@@ -1,9 +1,10 @@
 import path from "node:path"
 
+import { getQuickJS, QuickJSWASMModule } from "quickjs-emscripten"
+
 import { RandomAccessStorage } from "random-access-storage"
 import randomAccessFile from "random-access-file"
 import Database, * as sqlite from "better-sqlite3"
-import { QuickJSWASMModule } from "quickjs-emscripten"
 import { Client as HyperspaceClient, Server as HyperspaceServer, CoreStore } from "hyperspace"
 
 import { ModelValue } from "./models.js"
@@ -21,7 +22,6 @@ export class NativeCore extends Core {
 			directory: string
 			port?: number
 			storage?: (file: string) => RandomAccessStorage
-			quickJS: QuickJSWASMModule
 			peers?: string[]
 		}
 	) {
@@ -31,7 +31,8 @@ export class NativeCore extends Core {
 		const hyperspacePort = 9000 + Math.round(Math.random() * 1000)
 		const hyperspace = new HyperspaceServer({ storage, port: hyperspacePort })
 		await hyperspace.ready()
-		return new NativeCore(multihash, spec, { storage, ...options }, hyperspace, hyperspacePort)
+		const quickJS = await getQuickJS()
+		return new NativeCore(multihash, spec, { storage, ...options }, hyperspace, hyperspacePort, quickJS)
 	}
 
 	constructor(
@@ -40,11 +41,11 @@ export class NativeCore extends Core {
 		options: {
 			directory: string
 			port?: number
-			quickJS: QuickJSWASMModule
 			peers?: string[]
 		},
 		hyperspace: HyperspaceServer,
-		hyperspacePort: number
+		hyperspacePort: number,
+		quickJS: QuickJSWASMModule
 	) {
 		super(
 			multihash,
@@ -55,7 +56,8 @@ export class NativeCore extends Core {
 				peers: options.peers,
 			},
 			hyperspace,
-			hyperspacePort
+			hyperspacePort,
+			quickJS
 		)
 
 		this.database = new Database(path.resolve(options.directory, "db.sqlite"))

@@ -56,13 +56,13 @@ export abstract class Core {
 		spec: string,
 		options: {
 			storage: (file: string) => RandomAccessStorage
-			quickJS: QuickJSWASMModule
 			peers?: string[]
 		},
 		hyperspace: HyperspaceServer,
-		hyperspacePort: number
+		hyperspacePort: number,
+		quickJS: QuickJSWASMModule
 	) {
-		this.runtime = options.quickJS.newRuntime()
+		this.runtime = quickJS.newRuntime()
 
 		this.runtime.setMemoryLimit(1024 * 640) // 640kb memory limit
 		this.runtime.setModuleLoader((moduleName: string) => {

@@ -1,4 +1,4 @@
-import { QuickJSWASMModule } from "quickjs-emscripten"
+import { getQuickJS, QuickJSWASMModule } from "quickjs-emscripten"
 
 import { RandomAccessStorage } from "random-access-storage"
 import randomAccessIDB from "random-access-idb"
@@ -19,14 +19,15 @@ export class BrowserCore extends Core {
 		options: {
 			SQL: SqlJsStatic
 			storage: (file: string) => RandomAccessStorage
-			quickJS: QuickJSWASMModule
 			peers?: string[]
 		}
 	) {
 		const hyperspacePort = 9000 + Math.round(Math.random() * 1000)
 		const hyperspace = new HyperspaceServer({ storage: options.storage, port: hyperspacePort })
 		await hyperspace.ready()
-		return new BrowserCore(multihash, spec, options, hyperspace, hyperspacePort)
+
+		const quickJS = await getQuickJS()
+		return new BrowserCore(multihash, spec, options, hyperspace, hyperspacePort, quickJS)
 	}
 
 	constructor(
@@ -34,14 +35,14 @@ export class BrowserCore extends Core {
 		spec: string,
 		options: {
 			SQL: SqlJsStatic
-			quickJS: QuickJSWASMModule
 			storage: (file: string) => RandomAccessStorage
 			peers?: string[]
 		},
 		hyperspace: HyperspaceServer,
-		hyperspacePort: number
+		hyperspacePort: number,
+		quickJS: QuickJSWASMModule
 	) {
-		super(multihash, spec, options, hyperspace, hyperspacePort)
+		super(multihash, spec, options, hyperspace, hyperspacePort, quickJS)
 
 		this.database = new options.SQL.Database()
 

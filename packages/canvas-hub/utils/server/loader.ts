@@ -3,7 +3,7 @@ import path from "node:path"
 
 import { NativeCore } from "canvas-core"
 
-import { prisma, ipfs, quickJSPromise } from "./services"
+import { prisma, ipfs } from "./services"
 import { AppStatus } from "./status"
 
 const appDirectory = process.env.APP_DIRECTORY!
@@ -63,8 +63,7 @@ export class Loader {
 		}
 
 		const spec = Buffer.concat(chunks).toString("utf-8")
-		const quickJS = await quickJSPromise
-		const core = await NativeCore.initialize(multihash, spec, { quickJS, directory: appPath, port })
+		const core = await NativeCore.initialize(multihash, spec, { directory: appPath, port })
 		this.apps.set(multihash, core)
 	}
 
