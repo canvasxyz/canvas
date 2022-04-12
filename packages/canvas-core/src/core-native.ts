@@ -1,8 +1,10 @@
 import path from "node:path"
 
+import { RandomAccessStorage } from "random-access-storage"
 import randomAccessFile from "random-access-file"
 import Database, * as sqlite from "better-sqlite3"
 import { QuickJSWASMModule } from "quickjs-emscripten"
+import { Client as HyperspaceClient, Server as HyperspaceServer, CoreStore } from "hyperspace"
 
 import { ModelValue } from "./models.js"
 import { Core, assert } from "./core.js"
@@ -12,6 +14,26 @@ export class NativeCore extends Core {
 	private readonly modelStatements: Record<string, { set: sqlite.Statement }> = {}
 	private readonly routeStatements: Record<string, sqlite.Statement> = {}
 
+	static async initialize(
+		multihash: string,
+		spec: string,
+		options: {
+			directory: string
+			port?: number
+			storage?: (file: string) => RandomAccessStorage
+			quickJS: QuickJSWASMModule
+			peers?: string[]
+		}
+	) {
+		const storage =
+			options.storage || ((file: string) => randomAccessFile(path.resolve(options.directory, "hypercore", file)))
+
+		const hyperspacePort = 9000 + Math.round(Math.random() * 1000)
+		const hyperspace = new HyperspaceServer({ storage, port: hyperspacePort })
+		await hyperspace.ready()
+		return new NativeCore(multihash, spec, { storage, ...options }, hyperspace, hyperspacePort)
+	}
+
 	constructor(
 		multihash: string,
 		spec: string,
@@ -20,13 +42,21 @@ export class NativeCore extends Core {
 			port?: number
 			quickJS: QuickJSWASMModule
 			peers?: string[]
-		}
+		},
+		hyperspace: HyperspaceServer,
+		hyperspacePort: number
 	) {
-		super(multihash, spec, {
-			storage: (file: string) => randomAccessFile(path.resolve(options.directory, "hypercore", file)),
-			quickJS: options.quickJS,
-			peers: options.peers,
-		})
+		super(
+			multihash,
+			spec,
+			{
+				storage: (file: string) => randomAccessFile(path.resolve(options.directory, "hypercore", file)),
+				quickJS: options.quickJS,
+				peers: options.peers,
+			},
+			hyperspace,
+			hyperspacePort
+		)
 
 		this.database = new Database(path.resolve(options.directory, "db.sqlite"))
 

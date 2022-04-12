@@ -64,7 +64,7 @@ export class Loader {
 
 		const spec = Buffer.concat(chunks).toString("utf-8")
 		const quickJS = await quickJSPromise
-		const core = new NativeCore(multihash, spec, { quickJS, directory: appPath, port })
+		const core = await NativeCore.initialize(multihash, spec, { quickJS, directory: appPath, port })
 		this.apps.set(multihash, core)
 	}
 

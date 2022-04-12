@@ -35,11 +35,11 @@ export abstract class Core {
 	public readonly routeParameters: Record<string, string[]> = {}
 	public readonly actionParameters: Record<string, string[]> = {}
 
-	public readonly feed: Feed
-	public readonly hyperbee: HyperBee
 	public readonly hyperspaceServer: HyperspaceServer
 	public readonly hyperspaceClient: HyperspaceClient
 	public readonly peerstore: CoreStore
+	public feed: Feed
+	public hyperbee: HyperBee
 
 	private readonly runtime: QuickJSRuntime
 	private readonly vm: QuickJSContext
@@ -58,24 +58,13 @@ export abstract class Core {
 			storage: (file: string) => RandomAccessStorage
 			quickJS: QuickJSWASMModule
 			peers?: string[]
-		}
+		},
+		hyperspace: HyperspaceServer,
+		hyperspacePort: number
 	) {
-		const serverPort = 9000 + Math.round(Math.random() * 1000)
-
-		this.hyperspaceServer = new HyperspaceServer({ storage: options.storage, port: serverPort })
-		// await this.hyperspaceServer.ready() // wait for server to be ready before initializing client?
-		this.hyperspaceClient = new HyperspaceClient({ port: serverPort })
-		this.peerstore = this.hyperspaceClient.corestore()
-
-		// NOTE: initializing the hypercore from the peerstore will fail because the server has
-		// not started up yet.
-		this.feed = hypercore(options.storage, { createIfMissing: true, overwrite: false })
-		//this.feed = this.peerstore.get({ createIfMissing: true, overwrite: false })
-		this.hyperbee = new HyperBee(this.feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
-
 		this.runtime = options.quickJS.newRuntime()
 
-		this.runtime.setMemoryLimit(1024 * 640) // set memory limit
+		this.runtime.setMemoryLimit(1024 * 640) // 640kb memory limit
 		this.runtime.setModuleLoader((moduleName: string) => {
 			if (moduleName === this.multihash) {
 				return spec
@@ -95,12 +84,17 @@ export abstract class Core {
 		this.initializeRoutes()
 		this.initializeActions()
 
-		if (options.peers !== undefined) {
-			this.initializePeering(serverPort, options.peers)
-		}
+		this.hyperspaceServer = hyperspace
+		this.hyperspaceClient = new HyperspaceClient({ port: hyperspacePort })
+		this.peerstore = this.hyperspaceClient.corestore()
+
+		this.feed = this.peerstore.get({ createIfMissing: true, overwrite: false })
+		this.hyperbee = new HyperBee(this.feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
+
+		this.initializePeering(hyperspacePort, options.peers || [])
 	}
 
-	private async initializePeering(serverPort: number, peers: string[]) {
+	private async initializePeering(hyperspacePort: number, peers: string[]) {
 		// Bind logging
 		this.hyperspaceServer.on("client-open", () => {
 			const numPeers = this.hyperspaceServer.networker.peers.size
@@ -130,7 +124,7 @@ export abstract class Core {
 			)
 		).then(() => {
 			console.log(chalk.green(`Initialized ${peers.length} upstream peers`))
-			console.log(chalk.green(`Open to connections at localhost:${serverPort}/${this.multihash}`))
+			console.log(chalk.green(`Open to connections at localhost:${hyperspacePort}/${this.multihash}`))
 		})
 	}
 
