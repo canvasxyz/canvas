@@ -6,7 +6,6 @@
     "declaration": true,
     "module": "esnext",
     "target": "es2019",
-    "skipLibCheck": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true
   }
