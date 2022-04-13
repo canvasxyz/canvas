@@ -10,7 +10,7 @@ import { Client as HyperspaceClient, Server as HyperspaceServer, CoreStore } fro
 
 import * as t from "io-ts"
 
-import objectToString from "../utils/objectToString.js"
+import { objectToString } from "./utils.js"
 
 import {
 	Action,

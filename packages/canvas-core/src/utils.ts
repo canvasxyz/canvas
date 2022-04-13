@@ -16,8 +16,6 @@ const recursiveClone = (obj: Record<string, any>) => {
 	return clone
 }
 
-const objectToString = (obj: Record<string, any>) => {
+export const objectToString = (obj: Record<string, any>) => {
 	return JSON.stringify(recursiveClone(obj))
 }
-
-export default objectToString
