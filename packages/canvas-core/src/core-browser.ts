@@ -18,10 +18,11 @@ export class BrowserCore extends Core {
 		options: {
 			storage: (file: string) => RandomAccessStorage
 			peers?: string[]
+			sqlJsOptions?: { locateFile: any }
 		}
 	) {
 		const quickJS = await getQuickJS()
-		const SQL = await initSqlJs()
+		const SQL = await initSqlJs(options.sqlJsOptions)
 		return new BrowserCore(multihash, spec, options, quickJS, SQL)
 	}
 
