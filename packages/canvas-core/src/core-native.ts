@@ -16,7 +16,7 @@ export class NativeCore extends Core {
 
 	static async initialize(
 		multihash: string,
-		spec: string,
+		spec: string | object,
 		options: {
 			directory: string
 			port?: number
@@ -33,7 +33,7 @@ export class NativeCore extends Core {
 
 	constructor(
 		multihash: string,
-		spec: string,
+		spec: string | object,
 		options: {
 			directory: string
 			port?: number

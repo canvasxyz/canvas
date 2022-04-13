@@ -10,6 +10,8 @@ import { Client as HyperspaceClient, Server as HyperspaceServer, CoreStore } fro
 
 import * as t from "io-ts"
 
+import objectToString from "../utils/objectToString.js"
+
 import {
 	Action,
 	Session,
@@ -50,19 +52,21 @@ export abstract class Core {
 
 	constructor(
 		readonly multihash: string,
-		spec: string,
+		spec: string | object,
 		options: {
 			storage: (file: string) => RandomAccessStorage
 			peers?: string[]
 		},
 		quickJS: QuickJSWASMModule
 	) {
+		const specString = typeof spec === "object" ? objectToString(spec) : spec
+
 		this.runtime = quickJS.newRuntime()
 
 		this.runtime.setMemoryLimit(1024 * 640) // 640kb memory limit
 		this.runtime.setModuleLoader((moduleName: string) => {
 			if (moduleName === this.multihash) {
-				return spec
+				return specString
 			} else {
 				throw new Error("module imports are not allowed")
 			}

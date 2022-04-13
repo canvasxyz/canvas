@@ -14,7 +14,7 @@ export class BrowserCore extends Core {
 
 	static async initialize(
 		multihash: string,
-		spec: string,
+		spec: string | object,
 		options: {
 			storage: (file: string) => RandomAccessStorage
 			peers?: string[]
@@ -28,7 +28,7 @@ export class BrowserCore extends Core {
 
 	constructor(
 		multihash: string,
-		spec: string,
+		spec: string | object,
 		options: {
 			storage: (file: string) => RandomAccessStorage
 			peers?: string[]
