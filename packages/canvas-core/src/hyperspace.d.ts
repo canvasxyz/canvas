@@ -1,5 +1,6 @@
 declare module "hyperspace" {
 	import type { Feed, HypercoreOptions } from "hypercore"
+	import type { RandomAccessStorage } from "random-access-storage"
 	import type stream from "node:stream"
 
 	interface RemoteHypercoreOptions {

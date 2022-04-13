@@ -3,7 +3,6 @@ import { getQuickJS, QuickJSWASMModule } from "quickjs-emscripten"
 import { RandomAccessStorage } from "random-access-storage"
 import randomAccessIDB from "random-access-idb"
 import initSqlJs, { SqlJsStatic, Statement, Database } from "sql.js"
-import { Client as HyperspaceClient, Server as HyperspaceServer, CoreStore } from "hyperspace"
 
 import { ModelValue } from "./models.js"
 import { Core, assert } from "./core.js"
@@ -21,13 +20,9 @@ export class BrowserCore extends Core {
 			peers?: string[]
 		}
 	) {
-		const hyperspacePort = 9000 + Math.round(Math.random() * 1000)
-		const hyperspace = new HyperspaceServer({ storage: options.storage, port: hyperspacePort })
-		await hyperspace.ready()
-
 		const quickJS = await getQuickJS()
 		const SQL = await initSqlJs()
-		return new BrowserCore(multihash, spec, options, hyperspace, hyperspacePort, quickJS, SQL)
+		return new BrowserCore(multihash, spec, options, quickJS, SQL)
 	}
 
 	constructor(
@@ -37,12 +32,10 @@ export class BrowserCore extends Core {
 			storage: (file: string) => RandomAccessStorage
 			peers?: string[]
 		},
-		hyperspace: HyperspaceServer,
-		hyperspacePort: number,
 		quickJS: QuickJSWASMModule,
 		SQL: SqlJsStatic
 	) {
-		super(multihash, spec, options, hyperspace, hyperspacePort, quickJS)
+		super(multihash, spec, options, quickJS)
 
 		this.database = new SQL.Database()
 

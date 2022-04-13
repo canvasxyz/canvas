@@ -35,9 +35,6 @@ export abstract class Core {
 	public readonly routeParameters: Record<string, string[]> = {}
 	public readonly actionParameters: Record<string, string[]> = {}
 
-	public readonly hyperspaceServer: HyperspaceServer
-	public readonly hyperspaceClient: HyperspaceClient
-	public readonly peerstore: CoreStore
 	public feed: Feed
 	public hyperbee: HyperBee
 
@@ -58,8 +55,6 @@ export abstract class Core {
 			storage: (file: string) => RandomAccessStorage
 			peers?: string[]
 		},
-		hyperspace: HyperspaceServer,
-		hyperspacePort: number,
 		quickJS: QuickJSWASMModule
 	) {
 		this.runtime = quickJS.newRuntime()
@@ -84,49 +79,45 @@ export abstract class Core {
 		this.initializeRoutes()
 		this.initializeActions()
 
-		this.hyperspaceServer = hyperspace
-		this.hyperspaceClient = new HyperspaceClient({ port: hyperspacePort })
-		this.peerstore = this.hyperspaceClient.corestore()
-
-		this.feed = this.peerstore.get({ createIfMissing: true, overwrite: false })
+		this.feed = hypercore(options.storage, { createIfMissing: true, overwrite: false })
 		this.hyperbee = new HyperBee(this.feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
 
-		this.initializePeering(hyperspacePort, options.peers || [])
+		// this.initializePeering(hyperspacePort, options.peers || [])
 	}
 
-	private async initializePeering(hyperspacePort: number, peers: string[]) {
-		// Bind logging
-		this.hyperspaceServer.on("client-open", () => {
-			const numPeers = this.hyperspaceServer.networker.peers.size
-			if (numPeers === 0) return // Don't announce the local peer
-			console.log(chalk.green("Connected new peer"))
-		})
-		this.hyperspaceServer.on("client-close", () => {
-			console.log(chalk.green("Disconnected peer"))
-		})
+	// private async initializePeering(hyperspacePort: number, peers: string[]) {
+	// 	// Bind logging
+	// 	this.hyperspaceServer.on("client-open", () => {
+	// 		const numPeers = this.hyperspaceServer.networker.peers.size
+	// 		if (numPeers === 0) return // Don't announce the local peer
+	// 		console.log(chalk.green("Connected new peer"))
+	// 	})
+	// 	this.hyperspaceServer.on("client-close", () => {
+	// 		console.log(chalk.green("Disconnected peer"))
+	// 	})
 
-		await this.hyperbee.ready()
+	// 	await this.hyperbee.ready()
 
-		return Promise.all(
-			peers.map(
-				(peer: string) =>
-					new Promise<void>(async (resolve, reject) => {
-						const [remoteHost, remotePort] = peer.split("/")[0].split(":")
-						const remoteKey = peer.split("/")[1]
-						const remoteClient = new HyperspaceClient({
-							host: remoteHost,
-							port: remotePort,
-						})
-						// should we use localClient / this.peerstore?
-						const core = remoteClient.corestore().get({ key: remoteKey })
-						core.on("ready", () => resolve()).on("error", (err: any) => reject(err))
-					})
-			)
-		).then(() => {
-			console.log(chalk.green(`Initialized ${peers.length} upstream peers`))
-			console.log(chalk.green(`Open to connections at localhost:${hyperspacePort}/${this.multihash}`))
-		})
-	}
+	// 	return Promise.all(
+	// 		peers.map(
+	// 			(peer: string) =>
+	// 				new Promise<void>(async (resolve, reject) => {
+	// 					const [remoteHost, remotePort] = peer.split("/")[0].split(":")
+	// 					const remoteKey = peer.split("/")[1]
+	// 					const remoteClient = new HyperspaceClient({
+	// 						host: remoteHost,
+	// 						port: remotePort,
+	// 					})
+	// 					// should we use localClient / this.peerstore?
+	// 					const core = remoteClient.corestore().get({ key: remoteKey })
+	// 					core.on("ready", () => resolve()).on("error", (err: any) => reject(err))
+	// 				})
+	// 		)
+	// 	).then(() => {
+	// 		console.log(chalk.green(`Initialized ${peers.length} upstream peers`))
+	// 		console.log(chalk.green(`Open to connections at localhost:${hyperspacePort}/${this.multihash}`))
+	// 	})
+	// }
 
 	private initializeGlobalVariables() {
 		// Set up: console.log
