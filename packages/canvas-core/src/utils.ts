@@ -9,6 +9,12 @@ const recursiveClone = (obj: Record<string, any>) => {
 			clone[i] = recursiveClone(obj[i])
 		} else if (typeof obj[i] === "function") {
 			clone[i] = obj[i].toString()
+		} else if (typeof obj[i] === "number") {
+			clone[i] = obj[i]
+		} else if (typeof obj[i] === "string") {
+			clone[i] = obj[i]
+		} else if (typeof obj[i] === "boolean") {
+			clone[i] = obj[i]
 		} else {
 			clone[i] = JSON.stringify(obj[i])
 		}
@@ -16,6 +22,10 @@ const recursiveClone = (obj: Record<string, any>) => {
 	return clone
 }
 
-export const objectToString = (obj: Record<string, any>) => {
-	return JSON.stringify(recursiveClone(obj))
+export const objectSpecToString = (obj: Record<string, any>) => {
+	return `
+const models = ${JSON.stringify(recursiveClone(obj.models))};
+const routes = ${JSON.stringify(recursiveClone(obj.routes))};
+const actions = ${JSON.stringify(recursiveClone(obj.actions))};
+export { models, routes, actions };`
 }

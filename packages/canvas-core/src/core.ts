@@ -10,7 +10,7 @@ import { Client as HyperspaceClient, Server as HyperspaceServer, CoreStore } fro
 
 import * as t from "io-ts"
 
-import { objectToString } from "./utils.js"
+import { objectSpecToString } from "./utils.js"
 
 import {
 	Action,
@@ -59,14 +59,16 @@ export abstract class Core {
 		},
 		quickJS: QuickJSWASMModule
 	) {
-		const specString = typeof spec === "object" ? objectToString(spec) : spec
+		if (!multihash.match(/^[0-9a-zA-Z]+$/)) {
+			throw new Error("multihash must be alphanumeric")
+		}
 
 		this.runtime = quickJS.newRuntime()
 
 		this.runtime.setMemoryLimit(1024 * 640) // 640kb memory limit
 		this.runtime.setModuleLoader((moduleName: string) => {
 			if (moduleName === this.multihash) {
-				return specString
+				return typeof spec === "string" ? spec : objectSpecToString(spec)
 			} else {
 				throw new Error("module imports are not allowed")
 			}
@@ -76,7 +78,14 @@ export abstract class Core {
 		this.modelAPI = this.vm.newObject()
 		this.initializeGlobalVariables()
 		this.vm
-			.unwrapResult(this.vm.evalCode(`import * as spec from "${this.multihash}"\nObject.assign(globalThis, spec)`))
+			.unwrapResult(
+				this.vm.evalCode(`import * as spec from "${this.multihash}";
+for (const name of Object.keys(spec.actions)) {
+  spec.actions[name] = new Function('return ' + spec.actions[name])();
+}
+Object.assign(globalThis, spec);
+`)
+			)
 			.dispose()
 
 		this.initializeModels()
