@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "chalk": "^5.0.1",
-    "hyperspace": "^3.19.0"
+    "hyperspace": "^3.19.0",
+    "ipfs-only-hash": "^4.0.0"
   }
 }

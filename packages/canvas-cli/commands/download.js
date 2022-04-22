@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import { create as createIPFSHTTPClient } from "ipfs-http-client"
+import * as IpfsHttpClient from "ipfs-http-client"
 
 export const command = "download <multihash> [--path=apps]"
 export const desc = "Download a Canvas app"
@@ -12,7 +12,7 @@ export const builder = (yargs) => {
 			type: "string",
 			demandOption: true,
 		})
-		.option("path", {
+		.option("datadir", {
 			describe: "Path of the app data directory",
 			type: "string",
 			default: "./apps",
@@ -20,22 +20,34 @@ export const builder = (yargs) => {
 }
 
 export async function handler(args) {
-	const ipfs = createIPFSHTTPClient()
-	const spec = ipfs.cat(args.multihash)
-
-	if (!fs.existsSync(args.path)) {
-		console.log("Created " + args.path)
-		fs.mkdirSync(args.path)
+	const ipfs = await IpfsHttpClient.create()
+	const chunks = []
+	try {
+		for await (const chunk of ipfs.cat(args.multihash)) {
+			chunks.push(chunk)
+		}
+	} catch (err) {
+		if (err.message.indexOf("ECONNREFUSED") !== -1) {
+			console.log("Could not connect to local IPFS daemon, try: ipfs daemon --offline")
+		}
+		return
 	}
 
-	const appPath = path.resolve(args.path, args.multihash)
-	if (fs.existsSync(appPath)) {
-		console.error("App already exists at " + appPath)
+	const spec = Buffer.concat(chunks).toString("utf-8")
+
+	if (!fs.existsSync(args.datadir)) {
+		console.log("Created " + args.datadir)
+		fs.mkdirSync(args.datadir)
+	}
+
+	const datadir = path.resolve(args.datadir, args.multihash)
+	if (fs.existsSync(datadir)) {
+		console.error("App already exists at " + datadir)
 		process.exit(1)
 	}
 
-	fs.mkdirSync(appPath)
-	await fs.promises.writeFile(path.resolve(appPath, "spec.mjs"), spec)
-	await fs.promises.writeFile(path.resolve(appPath, "spec.cid"), args.multihash)
-	console.log(`Downloaded app at ${appPath}`)
+	fs.mkdirSync(datadir)
+	await fs.promises.writeFile(path.resolve(datadir, "spec.mjs"), spec)
+	await fs.promises.writeFile(path.resolve(datadir, "spec.cid"), args.multihash)
+	console.log(`Downloaded app at ${datadir}`)
 }

@@ -1,19 +1,22 @@
 import fs from "node:fs"
 import path from "node:path"
+import crypto from "node:crypto"
 
-import { App } from "canvas-core"
+import * as IpfsHttpClient from "ipfs-http-client"
+import Hash from "ipfs-only-hash"
+import { NativeCore } from "canvas-core"
 
-export const command = "run <multihash> [--path=apps] [--peer=localhost:9000/abc...] [--noserver]"
+export const command = "run <spec> [--datadir=apps] [--peer=localhost:9000/abc...] [--noserver]"
 export const desc = "Launch a Canvas app"
 
 export const builder = (yargs) => {
 	yargs
-		.positional("multihash", {
-			describe: "Hash of the spec from IPFS",
+		.positional("spec", {
+			describe: "Path to spec file, or IPFS hash of spec",
 			type: "string",
 			demandOption: true,
 		})
-		.option("path", {
+		.option("datadir", {
 			describe: "Path of the app data directory",
 			type: "string",
 			default: "./apps",
@@ -34,12 +37,40 @@ export const builder = (yargs) => {
 }
 
 export async function handler(args) {
-	const appPath = path.resolve(args.path, args.multihash)
-	await App.initialize({
-		multihash: args.multihash,
-		path: appPath,
-		port: args.port,
-		peers: [args.peer],
-		noServer: args.noserver,
+	let multihash, spec
+	if (args.spec.match(/^Qm[a-zA-Z0-9]+/)) {
+		// fetch spec from multihash
+		multihash = args.spec
+
+		const chunks = []
+		try {
+			const ipfs = await IpfsHttpClient.create()
+			for await (const chunk of ipfs.cat(multihash)) {
+				chunks.push(chunk)
+			}
+		} catch (err) {
+			if (err.message.indexOf("ECONNREFUSED") !== -1) {
+				console.log("Could not connect to local IPFS daemon, try: ipfs daemon --offline")
+			}
+			return
+		}
+		spec = Buffer.concat(chunks).toString("utf-8")
+	} else {
+		// read spec from file
+		const bytes = fs.readFileSync(args.spec)
+		multihash = await Hash.of(bytes)
+		spec = bytes.toString()
+	}
+	const datadir = path.resolve(args.datadir, multihash)
+
+	await NativeCore.initialize({
+		multihash,
+		spec,
+		options: {
+			directory: datadir,
+			port: args.port,
+			peers: [args.peer],
+			noServer: args.noserver,
+		},
 	})
 }
