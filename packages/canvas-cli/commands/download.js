@@ -4,7 +4,7 @@ import path from "node:path"
 import * as IpfsHttpClient from "ipfs-http-client"
 
 export const command = "download <multihash> [--path=apps]"
-export const desc = "Download a Canvas app"
+export const desc = "Download an app, by multihash"
 export const builder = (yargs) => {
 	yargs
 		.positional("multihash", {

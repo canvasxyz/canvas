@@ -7,7 +7,7 @@ import Hash from "ipfs-only-hash"
 import { NativeCore } from "canvas-core"
 
 export const command = "run <spec> [--datadir=apps] [--peer=localhost:9000/abc...] [--noserver]"
-export const desc = "Launch a Canvas app"
+export const desc = "Run an app, by path or multihash"
 
 export const builder = (yargs) => {
 	yargs
@@ -63,14 +63,10 @@ export async function handler(args) {
 	}
 	const datadir = path.resolve(args.datadir, multihash)
 
-	await NativeCore.initialize({
-		multihash,
-		spec,
-		options: {
-			directory: datadir,
-			port: args.port,
-			peers: [args.peer],
-			noServer: args.noserver,
-		},
+	await NativeCore.initialize(multihash, spec, {
+		directory: datadir,
+		port: args.port,
+		peers: [args.peer],
+		noServer: args.noserver,
 	})
 }
