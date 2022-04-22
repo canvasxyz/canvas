@@ -77,11 +77,14 @@ export abstract class Core {
 		this.vm = this.runtime.newContext()
 		this.modelAPI = this.vm.newObject()
 		this.initializeGlobalVariables()
+		// import the spec, and convert string functions by rehydrating them
 		this.vm
 			.unwrapResult(
 				this.vm.evalCode(`import * as spec from "${this.multihash}";
 for (const name of Object.keys(spec.actions)) {
-  spec.actions[name] = new Function('return ' + spec.actions[name])();
+  if (typeof spec.actions[name] === 'string') {
+    spec.actions[name] = new Function('return ' + spec.actions[name])();
+  }
 }
 Object.assign(globalThis, spec);
 `)
