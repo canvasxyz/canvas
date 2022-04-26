@@ -1,10 +1,7 @@
-import fs from "node:fs"
 import path from "node:path"
-import crypto from "node:crypto"
 
-import * as IpfsHttpClient from "ipfs-http-client"
-import Hash from "ipfs-only-hash"
 import { NativeCore } from "canvas-core"
+import { getSpec } from "./utils.js"
 
 export const command = "run <spec> [--datadir=apps] [--peer=localhost:9000/abc...] [--noserver]"
 export const desc = "Run an app, by path or multihash"
@@ -37,36 +34,36 @@ export const builder = (yargs) => {
 }
 
 export async function handler(args) {
-	let multihash, spec
-	if (args.spec.match(/^Qm[a-zA-Z0-9]+/)) {
-		// fetch spec from multihash
-		multihash = args.spec
-
-		const chunks = []
-		try {
-			const ipfs = await IpfsHttpClient.create()
-			for await (const chunk of ipfs.cat(multihash)) {
-				chunks.push(chunk)
-			}
-		} catch (err) {
-			if (err.message.indexOf("ECONNREFUSED") !== -1) {
-				console.log("Could not connect to local IPFS daemon, try: ipfs daemon --offline")
-			}
-			return
-		}
-		spec = Buffer.concat(chunks).toString("utf-8")
-	} else {
-		// read spec from file
-		const bytes = fs.readFileSync(args.spec)
-		multihash = await Hash.of(bytes)
-		spec = bytes.toString()
-	}
+	const { multihash, spec } = await getSpec(args.spec)
 	const datadir = path.resolve(args.datadir, multihash)
 
-	await NativeCore.initialize(multihash, spec, {
+	const core = await NativeCore.initialize(multihash, spec, {
 		directory: datadir,
 		port: args.port,
 		peers: [args.peer],
-		noServer: args.noserver,
 	})
+
+	console.log("should start server")
+	// TODO!
+
+	// serve GET /[multihash]
+
+	// serve POST /[multihash]/actions
+	// if (typeof req.query.multihash !== "string") {
+	// 	return res.status(StatusCodes.BAD_REQUEST).end()
+	// }
+
+	// if (!actionType.is(req.body)) {
+	// 	return res.status(StatusCodes.BAD_REQUEST).end()
+	// }
+
+	// const app = loader.apps.get(req.query.multihash)
+	// if (app === undefined) {
+	// 	return res.status(StatusCodes.NOT_FOUND).end()
+	// }
+
+	// await app
+	// 	.apply(req.body)
+	// 	.then(() => res.status(StatusCodes.OK).end())
+	// 	.catch((err) => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message))
 }

@@ -110,7 +110,6 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 				const action: Action = {
 					from: payloadObject.from,
 					session: sessionSigner.address,
-					chainId: "",
 					signature: result,
 					payload: payloadString,
 				}
@@ -166,7 +165,6 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 				const action: Action = {
 					from: payloadObject.from,
 					session: null,
-					chainId: "",
 					signature: result,
 					payload: payloadString,
 				}
@@ -211,8 +209,8 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			from: currentAddress,
 			spec: props.multihash,
 			timestamp,
-			metadata: JSON.stringify({ version: 1 }),
 			session_public_key: sessionSigner.address,
+			session_duration: 24 * 60 * 60,
 		}
 		const payload = JSON.stringify(payloadObject)
 
@@ -227,6 +225,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 					signature: result,
 					payload,
 					session_public_key: sessionSigner.address,
+					session_duration: 24 * 60 * 60,
 				}
 
 				fetch(`/api/instance/${props.multihash}/sessions`, {

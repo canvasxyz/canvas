@@ -77,7 +77,7 @@ export abstract class Core {
 		this.vm = this.runtime.newContext()
 		this.modelAPI = this.vm.newObject()
 		this.initializeGlobalVariables()
-		// import the spec, and convert string functions by rehydrating them
+		// Import the spec, rehydrating any functions that are being passed as strings.
 		this.vm
 			.unwrapResult(
 				this.vm.evalCode(`import * as spec from "${this.multihash}";
@@ -136,7 +136,8 @@ Object.assign(globalThis, spec);
 	// }
 
 	private initializeGlobalVariables() {
-		// Set up: console.log
+		// Set up some globals that are useful to have in the spec VM.
+		// console.log:
 		const logHandle = this.vm.newFunction("log", (...args: any) => {
 			const nativeArgs = args.map(this.vm.dump)
 			console.log("[worker]", ...nativeArgs)
@@ -257,7 +258,7 @@ Object.assign(globalThis, spec);
 		 * It is assumed that any session found in `this.sessions` is valid.
 		 */
 		if (action.session !== null) {
-			// TODO: VERIFY THAT THE SESSION HAS NOT EXPIRED
+			// TODO: VERIFY THAT THE SESSION HAS NOT EXPIRED + EXPIRE SESSIONS + VERIFY DURATION <= 24 HOURS
 			// const session = this.sessions.find((s) => s.session_public_key === action.session)
 			const record = await this.hyperbee.get(Core.getSessionKey(action.session))
 			assert(record !== null, "action signed by invalid session")

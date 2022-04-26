@@ -43,12 +43,9 @@ export const actionPayloadType: t.Type<ActionPayload> = t.type({
 	args: t.array(actionArgumentType),
 })
 
-// TODO: check if we want to keep chainId here
-// TODO: add spec to action wrapper type
 export type Action = {
 	from: string
 	session: string | null
-	chainId: string
 	signature: string
 	payload: string
 }
@@ -56,7 +53,6 @@ export type Action = {
 export const actionType: t.Type<Action> = t.type({
 	from: t.string,
 	session: t.union([t.string, t.null]),
-	chainId: t.string,
 	signature: t.string,
 	payload: t.string,
 })
@@ -70,6 +66,7 @@ export type Session = {
 	signature: string
 	payload: string
 	session_public_key: string
+	session_duration: number
 }
 
 export const sessionType: t.Type<Session> = t.type({
@@ -77,27 +74,28 @@ export const sessionType: t.Type<Session> = t.type({
 	signature: t.string,
 	payload: t.string,
 	session_public_key: t.string,
+	session_duration: t.number,
 })
 
 export type SessionPayload = {
 	from: string
 	spec: string
 	timestamp: number
-	metadata: string
 	session_public_key: string
+	session_duration: number
 }
 
 export const sessionPayloadType: t.Type<SessionPayload> = t.type({
 	from: t.string,
 	spec: t.string,
 	timestamp: t.number,
-	metadata: t.string,
 	session_public_key: t.string,
+	session_duration: t.number,
 })
 
 export const _sessions: Model = {
 	session_public_key: "string",
+	session_duration: "string",
 	timestamp: "integer",
-	metadata: "string",
 	signature: "string",
 }
