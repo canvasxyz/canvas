@@ -6,6 +6,7 @@ import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
 import { Action, actionType } from "canvas-core"
+import { APP_MULTIHASH_INVALID, APP_NOT_FOUND, ACTION_FORMAT_INVALID } from "./errors"
 
 import * as t from "io-ts"
 
@@ -13,12 +14,12 @@ const actionArray = t.array(actionType)
 
 async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	if (typeof req.query.multihash !== "string") {
-		return res.status(StatusCodes.BAD_REQUEST).end()
+		return res.status(StatusCodes.BAD_REQUEST).end(APP_MULTIHASH_INVALID)
 	}
 
 	const app = loader.apps.get(req.query.multihash)
 	if (app === undefined) {
-		return res.status(StatusCodes.NOT_FOUND).end()
+		return res.status(StatusCodes.NOT_FOUND).end(APP_NOT_FOUND)
 	}
 
 	if (app.feed.length === 0) {
@@ -35,16 +36,16 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 
 async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 	if (typeof req.query.multihash !== "string") {
-		return res.status(StatusCodes.BAD_REQUEST).end()
+		return res.status(StatusCodes.BAD_REQUEST).end(APP_MULTIHASH_INVALID)
 	}
 
 	if (!actionType.is(req.body)) {
-		return res.status(StatusCodes.BAD_REQUEST).end()
+		return res.status(StatusCodes.BAD_REQUEST).end(ACTION_FORMAT_INVALID)
 	}
 
 	const app = loader.apps.get(req.query.multihash)
 	if (app === undefined) {
-		return res.status(StatusCodes.NOT_FOUND).end()
+		return res.status(StatusCodes.NOT_FOUND).end(APP_NOT_FOUND)
 	}
 
 	await app

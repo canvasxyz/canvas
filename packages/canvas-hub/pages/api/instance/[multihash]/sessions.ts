@@ -3,15 +3,16 @@ import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
 import { Action, actionType, SessionPayload, sessionPayloadType } from "canvas-core"
+import { APP_MULTIHASH_INVALID, APP_NOT_FOUND, ACTION_FORMAT_INVALID, PAYLOAD_INVALID } from "./errors"
 
 async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	if (typeof req.query.multihash !== "string") {
-		return res.status(StatusCodes.BAD_REQUEST).end()
+		return res.status(StatusCodes.BAD_REQUEST).end(APP_MULTIHASH_INVALID)
 	}
 
 	const app = loader.apps.get(req.query.multihash)
 	if (app === undefined) {
-		return res.status(StatusCodes.NOT_FOUND).end()
+		return res.status(StatusCodes.NOT_FOUND).end(APP_NOT_FOUND)
 	}
 
 	const sessionActions: [string, Action][] = []
@@ -24,16 +25,19 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 
 async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 	if (typeof req.query.multihash !== "string") {
-		return res.status(StatusCodes.BAD_REQUEST).end()
+		return res.status(StatusCodes.BAD_REQUEST).end(APP_MULTIHASH_INVALID)
 	}
 
-	if (!actionType.is(req.body) || !sessionPayloadType.is(req.body.payload)) {
-		return res.status(StatusCodes.BAD_REQUEST).end()
+	if (!actionType.is(req.body)) {
+		return res.status(StatusCodes.BAD_REQUEST).end(ACTION_FORMAT_INVALID)
+	}
+	if (!sessionPayloadType.is(JSON.parse(req.body.payload))) {
+		return res.status(StatusCodes.BAD_REQUEST).end(PAYLOAD_INVALID)
 	}
 
 	const app = loader.apps.get(req.query.multihash)
 	if (app === undefined) {
-		return res.status(StatusCodes.NOT_FOUND).end()
+		return res.status(StatusCodes.NOT_FOUND).end(APP_NOT_FOUND)
 	}
 
 	await app
