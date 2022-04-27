@@ -26,7 +26,7 @@ test("Apply action", async (t) => {
 	})
 
 	const signature = await signer.signMessage(payload)
-	const action = { from, session: null, chainId: "", signature, payload }
+	const action = { from, session: null, signature, payload }
 
 	await core.apply(action)
 

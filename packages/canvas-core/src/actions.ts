@@ -1,27 +1,65 @@
 import * as t from "io-ts"
-import type { Model } from "./models.js"
+import { Model, ModelType, modelTypeType } from "./models.js"
+
+/**
+ * Specs
+ *
+ * Specs may be provided as strings or objects. These are the types for
+ * constructing them as objects.
+ *
+ */
+
+export type RouteType = string
+export const routeTypeType = t.string
+
+export type ActionType = Function
+export const actionTypeType = t.Function
+
+export type SpecModels = Record<string, Record<string, ModelType>>
+export type SpecRoutes = Record<string, RouteType>
+export type SpecActions = Record<string, ActionType>
+
+export const specModelsType: t.Type<SpecModels> = t.record(t.string, t.record(t.string, modelTypeType))
+export const specRoutesType: t.Type<SpecRoutes> = t.record(t.string, routeTypeType)
+export const specActionsType: t.Type<SpecActions> = t.record(t.string, actionTypeType)
+
+export type Spec = { models: SpecModels; routes: SpecRoutes; actions: SpecActions }
+export const specType: t.Type<Spec> = t.type({
+	models: specModelsType,
+	routes: specRoutesType,
+	actions: specActionsType,
+})
 
 /**
  * Actions
+ *
+ * An `Action` holds an ActionPayload or SessionPayload, its signature, and
+ * metadata needed to establish the validity of the signature.
  *
  * An `ActionArgument` is a type-level representation of concrete action argument
  * types, ie TypeScript types that describe the possible JavaScript values that
  * we put into and get out of action calls.
  *
  * An `ActionPayload` is the data signed by the user, either directly or using a
- * session key.
- *
- * An `Action` holds an ActionPayload, its signature, and metadata needed to
- * establish the validity of the signature.
- *
- * Sessions
+ * session key, to execute an action in a Canvas application.
  *
  * A `SessionPayload` is the data signed by the user to initiate a session.
  *
- * A `Session` holds an ActionPayload, its signature, and metadata needed to
- * establish the validity of the session.
- *
  */
+
+export type Action = {
+	from: string
+	session: string | null
+	signature: string
+	payload: string
+}
+
+export const actionType: t.Type<Action> = t.type({
+	from: t.string,
+	session: t.union([t.string, t.null]),
+	signature: t.string,
+	payload: t.string,
+})
 
 export type ActionArgument = null | boolean | number | string
 
@@ -43,61 +81,29 @@ export const actionPayloadType: t.Type<ActionPayload> = t.type({
 	args: t.array(actionArgumentType),
 })
 
-// TODO: check if we want to keep chainId here
-// TODO: add spec to action wrapper type
-export type Action = {
-	from: string
-	session: string | null
-	chainId: string
-	signature: string
-	payload: string
-}
-
-export const actionType: t.Type<Action> = t.type({
-	from: t.string,
-	session: t.union([t.string, t.null]),
-	chainId: t.string,
-	signature: t.string,
-	payload: t.string,
-})
-
-/**
- * Sessions
- */
-
-export type Session = {
-	from: string
-	signature: string
-	payload: string
-	session_public_key: string
-}
-
-export const sessionType: t.Type<Session> = t.type({
-	from: t.string,
-	signature: t.string,
-	payload: t.string,
-	session_public_key: t.string,
-})
-
 export type SessionPayload = {
 	from: string
 	spec: string
 	timestamp: number
-	metadata: string
 	session_public_key: string
+	session_duration: number
 }
 
 export const sessionPayloadType: t.Type<SessionPayload> = t.type({
 	from: t.string,
 	spec: t.string,
 	timestamp: t.number,
-	metadata: t.string,
 	session_public_key: t.string,
+	session_duration: t.number,
 })
+
+/**
+ * Session Storage
+ */
 
 export const _sessions: Model = {
 	session_public_key: "string",
+	session_duration: "string",
 	timestamp: "integer",
-	metadata: "string",
 	signature: "string",
 }

@@ -14,13 +14,12 @@ import { objectSpecToString } from "./utils.js"
 
 import {
 	Action,
-	Session,
-	sessionType,
-	sessionPayloadType,
 	actionType,
 	actionPayloadType,
+	sessionPayloadType,
 	ActionPayload,
 	ActionArgument,
+	Spec,
 } from "./actions.js"
 
 import { getColumnType, Model, modelType, ModelValue, validateType } from "./models.js"
@@ -52,7 +51,7 @@ export abstract class Core {
 
 	constructor(
 		readonly multihash: string,
-		spec: string | object,
+		spec: string | Spec,
 		options: {
 			storage: (file: string) => RandomAccessStorage
 			peers?: string[]
@@ -77,7 +76,7 @@ export abstract class Core {
 		this.vm = this.runtime.newContext()
 		this.modelAPI = this.vm.newObject()
 		this.initializeGlobalVariables()
-		// import the spec, and convert string functions by rehydrating them
+		// Import the spec, rehydrating any functions that are being passed as strings.
 		this.vm
 			.unwrapResult(
 				this.vm.evalCode(`import * as spec from "${this.multihash}";
@@ -136,7 +135,8 @@ Object.assign(globalThis, spec);
 	// }
 
 	private initializeGlobalVariables() {
-		// Set up: console.log
+		// Set up some globals that are useful to have in the spec VM.
+		// console.log:
 		const logHandle = this.vm.newFunction("log", (...args: any) => {
 			const nativeArgs = args.map(this.vm.dump)
 			console.log("[worker]", ...nativeArgs)
@@ -249,35 +249,59 @@ Object.assign(globalThis, spec);
 		assert(actionPayloadType.is(payload), "invalid message payload")
 
 		/**
+		 * Get the current time.
+		 * We should check against use a more reliable source than the system clock.
+		 */
+		const currentTime = +new Date() / 1000
+		const boundsCheckLowerLimit = +new Date("2020") / 1000
+		const boundsCheckUpperLimit = +new Date("2070") / 1000
+
+		/**
 		 * Verify the action signature.
 		 *
 		 * If the action is signed by a session key, then:
-		 *  - `action.from` and `payload.from` and `session.from` are the key used to generate the session
-		 *  - `action.session` and `session.session_public_key` are the key used to sign the payload
-		 * It is assumed that any session found in `this.sessions` is valid.
+		 *  - `action.from` === `payload.from` === `session.from` is the key used to generate the session
+		 *  - `action.session` === `session.session_public_key` is the key used to sign the payload
 		 */
 		if (action.session !== null) {
-			// TODO: VERIFY THAT THE SESSION HAS NOT EXPIRED
-			// const session = this.sessions.find((s) => s.session_public_key === action.session)
+			// get the session out of hyperbee
 			const record = await this.hyperbee.get(Core.getSessionKey(action.session))
 			assert(record !== null, "action signed by invalid session")
 			assert(typeof record.value === "string", "got invalid session from HyperBee")
+
+			// validate the session
 			const session = JSON.parse(record.value)
-			assert(sessionType.is(session), "got invalid session from HyperBee")
-			assert(action.from === payload.from, "action signed by invalid session")
-			assert(action.from === session.from, "action signed by invalid session")
-			assert(action.session === session.session_public_key, "action signed by invalid session")
+			assert(actionType.is(session), "got invalid session from HyperBee")
+			const sessionPayload = JSON.parse(session.payload)
+			assert(sessionPayloadType.is(sessionPayload), "got invalid session from HyperBee")
+
+			// validate the session has not expired, and that the session timestamp is reasonable
+			assert(sessionPayload.timestamp + sessionPayload.session_duration > currentTime, "session expired")
+			assert(sessionPayload.timestamp > payload.timestamp, "session timestamp must precede action timestamp")
+			// We don't guard against session timestamps in the future because the server clock might be out of sync.
+			// assert(sessionPayload.timestamp < currentTime, "session timestamp too far in the future")
+
+			// validate the session signature on the action we're processing
+			assert(action.from === payload.from && payload.from === session.from, "action signed by invalid session")
 			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
-			assert(action.session === verifiedAddress, "action signed by invalid session")
+			assert(
+				verifiedAddress === action.session && action.session === sessionPayload.session_public_key,
+				"action signed by invalid session"
+			)
 		} else {
 			assert(action.from === payload.from, "action signed by wrong address")
 			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
 			assert(action.from === verifiedAddress, "action signed by wrong address")
 		}
 
+		assert(payload.timestamp > boundsCheckLowerLimit, "action timestamp too far in the past")
+		assert(payload.timestamp < boundsCheckUpperLimit, "action timestamp too far in the future")
+		// We don't guard against session timestamps in the future because the server clock might be out of sync.
+		// assert(payload.timestamp < currentTime, "action timestamp too far in the future")
+
 		assert(payload.spec === this.multihash, "action signed for wrong spec")
-		assert(payload.call !== "", "attempted to call an empty action")
-		assert(payload.call in this.actionFunctions, "attempted to call an invalid action")
+		assert(payload.call !== "", "missing action function")
+		assert(payload.call in this.actionFunctions, "invalid action function")
 
 		this.currentPayload = payload
 		const context = this.vm.newObject()
@@ -315,8 +339,8 @@ Object.assign(globalThis, spec);
 	/**
 	 * Create a new session.
 	 */
-	public async session(session: Session) {
-		assert(sessionType.is(session), "invalid session")
+	public async session(session: Action) {
+		assert(actionType.is(session), "invalid session")
 		const payload = JSON.parse(session.payload)
 		assert(sessionPayloadType.is(payload), "invalid session payload")
 		assert(payload.from === session.from, "session signed by wrong address")
@@ -325,7 +349,7 @@ Object.assign(globalThis, spec);
 		const verifiedAddress = ethers.utils.verifyMessage(session.payload, session.signature)
 		assert(session.from === verifiedAddress, "session signed by wrong address")
 
-		const key = Core.getSessionKey(session.session_public_key)
+		const key = Core.getSessionKey(payload.session_public_key)
 		await this.hyperbee.put(key, JSON.stringify(session))
 	}
 
@@ -344,7 +368,7 @@ Object.assign(globalThis, spec);
 	private static sessionKeyPrefix = "s:"
 	private static actionKeyPrefix = "a:"
 
-	public async *getSessionStream(options: { limit?: number } = {}): AsyncIterable<[string, Session]> {
+	public async *getSessionStream(options: { limit?: number } = {}): AsyncIterable<[string, Action]> {
 		for await (const [key, value] of this.createPrefixStream(Core.sessionKeyPrefix, options)) {
 			yield [key.replace(/^s:/, "0x"), JSON.parse(value)]
 		}

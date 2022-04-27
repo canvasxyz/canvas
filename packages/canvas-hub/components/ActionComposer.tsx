@@ -15,7 +15,7 @@ import Sessions from "components/SpecSessions"
 
 import { useCodeMirror } from "utils/client/codemirror"
 
-import type { Action, ActionPayload, Session, SessionPayload } from "canvas-core"
+import type { Action, ActionPayload, SessionPayload } from "canvas-core"
 
 import styles from "./ActionComposer.module.scss"
 
@@ -26,7 +26,7 @@ const getInitialActionValue = (multihash: string, call: string, args: string[], 
 	"from": "${from}",
 	"call": "${call}",
 	"args": [${args.map((arg) => `"${arg}"`).join(", ")}],
-	"timestamp": ${new Date().valueOf()}
+	"timestamp": ${Math.round(new Date().valueOf() / 1000)}
 }`
 
 function ActionComposer(props: { multihash: string; actionParameters: Record<string, string[]> }) {
@@ -110,7 +110,6 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 				const action: Action = {
 					from: payloadObject.from,
 					session: sessionSigner.address,
-					chainId: "",
 					signature: result,
 					payload: payloadString,
 				}
@@ -166,7 +165,6 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 				const action: Action = {
 					from: payloadObject.from,
 					session: null,
-					chainId: "",
 					signature: result,
 					payload: payloadString,
 				}
@@ -203,7 +201,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			toast.error("Signer not ready. Have you connected Metamask?")
 			return
 		}
-		const timestamp = Math.round(+new Date())
+		const timestamp = Math.round(+new Date() / 1000)
 		const sessionSigner = ethers.Wallet.createRandom()
 		localStorage.setItem(sessionSigner.address, sessionSigner.privateKey) // store private key in localStorage
 
@@ -211,8 +209,8 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			from: currentAddress,
 			spec: props.multihash,
 			timestamp,
-			metadata: JSON.stringify({ version: 1 }),
 			session_public_key: sessionSigner.address,
+			session_duration: 24 * 60 * 60,
 		}
 		const payload = JSON.stringify(payloadObject)
 
@@ -222,17 +220,17 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			.then((result: string) => {
 				setGeneratingSession(false)
 
-				const session: Session = {
+				const sessionAction: Action = {
 					from: payloadObject.from,
+					session: null,
 					signature: result,
 					payload,
-					session_public_key: sessionSigner.address,
 				}
 
 				fetch(`/api/instance/${props.multihash}/sessions`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(session),
+					body: JSON.stringify(sessionAction),
 				}).then((res) => {
 					setGeneratingSession(false)
 					if (res.status === StatusCodes.OK) {
