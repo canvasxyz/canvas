@@ -4,6 +4,7 @@ import { RandomAccessStorage } from "random-access-storage"
 import randomAccessIDB from "random-access-idb"
 import initSqlJs, { SqlJsStatic, Statement, Database } from "sql.js"
 
+import { Spec } from "./actions.js"
 import { ModelValue } from "./models.js"
 import { Core, assert } from "./core.js"
 
@@ -14,7 +15,7 @@ export class BrowserCore extends Core {
 
 	static async initialize(
 		multihash: string,
-		spec: string | object,
+		spec: string | Spec,
 		options: {
 			storage: (file: string) => RandomAccessStorage
 			peers?: string[]
@@ -28,7 +29,7 @@ export class BrowserCore extends Core {
 
 	constructor(
 		multihash: string,
-		spec: string | object,
+		spec: string | Spec,
 		options: {
 			storage: (file: string) => RandomAccessStorage
 			peers?: string[]

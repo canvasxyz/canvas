@@ -6,6 +6,7 @@ import { RandomAccessStorage } from "random-access-storage"
 import randomAccessFile from "random-access-file"
 import Database, * as sqlite from "better-sqlite3"
 
+import { Spec } from "./actions.js"
 import { ModelValue } from "./models.js"
 import { Core, assert } from "./core.js"
 
@@ -16,7 +17,7 @@ export class NativeCore extends Core {
 
 	static async initialize(
 		multihash: string,
-		spec: string | object,
+		spec: string | Spec,
 		options: {
 			directory: string
 			port?: number
@@ -33,7 +34,7 @@ export class NativeCore extends Core {
 
 	constructor(
 		multihash: string,
-		spec: string | object,
+		spec: string | Spec,
 		options: {
 			directory: string
 			port?: number

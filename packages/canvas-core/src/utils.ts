@@ -1,3 +1,5 @@
+import type { Spec } from "./actions.js"
+
 /**
  * Recursively clones objects, using Function.prototype.toString() to stringify
  * functions, and JSON.stringify to stringify everything else.
@@ -22,7 +24,7 @@ const recursiveClone = (obj: Record<string, any>) => {
 	return clone
 }
 
-export const objectSpecToString = (obj: Record<string, any>) => {
+export const objectSpecToString = (obj: Spec) => {
 	return `
 const models = ${JSON.stringify(recursiveClone(obj.models))};
 const routes = ${JSON.stringify(recursiveClone(obj.routes))};

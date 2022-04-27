@@ -1,5 +1,34 @@
 import * as t from "io-ts"
-import type { Model } from "./models.js"
+import { Model, ModelType, modelTypeType } from "./models.js"
+
+/**
+ * Specs
+ *
+ * Specs may be provided as strings or objects. These are the types for
+ * constructing them as objects.
+ *
+ */
+
+export type RouteType = string
+export const routeTypeType = t.string
+
+export type ActionType = Function
+export const actionTypeType = t.Function
+
+export type SpecModels = Record<string, Record<string, ModelType>>
+export type SpecRoutes = Record<string, RouteType>
+export type SpecActions = Record<string, ActionType>
+
+export const specModelsType: t.Type<SpecModels> = t.record(t.string, t.record(t.string, modelTypeType))
+export const specRoutesType: t.Type<SpecRoutes> = t.record(t.string, routeTypeType)
+export const specActionsType: t.Type<SpecActions> = t.record(t.string, actionTypeType)
+
+export type Spec = { models: SpecModels; routes: SpecRoutes; actions: SpecActions }
+export const specType: t.Type<Spec> = t.type({
+	models: specModelsType,
+	routes: specRoutesType,
+	actions: specActionsType,
+})
 
 /**
  * Actions

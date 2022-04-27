@@ -12,7 +12,15 @@ import * as t from "io-ts"
 
 import { objectSpecToString } from "./utils.js"
 
-import { Action, actionType, actionPayloadType, sessionPayloadType, ActionPayload, ActionArgument } from "./actions.js"
+import {
+	Action,
+	actionType,
+	actionPayloadType,
+	sessionPayloadType,
+	ActionPayload,
+	ActionArgument,
+	Spec,
+} from "./actions.js"
 
 import { getColumnType, Model, modelType, ModelValue, validateType } from "./models.js"
 
@@ -43,7 +51,7 @@ export abstract class Core {
 
 	constructor(
 		readonly multihash: string,
-		spec: string | object,
+		spec: string | Spec,
 		options: {
 			storage: (file: string) => RandomAccessStorage
 			peers?: string[]
