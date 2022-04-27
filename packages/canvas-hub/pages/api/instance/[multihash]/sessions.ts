@@ -5,6 +5,9 @@ import { loader } from "utils/server/services"
 import { Action, actionType, SessionPayload, sessionPayloadType } from "canvas-core"
 import { APP_MULTIHASH_INVALID, APP_NOT_FOUND, ACTION_FORMAT_INVALID, PAYLOAD_INVALID } from "./errors"
 
+/**
+ * Get the last ten sessions from the hypercore feed of a running app
+ */
 async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	if (typeof req.query.multihash !== "string") {
 		return res.status(StatusCodes.BAD_REQUEST).end(APP_MULTIHASH_INVALID)
@@ -23,6 +26,9 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	return res.status(StatusCodes.OK).json(sessionActions)
 }
 
+/**
+ * Start a new session
+ */
 async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 	if (typeof req.query.multihash !== "string") {
 		return res.status(StatusCodes.BAD_REQUEST).end(APP_MULTIHASH_INVALID)

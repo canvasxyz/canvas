@@ -20,7 +20,6 @@ export class NativeCore extends Core {
 		spec: string | Spec,
 		options: {
 			directory: string
-			port?: number
 			storage?: (file: string) => RandomAccessStorage
 			peers?: string[]
 		}
@@ -37,7 +36,6 @@ export class NativeCore extends Core {
 		spec: string | Spec,
 		options: {
 			directory: string
-			port?: number
 			peers?: string[]
 		},
 		quickJS: QuickJSWASMModule

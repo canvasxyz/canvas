@@ -12,6 +12,9 @@ import * as t from "io-ts"
 
 const actionArray = t.array(actionType)
 
+/**
+ * Get the last ten actions from the hypercore feed of a running app
+ */
 async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	if (typeof req.query.multihash !== "string") {
 		return res.status(StatusCodes.BAD_REQUEST).end(APP_MULTIHASH_INVALID)
@@ -34,6 +37,9 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	return res.status(StatusCodes.OK).json(actions)
 }
 
+/**
+ * Apply a new action
+ */
 async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 	if (typeof req.query.multihash !== "string") {
 		return res.status(StatusCodes.BAD_REQUEST).end(APP_MULTIHASH_INVALID)
@@ -54,9 +60,6 @@ async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 		.catch((err) => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message))
 }
 
-/**
- * Get the last ten actions from the hypercore feed of a running app
- */
 export default async (req: NextApiRequest, res: NextApiResponse) => {
 	if (req.method === "GET") {
 		await handleGetRequest(req, res)
