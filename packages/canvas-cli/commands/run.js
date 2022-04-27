@@ -83,7 +83,7 @@ export async function handler(args) {
 	})
 
 	server.listen(port, () => {
-		console.log(`Serving API on port ${port}:`)
+		console.log(`Serving ${multihash} on port ${port}:`)
 		Object.keys(core.routes).map((name) => {
 			console.log(`└ GET http://localhost:${port}${name}`)
 		})
