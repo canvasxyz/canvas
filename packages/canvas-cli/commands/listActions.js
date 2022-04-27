@@ -26,7 +26,7 @@ export const builder = (yargs) => {
 export async function handler(args) {
 	const appPath = path.resolve(args.datadir, args.multihash)
 	if (!fs.existsSync(appPath)) {
-		console.log("App not found")
+		console.log("App not found. Have you tried running the app yet?")
 		process.exit(1)
 	}
 
