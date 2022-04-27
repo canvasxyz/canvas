@@ -278,6 +278,7 @@ Object.assign(globalThis, spec);
 			// validate the session has not expired, and that the session timestamp is reasonable
 			assert(sessionPayload.timestamp + sessionPayload.session_duration > currentTime, "session expired")
 			assert(sessionPayload.timestamp > payload.timestamp, "session timestamp must precede action timestamp")
+			// We don't guard against session timestamps in the future because the server clock might be out of sync.
 			// assert(sessionPayload.timestamp < currentTime, "session timestamp too far in the future")
 
 			// validate the session signature on the action we're processing
@@ -295,11 +296,12 @@ Object.assign(globalThis, spec);
 
 		assert(payload.timestamp > boundsCheckLowerLimit, "action timestamp too far in the past")
 		assert(payload.timestamp < boundsCheckUpperLimit, "action timestamp too far in the future")
+		// We don't guard against session timestamps in the future because the server clock might be out of sync.
 		// assert(payload.timestamp < currentTime, "action timestamp too far in the future")
 
 		assert(payload.spec === this.multihash, "action signed for wrong spec")
-		assert(payload.call !== "", "attempted to call an empty action")
-		assert(payload.call in this.actionFunctions, "attempted to call an invalid action")
+		assert(payload.call !== "", "missing action function")
+		assert(payload.call in this.actionFunctions, "invalid action function")
 
 		this.currentPayload = payload
 		const context = this.vm.newObject()

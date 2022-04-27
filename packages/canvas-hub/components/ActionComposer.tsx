@@ -26,7 +26,7 @@ const getInitialActionValue = (multihash: string, call: string, args: string[], 
 	"from": "${from}",
 	"call": "${call}",
 	"args": [${args.map((arg) => `"${arg}"`).join(", ")}],
-	"timestamp": ${new Date().valueOf()}
+	"timestamp": ${Math.round(new Date().valueOf() / 1000)}
 }`
 
 function ActionComposer(props: { multihash: string; actionParameters: Record<string, string[]> }) {
@@ -201,7 +201,7 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			toast.error("Signer not ready. Have you connected Metamask?")
 			return
 		}
-		const timestamp = Math.round(+new Date())
+		const timestamp = Math.round(+new Date() / 1000)
 		const sessionSigner = ethers.Wallet.createRandom()
 		localStorage.setItem(sessionSigner.address, sessionSigner.privateKey) // store private key in localStorage
 
