@@ -44,26 +44,4 @@ export async function handler(args) {
 	})
 
 	console.log("should start server")
-	// TODO!
-
-	// serve GET /[multihash]
-
-	// serve POST /[multihash]/actions
-	// if (typeof req.query.multihash !== "string") {
-	// 	return res.status(StatusCodes.BAD_REQUEST).end()
-	// }
-
-	// if (!actionType.is(req.body)) {
-	// 	return res.status(StatusCodes.BAD_REQUEST).end()
-	// }
-
-	// const app = loader.apps.get(req.query.multihash)
-	// if (app === undefined) {
-	// 	return res.status(StatusCodes.NOT_FOUND).end()
-	// }
-
-	// await app
-	// 	.apply(req.body)
-	// 	.then(() => res.status(StatusCodes.OK).end())
-	// 	.catch((err) => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message))
 }
