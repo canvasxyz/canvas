@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
-import { Session, sessionType } from "canvas-core"
+import { Action, actionType, SessionPayload, sessionPayloadType } from "canvas-core"
 
 async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 	if (typeof req.query.multihash !== "string") {
@@ -14,12 +14,12 @@ async function handleGetRequest(req: NextApiRequest, res: NextApiResponse) {
 		return res.status(StatusCodes.NOT_FOUND).end()
 	}
 
-	const sessions: [string, Session][] = []
+	const sessionActions: [string, Action][] = []
 	for await (const entry of app.getSessionStream({ limit: 10 })) {
-		sessions.push(entry)
+		sessionActions.push(entry)
 	}
 
-	return res.status(StatusCodes.OK).json(sessions)
+	return res.status(StatusCodes.OK).json(sessionActions)
 }
 
 async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
@@ -27,7 +27,7 @@ async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 		return res.status(StatusCodes.BAD_REQUEST).end()
 	}
 
-	if (!sessionType.is(req.body)) {
+	if (!actionType.is(req.body) || !sessionPayloadType.is(req.body.payload)) {
 		return res.status(StatusCodes.BAD_REQUEST).end()
 	}
 

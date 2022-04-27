@@ -15,7 +15,7 @@ import Sessions from "components/SpecSessions"
 
 import { useCodeMirror } from "utils/client/codemirror"
 
-import type { Action, ActionPayload, Session, SessionPayload } from "canvas-core"
+import type { Action, ActionPayload, SessionPayload } from "canvas-core"
 
 import styles from "./ActionComposer.module.scss"
 
@@ -220,18 +220,17 @@ function ActionComposer(props: { multihash: string; actionParameters: Record<str
 			.then((result: string) => {
 				setGeneratingSession(false)
 
-				const session: Session = {
+				const sessionAction: Action = {
 					from: payloadObject.from,
+					session: null,
 					signature: result,
 					payload,
-					session_public_key: sessionSigner.address,
-					session_duration: 24 * 60 * 60,
 				}
 
 				fetch(`/api/instance/${props.multihash}/sessions`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(session),
+					body: JSON.stringify(sessionAction),
 				}).then((res) => {
 					setGeneratingSession(false)
 					if (res.status === StatusCodes.OK) {
