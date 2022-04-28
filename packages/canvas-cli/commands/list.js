@@ -3,7 +3,6 @@ import * as listSessions from "./listSessions.js"
 
 import fs from "fs"
 import path from "node:path"
-import { getSpec } from "./utils.js"
 
 export const command = "list [--datadir=apps]"
 export const desc = "List all specs in the data directory."

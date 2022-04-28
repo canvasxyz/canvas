@@ -21,7 +21,7 @@ export const builder = (yargs) => {
 }
 
 export async function handler(args) {
-	const { multihash, spec } = await getSpec(args.spec)
+	const { multihash, spec } = await getSpec(args.datadir, args.spec)
 	const dataDirectory = path.resolve(args.datadir, multihash)
 
 	const core = await NativeCore.initialize({
