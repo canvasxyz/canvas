@@ -1,4 +1,3 @@
-import fs from "fs"
 import path from "node:path"
 import chalk from "chalk"
 import { NativeCore, actionType, actionPayloadType, sessionPayloadType } from "canvas-core"
@@ -23,12 +22,12 @@ export const builder = (yargs) => {
 
 export async function handler(args) {
 	const { multihash, spec } = await getSpec(args.spec)
-	const datadir = path.resolve(args.datadir, multihash)
+	const dataDirectory = path.resolve(args.datadir, multihash)
 
-	const core = await NativeCore.initialize(multihash, spec, {
-		directory: datadir,
+	const core = await NativeCore.initialize({
+		spec,
+		dataDirectory,
 		port: args.port,
-		peers: [args.peer],
 	})
 
 	console.log(`Showing info for ${multihash}:`)

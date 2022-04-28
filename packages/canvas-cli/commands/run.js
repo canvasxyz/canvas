@@ -39,13 +39,10 @@ export const builder = (yargs) => {
 
 export async function handler(args) {
 	const { multihash, spec } = await getSpec(args.spec)
-	const datadir = path.resolve(args.datadir, multihash)
+	const dataDirectory = path.resolve(args.datadir, multihash)
 	const port = args.port
 
-	const core = await NativeCore.initialize(multihash, spec, {
-		directory: datadir,
-		peers: [args.peer],
-	})
+	const core = await NativeCore.initialize({ spec, dataDirectory })
 
 	const ACTION_FORMAT_INVALID = "Invalid action format"
 
