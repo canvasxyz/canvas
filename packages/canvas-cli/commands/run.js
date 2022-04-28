@@ -59,24 +59,32 @@ export async function handler(args) {
 
 	server.post(`/actions`, async (req, res) => {
 		if (!actionType.is(req.body)) {
+			console.error(ACTION_FORMAT_INVALID)
 			res.status(StatusCodes.BAD_REQUEST).end(ACTION_FORMAT_INVALID)
 			return
 		}
 		await core
 			.apply(req.body)
 			.then(() => res.status(StatusCodes.OK).end())
-			.catch((err) => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message))
+			.catch((err) => {
+				console.error(err.message)
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+			})
 	})
 
 	server.post(`/sessions`, async (req, res) => {
 		if (!actionType.is(req.body)) {
+			console.error(ACTION_FORMAT_INVALID)
 			res.status(StatusCodes.BAD_REQUEST).end(ACTION_FORMAT_INVALID)
 			return
 		}
 		await core
 			.session(req.body)
 			.then(() => res.status(StatusCodes.OK).end())
-			.catch((err) => res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message))
+			.catch((err) => {
+				console.error(err.message)
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+			})
 	})
 
 	server.listen(port, () => {

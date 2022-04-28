@@ -222,16 +222,22 @@ Object.assign(globalThis, spec);
 
 			// validate the session has not expired, and that the session timestamp is reasonable
 			assert(sessionPayload.timestamp + sessionPayload.session_duration > currentTime, "session expired")
-			assert(sessionPayload.timestamp > payload.timestamp, "session timestamp must precede action timestamp")
+			assert(sessionPayload.timestamp <= payload.timestamp, "session timestamp must precede action timestamp")
 			// We don't guard against session timestamps in the future because the server clock might be out of sync.
 			// assert(sessionPayload.timestamp < currentTime, "session timestamp too far in the future")
 
 			// validate the session signature on the action we're processing
-			assert(action.from === payload.from && payload.from === session.from, "action signed by invalid session")
+			assert(action.from === payload.from, "invalid signature (action.from and payload.from do not match)")
+			assert(payload.from === session.from, "invalid signature (session.from and payload.from do not match)")
+
 			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
 			assert(
-				verifiedAddress === action.session && action.session === sessionPayload.session_public_key,
-				"action signed by invalid session"
+				verifiedAddress === action.session,
+				"invalid signature, or wrong data signed (recovered address does not match)"
+			)
+			assert(
+				action.session === sessionPayload.session_public_key,
+				"invalid signature (action.session and session_public_key do not match)"
 			)
 		} else {
 			assert(action.from === payload.from, "action signed by wrong address")
