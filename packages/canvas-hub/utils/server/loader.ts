@@ -43,6 +43,15 @@ export class Loader {
 		}
 	}
 
+	private async fetchSpec(multihash: string): Promise<string> {
+		const chunks: Uint8Array[] = []
+		for await (const chunk of ipfs.cat(multihash)) {
+			chunks.push(chunk)
+		}
+
+		return Buffer.concat(chunks).toString("utf-8")
+	}
+
 	public async start(multihash: string): Promise<void> {
 		const status = this.status.get(multihash)
 		if (status !== undefined) {
@@ -53,18 +62,26 @@ export class Loader {
 			}
 		}
 
-		const port = 8000 + this.status.size
-		const appPath = path.resolve(appDirectory, multihash)
-
 		this.status.set(multihash, { status: "starting" })
-		const chunks: Uint8Array[] = []
-		for await (const chunk of ipfs.cat(multihash)) {
-			chunks.push(chunk)
-		}
+		const spec = await this.fetchSpec(multihash).catch((err) => {
+			this.status.delete(multihash)
+			throw err
+		})
 
-		const spec = Buffer.concat(chunks).toString("utf-8")
-		const core = await NativeCore.initialize(multihash, spec, { directory: appPath, port })
-		this.apps.set(multihash, core)
+		const dataDirectory = path.resolve(appDirectory, multihash)
+		await NativeCore.initialize({ spec, dataDirectory })
+			.then((core) => {
+				if (core.multihash !== multihash) {
+					this.status.delete(multihash)
+					throw new Error("Could not start app: declared multihash did not match the given spec")
+				}
+
+				this.apps.set(multihash, core)
+			})
+			.catch((err) => {
+				this.status.delete(multihash)
+				throw err
+			})
 	}
 
 	public async stop(multihash: string): Promise<void> {

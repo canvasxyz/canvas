@@ -1,4 +1,4 @@
-import type { Spec } from "./actions.js"
+import type { ObjectSpec } from "./specs"
 
 /**
  * Recursively clones objects, using Function.prototype.toString() to stringify
@@ -24,10 +24,22 @@ const recursiveClone = (obj: Record<string, any>) => {
 	return clone
 }
 
-export const objectSpecToString = (obj: Spec) => {
+export function objectSpecToString(obj: ObjectSpec): string {
 	return `
-const models = ${JSON.stringify(recursiveClone(obj.models))};
-const routes = ${JSON.stringify(recursiveClone(obj.routes))};
-const actions = ${JSON.stringify(recursiveClone(obj.actions))};
-export { models, routes, actions };`
+export const models = ${JSON.stringify(recursiveClone(obj.models))};
+export const routes = ${JSON.stringify(recursiveClone(obj.routes))};
+export const actions = {
+	${Object.entries(obj.actions).map(([name, action]) => `${JSON.stringify(name)}: ${action.toString()}`)}
+}
+`
+}
+
+export function assert(value: boolean, message?: string): asserts value {
+	if (!value) {
+		if (message === undefined) {
+			throw new Error("assertion failed")
+		} else {
+			throw new Error(message)
+		}
+	}
 }

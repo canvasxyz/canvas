@@ -1,45 +1,44 @@
 import { getQuickJS, QuickJSWASMModule } from "quickjs-emscripten"
 
-import { RandomAccessStorage } from "random-access-storage"
-import randomAccessIDB from "random-access-idb"
-import initSqlJs, { SqlJsStatic, Statement, Database } from "sql.js"
+import type { RandomAccessStorage } from "random-access-storage"
+import randomAccessMemory from "random-access-memory"
+import initSqlJs, { SqlJsStatic, Statement, Database, SqlJsConfig } from "sql.js"
 
-import { Spec } from "./actions.js"
-import { ModelValue } from "./models.js"
-import { Core, assert } from "./core.js"
+import Hash from "ipfs-only-hash"
+
+import type { ObjectSpec } from "./specs"
+import type { ModelValue } from "./models.js"
+import { Core } from "./core.js"
+import { assert, objectSpecToString } from "./utils.js"
 
 export class BrowserCore extends Core {
 	private readonly database: Database
 	private readonly modelStatements: Record<string, { set: Statement }> = {}
 	private readonly routeStatements: Record<string, Statement> = {}
 
-	static async initialize(
-		multihash: string,
-		spec: string | Spec,
-		options: {
-			storage: (file: string) => RandomAccessStorage
-			peers?: string[]
-			sqlJsOptions?: { locateFile: any }
-		}
-	) {
+	static async initialize(config: {
+		spec: string | ObjectSpec
+		storage?: (file: string) => RandomAccessStorage
+		sqlJsOptions?: SqlJsConfig
+	}) {
 		const quickJS = await getQuickJS()
-		const SQL = await initSqlJs(options.sqlJsOptions)
-		return new BrowserCore(multihash, spec, options, quickJS, SQL)
+		const SQL = await initSqlJs(config.sqlJsOptions)
+		const spec = typeof config.spec === "string" ? config.spec : objectSpecToString(config.spec)
+		const multihash = await Hash.of(spec)
+		const storage = config.storage || randomAccessMemory
+		return new BrowserCore({ multihash, spec, quickJS, SQL, storage })
 	}
 
-	constructor(
-		multihash: string,
-		spec: string | Spec,
-		options: {
-			storage: (file: string) => RandomAccessStorage
-			peers?: string[]
-		},
-		quickJS: QuickJSWASMModule,
+	constructor(config: {
+		multihash: string
+		spec: string
+		storage: (file: string) => RandomAccessStorage
+		quickJS: QuickJSWASMModule
 		SQL: SqlJsStatic
-	) {
-		super(multihash, spec, options, quickJS)
+	}) {
+		super({ ...config })
 
-		this.database = new SQL.Database()
+		this.database = new config.SQL.Database()
 
 		// this has to be called *before* we try to prepare any statements
 		this.database.exec(Core.getDatabaseSchema(this.models))

@@ -1,28 +1,18 @@
 import { Buffer } from "buffer"
 import { ethers } from "ethers"
-import chalk from "chalk"
 
 import type { QuickJSWASMModule, QuickJSRuntime, QuickJSContext, QuickJSHandle } from "quickjs-emscripten"
 import type { RandomAccessStorage } from "random-access-storage"
 import HyperBee from "hyperbee"
 import hypercore, { Feed } from "hypercore"
-import { Client as HyperspaceClient, Server as HyperspaceServer, CoreStore } from "hyperspace"
 
 import * as t from "io-ts"
 
-import { objectSpecToString } from "./utils.js"
+import { assert } from "./utils.js"
 
-import {
-	Action,
-	actionType,
-	actionPayloadType,
-	sessionPayloadType,
-	ActionPayload,
-	ActionArgument,
-	Spec,
-} from "./actions.js"
-
+import { Action, actionType, actionPayloadType, sessionPayloadType, ActionPayload, ActionArgument } from "./actions.js"
 import { getColumnType, Model, modelType, ModelValue, validateType } from "./models.js"
+import { string } from "fp-ts"
 
 export abstract class Core {
 	public abstract setModel(name: string, params: Record<string, ModelValue>): void
@@ -31,6 +21,7 @@ export abstract class Core {
 		params?: Record<string, ModelValue>
 	): Record<string, ModelValue>[] | Promise<Record<string, ModelValue>[]>
 
+	public readonly multihash: string
 	public readonly models: Record<string, Model> = {}
 	public readonly routes: Record<string, string> = {}
 	public readonly routeParameters: Record<string, string[]> = {}
@@ -49,25 +40,20 @@ export abstract class Core {
 	// by the end of apply. This is a little hacky but it makes stuff way simpler.
 	private currentPayload: ActionPayload | null = null
 
-	constructor(
-		readonly multihash: string,
-		spec: string | Spec,
-		options: {
-			storage: (file: string) => RandomAccessStorage
-			peers?: string[]
-		},
+	constructor(config: {
+		multihash: string
+		spec: string
+		storage: (file: string) => RandomAccessStorage
 		quickJS: QuickJSWASMModule
-	) {
-		if (!multihash.match(/^[0-9a-zA-Z]+$/)) {
-			throw new Error("multihash must be alphanumeric")
-		}
+	}) {
+		this.multihash = config.multihash
 
-		this.runtime = quickJS.newRuntime()
+		this.runtime = config.quickJS.newRuntime()
 
 		this.runtime.setMemoryLimit(1024 * 640) // 640kb memory limit
 		this.runtime.setModuleLoader((moduleName: string) => {
 			if (moduleName === this.multihash) {
-				return typeof spec === "string" ? spec : objectSpecToString(spec)
+				return config.spec
 			} else {
 				throw new Error("module imports are not allowed")
 			}
@@ -80,11 +66,6 @@ export abstract class Core {
 		this.vm
 			.unwrapResult(
 				this.vm.evalCode(`import * as spec from "${this.multihash}";
-for (const name of Object.keys(spec.actions)) {
-  if (typeof spec.actions[name] === 'string') {
-    spec.actions[name] = new Function('return ' + spec.actions[name])();
-  }
-}
 Object.assign(globalThis, spec);
 `)
 			)
@@ -94,45 +75,9 @@ Object.assign(globalThis, spec);
 		this.initializeRoutes()
 		this.initializeActions()
 
-		this.feed = hypercore(options.storage, { createIfMissing: true, overwrite: false })
+		this.feed = hypercore(config.storage, { createIfMissing: true, overwrite: false })
 		this.hyperbee = new HyperBee(this.feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
-
-		// this.initializePeering(hyperspacePort, options.peers || [])
 	}
-
-	// private async initializePeering(hyperspacePort: number, peers: string[]) {
-	// 	// Bind logging
-	// 	this.hyperspaceServer.on("client-open", () => {
-	// 		const numPeers = this.hyperspaceServer.networker.peers.size
-	// 		if (numPeers === 0) return // Don't announce the local peer
-	// 		console.log(chalk.green("Connected new peer"))
-	// 	})
-	// 	this.hyperspaceServer.on("client-close", () => {
-	// 		console.log(chalk.green("Disconnected peer"))
-	// 	})
-
-	// 	await this.hyperbee.ready()
-
-	// 	return Promise.all(
-	// 		peers.map(
-	// 			(peer: string) =>
-	// 				new Promise<void>(async (resolve, reject) => {
-	// 					const [remoteHost, remotePort] = peer.split("/")[0].split(":")
-	// 					const remoteKey = peer.split("/")[1]
-	// 					const remoteClient = new HyperspaceClient({
-	// 						host: remoteHost,
-	// 						port: remotePort,
-	// 					})
-	// 					// should we use localClient / this.peerstore?
-	// 					const core = remoteClient.corestore().get({ key: remoteKey })
-	// 					core.on("ready", () => resolve()).on("error", (err: any) => reject(err))
-	// 				})
-	// 		)
-	// 	).then(() => {
-	// 		console.log(chalk.green(`Initialized ${peers.length} upstream peers`))
-	// 		console.log(chalk.green(`Open to connections at localhost:${hyperspacePort}/${this.multihash}`))
-	// 	})
-	// }
 
 	private initializeGlobalVariables() {
 		// Set up some globals that are useful to have in the spec VM.
@@ -420,15 +365,5 @@ Object.assign(globalThis, spec);
 			tables.push(`CREATE TABLE IF NOT EXISTS ${name} (${columns.join(", ")});`)
 		}
 		return tables.join("\n")
-	}
-}
-
-export function assert(value: boolean, message?: string): asserts value {
-	if (!value) {
-		if (message === undefined) {
-			throw new Error("assertion failed")
-		} else {
-			throw new Error(message)
-		}
 	}
 }
