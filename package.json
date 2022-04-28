@@ -9,7 +9,8 @@
     "build": "run-s -l build-core build-hub",
     "build-core": "npm run build --workspace=canvas-core -- --pretty",
     "build-hub": "export FORCE_COLOR=1 && npm run build --workspace=canvas-hub",
-    "start": "npm run start --workspace=canvas-hub"
+    "start": "npm run start --workspace=canvas-hub",
+    "test": "npm run test --workspace=canvas-core"
   },
   "workspaces": [
     "packages/canvas-cli",
