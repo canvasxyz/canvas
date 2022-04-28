@@ -2,55 +2,33 @@ import path from "path"
 
 import { getQuickJS, QuickJSWASMModule } from "quickjs-emscripten"
 
-import { RandomAccessStorage } from "random-access-storage"
 import randomAccessFile from "random-access-file"
 import Database, * as sqlite from "better-sqlite3"
 
-import { Spec } from "./actions.js"
-import { ModelValue } from "./models.js"
-import { Core, assert } from "./core.js"
+import Hash from "ipfs-only-hash"
+
+import type { ObjectSpec } from "./specs.js"
+import type { ModelValue } from "./models.js"
+import { Core } from "./core.js"
+import { assert, objectSpecToString } from "./utils.js"
 
 export class NativeCore extends Core {
 	public readonly database: sqlite.Database
 	private readonly modelStatements: Record<string, { set: sqlite.Statement }> = {}
 	private readonly routeStatements: Record<string, sqlite.Statement> = {}
 
-	static async initialize(
-		multihash: string,
-		spec: string | Spec,
-		options: {
-			directory: string
-			storage?: (file: string) => RandomAccessStorage
-			peers?: string[]
-		}
-	) {
-		const storage =
-			options.storage || ((file: string) => randomAccessFile(path.resolve(options.directory, "hypercore", file)))
-
+	static async initialize(config: { spec: string | ObjectSpec; dataDirectory: string }) {
 		const quickJS = await getQuickJS()
-		return new NativeCore(multihash, spec, { storage, ...options }, quickJS)
+		const spec = typeof config.spec === "string" ? config.spec : objectSpecToString(config.spec)
+		const multihash = await Hash.of(spec)
+		return new NativeCore({ multihash, spec, dataDirectory: config.dataDirectory, quickJS })
 	}
 
-	constructor(
-		multihash: string,
-		spec: string | Spec,
-		options: {
-			directory: string
-			peers?: string[]
-		},
-		quickJS: QuickJSWASMModule
-	) {
-		super(
-			multihash,
-			spec,
-			{
-				storage: (file: string) => randomAccessFile(path.resolve(options.directory, "hypercore", file)),
-				peers: options.peers,
-			},
-			quickJS
-		)
+	constructor(config: { multihash: string; spec: string; dataDirectory: string; quickJS: QuickJSWASMModule }) {
+		const storage = (file: string) => randomAccessFile(path.resolve(config.dataDirectory, "hypercore", file))
+		super({ ...config, storage })
 
-		this.database = new Database(path.resolve(options.directory, "db.sqlite"))
+		this.database = new Database(path.resolve(config.dataDirectory, "db.sqlite"))
 
 		// this has to be called *before* we try to prepare any statements
 		this.database.exec(Core.getDatabaseSchema(this.models))
