@@ -3,7 +3,7 @@ import test from "ava"
 import fs from "node:fs"
 
 import { ethers } from "ethers"
-import { BrowserCore } from "../lib/core-browser.js"
+import { BrowserCore } from "../lib/index.js"
 
 const spec = fs.readFileSync("../../examples/reddit.canvas.js", "utf-8")
 

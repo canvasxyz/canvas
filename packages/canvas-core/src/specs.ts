@@ -9,7 +9,7 @@ import type { ModelType } from "./models.js"
 
 export type RouteType = string
 
-export type ActionType = Function
+export type ActionType = (...args: any[]) => void
 
 export type SpecModels = Record<string, Record<string, ModelType>>
 export type SpecRoutes = Record<string, RouteType>
