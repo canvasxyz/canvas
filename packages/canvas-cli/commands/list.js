@@ -1,57 +1,52 @@
-import * as listActions from "./listActions.js"
-import * as listSessions from "./listSessions.js"
-
 import fs from "fs"
 import path from "node:path"
 
-export const command = "list [--datadir=apps]"
-export const desc = "List all specs in the data directory."
+import * as listActions from "./listActions.js"
+import * as listSessions from "./listSessions.js"
+
+import { defaultDataDirectory, getDirectorySize, isMultihash } from "./utils.js"
+
+export const command = "list"
+export const desc = "List all specs in the data directory"
 
 export const builder = (yargs) => {
 	yargs
 		.option("datadir", {
 			describe: "Path of the app data directory",
 			type: "string",
-			default: "./apps",
+			default: defaultDataDirectory,
 		})
 		.command([listActions, listSessions])
 }
 
 export async function handler(args) {
-	const dir = fs.opendirSync(args.datadir)
-	console.log(`Showing local specs:
-`)
+	if (!fs.existsSync(args.datadir)) {
+		fs.mkdirSync(args.datadir)
+	}
 
-	while (true) {
-		const dirent = await dir.read()
-		if (dirent === null) break
-
-		if (!dirent.name.startsWith("Qm")) {
-			console.log(`Unknown spec or invalid multihash, skipping: ${dirent.name}`)
+	console.log(`Showing local specs:\n`)
+	for (const multihash of fs.readdirSync(args.datadir)) {
+		if (!isMultihash(multihash)) {
+			console.log(`Unknown spec or invalid multihash, skipping: ${multihash}`)
 			continue
 		}
 
-		// get spec info, hypercore info
-		// TODO: we shouldn't have to read the whole file...
-		const multihash = dirent.name
-		let spec, db, hyp
-		try {
-			spec = fs.readFileSync(path.join(args.datadir, multihash, "spec.mjs"))
-		} catch (err) {}
-		try {
-			db = fs.readFileSync(path.join(args.datadir, multihash, "db.sqlite"))
-		} catch (err) {}
-		try {
-			// TODO: get directory size
-			hyp = fs.opendirSync(path.join(args.datadir, multihash, "hypercore"))
-		} catch (err) {}
+		const specPath = path.resolve(args.datadir, multihash, "spec.mjs")
+		const specStat = fs.existsSync(specPath) ? fs.statSync(specPath) : null
+
+		const databasePath = path.resolve(args.datadir, multihash, "db.sqlite")
+		const databaseStat = fs.existsSync(databasePath) ? fs.statSync(databasePath) : null
+
+		const hypercorePath = path.resolve(args.datadir, multihash, "hypercore")
+		const hypercoreSize = fs.existsSync(hypercorePath) ? getDirectorySize(hypercorePath) : null
+
 		console.log(multihash)
-		console.log(`Spec: ${spec?.length || "--"} bytes`)
-		console.log(`Models: ${db?.length || "--"} bytes`)
-		console.log(`Action Log: ${hyp?.bufferSize || "--"} bytes`)
+		console.log(`Spec:       ${specStat?.size ?? "--"} bytes`)
+		console.log(`Models:     ${databaseStat?.size ?? "--"} bytes`)
+		console.log(`Action log: ${hypercoreSize ?? "--"} bytes`)
 		console.log("")
 	}
+
 	console.log(`Try "canvas info", "canvas list actions", or
-"canvas list sessions" for more information on a spec.
-`)
+"canvas list sessions" for more information on a spec.`)
 }

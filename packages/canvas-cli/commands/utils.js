@@ -1,49 +1,35 @@
 import fs from "node:fs"
-import path from "path"
+import path from "node:path"
+import os from "node:os"
 
-import * as IpfsHttpClient from "ipfs-http-client"
-import Hash from "ipfs-only-hash"
+import fetch from "node-fetch"
 
-export const getSpec = async (datadir, multihashOrPath) => {
-	let multihash, spec
-	if (multihashOrPath.match(/^Qm[a-zA-Z0-9]+/)) {
-		multihash = multihashOrPath
-
-		// check the datadir for a matching spec
-		try {
-			const spec = fs.readFileSync(path.resolve(datadir, multihash, "spec.mjs")).toString()
-			const fileHash = await Hash.of(spec)
-			if (fileHash !== multihash) {
-				console.log("Found an existing spec.mjs, but it did not match the multihash.")
-				throw new Error()
-			}
-			return { multihash, spec }
-		} catch (err) {
-			console.log(err)
-		}
-
-		console.log("Fetching spec from IPFS. This requires a local IPFS daemon...")
-
-		// fetch spec from multihash
-		const chunks = []
-		try {
-			const ipfs = await IpfsHttpClient.create()
-			for await (const chunk of ipfs.cat(multihash)) {
-				chunks.push(chunk)
-			}
-		} catch (err) {
-			if (err.message.indexOf("ECONNREFUSED") !== -1) {
+export const download = (multihash) =>
+	fetch(`http://localhost:5001/api/v0/cat?arg=${multihash}`)
+		.then((res) => res.text())
+		.catch((err) => {
+			if (err?.code === "ECONNREFUSED") {
 				console.log("Could not connect to local IPFS daemon, try: ipfs daemon --offline")
+				process.exit(1)
+			} else {
+				throw err
 			}
-			throw err
-		}
-		spec = Buffer.concat(chunks).toString("utf-8")
-	} else {
-		// read spec from file
-		const bytes = fs.readFileSync(multihashOrPath)
-		multihash = await Hash.of(bytes)
-		spec = bytes.toString()
-	}
+		})
 
-	return { multihash, spec }
+export const defaultDataDirectory = process.env.CANVAS_DATA_DIRECTORY ?? path.resolve(os.homedir(), ".canvas")
+
+export function isMultihash(multihashOrPath) {
+	return /^Qm[a-zA-Z0-9]{44}$/.test(multihashOrPath)
+}
+
+export function getDirectorySize(directory) {
+	return fs.readdirSync(directory).reduce((totalSize, name) => {
+		const file = path.resolve(directory, name)
+		const stat = fs.statSync(file)
+		if (stat.isDirectory()) {
+			return totalSize + stat.size + getDirectorySize(file)
+		} else {
+			return totalSize + stat.size
+		}
+	}, 0)
 }

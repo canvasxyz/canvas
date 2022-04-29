@@ -2,6 +2,7 @@ import path from "path"
 
 import { getQuickJS, QuickJSWASMModule } from "quickjs-emscripten"
 
+import { RandomAccessStorage } from "random-access-storage"
 import randomAccessFile from "random-access-file"
 import Database, * as sqlite from "better-sqlite3"
 
@@ -21,14 +22,14 @@ export class NativeCore extends Core {
 		const quickJS = await getQuickJS()
 		const spec = typeof config.spec === "string" ? config.spec : objectSpecToString(config.spec)
 		const multihash = await Hash.of(spec)
-		return new NativeCore({ multihash, spec, dataDirectory: config.dataDirectory, quickJS })
+		return new NativeCore({ multihash, spec, directory: config.dataDirectory, quickJS })
 	}
 
-	constructor(config: { multihash: string; spec: string; dataDirectory: string; quickJS: QuickJSWASMModule }) {
-		const storage = (file: string) => randomAccessFile(path.resolve(config.dataDirectory, "hypercore", file))
+	constructor(config: { multihash: string; spec: string; directory: string; quickJS: QuickJSWASMModule }) {
+		const storage = (file: string) => randomAccessFile(path.resolve(config.directory, "hypercore", file))
 		super({ ...config, storage })
 
-		this.database = new Database(path.resolve(config.dataDirectory, "db.sqlite"))
+		this.database = new Database(path.resolve(config.directory, "db.sqlite"))
 
 		// this has to be called *before* we try to prepare any statements
 		this.database.exec(Core.getDatabaseSchema(this.models))

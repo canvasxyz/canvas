@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client"
-import * as IpfsHttpClient from "ipfs-http-client"
 
 import { Loader } from "utils/server/loader"
 
@@ -12,7 +11,6 @@ import { Loader } from "utils/server/loader"
 
 declare global {
 	var prisma: PrismaClient
-	var ipfs: IpfsHttpClient.IPFSHTTPClient
 	var loader: Loader
 }
 
@@ -28,19 +26,6 @@ function getPrismaClient() {
 }
 
 export const prisma = getPrismaClient()
-
-function getIpfsClient() {
-	if (process.env.NODE_ENV === "production") {
-		return IpfsHttpClient.create()
-	} else if (global.ipfs !== undefined) {
-		return global.ipfs
-	} else {
-		global.ipfs = IpfsHttpClient.create()
-		return global.ipfs
-	}
-}
-
-export const ipfs = getIpfsClient()
 
 function getLoader(): Loader {
 	if (process.env.NODE_ENV === "production") {

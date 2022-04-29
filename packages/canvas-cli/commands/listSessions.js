@@ -1,13 +1,14 @@
 import fs from "node:fs"
 import path from "node:path"
-import assert from "node:assert"
 
 import hypercore from "hypercore"
 import HyperBee from "hyperbee"
 
 import { createPrefixStream } from "../utils/prefixStream.js"
 
-export const command = "sessions <multihash> [--datadir=apps]"
+import { defaultDataDirectory } from "./utils.js"
+
+export const command = "sessions <multihash>"
 export const desc = "Print app session log"
 export const builder = (yargs) => {
 	yargs
@@ -19,11 +20,15 @@ export const builder = (yargs) => {
 		.option("datadir", {
 			describe: "Path of the app data directory",
 			type: "string",
-			default: "./apps",
+			default: defaultDataDirectory,
 		})
 }
 
 export async function handler(args) {
+	if (!fs.existsSync(args.datadir)) {
+		fs.mkdirSync(args.datadir)
+	}
+
 	const appPath = path.resolve(args.datadir, args.multihash)
 	if (!fs.existsSync(appPath)) {
 		console.log("App not found. Have you tried running the app yet?")
@@ -32,7 +37,7 @@ export async function handler(args) {
 
 	const hypercorePath = path.resolve(appPath, "hypercore")
 	if (!fs.existsSync(hypercorePath)) {
-		console.log("App initialized, but no action log found. Have you tried running the app yet?")
+		console.log("App initialized, but no session log found. Have you tried running the app yet?")
 		process.exit(1)
 	}
 

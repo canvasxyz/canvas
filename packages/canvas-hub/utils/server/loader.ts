@@ -3,7 +3,7 @@ import path from "node:path"
 
 import { NativeCore } from "canvas-core"
 
-import { prisma, ipfs } from "./services"
+import { prisma } from "./services"
 import { AppStatus } from "./status"
 
 const appDirectory = process.env.APP_DIRECTORY!
@@ -31,28 +31,19 @@ export class Loader {
 
 	private async initialize() {
 		const versions = await prisma.appVersion.findMany({
-			select: { multihash: true },
+			select: { multihash: true, spec: true },
 			where: { deployed: true },
 		})
 
-		for (const { multihash } of versions) {
+		for (const { multihash, spec } of versions) {
 			console.log("starting app", multihash)
-			await this.start(multihash).catch((err) => {
+			await this.start(multihash, spec).catch((err) => {
 				console.error(err)
 			})
 		}
 	}
 
-	private async fetchSpec(multihash: string): Promise<string> {
-		const chunks: Uint8Array[] = []
-		for await (const chunk of ipfs.cat(multihash)) {
-			chunks.push(chunk)
-		}
-
-		return Buffer.concat(chunks).toString("utf-8")
-	}
-
-	public async start(multihash: string): Promise<void> {
+	public async start(multihash: string, spec: string): Promise<void> {
 		const status = this.status.get(multihash)
 		if (status !== undefined) {
 			if (status.status === "starting") {
@@ -63,11 +54,6 @@ export class Loader {
 		}
 
 		this.status.set(multihash, { status: "starting" })
-		const spec = await this.fetchSpec(multihash).catch((err) => {
-			this.status.delete(multihash)
-			throw err
-		})
-
 		const dataDirectory = path.resolve(appDirectory, multihash)
 		await NativeCore.initialize({ spec, dataDirectory })
 			.then((core) => {
