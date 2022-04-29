@@ -1,4 +1,5 @@
 import path from "node:path"
+import fs from "node:fs"
 import cors from "cors"
 import express from "express"
 import bodyParser from "body-parser"
@@ -20,7 +21,7 @@ export const builder = (yargs) => {
 		.option("datadir", {
 			describe: "Path of the app data directory",
 			type: "string",
-			default: "./apps",
+			default: "~/.canvas",
 		})
 		.option("port", {
 			type: "number",
@@ -38,6 +39,10 @@ export const builder = (yargs) => {
 }
 
 export async function handler(args) {
+	if (!fs.existsSync(args.datadir)) {
+		fs.mkdirSync(args.datadir)
+	}
+
 	const { multihash, spec } = await getSpec(args.datadir, args.spec)
 	const dataDirectory = path.resolve(args.datadir, multihash)
 	const port = args.port
