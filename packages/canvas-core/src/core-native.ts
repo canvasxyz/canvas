@@ -7,7 +7,7 @@ import Database, * as sqlite from "better-sqlite3"
 
 import Hash from "ipfs-only-hash"
 
-import type { ObjectSpec } from "./specs.js"
+import { ObjectSpec, objectSpecType, stringSpecType } from "./specs.js"
 import type { ModelValue } from "./models.js"
 import { Core } from "./core.js"
 import { assert, objectSpecToString } from "./utils.js"
@@ -18,6 +18,8 @@ export class NativeCore extends Core {
 	private readonly routeStatements: Record<string, sqlite.Statement> = {}
 
 	static async initialize(config: { spec: string | ObjectSpec; dataDirectory: string }) {
+		assert(objectSpecType.is(config.spec) || stringSpecType.is(config.spec), "invalid spec")
+
 		const quickJS = await getQuickJS()
 		const spec = typeof config.spec === "string" ? config.spec : objectSpecToString(config.spec)
 		const multihash = await Hash.of(spec)
