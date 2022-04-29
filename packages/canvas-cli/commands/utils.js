@@ -5,7 +5,7 @@ import os from "node:os"
 import fetch from "node-fetch"
 
 export const download = (multihash) =>
-	fetch(`http://localhost:5001/api/v0/cat?arg=${multihash}`)
+	fetch(`http://localhost:5001/api/v0/cat?arg=${multihash}`, { method: "POST" })
 		.then((res) => res.text())
 		.catch((err) => {
 			if (err?.code === "ECONNREFUSED") {
