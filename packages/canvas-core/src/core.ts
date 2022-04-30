@@ -269,12 +269,16 @@ Object.assign(globalThis, spec);
 		assert(payload.call in this.actionFunctions, "invalid action function")
 
 		this.currentPayload = payload
+		const hash = ethers.utils.sha256(Buffer.from(JSON.stringify(payload)))
+
 		const context = this.vm.newObject()
+		const hashString = this.vm.newString(hash)
 		const fromString = this.vm.newString(payload.from)
 		const timestampNumber = this.vm.newNumber(payload.timestamp)
 		this.vm.setProp(context, "db", this.modelAPI)
 		this.vm.setProp(context, "from", fromString)
 		this.vm.setProp(context, "timestamp", timestampNumber)
+		this.vm.setProp(context, "hash", hashString)
 		const args = payload.args.map((arg) => this.parseActionArgument(arg))
 		this.vm.unwrapResult(this.vm.callFunction(this.actionFunctions[payload.call], context, ...args))
 		fromString.dispose()
