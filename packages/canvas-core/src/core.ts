@@ -188,9 +188,23 @@ Object.assign(globalThis, spec);
 	}
 
 	public async apply(action: Action): Promise<void> {
+		// Typechecks with warnings for usability
+		if (action.from === undefined) console.log("missing action.from")
+		if (action.signature === undefined) console.log("missing action.signature")
+		if (action.payload === undefined) console.log("missing action.payload")
 		assert(actionType.is(action), "invalid action")
+
 		// Verify the action matches the payload
 		const payload = JSON.parse(action.payload)
+		if (payload.from === undefined) console.log("missing payload.from")
+		if (payload.spec === undefined) console.log("missing payload.spec")
+		if (payload.timestamp === undefined) console.log("missing payload.timestamp")
+		if (payload.call === undefined) console.log("missing payload.call")
+		if (payload.args === undefined) console.log("missing payload.args")
+		if (!Array.isArray(payload.args)) console.log("payload.args should be an array")
+		if (payload.args.some((a) => Array.isArray(a) || typeof a === "object")) {
+			console.log("payload.args should only include primitive types")
+		}
 		assert(actionPayloadType.is(payload), "invalid message payload")
 
 		/**
