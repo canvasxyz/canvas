@@ -10,7 +10,15 @@ import * as t from "io-ts"
 
 import { assert } from "./utils.js"
 
-import { Action, actionType, actionPayloadType, sessionPayloadType, ActionPayload, ActionArgument } from "./actions.js"
+import {
+	Action,
+	actionType,
+	actionPayloadType,
+	sessionPayloadType,
+	ActionPayload,
+	ActionArgument,
+	ActionResult,
+} from "./actions.js"
 import { getColumnType, Model, modelType, ModelValue, validateType } from "./models.js"
 import { string } from "fp-ts"
 
@@ -83,7 +91,7 @@ export abstract class Core {
 		// console.log:
 		const logHandle = this.vm.newFunction("log", (...args: any) => {
 			const nativeArgs = args.map(this.vm.dump)
-			console.log("[worker]", ...nativeArgs)
+			console.log("[canvas-vm]", ...nativeArgs)
 		})
 
 		const consoleHandle = this.vm.newObject()
@@ -105,7 +113,7 @@ export abstract class Core {
 				assert(this.currentPayload !== null, "internal error: missing currentPayload")
 				const id = key.consume(this.vm.getString)
 				const params = value.consume(this.vm.dump)
-				assert(typeof params === "object")
+				assert(typeof params === "object", "object parameters expected: this.db.table.set(id, { field })")
 				for (const [field, type] of Object.entries(model)) {
 					validateType(type, params[field])
 				}
@@ -187,10 +195,24 @@ export abstract class Core {
 		})
 	}
 
-	public async apply(action: Action): Promise<void> {
+	public async apply(action: Action): Promise<ActionResult> {
+		// Typechecks with warnings for usability
+		if (action.from === undefined) console.log("missing action.from")
+		if (action.signature === undefined) console.log("missing action.signature")
+		if (action.payload === undefined) console.log("missing action.payload")
 		assert(actionType.is(action), "invalid action")
+
 		// Verify the action matches the payload
 		const payload = JSON.parse(action.payload)
+		if (payload.from === undefined) console.log("missing payload.from")
+		if (payload.spec === undefined) console.log("missing payload.spec")
+		if (payload.timestamp === undefined) console.log("missing payload.timestamp")
+		if (payload.call === undefined) console.log("missing payload.call")
+		if (payload.args === undefined) console.log("missing payload.args")
+		if (!Array.isArray(payload.args)) console.log("payload.args should be an array")
+		if (payload.args.some((a: ActionArgument) => Array.isArray(a) || typeof a === "object")) {
+			console.log("payload.args should only include primitive types")
+		}
 		assert(actionPayloadType.is(payload), "invalid message payload")
 
 		/**
@@ -255,12 +277,16 @@ export abstract class Core {
 		assert(payload.call in this.actionFunctions, "invalid action function")
 
 		this.currentPayload = payload
+		const hash = ethers.utils.sha256(Buffer.from(JSON.stringify(payload)))
+
 		const context = this.vm.newObject()
+		const hashString = this.vm.newString(hash)
 		const fromString = this.vm.newString(payload.from)
 		const timestampNumber = this.vm.newNumber(payload.timestamp)
 		this.vm.setProp(context, "db", this.modelAPI)
 		this.vm.setProp(context, "from", fromString)
 		this.vm.setProp(context, "timestamp", timestampNumber)
+		this.vm.setProp(context, "hash", hashString)
 		const args = payload.args.map((arg) => this.parseActionArgument(arg))
 		this.vm.unwrapResult(this.vm.callFunction(this.actionFunctions[payload.call], context, ...args))
 		fromString.dispose()
@@ -269,6 +295,8 @@ export abstract class Core {
 
 		// if everything succeeds
 		this.hyperbee.put(Core.getActionKey(action.signature), JSON.stringify(action))
+
+		return { hash }
 	}
 
 	private parseActionArgument(arg: ActionArgument): QuickJSHandle {

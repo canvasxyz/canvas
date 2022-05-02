@@ -17,6 +17,8 @@ import type { Model } from "./models.js"
  *
  * A `SessionPayload` is the data signed by the user to initiate a session.
  *
+ * An `ActionResult` is returned after successfully applying an action.
+ *
  */
 
 export type Action = {
@@ -68,6 +70,14 @@ export const sessionPayloadType: t.Type<SessionPayload> = t.type({
 	session_public_key: t.string,
 	session_duration: t.number,
 })
+
+export type ActionResult = {
+	hash: string
+}
+
+export const ActionResultType = {
+	hash: t.string,
+}
 
 /**
  * Session Storage

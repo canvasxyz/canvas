@@ -6,7 +6,7 @@ import initSqlJs, { SqlJsStatic, Statement, Database, SqlJsConfig } from "sql.js
 
 import Hash from "ipfs-only-hash"
 
-import type { ObjectSpec } from "./specs"
+import { ObjectSpec, objectSpecType, stringSpecType } from "./specs.js"
 import type { ModelValue } from "./models.js"
 import { Core } from "./core.js"
 import { assert, objectSpecToString } from "./utils.js"
@@ -21,6 +21,8 @@ export class BrowserCore extends Core {
 		storage?: (file: string) => RandomAccessStorage
 		sqlJsOptions?: SqlJsConfig
 	}) {
+		assert(objectSpecType.is(config.spec) || stringSpecType.is(config.spec), "invalid spec")
+
 		const quickJS = await getQuickJS()
 		const SQL = await initSqlJs(config.sqlJsOptions)
 		const spec = typeof config.spec === "string" ? config.spec : objectSpecToString(config.spec)

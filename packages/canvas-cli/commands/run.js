@@ -81,6 +81,11 @@ export async function handler(args) {
 	server.use(cors())
 	server.use(bodyParser.json())
 
+	server.get("/", (req, res) => {
+		res.json({ multihash })
+		return
+	})
+
 	for (const route of Object.keys(core.routes)) {
 		server.get(route, (req, res) => {
 			const results = core.routeStatements[route].all(req.params)
@@ -119,7 +124,12 @@ export async function handler(args) {
 	})
 
 	server.listen(port, () => {
+<<<<<<< HEAD
 		console.log(`Serving ${core.multihash} on port ${port}:`)
+=======
+		console.log(`Serving ${multihash} on port ${port}:`)
+		console.log(`└ GET http://localhost:${port}/`)
+>>>>>>> main
 		Object.keys(core.routes).map((name) => {
 			console.log(`└ GET http://localhost:${port}${name}`)
 		})
