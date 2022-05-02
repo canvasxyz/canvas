@@ -1,7 +1,7 @@
 import { Buffer } from "buffer"
 import { ethers } from "ethers"
 
-import { QuickJSWASMModule, QuickJSRuntime, QuickJSContext, QuickJSHandle, isFail } from "quickjs-emscripten"
+import { QuickJSWASMModule, QuickJSRuntime, QuickJSContext, QuickJSHandle, isFail, isSuccess } from "quickjs-emscripten"
 import type { RandomAccessStorage } from "random-access-storage"
 import HyperBee from "hyperbee"
 import hypercore, { Feed } from "hypercore"
@@ -10,17 +10,10 @@ import * as t from "io-ts"
 
 import { assert } from "./utils.js"
 
-import {
-	Action,
-	actionType,
-	actionPayloadType,
-	sessionPayloadType,
-	ActionPayload,
-	ActionArgument,
-	ActionResult,
-} from "./actions.js"
+import { Action, actionType, actionPayloadType, ActionPayload, ActionArgument, ActionResult } from "./actions.js"
+import { Session, sessionPayloadType, sessionType } from "./sessions.js"
+
 import { getColumnType, Model, modelType, ModelValue, validateType } from "./models.js"
-import { string } from "fp-ts"
 
 export abstract class Core {
 	public abstract setModel(name: string, params: Record<string, ModelValue>): void
@@ -200,7 +193,10 @@ export abstract class Core {
 	/**
 	 * Executes an action.
 	 */
-	public async apply(action: Action, replaying?: boolean): Promise<ActionResult> {
+	public async apply(
+		action: Action,
+		options: { replaying?: boolean; skipSignatureVerification?: boolean } = {}
+	): Promise<ActionResult> {
 		// Typechecks with warnings for usability
 		if (action.from === undefined) console.log("missing action.from")
 		if (action.signature === undefined) console.log("missing action.signature")
@@ -243,7 +239,7 @@ export abstract class Core {
 
 			// validate the session
 			const session = JSON.parse(record.value)
-			assert(actionType.is(session), "got invalid session from HyperBee")
+			assert(sessionType.is(session), "got invalid session from HyperBee")
 			const sessionPayload = JSON.parse(session.payload)
 			assert(sessionPayloadType.is(sessionPayload), "got invalid session from HyperBee")
 
@@ -257,6 +253,7 @@ export abstract class Core {
 			assert(action.from === payload.from, "invalid signature (action.from and payload.from do not match)")
 			assert(payload.from === session.from, "invalid signature (session.from and payload.from do not match)")
 
+			assert(action.signature !== null, "missing action signature")
 			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
 			assert(
 				verifiedAddress === action.session,
@@ -268,8 +265,11 @@ export abstract class Core {
 			)
 		} else {
 			assert(action.from === payload.from, "action signed by wrong address")
-			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
-			assert(action.from === verifiedAddress, "action signed by wrong address")
+			if (!options.skipSignatureVerification) {
+				assert(action.signature !== null, "missing action signature")
+				const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
+				assert(action.from === verifiedAddress, "action signed by wrong address")
+			}
 		}
 
 		assert(payload.timestamp > boundsCheckLowerLimit, "action timestamp too far in the past")
@@ -293,14 +293,19 @@ export abstract class Core {
 		this.vm.setProp(context, "timestamp", timestampNumber)
 		this.vm.setProp(context, "hash", hashString)
 		const args = payload.args.map((arg) => this.parseActionArgument(arg))
-		this.vm.unwrapResult(this.vm.callFunction(this.actionFunctions[payload.call], context, ...args))
+		const result = this.vm.callFunction(this.actionFunctions[payload.call], context, ...args)
+		if (isFail(result)) {
+			throw new Error(`Action application failed: ${JSON.stringify(result.error.consume(this.vm.dump), null, "  ")}`)
+		}
+
+		result.value.dispose()
 		fromString.dispose()
 		timestampNumber.dispose()
 		this.currentPayload = null
 
 		// if everything succeeds
-		if (!replaying) {
-			this.hyperbee.put(Core.getActionKey(action.signature), JSON.stringify(action))
+		if (!options.replaying) {
+			await this.hyperbee.put(Core.getActionKey(action.signature), JSON.stringify(action))
 		}
 
 		return { hash }
@@ -325,8 +330,8 @@ export abstract class Core {
 	/**
 	 * Create a new session.
 	 */
-	public async session(session: Action, replaying?: boolean) {
-		assert(actionType.is(session), "invalid session")
+	public async session(session: Session) {
+		assert(sessionType.is(session), "invalid session")
 		const payload = JSON.parse(session.payload)
 		assert(sessionPayloadType.is(payload), "invalid session payload")
 		assert(payload.from === session.from, "session signed by wrong address")
@@ -336,50 +341,46 @@ export abstract class Core {
 		assert(session.from === verifiedAddress, "session signed by wrong address")
 
 		const key = Core.getSessionKey(payload.session_public_key)
-		if (!replaying) {
-			await this.hyperbee.put(key, JSON.stringify(session))
-		}
+		await this.hyperbee.put(key, JSON.stringify(session))
 	}
 
 	/**
 	 * Replays the action log to reconstruct views.
 	 */
 	public async replay() {
-		for await (const item of this.hyperbee.createHistoryStream()) {
-			if (item.type !== "put") continue
-			try {
-				const action = JSON.parse(item.value.toString())
-				const payload = JSON.parse(action.payload)
-				if (actionPayloadType.is(payload)) {
-					await this.apply(action, true)
-				} else if (sessionPayloadType.is(payload)) {
-					await this.session(action, true)
-				} else {
-					console.error("Unknown payload:", action)
+		for await (const { type, key, value } of this.hyperbee.createHistoryStream()) {
+			if (type === "put") {
+				if (typeof key !== "string" || typeof value !== "string") {
+					throw new Error("Invalid entry in hyperbee history stream")
 				}
-			} catch (error) {
-				console.error("Error parsing action:", item.value)
+
+				if (key.startsWith(Core.actionKeyPrefix)) {
+					const action = JSON.parse(value)
+					assert(actionType.is(action), "Invalid action value in hyperbee history stream")
+					await this.apply(action, { replaying: true })
+				}
 			}
 		}
 	}
 
-	/**
-	 * Storage
-	 */
-	private static getActionKey(signature: string): string {
+	private static getActionKey(signature: string | null): string {
+		if (signature === null) {
+			const bytes = Buffer.from(ethers.utils.randomBytes(32))
+			return Core.actionKeyPrefix + bytes.toString("hex")
+		}
+
 		assert(signature.startsWith("0x"))
 		const bytes = Buffer.from(signature.slice(2), "hex")
-		const hash = ethers.utils.sha256(bytes)
-		return `a:${hash}`
+		return Core.actionKeyPrefix + ethers.utils.sha256(bytes)
 	}
 
-	private static getSessionKey(session_public_key: string): string {
-		assert(session_public_key.startsWith("0x"))
-		return `s:${session_public_key.slice(2)}`
+	private static getSessionKey(sessionPublicKey: string): string {
+		assert(sessionPublicKey.startsWith("0x"))
+		return Core.sessionKeyPrefix + sessionPublicKey.slice(2)
 	}
 
-	private static sessionKeyPrefix = "s:"
-	private static actionKeyPrefix = "a:"
+	private static readonly sessionKeyPrefix = "s:"
+	private static readonly actionKeyPrefix = "a:"
 
 	public async *getSessionStream(options: { limit?: number } = {}): AsyncIterable<[string, Action]> {
 		for await (const [key, value] of this.createPrefixStream(Core.sessionKeyPrefix, options)) {

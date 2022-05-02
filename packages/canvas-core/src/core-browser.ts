@@ -6,7 +6,8 @@ import initSqlJs, { SqlJsStatic, Statement, Database, SqlJsConfig } from "sql.js
 
 import Hash from "ipfs-only-hash"
 
-import { actionPayloadType, sessionPayloadType } from "./actions.js"
+import { actionPayloadType } from "./actions.js"
+import { sessionPayloadType } from "./sessions.js"
 import { ObjectSpec, objectSpecType, stringSpecType } from "./specs.js"
 import type { ModelValue } from "./models.js"
 import { Core } from "./core.js"
@@ -21,7 +22,7 @@ export class BrowserCore extends Core {
 		spec: string | ObjectSpec
 		storage?: (file: string) => RandomAccessStorage
 		sqlJsOptions?: SqlJsConfig
-		replay: boolean
+		replay?: boolean
 	}) {
 		assert(objectSpecType.is(config.spec) || stringSpecType.is(config.spec), "invalid spec")
 

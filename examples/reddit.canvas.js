@@ -80,10 +80,10 @@ export const actions = {
 	},
 	voteThread(threadId, value) {
 		if (value !== 1 && value !== -1) return false
-		this.db.threadVotes.set(id, { creator: this.from, threadId, value })
+		this.db.threadVotes.set(`${threadId}/${this.from}`, { creator: this.from, threadId, value })
 	},
 	voteComment(commentId, value) {
 		if (value !== 1 && value !== -1) return false
-		this.db.commentVotes.set(id, { creator: this.from, commentId, value })
+		this.db.commentVotes.set(`${commentId}/${this.from}`, { creator: this.from, commentId, value })
 	},
 }

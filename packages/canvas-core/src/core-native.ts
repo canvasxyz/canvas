@@ -2,7 +2,6 @@ import path from "path"
 
 import { getQuickJS, QuickJSWASMModule } from "quickjs-emscripten"
 
-import { RandomAccessStorage } from "random-access-storage"
 import randomAccessFile from "random-access-file"
 import Database, * as sqlite from "better-sqlite3"
 
@@ -13,19 +12,29 @@ import type { ModelValue } from "./models.js"
 import { Core } from "./core.js"
 import { assert, objectSpecToString } from "./utils.js"
 
+import * as t from "io-ts"
+
+const fixturesType = t.array(
+	t.type({ from: t.string, call: t.string, args: t.array(t.union([t.null, t.boolean, t.string, t.number])) })
+)
+
 export class NativeCore extends Core {
 	public readonly database: sqlite.Database
 	private readonly modelStatements: Record<string, { set: sqlite.Statement }> = {}
 	private readonly routeStatements: Record<string, sqlite.Statement> = {}
 
-	static async initialize(config: { spec: string | ObjectSpec; dataDirectory: string; replay: boolean }) {
+	static async initialize(config: { spec: string | ObjectSpec; dataDirectory: string; replay?: boolean }) {
 		assert(objectSpecType.is(config.spec) || stringSpecType.is(config.spec), "invalid spec")
 
 		const quickJS = await getQuickJS()
 		const spec = typeof config.spec === "string" ? config.spec : objectSpecToString(config.spec)
 		const multihash = await Hash.of(spec)
 		const core = new NativeCore({ multihash, spec, directory: config.dataDirectory, quickJS })
-		if (config.replay) await core.replay()
+
+		if (config.replay) {
+			await core.replay()
+		}
+
 		return core
 	}
 
