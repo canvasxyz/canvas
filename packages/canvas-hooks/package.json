@@ -1,0 +1,11 @@
+{
+  "name": "canvas-hooks",
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "ethers": "^5.6.4",
+    "ipfs-only-hash": "^4.0.0",
+    "random-access-idb": "^1.2.2",
+    "react": "^18.0.0"
+  }
+}
