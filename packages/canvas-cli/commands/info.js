@@ -2,7 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import chalk from "chalk"
 
-import { BrowserCore, actionType, actionPayloadType, sessionPayloadType } from "canvas-core"
+import { BrowserCore, actionType, sessionType, actionPayloadType, sessionPayloadType } from "canvas-core"
 
 import { defaultDataDirectory, isMultihash } from "./utils.js"
 
@@ -61,16 +61,27 @@ export async function handler(args) {
 To apply an action or initialize a session, POST
 a JSON object to the server following this schema:`)
 	console.log("{")
-	Object.entries(actionType.props).map(([field, { name }]) => {
+	Object.entries(actionType.props).forEach(([field, { name }]) => {
 		console.log(`    ${field}: ${chalk.green(name)},`)
 	})
 	console.log("}")
 
 	console.log(`
-To initialize a session, provide this as the payload,
+	To initialize a session, POST a JSON object to /sessions
+	following this schema:`)
+	console.log("{")
+	Object.entries(sessionType.props).forEach(([field, { name }]) => {
+		console.log(`    ${field}: ${chalk.green(name)},`)
+	})
+	console.log("}")
+
+	console.log(`
+To initialize a session, POST a JSON object to /sessions
+following this schema:
+provide this as the payload,
 in stringified form:`)
 	console.log("{")
-	Object.entries(sessionPayloadType.props).map(([field, { name }]) => {
+	Object.entries(sessionPayloadType.props).forEach(([field, { name }]) => {
 		console.log(`    ${field}: ${chalk.green(name)},`)
 	})
 	console.log("}")
@@ -79,7 +90,7 @@ in stringified form:`)
 To apply an action, provide this as the payload,
 in stringified form:`)
 	console.log("{")
-	Object.entries(actionPayloadType.props).map(([field, { name }]) => {
+	Object.entries(actionPayloadType.props).forEach(([field, { name }]) => {
 		console.log(`    ${field}: ${chalk.green(name)},`)
 	})
 	console.log("}")

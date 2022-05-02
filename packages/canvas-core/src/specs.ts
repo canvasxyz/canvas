@@ -28,4 +28,5 @@ export const objectSpecType = t.type({
 	actions: specActionsType,
 	routes: specRoutesType,
 })
+
 export const stringSpecType = t.string

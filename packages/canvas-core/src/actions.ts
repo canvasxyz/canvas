@@ -15,8 +15,6 @@ import type { Model } from "./models.js"
  * An `ActionPayload` is the data signed by the user, either directly or using a
  * session key, to execute an action in a Canvas application.
  *
- * A `SessionPayload` is the data signed by the user to initiate a session.
- *
  * An `ActionResult` is returned after successfully applying an action.
  *
  */
@@ -24,14 +22,14 @@ import type { Model } from "./models.js"
 export type Action = {
 	from: string
 	session: string | null
-	signature: string
+	signature: string | null
 	payload: string
 }
 
 export const actionType: t.Type<Action> = t.type({
 	from: t.string,
 	session: t.union([t.string, t.null]),
-	signature: t.string,
+	signature: t.union([t.string, t.null]),
 	payload: t.string,
 })
 
@@ -53,22 +51,6 @@ export const actionPayloadType: t.Type<ActionPayload> = t.type({
 	timestamp: t.number,
 	call: t.string,
 	args: t.array(actionArgumentType),
-})
-
-export type SessionPayload = {
-	from: string
-	spec: string
-	timestamp: number
-	session_public_key: string
-	session_duration: number
-}
-
-export const sessionPayloadType: t.Type<SessionPayload> = t.type({
-	from: t.string,
-	spec: t.string,
-	timestamp: t.number,
-	session_public_key: t.string,
-	session_duration: t.number,
 })
 
 export type ActionResult = {
