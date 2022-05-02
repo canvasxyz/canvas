@@ -20,7 +20,7 @@ const spec = {
 }
 
 function App() {
-	const [views, signAndSendAction] = useCore(spec, {
+	const { views, signAndSendAction, login, logout, sessionAddress } = useCore(spec, {
 		subscriptions: ["/threads"],
 	})
 	const inputRef = useRef()
@@ -38,6 +38,14 @@ function App() {
 				<input type="text" ref={inputRef} placeholder="Thread text" autoFocus="on" />
 				<input type="submit" value="Save" />
 			</form>
+			<input
+				type="button"
+				value={sessionAddress ? `Logout ${sessionAddress.slice(0, 5)}...` : "Login"}
+				onClick={(e) => {
+					sessionAddress ? logout() : login()
+				}}
+			/>
+
 			<br />
 			<div>
 				{views.get("/threads")?.map((row, index) => (
