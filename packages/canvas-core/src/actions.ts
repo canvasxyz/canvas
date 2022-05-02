@@ -75,10 +75,6 @@ export type ActionResult = {
 	hash: string
 }
 
-export const ActionResultType = {
-	hash: t.string,
-}
-
 /**
  * Session Storage
  */
