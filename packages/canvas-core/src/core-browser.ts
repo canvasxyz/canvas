@@ -6,6 +6,7 @@ import initSqlJs, { SqlJsStatic, Statement, Database, SqlJsConfig } from "sql.js
 
 import Hash from "ipfs-only-hash"
 
+import { actionPayloadType, sessionPayloadType } from "./actions.js"
 import { ObjectSpec, objectSpecType, stringSpecType } from "./specs.js"
 import type { ModelValue } from "./models.js"
 import { Core } from "./core.js"
@@ -20,6 +21,7 @@ export class BrowserCore extends Core {
 		spec: string | ObjectSpec
 		storage?: (file: string) => RandomAccessStorage
 		sqlJsOptions?: SqlJsConfig
+		replay: boolean
 	}) {
 		assert(objectSpecType.is(config.spec) || stringSpecType.is(config.spec), "invalid spec")
 
@@ -28,7 +30,9 @@ export class BrowserCore extends Core {
 		const spec = typeof config.spec === "string" ? config.spec : objectSpecToString(config.spec)
 		const multihash = await Hash.of(spec)
 		const storage = config.storage || randomAccessMemory
-		return new BrowserCore({ multihash, spec, quickJS, SQL, storage })
+		const core = new BrowserCore({ multihash, spec, quickJS, SQL, storage })
+		if (config.replay) await core.replay()
+		return core
 	}
 
 	constructor(config: {

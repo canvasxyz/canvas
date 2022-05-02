@@ -195,7 +195,10 @@ export abstract class Core {
 		})
 	}
 
-	public async apply(action: Action): Promise<ActionResult> {
+	/**
+	 * Executes an action.
+	 */
+	public async apply(action: Action, replaying: boolean): Promise<ActionResult> {
 		// Typechecks with warnings for usability
 		if (action.from === undefined) console.log("missing action.from")
 		if (action.signature === undefined) console.log("missing action.signature")
@@ -294,7 +297,9 @@ export abstract class Core {
 		this.currentPayload = null
 
 		// if everything succeeds
-		this.hyperbee.put(Core.getActionKey(action.signature), JSON.stringify(action))
+		if (!replaying) {
+			this.hyperbee.put(Core.getActionKey(action.signature), JSON.stringify(action))
+		}
 
 		return { hash }
 	}
@@ -318,7 +323,7 @@ export abstract class Core {
 	/**
 	 * Create a new session.
 	 */
-	public async session(session: Action) {
+	public async session(session: Action, replaying: boolean) {
 		assert(actionType.is(session), "invalid session")
 		const payload = JSON.parse(session.payload)
 		assert(sessionPayloadType.is(payload), "invalid session payload")
@@ -329,9 +334,36 @@ export abstract class Core {
 		assert(session.from === verifiedAddress, "session signed by wrong address")
 
 		const key = Core.getSessionKey(payload.session_public_key)
-		await this.hyperbee.put(key, JSON.stringify(session))
+		if (!replaying) {
+			await this.hyperbee.put(key, JSON.stringify(session))
+		}
 	}
 
+	/**
+	 * Replays the action log to reconstruct views.
+	 */
+	public async replay() {
+		for await (const item of this.hyperbee.createHistoryStream()) {
+			if (item.type !== "put") continue
+			try {
+				const action = JSON.parse(item.value.toString())
+				const payload = JSON.parse(action.payload)
+				if (actionPayloadType.is(payload)) {
+					await this.apply(action, true)
+				} else if (sessionPayloadType.is(payload)) {
+					await this.session(action, true)
+				} else {
+					console.error("Unknown payload:", action)
+				}
+			} catch (error) {
+				console.error("Error parsing action:", item.value)
+			}
+		}
+	}
+
+	/**
+	 * Storage
+	 */
 	private static getActionKey(signature: string): string {
 		assert(signature.startsWith("0x"))
 		const bytes = Buffer.from(signature.slice(2), "hex")

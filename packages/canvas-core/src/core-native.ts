@@ -18,13 +18,15 @@ export class NativeCore extends Core {
 	private readonly modelStatements: Record<string, { set: sqlite.Statement }> = {}
 	private readonly routeStatements: Record<string, sqlite.Statement> = {}
 
-	static async initialize(config: { spec: string | ObjectSpec; dataDirectory: string }) {
+	static async initialize(config: { spec: string | ObjectSpec; dataDirectory: string; replay: boolean }) {
 		assert(objectSpecType.is(config.spec) || stringSpecType.is(config.spec), "invalid spec")
 
 		const quickJS = await getQuickJS()
 		const spec = typeof config.spec === "string" ? config.spec : objectSpecToString(config.spec)
 		const multihash = await Hash.of(spec)
-		return new NativeCore({ multihash, spec, directory: config.dataDirectory, quickJS })
+		const core = new NativeCore({ multihash, spec, directory: config.dataDirectory, quickJS })
+		if (config.replay) await core.replay()
+		return core
 	}
 
 	constructor(config: { multihash: string; spec: string; directory: string; quickJS: QuickJSWASMModule }) {
