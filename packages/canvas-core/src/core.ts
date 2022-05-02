@@ -22,6 +22,7 @@ export abstract class Core {
 		params?: Record<string, ModelValue>
 	): Record<string, ModelValue>[] | Promise<Record<string, ModelValue>[]>
 
+	public readonly spec: string
 	public readonly multihash: string
 	public readonly models: Record<string, Model> = {}
 	public readonly routes: Record<string, string> = {}
@@ -48,6 +49,7 @@ export abstract class Core {
 		quickJS: QuickJSWASMModule
 	}) {
 		this.multihash = config.multihash
+		this.spec = config.spec
 
 		this.runtime = config.quickJS.newRuntime()
 
