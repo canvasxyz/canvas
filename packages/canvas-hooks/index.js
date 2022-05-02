@@ -151,7 +151,7 @@ export default function useCore(spec, { subscriptions }) {
 		signAndSendAction,
 		login,
 		logout,
-		currentAddress,
+		address: currentAddress,
 		sessionAddress: currentSessionSigner?.address,
 		core,
 	}

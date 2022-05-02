@@ -20,7 +20,7 @@ const spec = {
 }
 
 function App() {
-	const { views, signAndSendAction, login, logout, sessionAddress } = useCore(spec, {
+	const { views, signAndSendAction, login, logout, sessionAddress, address, core } = useCore(spec, {
 		subscriptions: ["/threads"],
 	})
 	const inputRef = useRef()
@@ -28,6 +28,7 @@ function App() {
 	return (
 		<div className="App">
 			<div>Canvas Demo App</div>
+			<div>Multihash: {core?.multihash}</div>
 			<form
 				onSubmit={(e) => {
 					e.preventDefault()
@@ -40,7 +41,7 @@ function App() {
 			</form>
 			<input
 				type="button"
-				value={sessionAddress ? `Logout ${sessionAddress.slice(0, 5)}...` : "Login"}
+				value={sessionAddress ? `Logout ${address?.slice(0, 5)}...` : "Login"}
 				onClick={(e) => {
 					sessionAddress ? logout() : login()
 				}}
