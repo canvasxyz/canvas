@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
-import { prisma, ipfs } from "utils/server/services"
+import Hash from "ipfs-only-hash"
+import { prisma } from "utils/server/services"
 
 import * as t from "io-ts"
 
@@ -19,9 +20,8 @@ async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 
 	const { spec } = req.body
 
-	const { cid } = await ipfs.add(spec)
-	const multihash = cid.toV0().toString()
-	console.log("cid", multihash)
+	const multihash = await Hash.of("")
+	console.log("multihash", multihash)
 
 	const app = await prisma.app.findUnique({
 		where: { slug },

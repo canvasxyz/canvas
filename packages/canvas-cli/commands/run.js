@@ -5,10 +5,13 @@ import express from "express"
 import bodyParser from "body-parser"
 import { StatusCodes } from "http-status-codes"
 
-import { NativeCore, actionType, actionPayloadType, sessionPayloadType } from "canvas-core"
-import { getSpec } from "./utils.js"
+import Hash from "ipfs-only-hash"
 
-export const command = "run <spec> [--datadir=apps] [--peer=localhost:9000/abc...] [--noserver]"
+import { NativeCore, actionType, actionPayloadType, sessionPayloadType } from "canvas-core"
+
+import { defaultDataDirectory, isMultihash, download } from "./utils.js"
+
+export const command = "run <spec>"
 export const desc = "Run an app, by path or multihash"
 
 export const builder = (yargs) => {
@@ -21,7 +24,7 @@ export const builder = (yargs) => {
 		.option("datadir", {
 			describe: "Path of the app data directory",
 			type: "string",
-			default: "~/.canvas",
+			default: defaultDataDirectory,
 		})
 		.option("port", {
 			type: "number",
@@ -43,11 +46,34 @@ export async function handler(args) {
 		fs.mkdirSync(args.datadir)
 	}
 
-	const { multihash, spec } = await getSpec(args.datadir, args.spec)
-	const dataDirectory = path.resolve(args.datadir, multihash)
-	const port = args.port
+	let appPath
+	let spec
+	if (isMultihash(args.spec)) {
+		appPath = path.resolve(args.datadir, args.spec)
+		if (fs.existsSync(appPath)) {
+			spec = fs.readFileSync(path.resolve(appPath, "spec.mjs"), "utf-8")
+		} else {
+			console.log("Creating", appPath)
+			fs.mkdirSync(appPath)
+			console.log("Downloading", args.spec, "from IPFS...")
+			spec = await download(args.spec)
+			fs.writeFileSync(path.resolve(appPath, "spec.mjs"), spec)
+			fs.writeFileSync(path.resolve(appPath, "spec.cid"), args.spec)
+		}
+	} else {
+		spec = fs.readFileSync(args.spec, "utf-8")
+		const multihash = await Hash.of(spec)
+		appPath = path.resolve(args.datadir, multihash)
+		if (!fs.existsSync(appPath)) {
+			console.log("Creating", appPath)
+			fs.mkdirSync(appPath)
+			fs.writeFileSync(path.resolve(appPath, "spec.mjs"), spec)
+			fs.writeFileSync(path.resolve(appPath, "spec.cid"), multihash)
+		}
+	}
 
-	const core = await NativeCore.initialize({ spec, dataDirectory })
+	const port = args.port
+	const core = await NativeCore.initialize({ spec, dataDirectory: appPath })
 
 	const ACTION_FORMAT_INVALID = "Invalid action format"
 
@@ -98,8 +124,12 @@ export async function handler(args) {
 	})
 
 	server.listen(port, () => {
+<<<<<<< HEAD
+		console.log(`Serving ${core.multihash} on port ${port}:`)
+=======
 		console.log(`Serving ${multihash} on port ${port}:`)
 		console.log(`└ GET http://localhost:${port}/`)
+>>>>>>> main
 		Object.keys(core.routes).map((name) => {
 			console.log(`└ GET http://localhost:${port}${name}`)
 		})

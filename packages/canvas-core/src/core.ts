@@ -1,7 +1,7 @@
 import { Buffer } from "buffer"
 import { ethers } from "ethers"
 
-import type { QuickJSWASMModule, QuickJSRuntime, QuickJSContext, QuickJSHandle } from "quickjs-emscripten"
+import { QuickJSWASMModule, QuickJSRuntime, QuickJSContext, QuickJSHandle, isFail } from "quickjs-emscripten"
 import type { RandomAccessStorage } from "random-access-storage"
 import HyperBee from "hyperbee"
 import hypercore, { Feed } from "hypercore"
@@ -70,14 +70,13 @@ export abstract class Core {
 		this.vm = this.runtime.newContext()
 		this.modelAPI = this.vm.newObject()
 		this.initializeGlobalVariables()
-		// Import the spec, rehydrating any functions that are being passed as strings.
-		this.vm
-			.unwrapResult(
-				this.vm.evalCode(`import * as spec from "${this.multihash}";
-Object.assign(globalThis, spec);
-`)
-			)
-			.dispose()
+
+		const importResult = this.vm.evalCode(`import * as spec from "${this.multihash}"; Object.assign(globalThis, spec);`)
+		if (isFail(importResult)) {
+			const message = this.vm.getProp(importResult.error, "message").consume(this.vm.getString)
+			importResult.error.dispose()
+			throw new Error(`Failed to load spec: ${message}`)
+		}
 
 		this.initializeModels()
 		this.initializeRoutes()
@@ -152,6 +151,7 @@ Object.assign(globalThis, spec);
 		const actionNames = this.vm
 			.unwrapResult(this.vm.callFunction(globalObjectKeys, globalObject, actions))
 			.consume(this.vm.dump)
+
 		assert(t.array(t.string).is(actionNames), "invalid actions export")
 		const globalFunction = this.vm.getProp(this.vm.global, "Function")
 		const globalFunctionPrototype = this.vm.getProp(globalFunction, "__proto__")

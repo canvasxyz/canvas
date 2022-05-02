@@ -12,13 +12,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 		return res.status(StatusCodes.BAD_REQUEST).end()
 	}
 
-	await prisma.appVersion.update({
+	const { spec } = await prisma.appVersion.update({
 		where: { multihash: req.query.multihash },
 		data: { deployed: true },
+		select: { spec: true },
 	})
 
 	await loader
-		.start(req.query.multihash)
+		.start(req.query.multihash, spec)
 		.then(() => res.status(StatusCodes.OK).end())
 		.catch((err) =>
 			res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err instanceof Error ? err.message : err.toString())
