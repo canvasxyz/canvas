@@ -58,28 +58,16 @@ export async function handler(args) {
 	console.log(`Found ${core.feed.length} actions. Connect to peers to retrieve more.`)
 
 	console.log(`
-To apply an action or initialize a session, POST
-a JSON object to the server following this schema:`)
-	console.log("{")
-	Object.entries(actionType.props).forEach(([field, { name }]) => {
-		console.log(`    ${field}: ${chalk.green(name)},`)
-	})
-	console.log("}")
-
-	console.log(`
-	To initialize a session, POST a JSON object to /sessions
-	following this schema:`)
+To initialize a session, POST a JSON object to /sessions
+with these properties:`)
 	console.log("{")
 	Object.entries(sessionType.props).forEach(([field, { name }]) => {
 		console.log(`    ${field}: ${chalk.green(name)},`)
 	})
 	console.log("}")
-
 	console.log(`
-To initialize a session, POST a JSON object to /sessions
-following this schema:
-provide this as the payload,
-in stringified form:`)
+The session payload should be a stringified JSON object
+with these properties:`)
 	console.log("{")
 	Object.entries(sessionPayloadType.props).forEach(([field, { name }]) => {
 		console.log(`    ${field}: ${chalk.green(name)},`)
@@ -87,8 +75,16 @@ in stringified form:`)
 	console.log("}")
 
 	console.log(`
-To apply an action, provide this as the payload,
-in stringified form:`)
+To apply an action, POST a JSON object to /actions
+with these properties:`)
+	console.log("{")
+	Object.entries(actionType.props).forEach(([field, { name }]) => {
+		console.log(`    ${field}: ${chalk.green(name)},`)
+	})
+	console.log("}")
+	console.log(`
+The action payload should be a stringified JSON object
+with these properties:`)
 	console.log("{")
 	Object.entries(actionPayloadType.props).forEach(([field, { name }]) => {
 		console.log(`    ${field}: ${chalk.green(name)},`)
