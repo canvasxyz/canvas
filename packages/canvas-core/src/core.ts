@@ -29,6 +29,7 @@ export abstract class Core {
 		params?: Record<string, ModelValue>
 	): Record<string, ModelValue>[] | Promise<Record<string, ModelValue>[]>
 
+	public readonly spec: string
 	public readonly multihash: string
 	public readonly models: Record<string, Model> = {}
 	public readonly routes: Record<string, string> = {}
@@ -55,6 +56,7 @@ export abstract class Core {
 		quickJS: QuickJSWASMModule
 	}) {
 		this.multihash = config.multihash
+		this.spec = config.spec
 
 		this.runtime = config.quickJS.newRuntime()
 
@@ -198,7 +200,7 @@ export abstract class Core {
 	/**
 	 * Executes an action.
 	 */
-	public async apply(action: Action, replaying: boolean): Promise<ActionResult> {
+	public async apply(action: Action, replaying?: boolean): Promise<ActionResult> {
 		// Typechecks with warnings for usability
 		if (action.from === undefined) console.log("missing action.from")
 		if (action.signature === undefined) console.log("missing action.signature")
@@ -323,7 +325,7 @@ export abstract class Core {
 	/**
 	 * Create a new session.
 	 */
-	public async session(session: Action, replaying: boolean) {
+	public async session(session: Action, replaying?: boolean) {
 		assert(actionType.is(session), "invalid session")
 		const payload = JSON.parse(session.payload)
 		assert(sessionPayloadType.is(payload), "invalid session payload")

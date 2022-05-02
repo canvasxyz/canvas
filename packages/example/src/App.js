@@ -19,6 +19,16 @@ const spec = {
 	},
 }
 
+const download = (text) => {
+	const element = document.createElement("a")
+	element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(text))
+	element.setAttribute("download", "spec.canvas.js")
+	element.style.display = "none"
+	document.body.appendChild(element)
+	element.click()
+	document.body.removeChild(element)
+}
+
 function App() {
 	const { views, signAndSendAction, login, logout, sessionAddress, address, core } = useCore(spec, {
 		subscriptions: ["/threads"],
@@ -28,7 +38,13 @@ function App() {
 	return (
 		<div className="App">
 			<div>Canvas Demo App</div>
-			<div>Multihash: {core?.multihash}</div>
+			<div>
+				Multihash: {core?.multihash} (
+				<a href="#" onClick={() => download(core?.spec)}>
+					Download
+				</a>
+				)
+			</div>
 			<form
 				onSubmit={(e) => {
 					e.preventDefault()
