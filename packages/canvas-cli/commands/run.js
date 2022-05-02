@@ -82,7 +82,7 @@ export async function handler(args) {
 	server.use(bodyParser.json())
 
 	server.get("/", (req, res) => {
-		res.json({ multihash })
+		res.json({ multihash: core.multihash })
 		return
 	})
 
