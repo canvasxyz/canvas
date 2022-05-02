@@ -86,7 +86,6 @@ export default function useCore(spec, { subscriptions }) {
 			currentSigner.signMessage(payloadString).then((signature) => {
 				const action = {
 					from: currentAddress,
-					session: null,
 					signature,
 					payload: payloadString,
 				}
