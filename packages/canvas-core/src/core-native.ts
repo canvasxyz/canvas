@@ -14,10 +14,6 @@ import { assert, objectSpecToString } from "./utils.js"
 
 import * as t from "io-ts"
 
-const fixturesType = t.array(
-	t.type({ from: t.string, call: t.string, args: t.array(t.union([t.null, t.boolean, t.string, t.number])) })
-)
-
 export class NativeCore extends Core {
 	public readonly database: sqlite.Database
 	private readonly modelStatements: Record<string, { set: sqlite.Statement }> = {}
