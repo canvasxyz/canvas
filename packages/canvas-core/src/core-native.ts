@@ -12,8 +12,6 @@ import type { ModelValue } from "./models.js"
 import { Core } from "./core.js"
 import { assert, objectSpecToString } from "./utils.js"
 
-import * as t from "io-ts"
-
 export class NativeCore extends Core {
 	public readonly database: sqlite.Database
 	private readonly modelStatements: Record<string, { set: sqlite.Statement }> = {}
