@@ -1,6 +1,7 @@
 import path from "node:path"
 import fs from "node:fs"
 
+import ethers from "ethers"
 import cors from "cors"
 import express from "express"
 import bodyParser from "body-parser"
@@ -20,7 +21,7 @@ export const desc = "Run an app, by path or multihash"
 
 const fixturesType = t.array(
 	t.type({
-		from: t.string,
+		privateKey: t.string,
 		call: t.string,
 		args: t.array(t.union([t.null, t.number, t.string, t.boolean])),
 	})
@@ -138,12 +139,19 @@ export async function handler(args) {
 			throw new Error("Invalid fixtures file.")
 		}
 		const timestamp = Math.round(Date.now() / 1000)
-		for (const [i, { from, call, args }] of result.right.entries()) {
-			const payload = { from, spec: core.multihash, call, args, timestamp: timestamp - result.right.length + i }
-			await core.apply(
-				{ from, session: null, signature: null, payload: JSON.stringify(payload) },
-				{ skipSignatureVerification: true }
-			)
+		for (const [i, { privateKey, call, args }] of result.right.entries()) {
+			const signer = new ethers.Wallet(privateKey)
+			const from = await signer.getAddress()
+			const payload = JSON.stringify({
+				from,
+				spec: core.multihash,
+				call,
+				args,
+				timestamp: timestamp - result.right.length + i,
+			})
+
+			const signature = await signer.signMessage(payload)
+			await core.apply({ from, session: null, signature, payload })
 		}
 	}
 

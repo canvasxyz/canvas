@@ -193,10 +193,7 @@ export abstract class Core {
 	/**
 	 * Executes an action.
 	 */
-	public async apply(
-		action: Action,
-		options: { replaying?: boolean; skipSignatureVerification?: boolean } = {}
-	): Promise<ActionResult> {
+	public async apply(action: Action, options: { replaying?: boolean } = {}): Promise<ActionResult> {
 		// Typechecks with warnings for usability
 		if (action.from === undefined) console.log("missing action.from")
 		if (action.signature === undefined) console.log("missing action.signature")
@@ -253,7 +250,6 @@ export abstract class Core {
 			assert(action.from === payload.from, "invalid signature (action.from and payload.from do not match)")
 			assert(payload.from === session.from, "invalid signature (session.from and payload.from do not match)")
 
-			assert(action.signature !== null, "missing action signature")
 			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
 			assert(
 				verifiedAddress === action.session,
@@ -265,11 +261,8 @@ export abstract class Core {
 			)
 		} else {
 			assert(action.from === payload.from, "action signed by wrong address")
-			if (!options.skipSignatureVerification) {
-				assert(action.signature !== null, "missing action signature")
-				const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
-				assert(action.from === verifiedAddress, "action signed by wrong address")
-			}
+			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature)
+			assert(action.from === verifiedAddress, "action signed by wrong address")
 		}
 
 		assert(payload.timestamp > boundsCheckLowerLimit, "action timestamp too far in the past")
@@ -363,12 +356,7 @@ export abstract class Core {
 		}
 	}
 
-	private static getActionKey(signature: string | null): string {
-		if (signature === null) {
-			const bytes = Buffer.from(ethers.utils.randomBytes(32))
-			return Core.actionKeyPrefix + bytes.toString("hex")
-		}
-
+	private static getActionKey(signature: string): string {
 		assert(signature.startsWith("0x"))
 		const bytes = Buffer.from(signature.slice(2), "hex")
 		return Core.actionKeyPrefix + ethers.utils.sha256(bytes)

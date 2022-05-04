@@ -22,14 +22,14 @@ import type { Model } from "./models.js"
 export type Action = {
 	from: string
 	session: string | null
-	signature: string | null
+	signature: string
 	payload: string
 }
 
 export const actionType: t.Type<Action> = t.type({
 	from: t.string,
 	session: t.union([t.string, t.null]),
-	signature: t.union([t.string, t.null]),
+	signature: t.string,
 	payload: t.string,
 })
 
