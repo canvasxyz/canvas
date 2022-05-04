@@ -241,8 +241,10 @@ export abstract class Core {
 			assert(sessionPayloadType.is(sessionPayload), "got invalid session from HyperBee")
 
 			// validate the session has not expired, and that the session timestamp is reasonable
-			assert(sessionPayload.timestamp + sessionPayload.session_duration > currentTime, "session expired")
-			assert(sessionPayload.timestamp <= payload.timestamp, "session timestamp must precede action timestamp")
+			if (!options.replaying) {
+				assert(sessionPayload.timestamp + sessionPayload.session_duration > currentTime, "session expired")
+				assert(sessionPayload.timestamp <= payload.timestamp, "session timestamp must precede action timestamp")
+			}
 			// We don't guard against session timestamps in the future because the server clock might be out of sync.
 			// assert(sessionPayload.timestamp < currentTime, "session timestamp too far in the future")
 
