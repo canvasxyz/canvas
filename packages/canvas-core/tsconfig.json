@@ -1,5 +1,5 @@
 { 
-  "include": ["src"],
+  "include": ["src", "types"],
   "compilerOptions": {
     "strict": true,
     "outDir": "lib",
