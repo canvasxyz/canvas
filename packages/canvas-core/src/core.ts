@@ -11,11 +11,12 @@ import * as t from "io-ts"
 import { assert } from "./utils.js"
 
 import { Action, actionType, actionPayloadType, ActionPayload, ActionArgument, ActionResult } from "./actions.js"
-import { Session, sessionPayloadType, sessionType } from "./sessions.js"
+import { Session, SessionPayload, sessionPayloadType, sessionType } from "./sessions.js"
 
 import { getColumnType, Model, modelType, ModelValue, validateType } from "./models.js"
+import { CustomEvent } from "./events.js"
 
-export abstract class Core {
+export abstract class Core extends EventTarget {
 	public abstract setModel(name: string, params: Record<string, ModelValue>): void
 	public abstract getRoute(
 		route: string,
@@ -48,6 +49,8 @@ export abstract class Core {
 		storage: (file: string) => RandomAccessStorage
 		quickJS: QuickJSWASMModule
 	}) {
+		super()
+
 		this.multihash = config.multihash
 		this.spec = config.spec
 
@@ -277,7 +280,7 @@ export abstract class Core {
 		assert(payload.call in this.actionFunctions, "invalid action function")
 
 		this.currentPayload = payload
-		const hash = ethers.utils.sha256(Buffer.from(JSON.stringify(payload)))
+		const hash = ethers.utils.sha256(Buffer.from(action.payload))
 
 		const context = this.vm.newObject()
 		const hashString = this.vm.newString(hash)
@@ -303,6 +306,7 @@ export abstract class Core {
 			await this.hyperbee.put(Core.getActionKey(action.signature), JSON.stringify(action))
 		}
 
+		this.dispatchEvent(new CustomEvent("action", { detail: payload }))
 		return { hash }
 	}
 
@@ -337,6 +341,7 @@ export abstract class Core {
 
 		const key = Core.getSessionKey(payload.session_public_key)
 		await this.hyperbee.put(key, JSON.stringify(session))
+		this.dispatchEvent(new CustomEvent("session", { detail: payload }))
 	}
 
 	/**
