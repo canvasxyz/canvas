@@ -1,7 +1,7 @@
 import { Buffer } from "buffer"
 import { ethers } from "ethers"
 
-import { QuickJSWASMModule, QuickJSRuntime, QuickJSContext, QuickJSHandle, isFail, isSuccess } from "quickjs-emscripten"
+import { QuickJSWASMModule, QuickJSRuntime, QuickJSContext, QuickJSHandle, isFail } from "quickjs-emscripten"
 import type { RandomAccessStorage } from "random-access-storage"
 import HyperBee from "hyperbee"
 import hypercore, { Feed } from "hypercore"
@@ -14,9 +14,14 @@ import { Action, actionType, actionPayloadType, ActionPayload, ActionArgument, A
 import { Session, SessionPayload, sessionPayloadType, sessionType } from "./sessions.js"
 
 import { getColumnType, Model, modelType, ModelValue, validateType } from "./models.js"
-import { CustomEvent } from "./events.js"
+import { EventEmitter, CustomEvent } from "./events.js"
 
-export abstract class Core extends EventTarget {
+interface CoreEvents {
+	action: CustomEvent<ActionPayload>
+	session: CustomEvent<SessionPayload>
+}
+
+export abstract class Core extends EventEmitter<CoreEvents> {
 	public abstract setModel(name: string, params: Record<string, ModelValue>): void
 	public abstract getRoute(
 		route: string,
