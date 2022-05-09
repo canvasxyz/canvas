@@ -1,3 +1,8 @@
+/// <reference types="../types/random-access-storage" />
+/// <reference types="../types/random-access-memory" />
+/// <reference types="../types/random-access-idb" />
+/// <reference types="../types/ipfs-only-hash" />
+
 import { getQuickJS, QuickJSWASMModule } from "quickjs-emscripten"
 
 import type { RandomAccessStorage } from "random-access-storage"
@@ -6,8 +11,6 @@ import initSqlJs, { SqlJsStatic, Statement, Database, SqlJsConfig } from "sql.js
 
 import Hash from "ipfs-only-hash"
 
-import { actionPayloadType } from "./actions.js"
-import { sessionPayloadType } from "./sessions.js"
 import { ObjectSpec, objectSpecType, stringSpecType } from "./specs.js"
 import type { ModelValue } from "./models.js"
 import { Core } from "./core.js"

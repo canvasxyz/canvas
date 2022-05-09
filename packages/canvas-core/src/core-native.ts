@@ -1,3 +1,6 @@
+/// <reference types="../types/random-access-file" />
+/// <reference types="../types/ipfs-only-hash" />
+
 import path from "path"
 
 import { getQuickJS, QuickJSWASMModule } from "quickjs-emscripten"

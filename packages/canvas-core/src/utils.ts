@@ -1,4 +1,4 @@
-import type { ObjectSpec } from "./specs"
+import type { ObjectSpec } from "./specs.js"
 
 /**
  * Recursively clones objects, using Function.prototype.toString() to stringify

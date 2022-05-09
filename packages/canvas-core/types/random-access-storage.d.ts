@@ -1,8 +1,5 @@
 declare module "random-access-storage" {
-	import type EventEmitter from "node:events"
-	import type { Buffer } from "node:buffer"
-
-	export interface RandomAccessStorage extends EventEmitter {
+	export interface RandomAccessStorage extends NodeJS.EventEmitter {
 		read(offset: number, size: number, cb?: (err: null | Error, data: null | Buffer) => void): void
 		write(offset: number, data: Buffer, cb?: (err: null | Error) => void): void
 		del(offset: number, size: number, cb?: (err: null | Error) => void): void
@@ -20,9 +17,13 @@ declare module "random-access-storage" {
 		opened: boolean
 		closed: boolean
 		destroyed: boolean
+
+		on(event: "open", callback?: () => void): this
+		on(event: "close", callback?: () => void): this
+		on(event: "destroy", callback?: () => void): this
 	}
 
-	interface RandomAccessStorageOptions {
+	export interface RandomAccessStorageOptions {
 		read: (offset: number, size: number, cb?: (err: null | Error, data: null | Buffer) => void) => void
 		write: (offset: number, data: Buffer, cb?: (err: null | Error) => void) => void
 		del: (offset: number, size: number, cb?: (err: null | Error) => void) => void

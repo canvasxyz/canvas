@@ -19,7 +19,7 @@ interface Listener {
  * https://github.com/microsoft/TypeScript/issues/299
  * etc
  */
-export class EventEmitter<EventMap> extends EventTarget {
+export class EventEmitter<EventMap extends Record<string, any>> extends EventTarget {
 	#listeners: Map<any, Listener[]> = new Map()
 
 	listenerCount(type: string) {
@@ -32,7 +32,6 @@ export class EventEmitter<EventMap> extends EventTarget {
 		return listeners.length
 	}
 
-	// @ts-expect-error EventTarget is not typed
 	addEventListener<U extends keyof EventMap>(
 		type: U,
 		callback: EventHandler<EventMap[U]>,
@@ -54,7 +53,6 @@ export class EventEmitter<EventMap> extends EventTarget {
 		})
 	}
 
-	// @ts-expect-error EventTarget is not typed
 	removeEventListener<U extends keyof EventMap>(
 		type: U,
 		callback?: EventHandler<EventMap[U]> | undefined,

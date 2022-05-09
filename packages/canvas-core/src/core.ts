@@ -1,3 +1,7 @@
+/// <reference types="../types/random-access-storage" />
+/// <reference types="../types/hyperbee" />
+/// <reference types="../types/hypercore" />
+
 import { Buffer } from "buffer"
 import { ethers } from "ethers"
 
