@@ -6,8 +6,9 @@
     "dev": "run-p -l dev-core dev-hub",
     "dev-core": "npm run dev --workspace=canvas-core -- --preserveWatchOutput --pretty",
     "dev-hub": "export FORCE_COLOR=1 && npm run dev --workspace=canvas-hub",
-    "build": "run-s -l build-core build-hub",
+    "build": "run-s -l build-core build-hooks build-hub",
     "build-core": "npm run build --workspace=canvas-core -- --pretty",
+    "build-hooks": "npm run build --workspace=canvas-hooks -- --pretty",
     "build-hub": "export FORCE_COLOR=1 && npm run build --workspace=canvas-hub",
     "start": "npm run start --workspace=canvas-hub",
     "test": "npm run test --workspace=canvas-core"
@@ -15,7 +16,9 @@
   "workspaces": [
     "packages/canvas-cli",
     "packages/canvas-hub",
-    "packages/canvas-core"
+    "packages/canvas-core",
+    "packages/canvas-hooks",
+    "packages/example"
   ],
   "devDependencies": {
     "npm-run-all": "^4.1.5"
