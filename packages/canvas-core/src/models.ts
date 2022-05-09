@@ -1,6 +1,6 @@
-import assert from "assert"
-
 import * as t from "io-ts"
+
+import { assert } from "./utils.js"
 
 /**
  * A `ModelType` is a runtime representation of an abstract model field type,
