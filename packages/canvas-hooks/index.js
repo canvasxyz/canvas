@@ -6,7 +6,7 @@ import randomAccessIDB from "random-access-idb"
 
 const LOCALSTORAGE_KEY = "__CANVAS_SESSION"
 
-export default function useCore(spec, { subscriptions }) {
+export default function useCanvas(spec, { subscriptions }) {
 	const [core, setCore] = useState()
 	const [idb, setIDB] = useState()
 	useEffect(() => {

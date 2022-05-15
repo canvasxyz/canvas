@@ -1,5 +1,5 @@
 {
-  "name": "example-canvas-app",
+  "name": "canvas-example-app",
   "version": "0.1.0",
   "private": true,
   "dependencies": {

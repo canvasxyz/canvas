@@ -1,4 +1,4 @@
-import useCore from "canvas-hooks"
+import useCanvas from "canvas-hooks"
 import { useRef } from "react"
 import "./App.css"
 
@@ -30,7 +30,7 @@ const download = (text) => {
 }
 
 function App() {
-	const { views, signAndSendAction, login, logout, sessionAddress, address, core } = useCore(spec, {
+	const { views, signAndSendAction, login, logout, sessionAddress, address, core } = useCanvas(spec, {
 		subscriptions: ["/threads"],
 	})
 	const inputRef = useRef()

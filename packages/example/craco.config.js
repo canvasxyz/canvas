@@ -28,9 +28,9 @@ module.exports = {
 				new CopyWebpackPlugin({
 					patterns: [
 						process.env.NODE_ENV === "production"
-							? { from: "./node_modules/sql.js/dist/sql-wasm.wasm", to: "./" }
+							? { from: "../../node_modules/sql.js/dist/sql-wasm.wasm", to: "./" }
 							: {
-									from: "./node_modules/sql.js/dist/sql-wasm.wasm",
+									from: "../../node_modules/sql.js/dist/sql-wasm.wasm",
 									to: "./public",
 							  },
 					],
