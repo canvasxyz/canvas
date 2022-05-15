@@ -20,7 +20,7 @@ async function handlePostRequest(req: NextApiRequest, res: NextApiResponse) {
 
 	const { spec } = req.body
 
-	const multihash = await Hash.of("")
+	const multihash = await Hash.of(spec)
 	console.log("multihash", multihash)
 
 	const app = await prisma.app.findUnique({
