@@ -1,12 +1,9 @@
 {
-  "name": "canvas-react",
+  "name": "example-canvas-app",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
     "@creditkarma/async-hooks": "^0.0.8",
-    "@testing-library/jest-dom": "^5.16.4",
-    "@testing-library/react": "^12.1.4",
-    "@testing-library/user-event": "^13.5.0",
     "assert": "^2.0.0",
     "browserify-zlib": "^0.2.0",
     "buffer": "^6.0.3",
@@ -14,6 +11,7 @@
     "canvas-hooks": "file:../canvas-hooks",
     "constants-browserify": "^1.0.0",
     "copy-webpack-plugin": "^10.2.4",
+    "craco": "^0.0.3",
     "crypto-browserify": "^3.12.0",
     "ethers": "^5.6.4",
     "https-browserify": "^1.0.0",
@@ -26,9 +24,9 @@
     "quickjs-emscripten": "^0.20.0",
     "random-access-idb": "^1.2.2",
     "random-access-memory": "^4.0.0",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
-    "react-scripts": "5.0.0",
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0",
+    "react-scripts": "5.0.1",
     "sql.js": "^1.6.2",
     "stream-browserify": "^3.0.0",
     "stream-http": "^3.2.0",
@@ -39,7 +37,6 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build",
-    "test": "craco test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
