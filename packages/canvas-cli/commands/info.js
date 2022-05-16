@@ -2,7 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import chalk from "chalk"
 
-import { BrowserCore, actionType, sessionType, actionPayloadType, sessionPayloadType } from "canvas-core"
+import { BrowserCore, actionType, sessionType, actionPayloadType, sessionPayloadType } from "@canvas-js/core"
 
 import { defaultDataDirectory, isMultihash } from "./utils.js"
 

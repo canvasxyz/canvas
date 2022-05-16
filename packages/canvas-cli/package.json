@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/cli",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "index.js",
@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "body-parser": "^1.20.0",
+    "@canvas-js/core": "*",
     "chalk": "^5.0.1",
     "cors": "^2.8.5",
     "ethers": "5.x",

@@ -2,7 +2,7 @@ import { Light as SyntaxHighlighter } from "react-syntax-highlighter"
 import js from "react-syntax-highlighter/dist/esm/languages/hljs/javascript"
 import { github as hljsStyle } from "react-syntax-highlighter/dist/esm/styles/hljs"
 
-import useCanvas from "canvas-hooks"
+import useCanvas from "@canvas-js/hooks"
 import moment from "moment"
 import { useRef } from "react"
 

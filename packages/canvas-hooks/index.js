@@ -1,6 +1,6 @@
 import Hash from "ipfs-only-hash"
 import { ethers } from "ethers"
-import { BrowserCore, objectSpecToString } from "canvas-core"
+import { BrowserCore, objectSpecToString } from "@canvas-js/core"
 import { useEffect, useState } from "react"
 import randomAccessIDB from "random-access-idb"
 
