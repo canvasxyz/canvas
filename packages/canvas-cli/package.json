@@ -1,11 +1,14 @@
 {
-  "name": "canvas-cli",
-  "private": true,
+  "name": "@canvas-js/cli",
+  "version": "0.0.1",
+	"author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "files": [
+    "commands",
+    "utils",
+    "index.js"
+  ],
   "dependencies": {
     "body-parser": "^1.20.0",
     "chalk": "^5.0.1",

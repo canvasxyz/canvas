@@ -11,6 +11,7 @@
     "build-core": "npm run build --workspace=@canvas-js/core -- --pretty",
     "build-hooks": "npm run build --workspace=@canvas-js/hooks -- --pretty",
     "build-hub": "export FORCE_COLOR=1 && npm run build --workspace=canvas-hub",
+    "publish-cli": "npm publish --workspace=@canvas-js/cli --access public",
     "publish-core": "export FORCE_COLOR=1 && npm run build --workspace=@canvas-js/core && npm publish --workspace=@canvas-js/core --access public",
     "publish-hooks": "npm publish --workspace=@canvas-js/hooks --access public",
     "start": "npm run start --workspace=canvas-hub",
