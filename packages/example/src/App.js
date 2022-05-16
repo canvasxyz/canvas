@@ -129,14 +129,14 @@ function InfoPanel({ core, views }) {
 	return (
 		<div className="w-80">
 			<div className="fixed w-80 m-10 text-sm">
-				<div className="info-panel border-2 border-gray-600 p-4 px-5 pb-5 rounded-lg">
+				<div className="info-panel border-2 border-gray-600 p-4 px-5 pb-5 rounded-lg max-h-96 overflow-scroll">
 					<div className="font-bold">Canvas Demo</div>
 					<div className="leading-snug mt-2">
 						This Canvas application runs in your browser, using an embedded{" "}
 						<a href="https://hypercore-protocol.org/" target="_blank" rel="noreferrer" className="underline">
 							Hypercore
 						</a>
-						, SQL database, and JavaScript sandbox.
+						, SQL database, and JavaScript/WASM VM.
 					</div>
 					{core && (
 						<div className="leading-snug mt-2">
@@ -151,11 +151,11 @@ function InfoPanel({ core, views }) {
 							</div>
 						</div>
 					)}
-				</div>
-				<div className="info-panel border-2 border-gray-500 mt-4 py-3 pl-4 rounded-lg whitespace-pre-wrap break-words font-mono text-xs max-h-96 overflow-scroll">
-					<SyntaxHighlighter language="javascript" style={hljsStyle} customStyle={{ background: "transparent" }}>
-						{core?.spec.trim()}
-					</SyntaxHighlighter>
+					<div className="whitespace-pre-wrap break-words font-mono text-xs mt-4">
+						<SyntaxHighlighter language="javascript" style={hljsStyle} customStyle={{ background: "transparent" }}>
+							{core?.spec.trim()}
+						</SyntaxHighlighter>
+					</div>
 				</div>
 			</div>
 		</div>
