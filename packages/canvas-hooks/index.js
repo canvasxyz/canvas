@@ -29,14 +29,6 @@ export default function useCanvas(spec, { subscriptions }) {
 	const [currentAddress, setCurrentAddress] = useState()
 	const [currentSessionSigner, setCurrentSessionSigner] = useState()
 	useEffect(() => {
-		// load any saved session
-		try {
-			const data = localStorage.getItem(LOCALSTORAGE_KEY)
-			const sessionObject = JSON.parse(data)
-			const sessionSigner = new ethers.Wallet(sessionObject.privateKey)
-			setCurrentSessionSigner(sessionSigner)
-		} catch (err) {}
-
 		// get a web3 provider
 		let provider
 		try {
@@ -48,16 +40,47 @@ export default function useCanvas(spec, { subscriptions }) {
 		if (!provider) {
 			return
 		}
+
+		// get current accounts
 		provider
 			.send("eth_requestAccounts", [])
 			.then(() => {
 				// save the signer
 				const signer = provider.getSigner()
 				setCurrentSigner(signer)
-				signer.getAddress().then((address) => setCurrentAddress(address))
+				signer.getAddress().then((address) => {
+					setCurrentAddress(address)
+
+					// load any saved session
+					try {
+						const data = localStorage.getItem(LOCALSTORAGE_KEY)
+						const sessionObject = JSON.parse(data)
+						const sessionSigner = new ethers.Wallet(sessionObject.privateKey)
+						if (sessionObject.from !== address) return
+						setCurrentSessionSigner(sessionSigner)
+					} catch (err) {}
+				})
 			})
 			.catch(() => {
 				// TODO handle error: Wallet did not return an address
+			})
+
+		// watch for changes
+		provider.provider
+			.on("accountsChanged", (accounts) => {
+				// clear any current session, then fetch the new "current address" of the wallet
+				console.log("accounts changed, logging out current session")
+				setCurrentSessionSigner(null)
+				localStorage.setItem(LOCALSTORAGE_KEY, null)
+
+				const signer = provider.getSigner()
+				setCurrentSigner(signer)
+				signer.getAddress().then((address) => {
+					setCurrentAddress(address)
+				})
+			})
+			.on("chainChanged", (accounts) => {
+				console.log("chain changed", accounts)
 			})
 	}, [])
 
@@ -76,6 +99,7 @@ export default function useCanvas(spec, { subscriptions }) {
 			const session_duration = 86400
 			const sessionSigner = ethers.Wallet.createRandom()
 			const sessionObject = {
+				from: currentAddress,
 				privateKey: sessionSigner.privateKey,
 				expiration: timestamp + session_duration,
 			}
