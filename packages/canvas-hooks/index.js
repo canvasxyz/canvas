@@ -38,9 +38,14 @@ export default function useCanvas(spec, { subscriptions }) {
 		} catch (err) {}
 
 		// get a web3 provider
-		const provider = new ethers.providers.Web3Provider(window.ethereum)
-		if (!provider) {
+		let provider
+		try {
+			provider = new ethers.providers.Web3Provider(window.ethereum)
+		} catch (err) {
 			// TODO handle error: Missing provider
+			return
+		}
+		if (!provider) {
 			return
 		}
 		provider

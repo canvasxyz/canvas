@@ -14,7 +14,7 @@ const spec = {
 	},
 	routes: {
 		"/threads":
-			"SELECT threads.id, threads.title, threads.timestamp, COUNT(IIF(likes.value, 1, NULL)) as likes from threads LEFT JOIN likes ON likes.threadId = threads.id",
+			"SELECT threads.id, threads.title, threads.timestamp, COUNT(IIF(likes.value, 1, NULL)) as likes FROM threads LEFT JOIN likes ON likes.threadId = threads.id GROUP BY threads.id",
 	},
 	actions: {
 		createThread: function (title) {
@@ -54,18 +54,14 @@ function App() {
 					<input
 						type="button"
 						value={sessionAddress ? `Logout ${address?.slice(0, 5)}...` : "Login"}
-						onClick={(e) => {
-							sessionAddress ? logout() : login()
-						}}
+						onClick={(e) => (sessionAddress ? logout() : login()).catch((err) => alert(err))}
 						className="rounded bg-gray-200 hover:bg-gray-300 cursor-pointer p-1 px-2 mb-5"
 					/>
 
 					<form
 						onSubmit={(e) => {
 							e.preventDefault()
-							signAndSendAction("createThread", inputRef.current.value).catch((err) => {
-								alert(err)
-							})
+							signAndSendAction("createThread", inputRef.current.value).catch((err) => alert(err))
 							inputRef.current.value = ""
 						}}
 					>
@@ -90,7 +86,9 @@ function App() {
 							<div key={index} className="p-4 px-5 rounded-lg border-2 border-gray-200 mb-4 break-words">
 								<div>{row.title}</div>
 								<div className="text-sm mt-0.5">{moment(row.timestamp * 1000).fromNow()}</div>
-								<div className="whitespace-pre-wrap w-96 font-mono text-xs mt-3">{JSON.stringify(row)}</div>
+								<div className="whitespace-pre-wrap w-96 font-mono text-gray-400 text-xs mt-3">
+									{JSON.stringify(row)}
+								</div>
 								<div
 									className="bg-gray-200 cursor-pointer rounded p-2 px-3 mt-4"
 									onClick={(e) =>
