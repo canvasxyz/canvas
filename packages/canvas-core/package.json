@@ -1,6 +1,7 @@
 {
-	"name": "canvas-core",
-	"private": true,
+	"name": "@canvas-js/core",
+	"version": "0.0.1",
+	"author": "Canvas Technology Corporation (https://canvas.xyz)",
 	"type": "module",
 	"types": "lib/index.d.ts",
 	"main": "lib/index.js",
@@ -10,7 +11,7 @@
 	],
 	"scripts": {
 		"test": "ava",
-		"build": "tsc",
+		"build": "rm -rf lib/* && tsc",
 		"dev": "tsc -w"
 	},
 	"dependencies": {
