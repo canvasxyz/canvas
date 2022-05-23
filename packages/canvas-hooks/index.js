@@ -6,6 +6,8 @@ import randomAccessIDB from "random-access-idb"
 
 const LOCALSTORAGE_KEY = "__CANVAS_SESSION"
 
+import { getActionSignaturePayload, getSessionSignaturePayload } from "./signer"
+
 export default function useCanvas(spec, { subscriptions }) {
 	const [core, setCore] = useState()
 	const [idb, setIDB] = useState()
@@ -96,12 +98,12 @@ export default function useCanvas(spec, { subscriptions }) {
 			if (!core) reject(new Error("Core not initialized yet"))
 
 			const timestamp = Math.round(+new Date() / 1000)
-			const session_duration = 86400
+			const sessionDuration = 86400
 			const sessionSigner = ethers.Wallet.createRandom()
 			const sessionObject = {
 				from: currentAddress,
 				privateKey: sessionSigner.privateKey,
-				expiration: timestamp + session_duration,
+				expiration: timestamp + sessionDuration,
 			}
 
 			const payload = {
@@ -109,10 +111,18 @@ export default function useCanvas(spec, { subscriptions }) {
 				spec: core.multihash,
 				timestamp,
 				session_public_key: sessionSigner.address,
-				session_duration,
+				session_duration: sessionDuration,
 			}
 			const payloadString = JSON.stringify(payload)
-			currentSigner.signMessage(payloadString).then((signature) => {
+
+			const [domain, types, value] = getSessionSignaturePayload(
+				currentAddress,
+				core.multihash,
+				timestamp,
+				sessionSigner.address,
+				sessionDuration
+			)
+			currentSigner._signTypedData(domain, types, value).then((signature) => {
 				const action = {
 					from: currentAddress,
 					signature,
@@ -143,7 +153,15 @@ export default function useCanvas(spec, { subscriptions }) {
 				args,
 			}
 			const payloadString = JSON.stringify(payload)
-			;(currentSessionSigner || currentSigner).signMessage(payloadString).then((signature) => {
+
+			const [domain, types, value] = getActionSignaturePayload(
+				currentAddress,
+				core.multihash,
+				Math.round(+new Date() / 1000),
+				call,
+				args
+			)
+			;(currentSessionSigner || currentSigner)._signTypedData(domain, types, value).then((signature) => {
 				const action = {
 					from: currentAddress,
 					session: currentSessionSigner ? currentSessionSigner.address : null,
