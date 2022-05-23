@@ -2,8 +2,8 @@ import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
-import { _sessions } from "canvas-core"
-import type { Model } from "canvas-core"
+import { _sessions } from "@canvas-js/core"
+import type { Model } from "@canvas-js/core"
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
 	if (req.method !== "GET") {

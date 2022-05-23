@@ -5,7 +5,7 @@ import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
-import { Action, actionType } from "canvas-core"
+import { Action, actionType } from "@canvas-js/core"
 import { APP_MULTIHASH_INVALID, APP_NOT_FOUND, ACTION_FORMAT_INVALID } from "./errors"
 
 import * as t from "io-ts"

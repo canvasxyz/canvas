@@ -1,16 +1,16 @@
 {
   "name": "@canvas-js/hooks",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"author": "Canvas Technology Corporation (https://canvas.xyz)",
   "main": "index.js",
 	"files": [
 		"index.js"
 	],
   "dependencies": {
-    "random-access-idb": "^1.2.2",
-    "@canvas-js/core": "*"
+    "random-access-idb": "^1.2.2"
   },
   "peerDependencies": {
+    "@canvas-js/core": "*",
     "ethers": "^5.x",
     "ipfs-only-hash": "^4.0.0",
     "react": "^18.x"

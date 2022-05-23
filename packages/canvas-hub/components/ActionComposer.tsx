@@ -15,7 +15,7 @@ import Sessions from "components/SpecSessions"
 
 import { useCodeMirror } from "utils/client/codemirror"
 
-import type { Action, ActionPayload, SessionPayload } from "canvas-core"
+import type { Action, ActionPayload, SessionPayload } from "@canvas-js/core"
 
 import styles from "./ActionComposer.module.scss"
 

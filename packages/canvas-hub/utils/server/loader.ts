@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import { NativeCore } from "canvas-core"
+import { NativeCore } from "@canvas-js/core"
 
 import { prisma } from "./services"
 import { AppStatus } from "./status"
