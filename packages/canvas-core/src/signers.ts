@@ -7,13 +7,13 @@ import type { ActionPayload, ActionArgument } from "./actions"
 import type { SessionPayload } from "./sessions"
 
 /**
- * Ethereum compatible signers, used to generate and
+ * Ethereum compatible signer logic, used to generate and
  * verify EIP-712 signed data for wallets like Metamask.
  *
- * `getActionSignaturePayload` gets a signature for an individual action
- * `verifyActionPayloadSignature` verifies an EIP-712 action signature
- * `getSessionSignaturePayload` gets a signature to start a session
- * `verifySessionPayloadSignature` verifies an EIP-712 session signature
+ * `getActionSignaturePayload` gets EIP-712 signing data for an individual action
+ * `verifyActionPayloadSignature` verifies an action signature matches a payload (does not check the payload)
+ * `getSessionSignaturePayload` gets EIP-712 signing data to start a session
+ * `verifySessionPayloadSignature` verifies a session signature matches a payload (does not check the payload)
  */
 
 export const getActionSignaturePayload = (
