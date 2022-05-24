@@ -162,7 +162,7 @@ export async function handler(args) {
 	server.use(bodyParser.json())
 
 	server.get("/", (req, res) => {
-		res.json({ multihash: core.multihash })
+		res.json({ multihash: core.multihash, spec: core.spec })
 		return
 	})
 
