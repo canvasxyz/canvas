@@ -1,31 +1,59 @@
 import Hash from "ipfs-only-hash"
 import { ethers } from "ethers"
+import { recoverTypedSignature, SignTypedDataVersion } from "@metamask/eth-sig-util"
 import { BrowserCore, objectSpecToString, getActionSignaturePayload, getSessionSignaturePayload } from "@canvas-js/core"
 import { useEffect, useState } from "react"
 import randomAccessIDB from "random-access-idb"
 
 const LOCALSTORAGE_KEY = "__CANVAS_SESSION"
 
-import { recoverTypedSignature, SignTypedDataVersion } from "@metamask/eth-sig-util"
-
-export default function useCanvas(spec, { subscriptions }) {
+export default function useCanvas({ spec, specServer, subscriptions }) {
 	const [core, setCore] = useState()
 	const [idb, setIDB] = useState()
+
 	useEffect(() => {
-		Hash.of(typeof spec === "string" ? spec : objectSpecToString(spec)).then((hash) => {
-			const idb = randomAccessIDB(hash)
-			setIDB(idb)
-			BrowserCore.initialize({
-				spec,
-				sqlJsOptions: { locateFile: (file) => `/public/${file}` },
-				storage: idb,
-				replay: true,
-			}).then((core) => {
-				setCore(core)
-				subscriptions.forEach((route) => updateView(route, core))
+		console.log("Starting Canvas!")
+		const fetchSpec = async () => {
+			// default to using a spec provided to the hook
+			if (spec !== undefined) {
+				return spec
+			}
+			// otherwise, fetch the spec from specServer
+			if (specServer !== undefined) {
+				const response = await fetch(specServer)
+				const json = await response.json()
+
+				console.log(`Downloading spec from ${specServer}`)
+				console.log(`Downloaded spec: data:text/plain;charset=utf-8,${encodeURIComponent(json.spec)}`)
+
+				return json.spec
+			}
+			throw new Error("useCanvas: must provide spec or specServer")
+		}
+
+		// fetch and start up the spec
+		fetchSpec()
+			.catch(console.error)
+			.then((spec) => {
+				Hash.of(typeof spec === "string" ? spec : objectSpecToString(spec)).then((hash) => {
+					const idb = randomAccessIDB(hash)
+					setIDB(idb)
+					BrowserCore.initialize({
+						spec,
+						sqlJsOptions: { locateFile: (file) => `/public/${file}` },
+						storage: idb,
+						replay: true,
+					}).then((core) => {
+						console.log("Initialized Canvas core")
+						setCore(core)
+						subscriptions.forEach((route) => {
+							updateView(route, core)
+							console.log(`Initialized view: ${route}`)
+						})
+					})
+				})
 			})
-		})
-	}, [spec])
+	}, [spec, specServer])
 
 	const [currentSigner, setCurrentSigner] = useState()
 	const [currentAddress, setCurrentAddress] = useState()

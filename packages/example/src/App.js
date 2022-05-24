@@ -8,46 +8,9 @@ import { useRef } from "react"
 
 SyntaxHighlighter.registerLanguage("javascript", js)
 
-const spec = {
-	models: {
-		threads: {
-			title: "string",
-		},
-		likes: {
-			threadId: "string",
-			value: "boolean",
-		},
-	},
-	routes: {
-		"/threads":
-			"SELECT threads.id, threads.title, threads.timestamp, COUNT(IIF(likes.value, 1, NULL)) as likes FROM threads LEFT JOIN likes ON likes.threadId = threads.id GROUP BY threads.id",
-	},
-	actions: {
-		createThread: function (title) {
-			if (!title || !title.trim()) throw new Error("Invalid title")
-			this.db.threads.set(this.hash, { title })
-		},
-		like: function (threadId) {
-			this.db.likes.set(this.from + threadId, { threadId, value: true })
-		},
-		unlike: function (threadId) {
-			this.db.likes.set(this.from + threadId, { threadId, value: false })
-		},
-	},
-}
-
-const download = (text) => {
-	const element = document.createElement("a")
-	element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(text))
-	element.setAttribute("download", "spec.canvas.js")
-	element.style.display = "none"
-	document.body.appendChild(element)
-	element.click()
-	document.body.removeChild(element)
-}
-
 function App() {
-	const { views, signAndSendAction, login, logout, sessionAddress, address, core } = useCanvas(spec, {
+	const { views, signAndSendAction, login, logout, sessionAddress, address, core } = useCanvas({
+		specServer: "http://localhost:8000",
 		subscriptions: ["/threads"],
 	})
 	const inputRef = useRef()
@@ -144,10 +107,9 @@ function InfoPanel({ core, views }) {
 							<div>{core?.hyperbee.version} log entries</div>
 							<div className="leading-snug mt-2">
 								{core?.multihash} (
-								<span className="underline cursor-pointer" onClick={() => download(core?.spec)}>
-									Download
-								</span>
-								)
+								{/* <span className="underline cursor-pointer" onClick={() => download(core?.spec)}> */}
+								{/* 	Download */}
+								{/* </span> */})
 							</div>
 						</div>
 					)}
