@@ -1,12 +1,12 @@
 import Hash from "ipfs-only-hash"
 import { ethers } from "ethers"
-import { BrowserCore, objectSpecToString } from "@canvas-js/core"
+import { BrowserCore, objectSpecToString, getActionSignaturePayload, getSessionSignaturePayload } from "@canvas-js/core"
 import { useEffect, useState } from "react"
 import randomAccessIDB from "random-access-idb"
 
 const LOCALSTORAGE_KEY = "__CANVAS_SESSION"
 
-import { getActionSignaturePayload, getSessionSignaturePayload } from "./signer"
+import { recoverTypedSignature, SignTypedDataVersion } from "@metamask/eth-sig-util"
 
 export default function useCanvas(spec, { subscriptions }) {
 	const [core, setCore] = useState()
@@ -122,6 +122,7 @@ export default function useCanvas(spec, { subscriptions }) {
 				sessionSigner.address,
 				sessionDuration
 			)
+
 			currentSigner._signTypedData(domain, types, value).then((signature) => {
 				const action = {
 					from: currentAddress,

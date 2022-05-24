@@ -19,6 +19,7 @@ import { Session, SessionPayload, sessionPayloadType, sessionType } from "./sess
 
 import { getColumnType, Model, modelType, ModelValue, validateType } from "./models.js"
 import { EventEmitter, CustomEvent } from "./events.js"
+import { verifyActionPayloadSignature, verifySessionPayloadSignature } from "./signers.js"
 
 interface CoreEvents {
 	action: CustomEvent<ActionPayload>
@@ -244,9 +245,8 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		 * If the action is signed by a session key, then:
 		 *  - `action.from` === `payload.from` === `session.from` is the key used to generate the session
 		 *  - `action.session` === `session.session_public_key` is the key used to sign the payload
-     *
-     * We get the session out of hyperbee, validate it's not malformed, validate it's not expired, and
-
+		 *
+		 * We get the session out of hyperbee, validate it's not malformed, not expired, and matches the action.
 		 */
 		if (action.session !== null) {
 			const record = await this.hyperbee.get(Core.getSessionKey(action.session))
@@ -258,36 +258,32 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 			const sessionPayload = JSON.parse(session.payload)
 			assert(sessionPayloadType.is(sessionPayload), "got invalid session from HyperBee")
 
-			// Validate the session has not expired, and that the session timestamp is reasonable
 			// We don't guard against session timestamps in the future because the server clock might be out of sync.
+			// But actions and sessions should have been signed on the same client, so we enforce ordering there.
+			// assert(sessionPayload.timestamp < currentTime, "session timestamp too far in the future")
+
 			if (!options.replaying) {
 				assert(sessionPayload.timestamp + sessionPayload.session_duration > currentTime, "session expired")
 				assert(sessionPayload.timestamp <= payload.timestamp, "session timestamp must precede action timestamp")
 			}
-			// assert(sessionPayload.timestamp < currentTime, "session timestamp too far in the future")
 
 			assert(action.from === payload.from, "invalid signature (action.from and payload.from do not match)")
 			assert(payload.from === session.from, "invalid signature (session.from and payload.from do not match)")
 
-			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature) // TODO XXX
-			assert(
-				verifiedAddress === action.session,
-				"invalid signature, or wrong data signed (recovered address does not match)"
-			)
-			assert(
-				action.session === sessionPayload.session_public_key,
-				"invalid signature (action.session and session_public_key do not match)"
-			)
+			const verifiedAddress = await verifyActionPayloadSignature(payload, action.signature)
+			assert(verifiedAddress === action.session, "invalid signature (recovered address does not match)")
+			assert(action.session === sessionPayload.session_public_key, "invalid signature (action, session do not match)")
 		} else {
 			assert(action.from === payload.from, "action signed by wrong address")
-			const verifiedAddress = ethers.utils.verifyMessage(action.payload, action.signature) // TODO XXX
+			const verifiedAddress = await verifyActionPayloadSignature(payload, action.signature)
 			assert(action.from === verifiedAddress, "action signed by wrong address")
 		}
 
-		assert(payload.timestamp > boundsCheckLowerLimit, "action timestamp too far in the past")
-		assert(payload.timestamp < boundsCheckUpperLimit, "action timestamp too far in the future")
 		// We don't guard against action timestamps in the future because the server clock might be out of sync.
 		// assert(payload.timestamp < currentTime, "action timestamp too far in the future")
+
+		assert(payload.timestamp > boundsCheckLowerLimit, "action timestamp too far in the past")
+		assert(payload.timestamp < boundsCheckUpperLimit, "action timestamp too far in the future")
 
 		assert(payload.spec === this.multihash, "action signed for wrong spec")
 		assert(payload.call !== "", "missing action function")
@@ -350,7 +346,7 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		assert(payload.from === session.from, "session signed by wrong address")
 		assert(payload.spec === this.multihash, "session signed for wrong spec")
 
-		const verifiedAddress = ethers.utils.verifyMessage(session.payload, session.signature) // TODO XXX
+		const verifiedAddress = await verifySessionPayloadSignature(payload, session.signature)
 		assert(session.from === verifiedAddress, "session signed by wrong address")
 
 		const key = Core.getSessionKey(payload.session_public_key)
