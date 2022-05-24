@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "run-p -l dev-core dev-hub dev-example",
     "dev-core": "npm run dev --workspace=@canvas-js/core -- --preserveWatchOutput --pretty",
-    "dev-example": "npm run start --workspace=canvas-example-app -- --preserveWatchOutput --pretty",
+    "dev-example": "GENERATE_SOURCEMAP=false npm run start --workspace=canvas-example-app -- --preserveWatchOutput --pretty",
     "dev-hub": "export FORCE_COLOR=1 && npm run dev --workspace=canvas-hub",
     "build": "run-s -l build-core build-hooks build-hub",
     "build-core": "npm run build --workspace=@canvas-js/core -- --pretty",
