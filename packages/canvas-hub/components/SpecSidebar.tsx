@@ -4,10 +4,9 @@ import { usePopper } from "react-popper"
 import toast from "react-hot-toast"
 import { Popover } from "@headlessui/react"
 
-import dynamic from "next/dynamic"
 import useSWR from "swr"
 
-import ProjectMenu from "./ProjectMenu"
+import { ProjectMenu } from "./ProjectMenu"
 import { StatusCodes } from "http-status-codes"
 import { AppContext } from "utils/client/AppContext"
 
@@ -49,7 +48,7 @@ function SidebarMenuItem({ active, multihash, running, spec, slug, draft_spec }:
 	})
 
 	const startApp = useCallback(
-		(close) => {
+		(close: () => void) => {
 			console.log("starting app", multihash)
 			fetch(`/api/instance/${multihash}/start`, { method: "PUT" }).then((res) => {
 				if (res.status !== StatusCodes.OK) {
@@ -64,7 +63,7 @@ function SidebarMenuItem({ active, multihash, running, spec, slug, draft_spec }:
 	)
 
 	const stopApp = useCallback(
-		(close) => {
+		(close: () => void) => {
 			if (!confirm("Stop the currently running instance?")) return
 			console.log("stopping app", multihash)
 			fetch(`/api/instance/${multihash}/stop`, { method: "PUT" }).then((res) => {
@@ -79,94 +78,95 @@ function SidebarMenuItem({ active, multihash, running, spec, slug, draft_spec }:
 		[multihash]
 	)
 
-	const editApp = useCallback(
-		(slug) => {
-			if (spec === draft_spec) {
+	const editApp = useCallback(() => {
+		if (spec === draft_spec) {
+			document.location = `/app/${slug}`
+			return
+		}
+
+		if (!confirm("Overwrite your existing edits?")) {
+			return
+		}
+
+		fetch(`/api/app/${slug}`, {
+			method: "PUT",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ draft_spec: spec }),
+		}).then((res) => {
+			if (res.status === StatusCodes.OK) {
 				document.location = `/app/${slug}`
-				return
+			} else {
+				toast.error("Error editing spec")
 			}
-			if (!confirm("Overwrite your existing edits?")) {
-				return
-			}
-			fetch(`/api/app/${slug}`, {
-				method: "PUT",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ draft_spec: spec }),
-			}).then((res) => {
-				if (res.status === StatusCodes.OK) {
-					document.location = `/app/${slug}`
-				} else {
-					toast.error("Error editing spec")
-				}
-			})
-		},
-		[multihash]
-	)
+		})
+	}, [multihash, slug])
 
 	const { appBody } = useContext(AppContext)
 
 	return (
 		<Popover className={`border-l ${active ? "border-gray-400" : "border-gray-200"}`}>
-			<Popover.Button
-				ref={setReferenceElement}
-				className={`flex-0 text-sm px-2 pb-5 flex gap-4 hover:bg-gray-100 cursor-pointer border-t outline-none ${
-					active ? "!bg-blue-500 text-white" : ""
-				} ${shouldBeRunning !== running ? "pointer-events-none " : ""}`}
-			>
-				<span
-					className={`relative text-xl top-1 leading-3 ${active ? "text-gray-100" : "text-gray-400"} ${
-						shouldBeRunning !== running ? "opacity-50" : ""
-					}`}
+			<>
+				<Popover.Button
+					ref={setReferenceElement}
+					className={`flex-0 text-sm px-2 pb-5 flex gap-4 hover:bg-gray-100 cursor-pointer border-t outline-none ${
+						active ? "!bg-blue-500 text-white" : ""
+					} ${shouldBeRunning !== running ? "pointer-events-none " : ""}`}
 				>
-					&hellip;
-				</span>
-			</Popover.Button>
-
-			{appBody &&
-				ReactDOM.createPortal(
-					<Popover.Panel
-						ref={setPopperElement}
-						className="absolute z-10 bg-white border border-gray-200 rounded shadow w-28"
-						style={styles.popper}
-						{...attributes.popper}
+					<span
+						className={`relative text-xl top-1 leading-3 ${active ? "text-gray-100" : "text-gray-400"} ${
+							shouldBeRunning !== running ? "opacity-50" : ""
+						}`}
 					>
-						{({ close }) => (
-							<>
-								<div>
-									<button
-										className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
-										onClick={editApp.bind(null, slug)}
-									>
-										Edit
-									</button>
-								</div>
-								<div>
-									{running ? (
+						&hellip;
+					</span>
+				</Popover.Button>
+
+				{appBody &&
+					ReactDOM.createPortal(
+						<Popover.Panel
+							ref={setPopperElement}
+							className="absolute z-10 bg-white border border-gray-200 rounded shadow w-28"
+							style={styles.popper}
+							{...attributes.popper}
+						>
+							{({ close }) => (
+								<>
+									<div>
 										<button
 											className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
-											onClick={stopApp.bind(null, close)}
+											onClick={editApp.bind(null)}
 										>
-											Stop
+											Edit
 										</button>
-									) : (
-										<button
-											className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
-											onClick={startApp.bind(null, close)}
-										>
-											Start
-										</button>
-									)}
-								</div>
-							</>
-						)}
-					</Popover.Panel>,
-					appBody
-				)}
+									</div>
+									<div>
+										{running ? (
+											<button
+												className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
+												onClick={stopApp.bind(null, close)}
+											>
+												Stop
+											</button>
+										) : (
+											<button
+												className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
+												onClick={startApp.bind(null, close)}
+											>
+												Start
+											</button>
+										)}
+									</div>
+								</>
+							)}
+						</Popover.Panel>,
+						appBody
+					)}
+			</>
 		</Popover>
 	)
 }
 
-function Sidebar({ version_number, app, edited }: SidebarProps) {
+export default function Sidebar({ version_number, app, edited }: SidebarProps) {
 	const { data, error } = useSWR("/api/instance")
 	const instances = useMemo<Record<string, { models: Record<string, Record<string, string>> }>>(
 		() => data || {},
@@ -226,5 +226,3 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 		</div>
 	)
 }
-
-export default dynamic(async () => Sidebar, { ssr: false })

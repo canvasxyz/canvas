@@ -1,4 +1,4 @@
-import { Toaster } from "react-hot-toast"
+import { Toaster, resolveValue } from "react-hot-toast"
 import { Transition } from "@tailwindui/react"
 
 import type { AppProps } from "next/app"
@@ -54,7 +54,7 @@ export default function App({ Component, pageProps }: AppProps) {
 									leaveFrom="opacity-100 scale-100"
 									leaveTo="opacity-0 scale-75"
 								>
-									{t.message}
+									{resolveValue(t.message, t)}
 								</Transition>
 							)}
 						</Toaster>
