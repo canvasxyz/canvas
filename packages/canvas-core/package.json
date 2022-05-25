@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/core",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"author": "Canvas Technology Corporation (https://canvas.xyz)",
 	"type": "module",
 	"types": "lib/index.d.ts",
