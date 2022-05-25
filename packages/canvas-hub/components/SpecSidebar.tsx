@@ -4,7 +4,6 @@ import { usePopper } from "react-popper"
 import toast from "react-hot-toast"
 import { Popover } from "@headlessui/react"
 
-import dynamic from "next/dynamic"
 import useSWR from "swr"
 
 import { ProjectMenu } from "./ProjectMenu"
@@ -167,7 +166,7 @@ function SidebarMenuItem({ active, multihash, running, spec, slug, draft_spec }:
 	)
 }
 
-function Sidebar({ version_number, app, edited }: SidebarProps) {
+export default function Sidebar({ version_number, app, edited }: SidebarProps) {
 	const { data, error } = useSWR("/api/instance")
 	const instances = useMemo<Record<string, { models: Record<string, Record<string, string>> }>>(
 		() => data || {},
@@ -227,5 +226,3 @@ function Sidebar({ version_number, app, edited }: SidebarProps) {
 		</div>
 	)
 }
-
-export default dynamic(async () => Sidebar, { ssr: false })
