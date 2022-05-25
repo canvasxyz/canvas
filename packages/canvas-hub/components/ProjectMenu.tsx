@@ -49,32 +49,30 @@ export default function ProjectMenu({ app }: ProjectMenuProps) {
 
 	return (
 		<Popover className="inline text-sm">
-			<>
-				<Popover.Button
-					ref={setReferenceElement}
-					className={`bg-gray-200 hover:bg-gray-300 inline-block px-1.5 py-1 ml-2 rounded`}
-				>
-					<span className="inline-block relative -top-0.5">&hellip;</span>
-				</Popover.Button>
+			<Popover.Button
+				ref={setReferenceElement}
+				className={`bg-gray-200 hover:bg-gray-300 inline-block px-1.5 py-1 ml-2 rounded`}
+			>
+				<span className="inline-block relative -top-0.5">&hellip;</span>
+			</Popover.Button>
 
-				{appBody &&
-					ReactDOM.createPortal(
-						<Popover.Panel
-							ref={setPopperElement}
-							className="absolute z-10 bg-white border border-gray-200 rounded shadow w-28 mt-2"
-							style={styles.popper}
-							{...attributes.popper}
+			{appBody &&
+				ReactDOM.createPortal(
+					<Popover.Panel
+						ref={setPopperElement}
+						className="absolute z-10 bg-white border border-gray-200 rounded shadow w-28 mt-2"
+						style={styles.popper}
+						{...attributes.popper}
+					>
+						<button
+							className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
+							onClick={deleteApp}
 						>
-							<button
-								className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
-								onClick={deleteApp}
-							>
-								Delete
-							</button>
-						</Popover.Panel>,
-						appBody
-					)}
-			</>
+							Delete
+						</button>
+					</Popover.Panel>,
+					appBody
+				)}
 		</Popover>
 	)
 }
