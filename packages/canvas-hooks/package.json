@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/hooks",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"author": "Canvas Technology Corporation (https://canvas.xyz)",
   "main": "index.js",
 	"files": [
