@@ -49,7 +49,7 @@ function SidebarMenuItem({ active, multihash, running, spec, slug, draft_spec }:
 	})
 
 	const startApp = useCallback(
-		(close) => {
+		(close: () => void) => {
 			console.log("starting app", multihash)
 			fetch(`/api/instance/${multihash}/start`, { method: "PUT" }).then((res) => {
 				if (res.status !== StatusCodes.OK) {
@@ -64,7 +64,7 @@ function SidebarMenuItem({ active, multihash, running, spec, slug, draft_spec }:
 	)
 
 	const stopApp = useCallback(
-		(close) => {
+		(close: () => void) => {
 			if (!confirm("Stop the currently running instance?")) return
 			console.log("stopping app", multihash)
 			fetch(`/api/instance/${multihash}/stop`, { method: "PUT" }).then((res) => {
@@ -79,29 +79,28 @@ function SidebarMenuItem({ active, multihash, running, spec, slug, draft_spec }:
 		[multihash]
 	)
 
-	const editApp = useCallback(
-		(slug) => {
-			if (spec === draft_spec) {
+	const editApp = useCallback(() => {
+		if (spec === draft_spec) {
+			document.location = `/app/${slug}`
+			return
+		}
+
+		if (!confirm("Overwrite your existing edits?")) {
+			return
+		}
+
+		fetch(`/api/app/${slug}`, {
+			method: "PUT",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ draft_spec: spec }),
+		}).then((res) => {
+			if (res.status === StatusCodes.OK) {
 				document.location = `/app/${slug}`
-				return
+			} else {
+				toast.error("Error editing spec")
 			}
-			if (!confirm("Overwrite your existing edits?")) {
-				return
-			}
-			fetch(`/api/app/${slug}`, {
-				method: "PUT",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ draft_spec: spec }),
-			}).then((res) => {
-				if (res.status === StatusCodes.OK) {
-					document.location = `/app/${slug}`
-				} else {
-					toast.error("Error editing spec")
-				}
-			})
-		},
-		[multihash]
-	)
+		})
+	}, [multihash, slug])
 
 	const { appBody } = useContext(AppContext)
 
@@ -136,7 +135,7 @@ function SidebarMenuItem({ active, multihash, running, spec, slug, draft_spec }:
 									<div>
 										<button
 											className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm border-b border-gray-200"
-											onClick={editApp.bind(null, slug)}
+											onClick={editApp.bind(null)}
 										>
 											Edit
 										</button>
