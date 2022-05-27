@@ -1,16 +1,9 @@
-import crypto from "node:crypto"
-import assert from "node:assert"
-
 import { NextApiRequest, NextApiResponse } from "next"
 import { StatusCodes } from "http-status-codes"
 
 import { loader } from "utils/server/services"
 import { Action, actionType } from "@canvas-js/core"
 import { APP_MULTIHASH_INVALID, APP_NOT_FOUND, ACTION_FORMAT_INVALID } from "./errors"
-
-import * as t from "io-ts"
-
-const actionArray = t.array(actionType)
 
 /**
  * Get the last ten actions from the hypercore feed of a running app

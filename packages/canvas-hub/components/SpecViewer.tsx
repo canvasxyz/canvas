@@ -33,4 +33,4 @@ function Viewer({ spec, version_number, multihash }: ViewerProps) {
 	)
 }
 
-export default dynamic(async () => Viewer, { ssr: false })
+export const SpecViewer = dynamic(async () => Viewer, { ssr: false })
