@@ -4,7 +4,7 @@ import chalk from "chalk"
 
 import * as t from "io-ts"
 
-import { BrowserCore, actionType, sessionType, actionPayloadType, sessionPayloadType } from "@canvas-js/core"
+import { BrowserCore, actionType, sessionType } from "@canvas-js/core"
 
 import { defaultDataDirectory, isMultihash } from "./utils.js"
 

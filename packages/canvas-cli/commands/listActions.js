@@ -45,7 +45,6 @@ export async function handler(args) {
 	const db = new HyperBee(feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
 	await db.ready()
 
-	console.log("Listing actions...")
 	for await (const [_, value] of createPrefixStream(db, "a:")) {
 		console.log(value)
 	}
@@ -54,7 +53,6 @@ export async function handler(args) {
 	await new Promise((resolve, reject) => {
 		feed.close((err) => {
 			if (err === null) {
-				console.log("Done")
 				resolve()
 			} else {
 				reject(err)
