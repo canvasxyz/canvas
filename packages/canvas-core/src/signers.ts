@@ -1,31 +1,27 @@
 import { utils } from "ethers"
-import { recoverTypedSignature, SignTypedDataVersion } from "@metamask/eth-sig-util"
+// import { recoverTypedSignature, SignTypedDataVersion } from "@metamask/eth-sig-util"
 import { verifyTypedData } from "@ethersproject/wallet"
 import { TypedDataDomain, TypedDataField } from "@ethersproject/abstract-signer"
 
-import type { ActionPayload, ActionArgument } from "./actions"
-import type { SessionPayload } from "./sessions"
+import type { Action, ActionArgument, ActionPayload } from "./actions.js"
+import type { Session, SessionPayload } from "./sessions.js"
 
 /**
  * Ethereum compatible signer logic, used to generate and
  * verify EIP-712 signed data for wallets like Metamask.
  *
- * `getActionSignaturePayload` gets EIP-712 signing data for an individual action
+ * `getActionSignatureData` gets EIP-712 signing data for an individual action
  * `verifyActionPayloadSignature` verifies an action signature matches a payload (does not check the payload)
- * `getSessionSignaturePayload` gets EIP-712 signing data to start a session
+ * `getSessionSignatureData` gets EIP-712 signing data to start a session
  * `verifySessionPayloadSignature` verifies a session signature matches a payload (does not check the payload)
  */
 
-export const getActionSignaturePayload = (
-	originAddress: string,
-	multihash: string,
-	timestamp: number,
-	call: string,
-	args: ActionArgument[]
-): [TypedDataDomain, Record<string, TypedDataField[]>, object] => {
+export function getActionSignatureData(
+	payload: ActionPayload
+): [TypedDataDomain, Record<string, TypedDataField[]>, Record<string, any>] {
 	const domain = {
 		name: "Canvas",
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(originAddress), 32)),
+		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
 	}
 
 	const actionTypes = {
@@ -38,35 +34,26 @@ export const getActionSignaturePayload = (
 	}
 
 	const actionValue = {
-		sendAction: call,
-		params: args.map((a: ActionArgument) => a?.toString()),
-		application: multihash,
-		timestamp: timestamp.toString(),
+		sendAction: payload.call,
+		params: payload.args.map((a: ActionArgument) => JSON.stringify(a)),
+		application: payload.spec,
+		timestamp: payload.timestamp.toString(),
 	}
+
 	return [domain, actionTypes, actionValue]
 }
 
-export const verifyActionPayloadSignature = async (payload: ActionPayload, signature: string): Promise<string> => {
-	const [domain, types, value] = getActionSignaturePayload(
-		payload.from,
-		payload.spec,
-		payload.timestamp,
-		payload.call,
-		payload.args
-	)
-	return verifyTypedData(domain, types, value, signature)
+export function verifyActionSignature(action: Action): string {
+	const [domain, types, value] = getActionSignatureData(action.payload)
+	return verifyTypedData(domain, types, value, action.signature)
 }
 
-export const getSessionSignaturePayload = (
-	originAddress: string,
-	multihash: string,
-	timestamp: number,
-	sessionSignerAddress: string,
-	sessionDuration: number
-): [TypedDataDomain, Record<string, TypedDataField[]>, object] => {
+export function getSessionSignatureData(
+	payload: SessionPayload
+): [TypedDataDomain, Record<string, TypedDataField[]>, Record<string, any>] {
 	const domain = {
 		name: "Canvas",
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(originAddress), 32)),
+		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
 	}
 
 	const sessionTypes = {
@@ -79,22 +66,16 @@ export const getSessionSignaturePayload = (
 	}
 
 	const sessionValue = {
-		loginTo: multihash,
-		registerSessionKey: sessionSignerAddress,
-		registerSessionDuration: sessionDuration.toString(),
-		timestamp: timestamp.toString(),
+		loginTo: payload.spec,
+		registerSessionKey: payload.session_public_key,
+		registerSessionDuration: payload.session_duration.toString(),
+		timestamp: payload.timestamp.toString(),
 	}
 
 	return [domain, sessionTypes, sessionValue]
 }
 
-export const verifySessionPayloadSignature = async (payload: SessionPayload, signature: string): Promise<string> => {
-	const [domain, types, value] = getSessionSignaturePayload(
-		payload.from,
-		payload.spec,
-		payload.timestamp,
-		payload.session_public_key,
-		payload.session_duration
-	)
-	return verifyTypedData(domain, types, value, signature)
+export function verifySessionSignature(session: Session): string {
+	const [domain, types, value] = getSessionSignatureData(session.payload)
+	return verifyTypedData(domain, types, value, session.signature)
 }

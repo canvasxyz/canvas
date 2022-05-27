@@ -5,9 +5,6 @@ import type { Model } from "./models.js"
 /**
  * Actions
  *
- * An `Action` holds an ActionPayload or SessionPayload, its signature, and
- * metadata needed to establish the validity of the signature.
- *
  * An `ActionArgument` is a type-level representation of concrete action argument
  * types, ie TypeScript types that describe the possible JavaScript values that
  * we put into and get out of action calls.
@@ -15,23 +12,10 @@ import type { Model } from "./models.js"
  * An `ActionPayload` is the data signed by the user, either directly or using a
  * session key, to execute an action in a Canvas application.
  *
- * An `ActionResult` is returned after successfully applying an action.
+ * An `Action` is an `ActionPayload` and a signature.
  *
+ * An `ActionResult` is returned after successfully applying an action.
  */
-
-export type Action = {
-	from: string
-	session: string | null
-	signature: string
-	payload: string
-}
-
-export const actionType: t.Type<Action> = t.type({
-	from: t.string,
-	session: t.union([t.string, t.null]),
-	signature: t.string,
-	payload: t.string,
-})
 
 export type ActionArgument = null | boolean | number | string
 
@@ -51,6 +35,18 @@ export const actionPayloadType: t.Type<ActionPayload> = t.type({
 	timestamp: t.number,
 	call: t.string,
 	args: t.array(actionArgumentType),
+})
+
+export type Action = {
+	payload: ActionPayload
+	session: string | null
+	signature: string
+}
+
+export const actionType: t.Type<Action> = t.type({
+	payload: actionPayloadType,
+	session: t.union([t.string, t.null]),
+	signature: t.string,
 })
 
 export type ActionResult = {
