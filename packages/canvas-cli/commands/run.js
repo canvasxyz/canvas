@@ -13,7 +13,7 @@ import Hash from "ipfs-only-hash"
 import * as t from "io-ts"
 import Either from "fp-ts/lib/Either.js"
 
-import { NativeCore, actionType, sessionType, getActionSignatureData } from "@canvas-js/core"
+import { NativeCore, actionType, actionPayloadType, sessionType, getActionSignatureData } from "@canvas-js/core"
 
 import { defaultDataDirectory, isMultihash, download } from "./utils.js"
 
@@ -160,7 +160,7 @@ export async function handler(args) {
 		})
 		console.log("└ POST /actions")
 		console.log(`  └ { ${Object.keys(actionType.props).join(", ")} }`)
-		console.log(`  └ payload: { ${Object.keys(actionType.payload.props).join(", ")} }`)
+		console.log(`  └ payload: { ${Object.keys(actionPayloadType.props).join(", ")} }`)
 		console.log(`  └ calls: [ ${Object.keys(core.actionFunctions).join(", ")} ]`)
 		console.log("└ POST /sessions")
 		console.log(`  └ { ${Object.keys(sessionType.props).join(", ")} }`)
