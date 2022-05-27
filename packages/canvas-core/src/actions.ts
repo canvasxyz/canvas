@@ -29,22 +29,24 @@ export type ActionPayload = {
 	timestamp: number
 }
 
+export const actionPayloadType: t.Type<ActionPayload> = t.type({
+	from: t.string,
+	spec: t.string,
+	timestamp: t.number,
+	call: t.string,
+	args: t.array(actionArgumentType),
+})
+
 export type Action = {
+	payload: ActionPayload
 	session: string | null
 	signature: string
-	payload: ActionPayload
 }
 
 export const actionType: t.Type<Action> = t.type({
+	payload: actionPayloadType,
 	session: t.union([t.string, t.null]),
 	signature: t.string,
-	payload: t.type({
-		from: t.string,
-		spec: t.string,
-		timestamp: t.number,
-		call: t.string,
-		args: t.array(actionArgumentType),
-	}),
 })
 
 export type ActionResult = {
