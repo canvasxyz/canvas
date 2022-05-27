@@ -2,6 +2,8 @@ import fs from "node:fs"
 import path from "node:path"
 import chalk from "chalk"
 
+import * as t from "io-ts"
+
 import { BrowserCore, actionType, sessionType, actionPayloadType, sessionPayloadType } from "@canvas-js/core"
 
 import { defaultDataDirectory, isMultihash } from "./utils.js"
@@ -41,59 +43,34 @@ export async function handler(args) {
 
 	const core = await BrowserCore.initialize({ spec })
 
-	console.log(`Showing info for ${core.multihash}:`)
-
-	console.log("")
+	console.log(`Showing info for ${core.multihash}:\n`)
 	console.log("models:", core.models)
+
 	console.log(
 		"routes:",
 		Object.keys(core.routes).map((name) => `GET ${name}`)
 	)
+
 	console.log(
 		"actions:",
 		Object.entries(core.actionParameters).map(([name, params]) => `${name}(${params.join(", ")})`)
 	)
 
-	console.log("")
-	console.log(`Found ${core.feed.length} actions. Connect to peers to retrieve more.`)
+	console.log(`\nFound ${core.feed.length} actions. Connect to peers to retrieve more.`)
 
 	console.log(`
 To initialize a session, POST a JSON object to /sessions
 with these properties:`)
-	console.log("{")
-	Object.entries(sessionType.props).forEach(([field, { name }]) => {
-		console.log(`    ${field}: ${chalk.green(name)},`)
-	})
-	console.log("}")
-	console.log(`
-The session payload should be a stringified JSON object
-with these properties:`)
-	console.log("{")
-	Object.entries(sessionPayloadType.props).forEach(([field, { name }]) => {
-		console.log(`    ${field}: ${chalk.green(name)},`)
-	})
-	console.log("}")
+	console.log(printType(sessionType))
 
 	console.log(`
 To apply an action, POST a JSON object to /actions
 with these properties:`)
-	console.log("{")
-	Object.entries(actionType.props).forEach(([field, { name }]) => {
-		console.log(`    ${field}: ${chalk.green(name)},`)
-	})
-	console.log("}")
-	console.log(`
-The action payload should be a stringified JSON object
-with these properties:`)
-	console.log("{")
-	Object.entries(actionPayloadType.props).forEach(([field, { name }]) => {
-		console.log(`    ${field}: ${chalk.green(name)},`)
-	})
-	console.log("}")
+	console.log(printType(actionType))
 
 	console.log(`
 Payloads should be signed by either the "from" address, or
-the "session" public key.
+the "session" public key using EIP-712.
 
 If a session public key is used, the server will only
 accept it if it has seen a recent session.
@@ -105,4 +82,15 @@ to a time when the Canvas protocol exists.
 Canvas currently supports these cryptography schemes:
 - Ethereum (ECDSA)
 `)
+}
+
+function printType(type, indent = "") {
+	if (type instanceof t.InterfaceType) {
+		const props = Object.entries(type.props).map(
+			([name, prop]) => `${indent}  ${name}: ${printType(prop, indent + "  ")}\n`
+		)
+		return `{\n${props.join("") + indent}}`
+	} else {
+		return chalk.green(type.name)
+	}
 }

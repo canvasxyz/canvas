@@ -189,11 +189,12 @@ export async function handler(args) {
 	})
 
 	server.post(`/sessions`, async (req, res) => {
-		if (!actionType.is(req.body)) {
+		if (!sessionType.is(req.body)) {
 			console.error(ACTION_FORMAT_INVALID)
 			res.status(StatusCodes.BAD_REQUEST).end(ACTION_FORMAT_INVALID)
 			return
 		}
+
 		await core
 			.session(req.body)
 			.then(() => res.status(StatusCodes.OK).end())
