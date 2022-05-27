@@ -27,6 +27,7 @@ export class NativeCore extends Core {
 		const spec = typeof config.spec === "string" ? config.spec : objectSpecToString(config.spec)
 		const multihash = await Hash.of(spec)
 		const core = new NativeCore({ multihash, spec, directory: config.dataDirectory, quickJS })
+		await core.hyperbee.ready()
 
 		if (config.replay) {
 			await core.replay()
