@@ -6,7 +6,7 @@ import type { Action, ActionArgument, ActionPayload, ModelValue } from "@canvas-
 import { getActionSignatureData } from "@canvas-js/core/lib/signers.js"
 
 declare global {
-	var ethereum: ethers.providers.Provider & ethers.providers.ExternalProvider
+	var ethereum: ethers.providers.Provider & ethers.providers.ExternalProvider & { isConnected: () => boolean }
 }
 
 interface CanvasContextValue {
@@ -99,7 +99,11 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 			}
 		}
 
-		window.ethereum.on("connect", handleConnect)
+		if (window.ethereum.isConnected()) {
+			handleConnect()
+		} else {
+			window.ethereum.on("connect", handleConnect)
+		}
 
 		function handleAccountsChanged(accounts: string[]) {
 			setAccounts(accounts)
