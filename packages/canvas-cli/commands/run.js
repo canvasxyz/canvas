@@ -110,7 +110,14 @@ export async function handler(args) {
 	server.use(bodyParser.json())
 
 	server.get("/", (req, res) => {
+		res.header("ETag", `"${core.multihash}"`)
 		res.json({ multihash: core.multihash, spec: core.spec })
+		return
+	})
+
+	server.head("/", (req, res) => {
+		res.status(StatusCodes.OK)
+		res.header("ETag", `"${core.multihash}"`)
 		return
 	})
 
