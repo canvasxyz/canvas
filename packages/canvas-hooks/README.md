@@ -14,7 +14,7 @@ Then, in any component inside your app, you can use the two canvas hooks: `useCa
 
 `useCanvas` returns an object with configuration data about the connected canvas app and the currently-authenticated user. Most importantly, it has an async `dispatch` method that you can use to sign and send actions.
 
-`useRoute` takes a string route and an object of params, and works like the `useSWR` hook, returning an error or an array of results. By default, if polls the server every three seconds, which you can change by setting the `refreshInterval: number` property on the parent `Canvas` element.
+`useRoute` takes a string route and an object of params, and works like the `useSWR` hook, returning an error or an array of results. Internally, it uses the [EventSource API](https://developer.mozilla.org/en-US/docs/Web/API/EventSource).
 
 ```ts
 import type { ethers } from "ethers"
