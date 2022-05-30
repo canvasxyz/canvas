@@ -45,7 +45,7 @@ export function getActionSignatureData(
 
 export function verifyActionSignature(action: Action): string {
 	const [domain, types, value] = getActionSignatureData(action.payload)
-	return verifyTypedData(domain, types, value, action.signature)
+	return verifyTypedData(domain, types, value, action.signature).toLowerCase()
 }
 
 export function getSessionSignatureData(
@@ -77,5 +77,5 @@ export function getSessionSignatureData(
 
 export function verifySessionSignature(session: Session): string {
 	const [domain, types, value] = getSessionSignatureData(session.payload)
-	return verifyTypedData(domain, types, value, session.signature)
+	return verifyTypedData(domain, types, value, session.signature).toLowerCase()
 }
