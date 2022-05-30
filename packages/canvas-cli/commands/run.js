@@ -106,12 +106,13 @@ export async function handler(args) {
 	const ACTION_FORMAT_INVALID = "Invalid action format"
 
 	const server = express()
-	server.use(cors())
+	server.use(cors({ exposedHeaders: ["ETag"] }))
 	server.use(bodyParser.json())
 
 	server.head("/", (req, res) => {
 		res.status(StatusCodes.OK)
 		res.header("ETag", `"${core.multihash}"`)
+		res.header("Content-Type", "application/json")
 		res.end()
 	})
 
