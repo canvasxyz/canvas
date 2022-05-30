@@ -317,7 +317,7 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 			await this.hyperbee.put(Core.getActionKey(action.signature), JSON.stringify(action))
 		}
 
-		this.dispatchEvent(new CustomEvent("action", { detail: action }))
+		this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
 		return { hash }
 	}
 
