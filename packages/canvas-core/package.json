@@ -11,7 +11,8 @@
 	],
 	"scripts": {
 		"test": "ava",
-		"build": "rm -rf lib/* && tsc",
+		"clean": "rm -rf lib/*",
+		"build": "tsc",
 		"dev": "tsc -w"
 	},
 	"dependencies": {

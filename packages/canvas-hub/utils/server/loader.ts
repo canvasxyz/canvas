@@ -55,6 +55,10 @@ export class Loader {
 
 		this.status.set(multihash, { status: "starting" })
 		const dataDirectory = path.resolve(appDirectory, multihash)
+		if (!fs.existsSync(dataDirectory)) {
+			fs.mkdirSync(dataDirectory)
+		}
+
 		await NativeCore.initialize({ spec, dataDirectory })
 			.then((core) => {
 				if (core.multihash !== multihash) {

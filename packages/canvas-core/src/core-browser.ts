@@ -35,7 +35,12 @@ export class BrowserCore extends Core {
 		const multihash = await Hash.of(spec)
 		const storage = config.storage || randomAccessMemory
 		const core = new BrowserCore({ multihash, spec, quickJS, SQL, storage })
-		if (config.replay) await core.replay()
+		await core.hyperbee.ready()
+
+		if (config.replay) {
+			await core.replay()
+		}
+
 		return core
 	}
 

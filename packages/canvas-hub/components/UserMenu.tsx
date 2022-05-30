@@ -1,4 +1,4 @@
-import { useContext, useLayoutEffect, useState } from "react"
+import { useContext, useState } from "react"
 import ReactDOM from "react-dom"
 import { usePopper } from "react-popper"
 import toast from "react-hot-toast"

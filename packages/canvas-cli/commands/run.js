@@ -1,5 +1,6 @@
 import path from "node:path"
 import fs from "node:fs"
+import assert from "node:assert"
 
 import ethers from "ethers"
 import cors from "cors"
@@ -12,48 +13,12 @@ import Hash from "ipfs-only-hash"
 import * as t from "io-ts"
 import Either from "fp-ts/lib/Either.js"
 
-import { NativeCore, actionType, actionPayloadType, sessionType, sessionPayloadType } from "@canvas-js/core"
+import { NativeCore, actionType, actionPayloadType, sessionType, getActionSignatureData } from "@canvas-js/core"
 
 import { defaultDataDirectory, isMultihash, download } from "./utils.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or multihash"
-
-const fixturesType = t.array(
-	t.type({
-		privateKey: t.string,
-		call: t.string,
-		args: t.array(t.union([t.null, t.number, t.string, t.boolean])),
-	})
-)
-
-async function resetAppData(appPath) {
-	const hypercorePath = path.resolve(appPath, "hypercore")
-	const databasePath = path.resolve(appPath, "db.sqlite")
-	if (fs.existsSync(hypercorePath) || fs.existsSync(databasePath)) {
-		console.log(
-			`[canvas-cli]: Found an existing action log in the app directory. Fixtures can only be applied to an empty action log.`
-		)
-		const { reset } = await prompt.get({
-			name: "reset",
-			description: `${chalk.yellow(`Do you want to ${chalk.bold("erase all data")} in ${appPath}?`)} [yN]`,
-			message: "Invalid input.",
-			type: "string",
-			required: true,
-			pattern: /^[yn]?$/i,
-		})
-
-		if (reset.toLowerCase() === "y") {
-			console.log(`[canvas-cli]: Removing ${hypercorePath}`)
-			fs.rmSync(hypercorePath, { recursive: true, force: true })
-			console.log(`[canvas-cli]: Removing ${databasePath}`)
-			fs.rmSync(databasePath, { recursive: true, force: true })
-		} else {
-			console.log("[canvas-cli]: Cancelled.")
-			process.exit(1)
-		}
-	}
-}
 
 export const builder = (yargs) => {
 	yargs
@@ -84,6 +49,10 @@ export const builder = (yargs) => {
 			type: "string",
 			desc: "Path to a JSON file containing an array of action payloads",
 		})
+		.option("reset", {
+			type: "boolean",
+			desc: "Reset the action log and model database",
+		})
 }
 
 export async function handler(args) {
@@ -100,7 +69,7 @@ export async function handler(args) {
 		appPath = path.resolve(args.datadir, args.spec)
 		if (fs.existsSync(appPath)) {
 			spec = fs.readFileSync(path.resolve(appPath, "spec.mjs"), "utf-8")
-			if (args.fixtures) {
+			if (args.reset) {
 				await resetAppData(appPath)
 			}
 		} else {
@@ -116,7 +85,7 @@ export async function handler(args) {
 		const multihash = await Hash.of(spec)
 		appPath = path.resolve(args.datadir, multihash)
 		if (fs.existsSync(appPath)) {
-			if (args.fixtures) {
+			if (args.reset) {
 				await resetAppData(appPath)
 			}
 		} else {
@@ -128,42 +97,28 @@ export async function handler(args) {
 	}
 
 	const port = args.port
-	const core = await NativeCore.initialize({
-		spec,
-		dataDirectory: appPath,
-	})
+	const core = await NativeCore.initialize({ spec, dataDirectory: appPath })
 
 	if (args.fixtures) {
-		const result = fixturesType.decode(JSON.parse(fs.readFileSync(args.fixtures, "utf-8")))
-		if (Either.isLeft(result)) {
-			throw new Error("Invalid fixtures file.")
-		}
-		const timestamp = Math.round(Date.now() / 1000)
-		for (const [i, { privateKey, call, args }] of result.right.entries()) {
-			const signer = new ethers.Wallet(privateKey)
-			const from = await signer.getAddress()
-			const payload = JSON.stringify({
-				from,
-				spec: core.multihash,
-				call,
-				args,
-				timestamp: timestamp - result.right.length + i,
-			})
-
-			const signature = await signer.signMessage(payload)
-			await core.apply({ from, session: null, signature, payload })
-		}
+		await applyFixtures(core, args.fixtures)
 	}
 
 	const ACTION_FORMAT_INVALID = "Invalid action format"
 
 	const server = express()
-	server.use(cors())
+	server.use(cors({ exposedHeaders: ["ETag"] }))
 	server.use(bodyParser.json())
 
+	server.head("/", (req, res) => {
+		res.status(StatusCodes.OK)
+		res.header("ETag", `"${core.multihash}"`)
+		res.header("Content-Type", "application/json")
+		res.end()
+	})
+
 	server.get("/", (req, res) => {
+		res.header("ETag", `"${core.multihash}"`)
 		res.json({ multihash: core.multihash, spec: core.spec })
-		return
 	})
 
 	for (const route of Object.keys(core.routes)) {
@@ -189,11 +144,12 @@ export async function handler(args) {
 	})
 
 	server.post(`/sessions`, async (req, res) => {
-		if (!actionType.is(req.body)) {
+		if (!sessionType.is(req.body)) {
 			console.error(ACTION_FORMAT_INVALID)
 			res.status(StatusCodes.BAD_REQUEST).end(ACTION_FORMAT_INVALID)
 			return
 		}
+
 		await core
 			.session(req.body)
 			.then(() => res.status(StatusCodes.OK).end())
@@ -215,6 +171,82 @@ export async function handler(args) {
 		console.log(`  └ calls: [ ${Object.keys(core.actionFunctions).join(", ")} ]`)
 		console.log("└ POST /sessions")
 		console.log(`  └ { ${Object.keys(sessionType.props).join(", ")} }`)
-		console.log(`  └ payload: { ${Object.keys(sessionPayloadType.props).join(", ")} }`)
+		console.log(`  └ payload: { ${Object.keys(sessionType.props.payload.props).join(", ")} }`)
 	})
+}
+
+const fixturesType = t.array(
+	t.type({
+		privateKey: t.string,
+		call: t.string,
+		args: t.array(t.union([t.null, t.number, t.string, t.boolean])),
+	})
+)
+
+async function applyFixtures(core, fixtures) {
+	if (core.feed.length > 0) {
+		console.error(
+			chalk.red(
+				`[canvas-cli]: Found an existing action log in the app directory. Fixtures can only be applied to an empty action log. Re-run in combination with the --reset flag to clear the data in the app directory.`
+			)
+		)
+
+		await core.close()
+		process.exit(1)
+	}
+
+	const result = fixturesType.decode(JSON.parse(fs.readFileSync(fixtures, "utf-8")))
+	if (Either.isLeft(result)) {
+		throw new Error("Invalid fixtures file")
+	}
+
+	const timestamp = Math.round(Date.now() / 1000)
+	const wallets = new Map()
+	for (const [i, { privateKey, call, args }] of result.right.entries()) {
+		if (!wallets.has(privateKey)) {
+			assert(privateKey.startsWith("0x"))
+			const paddedPrivateKey = "0x" + privateKey.slice(2).padStart(64, "0")
+			const wallet = new ethers.Wallet(paddedPrivateKey)
+			wallets.set(privateKey, wallet)
+		}
+
+		const signer = wallets.get(privateKey)
+		const from = await signer.getAddress()
+		const payload = {
+			from,
+			spec: core.multihash,
+			call,
+			args,
+			timestamp: timestamp - result.right.length + i,
+		}
+
+		const signatureData = getActionSignatureData(payload)
+		const signature = await signer._signTypedData(...signatureData)
+		await core.apply({ session: null, signature, payload })
+	}
+}
+
+async function resetAppData(appPath) {
+	const hypercorePath = path.resolve(appPath, "hypercore")
+	const databasePath = path.resolve(appPath, "db.sqlite")
+	if (fs.existsSync(hypercorePath) || fs.existsSync(databasePath)) {
+		const { reset } = await prompt.get({
+			name: "reset",
+			description: `${chalk.yellow(`Do you want to ${chalk.bold("erase all data")} in ${appPath}?`)} [yN]`,
+			message: "Invalid input.",
+			type: "string",
+			required: true,
+			pattern: /^[yn]?$/i,
+		})
+
+		if (reset.toLowerCase() === "y") {
+			console.log(`[canvas-cli]: Removing ${hypercorePath}`)
+			fs.rmSync(hypercorePath, { recursive: true, force: true })
+			console.log(`[canvas-cli]: Removing ${databasePath}`)
+			fs.rmSync(databasePath, { recursive: true, force: true })
+		} else {
+			console.log("[canvas-cli]: Cancelled.")
+			process.exit(1)
+		}
+	}
 }

@@ -162,4 +162,4 @@ function Editor({ app, onEdited }: EditorProps) {
 	)
 }
 
-export default dynamic(async () => Editor, { ssr: false })
+export const SpecEditor = dynamic(async () => Editor, { ssr: false })

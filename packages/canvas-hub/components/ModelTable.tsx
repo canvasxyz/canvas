@@ -8,14 +8,16 @@ interface ModelTableProps {
 	model: Record<string, string>
 }
 
-function ModelTable(props: ModelTableProps) {
+export function ModelTable(props: ModelTableProps) {
 	const { data, error } = useSWR<Record<string, string | number | null>[]>(
 		`/api/instance/${props.multihash}/models/${props.name}`
 	)
 
-	const rows = data || []
-
 	const fields = useMemo(() => Object.keys(props.model), [props.model])
+
+	if (data === undefined) {
+		return error ? <code>{error.toString()}</code> : null
+	}
 
 	return (
 		<div className="border border-gray-300 rounded overflow-scroll bg-gray-50 pb-3 overflow-x-scroll">
@@ -32,7 +34,7 @@ function ModelTable(props: ModelTableProps) {
 					</tr>
 				</thead>
 				<tbody>
-					{rows.map((row, index) => {
+					{data.map((row, index) => {
 						return (
 							<tr key={index}>
 								{props.name !== "_sessions" && (
@@ -56,26 +58,6 @@ function ModelTable(props: ModelTableProps) {
 					})}
 				</tbody>
 			</table>
-		</div>
-	)
-}
-
-interface ModelViewerProps {
-	multihash: string
-	models: Record<string, Record<string, string>>
-}
-
-export default function Models(props: ModelViewerProps) {
-	return (
-		<div>
-			{Object.entries(props.models)
-				.filter(([name, model]) => !name.startsWith("_"))
-				.map(([name, model]) => (
-					<div key={name}>
-						<div className="font-mono text-xs text-gray-700 mt-4 mb-3">{name}</div>
-						<ModelTable multihash={props.multihash} name={name} model={model} />
-					</div>
-				))}
 		</div>
 	)
 }

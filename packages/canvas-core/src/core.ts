@@ -14,12 +14,12 @@ import * as t from "io-ts"
 
 import { assert } from "./utils.js"
 
-import { Action, actionType, actionPayloadType, ActionPayload, ActionArgument, ActionResult } from "./actions.js"
-import { Session, SessionPayload, sessionPayloadType, sessionType } from "./sessions.js"
+import { Action, actionType, ActionArgument, ActionResult, actionArgumentType, ActionPayload } from "./actions.js"
+import { Session, SessionPayload, sessionType } from "./sessions.js"
 
 import { getColumnType, Model, modelType, ModelValue, validateType } from "./models.js"
 import { EventEmitter, CustomEvent } from "./events.js"
-import { verifyActionPayloadSignature, verifySessionPayloadSignature } from "./signers.js"
+import { verifyActionSignature, verifySessionSignature } from "./signers.js"
 
 interface CoreEvents {
 	action: CustomEvent<ActionPayload>
@@ -51,7 +51,7 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 	// This is a *mutable* slot for the payload of the "currently executing action".
 	// It starts as null, gets set at the beginning of apply, and gets re-set to null
 	// by the end of apply. This is a little hacky but it makes stuff way simpler.
-	private currentPayload: ActionPayload | null = null
+	private currentActionPayload: ActionPayload | null = null
 
 	constructor(config: {
 		multihash: string
@@ -118,7 +118,7 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 			this.models[name] = model
 
 			const setFunction = this.vm.newFunction("set", (key: QuickJSHandle, value: QuickJSHandle) => {
-				assert(this.currentPayload !== null, "internal error: missing currentPayload")
+				assert(this.currentActionPayload !== null, "internal error: missing currentActionPayload")
 				const id = key.consume(this.vm.getString)
 				const params = value.consume(this.vm.dump)
 				assert(typeof params === "object", "object parameters expected: this.db.table.set(id, { field })")
@@ -126,7 +126,7 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 					validateType(type, params[field])
 				}
 
-				const { from, timestamp } = this.currentPayload
+				const { from, timestamp } = this.currentActionPayload
 				this.setModel(name, { ...params, id, from, timestamp })
 			})
 
@@ -213,31 +213,27 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		 * We should eventually use a more reliable source than the system clock, to avoid
 		 * synchronization issues between different clients who hold the same public key.
 		 */
-		const currentTime = +new Date() / 1000
-		const boundsCheckLowerLimit = +new Date("2020") / 1000
-		const boundsCheckUpperLimit = +new Date("2070") / 1000
+		const currentTime = Date.now() / 1000
+		const boundsCheckLowerLimit = new Date("2020").valueOf() / 1000
+		const boundsCheckUpperLimit = new Date("2070").valueOf() / 1000
 
 		/**
 		 * Verify the action matches the payload.
 		 *
 		 * Provide informative errors by checking each field individually (this should be turned off in production).
 		 */
-		if (action.from === undefined) console.log("missing action.from")
 		if (action.signature === undefined) console.log("missing action.signature")
-		if (action.payload === undefined) console.log("missing action.payload")
-		assert(actionType.is(action), "invalid action")
-
-		const payload = JSON.parse(action.payload)
-		if (payload.from === undefined) console.log("missing payload.from")
-		if (payload.spec === undefined) console.log("missing payload.spec")
-		if (payload.timestamp === undefined) console.log("missing payload.timestamp")
-		if (payload.call === undefined) console.log("missing payload.call")
-		if (payload.args === undefined) console.log("missing payload.args")
-		if (!Array.isArray(payload.args)) console.log("payload.args should be an array")
-		if (payload.args.some((a: ActionArgument) => Array.isArray(a) || typeof a === "object")) {
-			console.log("payload.args should only include primitive types")
+		if (action.payload.from === undefined) console.log("missing action.payload.from")
+		if (action.payload.spec === undefined) console.log("missing action.payload.spec")
+		if (action.payload.timestamp === undefined) console.log("missing action.payload.timestamp")
+		if (action.payload.call === undefined) console.log("missing action.payload.call")
+		if (action.payload.args === undefined) console.log("missing action.payload.args")
+		if (!Array.isArray(action.payload.args)) console.log("action.payload.args should be an array")
+		if (action.payload.args.some((a: ActionArgument) => !actionArgumentType.is(a))) {
+			console.log("action.payload.args should only include primitive types")
 		}
-		assert(actionPayloadType.is(payload), "invalid action payload")
+
+		assert(actionType.is(action), "invalid action")
 
 		/**
 		 * Verify the action signature
@@ -255,68 +251,73 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 
 			const session = JSON.parse(record.value)
 			assert(sessionType.is(session), "got invalid session from HyperBee")
-			const sessionPayload = JSON.parse(session.payload)
-			assert(sessionPayloadType.is(sessionPayload), "got invalid session from HyperBee")
 
 			// We don't guard against session timestamps in the future because the server clock might be out of sync.
 			// But actions and sessions should have been signed on the same client, so we enforce ordering there.
-			// assert(sessionPayload.timestamp < currentTime, "session timestamp too far in the future")
+			// assert(session.payload.timestamp < currentTime, "session timestamp too far in the future")
 
 			if (!options.replaying) {
-				assert(sessionPayload.timestamp + sessionPayload.session_duration > currentTime, "session expired")
-				assert(sessionPayload.timestamp <= payload.timestamp, "session timestamp must precede action timestamp")
+				assert(session.payload.timestamp + session.payload.session_duration > currentTime, "session expired")
+				assert(session.payload.timestamp <= action.payload.timestamp, "session timestamp must precede action timestamp")
 			}
 
-			assert(action.from === payload.from, "invalid signature (action.from and payload.from do not match)")
-			assert(payload.from === session.from, "invalid signature (session.from and payload.from do not match)")
+			assert(
+				action.payload.from === session.payload.from,
+				"invalid signature (action.payload.from and session.payload.from do not match)"
+			)
 
-			const verifiedAddress = await verifyActionPayloadSignature(payload, action.signature)
+			const verifiedAddress = verifyActionSignature(action)
 			assert(verifiedAddress === action.session, "invalid signature (recovered address does not match)")
-			assert(action.session === sessionPayload.session_public_key, "invalid signature (action, session do not match)")
+			assert(verifiedAddress === session.payload.session_public_key, "invalid signature (action, session do not match)")
 		} else {
-			assert(action.from === payload.from, "action signed by wrong address")
-			const verifiedAddress = await verifyActionPayloadSignature(payload, action.signature)
-			assert(action.from === verifiedAddress, "action signed by wrong address")
+			const verifiedAddress = verifyActionSignature(action)
+			assert(verifiedAddress === action.payload.from, "action signed by wrong address")
 		}
 
 		// We don't guard against action timestamps in the future because the server clock might be out of sync.
 		// assert(payload.timestamp < currentTime, "action timestamp too far in the future")
 
-		assert(payload.timestamp > boundsCheckLowerLimit, "action timestamp too far in the past")
-		assert(payload.timestamp < boundsCheckUpperLimit, "action timestamp too far in the future")
+		assert(action.payload.timestamp > boundsCheckLowerLimit, "action timestamp too far in the past")
+		assert(action.payload.timestamp < boundsCheckUpperLimit, "action timestamp too far in the future")
 
-		assert(payload.spec === this.multihash, "action signed for wrong spec")
-		assert(payload.call !== "", "missing action function")
-		assert(payload.call in this.actionFunctions, "invalid action function")
+		assert(action.payload.spec === this.multihash, "action signed for wrong spec")
+		assert(action.payload.call !== "", "missing action function")
+		assert(action.payload.call in this.actionFunctions, "invalid action function")
 
-		this.currentPayload = payload
-		const hash = ethers.utils.sha256(Buffer.from(action.payload))
+		this.currentActionPayload = action.payload
+
+		assert(action.signature.startsWith("0x"))
+		const hash = ethers.utils.sha256(action.signature)
 
 		const context = this.vm.newObject()
 		const hashString = this.vm.newString(hash)
-		const fromString = this.vm.newString(payload.from)
-		const timestampNumber = this.vm.newNumber(payload.timestamp)
+		const fromString = this.vm.newString(action.payload.from)
+		const timestampNumber = this.vm.newNumber(action.payload.timestamp)
 		this.vm.setProp(context, "db", this.modelAPI)
 		this.vm.setProp(context, "from", fromString)
 		this.vm.setProp(context, "timestamp", timestampNumber)
 		this.vm.setProp(context, "hash", hashString)
-		const args = payload.args.map((arg) => this.parseActionArgument(arg))
-		const result = this.vm.callFunction(this.actionFunctions[payload.call], context, ...args)
+		const args = action.payload.args.map((arg) => this.parseActionArgument(arg))
+		const handler = this.actionFunctions[action.payload.call]
+		const result = this.vm.callFunction(handler, context, ...args)
 		if (isFail(result)) {
-			throw new Error(`Action application failed: ${JSON.stringify(result.error.consume(this.vm.dump), null, "  ")}`)
+			const error = result.error.consume(this.vm.dump)
+			const message = JSON.stringify(error, null, "  ")
+			throw new Error(`action application failed: ${message}`)
 		}
 
 		result.value.dispose()
+		hashString.dispose()
 		fromString.dispose()
 		timestampNumber.dispose()
-		this.currentPayload = null
+		this.currentActionPayload = null
 
 		// if everything succeeds
 		if (!options.replaying) {
 			await this.hyperbee.put(Core.getActionKey(action.signature), JSON.stringify(action))
 		}
 
-		this.dispatchEvent(new CustomEvent("action", { detail: payload }))
+		this.dispatchEvent(new CustomEvent("action", { detail: action }))
 		return { hash }
 	}
 
@@ -341,17 +342,14 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 	 */
 	public async session(session: Session) {
 		assert(sessionType.is(session), "invalid session")
-		const payload = JSON.parse(session.payload)
-		assert(sessionPayloadType.is(payload), "invalid session payload")
-		assert(payload.from === session.from, "session signed by wrong address")
-		assert(payload.spec === this.multihash, "session signed for wrong spec")
+		assert(session.payload.spec === this.multihash, "session signed for wrong spec")
 
-		const verifiedAddress = await verifySessionPayloadSignature(payload, session.signature)
-		assert(session.from === verifiedAddress, "session signed by wrong address")
+		const verifiedAddress = verifySessionSignature(session)
+		assert(verifiedAddress === session.payload.from, "session signed by wrong address")
 
-		const key = Core.getSessionKey(payload.session_public_key)
+		const key = Core.getSessionKey(session.payload.session_public_key)
 		await this.hyperbee.put(key, JSON.stringify(session))
-		this.dispatchEvent(new CustomEvent("session", { detail: payload }))
+		this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
 	}
 
 	/**

@@ -5,12 +5,13 @@ import useSWR from "swr"
 
 import { prisma } from "utils/server/services"
 
-import Editor from "components/SpecEditor"
-import Viewer from "components/SpecViewer"
-import Actions from "components/SpecActions"
-import Models from "components/ModelViewer"
+import { SpecEditor } from "components/SpecEditor"
+import { SpecViewer } from "components/SpecViewer"
+import { ActionsTable } from "components/ActionsTable"
+import { ModelTable } from "components/ModelTable"
 import ActionComposer from "components/ActionComposer"
 import Sidebar from "components/SpecSidebar"
+import { Model } from "@canvas-js/core"
 
 interface AppPageProps {
 	version_number: number | null
@@ -87,38 +88,51 @@ export default function AppPage({ version_number, app }: AppPageProps) {
 	const version =
 		version_number === null ? null : app.versions.find((version) => version.version_number === version_number)!
 
-	const { data, error } = useSWR("/api/instance")
-	const instance = useMemo(
+	const { data, error } =
+		useSWR<Record<string, { models: Record<string, Model>; actionParameters: Record<string, string[]> }>>(
+			"/api/instance"
+		)
+
+	const multihash = useMemo(
 		() => (version !== null && data !== undefined && version.multihash in data ? version.multihash : null),
 		[data]
 	)
+
+	if (data === undefined) {
+		return error ? <code>{error.toString()}</code> : null
+	}
 
 	return (
 		<div className="flex ">
 			<div className="pr-6">
 				<Sidebar version_number={version_number} app={app} edited={edited} />
 			</div>
-			{version === null ? <Editor key="editor" app={app} onEdited={onEdited} /> : <Viewer {...version} />}
+			{version === null ? <SpecEditor key="editor" app={app} onEdited={onEdited} /> : <SpecViewer {...version} />}
 			<div className="w-96 pl-6">
 				<div className="font-semibold mb-3">Actions</div>
-				{instance !== null ? (
-					<Actions multihash={instance} />
+				{multihash !== null ? (
+					<ActionsTable multihash={multihash} />
 				) : (
 					<div className="text-gray-400 text-sm">
 						{version_number === null ? <>Select a running instance to see actions</> : <>Instance paused</>}
 					</div>
 				)}
-				{instance !== null && (
+				{multihash !== null && (
 					<>
 						<div className="font-semibold mt-5 mb-3">New Action</div>
-						<ActionComposer actionParameters={data[instance].actionParameters} multihash={instance} />
+						<ActionComposer actionParameters={data[multihash].actionParameters} multihash={multihash} />
 					</>
 				)}
 			</div>
-			{instance !== null && (
+			{multihash !== null && (
 				<div className="w-96 pl-6">
 					<div className="font-semibold mb-3">Models</div>
-					<Models multihash={instance} models={data[instance].models} />
+					{Object.entries(data[multihash].models).map(([name, model]) => (
+						<div key={name}>
+							<div className="font-mono text-xs text-gray-700 mt-4 mb-3">{name}</div>
+							<ModelTable multihash={multihash} name={name} model={model} />
+						</div>
+					))}
 				</div>
 			)}
 		</div>

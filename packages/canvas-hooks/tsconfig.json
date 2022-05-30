@@ -1,0 +1,13 @@
+{
+  "include": ["src"],
+  "compilerOptions": {
+    "jsx": "react",
+    "strict": true,
+    "outDir": "lib",
+    "declaration": true,
+    "module": "esnext",
+    "target": "es2019",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true
+  }
+}

@@ -3,11 +3,10 @@ import ReactDOM from "react-dom"
 import { usePopper } from "react-popper"
 import toast from "react-hot-toast"
 import { Popover } from "@headlessui/react"
-
+import { StatusCodes } from "http-status-codes"
 import useSWR from "swr"
 
-import { ProjectMenu } from "./ProjectMenu"
-import { StatusCodes } from "http-status-codes"
+import { ProjectMenu } from "components/ProjectMenu"
 import { AppContext } from "utils/client/AppContext"
 
 interface SidebarProps {

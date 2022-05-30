@@ -3,7 +3,8 @@
 node_modules/
 
 packages/canvas-core/lib
-packages/canvas-cli/dist
+packages/canvas-hooks/lib
+packages/example-webpack/dist
 
 # Databases
 apps/
