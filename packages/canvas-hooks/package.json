@@ -1,18 +1,29 @@
 {
   "name": "@canvas-js/hooks",
-	"version": "0.0.4",
-	"author": "Canvas Technology Corporation (https://canvas.xyz)",
-  "main": "index.js",
-	"files": [
-		"index.js"
-	],
-  "dependencies": {
-    "random-access-idb": "^1.2.2"
+  "version": "0.0.4",
+  "type": "module",
+  "author": "Canvas Technology Corporation (https://canvas.xyz)",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "clean": "rm -rf lib/*",
+    "build": "tsc",
+    "dev": "tsc -w"
   },
   "peerDependencies": {
     "@canvas-js/core": "*",
     "ethers": "^5.x",
-    "ipfs-only-hash": "^4.0.0",
     "react": "^18.x"
+  },
+  "devDependencies": {
+    "typescript": "^4.7.2"
+  },
+  "dependencies": {
+    "@metamask/detect-provider": "^1.2.0",
+    "@metamask/providers": "^8.1.1",
+    "use-debounce": "^8.0.1"
   }
 }
