@@ -122,9 +122,50 @@ export async function handler(args) {
 	})
 
 	for (const route of Object.keys(core.routes)) {
+		const parameterNames = core.routeParameters[route]
 		server.get(route, (req, res) => {
-			const results = core.routeStatements[route].all(req.params)
-			res.status(StatusCodes.OK).json(results)
+			const parameterValues = {}
+			for (const name of parameterNames) {
+				const value = req.params[name]
+				if (typeof value === "string") {
+					parameterValues[name] = value
+				} else {
+					res.status(StatusCodes.BAD_REQUEST)
+					res.end(`Missing parameter "${name}"`)
+					return
+				}
+			}
+
+			const statement = core.routeStatements[route]
+			const accept = req.headers.accept
+			if (accept === "text/event-stream") {
+				// subscription response
+				res.setHeader("Cache-Control", "no-cache")
+				res.setHeader("Content-Type", "text/event-stream")
+				res.setHeader("Access-Control-Allow-Origin", "*")
+				res.setHeader("Connection", "keep-alive")
+				res.flushHeaders()
+
+				let data = null
+				const listener = () => {
+					const newData = statement.all(parameterValues)
+					if (data === null || !compareResults(data, newData)) {
+						data = newData
+						res.write(`data: ${JSON.stringify(data)}\n\n`)
+					}
+				}
+
+				listener()
+
+				core.addEventListener("action", listener)
+				res.on("close", () => {
+					core.removeEventListener("action", listener)
+				})
+			} else {
+				// normal JSON response
+				const data = statement.all(parameterValues)
+				res.status(StatusCodes.OK).json(data)
+			}
 		})
 	}
 
@@ -247,6 +288,28 @@ async function resetAppData(appPath) {
 		} else {
 			console.log("[canvas-cli]: Cancelled.")
 			process.exit(1)
+		}
+	}
+}
+
+// This assumes a and b are both arrays of objects of primitives,
+// ie both Record<string, ModelValue>[]
+function compareResults(a, b) {
+	if (a.length !== b.length) {
+		return false
+	}
+
+	for (let i = 0; i < a.length; i++) {
+		for (const key of a[i]) {
+			if (a[i][key] !== b[i][key]) {
+				return false
+			}
+		}
+
+		for (const key of b[i]) {
+			if (b[i][key] !== a[i][key]) {
+				return false
+			}
 		}
 	}
 }

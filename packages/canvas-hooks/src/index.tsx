@@ -1,7 +1,6 @@
-import React, { createContext, useState, useEffect, useCallback, useMemo, useContext, useRef } from "react"
+import React, { createContext, useState, useEffect, useCallback, useMemo, useContext } from "react"
 
 import { ethers } from "ethers"
-import { useDebouncedCallback } from "use-debounce"
 
 import type { Action, ActionArgument, ActionPayload, ModelValue } from "@canvas-js/core"
 import { getActionSignatureData } from "@canvas-js/core/lib/signers.js"
@@ -12,7 +11,6 @@ declare global {
 
 interface CanvasContextValue {
 	host?: string
-	refreshInterval: number
 	multihash: string | null
 	currentAddress: string | null
 	currentSigner: ethers.providers.JsonRpcSigner | null
@@ -22,10 +20,7 @@ interface CanvasContextValue {
 	provider: ethers.providers.Provider | null
 }
 
-const defaultRefreshInterval = 3000
-
 const CanvasContext = createContext<CanvasContextValue>({
-	refreshInterval: defaultRefreshInterval,
 	multihash: null,
 	currentAddress: null,
 	currentSigner: null,
@@ -37,12 +32,9 @@ const CanvasContext = createContext<CanvasContextValue>({
 
 interface CanvasProps {
 	host: string
-	refreshInterval?: number
 }
 
 export const Canvas: React.FC<CanvasProps> = (props) => {
-	const refreshInterval = useMemo(() => props.refreshInterval ?? defaultRefreshInterval, [])
-
 	const [currentSigner, setCurrentSigner] = useState<ethers.providers.JsonRpcSigner | null>(null)
 	const [currentAddress, setCurrentAddress] = useState<string | null>(null)
 	const [multihash, setMultihash] = useState<string | null>(null)
@@ -155,7 +147,7 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 		<CanvasContext.Provider
 			value={{
 				host: props.host,
-				refreshInterval,
+				// refreshInterval,
 				currentAddress,
 				currentSigner,
 				dispatch,
@@ -216,37 +208,24 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 	const [error, setError] = useState<Error | null>(null)
 	const [result, setResult] = useState<T[] | null>(null)
 
-	const urlRef = useRef<string | null>(null)
-	const refresh = useDebouncedCallback(
-		async () => {
-			if (urlRef.current !== null) {
-				const res = await fetch(urlRef.current, { headers: { accept: "application/json" } })
-				if (res.ok) {
-					const data = await res.json()
-					setResult(data)
-					setError(null)
-				} else {
-					const text = await res.text()
-					setError(new Error(`Failed to fetch route: ${text}`))
-				}
-			}
-		},
-		3000,
-		{ leading: true }
-	)
+	const url = useMemo(() => getRouteURL(host, route, params), [])
 
 	useEffect(() => {
-		const url = getRouteURL(host, route, params)
-		if (url !== urlRef.current) {
-			urlRef.current = url
-			refresh()
+		const source = new EventSource(url)
+		source.onmessage = (message: MessageEvent<string>) => {
+			const data = JSON.parse(message.data)
+			setResult(data)
+			setError(null)
 		}
-	}, [route, params])
 
-	useEffect(() => {
-		const interval = setInterval(() => refresh(), 5000)
-		return () => clearInterval(interval)
-	}, [])
+		source.onerror = (error) => {
+			setError(error)
+		}
+
+		return () => {
+			source.close()
+		}
+	}, [url])
 
 	return [error, result]
 }
