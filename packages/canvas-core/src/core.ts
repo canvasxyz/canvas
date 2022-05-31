@@ -2,6 +2,7 @@
 /// <reference types="../types/hyperbee" />
 /// <reference types="../types/hypercore" />
 
+import fetch from "node-fetch"
 import { Buffer } from "buffer"
 import { ethers } from "ethers"
 
@@ -53,7 +54,6 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 
 	private readonly runtime: QuickJSRuntime
 	private readonly vm: QuickJSContext
-	private readonly modelAPI: QuickJSHandle
 	private readonly actionFunctions: Record<string, QuickJSHandle> = {}
 
 	// This is a *mutable* slot for the payload of the "currently executing action".
@@ -84,7 +84,6 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		})
 
 		this.vm = this.runtime.newContext()
-		this.modelAPI = this.vm.newObject()
 		this.initializeGlobalVariables()
 
 		const importResult = this.vm.evalCode(`import * as spec from "${this.multihash}"; Object.assign(globalThis, spec);`)
@@ -115,6 +114,28 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		this.vm.setProp(this.vm.global, "console", consoleHandle)
 		consoleHandle.dispose()
 		logHandle.dispose()
+
+		const fetchHandle = this.vm.newFunction("fetch", (urlHandle: QuickJSHandle) => {
+			const url = this.vm.getString(urlHandle)
+			const deferred = this.vm.newPromise()
+			console.log("[canvas-vm] fetch:", url)
+
+			fetch(url)
+				.then((res) => res.text())
+				.then((data) => {
+					console.log(`[canvas-vm] fetch success: ${url} (${data.length} bytes)`)
+					this.vm.newString(data).consume((val) => deferred.resolve(val))
+				})
+				.catch((err) => {
+					console.log("[canvas-vm] fetch error:", err.message)
+					deferred.reject(err.message)
+				})
+			deferred.settled.then(this.vm.runtime.executePendingJobs)
+			return deferred.handle
+		})
+
+		this.vm.setProp(this.vm.global, "fetch", fetchHandle)
+		fetchHandle.dispose()
 	}
 
 	private initializeModels() {
@@ -124,24 +145,39 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		for (const [name, model] of Object.entries(models)) {
 			assert(/^[a-zA-Z0-9_]+$/.test(name), "invalid model name")
 			this.models[name] = model
+		}
+	}
 
+	private getModelAPI(from: string, timestamp: number) {
+		const modelAPI = this.vm.newObject()
+		const models = this.vm.getProp(this.vm.global, "models").consume(this.vm.dump)
+		assert(t.record(t.string, modelType).is(models), "invalid models export")
+
+		for (const [name, model] of Object.entries(models)) {
 			const setFunction = this.vm.newFunction("set", (key: QuickJSHandle, value: QuickJSHandle) => {
-				assert(this.currentActionPayload !== null, "internal error: missing currentActionPayload")
-				const id = key.consume(this.vm.getString)
-				const params = value.consume(this.vm.dump)
-				assert(typeof params === "object", "object parameters expected: this.db.table.set(id, { field })")
-				for (const [field, type] of Object.entries(model)) {
-					validateType(type, params[field])
-				}
+				try {
+					const id = key.consume(this.vm.getString)
+					const params = value.consume(this.vm.dump)
 
-				const { from, timestamp } = this.currentActionPayload
-				this.setModel(name, { ...params, id, from, timestamp })
+					assert(typeof params === "object", "object parameters expected: this.db.table.set(id, { field })")
+					assert(model.from === undefined, "this.db.table.set(id, { field }) attempted to overwrite from field")
+					assert(model.timestamp === undefined, "this.db.table.set(id, { field }) attempted to overwrite timestamp")
+					for (const [field, type] of Object.entries(model)) {
+						validateType(type, params[field])
+					}
+
+					this.setModel(name, { ...params, id, from, timestamp })
+					console.log(`saved to model ${name}: ${id}`)
+				} catch (err) {
+					console.log(`error saving to model ${name}: ${err instanceof Error ? err.message : err}`)
+				}
 			})
 
-			const modelAPI = this.vm.newObject()
-			this.vm.setProp(modelAPI, "set", setFunction)
-			this.vm.setProp(this.modelAPI, name, modelAPI)
+			const thisAPI = this.vm.newObject()
+			this.vm.setProp(thisAPI, "set", setFunction)
+			this.vm.setProp(modelAPI, name, thisAPI)
 		}
+		return modelAPI
 	}
 
 	private initializeRoutes() {
@@ -197,7 +233,6 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async close() {
-		this.modelAPI.dispose()
 		this.vm.dispose()
 
 		await new Promise<void>((resolve, reject) => {
@@ -307,20 +342,30 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		const hashString = this.vm.newString(hash)
 		const fromString = this.vm.newString(action.payload.from)
 		const timestampNumber = this.vm.newNumber(action.payload.timestamp)
-		this.vm.setProp(context, "db", this.modelAPI)
+
+		this.vm.setProp(this.vm.global, "from", fromString)
+		this.vm.setProp(this.vm.global, "timestamp", timestampNumber)
+
+		this.vm.setProp(context, "db", this.getModelAPI(action.payload.from, action.payload.timestamp))
 		this.vm.setProp(context, "from", fromString)
 		this.vm.setProp(context, "timestamp", timestampNumber)
 		this.vm.setProp(context, "hash", hashString)
 		const args = action.payload.args.map((arg) => this.parseActionArgument(arg))
 		const handler = this.actionFunctions[action.payload.call]
-		const result = this.vm.callFunction(handler, context, ...args)
-		if (isFail(result)) {
-			const error = result.error.consume(this.vm.dump)
+
+		// resolve any promise returned by async action handlers
+		const result = this.vm.unwrapResult(this.vm.callFunction(handler, context, ...args))
+		const promise = result.consume((result) => this.vm.resolvePromise(result))
+		this.vm.runtime.executePendingJobs()
+		const asyncResult = await promise
+
+		if (isFail(asyncResult)) {
+			const error = asyncResult.error.consume(this.vm.dump)
 			const message = JSON.stringify(error, null, "  ")
 			throw new Error(`action application failed: ${message}`)
 		}
 
-		result.value.dispose()
+		asyncResult.value.dispose()
 		hashString.dispose()
 		fromString.dispose()
 		timestampNumber.dispose()
