@@ -5,7 +5,7 @@ import { useRoute, useCanvas } from "@canvas-js/hooks"
 type Post = { id: string; fromId: string; content: string; timestamp: number; likes: number }
 
 export const App: React.FC<{}> = ({}) => {
-	const { multihash, currentAddress, dispatch, connect } = useCanvas()
+	const { multihash, currentAddress, dispatch, connect, disconnect } = useCanvas()
 
 	const [value, setValue] = useState("")
 
@@ -52,9 +52,12 @@ export const App: React.FC<{}> = ({}) => {
 			</section>
 			<section>
 				{currentAddress ? (
-					<span>
-						Logged in as <code>{currentAddress}</code>
-					</span>
+					<>
+						<span>
+							Logged in as <code>{currentAddress}</code>
+						</span>
+						<button onClick={disconnect}>Disconnect</button>
+					</>
 				) : (
 					<button onClick={connect}>Connect</button>
 				)}

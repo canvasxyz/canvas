@@ -16,6 +16,7 @@ interface CanvasContextValue {
 	currentSigner: ethers.providers.JsonRpcSigner | null
 	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
 	connect: () => void
+	disconnect: () => void
 	loading: boolean
 	provider: ethers.providers.Provider | null
 }
@@ -26,6 +27,7 @@ const CanvasContext = createContext<CanvasContextValue>({
 	currentSigner: null,
 	dispatch: (call, args) => Promise.reject(),
 	connect: () => {},
+	disconnect: () => {},
 	loading: true,
 	provider: null,
 })
@@ -130,8 +132,28 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const connect = useCallback(() => {
 		if (provider !== null && accounts.length === 0) {
 			provider.send("eth_requestAccounts", [])
+		} else if (provider !== null) {
+			// re-request permissions to allow user to choose another account
+			provider.send("wallet_requestPermissions", [{ eth_accounts: {} }])
+
+			const accounts = provider.send("eth_accounts", []).then((accounts) => {
+				setAccounts(accounts)
+				setLoading(false)
+
+				if (accounts.length > 0) {
+					const [address] = accounts
+					const signer = provider.getSigner(address)
+					setCurrentAddress(address)
+					setCurrentSigner(signer)
+				}
+			})
 		}
 	}, [accounts, provider])
+
+	const disconnect = useCallback(() => {
+		setCurrentAddress(null)
+		setCurrentSigner(null)
+	}, [])
 
 	useEffect(() => {
 		const eTagPattern = /^"([a-zA-Z0-9]+)"$/
@@ -158,6 +180,7 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 				dispatch,
 				multihash,
 				connect,
+				disconnect,
 				loading,
 				provider,
 			}}
@@ -172,10 +195,11 @@ export function useCanvas(): {
 	currentAddress: string | null
 	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
 	connect: () => void
+	disconnect: () => void
 	provider: ethers.providers.Provider | null
 } {
-	const { multihash, currentAddress, dispatch, connect, provider } = useContext(CanvasContext)
-	return { multihash, currentAddress, dispatch, connect, provider }
+	const { multihash, currentAddress, dispatch, connect, disconnect, provider } = useContext(CanvasContext)
+	return { multihash, currentAddress, dispatch, connect, disconnect, provider }
 }
 
 const routePattern = /^(\/:?[a-zA-Z0-9_]+)+$/
