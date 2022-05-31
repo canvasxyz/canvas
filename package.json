@@ -3,23 +3,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "run-p -l dev-core dev-hub dev-example",
+    "dev": "run-p -l dev-core dev-hooks dev-example",
     "dev-core": "npm run dev --workspace=@canvas-js/core -- --preserveWatchOutput --pretty",
-    "dev-example": "GENERATE_SOURCEMAP=false npm run start --workspace=canvas-example-app -- --preserveWatchOutput --pretty",
-    "dev-hub": "export FORCE_COLOR=1 && npm run dev --workspace=canvas-hub",
-    "build": "run-s -l build-core build-hooks build-hub",
+    "dev-hooks": "npm run dev --workspace=@canvas-js/hooks -- --preserveWatchOutput --pretty",
+    "dev-example": "GENERATE_SOURCEMAP=false npm run dev --workspace=canvas-example-webpack",
+    "build": "run-s -l build-core build-hooks",
     "build-core": "npm run build --workspace=@canvas-js/core -- --pretty",
     "build-hooks": "npm run build --workspace=@canvas-js/hooks -- --pretty",
-    "build-hub": "export FORCE_COLOR=1 && npm run build --workspace=canvas-hub",
     "publish-cli": "npm publish --workspace=@canvas-js/cli --access public",
     "publish-core": "export FORCE_COLOR=1 && npm run build --workspace=@canvas-js/core && npm publish --workspace=@canvas-js/core --access public",
     "publish-hooks": "npm publish --workspace=@canvas-js/hooks --access public",
-    "start": "npm run start --workspace=canvas-hub",
     "test": "npm run test --workspace=@canvas-js/core"
   },
   "workspaces": [
     "packages/canvas-cli",
-    "packages/canvas-hub",
     "packages/canvas-core",
     "packages/canvas-hooks",
     "packages/example-webpack"

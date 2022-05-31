@@ -32,6 +32,7 @@ const CanvasContext = createContext<CanvasContextValue>({
 
 interface CanvasProps {
 	host: string
+	children: JSX.Element
 }
 
 export const Canvas: React.FC<CanvasProps> = (props) => {
@@ -222,8 +223,9 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 			setError(null)
 		}
 
-		source.onerror = (error) => {
-			setError(error)
+		source.onerror = (event: Event) => {
+			console.log("Subscription error:", event)
+			setError(new Error("Subscription error"))
 		}
 
 		return () => {

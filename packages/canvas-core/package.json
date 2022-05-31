@@ -34,6 +34,7 @@
 		"sql.js": "^1.6.2"
 	},
 	"devDependencies": {
+		"@types/better-sqlite3": "^7.5.0",
 		"@types/node": "^17.0.23",
 		"@types/webpack": "5.x",
 		"ava": "^4.2.0",
