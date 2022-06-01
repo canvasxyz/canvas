@@ -267,11 +267,17 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 			)
 
 			const verifiedAddress = verifyActionSignature(action)
-			assert(verifiedAddress === action.session, "invalid signature (recovered address does not match)")
-			assert(verifiedAddress === session.payload.session_public_key, "invalid signature (action, session do not match)")
+			assert(
+				verifiedAddress.toLowerCase() === action.session.toLowerCase(),
+				"invalid signature (recovered address does not match)"
+			)
+			assert(
+				verifiedAddress.toLowerCase() === session.payload.session_public_key.toLowerCase(),
+				"invalid signature (action, session do not match)"
+			)
 		} else {
 			const verifiedAddress = verifyActionSignature(action)
-			assert(verifiedAddress === action.payload.from, "action signed by wrong address")
+			assert(verifiedAddress.toLowerCase() === action.payload.from.toLowerCase(), "action signed by wrong address")
 		}
 
 		// We don't guard against action timestamps in the future because the server clock might be out of sync.
