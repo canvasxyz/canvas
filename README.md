@@ -1,12 +1,17 @@
 # Canvas
 
-Canvas is a P2P protocol for building decentralized,
-frontend-independent applications, where every action in the
-application is a signed message from an Ethereum address.
+Canvas is a P2P protocol for building decentralized, frontend-independent applications,
+where every user action is a signed message from an cryptographic address.
 
 ## Using Canvas
 
-To install the CLI:
+To install the latest published CLI:
+
+```
+npm install -g @canvas-js/cli
+```
+
+To use your local development version of Canvas as the CLI:
 
 ```
 ./install.sh
@@ -23,76 +28,42 @@ Inspecting specs:
 
 Running and managing specs:
 
-- [TODO] `canvas run [spec] [--peer=peer.canvas.xyz]`
-- [TODO] `canvas download [multihash] [--peer=peer.canvas.xyz]`
-- [TODO] `canvas test [spec] [--tests=tests.js]`
-- [TODO] `canvas fixtures load [spec] [--fixture=fixtures.js]`
-- [TODO] `canvas migrate [old-spec] [new-spec] [--dry-run]`
+- `canvas init [spec.js]`
+- `canvas run [spec]`
+- `canvas download [multihash]`
 
 To create a new session, generate a new session_public_key, insert it
 into a signed payload, and sign the payload with your wallet address:
 
 ```
-POST / { from, signature, payload: { from, spec, timestamp, session_public_key, session_duration } }
+POST /sessions { from, signature, payload: { from, spec, timestamp, session_public_key, session_duration } }
 ```
 
 To apply an action directly from your wallet address:
 
 ```
-POST / { from, signature, payload: { from, spec, timestamp, call, args } }
+POST /actions { from, signature, payload: { from, spec, timestamp, call, args } }
 ```
 
 To apply an action using a session key:
 
 ```
-POST / { from, session, signature, payload: { from, spec, timestamp, call, args } }
+POST /actions { from, session, signature, payload: { from, spec, timestamp, call, args } }
 ```
 
-## Running the hub
+## Developing
 
-Start an IPFS daemon in a separate terminal
-
-```
-$ ipfs daemon --offline
-```
-
-Install dependencies and symlink the local packages:
+Compile the core, CLI, and React hooks, and run the example app in development mode:
 
 ```
-$ npm i
+npm run dev
 ```
 
-Create a `packages/canvas-hub/.env` file with `DATABASE_URL` and `APP_DIRECTORY` environement variables:
+Build and publish the Canvas packages:
 
 ```
-DATABASE_URL=file:./db.sqlite
-APP_DIRECTORY=./apps
-```
-
-Generate the prisma client:
-
-```
-$ cd packages/canvas-hub
-$ npx prisma generate
-$ cd ../..
-```
-
-The `dev` script in the repo run runs the NextJS dev server and TypeScript compilers for canvas-core and canvas-cli, all in parallel:
-
-```
-$ npm run dev
-```
-
-## Deploying the hub
-
-Build the core, CLI, and hub projects:
-
-```
-$ npm run build
-```
-
-Start the hub production NextJS server:
-
-```
-$ npm run start
+npm run build
+npm run publish-cli
+npm run publish-core
+npm run publish-hooks
 ```
