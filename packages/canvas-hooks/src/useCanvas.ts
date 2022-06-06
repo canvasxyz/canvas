@@ -15,7 +15,8 @@ import { useSession } from "./useSession.js"
  * - Calling `connect` with `window.ethereum === undefined` will throw an error.
  * - Calling `connect` or `dispatch` while `loading` is true will throw an error.
  * - Once `loading` is true, you can call `dispatch` with a `call` string and `args` array.
- *   This might prompt the user to sign a new session key.
+ *   If no existing session is found in localStorage, or if the existing session has
+ *   expired, then this will prompt the user to sign a new session key.
  */
 export function useCanvas(): {
 	loading: boolean

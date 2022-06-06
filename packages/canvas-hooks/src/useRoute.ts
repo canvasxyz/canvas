@@ -31,14 +31,14 @@ function getRouteURL(host: string, route: string, params: Record<string, string>
 export function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
 	route: string,
 	params: Record<string, string> = {}
-): [null | Error, null | T[]] {
+): { error: Error | null; data: T[] | null } {
 	const { host } = useContext(CanvasContext)
 	if (host === undefined) {
 		throw new Error("no host provided! you must provide a host URL in a parent Canvas element")
 	}
 
 	const [error, setError] = useState<Error | null>(null)
-	const [result, setResult] = useState<T[] | null>(null)
+	const [data, setData] = useState<T[] | null>(null)
 
 	const url = useMemo(() => getRouteURL(host, route, params), [])
 
@@ -46,7 +46,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 		const source = new EventSource(url)
 		source.onmessage = (message: MessageEvent<string>) => {
 			const data = JSON.parse(message.data)
-			setResult(data)
+			setData(data)
 			setError(null)
 		}
 
@@ -60,5 +60,5 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 		}
 	}, [url])
 
-	return [error, result]
+	return { error, data }
 }

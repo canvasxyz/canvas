@@ -23,7 +23,7 @@ export const App: React.FC<{}> = ({}) => {
 		[posting, dispatch]
 	)
 
-	const [routeError, posts] = useRoute<Post>("/posts")
+	const { error: routeError, data: posts } = useRoute<Post>("/posts")
 
 	return (
 		<>
