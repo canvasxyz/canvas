@@ -300,13 +300,13 @@ function compareResults(a, b) {
 	}
 
 	for (let i = 0; i < a.length; i++) {
-		for (const key of a[i]) {
+		for (const key in a[i]) {
 			if (a[i][key] !== b[i][key]) {
 				return false
 			}
 		}
 
-		for (const key of b[i]) {
+		for (const key in b[i]) {
 			if (b[i][key] !== a[i][key]) {
 				return false
 			}
