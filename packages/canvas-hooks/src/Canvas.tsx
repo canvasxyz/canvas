@@ -1,0 +1,36 @@
+import React, { useState, useEffect } from "react"
+
+import { CanvasContext } from "./CanvasContext.js"
+
+export const CANVAS_SESSION_LOCALSTORAGE_KEY = "CANVAS_SESSION"
+
+export interface CanvasProps {
+	host: string
+	children: JSX.Element
+}
+
+export const Canvas: React.FC<CanvasProps> = (props) => {
+	const [multihash, setMultihash] = useState<string | null>(null)
+	const [error, setError] = useState<Error | null>(null)
+
+	useEffect(() => {
+		const eTagPattern = /^"([a-zA-Z0-9]+)"$/
+		fetch(props.host, { method: "HEAD" })
+			.then((res) => {
+				const etag = res.headers.get("ETag")
+				if (res.ok && etag !== null && eTagPattern.test(etag)) {
+					const [_, multihash] = eTagPattern.exec(etag)!
+					setMultihash(multihash)
+				} else {
+					setError(new Error("Invalid response from remote API"))
+				}
+			})
+			.catch((err) => {
+				setError(err)
+			})
+	}, [])
+
+	return (
+		<CanvasContext.Provider value={{ host: props.host, multihash, error }}>{props.children}</CanvasContext.Provider>
+	)
+}

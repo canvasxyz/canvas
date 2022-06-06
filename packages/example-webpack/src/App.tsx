@@ -5,91 +5,116 @@ import { useRoute, useCanvas } from "@canvas-js/hooks"
 type Post = { id: string; fromId: string; content: string; timestamp: number; likes: number }
 
 export const App: React.FC<{}> = ({}) => {
-	const { multihash, currentAddress, currentSessionAddress, dispatch, connect, disconnect } = useCanvas()
-
-	const [value, setValue] = useState("")
-
+	const { error: canvasError, multihash, dispatch, connect, address } = useCanvas()
 	const [posting, setPosting] = useState(false)
 
-	const handleChange = useCallback(
-		(event: React.ChangeEvent<HTMLTextAreaElement>) => {
-			if (!posting) {
-				setValue(event.target.value)
+	const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = useCallback(
+		(event: React.KeyboardEvent<HTMLInputElement>) => {
+			if (event.code === "Enter") {
+				const { value } = event.currentTarget
+				event.currentTarget.value = ""
+				setPosting(true)
+				dispatch("createPost", [value])
+					.then(() => console.log("successfully created post"))
+					.catch((err) => console.error(err))
+					.finally(() => setPosting(false))
 			}
 		},
-		[posting]
+		[posting, dispatch]
 	)
 
-	const handlePost = useCallback(() => {
-		setPosting(true)
-		dispatch("createPost", [value])
-			.then(() => {
-				console.log("successfully created post")
-				setValue("")
-			})
-			.catch((err) => {
-				console.error("Error creating post")
-				console.error(err)
-			})
-			.finally(() => {
-				setPosting(false)
-			})
-	}, [value])
-
-	const [error, posts] = useRoute<Post>("/posts")
+	const [routeError, posts] = useRoute<Post>("/posts")
 
 	return (
-		<main>
-			<h1>Canvas Example App</h1>
-			<section>
-				{multihash === null ? (
-					<span>loading...</span>
-				) : (
-					<span>
-						The multihash of the app is <code>{multihash}</code>
-					</span>
-				)}
-			</section>
-			<section>
-				{currentAddress ? (
-					<>
-						Logged in as <code>{currentAddress}</code>
-						<button onClick={disconnect}>Disconnect</button>
-						<br />
-						Session: <code>{currentSessionAddress || "None"}</code>
-					</>
-				) : (
-					<button onClick={connect}>Connect</button>
-				)}
-			</section>
-			<section>
-				<textarea disabled={posting} value={value} onChange={handleChange}></textarea>
-				<br />
-				<button disabled={posting} onClick={handlePost}>
-					{posting ? "Posting..." : "Post"}
-				</button>
-			</section>
-			<section>
-				{error ? (
-					<code>{error.toString()}</code>
-				) : posts ? (
-					<table>
-						<tbody>
-							{posts.map((post) => (
-								<tr key={post.id}>
-									<td>{new Date(post.timestamp).toLocaleTimeString()}</td>
-									<td>
-										<code>{post.fromId}</code>
-									</td>
-									<td>{post.content}</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				) : (
-					<code>Loading...</code>
-				)}
-			</section>
-		</main>
+		<>
+			<header>
+				<h1>Canvas Example App</h1>
+			</header>
+			<main>
+				<fieldset>
+					<legend>App</legend>
+					{canvasError !== null ? (
+						<div>
+							<code>{canvasError.toString()}</code>
+						</div>
+					) : multihash !== null ? (
+						<div>
+							Connected to <code>{multihash}</code>
+						</div>
+					) : (
+						<div>loading...</div>
+					)}
+				</fieldset>
+
+				<fieldset>
+					<legend>Account</legend>
+					{address ? (
+						<div>
+							Logged in as <code>{address}</code>
+						</div>
+					) : (
+						<button onClick={connect}>Connect</button>
+					)}
+				</fieldset>
+
+				<fieldset>
+					<legend>Messages</legend>
+					{routeError ? (
+						<div>
+							<code>{routeError.toString()}</code>
+						</div>
+					) : posts ? (
+						<table>
+							<tbody>
+								{posts.map((_, i) => {
+									const post = posts[posts.length - i - 1]
+									const date = new Date(post.timestamp * 1000)
+									return (
+										<tr key={post.id}>
+											<td className="time">{date.toLocaleTimeString()}</td>
+											<td className="from">
+												<code>{post.fromId}</code>
+											</td>
+											<td className="content">{post.content}</td>
+										</tr>
+									)
+								})}
+
+								{address && (
+									<>
+										<tr>
+											<td colSpan={3}>
+												<hr />
+											</td>
+										</tr>
+										<tr>
+											<td></td>
+											<td>
+												<code>{address}</code>
+											</td>
+											<td>
+												<input type="text" disabled={posting} onKeyDown={handleKeyDown} />
+											</td>
+										</tr>
+									</>
+								)}
+							</tbody>
+						</table>
+					) : (
+						<code>Loading...</code>
+					)}
+				</fieldset>
+			</main>
+		</>
+	)
+}
+
+const Address: React.FC<{ address: string }> = (props) => {
+	const prefix = props.address.slice(0, 5)
+	const suffix = props.address.slice(-4)
+	return (
+		<code>
+			{prefix}…{suffix}
+		</code>
 	)
 }
