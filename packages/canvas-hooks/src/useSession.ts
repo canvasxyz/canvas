@@ -17,6 +17,8 @@ type SessionObject = {
 }
 
 export function useSession(
+	host: string,
+	multihash: string | null,
 	address: string | null,
 	signer: ethers.providers.JsonRpcSigner | null
 ): {
@@ -48,8 +50,6 @@ export function useSession(
 			}
 		}
 	}, [])
-
-	const { host, multihash } = useContext(CanvasContext)
 
 	// useEffect(() => {
 	// 	window.addEventListener("storage", (event) => {

@@ -33,9 +33,9 @@ import type { ActionArgument, ModelValue } from "@canvas-js/core"
  *   expired, then this will prompt the user to sign a new session key.
  */
 declare function useCanvas(): {
-	loading: boolean
-	error: Error | null
 	multihash: string | null
+	error: Error | null
+	loading: boolean
 	address: string | null
 	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
 	connect: () => Promise<void>

@@ -16,9 +16,9 @@ declare global {
  */
 export function useSigner(): {
 	loading: boolean
-	connect: () => Promise<void>
 	address: string | null
 	signer: ethers.providers.JsonRpcSigner | null
+	connect: () => Promise<void>
 } {
 	const [loading, setLoading] = useState(true)
 	const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null)

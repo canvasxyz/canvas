@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react"
 
 import { CanvasContext } from "./CanvasContext.js"
+import { useSession } from "./useSession.js"
+import { useSigner } from "./useSigner.js"
 
 export const CANVAS_SESSION_LOCALSTORAGE_KEY = "CANVAS_SESSION"
 
@@ -30,7 +32,14 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 			})
 	}, [])
 
+	const { loading, address, signer, connect } = useSigner()
+	const { dispatch } = useSession(props.host, multihash, address, signer)
+
 	return (
-		<CanvasContext.Provider value={{ host: props.host, multihash, error }}>{props.children}</CanvasContext.Provider>
+		<CanvasContext.Provider
+			value={{ host: props.host, multihash, error, loading: multihash === null || loading, address, connect, dispatch }}
+		>
+			{props.children}
+		</CanvasContext.Provider>
 	)
 }
