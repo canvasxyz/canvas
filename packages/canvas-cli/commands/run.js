@@ -1,6 +1,9 @@
 import path from "node:path"
 import fs from "node:fs"
 import assert from "node:assert"
+import child_process from "node:child_process"
+import process from "node:process"
+import stoppable from "stoppable"
 
 import ethers from "ethers"
 import cors from "cors"
@@ -201,20 +204,37 @@ export async function handler(args) {
 			})
 	})
 
-	server.listen(port, () => {
-		console.log(`Serving ${core.multihash} on port ${port}:`)
-		console.log(`└ GET http://localhost:${port}/`)
-		Object.keys(core.routes).map((name) => {
-			console.log(`└ GET http://localhost:${port}${name}`)
+	const instance = stoppable(
+		server.listen(port, () => {
+			console.log(`Serving ${core.multihash} on port ${port}:`)
+			console.log(`└ GET http://localhost:${port}/`)
+			Object.keys(core.routes).map((name) => {
+				console.log(`└ GET http://localhost:${port}${name}`)
+			})
+			console.log("└ POST /actions")
+			console.log(`  └ { ${Object.keys(actionType.props).join(", ")} }`)
+			console.log(`  └ payload: { ${Object.keys(actionPayloadType.props).join(", ")} }`)
+			console.log(`  └ calls: [ ${Object.keys(core.actionFunctions).join(", ")} ]`)
+			console.log("└ POST /sessions")
+			console.log(`  └ { ${Object.keys(sessionType.props).join(", ")} }`)
+			console.log(`  └ payload: { ${Object.keys(sessionType.props.payload.props).join(", ")} }`)
+		}),
+		0
+	)
+
+	// restart server if spec changes
+	if (!isMultihash(args.spec)) {
+		let terminated
+		fs.watch(args.spec, (event, filename) => {
+			if (terminated || !filename || event !== "change") return
+			terminated = true
+
+			console.log("File changed, restarting server...")
+			instance.stop((err, success) => {
+				handler(args)
+			})
 		})
-		console.log("└ POST /actions")
-		console.log(`  └ { ${Object.keys(actionType.props).join(", ")} }`)
-		console.log(`  └ payload: { ${Object.keys(actionPayloadType.props).join(", ")} }`)
-		console.log(`  └ calls: [ ${Object.keys(core.actionFunctions).join(", ")} ]`)
-		console.log("└ POST /sessions")
-		console.log(`  └ { ${Object.keys(sessionType.props).join(", ")} }`)
-		console.log(`  └ payload: { ${Object.keys(sessionType.props.payload.props).join(", ")} }`)
-	})
+	}
 }
 
 const fixturesType = t.array(
