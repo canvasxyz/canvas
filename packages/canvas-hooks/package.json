@@ -8,11 +8,6 @@
   "files": [
     "lib"
   ],
-  "scripts": {
-    "clean": "rm -rf lib/*",
-    "build": "tsc",
-    "dev": "tsc -w"
-  },
   "devDependencies": {
     "@types/react": "^18.0.9",
     "typescript": "^4.7.2"

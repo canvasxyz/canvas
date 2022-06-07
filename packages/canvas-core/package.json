@@ -10,10 +10,7 @@
 		"types"
 	],
 	"scripts": {
-		"test": "ava",
-		"clean": "rm -rf lib/*",
-		"build": "tsc",
-		"dev": "tsc -w"
+		"test": "ava"
 	},
 	"dependencies": {
 		"@canvas-js/interfaces": "0.0.5-alpha",
