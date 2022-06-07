@@ -1,13 +1,8 @@
 {
   "include": ["src"],
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "jsx": "react",
-    "strict": true,
-    "outDir": "lib",
-    "declaration": true,
-    "module": "esnext",
-    "target": "es2019",
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true
+    "rootDir": "src",
+    "outDir": "lib"
   }
 }

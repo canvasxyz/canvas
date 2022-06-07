@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "strict": true,
+    "declaration": true,
+    "module": "es2020",
+    "target": "es2020",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "removeComments": true
+  },
+}

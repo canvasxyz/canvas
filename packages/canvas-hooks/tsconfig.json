@@ -1,13 +1,12 @@
 {
+  "extends": "../../tsconfig.base.json",
   "include": ["src"],
   "compilerOptions": {
-    "jsx": "react",
-    "strict": true,
+    "rootDir": "src",
     "outDir": "lib",
-    "declaration": true,
-    "module": "esnext",
-    "target": "es2019",
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true
-  }
+    "jsx": "react",
+  },
+  "references": [
+    { "path": "../canvas-interfaces" }
+  ]
 }

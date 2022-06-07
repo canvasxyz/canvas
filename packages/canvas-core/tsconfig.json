@@ -1,13 +1,11 @@
 {
   "include": ["src", "types"],
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "strict": true,
-    "outDir": "lib",
-    "declaration": true,
-    "module": "esnext",
-    "target": "es2019",
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "removeComments": true
-  }
+    "rootDir": "src",
+    "outDir": "lib"
+  },
+  "references": [
+    { "path": "../canvas-interfaces" }
+  ]
 }

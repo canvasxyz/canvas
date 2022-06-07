@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/canvas-core" },
+    { "path": "./packages/canvas-interfaces" },
+    { "path": "./packages/canvas-hooks" }
+  ]
+}
