@@ -2,13 +2,6 @@
 .next/
 node_modules/
 
-packages/canvas-core/lib
-packages/canvas-hooks/lib
-packages/canvas-interfaces/lib
-packages/example-webpack/dist
-
-# Databases
-apps/
-packages/canvas-hub/apps
-packages/canvas-hub/prisma/db.sqlite
-packages/canvas-hub/prisma/db.sqlite-journal
+packages/*/tsconfig.tsbuildinfo
+packages/*/lib
+packages/*/dist
