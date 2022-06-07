@@ -5,6 +5,8 @@ where every user action is a signed message from an cryptographic address.
 
 ## Using Canvas
 
+You should be using Node v16 or later. We recommend installing nvm and using `nvm use lts/*`.
+
 To install the latest published CLI:
 
 ```
