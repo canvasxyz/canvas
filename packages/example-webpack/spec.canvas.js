@@ -10,8 +10,16 @@ const models = {
 }
 
 const routes = {
-	"/posts":
-		"SELECT posts.id, posts.fromId, posts.content, posts.timestamp, COUNT(IIF(likes.value, 1, NULL)) as likes FROM posts LEFT JOIN likes ON likes.postId = posts.id GROUP BY posts.id ORDER BY posts.timestamp DESC LIMIT 50",
+	"/posts": `
+	SELECT
+		posts.id,
+		posts.fromId,
+		posts.content,
+		posts.timestamp,
+		COUNT(IIF(likes.value, 1, NULL)) as likes
+	FROM posts LEFT JOIN likes ON likes.postId = posts.id GROUP BY posts.id
+	ORDER BY posts.timestamp
+	DESC LIMIT 50`,
 }
 
 const actions = {
