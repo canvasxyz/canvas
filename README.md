@@ -53,10 +53,18 @@ POST /actions { from, session, signature, payload: { from, spec, timestamp, call
 
 ## Developing
 
-Compile the core, CLI, and React hooks, and run the example app in development mode:
+The CLI is written in pure JS and doesn't require compilation.
+
+canvas-interfaces, canvas-core, and canvas-hooks are configured as a composite TypeScript project using project references and must be compiled with build mode turned on. Build all three in parallel with
 
 ```
 npm run dev
+```
+
+To run the example app in development mode:
+
+```
+npm run dev-example
 ```
 
 Build and publish the Canvas packages:
