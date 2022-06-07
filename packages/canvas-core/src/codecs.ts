@@ -2,7 +2,7 @@ import * as t from "io-ts"
 
 /**
  * These are io-ts codecs for all of the types defined in @canvas-js/interfaces.
- * We define these here and no in @canvas-js/interfaces because we want to import
+ * We define these here and not in @canvas-js/interfaces because we want to import
  * @canvas-js/interfaces in client-side (ie React) code but would like to avoid imporing
  * io-ts except on the server (it's heavy and you typically only need runtime validation
  * on the server).
