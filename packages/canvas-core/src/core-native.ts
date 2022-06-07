@@ -7,12 +7,12 @@ import { getQuickJS, QuickJSWASMModule } from "quickjs-emscripten"
 
 import randomAccessFile from "random-access-file"
 import Database, * as sqlite from "better-sqlite3"
-
 import Hash from "ipfs-only-hash"
 
-import { ObjectSpec, objectSpecType, stringSpecType } from "./specs.js"
-import type { ModelValue } from "./models.js"
+import type { ModelValue } from "@canvas-js/interfaces"
+
 import { Core } from "./core.js"
+import { ObjectSpec, objectSpecType, stringSpecType } from "./specs.js"
 import { assert, objectSpecToString } from "./utils.js"
 
 export class NativeCore extends Core {

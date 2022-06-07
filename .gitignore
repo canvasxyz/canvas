@@ -4,6 +4,7 @@ node_modules/
 
 packages/canvas-core/lib
 packages/canvas-hooks/lib
+packages/canvas-interfaces/lib
 packages/example-webpack/dist
 
 # Databases

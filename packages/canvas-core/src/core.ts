@@ -12,14 +12,22 @@ import hypercore, { Feed } from "hypercore"
 
 import * as t from "io-ts"
 
-import { assert } from "./utils.js"
+import {
+	Model,
+	ModelValue,
+	Action,
+	ActionArgument,
+	ActionResult,
+	ActionPayload,
+	Session,
+	SessionPayload,
+	verifyActionSignature,
+	verifySessionSignature,
+} from "@canvas-js/interfaces"
 
-import { Action, actionType, ActionArgument, ActionResult, actionArgumentType, ActionPayload } from "./actions.js"
-import { Session, SessionPayload, sessionType } from "./sessions.js"
-
-import { getColumnType, Model, modelType, ModelValue, validateType } from "./models.js"
+import { modelType, actionType, actionArgumentType, sessionType } from "./codecs.js"
 import { EventEmitter, CustomEvent } from "./events.js"
-import { verifyActionSignature, verifySessionSignature } from "./signers.js"
+import { assert, getColumnType, validateType } from "./utils.js"
 
 interface CoreEvents {
 	action: CustomEvent<ActionPayload>
@@ -277,7 +285,7 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 			)
 		} else {
 			const verifiedAddress = verifyActionSignature(action)
-			assert(verifiedAddress.toLowerCase() === action.payload.from.toLowerCase(), "action signed by wrong address")
+			assert(verifiedAddress === action.payload.from.toLowerCase(), "action signed by wrong address")
 		}
 
 		// We don't guard against action timestamps in the future because the server clock might be out of sync.
@@ -351,7 +359,7 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		assert(session.payload.spec === this.multihash, "session signed for wrong spec")
 
 		const verifiedAddress = verifySessionSignature(session)
-		assert(verifiedAddress === session.payload.from, "session signed by wrong address")
+		assert(verifiedAddress === session.payload.from.toLowerCase(), "session signed by wrong address")
 
 		const key = Core.getSessionKey(session.payload.session_public_key)
 		await this.hyperbee.put(key, JSON.stringify(session))

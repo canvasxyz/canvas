@@ -1,5 +1,5 @@
 {
-  "name": "@canvas-js/hooks",
+  "name": "@canvas-js/interfaces",
   "version": "0.0.5-alpha",
   "type": "module",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
@@ -14,13 +14,6 @@
     "dev": "tsc -w"
   },
   "devDependencies": {
-    "@types/react": "^18.0.9",
     "typescript": "^4.7.2"
-  },
-  "dependencies": {
-    "@canvas-js/interfaces": "0.0.5-alpha",
-    "@metamask/detect-provider": "^1.2.0",
-    "@metamask/providers": "^8.1.1",
-    "use-debounce": "^8.0.1"
   }
 }

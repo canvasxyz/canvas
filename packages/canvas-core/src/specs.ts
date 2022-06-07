@@ -1,6 +1,7 @@
 import * as t from "io-ts"
 
-import { ModelType, modelTypeType } from "./models.js"
+import { ModelType } from "@canvas-js/interfaces"
+import { modelTypeType } from "./codecs.js"
 
 /**
  * Specs

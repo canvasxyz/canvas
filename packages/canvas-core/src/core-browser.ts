@@ -11,9 +11,10 @@ import initSqlJs, { SqlJsStatic, Statement, Database, SqlJsConfig } from "sql.js
 
 import Hash from "ipfs-only-hash"
 
-import { ObjectSpec, objectSpecType, stringSpecType } from "./specs.js"
-import type { ModelValue } from "./models.js"
+import type { ModelValue } from "@canvas-js/interfaces"
+
 import { Core } from "./core.js"
+import { ObjectSpec, objectSpecType, stringSpecType } from "./specs.js"
 import { assert, objectSpecToString } from "./utils.js"
 
 export class BrowserCore extends Core {

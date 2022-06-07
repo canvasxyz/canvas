@@ -4,7 +4,8 @@ import fs from "node:fs"
 import Hash from "ipfs-only-hash"
 
 import { ethers } from "ethers"
-import { BrowserCore, getActionSignatureData, getSessionSignatureData } from "../lib/index.js"
+import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/interfaces"
+import { BrowserCore } from "../lib/index.js"
 
 const spec = fs.readFileSync("../../examples/reddit.canvas.js", "utf-8")
 const multihash = await Hash.of(spec)

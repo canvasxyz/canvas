@@ -1,7 +1,8 @@
 import test from "ava"
 
 import { ethers } from "ethers"
-import { BrowserCore, getActionSignatureData, getSessionSignatureData } from "../lib/index.js"
+import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/interfaces"
+import { BrowserCore } from "../lib/index.js"
 
 const signer = new ethers.Wallet.createRandom()
 const signerAddress = await signer.getAddress()

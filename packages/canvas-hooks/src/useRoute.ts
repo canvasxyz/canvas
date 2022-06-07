@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useContext } from "react"
 
-import type { ModelValue } from "@canvas-js/core"
+import { ModelValue } from "@canvas-js/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
 

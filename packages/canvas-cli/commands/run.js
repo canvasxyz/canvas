@@ -13,7 +13,8 @@ import Hash from "ipfs-only-hash"
 import * as t from "io-ts"
 import Either from "fp-ts/lib/Either.js"
 
-import { NativeCore, actionType, actionPayloadType, sessionType, getActionSignatureData } from "@canvas-js/core"
+import { getActionSignatureData } from "@canvas-js/interfaces"
+import { NativeCore, actionType, actionPayloadType, sessionType } from "@canvas-js/core"
 
 import { defaultDataDirectory, isMultihash, download } from "./utils.js"
 

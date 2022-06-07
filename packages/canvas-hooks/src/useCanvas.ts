@@ -1,6 +1,6 @@
 import { useContext } from "react"
 
-import type { ActionArgument } from "@canvas-js/core"
+import { ActionArgument } from "@canvas-js/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
 

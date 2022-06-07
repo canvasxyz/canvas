@@ -1,11 +1,15 @@
-import { useCallback, useContext, useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 import { ethers } from "ethers"
 
-import type { Action, ActionArgument, ActionPayload, SessionPayload } from "@canvas-js/core"
-import { getSessionSignatureData, getActionSignatureData } from "@canvas-js/core/lib/signers.js"
-
-import { CanvasContext } from "./CanvasContext.js"
+import {
+	Action,
+	ActionArgument,
+	ActionPayload,
+	SessionPayload,
+	getSessionSignatureData,
+	getActionSignatureData,
+} from "@canvas-js/interfaces"
 
 const CANVAS_SESSION_KEY = "CANVAS_SESSION"
 

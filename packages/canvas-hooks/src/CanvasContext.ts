@@ -1,6 +1,6 @@
 import { createContext } from "react"
 
-import type { ActionArgument } from "@canvas-js/core"
+import { ActionArgument } from "@canvas-js/interfaces"
 
 export interface CanvasContextValue {
 	host?: string

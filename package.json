@@ -17,6 +17,7 @@
   },
   "workspaces": [
     "packages/canvas-cli",
+    "packages/canvas-interfaces",
     "packages/canvas-core",
     "packages/canvas-hooks",
     "packages/example-webpack"
