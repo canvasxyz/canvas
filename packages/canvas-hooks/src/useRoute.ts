@@ -51,8 +51,8 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 		}
 
 		source.onerror = (event: Event) => {
-			console.log("Subscription error:", event)
-			setError(new Error("Subscription error"))
+			console.log("Connection error in EventSource subscription:", event)
+			setError(new Error("Connection error"))
 		}
 
 		return () => {
