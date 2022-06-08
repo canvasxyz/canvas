@@ -38,8 +38,9 @@ export class NativeCore extends Core {
 	public readonly database: sqlite.Database
 	private readonly modelStatements: Record<string, { set: sqlite.Statement }> = {}
 	private readonly routeStatements: Record<string, sqlite.Statement> = {}
-	private readonly ipfs?: IPFS
 	private readonly peering: boolean
+	private readonly ipfs?: IPFS
+	private peerId?: string
 
 	static async initialize({ spec, replay, ipfs, ...config }: NativeCoreConfig) {
 		assert(objectSpecType.is(spec) || stringSpecType.is(spec), "invalid spec")
@@ -62,6 +63,13 @@ export class NativeCore extends Core {
 
 		if (replay) {
 			await core.replay()
+		}
+
+		if (ipfs !== undefined && config.peering) {
+			console.log("subscribing to pubsub", core.topic)
+			const { id } = await ipfs.id()
+			core.peerId = id.toString()
+			await ipfs.pubsub.subscribe(core.topic, core.handleMessage)
 		}
 
 		return core
@@ -106,13 +114,13 @@ export class NativeCore extends Core {
 
 		this.peering = config.peering === true
 		this.ipfs = config.ipfs
-		if (this.ipfs !== undefined && this.peering) {
-			console.log("subscribing to pubsub", this.topic)
-			this.ipfs.pubsub.subscribe(this.topic, this.handleMessage)
-		}
 	}
 
 	private handleMessage = (event: Message) => {
+		if (event.from.toString() === this.peerId) {
+			return
+		}
+
 		console.log("handling pubsub message!")
 		let message: any
 		try {
@@ -179,6 +187,7 @@ export class NativeCore extends Core {
 				console.error("failed to publish action to pubsub")
 				console.error(err)
 			})
+		} else {
 		}
 		return result
 	}
