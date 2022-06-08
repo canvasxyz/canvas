@@ -7,6 +7,7 @@
     "target": "es2020",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    "removeComments": true
+    "removeComments": true,
+    "skipLibCheck": true
   },
 }

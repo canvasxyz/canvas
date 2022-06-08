@@ -15,6 +15,7 @@ import Either from "fp-ts/lib/Either.js"
 
 import { getActionSignatureData } from "@canvas-js/interfaces"
 import { NativeCore, actionType, actionPayloadType, sessionType } from "@canvas-js/core"
+import { create as createIpfsHttpClient } from "ipfs-http-client"
 
 import { defaultDataDirectory, isMultihash, download } from "./utils.js"
 
@@ -38,9 +39,13 @@ export const builder = (yargs) => {
 			default: 8000,
 			desc: "Port to bind the core API",
 		})
-		.option("peer", {
+		.option("peering", {
+			type: "boolean",
+			desc: "Enable peering over IPFS PubSub",
+		})
+		.option("ipfs", {
 			type: "string",
-			desc: "Peers to connect to",
+			desc: "IPFS HTTP API URL",
 		})
 		.option("noserver", {
 			type: "boolean",
@@ -98,7 +103,9 @@ export async function handler(args) {
 	}
 
 	const port = args.port
-	const core = await NativeCore.initialize({ spec, dataDirectory: appPath })
+	const peering = args.peering
+	const ipfs = args.ipfs && createIpfsHttpClient({ url: args.ipfs })
+	const core = await NativeCore.initialize({ spec, dataDirectory: appPath, peering, ipfs })
 
 	if (args.fixtures) {
 		await applyFixtures(core, args.fixtures)
