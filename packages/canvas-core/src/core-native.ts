@@ -107,24 +107,30 @@ export class NativeCore extends Core {
 		this.peering = config.peering === true
 		this.ipfs = config.ipfs
 		if (this.ipfs !== undefined && this.peering) {
+			console.log("subscribing to pubsub", this.topic)
 			this.ipfs.pubsub.subscribe(this.topic, this.handleMessage)
 		}
 	}
 
 	private handleMessage = (event: Message) => {
+		console.log("handling pubsub message!")
 		let message: any
 		try {
 			const data = new TextDecoder().decode(event.data)
 			message = JSON.parse(data)
 		} catch (e) {
+			console.error("failed to parse pubsub message")
+			console.error(e)
 			return
 		}
 
 		if (messageType.is(message)) {
 			if (message.type === "action") {
-				this.apply(message)
+				console.log("got action over pubsub", message.payload)
+				super.apply(message)
 			} else if (message.type === "session") {
-				this.session(message)
+				console.log("got session over pubsub", message.payload)
+				super.session(message)
 			}
 		}
 	}
@@ -155,6 +161,7 @@ export class NativeCore extends Core {
 
 	public async close() {
 		if (this.ipfs !== undefined && this.peering) {
+			console.log("unsubscribing from pubsub", this.topic)
 			this.ipfs.pubsub.unsubscribe(this.topic, this.handleMessage)
 		}
 
@@ -165,9 +172,13 @@ export class NativeCore extends Core {
 	public async apply(action: Action, options: { replaying?: boolean } = {}) {
 		const result = await super.apply(action, options)
 		if (this.ipfs !== undefined && this.peering) {
+			console.log("publishing action to pubsub")
 			const message = JSON.stringify({ type: "action", ...action })
 			const data = new TextEncoder().encode(message)
-			await this.ipfs.pubsub.publish(this.topic, data)
+			await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
+				console.error("failed to publish action to pubsub")
+				console.error(err)
+			})
 		}
 		return result
 	}
@@ -175,9 +186,13 @@ export class NativeCore extends Core {
 	public async session(session: Session) {
 		await super.session(session)
 		if (this.ipfs !== undefined && this.peering) {
+			console.log("publishing session to pubsub")
 			const message = JSON.stringify({ type: "session", ...session })
 			const data = new TextEncoder().encode(message)
-			await this.ipfs.pubsub.publish(this.topic, data)
+			await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
+				console.error("failed to publish session to pubsub")
+				console.error(err)
+			})
 		}
 	}
 }
