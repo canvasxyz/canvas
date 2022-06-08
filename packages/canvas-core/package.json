@@ -29,6 +29,7 @@
 		"ipfs-only-hash": "^4.0.0",
 		"it-pushable": "^2.0.1",
 		"it-stream-types": "^1.0.4",
+		"p-queue": "^7.2.0",
 		"quickjs-emscripten": "^0.20.0",
 		"random-access-file": "^2.2.1",
 		"random-access-idb": "^1.2.2",

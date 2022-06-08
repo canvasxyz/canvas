@@ -8,11 +8,11 @@ import { getQuickJS, QuickJSWASMModule } from "quickjs-emscripten"
 import randomAccessFile from "random-access-file"
 import Database, * as sqlite from "better-sqlite3"
 import Hash from "ipfs-only-hash"
-
 import type { IPFS } from "ipfs-core-types"
 import type { Message } from "@libp2p/interfaces/pubsub"
 
 import * as t from "io-ts"
+import PQueue from "p-queue"
 
 import type { Action, ModelValue, Session } from "@canvas-js/interfaces"
 import { actionType, sessionType } from "./codecs.js"
@@ -41,6 +41,7 @@ export class NativeCore extends Core {
 	private readonly peering: boolean
 	private readonly ipfs?: IPFS
 	private peerId?: string
+	private readonly queue: PQueue
 
 	static async initialize({ spec, replay, ipfs, ...config }: NativeCoreConfig) {
 		assert(objectSpecType.is(spec) || stringSpecType.is(spec), "invalid spec")
@@ -75,7 +76,7 @@ export class NativeCore extends Core {
 		return core
 	}
 
-	constructor(config: {
+	private constructor(config: {
 		multihash: string
 		spec: string
 		dataDirectory: string
@@ -114,6 +115,7 @@ export class NativeCore extends Core {
 
 		this.peering = config.peering === true
 		this.ipfs = config.ipfs
+		this.queue = new PQueue({ concurrency: 1 })
 	}
 
 	private handleMessage = (event: Message) => {
@@ -134,11 +136,9 @@ export class NativeCore extends Core {
 
 		if (messageType.is(message)) {
 			if (message.type === "action") {
-				console.log("got action over pubsub", message.payload)
-				super.apply(message)
+				this.queue.add(() => super.apply(message))
 			} else if (message.type === "session") {
-				console.log("got session over pubsub", message.payload)
-				super.session(message)
+				this.queue.add(() => super.session(message))
 			}
 		}
 	}
@@ -178,28 +178,28 @@ export class NativeCore extends Core {
 	}
 
 	public async apply(action: Action, options: { replaying?: boolean } = {}) {
-		const result = await super.apply(action, options)
+		const result = await this.queue.add(() => super.apply(action, options))
 		if (this.ipfs !== undefined && this.peering) {
-			console.log("publishing action to pubsub")
 			const message = JSON.stringify({ type: "action", ...action })
-			const data = new TextEncoder().encode(message)
+			const data = new TextEncoder().encode(JSON.stringify(message))
+			console.log("publishing action to pubsub topic")
 			await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
-				console.error("failed to publish action to pubsub")
+				console.error("failed to publish session to pubsub topic")
 				console.error(err)
 			})
-		} else {
 		}
+
 		return result
 	}
 
 	public async session(session: Session) {
-		await super.session(session)
+		await this.queue.add(() => super.session(session))
 		if (this.ipfs !== undefined && this.peering) {
-			console.log("publishing session to pubsub")
 			const message = JSON.stringify({ type: "session", ...session })
-			const data = new TextEncoder().encode(message)
+			const data = new TextEncoder().encode(JSON.stringify(message))
+			console.log("publishing session to pubsub topic")
 			await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
-				console.error("failed to publish session to pubsub")
+				console.error("failed to publish session to pubsub topic")
 				console.error(err)
 			})
 		}
