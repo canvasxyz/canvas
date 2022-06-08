@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useRef } from "react"
 
 import { useRoute, useCanvas } from "@canvas-js/hooks"
 
@@ -7,6 +7,8 @@ type Post = { id: string; fromId: string; content: string; timestamp: number; li
 export const App: React.FC<{}> = ({}) => {
 	const { error: canvasError, multihash, dispatch, connect, address } = useCanvas()
 	const [posting, setPosting] = useState(false)
+	const inputRef = useRef<HTMLInputElement>(null)
+	const scrollableRef = useRef<HTMLFieldSetElement>(null)
 
 	const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = useCallback(
 		(event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -17,7 +19,11 @@ export const App: React.FC<{}> = ({}) => {
 				dispatch("createPost", [value])
 					.then(() => console.log("successfully created post"))
 					.catch((err) => console.error(err))
-					.finally(() => setPosting(false))
+					.finally(() => {
+						setPosting(false)
+						inputRef.current?.focus()
+						if (scrollableRef.current) scrollableRef.current.scrollTop = scrollableRef.current?.scrollHeight
+					})
 			}
 		},
 		[posting, dispatch]
@@ -57,7 +63,7 @@ export const App: React.FC<{}> = ({}) => {
 					)}
 				</fieldset>
 
-				<fieldset>
+				<fieldset ref={scrollableRef} style={{ maxHeight: "55vh", overflow: "scroll" }}>
 					<legend>Messages</legend>
 					{routeError ? (
 						<div>
@@ -79,7 +85,8 @@ export const App: React.FC<{}> = ({}) => {
 										</tr>
 									)
 								})}
-
+							</tbody>
+							<tfoot style={{ position: "sticky", bottom: 0, background: "white" }}>
 								{address && (
 									<>
 										<tr>
@@ -93,12 +100,12 @@ export const App: React.FC<{}> = ({}) => {
 												<code>{address}</code>
 											</td>
 											<td>
-												<input type="text" disabled={posting} onKeyDown={handleKeyDown} />
+												<input type="text" readOnly={posting} onKeyDown={handleKeyDown} ref={inputRef} />
 											</td>
 										</tr>
 									</>
 								)}
-							</tbody>
+							</tfoot>
 						</table>
 					) : (
 						<code>Loading...</code>
