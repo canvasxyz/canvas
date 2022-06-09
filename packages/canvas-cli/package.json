@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/cli",
-  "version": "0.0.8",
+  "version": "0.0.12",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "index.js",
@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@canvas-js/core": "*",
+    "@canvas-js/interfaces": "*",
     "body-parser": "^1.20.0",
     "chalk": "^5.0.1",
     "cors": "^2.8.5",
@@ -27,6 +28,7 @@
     "ipfs-only-hash": "^4.0.0",
     "prompt": "^1.3.0",
     "stoppable": "^1.1.0",
+    "update-notifier": "^5.1.0",
     "yargs": "^17.4.0"
   }
 }
