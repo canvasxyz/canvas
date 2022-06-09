@@ -22,7 +22,9 @@ export const App: React.FC<{}> = ({}) => {
 					.finally(() => {
 						setPosting(false)
 						inputRef.current?.focus()
-						if (scrollableRef.current) scrollableRef.current.scrollTop = scrollableRef.current?.scrollHeight
+						setTimeout(() => {
+							if (scrollableRef.current) scrollableRef.current.scrollTop = scrollableRef.current?.scrollHeight
+						}, 0)
 					})
 			}
 		},
