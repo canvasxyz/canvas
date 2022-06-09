@@ -100,7 +100,13 @@ export const App: React.FC<{}> = ({}) => {
 												<code>{address}</code>
 											</td>
 											<td>
-												<input type="text" readOnly={posting} onKeyDown={handleKeyDown} ref={inputRef} />
+												<input
+													type="text"
+													readOnly={posting}
+													onKeyDown={handleKeyDown}
+													ref={inputRef}
+													autoFocus={true}
+												/>
 											</td>
 										</tr>
 									</>
