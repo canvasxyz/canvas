@@ -17,7 +17,7 @@ test("Apply signed action", async (t) => {
 	const core = await BrowserCore.initialize({ spec })
 	t.is(core.multihash, multihash)
 
-	const timestamp = Math.round(Date.now() / 1000)
+	const timestamp = +Date.now()
 	const actionPayload = {
 		from: signerAddress,
 		spec: multihash,
@@ -59,7 +59,7 @@ test("Apply session-signed action", async (t) => {
 	const sessionPayload = {
 		from: signerAddress,
 		spec: multihash,
-		timestamp: Math.round(Date.now() / 1000),
+		timestamp: +Date.now(),
 		session_public_key,
 		session_duration,
 	}
@@ -70,7 +70,7 @@ test("Apply session-signed action", async (t) => {
 
 	await core.session(session)
 
-	const actionTimestamp = Math.round(Date.now() / 1000)
+	const actionTimestamp = +Date.now()
 	const actionPayload = {
 		from: signerAddress,
 		spec: multihash,

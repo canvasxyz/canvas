@@ -262,7 +262,7 @@ async function applyFixtures(core, fixtures) {
 		throw new Error("Invalid fixtures file")
 	}
 
-	const timestamp = Math.round(Date.now() / 1000)
+	const timestamp = Date.now()
 	const wallets = new Map()
 	for (const [i, { privateKey, call, args }] of result.right.entries()) {
 		if (!wallets.has(privateKey)) {

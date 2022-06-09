@@ -256,9 +256,9 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		 * We should eventually use a more reliable source than the system clock, to avoid
 		 * synchronization issues between different clients who hold the same public key.
 		 */
-		const currentTime = Date.now() / 1000
-		const boundsCheckLowerLimit = new Date("2020").valueOf() / 1000
-		const boundsCheckUpperLimit = new Date("2070").valueOf() / 1000
+		const currentTime = Date.now().valueOf()
+		const boundsCheckLowerLimit = new Date("2020").valueOf()
+		const boundsCheckUpperLimit = new Date("2070").valueOf()
 
 		/**
 		 * Verify the action matches the payload.
