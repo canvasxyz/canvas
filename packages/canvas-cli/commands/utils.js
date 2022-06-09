@@ -5,6 +5,7 @@ import os from "node:os"
 import fetch from "node-fetch"
 import Hash from "ipfs-only-hash"
 import prompt from "prompt"
+import chalk from "chalk"
 
 async function resetAppData(appPath) {
 	const hypercorePath = path.resolve(appPath, "hypercore")
