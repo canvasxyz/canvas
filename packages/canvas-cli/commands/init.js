@@ -2,7 +2,7 @@ import fs from "fs"
 import path from "node:path"
 
 export const command = "init <spec>"
-export const desc = "Create a starter spec"
+export const desc = "Create a sample spec for demonstration purposes"
 
 export const builder = (yargs) => {
 	yargs.positional("spec", {
@@ -50,5 +50,5 @@ const actions = {
 export { models, routes, actions }
 `
 	fs.writeFileSync(args.spec, content.trim())
-	console.log(`Created starter spec at ${args.spec}`)
+	console.log(`Created sample spec at ${args.spec}`)
 }

@@ -1,22 +1,17 @@
 import fs from "fs"
 import path from "node:path"
 
-import * as listActions from "./listActions.js"
-import * as listSessions from "./listSessions.js"
-
 import { defaultDataDirectory, getDirectorySize, isMultihash } from "./utils.js"
 
 export const command = "list"
 export const desc = "List all specs in the data directory"
 
 export const builder = (yargs) => {
-	yargs
-		.option("datadir", {
-			describe: "Path of the app data directory",
-			type: "string",
-			default: defaultDataDirectory,
-		})
-		.command([listActions, listSessions])
+	yargs.option("datadir", {
+		describe: "Path of the app data directory",
+		type: "string",
+		default: defaultDataDirectory,
+	})
 }
 
 export async function handler(args) {
@@ -46,7 +41,4 @@ export async function handler(args) {
 		console.log(`Action log: ${hypercoreSize ?? "--"} bytes`)
 		console.log("")
 	}
-
-	console.log(`Try "canvas info", "canvas list actions", or
-"canvas list sessions" for more information on a spec.`)
 }
