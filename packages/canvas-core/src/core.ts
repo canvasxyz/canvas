@@ -26,7 +26,7 @@ import {
 	verifySessionSignature,
 } from "@canvas-js/interfaces"
 
-import { modelType, actionType, actionArgumentType, sessionType } from "./codecs.js"
+import { modelType, modelTypeType, indexType, actionType, actionArgumentType, sessionType } from "./codecs.js"
 import { EventEmitter, CustomEvent } from "./events.js"
 import { assert, getColumnType, validateType } from "./utils.js"
 
@@ -143,6 +143,9 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		assert(t.record(t.string, modelType).is(models), "invalid models export")
 
 		for (const [name, model] of Object.entries(models)) {
+			if (name === "indexes") continue
+			assert(model.from === undefined, "model should not overwrite from field")
+			assert(model.timestamp === undefined, "model should not overwrite timestamp")
 			assert(/^[a-zA-Z0-9_]+$/.test(name), "invalid model name")
 			this.models[name] = model
 		}
@@ -154,16 +157,19 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		assert(t.record(t.string, modelType).is(models), "invalid models export")
 
 		for (const [name, model] of Object.entries(models)) {
+			if (name === "indexes") continue
 			const setFunction = this.vm.newFunction("set", (key: QuickJSHandle, value: QuickJSHandle) => {
 				try {
 					const id = key.consume(this.vm.getString)
 					const params = value.consume(this.vm.dump)
 
 					assert(typeof params === "object", "object parameters expected: this.db.table.set(id, { field })")
-					assert(model.from === undefined, "this.db.table.set(id, { field }) attempted to overwrite from field")
-					assert(model.timestamp === undefined, "this.db.table.set(id, { field }) attempted to overwrite timestamp")
 					for (const [field, type] of Object.entries(model)) {
-						validateType(type, params[field])
+						if (modelTypeType.is(type)) {
+							validateType(type, params[field])
+						} else {
+							assert(indexType.is(type), "invalid index")
+						}
 					}
 
 					this.setModel(name, { ...params, id, from, timestamp })
@@ -486,15 +492,32 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 
 	static getDatabaseSchema(models: Record<string, Model>): string {
 		const tables: string[] = []
+		const indexes: string[] = []
 		for (const [name, model] of Object.entries(models)) {
 			const columns = ["id TEXT PRIMARY KEY NOT NULL", "timestamp INTEGER NOT NULL"]
 			for (const field of Object.keys(model)) {
 				assert(field !== "id" && field !== "timestamp", "fields can't be named 'id' or 'timestamp'")
-				columns.push(`${field} ${getColumnType(model[field])}`)
+				if (field === "indexes") {
+					const index = model[field]
+					if (indexType.is(index)) {
+						for (const indexItem of index) {
+							assert(indexItem !== "indexes" && indexItem in model, "index specified for invalid column")
+							const indexName = `idx_${indexItem}`
+							const indexColumns = [indexItem]
+							indexes.push(`CREATE INDEX IF NOT EXISTS ${indexName} ON ${name} (${indexColumns.join(", ")});`)
+						}
+					} else {
+						assert(false, "invalid index definition")
+					}
+				} else {
+					const type = model[field]
+					assert(!indexType.is(type), "invalid model definition")
+					columns.push(`${field} ${getColumnType(type)}`)
+				}
 			}
 
 			tables.push(`CREATE TABLE IF NOT EXISTS ${name} (${columns.join(", ")});`)
 		}
-		return tables.join("\n")
+		return tables.concat(indexes).join("\n")
 	}
 }

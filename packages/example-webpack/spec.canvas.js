@@ -6,6 +6,7 @@ const models = {
 	likes: {
 		postId: "string",
 		value: "boolean",
+		indexes: ["postId"],
 	},
 }
 

@@ -61,7 +61,7 @@ export class BrowserCore extends Core {
 
 		// Prepare model statements
 		for (const [name, model] of Object.entries(this.models)) {
-			const keys = ["timestamp", ...Object.keys(model)]
+			const keys = ["timestamp", ...Object.keys(model).filter((k) => k !== "indexes")]
 			const fields = keys.join(", ")
 			const params = keys.map((key) => `:${key}`).join(", ")
 			const condition = (n: string) => `${n} = CASE WHEN timestamp < :timestamp THEN :${n} ELSE ${n} END`
