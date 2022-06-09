@@ -3,12 +3,14 @@ export const models = {
 		title: "string",
 		creator: "string",
 		createdAt: "datetime",
+		indexes: ["creator", "createdAt"],
 	},
 	card: {
 		pollId: "string",
 		text: "string",
 		creator: "string",
 		createdAt: "datetime",
+		indexes: ["pollId"],
 	},
 	vote: {
 		cardId: "string",
@@ -16,6 +18,7 @@ export const models = {
 		isDisagree: "boolean",
 		creator: "string",
 		createdAt: "datetime",
+		indexes: ["cardId"],
 	},
 }
 

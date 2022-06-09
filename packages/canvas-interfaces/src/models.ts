@@ -6,7 +6,13 @@
 export type ModelType = "boolean" | "string" | "integer" | "float" | "datetime"
 
 /**
- *  A `ModelValue` is a type-level representation of concrete model field types, ie
+ * An `IndexType` defines a list of indexes to be generated and maintained for a model.
+ */
+
+export type IndexType = string[]
+
+/**
+ * A `ModelValue` is a type-level representation of concrete model field types, ie
  * a TypeScript type that describes the possible JavaScript values that instantiate
  * the various ModelType options.
  */
@@ -15,4 +21,4 @@ export type ModelValue = null | boolean | number | string
 /**
  * A `Model` is a map of property names to `ModelType` types
  */
-export type Model = Record<string, ModelType>
+export type Model = Record<string, ModelType | IndexType>

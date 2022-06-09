@@ -1,15 +1,16 @@
 import path from "node:path"
 import fs from "node:fs"
 import assert from "node:assert"
+import child_process from "node:child_process"
+import process from "node:process"
+import stoppable from "stoppable"
 
 import ethers from "ethers"
 import cors from "cors"
 import express from "express"
 import bodyParser from "body-parser"
 import { StatusCodes } from "http-status-codes"
-import prompt from "prompt"
 import chalk from "chalk"
-import Hash from "ipfs-only-hash"
 import * as t from "io-ts"
 import Either from "fp-ts/lib/Either.js"
 
@@ -17,7 +18,7 @@ import { getActionSignatureData } from "@canvas-js/interfaces"
 import { NativeCore, actionType, actionPayloadType, sessionType } from "@canvas-js/core"
 import { create as createIpfsHttpClient } from "ipfs-http-client"
 
-import { defaultDataDirectory, isMultihash, download } from "./utils.js"
+import { defaultDataDirectory, isMultihash, downloadSpec } from "./utils.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or multihash"
@@ -62,45 +63,7 @@ export const builder = (yargs) => {
 }
 
 export async function handler(args) {
-	if (!fs.existsSync(args.datadir)) {
-		fs.mkdirSync(args.datadir)
-	}
-
-	prompt.message = "[canvas-cli]"
-	prompt.start()
-
-	let appPath
-	let spec
-	if (isMultihash(args.spec)) {
-		appPath = path.resolve(args.datadir, args.spec)
-		if (fs.existsSync(appPath)) {
-			spec = fs.readFileSync(path.resolve(appPath, "spec.mjs"), "utf-8")
-			if (args.reset) {
-				await resetAppData(appPath)
-			}
-		} else {
-			console.log("Creating", appPath)
-			fs.mkdirSync(appPath)
-			console.log("Downloading", args.spec, "from IPFS...")
-			spec = await download(args.spec)
-			fs.writeFileSync(path.resolve(appPath, "spec.mjs"), spec)
-			fs.writeFileSync(path.resolve(appPath, "spec.cid"), args.spec)
-		}
-	} else {
-		spec = fs.readFileSync(args.spec, "utf-8")
-		const multihash = await Hash.of(spec)
-		appPath = path.resolve(args.datadir, multihash)
-		if (fs.existsSync(appPath)) {
-			if (args.reset) {
-				await resetAppData(appPath)
-			}
-		} else {
-			console.log("Creating", appPath)
-			fs.mkdirSync(appPath)
-			fs.writeFileSync(path.resolve(appPath, "spec.mjs"), spec)
-			fs.writeFileSync(path.resolve(appPath, "spec.cid"), multihash)
-		}
-	}
+	const [appPath, spec] = await downloadSpec(args.spec, args.datadir, args.reset)
 
 	const port = args.port
 	const peering = args.peering
@@ -208,20 +171,37 @@ export async function handler(args) {
 			})
 	})
 
-	server.listen(port, () => {
-		console.log(`Serving ${core.multihash} on port ${port}:`)
-		console.log(`└ GET http://localhost:${port}/`)
-		Object.keys(core.routes).map((name) => {
-			console.log(`└ GET http://localhost:${port}${name}`)
+	const instance = stoppable(
+		server.listen(port, () => {
+			console.log(`Serving ${core.multihash} on port ${port}:`)
+			console.log(`└ GET http://localhost:${port}/`)
+			Object.keys(core.routes).map((name) => {
+				console.log(`└ GET http://localhost:${port}${name}`)
+			})
+			console.log("└ POST /actions")
+			console.log(`  └ { ${Object.keys(actionType.props).join(", ")} }`)
+			console.log(`  └ payload: { ${Object.keys(actionPayloadType.props).join(", ")} }`)
+			console.log(`  └ calls: [ ${Object.keys(core.actionFunctions).join(", ")} ]`)
+			console.log("└ POST /sessions")
+			console.log(`  └ { ${Object.keys(sessionType.props).join(", ")} }`)
+			console.log(`  └ payload: { ${Object.keys(sessionType.props.payload.props).join(", ")} }`)
+		}),
+		0
+	)
+
+	// restart server if spec changes
+	if (!isMultihash(args.spec)) {
+		let terminated
+		fs.watch(args.spec, (event, filename) => {
+			if (terminated || !filename || event !== "change") return
+			terminated = true
+
+			console.log("File changed, restarting server...")
+			instance.stop((err, success) => {
+				handler(args)
+			})
 		})
-		console.log("└ POST /actions")
-		console.log(`  └ { ${Object.keys(actionType.props).join(", ")} }`)
-		console.log(`  └ payload: { ${Object.keys(actionPayloadType.props).join(", ")} }`)
-		console.log(`  └ calls: [ ${Object.keys(core.actionFunctions).join(", ")} ]`)
-		console.log("└ POST /sessions")
-		console.log(`  └ { ${Object.keys(sessionType.props).join(", ")} }`)
-		console.log(`  └ payload: { ${Object.keys(sessionType.props.payload.props).join(", ")} }`)
-	})
+	}
 }
 
 const fixturesType = t.array(
@@ -249,7 +229,7 @@ async function applyFixtures(core, fixtures) {
 		throw new Error("Invalid fixtures file")
 	}
 
-	const timestamp = Math.round(Date.now() / 1000)
+	const timestamp = Date.now()
 	const wallets = new Map()
 	for (const [i, { privateKey, call, args }] of result.right.entries()) {
 		if (!wallets.has(privateKey)) {
@@ -272,31 +252,6 @@ async function applyFixtures(core, fixtures) {
 		const signatureData = getActionSignatureData(payload)
 		const signature = await signer._signTypedData(...signatureData)
 		await core.apply({ session: null, signature, payload })
-	}
-}
-
-async function resetAppData(appPath) {
-	const hypercorePath = path.resolve(appPath, "hypercore")
-	const databasePath = path.resolve(appPath, "db.sqlite")
-	if (fs.existsSync(hypercorePath) || fs.existsSync(databasePath)) {
-		const { reset } = await prompt.get({
-			name: "reset",
-			description: `${chalk.yellow(`Do you want to ${chalk.bold("erase all data")} in ${appPath}?`)} [yN]`,
-			message: "Invalid input.",
-			type: "string",
-			required: true,
-			pattern: /^[yn]?$/i,
-		})
-
-		if (reset.toLowerCase() === "y") {
-			console.log(`[canvas-cli]: Removing ${hypercorePath}`)
-			fs.rmSync(hypercorePath, { recursive: true, force: true })
-			console.log(`[canvas-cli]: Removing ${databasePath}`)
-			fs.rmSync(databasePath, { recursive: true, force: true })
-		} else {
-			console.log("[canvas-cli]: Cancelled.")
-			process.exit(1)
-		}
 	}
 }
 

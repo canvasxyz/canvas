@@ -77,7 +77,7 @@ export function useSession(
 				throw new Error("dispatch called too early")
 			}
 
-			const timestamp = Math.round(Date.now() / 1000)
+			const timestamp = +Date.now()
 			const payload: ActionPayload = { from: address, spec: multihash, call, args, timestamp }
 
 			if (sessionSigner === null || sessionExpiration < timestamp) {
@@ -101,8 +101,8 @@ async function newSession(
 	host: string,
 	multihash: string
 ): Promise<[ethers.Wallet, SessionObject]> {
-	const timestamp = Math.round(Date.now() / 1000)
-	const sessionDuration = 86400
+	const timestamp = Date.now().valueOf()
+	const sessionDuration = 86400 * 1000
 	const sessionSigner = ethers.Wallet.createRandom()
 
 	const address = await signer.getAddress()

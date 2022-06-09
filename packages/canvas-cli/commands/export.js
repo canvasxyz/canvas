@@ -6,14 +6,14 @@ import HyperBee from "hyperbee"
 
 import { createPrefixStream } from "../utils/prefixStream.js"
 
-import { defaultDataDirectory } from "./utils.js"
+import { defaultDataDirectory, downloadSpec } from "./utils.js"
 
-export const command = "sessions <multihash>"
-export const desc = "Print app session log"
+export const command = "export <spec>"
+export const desc = "Export actions and sessions"
 export const builder = (yargs) => {
 	yargs
-		.positional("multihash", {
-			describe: "Hash of the spec from IPFS",
+		.positional("spec", {
+			describe: "Path to spec file, or IPFS hash of spec",
 			type: "string",
 			demandOption: true,
 		})
@@ -25,19 +25,11 @@ export const builder = (yargs) => {
 }
 
 export async function handler(args) {
-	if (!fs.existsSync(args.datadir)) {
-		fs.mkdirSync(args.datadir)
-	}
-
-	const appPath = path.resolve(args.datadir, args.multihash)
-	if (!fs.existsSync(appPath)) {
-		console.log("App not found. Have you tried running the app yet?")
-		process.exit(1)
-	}
+	const [appPath, spec] = await downloadSpec(args.spec, args.datadir, args.reset)
 
 	const hypercorePath = path.resolve(appPath, "hypercore")
 	if (!fs.existsSync(hypercorePath)) {
-		console.log("App initialized, but no session log found. Have you tried running the app yet?")
+		console.log("App initialized, but no action log found.")
 		process.exit(1)
 	}
 
@@ -45,7 +37,7 @@ export async function handler(args) {
 	const db = new HyperBee(feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
 	await db.ready()
 
-	for await (const [_, value] of createPrefixStream(db, "s:")) {
+	for await (const [_, value] of createPrefixStream(db, "")) {
 		console.log(value)
 	}
 

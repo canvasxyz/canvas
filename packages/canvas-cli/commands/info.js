@@ -4,9 +4,9 @@ import chalk from "chalk"
 
 import * as t from "io-ts"
 
-import { BrowserCore, actionType, sessionType } from "@canvas-js/core"
+import { NativeCore, actionType, sessionType } from "@canvas-js/core"
 
-import { defaultDataDirectory, isMultihash } from "./utils.js"
+import { defaultDataDirectory, isMultihash, downloadSpec } from "./utils.js"
 
 export const command = "info <spec>"
 export const desc = "Show the models, views, and actions for a spec"
@@ -26,22 +26,9 @@ export const builder = (yargs) => {
 }
 
 export async function handler(args) {
-	let spec
-	if (isMultihash(args.spec)) {
-		if (fs.existsSync(path.resolve(args.datadir, args.spec))) {
-			// read spec from datadir
-			spec = fs.readFileSync(path.resolve(args.datadir, args.spec, "spec.mjs"), "utf-8")
-		} else {
-			// fetch spec from multihash
-			console.log("Downloading", args.spec, "from IPFS...")
-			spec = await download(args.spec)
-		}
-	} else {
-		// read spec from file
-		spec = fs.readFileSync(args.spec, "utf-8")
-	}
+	const [appPath, spec] = await downloadSpec(args.spec, args.datadir, args.reset)
 
-	const core = await BrowserCore.initialize({ spec })
+	const core = await NativeCore.initialize({ spec, dataDirectory: appPath })
 
 	console.log(`Showing info for ${core.multihash}:\n`)
 	console.log("models:", core.models)
@@ -56,32 +43,21 @@ export async function handler(args) {
 		Object.entries(core.actionParameters).map(([name, params]) => `${name}(${params.join(", ")})`)
 	)
 
-	console.log(`\nFound ${core.feed.length} actions. Connect to peers to retrieve more.`)
-
 	console.log(`
-To initialize a session, POST a JSON object to /sessions
-with these properties:`)
+To initialize a session, POST to /sessions (JSON):`)
 	console.log(printType(sessionType))
 
 	console.log(`
-To apply an action, POST a JSON object to /actions
-with these properties:`)
+To apply an action, POST to /actions (JSON):`)
 	console.log(printType(actionType))
 
 	console.log(`
-Payloads should be signed by either the "from" address, or
-the "session" public key using EIP-712.
-
-If a session public key is used, the server will only
-accept it if it has seen a recent session.
-
-Timestamps should be provided as UTC unixtimes, and are
-unchecked, except to ensure they reasonably correspond
-to a time when the Canvas protocol exists.
-
-Canvas currently supports these cryptography schemes:
-- Ethereum (ECDSA)
+Payloads should be signed by either the "from" or "session"
+address using EIP-712 signTypedData_v4. Timestamps
+should be provided as UTC unixtimes with msec resolution.
 `)
+
+	console.log(`Found ${core.feed.length} actions. Connect to peers to retrieve more.`)
 }
 
 function printType(type, indent = "") {

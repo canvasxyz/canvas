@@ -27,6 +27,7 @@
     "ipfs-http-client": "^57.0.1",
     "ipfs-only-hash": "^4.0.0",
     "prompt": "^1.3.0",
+    "stoppable": "^1.1.0",
     "yargs": "^17.4.0"
   }
 }

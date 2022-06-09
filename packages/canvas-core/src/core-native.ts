@@ -95,7 +95,7 @@ export class NativeCore extends Core {
 		// Prepare model statements
 		for (const [name, model] of Object.entries(this.models)) {
 			// TODO: validate model name
-			const keys = ["timestamp", ...Object.keys(model)]
+			const keys = ["timestamp", ...Object.keys(model).filter((k) => k !== "indexes")]
 			const fields = keys.join(", ")
 			const params = keys.map((key) => `:${key}`).join(", ")
 			const condition = (n: string) => `${n} = CASE WHEN timestamp < :timestamp THEN :${n} ELSE ${n} END`
@@ -106,11 +106,11 @@ export class NativeCore extends Core {
 					`INSERT INTO ${name} (id, ${fields}) VALUES (:id, ${params}) ON CONFLICT (id) DO UPDATE SET ${updates}`
 				),
 			}
+		}
 
-			// Prepare route statements
-			for (const [route, query] of Object.entries(this.routes)) {
-				this.routeStatements[route] = this.database.prepare(query)
-			}
+		// Prepare route statements
+		for (const [route, query] of Object.entries(this.routes)) {
+			this.routeStatements[route] = this.database.prepare(query)
 		}
 
 		this.peering = config.peering === true
