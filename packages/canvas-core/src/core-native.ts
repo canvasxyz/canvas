@@ -59,11 +59,11 @@ export class NativeCore extends Core {
 					`INSERT INTO ${name} (id, ${fields}) VALUES (:id, ${params}) ON CONFLICT (id) DO UPDATE SET ${updates}`
 				),
 			}
+		}
 
-			// Prepare route statements
-			for (const [route, query] of Object.entries(this.routes)) {
-				this.routeStatements[route] = this.database.prepare(query)
-			}
+		// Prepare route statements
+		for (const [route, query] of Object.entries(this.routes)) {
+			this.routeStatements[route] = this.database.prepare(query)
 		}
 	}
 
