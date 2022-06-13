@@ -56,11 +56,6 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 	private readonly vm: QuickJSContext
 	private readonly actionFunctions: Record<string, QuickJSHandle> = {}
 
-	// This is a *mutable* slot for the payload of the "currently executing action".
-	// It starts as null, gets set at the beginning of apply, and gets re-set to null
-	// by the end of apply. This is a little hacky but it makes stuff way simpler.
-	private currentActionPayload: ActionPayload | null = null
-
 	constructor(config: {
 		multihash: string
 		spec: string
@@ -339,8 +334,6 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		assert(action.payload.call !== "", "missing action function")
 		assert(action.payload.call in this.actionFunctions, "invalid action function")
 
-		this.currentActionPayload = action.payload
-
 		assert(action.signature.startsWith("0x"))
 		const hash = ethers.utils.sha256(action.signature)
 
@@ -375,7 +368,6 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 		hashString.dispose()
 		fromString.dispose()
 		timestampNumber.dispose()
-		this.currentActionPayload = null
 
 		// if everything succeeds
 		if (!options.replaying) {
