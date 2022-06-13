@@ -31,11 +31,13 @@ export const builder = (yargs) => {
 			demandOption: true,
 		})
 		.option("datadir", {
+			alias: "d",
 			describe: "Path of the app data directory",
 			type: "string",
 			default: defaultDataDirectory,
 		})
 		.option("port", {
+			alias: "p",
 			type: "number",
 			default: 8000,
 			desc: "Port to bind the core API",
@@ -57,6 +59,7 @@ export const builder = (yargs) => {
 			desc: "Path to a JSON file containing an array of action payloads",
 		})
 		.option("reset", {
+			alias: "r",
 			type: "boolean",
 			desc: "Reset the action log and model database",
 		})
