@@ -237,8 +237,8 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async close() {
+		await this.queue.onEmpty()
 		this.vm.dispose()
-
 		await new Promise<void>((resolve, reject) => {
 			this.feed.close((err) => {
 				if (err === null) {
