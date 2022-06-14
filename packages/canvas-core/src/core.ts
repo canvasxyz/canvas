@@ -10,7 +10,7 @@ import { QuickJSWASMModule, QuickJSRuntime, QuickJSContext, QuickJSHandle, isFai
 import type { RandomAccessStorage } from "random-access-storage"
 import HyperBee from "hyperbee"
 import hypercore, { Feed } from "hypercore"
-
+import PQueue from "p-queue"
 import * as t from "io-ts"
 
 import {
@@ -56,6 +56,8 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 	private readonly vm: QuickJSContext
 	private readonly actionFunctions: Record<string, QuickJSHandle> = {}
 
+	private readonly queue: PQueue
+
 	constructor(config: {
 		multihash: string
 		spec: string
@@ -94,6 +96,7 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 
 		this.feed = hypercore(config.storage, { createIfMissing: true, overwrite: false })
 		this.hyperbee = new HyperBee(this.feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
+		this.queue = new PQueue({ concurrency: 1 })
 	}
 
 	private initializeGlobalVariables() {
@@ -250,7 +253,11 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 	/**
 	 * Executes an action.
 	 */
-	public async apply(action: Action, options: { replaying?: boolean } = {}): Promise<ActionResult> {
+	public apply(action: Action, options: { replaying?: boolean } = {}): Promise<ActionResult> {
+		return this.queue.add(() => this.#apply(action, options))
+	}
+
+	async #apply(action: Action, options: { replaying?: boolean }): Promise<ActionResult> {
 		/**
 		 * Get the current time.
 		 *
@@ -397,7 +404,11 @@ export abstract class Core extends EventEmitter<CoreEvents> {
 	/**
 	 * Create a new session.
 	 */
-	public async session(session: Session) {
+	public session(session: Session): Promise<void> {
+		return this.queue.add(() => this.#session(session))
+	}
+
+	async #session(session: Session): Promise<void> {
 		assert(sessionType.is(session), "invalid session")
 		assert(session.payload.spec === this.multihash, "session signed for wrong spec")
 

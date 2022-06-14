@@ -12,7 +12,6 @@ import type { IPFS } from "ipfs-core-types"
 import type { Message } from "@libp2p/interfaces/pubsub"
 
 import * as t from "io-ts"
-import PQueue from "p-queue"
 
 import type { Action, ModelValue, Session } from "@canvas-js/interfaces"
 import { actionType, sessionType } from "./codecs.js"
@@ -41,7 +40,6 @@ export class NativeCore extends Core {
 	private readonly peering: boolean
 	private readonly ipfs?: IPFS
 	private peerId?: string
-	private readonly queue: PQueue
 
 	static async initialize({ spec, replay, ipfs, ...config }: NativeCoreConfig) {
 		assert(objectSpecType.is(spec) || stringSpecType.is(spec), "invalid spec")
@@ -115,7 +113,6 @@ export class NativeCore extends Core {
 
 		this.peering = config.peering === true
 		this.ipfs = config.ipfs
-		this.queue = new PQueue({ concurrency: 1 })
 	}
 
 	private handleMessage = (event: Message) => {
@@ -136,9 +133,9 @@ export class NativeCore extends Core {
 
 		if (messageType.is(message)) {
 			if (message.type === "action") {
-				this.queue.add(() => super.apply(message))
+				super.apply(message)
 			} else if (message.type === "session") {
-				this.queue.add(() => super.session(message))
+				super.session(message)
 			}
 		}
 	}
@@ -178,7 +175,7 @@ export class NativeCore extends Core {
 	}
 
 	public async apply(action: Action, options: { replaying?: boolean } = {}) {
-		const result = await this.queue.add(() => super.apply(action, options))
+		const result = await super.apply(action, options)
 		if (this.ipfs !== undefined && this.peering) {
 			const message = JSON.stringify({ type: "action", ...action })
 			const data = new TextEncoder().encode(JSON.stringify(message))
@@ -193,7 +190,7 @@ export class NativeCore extends Core {
 	}
 
 	public async session(session: Session) {
-		await this.queue.add(() => super.session(session))
+		super.session(session)
 		if (this.ipfs !== undefined && this.peering) {
 			const message = JSON.stringify({ type: "session", ...session })
 			const data = new TextEncoder().encode(JSON.stringify(message))
