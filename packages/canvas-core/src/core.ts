@@ -400,6 +400,12 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		this.effects = []
 		const promiseResult = this.context.callFunction(actionHandle, thisArg, ...argHandles)
+
+		thisArg.dispose()
+		for (const handle of argHandles) {
+			handle.dispose()
+		}
+
 		if (isFail(promiseResult)) {
 			const error = promiseResult.error.consume(this.context.dump)
 			throw new ApplicationError(error)
@@ -414,11 +420,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		const returnValue = result.value.consume(this.context.dump)
 		if (returnValue !== undefined) {
 			throw new Error("action handlers must not return values")
-		}
-
-		thisArg.dispose()
-		for (const handle of argHandles) {
-			handle.dispose()
 		}
 
 		const effects = this.effects

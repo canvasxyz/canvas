@@ -73,11 +73,16 @@ export const routes = {
 
 export const actions = {
 	newThread(title, link) {
-		// console.log("wow lol")
 		this.db.threads.set(this.hash, { creator: this.from, title, link })
 	},
 	newComment(threadId, text) {
 		this.db.comments.set(this.hash, { creator: this.from, thread_id: threadId, text })
+	},
+	deleteThread(threadId) {
+		this.db.threads.delete(threadId)
+	},
+	deleteComment() {
+		this.db.comments.delete(commentId)
 	},
 	voteThread(threadId, value) {
 		if (value !== 1 && value !== -1) {

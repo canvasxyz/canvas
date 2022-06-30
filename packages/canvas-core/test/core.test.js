@@ -18,6 +18,9 @@ const quickJS = await getQuickJS()
 const signer = new ethers.Wallet.createRandom()
 const signerAddress = await signer.getAddress()
 
+const sessionSigner = new ethers.Wallet.createRandom()
+const sessionSignerAddress = await sessionSigner.getAddress()
+
 async function sign(signer, session, call, args) {
 	const timestamp = Date.now()
 	const actionPayload = { from: signerAddress, spec: multihash, call, args, timestamp }
@@ -75,9 +78,6 @@ test("Apply two signed actions", async (t) => {
 
 	await core.close()
 })
-
-const sessionSigner = new ethers.Wallet.createRandom()
-const sessionSignerAddress = await sessionSigner.getAddress()
 
 test("Apply action signed with session key", async (t) => {
 	const core = await Core.initialize({ name: multihash, directory: null, spec, quickJS })
@@ -163,12 +163,14 @@ test("Apply an action with a missing signature", async (t) => {
 	action.session = null
 	action.signature = "0x00"
 	await t.throwsAsync(core.apply(action), { instanceOf: Error, code: "INVALID_ARGUMENT" })
+	await core.close()
 })
 
 test("Apply an action signed by wrong address", async (t) => {
 	const core = await Core.initialize({ name: multihash, directory: null, spec, quickJS })
 	const action = await sign(sessionSigner, null, "newThread", ["Example Website", "http://example.com"])
 	await t.throwsAsync(core.apply(action), { instanceOf: Error, message: "action signed by wrong address" })
+	await core.close()
 })
 
 test("Apply an action that throws an error", async (t) => {
@@ -182,4 +184,6 @@ test("Apply an action that throws an error", async (t) => {
 		instanceOf: ApplicationError,
 		message: "invalid vote value",
 	})
+
+	await core.close()
 })
