@@ -7,6 +7,7 @@
 import path from "node:path"
 import assert from "node:assert"
 
+import fetch from "node-fetch"
 import { ethers } from "ethers"
 import {
 	isFail,
