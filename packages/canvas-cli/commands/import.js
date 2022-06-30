@@ -1,21 +1,19 @@
-import fs from "node:fs"
-import path from "node:path"
+import assert from "node:assert"
+import readline from "node:readline"
 
-import readline from "readline"
-import hypercore from "hypercore"
-import HyperBee from "hyperbee"
+import { getQuickJS } from "quickjs-emscripten"
+import chalk from "chalk"
 
-import { NativeCore, actionType, sessionType } from "@canvas-js/core"
-import { createPrefixStream } from "../utils/prefixStream.js"
+import { Core, actionType, sessionType } from "@canvas-js/core"
 
-import { defaultDataDirectory, downloadSpec } from "./utils.js"
+import { defaultDataDirectory, locateSpec } from "../utils.js"
 
 export const command = "import <spec>"
-export const desc = "Import actions and sessions"
+export const desc = "Import actions and sessions from stdin"
 export const builder = (yargs) => {
 	yargs
 		.positional("spec", {
-			describe: "Path to spec file, or IPFS hash of spec",
+			describe: "Path to spec file, or CID of spec",
 			type: "string",
 			demandOption: true,
 		})
@@ -24,12 +22,18 @@ export const builder = (yargs) => {
 			type: "string",
 			default: defaultDataDirectory,
 		})
+		.option("ipfs", {
+			type: "string",
+			desc: "IPFS HTTP API URL",
+			default: "http://localhost:5001",
+		})
 }
 
 export async function handler(args) {
-	const [appPath, spec] = await downloadSpec(args.spec, args.datadir, args.reset)
+	const { name, directory, spec, development } = await locateSpec({ ...args, temp: false })
 
-	const core = await NativeCore.initialize({ spec, dataDirectory: appPath })
+	const quickJS = await getQuickJS()
+	const core = await Core.initialize({ name, directory, spec, quickJS, development })
 
 	const rl = readline.createInterface({
 		input: process.stdin,
@@ -37,30 +41,28 @@ export async function handler(args) {
 		terminal: false,
 	})
 
-	const objs = []
+	let actionCount = 0
+	let sessionCount = 0
+
 	rl.on("line", (line) => {
-		const obj = JSON.parse(line)
-		objs.push(obj)
+		const { type, ...message } = JSON.parse(line)
+		if (type === "action") {
+			assert(actionType.is(message))
+			core
+				.apply(message)
+				.then(() => actionCount++)
+				.catch((err) => console.error(chalk.red("[canvas-cli] Failed to apply action:"), err))
+		} else if (type === "session") {
+			assert(sessionType.is(message))
+			core
+				.session(message)
+				.then(() => sessionCount++)
+				.catch((err) => console.error(chalk.red("[canvas-cli] Failed to apply session:"), err))
+		}
 	})
 
 	rl.on("close", async () => {
-		let a = 0
-		let s = 0
-
-		for (const obj of objs) {
-			if (sessionType.is(obj)) {
-				await core.session(obj).catch(console.log)
-				s++
-			}
-		}
-
-		for (const obj of objs) {
-			if (actionType.is(obj)) {
-				await core.apply(obj, { replaying: true }).catch(console.log)
-				a++
-			}
-		}
-
-		console.log(`Imported ${a} actions, ${s} sessions`)
+		await core.onIdle()
+		console.log(`[canvas-cli] Imported ${actionCount} actions, ${sessionCount} sessions`)
 	})
 }

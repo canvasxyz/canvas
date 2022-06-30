@@ -1,37 +1,27 @@
-const models = {
+export const models = {
 	posts: {
 		content: "string",
-		fromId: "string",
+		from_id: "string",
 	},
 	likes: {
-		postId: "string",
+		post_id: "string",
 		value: "boolean",
 	},
 }
 
-const routes = {
-	"/posts": `
-	SELECT
-		posts.id,
-		posts.fromId,
-		posts.content,
-		posts.timestamp,
-		COUNT(IIF(likes.value, 1, NULL)) as likes
-	FROM posts LEFT JOIN likes ON likes.postId = posts.id GROUP BY posts.id
-	ORDER BY posts.timestamp
-	DESC LIMIT 50`,
+export const routes = {
+	"/posts":
+		"SELECT posts.id, posts.from_id, posts.content, posts.updated_at, COUNT(IIF(likes.value, 1, NULL)) as likes FROM posts LEFT JOIN likes ON likes.post_id = posts.id GROUP BY posts.id ORDER BY posts.updated_at DESC LIMIT 50",
 }
 
-const actions = {
+export const actions = {
 	createPost(content) {
-		this.db.posts.set(this.hash, { content, fromId: this.from })
+		this.db.posts.set(this.hash, { content, from_id: this.from })
 	},
 	like(postId) {
-		this.db.likes.set(this.from + postId, { postId, value: true })
+		this.db.likes.set(`${this.from}/${postId}`, { post_id: postId, value: true })
 	},
 	unlike(postId) {
-		this.db.likes.set(this.from + postId, { postId, value: false })
+		this.db.likes.set(`${this.from}/${postId}`, { post_id: postId, value: false })
 	},
 }
-
-export { models, routes, actions }

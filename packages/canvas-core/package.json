@@ -11,36 +11,29 @@
 	],
 	"scripts": {
 		"test": "ava"
-	},
+	}, 
 	"dependencies": {
 		"@canvas-js/interfaces": "0.0.5-alpha",
-		"@libp2p/interfaces": "^2.0.3",
-		"@metamask/eth-sig-util": "^4.0.1",
 		"@types/better-sqlite3": "^7.5.0",
-		"@types/sql.js": "^1.4.3",
 		"better-sqlite3": "^7.5.0",
-		"buffer": "^6.0.3",
-		"ethers": "^5.6.2",
+		"ethers": "^5.6.9",
 		"fp-ts": "^2.11.9",
 		"hyperbee": "^1.8.0",
 		"hypercore": "^9.12.0",
 		"io-ts": "^2.2.16",
-		"ipfs-core-types": "^0.11.0",
 		"ipfs-only-hash": "^4.0.0",
-		"it-pushable": "^2.0.1",
 		"it-stream-types": "^1.0.4",
+		"multiformats": "^9.7.0",
+		"node-fetch": "^3.2.6",
 		"p-queue": "^7.2.0",
-		"quickjs-emscripten": "^0.20.0",
+		"quickjs-emscripten": "^0.21.0",
 		"random-access-file": "^2.2.1",
-		"random-access-idb": "^1.2.2",
 		"random-access-memory": "^4.0.0",
-		"random-access-storage": "^1.4.3",
-		"sql.js": "^1.6.2"
+		"random-access-storage": "^2.0.1"
 	},
 	"devDependencies": {
-		"@types/node": "^17.0.23",
-		"@types/node-fetch": "^2.6.1",
+		"@types/node": "^18.0.0",
 		"ava": "^4.2.0",
-		"typescript": "^4.7.2"
+		"typescript": "^4.7.4"
 	}
 }

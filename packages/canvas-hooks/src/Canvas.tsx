@@ -16,7 +16,7 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const [error, setError] = useState<Error | null>(null)
 
 	useEffect(() => {
-		const eTagPattern = /^"([a-zA-Z0-9]+)"$/
+		const eTagPattern = /^"(.+)"$/
 		fetch(props.host, { method: "HEAD" })
 			.then((res) => {
 				const etag = res.headers.get("ETag")

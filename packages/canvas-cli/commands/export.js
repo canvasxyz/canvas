@@ -3,13 +3,13 @@ import path from "node:path"
 
 import hypercore from "hypercore"
 import HyperBee from "hyperbee"
+import chalk from "chalk"
 
-import { createPrefixStream } from "../utils/prefixStream.js"
-
-import { defaultDataDirectory, downloadSpec } from "./utils.js"
+import { Core } from "@canvas-js/core"
+import { defaultDataDirectory, locateSpec } from "../utils.js"
 
 export const command = "export <spec>"
-export const desc = "Export actions and sessions"
+export const desc = "Export actions and sessions to stdout"
 export const builder = (yargs) => {
 	yargs
 		.positional("spec", {
@@ -22,14 +22,19 @@ export const builder = (yargs) => {
 			type: "string",
 			default: defaultDataDirectory,
 		})
+		.option("ipfs", {
+			type: "string",
+			desc: "IPFS HTTP API URL",
+			default: "http://localhost:5001",
+		})
 }
 
 export async function handler(args) {
-	const [appPath, spec] = await downloadSpec(args.spec, args.datadir, args.reset)
+	const { directory } = await locateSpec({ ...args, temp: false })
 
-	const hypercorePath = path.resolve(appPath, "hypercore")
+	const hypercorePath = path.resolve(directory, "hypercore")
 	if (!fs.existsSync(hypercorePath)) {
-		console.log("App initialized, but no action log found.")
+		console.error(chalk.red(`[canvas-cli] No action log found in ${directory}`))
 		process.exit(1)
 	}
 
@@ -37,8 +42,17 @@ export async function handler(args) {
 	const db = new HyperBee(feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
 	await db.ready()
 
-	for await (const [_, value] of createPrefixStream(db, "")) {
-		console.log(value)
+	for await (const entry of db.createHistoryStream()) {
+		if (entry.type === "put") {
+			const value = JSON.parse(entry.value)
+			if (entry.key.startsWith(Core.actionKeyPrefix)) {
+				console.log(JSON.stringify({ type: "action", ...value }))
+			} else if (entry.key.startsWith(Core.sessionKeyPrefix)) {
+				console.log(JSON.stringify({ type: "session", ...value }))
+			} else {
+				console.error(chalk.red("[canvas-cli] Skipping invalid entry"))
+			}
+		}
 	}
 
 	// Close the feed

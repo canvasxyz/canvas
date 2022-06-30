@@ -6,7 +6,7 @@
   "main": "index.js",
   "files": [
     "commands",
-    "utils",
+    "utils.js",
     "index.js"
   ],
   "bin": {
@@ -26,10 +26,11 @@
     "hypercore": "^9.12.0",
     "io-ts": "^2.2.16",
     "ipfs-http-client": "^57.0.1",
-    "ipfs-only-hash": "^4.0.0",
-    "prompt": "^1.3.0",
+    "multiformats": "^9.7.0",
+    "prompts": "^2.4.2",
+    "quickjs-emscripten": "^0.21.0",
     "stoppable": "^1.1.0",
-    "update-notifier": "^5.1.0",
-    "yargs": "^17.4.0"
+    "update-notifier": "^6.0.2",
+    "yargs": "^17.5.1"
   }
 }
