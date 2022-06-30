@@ -11,10 +11,11 @@
 	],
 	"scripts": {
 		"test": "ava"
-	}, 
+	},
 	"dependencies": {
 		"@canvas-js/interfaces": "0.0.5-alpha",
 		"@types/better-sqlite3": "^7.5.0",
+		"@types/node-fetch": "^2.6.2",
 		"better-sqlite3": "^7.5.0",
 		"ethers": "^5.6.9",
 		"fp-ts": "^2.11.9",
