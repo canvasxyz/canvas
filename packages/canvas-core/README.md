@@ -8,6 +8,7 @@ import { QuickJSWASMModule } from "quickjs-emscripten"
 import { Action, ActionResult, Session, ModelValue, Model } from "@canvas-js/interfaces"
 
 interface CoreConfig {
+	name: string
 	directory: string | null
 	spec: string
 	quickJS: QuickJSWASMModule
