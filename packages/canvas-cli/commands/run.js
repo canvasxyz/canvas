@@ -87,6 +87,11 @@ export async function handler(args) {
 
 	const { specPath, directory, name, spec, development } = await locateSpec(args)
 
+	if (development && args.peering) {
+		console.error(chalk.red(`[canvas-cli] --peering cannot be enabled for local development specs`))
+		process.exit(1)
+	}
+
 	if (args.watch && !development) {
 		console.warn(chalk.yellow(`[canvas-cli] --watch has no effect on CID specs`))
 	}
