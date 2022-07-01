@@ -108,12 +108,18 @@ export async function handler(args) {
 	}
 
 	const quickJS = await getQuickJS()
-	const ipfs = args.peering ? createIpfsHttpClient({ url: args.ipfs }) : null
+	let ipfs, peerId
+	if (args.peering) {
+		ipfs = createIpfsHttpClient({ url: args.ipfs })
+		const { id } = await ipfs.id()
+		peerId = id.toString()
+		console.log("[canvas-cli] Got local PeerID", peerId)
+	}
 
 	let core = await Core.initialize({ name, spec, directory, quickJS, replay: args.replay, development })
 	let api
 	if (!args.noserver) {
-		api = new API({ core, port: args.port, ipfs, peering: args.peering })
+		api = new API({ peerId, core, port: args.port, ipfs, peering: args.peering })
 	}
 
 	// TODO: intercept SIGINT and shut down the server and core gracefully
@@ -171,14 +177,18 @@ export async function handler(args) {
 }
 
 class API {
-	constructor({ core, port, ipfs, peering }) {
+	constructor({ peerId, core, port, ipfs, peering }) {
 		this.core = core
 		this.ipfs = ipfs
 		this.peering = peering
 
 		if (peering) {
 			this.topic = `canvas:${core.name}`
-			this.ipfs.pubsub.subscribe(topic, this.handleMessage)
+			this.peerId = peerId
+			console.log(`[canvas-cli] Subscribing to pubsub topic ${this.topic}`)
+			this.ipfs.pubsub
+				.subscribe(this.topic, this.handleMessage)
+				.catch((err) => console.error("Failed to subscribe to pubsub topic:", err))
 		}
 
 		const api = express()
@@ -225,7 +235,10 @@ class API {
 
 	async stop() {
 		if (this.peering) {
-			await this.ipfs.pubsub.unsubscribe(this.topic, this.handleMessage)
+			console.log(`[canvas-cli] Unsubscribing from pubsub topic ${this.topic}`)
+			await this.ipfs.pubsub
+				.unsubscribe(this.topic, this.handleMessage)
+				.catch((err) => console.error("[canvas-cli] Error while unsubscribing from pubsub topic", err))
 		}
 
 		await new Promise((resolve, reject) => {
@@ -284,7 +297,7 @@ class API {
 
 		if (this.peering) {
 			const message = { type: "action", ...action }
-			const data = new TextEncoder.encode(JSON.stringify(message))
+			const data = new TextEncoder().encode(JSON.stringify(message))
 			await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
 				console.error("[canvas-cli] Failed to publish action to pubsub topic:", err)
 			})
@@ -309,7 +322,7 @@ class API {
 
 		if (this.peering) {
 			const message = { type: "session", ...session }
-			const data = new TextEncoder.encode(JSON.stringify(message))
+			const data = new TextEncoder().encode(JSON.stringify(message))
 			await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
 				console.error("[canvas-cli] Failed to publish session to pubsub topic:", err)
 			})
@@ -330,8 +343,7 @@ class API {
 	])
 
 	handleMessage = (event) => {
-		event.from.equals(id)
-		if (event.from.equals(id)) {
+		if (event.from.toString() === this.peerId) {
 			return
 		}
 
@@ -346,9 +358,9 @@ class API {
 
 		if (API.messageType.is(message)) {
 			if (message.type === "action") {
-				this.core.apply(message)
+				this.core.apply(message).catch((err) => console.error("[canvas-cli] Error applying peer action:", err))
 			} else if (message.type === "session") {
-				this.core.session(message)
+				this.core.session(message).catch((err) => console.error("[canvas-cli] Error applying peer session:", err))
 			}
 		}
 	}
