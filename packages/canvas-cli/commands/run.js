@@ -178,8 +178,10 @@ class API {
 
 		if (peering) {
 			this.topic = `canvas:${core.name}`
+			const { id } = await ipfs.id()
+			this.peerId = id
 			console.log(`[canvas-cli] Subscribing to pubsub topic ${this.topic}`)
-			this.ipfs.pubsub.subscribe(topic, this.handleMessage)
+			this.ipfs.pubsub.subscribe(this.topic, this.handleMessage)
 		}
 
 		const api = express()
@@ -286,7 +288,7 @@ class API {
 
 		if (this.peering) {
 			const message = { type: "action", ...action }
-			const data = new TextEncoder.encode(JSON.stringify(message))
+			const data = new TextEncoder().encode(JSON.stringify(message))
 			await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
 				console.error("[canvas-cli] Failed to publish action to pubsub topic:", err)
 			})
@@ -311,7 +313,7 @@ class API {
 
 		if (this.peering) {
 			const message = { type: "session", ...session }
-			const data = new TextEncoder.encode(JSON.stringify(message))
+			const data = new TextEncoder().encode(JSON.stringify(message))
 			await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
 				console.error("[canvas-cli] Failed to publish session to pubsub topic:", err)
 			})
@@ -332,8 +334,7 @@ class API {
 	])
 
 	handleMessage = (event) => {
-		event.from.equals(id)
-		if (event.from.equals(id)) {
+		if (event.from.equals(this.peerId)) {
 			return
 		}
 
