@@ -111,8 +111,9 @@ export async function handler(args) {
 	let ipfs, peerId
 	if (args.peering) {
 		ipfs = createIpfsHttpClient({ url: args.ipfs })
-		peerId = await ipfs.id()
-		console.log("[canvas-cli] got local peerId", peerId)
+		const { id } = await ipfs.id()
+		peerId = id.toString()
+		console.log("[canvas-cli] Got local PeerID", peerId)
 	}
 
 	let core = await Core.initialize({ name, spec, directory, quickJS, replay: args.replay, development })
@@ -185,7 +186,9 @@ class API {
 			this.topic = `canvas:${core.name}`
 			this.peerId = peerId
 			console.log(`[canvas-cli] Subscribing to pubsub topic ${this.topic}`)
-			this.ipfs.pubsub.subscribe(this.topic, this.handleMessage)
+			this.ipfs.pubsub
+				.subscribe(this.topic, this.handleMessage)
+				.catch((err) => console.error("Failed to subscribe to pubsub topic:", err))
 		}
 
 		const api = express()
@@ -233,7 +236,9 @@ class API {
 	async stop() {
 		if (this.peering) {
 			console.log(`[canvas-cli] Unsubscribing from pubsub topic ${this.topic}`)
-			await this.ipfs.pubsub.unsubscribe(this.topic, this.handleMessage)
+			await this.ipfs.pubsub
+				.unsubscribe(this.topic, this.handleMessage)
+				.catch((err) => console.error("[canvas-cli] Error while unsubscribing from pubsub topic", err))
 		}
 
 		await new Promise((resolve, reject) => {
@@ -338,11 +343,9 @@ class API {
 	])
 
 	handleMessage = (event) => {
-		if (event.from.toString() === this.peerId.id.toString()) {
+		if (event.from.toString() === this.peerId) {
 			return
 		}
-
-		console.log("[canvas-cli] Handling pubsub message")
 
 		let message
 		try {
@@ -353,13 +356,11 @@ class API {
 			return
 		}
 
-		console.log(message)
-
 		if (API.messageType.is(message)) {
 			if (message.type === "action") {
-				this.core.apply(message).catch((err) => console.error("[canvas-cli] Error applying peer action", err))
+				this.core.apply(message).catch((err) => console.error("[canvas-cli] Error applying peer action:", err))
 			} else if (message.type === "session") {
-				this.core.session(message).catch((err) => console.error("[canvas-cli] Error applying peer session", err))
+				this.core.session(message).catch((err) => console.error("[canvas-cli] Error applying peer session:", err))
 			}
 		}
 	}
