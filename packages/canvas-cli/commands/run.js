@@ -108,12 +108,17 @@ export async function handler(args) {
 	}
 
 	const quickJS = await getQuickJS()
-	const ipfs = args.peering ? createIpfsHttpClient({ url: args.ipfs }) : null
+	let ipfs, peerId
+	if (args.peering) {
+		ipfs = createIpfsHttpClient({ url: args.ipfs })
+		peerId = await ipfs.id()
+		console.log("[canvas-cli] got local peerId", peerId)
+	}
 
 	let core = await Core.initialize({ name, spec, directory, quickJS, replay: args.replay, development })
 	let api
 	if (!args.noserver) {
-		api = new API({ core, port: args.port, ipfs, peering: args.peering })
+		api = new API({ peerId, core, port: args.port, ipfs, peering: args.peering })
 	}
 
 	// TODO: intercept SIGINT and shut down the server and core gracefully
@@ -171,15 +176,14 @@ export async function handler(args) {
 }
 
 class API {
-	constructor({ core, port, ipfs, peering }) {
+	constructor({ peerId, core, port, ipfs, peering }) {
 		this.core = core
 		this.ipfs = ipfs
 		this.peering = peering
 
 		if (peering) {
 			this.topic = `canvas:${core.name}`
-			const { id } = await ipfs.id()
-			this.peerId = id
+			this.peerId = peerId
 			console.log(`[canvas-cli] Subscribing to pubsub topic ${this.topic}`)
 			this.ipfs.pubsub.subscribe(this.topic, this.handleMessage)
 		}
