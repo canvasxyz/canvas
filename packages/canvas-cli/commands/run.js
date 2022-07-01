@@ -338,7 +338,7 @@ class API {
 	])
 
 	handleMessage = (event) => {
-		if (event.from.equals(this.peerId)) {
+		if (event.from.toString() === this.peerId.id.toString()) {
 			return
 		}
 
@@ -357,9 +357,9 @@ class API {
 
 		if (API.messageType.is(message)) {
 			if (message.type === "action") {
-				this.core.apply(message)
+				this.core.apply(message).catch((err) => console.error("[canvas-cli] Error applying peer action", err))
 			} else if (message.type === "session") {
-				this.core.session(message)
+				this.core.session(message).catch((err) => console.error("[canvas-cli] Error applying peer session", err))
 			}
 		}
 	}
