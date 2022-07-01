@@ -158,7 +158,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			if (indexes !== undefined) {
 				for (const indexPropertyName of indexes) {
-					assert(indexPropertyName in properties, "invalid index")
+					assert(indexPropertyName in properties || indexPropertyName === "updated_at", "invalid index")
 				}
 			}
 		}

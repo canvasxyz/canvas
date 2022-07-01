@@ -46,12 +46,31 @@ export const modelTypeType: t.Type<ModelType> = t.union([
 
 export const modelValueType: t.Type<ModelValue> = t.union([t.null, t.boolean, t.number, t.string])
 
-export const indexType: t.Type<IndexType> = t.array(t.string)
+const modelPropertiesType = t.record(t.string, modelTypeType)
+const modelIndexesType = t.partial({ indexes: t.array(t.string) })
 
-export const modelType: t.Type<Model> = t.intersection([
-	t.record(t.string, modelTypeType),
-	t.partial({ indexes: indexType }),
-])
+function validateModelType(u: unknown): u is Model {
+	if (!modelIndexesType.is(u)) {
+		return false
+	}
+
+	const { indexes, ...properties } = u
+
+	return modelPropertiesType.is(properties)
+}
+
+export const modelType: t.Type<Model> = new t.Type(
+	"Model",
+	validateModelType,
+	(i: unknown, context: t.Context) => {
+		if (validateModelType(i)) {
+			return t.success(i)
+		} else {
+			return t.failure(i, context)
+		}
+	},
+	t.identity
+)
 
 export const modelsType = t.record(t.string, modelType)
 

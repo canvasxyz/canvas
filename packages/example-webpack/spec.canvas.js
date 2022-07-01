@@ -2,6 +2,7 @@ export const models = {
 	posts: {
 		content: "string",
 		from_id: "string",
+		indexes: ["updated_at"],
 	},
 	likes: {
 		post_id: "string",
