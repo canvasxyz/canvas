@@ -178,6 +178,7 @@ class API {
 
 		if (peering) {
 			this.topic = `canvas:${core.name}`
+			console.log(`[canvas-cli] Subscribing to pubsub topic ${this.topic}`)
 			this.ipfs.pubsub.subscribe(topic, this.handleMessage)
 		}
 
@@ -225,6 +226,7 @@ class API {
 
 	async stop() {
 		if (this.peering) {
+			console.log(`[canvas-cli] Unsubscribing from pubsub topic ${this.topic}`)
 			await this.ipfs.pubsub.unsubscribe(this.topic, this.handleMessage)
 		}
 
@@ -335,6 +337,8 @@ class API {
 			return
 		}
 
+		console.log("[canvas-cli] Handling pubsub message")
+
 		let message
 		try {
 			const data = new TextDecoder().decode(event.data)
@@ -343,6 +347,8 @@ class API {
 			console.error("[canvas-cli] Failed to parse pubsub message:", err)
 			return
 		}
+
+		console.log(message)
 
 		if (API.messageType.is(message)) {
 			if (message.type === "action") {
