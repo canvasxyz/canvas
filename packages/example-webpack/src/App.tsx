@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef } from "react"
 
 import { useRoute, useCanvas } from "@canvas-js/hooks"
 
-type Post = { id: string; fromId: string; content: string; timestamp: number; likes: number }
+type Post = { id: string; from_id: string; content: string; updated_at: number; likes: number }
 
 export const App: React.FC<{}> = ({}) => {
 	const { error: canvasError, multihash, dispatch, connect, address } = useCanvas()
@@ -76,12 +76,12 @@ export const App: React.FC<{}> = ({}) => {
 							<tbody>
 								{posts.map((_, i) => {
 									const post = posts[posts.length - i - 1]
-									const date = new Date(post.timestamp)
+									const time = new Date(post.updated_at).toLocaleTimeString()
 									return (
 										<tr key={post.id}>
-											<td className="time">{date.toLocaleTimeString()}</td>
+											<td className="time">{time}</td>
 											<td className="from">
-												<code>{post.fromId}</code>
+												<code>{post.from_id}</code>
 											</td>
 											<td className="content">{post.content}</td>
 										</tr>

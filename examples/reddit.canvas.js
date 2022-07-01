@@ -21,6 +21,23 @@ export const models = {
 	},
 }
 
+export const actions = {
+	thread(id, title, link) {
+		db.threads.set(id, { creator: this.from, title, link })
+	},
+	comment(id, threadId, text) {
+		db.comments.set(id, { creator: this.from, threadId, text })
+	},
+	voteThread(threadId, value) {
+		if (value !== 1 && value !== -1) return false
+		db.threadVotes.set(`${threadId}/${this.from}`, { creator: this.from, threadId, value })
+	},
+	voteComment(commentId, value) {
+		if (value !== 1 && value !== -1) return false
+		db.commentVotes.set(`${commentId}/${this.from}`, { creator: this.from, commentId, value })
+	},
+}
+
 export const routes = {
 	"/latest": `SELECT
             threads.*,
@@ -69,21 +86,4 @@ export const routes = {
         GROUP BY comments.id
         ORDER BY score DESC
         LIMIT 30`,
-}
-
-export const actions = {
-	thread(id, title, link) {
-		this.db.threads.set(id, { creator: this.from, title, link })
-	},
-	comment(id, threadId, text) {
-		this.db.comments.set(id, { creator: this.from, threadId, text })
-	},
-	voteThread(threadId, value) {
-		if (value !== 1 && value !== -1) return false
-		this.db.threadVotes.set(`${threadId}/${this.from}`, { creator: this.from, threadId, value })
-	},
-	voteComment(commentId, value) {
-		if (value !== 1 && value !== -1) return false
-		this.db.commentVotes.set(`${commentId}/${this.from}`, { creator: this.from, commentId, value })
-	},
 }

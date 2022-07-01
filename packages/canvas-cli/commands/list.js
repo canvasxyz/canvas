@@ -1,7 +1,9 @@
-import fs from "fs"
+import fs from "node:fs"
 import path from "node:path"
 
-import { defaultDataDirectory, getDirectorySize, isMultihash } from "./utils.js"
+import { defaultDataDirectory, getDirectorySize, cidPattern, SPEC_FILENAME } from "../utils.js"
+
+import { Store } from "@canvas-js/core"
 
 export const command = "list"
 export const desc = "List all specs in the data directory"
@@ -20,22 +22,22 @@ export async function handler(args) {
 	}
 
 	console.log(`Showing local specs:\n`)
-	for (const multihash of fs.readdirSync(args.datadir)) {
-		if (!isMultihash(multihash)) {
-			console.log(`Unknown spec or invalid multihash, skipping: ${multihash}`)
+	for (const cid of fs.readdirSync(args.datadir)) {
+		if (!cidPattern.test(cid)) {
+			console.log(`[canvas-cli] Unknown spec or invalid CIDv0, skipping: ${cid}`)
 			continue
 		}
 
-		const specPath = path.resolve(args.datadir, multihash, "spec.mjs")
+		const specPath = path.resolve(args.datadir, cid, SPEC_FILENAME)
 		const specStat = fs.existsSync(specPath) ? fs.statSync(specPath) : null
 
-		const databasePath = path.resolve(args.datadir, multihash, "db.sqlite")
+		const databasePath = path.resolve(args.datadir, cid, Store.DATABASE_FILENAME)
 		const databaseStat = fs.existsSync(databasePath) ? fs.statSync(databasePath) : null
 
-		const hypercorePath = path.resolve(args.datadir, multihash, "hypercore")
+		const hypercorePath = path.resolve(args.datadir, cid, "hypercore")
 		const hypercoreSize = fs.existsSync(hypercorePath) ? getDirectorySize(hypercorePath) : null
 
-		console.log(multihash)
+		console.log(cid)
 		console.log(`Spec:       ${specStat?.size ?? "--"} bytes`)
 		console.log(`Models:     ${databaseStat?.size ?? "--"} bytes`)
 		console.log(`Action log: ${hypercoreSize ?? "--"} bytes`)

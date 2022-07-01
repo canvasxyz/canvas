@@ -8,7 +8,6 @@ export type ModelType = "boolean" | "string" | "integer" | "float" | "datetime"
 /**
  * An `IndexType` defines a list of indexes to be generated and maintained for a model.
  */
-
 export type IndexType = string[]
 
 /**
@@ -21,4 +20,4 @@ export type ModelValue = null | boolean | number | string
 /**
  * A `Model` is a map of property names to `ModelType` types
  */
-export type Model = Record<string, ModelType | IndexType>
+export type Model = Record<string, ModelType> & { indexes?: IndexType }

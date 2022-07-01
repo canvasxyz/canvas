@@ -2,22 +2,21 @@ export const models = {
 	poll: {
 		title: "string",
 		creator: "string",
-		createdAt: "datetime",
-		indexes: ["creator", "createdAt"],
+		created_at: "datetime",
+		indexes: ["creator", "created_at"],
 	},
 	card: {
-		pollId: "string",
+		poll_id: "string",
 		text: "string",
 		creator: "string",
-		createdAt: "datetime",
+		created_at: "datetime",
 		indexes: ["pollId"],
 	},
 	vote: {
-		cardId: "string",
-		isAgree: "boolean",
-		isDisagree: "boolean",
+		card_id: "string",
+		is_agree: "boolean",
+		is_disagree: "boolean",
 		creator: "string",
-		createdAt: "datetime",
 		indexes: ["cardId"],
 	},
 }
@@ -26,41 +25,40 @@ export const routes = {
 	// 	"/polls/:page":
 	// 		"SELECT * FROM polls ORDER BY createdAt DESC LIMIT 10 OFFSET (:page * 10)",
 	// 	"/cards/:id/:page": `
-	// SELECT cards.id, cards.pollId, cards.text, cards.creator, cards.createdAt,
-	//     group_concat(votes.creator || ':' || IIF(votes.isAgree, 'true', 'false'), ';') AS votes,
+	// SELECT cards.id, cards.poll_id, cards.text, cards.creator, cards.created_at,
+	//     group_concat(votes.creator || ':' || IIF(votes.is_agree, 'true', 'false'), ';') AS votes,
 	//     count(votes.id) AS votes_count
 	// FROM cards
-	// LEFT JOIN votes ON cards.id = votes.cardId
-	// WHERE cards.pollId = :id
+	// LEFT JOIN votes ON cards.id = votes.card_id
+	// WHERE cards.poll_id = :id
 	// GROUP BY cards.id
 	// ORDER BY votes_count DESC
-	// LIMIT 10 OFFSET (:page * 10
+	// LIMIT 10 OFFSET (:page * 10)
 	// `,
 }
 
 export const actions = {
 	createPoll(title) {
-		this.db.poll.create({
+		this.db.poll.set(this.hash, {
 			creator: this.from,
-			createdAt: this.timestamp,
+			created_at: this.timestamp,
 			title,
 		})
 	},
 	createCard(pollId, text) {
-		this.db.card({
+		this.db.card.set(this.hash, {
 			creator: this.from,
-			createdAt: this.timestamp,
-			pollId,
+			created_at: this.timestamp,
+			poll_id: pollId,
 			text,
 		})
 	},
 	createVote(cardId, value) {
-		this.db.vote({
+		this.db.vote.set(`${this.from}/${cardId}`, {
 			creator: this.from,
-			createdAt: this.timestamp,
-			cardId,
-			isAgree: value,
-			isDisagree: !value,
+			card_id: cardId,
+			is_agree: value,
+			is_disagree: !value,
 		})
 	},
 }

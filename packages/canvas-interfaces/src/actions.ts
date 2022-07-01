@@ -5,16 +5,19 @@
  */
 export type ActionArgument = null | boolean | number | string
 
+export type ActionContext = {
+	from: string
+	spec: string
+	timestamp: number
+}
+
 /**
  * An `ActionPayload` is the data signed by the user, either directly
  * or using a session key, to execute an action in a Canvas application.
  */
-export type ActionPayload = {
-	from: string
-	spec: string
+export type ActionPayload = ActionContext & {
 	call: string
 	args: ActionArgument[]
-	timestamp: number
 }
 
 /**

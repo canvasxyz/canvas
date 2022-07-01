@@ -48,7 +48,12 @@ export const modelValueType: t.Type<ModelValue> = t.union([t.null, t.boolean, t.
 
 export const indexType: t.Type<IndexType> = t.array(t.string)
 
-export const modelType: t.Type<Model> = t.record(t.string, t.union([modelTypeType, indexType]))
+export const modelType: t.Type<Model> = t.intersection([
+	t.record(t.string, modelTypeType),
+	t.partial({ indexes: indexType }),
+])
+
+export const modelsType = t.record(t.string, modelType)
 
 export const sessionPayloadType: t.Type<SessionPayload> = t.type({
 	from: t.string,

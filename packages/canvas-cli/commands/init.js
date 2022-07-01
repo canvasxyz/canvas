@@ -1,11 +1,10 @@
 import fs from "fs"
-import path from "node:path"
 
-export const command = "init <spec>"
+export const command = "init <filename>"
 export const desc = "Create a sample spec for demonstration purposes"
 
 export const builder = (yargs) => {
-	yargs.positional("spec", {
+	yargs.positional("filename", {
 		describe: "Path to spec file to create",
 		type: "string",
 		demandOption: true,
@@ -13,42 +12,40 @@ export const builder = (yargs) => {
 }
 
 export async function handler(args) {
-	if (fs.existsSync(args.spec)) {
+	if (fs.existsSync(args.filename)) {
 		console.log("File already exists, refusing to overwrite")
 		return
 	}
 
 	const content = `
-const models = {
-	threads: {
-		title: "string",
+export const models = {
+	posts: {
+		content: "string",
+		from_id: "string",
 	},
 	likes: {
-		threadId: "string",
+		post_id: "string",
 		value: "boolean",
 	},
 }
 
-const routes = {
-	"/threads":
-		"SELECT threads.id, threads.title, threads.timestamp, COUNT(IIF(likes.value, 1, NULL)) as likes FROM threads LEFT JOIN likes ON likes.threadId = threads.id GROUP BY threads.id",
+export const routes = {
+	"/posts":
+		"SELECT posts.id, posts.from_id, posts.content, posts.updated_at, COUNT(IIF(likes.value, 1, NULL)) as likes FROM posts LEFT JOIN likes ON likes.post_id = posts.id GROUP BY posts.id ORDER BY posts.updated_at DESC LIMIT 50",
 }
 
-const actions = {
-	createThread: function (title) {
-		if (!title || !title.trim()) throw new Error("Invalid title")
-		this.db.threads.set(this.hash, { title })
+export const actions = {
+	createPost(content) {
+		this.db.posts.set(this.hash, { content, from_id: this.from })
 	},
-	like: function (threadId) {
-		this.db.likes.set(this.from + threadId, { threadId, value: true })
+	like(postId) {
+		this.db.likes.set(\`${this.from}/${postId}\`, { post_id: postId, value: true })
 	},
-	unlike: function (threadId) {
-		this.db.likes.set(this.from + threadId, { threadId, value: false })
+	unlike(postId) {
+		this.db.likes.set(\`${this.from}/${postId}\`, { post_id: postId, value: false })
 	},
 }
-
-export { models, routes, actions }
 `
-	fs.writeFileSync(args.spec, content.trim())
-	console.log(`Created sample spec at ${args.spec}`)
+	fs.writeFileSync(args.filename, content.trim())
+	console.log(`Created sample spec at ${args.filename}`)
 }

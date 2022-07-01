@@ -1,11 +1,10 @@
 # Canvas
 
-Canvas is a P2P protocol for building decentralized, frontend-independent applications,
-where every user action is a signed message from an cryptographic address.
+Canvas is a P2P protocol for building decentralized, frontend-independent applications, where every user action is a signed message from an cryptographic address.
 
 ## Using Canvas
 
-You should be using Node v16 or later. We recommend installing nvm and using `nvm use lts/*`.
+**You must must use Node v16**. Later versions are impacted by [this bug](https://github.com/ethers-io/ethers.js/issues/3082) ultimately caused by Node's internal OpenSSL library.
 
 To install the latest published CLI:
 
@@ -32,25 +31,25 @@ Running and managing specs:
 
 - `canvas init [spec.js]`
 - `canvas run [spec]`
-- `canvas download [multihash]`
+- `canvas download [CID]`
 
 To create a new session, generate a new session_public_key, insert it
 into a signed payload, and sign the payload with your wallet address:
 
 ```
-POST /sessions { from, signature, payload: { from, spec, timestamp, session_public_key, session_duration } }
+POST /sessions { signature, payload: { from, spec, timestamp, session_public_key, session_duration } }
 ```
 
 To apply an action directly from your wallet address:
 
 ```
-POST /actions { from, signature, payload: { from, spec, timestamp, call, args } }
+POST /actions { session: null, signature, payload: { from, spec, timestamp, call, args } }
 ```
 
 To apply an action using a session key:
 
 ```
-POST /actions { from, session, signature, payload: { from, spec, timestamp, call, args } }
+POST /actions { session, signature, payload: { from, spec, timestamp, call, args } }
 ```
 
 ## Developing
