@@ -32,12 +32,22 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 			})
 	}, [])
 
-	const { loading, address, signer, connect } = useSigner()
-	const { dispatch } = useSession(props.host, multihash, address, signer)
+	const { loading, address, signer, connect, disconnect } = useSigner()
+	const { dispatch, session } = useSession(props.host, multihash, address, signer)
 
 	return (
 		<CanvasContext.Provider
-			value={{ host: props.host, multihash, error, loading: multihash === null || loading, address, connect, dispatch }}
+			value={{
+				host: props.host,
+				multihash,
+				error,
+				loading: multihash === null || loading,
+				address,
+				session,
+				connect,
+				disconnect,
+				dispatch,
+			}}
 		>
 			{props.children}
 		</CanvasContext.Provider>

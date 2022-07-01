@@ -11,7 +11,12 @@ import {
 	getActionSignatureData,
 } from "@canvas-js/interfaces"
 
-const CANVAS_SESSION_KEY = "CANVAS_SESSION"
+export const CANVAS_SESSION_KEY = "CANVAS_SESSION"
+
+export type CanvasSession = {
+	address: string
+	expiration: number
+}
 
 type SessionObject = {
 	spec: string
@@ -27,6 +32,7 @@ export function useSession(
 	signer: ethers.providers.JsonRpcSigner | null
 ): {
 	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
+	session: CanvasSession | null
 } {
 	const [sessionSigner, setSessionSigner] = useState<ethers.Wallet | null>(null)
 	const [sessionExpiration, setSessionExpiration] = useState<number>(0)
@@ -93,7 +99,12 @@ export function useSession(
 		[host, multihash, address, signer, sessionSigner, sessionExpiration]
 	)
 
-	return { dispatch }
+	const session = sessionSigner && {
+		address: sessionSigner.address,
+		expiration: sessionExpiration,
+	}
+
+	return { dispatch, session }
 }
 
 async function newSession(

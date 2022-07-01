@@ -1,11 +1,11 @@
-import React, { useState, useCallback, useRef } from "react"
+import React, { useState, useCallback, useRef, useLayoutEffect } from "react"
 
 import { useRoute, useCanvas } from "@canvas-js/hooks"
 
 type Post = { id: string; from_id: string; content: string; updated_at: number; likes: number }
 
 export const App: React.FC<{}> = ({}) => {
-	const { error: canvasError, multihash, dispatch, connect, address } = useCanvas()
+	const { error: canvasError, multihash, dispatch, connect, disconnect, address, session } = useCanvas()
 	const [posting, setPosting] = useState(false)
 	const inputRef = useRef<HTMLInputElement>(null)
 	const scrollableRef = useRef<HTMLFieldSetElement>(null)
@@ -22,9 +22,6 @@ export const App: React.FC<{}> = ({}) => {
 					.finally(() => {
 						setPosting(false)
 						inputRef.current?.focus()
-						setTimeout(() => {
-							if (scrollableRef.current) scrollableRef.current.scrollTop = scrollableRef.current?.scrollHeight
-						}, 0)
 					})
 			}
 		},
@@ -32,6 +29,9 @@ export const App: React.FC<{}> = ({}) => {
 	)
 
 	const { error: routeError, data: posts } = useRoute<Post>("/posts")
+	useLayoutEffect(() => {
+		if (scrollableRef.current) scrollableRef.current.scrollTop = scrollableRef.current?.scrollHeight
+	}, [posts])
 
 	return (
 		<>
@@ -58,7 +58,15 @@ export const App: React.FC<{}> = ({}) => {
 					<legend>Account</legend>
 					{address ? (
 						<div>
-							Logged in as <code>{address}</code>
+							Logged in as <code>{address}</code>, with{" "}
+							{session ? (
+								<>
+									session <code>{session.address}</code>
+								</>
+							) : (
+								<>no session</>
+							)}
+							<button onClick={disconnect}>Logout</button>
 						</div>
 					) : (
 						<button onClick={connect}>Connect</button>

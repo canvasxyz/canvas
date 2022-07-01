@@ -3,6 +3,7 @@ import { useContext } from "react"
 import { ActionArgument } from "@canvas-js/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
+import { CanvasSession } from "./useSession.js"
 
 /**
  * Here are the rules for the useCanvas hook:
@@ -21,9 +22,11 @@ export function useCanvas(): {
 	error: Error | null
 	loading: boolean
 	address: string | null
+	session: CanvasSession | null
 	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
 	connect: () => Promise<void>
+	disconnect: () => Promise<void>
 } {
-	const { multihash, error, loading, address, connect, dispatch } = useContext(CanvasContext)
-	return { multihash, error, loading, address, dispatch, connect }
+	const { multihash, error, loading, address, session, dispatch, connect, disconnect } = useContext(CanvasContext)
+	return { multihash, error, loading, address, session, dispatch, connect, disconnect }
 }
