@@ -320,7 +320,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		this.context.dispose()
 		this.runtime.dispose()
+
 		this.store.close()
+
 		this.dispatchEvent(new Event("close"))
 	}
 
@@ -377,12 +379,16 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			const hash = ethers.utils.sha256(action.signature)
 			const actionKey = Core.getActionKey(hash)
-			await this.hyperbee.put(actionKey, JSON.stringify(action))
+			const existingRecord = await this.hyperbee.get(actionKey)
+			if (existingRecord === null) {
+				await this.hyperbee.put(actionKey, JSON.stringify(action))
 
-			const effects = await this.getEffects(hash, action.payload)
-			this.store.applyEffects(action.payload, effects)
+				const effects = await this.getEffects(hash, action.payload)
+				this.store.applyEffects(action.payload, effects)
 
-			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
+				this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
+			}
+
 			return { hash }
 		})
 	}
@@ -439,10 +445,12 @@ export class Core extends EventEmitter<CoreEvents> {
 			const verifiedAddress = verifySessionSignature(session)
 			assert(verifiedAddress.toLowerCase() === session.payload.from.toLowerCase(), "session signed by wrong address")
 
-			const key = Core.getSessionKey(session.payload.session_public_key)
-			await this.hyperbee.put(key, JSON.stringify(session))
-
-			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
+			const sessionKey = Core.getSessionKey(session.payload.session_public_key)
+			const existingRecord = await this.hyperbee.get(sessionKey)
+			if (existingRecord === null) {
+				await this.hyperbee.put(sessionKey, JSON.stringify(session))
+				this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
+			}
 		})
 	}
 
