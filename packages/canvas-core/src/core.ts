@@ -66,7 +66,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	public static async initialize({ name, directory, spec, quickJS, replay, development }: CoreConfig): Promise<Core> {
 		if (!development) {
 			const cid = await Hash.of(spec)
-			assert(cid === name)
+			assert(cid === name, "Core.name is not equal to the hash of the provided spec.")
 		}
 
 		const runtime = quickJS.newRuntime()
@@ -437,8 +437,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	/**
 	 * Create a new session.
 	 */
-	public async session(session: Session): Promise<void> {
-		await this.queue.add(async () => {
+	public session(session: Session): Promise<void> {
+		return this.queue.add(async () => {
 			assert(sessionType.is(session), "invalid session")
 			assert(session.payload.spec === this.name, "session signed for wrong spec")
 

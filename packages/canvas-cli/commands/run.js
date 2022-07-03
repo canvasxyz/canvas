@@ -295,17 +295,30 @@ class API {
 			return
 		}
 
-		if (this.peering) {
-			const message = { type: "action", ...action }
-			const data = new TextEncoder().encode(JSON.stringify(message))
-			await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
-				console.error("[canvas-cli] Failed to publish action to pubsub topic:", err)
-			})
-		}
-
 		await this.core
 			.apply(action)
-			.then(() => res.status(StatusCodes.OK).end())
+			.then(async ({ hash }) => {
+				if (this.peering) {
+					const messages = []
+
+					if (action.session !== null) {
+						const sessionKey = Core.getSessionKey(action.session)
+						const sessionRecord = await this.core.hyperbee.get(sessionKey)
+						if (sessionRecord !== null) {
+							const session = JSON.parse(sessionRecord.value)
+							messages.push({ type: "session", ...session })
+						}
+					}
+
+					messages.push({ type: "action", ...action })
+					const data = new TextEncoder().encode(JSON.stringify(messages))
+					await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
+						console.error("[canvas-cli] Failed to publish action to pubsub topic:", err)
+					})
+				}
+
+				res.status(StatusCodes.OK).header("ETag", `"${hash}"`).end()
+			})
 			.catch((err) => {
 				console.error("[canvas-cli] Failed to apply action:", err)
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
@@ -320,47 +333,53 @@ class API {
 			return
 		}
 
-		if (this.peering) {
-			const message = { type: "session", ...session }
-			const data = new TextEncoder().encode(JSON.stringify(message))
-			await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
-				console.error("[canvas-cli] Failed to publish session to pubsub topic:", err)
-			})
-		}
-
 		await this.core
 			.session(session)
-			.then(() => res.status(StatusCodes.OK).end())
+			.then(async () => {
+				if (this.peering) {
+					const messages = [{ type: "session", ...session }]
+					const data = new TextEncoder().encode(JSON.stringify(messages))
+					await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
+						console.error("[canvas-cli] Failed to publish session to pubsub topic:", err)
+					})
+				}
+				res.status(StatusCodes.OK).end()
+			})
 			.catch((err) => {
 				console.error("[canvas-cli] Failed to create session:", err)
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
 			})
 	}
 
-	static messageType = t.union([
-		t.intersection([t.type({ type: t.literal("action") }), actionType]),
-		t.intersection([t.type({ type: t.literal("session") }), sessionType]),
-	])
+	static messagesType = t.array(
+		t.union([
+			t.intersection([t.type({ type: t.literal("action") }), actionType]),
+			t.intersection([t.type({ type: t.literal("session") }), sessionType]),
+		])
+	)
 
 	handleMessage = (event) => {
 		if (event.from.toString() === this.peerId) {
 			return
 		}
 
-		let message
+		let messages
 		try {
 			const data = new TextDecoder().decode(event.data)
-			message = JSON.parse(data)
+			messages = JSON.parse(data)
 		} catch (err) {
 			console.error("[canvas-cli] Failed to parse pubsub message:", err)
 			return
 		}
 
-		if (API.messageType.is(message)) {
-			if (message.type === "action") {
-				this.core.apply(message).catch((err) => console.error("[canvas-cli] Error applying peer action:", err))
-			} else if (message.type === "session") {
-				this.core.session(message).catch((err) => console.error("[canvas-cli] Error applying peer session:", err))
+		if (API.messagesType.is(messages)) {
+			for (const message of messages) {
+				// we don't need to await these here because core uses an async queue internally
+				if (message.type === "action") {
+					this.core.apply(message).catch((err) => console.error("[canvas-cli] Error applying peer action:", err))
+				} else if (message.type === "session") {
+					this.core.session(message).catch((err) => console.error("[canvas-cli] Error applying peer session:", err))
+				}
 			}
 		}
 	}
