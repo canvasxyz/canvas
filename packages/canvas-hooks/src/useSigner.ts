@@ -21,7 +21,6 @@ export function useSigner(): {
 	address: string | null
 	signer: ethers.providers.JsonRpcSigner | null
 	connect: () => Promise<void>
-	disconnect: () => Promise<void>
 } {
 	const [loading, setLoading] = useState(true)
 	const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null)
@@ -38,10 +37,6 @@ export function useSigner(): {
 
 		await provider.send("eth_requestAccounts", [])
 	}, [loading, provider])
-
-	const disconnect = useCallback(async () => {
-		localStorage.removeItem(CANVAS_SESSION_KEY)
-	}, [])
 
 	useEffect(() => {
 		if (window.ethereum === undefined) {
@@ -81,5 +76,5 @@ export function useSigner(): {
 		}
 	}, [])
 
-	return { loading, connect, disconnect, signer, address }
+	return { loading, connect, signer, address }
 }

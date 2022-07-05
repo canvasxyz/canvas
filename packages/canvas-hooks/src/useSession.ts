@@ -33,6 +33,7 @@ export function useSession(
 ): {
 	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
 	session: CanvasSession | null
+	disconnect: () => Promise<void>
 } {
 	const [sessionSigner, setSessionSigner] = useState<ethers.Wallet | null>(null)
 	const [sessionExpiration, setSessionExpiration] = useState<number>(0)
@@ -104,7 +105,13 @@ export function useSession(
 		expiration: sessionExpiration,
 	}
 
-	return { dispatch, session }
+	const disconnect = useCallback(async () => {
+		setSessionSigner(null)
+		setSessionExpiration(0)
+		localStorage.removeItem(CANVAS_SESSION_KEY)
+	}, [])
+
+	return { dispatch, session, disconnect }
 }
 
 async function newSession(

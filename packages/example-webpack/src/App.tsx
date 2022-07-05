@@ -66,7 +66,7 @@ export const App: React.FC<{}> = ({}) => {
 							) : (
 								<>no session</>
 							)}
-							<button onClick={disconnect}>Logout</button>
+							{session && <button onClick={disconnect}>Logout</button>}
 						</div>
 					) : (
 						<button onClick={connect}>Connect</button>
