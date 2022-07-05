@@ -40,7 +40,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 	const [error, setError] = useState<Error | null>(null)
 	const [data, setData] = useState<T[] | null>(null)
 
-	const url = useMemo(() => getRouteURL(host, route, params), [])
+	const url = useMemo(() => getRouteURL(host, route, params), [host, route, params])
 
 	useEffect(() => {
 		const source = new EventSource(url)
