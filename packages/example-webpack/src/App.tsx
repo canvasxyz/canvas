@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useLayoutEffect } from "react"
 
 import { useRoute, useCanvas } from "@canvas-js/hooks"
 
-type Post = { id: string; from_id: string; content: string; updated_at: number; likes: number }
+type Post = { id: string; from_id: string; content: string; updated_at: number; likes: number; my_likes: number }
 
 export const App: React.FC<{}> = ({}) => {
 	const { error: canvasError, multihash, dispatch, connect, disconnect, address, session } = useCanvas()
@@ -28,7 +28,7 @@ export const App: React.FC<{}> = ({}) => {
 		[posting, dispatch]
 	)
 
-	const { error: routeError, data: posts } = useRoute<Post>("/posts")
+	const { error: routeError, data: posts } = useRoute<Post>(address ? `/posts/${address}` : "/posts")
 	useLayoutEffect(() => {
 		if (scrollableRef.current) scrollableRef.current.scrollTop = scrollableRef.current?.scrollHeight
 	}, [posts])
@@ -92,6 +92,20 @@ export const App: React.FC<{}> = ({}) => {
 												<code>{post.from_id}</code>
 											</td>
 											<td className="content">{post.content}</td>
+											<td className="like">
+												<input
+													type="button"
+													value={`${post.my_likes ? "Unlike" : "Like"} ${post.likes}`}
+													onClick={() => {
+														dispatch(post.my_likes ? "unlike" : "like", [post.id])
+															.then(() => console.log(post.my_likes ? "unliked post" : "liked post", post.id))
+															.catch((err) => console.error(err))
+															.finally(() => {
+																//
+															})
+													}}
+												/>
+											</td>
 										</tr>
 									)
 								})}
@@ -100,7 +114,7 @@ export const App: React.FC<{}> = ({}) => {
 								{address && (
 									<>
 										<tr>
-											<td colSpan={3}>
+											<td colSpan={4}>
 												<hr />
 											</td>
 										</tr>
@@ -109,7 +123,7 @@ export const App: React.FC<{}> = ({}) => {
 											<td>
 												<code>{address}</code>
 											</td>
-											<td>
+											<td colSpan={2}>
 												<input
 													type="text"
 													readOnly={posting}
