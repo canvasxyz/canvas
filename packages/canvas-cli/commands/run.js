@@ -116,10 +116,15 @@ export async function handler(args) {
 		console.log("[canvas-cli] Got local PeerID", peerId)
 	}
 
-	let core = await Core.initialize({ name, spec, directory, quickJS, replay: args.replay, development })
-	let api
-	if (!args.noserver) {
-		api = new API({ peerId, core, port: args.port, ipfs, peering: args.peering })
+	let core, api
+	try {
+		core = await Core.initialize({ name, spec, directory, quickJS, replay: args.replay, development })
+		if (!args.noserver) {
+			api = new API({ peerId, core, port: args.port, ipfs, peering: args.peering })
+		}
+	} catch (err) {
+		console.log(err)
+		// don't terminate on error
 	}
 
 	// TODO: intercept SIGINT and shut down the server and core gracefully
@@ -154,10 +159,14 @@ export async function handler(args) {
 			console.log("[canvas-cli] File changed, restarting core...\n")
 			oldSpec = newSpec
 			terminating = true
-			if (!args.noserver) {
-				await api.stop()
+			try {
+				if (!args.noserver) {
+					await api?.stop()
+				}
+				await core.close()
+			} catch (err) {
+				// continue if the api or core crashed during the last reload
 			}
-			await core.close()
 
 			if (directory !== null) {
 				if (args.reset) {
@@ -167,9 +176,14 @@ export async function handler(args) {
 				}
 			}
 
-			core = await Core.initialize({ name, spec: newSpec, directory, quickJS, replay: args.replay, development })
-			if (!args.noserver) {
-				api = new API({ core, port: args.port, ipfs, peering: args.peering })
+			try {
+				core = await Core.initialize({ name, spec: newSpec, directory, quickJS, replay: args.replay, development })
+				if (!args.noserver) {
+					api = new API({ core, port: args.port, ipfs, peering: args.peering })
+				}
+			} catch (err) {
+				console.log(err)
+				// don't terminate on error
 			}
 			terminating = false
 		}
