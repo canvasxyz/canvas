@@ -290,7 +290,15 @@ class API {
 				}
 			}
 
-			listener()
+			try {
+				listener()
+			} catch (err) {
+				// kill the EventSource if this.core.getRoute() fails on first request
+				// TODO: is it possible that it succeeds now, but fails later with new `values`?
+				res.status(StatusCodes.BAD_REQUEST)
+				res.end(`Route error: ${err}`)
+				return
+			}
 
 			this.core.addEventListener("action", listener)
 			res.on("close", () => this.core.removeEventListener("action", listener))
