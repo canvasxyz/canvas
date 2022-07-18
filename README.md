@@ -18,7 +18,9 @@ To use your local development version of Canvas as the CLI:
 ./install.sh
 ```
 
-This just puts a stub shell script at `$(npm config get prefix)/bin/canvas` that calls `node ${PWD}/packages/canvas-cli/index.js $@`.
+This will put a stub shell script at `$(npm config get prefix)/bin/canvas` that calls `node ${PWD}/packages/canvas-cli/index.js $@`.
+
+Note that if you are using system Node, writing to /usr/local/bin/canvas will require sudo. In that case, you should install NVM and set your default Node with `nvm alias default v16`.
 
 Inspecting specs:
 
