@@ -79,7 +79,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		await core.hyperbee.ready()
 
 		if (replay) {
-			console.log(`[canavs-core] Replaying ${core.feed.length} entries from the action log...`)
+			console.log(`[canvas-core] Replaying ${core.feed.length} entries from the action log...`)
 			for await (const { type, key, value } of core.hyperbee.createHistoryStream()) {
 				if (type === "put") {
 					if (typeof key !== "string" || typeof value !== "string") {
@@ -95,7 +95,7 @@ export class Core extends EventEmitter<CoreEvents> {
 					}
 				}
 			}
-			console.log(`[canavs-core] Successfully replayed all ${core.feed.length} entries from the action log.`)
+			console.log(`[canvas-core] Successfully replayed all ${core.feed.length} entries from the action log.`)
 		}
 
 		console.log("[canvas-core] Initialized core", name)
@@ -415,12 +415,14 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (isFail(promiseResult)) {
 			const error = promiseResult.error.consume(this.context.dump)
+			this.effects = null
 			throw new ApplicationError(error)
 		}
 
 		const result = await promiseResult.value.consume((promiseHandle) => resolvePromise(this.context, promiseHandle))
 		if (isFail(result)) {
 			const error = result.error.consume(this.context.dump)
+			this.effects = null
 			throw new ApplicationError(error)
 		}
 
