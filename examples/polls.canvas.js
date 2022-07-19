@@ -10,14 +10,14 @@ export const models = {
 		text: "string",
 		creator: "string",
 		created_at: "datetime",
-		indexes: ["pollId"],
+		indexes: ["poll_id"],
 	},
 	vote: {
 		card_id: "string",
 		is_agree: "boolean",
 		is_disagree: "boolean",
 		creator: "string",
-		indexes: ["cardId"],
+		indexes: ["card_id"],
 	},
 }
 
@@ -38,14 +38,24 @@ export const routes = {
 }
 
 export const actions = {
-	createPoll(title) {
+	async createPoll(title) {
+		const milady = ethContract("0x5af0d9827e0c53e4799bb226655a1de152a425a5", [
+			"function balanceOf(address owner) view returns (uint balance)",
+		])
+		if ((await milady.balanceOf(this.from)) === "0") return false
+
 		this.db.poll.set(this.hash, {
 			creator: this.from,
 			created_at: this.timestamp,
 			title,
 		})
 	},
-	createCard(pollId, text) {
+	async createCard(pollId, text) {
+		const milady = ethContract("0x5af0d9827e0c53e4799bb226655a1de152a425a5", [
+			"function balanceOf(address owner) view returns (uint balance)",
+		])
+		if ((await milady.balanceOf(this.from)) === "0") return false
+
 		this.db.card.set(this.hash, {
 			creator: this.from,
 			created_at: this.timestamp,
@@ -53,7 +63,12 @@ export const actions = {
 			text,
 		})
 	},
-	createVote(cardId, value) {
+	async createVote(cardId, value) {
+		const milady = ethContract("0x5af0d9827e0c53e4799bb226655a1de152a425a5", [
+			"function balanceOf(address owner) view returns (uint balance)",
+		])
+		if ((await milady.balanceOf(this.from)) === "0") return false
+
 		this.db.vote.set(`${this.from}/${cardId}`, {
 			creator: this.from,
 			card_id: cardId,

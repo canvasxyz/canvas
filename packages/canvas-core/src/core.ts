@@ -275,14 +275,56 @@ export class Core extends EventEmitter<CoreEvents> {
 				})
 				.catch((err) => {
 					console.log("[canvas-vm] fetch error:", err.message)
-					deferred.reject(err.message)
+					deferred.reject(this.context.newString(err.message))
 				})
 			deferred.settled.then(this.runtime.executePendingJobs)
 			return deferred.handle
 		})
 
+		// eth:
+		const ethHandle = this.context.newFunction(
+			"ethContract",
+			(addressHandle: QuickJSHandle, abiHandle: QuickJSHandle) => {
+				assert(this.context.typeof(addressHandle) === "string", "address must be a string")
+				const address = this.context.getString(addressHandle)
+				const abi = this.context.dump(abiHandle)
+				const deferred = this.context.newPromise()
+				console.log("[canvas-vm] using ethContract:", address)
+
+				const provider = new ethers.providers.JsonRpcProvider(
+					"https://mainnet.infura.io/v3/785adec79d7945c2bb7928fd4b52cb3c"
+				) // or: optimism-mainnet, arbitrum-mainnet, polygon-mainnet
+				const contract = new ethers.Contract(address, abi, provider)
+				const wrapper: Record<string, QuickJSHandle> = {}
+
+				for (const key in contract.functions) {
+					if (typeof key !== "string") continue
+					if (key.indexOf("(") !== -1) continue
+					console.log("[canvas-vm] bound function:", key)
+
+					wrapper[key] = this.context.newFunction(key, (...argHandles: any[]) => {
+						const args = argHandles.map(this.context.dump)
+						console.log("[canvas-vm] called function:", key, args)
+						contract[key]
+							.apply(this, args)
+							.then((result: any) => {
+								deferred.resolve(this.context.newString(result.toString()))
+							})
+							.catch((err: Error) => {
+								console.log("[canvas-vm] eth call error:", err.message)
+								deferred.reject(this.context.newString(err.message))
+							})
+						deferred.settled.then(this.runtime.executePendingJobs)
+						return deferred.handle
+					})
+				}
+				return this.wrapObject(wrapper)
+			}
+		)
+
 		const globals = this.wrapObject({
 			fetch: fetchHandle,
+			ethContract: ethHandle,
 			console: consoleHandle,
 		})
 
