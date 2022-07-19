@@ -158,7 +158,10 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			if (indexes !== undefined) {
 				for (const indexPropertyName of indexes) {
-					assert(indexPropertyName in properties || indexPropertyName === "updated_at", "invalid index")
+					assert(
+						indexPropertyName in properties || indexPropertyName === "updated_at",
+						`model specified an invalid index "${indexPropertyName}". can only index on other model properties, or "updated_at"`
+					)
 				}
 			}
 		}
