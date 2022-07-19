@@ -71,9 +71,9 @@ export const builder = (yargs) => {
 			type: "boolean",
 			desc: "Open a temporary in-memory core",
 		})
-		.option("eth-chain", {
+		.option("chain-rpc", {
 			type: "array",
-			desc: "Provide an RPC endpoint for Ethereum-compatible chains",
+			desc: "Provide an RPC endpoint for reading on-chain data",
 		})
 }
 
@@ -111,20 +111,26 @@ export async function handler(args) {
 		}
 	}
 
-	let ethRpcs = {}
-	if (args.ethChain) {
-		for (let i = 0; i < args.ethChain.length; i += 2) {
-			const chainId = args.ethChain[i]
-			const chainRpc = args.ethChain[i + 1]
+	let rpc = {}
+	if (args.chainRpc) {
+		for (let i = 0; i < args.chainRpc.length; i += 3) {
+			const chain = args.chainRpc[i]
+			const chainId = args.chainRpc[i + 1]
+			const chainRpc = args.chainRpc[i + 2]
+			if (typeof chain !== "string") {
+				console.error(`Invalid chain "${chainId}", should be a string e.g. "eth"`)
+				return
+			}
 			if (typeof chainId !== "number") {
-				console.error("Invalid chainId for ethereum-compatible chain:", chainId)
+				console.error(`Invalid chain id "${chainId}", should be a number e.g. 1`)
 				return
 			}
 			if (typeof chainRpc !== "string") {
-				console.error("Invalid rpc url for ethereum-compatible chain:", chainRpc)
+				console.error(`Invalid chain rpc "${chainRpc}", should be a url`)
 				return
 			}
-			ethRpcs[chainId] = chainRpc
+			rpc[chain] = rpc[chain] || {}
+			rpc[chain][chainId] = chainRpc
 		}
 	}
 
@@ -146,7 +152,7 @@ export async function handler(args) {
 			quickJS,
 			replay: args.replay,
 			development,
-			rpc: { eth: ethRpcs },
+			rpc,
 		})
 		if (!args.noserver) {
 			api = new API({ peerId, core, port: args.port, ipfs, peering: args.peering })

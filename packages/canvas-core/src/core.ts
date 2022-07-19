@@ -118,7 +118,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly models: Record<string, Model>
 	public readonly routeParameters: Record<string, string[]>
 	public readonly actionParameters: Record<string, string[]>
-	public readonly contractParameters: Record<string, ContractMetadata>
+	public readonly contractParameters: Record<string, { metadata: ContractMetadata; contract: ethers.Contract }>
+	public readonly contractRpcProviders: Record<string, ethers.providers.JsonRpcProvider>
 
 	private readonly queue: PQueue
 	private readonly dbHandle: QuickJSHandle
@@ -213,6 +214,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		// parse and validate contracts
 		this.contractParameters = {}
+		this.contractRpcProviders = {}
 		if (contractsHandle !== undefined) {
 			const contractHandles = contractsHandle.consume(this.unwrapObject)
 			const contracts = mapEntries(contractHandles, (contract, contractHandle) => {
@@ -226,7 +228,26 @@ export class Core extends EventEmitter<CoreEvents> {
 				const chainId = this.context.getNumber(contracts[name].chainId)
 				const address = this.context.getString(contracts[name].address)
 				const abi = this.unwrapArray(contracts[name].abi).map(this.context.getString)
-				this.contractParameters[name] = { chain, chainId, address, abi }
+
+				if (!this.rpc[chain] || !this.rpc[chain][chainId]) {
+					throw new Error(
+						`[canvas-core] This spec needs an rpc endpoint for on-chain data (${chain}, chain id ${chainId}). Specify one with e.g. "canvas run --chain-rpc eth 1 https://mainnet.infura.io/v3/[APPID]".`
+					)
+				}
+				const rpcUrl = this.rpc[chain][chainId]
+
+				let provider
+				if (!this.contractRpcProviders[rpcUrl]) {
+					provider = new ethers.providers.JsonRpcProvider(rpcUrl)
+					this.contractRpcProviders[rpcUrl] = provider
+				} else {
+					provider = this.contractRpcProviders[rpcUrl]
+				}
+
+				this.contractParameters[name] = {
+					metadata: { chain, chainId, address, abi },
+					contract: new ethers.Contract(address, abi, provider),
+				}
 			}
 		}
 
@@ -321,50 +342,43 @@ export class Core extends EventEmitter<CoreEvents> {
 			return deferred.handle
 		})
 
-		// eth:
-		const ethHandle = this.context.newFunction(
-			"ethContract",
-			(addressHandle: QuickJSHandle, abiHandle: QuickJSHandle) => {
-				assert(this.context.typeof(addressHandle) === "string", "address must be a string")
-				const address = this.context.getString(addressHandle)
-				const abi = this.context.dump(abiHandle)
-				const deferred = this.context.newPromise()
-				console.log("[canvas-vm] using ethContract:", address)
+		// contract:
+		const contractHandle = this.context.newFunction("contract", (nameHandle: QuickJSHandle) => {
+			assert(this.context.typeof(nameHandle) === "string", "name must be a string")
+			const name = this.context.getString(nameHandle)
+			const contract = this.contractParameters[name].contract
+			const { address, abi } = this.contractParameters[name].metadata
+			const deferred = this.context.newPromise()
+			console.log("[canvas-vm] using contract:", name, address)
 
-				const provider = new ethers.providers.JsonRpcProvider(
-					"https://mainnet.infura.io/v3/785adec79d7945c2bb7928fd4b52cb3c"
-				) // or: optimism-mainnet, arbitrum-mainnet, polygon-mainnet
-				const contract = new ethers.Contract(address, abi, provider)
-				const wrapper: Record<string, QuickJSHandle> = {}
+			// produce an object that supports the contract's function calls
+			const wrapper: Record<string, QuickJSHandle> = {}
+			for (const key in contract.functions) {
+				if (typeof key !== "string") continue
+				if (key.indexOf("(") !== -1) continue
 
-				for (const key in contract.functions) {
-					if (typeof key !== "string") continue
-					if (key.indexOf("(") !== -1) continue
-					console.log("[canvas-vm] bound function:", key)
-
-					wrapper[key] = this.context.newFunction(key, (...argHandles: any[]) => {
-						const args = argHandles.map(this.context.dump)
-						console.log("[canvas-vm] called function:", key, args)
-						contract[key]
-							.apply(this, args)
-							.then((result: any) => {
-								deferred.resolve(this.context.newString(result.toString()))
-							})
-							.catch((err: Error) => {
-								console.log("[canvas-vm] eth call error:", err.message)
-								deferred.reject(this.context.newString(err.message))
-							})
-						deferred.settled.then(this.runtime.executePendingJobs)
-						return deferred.handle
-					})
-				}
-				return this.wrapObject(wrapper)
+				wrapper[key] = this.context.newFunction(key, (...argHandles: any[]) => {
+					const args = argHandles.map(this.context.dump)
+					console.log("[canvas-vm] read from contract:", name, key, args)
+					contract[key]
+						.apply(this, args)
+						.then((result: any) => {
+							deferred.resolve(this.context.newString(result.toString()))
+						})
+						.catch((err: Error) => {
+							console.log("[canvas-vm] eth call error:", err.message)
+							deferred.reject(this.context.newString(err.message))
+						})
+					deferred.settled.then(this.runtime.executePendingJobs)
+					return deferred.handle
+				})
 			}
-		)
+			return this.wrapObject(wrapper)
+		})
 
 		const globals = this.wrapObject({
 			fetch: fetchHandle,
-			ethContract: ethHandle,
+			contract: contractHandle,
 			console: consoleHandle,
 		})
 

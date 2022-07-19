@@ -48,7 +48,7 @@ export const contracts = {
 
 export const actions = {
 	async createPoll(title) {
-		if ((await this.contracts.milady.balanceOf(this.from)) === "0") return false
+		if ((await contract("milady").balanceOf(this.from)) === "0") return false
 		this.db.poll.set(this.hash, {
 			creator: this.from,
 			created_at: this.timestamp,
@@ -56,7 +56,7 @@ export const actions = {
 		})
 	},
 	async createCard(pollId, text) {
-		if ((await this.contracts.milady.balanceOf(this.from)) === "0") return false
+		if ((await contract.milady.balanceOf(this.from)) === "0") return false
 		this.db.card.set(this.hash, {
 			creator: this.from,
 			created_at: this.timestamp,
@@ -65,7 +65,7 @@ export const actions = {
 		})
 	},
 	async createVote(cardId, value) {
-		if ((await this.contracts.milady.balanceOf(this.from)) === "0") return false
+		if ((await contract.milady.balanceOf(this.from)) === "0") return false
 		this.db.vote.set(`${this.from}/${cardId}`, {
 			creator: this.from,
 			card_id: cardId,
