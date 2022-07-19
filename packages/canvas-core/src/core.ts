@@ -405,6 +405,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		const thisArg = this.wrapJSON({ hash, spec, from, timestamp })
 		this.context.setProp(thisArg, "db", this.dbHandle)
 
+		// after setting this.effects here, always make sure to reset it to null before
+		// returning or throwing an error - or the core won't be able to process more actions
 		this.effects = []
 		const promiseResult = this.context.callFunction(actionHandle, thisArg, ...argHandles)
 
@@ -428,6 +430,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		const returnValue = result.value.consume(this.context.dump)
 		if (returnValue !== undefined) {
+			this.effects = null
 			throw new Error("action handlers must not return values")
 		}
 
