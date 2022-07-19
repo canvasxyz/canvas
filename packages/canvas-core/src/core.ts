@@ -36,6 +36,7 @@ import {
 	verifySessionSignature,
 	ModelValue,
 	Model,
+	ContractMetadata,
 } from "@canvas-js/interfaces"
 
 import { Store, Effect } from "./store.js"
@@ -51,6 +52,7 @@ interface CoreConfig {
 	quickJS: QuickJSWASMModule
 	replay?: boolean
 	development?: boolean
+	rpc: Record<string, Record<string, string>>
 }
 
 interface CoreEvents {
@@ -63,7 +65,15 @@ interface CoreEvents {
 export class Core extends EventEmitter<CoreEvents> {
 	private static readonly RUNTIME_MEMORY_LIMIT = 1024 * 640 // 640kb
 
-	public static async initialize({ name, directory, spec, quickJS, replay, development }: CoreConfig): Promise<Core> {
+	public static async initialize({
+		name,
+		directory,
+		spec,
+		quickJS,
+		replay,
+		development,
+		rpc,
+	}: CoreConfig): Promise<Core> {
 		if (!development) {
 			const cid = await Hash.of(spec)
 			assert(cid === name, "Core.name is not equal to the hash of the provided spec.")
@@ -74,7 +84,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		runtime.setMemoryLimit(Core.RUNTIME_MEMORY_LIMIT)
 
 		const moduleHandle = await loadModule(context, name, spec)
-		const core = new Core(name, directory, runtime, context, moduleHandle)
+		const core = new Core(name, directory, runtime, context, moduleHandle, rpc || {})
 
 		await core.hyperbee.ready()
 
@@ -108,6 +118,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly models: Record<string, Model>
 	public readonly routeParameters: Record<string, string[]>
 	public readonly actionParameters: Record<string, string[]>
+	public readonly contractParameters: Record<string, ContractMetadata>
 
 	private readonly queue: PQueue
 	private readonly dbHandle: QuickJSHandle
@@ -120,15 +131,18 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly directory: string | null,
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
-		public readonly moduleHandle: QuickJSHandle
+		public readonly moduleHandle: QuickJSHandle,
+		public readonly rpc: Record<string, Record<string, string>>
 	) {
 		super()
 		this.queue = new PQueue({ concurrency: 1 })
+		this.rpc = rpc
 
 		const {
 			models: modelsHandle,
 			routes: routesHandle,
 			actions: actionsHandle,
+			contracts: contractsHandle,
 		} = moduleHandle.consume(this.unwrapObject)
 
 		assert(modelsHandle !== undefined, "spec is missing `models` export")
@@ -137,6 +151,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(context.typeof(modelsHandle) === "object", "`models` export must be an object")
 		assert(context.typeof(routesHandle) === "object", "`routes` export must be an object")
 		assert(context.typeof(actionsHandle) === "object", "`actions` export must be an object")
+		assert(
+			contractsHandle === undefined || context.typeof(contractsHandle) === "object",
+			"`contracts` export must be an object"
+		)
 
 		// parse and validate models
 		const models = modelsHandle.consume(this.unwrapJSON)
@@ -183,7 +201,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		// parse and validate action handles
+		// parse and validate action handlers
 		this.actionParameters = {}
 		this.actionHandles = actionsHandle.consume(this.unwrapObject)
 		const actionNamePattern = /^[a-zA-Z]+$/
@@ -191,6 +209,25 @@ export class Core extends EventEmitter<CoreEvents> {
 			assertPattern(name, actionNamePattern, "invalid action name")
 			const source = this.call("Function.prototype.toString", handle).consume(this.context.getString)
 			this.actionParameters[name] = parseFunctionParameters(source)
+		}
+
+		// parse and validate contracts
+		this.contractParameters = {}
+		if (contractsHandle !== undefined) {
+			const contractHandles = contractsHandle.consume(this.unwrapObject)
+			const contracts = mapEntries(contractHandles, (contract, contractHandle) => {
+				return contractHandle.consume(this.unwrapObject) // TODO: could be number?
+			})
+
+			const contractNamePattern = /^[a-zA-Z]+$/
+			for (const name of Object.keys(contracts)) {
+				assertPattern(name, contractNamePattern, "invalid contract name")
+				const chain = this.context.getString(contracts[name].chain)
+				const chainId = this.context.getNumber(contracts[name].chainId)
+				const address = this.context.getString(contracts[name].address)
+				const abi = this.unwrapArray(contracts[name].abi).map(this.context.getString)
+				this.contractParameters[name] = { chain, chainId, address, abi }
+			}
 		}
 
 		this.store = new Store(directory, models, routes)

@@ -71,6 +71,10 @@ export const builder = (yargs) => {
 			type: "boolean",
 			desc: "Open a temporary in-memory core",
 		})
+		.option("eth-chain", {
+			type: "array",
+			desc: "Provide an RPC endpoint for Ethereum-compatible chains",
+		})
 }
 
 export async function handler(args) {
@@ -107,6 +111,23 @@ export async function handler(args) {
 		}
 	}
 
+	let ethRpcs = {}
+	if (args.ethChain) {
+		for (let i = 0; i < args.ethChain.length; i += 2) {
+			const chainId = args.ethChain[i]
+			const chainRpc = args.ethChain[i + 1]
+			if (typeof chainId !== "number") {
+				console.error("Invalid chainId for ethereum-compatible chain:", chainId)
+				return
+			}
+			if (typeof chainRpc !== "string") {
+				console.error("Invalid rpc url for ethereum-compatible chain:", chainRpc)
+				return
+			}
+			ethRpcs[chainId] = chainRpc
+		}
+	}
+
 	const quickJS = await getQuickJS()
 	let ipfs, peerId
 	if (args.peering) {
@@ -118,7 +139,15 @@ export async function handler(args) {
 
 	let core, api
 	try {
-		core = await Core.initialize({ name, spec, directory, quickJS, replay: args.replay, development })
+		core = await Core.initialize({
+			name,
+			spec,
+			directory,
+			quickJS,
+			replay: args.replay,
+			development,
+			rpc: { eth: ethRpcs },
+		})
 		if (!args.noserver) {
 			api = new API({ peerId, core, port: args.port, ipfs, peering: args.peering })
 		}

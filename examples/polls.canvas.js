@@ -37,13 +37,18 @@ export const routes = {
 	// `,
 }
 
+export const contracts = {
+	milady: {
+		chain: "eth",
+		chainId: 1,
+		address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
+		abi: ["function balanceOf(address owner) view returns (uint balance)"],
+	},
+}
+
 export const actions = {
 	async createPoll(title) {
-		const milady = ethContract("0x5af0d9827e0c53e4799bb226655a1de152a425a5", [
-			"function balanceOf(address owner) view returns (uint balance)",
-		])
-		if ((await milady.balanceOf(this.from)) === "0") return false
-
+		if ((await this.contracts.milady.balanceOf(this.from)) === "0") return false
 		this.db.poll.set(this.hash, {
 			creator: this.from,
 			created_at: this.timestamp,
@@ -51,11 +56,7 @@ export const actions = {
 		})
 	},
 	async createCard(pollId, text) {
-		const milady = ethContract("0x5af0d9827e0c53e4799bb226655a1de152a425a5", [
-			"function balanceOf(address owner) view returns (uint balance)",
-		])
-		if ((await milady.balanceOf(this.from)) === "0") return false
-
+		if ((await this.contracts.milady.balanceOf(this.from)) === "0") return false
 		this.db.card.set(this.hash, {
 			creator: this.from,
 			created_at: this.timestamp,
@@ -64,11 +65,7 @@ export const actions = {
 		})
 	},
 	async createVote(cardId, value) {
-		const milady = ethContract("0x5af0d9827e0c53e4799bb226655a1de152a425a5", [
-			"function balanceOf(address owner) view returns (uint balance)",
-		])
-		if ((await milady.balanceOf(this.from)) === "0") return false
-
+		if ((await this.contracts.milady.balanceOf(this.from)) === "0") return false
 		this.db.vote.set(`${this.from}/${cardId}`, {
 			creator: this.from,
 			card_id: cardId,
