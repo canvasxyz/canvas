@@ -71,6 +71,10 @@ export const builder = (yargs) => {
 			type: "boolean",
 			desc: "Open a temporary in-memory core",
 		})
+		.option("chain-rpc", {
+			type: "array",
+			desc: "Provide an RPC endpoint for reading on-chain data",
+		})
 }
 
 export async function handler(args) {
@@ -107,6 +111,29 @@ export async function handler(args) {
 		}
 	}
 
+	let rpc = {}
+	if (args.chainRpc) {
+		for (let i = 0; i < args.chainRpc.length; i += 3) {
+			const chain = args.chainRpc[i]
+			const chainId = args.chainRpc[i + 1]
+			const chainRpc = args.chainRpc[i + 2]
+			if (typeof chain !== "string") {
+				console.error(`Invalid chain "${chainId}", should be a string e.g. "eth"`)
+				return
+			}
+			if (typeof chainId !== "number") {
+				console.error(`Invalid chain id "${chainId}", should be a number e.g. 1`)
+				return
+			}
+			if (typeof chainRpc !== "string") {
+				console.error(`Invalid chain rpc "${chainRpc}", should be a url`)
+				return
+			}
+			rpc[chain] = rpc[chain] || {}
+			rpc[chain][chainId] = chainRpc
+		}
+	}
+
 	const quickJS = await getQuickJS()
 	let ipfs, peerId
 	if (args.peering) {
@@ -118,7 +145,15 @@ export async function handler(args) {
 
 	let core, api
 	try {
-		core = await Core.initialize({ name, spec, directory, quickJS, replay: args.replay, development })
+		core = await Core.initialize({
+			name,
+			spec,
+			directory,
+			quickJS,
+			replay: args.replay,
+			development,
+			rpc,
+		})
 		if (!args.noserver) {
 			api = new API({ peerId, core, port: args.port, ipfs, peering: args.peering })
 		}
