@@ -77,4 +77,5 @@ npm run build
 npm run publish-cli
 npm run publish-core
 npm run publish-hooks
+npm run publish-interfaces
 ```
