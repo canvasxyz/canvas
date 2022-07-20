@@ -107,7 +107,10 @@ export function useSession(
 	}
 
 	const connectNewSession = useCallback(async () => {
-		if (multihash === null || signer === null) {
+		if (multihash === null) {
+			throw new Error("failed to connect to application backend")
+		}
+		if (signer === null) {
 			throw new Error("must have connected web3 signer to log in")
 		}
 		const [sessionSigner, sessionObject] = await newSession(signer, host, multihash)
