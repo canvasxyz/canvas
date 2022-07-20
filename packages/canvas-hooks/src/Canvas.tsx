@@ -32,8 +32,8 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 			})
 	}, [])
 
-	const { loading, address, signer, connect } = useSigner()
-	const { dispatch, session, disconnect } = useSession(props.host, multihash, address, signer)
+	const { loading, address, connect, signer } = useSigner()
+	const { dispatch, session, connectNewSession, disconnect } = useSession(props.host, multihash, address, signer)
 
 	return (
 		<CanvasContext.Provider
@@ -45,6 +45,7 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 				address,
 				session,
 				connect,
+				connectNewSession,
 				disconnect,
 				dispatch,
 			}}

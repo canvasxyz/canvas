@@ -25,8 +25,10 @@ export function useCanvas(): {
 	session: CanvasSession | null
 	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
 	connect: () => Promise<void>
+	connectNewSession: () => Promise<void>
 	disconnect: () => Promise<void>
 } {
-	const { multihash, error, loading, address, session, dispatch, connect, disconnect } = useContext(CanvasContext)
-	return { multihash, error, loading, address, session, dispatch, connect, disconnect }
+	const { multihash, error, loading, address, session, dispatch, connect, connectNewSession, disconnect } =
+		useContext(CanvasContext)
+	return { multihash, error, loading, address, session, dispatch, connect, connectNewSession, disconnect }
 }

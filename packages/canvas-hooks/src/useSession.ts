@@ -33,6 +33,7 @@ export function useSession(
 ): {
 	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
 	session: CanvasSession | null
+	connectNewSession: () => Promise<void>
 	disconnect: () => Promise<void>
 } {
 	const [sessionSigner, setSessionSigner] = useState<ethers.Wallet | null>(null)
@@ -105,13 +106,23 @@ export function useSession(
 		expiration: sessionExpiration,
 	}
 
+	const connectNewSession = useCallback(async () => {
+		if (multihash === null || signer === null) {
+			throw new Error("must have connected web3 signer to log in")
+		}
+		const [sessionSigner, sessionObject] = await newSession(signer, host, multihash)
+		localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(sessionObject))
+		setSessionSigner(sessionSigner)
+		setSessionExpiration(sessionObject.expiration)
+	}, [host, multihash, signer, sessionSigner, sessionExpiration])
+
 	const disconnect = useCallback(async () => {
 		setSessionSigner(null)
 		setSessionExpiration(0)
 		localStorage.removeItem(CANVAS_SESSION_KEY)
 	}, [])
 
-	return { dispatch, session, disconnect }
+	return { dispatch, session, connectNewSession, disconnect }
 }
 
 async function newSession(
