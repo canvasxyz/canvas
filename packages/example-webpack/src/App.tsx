@@ -2,7 +2,15 @@ import React, { useState, useCallback, useRef, useLayoutEffect } from "react"
 
 import { useRoute, useCanvas } from "@canvas-js/hooks"
 
-type Post = { id: string; from_id: string; content: string; updated_at: number; likes: number; my_likes: number }
+type Post = {
+	id: string
+	from_id: string
+	content: string
+	updated_at: number
+	likes: number
+	my_likes: number
+	all_likes: string
+}
 
 export const App: React.FC<{}> = ({}) => {
 	const { error: canvasError, multihash, dispatch, connect, disconnect, address, session } = useCanvas()
@@ -31,7 +39,7 @@ export const App: React.FC<{}> = ({}) => {
 		[posting, dispatch]
 	)
 
-	const { error: routeError, data: posts } = useRoute<Post>(address ? `/posts/${address}` : "/posts")
+	const { error: routeError, data: posts } = useRoute<Post>(address ? `/posts/as/${address}` : "/posts")
 	useLayoutEffect(() => {
 		if (scrollableRef.current) scrollableRef.current.scrollTop = scrollableRef.current?.scrollHeight
 	}, [posts])
