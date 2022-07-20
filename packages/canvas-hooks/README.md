@@ -47,6 +47,6 @@ declare function useRoute<T extends Record<string, ModelValue> = Record<string, 
 ): { error: Error | null; data: T[] | null }
 ```
 
-See the `packages/example-webpack` directory for an example application using these hooks.
+See the `packages/example-chat` directory for an example application using these hooks.
 
 (c) 2022 Canvas Technology Corporation
