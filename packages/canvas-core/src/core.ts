@@ -525,9 +525,13 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		const returnValue = result.value.consume(this.context.dump)
+		if (returnValue === false) {
+			this.effects = null
+			throw new Error("action rejected: not allowed")
+		}
 		if (returnValue !== undefined) {
 			this.effects = null
-			throw new Error("action handlers must not return values")
+			throw new Error("action rejected: unexpected return value")
 		}
 
 		const effects = this.effects

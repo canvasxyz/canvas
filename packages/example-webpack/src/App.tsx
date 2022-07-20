@@ -18,7 +18,10 @@ export const App: React.FC<{}> = ({}) => {
 				setPosting(true)
 				dispatch("createPost", [value])
 					.then(() => console.log("successfully created post"))
-					.catch((err) => console.error(err))
+					.catch((err) => {
+						console.error(err)
+						alert(err.message)
+					})
 					.finally(() => {
 						setPosting(false)
 						inputRef.current?.focus()
@@ -99,9 +102,9 @@ export const App: React.FC<{}> = ({}) => {
 													onClick={() => {
 														dispatch(post.my_likes ? "unlike" : "like", [post.id])
 															.then(() => console.log(post.my_likes ? "unliked post" : "liked post", post.id))
-															.catch((err) => console.error(err))
-															.finally(() => {
-																//
+															.catch((err) => {
+																console.error(err)
+																alert(err.message)
 															})
 													}}
 												/>
