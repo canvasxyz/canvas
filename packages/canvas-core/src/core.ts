@@ -63,6 +63,11 @@ interface CoreEvents {
 	session: CustomEvent<SessionPayload>
 }
 
+type BlockInfo = {
+	number: number
+	timestamp: number
+}
+
 export class Core extends EventEmitter<CoreEvents> {
 	private static readonly RUNTIME_MEMORY_LIMIT = 1024 * 640 // 640kb
 
@@ -122,6 +127,9 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly contractParameters: Record<string, { metadata: ContractMetadata; contract: ethers.Contract }>
 	public readonly contractRpcProviders: Record<string, ethers.providers.JsonRpcProvider>
 	public readonly rpcProviders: Partial<Record<Chain, Record<string, ethers.providers.JsonRpcProvider>>>
+
+	public readonly blockCache: Record<string, Record<string, BlockInfo>>
+	public readonly blockCacheRecents: Record<string, string[]>
 
 	private readonly queue: PQueue
 	private readonly dbHandle: QuickJSHandle
@@ -214,13 +222,44 @@ export class Core extends EventEmitter<CoreEvents> {
 			this.actionParameters[name] = parseFunctionParameters(source)
 		}
 
-		// construct rpcs
+		// set up cache and rpc
 		this.rpcProviders = {}
+		this.blockCache = {}
+		this.blockCacheRecents = {}
 		for (const [chain, chainRpcs] of Object.entries(this.rpc)) {
 			this.rpcProviders[chain as Chain] = {}
 			for (const [chainId, rpcUrl] of Object.entries(chainRpcs)) {
 				const providers = this.rpcProviders[chain as Chain]
-				if (providers) providers[chainId] = new ethers.providers.JsonRpcProvider(rpcUrl.toString())
+				if (!providers) continue
+
+				// set up each chain's rpc and blockhash cache
+				const key = chain + ":" + chainId
+				this.blockCache[key] = {}
+				this.blockCacheRecents[key] = []
+
+				// TODO: consider using JsonRpcBatchProvider
+				providers[chainId] = new ethers.providers.JsonRpcProvider(rpcUrl.toString())
+				providers[chainId].getBlockNumber().then(async (currentBlock) => {
+					const updateCache = async (blocknum: number) => {
+						const block = await providers[chainId].getBlock(blocknum)
+						const info = { number: block.number, timestamp: block.timestamp }
+
+						// keep up to 128 past blocks
+						const CACHE_SIZE = 128
+						this.blockCache[key][block.hash] = info
+						this.blockCacheRecents[key].push(block.hash)
+						if (this.blockCacheRecents[key].length > CACHE_SIZE) {
+							const evicted = this.blockCacheRecents[key].shift()
+							if (evicted) delete this.blockCache[key][evicted]
+						}
+					}
+					// warm up cache with recent blocks
+					for (let n = currentBlock - 10; n <= currentBlock; n++) {
+						await updateCache(n)
+					}
+					// listen for new blocks
+					providers[chainId].on("block", updateCache)
+				})
 			}
 		}
 
@@ -461,16 +500,21 @@ export class Core extends EventEmitter<CoreEvents> {
 			// TODO: declare the chains and chainIds that each spec will require upfront
 			assert(rpcProviders !== undefined, `action signed with unsupported chain: ${chain}`)
 			assert(rpcProviders[chainId] !== undefined, `action signed with unsupported chainId: ${chainId}`)
-			let verifiedBlock
-			try {
-				// TODO: cache blocks to avoid expensive retrievals; only look up recent blocks & evict old blocks
-				verifiedBlock = await rpcProviders[chainId].getBlock(action.payload.block.blockhash)
-			} catch (err) {
-				// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
-				throw new Error("action signed with invalid block hash")
+
+			let block
+			if (this.blockCache[chain + ":" + chainId]) {
+				block = this.blockCache[chain + ":" + chainId][blockhash]
+			} else {
+				try {
+					console.log(`fetching block ${action.payload.block.blockhash} for ${chain}:${chainId}`)
+					block = await rpcProviders[chainId].getBlock(action.payload.block.blockhash)
+				} catch (err) {
+					// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
+					throw new Error("action signed with invalid block hash")
+				}
 			}
-			assert(verifiedBlock?.timestamp === timestamp, "action signed with invalid timestamp")
-			assert(verifiedBlock?.number === blocknum, "action signed with invalid block number")
+			assert(block?.timestamp === timestamp, "action signed with invalid timestamp")
+			assert(block?.number === blocknum, "action signed with invalid block number")
 
 			// Verify the signature
 			if (action.session !== null) {
