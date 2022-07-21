@@ -20,6 +20,7 @@ export function useSigner(): {
 	loading: boolean
 	address: string | null
 	signer: ethers.providers.JsonRpcSigner | null
+	provider: ethers.providers.Provider | null
 	connect: () => Promise<void>
 } {
 	const [loading, setLoading] = useState(true)
@@ -76,5 +77,5 @@ export function useSigner(): {
 		}
 	}, [])
 
-	return { loading, connect, signer, address }
+	return { loading, connect, signer, provider, address }
 }

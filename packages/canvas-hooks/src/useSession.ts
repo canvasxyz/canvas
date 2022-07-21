@@ -5,6 +5,7 @@ import { ethers } from "ethers"
 import {
 	Action,
 	ActionArgument,
+	ActionBlock,
 	ActionPayload,
 	SessionPayload,
 	getSessionSignatureData,
@@ -29,7 +30,8 @@ export function useSession(
 	host: string,
 	multihash: string | null,
 	address: string | null,
-	signer: ethers.providers.JsonRpcSigner | null
+	signer: ethers.providers.JsonRpcSigner | null,
+	provider: ethers.providers.Provider | null
 ): {
 	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
 	session: CanvasSession | null
@@ -79,14 +81,24 @@ export function useSession(
 
 	const dispatch = useCallback(
 		async (call: string, args: ActionArgument[]) => {
-			if (host === undefined) {
+			if (provider === null) {
+				throw new Error("no web3 provider found")
+			} else if (host === undefined) {
 				throw new Error("no host configured")
 			} else if (multihash === null || address === null || signer === null) {
 				throw new Error("dispatch called too early")
 			}
 
 			const timestamp = +Date.now()
-			const payload: ActionPayload = { from: address, spec: multihash, call, args, timestamp }
+			const [network, providerBlock] = await Promise.all([provider.getNetwork(), provider.getBlock("latest")])
+			const block: ActionBlock = {
+				chain: "eth",
+				chainId: network.chainId,
+				blocknum: providerBlock.number,
+				blockhash: providerBlock.hash,
+				timestamp: providerBlock.timestamp,
+			}
+			const payload: ActionPayload = { from: address, spec: multihash, call, args, timestamp, block }
 
 			if (sessionSigner === null || sessionExpiration < timestamp) {
 				const [sessionSigner, sessionObject] = await newSession(signer, host, multihash)

@@ -18,6 +18,8 @@ import type {
 	Model,
 	Session,
 	SessionPayload,
+	Chain,
+	ChainId,
 } from "@canvas-js/interfaces"
 
 export const actionArgumentType: t.Type<ActionArgument> = t.union([t.null, t.boolean, t.number, t.string])
@@ -86,3 +88,12 @@ export const sessionType: t.Type<Session> = t.type({
 	payload: sessionPayloadType,
 	signature: t.string,
 })
+
+export const chainType: t.Type<Chain> = t.union([
+	t.literal("eth"),
+	t.literal("cosmos"),
+	t.literal("solana"),
+	t.literal("substrate"),
+])
+
+export const chainIdType: t.Type<ChainId> = t.number

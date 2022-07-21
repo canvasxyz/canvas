@@ -37,11 +37,12 @@ import {
 	ModelValue,
 	Model,
 	ContractMetadata,
+	Chain,
 } from "@canvas-js/interfaces"
 
 import { Store, Effect } from "./store.js"
 import { EventEmitter, CustomEvent } from "./events.js"
-import { actionType, sessionType, modelsType } from "./codecs.js"
+import { actionType, sessionType, modelsType, chainType, chainIdType } from "./codecs.js"
 import { createPrefixStream, JSONValue, mapEntries, signalInvalidType } from "./utils.js"
 import { ApplicationError } from "./errors.js"
 
@@ -52,7 +53,7 @@ interface CoreConfig {
 	quickJS: QuickJSWASMModule
 	replay?: boolean
 	development?: boolean
-	rpc: Record<string, Record<string, string>>
+	rpc: Partial<Record<Chain, Record<string, string>>>
 }
 
 interface CoreEvents {
@@ -120,6 +121,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly actionParameters: Record<string, string[]>
 	public readonly contractParameters: Record<string, { metadata: ContractMetadata; contract: ethers.Contract }>
 	public readonly contractRpcProviders: Record<string, ethers.providers.JsonRpcProvider>
+	public readonly rpcProviders: Partial<Record<Chain, Record<string, ethers.providers.JsonRpcProvider>>>
 
 	private readonly queue: PQueue
 	private readonly dbHandle: QuickJSHandle
@@ -212,6 +214,16 @@ export class Core extends EventEmitter<CoreEvents> {
 			this.actionParameters[name] = parseFunctionParameters(source)
 		}
 
+		// construct rpcs
+		this.rpcProviders = {}
+		for (const [chain, chainRpcs] of Object.entries(this.rpc)) {
+			this.rpcProviders[chain as Chain] = {}
+			for (const [chainId, rpcUrl] of Object.entries(chainRpcs)) {
+				const providers = this.rpcProviders[chain as Chain]
+				if (providers) providers[chainId] = new ethers.providers.JsonRpcProvider(rpcUrl.toString())
+			}
+		}
+
 		// parse and validate contracts
 		this.contractParameters = {}
 		this.contractRpcProviders = {}
@@ -228,6 +240,9 @@ export class Core extends EventEmitter<CoreEvents> {
 				const chainId = this.context.getNumber(contracts[name].chainId)
 				const address = this.context.getString(contracts[name].address)
 				const abi = this.unwrapArray(contracts[name].abi).map(this.context.getString)
+
+				assert(chainType.is(chain), "invalid chain")
+				assert(chainIdType.is(chainId), "invalid chain id")
 
 				if (!this.rpc[chain] || !this.rpc[chain][chainId]) {
 					throw new Error(
@@ -437,6 +452,25 @@ export class Core extends EventEmitter<CoreEvents> {
 			// check the timestamp bounds
 			assert(action.payload.timestamp > Core.boundsCheckLowerLimit, "action timestamp too far in the past")
 			assert(action.payload.timestamp < Core.boundsCheckUpperLimit, "action timestamp too far in the future")
+
+			// check the block
+			assert(action.payload.block, "action signed with invalid block")
+			const { chain, chainId, blocknum, blockhash, timestamp } = action.payload.block
+			const rpcProviders = this.rpcProviders[chain]
+
+			// TODO: declare the chains and chainIds that each spec will require upfront
+			assert(rpcProviders !== undefined, `action signed with unsupported chain: ${chain}`)
+			assert(rpcProviders[chainId] !== undefined, `action signed with unsupported chainId: ${chainId}`)
+			let verifiedBlock
+			try {
+				// TODO: cache blocks to avoid expensive retrievals; only look up recent blocks & evict old blocks
+				verifiedBlock = await rpcProviders[chainId].getBlock(action.payload.block.blockhash)
+			} catch (err) {
+				// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
+				throw new Error("action signed with invalid block hash")
+			}
+			assert(verifiedBlock?.timestamp === timestamp, "action signed with invalid timestamp")
+			assert(verifiedBlock?.number === blocknum, "action signed with invalid block number")
 
 			// Verify the signature
 			if (action.session !== null) {

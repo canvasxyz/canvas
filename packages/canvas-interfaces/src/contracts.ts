@@ -1,4 +1,11 @@
 /**
+ * A `Chain` is a string representation of a type of chain.
+ */
+export type Chain = "eth" | "cosmos" | "solana" | "substrate"
+
+export type ChainId = number
+
+/**
  * A `ContractMetadata` defines the metadata for a contract read by a
  * Canvas spec. Metadatas should be sufficiently generalizable to
  * refer to contracts on many different chains and chain architectures.
@@ -7,8 +14,8 @@
  * a numerical chainId, and an ethers.js-style human readable ABI.
  */
 export type ContractMetadata = {
-	chain: string
-	chainId: number
+	chain: Chain
+	chainId: ChainId
 	address: string
 	abi: string[]
 }
