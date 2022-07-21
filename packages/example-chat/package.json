@@ -9,7 +9,7 @@
     "dev": "webpack server"
   },
   "dependencies": {
-    "@canvas-js/hooks": "*",
+    "@canvas-js/hooks": "^0.0.6",
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.5",
     "react": "^18.1.0",
