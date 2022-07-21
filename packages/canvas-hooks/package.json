@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/hooks",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "type": "module",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "main": "lib/index.js",
