@@ -1,10 +1,14 @@
 # Canvas
 
-Canvas is a P2P protocol for building decentralized, frontend-independent applications, where every user action is a signed message from an cryptographic address.
+Canvas is a peer-to-peer protocol for building decentralized,
+frontend-independent applications, where every user action is a signed
+message from an cryptographic address.
 
 ## Using Canvas
 
-**You must must use Node v16**. Later versions are impacted by [this bug](https://github.com/ethers-io/ethers.js/issues/3082) ultimately caused by Node's internal OpenSSL library.
+**You must must use Node v16**. Later versions are impacted by
+[this bug](https://github.com/ethers-io/ethers.js/issues/3082)
+ultimately caused by Node's internal OpenSSL library.
 
 To install the latest published CLI:
 
@@ -18,9 +22,13 @@ To use your local development version of Canvas as the CLI:
 ./install.sh
 ```
 
-This will put a stub shell script at `$(npm config get prefix)/bin/canvas` that calls `node ${PWD}/packages/canvas-cli/index.js $@`.
+This will put a stub shell script at `$(npm config get prefix)/bin/canvas`
+that calls `node ${PWD}/packages/canvas-cli/index.js $@`.
 
-Note that if you are using system Node, writing to /usr/local/bin/canvas will require sudo. In that case, you should install NVM and set your default Node with `nvm alias default v16`.
+Note that if you are using system Node, writing to /usr/local/bin/canvas
+will require sudo. In that case, you should install
+[NVM](https://github.com/nvm-sh/nvm#installing-and-updating) and set your
+default Node with `nvm alias default v16`.
 
 Inspecting specs:
 
@@ -58,7 +66,9 @@ POST /actions { session, signature, payload: { from, spec, timestamp, call, args
 
 The CLI is written in pure JS and doesn't require compilation.
 
-canvas-interfaces, canvas-core, and canvas-hooks are configured as a composite TypeScript project using project references and must be compiled with build mode turned on. Build all three in parallel with
+canvas-interfaces, canvas-core, and canvas-hooks are configured as a
+composite TypeScript project using project references and must be
+compiled with build mode turned on. Build all three in parallel with:
 
 ```
 npm run dev
