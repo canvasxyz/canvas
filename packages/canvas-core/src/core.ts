@@ -240,12 +240,16 @@ export class Core extends EventEmitter<CoreEvents> {
 							if (evicted) delete this.blockCache[key][evicted]
 						}
 					}
-					// warm up cache with recent blocks
-					for (let n = currentBlock - 10; n <= currentBlock; n++) {
-						await updateCache(n)
-					}
+
 					// listen for new blocks
 					providers[chainId].on("block", updateCache)
+
+					// warm up cache with current block. this must happen *after* setting up the listener
+					const block = await providers[chainId].getBlock(currentBlock)
+					const info = { number: block.number, timestamp: block.timestamp }
+
+					this.blockCache[key][block.hash] = info
+					this.blockCacheRecents[key].unshift(block.hash)
 				})
 			}
 		}
