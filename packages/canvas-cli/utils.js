@@ -4,6 +4,7 @@ import os from "node:os"
 
 import fetch from "node-fetch"
 import chalk from "chalk"
+import Database from "better-sqlite3"
 
 import prompts from "prompts"
 
@@ -11,10 +12,9 @@ import { Store } from "@canvas-js/core"
 
 export const SPEC_FILENAME = "spec.canvas.js"
 
-export async function deleteActionLog(directory, { prompt } = {}) {
-	const hypercorePath = path.resolve(directory, "hypercore")
+export async function deleteDatabase(directory, { prompt } = {}) {
 	const databasePath = path.resolve(directory, Store.DATABASE_FILENAME)
-	if (fs.existsSync(hypercorePath) || fs.existsSync(databasePath)) {
+	if (fs.existsSync(databasePath)) {
 		if (prompt) {
 			const { confirm } = await prompts({
 				type: "confirm",
@@ -28,14 +28,12 @@ export async function deleteActionLog(directory, { prompt } = {}) {
 			}
 		}
 
-		console.log(`[canvas-cli] Deleting ${hypercorePath}`)
-		fs.rmSync(hypercorePath, { recursive: true, force: true })
 		console.log(`[canvas-cli] Deleting ${databasePath}`)
 		fs.rmSync(databasePath)
 	}
 }
 
-export async function deleteModelDatabase(directory, { prompt } = {}) {
+export async function deleteGeneratedModels(directory, { prompt } = {}) {
 	const databasePath = path.resolve(directory, Store.DATABASE_FILENAME)
 	if (fs.existsSync(databasePath)) {
 		if (prompt) {
@@ -51,8 +49,16 @@ export async function deleteModelDatabase(directory, { prompt } = {}) {
 			}
 		}
 
-		console.log(`[canvas-cli] Removing ${databasePath}`)
-		fs.rmSync(databasePath)
+		console.log(`[canvas-cli] Clearing generated models from ${databasePath}`)
+		const db = new Database(databasePath)
+		const tables = db.prepare("SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name").all()
+		const query = tables
+			.map((t) => t.name)
+			.filter((t) => !t.startsWith("_") && !t.startsWith("sqlite_"))
+			.map((t) => `DROP TABLE IF EXISTS ${t};\nDROP TABLE IF EXISTS _${t}_deleted;`)
+			.join("\n")
+		if (query) console.log(chalk.green(query))
+		db.exec(query)
 	}
 }
 

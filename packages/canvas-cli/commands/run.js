@@ -16,7 +16,7 @@ import * as t from "io-ts"
 import { Core, actionType, actionPayloadType, sessionType } from "@canvas-js/core"
 import { create as createIpfsHttpClient } from "ipfs-http-client"
 
-import { defaultDataDirectory, deleteActionLog, deleteModelDatabase, locateSpec } from "../utils.js"
+import { defaultDataDirectory, deleteDatabase, deleteGeneratedModels, locateSpec } from "../utils.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -105,9 +105,9 @@ export async function handler(args) {
 			console.log(`[canvas-cli] Creating directory ${directory}`)
 			fs.mkdirSync(directory)
 		} else if (args.reset) {
-			await deleteActionLog(directory, { prompt: true })
+			await deleteDatabase(directory, { prompt: true })
 		} else if (args.replay) {
-			await deleteModelDatabase(directory, { prompt: true })
+			await deleteGeneratedModels(directory, { prompt: true })
 		}
 	}
 
@@ -205,9 +205,9 @@ export async function handler(args) {
 
 			if (directory !== null) {
 				if (args.reset) {
-					await deleteActionLog(directory, { prompt: false })
+					await deleteDatabase(directory, { prompt: false })
 				} else if (args.replay) {
-					await deleteModelDatabase(directory, { prompt: false })
+					await deleteGeneratedModels(directory, { prompt: false })
 				}
 			}
 
