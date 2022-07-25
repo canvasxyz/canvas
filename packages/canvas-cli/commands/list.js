@@ -34,13 +34,9 @@ export async function handler(args) {
 		const databasePath = path.resolve(args.datadir, cid, Store.DATABASE_FILENAME)
 		const databaseStat = fs.existsSync(databasePath) ? fs.statSync(databasePath) : null
 
-		const hypercorePath = path.resolve(args.datadir, cid, "hypercore")
-		const hypercoreSize = fs.existsSync(hypercorePath) ? getDirectorySize(hypercorePath) : null
-
 		console.log(cid)
-		console.log(`Spec:       ${specStat?.size ?? "--"} bytes`)
-		console.log(`Models:     ${databaseStat?.size ?? "--"} bytes`)
-		console.log(`Action log: ${hypercoreSize ?? "--"} bytes`)
+		console.log(`Spec:     ${specStat?.size ?? "--"} bytes`)
+		console.log(`Data:     ${databaseStat?.size ?? "--"} bytes`)
 		console.log("")
 	}
 }

@@ -1,8 +1,6 @@
 /// <reference types="../types/random-access-storage" />
 /// <reference types="../types/random-access-file" />
 /// <reference types="../types/random-access-memory" />
-/// <reference types="../types/hyperbee" />
-/// <reference types="../types/hypercore" />
 
 import path from "node:path"
 import assert from "node:assert"
@@ -20,8 +18,6 @@ import {
 
 import randomAccessFile from "random-access-file"
 import randomAccessMemory from "random-access-memory"
-import hypercore, { Feed } from "hypercore"
-import HyperBee from "hyperbee"
 
 import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
@@ -43,7 +39,7 @@ import {
 import { Store, Effect } from "./store.js"
 import { EventEmitter, CustomEvent } from "./events.js"
 import { actionType, sessionType, modelsType, chainType, chainIdType } from "./codecs.js"
-import { createPrefixStream, JSONValue, mapEntries, signalInvalidType } from "./utils.js"
+import { JSONValue, mapEntries, signalInvalidType, PAGE_SIZE } from "./utils.js"
 import { ApplicationError } from "./errors.js"
 
 interface CoreConfig {
@@ -90,36 +86,24 @@ export class Core extends EventEmitter<CoreEvents> {
 		runtime.setMemoryLimit(Core.RUNTIME_MEMORY_LIMIT)
 
 		const moduleHandle = await loadModule(context, name, spec)
-		const core = new Core(name, directory, runtime, context, moduleHandle, rpc || {})
-
-		await core.hyperbee.ready()
+		const core = new Core(name, directory, !!replay, runtime, context, moduleHandle, rpc || {})
 
 		if (replay) {
-			console.log(`[canvas-core] Replaying ${core.feed.length} entries from the action log...`)
-			for await (const { type, key, value } of core.hyperbee.createHistoryStream()) {
-				if (type === "put") {
-					if (typeof key !== "string" || typeof value !== "string") {
-						throw new Error("Invalid entry in hyperbee history stream")
-					}
-
-					if (key.startsWith(Core.actionKeyPrefix)) {
-						const hash = "0x" + key.slice(2)
-						const action = JSON.parse(value)
-						assert(actionType.is(action), "Invalid action value in hyperbee history stream")
-						const effects = await core.getEffects(hash, action.payload)
-						core.store.applyEffects(action.payload, effects)
-					}
-				}
+			console.log(`[canvas-core] Replaying action log...`)
+			let i = 0
+			for await (const [hash, action] of core.store.getActionStream(PAGE_SIZE)) {
+				assert(actionType.is(action), "Invalid action value in action log")
+				const effects = await core.getEffects(hash, action.payload)
+				core.store.applyEffects(action.payload, effects)
+				i++
 			}
-			console.log(`[canvas-core] Successfully replayed all ${core.feed.length} entries from the action log.`)
+			console.log(`[canvas-core] Successfully replayed all ${i} entries from the action log.`)
 		}
 
 		console.log("[canvas-core] Initialized core", name)
 		return core
 	}
 
-	public readonly feed: Feed
-	public readonly hyperbee: HyperBee
 	public readonly store: Store
 	public readonly models: Record<string, Model>
 	public readonly routeParameters: Record<string, string[]>
@@ -140,6 +124,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	private constructor(
 		public readonly name: string,
 		public readonly directory: string | null,
+		public readonly replay: boolean,
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
 		public readonly moduleHandle: QuickJSHandle,
@@ -305,16 +290,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		this.store = new Store(directory, models, routes)
-
-		this.feed = hypercore(
-			directory === null
-				? randomAccessMemory
-				: (file: string) => randomAccessFile(path.resolve(directory, "hypercore", file)),
-			{ createIfMissing: true, overwrite: false }
-		)
-
-		this.hyperbee = new HyperBee(this.feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
+		this.store = new Store(directory, models, routes, replay)
 
 		this.effects = null
 		this.dbHandle = this.wrapObject(
@@ -448,16 +424,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		console.log("[canvas-core] Closing...")
 		await this.queue.onEmpty()
 
-		await new Promise<void>((resolve, reject) => {
-			this.feed.close((err) => {
-				if (err === null) {
-					resolve()
-				} else {
-					reject(err)
-				}
-			})
-		})
-
 		this.dbHandle.dispose()
 		for (const handle of Object.values(this.actionHandles)) {
 			handle.dispose()
@@ -513,19 +479,17 @@ export class Core extends EventEmitter<CoreEvents> {
 					throw new Error("action signed with invalid block hash")
 				}
 			}
+
+			assert(block, "could not find a valid block:" + JSON.stringify(action.payload.block))
 			assert(block?.timestamp === timestamp, "action signed with invalid timestamp")
 			assert(block?.number === blocknum, "action signed with invalid block number")
 
 			// Verify the signature
 			if (action.session !== null) {
 				const sessionKey = Core.getSessionKey(action.session)
-				const sessionRecord = await this.hyperbee.get(sessionKey)
-				assert(sessionRecord !== null, "action signed by invalid session")
-				assert(typeof sessionRecord.value === "string", "got invalid session from HyperBee")
+				const session = await this.store.getSession(sessionKey)
 
-				const session = JSON.parse(sessionRecord.value)
-				assert(sessionType.is(session), "got invalid session from HyperBee")
-
+				assert(session !== null, "session not found")
 				assert(
 					session.payload.timestamp + session.payload.session_duration > action.payload.timestamp,
 					"session expired"
@@ -553,9 +517,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			const hash = ethers.utils.sha256(action.signature)
 			const actionKey = Core.getActionKey(hash)
-			const existingRecord = await this.hyperbee.get(actionKey)
+			const existingRecord = await this.store.getAction(actionKey)
 			if (existingRecord === null) {
-				await this.hyperbee.put(actionKey, JSON.stringify(action))
+				await this.store.insertAction(actionKey, action)
 
 				const effects = await this.getEffects(hash, action.payload)
 				this.store.applyEffects(action.payload, effects)
@@ -629,9 +593,9 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(verifiedAddress.toLowerCase() === session.payload.from.toLowerCase(), "session signed by wrong address")
 
 			const sessionKey = Core.getSessionKey(session.payload.session_public_key)
-			const existingRecord = await this.hyperbee.get(sessionKey)
+			const existingRecord = await this.store.getSession(sessionKey)
 			if (existingRecord === null) {
-				await this.hyperbee.put(sessionKey, JSON.stringify(session))
+				await this.store.insertSession(sessionKey, session)
 				this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
 			}
 		})
@@ -639,26 +603,14 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	public static readonly actionKeyPrefix = "a:"
 	public static getActionKey(hash: string): string {
-		assert(hash.startsWith("0x"), "internal error: corrupt action key found in hypercore")
+		assert(hash.startsWith("0x"), "internal error: corrupt action key found in message store")
 		return Core.actionKeyPrefix + hash.slice(2)
 	}
 
 	public static readonly sessionKeyPrefix = "s:"
 	public static getSessionKey(sessionPublicKey: string): string {
-		assert(sessionPublicKey.startsWith("0x"), "internal error: corrupt session key found in hypercore")
+		assert(sessionPublicKey.startsWith("0x"), "internal error: corrupt session key found in message store")
 		return Core.sessionKeyPrefix + sessionPublicKey.slice(2)
-	}
-
-	public async *getSessionStream(options: { limit?: number } = {}): AsyncIterable<[string, Action]> {
-		for await (const [key, value] of createPrefixStream<string>(this.hyperbee, Core.sessionKeyPrefix, options)) {
-			yield [key.replace(/^s:/, "0x"), JSON.parse(value)]
-		}
-	}
-
-	public async *getActionStream(options: { limit?: number } = {}): AsyncIterable<[string, Action]> {
-		for await (const [key, value] of createPrefixStream<string>(this.hyperbee, Core.actionKeyPrefix, options)) {
-			yield [key.replace(/^a:/, "0x"), JSON.parse(value)]
-		}
 	}
 
 	// Utilities

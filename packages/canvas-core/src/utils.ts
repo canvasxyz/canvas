@@ -2,7 +2,7 @@ import assert from "node:assert"
 
 import type { ModelType, ModelValue } from "@canvas-js/interfaces"
 
-import type HyperBee from "hyperbee"
+export const PAGE_SIZE = 20
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
 export interface JSONArray extends Array<JSONValue> {}
@@ -34,36 +34,36 @@ export function validateType(type: ModelType, value: ModelValue) {
 	}
 }
 
-export async function* createPrefixStream<T extends string | Uint8Array = string | Uint8Array>(
-	db: HyperBee,
-	prefix: string,
-	options: { limit?: number } = {}
-): AsyncIterable<[string, T]> {
-	const limit = options.limit === undefined || options.limit === -1 ? Infinity : options.limit
-	if (limit === 0) {
-		return
-	}
+// export async function* createPrefixStream<T extends string | Uint8Array = string | Uint8Array>(
+// 	db: HyperBee,
+// 	prefix: string,
+// 	options: { limit?: number } = {}
+// ): AsyncIterable<[string, T]> {
+// 	const limit = options.limit === undefined || options.limit === -1 ? Infinity : options.limit
+// 	if (limit === 0) {
+// 		return
+// 	}
 
-	const deletedKeys = new Set()
-	let n = 0
-	for await (const { type, key, value } of db.createHistoryStream({ reverse: true })) {
-		if (typeof key === "string" && key.startsWith(prefix)) {
-			if (type === "del") {
-				deletedKeys.add(key)
-			} else if (type === "put") {
-				if (deletedKeys.has(key)) {
-					continue
-				} else {
-					yield [key, value as T]
-					n++
-					if (n >= limit) {
-						return
-					}
-				}
-			}
-		}
-	}
-}
+// 	const deletedKeys = new Set()
+// 	let n = 0
+// 	for await (const { type, key, value } of db.createHistoryStream({ reverse: true })) {
+// 		if (typeof key === "string" && key.startsWith(prefix)) {
+// 			if (type === "del") {
+// 				deletedKeys.add(key)
+// 			} else if (type === "put") {
+// 				if (deletedKeys.has(key)) {
+// 					continue
+// 				} else {
+// 					yield [key, value as T]
+// 					n++
+// 					if (n >= limit) {
+// 						return
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 // /**
 //  * Recursively clones objects, using Function.prototype.toString() to stringify

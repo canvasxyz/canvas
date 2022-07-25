@@ -1,8 +1,6 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import hypercore from "hypercore"
-import HyperBee from "hyperbee"
 import chalk from "chalk"
 
 import { Core } from "@canvas-js/core"
@@ -32,17 +30,8 @@ export const builder = (yargs) => {
 export async function handler(args) {
 	const { directory } = await locateSpec({ ...args, temp: false })
 
-	const hypercorePath = path.resolve(directory, "hypercore")
-	if (!fs.existsSync(hypercorePath)) {
-		console.error(chalk.red(`[canvas-cli] No action log found in ${directory}`))
-		process.exit(1)
-	}
-
-	const feed = hypercore(hypercorePath, { createIfMissing: false })
-	const db = new HyperBee(feed, { keyEncoding: "utf-8", valueEncoding: "utf-8" })
-	await db.ready()
-
-	for await (const entry of db.createHistoryStream()) {
+	// TODO: select message log from database
+	for await (const entry of []) {
 		if (entry.type === "put") {
 			const value = JSON.parse(entry.value)
 			if (entry.key.startsWith(Core.actionKeyPrefix)) {
@@ -55,14 +44,5 @@ export async function handler(args) {
 		}
 	}
 
-	// Close the feed
-	await new Promise((resolve, reject) => {
-		feed.close((err) => {
-			if (err === null) {
-				resolve()
-			} else {
-				reject(err)
-			}
-		})
-	})
+	// TODO: close the db connection
 }

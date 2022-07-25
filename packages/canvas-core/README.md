@@ -29,8 +29,6 @@ declare class Core {
 	getRoute(route: string, params?: Record<string, ModelValue>): Record<string, ModelValue>[]
 	apply(action: Action): Promise<ActionResult>
 	session(session: Session): Promise<void>
-	getSessionStream(options?: { limit?: number }): AsyncIterable<[string, Action]>
-	getActionStream(options?: { limit?: number }): AsyncIterable<[string, Action]>
 }
 ```
 

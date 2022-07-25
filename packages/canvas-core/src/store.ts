@@ -1,11 +1,13 @@
-import assert from "node:assert"
+import assert, { AssertionError } from "node:assert"
 import path from "node:path"
 import fs from "node:fs"
+import chalk from "chalk"
 
-import type { ActionContext, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
+import type { Action, Session, ActionContext, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
 import Database, * as sqlite from "better-sqlite3"
 
-import { mapEntries, signalInvalidType } from "./utils.js"
+import { actionType, sessionType } from "./codecs.js"
+import { mapEntries, signalInvalidType, PAGE_SIZE } from "./utils.js"
 
 export type Effect =
 	| { type: "set"; model: string; id: string; values: Record<string, ModelValue> }
@@ -28,22 +30,41 @@ export class Store {
 	private readonly statements: Record<string, ModelStatements>
 	private readonly transaction: (context: ActionContext, effects: Effect[]) => void
 	private readonly routeStatements: Record<string, sqlite.Statement>
+	private readonly messageStatements: Record<string, sqlite.Statement>
 
-	constructor(directory: string | null, models: Record<string, Model>, routes: Record<string, string>) {
+	insertAction: (key: string, action: Action) => Promise<void>
+	insertSession: (key: string, session: Session) => Promise<void>
+	getAction: (key: string) => Promise<Action | null>
+	getSession: (key: string) => Promise<Session | null>
+	getActionStream: (limit: number) => AsyncIterable<[string, Action]>
+	getSessionStream: (limit: number) => AsyncIterable<[string, Session]>
+	getHistoryStream: (limit: number) => AsyncIterable<[string, Action | Session]>
+
+	constructor(
+		directory: string | null,
+		models: Record<string, Model>,
+		routes: Record<string, string>,
+		replay: boolean
+	) {
 		if (directory === null) {
 			this.database = new Database(":memory:")
 			console.log("[canvas-core] Initializing new in-memory model database")
-			Store.initializeDatabase(this.database, models)
+			Store.initializeMessageTables(this.database, models)
+			Store.initializeModelTables(this.database, models)
 		} else {
 			const databasePath = path.resolve(directory, Store.DATABASE_FILENAME)
 			if (fs.existsSync(databasePath)) {
 				console.log(`[canvas-core] Found existing model database at ${databasePath}`)
 				this.database = new Database(databasePath, { fileMustExist: true })
+				if (replay) {
+					Store.initializeModelTables(this.database, models)
+				}
 				Store.validateDatabase(this.database, models)
 			} else {
 				console.log(`[canvas-core] Initializing new model database at ${databasePath}`)
 				this.database = new Database(databasePath)
-				Store.initializeDatabase(this.database, models)
+				Store.initializeMessageTables(this.database, models)
+				Store.initializeModelTables(this.database, models)
 			}
 		}
 
@@ -64,6 +85,80 @@ export class Store {
 				getDeletedAt: this.database.prepare(`SELECT deleted_at FROM ${deletedTableName} WHERE id = ?`),
 			}
 		})
+
+		this.messageStatements = {
+			insertAction: this.database.prepare("INSERT INTO _messages (key, data, action) VALUES (:key, :data, true)"),
+			insertSession: this.database.prepare("INSERT INTO _messages (key, data, session) VALUES (:key, :data, true)"),
+			getAction: this.database.prepare("SELECT * FROM _messages WHERE action = true AND key = :key"),
+			getSession: this.database.prepare("SELECT * FROM _messages WHERE session = true AND key = :key"),
+			getSessions: this.database.prepare("SELECT * FROM _messages WHERE session = true AND id > :last LIMIT :limit"),
+			getActions: this.database.prepare("SELECT * FROM _messages WHERE action = true AND id > :last LIMIT :limit"),
+			getHistory: this.database.prepare("SELECT * FROM _messages WHERE id > :last LIMIT :limit"),
+		}
+
+		this.insertAction = async (key: string, action: Action) => {
+			assert(actionType.is(action), "got invalid action")
+			await this.messageStatements.insertAction.run({ key: key, data: JSON.stringify(action) })
+		}
+
+		this.insertSession = async (key: string, session: Session) => {
+			assert(sessionType.is(session), "got invalid session")
+			await this.messageStatements.insertSession.run({ key: key, data: JSON.stringify(session) })
+		}
+
+		this.getAction = async (key: string) => {
+			const record = await this.messageStatements.getAction.get({ key })
+			if (!record) return null
+			assert(typeof record.data === "string", "got invalid action")
+			const action = JSON.parse(record.data)
+			assert(actionType.is(action), "got invalid action")
+			return action
+		}
+
+		this.getSession = async (key: string) => {
+			const record = await this.messageStatements.getSession.get({ key })
+			if (!record) return null
+			assert(typeof record.data === "string", "got invalid session")
+			const session = JSON.parse(record.data)
+			assert(sessionType.is(session), "got invalid session")
+			return session
+		}
+
+		this.getActionStream = async function* (limit: number = PAGE_SIZE): AsyncIterable<[string, Action]> {
+			let last = -1
+			while (last !== undefined) {
+				const page = await this.messageStatements.getActions.all({ last, limit })
+				if (page.length === 0) return
+				for (const message of page) {
+					yield [message.key, JSON.parse(message.data) as Action]
+					last = message?.id
+				}
+			}
+		}
+
+		this.getSessionStream = async function* (limit: number = PAGE_SIZE): AsyncIterable<[string, Session]> {
+			let last = -1
+			while (last !== undefined) {
+				const page = await this.messageStatements.getSessions.all({ last, limit })
+				if (page.length === 0) return
+				for (const message of page) {
+					yield [message.key, JSON.parse(message.data) as Session]
+					last = message?.id
+				}
+			}
+		}
+
+		this.getHistoryStream = async function* (limit: number = PAGE_SIZE): AsyncIterable<[string, Action | Session]> {
+			let last = -1
+			while (last !== undefined) {
+				const page = await this.messageStatements.getHistory.all({ last, limit })
+				if (page.length === 0) return
+				for (const message of page) {
+					yield [message.key, JSON.parse(message.data)]
+					last = message?.id
+				}
+			}
+		}
 
 		this.transaction = this.database.transaction((context: ActionContext, effects: Effect[]): void => {
 			for (const effect of effects) {
@@ -162,10 +257,35 @@ export class Store {
 	}
 
 	private static validateDatabase(database: sqlite.Database, models: Record<string, Model>) {
-		// TODO
+		const schema = database.prepare("SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name").all()
+		const tables = schema
+			.map((t) => t.name)
+			.filter((t) => !t.startsWith("sqlite_"))
+			.map((t) => `'${t}'`)
+		const errors: string[] = []
+
+		if (!tables.includes("'_messages'")) errors.push("missing _messages table")
+		for (const [name, { indexes, ...properties }] of Object.entries(models)) {
+			if (!tables.includes(Store.tableName(name))) errors.push("missing model table for " + name)
+			if (!tables.includes(Store.deletedTableName(name))) errors.push("missing model deletion table for " + name)
+		}
+
+		if (errors.length > 0) {
+			for (const error of errors) console.log(chalk.red(error))
+			console.log(chalk.yellow("Model database looks out of sync. Try --replay to reset it."))
+			process.exit(1)
+		}
 	}
 
-	private static initializeDatabase(database: sqlite.Database, models: Record<string, Model>) {
+	private static initializeMessageTables(database: sqlite.Database, models: Record<string, Model>) {
+		const createMessagesTable =
+			"CREATE TABLE _messages (id INTEGER PRIMARY KEY AUTOINCREMENT, key STRING, data TEXT, session BOOLEAN, action BOOLEAN);"
+		const createMessagesIndex = "CREATE INDEX _messages_index ON _messages (key);"
+		database.exec(createMessagesTable)
+		database.exec(createMessagesIndex)
+	}
+
+	private static initializeModelTables(database: sqlite.Database, models: Record<string, Model>) {
 		for (const [name, { indexes, ...properties }] of Object.entries(models)) {
 			const deletedTableName = Store.deletedTableName(name)
 			const createDeletedTable = `CREATE TABLE ${deletedTableName} (id TEXT PRIMARY KEY NOT NULL, deleted_at INTEGER NOT NULL);`
