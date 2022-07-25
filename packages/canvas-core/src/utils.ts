@@ -2,7 +2,7 @@ import assert from "node:assert"
 
 import type { ModelType, ModelValue } from "@canvas-js/interfaces"
 
-export const PAGE_SIZE = 20
+export const SQL_QUERY_LIMIT = 20
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
 export interface JSONArray extends Array<JSONValue> {}

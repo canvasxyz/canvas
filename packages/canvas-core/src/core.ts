@@ -39,7 +39,7 @@ import {
 import { Store, Effect } from "./store.js"
 import { EventEmitter, CustomEvent } from "./events.js"
 import { actionType, sessionType, modelsType, chainType, chainIdType } from "./codecs.js"
-import { JSONValue, mapEntries, signalInvalidType, PAGE_SIZE } from "./utils.js"
+import { JSONValue, mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "./utils.js"
 import { ApplicationError } from "./errors.js"
 
 interface CoreConfig {
@@ -91,7 +91,9 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (replay) {
 			console.log(`[canvas-core] Replaying action log...`)
 			let i = 0
-			for await (const [hash, action] of core.store.getActionStream(PAGE_SIZE)) {
+			// note that SQL_QUERY_LIMIT is the number of actions per page to retrieve,
+			// not the total number of actions to retrieve
+			for await (const [hash, action] of core.store.getActionStream(SQL_QUERY_LIMIT)) {
 				assert(actionType.is(action), "Invalid action value in action log")
 				const effects = await core.getEffects(hash, action.payload)
 				core.store.applyEffects(action.payload, effects)

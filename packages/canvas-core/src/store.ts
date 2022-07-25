@@ -7,7 +7,7 @@ import type { Action, Session, ActionContext, Model, ModelType, ModelValue } fro
 import Database, * as sqlite from "better-sqlite3"
 
 import { actionType, sessionType } from "./codecs.js"
-import { mapEntries, signalInvalidType, PAGE_SIZE } from "./utils.js"
+import { mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "./utils.js"
 
 export type Effect =
 	| { type: "set"; model: string; id: string; values: Record<string, ModelValue> }
@@ -124,7 +124,8 @@ export class Store {
 			return session
 		}
 
-		this.getActionStream = async function* (limit: number = PAGE_SIZE): AsyncIterable<[string, Action]> {
+		// unused
+		this.getActionStream = async function* (limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Action]> {
 			let last = -1
 			while (last !== undefined) {
 				const page = await this.messageStatements.getActions.all({ last, limit })
@@ -136,7 +137,8 @@ export class Store {
 			}
 		}
 
-		this.getSessionStream = async function* (limit: number = PAGE_SIZE): AsyncIterable<[string, Session]> {
+		// unused
+		this.getSessionStream = async function* (limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Session]> {
 			let last = -1
 			while (last !== undefined) {
 				const page = await this.messageStatements.getSessions.all({ last, limit })
@@ -148,7 +150,10 @@ export class Store {
 			}
 		}
 
-		this.getHistoryStream = async function* (limit: number = PAGE_SIZE): AsyncIterable<[string, Action | Session]> {
+		// unused
+		this.getHistoryStream = async function* (
+			limit: number = SQL_QUERY_LIMIT
+		): AsyncIterable<[string, Action | Session]> {
 			let last = -1
 			while (last !== undefined) {
 				const page = await this.messageStatements.getHistory.all({ last, limit })
