@@ -197,7 +197,7 @@ export class PostgresStore extends Store {
 						if (effect.type === "set") {
 							const params: Record<string, ModelValue> = { id: effect.id, updated_at: context.timestamp }
 							for (const [property, value] of Object.entries(effect.values)) {
-								params[property] = typeof value === "boolean" ? Number(value) : value
+								params[property] = value
 							}
 
 							if (updatedAt === undefined) {
@@ -233,7 +233,7 @@ export class PostgresStore extends Store {
 		assert(route in this.routeStatements, "invalid route name")
 		const result = this.db.any(
 			this.routeStatements[route],
-			mapEntries(params, (param, value) => (typeof value === "boolean" ? Number(value) : value))
+			mapEntries(params, (param, value) => value)
 		)
 		return result
 	}
