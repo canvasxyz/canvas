@@ -23,6 +23,7 @@
 		"io-ts": "^2.2.16",
 		"ipfs-only-hash": "^4.0.0",
 		"it-stream-types": "^1.0.4",
+		"knex": "^2.2.0",
 		"multiformats": "^9.7.0",
 		"node-fetch": "^3.2.6",
 		"p-queue": "^7.2.0",
