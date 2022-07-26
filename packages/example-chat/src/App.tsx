@@ -107,7 +107,7 @@ export const App: React.FC<{}> = ({}) => {
 							<tbody>
 								{posts.map((_, i) => {
 									const post = posts[posts.length - i - 1]
-									const time = new Date(post.updated_at).toLocaleTimeString()
+									const time = new Date(+post.updated_at).toLocaleTimeString()
 									return (
 										<tr key={post.id}>
 											<td className="time">{time}</td>
