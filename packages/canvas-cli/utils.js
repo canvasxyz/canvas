@@ -4,7 +4,7 @@ import os from "node:os"
 
 import fetch from "node-fetch"
 import chalk from "chalk"
-import Database from "better-sqlite3"
+import Knex from "knex"
 
 import prompts from "prompts"
 
@@ -50,15 +50,27 @@ export async function deleteGeneratedModels(directory, { prompt } = {}) {
 		}
 
 		console.log(`[canvas-cli] Clearing generated models from ${databasePath}`)
-		const db = new Database(databasePath)
-		const tables = db.prepare("SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name").all()
-		const query = tables
-			.map((t) => t.name)
-			.filter((t) => !t.startsWith("_") && !t.startsWith("sqlite_"))
-			.map((t) => `DROP TABLE IF EXISTS ${t};\nDROP TABLE IF EXISTS _${t}_deleted;`)
-			.join("\n")
-		if (query) console.log(chalk.green(query))
-		db.exec(query)
+
+		const knex = Knex({
+			client: "better-sqlite3",
+			connection: { filename: databasePath },
+			useNullAsDefault: true,
+		})
+
+		// list all tables
+		// for pg: SELECT tablename FROM pg_tables WHERE schemaname='public'
+		// for sqlite3: SELECT name FROM sqlite_master WHERE type='table';
+		const tables = await knex.select("name").from("sqlite_master").where("type", "table").orderBy("name")
+		const names = tables.map((t) => t.name).filter((t) => !t.startsWith("_") && !t.startsWith("sqlite_"))
+
+		if (names.length > 0) {
+			console.log(chalk.green("Dropping model tables & deletion tables for: " + names.join(", ")))
+		}
+
+		const dropModelTables = names.map((t) => knex.schema.dropTableIfExists(t))
+		const dropDeletionTables = names.map((t) => knex.schema.dropTableIfExists(`_${t}_deleted`))
+		const result = await Promise.all(dropModelTables.concat(dropDeletionTables))
+		console.log(chalk.green("Dropped " + result.length + " tables"))
 	}
 }
 
