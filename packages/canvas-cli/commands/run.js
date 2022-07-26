@@ -317,8 +317,8 @@ class API {
 			res.flushHeaders()
 
 			let data = null
-			const listener = () => {
-				const newData = this.core.getRoute(route, values)
+			const listener = async () => {
+				const newData = await this.core.getRoute(route, values)
 				if (data === null || !compareResults(data, newData)) {
 					data = newData
 					res.write(`data: ${JSON.stringify(data)}\n\n`)
@@ -339,8 +339,15 @@ class API {
 			res.on("close", () => this.core.removeEventListener("action", listener))
 		} else {
 			// normal JSON response
-			const data = this.core.getRoute(route, values)
-			res.status(StatusCodes.OK).json(data)
+			this.core
+				.getRoute(route, values)
+				.then((data) => {
+					res.status(StatusCodes.OK).json(data)
+				})
+				.catch((err) => {
+					res.status(StatusCodes.BAD_REQUEST)
+					res.end(`Route error: ${err}`)
+				})
 		}
 	}
 

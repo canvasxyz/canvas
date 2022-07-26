@@ -38,6 +38,7 @@ import {
 
 import { Store, Effect } from "./store/store.js"
 import { SqliteStore } from "./store/sqlite.js"
+import { PostgresStore } from "./store/postgres.js"
 import { EventEmitter, CustomEvent } from "./events.js"
 import { actionType, sessionType, modelsType, chainType, chainIdType } from "./codecs.js"
 import { JSONValue, mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "./utils.js"
@@ -88,6 +89,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		const moduleHandle = await loadModule(context, name, spec)
 		const core = new Core(name, directory, !!replay, runtime, context, moduleHandle, rpc || {})
+
+		await core.store.ready()
 
 		if (replay) {
 			console.log(`[canvas-core] Replaying action log...`)
@@ -297,7 +300,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		this.store = new SqliteStore(directory, models, routes, replay)
+		// this.store = new SqliteStore(directory, models, routes, replay)
+		this.store = new PostgresStore("postgresql://localhost:5432/canvas", models, routes, replay)
 
 		this.effects = null
 		this.dbHandle = this.wrapObject(
@@ -449,7 +453,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.dispatchEvent(new Event("close"))
 	}
 
-	public getRoute(route: string, params: Record<string, ModelValue> = {}): Record<string, ModelValue>[] {
+	public async getRoute(route: string, params: Record<string, ModelValue> = {}): Promise<Record<string, ModelValue>[]> {
 		return this.store.getRoute(route, params)
 	}
 
@@ -473,7 +477,6 @@ export class Core extends EventEmitter<CoreEvents> {
 			// TODO: declare the chains and chainIds that each spec will require upfront
 			assert(rpcProviders !== undefined, `action signed with unsupported chain: ${chain}`)
 			assert(rpcProviders[chainId] !== undefined, `action signed with unsupported chainId: ${chainId}`)
-
 			let block
 			if (this.blockCache[chain + ":" + chainId]) {
 				block = this.blockCache[chain + ":" + chainId][blockhash]
@@ -531,7 +534,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				await this.store.insertAction(actionKey, action)
 
 				const effects = await this.getEffects(hash, action.payload)
-				this.store.applyEffects(action.payload, effects)
+				await this.store.applyEffects(action.payload, effects)
 
 				this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
 			}

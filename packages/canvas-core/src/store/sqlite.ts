@@ -37,6 +37,11 @@ export class SqliteStore extends Store {
 	private readonly modelStatements: Record<string, ModelStatements>
 	private readonly backlogStatements: BacklogStatements
 
+	public ready(): Promise<void> {
+		// better-sqlite3 initializes synchronously, so the core is always ready()
+		return new Promise((resolve, reject) => resolve())
+	}
+
 	constructor(
 		directory: string | null,
 		models: Record<string, Model>,
@@ -227,7 +232,7 @@ export class SqliteStore extends Store {
 		this.database.close()
 	}
 
-	public getRoute(route: string, params: Record<string, ModelValue>): Record<string, ModelValue>[] {
+	public async getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]> {
 		assert(route in this.routeStatements, "invalid route name")
 		return this.routeStatements[route].all(
 			mapEntries(params, (param, value) => (typeof value === "boolean" ? Number(value) : value))
@@ -281,7 +286,7 @@ export class SqliteStore extends Store {
 
 	private static initializeMessageTables(database: sqlite.Database, models: Record<string, Model>) {
 		const createMessagesTable =
-			"CREATE TABLE _messages (id INTEGER PRIMARY KEY AUTOINCREMENT, key STRING, data TEXT, session BOOLEAN, action BOOLEAN);"
+			"CREATE TABLE _messages (id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT, data TEXT, session BOOLEAN, action BOOLEAN);"
 		const createMessagesIndex = "CREATE INDEX _messages_index ON _messages (key);"
 		database.exec(createMessagesTable)
 		database.exec(createMessagesIndex)

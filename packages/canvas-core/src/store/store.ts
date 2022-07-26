@@ -16,6 +16,7 @@ export abstract class Store {
 	abstract getHistoryStream(limit: number): AsyncIterable<[string, Action | Session]>
 
 	abstract applyEffects(context: ActionContext, effects: Effect[]): void
+	abstract ready(): Promise<void>
 	abstract close(): void
-	abstract getRoute(route: string, params: Record<string, ModelValue>): Record<string, ModelValue>[]
+	abstract getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]>
 }
