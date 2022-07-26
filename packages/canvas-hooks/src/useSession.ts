@@ -100,13 +100,19 @@ export function useSession(
 			if (contextSessionSigner === null) throw new Error("session login failed")
 
 			const timestamp = +Date.now() // get a new timestamp, from after we have secured a session
-			const [network, providerBlock] = await Promise.all([provider.getNetwork(), provider.getBlock("latest")])
-			const block: ActionBlock = {
-				chain: "eth",
-				chainId: network.chainId,
-				blocknum: providerBlock.number,
-				blockhash: providerBlock.hash,
-				timestamp: providerBlock.timestamp,
+			let block: ActionBlock
+			try {
+				const [network, providerBlock] = await Promise.all([provider.getNetwork(), provider.getBlock("latest")])
+				block = {
+					chain: "eth",
+					chainId: network.chainId,
+					blocknum: providerBlock.number,
+					blockhash: providerBlock.hash,
+					timestamp: providerBlock.timestamp,
+				}
+			} catch (err) {
+				console.error(err)
+				throw err
 			}
 			const payload: ActionPayload = { from: address, spec: multihash, call, args, timestamp, block }
 

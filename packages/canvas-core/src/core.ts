@@ -476,10 +476,12 @@ export class Core extends EventEmitter<CoreEvents> {
 			let block
 			if (this.blockCache[chain + ":" + chainId]) {
 				block = this.blockCache[chain + ":" + chainId][blockhash]
-			} else {
+			}
+			if (!block) {
 				try {
 					console.log(`fetching block ${action.payload.block.blockhash} for ${chain}:${chainId}`)
 					block = await rpcProviders[chainId].getBlock(action.payload.block.blockhash)
+					this.blockCache[chain + ":" + chainId][blockhash] = block
 				} catch (err) {
 					// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
 					throw new Error("action signed with invalid block hash")
