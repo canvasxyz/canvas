@@ -89,7 +89,15 @@ export function useSession(
 				throw new Error("dispatch called too early")
 			}
 
-			const timestamp = +Date.now()
+			if (sessionSigner === null || sessionExpiration < +Date.now()) {
+				const session = await newSession(signer, host, multihash)
+				localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(session[1]))
+				setSessionSigner(session[0])
+				setSessionExpiration(session[1].expiration)
+			}
+			if (!sessionSigner) throw new Error("session login failed")
+
+			const timestamp = +Date.now() // get a new timestamp, from after we have secured a session
 			const [network, providerBlock] = await Promise.all([provider.getNetwork(), provider.getBlock("latest")])
 			const block: ActionBlock = {
 				chain: "eth",
@@ -100,15 +108,7 @@ export function useSession(
 			}
 			const payload: ActionPayload = { from: address, spec: multihash, call, args, timestamp, block }
 
-			if (sessionSigner === null || sessionExpiration < timestamp) {
-				const [sessionSigner, sessionObject] = await newSession(signer, host, multihash)
-				localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(sessionObject))
-				setSessionSigner(sessionSigner)
-				setSessionExpiration(sessionObject.expiration)
-				await send(host, sessionSigner, payload)
-			} else {
-				await send(host, sessionSigner, payload)
-			}
+			await send(host, sessionSigner, payload)
 		},
 		[host, multihash, address, signer, sessionSigner, sessionExpiration]
 	)
