@@ -13,9 +13,9 @@ export const models = {
 
 export const routes = {
 	"/posts":
-		"SELECT posts.id, posts.from_id, posts.content, posts.updated_at, COUNT(likes.value) as likes, array_agg(likes.from_id) as all_likes FROM posts LEFT JOIN likes ON likes.post_id = posts.id GROUP BY posts.id ORDER BY posts.updated_at DESC LIMIT 50",
+		"SELECT posts.id, posts.from_id, posts.content, posts.updated_at, COUNT(CASE WHEN likes.value THEN 1 END) as likes, ARRAY_AGG(likes.from_id) as all_likes FROM posts LEFT JOIN likes ON likes.post_id = posts.id GROUP BY posts.id ORDER BY posts.updated_at DESC LIMIT 50",
 	"/posts/as/:from_id":
-		"SELECT posts.id, posts.from_id, posts.content, posts.updated_at, COUNT(likes.value) as likes, COUNT(my_likes.value) as my_likes, array_agg(likes.from_id) as all_likes FROM posts LEFT JOIN likes ON likes.post_id = posts.id LEFT JOIN likes my_likes ON my_likes.post_id = posts.id AND my_likes.post_id = posts.id AND my_likes.from_id = $/from_id/ GROUP BY posts.id ORDER BY posts.updated_at DESC LIMIT 50",
+		"SELECT posts.id, posts.from_id, posts.content, posts.updated_at, COUNT(CASE WHEN likes.value THEN 1 END) as likes, COUNT(CASE WHEN my_likes.value THEN 1 END) as my_likes, ARRAY_AGG(likes.from_id) as all_likes FROM posts LEFT JOIN likes ON likes.post_id = posts.id LEFT JOIN likes my_likes ON my_likes.post_id = posts.id AND my_likes.post_id = posts.id AND my_likes.from_id = $/from_id/ GROUP BY posts.id ORDER BY posts.updated_at DESC LIMIT 50",
 }
 
 export const actions = {
