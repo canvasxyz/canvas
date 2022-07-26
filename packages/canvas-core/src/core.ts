@@ -36,7 +36,8 @@ import {
 	Chain,
 } from "@canvas-js/interfaces"
 
-import { Store, Effect } from "./store.js"
+import { Store, Effect } from "./store/store.js"
+import { SqliteStore } from "./store/sqlite.js"
 import { EventEmitter, CustomEvent } from "./events.js"
 import { actionType, sessionType, modelsType, chainType, chainIdType } from "./codecs.js"
 import { JSONValue, mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "./utils.js"
@@ -296,7 +297,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		this.store = new Store(directory, models, routes, replay)
+		this.store = new SqliteStore(directory, models, routes, replay)
 
 		this.effects = null
 		this.dbHandle = this.wrapObject(
