@@ -4,5 +4,5 @@ import "fp-ts"
 
 export * from "./codecs.js"
 export * from "./core.js"
-export * from "./store.js"
+export * from "./store/store.js"
 export * from "./errors.js"

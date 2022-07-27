@@ -33,6 +33,10 @@ export const builder = (yargs) => {
 			desc: "Path of the app data directory",
 			default: defaultDataDirectory,
 		})
+		.option("database", {
+			type: "string",
+			desc: "Path to the app database. Providing one forces the app to run on Postgres",
+		})
 		.option("port", {
 			type: "number",
 			desc: "Port to bind the core API",
@@ -70,6 +74,11 @@ export const builder = (yargs) => {
 		.option("temp", {
 			type: "boolean",
 			desc: "Open a temporary in-memory core",
+		})
+		.option("verbose", {
+			type: "boolean",
+			desc: "Enable verbose logging",
+			default: false,
 		})
 		.option("chain-rpc", {
 			type: "array",
@@ -148,7 +157,8 @@ export async function handler(args) {
 		core = await Core.initialize({
 			name,
 			spec,
-			directory,
+			verbose: args.verbose,
+			directoryOrDatabaseUrl: args.database || directory,
 			quickJS,
 			replay: args.replay,
 			development,
@@ -260,7 +270,7 @@ class API {
 		api.post("/sessions", this.handleSession)
 
 		for (const route of Object.keys(core.routeParameters)) {
-			api.get(route, this.handleRoute(route))
+			api.get(route, this.getRouteHandler(route))
 		}
 
 		this.server = stoppable(
@@ -295,7 +305,7 @@ class API {
 		})
 	}
 
-	handleRoute = (route) => async (req, res) => {
+	getRouteHandler = (route) => async (req, res) => {
 		const values = {}
 		for (const name of this.core.routeParameters[route]) {
 			const value = req.params[name]
@@ -317,8 +327,8 @@ class API {
 			res.flushHeaders()
 
 			let data = null
-			const listener = () => {
-				const newData = this.core.getRoute(route, values)
+			const listener = async () => {
+				const newData = await this.core.getRoute(route, values)
 				if (data === null || !compareResults(data, newData)) {
 					data = newData
 					res.write(`data: ${JSON.stringify(data)}\n\n`)
@@ -326,10 +336,11 @@ class API {
 			}
 
 			try {
-				listener()
+				await listener()
 			} catch (err) {
 				// kill the EventSource if this.core.getRoute() fails on first request
 				// TODO: is it possible that it succeeds now, but fails later with new `values`?
+				console.log(chalk.red("[canvas-cli] error fetching view: " + err.message))
 				res.status(StatusCodes.BAD_REQUEST)
 				res.end(`Route error: ${err}`)
 				return
@@ -339,8 +350,15 @@ class API {
 			res.on("close", () => this.core.removeEventListener("action", listener))
 		} else {
 			// normal JSON response
-			const data = this.core.getRoute(route, values)
-			res.status(StatusCodes.OK).json(data)
+			this.core
+				.getRoute(route, values)
+				.then((data) => {
+					res.status(StatusCodes.OK).json(data)
+				})
+				.catch((err) => {
+					res.status(StatusCodes.BAD_REQUEST)
+					res.end(`Route error: ${err}`)
+				})
 		}
 	}
 

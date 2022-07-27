@@ -1,7 +1,4 @@
-/// <reference types="../types/random-access-storage" />
-/// <reference types="../types/random-access-file" />
-/// <reference types="../types/random-access-memory" />
-
+import fs from "node:fs"
 import path from "node:path"
 import assert from "node:assert"
 
@@ -36,7 +33,9 @@ import {
 	Chain,
 } from "@canvas-js/interfaces"
 
-import { Store, Effect } from "./store.js"
+import { Store, Effect } from "./store/store.js"
+import { SqliteStore } from "./store/sqlite.js"
+import { PostgresStore } from "./store/postgres.js"
 import { EventEmitter, CustomEvent } from "./events.js"
 import { actionType, sessionType, modelsType, chainType, chainIdType } from "./codecs.js"
 import { JSONValue, mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "./utils.js"
@@ -44,11 +43,12 @@ import { ApplicationError } from "./errors.js"
 
 interface CoreConfig {
 	name: string
-	directory: string | null
+	directoryOrDatabaseUrl: string | null
 	spec: string
 	quickJS: QuickJSWASMModule
 	replay?: boolean
 	development?: boolean
+	verbose?: boolean
 	rpc: Partial<Record<Chain, Record<string, string>>>
 }
 
@@ -69,11 +69,12 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	public static async initialize({
 		name,
-		directory,
+		directoryOrDatabaseUrl,
 		spec,
 		quickJS,
 		replay,
 		development,
+		verbose,
 		rpc,
 	}: CoreConfig): Promise<Core> {
 		if (!development) {
@@ -86,7 +87,20 @@ export class Core extends EventEmitter<CoreEvents> {
 		runtime.setMemoryLimit(Core.RUNTIME_MEMORY_LIMIT)
 
 		const moduleHandle = await loadModule(context, name, spec)
-		const core = new Core(name, directory, !!replay, runtime, context, moduleHandle, rpc || {})
+		if (verbose) console.log("[canvas-core] Initializing core")
+		const core = new Core(
+			name,
+			directoryOrDatabaseUrl,
+			!!replay,
+			runtime,
+			context,
+			moduleHandle,
+			rpc || {},
+			verbose || false
+		)
+
+		if (verbose) console.log("[canvas-core] Initializing core store on", directoryOrDatabaseUrl)
+		await core.store.ready()
 
 		if (replay) {
 			console.log(`[canvas-core] Replaying action log...`)
@@ -102,7 +116,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			console.log(`[canvas-core] Successfully replayed all ${i} entries from the action log.`)
 		}
 
-		console.log("[canvas-core] Initialized core", name)
+		console.log("[canvas-core] Initialized core", name, "with database", directoryOrDatabaseUrl)
 		return core
 	}
 
@@ -125,16 +139,18 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private constructor(
 		public readonly name: string,
-		public readonly directory: string | null,
+		public readonly directoryOrDatabaseUrl: string | null,
 		public readonly replay: boolean,
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
 		public readonly moduleHandle: QuickJSHandle,
-		public readonly rpc: Record<string, Record<string, string>>
+		public readonly rpc: Record<string, Record<string, string>>,
+		public readonly verbose: boolean
 	) {
 		super()
 		this.queue = new PQueue({ concurrency: 1 })
 		this.rpc = rpc
+		this.verbose = verbose
 
 		const {
 			models: modelsHandle,
@@ -296,7 +312,15 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		this.store = new Store(directory, models, routes, replay)
+		// directoryOrDatabaseUrl should be either a postgres:// url, a directory, or empty (in-memory sqlite)
+		if (directoryOrDatabaseUrl?.startsWith("postgresql://")) {
+			this.store = new PostgresStore(directoryOrDatabaseUrl, models, routes, replay)
+		} else {
+			if (directoryOrDatabaseUrl && !fs.lstatSync(directoryOrDatabaseUrl).isDirectory()) {
+				throw new Error("core must be initialized with a valid directory, database url, or 'null'")
+			}
+			this.store = new SqliteStore(directoryOrDatabaseUrl, models, routes, replay)
+		}
 
 		this.effects = null
 		this.dbHandle = this.wrapObject(
@@ -448,7 +472,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.dispatchEvent(new Event("close"))
 	}
 
-	public getRoute(route: string, params: Record<string, ModelValue> = {}): Record<string, ModelValue>[] {
+	public async getRoute(route: string, params: Record<string, ModelValue> = {}): Promise<Record<string, ModelValue>[]> {
+		if (this.verbose) console.log("[canvas-core] getRoute:", route, params)
 		return this.store.getRoute(route, params)
 	}
 
@@ -459,6 +484,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Executes an action.
 	 */
 	public apply(action: Action): Promise<ActionResult> {
+		if (this.verbose) console.log("[canvas-core] apply action:", JSON.stringify(action))
 		return this.queue.add(async () => {
 			// check the timestamp bounds
 			assert(action.payload.timestamp > Core.boundsCheckLowerLimit, "action timestamp too far in the past")
@@ -472,7 +498,6 @@ export class Core extends EventEmitter<CoreEvents> {
 			// TODO: declare the chains and chainIds that each spec will require upfront
 			assert(rpcProviders !== undefined, `action signed with unsupported chain: ${chain}`)
 			assert(rpcProviders[chainId] !== undefined, `action signed with unsupported chainId: ${chainId}`)
-
 			let block
 			if (this.blockCache[chain + ":" + chainId]) {
 				block = this.blockCache[chain + ":" + chainId][blockhash]
@@ -530,7 +555,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				await this.store.insertAction(actionKey, action)
 
 				const effects = await this.getEffects(hash, action.payload)
-				this.store.applyEffects(action.payload, effects)
+				await this.store.applyEffects(action.payload, effects)
 
 				this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
 			}
@@ -593,6 +618,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Create a new session.
 	 */
 	public session(session: Session): Promise<void> {
+		if (this.verbose) console.log("[canvas-core] apply session:", JSON.stringify(session))
 		return this.queue.add(async () => {
 			assert(sessionType.is(session), "invalid session")
 			assert(session.payload.spec === this.name, "session signed for wrong spec")
