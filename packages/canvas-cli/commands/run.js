@@ -270,7 +270,7 @@ class API {
 		api.post("/sessions", this.handleSession)
 
 		for (const route of Object.keys(core.routeParameters)) {
-			api.get(route, this.handleRoute(route))
+			api.get(route, this.getRouteHandler(route))
 		}
 
 		this.server = stoppable(
@@ -305,7 +305,7 @@ class API {
 		})
 	}
 
-	handleRoute = (route) => async (req, res) => {
+	getRouteHandler = (route) => async (req, res) => {
 		const values = {}
 		for (const name of this.core.routeParameters[route]) {
 			const value = req.params[name]
@@ -336,10 +336,11 @@ class API {
 			}
 
 			try {
-				listener()
+				await listener()
 			} catch (err) {
 				// kill the EventSource if this.core.getRoute() fails on first request
 				// TODO: is it possible that it succeeds now, but fails later with new `values`?
+				console.log(chalk.red("[canvas-cli] error fetching view: " + err.message))
 				res.status(StatusCodes.BAD_REQUEST)
 				res.end(`Route error: ${err}`)
 				return
