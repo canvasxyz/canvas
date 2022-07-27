@@ -75,6 +75,11 @@ export const builder = (yargs) => {
 			type: "boolean",
 			desc: "Open a temporary in-memory core",
 		})
+		.option("verbose", {
+			type: "boolean",
+			desc: "Enable verbose logging",
+			default: false,
+		})
 		.option("chain-rpc", {
 			type: "array",
 			desc: "Provide an RPC endpoint for reading on-chain data",
@@ -152,6 +157,7 @@ export async function handler(args) {
 		core = await Core.initialize({
 			name,
 			spec,
+			verbose: args.verbose,
 			directoryOrDatabaseUrl: args.database || directory,
 			quickJS,
 			replay: args.replay,

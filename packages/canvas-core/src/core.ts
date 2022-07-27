@@ -48,6 +48,7 @@ interface CoreConfig {
 	quickJS: QuickJSWASMModule
 	replay?: boolean
 	development?: boolean
+	verbose?: boolean
 	rpc: Partial<Record<Chain, Record<string, string>>>
 }
 
@@ -73,6 +74,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		quickJS,
 		replay,
 		development,
+		verbose,
 		rpc,
 	}: CoreConfig): Promise<Core> {
 		if (!development) {
@@ -85,8 +87,19 @@ export class Core extends EventEmitter<CoreEvents> {
 		runtime.setMemoryLimit(Core.RUNTIME_MEMORY_LIMIT)
 
 		const moduleHandle = await loadModule(context, name, spec)
-		const core = new Core(name, directoryOrDatabaseUrl, !!replay, runtime, context, moduleHandle, rpc || {})
+		if (verbose) console.log("[canvas-core] Initializing core")
+		const core = new Core(
+			name,
+			directoryOrDatabaseUrl,
+			!!replay,
+			runtime,
+			context,
+			moduleHandle,
+			rpc || {},
+			verbose || false
+		)
 
+		if (verbose) console.log("[canvas-core] Initializing core store on", directoryOrDatabaseUrl)
 		await core.store.ready()
 
 		if (replay) {
@@ -131,11 +144,13 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
 		public readonly moduleHandle: QuickJSHandle,
-		public readonly rpc: Record<string, Record<string, string>>
+		public readonly rpc: Record<string, Record<string, string>>,
+		public readonly verbose: boolean
 	) {
 		super()
 		this.queue = new PQueue({ concurrency: 1 })
 		this.rpc = rpc
+		this.verbose = verbose
 
 		const {
 			models: modelsHandle,
@@ -458,6 +473,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async getRoute(route: string, params: Record<string, ModelValue> = {}): Promise<Record<string, ModelValue>[]> {
+		if (this.verbose) console.log("[canvas-core] getRoute:", route, params)
 		return this.store.getRoute(route, params)
 	}
 
@@ -468,6 +484,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Executes an action.
 	 */
 	public apply(action: Action): Promise<ActionResult> {
+		if (this.verbose) console.log("[canvas-core] apply action:", JSON.stringify(action))
 		return this.queue.add(async () => {
 			// check the timestamp bounds
 			assert(action.payload.timestamp > Core.boundsCheckLowerLimit, "action timestamp too far in the past")
@@ -601,6 +618,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Create a new session.
 	 */
 	public session(session: Session): Promise<void> {
+		if (this.verbose) console.log("[canvas-core] apply session:", JSON.stringify(session))
 		return this.queue.add(async () => {
 			assert(sessionType.is(session), "invalid session")
 			assert(session.payload.spec === this.name, "session signed for wrong spec")
