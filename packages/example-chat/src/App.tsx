@@ -118,9 +118,9 @@ export const App: React.FC<{}> = ({}) => {
 											<td className="like">
 												<input
 													type="button"
-													value={`${post.my_likes ? "Unlike" : "Like"} ${post.likes}`}
+													value={`${+post.my_likes ? "Unlike" : "Like"} ${post.likes}`}
 													onClick={() => {
-														dispatch(post.my_likes ? "unlike" : "like", [post.id])
+														dispatch(+post.my_likes ? "unlike" : "like", [post.id])
 															.then(() => console.log(post.my_likes ? "unliked post" : "liked post", post.id))
 															.catch((err) => {
 																console.error(err)
