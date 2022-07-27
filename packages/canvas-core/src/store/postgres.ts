@@ -263,23 +263,22 @@ export class PostgresStore extends Store {
 	}
 
 	private async validateDatabase(models: Record<string, Model>) {
-		// const schema = await this.db.any("SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name")
-		// const tables = schema
-		// 	.map((t) => t.name)
-		// 	.filter((t) => !t.startsWith("sqlite_"))
-		// 	.map((t) => `'${t}'`)
-		// const errors: string[] = []
-		// if (!tables.includes("'_messages'")) errors.push("missing _messages table")
-		// for (const [name, { indexes, ...properties }] of Object.entries(models)) {
-		// 	if (!tables.includes(PostgresStore.tableName(name))) errors.push("missing model table for " + name)
-		// 	if (!tables.includes(PostgresStore.deletedTableName(name)))
-		// 		errors.push("missing model deletion table for " + name)
-		// }
-		// if (errors.length > 0) {
-		// 	for (const error of errors) console.log(chalk.red(error))
-		// 	console.log(chalk.yellow("Model database looks out of sync. Try --replay to reset it."))
-		// 	process.exit(1)
-		// }
+		const schema = await this.db.any(
+			"SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';"
+		)
+		const tables = schema.map((t) => t.tablename).map((t) => `"${t}"`)
+		const errors: string[] = []
+		if (!tables.includes('"_messages"')) errors.push("missing _messages table")
+		for (const [name, { indexes, ...properties }] of Object.entries(models)) {
+			if (!tables.includes(PostgresStore.tableName(name))) errors.push("missing model table for " + name)
+			if (!tables.includes(PostgresStore.deletedTableName(name)))
+				errors.push("missing model deletion table for " + name)
+		}
+		if (errors.length > 0) {
+			for (const error of errors) console.log(chalk.red(error))
+			console.log(chalk.yellow("Model database looks out of sync. Try --replay to reset it."))
+			process.exit(1)
+		}
 	}
 
 	private async initializeMessageTables(models: Record<string, Model>) {
