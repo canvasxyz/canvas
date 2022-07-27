@@ -33,6 +33,10 @@ export const builder = (yargs) => {
 			desc: "Path of the app data directory",
 			default: defaultDataDirectory,
 		})
+		.option("database", {
+			type: "string",
+			desc: "Path to the app database. Providing one forces the app to run on Postgres",
+		})
 		.option("port", {
 			type: "number",
 			desc: "Port to bind the core API",
@@ -148,7 +152,7 @@ export async function handler(args) {
 		core = await Core.initialize({
 			name,
 			spec,
-			directory,
+			directoryOrDatabaseUrl: args.database || directory,
 			quickJS,
 			replay: args.replay,
 			development,
