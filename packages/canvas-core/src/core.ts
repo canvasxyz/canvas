@@ -637,6 +637,45 @@ export class Core extends EventEmitter<CoreEvents> {
 			const verifiedAddress = verifySessionSignature(session)
 			assert(verifiedAddress.toLowerCase() === session.payload.from.toLowerCase(), "session signed by wrong address")
 
+			// check the timestamp bounds
+			assert(session.payload.timestamp > Core.boundsCheckLowerLimit, "session timestamp too far in the past")
+			assert(session.payload.timestamp < Core.boundsCheckUpperLimit, "session timestamp too far in the future")
+
+			// fetch the block
+			assert(session.payload.block, "session signed with invalid block")
+			const { chain, chainId, blocknum, blockhash, timestamp } = session.payload.block
+			const rpcProviders = this.rpcProviders[chain]
+
+			// TODO: declare the chains and chainIds that each spec will require upfront
+			assert(rpcProviders !== undefined, `session signed with unsupported chain: ${chain}`)
+			assert(rpcProviders[chainId] !== undefined, `session signed with unsupported chainId: ${chainId}`)
+			let block
+			if (this.blockCache[chain + ":" + chainId]) {
+				block = this.blockCache[chain + ":" + chainId][blockhash]
+			}
+			if (!block) {
+				try {
+					console.log(`fetching block ${session.payload.block.blockhash} for ${chain}:${chainId}`)
+					block = await rpcProviders[chainId].getBlock(session.payload.block.blockhash)
+					this.blockCache[chain + ":" + chainId][blockhash] = block
+				} catch (err) {
+					// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
+					throw new Error("session signed with invalid block hash")
+				}
+			}
+
+			// check the block corresponds to other metadata on the session
+			assert(block, "could not find a valid block:" + JSON.stringify(session.payload.block))
+			assert(block?.timestamp === timestamp, "session signed with invalid timestamp")
+			assert(block?.number === blocknum, "session signed with invalid block number")
+
+			// check the block was recent
+			const blockAllowableLatency = 30 * 60 // sessions must be processed within X seconds
+			assert(
+				timestamp >= this.blockCacheMostRecentTimestamp[chain + ":" + chainId] - blockAllowableLatency,
+				"session must be signed with a recent timestamp, within " + blockAllowableLatency + "s of the last seen block"
+			)
+
 			const sessionKey = Core.getSessionKey(session.payload.session_public_key)
 			const existingRecord = await this.store.getSession(sessionKey)
 			if (existingRecord === null) {

@@ -5,7 +5,7 @@ import { ethers } from "ethers"
 import {
 	Action,
 	ActionArgument,
-	ActionBlock,
+	Block,
 	ActionPayload,
 	SessionPayload,
 	getSessionSignatureData,
@@ -91,7 +91,7 @@ export function useSession(
 
 			let contextSessionSigner = sessionSigner
 			if (sessionSigner === null || sessionExpiration < +Date.now()) {
-				const session = await newSession(signer, host, multihash)
+				const session = await newSession(signer, host, multihash, provider)
 				localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(session[1]))
 				setSessionSigner(session[0])
 				setSessionExpiration(session[1].expiration)
@@ -100,7 +100,7 @@ export function useSession(
 			if (contextSessionSigner === null) throw new Error("session login failed")
 
 			const timestamp = +Date.now() // get a new timestamp, from after we have secured a session
-			let block: ActionBlock
+			let block: Block
 			try {
 				const [network, providerBlock] = await Promise.all([provider.getNetwork(), provider.getBlock("latest")])
 				block = {
@@ -127,13 +127,16 @@ export function useSession(
 	}
 
 	const connectNewSession = useCallback(async () => {
+		if (provider === null) {
+			throw new Error("no web3 provider found")
+		}
 		if (multihash === null) {
 			throw new Error("failed to connect to application backend")
 		}
 		if (signer === null) {
 			throw new Error("must have connected web3 signer to log in")
 		}
-		const [sessionSigner, sessionObject] = await newSession(signer, host, multihash)
+		const [sessionSigner, sessionObject] = await newSession(signer, host, multihash, provider)
 		localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(sessionObject))
 		setSessionSigner(sessionSigner)
 		setSessionExpiration(sessionObject.expiration)
@@ -151,7 +154,8 @@ export function useSession(
 async function newSession(
 	signer: ethers.providers.JsonRpcSigner,
 	host: string,
-	multihash: string
+	multihash: string,
+	provider: ethers.providers.Provider
 ): Promise<[ethers.Wallet, SessionObject]> {
 	const timestamp = Date.now().valueOf()
 	const sessionDuration = 86400 * 1000
@@ -167,12 +171,27 @@ async function newSession(
 		expiration: timestamp + sessionDuration,
 	}
 
+	let block: Block
+	try {
+		const [network, providerBlock] = await Promise.all([provider.getNetwork(), provider.getBlock("latest")])
+		block = {
+			chain: "eth",
+			chainId: network.chainId,
+			blocknum: providerBlock.number,
+			blockhash: providerBlock.hash,
+			timestamp: providerBlock.timestamp,
+		}
+	} catch (err) {
+		console.error(err)
+		throw err
+	}
 	const payload: SessionPayload = {
 		from: from,
 		spec: multihash,
 		session_public_key: sessionSigner.address,
 		session_duration: sessionDuration,
 		timestamp,
+		block,
 	}
 
 	const signatureData = getSessionSignatureData(payload)

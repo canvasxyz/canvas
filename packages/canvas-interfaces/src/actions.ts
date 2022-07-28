@@ -6,12 +6,12 @@ import type { Chain, ChainId } from "./contracts.js"
  * that we put into and get out of action calls.
  *
  * The action timestamp may be expressed as a number or blockhash. We provide
- * `ActionBlock` for this. The action processor may choose to check `timestamp`
+ * `Block` for this. The action processor may choose to check `timestamp`
  * and/or `block` depending on which is provided.
  */
 export type ActionArgument = null | boolean | number | string
 
-export type ActionBlock = {
+export type Block = {
 	chain: Chain
 	chainId: ChainId
 	blocknum: number
@@ -29,7 +29,7 @@ export type ActionContext = {
 	from: string
 	spec: string
 	timestamp: number
-	block?: ActionBlock
+	block?: Block
 }
 
 export type ActionPayload = ActionContext & {
