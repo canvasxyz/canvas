@@ -130,6 +130,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	public readonly blockCache: Record<string, Record<string, BlockInfo>>
 	public readonly blockCacheRecents: Record<string, string[]>
+	public readonly blockCacheMostRecentTimestamp: Record<string, number>
 
 	private readonly queue: PQueue
 	private readonly dbHandle: QuickJSHandle
@@ -229,6 +230,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.rpcProviders = {}
 		this.blockCache = {}
 		this.blockCacheRecents = {}
+		this.blockCacheMostRecentTimestamp = {}
 		for (const [chain, chainRpcs] of Object.entries(this.rpc)) {
 			this.rpcProviders[chain as Chain] = {}
 			for (const [chainId, rpcUrl] of Object.entries(chainRpcs)) {
@@ -246,6 +248,7 @@ export class Core extends EventEmitter<CoreEvents> {
 					const updateCache = async (blocknum: number) => {
 						const block = await providers[chainId].getBlock(blocknum)
 						const info = { number: block.number, timestamp: block.timestamp }
+						this.blockCacheMostRecentTimestamp[key] = block.timestamp
 
 						// keep up to 128 past blocks
 						const CACHE_SIZE = 128
@@ -490,7 +493,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(action.payload.timestamp > Core.boundsCheckLowerLimit, "action timestamp too far in the past")
 			assert(action.payload.timestamp < Core.boundsCheckUpperLimit, "action timestamp too far in the future")
 
-			// check the block
+			// fetch the block
 			assert(action.payload.block, "action signed with invalid block")
 			const { chain, chainId, blocknum, blockhash, timestamp } = action.payload.block
 			const rpcProviders = this.rpcProviders[chain]
@@ -513,9 +516,17 @@ export class Core extends EventEmitter<CoreEvents> {
 				}
 			}
 
+			// check the block corresponds to other metadata on the action
 			assert(block, "could not find a valid block:" + JSON.stringify(action.payload.block))
 			assert(block?.timestamp === timestamp, "action signed with invalid timestamp")
 			assert(block?.number === blocknum, "action signed with invalid block number")
+
+			// check the block was recent
+			const blockAllowableLatency = 30 * 60 // actions must be processed within X seconds
+			assert(
+				timestamp >= this.blockCacheMostRecentTimestamp[chain + ":" + chainId] - blockAllowableLatency,
+				"action must be signed with a recent timestamp, within " + blockAllowableLatency + "s of the last seen block"
+			)
 
 			// Verify the signature
 			if (action.session !== null) {
