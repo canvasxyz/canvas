@@ -395,8 +395,9 @@ class API {
 				res.status(StatusCodes.OK).header("ETag", `"${hash}"`).end()
 			})
 			.catch((err) => {
-				console.error("[canvas-cli] Failed to apply action:", err.message)
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+				const message = err.message || err.internalError?.message
+				console.error("[canvas-cli] Failed to apply action:", message)
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message || "Failed to apply action")
 			})
 	}
 
