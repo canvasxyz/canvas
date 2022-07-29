@@ -44,7 +44,8 @@ import { ApplicationError } from "./errors.js"
 
 interface CoreConfig {
 	name: string
-	directoryOrDatabaseUrl: string | null
+	directory?: string
+	database?: string
 	spec: string
 	quickJS: QuickJSWASMModule
 	replay?: boolean
@@ -70,7 +71,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	public static async initialize({
 		name,
-		directoryOrDatabaseUrl,
+		directory,
+		database,
 		spec,
 		quickJS,
 		replay,
@@ -91,7 +93,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (verbose) console.log("[canvas-core] Initializing core")
 		const core = new Core(
 			name,
-			directoryOrDatabaseUrl,
+			directory,
+			database,
 			!!replay,
 			runtime,
 			context,
@@ -100,7 +103,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			verbose || false
 		)
 
-		if (verbose) console.log("[canvas-core] Initializing core store on", directoryOrDatabaseUrl)
+		if (verbose) console.log("[canvas-core] Initializing core store on", database || directory)
 		await core.store.ready()
 
 		if (replay) {
@@ -116,7 +119,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			console.log(`[canvas-core] Successfully replayed all ${i} entries from the action log.`)
 		}
 
-		console.log("[canvas-core] Initialized core", name, "with database", directoryOrDatabaseUrl)
+		console.log("[canvas-core] Initialized core", name, "with database", database || directory)
 		return core
 	}
 
@@ -141,7 +144,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private constructor(
 		public readonly name: string,
-		public readonly directoryOrDatabaseUrl: string | null,
+		public readonly directory: string | undefined,
+		public readonly database: string | undefined | null,
 		public readonly replay: boolean,
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
@@ -316,14 +320,15 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		// directoryOrDatabaseUrl should be either a postgres:// url, a directory, or empty (in-memory sqlite)
-		if (directoryOrDatabaseUrl?.startsWith("postgresql://")) {
-			this.store = new PostgresStore(directoryOrDatabaseUrl, models, routes, replay)
+		// initialize the core with either a postgres:// url, a directory, or empty (in-memory sqlite)
+		if (database) {
+			if (!database.startsWith("postgresql://")) throw new Error("database must be a postgres:// url")
+			this.store = new PostgresStore(database, models, routes, replay)
 		} else {
-			if (directoryOrDatabaseUrl && !fs.lstatSync(directoryOrDatabaseUrl).isDirectory()) {
-				throw new Error("core must be initialized with a valid directory, database url, or 'null'")
+			if (directory === undefined || (directory !== null && !fs.lstatSync(directory).isDirectory())) {
+				throw new Error("core must be initialized with a valid directory, database url, or 'null' for in-memory db")
 			}
-			this.store = new SqliteStore(directoryOrDatabaseUrl, models, routes, replay)
+			this.store = new SqliteStore(directory, models, routes, replay)
 		}
 
 		this.effects = null

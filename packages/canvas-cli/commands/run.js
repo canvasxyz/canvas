@@ -158,7 +158,8 @@ export async function handler(args) {
 			name,
 			spec,
 			verbose: args.verbose,
-			directoryOrDatabaseUrl: args.database || directory,
+			directory: args.database ? null : directory, // use sqlite if no `database` url was provided
+			database: args.database,
 			quickJS,
 			replay: args.replay,
 			development,
