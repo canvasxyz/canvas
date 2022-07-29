@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/core",
-	"version": "0.0.4",
+	"version": "0.0.8",
 	"author": "Canvas Technology Corporation (https://canvas.xyz)",
 	"type": "module",
 	"types": "lib/index.d.ts",
@@ -13,7 +13,7 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.0.6",
+		"@canvas-js/interfaces": "0.0.8",
 		"@types/better-sqlite3": "^7.5.0",
 		"@types/node-fetch": "^2.6.2",
 		"@types/pg": "^8.6.5",
