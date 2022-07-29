@@ -2,6 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import assert from "node:assert"
 
+import chalk from "chalk"
 import fetch from "node-fetch"
 import { ethers } from "ethers"
 import {
@@ -105,8 +106,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (replay) {
 			console.log(`[canvas-core] Replaying action log...`)
 			let i = 0
-			// note that SQL_QUERY_LIMIT is the number of actions per page to retrieve,
-			// not the total number of actions to retrieve
+			// SQL_QUERY_LIMIT is the number of actions per page to retrieve
 			for await (const [hash, action] of core.store.getActionStream(SQL_QUERY_LIMIT)) {
 				assert(actionType.is(action), "Invalid action value in action log")
 				const effects = await core.getEffects(hash, action.payload)
@@ -125,6 +125,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly routeParameters: Record<string, string[]>
 	public readonly actionParameters: Record<string, string[]>
 	public readonly contractParameters: Record<string, { metadata: ContractMetadata; contract: ethers.Contract }>
+	// TODO: remove contractRpcProviders, we don't need two sets of providers
 	public readonly contractRpcProviders: Record<string, ethers.providers.JsonRpcProvider>
 	public readonly rpcProviders: Partial<Record<Chain, Record<string, ethers.providers.JsonRpcProvider>>>
 
@@ -375,78 +376,6 @@ export class Core extends EventEmitter<CoreEvents> {
 				})
 			})
 		)
-
-		// initialize global variables
-		// console.log:
-		const consoleHandle = this.wrapObject({
-			log: this.context.newFunction("log", (...args: any[]) => {
-				console.log("[canvas-vm]", ...args.map(this.context.dump))
-			}),
-		})
-
-		// fetch:
-		const fetchHandle = this.context.newFunction("fetch", (urlHandle: QuickJSHandle) => {
-			assert(this.context.typeof(urlHandle) === "string", "url must be a string")
-			const url = this.context.getString(urlHandle)
-			const deferred = this.context.newPromise()
-			console.log("[canvas-vm] fetch:", url)
-
-			fetch(url)
-				.then((res) => res.text())
-				.then((data) => {
-					console.log(`[canvas-vm] fetch success: ${url} (${data.length} bytes)`)
-					this.context.newString(data).consume((val) => deferred.resolve(val))
-				})
-				.catch((err) => {
-					console.log("[canvas-vm] fetch error:", err.message)
-					deferred.reject(this.context.newString(err.message))
-				})
-			deferred.settled.then(this.runtime.executePendingJobs)
-			return deferred.handle
-		})
-
-		// contract:
-		const contractHandle = this.context.newFunction("contract", (nameHandle: QuickJSHandle) => {
-			assert(this.context.typeof(nameHandle) === "string", "name must be a string")
-			const name = this.context.getString(nameHandle)
-			const contract = this.contractParameters[name].contract
-			const { address, abi } = this.contractParameters[name].metadata
-			const deferred = this.context.newPromise()
-			console.log("[canvas-vm] using contract:", name, address)
-
-			// produce an object that supports the contract's function calls
-			const wrapper: Record<string, QuickJSHandle> = {}
-			for (const key in contract.functions) {
-				if (typeof key !== "string") continue
-				if (key.indexOf("(") !== -1) continue
-
-				wrapper[key] = this.context.newFunction(key, (...argHandles: any[]) => {
-					const args = argHandles.map(this.context.dump)
-					console.log("[canvas-vm] read from contract:", name, key, args)
-					contract[key]
-						.apply(this, args)
-						.then((result: any) => {
-							deferred.resolve(this.context.newString(result.toString()))
-						})
-						.catch((err: Error) => {
-							console.log("[canvas-vm] eth call error:", err.message)
-							deferred.reject(this.context.newString(err.message))
-						})
-					deferred.settled.then(this.runtime.executePendingJobs)
-					return deferred.handle
-				})
-			}
-			return this.wrapObject(wrapper)
-		})
-
-		const globals = this.wrapObject({
-			fetch: fetchHandle,
-			contract: contractHandle,
-			console: consoleHandle,
-		})
-
-		this.call("Object.assign", null, this.context.global, globals).dispose()
-		globals.dispose()
 	}
 
 	public async onIdle(): Promise<void> {
@@ -559,20 +488,102 @@ export class Core extends EventEmitter<CoreEvents> {
 				assert(verifiedAddress.toLowerCase() === action.payload.from.toLowerCase(), "action signed by wrong address")
 			}
 
+			// check if the action has already been applied
 			const hash = ethers.utils.sha256(action.signature)
 			const actionKey = Core.getActionKey(hash)
 			const existingRecord = await this.store.getAction(actionKey)
-			if (existingRecord === null) {
-				await this.store.insertAction(actionKey, action)
+			if (existingRecord !== null) return { hash }
 
-				const effects = await this.getEffects(hash, action.payload)
-				await this.store.applyEffects(action.payload, effects)
+			// set up hooks available to action processor
+			this.setupGlobals(blockhash, blocknum)
 
-				this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
-			}
+			// apply the action
+			await this.store.insertAction(actionKey, action)
+
+			const effects = await this.getEffects(hash, action.payload)
+			await this.store.applyEffects(action.payload, effects)
+
+			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
 
 			return { hash }
 		})
+	}
+
+	private setupGlobals(blockhash: string, blocknum: number): void {
+		// console.log:
+		const consoleHandle = this.wrapObject({
+			log: this.context.newFunction("log", (...args: any[]) => {
+				console.log("[canvas-vm]", ...args.map(this.context.dump))
+			}),
+		})
+
+		// fetch:
+		const fetchHandle = this.context.newFunction("fetch", (urlHandle: QuickJSHandle) => {
+			assert(this.context.typeof(urlHandle) === "string", "url must be a string")
+			const url = this.context.getString(urlHandle)
+			const deferred = this.context.newPromise()
+			console.log("[canvas-vm] fetch:", url)
+
+			fetch(url)
+				.then((res) => res.text())
+				.then((data) => {
+					console.log(`[canvas-vm] fetch success: ${url} (${data.length} bytes)`)
+					this.context.newString(data).consume((val) => deferred.resolve(val))
+				})
+				.catch((err) => {
+					console.log("[canvas-vm] fetch error:", err.message)
+					deferred.reject(this.context.newString(err.message))
+				})
+			deferred.settled.then(this.runtime.executePendingJobs)
+			return deferred.handle
+		})
+
+		// contract:
+		const contractHandle = this.context.newFunction("contract", (nameHandle: QuickJSHandle) => {
+			assert(this.context.typeof(nameHandle) === "string", "name must be a string")
+			const name = this.context.getString(nameHandle)
+			const contract = this.contractParameters[name].contract
+			const { address, abi } = this.contractParameters[name].metadata
+			const deferred = this.context.newPromise()
+			console.log("[canvas-vm] using contract:", name, address)
+
+			// produce an object that supports the contract's function calls
+			const wrapper: Record<string, QuickJSHandle> = {}
+			for (const key in contract.functions) {
+				if (typeof key !== "string") continue
+				if (key.indexOf("(") !== -1) continue
+
+				wrapper[key] = this.context.newFunction(key, (...argHandles: any[]) => {
+					const args = argHandles.map(this.context.dump)
+					console.log(
+						"[canvas-vm] contract: " +
+							chalk.green(`${name}.${key}(${args.join(",")})`) +
+							` at block ${blocknum} ${blockhash.slice(0, 5)}`
+					)
+					contract[key]
+						.apply(this, args.concat({ blockTag: blocknum }))
+						.then((result: any) => {
+							deferred.resolve(this.context.newString(result.toString()))
+						})
+						.catch((err: Error) => {
+							console.log("[canvas-vm] eth call error:", err.message)
+							deferred.reject(this.context.newString(err.message))
+						})
+					deferred.settled.then(this.runtime.executePendingJobs)
+					return deferred.handle
+				})
+			}
+			return this.wrapObject(wrapper)
+		})
+
+		const globals = this.wrapObject({
+			fetch: fetchHandle,
+			contract: contractHandle,
+			console: consoleHandle,
+		})
+
+		this.call("Object.assign", null, this.context.global, globals).dispose()
+		globals.dispose()
 	}
 
 	private async getEffects(hash: string, { call, args, spec, from, timestamp }: ActionPayload): Promise<Effect[]> {
