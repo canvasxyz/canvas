@@ -144,7 +144,13 @@ export async function handler(args) {
 			rpc[chain] = rpc[chain] || {}
 			rpc[chain][chainId] = chainRpc
 		}
-	}
+	} else {
+      if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
+          rpc.eth = {}
+          rpc.eth[process.env.ETH_CHAIN_ID] = process.env.ETH_CHAIN_RPC
+          console.log(`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`)
+      }
+  }
 
 	const quickJS = await getQuickJS()
 	let ipfs, peerId

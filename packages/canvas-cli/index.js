@@ -2,9 +2,12 @@
 import fs from "node:fs"
 import updateNotifier from "update-notifier"
 import yargs from "yargs"
+import dotenv from "dotenv"
 import { hideBin } from "yargs/helpers"
 
 import { commands } from "./commands/index.js"
+
+dotenv.config()
 
 // const notifier = updateNotifier({
 // 	pkg: JSON.parse(fs.readFileSync("./package.json", "utf-8")),
