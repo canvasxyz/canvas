@@ -115,8 +115,11 @@ export async function handler(args) {
 			fs.mkdirSync(directory)
 		} else if (args.reset) {
 			await deleteDatabase(directory, { prompt: true })
+			console.log(`[canvas-cli] Reset database at ${directory}`)
+			return
 		} else if (args.replay) {
 			await deleteGeneratedModels(directory, { prompt: true })
+			console.log(`[canvas-cli] Deleted generated models at ${directory}`)
 		}
 	}
 
