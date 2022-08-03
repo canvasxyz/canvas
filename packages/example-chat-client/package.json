@@ -1,5 +1,5 @@
 {
-  "name": "canvas-example-chat",
+  "name": "canvas-example-chat-client",
   "version": "0.0.0",
   "description": "",
   "main": "index.js",
