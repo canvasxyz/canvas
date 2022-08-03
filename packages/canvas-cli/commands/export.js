@@ -4,7 +4,7 @@ import path from "node:path"
 import chalk from "chalk"
 
 import { Core } from "@canvas-js/core"
-import { defaultDataDirectory, locateSpec } from "../utils.js"
+import { locateSpec } from "../utils.js"
 
 export const command = "export <spec>"
 export const desc = "Export actions and sessions to stdout"
@@ -18,7 +18,6 @@ export const builder = (yargs) => {
 		.option("datadir", {
 			describe: "Path of the app data directory",
 			type: "string",
-			default: defaultDataDirectory,
 		})
 		.option("ipfs", {
 			type: "string",

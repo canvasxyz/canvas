@@ -16,7 +16,7 @@ import * as t from "io-ts"
 import { Core, actionType, actionPayloadType, sessionType } from "@canvas-js/core"
 import { create as createIpfsHttpClient } from "ipfs-http-client"
 
-import { defaultDataDirectory, deleteDatabase, deleteGeneratedModels, locateSpec } from "../utils.js"
+import { deleteDatabase, deleteGeneratedModels, locateSpec } from "../utils.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -31,7 +31,6 @@ export const builder = (yargs) => {
 		.option("datadir", {
 			type: "string",
 			desc: "Path of the app data directory",
-			default: defaultDataDirectory,
 		})
 		.option("database", {
 			type: "string",
@@ -145,12 +144,14 @@ export async function handler(args) {
 			rpc[chain][chainId] = chainRpc
 		}
 	} else {
-      if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
-          rpc.eth = {}
-          rpc.eth[process.env.ETH_CHAIN_ID] = process.env.ETH_CHAIN_RPC
-          console.log(`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`)
-      }
-  }
+		if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
+			rpc.eth = {}
+			rpc.eth[process.env.ETH_CHAIN_ID] = process.env.ETH_CHAIN_RPC
+			console.log(
+				`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
+			)
+		}
+	}
 
 	const quickJS = await getQuickJS()
 	let ipfs, peerId

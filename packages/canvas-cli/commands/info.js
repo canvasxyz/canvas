@@ -7,7 +7,7 @@ import { getQuickJS } from "quickjs-emscripten"
 
 import { Core, actionType, sessionType } from "@canvas-js/core"
 
-import { defaultDataDirectory, locateSpec } from "../utils.js"
+import { locateSpec } from "../utils.js"
 
 export const command = "info <spec>"
 export const desc = "Show the models, views, and actions for a spec"
@@ -22,7 +22,6 @@ export const builder = (yargs) => {
 		.option("datadir", {
 			describe: "Path of the app data directory",
 			type: "string",
-			default: defaultDataDirectory,
 		})
 		.option("ipfs", {
 			type: "string",

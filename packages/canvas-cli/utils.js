@@ -76,9 +76,11 @@ export async function deleteGeneratedModels(directory, { prompt } = {}) {
 
 export const cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 
+export const defaultDataDirectory = process.env.CANVAS_DATA_DIRECTORY ?? path.resolve(os.homedir(), ".canvas")
+
 export async function locateSpec({ spec: name, datadir, ipfs, temp }) {
 	if (cidPattern.test(name)) {
-		const directory = temp ? null : path.resolve(datadir, name)
+		const directory = temp ? null : datadir ? path.resolve(datadir, name) : defaultDataDirectory
 		const specPath = path.resolve(datadir, name, SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const spec = fs.readFileSync(specPath, "utf-8")
@@ -95,7 +97,7 @@ export async function locateSpec({ spec: name, datadir, ipfs, temp }) {
 	} else if (name.endsWith(".js")) {
 		const specPath = path.resolve(name)
 		const spec = fs.readFileSync(specPath, "utf-8")
-		const directory = temp ? null : specPath.slice(0, specPath.lastIndexOf("."))
+		const directory = temp ? null : datadir ? datadir : specPath.slice(0, specPath.lastIndexOf("."))
 		return { specPath, directory, name: specPath, spec, development: true }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js file"))
@@ -120,8 +122,6 @@ function download(cid, ipfsURL) {
 			}
 		})
 }
-
-export const defaultDataDirectory = process.env.CANVAS_DATA_DIRECTORY ?? path.resolve(os.homedir(), ".canvas")
 
 export function getDirectorySize(directory) {
 	return fs.readdirSync(directory).reduce((totalSize, name) => {

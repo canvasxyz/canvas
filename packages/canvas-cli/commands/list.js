@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import { defaultDataDirectory, getDirectorySize, cidPattern, SPEC_FILENAME } from "../utils.js"
+import { getDirectorySize, cidPattern, SPEC_FILENAME } from "../utils.js"
 
 import { Store } from "@canvas-js/core"
 
@@ -12,7 +12,6 @@ export const builder = (yargs) => {
 	yargs.option("datadir", {
 		describe: "Path of the app data directory",
 		type: "string",
-		default: defaultDataDirectory,
 	})
 }
 
