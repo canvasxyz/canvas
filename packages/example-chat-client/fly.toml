@@ -1,4 +1,4 @@
-app = "canvas-example-chat-server"
+app = "canvas-example-chat-client"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
@@ -9,19 +9,15 @@ processes = []
   allowed_public_ports = []
   auto_rollback = true
 
-[mounts]
-  source = "canvas_example_chat_data"
-  destination = "/data"
-
 [[services]]
   http_checks = []
-  internal_port = 8000
+  internal_port = 8080
   processes = ["app"]
   protocol = "tcp"
   script_checks = []
   [services.concurrency]
-    hard_limit = 100
-    soft_limit = 90
+    hard_limit = 25
+    soft_limit = 20
     type = "connections"
 
   [[services.ports]]
