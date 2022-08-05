@@ -24,6 +24,7 @@ import {
 	Action,
 	ActionResult,
 	ActionPayload,
+	Block,
 	Session,
 	SessionPayload,
 	verifyActionSignature,
@@ -418,6 +419,45 @@ export class Core extends EventEmitter<CoreEvents> {
 	private static boundsCheckUpperLimit = new Date("2070").valueOf()
 
 	/**
+	 * Helper for verifying the blockhash for an action or session.
+	 */
+	public async verifyBlock(blockInfo: Block) {
+		const { chain, chainId, blocknum, blockhash, timestamp } = blockInfo
+		const rpcProviders = this.rpcProviders[chain]
+
+		// TODO: declare the chains and chainIds that each spec will require upfront
+
+		// Find the block via RPC.
+		assert(rpcProviders !== undefined, `action signed with unsupported chain: ${chain}`)
+		assert(rpcProviders[chainId] !== undefined, `action signed with unsupported chainId: ${chainId}`)
+		let block
+		if (this.blockCache[chain + ":" + chainId]) {
+			block = this.blockCache[chain + ":" + chainId][blockhash]
+		}
+		if (!block) {
+			try {
+				console.log(`fetching block ${blockInfo.blockhash} for ${chain}:${chainId}`)
+				block = await rpcProviders[chainId].getBlock(blockInfo.blockhash)
+				this.blockCache[chain + ":" + chainId][blockhash] = block
+			} catch (err) {
+				// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
+				throw new Error("action signed with invalid block hash")
+			}
+		}
+		// check the block retrieved from RPC matches metadata from the user
+		assert(block, "could not find a valid block:" + JSON.stringify(block))
+		assert(block?.number === blocknum, "action/session provided with invalid block number")
+		assert(block?.timestamp === timestamp, "action/session provided with invalid timestamp")
+
+		// check the block was recent
+		const maxDelay = 30 * 60 // limit propagation to 30 minutes
+		assert(
+			timestamp >= this.blockCacheMostRecentTimestamp[chain + ":" + chainId] - maxDelay,
+			"action must be signed with a recent timestamp, within " + maxDelay + "s of the last seen block"
+		)
+	}
+
+	/**
 	 * Executes an action.
 	 */
 	public apply(action: Action): Promise<ActionResult> {
@@ -427,42 +467,11 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(action.payload.timestamp > Core.boundsCheckLowerLimit, "action timestamp too far in the past")
 			assert(action.payload.timestamp < Core.boundsCheckUpperLimit, "action timestamp too far in the future")
 
-			// fetch the block
+			// check the action was signed with a valid, recent block
 			assert(action.payload.block, "action signed with invalid block")
-			const { chain, chainId, blocknum, blockhash, timestamp } = action.payload.block
-			const rpcProviders = this.rpcProviders[chain]
+			await this.verifyBlock(action.payload.block)
 
-			// TODO: declare the chains and chainIds that each spec will require upfront
-			assert(rpcProviders !== undefined, `action signed with unsupported chain: ${chain}`)
-			assert(rpcProviders[chainId] !== undefined, `action signed with unsupported chainId: ${chainId}`)
-			let block
-			if (this.blockCache[chain + ":" + chainId]) {
-				block = this.blockCache[chain + ":" + chainId][blockhash]
-			}
-			if (!block) {
-				try {
-					console.log(`fetching block ${action.payload.block.blockhash} for ${chain}:${chainId}`)
-					block = await rpcProviders[chainId].getBlock(action.payload.block.blockhash)
-					this.blockCache[chain + ":" + chainId][blockhash] = block
-				} catch (err) {
-					// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
-					throw new Error("action signed with invalid block hash")
-				}
-			}
-
-			// check the block corresponds to other metadata on the action
-			assert(block, "could not find a valid block:" + JSON.stringify(action.payload.block))
-			assert(block?.timestamp === timestamp, "action signed with invalid timestamp")
-			assert(block?.number === blocknum, "action signed with invalid block number")
-
-			// check the block was recent
-			const blockAllowableLatency = 30 * 60 // actions must be processed within X seconds
-			assert(
-				timestamp >= this.blockCacheMostRecentTimestamp[chain + ":" + chainId] - blockAllowableLatency,
-				"action must be signed with a recent timestamp, within " + blockAllowableLatency + "s of the last seen block"
-			)
-
-			// Verify the signature
+			// verify the signature, either using a session signature or action signature
 			if (action.session !== null) {
 				const sessionKey = Core.getSessionKey(action.session)
 				const session = await this.store.getSession(sessionKey)
@@ -500,7 +509,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			if (existingRecord !== null) return { hash }
 
 			// set up hooks available to action processor
-			this.setupGlobals(blockhash, blocknum)
+			this.setupGlobals(action.payload.block.blockhash, action.payload.block.blocknum)
 
 			// apply the action
 			await this.store.insertAction(actionKey, action)
@@ -514,6 +523,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		})
 	}
 
+	/**
+	 * Set up function calls available to the QuickJS VM executor.
+	 * Used by `.apply()`.
+	 */
 	private setupGlobals(blockhash: string, blocknum: number): void {
 		// console.log:
 		const consoleHandle = this.wrapObject({
@@ -591,6 +604,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		globals.dispose()
 	}
 
+	/**
+	 * Given a call, get a list of effects to pass to `store.applyEffects`, to be applied to the models.
+	 * Used by `.apply()` and when replaying actions.
+	 */
 	private async getEffects(hash: string, { call, args, spec, from, timestamp }: ActionPayload): Promise<Effect[]> {
 		assert(this.effects === null, "cannot apply more than one action at once")
 
@@ -657,41 +674,11 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(session.payload.timestamp > Core.boundsCheckLowerLimit, "session timestamp too far in the past")
 			assert(session.payload.timestamp < Core.boundsCheckUpperLimit, "session timestamp too far in the future")
 
-			// fetch the block
+			// check the session was signed with a valid, recent block
 			assert(session.payload.block, "session signed with invalid block")
-			const { chain, chainId, blocknum, blockhash, timestamp } = session.payload.block
-			const rpcProviders = this.rpcProviders[chain]
+			await this.verifyBlock(session.payload.block)
 
-			// TODO: declare the chains and chainIds that each spec will require upfront
-			assert(rpcProviders !== undefined, `session signed with unsupported chain: ${chain}`)
-			assert(rpcProviders[chainId] !== undefined, `session signed with unsupported chainId: ${chainId}`)
-			let block
-			if (this.blockCache[chain + ":" + chainId]) {
-				block = this.blockCache[chain + ":" + chainId][blockhash]
-			}
-			if (!block) {
-				try {
-					console.log(`fetching block ${session.payload.block.blockhash} for ${chain}:${chainId}`)
-					block = await rpcProviders[chainId].getBlock(session.payload.block.blockhash)
-					this.blockCache[chain + ":" + chainId][blockhash] = block
-				} catch (err) {
-					// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
-					throw new Error("session signed with invalid block hash")
-				}
-			}
-
-			// check the block corresponds to other metadata on the session
-			assert(block, "could not find a valid block:" + JSON.stringify(session.payload.block))
-			assert(block?.timestamp === timestamp, "session signed with invalid timestamp")
-			assert(block?.number === blocknum, "session signed with invalid block number")
-
-			// check the block was recent
-			const blockAllowableLatency = 30 * 60 // sessions must be processed within X seconds
-			assert(
-				timestamp >= this.blockCacheMostRecentTimestamp[chain + ":" + chainId] - blockAllowableLatency,
-				"session must be signed with a recent timestamp, within " + blockAllowableLatency + "s of the last seen block"
-			)
-
+			// add the session to store
 			const sessionKey = Core.getSessionKey(session.payload.session_public_key)
 			const existingRecord = await this.store.getSession(sessionKey)
 			if (existingRecord === null) {
