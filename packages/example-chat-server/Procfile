@@ -1,0 +1,1 @@
+web: canvas run ./spec.canvas.js --port $PORT --database $DATABASE_URL

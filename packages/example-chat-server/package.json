@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "build": "npm install -g @canvas-js/cli"
+  }
+}
