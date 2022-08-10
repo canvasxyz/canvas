@@ -52,6 +52,7 @@ interface CoreConfig {
 	replay?: boolean
 	development?: boolean
 	verbose?: boolean
+	unchecked?: boolean
 	rpc: Partial<Record<Chain, Record<string, string>>>
 }
 
@@ -79,6 +80,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		replay,
 		development,
 		verbose,
+		unchecked,
 		rpc,
 	}: CoreConfig): Promise<Core> {
 		if (!development) {
@@ -101,7 +103,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			context,
 			moduleHandle,
 			rpc || {},
-			verbose || false
+			verbose || false,
+			unchecked || false
 		)
 
 		if (verbose) console.log("[canvas-core] Initializing core store on", database || directory)
@@ -152,12 +155,14 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly context: QuickJSContext,
 		public readonly moduleHandle: QuickJSHandle,
 		public readonly rpc: Record<string, Record<string, string>>,
-		public readonly verbose: boolean
+		public readonly verbose: boolean,
+		public readonly unchecked: boolean
 	) {
 		super()
 		this.queue = new PQueue({ concurrency: 1 })
 		this.rpc = rpc
 		this.verbose = verbose
+		this.unchecked = unchecked
 
 		const {
 			models: modelsHandle,
@@ -242,6 +247,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			for (const [chainId, rpcUrl] of Object.entries(chainRpcs)) {
 				const providers = this.rpcProviders[chain as Chain]
 				if (!providers) continue
+				if (this.unchecked) continue
 
 				// set up each chain's rpc and blockhash cache
 				const key = chain + ":" + chainId
@@ -469,7 +475,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			// check the action was signed with a valid, recent block
 			assert(action.payload.block, "action signed with invalid block")
-			await this.verifyBlock(action.payload.block)
+			if (!this.unchecked) {
+				await this.verifyBlock(action.payload.block)
+			}
 
 			// verify the signature, either using a session signature or action signature
 			if (action.session !== null) {
@@ -676,7 +684,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			// check the session was signed with a valid, recent block
 			assert(session.payload.block, "session signed with invalid block")
-			await this.verifyBlock(session.payload.block)
+			if (!this.unchecked) {
+				await this.verifyBlock(session.payload.block)
+			}
 
 			// add the session to store
 			const sessionKey = Core.getSessionKey(session.payload.session_public_key)
