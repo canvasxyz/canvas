@@ -1,3 +1,5 @@
+export const database = "sqlite"
+
 export const models = {
 	posts: {
 		content: "string",

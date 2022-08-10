@@ -165,21 +165,32 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.unchecked = unchecked
 
 		const {
+			database: databaseHandle,
 			models: modelsHandle,
 			routes: routesHandle,
 			actions: actionsHandle,
 			contracts: contractsHandle,
 		} = moduleHandle.consume(this.unwrapObject)
 
+		assert(databaseHandle !== undefined, "spec is missing `database` export")
 		assert(modelsHandle !== undefined, "spec is missing `models` export")
 		assert(routesHandle !== undefined, "spec is missing `routes` export")
 		assert(actionsHandle !== undefined, "spec is missing `actions` export")
+		assert(context.typeof(databaseHandle) === "string", "`database` export must be an object")
 		assert(context.typeof(modelsHandle) === "object", "`models` export must be an object")
 		assert(context.typeof(routesHandle) === "object", "`routes` export must be an object")
 		assert(context.typeof(actionsHandle) === "object", "`actions` export must be an object")
 		assert(
 			contractsHandle === undefined || context.typeof(contractsHandle) === "object",
 			"`contracts` export must be an object"
+		)
+
+		// parse and validate database
+		// this is checked when we initialize the database store later
+		const databaseRequested = databaseHandle.consume(context.getString)
+		assert(
+			databaseRequested === "sqlite" || databaseRequested === "postgres",
+			"invalid database name, must be 'sqlite' or 'postgres'"
 		)
 
 		// parse and validate models
@@ -330,11 +341,13 @@ export class Core extends EventEmitter<CoreEvents> {
 		// initialize the core with either a postgres:// url, a directory, or empty (in-memory sqlite)
 		if (database) {
 			if (!database.startsWith("postgresql://")) throw new Error("database must be a postgres:// url")
+			assert(databaseRequested === "postgres", `this spec requested a ${databaseRequested} database`)
 			this.store = new PostgresStore(database, models, routes, replay)
 		} else {
 			if (directory === undefined || (directory !== null && !fs.lstatSync(directory).isDirectory())) {
 				throw new Error("core must be initialized with a valid directory, database url, or 'null' for in-memory db")
 			}
+			assert(databaseRequested === "sqlite", `this spec requested a ${databaseRequested} database`)
 			this.store = new SqliteStore(directory, models, routes, replay)
 		}
 
