@@ -66,6 +66,10 @@ export const builder = (yargs) => {
 			type: "boolean",
 			desc: "Reconstruct the model database by replying the action log",
 		})
+		.option("unchecked", {
+			type: "boolean",
+			desc: "Run the node in unchecked mode, without verifying block hashes",
+		})
 		.option("watch", {
 			type: "boolean",
 			desc: "Restart the core on spec file changes",
@@ -172,6 +176,7 @@ export async function handler(args) {
 			database: args.database,
 			quickJS,
 			replay: args.replay,
+			unchecked: args.unchecked,
 			development,
 			rpc,
 		})
