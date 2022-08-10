@@ -2,6 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import assert from "node:assert"
 import process from "node:process"
+import readline from "node:readline"
 import stoppable from "stoppable"
 
 import { getQuickJS } from "quickjs-emscripten"
@@ -154,6 +155,22 @@ export async function handler(args) {
 			console.log(
 				`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
 			)
+		} else if (!args.unchecked) {
+			const line = readline.createInterface({ input: process.stdin, output: process.stdout })
+			const confirmed = await new Promise((resolve) => {
+				line.question(chalk.yellow("No chain RPC provided. Run in unchecked mode instead? [Y/n] "), (response) => {
+					line.close()
+					resolve(response === "Y" || response === "y")
+				})
+			})
+			if (confirmed) {
+				args.unchecked = true
+				args.peering = false
+				console.log(chalk.red("Running in unchecked mode! Actions will be processed without verifying a blockhash."))
+				console.log(chalk.red("Peering automatically disabled."))
+			} else {
+				console.log(chalk.red("Running without unchecked mode! New actions cannot be processed without an RPC."))
+			}
 		}
 	}
 
