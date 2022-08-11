@@ -65,7 +65,16 @@ export async function handler(args) {
 			.map(([name, params]) => `${name}(${params.join(", ")})\n`)
 			.join("")
 	)
+
+	console.log(chalk.green("===== contracts ====="))
+	Object.entries(core.contractParameters).forEach(([name, { metadata }]) => {
+		console.log(`${name}: ${metadata.chain} chainId:${metadata.chainId} ${metadata.address}`)
+		metadata.abi.forEach((line) => console.log(`- ${line}`))
+	})
+	console.log("")
+
 	await core.close()
+	process.exit(0)
 }
 
 function printType(type, indent = "") {
