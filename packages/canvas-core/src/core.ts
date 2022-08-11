@@ -317,10 +317,10 @@ export class Core extends EventEmitter<CoreEvents> {
 			const contractNamePattern = /^[a-zA-Z]+$/
 			for (const name of Object.keys(contracts)) {
 				assertPattern(name, contractNamePattern, "invalid contract name")
-				const chain = this.context.getString(contracts[name].chain)
-				const chainId = this.context.getNumber(contracts[name].chainId)
-				const address = this.context.getString(contracts[name].address)
-				const abi = this.unwrapArray(contracts[name].abi).map(this.context.getString)
+				const chain = contracts[name].chain.consume(this.context.getString)
+				const chainId = contracts[name].chainId.consume(this.context.getNumber)
+				const address = contracts[name].address.consume(this.context.getString)
+				const abi = contracts[name].abi.consume(this.unwrapArray).map((item) => item.consume(this.context.getString))
 
 				assert(chainType.is(chain), "invalid chain")
 				assert(chainIdType.is(chainId), "invalid chain id")
@@ -417,7 +417,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async close() {
-		console.log("[canvas-core] Closing...")
+		if (this.verbose) console.log("[canvas-core] Closing...")
 		await this.queue.onEmpty()
 
 		this.dbHandle.dispose()
