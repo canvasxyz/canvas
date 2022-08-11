@@ -7,7 +7,7 @@ import { getQuickJS } from "quickjs-emscripten"
 
 import { Core, actionType, sessionType } from "@canvas-js/core"
 
-import { locateSpec } from "../utils.js"
+import { locateSpec, setupRpcs } from "../utils.js"
 
 export const command = "info <spec>"
 export const desc = "Show the models, views, and actions for a spec"
@@ -28,14 +28,23 @@ export const builder = (yargs) => {
 			desc: "IPFS HTTP API URL",
 			default: "http://localhost:5001",
 		})
+		.option("verbose", {
+			type: "boolean",
+			desc: "Enable verbose logging",
+			default: false,
+		})
+		.option("chain-rpc", {
+			type: "array",
+			desc: "Provide an RPC endpoint for reading on-chain data",
+		})
 }
 
 export async function handler(args) {
 	const { directory, name, spec, development } = await locateSpec({ ...args, temp: true })
 
 	const quickJS = await getQuickJS()
-
-	const core = await Core.initialize({ name, spec, directory, quickJS, development })
+	const rpc = setupRpcs(args)
+	const core = await Core.initialize({ name, spec, directory, quickJS, verbose: args.verbose, rpc, development })
 
 	console.log(`name: ${core.name}:\n`)
 

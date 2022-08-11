@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import os from "node:os"
+import process from "node:process"
 
 import fetch from "node-fetch"
 import chalk from "chalk"
@@ -103,6 +104,40 @@ export async function locateSpec({ spec: name, datadir, ipfs, temp }) {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js file"))
 		process.exit(1)
 	}
+}
+
+export function setupRpcs(args) {
+	let rpc = {}
+	if (args.chainRpc) {
+		for (let i = 0; i < args.chainRpc.length; i += 3) {
+			const chain = args.chainRpc[i]
+			const chainId = args.chainRpc[i + 1]
+			const chainRpc = args.chainRpc[i + 2]
+			if (typeof chain !== "string") {
+				console.error(`Invalid chain "${chainId}", should be a string e.g. "eth"`)
+				return
+			}
+			if (typeof chainId !== "number") {
+				console.error(`Invalid chain id "${chainId}", should be a number e.g. 1`)
+				return
+			}
+			if (typeof chainRpc !== "string") {
+				console.error(`Invalid chain rpc "${chainRpc}", should be a url`)
+				return
+			}
+			rpc[chain] = rpc[chain] || {}
+			rpc[chain][chainId] = chainRpc
+		}
+	} else {
+		if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
+			rpc.eth = {}
+			rpc.eth[process.env.ETH_CHAIN_ID] = process.env.ETH_CHAIN_RPC
+			console.log(
+				`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
+			)
+		}
+	}
+	return rpc
 }
 
 function download(cid, ipfsURL) {

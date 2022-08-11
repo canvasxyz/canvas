@@ -17,7 +17,7 @@ import * as t from "io-ts"
 import { Core, actionType, actionPayloadType, sessionType } from "@canvas-js/core"
 import { create as createIpfsHttpClient } from "ipfs-http-client"
 
-import { deleteDatabase, deleteGeneratedModels, locateSpec } from "../utils.js"
+import { setupRpcs, deleteDatabase, deleteGeneratedModels, locateSpec } from "../utils.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -127,50 +127,24 @@ export async function handler(args) {
 		}
 	}
 
-	let rpc = {}
-	if (args.chainRpc) {
-		for (let i = 0; i < args.chainRpc.length; i += 3) {
-			const chain = args.chainRpc[i]
-			const chainId = args.chainRpc[i + 1]
-			const chainRpc = args.chainRpc[i + 2]
-			if (typeof chain !== "string") {
-				console.error(`Invalid chain "${chainId}", should be a string e.g. "eth"`)
-				return
-			}
-			if (typeof chainId !== "number") {
-				console.error(`Invalid chain id "${chainId}", should be a number e.g. 1`)
-				return
-			}
-			if (typeof chainRpc !== "string") {
-				console.error(`Invalid chain rpc "${chainRpc}", should be a url`)
-				return
-			}
-			rpc[chain] = rpc[chain] || {}
-			rpc[chain][chainId] = chainRpc
-		}
-	} else {
-		if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
-			rpc.eth = {}
-			rpc.eth[process.env.ETH_CHAIN_ID] = process.env.ETH_CHAIN_RPC
-			console.log(
-				`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
-			)
-		} else if (!args.unchecked) {
-			const line = readline.createInterface({ input: process.stdin, output: process.stdout })
-			const confirmed = await new Promise((resolve) => {
-				line.question(chalk.yellow("No chain RPC provided. Run in unchecked mode instead? [Y/n] "), (response) => {
-					line.close()
-					resolve(response === "Y" || response === "y")
-				})
+	// read rpcs from --chain-rpc arguments or environment variables
+	// prompt to run in unchecked mode, if no rpcs were provided
+	let rpc = setupRpcs(args)
+	if (Object.keys(rpc).length === 0 && !args.unchecked) {
+		const line = readline.createInterface({ input: process.stdin, output: process.stdout })
+		const confirmed = await new Promise((resolve) => {
+			line.question(chalk.yellow("No chain RPC provided. Run in unchecked mode instead? [Y/n] "), (response) => {
+				line.close()
+				resolve(response === "Y" || response === "y")
 			})
-			if (confirmed) {
-				args.unchecked = true
-				args.peering = false
-				console.log(chalk.red("Running in unchecked mode! Actions will be processed without verifying a blockhash."))
-				console.log(chalk.red("Peering automatically disabled."))
-			} else {
-				console.log(chalk.red("Running without unchecked mode! New actions cannot be processed without an RPC."))
-			}
+		})
+		if (confirmed) {
+			args.unchecked = true
+			args.peering = false
+			console.log(chalk.red("Running in unchecked mode! Actions will be processed without verifying a blockhash."))
+			console.log(chalk.red("Peering automatically disabled."))
+		} else {
+			console.log(chalk.red("Running without unchecked mode! New actions cannot be processed without an RPC."))
 		}
 	}
 
