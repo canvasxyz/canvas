@@ -255,7 +255,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		// parse and validate translators
-		this.translatorHandles = translatorsHandle.consume(this.unwrapObject) || {}
+		this.translatorHandles = translatorsHandle?.consume(this.unwrapObject) || {}
 
 		// set up cache and rpc
 		this.rpcProviders = {}
