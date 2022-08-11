@@ -325,12 +325,16 @@ export class Core extends EventEmitter<CoreEvents> {
 				assert(chainType.is(chain), "invalid chain")
 				assert(chainIdType.is(chainId), "invalid chain id")
 
+				let rpcUrl
 				if (!this.rpc[chain] || !this.rpc[chain][chainId]) {
-					throw new Error(
-						`[canvas-core] This spec needs an rpc endpoint for on-chain data (${chain}, chain id ${chainId}). Specify one with e.g. "canvas run --chain-rpc eth 1 https://mainnet.infura.io/v3/[APPID]".`
-					)
+					if (!this.unchecked)
+						throw new Error(
+							`[canvas-core] This spec needs an rpc endpoint for on-chain data (${chain}, chain id ${chainId}). Specify one with e.g. "canvas run --chain-rpc eth 1 https://mainnet.infura.io/v3/[APPID]".`
+						)
+					rpcUrl = ""
+				} else {
+					rpcUrl = this.rpc[chain][chainId]
 				}
-				const rpcUrl = this.rpc[chain][chainId]
 
 				let provider
 				if (!this.contractRpcProviders[rpcUrl]) {

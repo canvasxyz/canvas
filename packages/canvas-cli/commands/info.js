@@ -44,7 +44,16 @@ export async function handler(args) {
 
 	const quickJS = await getQuickJS()
 	const rpc = setupRpcs(args)
-	const core = await Core.initialize({ name, spec, directory, quickJS, verbose: args.verbose, rpc, development })
+	const core = await Core.initialize({
+		name,
+		spec,
+		directory,
+		quickJS,
+		verbose: args.verbose,
+		rpc,
+		unchecked: true,
+		development,
+	})
 
 	console.log(`name: ${core.name}:\n`)
 
