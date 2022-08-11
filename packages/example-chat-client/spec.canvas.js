@@ -1,5 +1,12 @@
 export const database = "sqlite"
 
+export const translators = {
+	QmPWamHP8hZyCSCtwsTUHdikbRNFUW4tYtjX4hpuG9g4LD: (name, args) => {
+		console.log("called translator:", name, args)
+		return [name, args]
+	},
+}
+
 export const models = {
 	posts: {
 		content: "string",

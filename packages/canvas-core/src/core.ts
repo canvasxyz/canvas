@@ -39,7 +39,7 @@ import { Store, Effect } from "./store/store.js"
 import { SqliteStore } from "./store/sqlite.js"
 import { PostgresStore } from "./store/postgres.js"
 import { EventEmitter, CustomEvent } from "./events.js"
-import { actionType, sessionType, modelsType, chainType, chainIdType } from "./codecs.js"
+import { actionType, actionArgumentArrayType, sessionType, modelsType, chainType, chainIdType } from "./codecs.js"
 import { JSONValue, mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "./utils.js"
 import { ApplicationError } from "./errors.js"
 
@@ -143,6 +143,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly queue: PQueue
 	private readonly dbHandle: QuickJSHandle
 	private readonly actionHandles: Readonly<Record<string, QuickJSHandle>>
+	private readonly translatorHandles: Readonly<Record<string, QuickJSHandle>>
 
 	private effects: Effect[] | null
 
@@ -170,6 +171,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			routes: routesHandle,
 			actions: actionsHandle,
 			contracts: contractsHandle,
+			translators: translatorsHandle,
 		} = moduleHandle.consume(this.unwrapObject)
 
 		assert(databaseHandle !== undefined, "spec is missing `database` export")
@@ -183,6 +185,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(
 			contractsHandle === undefined || context.typeof(contractsHandle) === "object",
 			"`contracts` export must be an object"
+		)
+		assert(
+			translatorsHandle === undefined || context.typeof(translatorsHandle) === "object",
+			"`translators` export must be an object"
 		)
 
 		// parse and validate database
@@ -247,6 +253,9 @@ export class Core extends EventEmitter<CoreEvents> {
 			const source = this.call("Function.prototype.toString", handle).consume(this.context.getString)
 			this.actionParameters[name] = parseFunctionParameters(source)
 		}
+
+		// parse and validate translators
+		this.translatorHandles = translatorsHandle.consume(this.unwrapObject) || {}
 
 		// set up cache and rpc
 		this.rpcProviders = {}
@@ -416,6 +425,10 @@ export class Core extends EventEmitter<CoreEvents> {
 			handle.dispose()
 		}
 
+		for (const handle of Object.values(this.translatorHandles)) {
+			handle.dispose()
+		}
+
 		for (const [key, handle] of Object.entries(this.globalHandleCache)) {
 			handle.dispose()
 			delete this.globalHandleCache[key]
@@ -482,6 +495,9 @@ export class Core extends EventEmitter<CoreEvents> {
 	public apply(action: Action): Promise<ActionResult> {
 		if (this.verbose) console.log("[canvas-core] apply action:", JSON.stringify(action))
 		return this.queue.add(async () => {
+			// check type of action
+			assert(actionType.is(action), "Invalid action value in action log")
+
 			// check the timestamp bounds
 			assert(action.payload.timestamp > Core.boundsCheckLowerLimit, "action timestamp too far in the past")
 			assert(action.payload.timestamp < Core.boundsCheckUpperLimit, "action timestamp too far in the future")
@@ -504,6 +520,8 @@ export class Core extends EventEmitter<CoreEvents> {
 				)
 				assert(session.payload.timestamp <= action.payload.timestamp, "session timestamp must precede action timestamp")
 
+				assert(session.payload.spec === this.name, "action referenced a session for the wrong spec")
+
 				assert(
 					action.payload.from === session.payload.from,
 					"invalid session key (action.payload.from and session.payload.from do not match)"
@@ -518,9 +536,34 @@ export class Core extends EventEmitter<CoreEvents> {
 					verifiedAddress.toLowerCase() === session.payload.session_public_key.toLowerCase(),
 					"invalid action signature (action, session do not match)"
 				)
+
+				assert(action.payload.spec === session.payload.spec, "action signed for wrong spec")
 			} else {
 				const verifiedAddress = verifyActionSignature(action)
 				assert(verifiedAddress.toLowerCase() === action.payload.from.toLowerCase(), "action signed by wrong address")
+
+				if (action.payload.spec !== this.name) {
+					assert(action.payload.spec in this.translatorHandles, "action signed for wrong spec")
+					const result = this.context.callFunction(
+						this.translatorHandles[action.payload.spec],
+						this.context.undefined,
+						this.context.newString(action.payload.call),
+						...action.payload.args.map((arg) => this.wrapJSON(arg))
+					)
+					if (isFail(result)) {
+						const error = result.error.consume(this.context.dump)
+						throw error
+					}
+					const [translatedCall, translatedArgs] = result.value.consume(this.unwrapArray)
+					assert(
+						typeof translatedCall === "string",
+						"translator function returned an invalid call name (must be a string)"
+					)
+					assert(
+						actionArgumentArrayType.is(translatedArgs),
+						"translator function returned an invalid args (must be an array of primitives)"
+					)
+				}
 			}
 
 			// check if the action has already been applied

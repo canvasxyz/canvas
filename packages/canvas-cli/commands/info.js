@@ -39,34 +39,23 @@ export async function handler(args) {
 
 	console.log(`name: ${core.name}:\n`)
 
-	console.log(`models: ${JSON.stringify(core.models, null, "  ")}\n`)
+	console.log(chalk.green("===== models ====="))
+	console.log(`${JSON.stringify(core.models, null, "  ")}\n`)
 
-	console.log("routes:")
-	console.log(
-		Object.keys(core.routeParameters)
-			.map((route) => `  GET ${route}\n`)
-			.join("")
-	)
+	console.log(chalk.green("===== routes ====="))
+	Object.keys(core.routeParameters).forEach((route) => console.log(`GET ${route}`))
+	console.log("POST /sessions")
+	console.log(printType(sessionType))
+	console.log("POST /actions")
+	console.log(printType(actionType))
+	console.log("")
 
-	console.log("actions:")
+	console.log(chalk.green("===== actions ====="))
 	console.log(
 		Object.entries(core.actionParameters)
-			.map(([name, params]) => `  ${name}(${params.join(", ")})\n`)
+			.map(([name, params]) => `${name}(${params.join(", ")})\n`)
 			.join("")
 	)
-
-	console.log("To initialize a session, POST to /sessions (JSON):")
-	console.log(printType(sessionType))
-	console.log("")
-	console.log("To apply an action, POST to /actions (JSON):")
-	console.log(printType(actionType))
-	console.log(`
-Payloads should be signed by either the "from" or "session"
-address using EIP-712 signTypedData_v4. Timestamps
-should be provided as UTC unixtimes with msec resolution.`)
-	console.log(`
-Found ${core.feed.length} actions. Connect to peers to retrieve more.`)
-
 	await core.close()
 }
 
