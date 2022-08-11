@@ -7,17 +7,17 @@ export const models = {
 		creator: "string",
 	},
 	comments: {
-		threadId: "string",
+		thread_id: "string",
 		text: "string",
 		creator: "string",
 	},
-	threadVotes: {
-		threadId: "string",
+	thread_votes: {
+		thread_id: "string",
 		creator: "string",
 		value: "integer",
 	},
-	commentVotes: {
-		commentId: "string",
+	comment_votes: {
+		comment_id: "string",
 		creator: "string",
 		value: "integer",
 	},
@@ -27,16 +27,16 @@ export const actions = {
 	thread(id, title, link) {
 		db.threads.set(id, { creator: this.from, title, link })
 	},
-	comment(id, threadId, text) {
-		db.comments.set(id, { creator: this.from, threadId, text })
+	comment(id, thread_id, text) {
+		db.comments.set(id, { creator: this.from, thread_id, text })
 	},
-	voteThread(threadId, value) {
+	voteThread(thread_id, value) {
 		if (value !== 1 && value !== -1) return false
-		db.threadVotes.set(`${threadId}/${this.from}`, { creator: this.from, threadId, value })
+		db.thread_votes.set(`${thread_id}/${this.from}`, { creator: this.from, thread_id, value })
 	},
-	voteComment(commentId, value) {
+	voteComment(comment_id, value) {
 		if (value !== 1 && value !== -1) return false
-		db.commentVotes.set(`${commentId}/${this.from}`, { creator: this.from, commentId, value })
+		db.comment_votes.set(`${comment_id}/${this.from}`, { creator: this.from, comment_id, value })
 	},
 }
 
@@ -44,47 +44,47 @@ export const routes = {
 	"/latest": `SELECT
             threads.*,
             SUM(
-                1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.timestamp) *
-                CAST(threadVotes.value as INT)
+                1 / (cast(strftime('%s','now') as float) * 1000 - thread_votes.updated_at) *
+                CAST(thread_votes.value as INT)
             ) AS score,
-            group_concat(threadVotes.creator) as voters
+            group_concat(thread_votes.creator) as voters
         FROM threads
-            LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
+            LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id
         GROUP BY threads.id
-        ORDER BY threads.timestamp DESC
+        ORDER BY threads.updated_at DESC
         LIMIT 30`,
 	"/top": `SELECT
             threads.*,
             SUM(
-                1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.timestamp) *
-                CAST(threadVotes.value as INT)
+                1 / (cast(strftime('%s','now') as float) * 1000 - thread_votes.updated_at) *
+                CAST(thread_votes.value as INT)
             ) AS score,
-            group_concat(threadVotes.creator) as voters
+            group_concat(thread_votes.creator) as voters
         FROM threads
-            LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
+            LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id
         GROUP BY threads.id
         ORDER BY score DESC
         LIMIT 30`,
-	"/threads/:threadId": `SELECT
+	"/threads/:thread_id": `SELECT
             threads.*,
             SUM(
-                1 / (cast(strftime('%s','now') as float) * 1000 - threadVotes.timestamp) * threadVotes.value
+                1 / (cast(strftime('%s','now') as float) * 1000 - thread_votes.updated_at) * thread_votes.value
             ) AS score,
-            group_concat(threadVotes.creator) as voters
+            group_concat(thread_votes.creator) as voters
         FROM threads
-            LEFT JOIN comments ON comments.threadId = threads.id
-            LEFT JOIN threadVotes ON threads.id = threadVotes.threadId
-            WHERE threads.id = :threadId
+            LEFT JOIN comments ON comments.thread_id = threads.id
+            LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id
+            WHERE threads.id = :thread_id
         GROUP BY threads.id`,
-	"/threads/:threadId/comments": `SELECT
+	"/threads/:thread_id/comments": `SELECT
             comments.*,
             SUM(
-                1 / (cast(strftime('%s','now') as float) * 1000 - commentVotes.timestamp) * commentVotes.value
+                1 / (cast(strftime('%s','now') as float) * 1000 - comment_votes.updated_at) * comment_votes.value
             ) AS score,
-            group_concat(commentVotes.creator) as voters
+            group_concat(comment_votes.creator) as voters
         FROM comments
-            LEFT JOIN commentVotes ON comments.id = commentVotes.commentId
-            WHERE comments.threadId = :threadId
+            LEFT JOIN comment_votes ON comments.id = comment_votes.comment_id
+            WHERE comments.thread_id = :thread_id
         GROUP BY comments.id
         ORDER BY score DESC
         LIMIT 30`,
