@@ -24,6 +24,8 @@ import type {
 
 export const actionArgumentType: t.Type<ActionArgument> = t.union([t.null, t.boolean, t.number, t.string])
 
+export const actionArgumentArrayType = t.array(actionArgumentType)
+
 export const actionPayloadType: t.Type<ActionPayload> = t.type({
 	from: t.string,
 	spec: t.string,
