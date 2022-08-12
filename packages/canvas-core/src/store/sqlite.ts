@@ -52,20 +52,20 @@ export class SqliteStore extends Store {
 
 		if (directory === null) {
 			this.database = new Database(":memory:")
-			console.log("[canvas-core] Initializing new in-memory model database")
+			console.error("[canvas-core] Initializing new in-memory model database")
 			SqliteStore.initializeMessageTables(this.database, models)
 			SqliteStore.initializeModelTables(this.database, models)
 		} else {
 			const databasePath = path.resolve(directory, SqliteStore.DATABASE_FILENAME)
 			if (fs.existsSync(databasePath)) {
-				console.log(`[canvas-core] Found existing model database at ${databasePath}`)
+				console.error(`[canvas-core] Found existing model database at ${databasePath}`)
 				this.database = new Database(databasePath, { fileMustExist: true })
 				if (replay) {
 					SqliteStore.initializeModelTables(this.database, models)
 				}
 				SqliteStore.validateDatabase(this.database, models)
 			} else {
-				console.log(`[canvas-core] Initializing new model database at ${databasePath}`)
+				console.error(`[canvas-core] Initializing new model database at ${databasePath}`)
 				this.database = new Database(databasePath)
 				SqliteStore.initializeMessageTables(this.database, models)
 				SqliteStore.initializeModelTables(this.database, models)
@@ -278,8 +278,8 @@ export class SqliteStore extends Store {
 		}
 
 		if (errors.length > 0) {
-			for (const error of errors) console.log(chalk.red(error))
-			console.log(chalk.yellow("Model database looks out of sync. Try --replay to reset it."))
+			for (const error of errors) console.error(chalk.red(error))
+			console.error(chalk.yellow("Model database looks out of sync. Try --replay to reset it."))
 			process.exit(1)
 		}
 	}

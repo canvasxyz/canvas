@@ -275,8 +275,8 @@ export class PostgresStore extends Store {
 				errors.push("missing model deletion table for " + name)
 		}
 		if (errors.length > 0) {
-			for (const error of errors) console.log(chalk.red(error))
-			console.log(chalk.yellow("Model database looks out of sync. Try --replay to reset it."))
+			for (const error of errors) console.error(chalk.red(error))
+			console.error(chalk.yellow("Model database looks out of sync. Try --replay to reset it."))
 			process.exit(1)
 		}
 	}
