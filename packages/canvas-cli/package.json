@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/cli",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "index.js",
