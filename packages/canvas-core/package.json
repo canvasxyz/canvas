@@ -29,10 +29,7 @@
 		"node-fetch": "^3.2.6",
 		"p-queue": "^7.2.0",
 		"pg-promise": "^10.11.1",
-		"quickjs-emscripten": "^0.21.0",
-		"random-access-file": "^2.2.1",
-		"random-access-memory": "^4.0.0",
-		"random-access-storage": "^2.0.1"
+		"quickjs-emscripten": "^0.21.0"
 	},
 	"devDependencies": {
 		"@types/node": "^18.0.0",

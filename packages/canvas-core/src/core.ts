@@ -1,5 +1,4 @@
 import fs from "node:fs"
-import path from "node:path"
 import assert from "node:assert"
 
 import chalk from "chalk"
@@ -13,9 +12,6 @@ import {
 	QuickJSWASMModule,
 	VmCallResult,
 } from "quickjs-emscripten"
-
-import randomAccessFile from "random-access-file"
-import randomAccessMemory from "random-access-memory"
 
 import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
