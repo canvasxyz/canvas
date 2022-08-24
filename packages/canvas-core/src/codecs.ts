@@ -12,7 +12,6 @@ import type {
 	ActionArgument,
 	ActionPayload,
 	Action,
-	IndexType,
 	ModelType,
 	ModelValue,
 	Model,

@@ -1,4 +1,4 @@
-import assert, { AssertionError } from "node:assert"
+import assert from "node:assert"
 import path from "node:path"
 import fs from "node:fs"
 import chalk from "chalk"
