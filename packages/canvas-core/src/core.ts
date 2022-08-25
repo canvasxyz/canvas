@@ -575,10 +575,9 @@ export class Core extends EventEmitter<CoreEvents> {
 			// set up hooks available to action processor
 			this.setupGlobals(action.payload.block.blockhash, action.payload.block.blocknum)
 
-			// apply the action
-			await this.store.insertAction(actionKey, action)
-
+			// execute the action
 			const effects = await this.getEffects(hash, action.payload)
+			await this.store.insertAction(actionKey, action)
 			await this.store.applyEffects(action.payload, effects)
 
 			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))

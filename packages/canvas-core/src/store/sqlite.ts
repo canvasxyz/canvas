@@ -173,7 +173,6 @@ export class SqliteStore extends Store {
 		return session
 	}
 
-	// unused
 	public async *getActionStream(limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Action]> {
 		let last = -1
 		while (last !== undefined) {
@@ -186,7 +185,6 @@ export class SqliteStore extends Store {
 		}
 	}
 
-	// unused
 	public async *getSessionStream(limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Session]> {
 		let last = -1
 		while (last !== undefined) {
@@ -199,7 +197,6 @@ export class SqliteStore extends Store {
 		}
 	}
 
-	// unused
 	public async *getHistoryStream(limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Action | Session]> {
 		let last = -1
 		while (last !== undefined) {
