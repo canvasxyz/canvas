@@ -1,4 +1,3 @@
-import fs from "node:fs"
 import assert from "node:assert"
 
 import chalk from "chalk"
@@ -39,17 +38,19 @@ import { actionType, actionArgumentArrayType, sessionType, modelsType, chainType
 import { JSONValue, mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "./utils.js"
 import { ApplicationError } from "./errors.js"
 
-interface CoreConfig {
+export interface CoreConfig {
 	name: string
-	directory?: string
-	database?: string
+	directory: string | null // only null for local development specs
+	databaseURI?: string
 	spec: string
 	quickJS: QuickJSWASMModule
 	replay?: boolean
+	reset?: boolean
 	development?: boolean
 	verbose?: boolean
 	unchecked?: boolean
-	rpc: Partial<Record<Chain, Record<string, string>>>
+	rpc?: Partial<Record<Chain, Record<string, string>>>
+	log?: (...args: any[]) => void
 }
 
 interface CoreEvents {
@@ -67,59 +68,59 @@ type BlockInfo = {
 export class Core extends EventEmitter<CoreEvents> {
 	private static readonly RUNTIME_MEMORY_LIMIT = 1024 * 640 // 640kb
 
-	public static async initialize({
-		name,
-		directory,
-		database,
-		spec,
-		quickJS,
-		replay,
-		development,
-		verbose,
-		unchecked,
-		rpc,
-	}: CoreConfig): Promise<Core> {
-		if (!development) {
-			const cid = await Hash.of(spec)
-			assert(cid === name, "Core.name is not equal to the hash of the provided spec.")
+	public static async initialize(config: CoreConfig): Promise<Core> {
+		if (!config.development) {
+			const cid = await Hash.of(config.spec)
+			assert(cid === config.name, "Core.name is not equal to the hash of the provided spec.")
 		}
 
-		const runtime = quickJS.newRuntime()
+		const runtime = config.quickJS.newRuntime()
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(Core.RUNTIME_MEMORY_LIMIT)
 
-		const moduleHandle = await loadModule(context, name, spec)
-		if (verbose) console.error("[canvas-core] Initializing core")
+		const moduleHandle = await loadModule(context, config.name, config.spec)
+		if (config.verbose) console.log(`[canvas-core] Initializing core ${config.name}`)
+
 		const core = new Core(
-			name,
-			directory,
-			database,
-			!!replay,
+			config.name,
+			config.directory,
+			config.databaseURI || null,
+			config.replay || false,
+			config.reset || false,
 			runtime,
 			context,
 			moduleHandle,
-			rpc || {},
-			verbose || false,
-			unchecked || false
+			config.rpc || {},
+			config.verbose || false,
+			config.unchecked || false
 		)
 
-		if (verbose) console.error("[canvas-core] Initializing core store on", database || directory)
-		await core.store.ready()
-
-		if (replay) {
-			console.error(`[canvas-core] Replaying action log...`)
-			let i = 0
-			// SQL_QUERY_LIMIT is the number of actions per page to retrieve
-			for await (const [hash, action] of core.store.getActionStream(SQL_QUERY_LIMIT)) {
-				assert(actionType.is(action), "Invalid action value in action log")
-				const effects = await core.getEffects(hash, action.payload)
-				core.store.applyEffects(action.payload, effects)
-				i++
-			}
-			console.error(`[canvas-core] Successfully replayed all ${i} entries from the action log.`)
+		if (config.verbose) {
+			console.log("[canvas-core] Initializing core store on", config.databaseURI || config.directory)
 		}
 
-		console.error("[canvas-core] Initialized core", name, "with database", database || directory)
+		await core.store.ready()
+
+		if (config.replay) {
+			console.log(`[canvas-core] Replaying action log...`)
+			let i = 0
+
+			// SQL_QUERY_LIMIT is the number of actions per page to retrieve
+			for await (const [id, action] of core.store.getActionStream(SQL_QUERY_LIMIT)) {
+				if (!actionType.is(action)) {
+					console.error(action)
+					throw new Error("Invalid action value in action log")
+				}
+
+				const effects = await core.getEffects(id, action.payload)
+				await core.store.applyEffects(action.payload, effects)
+				i++
+			}
+
+			console.log(`[canvas-core] Successfully replayed all ${i} entries from the action log.`)
+		}
+
+		console.log(`[canvas-core] Successfully initialized core ${config.name}`)
 		return core
 	}
 
@@ -145,9 +146,10 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private constructor(
 		public readonly name: string,
-		public readonly directory: string | undefined,
-		public readonly database: string | undefined | null,
+		public readonly directory: string | null,
+		public readonly databaseURI: string | null,
 		public readonly replay: boolean,
+		public readonly reset: boolean,
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
 		public readonly moduleHandle: QuickJSHandle,
@@ -157,9 +159,6 @@ export class Core extends EventEmitter<CoreEvents> {
 	) {
 		super()
 		this.queue = new PQueue({ concurrency: 1 })
-		this.rpc = rpc
-		this.verbose = verbose
-		this.unchecked = unchecked
 
 		const {
 			database: databaseHandle,
@@ -347,24 +346,19 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		// initialize the core with either a postgres:// url, a directory, or empty (in-memory sqlite)
-		if (database) {
-			if (!database.startsWith("postgresql://")) throw new Error("database must be a postgres:// url")
-			assert(databaseRequested === "postgres", `this spec requested a ${databaseRequested} database`)
-			this.store = new PostgresStore(database, models, routes, replay)
+		if (databaseRequested === "sqlite") {
+			this.store = new SqliteStore({ directory, databaseURI, replay, reset, models, routes })
+		} else if (databaseRequested === "postgres") {
+			this.store = new PostgresStore({ directory, databaseURI, replay, reset, models, routes })
 		} else {
-			if (directory === undefined || (directory !== null && !fs.lstatSync(directory).isDirectory())) {
-				throw new Error("core must be initialized with a valid directory, database url, or 'null' for in-memory db")
-			}
-			assert(databaseRequested === "sqlite", `this spec requested a ${databaseRequested} database`)
-			this.store = new SqliteStore(directory, models, routes, replay)
+			throw new Error("invalid database identifier")
 		}
 
 		this.effects = null
 		this.dbHandle = this.wrapObject(
 			mapEntries(models, (name, { indexes, ...properties }) => {
 				const setFunctionHandle = context.newFunction("set", (idHandle: QuickJSHandle, valuesHandle: QuickJSHandle) => {
-					assert(this.effects !== null, "internal error: #effects is null")
+					assert(this.effects !== null, "internal error: this.effects is null")
 					assert(idHandle !== undefined)
 					assert(valuesHandle !== undefined)
 					assert(context.typeof(idHandle) === "string")
@@ -395,7 +389,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				})
 
 				const deleteFunctionHandle = this.context.newFunction("delete", (idHandle: QuickJSHandle) => {
-					assert(this.effects !== null, "internal error: #effects is null")
+					assert(this.effects !== null, "internal error: this.effects is null")
 					assert(idHandle !== undefined)
 					assert(context.typeof(idHandle) === "string")
 
@@ -417,7 +411,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async close() {
-		if (this.verbose) console.error("[canvas-core] Closing...")
+		if (this.verbose) console.log("[canvas-core] Closing...")
 		await this.queue.onEmpty()
 
 		this.dbHandle.dispose()
@@ -443,7 +437,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async getRoute(route: string, params: Record<string, ModelValue> = {}): Promise<Record<string, ModelValue>[]> {
-		if (this.verbose) console.error("[canvas-core] getRoute:", route, params)
+		if (this.verbose) console.log("[canvas-core] getRoute:", route, params)
 		return this.store.getRoute(route, params)
 	}
 
@@ -466,9 +460,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (this.blockCache[chain + ":" + chainId]) {
 			block = this.blockCache[chain + ":" + chainId][blockhash]
 		}
+
 		if (!block) {
 			try {
-				console.error(`[canvas-core] fetching block ${blockInfo.blockhash} for ${chain}:${chainId}`)
+				console.log(`[canvas-core] fetching block ${blockInfo.blockhash} for ${chain}:${chainId}`)
 				block = await rpcProviders[chainId].getBlock(blockInfo.blockhash)
 				this.blockCache[chain + ":" + chainId][blockhash] = block
 			} catch (err) {
@@ -502,9 +497,9 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(action.payload.timestamp > Core.boundsCheckLowerLimit, "action timestamp too far in the past")
 			assert(action.payload.timestamp < Core.boundsCheckUpperLimit, "action timestamp too far in the future")
 
-			// check the action was signed with a valid, recent block
-			assert(action.payload.block, "action signed with invalid block")
 			if (!this.unchecked) {
+				// check the action was signed with a valid, recent block
+				assert(action.payload.block !== undefined, "action missing block data")
 				await this.verifyBlock(action.payload.block)
 			}
 
@@ -573,7 +568,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			if (existingRecord !== null) return { hash }
 
 			// set up hooks available to action processor
-			this.setupGlobals(action.payload.block.blockhash, action.payload.block.blocknum)
+			this.setupGlobals(action.payload.block)
 
 			// apply the action
 			await this.store.insertAction(actionKey, action)
@@ -591,16 +586,18 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Set up function calls available to the QuickJS VM executor.
 	 * Used by `.apply()`.
 	 */
-	private setupGlobals(blockhash: string, blocknum: number): void {
+	private setupGlobals(block?: Block): void {
+		const globalHandles: Record<string, QuickJSHandle> = {}
+
 		// log to console:
-		const consoleHandle = this.wrapObject({
+		globalHandles.console = this.wrapObject({
 			log: this.context.newFunction("log", (...args: any[]) => {
 				console.error("[canvas-vm]", ...args.map(this.context.dump))
 			}),
 		})
 
 		// fetch:
-		const fetchHandle = this.context.newFunction("fetch", (urlHandle: QuickJSHandle) => {
+		globalHandles.fetch = this.context.newFunction("fetch", (urlHandle: QuickJSHandle) => {
 			assert(this.context.typeof(urlHandle) === "string", "url must be a string")
 			const url = this.context.getString(urlHandle)
 			const deferred = this.context.newPromise()
@@ -620,50 +617,47 @@ export class Core extends EventEmitter<CoreEvents> {
 			return deferred.handle
 		})
 
-		// contract:
-		const contractHandle = this.context.newFunction("contract", (nameHandle: QuickJSHandle) => {
-			assert(this.context.typeof(nameHandle) === "string", "name must be a string")
-			const name = this.context.getString(nameHandle)
-			const contract = this.contractParameters[name].contract
-			const { address, abi } = this.contractParameters[name].metadata
-			const deferred = this.context.newPromise()
-			console.error("[canvas-vm] using contract:", name, address)
+		if (block !== undefined) {
+			// contract:
+			globalHandles.contract = this.context.newFunction("contract", (nameHandle: QuickJSHandle) => {
+				assert(this.context.typeof(nameHandle) === "string", "name must be a string")
+				const name = this.context.getString(nameHandle)
+				const contract = this.contractParameters[name].contract
+				const { address, abi } = this.contractParameters[name].metadata
+				const deferred = this.context.newPromise()
+				console.error("[canvas-vm] using contract:", name, address)
 
-			// produce an object that supports the contract's function calls
-			const wrapper: Record<string, QuickJSHandle> = {}
-			for (const key in contract.functions) {
-				if (typeof key !== "string") continue
-				if (key.indexOf("(") !== -1) continue
+				// produce an object that supports the contract's function calls
+				const wrapper: Record<string, QuickJSHandle> = {}
+				for (const key in contract.functions) {
+					if (typeof key !== "string") continue
+					if (key.indexOf("(") !== -1) continue
 
-				wrapper[key] = this.context.newFunction(key, (...argHandles: any[]) => {
-					const args = argHandles.map(this.context.dump)
-					console.error(
-						"[canvas-vm] contract: " +
-							chalk.green(`${name}.${key}(${args.join(",")})`) +
-							` at block ${blocknum} ${blockhash.slice(0, 5)}`
-					)
-					contract[key]
-						.apply(this, args.concat({ blockTag: blocknum }))
-						.then((result: any) => {
-							deferred.resolve(this.context.newString(result.toString()))
-						})
-						.catch((err: Error) => {
-							console.error("[canvas-vm] eth call error:", err.message)
-							deferred.reject(this.context.newString(err.message))
-						})
-					deferred.settled.then(this.runtime.executePendingJobs)
-					return deferred.handle
-				})
-			}
-			return this.wrapObject(wrapper)
-		})
+					wrapper[key] = this.context.newFunction(key, (...argHandles: any[]) => {
+						const args = argHandles.map(this.context.dump)
+						console.error(
+							"[canvas-vm] contract: " +
+								chalk.green(`${name}.${key}(${args.join(",")})`) +
+								` at block ${block.blocknum} ${block.blockhash.slice(0, 5)}`
+						)
+						contract[key]
+							.apply(this, args.concat({ blockTag: block.blocknum }))
+							.then((result: any) => {
+								deferred.resolve(this.context.newString(result.toString()))
+							})
+							.catch((err: Error) => {
+								console.error("[canvas-vm] eth call error:", err.message)
+								deferred.reject(this.context.newString(err.message))
+							})
+						deferred.settled.then(this.runtime.executePendingJobs)
+						return deferred.handle
+					})
+				}
+				return this.wrapObject(wrapper)
+			})
+		}
 
-		const globals = this.wrapObject({
-			fetch: fetchHandle,
-			contract: contractHandle,
-			console: consoleHandle,
-		})
-
+		const globals = this.wrapObject(globalHandles)
 		this.call("Object.assign", null, this.context.global, globals).dispose()
 		globals.dispose()
 	}
@@ -739,8 +733,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(session.payload.timestamp < Core.boundsCheckUpperLimit, "session timestamp too far in the future")
 
 			// check the session was signed with a valid, recent block
-			assert(session.payload.block, "session signed with invalid block")
 			if (!this.unchecked) {
+				assert(session.payload.block !== undefined, "session missing block info")
 				await this.verifyBlock(session.payload.block)
 			}
 

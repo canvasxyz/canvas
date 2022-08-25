@@ -2,8 +2,8 @@
 .next/
 node_modules/
 
-packages/*/tsconfig.tsbuildinfo
-packages/*/lib
-packages/*/dist
+packages/**/tsconfig.tsbuildinfo
+packages/**/lib/
+packages/**/dist/
 
 *.canvas

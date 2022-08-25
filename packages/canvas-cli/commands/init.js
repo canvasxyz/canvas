@@ -17,7 +17,7 @@ export async function handler(args) {
 		return
 	}
 
-	const content = `
+	const content = `export const database = "sqlite"
 export const models = {
 	posts: {
 		content: "string",
@@ -46,6 +46,6 @@ export const actions = {
 	},
 }
 `
-	fs.writeFileSync(args.filename, content.trim())
+	fs.writeFileSync(args.filename, content)
 	console.log(`Created sample spec at ${args.filename}`)
 }

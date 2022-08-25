@@ -1,12 +1,9 @@
 import fs from "node:fs"
-import path from "node:path"
-import assert from "node:assert"
 import process from "node:process"
-import readline from "node:readline"
 import stoppable from "stoppable"
+import prompts from "prompts"
 
 import { getQuickJS } from "quickjs-emscripten"
-import ethers from "ethers"
 import cors from "cors"
 import express from "express"
 import bodyParser from "body-parser"
@@ -35,7 +32,7 @@ export const builder = (yargs) => {
 		})
 		.option("database", {
 			type: "string",
-			desc: "Path to the app database. Providing one forces the app to run on Postgres",
+			desc: "Override database URI",
 		})
 		.option("port", {
 			type: "number",
@@ -62,10 +59,12 @@ export const builder = (yargs) => {
 		.option("reset", {
 			type: "boolean",
 			desc: "Reset the action log and model database",
+			default: false,
 		})
 		.option("replay", {
 			type: "boolean",
 			desc: "Reconstruct the model database by replying the action log",
+			default: false,
 		})
 		.option("unchecked", {
 			type: "boolean",
@@ -97,9 +96,14 @@ export async function handler(args) {
 		process.exit(1)
 	}
 
-	if (args.temp && (args.replay || args.reset)) {
-		console.error(chalk.red("[canvas-cli] --temp cannot be used with --replay or --reset"))
-		process.exit(1)
+	if (args.temp) {
+		if (args.replay || args.reset) {
+			console.error(chalk.red("[canvas-cli] --temp cannot be used with --replay or --reset"))
+			process.exit(1)
+		} else if (args.database !== undefined) {
+			console.error(chalk.red("[canvas-cli] --temp cannot be used with --database"))
+			process.exit(1)
+		}
 	}
 
 	const { specPath, directory, name, spec, development } = await locateSpec(args)
@@ -113,11 +117,17 @@ export async function handler(args) {
 		console.warn(chalk.yellow(`[canvas-cli] --watch has no effect on CID specs`))
 	}
 
-	if (!args.temp) {
+	if (directory !== null) {
 		if (!fs.existsSync(directory)) {
 			console.log(`[canvas-cli] Creating directory ${directory}`)
 			fs.mkdirSync(directory)
-		} else if (args.reset) {
+		}
+
+		if (args.reset) {
+			await confirm(
+				`${chalk.yellow(`Do you want to ${chalk.bold("erase all data")} in ${args.database || directory}?`)}`
+			)
+
 			await deleteDatabase(directory, { prompt: true })
 			console.log(`[canvas-cli] Reset database at ${directory}`)
 			return
@@ -129,16 +139,15 @@ export async function handler(args) {
 
 	// read rpcs from --chain-rpc arguments or environment variables
 	// prompt to run in unchecked mode, if no rpcs were provided
-	let rpc = setupRpcs(args)
+	const rpc = setupRpcs(args)
 	if (Object.keys(rpc).length === 0 && !args.unchecked) {
-		const line = readline.createInterface({ input: process.stdin, output: process.stdout })
-		const confirmed = await new Promise((resolve) => {
-			line.question(chalk.yellow("No chain RPC provided. Run in unchecked mode instead? [Y/n] "), (response) => {
-				line.close()
-				resolve(response === "Y" || response === "y")
-			})
+		const { confirm } = await prompts({
+			type: "confirm",
+			name: "confirm",
+			message: chalk.yellow("No chain RPC provided. Run in unchecked mode instead?"),
 		})
-		if (confirmed) {
+
+		if (confirm) {
 			args.unchecked = true
 			args.peering = false
 			console.log(chalk.red("Running in unchecked mode! Actions will be processed without verifying a blockhash."))
@@ -164,9 +173,10 @@ export async function handler(args) {
 			spec,
 			verbose: args.verbose,
 			directory: args.database ? null : directory, // use sqlite if no `database` url was provided
-			database: args.database,
+			databaseURI: args.database,
 			quickJS,
 			replay: args.replay,
+			reset: args.reset,
 			unchecked: args.unchecked,
 			development,
 			rpc,

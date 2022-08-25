@@ -9,9 +9,16 @@ import Knex from "knex"
 
 import prompts from "prompts"
 
-import { Store } from "@canvas-js/core"
-
 export const SPEC_FILENAME = "spec.canvas.js"
+
+export async function confirm(message) {
+	const { confirm } = await prompts({ type: "confirm", name: "confirm", message })
+
+	if (!confirm) {
+		console.log("[canvas-cli] Cancelled.")
+		process.exit(1)
+	}
+}
 
 export async function deleteDatabase(directory, { prompt } = {}) {
 	const databasePath = path.resolve(directory, Store.DATABASE_FILENAME)
@@ -98,8 +105,7 @@ export async function locateSpec({ spec: name, datadir, ipfs, temp }) {
 	} else if (name.endsWith(".js")) {
 		const specPath = path.resolve(name)
 		const spec = fs.readFileSync(specPath, "utf-8")
-		const directory = temp ? null : datadir ? datadir : specPath.slice(0, specPath.lastIndexOf("."))
-		return { specPath, directory, name: specPath, spec, development: true }
+		return { specPath, directory: null, name: specPath, spec, development: true }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js file"))
 		process.exit(1)
@@ -107,7 +113,7 @@ export async function locateSpec({ spec: name, datadir, ipfs, temp }) {
 }
 
 export function setupRpcs(args) {
-	let rpc = {}
+	const rpc = {}
 	if (args.chainRpc) {
 		for (let i = 0; i < args.chainRpc.length; i += 3) {
 			const chain = args.chainRpc[i]

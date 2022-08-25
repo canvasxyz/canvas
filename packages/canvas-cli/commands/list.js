@@ -1,9 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import { getDirectorySize, cidPattern, SPEC_FILENAME } from "../utils.js"
-
-import { Store } from "@canvas-js/core"
+import { cidPattern, SPEC_FILENAME } from "../utils.js"
 
 export const command = "list"
 export const desc = "List all specs in the data directory"
