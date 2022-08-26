@@ -150,7 +150,7 @@ export async function handler(args) {
 		ipfs = createIpfsHttpClient({ url: args.ipfs })
 		const { id } = await ipfs.id()
 		peerId = id.toString()
-		console.log("[canvas-cli] Got local PeerID", peerId)
+		console.log("[canvas-cli] Peering enabled. Got local PeerID", peerId)
 	}
 
 	let core, api
@@ -164,7 +164,6 @@ export async function handler(args) {
 			replay: args.replay,
 			reset: args.reset,
 			unchecked: args.unchecked,
-			development,
 			rpc,
 		})
 
@@ -231,7 +230,6 @@ export async function handler(args) {
 					quickJS,
 					replay: args.replay,
 					reset: args.reset,
-					development: true,
 				})
 
 				if (!args.noserver) {
@@ -390,7 +388,7 @@ class API {
 
 					if (action.session !== null) {
 						const sessionKey = Core.getSessionKey(action.session)
-						const sessionRecord = await this.core.hyperbee.get(sessionKey)
+						const sessionRecord = await this.core.store.getSession(sessionKey)
 						if (sessionRecord !== null) {
 							const session = JSON.parse(sessionRecord.value)
 							messages.push({ type: "session", ...session })
