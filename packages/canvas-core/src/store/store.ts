@@ -10,6 +10,7 @@ export interface StoreConfig {
 	routes: Record<string, string>
 	replay: boolean
 	reset: boolean
+	verbose?: boolean
 }
 
 export interface Store {

@@ -45,23 +45,27 @@ export class SqliteStore implements Store {
 	constructor(config: StoreConfig) {
 		if (config.databaseURI === null) {
 			this.database = new Database(":memory:")
-			console.log("[canvas-core] Initializing new in-memory database")
-			console.warn(chalk.yellow("[canvas-core] All data will be lost on close!"))
+			if (config.verbose) {
+				console.log("[canvas-core] Initializing new in-memory database")
+				console.warn(chalk.yellow("[canvas-core] All data will be lost on close!"))
+			}
+
 			SqliteStore.initializeMessageTables(this.database)
 			SqliteStore.initializeModelTables(this.database, config.models)
 		} else {
 			assert(config.databaseURI.startsWith("file:"), "SQLite databases must use file URIs (e.g. file:db.sqlite)")
 			const databasePath = config.databaseURI.slice("file:".length)
 
-			console.error(`[canvas-core] Initializing database at ${databasePath}`)
+			if (config.verbose) console.log(`[canvas-core] Initializing database at ${databasePath}`)
+
 			this.database = new Database(databasePath)
 			if (config.reset) {
-				console.error(`[canvas-core] Deleting message tables in ${databasePath}`)
+				if (config.verbose) console.warn(`[canvas-core] Deleting message tables in ${databasePath}`)
 				SqliteStore.deleteMessageTables(this.database)
-				console.error(`[canvas-core] Deleting model tables in ${databasePath}`)
+				if (config.verbose) console.warn(`[canvas-core] Deleting model tables in ${databasePath}`)
 				SqliteStore.deleteModelTables(this.database, config.models)
 			} else if (config.replay) {
-				console.error(`[canvas-core] Deleting model tables in ${databasePath}`)
+				if (config.verbose) console.warn(`[canvas-core] Deleting model tables in ${databasePath}`)
 				SqliteStore.deleteModelTables(this.database, config.models)
 			}
 

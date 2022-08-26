@@ -51,7 +51,9 @@ export class PostgresStore implements Store {
 			throw new Error("Postgres databases require an explicit database URI")
 		}
 
-		console.log("[canvas-core] Connecting to Postgres database at", config.databaseURI)
+		if (config.verbose) {
+			console.log("[canvas-core] Connecting to Postgres database at", config.databaseURI)
+		}
 
 		const pgp = PgPromise() // TODO: use { pgNative: true } for pg-native bindings
 		this.db = pgp(config.databaseURI)
