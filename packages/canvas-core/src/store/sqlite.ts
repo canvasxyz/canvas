@@ -169,10 +169,11 @@ export class SqliteStore implements Store {
 		return session
 	}
 
-	public async *getActionStream(limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Action]> {
+	// unused
+	public async *getActionStream(): AsyncIterable<[string, Action]> {
 		let last = -1
 		while (last !== undefined) {
-			const page = await this.backlogStatements.getActions.all({ last, limit })
+			const page = await this.backlogStatements.getActions.all({ last, limit: SQL_QUERY_LIMIT })
 			if (page.length === 0) return
 			for (const message of page) {
 				yield [message.key, JSON.parse(message.data) as Action]
@@ -181,10 +182,11 @@ export class SqliteStore implements Store {
 		}
 	}
 
-	public async *getSessionStream(limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Session]> {
+	// unused
+	public async *getSessionStream(): AsyncIterable<[string, Session]> {
 		let last = -1
 		while (last !== undefined) {
-			const page = await this.backlogStatements.getSessions.all({ last, limit })
+			const page = await this.backlogStatements.getSessions.all({ last, limit: SQL_QUERY_LIMIT })
 			if (page.length === 0) return
 			for (const message of page) {
 				yield [message.key, JSON.parse(message.data)]
@@ -193,10 +195,11 @@ export class SqliteStore implements Store {
 		}
 	}
 
-	public async *getHistoryStream(limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Action | Session]> {
+	// unused
+	public async *getHistoryStream(): AsyncIterable<[string, Action | Session]> {
 		let last = -1
 		while (last !== undefined) {
-			const page = await this.backlogStatements.getHistory.all({ last, limit })
+			const page = await this.backlogStatements.getHistory.all({ last, limit: SQL_QUERY_LIMIT })
 			if (page.length === 0) return
 			for (const message of page) {
 				yield [message.key, JSON.parse(message.data)]

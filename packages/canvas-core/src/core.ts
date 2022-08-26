@@ -99,8 +99,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			console.log(`[canvas-core] Replaying action log...`)
 			let i = 0
 
-			// SQL_QUERY_LIMIT is the number of actions per page to retrieve
-			for await (const [id, action] of core.store.getActionStream(SQL_QUERY_LIMIT)) {
+			for await (const [id, action] of core.store.getActionStream()) {
 				if (!actionType.is(action)) {
 					console.error(action)
 					throw new Error("Invalid action value in action log")

@@ -135,10 +135,10 @@ export class PostgresStore implements Store {
 	}
 
 	// unused
-	public async *getActionStream(limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Action]> {
+	public async *getActionStream(): AsyncIterable<[string, Action]> {
 		let last = -1
 		while (last !== undefined) {
-			const page = await this.db.any(this.backlogStatements.getActions, { last, limit })
+			const page = await this.db.any(this.backlogStatements.getActions, { last, limit: SQL_QUERY_LIMIT })
 			if (page.length === 0) return
 			for (const message of page) {
 				yield [message.key, JSON.parse(message.data) as Action]
@@ -148,10 +148,10 @@ export class PostgresStore implements Store {
 	}
 
 	// unused
-	public async *getSessionStream(limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Session]> {
+	public async *getSessionStream(): AsyncIterable<[string, Session]> {
 		let last = -1
 		while (last !== undefined) {
-			const page = await this.db.any(this.backlogStatements.getSessions, { last, limit })
+			const page = await this.db.any(this.backlogStatements.getSessions, { last, limit: SQL_QUERY_LIMIT })
 			if (page.length === 0) return
 			for (const message of page) {
 				yield [message.key, JSON.parse(message.data)]
@@ -161,10 +161,10 @@ export class PostgresStore implements Store {
 	}
 
 	// unused
-	public async *getHistoryStream(limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Action | Session]> {
+	public async *getHistoryStream(): AsyncIterable<[string, Action | Session]> {
 		let last = -1
 		while (last !== undefined) {
-			const page = await this.db.any(this.backlogStatements.getHistory, { last, limit })
+			const page = await this.db.any(this.backlogStatements.getHistory, { last, limit: SQL_QUERY_LIMIT })
 			if (page.length === 0) return
 			for (const message of page) {
 				yield [message.key, JSON.parse(message.data)]
