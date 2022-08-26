@@ -7,6 +7,7 @@ import Database, * as sqlite from "better-sqlite3"
 import { Store, StoreConfig, Effect } from "./store.js"
 import { actionType, sessionType } from "../codecs.js"
 import { mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "../utils.js"
+import chalk from "chalk"
 
 interface ModelStatements {
 	insert: sqlite.Statement
@@ -45,7 +46,8 @@ export class SqliteStore implements Store {
 	constructor(config: StoreConfig) {
 		if (config.databaseURI === null) {
 			this.database = new Database(":memory:")
-			console.error("[canvas-core] Initializing new in-memory database")
+			console.log("[canvas-core] Initializing new in-memory database")
+			console.warn(chalk.yellow("[canvas-core] All data will be lost on close!"))
 			SqliteStore.initializeMessageTables(this.database)
 			SqliteStore.initializeModelTables(this.database, config.models)
 		} else {
