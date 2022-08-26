@@ -5,107 +5,45 @@ import process from "node:process"
 
 import fetch from "node-fetch"
 import chalk from "chalk"
-import Knex from "knex"
 
 import prompts from "prompts"
 
 export const SPEC_FILENAME = "spec.canvas.js"
 
-export async function confirm(message) {
-	const { confirm } = await prompts({ type: "confirm", name: "confirm", message })
+export async function confirmOrExit(message) {
+	const { confirm } = await prompts({ type: "confirm", name: "confirm", message: chalk.yellow(message) })
 
 	if (!confirm) {
-		console.log("[canvas-cli] Cancelled.")
+		console.error("[canvas-cli] Cancelled.")
 		process.exit(1)
 	}
 }
 
-export async function deleteDatabase(directory, { prompt } = {}) {
-	const databasePath = path.resolve(directory, Store.DATABASE_FILENAME)
-	if (fs.existsSync(databasePath)) {
-		if (prompt) {
-			const { confirm } = await prompts({
-				type: "confirm",
-				name: "confirm",
-				message: `${chalk.yellow(`Do you want to ${chalk.bold("erase all data")} in ${directory}?`)}`,
-			})
-
-			if (!confirm) {
-				console.log("[canvas-cli] Cancelled.")
-				process.exit(1)
-			}
-		}
-
-		console.log(`[canvas-cli] Deleting ${databasePath}`)
-		fs.rmSync(databasePath)
-	}
-}
-
-export async function deleteGeneratedModels(directory, { prompt } = {}) {
-	const databasePath = path.resolve(directory, Store.DATABASE_FILENAME)
-	if (fs.existsSync(databasePath)) {
-		if (prompt) {
-			const { confirm } = await prompts({
-				type: "confirm",
-				name: "confirm",
-				message: `${chalk.yellow(`Do you want to ${chalk.bold("erase the model database")} at ${databasePath}?`)}`,
-			})
-
-			if (!confirm) {
-				console.log("[canvas-cli] Cancelled.")
-				process.exit(1)
-			}
-		}
-
-		console.log(`[canvas-cli] Clearing generated models from ${databasePath}`)
-
-		const knex = Knex({
-			client: "better-sqlite3",
-			connection: { filename: databasePath },
-			useNullAsDefault: true,
-		})
-
-		// list all tables
-		// for pg: SELECT tablename FROM pg_tables WHERE schemaname='public'
-		// for sqlite3: SELECT name FROM sqlite_master WHERE type='table';
-		const tables = await knex.select("name").from("sqlite_master").where("type", "table").orderBy("name")
-		const names = tables.map((t) => t.name).filter((t) => !t.startsWith("_") && !t.startsWith("sqlite_"))
-
-		if (names.length > 0) {
-			console.log(chalk.green("Dropping model tables & deletion tables for: " + names.join(", ")))
-		}
-
-		const dropModelTables = names.map((t) => knex.schema.dropTableIfExists(t))
-		const dropDeletionTables = names.map((t) => knex.schema.dropTableIfExists(`_${t}_deleted`))
-		const result = await Promise.all(dropModelTables.concat(dropDeletionTables))
-		console.log(chalk.green("Dropped " + result.length + " tables"))
-	}
-}
+export const defaultDataDirectory = process.env.CANVAS_DATA_DIRECTORY ?? path.resolve(os.homedir(), ".canvas")
 
 export const cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 
-export const defaultDataDirectory = process.env.CANVAS_DATA_DIRECTORY ?? path.resolve(os.homedir(), ".canvas")
-
-export async function locateSpec({ spec: name, datadir, ipfs, temp }) {
+export async function locateSpec({ spec: name, datadir, ipfs: ipfsAPI }) {
 	if (cidPattern.test(name)) {
-		const directory = temp ? null : datadir ? path.resolve(datadir, name) : defaultDataDirectory
+		const directory = path.resolve(datadir, name)
 		const specPath = path.resolve(datadir, name, SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const spec = fs.readFileSync(specPath, "utf-8")
-			return { specPath, directory, name, spec, development: false }
+			return { name, directory, specPath, spec }
 		} else {
-			const spec = await download(name, ipfs)
-			if (!fs.existsSync(path.resolve(datadir, name))) {
-				fs.mkdirSync(path.resolve(datadir, name))
+			if (!fs.existsSync(directory)) {
+				console.log(`[canvas-cli] Creating directory ${directory}`)
+				fs.mkdirSync(directory)
 			}
-			fs.writeFileSync(specPath, spec)
-			console.log(`[canvas-cli] Downloaded to ${specPath}`)
-			return { specPath, directory, name, spec, development: false }
+
+			fs.writeFileSync(specPath, await download(name, ipfsAPI))
+			console.log(`[canvas-cli] Downloaded spec to ${specPath}`)
+			return { name, directory, specPath, spec }
 		}
 	} else if (name.endsWith(".js")) {
 		const specPath = path.resolve(name)
 		const spec = fs.readFileSync(specPath, "utf-8")
-		return { specPath, directory: null, name: specPath, spec, development: true }
+		return { name: specPath, directory: null, specPath, spec }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js file"))
 		process.exit(1)
@@ -146,9 +84,9 @@ export function setupRpcs(args) {
 	return rpc
 }
 
-function download(cid, ipfsURL) {
+function download(cid, ipfsAPI) {
 	console.log(`[canvas-cli] Attempting to download ${cid} from local IPFS node...`)
-	return fetch(`${ipfsURL}/api/v0/cat?arg=${cid}`, { method: "POST" })
+	return fetch(`${ipfsAPI}/api/v0/cat?arg=${cid}`, { method: "POST" })
 		.then((res) => res.text())
 		.catch((err) => {
 			if (err.code === "ECONNREFUSED") {

@@ -5,7 +5,6 @@ export type Effect =
 	| { type: "del"; model: string; id: string }
 
 export interface StoreConfig {
-	directory: string | null
 	databaseURI: string | null
 	models: Record<string, Model>
 	routes: Record<string, string>

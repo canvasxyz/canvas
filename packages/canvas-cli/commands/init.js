@@ -1,4 +1,4 @@
-import fs from "fs"
+import fs from "node:fs"
 
 export const command = "init <filename>"
 export const desc = "Create a sample spec for demonstration purposes"

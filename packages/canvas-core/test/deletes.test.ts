@@ -27,7 +27,7 @@ async function sign(signer: ethers.Wallet, session: string | null, call: string,
 
 const coreConfig: CoreConfig = {
 	name: specName,
-	directory: null,
+	databaseURI: null,
 	spec,
 	quickJS,
 	unchecked: true,

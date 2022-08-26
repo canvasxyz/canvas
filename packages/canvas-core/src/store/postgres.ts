@@ -1,7 +1,4 @@
 import assert from "node:assert"
-import path from "node:path"
-import fs, { Mode } from "node:fs"
-import chalk from "chalk"
 
 import type { Action, Session, ActionContext, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
 import PgPromise from "pg-promise"
@@ -49,22 +46,15 @@ export class PostgresStore implements Store {
 		})
 	}
 
-	private static getConnectionURL(config: StoreConfig): string {
-		if (config.databaseURI !== null) {
-			return config.databaseURI
-		} else if (config.directory !== null) {
-			// TODO: create a database in config.directory and return a connection URL
-			throw new Error("Postgres databases require an explicit database URI")
-		} else {
-			// TODO: create a temporary database??
+	constructor(config: StoreConfig) {
+		if (config.databaseURI === null) {
 			throw new Error("Postgres databases require an explicit database URI")
 		}
-	}
 
-	constructor(config: StoreConfig) {
-		const url = PostgresStore.getConnectionURL(config)
+		console.log("[canvas-core] Connecting to Postgres database at", config.databaseURI)
+
 		const pgp = PgPromise() // TODO: use { pgNative: true } for pg-native bindings
-		this.db = pgp(url)
+		this.db = pgp(config.databaseURI)
 
 		this.modelStatements = mapEntries(config.models, (name, { indexes, ...properties }) => {
 			const keys = ["updated_at", ...Object.keys(properties)]

@@ -11,10 +11,10 @@ import { StatusCodes } from "http-status-codes"
 import chalk from "chalk"
 import * as t from "io-ts"
 
-import { Core, actionType, actionPayloadType, sessionType } from "@canvas-js/core"
+import { Core, actionType, actionPayloadType, sessionType, SqliteStore } from "@canvas-js/core"
 import { create as createIpfsHttpClient } from "ipfs-http-client"
 
-import { setupRpcs, deleteDatabase, deleteGeneratedModels, locateSpec } from "../utils.js"
+import { setupRpcs, locateSpec, defaultDataDirectory, confirmOrExit } from "../utils.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -29,6 +29,7 @@ export const builder = (yargs) => {
 		.option("datadir", {
 			type: "string",
 			desc: "Path of the app data directory",
+			default: defaultDataDirectory,
 		})
 		.option("database", {
 			type: "string",
@@ -74,10 +75,10 @@ export const builder = (yargs) => {
 			type: "boolean",
 			desc: "Restart the core on spec file changes",
 		})
-		.option("temp", {
-			type: "boolean",
-			desc: "Open a temporary in-memory core",
-		})
+		// .option("temp", {
+		// 	type: "boolean",
+		// 	desc: "Open a temporary in-memory core",
+		// })
 		.option("verbose", {
 			type: "boolean",
 			desc: "Enable verbose logging",
@@ -96,44 +97,30 @@ export async function handler(args) {
 		process.exit(1)
 	}
 
-	if (args.temp) {
-		if (args.replay || args.reset) {
-			console.error(chalk.red("[canvas-cli] --temp cannot be used with --replay or --reset"))
-			process.exit(1)
-		} else if (args.database !== undefined) {
-			console.error(chalk.red("[canvas-cli] --temp cannot be used with --database"))
-			process.exit(1)
-		}
-	}
+	const { name, directory, specPath, spec } = await locateSpec(args)
 
-	const { specPath, directory, name, spec, development } = await locateSpec(args)
+	const development = directory === null
+	const databaseURI = args.database || (directory && `file:${directory}/${SqliteStore.DATABASE_FILENAME}`)
+
+	if (!development && args.watch) {
+		console.warn(chalk.yellow(`[canvas-cli] --watch has no effect on CID specs`))
+	}
 
 	if (development && args.peering) {
 		console.error(chalk.red(`[canvas-cli] --peering cannot be enabled for local development specs`))
 		process.exit(1)
 	}
 
-	if (args.watch && !development) {
-		console.warn(chalk.yellow(`[canvas-cli] --watch has no effect on CID specs`))
-	}
-
-	if (directory !== null) {
-		if (!fs.existsSync(directory)) {
-			console.log(`[canvas-cli] Creating directory ${directory}`)
-			fs.mkdirSync(directory)
+	if (databaseURI === null) {
+		if (args.replay || args.reset) {
+			console.error(chalk.red("[canvas-cli] --replay and --reset cannot be used with temporary development databases"))
+			process.exit(1)
 		}
-
+	} else {
 		if (args.reset) {
-			await confirm(
-				`${chalk.yellow(`Do you want to ${chalk.bold("erase all data")} in ${args.database || directory}?`)}`
-			)
-
-			await deleteDatabase(directory, { prompt: true })
-			console.log(`[canvas-cli] Reset database at ${directory}`)
-			return
+			await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${databaseURI}?`)
 		} else if (args.replay) {
-			await deleteGeneratedModels(directory, { prompt: true })
-			console.log(`[canvas-cli] Deleted generated models at ${directory}`)
+			await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${databaseURI}?`)
 		}
 	}
 
@@ -150,10 +137,10 @@ export async function handler(args) {
 		if (confirm) {
 			args.unchecked = true
 			args.peering = false
-			console.log(chalk.red("Running in unchecked mode! Actions will be processed without verifying a blockhash."))
-			console.log(chalk.red("Peering automatically disabled."))
+			console.warn(chalk.yellow("Running in unchecked mode! Actions will be processed without verifying a blockhash."))
+			console.warn(chalk.yellow("Peering automatically disabled."))
 		} else {
-			console.log(chalk.red("Running without unchecked mode! New actions cannot be processed without an RPC."))
+			console.warn(chalk.red("Running without unchecked mode! New actions cannot be processed without an RPC."))
 		}
 	}
 
@@ -172,8 +159,7 @@ export async function handler(args) {
 			name,
 			spec,
 			verbose: args.verbose,
-			directory: args.database ? null : directory, // use sqlite if no `database` url was provided
-			databaseURI: args.database,
+			databaseURI,
 			quickJS,
 			replay: args.replay,
 			reset: args.reset,
@@ -181,6 +167,7 @@ export async function handler(args) {
 			development,
 			rpc,
 		})
+
 		if (!args.noserver) {
 			api = new API({ peerId, core, port: args.port, ipfs, peering: args.peering })
 		}
@@ -191,18 +178,24 @@ export async function handler(args) {
 
 	// TODO: intercept SIGINT and shut down the server and core gracefully
 
-	if (!args.watch) {
+	if (!args.watch || !development) {
 		return
 	}
 
-	if (args.reset) {
-		console.log(
+	if (databaseURI === null) {
+		console.warn(
+			chalk.yellow(
+				"[canvas-cli] Warning: the action log will be erased on every change to the spec file. All data will be lost."
+			)
+		)
+	} else if (args.reset) {
+		console.warn(
 			chalk.yellow(
 				"[canvas-cli] Warning: the action log will be erased on every change to the spec file. All data will be lost."
 			)
 		)
 	} else if (args.replay) {
-		console.log(
+		console.warn(
 			chalk.yellow(
 				"[canvas-cli] Warning: the model database will be rebuilt from the action log on every change to the spec file."
 			)
@@ -230,16 +223,17 @@ export async function handler(args) {
 				// continue if the api or core crashed during the last reload
 			}
 
-			if (directory !== null) {
-				if (args.reset) {
-					await deleteDatabase(directory, { prompt: false })
-				} else if (args.replay) {
-					await deleteGeneratedModels(directory, { prompt: false })
-				}
-			}
-
 			try {
-				core = await Core.initialize({ name, spec: newSpec, directory, quickJS, replay: args.replay, development })
+				core = await Core.initialize({
+					name,
+					spec: newSpec,
+					databaseURI,
+					quickJS,
+					replay: args.replay,
+					reset: args.reset,
+					development: true,
+				})
+
 				if (!args.noserver) {
 					api = new API({ core, port: args.port, ipfs, peering: args.peering })
 				}
@@ -247,6 +241,7 @@ export async function handler(args) {
 				console.log(err)
 				// don't terminate on error
 			}
+
 			terminating = false
 		}
 	})

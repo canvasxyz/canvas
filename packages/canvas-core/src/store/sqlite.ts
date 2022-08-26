@@ -42,26 +42,16 @@ export class SqliteStore implements Store {
 		return Promise.resolve()
 	}
 
-	private static getDatabasePath(config: StoreConfig): string | null {
-		if (config.databaseURI !== null) {
-			assert(config.databaseURI.startsWith("file:"), "SQLite databases must use file URIs (e.g. file:db.sqlite)")
-			return config.databaseURI.slice("file:".length)
-		} else if (config.directory !== null) {
-			return path.resolve(config.directory, SqliteStore.DATABASE_FILENAME)
-		} else {
-			return null
-		}
-	}
-
 	constructor(config: StoreConfig) {
-		const databasePath = SqliteStore.getDatabasePath(config)
-
-		if (databasePath === null) {
+		if (config.databaseURI === null) {
 			this.database = new Database(":memory:")
 			console.error("[canvas-core] Initializing new in-memory database")
 			SqliteStore.initializeMessageTables(this.database)
 			SqliteStore.initializeModelTables(this.database, config.models)
 		} else {
+			assert(config.databaseURI.startsWith("file:"), "SQLite databases must use file URIs (e.g. file:db.sqlite)")
+			const databasePath = config.databaseURI.slice("file:".length)
+
 			console.error(`[canvas-core] Initializing database at ${databasePath}`)
 			this.database = new Database(databasePath)
 			if (config.reset) {

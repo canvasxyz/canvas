@@ -30,9 +30,7 @@ import {
 	Chain,
 } from "@canvas-js/interfaces"
 
-import { Store, Effect } from "./store/store.js"
-import { SqliteStore } from "./store/sqlite.js"
-import { PostgresStore } from "./store/postgres.js"
+import { Store, Effect, SqliteStore, PostgresStore } from "./store/index.js"
 import { EventEmitter, CustomEvent } from "./events.js"
 import { actionType, actionArgumentArrayType, sessionType, modelsType, chainType, chainIdType } from "./codecs.js"
 import { JSONValue, mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "./utils.js"
@@ -40,8 +38,7 @@ import { ApplicationError } from "./errors.js"
 
 export interface CoreConfig {
 	name: string
-	directory: string | null // only null for local development specs
-	databaseURI?: string
+	databaseURI: string | null
 	spec: string
 	quickJS: QuickJSWASMModule
 	replay?: boolean
@@ -69,6 +66,10 @@ export class Core extends EventEmitter<CoreEvents> {
 	private static readonly RUNTIME_MEMORY_LIMIT = 1024 * 640 // 640kb
 
 	public static async initialize(config: CoreConfig): Promise<Core> {
+		if (config.verbose) {
+			console.log(`[canvas-core] Initializing core ${config.name}`)
+		}
+
 		if (!config.development) {
 			const cid = await Hash.of(config.spec)
 			assert(cid === config.name, "Core.name is not equal to the hash of the provided spec.")
@@ -79,12 +80,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		runtime.setMemoryLimit(Core.RUNTIME_MEMORY_LIMIT)
 
 		const moduleHandle = await loadModule(context, config.name, config.spec)
-		if (config.verbose) console.log(`[canvas-core] Initializing core ${config.name}`)
 
 		const core = new Core(
 			config.name,
-			config.directory,
-			config.databaseURI || null,
+			config.databaseURI,
 			config.replay || false,
 			config.reset || false,
 			runtime,
@@ -94,10 +93,6 @@ export class Core extends EventEmitter<CoreEvents> {
 			config.verbose || false,
 			config.unchecked || false
 		)
-
-		if (config.verbose) {
-			console.log("[canvas-core] Initializing core store on", config.databaseURI || config.directory)
-		}
 
 		await core.store.ready()
 
@@ -146,7 +141,6 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private constructor(
 		public readonly name: string,
-		public readonly directory: string | null,
 		public readonly databaseURI: string | null,
 		public readonly replay: boolean,
 		public readonly reset: boolean,
@@ -224,9 +218,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		// parse and validate routes
 		const routeHandles = routesHandle.consume(this.unwrapObject)
-		const routes = mapEntries(routeHandles, (route, routeHandle) => {
-			return routeHandle.consume(context.getString)
-		})
+		const routes = mapEntries(routeHandles, (route, routeHandle) => routeHandle.consume(context.getString))
 
 		const routeNamePattern = /^(\/:?[a-z_]+)+$/
 		const routeParameterPattern = /:([a-zA-Z0-9_]+)/g
@@ -347,9 +339,9 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		if (databaseRequested === "sqlite") {
-			this.store = new SqliteStore({ directory, databaseURI, replay, reset, models, routes })
+			this.store = new SqliteStore({ databaseURI, replay, reset, models, routes })
 		} else if (databaseRequested === "postgres") {
-			this.store = new PostgresStore({ directory, databaseURI, replay, reset, models, routes })
+			this.store = new PostgresStore({ databaseURI, replay, reset, models, routes })
 		} else {
 			throw new Error("invalid database identifier")
 		}
