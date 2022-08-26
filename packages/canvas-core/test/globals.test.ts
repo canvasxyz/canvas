@@ -3,26 +3,30 @@ import test from "ava"
 import { ethers } from "ethers"
 
 import { getQuickJS } from "quickjs-emscripten"
-import Hash from "ipfs-only-hash"
 
-import { getActionSignatureData } from "@canvas-js/interfaces"
-import { Core } from "../lib/index.js"
+import { ActionArgument, getActionSignatureData } from "@canvas-js/interfaces"
+import { Core } from "@canvas-js/core"
 
 const quickJS = await getQuickJS()
 
-const signer = new ethers.Wallet.createRandom()
+const signer = ethers.Wallet.createRandom()
 const signerAddress = await signer.getAddress()
 
-async function sign(signer, session, { spec, call, args }) {
+const specName = "spec.js"
+
+async function sign(signer: ethers.Wallet, session: string | null, call: string, args: ActionArgument[]) {
 	const timestamp = Date.now()
-	const actionPayload = { from: signerAddress, spec, call, args, timestamp }
+	const actionPayload = { from: signerAddress, spec: specName, call, args, timestamp }
 	const actionSignatureData = getActionSignatureData(actionPayload)
 	const actionSignature = await signer._signTypedData(...actionSignatureData)
 	return { payload: actionPayload, session, signature: actionSignature }
 }
 
+const config = { unchecked: true, databaseURI: null }
+
 test("Test console.log", async (t) => {
 	const spec = `
+export const database = "sqlite"
 export const models = {
   posts: { content: "string" }
 }
@@ -39,18 +43,17 @@ export const actions = {
 }
 `.trim()
 
-	const multihash = await Hash.of(spec)
+	const core = await Core.initialize({ name: specName, spec: spec, quickJS, ...config })
 
-	const core = await Core.initialize({ name: multihash, directory: null, spec: spec, quickJS })
-
-	const action = await sign(signer, null, { spec: multihash, call: "newPost", args: ["Hello World"] })
+	const action = await sign(signer, null, "newPost", ["Hello World"])
 	await core.apply(action)
-	t.pass()
 	await core.close()
+	t.pass()
 })
 
 test("Test fetch", async (t) => {
 	const spec = `
+export const database = "sqlite"
 export const models = {}
 export const routes = {}
 export const actions = {
@@ -61,12 +64,10 @@ export const actions = {
 }
 `.trim()
 
-	const multihash = await Hash.of(spec)
+	const core = await Core.initialize({ name: specName, spec: spec, quickJS, ...config })
 
-	const core = await Core.initialize({ name: multihash, directory: null, spec: spec, quickJS })
-
-	const action = await sign(signer, null, { spec: multihash, call: "logIP", args: [] })
+	const action = await sign(signer, null, "logIP", [])
 	await core.apply(action)
-	t.pass()
 	await core.close()
+	t.pass()
 })

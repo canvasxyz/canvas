@@ -1,12 +1,9 @@
-import assert, { AssertionError } from "node:assert"
-import path from "node:path"
-import fs from "node:fs"
-import chalk from "chalk"
+import assert from "node:assert"
 
 import type { Action, Session, ActionContext, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
 import PgPromise from "pg-promise"
 
-import { Store, Effect } from "./store.js"
+import { Store, StoreConfig, Effect } from "./store.js"
 import { actionType, sessionType } from "../codecs.js"
 import { mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "../utils.js"
 
@@ -32,7 +29,7 @@ interface BacklogStatements {
 	getHistory: string
 }
 
-export class PostgresStore extends Store {
+export class PostgresStore implements Store {
 	private readonly db: PgPromise.IDatabase<PgExtensions, any>
 	private readonly routeStatements: Record<string, string>
 	private readonly modelStatements: Record<string, ModelStatements>
@@ -42,20 +39,24 @@ export class PostgresStore extends Store {
 	private isReady: boolean
 
 	public ready(): Promise<void> {
-		if (this.isReady) return new Promise((resolve, reject) => resolve())
+		if (this.isReady) return Promise.resolve()
 		return new Promise((resolve, reject) => {
 			if (this.onready !== null) throw new Error("ready handler can only be bound once")
 			this.onready = () => resolve()
 		})
 	}
 
-	constructor(url: string, models: Record<string, Model>, routes: Record<string, string>, replay: boolean) {
-		super()
+	constructor(config: StoreConfig) {
+		if (config.databaseURI === null) {
+			throw new Error("Postgres databases require an explicit database URI")
+		}
+
+		console.log("[canvas-core] Connecting to Postgres database at", config.databaseURI)
 
 		const pgp = PgPromise() // TODO: use { pgNative: true } for pg-native bindings
-		this.db = pgp(url)
+		this.db = pgp(config.databaseURI)
 
-		this.modelStatements = mapEntries(models, (name, { indexes, ...properties }) => {
+		this.modelStatements = mapEntries(config.models, (name, { indexes, ...properties }) => {
 			const keys = ["updated_at", ...Object.keys(properties)]
 			const values = keys.map((key) => `$/${key}/`).join(", ")
 			const updates = keys.map((key) => `${PostgresStore.propertyName(key)} = $/${key}/`).join(", ")
@@ -83,30 +84,26 @@ export class PostgresStore extends Store {
 			getHistory: "SELECT * FROM _messages WHERE id > $/last/ LIMIT $/limit/",
 		}
 
-		this.routeStatements = mapEntries(routes, (route, query) => query)
+		this.routeStatements = mapEntries(config.routes, (route, query) => query)
 		this.onready = null
 		this.isReady = false
 
-		if (replay) {
-			this.initializeMessageTables(models).then(() => {
-				// TODO: don't kill the action log!
-				this.initializeModelTables(models).then(() => {
-					this.validateDatabase(models).then(() => {
-						if (this.onready) this.onready()
-						this.isReady = true
-					})
-				})
-			})
-		} else {
-			this.validateDatabase(models).then(() => {
-				if (this.onready) this.onready()
-				this.isReady = true
-			})
+		this.initialize(config).then(() => {
+			if (this.onready) this.onready()
+			this.isReady = true
+		})
+	}
+
+	private async initialize(config: StoreConfig) {
+		if (config.reset) {
+			await this.deleteModelTables(config.models)
+		} else if (config.replay) {
+			await this.deleteMessageTables()
+			await this.deleteModelTables(config.models)
 		}
-		// if (reset) {
-		//   await this.initializeMessageTables(models)
-		//   await this.initializeModelTables(models)
-		// }
+
+		await this.initializeMessageTables()
+		await this.initializeModelTables(config.models)
 	}
 
 	public async insertAction(key: string, action: Action) {
@@ -227,6 +224,7 @@ export class PostgresStore extends Store {
 
 	public close() {
 		// nothing to do, since pg-promise should handle connections for us
+		// this.db.
 	}
 
 	public async getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]> {
@@ -262,41 +260,25 @@ export class PostgresStore extends Store {
 		}
 	}
 
-	private async validateDatabase(models: Record<string, Model>) {
-		const schema = await this.db.any(
-			"SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';"
-		)
-		const tables = schema.map((t) => t.tablename).map((t) => `"${t}"`)
-		const errors: string[] = []
-		if (!tables.includes('"_messages"')) errors.push("missing _messages table")
-		for (const [name, { indexes, ...properties }] of Object.entries(models)) {
-			if (!tables.includes(PostgresStore.tableName(name))) errors.push("missing model table for " + name)
-			if (!tables.includes(PostgresStore.deletedTableName(name)))
-				errors.push("missing model deletion table for " + name)
-		}
-		if (errors.length > 0) {
-			for (const error of errors) console.error(chalk.red(error))
-			console.error(chalk.yellow("Model database looks out of sync. Try --replay to reset it."))
-			process.exit(1)
-		}
+	private async initializeMessageTables() {
+		const createMessagesTable =
+			"CREATE TABLE IF NOT EXISTS _messages (id SERIAL PRIMARY KEY, key TEXT, data TEXT, session BOOLEAN, action BOOLEAN);"
+		await this.db.none(createMessagesTable)
+		const createMessagesIndex = "CREATE INDEX IF NOT EXISTS _messages_index ON _messages (key);"
+		await this.db.none(createMessagesIndex)
 	}
 
-	private async initializeMessageTables(models: Record<string, Model>) {
-		await this.db.none("DROP TABLE IF EXISTS _messages;")
-		await this.db.none("DROP INDEX IF EXISTS _messages_index;")
-
-		const createMessagesTable =
-			"CREATE TABLE _messages (id SERIAL PRIMARY KEY, key TEXT, data TEXT, session BOOLEAN, action BOOLEAN);"
-		const createMessagesIndex = "CREATE INDEX _messages_index ON _messages (key);"
-		await this.db.none(createMessagesTable)
-		await this.db.none(createMessagesIndex)
+	private async deleteMessageTables() {
+		const dropMessagesTable = "DROP TABLE IF EXISTS _messages;"
+		await this.db.none(dropMessagesTable)
+		const dropMessagesIndex = "DROP INDEX IF EXISTS _messages_index;"
+		await this.db.none(dropMessagesIndex)
 	}
 
 	private async initializeModelTables(models: Record<string, Model>) {
 		for (const [name, { indexes, ...properties }] of Object.entries(models)) {
 			const deletedTableName = PostgresStore.deletedTableName(name)
-			await this.db.none(`DROP TABLE IF EXISTS ${deletedTableName};`)
-			const createDeletedTable = `CREATE TABLE ${deletedTableName} (id TEXT PRIMARY KEY NOT NULL, deleted_at BIGINT NOT NULL);`
+			const createDeletedTable = `CREATE TABLE IF NOT EXISTS ${deletedTableName} (id TEXT PRIMARY KEY NOT NULL, deleted_at BIGINT NOT NULL);`
 			await this.db.none(createDeletedTable)
 
 			const columns = ["id TEXT PRIMARY KEY NOT NULL", "updated_at BIGINT NOT NULL"]
@@ -305,19 +287,35 @@ export class PostgresStore extends Store {
 			}
 
 			const tableName = PostgresStore.tableName(name)
-
-			await this.db.none(`DROP TABLE IF EXISTS ${tableName};`)
-			const createTable = `CREATE TABLE ${tableName} (${columns.join(", ")});`
+			const createTable = `CREATE TABLE IF NOT EXISTS ${tableName} (${columns.join(", ")});`
 			await this.db.none(createTable)
 
 			if (indexes !== undefined) {
 				for (const property of indexes) {
 					const indexName = PostgresStore.indexName(name, property)
 					const propertyName = PostgresStore.propertyName(property)
-					await this.db.none(`DROP INDEX IF EXISTS ${indexName};`)
-					await this.db.none(`CREATE INDEX ${indexName} ON ${tableName} (${propertyName});`)
+					await this.db.none(`CREATE INDEX NOT EXISTS ${indexName} ON ${tableName} (${propertyName});`)
 				}
 			}
+		}
+	}
+
+	private async deleteModelTables(models: Record<string, Model>) {
+		for (const [name, { indexes }] of Object.entries(models)) {
+			if (indexes !== undefined) {
+				for (const property of indexes) {
+					const indexName = PostgresStore.indexName(name, property)
+					await this.db.none(`DROP INDEX IF EXISTS ${indexName};`)
+				}
+			}
+
+			const deletedTableName = PostgresStore.deletedTableName(name)
+			const dropDeletedTable = `DROP TABLE IF EXISTS ${deletedTableName};`
+			await this.db.none(dropDeletedTable)
+
+			const tableName = PostgresStore.tableName(name)
+			const dropTable = `DROP TABLE IF EXISTS ${tableName};`
+			await this.db.none(dropTable)
 		}
 	}
 }

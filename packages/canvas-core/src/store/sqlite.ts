@@ -1,12 +1,10 @@
 import assert from "node:assert"
 import path from "node:path"
-import fs from "node:fs"
-import chalk from "chalk"
 
 import type { Action, Session, ActionContext, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
 import Database, * as sqlite from "better-sqlite3"
 
-import { Store, Effect } from "./store.js"
+import { Store, StoreConfig, Effect } from "./store.js"
 import { actionType, sessionType } from "../codecs.js"
 import { mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "../utils.js"
 
@@ -30,7 +28,9 @@ interface BacklogStatements {
 	getHistory: sqlite.Statement
 }
 
-export class SqliteStore extends Store {
+export class SqliteStore implements Store {
+	public static DATABASE_FILENAME = "db.sqlite"
+
 	private readonly database: sqlite.Database
 	private readonly transaction: (context: ActionContext, effects: Effect[]) => void
 	private readonly routeStatements: Record<string, sqlite.Statement>
@@ -39,40 +39,36 @@ export class SqliteStore extends Store {
 
 	public ready(): Promise<void> {
 		// better-sqlite3 initializes synchronously, so the core is always ready()
-		return new Promise((resolve, reject) => resolve())
+		return Promise.resolve()
 	}
 
-	constructor(
-		directory: string | null,
-		models: Record<string, Model>,
-		routes: Record<string, string>,
-		replay: boolean
-	) {
-		super()
-
-		if (directory === null) {
+	constructor(config: StoreConfig) {
+		if (config.databaseURI === null) {
 			this.database = new Database(":memory:")
-			console.error("[canvas-core] Initializing new in-memory model database")
-			SqliteStore.initializeMessageTables(this.database, models)
-			SqliteStore.initializeModelTables(this.database, models)
+			console.error("[canvas-core] Initializing new in-memory database")
+			SqliteStore.initializeMessageTables(this.database)
+			SqliteStore.initializeModelTables(this.database, config.models)
 		} else {
-			const databasePath = path.resolve(directory, SqliteStore.DATABASE_FILENAME)
-			if (fs.existsSync(databasePath)) {
-				console.error(`[canvas-core] Found existing model database at ${databasePath}`)
-				this.database = new Database(databasePath, { fileMustExist: true })
-				if (replay) {
-					SqliteStore.initializeModelTables(this.database, models)
-				}
-				SqliteStore.validateDatabase(this.database, models)
-			} else {
-				console.error(`[canvas-core] Initializing new model database at ${databasePath}`)
-				this.database = new Database(databasePath)
-				SqliteStore.initializeMessageTables(this.database, models)
-				SqliteStore.initializeModelTables(this.database, models)
+			assert(config.databaseURI.startsWith("file:"), "SQLite databases must use file URIs (e.g. file:db.sqlite)")
+			const databasePath = config.databaseURI.slice("file:".length)
+
+			console.error(`[canvas-core] Initializing database at ${databasePath}`)
+			this.database = new Database(databasePath)
+			if (config.reset) {
+				console.error(`[canvas-core] Deleting message tables in ${databasePath}`)
+				SqliteStore.deleteMessageTables(this.database)
+				console.error(`[canvas-core] Deleting model tables in ${databasePath}`)
+				SqliteStore.deleteModelTables(this.database, config.models)
+			} else if (config.replay) {
+				console.error(`[canvas-core] Deleting model tables in ${databasePath}`)
+				SqliteStore.deleteModelTables(this.database, config.models)
 			}
+
+			SqliteStore.initializeMessageTables(this.database)
+			SqliteStore.initializeModelTables(this.database, config.models)
 		}
 
-		this.modelStatements = mapEntries(models, (name, { indexes, ...properties }) => {
+		this.modelStatements = mapEntries(config.models, (name, { indexes, ...properties }) => {
 			const keys = ["updated_at", ...Object.keys(properties)]
 			const values = keys.map((key) => `:${key}`).join(", ")
 			const updates = keys.map((key) => `${SqliteStore.propertyName(key)} = :${key}`).join(", ")
@@ -142,7 +138,7 @@ export class SqliteStore extends Store {
 			}
 		})
 
-		this.routeStatements = mapEntries(routes, (route, query) => this.database.prepare(query))
+		this.routeStatements = mapEntries(config.routes, (route, query) => this.database.prepare(query))
 	}
 
 	public async insertAction(key: string, action: Action) {
@@ -221,7 +217,7 @@ export class SqliteStore extends Store {
 		return result && result.updated_at
 	}
 
-	public applyEffects(context: ActionContext, effects: Effect[]) {
+	public async applyEffects(context: ActionContext, effects: Effect[]) {
 		this.transaction(context, effects)
 	}
 
@@ -260,39 +256,25 @@ export class SqliteStore extends Store {
 		}
 	}
 
-	private static validateDatabase(database: sqlite.Database, models: Record<string, Model>) {
-		const schema = database.prepare("SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name").all()
-		const tables = schema
-			.map((t) => t.name)
-			.filter((t) => !t.startsWith("sqlite_"))
-			.map((t) => `'${t}'`)
-		const errors: string[] = []
-
-		if (!tables.includes("'_messages'")) errors.push("missing _messages table")
-		for (const [name, { indexes, ...properties }] of Object.entries(models)) {
-			if (!tables.includes(SqliteStore.tableName(name))) errors.push("missing model table for " + name)
-			if (!tables.includes(SqliteStore.deletedTableName(name))) errors.push("missing model deletion table for " + name)
-		}
-
-		if (errors.length > 0) {
-			for (const error of errors) console.error(chalk.red(error))
-			console.error(chalk.yellow("Model database looks out of sync. Try --replay to reset it."))
-			process.exit(1)
-		}
-	}
-
-	private static initializeMessageTables(database: sqlite.Database, models: Record<string, Model>) {
+	private static initializeMessageTables(database: sqlite.Database) {
 		const createMessagesTable =
-			"CREATE TABLE _messages (id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT, data TEXT, session BOOLEAN, action BOOLEAN);"
-		const createMessagesIndex = "CREATE INDEX _messages_index ON _messages (key);"
+			"CREATE TABLE IF NOT EXISTS _messages (id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT, data TEXT, session BOOLEAN, action BOOLEAN);"
+		const createMessagesIndex = "CREATE INDEX IF NOT EXISTS _messages_index ON _messages (key);"
 		database.exec(createMessagesTable)
 		database.exec(createMessagesIndex)
+	}
+
+	private static deleteMessageTables(database: sqlite.Database) {
+		const dropMessagesIndex = "DROP INDEX IF EXISTS _messages_index;"
+		database.exec(dropMessagesIndex)
+		const dropMessagesTable = "DROP TABLE IF EXISTS _messages;"
+		database.exec(dropMessagesTable)
 	}
 
 	private static initializeModelTables(database: sqlite.Database, models: Record<string, Model>) {
 		for (const [name, { indexes, ...properties }] of Object.entries(models)) {
 			const deletedTableName = SqliteStore.deletedTableName(name)
-			const createDeletedTable = `CREATE TABLE ${deletedTableName} (id TEXT PRIMARY KEY NOT NULL, deleted_at INTEGER NOT NULL);`
+			const createDeletedTable = `CREATE TABLE IF NOT EXISTS ${deletedTableName} (id TEXT PRIMARY KEY NOT NULL, deleted_at INTEGER NOT NULL);`
 			database.exec(createDeletedTable)
 
 			const columns = ["id TEXT PRIMARY KEY NOT NULL", "updated_at INTEGER NOT NULL"]
@@ -302,16 +284,36 @@ export class SqliteStore extends Store {
 
 			const tableName = SqliteStore.tableName(name)
 
-			const createTable = `CREATE TABLE ${tableName} (${columns.join(", ")});`
+			const createTable = `CREATE TABLE IF NOT EXISTS ${tableName} (${columns.join(", ")});`
 			database.exec(createTable)
 
 			if (indexes !== undefined) {
 				for (const property of indexes) {
 					const indexName = SqliteStore.indexName(name, property)
 					const propertyName = SqliteStore.propertyName(property)
-					database.exec(`CREATE INDEX ${indexName} ON ${tableName} (${propertyName});`)
+					database.exec(`CREATE INDEX IF NOT EXISTS ${indexName} ON ${tableName} (${propertyName});`)
 				}
 			}
+		}
+	}
+
+	private static deleteModelTables(database: sqlite.Database, models: Record<string, Model>) {
+		for (const [name, { indexes }] of Object.entries(models)) {
+			const tableName = SqliteStore.tableName(name)
+
+			if (indexes !== undefined) {
+				for (const property of indexes) {
+					const indexName = SqliteStore.indexName(name, property)
+					database.exec(`DROP INDEX IF EXISTS ${indexName};`)
+				}
+			}
+
+			const dropTable = `DROP TABLE IF EXISTS ${tableName};`
+			database.exec(dropTable)
+
+			const deletedTableName = SqliteStore.deletedTableName(name)
+			const dropDeletedTable = `DROP TABLE IF EXISTS ${deletedTableName};`
+			database.exec(dropDeletedTable)
 		}
 	}
 }

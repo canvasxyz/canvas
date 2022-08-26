@@ -1,12 +1,9 @@
 import fs from "node:fs"
-import path from "node:path"
-import assert from "node:assert"
 import process from "node:process"
-import readline from "node:readline"
 import stoppable from "stoppable"
+import prompts from "prompts"
 
 import { getQuickJS } from "quickjs-emscripten"
-import ethers from "ethers"
 import cors from "cors"
 import express from "express"
 import bodyParser from "body-parser"
@@ -14,10 +11,10 @@ import { StatusCodes } from "http-status-codes"
 import chalk from "chalk"
 import * as t from "io-ts"
 
-import { Core, actionType, actionPayloadType, sessionType } from "@canvas-js/core"
+import { Core, actionType, actionPayloadType, sessionType, SqliteStore } from "@canvas-js/core"
 import { create as createIpfsHttpClient } from "ipfs-http-client"
 
-import { setupRpcs, deleteDatabase, deleteGeneratedModels, locateSpec } from "../utils.js"
+import { setupRpcs, locateSpec, defaultDataDirectory, confirmOrExit } from "../utils.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -32,10 +29,11 @@ export const builder = (yargs) => {
 		.option("datadir", {
 			type: "string",
 			desc: "Path of the app data directory",
+			default: defaultDataDirectory,
 		})
 		.option("database", {
 			type: "string",
-			desc: "Path to the app database. Providing one forces the app to run on Postgres",
+			desc: "Override database URI",
 		})
 		.option("port", {
 			type: "number",
@@ -62,10 +60,12 @@ export const builder = (yargs) => {
 		.option("reset", {
 			type: "boolean",
 			desc: "Reset the action log and model database",
+			default: false,
 		})
 		.option("replay", {
 			type: "boolean",
 			desc: "Reconstruct the model database by replying the action log",
+			default: false,
 		})
 		.option("unchecked", {
 			type: "boolean",
@@ -75,10 +75,10 @@ export const builder = (yargs) => {
 			type: "boolean",
 			desc: "Restart the core on spec file changes",
 		})
-		.option("temp", {
-			type: "boolean",
-			desc: "Open a temporary in-memory core",
-		})
+		// .option("temp", {
+		// 	type: "boolean",
+		// 	desc: "Open a temporary in-memory core",
+		// })
 		.option("verbose", {
 			type: "boolean",
 			desc: "Enable verbose logging",
@@ -97,54 +97,50 @@ export async function handler(args) {
 		process.exit(1)
 	}
 
-	if (args.temp && (args.replay || args.reset)) {
-		console.error(chalk.red("[canvas-cli] --temp cannot be used with --replay or --reset"))
-		process.exit(1)
-	}
+	const { name, directory, specPath, spec } = await locateSpec(args)
 
-	const { specPath, directory, name, spec, development } = await locateSpec(args)
+	const development = directory === null
+	const databaseURI = args.database || (directory && `file:${directory}/${SqliteStore.DATABASE_FILENAME}`)
+
+	if (!development && args.watch) {
+		console.warn(chalk.yellow(`[canvas-cli] --watch has no effect on CID specs`))
+	}
 
 	if (development && args.peering) {
 		console.error(chalk.red(`[canvas-cli] --peering cannot be enabled for local development specs`))
 		process.exit(1)
 	}
 
-	if (args.watch && !development) {
-		console.warn(chalk.yellow(`[canvas-cli] --watch has no effect on CID specs`))
-	}
-
-	if (!args.temp) {
-		if (!fs.existsSync(directory)) {
-			console.log(`[canvas-cli] Creating directory ${directory}`)
-			fs.mkdirSync(directory)
-		} else if (args.reset) {
-			await deleteDatabase(directory, { prompt: true })
-			console.log(`[canvas-cli] Reset database at ${directory}`)
-			return
+	if (databaseURI === null) {
+		if (args.replay || args.reset) {
+			console.error(chalk.red("[canvas-cli] --replay and --reset cannot be used with temporary development databases"))
+			process.exit(1)
+		}
+	} else {
+		if (args.reset) {
+			await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${databaseURI}?`)
 		} else if (args.replay) {
-			await deleteGeneratedModels(directory, { prompt: true })
-			console.log(`[canvas-cli] Deleted generated models at ${directory}`)
+			await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${databaseURI}?`)
 		}
 	}
 
 	// read rpcs from --chain-rpc arguments or environment variables
 	// prompt to run in unchecked mode, if no rpcs were provided
-	let rpc = setupRpcs(args)
+	const rpc = setupRpcs(args)
 	if (Object.keys(rpc).length === 0 && !args.unchecked) {
-		const line = readline.createInterface({ input: process.stdin, output: process.stdout })
-		const confirmed = await new Promise((resolve) => {
-			line.question(chalk.yellow("No chain RPC provided. Run in unchecked mode instead? [Y/n] "), (response) => {
-				line.close()
-				resolve(response === "Y" || response === "y")
-			})
+		const { confirm } = await prompts({
+			type: "confirm",
+			name: "confirm",
+			message: chalk.yellow("No chain RPC provided. Run in unchecked mode instead?"),
 		})
-		if (confirmed) {
+
+		if (confirm) {
 			args.unchecked = true
 			args.peering = false
-			console.log(chalk.red("Running in unchecked mode! Actions will be processed without verifying a blockhash."))
-			console.log(chalk.red("Peering automatically disabled."))
+			console.warn(chalk.yellow("Running in unchecked mode! Actions will be processed without verifying a blockhash."))
+			console.warn(chalk.yellow("Peering automatically disabled."))
 		} else {
-			console.log(chalk.red("Running without unchecked mode! New actions cannot be processed without an RPC."))
+			console.warn(chalk.red("Running without unchecked mode! New actions cannot be processed without an RPC."))
 		}
 	}
 
@@ -154,7 +150,7 @@ export async function handler(args) {
 		ipfs = createIpfsHttpClient({ url: args.ipfs })
 		const { id } = await ipfs.id()
 		peerId = id.toString()
-		console.log("[canvas-cli] Got local PeerID", peerId)
+		console.log("[canvas-cli] Peering enabled. Got local PeerID", peerId)
 	}
 
 	let core, api
@@ -163,14 +159,14 @@ export async function handler(args) {
 			name,
 			spec,
 			verbose: args.verbose,
-			directory: args.database ? null : directory, // use sqlite if no `database` url was provided
-			database: args.database,
+			databaseURI,
 			quickJS,
 			replay: args.replay,
+			reset: args.reset,
 			unchecked: args.unchecked,
-			development,
 			rpc,
 		})
+
 		if (!args.noserver) {
 			api = new API({ peerId, core, port: args.port, ipfs, peering: args.peering })
 		}
@@ -181,18 +177,24 @@ export async function handler(args) {
 
 	// TODO: intercept SIGINT and shut down the server and core gracefully
 
-	if (!args.watch) {
+	if (!args.watch || !development) {
 		return
 	}
 
-	if (args.reset) {
-		console.log(
+	if (databaseURI === null) {
+		console.warn(
+			chalk.yellow(
+				"[canvas-cli] Warning: the action log will be erased on every change to the spec file. All data will be lost."
+			)
+		)
+	} else if (args.reset) {
+		console.warn(
 			chalk.yellow(
 				"[canvas-cli] Warning: the action log will be erased on every change to the spec file. All data will be lost."
 			)
 		)
 	} else if (args.replay) {
-		console.log(
+		console.warn(
 			chalk.yellow(
 				"[canvas-cli] Warning: the model database will be rebuilt from the action log on every change to the spec file."
 			)
@@ -220,16 +222,16 @@ export async function handler(args) {
 				// continue if the api or core crashed during the last reload
 			}
 
-			if (directory !== null) {
-				if (args.reset) {
-					await deleteDatabase(directory, { prompt: false })
-				} else if (args.replay) {
-					await deleteGeneratedModels(directory, { prompt: false })
-				}
-			}
-
 			try {
-				core = await Core.initialize({ name, spec: newSpec, directory, quickJS, replay: args.replay, development })
+				core = await Core.initialize({
+					name,
+					spec: newSpec,
+					databaseURI,
+					quickJS,
+					replay: args.replay,
+					reset: args.reset,
+				})
+
 				if (!args.noserver) {
 					api = new API({ core, port: args.port, ipfs, peering: args.peering })
 				}
@@ -237,6 +239,7 @@ export async function handler(args) {
 				console.log(err)
 				// don't terminate on error
 			}
+
 			terminating = false
 		}
 	})
@@ -385,7 +388,7 @@ class API {
 
 					if (action.session !== null) {
 						const sessionKey = Core.getSessionKey(action.session)
-						const sessionRecord = await this.core.hyperbee.get(sessionKey)
+						const sessionRecord = await this.core.store.getSession(sessionKey)
 						if (sessionRecord !== null) {
 							const session = JSON.parse(sessionRecord.value)
 							messages.push({ type: "session", ...session })

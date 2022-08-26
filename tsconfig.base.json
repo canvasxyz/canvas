@@ -3,7 +3,7 @@
     "composite": true,
     "strict": true,
     "declaration": true,
-    "module": "es2020",
+    "module": "es2022",
     "target": "es2020",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
