@@ -1,13 +1,12 @@
 import assert from "node:assert"
-import path from "node:path"
+
+import Database, * as sqlite from "better-sqlite3"
+import chalk from "chalk"
 
 import type { Action, Session, ActionContext, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
-import Database, * as sqlite from "better-sqlite3"
-
 import { Store, StoreConfig, Effect } from "./store.js"
 import { actionType, sessionType } from "../codecs.js"
 import { mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "../utils.js"
-import chalk from "chalk"
 
 interface ModelStatements {
 	insert: sqlite.Statement
