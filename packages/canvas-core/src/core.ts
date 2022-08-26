@@ -43,11 +43,9 @@ export interface CoreConfig {
 	quickJS: QuickJSWASMModule
 	replay?: boolean
 	reset?: boolean
-	development?: boolean
 	verbose?: boolean
 	unchecked?: boolean
 	rpc?: Partial<Record<Chain, Record<string, string>>>
-	log?: (...args: any[]) => void
 }
 
 interface CoreEvents {
@@ -63,6 +61,7 @@ type BlockInfo = {
 }
 
 export class Core extends EventEmitter<CoreEvents> {
+	private static readonly cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 	private static readonly RUNTIME_MEMORY_LIMIT = 1024 * 640 // 640kb
 
 	public static async initialize(config: CoreConfig): Promise<Core> {
@@ -70,7 +69,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			console.log(`[canvas-core] Initializing core ${config.name}`)
 		}
 
-		if (!config.development) {
+		if (Core.cidPattern.test(config.name)) {
 			const cid = await Hash.of(config.spec)
 			assert(cid === config.name, "Core.name is not equal to the hash of the provided spec.")
 		}

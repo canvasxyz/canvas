@@ -31,7 +31,6 @@ const coreConfig: CoreConfig = {
 	spec,
 	quickJS,
 	unchecked: true,
-	development: true,
 }
 
 test("Test setting and then deleting a record", async (t) => {

@@ -22,7 +22,7 @@ async function sign(signer: ethers.Wallet, session: string | null, call: string,
 	return { payload: actionPayload, session, signature: actionSignature }
 }
 
-const config = { development: true, unchecked: true, databaseURI: null }
+const config = { unchecked: true, databaseURI: null }
 
 test("Test console.log", async (t) => {
 	const spec = `

@@ -34,7 +34,6 @@ const coreConfig: CoreConfig = {
 	spec,
 	quickJS,
 	unchecked: true,
-	development: true,
 }
 
 test("Apply signed action", async (t) => {
