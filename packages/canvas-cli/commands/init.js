@@ -18,6 +18,7 @@ export async function handler(args) {
 	}
 
 	const content = `export const database = "sqlite"
+
 export const models = {
 	posts: {
 		content: "string",
