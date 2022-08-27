@@ -21,6 +21,7 @@ export async function handler(args: Args) {
 	}
 
 	const content = `export const database = "sqlite"
+
 export const models = {
 	posts: {
 		content: "string",
