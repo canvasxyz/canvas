@@ -5,12 +5,10 @@
   "type": "module",
   "main": "dist/index.js",
   "files": [
-    "commands",
-    "utils.js",
-    "index.js"
+    "dist"
   ],
   "bin": {
-    "canvas": "index.js"
+    "canvas": "dist/index.js"
   },
   "dependencies": {
     "@canvas-js/core": "*",
