@@ -52,14 +52,8 @@ export async function handler(args: Args) {
 	})
 
 	let i = 0
-	for await (const [key, value] of core.store.getHistoryStream()) {
-		if (key.startsWith(Core.actionKeyPrefix)) {
-			console.log(JSON.stringify({ type: "action", ...value }, null, args.compact ? undefined : 2))
-		} else if (key.startsWith(Core.sessionKeyPrefix)) {
-			console.log(JSON.stringify({ type: "session", ...value }, null, args.compact ? undefined : 2))
-		} else {
-			console.error(chalk.red("[canvas-cli] Skipping invalid entry"))
-		}
+	for await (const [_, value] of core.store.getHistoryStream()) {
+		console.log(JSON.stringify(value, null, args.compact ? undefined : 2))
 		i++
 	}
 
