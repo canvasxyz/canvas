@@ -33,7 +33,7 @@ export function useSession(
 	signer: ethers.providers.JsonRpcSigner | null,
 	provider: ethers.providers.Provider | null
 ): {
-	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
+	dispatch: (call: string, ...args: ActionArgument[]) => Promise<void>
 	session: CanvasSession | null
 	connectNewSession: () => Promise<void>
 	disconnect: () => Promise<void>
@@ -80,7 +80,7 @@ export function useSession(
 	}, [multihash, address])
 
 	const dispatch = useCallback(
-		async (call: string, args: ActionArgument[]) => {
+		async (call: string, ...args: ActionArgument[]) => {
 			if (provider === null) {
 				throw new Error("no web3 provider found")
 			} else if (host === undefined) {

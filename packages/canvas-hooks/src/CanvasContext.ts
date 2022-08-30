@@ -14,7 +14,7 @@ export interface CanvasContextValue {
 	connect: () => Promise<void>
 	connectNewSession: () => Promise<void>
 	disconnect: () => Promise<void>
-	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
+	dispatch: (call: string, ...args: ActionArgument[]) => Promise<void>
 }
 
 export const CanvasContext = createContext<CanvasContextValue>({
@@ -26,5 +26,5 @@ export const CanvasContext = createContext<CanvasContextValue>({
 	connect: () => Promise.reject(),
 	connectNewSession: () => Promise.reject(),
 	disconnect: () => Promise.reject(),
-	dispatch: (call, args) => Promise.reject(),
+	dispatch: (call, ...args) => Promise.reject(),
 })

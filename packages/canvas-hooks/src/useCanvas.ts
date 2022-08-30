@@ -23,7 +23,7 @@ export function useCanvas(): {
 	loading: boolean
 	address: string | null
 	session: CanvasSession | null
-	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
+	dispatch: (call: string, ...args: ActionArgument[]) => Promise<void>
 	connect: () => Promise<void>
 	connectNewSession: () => Promise<void>
 	disconnect: () => Promise<void>
