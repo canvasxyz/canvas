@@ -225,6 +225,9 @@ async function send(host: string, sessionSigner: ethers.Wallet, payload: ActionP
 
 	if (!res.ok) {
 		const message = await res.text()
+		if (message === "session not found") {
+			localStorage.removeItem(CANVAS_SESSION_KEY)
+		}
 		throw new Error(message)
 	}
 }

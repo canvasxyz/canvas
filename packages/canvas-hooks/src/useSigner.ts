@@ -41,6 +41,7 @@ export function useSigner(): {
 
 	useEffect(() => {
 		if (window.ethereum === undefined) {
+			console.error("Could not find injected wallet provider")
 			setLoading(false)
 			return
 		}
