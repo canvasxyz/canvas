@@ -1,17 +1,20 @@
 import fs from "node:fs"
 
+import yargs from "yargs"
+
 export const command = "init <filename>"
 export const desc = "Create a sample spec for demonstration purposes"
 
-export const builder = (yargs) => {
+export const builder = (yargs: yargs.Argv) =>
 	yargs.positional("filename", {
 		describe: "Path to spec file to create",
 		type: "string",
 		demandOption: true,
 	})
-}
 
-export async function handler(args) {
+type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
+
+export async function handler(args: Args) {
 	if (fs.existsSync(args.filename)) {
 		console.log("File already exists, refusing to overwrite")
 		return

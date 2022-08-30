@@ -96,11 +96,12 @@ export class Core extends EventEmitter<CoreEvents> {
 		await core.store.ready()
 
 		if (config.replay) {
-			console.log(`[canvas-core] Replaying action log...`)
-			let i = 0
+			if (config.verbose) {
+				console.log(`[canvas-core] Replaying action log...`)
+			}
 
-			// SQL_QUERY_LIMIT is the number of actions per page to retrieve
-			for await (const [id, action] of core.store.getActionStream(SQL_QUERY_LIMIT)) {
+			let i = 0
+			for await (const [id, action] of core.store.getActionStream()) {
 				if (!actionType.is(action)) {
 					console.error(action)
 					throw new Error("Invalid action value in action log")
@@ -111,10 +112,15 @@ export class Core extends EventEmitter<CoreEvents> {
 				i++
 			}
 
-			console.log(`[canvas-core] Successfully replayed all ${i} entries from the action log.`)
+			if (config.verbose) {
+				console.log(`[canvas-core] Successfully replayed all ${i} entries from the action log.`)
+			}
 		}
 
-		console.log(`[canvas-core] Successfully initialized core ${config.name}`)
+		if (config.verbose) {
+			console.log(`[canvas-core] Successfully initialized core ${config.name}`)
+		}
+
 		return core
 	}
 
@@ -402,7 +408,10 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async close() {
-		if (this.verbose) console.log("[canvas-core] Closing...")
+		if (this.verbose) {
+			console.log("[canvas-core] Closing...")
+		}
+
 		await this.queue.onEmpty()
 
 		this.dbHandle.dispose()
@@ -428,7 +437,10 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async getRoute(route: string, params: Record<string, ModelValue> = {}): Promise<Record<string, ModelValue>[]> {
-		if (this.verbose) console.log("[canvas-core] getRoute:", route, params)
+		if (this.verbose) {
+			console.log("[canvas-core] getRoute:", route, params)
+		}
+
 		return this.store.getRoute(route, params)
 	}
 
@@ -454,7 +466,10 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (!block) {
 			try {
-				console.log(`[canvas-core] fetching block ${blockInfo.blockhash} for ${chain}:${chainId}`)
+				if (this.verbose) {
+					console.log(`[canvas-core] fetching block ${blockInfo.blockhash} for ${chain}:${chainId}`)
+				}
+
 				block = await rpcProviders[chainId].getBlock(blockInfo.blockhash)
 				this.blockCache[chain + ":" + chainId][blockhash] = block
 			} catch (err) {
@@ -479,7 +494,10 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Executes an action.
 	 */
 	public apply(action: Action): Promise<ActionResult> {
-		if (this.verbose) console.error("[canvas-core] apply action:", JSON.stringify(action))
+		if (this.verbose) {
+			console.log("[canvas-core] apply action:", JSON.stringify(action))
+		}
+
 		return this.queue.add(async () => {
 			// check type of action
 			assert(actionType.is(action), "Invalid action value in action log")
@@ -582,7 +600,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		// log to console:
 		globalHandles.console = this.wrapObject({
 			log: this.context.newFunction("log", (...args: any[]) => {
-				console.error("[canvas-vm]", ...args.map(this.context.dump))
+				console.log("[canvas-vm]", ...args.map(this.context.dump))
 			}),
 		})
 
@@ -591,12 +609,17 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(this.context.typeof(urlHandle) === "string", "url must be a string")
 			const url = this.context.getString(urlHandle)
 			const deferred = this.context.newPromise()
-			console.error("[canvas-vm] fetch:", url)
+			if (this.verbose) {
+				console.log("[canvas-vm] fetch:", url)
+			}
 
 			fetch(url)
 				.then((res) => res.text())
 				.then((data) => {
-					console.error(`[canvas-vm] fetch success: ${url} (${data.length} bytes)`)
+					if (this.verbose) {
+						console.log(`[canvas-vm] fetch OK: ${url} (${data.length} bytes)`)
+					}
+
 					this.context.newString(data).consume((val) => deferred.resolve(val))
 				})
 				.catch((err) => {
@@ -615,7 +638,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				const contract = this.contractParameters[name].contract
 				const { address, abi } = this.contractParameters[name].metadata
 				const deferred = this.context.newPromise()
-				console.error("[canvas-vm] using contract:", name, address)
+				if (this.verbose) console.log("[canvas-vm] using contract:", name, address)
 
 				// produce an object that supports the contract's function calls
 				const wrapper: Record<string, QuickJSHandle> = {}
@@ -625,18 +648,18 @@ export class Core extends EventEmitter<CoreEvents> {
 
 					wrapper[key] = this.context.newFunction(key, (...argHandles: any[]) => {
 						const args = argHandles.map(this.context.dump)
-						console.error(
-							"[canvas-vm] contract: " +
-								chalk.green(`${name}.${key}(${args.join(",")})`) +
-								` at block ${block.blocknum} ${block.blockhash.slice(0, 5)}`
-						)
+						if (this.verbose) {
+							const call = chalk.green(`${name}.${key}(${args.join(",")})`)
+							console.log(`[canvas-vm] contract: ${call} at block ${block.blocknum} ${block.blockhash.slice(0, 5)}`)
+						}
+
 						contract[key]
 							.apply(this, args.concat({ blockTag: block.blocknum }))
 							.then((result: any) => {
 								deferred.resolve(this.context.newString(result.toString()))
 							})
 							.catch((err: Error) => {
-								console.error("[canvas-vm] eth call error:", err.message)
+								console.error("[canvas-vm] contract call error:", err.message)
 								deferred.reject(this.context.newString(err.message))
 							})
 						deferred.settled.then(this.runtime.executePendingJobs)
@@ -710,7 +733,10 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Create a new session.
 	 */
 	public session(session: Session): Promise<void> {
-		if (this.verbose) console.error("[canvas-core] apply session:", JSON.stringify(session))
+		if (this.verbose) {
+			console.log("[canvas-core] apply session:", JSON.stringify(session))
+		}
+
 		return this.queue.add(async () => {
 			assert(sessionType.is(session), "invalid session")
 			assert(session.payload.spec === this.name, "session signed for wrong spec")

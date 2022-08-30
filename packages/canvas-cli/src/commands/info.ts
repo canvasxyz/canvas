@@ -1,25 +1,25 @@
+import yargs from "yargs"
 import chalk from "chalk"
-
 import * as t from "io-ts"
 import { getQuickJS } from "quickjs-emscripten"
 
 import { Core, actionType, sessionType } from "@canvas-js/core"
 
-import { locateSpec, setupRpcs } from "../utils.js"
+import { defaultDatabaseURI, locateSpec } from "../utils.js"
 
 export const command = "info <spec>"
 export const desc = "Show the models, views, and actions for a spec"
 
-export const builder = (yargs) => {
+export const builder = (yargs: yargs.Argv) =>
 	yargs
 		.positional("spec", {
 			describe: "Path to spec file, or IPFS hash of spec",
 			type: "string",
 			demandOption: true,
 		})
-		.option("datadir", {
-			describe: "Path of the app data directory",
+		.option("database", {
 			type: "string",
+			desc: "Override database URI",
 		})
 		.option("ipfs", {
 			type: "string",
@@ -31,26 +31,22 @@ export const builder = (yargs) => {
 			desc: "Enable verbose logging",
 			default: false,
 		})
-		.option("chain-rpc", {
-			type: "array",
-			desc: "Provide an RPC endpoint for reading on-chain data",
-		})
-}
 
-export async function handler(args) {
-	const { directory, name, spec, development } = await locateSpec({ ...args, temp: true })
+type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
+
+export async function handler(args: Args) {
+	const { name, spec, directory } = await locateSpec(args.spec, args.ipfs)
+	const databaseURI = args.database || defaultDatabaseURI(directory)
 
 	const quickJS = await getQuickJS()
-	const rpc = setupRpcs(args)
+
 	const core = await Core.initialize({
 		name,
+		databaseURI,
 		spec,
-		directory,
 		quickJS,
 		verbose: args.verbose,
-		rpc,
 		unchecked: true,
-		development,
 	})
 
 	console.log(`name: ${core.name}:\n`)
@@ -84,11 +80,12 @@ export async function handler(args) {
 	process.exit(0)
 }
 
-function printType(type, indent = "") {
+function printType<T>(type: t.Type<T>, indent = ""): string {
 	if (type instanceof t.InterfaceType) {
-		const props = Object.entries(type.props).map(
+		const props = Object.entries<t.Type<any>>(type.props).map(
 			([name, prop]) => `${indent}  ${name}: ${printType(prop, indent + "  ")}\n`
 		)
+
 		return `{\n${props.join("") + indent}}`
 	} else {
 		return chalk.green(type.name)

@@ -10,6 +10,7 @@ export interface StoreConfig {
 	routes: Record<string, string>
 	replay: boolean
 	reset: boolean
+	verbose?: boolean
 }
 
 export interface Store {
@@ -17,9 +18,9 @@ export interface Store {
 	insertSession(key: string, session: Session): Promise<void>
 	getAction(key: string): Promise<Action | null>
 	getSession(key: string): Promise<Session | null>
-	getActionStream(limit: number): AsyncIterable<[string, Action]>
-	getSessionStream(limit: number): AsyncIterable<[string, Session]>
-	getHistoryStream(limit: number): AsyncIterable<[string, Action | Session]>
+	getActionStream(): AsyncIterable<[string, Action]>
+	getSessionStream(): AsyncIterable<[string, Session]>
+	getHistoryStream(): AsyncIterable<[string, Action | Session]>
 
 	ready(): Promise<void>
 	close(): void

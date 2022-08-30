@@ -1,22 +1,23 @@
+import yargs from "yargs"
 import chalk from "chalk"
 
 import { getQuickJS } from "quickjs-emscripten"
 
 import { Core } from "@canvas-js/core"
-import { locateSpec, setupRpcs } from "../utils.js"
+import { defaultDatabaseURI, locateSpec } from "../utils.js"
 
 export const command = "export <spec>"
-export const desc = "Export actions and sessions to stdout"
-export const builder = (yargs) => {
+export const desc = "Export actions and sessions as JSON to stdout"
+export const builder = (yargs: yargs.Argv) =>
 	yargs
 		.positional("spec", {
 			describe: "Path to spec file, or IPFS hash of spec",
 			type: "string",
 			demandOption: true,
 		})
-		.option("datadir", {
-			describe: "Path of the app data directory",
+		.option("database", {
 			type: "string",
+			desc: "Override database URI",
 		})
 		.option("ipfs", {
 			type: "string",
@@ -33,30 +34,29 @@ export const builder = (yargs) => {
 			type: "boolean",
 			default: false,
 		})
-}
 
-export async function handler(args) {
-	const { directory, name, spec, development } = await locateSpec(args)
+type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
+
+export async function handler(args: Args) {
+	const { directory, name, spec } = await locateSpec(args.spec, args.ipfs)
+	const databaseURI = args.database || defaultDatabaseURI(directory)
 
 	const quickJS = await getQuickJS()
-	const rpc = setupRpcs(args)
 	const core = await Core.initialize({
+		databaseURI,
 		name,
 		spec,
-		directory,
 		quickJS,
 		verbose: args.verbose,
-		rpc,
 		unchecked: true,
-		development,
 	})
 
 	let i = 0
 	for await (const [key, value] of core.store.getHistoryStream()) {
 		if (key.startsWith(Core.actionKeyPrefix)) {
-			console.log(JSON.stringify({ type: "action", ...value }, null, args.compact ? null : 2))
+			console.log(JSON.stringify({ type: "action", ...value }, null, args.compact ? undefined : 2))
 		} else if (key.startsWith(Core.sessionKeyPrefix)) {
-			console.log(JSON.stringify({ type: "session", ...value }, null, args.compact ? null : 2))
+			console.log(JSON.stringify({ type: "session", ...value }, null, args.compact ? undefined : 2))
 		} else {
 			console.error(chalk.red("[canvas-cli] Skipping invalid entry"))
 		}

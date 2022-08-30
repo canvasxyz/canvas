@@ -6,11 +6,34 @@ import process from "node:process"
 import fetch from "node-fetch"
 import chalk from "chalk"
 
+import t from "io-ts"
+
 import prompts from "prompts"
+import { Chain } from "@canvas-js/interfaces"
+import { SqliteStore } from "@canvas-js/core"
+
+const chainType: t.Type<Chain> = t.union([
+	t.literal("eth"),
+	t.literal("cosmos"),
+	t.literal("solana"),
+	t.literal("substrate"),
+])
 
 export const SPEC_FILENAME = "spec.canvas.js"
 
-export async function confirmOrExit(message) {
+export const CANVAS_HOME = process.env.CANVAS_HOME ?? path.resolve(os.homedir(), ".canvas")
+
+if (!fs.existsSync(CANVAS_HOME)) {
+	console.log(`[canvas-cli] Creating directory ${path.resolve(CANVAS_HOME)}`)
+	console.log("[canvas-cli] Override this path by setting a CANVAS_HOME environment variable.")
+	fs.mkdirSync(CANVAS_HOME)
+}
+
+export function defaultDatabaseURI(directory: string | null): string | null {
+	return directory && `file:${path.resolve(directory, SqliteStore.DATABASE_FILENAME)}`
+}
+
+export async function confirmOrExit(message: string) {
 	const { confirm } = await prompts({ type: "confirm", name: "confirm", message: chalk.yellow(message) })
 
 	if (!confirm) {
@@ -19,14 +42,19 @@ export async function confirmOrExit(message) {
 	}
 }
 
-export const defaultDataDirectory = process.env.CANVAS_DATA_DIRECTORY ?? path.resolve(os.homedir(), ".canvas")
-
 export const cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 
-export async function locateSpec({ spec: name, datadir, ipfs: ipfsAPI }) {
+interface LocateSpecResult {
+	name: string
+	directory: string | null
+	specPath: string
+	spec: string
+}
+
+export async function locateSpec(name: string, ipfsAPI: string): Promise<LocateSpecResult> {
 	if (cidPattern.test(name)) {
-		const directory = path.resolve(datadir, name)
-		const specPath = path.resolve(datadir, name, SPEC_FILENAME)
+		const directory = path.resolve(CANVAS_HOME, name)
+		const specPath = path.resolve(CANVAS_HOME, name, SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const spec = fs.readFileSync(specPath, "utf-8")
 			return { name, directory, specPath, spec }
@@ -36,7 +64,8 @@ export async function locateSpec({ spec: name, datadir, ipfs: ipfsAPI }) {
 				fs.mkdirSync(directory)
 			}
 
-			fs.writeFileSync(specPath, await download(name, ipfsAPI))
+			const spec = await download(name, ipfsAPI)
+			fs.writeFileSync(specPath, spec)
 			console.log(`[canvas-cli] Downloaded spec to ${specPath}`)
 			return { name, directory, specPath, spec }
 		}
@@ -49,42 +78,47 @@ export async function locateSpec({ spec: name, datadir, ipfs: ipfsAPI }) {
 		process.exit(1)
 	}
 }
+export function setupRpcs(args?: Array<string | number>): Partial<Record<Chain, Record<string, string>>> {
+	const rpcs: Partial<Record<Chain, Record<string, string>>> = {}
+	if (args) {
+		for (let i = 0; i < args.length; i += 3) {
+			const [chain, id, url] = args.slice(i, i + 3)
 
-export function setupRpcs(args) {
-	const rpc = {}
-	if (args.chainRpc) {
-		for (let i = 0; i < args.chainRpc.length; i += 3) {
-			const chain = args.chainRpc[i]
-			const chainId = args.chainRpc[i + 1]
-			const chainRpc = args.chainRpc[i + 2]
-			if (typeof chain !== "string") {
-				console.error(`Invalid chain "${chainId}", should be a string e.g. "eth"`)
-				return
+			if (!chainType.is(chain)) {
+				console.error(chalk.red(`[canvas-cli] Invalid chain "${chain}", should be a ${chainType.name}`))
+				return {}
 			}
-			if (typeof chainId !== "number") {
-				console.error(`Invalid chain id "${chainId}", should be a number e.g. 1`)
-				return
+
+			if (typeof id !== "number") {
+				console.error(chalk.red(`Invalid chain id "${id}", should be a number e.g. 1`))
+				return {}
 			}
-			if (typeof chainRpc !== "string") {
-				console.error(`Invalid chain rpc "${chainRpc}", should be a url`)
-				return
+
+			if (typeof url !== "string") {
+				console.error(chalk.red(`Invalid chain rpc "${url}", should be a url`))
+				return {}
 			}
-			rpc[chain] = rpc[chain] || {}
-			rpc[chain][chainId] = chainRpc
+
+			const c = rpcs[chain]
+			if (c) {
+				c[id] = url
+			} else {
+				rpcs[chain] = { [id]: url }
+			}
 		}
 	} else {
 		if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
-			rpc.eth = {}
-			rpc.eth[process.env.ETH_CHAIN_ID] = process.env.ETH_CHAIN_RPC
+			rpcs.eth = {}
+			rpcs.eth[process.env.ETH_CHAIN_ID] = process.env.ETH_CHAIN_RPC
 			console.log(
 				`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
 			)
 		}
 	}
-	return rpc
+	return rpcs
 }
 
-function download(cid, ipfsAPI) {
+function download(cid: string, ipfsAPI: string) {
 	console.log(`[canvas-cli] Attempting to download ${cid} from local IPFS node...`)
 	return fetch(`${ipfsAPI}/api/v0/cat?arg=${cid}`, { method: "POST" })
 		.then((res) => res.text())
@@ -102,7 +136,7 @@ function download(cid, ipfsAPI) {
 		})
 }
 
-export function getDirectorySize(directory) {
+export function getDirectorySize(directory: string): number {
 	return fs.readdirSync(directory).reduce((totalSize, name) => {
 		const file = path.resolve(directory, name)
 		const stat = fs.statSync(file)

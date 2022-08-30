@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
+    { "path": "./packages/canvas-cli" },
     { "path": "./packages/canvas-core" },
     { "path": "./packages/canvas-core/test" },
     { "path": "./packages/canvas-interfaces" },

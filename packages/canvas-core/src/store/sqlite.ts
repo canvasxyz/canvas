@@ -1,9 +1,9 @@
 import assert from "node:assert"
-import path from "node:path"
+
+import Database, * as sqlite from "better-sqlite3"
+import chalk from "chalk"
 
 import type { Action, Session, ActionContext, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
-import Database, * as sqlite from "better-sqlite3"
-
 import { Store, StoreConfig, Effect } from "./store.js"
 import { actionType, sessionType } from "../codecs.js"
 import { mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "../utils.js"
@@ -45,22 +45,27 @@ export class SqliteStore implements Store {
 	constructor(config: StoreConfig) {
 		if (config.databaseURI === null) {
 			this.database = new Database(":memory:")
-			console.error("[canvas-core] Initializing new in-memory database")
+			if (config.verbose) {
+				console.log("[canvas-core] Initializing new in-memory database")
+				console.warn(chalk.yellow("[canvas-core] All data will be lost on close!"))
+			}
+
 			SqliteStore.initializeMessageTables(this.database)
 			SqliteStore.initializeModelTables(this.database, config.models)
 		} else {
 			assert(config.databaseURI.startsWith("file:"), "SQLite databases must use file URIs (e.g. file:db.sqlite)")
 			const databasePath = config.databaseURI.slice("file:".length)
 
-			console.error(`[canvas-core] Initializing database at ${databasePath}`)
+			if (config.verbose) console.log(`[canvas-core] Initializing database at ${databasePath}`)
+
 			this.database = new Database(databasePath)
 			if (config.reset) {
-				console.error(`[canvas-core] Deleting message tables in ${databasePath}`)
+				if (config.verbose) console.warn(`[canvas-core] Deleting message tables in ${databasePath}`)
 				SqliteStore.deleteMessageTables(this.database)
-				console.error(`[canvas-core] Deleting model tables in ${databasePath}`)
+				if (config.verbose) console.warn(`[canvas-core] Deleting model tables in ${databasePath}`)
 				SqliteStore.deleteModelTables(this.database, config.models)
 			} else if (config.replay) {
-				console.error(`[canvas-core] Deleting model tables in ${databasePath}`)
+				if (config.verbose) console.warn(`[canvas-core] Deleting model tables in ${databasePath}`)
 				SqliteStore.deleteModelTables(this.database, config.models)
 			}
 
@@ -169,10 +174,11 @@ export class SqliteStore implements Store {
 		return session
 	}
 
-	public async *getActionStream(limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Action]> {
+	// unused
+	public async *getActionStream(): AsyncIterable<[string, Action]> {
 		let last = -1
 		while (last !== undefined) {
-			const page = await this.backlogStatements.getActions.all({ last, limit })
+			const page = await this.backlogStatements.getActions.all({ last, limit: SQL_QUERY_LIMIT })
 			if (page.length === 0) return
 			for (const message of page) {
 				yield [message.key, JSON.parse(message.data) as Action]
@@ -181,10 +187,11 @@ export class SqliteStore implements Store {
 		}
 	}
 
-	public async *getSessionStream(limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Session]> {
+	// unused
+	public async *getSessionStream(): AsyncIterable<[string, Session]> {
 		let last = -1
 		while (last !== undefined) {
-			const page = await this.backlogStatements.getSessions.all({ last, limit })
+			const page = await this.backlogStatements.getSessions.all({ last, limit: SQL_QUERY_LIMIT })
 			if (page.length === 0) return
 			for (const message of page) {
 				yield [message.key, JSON.parse(message.data)]
@@ -193,10 +200,11 @@ export class SqliteStore implements Store {
 		}
 	}
 
-	public async *getHistoryStream(limit: number = SQL_QUERY_LIMIT): AsyncIterable<[string, Action | Session]> {
+	// unused
+	public async *getHistoryStream(): AsyncIterable<[string, Action | Session]> {
 		let last = -1
 		while (last !== undefined) {
-			const page = await this.backlogStatements.getHistory.all({ last, limit })
+			const page = await this.backlogStatements.getHistory.all({ last, limit: SQL_QUERY_LIMIT })
 			if (page.length === 0) return
 			for (const message of page) {
 				yield [message.key, JSON.parse(message.data)]
