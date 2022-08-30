@@ -33,7 +33,7 @@ export const App: React.FC<{}> = ({}) => {
 				const { value } = event.currentTarget
 				event.currentTarget.value = ""
 				setPosting(true)
-				dispatch("createPost", [value])
+				dispatch("createPost", value)
 					.then(() => console.log("successfully created post"))
 					.catch((err) => {
 						console.error(err)
@@ -120,7 +120,7 @@ export const App: React.FC<{}> = ({}) => {
 													type="button"
 													value={`${+post.my_likes ? "Unlike" : "Like"} ${post.likes}`}
 													onClick={() => {
-														dispatch(+post.my_likes ? "unlike" : "like", [post.id])
+														dispatch(+post.my_likes ? "unlike" : "like", post.id)
 															.then(() => console.log(post.my_likes ? "unliked post" : "liked post", post.id))
 															.catch((err) => {
 																console.error(err)
