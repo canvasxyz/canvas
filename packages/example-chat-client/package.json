@@ -1,5 +1,5 @@
 {
-  "name": "canvas-example-chat-client",
+  "name": "@canvas-js/example-chat-client",
   "version": "0.0.0",
   "description": "",
   "main": "index.js",
@@ -9,7 +9,7 @@
     "dev": "webpack server"
   },
   "dependencies": {
-    "@canvas-js/hooks": "^0.0.10",
+    "@canvas-js/hooks": "^0.0.11",
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.5",
     "react": "^18.1.0",

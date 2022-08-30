@@ -50,7 +50,7 @@ npm run dev
 To run the example app in development mode:
 
 ```
-npm run dev-example
+npm run dev-example-chat
 ```
 
 Build and publish the Canvas packages:
@@ -58,7 +58,5 @@ Build and publish the Canvas packages:
 ```
 npm run build
 npm run publish-cli
-npm run publish-core
-npm run publish-hooks
-npm run publish-interfaces
+npm run publish-core && npm run publish-hooks && npm run publish-interfaces
 ```
