@@ -14,6 +14,7 @@ import {
 
 import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
+import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
 import {
 	Action,
@@ -30,7 +31,6 @@ import {
 } from "@canvas-js/interfaces"
 
 import { Store, Effect, SqliteStore } from "./store/index.js"
-import { EventEmitter, CustomEvent } from "./events.js"
 import { actionType, actionArgumentArrayType, sessionType, modelsType, chainType, chainIdType } from "./codecs.js"
 import { encodeAction, encodeSession, JSONValue, mapEntries, signalInvalidType } from "./utils.js"
 import { ApplicationError } from "./errors.js"
