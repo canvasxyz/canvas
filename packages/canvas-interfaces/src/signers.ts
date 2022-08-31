@@ -2,7 +2,7 @@ import { utils } from "ethers"
 import { verifyTypedData } from "@ethersproject/wallet"
 import { TypedDataDomain, TypedDataField } from "@ethersproject/abstract-signer"
 
-import type { Action, ActionPayload } from "./actions.js"
+import type { Action, ActionArgument, ActionPayload } from "./actions.js"
 import type { Session, SessionPayload } from "./sessions.js"
 
 /**
@@ -19,6 +19,27 @@ const actionDataFields = {
 	],
 }
 
+// JSON.stringify has lossy behavior on the number values +/-Infinity, NaN, and -0.
+// We never actually parse these serialized arguments anywhere - the only purpose here
+// is to map them injectively to strings for signing.
+function serializeActionArgument(arg: ActionArgument): string {
+	if (typeof arg === "number") {
+		if (isNaN(arg)) {
+			return "NaN"
+		} else if (Object.is(arg, -0)) {
+			return "-0"
+		} else if (arg === Infinity) {
+			return "Infinity"
+		} else if (arg === -Infinity) {
+			return "-Infinity"
+		} else {
+			return arg.toString()
+		}
+	} else {
+		return JSON.stringify(arg)
+	}
+}
+
 /**
  * `getActionSignatureData` gets EIP-712 signing data for an individual action
  */
@@ -32,7 +53,7 @@ export function getActionSignatureData(
 
 	const actionValue = {
 		sendAction: payload.call,
-		params: payload.args.map((a) => JSON.stringify(a)),
+		params: payload.args.map(serializeActionArgument),
 		application: payload.spec,
 		timestamp: payload.timestamp.toString(),
 	}
