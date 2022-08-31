@@ -52,12 +52,16 @@ export async function handler(args: Args) {
 	})
 
 	let i = 0
-	for await (const [_, value] of core.store.getHistoryStream()) {
-		console.log(JSON.stringify(value, null, args.compact ? undefined : 2))
+	for await (const [_, session] of core.store.getSessionStream()) {
+		console.log(JSON.stringify(session, null, args.compact ? undefined : 2))
+		i++
+	}
+	for await (const [_, action] of core.store.getActionStream()) {
+		console.log(JSON.stringify(action, null, args.compact ? undefined : 2))
 		i++
 	}
 
-	console.error(chalk.yellow(`Exported ${i} action${i === 1 ? "" : "s"}`))
+	console.error(chalk.yellow(`Exported ${i} message${i === 1 ? "" : "s"}`))
 	await core.close()
 	process.exit(0)
 }

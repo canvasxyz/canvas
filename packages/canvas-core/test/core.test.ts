@@ -7,7 +7,7 @@ import { ethers } from "ethers"
 import { getQuickJS } from "quickjs-emscripten"
 
 import { Core, CoreConfig, ApplicationError } from "@canvas-js/core"
-import { ActionArgument, getActionSignatureData, getSessionSignatureData } from "@canvas-js/interfaces"
+import { ActionArgument, getActionSignatureData, getSessionSignatureData, SessionPayload } from "@canvas-js/interfaces"
 
 const quickJS = await getQuickJS()
 
@@ -41,7 +41,6 @@ test("Apply signed action", async (t) => {
 
 	const action = await sign(signer, null, "newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash } = await core.apply(action)
-	t.is(hash, ethers.utils.sha256(action.signature))
 
 	const result = await core.getRoute("/latest")
 	t.deepEqual(result, [
@@ -89,12 +88,12 @@ test("Apply two signed actions", async (t) => {
 test("Apply action signed with session key", async (t) => {
 	const core = await Core.initialize(coreConfig)
 
-	const sessionPayload = {
+	const sessionPayload: SessionPayload = {
 		from: signerAddress,
 		spec: specName,
 		timestamp: Date.now(),
-		session_public_key: sessionSignerAddress,
-		session_duration: 60 * 60 * 1000, // 1 hour
+		address: sessionSignerAddress,
+		duration: 60 * 60 * 1000, // 1 hour
 	}
 
 	const sessionSignatureData = getSessionSignatureData(sessionPayload)
@@ -107,7 +106,6 @@ test("Apply action signed with session key", async (t) => {
 	])
 
 	const { hash } = await core.apply(action)
-	t.is(hash, ethers.utils.sha256(action.signature))
 
 	const result = await core.getRoute("/latest")
 	t.deepEqual(result, [
@@ -128,12 +126,12 @@ test("Apply action signed with session key", async (t) => {
 test("Apply two actions signed with session keys", async (t) => {
 	const core = await Core.initialize(coreConfig)
 
-	const sessionPayload = {
+	const sessionPayload: SessionPayload = {
 		from: signerAddress,
 		spec: specName,
 		timestamp: Date.now(),
-		session_public_key: sessionSignerAddress,
-		session_duration: 60 * 60 * 1000, // 1 hour
+		address: sessionSignerAddress,
+		duration: 60 * 60 * 1000, // 1 hour
 	}
 
 	const sessionSignatureData = getSessionSignatureData(sessionPayload)

@@ -170,8 +170,7 @@ export class API {
 					const messages = []
 
 					if (action.session !== null) {
-						const sessionKey = Core.getSessionKey(action.session)
-						const session = await this.core.store.getSession(sessionKey)
+						const session = await this.core.store.getSessionByAddress(action.session)
 						if (session !== null) {
 							messages.push({ type: "session", ...session })
 						}

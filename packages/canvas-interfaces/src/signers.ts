@@ -51,7 +51,7 @@ export function verifyActionSignature(action: Action): string {
 const sessionDataFields = {
 	Message: [
 		{ name: "loginTo", type: "string" },
-		{ name: "registerSessionKey", type: "string" },
+		{ name: "registerSessionAddress", type: "string" },
 		{ name: "registerSessionDuration", type: "uint256" },
 		{ name: "timestamp", type: "uint256" },
 	],
@@ -70,8 +70,8 @@ export function getSessionSignatureData(
 
 	const sessionValue = {
 		loginTo: payload.spec,
-		registerSessionKey: payload.session_public_key,
-		registerSessionDuration: payload.session_duration.toString(),
+		registerSessionAddress: payload.address,
+		registerSessionDuration: payload.duration.toString(),
 		timestamp: payload.timestamp.toString(),
 	}
 

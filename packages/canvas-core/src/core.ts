@@ -17,7 +17,6 @@ import Hash from "ipfs-only-hash"
 
 import {
 	Action,
-	ActionResult,
 	ActionPayload,
 	Block,
 	Session,
@@ -30,10 +29,10 @@ import {
 	Chain,
 } from "@canvas-js/interfaces"
 
-import { Store, Effect, SqliteStore, PostgresStore } from "./store/index.js"
+import { Store, Effect, SqliteStore } from "./store/index.js"
 import { EventEmitter, CustomEvent } from "./events.js"
 import { actionType, actionArgumentArrayType, sessionType, modelsType, chainType, chainIdType } from "./codecs.js"
-import { JSONValue, mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "./utils.js"
+import { encodeAction, encodeSession, JSONValue, mapEntries, signalInvalidType } from "./utils.js"
 import { ApplicationError } from "./errors.js"
 
 export interface CoreConfig {
@@ -103,7 +102,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			let i = 0
 			for await (const [id, action] of core.store.getActionStream()) {
 				if (!actionType.is(action)) {
-					console.error(action)
+					console.error("[canvas-core]", action)
 					throw new Error("Invalid action value in action log")
 				}
 
@@ -345,8 +344,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (databaseRequested === "sqlite") {
 			this.store = new SqliteStore({ databaseURI, replay, reset, models, routes })
-		} else if (databaseRequested === "postgres") {
-			this.store = new PostgresStore({ databaseURI, replay, reset, models, routes })
+			// } else if (databaseRequested === "postgres") {
+			// 	this.store = new PostgresStore({ databaseURI, replay, reset, models, routes })
 		} else {
 			throw new Error("invalid database identifier")
 		}
@@ -479,8 +478,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 		// check the block retrieved from RPC matches metadata from the user
 		assert(block, "could not find a valid block:" + JSON.stringify(block))
-		assert(block?.number === blocknum, "action/session provided with invalid block number")
-		assert(block?.timestamp === timestamp, "action/session provided with invalid timestamp")
+		assert(block.number === blocknum, "action/session provided with invalid block number")
+		assert(block.timestamp === timestamp, "action/session provided with invalid timestamp")
 
 		// check the block was recent
 		const maxDelay = 30 * 60 // limit propagation to 30 minutes
@@ -493,101 +492,107 @@ export class Core extends EventEmitter<CoreEvents> {
 	/**
 	 * Executes an action.
 	 */
-	public apply(action: Action): Promise<ActionResult> {
+	public apply(action: Action): Promise<{ hash: string }> {
 		if (this.verbose) {
 			console.log("[canvas-core] apply action:", JSON.stringify(action))
 		}
 
 		return this.queue.add(async () => {
 			// check type of action
-			assert(actionType.is(action), "Invalid action value in action log")
+			assert(actionType.is(action), "Invalid action value")
 
-			// check the timestamp bounds
-			assert(action.payload.timestamp > Core.boundsCheckLowerLimit, "action timestamp too far in the past")
-			assert(action.payload.timestamp < Core.boundsCheckUpperLimit, "action timestamp too far in the future")
-
-			if (!this.unchecked) {
-				// check the action was signed with a valid, recent block
-				assert(action.payload.block !== undefined, "action missing block data")
-				await this.verifyBlock(action.payload.block)
-			}
-
-			// verify the signature, either using a session signature or action signature
-			if (action.session !== null) {
-				const sessionKey = Core.getSessionKey(action.session)
-				const session = await this.store.getSession(sessionKey)
-
-				assert(session !== null, "session not found")
-				assert(
-					session.payload.timestamp + session.payload.session_duration > action.payload.timestamp,
-					"session expired"
-				)
-				assert(session.payload.timestamp <= action.payload.timestamp, "session timestamp must precede action timestamp")
-
-				assert(session.payload.spec === this.name, "action referenced a session for the wrong spec")
-
-				assert(
-					action.payload.from === session.payload.from,
-					"invalid session key (action.payload.from and session.payload.from do not match)"
-				)
-
-				const verifiedAddress = verifyActionSignature(action)
-				assert(
-					verifiedAddress.toLowerCase() === action.session.toLowerCase(),
-					"invalid action signature (recovered address does not match)"
-				)
-				assert(
-					verifiedAddress.toLowerCase() === session.payload.session_public_key.toLowerCase(),
-					"invalid action signature (action, session do not match)"
-				)
-
-				assert(action.payload.spec === session.payload.spec, "action signed for wrong spec")
-			} else {
-				const verifiedAddress = verifyActionSignature(action)
-				assert(verifiedAddress.toLowerCase() === action.payload.from.toLowerCase(), "action signed by wrong address")
-
-				if (action.payload.spec !== this.name) {
-					assert(action.payload.spec in this.translatorHandles, "action signed for wrong spec")
-					const result = this.context.callFunction(
-						this.translatorHandles[action.payload.spec],
-						this.context.undefined,
-						this.context.newString(action.payload.call),
-						...action.payload.args.map((arg) => this.wrapJSON(arg))
-					)
-					if (isFail(result)) {
-						const error = result.error.consume(this.context.dump)
-						throw error
-					}
-					const [translatedCall, translatedArgs] = result.value.consume(this.unwrapArray)
-					assert(
-						typeof translatedCall === "string",
-						"translator function returned an invalid call name (must be a string)"
-					)
-					assert(
-						actionArgumentArrayType.is(translatedArgs),
-						"translator function returned an invalid args (must be an array of primitives)"
-					)
-				}
-			}
+			// serialize and hash the action
+			const data = encodeAction(action)
+			const hash = ethers.utils.sha256(data)
 
 			// check if the action has already been applied
-			const hash = ethers.utils.sha256(action.signature)
-			const actionKey = Core.getActionKey(hash)
-			const existingRecord = await this.store.getAction(actionKey)
-			if (existingRecord !== null) return { hash }
+			const existingRecord = await this.store.getActionByHash(hash)
+			if (existingRecord !== null) {
+				return { hash }
+			}
+
+			await this.validateAction(action)
 
 			// set up hooks available to action processor
 			this.setupGlobals(action.payload.block)
 
 			// execute the action
 			const effects = await this.getEffects(hash, action.payload)
-			await this.store.insertAction(actionKey, action)
+			await this.store.insertAction({ hash, data })
 			await this.store.applyEffects(action.payload, effects)
 
 			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
 
 			return { hash }
 		})
+	}
+
+	private async validateAction(action: Action) {
+		const { timestamp, block, spec, from } = action.payload
+		assert(spec === this.name, "session signed for wrong spec")
+
+		// check the timestamp bounds
+		assert(timestamp > Core.boundsCheckLowerLimit, "action timestamp too far in the past")
+		assert(timestamp < Core.boundsCheckUpperLimit, "action timestamp too far in the future")
+
+		if (!this.unchecked) {
+			// check the action was signed with a valid, recent block
+			assert(block !== undefined, "action missing block data")
+			await this.verifyBlock(block)
+		}
+
+		// verify the signature, either using a session signature or action signature
+		if (action.session !== null) {
+			const session = await this.store.getSessionByAddress(action.session)
+			assert(session !== null, "session not found")
+			assert(session.payload.timestamp + session.payload.duration > timestamp, "session expired")
+			assert(session.payload.timestamp <= timestamp, "session timestamp must precede action timestamp")
+
+			assert(session.payload.spec === spec, "action referenced a session for the wrong spec")
+
+			assert(
+				session.payload.from.toLowerCase() === from.toLowerCase(),
+				"invalid session key (action.payload.from and session.payload.from do not match)"
+			)
+
+			const verifiedAddress = verifyActionSignature(action)
+			assert(
+				verifiedAddress.toLowerCase() === action.session.toLowerCase(),
+				"invalid action signature (recovered address does not match)"
+			)
+			assert(
+				verifiedAddress.toLowerCase() === session.payload.address.toLowerCase(),
+				"invalid action signature (action, session do not match)"
+			)
+
+			assert(action.payload.spec === session.payload.spec, "action signed for wrong spec")
+		} else {
+			const verifiedAddress = verifyActionSignature(action)
+			assert(verifiedAddress.toLowerCase() === action.payload.from.toLowerCase(), "action signed by wrong address")
+
+			if (action.payload.spec !== this.name) {
+				assert(action.payload.spec in this.translatorHandles, "action signed for wrong spec")
+				const result = this.context.callFunction(
+					this.translatorHandles[action.payload.spec],
+					this.context.undefined,
+					this.context.newString(action.payload.call),
+					...action.payload.args.map((arg) => this.wrapJSON(arg))
+				)
+				if (isFail(result)) {
+					const error = result.error.consume(this.context.dump)
+					throw error
+				}
+				const [translatedCall, translatedArgs] = result.value.consume(this.unwrapArray)
+				assert(
+					typeof translatedCall === "string",
+					"translator function returned an invalid call name (must be a string)"
+				)
+				assert(
+					actionArgumentArrayType.is(translatedArgs),
+					"translator function returned an invalid args (must be an array of primitives)"
+				)
+			}
+		}
 	}
 
 	/**
@@ -732,48 +737,49 @@ export class Core extends EventEmitter<CoreEvents> {
 	/**
 	 * Create a new session.
 	 */
-	public session(session: Session): Promise<void> {
+	public session(session: Session): Promise<{ hash: string }> {
 		if (this.verbose) {
 			console.log("[canvas-core] apply session:", JSON.stringify(session))
 		}
 
 		return this.queue.add(async () => {
 			assert(sessionType.is(session), "invalid session")
-			assert(session.payload.spec === this.name, "session signed for wrong spec")
 
-			const verifiedAddress = verifySessionSignature(session)
-			assert(verifiedAddress.toLowerCase() === session.payload.from.toLowerCase(), "session signed by wrong address")
+			const data = encodeSession(session)
+			const hash = ethers.utils.sha256(data)
 
-			// check the timestamp bounds
-			assert(session.payload.timestamp > Core.boundsCheckLowerLimit, "session timestamp too far in the past")
-			assert(session.payload.timestamp < Core.boundsCheckUpperLimit, "session timestamp too far in the future")
-
-			// check the session was signed with a valid, recent block
-			if (!this.unchecked) {
-				assert(session.payload.block !== undefined, "session missing block info")
-				await this.verifyBlock(session.payload.block)
+			const existingRecord = await this.store.getSessionByHash(hash)
+			if (existingRecord !== null) {
+				return { hash }
 			}
+
+			await this.validateSession(session)
 
 			// add the session to store
-			const sessionKey = Core.getSessionKey(session.payload.session_public_key)
-			const existingRecord = await this.store.getSession(sessionKey)
-			if (existingRecord === null) {
-				await this.store.insertSession(sessionKey, session)
-				this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
-			}
+			await this.store.insertSession({ data, hash, address: session.payload.address })
+
+			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
+
+			return { hash }
 		})
 	}
 
-	public static readonly actionKeyPrefix = "a:"
-	public static getActionKey(hash: string): string {
-		assert(hash.startsWith("0x"), "internal error: corrupt action key found in message store")
-		return Core.actionKeyPrefix + hash.slice(2)
-	}
+	private async validateSession(session: Session) {
+		const { from, spec, timestamp, block } = session.payload
+		assert(spec === this.name, "session signed for wrong spec")
 
-	public static readonly sessionKeyPrefix = "s:"
-	public static getSessionKey(sessionPublicKey: string): string {
-		assert(sessionPublicKey.startsWith("0x"), "internal error: corrupt session key found in message store")
-		return Core.sessionKeyPrefix + sessionPublicKey.slice(2)
+		const verifiedAddress = verifySessionSignature(session)
+		assert(verifiedAddress.toLowerCase() === from.toLowerCase(), "session signed by wrong address")
+
+		// check the timestamp bounds
+		assert(timestamp > Core.boundsCheckLowerLimit, "session timestamp too far in the past")
+		assert(timestamp < Core.boundsCheckUpperLimit, "session timestamp too far in the future")
+
+		// check the session was signed with a valid, recent block
+		if (!this.unchecked) {
+			assert(block !== undefined, "session missing block info")
+			await this.verifyBlock(block)
+		}
 	}
 
 	// Utilities

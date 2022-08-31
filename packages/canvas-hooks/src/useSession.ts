@@ -188,8 +188,8 @@ async function newSession(
 	const payload: SessionPayload = {
 		from: from,
 		spec: multihash,
-		session_public_key: sessionSigner.address,
-		session_duration: sessionDuration,
+		address: sessionSigner.address,
+		duration: sessionDuration,
 		timestamp,
 		block,
 	}

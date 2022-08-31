@@ -2,31 +2,12 @@ import assert from "node:assert"
 
 import Database, * as sqlite from "better-sqlite3"
 import chalk from "chalk"
+import { ethers } from "ethers"
 
 import type { Action, Session, ActionContext, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
 import { Store, StoreConfig, Effect } from "./store.js"
-import { actionType, sessionType } from "../codecs.js"
-import { mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "../utils.js"
 
-interface ModelStatements {
-	insert: sqlite.Statement
-	update: sqlite.Statement
-	delete: sqlite.Statement
-	insertDeleted: sqlite.Statement
-	updateDeleted: sqlite.Statement
-	getUpdatedAt: sqlite.Statement
-	getDeletedAt: sqlite.Statement
-}
-
-interface BacklogStatements {
-	insertAction: sqlite.Statement
-	insertSession: sqlite.Statement
-	getAction: sqlite.Statement
-	getSession: sqlite.Statement
-	getSessions: sqlite.Statement
-	getActions: sqlite.Statement
-	getHistory: sqlite.Statement
-}
+import { decodeAction, decodeSession, mapEntries, signalInvalidType } from "../utils.js"
 
 export class SqliteStore implements Store {
 	public static DATABASE_FILENAME = "db.sqlite"
@@ -34,8 +15,11 @@ export class SqliteStore implements Store {
 	private readonly database: sqlite.Database
 	private readonly transaction: (context: ActionContext, effects: Effect[]) => void
 	private readonly routeStatements: Record<string, sqlite.Statement>
-	private readonly modelStatements: Record<string, ModelStatements>
-	private readonly backlogStatements: BacklogStatements
+	private readonly messageStatements: Record<keyof typeof SqliteStore.messageStatements, sqlite.Statement>
+	private readonly modelStatements: Record<
+		string,
+		Record<keyof ReturnType<typeof SqliteStore.getModelStatements>, sqlite.Statement>
+	>
 
 	public ready(): Promise<void> {
 		// better-sqlite3 initializes synchronously, so the core is always ready()
@@ -73,33 +57,15 @@ export class SqliteStore implements Store {
 			SqliteStore.initializeModelTables(this.database, config.models)
 		}
 
-		this.modelStatements = mapEntries(config.models, (name, { indexes, ...properties }) => {
-			const keys = ["updated_at", ...Object.keys(properties)]
-			const values = keys.map((key) => `:${key}`).join(", ")
-			const updates = keys.map((key) => `${SqliteStore.propertyName(key)} = :${key}`).join(", ")
+		// tiny utility for preparing sets of string statements at once
+		const prepare = <K extends string>(statements: Record<K, string>) =>
+			mapEntries(statements, (_, sql) => this.database.prepare(sql))
 
-			const tableName = SqliteStore.tableName(name)
-			const deletedTableName = SqliteStore.deletedTableName(name)
-			return {
-				insert: this.database.prepare(`INSERT INTO ${tableName} VALUES (:id, ${values})`),
-				update: this.database.prepare(`UPDATE ${tableName} SET ${updates} WHERE id = :id`),
-				delete: this.database.prepare(`DELETE FROM ${tableName} WHERE id = :id`),
-				insertDeleted: this.database.prepare(`INSERT INTO ${deletedTableName} VALUES (:id, :deleted_at)`),
-				updateDeleted: this.database.prepare(`UPDATE ${deletedTableName} SET deleted_at = :deleted_at WHERE id = :id`),
-				getUpdatedAt: this.database.prepare(`SELECT updated_at FROM ${tableName} WHERE id = ?`),
-				getDeletedAt: this.database.prepare(`SELECT deleted_at FROM ${deletedTableName} WHERE id = ?`),
-			}
-		})
+		this.modelStatements = mapEntries(config.models, (name, model) =>
+			prepare(SqliteStore.getModelStatements(name, model))
+		)
 
-		this.backlogStatements = {
-			insertAction: this.database.prepare("INSERT INTO _messages (key, data, action) VALUES (:key, :data, true)"),
-			insertSession: this.database.prepare("INSERT INTO _messages (key, data, session) VALUES (:key, :data, true)"),
-			getAction: this.database.prepare("SELECT * FROM _messages WHERE action = true AND key = :key"),
-			getSession: this.database.prepare("SELECT * FROM _messages WHERE session = true AND key = :key"),
-			getSessions: this.database.prepare("SELECT * FROM _messages WHERE session = true AND id > :last LIMIT :limit"),
-			getActions: this.database.prepare("SELECT * FROM _messages WHERE action = true AND id > :last LIMIT :limit"),
-			getHistory: this.database.prepare("SELECT * FROM _messages WHERE id > :last LIMIT :limit"),
-		}
+		this.messageStatements = prepare(SqliteStore.messageStatements)
 
 		this.transaction = this.database.transaction((context: ActionContext, effects: Effect[]): void => {
 			for (const effect of effects) {
@@ -146,70 +112,58 @@ export class SqliteStore implements Store {
 		this.routeStatements = mapEntries(config.routes, (route, query) => this.database.prepare(query))
 	}
 
-	public async insertAction(key: string, action: Action) {
-		assert(actionType.is(action), "got invalid action")
-		await this.backlogStatements.insertAction.run({ key: key, data: JSON.stringify(action) })
+	public async insertAction(params: { hash: string; data: Uint8Array }) {
+		this.messageStatements.insertAction.run({
+			hash: ethers.utils.arrayify(params.hash),
+			data: params.data,
+		})
 	}
 
-	public async insertSession(key: string, session: Session) {
-		assert(sessionType.is(session), "got invalid session")
-		await this.backlogStatements.insertSession.run({ key: key, data: JSON.stringify(session) })
+	public async insertSession(params: { hash: string; data: Uint8Array; address: string }) {
+		this.messageStatements.insertSession.run({
+			hash: ethers.utils.arrayify(params.hash),
+			data: params.data,
+			address: ethers.utils.arrayify(params.address),
+		})
 	}
 
-	public async getAction(key: string) {
-		const record = await this.backlogStatements.getAction.get({ key })
-		if (!record) return null
-		assert(typeof record.data === "string", "got invalid action")
-		const action = JSON.parse(record.data)
-		assert(actionType.is(action), "got invalid action")
-		return action
+	public async getActionByHash(hash: string) {
+		const record: undefined | { data: Buffer } = this.messageStatements.getActionByHash.get({
+			hash: ethers.utils.arrayify(hash),
+		})
+
+		return record ? decodeAction(record.data) : null
 	}
 
-	public async getSession(key: string) {
-		const record = await this.backlogStatements.getSession.get({ key })
-		if (!record) return null
-		assert(typeof record.data === "string", "got invalid session")
-		const session = JSON.parse(record.data)
-		assert(sessionType.is(session), "got invalid session")
-		return session
+	public async getSessionByHash(hash: string) {
+		const record: undefined | { data: Buffer } = await this.messageStatements.getSessionByHash.get({
+			hash: ethers.utils.arrayify(hash),
+		})
+
+		return record ? decodeSession(record.data) : null
 	}
 
-	// unused
+	public async getSessionByAddress(address: string) {
+		const record: undefined | { data: Buffer } = await this.messageStatements.getSessionByAddress.get({
+			address: ethers.utils.arrayify(address),
+		})
+
+		return record ? decodeSession(record.data) : null
+	}
+
 	public async *getActionStream(): AsyncIterable<[string, Action]> {
-		let last = -1
-		while (last !== undefined) {
-			const page = await this.backlogStatements.getActions.all({ last, limit: SQL_QUERY_LIMIT })
-			if (page.length === 0) return
-			for (const message of page) {
-				yield [message.key, JSON.parse(message.data) as Action]
-				last = message?.id
-			}
+		// we can use statement.iterate() instead of paging manually
+		// https://github.com/WiseLibs/better-sqlite3/issues/406
+		for (const result of this.messageStatements.getActions.iterate({})) {
+			const { data, hash } = result as { data: Buffer; hash: Buffer }
+			yield [ethers.utils.hexlify(hash), decodeAction(data)]
 		}
 	}
 
-	// unused
 	public async *getSessionStream(): AsyncIterable<[string, Session]> {
-		let last = -1
-		while (last !== undefined) {
-			const page = await this.backlogStatements.getSessions.all({ last, limit: SQL_QUERY_LIMIT })
-			if (page.length === 0) return
-			for (const message of page) {
-				yield [message.key, JSON.parse(message.data)]
-				last = message?.id
-			}
-		}
-	}
-
-	// unused
-	public async *getHistoryStream(): AsyncIterable<[string, Action | Session]> {
-		let last = -1
-		while (last !== undefined) {
-			const page = await this.backlogStatements.getHistory.all({ last, limit: SQL_QUERY_LIMIT })
-			if (page.length === 0) return
-			for (const message of page) {
-				yield [message.key, JSON.parse(message.data)]
-				last = message?.id
-			}
+		for (const result of this.messageStatements.getSessions.iterate({})) {
+			const { data, hash } = result as { data: Buffer; hash: Buffer }
+			yield [ethers.utils.hexlify(hash), decodeSession(data)]
 		}
 	}
 
@@ -236,13 +190,13 @@ export class SqliteStore implements Store {
 	public async getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]> {
 		assert(route in this.routeStatements, "invalid route name")
 		return this.routeStatements[route].all(
-			mapEntries(params, (param, value) => (typeof value === "boolean" ? Number(value) : value))
+			mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value))
 		)
 	}
 
 	// We have to be sure to quote these because, even though we validate that they're all [a-z_]+ elsewhere,
 	// because they might be reserved SQL keywords.
-	private static tableName = (modelName: string) => `'${modelName}'`
+	private static modelTableName = (modelName: string) => `'${modelName}'`
 	private static deletedTableName = (modelName: string) => `'_${modelName}_deleted'`
 	private static propertyName = (propertyName: string) => `'${propertyName}'`
 	private static indexName = (modelName: string, propertyName: string) => `'${modelName}:${propertyName}'`
@@ -265,18 +219,29 @@ export class SqliteStore implements Store {
 	}
 
 	private static initializeMessageTables(database: sqlite.Database) {
-		const createMessagesTable =
-			"CREATE TABLE IF NOT EXISTS _messages (id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT, data TEXT, session BOOLEAN, action BOOLEAN);"
-		const createMessagesIndex = "CREATE INDEX IF NOT EXISTS _messages_index ON _messages (key);"
-		database.exec(createMessagesTable)
-		database.exec(createMessagesIndex)
+		const createSessionsTable = `CREATE TABLE IF NOT EXISTS _sessions (
+			id      INTEGER PRIMARY KEY AUTOINCREMENT,
+			hash    BLOB    NOT NULL UNIQUE,
+			data    BLOB    NOT NULL,
+			address BLOB    NOT NULL UNIQUE
+		);`
+
+		const createActionsTable = `CREATE TABLE IF NOT EXISTS _actions (
+			id   INTEGER PRIMARY KEY AUTOINCREMENT,
+			hash BLOB    NOT NULL UNIQUE,
+			data BLOB    NOT NULL
+		);`
+
+		database.exec(createSessionsTable)
+		database.exec(createActionsTable)
 	}
 
 	private static deleteMessageTables(database: sqlite.Database) {
-		const dropMessagesIndex = "DROP INDEX IF EXISTS _messages_index;"
-		database.exec(dropMessagesIndex)
-		const dropMessagesTable = "DROP TABLE IF EXISTS _messages;"
-		database.exec(dropMessagesTable)
+		const dropSessionsTable = `DROP TABLE IF EXISTS _sessions;`
+		const dropActionsTable = `DROP TABLE IF EXISTS _actions;`
+
+		database.exec(dropSessionsTable)
+		database.exec(dropActionsTable)
 	}
 
 	private static initializeModelTables(database: sqlite.Database, models: Record<string, Model>) {
@@ -290,7 +255,7 @@ export class SqliteStore implements Store {
 				columns.push(`'${property}' ${SqliteStore.getColumnType(type)}`)
 			}
 
-			const tableName = SqliteStore.tableName(name)
+			const tableName = SqliteStore.modelTableName(name)
 
 			const createTable = `CREATE TABLE IF NOT EXISTS ${tableName} (${columns.join(", ")});`
 			database.exec(createTable)
@@ -307,8 +272,6 @@ export class SqliteStore implements Store {
 
 	private static deleteModelTables(database: sqlite.Database, models: Record<string, Model>) {
 		for (const [name, { indexes }] of Object.entries(models)) {
-			const tableName = SqliteStore.tableName(name)
-
 			if (indexes !== undefined) {
 				for (const property of indexes) {
 					const indexName = SqliteStore.indexName(name, property)
@@ -316,12 +279,41 @@ export class SqliteStore implements Store {
 				}
 			}
 
-			const dropTable = `DROP TABLE IF EXISTS ${tableName};`
-			database.exec(dropTable)
+			const modelTableName = SqliteStore.modelTableName(name)
+			const dropModelTable = `DROP TABLE IF EXISTS ${modelTableName};`
+			database.exec(dropModelTable)
 
 			const deletedTableName = SqliteStore.deletedTableName(name)
 			const dropDeletedTable = `DROP TABLE IF EXISTS ${deletedTableName};`
 			database.exec(dropDeletedTable)
 		}
+	}
+
+	private static getModelStatements(name: string, { indexes, ...properties }: Model) {
+		const keys = ["updated_at", ...Object.keys(properties)]
+		const values = keys.map((key) => `:${key}`).join(", ")
+		const updates = keys.map((key) => `${SqliteStore.propertyName(key)} = :${key}`).join(", ")
+
+		const tableName = SqliteStore.modelTableName(name)
+		const deletedTableName = SqliteStore.deletedTableName(name)
+		return {
+			insert: `INSERT INTO ${tableName} VALUES (:id, ${values})`,
+			update: `UPDATE ${tableName} SET ${updates} WHERE id = :id`,
+			delete: `DELETE FROM ${tableName} WHERE id = :id`,
+			insertDeleted: `INSERT INTO ${deletedTableName} VALUES (:id, :deleted_at)`,
+			updateDeleted: `UPDATE ${deletedTableName} SET deleted_at = :deleted_at WHERE id = :id`,
+			getUpdatedAt: `SELECT updated_at FROM ${tableName} WHERE id = ?`,
+			getDeletedAt: `SELECT deleted_at FROM ${deletedTableName} WHERE id = ?`,
+		}
+	}
+
+	private static messageStatements = {
+		insertAction: `INSERT INTO _actions (hash, data) VALUES (:hash, :data)`,
+		insertSession: `INSERT INTO _sessions (hash, data, address) VALUES (:hash, :data, :address)`,
+		getActionByHash: `SELECT data FROM _actions WHERE hash = :hash`,
+		getSessionByHash: `SELECT data FROM _sessions WHERE hash = :hash`,
+		getSessionByAddress: `SELECT data FROM _sessions WHERE address = :address`,
+		getSessions: `SELECT hash, data FROM _sessions`,
+		getActions: `SELECT hash, data FROM _actions`,
 	}
 }

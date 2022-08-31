@@ -11,8 +11,8 @@ export type SessionPayload = {
 	from: string
 	spec: string
 	timestamp: number
-	session_public_key: string
-	session_duration: number
+	address: string
+	duration: number
 	block?: Block
 }
 

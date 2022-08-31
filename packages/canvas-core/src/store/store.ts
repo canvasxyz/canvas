@@ -14,13 +14,13 @@ export interface StoreConfig {
 }
 
 export interface Store {
-	insertAction(key: string, action: Action): Promise<void>
-	insertSession(key: string, session: Session): Promise<void>
-	getAction(key: string): Promise<Action | null>
-	getSession(key: string): Promise<Session | null>
+	insertAction(params: { hash: string; data: Uint8Array }): Promise<void>
+	insertSession(params: { hash: string; data: Uint8Array; address: string }): Promise<void>
+	getActionByHash(hash: string): Promise<Action | null>
+	getSessionByHash(hash: string): Promise<Session | null>
+	getSessionByAddress(address: string): Promise<Session | null>
 	getActionStream(): AsyncIterable<[string, Action]>
 	getSessionStream(): AsyncIterable<[string, Session]>
-	getHistoryStream(): AsyncIterable<[string, Action | Session]>
 
 	ready(): Promise<void>
 	close(): void

@@ -45,10 +45,3 @@ export type Action = {
 	session: string | null
 	signature: string
 }
-
-/**
- * An `ActionResult` is returned after successfully applying an action.
- */
-export type ActionResult = {
-	hash: string
-}

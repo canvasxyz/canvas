@@ -5,7 +5,9 @@ import PgPromise from "pg-promise"
 
 import { Store, StoreConfig, Effect } from "./store.js"
 import { actionType, sessionType } from "../codecs.js"
-import { mapEntries, signalInvalidType, SQL_QUERY_LIMIT } from "../utils.js"
+import { encodeAction, encodeSession, mapEntries, signalInvalidType } from "../utils.js"
+import { createHash } from "node:crypto"
+import { ethers } from "ethers"
 
 interface PgExtensions {}
 
@@ -29,7 +31,9 @@ interface BacklogStatements {
 	getHistory: string
 }
 
-export class PostgresStore implements Store {
+export class PostgresStore {
+	private static readonly SQL_QUERY_LIMIT = 20
+
 	private readonly db: PgPromise.IDatabase<PgExtensions, any>
 	private readonly routeStatements: Record<string, string>
 	private readonly modelStatements: Record<string, ModelStatements>
@@ -108,14 +112,18 @@ export class PostgresStore implements Store {
 		await this.initializeModelTables(config.models)
 	}
 
-	public async insertAction(key: string, action: Action) {
-		assert(actionType.is(action), "got invalid action")
-		await this.db.none(this.backlogStatements.insertAction, { key: key, data: JSON.stringify(action) })
+	public async insertAction(action: Action) {
+		const data = encodeAction(action)
+		const hash = createHash("sha256").update(data).digest()
+		// this.messageStatements.insertAction.run({ hash, data })
+		// await this.db.none(this.backlogStatements.insertAction, { key: key, data: JSON.stringify(action) })
+		return ethers.utils.hexlify(hash)
 	}
 
-	public async insertSession(key: string, session: Session) {
-		assert(sessionType.is(session), "got invalid session")
-		await this.db.none(this.backlogStatements.insertSession, { key: key, data: JSON.stringify(session) })
+	public async insertSession(session: Session) {
+		const data = encodeSession(session)
+		const hash = createHash("sha256").update(data).digest()
+		return ethers.utils.hexlify(hash)
 	}
 
 	public async getAction(key: string) {
@@ -140,7 +148,7 @@ export class PostgresStore implements Store {
 	public async *getActionStream(): AsyncIterable<[string, Action]> {
 		let last = -1
 		while (last !== undefined) {
-			const page = await this.db.any(this.backlogStatements.getActions, { last, limit: SQL_QUERY_LIMIT })
+			const page = await this.db.any(this.backlogStatements.getActions, { last, limit: PostgresStore.SQL_QUERY_LIMIT })
 			if (page.length === 0) return
 			for (const message of page) {
 				yield [message.key, JSON.parse(message.data) as Action]
@@ -153,20 +161,7 @@ export class PostgresStore implements Store {
 	public async *getSessionStream(): AsyncIterable<[string, Session]> {
 		let last = -1
 		while (last !== undefined) {
-			const page = await this.db.any(this.backlogStatements.getSessions, { last, limit: SQL_QUERY_LIMIT })
-			if (page.length === 0) return
-			for (const message of page) {
-				yield [message.key, JSON.parse(message.data)]
-				last = message?.id
-			}
-		}
-	}
-
-	// unused
-	public async *getHistoryStream(): AsyncIterable<[string, Action | Session]> {
-		let last = -1
-		while (last !== undefined) {
-			const page = await this.db.any(this.backlogStatements.getHistory, { last, limit: SQL_QUERY_LIMIT })
+			const page = await this.db.any(this.backlogStatements.getSessions, { last, limit: PostgresStore.SQL_QUERY_LIMIT })
 			if (page.length === 0) return
 			for (const message of page) {
 				yield [message.key, JSON.parse(message.data)]

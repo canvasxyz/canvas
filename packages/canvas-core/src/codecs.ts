@@ -65,8 +65,8 @@ export const sessionPayloadType: t.Type<SessionPayload> = t.intersection([
 		from: t.string,
 		spec: t.string,
 		timestamp: t.number,
-		session_public_key: t.string,
-		session_duration: t.number,
+		address: t.string,
+		duration: t.number,
 	}),
 	t.partial({ block: blockType }),
 ])
