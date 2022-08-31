@@ -28,6 +28,7 @@ import {
 	Model,
 	ContractMetadata,
 	Chain,
+	ActionArgument,
 } from "@canvas-js/interfaces"
 
 import { Store, Effect, SqliteStore } from "./store/index.js"
@@ -352,53 +353,24 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		this.effects = null
 		this.dbHandle = this.wrapObject(
-			mapEntries(models, (name, { indexes, ...properties }) => {
-				const setFunctionHandle = context.newFunction("set", (idHandle: QuickJSHandle, valuesHandle: QuickJSHandle) => {
-					assert(this.effects !== null, "internal error: this.effects is null")
-					assert(idHandle !== undefined)
-					assert(valuesHandle !== undefined)
-					assert(context.typeof(idHandle) === "string")
-
-					const id = idHandle.consume(context.getString)
-
-					const valueHandles = this.unwrapObject(valuesHandle)
-					const values: Record<string, ModelValue> = {}
-					for (const [property, type] of Object.entries(properties)) {
-						assert(property in valueHandles)
-						const valueHandle = valueHandles[property]
-						if (type === "boolean") {
-							values[property] = Boolean(valueHandle.consume(context.getNumber))
-						} else if (type === "integer") {
-							values[property] = valueHandle.consume(context.getNumber)
-						} else if (type === "float") {
-							values[property] = valueHandle.consume(context.getNumber)
-						} else if (type === "string") {
-							values[property] = valueHandle.consume(context.getString)
-						} else if (type === "datetime") {
-							values[property] = valueHandle.consume(context.getNumber)
-						} else {
-							signalInvalidType(type)
-						}
-					}
-
-					this.effects.push({ type: "set", model: name, id, values })
+			mapEntries(models, (name, model) =>
+				this.wrapObject({
+					set: context.newFunction("set", (idHandle, valuesHandle) => {
+						assert(this.effects !== null, "internal error: this.effects is null")
+						assert(idHandle !== undefined)
+						assert(valuesHandle !== undefined)
+						const id = idHandle.consume(context.getString)
+						const values = this.unwrapModelValues(model, valuesHandle)
+						this.effects.push({ type: "set", model: name, id, values })
+					}),
+					delete: this.context.newFunction("delete", (idHandle) => {
+						assert(this.effects !== null, "internal error: this.effects is null")
+						assert(idHandle !== undefined)
+						const id = idHandle.consume(context.getString)
+						this.effects.push({ type: "del", model: name, id })
+					}),
 				})
-
-				const deleteFunctionHandle = this.context.newFunction("delete", (idHandle: QuickJSHandle) => {
-					assert(this.effects !== null, "internal error: this.effects is null")
-					assert(idHandle !== undefined)
-					assert(context.typeof(idHandle) === "string")
-
-					const id = idHandle.consume(context.getString)
-
-					this.effects.push({ type: "del", model: name, id })
-				})
-
-				return this.wrapObject({
-					set: setFunctionHandle,
-					delete: deleteFunctionHandle,
-				})
-			})
+			)
 		)
 	}
 
@@ -576,7 +548,7 @@ export class Core extends EventEmitter<CoreEvents> {
 					this.translatorHandles[action.payload.spec],
 					this.context.undefined,
 					this.context.newString(action.payload.call),
-					...action.payload.args.map((arg) => this.wrapJSON(arg))
+					...action.payload.args.map((arg) => this.wrapActionArgument(arg))
 				)
 				if (isFail(result)) {
 					const error = result.error.consume(this.context.dump)
@@ -690,7 +662,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		const actionHandle = this.actionHandles[call]
 		assert(actionHandle !== undefined, "invalid action call")
 
-		const argHandles = args.map(this.wrapJSON)
+		const argHandles = args.map(this.wrapActionArgument)
 
 		// we can't use wrapObject here because wrapObject disposes of its children!
 		const thisArg = this.wrapJSON({ hash, spec, from, timestamp })
@@ -724,6 +696,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			this.effects = null
 			throw new Error("action rejected: not allowed")
 		}
+
 		if (returnValue !== undefined) {
 			this.effects = null
 			throw new Error("action rejected: unexpected return value")
@@ -816,6 +789,46 @@ export class Core extends EventEmitter<CoreEvents> {
 			throw new Error("Interal error: Core.call failed")
 		}
 		return result.value
+	}
+
+	private wrapActionArgument = (arg: ActionArgument): QuickJSHandle => {
+		if (arg === null) {
+			return this.context.null
+		} else if (typeof arg === "boolean") {
+			return arg ? this.context.true : this.context.false
+		} else if (typeof arg === "number") {
+			return this.context.newNumber(arg)
+		} else if (typeof arg === "string") {
+			return this.context.newString(arg)
+		} else {
+			signalInvalidType(arg)
+		}
+	}
+
+	private unwrapModelValues = (model: Model, valuesHandle: QuickJSHandle): Record<string, ModelValue> => {
+		const { indexes, ...properties } = model
+		const valueHandles = this.unwrapObject(valuesHandle)
+		const values: Record<string, ModelValue> = {}
+
+		for (const [property, type] of Object.entries(properties)) {
+			assert(property in valueHandles)
+			const valueHandle = valueHandles[property]
+			if (type === "boolean") {
+				values[property] = Boolean(valueHandle.consume(this.context.getNumber))
+			} else if (type === "integer") {
+				values[property] = valueHandle.consume(this.context.getNumber)
+			} else if (type === "float") {
+				values[property] = valueHandle.consume(this.context.getNumber)
+			} else if (type === "string") {
+				values[property] = valueHandle.consume(this.context.getString)
+			} else if (type === "datetime") {
+				values[property] = valueHandle.consume(this.context.getNumber)
+			} else {
+				signalInvalidType(type)
+			}
+		}
+
+		return values
 	}
 
 	/**
