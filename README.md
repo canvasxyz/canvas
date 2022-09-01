@@ -56,6 +56,7 @@ npm run dev-example-chat
 Build and publish the Canvas packages:
 
 ```
+npm i
 npm run build
 npm run publish-cli &&
   npm run publish-core &&
