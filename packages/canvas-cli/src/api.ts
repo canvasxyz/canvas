@@ -38,10 +38,10 @@ export class API {
 		if (ipfs !== undefined && this.peering) {
 			this.topic = `canvas:${core.name}`
 			this.peerID = peerID
-			console.log(`[canvas-cli] Subscribing to pubsub topic ${this.topic}`)
-			ipfs.pubsub
-				.subscribe(this.topic, this.handleMessage)
-				.catch((err) => console.error("Failed to subscribe to pubsub topic:", err))
+			console.log(chalk.yellow(`Subscribing to pubsub topic ${this.topic}`))
+			ipfs.pubsub.subscribe(this.topic, this.handleMessage).catch((err) => {
+				console.error(chalk.red(`[canvas-cli] Failed to subscribe to pubsub topic: ${err}`))
+			})
 		}
 
 		const api = express()
@@ -69,7 +69,7 @@ export class API {
 
 		this.server = stoppable(
 			api.listen(port, () => {
-				console.log(`[canvas-cli] Serving ${core.name} on port ${port}:`)
+				console.log(chalk.yellow(`Serving ${core.name} on port ${port}:`))
 				console.log(`└ GET http://localhost:${port}/`)
 				for (const name of Object.keys(core.routeParameters)) {
 					console.log(`└ GET http://localhost:${port}${name}`)

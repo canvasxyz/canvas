@@ -7,6 +7,7 @@ import prompts from "prompts"
 
 import { getQuickJS } from "quickjs-emscripten"
 import { create as createIpfsHttpClient, IPFSHTTPClient } from "ipfs-http-client"
+import Hash from "ipfs-only-hash"
 
 import { Core } from "@canvas-js/core"
 
@@ -88,7 +89,7 @@ export async function handler(args: Args) {
 	const databaseURI = args.database || defaultDatabaseURI(directory)
 
 	if (!development && args.watch) {
-		console.warn(chalk.yellow(`[canvas-cli] --watch has no effect on CID specs`))
+		console.log(chalk.yellow(`[canvas-cli] --watch has no effect on CID specs`))
 	}
 
 	if (development && args.peering) {
@@ -122,10 +123,12 @@ export async function handler(args: Args) {
 		if (confirm) {
 			args.unchecked = true
 			args.peering = false
-			console.warn(chalk.yellow("Running in unchecked mode! Actions will be processed without verifying a blockhash."))
-			console.warn(chalk.yellow("Peering automatically disabled."))
+			console.log(
+				chalk.yellow.bold("Running in unchecked mode. ") +
+					chalk.yellow("Actions' block hashes will not be checked, and P2P will be disabled.")
+			)
 		} else {
-			console.warn(chalk.red("Running without unchecked mode! New actions cannot be processed without an RPC."))
+			console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
 		}
 	}
 
@@ -137,7 +140,22 @@ export async function handler(args: Args) {
 		ipfs = createIpfsHttpClient({ url: args.ipfs })
 		const { id } = await ipfs.id()
 		peerID = id.toString()
-		console.log("[canvas-cli] Peering enabled. Got local PeerID", peerID)
+		console.log(chalk.yellow(`Peering enabled, using local IPFS peer ID ${peerID}`))
+	}
+
+	if (databaseURI) {
+		console.log(chalk.yellow(chalk.bold("Using database: " + databaseURI)))
+	}
+	if (!databaseURI && development) {
+		console.log(chalk.yellow.bold("Using in-memory database. ") + chalk.yellow("All data will be lost on close."))
+		const cid = await Hash.of(spec)
+		console.log("")
+		console.log(chalk.magenta("To persist data, add a database with " + chalk.bold("--database file:db.sqlite") + "."))
+		console.log(chalk.magenta("Or, run the spec in production:"))
+		console.log(chalk.magenta.bold("ipfs daemon"))
+		console.log(chalk.magenta.bold(`ipfs add ${args.spec}`))
+		console.log(chalk.magenta.bold(`canvas run ${cid}`))
+		console.log("")
 	}
 
 	let core: Core, api: API
@@ -158,7 +176,7 @@ export async function handler(args: Args) {
 			api = new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
 		}
 	} catch (err) {
-		console.log(err)
+		console.log(chalk.red(err))
 		// don't terminate on error
 	}
 
@@ -169,19 +187,19 @@ export async function handler(args: Args) {
 	}
 
 	if (databaseURI === null) {
-		console.warn(
+		console.log(
 			chalk.yellow(
 				"[canvas-cli] Warning: the action log will be erased on every change to the spec file. All data will be lost."
 			)
 		)
 	} else if (args.reset) {
-		console.warn(
+		console.log(
 			chalk.yellow(
 				"[canvas-cli] Warning: the action log will be erased on every change to the spec file. All data will be lost."
 			)
 		)
 	} else if (args.replay) {
-		console.warn(
+		console.log(
 			chalk.yellow(
 				"[canvas-cli] Warning: the model database will be rebuilt from the action log on every change to the spec file."
 			)
@@ -197,7 +215,7 @@ export async function handler(args: Args) {
 
 		const newSpec = fs.readFileSync(specPath, "utf-8")
 		if (newSpec !== oldSpec) {
-			console.log("[canvas-cli] File changed, restarting core...\n")
+			console.log(chalk.yellow("File changed, restarting core...\n"))
 			oldSpec = newSpec
 			terminating = true
 			try {
@@ -212,18 +230,21 @@ export async function handler(args: Args) {
 			try {
 				core = await Core.initialize({
 					name,
-					spec: newSpec,
+					spec,
+					verbose: args.verbose,
 					databaseURI,
 					quickJS,
 					replay: args.replay,
 					reset: args.reset,
+					unchecked: args.unchecked,
+					rpc,
 				})
 
 				if (!args.noserver) {
-					api = new API({ core, port: args.port, ipfs, peering: args.peering })
+					api = new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
 				}
 			} catch (err) {
-				console.log(err)
+				console.log(chalk.red(err))
 				// don't terminate on error
 			}
 

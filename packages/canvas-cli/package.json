@@ -24,6 +24,7 @@
     "http-status-codes": "^2.2.0",
     "io-ts": "^2.2.16",
     "ipfs-http-client": "^57.0.1",
+    "ipfs-only-hash": "^4.0.0",
     "multiformats": "^9.7.0",
     "prompts": "^2.4.2",
     "quickjs-emscripten": "^0.21.0",
