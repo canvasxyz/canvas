@@ -6,8 +6,8 @@ Make sure you have the Canvas CLI installed, and the local NPM dependencies inst
 
 ### Developing
 
-1. In one process, start the Canvas backend with `canvas run spec.canvas.js`.
-2. In a separate process, start the webpack development server with `npm run dev`.
+1. In one terminal, start a backend: `canvas run ../example-chat-server/spec.canvas.js`.
+2. In another terminal, start the webpack development server with `npm run dev`.
 3. Open the app at http://localhost:8080/
 
 ### Deploying to Fly.io
