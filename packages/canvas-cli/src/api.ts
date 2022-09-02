@@ -69,16 +69,13 @@ export class API {
 
 		this.server = stoppable(
 			api.listen(port, () => {
-				console.log(chalk.yellow(`Serving ${core.name} on port ${port}:`))
-				console.log(`└ GET http://localhost:${port}/`)
+				console.log(`Serving ${core.name}:`)
+				console.log(`GET http://localhost:${port}/`)
 				for (const name of Object.keys(core.routeParameters)) {
-					console.log(`└ GET http://localhost:${port}${name}`)
+					console.log(`GET http://localhost:${port}${name}`)
 				}
-				console.log("└ POST /actions")
-				console.log(`  └ ${actionType.name}`)
-				console.log(`  └ calls: [ ${Object.keys(core.actionParameters).join(", ")} ]`)
-				console.log("└ POST /sessions")
-				console.log(`  └ ${sessionType.name}`)
+				console.log(`POST /actions [ ${Object.keys(core.actionParameters).join(", ")} ]`)
+				console.log(`POST /sessions`)
 			}),
 			0
 		)

@@ -321,7 +321,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				if (!this.rpc[chain] || !this.rpc[chain][chainId]) {
 					if (!this.unchecked)
 						throw new Error(
-							`[canvas-core] This spec needs an rpc endpoint for on-chain data (${chain}, chain id ${chainId}). Specify one with e.g. "canvas run --chain-rpc eth 1 https://mainnet.infura.io/v3/[APPID]".`
+							`This spec needs an rpc endpoint for on-chain data (${chain}, chain id ${chainId}). Specify one with "canvas run --chain-rpc eth 1 https://mainnet.infura.io/v3/[APPID]".`
 						)
 					rpcUrl = ""
 				} else {

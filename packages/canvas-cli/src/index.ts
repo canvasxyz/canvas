@@ -21,5 +21,4 @@ commands
 	.strict()
 	.scriptName("canvas")
 	.help()
-	.showHelpOnFail(false)
 	.parse()

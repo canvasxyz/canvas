@@ -125,7 +125,7 @@ export async function handler(args: Args) {
 			args.peering = false
 			console.log(
 				chalk.yellow.bold("Running in unchecked mode. ") +
-					chalk.yellow("Actions' block hashes will not be checked, and P2P will be disabled.")
+					chalk.yellow("Block hashes will not be checked, and P2P will be disabled.")
 			)
 		} else {
 			console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
@@ -144,17 +144,40 @@ export async function handler(args: Args) {
 	}
 
 	if (databaseURI) {
-		console.log(chalk.yellow(chalk.bold("Using database: " + databaseURI)))
+		console.log(chalk.yellow(chalk.bold("Using database: " + databaseURI.replace(/^file:/, ""))))
 	}
 	if (!databaseURI && development) {
 		console.log(chalk.yellow.bold("Using in-memory database. ") + chalk.yellow("All data will be lost on close."))
-		const cid = await Hash.of(spec)
+	}
+
+	if (development) {
+		console.log(
+			chalk.yellow(
+				chalk.bold("Using development spec. ") + "To run in production mode, publish and run the spec from IPFS."
+			)
+		)
+	}
+
+	if (development) {
 		console.log("")
-		console.log(chalk.magenta("To persist data, add a database with " + chalk.bold("--database file:db.sqlite") + "."))
-		console.log(chalk.magenta("Or, run the spec in production:"))
-		console.log(chalk.magenta.bold("ipfs daemon"))
-		console.log(chalk.magenta.bold(`ipfs add ${args.spec}`))
-		console.log(chalk.magenta.bold(`canvas run ${cid}`))
+	}
+	if (!databaseURI && development) {
+		console.log(
+			chalk.red(
+				"→ To persist data, add a database with " +
+					chalk.bold("--database file:db.sqlite") +
+					", or run the spec from IPFS."
+			)
+		)
+	}
+
+	if (development) {
+		const cid = await Hash.of(spec)
+		console.log(
+			chalk.red("→ To publish the spec to IPFS, start " + chalk.bold("ipfs daemon") + " in a separate window and run:")
+		)
+		console.log(chalk.red.bold(`  ipfs add ${args.spec}`))
+		console.log(chalk.red.bold(`  canvas run ${cid}`))
 		console.log("")
 	}
 
