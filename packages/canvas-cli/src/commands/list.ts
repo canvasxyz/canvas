@@ -3,6 +3,7 @@ import path from "node:path"
 
 import yargs from "yargs"
 import chalk from "chalk"
+import Database, * as sqlite from "better-sqlite3"
 
 import { SqliteStore } from "@canvas-js/core"
 import { CANVAS_HOME, cidPattern, SPEC_FILENAME } from "../utils.js"
@@ -29,6 +30,13 @@ export async function handler({}) {
 		console.log(cid)
 		console.log(`Spec:     ${specStat?.size ?? "--"} bytes`)
 		console.log(`Data:     ${databaseStat?.size ?? "--"} bytes`)
+
+		const db = new Database(databasePath)
+		try {
+			const messages = db.prepare("SELECT COUNT(*) AS count FROM _messages").get()
+			console.log(`Messages: ${messages.count}`)
+		} catch (err) {}
+
 		console.log("")
 	}
 }
