@@ -495,7 +495,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	 */
 	public apply(action: Action): Promise<ActionResult> {
 		if (this.verbose) {
-			console.log("[canvas-core] apply action:", JSON.stringify(action))
+			console.log("[canvas-core] applying action:", JSON.stringify(action))
 		}
 
 		return this.queue.add(async () => {
@@ -585,6 +585,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			await this.store.applyEffects(action.payload, effects)
 
 			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
+
+			console.log("[canvas-core] applied action:", action.signature)
 
 			return { hash }
 		})
@@ -734,7 +736,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	 */
 	public session(session: Session): Promise<void> {
 		if (this.verbose) {
-			console.log("[canvas-core] apply session:", JSON.stringify(session))
+			console.log("[canvas-core] applying session:", JSON.stringify(session))
 		}
 
 		return this.queue.add(async () => {
@@ -760,6 +762,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			if (existingRecord === null) {
 				await this.store.insertSession(sessionKey, session)
 				this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
+
+				console.log("[canvas-core] applied session:", session.signature)
 			}
 		})
 	}
