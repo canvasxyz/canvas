@@ -19,23 +19,60 @@ import type {
 	SessionPayload,
 	Chain,
 	ChainId,
+	Block,
 } from "@canvas-js/interfaces"
+
+export const chainType: t.Type<Chain> = t.union([
+	t.literal("eth"),
+	t.literal("cosmos"),
+	t.literal("solana"),
+	t.literal("substrate"),
+])
+
+export const chainIdType: t.Type<ChainId> = t.number
+
+export const blockType: t.Type<Block> = t.type({
+	chain: chainType,
+	chainId: chainIdType,
+	blocknum: t.number,
+	blockhash: t.string,
+	timestamp: t.number,
+})
 
 export const actionArgumentType: t.Type<ActionArgument> = t.union([t.null, t.boolean, t.number, t.string])
 
 export const actionArgumentArrayType = t.array(actionArgumentType)
 
-export const actionPayloadType: t.Type<ActionPayload> = t.type({
-	from: t.string,
-	spec: t.string,
-	timestamp: t.number,
-	call: t.string,
-	args: t.array(actionArgumentType),
-})
+export const actionPayloadType: t.Type<ActionPayload> = t.intersection([
+	t.type({
+		from: t.string,
+		spec: t.string,
+		timestamp: t.number,
+		call: t.string,
+		args: t.array(actionArgumentType),
+	}),
+	t.partial({ block: blockType }),
+])
 
 export const actionType: t.Type<Action> = t.type({
 	payload: actionPayloadType,
 	session: t.union([t.string, t.null]),
+	signature: t.string,
+})
+
+export const sessionPayloadType: t.Type<SessionPayload> = t.intersection([
+	t.type({
+		from: t.string,
+		spec: t.string,
+		timestamp: t.number,
+		address: t.string,
+		duration: t.number,
+	}),
+	t.partial({ block: blockType }),
+])
+
+export const sessionType: t.Type<Session> = t.type({
+	payload: sessionPayloadType,
 	signature: t.string,
 })
 
@@ -76,25 +113,3 @@ export const modelType: t.Type<Model> = new t.Type(
 )
 
 export const modelsType = t.record(t.string, modelType)
-
-export const sessionPayloadType: t.Type<SessionPayload> = t.type({
-	from: t.string,
-	spec: t.string,
-	timestamp: t.number,
-	session_public_key: t.string,
-	session_duration: t.number,
-})
-
-export const sessionType: t.Type<Session> = t.type({
-	payload: sessionPayloadType,
-	signature: t.string,
-})
-
-export const chainType: t.Type<Chain> = t.union([
-	t.literal("eth"),
-	t.literal("cosmos"),
-	t.literal("solana"),
-	t.literal("substrate"),
-])
-
-export const chainIdType: t.Type<ChainId> = t.number

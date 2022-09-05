@@ -5,7 +5,7 @@ A programmable append-only log for peer-to-peer decentralized applications.
 ```typescript
 import { QuickJSWASMModule } from "quickjs-emscripten"
 
-import { Action, ActionResult, Session, ModelValue, Model } from "@canvas-js/interfaces"
+import { Action, Session, ModelValue, Model } from "@canvas-js/interfaces"
 
 interface CoreConfig {
 	name: string
@@ -27,7 +27,7 @@ declare class Core {
 
 	close(): Promise<void>
 	getRoute(route: string, params?: Record<string, ModelValue>): Record<string, ModelValue>[]
-	apply(action: Action): Promise<ActionResult>
+	apply(action: Action): Promise<{ hash: string }>
 	session(session: Session): Promise<void>
 }
 ```

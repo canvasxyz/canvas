@@ -10,7 +10,7 @@ import t from "io-ts"
 
 import prompts from "prompts"
 import { Chain } from "@canvas-js/interfaces"
-import { SqliteStore } from "@canvas-js/core"
+import { ModelStore, PostgresStore, SqliteStore } from "@canvas-js/core"
 
 const chainType: t.Type<Chain> = t.union([
 	t.literal("eth"),
@@ -51,14 +51,14 @@ interface LocateSpecResult {
 	spec: string
 }
 
-export async function locateSpec(name: string, ipfsAPI: string): Promise<LocateSpecResult> {
+export async function locateSpec(name: string, ipfsAPI?: string): Promise<LocateSpecResult> {
 	if (cidPattern.test(name)) {
 		const directory = path.resolve(CANVAS_HOME, name)
 		const specPath = path.resolve(CANVAS_HOME, name, SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const spec = fs.readFileSync(specPath, "utf-8")
 			return { name, directory, specPath, spec }
-		} else {
+		} else if (ipfsAPI !== undefined) {
 			if (!fs.existsSync(directory)) {
 				console.log(`[canvas-cli] Creating directory ${directory}`)
 				fs.mkdirSync(directory)
@@ -68,6 +68,8 @@ export async function locateSpec(name: string, ipfsAPI: string): Promise<LocateS
 			fs.writeFileSync(specPath, spec)
 			console.log(`[canvas-cli] Downloaded spec to ${specPath}`)
 			return { name, directory, specPath, spec }
+		} else {
+			throw new Error("No IPFS API provided")
 		}
 	} else if (name.endsWith(".js")) {
 		const specPath = path.resolve(name)
@@ -146,4 +148,25 @@ export function getDirectorySize(directory: string): number {
 			return totalSize + stat.size
 		}
 	}, 0)
+}
+
+const fileURIPrefix = "file:"
+const postgresURIPrefix = "postgres:"
+
+export function getStore(
+	databaseURI: string | null,
+	directory: string | null,
+	options: { verbose?: boolean }
+): ModelStore {
+	if (databaseURI === null) {
+		return directory === null
+			? new SqliteStore(null, options)
+			: new SqliteStore(path.resolve(directory, SqliteStore.DATABASE_FILENAME), options)
+	} else if (databaseURI.startsWith(fileURIPrefix)) {
+		return new SqliteStore(databaseURI.slice(fileURIPrefix.length))
+	} else if (databaseURI.startsWith(postgresURIPrefix)) {
+		return new PostgresStore(databaseURI, options)
+	} else {
+		throw new Error("invalid database URI")
+	}
 }

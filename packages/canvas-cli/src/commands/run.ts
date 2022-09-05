@@ -1,4 +1,4 @@
-import fs from "node:fs"
+// import fs from "node:fs"
 import process from "node:process"
 
 import yargs from "yargs"
@@ -12,7 +12,7 @@ import Hash from "ipfs-only-hash"
 import { Core } from "@canvas-js/core"
 
 import { API } from "../api.js"
-import { setupRpcs, locateSpec, confirmOrExit, defaultDatabaseURI } from "../utils.js"
+import { setupRpcs, locateSpec, confirmOrExit, defaultDatabaseURI, getStore } from "../utils.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -181,33 +181,70 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	let core: Core, api: API
-	try {
-		core = await Core.initialize({
-			name,
-			spec,
-			verbose: args.verbose,
-			databaseURI,
-			quickJS,
-			replay: args.replay,
-			reset: args.reset,
-			unchecked: args.unchecked,
-			rpc,
-		})
+	const store = getStore(databaseURI, directory, { verbose: args.verbose })
+	const core = await Core.initialize({
+		store,
+		directory,
+		name,
+		spec,
+		verbose: args.verbose,
+		quickJS,
+		replay: args.replay,
+		unchecked: args.unchecked,
+		rpc,
+	})
 
-		if (!args.noserver) {
-			api = new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
-		}
-	} catch (err) {
-		console.log(chalk.red(err))
-		// don't terminate on error
+	if (!args.noserver) {
+		const api = new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
 	}
 
-	// TODO: intercept SIGINT and shut down the server and core gracefully
+	// let core: Core, api: API
+	// try {
+	// 	core = await Core.initialize({
+	// 		store,
+	// 		directory,
+	// 		name,
+	// 		spec,
+	// 		verbose: args.verbose,
+	// 		quickJS,
+	// 		replay: args.replay,
+	// 		unchecked: args.unchecked,
+	// 		rpc,
+	// 	})
 
-	if (!args.watch || !development) {
-		return
-	}
+	// 	if (!args.noserver) {
+	// 		api = new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
+	// 	}
+	// } catch (err) {
+	//  console.log(chalk.red(err))
+	// 	// don't terminate on error
+	// }
+
+	// let core: Core, api: API
+	// try {
+	// 	core = await Core.initialize({
+	// 		store,
+	// 		directory,
+	// 		name,
+	// 		spec,
+	// 		verbose: args.verbose,
+	// 		quickJS,
+	// 		replay: args.replay,
+	// 		unchecked: args.unchecked,
+	// 		rpc,
+	// 	})
+
+	// 	if (!args.noserver) {
+	// 		api = new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
+	// 	}
+	// } catch (err) {
+	// 	console.log(err)
+	// 	// don't terminate on error
+	// }
+
+	// if (!args.watch || !development) {
+	// 	return
+	// }
 
 	if (databaseURI === null) {
 		console.log(
@@ -229,49 +266,46 @@ export async function handler(args: Args) {
 		)
 	}
 
-	let terminating = false
-	let oldSpec = spec
-	fs.watch(specPath, async (event, filename) => {
-		if (terminating || !filename || event !== "change") {
-			return
-		}
+	// let terminating = false
+	// let oldSpec = spec
+	// fs.watch(specPath, async (event, filename) => {
+	// 	if (terminating || !filename || event !== "change") {
+	// 		return
+	// 	}
 
-		const newSpec = fs.readFileSync(specPath, "utf-8")
-		if (newSpec !== oldSpec) {
-			console.log(chalk.yellow("File changed, restarting core...\n"))
-			oldSpec = newSpec
-			terminating = true
-			try {
-				if (!args.noserver) {
-					await api?.stop()
-				}
-				await core.close()
-			} catch (err) {
-				// continue if the api or core crashed during the last reload
-			}
+	// 	const newSpec = fs.readFileSync(specPath, "utf-8")
+	// 	if (newSpec !== oldSpec) {
+	// 		console.log(chalk.yellow("File changed, restarting core...\n"))
+	// 		oldSpec = newSpec
+	// 		terminating = true
+	// 		try {
+	// 			if (!args.noserver) {
+	// 				await api?.stop()
+	// 			}
+	// 			await core.close()
+	// 		} catch (err) {
+	// 			// continue if the api or core crashed during the last reload
+	// 		}
 
-			try {
-				core = await Core.initialize({
-					name,
-					spec,
-					verbose: args.verbose,
-					databaseURI,
-					quickJS,
-					replay: args.replay,
-					reset: args.reset,
-					unchecked: args.unchecked,
-					rpc,
-				})
+	// 		try {
+	// 			core = await Core.initialize({
+	// 				name,
+	// 				spec: newSpec,
+	// 				databaseURI,
+	// 				quickJS,
+	// 				replay: args.replay,
+	// 				reset: args.reset,
+	// 			})
 
-				if (!args.noserver) {
-					api = new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
-				}
-			} catch (err) {
-				console.log(chalk.red(err))
-				// don't terminate on error
-			}
+	// 			if (!args.noserver) {
+	// 				api = new API({ core, port: args.port, ipfs, peering: args.peering })
+	// 			}
+	// 		} catch (err) {
+	// 			console.log(err)
+	// 			// don't terminate on error
+	// 		}
 
-			terminating = false
-		}
-	})
+	// 		terminating = false
+	// 	}
+	// })
 }
