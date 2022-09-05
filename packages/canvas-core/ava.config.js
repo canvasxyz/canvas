@@ -1,3 +1,10 @@
 export default {
-	files: ["./test/lib/*.test.js"],
+	files: ["./test/*.test.ts"],
+	concurrency: 1,
+	typescript: {
+		compile: false,
+		rewritePaths: {
+			"test/": "test/lib/",
+		},
+	},
 }

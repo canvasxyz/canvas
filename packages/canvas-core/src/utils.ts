@@ -2,6 +2,7 @@ import assert from "node:assert"
 
 import { ethers } from "ethers"
 import * as cbor from "microcbor"
+import Hash from "ipfs-only-hash"
 
 import type {
 	Action,
@@ -9,6 +10,7 @@ import type {
 	Block,
 	Chain,
 	ChainId,
+	Model,
 	ModelType,
 	ModelValue,
 	Session,
@@ -54,6 +56,7 @@ export type BinaryBlock = {
 }
 
 export type BinaryAction = {
+	type: "action"
 	signature: Uint8Array
 	session: Uint8Array | null
 	payload: {
@@ -67,6 +70,7 @@ export type BinaryAction = {
 }
 
 export type BinarySession = {
+	type: "session"
 	signature: Uint8Array
 	payload: {
 		from: Uint8Array
@@ -89,6 +93,7 @@ const fromBinaryBlock = (binaryBlock: BinaryBlock): Block => ({
 })
 
 const toBinarySession = (session: Session): BinarySession => ({
+	type: "session",
 	signature: ethers.utils.arrayify(session.signature),
 	payload: {
 		...session.payload,
@@ -109,6 +114,7 @@ const fromBinarySession = (binarySession: BinarySession): Session => ({
 })
 
 const toBinaryAction = (action: Action): BinaryAction => ({
+	type: "action",
 	signature: ethers.utils.arrayify(action.signature),
 	session: action.session === null ? null : ethers.utils.arrayify(action.session),
 	payload: {
@@ -157,6 +163,56 @@ export async function getActionHash(action: Action): Promise<string> {
 	return ethers.utils.hexlify(hash.digest())
 }
 
+export async function getSessionhash(session: Session): Promise<string> {
+	const hash = createHash("sha256")
+	for await (const chunk of cbor.encodeStream(source([session]))) {
+		hash.update(chunk)
+	}
+
+	return ethers.utils.hexlify(hash.digest())
+}
+
 export async function* source<T>(iter: Iterable<T>) {
 	for (const value of iter) yield value
+}
+
+type ValueTypes = {
+	boolean: boolean
+	string: string
+	float: number
+	integer: number
+	datetime: number
+}
+
+type Values<M extends Model> = { [K in Exclude<keyof M, "indexes">]: ValueTypes[M[K]] }
+
+export type Context<Models extends Record<string, Model>> = {
+	timestamp: number
+	hash: string
+	from: string
+	db: {
+		[K in keyof Models]: {
+			set: (id: string, values: Values<Models[K]>) => void
+			delete: (id: string) => void
+		}
+	}
+}
+
+export async function compileSpec<Models extends Record<string, Model>>(
+	models: Models,
+	actions: Record<string, (this: Context<Models>, ...args: ActionArgument[]) => void>
+): Promise<{ name: string; spec: string }> {
+	const modelEntries = Object.entries(models)
+		.map(([name, model]) => `${name}: ${JSON.stringify(model)}`)
+		.join(",\n")
+
+	const actionEntries = Object.entries(actions).map(([name, action]) => {
+		const source = action.toString()
+		assert(source.startsWith(name + "(") || source.startsWith(`async ${name}(`))
+		return source
+	})
+
+	const spec = `export const models = {\n${modelEntries}};\nexport const actions = {\n${actionEntries}};\n`
+	const name = await Hash.of(spec)
+	return { name, spec }
 }

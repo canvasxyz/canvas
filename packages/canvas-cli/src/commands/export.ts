@@ -4,7 +4,7 @@ import chalk from "chalk"
 import { getQuickJS } from "quickjs-emscripten"
 
 import { Core } from "@canvas-js/core"
-import { defaultDatabaseURI, locateSpec } from "../utils.js"
+import { defaultDatabaseURI, getStore, locateSpec } from "../utils.js"
 
 export const command = "export <spec>"
 export const desc = "Export actions and sessions as JSON to stdout"
@@ -19,45 +19,25 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "string",
 			desc: "Override database URI",
 		})
-		.option("ipfs", {
-			type: "string",
-			desc: "IPFS HTTP API URL",
-			default: "http://localhost:5001",
-		})
-		.option("verbose", {
-			type: "boolean",
-			desc: "Enable verbose logging",
-			default: false,
-		})
-		.option("compact", {
-			describe: "Don't pretty-print exported JSON",
-			type: "boolean",
-			default: false,
-		})
 
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { directory, name, spec } = await locateSpec(args.spec, args.ipfs)
+	const { directory, name, spec } = await locateSpec(args.spec)
 	const databaseURI = args.database || defaultDatabaseURI(directory)
+	const store = getStore(databaseURI, directory, { verbose: false })
 
 	const quickJS = await getQuickJS()
-	const core = await Core.initialize({
-		databaseURI,
-		name,
-		spec,
-		quickJS,
-		verbose: args.verbose,
-		unchecked: true,
-	})
+	const core = await Core.initialize({ directory: null, store, name, spec, quickJS, unchecked: true })
 
 	let i = 0
-	for await (const [_, session] of core.store.getSessionStream()) {
-		console.log(JSON.stringify(session, null, args.compact ? undefined : 2))
+	for await (const [_, session] of core.log.getSessionStream()) {
+		console.log(JSON.stringify(session))
 		i++
 	}
-	for await (const [_, action] of core.store.getActionStream()) {
-		console.log(JSON.stringify(action, null, args.compact ? undefined : 2))
+
+	for await (const [_, action] of core.log.getActionStream()) {
+		console.log(JSON.stringify(action))
 		i++
 	}
 

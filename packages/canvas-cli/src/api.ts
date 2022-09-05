@@ -63,17 +63,17 @@ export class API {
 		api.post("/actions", this.handleAction)
 		api.post("/sessions", this.handleSession)
 
-		for (const route of Object.keys(core.routeParameters)) {
-			api.get(route, this.getRouteHandler(route))
-		}
+		// for (const route of Object.keys(core.routeParameters)) {
+		// 	api.get(route, this.getRouteHandler(route))
+		// }
 
 		this.server = stoppable(
 			api.listen(port, () => {
 				console.log(`[canvas-cli] Serving ${core.name} on port ${port}:`)
 				console.log(`└ GET http://localhost:${port}/`)
-				for (const name of Object.keys(core.routeParameters)) {
-					console.log(`└ GET http://localhost:${port}${name}`)
-				}
+				// for (const name of Object.keys(core.routeParameters)) {
+				// 	console.log(`└ GET http://localhost:${port}${name}`)
+				// }
 				console.log("└ POST /actions")
 				console.log(`  └ ${actionType.name}`)
 				console.log(`  └ calls: [ ${Object.keys(core.actionParameters).join(", ")} ]`)
@@ -97,63 +97,63 @@ export class API {
 		})
 	}
 
-	getRouteHandler = (route: string) => async (req: Request, res: Response) => {
-		const params: Record<string, string> = {}
-		for (const name of this.core.routeParameters[route]) {
-			const value = req.params[name]
-			if (typeof value === "string") {
-				params[name] = value
-			} else {
-				res.status(StatusCodes.BAD_REQUEST)
-				res.end(`Missing parameter "${name}"`)
-				return
-			}
-		}
+	// getRouteHandler = (route: string) => async (req: Request, res: Response) => {
+	// 	const params: Record<string, string> = {}
+	// 	for (const name of this.core.routeParameters[route]) {
+	// 		const value = req.params[name]
+	// 		if (typeof value === "string") {
+	// 			params[name] = value
+	// 		} else {
+	// 			res.status(StatusCodes.BAD_REQUEST)
+	// 			res.end(`Missing parameter "${name}"`)
+	// 			return
+	// 		}
+	// 	}
 
-		if (req.headers.accept === "text/event-stream") {
-			// subscription response
-			res.setHeader("Cache-Control", "no-cache")
-			res.setHeader("Content-Type", "text/event-stream")
-			res.setHeader("Access-Control-Allow-Origin", "*")
-			res.setHeader("Connection", "keep-alive")
-			res.flushHeaders()
+	// 	if (req.headers.accept === "text/event-stream") {
+	// 		// subscription response
+	// 		res.setHeader("Cache-Control", "no-cache")
+	// 		res.setHeader("Content-Type", "text/event-stream")
+	// 		res.setHeader("Access-Control-Allow-Origin", "*")
+	// 		res.setHeader("Connection", "keep-alive")
+	// 		res.flushHeaders()
 
-			let data: Record<string, ModelValue>[] | null = null
-			const listener = async () => {
-				const newData = await this.core.getRoute(route, params)
-				if (data === null || !compareResults(data, newData)) {
-					data = newData
-					res.write(`data: ${JSON.stringify(data)}\n\n`)
-				}
-			}
+	// 		let data: Record<string, ModelValue>[] | null = null
+	// 		const listener = async () => {
+	// 			const newData = await this.core.getRoute(route, params)
+	// 			if (data === null || !compareResults(data, newData)) {
+	// 				data = newData
+	// 				res.write(`data: ${JSON.stringify(data)}\n\n`)
+	// 			}
+	// 		}
 
-			try {
-				await listener()
-			} catch (err) {
-				// kill the EventSource if this.core.getRoute() fails on first request
-				// TODO: is it possible that it succeeds now, but fails later with new `values`?
-				console.error(chalk.red("[canvas-cli] error fetching view"), err)
-				console.error(err)
-				res.status(StatusCodes.BAD_REQUEST)
-				res.end(`Route error: ${err}`)
-				return
-			}
+	// 		try {
+	// 			await listener()
+	// 		} catch (err) {
+	// 			// kill the EventSource if this.core.getRoute() fails on first request
+	// 			// TODO: is it possible that it succeeds now, but fails later with new `values`?
+	// 			console.error(chalk.red("[canvas-cli] error fetching view"), err)
+	// 			console.error(err)
+	// 			res.status(StatusCodes.BAD_REQUEST)
+	// 			res.end(`Route error: ${err}`)
+	// 			return
+	// 		}
 
-			this.core.addEventListener("action", listener)
-			res.on("close", () => this.core.removeEventListener("action", listener))
-		} else {
-			// normal JSON response
-			this.core
-				.getRoute(route, params)
-				.then((data) => {
-					res.status(StatusCodes.OK).json(data)
-				})
-				.catch((err) => {
-					res.status(StatusCodes.BAD_REQUEST)
-					res.end(`Route error: ${err}`)
-				})
-		}
-	}
+	// 		this.core.addEventListener("action", listener)
+	// 		res.on("close", () => this.core.removeEventListener("action", listener))
+	// 	} else {
+	// 		// normal JSON response
+	// 		this.core
+	// 			.getRoute(route, params)
+	// 			.then((data) => {
+	// 				res.status(StatusCodes.OK).json(data)
+	// 			})
+	// 			.catch((err) => {
+	// 				res.status(StatusCodes.BAD_REQUEST)
+	// 				res.end(`Route error: ${err}`)
+	// 			})
+	// 	}
+	// }
 
 	handleAction = async (req: Request, res: Response) => {
 		const action = req.body
@@ -170,7 +170,7 @@ export class API {
 					const messages = []
 
 					if (action.session !== null) {
-						const session = await this.core.store.getSessionByAddress(action.session)
+						const session = await this.core.log.getSessionByAddress(action.session)
 						if (session !== null) {
 							messages.push({ type: "session", ...session })
 						}
@@ -252,22 +252,22 @@ export class API {
 	}
 }
 
-function compareResults(a: Record<string, ModelValue>[], b: Record<string, ModelValue>[]) {
-	if (a.length !== b.length) {
-		return false
-	}
+// function compareResults(a: Record<string, ModelValue>[], b: Record<string, ModelValue>[]) {
+// 	if (a.length !== b.length) {
+// 		return false
+// 	}
 
-	for (let i = 0; i < a.length; i++) {
-		for (const key in a[i]) {
-			if (a[i][key] !== b[i][key]) {
-				return false
-			}
-		}
+// 	for (let i = 0; i < a.length; i++) {
+// 		for (const key in a[i]) {
+// 			if (a[i][key] !== b[i][key]) {
+// 				return false
+// 			}
+// 		}
 
-		for (const key in b[i]) {
-			if (b[i][key] !== a[i][key]) {
-				return false
-			}
-		}
-	}
-}
+// 		for (const key in b[i]) {
+// 			if (b[i][key] !== a[i][key]) {
+// 				return false
+// 			}
+// 		}
+// 	}
+// }

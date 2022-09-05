@@ -3,9 +3,9 @@ import chalk from "chalk"
 import * as t from "io-ts"
 import { getQuickJS } from "quickjs-emscripten"
 
-import { Core, actionType, sessionType } from "@canvas-js/core"
+import { Core, actionType, sessionType, SqliteStore } from "@canvas-js/core"
 
-import { defaultDatabaseURI, locateSpec } from "../utils.js"
+import { defaultDatabaseURI, getStore, locateSpec } from "../utils.js"
 
 export const command = "info <spec>"
 export const desc = "Show the models, views, and actions for a spec"
@@ -40,9 +40,11 @@ export async function handler(args: Args) {
 
 	const quickJS = await getQuickJS()
 
+	const store = getStore(databaseURI, null, {})
 	const core = await Core.initialize({
+		directory: null,
+		store,
 		name,
-		databaseURI,
 		spec,
 		quickJS,
 		verbose: args.verbose,
@@ -54,8 +56,8 @@ export async function handler(args: Args) {
 	console.log(chalk.green("===== models ====="))
 	console.log(`${JSON.stringify(core.models, null, "  ")}\n`)
 
-	console.log(chalk.green("===== routes ====="))
-	Object.keys(core.routeParameters).forEach((route) => console.log(`GET ${route}`))
+	// console.log(chalk.green("===== routes ====="))
+	// Object.keys(core.routeParameters).forEach((route) => console.log(`GET ${route}`))
 	console.log("POST /sessions")
 	console.log(printType(sessionType))
 	console.log("POST /actions")
@@ -69,12 +71,12 @@ export async function handler(args: Args) {
 			.join("")
 	)
 
-	console.log(chalk.green("===== contracts ====="))
-	Object.entries(core.contractParameters).forEach(([name, { metadata }]) => {
-		console.log(`${name}: ${metadata.chain} chainId:${metadata.chainId} ${metadata.address}`)
-		metadata.abi.forEach((line) => console.log(`- ${line}`))
-	})
-	console.log("")
+	// console.log(chalk.green("===== contracts ====="))
+	// Object.entries(core.contractParameters).forEach(([name, { metadata }]) => {
+	// 	console.log(`${name}: ${metadata.chain} chainId:${metadata.chainId} ${metadata.address}`)
+	// 	metadata.abi.forEach((line) => console.log(`- ${line}`))
+	// })
+	// console.log("")
 
 	await core.close()
 	process.exit(0)
