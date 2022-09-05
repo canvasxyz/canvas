@@ -39,7 +39,6 @@
     "@types/prompts": "^2.0.14",
     "@types/stoppable": "^1.1.1",
     "@types/yargs": "^17.0.11",
-    "node-gyp": "^9.1.0",
     "typescript": "^4.7.4"
   }
 }
