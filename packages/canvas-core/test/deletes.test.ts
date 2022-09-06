@@ -16,9 +16,9 @@ const signerAddress = await signer.getAddress()
 
 test("Test setting and then deleting a record", async (t) => {
 	const store = new SqliteStore(null)
-	const { name, spec } = await compileSpec(
-		{ threads: { title: "string", link: "string", creator: "string" } },
-		{
+	const { name, spec } = await compileSpec({
+		models: { threads: { title: "string", link: "string", creator: "string" } },
+		actions: {
 			newThread(title, link) {
 				if (typeof title === "string" && typeof link === "string") {
 					this.db.threads.set(this.hash, { creator: this.from, title, link })
@@ -29,8 +29,8 @@ test("Test setting and then deleting a record", async (t) => {
 					this.db.threads.delete(threadId)
 				}
 			},
-		}
-	)
+		},
+	})
 
 	const core = await Core.initialize({ name, directory: null, store, spec, quickJS, unchecked: true })
 

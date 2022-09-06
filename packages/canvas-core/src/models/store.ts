@@ -5,12 +5,10 @@ export type Effect =
 	| { type: "del"; model: string; id: string }
 
 export interface ModelStore {
-	initialize(
-		models: Record<string, Model>
-		// routes: Record<string, string>
-	): Promise<void>
+	readonly identifier: string
+	initialize(models: Record<string, Model>, routes?: Record<string, string>): Promise<void>
 	close(): void
 
 	applyEffects(context: ActionContext, effects: Effect[]): Promise<void>
-	// getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]>
+	getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]>
 }

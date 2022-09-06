@@ -64,33 +64,17 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(cid === name, "Core.name is not equal to the hash of the provided spec.")
 		}
 
-		const { vm, models, actionParameters } = await VM.initialize(name, spec, quickJS, { verbose })
+		const { vm, exports } = await VM.initialize(name, spec, quickJS, { verbose })
+		const { models, actionParameters, database, routes, routeParameters } = exports
 
-		// validate models
-		const modelNamePattern = /^[a-z_]+$/
-		const modelPropertyNamePattern = /^[a-z_]+$/
-		for (const [name, model] of Object.entries(models)) {
-			assertPattern(name, modelNamePattern, "invalid model name")
-			assert(name.startsWith("_") === false, "model names cannot begin with an underscore")
-			const { indexes, ...properties } = model
-			for (const property of Object.keys(properties)) {
-				assertPattern(property, modelPropertyNamePattern, "invalid model property name")
-				assert(property.startsWith("_") === false, "model property names cannot begin with an underscore")
-				assert(property !== "id", "model properties cannot be named `id`")
-				assert(property !== "updated_at", "model properties cannot be named `updated_at`")
-			}
-
-			if (indexes !== undefined) {
-				for (const indexPropertyName of indexes) {
-					assert(
-						indexPropertyName in properties || indexPropertyName === "updated_at",
-						`model specified an invalid index "${indexPropertyName}". can only index on other model properties, or "updated_at"`
-					)
-				}
-			}
+		if (database !== undefined) {
+			assert(
+				store.identifier === database,
+				`spec requires a ${database} model store, but the core was initialized with a ${store.identifier} model store`
+			)
 		}
 
-		await store.initialize(models)
+		await store.initialize(models, routes)
 
 		const log = new MessageStore(name, directory, { verbose })
 
@@ -126,8 +110,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		return core
 	}
 
-	// public readonly routeParameters: Record<string, string[]>
-
 	// public readonly contractParameters: Record<string, { metadata: ContractMetadata; contract: ethers.Contract }>
 	// // TODO: remove contractRpcProviders, we don't need two sets of providers
 	// public readonly contractRpcProviders: Record<string, ethers.providers.JsonRpcProvider>
@@ -144,6 +126,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly vm: VM,
 		public readonly models: Record<string, Model>,
 		// public readonly routes: Record<string, string>,
+		// public readonly routes: Record<string, string>,
 		public readonly actionParameters: Record<string, string[]>,
 		public readonly store: ModelStore,
 		public readonly log: MessageStore,
@@ -155,17 +138,6 @@ export class Core extends EventEmitter<CoreEvents> {
 	) {
 		super()
 		this.queue = new PQueue({ concurrency: 1 })
-
-		// const routeNamePattern = /^(\/:?[a-z_]+)+$/
-		// const routeParameterPattern = /:([a-zA-Z0-9_]+)/g
-		// this.routeParameters = {}
-		// for (const route of Object.keys(routes)) {
-		// 	assertPattern(route, routeNamePattern, "invalid route name")
-		// 	this.routeParameters[route] = []
-		// 	for (const [_, param] of route.matchAll(routeParameterPattern)) {
-		// 		this.routeParameters[route].push(param)
-		// 	}
-		// }
 
 		// set up cache and rpc
 		// this.rpcProviders = {}
@@ -506,7 +478,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			await this.verifyBlock(block)
 		}
 	}
-}
 
-const assertPattern = (value: string, pattern: RegExp, message: string) =>
-	assert(pattern.test(value), `${message}: ${JSON.stringify(value)} does not match pattern ${pattern.source}`)
+	public async getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]> {
+		return this.store.getRoute(route, params)
+	}
+}

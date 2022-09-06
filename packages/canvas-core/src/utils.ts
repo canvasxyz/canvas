@@ -198,21 +198,30 @@ export type Context<Models extends Record<string, Model>> = {
 	}
 }
 
-export async function compileSpec<Models extends Record<string, Model>>(
-	models: Models,
+export async function compileSpec<Models extends Record<string, Model>>(exports: {
+	models: Models
 	actions: Record<string, (this: Context<Models>, ...args: ActionArgument[]) => void>
-): Promise<{ name: string; spec: string }> {
-	const modelEntries = Object.entries(models)
-		.map(([name, model]) => `${name}: ${JSON.stringify(model)}`)
-		.join(",\n")
+	routes?: Record<string, string>
+}): Promise<{ name: string; spec: string }> {
+	const { models, actions, routes } = exports
 
 	const actionEntries = Object.entries(actions).map(([name, action]) => {
 		const source = action.toString()
-		assert(source.startsWith(name + "(") || source.startsWith(`async ${name}(`))
+		assert(source.startsWith(`${name}(`) || source.startsWith(`async ${name}(`))
 		return source
 	})
 
-	const spec = `export const models = {\n${modelEntries}};\nexport const actions = {\n${actionEntries}};\n`
+	const lines = [
+		`export const models = ${JSON.stringify(models)};`,
+		`export const actions = {\n${actionEntries.join(",\n")}};`,
+	]
+
+	if (routes !== undefined) {
+		lines.push(`export const database = "sqlite";`)
+		lines.push(`export const routes = ${JSON.stringify(routes, null, "  ")};`)
+	}
+
+	const spec = lines.join("\n")
 	const name = await Hash.of(spec)
 	return { name, spec }
 }

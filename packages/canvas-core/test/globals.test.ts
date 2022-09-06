@@ -12,15 +12,15 @@ const quickJS = await getQuickJS()
 const signer = ethers.Wallet.createRandom()
 const signerAddress = await signer.getAddress()
 
-const { spec, name } = await compileSpec(
-	{},
-	{
+const { spec, name } = await compileSpec({
+	models: {},
+	actions: {
 		async logIP() {
 			const res = await fetch("https://ipv4.icanhazip.com/")
 			console.log("my IP address is", res)
 		},
-	}
-)
+	},
+})
 
 async function sign(signer: ethers.Wallet, session: string | null, call: string, args: ActionArgument[]) {
 	const timestamp = Date.now()

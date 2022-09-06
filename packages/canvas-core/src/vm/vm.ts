@@ -14,58 +14,69 @@ import { mapEntries, signalInvalidType } from "../utils.js"
 
 import { loadModule, wrapObject, unwrapObject, disposeCachedHandles, call, wrapJSON, resolvePromise } from "./utils.js"
 
+type Exports = {
+	models: Record<string, Model>
+	actionParameters: Record<string, string[]>
+	database?: "sqlite" | "postgres"
+	routes?: Record<string, string>
+	routeParameters?: Record<string, string[]>
+}
+
 export class VM {
 	public static async initialize(
 		name: string,
 		spec: string,
 		quickJS: QuickJSWASMModule,
 		options: { verbose?: boolean } = {}
-	): Promise<{
-		vm: VM
-		// database: "sqlite" | "postgres"
-		// routes: Record<string, string>
-		models: Record<string, Model>
-		actionParameters: Record<string, string[]>
-	}> {
+	): Promise<{ vm: VM; exports: Exports }> {
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(VM.RUNTIME_MEMORY_LIMIT)
 
 		const moduleHandle = await loadModule(context, name, spec)
 		const {
-			// database: databaseHandle,
+			database: databaseHandle,
 			models: modelsHandle,
-			// routes: routesHandle,
+			routes: routesHandle,
 			actions: actionsHandle,
 			// contracts: contractsHandle,
-			// translators: translatorsHandle,
 		} = moduleHandle.consume((handle) => unwrapObject(context, handle))
 
-		// assert(databaseHandle !== undefined, "spec is missing `database` export")
 		assert(modelsHandle !== undefined, "spec is missing `models` export")
-		// assert(routesHandle !== undefined, "spec is missing `routes` export")
 		assert(actionsHandle !== undefined, "spec is missing `actions` export")
-		// assert(context.typeof(databaseHandle) === "string", "`database` export must be an object")
 		assert(context.typeof(modelsHandle) === "object", "`models` export must be an object")
-		// assert(context.typeof(routesHandle) === "object", "`routes` export must be an object")
 		assert(context.typeof(actionsHandle) === "object", "`actions` export must be an object")
 		// assert(
 		// 	contractsHandle === undefined || context.typeof(contractsHandle) === "object",
 		// 	"`contracts` export must be an object"
 		// )
-		// assert(
-		// 	translatorsHandle === undefined || context.typeof(translatorsHandle) === "object",
-		// 	"`translators` export must be an object"
-		// )
-
-		// const database = databaseHandle.consume(context.getString)
-		// assert(database === "sqlite" || database === "postgres", "invalid database name, must be 'sqlite' or 'postgres'")
 
 		const models = modelsHandle.consume(context.dump)
 		assert(modelsType.is(models), "invalid `models` export")
 
-		// const routes = routesHandle.consume(context.dump)
-		// assert(t.record(t.string, t.string).is(routes))
+		// validate models
+		const modelNamePattern = /^[a-z_]+$/
+		const modelPropertyNamePattern = /^[a-z_]+$/
+		for (const [name, model] of Object.entries(models)) {
+			assertPattern(name, modelNamePattern, "invalid model name")
+			assert(name.startsWith("_") === false, "model names cannot begin with an underscore")
+			const { indexes, ...properties } = model
+			for (const property of Object.keys(properties)) {
+				assertPattern(property, modelPropertyNamePattern, "invalid model property name")
+				assert(property.startsWith("_") === false, "model property names cannot begin with an underscore")
+				assert(property !== "id", "model properties cannot be named `id`")
+				assert(property !== "updated_at", "model properties cannot be named `updated_at`")
+			}
+
+			if (indexes !== undefined) {
+				for (const indexPropertyName of indexes) {
+					assert(
+						indexPropertyName in properties || indexPropertyName === "updated_at",
+						`model specified an invalid index "${indexPropertyName}". can only index on other model properties, or "updated_at"`
+					)
+				}
+			}
+		}
 
 		const actionHandles = actionsHandle.consume((handle) => unwrapObject(context, handle))
 		for (const handle of Object.values(actionHandles)) {
@@ -76,20 +87,40 @@ export class VM {
 		const actionParameters: Record<string, string[]> = {}
 		const actionNamePattern = /^[a-zA-Z]+$/
 		for (const [name, handle] of Object.entries(actionHandles)) {
-			assert(actionNamePattern.test(name), "invalid action name")
+			assertPattern(name, actionNamePattern, "invalid action name")
 			const source = call(context, "Function.prototype.toString", handle).consume(context.getString)
 			actionParameters[name] = parseFunctionParameters(source)
 		}
 
-		const vm = new VM(runtime, context, actionHandles, models, options)
+		const exports: Exports = { models, actionParameters }
 
-		return {
-			vm,
-			// database,
-			// routes,
-			models,
-			actionParameters,
+		if (databaseHandle !== undefined) {
+			assert(context.typeof(databaseHandle) === "string", "`database` export must be a string")
+			const database = databaseHandle.consume(context.getString)
+			assert(database === "sqlite" || database === "postgres", "invalid database name, must be 'sqlite' or 'postgres'")
+			exports.database = database
 		}
+
+		if (routesHandle !== undefined) {
+			const routeNamePattern = /^(\/:?[a-z_]+)+$/
+			const routeParameterPattern = /:([a-zA-Z0-9_]+)/g
+
+			assert(context.typeof(routesHandle) === "object", "`routes` export must be an object")
+			exports.routes = {}
+			exports.routeParameters = {}
+			for (const [name, handle] of Object.entries(routesHandle.consume((handle) => unwrapObject(context, handle)))) {
+				assert(context.typeof(handle) === "string", "route queries must be strings")
+				assertPattern(name, routeNamePattern, "invalid route name")
+				exports.routes[name] = handle.consume(context.getString)
+				exports.routeParameters[name] = []
+				for (const [_, param] of name.matchAll(routeParameterPattern)) {
+					exports.routeParameters[name].push(param)
+				}
+			}
+		}
+
+		const vm = new VM(runtime, context, actionHandles, models, options)
+		return { vm, exports }
 	}
 
 	private static readonly RUNTIME_MEMORY_LIMIT = 1024 * 640 // 640kb
@@ -286,3 +317,6 @@ function parseFunctionParameters(source: string): string[] {
 		.split(",")
 		.filter(Boolean) // split & filter [""]
 }
+
+const assertPattern = (value: string, pattern: RegExp, message: string) =>
+	assert(pattern.test(value), `${message}: ${JSON.stringify(value)} does not match pattern ${pattern.source}`)

@@ -13,15 +13,14 @@ export class SqliteStore implements ModelStore {
 	public readonly database: sqlite.Database
 
 	private readonly transaction: (context: ActionContext, effects: Effect[]) => void
-	// private readonly routeStatements: Record<string, sqlite.Statement>
+	private readonly routeStatements: Record<string, sqlite.Statement> = {}
 	private readonly modelStatements: Record<
 		string,
 		Record<keyof ReturnType<typeof SqliteStore.getModelStatements>, sqlite.Statement>
 	> = {}
 
-	public ready(): Promise<void> {
-		// better-sqlite3 initializes synchronously, so the core is always ready()
-		return Promise.resolve()
+	public get identifier(): string {
+		return "sqlite"
 	}
 
 	constructor(path: string | null, options: { verbose?: boolean } = {}) {
@@ -81,16 +80,20 @@ export class SqliteStore implements ModelStore {
 				}
 			}
 		})
-
-		// this.routeStatements = mapEntries(config.routes, (route, query) => this.database.prepare(query))
 	}
 
-	public async initialize(models: Record<string, Model>) {
+	public async initialize(models: Record<string, Model>, routes?: Record<string, string>) {
 		this.initializeModelTables(models)
 		for (const [name, model] of Object.entries(models)) {
 			this.modelStatements[name] = mapEntries(SqliteStore.getModelStatements(name, model), (_, sql) =>
 				this.database.prepare(sql)
 			)
+		}
+
+		if (routes !== undefined) {
+			for (const [route, query] of Object.entries(routes)) {
+				this.routeStatements[route] = this.database.prepare(query)
+			}
 		}
 	}
 
@@ -114,12 +117,12 @@ export class SqliteStore implements ModelStore {
 		this.database.close()
 	}
 
-	// public async getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]> {
-	// 	assert(route in this.routeStatements, "invalid route name")
-	// 	return this.routeStatements[route].all(
-	// 		mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value))
-	// 	)
-	// }
+	public async getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]> {
+		assert(route in this.routeStatements, "invalid route name")
+		return this.routeStatements[route].all(
+			mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value))
+		)
+	}
 
 	// We have to be sure to quote these because, even though we validate that they're all [a-z_]+ elsewhere,
 	// because they might be reserved SQL keywords.

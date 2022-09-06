@@ -12,9 +12,9 @@ import { mapEntries, signalInvalidType } from "../utils.js"
 export class PostgresStore implements ModelStore {
 	private readonly db: PgPromise.IDatabase<{}, any>
 
-	// we can't use prepared statements for routes because they only accept positional parameters!
+	// we can't use prepared statements for routes because they only accept positional parameter :/
 	// private readonly routeStatements: Record<string, PgPromise.PreparedStatement>
-	// private readonly routes: Record<string, string>
+	private readonly routes: Record<string, string> = {}
 
 	private readonly modelStatements: Record<
 		string,
@@ -33,7 +33,11 @@ export class PostgresStore implements ModelStore {
 		this.db = pgp(databaseURI)
 	}
 
-	public async initialize(models: Record<string, Model>) {
+	public get identifier(): string {
+		return "postgres"
+	}
+
+	public async initialize(models: Record<string, Model>, routes?: Record<string, string>) {
 		for (const [name, { indexes, ...properties }] of Object.entries(models)) {
 			const propertyKeys = Object.keys(properties)
 			this.modelProperties[name] = propertyKeys
@@ -61,6 +65,12 @@ export class PostgresStore implements ModelStore {
 					const propertyName = PostgresStore.propertyName(property)
 					await this.db.none(`CREATE INDEX NOT EXISTS ${indexName} ON ${tableName} (${propertyName});`)
 				}
+			}
+		}
+
+		if (routes !== undefined) {
+			for (const [name, query] of Object.entries(routes)) {
+				this.routes[name] = query
 			}
 		}
 	}
@@ -125,10 +135,10 @@ export class PostgresStore implements ModelStore {
 		// nothing to do, since pg-promise should handle connections for us
 	}
 
-	// public async getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]> {
-	// 	assert(route in this.routes, "invalid route name")
-	// 	return this.db.any(this.routes[route], params)
-	// }
+	public async getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]> {
+		assert(route in this.routes, "invalid route name")
+		return this.db.any(this.routes[route], params)
+	}
 
 	// We have to be sure to quote these because, even though we validate that they're all [a-z_]+ elsewhere,
 	// because they might be reserved SQL keywords.
