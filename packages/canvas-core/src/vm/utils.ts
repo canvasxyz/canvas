@@ -20,9 +20,12 @@ function getCache(context: QuickJSContext): Record<string, QuickJSHandle> {
 export function disposeCachedHandles(context: QuickJSContext) {
 	const map = contextCacheMap.get(context)
 	if (map !== undefined) {
-		for (const handle of Object.values(map)) {
+		for (const [path, handle] of Object.entries(map)) {
 			handle.dispose()
+			delete map[path]
 		}
+
+		contextCacheMap.delete(context) // not really necessary
 	}
 }
 

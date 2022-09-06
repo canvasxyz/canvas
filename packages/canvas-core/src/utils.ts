@@ -196,14 +196,16 @@ export type Context<Models extends Record<string, Model>> = {
 			delete: (id: string) => void
 		}
 	}
+	contracts: Record<string, (...args: any[]) => Promise<any[]>>
 }
 
 export async function compileSpec<Models extends Record<string, Model>>(exports: {
 	models: Models
 	actions: Record<string, (this: Context<Models>, ...args: ActionArgument[]) => void>
 	routes?: Record<string, string>
+	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
 }): Promise<{ name: string; spec: string }> {
-	const { models, actions, routes } = exports
+	const { models, actions, routes, contracts } = exports
 
 	const actionEntries = Object.entries(actions).map(([name, action]) => {
 		const source = action.toString()
@@ -219,6 +221,10 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	if (routes !== undefined) {
 		lines.push(`export const database = "sqlite";`)
 		lines.push(`export const routes = ${JSON.stringify(routes, null, "  ")};`)
+	}
+
+	if (contracts !== undefined) {
+		lines.push(`export const contracts = ${JSON.stringify(contracts, null, "  ")};`)
 	}
 
 	const spec = lines.join("\n")
