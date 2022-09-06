@@ -8,7 +8,7 @@ import chalk from "chalk"
 
 import { Core, actionType, sessionType } from "@canvas-js/core"
 
-import { defaultDatabaseURI, getStore, locateSpec, setupRpcs } from "../utils.js"
+import { defaultDatabaseURI, getModelStore, locateSpec, setupRpcs } from "../utils.js"
 
 export const command = "import <spec>"
 export const desc = "Import actions and sessions from stdin"
@@ -43,7 +43,7 @@ type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	const { name, directory, spec } = await locateSpec(args.spec, args.ipfs)
 	const databaseURI = args.database || defaultDatabaseURI(directory)
-	const store = getStore(databaseURI, directory, { verbose: args.verbose })
+	const store = getModelStore(databaseURI, { verbose: args.verbose })
 
 	const quickJS = await getQuickJS()
 

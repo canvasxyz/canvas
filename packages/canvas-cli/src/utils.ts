@@ -47,7 +47,6 @@ export const cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 interface LocateSpecResult {
 	name: string
 	directory: string | null
-	specPath: string
 	spec: string
 }
 
@@ -57,7 +56,7 @@ export async function locateSpec(name: string, ipfsAPI?: string): Promise<Locate
 		const specPath = path.resolve(CANVAS_HOME, name, SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const spec = fs.readFileSync(specPath, "utf-8")
-			return { name, directory, specPath, spec }
+			return { name, directory, spec }
 		} else if (ipfsAPI !== undefined) {
 			if (!fs.existsSync(directory)) {
 				console.log(`[canvas-cli] Creating directory ${directory}`)
@@ -67,14 +66,14 @@ export async function locateSpec(name: string, ipfsAPI?: string): Promise<Locate
 			const spec = await download(name, ipfsAPI)
 			fs.writeFileSync(specPath, spec)
 			console.log(`[canvas-cli] Downloaded spec to ${specPath}`)
-			return { name, directory, specPath, spec }
+			return { name, directory, spec }
 		} else {
 			throw new Error("No IPFS API provided")
 		}
 	} else if (name.endsWith(".js")) {
 		const specPath = path.resolve(name)
 		const spec = fs.readFileSync(specPath, "utf-8")
-		return { name: specPath, directory: null, specPath, spec }
+		return { name: specPath, directory: null, spec }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js file"))
 		process.exit(1)
@@ -153,15 +152,9 @@ export function getDirectorySize(directory: string): number {
 const fileURIPrefix = "file:"
 const postgresURIPrefix = "postgres:"
 
-export function getStore(
-	databaseURI: string | null,
-	directory: string | null,
-	options: { verbose?: boolean }
-): ModelStore {
+export function getModelStore(databaseURI: string | null, options: { verbose?: boolean }): ModelStore {
 	if (databaseURI === null) {
-		return directory === null
-			? new SqliteStore(null, options)
-			: new SqliteStore(path.resolve(directory, SqliteStore.DATABASE_FILENAME), options)
+		return new SqliteStore(null, options)
 	} else if (databaseURI.startsWith(fileURIPrefix)) {
 		return new SqliteStore(databaseURI.slice(fileURIPrefix.length))
 	} else if (databaseURI.startsWith(postgresURIPrefix)) {

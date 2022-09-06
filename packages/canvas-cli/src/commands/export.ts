@@ -4,7 +4,7 @@ import chalk from "chalk"
 import { getQuickJS } from "quickjs-emscripten"
 
 import { Core } from "@canvas-js/core"
-import { defaultDatabaseURI, getStore, locateSpec } from "../utils.js"
+import { defaultDatabaseURI, getModelStore, locateSpec } from "../utils.js"
 
 export const command = "export <spec>"
 export const desc = "Export actions and sessions as JSON to stdout"
@@ -25,18 +25,18 @@ type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	const { directory, name, spec } = await locateSpec(args.spec)
 	const databaseURI = args.database || defaultDatabaseURI(directory)
-	const store = getStore(databaseURI, directory, { verbose: false })
+	const store = getModelStore(databaseURI, { verbose: false })
 
 	const quickJS = await getQuickJS()
 	const core = await Core.initialize({ directory: null, store, name, spec, quickJS, unchecked: true })
 
 	let i = 0
-	for await (const [_, session] of core.log.getSessionStream()) {
+	for await (const [_, session] of core.messageStore.getSessionStream()) {
 		console.log(JSON.stringify(session))
 		i++
 	}
 
-	for await (const [_, action] of core.log.getActionStream()) {
+	for await (const [_, action] of core.messageStore.getActionStream()) {
 		console.log(JSON.stringify(action))
 		i++
 	}

@@ -5,7 +5,7 @@ import { getQuickJS } from "quickjs-emscripten"
 
 import { Core, actionType, sessionType, SqliteStore } from "@canvas-js/core"
 
-import { defaultDatabaseURI, getStore, locateSpec } from "../utils.js"
+import { defaultDatabaseURI, getModelStore, locateSpec } from "../utils.js"
 
 export const command = "info <spec>"
 export const desc = "Show the models, views, and actions for a spec"
@@ -40,7 +40,7 @@ export async function handler(args: Args) {
 
 	const quickJS = await getQuickJS()
 
-	const store = getStore(databaseURI, null, {})
+	const store = getModelStore(databaseURI, {})
 	const core = await Core.initialize({
 		directory: null,
 		store,
