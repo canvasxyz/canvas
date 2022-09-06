@@ -3,9 +3,9 @@ import path from "node:path"
 
 import yargs from "yargs"
 import chalk from "chalk"
-import Database, * as sqlite from "better-sqlite3"
+import Database from "better-sqlite3"
 
-import { SqliteStore } from "@canvas-js/core"
+import { MessageStore, SqliteStore } from "@canvas-js/core"
 import { CANVAS_HOME, cidPattern, SPEC_FILENAME } from "../utils.js"
 
 export const command = "list"
@@ -21,21 +21,28 @@ export async function handler({}) {
 			continue
 		}
 
-		const specPath = path.resolve(CANVAS_HOME, cid, SPEC_FILENAME)
-		const specStat = fs.existsSync(specPath) ? fs.statSync(specPath) : null
-
-		const databasePath = path.resolve(CANVAS_HOME, cid, SqliteStore.DATABASE_FILENAME)
-		const databaseStat = fs.existsSync(databasePath) ? fs.statSync(databasePath) : null
-
 		console.log(cid)
-		console.log(`Spec:     ${specStat?.size ?? "--"} bytes`)
-		console.log(`Data:     ${databaseStat?.size ?? "--"} bytes`)
 
-		const db = new Database(databasePath)
-		try {
-			const messages = db.prepare("SELECT COUNT(*) AS count FROM _messages").get()
-			console.log(`Messages: ${messages.count}`)
-		} catch (err) {}
+		const specPath = path.resolve(CANVAS_HOME, cid, SPEC_FILENAME)
+		if (fs.existsSync(specPath)) {
+			const specStat = fs.statSync(specPath)
+			console.log(`Spec:     ${specStat.size} bytes`)
+		}
+
+		const messagesPath = path.resolve(CANVAS_HOME, cid, MessageStore.DATABASE_FILENAME)
+		if (fs.existsSync(messagesPath)) {
+			const messagesStat = fs.statSync(messagesPath)
+			const messagesDB = new Database(messagesPath)
+			const { count: actionCount } = messagesDB.prepare("SELECT COUNT(*) AS count FROM actions").get()
+			const { count: sessionCount } = messagesDB.prepare("SELECT COUNT(*) AS count FROM sessions").get()
+			console.log(`Messages: ${messagesStat.size} bytes (${actionCount} actions, ${sessionCount} sessions)`)
+		}
+
+		const modelsPath = path.resolve(CANVAS_HOME, cid, SqliteStore.DATABASE_FILENAME)
+		if (fs.existsSync(modelsPath)) {
+			const modelsStat = fs.statSync(modelsPath)
+			console.log(`Models:   ${modelsStat.size} bytes`)
+		}
 
 		console.log("")
 	}

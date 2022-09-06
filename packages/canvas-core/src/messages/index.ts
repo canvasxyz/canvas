@@ -44,7 +44,7 @@ type SessionRecord = {
 }
 
 export class MessageStore {
-	static MESSAGE_LOG_FILENAME = "log.sqlite"
+	static DATABASE_FILENAME = "messages.sqlite"
 
 	private readonly database: sqlite.Database
 	private readonly statements: Record<keyof typeof MessageStore.statements, sqlite.Statement>
@@ -61,7 +61,7 @@ export class MessageStore {
 				console.log(`[canvas-core] Initializing message store at ${directory}`)
 			}
 
-			this.database = new Database(path.join(directory, MessageStore.MESSAGE_LOG_FILENAME))
+			this.database = new Database(path.join(directory, MessageStore.DATABASE_FILENAME))
 		}
 
 		this.database.exec(MessageStore.createBlocksTable)

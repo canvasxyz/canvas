@@ -8,7 +8,7 @@ import { ModelStore, Effect } from "./store.js"
 import { mapEntries, signalInvalidType } from "../utils.js"
 
 export class SqliteStore implements ModelStore {
-	public static DATABASE_FILENAME = "db.sqlite"
+	public static DATABASE_FILENAME = "models.sqlite"
 
 	public readonly database: sqlite.Database
 
