@@ -55,7 +55,11 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 			setError(new Error("Connection error"))
 		}
 
+		const handleBeforeUnload = () => source.close()
+		window.addEventListener("beforeunload", handleBeforeUnload)
+
 		return () => {
+			window.removeEventListener("beforeunload", handleBeforeUnload)
 			source.close()
 		}
 	}, [url])
