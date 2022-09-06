@@ -64,6 +64,10 @@ export function call(
 	return result.value
 }
 
+export function newBigInt(context: QuickJSContext, value: bigint): QuickJSHandle {
+	return context.newString(value.toString()).consume((handle) => call(context, "BigInt", null, handle))
+}
+
 /**
  * Wrap an object outside a QuickJS VM by one level,
  * returning a QuickJSHandle in the host environment.

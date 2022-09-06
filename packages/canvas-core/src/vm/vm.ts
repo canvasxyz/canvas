@@ -1,31 +1,46 @@
 import assert from "node:assert"
 
+import { ethers } from "ethers"
 import { isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime, QuickJSWASMModule } from "quickjs-emscripten"
-// import * as t from "io-ts"
 
 // we can eliminate this dependency when Node 18 goes LTS with native fetch
 import fetch from "node-fetch"
 
-import { ActionArgument, ActionPayload, Model, ModelValue } from "@canvas-js/interfaces"
+import { ActionArgument, ActionContext, ActionPayload, Model, ModelValue } from "@canvas-js/interfaces"
 import type { Effect } from "../models/index.js"
-import { modelsType } from "../codecs.js"
+import { chainIdType, chainType, modelsType } from "../codecs.js"
 import { ApplicationError } from "../errors.js"
 import { mapEntries, signalInvalidType } from "../utils.js"
 
-import { loadModule, wrapObject, unwrapObject, disposeCachedHandles, call, wrapJSON, resolvePromise } from "./utils.js"
+import {
+	loadModule,
+	wrapObject,
+	unwrapObject,
+	disposeCachedHandles,
+	call,
+	wrapJSON,
+	resolvePromise,
+	unwrapArray,
+	wrapArray,
+	newBigInt,
+} from "./utils.js"
+import chalk from "chalk"
 
 type Exports = {
 	models: Record<string, Model>
 	actionParameters: Record<string, string[]>
+	routes: Record<string, string>
+	routeParameters: Record<string, string[]>
 	database?: "sqlite" | "postgres"
-	routes?: Record<string, string>
-	routeParameters?: Record<string, string[]>
 }
+
+type ContractFunctionResult = string | boolean | number | bigint
 
 export class VM {
 	public static async initialize(
 		name: string,
 		spec: string,
+		providers: Record<string, ethers.providers.JsonRpcProvider>,
 		quickJS: QuickJSWASMModule,
 		options: { verbose?: boolean } = {}
 	): Promise<{ vm: VM; exports: Exports }> {
@@ -39,17 +54,17 @@ export class VM {
 			models: modelsHandle,
 			routes: routesHandle,
 			actions: actionsHandle,
-			// contracts: contractsHandle,
+			contracts: contractsHandle,
 		} = moduleHandle.consume((handle) => unwrapObject(context, handle))
 
 		assert(modelsHandle !== undefined, "spec is missing `models` export")
 		assert(actionsHandle !== undefined, "spec is missing `actions` export")
 		assert(context.typeof(modelsHandle) === "object", "`models` export must be an object")
 		assert(context.typeof(actionsHandle) === "object", "`actions` export must be an object")
-		// assert(
-		// 	contractsHandle === undefined || context.typeof(contractsHandle) === "object",
-		// 	"`contracts` export must be an object"
-		// )
+		assert(
+			contractsHandle === undefined || context.typeof(contractsHandle) === "object",
+			"`contracts` export must be an object"
+		)
 
 		const models = modelsHandle.consume(context.dump)
 		assert(modelsType.is(models), "invalid `models` export")
@@ -83,16 +98,15 @@ export class VM {
 			assert(context.typeof(handle) === "function")
 		}
 
+		const exports: Exports = { models, actionParameters: {}, routes: {}, routeParameters: {} }
+
 		// parse and validate action handlers
-		const actionParameters: Record<string, string[]> = {}
 		const actionNamePattern = /^[a-zA-Z]+$/
 		for (const [name, handle] of Object.entries(actionHandles)) {
 			assertPattern(name, actionNamePattern, "invalid action name")
 			const source = call(context, "Function.prototype.toString", handle).consume(context.getString)
-			actionParameters[name] = parseFunctionParameters(source)
+			exports.actionParameters[name] = parseFunctionParameters(source)
 		}
-
-		const exports: Exports = { models, actionParameters }
 
 		if (databaseHandle !== undefined) {
 			assert(context.typeof(databaseHandle) === "string", "`database` export must be a string")
@@ -106,8 +120,6 @@ export class VM {
 			const routeParameterPattern = /:([a-zA-Z0-9_]+)/g
 
 			assert(context.typeof(routesHandle) === "object", "`routes` export must be an object")
-			exports.routes = {}
-			exports.routeParameters = {}
 			for (const [name, handle] of Object.entries(routesHandle.consume((handle) => unwrapObject(context, handle)))) {
 				assert(context.typeof(handle) === "string", "route queries must be strings")
 				assertPattern(name, routeNamePattern, "invalid route name")
@@ -119,19 +131,48 @@ export class VM {
 			}
 		}
 
-		const vm = new VM(runtime, context, actionHandles, models, options)
+		const contracts: Record<string, ethers.Contract> = {}
+		if (contractsHandle !== undefined) {
+			// parse and validate contracts
+			const contractNamePattern = /^[a-zA-Z]+$/
+			const contractHandles = contractsHandle.consume((handle) => unwrapObject(context, handle))
+			for (const [name, contractHandle] of Object.entries(contractHandles)) {
+				assertPattern(name, contractNamePattern, "invalid contract name")
+				const contract = contractHandle.consume((handle) => unwrapObject(context, handle))
+				const chain = contract.chain.consume(context.getString)
+				const chainId = contract.chainId.consume(context.getNumber)
+				const address = contract.address.consume(context.getString)
+				const abi = contract.abi
+					.consume((handle) => unwrapArray(context, handle))
+					.map((item) => item.consume(context.getString))
+
+				assert(chainType.is(chain), "invalid chain")
+				assert(chainIdType.is(chainId), "invalid chain id")
+
+				const key = `${chain}:${chainId}`
+				const provider = providers[key]
+				assert(provider !== undefined, `spec requires an RPC endpoint for ${key}`)
+				contracts[name] = new ethers.Contract(address, abi, provider)
+			}
+		}
+
+		const vm = new VM(runtime, context, actionHandles, models, contracts, options)
+
 		return { vm, exports }
 	}
 
 	private static readonly RUNTIME_MEMORY_LIMIT = 1024 * 640 // 640kb
 	private readonly dbHandle: QuickJSHandle
+	private readonly contractsHandle: QuickJSHandle
 	private effects: Effect[] | null = null
+	private actionContext: ActionContext | null = null
 
 	constructor(
 		private readonly runtime: QuickJSRuntime,
 		private readonly context: QuickJSContext,
 		private readonly actionHandles: Record<string, QuickJSHandle>,
 		models: Record<string, Model>,
+		contracts: Record<string, ethers.Contract>,
 		options: { verbose?: boolean }
 	) {
 		this.installGlobals(options)
@@ -155,6 +196,37 @@ export class VM {
 						this.effects.push({ type: "del", model: name, id })
 					}),
 				})
+			)
+		)
+
+		this.contractsHandle = wrapObject(
+			context,
+			mapEntries(contracts, (name, contract) =>
+				wrapObject(
+					context,
+					mapEntries(contract.functions, (key, fn) =>
+						context.newFunction(`${name}.${key}`, (...argHandles: QuickJSHandle[]) => {
+							assert(this.actionContext !== null, "internal error: this.actionContext is null")
+							const { block } = this.actionContext
+							assert(block !== undefined, "action called a contract function but did not include a blockhash")
+							const args = argHandles.map(context.dump)
+							if (options.verbose) {
+								const call = chalk.green(`${name}.${key}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`)
+								console.log(`[canvas-vm] contract: ${call} at block ${block.blocknum} (${block.blockhash})`)
+							}
+
+							const deferred = this.context.newPromise()
+							fn.apply(contract, args)
+								.then((result: ContractFunctionResult[]) => {
+									deferred.resolve(wrapArray(context, result.map(this.wrapContractFunctionResult)))
+								})
+								.catch((err) => deferred.reject(context.newString(err.toString())))
+								.finally(() => runtime.executePendingJobs())
+
+							return deferred.handle
+						})
+					)
+				)
 			)
 		)
 	}
@@ -215,20 +287,21 @@ export class VM {
 	 * Given a call, get a list of effects to pass to `store.applyEffects`, to be applied to the models.
 	 * Used by `.apply()` and when replaying actions.
 	 */
-	public async execute(hash: string, { call, args, spec, from, timestamp }: ActionPayload): Promise<Effect[]> {
-		assert(this.effects === null, "cannot apply more than one action at once")
+	public async execute(hash: string, { call, args, ...context }: ActionPayload): Promise<Effect[]> {
+		assert(this.effects === null && this.actionContext === null, "cannot apply more than one action at once")
 
 		const actionHandle = this.actionHandles[call]
 		assert(actionHandle !== undefined, "invalid action call")
 
 		const argHandles = args.map(this.wrapActionArgument)
 
-		const thisArg = wrapJSON(this.context, { hash, spec, from, timestamp })
+		const thisArg = wrapJSON(this.context, { hash, ...context })
 		this.context.setProp(thisArg, "db", this.dbHandle)
 
 		// after setting this.effects here, always make sure to reset it to null before
 		// returning or throwing an error - or the core won't be able to process more actions
 		this.effects = []
+		this.actionContext = context
 		const promiseResult = this.context.callFunction(actionHandle, thisArg, ...argHandles)
 
 		thisArg.dispose()
@@ -303,6 +376,22 @@ export class VM {
 		}
 
 		return values
+	}
+
+	private wrapContractFunctionResult = (value: ContractFunctionResult): QuickJSHandle => {
+		if (value === true) {
+			return this.context.true
+		} else if (value === false) {
+			return this.context.false
+		} else if (typeof value === "string") {
+			return this.context.newString(value)
+		} else if (typeof value === "number") {
+			return this.context.newNumber(value)
+		} else if (typeof value === "bigint") {
+			return newBigInt(this.context, value)
+		} else {
+			throw new Error("Unsupported value type in contract function result")
+		}
 	}
 }
 

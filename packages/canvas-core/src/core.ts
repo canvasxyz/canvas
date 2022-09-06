@@ -17,7 +17,6 @@ import {
 	verifySessionSignature,
 	ModelValue,
 	Model,
-	ContractMetadata,
 	Chain,
 } from "@canvas-js/interfaces"
 
@@ -65,7 +64,15 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(cid === name, "Core.name is not equal to the hash of the provided spec.")
 		}
 
-		const { vm, exports } = await VM.initialize(name, spec, quickJS, { verbose })
+		const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
+		for (const [chain, chainIds] of Object.keys(rpc || {})) {
+			for (const [chainId, url] of Object.entries(chainIds)) {
+				const key = `${chain}:${chainId}`
+				providers[key] = new ethers.providers.JsonRpcProvider(url)
+			}
+		}
+
+		const { vm, exports } = await VM.initialize(name, spec, providers, quickJS, { verbose })
 		const { models, actionParameters, database, routes, routeParameters } = exports
 
 		if (database !== undefined) {
@@ -84,8 +91,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			vm,
 			models,
 			actionParameters,
-			routes || {},
-			routeParameters || {},
+			routes,
+			routeParameters,
 			modelStore,
 			messageStore,
 			rpc || {},
@@ -124,10 +131,9 @@ export class Core extends EventEmitter<CoreEvents> {
 	// public readonly contractParameters: Record<string, { metadata: ContractMetadata; contract: ethers.Contract }>
 	// TODO: remove contractRpcProviders, we don't need two sets of providers
 	// public readonly contractRpcProviders: Record<string, ethers.providers.JsonRpcProvider>
+
 	private readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {}
-	// private readonly rpcProviders: Partial<Record<Chain, Record<string, ethers.providers.JsonRpcProvider>>> = {}
 	private readonly blockCache: Record<string, CacheMap<string, BlockInfo>> = {}
-	// private readonly blockCacheRecents: Record<string, string[]> = {}
 	private readonly blockCacheMostRecentTimestamp: Record<string, number> = {}
 
 	private readonly queue: PQueue
@@ -186,52 +192,6 @@ export class Core extends EventEmitter<CoreEvents> {
 				})
 			}
 		}
-
-		// parse and validate contracts
-		// this.contractParameters = {}
-		// this.contractRpcProviders = {}
-		// if (contractsHandle !== undefined) {
-		// 	const contractHandles = contractsHandle.consume(this.unwrapObject)
-		// 	const contracts = mapEntries(contractHandles, (contract, contractHandle) => {
-		// 		return contractHandle.consume(this.unwrapObject) // TODO: could be number?
-		// 	})
-
-		// 	const contractNamePattern = /^[a-zA-Z]+$/
-		// 	for (const name of Object.keys(contracts)) {
-		// 		assertPattern(name, contractNamePattern, "invalid contract name")
-		// 		const chain = contracts[name].chain.consume(this.context.getString)
-		// 		const chainId = contracts[name].chainId.consume(this.context.getNumber)
-		// 		const address = contracts[name].address.consume(this.context.getString)
-		// 		const abi = contracts[name].abi.consume(this.unwrapArray).map((item) => item.consume(this.context.getString))
-
-		// 		assert(chainType.is(chain), "invalid chain")
-		// 		assert(chainIdType.is(chainId), "invalid chain id")
-
-		// 		let rpcUrl
-		// 		if (!this.rpc[chain] || !this.rpc[chain][chainId]) {
-		// 			if (!this.unchecked)
-		// 				throw new Error(
-		// 					`[canvas-core] This spec needs an rpc endpoint for on-chain data (${chain}, chain id ${chainId}). Specify one with e.g. "canvas run --chain-rpc eth 1 https://mainnet.infura.io/v3/[APPID]".`
-		// 				)
-		// 			rpcUrl = ""
-		// 		} else {
-		// 			rpcUrl = this.rpc[chain][chainId]
-		// 		}
-
-		// 		let provider
-		// 		if (!this.contractRpcProviders[rpcUrl]) {
-		// 			provider = new ethers.providers.JsonRpcProvider(rpcUrl)
-		// 			this.contractRpcProviders[rpcUrl] = provider
-		// 		} else {
-		// 			provider = this.contractRpcProviders[rpcUrl]
-		// 		}
-
-		// 		this.contractParameters[name] = {
-		// 			metadata: { chain, chainId, address, abi },
-		// 			contract: new ethers.Contract(address, abi, provider),
-		// 		}
-		// 	}
-		// }
 	}
 
 	public async onIdle(): Promise<void> {
