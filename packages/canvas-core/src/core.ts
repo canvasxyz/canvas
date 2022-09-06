@@ -53,7 +53,7 @@ type BlockInfo = {
 export class Core extends EventEmitter<CoreEvents> {
 	private static readonly cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
-		const { store, directory, name, spec, verbose, unchecked, rpc, replay, quickJS } = config
+		const { store: modelStore, directory, name, spec, verbose, unchecked, rpc, replay, quickJS } = config
 
 		if (verbose) {
 			console.log(`[canvas-core] Initializing core ${name}`)
@@ -69,17 +69,27 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (database !== undefined) {
 			assert(
-				store.identifier === database,
-				`spec requires a ${database} model store, but the core was initialized with a ${store.identifier} model store`
+				modelStore.identifier === database,
+				`spec requires a ${database} model store, but the core was initialized with a ${modelStore.identifier} model store`
 			)
 		}
 
-		await store.initialize(models, routes)
+		await modelStore.initialize(models, routes)
 
-		const log = new MessageStore(name, directory, { verbose })
+		const messageStore = new MessageStore(name, directory, { verbose })
 
-		// const core = new Core(name, vm, models, routes, actionParameters, store, log, { verbose, unchecked, rpc })
-		const core = new Core(name, vm, models, actionParameters, store, log, { verbose, unchecked, rpc })
+		const options = { verbose, unchecked, rpc }
+		const core = new Core(
+			name,
+			vm,
+			models,
+			actionParameters,
+			routes || {},
+			routeParameters || {},
+			modelStore,
+			messageStore,
+			options
+		)
 
 		if (replay) {
 			if (verbose) {
@@ -87,14 +97,14 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 
 			let i = 0
-			for await (const [id, action] of log.getActionStream()) {
+			for await (const [id, action] of messageStore.getActionStream()) {
 				if (!actionType.is(action)) {
 					console.error("[canvas-core]", action)
 					throw new Error("Invalid action value in action log")
 				}
 
 				const effects = await vm.execute(id, action.payload)
-				await store.applyEffects(action.payload, effects)
+				await modelStore.applyEffects(action.payload, effects)
 				i++
 			}
 
@@ -125,11 +135,11 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly name: string,
 		public readonly vm: VM,
 		public readonly models: Record<string, Model>,
-		// public readonly routes: Record<string, string>,
-		// public readonly routes: Record<string, string>,
 		public readonly actionParameters: Record<string, string[]>,
-		public readonly store: ModelStore,
-		public readonly log: MessageStore,
+		public readonly routes: Record<string, string>,
+		public readonly routeParameters: Record<string, string[]>,
+		public readonly modelStore: ModelStore,
+		public readonly messageStore: MessageStore,
 		private readonly options: {
 			verbose?: boolean
 			unchecked?: boolean
@@ -245,8 +255,10 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		await this.queue.onEmpty()
 
+		// TODO: think about when and how to close the model store.
+		// Right now neither model store implementation actually needs closing.
+
 		this.vm.dispose()
-		this.store.close()
 		this.dispatchEvent(new Event("close"))
 	}
 
@@ -315,7 +327,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			const hash = await getActionHash(action)
 
 			// check if the action has already been applied
-			const existingRecord = await this.log.getActionByHash(hash)
+			const existingRecord = await this.messageStore.getActionByHash(hash)
 			if (existingRecord !== null) {
 				return { hash }
 			}
@@ -327,8 +339,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			// execute the action
 			const effects = await this.vm.execute(hash, action.payload)
-			await this.log.insertAction(hash, action)
-			await this.store.applyEffects(action.payload, effects)
+			await this.messageStore.insertAction(hash, action)
+			await this.modelStore.applyEffects(action.payload, effects)
 
 			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
 
@@ -352,7 +364,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
-			const session = await this.log.getSessionByAddress(action.session)
+			const session = await this.messageStore.getSessionByAddress(action.session)
 			assert(session !== null, "session not found")
 			assert(session.payload.timestamp + session.payload.duration > timestamp, "session expired")
 			assert(session.payload.timestamp <= timestamp, "session timestamp must precede action timestamp")
@@ -446,14 +458,14 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			const hash = await getSessionhash(session)
 
-			const existingRecord = await this.log.getSessionByHash(hash)
+			const existingRecord = await this.messageStore.getSessionByHash(hash)
 			if (existingRecord !== null) {
 				return { hash }
 			}
 
 			await this.validateSession(session)
 
-			await this.log.insertSession(hash, session)
+			await this.messageStore.insertSession(hash, session)
 
 			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
 
@@ -480,6 +492,6 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]> {
-		return this.store.getRoute(route, params)
+		return this.modelStore.getRoute(route, params)
 	}
 }
