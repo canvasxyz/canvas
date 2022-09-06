@@ -225,3 +225,22 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	const name = await Hash.of(spec)
 	return { name, spec }
 }
+
+// add elements with CacheMap.add(key, value) and they'll
+// get shifted out in the order they were added.
+export class CacheMap<K, V> extends Map<K, V> {
+	constructor(public readonly capacity: number) {
+		super()
+	}
+
+	add(key: K, value: V) {
+		this.set(key, value)
+		for (const key of this.keys()) {
+			if (this.size > this.capacity) {
+				this.delete(key)
+			} else {
+				break
+			}
+		}
+	}
+}

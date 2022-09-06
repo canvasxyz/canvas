@@ -115,8 +115,9 @@ export async function handler(args: Args) {
 			args.unchecked = true
 			args.peering = false
 			console.log(
-				chalk.yellow.bold("Running in unchecked mode. ") +
-					chalk.yellow("Block hashes will not be checked, and P2P will be disabled.")
+				chalk.yellow(
+					`${chalk.bold("Running in unchecked mode. ")} Block hashes will not be checked, and P2P will be disabled.`
+				)
 			)
 		} else {
 			console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
@@ -146,7 +147,10 @@ export async function handler(args: Args) {
 		)
 
 		if (databaseURI === null) {
-			console.log(chalk.yellow.bold("Using in-memory database. ") + chalk.yellow("All data will be lost on close."))
+			console.log(
+				chalk.yellow.bold("Using in-memory model database. ") + chalk.yellow("All data will be lost on close.")
+			)
+
 			console.log(
 				chalk.red(
 					`→ To persist data, add a database with ${chalk.bold(

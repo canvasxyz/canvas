@@ -155,10 +155,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		// set up rpc providers and block caches
 		for (const [chain, chainRpcs] of Object.entries(this.rpc)) {
-			// this.rpcProviders[chain as Chain] = {}
 			for (const [chainId, rpcUrl] of Object.entries(chainRpcs)) {
-				// const providers = this.rpcProviders[chain as Chain]
-				// if (!providers) continue
 				if (this.options.unchecked) continue
 
 				// set up each chain's rpc and blockhash cache
@@ -244,10 +241,6 @@ export class Core extends EventEmitter<CoreEvents> {
 	public async close() {
 		for (const provider of Object.values(this.providers)) {
 			provider.removeAllListeners("block")
-		}
-
-		if (this.options.verbose) {
-			console.log("[canvas-core] Closing...")
 		}
 
 		await this.queue.onEmpty()
