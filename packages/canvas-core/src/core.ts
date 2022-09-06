@@ -1,5 +1,6 @@
 import assert from "node:assert"
 
+import { ethers } from "ethers"
 import { QuickJSWASMModule } from "quickjs-emscripten"
 
 import PQueue from "p-queue"
@@ -22,7 +23,7 @@ import {
 
 import { ModelStore } from "./models/index.js"
 import { actionType, sessionType, chainType, chainIdType } from "./codecs.js"
-import { getActionHash, getSessionhash, mapEntries, signalInvalidType } from "./utils.js"
+import { getActionHash, getSessionhash, mapEntries, signalInvalidType, CacheMap } from "./utils.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
 
@@ -78,7 +79,6 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		const messageStore = new MessageStore(name, directory, { verbose })
 
-		const options = { verbose, unchecked, rpc }
 		const core = new Core(
 			name,
 			vm,
@@ -88,7 +88,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			routeParameters || {},
 			modelStore,
 			messageStore,
-			options
+			rpc || {},
+			{ verbose, unchecked }
 		)
 
 		if (replay) {
@@ -121,13 +122,13 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	// public readonly contractParameters: Record<string, { metadata: ContractMetadata; contract: ethers.Contract }>
-	// // TODO: remove contractRpcProviders, we don't need two sets of providers
+	// TODO: remove contractRpcProviders, we don't need two sets of providers
 	// public readonly contractRpcProviders: Record<string, ethers.providers.JsonRpcProvider>
-	// public readonly rpcProviders: Partial<Record<Chain, Record<string, ethers.providers.JsonRpcProvider>>>
-
-	// public readonly blockCache: Record<string, Record<string, BlockInfo>>
-	// public readonly blockCacheRecents: Record<string, string[]>
-	// public readonly blockCacheMostRecentTimestamp: Record<string, number>
+	private readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {}
+	// private readonly rpcProviders: Partial<Record<Chain, Record<string, ethers.providers.JsonRpcProvider>>> = {}
+	private readonly blockCache: Record<string, CacheMap<string, BlockInfo>> = {}
+	// private readonly blockCacheRecents: Record<string, string[]> = {}
+	private readonly blockCacheMostRecentTimestamp: Record<string, number> = {}
 
 	private readonly queue: PQueue
 
@@ -140,62 +141,54 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly routeParameters: Record<string, string[]>,
 		public readonly modelStore: ModelStore,
 		public readonly messageStore: MessageStore,
+		public readonly rpc: Partial<Record<Chain, Record<string, string>>>,
 		private readonly options: {
 			verbose?: boolean
 			unchecked?: boolean
-			rpc?: Partial<Record<Chain, Record<string, string>>>
 		}
 	) {
 		super()
 		this.queue = new PQueue({ concurrency: 1 })
 
-		// set up cache and rpc
-		// this.rpcProviders = {}
-		// this.blockCache = {}
-		// this.blockCacheRecents = {}
-		// this.blockCacheMostRecentTimestamp = {}
-		// for (const [chain, chainRpcs] of Object.entries(this.rpc)) {
-		// 	this.rpcProviders[chain as Chain] = {}
-		// 	for (const [chainId, rpcUrl] of Object.entries(chainRpcs)) {
-		// 		const providers = this.rpcProviders[chain as Chain]
-		// 		if (!providers) continue
-		// 		if (this.options.unchecked) continue
+		// keep up to 128 past blocks
+		const CACHE_SIZE = 128
 
-		// 		// set up each chain's rpc and blockhash cache
-		// 		const key = chain + ":" + chainId
-		// 		this.blockCache[key] = {}
-		// 		this.blockCacheRecents[key] = []
+		// set up rpc providers and block caches
+		for (const [chain, chainRpcs] of Object.entries(this.rpc)) {
+			// this.rpcProviders[chain as Chain] = {}
+			for (const [chainId, rpcUrl] of Object.entries(chainRpcs)) {
+				// const providers = this.rpcProviders[chain as Chain]
+				// if (!providers) continue
+				if (this.options.unchecked) continue
 
-		// 		// TODO: consider using JsonRpcBatchProvider
-		// 		providers[chainId] = new ethers.providers.JsonRpcProvider(rpcUrl.toString())
-		// 		providers[chainId].getBlockNumber().then(async (currentBlock) => {
-		// 			const updateCache = async (blocknum: number) => {
-		// 				const block = await providers[chainId].getBlock(blocknum)
-		// 				const info = { number: block.number, timestamp: block.timestamp }
-		// 				this.blockCacheMostRecentTimestamp[key] = block.timestamp
+				// set up each chain's rpc and blockhash cache
+				const key = `${chain}:${chainId}`
+				this.blockCache[key] = new CacheMap(CACHE_SIZE)
 
-		// 				// keep up to 128 past blocks
-		// 				const CACHE_SIZE = 128
-		// 				this.blockCache[key][block.hash] = info
-		// 				this.blockCacheRecents[key].push(block.hash)
-		// 				if (this.blockCacheRecents[key].length > CACHE_SIZE) {
-		// 					const evicted = this.blockCacheRecents[key].shift()
-		// 					if (evicted) delete this.blockCache[key][evicted]
-		// 				}
-		// 			}
+				// TODO: consider using JsonRpcBatchProvider
+				this.providers[key] = new ethers.providers.JsonRpcProvider(rpcUrl)
+				this.providers[key].getBlockNumber().then(async (currentBlockNumber) => {
+					const updateCache = async (blocknum: number) => {
+						const { timestamp, hash, number } = await this.providers[key].getBlock(blocknum)
+						if (this.options.verbose) {
+							console.log(`[canavs-core] Caching ${key} block ${number} (${hash})`)
+						}
 
-		// 			// listen for new blocks
-		// 			providers[chainId].on("block", updateCache)
+						this.blockCacheMostRecentTimestamp[key] = timestamp
+						this.blockCache[key].add(hash, { number, timestamp })
+					}
 
-		// 			// warm up cache with current block. this must happen *after* setting up the listener
-		// 			const block = await providers[chainId].getBlock(currentBlock)
-		// 			const info = { number: block.number, timestamp: block.timestamp }
+					// listen for new blocks
+					this.providers[key].on("block", updateCache)
 
-		// 			this.blockCache[key][block.hash] = info
-		// 			this.blockCacheRecents[key].unshift(block.hash)
-		// 		})
-		// 	}
-		// }
+					// warm up cache with current block. this must happen *after* setting up the listener
+					const block = await this.providers[key].getBlock(currentBlockNumber)
+					const info = { number: block.number, timestamp: block.timestamp }
+
+					this.blockCache[key].add(block.hash, info)
+				})
+			}
+		}
 
 		// parse and validate contracts
 		// this.contractParameters = {}
@@ -249,6 +242,10 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async close() {
+		for (const provider of Object.values(this.providers)) {
+			provider.removeAllListeners("block")
+		}
+
 		if (this.options.verbose) {
 			console.log("[canvas-core] Closing...")
 		}
@@ -262,14 +259,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.dispatchEvent(new Event("close"))
 	}
 
-	// public async getRoute(route: string, params: Record<string, ModelValue> = {}): Promise<Record<string, ModelValue>[]> {
-	// 	if (this.options.verbose) {
-	// 		console.log("[canvas-core] getRoute:", route, params)
-	// 	}
-
-	// 	return this.store.getRoute(route, params)
-	// }
-
 	private static boundsCheckLowerLimit = new Date("2020").valueOf()
 	private static boundsCheckUpperLimit = new Date("2070").valueOf()
 
@@ -277,38 +266,39 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Helper for verifying the blockhash for an action or session.
 	 */
 	public async verifyBlock(blockInfo: Block) {
-		// const { chain, chainId, blocknum, blockhash, timestamp } = blockInfo
-		// const rpcProviders = this.rpcProviders[chain]
-		// // TODO: declare the chains and chainIds that each spec will require upfront
-		// // Find the block via RPC.
-		// assert(rpcProviders !== undefined, `action signed with unsupported chain: ${chain}`)
-		// assert(rpcProviders[chainId] !== undefined, `action signed with unsupported chainId: ${chainId}`)
-		// let block
-		// if (this.blockCache[chain + ":" + chainId]) {
-		// 	block = this.blockCache[chain + ":" + chainId][blockhash]
-		// }
-		// if (!block) {
-		// 	try {
-		// 		if (this.options.verbose) {
-		// 			console.log(`[canvas-core] fetching block ${blockInfo.blockhash} for ${chain}:${chainId}`)
-		// 		}
-		// 		block = await rpcProviders[chainId].getBlock(blockInfo.blockhash)
-		// 		this.blockCache[chain + ":" + chainId][blockhash] = block
-		// 	} catch (err) {
-		// 		// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
-		// 		throw new Error("action signed with invalid block hash")
-		// 	}
-		// }
-		// // check the block retrieved from RPC matches metadata from the user
-		// assert(block, "could not find a valid block:" + JSON.stringify(block))
-		// assert(block.number === blocknum, "action/session provided with invalid block number")
-		// assert(block.timestamp === timestamp, "action/session provided with invalid timestamp")
-		// // check the block was recent
-		// const maxDelay = 30 * 60 // limit propagation to 30 minutes
-		// assert(
-		// 	timestamp >= this.blockCacheMostRecentTimestamp[chain + ":" + chainId] - maxDelay,
-		// 	"action must be signed with a recent timestamp, within " + maxDelay + "s of the last seen block"
-		// )
+		const { chain, chainId, blocknum, blockhash, timestamp } = blockInfo
+		const provider = this.providers[`${chain}:${chainId}`]
+
+		// TODO: declare the chains and chainIds that each spec will require upfront
+		// Find the block via RPC.
+		assert(provider !== undefined, `action signed with unsupported chain: ${chain} ${chainId}`)
+		let block
+		if (this.blockCache[chain + ":" + chainId]) {
+			block = this.blockCache[chain + ":" + chainId].get(blockhash)
+		}
+		if (!block) {
+			try {
+				if (this.options.verbose) {
+					console.log(`[canvas-core] fetching block ${blockInfo.blockhash} for ${chain}:${chainId}`)
+				}
+				block = await provider.getBlock(blockInfo.blockhash)
+				this.blockCache[chain + ":" + chainId].add(blockhash, block)
+			} catch (err) {
+				// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
+				throw new Error("action signed with invalid block hash")
+			}
+		}
+
+		// check the block retrieved from RPC matches metadata from the user
+		assert(block, "could not find a valid block:" + JSON.stringify(block))
+		assert(block.number === blocknum, "action/session provided with invalid block number")
+		assert(block.timestamp === timestamp, "action/session provided with invalid timestamp")
+		// check the block was recent
+		const maxDelay = 30 * 60 // limit propagation to 30 minutes
+		assert(
+			timestamp >= this.blockCacheMostRecentTimestamp[chain + ":" + chainId] - maxDelay,
+			"action must be signed with a recent timestamp, within " + maxDelay + "s of the last seen block"
+		)
 	}
 
 	/**
@@ -316,7 +306,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	 */
 	public apply(action: Action): Promise<{ hash: string }> {
 		if (this.options.verbose) {
-			console.log("[canvas-core] apply action:", JSON.stringify(action))
+			console.log("[canvas-core] apply action", action.session, action.signature, action.payload)
 		}
 
 		return this.queue.add(async () => {
@@ -492,6 +482,9 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]> {
+		if (this.options.verbose) {
+			console.log("[canvas-core] getRoute:", route, params)
+		}
 		return this.modelStore.getRoute(route, params)
 	}
 }
