@@ -335,6 +335,7 @@ export class VM {
 
 		const effects = this.effects
 		this.effects = null
+		this.actionContext = null
 		return effects
 	}
 
