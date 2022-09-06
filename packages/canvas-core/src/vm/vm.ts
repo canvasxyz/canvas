@@ -233,6 +233,7 @@ export class VM {
 
 	public dispose() {
 		this.dbHandle.dispose()
+		this.contractsHandle.dispose()
 		for (const handle of Object.values(this.actionHandles)) {
 			handle.dispose()
 		}
