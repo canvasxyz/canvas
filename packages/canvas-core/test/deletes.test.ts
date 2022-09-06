@@ -1,7 +1,5 @@
 import test from "ava"
 
-import fs from "node:fs"
-
 import { ethers } from "ethers"
 
 import { getQuickJS } from "quickjs-emscripten"
