@@ -390,6 +390,7 @@ export class VM {
 		} else if (typeof value === "number") {
 			return this.context.newNumber(value)
 		} else if (ethers.BigNumber.isBigNumber(value)) {
+			// TODO: support real bigints
 			// return newBigInt(this.context, value.toBigInt())
 			return this.context.newNumber(value.toNumber())
 		} else {

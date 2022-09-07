@@ -45,11 +45,6 @@ interface CoreEvents {
 	session: CustomEvent<SessionPayload>
 }
 
-type BlockInfo = {
-	number: number
-	timestamp: number
-}
-
 export class Core extends EventEmitter<CoreEvents> {
 	private static readonly cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
@@ -128,11 +123,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		return core
 	}
 
-	// public readonly contractParameters: Record<string, { metadata: ContractMetadata; contract: ethers.Contract }>
-	// TODO: remove contractRpcProviders, we don't need two sets of providers
-	// public readonly contractRpcProviders: Record<string, ethers.providers.JsonRpcProvider>
-
-	private readonly blockCache: Record<string, CacheMap<string, BlockInfo>> = {}
+	private readonly blockCache: Record<string, CacheMap<string, { number: number; timestamp: number }>> = {}
 	private readonly blockCacheMostRecentTimestamp: Record<string, number> = {}
 
 	private readonly queue: PQueue
@@ -172,15 +163,6 @@ export class Core extends EventEmitter<CoreEvents> {
 				this.blockCacheMostRecentTimestamp[key] = timestamp
 				this.blockCache[key].add(hash, { number, timestamp })
 			})
-
-			// // TODO: consider using JsonRpcBatchProvider
-			// provider.getBlockNumber().then(async (currentBlockNumber) => {
-			// 	// warm up cache with current block. this must happen *after* setting up the listener
-			// 	const block = await this.providers[key].getBlock(currentBlockNumber)
-			// 	const info = { number: block.number, timestamp: block.timestamp }
-
-			// 	this.blockCache[key].add(block.hash, info)
-			// })
 		}
 	}
 
@@ -267,9 +249,6 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			await this.validateAction(action)
 
-			// set up hooks available to action processor
-			// this.setupGlobals(action.payload.block)
-
 			// execute the action
 			const effects = await this.vm.execute(hash, action.payload)
 			await this.messageStore.insertAction(hash, action)
@@ -325,58 +304,6 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(verifiedAddress.toLowerCase() === action.payload.from.toLowerCase(), "action signed by wrong address")
 		}
 	}
-
-	/**
-	 * Set up function calls available to the QuickJS VM executor.
-	 * Used by `.apply()`.
-	 */
-	// private setupGlobals(block?: Block): void {
-	// 	const globalHandles: Record<string, QuickJSHandle> = {}
-
-	// 	if (block !== undefined) {
-	// 		// contract:
-	// 		globalHandles.contract = this.context.newFunction("contract", (nameHandle: QuickJSHandle) => {
-	// 			assert(this.context.typeof(nameHandle) === "string", "name must be a string")
-	// 			const name = this.context.getString(nameHandle)
-	// 			const contract = this.contractParameters[name].contract
-	// 			const { address, abi } = this.contractParameters[name].metadata
-	// 			const deferred = this.context.newPromise()
-	// 			if (this.verbose) console.log("[canvas-vm] using contract:", name, address)
-
-	// 			// produce an object that supports the contract's function calls
-	// 			const wrapper: Record<string, QuickJSHandle> = {}
-	// 			for (const key in contract.functions) {
-	// 				if (typeof key !== "string") continue
-	// 				if (key.indexOf("(") !== -1) continue
-
-	// 				wrapper[key] = this.context.newFunction(key, (...argHandles: any[]) => {
-	// 					const args = argHandles.map(this.context.dump)
-	// 					if (this.verbose) {
-	// 						const call = chalk.green(`${name}.${key}(${args.join(",")})`)
-	// 						console.log(`[canvas-vm] contract: ${call} at block ${block.blocknum} ${block.blockhash.slice(0, 5)}`)
-	// 					}
-
-	// 					contract[key]
-	// 						.apply(this, args.concat({ blockTag: block.blocknum }))
-	// 						.then((result: any) => {
-	// 							deferred.resolve(this.context.newString(result.toString()))
-	// 						})
-	// 						.catch((err: Error) => {
-	// 							console.error("[canvas-vm] contract call error:", err.message)
-	// 							deferred.reject(this.context.newString(err.message))
-	// 						})
-	// 					deferred.settled.then(this.runtime.executePendingJobs)
-	// 					return deferred.handle
-	// 				})
-	// 			}
-	// 			return this.wrapObject(wrapper)
-	// 		})
-	// 	}
-
-	// 	const globals = this.wrapObject(globalHandles)
-	// 	this.call("Object.assign", null, this.context.global, globals).dispose()
-	// 	globals.dispose()
-	// }
 
 	/**
 	 * Create a new session.
