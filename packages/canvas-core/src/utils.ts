@@ -196,7 +196,7 @@ export type Context<Models extends Record<string, Model>> = {
 			delete: (id: string) => void
 		}
 	}
-	contracts: Record<string, (...args: any[]) => Promise<any[]>>
+	contracts: Record<string, Record<string, (...args: any[]) => Promise<any[]>>>
 }
 
 export async function compileSpec<Models extends Record<string, Model>>(exports: {

@@ -65,7 +65,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
-		for (const [chain, chainIds] of Object.keys(rpc || {})) {
+		for (const [chain, chainIds] of Object.entries(rpc || {})) {
 			for (const [chainId, url] of Object.entries(chainIds)) {
 				const key = `${chain}:${chainId}`
 				providers[key] = new ethers.providers.JsonRpcProvider(url)
@@ -95,7 +95,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			routeParameters,
 			modelStore,
 			messageStore,
-			rpc || {},
+			providers,
 			{ verbose, unchecked }
 		)
 
@@ -132,7 +132,6 @@ export class Core extends EventEmitter<CoreEvents> {
 	// TODO: remove contractRpcProviders, we don't need two sets of providers
 	// public readonly contractRpcProviders: Record<string, ethers.providers.JsonRpcProvider>
 
-	private readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {}
 	private readonly blockCache: Record<string, CacheMap<string, BlockInfo>> = {}
 	private readonly blockCacheMostRecentTimestamp: Record<string, number> = {}
 
@@ -147,7 +146,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly routeParameters: Record<string, string[]>,
 		public readonly modelStore: ModelStore,
 		public readonly messageStore: MessageStore,
-		public readonly rpc: Partial<Record<Chain, Record<string, string>>>,
+		public readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {},
 		private readonly options: {
 			verbose?: boolean
 			unchecked?: boolean
@@ -160,37 +159,28 @@ export class Core extends EventEmitter<CoreEvents> {
 		const CACHE_SIZE = 128
 
 		// set up rpc providers and block caches
-		for (const [chain, chainRpcs] of Object.entries(this.rpc)) {
-			for (const [chainId, rpcUrl] of Object.entries(chainRpcs)) {
-				if (this.options.unchecked) continue
+		for (const [key, provider] of Object.entries(providers)) {
+			this.blockCache[key] = new CacheMap(CACHE_SIZE)
 
-				// set up each chain's rpc and blockhash cache
-				const key = `${chain}:${chainId}`
-				this.blockCache[key] = new CacheMap(CACHE_SIZE)
+			// listen for new blocks
+			provider.on("block", async (blocknum: number) => {
+				const { timestamp, hash, number } = await this.providers[key].getBlock(blocknum)
+				if (this.options.verbose) {
+					console.log(`[canavs-core] Caching ${key} block ${number} (${hash})`)
+				}
 
-				// TODO: consider using JsonRpcBatchProvider
-				this.providers[key] = new ethers.providers.JsonRpcProvider(rpcUrl)
-				this.providers[key].getBlockNumber().then(async (currentBlockNumber) => {
-					const updateCache = async (blocknum: number) => {
-						const { timestamp, hash, number } = await this.providers[key].getBlock(blocknum)
-						if (this.options.verbose) {
-							console.log(`[canavs-core] Caching ${key} block ${number} (${hash})`)
-						}
+				this.blockCacheMostRecentTimestamp[key] = timestamp
+				this.blockCache[key].add(hash, { number, timestamp })
+			})
 
-						this.blockCacheMostRecentTimestamp[key] = timestamp
-						this.blockCache[key].add(hash, { number, timestamp })
-					}
+			// // TODO: consider using JsonRpcBatchProvider
+			// provider.getBlockNumber().then(async (currentBlockNumber) => {
+			// 	// warm up cache with current block. this must happen *after* setting up the listener
+			// 	const block = await this.providers[key].getBlock(currentBlockNumber)
+			// 	const info = { number: block.number, timestamp: block.timestamp }
 
-					// listen for new blocks
-					this.providers[key].on("block", updateCache)
-
-					// warm up cache with current block. this must happen *after* setting up the listener
-					const block = await this.providers[key].getBlock(currentBlockNumber)
-					const info = { number: block.number, timestamp: block.timestamp }
-
-					this.blockCache[key].add(block.hash, info)
-				})
-			}
+			// 	this.blockCache[key].add(block.hash, info)
+			// })
 		}
 	}
 

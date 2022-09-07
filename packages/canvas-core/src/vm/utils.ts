@@ -67,9 +67,10 @@ export function call(
 	return result.value
 }
 
-export function newBigInt(context: QuickJSContext, value: bigint): QuickJSHandle {
-	return context.newString(value.toString()).consume((handle) => call(context, "BigInt", null, handle))
-}
+// TODO: figure out why quickjs-emscripten doesn't support BigInts
+// export function newBigInt(context: QuickJSContext, value: bigint): QuickJSHandle {
+// 	return context.newString(value.toString()).consume((handle) => call(context, "BigInt", null, handle))
+// }
 
 /**
  * Wrap an object outside a QuickJS VM by one level,

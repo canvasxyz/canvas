@@ -22,7 +22,6 @@ import {
 	resolvePromise,
 	unwrapArray,
 	wrapArray,
-	newBigInt,
 } from "./utils.js"
 import chalk from "chalk"
 
@@ -217,9 +216,9 @@ export class VM {
 
 							const deferred = this.context.newPromise()
 							fn.apply(contract, args)
-								.then((result: ContractFunctionResult[]) => {
-									deferred.resolve(wrapArray(context, result.map(this.wrapContractFunctionResult)))
-								})
+								.then((result: ContractFunctionResult[]) =>
+									wrapArray(context, result.map(this.wrapContractFunctionResult)).consume(deferred.resolve)
+								)
 								.catch((err) => deferred.reject(context.newString(err.toString())))
 								.finally(() => runtime.executePendingJobs())
 
@@ -298,6 +297,7 @@ export class VM {
 
 		const thisArg = wrapJSON(this.context, { hash, ...context })
 		this.context.setProp(thisArg, "db", this.dbHandle)
+		this.context.setProp(thisArg, "contracts", this.contractsHandle)
 
 		// after setting this.effects here, always make sure to reset it to null before
 		// returning or throwing an error - or the core won't be able to process more actions
@@ -389,9 +389,11 @@ export class VM {
 			return this.context.newString(value)
 		} else if (typeof value === "number") {
 			return this.context.newNumber(value)
-		} else if (typeof value === "bigint") {
-			return newBigInt(this.context, value)
+		} else if (ethers.BigNumber.isBigNumber(value)) {
+			// return newBigInt(this.context, value.toBigInt())
+			return this.context.newNumber(value.toNumber())
 		} else {
+			console.error(value)
 			throw new Error("Unsupported value type in contract function result")
 		}
 	}
