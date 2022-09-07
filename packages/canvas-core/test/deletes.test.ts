@@ -1,50 +1,62 @@
 import test from "ava"
 
-import fs from "node:fs"
-
 import { ethers } from "ethers"
 
 import { getQuickJS } from "quickjs-emscripten"
 
 import { ActionArgument, getActionSignatureData } from "@canvas-js/interfaces"
-import { Core, CoreConfig } from "@canvas-js/core"
+import { Core, SqliteStore, compileSpec } from "@canvas-js/core"
 
 const quickJS = await getQuickJS()
-
-const spec = fs.readFileSync("./test/example.canvas.js", "utf-8")
-const specName = "example.canvas.js"
 
 const signer = ethers.Wallet.createRandom()
 const signerAddress = await signer.getAddress()
 
-async function sign(signer: ethers.Wallet, session: string | null, call: string, args: ActionArgument[]) {
-	const timestamp = Date.now()
-	const actionPayload = { from: signerAddress, spec: specName, call, args, timestamp }
-	const actionSignatureData = getActionSignatureData(actionPayload)
-	const actionSignature = await signer._signTypedData(...actionSignatureData)
-	return { payload: actionPayload, session, signature: actionSignature }
-}
-
-const coreConfig: CoreConfig = {
-	name: specName,
-	databaseURI: null,
-	spec,
-	quickJS,
-	unchecked: true,
-}
-
 test("Test setting and then deleting a record", async (t) => {
-	const core = await Core.initialize(coreConfig)
-	const { hash: threadId } = await sign(signer, null, "newThread", [
-		"Hacker News",
-		"https://news.ycombinator.com",
-	]).then((action) => core.apply(action))
+	const store = new SqliteStore(null)
+	const { name, spec } = await compileSpec({
+		models: { threads: { title: "string", link: "string", creator: "string" } },
+		actions: {
+			newThread(title, link) {
+				if (typeof title === "string" && typeof link === "string") {
+					this.db.threads.set(this.hash, { creator: this.from, title, link })
+				}
+			},
+			deleteThread(threadId) {
+				if (typeof threadId === "string") {
+					this.db.threads.delete(threadId)
+				}
+			},
+		},
+	})
 
-	await core.getRoute("/latest", {}).then(({ length }) => t.is(length, 1))
+	async function sign(signer: ethers.Wallet, session: string | null, call: string, args: ActionArgument[]) {
+		const timestamp = Date.now()
+		const actionPayload = { from: signerAddress, spec: name, call, args, timestamp }
+		const actionSignatureData = getActionSignatureData(actionPayload)
+		const actionSignature = await signer._signTypedData(...actionSignatureData)
+		return { payload: actionPayload, session, signature: actionSignature }
+	}
+
+	const core = await Core.initialize({ name, directory: null, store, spec, quickJS, unchecked: true })
+
+	const newThreadAction = await sign(signer, null, "newThread", ["Hacker News", "https://news.ycombinator.com"])
+
+	const { hash: threadId } = await core.apply(newThreadAction)
+
+	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [
+		{
+			id: threadId,
+			title: "Hacker News",
+			link: "https://news.ycombinator.com",
+			creator: signerAddress,
+			updated_at: newThreadAction.payload.timestamp,
+		},
+	])
 
 	await sign(signer, null, "deleteThread", [threadId]).then((action) => core.apply(action))
 
-	await core.getRoute("/latest", {}).then(({ length }) => t.is(length, 0))
+	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [])
 
 	await core.close()
 })

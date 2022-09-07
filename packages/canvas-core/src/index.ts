@@ -4,5 +4,8 @@ import "fp-ts"
 
 export * from "./codecs.js"
 export * from "./core.js"
-export * from "./store/index.js"
+export * from "./models/index.js"
+export * from "./messages/index.js"
 export * from "./errors.js"
+
+export { compileSpec } from "./utils.js"

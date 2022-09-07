@@ -168,13 +168,3 @@ export const App: React.FC<{}> = ({}) => {
 		</>
 	)
 }
-
-const Address: React.FC<{ address: string }> = (props) => {
-	const prefix = props.address.slice(0, 5)
-	const suffix = props.address.slice(-4)
-	return (
-		<code>
-			{prefix}…{suffix}
-		</code>
-	)
-}

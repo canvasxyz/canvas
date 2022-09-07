@@ -69,13 +69,16 @@ export class API {
 
 		this.server = stoppable(
 			api.listen(port, () => {
-				console.log(`Serving ${core.name}:`)
-				console.log(`GET http://localhost:${port}/`)
+				console.log(`[canvas-cli] Serving ${core.name} on port ${port}:`)
+				console.log(`└ GET http://localhost:${port}/`)
 				for (const name of Object.keys(core.routeParameters)) {
-					console.log(`GET http://localhost:${port}${name}`)
+					console.log(`└ GET http://localhost:${port}${name}`)
 				}
-				console.log(`POST /actions [ ${Object.keys(core.actionParameters).join(", ")} ]`)
-				console.log(`POST /sessions`)
+				console.log("└ POST /actions")
+				console.log(`  └ ${actionType.name}`)
+				console.log(`  └ calls: [ ${Object.keys(core.actionParameters).join(", ")} ]`)
+				console.log("└ POST /sessions")
+				console.log(`  └ ${sessionType.name}`)
 			}),
 			0
 		)
@@ -111,7 +114,7 @@ export class API {
 			// subscription response
 			res.setHeader("Cache-Control", "no-cache")
 			res.setHeader("Content-Type", "text/event-stream")
-			res.setHeader("Access-Control-Allow-Origin", "*")
+			// res.setHeader("Access-Control-Allow-Origin", "*")
 			res.setHeader("Connection", "keep-alive")
 			res.flushHeaders()
 
@@ -167,8 +170,7 @@ export class API {
 					const messages = []
 
 					if (action.session !== null) {
-						const sessionKey = Core.getSessionKey(action.session)
-						const session = await this.core.store.getSession(sessionKey)
+						const session = await this.core.messageStore.getSessionByAddress(action.session)
 						if (session !== null) {
 							messages.push({ type: "session", ...session })
 						}

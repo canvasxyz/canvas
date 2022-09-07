@@ -1,4 +1,3 @@
-import fs from "node:fs"
 import process from "node:process"
 
 import yargs from "yargs"
@@ -12,7 +11,7 @@ import Hash from "ipfs-only-hash"
 import { Core } from "@canvas-js/core"
 
 import { API } from "../api.js"
-import { setupRpcs, locateSpec, confirmOrExit, defaultDatabaseURI } from "../utils.js"
+import { setupRpcs, locateSpec, confirmOrExit, defaultDatabaseURI, getModelStore } from "../utils.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -48,21 +47,17 @@ export const builder = (yargs: yargs.Argv) =>
 		})
 		.option("reset", {
 			type: "boolean",
-			desc: "Reset the action log and model database",
+			desc: "Reset the message log and model databases",
 			default: false,
 		})
 		.option("replay", {
 			type: "boolean",
-			desc: "Reconstruct the model database by replying the action log",
+			desc: "Reconstruct the model database by replying the message log",
 			default: false,
 		})
 		.option("unchecked", {
 			type: "boolean",
 			desc: "Run the node in unchecked mode, without verifying block hashes",
-		})
-		.option("watch", {
-			type: "boolean",
-			desc: "Restart the core on spec file changes",
 		})
 		.option("verbose", {
 			type: "boolean",
@@ -83,14 +78,10 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
-	const { name, directory, specPath, spec } = await locateSpec(args.spec, args.ipfs)
+	const { name, directory, spec } = await locateSpec(args.spec, args.ipfs)
 
 	const development = directory === null
 	const databaseURI = args.database || defaultDatabaseURI(directory)
-
-	if (!development && args.watch) {
-		console.log(chalk.yellow(`[canvas-cli] --watch has no effect on CID specs`))
-	}
 
 	if (development && args.peering) {
 		console.error(chalk.red(`[canvas-cli] --peering cannot be enabled for local development specs`))
@@ -124,8 +115,9 @@ export async function handler(args: Args) {
 			args.unchecked = true
 			args.peering = false
 			console.log(
-				chalk.yellow.bold("Running in unchecked mode. ") +
-					chalk.yellow("Block hashes will not be checked, and P2P will be disabled.")
+				chalk.yellow(
+					`${chalk.bold("Running in unchecked mode. ")} Block hashes will not be checked, and P2P will be disabled.`
+				)
 			)
 		} else {
 			console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
@@ -143,135 +135,66 @@ export async function handler(args: Args) {
 		console.log(chalk.yellow(`Peering enabled, using local IPFS peer ID ${peerID}`))
 	}
 
-	if (databaseURI) {
-		console.log(chalk.yellow(chalk.bold("Using database: " + databaseURI.replace(/^file:/, ""))))
-	}
-	if (!databaseURI && development) {
-		console.log(chalk.yellow.bold("Using in-memory database. ") + chalk.yellow("All data will be lost on close."))
+	if (databaseURI !== null) {
+		console.log(`[canvas-cli] Using model database ${databaseURI}`)
 	}
 
 	if (development) {
 		console.log(
 			chalk.yellow(
-				chalk.bold("Using development spec. ") + "To run in production mode, publish and run the spec from IPFS."
+				`${chalk.bold("Using development spec.")} To run in production mode, publish and run the spec from IPFS.`
 			)
 		)
-	}
 
-	if (development) {
-		console.log("")
-	}
-	if (!databaseURI && development) {
-		console.log(
-			chalk.red(
-				"→ To persist data, add a database with " +
-					chalk.bold("--database file:db.sqlite") +
-					", or run the spec from IPFS."
+		if (databaseURI === null) {
+			console.log(
+				chalk.yellow.bold("Using in-memory model database. ") + chalk.yellow("All data will be lost on close.")
 			)
-		)
-	}
 
-	if (development) {
+			console.log(
+				chalk.red(
+					`→ To persist data, add a database with ${chalk.bold(
+						"--database file:db.sqlite"
+					)}, or run the spec from IPFS.`
+				)
+			)
+		}
+
 		const cid = await Hash.of(spec)
 		console.log(
-			chalk.red("→ To publish the spec to IPFS, start " + chalk.bold("ipfs daemon") + " in a separate window and run:")
+			chalk.red(`→ To publish the spec to IPFS, start ${chalk.bold("ipfs daemon")} in a separate window and run:`)
 		)
 		console.log(chalk.red.bold(`  ipfs add ${args.spec}`))
 		console.log(chalk.red.bold(`  canvas run ${cid}`))
 		console.log("")
 	}
 
-	let core: Core, api: API
-	try {
-		core = await Core.initialize({
-			name,
-			spec,
-			verbose: args.verbose,
-			databaseURI,
-			quickJS,
-			replay: args.replay,
-			reset: args.reset,
-			unchecked: args.unchecked,
-			rpc,
-		})
+	const modelStore = getModelStore(databaseURI, { verbose: args.verbose })
+	const core = await Core.initialize({
+		store: modelStore,
+		directory,
+		name,
+		spec,
+		verbose: args.verbose,
+		quickJS,
+		replay: args.replay,
+		unchecked: args.unchecked,
+		rpc,
+	})
 
-		if (!args.noserver) {
-			api = new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
-		}
-	} catch (err) {
-		console.log(chalk.red(err))
-		// don't terminate on error
-	}
+	const api = args.noserver ? null : new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
 
-	// TODO: intercept SIGINT and shut down the server and core gracefully
-
-	if (!args.watch || !development) {
-		return
-	}
-
-	if (databaseURI === null) {
-		console.log(
-			chalk.yellow(
-				"[canvas-cli] Warning: the action log will be erased on every change to the spec file. All data will be lost."
-			)
-		)
-	} else if (args.reset) {
-		console.log(
-			chalk.yellow(
-				"[canvas-cli] Warning: the action log will be erased on every change to the spec file. All data will be lost."
-			)
-		)
-	} else if (args.replay) {
-		console.log(
-			chalk.yellow(
-				"[canvas-cli] Warning: the model database will be rebuilt from the action log on every change to the spec file."
-			)
-		)
-	}
-
-	let terminating = false
-	let oldSpec = spec
-	fs.watch(specPath, async (event, filename) => {
-		if (terminating || !filename || event !== "change") {
-			return
+	process.on("SIGINT", async () => {
+		process.stdout.write("[canvas-cli] Received SIGINT. Exiting gracefully...\n")
+		if (api !== null) {
+			process.stdout.write("[canvas-cli] Stopping API server...")
+			await api.stop()
+			process.stdout.write(" done!\n")
 		}
 
-		const newSpec = fs.readFileSync(specPath, "utf-8")
-		if (newSpec !== oldSpec) {
-			console.log(chalk.yellow("File changed, restarting core...\n"))
-			oldSpec = newSpec
-			terminating = true
-			try {
-				if (!args.noserver) {
-					await api?.stop()
-				}
-				await core.close()
-			} catch (err) {
-				// continue if the api or core crashed during the last reload
-			}
-
-			try {
-				core = await Core.initialize({
-					name,
-					spec,
-					verbose: args.verbose,
-					databaseURI,
-					quickJS,
-					replay: args.replay,
-					reset: args.reset,
-					unchecked: args.unchecked,
-					rpc,
-				})
-
-				if (!args.noserver) {
-					api = new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
-				}
-			} catch (err) {
-				console.log(chalk.red(err))
-				// don't terminate on error
-			}
-
-			terminating = false
-		}
+		process.stdout.write("[canvas-cli] Closing core...")
+		await core.close()
+		modelStore.close()
+		process.stdout.write(" done!\n")
 	})
 }

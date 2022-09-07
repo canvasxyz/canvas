@@ -14,6 +14,7 @@
 	},
 	"dependencies": {
 		"@canvas-js/interfaces": "0.0.16",
+		"@libp2p/interfaces": "^3.0.3",
 		"@types/better-sqlite3": "^7.5.0",
 		"@types/node-fetch": "^2.6.2",
 		"@types/pg": "^8.6.5",
@@ -25,6 +26,7 @@
 		"ipfs-only-hash": "^4.0.0",
 		"it-stream-types": "^1.0.4",
 		"knex": "^2.2.0",
+		"microcbor": "^0.2.0",
 		"multiformats": "^9.7.0",
 		"node-fetch": "^3.2.6",
 		"p-queue": "^7.2.0",
@@ -32,6 +34,7 @@
 		"quickjs-emscripten": "^0.21.0"
 	},
 	"devDependencies": {
+		"@ava/typescript": "^3.0.1",
 		"@types/node": "^18.0.0",
 		"ava": "^4.2.0",
 		"typescript": "^4.7.4"

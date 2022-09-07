@@ -10,7 +10,7 @@ import t from "io-ts"
 
 import prompts from "prompts"
 import { Chain } from "@canvas-js/interfaces"
-import { SqliteStore } from "@canvas-js/core"
+import { ModelStore, PostgresStore, SqliteStore } from "@canvas-js/core"
 
 const chainType: t.Type<Chain> = t.union([
 	t.literal("eth"),
@@ -47,18 +47,17 @@ export const cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 interface LocateSpecResult {
 	name: string
 	directory: string | null
-	specPath: string
 	spec: string
 }
 
-export async function locateSpec(name: string, ipfsAPI: string): Promise<LocateSpecResult> {
+export async function locateSpec(name: string, ipfsAPI?: string): Promise<LocateSpecResult> {
 	if (cidPattern.test(name)) {
 		const directory = path.resolve(CANVAS_HOME, name)
 		const specPath = path.resolve(CANVAS_HOME, name, SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const spec = fs.readFileSync(specPath, "utf-8")
-			return { name, directory, specPath, spec }
-		} else {
+			return { name, directory, spec }
+		} else if (ipfsAPI !== undefined) {
 			if (!fs.existsSync(directory)) {
 				console.log(`[canvas-cli] Creating directory ${directory}`)
 				fs.mkdirSync(directory)
@@ -67,12 +66,14 @@ export async function locateSpec(name: string, ipfsAPI: string): Promise<LocateS
 			const spec = await download(name, ipfsAPI)
 			fs.writeFileSync(specPath, spec)
 			console.log(`[canvas-cli] Downloaded spec to ${specPath}`)
-			return { name, directory, specPath, spec }
+			return { name, directory, spec }
+		} else {
+			throw new Error("No IPFS API provided")
 		}
 	} else if (name.endsWith(".js")) {
 		const specPath = path.resolve(name)
 		const spec = fs.readFileSync(specPath, "utf-8")
-		return { name: specPath, directory: null, specPath, spec }
+		return { name: specPath, directory: null, spec }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js file"))
 		process.exit(1)
@@ -146,4 +147,19 @@ export function getDirectorySize(directory: string): number {
 			return totalSize + stat.size
 		}
 	}, 0)
+}
+
+const fileURIPrefix = "file:"
+const postgresURIPrefix = "postgres:"
+
+export function getModelStore(databaseURI: string | null, options: { verbose?: boolean }): ModelStore {
+	if (databaseURI === null) {
+		return new SqliteStore(null, options)
+	} else if (databaseURI.startsWith(fileURIPrefix)) {
+		return new SqliteStore(databaseURI.slice(fileURIPrefix.length))
+	} else if (databaseURI.startsWith(postgresURIPrefix)) {
+		return new PostgresStore(databaseURI, options)
+	} else {
+		throw new Error("invalid database URI")
+	}
 }
