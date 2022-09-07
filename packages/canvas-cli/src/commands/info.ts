@@ -3,7 +3,7 @@ import chalk from "chalk"
 import * as t from "io-ts"
 import { getQuickJS } from "quickjs-emscripten"
 
-import { Core, actionType, sessionType, SqliteStore } from "@canvas-js/core"
+import { Core, actionType, sessionType } from "@canvas-js/core"
 
 import { defaultDatabaseURI, getModelStore, locateSpec } from "../utils.js"
 

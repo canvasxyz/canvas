@@ -20,18 +20,19 @@ import {
 	Chain,
 } from "@canvas-js/interfaces"
 
-import { ModelStore } from "./models/index.js"
+import { ModelStore, SqliteStore } from "./models/index.js"
 import { actionType, sessionType, chainType, chainIdType } from "./codecs.js"
 import { getActionHash, getSessionhash, mapEntries, signalInvalidType, CacheMap } from "./utils.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
+import path from "node:path"
 
 export interface CoreConfig {
 	name: string
 	directory: string | null
-	store: ModelStore
 	spec: string
 	quickJS: QuickJSWASMModule
+	store?: ModelStore
 	replay?: boolean
 	verbose?: boolean
 	unchecked?: boolean
@@ -48,7 +49,7 @@ interface CoreEvents {
 export class Core extends EventEmitter<CoreEvents> {
 	private static readonly cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
-		const { store: modelStore, directory, name, spec, verbose, unchecked, rpc, replay, quickJS } = config
+		const { directory, name, spec, verbose, unchecked, rpc, replay, quickJS } = config
 
 		if (verbose) {
 			console.log(`[canvas-core] Initializing core ${name}`)
@@ -69,6 +70,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		const { vm, exports } = await VM.initialize(name, spec, providers, quickJS, { verbose })
 		const { models, actionParameters, database, routes, routeParameters } = exports
+
+		const modelStore =
+			config.store || new SqliteStore(directory && path.resolve(directory, SqliteStore.DATABASE_FILENAME))
 
 		if (database !== undefined) {
 			assert(

@@ -54,8 +54,7 @@ test("Apply signed action", async (t) => {
 	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash } = await core.apply(action)
 
-	const result = store.database.prepare("SELECT * FROM threads").all()
-	t.deepEqual(result, [
+	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [
 		{
 			id: hash,
 			title: "Hacker News",
@@ -78,9 +77,7 @@ test("Apply two signed actions", async (t) => {
 	const voteThreadAction = await sign("voteThread", [newThreadHash, 1])
 	await core.apply(voteThreadAction)
 
-	const result = store.database.prepare("SELECT * FROM threads").all()
-
-	t.deepEqual(result, [
+	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [
 		{
 			id: newThreadHash,
 			title: "Hacker News",
@@ -126,8 +123,7 @@ test("Apply action signed with session key", async (t) => {
 
 	const { hash } = await core.apply(action)
 
-	const result = store.database.prepare("SELECT * FROM threads").all()
-	t.deepEqual(result, [
+	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [
 		{
 			id: hash,
 			title: "Hacker News",
@@ -161,9 +157,7 @@ test("Apply two actions signed with session keys", async (t) => {
 	const voteThreadAction = await sign("voteThread", [newThreadHash, 1])
 	await core.apply(voteThreadAction)
 
-	const result = store.database.prepare("SELECT * FROM threads").all()
-
-	t.deepEqual(result, [
+	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [
 		{
 			creator: signerAddress,
 			id: newThreadHash,
@@ -179,8 +173,7 @@ test("Apply two actions signed with session keys", async (t) => {
 })
 
 test("Apply an action with a missing signature", async (t) => {
-	const store = new SqliteStore(null)
-	const core = await Core.initialize({ name, spec, directory: null, store, quickJS, unchecked: true })
+	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 	const action = await sign("newThread", ["Example Website", "http://example.com"])
 	action.signature = "0x00"
 	await t.throwsAsync(core.apply(action), { instanceOf: Error, code: "INVALID_ARGUMENT" })
@@ -188,8 +181,7 @@ test("Apply an action with a missing signature", async (t) => {
 })
 
 test("Apply an action signed by wrong address", async (t) => {
-	const store = new SqliteStore(null)
-	const core = await Core.initialize({ name, spec, directory: null, store, quickJS, unchecked: true })
+	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 	const action = await sign("newThread", ["Example Website", "http://example.com"])
 	action.payload.from = sessionSignerAddress
 	await t.throwsAsync(core.apply(action), { instanceOf: Error, message: "action signed by wrong address" })
@@ -197,8 +189,7 @@ test("Apply an action signed by wrong address", async (t) => {
 })
 
 test("Apply an action that throws an error", async (t) => {
-	const store = new SqliteStore(null)
-	const core = await Core.initialize({ name, spec, directory: null, store, quickJS, unchecked: true })
+	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 
 	const newThreadAction = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash: newThreadHash } = await core.apply(newThreadAction)

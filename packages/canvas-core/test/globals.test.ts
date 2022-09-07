@@ -31,8 +31,7 @@ async function sign(signer: ethers.Wallet, session: string | null, call: string,
 }
 
 test("test fetch and log IP address", async (t) => {
-	const store = new SqliteStore(null)
-	const core = await Core.initialize({ name, spec, directory: null, store, quickJS, unchecked: true })
+	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 
 	const action = await sign(signer, null, "logIP", [])
 	await core.apply(action)

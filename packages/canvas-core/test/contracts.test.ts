@@ -26,7 +26,6 @@ test("Test calling the public ENS resolver contract", async (t) => {
 		return
 	}
 
-	const store = new SqliteStore(null)
 	const { name, spec } = await compileSpec({
 		models: {},
 		actions: {
@@ -48,7 +47,7 @@ test("Test calling the public ENS resolver contract", async (t) => {
 	})
 
 	const rpc = { eth: { [ETH_CHAIN_ID]: ETH_CHAIN_RPC } }
-	const core = await Core.initialize({ name, directory: null, store, spec, quickJS, rpc })
+	const core = await Core.initialize({ name, directory: null, spec, quickJS, rpc })
 	const provider = core.providers["eth:1"]
 
 	async function sign(call: string, args: ActionArgument[]): Promise<Action> {

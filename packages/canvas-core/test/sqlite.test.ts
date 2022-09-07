@@ -4,7 +4,7 @@ import { ethers } from "ethers"
 
 import { getQuickJS } from "quickjs-emscripten"
 
-import { Core, SqliteStore, compileSpec } from "@canvas-js/core"
+import { Core, compileSpec } from "@canvas-js/core"
 import { ActionArgument, getActionSignatureData } from "@canvas-js/interfaces"
 
 const quickJS = await getQuickJS()
@@ -52,8 +52,7 @@ async function sign(call: string, args: ActionArgument[]) {
 }
 
 test("get /all", async (t) => {
-	const store = new SqliteStore(null)
-	const core = await Core.initialize({ name, spec, directory: null, store, quickJS, unchecked: true })
+	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 
 	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash } = await core.apply(action)
@@ -66,29 +65,28 @@ test("get /all", async (t) => {
 		updated_at: action.payload.timestamp,
 	}
 
-	t.deepEqual(await store.getRoute("/all", {}), [{ ...expected, score: null }])
+	t.deepEqual(await core.getRoute("/all", {}), [{ ...expected, score: null }])
 
 	await sign("voteThread", [hash, 1]).then((action) => core.apply(action))
-	t.deepEqual(await store.getRoute("/all", {}), [{ ...expected, score: 1 }])
+	t.deepEqual(await core.getRoute("/all", {}), [{ ...expected, score: 1 }])
 
 	await sign("voteThread", [hash, -1]).then((action) => core.apply(action))
-	t.deepEqual(await store.getRoute("/all", {}), [{ ...expected, score: -1 }])
+	t.deepEqual(await core.getRoute("/all", {}), [{ ...expected, score: -1 }])
 
 	await core.close()
 })
 
 test("get /votes/:thread_id", async (t) => {
-	const store = new SqliteStore(null)
-	const core = await Core.initialize({ name, spec, directory: null, store, quickJS, unchecked: true })
+	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 
 	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash } = await core.apply(action)
 
 	await sign("voteThread", [hash, 1]).then((action) => core.apply(action))
-	t.deepEqual(await store.getRoute("/votes/:thread_id", { thread_id: hash }), [{ creator: signerAddress, value: 1 }])
+	t.deepEqual(await core.getRoute("/votes/:thread_id", { thread_id: hash }), [{ creator: signerAddress, value: 1 }])
 
 	await sign("voteThread", [hash, -1]).then((action) => core.apply(action))
-	t.deepEqual(await store.getRoute("/votes/:thread_id", { thread_id: hash }), [{ creator: signerAddress, value: -1 }])
+	t.deepEqual(await core.getRoute("/votes/:thread_id", { thread_id: hash }), [{ creator: signerAddress, value: -1 }])
 
 	await core.close()
 })
