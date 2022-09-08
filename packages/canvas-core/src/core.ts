@@ -100,9 +100,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		)
 
 		if (replay) {
-			if (verbose) {
-				console.log(`[canvas-core] Replaying action log...`)
-			}
+			console.log(`[canvas-core] Replaying action log...`)
 
 			let i = 0
 			for await (const [id, action] of messageStore.getActionStream()) {
@@ -116,9 +114,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				i++
 			}
 
-			if (verbose) {
-				console.log(`[canvas-core] Successfully replayed all ${i} entries from the action log.`)
-			}
+			console.log(`[canvas-core] Successfully replayed all ${i} entries from the action log.`)
 		}
 
 		if (verbose) {
