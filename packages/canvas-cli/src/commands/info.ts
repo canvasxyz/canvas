@@ -3,9 +3,9 @@ import chalk from "chalk"
 import * as t from "io-ts"
 import { getQuickJS } from "quickjs-emscripten"
 
-import { Core, actionType, sessionType } from "@canvas-js/core"
+import { actionType, sessionType, VM } from "@canvas-js/core"
 
-import { defaultDatabaseURI, getModelStore, locateSpec } from "../utils.js"
+import { locateSpec } from "../utils.js"
 
 export const command = "info <spec>"
 export const desc = "Show the models, views, and actions for a spec"
@@ -17,47 +17,29 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "string",
 			demandOption: true,
 		})
-		.option("database", {
-			type: "string",
-			desc: "Override database URI",
-		})
 		.option("ipfs", {
 			type: "string",
 			desc: "IPFS HTTP API URL",
 			default: "http://localhost:5001",
 		})
-		.option("verbose", {
-			type: "boolean",
-			desc: "Enable verbose logging",
-			default: false,
-		})
 
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { name, spec, directory } = await locateSpec(args.spec, args.ipfs)
-	const databaseURI = args.database || defaultDatabaseURI(directory)
-
+	const { name, spec } = await locateSpec(args.spec, args.ipfs)
 	const quickJS = await getQuickJS()
 
-	const store = getModelStore(databaseURI, {})
-	const core = await Core.initialize({
-		directory: null,
-		store,
-		name,
-		spec,
-		quickJS,
-		verbose: args.verbose,
-		unchecked: true,
-	})
+	const { vm, exports } = await VM.initialize(name, spec, {}, quickJS, { unchecked: true })
+	const { models, routeParameters, actionParameters, contractMetadata } = exports
+	vm.dispose()
 
-	console.log(`name: ${core.name}:\n`)
+	console.log(`name: ${name}:\n`)
 
 	console.log(chalk.green("===== models ====="))
-	console.log(`${JSON.stringify(core.models, null, "  ")}\n`)
+	console.log(`${JSON.stringify(models, null, "  ")}\n`)
 
-	// console.log(chalk.green("===== routes ====="))
-	// Object.keys(core.routeParameters).forEach((route) => console.log(`GET ${route}`))
+	console.log(chalk.green("===== routes ====="))
+	Object.keys(routeParameters).forEach((route) => console.log(`GET ${route}`))
 	console.log("POST /sessions")
 	console.log(printType(sessionType))
 	console.log("POST /actions")
@@ -66,19 +48,18 @@ export async function handler(args: Args) {
 
 	console.log(chalk.green("===== actions ====="))
 	console.log(
-		Object.entries(core.actionParameters)
+		Object.entries(actionParameters)
 			.map(([name, params]) => `${name}(${params.join(", ")})\n`)
 			.join("")
 	)
 
-	// console.log(chalk.green("===== contracts ====="))
-	// Object.entries(core.contractParameters).forEach(([name, { metadata }]) => {
-	// 	console.log(`${name}: ${metadata.chain} chainId:${metadata.chainId} ${metadata.address}`)
-	// 	metadata.abi.forEach((line) => console.log(`- ${line}`))
-	// })
-	// console.log("")
+	console.log(chalk.green("===== contracts ====="))
+	Object.entries(contractMetadata).forEach(([name, { chain, chainId, address, abi }]) => {
+		console.log(`${name}: ${address} on ${chain} ${chainId}`)
+		abi.forEach((line) => console.log(`- ${line}`))
+	})
+	console.log("")
 
-	await core.close()
 	process.exit(0)
 }
 
@@ -88,6 +69,20 @@ function printType<T>(type: t.Type<T>, indent = ""): string {
 			([name, prop]) => `${indent}  ${name}: ${printType(prop, indent + "  ")}\n`
 		)
 
+		return `{\n${props.join("") + indent}}`
+	} else if (type instanceof t.IntersectionType) {
+		const props: string[] = []
+		for (const child of type.types) {
+			if (child instanceof t.InterfaceType) {
+				for (const [name, prop] of Object.entries<t.Type<any>>(child.props)) {
+					props.push(`${indent}  ${name}: ${printType(prop, indent + "  ")}\n`)
+				}
+			} else if (child instanceof t.PartialType) {
+				for (const [name, prop] of Object.entries<t.Type<any>>(child.props)) {
+					props.push(`${indent}  ${name}?: ${printType(prop, indent + "  ")}\n`)
+				}
+			}
+		}
 		return `{\n${props.join("") + indent}}`
 	} else {
 		return chalk.green(type.name)

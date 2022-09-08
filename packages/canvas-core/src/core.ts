@@ -1,4 +1,5 @@
 import assert from "node:assert"
+import path from "node:path"
 
 import { ethers } from "ethers"
 import { QuickJSWASMModule } from "quickjs-emscripten"
@@ -18,14 +19,14 @@ import {
 	ModelValue,
 	Model,
 	Chain,
+	ContractMetadata,
 } from "@canvas-js/interfaces"
 
 import { ModelStore, SqliteStore } from "./models/index.js"
-import { actionType, sessionType, chainType, chainIdType } from "./codecs.js"
-import { getActionHash, getSessionhash, mapEntries, signalInvalidType, CacheMap } from "./utils.js"
+import { actionType, sessionType } from "./codecs.js"
+import { getActionHash, getSessionhash, CacheMap } from "./utils.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
-import path from "node:path"
 
 export interface CoreConfig {
 	name: string
@@ -69,7 +70,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		const { vm, exports } = await VM.initialize(name, spec, providers, quickJS, { verbose })
-		const { models, actionParameters, database, routes, routeParameters } = exports
+		const { models, actionParameters, database, routes, routeParameters, contractMetadata } = exports
 
 		const modelStore =
 			config.store || new SqliteStore(directory && path.resolve(directory, SqliteStore.DATABASE_FILENAME))
@@ -90,8 +91,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			vm,
 			models,
 			actionParameters,
-			routes,
 			routeParameters,
+			contractMetadata,
 			modelStore,
 			messageStore,
 			providers,
@@ -137,8 +138,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly vm: VM,
 		public readonly models: Record<string, Model>,
 		public readonly actionParameters: Record<string, string[]>,
-		public readonly routes: Record<string, string>,
 		public readonly routeParameters: Record<string, string[]>,
+		public readonly contractMetadata: Record<string, ContractMetadata>,
 		public readonly modelStore: ModelStore,
 		public readonly messageStore: MessageStore,
 		public readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {},

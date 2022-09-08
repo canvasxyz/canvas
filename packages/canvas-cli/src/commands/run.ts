@@ -1,17 +1,18 @@
 import process from "node:process"
+import path from "node:path"
+import fs from "node:fs"
 
 import yargs from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
-
 import { getQuickJS } from "quickjs-emscripten"
 import { create as createIpfsHttpClient, IPFSHTTPClient } from "ipfs-http-client"
 import Hash from "ipfs-only-hash"
 
-import { Core } from "@canvas-js/core"
+import { Core, MessageStore, SqliteStore } from "@canvas-js/core"
 
+import { setupRpcs, locateSpec, confirmOrExit, getModelStore } from "../utils.js"
 import { API } from "../api.js"
-import { setupRpcs, locateSpec, confirmOrExit, defaultDatabaseURI, getModelStore } from "../utils.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -74,30 +75,43 @@ type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	// validate options
 	if (args.replay && args.reset) {
-		console.error(chalk.red("[canvas-cli] --replay and --reset cannot be used together"))
+		console.log(chalk.red("[canvas-cli] --replay and --reset cannot be used together"))
 		process.exit(1)
 	}
 
 	const { name, directory, spec } = await locateSpec(args.spec, args.ipfs)
 
-	const development = directory === null
-	const databaseURI = args.database || defaultDatabaseURI(directory)
-
-	if (development && args.peering) {
-		console.error(chalk.red(`[canvas-cli] --peering cannot be enabled for local development specs`))
-		process.exit(1)
-	}
-
-	if (databaseURI === null) {
-		if (args.replay || args.reset) {
-			console.error(chalk.red("[canvas-cli] --replay and --reset cannot be used with temporary development databases"))
+	if (directory === null) {
+		if (args.peering) {
+			console.log(chalk.red(`[canvas-cli] --peering cannot be enabled for local development specs`))
+			process.exit(1)
+		} else if (args.replay || args.reset) {
+			console.log(chalk.red("[canvas-cli] --replay and --reset cannot be used with temporary development databases"))
 			process.exit(1)
 		}
-	} else {
-		if (args.reset) {
-			await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${databaseURI}?`)
-		} else if (args.replay) {
-			await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${databaseURI}?`)
+	} else if (args.reset) {
+		await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${directory}?`)
+		const messagesPath = path.resolve(directory, MessageStore.DATABASE_FILENAME)
+		if (fs.existsSync(messagesPath)) {
+			fs.rmSync(messagesPath)
+			console.log(`[canvas-cli] Deleted ${messagesPath}`)
+		}
+
+		const modelsPath = path.resolve(directory, SqliteStore.DATABASE_FILENAME)
+		if (fs.existsSync(modelsPath)) {
+			fs.rmSync(modelsPath)
+			console.log(`[canvas-cli] Deleted ${modelsPath}`)
+		}
+
+		if (args.database !== undefined) {
+			console.log(`[canvas-cli] The provided database at ${args.database} was not changed.`)
+		}
+	} else if (args.replay) {
+		await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
+		const modelsPath = path.resolve(directory, SqliteStore.DATABASE_FILENAME)
+		if (fs.existsSync(modelsPath)) {
+			fs.rmSync(modelsPath)
+			console.log(`[canvas-cli] Deleted ${modelsPath}`)
 		}
 	}
 
@@ -135,30 +149,15 @@ export async function handler(args: Args) {
 		console.log(chalk.yellow(`Peering enabled, using local IPFS peer ID ${peerID}`))
 	}
 
-	if (databaseURI !== null) {
-		console.log(`[canvas-cli] Using model database ${databaseURI}`)
-	}
-
-	if (development) {
+	if (directory === null) {
 		console.log(
 			chalk.yellow(
 				`${chalk.bold("Using development spec.")} To run in production mode, publish and run the spec from IPFS.`
 			)
 		)
 
-		if (databaseURI === null) {
-			console.log(
-				chalk.yellow.bold("Using in-memory model database. ") + chalk.yellow("All data will be lost on close.")
-			)
-
-			console.log(
-				chalk.red(
-					`→ To persist data, add a database with ${chalk.bold(
-						"--database file:db.sqlite"
-					)}, or run the spec from IPFS.`
-				)
-			)
-		}
+		console.log(chalk.yellow.bold("Using in-memory model database. ") + chalk.yellow("All data will be lost on close."))
+		console.log(chalk.red(`→ To persist data, run the spec from IPFS.`))
 
 		const cid = await Hash.of(spec)
 		console.log(
@@ -169,18 +168,10 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const modelStore = getModelStore(databaseURI, { verbose: args.verbose })
-	const core = await Core.initialize({
-		store: modelStore,
-		directory,
-		name,
-		spec,
-		verbose: args.verbose,
-		quickJS,
-		replay: args.replay,
-		unchecked: args.unchecked,
-		rpc,
-	})
+	const { database: databaseURI, verbose, replay, unchecked } = args
+	const store = getModelStore(databaseURI, directory, { verbose })
+
+	const core = await Core.initialize({ directory, name, spec, store, rpc, quickJS, verbose, replay, unchecked })
 
 	const api = args.noserver ? null : new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
 
@@ -194,7 +185,7 @@ export async function handler(args: Args) {
 
 		process.stdout.write("[canvas-cli] Closing core...")
 		await core.close()
-		modelStore.close()
+		core.modelStore.close() // not necessary (?)
 		process.stdout.write(" done!\n")
 	})
 }

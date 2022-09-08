@@ -6,7 +6,14 @@ import { isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime, QuickJSWASMModul
 // we can eliminate this dependency when Node 18 goes LTS with native fetch
 import fetch from "node-fetch"
 
-import { ActionArgument, ActionContext, ActionPayload, Model, ModelValue } from "@canvas-js/interfaces"
+import {
+	ActionArgument,
+	ActionContext,
+	ActionPayload,
+	ContractMetadata,
+	Model,
+	ModelValue,
+} from "@canvas-js/interfaces"
 import type { Effect } from "../models/index.js"
 import { chainIdType, chainType, modelsType } from "../codecs.js"
 import { ApplicationError } from "../errors.js"
@@ -30,6 +37,7 @@ type Exports = {
 	actionParameters: Record<string, string[]>
 	routes: Record<string, string>
 	routeParameters: Record<string, string[]>
+	contractMetadata: Record<string, ContractMetadata>
 	database?: "sqlite" | "postgres"
 }
 
@@ -41,7 +49,7 @@ export class VM {
 		spec: string,
 		providers: Record<string, ethers.providers.JsonRpcProvider>,
 		quickJS: QuickJSWASMModule,
-		options: { verbose?: boolean } = {}
+		options: { verbose?: boolean; unchecked?: boolean } = {}
 	): Promise<{ vm: VM; exports: Exports }> {
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
@@ -97,7 +105,7 @@ export class VM {
 			assert(context.typeof(handle) === "function")
 		}
 
-		const exports: Exports = { models, actionParameters: {}, routes: {}, routeParameters: {} }
+		const exports: Exports = { models, actionParameters: {}, routes: {}, routeParameters: {}, contractMetadata: {} }
 
 		// parse and validate action handlers
 		const actionNamePattern = /^[a-zA-Z]+$/
@@ -150,8 +158,11 @@ export class VM {
 
 				const key = `${chain}:${chainId}`
 				const provider = providers[key]
-				assert(provider !== undefined, `spec requires an RPC endpoint for ${key}`)
-				contracts[name] = new ethers.Contract(address, abi, provider)
+				assert(options.unchecked || provider !== undefined, `spec requires an RPC endpoint for ${key}`)
+				exports.contractMetadata[name] = { chain, chainId, address, abi }
+				if (provider !== undefined) {
+					contracts[name] = new ethers.Contract(address, abi, provider)
+				}
 			}
 		}
 

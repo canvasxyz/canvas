@@ -29,10 +29,6 @@ if (!fs.existsSync(CANVAS_HOME)) {
 	fs.mkdirSync(CANVAS_HOME)
 }
 
-export function defaultDatabaseURI(directory: string | null): string | null {
-	return directory && `file:${path.resolve(directory, SqliteStore.DATABASE_FILENAME)}`
-}
-
 export async function confirmOrExit(message: string) {
 	const { confirm } = await prompts({ type: "confirm", name: "confirm", message: chalk.yellow(message) })
 
@@ -152,14 +148,20 @@ export function getDirectorySize(directory: string): number {
 const fileURIPrefix = "file:"
 const postgresURIPrefix = "postgres:"
 
-export function getModelStore(databaseURI: string | null, options: { verbose?: boolean }): ModelStore {
-	if (databaseURI === null) {
-		return new SqliteStore(null, options)
-	} else if (databaseURI.startsWith(fileURIPrefix)) {
-		return new SqliteStore(databaseURI.slice(fileURIPrefix.length))
-	} else if (databaseURI.startsWith(postgresURIPrefix)) {
-		return new PostgresStore(databaseURI, options)
+export function getModelStore(
+	databaseURI: string | undefined,
+	directory: string | null,
+	options: { verbose?: boolean }
+): ModelStore {
+	if (databaseURI !== undefined) {
+		if (databaseURI.startsWith(fileURIPrefix)) {
+			return new SqliteStore(databaseURI.slice(fileURIPrefix.length))
+		} else if (databaseURI.startsWith(postgresURIPrefix)) {
+			return new PostgresStore(databaseURI, options)
+		} else {
+			throw new Error("invalid database URI")
+		}
 	} else {
-		throw new Error("invalid database URI")
+		return new SqliteStore(directory && path.resolve(directory, SqliteStore.DATABASE_FILENAME))
 	}
 }
