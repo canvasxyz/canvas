@@ -175,7 +175,7 @@ export async function handler(args: Args) {
 
 	const core = await Core.initialize({ directory, name, spec, store, rpc, quickJS, verbose, replay, unchecked })
 
-	const api = args.noserver ? null : new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
+	const api = args.noserver ? null : new API({ peerID, core, port: args.port, ipfs, peering: args.peering, verbose })
 
 	let stopping = false
 	process.on("SIGINT", async () => {

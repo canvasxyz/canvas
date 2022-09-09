@@ -20,6 +20,7 @@ interface APIConfig {
 	ipfs?: IPFSHTTPClient
 	peerID?: string
 	peering?: boolean
+	verbose?: boolean
 }
 
 export class API {
@@ -30,7 +31,9 @@ export class API {
 	readonly peerID?: string
 	readonly server: http.Server & stoppable.WithStop
 
-	constructor({ peerID, core, port, ipfs, peering }: APIConfig) {
+	private readonly peerLoggingTimer?: NodeJS.Timer
+
+	constructor({ peerID, core, port, ipfs, peering, verbose }: APIConfig) {
 		this.core = core
 		this.ipfs = ipfs
 		this.peering = !!peering
@@ -42,6 +45,23 @@ export class API {
 			ipfs.pubsub.subscribe(this.topic, this.handleMessage).catch((err) => {
 				console.log(chalk.red(`[canvas-cli] Failed to subscribe to pubsub topic: ${err}`))
 			})
+
+			if (verbose) {
+				const peerLoggingTimeout = 10000
+				this.peerLoggingTimer = setInterval(async () => {
+					ipfs.pubsub
+						.peers(this.topic!, { timeout: peerLoggingTimeout })
+						.then((peerIds) => {
+							console.log(`[canvas-cli] Connected to ${peerIds.length} pubsub peers`)
+							for (const peerId of peerIds) {
+								console.log(`             - ${peerId.toString()}`)
+							}
+						})
+						.catch((err) => {
+							console.log(chalk.red("[canvas-cli] Failed to list pubsub peers"), err)
+						})
+				}, peerLoggingTimeout)
+			}
 		}
 
 		const api = express()
@@ -85,6 +105,8 @@ export class API {
 	}
 
 	async stop() {
+		clearInterval(this.peerLoggingTimer)
+
 		if (this.peering && this.ipfs !== undefined && this.topic !== undefined) {
 			console.log(`[canvas-cli] Unsubscribing from pubsub topic ${this.topic}`)
 			await this.ipfs.pubsub
