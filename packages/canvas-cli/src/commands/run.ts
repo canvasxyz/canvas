@@ -148,7 +148,7 @@ export async function handler(args: Args) {
 		ipfs = createIpfsHttpClient({ url: args.ipfs })
 		const { id } = await ipfs.id()
 		peerID = id.toString()
-		console.log(chalk.yellow(`Peering enabled, using local IPFS peer ID ${peerID}`))
+		console.log(chalk.yellow(`[canvas-cli] Peering enabled, using local IPFS peer ID ${peerID}`))
 	}
 
 	if (directory === null) {
@@ -177,17 +177,26 @@ export async function handler(args: Args) {
 
 	const api = args.noserver ? null : new API({ peerID, core, port: args.port, ipfs, peering: args.peering })
 
+	let stopping = false
 	process.on("SIGINT", async () => {
-		process.stdout.write("[canvas-cli] Received SIGINT. Exiting gracefully...\n")
-		if (api !== null) {
-			process.stdout.write("[canvas-cli] Stopping API server...")
-			await api.stop()
-			process.stdout.write(" done!\n")
-		}
+		if (stopping) {
+			process.exit(1)
+		} else {
+			stopping = true
+			process.stdout.write(
+				`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`
+			)
 
-		process.stdout.write("[canvas-cli] Closing core...")
-		await core.close()
-		core.modelStore.close() // not necessary (?)
-		process.stdout.write(" done!\n")
+			if (api !== null) {
+				if (args.verbose) console.log("[canvas-cli] Stopping API server...")
+				await api.stop()
+				console.log("[canvas-cli] API server stopped.")
+			}
+
+			if (args.verbose) console.log("[canvas-cli] Closing core...")
+			await core.close()
+			core.modelStore.close() // not necessary (?)
+			if (args.verbose) console.log("[canvas-cli] Core closed.")
+		}
 	})
 }

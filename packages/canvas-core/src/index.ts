@@ -8,5 +8,5 @@ export * from "./models/index.js"
 export * from "./messages/index.js"
 export * from "./codecs.js"
 export * from "./errors.js"
-
+export * from "./encoding.js"
 export { compileSpec } from "./utils.js"

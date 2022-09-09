@@ -24,7 +24,8 @@ import {
 
 import { ModelStore, SqliteStore } from "./models/index.js"
 import { actionType, sessionType } from "./codecs.js"
-import { getActionHash, getSessionhash, CacheMap } from "./utils.js"
+import { CacheMap } from "./utils.js"
+import { getActionHash, getSessionhash } from "./encoding.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
 
@@ -174,6 +175,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	public async close() {
 		for (const provider of Object.values(this.providers)) {
 			provider.removeAllListeners("block")
+			provider.removeAllListeners()
 		}
 
 		await this.queue.onEmpty()
