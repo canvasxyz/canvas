@@ -48,7 +48,7 @@ export function getActionSignatureData(
 ): [TypedDataDomain, Record<string, TypedDataField[]>, Record<string, any>] {
 	const domain = {
 		name: "Canvas",
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
+		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)).toLowerCase(),
 	}
 
 	const actionValue = {
@@ -86,7 +86,7 @@ export function getSessionSignatureData(
 ): [TypedDataDomain, Record<string, TypedDataField[]>, Record<string, any>] {
 	const domain = {
 		name: "Canvas",
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
+		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)).toLowerCase(),
 	}
 
 	const sessionValue = {

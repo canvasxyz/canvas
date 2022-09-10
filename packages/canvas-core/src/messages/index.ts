@@ -157,12 +157,16 @@ export class MessageStore {
 		return record === undefined ? null : this.parseSessionRecord(record)
 	}
 
-	public getSessionByAddress(address: string): Session | null {
+	public getSessionByAddress(address: string): { hash: null; session: null } | { hash: string; session: Session } {
 		const record: undefined | SessionRecord = this.statements.getSessionByAddress.get({
 			session_address: fromHex(address),
 		})
 
-		return record === undefined ? null : this.parseSessionRecord(record)
+		if (record === undefined) {
+			return { hash: null, session: null }
+		} else {
+			return { hash: toHex(record.hash), session: this.parseSessionRecord(record) }
+		}
 	}
 
 	private parseSessionRecord(record: SessionRecord): Session {

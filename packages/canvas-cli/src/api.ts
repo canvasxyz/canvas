@@ -1,4 +1,5 @@
 import http from "node:http"
+import assert from "node:assert"
 
 import chalk from "chalk"
 import stoppable from "stoppable"
@@ -187,7 +188,7 @@ export class API {
 		await this.core
 			.apply(action)
 			.then(async ({ hash }) => {
-				this.publishMessage(action).catch((err) => {
+				this.publishMessage(hash, action).catch((err) => {
 					console.log(chalk.red("[canvas-cli] Failed to publish message to pubsub"), err)
 				})
 
@@ -200,10 +201,16 @@ export class API {
 			})
 	}
 
-	private async publishMessage(action: Action) {
+	private async publishMessage(actionHash: string, action: Action) {
 		if (this.peering && this.ipfs !== undefined && this.topic !== undefined) {
-			const session = action.session ? await this.core.messageStore.getSessionByAddress(action.session) : null
-			const message = encodeBinaryMessage(action, session)
+			let message: Uint8Array
+			if (action.session !== null) {
+				const { hash: sessionHash, session } = await this.core.messageStore.getSessionByAddress(action.session)
+				assert(sessionHash !== null && session !== null)
+				message = encodeBinaryMessage({ hash: actionHash, action }, { hash: sessionHash, session })
+			} else {
+				message = encodeBinaryMessage({ hash: actionHash, action }, { hash: null, session: null })
+			}
 
 			await this.ipfs.pubsub.publish(this.topic, message).catch((err) => {
 				console.error(chalk.red("[canvas-cli] Failed to publish action to pubsub topic"), err)

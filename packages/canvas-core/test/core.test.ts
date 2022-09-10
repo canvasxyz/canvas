@@ -10,7 +10,7 @@ import { ActionArgument, getActionSignatureData, getSessionSignatureData, Sessio
 const quickJS = await getQuickJS()
 
 const signer = ethers.Wallet.createRandom()
-const signerAddress = await signer.getAddress()
+const signerAddress = signer.address.toLowerCase()
 
 const { spec, name } = await compileSpec({
 	models: {

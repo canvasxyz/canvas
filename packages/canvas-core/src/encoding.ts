@@ -5,6 +5,8 @@ import { ethers } from "ethers"
 import * as cbor from "microcbor"
 import assert from "node:assert"
 
+const { hexlify, arrayify } = ethers.utils
+
 export type BinaryBlock = {
 	chain: Chain
 	chainId: ChainId
@@ -23,7 +25,7 @@ export type BinaryAction = {
 		from: Uint8Array
 		spec: string
 		timestamp: number
-		block?: BinaryBlock
+		block: BinaryBlock | null
 	}
 }
 
@@ -36,98 +38,124 @@ export type BinarySession = {
 		timestamp: number
 		address: Uint8Array
 		duration: number
-		block?: BinaryBlock
+		block: BinaryBlock | null
 	}
 }
 
-const toBinaryBlock = (block: Block): BinaryBlock => ({
-	...block,
-	blockhash: ethers.utils.arrayify(block.blockhash),
-})
+const toBinaryBlock = ({ blockhash, ...block }: Block): BinaryBlock => ({ ...block, blockhash: arrayify(blockhash) })
 
-const fromBinaryBlock = (binaryBlock: BinaryBlock): Block => ({
+const fromBinaryBlock = ({ blockhash, ...binaryBlock }: BinaryBlock): Block => ({
 	...binaryBlock,
-	blockhash: ethers.utils.hexlify(binaryBlock.blockhash),
+	blockhash: hexlify(blockhash).toLowerCase(),
 })
 
 const toBinarySession = (session: Session): BinarySession => ({
 	type: "session",
-	signature: ethers.utils.arrayify(session.signature),
+	signature: arrayify(session.signature),
 	payload: {
 		...session.payload,
-		from: ethers.utils.arrayify(session.payload.from),
-		address: ethers.utils.arrayify(session.payload.address),
-		block: session.payload.block && toBinaryBlock(session.payload.block),
+		from: arrayify(session.payload.from),
+		address: arrayify(session.payload.address),
+		block: session.payload.block ? toBinaryBlock(session.payload.block) : null,
 	},
 })
 
-const fromBinarySession = (binarySession: BinarySession): Session => ({
-	signature: ethers.utils.hexlify(binarySession.signature),
-	payload: {
-		...binarySession.payload,
-		from: ethers.utils.hexlify(binarySession.payload.from),
-		address: ethers.utils.hexlify(binarySession.payload.address),
-		block: binarySession.payload.block && fromBinaryBlock(binarySession.payload.block),
-	},
-})
+function fromBinarySession({ signature, payload: { from, address, block, ...payload } }: BinarySession): Session {
+	const session: Session = {
+		signature: hexlify(signature).toLowerCase(),
+		payload: {
+			...payload,
+			from: hexlify(from).toLowerCase(),
+			address: hexlify(address).toLowerCase(),
+		},
+	}
+
+	if (block !== null) {
+		session.payload.block = fromBinaryBlock(block)
+	}
+
+	return session
+}
 
 const toBinaryAction = (action: Action): BinaryAction => ({
 	type: "action",
-	signature: ethers.utils.arrayify(action.signature),
-	session: action.session ? ethers.utils.arrayify(action.session) : null,
+	signature: arrayify(action.signature),
+	session: action.session ? arrayify(action.session) : null,
 	payload: {
 		...action.payload,
-		from: ethers.utils.arrayify(action.payload.from),
-		block: action.payload.block && toBinaryBlock(action.payload.block),
+		from: arrayify(action.payload.from),
+		block: action.payload.block ? toBinaryBlock(action.payload.block) : null,
 	},
 })
 
-const fromBinaryAction = (binaryAction: BinaryAction): Action => ({
-	signature: ethers.utils.hexlify(binaryAction.signature),
-	session: binaryAction.session ? ethers.utils.hexlify(binaryAction.session) : null,
-	payload: {
-		...binaryAction.payload,
-		from: ethers.utils.hexlify(binaryAction.payload.from),
-		block: binaryAction.payload.block && fromBinaryBlock(binaryAction.payload.block),
-	},
-})
+function fromBinaryAction({ signature, session, payload: { from, block, ...payload } }: BinaryAction): Action {
+	const action: Action = {
+		signature: hexlify(signature).toLowerCase(),
+		session: session && hexlify(session).toLowerCase(),
+		payload: { ...payload, from: hexlify(from).toLowerCase() },
+	}
 
+	if (block !== null) {
+		action.payload.block = fromBinaryBlock(block)
+	}
+
+	return action
+}
+
+/**
+ * Guaranteed to encode hex as lower-case
+ */
 export function encodeAction(action: Action): Uint8Array {
 	const binaryAction = toBinaryAction(action)
 	return cbor.encode(binaryAction)
 }
 
+/**
+ * Guaranteed to encode hex as lower-case
+ */
 export function decodeAction(data: Uint8Array): Action {
 	const binaryAction = cbor.decode(data) as BinaryAction
 	return fromBinaryAction(binaryAction)
 }
 
+/**
+ * Guaranteed to encode hex as lower-case
+ */
 export function encodeSession(session: Session): Uint8Array {
 	const binarySession = toBinarySession(session)
 	return cbor.encode(binarySession)
 }
 
+/**
+ * Guaranteed to encode hex as lower-case
+ */
 export function decodeSession(data: Uint8Array): Session {
 	const binarySession = cbor.decode(data) as BinarySession
 	return fromBinarySession(binarySession)
 }
 
+/**
+ * Guaranteed to encode hex as lower-case
+ */
 export async function getActionHash(action: Action): Promise<string> {
 	const hash = createHash("sha256")
 	for await (const chunk of cbor.encodeStream(source([action]))) {
 		hash.update(chunk)
 	}
 
-	return ethers.utils.hexlify(hash.digest())
+	return "0x" + hash.digest("hex")
 }
 
-export async function getSessionhash(session: Session): Promise<string> {
+/**
+ * Guaranteed to encode hex as lower-case
+ */
+export async function getSessionHash(session: Session): Promise<string> {
 	const hash = createHash("sha256")
 	for await (const chunk of cbor.encodeStream(source([session]))) {
 		hash.update(chunk)
 	}
 
-	return ethers.utils.hexlify(hash.digest())
+	return "0x" + hash.digest("hex")
 }
 
 export async function* source<T>(iter: Iterable<T>) {
@@ -141,21 +169,26 @@ export async function* source<T>(iter: Iterable<T>) {
 // This means the wire format for pubsub messages is different than both `Action` and `BinaryAction`.
 // Here, we use CBOR, but a modified BinaryAction where .session is `null | BinarySession`
 // instead of `null | string`. We call this type a `BinaryMessage`
-type BinaryMessage = Omit<BinaryAction, "type" | "session"> & { session: BinarySession | null }
+type Hash = { hash: Uint8Array }
+type BinaryMessage = Omit<BinaryAction, "type" | "session"> & Hash & { session: null | (BinarySession & Hash) }
 
-export function encodeBinaryMessage(action: Action, session: Session | null): Uint8Array {
+export function encodeBinaryMessage(
+	{ hash: actionHash, action }: { hash: string; action: Action },
+	{ hash: sessionHash, session }: { hash: string; session: Session } | { hash: null; session: null }
+): Uint8Array {
 	assert(
 		action.session?.toLowerCase() === session?.payload.address.toLowerCase(),
 		"encodeBinaryMessage: action.session does not match session"
 	)
 
 	const message: BinaryMessage = {
-		signature: ethers.utils.arrayify(action.signature),
-		session: session ? toBinarySession(session) : null,
+		hash: arrayify(actionHash),
+		signature: arrayify(action.signature),
+		session: session ? { hash: arrayify(sessionHash), ...toBinarySession(session) } : null,
 		payload: {
 			...action.payload,
-			from: ethers.utils.arrayify(action.payload.from),
-			block: action.payload.block && toBinaryBlock(action.payload.block),
+			from: arrayify(action.payload.from),
+			block: action.payload.block ? toBinaryBlock(action.payload.block) : null,
 		},
 	}
 
@@ -172,12 +205,12 @@ export function decodeBinaryMessage(data: Uint8Array): [Action, Session | null] 
 	const session = binarySession && fromBinarySession(binarySession)
 	const action: Action = {
 		session: session && session.payload.address,
-		signature: ethers.utils.hexlify(signature),
-		payload: {
-			...payload,
-			from: ethers.utils.hexlify(from),
-			block: block && fromBinaryBlock(block),
-		},
+		signature: hexlify(signature).toLowerCase(),
+		payload: { ...payload, from: hexlify(from).toLowerCase() },
+	}
+
+	if (block !== null) {
+		action.payload.block = fromBinaryBlock(block)
 	}
 
 	return [action, session]

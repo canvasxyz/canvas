@@ -6,7 +6,7 @@ import { ethers } from "ethers"
 import { getQuickJS } from "quickjs-emscripten"
 
 import { Action, ActionArgument, ActionPayload, getActionSignatureData } from "@canvas-js/interfaces"
-import { Core, SqliteStore, compileSpec } from "@canvas-js/core"
+import { Core, compileSpec } from "@canvas-js/core"
 
 import { getCurrentBlock } from "./utils.js"
 
@@ -17,7 +17,7 @@ const { ETH_CHAIN_ID, ETH_CHAIN_RPC } = process.env
 const quickJS = await getQuickJS()
 
 const signer = ethers.Wallet.createRandom()
-const signerAddress = await signer.getAddress()
+const signerAddress = signer.address.toLowerCase()
 
 test("Test calling the public ENS resolver contract", async (t) => {
 	if (ETH_CHAIN_ID === undefined || ETH_CHAIN_RPC === undefined) {
