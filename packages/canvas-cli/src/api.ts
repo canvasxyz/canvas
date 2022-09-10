@@ -187,16 +187,9 @@ export class API {
 		await this.core
 			.apply(action)
 			.then(async ({ hash }) => {
-				if (this.peering && this.ipfs !== undefined && this.topic !== undefined) {
-					const message = encodeBinaryMessage(
-						action,
-						action.session === null ? null : await this.core.messageStore.getSessionByAddress(action.session)
-					)
-
-					await this.ipfs.pubsub.publish(this.topic, message).catch((err) => {
-						console.error(chalk.red("[canvas-cli] Failed to publish action to pubsub topic"), err)
-					})
-				}
+				this.publishMessage(action).catch((err) => {
+					console.log(chalk.red("[canvas-cli] Failed to publish message to pubsub"), err)
+				})
 
 				res.status(StatusCodes.OK).header("ETag", `"${hash}"`).end()
 			})
@@ -205,6 +198,17 @@ export class API {
 				console.error("[canvas-cli] Failed to apply action:", message)
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message || "Failed to apply action")
 			})
+	}
+
+	private async publishMessage(action: Action) {
+		if (this.peering && this.ipfs !== undefined && this.topic !== undefined) {
+			const session = action.session ? await this.core.messageStore.getSessionByAddress(action.session) : null
+			const message = encodeBinaryMessage(action, session)
+
+			await this.ipfs.pubsub.publish(this.topic, message).catch((err) => {
+				console.error(chalk.red("[canvas-cli] Failed to publish action to pubsub topic"), err)
+			})
+		}
 	}
 
 	handleSession = async (req: Request, res: Response) => {

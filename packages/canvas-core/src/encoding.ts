@@ -74,7 +74,7 @@ const fromBinarySession = (binarySession: BinarySession): Session => ({
 const toBinaryAction = (action: Action): BinaryAction => ({
 	type: "action",
 	signature: ethers.utils.arrayify(action.signature),
-	session: action.session === null ? null : ethers.utils.arrayify(action.session),
+	session: action.session ? ethers.utils.arrayify(action.session) : null,
 	payload: {
 		...action.payload,
 		from: ethers.utils.arrayify(action.payload.from),
@@ -84,7 +84,7 @@ const toBinaryAction = (action: Action): BinaryAction => ({
 
 const fromBinaryAction = (binaryAction: BinaryAction): Action => ({
 	signature: ethers.utils.hexlify(binaryAction.signature),
-	session: binaryAction.session === null ? null : ethers.utils.hexlify(binaryAction.session),
+	session: binaryAction.session ? ethers.utils.hexlify(binaryAction.session) : null,
 	payload: {
 		...binaryAction.payload,
 		from: ethers.utils.hexlify(binaryAction.payload.from),
@@ -144,10 +144,14 @@ export async function* source<T>(iter: Iterable<T>) {
 type BinaryMessage = Omit<BinaryAction, "type" | "session"> & { session: BinarySession | null }
 
 export function encodeBinaryMessage(action: Action, session: Session | null): Uint8Array {
-	assert(action.session === (session && session.payload.address))
+	assert(
+		action.session?.toLowerCase() === session?.payload.address.toLowerCase(),
+		"encodeBinaryMessage: action.session does not match session"
+	)
+
 	const message: BinaryMessage = {
 		signature: ethers.utils.arrayify(action.signature),
-		session: session === null ? null : toBinarySession(session),
+		session: session ? toBinarySession(session) : null,
 		payload: {
 			...action.payload,
 			from: ethers.utils.arrayify(action.payload.from),
