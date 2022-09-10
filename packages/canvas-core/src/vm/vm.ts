@@ -306,7 +306,13 @@ export class VM {
 
 		const argHandles = args.map(this.wrapActionArgument)
 
-		const thisArg = wrapJSON(this.context, { hash, ...context })
+		// everything that goes into the VM must be deterministic, and deterministic means normalized!
+		const from = context.from.toLowerCase()
+		const blockhash = context.block?.blockhash.toLowerCase()
+		const thisArg = wrapJSON(
+			this.context,
+			blockhash ? { hash, from, block: { ...context.block, blockhash } } : { hash, from }
+		)
 		this.context.setProp(thisArg, "db", this.dbHandle)
 		this.context.setProp(thisArg, "contracts", this.contractsHandle)
 
