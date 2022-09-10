@@ -11,7 +11,15 @@ import * as t from "io-ts"
 import type { Message } from "@libp2p/interface-pubsub"
 import type { EventCallback } from "@libp2p/interfaces/events"
 
-import { Core, actionType, sessionType, encodeBinaryMessage, decodeBinaryMessage } from "@canvas-js/core"
+import {
+	Core,
+	actionType,
+	sessionType,
+	encodeBinaryMessage,
+	decodeBinaryMessage,
+	getActionHash,
+	getSessionHash,
+} from "@canvas-js/core"
 import { Action, ModelValue, Session } from "@canvas-js/interfaces"
 import { IPFSHTTPClient } from "ipfs-http-client"
 
@@ -237,15 +245,13 @@ export class API {
 			})
 	}
 
-	static binaryMessageType = t.tuple([actionType, t.union([t.null, sessionType])])
-
 	handleMessage: EventCallback<Message> = async (event) => {
 		console.log(event)
 		if (event.type === "signed" && event.from.toString() === this.peerID) {
 			return
 		}
 
-		let message: [Action, Session | null]
+		let message: ReturnType<typeof decodeBinaryMessage>
 		try {
 			message = decodeBinaryMessage(event.data)
 		} catch (err) {
@@ -253,16 +259,20 @@ export class API {
 			return
 		}
 
-		if (!API.binaryMessageType.is(message)) {
-			console.error(chalk.red("[canvas-cli] Received invalid pubsub message"), message)
-			return
-		}
-
-		const [action, session] = message
+		const [{ hash: actionHash, action }, { hash: sessionHash, session }] = message
 		try {
+			await getActionHash(action).then((hash) =>
+				assert(hash === actionHash, `action hashes did not match: ${hash} !== ${actionHash}`)
+			)
+
 			if (session !== null) {
+				await getSessionHash(session).then((hash) =>
+					assert(hash === sessionHash, `session hashes did not match: ${hash} !== ${sessionHash}`)
+				)
+
 				await this.core.session(session)
 			}
+
 			await this.core.apply(action)
 		} catch (err) {
 			console.log(chalk.red("[canvas-cli] Error applying peer message"), err)

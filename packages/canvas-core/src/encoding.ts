@@ -1,9 +1,12 @@
+import assert from "node:assert"
 import { createHash } from "node:crypto"
 
 import type { Chain, ChainId, ActionArgument, Block, Session, Action } from "@canvas-js/interfaces"
 import { ethers } from "ethers"
 import * as cbor from "microcbor"
-import assert from "node:assert"
+import * as t from "io-ts"
+
+import { actionArgumentArrayType, chainIdType, chainType } from "./codecs.js"
 
 const { hexlify, arrayify } = ethers.utils
 
@@ -139,7 +142,7 @@ export function decodeSession(data: Uint8Array): Session {
  */
 export async function getActionHash(action: Action): Promise<string> {
 	const hash = createHash("sha256")
-	for await (const chunk of cbor.encodeStream(source([action]))) {
+	for await (const chunk of cbor.encodeStream(source([toBinaryAction(action)]))) {
 		hash.update(chunk)
 	}
 
@@ -151,7 +154,7 @@ export async function getActionHash(action: Action): Promise<string> {
  */
 export async function getSessionHash(session: Session): Promise<string> {
 	const hash = createHash("sha256")
-	for await (const chunk of cbor.encodeStream(source([session]))) {
+	for await (const chunk of cbor.encodeStream(source([toBinarySession(session)]))) {
 		hash.update(chunk)
 	}
 
@@ -170,11 +173,56 @@ export async function* source<T>(iter: Iterable<T>) {
 // Here, we use CBOR, but a modified BinaryAction where .session is `null | BinarySession`
 // instead of `null | string`. We call this type a `BinaryMessage`
 type Hash = { hash: Uint8Array }
-type BinaryMessage = Omit<BinaryAction, "type" | "session"> & Hash & { session: null | (BinarySession & Hash) }
+type BinaryMessage = Omit<BinaryAction, "type" | "session"> &
+	Hash & { session: null | (Omit<BinarySession, "type"> & Hash) }
+
+const isUint8Array = (u: unknown): u is Uint8Array => u instanceof Uint8Array
+const uint8ArrayType = new t.Type(
+	"Uint8Array",
+	isUint8Array,
+	(i, context) => (isUint8Array(i) ? t.success(i) : t.failure(i, context)),
+	t.identity
+)
+
+const binaryBlockType: t.Type<BinaryBlock> = t.type({
+	chain: chainType,
+	chainId: chainIdType,
+	blocknum: t.number,
+	blockhash: uint8ArrayType,
+	timestamp: t.number,
+})
+
+const binaryMessageType: t.Type<BinaryMessage> = t.type({
+	hash: uint8ArrayType,
+	signature: uint8ArrayType,
+	session: t.union([
+		t.null,
+		t.type({
+			hash: uint8ArrayType,
+			signature: uint8ArrayType,
+			payload: t.type({
+				from: uint8ArrayType,
+				spec: t.string,
+				timestamp: t.number,
+				address: uint8ArrayType,
+				duration: t.number,
+				block: t.union([t.null, binaryBlockType]),
+			}),
+		}),
+	]),
+	payload: t.type({
+		call: t.string,
+		args: actionArgumentArrayType,
+		from: uint8ArrayType,
+		spec: t.string,
+		timestamp: t.number,
+		block: t.union([t.null, binaryBlockType]),
+	}),
+})
 
 export function encodeBinaryMessage(
 	{ hash: actionHash, action }: { hash: string; action: Action },
-	{ hash: sessionHash, session }: { hash: string; session: Session } | { hash: null; session: null }
+	{ hash: sessionHash, session }: { hash: string | null; session: Session | null }
 ): Uint8Array {
 	assert(
 		action.session?.toLowerCase() === session?.payload.address.toLowerCase(),
@@ -184,7 +232,7 @@ export function encodeBinaryMessage(
 	const message: BinaryMessage = {
 		hash: arrayify(actionHash),
 		signature: arrayify(action.signature),
-		session: session ? { hash: arrayify(sessionHash), ...toBinarySession(session) } : null,
+		session: null,
 		payload: {
 			...action.payload,
 			from: arrayify(action.payload.from),
@@ -192,17 +240,30 @@ export function encodeBinaryMessage(
 		},
 	}
 
+	if (sessionHash !== null && session !== null) {
+		const { type, ...binarySession } = toBinarySession(session)
+		message.session = { hash: arrayify(sessionHash), ...binarySession }
+	}
+
 	return cbor.encode(message)
 }
 
-export function decodeBinaryMessage(data: Uint8Array): [Action, Session | null] {
+export function decodeBinaryMessage(
+	data: Uint8Array
+): [{ hash: string; action: Action }, { hash: string | null; session: Session | null }] {
+	const result = binaryMessageType.decode(cbor.decode(data))
+	if (result._tag === "Left") {
+		throw new Error("decodeBinaryMessage: invalid binary message")
+	}
+
 	const {
+		hash,
 		session: binarySession,
 		signature,
 		payload: { from, block, ...payload },
-	} = cbor.decode(data) as BinaryMessage
+	} = result.right
 
-	const session = binarySession && fromBinarySession(binarySession)
+	const session = binarySession && fromBinarySession({ type: "session", ...binarySession })
 	const action: Action = {
 		session: session && session.payload.address,
 		signature: hexlify(signature).toLowerCase(),
@@ -213,5 +274,8 @@ export function decodeBinaryMessage(data: Uint8Array): [Action, Session | null] 
 		action.payload.block = fromBinaryBlock(block)
 	}
 
-	return [action, session]
+	return [
+		{ hash: hexlify(hash).toLowerCase(), action },
+		{ hash: binarySession && hexlify(binarySession.hash).toLowerCase(), session },
+	]
 }
