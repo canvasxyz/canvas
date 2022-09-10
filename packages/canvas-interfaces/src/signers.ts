@@ -91,7 +91,7 @@ export function getSessionSignatureData(
 
 	const sessionValue = {
 		loginTo: payload.spec,
-		registerSessionAddress: payload.address,
+		registerSessionAddress: payload.address.toLowerCase(),
 		registerSessionDuration: payload.duration.toString(),
 		timestamp: payload.timestamp.toString(),
 	}
