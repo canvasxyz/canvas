@@ -10,7 +10,7 @@ import { Core, SqliteStore, compileSpec } from "@canvas-js/core"
 const quickJS = await getQuickJS()
 
 const signer = ethers.Wallet.createRandom()
-const signerAddress = await signer.getAddress()
+const signerAddress = signer.address.toLowerCase()
 
 test("Test setting and then deleting a record", async (t) => {
 	const store = new SqliteStore(null)

@@ -1,4 +1,5 @@
 import http from "node:http"
+import assert from "node:assert"
 
 import chalk from "chalk"
 import stoppable from "stoppable"
@@ -6,12 +7,20 @@ import cors from "cors"
 import express, { Request, Response } from "express"
 import bodyParser from "body-parser"
 import { StatusCodes } from "http-status-codes"
-// import * as t from "io-ts"
-// import type { Message } from "@libp2p/interface-pubsub"
-// import type { EventCallback } from "@libp2p/interfaces/events"
+import * as t from "io-ts"
+import type { Message } from "@libp2p/interface-pubsub"
+import type { EventCallback } from "@libp2p/interfaces/events"
 
-import { Core, actionType, sessionType } from "@canvas-js/core"
-import { ModelValue } from "@canvas-js/interfaces"
+import {
+	Core,
+	actionType,
+	sessionType,
+	encodeBinaryMessage,
+	decodeBinaryMessage,
+	getActionHash,
+	getSessionHash,
+} from "@canvas-js/core"
+import { Action, ModelValue, Session } from "@canvas-js/interfaces"
 import { IPFSHTTPClient } from "ipfs-http-client"
 
 interface APIConfig {
@@ -20,6 +29,7 @@ interface APIConfig {
 	ipfs?: IPFSHTTPClient
 	peerID?: string
 	peering?: boolean
+	verbose?: boolean
 }
 
 export class API {
@@ -29,20 +39,40 @@ export class API {
 	readonly topic?: string
 	readonly peerID?: string
 	readonly server: http.Server & stoppable.WithStop
+	private readonly verbose?: boolean
+	private readonly peerLoggingTimer?: NodeJS.Timer
 
-	constructor({ peerID, core, port, ipfs, peering }: APIConfig) {
+	constructor({ peerID, core, port, ipfs, peering, verbose }: APIConfig) {
 		this.core = core
 		this.ipfs = ipfs
 		this.peering = !!peering
+		this.verbose = verbose
 
-		// if (ipfs !== undefined && this.peering) {
-		// 	this.topic = `canvas:${core.name}`
-		// 	this.peerID = peerID
-		// 	console.log(chalk.yellow(`Subscribing to pubsub topic ${this.topic}`))
-		// 	ipfs.pubsub.subscribe(this.topic, this.handleMessage).catch((err) => {
-		// 		console.error(chalk.red(`[canvas-cli] Failed to subscribe to pubsub topic: ${err}`))
-		// 	})
-		// }
+		if (ipfs !== undefined && this.peering) {
+			this.topic = `canvas:${core.name}`
+			this.peerID = peerID
+			console.log(`[canvas-cli] Subscribing to pubsub topic ${this.topic}`)
+			ipfs.pubsub.subscribe(this.topic, this.handleMessage).catch((err) => {
+				console.log(chalk.red(`[canvas-cli] Failed to subscribe to pubsub topic: ${err}`))
+			})
+
+			if (verbose) {
+				const peerLoggingTimeout = 10000
+				this.peerLoggingTimer = setInterval(async () => {
+					ipfs.pubsub
+						.peers(this.topic!, { timeout: peerLoggingTimeout })
+						.then((peerIds) => {
+							console.log(`[canvas-cli] Connected to ${peerIds.length} pubsub peers`)
+							for (const peerId of peerIds) {
+								console.log(`[canvas-cli] - ${peerId.toString()}`)
+							}
+						})
+						.catch((err) => {
+							console.log(chalk.red("[canvas-cli] Failed to list pubsub peers"), err)
+						})
+				}, peerLoggingTimeout)
+			}
+		}
 
 		const api = express()
 		api.use(cors({ exposedHeaders: ["ETag"] }))
@@ -85,12 +115,14 @@ export class API {
 	}
 
 	async stop() {
-		// if (this.peering && this.ipfs !== undefined && this.topic !== undefined) {
-		// 	console.log(`[canvas-cli] Unsubscribing from pubsub topic ${this.topic}`)
-		// 	await this.ipfs.pubsub
-		// 		.unsubscribe(this.topic, this.handleMessage)
-		// 		.catch((err) => console.error("[canvas-cli] Error while unsubscribing from pubsub topic", err))
-		// }
+		clearInterval(this.peerLoggingTimer)
+
+		if (this.peering && this.ipfs !== undefined && this.topic !== undefined) {
+			console.log(`[canvas-cli] Unsubscribing from pubsub topic ${this.topic}`)
+			await this.ipfs.pubsub
+				.unsubscribe(this.topic, this.handleMessage)
+				.catch((err) => console.error("[canvas-cli] Error while unsubscribing from pubsub topic", err))
+		}
 
 		await new Promise<void>((resolve, reject) => {
 			this.server.stop((err) => (err ? reject(err) : resolve()))
@@ -114,7 +146,6 @@ export class API {
 			// subscription response
 			res.setHeader("Cache-Control", "no-cache")
 			res.setHeader("Content-Type", "text/event-stream")
-			// res.setHeader("Access-Control-Allow-Origin", "*")
 			res.setHeader("Connection", "keep-alive")
 			res.flushHeaders()
 
@@ -158,7 +189,11 @@ export class API {
 	handleAction = async (req: Request, res: Response) => {
 		const action = req.body
 		if (!actionType.is(action)) {
-			console.error(`[canvas-cli] Received invalid action`)
+			if (this.verbose) {
+				console.log(chalk.red(`[canvas-cli] Received invalid action`), action)
+			} else {
+				console.log(chalk.red(`[canvas-cli] Received invalid action`))
+			}
 			res.status(StatusCodes.BAD_REQUEST).end()
 			return
 		}
@@ -166,22 +201,9 @@ export class API {
 		await this.core
 			.apply(action)
 			.then(async ({ hash }) => {
-				// if (this.peering && this.ipfs !== undefined && this.topic !== undefined) {
-				// 	const messages = []
-
-				// 	if (action.session !== null) {
-				// 		const session = await this.core.messageStore.getSessionByAddress(action.session)
-				// 		if (session !== null) {
-				// 			messages.push({ type: "session", ...session })
-				// 		}
-				// 	}
-
-				// 	messages.push({ type: "action", ...action })
-				// 	const data = new TextEncoder().encode(JSON.stringify(messages))
-				// 	await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
-				// 		console.error("[canvas-cli] Failed to publish action to pubsub topic:", err)
-				// 	})
-				// }
+				this.publishMessage(hash, action).catch((err) => {
+					console.log(chalk.red("[canvas-cli] Failed to publish message to pubsub"), err)
+				})
 
 				res.status(StatusCodes.OK).header("ETag", `"${hash}"`).end()
 			})
@@ -192,64 +214,75 @@ export class API {
 			})
 	}
 
+	private async publishMessage(actionHash: string, action: Action) {
+		if (this.peering && this.ipfs !== undefined && this.topic !== undefined) {
+			let message: Uint8Array
+			if (action.session !== null) {
+				const { hash: sessionHash, session } = await this.core.messageStore.getSessionByAddress(action.session)
+				assert(sessionHash !== null && session !== null)
+				message = encodeBinaryMessage({ hash: actionHash, action }, { hash: sessionHash, session })
+			} else {
+				message = encodeBinaryMessage({ hash: actionHash, action }, { hash: null, session: null })
+			}
+
+			await this.ipfs.pubsub.publish(this.topic, message).catch((err) => {
+				console.error(chalk.red("[canvas-cli] Failed to publish action to pubsub topic"), err)
+			})
+		}
+	}
+
 	handleSession = async (req: Request, res: Response) => {
 		const session = req.body
 		if (!sessionType.is(session)) {
-			console.error(`[canvas-cli] Received invalid session`)
+			if (this.verbose) {
+				console.error(chalk.red(`[canvas-cli] Received invalid session`), session)
+			} else {
+				console.error(chalk.red(`[canvas-cli] Received invalid session`))
+			}
+
 			res.status(StatusCodes.BAD_REQUEST).end()
 			return
 		}
 
+		// Since we republish all session with each action, we just skip sending sessions
+		// over pubsub entirely.
 		await this.core
 			.session(session)
-			.then(async () => {
-				// if (this.peering && this.ipfs !== undefined && this.topic !== undefined) {
-				// 	const messages = [{ type: "session", ...session }]
-				// 	const data = new TextEncoder().encode(JSON.stringify(messages))
-				// 	await this.ipfs.pubsub.publish(this.topic, data).catch((err) => {
-				// 		console.error("[canvas-cli] Failed to publish session to pubsub topic:", err)
-				// 	})
-				// }
-				res.status(StatusCodes.OK).end()
-			})
+			.then(() => res.status(StatusCodes.OK).end())
 			.catch((err) => {
 				console.error("[canvas-cli] Failed to create session:", err)
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
 			})
 	}
 
-	// static messagesType = t.array(
-	// 	t.union([
-	// 		t.intersection([t.type({ type: t.literal("action") }), actionType]),
-	// 		t.intersection([t.type({ type: t.literal("session") }), sessionType]),
-	// 	])
-	// )
+	handleMessage: EventCallback<Message> = async (event) => {
+		if (event.type !== "signed" || event.from.toString() === this.peerID) {
+			return
+		}
 
-	// handleMessage: EventCallback<Message> = (event) => {
-	// 	if (event.from.toString() === this.peerID) {
-	// 		return
-	// 	}
+		if (this.verbose) {
+			console.log(`[canvas-cli] Reveived pubsub message from peer ${event.from.toString()}`)
+		}
 
-	// 	let messages
-	// 	try {
-	// 		const data = new TextDecoder().decode(event.data)
-	// 		messages = JSON.parse(data)
-	// 	} catch (err) {
-	// 		console.error("[canvas-cli] Failed to parse pubsub message:", err)
-	// 		return
-	// 	}
+		let decodedMessage: ReturnType<typeof decodeBinaryMessage>
+		try {
+			decodedMessage = decodeBinaryMessage(event.data)
+		} catch (err) {
+			console.error(chalk.red("[canvas-cli] Failed to parse pubsub message"), err)
+			return
+		}
 
-	// 	if (API.messagesType.is(messages)) {
-	// 		for (const message of messages) {
-	// 			// we don't need to await these here because core uses an async queue internally
-	// 			if (message.type === "action") {
-	// 				this.core.apply(message).catch((err) => console.error("[canvas-cli] Error applying peer action:", err))
-	// 			} else if (message.type === "session") {
-	// 				this.core.session(message).catch((err) => console.error("[canvas-cli] Error applying peer session:", err))
-	// 			}
-	// 		}
-	// 	}
-	// }
+		const { action, session } = decodedMessage
+		try {
+			if (session !== null) {
+				await this.core.session(session)
+			}
+
+			await this.core.apply(action)
+		} catch (err) {
+			console.log(chalk.red("[canvas-cli] Error applying peer message"), err)
+		}
+	}
 }
 
 function compareResults(a: Record<string, ModelValue>[], b: Record<string, ModelValue>[]) {

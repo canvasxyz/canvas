@@ -2,7 +2,6 @@ import path from "node:path"
 import assert from "node:assert"
 
 import Database, * as sqlite from "better-sqlite3"
-import chalk from "chalk"
 import * as cbor from "microcbor"
 
 import type { Action, Session, Block, ActionArgument } from "@canvas-js/interfaces"
@@ -76,7 +75,7 @@ export class MessageStore {
 	}
 
 	public insertAction(hash: string, action: Action) {
-		assert(action.payload.spec === this.name)
+		assert(action.payload.spec === this.name, "insertAction: action.payload.spec did not match MessageStore.name")
 
 		const args = cbor.encode(action.payload.args)
 
@@ -103,7 +102,7 @@ export class MessageStore {
 	}
 
 	public insertSession(hash: string, session: Session) {
-		assert(session.payload.spec === this.name)
+		assert(session.payload.spec === this.name, "insertSession: session.payload.spec did not match MessageStore.name")
 
 		const record: SessionRecord = {
 			hash: fromHex(hash),
@@ -158,12 +157,16 @@ export class MessageStore {
 		return record === undefined ? null : this.parseSessionRecord(record)
 	}
 
-	public getSessionByAddress(address: string): Session | null {
+	public getSessionByAddress(address: string): { hash: null; session: null } | { hash: string; session: Session } {
 		const record: undefined | SessionRecord = this.statements.getSessionByAddress.get({
 			session_address: fromHex(address),
 		})
 
-		return record === undefined ? null : this.parseSessionRecord(record)
+		if (record === undefined) {
+			return { hash: null, session: null }
+		} else {
+			return { hash: toHex(record.hash), session: this.parseSessionRecord(record) }
+		}
 	}
 
 	private parseSessionRecord(record: SessionRecord): Session {
@@ -217,8 +220,8 @@ export class MessageStore {
 
 			return Number(lastInsertRowid)
 		} else {
-			assert(block.blockhash === toHex(record.blockhash))
-			assert(block.timestamp === record.timestamp)
+			assert(block.blockhash === toHex(record.blockhash), "MessageStore.getBlockId: blockhashes did not match")
+			assert(block.timestamp === record.timestamp, "MessageStore.getBlockId: timestamps did not match")
 			return record.id
 		}
 	}
@@ -229,7 +232,7 @@ export class MessageStore {
 			throw new Error("internal error: failed to look up block id")
 		}
 
-		assert(chainType.is(record.chain))
+		assert(chainType.is(record.chain), `invalid chain type ${JSON.stringify(record.chain)}`)
 
 		return {
 			chain: record.chain,
@@ -300,7 +303,7 @@ export class MessageStore {
 }
 
 function fromHex(input: string) {
-	assert(input.startsWith("0x"))
+	assert(input.startsWith("0x"), 'input did not start with "0x"')
 	return Buffer.from(input.slice(2), "hex")
 }
 

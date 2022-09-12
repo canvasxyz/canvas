@@ -24,7 +24,8 @@ import {
 
 import { ModelStore, SqliteStore } from "./models/index.js"
 import { actionType, sessionType } from "./codecs.js"
-import { getActionHash, getSessionhash, CacheMap } from "./utils.js"
+import { CacheMap } from "./utils.js"
+import { getActionHash, getSessionHash } from "./encoding.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
 
@@ -174,6 +175,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	public async close() {
 		for (const provider of Object.values(this.providers)) {
 			provider.removeAllListeners("block")
+			provider.removeAllListeners()
 		}
 
 		await this.queue.onEmpty()
@@ -193,36 +195,39 @@ export class Core extends EventEmitter<CoreEvents> {
 	 */
 	public async verifyBlock(blockInfo: Block) {
 		const { chain, chainId, blocknum, blockhash, timestamp } = blockInfo
-		const provider = this.providers[`${chain}:${chainId}`]
+		const key = `${chain}:${chainId}`
+		const provider = this.providers[key]
+		const cache = this.blockCache[key]
 
 		// TODO: declare the chains and chainIds that each spec will require upfront
 		// Find the block via RPC.
-		assert(provider !== undefined, `action signed with unsupported chain: ${chain} ${chainId}`)
-		let block
-		if (this.blockCache[chain + ":" + chainId]) {
-			block = this.blockCache[chain + ":" + chainId].get(blockhash)
-		}
-		if (!block) {
+		assert(provider !== undefined && cache !== undefined, `action signed with unsupported chain: ${chain} ${chainId}`)
+
+		let block = cache.get(blockhash.toLowerCase())
+		if (block === undefined) {
+			if (this.options.verbose) {
+				console.log(`[canvas-core] Fetching block ${blockInfo.blockhash} for ${key}`)
+			}
+
 			try {
-				if (this.options.verbose) {
-					console.log(`[canvas-core] fetching block ${blockInfo.blockhash} for ${chain}:${chainId}`)
-				}
 				block = await provider.getBlock(blockInfo.blockhash)
-				this.blockCache[chain + ":" + chainId].add(blockhash, block)
 			} catch (err) {
 				// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
-				throw new Error("action signed with invalid block hash")
+				throw new Error("Failed to fetch block from RPC provider")
 			}
+
+			cache.add(blockhash, block)
 		}
 
 		// check the block retrieved from RPC matches metadata from the user
 		assert(block, "could not find a valid block:" + JSON.stringify(block))
 		assert(block.number === blocknum, "action/session provided with invalid block number")
 		assert(block.timestamp === timestamp, "action/session provided with invalid timestamp")
+
 		// check the block was recent
 		const maxDelay = 30 * 60 // limit propagation to 30 minutes
 		assert(
-			timestamp >= this.blockCacheMostRecentTimestamp[chain + ":" + chainId] - maxDelay,
+			timestamp >= this.blockCacheMostRecentTimestamp[key] - maxDelay,
 			"action must be signed with a recent timestamp, within " + maxDelay + "s of the last seen block"
 		)
 	}
@@ -240,7 +245,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(actionType.is(action), "Invalid action value")
 
 			// hash the action
-			const hash = await getActionHash(action)
+			const hash = getActionHash(action)
 
 			// check if the action has already been applied
 			const existingRecord = await this.messageStore.getActionByHash(hash)
@@ -262,7 +267,9 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async validateAction(action: Action) {
-		const { timestamp, block, spec, from } = action.payload
+		const { timestamp, block, spec } = action.payload
+		const fromAddress = action.payload.from.toLowerCase()
+
 		assert(spec === this.name, "session signed for wrong spec")
 
 		// check the timestamp bounds
@@ -277,32 +284,25 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
-			const session = await this.messageStore.getSessionByAddress(action.session)
+			const sessionAddress = action.session.toLowerCase()
+			const { session } = await this.messageStore.getSessionByAddress(sessionAddress)
 			assert(session !== null, "session not found")
 			assert(session.payload.timestamp + session.payload.duration > timestamp, "session expired")
 			assert(session.payload.timestamp <= timestamp, "session timestamp must precede action timestamp")
 
 			assert(session.payload.spec === spec, "action referenced a session for the wrong spec")
-
 			assert(
-				session.payload.from.toLowerCase() === from.toLowerCase(),
+				session.payload.from === fromAddress,
 				"invalid session key (action.payload.from and session.payload.from do not match)"
 			)
 
 			const verifiedAddress = verifyActionSignature(action)
-			assert(
-				verifiedAddress.toLowerCase() === action.session.toLowerCase(),
-				"invalid action signature (recovered address does not match)"
-			)
-			assert(
-				verifiedAddress.toLowerCase() === session.payload.address.toLowerCase(),
-				"invalid action signature (action, session do not match)"
-			)
-
+			assert(verifiedAddress === sessionAddress, "invalid action signature (recovered address does not match)")
+			assert(verifiedAddress === session.payload.address, "invalid action signature (action, session do not match)")
 			assert(action.payload.spec === session.payload.spec, "action signed for wrong spec")
 		} else {
 			const verifiedAddress = verifyActionSignature(action)
-			assert(verifiedAddress.toLowerCase() === action.payload.from.toLowerCase(), "action signed by wrong address")
+			assert(verifiedAddress === fromAddress, "action signed by wrong address")
 		}
 	}
 
@@ -317,7 +317,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		return this.queue.add(async () => {
 			assert(sessionType.is(session), "invalid session")
 
-			const hash = await getSessionhash(session)
+			const hash = getSessionHash(session)
 
 			const existingRecord = await this.messageStore.getSessionByHash(hash)
 			if (existingRecord !== null) {
