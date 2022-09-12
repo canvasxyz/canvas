@@ -140,25 +140,17 @@ export function decodeSession(data: Uint8Array): Session {
 /**
  * Guaranteed to encode hex as lower-case
  */
-export async function getActionHash(action: Action): Promise<string> {
-	const hash = createHash("sha256")
-	for await (const chunk of cbor.encodeStream(source([toBinaryAction(action)]))) {
-		hash.update(chunk)
-	}
-
-	return "0x" + hash.digest("hex")
+export function getActionHash(action: Action): string {
+	const data = cbor.encode(toBinaryAction(action))
+	return "0x" + createHash("sha256").update(data).digest("hex")
 }
 
 /**
  * Guaranteed to encode hex as lower-case
  */
-export async function getSessionHash(session: Session): Promise<string> {
-	const hash = createHash("sha256")
-	for await (const chunk of cbor.encodeStream(source([toBinarySession(session)]))) {
-		hash.update(chunk)
-	}
-
-	return "0x" + hash.digest("hex")
+export function getSessionHash(session: Session): string {
+	const data = cbor.encode(toBinarySession(session))
+	return "0x" + createHash("sha256").update(data).digest("hex")
 }
 
 export async function* source<T>(iter: Iterable<T>) {
@@ -248,25 +240,29 @@ export function encodeBinaryMessage(
 	return cbor.encode(message)
 }
 
-export function decodeBinaryMessage(
-	data: Uint8Array
-): [{ hash: string; action: Action }, { hash: string | null; session: Session | null }] {
-	const result = binaryMessageType.decode(cbor.decode(data))
-	if (result._tag === "Left") {
+export function decodeBinaryMessage(data: Uint8Array): { action: Action; session: Session | null } {
+	const binaryMessage = cbor.decode(data)
+	if (!binaryMessageType.is(binaryMessage)) {
 		throw new Error("decodeBinaryMessage: invalid binary message")
 	}
 
-	const {
-		hash,
-		session: binarySession,
-		signature,
-		payload: { from, block, ...payload },
-	} = result.right
+	const { from, block, ...payload } = binaryMessage.payload
 
-	const session = binarySession && fromBinarySession({ type: "session", ...binarySession })
+	// We do a little extra work here to validate the hashes *inside* of decodeBinaryMessage
+	// to avoid re-constructing BinarySession and BinaryAction objects afterwards.
+	const binaryAction: BinaryAction = {
+		type: "action",
+		signature: binaryMessage.signature,
+		session: binaryMessage.session && binaryMessage.session.payload.address,
+		payload: binaryMessage.payload,
+	}
+
+	const binaryActionDigest = createHash("sha256").update(cbor.encode(binaryAction)).digest()
+	assert(binaryActionDigest.compare(binaryMessage.hash) === 0, "decodeBinaryMessage: action hash does not match")
+
 	const action: Action = {
-		session: session && session.payload.address,
-		signature: hexlify(signature).toLowerCase(),
+		session: null,
+		signature: hexlify(binaryMessage.signature).toLowerCase(),
 		payload: { ...payload, from: hexlify(from).toLowerCase() },
 	}
 
@@ -274,8 +270,18 @@ export function decodeBinaryMessage(
 		action.payload.block = fromBinaryBlock(block)
 	}
 
-	return [
-		{ hash: hexlify(hash).toLowerCase(), action },
-		{ hash: binarySession && hexlify(binarySession.hash).toLowerCase(), session },
-	]
+	if (binaryMessage.session !== null) {
+		const binarySession: BinarySession = { type: "session", ...binaryMessage.session }
+		const binarySessionDigest = createHash("sha256").update(cbor.encode(binarySession)).digest()
+		assert(
+			binarySessionDigest.compare(binaryMessage.session.hash) === 0,
+			"decodeBinaryMessage: session hash does not match"
+		)
+
+		const session = fromBinarySession(binarySession)
+		action.session = session.payload.address
+		return { action, session }
+	} else {
+		return { action, session: null }
+	}
 }

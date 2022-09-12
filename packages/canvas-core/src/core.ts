@@ -245,7 +245,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(actionType.is(action), "Invalid action value")
 
 			// hash the action
-			const hash = await getActionHash(action)
+			const hash = getActionHash(action)
 
 			// check if the action has already been applied
 			const existingRecord = await this.messageStore.getActionByHash(hash)
@@ -317,7 +317,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		return this.queue.add(async () => {
 			assert(sessionType.is(session), "invalid session")
 
-			const hash = await getSessionHash(session)
+			const hash = getSessionHash(session)
 
 			const existingRecord = await this.messageStore.getSessionByHash(hash)
 			if (existingRecord !== null) {

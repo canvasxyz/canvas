@@ -39,13 +39,14 @@ export class API {
 	readonly topic?: string
 	readonly peerID?: string
 	readonly server: http.Server & stoppable.WithStop
-
+	private readonly verbose?: boolean
 	private readonly peerLoggingTimer?: NodeJS.Timer
 
 	constructor({ peerID, core, port, ipfs, peering, verbose }: APIConfig) {
 		this.core = core
 		this.ipfs = ipfs
 		this.peering = !!peering
+		this.verbose = verbose
 
 		if (ipfs !== undefined && this.peering) {
 			this.topic = `canvas:${core.name}`
@@ -63,7 +64,7 @@ export class API {
 						.then((peerIds) => {
 							console.log(`[canvas-cli] Connected to ${peerIds.length} pubsub peers`)
 							for (const peerId of peerIds) {
-								console.log(`             - ${peerId.toString()}`)
+								console.log(`[canvas-cli] - ${peerId.toString()}`)
 							}
 						})
 						.catch((err) => {
@@ -188,7 +189,11 @@ export class API {
 	handleAction = async (req: Request, res: Response) => {
 		const action = req.body
 		if (!actionType.is(action)) {
-			console.error(`[canvas-cli] Received invalid action`)
+			if (this.verbose) {
+				console.log(chalk.red(`[canvas-cli] Received invalid action`), action)
+			} else {
+				console.log(chalk.red(`[canvas-cli] Received invalid action`))
+			}
 			res.status(StatusCodes.BAD_REQUEST).end()
 			return
 		}
@@ -229,7 +234,12 @@ export class API {
 	handleSession = async (req: Request, res: Response) => {
 		const session = req.body
 		if (!sessionType.is(session)) {
-			console.error(`[canvas-cli] Received invalid session`)
+			if (this.verbose) {
+				console.error(chalk.red(`[canvas-cli] Received invalid session`), session)
+			} else {
+				console.error(chalk.red(`[canvas-cli] Received invalid session`))
+			}
+
 			res.status(StatusCodes.BAD_REQUEST).end()
 			return
 		}
@@ -246,30 +256,25 @@ export class API {
 	}
 
 	handleMessage: EventCallback<Message> = async (event) => {
-		console.log(event)
-		if (event.type === "signed" && event.from.toString() === this.peerID) {
+		if (event.type !== "signed" || event.from.toString() === this.peerID) {
 			return
 		}
 
-		let message: ReturnType<typeof decodeBinaryMessage>
+		if (this.verbose) {
+			console.log(`[canvas-cli] Reveived pubsub message from peer ${event.from.toString()}`)
+		}
+
+		let decodedMessage: ReturnType<typeof decodeBinaryMessage>
 		try {
-			message = decodeBinaryMessage(event.data)
+			decodedMessage = decodeBinaryMessage(event.data)
 		} catch (err) {
 			console.error(chalk.red("[canvas-cli] Failed to parse pubsub message"), err)
 			return
 		}
 
-		const [{ hash: actionHash, action }, { hash: sessionHash, session }] = message
+		const { action, session } = decodedMessage
 		try {
-			await getActionHash(action).then((hash) =>
-				assert(hash === actionHash, `action hashes did not match: ${hash} !== ${actionHash}`)
-			)
-
 			if (session !== null) {
-				await getSessionHash(session).then((hash) =>
-					assert(hash === sessionHash, `session hashes did not match: ${hash} !== ${sessionHash}`)
-				)
-
 				await this.core.session(session)
 			}
 
