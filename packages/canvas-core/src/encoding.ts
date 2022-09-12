@@ -271,7 +271,8 @@ export function decodeBinaryMessage(data: Uint8Array): { action: Action; session
 	}
 
 	if (binaryMessage.session !== null) {
-		const binarySession: BinarySession = { type: "session", ...binaryMessage.session }
+		const { signature, payload } = binaryMessage.session
+		const binarySession: BinarySession = { type: "session", signature, payload }
 		const binarySessionDigest = createHash("sha256").update(cbor.encode(binarySession)).digest()
 		assert(
 			binarySessionDigest.compare(binaryMessage.session.hash) === 0,
