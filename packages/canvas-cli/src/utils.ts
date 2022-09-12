@@ -6,18 +6,9 @@ import process from "node:process"
 import fetch from "node-fetch"
 import chalk from "chalk"
 
-import t from "io-ts"
-
 import prompts from "prompts"
 import { Chain } from "@canvas-js/interfaces"
-import { ModelStore, PostgresStore, SqliteStore } from "@canvas-js/core"
-
-const chainType: t.Type<Chain> = t.union([
-	t.literal("eth"),
-	t.literal("cosmos"),
-	t.literal("solana"),
-	t.literal("substrate"),
-])
+import { chainType, ModelStore, PostgresStore, SqliteStore } from "@canvas-js/core"
 
 export const SPEC_FILENAME = "spec.canvas.js"
 
