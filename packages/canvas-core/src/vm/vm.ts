@@ -32,7 +32,7 @@ import {
 } from "./utils.js"
 import chalk from "chalk"
 
-type Exports = {
+export type Exports = {
 	models: Record<string, Model>
 	actionParameters: Record<string, string[]>
 	routes: Record<string, string>

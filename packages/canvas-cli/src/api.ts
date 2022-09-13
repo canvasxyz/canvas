@@ -45,7 +45,7 @@ export class API {
 		api.post("/actions", this.handleAction)
 		api.post("/sessions", this.handleSession)
 
-		for (const route of Object.keys(core.routeParameters)) {
+		for (const route of Object.keys(core.exports.routeParameters)) {
 			api.get(route, this.getRouteHandler(route))
 		}
 
@@ -53,12 +53,12 @@ export class API {
 			api.listen(port, () => {
 				console.log(`[canvas-cli] Serving ${core.name} on port ${port}:`)
 				console.log(`└ GET http://localhost:${port}/`)
-				for (const name of Object.keys(core.routeParameters)) {
+				for (const name of Object.keys(core.exports.routeParameters)) {
 					console.log(`└ GET http://localhost:${port}${name}`)
 				}
 				console.log("└ POST /actions")
 				console.log(`  └ ${actionType.name}`)
-				console.log(`  └ calls: [ ${Object.keys(core.actionParameters).join(", ")} ]`)
+				console.log(`  └ calls: [ ${Object.keys(core.exports.actionParameters).join(", ")} ]`)
 				console.log("└ POST /sessions")
 				console.log(`  └ ${sessionType.name}`)
 			}),
@@ -76,7 +76,7 @@ export class API {
 
 	getRouteHandler = (route: string) => async (req: Request, res: Response) => {
 		const params: Record<string, string> = {}
-		for (const name of this.core.routeParameters[route]) {
+		for (const name of this.core.exports.routeParameters[route]) {
 			const value = req.params[name]
 			if (typeof value === "string") {
 				params[name] = value

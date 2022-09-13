@@ -4,16 +4,24 @@ import path from "node:path"
 import { ethers } from "ethers"
 import { QuickJSWASMModule } from "quickjs-emscripten"
 
+import chalk from "chalk"
 import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
-import { EventEmitter, CustomEvent, EventCallback } from "@libp2p/interfaces/events"
-import type { Message } from "@libp2p/interface-pubsub"
+
 import { createLibp2p, Libp2p } from "libp2p"
+import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { TCP } from "@libp2p/tcp"
 import { Noise } from "@chainsafe/libp2p-noise"
 import { Mplex } from "@libp2p/mplex"
 import { MulticastDNS } from "@libp2p/mdns"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
+import type { Message } from "@libp2p/interface-pubsub"
+import type { Connection, Stream } from "@libp2p/interface-connection"
+import type { IncomingStreamData } from "@libp2p/interface-registrar"
+
+import * as cbor from "microcbor"
+
+import { Tree, Scanner } from "node-okra"
 
 import {
 	Action,
@@ -24,18 +32,15 @@ import {
 	verifyActionSignature,
 	verifySessionSignature,
 	ModelValue,
-	Model,
 	Chain,
-	ContractMetadata,
 } from "@canvas-js/interfaces"
 
 import { ModelStore, SqliteStore } from "./models/index.js"
 import { actionType, sessionType } from "./codecs.js"
 import { CacheMap } from "./utils.js"
 import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
-import { VM } from "./vm/index.js"
+import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
-import chalk from "chalk"
 
 export interface CoreConfig {
 	name: string
@@ -59,6 +64,7 @@ interface CoreEvents {
 }
 
 export class Core extends EventEmitter<CoreEvents> {
+	private static readonly OKRA_FILENAME = "mst.okra"
 	private static readonly cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
 		const { directory, name, spec, verbose, unchecked, rpc, replay, quickJS, peering, port } = config
@@ -81,51 +87,59 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		const { vm, exports } = await VM.initialize(name, spec, providers, quickJS, { verbose })
-		const { models, actionParameters, database, routes, routeParameters, contractMetadata } = exports
 
 		const modelStore =
 			config.store || new SqliteStore(directory && path.resolve(directory, SqliteStore.DATABASE_FILENAME))
 
-		if (database !== undefined) {
+		if (exports.database !== undefined) {
 			assert(
-				modelStore.identifier === database,
-				`spec requires a ${database} model store, but the core was initialized with a ${modelStore.identifier} model store`
+				modelStore.identifier === exports.database,
+				`spec requires a ${exports.database} model store, but the core was initialized with a ${modelStore.identifier} model store`
 			)
 		}
 
-		await modelStore.initialize(models, routes)
+		await modelStore.initialize(exports.models, exports.routes)
 
 		const messageStore = new MessageStore(name, directory, { verbose })
 
 		let libp2p: Libp2p | null = null
 		if (peering && port) {
+			const gossipSub = new GossipSub({
+				fallbackToFloodsub: false,
+				allowPublishToZeroPeers: true,
+				globalSignaturePolicy: "StrictNoSign",
+			})
+
 			libp2p = await createLibp2p({
 				addresses: { listen: [`/ip4/0.0.0.0/tcp/${port}`] },
 				transports: [new TCP()],
 				connectionEncryption: [new Noise()],
 				streamMuxers: [new Mplex()],
 				peerDiscovery: [new MulticastDNS()],
-				pubsub: new GossipSub({ fallbackToFloodsub: false, allowPublishToZeroPeers: true }),
+				pubsub: gossipSub,
 			})
-			libp2p.peerStore.addEventListener("peer", ({ detail: { id } }) => {
-				console.log(chalk.green(`[canvas-core] Connected to peer ${id.toString()}`))
+
+			libp2p.connectionManager.addEventListener("peer:connect", ({ detail: connection }) => {
+				console.log(chalk.green(`[canvas-core] Connected to peer ${connection.remotePeer.toString()}`))
 			})
+
+			libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
+				console.log(chalk.green(`[canvas-core] Disconnected from peer ${connection.remotePeer.toString()}`))
+			})
+
 			await libp2p.start()
 		}
 
-		const core = new Core(
-			name,
-			vm,
-			models,
-			actionParameters,
-			routeParameters,
-			contractMetadata,
-			modelStore,
-			messageStore,
-			providers,
-			libp2p,
-			{ verbose, unchecked }
-		)
+		let mst: Tree | null = null
+		if (directory !== null) {
+			const mstPath = path.resolve(directory, Core.OKRA_FILENAME)
+			mst = new Tree(mstPath)
+			if (verbose) {
+				console.log(`[canvas-core] Using MST at ${mstPath}`)
+			}
+		}
+
+		const core = new Core(name, vm, exports, modelStore, messageStore, providers, libp2p, mst, { verbose, unchecked })
 
 		if (replay) {
 			console.log(`[canvas-core] Replaying action log...`)
@@ -160,14 +174,12 @@ export class Core extends EventEmitter<CoreEvents> {
 	private constructor(
 		public readonly name: string,
 		public readonly vm: VM,
-		public readonly models: Record<string, Model>,
-		public readonly actionParameters: Record<string, string[]>,
-		public readonly routeParameters: Record<string, string[]>,
-		public readonly contractMetadata: Record<string, ContractMetadata>,
+		public readonly exports: Exports,
 		public readonly modelStore: ModelStore,
 		public readonly messageStore: MessageStore,
 		public readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {},
 		public readonly libp2p: Libp2p | null,
+		public readonly mst: Tree | null,
 		private readonly options: {
 			verbose?: boolean
 			unchecked?: boolean
@@ -198,6 +210,22 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (libp2p !== null) {
 			libp2p.pubsub.subscribe(`canvas:${this.name}`)
 			libp2p.pubsub.addEventListener("message", ({ detail: message }) => this.handleMessage(message))
+			libp2p.handle("/x/canvas.xyz/cursor/0.0.0", (data) => this.handleCursor(data))
+		}
+	}
+
+	private async handleCursor({ connection, stream }: IncomingStreamData) {
+		console.log("handling cursor stream", stream.stat)
+		for await (const message of cbor.decodeStream(Core.streamChunks(stream))) {
+			console.log("got cursor message", message)
+		}
+	}
+
+	private static streamChunks = async function* (stream: Stream): AsyncIterable<Uint8Array> {
+		for await (const chunkList of stream.source) {
+			for (const chunk of chunkList) {
+				yield chunk
+			}
 		}
 	}
 
@@ -294,11 +322,17 @@ export class Core extends EventEmitter<CoreEvents> {
 			const effects = await this.vm.execute(hash, action.payload)
 			await this.messageStore.insertAction(hash, action)
 			await this.modelStore.applyEffects(action.payload, effects)
+			if (this.mst !== null) {
+				const hashBuffer = Buffer.from(hash.slice(2), "hex")
+				const leafBuffer = Buffer.alloc(14)
+				leafBuffer.writeUintBE(action.payload.timestamp * 2, 0, 6)
+				hashBuffer.copy(leafBuffer, 6, 0, 8)
+				this.mst.insert(leafBuffer, hashBuffer)
+			}
 
 			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
-			if (this.libp2p !== null) {
-				await this.publishMessage(hash, action)
-			}
+
+			await this.publishMessage(hash, action)
 
 			return { hash }
 		})
@@ -364,6 +398,13 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			await this.validateSession(session)
 			await this.messageStore.insertSession(hash, session)
+			if (this.mst !== null) {
+				const hashBuffer = Buffer.from(hash.slice(2), "hex")
+				const leafBuffer = Buffer.alloc(14)
+				leafBuffer.writeUintBE(session.payload.timestamp * 2 + 1, 0, 6)
+				hashBuffer.copy(leafBuffer, 6, 0, 8)
+				this.mst.insert(leafBuffer, hashBuffer)
+			}
 
 			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
 
