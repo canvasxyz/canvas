@@ -293,6 +293,9 @@ export class Core extends EventEmitter<CoreEvents> {
 			await this.modelStore.applyEffects(action.payload, effects)
 
 			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
+			if (this.libp2p !== null) {
+				await this.publishMessage(hash, action)
+			}
 
 			return { hash }
 		})
@@ -358,7 +361,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			await this.validateSession(session)
 			await this.messageStore.insertSession(hash, session)
+
 			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
+
 			return { hash }
 		})
 	}
