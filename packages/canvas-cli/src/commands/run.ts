@@ -6,7 +6,6 @@ import yargs from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
 import { getQuickJS } from "quickjs-emscripten"
-import { create as createIpfsHttpClient, IPFSHTTPClient } from "ipfs-http-client"
 import Hash from "ipfs-only-hash"
 
 import { Core, MessageStore, SqliteStore } from "@canvas-js/core"
@@ -35,7 +34,12 @@ export const builder = (yargs: yargs.Argv) =>
 		})
 		.option("peering", {
 			type: "boolean",
-			desc: "Enable peering over IPFS PubSub",
+			desc: "Enable peering over libp2p GossipSub",
+		})
+		.option("peering-port", {
+			type: "number",
+			desc: "Port to bind libp2p TCP transport",
+			default: 4044,
 		})
 		.option("ipfs", {
 			type: "string",
@@ -140,17 +144,6 @@ export async function handler(args: Args) {
 		}
 	}
 
-	const quickJS = await getQuickJS()
-
-	let ipfs: IPFSHTTPClient | undefined = undefined
-	let peerID: string | undefined = undefined
-	if (args.peering) {
-		ipfs = createIpfsHttpClient({ url: args.ipfs })
-		const { id } = await ipfs.id()
-		peerID = id.toString()
-		console.log(chalk.yellow(`[canvas-cli] Peering enabled, using local IPFS peer ID ${peerID}`))
-	}
-
 	if (directory === null) {
 		console.log(
 			chalk.yellow(
@@ -170,12 +163,26 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const { database: databaseURI, verbose, replay, unchecked } = args
+	const quickJS = await getQuickJS()
+
+	const { database: databaseURI, verbose, replay, unchecked, peering, "peering-port": peeringPort } = args
 	const store = getModelStore(databaseURI, directory, { verbose })
 
-	const core = await Core.initialize({ directory, name, spec, store, rpc, quickJS, verbose, replay, unchecked })
+	const core = await Core.initialize({
+		directory,
+		name,
+		spec,
+		store,
+		rpc,
+		quickJS,
+		verbose,
+		replay,
+		unchecked,
+		peering,
+		port: peeringPort,
+	})
 
-	const api = args.noserver ? null : new API({ peerID, core, port: args.port, ipfs, peering: args.peering, verbose })
+	const api = args.noserver ? null : new API({ core, port: args.port, verbose })
 
 	let stopping = false
 	process.on("SIGINT", async () => {

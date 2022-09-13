@@ -61,6 +61,6 @@ test("Test calling the public ENS resolver contract", async (t) => {
 	}
 
 	const action = await sign("verify", [])
-	await t.throwsAsync(core.apply(action), { message: "balance is zero!" })
+	await t.throwsAsync(core.applyAction(action), { message: "balance is zero!" })
 	await core.close()
 })

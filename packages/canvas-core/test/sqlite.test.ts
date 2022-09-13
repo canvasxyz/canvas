@@ -55,7 +55,7 @@ test("get /all", async (t) => {
 	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 
 	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
-	const { hash } = await core.apply(action)
+	const { hash } = await core.applyAction(action)
 
 	const expected = {
 		id: hash,
@@ -67,10 +67,10 @@ test("get /all", async (t) => {
 
 	t.deepEqual(await core.getRoute("/all", {}), [{ ...expected, score: null }])
 
-	await sign("voteThread", [hash, 1]).then((action) => core.apply(action))
+	await sign("voteThread", [hash, 1]).then((action) => core.applyAction(action))
 	t.deepEqual(await core.getRoute("/all", {}), [{ ...expected, score: 1 }])
 
-	await sign("voteThread", [hash, -1]).then((action) => core.apply(action))
+	await sign("voteThread", [hash, -1]).then((action) => core.applyAction(action))
 	t.deepEqual(await core.getRoute("/all", {}), [{ ...expected, score: -1 }])
 
 	await core.close()
@@ -80,12 +80,12 @@ test("get /votes/:thread_id", async (t) => {
 	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 
 	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
-	const { hash } = await core.apply(action)
+	const { hash } = await core.applyAction(action)
 
-	await sign("voteThread", [hash, 1]).then((action) => core.apply(action))
+	await sign("voteThread", [hash, 1]).then((action) => core.applyAction(action))
 	t.deepEqual(await core.getRoute("/votes/:thread_id", { thread_id: hash }), [{ creator: signerAddress, value: 1 }])
 
-	await sign("voteThread", [hash, -1]).then((action) => core.apply(action))
+	await sign("voteThread", [hash, -1]).then((action) => core.applyAction(action))
 	t.deepEqual(await core.getRoute("/votes/:thread_id", { thread_id: hash }), [{ creator: signerAddress, value: -1 }])
 
 	await core.close()

@@ -6,7 +6,14 @@ import { QuickJSWASMModule } from "quickjs-emscripten"
 
 import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
-import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
+import { EventEmitter, CustomEvent, EventCallback } from "@libp2p/interfaces/events"
+import type { Message } from "@libp2p/interface-pubsub"
+import { createLibp2p, Libp2p } from "libp2p"
+import { TCP } from "@libp2p/tcp"
+import { Noise } from "@chainsafe/libp2p-noise"
+import { Mplex } from "@libp2p/mplex"
+import { MulticastDNS } from "@libp2p/mdns"
+import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 
 import {
 	Action,
@@ -25,9 +32,10 @@ import {
 import { ModelStore, SqliteStore } from "./models/index.js"
 import { actionType, sessionType } from "./codecs.js"
 import { CacheMap } from "./utils.js"
-import { getActionHash, getSessionHash } from "./encoding.js"
+import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
+import chalk from "chalk"
 
 export interface CoreConfig {
 	name: string
@@ -39,6 +47,8 @@ export interface CoreConfig {
 	verbose?: boolean
 	unchecked?: boolean
 	rpc?: Partial<Record<Chain, Record<string, string>>>
+	peering?: boolean
+	port?: number
 }
 
 interface CoreEvents {
@@ -51,7 +61,7 @@ interface CoreEvents {
 export class Core extends EventEmitter<CoreEvents> {
 	private static readonly cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
-		const { directory, name, spec, verbose, unchecked, rpc, replay, quickJS } = config
+		const { directory, name, spec, verbose, unchecked, rpc, replay, quickJS, peering, port } = config
 
 		if (verbose) {
 			console.log(`[canvas-core] Initializing core ${name}`)
@@ -87,6 +97,19 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		const messageStore = new MessageStore(name, directory, { verbose })
 
+		let libp2p: Libp2p | null = null
+		if (peering && port) {
+			libp2p = await createLibp2p({
+				addresses: { listen: [`/ip4/0.0.0.0/tcp/${port}`] },
+				transports: [new TCP()],
+				connectionEncryption: [new Noise()],
+				streamMuxers: [new Mplex()],
+				peerDiscovery: [new MulticastDNS()],
+				pubsub: new GossipSub({ fallbackToFloodsub: false, allowPublishToZeroPeers: true }),
+			})
+			await libp2p.start()
+		}
+
 		const core = new Core(
 			name,
 			vm,
@@ -97,6 +120,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			modelStore,
 			messageStore,
 			providers,
+			libp2p,
 			{ verbose, unchecked }
 		)
 
@@ -140,6 +164,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly modelStore: ModelStore,
 		public readonly messageStore: MessageStore,
 		public readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {},
+		public readonly libp2p: Libp2p | null,
 		private readonly options: {
 			verbose?: boolean
 			unchecked?: boolean
@@ -166,6 +191,11 @@ export class Core extends EventEmitter<CoreEvents> {
 				this.blockCache[key].add(hash, { number, timestamp })
 			})
 		}
+
+		if (libp2p !== null) {
+			libp2p.pubsub.subscribe(`canvas:${this.name}`)
+			libp2p.pubsub.addEventListener("message", ({ detail: message }) => this.handleMessage(message))
+		}
 	}
 
 	public async onIdle(): Promise<void> {
@@ -175,14 +205,16 @@ export class Core extends EventEmitter<CoreEvents> {
 	public async close() {
 		for (const provider of Object.values(this.providers)) {
 			provider.removeAllListeners("block")
-			provider.removeAllListeners()
+		}
+
+		if (this.libp2p !== null) {
+			await this.libp2p.stop()
 		}
 
 		await this.queue.onEmpty()
 
 		// TODO: think about when and how to close the model store.
 		// Right now neither model store implementation actually needs closing.
-
 		this.vm.dispose()
 		this.dispatchEvent(new Event("close"))
 	}
@@ -235,7 +267,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	/**
 	 * Executes an action.
 	 */
-	public apply(action: Action): Promise<{ hash: string }> {
+	public applyAction(action: Action): Promise<{ hash: string }> {
 		if (this.options.verbose) {
 			console.log("[canvas-core] apply action", action.session, action.signature, action.payload)
 		}
@@ -309,7 +341,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	/**
 	 * Create a new session.
 	 */
-	public session(session: Session): Promise<{ hash: string }> {
+	public applySession(session: Session): Promise<{ hash: string }> {
 		if (this.options.verbose) {
 			console.log("[canvas-core] apply session:", JSON.stringify(session))
 		}
@@ -325,11 +357,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 
 			await this.validateSession(session)
-
 			await this.messageStore.insertSession(hash, session)
-
 			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
-
 			return { hash }
 		})
 	}
@@ -357,5 +386,52 @@ export class Core extends EventEmitter<CoreEvents> {
 			console.log("[canvas-core] getRoute:", route, params)
 		}
 		return this.modelStore.getRoute(route, params)
+	}
+
+	private async publishMessage(actionHash: string, action: Action) {
+		if (this.libp2p !== null) {
+			let message: Uint8Array
+			if (action.session !== null) {
+				const { hash: sessionHash, session } = await this.messageStore.getSessionByAddress(action.session)
+				assert(sessionHash !== null && session !== null)
+				message = encodeBinaryMessage({ hash: actionHash, action }, { hash: sessionHash, session })
+			} else {
+				message = encodeBinaryMessage({ hash: actionHash, action }, { hash: null, session: null })
+			}
+
+			await this.libp2p.pubsub
+				.publish(`canvas:${this.name}`, message)
+				.then(({ recipients }) => {
+					if (this.options.verbose) {
+						console.log(`[canvas-core] Published message to ${recipients.length} peers`)
+					}
+				})
+				.catch((err) => {
+					console.error(chalk.red("[canvas-core] Failed to publish action to pubsub topic"), err)
+				})
+		}
+	}
+
+	private async handleMessage({ topic, data }: Message) {
+		assert(topic === `canvas:${this.name}`)
+
+		let decodedMessage: ReturnType<typeof decodeBinaryMessage>
+		try {
+			decodedMessage = decodeBinaryMessage(data)
+		} catch (err) {
+			console.error(chalk.red("[canvas-core] Failed to parse pubsub message"), err)
+			return
+		}
+
+		const { action, session } = decodedMessage
+		try {
+			if (session !== null) {
+				await this.applySession(session)
+			}
+
+			await this.applyAction(action)
+		} catch (err) {
+			console.log(chalk.red("[canvas-core] Error applying peer message"), err)
+		}
 	}
 }
