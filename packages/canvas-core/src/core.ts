@@ -107,6 +107,9 @@ export class Core extends EventEmitter<CoreEvents> {
 				peerDiscovery: [new MulticastDNS()],
 				pubsub: new GossipSub({ fallbackToFloodsub: false, allowPublishToZeroPeers: true }),
 			})
+			libp2p.peerStore.addEventListener("peer", ({ detail: { id } }) => {
+				console.log(chalk.green(`[canvas-core] Connected to peer ${id.toString()}`))
+			})
 			await libp2p.start()
 		}
 
@@ -390,6 +393,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (this.options.verbose) {
 			console.log("[canvas-core] getRoute:", route, params)
 		}
+
 		return this.modelStore.getRoute(route, params)
 	}
 
