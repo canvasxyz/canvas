@@ -131,9 +131,7 @@ export async function handler(args: Args) {
 			args.peering = false
 			console.log(
 				chalk.yellow(
-					`[canvas-core] ${chalk.bold(
-						"Running in unchecked mode."
-					)} Block hashes will not be checked, and P2P will be disabled.`
+					`${chalk.bold("Running in unchecked mode.")} Block hashes will not be checked, and P2P will be disabled.`
 				)
 			)
 		} else {
