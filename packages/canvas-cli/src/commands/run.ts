@@ -127,6 +127,7 @@ export async function handler(args: Args) {
 			type: "confirm",
 			name: "confirm",
 			message: chalk.yellow("No chain RPC provided. Run in unchecked mode instead?"),
+			initial: true,
 		})
 
 		if (confirm) {

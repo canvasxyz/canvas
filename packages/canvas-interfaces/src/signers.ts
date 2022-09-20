@@ -10,6 +10,10 @@ import type { Session, SessionPayload } from "./sessions.js"
  * verify EIP-712 signed data for wallets like Metamask.
  */
 
+// TODO: ensure signed actions and sessions match what's expected
+// by web3.js, which is less permissive than ethers when generating
+// signTypedData messages.
+
 const actionDataFields = {
 	Message: [
 		{ name: "sendAction", type: "string" },

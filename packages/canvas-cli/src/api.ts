@@ -30,6 +30,8 @@ export class API {
 		api.use(cors({ exposedHeaders: ["ETag"] }))
 		api.use(bodyParser.json())
 
+		// TODO: once we start sending more than { name: core.name } to the client,
+		// we should set No-Cache on dev cores since ETag will not update
 		api.head("/", (req, res) => {
 			res.status(StatusCodes.OK)
 			res.header("ETag", `"${core.name}"`)
