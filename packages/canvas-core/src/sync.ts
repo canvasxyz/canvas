@@ -2,20 +2,22 @@ import assert from "node:assert"
 import type { Stream } from "@libp2p/interface-connection"
 import type { Source } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
-import type * as okra from "node-okra"
 
 import * as t from "io-ts"
 import * as cbor from "microcbor"
 
 import { uint8ArrayType } from "./codecs.js"
 import { signalInvalidType } from "./utils.js"
-// import { encodeAction, encodeSession } from "./encoding.js"
-// import type { MessageStore } from "./messages/index.js"
+import { decodeAction, decodeSession, encodeAction, encodeSession } from "./encoding.js"
+import type { MessageStore } from "./messages/index.js"
+import type * as okra from "node-okra"
+import { createHash } from "node:crypto"
+import { Action, Session } from "@canvas-js/interfaces"
 
 const codes = {
 	GET_ROOT: 0,
 	GET_CHILDREN: 1,
-	// GET_VALUES: 2,
+	GET_VALUES: 2,
 } as const
 
 const requestType = t.union([
@@ -26,11 +28,11 @@ const requestType = t.union([
 		level: t.number,
 		leaf: t.union([t.null, uint8ArrayType]),
 	}),
-	// t.type({
-	// 	seq: t.number,
-	// 	code: t.literal(codes.GET_VALUES),
-	// 	nodes: t.array(t.type({ leaf: uint8ArrayType, hash: uint8ArrayType })),
-	// }),
+	t.type({
+		seq: t.number,
+		code: t.literal(codes.GET_VALUES),
+		nodes: t.array(t.type({ leaf: uint8ArrayType, hash: uint8ArrayType })),
+	}),
 ])
 
 const responseType = t.union([
@@ -40,13 +42,13 @@ const responseType = t.union([
 		code: t.literal(codes.GET_CHILDREN),
 		nodes: t.array(t.type({ leaf: uint8ArrayType, hash: uint8ArrayType })),
 	}),
-	// t.type({ seq: t.number, code: t.literal(codes.GET_VALUES), values: t.array(uint8ArrayType) }),
+	t.type({ seq: t.number, code: t.literal(codes.GET_VALUES), values: t.array(uint8ArrayType) }),
 ])
 
 async function* handleSourceStream(
 	requests: AsyncIterable<t.TypeOf<typeof requestType>>,
-	source: okra.Source
-	// messageStore: MessageStore
+	source: okra.Source,
+	messageStore: MessageStore
 ): AsyncIterable<t.TypeOf<typeof responseType>> {
 	for await (const request of requests) {
 		const { code, seq } = request
@@ -58,27 +60,30 @@ async function* handleSourceStream(
 			const leaf = request.leaf && Buffer.from(request.leaf.buffer, request.leaf.byteOffset, request.leaf.byteLength)
 			const nodes = source.getChildren(request.level, leaf)
 			yield { seq, code, nodes }
-			// } else if (code === codes.GET_VALUES) {
-			// 	const values = request.nodes.map(({ leaf, hash }) => {
-			// 		const timestamp = toBuffer(leaf).readUintBE(0, 6)
-			// 		if (timestamp % 2 === 0) {
-			// 			const session = messageStore.getSessionByHash(toBuffer(hash))
-			// 			if (session === null) {
-			// 				throw new Error(`session not found: ${hexlify(hash)}`)
-			// 			} else {
-			// 				return encodeSession(session)
-			// 			}
-			// 		} else {
-			// 			const action = messageStore.getActionByHash(toBuffer(hash))
-			// 			if (action === null) {
-			// 				throw new Error(`action not found: ${hexlify(hash)}`)
-			// 			} else {
-			// 				return encodeAction(action)
-			// 			}
-			// 		}
-			// 	})
+		} else if (code === codes.GET_VALUES) {
+			// console.log("[canvas-core] Handling GET_VALUES request...", request.nodes.length)
+			const values = request.nodes.map(({ leaf, hash }, i) => {
+				// console.log("[canvas-core] Retrieving value for", toBuffer(hash).toString("hex"))
+				const timestamp = toBuffer(leaf).readUintBE(0, 6)
+				if (timestamp % 2 === 0) {
+					const session = messageStore.getSessionByHash(toBuffer(hash))
+					if (session === null) {
+						throw new Error(`session not found: ${toHex(hash)}`)
+					} else {
+						return encodeSession(session)
+					}
+				} else {
+					const action = messageStore.getActionByHash(toBuffer(hash))
+					if (action === null) {
+						throw new Error(`action not found: ${toHex(hash)}`)
+					} else {
+						return encodeAction(action)
+					}
+				}
+			})
 
-			// 	yield { seq, code, values }
+			// console.log("[canvas-core] Returning values result", values)
+			yield { seq, code, values }
 		} else {
 			signalInvalidType(request)
 		}
@@ -90,9 +95,14 @@ async function* handleSourceStream(
 // await stream.sink(cbor.encodeStream(responses))
 // }
 
-export async function handleSource(stream: Stream, source: okra.Source) {
-	const responses = handleSourceStream(decode(stream.source, requestType), source)
-	await stream.sink(cbor.encodeStream(responses))
+export async function handleSource(stream: Stream, source: okra.Source, messageStore: MessageStore) {
+	async function* chunks(): AsyncIterable<Uint8Array> {
+		for await (const response of handleSourceStream(decode(stream.source, requestType), source, messageStore)) {
+			yield cbor.encode(response)
+		}
+	}
+
+	await stream.sink(chunks())
 }
 
 const rpc = {
@@ -100,7 +110,7 @@ const rpc = {
 		iter: AsyncIterator<t.TypeOf<typeof responseType>>,
 		seq: number
 	): AsyncGenerator<t.TypeOf<typeof requestType>, { level: number; hash: Buffer }> {
-		yield { code: codes.GET_ROOT, seq: ++seq }
+		yield { code: codes.GET_ROOT, seq }
 		const { value, done } = await iter.next()
 		if (done) {
 			throw new Error("source stream ended prematurely")
@@ -119,7 +129,7 @@ const rpc = {
 		level: number,
 		leaf: Buffer
 	): AsyncGenerator<t.TypeOf<typeof requestType>, { leaf: Buffer; hash: Buffer }[]> {
-		yield { code: codes.GET_CHILDREN, seq: ++seq, level, leaf }
+		yield { code: codes.GET_CHILDREN, seq, level, leaf }
 		const { value, done } = await iter.next()
 		if (done) {
 			throw new Error("source stream ended prematurely")
@@ -132,39 +142,34 @@ const rpc = {
 		return value.nodes.map(({ leaf, hash }) => ({ leaf: toBuffer(leaf), hash: toBuffer(hash) }))
 	},
 
-	// async *getValues(
-	// 	iter: AsyncIterator<t.TypeOf<typeof responseType>>,
-	// 	seq: number,
-	// 	nodes: { leaf: Buffer; hash: Buffer }[]
-	// ): AsyncGenerator<t.TypeOf<typeof requestType>, Buffer[]> {
-	// 	yield { code: codes.GET_VALUES, seq: ++seq, nodes }
-	// 	const { value, done } = await iter.next()
-	// 	if (done) {
-	// 		throw new Error("source stream ended prematurely")
-	// 	} else if (value.seq !== seq) {
-	// 		throw new Error("got invalid sequence number")
-	// 	} else if (value.code !== codes.GET_VALUES) {
-	// 		throw new Error("got invalid response code")
-	// 	}
+	async *getValues(
+		iter: AsyncIterator<t.TypeOf<typeof responseType>>,
+		seq: number,
+		nodes: { leaf: Buffer; hash: Buffer }[]
+	): AsyncGenerator<t.TypeOf<typeof requestType>, Buffer[]> {
+		yield { code: codes.GET_VALUES, seq, nodes }
+		const { value, done } = await iter.next()
+		if (done) {
+			throw new Error("source stream ended prematurely")
+		} else if (value.seq !== seq) {
+			throw new Error("got invalid sequence number")
+		} else if (value.code !== codes.GET_VALUES) {
+			throw new Error("got invalid response code")
+		}
 
-	// 	return value.values.map(toBuffer)
-	// },
+		return value.values.map(toBuffer)
+	},
 }
 
-export async function* handleTarget(
+export async function handleTarget(
 	stream: Stream,
 	target: okra.Target,
-	callback: (leaf: Buffer, hash: Buffer) => Promise<void>
+	// callback: (leaf: Buffer, hash: Buffer) => Promise<void>
+	callback: (hash: string, message: ({ type: "session" } & Session) | ({ type: "action" } & Action)) => Promise<void>
 ) {
 	const responses = decode(stream.source, responseType)
 	const iter = responses[Symbol.asyncIterator]()
 	let seq = 0
-
-	async function* pipe(): AsyncIterable<t.TypeOf<typeof requestType>> {
-		const { level: sourceLevel, hash: sourceValue } = yield* rpc.getRoot(iter, seq++)
-		const sourceRoot = Buffer.alloc(14)
-		yield* enter(target.getRootLevel(), sourceLevel, sourceRoot, sourceValue)
-	}
 
 	async function* enter(
 		targetLevel: number,
@@ -199,28 +204,56 @@ export async function* handleTarget(
 			}
 		} else {
 			const leaves = target.filter(nodes)
-			for (const { leaf, hash } of leaves) {
-				await callback(leaf, hash)
-			}
-			// const values = yield* rpc.getValues(iter, seq++, leaves)
-			// if (values.length !== leaves.length) {
-			// 	throw new Error("expected values.length to match leaves.length")
-			// }
 
-			// 	for (const [i, value] of values.entries()) {
-			// 		const { leaf } = leaves[i]
-			// 		const timestamp = leaf.readUintBE(0, 6)
-			// 		if (timestamp % 2 === 0) {
-			// 			await callback(value)
-			// 		} else {
-			// 			await callback(value)
-			// 		}
-			// 	}
+			// console.log(
+			// 	"[canvas-core] got filtered leaves",
+			// 	leaves.map(({ leaf, hash }) => ({ leaf: leaf.toString("hex"), hash: hash.toString("hex") }))
+			// )
+
+			const values = yield* rpc.getValues(iter, seq++, leaves)
+			if (values.length !== leaves.length) {
+				throw new Error("expected values.length to match leaves.length")
+			}
+
+			// console.log("[canvas-core] Got leaf values", values)
+
+			for (const [i, { leaf, hash }] of leaves.entries()) {
+				// await callback(leaf, hash)
+
+				const value = values[i]
+				if (!createHash("sha256").update(value).digest().equals(hash)) {
+					throw new Error(`the value received for ${toHex(hash)} did not match the hash`)
+				}
+
+				const timestamp = leaf.readUintBE(0, 6)
+				if (timestamp % 2 == 0) {
+					const session = decodeSession(value)
+					await callback(toHex(hash), { type: "session", ...session })
+				} else {
+					const action = decodeAction(value)
+					await callback(toHex(hash), { type: "action", ...action })
+				}
+			}
 		}
 	}
 
-	await stream.sink(cbor.encodeStream(pipe()))
+	async function* pipe(): AsyncIterable<t.TypeOf<typeof requestType>> {
+		const { level: sourceLevel, hash: sourceValue } = yield* rpc.getRoot(iter, seq++)
+		const sourceRoot = Buffer.alloc(14)
+		yield* enter(target.getRootLevel(), sourceLevel, sourceRoot, sourceValue)
+	}
+
+	async function* sink() {
+		for await (const request of pipe()) {
+			yield cbor.encode(request)
+		}
+	}
+
+	// await stream.sink(cbor.encodeStream(pipe()))
+	await stream.sink(sink())
 }
+
+const toHex = (hash: Uint8Array | Buffer) => `0x${(Buffer.isBuffer(hash) ? hash : toBuffer(hash)).toString("hex")}`
 
 async function* streamChunks(source: Source<Uint8ArrayList>): AsyncIterable<Uint8Array> {
 	for await (const chunkList of source) {

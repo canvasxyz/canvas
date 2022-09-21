@@ -17,13 +17,10 @@ import { MulticastDNS } from "@libp2p/mdns"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { Message } from "@libp2p/interface-pubsub"
 import type { Connection, Stream } from "@libp2p/interface-connection"
-import type { IncomingStreamData } from "@libp2p/interface-registrar"
 import type { PeerId } from "@libp2p/interface-peer-id"
 
-import * as cbor from "microcbor"
-import * as t from "io-ts"
-
 import * as okra from "node-okra"
+import { handleSource, handleTarget } from "./sync.js"
 
 import {
 	Action,
@@ -38,16 +35,9 @@ import {
 } from "@canvas-js/interfaces"
 
 import { ModelStore, SqliteStore } from "./models/index.js"
-import { actionType, sessionType, uint8ArrayType } from "./codecs.js"
+import { actionType, sessionType } from "./codecs.js"
 import { CacheMap, signalInvalidType } from "./utils.js"
-import {
-	binaryActionType,
-	binarySessionType,
-	decodeBinaryMessage,
-	encodeBinaryMessage,
-	getActionHash,
-	getSessionHash,
-} from "./encoding.js"
+import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
 
@@ -73,7 +63,7 @@ interface CoreEvents {
 }
 
 export class Core extends EventEmitter<CoreEvents> {
-	private static readonly OKRA_FILENAME = "mst.okra"
+	public static readonly MST_FILENAME = "mst.okra"
 	private static readonly cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
 		const { directory, name, spec, verbose, unchecked, rpc, replay, quickJS, peering, port } = config
@@ -134,15 +124,6 @@ export class Core extends EventEmitter<CoreEvents> {
 						`[canvas-core] Connected to peer ${connection.remotePeer.toString()} with connection ID ${connection.id}`
 					)
 				)
-
-				// peerStore.protoBook
-				// 	.get(connection.remotePeer)
-				// 	.then((protocols) => {
-				// 		console.log(`[canvas-core] ${connection.remotePeer.toString()} supports protocols`, protocols)
-				// 	})
-				// 	.catch((err) => {
-				// 		console.log(chalk.red(`[canvas-core] Failed to look up peer protocols in libp2p protoBook`, err))
-				// 	})
 			})
 
 			libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
@@ -154,14 +135,15 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		let mst: okra.Tree | null = null
 		if (directory !== null) {
-			const mstPath = path.resolve(directory, Core.OKRA_FILENAME)
+			const mstPath = path.resolve(directory, Core.MST_FILENAME)
 			mst = new okra.Tree(mstPath)
 			if (verbose) {
 				console.log(`[canvas-core] Using MST at ${mstPath}`)
 			}
 		}
 
-		const core = new Core(name, vm, exports, modelStore, messageStore, providers, libp2p, mst, { verbose, unchecked })
+		const options = { verbose, unchecked, peering: true, sync: true }
+		const core = new Core(name, vm, exports, modelStore, messageStore, providers, libp2p, mst, options)
 
 		if (replay) {
 			console.log(`[canvas-core] Replaying action log...`)
@@ -194,6 +176,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly protocol: string | null = null
 	private readonly queue: PQueue
 	private syncTimeout: NodeJS.Timeout | null = null
+	private static InitialSyncInterval = 5000
+	private static SyncInterval = 10000
 
 	private constructor(
 		public readonly name: string,
@@ -207,6 +191,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		private readonly options: {
 			verbose?: boolean
 			unchecked?: boolean
+			peering?: boolean
+			sync?: boolean
 		}
 	) {
 		super()
@@ -233,13 +219,17 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		this.syncTimeout = null
-		if (libp2p !== null) {
-			libp2p.pubsub.subscribe(`canvas:${this.name}`)
-			libp2p.pubsub.addEventListener("message", ({ detail: message }) => this.handleMessage(message))
-			console.log(`[canvas-cli] Subscribed to pubsub topic "canvas:${this.name}"`)
-			// this.protocol = `/x/canvas/${this.name}`
-			// libp2p.handle(Core.SyncProtocol, (data) => this.handleCursor(data))
-			// this.syncTimeout = setTimeout(() => this.sync(), 10000)
+		if (this.libp2p !== null) {
+			if (options.peering) {
+				this.libp2p.pubsub.subscribe(`canvas:${this.name}`)
+				this.libp2p.pubsub.addEventListener("message", ({ detail: message }) => this.handleMessage(message))
+				console.log(`[canvas-cli] Subscribed to pubsub topic "canvas:${this.name}"`)
+			}
+			if (options.sync) {
+				this.protocol = `/x/canvas/${this.name}`
+				this.libp2p.handle(this.protocol, ({ connection, stream }) => this.handleIncomingStream(connection, stream))
+				this.syncTimeout = setTimeout(() => this.sync(), Core.InitialSyncInterval)
+			}
 		}
 	}
 
@@ -320,44 +310,43 @@ export class Core extends EventEmitter<CoreEvents> {
 	/**
 	 * Executes an action.
 	 */
-	public applyAction(action: Action): Promise<{ hash: string }> {
-		if (this.options.verbose) {
-			console.log("[canvas-core] apply action", action.session, action.signature, action.payload)
+	public async applyAction(action: Action): Promise<{ hash: string }> {
+		assert(actionType.is(action), "Invalid action value")
+
+		const hash = getActionHash(action)
+
+		const existingRecord = this.messageStore.getActionByHash(hash)
+		if (existingRecord !== null) {
+			return { hash }
 		}
 
-		return this.queue.add(async () => {
-			// check type of action
-			assert(actionType.is(action), "Invalid action value")
+		await this.queue.add(() => this.applyActionInternal(hash, action))
+		await this.publishMessage(hash, action)
+		return { hash }
+	}
 
-			// hash the action
-			const hash = getActionHash(action)
+	private async applyActionInternal(hash: string, action: Action) {
+		if (this.options.verbose) {
+			console.log(chalk.green(`[canvas-core] Applying action ${hash}`), action)
+		} else {
+			console.log(chalk.green(`[canvas-core] Applying action ${hash}`))
+		}
 
-			// check if the action has already been applied
-			const existingRecord = await this.messageStore.getActionByHash(hash)
-			if (existingRecord !== null) {
-				return { hash }
-			}
+		await this.validateAction(action)
 
-			await this.validateAction(action)
+		const effects = await this.vm.execute(hash, action.payload)
+		await this.messageStore.insertAction(hash, action)
+		await this.modelStore.applyEffects(action.payload, effects)
+		if (this.mst !== null) {
+			const hashBuffer = Buffer.from(hash.slice(2), "hex")
+			const leafBuffer = Buffer.alloc(14)
+			leafBuffer.writeUintBE(action.payload.timestamp * 2 + 1, 0, 6)
+			hashBuffer.copy(leafBuffer, 6, 0, 8)
+			this.mst.insert(leafBuffer, hashBuffer)
+		}
 
-			// execute the action
-			const effects = await this.vm.execute(hash, action.payload)
-			await this.messageStore.insertAction(hash, action)
-			await this.modelStore.applyEffects(action.payload, effects)
-			if (this.mst !== null) {
-				const hashBuffer = Buffer.from(hash.slice(2), "hex")
-				const leafBuffer = Buffer.alloc(14)
-				leafBuffer.writeUintBE(action.payload.timestamp * 2, 0, 6)
-				hashBuffer.copy(leafBuffer, 6, 0, 8)
-				this.mst.insert(leafBuffer, hashBuffer)
-			}
-
-			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
-
-			await this.publishMessage(hash, action)
-
-			return { hash }
-		})
+		this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
+		console.log(chalk.green(`[canvas-core] Successfully applied action ${hash}`))
 	}
 
 	private async validateAction(action: Action) {
@@ -403,35 +392,40 @@ export class Core extends EventEmitter<CoreEvents> {
 	/**
 	 * Create a new session.
 	 */
-	public applySession(session: Session): Promise<{ hash: string }> {
-		if (this.options.verbose) {
-			console.log("[canvas-core] apply session:", JSON.stringify(session))
+	public async applySession(session: Session): Promise<{ hash: string }> {
+		assert(sessionType.is(session), "invalid session")
+
+		const hash = getSessionHash(session)
+
+		const existingRecord = this.messageStore.getSessionByHash(hash)
+		if (existingRecord !== null) {
+			return { hash }
 		}
 
-		return this.queue.add(async () => {
-			assert(sessionType.is(session), "invalid session")
+		await this.queue.add(() => this.applySessionInternal(hash, session))
 
-			const hash = getSessionHash(session)
+		return { hash }
+	}
 
-			const existingRecord = await this.messageStore.getSessionByHash(hash)
-			if (existingRecord !== null) {
-				return { hash }
-			}
+	private async applySessionInternal(hash: string, session: Session) {
+		if (this.options.verbose) {
+			console.log(chalk.green(`[canvas-core] Applying session ${hash}`), session)
+		} else {
+			console.log(chalk.green(`[canvas-core] Applying session ${hash}`))
+		}
 
-			await this.validateSession(session)
-			await this.messageStore.insertSession(hash, session)
-			if (this.mst !== null) {
-				const hashBuffer = Buffer.from(hash.slice(2), "hex")
-				const leafBuffer = Buffer.alloc(14)
-				leafBuffer.writeUintBE(session.payload.timestamp * 2 + 1, 0, 6)
-				hashBuffer.copy(leafBuffer, 6, 0, 8)
-				this.mst.insert(leafBuffer, hashBuffer)
-			}
+		await this.validateSession(session)
+		await this.messageStore.insertSession(hash, session)
+		if (this.mst !== null) {
+			const hashBuffer = Buffer.from(hash.slice(2), "hex")
+			const leafBuffer = Buffer.alloc(14)
+			leafBuffer.writeUintBE(session.payload.timestamp * 2, 0, 6)
+			hashBuffer.copy(leafBuffer, 6, 0, 8)
+			this.mst.insert(leafBuffer, hashBuffer)
+		}
 
-			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
-
-			return { hash }
-		})
+		this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
+		console.log(chalk.green(`[canvas-core] Successfully applied session ${hash}`))
 	}
 
 	private async validateSession(session: Session) {
@@ -505,5 +499,79 @@ export class Core extends EventEmitter<CoreEvents> {
 		} catch (err) {
 			console.log(chalk.red("[canvas-core] Error applying peer message"), err)
 		}
+	}
+
+	private handleIncomingStream(connection: Connection, stream: Stream) {
+		console.log(
+			`[canvas-core] Handling incoming stream ${stream.id} on connection ${connection.id} from peer`,
+			connection.remotePeer.toString()
+		)
+
+		if (this.mst !== null) {
+			const source = new okra.Source(this.mst)
+			handleSource(stream, source, this.messageStore)
+				.then(() => console.log(`[canvas-core] Stream ${stream.id} closed`))
+				.catch((err) => console.log(chalk.red(`[canvas-core] Error in incoming stream handler`), err))
+				.finally(() => source.close())
+		}
+	}
+
+	private sync() {
+		return this.queue.add(async () => {
+			if (this.libp2p === null || this.mst === null || this.protocol === null || !this.options.sync) {
+				return
+			}
+
+			const peers = new Map<string, PeerId>()
+			for (const peer of this.libp2p.getPeers()) {
+				const protocols = await this.libp2p.peerStore.protoBook.get(peer)
+				if (protocols.includes(this.protocol)) {
+					peers.set(peer.toString(), peer)
+				}
+			}
+
+			for (const peer of peers.values()) {
+				console.log("[canvas-core] Initiating sync with", peer.toString())
+				const target = new okra.Target(this.mst)
+				let messageCount = 0
+				await this.libp2p
+					.dialProtocol(peer, this.protocol)
+					.then((stream) => {
+						console.log(`[canvas-core] Successfully dialed ${peer.toString()} and got stream ${stream.id}`)
+						// return handleTarget(stream, target, async (leaf, hash) => {
+						// 	console.log("[canvas-core] IDENTIFIED MISSING MESSAGE", leaf.toString("hex"), hash.toString("hex"))
+						// })
+
+						return handleTarget(stream, target, async (hash, message) => {
+							messageCount += 1
+							console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
+							if (message.type === "session") {
+								const { type, ...session } = message
+								await this.applySessionInternal(hash, session).catch((err) => {
+									console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
+								})
+							} else if (message.type === "action") {
+								const { type, ...action } = message
+								await this.applyActionInternal(hash, action).catch((err) => {
+									console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
+								})
+							} else {
+								signalInvalidType(message)
+							}
+						})
+					})
+					.catch((err) => console.log(chalk.red("[canvas-core] Sync failed"), err))
+					.finally(() => {
+						console.log(
+							chalk.green(
+								`[canvas-core] Sync with ${peer.toString()} completed. Found and applied ${messageCount} new messages.`
+							)
+						)
+						target.close()
+					})
+			}
+
+			this.syncTimeout = setTimeout(() => this.sync(), Core.SyncInterval)
+		})
 	}
 }
