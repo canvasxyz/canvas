@@ -1,49 +1,60 @@
 import assert from "node:assert"
 import { createHash } from "node:crypto"
 
-import type { Chain, ChainId, ActionArgument, Block, Session, Action } from "@canvas-js/interfaces"
 import { ethers } from "ethers"
-import * as cbor from "microcbor"
 import * as t from "io-ts"
+import * as cbor from "microcbor"
 
-import { actionArgumentArrayType, chainIdType, chainType } from "./codecs.js"
+import type { Block, Session, Action } from "@canvas-js/interfaces"
+
+import { actionArgumentArrayType, chainIdType, chainType, uint8ArrayType } from "./codecs.js"
 
 const { hexlify, arrayify } = ethers.utils
 
-export type BinaryBlock = {
-	chain: Chain
-	chainId: ChainId
-	blocknum: number
-	blockhash: Uint8Array
-	timestamp: number
-}
+const binaryBlockType = t.type({
+	chain: chainType,
+	chainId: chainIdType,
+	blocknum: t.number,
+	blockhash: uint8ArrayType,
+	timestamp: t.number,
+})
 
-export type BinaryAction = {
-	type: "action"
-	signature: Uint8Array
-	session: Uint8Array | null
-	payload: {
-		call: string
-		args: ActionArgument[]
-		from: Uint8Array
-		spec: string
-		timestamp: number
-		block: BinaryBlock | null
-	}
-}
+export type BinaryBlock = t.TypeOf<typeof binaryBlockType>
 
-export type BinarySession = {
-	type: "session"
-	signature: Uint8Array
-	payload: {
-		from: Uint8Array
-		spec: string
-		timestamp: number
-		address: Uint8Array
-		duration: number
-		block: BinaryBlock | null
-	}
-}
+const binaryActionPayloadType = t.type({
+	call: t.string,
+	args: actionArgumentArrayType,
+	from: uint8ArrayType,
+	spec: t.string,
+	timestamp: t.number,
+	block: t.union([t.null, binaryBlockType]),
+})
+
+export const binaryActionType = t.type({
+	type: t.literal("action"),
+	signature: uint8ArrayType,
+	session: t.union([t.null, uint8ArrayType]),
+	payload: binaryActionPayloadType,
+})
+
+export type BinaryAction = t.TypeOf<typeof binaryActionType>
+
+const binarySessionPayloadType = t.type({
+	from: uint8ArrayType,
+	spec: t.string,
+	timestamp: t.number,
+	address: uint8ArrayType,
+	duration: t.number,
+	block: t.union([t.null, binaryBlockType]),
+})
+
+export const binarySessionType = t.type({
+	type: t.literal("session"),
+	signature: uint8ArrayType,
+	payload: binarySessionPayloadType,
+})
+
+export type BinarySession = t.TypeOf<typeof binarySessionType>
 
 const toBinaryBlock = ({ blockhash, ...block }: Block): BinaryBlock => ({ ...block, blockhash: arrayify(blockhash) })
 
@@ -168,48 +179,14 @@ type Hash = { hash: Uint8Array }
 type BinaryMessage = Omit<BinaryAction, "type" | "session"> &
 	Hash & { session: null | (Omit<BinarySession, "type"> & Hash) }
 
-const isUint8Array = (u: unknown): u is Uint8Array => u instanceof Uint8Array
-const uint8ArrayType = new t.Type(
-	"Uint8Array",
-	isUint8Array,
-	(i, context) => (isUint8Array(i) ? t.success(i) : t.failure(i, context)),
-	t.identity
-)
-
-const binaryBlockType: t.Type<BinaryBlock> = t.type({
-	chain: chainType,
-	chainId: chainIdType,
-	blocknum: t.number,
-	blockhash: uint8ArrayType,
-	timestamp: t.number,
-})
-
 const binaryMessageType: t.Type<BinaryMessage> = t.type({
 	hash: uint8ArrayType,
 	signature: uint8ArrayType,
 	session: t.union([
 		t.null,
-		t.type({
-			hash: uint8ArrayType,
-			signature: uint8ArrayType,
-			payload: t.type({
-				from: uint8ArrayType,
-				spec: t.string,
-				timestamp: t.number,
-				address: uint8ArrayType,
-				duration: t.number,
-				block: t.union([t.null, binaryBlockType]),
-			}),
-		}),
+		t.type({ hash: uint8ArrayType, signature: uint8ArrayType, payload: binarySessionPayloadType }),
 	]),
-	payload: t.type({
-		call: t.string,
-		args: actionArgumentArrayType,
-		from: uint8ArrayType,
-		spec: t.string,
-		timestamp: t.number,
-		block: t.union([t.null, binaryBlockType]),
-	}),
+	payload: binaryActionPayloadType,
 })
 
 export function encodeBinaryMessage(

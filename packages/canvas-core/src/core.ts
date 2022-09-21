@@ -18,10 +18,12 @@ import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { Message } from "@libp2p/interface-pubsub"
 import type { Connection, Stream } from "@libp2p/interface-connection"
 import type { IncomingStreamData } from "@libp2p/interface-registrar"
+import type { PeerId } from "@libp2p/interface-peer-id"
 
 import * as cbor from "microcbor"
+import * as t from "io-ts"
 
-import { Tree, Scanner } from "node-okra"
+import { Tree } from "node-okra"
 
 import {
 	Action,
@@ -36,9 +38,16 @@ import {
 } from "@canvas-js/interfaces"
 
 import { ModelStore, SqliteStore } from "./models/index.js"
-import { actionType, sessionType } from "./codecs.js"
-import { CacheMap } from "./utils.js"
-import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
+import { actionType, sessionType, uint8ArrayType } from "./codecs.js"
+import { CacheMap, signalInvalidType } from "./utils.js"
+import {
+	binaryActionType,
+	binarySessionType,
+	decodeBinaryMessage,
+	encodeBinaryMessage,
+	getActionHash,
+	getSessionHash,
+} from "./encoding.js"
 import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
 
@@ -119,11 +128,21 @@ export class Core extends EventEmitter<CoreEvents> {
 				pubsub: gossipSub,
 			})
 
-			libp2p.connectionManager.addEventListener("peer:connect", ({ detail: connection }) => {
-				console.log(chalk.green(`[canvas-core] Connected to peer ${connection.remotePeer.toString()}`))
+			const { peerStore, connectionManager } = libp2p
+
+			connectionManager.addEventListener("peer:connect", ({ detail: connection }) => {
+				console.log(
+					chalk.green(
+						`[canvas-core] Connected to peer ${connection.remotePeer.toString()} with connection ID ${connection.id}`
+					)
+				)
+
+				peerStore.protoBook.get(connection.remotePeer).then((protocols) => {
+					console.log(`[canvas-core] ${connection.remotePeer.toString()} supports protocols`, protocols)
+				})
 			})
 
-			libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
+			connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
 				console.log(chalk.green(`[canvas-core] Disconnected from peer ${connection.remotePeer.toString()}`))
 			})
 
@@ -170,6 +189,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly blockCacheMostRecentTimestamp: Record<string, number> = {}
 
 	private readonly queue: PQueue
+	private syncTimeout: NodeJS.Timeout | null = null
 
 	private constructor(
 		public readonly name: string,
@@ -207,25 +227,12 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 		}
 
+		this.syncTimeout = null
 		if (libp2p !== null) {
 			libp2p.pubsub.subscribe(`canvas:${this.name}`)
 			libp2p.pubsub.addEventListener("message", ({ detail: message }) => this.handleMessage(message))
-			libp2p.handle("/x/canvas.xyz/cursor/0.0.0", (data) => this.handleCursor(data))
-		}
-	}
-
-	private async handleCursor({ connection, stream }: IncomingStreamData) {
-		console.log("handling cursor stream", stream.stat)
-		for await (const message of cbor.decodeStream(Core.streamChunks(stream))) {
-			console.log("got cursor message", message)
-		}
-	}
-
-	private static streamChunks = async function* (stream: Stream): AsyncIterable<Uint8Array> {
-		for await (const chunkList of stream.source) {
-			for (const chunk of chunkList) {
-				yield chunk
-			}
+			// libp2p.handle(Core.CursorProtocol, (data) => this.handleCursor(data))
+			// this.syncTimeout = setTimeout(() => this.sync(), 10000)
 		}
 	}
 
@@ -234,6 +241,10 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async close() {
+		if (this.syncTimeout !== null) {
+			clearTimeout(this.syncTimeout)
+		}
+
 		for (const provider of Object.values(this.providers)) {
 			provider.removeAllListeners("block")
 		}

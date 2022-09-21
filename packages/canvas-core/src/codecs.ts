@@ -113,3 +113,36 @@ export const modelType: t.Type<Model> = new t.Type(
 )
 
 export const modelsType = t.record(t.string, modelType)
+
+const isUint8Array = (u: unknown): u is Uint8Array => u instanceof Uint8Array
+
+export const uint8ArrayType = new t.Type(
+	"Uint8Array",
+	isUint8Array,
+	(i, context) => (isUint8Array(i) ? t.success(i) : t.failure(i, context)),
+	t.identity
+)
+
+// interface Bytes32Brand {
+// 	readonly Bytes32: unique symbol
+// }
+
+// export const bytes32Type = t.brand(
+// 	uint8ArrayType,
+// 	(n): n is t.Branded<Uint8Array, Bytes32Brand> => n.byteLength === 32,
+// 	"Bytes32"
+// )
+
+// export type Bytes32 = t.TypeOf<typeof bytes32Type>
+
+// interface Bytes14Brand {
+// 	readonly Bytes14: unique symbol
+// }
+
+// export const bytes14Type = t.brand(
+// 	uint8ArrayType,
+// 	(n): n is t.Branded<Uint8Array, Bytes14Brand> => n.byteLength === 14,
+// 	"Bytes14"
+// )
+
+// export type Bytes14 = t.TypeOf<typeof bytes14Type>

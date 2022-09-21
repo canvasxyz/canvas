@@ -74,13 +74,13 @@ export class MessageStore {
 		this.database.close()
 	}
 
-	public insertAction(hash: string, action: Action) {
+	public insertAction(hash: string | Buffer, action: Action) {
 		assert(action.payload.spec === this.name, "insertAction: action.payload.spec did not match MessageStore.name")
 
 		const args = cbor.encode(action.payload.args)
 
 		const record: ActionRecord = {
-			hash: fromHex(hash),
+			hash: typeof hash === "string" ? fromHex(hash) : hash,
 			signature: fromHex(action.signature),
 			session_address: null,
 			from_address: fromHex(action.payload.from),
@@ -101,11 +101,11 @@ export class MessageStore {
 		this.statements.insertAction.run(record)
 	}
 
-	public insertSession(hash: string, session: Session) {
+	public insertSession(hash: string | Buffer, session: Session) {
 		assert(session.payload.spec === this.name, "insertSession: session.payload.spec did not match MessageStore.name")
 
 		const record: SessionRecord = {
-			hash: fromHex(hash),
+			hash: typeof hash === "string" ? fromHex(hash) : hash,
 			signature: fromHex(session.signature),
 			from_address: fromHex(session.payload.from),
 			session_address: fromHex(session.payload.address),
@@ -121,9 +121,9 @@ export class MessageStore {
 		this.statements.insertSession.run(record)
 	}
 
-	public getActionByHash(hash: string): Action | null {
+	public getActionByHash(hash: string | Buffer): Action | null {
 		const record: undefined | ActionRecord = this.statements.getActionByHash.get({
-			hash: fromHex(hash),
+			hash: typeof hash === "string" ? fromHex(hash) : hash,
 		})
 
 		return record === undefined ? null : this.parseActionRecord(record)
@@ -149,9 +149,9 @@ export class MessageStore {
 		return action
 	}
 
-	public getSessionByHash(hash: string): Session | null {
+	public getSessionByHash(hash: Buffer | string): Session | null {
 		const record: undefined | SessionRecord = this.statements.getSessionByHash.get({
-			hash: fromHex(hash),
+			hash: typeof hash === "string" ? fromHex(hash) : hash,
 		})
 
 		return record === undefined ? null : this.parseSessionRecord(record)
