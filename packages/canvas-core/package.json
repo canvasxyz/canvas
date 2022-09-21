@@ -35,6 +35,7 @@
 		"microcbor": "^0.2.1",
 		"multiformats": "^9.7.0",
 		"node-fetch": "^3.2.6",
+		"node-okra": "^0.0.1",
 		"p-queue": "^7.2.0",
 		"pg-promise": "^10.11.1",
 		"quickjs-emscripten": "^0.21.0"
