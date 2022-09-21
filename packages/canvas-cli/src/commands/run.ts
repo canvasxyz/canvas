@@ -107,6 +107,12 @@ export async function handler(args: Args) {
 			console.log(`[canvas-cli] Deleted ${modelsPath}`)
 		}
 
+		const mstPath = path.resolve(directory, Core.MST_FILENAME)
+		if (fs.existsSync(mstPath)) {
+			fs.rmSync(mstPath)
+			console.log(`[canvas-cli] Deleted ${mstPath}`)
+		}
+
 		if (args.database !== undefined) {
 			console.log(`[canvas-cli] The provided database at ${args.database} was not changed.`)
 		}
