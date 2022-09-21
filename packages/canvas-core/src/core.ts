@@ -23,7 +23,7 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 import * as cbor from "microcbor"
 import * as t from "io-ts"
 
-import { Tree } from "node-okra"
+import * as okra from "node-okra"
 
 import {
 	Action,
@@ -116,7 +116,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			const gossipSub = new GossipSub({
 				fallbackToFloodsub: false,
 				allowPublishToZeroPeers: true,
-				globalSignaturePolicy: "StrictNoSign",
+				globalSignaturePolicy: "StrictSign",
 			})
 
 			libp2p = await createLibp2p({
@@ -128,31 +128,34 @@ export class Core extends EventEmitter<CoreEvents> {
 				pubsub: gossipSub,
 			})
 
-			const { peerStore, connectionManager } = libp2p
-
-			connectionManager.addEventListener("peer:connect", ({ detail: connection }) => {
+			libp2p.connectionManager.addEventListener("peer:connect", ({ detail: connection }) => {
 				console.log(
 					chalk.green(
 						`[canvas-core] Connected to peer ${connection.remotePeer.toString()} with connection ID ${connection.id}`
 					)
 				)
 
-				peerStore.protoBook.get(connection.remotePeer).then((protocols) => {
-					console.log(`[canvas-core] ${connection.remotePeer.toString()} supports protocols`, protocols)
-				})
+				// peerStore.protoBook
+				// 	.get(connection.remotePeer)
+				// 	.then((protocols) => {
+				// 		console.log(`[canvas-core] ${connection.remotePeer.toString()} supports protocols`, protocols)
+				// 	})
+				// 	.catch((err) => {
+				// 		console.log(chalk.red(`[canvas-core] Failed to look up peer protocols in libp2p protoBook`, err))
+				// 	})
 			})
 
-			connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
+			libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
 				console.log(chalk.green(`[canvas-core] Disconnected from peer ${connection.remotePeer.toString()}`))
 			})
 
 			await libp2p.start()
 		}
 
-		let mst: Tree | null = null
+		let mst: okra.Tree | null = null
 		if (directory !== null) {
 			const mstPath = path.resolve(directory, Core.OKRA_FILENAME)
-			mst = new Tree(mstPath)
+			mst = new okra.Tree(mstPath)
 			if (verbose) {
 				console.log(`[canvas-core] Using MST at ${mstPath}`)
 			}
@@ -188,6 +191,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly blockCache: Record<string, CacheMap<string, { number: number; timestamp: number }>> = {}
 	private readonly blockCacheMostRecentTimestamp: Record<string, number> = {}
 
+	private readonly protocol: string | null = null
 	private readonly queue: PQueue
 	private syncTimeout: NodeJS.Timeout | null = null
 
@@ -199,13 +203,14 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly messageStore: MessageStore,
 		public readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {},
 		public readonly libp2p: Libp2p | null,
-		public readonly mst: Tree | null,
+		public readonly mst: okra.Tree | null,
 		private readonly options: {
 			verbose?: boolean
 			unchecked?: boolean
 		}
 	) {
 		super()
+
 		this.queue = new PQueue({ concurrency: 1 })
 
 		// keep up to 128 past blocks
@@ -231,7 +236,9 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (libp2p !== null) {
 			libp2p.pubsub.subscribe(`canvas:${this.name}`)
 			libp2p.pubsub.addEventListener("message", ({ detail: message }) => this.handleMessage(message))
-			// libp2p.handle(Core.CursorProtocol, (data) => this.handleCursor(data))
+			console.log(`[canvas-cli] Subscribed to pubsub topic "canvas:${this.name}"`)
+			// this.protocol = `/x/canvas/${this.name}`
+			// libp2p.handle(Core.SyncProtocol, (data) => this.handleCursor(data))
 			// this.syncTimeout = setTimeout(() => this.sync(), 10000)
 		}
 	}
@@ -250,6 +257,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		if (this.libp2p !== null) {
+			this.libp2p.pubsub.unsubscribe(`canvas:${this.name}`)
+			this.libp2p.pubsub.removeEventListener("message")
+			this.libp2p.connectionManager.removeEventListener("peer:connect")
+			this.libp2p.connectionManager.removeEventListener("peer:disconnect")
 			await this.libp2p.stop()
 		}
 
