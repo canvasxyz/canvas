@@ -267,7 +267,6 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Helper for verifying the blockhash for an action or session.
 	 */
 	public async verifyBlock(blockInfo: Block, options: { sync?: boolean }) {
-		console.log("verifying block", !!options.sync)
 		const { chain, chainId, blocknum, blockhash, timestamp } = blockInfo
 		const key = `${chain}:${chainId}`
 		const provider = this.providers[key]
@@ -540,40 +539,47 @@ export class Core extends EventEmitter<CoreEvents> {
 				}
 
 				const target = new okra.Target(this.mst)
-				let messageCount = 0
+				let successCount = 0
+				let failureCount = 0
 				await this.libp2p.dialProtocol(peer, this.protocol).then((stream) => {
 					if (this.options.verbose) {
 						console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}`)
 					}
 
 					return handleTarget(stream, target, async (hash, message) => {
-						messageCount += 1
 						if (this.options.verbose) {
 							console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
 						}
 
 						if (message.type === "session") {
 							const { type, ...session } = message
-							await this.applySessionInternal(hash, session, { sync: true }).catch((err) => {
-								console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
-							})
+							await this.applySessionInternal(hash, session, { sync: true })
+								.then(() => {
+									successCount += 1
+								})
+								.catch((err) => {
+									failureCount += 1
+									console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
+								})
 						} else if (message.type === "action") {
 							const { type, ...action } = message
-							await this.applyActionInternal(hash, action, { sync: true }).catch((err) => {
-								console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
-							})
+							await this.applyActionInternal(hash, action, { sync: true })
+								.then(() => {
+									successCount += 1
+								})
+								.catch((err) => {
+									failureCount += 1
+									console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
+								})
 						} else {
 							signalInvalidType(message)
 						}
 					})
 						.then(() => {
-							if (this.options.verbose) {
-								console.log(
-									chalk.green(
-										`[canvas-core] Sync with ${peer.toString()} completed. Found and applied ${messageCount} new messages.`
-									)
-								)
-							}
+							console.log(chalk.green(`[canvas-core] Sync with ${peer.toString()} completed.`))
+							console.log(
+								chalk.green(`[canvas-core] Applied ${successCount} new messages with ${failureCount} failures.`)
+							)
 						})
 						.catch((err) => console.log(chalk.red("[canvas-core] Sync failed"), err))
 						.finally(() => {
