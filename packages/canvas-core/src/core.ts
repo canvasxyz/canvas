@@ -1,5 +1,6 @@
 import assert from "node:assert"
 import path from "node:path"
+import fs from "node:fs"
 
 import { ethers } from "ethers"
 import { QuickJSWASMModule } from "quickjs-emscripten"
@@ -20,6 +21,7 @@ import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { Message } from "@libp2p/interface-pubsub"
 import type { Connection, Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
+import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 
 import * as okra from "node-okra"
 import { handleSource, handleTarget } from "./sync.js"
@@ -42,6 +44,7 @@ import { CacheMap, signalInvalidType, bootstrapList } from "./utils.js"
 import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
+import { fst } from "fp-ts/lib/ReadonlyTuple.js"
 
 export interface CoreConfig {
 	name: string
@@ -54,7 +57,7 @@ export interface CoreConfig {
 	unchecked?: boolean
 	rpc?: Partial<Record<Chain, Record<string, string>>>
 	peering?: boolean
-	port?: number
+	peeringPort?: number
 }
 
 interface CoreEvents {
@@ -68,7 +71,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	public static readonly MST_FILENAME = "mst.okra"
 	private static readonly cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
-		const { directory, name, spec, verbose, unchecked, rpc, replay, quickJS, peering, port } = config
+		const { directory, name, spec, verbose, unchecked, rpc, replay, quickJS, peering, peeringPort: port } = config
 
 		if (verbose) {
 			console.log(`[canvas-core] Initializing core ${name}`)
@@ -104,8 +107,20 @@ export class Core extends EventEmitter<CoreEvents> {
 		const messageStore = new MessageStore(name, directory, { verbose })
 
 		let libp2p: Libp2p | null = null
-		if (peering && port) {
+		if (directory && peering && port) {
+			const peerIdPath = path.resolve(directory, "id")
+			let peerId: PeerId
+			if (fs.existsSync(peerIdPath)) {
+				peerId = await createFromProtobuf(fs.readFileSync(peerIdPath))
+			} else {
+				peerId = await createEd25519PeerId()
+				fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
+			}
+
+			console.log(`[canvas-core] Using libp2p PeerId ${peerId.toString()}`)
+
 			libp2p = await createLibp2p({
+				peerId,
 				addresses: { listen: [`/ip4/0.0.0.0/tcp/${port}`] },
 				transports: [new TCP()],
 				connectionEncryption: [new Noise()],
@@ -234,6 +249,10 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 
 			this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, protocols } }) => {
+				if (this.libp2p && peerId.equals(this.libp2p.peerId)) {
+					return
+				}
+
 				const id = peerId.toString()
 				if (protocols.includes(this.protocol)) {
 					if (!applicationPeers.has(id)) {

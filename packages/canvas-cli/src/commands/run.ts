@@ -186,7 +186,7 @@ export async function handler(args: Args) {
 		replay,
 		unchecked,
 		peering,
-		port: peeringPort,
+		peeringPort,
 	})
 
 	const api = args.noserver ? null : new API({ core, port: args.port, verbose })
