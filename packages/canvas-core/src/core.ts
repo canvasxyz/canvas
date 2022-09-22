@@ -576,14 +576,18 @@ export class Core extends EventEmitter<CoreEvents> {
 						}
 					})
 						.then(() => {
-							console.log(chalk.green(`[canvas-core] Sync with ${peer.toString()} completed.`))
-							console.log(
-								chalk.green(`[canvas-core] Applied ${successCount} new messages with ${failureCount} failures.`)
-							)
+							if (this.options.verbose) {
+								console.log(chalk.green(`[canvas-core] Sync with ${peer.toString()} completed.`))
+								console.log(
+									chalk.green(`[canvas-core] Applied ${successCount} new messages with ${failureCount} failures.`)
+								)
+							}
 						})
 						.catch((err) => console.log(chalk.red("[canvas-core] Sync failed"), err))
 						.finally(() => {
-							console.log(`[canvas-core] Closed outgoing stream ${stream.id}`)
+							if (this.options.verbose) {
+								console.log(`[canvas-core] Closed outgoing stream ${stream.id}`)
+							}
 							target.close()
 						})
 				})
