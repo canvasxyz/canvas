@@ -103,19 +103,17 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		let libp2p: Libp2p | null = null
 		if (peering && port) {
-			const gossipSub = new GossipSub({
-				fallbackToFloodsub: false,
-				allowPublishToZeroPeers: true,
-				globalSignaturePolicy: "StrictSign",
-			})
-
 			libp2p = await createLibp2p({
 				addresses: { listen: [`/ip4/0.0.0.0/tcp/${port}`] },
 				transports: [new TCP()],
 				connectionEncryption: [new Noise()],
 				streamMuxers: [new Mplex()],
 				peerDiscovery: [new MulticastDNS()],
-				pubsub: gossipSub,
+				pubsub: new GossipSub({
+					fallbackToFloodsub: false,
+					allowPublishToZeroPeers: true,
+					globalSignaturePolicy: "StrictSign",
+				}),
 			})
 
 			libp2p.connectionManager.addEventListener("peer:connect", ({ detail: connection }) => {
@@ -268,7 +266,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	/**
 	 * Helper for verifying the blockhash for an action or session.
 	 */
-	public async verifyBlock(blockInfo: Block) {
+	public async verifyBlock(blockInfo: Block, options: { sync?: boolean }) {
+		console.log("verifying block", !!options.sync)
 		const { chain, chainId, blocknum, blockhash, timestamp } = blockInfo
 		const key = `${chain}:${chainId}`
 		const provider = this.providers[key]
@@ -299,12 +298,14 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(block.number === blocknum, "action/session provided with invalid block number")
 		assert(block.timestamp === timestamp, "action/session provided with invalid timestamp")
 
-		// check the block was recent
-		const maxDelay = 30 * 60 // limit propagation to 30 minutes
-		assert(
-			timestamp >= this.blockCacheMostRecentTimestamp[key] - maxDelay,
-			"action must be signed with a recent timestamp, within " + maxDelay + "s of the last seen block"
-		)
+		if (!options.sync) {
+			// check the block was recent
+			const maxDelay = 30 * 60 // limit propagation to 30 minutes
+			assert(
+				timestamp >= this.blockCacheMostRecentTimestamp[key] - maxDelay,
+				`action must be signed with a recent timestamp, within ${maxDelay}s of the last seen block`
+			)
+		}
 	}
 
 	/**
@@ -325,14 +326,14 @@ export class Core extends EventEmitter<CoreEvents> {
 		return { hash }
 	}
 
-	private async applyActionInternal(hash: string, action: Action) {
+	private async applyActionInternal(hash: string, action: Action, options: { sync?: boolean } = {}) {
 		if (this.options.verbose) {
 			console.log(chalk.green(`[canvas-core] Applying action ${hash}`), action)
 		} else {
 			console.log(chalk.green(`[canvas-core] Applying action ${hash}`))
 		}
 
-		await this.validateAction(action)
+		await this.validateAction(action, options)
 
 		const effects = await this.vm.execute(hash, action.payload)
 		await this.messageStore.insertAction(hash, action)
@@ -349,7 +350,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		console.log(chalk.green(`[canvas-core] Successfully applied action ${hash}`))
 	}
 
-	private async validateAction(action: Action) {
+	private async validateAction(action: Action, options: { sync?: boolean }) {
 		const { timestamp, block, spec } = action.payload
 		const fromAddress = action.payload.from.toLowerCase()
 
@@ -362,7 +363,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (!this.options.unchecked) {
 			// check the action was signed with a valid, recent block
 			assert(block !== undefined, "action missing block data")
-			await this.verifyBlock(block)
+			await this.verifyBlock(block, options)
 		}
 
 		// verify the signature, either using a session signature or action signature
@@ -407,14 +408,14 @@ export class Core extends EventEmitter<CoreEvents> {
 		return { hash }
 	}
 
-	private async applySessionInternal(hash: string, session: Session) {
+	private async applySessionInternal(hash: string, session: Session, options: { sync?: boolean } = {}) {
 		if (this.options.verbose) {
 			console.log(chalk.green(`[canvas-core] Applying session ${hash}`), session)
 		} else {
 			console.log(chalk.green(`[canvas-core] Applying session ${hash}`))
 		}
 
-		await this.validateSession(session)
+		await this.validateSession(session, options)
 		await this.messageStore.insertSession(hash, session)
 		if (this.mst !== null) {
 			const hashBuffer = Buffer.from(hash.slice(2), "hex")
@@ -428,7 +429,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		console.log(chalk.green(`[canvas-core] Successfully applied session ${hash}`))
 	}
 
-	private async validateSession(session: Session) {
+	private async validateSession(session: Session, options: { sync?: boolean }) {
 		const { from, spec, timestamp, block } = session.payload
 		assert(spec === this.name, "session signed for wrong spec")
 
@@ -442,7 +443,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		// check the session was signed with a valid, recent block
 		if (!this.options.unchecked) {
 			assert(block !== undefined, "session missing block info")
-			await this.verifyBlock(block)
+			await this.verifyBlock(block, options)
 		}
 	}
 
@@ -502,17 +503,20 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private handleIncomingStream(connection: Connection, stream: Stream) {
-		console.log(
-			`[canvas-core] Handling incoming stream ${stream.id} on connection ${connection.id} from peer`,
-			connection.remotePeer.toString()
-		)
+		if (this.options.verbose) {
+			console.log(`[canvas-core] Handling incoming stream ${stream.id} from peer ${connection.remotePeer.toString()}`)
+		}
 
 		if (this.mst !== null) {
 			const source = new okra.Source(this.mst)
 			handleSource(stream, source, this.messageStore)
-				.then(() => console.log(`[canvas-core] Stream ${stream.id} closed`))
 				.catch((err) => console.log(chalk.red(`[canvas-core] Error in incoming stream handler`), err))
-				.finally(() => source.close())
+				.finally(() => {
+					source.close()
+					if (this.options.verbose) {
+						console.log(`[canvas-core] Closed incoming stream ${stream.id}`)
+					}
+				})
 		}
 	}
 
@@ -531,44 +535,52 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 
 			for (const peer of peers.values()) {
-				console.log("[canvas-core] Initiating sync with", peer.toString())
+				if (this.options.verbose) {
+					console.log("[canvas-core] Initiating sync with", peer.toString())
+				}
+
 				const target = new okra.Target(this.mst)
 				let messageCount = 0
-				await this.libp2p
-					.dialProtocol(peer, this.protocol)
-					.then((stream) => {
-						console.log(`[canvas-core] Successfully dialed ${peer.toString()} and got stream ${stream.id}`)
-						// return handleTarget(stream, target, async (leaf, hash) => {
-						// 	console.log("[canvas-core] IDENTIFIED MISSING MESSAGE", leaf.toString("hex"), hash.toString("hex"))
-						// })
+				await this.libp2p.dialProtocol(peer, this.protocol).then((stream) => {
+					if (this.options.verbose) {
+						console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}`)
+					}
 
-						return handleTarget(stream, target, async (hash, message) => {
-							messageCount += 1
+					return handleTarget(stream, target, async (hash, message) => {
+						messageCount += 1
+						if (this.options.verbose) {
 							console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
-							if (message.type === "session") {
-								const { type, ...session } = message
-								await this.applySessionInternal(hash, session).catch((err) => {
-									console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
-								})
-							} else if (message.type === "action") {
-								const { type, ...action } = message
-								await this.applyActionInternal(hash, action).catch((err) => {
-									console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
-								})
-							} else {
-								signalInvalidType(message)
+						}
+
+						if (message.type === "session") {
+							const { type, ...session } = message
+							await this.applySessionInternal(hash, session, { sync: true }).catch((err) => {
+								console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
+							})
+						} else if (message.type === "action") {
+							const { type, ...action } = message
+							await this.applyActionInternal(hash, action, { sync: true }).catch((err) => {
+								console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
+							})
+						} else {
+							signalInvalidType(message)
+						}
+					})
+						.then(() => {
+							if (this.options.verbose) {
+								console.log(
+									chalk.green(
+										`[canvas-core] Sync with ${peer.toString()} completed. Found and applied ${messageCount} new messages.`
+									)
+								)
 							}
 						})
-					})
-					.catch((err) => console.log(chalk.red("[canvas-core] Sync failed"), err))
-					.finally(() => {
-						console.log(
-							chalk.green(
-								`[canvas-core] Sync with ${peer.toString()} completed. Found and applied ${messageCount} new messages.`
-							)
-						)
-						target.close()
-					})
+						.catch((err) => console.log(chalk.red("[canvas-core] Sync failed"), err))
+						.finally(() => {
+							console.log(`[canvas-core] Closed outgoing stream ${stream.id}`)
+							target.close()
+						})
+				})
 			}
 
 			this.syncTimeout = setTimeout(() => this.sync(), Core.SyncInterval)

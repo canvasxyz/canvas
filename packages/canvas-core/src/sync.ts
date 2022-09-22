@@ -1,4 +1,6 @@
 import assert from "node:assert"
+import { createHash } from "node:crypto"
+
 import type { Stream } from "@libp2p/interface-connection"
 import type { Source } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
@@ -6,13 +8,13 @@ import type { Uint8ArrayList } from "uint8arraylist"
 import * as t from "io-ts"
 import * as cbor from "microcbor"
 
+import type * as okra from "node-okra"
+import type { Action, Session } from "@canvas-js/interfaces"
+
+import type { MessageStore } from "./messages/index.js"
 import { uint8ArrayType } from "./codecs.js"
 import { signalInvalidType } from "./utils.js"
 import { decodeAction, decodeSession, encodeAction, encodeSession } from "./encoding.js"
-import type { MessageStore } from "./messages/index.js"
-import type * as okra from "node-okra"
-import { createHash } from "node:crypto"
-import { Action, Session } from "@canvas-js/interfaces"
 
 const codes = {
 	GET_ROOT: 0,
@@ -61,9 +63,7 @@ async function* handleSourceStream(
 			const nodes = source.getChildren(request.level, leaf)
 			yield { seq, code, nodes }
 		} else if (code === codes.GET_VALUES) {
-			// console.log("[canvas-core] Handling GET_VALUES request...", request.nodes.length)
 			const values = request.nodes.map(({ leaf, hash }, i) => {
-				// console.log("[canvas-core] Retrieving value for", toBuffer(hash).toString("hex"))
 				const timestamp = toBuffer(leaf).readUintBE(0, 6)
 				if (timestamp % 2 === 0) {
 					const session = messageStore.getSessionByHash(toBuffer(hash))
@@ -82,18 +82,12 @@ async function* handleSourceStream(
 				}
 			})
 
-			// console.log("[canvas-core] Returning values result", values)
 			yield { seq, code, values }
 		} else {
 			signalInvalidType(request)
 		}
 	}
 }
-
-// export async function handleSource(stream: Stream, source: OkraSource, messageStore: MessageStore) {
-// const responses = handleSourceStream(decode(stream.source, requestType), source, messageStore)
-// await stream.sink(cbor.encodeStream(responses))
-// }
 
 export async function handleSource(stream: Stream, source: okra.Source, messageStore: MessageStore) {
 	async function* chunks(): AsyncIterable<Uint8Array> {
@@ -164,7 +158,6 @@ const rpc = {
 export async function handleTarget(
 	stream: Stream,
 	target: okra.Target,
-	// callback: (leaf: Buffer, hash: Buffer) => Promise<void>
 	callback: (hash: string, message: ({ type: "session" } & Session) | ({ type: "action" } & Action)) => Promise<void>
 ) {
 	const responses = decode(stream.source, responseType)
@@ -204,22 +197,12 @@ export async function handleTarget(
 			}
 		} else {
 			const leaves = target.filter(nodes)
-
-			// console.log(
-			// 	"[canvas-core] got filtered leaves",
-			// 	leaves.map(({ leaf, hash }) => ({ leaf: leaf.toString("hex"), hash: hash.toString("hex") }))
-			// )
-
 			const values = yield* rpc.getValues(iter, seq++, leaves)
 			if (values.length !== leaves.length) {
 				throw new Error("expected values.length to match leaves.length")
 			}
 
-			// console.log("[canvas-core] Got leaf values", values)
-
 			for (const [i, { leaf, hash }] of leaves.entries()) {
-				// await callback(leaf, hash)
-
 				const value = values[i]
 				if (!createHash("sha256").update(value).digest().equals(hash)) {
 					throw new Error(`the value received for ${toHex(hash)} did not match the hash`)
@@ -249,11 +232,8 @@ export async function handleTarget(
 		}
 	}
 
-	// await stream.sink(cbor.encodeStream(pipe()))
 	await stream.sink(sink())
 }
-
-const toHex = (hash: Uint8Array | Buffer) => `0x${(Buffer.isBuffer(hash) ? hash : toBuffer(hash)).toString("hex")}`
 
 async function* streamChunks(source: Source<Uint8ArrayList>): AsyncIterable<Uint8Array> {
 	for await (const chunkList of source) {
@@ -271,3 +251,5 @@ async function* decode<T extends cbor.CBORValue>(source: Source<Uint8ArrayList>,
 }
 
 const toBuffer = (array: Uint8Array) => Buffer.from(array.buffer, array.byteOffset, array.byteLength)
+
+const toHex = (hash: Uint8Array | Buffer) => `0x${(Buffer.isBuffer(hash) ? hash : toBuffer(hash)).toString("hex")}`
