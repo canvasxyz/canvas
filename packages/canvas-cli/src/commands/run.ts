@@ -43,8 +43,8 @@ export const builder = (yargs: yargs.Argv) =>
 		})
 		.option("ipfs", {
 			type: "string",
-			desc: "IPFS HTTP API URL",
-			default: "http://localhost:5001",
+			desc: "IPFS Gateway URL",
+			default: "http://127.0.0.1:8080",
 		})
 		.option("noserver", {
 			type: "boolean",

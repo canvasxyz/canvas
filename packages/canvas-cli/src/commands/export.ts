@@ -19,11 +19,16 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "string",
 			desc: "Override database URI",
 		})
+		.option("ipfs", {
+			type: "string",
+			desc: "IPFS Gateway URL",
+			default: "http://127.0.0.1:8080",
+		})
 
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { directory, name, spec } = await locateSpec(args.spec)
+	const { directory, name, spec } = await locateSpec(args.spec, args.ipfs)
 	const store = getModelStore(args.database, directory, { verbose: false })
 
 	const quickJS = await getQuickJS()

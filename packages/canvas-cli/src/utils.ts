@@ -37,25 +37,23 @@ interface LocateSpecResult {
 	spec: string
 }
 
-export async function locateSpec(name: string, ipfsAPI?: string): Promise<LocateSpecResult> {
+export async function locateSpec(name: string, ipfsGatewayURL: string): Promise<LocateSpecResult> {
 	if (cidPattern.test(name)) {
 		const directory = path.resolve(CANVAS_HOME, name)
 		const specPath = path.resolve(CANVAS_HOME, name, SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const spec = fs.readFileSync(specPath, "utf-8")
 			return { name, directory, spec }
-		} else if (ipfsAPI !== undefined) {
+		} else {
 			if (!fs.existsSync(directory)) {
 				console.log(`[canvas-cli] Creating directory ${directory}`)
 				fs.mkdirSync(directory)
 			}
 
-			const spec = await download(name, ipfsAPI)
+			const spec = await download(name, ipfsGatewayURL)
 			fs.writeFileSync(specPath, spec)
 			console.log(`[canvas-cli] Downloaded spec to ${specPath}`)
 			return { name, directory, spec }
-		} else {
-			throw new Error("No IPFS API provided")
 		}
 	} else if (name.endsWith(".js")) {
 		const specPath = path.resolve(name)
@@ -106,9 +104,11 @@ export function setupRpcs(args?: Array<string | number>): Partial<Record<Chain, 
 	return rpcs
 }
 
-function download(cid: string, ipfsAPI: string) {
-	console.log(`[canvas-cli] Attempting to download ${cid} from local IPFS node...`)
-	return fetch(`${ipfsAPI}/api/v0/cat?arg=${cid}`, { method: "POST" })
+function download(cid: string, ipfsGatewayURL: string) {
+	const url = `${ipfsGatewayURL}/ipfs/${cid}`
+	console.log(`[canvas-cli] Attempting to download spec from IPFS gateway...`)
+	console.log(`[canvas-cli] GET ${url}`)
+	return fetch(url, { method: "GET" })
 		.then((res) => res.text())
 		.catch((err) => {
 			if (err.code === "ECONNREFUSED") {
