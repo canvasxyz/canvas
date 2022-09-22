@@ -533,9 +533,14 @@ export class Core extends EventEmitter<CoreEvents> {
 				}
 			}
 
+			if (this.options.verbose) {
+				console.log(`[canvas-core] Connected ${peers.size} application peers`)
+			}
+
+			let i = 0
 			for (const peer of peers.values()) {
 				if (this.options.verbose) {
-					console.log("[canvas-core] Initiating sync with", peer.toString())
+					console.log(`[canvas-core] Initiating sync with ${peer.toString()} (${++i}/${peers.size})`)
 				}
 
 				const target = new okra.Target(this.mst)
