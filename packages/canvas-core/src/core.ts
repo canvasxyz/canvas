@@ -14,6 +14,8 @@ import { TCP } from "@libp2p/tcp"
 import { Noise } from "@chainsafe/libp2p-noise"
 import { Mplex } from "@libp2p/mplex"
 import { MulticastDNS } from "@libp2p/mdns"
+import { Bootstrap } from "@libp2p/bootstrap"
+import { KadDHT } from "@libp2p/kad-dht"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { Message } from "@libp2p/interface-pubsub"
 import type { Connection, Stream } from "@libp2p/interface-connection"
@@ -36,7 +38,7 @@ import {
 
 import { ModelStore, SqliteStore } from "./models/index.js"
 import { actionType, sessionType } from "./codecs.js"
-import { CacheMap, signalInvalidType } from "./utils.js"
+import { CacheMap, signalInvalidType, bootstrapList } from "./utils.js"
 import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
@@ -108,7 +110,8 @@ export class Core extends EventEmitter<CoreEvents> {
 				transports: [new TCP()],
 				connectionEncryption: [new Noise()],
 				streamMuxers: [new Mplex()],
-				peerDiscovery: [new MulticastDNS()],
+				peerDiscovery: [new MulticastDNS(), new Bootstrap({ list: bootstrapList })],
+				dht: new KadDHT(),
 				pubsub: new GossipSub({
 					fallbackToFloodsub: false,
 					allowPublishToZeroPeers: true,
@@ -122,6 +125,10 @@ export class Core extends EventEmitter<CoreEvents> {
 						`[canvas-core] Connected to peer ${connection.remotePeer.toString()} with connection ID ${connection.id}`
 					)
 				)
+			})
+
+			libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, protocols } }) => {
+				console.log(`[canvas-core] Peer ${peerId.toString()} supports protocols ${protocols}`)
 			})
 
 			libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
