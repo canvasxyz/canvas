@@ -110,29 +110,17 @@ export class Core extends EventEmitter<CoreEvents> {
 				transports: [new TCP()],
 				connectionEncryption: [new Noise()],
 				streamMuxers: [new Mplex()],
-				peerDiscovery: [new MulticastDNS(), new Bootstrap({ list: bootstrapList })],
+				peerDiscovery: [
+					// new MulticastDNS(),
+					new Bootstrap({ list: bootstrapList }),
+				],
 				dht: new KadDHT(),
 				pubsub: new GossipSub({
+					doPX: true,
 					fallbackToFloodsub: false,
 					allowPublishToZeroPeers: true,
 					globalSignaturePolicy: "StrictSign",
 				}),
-			})
-
-			libp2p.connectionManager.addEventListener("peer:connect", ({ detail: connection }) => {
-				console.log(
-					chalk.green(
-						`[canvas-core] Connected to peer ${connection.remotePeer.toString()} with connection ID ${connection.id}`
-					)
-				)
-			})
-
-			libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, protocols } }) => {
-				console.log(`[canvas-core] Peer ${peerId.toString()} supports protocols ${protocols}`)
-			})
-
-			libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
-				console.log(chalk.green(`[canvas-core] Disconnected from peer ${connection.remotePeer.toString()}`))
 			})
 
 			await libp2p.start()
@@ -178,7 +166,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly blockCache: Record<string, CacheMap<string, { number: number; timestamp: number }>> = {}
 	private readonly blockCacheMostRecentTimestamp: Record<string, number> = {}
 
-	private readonly protocol: string | null = null
+	private readonly protocol: string
 	private readonly queue: PQueue
 	private syncTimeout: NodeJS.Timeout | null = null
 	private static InitialSyncInterval = 5000
@@ -201,7 +189,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	) {
 		super()
-
+		this.protocol = `/x/canvas/${this.name}`
 		this.queue = new PQueue({ concurrency: 1 })
 
 		// keep up to 128 past blocks
@@ -230,11 +218,44 @@ export class Core extends EventEmitter<CoreEvents> {
 				this.libp2p.pubsub.addEventListener("message", ({ detail: message }) => this.handleMessage(message))
 				console.log(`[canvas-cli] Subscribed to pubsub topic "canvas:${this.name}"`)
 			}
+
 			if (options.sync) {
-				this.protocol = `/x/canvas/${this.name}`
 				this.libp2p.handle(this.protocol, ({ connection, stream }) => this.handleIncomingStream(connection, stream))
 				this.syncTimeout = setTimeout(() => this.sync(), Core.InitialSyncInterval)
 			}
+
+			const applicationPeers = new Set<string>()
+			const gossipSubPeers = new Set<string>()
+
+			this.libp2p.connectionManager.addEventListener("peer:connect", ({ detail: connection }) => {
+				console.log(
+					`[canvas-core] Connected to peer ${connection.remotePeer.toString()} with connection ID ${connection.id}`
+				)
+			})
+
+			this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, protocols } }) => {
+				const id = peerId.toString()
+				if (protocols.includes(this.protocol)) {
+					if (!applicationPeers.has(id)) {
+						console.log(chalk.green(`[canvas-core] Found application peer ${id}`))
+						applicationPeers.add(id)
+					}
+				}
+
+				if (protocols.includes(GossipSub.multicodec)) {
+					if (!gossipSubPeers.has(id)) {
+						console.log(chalk.green(`[canvas-core] Found GossipSub peer ${id} (${gossipSubPeers.size + 1})`))
+						gossipSubPeers.add(id)
+					}
+				}
+			})
+
+			this.libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
+				const id = connection.remotePeer.toString()
+				console.log(`[canvas-core] Disconnected from peer ${id}`)
+				applicationPeers.delete(id)
+				gossipSubPeers.delete(id)
+			})
 		}
 	}
 
@@ -541,7 +562,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 
 			if (this.options.verbose) {
-				console.log(`[canvas-core] Connected ${peers.size} application peers`)
+				console.log(chalk.green(`[canvas-core] Connected to ${peers.size} application peers`))
 			}
 
 			let i = 0
