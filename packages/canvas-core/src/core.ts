@@ -10,7 +10,6 @@ import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
 
 import { createLibp2p, Libp2p } from "libp2p"
-import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { TCP } from "@libp2p/tcp"
 import { Noise } from "@chainsafe/libp2p-noise"
 import { Mplex } from "@libp2p/mplex"
@@ -22,9 +21,9 @@ import type { Message } from "@libp2p/interface-pubsub"
 import type { Connection, Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
+import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
 import * as okra from "node-okra"
-import { handleSource, handleTarget } from "./sync.js"
 
 import {
 	Action,
@@ -44,7 +43,7 @@ import { CacheMap, signalInvalidType, bootstrapList } from "./utils.js"
 import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
-import { fst } from "fp-ts/lib/ReadonlyTuple.js"
+import { handleSource, handleTarget } from "./sync.js"
 
 export interface CoreConfig {
 	name: string
@@ -107,7 +106,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		const messageStore = new MessageStore(name, directory, { verbose })
 
 		let libp2p: Libp2p | null = null
-		if (directory && peering && port) {
+		if (directory !== null && peering && port) {
 			const peerIdPath = path.resolve(directory, "id")
 			let peerId: PeerId
 			if (fs.existsSync(peerIdPath)) {
@@ -117,7 +116,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
 			}
 
-			console.log(`[canvas-core] Using libp2p PeerId ${peerId.toString()}`)
+			console.log(`[canvas-core] PeerId ${peerId.toString()}`)
 
 			libp2p = await createLibp2p({
 				peerId,
@@ -131,7 +130,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				],
 				dht: new KadDHT(),
 				pubsub: new GossipSub({
-					doPX: true,
+					// doPX: true,
 					fallbackToFloodsub: false,
 					allowPublishToZeroPeers: true,
 					globalSignaturePolicy: "StrictSign",
@@ -256,15 +255,15 @@ export class Core extends EventEmitter<CoreEvents> {
 				const id = peerId.toString()
 				if (protocols.includes(this.protocol)) {
 					if (!applicationPeers.has(id)) {
-						console.log(chalk.green(`[canvas-core] Found application peer ${id}`))
 						applicationPeers.add(id)
+						console.log(chalk.green(`[canvas-core] Found application peer ${id} (${applicationPeers.size})`))
 					}
 				}
 
 				if (protocols.includes(GossipSub.multicodec)) {
 					if (!gossipSubPeers.has(id)) {
-						console.log(chalk.green(`[canvas-core] Found GossipSub peer ${id} (${gossipSubPeers.size + 1})`))
 						gossipSubPeers.add(id)
+						console.log(chalk.green(`[canvas-core] Found GossipSub peer ${id} (${gossipSubPeers.size})`))
 					}
 				}
 			})
@@ -526,7 +525,9 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async handleMessage({ topic, data }: Message) {
-		assert(topic === `canvas:${this.name}`)
+		if (topic !== `canvas:${this.name}`) {
+			return
+		}
 
 		let decodedMessage: ReturnType<typeof decodeBinaryMessage>
 		try {
