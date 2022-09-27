@@ -230,7 +230,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			if (options.peering) {
 				this.libp2p.pubsub.subscribe(`canvas:${this.name}`)
 				this.libp2p.pubsub.addEventListener("message", ({ detail: message }) => this.handleMessage(message))
-				console.log(`[canvas-cli] Subscribed to pubsub topic "canvas:${this.name}"`)
+				console.log(`[canvas-core] Subscribed to pubsub topic "canvas:${this.name}"`)
 			}
 
 			if (options.sync) {
