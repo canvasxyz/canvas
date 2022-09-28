@@ -580,7 +580,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private rendezvousTimeout: NodeJS.Timeout | null = null
-	private static initialRendezvousInterval = 1000
+	private static initialRendezvousInterval = 1000 * 5
 	private static rendezvousInterval = 1000 * 60 * 60 * 6
 	private rendezvous() {
 		return this.queue.add(async () => {
@@ -590,12 +590,15 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			const rendezvous = getRendezvousCID(this.cid)
 			console.log(`[canvas-core] Publishing DHT provider record for rendezvous key ${rendezvous.toString()}`)
-			await this.libp2p.contentRouting.provide(rendezvous).catch((err) => {
-				console.log(chalk.red(`[canvas-core] Failed to publish DHT provider record`), err)
-			})
-
-			// this.libp2p.connectionManager.getConnections()
-			this.rendezvousTimeout = setTimeout(() => this.rendezvous(), Core.rendezvousInterval)
+			await this.libp2p.contentRouting
+				.provide(rendezvous)
+				.then(() => {
+					this.rendezvousTimeout = setTimeout(() => this.rendezvous(), Core.rendezvousInterval)
+				})
+				.catch((err) => {
+					console.log(chalk.red(`[canvas-core] Failed to publish DHT provider record`), err)
+					this.rendezvousTimeout = setTimeout(() => this.rendezvous(), Core.initialRendezvousInterval)
+				})
 		})
 	}
 
