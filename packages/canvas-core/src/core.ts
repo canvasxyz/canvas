@@ -8,6 +8,7 @@ import { QuickJSWASMModule } from "quickjs-emscripten"
 import chalk from "chalk"
 import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
+import { CID } from "multiformats/cid"
 
 import { createLibp2p, Libp2p } from "libp2p"
 import { TCP } from "@libp2p/tcp"
@@ -18,8 +19,8 @@ import { Bootstrap } from "@libp2p/bootstrap"
 import { KadDHT } from "@libp2p/kad-dht"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { Message } from "@libp2p/interface-pubsub"
-import type { Connection, Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
+import type { StreamHandler } from "@libp2p/interface-registrar"
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
@@ -39,7 +40,7 @@ import {
 
 import { ModelStore, SqliteStore } from "./models/index.js"
 import { actionType, sessionType } from "./codecs.js"
-import { CacheMap, signalInvalidType, bootstrapList } from "./utils.js"
+import { CacheMap, signalInvalidType, bootstrapList, getTopic, getProtocol, getRendezvousCID } from "./utils.js"
 import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
@@ -68,7 +69,7 @@ interface CoreEvents {
 
 export class Core extends EventEmitter<CoreEvents> {
 	public static readonly MST_FILENAME = "mst.okra"
-	private static readonly cidPattern = /^Qm[a-zA-Z0-9]{44}$/
+	private static readonly cidPattern = /^[a-zA-Z0-9]+$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
 		const { directory, name, spec, verbose, unchecked, rpc, replay, quickJS, peering, peeringPort: port } = config
 
@@ -76,10 +77,13 @@ export class Core extends EventEmitter<CoreEvents> {
 			console.log(`[canvas-core] Initializing core ${name}`)
 		}
 
-		if (Core.cidPattern.test(name)) {
-			const cid = await Hash.of(spec)
-			assert(cid === name, "Core.name is not equal to the hash of the provided spec.")
-		}
+		const cid = await Hash.of(spec).then((cid) => {
+			if (Core.cidPattern.test(name)) {
+				assert(cid === name, "Core.name is not equal to the hash of the provided spec.")
+			}
+
+			return CID.parse(cid)
+		})
 
 		const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
 		for (const [chain, chainIds] of Object.entries(rpc || {})) {
@@ -150,7 +154,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		const options = { verbose, unchecked, peering: true, sync: true }
-		const core = new Core(name, vm, exports, modelStore, messageStore, providers, libp2p, mst, options)
+		const core = new Core(name, cid, vm, exports, modelStore, messageStore, providers, libp2p, mst, options)
 
 		if (replay) {
 			console.log(`[canvas-core] Replaying action log...`)
@@ -181,13 +185,12 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly blockCacheMostRecentTimestamp: Record<string, number> = {}
 
 	private readonly protocol: string
+	private readonly topic: string
 	private readonly queue: PQueue
-	private syncTimeout: NodeJS.Timeout | null = null
-	private static InitialSyncInterval = 5000
-	private static SyncInterval = 10000
 
 	private constructor(
 		public readonly name: string,
+		public readonly cid: CID,
 		public readonly vm: VM,
 		public readonly exports: Exports,
 		public readonly modelStore: ModelStore,
@@ -203,7 +206,9 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	) {
 		super()
-		this.protocol = `/x/canvas/${this.name}`
+		this.protocol = getProtocol(this.cid)
+		this.topic = getTopic(this.cid)
+
 		this.queue = new PQueue({ concurrency: 1 })
 
 		// keep up to 128 past blocks
@@ -225,17 +230,17 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 		}
 
-		this.syncTimeout = null
 		if (this.libp2p !== null) {
 			if (options.peering) {
-				this.libp2p.pubsub.subscribe(`canvas:${this.name}`)
+				this.libp2p.pubsub.subscribe(this.topic)
 				this.libp2p.pubsub.addEventListener("message", ({ detail: message }) => this.handleMessage(message))
-				console.log(`[canvas-core] Subscribed to pubsub topic "canvas:${this.name}"`)
+				this.rendezvousTimeout = setTimeout(() => this.rendezvous(), Core.initialRendezvousInterval)
+				console.log(`[canvas-core] Subscribed to pubsub topic "${this.topic}"`)
 			}
 
 			if (options.sync) {
-				this.libp2p.handle(this.protocol, ({ connection, stream }) => this.handleIncomingStream(connection, stream))
-				this.syncTimeout = setTimeout(() => this.sync(), Core.InitialSyncInterval)
+				this.libp2p.handle(this.protocol, this.handleIncomingStream)
+				this.syncTimeout = setTimeout(() => this.sync(), Core.initialSyncInterval)
 			}
 
 			const applicationPeers = new Set<string>()
@@ -286,13 +291,18 @@ export class Core extends EventEmitter<CoreEvents> {
 			clearTimeout(this.syncTimeout)
 		}
 
+		if (this.rendezvousTimeout !== null) {
+			clearTimeout(this.rendezvousTimeout)
+		}
+
 		for (const provider of Object.values(this.providers)) {
 			provider.removeAllListeners("block")
 		}
 
 		if (this.libp2p !== null) {
-			this.libp2p.pubsub.unsubscribe(`canvas:${this.name}`)
+			this.libp2p.pubsub.unsubscribe(this.topic)
 			this.libp2p.pubsub.removeEventListener("message")
+			this.libp2p.peerStore.removeEventListener("change:protocols")
 			this.libp2p.connectionManager.removeEventListener("peer:connect")
 			this.libp2p.connectionManager.removeEventListener("peer:disconnect")
 			await this.libp2p.stop()
@@ -501,31 +511,33 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async publishMessage(actionHash: string, action: Action) {
-		if (this.libp2p !== null) {
-			let message: Uint8Array
-			if (action.session !== null) {
-				const { hash: sessionHash, session } = await this.messageStore.getSessionByAddress(action.session)
-				assert(sessionHash !== null && session !== null)
-				message = encodeBinaryMessage({ hash: actionHash, action }, { hash: sessionHash, session })
-			} else {
-				message = encodeBinaryMessage({ hash: actionHash, action }, { hash: null, session: null })
-			}
-
-			await this.libp2p.pubsub
-				.publish(`canvas:${this.name}`, message)
-				.then(({ recipients }) => {
-					if (this.options.verbose) {
-						console.log(`[canvas-core] Published message to ${recipients.length} peers`)
-					}
-				})
-				.catch((err) => {
-					console.error(chalk.red("[canvas-core] Failed to publish action to pubsub topic"), err)
-				})
+		if (this.libp2p === null) {
+			return
 		}
+
+		let message: Uint8Array
+		if (action.session !== null) {
+			const { hash: sessionHash, session } = await this.messageStore.getSessionByAddress(action.session)
+			assert(sessionHash !== null && session !== null)
+			message = encodeBinaryMessage({ hash: actionHash, action }, { hash: sessionHash, session })
+		} else {
+			message = encodeBinaryMessage({ hash: actionHash, action }, { hash: null, session: null })
+		}
+
+		await this.libp2p.pubsub
+			.publish(this.topic, message)
+			.then(({ recipients }) => {
+				if (this.options.verbose) {
+					console.log(`[canvas-core] Published message to ${recipients.length} peers`)
+				}
+			})
+			.catch((err) => {
+				console.error(chalk.red("[canvas-core] Failed to publish action to pubsub topic"), err)
+			})
 	}
 
-	private async handleMessage({ topic, data }: Message) {
-		if (topic !== `canvas:${this.name}`) {
+	private handleMessage = async ({ topic, data }: Message) => {
+		if (topic !== this.topic) {
 			return
 		}
 
@@ -549,7 +561,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private handleIncomingStream(connection: Connection, stream: Stream) {
+	private handleIncomingStream: StreamHandler = ({ connection, stream }) => {
 		if (this.options.verbose) {
 			console.log(`[canvas-core] Handling incoming stream ${stream.id} from peer ${connection.remotePeer.toString()}`)
 		}
@@ -567,6 +579,29 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
+	private rendezvousTimeout: NodeJS.Timeout | null = null
+	private static initialRendezvousInterval = 1000
+	private static rendezvousInterval = 1000 * 60 * 60 * 6
+	private rendezvous() {
+		return this.queue.add(async () => {
+			if (this.libp2p === null) {
+				return
+			}
+
+			const rendezvous = getRendezvousCID(this.cid)
+			console.log(`[canvas-core] Publishing DHT provider record for rendezvous key ${rendezvous.toString()}`)
+			await this.libp2p.contentRouting.provide(rendezvous).catch((err) => {
+				console.log(chalk.red(`[canvas-core] Failed to publish DHT provider record`), err)
+			})
+
+			// this.libp2p.connectionManager.getConnections()
+			this.rendezvousTimeout = setTimeout(() => this.rendezvous(), Core.rendezvousInterval)
+		})
+	}
+
+	private static initialSyncInterval = 1000 * 5
+	private static syncInterval = 1000 * 60
+	private syncTimeout: NodeJS.Timeout | null = null
 	private sync() {
 		return this.queue.add(async () => {
 			if (this.libp2p === null || this.mst === null || this.protocol === null || !this.options.sync) {
@@ -574,12 +609,21 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 
 			const peers = new Map<string, PeerId>()
-			for (const peer of this.libp2p.getPeers()) {
-				const protocols = await this.libp2p.peerStore.protoBook.get(peer)
+
+			const rendezvous = getRendezvousCID(this.cid)
+			for await (const { id, protocols } of this.libp2p.contentRouting.findProviders(rendezvous)) {
 				if (protocols.includes(this.protocol)) {
-					peers.set(peer.toString(), peer)
+					console.log(chalk.green(`[canvas-core] Found application peer ${id.toString()} via DHT rendezvous`))
+					peers.set(id.toString(), id)
 				}
 			}
+
+			// for (const peer of this.libp2p.getPeers()) {
+			// 	const protocols = await this.libp2p.peerStore.protoBook.get(peer)
+			// 	if (protocols.includes(this.protocol)) {
+			// 		peers.set(peer.toString(), peer)
+			// 	}
+			// }
 
 			if (this.options.verbose) {
 				console.log(chalk.green(`[canvas-core] Connected to ${peers.size} application peers`))
@@ -646,7 +690,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				})
 			}
 
-			this.syncTimeout = setTimeout(() => this.sync(), Core.SyncInterval)
+			this.syncTimeout = setTimeout(() => this.sync(), Core.syncInterval)
 		})
 	}
 }

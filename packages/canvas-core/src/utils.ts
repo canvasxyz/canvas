@@ -1,21 +1,12 @@
 import assert from "node:assert"
 
-import { ethers } from "ethers"
-import * as cbor from "microcbor"
 import Hash from "ipfs-only-hash"
 
-import type {
-	Action,
-	ActionArgument,
-	Block,
-	Chain,
-	ChainId,
-	Model,
-	ModelType,
-	ModelValue,
-	Session,
-} from "@canvas-js/interfaces"
-import { createHash } from "node:crypto"
+import { CID } from "multiformats/cid"
+import * as raw from "multiformats/codecs/raw"
+import { identity } from "multiformats/hashes/identity"
+
+import type { ActionArgument, Chain, ChainId, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
 export interface JSONArray extends Array<JSONValue> {}
@@ -129,8 +120,16 @@ export const bootstrapList = [
 	"/dnsaddr/bootstrap.libp2p.io/p2p/QmZa1sAxajnQjVM8WjWXoMbmPd7NsWhfKsPkErzpm9wGkp",
 	"/dnsaddr/bootstrap.libp2p.io/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
 	"/dnsaddr/bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
-	"/dns4/node0.preload.ipfs.io/tcp/443/wss/p2p/QmZMxNdpMkewiVZLMRxaNxUeZpDUb34pWjZ1kZvsd16Zic",
-	"/dns4/node1.preload.ipfs.io/tcp/443/wss/p2p/Qmbut9Ywz9YEDrz8ySBSgWyJk41Uvm2QJPhwDJzJyGFsD6",
-	"/dns4/node2.preload.ipfs.io/tcp/443/wss/p2p/QmV7gnbW5VTcJ3oyM2Xk1rdFBJ3kTkvxc87UFGsun29STS",
-	"/dns4/node3.preload.ipfs.io/tcp/443/wss/p2p/QmY7JB6MQXhxHvq7dBDh4HpbH29v4yE9JRadAVpndvzySN",
+	// "/dns4/node0.preload.ipfs.io/tcp/443/wss/p2p/QmZMxNdpMkewiVZLMRxaNxUeZpDUb34pWjZ1kZvsd16Zic",
+	// "/dns4/node1.preload.ipfs.io/tcp/443/wss/p2p/Qmbut9Ywz9YEDrz8ySBSgWyJk41Uvm2QJPhwDJzJyGFsD6",
+	// "/dns4/node2.preload.ipfs.io/tcp/443/wss/p2p/QmV7gnbW5VTcJ3oyM2Xk1rdFBJ3kTkvxc87UFGsun29STS",
+	// "/dns4/node3.preload.ipfs.io/tcp/443/wss/p2p/QmY7JB6MQXhxHvq7dBDh4HpbH29v4yE9JRadAVpndvzySN",
 ]
+
+export const getProtocol = (cid: CID) => `/x/canvas/${cid.toString()}`
+export const getTopic = (cid: CID) => `canvas:${cid.toString()}`
+
+export function getRendezvousCID(cid: CID) {
+	const data = Buffer.from(getTopic(cid), "utf-8")
+	return CID.createV1(raw.code, identity.digest(raw.encode(data)))
+}
