@@ -20,7 +20,8 @@ import { MulticastDNS } from "@libp2p/mdns"
 import { Bootstrap } from "@libp2p/bootstrap"
 import { KadDHT } from "@libp2p/kad-dht"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
-import type { Message } from "@libp2p/interface-pubsub"
+import type { Message as PubSubMessage } from "@libp2p/interface-pubsub"
+import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
@@ -55,7 +56,7 @@ import {
 import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
-import { handleSource, handleTarget } from "./sync.js"
+import { handleSource, handleTarget, Message } from "./sync.js"
 
 export interface CoreConfig {
 	name: string
@@ -253,7 +254,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			if (options.sync) {
 				this.libp2p.handle(this.protocol, this.handleIncomingStream)
-				this.startSyncService()
+				this.startSyncService(this.libp2p)
 			}
 
 			if (this.options.verbose) {
@@ -518,7 +519,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 	}
 
-	private handleMessage = async ({ topic, data }: Message) => {
+	private handleMessage = async ({ topic, data }: PubSubMessage) => {
 		if (topic !== this.topic) {
 			return
 		}
@@ -543,113 +544,25 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private handleIncomingStream: StreamHandler = ({ connection, stream }) => {
+	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {
 		if (this.options.verbose) {
 			console.log(`[canvas-core] Handling incoming stream ${stream.id} from peer ${connection.remotePeer.toString()}`)
 		}
 
 		if (this.mst !== null) {
 			const source = new okra.Source(this.mst)
-			handleSource(stream, source, this.messageStore)
-				.catch((err) => console.log(chalk.red(`[canvas-core] Error in incoming stream handler`), err))
-				.finally(() => {
-					source.close()
-					if (this.options.verbose) {
-						console.log(`[canvas-core] Closed incoming stream ${stream.id}`)
-					}
-				})
-		}
-	}
+			try {
+				await handleSource(stream, source, this.messageStore)
+			} catch (err) {
+				console.log(chalk.red(`[canvas-core] Error in incoming stream handler`), err)
+			}
 
-	private static syncDelay = 1000 * 30
-	private static syncInterval = 1000 * 60 * 60
+			source.close()
 
-	private startSyncService() {}
-
-	private async sync(peers: PeerId[]) {
-		if (this.libp2p === null || this.mst === null || this.protocol === null || !this.options.sync) {
-			return
-		}
-
-		let i = 0
-		for (const peer of peers) {
 			if (this.options.verbose) {
-				console.log(`[canvas-core] Initiating sync with ${peer.toString()} (${++i}/${peers.length})`)
-			}
-
-			const target = new okra.Target(this.mst)
-			let successCount = 0
-			let failureCount = 0
-			await this.libp2p.dialProtocol(peer, this.protocol).then((stream) => {
-				if (this.options.verbose) {
-					console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}`)
-				}
-
-				return handleTarget(stream, target, async (hash, message) => {
-					if (this.options.verbose) {
-						console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
-					}
-
-					if (message.type === "session") {
-						const { type, ...session } = message
-						await this.applySessionInternal(hash, session, { sync: true })
-							.then(() => {
-								successCount += 1
-							})
-							.catch((err) => {
-								failureCount += 1
-								console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
-							})
-					} else if (message.type === "action") {
-						const { type, ...action } = message
-						await this.applyActionInternal(hash, action, { sync: true })
-							.then(() => {
-								successCount += 1
-							})
-							.catch((err) => {
-								failureCount += 1
-								console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
-							})
-					} else {
-						signalInvalidType(message)
-					}
-				})
-					.then(() => {
-						if (this.options.verbose) {
-							console.log(chalk.green(`[canvas-core] Sync with ${peer.toString()} completed.`))
-							console.log(
-								chalk.green(`[canvas-core] Applied ${successCount} new messages with ${failureCount} failures.`)
-							)
-						}
-					})
-					.catch((err) => console.log(chalk.red("[canvas-core] Sync failed"), err))
-					.finally(() => {
-						if (this.options.verbose) {
-							console.log(`[canvas-core] Closed outgoing stream ${stream.id}`)
-						}
-						target.close()
-					})
-			})
-		}
-	}
-
-	private async findPeers(): Promise<PeerId[]> {
-		const peers = new Map<string, PeerId>()
-
-		if (this.libp2p !== null) {
-			const rendezvous = getRendezvousCID(this.cid)
-			console.log(chalk.green(`[canvas-core] Attempting to rendezvous at ${rendezvous.toString(base58btc)}`))
-
-			const { signal } = this.controller
-			for await (const { id, protocols } of this.libp2p.contentRouting.findProviders(rendezvous, { signal })) {
-				if (protocols.includes(this.protocol)) {
-					console.log(chalk.green(`[canvas-core] Found application peer ${id.toString()} via DHT rendezvous`))
-					peers.set(id.toString(), id)
-				}
+				console.log(`[canvas-core] Closed incoming stream ${stream.id}`)
 			}
 		}
-
-		return Array.from(peers.values())
 	}
 
 	private static peeringDelay = 1000 * 5
@@ -661,13 +574,13 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		try {
 			await wait({ delay: Core.peeringDelay, signal })
-			while (true) {
+			while (!signal.aborted) {
 				console.log(chalk.green(`[canvas-core] Publishing DHT rendezvous record ${rendezvous.toString(base58btc)}`))
 				await retry(
-					(signal) =>
-						libp2p.contentRouting
-							.provide(rendezvous, { signal })
-							.then(() => console.log(chalk.green(`[canvas-core] Successfully published DHT rendezvous record`))),
+					async (signal) => {
+						await libp2p.contentRouting.provide(rendezvous, { signal })
+						console.log(chalk.green(`[canvas-core] Successfully published DHT rendezvous record`))
+					},
 					(err) => {
 						const message = err instanceof Error ? err.message : err.toString()
 						console.log(chalk.red(`[canvas-core] Failed to publish DHT rendezvous record (${message})`))
@@ -679,6 +592,117 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 		} catch (err) {
 			console.log(`[canvas-core] Aborting peering service`)
+		}
+	}
+
+	private static syncDelay = 1000 * 30
+	private static syncInterval = 1000 * 60 * 5
+	private static syncRetryInterval = 1000 * 60
+	private async startSyncService(libp2p: Libp2p) {
+		const { signal } = this.controller
+		const rendezvous = getRendezvousCID(this.cid)
+
+		const findPeers = async (signal: AbortSignal): Promise<PeerId[]> => {
+			console.log(chalk.green(`[canvas-core] Attempting to rendezvous at ${rendezvous.toString(base58btc)}`))
+
+			const peers = new Map<string, PeerId>()
+			for await (const { id, protocols } of libp2p.contentRouting.findProviders(rendezvous, { signal })) {
+				if (protocols.includes(this.protocol)) {
+					console.log(chalk.green(`[canvas-core] Found application peer ${id.toString()} via DHT rendezvous`))
+					peers.set(id.toString(), id)
+				}
+			}
+
+			return Array.from(peers.values())
+		}
+
+		try {
+			await wait({ delay: Core.syncDelay, signal })
+			while (!signal.aborted) {
+				const peers = await retry(
+					findPeers,
+					(err) => console.log(chalk.red(`[cavnas-core] Failed to rendezvous with application peers`), err),
+					{ signal, delay: Core.syncRetryInterval }
+				)
+
+				await this.sync(libp2p, peers)
+				await wait({ delay: Core.syncInterval, signal })
+			}
+		} catch (err) {
+			console.log(`[canvas-core] Aborting sync service`)
+		}
+	}
+
+	private async sync(libp2p: Libp2p, peers: PeerId[]) {
+		if (this.mst === null) {
+			return
+		}
+
+		const { signal } = this.controller
+
+		for (const [i, peer] of peers.entries()) {
+			console.log(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`)
+
+			let stream: Stream
+			try {
+				stream = await libp2p.dialProtocol(peer, this.protocol, { signal })
+			} catch (err) {
+				console.log(chalk.red(`[canvas-core] Failed to dial peer ${peer.toString()}`, err))
+				continue
+			}
+
+			if (this.options.verbose) {
+				console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}`)
+			}
+
+			const target = new okra.Target(this.mst)
+
+			let successCount = 0
+			let failureCount = 0
+			const handleMessage = async (hash: string, message: Message) => {
+				if (this.options.verbose) {
+					console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
+				}
+
+				if (message.type === "session") {
+					const { type, ...session } = message
+					try {
+						await this.applySessionInternal(hash, session, { sync: true })
+						successCount += 1
+					} catch (err) {
+						console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
+						failureCount += 1
+					}
+				} else if (message.type === "action") {
+					const { type, ...action } = message
+					try {
+						await this.applyActionInternal(hash, action, { sync: true })
+						successCount += 1
+					} catch (err) {
+						console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
+						failureCount += 1
+					}
+				} else {
+					signalInvalidType(message)
+				}
+			}
+
+			try {
+				await handleTarget(stream, target, handleMessage)
+				console.log(
+					chalk.green(
+						`[canvas-core] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
+					)
+				)
+			} catch (err) {
+				console.log(chalk.red("[canvas-core] Sync failed"), err)
+			}
+
+			target.close()
+
+			if (this.options.verbose) {
+				console.log(`[canvas-core] Closed outgoing stream ${stream.id}`)
+			}
 		}
 	}
 }

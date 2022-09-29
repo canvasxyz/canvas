@@ -155,10 +155,12 @@ const rpc = {
 	},
 }
 
+export type Message = ({ type: "session" } & Session) | ({ type: "action" } & Action)
+
 export async function handleTarget(
 	stream: Stream,
 	target: okra.Target,
-	callback: (hash: string, message: ({ type: "session" } & Session) | ({ type: "action" } & Action)) => Promise<void>
+	handleMessage: (hash: string, message: Message) => Promise<void>
 ) {
 	const responses = decode(stream.source, responseType)
 	const iter = responses[Symbol.asyncIterator]()
@@ -211,10 +213,10 @@ export async function handleTarget(
 				const timestamp = leaf.readUintBE(0, 6)
 				if (timestamp % 2 == 0) {
 					const session = decodeSession(value)
-					await callback(toHex(hash), { type: "session", ...session })
+					await handleMessage(toHex(hash), { type: "session", ...session })
 				} else {
 					const action = decodeAction(value)
-					await callback(toHex(hash), { type: "action", ...action })
+					await handleMessage(toHex(hash), { type: "action", ...action })
 				}
 			}
 		}
