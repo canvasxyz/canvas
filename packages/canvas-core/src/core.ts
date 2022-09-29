@@ -12,6 +12,7 @@ import { CID } from "multiformats/cid"
 
 import { createLibp2p, Libp2p } from "libp2p"
 import { TCP } from "@libp2p/tcp"
+import { WebSockets } from "@libp2p/websockets"
 import { Noise } from "@chainsafe/libp2p-noise"
 import { Mplex } from "@libp2p/mplex"
 import { MulticastDNS } from "@libp2p/mdns"
@@ -134,7 +135,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			libp2p = await createLibp2p({
 				peerId,
 				addresses: { listen: [`/ip4/0.0.0.0/tcp/${port}`] },
-				transports: [new TCP()],
+				transports: [new TCP(), new WebSockets()],
 				connectionEncryption: [new Noise()],
 				streamMuxers: [new Mplex()],
 				peerDiscovery: [
@@ -652,9 +653,9 @@ export class Core extends EventEmitter<CoreEvents> {
 	// }
 }
 
-const delay = 1000 * 10
-const interval = 1000 * 60 * 5
-const retryInterval = 1000 * 1
+const delay = 1000 * 30
+const interval = 1000 * 60 * 60
+const retryInterval = 1000 * 60
 async function startPeeringService(libp2p: Libp2p, rendezvous: CID, signal: AbortSignal) {
 	async function f(signal: AbortSignal) {
 		await libp2p.contentRouting.provide(rendezvous, { signal })
@@ -670,7 +671,7 @@ async function startPeeringService(libp2p: Libp2p, rendezvous: CID, signal: Abor
 			)
 		)
 
-		const limit = 5
+		const limit = 10
 		let n = 1
 		for await (const err of retry(f, { signal, delay: retryInterval })) {
 			if (n < limit) {
