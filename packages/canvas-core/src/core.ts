@@ -621,10 +621,11 @@ export class Core extends EventEmitter<CoreEvents> {
 			while (!signal.aborted) {
 				const peers = await retry(
 					findPeers,
-					(err) => console.log(chalk.red(`[cavnas-core] Failed to rendezvous with application peers`), err),
+					(err) => console.log(chalk.red(`[canvas-core] Failed to rendezvous with application peers`), err),
 					{ signal, delay: Core.syncRetryInterval }
 				)
 
+				console.log(chalk.green(`[canvas-core] Found ${peers.length} application peers`))
 				await this.sync(libp2p, peers)
 				await wait({ delay: Core.syncInterval, signal })
 			}
