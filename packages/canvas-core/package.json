@@ -21,7 +21,7 @@
 		"@libp2p/interface-peer-id": "^1.0.4",
 		"@libp2p/interface-registrar": "^2.0.3",
 		"@libp2p/interfaces": "^3.0.3",
-		"@libp2p/kad-dht": "^3.0.5",
+		"@libp2p/kad-dht": "^3.0.6",
 		"@libp2p/mdns": "^3.0.0",
 		"@libp2p/mplex": "^5.2.2",
 		"@libp2p/peer-id-factory": "^1.0.18",
