@@ -133,3 +133,46 @@ export function getRendezvousCID(cid: CID) {
 	const data = Buffer.from(getTopic(cid), "utf-8")
 	return CID.createV1(raw.code, identity.digest(raw.encode(data)))
 }
+
+export const wait = (options: { delay: number; signal: AbortSignal }) =>
+	new Promise<void>((resolve, reject) => {
+		let timeout: NodeJS.Timeout | undefined = undefined
+
+		const abort = (event: Event) => {
+			clearTimeout(timeout)
+			reject(event)
+		}
+
+		options.signal.addEventListener("abort", abort)
+		timeout = setTimeout(() => {
+			options.signal.removeEventListener("abort", abort)
+			resolve()
+		}, options.delay)
+	})
+
+export const retry = (
+	f: (signal: AbortSignal) => Promise<void>,
+	options: { signal: AbortSignal; delay: number }
+): AsyncIterable<any> => ({
+	[Symbol.asyncIterator]() {
+		let n = 0
+		return {
+			next() {
+				if (options.signal.aborted) {
+					return Promise.resolve({ done: true, value: undefined })
+				}
+
+				const next = n++ === 0 ? f(options.signal) : wait(options).then(() => f(options.signal))
+				return next
+					.then(() => ({ done: true, value: undefined }))
+					.catch((err) => {
+						if (err instanceof Event && err.type === "abort" && options.signal.aborted) {
+							return { done: true, value: undefined }
+						} else {
+							return { done: false, value: err }
+						}
+					})
+			},
+		}
+	},
+})

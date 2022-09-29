@@ -40,7 +40,16 @@ import {
 
 import { ModelStore, SqliteStore } from "./models/index.js"
 import { actionType, sessionType } from "./codecs.js"
-import { CacheMap, signalInvalidType, bootstrapList, getTopic, getProtocol, getRendezvousCID } from "./utils.js"
+import {
+	CacheMap,
+	signalInvalidType,
+	bootstrapList,
+	getTopic,
+	getProtocol,
+	getRendezvousCID,
+	wait,
+	retry,
+} from "./utils.js"
 import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
@@ -187,6 +196,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly protocol: string
 	private readonly topic: string
 	private readonly queue: PQueue
+	private provideRendezvousKey: AbortController = new AbortController()
+	private findRendezvousProviders: AbortController = new AbortController()
 
 	private constructor(
 		public readonly name: string,
@@ -234,51 +245,26 @@ export class Core extends EventEmitter<CoreEvents> {
 			if (options.peering) {
 				this.libp2p.pubsub.subscribe(this.topic)
 				this.libp2p.pubsub.addEventListener("message", ({ detail: message }) => this.handleMessage(message))
-				this.rendezvousTimeout = setTimeout(() => this.rendezvous(), Core.initialRendezvousInterval)
-				console.log(`[canvas-core] Subscribed to pubsub topic "${this.topic}"`)
+				console.log(`[canvas-core] Subscribed to pubsub topic ${this.topic}`)
+				startPeeringService(this.libp2p, getRendezvousCID(this.cid), this.controller.signal)
 			}
 
 			if (options.sync) {
 				this.libp2p.handle(this.protocol, this.handleIncomingStream)
-				this.syncTimeout = setTimeout(() => this.sync(), Core.initialSyncInterval)
+				this.startSyncService()
 			}
 
-			const applicationPeers = new Set<string>()
-			const gossipSubPeers = new Set<string>()
+			if (this.options.verbose) {
+				this.libp2p.connectionManager.addEventListener("peer:connect", ({ detail: connection }) => {
+					console.log(
+						`[canvas-core] Connected to peer ${connection.remotePeer.toString()} with connection ID ${connection.id}`
+					)
+				})
 
-			this.libp2p.connectionManager.addEventListener("peer:connect", ({ detail: connection }) => {
-				console.log(
-					`[canvas-core] Connected to peer ${connection.remotePeer.toString()} with connection ID ${connection.id}`
-				)
-			})
-
-			this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, protocols } }) => {
-				if (this.libp2p && peerId.equals(this.libp2p.peerId)) {
-					return
-				}
-
-				const id = peerId.toString()
-				if (protocols.includes(this.protocol)) {
-					if (!applicationPeers.has(id)) {
-						applicationPeers.add(id)
-						console.log(chalk.green(`[canvas-core] Found application peer ${id} (${applicationPeers.size})`))
-					}
-				}
-
-				if (protocols.includes(GossipSub.multicodec)) {
-					if (!gossipSubPeers.has(id)) {
-						gossipSubPeers.add(id)
-						console.log(chalk.green(`[canvas-core] Found GossipSub peer ${id} (${gossipSubPeers.size})`))
-					}
-				}
-			})
-
-			this.libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
-				const id = connection.remotePeer.toString()
-				console.log(`[canvas-core] Disconnected from peer ${id}`)
-				applicationPeers.delete(id)
-				gossipSubPeers.delete(id)
-			})
+				this.libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
+					console.log(`[canvas-core] Disconnected from peer ${connection.remotePeer.toString()}`)
+				})
+			}
 		}
 	}
 
@@ -286,14 +272,9 @@ export class Core extends EventEmitter<CoreEvents> {
 		await this.queue.onIdle()
 	}
 
+	private readonly controller = new AbortController()
 	public async close() {
-		if (this.syncTimeout !== null) {
-			clearTimeout(this.syncTimeout)
-		}
-
-		if (this.rendezvousTimeout !== null) {
-			clearTimeout(this.rendezvousTimeout)
-		}
+		this.controller.abort()
 
 		for (const provider of Object.values(this.providers)) {
 			provider.removeAllListeners("block")
@@ -302,7 +283,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (this.libp2p !== null) {
 			this.libp2p.pubsub.unsubscribe(this.topic)
 			this.libp2p.pubsub.removeEventListener("message")
-			this.libp2p.peerStore.removeEventListener("change:protocols")
 			this.libp2p.connectionManager.removeEventListener("peer:connect")
 			this.libp2p.connectionManager.removeEventListener("peer:disconnect")
 			await this.libp2p.stop()
@@ -579,121 +559,147 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private rendezvousTimeout: NodeJS.Timeout | null = null
-	private static initialRendezvousInterval = 1000 * 5
-	private static rendezvousInterval = 1000 * 60 * 60 * 6
-	private rendezvous() {
-		return this.queue.add(async () => {
-			if (this.libp2p === null) {
-				return
-			}
+	private startSyncService() {}
 
-			const rendezvous = getRendezvousCID(this.cid)
-			console.log(`[canvas-core] Publishing DHT provider record for rendezvous key ${rendezvous.toString()}`)
-			await this.libp2p.contentRouting
-				.provide(rendezvous)
-				.then(() => {
-					this.rendezvousTimeout = setTimeout(() => this.rendezvous(), Core.rendezvousInterval)
-				})
-				.catch((err) => {
-					console.log(chalk.red(`[canvas-core] Failed to publish DHT provider record`), err)
-					this.rendezvousTimeout = setTimeout(() => this.rendezvous(), Core.initialRendezvousInterval)
-				})
-		})
+	// private async sync(peers: PeerId[]) {
+	// 	if (this.libp2p === null || this.mst === null || this.protocol === null || !this.options.sync) {
+	// 		return
+	// 	}
+
+	// 	let i = 0
+	// 	for (const peer of peers) {
+	// 		if (this.options.verbose) {
+	// 			console.log(`[canvas-core] Initiating sync with ${peer.toString()} (${++i}/${peers.length})`)
+	// 		}
+
+	// 		const target = new okra.Target(this.mst)
+	// 		let successCount = 0
+	// 		let failureCount = 0
+	// 		await this.libp2p.dialProtocol(peer, this.protocol).then((stream) => {
+	// 			if (this.options.verbose) {
+	// 				console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}`)
+	// 			}
+
+	// 			return handleTarget(stream, target, async (hash, message) => {
+	// 				if (this.options.verbose) {
+	// 					console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
+	// 				}
+
+	// 				if (message.type === "session") {
+	// 					const { type, ...session } = message
+	// 					await this.applySessionInternal(hash, session, { sync: true })
+	// 						.then(() => {
+	// 							successCount += 1
+	// 						})
+	// 						.catch((err) => {
+	// 							failureCount += 1
+	// 							console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
+	// 						})
+	// 				} else if (message.type === "action") {
+	// 					const { type, ...action } = message
+	// 					await this.applyActionInternal(hash, action, { sync: true })
+	// 						.then(() => {
+	// 							successCount += 1
+	// 						})
+	// 						.catch((err) => {
+	// 							failureCount += 1
+	// 							console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
+	// 						})
+	// 				} else {
+	// 					signalInvalidType(message)
+	// 				}
+	// 			})
+	// 				.then(() => {
+	// 					if (this.options.verbose) {
+	// 						console.log(chalk.green(`[canvas-core] Sync with ${peer.toString()} completed.`))
+	// 						console.log(
+	// 							chalk.green(`[canvas-core] Applied ${successCount} new messages with ${failureCount} failures.`)
+	// 						)
+	// 					}
+	// 				})
+	// 				.catch((err) => console.log(chalk.red("[canvas-core] Sync failed"), err))
+	// 				.finally(() => {
+	// 					if (this.options.verbose) {
+	// 						console.log(`[canvas-core] Closed outgoing stream ${stream.id}`)
+	// 					}
+	// 					target.close()
+	// 				})
+	// 		})
+	// 	}
+	// }
+
+	// private async findPeers(): Promise<PeerId[]> {
+	// 	const peers = new Map<string, PeerId>()
+
+	// 	if (this.libp2p !== null) {
+	// 		const rendezvous = getRendezvousCID(this.cid)
+	// 		if (this.options.verbose) {
+	// 			console.log(chalk.green(`[canvas-core] Attempting to rendezvous with peers at ${rendezvous.toString()}`))
+	// 		}
+
+	// 		const { signal } = this.controller
+	// 		for await (const { id, protocols } of this.libp2p.contentRouting.findProviders(rendezvous, { signal })) {
+	// 			if (protocols.includes(this.protocol)) {
+	// 				if (this.options.verbose) {
+	// 					console.log(chalk.green(`[canvas-core] Found application peer ${id.toString()} via DHT rendezvous`))
+	// 				}
+	// 				peers.set(id.toString(), id)
+	// 			}
+	// 		}
+	// 	}
+
+	// 	return Array.from(peers.values())
+	// }
+}
+
+const delay = 1000 * 10
+const interval = 1000 * 60 * 5
+const retryInterval = 1000 * 1
+async function startPeeringService(libp2p: Libp2p, rendezvous: CID, signal: AbortSignal) {
+	async function f(signal: AbortSignal) {
+		await libp2p.contentRouting.provide(rendezvous, { signal })
+		console.log(chalk.green(`[canvas-core] Successfully published DHT rendezvous record`))
 	}
 
-	private static initialSyncInterval = 1000 * 5
-	private static syncInterval = 1000 * 60
-	private syncTimeout: NodeJS.Timeout | null = null
-	private sync() {
-		return this.queue.add(async () => {
-			if (this.libp2p === null || this.mst === null || this.protocol === null || !this.options.sync) {
-				return
+	let date: Date
+	const retryF = async (signal: AbortSignal) => {
+		date = new Date()
+		console.log(
+			chalk.green(
+				`[canvas-core] Publishing DHT rendezvous record ${rendezvous.toString()} (${date.toLocaleTimeString()})`
+			)
+		)
+
+		const limit = 5
+		let n = 1
+		for await (const err of retry(f, { signal, delay: retryInterval })) {
+			if (n < limit) {
+				console.log(chalk.red(`[canvas-core] Failed to publish DHT rendezvous record (${n}/${limit} tries)`))
+				n++
+				continue
+			} else {
+				date = new Date(date.valueOf() + interval)
+				console.log(
+					chalk.red(
+						`[canvas-core] Failed to publish DHT rendezvous record after ${limit} tries, trying again at ${date.toLocaleTimeString()}`
+					)
+				)
+				break
 			}
-
-			const peers = new Map<string, PeerId>()
-
-			const rendezvous = getRendezvousCID(this.cid)
-			for await (const { id, protocols } of this.libp2p.contentRouting.findProviders(rendezvous)) {
-				if (protocols.includes(this.protocol)) {
-					console.log(chalk.green(`[canvas-core] Found application peer ${id.toString()} via DHT rendezvous`))
-					peers.set(id.toString(), id)
-				}
-			}
-
-			// for (const peer of this.libp2p.getPeers()) {
-			// 	const protocols = await this.libp2p.peerStore.protoBook.get(peer)
-			// 	if (protocols.includes(this.protocol)) {
-			// 		peers.set(peer.toString(), peer)
-			// 	}
-			// }
-
-			if (this.options.verbose) {
-				console.log(chalk.green(`[canvas-core] Connected to ${peers.size} application peers`))
-			}
-
-			let i = 0
-			for (const peer of peers.values()) {
-				if (this.options.verbose) {
-					console.log(`[canvas-core] Initiating sync with ${peer.toString()} (${++i}/${peers.size})`)
-				}
-
-				const target = new okra.Target(this.mst)
-				let successCount = 0
-				let failureCount = 0
-				await this.libp2p.dialProtocol(peer, this.protocol).then((stream) => {
-					if (this.options.verbose) {
-						console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}`)
-					}
-
-					return handleTarget(stream, target, async (hash, message) => {
-						if (this.options.verbose) {
-							console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
-						}
-
-						if (message.type === "session") {
-							const { type, ...session } = message
-							await this.applySessionInternal(hash, session, { sync: true })
-								.then(() => {
-									successCount += 1
-								})
-								.catch((err) => {
-									failureCount += 1
-									console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
-								})
-						} else if (message.type === "action") {
-							const { type, ...action } = message
-							await this.applyActionInternal(hash, action, { sync: true })
-								.then(() => {
-									successCount += 1
-								})
-								.catch((err) => {
-									failureCount += 1
-									console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
-								})
-						} else {
-							signalInvalidType(message)
-						}
-					})
-						.then(() => {
-							if (this.options.verbose) {
-								console.log(chalk.green(`[canvas-core] Sync with ${peer.toString()} completed.`))
-								console.log(
-									chalk.green(`[canvas-core] Applied ${successCount} new messages with ${failureCount} failures.`)
-								)
-							}
-						})
-						.catch((err) => console.log(chalk.red("[canvas-core] Sync failed"), err))
-						.finally(() => {
-							if (this.options.verbose) {
-								console.log(`[canvas-core] Closed outgoing stream ${stream.id}`)
-							}
-							target.close()
-						})
-				})
-			}
-
-			this.syncTimeout = setTimeout(() => this.sync(), Core.syncInterval)
-		})
+		}
 	}
+
+	wait({ delay, signal })
+		.then(() => {
+			retryF(signal)
+			const timer = setInterval(() => retryF(signal), interval)
+			signal.addEventListener("abort", () => clearInterval(timer))
+		})
+		.catch((err) => {
+			if (err instanceof Event && err.type === "abort" && signal.aborted) {
+				console.log(`[canvas-core] Aborted DHT provide call during initial delay`)
+			} else {
+				throw err
+			}
+		})
 }
