@@ -150,29 +150,51 @@ export const wait = (options: { delay: number; signal: AbortSignal }) =>
 		}, options.delay)
 	})
 
-export const retry = (
-	f: (signal: AbortSignal) => Promise<void>,
-	options: { signal: AbortSignal; delay: number }
-): AsyncIterable<any> => ({
-	[Symbol.asyncIterator]() {
-		let n = 0
-		return {
-			next() {
-				if (options.signal.aborted) {
-					return Promise.resolve({ done: true, value: undefined })
-				}
+// const retry = (
+// 	f: (signal: AbortSignal) => Promise<void>,
+// 	options: { signal: AbortSignal; delay: number }
+// ): AsyncIterable<any> => ({
+// 	[Symbol.asyncIterator]() {
+// 		let n = 0
+// 		return {
+// 			next() {
+// 				if (options.signal.aborted) {
+// 					return Promise.resolve({ done: true, value: undefined })
+// 				}
 
-				const next = n++ === 0 ? f(options.signal) : wait(options).then(() => f(options.signal))
-				return next
-					.then(() => ({ done: true, value: undefined }))
-					.catch((err) => {
-						if (err instanceof Event && err.type === "abort" && options.signal.aborted) {
-							return { done: true, value: undefined }
-						} else {
-							return { done: false, value: err }
-						}
-					})
-			},
+// 				const next = n++ === 0 ? f(options.signal) : wait(options).then(() => f(options.signal))
+// 				return next
+// 					.then(() => ({ done: true, value: undefined }))
+// 					.catch((err) => {
+// 						if (err instanceof Event && err.type === "abort" && options.signal.aborted) {
+// 							return { done: true, value: undefined }
+// 						} else {
+// 							return { done: false, value: err }
+// 						}
+// 					})
+// 			},
+// 		}
+// 	},
+// })
+
+export async function retry<T>(
+	f: (signal: AbortSignal) => Promise<T>,
+	handleError: (err: any, n: number) => void,
+	options: { signal: AbortSignal; delay: number }
+): Promise<T> {
+	let n = 0
+	while (true) {
+		const result: IteratorResult<any, T> = await f(options.signal)
+			.then((value) => ({ done: true, value }))
+			.catch((err) => ({ done: false, value: err }))
+
+		if (result.done) {
+			return result.value
+		} else if (options.signal.aborted) {
+			throw result.value
+		} else {
+			handleError(result.value, n++)
+			await wait(options)
 		}
-	},
-})
+	}
+}
