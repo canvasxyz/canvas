@@ -83,7 +83,7 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
-	const { name, directory, spec } = await locateSpec(args.spec, args.ipfs)
+	const { name, directory, spec, peerId } = await locateSpec(args.spec, args.ipfs)
 
 	if (directory === null) {
 		if (args.peering) {
@@ -185,6 +185,7 @@ export async function handler(args: Args) {
 		unchecked,
 		peering,
 		peeringPort,
+		peerId,
 	})
 
 	const api = args.noserver ? null : new API({ core, port: args.port, verbose })

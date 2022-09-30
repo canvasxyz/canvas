@@ -5,8 +5,11 @@ import process from "node:process"
 
 import fetch from "node-fetch"
 import chalk from "chalk"
-
 import prompts from "prompts"
+
+import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
+import type { PeerId } from "@libp2p/interface-peer-id"
+
 import { Chain } from "@canvas-js/interfaces"
 import { chainType, ModelStore, PostgresStore, SqliteStore } from "@canvas-js/core"
 
@@ -35,15 +38,28 @@ interface LocateSpecResult {
 	name: string
 	directory: string | null
 	spec: string
+	peerId: PeerId | undefined
 }
 
 export async function locateSpec(name: string, ipfsGatewayURL: string): Promise<LocateSpecResult> {
+	let peerId: PeerId | undefined
 	if (cidPattern.test(name)) {
 		const directory = path.resolve(CANVAS_HOME, name)
+
+		const peerIdPath = path.resolve(CANVAS_HOME, "peer.id")
+		if (fs.existsSync(peerIdPath)) {
+			peerId = await createFromProtobuf(fs.readFileSync(peerIdPath))
+			console.log(`[canvas-cli] Found existing PeerId at ${peerIdPath}`)
+		} else {
+			peerId = await createEd25519PeerId()
+			fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
+			console.log(`[canvas-cli] Created new PeerId at ${peerIdPath}`)
+		}
+
 		const specPath = path.resolve(CANVAS_HOME, name, SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const spec = fs.readFileSync(specPath, "utf-8")
-			return { name, directory, spec }
+			return { name, directory, spec, peerId }
 		} else {
 			if (!fs.existsSync(directory)) {
 				console.log(`[canvas-cli] Creating directory ${directory}`)
@@ -53,12 +69,12 @@ export async function locateSpec(name: string, ipfsGatewayURL: string): Promise<
 			const spec = await download(name, ipfsGatewayURL)
 			fs.writeFileSync(specPath, spec)
 			console.log(`[canvas-cli] Downloaded spec to ${specPath}`)
-			return { name, directory, spec }
+			return { name, directory, spec, peerId }
 		}
 	} else if (name.endsWith(".js")) {
 		const specPath = path.resolve(name)
 		const spec = fs.readFileSync(specPath, "utf-8")
-		return { name: specPath, directory: null, spec }
+		return { name: specPath, directory: null, spec, peerId }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js file"))
 		process.exit(1)

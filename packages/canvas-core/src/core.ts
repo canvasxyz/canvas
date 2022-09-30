@@ -1,6 +1,5 @@
 import assert from "node:assert"
 import path from "node:path"
-import fs from "node:fs"
 
 import { ethers } from "ethers"
 import { QuickJSWASMModule } from "quickjs-emscripten"
@@ -20,7 +19,7 @@ import type { Message as PubSubMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
-import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
+
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
 import * as okra from "node-okra"
@@ -57,6 +56,7 @@ export interface CoreConfig {
 	rpc?: Partial<Record<Chain, Record<string, string>>>
 	peering?: boolean
 	peeringPort?: number
+	peerId?: PeerId
 }
 
 interface CoreEvents {
@@ -111,19 +111,9 @@ export class Core extends EventEmitter<CoreEvents> {
 		let libp2p: Libp2p | null = null
 		if (directory !== null && peering) {
 			assert(port !== undefined, "a peeringPort must be provided if peering is enabled")
-			const peerIdPath = path.resolve(directory, "id")
-			let peerId: PeerId
-			if (fs.existsSync(peerIdPath)) {
-				peerId = await createFromProtobuf(fs.readFileSync(peerIdPath))
-			} else {
-				peerId = await createEd25519PeerId()
-				fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
-			}
-
-			console.log(`[canvas-core] PeerId ${peerId.toString()}`)
 
 			libp2p = await createLibp2p({
-				peerId,
+				peerId: config.peerId,
 				addresses: { listen: [`/ip4/0.0.0.0/tcp/${port}`] },
 				transports: [new TCP()],
 				connectionEncryption: [new Noise()],
@@ -137,6 +127,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				}),
 			})
 
+			console.log(`[canvas-core] PeerId ${libp2p.peerId.toString()}`)
 			await libp2p.start()
 		}
 
