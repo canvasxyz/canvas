@@ -109,7 +109,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		const messageStore = new MessageStore(name, directory, { verbose })
 
 		let libp2p: Libp2p | null = null
-		if (directory !== null && peering && port) {
+		if (directory !== null && peering) {
+			assert(port !== undefined, "a peeringPort must be provided if peering is enabled")
 			const peerIdPath = path.resolve(directory, "id")
 			let peerId: PeerId
 			if (fs.existsSync(peerIdPath)) {
