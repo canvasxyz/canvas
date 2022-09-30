@@ -9,16 +9,12 @@ import chalk from "chalk"
 import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
-import { base58btc } from "multiformats/bases/base58"
 
 import { createLibp2p, Libp2p } from "libp2p"
 import { TCP } from "@libp2p/tcp"
-import { WebSockets } from "@libp2p/websockets"
 import { Noise } from "@chainsafe/libp2p-noise"
 import { Mplex } from "@libp2p/mplex"
 import { MulticastDNS } from "@libp2p/mdns"
-import { Bootstrap } from "@libp2p/bootstrap"
-import { KadDHT } from "@libp2p/kad-dht"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { Message as PubSubMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
@@ -43,16 +39,7 @@ import {
 
 import { ModelStore, SqliteStore } from "./models/index.js"
 import { actionType, sessionType } from "./codecs.js"
-import {
-	CacheMap,
-	signalInvalidType,
-	bootstrapList,
-	getTopic,
-	getProtocol,
-	getRendezvousCID,
-	wait,
-	retry,
-} from "./utils.js"
+import { CacheMap, signalInvalidType, getTopic, getProtocol, wait, retry } from "./utils.js"
 import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
@@ -137,16 +124,12 @@ export class Core extends EventEmitter<CoreEvents> {
 			libp2p = await createLibp2p({
 				peerId,
 				addresses: { listen: [`/ip4/0.0.0.0/tcp/${port}`] },
-				transports: [new TCP(), new WebSockets()],
+				transports: [new TCP()],
 				connectionEncryption: [new Noise()],
 				streamMuxers: [new Mplex()],
-				peerDiscovery: [
-					// new MulticastDNS(),
-					new Bootstrap({ list: bootstrapList }),
-				],
-				dht: new KadDHT(),
+				peerDiscovery: [new MulticastDNS()],
 				pubsub: new GossipSub({
-					// doPX: true,
+					doPX: true,
 					fallbackToFloodsub: false,
 					allowPublishToZeroPeers: true,
 					globalSignaturePolicy: "StrictSign",
@@ -199,8 +182,6 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly protocol: string
 	private readonly topic: string
 	private readonly queue: PQueue
-	private provideRendezvousKey: AbortController = new AbortController()
-	private findRendezvousProviders: AbortController = new AbortController()
 
 	private constructor(
 		public readonly name: string,
@@ -247,9 +228,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (this.libp2p !== null) {
 			if (options.peering) {
 				this.libp2p.pubsub.subscribe(this.topic)
-				this.libp2p.pubsub.addEventListener("message", ({ detail: message }) => this.handleMessage(message))
+				this.libp2p.pubsub.addEventListener("message", this.handleMessage)
 				console.log(`[canvas-core] Subscribed to pubsub topic ${this.topic}`)
-				this.startPeeringService(this.libp2p)
 			}
 
 			if (options.sync) {
@@ -519,7 +499,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 	}
 
-	private handleMessage = async ({ topic, data }: PubSubMessage) => {
+	private handleMessage = async ({ detail: { topic, data } }: CustomEvent<PubSubMessage>) => {
 		if (topic !== this.topic) {
 			return
 		}
@@ -565,63 +545,18 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private static peeringDelay = 1000 * 5
-	private static peeringInterval = 1000 * 60 * 60 * 3
-	private static peeringRetryInterval = 1000 * 60
-	async startPeeringService(libp2p: Libp2p) {
-		const { signal } = this.controller
-		const rendezvous = getRendezvousCID(this.cid)
-
-		try {
-			await wait({ delay: Core.peeringDelay, signal })
-			while (!signal.aborted) {
-				console.log(chalk.green(`[canvas-core] Publishing DHT rendezvous record ${rendezvous.toString(base58btc)}`))
-				await retry(
-					async (signal) => {
-						await libp2p.contentRouting.provide(rendezvous, { signal })
-						console.log(chalk.green(`[canvas-core] Successfully published DHT rendezvous record`))
-					},
-					(err) => {
-						const message = err instanceof Error ? err.message : err.toString()
-						console.log(chalk.red(`[canvas-core] Failed to publish DHT rendezvous record (${message})`))
-					},
-					{ signal, delay: Core.peeringRetryInterval }
-				)
-
-				await wait({ signal, delay: Core.peeringInterval })
-			}
-		} catch (err) {
-			console.log(`[canvas-core] Aborting peering service`)
-		}
-	}
-
 	private static syncDelay = 1000 * 30
 	private static syncInterval = 1000 * 60 * 5
 	private static syncRetryInterval = 1000 * 60
 	private async startSyncService(libp2p: Libp2p) {
 		const { signal } = this.controller
-		const rendezvous = getRendezvousCID(this.cid)
-
-		const findPeers = async (signal: AbortSignal): Promise<PeerId[]> => {
-			console.log(chalk.green(`[canvas-core] Attempting to rendezvous at ${rendezvous.toString(base58btc)}`))
-
-			const peers = new Map<string, PeerId>()
-			for await (const { id, protocols } of libp2p.contentRouting.findProviders(rendezvous, { signal })) {
-				if (protocols.includes(this.protocol)) {
-					console.log(chalk.green(`[canvas-core] Found application peer ${id.toString()} via DHT rendezvous`))
-					peers.set(id.toString(), id)
-				}
-			}
-
-			return Array.from(peers.values())
-		}
 
 		try {
 			await wait({ delay: Core.syncDelay, signal })
 			while (!signal.aborted) {
 				const peers = await retry(
-					findPeers,
-					(err) => console.log(chalk.red(`[canvas-core] Failed to rendezvous with application peers`), err),
+					this.findPeers,
+					(err) => console.log(chalk.red(`[canvas-core] Failed to locate application peers`), err),
 					{ signal, delay: Core.syncRetryInterval }
 				)
 
@@ -632,6 +567,21 @@ export class Core extends EventEmitter<CoreEvents> {
 		} catch (err) {
 			console.log(`[canvas-core] Aborting sync service`)
 		}
+	}
+
+	private findPeers = async (signal: AbortSignal): Promise<PeerId[]> => {
+		const peers = new Map<string, PeerId>()
+
+		if (this.libp2p !== null) {
+			for (const peer of this.libp2p.getPeers()) {
+				const protocols = await this.libp2p.peerStore.protoBook.get(peer)
+				if (protocols.includes(this.protocol)) {
+					peers.set(peer.toString(), peer)
+				}
+			}
+		}
+
+		return Array.from(peers.values())
 	}
 
 	private async sync(libp2p: Libp2p, peers: PeerId[]) {
