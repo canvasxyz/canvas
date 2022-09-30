@@ -607,10 +607,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}`)
 			}
 
-			const closeStream = () => {
-				console.log(chalk.red(`[canvas-core] CLOSING STREAM DUE TO ABORT SIGNAL`))
-				stream.close()
-			}
+			const closeStream = () => stream.close()
 
 			signal.addEventListener("abort", closeStream)
 
