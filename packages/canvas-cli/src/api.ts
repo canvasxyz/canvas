@@ -1,5 +1,4 @@
 import http from "node:http"
-import assert from "node:assert"
 
 import chalk from "chalk"
 import stoppable from "stoppable"
@@ -7,72 +6,25 @@ import cors from "cors"
 import express, { Request, Response } from "express"
 import bodyParser from "body-parser"
 import { StatusCodes } from "http-status-codes"
-import * as t from "io-ts"
-import type { Message } from "@libp2p/interface-pubsub"
-import type { EventCallback } from "@libp2p/interfaces/events"
 
-import {
-	Core,
-	actionType,
-	sessionType,
-	encodeBinaryMessage,
-	decodeBinaryMessage,
-	getActionHash,
-	getSessionHash,
-} from "@canvas-js/core"
-import { Action, ModelValue, Session } from "@canvas-js/interfaces"
-import { IPFSHTTPClient } from "ipfs-http-client"
+import { Core, actionType, sessionType } from "@canvas-js/core"
+import { ModelValue } from "@canvas-js/interfaces"
 
 interface APIConfig {
 	core: Core
 	port: number
-	ipfs?: IPFSHTTPClient
-	peerID?: string
-	peering?: boolean
 	verbose?: boolean
 }
 
 export class API {
 	readonly core: Core
-	readonly peering: boolean
-	readonly ipfs?: IPFSHTTPClient
-	readonly topic?: string
-	readonly peerID?: string
 	readonly server: http.Server & stoppable.WithStop
 	private readonly verbose?: boolean
 	private readonly peerLoggingTimer?: NodeJS.Timer
 
-	constructor({ peerID, core, port, ipfs, peering, verbose }: APIConfig) {
+	constructor({ core, port, verbose }: APIConfig) {
 		this.core = core
-		this.ipfs = ipfs
-		this.peering = !!peering
 		this.verbose = verbose
-
-		if (ipfs !== undefined && this.peering) {
-			this.topic = `canvas:${core.name}`
-			this.peerID = peerID
-			console.log(`[canvas-cli] Subscribing to pubsub topic ${this.topic}`)
-			ipfs.pubsub.subscribe(this.topic, this.handleMessage).catch((err) => {
-				console.log(chalk.red(`[canvas-cli] Failed to subscribe to pubsub topic: ${err}`))
-			})
-
-			if (verbose) {
-				const peerLoggingTimeout = 10000
-				this.peerLoggingTimer = setInterval(async () => {
-					ipfs.pubsub
-						.peers(this.topic!, { timeout: peerLoggingTimeout })
-						.then((peerIds) => {
-							console.log(`[canvas-cli] Connected to ${peerIds.length} pubsub peers`)
-							for (const peerId of peerIds) {
-								console.log(`[canvas-cli] - ${peerId.toString()}`)
-							}
-						})
-						.catch((err) => {
-							console.log(chalk.red("[canvas-cli] Failed to list pubsub peers"), err)
-						})
-				}, peerLoggingTimeout)
-			}
-		}
 
 		const api = express()
 		api.use(cors({ exposedHeaders: ["ETag"] }))
@@ -95,7 +47,7 @@ export class API {
 		api.post("/actions", this.handleAction)
 		api.post("/sessions", this.handleSession)
 
-		for (const route of Object.keys(core.routeParameters)) {
+		for (const route of Object.keys(core.exports.routeParameters)) {
 			api.get(route, this.getRouteHandler(route))
 		}
 
@@ -103,12 +55,12 @@ export class API {
 			api.listen(port, () => {
 				console.log(`[canvas-cli] Serving ${core.name} on port ${port}:`)
 				console.log(`└ GET http://localhost:${port}/`)
-				for (const name of Object.keys(core.routeParameters)) {
+				for (const name of Object.keys(core.exports.routeParameters)) {
 					console.log(`└ GET http://localhost:${port}${name}`)
 				}
 				console.log("└ POST /actions")
 				console.log(`  └ ${actionType.name}`)
-				console.log(`  └ calls: [ ${Object.keys(core.actionParameters).join(", ")} ]`)
+				console.log(`  └ calls: [ ${Object.keys(core.exports.actionParameters).join(", ")} ]`)
 				console.log("└ POST /sessions")
 				console.log(`  └ ${sessionType.name}`)
 			}),
@@ -119,13 +71,6 @@ export class API {
 	async stop() {
 		clearInterval(this.peerLoggingTimer)
 
-		if (this.peering && this.ipfs !== undefined && this.topic !== undefined) {
-			console.log(`[canvas-cli] Unsubscribing from pubsub topic ${this.topic}`)
-			await this.ipfs.pubsub
-				.unsubscribe(this.topic, this.handleMessage)
-				.catch((err) => console.error("[canvas-cli] Error while unsubscribing from pubsub topic", err))
-		}
-
 		await new Promise<void>((resolve, reject) => {
 			this.server.stop((err) => (err ? reject(err) : resolve()))
 		})
@@ -133,7 +78,7 @@ export class API {
 
 	getRouteHandler = (route: string) => async (req: Request, res: Response) => {
 		const params: Record<string, string> = {}
-		for (const name of this.core.routeParameters[route]) {
+		for (const name of this.core.exports.routeParameters[route]) {
 			const value = req.params[name]
 			if (typeof value === "string") {
 				params[name] = value
@@ -201,12 +146,8 @@ export class API {
 		}
 
 		await this.core
-			.apply(action)
+			.applyAction(action)
 			.then(async ({ hash }) => {
-				this.publishMessage(hash, action).catch((err) => {
-					console.log(chalk.red("[canvas-cli] Failed to publish message to pubsub"), err)
-				})
-
 				res.status(StatusCodes.OK).header("ETag", `"${hash}"`).end()
 			})
 			.catch((err) => {
@@ -214,23 +155,6 @@ export class API {
 				console.error("[canvas-cli] Failed to apply action:", message)
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message || "Failed to apply action")
 			})
-	}
-
-	private async publishMessage(actionHash: string, action: Action) {
-		if (this.peering && this.ipfs !== undefined && this.topic !== undefined) {
-			let message: Uint8Array
-			if (action.session !== null) {
-				const { hash: sessionHash, session } = await this.core.messageStore.getSessionByAddress(action.session)
-				assert(sessionHash !== null && session !== null)
-				message = encodeBinaryMessage({ hash: actionHash, action }, { hash: sessionHash, session })
-			} else {
-				message = encodeBinaryMessage({ hash: actionHash, action }, { hash: null, session: null })
-			}
-
-			await this.ipfs.pubsub.publish(this.topic, message).catch((err) => {
-				console.error(chalk.red("[canvas-cli] Failed to publish action to pubsub topic"), err)
-			})
-		}
 	}
 
 	handleSession = async (req: Request, res: Response) => {
@@ -249,41 +173,12 @@ export class API {
 		// Since we republish all session with each action, we just skip sending sessions
 		// over pubsub entirely.
 		await this.core
-			.session(session)
+			.applySession(session)
 			.then(() => res.status(StatusCodes.OK).end())
 			.catch((err) => {
 				console.error("[canvas-cli] Failed to create session:", err)
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
 			})
-	}
-
-	handleMessage: EventCallback<Message> = async (event) => {
-		if (event.type !== "signed" || event.from.toString() === this.peerID) {
-			return
-		}
-
-		if (this.verbose) {
-			console.log(`[canvas-cli] Reveived pubsub message from peer ${event.from.toString()}`)
-		}
-
-		let decodedMessage: ReturnType<typeof decodeBinaryMessage>
-		try {
-			decodedMessage = decodeBinaryMessage(event.data)
-		} catch (err) {
-			console.error(chalk.red("[canvas-cli] Failed to parse pubsub message"), err)
-			return
-		}
-
-		const { action, session } = decodedMessage
-		try {
-			if (session !== null) {
-				await this.core.session(session)
-			}
-
-			await this.core.apply(action)
-		} catch (err) {
-			console.log(chalk.red("[canvas-cli] Error applying peer message"), err)
-		}
 	}
 }
 

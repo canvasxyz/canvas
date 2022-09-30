@@ -42,7 +42,7 @@ test("Test setting and then deleting a record", async (t) => {
 
 	const newThreadAction = await sign(signer, null, "newThread", ["Hacker News", "https://news.ycombinator.com"])
 
-	const { hash: threadId } = await core.apply(newThreadAction)
+	const { hash: threadId } = await core.applyAction(newThreadAction)
 
 	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [
 		{
@@ -54,7 +54,7 @@ test("Test setting and then deleting a record", async (t) => {
 		},
 	])
 
-	await sign(signer, null, "deleteThread", [threadId]).then((action) => core.apply(action))
+	await sign(signer, null, "deleteThread", [threadId]).then((action) => core.applyAction(action))
 
 	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [])
 

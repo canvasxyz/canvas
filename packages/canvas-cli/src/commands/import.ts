@@ -65,13 +65,13 @@ export async function handler(args: Args) {
 		if (type === "action") {
 			assert(actionType.is(message))
 			core
-				.apply(message)
+				.applyAction(message)
 				.then(() => actionCount++)
 				.catch((err) => console.error(chalk.red("[canvas-cli] Failed to apply action:"), err))
 		} else if (type === "session") {
 			assert(sessionType.is(message))
 			core
-				.session(message)
+				.applySession(message)
 				.then(() => sessionCount++)
 				.catch((err) => console.error(chalk.red("[canvas-cli] Failed to apply session:"), err))
 		} else {

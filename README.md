@@ -71,8 +71,8 @@ Run unit tests with `npm run test` from either the repo root or the `packages/ca
 If you have a a `.env` file **in the repo root** with two environment variables...
 
 ```
-ETH_CHAIN_ID=1
-ETH_CHAIN_RPC=https://mainnet.infura.io/v3/MY_API_KEY
+export ETH_CHAIN_ID=1
+export ETH_CHAIN_RPC=https://mainnet.infura.io/v3/MY_API_KEY
 ```
 
 ... then `npm run test` will also run the contract call tests in `packages/canvas-core/test/contracts.test.ts`. If `.env` is missing these tests will be skipped.

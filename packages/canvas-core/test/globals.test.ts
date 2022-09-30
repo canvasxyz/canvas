@@ -34,7 +34,7 @@ test("test fetch and log IP address", async (t) => {
 	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 
 	const action = await sign(signer, null, "logIP", [])
-	await core.apply(action)
+	await core.applyAction(action)
 	await core.close()
 
 	t.pass()

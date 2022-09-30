@@ -5,19 +5,13 @@ import process from "node:process"
 
 import fetch from "node-fetch"
 import chalk from "chalk"
-
-import t from "io-ts"
-
 import prompts from "prompts"
-import { Chain } from "@canvas-js/interfaces"
-import { ModelStore, PostgresStore, SqliteStore } from "@canvas-js/core"
 
-const chainType: t.Type<Chain> = t.union([
-	t.literal("eth"),
-	t.literal("cosmos"),
-	t.literal("solana"),
-	t.literal("substrate"),
-])
+import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
+import type { PeerId } from "@libp2p/interface-peer-id"
+
+import { Chain } from "@canvas-js/interfaces"
+import { chainType, ModelStore, PostgresStore, SqliteStore } from "@canvas-js/core"
 
 export const SPEC_FILENAME = "spec.canvas.js"
 
@@ -44,32 +38,43 @@ interface LocateSpecResult {
 	name: string
 	directory: string | null
 	spec: string
+	peerId: PeerId | undefined
 }
 
-export async function locateSpec(name: string, ipfsAPI?: string): Promise<LocateSpecResult> {
+export async function locateSpec(name: string, ipfsGatewayURL: string): Promise<LocateSpecResult> {
+	let peerId: PeerId | undefined
 	if (cidPattern.test(name)) {
 		const directory = path.resolve(CANVAS_HOME, name)
+
+		const peerIdPath = path.resolve(CANVAS_HOME, "peer.id")
+		if (fs.existsSync(peerIdPath)) {
+			peerId = await createFromProtobuf(fs.readFileSync(peerIdPath))
+			console.log(`[canvas-cli] Found existing PeerId at ${peerIdPath}`)
+		} else {
+			peerId = await createEd25519PeerId()
+			fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
+			console.log(`[canvas-cli] Created new PeerId at ${peerIdPath}`)
+		}
+
 		const specPath = path.resolve(CANVAS_HOME, name, SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const spec = fs.readFileSync(specPath, "utf-8")
-			return { name, directory, spec }
-		} else if (ipfsAPI !== undefined) {
+			return { name, directory, spec, peerId }
+		} else {
 			if (!fs.existsSync(directory)) {
 				console.log(`[canvas-cli] Creating directory ${directory}`)
 				fs.mkdirSync(directory)
 			}
 
-			const spec = await download(name, ipfsAPI)
+			const spec = await download(name, ipfsGatewayURL)
 			fs.writeFileSync(specPath, spec)
 			console.log(`[canvas-cli] Downloaded spec to ${specPath}`)
-			return { name, directory, spec }
-		} else {
-			throw new Error("No IPFS API provided")
+			return { name, directory, spec, peerId }
 		}
 	} else if (name.endsWith(".js")) {
 		const specPath = path.resolve(name)
 		const spec = fs.readFileSync(specPath, "utf-8")
-		return { name: specPath, directory: null, spec }
+		return { name: specPath, directory: null, spec, peerId }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js file"))
 		process.exit(1)
@@ -115,9 +120,11 @@ export function setupRpcs(args?: Array<string | number>): Partial<Record<Chain, 
 	return rpcs
 }
 
-function download(cid: string, ipfsAPI: string) {
-	console.log(`[canvas-cli] Attempting to download ${cid} from local IPFS node...`)
-	return fetch(`${ipfsAPI}/api/v0/cat?arg=${cid}`, { method: "POST" })
+function download(cid: string, ipfsGatewayURL: string) {
+	const url = `${ipfsGatewayURL}/ipfs/${cid}`
+	console.log(`[canvas-cli] Attempting to download spec from IPFS gateway...`)
+	console.log(`[canvas-cli] GET ${url}`)
+	return fetch(url, { method: "GET" })
 		.then((res) => res.text())
 		.catch((err) => {
 			if (err.code === "ECONNREFUSED") {
