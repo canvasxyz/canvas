@@ -160,7 +160,7 @@ export type Message = ({ type: "session" } & Session) | ({ type: "action" } & Ac
 export async function handleTarget(
 	stream: Stream,
 	target: okra.Target,
-	handleMessage: (hash: string, message: Message) => Promise<void>
+	applyBatch: (messages: Iterable<[string, Message]>) => Promise<void>
 ) {
 	const responses = decode(stream.source, responseType)
 	const iter = responses[Symbol.asyncIterator]()
@@ -204,6 +204,8 @@ export async function handleTarget(
 				throw new Error("expected values.length to match leaves.length")
 			}
 
+			const messages: [string, Message][] = []
+
 			for (const [i, { leaf, hash }] of leaves.entries()) {
 				const value = values[i]
 				if (!createHash("sha256").update(value).digest().equals(hash)) {
@@ -211,14 +213,15 @@ export async function handleTarget(
 				}
 
 				const timestamp = leaf.readUintBE(0, 6)
-				if (timestamp % 2 == 0) {
-					const session = decodeSession(value)
-					await handleMessage(toHex(hash), { type: "session", ...session })
-				} else {
-					const action = decodeAction(value)
-					await handleMessage(toHex(hash), { type: "action", ...action })
-				}
+				messages.push([
+					toHex(hash),
+					timestamp % 2 == 0
+						? { type: "session", ...decodeSession(value) }
+						: { type: "action", ...decodeAction(value) },
+				])
 			}
+
+			await applyBatch(messages)
 		}
 	}
 

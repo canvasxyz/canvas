@@ -257,8 +257,6 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private readonly controller = new AbortController()
 	public async close() {
-		this.controller.abort()
-
 		for (const provider of Object.values(this.providers)) {
 			provider.removeAllListeners("block")
 		}
@@ -271,10 +269,12 @@ export class Core extends EventEmitter<CoreEvents> {
 			await this.libp2p.stop()
 		}
 
-		await this.queue.onEmpty()
+		this.controller.abort()
+
+		await this.queue.onIdle()
 
 		// TODO: think about when and how to close the model store.
-		// Right now neither model store implementation actually needs closing.
+		// Right now the model store implementation doesn't actually need closing.
 		this.vm.dispose()
 		this.dispatchEvent(new Event("close"))
 	}
@@ -347,8 +347,6 @@ export class Core extends EventEmitter<CoreEvents> {
 	private async applyActionInternal(hash: string, action: Action, options: { sync?: boolean } = {}) {
 		if (this.options.verbose) {
 			console.log(chalk.green(`[canvas-core] Applying action ${hash}`), action)
-		} else {
-			console.log(chalk.green(`[canvas-core] Applying action ${hash}`))
 		}
 
 		await this.validateAction(action, options)
@@ -365,7 +363,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
-		console.log(chalk.green(`[canvas-core] Successfully applied action ${hash}`))
+
+		if (this.options.verbose) {
+			console.log(chalk.green(`[canvas-core] Successfully applied action ${hash}`))
+		}
 	}
 
 	private async validateAction(action: Action, options: { sync?: boolean }) {
@@ -429,8 +430,6 @@ export class Core extends EventEmitter<CoreEvents> {
 	private async applySessionInternal(hash: string, session: Session, options: { sync?: boolean } = {}) {
 		if (this.options.verbose) {
 			console.log(chalk.green(`[canvas-core] Applying session ${hash}`), session)
-		} else {
-			console.log(chalk.green(`[canvas-core] Applying session ${hash}`))
 		}
 
 		await this.validateSession(session, options)
@@ -444,7 +443,9 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
-		console.log(chalk.green(`[canvas-core] Successfully applied session ${hash}`))
+		if (this.options.verbose) {
+			console.log(chalk.green(`[canvas-core] Successfully applied session ${hash}`))
+		}
 	}
 
 	private async validateSession(session: Session, options: { sync?: boolean }) {
@@ -545,7 +546,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private static syncDelay = 1000 * 30
+	private static syncDelay = 1000 * 5
 	private static syncInterval = 1000 * 60 * 5
 	private static syncRetryInterval = 1000 * 60
 	private async startSyncService(libp2p: Libp2p) {
@@ -592,7 +593,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		const { signal } = this.controller
 
 		for (const [i, peer] of peers.entries()) {
-			console.log(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`)
+			console.log(chalk.green(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`))
 
 			let stream: Stream
 			try {
@@ -606,40 +607,50 @@ export class Core extends EventEmitter<CoreEvents> {
 				console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}`)
 			}
 
+			const closeStream = () => {
+				console.log(chalk.red(`[canvas-core] CLOSING STREAM DUE TO ABORT SIGNAL`))
+				stream.close()
+			}
+
+			signal.addEventListener("abort", closeStream)
+
 			const target = new okra.Target(this.mst)
 
 			let successCount = 0
 			let failureCount = 0
-			const handleMessage = async (hash: string, message: Message) => {
-				if (this.options.verbose) {
-					console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
-				}
+			const applyBatch = (messages: Iterable<[string, Message]>) =>
+				this.queue.add(async () => {
+					for (const [hash, message] of messages) {
+						if (this.options.verbose) {
+							console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
+						}
 
-				if (message.type === "session") {
-					const { type, ...session } = message
-					try {
-						await this.applySessionInternal(hash, session, { sync: true })
-						successCount += 1
-					} catch (err) {
-						console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
-						failureCount += 1
+						if (message.type === "session") {
+							const { type, ...session } = message
+							try {
+								await this.applySessionInternal(hash, session, { sync: true })
+								successCount += 1
+							} catch (err) {
+								console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
+								failureCount += 1
+							}
+						} else if (message.type === "action") {
+							const { type, ...action } = message
+							try {
+								await this.applyActionInternal(hash, action, { sync: true })
+								successCount += 1
+							} catch (err) {
+								console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
+								failureCount += 1
+							}
+						} else {
+							signalInvalidType(message)
+						}
 					}
-				} else if (message.type === "action") {
-					const { type, ...action } = message
-					try {
-						await this.applyActionInternal(hash, action, { sync: true })
-						successCount += 1
-					} catch (err) {
-						console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
-						failureCount += 1
-					}
-				} else {
-					signalInvalidType(message)
-				}
-			}
+				})
 
 			try {
-				await handleTarget(stream, target, handleMessage)
+				await handleTarget(stream, target, applyBatch)
 				console.log(
 					chalk.green(
 						`[canvas-core] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
@@ -649,6 +660,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				console.log(chalk.red("[canvas-core] Sync failed"), err)
 			}
 
+			signal.removeEventListener("abort", closeStream)
 			target.close()
 
 			if (this.options.verbose) {
