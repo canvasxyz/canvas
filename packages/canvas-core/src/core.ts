@@ -153,12 +153,12 @@ export class Core extends EventEmitter<CoreEvents> {
 		const core = new Core(name, cid, vm, exports, modelStore, messageStore, providers, libp2p, mst, options)
 
 		if (replay) {
-			console.log(`[canvas-core] Replaying action log...`)
+			console.log(chalk.green(`[canvas-core] Replaying action log...`))
 
 			let i = 0
 			for await (const [id, action] of messageStore.getActionStream()) {
 				if (!actionType.is(action)) {
-					console.error("[canvas-core]", action)
+					console.log(chalk.red("[canvas-core]"), action)
 					throw new Error("Invalid action value in action log")
 				}
 
@@ -167,7 +167,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				i++
 			}
 
-			console.log(`[canvas-core] Successfully replayed all ${i} entries from the action log.`)
+			console.log(chalk.green(`[canvas-core] Successfully replayed all ${i} entries from the action log.`))
 		}
 
 		if (verbose) {
