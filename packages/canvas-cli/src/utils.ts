@@ -3,9 +3,9 @@ import path from "node:path"
 import os from "node:os"
 import process from "node:process"
 
-import fetch from "node-fetch"
 import chalk from "chalk"
 import prompts from "prompts"
+import { fetch } from "undici"
 
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 import type { PeerId } from "@libp2p/interface-peer-id"

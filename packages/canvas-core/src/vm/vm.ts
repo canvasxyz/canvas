@@ -1,10 +1,9 @@
 import assert from "node:assert"
 
+import chalk from "chalk"
+import { fetch } from "undici"
 import { ethers } from "ethers"
 import { isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime, QuickJSWASMModule } from "quickjs-emscripten"
-
-// we can eliminate this dependency when Node 18 goes LTS with native fetch
-import fetch from "node-fetch"
 
 import {
 	ActionArgument,
@@ -14,6 +13,7 @@ import {
 	Model,
 	ModelValue,
 } from "@canvas-js/interfaces"
+
 import type { Effect } from "../models/index.js"
 import { chainIdType, chainType, modelsType } from "../codecs.js"
 import { ApplicationError } from "../errors.js"
@@ -30,7 +30,6 @@ import {
 	unwrapArray,
 	wrapArray,
 } from "./utils.js"
-import chalk from "chalk"
 
 export type Exports = {
 	models: Record<string, Model>
