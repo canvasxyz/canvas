@@ -10,15 +10,16 @@ import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
 
 import { createLibp2p, Libp2p } from "libp2p"
-import { TCP } from "@libp2p/tcp"
+import { WebSockets } from "@libp2p/websockets"
 import { Noise } from "@chainsafe/libp2p-noise"
 import { Mplex } from "@libp2p/mplex"
-import { MulticastDNS } from "@libp2p/mdns"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { Message as PubSubMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
+import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
+import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
@@ -38,11 +39,13 @@ import {
 
 import { ModelStore, SqliteStore } from "./models/index.js"
 import { actionType, sessionType } from "./codecs.js"
-import { CacheMap, signalInvalidType, getTopic, getProtocol, wait, retry } from "./utils.js"
+import { CacheMap, signalInvalidType, getTopic, getProtocol, wait, retry, bootstrapList } from "./utils.js"
 import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./messages/index.js"
 import { handleSource, handleTarget, Message } from "./sync.js"
+import { Bootstrap } from "@libp2p/bootstrap"
+import { Multiaddr } from "@multiformats/multiaddr"
 
 export interface CoreConfig {
 	name: string
@@ -113,12 +116,19 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(port !== undefined, "a peeringPort must be provided if peering is enabled")
 
 			libp2p = await createLibp2p({
+				connectionGater: {
+					denyDialMultiaddr: async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr),
+				},
 				peerId: config.peerId,
-				addresses: { listen: [`/ip4/0.0.0.0/tcp/${port}`] },
-				transports: [new TCP()],
+				addresses: {
+					listen: [`/ip4/0.0.0.0/tcp/${port}`],
+					announceFilter: (multiaddrs) =>
+						multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr)),
+				},
+				transports: [new WebSockets()],
 				connectionEncryption: [new Noise()],
 				streamMuxers: [new Mplex()],
-				peerDiscovery: [new MulticastDNS()],
+				peerDiscovery: [new Bootstrap({ list: bootstrapList })],
 				pubsub: new GossipSub({
 					doPX: true,
 					fallbackToFloodsub: false,
