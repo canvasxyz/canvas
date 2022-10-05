@@ -57,6 +57,7 @@ Build and publish the Canvas packages:
 
 ```
 npm i
+npm run clean
 npm run build
 npm run publish-cli &&
   npm run publish-core &&

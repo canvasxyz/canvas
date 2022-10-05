@@ -104,7 +104,13 @@ export class VM {
 			assert(context.typeof(handle) === "function")
 		}
 
-		const exports: Exports = { models, actionParameters: {}, routes: {}, routeParameters: {}, contractMetadata: {} }
+		const exports: Exports = {
+			models,
+			actionParameters: {},
+			routes: {},
+			routeParameters: {},
+			contractMetadata: {},
+		}
 
 		// parse and validate action handlers
 		const actionNamePattern = /^[a-zA-Z]+$/
@@ -306,11 +312,15 @@ export class VM {
 		const argHandles = args.map(this.wrapActionArgument)
 
 		// everything that goes into the VM must be deterministic, and deterministic means normalized!
-		const blockhash = context.block?.blockhash.toLowerCase()
+		const blockhash = context.block ? context.block.blockhash.toLowerCase() : null
 		const thisArg = wrapJSON(
 			this.context,
 			blockhash
-				? { hash: hash.toLowerCase(), from: context.from.toLowerCase(), block: { ...context.block, blockhash } }
+				? {
+						hash: hash.toLowerCase(),
+						from: context.from.toLowerCase(),
+						block: { ...context.block, blockhash },
+				  }
 				: { hash: hash.toLowerCase(), from: context.from.toLowerCase() }
 		)
 		this.context.setProp(thisArg, "db", this.dbHandle)

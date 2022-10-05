@@ -194,7 +194,7 @@ export function encodeBinaryMessage(
 	{ hash: sessionHash, session }: { hash: string | null; session: Session | null }
 ): Uint8Array {
 	assert(
-		action.session?.toLowerCase() === session?.payload.address.toLowerCase(),
+		(action.session && action.session.toLowerCase()) === (session && session.payload.address.toLowerCase()),
 		"encodeBinaryMessage: action.session does not match session"
 	)
 
