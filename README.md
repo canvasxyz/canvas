@@ -57,6 +57,8 @@ Build and publish the Canvas packages:
 
 ```
 npm i
+git add .
+git commit -m "version bump"   # In this order, to ensure package-lock.json is up-to-date
 npm run clean
 npm run build
 npm run publish-cli &&
