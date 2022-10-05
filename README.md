@@ -64,6 +64,18 @@ npm run publish-cli &&
   npm run publish-interfaces
 ```
 
+## Linting and Code Formatting
+
+We use `prettier` for code formatting. You should install the relevant
+prettier extension for your code editor, which will automatically
+rewrite files as you save them.
+
+To format all code using prettier:
+
+```
+prettier -w .
+```
+
 ## Testing
 
 Run unit tests with `npm run test` from either the repo root or the `packages/canvas-core` directory.
