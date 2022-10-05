@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/cli",
-  "version": "0.0.17-alpha",
+  "version": "0.0.17-alpha2",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "dist/index.js",
@@ -11,8 +11,8 @@
     "canvas": "dist/index.js"
   },
   "dependencies": {
-    "@canvas-js/core": "0.0.17-alpha",
-    "@canvas-js/interfaces": "0.0.17-alpha",
+    "@canvas-js/core": "0.0.17-alpha2",
+    "@canvas-js/interfaces": "0.0.17-alpha2",
     "better-sqlite3": "^7.6.2",
     "body-parser": "^1.20.0",
     "chalk": "^5.0.1",
