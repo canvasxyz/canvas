@@ -121,7 +121,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				},
 				peerId: config.peerId,
 				addresses: {
-					listen: [`/ip4/0.0.0.0/tcp/${port}`],
+					listen: [`/ip4/0.0.0.0/tcp/${port}/ws`],
 					announceFilter: (multiaddrs) =>
 						multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr)),
 				},
