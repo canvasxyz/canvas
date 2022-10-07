@@ -11,7 +11,7 @@ import * as cbor from "microcbor"
 import type * as okra from "node-okra"
 import type { Action, Session } from "@canvas-js/interfaces"
 
-import type { MessageStore } from "./messages/index.js"
+import type { MessageStore } from "./message-store/index.js"
 import { uint8ArrayType } from "./codecs.js"
 import { signalInvalidType } from "./utils.js"
 import { decodeAction, decodeSession, encodeAction, encodeSession } from "./encoding.js"
