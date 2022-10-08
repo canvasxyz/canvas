@@ -239,8 +239,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			if (options.sync) {
 				this.libp2p.handle(this.syncProtocol, this.handleIncomingStream)
-				this.startSyncService(this.libp2p)
-				this.startPeeringService(this.libp2p)
+				this.startSyncService()
+				this.startPeeringService()
 			}
 
 			if (this.options.verbose) {
@@ -555,7 +555,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	private static peeringDelay = 1000 * 5
 	private static peeringInterval = 1000 * 60 * 5
 	private static peeringRetryInterval = 1000 * 60
-	private async startPeeringService(libp2p: Libp2p) {
+	private async startPeeringService() {
 		const { signal } = this.controller
 		try {
 			await wait({ signal, delay: Core.peeringDelay })
@@ -585,7 +585,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	private static syncDelay = 1000 * 5
 	private static syncInterval = 1000 * 60 * 5
 	private static syncRetryInterval = 1000 * 60
-	private async startSyncService(libp2p: Libp2p) {
+	private async startSyncService() {
 		const { signal } = this.controller
 
 		try {
@@ -598,7 +598,12 @@ export class Core extends EventEmitter<CoreEvents> {
 				)
 
 				console.log(chalk.green(`[canvas-core] Found ${peers.length} application peers`))
-				await this.sync(libp2p, peers)
+
+				for (const [i, peer] of peers.entries()) {
+					console.log(chalk.green(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`))
+					await this.sync(peer)
+				}
+
 				await wait({ signal, delay: Core.syncInterval })
 			}
 		} catch (err) {
@@ -621,84 +626,80 @@ export class Core extends EventEmitter<CoreEvents> {
 		return Array.from(peers.values())
 	}
 
-	private async sync(libp2p: Libp2p, peers: PeerId[]) {
-		if (this.mst === null) {
+	private async sync(peer: PeerId) {
+		if (this.mst === null || this.libp2p === null) {
 			return
 		}
 
 		const { signal } = this.controller
 
-		for (const [i, peer] of peers.entries()) {
-			console.log(chalk.green(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`))
+		let stream: Stream
+		try {
+			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal })
+		} catch (err) {
+			console.log(chalk.red(`[canvas-core] Failed to dial peer ${peer.toString()}`, err))
+			return
+		}
 
-			let stream: Stream
-			try {
-				stream = await libp2p.dialProtocol(peer, this.syncProtocol, { signal })
-			} catch (err) {
-				console.log(chalk.red(`[canvas-core] Failed to dial peer ${peer.toString()}`, err))
-				continue
-			}
+		if (this.options.verbose) {
+			console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}`)
+		}
 
-			if (this.options.verbose) {
-				console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}`)
-			}
+		const closeStream = () => stream.close()
 
-			const closeStream = () => stream.close()
+		signal.addEventListener("abort", closeStream)
 
-			signal.addEventListener("abort", closeStream)
+		const target = new okra.Target(this.mst)
 
-			const target = new okra.Target(this.mst)
-
-			let successCount = 0
-			let failureCount = 0
-			const applyBatch = (messages: Iterable<[string, Message]>) =>
-				this.queue.add(async () => {
-					for (const [hash, message] of messages) {
-						if (this.options.verbose) {
-							console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
-						}
-
-						if (message.type === "session") {
-							const { type, ...session } = message
-							try {
-								await this.applySessionInternal(hash, session, { sync: true })
-								successCount += 1
-							} catch (err) {
-								console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
-								failureCount += 1
-							}
-						} else if (message.type === "action") {
-							const { type, ...action } = message
-							try {
-								await this.applyActionInternal(hash, action, { sync: true })
-								successCount += 1
-							} catch (err) {
-								console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
-								failureCount += 1
-							}
-						} else {
-							signalInvalidType(message)
-						}
+		let successCount = 0
+		let failureCount = 0
+		const applyBatch = (messages: Iterable<[string, Message]>) =>
+			this.queue.add(async () => {
+				for (const [hash, message] of messages) {
+					if (this.options.verbose) {
+						console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
 					}
-				})
 
-			try {
-				await handleTarget(stream, target, applyBatch)
-				console.log(
-					chalk.green(
-						`[canvas-core] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
-					)
+					if (message.type === "session") {
+						const { type, ...session } = message
+						try {
+							await this.applySessionInternal(hash, session, { sync: true })
+							successCount += 1
+						} catch (err) {
+							console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
+							failureCount += 1
+						}
+					} else if (message.type === "action") {
+						const { type, ...action } = message
+						try {
+							await this.applyActionInternal(hash, action, { sync: true })
+							successCount += 1
+						} catch (err) {
+							console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
+							failureCount += 1
+						}
+					} else {
+						signalInvalidType(message)
+					}
+				}
+			})
+
+		try {
+			await handleTarget(stream, target, applyBatch)
+			console.log(
+				chalk.green(
+					`[canvas-core] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
 				)
-			} catch (err) {
-				console.log(chalk.red("[canvas-core] Sync failed"), err)
-			}
+			)
+		} catch (err) {
+			console.log(chalk.red("[canvas-core] Sync failed"), err)
+		}
 
-			signal.removeEventListener("abort", closeStream)
-			target.close()
+		signal.removeEventListener("abort", closeStream)
+		target.close()
 
-			if (this.options.verbose) {
-				console.log(`[canvas-core] Closed outgoing stream ${stream.id}`)
-			}
+		if (this.options.verbose) {
+			console.log(`[canvas-core] Closed outgoing stream ${stream.id}`)
 		}
 	}
 }
