@@ -207,7 +207,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	) {
 		super()
-		this.syncProtocol = `/x/canvas/sync/0.0.0/${cid.toString()}`
+		this.syncProtocol = `/x/canvas/sync/${cid.toString()}/0.0.0`
 
 		this.queue = new PQueue({ concurrency: 1 })
 
@@ -615,8 +615,12 @@ export class Core extends EventEmitter<CoreEvents> {
 		const peers: PeerId[] = []
 
 		if (this.libp2p !== null) {
-			for await (const { id, protocols } of this.libp2p.contentRouting.findProviders(this.cid, { signal })) {
-				peers.push(id)
+			for await (const { id } of this.libp2p.contentRouting.findProviders(this.cid, { signal })) {
+				if (id.equals(this.libp2p.peerId)) {
+					continue
+				} else {
+					peers.push(id)
+				}
 			}
 		}
 
