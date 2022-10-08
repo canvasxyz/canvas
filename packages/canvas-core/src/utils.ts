@@ -114,26 +114,12 @@ export class CacheMap<K, V> extends Map<K, V> {
 }
 
 export const bootstrapList = [
-	"/dns4/bootstrap.slacker.house/tcp/4001/ws/p2p/12D3KooWNp7ZPT5apL7RuBzEvENnaiPwogYfbBVRnePQu7E8KWsG",
-	// "/ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ",
-	// "/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
-	// "/dnsaddr/bootstrap.libp2p.io/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
-	// "/dnsaddr/bootstrap.libp2p.io/p2p/QmZa1sAxajnQjVM8WjWXoMbmPd7NsWhfKsPkErzpm9wGkp",
-	// "/dnsaddr/bootstrap.libp2p.io/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
-	// "/dnsaddr/bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
-	// "/dns4/node0.preload.ipfs.io/tcp/443/wss/p2p/QmZMxNdpMkewiVZLMRxaNxUeZpDUb34pWjZ1kZvsd16Zic",
-	// "/dns4/node1.preload.ipfs.io/tcp/443/wss/p2p/Qmbut9Ywz9YEDrz8ySBSgWyJk41Uvm2QJPhwDJzJyGFsD6",
-	// "/dns4/node2.preload.ipfs.io/tcp/443/wss/p2p/QmV7gnbW5VTcJ3oyM2Xk1rdFBJ3kTkvxc87UFGsun29STS",
-	// "/dns4/node3.preload.ipfs.io/tcp/443/wss/p2p/QmY7JB6MQXhxHvq7dBDh4HpbH29v4yE9JRadAVpndvzySN",
+	"/ip4/137.66.12.223/tcp/4002/ws/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o",
+	"/ip4/137.66.11.73/tcp/4002/ws/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT",
+	"/ip4/137.66.27.235/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
 ]
 
-export const getProtocol = (cid: CID) => `/x/canvas/${cid.toString()}`
-export const getTopic = (cid: CID) => `canvas:${cid.toString()}`
-
-// export function getRendezvousCID(cid: CID) {
-// 	const data = Buffer.from(getTopic(cid), "utf-8")
-// 	return CID.createV1(raw.code, identity.digest(raw.encode(data)))
-// }
+export const getSyncProtocol = (cid: CID) => `/x/canvas/sync/0.0.0/${cid.toString()}`
 
 export const wait = (options: { delay: number; signal: AbortSignal }) =>
 	new Promise<void>((resolve, reject) => {
@@ -150,33 +136,6 @@ export const wait = (options: { delay: number; signal: AbortSignal }) =>
 			resolve()
 		}, options.delay)
 	})
-
-// const retry = (
-// 	f: (signal: AbortSignal) => Promise<void>,
-// 	options: { signal: AbortSignal; delay: number }
-// ): AsyncIterable<any> => ({
-// 	[Symbol.asyncIterator]() {
-// 		let n = 0
-// 		return {
-// 			next() {
-// 				if (options.signal.aborted) {
-// 					return Promise.resolve({ done: true, value: undefined })
-// 				}
-
-// 				const next = n++ === 0 ? f(options.signal) : wait(options).then(() => f(options.signal))
-// 				return next
-// 					.then(() => ({ done: true, value: undefined }))
-// 					.catch((err) => {
-// 						if (err instanceof Event && err.type === "abort" && options.signal.aborted) {
-// 							return { done: true, value: undefined }
-// 						} else {
-// 							return { done: false, value: err }
-// 						}
-// 					})
-// 			},
-// 		}
-// 	},
-// })
 
 export async function retry<T>(
 	f: (signal: AbortSignal) => Promise<T>,
