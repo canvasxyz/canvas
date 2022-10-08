@@ -553,8 +553,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private static peeringDelay = 1000 * 5
-	private static peeringInterval = 1000 * 60 * 5
-	private static peeringRetryInterval = 1000 * 60
+	private static peeringInterval = 1000 * 10
+	private static peeringRetryInterval = 1000 * 1
 	private async startPeeringService() {
 		const { signal } = this.controller
 		try {
@@ -582,9 +582,9 @@ export class Core extends EventEmitter<CoreEvents> {
 		console.log(chalk.green(`[canvas-core] Successfully published DHT rendezvous record`))
 	}
 
-	private static syncDelay = 1000 * 5
-	private static syncInterval = 1000 * 60 * 5
-	private static syncRetryInterval = 1000 * 60
+	private static syncDelay = 1000 * 10
+	private static syncInterval = 1000 * 10
+	private static syncRetryInterval = 1000 * 1
 	private async startSyncService() {
 		const { signal } = this.controller
 
@@ -612,18 +612,17 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private findPeers = async (signal: AbortSignal): Promise<PeerId[]> => {
-		const peers = new Map<string, PeerId>()
+		const peers: PeerId[] = []
 
 		if (this.libp2p !== null) {
-			for (const peer of this.libp2p.getPeers()) {
-				const protocols = await this.libp2p.peerStore.protoBook.get(peer)
+			for await (const { id, protocols } of this.libp2p.contentRouting.findProviders(this.cid, { signal })) {
 				if (protocols.includes(this.syncProtocol)) {
-					peers.set(peer.toString(), peer)
+					peers.push(id)
 				}
 			}
 		}
 
-		return Array.from(peers.values())
+		return peers
 	}
 
 	private async sync(peer: PeerId) {
