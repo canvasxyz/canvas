@@ -9,6 +9,7 @@ import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
 import { Multiaddr } from "@multiformats/multiaddr"
+import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
@@ -117,13 +118,16 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (directory !== null && peering) {
 			assert(port !== undefined, "a peeringPort must be provided if peering is enabled")
 
+			const peerId = config.peerId || (await createEd25519PeerId())
+
 			libp2p = await createLibp2p({
 				connectionGater: {
 					denyDialMultiaddr: async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr),
 				},
-				peerId: config.peerId,
+				peerId,
 				addresses: {
 					listen: [`/ip4/0.0.0.0/tcp/${port}/ws`],
+					announce: [...bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId.toString()}`)],
 					announceFilter: (multiaddrs) =>
 						multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr)),
 				},
