@@ -42,7 +42,7 @@ import {
 } from "@canvas-js/interfaces"
 
 import { actionType, sessionType } from "./codecs.js"
-import { CacheMap, signalInvalidType, getSyncProtocol, wait, retry, bootstrapList } from "./utils.js"
+import { CacheMap, signalInvalidType, wait, retry, bootstrapList } from "./utils.js"
 import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { ModelStore, SqliteStore } from "./model-store/index.js"
 import { VM, Exports } from "./vm/index.js"
@@ -207,7 +207,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	) {
 		super()
-		this.syncProtocol = getSyncProtocol(this.cid)
+		this.syncProtocol = `/x/canvas/sync/0.0.0/${cid.toString()}`
 
 		this.queue = new PQueue({ concurrency: 1 })
 
@@ -553,8 +553,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private static peeringDelay = 1000 * 5
-	private static peeringInterval = 1000 * 10
-	private static peeringRetryInterval = 1000 * 1
+	private static peeringInterval = 1000 * 15
+	private static peeringRetryInterval = 1000 * 5
 	private async startPeeringService() {
 		const { signal } = this.controller
 		try {
@@ -583,8 +583,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private static syncDelay = 1000 * 10
-	private static syncInterval = 1000 * 10
-	private static syncRetryInterval = 1000 * 1
+	private static syncInterval = 1000 * 15
+	private static syncRetryInterval = 1000 * 5
 	private async startSyncService() {
 		const { signal } = this.controller
 
@@ -616,9 +616,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (this.libp2p !== null) {
 			for await (const { id, protocols } of this.libp2p.contentRouting.findProviders(this.cid, { signal })) {
-				if (protocols.includes(this.syncProtocol)) {
-					peers.push(id)
-				}
+				peers.push(id)
 			}
 		}
 

@@ -119,8 +119,6 @@ export const bootstrapList = [
 	"/ip4/137.66.27.235/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
 ]
 
-export const getSyncProtocol = (cid: CID) => `/x/canvas/sync/0.0.0/${cid.toString()}`
-
 export const wait = (options: { delay: number; signal: AbortSignal }) =>
 	new Promise<void>((resolve, reject) => {
 		let timeout: NodeJS.Timeout | undefined = undefined
