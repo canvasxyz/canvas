@@ -498,6 +498,10 @@ export class Core extends EventEmitter<CoreEvents> {
 			message = encodeBinaryMessage({ hash: actionHash, action }, { hash: null, session: null })
 		}
 
+		if (this.options.verbose) {
+			console.log(`[canvas-core] Publishing message ${actionHash} to GossipSub`)
+		}
+
 		await this.libp2p.pubsub
 			.publish(this.cid.toString(), message)
 			.then(({ recipients }) => {
@@ -557,7 +561,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private static peeringDelay = 1000 * 5
-	private static peeringInterval = 1000 * 15
+	private static peeringInterval = 1000 * 60 + 60
 	private static peeringRetryInterval = 1000 * 5
 	private async startPeeringService() {
 		const { signal } = this.controller
