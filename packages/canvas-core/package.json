@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/core",
-	"version": "0.0.17-alpha2",
+	"version": "0.0.17",
 	"author": "Canvas Technology Corporation (https://canvas.xyz)",
 	"type": "module",
 	"types": "lib/index.d.ts",
@@ -13,7 +13,7 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.0.17-alpha2",
+		"@canvas-js/interfaces": "0.0.17",
 		"@chainsafe/libp2p-gossipsub": "^4.1.1",
 		"@chainsafe/libp2p-noise": "^8.0.1",
 		"@libp2p/bootstrap": "^3.0.0",
