@@ -57,11 +57,26 @@ Build and publish the Canvas packages:
 
 ```
 npm i
+git add .
+git commit -m "version bump"   # In this order, to ensure package-lock.json is up-to-date
+npm run clean
 npm run build
 npm run publish-cli &&
   npm run publish-core &&
   npm run publish-hooks &&
   npm run publish-interfaces
+```
+
+## Linting and Code Formatting
+
+We use `prettier` for code formatting. You should install the relevant
+prettier extension for your code editor, which will automatically
+rewrite files as you save them.
+
+To format all code using prettier:
+
+```
+prettier -w .
 ```
 
 ## Testing
