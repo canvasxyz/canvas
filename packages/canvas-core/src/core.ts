@@ -248,14 +248,12 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 
 			if (this.options.verbose) {
-				this.libp2p.connectionManager.addEventListener("peer:connect", ({ detail: connection }) => {
-					console.log(
-						`[canvas-core] Connected to peer ${connection.remotePeer.toString()} with connection ID ${connection.id}`
-					)
+				this.libp2p.connectionManager.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) => {
+					console.log(`[canvas-core] Connected to peer ${remotePeer.toString()} (${id})`)
 				})
 
-				this.libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
-					console.log(`[canvas-core] Disconnected from peer ${connection.remotePeer.toString()}`)
+				this.libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) => {
+					console.log(`[canvas-core] Disconnected from peer ${remotePeer.toString()} (${id})`)
 				})
 			}
 		}

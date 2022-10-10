@@ -2,10 +2,6 @@ import assert from "node:assert"
 
 import Hash from "ipfs-only-hash"
 
-import { CID } from "multiformats/cid"
-import * as raw from "multiformats/codecs/raw"
-import { identity } from "multiformats/hashes/identity"
-
 import type { ActionArgument, Chain, ChainId, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
