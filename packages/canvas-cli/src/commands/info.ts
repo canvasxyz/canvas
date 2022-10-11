@@ -33,7 +33,7 @@ export async function handler(args: Args) {
 	const { models, routeParameters, actionParameters, contractMetadata } = exports
 	vm.dispose()
 
-	console.log(`name: ${name}:\n`)
+	console.log(`name: ${name}\n`)
 
 	console.log(chalk.green("===== models ====="))
 	console.log(`${JSON.stringify(models, null, "  ")}\n`)
