@@ -90,6 +90,8 @@ export class VM {
 				properties.id === "string" && properties.updated_at === "string",
 				`Models must include properties { id: "string" } and { updated_at: "string" }`
 			)
+			delete model.id
+			delete model.updated_at
 
 			if (indexes !== undefined) {
 				for (const indexPropertyName of indexes) {
