@@ -95,7 +95,7 @@ export class API {
 
 			let data: Record<string, ModelValue>[] | null = null
 			const listener = async () => {
-				const newData = await this.core.getRoute(route, params)
+				const newData = this.core.getRoute(route, params)
 				if (data === null || !compareResults(data, newData)) {
 					data = newData
 					res.write(`data: ${JSON.stringify(data)}\n\n`)
@@ -122,7 +122,8 @@ export class API {
 			try {
 				data = this.core.getRoute(route, params)
 			} catch (err) {
-				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err}`)
+				res.status(StatusCodes.BAD_REQUEST)
+				return err instanceof Error ? res.end(`Route error: ${err.message}`) : res.end()
 			}
 
 			return res.status(StatusCodes.OK).json(data)
