@@ -42,7 +42,7 @@ type ValueTypes = {
 	datetime: number
 }
 
-type Values<M extends Model> = { [K in Exclude<keyof M, "indexes">]: ValueTypes[M[K]] }
+type Values<M extends Model> = { [K in Exclude<keyof M, "indexes" | "id" | "updated_at">]: ValueTypes[M[K]] }
 
 export type Context<Models extends Record<string, Model>> = {
 	timestamp: number

@@ -20,4 +20,4 @@ export type ModelValue = null | boolean | number | string
 /**
  * A `Model` is a map of property names to `ModelType` types
  */
-export type Model = Record<string, ModelType> & { indexes?: IndexType }
+export type Model = { id: "string"; updated_at: "datetime"; indexes?: IndexType } & Record<string, ModelType>

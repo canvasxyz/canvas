@@ -38,7 +38,10 @@ export class PostgresStore implements ModelStore {
 	}
 
 	public async initialize(models: Record<string, Model>, routes?: Record<string, string>) {
-		for (const [name, { indexes, ...properties }] of Object.entries(models)) {
+		for (const [name, { id, updated_at, indexes, ...properties }] of Object.entries(models)) {
+			assert(id === "string", "id property must be 'string'")
+			assert(updated_at === "datetime", "updated_at property must be 'datetime'")
+
 			const propertyKeys = Object.keys(properties)
 			this.modelProperties[name] = propertyKeys
 			this.modelStatements[name] = mapEntries(

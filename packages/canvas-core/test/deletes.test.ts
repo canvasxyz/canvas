@@ -15,7 +15,7 @@ const signerAddress = signer.address.toLowerCase()
 test("Test setting and then deleting a record", async (t) => {
 	const store = new SqliteStore(null)
 	const { name, spec } = await compileSpec({
-		models: { threads: { title: "string", link: "string", creator: "string" } },
+		models: { threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" } },
 		actions: {
 			newThread(title, link) {
 				if (typeof title === "string" && typeof link === "string") {

@@ -87,17 +87,16 @@ export class VM {
 				assert(property.startsWith("_") === false, "model property names cannot begin with an underscore")
 			}
 			assert(
-				properties.id === "string" && properties.updated_at === "string",
-				`Models must include properties { id: "string" } and { updated_at: "string" }`
+				properties.id === "string" && properties.updated_at === "datetime",
+				`Models must include properties { id: "string" } and { updated_at: "datetime" }`
 			)
-			delete model.id
-			delete model.updated_at
 
 			if (indexes !== undefined) {
 				for (const indexPropertyName of indexes) {
+					assert(indexPropertyName !== "id", `"id" index is redundant`)
 					assert(
-						indexPropertyName in properties || indexPropertyName === "updated_at",
-						`model specified an invalid index "${indexPropertyName}". can only index on other model properties, or "updated_at"`
+						indexPropertyName in properties,
+						`model specified an invalid index "${indexPropertyName}" - can only index on other model properties`
 					)
 				}
 			}
@@ -386,7 +385,7 @@ export class VM {
 	}
 
 	private unwrapModelValues = (model: Model, valuesHandle: QuickJSHandle): Record<string, ModelValue> => {
-		const { indexes, ...properties } = model
+		const { id, updated_at, indexes, ...properties } = model
 		const valueHandles = unwrapObject(this.context, valuesHandle)
 		const values: Record<string, ModelValue> = {}
 

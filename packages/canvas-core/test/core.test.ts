@@ -14,11 +14,13 @@ const signerAddress = signer.address.toLowerCase()
 
 const { spec, name } = await compileSpec({
 	models: {
-		threads: { title: "string", link: "string", creator: "string" },
+		threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" },
 		thread_votes: {
+			id: "string",
 			thread_id: "string",
 			creator: "string",
 			value: "integer",
+			updated_at: "datetime",
 		},
 	},
 	actions: {

@@ -149,7 +149,10 @@ export class SqliteStore implements ModelStore {
 	}
 
 	private initializeModelTables(models: Record<string, Model>) {
-		for (const [name, { indexes, ...properties }] of Object.entries(models)) {
+		for (const [name, { indexes, id, updated_at, ...properties }] of Object.entries(models)) {
+			assert(id === "string", "id property must be 'string'")
+			assert(updated_at === "datetime", "updated_at property must be 'datetime'")
+
 			const deletedTableName = SqliteStore.deletedTableName(name)
 			const createDeletedTable = `CREATE TABLE IF NOT EXISTS ${deletedTableName} (id TEXT PRIMARY KEY NOT NULL, deleted_at INTEGER NOT NULL);`
 			this.database.exec(createDeletedTable)
@@ -174,7 +177,7 @@ export class SqliteStore implements ModelStore {
 		}
 	}
 
-	private static getModelStatements(name: string, { indexes, ...properties }: Model) {
+	private static getModelStatements(name: string, { id, updated_at, indexes, ...properties }: Model) {
 		const keys = ["updated_at", ...Object.keys(properties)]
 		const values = keys.map((key) => `:${key}`).join(", ")
 		const updates = keys.map((key) => `${SqliteStore.propertyName(key)} = :${key}`).join(", ")

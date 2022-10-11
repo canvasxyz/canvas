@@ -86,10 +86,14 @@ export const modelTypeType: t.Type<ModelType> = t.union([
 
 export const modelValueType: t.Type<ModelValue> = t.union([t.null, t.boolean, t.number, t.string])
 
-const modelPropertiesType = t.record(t.string, modelTypeType)
+const modelPropertiesType = t.intersection([
+	t.type({ id: t.literal("string"), updated_at: t.literal("datetime") }),
+	t.record(t.string, modelTypeType),
+])
+
 const modelIndexesType = t.partial({ indexes: t.array(t.string) })
 
-function validateModelType(u: unknown): u is Model {
+function isModel(u: unknown): u is Model {
 	if (!modelIndexesType.is(u)) {
 		return false
 	}
@@ -101,14 +105,8 @@ function validateModelType(u: unknown): u is Model {
 
 export const modelType: t.Type<Model> = new t.Type(
 	"Model",
-	validateModelType,
-	(i: unknown, context: t.Context) => {
-		if (validateModelType(i)) {
-			return t.success(i)
-		} else {
-			return t.failure(i, context)
-		}
-	},
+	isModel,
+	(i: unknown, context: t.Context) => (isModel(i) ? t.success(i) : t.failure(i, context)),
 	t.identity
 )
 
@@ -122,27 +120,3 @@ export const uint8ArrayType = new t.Type(
 	(i, context) => (isUint8Array(i) ? t.success(i) : t.failure(i, context)),
 	t.identity
 )
-
-// interface Bytes32Brand {
-// 	readonly Bytes32: unique symbol
-// }
-
-// export const bytes32Type = t.brand(
-// 	uint8ArrayType,
-// 	(n): n is t.Branded<Uint8Array, Bytes32Brand> => n.byteLength === 32,
-// 	"Bytes32"
-// )
-
-// export type Bytes32 = t.TypeOf<typeof bytes32Type>
-
-// interface Bytes14Brand {
-// 	readonly Bytes14: unique symbol
-// }
-
-// export const bytes14Type = t.brand(
-// 	uint8ArrayType,
-// 	(n): n is t.Branded<Uint8Array, Bytes14Brand> => n.byteLength === 14,
-// 	"Bytes14"
-// )
-
-// export type Bytes14 = t.TypeOf<typeof bytes14Type>
