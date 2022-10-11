@@ -45,9 +45,9 @@ import {
 import { actionType, sessionType } from "./codecs.js"
 import { CacheMap, signalInvalidType, wait, retry, bootstrapList } from "./utils.js"
 import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
-import { ModelStore, SqliteStore } from "./model-store/index.js"
+import { ModelStore } from "./model-store/index.js"
 import { VM, Exports } from "./vm/index.js"
-import { MessageStore } from "./message-store/index.js"
+import { MessageStore } from "./message-store/store.js"
 import { handleSource, handleTarget, Message } from "./sync.js"
 
 export interface CoreConfig {
@@ -55,7 +55,6 @@ export interface CoreConfig {
 	directory: string | null
 	spec: string
 	quickJS: QuickJSWASMModule
-	store?: ModelStore
 	replay?: boolean
 	verbose?: boolean
 	unchecked?: boolean
@@ -100,17 +99,12 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		const { vm, exports } = await VM.initialize(name, spec, providers, quickJS, { verbose })
 
-		const modelStore =
-			config.store || new SqliteStore(directory && path.resolve(directory, SqliteStore.DATABASE_FILENAME))
-
-		if (exports.database !== undefined) {
-			assert(
-				modelStore.identifier === exports.database,
-				`spec requires a ${exports.database} model store, but the core was initialized with a ${modelStore.identifier} model store`
-			)
-		}
-
-		await modelStore.initialize(exports.models, exports.routes)
+		const modelStore = new ModelStore(
+			directory && path.resolve(directory, ModelStore.DATABASE_FILENAME),
+			exports.models,
+			exports.routes,
+			{ verbose }
+		)
 
 		const messageStore = new MessageStore(name, directory, { verbose })
 
@@ -284,6 +278,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		// TODO: think about when and how to close the model store.
 		// Right now the model store implementation doesn't actually need closing.
 		this.vm.dispose()
+		this.messageStore.close()
+		this.modelStore.close()
 		this.dispatchEvent(new Event("close"))
 	}
 
@@ -474,7 +470,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	public async getRoute(route: string, params: Record<string, ModelValue>): Promise<Record<string, ModelValue>[]> {
+	public getRoute(route: string, params: Record<string, ModelValue>): Record<string, ModelValue>[] {
 		if (this.options.verbose) {
 			console.log("[canvas-core] getRoute:", route, params)
 		}

@@ -5,7 +5,7 @@ import yargs from "yargs"
 import chalk from "chalk"
 import Database from "better-sqlite3"
 
-import { MessageStore, SqliteStore } from "@canvas-js/core"
+import { MessageStore, ModelStore } from "@canvas-js/core"
 import { CANVAS_HOME, cidPattern, SPEC_FILENAME } from "../utils.js"
 
 export const command = "list"
@@ -38,7 +38,7 @@ export async function handler({}) {
 			console.log(`Messages: ${messagesStat.size} bytes (${actionCount} actions, ${sessionCount} sessions)`)
 		}
 
-		const modelsPath = path.resolve(CANVAS_HOME, cid, SqliteStore.DATABASE_FILENAME)
+		const modelsPath = path.resolve(CANVAS_HOME, cid, ModelStore.DATABASE_FILENAME)
 		if (fs.existsSync(modelsPath)) {
 			const modelsStat = fs.statSync(modelsPath)
 			console.log(`Models:   ${modelsStat.size} bytes`)

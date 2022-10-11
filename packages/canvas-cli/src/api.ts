@@ -118,15 +118,14 @@ export class API {
 			res.on("close", () => this.core.removeEventListener("action", listener))
 		} else {
 			// normal JSON response
-			this.core
-				.getRoute(route, params)
-				.then((data) => {
-					res.status(StatusCodes.OK).json(data)
-				})
-				.catch((err) => {
-					res.status(StatusCodes.BAD_REQUEST)
-					res.end(`Route error: ${err}`)
-				})
+			let data = undefined
+			try {
+				data = this.core.getRoute(route, params)
+			} catch (err) {
+				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err}`)
+			}
+
+			return res.status(StatusCodes.OK).json(data)
 		}
 	}
 

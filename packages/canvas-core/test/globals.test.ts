@@ -5,7 +5,7 @@ import { ethers } from "ethers"
 import { getQuickJS } from "quickjs-emscripten"
 
 import { ActionArgument, getActionSignatureData } from "@canvas-js/interfaces"
-import { compileSpec, Core, SqliteStore } from "@canvas-js/core"
+import { compileSpec, Core } from "@canvas-js/core"
 
 const quickJS = await getQuickJS()
 

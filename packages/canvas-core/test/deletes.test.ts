@@ -5,7 +5,7 @@ import { ethers } from "ethers"
 import { getQuickJS } from "quickjs-emscripten"
 
 import { ActionArgument, getActionSignatureData } from "@canvas-js/interfaces"
-import { Core, SqliteStore, compileSpec } from "@canvas-js/core"
+import { Core, compileSpec } from "@canvas-js/core"
 
 const quickJS = await getQuickJS()
 
@@ -13,7 +13,6 @@ const signer = ethers.Wallet.createRandom()
 const signerAddress = signer.address.toLowerCase()
 
 test("Test setting and then deleting a record", async (t) => {
-	const store = new SqliteStore(null)
 	const { name, spec } = await compileSpec({
 		models: { threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" } },
 		actions: {
@@ -38,13 +37,13 @@ test("Test setting and then deleting a record", async (t) => {
 		return { payload: actionPayload, session, signature: actionSignature }
 	}
 
-	const core = await Core.initialize({ name, directory: null, store, spec, quickJS, unchecked: true })
+	const core = await Core.initialize({ name, directory: null, spec, quickJS, unchecked: true })
 
 	const newThreadAction = await sign(signer, null, "newThread", ["Hacker News", "https://news.ycombinator.com"])
 
 	const { hash: threadId } = await core.applyAction(newThreadAction)
 
-	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [
+	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
 		{
 			id: threadId,
 			title: "Hacker News",
@@ -56,7 +55,7 @@ test("Test setting and then deleting a record", async (t) => {
 
 	await sign(signer, null, "deleteThread", [threadId]).then((action) => core.applyAction(action))
 
-	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [])
+	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [])
 
 	await core.close()
 })
