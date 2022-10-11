@@ -2,23 +2,29 @@ export const database = "sqlite"
 
 export const models = {
 	polls: {
+		id: "string",
 		title: "string",
 		creator: "string",
 		created_at: "datetime",
+		updated_at: "string",
 		indexes: ["creator", "created_at"],
 	},
 	cards: {
+		id: "string",
 		poll_id: "string",
 		text: "string",
 		creator: "string",
 		created_at: "datetime",
+		updated_at: "string",
 		indexes: ["poll_id"],
 	},
 	votes: {
+		id: "string",
 		card_id: "string",
 		is_agree: "boolean",
 		is_disagree: "boolean",
 		creator: "string",
+		updated_at: "string",
 		indexes: ["card_id"],
 	},
 }

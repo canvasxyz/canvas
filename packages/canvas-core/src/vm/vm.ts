@@ -83,11 +83,13 @@ export class VM {
 			assert(name.startsWith("_") === false, "model names cannot begin with an underscore")
 			const { indexes, ...properties } = model
 			for (const property of Object.keys(properties)) {
-				assertPattern(property, modelPropertyNamePattern, "invalid model property name")
+				assertPattern(property, modelPropertyNamePattern, `invalid model property name: ${property}`)
 				assert(property.startsWith("_") === false, "model property names cannot begin with an underscore")
-				assert(property !== "id", "model properties cannot be named `id`")
-				assert(property !== "updated_at", "model properties cannot be named `updated_at`")
 			}
+			assert(
+				properties.id === "string" && properties.updated_at === "string",
+				`Models must include properties { id: "string" } and { updated_at: "string" }`
+			)
 
 			if (indexes !== undefined) {
 				for (const indexPropertyName of indexes) {

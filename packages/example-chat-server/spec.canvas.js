@@ -2,14 +2,18 @@ export const database = "sqlite"
 
 export const models = {
 	posts: {
+		id: "string",
 		content: "string",
 		from_id: "string",
+		updated_at: "string",
 		indexes: ["updated_at"],
 	},
 	likes: {
+		id: "string",
 		from_id: "string",
 		post_id: "string",
 		value: "boolean",
+		updated_at: "string",
 	},
 }
 
