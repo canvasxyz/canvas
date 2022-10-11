@@ -68,8 +68,8 @@ export class ModelStore {
 
 	private getDeletedAt(name: string, id: string): number | undefined {
 		const { getDeletedAt } = this.modelStatements[name]
-		const result: { updated_at: number } | undefined = getDeletedAt.get(id)
-		return result && result.updated_at
+		const result: { deleted_at: number } | undefined = getDeletedAt.get(id)
+		return result && result.deleted_at
 	}
 
 	public applyEffects(context: ActionContext, effects: Effect[]) {
