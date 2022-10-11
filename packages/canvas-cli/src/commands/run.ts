@@ -173,20 +173,30 @@ export async function handler(args: Args) {
 	const { database: databaseURI, verbose, replay, unchecked, peering, "peering-port": peeringPort } = args
 	const store = getModelStore(databaseURI, directory, { verbose })
 
-	const core = await Core.initialize({
-		directory,
-		name,
-		spec,
-		store,
-		rpc,
-		quickJS,
-		verbose,
-		replay,
-		unchecked,
-		peering,
-		peeringPort,
-		peerId,
-	})
+	let core: Core
+	try {
+		core = await Core.initialize({
+			directory,
+			name,
+			spec,
+			store,
+			rpc,
+			quickJS,
+			verbose,
+			replay,
+			unchecked,
+			peering,
+			peeringPort,
+			peerId,
+		})
+	} catch (err) {
+		if (err instanceof Error) {
+			console.log(chalk.red(err.message))
+		} else {
+			throw err
+		}
+		return
+	}
 
 	const api = args.noserver ? null : new API({ core, port: args.port, verbose })
 
