@@ -27,6 +27,14 @@ const libp2p = await createLibp2p({
 	streamMuxers: [new Mplex()],
 	peerDiscovery: [new Bootstrap({ list: bootstrapList })],
 	dht: new KadDHT({ protocolPrefix: "/canvas", clientMode: false }),
+	relay: {
+		enabled: true,
+		hop: {
+			timeout: 2147483647,
+			enabled: true,
+			active: true,
+		},
+	},
 })
 
 await libp2p.start()
