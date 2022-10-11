@@ -6,7 +6,7 @@ export const models = {
 		title: "string",
 		creator: "string",
 		created_at: "datetime",
-		updated_at: "string",
+		updated_at: "datetime",
 		indexes: ["creator", "created_at"],
 	},
 	cards: {
@@ -15,7 +15,7 @@ export const models = {
 		text: "string",
 		creator: "string",
 		created_at: "datetime",
-		updated_at: "string",
+		updated_at: "datetime",
 		indexes: ["poll_id"],
 	},
 	votes: {
@@ -24,7 +24,7 @@ export const models = {
 		is_agree: "boolean",
 		is_disagree: "boolean",
 		creator: "string",
-		updated_at: "string",
+		updated_at: "datetime",
 		indexes: ["card_id"],
 	},
 }

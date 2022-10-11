@@ -6,28 +6,28 @@ export const models = {
 		title: "string",
 		link: "string",
 		creator: "string",
-		updated_at: "string",
+		updated_at: "datetime",
 	},
 	comments: {
 		id: "string",
 		thread_id: "string",
 		text: "string",
 		creator: "string",
-		updated_at: "string",
+		updated_at: "datetime",
 	},
 	thread_votes: {
 		id: "string",
 		thread_id: "string",
 		creator: "string",
 		value: "integer",
-		updated_at: "string",
+		updated_at: "datetime",
 	},
 	comment_votes: {
 		id: "string",
 		comment_id: "string",
 		creator: "string",
 		value: "integer",
-		updated_at: "string",
+		updated_at: "datetime",
 	},
 }
 

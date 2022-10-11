@@ -8,7 +8,7 @@ export const models = {
 		title: "string",
 		body: "string",
 		link: "string",
-		updated_at: "string",
+		updated_at: "datetime",
 		indexes: ["creator"],
 	},
 	comments: {
@@ -17,7 +17,7 @@ export const models = {
 		thread_id: "string",
 		body: "string",
 		parent_comment_id: "string",
-		updated_at: "string",
+		updated_at: "datetime",
 		indexes: ["thread_id", "creator"],
 	},
 	thread_reactions: {
@@ -25,7 +25,7 @@ export const models = {
 		thread_id: "string",
 		creator: "string",
 		value: "integer",
-		updated_at: "string",
+		updated_at: "datetime",
 		indexes: ["thread_id", "creator"],
 	},
 	comment_reactions: {
@@ -33,7 +33,7 @@ export const models = {
 		comment_id: "string",
 		creator: "string",
 		value: "integer",
-		updated_at: "string",
+		updated_at: "datetime",
 		indexes: ["comment_id", "creator"],
 	},
 }

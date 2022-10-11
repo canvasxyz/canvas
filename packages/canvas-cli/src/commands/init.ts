@@ -27,13 +27,13 @@ export const models = {
 		// id: "string",
 		// content: "string",
 		// from_id: "string",
-		// updated_at: "string",
+		// updated_at: "datetime",
 	},
 	likes: {
 		// id: "string",
 		// post_id: "string",
 		// value: "boolean",
-		// updated_at: "string",
+		// updated_at: "datetime",
 	},
 }
 
