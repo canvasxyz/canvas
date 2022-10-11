@@ -4,7 +4,7 @@ import { ethers } from "ethers"
 
 import { getQuickJS } from "quickjs-emscripten"
 
-import { Core, ApplicationError, SqliteStore, compileSpec } from "@canvas-js/core"
+import { Core, ApplicationError, compileSpec } from "@canvas-js/core"
 import { ActionArgument, getActionSignatureData, getSessionSignatureData, SessionPayload } from "@canvas-js/interfaces"
 
 const quickJS = await getQuickJS()
@@ -50,13 +50,12 @@ async function sign(call: string, args: ActionArgument[]) {
 }
 
 test("Apply signed action", async (t) => {
-	const store = new SqliteStore(null)
-	const core = await Core.initialize({ name, spec, directory: null, store, quickJS, unchecked: true })
+	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 
 	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash } = await core.applyAction(action)
 
-	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [
+	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
 		{
 			id: hash,
 			title: "Hacker News",
@@ -70,8 +69,7 @@ test("Apply signed action", async (t) => {
 })
 
 test("Apply two signed actions", async (t) => {
-	const store = new SqliteStore(null)
-	const core = await Core.initialize({ name, spec, directory: null, store, quickJS, unchecked: true })
+	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 
 	const newThreadAction = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash: newThreadHash } = await core.applyAction(newThreadAction)
@@ -79,7 +77,7 @@ test("Apply two signed actions", async (t) => {
 	const voteThreadAction = await sign("voteThread", [newThreadHash, 1])
 	await core.applyAction(voteThreadAction)
 
-	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [
+	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
 		{
 			id: newThreadHash,
 			title: "Hacker News",
@@ -106,8 +104,7 @@ async function signWithSession(call: string, args: ActionArgument[]) {
 }
 
 test("Apply action signed with session key", async (t) => {
-	const store = new SqliteStore(null)
-	const core = await Core.initialize({ name, spec, directory: null, store, quickJS, unchecked: true })
+	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 
 	const sessionPayload: SessionPayload = {
 		from: signerAddress,
@@ -125,7 +122,7 @@ test("Apply action signed with session key", async (t) => {
 
 	const { hash } = await core.applyAction(action)
 
-	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [
+	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
 		{
 			id: hash,
 			title: "Hacker News",
@@ -139,8 +136,7 @@ test("Apply action signed with session key", async (t) => {
 })
 
 test("Apply two actions signed with session keys", async (t) => {
-	const store = new SqliteStore(null)
-	const core = await Core.initialize({ name, spec, directory: null, store, quickJS, unchecked: true })
+	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
 
 	const sessionPayload: SessionPayload = {
 		from: signerAddress,
@@ -159,7 +155,7 @@ test("Apply two actions signed with session keys", async (t) => {
 	const voteThreadAction = await sign("voteThread", [newThreadHash, 1])
 	await core.applyAction(voteThreadAction)
 
-	t.deepEqual(store.database.prepare("SELECT * FROM threads").all(), [
+	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
 		{
 			creator: signerAddress,
 			id: newThreadHash,

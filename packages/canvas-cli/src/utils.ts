@@ -11,7 +11,7 @@ import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp
 import type { PeerId } from "@libp2p/interface-peer-id"
 
 import { Chain } from "@canvas-js/interfaces"
-import { chainType, ModelStore, PostgresStore, SqliteStore } from "@canvas-js/core"
+import { chainType } from "@canvas-js/core"
 
 export const SPEC_FILENAME = "spec.canvas.js"
 
@@ -150,25 +150,4 @@ export function getDirectorySize(directory: string): number {
 			return totalSize + stat.size
 		}
 	}, 0)
-}
-
-const fileURIPrefix = "file:"
-const postgresURIPrefix = "postgres:"
-
-export function getModelStore(
-	databaseURI: string | undefined,
-	directory: string | null,
-	options: { verbose?: boolean }
-): ModelStore {
-	if (databaseURI !== undefined) {
-		if (databaseURI.startsWith(fileURIPrefix)) {
-			return new SqliteStore(databaseURI.slice(fileURIPrefix.length))
-		} else if (databaseURI.startsWith(postgresURIPrefix)) {
-			return new PostgresStore(databaseURI, options)
-		} else {
-			throw new Error("invalid database URI")
-		}
-	} else {
-		return new SqliteStore(directory && path.resolve(directory, SqliteStore.DATABASE_FILENAME))
-	}
 }

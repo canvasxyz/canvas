@@ -8,9 +8,9 @@ import prompts from "prompts"
 import { getQuickJS } from "quickjs-emscripten"
 import Hash from "ipfs-only-hash"
 
-import { Core, MessageStore, SqliteStore } from "@canvas-js/core"
+import { Core, MessageStore, ModelStore } from "@canvas-js/core"
 
-import { setupRpcs, locateSpec, confirmOrExit, getModelStore } from "../utils.js"
+import { setupRpcs, locateSpec, confirmOrExit } from "../utils.js"
 import { API } from "../api.js"
 
 export const command = "run <spec>"
@@ -101,7 +101,7 @@ export async function handler(args: Args) {
 			console.log(`[canvas-cli] Deleted ${messagesPath}`)
 		}
 
-		const modelsPath = path.resolve(directory, SqliteStore.DATABASE_FILENAME)
+		const modelsPath = path.resolve(directory, ModelStore.DATABASE_FILENAME)
 		if (fs.existsSync(modelsPath)) {
 			fs.rmSync(modelsPath)
 			console.log(`[canvas-cli] Deleted ${modelsPath}`)
@@ -118,7 +118,7 @@ export async function handler(args: Args) {
 		}
 	} else if (args.replay) {
 		await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
-		const modelsPath = path.resolve(directory, SqliteStore.DATABASE_FILENAME)
+		const modelsPath = path.resolve(directory, ModelStore.DATABASE_FILENAME)
 		if (fs.existsSync(modelsPath)) {
 			fs.rmSync(modelsPath)
 			console.log(`[canvas-cli] Deleted ${modelsPath}`)
@@ -164,7 +164,6 @@ export async function handler(args: Args) {
 	const quickJS = await getQuickJS()
 
 	const { database: databaseURI, verbose, replay, unchecked, peering, "peering-port": peeringPort } = args
-	const store = getModelStore(databaseURI, directory, { verbose })
 
 	let core: Core
 	try {
@@ -172,7 +171,6 @@ export async function handler(args: Args) {
 			directory,
 			name,
 			spec,
-			store,
 			rpc,
 			quickJS,
 			verbose,

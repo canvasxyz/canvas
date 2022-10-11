@@ -37,7 +37,6 @@ export type Exports = {
 	routes: Record<string, string>
 	routeParameters: Record<string, string[]>
 	contractMetadata: Record<string, ContractMetadata>
-	database?: "sqlite" | "postgres"
 }
 
 type ContractFunctionResult = string | boolean | number | bigint
@@ -56,7 +55,6 @@ export class VM {
 
 		const moduleHandle = await loadModule(context, name, spec)
 		const {
-			database: databaseHandle,
 			models: modelsHandle,
 			routes: routesHandle,
 			actions: actionsHandle,
@@ -121,13 +119,6 @@ export class VM {
 			assertPattern(name, actionNamePattern, "invalid action name")
 			const source = call(context, "Function.prototype.toString", handle).consume(context.getString)
 			exports.actionParameters[name] = parseFunctionParameters(source)
-		}
-
-		if (databaseHandle !== undefined) {
-			assert(context.typeof(databaseHandle) === "string", "`database` export must be a string")
-			const database = databaseHandle.consume(context.getString)
-			assert(database === "sqlite" || database === "postgres", "invalid database name, must be 'sqlite' or 'postgres'")
-			exports.database = database
 		}
 
 		if (routesHandle !== undefined) {

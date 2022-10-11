@@ -20,9 +20,7 @@ export async function handler(args: Args) {
 		return
 	}
 
-	const content = `export const database = "sqlite"
-
-export const models = {
+	const content = `export const models = {
 	posts: {
 		// id: "string",
 		// content: "string",
