@@ -139,11 +139,7 @@ export async function handler(args: Args) {
 		if (confirm) {
 			args.unchecked = true
 			args.peering = false
-			console.log(
-				chalk.yellow(
-					`${chalk.bold("Running in unchecked mode.")} Block hashes will not be checked, and P2P will be disabled.`
-				)
-			)
+			console.log(chalk.yellow(`✦ ${chalk.bold("Using unchecked mode.")} Actions will not require a valid block hash.`))
 		} else {
 			console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
 		}
@@ -152,19 +148,16 @@ export async function handler(args: Args) {
 	if (directory === null) {
 		console.log(
 			chalk.yellow(
-				`${chalk.bold("Using development spec.")} To run in production mode, publish and run the spec from IPFS.`
+				`✦ ${chalk.bold("Using development mode.")} Actions will be signed with the spec's filename, not IPFS hash.`
 			)
 		)
-
-		console.log(chalk.yellow.bold("Using in-memory model database. ") + chalk.yellow("All data will be lost on close."))
-		console.log(chalk.red(`→ To persist data, run the spec from IPFS.`))
+		console.log(chalk.yellow(`✦ ${chalk.bold("Using in-memory model database.")} Data will not be saved between runs.`))
 
 		const cid = await Hash.of(spec)
-		console.log(
-			chalk.red(`→ To publish the spec to IPFS, start ${chalk.bold("ipfs daemon")} in a separate window and run:`)
-		)
-		console.log(chalk.red.bold(`  ipfs add ${args.spec}`))
-		console.log(chalk.red.bold(`  canvas run ${cid}`))
+		console.log(chalk.yellow(`✦ To persist data, run the spec from IPFS:`))
+		console.log(chalk.yellow(`  ipfs daemon`))
+		console.log(chalk.yellow(`  ipfs add ${args.spec}`))
+		console.log(chalk.yellow(`  canvas run ${cid}`))
 		console.log("")
 	}
 

@@ -53,16 +53,13 @@ export class API {
 
 		this.server = stoppable(
 			api.listen(port, () => {
-				console.log(`[canvas-cli] Serving ${core.name} on port ${port}:`)
+				console.log(`Serving ${core.name} on port ${port}:`)
 				console.log(`└ GET http://localhost:${port}/`)
 				for (const name of Object.keys(core.exports.routeParameters)) {
 					console.log(`└ GET http://localhost:${port}${name}`)
 				}
 				console.log("└ POST /actions")
-				console.log(`  └ ${actionType.name}`)
-				console.log(`  └ calls: [ ${Object.keys(core.exports.actionParameters).join(", ")} ]`)
 				console.log("└ POST /sessions")
-				console.log(`  └ ${sessionType.name}`)
 			}),
 			0
 		)
