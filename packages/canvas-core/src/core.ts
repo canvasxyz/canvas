@@ -559,7 +559,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private static peeringDelay = 1000 * 5
-	private static peeringInterval = 1000 * 60 + 60
+	private static peeringInterval = 1000 * 60 * 60 * 1
 	private static peeringRetryInterval = 1000 * 5
 	private async startPeeringService() {
 		const { signal } = this.controller
@@ -589,7 +589,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private static syncDelay = 1000 * 10
-	private static syncInterval = 1000 * 15
+	private static syncInterval = 1000 * 60 * 1
 	private static syncRetryInterval = 1000 * 5
 	private async startSyncService() {
 		const { signal } = this.controller
