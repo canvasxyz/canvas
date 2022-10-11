@@ -2,24 +2,32 @@ export const database = "sqlite"
 
 export const models = {
 	threads: {
+		id: "string",
 		title: "string",
 		link: "string",
 		creator: "string",
+		updated_at: "string",
 	},
 	comments: {
+		id: "string",
 		thread_id: "string",
 		text: "string",
 		creator: "string",
+		updated_at: "string",
 	},
 	thread_votes: {
+		id: "string",
 		thread_id: "string",
 		creator: "string",
 		value: "integer",
+		updated_at: "string",
 	},
 	comment_votes: {
+		id: "string",
 		comment_id: "string",
 		creator: "string",
 		value: "integer",
+		updated_at: "string",
 	},
 }
 

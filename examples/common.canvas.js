@@ -2,30 +2,38 @@ export const database = "sqlite"
 
 export const models = {
 	threads: {
+		id: "string",
 		community: "string",
 		creator: "string",
 		title: "string",
 		body: "string",
 		link: "string",
+		updated_at: "string",
 		indexes: ["creator"],
 	},
 	comments: {
+		id: "string",
 		creator: "string",
 		thread_id: "string",
 		body: "string",
 		parent_comment_id: "string",
+		updated_at: "string",
 		indexes: ["thread_id", "creator"],
 	},
 	thread_reactions: {
+		id: "string",
 		thread_id: "string",
 		creator: "string",
 		value: "integer",
+		updated_at: "string",
 		indexes: ["thread_id", "creator"],
 	},
 	comment_reactions: {
+		id: "string",
 		comment_id: "string",
 		creator: "string",
 		value: "integer",
+		updated_at: "string",
 		indexes: ["comment_id", "creator"],
 	},
 }
