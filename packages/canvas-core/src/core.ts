@@ -8,19 +8,25 @@ import chalk from "chalk"
 import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
+import { Multiaddr } from "@multiformats/multiaddr"
+import { createEd25519PeerId } from "@libp2p/peer-id-factory"
+
+import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
 import { createLibp2p, Libp2p } from "libp2p"
-import { TCP } from "@libp2p/tcp"
+import { WebSockets } from "@libp2p/websockets"
 import { Noise } from "@chainsafe/libp2p-noise"
 import { Mplex } from "@libp2p/mplex"
-import { MulticastDNS } from "@libp2p/mdns"
+import { Bootstrap } from "@libp2p/bootstrap"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
+import { KadDHT } from "@libp2p/kad-dht"
+import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
+import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
+
 import type { Message as PubSubMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
-
-import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
 import * as okra from "node-okra"
 
@@ -36,12 +42,12 @@ import {
 	Chain,
 } from "@canvas-js/interfaces"
 
-import { ModelStore, SqliteStore } from "./models/index.js"
 import { actionType, sessionType } from "./codecs.js"
-import { CacheMap, signalInvalidType, getTopic, getProtocol, wait, retry } from "./utils.js"
+import { CacheMap, signalInvalidType, wait, retry, bootstrapList } from "./utils.js"
 import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
+import { ModelStore, SqliteStore } from "./model-store/index.js"
 import { VM, Exports } from "./vm/index.js"
-import { MessageStore } from "./messages/index.js"
+import { MessageStore } from "./message-store/index.js"
 import { handleSource, handleTarget, Message } from "./sync.js"
 
 export interface CoreConfig {
@@ -112,19 +118,32 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (directory !== null && peering) {
 			assert(port !== undefined, "a peeringPort must be provided if peering is enabled")
 
+			const peerId = config.peerId || (await createEd25519PeerId())
+
 			libp2p = await createLibp2p({
-				peerId: config.peerId,
-				addresses: { listen: [`/ip4/0.0.0.0/tcp/${port}`] },
-				transports: [new TCP()],
+				connectionGater: {
+					denyDialMultiaddr: async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr),
+				},
+				peerId,
+				addresses: {
+					listen: [`/ip4/0.0.0.0/tcp/${port}/ws`],
+					announce: [...bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId.toString()}`)],
+					announceFilter: (multiaddrs) =>
+						multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr)),
+				},
+				transports: [new WebSockets()],
+				// @ts-expect-error
 				connectionEncryption: [new Noise()],
+				// @ts-expect-error
 				streamMuxers: [new Mplex()],
-				peerDiscovery: [new MulticastDNS()],
+				peerDiscovery: [new Bootstrap({ list: bootstrapList })],
 				pubsub: new GossipSub({
 					doPX: true,
 					fallbackToFloodsub: false,
 					allowPublishToZeroPeers: true,
 					globalSignaturePolicy: "StrictSign",
 				}),
+				dht: new KadDHT({ protocolPrefix: "/canvas", clientMode: false }),
 			})
 
 			console.log(`[canvas-core] PeerId ${libp2p.peerId.toString()}`)
@@ -171,8 +190,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly blockCache: Record<string, CacheMap<string, { number: number; timestamp: number }>> = {}
 	private readonly blockCacheMostRecentTimestamp: Record<string, number> = {}
 
-	private readonly protocol: string
-	private readonly topic: string
+	private readonly syncProtocol: string
 	private readonly queue: PQueue
 
 	private constructor(
@@ -193,8 +211,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	) {
 		super()
-		this.protocol = getProtocol(this.cid)
-		this.topic = getTopic(this.cid)
+		this.syncProtocol = `/x/canvas/sync/${cid.toString()}/0.0.0`
 
 		this.queue = new PQueue({ concurrency: 1 })
 
@@ -219,25 +236,24 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (this.libp2p !== null) {
 			if (options.peering) {
-				this.libp2p.pubsub.subscribe(this.topic)
+				this.libp2p.pubsub.subscribe(this.cid.toString())
 				this.libp2p.pubsub.addEventListener("message", this.handleMessage)
-				console.log(`[canvas-core] Subscribed to pubsub topic ${this.topic}`)
+				console.log(`[canvas-core] Subscribed to pubsub topic ${this.cid.toString()}`)
 			}
 
 			if (options.sync) {
-				this.libp2p.handle(this.protocol, this.handleIncomingStream)
-				this.startSyncService(this.libp2p)
+				this.libp2p.handle(this.syncProtocol, this.handleIncomingStream)
+				this.startSyncService()
+				this.startPeeringService()
 			}
 
 			if (this.options.verbose) {
-				this.libp2p.connectionManager.addEventListener("peer:connect", ({ detail: connection }) => {
-					console.log(
-						`[canvas-core] Connected to peer ${connection.remotePeer.toString()} with connection ID ${connection.id}`
-					)
+				this.libp2p.connectionManager.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) => {
+					console.log(`[canvas-core] Connected to peer ${remotePeer.toString()} (${id})`)
 				})
 
-				this.libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: connection }) => {
-					console.log(`[canvas-core] Disconnected from peer ${connection.remotePeer.toString()}`)
+				this.libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) => {
+					console.log(`[canvas-core] Disconnected from peer ${remotePeer.toString()} (${id})`)
 				})
 			}
 		}
@@ -254,7 +270,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		if (this.libp2p !== null) {
-			this.libp2p.pubsub.unsubscribe(this.topic)
+			this.libp2p.pubsub.unsubscribe(this.cid.toString())
 			this.libp2p.pubsub.removeEventListener("message")
 			this.libp2p.connectionManager.removeEventListener("peer:connect")
 			this.libp2p.connectionManager.removeEventListener("peer:disconnect")
@@ -480,8 +496,12 @@ export class Core extends EventEmitter<CoreEvents> {
 			message = encodeBinaryMessage({ hash: actionHash, action }, { hash: null, session: null })
 		}
 
+		if (this.options.verbose) {
+			console.log(`[canvas-core] Publishing message ${actionHash} to GossipSub`)
+		}
+
 		await this.libp2p.pubsub
-			.publish(this.topic, message)
+			.publish(this.cid.toString(), message)
 			.then(({ recipients }) => {
 				if (this.options.verbose) {
 					console.log(`[canvas-core] Published message to ${recipients.length} peers`)
@@ -493,7 +513,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private handleMessage = async ({ detail: { topic, data } }: CustomEvent<PubSubMessage>) => {
-		if (topic !== this.topic) {
+		if (topic !== this.cid.toString()) {
 			return
 		}
 
@@ -538,14 +558,44 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private static syncDelay = 1000 * 5
-	private static syncInterval = 1000 * 60 * 5
-	private static syncRetryInterval = 1000 * 60
-	private async startSyncService(libp2p: Libp2p) {
+	private static peeringDelay = 1000 * 5
+	private static peeringInterval = 1000 * 60 * 60 * 1
+	private static peeringRetryInterval = 1000 * 5
+	private async startPeeringService() {
+		const { signal } = this.controller
+		try {
+			await wait({ signal, delay: Core.peeringDelay })
+			while (!signal.aborted) {
+				await retry(
+					this.announce,
+					(err) => console.log(chalk.red(`[canvas-core] Failed to publish DHT rendezvous record`), err),
+					{ signal, delay: Core.peeringRetryInterval }
+				)
+				await wait({ signal, delay: Core.peeringInterval })
+			}
+		} catch (err) {
+			console.log(`[canvas-core] Aborting peering service`)
+		}
+	}
+
+	private announce = async (signal: AbortSignal): Promise<void> => {
+		if (this.libp2p === null) {
+			return
+		}
+
+		console.log(chalk.green(`[canvas-core] Publishing DHT rendezvous record ${this.cid.toString()}`))
+		await this.libp2p.contentRouting.provide(this.cid, { signal })
+		console.log(chalk.green(`[canvas-core] Successfully published DHT rendezvous record`))
+	}
+
+	private static syncDelay = 1000 * 10
+	private static syncInterval = 1000 * 60 * 1
+	private static syncRetryInterval = 1000 * 5
+	private async startSyncService() {
 		const { signal } = this.controller
 
 		try {
-			await wait({ delay: Core.syncDelay, signal })
+			await wait({ signal, delay: Core.syncDelay })
 			while (!signal.aborted) {
 				const peers = await retry(
 					this.findPeers,
@@ -554,8 +604,13 @@ export class Core extends EventEmitter<CoreEvents> {
 				)
 
 				console.log(chalk.green(`[canvas-core] Found ${peers.length} application peers`))
-				await this.sync(libp2p, peers)
-				await wait({ delay: Core.syncInterval, signal })
+
+				for (const [i, peer] of peers.entries()) {
+					console.log(chalk.green(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`))
+					await this.sync(peer)
+				}
+
+				await wait({ signal, delay: Core.syncInterval })
 			}
 		} catch (err) {
 			console.log(`[canvas-core] Aborting sync service`)
@@ -563,98 +618,95 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private findPeers = async (signal: AbortSignal): Promise<PeerId[]> => {
-		const peers = new Map<string, PeerId>()
+		const peers: PeerId[] = []
 
 		if (this.libp2p !== null) {
-			for (const peer of this.libp2p.getPeers()) {
-				const protocols = await this.libp2p.peerStore.protoBook.get(peer)
-				if (protocols.includes(this.protocol)) {
-					peers.set(peer.toString(), peer)
+			for await (const { id } of this.libp2p.contentRouting.findProviders(this.cid, { signal })) {
+				if (id.equals(this.libp2p.peerId)) {
+					continue
+				} else {
+					peers.push(id)
 				}
 			}
 		}
 
-		return Array.from(peers.values())
+		return peers
 	}
 
-	private async sync(libp2p: Libp2p, peers: PeerId[]) {
-		if (this.mst === null) {
+	private async sync(peer: PeerId) {
+		if (this.mst === null || this.libp2p === null) {
 			return
 		}
 
 		const { signal } = this.controller
 
-		for (const [i, peer] of peers.entries()) {
-			console.log(chalk.green(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`))
+		let stream: Stream
+		try {
+			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal })
+		} catch (err) {
+			console.log(chalk.red(`[canvas-core] Failed to dial peer ${peer.toString()}`, err))
+			return
+		}
 
-			let stream: Stream
-			try {
-				stream = await libp2p.dialProtocol(peer, this.protocol, { signal })
-			} catch (err) {
-				console.log(chalk.red(`[canvas-core] Failed to dial peer ${peer.toString()}`, err))
-				continue
-			}
+		if (this.options.verbose) {
+			console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}`)
+		}
 
-			if (this.options.verbose) {
-				console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}`)
-			}
+		const closeStream = () => stream.close()
 
-			const closeStream = () => stream.close()
+		signal.addEventListener("abort", closeStream)
 
-			signal.addEventListener("abort", closeStream)
+		const target = new okra.Target(this.mst)
 
-			const target = new okra.Target(this.mst)
-
-			let successCount = 0
-			let failureCount = 0
-			const applyBatch = (messages: Iterable<[string, Message]>) =>
-				this.queue.add(async () => {
-					for (const [hash, message] of messages) {
-						if (this.options.verbose) {
-							console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
-						}
-
-						if (message.type === "session") {
-							const { type, ...session } = message
-							try {
-								await this.applySessionInternal(hash, session, { sync: true })
-								successCount += 1
-							} catch (err) {
-								console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
-								failureCount += 1
-							}
-						} else if (message.type === "action") {
-							const { type, ...action } = message
-							try {
-								await this.applyActionInternal(hash, action, { sync: true })
-								successCount += 1
-							} catch (err) {
-								console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
-								failureCount += 1
-							}
-						} else {
-							signalInvalidType(message)
-						}
+		let successCount = 0
+		let failureCount = 0
+		const applyBatch = (messages: Iterable<[string, Message]>) =>
+			this.queue.add(async () => {
+				for (const [hash, message] of messages) {
+					if (this.options.verbose) {
+						console.log(chalk.green(`[canvas-core] Received missing ${message.type} ${hash}`))
 					}
-				})
 
-			try {
-				await handleTarget(stream, target, applyBatch)
-				console.log(
-					chalk.green(
-						`[canvas-core] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
-					)
+					if (message.type === "session") {
+						const { type, ...session } = message
+						try {
+							await this.applySessionInternal(hash, session, { sync: true })
+							successCount += 1
+						} catch (err) {
+							console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
+							failureCount += 1
+						}
+					} else if (message.type === "action") {
+						const { type, ...action } = message
+						try {
+							await this.applyActionInternal(hash, action, { sync: true })
+							successCount += 1
+						} catch (err) {
+							console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
+							failureCount += 1
+						}
+					} else {
+						signalInvalidType(message)
+					}
+				}
+			})
+
+		try {
+			await handleTarget(stream, target, applyBatch)
+			console.log(
+				chalk.green(
+					`[canvas-core] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
 				)
-			} catch (err) {
-				console.log(chalk.red("[canvas-core] Sync failed"), err)
-			}
+			)
+		} catch (err) {
+			console.log(chalk.red("[canvas-core] Sync failed"), err)
+		}
 
-			signal.removeEventListener("abort", closeStream)
-			target.close()
+		signal.removeEventListener("abort", closeStream)
+		target.close()
 
-			if (this.options.verbose) {
-				console.log(`[canvas-core] Closed outgoing stream ${stream.id}`)
-			}
+		if (this.options.verbose) {
+			console.log(`[canvas-core] Closed outgoing stream ${stream.id}`)
 		}
 	}
 }

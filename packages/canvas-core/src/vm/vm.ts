@@ -14,7 +14,7 @@ import {
 	ModelValue,
 } from "@canvas-js/interfaces"
 
-import type { Effect } from "../models/index.js"
+import type { Effect } from "../model-store/index.js"
 import { chainIdType, chainType, modelsType } from "../codecs.js"
 import { ApplicationError } from "../errors.js"
 import { mapEntries, signalInvalidType } from "../utils.js"
