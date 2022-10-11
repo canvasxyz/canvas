@@ -149,7 +149,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				}
 
 				const effects = await vm.execute(id, action.payload)
-				await core.modelStore.applyEffects(action.payload, effects)
+				core.modelStore.applyEffects(action.payload, effects)
 				i++
 			}
 
@@ -348,8 +348,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		await this.validateAction(action, options)
 
 		const effects = await this.vm.execute(hash, action.payload)
-		await this.messageStore.insertAction(hash, action)
-		await this.modelStore.applyEffects(action.payload, effects)
+		this.messageStore.insertAction(hash, action)
+		this.modelStore.applyEffects(action.payload, effects)
 		if (this.mst !== null) {
 			const hashBuffer = Buffer.from(hash.slice(2), "hex")
 			const leafBuffer = Buffer.alloc(14)
@@ -384,7 +384,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
 			const sessionAddress = action.session.toLowerCase()
-			const { session } = await this.messageStore.getSessionByAddress(sessionAddress)
+			const { session } = this.messageStore.getSessionByAddress(sessionAddress)
 			assert(session !== null, "session not found")
 			assert(session.payload.timestamp + session.payload.duration > timestamp, "session expired")
 			assert(session.payload.timestamp <= timestamp, "session timestamp must precede action timestamp")
@@ -429,7 +429,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		await this.validateSession(session, options)
-		await this.messageStore.insertSession(hash, session)
+		this.messageStore.insertSession(hash, session)
 		if (this.mst !== null) {
 			const hashBuffer = Buffer.from(hash.slice(2), "hex")
 			const leafBuffer = Buffer.alloc(14)
@@ -477,7 +477,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		let message: Uint8Array
 		if (action.session !== null) {
-			const { hash: sessionHash, session } = await this.messageStore.getSessionByAddress(action.session)
+			const { hash: sessionHash, session } = this.messageStore.getSessionByAddress(action.session)
 			assert(sessionHash !== null && session !== null)
 			message = encodeBinaryMessage({ hash: actionHash, action }, { hash: sessionHash, session })
 		} else {

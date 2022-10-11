@@ -55,43 +55,7 @@ export class ModelStore {
 
 		this.transaction = this.database.transaction((context: ActionContext, effects: Effect[]): void => {
 			for (const effect of effects) {
-				const updatedAt = this.getUpdatedAt(effect.model, effect.id)
-				if (updatedAt !== undefined && updatedAt > context.timestamp) {
-					continue
-				}
-
-				const deletedAt = this.getDeletedAt(effect.model, effect.id)
-				if (deletedAt !== undefined && deletedAt > context.timestamp) {
-					continue
-				}
-
-				const statements = this.modelStatements[effect.model]
-				if (effect.type === "set") {
-					// sqlite doesn't actually support booleans, just integers,
-					// and better-sqlite doesn't convert them automatically
-					const params: Record<string, ModelValue> = { id: effect.id, updated_at: context.timestamp }
-					for (const [property, value] of Object.entries(effect.values)) {
-						params[property] = typeof value === "boolean" ? Number(value) : value
-					}
-
-					if (updatedAt === undefined) {
-						statements.insert.run(params)
-					} else {
-						statements.update.run(params)
-					}
-				} else if (effect.type === "del") {
-					if (deletedAt === undefined) {
-						statements.insertDeleted.run({ id: effect.id, deleted_at: context.timestamp })
-					} else {
-						statements.updateDeleted.run({ id: effect.id, deleted_at: context.timestamp })
-					}
-
-					if (updatedAt !== undefined) {
-						statements.delete.run({ id: effect.id })
-					}
-				} else {
-					signalInvalidType(effect)
-				}
+				this.applyEffect(context, effect)
 			}
 		})
 	}
@@ -108,8 +72,48 @@ export class ModelStore {
 		return result && result.updated_at
 	}
 
-	public async applyEffects(context: ActionContext, effects: Effect[]) {
+	public applyEffects(context: ActionContext, effects: Effect[]) {
 		this.transaction(context, effects)
+	}
+
+	private applyEffect(context: ActionContext, effect: Effect) {
+		const updatedAt = this.getUpdatedAt(effect.model, effect.id)
+		if (updatedAt !== undefined && updatedAt > context.timestamp) {
+			return
+		}
+
+		const deletedAt = this.getDeletedAt(effect.model, effect.id)
+		if (deletedAt !== undefined && deletedAt > context.timestamp) {
+			return
+		}
+
+		const statements = this.modelStatements[effect.model]
+		if (effect.type === "set") {
+			// sqlite doesn't actually support booleans, just integers,
+			// and better-sqlite doesn't convert them automatically
+			const params: Record<string, ModelValue> = { id: effect.id, updated_at: context.timestamp }
+			for (const [property, value] of Object.entries(effect.values)) {
+				params[property] = typeof value === "boolean" ? Number(value) : value
+			}
+
+			if (updatedAt === undefined) {
+				statements.insert.run(params)
+			} else {
+				statements.update.run(params)
+			}
+		} else if (effect.type === "del") {
+			if (deletedAt === undefined) {
+				statements.insertDeleted.run({ id: effect.id, deleted_at: context.timestamp })
+			} else {
+				statements.updateDeleted.run({ id: effect.id, deleted_at: context.timestamp })
+			}
+
+			if (updatedAt !== undefined) {
+				statements.delete.run({ id: effect.id })
+			}
+		} else {
+			signalInvalidType(effect)
+		}
 	}
 
 	public close() {
