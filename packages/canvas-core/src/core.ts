@@ -99,15 +99,6 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		const { vm, exports } = await VM.initialize(name, spec, providers, quickJS, { verbose })
 
-		const modelStore = new ModelStore(
-			directory && path.resolve(directory, ModelStore.DATABASE_FILENAME),
-			exports.models,
-			exports.routes,
-			{ verbose }
-		)
-
-		const messageStore = new MessageStore(name, directory, { verbose })
-
 		let libp2p: Libp2p | null = null
 		if (directory !== null && peering) {
 			assert(port !== undefined, "a peeringPort must be provided if peering is enabled")
@@ -144,30 +135,21 @@ export class Core extends EventEmitter<CoreEvents> {
 			await libp2p.start()
 		}
 
-		let mst: okra.Tree | null = null
-		if (directory !== null) {
-			const mstPath = path.resolve(directory, Core.MST_FILENAME)
-			mst = new okra.Tree(mstPath)
-			if (verbose) {
-				console.log(`[canvas-core] Using MST at ${mstPath}`)
-			}
-		}
-
 		const options = { verbose, unchecked, peering: true, sync: true }
-		const core = new Core(name, cid, vm, exports, modelStore, messageStore, providers, libp2p, mst, options)
+		const core = new Core(directory, name, cid, vm, exports, providers, libp2p, options)
 
 		if (replay) {
 			console.log(chalk.green(`[canvas-core] Replaying action log...`))
 
 			let i = 0
-			for await (const [id, action] of messageStore.getActionStream()) {
+			for await (const [id, action] of core.messageStore.getActionStream()) {
 				if (!actionType.is(action)) {
 					console.log(chalk.red("[canvas-core]"), action)
 					throw new Error("Invalid action value in action log")
 				}
 
 				const effects = await vm.execute(id, action.payload)
-				await modelStore.applyEffects(action.payload, effects)
+				await core.modelStore.applyEffects(action.payload, effects)
 				i++
 			}
 
@@ -181,6 +163,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		return core
 	}
 
+	public readonly modelStore: ModelStore
+	public readonly messageStore: MessageStore
+	public readonly mst: okra.Tree | null
+
 	private readonly blockCache: Record<string, CacheMap<string, { number: number; timestamp: number }>> = {}
 	private readonly blockCacheMostRecentTimestamp: Record<string, number> = {}
 
@@ -188,15 +174,13 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly queue: PQueue
 
 	private constructor(
+		public readonly directory: string | null,
 		public readonly name: string,
 		public readonly cid: CID,
 		public readonly vm: VM,
 		public readonly exports: Exports,
-		public readonly modelStore: ModelStore,
-		public readonly messageStore: MessageStore,
 		public readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {},
 		public readonly libp2p: Libp2p | null,
-		public readonly mst: okra.Tree | null,
 		private readonly options: {
 			verbose?: boolean
 			unchecked?: boolean
@@ -206,6 +190,10 @@ export class Core extends EventEmitter<CoreEvents> {
 	) {
 		super()
 		this.syncProtocol = `/x/canvas/sync/${cid.toString()}/0.0.0`
+
+		this.modelStore = new ModelStore(directory, exports.models, exports.routes, { verbose: options.verbose })
+		this.messageStore = new MessageStore(name, directory, { verbose: options.verbose })
+		this.mst = directory ? new okra.Tree(path.resolve(directory, Core.MST_FILENAME)) : null
 
 		this.queue = new PQueue({ concurrency: 1 })
 
@@ -280,6 +268,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.vm.dispose()
 		this.messageStore.close()
 		this.modelStore.close()
+		if (this.mst !== null) {
+			this.mst.close()
+		}
+
 		this.dispatchEvent(new Event("close"))
 	}
 
