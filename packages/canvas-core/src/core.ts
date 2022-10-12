@@ -10,6 +10,7 @@ import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
 import { Multiaddr } from "@multiformats/multiaddr"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { transform } from "sucrase"
 
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
@@ -75,7 +76,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	public static readonly MST_FILENAME = "mst.okra"
 	private static readonly cidPattern = /^[a-zA-Z0-9]+$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
-		const { directory, name, spec, verbose, unchecked, rpc, replay, quickJS, peering, peeringPort: port } = config
+		const { directory, name, verbose, unchecked, rpc, replay, quickJS, peering, peeringPort: port } = config
+		let { spec } = config
 
 		if (verbose) {
 			console.log(`[canvas-core] Initializing core ${name}`)
@@ -88,6 +90,20 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			return CID.parse(cid)
 		})
+
+		try {
+			spec = transform(spec, {
+				transforms: ["jsx"],
+				jsxPragma: "React.createElement",
+				jsxFragmentPragma: "React.Fragment",
+				production: true,
+			}).code
+		} catch (err) {
+			if (verbose) {
+				console.log(chalk.red("Invalid spec:"), chalk.red(err))
+			}
+			throw err
+		}
 
 		const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
 		for (const [chain, chainIds] of Object.entries(rpc || {})) {

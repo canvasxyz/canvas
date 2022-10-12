@@ -41,6 +41,7 @@
 		"p-queue": "^7.2.0",
 		"pg-promise": "^10.11.1",
 		"quickjs-emscripten": "^0.21.0",
+		"sucrase": "^3.28.0",
 		"undici": "^5.11.0"
 	},
 	"devDependencies": {
