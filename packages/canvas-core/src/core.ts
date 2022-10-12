@@ -152,7 +152,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		const options = { verbose, unchecked, peering: true, sync: true }
-		const core = new Core(directory, name, cid, vm, exports, providers, libp2p, options)
+		const core = new Core(directory, name, cid, vm, exports, providers, libp2p, spec, options)
 
 		if (replay) {
 			console.log(chalk.green(`[canvas-core] Replaying action log...`))
@@ -197,6 +197,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly exports: Exports,
 		public readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {},
 		public readonly libp2p: Libp2p | null,
+		public readonly spec: string,
 		private readonly options: {
 			verbose?: boolean
 			unchecked?: boolean
@@ -205,6 +206,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	) {
 		super()
+		this.spec = spec
 		this.syncProtocol = `/x/canvas/sync/${cid.toString()}/0.0.0`
 
 		this.modelStore = new ModelStore(directory, exports.models, exports.routes, { verbose: options.verbose })
