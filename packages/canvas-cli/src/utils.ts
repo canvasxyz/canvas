@@ -2,6 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import os from "node:os"
 import process from "node:process"
+import { transform } from "sucrase"
 
 import chalk from "chalk"
 import prompts from "prompts"
@@ -71,12 +72,27 @@ export async function locateSpec(name: string, ipfsGatewayURL: string): Promise<
 			console.log(`[canvas-cli] Downloaded spec to ${specPath}`)
 			return { name, directory, spec, peerId }
 		}
-	} else if (name.endsWith(".js")) {
+	} else if (name.endsWith(".js") || name.endsWith(".jsx")) {
 		const specPath = path.resolve(name)
-		const spec = fs.readFileSync(specPath, "utf-8")
+		let spec = fs.readFileSync(specPath, "utf-8")
+
+		if (name.endsWith(".jsx")) {
+			try {
+				spec = transform(spec, {
+					transforms: ["jsx"],
+					jsxPragma: "React.createElement",
+					jsxFragmentPragma: "React.Fragment",
+					production: true,
+				}).code
+			} catch (err) {
+				console.log(chalk.red("Invalid spec:"), chalk.red(err))
+				process.exit(1)
+			}
+		}
+
 		return { name: specPath, directory: null, spec, peerId }
 	} else {
-		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js file"))
+		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js/.jsx file"))
 		process.exit(1)
 	}
 }
