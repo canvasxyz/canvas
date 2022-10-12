@@ -71,12 +71,12 @@ export async function locateSpec(name: string, ipfsGatewayURL: string): Promise<
 			console.log(`[canvas-cli] Downloaded spec to ${specPath}`)
 			return { name, directory, spec, peerId }
 		}
-	} else if (name.endsWith(".js")) {
+	} else if (name.endsWith(".js") || name.endsWith(".jsx")) {
 		const specPath = path.resolve(name)
-		const spec = fs.readFileSync(specPath, "utf-8")
+		let spec = fs.readFileSync(specPath, "utf-8")
 		return { name: specPath, directory: null, spec, peerId }
 	} else {
-		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js file"))
+		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js/.jsx file"))
 		process.exit(1)
 	}
 }
