@@ -8,6 +8,7 @@ export interface CanvasContextValue {
 	host?: string
 	cid: string | null
 	uri: string | null
+	spec: string | null
 	error: Error | null
 	loading: boolean
 	address: string | null
@@ -21,6 +22,7 @@ export interface CanvasContextValue {
 export const CanvasContext = createContext<CanvasContextValue>({
 	cid: null,
 	uri: null,
+	spec: null,
 	error: null,
 	loading: true,
 	address: null,

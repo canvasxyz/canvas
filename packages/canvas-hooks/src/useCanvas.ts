@@ -7,7 +7,7 @@ import { CanvasSession } from "./useSession.js"
 
 /**
  * Here are the rules for the useCanvas hook:
- * - Initially, `loading` is true and `multihash` and `address` are null.
+ * - Initially, `loading` is true and `multihash`, `spec`, and `address` are null.
  * - Once the hook connects to both window.ethereum and the remote backend,
  *   `loading` will switch to false, with non-null `multihash`. However, `address`
  *   might still be null, in which case you MUST call `connect` to request accounts.
@@ -20,6 +20,7 @@ import { CanvasSession } from "./useSession.js"
 export function useCanvas(): {
 	cid: string | null
 	uri: string | null
+	spec: string | null
 	error: Error | null
 	loading: boolean
 	address: string | null
@@ -29,7 +30,7 @@ export function useCanvas(): {
 	connectNewSession: () => Promise<void>
 	disconnect: () => Promise<void>
 } {
-	const { cid, uri, error, loading, address, session, dispatch, connect, connectNewSession, disconnect } =
+	const { cid, uri, spec, error, loading, address, session, dispatch, connect, connectNewSession, disconnect } =
 		useContext(CanvasContext)
-	return { cid, uri, error, loading, address, session, dispatch, connect, connectNewSession, disconnect }
+	return { cid, uri, spec, error, loading, address, session, dispatch, connect, connectNewSession, disconnect }
 }

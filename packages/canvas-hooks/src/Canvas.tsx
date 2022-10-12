@@ -15,13 +15,14 @@ const etagPattern = /^"(.+)"$/
 const linkPattern = /^<(.+)>; rel="self"$/
 
 export const Canvas: React.FC<CanvasProps> = (props) => {
+	const [spec, setSpec] = useState<string | null>(null)
 	const [cid, setCID] = useState<string | null>(null)
 	const [uri, setURI] = useState<string | null>(null)
 	const [error, setError] = useState<Error | null>(null)
 
 	useEffect(() => {
-		fetch(props.host, { method: "HEAD" })
-			.then((res) => {
+		fetch(props.host + "?spec=true", { method: "GET" })
+			.then(async (res) => {
 				const etag = res.headers.get("ETag")
 				const link = res.headers.get("Link")
 				if (res.ok && etag !== null && link !== null) {
@@ -33,8 +34,11 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 						setCID(cid)
 						setURI(uri)
 					}
-				} else {
-					setError(new Error("Invalid response from remote API"))
+
+					// spec data
+					const json = await res.text()
+					const obj = JSON.parse(json)
+					setSpec(obj.spec)
 				}
 			})
 			.catch((err) => setError(err))
@@ -49,6 +53,7 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 				host: props.host,
 				cid,
 				uri,
+				spec,
 				error,
 				loading: cid === null || uri === null || loading,
 				address,
