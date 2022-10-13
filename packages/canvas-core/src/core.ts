@@ -10,6 +10,7 @@ import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
 import { Multiaddr } from "@multiformats/multiaddr"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { transform } from "sucrase"
 
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
@@ -76,7 +77,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	public static readonly MST_FILENAME = "mst.okra"
 	private static readonly cidPattern = /^[a-zA-Z0-9]+$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
-		const { directory, name, spec, verbose, unchecked, rpc, replay, quickJS, peering, peeringPort: port } = config
+		const { directory, name, verbose, unchecked, rpc, replay, quickJS, peering, peeringPort: port } = config
+		let { spec } = config
 
 		if (verbose) {
 			console.log(`[canvas-core] Initializing core ${name}`)
@@ -89,6 +91,20 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			return CID.parse(cid)
 		})
+
+		try {
+			spec = transform(spec, {
+				transforms: ["jsx"],
+				jsxPragma: "React.createElement",
+				jsxFragmentPragma: "React.Fragment",
+				production: true,
+			}).code
+		} catch (err) {
+			if (verbose) {
+				console.log(chalk.red("Invalid spec:"), chalk.red(err))
+			}
+			throw err
+		}
 
 		const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
 		for (const [chain, chainIds] of Object.entries(rpc || {})) {
@@ -137,7 +153,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		const options = { verbose, unchecked, peering: true, sync: true }
-		const core = new Core(directory, name, cid, vm, exports, providers, libp2p, options)
+		const core = new Core(directory, name, cid, vm, exports, providers, libp2p, spec, options)
 
 		if (replay) {
 			console.log(chalk.green(`[canvas-core] Replaying action log...`))
@@ -183,6 +199,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly exports: Exports,
 		public readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {},
 		public readonly libp2p: Libp2p | null,
+		public readonly spec: string,
 		private readonly options: {
 			verbose?: boolean
 			unchecked?: boolean
@@ -191,6 +208,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	) {
 		super()
+		this.spec = spec
 		this.syncProtocol = `/x/canvas/sync/${cid.toString()}/0.0.0`
 
 		this.modelStore = new ModelStore(directory, exports.models, exports.routes, { verbose: options.verbose })
