@@ -1,15 +1,14 @@
 {
   "name": "@canvas-js/rpc",
   "version": "0.0.17",
-  "type": "module",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "exports": {
     "./sync": "./sync/index.js"
   },
   "scripts": {
     "generate": "npm run generate-js && npm run generate-ts",
-		"generate-js": "pbjs ./sync/index.proto -t static-module -w es6 -o ./sync/index.js",
-		"generate-ts": "pbts ./sync/index.js -o ./sync/index.d.ts"
+    "generate-js": "pbjs ./sync/index.proto -t static-module -o ./sync/index.js",
+    "generate-ts": "pbts ./sync/index.js -o ./sync/index.d.ts"
   },
   "files": [
     "sync/index.js",

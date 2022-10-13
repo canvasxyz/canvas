@@ -9,7 +9,7 @@ import { pipe } from "it-pipe"
 import * as lp from "it-length-prefixed"
 
 import * as okra from "node-okra"
-import { Request, Response } from "@canvas-js/rpc/sync"
+import RPC from "@canvas-js/rpc/sync"
 import { MessageStore } from "../message-store/store.js"
 import { encodeAction, encodeSession } from "../encoding.js"
 import { toBuffer, toHex } from "../utils.js"
@@ -29,9 +29,9 @@ export class Server {
 
 		async function* handle(source: Source<Uint8ArrayList>): AsyncIterable<Uint8Array> {
 			for await (const msg of source) {
-				const req = Request.decode(msg.subarray())
+				const req = RPC.Request.decode(msg.subarray())
 				const res = Server.handleRequest(messageStore, txn, req)
-				yield Response.encode(res).finish()
+				yield RPC.Response.encode(res).finish()
 			}
 		}
 
@@ -44,30 +44,30 @@ export class Server {
 		}
 	}
 
-	private static handleRequest(messageStore: MessageStore, txn: okra.Source, req: Request): Response {
+	private static handleRequest(messageStore: MessageStore, txn: okra.Source, req: RPC.Request): RPC.Response {
 		switch (req.request) {
 			case "getRoot":
 				assert(req.getRoot)
-				return Response.create({ seq: req.seq, getRoot: Server.getRoot(txn, req.getRoot) })
+				return RPC.Response.create({ seq: req.seq, getRoot: Server.getRoot(txn, req.getRoot) })
 			case "getChildren":
 				assert(req.getChildren)
-				return Response.create({ seq: req.seq, getChildren: Server.getChildren(txn, req.getChildren) })
+				return RPC.Response.create({ seq: req.seq, getChildren: Server.getChildren(txn, req.getChildren) })
 			case "getValues":
 				assert(req.getValues)
-				return Response.create({ seq: req.seq, getValues: Server.getValues(messageStore, req.getValues) })
+				return RPC.Response.create({ seq: req.seq, getValues: Server.getValues(messageStore, req.getValues) })
 			default:
 				throw new Error("invalid request type")
 		}
 	}
 
-	private static getRoot(txn: okra.Source, {}: Request.IGetRootRequest): Response.IGetRootResponse {
+	private static getRoot(txn: okra.Source, {}: RPC.Request.IGetRootRequest): RPC.Response.IGetRootResponse {
 		return { hash: txn.getRootHash(), level: txn.getRootLevel() }
 	}
 
 	private static getChildren(
 		txn: okra.Source,
-		{ level, leaf }: Request.IGetChildrenRequest
-	): Response.IGetChildrenResponse {
+		{ level, leaf }: RPC.Request.IGetChildrenRequest
+	): RPC.Response.IGetChildrenResponse {
 		assert(typeof level === "number" && level > 0)
 		assert(leaf instanceof Uint8Array)
 		return { nodes: txn.getChildren(level, toBuffer(leaf)) }
@@ -75,8 +75,8 @@ export class Server {
 
 	private static getValues(
 		messageStore: MessageStore,
-		{ nodes }: Request.IGetValuesRequest
-	): Response.IGetValuesResponse {
+		{ nodes }: RPC.Request.IGetValuesRequest
+	): RPC.Response.IGetValuesResponse {
 		assert(nodes)
 		return {
 			values: nodes.map(({ leaf, hash }, i) => {
