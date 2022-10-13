@@ -10,9 +10,6 @@
 		"types"
 	],
 	"scripts": {
-		"generate": "npm run generate-js && npm run generate-ts",
-		"generate-js": "pbjs ./message/sync.proto -t static-module -w es6 -o ./message/sync.js",
-		"generate-ts": "pbts ./message/sync.js -o ./message/sync.d.ts",
 		"test": "ava"
 	},
 	"dependencies": {
