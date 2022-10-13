@@ -3,13 +3,16 @@
 	"version": "0.0.17",
 	"author": "Canvas Technology Corporation (https://canvas.xyz)",
 	"type": "module",
-	"types": "lib/index.d.ts",
-	"main": "lib/index.js",
+	"types": "./lib/index.d.ts",
+	"main": "./lib/index.js",
 	"files": [
 		"lib",
 		"types"
 	],
 	"scripts": {
+		"generate": "npm run generate-js && npm run generate-ts",
+		"generate-js": "pbjs ./message/sync.proto -t static-module -w es6 -o ./message/sync.js",
+		"generate-ts": "pbts ./message/sync.js -o ./message/sync.d.ts",
 		"test": "ava"
 	},
 	"dependencies": {
@@ -33,6 +36,7 @@
 		"fp-ts": "^2.11.9",
 		"io-ts": "^2.2.16",
 		"ipfs-only-hash": "^4.0.0",
+		"it-pushable": "^3.1.0",
 		"it-stream-types": "^1.0.4",
 		"libp2p": "^0.39.5",
 		"microcbor": "^0.2.1",
@@ -40,7 +44,9 @@
 		"node-okra": "^0.0.1",
 		"p-queue": "^7.2.0",
 		"pg-promise": "^10.11.1",
+		"protobufjs": "~7.1.2",
 		"quickjs-emscripten": "^0.21.0",
+		"uint8arraylist": "^2.3.2",
 		"undici": "^5.11.0"
 	},
 	"devDependencies": {

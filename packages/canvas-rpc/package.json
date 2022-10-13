@@ -1,0 +1,16 @@
+{
+  "name": "@canvas-js/rpc",
+  "version": "0.0.17",
+  "type": "module",
+  "author": "Canvas Technology Corporation (https://canvas.xyz)",
+  "exports": {
+    "./sync": "./sync/index.js"
+  },
+  "files": [
+    "sync/index.js",
+    "sync/index.d.ts"
+  ],
+  "dependencies": {
+    "protobufjs": "~7.1.2"
+  }
+}
