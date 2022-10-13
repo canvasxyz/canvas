@@ -41,13 +41,13 @@ export const builder = (yargs: yargs.Argv) =>
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { name, directory, spec } = await locateSpec(args.spec, args.ipfs)
+	const { uri, directory, spec } = await locateSpec(args.spec, args.ipfs)
 
 	const quickJS = await getQuickJS()
 
 	const rpc = setupRpcs(args["chain-rpc"])
 
-	const core = await Core.initialize({ name, directory, spec, quickJS, verbose: args.verbose, rpc })
+	const core = await Core.initialize({ uri, directory, spec, quickJS, verbose: args.verbose, rpc })
 
 	const rl = readline.createInterface({
 		input: process.stdin,

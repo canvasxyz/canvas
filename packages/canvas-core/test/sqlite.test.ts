@@ -12,7 +12,7 @@ const quickJS = await getQuickJS()
 const signer = ethers.Wallet.createRandom()
 const signerAddress = signer.address.toLowerCase()
 
-const { spec, name } = await compileSpec({
+const { spec, uri } = await compileSpec({
 	models: {
 		threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" },
 		thread_votes: {
@@ -47,14 +47,14 @@ const { spec, name } = await compileSpec({
 
 async function sign(call: string, args: ActionArgument[]) {
 	const timestamp = Date.now()
-	const actionPayload = { from: signerAddress, spec: name, call, args, timestamp }
+	const actionPayload = { from: signerAddress, spec: uri, call, args, timestamp }
 	const actionSignatureData = getActionSignatureData(actionPayload)
 	const actionSignature = await signer._signTypedData(...actionSignatureData)
 	return { payload: actionPayload, session: null, signature: actionSignature }
 }
 
 test("get /all", async (t) => {
-	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, quickJS, unchecked: true })
 
 	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash } = await core.applyAction(action)
@@ -79,7 +79,7 @@ test("get /all", async (t) => {
 })
 
 test("get /votes/:thread_id", async (t) => {
-	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, quickJS, unchecked: true })
 
 	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash } = await core.applyAction(action)

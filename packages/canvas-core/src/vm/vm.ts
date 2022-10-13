@@ -43,7 +43,7 @@ type ContractFunctionResult = string | boolean | number | bigint
 
 export class VM {
 	public static async initialize(
-		name: string,
+		uri: string,
 		spec: string,
 		providers: Record<string, ethers.providers.JsonRpcProvider>,
 		quickJS: QuickJSWASMModule,
@@ -53,7 +53,7 @@ export class VM {
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(VM.RUNTIME_MEMORY_LIMIT)
 
-		const moduleHandle = await loadModule(context, name, spec)
+		const moduleHandle = await loadModule(context, uri, spec)
 		const {
 			models: modelsHandle,
 			routes: routesHandle,

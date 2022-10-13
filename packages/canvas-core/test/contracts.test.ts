@@ -26,7 +26,7 @@ test("Test calling the public ENS resolver contract", async (t) => {
 		return
 	}
 
-	const { name, spec } = await compileSpec({
+	const { uri, spec } = await compileSpec({
 		models: {},
 		actions: {
 			async verify() {
@@ -47,13 +47,13 @@ test("Test calling the public ENS resolver contract", async (t) => {
 	})
 
 	const rpc = { eth: { [ETH_CHAIN_ID]: ETH_CHAIN_RPC } }
-	const core = await Core.initialize({ name, directory: null, spec, quickJS, rpc })
+	const core = await Core.initialize({ uri, directory: null, spec, quickJS, rpc })
 	const provider = core.providers["eth:1"]
 
 	async function sign(call: string, args: ActionArgument[]): Promise<Action> {
 		const timestamp = Date.now()
 		const block = await getCurrentBlock(provider)
-		const actionPayload: ActionPayload = { from: signerAddress, spec: name, call, args, timestamp, block }
+		const actionPayload: ActionPayload = { from: signerAddress, spec: uri, call, args, timestamp, block }
 		const actionSignatureData = getActionSignatureData(actionPayload)
 		const actionSignature = await signer._signTypedData(...actionSignatureData)
 

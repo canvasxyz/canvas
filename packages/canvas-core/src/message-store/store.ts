@@ -20,7 +20,7 @@ export class MessageStore {
 	public readonly database: sqlite.Database
 	private readonly statements: Record<keyof typeof MessageStore.statements, sqlite.Statement>
 
-	constructor(public readonly name: string, directory: string | null, options: { verbose?: boolean } = {}) {
+	constructor(public readonly uri: string, directory: string | null, options: { verbose?: boolean } = {}) {
 		if (directory === null) {
 			if (options.verbose) {
 				console.log("[canvas-core] Initializing in-memory message store")
@@ -47,7 +47,7 @@ export class MessageStore {
 	}
 
 	public insertAction(hash: string | Buffer, action: Action) {
-		assert(action.payload.spec === this.name, "insertAction: action.payload.spec did not match MessageStore.name")
+		assert(action.payload.spec === this.uri, "insertAction: action.payload.spec did not match MessageStore.name")
 
 		const args = cbor.encode(action.payload.args)
 
@@ -74,7 +74,7 @@ export class MessageStore {
 	}
 
 	public insertSession(hash: string | Buffer, session: Session) {
-		assert(session.payload.spec === this.name, "insertSession: session.payload.spec did not match MessageStore.name")
+		assert(session.payload.spec === this.uri, "insertSession: session.payload.spec did not match MessageStore.uri")
 
 		const record: SessionRecord = {
 			hash: typeof hash === "string" ? fromHex(hash) : hash,
@@ -106,7 +106,7 @@ export class MessageStore {
 			signature: toHex(record.signature),
 			session: record.session_address && toHex(record.session_address),
 			payload: {
-				spec: this.name,
+				spec: this.uri,
 				from: toHex(record.from_address),
 				call: record.call,
 				args: cbor.decode(record.args) as ActionArgument[],
@@ -145,7 +145,7 @@ export class MessageStore {
 		const session: Session = {
 			signature: toHex(record.signature),
 			payload: {
-				spec: this.name,
+				spec: this.uri,
 				from: toHex(record.from_address),
 				timestamp: record.timestamp,
 				address: toHex(record.session_address),

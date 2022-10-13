@@ -35,9 +35,9 @@ export async function confirmOrExit(message: string) {
 export const cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 
 interface LocateSpecResult {
-	name: string
-	directory: string | null
+	uri: string
 	spec: string
+	directory: string | null
 	peerId: PeerId | undefined
 }
 
@@ -59,7 +59,7 @@ export async function locateSpec(name: string, ipfsGatewayURL: string): Promise<
 		const specPath = path.resolve(CANVAS_HOME, name, SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const spec = fs.readFileSync(specPath, "utf-8")
-			return { name, directory, spec, peerId }
+			return { uri: `ipfs://${name}`, directory, spec, peerId }
 		} else {
 			if (!fs.existsSync(directory)) {
 				console.log(`[canvas-cli] Creating directory ${directory}`)
@@ -69,17 +69,18 @@ export async function locateSpec(name: string, ipfsGatewayURL: string): Promise<
 			const spec = await download(name, ipfsGatewayURL)
 			fs.writeFileSync(specPath, spec)
 			console.log(`[canvas-cli] Downloaded spec to ${specPath}`)
-			return { name, directory, spec, peerId }
+			return { uri: `ipfs://${name}`, directory, spec, peerId }
 		}
 	} else if (name.endsWith(".js") || name.endsWith(".jsx")) {
 		const specPath = path.resolve(name)
 		let spec = fs.readFileSync(specPath, "utf-8")
-		return { name: specPath, directory: null, spec, peerId }
+		return { uri: `file://${specPath}`, directory: null, spec, peerId }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js/.jsx file"))
 		process.exit(1)
 	}
 }
+
 export function setupRpcs(args?: Array<string | number>): Partial<Record<Chain, Record<string, string>>> {
 	const rpcs: Partial<Record<Chain, Record<string, string>>> = {}
 	if (args) {

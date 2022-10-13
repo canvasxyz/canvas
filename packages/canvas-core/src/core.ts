@@ -24,7 +24,7 @@ import { KadDHT } from "@libp2p/kad-dht"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 
-import type { Message as PubSubMessage } from "@libp2p/interface-pubsub"
+import type { SignedMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
@@ -52,8 +52,8 @@ import { MessageStore } from "./message-store/store.js"
 import { handleSource, handleTarget, Message } from "./sync.js"
 
 export interface CoreConfig {
-	name: string
 	directory: string | null
+	uri: string
 	spec: string
 	quickJS: QuickJSWASMModule
 	replay?: boolean
@@ -74,18 +74,21 @@ interface CoreEvents {
 
 export class Core extends EventEmitter<CoreEvents> {
 	public static readonly MST_FILENAME = "mst.okra"
-	private static readonly cidPattern = /^[a-zA-Z0-9]+$/
+	private static readonly ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
+	private static readonly fileURIPattern = /^file:\/\/(.+)$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
-		const { directory, name, verbose, unchecked, rpc, replay, quickJS, peering, peeringPort: port } = config
+		const { directory, uri, verbose, unchecked, rpc, replay, quickJS, peering, peeringPort: port } = config
 		let { spec } = config
 
 		if (verbose) {
-			console.log(`[canvas-core] Initializing core ${name}`)
+			console.log(`[canvas-core] Initializing core ${uri}`)
 		}
 
+		assert(Core.ipfsURIPattern.test(uri) || Core.fileURIPattern.test(uri), "Core.uri must be an ipfs:// or file:// URI")
+
 		const cid = await Hash.of(spec).then((cid) => {
-			if (Core.cidPattern.test(name)) {
-				assert(cid === name, "Core.name is not equal to the hash of the provided spec.")
+			if (Core.ipfsURIPattern.test(uri)) {
+				assert(uri === `ipfs://${cid}`, "Core.uri is not equal to the hash of the provided spec.")
 			}
 
 			return CID.parse(cid)
@@ -113,7 +116,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		const { vm, exports } = await VM.initialize(name, spec, providers, quickJS, { verbose })
+		const { vm, exports } = await VM.initialize(uri, spec, providers, quickJS, { verbose })
 
 		let libp2p: Libp2p | null = null
 		if (directory !== null && peering) {
@@ -152,7 +155,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		const options = { verbose, unchecked, peering: true, sync: true }
-		const core = new Core(directory, name, cid, vm, exports, providers, libp2p, spec, options)
+		const core = new Core(directory, uri, cid, vm, exports, providers, libp2p, spec, options)
 
 		if (replay) {
 			console.log(chalk.green(`[canvas-core] Replaying action log...`))
@@ -173,7 +176,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		if (verbose) {
-			console.log(`[canvas-core] Successfully initialized core ${config.name}`)
+			console.log(`[canvas-core] Successfully initialized core ${config.uri}`)
 		}
 
 		return core
@@ -191,7 +194,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private constructor(
 		public readonly directory: string | null,
-		public readonly name: string,
+		public readonly uri: string,
 		public readonly cid: CID,
 		public readonly vm: VM,
 		public readonly exports: Exports,
@@ -210,7 +213,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.syncProtocol = `/x/canvas/sync/${cid.toString()}/0.0.0`
 
 		this.modelStore = new ModelStore(directory, exports.models, exports.routes, { verbose: options.verbose })
-		this.messageStore = new MessageStore(name, directory, { verbose: options.verbose })
+		this.messageStore = new MessageStore(uri, directory, { verbose: options.verbose })
 		this.mst = directory ? new okra.Tree(path.resolve(directory, Core.MST_FILENAME)) : null
 
 		this.queue = new PQueue({ concurrency: 1 })
@@ -236,9 +239,14 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (this.libp2p !== null) {
 			if (options.peering) {
-				this.libp2p.pubsub.subscribe(this.cid.toString())
-				this.libp2p.pubsub.addEventListener("message", this.handleMessage)
-				console.log(`[canvas-core] Subscribed to pubsub topic ${this.cid.toString()}`)
+				this.libp2p.pubsub.subscribe(this.uri)
+				this.libp2p.pubsub.addEventListener("message", ({ detail: message }) => {
+					if (message.type === "signed" && message.topic === this.uri) {
+						this.handleMessage(message)
+					}
+				})
+
+				console.log(`[canvas-core] Subscribed to pubsub topic ${this.uri}`)
 			}
 
 			if (options.sync) {
@@ -270,7 +278,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		if (this.libp2p !== null) {
-			this.libp2p.pubsub.unsubscribe(this.cid.toString())
+			this.libp2p.pubsub.unsubscribe(this.uri)
 			this.libp2p.pubsub.removeEventListener("message")
 			this.libp2p.connectionManager.removeEventListener("peer:connect")
 			this.libp2p.connectionManager.removeEventListener("peer:disconnect")
@@ -281,8 +289,6 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		await this.queue.onIdle()
 
-		// TODO: think about when and how to close the model store.
-		// Right now the model store implementation doesn't actually need closing.
 		this.vm.dispose()
 		this.messageStore.close()
 		this.modelStore.close()
@@ -387,7 +393,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		const { timestamp, block, spec } = action.payload
 		const fromAddress = action.payload.from.toLowerCase()
 
-		assert(spec === this.name, "session signed for wrong spec")
+		assert(spec === this.uri, "action signed for wrong spec")
 
 		// check the timestamp bounds
 		assert(timestamp > Core.boundsCheckLowerLimit, "action timestamp too far in the past")
@@ -464,7 +470,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private async validateSession(session: Session, options: { sync?: boolean }) {
 		const { from, spec, timestamp, block } = session.payload
-		assert(spec === this.name, "session signed for wrong spec")
+		assert(spec === this.uri, "session signed for wrong spec")
 
 		const verifiedAddress = verifySessionSignature(session)
 		assert(verifiedAddress.toLowerCase() === from.toLowerCase(), "session signed by wrong address")
@@ -518,11 +524,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 	}
 
-	private handleMessage = async ({ detail: { topic, data } }: CustomEvent<PubSubMessage>) => {
-		if (topic !== this.cid.toString()) {
-			return
-		}
-
+	private async handleMessage({ topic, data }: SignedMessage) {
 		let decodedMessage: ReturnType<typeof decodeBinaryMessage>
 		try {
 			decodedMessage = decodeBinaryMessage(data)
@@ -625,6 +627,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private findPeers = async (signal: AbortSignal): Promise<PeerId[]> => {
 		const peers: PeerId[] = []
+		this.libp2p?.pubsub.getSubscribers(this.uri)
 
 		if (this.libp2p !== null) {
 			for await (const { id } of this.libp2p.contentRouting.findProviders(this.cid, { signal })) {

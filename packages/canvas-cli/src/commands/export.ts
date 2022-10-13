@@ -28,10 +28,10 @@ export const builder = (yargs: yargs.Argv) =>
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { directory, name, spec } = await locateSpec(args.spec, args.ipfs)
+	const { directory, spec, uri } = await locateSpec(args.spec, args.ipfs)
 
 	const quickJS = await getQuickJS()
-	const core = await Core.initialize({ directory, name, spec, quickJS, unchecked: true })
+	const core = await Core.initialize({ directory, spec, uri, quickJS, unchecked: true })
 
 	let i = 0
 	for await (const [_, session] of core.messageStore.getSessionStream()) {

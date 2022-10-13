@@ -30,19 +30,23 @@ export class API {
 		api.use(cors({ exposedHeaders: ["ETag"] }))
 		api.use(bodyParser.json())
 
+		const cid = core.cid.toString()
+		const link = core.uri === cid ? `ipfs://${core.uri}` : `file://${core.uri}`
 		api.head("/", (req, res) => {
 			res.status(StatusCodes.OK)
-			res.header("ETag", `"${core.name}-${core.cid.toString()}"`)
+			res.header("ETag", `"${cid}"`)
+			res.header("Link", `<${link}>; rel="self"`)
 			res.header("Content-Type", "application/json")
 			res.end()
 		})
 
 		api.get("/", (req: Request, res: Response) => {
-			res.header("ETag", `"${core.name}-${core.cid.toString()}"`)
+			res.header("ETag", `"${cid}"`)
+			res.header("Link", `<${link}>; rel="self"`)
 			if (req.query.spec === "true") {
-				res.json({ name: core.name, spec: core.spec })
+				res.json({ name: core.uri, spec: core.spec })
 			} else {
-				res.json({ name: core.name })
+				res.json({ name: core.uri })
 			}
 		})
 
@@ -55,7 +59,7 @@ export class API {
 
 		this.server = stoppable(
 			api.listen(port, () => {
-				console.log(`Serving ${core.name} on port ${port}:`)
+				console.log(`Serving ${core.uri} on port ${port}:`)
 				console.log(`└ GET http://localhost:${port}/`)
 				for (const name of Object.keys(core.exports.routeParameters)) {
 					console.log(`└ GET http://localhost:${port}${name}`)

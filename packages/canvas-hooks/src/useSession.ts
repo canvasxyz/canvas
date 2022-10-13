@@ -28,7 +28,7 @@ type SessionObject = {
 
 export function useSession(
 	host: string,
-	multihash: string | null,
+	uri: string | null,
 	address: string | null,
 	signer: ethers.providers.JsonRpcSigner | null,
 	provider: ethers.providers.Provider | null
@@ -41,7 +41,7 @@ export function useSession(
 	const [sessionSigner, setSessionSigner] = useState<ethers.Wallet | null>(null)
 	const [sessionExpiration, setSessionExpiration] = useState<number>(0)
 
-	const loadExistingSession = useCallback((multihash: string, address: string, value: string | null) => {
+	const loadExistingSession = useCallback((uri: string, address: string, value: string | null) => {
 		if (value !== null) {
 			let sessionObject: SessionObject
 			try {
@@ -53,7 +53,7 @@ export function useSession(
 				return
 			}
 
-			if (sessionObject.spec === multihash && sessionObject.forPublicKey === address) {
+			if (sessionObject.spec === uri && sessionObject.forPublicKey === address) {
 				const sessionSigner = new ethers.Wallet(sessionObject.sessionPrivateKey)
 				setSessionSigner(sessionSigner)
 				setSessionExpiration(sessionObject.expiration)
@@ -73,11 +73,11 @@ export function useSession(
 	// }, [])
 
 	useEffect(() => {
-		if (multihash !== null && address !== null) {
+		if (uri !== null && address !== null) {
 			const item = localStorage.getItem(CANVAS_SESSION_KEY)
-			loadExistingSession(multihash, address, item)
+			loadExistingSession(uri, address, item)
 		}
-	}, [multihash, address])
+	}, [uri, address])
 
 	const dispatch = useCallback(
 		async (call: string, ...args: ActionArgument[]) => {
@@ -85,13 +85,13 @@ export function useSession(
 				throw new Error("no web3 provider found")
 			} else if (host === undefined) {
 				throw new Error("no host configured")
-			} else if (multihash === null || address === null || signer === null) {
+			} else if (uri === null || address === null || signer === null) {
 				throw new Error("dispatch called too early")
 			}
 
 			let contextSessionSigner = sessionSigner
 			if (sessionSigner === null || sessionExpiration < +Date.now()) {
-				const session = await newSession(signer, host, multihash, provider)
+				const session = await newSession(signer, host, uri, provider)
 				localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(session[1]))
 				setSessionSigner(session[0])
 				setSessionExpiration(session[1].expiration)
@@ -114,11 +114,11 @@ export function useSession(
 				console.error(err)
 				throw err
 			}
-			const payload: ActionPayload = { from: address, spec: multihash, call, args, timestamp, block }
+			const payload: ActionPayload = { from: address, spec: uri, call, args, timestamp, block }
 
 			await send(host, contextSessionSigner, payload)
 		},
-		[host, multihash, address, signer, sessionSigner, sessionExpiration]
+		[host, uri, address, signer, sessionSigner, sessionExpiration]
 	)
 
 	const session = sessionSigner && {
@@ -130,17 +130,17 @@ export function useSession(
 		if (provider === null) {
 			throw new Error("no web3 provider found")
 		}
-		if (multihash === null) {
+		if (uri === null) {
 			throw new Error("failed to connect to application backend")
 		}
 		if (signer === null) {
 			throw new Error("must have connected web3 signer to log in")
 		}
-		const [sessionSigner, sessionObject] = await newSession(signer, host, multihash, provider)
+		const [sessionSigner, sessionObject] = await newSession(signer, host, uri, provider)
 		localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(sessionObject))
 		setSessionSigner(sessionSigner)
 		setSessionExpiration(sessionObject.expiration)
-	}, [host, multihash, signer, sessionSigner, sessionExpiration])
+	}, [host, uri, signer, sessionSigner, sessionExpiration])
 
 	const disconnect = useCallback(async () => {
 		setSessionSigner(null)
@@ -154,7 +154,7 @@ export function useSession(
 async function newSession(
 	signer: ethers.providers.JsonRpcSigner,
 	host: string,
-	multihash: string,
+	uri: string,
 	provider: ethers.providers.Provider
 ): Promise<[ethers.Wallet, SessionObject]> {
 	const timestamp = Date.now().valueOf()
@@ -165,7 +165,7 @@ async function newSession(
 	const from = address.toLowerCase()
 
 	const sessionObject: SessionObject = {
-		spec: multihash,
+		spec: uri,
 		forPublicKey: from,
 		sessionPrivateKey: sessionSigner.privateKey,
 		expiration: timestamp + sessionDuration,
@@ -185,9 +185,10 @@ async function newSession(
 		console.error(err)
 		throw err
 	}
+
 	const payload: SessionPayload = {
 		from: from,
-		spec: multihash,
+		spec: uri,
 		address: sessionSigner.address,
 		duration: sessionDuration,
 		timestamp,
