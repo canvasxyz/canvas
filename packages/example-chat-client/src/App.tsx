@@ -70,7 +70,10 @@ export const App: React.FC<{}> = ({}) => {
 							<div className="text-gray-400">Select an app</div>
 						) : (
 							<>
-								<div className="w-72 h-96 border border-gray-200 rounded-lg shadow-lg bg-white">
+								<div
+									className="relative overflow-scroll border border-gray-200 rounded-lg shadow-lg bg-white"
+									style={{ width: 360, height: 500 }}
+								>
 									<Modular hash={selectedHash} />
 								</div>
 								<div className="m-1 mt-8 font-mono text-sm text-gray-400">Loading {selectedHash} ...</div>
@@ -124,6 +127,7 @@ export const Modular: React.FC<{ hash: string }> = ({ hash }) => {
 		useState,
 		useMemo,
 		useRef,
+		useEffect,
 	}
 
 	return <ModularChild routes={routes} actions={actions} hooks={hooks} fn={mod.fn} />
