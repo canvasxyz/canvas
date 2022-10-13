@@ -18,7 +18,8 @@ import { CanvasSession } from "./useSession.js"
  *   expired, then this will prompt the user to sign a new session key.
  */
 export function useCanvas(): {
-	multihash: string | null
+	cid: string | null
+	uri: string | null
 	error: Error | null
 	loading: boolean
 	address: string | null
@@ -28,7 +29,7 @@ export function useCanvas(): {
 	connectNewSession: () => Promise<void>
 	disconnect: () => Promise<void>
 } {
-	const { multihash, error, loading, address, session, dispatch, connect, connectNewSession, disconnect } =
+	const { cid, uri, error, loading, address, session, dispatch, connect, connectNewSession, disconnect } =
 		useContext(CanvasContext)
-	return { multihash, error, loading, address, session, dispatch, connect, connectNewSession, disconnect }
+	return { cid, uri, error, loading, address, session, dispatch, connect, connectNewSession, disconnect }
 }

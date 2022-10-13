@@ -62,7 +62,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	actions: Record<string, (this: Context<Models>, ...args: ActionArgument[]) => void>
 	routes?: Record<string, string>
 	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
-}): Promise<{ name: string; spec: string }> {
+}): Promise<{ uri: string; spec: string }> {
 	const { models, actions, routes, contracts } = exports
 
 	const actionEntries = Object.entries(actions).map(([name, action]) => {
@@ -86,8 +86,8 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	}
 
 	const spec = lines.join("\n")
-	const name = await Hash.of(spec)
-	return { name, spec }
+	const cid = await Hash.of(spec)
+	return { uri: `ipfs://${cid}`, spec }
 }
 
 // add elements with CacheMap.add(key, value) and they'll

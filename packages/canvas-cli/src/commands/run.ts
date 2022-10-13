@@ -23,10 +23,6 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "string",
 			demandOption: true,
 		})
-		.option("database", {
-			type: "string",
-			desc: "Override database URI",
-		})
 		.option("port", {
 			type: "number",
 			desc: "Port to bind the core API",
@@ -83,7 +79,7 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
-	const { name, directory, spec, peerId } = await locateSpec(args.spec, args.ipfs)
+	const { uri, directory, spec, peerId } = await locateSpec(args.spec, args.ipfs)
 
 	if (directory === null) {
 		if (args.peering) {
@@ -111,10 +107,6 @@ export async function handler(args: Args) {
 		if (fs.existsSync(mstPath)) {
 			fs.rmSync(mstPath)
 			console.log(`[canvas-cli] Deleted ${mstPath}`)
-		}
-
-		if (args.database !== undefined) {
-			console.log(`[canvas-cli] The provided database at ${args.database} was not changed.`)
 		}
 	} else if (args.replay) {
 		await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
@@ -163,13 +155,13 @@ export async function handler(args: Args) {
 
 	const quickJS = await getQuickJS()
 
-	const { database: databaseURI, verbose, replay, unchecked, peering, "peering-port": peeringPort } = args
+	const { verbose, replay, unchecked, peering, "peering-port": peeringPort } = args
 
 	let core: Core
 	try {
 		core = await Core.initialize({
 			directory,
-			name,
+			uri,
 			spec,
 			rpc,
 			quickJS,

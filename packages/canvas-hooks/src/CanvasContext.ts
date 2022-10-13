@@ -6,7 +6,8 @@ import { CanvasSession } from "./useSession.js"
 
 export interface CanvasContextValue {
 	host?: string
-	multihash: string | null
+	cid: string | null
+	uri: string | null
 	error: Error | null
 	loading: boolean
 	address: string | null
@@ -18,7 +19,8 @@ export interface CanvasContextValue {
 }
 
 export const CanvasContext = createContext<CanvasContextValue>({
-	multihash: null,
+	cid: null,
+	uri: null,
 	error: null,
 	loading: true,
 	address: null,

@@ -12,7 +12,7 @@ const quickJS = await getQuickJS()
 const signer = ethers.Wallet.createRandom()
 const signerAddress = signer.address.toLowerCase()
 
-const { spec, name } = await compileSpec({
+const { spec, uri } = await compileSpec({
 	models: {
 		threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" },
 		thread_votes: {
@@ -43,14 +43,14 @@ const { spec, name } = await compileSpec({
 
 async function sign(call: string, args: ActionArgument[]) {
 	const timestamp = Date.now()
-	const actionPayload = { from: signerAddress, spec: name, call, args, timestamp }
+	const actionPayload = { from: signerAddress, spec: uri, call, args, timestamp }
 	const actionSignatureData = getActionSignatureData(actionPayload)
 	const actionSignature = await signer._signTypedData(...actionSignatureData)
 	return { payload: actionPayload, session: null, signature: actionSignature }
 }
 
 test("Apply signed action", async (t) => {
-	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, quickJS, unchecked: true })
 
 	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash } = await core.applyAction(action)
@@ -69,7 +69,7 @@ test("Apply signed action", async (t) => {
 })
 
 test("Apply two signed actions", async (t) => {
-	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, quickJS, unchecked: true })
 
 	const newThreadAction = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash: newThreadHash } = await core.applyAction(newThreadAction)
@@ -97,18 +97,18 @@ const sessionSignerAddress = await sessionSigner.getAddress()
 
 async function signWithSession(call: string, args: ActionArgument[]) {
 	const timestamp = Date.now()
-	const actionPayload = { from: signerAddress, spec: name, call, args, timestamp }
+	const actionPayload = { from: signerAddress, spec: uri, call, args, timestamp }
 	const actionSignatureData = getActionSignatureData(actionPayload)
 	const actionSignature = await sessionSigner._signTypedData(...actionSignatureData)
 	return { payload: actionPayload, session: sessionSignerAddress, signature: actionSignature }
 }
 
 test("Apply action signed with session key", async (t) => {
-	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, quickJS, unchecked: true })
 
 	const sessionPayload: SessionPayload = {
 		from: signerAddress,
-		spec: name,
+		spec: uri,
 		timestamp: Date.now(),
 		address: sessionSignerAddress,
 		duration: 60 * 60 * 1000, // 1 hour
@@ -136,11 +136,11 @@ test("Apply action signed with session key", async (t) => {
 })
 
 test("Apply two actions signed with session keys", async (t) => {
-	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, quickJS, unchecked: true })
 
 	const sessionPayload: SessionPayload = {
 		from: signerAddress,
-		spec: name,
+		spec: uri,
 		timestamp: Date.now(),
 		address: sessionSignerAddress,
 		duration: 60 * 60 * 1000, // 1 hour
@@ -171,7 +171,7 @@ test("Apply two actions signed with session keys", async (t) => {
 })
 
 test("Apply an action with a missing signature", async (t) => {
-	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, quickJS, unchecked: true })
 	const action = await sign("newThread", ["Example Website", "http://example.com"])
 	action.signature = "0x00"
 	await t.throwsAsync(core.applyAction(action), { instanceOf: Error, code: "INVALID_ARGUMENT" })
@@ -179,7 +179,7 @@ test("Apply an action with a missing signature", async (t) => {
 })
 
 test("Apply an action signed by wrong address", async (t) => {
-	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, quickJS, unchecked: true })
 	const action = await sign("newThread", ["Example Website", "http://example.com"])
 	action.payload.from = sessionSignerAddress
 	await t.throwsAsync(core.applyAction(action), { instanceOf: Error, message: "action signed by wrong address" })
@@ -187,7 +187,7 @@ test("Apply an action signed by wrong address", async (t) => {
 })
 
 test("Apply an action that throws an error", async (t) => {
-	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, quickJS, unchecked: true })
 
 	const newThreadAction = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash: newThreadHash } = await core.applyAction(newThreadAction)
