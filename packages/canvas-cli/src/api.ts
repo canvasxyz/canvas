@@ -39,7 +39,7 @@ export class API {
 		})
 
 		api.get("/", (req: Request, res: Response) => {
-			res.header("ETag", `"${core.cid.toString}"`)
+			res.header("ETag", `"${core.cid.toString()}"`)
 			res.header("Link", `<${core.uri}>; rel="self"`)
 			if (req.query.spec === "true") {
 				res.json({ name: core.uri, spec: core.spec })
