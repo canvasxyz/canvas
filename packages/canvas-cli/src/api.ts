@@ -27,22 +27,20 @@ export class API {
 		this.verbose = verbose
 
 		const api = express()
-		api.use(cors({ exposedHeaders: ["ETag"] }))
+		api.use(cors({ exposedHeaders: ["ETag", "Link"] }))
 		api.use(bodyParser.json())
 
-		const cid = core.cid.toString()
-		const link = core.uri === cid ? `ipfs://${core.uri}` : `file://${core.uri}`
 		api.head("/", (req, res) => {
 			res.status(StatusCodes.OK)
-			res.header("ETag", `"${cid}"`)
-			res.header("Link", `<${link}>; rel="self"`)
+			res.header("ETag", `"${core.cid.toString()}"`)
+			res.header("Link", `<${core.uri}>; rel="self"`)
 			res.header("Content-Type", "application/json")
 			res.end()
 		})
 
 		api.get("/", (req: Request, res: Response) => {
-			res.header("ETag", `"${cid}"`)
-			res.header("Link", `<${link}>; rel="self"`)
+			res.header("ETag", `"${core.cid.toString}"`)
+			res.header("Link", `<${core.uri}>; rel="self"`)
 			if (req.query.spec === "true") {
 				res.json({ name: core.uri, spec: core.spec })
 			} else {
