@@ -14,6 +14,7 @@
 	},
 	"dependencies": {
 		"@canvas-js/interfaces": "0.0.17",
+		"@canvas-js/rpc": "0.0.17",
 		"@chainsafe/libp2p-gossipsub": "^4.1.1",
 		"@chainsafe/libp2p-noise": "^9.0.0",
 		"@libp2p/bootstrap": "^4.0.0",
