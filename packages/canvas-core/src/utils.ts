@@ -152,3 +152,8 @@ export async function retry<T>(
 		}
 	}
 }
+
+export const toBuffer = (array: Uint8Array) => Buffer.from(array.buffer, array.byteOffset, array.byteLength)
+
+export const toHex = (hash: Uint8Array | Buffer) =>
+	`0x${(Buffer.isBuffer(hash) ? hash : toBuffer(hash)).toString("hex")}`

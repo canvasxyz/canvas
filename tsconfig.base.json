@@ -8,6 +8,9 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "removeComments": true,
-    "skipLibCheck": true
+    "baseUrl": ".",
+    "paths": {
+      "@canvas-js/rpc/sync": ["./packages/canvas-rpc/sync/index.d.ts"]
+    }
   },
 }

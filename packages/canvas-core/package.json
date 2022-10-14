@@ -3,8 +3,8 @@
 	"version": "0.0.17",
 	"author": "Canvas Technology Corporation (https://canvas.xyz)",
 	"type": "module",
-	"types": "lib/index.d.ts",
-	"main": "lib/index.js",
+	"types": "./lib/index.d.ts",
+	"main": "./lib/index.js",
 	"files": [
 		"lib",
 		"types"
@@ -14,6 +14,7 @@
 	},
 	"dependencies": {
 		"@canvas-js/interfaces": "0.0.17",
+		"@canvas-js/rpc": "0.0.17",
 		"@chainsafe/libp2p-gossipsub": "^4.1.1",
 		"@chainsafe/libp2p-noise": "^9.0.0",
 		"@libp2p/bootstrap": "^4.0.0",
@@ -33,6 +34,7 @@
 		"fp-ts": "^2.11.9",
 		"io-ts": "^2.2.16",
 		"ipfs-only-hash": "^4.0.0",
+		"it-pushable": "^3.1.0",
 		"it-stream-types": "^1.0.4",
 		"libp2p": "^0.39.5",
 		"microcbor": "^0.2.1",
@@ -40,7 +42,9 @@
 		"node-okra": "^0.0.1",
 		"p-queue": "^7.2.0",
 		"pg-promise": "^10.11.1",
+		"protobufjs": "~7.1.2",
 		"quickjs-emscripten": "^0.21.0",
+		"uint8arraylist": "^2.3.2",
 		"sucrase": "^3.28.0",
 		"undici": "^5.11.0"
 	},

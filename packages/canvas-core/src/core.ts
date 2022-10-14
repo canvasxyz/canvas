@@ -49,7 +49,8 @@ import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash
 import { ModelStore } from "./model-store/index.js"
 import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./message-store/store.js"
-import { handleSource, handleTarget, Message } from "./sync.js"
+
+import * as RPC from "./rpc/index.js"
 
 export interface CoreConfig {
 	directory: string | null
@@ -185,6 +186,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly modelStore: ModelStore
 	public readonly messageStore: MessageStore
 	public readonly mst: okra.Tree | null
+	public readonly rpcServer: RPC.Server | null
 
 	private readonly blockCache: Record<string, CacheMap<string, { number: number; timestamp: number }>> = {}
 	private readonly blockCacheMostRecentTimestamp: Record<string, number> = {}
@@ -210,11 +212,17 @@ export class Core extends EventEmitter<CoreEvents> {
 	) {
 		super()
 		this.spec = spec
-		this.syncProtocol = `/x/canvas/sync/${cid.toString()}/0.0.0`
+		this.syncProtocol = `/x/canvas/sync/${cid.toString()}`
 
 		this.modelStore = new ModelStore(directory, exports.models, exports.routes, { verbose: options.verbose })
 		this.messageStore = new MessageStore(uri, directory, { verbose: options.verbose })
-		this.mst = directory ? new okra.Tree(path.resolve(directory, Core.MST_FILENAME)) : null
+		if (directory === null) {
+			this.rpcServer = null
+			this.mst = null
+		} else {
+			this.mst = new okra.Tree(path.resolve(directory, Core.MST_FILENAME))
+			this.rpcServer = new RPC.Server({ mst: this.mst, messageStore: this.messageStore })
+		}
 
 		this.queue = new PQueue({ concurrency: 1 })
 
@@ -546,23 +554,17 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {
+		if (this.rpcServer === null) {
+			return
+		}
+
 		if (this.options.verbose) {
 			console.log(`[canvas-core] Handling incoming stream ${stream.id} from peer ${connection.remotePeer.toString()}`)
 		}
 
-		if (this.mst !== null) {
-			const source = new okra.Source(this.mst)
-			try {
-				await handleSource(stream, source, this.messageStore)
-			} catch (err) {
-				console.log(chalk.red(`[canvas-core] Error in incoming stream handler`), err)
-			}
-
-			source.close()
-
-			if (this.options.verbose) {
-				console.log(`[canvas-core] Closed incoming stream ${stream.id}`)
-			}
+		await this.rpcServer.handleIncomingStream(stream)
+		if (this.options.verbose) {
+			console.log(`[canvas-core] Closed incoming stream ${stream.id}`)
 		}
 	}
 
@@ -662,14 +664,11 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		const closeStream = () => stream.close()
-
 		signal.addEventListener("abort", closeStream)
-
-		const target = new okra.Target(this.mst)
 
 		let successCount = 0
 		let failureCount = 0
-		const applyBatch = (messages: Iterable<[string, Message]>) =>
+		const applyBatch = (messages: Iterable<[string, RPC.Message]>) =>
 			this.queue.add(async () => {
 				for (const [hash, message] of messages) {
 					if (this.options.verbose) {
@@ -700,19 +699,12 @@ export class Core extends EventEmitter<CoreEvents> {
 				}
 			})
 
-		try {
-			await handleTarget(stream, target, applyBatch)
-			console.log(
-				chalk.green(
-					`[canvas-core] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
-				)
-			)
-		} catch (err) {
-			console.log(chalk.red("[canvas-core] Sync failed"), err)
-		}
+		await RPC.sync(this.mst, stream, applyBatch)
+		console.log(
+			`[canvas-core] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
+		)
 
 		signal.removeEventListener("abort", closeStream)
-		target.close()
 
 		if (this.options.verbose) {
 			console.log(`[canvas-core] Closed outgoing stream ${stream.id}`)
