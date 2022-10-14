@@ -21,9 +21,5 @@
     "packages/example-chat-client",
     "packages/canvas-rpc",
     "packages/canvas-bootstrap-peer"
-  ],
-  "devDependencies": {
-    "npm-run-all": "^4.1.5",
-    "protobufjs-cli": "~1.0.2"
-  }
+  ]
 }
