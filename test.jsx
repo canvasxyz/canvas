@@ -46,26 +46,56 @@ export const component = ({ React, routes, actions, useRef, useState, useEffect 
 	const [focused, setFocused] = useState(false)
 	const [gamestate, setGamestate] = useState("stopped") // playing, stopped
 	const [gamescore, setGamescore] = useState(0)
-	// const [keydown, setKeydown] = useState(false)
-	// const [gameover, setGameover] = useState(false)
+
+	const birdLeft = 135
+	const birdRight = 185
+	const birdHeight = 50
 
 	useEffect(() => {
-		let score = 0
-		let gameover = true
-		let keydown = false
 		const bird = document.querySelector(".bird")
 		const ground = document.querySelector(".ground")
+		const obstacleContainer = document.querySelector(".obstacle-container")
+		let obstacles = []
 
+		let gameover = true
+		let keydown = false
+
+		let score = 0
+		let x = 0
 		let birdBottom = 200
 		let jumpDelta = 10
 		let gravityDelta = 5
-		let movementDelta = 2
+		let xDelta = 2
+		const obstacleWidth = 50
+		const obstacleSpacing = 200
+
+		function generateObstacle(top) {
+			const el = document.createElement("div")
+			const obstacleHeight = Math.random() > 0.5 ? 200 : 100
+			obstacleContainer.appendChild(el)
+			el.style.position = "absolute"
+			el.style.background = "#ddd"
+			el.style.width = `${obstacleWidth}px`
+			el.style.height = `${obstacleHeight}px`
+			el.style.bottom = top ? `${496 - 20 - obstacleHeight}px` : "0px"
+			el.style.left = "320px"
+			obstacles.push(el)
+		}
+
+		function clearObstacles() {
+			while (obstacles.length > 0) {
+				obstacles.pop().remove()
+			}
+		}
 
 		function restart() {
-			console.log("restart")
+			x = 0
 			score = 0
 			birdBottom = 200
 			gameover = false
+			clearObstacles()
+			generateObstacle(true)
+			generateObstacle(false)
 			setGamescore(0)
 			setGamestate("playing")
 		}
@@ -74,7 +104,7 @@ export const component = ({ React, routes, actions, useRef, useState, useEffect 
 			if (gameover) {
 				return
 			}
-			if (birdBottom <= 0 || birdBottom + 50 > 500 - 25) {
+			if (birdBottom <= 0 || birdBottom + 50 > 496 - 25) {
 				gameover = true
 				setGamestate("stopped")
 				return
@@ -86,12 +116,42 @@ export const component = ({ React, routes, actions, useRef, useState, useEffect 
 			}
 			bird.style.bottom = birdBottom + "px"
 			score += 10
+			x += xDelta
+			obstacles.map((o) => {
+				const obstacleBottom = parseInt(o.style.bottom)
+				const obstacleLeft = parseInt(o.style.left)
+				const obstacleRight = obstacleLeft + obstacleWidth
+				const obstacleTop = obstacleBottom + parseInt(o.style.height)
+				const birdTop = birdBottom + birdHeight
+				o.style.left = `${obstacleLeft - xDelta}px`
+
+				console.log(
+					(birdBottom < obstacleTop && birdBottom > obstacleBottom) ||
+						(birdTop < obstacleTop && birdTop > obstacleBottom),
+					(birdRight > obstacleRight && birdLeft < obstacleRight) ||
+						(birdRight > obstacleLeft && birdLeft < obstacleLeft)
+				)
+				if (
+					((birdBottom < obstacleTop && birdBottom > obstacleBottom) ||
+						(birdTop < obstacleTop && birdTop > obstacleBottom)) &&
+					((birdRight > obstacleRight && birdLeft < obstacleRight) ||
+						(birdRight > obstacleLeft && birdLeft < obstacleLeft))
+				) {
+					// collision
+					gameover = true
+					setGamestate("stopped")
+					throw new Error()
+				}
+			})
+			if (x !== 0 && x % obstacleSpacing === 0) {
+				generateObstacle(true)
+				generateObstacle(false)
+			}
 			setGamescore(score)
 		}
 		let gameTimerId = setInterval(tick, 20)
 
 		document.onkeydown = (e) => {
-			console.log(gameover, e.keyCode)
 			if (gameover && e.keyCode === 78) restart()
 			if (!gameover && e.keyCode === 32) keydown = true
 		}
@@ -143,12 +203,13 @@ export const component = ({ React, routes, actions, useRef, useState, useEffect 
 						style={{
 							background: "green",
 							position: "absolute",
-							width: 50,
-							height: 45,
-							left: 140,
-							bottom: 100,
+							width: birdRight - birdLeft,
+							height: birdHeight,
+							left: birdLeft,
+							bottom: 200,
 						}}
 					></div>
+					<div className="obstacle-container"></div>
 				</div>
 			</div>
 			<div
