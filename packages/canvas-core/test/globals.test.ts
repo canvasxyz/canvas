@@ -12,7 +12,7 @@ const quickJS = await getQuickJS()
 const signer = ethers.Wallet.createRandom()
 const signerAddress = signer.address.toLowerCase()
 
-const { spec, name } = await compileSpec({
+const { spec, uri } = await compileSpec({
 	models: {},
 	actions: {
 		async logIP() {
@@ -24,14 +24,14 @@ const { spec, name } = await compileSpec({
 
 async function sign(signer: ethers.Wallet, session: string | null, call: string, args: ActionArgument[]) {
 	const timestamp = Date.now()
-	const actionPayload = { from: signerAddress, spec: name, call, args, timestamp }
+	const actionPayload = { from: signerAddress, spec: uri, call, args, timestamp }
 	const actionSignatureData = getActionSignatureData(actionPayload)
 	const actionSignature = await signer._signTypedData(...actionSignatureData)
 	return { payload: actionPayload, session, signature: actionSignature }
 }
 
 test("test fetch and log IP address", async (t) => {
-	const core = await Core.initialize({ name, spec, directory: null, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, quickJS, unchecked: true })
 
 	const action = await sign(signer, null, "logIP", [])
 	await core.applyAction(action)

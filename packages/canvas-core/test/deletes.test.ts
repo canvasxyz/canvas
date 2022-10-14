@@ -13,7 +13,7 @@ const signer = ethers.Wallet.createRandom()
 const signerAddress = signer.address.toLowerCase()
 
 test("Test setting and then deleting a record", async (t) => {
-	const { name, spec } = await compileSpec({
+	const { uri, spec } = await compileSpec({
 		models: { threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" } },
 		actions: {
 			newThread(title, link) {
@@ -31,13 +31,13 @@ test("Test setting and then deleting a record", async (t) => {
 
 	async function sign(signer: ethers.Wallet, session: string | null, call: string, args: ActionArgument[]) {
 		const timestamp = Date.now()
-		const actionPayload = { from: signerAddress, spec: name, call, args, timestamp }
+		const actionPayload = { from: signerAddress, spec: uri, call, args, timestamp }
 		const actionSignatureData = getActionSignatureData(actionPayload)
 		const actionSignature = await signer._signTypedData(...actionSignatureData)
 		return { payload: actionPayload, session, signature: actionSignature }
 	}
 
-	const core = await Core.initialize({ name, directory: null, spec, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, directory: null, spec, quickJS, unchecked: true })
 
 	const newThreadAction = await sign(signer, null, "newThread", ["Hacker News", "https://news.ycombinator.com"])
 

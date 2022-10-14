@@ -13,16 +13,7 @@ type Post = {
 }
 
 export const App: React.FC<{}> = ({}) => {
-	const {
-		error: canvasError,
-		multihash,
-		dispatch,
-		connect,
-		connectNewSession,
-		disconnect,
-		address,
-		session,
-	} = useCanvas()
+	const { error: canvasError, uri, dispatch, connect, connectNewSession, disconnect, address, session } = useCanvas()
 	const [posting, setPosting] = useState(false)
 	const inputRef = useRef<HTMLInputElement>(null)
 	const scrollableRef = useRef<HTMLFieldSetElement>(null)
@@ -65,9 +56,9 @@ export const App: React.FC<{}> = ({}) => {
 						<div>
 							<code>{canvasError.toString()}</code>
 						</div>
-					) : multihash !== null ? (
+					) : uri !== null ? (
 						<div>
-							Connected to <code>{multihash}</code>
+							Connected to <code>{uri}</code>
 						</div>
 					) : (
 						<div>loading...</div>

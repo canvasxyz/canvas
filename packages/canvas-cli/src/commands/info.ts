@@ -26,10 +26,10 @@ export const builder = (yargs: yargs.Argv) =>
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { name, spec } = await locateSpec(args.spec, args.ipfs)
+	const { uri, spec } = await locateSpec(args.spec, args.ipfs)
 	const quickJS = await getQuickJS()
 
-	const { vm, exports } = await VM.initialize(name, spec, {}, quickJS, { unchecked: true })
+	const { vm, exports } = await VM.initialize(uri, spec, {}, quickJS, { unchecked: true })
 	const { models, routeParameters, actionParameters, contractMetadata } = exports
 	vm.dispose()
 
