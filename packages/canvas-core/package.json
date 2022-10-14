@@ -27,7 +27,6 @@
 		"@libp2p/peer-id-factory": "^1.0.18",
 		"@libp2p/websockets": "^4.0.1",
 		"@types/better-sqlite3": "^7.5.0",
-		"@types/pg": "^8.6.5",
 		"better-sqlite3": "^7.5.0",
 		"chalk": "^5.0.1",
 		"ethers": "^5.7.0",
@@ -41,11 +40,10 @@
 		"multiformats": "^9.9.0",
 		"node-okra": "^0.0.1",
 		"p-queue": "^7.2.0",
-		"pg-promise": "^10.11.1",
 		"protobufjs": "~7.1.2",
 		"quickjs-emscripten": "^0.21.0",
-		"uint8arraylist": "^2.3.2",
 		"sucrase": "^3.28.0",
+		"uint8arraylist": "^2.3.2",
 		"undici": "^5.11.0"
 	},
 	"devDependencies": {
