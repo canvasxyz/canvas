@@ -158,7 +158,7 @@ export const component = ({ React, routes, actions, useRef, useState, useEffect 
 				<div
 					className="border-top"
 					style={{
-						background: "#669efe",
+						background: "#d7a84a",
 						width: 320,
 						height: 20,
 						position: "absolute",
