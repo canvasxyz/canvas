@@ -39,6 +39,8 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 					const json = await res.text()
 					const obj = JSON.parse(json)
 					setSpec(obj.spec)
+				} else {
+					setError(new Error("Invalid response from remote API"))
 				}
 			})
 			.catch((err) => setError(err))
