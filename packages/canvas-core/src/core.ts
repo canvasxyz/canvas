@@ -212,7 +212,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	) {
 		super()
 		this.spec = spec
-		this.syncProtocol = `/x/canvas/sync/${cid.toString()}/0.0.0`
+		this.syncProtocol = `/x/canvas/sync/${cid.toString()}`
 
 		this.modelStore = new ModelStore(directory, exports.models, exports.routes, { verbose: options.verbose })
 		this.messageStore = new MessageStore(uri, directory, { verbose: options.verbose })
