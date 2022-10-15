@@ -122,7 +122,7 @@ export function useSession(
 	)
 
 	const session = sessionSigner && {
-		address: sessionSigner.address,
+		address: sessionSigner.address.toLowerCase(),
 		expiration: sessionExpiration,
 	}
 

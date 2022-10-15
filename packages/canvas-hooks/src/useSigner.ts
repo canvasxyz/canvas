@@ -50,7 +50,7 @@ export function useSigner(): {
 
 		function handleAccountsChanged(accounts: string[]) {
 			if (accounts.length > 0) {
-				const address = accounts[0]
+				const address = accounts[0].toLowerCase()
 				const signer = provider.getSigner(address)
 				setAddress(address)
 				setSigner(signer)
@@ -66,7 +66,7 @@ export function useSigner(): {
 			setLoading(false)
 			setProvider(provider)
 			if (accounts.length > 0) {
-				const address = accounts[0]
+				const address = accounts[0].toLowerCase()
 				const signer = provider.getSigner(address)
 				setAddress(address)
 				setSigner(signer)
