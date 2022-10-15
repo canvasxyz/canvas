@@ -120,22 +120,20 @@ function fromBinaryAction({ signature, session, payload: { from, block, ...paylo
 	return action
 }
 
-/**
- * Guaranteed to encode hex as lower-case
- */
+export const encodeAction = (action: Action) => cbor.encode(toBinaryAction(action))
+
+export const encodeSession = (session: Session) => cbor.encode(toBinarySession(session))
+
 export function encodeMessage(message: Message): Uint8Array {
 	if (message.type === "action") {
-		return cbor.encode(toBinaryAction(message))
+		return encodeAction(message)
 	} else if (message.type === "session") {
-		return cbor.encode(toBinarySession(message))
+		return encodeSession(message)
 	} else {
 		signalInvalidType(message)
 	}
 }
 
-/**
- * Guaranteed to encode hex as lower-case
- */
 export function decodeMessage(data: Uint8Array): Message {
 	const binaryMessage = cbor.decode(data)
 	if (!binaryMessageType.is(binaryMessage)) {
