@@ -12,7 +12,7 @@ import { Multiaddr } from "@multiformats/multiaddr"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { transform } from "sucrase"
 
-import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
+import { EventEmitter, CustomEvent, EventHandler } from "@libp2p/interfaces/events"
 
 import { createLibp2p, Libp2p } from "libp2p"
 import { WebSockets } from "@libp2p/websockets"
@@ -24,7 +24,7 @@ import { KadDHT } from "@libp2p/kad-dht"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 
-import type { SignedMessage } from "@libp2p/interface-pubsub"
+import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
@@ -51,7 +51,7 @@ import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./message-store/store.js"
 
 import * as RPC from "./rpc/index.js"
-import { MESSAGE_DATABASE_FILENAME, MODEL_DATABASE_FILENAME, MST_FILENAME } from "./constants.js"
+import { BLOCK_CACHE_SIZE, MESSAGE_DATABASE_FILENAME, MODEL_DATABASE_FILENAME, MST_FILENAME } from "./constants.js"
 
 export interface CoreConfig {
 	directory: string | null
@@ -156,7 +156,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		const options = { verbose, unchecked, peering: true, sync: true }
-		const core = new Core(directory, uri, cid, vm, exports, providers, libp2p, spec, options)
+		const core = new Core(directory, uri, cid, spec, vm, exports, libp2p, providers, options)
 
 		if (replay) {
 			console.log(chalk.green(`[canvas-core] Replaying action log...`))
@@ -198,11 +198,11 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly directory: string | null,
 		public readonly uri: string,
 		public readonly cid: CID,
+		public readonly spec: string,
 		public readonly vm: VM,
 		public readonly exports: Exports,
-		public readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {},
 		public readonly libp2p: Libp2p | null,
-		public readonly spec: string,
+		public readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {},
 		private readonly options: {
 			verbose?: boolean
 			unchecked?: boolean
@@ -230,12 +230,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		this.queue = new PQueue({ concurrency: 1 })
 
-		// keep up to 128 past blocks
-		const CACHE_SIZE = 128
-
 		// set up rpc providers and block caches
 		for (const [key, provider] of Object.entries(providers)) {
-			this.blockCache[key] = new CacheMap(CACHE_SIZE)
+			this.blockCache[key] = new CacheMap(BLOCK_CACHE_SIZE)
 
 			// listen for new blocks
 			provider.on("block", async (blocknum: number) => {
@@ -252,12 +249,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (this.libp2p !== null) {
 			if (options.peering) {
 				this.libp2p.pubsub.subscribe(this.uri)
-				this.libp2p.pubsub.addEventListener("message", ({ detail: message }) => {
-					if (message.type === "signed" && message.topic === this.uri) {
-						this.handleMessage(message)
-					}
-				})
-
+				this.libp2p.pubsub.addEventListener("message", this.handleMessage)
 				console.log(`[canvas-core] Subscribed to pubsub topic ${this.uri}`)
 			}
 
@@ -265,16 +257,6 @@ export class Core extends EventEmitter<CoreEvents> {
 				this.libp2p.handle(this.syncProtocol, this.handleIncomingStream)
 				this.startSyncService()
 				this.startPeeringService()
-			}
-
-			if (this.options.verbose) {
-				this.libp2p.connectionManager.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) => {
-					console.log(`[canvas-core] Connected to peer ${remotePeer.toString()} (${id})`)
-				})
-
-				this.libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) => {
-					console.log(`[canvas-core] Disconnected from peer ${remotePeer.toString()} (${id})`)
-				})
 			}
 		}
 	}
@@ -291,9 +273,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (this.libp2p !== null) {
 			this.libp2p.pubsub.unsubscribe(this.uri)
-			this.libp2p.pubsub.removeEventListener("message")
-			this.libp2p.connectionManager.removeEventListener("peer:connect")
-			this.libp2p.connectionManager.removeEventListener("peer:disconnect")
+			this.libp2p.pubsub.removeEventListener("message", this.handleMessage)
 			await this.libp2p.stop()
 		}
 
@@ -536,10 +516,14 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 	}
 
-	private async handleMessage({ topic, data }: SignedMessage) {
+	private handleMessage: EventHandler<CustomEvent<SignedMessage | UnsignedMessage>> = async ({ detail: message }) => {
+		if (message.type !== "signed" || message.topic !== this.uri) {
+			return
+		}
+
 		let decodedMessage: ReturnType<typeof decodeBinaryMessage>
 		try {
-			decodedMessage = decodeBinaryMessage(data)
+			decodedMessage = decodeBinaryMessage(message.data)
 		} catch (err) {
 			console.error(chalk.red("[canvas-core] Failed to parse pubsub message"), err)
 			return
