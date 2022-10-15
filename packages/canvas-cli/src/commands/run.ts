@@ -8,7 +8,7 @@ import prompts from "prompts"
 import { getQuickJS } from "quickjs-emscripten"
 import Hash from "ipfs-only-hash"
 
-import { Core, MessageStore, ModelStore } from "@canvas-js/core"
+import { Core, MessageStore, ModelStore, constants } from "@canvas-js/core"
 
 import { setupRpcs, locateSpec, confirmOrExit } from "../utils.js"
 import { API } from "../api.js"
@@ -91,26 +91,26 @@ export async function handler(args: Args) {
 		}
 	} else if (args.reset) {
 		await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${directory}?`)
-		const messagesPath = path.resolve(directory, MessageStore.DATABASE_FILENAME)
+		const messagesPath = path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
 		if (fs.existsSync(messagesPath)) {
 			fs.rmSync(messagesPath)
 			console.log(`[canvas-cli] Deleted ${messagesPath}`)
 		}
 
-		const modelsPath = path.resolve(directory, ModelStore.DATABASE_FILENAME)
+		const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
 		if (fs.existsSync(modelsPath)) {
 			fs.rmSync(modelsPath)
 			console.log(`[canvas-cli] Deleted ${modelsPath}`)
 		}
 
-		const mstPath = path.resolve(directory, Core.MST_FILENAME)
+		const mstPath = path.resolve(directory, constants.MST_FILENAME)
 		if (fs.existsSync(mstPath)) {
 			fs.rmSync(mstPath)
 			console.log(`[canvas-cli] Deleted ${mstPath}`)
 		}
 	} else if (args.replay) {
 		await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
-		const modelsPath = path.resolve(directory, ModelStore.DATABASE_FILENAME)
+		const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
 		if (fs.existsSync(modelsPath)) {
 			fs.rmSync(modelsPath)
 			console.log(`[canvas-cli] Deleted ${modelsPath}`)

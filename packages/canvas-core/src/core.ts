@@ -51,6 +51,7 @@ import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./message-store/store.js"
 
 import * as RPC from "./rpc/index.js"
+import { MESSAGE_DATABASE_FILENAME, MODEL_DATABASE_FILENAME, MST_FILENAME } from "./constants.js"
 
 export interface CoreConfig {
 	directory: string | null
@@ -74,7 +75,6 @@ interface CoreEvents {
 }
 
 export class Core extends EventEmitter<CoreEvents> {
-	public static readonly MST_FILENAME = "mst.okra"
 	private static readonly ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
 	private static readonly fileURIPattern = /^file:\/\/(.+)$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
@@ -214,13 +214,17 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.spec = spec
 		this.syncProtocol = `/x/canvas/sync/${cid.toString()}`
 
-		this.modelStore = new ModelStore(directory, exports.models, exports.routes, { verbose: options.verbose })
-		this.messageStore = new MessageStore(uri, directory, { verbose: options.verbose })
+		const modelDatabasePath = directory && path.resolve(directory, MODEL_DATABASE_FILENAME)
+		this.modelStore = new ModelStore(modelDatabasePath, exports.models, exports.routes, { verbose: options.verbose })
+
+		const messageDatabasePath = directory && path.resolve(directory, MESSAGE_DATABASE_FILENAME)
+		this.messageStore = new MessageStore(uri, messageDatabasePath, { verbose: options.verbose })
+
 		if (directory === null) {
 			this.rpcServer = null
 			this.mst = null
 		} else {
-			this.mst = new okra.Tree(path.resolve(directory, Core.MST_FILENAME))
+			this.mst = new okra.Tree(path.resolve(directory, MST_FILENAME))
 			this.rpcServer = new RPC.Server({ mst: this.mst, messageStore: this.messageStore })
 		}
 

@@ -1,4 +1,3 @@
-import path from "node:path"
 import assert from "node:assert"
 import Database, * as sqlite from "better-sqlite3"
 import chalk from "chalk"
@@ -8,7 +7,6 @@ import { mapEntries, signalInvalidType } from "../utils.js"
 import type { Effect } from "./types.js"
 
 export class ModelStore {
-	public static DATABASE_FILENAME = "models.sqlite"
 	public readonly database: sqlite.Database
 
 	private readonly transaction: (context: ActionContext, effects: Effect[]) => void
@@ -19,12 +17,12 @@ export class ModelStore {
 	> = {}
 
 	constructor(
-		directory: string | null,
+		path: string | null,
 		models: Record<string, Model>,
 		routes: Record<string, string>,
 		options: { verbose?: boolean } = {}
 	) {
-		if (directory === null) {
+		if (path === null) {
 			if (options.verbose) {
 				console.log("[canvas-core] Initializing new in-memory database")
 				console.warn(chalk.yellow("[canvas-core] All data will be lost on close!"))
@@ -32,12 +30,11 @@ export class ModelStore {
 
 			this.database = new Database(":memory:")
 		} else {
-			const databasePath = path.resolve(directory, ModelStore.DATABASE_FILENAME)
 			if (options.verbose) {
-				console.log(`[canvas-core] Initializing database at ${databasePath}`)
+				console.log(`[canvas-core] Initializing database at ${path}`)
 			}
 
-			this.database = new Database(databasePath)
+			this.database = new Database(path)
 		}
 
 		this.initializeModelTables(models)

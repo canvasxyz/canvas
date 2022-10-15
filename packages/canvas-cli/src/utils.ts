@@ -11,9 +11,7 @@ import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp
 import type { PeerId } from "@libp2p/interface-peer-id"
 
 import { Chain } from "@canvas-js/interfaces"
-import { chainType } from "@canvas-js/core"
-
-export const SPEC_FILENAME = "spec.canvas.js"
+import { chainType, constants } from "@canvas-js/core"
 
 export const CANVAS_HOME = process.env.CANVAS_HOME ?? path.resolve(os.homedir(), ".canvas")
 
@@ -46,7 +44,7 @@ export async function locateSpec(name: string, ipfsGatewayURL: string): Promise<
 	if (cidPattern.test(name)) {
 		const directory = path.resolve(CANVAS_HOME, name)
 
-		const peerIdPath = path.resolve(CANVAS_HOME, "peer.id")
+		const peerIdPath = path.resolve(CANVAS_HOME, constants.PEER_ID_FILENAME)
 		if (fs.existsSync(peerIdPath)) {
 			peerId = await createFromProtobuf(fs.readFileSync(peerIdPath))
 			console.log(`[canvas-cli] Found existing PeerId at ${peerIdPath}`)
@@ -56,7 +54,7 @@ export async function locateSpec(name: string, ipfsGatewayURL: string): Promise<
 			console.log(`[canvas-cli] Created new PeerId at ${peerIdPath}`)
 		}
 
-		const specPath = path.resolve(CANVAS_HOME, name, SPEC_FILENAME)
+		const specPath = path.resolve(CANVAS_HOME, name, constants.SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const spec = fs.readFileSync(specPath, "utf-8")
 			return { uri: `ipfs://${name}`, directory, spec, peerId }

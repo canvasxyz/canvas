@@ -1,4 +1,3 @@
-import path from "node:path"
 import assert from "node:assert"
 
 import Database, * as sqlite from "better-sqlite3"
@@ -16,12 +15,11 @@ import type { BlockRecord, ActionRecord, SessionRecord } from "./types.js"
  */
 
 export class MessageStore {
-	public static DATABASE_FILENAME = "messages.sqlite"
 	public readonly database: sqlite.Database
 	private readonly statements: Record<keyof typeof MessageStore.statements, sqlite.Statement>
 
-	constructor(public readonly uri: string, directory: string | null, options: { verbose?: boolean } = {}) {
-		if (directory === null) {
+	constructor(public readonly uri: string, path: string | null, options: { verbose?: boolean } = {}) {
+		if (path === null) {
 			if (options.verbose) {
 				console.log("[canvas-core] Initializing in-memory message store")
 			}
@@ -29,10 +27,10 @@ export class MessageStore {
 			this.database = new Database(":memory:")
 		} else {
 			if (options.verbose) {
-				console.log(`[canvas-core] Initializing message store at ${directory}`)
+				console.log(`[canvas-core] Initializing message store at ${path}`)
 			}
 
-			this.database = new Database(path.join(directory, MessageStore.DATABASE_FILENAME))
+			this.database = new Database(path)
 		}
 
 		this.database.exec(MessageStore.createBlocksTable)

@@ -5,8 +5,8 @@ import yargs from "yargs"
 import chalk from "chalk"
 import Database from "better-sqlite3"
 
-import { MessageStore, ModelStore } from "@canvas-js/core"
-import { CANVAS_HOME, cidPattern, SPEC_FILENAME } from "../utils.js"
+import { constants } from "@canvas-js/core"
+import { CANVAS_HOME, cidPattern } from "../utils.js"
 
 export const command = "list"
 export const desc = "List all specs in the data directory"
@@ -23,13 +23,13 @@ export async function handler({}) {
 
 		console.log(cid)
 
-		const specPath = path.resolve(CANVAS_HOME, cid, SPEC_FILENAME)
+		const specPath = path.resolve(CANVAS_HOME, cid, constants.SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const specStat = fs.statSync(specPath)
 			console.log(`Spec:     ${specStat.size} bytes`)
 		}
 
-		const messagesPath = path.resolve(CANVAS_HOME, cid, MessageStore.DATABASE_FILENAME)
+		const messagesPath = path.resolve(CANVAS_HOME, cid, constants.MESSAGE_DATABASE_FILENAME)
 		if (fs.existsSync(messagesPath)) {
 			const messagesStat = fs.statSync(messagesPath)
 			const messagesDB = new Database(messagesPath)
@@ -38,7 +38,7 @@ export async function handler({}) {
 			console.log(`Messages: ${messagesStat.size} bytes (${actionCount} actions, ${sessionCount} sessions)`)
 		}
 
-		const modelsPath = path.resolve(CANVAS_HOME, cid, ModelStore.DATABASE_FILENAME)
+		const modelsPath = path.resolve(CANVAS_HOME, cid, constants.MODEL_DATABASE_FILENAME)
 		if (fs.existsSync(modelsPath)) {
 			const modelsStat = fs.statSync(modelsPath)
 			console.log(`Models:   ${modelsStat.size} bytes`)
