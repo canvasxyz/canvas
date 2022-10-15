@@ -41,17 +41,19 @@ import {
 	verifySessionSignature,
 	ModelValue,
 	Chain,
+	Message,
 } from "@canvas-js/interfaces"
 
 import { actionType, sessionType } from "./codecs.js"
 import { CacheMap, signalInvalidType, wait, retry, bootstrapList } from "./utils.js"
-import { decodeBinaryMessage, encodeBinaryMessage, getActionHash, getSessionHash } from "./encoding.js"
+import { encodeMessage, decodeMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { ModelStore } from "./model-store/index.js"
 import { VM, Exports } from "./vm/index.js"
 import { MessageStore } from "./message-store/store.js"
 
 import * as RPC from "./rpc/index.js"
 import { BLOCK_CACHE_SIZE, MESSAGE_DATABASE_FILENAME, MODEL_DATABASE_FILENAME, MST_FILENAME } from "./constants.js"
+import { createHash } from "node:crypto"
 
 export interface CoreConfig {
 	directory: string | null
@@ -352,7 +354,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		await this.queue.add(() => this.applyActionInternal(hash, action))
-		await this.publishMessage(hash, action)
+		await this.publishMessage(hash, { type: "action", ...action })
 		return { hash }
 	}
 
@@ -435,7 +437,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		await this.queue.add(() => this.applySessionInternal(hash, session))
-
+		await this.publishMessage(hash, { type: "session", ...session })
 		return { hash }
 	}
 
@@ -486,26 +488,17 @@ export class Core extends EventEmitter<CoreEvents> {
 		return this.modelStore.getRoute(route, params)
 	}
 
-	private async publishMessage(actionHash: string, action: Action) {
+	private async publishMessage(hash: string, message: Message) {
 		if (this.libp2p === null) {
 			return
 		}
 
-		let message: Uint8Array
-		if (action.session !== null) {
-			const { hash: sessionHash, session } = this.messageStore.getSessionByAddress(action.session)
-			assert(sessionHash !== null && session !== null)
-			message = encodeBinaryMessage({ hash: actionHash, action }, { hash: sessionHash, session })
-		} else {
-			message = encodeBinaryMessage({ hash: actionHash, action }, { hash: null, session: null })
-		}
-
 		if (this.options.verbose) {
-			console.log(`[canvas-core] Publishing message ${actionHash} to GossipSub`)
+			console.log(`[canvas-core] Publishing action ${hash} to GossipSub`)
 		}
 
 		await this.libp2p.pubsub
-			.publish(this.cid.toString(), message)
+			.publish(this.uri, encodeMessage(message))
 			.then(({ recipients }) => {
 				if (this.options.verbose) {
 					console.log(`[canvas-core] Published message to ${recipients.length} peers`)
@@ -516,26 +509,24 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 	}
 
-	private handleMessage: EventHandler<CustomEvent<SignedMessage | UnsignedMessage>> = async ({ detail: message }) => {
-		if (message.type !== "signed" || message.topic !== this.uri) {
+	private handleMessage: EventHandler<CustomEvent<SignedMessage | UnsignedMessage>> = async ({
+		detail: { topic, data },
+	}) => {
+		if (topic !== this.uri) {
 			return
 		}
 
-		let decodedMessage: ReturnType<typeof decodeBinaryMessage>
-		try {
-			decodedMessage = decodeBinaryMessage(message.data)
-		} catch (err) {
-			console.error(chalk.red("[canvas-core] Failed to parse pubsub message"), err)
-			return
-		}
+		const hash = createHash("sha256").update(data).digest().toString("hex")
 
-		const { action, session } = decodedMessage
+		const message = decodeMessage(data)
 		try {
-			if (session !== null) {
-				await this.applySession(session)
+			if (message.type === "action") {
+				await this.queue.add(() => this.applyActionInternal(hash, message))
+			} else if (message.type === "session") {
+				await this.queue.add(() => this.applySessionInternal(hash, message))
+			} else {
+				signalInvalidType(message)
 			}
-
-			await this.applyAction(action)
 		} catch (err) {
 			console.log(chalk.red("[canvas-core] Error applying peer message"), err)
 		}
