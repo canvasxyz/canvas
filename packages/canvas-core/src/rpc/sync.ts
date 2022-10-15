@@ -7,7 +7,7 @@ import * as okra from "node-okra"
 import type { Action, Session } from "@canvas-js/interfaces"
 
 import { toHex } from "../utils.js"
-import { decodeAction, decodeSession } from "../encoding.js"
+import { decodeMessage } from "../encoding.js"
 import { Client } from "./client.js"
 
 export type Message = ({ type: "session" } & Session) | ({ type: "action" } & Action)
@@ -51,19 +51,13 @@ export async function sync(
 
 			const messages: [string, Message][] = []
 
-			for (const [i, { leaf, hash }] of leaves.entries()) {
-				const value = values[i]
+			for (const [i, value] of values.entries()) {
+				const { hash } = leaves[i]
 				if (!createHash("sha256").update(value).digest().equals(hash)) {
 					throw new Error(`the value received for ${toHex(hash)} did not match the hash`)
 				}
 
-				const timestamp = leaf.readUintBE(0, 6)
-				messages.push([
-					toHex(hash),
-					timestamp % 2 == 0
-						? { type: "session", ...decodeSession(value) }
-						: { type: "action", ...decodeAction(value) },
-				])
+				messages.push([toHex(hash), decodeMessage(value)])
 			}
 
 			await applyBatch(messages)
