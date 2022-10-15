@@ -45,7 +45,7 @@ import {
 } from "@canvas-js/interfaces"
 
 import { actionType, sessionType } from "./codecs.js"
-import { CacheMap, signalInvalidType, wait, retry, bootstrapList } from "./utils.js"
+import { CacheMap, signalInvalidType, wait, retry, bootstrapList, toHex } from "./utils.js"
 import { encodeMessage, decodeMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { ModelStore } from "./model-store/index.js"
 import { VM, Exports } from "./vm/index.js"
@@ -516,7 +516,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			return
 		}
 
-		const hash = createHash("sha256").update(data).digest().toString("hex")
+		const hash = toHex(createHash("sha256").update(data).digest())
 
 		const message = decodeMessage(data)
 		try {

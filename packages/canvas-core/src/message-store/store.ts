@@ -5,7 +5,7 @@ import * as cbor from "microcbor"
 
 import type { Action, Session, Block, ActionArgument } from "@canvas-js/interfaces"
 
-import { mapEntries } from "../utils.js"
+import { mapEntries, fromHex, toHex } from "../utils.js"
 import { chainType } from "../codecs.js"
 
 import type { BlockRecord, ActionRecord, SessionRecord } from "./types.js"
@@ -270,13 +270,4 @@ export class MessageStore {
 		getSessions: `SELECT * FROM sessions`,
 		getActions: `SELECT * FROM actions`,
 	}
-}
-
-function fromHex(input: string) {
-	assert(input.startsWith("0x"), 'input did not start with "0x"')
-	return Buffer.from(input.slice(2), "hex")
-}
-
-function toHex(data: Buffer) {
-	return `0x${data.toString("hex")}`
 }
