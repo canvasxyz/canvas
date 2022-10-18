@@ -1,7 +1,7 @@
 import React, { MouseEventHandler, useState, useMemo, useCallback, useRef, useLayoutEffect, useEffect } from "react"
 import * as ReactDOM from "react-dom"
 
-import { useRoute, useCanvas } from "@canvas-js/hooks"
+import { Canvas, useRoute, useCanvas } from "@canvas-js/hooks"
 
 type Post = {
 	id: string
@@ -41,9 +41,19 @@ export const ModularSelect: React.FC<{
 	)
 }
 
-export const App: React.FC<{}> = ({}) => {
+export const AppWrapper = () => {
 	const [selectedHash, setSelectedHash] = useState("a")
+	return (
+		<Canvas host="http://localhost:8000">
+			<App selectedHash={selectedHash} setSelectedHash={setSelectedHash} />
+		</Canvas>
+	)
+}
 
+export const App: React.FC<{ setSelectedHash: Function; selectedHash: string }> = ({
+	setSelectedHash,
+	selectedHash,
+}) => {
 	return (
 		<div>
 			<div className="w-full p-4 border-b border-white text-center">Canvas</div>
@@ -76,7 +86,7 @@ export const App: React.FC<{}> = ({}) => {
 								>
 									<Modular hash={selectedHash} />
 								</div>
-								<div className="m-1 mt-8 font-mono text-sm text-gray-400">Loading {selectedHash} ...</div>
+								<div className="m-1 mt-8 font-mono text-sm text-gray-400">Connecting to backend {selectedHash} ...</div>
 							</>
 						)}
 					</div>

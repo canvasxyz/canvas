@@ -6,12 +6,14 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack build",
-    "dev": "webpack server"
+    "dev": "concurrently --kill-others \"webpack server\" \"canvas run ./flappy.jsx --unchecked\""
   },
   "dependencies": {
-    "@canvas-js/hooks": "0.0.17",
+    "@canvas-js/cli": "0.0.17",
+    "@canvas-js/hooks": "0.0.18-alpha",
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.5",
+    "concurrently": "^7.4.0",
     "react": "^18.1.0",
     "react-dom": "^18.2.0"
   },
