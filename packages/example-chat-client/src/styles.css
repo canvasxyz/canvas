@@ -1,0 +1,15 @@
+main {
+	width: max-content;
+}
+
+td {
+	vertical-align: top;
+}
+
+td.content {
+	width: 500px;
+}
+
+input[type="text"] {
+	width: 100%;
+}
