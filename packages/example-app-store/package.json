@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack build",
-    "dev": "concurrently --kill-others \"webpack server\" \"canvas run ./flappy.jsx --unchecked\""
+    "dev": "concurrently --kill-others \"webpack server\" \"canvas run ./flappy.jsx --unchecked --port=8000\" \"canvas run ./govhouse.jsx --unchecked --port=8001\""
   },
   "dependencies": {
     "@canvas-js/cli": "0.0.17",

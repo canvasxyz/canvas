@@ -42,18 +42,24 @@ export const ModularSelect: React.FC<{
 }
 
 export const AppWrapper = () => {
-	const [selectedHash, setSelectedHash] = useState("a")
+	const [endpoint, setEndpoint] = useState<string>("http://localhost:8001")
+	const [hidden, setHidden] = useState(false)
+	useEffect(() => {
+		setHidden(true)
+		setTimeout(() => setHidden(false), 500)
+	}, [endpoint])
+
+	if (hidden) {
+		return <App endpoint={endpoint} setEndpoint={setEndpoint} />
+	}
 	return (
-		<Canvas host="http://localhost:8000">
-			<App selectedHash={selectedHash} setSelectedHash={setSelectedHash} />
+		<Canvas host={endpoint}>
+			<App endpoint={endpoint} setEndpoint={setEndpoint} />
 		</Canvas>
 	)
 }
 
-export const App: React.FC<{ setSelectedHash: Function; selectedHash: string }> = ({
-	setSelectedHash,
-	selectedHash,
-}) => {
+export const App: React.FC<{ setEndpoint: Function; endpoint: string }> = ({ setEndpoint, endpoint }) => {
 	return (
 		<div>
 			<div className="w-full p-4 border-b border-white text-center">Canvas</div>
@@ -63,20 +69,19 @@ export const App: React.FC<{ setSelectedHash: Function; selectedHash: string }> 
 						<ModularSelect
 							name="Flappy Bird"
 							category="Games"
-							onclick={() => setSelectedHash("a")}
-							selected={selectedHash === "a"}
+							onclick={() => setEndpoint("http://localhost:8000")}
+							selected={endpoint === "http://localhost:8000"}
 						/>
 						<ModularSelect
-							name="Gov House"
+							name="TinyPolis"
 							category="Tools"
-							onclick={() => setSelectedHash("b")}
-							selected={selectedHash === "b"}
+							onclick={() => setEndpoint("http://localhost:8001")}
+							selected={endpoint === "http://localhost:8001"}
 						/>
-						<ModularSelect name="Home" category="Tools" disabled />
 						<ModularSelect name="TinyRoam" category="Tools" disabled />
 					</div>
 					<div className="w-72">
-						{!selectedHash ? (
+						{!endpoint ? (
 							<div className="text-gray-400">Select an app</div>
 						) : (
 							<>
@@ -84,9 +89,9 @@ export const App: React.FC<{ setSelectedHash: Function; selectedHash: string }> 
 									className="relative overflow-scroll border border-gray-200 rounded-lg shadow-lg bg-white"
 									style={{ width: 360, height: 500 }}
 								>
-									<Modular hash={selectedHash} />
+									<Modular hash={endpoint} />
 								</div>
-								<div className="m-1 mt-8 font-mono text-sm text-gray-400">Connecting to backend {selectedHash} ...</div>
+								<div className="m-1 mt-8 font-mono text-sm text-gray-400">Connecting to backend {endpoint} ...</div>
 							</>
 						)}
 					</div>
@@ -120,7 +125,7 @@ export const Modular: React.FC<{ hash: string }> = ({ hash }) => {
 	}, [spec])
 
 	if (!mod) {
-		return <div>Loading</div>
+		return <div className="text-center mt-60 text-gray-400">Loading...</div>
 	}
 
 	const routes = {
