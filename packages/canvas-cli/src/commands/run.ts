@@ -79,7 +79,7 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
-	const { uri, directory, spec, peerId } = await locateSpec(args.spec, args.ipfs)
+	let { uri, directory, spec, peerId } = await locateSpec(args.spec, args.ipfs)
 
 	if (directory === null) {
 		if (args.peering) {
@@ -153,7 +153,7 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const quickJS = await getQuickJS()
+	let quickJS = await getQuickJS()
 
 	const { verbose, replay, unchecked, peering, "peering-port": peeringPort } = args
 
@@ -181,7 +181,36 @@ export async function handler(args: Args) {
 		return
 	}
 
-	const api = args.noserver ? null : new API({ core, port: args.port, verbose })
+	let api = args.noserver ? null : new API({ core, port: args.port, verbose })
+
+	let restarting = false
+	fs.watch(args.spec, async (event: string, filename: string) => {
+		if (restarting || !filename || event !== "change") return
+		restarting = true
+		console.log(">>>> RESTARTING")
+
+		await api?.stop()
+		// await core.close()
+		// core.modelStore.close()
+
+		const { uri, directory, spec, peerId } = await locateSpec(args.spec, args.ipfs)
+		quickJS = await getQuickJS()
+		core = await Core.initialize({
+			directory,
+			uri,
+			spec,
+			rpc,
+			quickJS,
+			verbose,
+			replay,
+			unchecked,
+			peering,
+			peeringPort,
+			peerId,
+		})
+		api = args.noserver ? null : new API({ core, port: args.port, verbose })
+		restarting = false
+	})
 
 	let stopping = false
 	process.on("SIGINT", async () => {
