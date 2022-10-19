@@ -4,14 +4,20 @@ import * as ReactDOM from "react-dom"
 import { Canvas, useRoute, useCanvas } from "@canvas-js/hooks"
 import { ActionArgument } from "@canvas-js/interfaces"
 
-type Post = {
-	id: string
-	from_id: string
-	content: string
-	updated_at: number
-	likes: number
-	my_likes: number
-	all_likes: string
+type Hooks = {
+	useState: Function
+	useMemo: Function
+	useRef: Function
+	useEffect: Function
+	useRoute: Function
+}
+
+const hooks: Hooks = {
+	useState,
+	useMemo,
+	useRef,
+	useEffect,
+	useRoute,
 }
 
 export const ModularSelect: React.FC<{
@@ -115,42 +121,27 @@ export const Modular: React.FC<{ hash: string }> = ({ hash }) => {
 		address,
 		session,
 	} = useCanvas()
-	const [mod, setMod] = useState<{ fn: (hooks: any, props: any) => React.ReactElement } | null>()
+	const [mod, setMod] = useState<{ fc: React.FC } | null>()
 
 	useEffect(() => {
 		if (spec === null) return
 		const dataUri = "data:text/javascript;charset=utf-8," + encodeURIComponent(spec)
-		import(/* webpackIgnore: true */ dataUri).then((mod) => {
-			setMod({ fn: mod.component })
-		})
+		import(/* webpackIgnore: true */ dataUri).then((mod) => setMod({ fc: mod.component }))
 	}, [spec])
+
+	const wrappedDispatch = (call: string, ...args: string[]) => {
+		console.log("called dispatch:", call, ...args)
+		return dispatch.call(null, call, ...args)
+	}
 
 	if (!mod) {
 		return <div className="text-center mt-60 text-gray-400">Loading...</div>
+	} else {
+		return <ModularChild dispatch={wrappedDispatch} hooks={hooks} fc={mod.fc} />
 	}
-
-	const routes = {
-		subscribe: () => {
-			console.log("called subscribe")
-		},
-	}
-	const actions = {
-		dispatch: (call: string, ...args: string[]) => {
-			console.log("called dispatch:", call, args)
-			return dispatch.call(null, call, ...args)
-		},
-	}
-	const hooks = {
-		useState,
-		useMemo,
-		useRef,
-		useEffect,
-		useRoute,
-	}
-
-	return <ModularChild routes={routes} actions={actions} hooks={hooks} fn={mod.fn} />
 }
 
-export const ModularChild = ({ routes, actions, hooks, fn }: { routes: any; actions: any; hooks: any; fn: any }) => {
-	return fn({ React, actions, routes, ...hooks }, { props: {} })
+// Return a separate component to avoid issues with hook reuse detection
+export const ModularChild = ({ dispatch, fc, hooks }: { dispatch: Function; hooks: Hooks; fc: React.FC }) => {
+	return fc({ React, dispatch, ...hooks })
 }
