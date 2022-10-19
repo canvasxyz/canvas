@@ -82,22 +82,26 @@ export function useSession(
 	const dispatch = useCallback(
 		async (call: string, ...args: ActionArgument[]) => {
 			if (provider === null) {
-				throw new Error("no web3 provider found")
+				return Promise.reject(new Error("no web3 provider found"))
 			} else if (host === undefined) {
-				throw new Error("no host configured")
+				return Promise.reject(new Error("no host configured"))
 			} else if (uri === null || address === null || signer === null) {
-				throw new Error("dispatch called too early")
+				return Promise.reject(new Error("dispatch called too early"))
 			}
 
 			let contextSessionSigner = sessionSigner
 			if (sessionSigner === null || sessionExpiration < +Date.now()) {
-				const session = await newSession(signer, host, uri, provider)
-				localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(session[1]))
-				setSessionSigner(session[0])
-				setSessionExpiration(session[1].expiration)
-				contextSessionSigner = session[0]
+				try {
+					const session = await newSession(signer, host, uri, provider)
+					localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(session[1]))
+					setSessionSigner(session[0])
+					setSessionExpiration(session[1].expiration)
+					contextSessionSigner = session[0]
+				} catch (err) {
+					return Promise.reject(err)
+				}
 			}
-			if (contextSessionSigner === null) throw new Error("session login failed")
+			if (contextSessionSigner === null) return Promise.reject(new Error("session login failed"))
 
 			const timestamp = +Date.now() // get a new timestamp, from after we have secured a session
 			let block: Block
@@ -112,11 +116,11 @@ export function useSession(
 				}
 			} catch (err) {
 				console.error(err)
-				throw err
+				return Promise.reject(err)
 			}
 			const payload: ActionPayload = { from: address, spec: uri, call, args, timestamp, block }
 
-			await send(host, contextSessionSigner, payload)
+			return send(host, contextSessionSigner, payload)
 		},
 		[host, uri, address, signer, sessionSigner, sessionExpiration]
 	)
@@ -128,18 +132,22 @@ export function useSession(
 
 	const connectNewSession = useCallback(async () => {
 		if (provider === null) {
-			throw new Error("no web3 provider found")
+			return Promise.reject(new Error("no web3 provider found"))
 		}
 		if (uri === null) {
-			throw new Error("failed to connect to application backend")
+			return Promise.reject(new Error("failed to connect to application backend"))
 		}
 		if (signer === null) {
-			throw new Error("must have connected web3 signer to log in")
+			return Promise.reject(new Error("must have connected web3 signer to log in"))
 		}
-		const [sessionSigner, sessionObject] = await newSession(signer, host, uri, provider)
-		localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(sessionObject))
-		setSessionSigner(sessionSigner)
-		setSessionExpiration(sessionObject.expiration)
+		try {
+			const [sessionSigner, sessionObject] = await newSession(signer, host, uri, provider)
+			localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(sessionObject))
+			setSessionSigner(sessionSigner)
+			setSessionExpiration(sessionObject.expiration)
+		} catch (err) {
+			return Promise.reject(err)
+		}
 	}, [host, uri, signer, sessionSigner, sessionExpiration])
 
 	const disconnect = useCallback(async () => {
@@ -161,7 +169,12 @@ async function newSession(
 	const sessionDuration = 86400 * 1000
 	const sessionSigner = ethers.Wallet.createRandom()
 
-	const address = await signer.getAddress()
+	let address
+	try {
+		address = await signer.getAddress()
+	} catch (err) {
+		return Promise.reject(err)
+	}
 	const from = address.toLowerCase()
 
 	const sessionObject: SessionObject = {
@@ -183,7 +196,7 @@ async function newSession(
 		}
 	} catch (err) {
 		console.error(err)
-		throw err
+		return Promise.reject(err)
 	}
 
 	const payload: SessionPayload = {
@@ -195,9 +208,14 @@ async function newSession(
 		block,
 	}
 
-	const signatureData = getSessionSignatureData(payload)
-	const signature = await signer._signTypedData(...signatureData)
-	const session = { signature, payload }
+	let session
+	try {
+		const signatureData = getSessionSignatureData(payload)
+		const signature = await signer._signTypedData(...signatureData)
+		session = { signature, payload }
+	} catch (err) {
+		return Promise.reject(err)
+	}
 
 	const res = await fetch(`${host}/sessions`, {
 		method: "POST",
@@ -208,7 +226,7 @@ async function newSession(
 	if (!res.ok) {
 		localStorage.removeItem(CANVAS_SESSION_KEY)
 		const err = await res.text()
-		throw new Error(err)
+		return Promise.reject(new Error(err))
 	}
 
 	return [sessionSigner, sessionObject]
@@ -229,6 +247,6 @@ async function send(host: string, sessionSigner: ethers.Wallet, payload: ActionP
 		if (message === "session not found") {
 			localStorage.removeItem(CANVAS_SESSION_KEY)
 		}
-		throw new Error(message)
+		return Promise.reject(new Error(message))
 	}
 }
