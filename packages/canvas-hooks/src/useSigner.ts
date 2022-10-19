@@ -31,12 +31,12 @@ export function useSigner(): {
 
 	const connect = useCallback(async () => {
 		if (loading) {
-			throw new Error("connect() called too soon - wait for loading to be false!")
+			return Promise.reject(new Error("connect() called too soon - wait for loading to be false!"))
 		} else if (provider === null) {
-			throw new Error("No window.ethereum provider found. Install MetaMask if you haven't!")
+			return Promise.reject(new Error("No window.ethereum provider found. Install MetaMask if you haven't!"))
 		}
 
-		await provider.send("eth_requestAccounts", [])
+		return provider.send("eth_requestAccounts", [])
 	}, [loading, provider])
 
 	useEffect(() => {
