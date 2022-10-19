@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@canvas-js/cli": "0.0.17",
-    "@canvas-js/hooks": "0.0.18-alpha",
+    "@canvas-js/hooks": "0.0.18-alpha2",
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.5",
     "concurrently": "^7.4.0",

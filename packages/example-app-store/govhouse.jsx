@@ -44,22 +44,51 @@ export const actions = {
 	},
 }
 
-export const component = ({ React, routes, actions, useRef, useState, useEffect }, { props }) => {
+export const component = ({ React, routes, actions, useRef, useRoute, useState, useEffect }, { props }) => {
+	const { error, data } = useRoute("/cards")
 	const [focused, setFocused] = useState(false)
+	const [submitting, setSubmitting] = useState(false)
 	const inputRef = useRef()
 
 	return (
 		<div tabIndex="0" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}>
-			<div>Gov House</div>
-
-			<form
-				onSubmit={(e) => {
-					e.preventDefault()
-					actions.dispatch("createCard")
-				}}
+			<div
+				className="box has-background-info has-text-white has-text-centered has-text-weight-semibold py-2"
+				style={{ borderRadius: 0 }}
 			>
-				<input type="text" ref={inputRef} placeholder="Write your opinion here" />
-			</form>
+				Gov House
+			</div>
+			{data?.length}
+			{data?.map((d) => {
+				return (
+					<div key={d.id} className="box m-3">
+						<div>{d.text}</div>
+						<div>{d.creator}</div>
+						<div>{d.votes_count}</div>
+					</div>
+				)
+			})}
+			<div className="p-3">
+				<form
+					onSubmit={(e) => {
+						e.preventDefault()
+						setSubmitting(true)
+						actions
+							.dispatch("createCard", inputRef.current.value)
+							.then(() => setSubmitting(false))
+							.catch(() => setSubmitting(false))
+					}}
+				>
+					<input
+						className="input"
+						type="text"
+						ref={inputRef}
+						placeholder="Write your opinion here"
+						disabled={submitting}
+					/>
+					<input className="button" type="submit" value="Post" />
+				</form>
+			</div>
 		</div>
 	)
 }

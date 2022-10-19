@@ -2,6 +2,7 @@ import React, { MouseEventHandler, useState, useMemo, useCallback, useRef, useLa
 import * as ReactDOM from "react-dom"
 
 import { Canvas, useRoute, useCanvas } from "@canvas-js/hooks"
+import { ActionArgument } from "@canvas-js/interfaces"
 
 type Post = {
 	id: string
@@ -46,7 +47,7 @@ export const AppWrapper = () => {
 	const [hidden, setHidden] = useState(false)
 	useEffect(() => {
 		setHidden(true)
-		setTimeout(() => setHidden(false), 500)
+		setTimeout(() => setHidden(false), 0)
 	}, [endpoint])
 
 	if (hidden) {
@@ -134,8 +135,9 @@ export const Modular: React.FC<{ hash: string }> = ({ hash }) => {
 		},
 	}
 	const actions = {
-		createPost: () => {
-			console.log("called createPost")
+		dispatch: (call: string, ...args: string[]) => {
+			console.log("called dispatch:", call, args)
+			return dispatch.call(null, call, ...args)
 		},
 	}
 	const hooks = {
@@ -143,6 +145,7 @@ export const Modular: React.FC<{ hash: string }> = ({ hash }) => {
 		useMemo,
 		useRef,
 		useEffect,
+		useRoute,
 	}
 
 	return <ModularChild routes={routes} actions={actions} hooks={hooks} fn={mod.fn} />
