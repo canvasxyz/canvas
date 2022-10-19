@@ -1,51 +1,50 @@
 export const models = {
-	cards: {
+	messages: {
 		id: "string",
 		text: "string",
 		creator: "string",
 		updated_at: "datetime",
 		indexes: [],
 	},
-	votes: {
+	reacts: {
 		id: "string",
-		card_id: "string",
+		message_id: "string",
 		value: "integer",
 		creator: "string",
 		updated_at: "datetime",
-		indexes: ["card_id"],
+		indexes: ["message_id"],
 	},
 }
 
 export const routes = {
-	"/cards": `
-	SELECT cards.*,
-	    group_concat(votes.creator || ':' || votes.value, ';') AS votes,
-	    SUM(value) AS score
-	FROM cards
-	LEFT JOIN votes ON cards.id = votes.card_id
-	GROUP BY cards.id
-	ORDER BY score DESC
+	"/messages": `
+	SELECT messages.*,
+	    group_concat(reacts.creator || ':' || reacts.value, ';') AS reacts
+	FROM messages
+	LEFT JOIN reacts ON messages.id = reacts.message_id
+	GROUP BY messages.id
+	ORDER BY updated_at DESC
 	`,
 }
 
 export const actions = {
-	createCard(text) {
-		this.db.cards.set(this.hash, {
+	message(text) {
+		this.db.messages.set(this.hash, {
 			creator: this.from,
 			text,
 		})
 	},
-	createVote(cardId, value) {
-		this.db.votes.set(`${this.from}/${cardId}`, {
+	react(messageId, value) {
+		this.db.reacts.set(`${this.from}/${messageId}`, {
 			creator: this.from,
-			card_id: cardId,
+			message_id: messageId,
 			value: value ? 1 : -1,
 		})
 	},
 }
 
 export const component = ({ React, dispatch, useRef, useRoute, useState, useEffect }) => {
-	const { error, data } = useRoute("/cards")
+	const { error, data } = useRoute("/messages")
 	const [submitting, setSubmitting] = useState(false)
 	const inputRef = useRef()
 
@@ -55,18 +54,17 @@ export const component = ({ React, dispatch, useRef, useRoute, useState, useEffe
 				className="box has-background-info has-text-white has-text-centered has-text-weight-semibold py-2"
 				style={{ borderRadius: 0 }}
 			>
-				Gov House
+				Chat
 			</div>
-			{data?.length}
+			{data?.length} message{data?.length === 1 ? "" : "s"}
 			{data?.map((d) => {
 				return (
 					<div key={d.id} className="box m-3">
 						<div>{d.text}</div>
-						<div>{d.creator}</div>
-						<div>{d.score}</div>
-						<div>{d.votes}</div>
-						<button onClick={(e) => dispatch("createVote", d.id, true)}>+</button>
-						<button onClick={(e) => dispatch("createVote", d.id, false)}>-</button>
+						<div>{d.creator.slice(2, 6)}</div>
+						<div>{d.reacts}</div>
+						<button onClick={(e) => dispatch("react", d.id, true)}>+</button>
+						<button onClick={(e) => dispatch("react", d.id, false)}>-</button>
 					</div>
 				)
 			})}
@@ -75,7 +73,7 @@ export const component = ({ React, dispatch, useRef, useRoute, useState, useEffe
 					onSubmit={(e) => {
 						e.preventDefault()
 						setSubmitting(true)
-						dispatch("createCard", inputRef.current.value)
+						dispatch("message", inputRef.current.value)
 							.then(() => {
 								inputRef.current.value = ""
 								setSubmitting(false)

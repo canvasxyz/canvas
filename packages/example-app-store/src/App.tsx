@@ -83,8 +83,13 @@ export const App: React.FC<{ setEndpoint: Function; endpoint: string }> = ({ set
 	return (
 		<div>
 			<div className="w-full p-4 border-b border-white text-center">Canvas</div>
-			{address ? <button onClick={disconnect}>Disconnect</button> : <button onClick={connect}>Connect</button>}
-			{address && <button onClick={connectNewSession}>Reconnect</button>}
+			{session?.address ? (
+				<button onClick={disconnect}>Disconnect</button>
+			) : address ? (
+				<button onClick={connectNewSession}>Connect</button>
+			) : (
+				<button onClick={connect}>Connect</button>
+			)}
 			<div className="p-10">
 				<div className="flex">
 					<div className="w-72 mr-10">
@@ -95,7 +100,7 @@ export const App: React.FC<{ setEndpoint: Function; endpoint: string }> = ({ set
 							selected={endpoint === "http://localhost:8000"}
 						/>
 						<ModularSelect
-							name="TinyPolis"
+							name="Chat"
 							category="Tools"
 							onclick={() => setEndpoint("http://localhost:8001")}
 							selected={endpoint === "http://localhost:8001"}
