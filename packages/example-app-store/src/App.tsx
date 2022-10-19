@@ -67,9 +67,24 @@ export const AppWrapper = () => {
 }
 
 export const App: React.FC<{ setEndpoint: Function; endpoint: string }> = ({ setEndpoint, endpoint }) => {
+	const {
+		error: canvasError,
+		cid,
+		uri,
+		spec,
+		dispatch,
+		connect,
+		connectNewSession,
+		disconnect,
+		address,
+		session,
+	} = useCanvas()
+
 	return (
 		<div>
 			<div className="w-full p-4 border-b border-white text-center">Canvas</div>
+			{address ? <button onClick={disconnect}>Disconnect</button> : <button onClick={connect}>Connect</button>}
+			{address && <button onClick={connectNewSession}>Reconnect</button>}
 			<div className="p-10">
 				<div className="flex">
 					<div className="w-72 mr-10">
@@ -96,7 +111,7 @@ export const App: React.FC<{ setEndpoint: Function; endpoint: string }> = ({ set
 									className="relative overflow-scroll border border-gray-200 rounded-lg shadow-lg bg-white"
 									style={{ width: 360, height: 500 }}
 								>
-									<Modular hash={endpoint} />
+									<Modular spec={spec} dispatch={dispatch} hash={endpoint} />
 								</div>
 								<div className="m-1 mt-8 font-mono text-sm text-gray-400">Connecting to backend {endpoint} ...</div>
 							</>
@@ -108,19 +123,11 @@ export const App: React.FC<{ setEndpoint: Function; endpoint: string }> = ({ set
 	)
 }
 
-export const Modular: React.FC<{ hash: string }> = ({ hash }) => {
-	const {
-		error: canvasError,
-		cid,
-		uri,
-		spec,
-		dispatch,
-		connect,
-		connectNewSession,
-		disconnect,
-		address,
-		session,
-	} = useCanvas()
+export const Modular: React.FC<{ spec: string | null; hash: string; dispatch: Function }> = ({
+	spec,
+	hash,
+	dispatch,
+}) => {
 	const [mod, setMod] = useState<{ fc: React.FC } | null>()
 
 	useEffect(() => {
@@ -131,7 +138,10 @@ export const Modular: React.FC<{ hash: string }> = ({ hash }) => {
 
 	const wrappedDispatch = (call: string, ...args: string[]) => {
 		console.log("called dispatch:", call, ...args)
-		return dispatch.call(null, call, ...args)
+		return dispatch.call(null, call, ...args).catch((err: Error) => {
+			console.error(err)
+			throw err
+		})
 	}
 
 	if (!mod) {
@@ -143,5 +153,5 @@ export const Modular: React.FC<{ hash: string }> = ({ hash }) => {
 
 // Return a separate component to avoid issues with hook reuse detection
 export const ModularChild = ({ dispatch, fc, hooks }: { dispatch: Function; hooks: Hooks; fc: React.FC }) => {
-	return fc({ React, dispatch, ...hooks })
+	return fc({ React, dispatch, ...hooks }, {})
 }
