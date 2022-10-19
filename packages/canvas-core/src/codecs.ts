@@ -29,7 +29,7 @@ export const chainType: t.Type<Chain> = t.union([
 	t.literal("substrate"),
 ])
 
-export const chainIdType: t.Type<ChainId> = t.number
+export const chainIdType: t.Type<ChainId> = t.union([t.number, t.string])
 
 export const blockType: t.Type<Block> = t.type({
 	chain: chainType,

@@ -3,7 +3,7 @@
  */
 export type Chain = "eth" | "cosmos" | "solana" | "substrate"
 
-export type ChainId = number
+export type ChainId = number | string
 
 /**
  * A `ContractMetadata` defines the metadata for a contract read by a
