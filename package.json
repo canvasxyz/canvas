@@ -6,7 +6,7 @@
     "appstore": "npm run dev --workspace=@canvas-js/example-app-store",
     "dev-example-chat": "GENERATE_SOURCEMAP=false npm run dev --workspace=@canvas-js/example-chat-client",
     "dev": "tsc --build --watch",
-    "build": "tsc --build",
+    "build": "tsc --build --clean && tsc --build",
     "clean": "tsc --build --clean",
     "publish-cli": "npm publish --workspace=@canvas-js/cli --access public",
     "publish-core": "npm publish --workspace=@canvas-js/core --access public",
