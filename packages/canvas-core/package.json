@@ -13,7 +13,7 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.0.17",
+		"@canvas-js/interfaces": "0.0.18",
 		"@canvas-js/rpc": "0.0.17",
 		"@chainsafe/libp2p-gossipsub": "^4.1.1",
 		"@chainsafe/libp2p-noise": "^9.0.0",
