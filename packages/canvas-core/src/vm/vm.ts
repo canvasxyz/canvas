@@ -320,8 +320,8 @@ export class VM {
 		this.context.setProp(thisArg, "db", this.dbHandle)
 		this.context.setProp(thisArg, "contracts", this.contractsHandle)
 
-		// after setting this.effects here, always make sure to reset it to null before
-		// returning or throwing an error - or the core won't be able to process more actions
+		// IMPORTANT: always reset `this.effects` and `this.actionContext` before returning or
+		// throwing an error - or the core won't be able to process more actions
 		this.effects = []
 		this.actionContext = context
 		const promiseResult = this.context.callFunction(actionHandle, thisArg, ...argHandles)
@@ -334,6 +334,7 @@ export class VM {
 		if (isFail(promiseResult)) {
 			const error = promiseResult.error.consume(this.context.dump)
 			this.effects = null
+			this.actionContext = null
 			throw new ApplicationError(error)
 		}
 
@@ -341,17 +342,20 @@ export class VM {
 		if (isFail(result)) {
 			const error = result.error.consume(this.context.dump)
 			this.effects = null
+			this.actionContext = null
 			throw new ApplicationError(error)
 		}
 
 		const returnValue = result.value.consume(this.context.dump)
 		if (returnValue === false) {
 			this.effects = null
+			this.actionContext = null
 			throw new Error("action rejected: not allowed")
 		}
 
 		if (returnValue !== undefined) {
 			this.effects = null
+			this.actionContext = null
 			throw new Error("action rejected: unexpected return value")
 		}
 
