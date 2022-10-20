@@ -128,6 +128,25 @@ export const App: React.FC<{ setEndpoint: Function; endpoint: string }> = ({ set
 	)
 }
 
+class ModularErrorBoundary extends React.Component<{ children: JSX.Element }, { hasError: boolean }> {
+	constructor(props: { children: JSX.Element }) {
+		super(props)
+		this.state = { hasError: false }
+	}
+	static getDerivedStateFromError(error: Error) {
+		return { hasError: true }
+	}
+	componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+		console.error(error, errorInfo)
+	}
+	render(): React.ReactNode {
+		if (this.state.hasError) {
+			return <div className="mt-20 text-center">Something went wrong.</div>
+		}
+		return this.props.children
+	}
+}
+
 export const Modular: React.FC<{ spec: string | null; hash: string; dispatch: Function }> = ({
 	spec,
 	hash,
@@ -152,7 +171,11 @@ export const Modular: React.FC<{ spec: string | null; hash: string; dispatch: Fu
 	if (!mod) {
 		return <div className="text-center mt-60 text-gray-400">Loading...</div>
 	} else {
-		return <ModularChild dispatch={wrappedDispatch} hooks={hooks} fc={mod.fc} />
+		return (
+			<ModularErrorBoundary>
+				<ModularChild dispatch={wrappedDispatch} hooks={hooks} fc={mod.fc} />
+			</ModularErrorBoundary>
+		)
 	}
 }
 
