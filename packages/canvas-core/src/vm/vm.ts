@@ -192,15 +192,15 @@ export class VM {
 				wrapObject(context, {
 					set: context.newFunction("set", (idHandle, valuesHandle) => {
 						assert(this.effects !== null, "internal error: this.effects is null")
-						assert(idHandle !== undefined)
-						assert(valuesHandle !== undefined)
+						assert(idHandle !== undefined, "internal error: missing idHandle")
+						assert(valuesHandle !== undefined, "internal error: missing valuesHandle")
 						const id = idHandle.consume(context.getString)
-						const values = this.unwrapModelValues(model, valuesHandle)
+						const values = this.unwrapModelValues(name, model, valuesHandle)
 						this.effects.push({ type: "set", model: name, id, values })
 					}),
 					delete: context.newFunction("delete", (idHandle) => {
 						assert(this.effects !== null, "internal error: this.effects is null")
-						assert(idHandle !== undefined)
+						assert(idHandle !== undefined, "internal error: missing idHandle")
 						const id = idHandle.consume(context.getString)
 						this.effects.push({ type: "del", model: name, id })
 					}),
@@ -379,13 +379,13 @@ export class VM {
 		}
 	}
 
-	private unwrapModelValues = (model: Model, valuesHandle: QuickJSHandle): Record<string, ModelValue> => {
+	private unwrapModelValues = (name: string, model: Model, valuesHandle: QuickJSHandle): Record<string, ModelValue> => {
 		const { id, updated_at, indexes, ...properties } = model
 		const valueHandles = unwrapObject(this.context, valuesHandle)
 		const values: Record<string, ModelValue> = {}
 
 		for (const [property, type] of Object.entries(properties)) {
-			assert(property in valueHandles)
+			assert(property in valueHandles, `this.db.${name}.set() did not provide ${property}`)
 			const valueHandle = valueHandles[property]
 			if (type === "boolean") {
 				values[property] = Boolean(valueHandle.consume(this.context.getNumber))
