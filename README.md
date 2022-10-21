@@ -1,5 +1,8 @@
 # Canvas
 
+[![tests](https://github.com/canvasxyz/canvas/actions/workflows/ci.yml/badge.svg)](https://github.com/canvasxyz/canvas/actions/workflows/ci.yml)
+[![node](https://img.shields.io/node/v/@canvas-js/core.svg)](https://www.npmjs.com/package/@canvas-js/core)
+ 
 Canvas is a new architecture for decentralized applications, where
 every user interaction is a signed message exchanged over a
 peer-to-peer network.
