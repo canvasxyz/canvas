@@ -8,21 +8,12 @@ import chalk from "chalk"
 import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
-import { Multiaddr } from "@multiformats/multiaddr"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { transform } from "sucrase"
 
 import { EventEmitter, CustomEvent, EventHandler } from "@libp2p/interfaces/events"
 
 import { createLibp2p, Libp2p } from "libp2p"
-import { WebSockets } from "@libp2p/websockets"
-import { Noise } from "@chainsafe/libp2p-noise"
-import { Mplex } from "@libp2p/mplex"
-import { Bootstrap } from "@libp2p/bootstrap"
-import { GossipSub } from "@chainsafe/libp2p-gossipsub"
-import { KadDHT } from "@libp2p/kad-dht"
-import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
-import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
@@ -54,6 +45,7 @@ import { MessageStore } from "./message-store/store.js"
 import * as RPC from "./rpc/index.js"
 import { BLOCK_CACHE_SIZE, MESSAGE_DATABASE_FILENAME, MODEL_DATABASE_FILENAME, MST_FILENAME } from "./constants.js"
 import { createHash } from "node:crypto"
+import { getLibp2pInit } from "./libp2p.js"
 
 export interface CoreConfig {
 	directory: string | null
@@ -126,33 +118,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(port !== undefined, "a peeringPort must be provided if peering is enabled")
 
 			const peerId = config.peerId || (await createEd25519PeerId())
-
-			libp2p = await createLibp2p({
-				connectionGater: {
-					denyDialMultiaddr: async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr),
-				},
-				peerId,
-				addresses: {
-					listen: [`/ip4/0.0.0.0/tcp/${port}/ws`],
-					announce: [...bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId.toString()}`)],
-					announceFilter: (multiaddrs) =>
-						multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr)),
-				},
-				transports: [new WebSockets()],
-				// @ts-expect-error
-				connectionEncryption: [new Noise()],
-				// @ts-expect-error
-				streamMuxers: [new Mplex()],
-				peerDiscovery: [new Bootstrap({ list: bootstrapList })],
-				pubsub: new GossipSub({
-					doPX: true,
-					fallbackToFloodsub: false,
-					allowPublishToZeroPeers: true,
-					globalSignaturePolicy: "StrictSign",
-				}),
-				dht: new KadDHT({ protocolPrefix: "/canvas", clientMode: false }),
-			})
-
+			libp2p = await createLibp2p(getLibp2pInit(peerId, port))
 			console.log(`[canvas-core] PeerId ${libp2p.peerId.toString()}`)
 			await libp2p.start()
 		}

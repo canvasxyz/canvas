@@ -1,16 +1,18 @@
 import { createLibp2p } from "libp2p"
-import { WebSockets } from "@libp2p/websockets"
-import { Noise } from "@chainsafe/libp2p-noise"
-import { Mplex } from "@libp2p/mplex"
-import { KadDHT } from "@libp2p/kad-dht"
-import { Bootstrap } from "@libp2p/bootstrap"
+import { webSockets } from "@libp2p/websockets"
+import { noise } from "@chainsafe/libp2p-noise"
+import { mplex } from "@libp2p/mplex"
+import { kadDHT } from "@libp2p/kad-dht"
+import { bootstrap } from "@libp2p/bootstrap"
 import { createFromProtobuf } from "@libp2p/peer-id-factory"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 
+const bootstrapList = process.env.BOOTSTRAP_LIST.split(" ")
+
 const peerId = await createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
 
-const bootstrapList = process.env.BOOTSTRAP_LIST.split(" ")
+const RELAY_HOP_TIMEOUT = 0x7fffffff
 
 const libp2p = await createLibp2p({
 	peerId,
@@ -22,15 +24,15 @@ const libp2p = await createLibp2p({
 	connectionGater: {
 		denyDialMultiaddr: async (peerId, multiaddr) => isLoopback(multiaddr),
 	},
-	transports: [new WebSockets()],
-	connectionEncryption: [new Noise()],
-	streamMuxers: [new Mplex()],
-	peerDiscovery: [new Bootstrap({ list: bootstrapList })],
-	dht: new KadDHT({ protocolPrefix: "/canvas", clientMode: false }),
+	transports: [webSockets()],
+	connectionEncryption: [noise()],
+	streamMuxers: [mplex()],
+	peerDiscovery: [bootstrap({ list: bootstrapList })],
+	dht: kadDHT({ protocolPrefix: "/canvas", clientMode: false }),
 	relay: {
 		enabled: true,
 		hop: {
-			timeout: 2147483647,
+			timeout: RELAY_HOP_TIMEOUT,
 			enabled: true,
 			active: true,
 		},

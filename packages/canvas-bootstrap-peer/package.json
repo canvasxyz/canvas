@@ -6,15 +6,14 @@
   "type": "module",
   "main": "index.js",
   "dependencies": {
-    "@chainsafe/libp2p-noise": "^9.0.0",
-    "@libp2p/bootstrap": "^4.0.0",
-    "@libp2p/kad-dht": "^4.0.0",
-    "@libp2p/mdns": "^4.0.0",
-    "@libp2p/mplex": "^6.0.2",
+    "@chainsafe/libp2p-noise": "^10.0.0",
+    "@libp2p/bootstrap": "^5.0.0",
+    "@libp2p/kad-dht": "^5.0.1",
+    "@libp2p/mplex": "^7.0.0",
     "@libp2p/peer-id-factory": "^1.0.18",
-    "@libp2p/tcp": "^4.0.1",
     "@libp2p/utils": "^3.0.2",
-    "@libp2p/websockets": "^4.0.1",
-    "libp2p": "^0.39.5"
+    "@libp2p/websockets": "^5.0.0",
+    "libp2p": "^0.40.0",
+    "multiformats": "^10.0.2"
   }
 }
