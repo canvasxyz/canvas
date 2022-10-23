@@ -1,1 +1,1 @@
-export { VM, Exports } from "./vm.js"
+export { VM } from "./vm.js"

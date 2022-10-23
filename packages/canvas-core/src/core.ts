@@ -9,7 +9,6 @@ import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
-import { transform } from "sucrase"
 
 import { EventEmitter, CustomEvent, EventHandler } from "@libp2p/interfaces/events"
 
@@ -39,7 +38,7 @@ import { actionType, sessionType } from "./codecs.js"
 import { CacheMap, signalInvalidType, wait, retry, bootstrapList, toHex } from "./utils.js"
 import { encodeMessage, decodeMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { ModelStore } from "./model-store/index.js"
-import { VM, Exports } from "./vm/index.js"
+import { VM } from "./vm/index.js"
 import { MessageStore } from "./message-store/store.js"
 
 import * as RPC from "./rpc/index.js"
@@ -89,20 +88,6 @@ export class Core extends EventEmitter<CoreEvents> {
 			return CID.parse(cid)
 		})
 
-		try {
-			spec = transform(spec, {
-				transforms: ["jsx"],
-				jsxPragma: "React.createElement",
-				jsxFragmentPragma: "React.Fragment",
-				production: true,
-			}).code
-		} catch (err) {
-			if (verbose) {
-				console.log(chalk.red("Invalid spec:"), chalk.red(err))
-			}
-			throw err
-		}
-
 		const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
 		for (const [chain, chainIds] of Object.entries(rpc || {})) {
 			for (const [chainId, url] of Object.entries(chainIds)) {
@@ -111,7 +96,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		const { vm, exports } = await VM.initialize(uri, spec, providers, quickJS, { verbose })
+		const vm = await VM.initialize(uri, spec, providers, { verbose })
 
 		let libp2p: Libp2p | null = null
 		if (directory !== null && peering) {
@@ -124,7 +109,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		const options = { verbose, unchecked, peering: true, sync: true }
-		const core = new Core(directory, uri, cid, spec, vm, exports, libp2p, providers, options)
+		const core = new Core(directory, uri, cid, spec, vm, libp2p, providers, options)
 
 		if (replay) {
 			console.log(chalk.green(`[canvas-core] Replaying action log...`))
@@ -168,7 +153,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly cid: CID,
 		public readonly spec: string,
 		public readonly vm: VM,
-		public readonly exports: Exports,
 		public readonly libp2p: Libp2p | null,
 		public readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {},
 		private readonly options: {
@@ -183,7 +167,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.syncProtocol = `/x/canvas/sync/${cid.toString()}`
 
 		const modelDatabasePath = directory && path.resolve(directory, MODEL_DATABASE_FILENAME)
-		this.modelStore = new ModelStore(modelDatabasePath, exports.models, exports.routes, { verbose: options.verbose })
+		this.modelStore = new ModelStore(modelDatabasePath, vm.models, vm.routes, { verbose: options.verbose })
 
 		const messageDatabasePath = directory && path.resolve(directory, MESSAGE_DATABASE_FILENAME)
 		this.messageStore = new MessageStore(uri, messageDatabasePath, { verbose: options.verbose })

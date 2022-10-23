@@ -12,7 +12,7 @@ type Hooks = {
 	useRoute: Function
 }
 
-const hooks: Hooks = {
+const hooks = {
 	useState,
 	useMemo,
 	useRef,
@@ -69,9 +69,7 @@ export const AppWrapper = () => {
 export const App: React.FC<{ setEndpoint: Function; endpoint: string }> = ({ setEndpoint, endpoint }) => {
 	const {
 		error: canvasError,
-		cid,
-		uri,
-		spec,
+		component,
 		dispatch,
 		connect,
 		connectNewSession,
@@ -116,7 +114,7 @@ export const App: React.FC<{ setEndpoint: Function; endpoint: string }> = ({ set
 									className="relative overflow-scroll border border-gray-200 rounded-lg shadow-lg bg-white"
 									style={{ width: 360, height: 500 }}
 								>
-									<Modular spec={spec} dispatch={dispatch} hash={endpoint} />
+									<Modular component={component} dispatch={dispatch} />
 								</div>
 								<div className="m-1 mt-10 font-mono text-sm text-gray-400">Connected to {endpoint}</div>
 							</>
@@ -147,28 +145,28 @@ class ModularErrorBoundary extends React.Component<{ children: JSX.Element }, { 
 	}
 }
 
-export const Modular: React.FC<{ spec: string | null; hash: string; dispatch: Function }> = ({
-	spec,
-	hash,
-	dispatch,
-}) => {
-	const [mod, setMod] = useState<{ fc: React.FC } | null>()
-
+export const Modular: React.FC<{ component: string | null; dispatch: Function }> = ({ component, dispatch }) => {
+	const [mod, setMod] = useState<{ fc: React.FC | null }>({ fc: null })
 	useEffect(() => {
-		if (spec === null) return
-		const dataUri = "data:text/javascript;charset=utf-8," + encodeURIComponent(spec)
-		import(/* webpackIgnore: true */ dataUri).then((mod) => setMod({ fc: mod.component }))
-	}, [spec])
+		if (component !== null) {
+			const dataUri =
+				"data:text/javascript;charset=utf-8," + encodeURIComponent(`export default (React) => ${component}`)
+			import(/* webpackIgnore: true */ dataUri).then((mod) => setMod({ fc: mod.default(React) }))
+		}
+	}, [component])
 
-	const wrappedDispatch = (call: string, ...args: string[]) => {
-		console.log("called dispatch:", call, ...args)
-		return dispatch.call(null, call, ...args).catch((err: Error) => {
-			console.error(err)
-			throw err
-		})
-	}
+	const wrappedDispatch = useCallback(
+		(call: string, ...args: string[]) => {
+			console.log("called dispatch:", call, ...args)
+			return dispatch.call(null, call, ...args).catch((err: Error) => {
+				console.error(err)
+				throw err
+			})
+		},
+		[dispatch]
+	)
 
-	if (!mod) {
+	if (mod.fc === null) {
 		return <div className="text-center mt-60 text-gray-400">Loading...</div>
 	} else {
 		return (
@@ -181,5 +179,5 @@ export const Modular: React.FC<{ spec: string | null; hash: string; dispatch: Fu
 
 // Return a separate component to avoid issues with hook reuse detection
 export const ModularChild = ({ dispatch, fc, hooks }: { dispatch: Function; hooks: Hooks; fc: React.FC }) => {
-	return fc({ React, dispatch, ...hooks }, {})
+	return fc({ react: React, dispatch, ...hooks }, {})
 }

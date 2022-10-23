@@ -1,4 +1,4 @@
-import { useContext } from "react"
+import React, { useContext } from "react"
 
 import { ActionArgument } from "@canvas-js/interfaces"
 
@@ -20,17 +20,17 @@ import { CanvasSession } from "./useSession.js"
 export function useCanvas(): {
 	cid: string | null
 	uri: string | null
-	spec: string | null
 	error: Error | null
 	loading: boolean
 	address: string | null
 	session: CanvasSession | null
+	component: string | null
 	dispatch: (call: string, ...args: ActionArgument[]) => Promise<void>
 	connect: () => Promise<void>
 	connectNewSession: () => Promise<void>
 	disconnect: () => Promise<void>
 } {
-	const { cid, uri, spec, error, loading, address, session, dispatch, connect, connectNewSession, disconnect } =
+	const { cid, uri, component, error, loading, address, session, dispatch, connect, connectNewSession, disconnect } =
 		useContext(CanvasContext)
-	return { cid, uri, spec, error, loading, address, session, dispatch, connect, connectNewSession, disconnect }
+	return { cid, uri, component, error, loading, address, session, dispatch, connect, connectNewSession, disconnect }
 }

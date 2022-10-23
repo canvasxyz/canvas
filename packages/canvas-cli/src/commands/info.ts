@@ -29,8 +29,8 @@ export async function handler(args: Args) {
 	const { uri, spec } = await locateSpec(args.spec, args.ipfs)
 	const quickJS = await getQuickJS()
 
-	const { vm, exports } = await VM.initialize(uri, spec, {}, quickJS, { unchecked: true })
-	const { models, routeParameters, actionParameters, contractMetadata } = exports
+	const vm = await VM.initialize(uri, spec, {}, { unchecked: true })
+	const { models, routeParameters, actionParameters, contractMetadata } = vm
 	vm.dispose()
 
 	console.log(`name: ${name}\n`)

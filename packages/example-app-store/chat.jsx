@@ -43,7 +43,7 @@ export const actions = {
 	},
 }
 
-export const component = ({ React, dispatch, useRef, useRoute, useState, useEffect }) => {
+export const component = ({ react: { useRef, useState }, useRoute, dispatch }) => {
 	const { error, data } = useRoute("/messages")
 	const [submitting, setSubmitting] = useState(false)
 	const inputRef = useRef()

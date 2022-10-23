@@ -65,6 +65,7 @@ export function useSigner(): {
 		provider.send("eth_accounts", []).then((accounts) => {
 			setLoading(false)
 			setProvider(provider)
+			console.log("we set the provider", provider)
 			if (accounts.length > 0) {
 				const address = accounts[0].toLowerCase()
 				const signer = provider.getSigner(address)

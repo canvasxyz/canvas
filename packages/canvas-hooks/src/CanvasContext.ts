@@ -1,4 +1,4 @@
-import { createContext } from "react"
+import React, { createContext } from "react"
 
 import { ActionArgument } from "@canvas-js/interfaces"
 
@@ -8,11 +8,11 @@ export interface CanvasContextValue {
 	host?: string
 	cid: string | null
 	uri: string | null
-	spec: string | null
 	error: Error | null
 	loading: boolean
 	address: string | null
 	session: CanvasSession | null
+	component: string | null
 	connect: () => Promise<void>
 	connectNewSession: () => Promise<void>
 	disconnect: () => Promise<void>
@@ -22,11 +22,11 @@ export interface CanvasContextValue {
 export const CanvasContext = createContext<CanvasContextValue>({
 	cid: null,
 	uri: null,
-	spec: null,
 	error: null,
 	loading: true,
 	address: null,
 	session: null,
+	component: null,
 	connect: () => Promise.reject(),
 	connectNewSession: () => Promise.reject(),
 	disconnect: () => Promise.reject(),

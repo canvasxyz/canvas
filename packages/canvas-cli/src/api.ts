@@ -20,7 +20,6 @@ export class API {
 	readonly core: Core
 	readonly server: http.Server & stoppable.WithStop
 	private readonly verbose?: boolean
-	private readonly peerLoggingTimer?: NodeJS.Timer
 
 	constructor({ core, port, verbose }: APIConfig) {
 		this.core = core
@@ -30,28 +29,16 @@ export class API {
 		api.use(cors({ exposedHeaders: ["ETag", "Link"] }))
 		api.use(bodyParser.json())
 
-		api.head("/", (req, res) => {
-			res.status(StatusCodes.OK)
-			res.header("ETag", `"${core.cid.toString()}"`)
-			res.header("Link", `<${core.uri}>; rel="self"`)
-			res.header("Content-Type", "application/json")
-			res.end()
-		})
-
 		api.get("/", (req: Request, res: Response) => {
 			res.header("ETag", `"${core.cid.toString()}"`)
 			res.header("Link", `<${core.uri}>; rel="self"`)
-			if (req.query.spec === "true") {
-				res.json({ name: core.uri, spec: core.spec })
-			} else {
-				res.json({ name: core.uri })
-			}
+			res.json({ name: core.uri, component: core.vm.component })
 		})
 
 		api.post("/actions", this.handleAction)
 		api.post("/sessions", this.handleSession)
 
-		for (const route of Object.keys(core.exports.routeParameters)) {
+		for (const route of Object.keys(core.vm.routeParameters)) {
 			api.get(route, this.getRouteHandler(route))
 		}
 
@@ -59,7 +46,7 @@ export class API {
 			api.listen(port, () => {
 				console.log(`Serving ${core.uri} on port ${port}:`)
 				console.log(`└ GET http://localhost:${port}/`)
-				for (const name of Object.keys(core.exports.routeParameters)) {
+				for (const name of Object.keys(core.vm.routeParameters)) {
 					console.log(`└ GET http://localhost:${port}${name}`)
 				}
 				console.log("└ POST /actions")
@@ -70,8 +57,6 @@ export class API {
 	}
 
 	async stop() {
-		clearInterval(this.peerLoggingTimer)
-
 		await new Promise<void>((resolve, reject) => {
 			this.server.stop((err) => (err ? reject(err) : resolve()))
 		})
@@ -79,7 +64,7 @@ export class API {
 
 	getRouteHandler = (route: string) => async (req: Request, res: Response) => {
 		const params: Record<string, string> = {}
-		for (const name of this.core.exports.routeParameters[route]) {
+		for (const name of this.core.vm.routeParameters[route]) {
 			const value = req.params[name]
 			if (typeof value === "string") {
 				params[name] = value

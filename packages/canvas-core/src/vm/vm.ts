@@ -2,8 +2,11 @@ import assert from "node:assert"
 
 import chalk from "chalk"
 import { fetch } from "undici"
+import { getQuickJS, isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime } from "quickjs-emscripten"
+import { transform } from "sucrase"
 import { ethers } from "ethers"
-import { isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime, QuickJSWASMModule } from "quickjs-emscripten"
+
+import * as t from "io-ts"
 
 import {
 	ActionArgument,
@@ -31,35 +34,69 @@ import {
 	wrapArray,
 } from "./utils.js"
 
-export type Exports = {
-	models: Record<string, Model>
-	actionParameters: Record<string, string[]>
-	routes: Record<string, string>
-	routeParameters: Record<string, string[]>
-	contractMetadata: Record<string, ContractMetadata>
-}
+import * as constants from "../constants.js"
 
-type ContractFunctionResult = string | boolean | number | bigint
+type Options = { verbose?: boolean; unchecked?: boolean }
 
 export class VM {
 	public static async initialize(
 		uri: string,
 		spec: string,
 		providers: Record<string, ethers.providers.JsonRpcProvider>,
-		quickJS: QuickJSWASMModule,
-		options: { verbose?: boolean; unchecked?: boolean } = {}
-	): Promise<{ vm: VM; exports: Exports }> {
+		options: Options = {}
+	): Promise<VM> {
+		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
-		runtime.setMemoryLimit(VM.RUNTIME_MEMORY_LIMIT)
+		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
-		const moduleHandle = await loadModule(context, uri, spec)
+		const { code: transpiledSpec } = transform(spec, {
+			transforms: ["jsx"],
+			jsxPragma: "React.createElement",
+			jsxFragmentPragma: "React.Fragment",
+			disableESTransforms: true,
+			production: true,
+		})
+
+		const moduleHandle = await loadModule(context, uri, transpiledSpec)
+		return new VM(runtime, context, moduleHandle, providers, options)
+	}
+
+	public readonly models: Record<string, Model>
+	public readonly routeParameters: Record<string, string[]>
+	public readonly routes: Record<string, string>
+	public readonly actionParameters: Record<string, string[]>
+	public readonly contracts: Record<string, ethers.Contract>
+	public readonly contractMetadata: Record<string, ContractMetadata>
+	public readonly component: string | null
+
+	private readonly actionHandles: Record<string, QuickJSHandle>
+	private readonly contractsHandle: QuickJSHandle
+	private readonly dbHandle: QuickJSHandle
+
+	private effects: Effect[] | null = null
+	private actionContext: ActionContext | null = null
+
+	constructor(
+		public readonly runtime: QuickJSRuntime,
+		public readonly context: QuickJSContext,
+		moduleHandle: QuickJSHandle,
+		providers: Record<string, ethers.providers.JsonRpcProvider>,
+		options: Options
+	) {
 		const {
 			models: modelsHandle,
 			routes: routesHandle,
 			actions: actionsHandle,
 			contracts: contractsHandle,
+			component: componentHandle,
+			...rest
 		} = moduleHandle.consume((handle) => unwrapObject(context, handle))
+
+		for (const [name, handle] of Object.entries(rest)) {
+			console.log(chalk.yellow(`[canvas-vm] Warning: extraneous export ${JSON.stringify(name)}`))
+			handle.dispose()
+		}
 
 		assert(modelsHandle !== undefined, "spec is missing `models` export")
 		assert(actionsHandle !== undefined, "spec is missing `actions` export")
@@ -69,14 +106,17 @@ export class VM {
 			contractsHandle === undefined || context.typeof(contractsHandle) === "object",
 			"`contracts` export must be an object"
 		)
+		assert(
+			componentHandle === undefined || context.typeof(componentHandle) === "function",
+			"`component` export must be string"
+		)
 
-		const models = modelsHandle.consume(context.dump)
-		assert(modelsType.is(models), "invalid `models` export")
+		this.models = validate(modelsType, modelsHandle.consume(context.dump), "invalid `models` export")
 
 		// validate models
 		const modelNamePattern = /^[a-z_]+$/
 		const modelPropertyNamePattern = /^[a-z_]+$/
-		for (const [name, model] of Object.entries(models)) {
+		for (const [name, model] of Object.entries(this.models)) {
 			assertPattern(name, modelNamePattern, "invalid model name")
 			assert(name.startsWith("_") === false, "model names cannot begin with an underscore")
 			const { indexes, ...properties } = model
@@ -100,48 +140,42 @@ export class VM {
 			}
 		}
 
-		const actionHandles = actionsHandle.consume((handle) => unwrapObject(context, handle))
-		for (const handle of Object.values(actionHandles)) {
-			assert(context.typeof(handle) === "function")
-		}
-
-		const exports: Exports = {
-			models,
-			actionParameters: {},
-			routes: {},
-			routeParameters: {},
-			contractMetadata: {},
-		}
-
 		// parse and validate action handlers
+		this.actionHandles = actionsHandle.consume((handle) => unwrapObject(context, handle))
+		this.actionParameters = {}
 		const actionNamePattern = /^[a-zA-Z]+$/
-		for (const [name, handle] of Object.entries(actionHandles)) {
+		for (const [name, handle] of Object.entries(this.actionHandles)) {
 			assertPattern(name, actionNamePattern, "invalid action name")
+			assert(context.typeof(handle) === "function", `actions.${name} is not a function`)
 			const source = call(context, "Function.prototype.toString", handle).consume(context.getString)
-			exports.actionParameters[name] = parseFunctionParameters(source)
+			this.actionParameters[name] = parseFunctionParameters(source)
 		}
 
+		this.routes = {}
+		this.routeParameters = {}
 		if (routesHandle !== undefined) {
+			assert(context.typeof(routesHandle) === "object", "`routes` export must be an object")
+
+			const routeHandles = routesHandle.consume((handle) => unwrapObject(context, handle))
 			const routeNamePattern = /^(\/:?[a-z_]+)+$/
 			const routeParameterPattern = /:([a-zA-Z0-9_]+)/g
-
-			assert(context.typeof(routesHandle) === "object", "`routes` export must be an object")
-			for (const [name, handle] of Object.entries(routesHandle.consume((handle) => unwrapObject(context, handle)))) {
+			for (const [name, handle] of Object.entries(routeHandles)) {
 				assert(context.typeof(handle) === "string", "route queries must be strings")
 				assertPattern(name, routeNamePattern, "invalid route name")
-				exports.routes[name] = handle.consume(context.getString)
-				exports.routeParameters[name] = []
+				this.routes[name] = handle.consume(context.getString)
+				this.routeParameters[name] = []
 				for (const [_, param] of name.matchAll(routeParameterPattern)) {
-					exports.routeParameters[name].push(param)
+					this.routeParameters[name].push(param)
 				}
 			}
 		}
 
-		const contracts: Record<string, ethers.Contract> = {}
+		this.contracts = {}
+		this.contractMetadata = {}
 		if (contractsHandle !== undefined) {
 			// parse and validate contracts
-			const contractNamePattern = /^[a-zA-Z]+$/
 			const contractHandles = contractsHandle.consume((handle) => unwrapObject(context, handle))
+			const contractNamePattern = /^[a-zA-Z]+$/
 			for (const [name, contractHandle] of Object.entries(contractHandles)) {
 				assertPattern(name, contractNamePattern, "invalid contract name")
 				const contract = contractHandle.consume((handle) => unwrapObject(context, handle))
@@ -155,52 +189,40 @@ export class VM {
 				assert(chainType.is(chain), "invalid chain")
 				assert(chainIdType.is(chainId), "invalid chain id")
 
-				const key = `${chain}:${chainId}`
-				const provider = providers[key]
-				assert(options.unchecked || provider !== undefined, `spec requires an RPC endpoint for ${key}`)
-				exports.contractMetadata[name] = { chain, chainId, address, abi }
-				if (provider !== undefined) {
-					contracts[name] = new ethers.Contract(address, abi, provider)
+				this.contractMetadata[name] = { chain, chainId, address, abi }
+
+				if (options.unchecked) {
+					if (options.verbose) {
+						console.log(`[canvas-vm] Skipping contract setup`)
+					}
+				} else {
+					const provider = providers[`${chain}:${chainId}`]
+					assert(provider !== undefined, `Spec requires an RPC endpoint for ${chain}:${chainId}`)
+					this.contracts[name] = new ethers.Contract(address, abi, provider)
 				}
 			}
 		}
 
-		const vm = new VM(runtime, context, actionHandles, models, contracts, options)
-
-		return { vm, exports }
-	}
-
-	private static readonly RUNTIME_MEMORY_LIMIT = 1024 * 640 // 640kb
-	private readonly dbHandle: QuickJSHandle
-	private readonly contractsHandle: QuickJSHandle
-	private effects: Effect[] | null = null
-	private actionContext: ActionContext | null = null
-
-	constructor(
-		private readonly runtime: QuickJSRuntime,
-		private readonly context: QuickJSContext,
-		private readonly actionHandles: Record<string, QuickJSHandle>,
-		models: Record<string, Model>,
-		contracts: Record<string, ethers.Contract>,
-		options: { verbose?: boolean }
-	) {
-		this.installGlobals(options)
+		this.component =
+			componentHandle === undefined
+				? null
+				: call(context, "Function.prototype.toString", componentHandle).consume(context.getString)
 
 		this.dbHandle = wrapObject(
 			context,
-			mapEntries(models, (name, model) =>
+			mapEntries(this.models, (name, model) =>
 				wrapObject(context, {
 					set: context.newFunction("set", (idHandle, valuesHandle) => {
 						assert(this.effects !== null, "internal error: this.effects is null")
-						assert(idHandle !== undefined, "internal error: missing idHandle")
-						assert(valuesHandle !== undefined, "internal error: missing valuesHandle")
+						assert(idHandle !== undefined)
+						assert(valuesHandle !== undefined)
 						const id = idHandle.consume(context.getString)
-						const values = this.unwrapModelValues(name, model, valuesHandle)
+						const values = this.unwrapModelValues(model, valuesHandle)
 						this.effects.push({ type: "set", model: name, id, values })
 					}),
 					delete: context.newFunction("delete", (idHandle) => {
 						assert(this.effects !== null, "internal error: this.effects is null")
-						assert(idHandle !== undefined, "internal error: missing idHandle")
+						assert(idHandle !== undefined)
 						const id = idHandle.consume(context.getString)
 						this.effects.push({ type: "del", model: name, id })
 					}),
@@ -210,7 +232,7 @@ export class VM {
 
 		this.contractsHandle = wrapObject(
 			context,
-			mapEntries(contracts, (name, contract) =>
+			mapEntries(this.contracts, (name, contract) =>
 				wrapObject(
 					context,
 					mapEntries(contract.functions, (key, fn) =>
@@ -224,7 +246,7 @@ export class VM {
 								console.log(`[canvas-vm] contract: ${call} at block ${block.blocknum} (${block.blockhash})`)
 							}
 
-							const deferred = this.context.newPromise()
+							const deferred = context.newPromise()
 							fn.apply(contract, args)
 								.then((result: ContractFunctionResult[]) =>
 									wrapArray(context, result.map(this.wrapContractFunctionResult)).consume(deferred.resolve)
@@ -238,6 +260,41 @@ export class VM {
 				)
 			)
 		)
+
+		// install globals
+		wrapObject(context, {
+			// console.log:
+			console: wrapObject(context, {
+				log: context.newFunction("log", (...args: any[]) => console.log("[canvas-vm]", ...args.map(context.dump))),
+			}),
+
+			// fetch:
+			fetch: context.newFunction("fetch", (urlHandle: QuickJSHandle) => {
+				assert(context.typeof(urlHandle) === "string", "url must be a string")
+				const url = context.getString(urlHandle)
+				const deferred = context.newPromise()
+				if (options.verbose) {
+					console.log("[canvas-vm] fetch:", url)
+				}
+
+				fetch(url)
+					.then((res) => res.text())
+					.then((data) => {
+						if (options.verbose) {
+							console.log(`[canvas-vm] fetch OK: ${url} (${data.length} bytes)`)
+						}
+
+						context.newString(data).consume((val) => deferred.resolve(val))
+					})
+					.catch((err) => {
+						console.error("[canvas-vm] fetch error:", err.message)
+						deferred.reject(context.newString(err.message))
+					})
+
+				deferred.settled.then(context.runtime.executePendingJobs)
+				return deferred.handle
+			}),
+		}).consume((globalsHandle) => call(context, "Object.assign", null, context.global, globalsHandle).dispose())
 	}
 
 	public dispose() {
@@ -250,47 +307,6 @@ export class VM {
 		disposeCachedHandles(this.context)
 		this.context.dispose()
 		this.runtime.dispose()
-	}
-
-	private installGlobals(options: { verbose?: boolean }) {
-		const globals = wrapObject(this.context, {
-			// log to console:
-			console: wrapObject(this.context, {
-				log: this.context.newFunction("log", (...args: any[]) => {
-					console.log("[canvas-vm]", ...args.map(this.context.dump))
-				}),
-			}),
-
-			// fetch:
-			fetch: this.context.newFunction("fetch", (urlHandle: QuickJSHandle) => {
-				assert(this.context.typeof(urlHandle) === "string", "url must be a string")
-				const url = this.context.getString(urlHandle)
-				const deferred = this.context.newPromise()
-				if (options.verbose) {
-					console.log("[canvas-vm] fetch:", url)
-				}
-
-				fetch(url)
-					.then((res) => res.text())
-					.then((data) => {
-						if (options.verbose) {
-							console.log(`[canvas-vm] fetch OK: ${url} (${data.length} bytes)`)
-						}
-
-						this.context.newString(data).consume((val) => deferred.resolve(val))
-					})
-					.catch((err) => {
-						console.error("[canvas-vm] fetch error:", err.message)
-						deferred.reject(this.context.newString(err.message))
-					})
-
-				deferred.settled.then(this.context.runtime.executePendingJobs)
-				return deferred.handle
-			}),
-		})
-
-		call(this.context, "Object.assign", null, this.context.global, globals).dispose()
-		globals.dispose()
 	}
 
 	/**
@@ -320,8 +336,8 @@ export class VM {
 		this.context.setProp(thisArg, "db", this.dbHandle)
 		this.context.setProp(thisArg, "contracts", this.contractsHandle)
 
-		// IMPORTANT: always reset `this.effects` and `this.actionContext` before returning or
-		// throwing an error - or the core won't be able to process more actions
+		// after setting this.effects here, always make sure to reset it to null before
+		// returning or throwing an error - or the core won't be able to process more actions
 		this.effects = []
 		this.actionContext = context
 		const promiseResult = this.context.callFunction(actionHandle, thisArg, ...argHandles)
@@ -334,7 +350,6 @@ export class VM {
 		if (isFail(promiseResult)) {
 			const error = promiseResult.error.consume(this.context.dump)
 			this.effects = null
-			this.actionContext = null
 			throw new ApplicationError(error)
 		}
 
@@ -342,20 +357,17 @@ export class VM {
 		if (isFail(result)) {
 			const error = result.error.consume(this.context.dump)
 			this.effects = null
-			this.actionContext = null
 			throw new ApplicationError(error)
 		}
 
 		const returnValue = result.value.consume(this.context.dump)
 		if (returnValue === false) {
 			this.effects = null
-			this.actionContext = null
 			throw new Error("action rejected: not allowed")
 		}
 
 		if (returnValue !== undefined) {
 			this.effects = null
-			this.actionContext = null
 			throw new Error("action rejected: unexpected return value")
 		}
 
@@ -379,13 +391,13 @@ export class VM {
 		}
 	}
 
-	private unwrapModelValues = (name: string, model: Model, valuesHandle: QuickJSHandle): Record<string, ModelValue> => {
+	private unwrapModelValues = (model: Model, valuesHandle: QuickJSHandle): Record<string, ModelValue> => {
 		const { id, updated_at, indexes, ...properties } = model
 		const valueHandles = unwrapObject(this.context, valuesHandle)
 		const values: Record<string, ModelValue> = {}
 
 		for (const [property, type] of Object.entries(properties)) {
-			assert(property in valueHandles, `this.db.${name}.set() did not provide ${property}`)
+			assert(property in valueHandles)
 			const valueHandle = valueHandles[property]
 			if (type === "boolean") {
 				values[property] = Boolean(valueHandle.consume(this.context.getNumber))
@@ -422,6 +434,16 @@ export class VM {
 			console.error(value)
 			throw new Error("Unsupported value type in contract function result")
 		}
+	}
+}
+
+type ContractFunctionResult = string | boolean | number | bigint
+
+function validate<T>(type: t.Type<T>, value: any, message?: string): T {
+	if (type.is(value)) {
+		return value
+	} else {
+		throw new Error(message)
 	}
 }
 

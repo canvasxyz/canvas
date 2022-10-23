@@ -2,7 +2,11 @@ import assert from "node:assert"
 
 import { isFail, QuickJSContext, QuickJSHandle, VmCallResult } from "quickjs-emscripten"
 
-import type { JSONValue } from "../utils.js"
+export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
+export interface JSONArray extends Array<JSONValue> {}
+export interface JSONObject {
+	[key: string]: JSONValue
+}
 
 const contextCacheMap = new WeakMap<QuickJSContext, Record<string, QuickJSHandle>>()
 
