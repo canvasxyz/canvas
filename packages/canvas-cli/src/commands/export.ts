@@ -15,10 +15,6 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "string",
 			demandOption: true,
 		})
-		.option("database", {
-			type: "string",
-			desc: "Override database URI",
-		})
 		.option("ipfs", {
 			type: "string",
 			desc: "IPFS Gateway URL",
