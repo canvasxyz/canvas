@@ -48,7 +48,7 @@ test("Test calling the public ENS resolver contract", async (t) => {
 
 	const rpc = { eth: { [ETH_CHAIN_ID]: ETH_CHAIN_RPC } }
 	const core = await Core.initialize({ uri, directory: null, spec, quickJS, rpc })
-	const provider = core.providers["eth:1"]
+	const provider = core.getProvider("eth", ETH_CHAIN_ID)
 
 	async function sign(call: string, args: ActionArgument[]): Promise<Action> {
 		const timestamp = Date.now()

@@ -1,8 +1,11 @@
 import assert from "node:assert"
 
+import chalk from "chalk"
+import { ethers } from "ethers"
 import Hash from "ipfs-only-hash"
 
 import type { ActionArgument, Chain, ChainId, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
+import * as constants from "./constants.js"
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
 export interface JSONArray extends Array<JSONValue> {}
@@ -89,25 +92,6 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	return { uri: `ipfs://${cid}`, spec }
 }
 
-// add elements with CacheMap.add(key, value) and they'll
-// get shifted out in the order they were added.
-export class CacheMap<K, V> extends Map<K, V> {
-	constructor(public readonly capacity: number) {
-		super()
-	}
-
-	add(key: K, value: V) {
-		this.set(key, value)
-		for (const key of this.keys()) {
-			if (this.size > this.capacity) {
-				this.delete(key)
-			} else {
-				break
-			}
-		}
-	}
-}
-
 export const bootstrapList = [
 	"/ip4/137.66.12.223/tcp/4002/ws/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o",
 	"/ip4/137.66.11.73/tcp/4002/ws/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT",
@@ -165,4 +149,75 @@ export function toHex(hash: Uint8Array | Buffer) {
 export function fromHex(input: string) {
 	assert(input.startsWith("0x"), 'input did not start with "0x"')
 	return Buffer.from(input.slice(2), "hex")
+}
+
+// add elements with CacheMap.add(key, value) and they'll
+// get shifted out in the order they were added.
+export class CacheMap<K, V> extends Map<K, V> {
+	constructor(public readonly capacity: number) {
+		super()
+	}
+
+	add(key: K, value: V) {
+		this.set(key, value)
+		for (const key of this.keys()) {
+			if (this.size > this.capacity) {
+				this.delete(key)
+			} else {
+				break
+			}
+		}
+	}
+}
+
+export interface BlockResolver {
+	getBlock(chain: Chain, chainId: ChainId, blockhash: string): Promise<ethers.providers.Block>
+}
+
+export class BlockCache implements BlockResolver {
+	private readonly controller = new AbortController()
+	private readonly caches: Record<string, CacheMap<string, ethers.providers.Block>> = {}
+	constructor(private readonly providers: Record<string, ethers.providers.Provider>) {
+		this.caches = mapEntries(providers, () => new CacheMap(constants.BLOCK_CACHE_SIZE))
+
+		for (const [key, provider] of Object.entries(providers)) {
+			this.caches[key] = new CacheMap(constants.BLOCK_CACHE_SIZE)
+			const handleBlock = async (blocknum: number) => {
+				const block = await this.providers[key].getBlock(blocknum)
+				this.caches[key].add(block.hash, block)
+			}
+
+			provider.on("block", handleBlock)
+			this.controller.signal.addEventListener("abort", () => {
+				provider.removeListener("block", handleBlock)
+				this.caches[key].clear()
+			})
+		}
+	}
+
+	public close() {
+		this.controller.abort()
+	}
+
+	async getBlock(chain: Chain, chainId: ChainId, blockhash: string): Promise<ethers.providers.Block> {
+		const key = `${chain}:${chainId}`
+		const provider = this.providers[key]
+		assert(provider !== undefined, `No provider for ${chain}:${chainId}`)
+
+		blockhash = blockhash.toLowerCase()
+		let block = this.caches[key].get(blockhash)
+		if (block === undefined) {
+			try {
+				block = await provider.getBlock(blockhash)
+			} catch (err) {
+				// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
+				console.log(chalk.red("Failed to fetch block from RPC provider"))
+				throw err
+			}
+
+			this.caches[key].add(blockhash, block)
+		}
+
+		return block
+	}
 }

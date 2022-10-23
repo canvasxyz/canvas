@@ -32,17 +32,18 @@ import {
 	ModelValue,
 	Chain,
 	Message,
+	ChainId,
 } from "@canvas-js/interfaces"
 
 import { actionType, sessionType } from "./codecs.js"
-import { CacheMap, signalInvalidType, wait, retry, bootstrapList, toHex } from "./utils.js"
+import { signalInvalidType, wait, retry, toHex, BlockCache, BlockResolver } from "./utils.js"
 import { encodeMessage, decodeMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { ModelStore } from "./model-store/index.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./message-store/store.js"
 
 import * as RPC from "./rpc/index.js"
-import { BLOCK_CACHE_SIZE, MESSAGE_DATABASE_FILENAME, MODEL_DATABASE_FILENAME, MST_FILENAME } from "./constants.js"
+import { MESSAGE_DATABASE_FILENAME, MODEL_DATABASE_FILENAME, MST_FILENAME } from "./constants.js"
 import { createHash } from "node:crypto"
 import { getLibp2pInit } from "./libp2p.js"
 
@@ -54,7 +55,7 @@ export interface CoreConfig {
 	replay?: boolean
 	verbose?: boolean
 	unchecked?: boolean
-	rpc?: Partial<Record<Chain, Record<string, string>>>
+	rpc?: Partial<Record<Chain, Record<ChainId, string>>>
 	peering?: boolean
 	peeringPort?: number
 	peerId?: PeerId
@@ -108,8 +109,10 @@ export class Core extends EventEmitter<CoreEvents> {
 			await libp2p.start()
 		}
 
+		const blockCache = new BlockCache(providers)
 		const options = { verbose, unchecked, peering: true, sync: true }
-		const core = new Core(directory, uri, cid, spec, vm, libp2p, providers, options)
+		const core = new Core(directory, uri, cid, spec, vm, libp2p, providers, blockCache, options)
+		core.addEventListener("close", () => blockCache.close())
 
 		if (replay) {
 			console.log(chalk.green(`[canvas-core] Replaying action log...`))
@@ -141,11 +144,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly mst: okra.Tree | null
 	public readonly rpcServer: RPC.Server | null
 
-	private readonly blockCache: Record<string, CacheMap<string, { number: number; timestamp: number }>> = {}
-	private readonly blockCacheMostRecentTimestamp: Record<string, number> = {}
-
-	private readonly syncProtocol: string
-	private readonly queue: PQueue
+	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
 
 	private constructor(
 		public readonly directory: string | null,
@@ -154,7 +153,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly spec: string,
 		public readonly vm: VM,
 		public readonly libp2p: Libp2p | null,
-		public readonly providers: Record<string, ethers.providers.JsonRpcProvider> = {},
+		private readonly providers: Record<string, ethers.providers.JsonRpcProvider>,
+		private readonly blockResolver: BlockResolver | null,
 		private readonly options: {
 			verbose?: boolean
 			unchecked?: boolean
@@ -163,8 +163,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	) {
 		super()
-		this.spec = spec
-		this.syncProtocol = `/x/canvas/sync/${cid.toString()}`
 
 		const modelDatabasePath = directory && path.resolve(directory, MODEL_DATABASE_FILENAME)
 		this.modelStore = new ModelStore(modelDatabasePath, vm.models, vm.routes, { verbose: options.verbose })
@@ -178,24 +176,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		} else {
 			this.mst = new okra.Tree(path.resolve(directory, MST_FILENAME))
 			this.rpcServer = new RPC.Server({ mst: this.mst, messageStore: this.messageStore })
-		}
-
-		this.queue = new PQueue({ concurrency: 1 })
-
-		// set up rpc providers and block caches
-		for (const [key, provider] of Object.entries(providers)) {
-			this.blockCache[key] = new CacheMap(BLOCK_CACHE_SIZE)
-
-			// listen for new blocks
-			provider.on("block", async (blocknum: number) => {
-				const { timestamp, hash, number } = await this.providers[key].getBlock(blocknum)
-				if (this.options.verbose) {
-					console.log(`[canavs-core] Caching ${key} block ${number} (${hash})`)
-				}
-
-				this.blockCacheMostRecentTimestamp[key] = timestamp
-				this.blockCache[key].add(hash, { number, timestamp })
-			})
 		}
 
 		if (this.libp2p !== null) {
@@ -213,16 +193,23 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
+	public get syncProtocol() {
+		return `/x/canvas/sync/${this.cid.toString()}`
+	}
+
 	public async onIdle(): Promise<void> {
 		await this.queue.onIdle()
 	}
 
+	public getProvider(chain: Chain, chainId: ChainId): ethers.providers.JsonRpcProvider {
+		const key = `${chain}:${chainId}`
+		const provider = this.providers[key]
+		assert(provider !== undefined, `No provider for ${key}`)
+		return provider
+	}
+
 	private readonly controller = new AbortController()
 	public async close() {
-		for (const provider of Object.values(this.providers)) {
-			provider.removeAllListeners("block")
-		}
-
 		if (this.libp2p !== null) {
 			this.libp2p.pubsub.unsubscribe(this.uri)
 			this.libp2p.pubsub.removeEventListener("message", this.handleMessage)
@@ -251,43 +238,12 @@ export class Core extends EventEmitter<CoreEvents> {
 	 */
 	public async verifyBlock(blockInfo: Block, options: { sync?: boolean }) {
 		const { chain, chainId, blocknum, blockhash, timestamp } = blockInfo
-		const key = `${chain}:${chainId}`
-		const provider = this.providers[key]
-		const cache = this.blockCache[key]
-
-		// TODO: declare the chains and chainIds that each spec will require upfront
-		// Find the block via RPC.
-		assert(provider !== undefined && cache !== undefined, `action signed with unsupported chain: ${chain} ${chainId}`)
-
-		let block = cache.get(blockhash.toLowerCase())
-		if (block === undefined) {
-			if (this.options.verbose) {
-				console.log(`[canvas-core] Fetching block ${blockInfo.blockhash} for ${key}`)
-			}
-
-			try {
-				block = await provider.getBlock(blockInfo.blockhash)
-			} catch (err) {
-				// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
-				throw new Error("Failed to fetch block from RPC provider")
-			}
-
-			cache.add(blockhash, block)
-		}
+		assert(this.blockResolver !== null, "No block resolver provided")
+		const block = await this.blockResolver.getBlock(chain, chainId, blockhash)
 
 		// check the block retrieved from RPC matches metadata from the user
-		assert(block, "could not find a valid block:" + JSON.stringify(block))
 		assert(block.number === blocknum, "action/session provided with invalid block number")
 		assert(block.timestamp === timestamp, "action/session provided with invalid timestamp")
-
-		if (!options.sync) {
-			// check the block was recent
-			const maxDelay = 30 * 60 // limit propagation to 30 minutes
-			assert(
-				timestamp >= this.blockCacheMostRecentTimestamp[key] - maxDelay,
-				`action must be signed with a recent timestamp, within ${maxDelay}s of the last seen block`
-			)
-		}
 	}
 
 	/**
