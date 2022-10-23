@@ -77,7 +77,6 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	]
 
 	if (routes !== undefined) {
-		lines.push(`export const database = "sqlite";`)
 		lines.push(`export const routes = ${JSON.stringify(routes, null, "  ")};`)
 	}
 
