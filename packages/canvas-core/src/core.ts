@@ -54,7 +54,7 @@ export interface CoreConfig {
 	unchecked?: boolean
 	rpc?: Partial<Record<Chain, Record<ChainId, string>>>
 	peering?: boolean
-	peeringPort?: number
+	port?: number
 	peerId?: PeerId
 }
 
@@ -69,8 +69,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	private static readonly ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
 	private static readonly fileURIPattern = /^file:\/\/(.+)$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
-		const { directory, uri, verbose, unchecked, rpc, peering, peeringPort: port } = config
-		let { spec } = config
+		const { directory, uri, spec, verbose, unchecked, rpc, peering, port } = config
 
 		if (verbose) {
 			console.log(`[canvas-core] Initializing core ${uri}`)

@@ -164,7 +164,7 @@ export async function handler(args: Args) {
 			verbose,
 			unchecked,
 			peering,
-			peeringPort,
+			port: peeringPort,
 			peerId,
 		})
 	} catch (err) {
