@@ -1,5 +1,6 @@
 import assert from "node:assert"
 import path from "node:path"
+import { createHash } from "node:crypto"
 
 import { ethers } from "ethers"
 
@@ -42,8 +43,7 @@ import { VM } from "./vm/index.js"
 import { MessageStore } from "./message-store/store.js"
 
 import * as RPC from "./rpc/index.js"
-import { MESSAGE_DATABASE_FILENAME, MODEL_DATABASE_FILENAME, MST_FILENAME } from "./constants.js"
-import { createHash } from "node:crypto"
+import * as constants from "./constants.js"
 import { getLibp2pInit } from "./libp2p.js"
 
 export interface CoreConfig {
@@ -65,9 +65,10 @@ interface CoreEvents {
 	session: CustomEvent<SessionPayload>
 }
 
+const ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
+const fileURIPattern = /^file:\/\/(.+)$/
+
 export class Core extends EventEmitter<CoreEvents> {
-	private static readonly ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
-	private static readonly fileURIPattern = /^file:\/\/(.+)$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
 		const { directory, uri, spec, verbose, unchecked, rpc, peering, port } = config
 
@@ -75,10 +76,10 @@ export class Core extends EventEmitter<CoreEvents> {
 			console.log(`[canvas-core] Initializing core ${uri}`)
 		}
 
-		assert(Core.ipfsURIPattern.test(uri) || Core.fileURIPattern.test(uri), "Core.uri must be an ipfs:// or file:// URI")
+		assert(ipfsURIPattern.test(uri) || fileURIPattern.test(uri), "Core.uri must be an ipfs:// or file:// URI")
 
 		const cid = await Hash.of(spec).then((cid) => {
-			if (Core.ipfsURIPattern.test(uri)) {
+			if (ipfsURIPattern.test(uri)) {
 				assert(uri === `ipfs://${cid}`, "Core.uri is not equal to the hash of the provided spec.")
 			}
 
@@ -148,17 +149,17 @@ export class Core extends EventEmitter<CoreEvents> {
 	) {
 		super()
 
-		const modelDatabasePath = directory && path.resolve(directory, MODEL_DATABASE_FILENAME)
+		const modelDatabasePath = directory && path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
 		this.modelStore = new ModelStore(modelDatabasePath, vm.models, vm.routes, { verbose: options.verbose })
 
-		const messageDatabasePath = directory && path.resolve(directory, MESSAGE_DATABASE_FILENAME)
+		const messageDatabasePath = directory && path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
 		this.messageStore = new MessageStore(uri, messageDatabasePath, { verbose: options.verbose })
 
 		if (directory === null) {
 			this.rpcServer = null
 			this.mst = null
 		} else {
-			this.mst = new okra.Tree(path.resolve(directory, MST_FILENAME))
+			this.mst = new okra.Tree(path.resolve(directory, constants.MST_FILENAME))
 			this.rpcServer = new RPC.Server({ mst: this.mst, messageStore: this.messageStore })
 		}
 
@@ -230,9 +231,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.dispatchEvent(new Event("close"))
 	}
 
-	private static boundsCheckLowerLimit = new Date("2020").valueOf()
-	private static boundsCheckUpperLimit = new Date("2070").valueOf()
-
 	/**
 	 * Helper for verifying the blockhash for an action or session.
 	 */
@@ -296,8 +294,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(spec === this.uri, "action signed for wrong spec")
 
 		// check the timestamp bounds
-		assert(timestamp > Core.boundsCheckLowerLimit, "action timestamp too far in the past")
-		assert(timestamp < Core.boundsCheckUpperLimit, "action timestamp too far in the future")
+		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
+		assert(timestamp < constants.BOUNDS_CHECK_UPPER_LIMIT, "action timestamp too far in the future")
 
 		if (!this.options.unchecked) {
 			// check the action was signed with a valid, recent block
@@ -376,8 +374,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(verifiedAddress.toLowerCase() === from.toLowerCase(), "session signed by wrong address")
 
 		// check the timestamp bounds
-		assert(timestamp > Core.boundsCheckLowerLimit, "session timestamp too far in the past")
-		assert(timestamp < Core.boundsCheckUpperLimit, "session timestamp too far in the future")
+		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "session timestamp too far in the past")
+		assert(timestamp < constants.BOUNDS_CHECK_UPPER_LIMIT, "session timestamp too far in the future")
 
 		// check the session was signed with a valid, recent block
 		if (!this.options.unchecked) {
