@@ -7,9 +7,9 @@ import chalk from "chalk"
 import prompts from "prompts"
 import Hash from "ipfs-only-hash"
 
-import { Core, constants, actionType } from "@canvas-js/core"
+import { Core, constants, actionType, Driver } from "@canvas-js/core"
 
-import { setupRpcs, locateSpec, confirmOrExit } from "../utils.js"
+import { setupRpcs, locateSpec, confirmOrExit, CANVAS_HOME } from "../utils.js"
 import { API } from "../api.js"
 
 export const command = "run <spec>"
@@ -152,21 +152,13 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const { verbose, replay, unchecked, peering, "peering-port": peeringPort } = args
+	const { verbose, replay, unchecked, "peering-port": peeringPort } = args
+
+	const driver = await Driver.initialize({ rootDirectory: CANVAS_HOME, port: peeringPort, rpc })
 
 	let core: Core
 	try {
-		core = await Core.initialize({
-			directory,
-			uri,
-			spec,
-			rpc,
-			verbose,
-			unchecked,
-			peering,
-			port: peeringPort,
-			peerId,
-		})
+		core = await driver.start(uri, { unchecked })
 	} catch (err) {
 		if (err instanceof Error) {
 			console.log(chalk.red(err.message))

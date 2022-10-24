@@ -4,6 +4,7 @@ import readline from "node:readline"
 import yargs from "yargs"
 
 import chalk from "chalk"
+import { ethers } from "ethers"
 
 import { Core, actionType, sessionType } from "@canvas-js/core"
 
@@ -23,11 +24,6 @@ export const builder = (yargs: yargs.Argv) =>
 			desc: "IPFS HTTP API URL",
 			default: "http://localhost:5001",
 		})
-		.option("verbose", {
-			type: "boolean",
-			desc: "Enable verbose logging",
-			default: false,
-		})
 		.option("chain-rpc", {
 			type: "array",
 			desc: "Provide an RPC endpoint for reading on-chain data",
@@ -40,7 +36,15 @@ export async function handler(args: Args) {
 
 	const rpc = setupRpcs(args["chain-rpc"])
 
-	const core = await Core.initialize({ uri, directory, spec, verbose: args.verbose, rpc })
+	const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
+	for (const [chain, chainIds] of Object.entries(rpc || {})) {
+		for (const [chainId, url] of Object.entries(chainIds)) {
+			const key = `${chain}:${chainId}`
+			providers[key] = new ethers.providers.JsonRpcProvider(url)
+		}
+	}
+
+	const core = await Core.initialize({ uri, directory, spec, providers })
 
 	const rl = readline.createInterface({
 		input: process.stdin,

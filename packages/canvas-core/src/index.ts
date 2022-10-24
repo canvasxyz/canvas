@@ -3,6 +3,7 @@
 import "fp-ts"
 
 export * from "./core.js"
+export * from "./driver.js"
 export * from "./vm/index.js"
 export * from "./model-store/index.js"
 export * from "./message-store/store.js"
