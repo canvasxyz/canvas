@@ -15,21 +15,23 @@ export const builder = (yargs: yargs.Argv) => yargs
 
 export async function handler({}) {
 	console.log(`Showing local specs in ${path.resolve(CANVAS_HOME)}\n`)
-	for (const cid of fs.readdirSync(CANVAS_HOME)) {
-		if (!cidPattern.test(cid)) {
-			console.warn(chalk.yellow(`[canvas-cli] Unknown spec or invalid CIDv0, skipping: ${cid}`))
+	for (const name of fs.readdirSync(CANVAS_HOME)) {
+		if (name === constants.PEER_ID_FILENAME) {
+			continue
+		} else if (!cidPattern.test(name)) {
+			console.warn(chalk.yellow(`[canvas-cli] Unknown spec or invalid CIDv0, skipping: ${name}`))
 			continue
 		}
 
-		console.log(cid)
+		console.log(name)
 
-		const specPath = path.resolve(CANVAS_HOME, cid, constants.SPEC_FILENAME)
+		const specPath = path.resolve(CANVAS_HOME, name, constants.SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
 			const specStat = fs.statSync(specPath)
 			console.log(`Spec:     ${specStat.size} bytes`)
 		}
 
-		const messagesPath = path.resolve(CANVAS_HOME, cid, constants.MESSAGE_DATABASE_FILENAME)
+		const messagesPath = path.resolve(CANVAS_HOME, name, constants.MESSAGE_DATABASE_FILENAME)
 		if (fs.existsSync(messagesPath)) {
 			const messagesStat = fs.statSync(messagesPath)
 			const messagesDB = new Database(messagesPath)
@@ -38,7 +40,7 @@ export async function handler({}) {
 			console.log(`Messages: ${messagesStat.size} bytes (${actionCount} actions, ${sessionCount} sessions)`)
 		}
 
-		const modelsPath = path.resolve(CANVAS_HOME, cid, constants.MODEL_DATABASE_FILENAME)
+		const modelsPath = path.resolve(CANVAS_HOME, name, constants.MODEL_DATABASE_FILENAME)
 		if (fs.existsSync(modelsPath)) {
 			const modelsStat = fs.statSync(modelsPath)
 			console.log(`Models:   ${modelsStat.size} bytes`)
