@@ -11,8 +11,8 @@ import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 import { EventEmitter, CustomEvent, EventHandler } from "@libp2p/interfaces/events"
 
-import { createLibp2p, Libp2p } from "libp2p"
-
+import { createLibp2p, type Libp2p } from "libp2p"
+import type { FetchService } from "libp2p/fetch"
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
@@ -109,7 +109,12 @@ export class Core extends EventEmitter<CoreEvents> {
 		const blockCache = new BlockCache(providers)
 		const options = { verbose, unchecked, peering: true, sync: true }
 		const core = new Core(directory, uri, cid, spec, vm, libp2p, providers, blockCache, options)
-		core.addEventListener("close", () => blockCache.close())
+		core.addEventListener("close", () => {
+			blockCache.close()
+			if (libp2p !== null) {
+				libp2p.stop()
+			}
+		})
 
 		if (verbose) {
 			console.log(`[canvas-core] Successfully initialized core ${config.uri}`)
@@ -124,6 +129,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly rpcServer: RPC.Server | null
 
 	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
+	private readonly controller = new AbortController()
 
 	private constructor(
 		public readonly directory: string | null,
@@ -169,6 +175,19 @@ export class Core extends EventEmitter<CoreEvents> {
 				this.startSyncService()
 				this.startPeeringService()
 			}
+
+			if (this.uri.startsWith("ipfs://")) {
+				const { fetchService } = this.libp2p as Libp2p & { fetchService: FetchService }
+				fetchService.registerLookupFunction(`${this.uri}/`, this.fetchLookupFunction)
+			}
+		}
+	}
+
+	private fetchLookupFunction = async (key: string) => {
+		if (key === `${this.uri}/`) {
+			return Buffer.from(this.spec, "utf-8")
+		} else {
+			return null
 		}
 	}
 
@@ -187,15 +206,18 @@ export class Core extends EventEmitter<CoreEvents> {
 		return provider
 	}
 
-	private readonly controller = new AbortController()
 	public async close() {
+		this.controller.abort()
+
 		if (this.libp2p !== null) {
 			this.libp2p.pubsub.unsubscribe(this.uri)
 			this.libp2p.pubsub.removeEventListener("message", this.handleMessage)
-			await this.libp2p.stop()
-		}
 
-		this.controller.abort()
+			if (this.uri.startsWith("ipfs://")) {
+				const { fetchService } = this.libp2p as Libp2p & { fetchService: FetchService }
+				fetchService.unregisterLookupFunction(`${this.uri}/`, this.fetchLookupFunction)
+			}
+		}
 
 		await this.queue.onIdle()
 
