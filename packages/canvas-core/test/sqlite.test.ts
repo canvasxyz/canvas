@@ -2,12 +2,8 @@ import test from "ava"
 
 import { ethers } from "ethers"
 
-import { getQuickJS } from "quickjs-emscripten"
-
 import { Core, compileSpec } from "@canvas-js/core"
 import { ActionArgument, getActionSignatureData } from "@canvas-js/interfaces"
-
-const quickJS = await getQuickJS()
 
 const signer = ethers.Wallet.createRandom()
 const signerAddress = signer.address.toLowerCase()
@@ -79,7 +75,7 @@ test("get /all", async (t) => {
 })
 
 test("get /votes/:thread_id", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
 
 	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash } = await core.applyAction(action)

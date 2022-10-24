@@ -3,8 +3,6 @@ import test from "ava"
 import * as dotenv from "dotenv"
 import { ethers } from "ethers"
 
-import { getQuickJS } from "quickjs-emscripten"
-
 import { Action, ActionArgument, ActionPayload, getActionSignatureData } from "@canvas-js/interfaces"
 import { Core, compileSpec } from "@canvas-js/core"
 
@@ -13,8 +11,6 @@ import { getCurrentBlock } from "./utils.js"
 dotenv.config({ path: "../../.env" })
 
 const { ETH_CHAIN_ID, ETH_CHAIN_RPC } = process.env
-
-const quickJS = await getQuickJS()
 
 const signer = ethers.Wallet.createRandom()
 const signerAddress = signer.address.toLowerCase()
@@ -47,7 +43,7 @@ test("Test calling the public ENS resolver contract", async (t) => {
 	})
 
 	const rpc = { eth: { [ETH_CHAIN_ID]: ETH_CHAIN_RPC } }
-	const core = await Core.initialize({ uri, directory: null, spec, quickJS, rpc })
+	const core = await Core.initialize({ uri, directory: null, spec, rpc })
 	const provider = core.getProvider("eth", ETH_CHAIN_ID)
 
 	async function sign(call: string, args: ActionArgument[]): Promise<Action> {

@@ -3,7 +3,6 @@ import readline from "node:readline"
 
 import yargs from "yargs"
 
-import { getQuickJS } from "quickjs-emscripten"
 import chalk from "chalk"
 
 import { Core, actionType, sessionType } from "@canvas-js/core"
@@ -39,11 +38,9 @@ type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	const { uri, directory, spec } = await locateSpec(args.spec, args.ipfs)
 
-	const quickJS = await getQuickJS()
-
 	const rpc = setupRpcs(args["chain-rpc"])
 
-	const core = await Core.initialize({ uri, directory, spec, quickJS, verbose: args.verbose, rpc })
+	const core = await Core.initialize({ uri, directory, spec, verbose: args.verbose, rpc })
 
 	const rl = readline.createInterface({
 		input: process.stdin,

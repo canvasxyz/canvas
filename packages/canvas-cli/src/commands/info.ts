@@ -1,7 +1,6 @@
 import yargs from "yargs"
 import chalk from "chalk"
 import * as t from "io-ts"
-import { getQuickJS } from "quickjs-emscripten"
 
 import { actionType, sessionType, VM } from "@canvas-js/core"
 
@@ -27,7 +26,6 @@ type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
 	const { uri, spec } = await locateSpec(args.spec, args.ipfs)
-	const quickJS = await getQuickJS()
 
 	const vm = await VM.initialize(uri, spec, {}, { unchecked: true })
 	const { models, routeParameters, actionParameters, contractMetadata } = vm

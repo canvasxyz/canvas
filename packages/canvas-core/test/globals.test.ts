@@ -2,12 +2,8 @@ import test from "ava"
 
 import { ethers } from "ethers"
 
-import { getQuickJS } from "quickjs-emscripten"
-
 import { ActionArgument, getActionSignatureData } from "@canvas-js/interfaces"
 import { compileSpec, Core } from "@canvas-js/core"
-
-const quickJS = await getQuickJS()
 
 const signer = ethers.Wallet.createRandom()
 const signerAddress = signer.address.toLowerCase()
@@ -31,7 +27,7 @@ async function sign(signer: ethers.Wallet, session: string | null, call: string,
 }
 
 test("test fetch and log IP address", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, quickJS, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
 
 	const action = await sign(signer, null, "logIP", [])
 	await core.applyAction(action)
