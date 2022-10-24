@@ -203,10 +203,12 @@ export class VM {
 			}
 		}
 
-		this.component =
-			componentHandle === undefined
-				? null
-				: call(context, "Function.prototype.toString", componentHandle).consume(context.getString)
+		if (componentHandle === undefined) {
+			this.component = null
+		} else {
+			this.component = call(context, "Function.prototype.toString", componentHandle).consume(context.getString)
+			componentHandle.dispose()
+		}
 
 		this.dbHandle = wrapObject(
 			context,
