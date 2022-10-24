@@ -2,7 +2,6 @@ import assert from "node:assert"
 import path from "node:path"
 
 import { ethers } from "ethers"
-import { QuickJSWASMModule } from "quickjs-emscripten"
 
 import chalk from "chalk"
 import PQueue from "p-queue"
@@ -51,8 +50,6 @@ export interface CoreConfig {
 	directory: string | null
 	uri: string
 	spec: string
-	quickJS: QuickJSWASMModule
-	replay?: boolean
 	verbose?: boolean
 	unchecked?: boolean
 	rpc?: Partial<Record<Chain, Record<ChainId, string>>>
@@ -72,7 +69,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	private static readonly ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
 	private static readonly fileURIPattern = /^file:\/\/(.+)$/
 	public static async initialize(config: CoreConfig): Promise<Core> {
-		const { directory, uri, verbose, unchecked, rpc, replay, quickJS, peering, peeringPort: port } = config
+		const { directory, uri, verbose, unchecked, rpc, peering, peeringPort: port } = config
 		let { spec } = config
 
 		if (verbose) {
@@ -113,24 +110,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		const options = { verbose, unchecked, peering: true, sync: true }
 		const core = new Core(directory, uri, cid, spec, vm, libp2p, providers, blockCache, options)
 		core.addEventListener("close", () => blockCache.close())
-
-		if (replay) {
-			console.log(chalk.green(`[canvas-core] Replaying action log...`))
-
-			let i = 0
-			for await (const [id, action] of core.messageStore.getActionStream()) {
-				if (!actionType.is(action)) {
-					console.log(chalk.red("[canvas-core]"), action)
-					throw new Error("Invalid action value in action log")
-				}
-
-				const effects = await vm.execute(id, action.payload)
-				core.modelStore.applyEffects(action.payload, effects)
-				i++
-			}
-
-			console.log(chalk.green(`[canvas-core] Successfully replayed all ${i} entries from the action log.`))
-		}
 
 		if (verbose) {
 			console.log(`[canvas-core] Successfully initialized core ${config.uri}`)

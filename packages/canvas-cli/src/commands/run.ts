@@ -5,10 +5,9 @@ import fs from "node:fs"
 import yargs from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
-import { getQuickJS } from "quickjs-emscripten"
 import Hash from "ipfs-only-hash"
 
-import { Core, MessageStore, ModelStore, constants } from "@canvas-js/core"
+import { Core, constants, actionType } from "@canvas-js/core"
 
 import { setupRpcs, locateSpec, confirmOrExit } from "../utils.js"
 import { API } from "../api.js"
@@ -153,8 +152,6 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const quickJS = await getQuickJS()
-
 	const { verbose, replay, unchecked, peering, "peering-port": peeringPort } = args
 
 	let core: Core
@@ -164,9 +161,7 @@ export async function handler(args: Args) {
 			uri,
 			spec,
 			rpc,
-			quickJS,
 			verbose,
-			replay,
 			unchecked,
 			peering,
 			peeringPort,
@@ -179,6 +174,24 @@ export async function handler(args: Args) {
 			throw err
 		}
 		return
+	}
+
+	if (replay) {
+		console.log(chalk.green(`[canvas-core] Replaying action log...`))
+
+		let i = 0
+		for await (const [id, action] of core.messageStore.getActionStream()) {
+			if (!actionType.is(action)) {
+				console.log(chalk.red("[canvas-core]"), action)
+				throw new Error("Invalid action value in action log")
+			}
+
+			const effects = await core.vm.execute(id, action.payload)
+			core.modelStore.applyEffects(action.payload, effects)
+			i++
+		}
+
+		console.log(chalk.green(`[canvas-core] Successfully replayed all ${i} entries from the action log.`))
 	}
 
 	const api = args.noserver ? null : new API({ core, port: args.port, verbose })
