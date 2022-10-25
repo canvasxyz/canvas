@@ -91,7 +91,7 @@ export class Driver {
 				const [_, cid] = ipfsURI
 				spec = await this.fetch(CID.parse(cid))
 				if (this.rootDirectory !== null) {
-					directory = path.relative(this.rootDirectory, cid)
+					directory = path.resolve(this.rootDirectory, cid)
 				}
 			} else if (fileURI !== null) {
 				const [_, specPath] = fileURI
