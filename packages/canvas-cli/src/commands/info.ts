@@ -1,37 +1,48 @@
+import fs from "node:fs"
+import path from "node:path"
+
 import yargs from "yargs"
 import chalk from "chalk"
 import * as t from "io-ts"
 
-import { actionType, sessionType, VM } from "@canvas-js/core"
+import { actionType, constants, sessionType, VM } from "@canvas-js/core"
 
-import { locateSpec } from "../utils.js"
+import { parseSpecArgument } from "../utils.js"
 
 export const command = "info <spec>"
 export const desc = "Show the models, views, and actions for a spec"
 
 export const builder = (yargs: yargs.Argv) =>
-	yargs
-		.positional("spec", {
-			describe: "Path to spec file, or IPFS hash of spec",
-			type: "string",
-			demandOption: true,
-		})
-		.option("ipfs", {
-			type: "string",
-			desc: "IPFS HTTP API URL",
-			default: "http://localhost:5001",
-		})
+	yargs.positional("spec", {
+		describe: "Path to spec file, or IPFS hash of spec",
+		type: "string",
+		demandOption: true,
+	})
 
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { uri, spec } = await locateSpec(args.spec, args.ipfs)
+	const { uri, directory } = parseSpecArgument(args.spec)
+
+	let spec: string
+	if (directory !== null) {
+		const specPath = path.resolve(directory, constants.SPEC_FILENAME)
+		if (fs.existsSync(specPath)) {
+			spec = fs.readFileSync(specPath, "utf-8")
+		} else {
+			console.log(chalk.yellow(`[canvas-cli] The spec ${args.spec} is not installed locally.`))
+			console.log(chalk.yellow(`[canvas-cli] Try runing "canvas install ${args.spec}"`))
+			process.exit(1)
+		}
+	} else {
+		spec = fs.readFileSync(args.spec, "utf-8")
+	}
 
 	const vm = await VM.initialize(uri, spec, {}, { unchecked: true })
 	const { models, routeParameters, actionParameters, contractMetadata } = vm
 	vm.dispose()
 
-	console.log(`name: ${name}\n`)
+	console.log(`name: ${uri}\n`)
 
 	console.log(chalk.green("===== models ====="))
 	console.log(`${JSON.stringify(models, null, "  ")}\n`)

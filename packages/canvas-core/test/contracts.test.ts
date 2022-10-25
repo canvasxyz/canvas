@@ -4,9 +4,10 @@ import * as dotenv from "dotenv"
 import { ethers } from "ethers"
 
 import { Action, ActionArgument, ActionPayload, getActionSignatureData } from "@canvas-js/interfaces"
-import { Core, compileSpec } from "@canvas-js/core"
+import { compileSpec, Core, Driver } from "@canvas-js/core"
 
 import { getCurrentBlock } from "./utils.js"
+import { BlockCache } from "../src/utils.js"
 
 dotenv.config({ path: "../../.env" })
 
@@ -42,9 +43,9 @@ test("Test calling the public ENS resolver contract", async (t) => {
 		},
 	})
 
-	const rpc = { eth: { [ETH_CHAIN_ID]: ETH_CHAIN_RPC } }
-	const core = await Core.initialize({ uri, directory: null, spec, rpc })
-	const provider = core.getProvider("eth", ETH_CHAIN_ID)
+	const provider = new ethers.providers.JsonRpcProvider(ETH_CHAIN_RPC)
+	const providers = { [`eth:${ETH_CHAIN_ID}`]: provider }
+	const core = await Core.initialize({ directory: null, uri, spec, providers })
 
 	async function sign(call: string, args: ActionArgument[]): Promise<Action> {
 		const timestamp = Date.now()

@@ -7,9 +7,9 @@ import chalk from "chalk"
 import prompts from "prompts"
 import Hash from "ipfs-only-hash"
 
-import { Core, constants, actionType } from "@canvas-js/core"
+import { Core, constants, actionType, Driver } from "@canvas-js/core"
 
-import { setupRpcs, locateSpec, confirmOrExit } from "../utils.js"
+import { setupRpcs, confirmOrExit, CANVAS_HOME, parseSpecArgument } from "../utils.js"
 import { API } from "../api.js"
 
 export const command = "run <spec>"
@@ -27,19 +27,14 @@ export const builder = (yargs: yargs.Argv) =>
 			desc: "Port to bind the core API",
 			default: 8000,
 		})
-		.option("peering", {
+		.option("offline", {
 			type: "boolean",
-			desc: "Enable peering over libp2p GossipSub",
+			desc: "Disable libp2p",
 		})
 		.option("peering-port", {
 			type: "number",
-			desc: "Port to bind libp2p TCP transport",
+			desc: "Port to bind libp2p WebSocket transport",
 			default: 4044,
-		})
-		.option("ipfs", {
-			type: "string",
-			desc: "IPFS Gateway URL",
-			default: "http://127.0.0.1:8080",
 		})
 		.option("noserver", {
 			type: "boolean",
@@ -78,41 +73,43 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
-	const { uri, directory, spec, peerId } = await locateSpec(args.spec, args.ipfs)
+	const { uri, directory } = parseSpecArgument(args.spec)
 
 	if (directory === null) {
-		if (args.peering) {
-			console.log(chalk.red(`[canvas-cli] --peering cannot be enabled for local development specs`))
-			process.exit(1)
-		} else if (args.replay || args.reset) {
+		if (args.replay || args.reset) {
 			console.log(chalk.red("[canvas-cli] --replay and --reset cannot be used with temporary development databases"))
 			process.exit(1)
 		}
-	} else if (args.reset) {
-		await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${directory}?`)
-		const messagesPath = path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
-		if (fs.existsSync(messagesPath)) {
-			fs.rmSync(messagesPath)
-			console.log(`[canvas-cli] Deleted ${messagesPath}`)
-		}
+	} else {
+		if (!fs.existsSync(directory)) {
+			console.log(`[canvas-cli] Creating new directory ${directory}`)
+			fs.mkdirSync(directory)
+		} else if (args.reset) {
+			await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${directory}?`)
+			const messagesPath = path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
+			if (fs.existsSync(messagesPath)) {
+				fs.rmSync(messagesPath)
+				console.log(`[canvas-cli] Deleted ${messagesPath}`)
+			}
 
-		const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
-		if (fs.existsSync(modelsPath)) {
-			fs.rmSync(modelsPath)
-			console.log(`[canvas-cli] Deleted ${modelsPath}`)
-		}
+			const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
+			if (fs.existsSync(modelsPath)) {
+				fs.rmSync(modelsPath)
+				console.log(`[canvas-cli] Deleted ${modelsPath}`)
+			}
 
-		const mstPath = path.resolve(directory, constants.MST_FILENAME)
-		if (fs.existsSync(mstPath)) {
-			fs.rmSync(mstPath)
-			console.log(`[canvas-cli] Deleted ${mstPath}`)
-		}
-	} else if (args.replay) {
-		await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
-		const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
-		if (fs.existsSync(modelsPath)) {
-			fs.rmSync(modelsPath)
-			console.log(`[canvas-cli] Deleted ${modelsPath}`)
+			const mstPath = path.resolve(directory, constants.MST_FILENAME)
+			if (fs.existsSync(mstPath)) {
+				fs.rmSync(mstPath)
+				console.log(`[canvas-cli] Deleted ${mstPath}`)
+			}
+		} else if (args.replay) {
+			await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
+			const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
+			if (fs.existsSync(modelsPath)) {
+				fs.rmSync(modelsPath)
+				console.log(`[canvas-cli] Deleted ${modelsPath}`)
+			}
 		}
 	}
 
@@ -129,7 +126,7 @@ export async function handler(args: Args) {
 
 		if (confirm) {
 			args.unchecked = true
-			args.peering = false
+			args.offline = true
 			console.log(chalk.yellow(`✦ ${chalk.bold("Using unchecked mode.")} Actions will not require a valid block hash.`))
 		} else {
 			console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
@@ -143,30 +140,18 @@ export async function handler(args: Args) {
 			)
 		)
 		console.log(chalk.yellow(`✦ ${chalk.bold("Using in-memory model database.")} Data will not be saved between runs.`))
-
-		const cid = await Hash.of(spec)
-		console.log(chalk.yellow(`✦ To persist data, run the spec from IPFS:`))
-		console.log(chalk.yellow(`  ipfs daemon`))
-		console.log(chalk.yellow(`  ipfs add ${args.spec}`))
-		console.log(chalk.yellow(`  canvas run ${cid}`))
+		console.log(chalk.yellow(`✦ To persist data, install the spec with:`))
+		console.log(chalk.yellow(`  canvas install ${args.spec}`))
 		console.log("")
 	}
 
-	const { verbose, replay, unchecked, peering, "peering-port": peeringPort } = args
+	const { replay, verbose, unchecked, offline, "peering-port": peeringPort } = args
+
+	const driver = await Driver.initialize({ rootDirectory: CANVAS_HOME, port: peeringPort, rpc })
 
 	let core: Core
 	try {
-		core = await Core.initialize({
-			directory,
-			uri,
-			spec,
-			rpc,
-			verbose,
-			unchecked,
-			peering,
-			port: peeringPort,
-			peerId,
-		})
+		core = await driver.start(uri, { unchecked, verbose, offline })
 	} catch (err) {
 		if (err instanceof Error) {
 			console.log(chalk.red(err.message))
@@ -176,7 +161,7 @@ export async function handler(args: Args) {
 		return
 	}
 
-	if (replay) {
+	if (directory !== null && replay) {
 		console.log(chalk.green(`[canvas-core] Replaying action log...`))
 
 		let i = 0
@@ -213,8 +198,7 @@ export async function handler(args: Args) {
 			}
 
 			if (args.verbose) console.log("[canvas-cli] Closing core...")
-			await core.close()
-			core.modelStore.close() // not necessary (?)
+			await driver.close()
 			if (args.verbose) console.log("[canvas-cli] Core closed.")
 		}
 	})

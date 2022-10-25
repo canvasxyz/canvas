@@ -170,11 +170,9 @@ export class CacheMap<K, V> extends Map<K, V> {
 	}
 }
 
-export interface BlockResolver {
-	getBlock(chain: Chain, chainId: ChainId, blockhash: string): Promise<ethers.providers.Block>
-}
+export type BlockResolver = (chain: Chain, chainId: ChainId, blockhash: string) => Promise<ethers.providers.Block>
 
-export class BlockCache implements BlockResolver {
+export class BlockCache {
 	private readonly controller = new AbortController()
 	private readonly caches: Record<string, CacheMap<string, ethers.providers.Block>> = {}
 	constructor(private readonly providers: Record<string, ethers.providers.Provider>) {
@@ -199,7 +197,7 @@ export class BlockCache implements BlockResolver {
 		this.controller.abort()
 	}
 
-	async getBlock(chain: Chain, chainId: ChainId, blockhash: string): Promise<ethers.providers.Block> {
+	public getBlock: BlockResolver = async (chain, chainId, blockhash) => {
 		const key = `${chain}:${chainId}`
 		const provider = this.providers[key]
 		assert(provider !== undefined, `No provider for ${chain}:${chainId}`)

@@ -2,17 +2,15 @@ import assert from "node:assert"
 import path from "node:path"
 import { createHash } from "node:crypto"
 
-import { ethers } from "ethers"
-
 import chalk from "chalk"
 import PQueue from "p-queue"
+import { ethers } from "ethers"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
-import { EventEmitter, CustomEvent, EventHandler } from "@libp2p/interfaces/events"
+import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
-import { createLibp2p, type Libp2p } from "libp2p"
+import type { Libp2p } from "libp2p"
 import type { FetchService } from "libp2p/fetch"
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
@@ -30,13 +28,11 @@ import {
 	verifyActionSignature,
 	verifySessionSignature,
 	ModelValue,
-	Chain,
 	Message,
-	ChainId,
 } from "@canvas-js/interfaces"
 
 import { actionType, sessionType } from "./codecs.js"
-import { signalInvalidType, wait, retry, toHex, BlockCache, BlockResolver } from "./utils.js"
+import { signalInvalidType, wait, retry, toHex, BlockResolver } from "./utils.js"
 import { encodeMessage, decodeMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { ModelStore } from "./model-store/index.js"
 import { VM } from "./vm/index.js"
@@ -44,18 +40,23 @@ import { MessageStore } from "./message-store/store.js"
 
 import * as RPC from "./rpc/index.js"
 import * as constants from "./constants.js"
-import { getLibp2pInit } from "./libp2p.js"
 
-export interface CoreConfig {
+interface CoreConfig extends CoreOptions {
+	// pass `null` to run in memory
 	directory: string | null
 	uri: string
 	spec: string
-	verbose?: boolean
+	// omit or pass `null` to run offline
+	libp2p?: Libp2p | null
+	providers?: Record<string, ethers.providers.JsonRpcProvider>
+	// defaults to fetching each block from the provider with no caching
+	blockResolver?: BlockResolver
+}
+
+interface CoreOptions {
 	unchecked?: boolean
-	rpc?: Partial<Record<Chain, Record<ChainId, string>>>
-	peering?: boolean
-	port?: number
-	peerId?: PeerId
+	verbose?: boolean
+	offline?: boolean
 }
 
 interface CoreEvents {
@@ -65,71 +66,29 @@ interface CoreEvents {
 	session: CustomEvent<SessionPayload>
 }
 
-const ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
-const fileURIPattern = /^file:\/\/(.+)$/
-
 export class Core extends EventEmitter<CoreEvents> {
-	public static async initialize(config: CoreConfig): Promise<Core> {
-		const { directory, uri, spec, verbose, unchecked, rpc, peering, port } = config
-
-		if (verbose) {
-			console.log(`[canvas-core] Initializing core ${uri}`)
-		}
-
-		assert(ipfsURIPattern.test(uri) || fileURIPattern.test(uri), "Core.uri must be an ipfs:// or file:// URI")
-
-		const cid = await Hash.of(spec).then((cid) => {
-			if (ipfsURIPattern.test(uri)) {
-				assert(uri === `ipfs://${cid}`, "Core.uri is not equal to the hash of the provided spec.")
-			}
-
-			return CID.parse(cid)
-		})
-
-		const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
-		for (const [chain, chainIds] of Object.entries(rpc || {})) {
-			for (const [chainId, url] of Object.entries(chainIds)) {
-				const key = `${chain}:${chainId}`
-				providers[key] = new ethers.providers.JsonRpcProvider(url)
-			}
-		}
-
-		const vm = await VM.initialize(uri, spec, providers, { verbose })
-
-		let libp2p: Libp2p | null = null
-		if (directory !== null && peering) {
-			assert(port !== undefined, "a peeringPort must be provided if peering is enabled")
-
-			const peerId = config.peerId || (await createEd25519PeerId())
-			libp2p = await createLibp2p(getLibp2pInit(peerId, port))
-			console.log(`[canvas-core] PeerId ${libp2p.peerId.toString()}`)
-			await libp2p.start()
-		}
-
-		const blockCache = new BlockCache(providers)
-		const options = { verbose, unchecked, peering: true, sync: true }
-		const core = new Core(directory, uri, cid, spec, vm, libp2p, providers, blockCache, options)
-		core.addEventListener("close", () => {
-			blockCache.close()
-			if (libp2p !== null) {
-				libp2p.stop()
-			}
-		})
-
-		if (verbose) {
-			console.log(`[canvas-core] Successfully initialized core ${config.uri}`)
-		}
-
-		return core
-	}
-
 	public readonly modelStore: ModelStore
 	public readonly messageStore: MessageStore
-	public readonly mst: okra.Tree | null
-	public readonly rpcServer: RPC.Server | null
+	public readonly mst: okra.Tree | null = null
+	public readonly rpcServer: RPC.Server | null = null
 
 	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
 	private readonly controller = new AbortController()
+
+	public static async initialize({ directory, uri, spec, libp2p, providers, blockResolver, ...options }: CoreConfig) {
+		const cid = await Hash.of(spec).then(CID.parse)
+		const vm = await VM.initialize(uri, spec, providers || {})
+
+		if (blockResolver === undefined) {
+			blockResolver = (chain, chainId, blockhash) => {
+				const provider = providers?.[`${chain}:${chainId}`]
+				assert(provider !== undefined, `no provider for ${chain}:${chainId}`)
+				return provider.getBlock(blockhash)
+			}
+		}
+
+		return new Core(directory || null, uri, cid, spec, vm, libp2p || null, blockResolver || null, options)
+	}
 
 	private constructor(
 		public readonly directory: string | null,
@@ -138,14 +97,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly spec: string,
 		public readonly vm: VM,
 		public readonly libp2p: Libp2p | null,
-		private readonly providers: Record<string, ethers.providers.JsonRpcProvider>,
-		private readonly blockResolver: BlockResolver | null,
-		private readonly options: {
-			verbose?: boolean
-			unchecked?: boolean
-			peering?: boolean
-			sync?: boolean
-		}
+		private readonly blockResolver: BlockResolver,
+		private readonly options: CoreOptions
 	) {
 		super()
 
@@ -155,30 +108,25 @@ export class Core extends EventEmitter<CoreEvents> {
 		const messageDatabasePath = directory && path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
 		this.messageStore = new MessageStore(uri, messageDatabasePath, { verbose: options.verbose })
 
-		if (directory === null) {
-			this.rpcServer = null
-			this.mst = null
-		} else {
+		if (directory !== null) {
+			// offline cores might be run with a non-null directory; we still want to update the MST
 			this.mst = new okra.Tree(path.resolve(directory, constants.MST_FILENAME))
-			this.rpcServer = new RPC.Server({ mst: this.mst, messageStore: this.messageStore })
-		}
 
-		if (this.libp2p !== null) {
-			if (options.peering) {
-				this.libp2p.pubsub.subscribe(this.uri)
-				this.libp2p.pubsub.addEventListener("message", this.handleMessage)
+			if (libp2p !== null && !this.options.offline) {
+				this.rpcServer = new RPC.Server({ mst: this.mst, messageStore: this.messageStore })
+
+				libp2p.pubsub.subscribe(this.uri)
+				libp2p.pubsub.addEventListener("message", this.handleMessage)
 				console.log(`[canvas-core] Subscribed to pubsub topic ${this.uri}`)
-			}
 
-			if (options.sync) {
-				this.libp2p.handle(this.syncProtocol, this.handleIncomingStream)
-				this.startSyncService()
-				this.startPeeringService()
-			}
+				libp2p.handle(this.syncProtocol, this.handleIncomingStream)
+				this.startSyncService(libp2p)
+				this.startPeeringService(libp2p)
 
-			if (this.uri.startsWith("ipfs://")) {
-				const { fetchService } = this.libp2p as Libp2p & { fetchService: FetchService }
-				fetchService.registerLookupFunction(`${this.uri}/`, this.fetchLookupFunction)
+				if (this.uri.startsWith("ipfs://")) {
+					const { fetchService } = this.libp2p as Libp2p & { fetchService: FetchService }
+					fetchService.registerLookupFunction(`${this.uri}/`, this.fetchLookupFunction)
+				}
 			}
 		}
 	}
@@ -199,17 +147,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		await this.queue.onIdle()
 	}
 
-	public getProvider(chain: Chain, chainId: ChainId): ethers.providers.JsonRpcProvider {
-		const key = `${chain}:${chainId}`
-		const provider = this.providers[key]
-		assert(provider !== undefined, `No provider for ${key}`)
-		return provider
-	}
-
 	public async close() {
 		this.controller.abort()
 
-		if (this.libp2p !== null) {
+		if (this.libp2p !== null && !this.options.offline) {
 			this.libp2p.pubsub.unsubscribe(this.uri)
 			this.libp2p.pubsub.removeEventListener("message", this.handleMessage)
 
@@ -234,10 +175,9 @@ export class Core extends EventEmitter<CoreEvents> {
 	/**
 	 * Helper for verifying the blockhash for an action or session.
 	 */
-	public async verifyBlock(blockInfo: Block, options: { sync?: boolean }) {
+	public async verifyBlock(blockInfo: Block) {
 		const { chain, chainId, blocknum, blockhash, timestamp } = blockInfo
-		assert(this.blockResolver !== null, "No block resolver provided")
-		const block = await this.blockResolver.getBlock(chain, chainId, blockhash)
+		const block = await this.blockResolver(chain, chainId, blockhash)
 
 		// check the block retrieved from RPC matches metadata from the user
 		assert(block.number === blocknum, "action/session provided with invalid block number")
@@ -262,12 +202,12 @@ export class Core extends EventEmitter<CoreEvents> {
 		return { hash }
 	}
 
-	private async applyActionInternal(hash: string, action: Action, options: { sync?: boolean } = {}) {
+	private async applyActionInternal(hash: string, action: Action) {
 		if (this.options.verbose) {
 			console.log(chalk.green(`[canvas-core] Applying action ${hash}`), action)
 		}
 
-		await this.validateAction(action, options)
+		await this.validateAction(action)
 
 		const effects = await this.vm.execute(hash, action.payload)
 		this.messageStore.insertAction(hash, action)
@@ -287,7 +227,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private async validateAction(action: Action, options: { sync?: boolean }) {
+	private async validateAction(action: Action) {
 		const { timestamp, block, spec } = action.payload
 		const fromAddress = action.payload.from.toLowerCase()
 
@@ -299,8 +239,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (!this.options.unchecked) {
 			// check the action was signed with a valid, recent block
-			assert(block !== undefined, "action missing block data")
-			await this.verifyBlock(block, options)
+			assert(block !== undefined, "action is missing block data")
+			await this.verifyBlock(block)
 		}
 
 		// verify the signature, either using a session signature or action signature
@@ -345,12 +285,12 @@ export class Core extends EventEmitter<CoreEvents> {
 		return { hash }
 	}
 
-	private async applySessionInternal(hash: string, session: Session, options: { sync?: boolean } = {}) {
+	private async applySessionInternal(hash: string, session: Session) {
 		if (this.options.verbose) {
 			console.log(chalk.green(`[canvas-core] Applying session ${hash}`), session)
 		}
 
-		await this.validateSession(session, options)
+		await this.validateSession(session)
 		this.messageStore.insertSession(hash, session)
 		if (this.mst !== null) {
 			const hashBuffer = Buffer.from(hash.slice(2), "hex")
@@ -366,7 +306,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private async validateSession(session: Session, options: { sync?: boolean }) {
+	private async validateSession(session: Session) {
 		const { from, spec, timestamp, block } = session.payload
 		assert(spec === this.uri, "session signed for wrong spec")
 
@@ -377,10 +317,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "session timestamp too far in the past")
 		assert(timestamp < constants.BOUNDS_CHECK_UPPER_LIMIT, "session timestamp too far in the future")
 
-		// check the session was signed with a valid, recent block
 		if (!this.options.unchecked) {
-			assert(block !== undefined, "session missing block info")
-			await this.verifyBlock(block, options)
+			// check the session was signed with a valid, recent block
+			assert(block !== undefined, "session is missing block data")
+			await this.verifyBlock(block)
 		}
 	}
 
@@ -393,7 +333,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async publishMessage(hash: string, message: Message) {
-		if (this.libp2p === null) {
+		if (this.libp2p === null || this.options.offline) {
 			return
 		}
 
@@ -413,9 +353,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 	}
 
-	private handleMessage: EventHandler<CustomEvent<SignedMessage | UnsignedMessage>> = async ({
-		detail: { topic, data },
-	}) => {
+	private handleMessage = async ({ detail: { topic, data } }: CustomEvent<SignedMessage | UnsignedMessage>) => {
 		if (topic !== this.uri) {
 			return
 		}
@@ -454,13 +392,17 @@ export class Core extends EventEmitter<CoreEvents> {
 	private static peeringDelay = 1000 * 5
 	private static peeringInterval = 1000 * 60 * 60 * 1
 	private static peeringRetryInterval = 1000 * 5
-	private async startPeeringService() {
+	private async startPeeringService(libp2p: Libp2p) {
+		if (this.options.verbose) {
+			console.log("[canvas-core] Staring announce service")
+		}
+
 		const { signal } = this.controller
 		try {
 			await wait({ signal, delay: Core.peeringDelay })
 			while (!signal.aborted) {
 				await retry(
-					this.announce,
+					(signal) => this.announce(libp2p, signal),
 					(err) => console.log(chalk.red(`[canvas-core] Failed to publish DHT rendezvous record`), err),
 					{ signal, delay: Core.peeringRetryInterval }
 				)
@@ -471,27 +413,27 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private announce = async (signal: AbortSignal): Promise<void> => {
-		if (this.libp2p === null) {
-			return
-		}
-
+	private async announce(libp2p: Libp2p, signal: AbortSignal): Promise<void> {
 		console.log(chalk.green(`[canvas-core] Publishing DHT rendezvous record ${this.cid.toString()}`))
-		await this.libp2p.contentRouting.provide(this.cid, { signal })
+		await libp2p.contentRouting.provide(this.cid, { signal })
 		console.log(chalk.green(`[canvas-core] Successfully published DHT rendezvous record`))
 	}
 
 	private static syncDelay = 1000 * 10
 	private static syncInterval = 1000 * 60 * 1
 	private static syncRetryInterval = 1000 * 5
-	private async startSyncService() {
+	private async startSyncService(libp2p: Libp2p) {
+		if (this.options.verbose) {
+			console.log("[canvas-core] Staring sync service")
+		}
+
 		const { signal } = this.controller
 
 		try {
 			await wait({ signal, delay: Core.syncDelay })
 			while (!signal.aborted) {
 				const peers = await retry(
-					this.findPeers,
+					(signal) => this.findPeers(libp2p, signal),
 					(err) => console.log(chalk.red(`[canvas-core] Failed to locate application peers`), err),
 					{ signal, delay: Core.syncRetryInterval }
 				)
@@ -500,35 +442,33 @@ export class Core extends EventEmitter<CoreEvents> {
 
 				for (const [i, peer] of peers.entries()) {
 					console.log(chalk.green(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`))
-					await this.sync(peer)
+					await this.sync(libp2p, peer)
 				}
 
 				await wait({ signal, delay: Core.syncInterval })
 			}
 		} catch (err) {
-			console.log(`[canvas-core] Aborting sync service`)
+			console.log("[canvas-core] Aborting sync service")
 		}
 	}
 
-	private findPeers = async (signal: AbortSignal): Promise<PeerId[]> => {
+	async findPeers(libp2p: Libp2p, signal: AbortSignal): Promise<PeerId[]> {
 		const peers: PeerId[] = []
-		this.libp2p?.pubsub.getSubscribers(this.uri)
 
-		if (this.libp2p !== null) {
-			for await (const { id } of this.libp2p.contentRouting.findProviders(this.cid, { signal })) {
-				if (id.equals(this.libp2p.peerId)) {
-					continue
-				} else {
-					peers.push(id)
-				}
+		// this.libp2p.pubsub.getSubscribers(this.uri)
+		for await (const { id } of libp2p.contentRouting.findProviders(this.cid, { signal })) {
+			if (id.equals(libp2p.peerId)) {
+				continue
+			} else {
+				peers.push(id)
 			}
 		}
 
 		return peers
 	}
 
-	private async sync(peer: PeerId) {
-		if (this.mst === null || this.libp2p === null) {
+	private async sync(libp2p: Libp2p, peer: PeerId) {
+		if (this.mst === null) {
 			return
 		}
 
@@ -536,7 +476,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		let stream: Stream
 		try {
-			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal })
+			stream = await libp2p.dialProtocol(peer, this.syncProtocol, { signal })
 		} catch (err) {
 			console.log(chalk.red(`[canvas-core] Failed to dial peer ${peer.toString()}`, err))
 			return
@@ -561,7 +501,7 @@ export class Core extends EventEmitter<CoreEvents> {
 					if (message.type === "session") {
 						const { type, ...session } = message
 						try {
-							await this.applySessionInternal(hash, session, { sync: true })
+							await this.applySessionInternal(hash, session)
 							successCount += 1
 						} catch (err) {
 							console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
@@ -570,7 +510,7 @@ export class Core extends EventEmitter<CoreEvents> {
 					} else if (message.type === "action") {
 						const { type, ...action } = message
 						try {
-							await this.applyActionInternal(hash, action, { sync: true })
+							await this.applyActionInternal(hash, action)
 							successCount += 1
 						} catch (err) {
 							console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)
@@ -583,6 +523,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 
 		await RPC.sync(this.mst, stream, applyBatch)
+
 		console.log(
 			`[canvas-core] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
 		)

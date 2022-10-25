@@ -132,7 +132,7 @@ test("Apply action signed with session key", async (t) => {
 })
 
 test("Apply two actions signed with session keys", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ directory: null, uri, spec, unchecked: true })
 
 	const sessionPayload: SessionPayload = {
 		from: signerAddress,
