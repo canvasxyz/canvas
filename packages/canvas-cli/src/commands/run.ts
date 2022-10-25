@@ -27,13 +27,13 @@ export const builder = (yargs: yargs.Argv) =>
 			desc: "Port to bind the core API",
 			default: 8000,
 		})
-		.option("peering", {
+		.option("offline", {
 			type: "boolean",
-			desc: "Enable peering over libp2p GossipSub",
+			desc: "Disable libp2p",
 		})
 		.option("peering-port", {
 			type: "number",
-			desc: "Port to bind libp2p TCP transport",
+			desc: "Port to bind libp2p WebSocket transport",
 			default: 4044,
 		})
 		.option("noserver", {
@@ -76,10 +76,7 @@ export async function handler(args: Args) {
 	const { uri, directory } = parseSpecArgument(args.spec)
 
 	if (directory === null) {
-		if (args.peering) {
-			console.log(chalk.red(`[canvas-cli] --peering cannot be enabled for local development specs`))
-			process.exit(1)
-		} else if (args.replay || args.reset) {
+		if (args.replay || args.reset) {
 			console.log(chalk.red("[canvas-cli] --replay and --reset cannot be used with temporary development databases"))
 			process.exit(1)
 		}
@@ -129,7 +126,7 @@ export async function handler(args: Args) {
 
 		if (confirm) {
 			args.unchecked = true
-			args.peering = false
+			args.offline = true
 			console.log(chalk.yellow(`✦ ${chalk.bold("Using unchecked mode.")} Actions will not require a valid block hash.`))
 		} else {
 			console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
@@ -148,13 +145,13 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const { verbose, replay, unchecked, "peering-port": peeringPort } = args
+	const { replay, verbose, unchecked, offline, "peering-port": peeringPort } = args
 
 	const driver = await Driver.initialize({ rootDirectory: CANVAS_HOME, port: peeringPort, rpc })
 
 	let core: Core
 	try {
-		core = await driver.start(uri, { unchecked, verbose })
+		core = await driver.start(uri, { unchecked, verbose, offline })
 	} catch (err) {
 		if (err instanceof Error) {
 			console.log(chalk.red(err.message))
@@ -201,8 +198,7 @@ export async function handler(args: Args) {
 			}
 
 			if (args.verbose) console.log("[canvas-cli] Closing core...")
-			await core.close()
-			core.modelStore.close() // not necessary (?)
+			await driver.close()
 			if (args.verbose) console.log("[canvas-cli] Core closed.")
 		}
 	})

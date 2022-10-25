@@ -44,9 +44,11 @@ export class Driver {
 
 			console.log(`[canvas-core] PeerId ${peerId.toString()}`)
 
-			const libp2p = await createLibp2p(getLibp2pInit(peerId, port))
+			libp2p = await createLibp2p(getLibp2pInit(peerId, port))
 			await libp2p.start()
 		}
+
+		// console.log()
 
 		const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
 		for (const [chain, chainIds] of Object.entries(rpc || {})) {
@@ -78,6 +80,10 @@ export class Driver {
 		for (const key of Object.keys(this.cores)) {
 			await this.stop(key)
 		}
+
+		if (this.libp2p !== null) {
+			await this.libp2p.stop()
+		}
 	}
 
 	public start(
@@ -107,15 +113,17 @@ export class Driver {
 				directory,
 				uri,
 				spec,
-				libp2p: options.offline ? null : this.libp2p,
+				libp2p: this.libp2p,
 				providers: this.providers,
 				blockResolver: this.blockCache.getBlock,
-				unchecked: options.unchecked,
-				verbose: options.verbose,
+				...options,
 			})
 
 			this.cores[uri] = core
-			core.addEventListener("close", () => delete this.cores[uri])
+			core.addEventListener("close", () => {
+				delete this.cores[uri]
+			})
+
 			return core
 		})
 	}
@@ -128,6 +136,7 @@ export class Driver {
 			}
 
 			await core.close()
+			delete this.cores[uri]
 		})
 	}
 

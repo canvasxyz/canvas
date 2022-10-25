@@ -393,6 +393,10 @@ export class Core extends EventEmitter<CoreEvents> {
 	private static peeringInterval = 1000 * 60 * 60 * 1
 	private static peeringRetryInterval = 1000 * 5
 	private async startPeeringService(libp2p: Libp2p) {
+		if (this.options.verbose) {
+			console.log("[canvas-core] Staring announce service")
+		}
+
 		const { signal } = this.controller
 		try {
 			await wait({ signal, delay: Core.peeringDelay })
@@ -419,6 +423,10 @@ export class Core extends EventEmitter<CoreEvents> {
 	private static syncInterval = 1000 * 60 * 1
 	private static syncRetryInterval = 1000 * 5
 	private async startSyncService(libp2p: Libp2p) {
+		if (this.options.verbose) {
+			console.log("[canvas-core] Staring sync service")
+		}
+
 		const { signal } = this.controller
 
 		try {
