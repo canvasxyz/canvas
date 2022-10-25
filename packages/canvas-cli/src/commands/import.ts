@@ -1,29 +1,27 @@
 import assert from "node:assert"
 import readline from "node:readline"
+import fs from "node:fs"
+import path from "node:path"
 
 import yargs from "yargs"
 
 import chalk from "chalk"
 import { ethers } from "ethers"
 
-import { Core, actionType, sessionType } from "@canvas-js/core"
+import { Core, actionType, sessionType, constants } from "@canvas-js/core"
 
-import { locateSpec, setupRpcs } from "../utils.js"
+import { parseSpecArgument, setupRpcs } from "../utils.js"
 
 export const command = "import <spec>"
 export const desc = "Import actions and sessions from stdin"
 export const builder = (yargs: yargs.Argv) =>
 	yargs
 		.positional("spec", {
-			describe: "Path to spec file, or CID of spec",
+			describe: "CID of spec",
 			type: "string",
 			demandOption: true,
 		})
-		.option("ipfs", {
-			type: "string",
-			desc: "IPFS HTTP API URL",
-			default: "http://localhost:5001",
-		})
+
 		.option("chain-rpc", {
 			type: "array",
 			desc: "Provide an RPC endpoint for reading on-chain data",
@@ -32,7 +30,10 @@ export const builder = (yargs: yargs.Argv) =>
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { uri, directory, spec } = await locateSpec(args.spec, args.ipfs)
+	const { uri, directory } = parseSpecArgument(args.spec)
+	assert(directory !== null, "Cannot import to development specs since they do not persist any data")
+
+	const spec = fs.readFileSync(path.resolve(directory, constants.SPEC_FILENAME), "utf-8")
 
 	const rpc = setupRpcs(args["chain-rpc"])
 

@@ -9,7 +9,7 @@ import Hash from "ipfs-only-hash"
 
 import { Core, constants, actionType, Driver } from "@canvas-js/core"
 
-import { setupRpcs, locateSpec, confirmOrExit, CANVAS_HOME } from "../utils.js"
+import { setupRpcs, confirmOrExit, CANVAS_HOME, parseSpecArgument } from "../utils.js"
 import { API } from "../api.js"
 
 export const command = "run <spec>"
@@ -35,11 +35,6 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "number",
 			desc: "Port to bind libp2p TCP transport",
 			default: 4044,
-		})
-		.option("ipfs", {
-			type: "string",
-			desc: "IPFS Gateway URL",
-			default: "http://127.0.0.1:8080",
 		})
 		.option("noserver", {
 			type: "boolean",
@@ -78,7 +73,7 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
-	const { uri, directory, spec, peerId } = await locateSpec(args.spec, args.ipfs)
+	const { uri, directory } = parseSpecArgument(args.spec)
 
 	if (directory === null) {
 		if (args.peering) {
@@ -88,31 +83,36 @@ export async function handler(args: Args) {
 			console.log(chalk.red("[canvas-cli] --replay and --reset cannot be used with temporary development databases"))
 			process.exit(1)
 		}
-	} else if (args.reset) {
-		await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${directory}?`)
-		const messagesPath = path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
-		if (fs.existsSync(messagesPath)) {
-			fs.rmSync(messagesPath)
-			console.log(`[canvas-cli] Deleted ${messagesPath}`)
-		}
+	} else {
+		if (!fs.existsSync(directory)) {
+			console.log(`[canvas-cli] Creating new directory ${directory}`)
+			fs.mkdirSync(directory)
+		} else if (args.reset) {
+			await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${directory}?`)
+			const messagesPath = path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
+			if (fs.existsSync(messagesPath)) {
+				fs.rmSync(messagesPath)
+				console.log(`[canvas-cli] Deleted ${messagesPath}`)
+			}
 
-		const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
-		if (fs.existsSync(modelsPath)) {
-			fs.rmSync(modelsPath)
-			console.log(`[canvas-cli] Deleted ${modelsPath}`)
-		}
+			const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
+			if (fs.existsSync(modelsPath)) {
+				fs.rmSync(modelsPath)
+				console.log(`[canvas-cli] Deleted ${modelsPath}`)
+			}
 
-		const mstPath = path.resolve(directory, constants.MST_FILENAME)
-		if (fs.existsSync(mstPath)) {
-			fs.rmSync(mstPath)
-			console.log(`[canvas-cli] Deleted ${mstPath}`)
-		}
-	} else if (args.replay) {
-		await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
-		const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
-		if (fs.existsSync(modelsPath)) {
-			fs.rmSync(modelsPath)
-			console.log(`[canvas-cli] Deleted ${modelsPath}`)
+			const mstPath = path.resolve(directory, constants.MST_FILENAME)
+			if (fs.existsSync(mstPath)) {
+				fs.rmSync(mstPath)
+				console.log(`[canvas-cli] Deleted ${mstPath}`)
+			}
+		} else if (args.replay) {
+			await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
+			const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
+			if (fs.existsSync(modelsPath)) {
+				fs.rmSync(modelsPath)
+				console.log(`[canvas-cli] Deleted ${modelsPath}`)
+			}
 		}
 	}
 
@@ -143,12 +143,8 @@ export async function handler(args: Args) {
 			)
 		)
 		console.log(chalk.yellow(`✦ ${chalk.bold("Using in-memory model database.")} Data will not be saved between runs.`))
-
-		const cid = await Hash.of(spec)
-		console.log(chalk.yellow(`✦ To persist data, run the spec from IPFS:`))
-		console.log(chalk.yellow(`  ipfs daemon`))
-		console.log(chalk.yellow(`  ipfs add ${args.spec}`))
-		console.log(chalk.yellow(`  canvas run ${cid}`))
+		console.log(chalk.yellow(`✦ To persist data, install the spec with:`))
+		console.log(chalk.yellow(`  canvas install ${args.spec}`))
 		console.log("")
 	}
 
@@ -168,7 +164,7 @@ export async function handler(args: Args) {
 		return
 	}
 
-	if (replay) {
+	if (directory !== null && replay) {
 		console.log(chalk.green(`[canvas-core] Replaying action log...`))
 
 		let i = 0

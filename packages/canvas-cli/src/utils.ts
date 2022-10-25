@@ -6,9 +6,7 @@ import process from "node:process"
 import chalk from "chalk"
 import prompts from "prompts"
 import { fetch } from "undici"
-
-import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
-import type { PeerId } from "@libp2p/interface-peer-id"
+import { exportToProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 import { Chain } from "@canvas-js/interfaces"
 import { chainType, constants } from "@canvas-js/core"
@@ -19,6 +17,13 @@ if (!fs.existsSync(CANVAS_HOME)) {
 	console.log(`[canvas-cli] Creating directory ${path.resolve(CANVAS_HOME)}`)
 	console.log("[canvas-cli] Override this path by setting a CANVAS_HOME environment variable.")
 	fs.mkdirSync(CANVAS_HOME)
+}
+
+const peerIdPath = path.resolve(CANVAS_HOME, constants.PEER_ID_FILENAME)
+if (!fs.existsSync(peerIdPath)) {
+	console.log(`[canvas-cli] Creating new PeerID at ${peerIdPath}`)
+	const peerId = await createEd25519PeerId()
+	fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
 }
 
 export async function confirmOrExit(message: string) {
@@ -32,47 +37,12 @@ export async function confirmOrExit(message: string) {
 
 export const cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 
-interface LocateSpecResult {
-	uri: string
-	spec: string
-	directory: string | null
-	peerId: PeerId | undefined
-}
-
-export async function locateSpec(name: string, ipfsGatewayURL: string): Promise<LocateSpecResult> {
-	let peerId: PeerId | undefined
-	if (cidPattern.test(name)) {
-		const directory = path.resolve(CANVAS_HOME, name)
-
-		const peerIdPath = path.resolve(CANVAS_HOME, constants.PEER_ID_FILENAME)
-		if (fs.existsSync(peerIdPath)) {
-			peerId = await createFromProtobuf(fs.readFileSync(peerIdPath))
-			console.log(`[canvas-cli] Found existing PeerId at ${peerIdPath}`)
-		} else {
-			peerId = await createEd25519PeerId()
-			fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
-			console.log(`[canvas-cli] Created new PeerId at ${peerIdPath}`)
-		}
-
-		const specPath = path.resolve(CANVAS_HOME, name, constants.SPEC_FILENAME)
-		if (fs.existsSync(specPath)) {
-			const spec = fs.readFileSync(specPath, "utf-8")
-			return { uri: `ipfs://${name}`, directory, spec, peerId }
-		} else {
-			if (!fs.existsSync(directory)) {
-				console.log(`[canvas-cli] Creating directory ${directory}`)
-				fs.mkdirSync(directory)
-			}
-
-			const spec = await download(name, ipfsGatewayURL)
-			fs.writeFileSync(specPath, spec)
-			console.log(`[canvas-cli] Downloaded spec to ${specPath}`)
-			return { uri: `ipfs://${name}`, directory, spec, peerId }
-		}
-	} else if (name.endsWith(".js") || name.endsWith(".jsx")) {
-		const specPath = path.resolve(name)
-		let spec = fs.readFileSync(specPath, "utf-8")
-		return { uri: `file://${specPath}`, directory: null, spec, peerId }
+export function parseSpecArgument(spec: string): { uri: string; directory: string | null } {
+	if (cidPattern.test(spec)) {
+		const directory = path.resolve(CANVAS_HOME, spec)
+		return { uri: `ipfs://${spec}`, directory }
+	} else if (spec.endsWith(".js") || spec.endsWith(".jsx")) {
+		return { uri: `file://${spec}`, directory: null }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js/.jsx file"))
 		process.exit(1)
