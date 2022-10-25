@@ -5,9 +5,9 @@
 	"type": "module",
 	"types": "./lib/index.d.ts",
 	"main": "./lib/index.js",
-  "engines" : {
-    "node": ">=16.0.0"
-  },
+	"engines": {
+		"node": ">=16.0.0"
+	},
 	"files": [
 		"lib",
 		"types"
@@ -18,7 +18,7 @@
 	"dependencies": {
 		"@canvas-js/interfaces": "0.0.18",
 		"@canvas-js/rpc": "0.0.17",
-		"@chainsafe/libp2p-gossipsub": "github:ChainSafe/js-libp2p-gossipsub#v4.2.0",
+		"@chainsafe/libp2p-gossipsub": "^5.0.0",
 		"@chainsafe/libp2p-noise": "^10.0.0",
 		"@libp2p/bootstrap": "^5.0.0",
 		"@libp2p/interface-connection": "^3.0.2",
