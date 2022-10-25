@@ -14,7 +14,6 @@ import { CID } from "multiformats/cid"
 import type { Chain, ChainId } from "@canvas-js/interfaces"
 
 import { Core } from "./core.js"
-import { VM } from "./vm/index.js"
 import { getLibp2pInit } from "./libp2p.js"
 import { BlockCache } from "./utils.js"
 import * as constants from "./constants.js"

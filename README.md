@@ -21,11 +21,12 @@ npm install -g @canvas-js/cli
 ## Commands
 
 - `canvas init [filename]`: Create a sample application for demonstration purposes.
-- `canvas info [filename | multihash]`: Show models, views, and actions for an application.
-- `canvas run [filename | multihash]`: Run a Canvas application.
-- `canvas export [filename | multihash]`: Export actions from a Canvas application.
-- `canvas import [filename | multihash]`: Import actions from a Canvas application.
-- `canvas list`: List all local SQLite databases for Canvas applications.
+- `canvas info [filename | CID]`: Show models, views, and actions for an application.
+- `canvas run [filename | CID]`: Run a Canvas application.
+- `canvas export [CID]`: Export actions from a Canvas application.
+- `canvas import [CID]`: Import actions from a Canvas application.
+- `canvas install [filename]`: Install a local spec file as a Canvas application.
+- `canvas list`: List all installed Canvas applications.
 
 You can run each command with --help for more detailed documentation.
 

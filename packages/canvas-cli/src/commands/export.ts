@@ -13,7 +13,7 @@ export const command = "export <spec>"
 export const desc = "Export actions and sessions as JSON to stdout"
 export const builder = (yargs: yargs.Argv) =>
 	yargs.positional("spec", {
-		describe: "IPFS hash of spec",
+		describe: "CID of spec",
 		type: "string",
 		demandOption: true,
 	})

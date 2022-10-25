@@ -14,7 +14,7 @@ export const desc = "Show the models, views, and actions for a spec"
 
 export const builder = (yargs: yargs.Argv) =>
 	yargs.positional("spec", {
-		describe: "Path to spec file, or IPFS hash of spec",
+		describe: "spec filename or CID",
 		type: "string",
 		demandOption: true,
 	})

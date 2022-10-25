@@ -5,7 +5,6 @@ import fs from "node:fs"
 import yargs from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
-import Hash from "ipfs-only-hash"
 
 import { Core, constants, actionType, Driver } from "@canvas-js/core"
 
