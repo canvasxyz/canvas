@@ -77,6 +77,8 @@ export async function handler(args: Args) {
 			{ signal: controller.signal, delay: 1000 }
 		)
 
+		await libp2p.stop()
+
 		console.log(chalk.yellow(`[canvas-cli] Creating ${specPath}`))
 		fs.writeFileSync(specPath, spec)
 		runCommand = `canvas run ${cid.toString()}`
