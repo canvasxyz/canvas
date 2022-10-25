@@ -8,7 +8,7 @@ import { ethers } from "ethers"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
 
-import { EventEmitter, CustomEvent, EventHandler } from "@libp2p/interfaces/events"
+import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
 import type { Libp2p } from "libp2p"
 import type { FetchService } from "libp2p/fetch"
@@ -56,6 +56,7 @@ interface CoreConfig extends CoreOptions {
 interface CoreOptions {
 	unchecked?: boolean
 	verbose?: boolean
+	offline?: boolean
 }
 
 interface CoreEvents {
@@ -111,16 +112,16 @@ export class Core extends EventEmitter<CoreEvents> {
 			// offline cores might be run with a non-null directory; we still want to update the MST
 			this.mst = new okra.Tree(path.resolve(directory, constants.MST_FILENAME))
 
-			if (this.libp2p !== null) {
+			if (libp2p !== null && !this.options.offline) {
 				this.rpcServer = new RPC.Server({ mst: this.mst, messageStore: this.messageStore })
 
-				this.libp2p.pubsub.subscribe(this.uri)
-				this.libp2p.pubsub.addEventListener("message", this.handleMessage)
+				libp2p.pubsub.subscribe(this.uri)
+				libp2p.pubsub.addEventListener("message", this.handleMessage)
 				console.log(`[canvas-core] Subscribed to pubsub topic ${this.uri}`)
 
-				this.libp2p.handle(this.syncProtocol, this.handleIncomingStream)
-				this.startSyncService()
-				this.startPeeringService()
+				libp2p.handle(this.syncProtocol, this.handleIncomingStream)
+				this.startSyncService(libp2p)
+				this.startPeeringService(libp2p)
 
 				if (this.uri.startsWith("ipfs://")) {
 					const { fetchService } = this.libp2p as Libp2p & { fetchService: FetchService }
@@ -149,7 +150,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	public async close() {
 		this.controller.abort()
 
-		if (this.libp2p !== null) {
+		if (this.libp2p !== null && !this.options.offline) {
 			this.libp2p.pubsub.unsubscribe(this.uri)
 			this.libp2p.pubsub.removeEventListener("message", this.handleMessage)
 
@@ -332,7 +333,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async publishMessage(hash: string, message: Message) {
-		if (this.libp2p === null) {
+		if (this.libp2p === null || this.options.offline) {
 			return
 		}
 
@@ -352,9 +353,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 	}
 
-	private handleMessage: EventHandler<CustomEvent<SignedMessage | UnsignedMessage>> = async ({
-		detail: { topic, data },
-	}) => {
+	private handleMessage = async ({ detail: { topic, data } }: CustomEvent<SignedMessage | UnsignedMessage>) => {
 		if (topic !== this.uri) {
 			return
 		}
@@ -393,13 +392,13 @@ export class Core extends EventEmitter<CoreEvents> {
 	private static peeringDelay = 1000 * 5
 	private static peeringInterval = 1000 * 60 * 60 * 1
 	private static peeringRetryInterval = 1000 * 5
-	private async startPeeringService() {
+	private async startPeeringService(libp2p: Libp2p) {
 		const { signal } = this.controller
 		try {
 			await wait({ signal, delay: Core.peeringDelay })
 			while (!signal.aborted) {
 				await retry(
-					this.announce,
+					(signal) => this.announce(libp2p, signal),
 					(err) => console.log(chalk.red(`[canvas-core] Failed to publish DHT rendezvous record`), err),
 					{ signal, delay: Core.peeringRetryInterval }
 				)
@@ -410,27 +409,23 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private announce = async (signal: AbortSignal): Promise<void> => {
-		if (this.libp2p === null) {
-			return
-		}
-
+	private async announce(libp2p: Libp2p, signal: AbortSignal): Promise<void> {
 		console.log(chalk.green(`[canvas-core] Publishing DHT rendezvous record ${this.cid.toString()}`))
-		await this.libp2p.contentRouting.provide(this.cid, { signal })
+		await libp2p.contentRouting.provide(this.cid, { signal })
 		console.log(chalk.green(`[canvas-core] Successfully published DHT rendezvous record`))
 	}
 
 	private static syncDelay = 1000 * 10
 	private static syncInterval = 1000 * 60 * 1
 	private static syncRetryInterval = 1000 * 5
-	private async startSyncService() {
+	private async startSyncService(libp2p: Libp2p) {
 		const { signal } = this.controller
 
 		try {
 			await wait({ signal, delay: Core.syncDelay })
 			while (!signal.aborted) {
 				const peers = await retry(
-					this.findPeers,
+					(signal) => this.findPeers(libp2p, signal),
 					(err) => console.log(chalk.red(`[canvas-core] Failed to locate application peers`), err),
 					{ signal, delay: Core.syncRetryInterval }
 				)
@@ -439,7 +434,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 				for (const [i, peer] of peers.entries()) {
 					console.log(chalk.green(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`))
-					await this.sync(peer)
+					await this.sync(libp2p, peer)
 				}
 
 				await wait({ signal, delay: Core.syncInterval })
@@ -449,25 +444,23 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private findPeers = async (signal: AbortSignal): Promise<PeerId[]> => {
+	async findPeers(libp2p: Libp2p, signal: AbortSignal): Promise<PeerId[]> {
 		const peers: PeerId[] = []
 
-		if (this.libp2p !== null) {
-			// this.libp2p.pubsub.getSubscribers(this.uri)
-			for await (const { id } of this.libp2p.contentRouting.findProviders(this.cid, { signal })) {
-				if (id.equals(this.libp2p.peerId)) {
-					continue
-				} else {
-					peers.push(id)
-				}
+		// this.libp2p.pubsub.getSubscribers(this.uri)
+		for await (const { id } of libp2p.contentRouting.findProviders(this.cid, { signal })) {
+			if (id.equals(libp2p.peerId)) {
+				continue
+			} else {
+				peers.push(id)
 			}
 		}
 
 		return peers
 	}
 
-	private async sync(peer: PeerId) {
-		if (this.mst === null || this.libp2p === null) {
+	private async sync(libp2p: Libp2p, peer: PeerId) {
+		if (this.mst === null) {
 			return
 		}
 
@@ -475,7 +468,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		let stream: Stream
 		try {
-			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal })
+			stream = await libp2p.dialProtocol(peer, this.syncProtocol, { signal })
 		} catch (err) {
 			console.log(chalk.red(`[canvas-core] Failed to dial peer ${peer.toString()}`, err))
 			return

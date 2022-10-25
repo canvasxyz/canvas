@@ -154,7 +154,7 @@ export async function handler(args: Args) {
 
 	let core: Core
 	try {
-		core = await driver.start(uri, { unchecked })
+		core = await driver.start(uri, { unchecked, verbose })
 	} catch (err) {
 		if (err instanceof Error) {
 			console.log(chalk.red(err.message))

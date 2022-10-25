@@ -80,7 +80,10 @@ export class Driver {
 		}
 	}
 
-	public start(uri: string, options: { unchecked?: boolean; offline?: boolean } = {}): Promise<Core> {
+	public start(
+		uri: string,
+		options: { unchecked?: boolean; verbose?: boolean; offline?: boolean } = {}
+	): Promise<Core> {
 		return this.queue.add(async () => {
 			const ipfsURI = ipfsURIPattern.exec(uri)
 			const fileURI = fileURIPattern.exec(uri)
@@ -108,6 +111,7 @@ export class Driver {
 				providers: this.providers,
 				blockResolver: this.blockCache.getBlock,
 				unchecked: options.unchecked,
+				verbose: options.verbose,
 			})
 
 			this.cores[uri] = core
