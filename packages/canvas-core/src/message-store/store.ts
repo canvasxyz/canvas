@@ -225,7 +225,7 @@ export class MessageStore {
 
 	private static createActionsTable = `CREATE TABLE IF NOT EXISTS actions (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    hash            BLOB    NOT NULL,
+    hash            BLOB    NOT NULL UNIQUE,
     signature       BLOB    NOT NULL,
     session_address BLOB    REFERENCES sessions(session_address),
     from_address    BLOB    NOT NULL,
@@ -238,7 +238,7 @@ export class MessageStore {
 	private static createSessionsTable = `CREATE TABLE IF NOT EXISTS sessions (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     hash            BLOB    NOT NULL UNIQUE,
-    signature       BLOB    NOT NULL UNIQUE,
+    signature       BLOB    NOT NULL,
     from_address    BLOB    NOT NULL,
     session_address BLOB    NOT NULL UNIQUE,
     duration        INTEGER NOT NULL,
