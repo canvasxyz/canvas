@@ -33,7 +33,7 @@ export function getLibp2pInit(peerId: PeerId, port?: number): Libp2pOptions {
 		peerId: peerId,
 		addresses: {
 			listen: listenMultiaddrs,
-			announce: [...bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId.toString()}`)],
+			announce: bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId.toString()}`),
 			announceFilter: (multiaddrs) => multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr)),
 		},
 		transports: [webSockets()],

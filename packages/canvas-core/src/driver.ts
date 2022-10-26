@@ -61,6 +61,7 @@ export class Driver {
 	}
 
 	public readonly cores: Record<string, Core> = {}
+
 	private readonly queue = new PQueue({ concurrency: 1 })
 	private readonly controller = new AbortController()
 	private readonly blockCache: BlockCache
@@ -96,11 +97,13 @@ export class Driver {
 			let directory: string | null = null
 			let spec: string
 			if (ipfsURI !== null) {
-				const [_, cid] = ipfsURI
-				spec = await this.fetch(CID.parse(cid))
-				if (this.rootDirectory !== null) {
-					directory = path.resolve(this.rootDirectory, cid)
+				if (this.rootDirectory === null) {
+					throw new Error("cannot run IPFS specs in development mode")
 				}
+
+				const [_, cid] = ipfsURI
+				directory = path.resolve(this.rootDirectory, cid)
+				spec = fs.readFileSync(path.resolve(directory, constants.SPEC_FILENAME), "utf-8")
 			} else if (fileURI !== null) {
 				const [_, specPath] = fileURI
 				spec = fs.readFileSync(specPath, "utf-8")
@@ -137,41 +140,5 @@ export class Driver {
 			await core.close()
 			delete this.cores[uri]
 		})
-	}
-
-	public async fetch(cid: CID): Promise<string> {
-		if (this.rootDirectory !== null) {
-			const directory = path.resolve(this.rootDirectory, cid.toString())
-			const specPath = path.resolve(directory, constants.SPEC_FILENAME)
-			if (fs.existsSync(specPath)) {
-				return fs.readFileSync(specPath, "utf-8")
-			}
-		}
-
-		if (this.libp2p === null) {
-			throw new Error("cannot fetch spec because the driver is offline")
-		}
-
-		const { signal } = this.controller
-
-		for await (const { id } of this.libp2p.contentRouting.findProviders(cid, { signal })) {
-			let data: Uint8Array | null = null
-			try {
-				data = await this.libp2p.fetch(id, `ipfs://${cid.toString()}/`)
-			} catch (err) {
-				console.log(chalk.red(`[canvas-core] Failed to fetch spec from ${id.toString()}`))
-			} finally {
-				if (data === null) {
-					continue
-				}
-			}
-
-			const hash = await Hash.of(data)
-			if (hash === cid.toString()) {
-				return Buffer.from(data).toString("utf-8")
-			}
-		}
-
-		throw new Error("failed to fetch spec from libp2p")
 	}
 }

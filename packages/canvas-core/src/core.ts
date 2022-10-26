@@ -11,7 +11,6 @@ import { CID } from "multiformats/cid"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
 import type { Libp2p } from "libp2p"
-import type { FetchService } from "libp2p/fetch"
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
@@ -122,20 +121,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				libp2p.handle(this.syncProtocol, this.handleIncomingStream)
 				this.startSyncService(libp2p)
 				this.startPeeringService(libp2p)
-
-				if (this.uri.startsWith("ipfs://")) {
-					const { fetchService } = this.libp2p as Libp2p & { fetchService: FetchService }
-					fetchService.registerLookupFunction(`${this.uri}/`, this.fetchLookupFunction)
-				}
 			}
-		}
-	}
-
-	private fetchLookupFunction = async (key: string) => {
-		if (key === `${this.uri}/`) {
-			return Buffer.from(this.spec, "utf-8")
-		} else {
-			return null
 		}
 	}
 
@@ -153,11 +139,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (this.libp2p !== null && !this.options.offline) {
 			this.libp2p.pubsub.unsubscribe(this.uri)
 			this.libp2p.pubsub.removeEventListener("message", this.handleMessage)
-
-			if (this.uri.startsWith("ipfs://")) {
-				const { fetchService } = this.libp2p as Libp2p & { fetchService: FetchService }
-				fetchService.unregisterLookupFunction(`${this.uri}/`, this.fetchLookupFunction)
-			}
 		}
 
 		await this.queue.onIdle()
@@ -414,9 +395,9 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async announce(libp2p: Libp2p, signal: AbortSignal): Promise<void> {
-		console.log(chalk.green(`[canvas-core] Publishing DHT rendezvous record ${this.cid.toString()}`))
+		// console.log(chalk.green(`[canvas-core] Publishing DHT rendezvous record ${this.cid.toString()}`))
 		await libp2p.contentRouting.provide(this.cid, { signal })
-		console.log(chalk.green(`[canvas-core] Successfully published DHT rendezvous record`))
+		// console.log(chalk.green(`[canvas-core] Successfully published DHT rendezvous record`))
 	}
 
 	private static syncDelay = 1000 * 10
@@ -441,7 +422,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				console.log(chalk.green(`[canvas-core] Found ${peers.length} application peers`))
 
 				for (const [i, peer] of peers.entries()) {
-					console.log(chalk.green(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`))
+					// console.log(chalk.green(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`))
 					await this.sync(libp2p, peer)
 				}
 
