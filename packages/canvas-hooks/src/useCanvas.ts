@@ -1,36 +1,96 @@
-import React, { useContext } from "react"
+import { Action, ActionPayload, getActionSignatureData } from "@canvas-js/interfaces"
+import { useCallback, useContext, useState } from "react"
 
-import { ActionArgument } from "@canvas-js/interfaces"
+import { CanvasContext, ApplicationData } from "./CanvasContext.js"
+import { Dispatch, CANVAS_SESSION_KEY, getLatestBlock } from "./utils.js"
 
-import { CanvasContext } from "./CanvasContext.js"
-import { CanvasSession } from "./useSession.js"
-
-/**
- * Here are the rules for the useCanvas hook:
- * - Initially, `loading` is true and `multihash`, `spec`, and `address` are null.
- * - Once the hook connects to both window.ethereum and the remote backend,
- *   `loading` will switch to false, with non-null `multihash`. However, `address`
- *   might still be null, in which case you MUST call `connect` to request accounts.
- * - Calling `connect` with `window.ethereum === undefined` will throw an error.
- * - Calling `connect` or `dispatch` while `loading` is true will throw an error.
- * - Once `loading` is true, you can call `dispatch` with a `call` string and `args` array.
- *   If no existing session is found in localStorage, or if the existing session has
- *   expired, then this will prompt the user to sign a new session key.
- */
 export function useCanvas(): {
-	cid: string | null
-	uri: string | null
+	isLoading: boolean
+	isPending: boolean
+	isReady: boolean
 	error: Error | null
-	loading: boolean
-	address: string | null
-	session: CanvasSession | null
-	component: string | null
-	dispatch: (call: string, ...args: ActionArgument[]) => Promise<void>
-	connect: () => Promise<void>
-	connectNewSession: () => Promise<void>
-	disconnect: () => Promise<void>
+	host: string | null
+	data: ApplicationData | null
+	dispatch: Dispatch
 } {
-	const { cid, uri, component, error, loading, address, session, dispatch, connect, connectNewSession, disconnect } =
-		useContext(CanvasContext)
-	return { cid, uri, component, error, loading, address, session, dispatch, connect, connectNewSession, disconnect }
+	const {
+		isLoading,
+		error,
+		host,
+		data,
+		signer,
+		sessionWallet,
+		setSessionWallet,
+		sessionExpiration,
+		setSessionExpiration,
+	} = useContext(CanvasContext)
+
+	const [isPending, setIsPending] = useState(false)
+
+	const dispatch: Dispatch = useCallback(
+		async (call, ...args) => {
+			console.log("dispatch:", call, args)
+			if (host === null) {
+				throw new Error("no host configured")
+			} else if (signer === null) {
+				throw new Error("dispatch() called without a provider")
+			} else if (sessionWallet === null || sessionExpiration === null) {
+				throw new Error("dispatch() called while logged out")
+			} else if (data === null) {
+				throw new Error("dispatch called before the application connection was established")
+			}
+
+			const timestamp = Date.now()
+			if (sessionExpiration < timestamp) {
+				setSessionWallet(null)
+				setSessionExpiration(null)
+				throw new Error("Session expired. Please log in again.")
+			}
+
+			setIsPending(true)
+			console.log("set pending to true")
+
+			try {
+				const block = await getLatestBlock(signer.provider)
+				console.log("got block", block)
+
+				const address = await signer.getAddress()
+				console.log("from address", address)
+
+				const payload: ActionPayload = { from: address, spec: data.uri, call, args, timestamp, block }
+
+				const signatureData = getActionSignatureData(payload)
+				const signature = await sessionWallet._signTypedData(...signatureData)
+				console.log("got signature", signature)
+
+				const action: Action = { session: sessionWallet.address, signature, payload }
+
+				const res = await fetch(host + "actions", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(action),
+				})
+
+				if (!res.ok) {
+					const message = await res.text()
+					if (message === "session not found" || message === "session expired") {
+						setSessionWallet(null)
+						setSessionExpiration(null)
+						localStorage.removeItem(CANVAS_SESSION_KEY)
+					}
+
+					throw new Error(message)
+				}
+
+				const { hash } = await res.json()
+				return { hash }
+			} finally {
+				setIsPending(false)
+			}
+		},
+		[host, data, signer, sessionWallet, sessionExpiration]
+	)
+
+	const isReady = !isPending && sessionWallet !== null
+	return { isLoading, isPending, isReady, error, host, data, dispatch }
 }

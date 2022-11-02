@@ -6,11 +6,10 @@ import path from "node:path"
 import yargs from "yargs"
 
 import chalk from "chalk"
-import { ethers } from "ethers"
 
 import { Core, actionType, sessionType, constants } from "@canvas-js/core"
 
-import { parseSpecArgument, setupRpcs } from "../utils.js"
+import { getProviders, parseSpecArgument } from "../utils.js"
 
 export const command = "import <spec>"
 export const desc = "Import actions and sessions from stdin"
@@ -35,15 +34,7 @@ export async function handler(args: Args) {
 
 	const spec = fs.readFileSync(path.resolve(directory, constants.SPEC_FILENAME), "utf-8")
 
-	const rpc = setupRpcs(args["chain-rpc"])
-
-	const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
-	for (const [chain, chainIds] of Object.entries(rpc || {})) {
-		for (const [chainId, url] of Object.entries(chainIds)) {
-			const key = `${chain}:${chainId}`
-			providers[key] = new ethers.providers.JsonRpcProvider(url)
-		}
-	}
+	const providers = getProviders(args["chain-rpc"])
 
 	const core = await Core.initialize({ uri, directory, spec, providers })
 

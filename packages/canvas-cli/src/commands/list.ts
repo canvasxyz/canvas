@@ -6,7 +6,7 @@ import chalk from "chalk"
 import Database from "better-sqlite3"
 
 import { constants } from "@canvas-js/core"
-import { CANVAS_HOME, cidPattern } from "../utils.js"
+import { CANVAS_HOME, cidPattern, SOCKET_FILENAME } from "../utils.js"
 
 export const command = "list"
 export const desc = "List all specs in the data directory"
@@ -14,9 +14,9 @@ export const desc = "List all specs in the data directory"
 export const builder = (yargs: yargs.Argv) => yargs
 
 export async function handler({}) {
-	console.log(`Showing local specs in ${path.resolve(CANVAS_HOME)}\n`)
+	console.log(`Showing local specs in ${CANVAS_HOME}\n`)
 	for (const name of fs.readdirSync(CANVAS_HOME)) {
-		if (name === constants.PEER_ID_FILENAME) {
+		if (name === constants.PEER_ID_FILENAME || name === SOCKET_FILENAME) {
 			continue
 		} else if (!cidPattern.test(name)) {
 			console.warn(chalk.yellow(`[canvas-cli] Unknown spec or invalid CIDv0, skipping: ${name}`))

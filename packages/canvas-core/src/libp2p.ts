@@ -20,22 +20,23 @@ const bootstrapList = [
 	"/ip4/137.66.27.235/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
 ]
 
+const announceFilter = (multiaddrs: Multiaddr[]) =>
+	multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr))
+
+const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
+
 export function getLibp2pInit(peerId: PeerId, port?: number): Libp2pOptions {
-	const listenMultiaddrs: string[] = []
+	const announceAddresses = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId.toString()}`)
+
+	const listenAddresses: string[] = []
 	if (port !== undefined) {
-		listenMultiaddrs.push(`/ip4/0.0.0.0/tcp/${port}/ws`)
+		listenAddresses.push(`/ip4/0.0.0.0/tcp/${port}/ws`)
 	}
 
 	return {
-		connectionGater: {
-			denyDialMultiaddr: async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr),
-		},
+		connectionGater: { denyDialMultiaddr },
 		peerId: peerId,
-		addresses: {
-			listen: listenMultiaddrs,
-			announce: [...bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId.toString()}`)],
-			announceFilter: (multiaddrs) => multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr)),
-		},
+		addresses: { listen: listenAddresses, announce: announceAddresses, announceFilter },
 		transports: [webSockets()],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],

@@ -1,252 +1,165 @@
-import { useCallback, useEffect, useState } from "react"
-
+import { useCallback, useContext, useEffect, useState } from "react"
 import { ethers } from "ethers"
 
-import {
-	Action,
-	ActionArgument,
-	Block,
-	ActionPayload,
-	SessionPayload,
-	getSessionSignatureData,
-	getActionSignatureData,
-} from "@canvas-js/interfaces"
+import { SessionPayload, getSessionSignatureData, Session } from "@canvas-js/interfaces"
 
-export const CANVAS_SESSION_KEY = "CANVAS_SESSION"
+import { CanvasContext } from "./CanvasContext.js"
+import { CANVAS_SESSION_KEY, getLatestBlock } from "./utils.js"
 
-export type CanvasSession = {
-	address: string
-	expiration: number
-}
-
-type SessionObject = {
-	spec: string
-	forPublicKey: string
-	sessionPrivateKey: string
-	expiration: number
-}
-
-export function useSession(
-	host: string,
-	uri: string | null,
-	address: string | null,
-	signer: ethers.providers.JsonRpcSigner | null,
-	provider: ethers.providers.Provider | null
-): {
-	dispatch: (call: string, ...args: ActionArgument[]) => Promise<void>
-	session: CanvasSession | null
-	connectNewSession: () => Promise<void>
-	disconnect: () => Promise<void>
+export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
+	error: Error | null
+	isLoading: boolean
+	isPending: boolean
+	sessionAddress: string | null
+	sessionExpiration: number | null
+	login: () => void
+	logout: () => void
 } {
-	const [sessionSigner, setSessionSigner] = useState<ethers.Wallet | null>(null)
-	const [sessionExpiration, setSessionExpiration] = useState<number>(0)
+	const { host, data, setSigner, sessionWallet, setSessionWallet, sessionExpiration, setSessionExpiration } =
+		useContext(CanvasContext)
 
-	const loadExistingSession = useCallback((uri: string, address: string, value: string | null) => {
-		if (value !== null) {
-			let sessionObject: SessionObject
-			try {
-				sessionObject = JSON.parse(value)
-			} catch (e) {
-				localStorage.removeItem(CANVAS_SESSION_KEY)
-				setSessionSigner(null)
-				setSessionExpiration(0)
-				return
-			}
+	const [error, setError] = useState<null | Error>(null)
+	const [isLoading, setIsLoading] = useState(true)
+	const [isPending, setIsPending] = useState(false)
 
-			if (sessionObject.spec === uri && sessionObject.forPublicKey === address) {
-				const sessionSigner = new ethers.Wallet(sessionObject.sessionPrivateKey)
-				setSessionSigner(sessionSigner)
-				setSessionExpiration(sessionObject.expiration)
-			} else {
-				localStorage.removeItem(CANVAS_SESSION_KEY)
-				setSessionSigner(null)
-				setSessionExpiration(0)
-			}
+	const [signerAddress, setSignerAddress] = useState<string | null>(null)
+	useEffect(() => {
+		if (signer === null) {
+			setSignerAddress(null)
+			setSigner(null)
+			setSessionWallet(null)
+			setSessionExpiration(null)
+		} else {
+			signer.getAddress().then((address) => {
+				setSigner(signer)
+				setSignerAddress(address)
+			})
 		}
-	}, [])
-
-	// useEffect(() => {
-	// 	window.addEventListener("storage", (event) => {
-	// 		if (event.key === CANVAS_SESSION_KEY) {
-	// 		}
-	// 	})
-	// }, [])
+	}, [signer])
 
 	useEffect(() => {
-		if (uri !== null && address !== null) {
-			const item = localStorage.getItem(CANVAS_SESSION_KEY)
-			loadExistingSession(uri, address, item)
+		if (host === null || data === null || signerAddress === null) {
+			return
 		}
-	}, [uri, address])
 
-	const dispatch = useCallback(
-		async (call: string, ...args: ActionArgument[]) => {
-			if (provider === null) {
-				return Promise.reject(new Error("no web3 provider found"))
-			} else if (host === undefined) {
-				return Promise.reject(new Error("no host configured"))
-			} else if (uri === null || address === null || signer === null) {
-				return Promise.reject(new Error("dispatch called too early"))
-			}
+		setIsLoading(false)
 
-			let contextSessionSigner = sessionSigner
-			if (sessionSigner === null || sessionExpiration < +Date.now()) {
-				try {
-					const session = await newSession(signer, host, uri, provider)
-					localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(session[1]))
-					setSessionSigner(session[0])
-					setSessionExpiration(session[1].expiration)
-					contextSessionSigner = session[0]
-				} catch (err) {
-					return Promise.reject(err)
-				}
-			}
-			if (contextSessionSigner === null) return Promise.reject(new Error("session login failed"))
-
-			const timestamp = +Date.now() // get a new timestamp, from after we have secured a session
-			let block: Block
-			try {
-				const [network, providerBlock] = await Promise.all([provider.getNetwork(), provider.getBlock("latest")])
-				block = {
-					chain: "eth",
-					chainId: network.chainId,
-					blocknum: providerBlock.number,
-					blockhash: providerBlock.hash,
-					timestamp: providerBlock.timestamp,
-				}
-			} catch (err) {
-				console.error(err)
-				return Promise.reject(err)
-			}
-			const payload: ActionPayload = { from: address, spec: uri, call, args, timestamp, block }
-
-			return send(host, contextSessionSigner, payload)
-		},
-		[host, uri, address, signer, sessionSigner, sessionExpiration]
-	)
-
-	const session = sessionSigner && {
-		address: sessionSigner.address.toLowerCase(),
-		expiration: sessionExpiration,
-	}
-
-	const connectNewSession = useCallback(async () => {
-		if (provider === null) {
-			return Promise.reject(new Error("no web3 provider found"))
+		const item = localStorage.getItem(CANVAS_SESSION_KEY)
+		if (item === null) {
+			return
 		}
-		if (uri === null) {
-			return Promise.reject(new Error("failed to connect to application backend"))
+
+		const sessionObject = JSON.parse(item)
+		if (!isSessionObject(sessionObject)) {
+			localStorage.removeItem(CANVAS_SESSION_KEY)
+			return
 		}
-		if (signer === null) {
-			return Promise.reject(new Error("must have connected web3 signer to log in"))
+
+		const { spec, forPublicKey, sessionPrivateKey, expiration } = sessionObject
+		if (data.uri !== spec || signerAddress !== forPublicKey || expiration < Date.now()) {
+			localStorage.removeItem(CANVAS_SESSION_KEY)
+			return
 		}
+
+		const wallet = new ethers.Wallet(sessionPrivateKey)
+		setSessionWallet(wallet)
+		setSessionExpiration(expiration)
+	}, [host, data, signerAddress])
+
+	const login = useCallback(async () => {
+		if (host === null) {
+			return setError(new Error("no host configured"))
+		} else if (signer === null) {
+			return setError(new Error("login() called without a signer"))
+		} else if (signerAddress === null) {
+			return setError(new Error("login() called before the signer was ready"))
+		} else if (data === null) {
+			return setError(new Error("login() called before the application connection was established"))
+		}
+
+		setIsPending(true)
+
 		try {
-			const [sessionSigner, sessionObject] = await newSession(signer, host, uri, provider)
-			localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(sessionObject))
-			setSessionSigner(sessionSigner)
-			setSessionExpiration(sessionObject.expiration)
-		} catch (err) {
-			return Promise.reject(err)
-		}
-	}, [host, uri, signer, sessionSigner, sessionExpiration])
+			const timestamp = Date.now()
+			const sessionDuration = 86400 * 1000
+			const wallet = ethers.Wallet.createRandom()
 
-	const disconnect = useCallback(async () => {
-		setSessionSigner(null)
-		setSessionExpiration(0)
+			const sessionObject: SessionObject = {
+				spec: data.uri,
+				forPublicKey: signerAddress,
+				sessionPrivateKey: wallet.privateKey,
+				expiration: timestamp + sessionDuration,
+			}
+
+			const block = await getLatestBlock(signer.provider)
+
+			const payload: SessionPayload = {
+				from: signerAddress,
+				spec: data.uri,
+				address: wallet.address,
+				duration: sessionDuration,
+				timestamp,
+				block,
+			}
+
+			const sessionSignatureData = getSessionSignatureData(payload)
+			const signature = await signer._signTypedData(...sessionSignatureData)
+			const session: Session = { signature, payload }
+
+			const res = await fetch(host + "sessions", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(session),
+			})
+
+			if (!res.ok) {
+				const message = await res.text()
+				throw new Error(message)
+			}
+
+			localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(sessionObject))
+			setSessionWallet(wallet)
+			setSessionExpiration(sessionObject.expiration)
+			setError(null)
+		} catch (err) {
+			console.error(err)
+			if (err instanceof Error) {
+				setError(err)
+			} else {
+				throw err
+			}
+		} finally {
+			setIsPending(false)
+		}
+	}, [host, data, signer, signerAddress])
+
+	const logout = useCallback(() => {
+		setSessionWallet(null)
+		setSessionExpiration(null)
 		localStorage.removeItem(CANVAS_SESSION_KEY)
 	}, [])
 
-	return { dispatch, session, connectNewSession, disconnect }
+	const sessionAddress = sessionWallet && sessionWallet.address
+	return {
+		error,
+		isLoading,
+		isPending,
+		// isSuccess,
+		sessionAddress,
+		sessionExpiration,
+		login,
+		logout,
+	}
 }
 
-async function newSession(
-	signer: ethers.providers.JsonRpcSigner,
-	host: string,
-	uri: string,
-	provider: ethers.providers.Provider
-): Promise<[ethers.Wallet, SessionObject]> {
-	const timestamp = Date.now().valueOf()
-	const sessionDuration = 86400 * 1000
-	const sessionSigner = ethers.Wallet.createRandom()
+type SessionObject = { spec: string; forPublicKey: string; sessionPrivateKey: string; expiration: number }
 
-	let address
-	try {
-		address = await signer.getAddress()
-	} catch (err) {
-		return Promise.reject(err)
-	}
-	const from = address.toLowerCase()
-
-	const sessionObject: SessionObject = {
-		spec: uri,
-		forPublicKey: from,
-		sessionPrivateKey: sessionSigner.privateKey,
-		expiration: timestamp + sessionDuration,
-	}
-
-	let block: Block
-	try {
-		const [network, providerBlock] = await Promise.all([provider.getNetwork(), provider.getBlock("latest")])
-		block = {
-			chain: "eth",
-			chainId: network.chainId,
-			blocknum: providerBlock.number,
-			blockhash: providerBlock.hash,
-			timestamp: providerBlock.timestamp,
-		}
-	} catch (err) {
-		console.error(err)
-		return Promise.reject(err)
-	}
-
-	const payload: SessionPayload = {
-		from: from,
-		spec: uri,
-		address: sessionSigner.address,
-		duration: sessionDuration,
-		timestamp,
-		block,
-	}
-
-	let session
-	try {
-		const signatureData = getSessionSignatureData(payload)
-		const signature = await signer._signTypedData(...signatureData)
-		session = { signature, payload }
-	} catch (err) {
-		return Promise.reject(err)
-	}
-
-	const res = await fetch(`${host}/sessions`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(session),
-	})
-
-	if (!res.ok) {
-		localStorage.removeItem(CANVAS_SESSION_KEY)
-		const err = await res.text()
-		return Promise.reject(new Error(err))
-	}
-
-	return [sessionSigner, sessionObject]
-}
-
-async function send(host: string, sessionSigner: ethers.Wallet, payload: ActionPayload) {
-	const signatureData = getActionSignatureData(payload)
-	const signature = await sessionSigner._signTypedData(...signatureData)
-	const action: Action = { session: sessionSigner.address, signature, payload }
-	const res = await fetch(`${host}/actions`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(action),
-	})
-
-	if (!res.ok) {
-		const message = await res.text()
-		if (message === "session not found") {
-			localStorage.removeItem(CANVAS_SESSION_KEY)
-		}
-		return Promise.reject(new Error(message))
-	}
+function isSessionObject(obj: any): obj is SessionObject {
+	return (
+		typeof obj === "object" &&
+		typeof obj.spec === "string" &&
+		typeof obj.forPublicKey === "string" &&
+		typeof obj.sessionPrivateKey === "string" &&
+		typeof obj.expiration === "number"
+	)
 }

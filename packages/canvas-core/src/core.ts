@@ -10,8 +10,7 @@ import { CID } from "multiformats/cid"
 
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
-import type { Libp2p } from "libp2p"
-import type { FetchService } from "libp2p/fetch"
+import { createLibp2p, Libp2p } from "libp2p"
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
@@ -34,26 +33,27 @@ import {
 import { actionType, sessionType } from "./codecs.js"
 import { signalInvalidType, wait, retry, toHex, BlockResolver } from "./utils.js"
 import { encodeMessage, decodeMessage, getActionHash, getSessionHash } from "./encoding.js"
-import { ModelStore } from "./model-store/index.js"
 import { VM } from "./vm/index.js"
-import { MessageStore } from "./message-store/store.js"
+import { MessageStore } from "./messageStore.js"
+import { ModelStore } from "./modelStore.js"
 
 import * as RPC from "./rpc/index.js"
 import * as constants from "./constants.js"
+import { getLibp2pInit } from "./libp2p.js"
+import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
-interface CoreConfig extends CoreOptions {
+export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
 	directory: string | null
 	uri: string
 	spec: string
-	// omit or pass `null` to run offline
-	libp2p?: Libp2p | null
+	libp2p?: Libp2p
 	providers?: Record<string, ethers.providers.JsonRpcProvider>
 	// defaults to fetching each block from the provider with no caching
 	blockResolver?: BlockResolver
 }
 
-interface CoreOptions {
+export interface CoreOptions {
 	unchecked?: boolean
 	verbose?: boolean
 	offline?: boolean
@@ -81,13 +81,24 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (blockResolver === undefined) {
 			blockResolver = (chain, chainId, blockhash) => {
-				const provider = providers?.[`${chain}:${chainId}`]
-				assert(provider !== undefined, `no provider for ${chain}:${chainId}`)
-				return provider.getBlock(blockhash)
+				const key = `${chain}:${chainId}`
+				assert(providers !== undefined && key in providers, `no provider for ${chain}:${chainId}`)
+				return providers[key].getBlock(blockhash)
 			}
 		}
 
-		return new Core(directory || null, uri, cid, spec, vm, libp2p || null, blockResolver || null, options)
+		if (options.offline) {
+			return new Core(directory, uri, cid, spec, vm, null, blockResolver, options)
+		} else if (libp2p === undefined) {
+			const peerId = await createEd25519PeerId()
+			const libp2p = await createLibp2p(getLibp2pInit(peerId))
+			await libp2p.start()
+			const core = new Core(directory, uri, cid, spec, vm, libp2p, blockResolver, options)
+			core.addEventListener("close", () => libp2p.stop())
+			return core
+		} else {
+			return new Core(directory, uri, cid, spec, vm, libp2p, blockResolver, options)
+		}
 	}
 
 	private constructor(
@@ -117,25 +128,14 @@ export class Core extends EventEmitter<CoreEvents> {
 
 				libp2p.pubsub.subscribe(this.uri)
 				libp2p.pubsub.addEventListener("message", this.handleMessage)
-				console.log(`[canvas-core] Subscribed to pubsub topic ${this.uri}`)
+				if (this.options.verbose) {
+					console.log(`[canvas-core] Subscribed to pubsub topic ${this.uri}`)
+				}
 
 				libp2p.handle(this.syncProtocol, this.handleIncomingStream)
 				this.startSyncService(libp2p)
 				this.startPeeringService(libp2p)
-
-				if (this.uri.startsWith("ipfs://")) {
-					const { fetchService } = this.libp2p as Libp2p & { fetchService: FetchService }
-					fetchService.registerLookupFunction(`${this.uri}/`, this.fetchLookupFunction)
-				}
 			}
-		}
-	}
-
-	private fetchLookupFunction = async (key: string) => {
-		if (key === `${this.uri}/`) {
-			return Buffer.from(this.spec, "utf-8")
-		} else {
-			return null
 		}
 	}
 
@@ -151,13 +151,9 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.controller.abort()
 
 		if (this.libp2p !== null && !this.options.offline) {
+			this.libp2p.unhandle(this.syncProtocol)
 			this.libp2p.pubsub.unsubscribe(this.uri)
 			this.libp2p.pubsub.removeEventListener("message", this.handleMessage)
-
-			if (this.uri.startsWith("ipfs://")) {
-				const { fetchService } = this.libp2p as Libp2p & { fetchService: FetchService }
-				fetchService.unregisterLookupFunction(`${this.uri}/`, this.fetchLookupFunction)
-			}
 		}
 
 		await this.queue.onIdle()
@@ -349,7 +345,8 @@ export class Core extends EventEmitter<CoreEvents> {
 				}
 			})
 			.catch((err) => {
-				console.error(chalk.red("[canvas-core] Failed to publish action to pubsub topic"), err)
+				const message = err instanceof Error ? err.message : err.toString()
+				console.error(chalk.red("[canvas-core] Failed to publish action to pubsub topic"), message)
 			})
 	}
 
@@ -403,20 +400,35 @@ export class Core extends EventEmitter<CoreEvents> {
 			while (!signal.aborted) {
 				await retry(
 					(signal) => this.announce(libp2p, signal),
-					(err) => console.log(chalk.red(`[canvas-core] Failed to publish DHT rendezvous record`), err),
+					(err) => {
+						const message = err instanceof Error ? err.message : err.toString()
+						console.log(chalk.red(`[canvas-core] Failed to publish DHT rendezvous record.`), message)
+					},
 					{ signal, delay: Core.peeringRetryInterval }
 				)
 				await wait({ signal, delay: Core.peeringInterval })
 			}
 		} catch (err) {
-			console.log(`[canvas-core] Aborting peering service`)
+			if (err instanceof Event && err.type === "abort") {
+				if (this.options.verbose) {
+					console.log(`[canvas-core] Aborting peering service.`)
+				}
+			} else {
+				console.log(chalk.red(`[canvas-core] Peering service crashed.`), err)
+			}
 		}
 	}
 
 	private async announce(libp2p: Libp2p, signal: AbortSignal): Promise<void> {
-		console.log(chalk.green(`[canvas-core] Publishing DHT rendezvous record ${this.cid.toString()}`))
+		if (this.options.verbose) {
+			console.log(chalk.green(`[canvas-core] Publishing DHT rendezvous record ${this.cid.toString()}`))
+		}
+
 		await libp2p.contentRouting.provide(this.cid, { signal })
-		console.log(chalk.green(`[canvas-core] Successfully published DHT rendezvous record`))
+
+		if (this.options.verbose) {
+			console.log(chalk.green(`[canvas-core] Successfully published DHT rendezvous record.`))
+		}
 	}
 
 	private static syncDelay = 1000 * 10
@@ -434,21 +446,34 @@ export class Core extends EventEmitter<CoreEvents> {
 			while (!signal.aborted) {
 				const peers = await retry(
 					(signal) => this.findPeers(libp2p, signal),
-					(err) => console.log(chalk.red(`[canvas-core] Failed to locate application peers`), err),
+					(err) => {
+						const message = err instanceof Error ? err.message : err.toString()
+						console.log(chalk.red(`[canvas-core] Failed to locate application peers.`), message)
+					},
 					{ signal, delay: Core.syncRetryInterval }
 				)
 
-				console.log(chalk.green(`[canvas-core] Found ${peers.length} application peers`))
+				if (this.options.verbose) {
+					console.log(chalk.green(`[canvas-core] Found ${peers.length} peers for ${this.uri}`))
+				}
 
 				for (const [i, peer] of peers.entries()) {
-					console.log(chalk.green(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`))
+					if (this.options.verbose) {
+						console.log(chalk.green(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`))
+					}
 					await this.sync(libp2p, peer)
 				}
 
 				await wait({ signal, delay: Core.syncInterval })
 			}
 		} catch (err) {
-			console.log("[canvas-core] Aborting sync service")
+			if (err instanceof Event && err.type === "abort") {
+				if (this.options.verbose) {
+					console.log("[canvas-core] Aborting sync service.")
+				}
+			} else {
+				console.log(chalk.red(`[canvas-core] Sync service crashed.`), err)
+			}
 		}
 	}
 

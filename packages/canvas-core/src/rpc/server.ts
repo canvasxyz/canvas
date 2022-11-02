@@ -10,7 +10,8 @@ import * as lp from "it-length-prefixed"
 
 import * as okra from "node-okra"
 import RPC from "@canvas-js/rpc/sync"
-import { MessageStore } from "../message-store/store.js"
+
+import type { MessageStore } from "../messageStore.js"
 import { encodeAction, encodeSession } from "../encoding.js"
 import { toBuffer, toHex } from "../utils.js"
 

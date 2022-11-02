@@ -5,11 +5,16 @@ import fs from "node:fs"
 import yargs from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
+import stoppable from "stoppable"
+import express, { Request, Response } from "express"
+import bodyParser from "body-parser"
+import cors from "cors"
+import { createLibp2p } from "libp2p"
 
-import { Core, constants, actionType, Driver } from "@canvas-js/core"
+import { Core, constants, actionType, getLibp2pInit, BlockCache } from "@canvas-js/core"
 
-import { setupRpcs, confirmOrExit, CANVAS_HOME, parseSpecArgument } from "../utils.js"
-import { API } from "../api.js"
+import { getProviders, confirmOrExit, parseSpecArgument, getPeerId } from "../utils.js"
+import { handleRoute, handleAction, handleSession } from "../api.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -23,21 +28,17 @@ export const builder = (yargs: yargs.Argv) =>
 		})
 		.option("port", {
 			type: "number",
-			desc: "Port to bind the core API",
+			desc: "Port to bind the Core API",
 			default: 8000,
 		})
 		.option("offline", {
 			type: "boolean",
 			desc: "Disable libp2p",
 		})
-		.option("peering-port", {
+		.option("listen", {
 			type: "number",
-			desc: "Port to bind libp2p WebSocket transport",
+			desc: "libp2p WebSocket transport port",
 			default: 4044,
-		})
-		.option("noserver", {
-			type: "boolean",
-			desc: "Don't bind an Express server to provide view APIs",
 		})
 		.option("reset", {
 			type: "boolean",
@@ -72,50 +73,49 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
-	const { uri, directory } = parseSpecArgument(args.spec)
+	const { directory, uri, spec } = parseSpecArgument(args.spec)
 
 	if (directory === null) {
 		if (args.replay || args.reset) {
 			console.log(chalk.red("[canvas-cli] --replay and --reset cannot be used with temporary development databases"))
 			process.exit(1)
 		}
-	} else {
-		if (!fs.existsSync(directory)) {
-			console.log(`[canvas-cli] Creating new directory ${directory}`)
-			fs.mkdirSync(directory)
-		} else if (args.reset) {
-			await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${directory}?`)
-			const messagesPath = path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
-			if (fs.existsSync(messagesPath)) {
-				fs.rmSync(messagesPath)
-				console.log(`[canvas-cli] Deleted ${messagesPath}`)
-			}
+	} else if (!fs.existsSync(directory)) {
+		console.log(`[canvas-cli] Creating new directory ${directory}`)
+		fs.mkdirSync(directory)
+	} else if (args.reset) {
+		await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${directory}?`)
+		const messagesPath = path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
+		if (fs.existsSync(messagesPath)) {
+			fs.rmSync(messagesPath)
+			console.log(`[canvas-cli] Deleted ${messagesPath}`)
+		}
 
-			const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
-			if (fs.existsSync(modelsPath)) {
-				fs.rmSync(modelsPath)
-				console.log(`[canvas-cli] Deleted ${modelsPath}`)
-			}
+		const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
+		if (fs.existsSync(modelsPath)) {
+			fs.rmSync(modelsPath)
+			console.log(`[canvas-cli] Deleted ${modelsPath}`)
+		}
 
-			const mstPath = path.resolve(directory, constants.MST_FILENAME)
-			if (fs.existsSync(mstPath)) {
-				fs.rmSync(mstPath)
-				console.log(`[canvas-cli] Deleted ${mstPath}`)
-			}
-		} else if (args.replay) {
-			await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
-			const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
-			if (fs.existsSync(modelsPath)) {
-				fs.rmSync(modelsPath)
-				console.log(`[canvas-cli] Deleted ${modelsPath}`)
-			}
+		const mstPath = path.resolve(directory, constants.MST_FILENAME)
+		if (fs.existsSync(mstPath)) {
+			fs.rmSync(mstPath)
+			console.log(`[canvas-cli] Deleted ${mstPath}`)
+		}
+	} else if (args.replay) {
+		await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
+		const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
+		if (fs.existsSync(modelsPath)) {
+			fs.rmSync(modelsPath)
+			console.log(`[canvas-cli] Deleted ${modelsPath}`)
 		}
 	}
 
 	// read rpcs from --chain-rpc arguments or environment variables
 	// prompt to run in unchecked mode, if no rpcs were provided
-	const rpc = setupRpcs(args["chain-rpc"])
-	if (Object.keys(rpc).length === 0 && !args.unchecked) {
+	const providers = getProviders(args["chain-rpc"])
+
+	if (Object.keys(providers).length === 0 && !args.unchecked) {
 		const { confirm } = await prompts({
 			type: "confirm",
 			name: "confirm",
@@ -144,44 +144,85 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const { replay, verbose, unchecked, offline, "peering-port": peeringPort } = args
+	const { replay, verbose, unchecked, offline, listen: peeringPort } = args
 
-	const driver = await Driver.initialize({ rootDirectory: CANVAS_HOME, port: peeringPort, rpc })
+	const peerId = await getPeerId()
+	const libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+	await libp2p.start()
 
-	let core: Core
-	try {
-		core = await driver.start(uri, { unchecked, verbose, offline })
-	} catch (err) {
-		if (err instanceof Error) {
-			console.log(chalk.red(err.message))
-		} else {
-			throw err
-		}
-		return
-	}
+	const blockCache = new BlockCache(providers)
+
+	const core = await Core.initialize({
+		directory,
+		uri,
+		spec,
+		providers,
+		libp2p,
+		blockResolver: blockCache.getBlock,
+		unchecked,
+		verbose,
+		offline,
+	})
 
 	if (directory !== null && replay) {
 		console.log(chalk.green(`[canvas-core] Replaying action log...`))
-
+		const { vm, messageStore, modelStore } = core
 		let i = 0
-		for await (const [id, action] of core.messageStore.getActionStream()) {
+		for await (const [id, action] of messageStore.getActionStream()) {
 			if (!actionType.is(action)) {
 				console.log(chalk.red("[canvas-core]"), action)
 				throw new Error("Invalid action value in action log")
 			}
 
-			const effects = await core.vm.execute(id, action.payload)
-			core.modelStore.applyEffects(action.payload, effects)
+			const effects = await vm.execute(id, action.payload)
+			modelStore.applyEffects(action.payload, effects)
 			i++
 		}
 
 		console.log(chalk.green(`[canvas-core] Successfully replayed all ${i} entries from the action log.`))
 	}
 
-	const api = args.noserver ? null : new API({ core, port: args.port, verbose })
+	const api = express()
+	api.use(bodyParser.json())
+	api.use(cors({ exposedHeaders: ["ETag", "Link"] }))
+
+	api.get("*", (req: Request, res: Response) => {
+		const pathComponents = req.path === "/" ? [] : req.path.slice(1).split("/")
+		handleRoute(core, pathComponents, req, res)
+	})
+
+	api.post("/actions", (req, res) => handleAction(core, req, res))
+	api.post("/sessions", (req, res) => handleSession(core, req, res))
+
+	const server = stoppable(
+		api.listen(args.port, () => {
+			console.log(`Serving ${core.uri} on port ${args.port}:`)
+			console.log(`└ GET http://localhost:${args.port}/`)
+			for (const name of Object.keys(core.vm.routes)) {
+				console.log(`└ GET http://localhost:${args.port}${name}`)
+			}
+			console.log("└ POST /actions")
+			console.log("└ POST /sessions")
+		}),
+		0
+	)
+
+	const controller = new AbortController()
+
+	controller.signal.addEventListener("abort", async () => {
+		console.log("[canvas-cli] Stopping API server...")
+		await new Promise<void>((resolve, reject) => server.stop((err) => (err ? reject(err) : resolve())))
+		console.log("[canvas-cli] API server stopped.")
+
+		if (args.verbose) console.log("[canvas-cli] Closing core...")
+		await core.close()
+		if (args.verbose) console.log("[canvas-cli] Core closed.")
+		await libp2p.stop()
+		blockCache.close()
+	})
 
 	let stopping = false
-	process.on("SIGINT", async () => {
+	process.on("SIGINT", () => {
 		if (stopping) {
 			process.exit(1)
 		} else {
@@ -190,15 +231,7 @@ export async function handler(args: Args) {
 				`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`
 			)
 
-			if (api !== null) {
-				if (args.verbose) console.log("[canvas-cli] Stopping API server...")
-				await api.stop()
-				console.log("[canvas-cli] API server stopped.")
-			}
-
-			if (args.verbose) console.log("[canvas-cli] Closing core...")
-			await driver.close()
-			if (args.verbose) console.log("[canvas-cli] Core closed.")
+			controller.abort()
 		}
 	})
 }

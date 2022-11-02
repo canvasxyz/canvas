@@ -1,6 +1,5 @@
-import { utils } from "ethers"
+import { TypedDataDomain, TypedDataField, utils } from "ethers"
 import { verifyTypedData } from "@ethersproject/wallet"
-import { TypedDataDomain, TypedDataField } from "@ethersproject/abstract-signer"
 
 import type { Action, ActionArgument, ActionPayload } from "./actions.js"
 import type { Session, SessionPayload } from "./sessions.js"
@@ -44,15 +43,15 @@ function serializeActionArgument(arg: ActionArgument): string {
 	}
 }
 
+type SignatureData = [TypedDataDomain, Record<string, TypedDataField[]>, Record<string, string | string[]>]
+
 /**
  * `getActionSignatureData` gets EIP-712 signing data for an individual action
  */
-export function getActionSignatureData(
-	payload: ActionPayload
-): [TypedDataDomain, Record<string, TypedDataField[]>, Record<string, any>] {
+export function getActionSignatureData(payload: ActionPayload): SignatureData {
 	const domain = {
 		name: "Canvas",
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)).toLowerCase(),
+		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
 	}
 
 	const actionValue = {
@@ -85,12 +84,10 @@ const sessionDataFields = {
 /**
  * `getSessionSignatureData` gets EIP-712 signing data to start a session
  */
-export function getSessionSignatureData(
-	payload: SessionPayload
-): [TypedDataDomain, Record<string, TypedDataField[]>, Record<string, any>] {
+export function getSessionSignatureData(payload: SessionPayload): SignatureData {
 	const domain = {
 		name: "Canvas",
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)).toLowerCase(),
+		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
 	}
 
 	const sessionValue = {

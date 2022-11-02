@@ -33,7 +33,7 @@ test("Test setting and then deleting a record", async (t) => {
 		return { payload: actionPayload, session, signature: actionSignature }
 	}
 
-	const core = await Core.initialize({ uri, directory: null, spec, unchecked: true })
+	const core = await Core.initialize({ uri, directory: null, spec, unchecked: true, offline: true })
 
 	const newThreadAction = await sign(signer, null, "newThread", ["Hacker News", "https://news.ycombinator.com"])
 

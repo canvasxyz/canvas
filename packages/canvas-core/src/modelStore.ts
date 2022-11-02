@@ -3,8 +3,11 @@ import Database, * as sqlite from "better-sqlite3"
 import chalk from "chalk"
 
 import type { ActionContext, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
-import { mapEntries, signalInvalidType } from "../utils.js"
-import type { Effect } from "./types.js"
+import { mapEntries, signalInvalidType } from "./utils.js"
+
+export type Effect =
+	| { type: "set"; model: string; id: string; values: Record<string, ModelValue> }
+	| { type: "del"; model: string; id: string }
 
 export class ModelStore {
 	public readonly database: sqlite.Database

@@ -23,9 +23,10 @@
     "http-status-codes": "^2.2.0",
     "io-ts": "^2.2.16",
     "ipfs-only-hash": "^4.0.0",
+    "libp2p": "^0.40.0",
     "multiformats": "^10.0.2",
+    "p-queue": "^7.3.0",
     "prompts": "^2.4.2",
-    "quickjs-emscripten": "^0.21.0",
     "stoppable": "^1.1.0",
     "undici": "^5.11.0",
     "yargs": "^17.5.1"
