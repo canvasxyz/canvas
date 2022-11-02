@@ -92,6 +92,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		} else if (libp2p === undefined) {
 			const peerId = await createEd25519PeerId()
 			const libp2p = await createLibp2p(getLibp2pInit(peerId))
+			await libp2p.start()
 			const core = new Core(directory, uri, cid, spec, vm, libp2p, blockResolver, options)
 			core.addEventListener("close", () => libp2p.stop())
 			return core

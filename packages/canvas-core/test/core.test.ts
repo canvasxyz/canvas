@@ -46,7 +46,7 @@ async function sign(call: string, args: ActionArgument[]) {
 }
 
 test("Apply signed action", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true, offline: true })
 
 	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
 	const { hash } = await core.applyAction(action)
