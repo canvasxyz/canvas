@@ -10,43 +10,112 @@ To use the Canvas hooks, you must first wrap your application in a parent `Canva
 </Canvas>
 ```
 
-Then, in any component inside your app, you can use the two canvas hooks: `useCanvas` and `useRoute`.
+Next, in just one location in your app (ideally a dedicated login/authentication component), acquire an `ethers.providers.JsonRpcSigner` for the user and pass it into the Canvas `useSession` hook. This example uses `wagmi` and assumes the the user has already connected using the wagmi `useConnect()` hook.
 
-`useCanvas` returns an object with configuration data about the connected canvas app and the currently-authenticated user. Most importantly, it has an async `connect` method to request authentication from MetaMask and an async `dispatch` method that you can use to sign and send actions.
+```tsx
+import React from "react"
 
-`useRoute` takes a string route and an object of params, and works like the `useSWR` hook, returning an error or an array of results. Internally, it uses the [EventSource API](https://developer.mozilla.org/en-US/docs/Web/API/EventSource).
+import { ethers } from "ethers"
+import { useSigner } from "wagmi"
+import { useSession } from "@canvas-js/hooks"
 
-```ts
-import type { ethers } from "ethers"
-import type { ActionArgument, ModelValue } from "@canvas-js/core"
+const Login: React.FC<{}> = ({}) => {
+	const { error: signerError, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
 
-/**
- * Here are the rules for the useCanvas hook:
- * - Initially, `loading` is true, and `multihash` and `address` are null.
- * - Once the hook connects to both window.ethereum and the remote backend,
- *   `loading` will switch to false, with non-null `multihash`. However, `address`
- *   might still be null, in which case you MUST call `connect` to request accounts.
- * - Calling `connect` with `window.ethereum === undefined` will throw an error.
- * - Calling `connect` or `dispatch` while `loading` is true will throw an error.
- * - Once `loading` is true, you can call `dispatch` with a `call` string and `args` array.
- *   If no existing session is found in localStorage, or if the existing session has
- *   expired, then this will prompt the user to sign a new session key.
- */
-declare function useCanvas(): {
-	multihash: string | null
-	error: Error | null
-	loading: boolean
-	address: string | null
-	dispatch: (call: string, args: ActionArgument[]) => Promise<void>
-	connect: () => Promise<void>
+	const {
+		error: sessionError,
+		sessionAddress,
+		sessionExpiration,
+		login,
+		logout,
+		isLoading,
+		isPending,
+	} = useSession(signer ?? null)
+
+	if (sessionAddress === null) {
+		return (
+			<div>
+				{isLoading ? <p>Loading...</p> : <p>Click Login to begin a new session.</p>}
+				<button disabled={isLoading || isPending} onClick={login}>
+					Login
+				</button>
+			</div>
+		)
+	} else {
+		return (
+			<div>
+				<p>Using session {sessionAddress}.</p>
+				<button disabled={isLoading} onClick={logout}>
+					Logout
+				</button>
+			</div>
+		)
+	}
 }
-
-declare function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
-	route: string,
-	params?: Record<string, string>
-): { error: Error | null; data: T[] | null }
 ```
 
-See the `packages/example-chat` directory for an example application using these hooks.
+`useSession` returns some status values along with `login()` and `logout()` methods. `login()` creates a new session and stores it in localStorage and an internal React context; `logout()` reset the context value and clears localStorage.
+
+You only need to include `useSession` in one place in your entire application, and it should attach natually to the regular wallet connect flow.
+
+The `useCanvas` can be imported any number of times anywhere throughout your application. `useCanvas` returns metadata about the connected application, and an async `dispatch()` method that is used to create and send actions.
+
+```tsx
+import { useCallback } from "react"
+import { useCanvas } from "@canvas-js/hooks"
+
+export function SomeComponent(props: {}) {
+	const { isReady, dispatch } = useCanvas()
+
+	const [count, setCount] = useState(0)
+
+	const handleClick = useCallback(() => {
+		dispatch("poke", count)
+		setCount(count + 1)
+	}, [dispatch, count])
+
+	return <button disabled={isReady} onClick={handleClick}></button>
+}
+```
+
+Here, when the button is clicked, we dispatch a `poke` action with a single integer argument. The signing, timestamp, current block, and so on are all handled internally by the dispatch method using the session wallet held by the internal React context.
+
+Lastly, to subscribe to a route, pass the `useRoute` a string route and an object of params. `useRoute` works like the `useSWR` hook, returning an error or an array of results. Internally, it uses the [EventSource API](https://developer.mozilla.org/en-US/docs/Web/API/EventSource).
+
+```ts
+declare function useSession(signer: ethers.providers.JsonRpcSigner | null): {
+	error: Error | null
+	isLoading: boolean
+	isPending: boolean
+	sessionAddress: string | null
+	sessionExpiration: number | null
+	login: () => void
+	logout: () => void
+}
+
+declare function useCanvas(): {
+	dispatch: (call: string, ...args: (null | boolean | number | string)[]) => Promise<{ hash: string }>
+	isLoading: boolean
+	isPending: boolean
+	isReady: boolean
+	error: Error | null
+	host: string | null
+	data: {
+		cid: string
+		uri: string
+		component: string | null
+		actions: string[]
+		routes: string[]
+	} | null
+}
+
+declare function useRoute<T = Record<string, null | boolean | number | string>>(
+	route: string,
+	params: Record<string, string>
+): {
+	error: Error | null
+	data: T[] | null
+}
+```
 
 (c) 2022 Canvas Technology Corporation
