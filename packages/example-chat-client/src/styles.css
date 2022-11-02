@@ -8,6 +8,14 @@ body {
 	margin: 0;
 }
 
+.title-bar, .window, button, input, label, option, select, textarea, ul.tree-view {
+  font-size: 13px;
+}
+
+input[type=email], input[type=password], input[type=text], select {
+  height: 28px;
+}
+
 #root {
 	height: 100%;
 	display: flex;

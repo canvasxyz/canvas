@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack build",
-    "dev": "webpack server"
+    "dev": "concurrently --kill-others \"canvas run spec.canvas.js --unchecked\" \"webpack server\""
   },
   "dependencies": {
     "@canvas-js/hooks": "0.0.18-alpha2",
@@ -18,6 +18,7 @@
     "wagmi": "^0.7.7"
   },
   "devDependencies": {
+    "concurrently": "^7.5.0",
     "css-loader": "^6.7.1",
     "style-loader": "^3.3.1",
     "ts-loader": "^9.3.0",

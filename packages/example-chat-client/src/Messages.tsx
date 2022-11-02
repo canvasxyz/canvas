@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useRef } from "react"
+import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 
 import { useCanvas, useRoute } from "@canvas-js/hooks"
 
@@ -24,6 +24,7 @@ export const Messages: React.FC<{}> = ({}) => {
 					const { hash } = await dispatch("createPost", input.value)
 					console.log("created post", hash)
 					input.value = ""
+					setTimeout(() => input.focus(), 0)
 				} catch (err) {
 					console.error(err)
 					if (err instanceof Error) {
@@ -34,6 +35,9 @@ export const Messages: React.FC<{}> = ({}) => {
 		},
 		[isReady, dispatch]
 	)
+	useEffect(() => {
+		if (isReady) inputRef.current?.focus()
+	}, [isReady])
 
 	const { data, error } = useRoute<Post>("/posts", {})
 
@@ -59,7 +63,13 @@ export const Messages: React.FC<{}> = ({}) => {
 							})}
 					</ul>
 				</div>
-				<input type="text" disabled={!isReady} ref={inputRef} onKeyDown={handleKeyDown} />
+				<input
+					type="text"
+					disabled={!isReady}
+					ref={inputRef}
+					onKeyDown={handleKeyDown}
+					placeholder={isReady ? "" : "Start a session to chat"}
+				/>
 			</div>
 		</div>
 	)
