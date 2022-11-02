@@ -1,34 +1,48 @@
-import React, { createContext } from "react"
+import { ethers } from "ethers"
+import { createContext } from "react"
 
-import { ActionArgument } from "@canvas-js/interfaces"
-
-import { CanvasSession } from "./useSession.js"
+export interface ApplicationData {
+	cid: string
+	uri: string
+	component: string | null
+	actions: string[]
+	routes: string[]
+}
 
 export interface CanvasContextValue {
-	host?: string
-	cid: string | null
-	uri: string | null
+	// public (returned from useCanvas hook)
+	isLoading: boolean
 	error: Error | null
-	loading: boolean
-	address: string | null
-	session: CanvasSession | null
-	component: string | null
-	connect: () => Promise<void>
-	connectNewSession: () => Promise<void>
-	disconnect: () => Promise<void>
-	dispatch: (call: string, ...args: ActionArgument[]) => Promise<void>
+	host: string | null
+	data: ApplicationData | null
+
+	// private (not returned from useCanvas hook)
+	signer: ethers.providers.JsonRpcSigner | null
+	setSigner: (signer: ethers.providers.JsonRpcSigner | null) => void
+	sessionWallet: ethers.Wallet | null
+	setSessionWallet: (sessionWallet: ethers.Wallet | null) => void
+	sessionExpiration: number | null
+	setSessionExpiration: (sessionExpiration: number | null) => void
 }
 
 export const CanvasContext = createContext<CanvasContextValue>({
-	cid: null,
-	uri: null,
+	isLoading: true,
+	host: null,
 	error: null,
-	loading: true,
-	address: null,
-	session: null,
-	component: null,
-	connect: () => Promise.reject(),
-	connectNewSession: () => Promise.reject(),
-	disconnect: () => Promise.reject(),
-	dispatch: (call, ...args) => Promise.reject(),
+	data: null,
+
+	signer: null,
+	setSigner: (_) => {
+		throw new Error("Missing <Canvas /> parent element")
+	},
+
+	sessionWallet: null,
+	setSessionWallet: (_) => {
+		throw new Error("Missing <Canvas /> parent element")
+	},
+
+	sessionExpiration: null,
+	setSessionExpiration: (_) => {
+		throw new Error("Missing <Canvas /> parent element")
+	},
 })

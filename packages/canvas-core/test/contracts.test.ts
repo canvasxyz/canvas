@@ -4,10 +4,9 @@ import * as dotenv from "dotenv"
 import { ethers } from "ethers"
 
 import { Action, ActionArgument, ActionPayload, getActionSignatureData } from "@canvas-js/interfaces"
-import { compileSpec, Core, Driver } from "@canvas-js/core"
+import { compileSpec, Core } from "@canvas-js/core"
 
 import { getCurrentBlock } from "./utils.js"
-import { BlockCache } from "../src/utils.js"
 
 dotenv.config({ path: "../../.env" })
 

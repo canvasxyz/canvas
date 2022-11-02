@@ -5,10 +5,37 @@ import * as cbor from "microcbor"
 
 import type { Action, Session, Block, ActionArgument } from "@canvas-js/interfaces"
 
-import { mapEntries, fromHex, toHex } from "../utils.js"
-import { chainType } from "../codecs.js"
+import { mapEntries, fromHex, toHex } from "./utils.js"
+import { chainType } from "./codecs.js"
 
-import type { BlockRecord, ActionRecord, SessionRecord } from "./types.js"
+type BlockRecord = {
+	chain: string
+	chain_id: number
+	blocknum: number
+	blockhash: Buffer
+	timestamp: number
+}
+
+type ActionRecord = {
+	hash: Buffer
+	signature: Buffer
+	from_address: Buffer
+	session_address: Buffer | null
+	timestamp: number
+	block_id: number | null
+	call: string
+	args: Buffer
+}
+
+type SessionRecord = {
+	hash: Buffer
+	signature: Buffer
+	from_address: Buffer
+	session_address: Buffer
+	duration: number
+	timestamp: number
+	block_id: number | null
+}
 
 /**
  * The message log archives messages in its own separate SQLite database.

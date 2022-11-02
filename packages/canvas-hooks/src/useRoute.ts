@@ -25,24 +25,40 @@ function getRouteURL(host: string, route: string, params: Record<string, string>
 		}
 	})
 
+	if (host.endsWith("/")) {
+		host = host.slice(0, -1)
+	}
+
 	return `${host}/${componentValues.join("/")}`
 }
 
 export function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
 	route: string,
-	params: Record<string, string> = {}
+	params: Record<string, string>
 ): { error: Error | null; data: T[] | null } {
-	const { host } = useContext(CanvasContext)
-	if (host === undefined) {
-		throw new Error("no host provided! you must provide a host URL in a parent Canvas element")
+	const { host, data: applicationData } = useContext(CanvasContext)
+	if (host === null) {
+		throw new Error("No API endpoint provided! you must provide an API endpoint in a parent Canvas element.")
 	}
 
 	const [error, setError] = useState<Error | null>(null)
 	const [data, setData] = useState<T[] | null>(null)
 
-	const url = useMemo(() => getRouteURL(host, route, params), [host, route, params])
+	const url = useMemo(() => {
+		if (applicationData === null) {
+			return null
+		} else if (applicationData.routes.includes(route)) {
+			return getRouteURL(host, route, params)
+		} else {
+			throw new Error(`${applicationData.uri} has no route ${JSON.stringify(route)}`)
+		}
+	}, [host, applicationData, route, params])
 
 	useEffect(() => {
+		if (url === null) {
+			return
+		}
+
 		const source = new EventSource(url)
 		source.onmessage = (message: MessageEvent<string>) => {
 			const data = JSON.parse(message.data)
@@ -50,8 +66,8 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 			setError(null)
 		}
 
-		source.onerror = (event: Event) => {
-			console.log("Connection error in EventSource subscription:", event)
+		source.onerror = (event) => {
+			console.error("Connection error in EventSource subscription:", event)
 			setError(new Error("Connection error"))
 		}
 

@@ -1,14 +1,11 @@
-// having an empty import for fp-ts fixes this bug
-// https://github.com/microsoft/TypeScript/issues/48075
-import "fp-ts"
-
 export * from "./core.js"
-export * from "./driver.js"
 export * from "./vm/index.js"
-export * from "./model-store/index.js"
-export * from "./message-store/store.js"
+export * from "./modelStore.js"
+export * from "./messageStore.js"
 export * from "./codecs.js"
 export * from "./errors.js"
 export * from "./encoding.js"
-export { compileSpec } from "./utils.js"
+export { BlockCache } from "./blockCache.js"
+export { getLibp2pInit } from "./libp2p.js"
+export { compileSpec, BlockResolver } from "./utils.js"
 export * as constants from "./constants.js"

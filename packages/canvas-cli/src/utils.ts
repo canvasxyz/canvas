@@ -2,16 +2,20 @@ import fs from "node:fs"
 import path from "node:path"
 import os from "node:os"
 import process from "node:process"
+import http from "node:http"
 
+import stoppable from "stoppable"
 import chalk from "chalk"
 import prompts from "prompts"
-import { fetch } from "undici"
-import { exportToProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 
-import { Chain } from "@canvas-js/interfaces"
+import type { Chain } from "@canvas-js/interfaces"
 import { chainType, constants } from "@canvas-js/core"
+import { ethers } from "ethers"
 
 export const CANVAS_HOME = process.env.CANVAS_HOME ?? path.resolve(os.homedir(), ".canvas")
+export const SOCKET_FILENAME = "daemon.sock"
+export const SOCKET_PATH = path.resolve(CANVAS_HOME, SOCKET_FILENAME)
 
 if (!fs.existsSync(CANVAS_HOME)) {
 	console.log(`[canvas-cli] Creating directory ${path.resolve(CANVAS_HOME)}`)
@@ -19,11 +23,16 @@ if (!fs.existsSync(CANVAS_HOME)) {
 	fs.mkdirSync(CANVAS_HOME)
 }
 
-const peerIdPath = path.resolve(CANVAS_HOME, constants.PEER_ID_FILENAME)
-if (!fs.existsSync(peerIdPath)) {
-	console.log(`[canvas-cli] Creating new PeerID at ${peerIdPath}`)
-	const peerId = await createEd25519PeerId()
-	fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
+export async function getPeerId() {
+	const peerIdPath = path.resolve(CANVAS_HOME, constants.PEER_ID_FILENAME)
+	if (fs.existsSync(peerIdPath)) {
+		return createFromProtobuf(fs.readFileSync(peerIdPath))
+	} else {
+		console.log(`[canvas-cli] Creating new PeerID at ${peerIdPath}`)
+		const peerId = await createEd25519PeerId()
+		fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
+		return peerId
+	}
 }
 
 export async function confirmOrExit(message: string) {
@@ -37,76 +46,56 @@ export async function confirmOrExit(message: string) {
 
 export const cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 
-export function parseSpecArgument(spec: string): { uri: string; directory: string | null } {
-	if (cidPattern.test(spec)) {
-		const directory = path.resolve(CANVAS_HOME, spec)
-		return { uri: `ipfs://${spec}`, directory }
-	} else if (spec.endsWith(".js") || spec.endsWith(".jsx")) {
-		return { uri: `file://${spec}`, directory: null }
+export function parseSpecArgument(value: string): { directory: string | null; uri: string; spec: string } {
+	if (cidPattern.test(value)) {
+		const directory = path.resolve(CANVAS_HOME, value)
+		const specPath = path.resolve(directory, constants.SPEC_FILENAME)
+		if (fs.existsSync(specPath)) {
+			const spec = fs.readFileSync(specPath, "utf-8")
+			return { directory, uri: `ipfs://${value}`, spec }
+		} else {
+			console.error(chalk.red(`[canvas-cli] App ${value} is not installed.`))
+			process.exit(1)
+		}
+	} else if (value.endsWith(".js") || value.endsWith(".jsx")) {
+		const specPath = path.resolve(value)
+		const spec = fs.readFileSync(specPath, "utf-8")
+		return { directory: null, uri: `file://${specPath}`, spec }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js/.jsx file"))
 		process.exit(1)
 	}
 }
 
-export function setupRpcs(args?: Array<string | number>): Partial<Record<Chain, Record<string, string>>> {
-	const rpcs: Partial<Record<Chain, Record<string, string>>> = {}
-	if (args) {
+export function getProviders(args?: (string | number)[]): Record<string, ethers.providers.JsonRpcProvider> {
+	const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
+
+	if (args !== undefined) {
 		for (let i = 0; i < args.length; i += 3) {
 			const [chain, id, url] = args.slice(i, i + 3)
-
 			if (!chainType.is(chain)) {
-				console.error(chalk.red(`[canvas-cli] Invalid chain "${chain}", should be a ${chainType.name}`))
-				return {}
-			}
-
-			if (typeof id !== "number") {
-				console.error(chalk.red(`Invalid chain id "${id}", should be a number e.g. 1`))
-				return {}
-			}
-
-			if (typeof url !== "string") {
-				console.error(chalk.red(`Invalid chain rpc "${url}", should be a url`))
-				return {}
-			}
-
-			const c = rpcs[chain]
-			if (c) {
-				c[id] = url
-			} else {
-				rpcs[chain] = { [id]: url }
-			}
-		}
-	} else {
-		if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
-			rpcs.eth = {}
-			rpcs.eth[process.env.ETH_CHAIN_ID] = process.env.ETH_CHAIN_RPC
-			console.log(
-				`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
-			)
-		}
-	}
-	return rpcs
-}
-
-function download(cid: string, ipfsGatewayURL: string) {
-	const url = `${ipfsGatewayURL}/ipfs/${cid}`
-	console.log(`[canvas-cli] Attempting to download spec from IPFS gateway...`)
-	console.log(`[canvas-cli] GET ${url}`)
-	return fetch(url, { method: "GET" })
-		.then((res) => res.text())
-		.catch((err) => {
-			if (err.code === "ECONNREFUSED") {
-				console.error(
-					chalk.red(
-						"[canvas-cli] Could not connect to local IPFS daemon. Try running `ipfs daemon` in another process."
-					)
-				)
+				console.log(chalk.red(`[canvas-cli] Invalid chain "${chain}", should be a ${chainType.name}`))
 				process.exit(1)
-			} else {
-				throw err
+			} else if (typeof id !== "number") {
+				console.log(chalk.red(`Invalid chain id "${id}", should be a number e.g. 1`))
+				process.exit(1)
+			} else if (typeof url !== "string") {
+				console.log(chalk.red(`Invalid chain rpc "${url}", should be a url`))
+				process.exit(1)
 			}
-		})
+
+			const key = `${chain}:${id}`
+			providers[key] = new ethers.providers.JsonRpcProvider(url)
+		}
+	} else if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
+		const key = `eth:${process.env.ETH_CHAIN_ID}`
+		providers[key] = new ethers.providers.JsonRpcProvider(process.env.ETH_CHAIN_RPC)
+		console.log(
+			`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
+		)
+	}
+
+	return providers
 }
 
 export function getDirectorySize(directory: string): number {
@@ -119,4 +108,12 @@ export function getDirectorySize(directory: string): number {
 			return totalSize + stat.size
 		}
 	}, 0)
+}
+
+export function startSignalServer(requestListener: http.RequestListener, listen: string | number, signal: AbortSignal) {
+	return new Promise<void>((resolve, reject) => {
+		const server = stoppable(http.createServer(requestListener), 0)
+		signal.addEventListener("abort", () => server.stop())
+		server.listen(listen, () => resolve())
+	})
 }
