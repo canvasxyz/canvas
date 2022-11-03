@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack build",
     "dev": "concurrently --kill-others -n backend,frontend \"canvas run spec.canvas.js --unchecked\" \"webpack server\"",
+    "start": "concurrently --kill-others -n backend,frontend \"canvas run $(ipfs-only-hash spec.canvas.js --cidVersion 0) --unchecked\" \"webpack server\"",
     "serve": "serve ./dist"
   },
   "dependencies": {

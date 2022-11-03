@@ -72,7 +72,7 @@ const Login: React.FC<{}> = ({}) => {
 				<>
 					{isLoading ? <p>Loading...</p> : <p>Click Login to begin a new session.</p>}
 					<button disabled={isLoading || isPending} onClick={login}>
-						Login
+						{isPending ? "Waiting for login" : "Login"}
 					</button>
 				</>
 			) : (
