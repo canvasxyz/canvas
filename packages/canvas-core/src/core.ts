@@ -45,7 +45,8 @@ import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
 	directory: string | null
-	uri: string
+	// defaults to ipfs:// hash of spec
+	uri?: string
 	spec: string
 	libp2p?: Libp2p
 	providers?: Record<string, ethers.providers.JsonRpcProvider>
@@ -77,6 +78,10 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	public static async initialize({ directory, uri, spec, libp2p, providers, blockResolver, ...options }: CoreConfig) {
 		const cid = await Hash.of(spec).then(CID.parse)
+		if (uri === undefined) {
+			uri = `ipfs://${cid.toString()}`
+		}
+
 		const vm = await VM.initialize(uri, spec, providers || {})
 
 		if (blockResolver === undefined) {
