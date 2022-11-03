@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/core",
-	"version": "0.0.17",
+	"version": "0.0.19",
 	"author": "Canvas Technology Corporation (https://canvas.xyz)",
 	"type": "module",
 	"types": "./lib/index.d.ts",
@@ -16,8 +16,8 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.0.18",
-		"@canvas-js/rpc": "0.0.17",
+		"@canvas-js/interfaces": "0.0.19",
+		"@canvas-js/rpc": "0.0.19",
 		"@chainsafe/libp2p-gossipsub": "^5.0.0",
 		"@chainsafe/libp2p-noise": "^10.0.0",
 		"@libp2p/bootstrap": "^5.0.0",

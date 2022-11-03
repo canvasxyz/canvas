@@ -9,7 +9,7 @@
     "dev": "concurrently --kill-others \"canvas run spec.canvas.js --unchecked\" \"webpack server\""
   },
   "dependencies": {
-    "@canvas-js/hooks": "0.0.18-alpha2",
+    "@canvas-js/hooks": "0.0.19",
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.5",
     "98.css": "^0.1.18",

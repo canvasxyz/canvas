@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/rpc",
-  "version": "0.0.17",
+  "version": "0.0.19",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "exports": {
     "./sync": "./sync/index.js"
