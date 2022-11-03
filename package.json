@@ -1,6 +1,5 @@
 {
   "name": "canvas",
-  "private": true,
   "type": "module",
   "scripts": {
     "appstore": "npm run dev --workspace=@canvas-js/example-app-store",
@@ -12,6 +11,7 @@
     "publish-core": "npm publish --workspace=@canvas-js/core --access public",
     "publish-hooks": "npm publish --workspace=@canvas-js/hooks --access public",
     "publish-interfaces": "npm publish --workspace=@canvas-js/interfaces --access public",
+    "publish-rpc": "npm publish --workspace=@canvas-js/rpc --access public",
     "test": "npm run test --workspace=@canvas-js/core"
   },
   "workspaces": [
@@ -20,8 +20,7 @@
     "packages/canvas-core",
     "packages/canvas-hooks",
     "packages/example-app-store",
-    "packages/example-chat-client",
-    "packages/example-chat-server",
+    "packages/example-chat",
     "packages/canvas-rpc",
     "packages/canvas-bootstrap-peer"
   ]

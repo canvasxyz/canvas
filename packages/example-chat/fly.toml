@@ -1,4 +1,4 @@
-app = "canvas-example-chat-client"
+app = "canvas-chat"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
@@ -8,6 +8,10 @@ processes = []
 [experimental]
   allowed_public_ports = []
   auto_rollback = true
+
+[[statics]]
+  guest_path = "/dist"
+  url_prefix = "/"
 
 [[services]]
   http_checks = []
