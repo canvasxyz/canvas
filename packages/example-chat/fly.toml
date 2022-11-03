@@ -9,6 +9,10 @@ processes = []
   allowed_public_ports = []
   auto_rollback = true
 
+[[statics]]
+  guest_path = "/dist"
+  url_prefix = "/"
+
 [[services]]
   http_checks = []
   internal_port = 8000

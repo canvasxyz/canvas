@@ -1,4 +1,5 @@
 const path = require("path")
+const webpack = require("webpack")
 const CopyWebpackPlugin = require("copy-webpack-plugin")
 
 module.exports = {
@@ -32,6 +33,9 @@ module.exports = {
 	plugins: [
 		new CopyWebpackPlugin({
 			patterns: [{ from: "public" }],
+		}),
+		new webpack.DefinePlugin({
+			"process.env.BUNDLER": JSON.stringify(process.argv[process.argv.length - 1]),
 		}),
 	],
 	devServer: {
