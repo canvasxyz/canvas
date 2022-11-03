@@ -12,6 +12,7 @@
     "publish-core": "npm publish --workspace=@canvas-js/core --access public",
     "publish-hooks": "npm publish --workspace=@canvas-js/hooks --access public",
     "publish-interfaces": "npm publish --workspace=@canvas-js/interfaces --access public",
+    "publish-rpc": "npm publish --workspace=@canvas-js/rpc --access public",
     "test": "npm run test --workspace=@canvas-js/core"
   },
   "workspaces": [

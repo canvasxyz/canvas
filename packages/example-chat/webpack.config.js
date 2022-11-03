@@ -1,4 +1,5 @@
 const path = require("path")
+const CopyWebpackPlugin = require("copy-webpack-plugin")
 
 module.exports = {
 	mode: "development",
@@ -28,6 +29,11 @@ module.exports = {
 	experiments: {
 		outputModule: true,
 	},
+	plugins: [
+		new CopyWebpackPlugin({
+			patterns: [{ from: "public" }],
+		}),
+	],
 	devServer: {
 		static: [path.join(__dirname, "dist"), path.join(__dirname, "public")],
 		hot: true,
