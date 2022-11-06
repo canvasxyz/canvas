@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/next",
-  "version": "0.0.20",
+  "version": "0.0.20a",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "dist/index.js",

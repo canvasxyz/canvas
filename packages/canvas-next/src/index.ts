@@ -21,7 +21,7 @@ const directory = process.env.CANVAS_PATH ?? null
 const specPath = process.env.CANVAS_SPEC ?? path.resolve(directory ?? ".", constants.SPEC_FILENAME)
 const spec = fs.readFileSync(specPath, "utf-8")
 
-const { LISTEN, PEER_ID, ETH_CHAIN_ID, ETH_CHAIN_RPC } = process.env
+const { LISTEN, VERBOSE, PEER_ID, ETH_CHAIN_ID, ETH_CHAIN_RPC } = process.env
 
 const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
 let unchecked = true
@@ -37,10 +37,10 @@ if (typeof LISTEN === "string" && typeof PEER_ID === "string") {
 	const libp2p = await createLibp2p(getLibp2pInit(peerId, Number(LISTEN)))
 	await libp2p.start()
 	console.log("[canvas-next] Started libp2p", directory)
-	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, offline: false, verbose: true })
+	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, offline: false, verbose: !!VERBOSE })
 	global.core.addEventListener("close", () => libp2p.stop())
 } else {
-	global.core = await Core.initialize({ directory, spec, providers, unchecked, offline: true })
+	global.core = await Core.initialize({ directory, spec, providers, unchecked, offline: true, verbose: !!VERBOSE })
 }
 
 const port = Number(process.env.PORT) || 3000
