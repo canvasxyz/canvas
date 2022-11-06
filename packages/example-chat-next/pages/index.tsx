@@ -1,15 +1,25 @@
 import React from "react"
 import dynamic from "next/dynamic"
+import { GetServerSideProps } from "next"
 
 import { useCanvas } from "@canvas-js/hooks"
 
-import { ErrorMessage } from "components/ErrorMessage"
-import { Messages } from "components/Messages"
+import { ErrorMessage } from "../components/ErrorMessage"
 
 const Connect = dynamic(() => import("../components/Connect").then(({ Connect }) => Connect), { ssr: false })
+const Messages = dynamic(() => import("../components/Messages").then(({ Messages }) => Messages), { ssr: false })
 
-export default function Index(props: {}) {
-	const { isLoading, error, data, host } = useCanvas()
+export const getServerSideProps: GetServerSideProps<{ host: string }> = async ({}) => {
+	if (global.core === undefined) {
+		return { notFound: true }
+	}
+
+	const { cid } = global.core
+	return { props: { host: `/app/${cid.toString()}` } }
+}
+
+export default function Index({}) {
+	const { isLoading, error, data } = useCanvas()
 
 	return (
 		<>

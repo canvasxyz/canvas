@@ -3,7 +3,10 @@
     "pages",
     "utils",
     "components",
-    "core.d.ts"
+    "core.d.ts",
+    "app/Connect.tsx",
+    "app/client.ts",
+    ".next/types/**/*.ts"
   ],
   "compilerOptions": {
     "baseUrl": ".",
@@ -26,7 +29,12 @@
     "incremental": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "exclude": [
     "node_modules"
