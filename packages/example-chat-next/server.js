@@ -26,18 +26,6 @@ const hostname = "localhost"
 const app = next({ dev: process.env.NODE_ENV !== "production", hostname, port })
 await app.prepare()
 
-const handler = app.getRequestHandler()
-const server = http.createServer((req, res) => {
-	if (res.url === "MY PATH") {
-	} else {
-		handler(req, res)
-	}
-})
+const server = http.createServer(app.getRequestHandler())
 
-server.listen(port, (err) => {
-	if (err) {
-		throw err
-	} else {
-		console.log(`> Ready on http://${hostname}:${port}`)
-	}
-})
+server.listen(port, () => console.log(`> Ready on http://${hostname}:${port}`))
