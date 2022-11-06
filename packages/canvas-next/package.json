@@ -8,7 +8,7 @@
     "dist"
   ],
   "bin": {
-    "canvas-next": "node ./dist/index.js"
+    "canvas-next": "./dist/index.js"
   },
   "engines": {
     "node": ">=16.0.0"
