@@ -11,7 +11,7 @@ import express from "express"
 import bodyParser from "body-parser"
 import { StatusCodes } from "http-status-codes"
 import { createLibp2p } from "libp2p"
-import { createFromProtobuf } from "@libp2p/peer-id-factory"
+import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { ethers } from "ethers"
 
 import { constants, Core, getLibp2pInit } from "@canvas-js/core"
@@ -31,8 +31,11 @@ if (typeof ETH_CHAIN_ID === "string" && typeof ETH_CHAIN_RPC === "string") {
 	providers[key] = new ethers.providers.JsonRpcProvider(ETH_CHAIN_RPC)
 }
 
-if (typeof LISTEN === "string" && typeof PEER_ID === "string") {
-	const peerId = await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
+if (typeof LISTEN === "string") {
+	const peerId =
+        typeof PEER_ID === "string" ?
+        await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
+        : await createEd25519PeerId();
 	console.log("[canvas-next] Using PeerId", peerId.toString())
 	const libp2p = await createLibp2p(getLibp2pInit(peerId, Number(LISTEN)))
 	await libp2p.start()
