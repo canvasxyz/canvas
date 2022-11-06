@@ -9,7 +9,7 @@ export const models = {
 }
 
 export const routes = {
-	"/posts": "SELECT * FROM POSTS ORDER BY updated_at DESC LIMIT 50",
+	"/posts": `SELECT id, from_id, content, updated_at FROM posts ORDER BY updated_at DESC LIMIT 50`,
 }
 
 export const actions = {
