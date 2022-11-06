@@ -1,5 +1,7 @@
 html {
 	background-color: #dfdfdf;
+  background-image: url('../public/background.jpeg');
+  background-size: cover;
 	transform: scale(1.25);
 	transform-origin: 0 0;
 	height: 80%;
