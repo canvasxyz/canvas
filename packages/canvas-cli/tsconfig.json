@@ -6,6 +6,7 @@
     "outDir": "dist"
   },
   "references": [
-    { "path": "../canvas-core" }
+    { "path": "../canvas-core" },
+    { "path": "../canvas-interfaces" }
   ]
 }

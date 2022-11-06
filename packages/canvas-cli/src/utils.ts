@@ -9,7 +9,6 @@ import chalk from "chalk"
 import prompts from "prompts"
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 
-import type { Chain } from "@canvas-js/interfaces"
 import { chainType, constants } from "@canvas-js/core"
 import { ethers } from "ethers"
 
