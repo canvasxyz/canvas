@@ -40,11 +40,11 @@ export const Messages: React.FC<{}> = ({}) => {
 	const { data, error } = useRoute<Post>("/posts", {})
 
 	const scrollContainer = useRef<HTMLDivElement>(null)
-	// useLayoutEffect(() => {
-	// 	if (scrollContainer.current !== null) {
-	// 		scrollContainer.current.scrollTop = scrollContainer.current.scrollHeight
-	// 	}
-	// }, [data])
+	useLayoutEffect(() => {
+		if (scrollContainer.current !== null) {
+			scrollContainer.current.scrollTop = scrollContainer.current.scrollHeight
+		}
+	}, [data])
 
 	return (
 		<div id="messages" className="window">
@@ -72,18 +72,6 @@ export const Messages: React.FC<{}> = ({}) => {
 		</div>
 	)
 }
-
-// function* RenderTimeline(posts: null | Post[]): Iterable<React.ReactNode> {
-// 	if (posts === null || posts.length === 0) {
-// 		return
-// 	}
-
-// 	let referenceDate = new Date(posts[posts.length - 1].updated_at).setHours(0)
-// 	for (let i = posts.length - 1; i >= 0; i--) {
-// 		const post = posts[i]
-// 		const date = new Date(posts[posts.length - 1].updated_at)
-// 	}
-// }
 
 const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
 	const address = `${from_id.slice(0, 5)}…${from_id.slice(-4)}`
