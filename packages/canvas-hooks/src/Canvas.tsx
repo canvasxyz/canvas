@@ -5,7 +5,7 @@ import { CanvasContext, ApplicationData } from "./CanvasContext.js"
 
 export interface CanvasProps {
 	host: string
-	children: JSX.Element
+	children: React.ReactNode
 }
 
 export const Canvas: React.FC<CanvasProps> = (props) => {
