@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useMemo } from "react"
 
 import { ethers } from "ethers"
 import { useAccount, useConnect, useDisconnect, useSigner } from "wagmi"
@@ -62,6 +62,15 @@ const Login: React.FC<{}> = ({}) => {
 		isPending,
 	} = useSession(signer ?? null)
 
+	const [expirationDate, expirationTime] = useMemo(() => {
+		if (sessionExpiration === null) {
+			return [null, null]
+		}
+
+		const date = new Date(sessionExpiration)
+		return [date.toLocaleDateString(), date.toLocaleTimeString()]
+	}, [sessionExpiration])
+
 	if (signer === undefined || signer === null) {
 		return null
 	}
@@ -77,7 +86,9 @@ const Login: React.FC<{}> = ({}) => {
 				</>
 			) : (
 				<>
-					<p>Using session {sessionAddress}.</p>
+					<p>
+						Using session {sessionAddress}, which expires on {expirationDate} at {expirationTime}.
+					</p>
 					<button disabled={isLoading} onClick={logout}>
 						Logout
 					</button>
