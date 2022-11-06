@@ -1,2 +1,2 @@
-backend: canvas install spec.canvas.js && canvas run $(ipfs-only-hash spec.canvas.js --cidVersion 0) --unchecked
+backend: export CANVAS_HOME=./data && canvas install spec.canvas.js && canvas run $(ipfs-only-hash spec.canvas.js --cidVersion 0) --unchecked
 frontend: serve -p 5100

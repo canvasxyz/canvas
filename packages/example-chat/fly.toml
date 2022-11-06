@@ -9,6 +9,10 @@ processes = []
   allowed_public_ports = []
   auto_rollback = true
 
+[mounts]
+  source="canvas_chat_data"
+  destination="/data"
+
 [[statics]]
   guest_path = "/dist"
   url_prefix = "/"
