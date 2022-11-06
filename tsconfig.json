@@ -4,6 +4,7 @@
     { "path": "./packages/canvas-cli" },
     { "path": "./packages/canvas-core" },
     { "path": "./packages/canvas-core/test" },
+    { "path": "./packages/canvas-next" },
     { "path": "./packages/canvas-interfaces" },
     { "path": "./packages/canvas-hooks" }
   ]

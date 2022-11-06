@@ -18,6 +18,7 @@
     "packages/canvas-cli",
     "packages/canvas-interfaces",
     "packages/canvas-core",
+    "packages/canvas-next",
     "packages/canvas-hooks",
     "packages/example-app-store",
     "packages/example-chat",
