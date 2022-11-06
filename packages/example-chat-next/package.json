@@ -13,7 +13,7 @@
   "dependencies": {
     "@canvas-js/core": "0.0.20",
     "@canvas-js/hooks": "0.0.20",
-    "@canvas-js/next": "0.0.20",
+    "@canvas-js/next": "0.0.21",
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.5",
     "98.css": "^0.1.18",
