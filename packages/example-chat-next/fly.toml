@@ -1,6 +1,6 @@
-# fly.toml file generated for still-resonance-8775 on 2022-11-05T23:07:42-07:00
+# fly.toml file generated for canvas-chat-2 on 2022-11-05T23:41:12-07:00
 
-app = "still-resonance-8775"
+app = "canvas-chat-2"
 kill_signal = "SIGINT"
 kill_timeout = 30
 processes = []
@@ -10,6 +10,10 @@ processes = []
   CANVAS_SPEC = "spec.canvas.js"
   LISTEN = "4002"
   PORT = "8080"
+
+[mounts]
+  source="canvas_chat_2_data"
+  destination="/data"
 
 [[services]]
   internal_port = 4002

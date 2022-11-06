@@ -4,10 +4,9 @@ FROM node:16-alpine AS builder
 RUN apk add --no-cache bash git openssh libc6-compat
 WORKDIR /app
 COPY . .
-RUN yarn install --frozen-lockfile
 
-# If using npm with a `package-lock.json` comment out above and use below instead
-# RUN npm ci
+# We should use `npm ci` but need to double-check that it's available on Fly
+RUN npm install
 
 ENV NEXT_TELEMETRY_DISABLED 1
 
@@ -16,10 +15,7 @@ ENV NEXT_TELEMETRY_DISABLED 1
 # Example:
 # ARG NEXT_PUBLIC_EXAMPLE="value here"
 
-RUN yarn build
-
-# If using npm comment out above and use below instead
-# RUN npm run build
+RUN npm run build
 
 # Production image, copy all the files and run next
 FROM node:16-alpine AS runner
@@ -27,6 +23,7 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
+ENV CANVAS_HOME /data
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -35,7 +32,4 @@ COPY --from=builder /app ./
 
 USER nextjs
 
-CMD ["yarn", "start"]
-
-# If using npm comment out above and use below instead
-# CMD ["npm", "run", "start"]
+CMD ["npm", "run", "start"]
