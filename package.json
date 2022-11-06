@@ -21,6 +21,7 @@
     "packages/canvas-hooks",
     "packages/example-app-store",
     "packages/example-chat",
+    "packages/example-chat-next",
     "packages/canvas-rpc",
     "packages/canvas-bootstrap-peer"
   ]
