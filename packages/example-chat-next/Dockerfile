@@ -30,7 +30,7 @@ ENV CANVAS_PATH /data2
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-USER nextjs
+# USER nextjs
 
 COPY --from=builder /app ./
 

@@ -7,7 +7,7 @@ processes = []
   CANVAS_PATH = "/data2"
   CANVAS_SPEC = "spec.canvas.js"
   LISTEN = "4002"
-  PORT = "8080"
+  PORT = "8000"
 
 [mounts]
   source="canvas_chat_data_2"
