@@ -1,4 +1,6 @@
 html {
+  background-image: url('./background.jpeg');
+  background-size: cover;
 	background-color: #dfdfdf;
 	transform: scale(1.25);
 	transform-origin: 0 0;
@@ -9,6 +11,10 @@ html {
 body {
 	margin: 0;
 	height: 100%;
+}
+
+.window {
+  background: #8dddb9;
 }
 
 #__next {

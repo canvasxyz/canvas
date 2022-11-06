@@ -1,6 +1,7 @@
 import React from "react"
 import dynamic from "next/dynamic"
 import { GetServerSideProps } from "next"
+import Head from "next/head"
 
 import { useCanvas } from "@canvas-js/hooks"
 
@@ -23,6 +24,10 @@ export default function Index({}) {
 
 	return (
 		<>
+			<Head>
+				<title>Canvas Example App</title>
+				<meta name="viewport" content="initial-scale=1.0, width=device-width" />
+			</Head>
 			<Messages />
 			<div id="sidebar">
 				<div className="window">
