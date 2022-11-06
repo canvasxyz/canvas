@@ -1,0 +1,51 @@
+# fly.toml file generated for still-resonance-8775 on 2022-11-05T23:07:42-07:00
+
+app = "still-resonance-8775"
+kill_signal = "SIGINT"
+kill_timeout = 30
+processes = []
+
+[env]
+  CANVAS_PATH = "data"
+  CANVAS_SPEC = "spec.canvas.js"
+  LISTEN = "4002"
+  PORT = "8080"
+
+[[services]]
+  internal_port = 4002
+  processes = ["app"]
+  protocol = "tcp"
+  [services.concurrency]
+    hard_limit = 100
+    soft_limit = 100
+    type = "connections"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 4002
+
+[[services]]
+  http_checks = []
+  internal_port = 8000
+  processes = ["app"]
+  protocol = "tcp"
+  script_checks = []
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+    type = "connections"
+
+  [[services.ports]]
+    force_https = true
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [[services.tcp_checks]]
+    grace_period = "1s"
+    interval = "15s"
+    restart_limit = 0
+    timeout = "2s"
