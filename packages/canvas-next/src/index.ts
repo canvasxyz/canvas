@@ -10,17 +10,38 @@ import next from "next"
 import express from "express"
 import bodyParser from "body-parser"
 import { StatusCodes } from "http-status-codes"
+import { createLibp2p } from "libp2p"
+import { createFromProtobuf } from "@libp2p/peer-id-factory"
+import { ethers } from "ethers"
 
-import { constants, Core } from "@canvas-js/core"
+import { constants, Core, getLibp2pInit } from "@canvas-js/core"
 import { handleAction, handleRoute, handleSession } from "./api.js"
 
 const directory = process.env.CANVAS_PATH ?? null
-const specPath = path.resolve(directory ?? ".", constants.SPEC_FILENAME)
+const specPath = process.env.CANVAS_SPEC ?? path.resolve(directory ?? ".", constants.SPEC_FILENAME)
 const spec = fs.readFileSync(specPath, "utf-8")
 
-// TODO: set up providers and block cache
-// TODO: set up peerId and libp2p node
-global.core = await Core.initialize({ directory, spec, unchecked: true, offline: true })
+const { LISTEN, PEER_ID, ETH_CHAIN_ID, ETH_CHAIN_RPC } = process.env
+
+const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
+let unchecked = true
+if (typeof ETH_CHAIN_ID === "string" && typeof ETH_CHAIN_RPC === "string") {
+	unchecked = false
+	const key = `eth:${process.env.ETH_CHAIN_ID}`
+	providers[key] = new ethers.providers.JsonRpcProvider(ETH_CHAIN_RPC)
+}
+
+if (typeof LISTEN === "string" && typeof PEER_ID === "string") {
+	const peerId = await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
+	console.log("[canvas-next] Using PeerId", peerId.toString())
+	const libp2p = await createLibp2p(getLibp2pInit(peerId, Number(LISTEN)))
+	await libp2p.start()
+	console.log("[canvas-next] Started libp2p", directory)
+	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, offline: false, verbose: true })
+	global.core.addEventListener("close", () => libp2p.stop())
+} else {
+	global.core = await Core.initialize({ directory, spec, providers, unchecked, offline: true })
+}
 
 const port = Number(process.env.PORT) || 3000
 const hostname = "localhost"
