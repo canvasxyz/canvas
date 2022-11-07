@@ -14,7 +14,7 @@ processes = []
   destination="/data"
 
 [[statics]]
-  guest_path = "/dist"
+  guest_path = "/app/dist"
   url_prefix = "/"
 
 [[services]]

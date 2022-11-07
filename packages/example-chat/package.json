@@ -7,8 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack build",
     "dev": "concurrently --kill-others -n backend,frontend \"canvas run spec.canvas.js --unchecked\" \"webpack server\"",
-    "start": "concurrently --kill-others -n backend,frontend \"canvas run $(ipfs-only-hash spec.canvas.js --cidVersion 0) --unchecked\" \"webpack server\"",
-    "serve": "serve ./dist"
+    "start": "concurrently --kill-others -n backend,frontend \"canvas run $(ipfs-only-hash spec.canvas.js --cidVersion 0) --unchecked\" \"webpack server\""
   },
   "dependencies": {
     "@canvas-js/hooks": "0.0.20",
@@ -23,7 +22,6 @@
   "devDependencies": {
     "concurrently": "^7.5.0",
     "css-loader": "^6.7.1",
-    "serve": "^14.0.1",
     "style-loader": "^3.3.1",
     "ts-loader": "^9.3.0",
     "webpack-cli": "^4.9.2",
