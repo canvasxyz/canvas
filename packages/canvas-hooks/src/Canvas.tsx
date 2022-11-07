@@ -17,7 +17,7 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const [sessionWallet, setSessionWallet] = useState<ethers.Wallet | null>(null)
 	const [sessionExpiration, setSessionExpiration] = useState<number | null>(null)
 
-	const host = props.host.endsWith("/") ? props.host : props.host + "/"
+	const host = props.host
 
 	useEffect(() => {
 		fetch(host)

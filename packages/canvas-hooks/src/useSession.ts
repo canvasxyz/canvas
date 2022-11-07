@@ -4,7 +4,7 @@ import { ethers } from "ethers"
 import { SessionPayload, getSessionSignatureData, Session } from "@canvas-js/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
-import { CANVAS_SESSION_KEY, getLatestBlock } from "./utils.js"
+import urlJoin, { CANVAS_SESSION_KEY, getLatestBlock } from "./utils.js"
 
 export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 	error: Error | null
@@ -106,7 +106,7 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 			const signature = await signer._signTypedData(...sessionSignatureData)
 			const session: Session = { signature, payload }
 
-			const res = await fetch(host + "sessions", {
+			const res = await fetch(urlJoin(host, "sessions"), {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(session),
