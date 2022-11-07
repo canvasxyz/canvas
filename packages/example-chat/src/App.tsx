@@ -23,7 +23,6 @@ export const App: React.FC<{}> = ({}) => {
 						) : data ? (
 							<>
 								<p>{data.uri}</p>
-								<p>Using API endpoint at {host}</p>
 							</>
 						) : (
 							<ErrorMessage error={error} />
