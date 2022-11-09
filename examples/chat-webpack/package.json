@@ -1,5 +1,6 @@
 {
-  "name": "@canvas-js/example-chat-client",
+  "private": true,
+  "name": "@canvas-js/example-chat-webpack",
   "version": "0.0.0",
   "description": "",
   "main": "index.js",
