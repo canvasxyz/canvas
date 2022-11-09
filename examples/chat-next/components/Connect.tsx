@@ -32,6 +32,7 @@ export const Connect: React.FC<{}> = ({}) => {
 								disabled={!connector.ready || isConnected}
 								key={connector.id}
 								onClick={() => connect({ connector })}
+								style={{ marginRight: 5 }}
 							>
 								{connector.name}
 								{!connector.ready && " (unsupported)"}

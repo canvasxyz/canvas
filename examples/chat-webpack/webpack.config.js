@@ -1,6 +1,7 @@
 const path = require("path")
 const webpack = require("webpack")
 const CopyWebpackPlugin = require("copy-webpack-plugin")
+const NodePolyfillPlugin = require("node-polyfill-webpack-plugin")
 
 module.exports = {
 	mode: "development",
@@ -31,11 +32,12 @@ module.exports = {
 		outputModule: true,
 	},
 	plugins: [
+		new NodePolyfillPlugin(),
 		new CopyWebpackPlugin({
 			patterns: [{ from: "public" }],
 		}),
 		new webpack.DefinePlugin({
-			"process.env.BUNDLER": JSON.stringify(process.argv[process.argv.length - 1]),
+			"process.env.BUNDLER": JSON.stringify(process.argv[2]),
 		}),
 	],
 	devServer: {

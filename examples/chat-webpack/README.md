@@ -16,7 +16,7 @@ npm install -g @canvas-js/cli
 npm run dev
 ```
 
-Open the app at http://localhost:8080/. The API will run at
+Open the app at http://localhost:3000/. The API will run at
 http://localhost:8000/.
 
 ### Deploying to Fly.io

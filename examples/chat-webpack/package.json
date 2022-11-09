@@ -7,8 +7,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack build",
-    "dev": "concurrently --kill-others -n backend,frontend \"canvas run spec.canvas.js --unchecked\" \"webpack server\"",
-    "start": "concurrently --kill-others -n backend,frontend \"canvas run $(ipfs-only-hash spec.canvas.js --cidVersion 0) --unchecked\" \"webpack server\""
+    "dev": "concurrently --kill-others -n backend,frontend \"canvas run spec.canvas.js --unchecked\" \"webpack server --port 3000\"",
+    "start": "concurrently --kill-others -n backend,frontend \"canvas run $(ipfs-only-hash spec.canvas.js --cidVersion 0) --unchecked\" \"webpack server --port 3000\""
   },
   "dependencies": {
     "@canvas-js/hooks": "0.0.22",
@@ -16,6 +16,7 @@
     "@types/react-dom": "^18.0.5",
     "98.css": "^0.1.18",
     "copy-webpack-plugin": "^11.0.0",
+    "node-polyfill-webpack-plugin": "^2.0.1",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "wagmi": "^0.7.7"
