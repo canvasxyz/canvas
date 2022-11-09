@@ -1,12 +1,11 @@
 {
-  "include": ["src"],
+  "include": ["src", "types"],
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "lib"
   },
   "references": [
-    { "path": "../canvas-core" },
-    { "path": "../canvas-interfaces" }
+    { "path": "../interfaces" }
   ]
 }

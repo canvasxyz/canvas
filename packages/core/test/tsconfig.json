@@ -7,6 +7,6 @@
   },
   "references": [
     { "path": "../." },
-    { "path": "../../canvas-interfaces" }
+    { "path": "../../interfaces" }
   ]
 }

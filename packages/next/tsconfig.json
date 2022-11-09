@@ -9,7 +9,7 @@
     "jsx": "react"
   },
   "references": [
-    { "path": "../canvas-core" },
-    { "path": "../canvas-interfaces" }
+    { "path": "../core" },
+    { "path": "../interfaces" }
   ]
 }

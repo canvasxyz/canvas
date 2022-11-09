@@ -7,8 +7,9 @@ import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
 
-import { toBuffer } from "../utils.js"
 import RPC from "@canvas-js/rpc/sync"
+
+import { toBuffer } from "../utils.js"
 
 export class Client {
 	private seq = 0
