@@ -15,9 +15,9 @@ import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 import { toHex } from "./utils.js"
 
 const bootstrapList = [
-	"/ip4/137.66.12.223/tcp/4002/ws/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o",
-	"/ip4/137.66.11.73/tcp/4002/ws/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT",
-	"/ip4/137.66.27.235/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
+	"/dnsaddr/bootstrap.canvas.xyz/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o",
+	"/dnsaddr/bootstrap.canvas.xyz/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT",
+	"/dnsaddr/bootstrap.canvas.xyz/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
 ]
 
 const announceFilter = (multiaddrs: Multiaddr[]) =>
@@ -25,8 +25,9 @@ const announceFilter = (multiaddrs: Multiaddr[]) =>
 
 const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
 
-export function getLibp2pInit(peerId: PeerId, port?: number): Libp2pOptions {
-	const announceAddresses = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId.toString()}`)
+export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]): Libp2pOptions {
+	const announceAddresses =
+		announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId.toString()}`)
 
 	const listenAddresses: string[] = []
 	if (port !== undefined) {
