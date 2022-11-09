@@ -8,7 +8,7 @@
   "dependencies": {
     "@chainsafe/libp2p-noise": "^10.0.0",
     "@libp2p/bootstrap": "^5.0.0",
-    "@libp2p/kad-dht": "^5.0.1",
+    "@libp2p/kad-dht": "^6.0.1",
     "@libp2p/mplex": "^7.0.0",
     "@libp2p/peer-id-factory": "^1.0.18",
     "@libp2p/utils": "^3.0.2",
