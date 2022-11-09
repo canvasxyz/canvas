@@ -1,3 +1,5 @@
+import dns from "node:dns"
+
 import { createLibp2p } from "libp2p"
 import { webSockets } from "@libp2p/websockets"
 import { noise } from "@chainsafe/libp2p-noise"
@@ -14,16 +16,24 @@ const peerId = await createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64
 
 const RELAY_HOP_TIMEOUT = 0x7fffffff
 
+const address = await new Promise((resolve, reject) => {
+	dns.resolve(`${process.env.FLY_APP_NAME}.fly.dev`, (err, [address]) => {
+		if (err || address === undefined) {
+			reject(err)
+		} else {
+			resolve(address)
+		}
+	})
+})
+
+const listen = [`/ip4/0.0.0.0/tcp/${process.env.PORT}/ws`]
+const announce = [`/ip4/${address}/tcp/${process.env.PORT}/ws`]
+const announceFilter = (multiaddrs) => multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr))
+
 const libp2p = await createLibp2p({
 	peerId,
-	addresses: {
-		listen: [`/ip4/0.0.0.0/tcp/${process.env.PORT}/ws`],
-		announce: [process.env.ANNOUNCE],
-		announceFilter: (multiaddrs) => multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr)),
-	},
-	connectionGater: {
-		denyDialMultiaddr: async (peerId, multiaddr) => isLoopback(multiaddr),
-	},
+	addresses: { listen, announce, announceFilter },
+	connectionGater: { denyDialMultiaddr: async (peerId, multiaddr) => isLoopback(multiaddr) },
 	transports: [webSockets()],
 	connectionEncryption: [noise()],
 	streamMuxers: [mplex()],

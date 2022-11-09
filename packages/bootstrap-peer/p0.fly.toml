@@ -10,7 +10,6 @@ processes = []
 
 [env]
   PORT = "4002"
-  ANNOUNCE = "/ip4/137.66.12.223/tcp/4002/ws"
   BOOTSTRAP_LIST = "/dns4/canvas-bootstrap-p1.fly.dev/tcp/4002/ws/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT /dns4/canvas-bootstrap-p2.fly.dev/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3"
 
 [[services]]
