@@ -9,9 +9,6 @@
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "removeComments": true,
-    "baseUrl": ".",
-    "paths": {
-      "@canvas-js/rpc/sync": ["./packages/rpc/sync/index.d.ts"]
-    }
+    "baseUrl": "."
   },
 }

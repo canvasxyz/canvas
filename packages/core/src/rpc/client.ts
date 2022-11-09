@@ -7,7 +7,7 @@ import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
 
-import RPC from "@canvas-js/rpc/sync"
+import * as RPC from "../../rpc/sync/index.js"
 
 import { toBuffer } from "../utils.js"
 
