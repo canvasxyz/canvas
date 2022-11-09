@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/cli",
-  "version": "0.0.20",
+  "version": "0.0.22",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "dist/index.js",
@@ -11,8 +11,8 @@
     "canvas": "dist/index.js"
   },
   "dependencies": {
-    "@canvas-js/core": "0.0.20",
-    "@canvas-js/interfaces": "0.0.20",
+    "@canvas-js/core": "0.0.22",
+    "@canvas-js/interfaces": "0.0.22",
     "better-sqlite3": "^7.6.2",
     "body-parser": "^1.20.0",
     "chalk": "^5.0.1",

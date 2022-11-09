@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/core",
-	"version": "0.0.20",
+	"version": "0.0.22",
 	"author": "Canvas Technology Corporation (https://canvas.xyz)",
 	"type": "module",
 	"types": "./lib/index.d.ts",
@@ -10,14 +10,17 @@
 	},
 	"files": [
 		"lib",
+		"rpc",
 		"types"
 	],
 	"scripts": {
+		"generate-rpc": "npm run generate-rpc-js && npm run generate-rpc-ts",
+    "generate-rpc-js": "pbjs ./rpc/sync/index.proto -t static-module -o ./rpc/sync/index.js",
+    "generate-rpc-ts": "pbts ./rpc/sync/index.js -o ./rpc/sync/index.d.ts",
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.0.20",
-		"@canvas-js/rpc": "0.0.20",
+		"@canvas-js/interfaces": "0.0.22",
 		"@chainsafe/libp2p-gossipsub": "^5.0.0",
 		"@chainsafe/libp2p-noise": "^10.0.0",
 		"@libp2p/bootstrap": "^5.0.0",
@@ -54,6 +57,7 @@
 		"@types/node": "^18.0.0",
 		"ava": "^5.0.1",
 		"dotenv": "^16.0.3",
+		"protobufjs-cli": "~1.0.2",
 		"typescript": "^4.7.4"
 	}
 }
