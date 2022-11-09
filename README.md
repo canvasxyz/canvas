@@ -77,13 +77,15 @@ Make sure you've commited your changes:
 ```
 $ git status
 $ git add .
-$ git commit -m "v0.0.X"
+$ git commit -m "made some changes"
 ```
 
-Bump the version, explicitly passing a `0.0.X` version number into the NPM script, and publish the packages together:
+Bump the version, explicitly passing a `0.0.X` version number into the NPM script, make a manual commit just for the version bump, and publish the packages together:
 
 ```
 $ npm run version -- 0.0.X
+$ git add .
+$ git commit -m "v0.0.X"
 $ npm run publish
 ```
 
