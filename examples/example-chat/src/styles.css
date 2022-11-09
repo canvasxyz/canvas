@@ -1,0 +1,63 @@
+html {
+	background-color: #dfdfdf;
+  background-image: url('../public/background.jpeg');
+  background-size: cover;
+	transform: scale(1.25);
+	transform-origin: 0 0;
+	height: 80%;
+	width: 80%;
+}
+
+body {
+	height: 100%;
+	margin: 0;
+}
+
+#root {
+	height: 100%;
+	display: flex;
+	max-width: 1024px;
+	margin: 0 12px;
+	gap: 12px;
+}
+
+#messages {
+	min-width: 300px;
+	margin: 12px 0px;
+	display: flex;
+	flex-direction: column;
+	flex-grow: 1;
+}
+
+#messages .window-body {
+	display: flex;
+	flex-direction: column;
+	flex-grow: 1;
+	gap: 4px;
+}
+
+#scroll-container {
+	overflow-y: scroll;
+	flex-grow: 1;
+	height: 0px;
+
+	display: flex;
+	flex-direction: column;
+}
+
+#scroll-container ul.tree-view {
+	flex-grow: 1;
+}
+
+#sidebar {
+	margin: 12px 0px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 360px;
+}
+
+span.address {
+	width: 68px;
+	color: #777;
+}

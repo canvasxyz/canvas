@@ -20,10 +20,10 @@
     "packages/canvas-core",
     "packages/canvas-next",
     "packages/canvas-hooks",
-    "packages/example-app-store",
-    "packages/example-chat",
-    "packages/example-chat-next",
     "packages/canvas-rpc",
-    "packages/canvas-bootstrap-peer"
+    "packages/canvas-bootstrap-peer",
+    "examples/example-app-store",
+    "examples/example-chat",
+    "examples/example-chat-next"
   ]
 }
