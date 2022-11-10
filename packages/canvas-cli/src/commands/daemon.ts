@@ -116,6 +116,11 @@ export async function handler(args: Args) {
 	})
 }
 
+type AppInfo = {
+	hash: string
+	status: "stopped" | "starting" | "running"
+}
+
 class Daemon {
 	public readonly api = express()
 
@@ -132,7 +137,7 @@ class Daemon {
 
 		this.api.get("/app", (req, res) => {
 			this.queue.add(async () => {
-				const apps: Record<string, string> = {}
+				const apps: Record<string, AppInfo> = {}
 				for (const name of fs.readdirSync(CANVAS_HOME)) {
 					if (name === constants.PEER_ID_FILENAME || name === SOCKET_FILENAME) {
 						continue
@@ -142,11 +147,20 @@ class Daemon {
 					if (fs.existsSync(specPath)) {
 						const spec = fs.readFileSync(specPath, "utf-8")
 						const cid = await Hash.of(spec)
-						apps[name] = cid
+
+						const status = this.cores.has(name) ? "running" : "stopped"
+
+						apps[name] = {
+							hash: cid,
+							status: status,
+						}
 					}
 				}
 
-				res.json(apps)
+				const result = {
+					apps,
+				}
+				res.json(result)
 			})
 		})
 
