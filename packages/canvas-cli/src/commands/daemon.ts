@@ -18,6 +18,7 @@ import { CANVAS_HOME, getPeerId, getProviders, SOCKET_FILENAME, SOCKET_PATH, sta
 import { handleAction, handleRoute, handleSession } from "../api.js"
 
 import { ethers } from "ethers"
+import { installSpec } from "./install.js"
 
 export const command = "daemon"
 export const desc = "Start the canvas daemon"
@@ -189,7 +190,20 @@ class Daemon {
 			})
 		})
 
-		this.api.post("/app/:name/start", async (req, res) => {
+		this.api.post("/app/install", async (req, res) => {
+			// @ts-ignore
+			const { spec } = req.params
+			const multihash = Hash.of(spec)
+			console.log(`installing app with hash ${multihash}`)
+
+			await installSpec(spec)
+
+			console.log(`installed app with hash ${multihash}`)
+
+			res.status(StatusCodes.CREATED).end()
+		})
+
+		this.api.post("/app/:name/start/", async (req, res) => {
 			const { name } = req.params
 
 			this.queue.add(async () => {

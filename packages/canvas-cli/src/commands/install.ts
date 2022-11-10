@@ -21,8 +21,7 @@ export const builder = (yargs: yargs.Argv) =>
 
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
-export async function handler(args: Args) {
-	const spec = fs.readFileSync(args.spec, "utf-8")
+export async function installSpec(spec: string): Promise<string> {
 	const cid = await Hash.of(spec)
 	const directory = path.resolve(CANVAS_HOME, cid)
 	if (!fs.existsSync(directory)) {
@@ -37,6 +36,13 @@ export async function handler(args: Args) {
 		console.log(`[canvas-cli] Creating ${specPath}`)
 		fs.writeFileSync(specPath, spec, "utf-8")
 	}
+	return cid
+}
+
+export async function handler(args: Args) {
+	const spec = fs.readFileSync(args.spec, "utf-8")
+
+	const cid = await installSpec(spec)
 
 	console.log(chalk.yellow(`[canvas-cli] Run the app with ${chalk.bold(`canvas run ${cid}`)}`))
 }
