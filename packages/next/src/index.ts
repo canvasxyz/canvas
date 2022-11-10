@@ -10,7 +10,7 @@ import next from "next"
 import express from "express"
 import bodyParser from "body-parser"
 import { StatusCodes } from "http-status-codes"
-import { createLibp2p } from "libp2p"
+import { Libp2p, createLibp2p } from "libp2p"
 import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { ethers } from "ethers"
 
@@ -21,7 +21,9 @@ const directory = process.env.CANVAS_PATH ?? null
 const specPath = process.env.CANVAS_SPEC ?? path.resolve(directory ?? ".", constants.SPEC_FILENAME)
 const spec = fs.readFileSync(specPath, "utf-8")
 
-const { LISTEN, VERBOSE, PEER_ID, ETH_CHAIN_ID, ETH_CHAIN_RPC } = process.env
+const { ANNOUNCE, LISTEN, PEER_ID, ETH_CHAIN_ID, ETH_CHAIN_RPC, NODE_ENV } = process.env
+
+const verbose = NODE_ENV !== "production"
 
 const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
 let unchecked = true
@@ -33,17 +35,24 @@ if (typeof ETH_CHAIN_ID === "string" && typeof ETH_CHAIN_RPC === "string") {
 
 if (typeof LISTEN === "string") {
 	const peerId =
-        typeof PEER_ID === "string" ?
-        await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
-        : await createEd25519PeerId();
+		typeof PEER_ID === "string" ? await createFromProtobuf(Buffer.from(PEER_ID, "base64")) : await createEd25519PeerId()
+
 	console.log("[canvas-next] Using PeerId", peerId.toString())
-	const libp2p = await createLibp2p(getLibp2pInit(peerId, Number(LISTEN)))
+
+	let libp2p: Libp2p
+	if (typeof ANNOUNCE === "string") {
+		libp2p = await createLibp2p(getLibp2pInit(peerId, Number(LISTEN), [ANNOUNCE]))
+	} else {
+		libp2p = await createLibp2p(getLibp2pInit(peerId, Number(LISTEN)))
+	}
+
 	await libp2p.start()
 	console.log("[canvas-next] Started libp2p", directory)
-	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, offline: false, verbose: !!VERBOSE })
+
+	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, offline: false, verbose })
 	global.core.addEventListener("close", () => libp2p.stop())
 } else {
-	global.core = await Core.initialize({ directory, spec, providers, unchecked, offline: true, verbose: !!VERBOSE })
+	global.core = await Core.initialize({ directory, spec, providers, unchecked, offline: true, verbose })
 }
 
 const port = Number(process.env.PORT) || 3000
