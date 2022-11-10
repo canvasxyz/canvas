@@ -16,6 +16,7 @@ import { BlockCache, Core, getLibp2pInit, constants, BlockResolver } from "@canv
 
 import { CANVAS_HOME, getPeerId, getProviders, SOCKET_FILENAME, SOCKET_PATH, startSignalServer } from "../utils.js"
 import { handleAction, handleRoute, handleSession } from "../api.js"
+import { installSpec } from "./install.js"
 
 import { ethers } from "ethers"
 
@@ -191,6 +192,19 @@ class Daemon {
 				fs.rmSync(directory, { recursive: true })
 				res.status(StatusCodes.OK).end()
 			})
+		})
+
+		this.api.post("/app/install", async (req, res) => {
+			// @ts-ignore
+			const { spec } = req.params
+			const multihash = Hash.of(spec)
+			console.log(`installing app with hash ${multihash}`)
+
+			await installSpec(spec)
+
+			console.log(`installed app with hash ${multihash}`)
+
+			res.status(StatusCodes.CREATED).end()
 		})
 
 		this.api.post("/app/:name/start", async (req, res) => {
