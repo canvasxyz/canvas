@@ -1,5 +1,7 @@
 {
   "name": "canvas",
+  "private": true,
+  "version": "0.0.23",
   "type": "module",
   "scripts": {
     "appstore": "npm run dev --workspace=@canvas-js/example-app-store",
@@ -7,14 +9,14 @@
     "dev": "tsc --build --watch",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "version": "npm version --git-tag-version=false --workspace=packages --workspace=examples --workspaces-update=true --save --save-exact",
+    "version": "npm version --git-tag-version=false --workspaces=true --include-workspace-root=true --workspaces-update=true --save --save-exact",
     "publish": "npm publish --workspace=packages --access public",
     "test": "npm run test --workspace=@canvas-js/core"
   },
   "workspaces": [
-    "packages/cli",
     "packages/interfaces",
     "packages/core",
+    "packages/cli",
     "packages/next",
     "packages/hooks",
     "packages/bootstrap-peer",
