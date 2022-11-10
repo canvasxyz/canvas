@@ -21,9 +21,9 @@ const directory = process.env.CANVAS_PATH ?? null
 const specPath = process.env.CANVAS_SPEC ?? path.resolve(directory ?? ".", constants.SPEC_FILENAME)
 const spec = fs.readFileSync(specPath, "utf-8")
 
-const { ANNOUNCE, LISTEN, PEER_ID, ETH_CHAIN_ID, ETH_CHAIN_RPC, NODE_ENV } = process.env
+const { ANNOUNCE, LISTEN, PEER_ID, ETH_CHAIN_ID, ETH_CHAIN_RPC, NODE_ENV, VERBOSE } = process.env
 
-const verbose = NODE_ENV !== "production"
+const verbose = NODE_ENV !== "production" || VERBOSE === "true"
 
 const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
 let unchecked = true
