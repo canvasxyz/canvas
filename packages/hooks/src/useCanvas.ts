@@ -2,7 +2,7 @@ import { Action, ActionPayload, getActionSignatureData } from "@canvas-js/interf
 import { useCallback, useContext, useState } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"
-import { Dispatch, CANVAS_SESSION_KEY, getLatestBlock } from "./utils.js"
+import { urlJoin, Dispatch, CANVAS_SESSION_KEY, getLatestBlock } from "./utils.js"
 
 export function useCanvas(): {
 	isLoading: boolean
@@ -65,7 +65,7 @@ export function useCanvas(): {
 
 				const action: Action = { session: sessionWallet.address, signature, payload }
 
-				const res = await fetch(host + "actions", {
+				const res = await fetch(urlJoin(host, "actions"), {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify(action),
