@@ -195,9 +195,9 @@ class Daemon {
 		})
 
 		this.api.post("/app/install", async (req, res) => {
-			// @ts-ignore
-			const { spec } = req.params
-			const multihash = Hash.of(spec)
+			const { spec } = req.body
+
+			const multihash = await Hash.of(spec)
 			console.log(`installing app with hash ${multihash}`)
 
 			await installSpec(spec)
