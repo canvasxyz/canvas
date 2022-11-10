@@ -7,10 +7,8 @@
     "target": "es2020",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
     "removeComments": true,
-    "baseUrl": ".",
-    "paths": {
-      "@canvas-js/rpc/sync": ["./packages/canvas-rpc/sync/index.d.ts"]
-    }
+    "baseUrl": "."
   },
 }

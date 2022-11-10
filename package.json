@@ -1,27 +1,27 @@
 {
   "name": "canvas",
+  "private": true,
+  "version": "0.0.22",
   "type": "module",
   "scripts": {
     "appstore": "npm run dev --workspace=@canvas-js/example-app-store",
     "dev-example-chat": "GENERATE_SOURCEMAP=false npm run dev --workspace=@canvas-js/example-chat-client",
     "dev": "tsc --build --watch",
-    "build": "tsc --build --clean && tsc --build",
+    "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "publish-cli": "npm publish --workspace=@canvas-js/cli --access public",
-    "publish-core": "npm publish --workspace=@canvas-js/core --access public",
-    "publish-hooks": "npm publish --workspace=@canvas-js/hooks --access public",
-    "publish-interfaces": "npm publish --workspace=@canvas-js/interfaces --access public",
-    "publish-rpc": "npm publish --workspace=@canvas-js/rpc --access public",
+    "version": "npm version --git-tag-version=false --workspaces=true --include-workspace-root=true --workspaces-update=true --save --save-exact",
+    "publish": "npm publish --workspace=packages --access public",
     "test": "npm run test --workspace=@canvas-js/core"
   },
   "workspaces": [
-    "packages/canvas-cli",
-    "packages/canvas-interfaces",
-    "packages/canvas-core",
-    "packages/canvas-hooks",
-    "packages/example-app-store",
-    "packages/example-chat",
-    "packages/canvas-rpc",
-    "packages/canvas-bootstrap-peer"
+    "packages/interfaces",
+    "packages/core",
+    "packages/cli",
+    "packages/next",
+    "packages/hooks",
+    "packages/bootstrap-peer",
+    "examples/app-store",
+    "examples/chat-webpack",
+    "examples/chat-next"
   ]
 }

@@ -64,18 +64,29 @@ npm run dev-example-chat
 
 ### Publishing to NPM
 
-Build and publish the Canvas packages:
+Before publishing, make sure the project is in a clean state and passes tests:
 
 ```
-npm i
-git add .
-git commit -m "version bump"   # In this order, to ensure package-lock.json is up-to-date
-npm run clean
-npm run build
-npm run publish-cli &&
-  npm run publish-core &&
-  npm run publish-hooks &&
-  npm run publish-interfaces
+$ npm run clean
+$ npm run build
+$ npm run test
+```
+
+Make sure you've commited your changes:
+
+```
+$ git status
+$ git add .
+$ git commit -m "made some changes"
+```
+
+Bump the version, explicitly passing a `0.0.X` version number into the NPM script, make a manual commit just for the version bump, and publish the packages together:
+
+```
+$ npm run version -- 0.0.X
+$ git add .
+$ git commit -m "v0.0.X"
+$ npm run publish
 ```
 
 ### Linting and Code Formatting

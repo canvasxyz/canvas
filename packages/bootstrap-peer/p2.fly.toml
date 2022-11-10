@@ -1,0 +1,26 @@
+# fly.toml file generated for canvas-bootstrap-peer on 2022-10-04T02:00:31-04:00
+
+app = "canvas-bootstrap-p2"
+kill_signal = "SIGINT"
+kill_timeout = 30
+processes = []
+
+[build]
+  builder = "heroku/buildpacks:20"
+
+[env]
+  PORT = "4002"
+  BOOTSTRAP_LIST = "/dns4/canvas-bootstrap-p0.fly.dev/tcp/4002/ws/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o /dns4/canvas-bootstrap-p1.fly.dev/tcp/4002/ws/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT"
+
+[[services]]
+  internal_port = 4002
+  processes = ["app"]
+  protocol = "tcp"
+  [services.concurrency]
+    hard_limit = 100
+    soft_limit = 100
+    type = "connections"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 4002
