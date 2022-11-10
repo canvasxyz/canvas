@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "canvas-next",
     "build": "next build",
-    "start": "NODE_ENV=production canvas-next",
+    "start": "NODE_ENV=production CANVAS_PATH=./ canvas-next",
     "lint": "next lint"
   },
   "dependencies": {
