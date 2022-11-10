@@ -18,6 +18,8 @@ import { CANVAS_HOME, getPeerId, getProviders, SOCKET_FILENAME, SOCKET_PATH, sta
 import { handleAction, handleRoute, handleSession } from "../api.js"
 
 import { ethers } from "ethers"
+import winston from "winston"
+import expressWinston from "express-winston"
 
 export const command = "daemon"
 export const desc = "Start the canvas daemon"
@@ -128,6 +130,21 @@ class Daemon {
 		providers: Record<string, ethers.providers.JsonRpcProvider>,
 		blockResolver: BlockResolver
 	) {
+		this.api.use(
+			expressWinston.logger({
+				transports: [new winston.transports.Console()],
+				format: winston.format.simple(),
+				meta: true, // optional: control whether you want to log the meta data about the request (default to true)
+				msg: "HTTP {{req.method}} {{req.url}}", // optional: customize the default logging message. E.g. "{{res.statusCode}} {{req.method}} {{res.responseTime}}ms {{req.url}}"
+				expressFormat: true, // Use the default Express/morgan request formatting. Enabling this will override any msg if true. Will only output colors with colorize set to true
+				colorize: false, // Color the text and status code, using the Express/morgan color palette (text: gray, status: default green, 3XX cyan, 4XX yellow, 5XX red).
+				ignoreRoute: function (req, res) {
+					// /app/ is noisy, so don't log it
+					return req.path == "/app/" && res.statusCode == StatusCodes.OK
+					// return false
+				}, // optional: allows to skip some log messages based on request and/or response
+			})
+		)
 		this.api.use(bodyParser.json())
 		this.api.use(cors({ exposedHeaders: ["ETag", "Link"] }))
 
