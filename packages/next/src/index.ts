@@ -65,6 +65,15 @@ const prefix = `/app/${core.cid.toString()}`
 
 const canvasRouteHandler = express()
 canvasRouteHandler.use(bodyParser.json())
+canvasRouteHandler.get("/app/:name", (req, res) => {
+	const { name } = req.params
+	if (name !== core.cid.toString()) {
+		return res.status(StatusCodes.NOT_FOUND).end()
+	}
+
+	handleRoute(core, [], req, res)
+})
+
 canvasRouteHandler.get("/app/:name/*", (req, res) => {
 	const { name } = req.params
 	if (name !== core.cid.toString()) {
