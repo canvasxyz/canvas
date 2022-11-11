@@ -281,6 +281,24 @@ class Daemon {
 			})
 		})
 
+		this.api.get("/app/:name/actions", (req, res) => {
+			const { name } = req.params
+
+			this.queue.add(async () => {
+				const core = this.cores.get(name)
+				if (core === undefined) {
+					return res.status(StatusCodes.NOT_FOUND).end()
+				}
+
+				const actions = []
+				for await (const entry of core.messageStore.getActionStream()) {
+					actions.push(entry)
+				}
+
+				return res.status(StatusCodes.OK).json(actions)
+			})
+		})
+
 		this.api.post("/app/:name/actions", (req, res) => {
 			const { name } = req.params
 
@@ -323,7 +341,6 @@ class Daemon {
 				const query = `SELECT * FROM ${modelName} ORDER BY updated_at DESC LIMIT 10`
 				// @ts-ignore
 				const rows = core.modelStore.database.prepare(query).all()
-				console.log(rows)
 
 				return res.status(StatusCodes.OK).json(rows)
 			})
