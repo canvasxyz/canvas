@@ -146,7 +146,17 @@ class Daemon {
 					if (fs.existsSync(specPath)) {
 						const spec = fs.readFileSync(specPath, "utf-8")
 						const cid = await Hash.of(spec)
-						apps[name] = { uri: `ipfs://${cid}`, cid, status }
+
+						const core = this.cores.get(name)
+
+						apps[name] = {
+							uri: `ipfs://${cid}`,
+							// @ts-ignore
+							models: core && core.vm.models,
+							actionParameters: core && core.vm.actionParameters,
+							cid,
+							status,
+						}
 					}
 				}
 
@@ -210,35 +220,43 @@ class Daemon {
 		this.api.post("/app/:name/start", async (req, res) => {
 			const { name } = req.params
 
-			this.queue.add(async () => {
-				if (this.cores.has(name)) {
-					return res.status(StatusCodes.CONFLICT).end()
-				}
+			// this.queue.add(async () => {
+			if (this.cores.has(name)) {
+				return res.status(StatusCodes.CONFLICT).end()
+			}
 
-				const directory = path.resolve(CANVAS_HOME, name)
-				if (!fs.existsSync(directory)) {
-					return res.status(StatusCodes.NOT_FOUND).end()
-				}
+			const directory = path.resolve(CANVAS_HOME, name)
+			if (!fs.existsSync(directory)) {
+				return res.status(StatusCodes.NOT_FOUND).end()
+			}
 
-				const specPath = path.resolve(CANVAS_HOME, name, constants.SPEC_FILENAME)
-				if (!fs.existsSync(specPath)) {
-					return res.status(StatusCodes.NOT_FOUND).end()
-				}
+			const specPath = path.resolve(CANVAS_HOME, name, constants.SPEC_FILENAME)
+			if (!fs.existsSync(specPath)) {
+				return res.status(StatusCodes.NOT_FOUND).end()
+			}
 
-				const spec = fs.readFileSync(specPath, "utf-8")
-				const hash = await Hash.of(spec)
-				const uri = `ipfs://${hash}`
+			const spec = fs.readFileSync(specPath, "utf-8")
+			let hash
+			try {
+				hash = await Hash.of(spec)
+			} catch (err) {
+				console.log(spec)
+				const message = err instanceof Error ? err.message : (err as any).toString()
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
+			}
 
-				try {
-					const core = await Core.initialize({ directory, uri, spec, libp2p, providers, blockResolver })
-					this.cores.set(name, core)
-					console.log(`[canvas-cli] Started ${core.uri}`)
-					res.status(StatusCodes.OK).end()
-				} catch (err) {
-					const message = err instanceof Error ? err.message : (err as any).toString()
-					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
-				}
-			})
+			const uri = `ipfs://${hash}`
+
+			try {
+				const core = await Core.initialize({ directory, uri, spec, libp2p, providers, blockResolver })
+				this.cores.set(name, core)
+				console.log(`[canvas-cli] Started ${core.uri}`)
+				res.status(StatusCodes.OK).end()
+			} catch (err) {
+				const message = err instanceof Error ? err.message : (err as any).toString()
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
+			}
+			// })
 		})
 
 		this.api.post("/app/:name/stop", (req, res) => {
@@ -286,6 +304,28 @@ class Daemon {
 				}
 
 				await handleSession(core, req, res)
+			})
+		})
+
+		this.api.get("/app/:name/models/:modelName", (req, res) => {
+			const { modelName, name } = req.params
+
+			this.queue.add(async () => {
+				const core = this.cores.get(name)
+				if (core === undefined) {
+					return res.status(StatusCodes.NOT_FOUND).end()
+				}
+				const model = core.vm.models[modelName]
+				if (model === undefined) {
+					return res.status(StatusCodes.NOT_FOUND).end()
+				}
+
+				const query = `SELECT * FROM ${modelName} ORDER BY updated_at DESC LIMIT 10`
+				// @ts-ignore
+				const rows = core.modelStore.database.prepare(query).all()
+				console.log(rows)
+
+				return res.status(StatusCodes.OK).json(rows)
 			})
 		})
 
