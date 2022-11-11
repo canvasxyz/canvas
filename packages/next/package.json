@@ -5,10 +5,11 @@
   "type": "module",
   "main": "dist/index.js",
   "files": [
-    "dist"
+    "dist",
+    "index.js"
   ],
   "bin": {
-    "canvas-next": "./dist/index.js"
+    "canvas-next": "./index.js"
   },
   "engines": {
     "node": ">=16.0.0"
