@@ -312,6 +312,24 @@ class Daemon {
 			})
 		})
 
+		this.api.get("/app/:name/sessions", (req, res) => {
+			const { name } = req.params
+
+			this.queue.add(async () => {
+				const core = this.cores.get(name)
+				if (core === undefined) {
+					return res.status(StatusCodes.NOT_FOUND).end()
+				}
+
+				const sessions = []
+				for await (const entry of core.messageStore.getSessionStream()) {
+					sessions.push(entry)
+				}
+
+				return res.status(StatusCodes.OK).json(sessions)
+			})
+		})
+
 		this.api.post("/app/:name/sessions", (req, res) => {
 			const { name } = req.params
 
