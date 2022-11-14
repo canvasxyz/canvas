@@ -84,6 +84,11 @@ Bump the version, explicitly passing a `0.0.X` version number into the NPM scrip
 
 ```
 $ npm run version -- 0.0.X
+```
+
+> ⚠️ There is a bug in the NPM CLI that causes some workspace packages to not update their dependencies to other workspace packages to the new version. Until we come up with a workaround, you have to manually check the package.json dependencies of all workspace packages in both `packages/` and `examples/` and bump their dependencies to your new `0.0.X` by hand.
+
+```
 $ git add .
 $ git commit -m "v0.0.X"
 $ npm run publish
