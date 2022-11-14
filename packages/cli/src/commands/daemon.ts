@@ -16,6 +16,7 @@ import { BlockCache, Core, getLibp2pInit, constants, BlockResolver } from "@canv
 
 import { CANVAS_HOME, getPeerId, getProviders, SOCKET_FILENAME, SOCKET_PATH, startSignalServer } from "../utils.js"
 import { handleAction, handleRoute, handleSession } from "../api.js"
+import { installSpec } from "./install.js"
 
 import { ethers } from "ethers"
 import winston from "winston"
@@ -162,7 +163,17 @@ class Daemon {
 					if (fs.existsSync(specPath)) {
 						const spec = fs.readFileSync(specPath, "utf-8")
 						const cid = await Hash.of(spec)
-						apps[name] = { uri: `ipfs://${cid}`, cid, status }
+
+						const core = this.cores.get(name)
+
+						apps[name] = {
+							uri: `ipfs://${cid}`,
+							// @ts-ignore
+							models: core && core.vm.models,
+							actionParameters: core && core.vm.actionParameters,
+							cid,
+							status,
+						}
 					}
 				}
 
@@ -210,6 +221,19 @@ class Daemon {
 			})
 		})
 
+		this.api.post("/app/install", async (req, res) => {
+			const { spec } = req.body
+
+			const multihash = await Hash.of(spec)
+			console.log(`installing app with hash ${multihash}`)
+
+			await installSpec(spec)
+
+			console.log(`installed app with hash ${multihash}`)
+
+			res.status(StatusCodes.CREATED).end()
+		})
+
 		this.api.post("/app/:name/start", async (req, res) => {
 			const { name } = req.params
 
@@ -229,7 +253,15 @@ class Daemon {
 				}
 
 				const spec = fs.readFileSync(specPath, "utf-8")
-				const hash = await Hash.of(spec)
+				let hash
+				try {
+					hash = await Hash.of(spec)
+				} catch (err) {
+					console.log(spec)
+					const message = err instanceof Error ? err.message : (err as any).toString()
+					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
+				}
+
 				const uri = `ipfs://${hash}`
 
 				try {
@@ -266,6 +298,24 @@ class Daemon {
 			})
 		})
 
+		this.api.get("/app/:name/actions", (req, res) => {
+			const { name } = req.params
+
+			this.queue.add(async () => {
+				const core = this.cores.get(name)
+				if (core === undefined) {
+					return res.status(StatusCodes.NOT_FOUND).end()
+				}
+
+				const actions = []
+				for await (const entry of core.messageStore.getActionStream()) {
+					actions.push(entry)
+				}
+
+				return res.status(StatusCodes.OK).json(actions)
+			})
+		})
+
 		this.api.post("/app/:name/actions", (req, res) => {
 			const { name } = req.params
 
@@ -279,6 +329,24 @@ class Daemon {
 			})
 		})
 
+		this.api.get("/app/:name/sessions", (req, res) => {
+			const { name } = req.params
+
+			this.queue.add(async () => {
+				const core = this.cores.get(name)
+				if (core === undefined) {
+					return res.status(StatusCodes.NOT_FOUND).end()
+				}
+
+				const sessions = []
+				for await (const entry of core.messageStore.getSessionStream()) {
+					sessions.push(entry)
+				}
+
+				return res.status(StatusCodes.OK).json(sessions)
+			})
+		})
+
 		this.api.post("/app/:name/sessions", (req, res) => {
 			const { name } = req.params
 
@@ -289,6 +357,27 @@ class Daemon {
 				}
 
 				await handleSession(core, req, res)
+			})
+		})
+
+		this.api.get("/app/:name/models/:modelName", (req, res) => {
+			const { modelName, name } = req.params
+
+			this.queue.add(async () => {
+				const core = this.cores.get(name)
+				if (core === undefined) {
+					return res.status(StatusCodes.NOT_FOUND).end()
+				}
+				const model = core.vm.models[modelName]
+				if (model === undefined) {
+					return res.status(StatusCodes.NOT_FOUND).end()
+				}
+
+				const query = `SELECT * FROM ${modelName} ORDER BY updated_at DESC LIMIT 10`
+				// @ts-ignore
+				const rows = core.modelStore.database.prepare(query).all()
+
+				return res.status(StatusCodes.OK).json(rows)
 			})
 		})
 
