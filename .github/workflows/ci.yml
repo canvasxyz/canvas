@@ -28,27 +28,10 @@ jobs:
       - name: Run tests
         run: npm run test
 
-  examples:
-    name: Build examples
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Setup Node
-        uses: actions/setup-node@v1
-        with:
-          node-version: 16.x
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build Next.js
+      - name: Build Next.js example
         run: npm run build --workspace=@canvas-js/example-chat-next
 
-      - name: Build Webpack
+      - name: Build Webpack example
         run: npm run build --workspace=@canvas-js/example-chat-webpack
 
       - name: Run Next.js
