@@ -27,8 +27,7 @@ jobs:
       - name: Run tests
         run: npm run test
 
-jobs:
-  test:
+  examples:
     name: Build examples
     runs-on: ubuntu-latest
 
