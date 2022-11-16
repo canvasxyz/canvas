@@ -41,7 +41,7 @@ jobs:
         run: npm run build --workspace=@canvas-js/example-chat-webpack
 
       - name: Ensure Next.js example starts
-        run: npm run start --workspace=@canvas-js/example-chat-next & sleep 15 ; kill $!
+        run: npm run start --workspace=@canvas-js/example-chat-next & sleep 10 ; kill $!
 
       - name: Ensure Webpack example starts
-        run: npm run start --workspace=@canvas-js/example-chat-webpack  & sleep 15 ; kill $!
+        run: npm run dev --workspace=@canvas-js/example-chat-webpack & sleep 10 ; kill $!
