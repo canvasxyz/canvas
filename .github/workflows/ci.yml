@@ -48,8 +48,3 @@ jobs:
 
       - name: Ensure Next.js example starts
         run: npm run start --workspace=@canvas-js/example-chat-next & sleep 10 ; kill $!
-
-      - name: Ensure Webpack example starts
-        run: |
-          npm install -g @canvas-js/cli
-          npm run start --workspace=@canvas-js/example-chat-webpack & sleep 10 ; kill $!
