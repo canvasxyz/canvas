@@ -19,10 +19,19 @@ jobs:
           node-version: 16.x
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build
         run: npm run build
 
       - name: Run tests
         run: npm run test
+
+      - name: Build Next.js example
+        run: npm run build --workspace=@canvas-js/example-chat-next
+
+      - name: Build Webpack example
+        run: npm run build --workspace=@canvas-js/example-chat-webpack
+
+      - name: Ensure Next.js example starts
+        run: npm run start --workspace=@canvas-js/example-chat-next & sleep 10 ; kill $!
