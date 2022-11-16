@@ -17,10 +17,16 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 16.x
-          cache: 'npm'
+
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: npm-
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build
         run: npm run build
@@ -34,8 +40,8 @@ jobs:
       - name: Build Webpack example
         run: npm run build --workspace=@canvas-js/example-chat-webpack
 
-      - name: Run Next.js
-        run: npm run start --workspace=@canvas-js/example-chat-next
+      - name: Ensure Next.js example starts
+        run: npm run start --workspace=@canvas-js/example-chat-next & sleep 15 ; kill $!
 
-      - name: Run Webpack
-        run: npm run start --workspace=@canvas-js/example-chat-webpack
+      - name: Ensure Webpack example starts
+        run: npm run start --workspace=@canvas-js/example-chat-webpack  & sleep 15 ; kill $!
