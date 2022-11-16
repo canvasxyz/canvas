@@ -7,7 +7,7 @@ import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
 
-import * as RPC from "../../rpc/sync/index.js"
+import RPC from "../../rpc/sync/index.cjs"
 
 import { toBuffer } from "../utils.js"
 
