@@ -17,6 +17,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 16.x
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
@@ -39,6 +40,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 16.x
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
@@ -48,3 +50,9 @@ jobs:
 
       - name: Build Webpack
         run: npm run build --workspace=@canvas-js/example-chat-webpack
+
+      - name: Run Next.js
+        run: npm run start --workspace=@canvas-js/example-chat-next
+
+      - name: Run Webpack
+        run: npm run start --workspace=@canvas-js/example-chat-webpack
