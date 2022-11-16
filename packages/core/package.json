@@ -15,8 +15,8 @@
 	],
 	"scripts": {
 		"generate-rpc": "npm run generate-rpc-js && npm run generate-rpc-ts",
-		"generate-rpc-js": "pbjs ./rpc/sync/index.proto -t static-module -o ./rpc/sync/index.js",
-		"generate-rpc-ts": "pbts ./rpc/sync/index.js -o ./rpc/sync/index.d.ts",
+		"generate-rpc-js": "pbjs ./rpc/sync/index.proto -t static-module -w commonjs -o ./rpc/sync/index.cjs",
+		"generate-rpc-ts": "pbjs -t static-module ./rpc/sync/index.proto | pbts -o ./rpc/sync/index.d.cts -",
 		"test": "ava"
 	},
 	"dependencies": {
