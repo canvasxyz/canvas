@@ -5,6 +5,7 @@ import fs from "node:fs"
 import yargs from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
+import serveStatic from "serve-static"
 import stoppable from "stoppable"
 import express, { Request, Response } from "express"
 import bodyParser from "body-parser"
@@ -63,9 +64,9 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "array",
 			desc: "Provide an RPC endpoint for reading on-chain data",
 		})
-		.option("prefix", {
+		.option("static", {
 			type: "string",
-			desc: "Attach a prefix before all API routes",
+			desc: "Serve a static directory from /, and API routes from /api",
 		})
 
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
@@ -138,13 +139,10 @@ export async function handler(args: Args) {
 
 	if (directory === null) {
 		console.log(
-			chalk.yellow(
-				`✦ ${chalk.bold("Using development mode.")} Actions will be signed with the spec's filename, not IPFS hash.`
-			)
+			chalk.yellow(`✦ ${chalk.bold("Using development mode.")} Actions will be signed with the spec filename.`)
 		)
-		console.log(chalk.yellow(`✦ ${chalk.bold("Using in-memory model database.")} Data will not be saved between runs.`))
-		console.log(chalk.yellow(`✦ To persist data, install the spec with:`))
-		console.log(chalk.yellow(`  canvas install ${args.spec}`))
+		console.log(chalk.yellow(`✦ ${chalk.bold("Using in-memory database.")} Data will be lost on restart.`))
+		console.log(chalk.yellow(`✦ ${chalk.bold("To persist data, install the spec:")} canvas install ${args.spec}`))
 		console.log("")
 	}
 
@@ -205,15 +203,28 @@ export async function handler(args: Args) {
 	api.post("/sessions", (req, res) => handleSession(core, req, res))
 
 	const app = express()
-	const apiPath = args.prefix ? `/${args.prefix}` : "/"
+	const apiPath = args.static ? `/api` : "/"
 	app.use(bodyParser.json())
 	app.use(cors({ exposedHeaders: ["ETag", "Link"] }))
 	app.use(apiPath, api)
 
-	const apiPrefix = args.prefix ? `${args.prefix}/` : ""
+	if (args.static && !/^(.\/)?\w[\w/]*$/.test(args.static)) {
+		throw new Error("Invalid directory for static files")
+	}
+	if (args.static && !fs.existsSync(args.static)) {
+		throw new Error("Invalid directory for static files (path not found)")
+	}
+	if (args.static) {
+		app.use(serveStatic(args.static, { index: ["index.html", "index.htm"] }))
+	}
+
+	const apiPrefix = args.static ? `api/` : ""
 	const server = stoppable(
 		app.listen(args.port, () => {
-			console.log(`Serving ${core.uri} on port ${args.port}:`)
+			console.log(`Serving ${core.uri}:`)
+			if (typeof args.static === "string") {
+				console.log(`└ GET http://localhost:${args.port}/`)
+			}
 			console.log(`└ GET http://localhost:${args.port}${apiPath}`)
 			for (const name of Object.keys(core.vm.routes)) {
 				console.log(`└ GET http://localhost:${args.port}/${apiPrefix}${name.slice(1)}`)
