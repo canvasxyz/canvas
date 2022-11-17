@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@canvas-js/core": "0.0.27",
+    "@canvas-js/interfaces": "0.0.27",
     "@canvas-js/hooks": "0.0.27",
     "@canvas-js/next": "0.0.27",
     "@types/react": "^18.0.9",
