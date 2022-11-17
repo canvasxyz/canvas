@@ -15,7 +15,7 @@ const root = ReactDOM.createRoot(document.getElementById("root")!)
 root.render(
 	<React.StrictMode>
 		<WagmiConfig client={client}>
-			<Canvas host={process.env.BUNDLER === "server" ? "http://127.0.0.1:8000" : "/"}>
+			<Canvas host={process.env.BUNDLER === "server" ? "http://127.0.0.1:8000" : "/api"}>
 				<App />
 			</Canvas>
 		</WagmiConfig>
