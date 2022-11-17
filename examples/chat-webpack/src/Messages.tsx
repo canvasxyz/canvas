@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 
+import { useEnsName } from "wagmi"
 import { useCanvas, useRoute } from "@canvas-js/hooks"
 
 type Post = {
 	id: string
-	from_id: string
+	from_id: `0x${string}`
 	content: string
 	updated_at: number
 	likes: number
@@ -89,8 +90,12 @@ export const Messages: React.FC<{}> = ({}) => {
 
 const Post: React.FC<Post> = ({ from_id, content, updated_at, likes }) => {
 	const address = `${from_id.slice(0, 5)}…${from_id.slice(-4)}`
+	// use wagmi's internal cache for ens names
+	const { data, isError, isLoading } = useEnsName({ address: from_id })
+
 	return (
 		<li>
+			{data && <span className="address address-ens">[{data}]</span>}
 			<span className="address">{address} &gt;</span> {content}
 		</li>
 	)

@@ -65,3 +65,8 @@ span.address {
 	width: 68px;
 	color: #777;
 }
+
+span.address-ens {
+  color: #777;
+	margin-right: 3px;
+}
