@@ -5,7 +5,7 @@ import { useCanvas, useRoute } from "@canvas-js/hooks"
 
 type Post = {
 	id: string
-	from_id: string
+	from_id: `0x${string}`
 	content: string
 	updated_at: number
 }
