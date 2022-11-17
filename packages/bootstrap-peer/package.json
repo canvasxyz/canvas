@@ -1,7 +1,7 @@
 {
   "name": "@canvas-js/bootstrap-peer",
   "private": true,
-  "version": "0.0.24",
+  "version": "0.0.25",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "index.js",
