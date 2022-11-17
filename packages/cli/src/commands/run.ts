@@ -63,6 +63,10 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "array",
 			desc: "Provide an RPC endpoint for reading on-chain data",
 		})
+		.option("prefix", {
+			type: "string",
+			desc: "Attach a prefix before all API routes",
+		})
 
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
@@ -192,27 +196,30 @@ export async function handler(args: Args) {
 		console.log(chalk.green(`[canvas-core] Successfully replayed all ${i} entries from the action log.`))
 	}
 
-	const api = express()
-	api.use(bodyParser.json())
-	api.use(cors({ exposedHeaders: ["ETag", "Link"] }))
-
+	const api = express.Router()
 	api.get("*", (req: Request, res: Response) => {
 		const pathComponents = req.path === "/" ? [] : req.path.slice(1).split("/")
 		handleRoute(core, pathComponents, req, res)
 	})
-
 	api.post("/actions", (req, res) => handleAction(core, req, res))
 	api.post("/sessions", (req, res) => handleSession(core, req, res))
 
+	const app = express()
+	const apiPath = args.prefix ? `/${args.prefix}` : "/"
+	app.use(bodyParser.json())
+	app.use(cors({ exposedHeaders: ["ETag", "Link"] }))
+	app.use(apiPath, api)
+
+	const apiPrefix = args.prefix ? `${args.prefix}/` : ""
 	const server = stoppable(
-		api.listen(args.port, () => {
+		app.listen(args.port, () => {
 			console.log(`Serving ${core.uri} on port ${args.port}:`)
-			console.log(`└ GET http://localhost:${args.port}/`)
+			console.log(`└ GET http://localhost:${args.port}${apiPath}`)
 			for (const name of Object.keys(core.vm.routes)) {
-				console.log(`└ GET http://localhost:${args.port}${name}`)
+				console.log(`└ GET http://localhost:${args.port}/${apiPrefix}${name.slice(1)}`)
 			}
-			console.log("└ POST /actions")
-			console.log("└ POST /sessions")
+			console.log(`└ POST /${apiPrefix}actions`)
+			console.log(`└ POST /${apiPrefix}sessions`)
 		}),
 		0
 	)
