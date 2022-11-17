@@ -15,9 +15,9 @@ import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 import { toHex } from "./utils.js"
 
 const bootstrapList = [
-	"/dnsaddr/bootstrap.canvas.xyz/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o",
-	"/dnsaddr/bootstrap.canvas.xyz/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT",
-	"/dnsaddr/bootstrap.canvas.xyz/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
+	"/ip4/137.66.12.223/tcp/4002/ws/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o",
+	"/ip4/137.66.11.73/tcp/4002/ws/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT",
+	"/ip4/137.66.27.235/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
 ]
 
 const announceFilter = (multiaddrs: Multiaddr[]) =>
