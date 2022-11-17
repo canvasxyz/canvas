@@ -4,10 +4,8 @@
   "version": "0.0.25",
   "type": "module",
   "scripts": {
-    "appstore": "npm run dev --workspace=@canvas-js/example-app-store",
-    "dev-example-chat": "GENERATE_SOURCEMAP=false npm run dev --workspace=@canvas-js/example-chat-client",
     "dev": "tsc --build --watch",
-    "build": "tsc --build",
+    "build": "tsc --build && npm run build --workspace=@canvas-js/example-chat-next --workspace=@canvas-js/example-chat-webpack",
     "clean": "tsc --build --clean",
     "version": "npm version --git-tag-version=false --workspaces=true --include-workspace-root=true --workspaces-update=true --save --save-exact",
     "publish": "npm publish --workspace=packages --access public",
