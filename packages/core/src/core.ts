@@ -134,6 +134,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				libp2p.pubsub.subscribe(this.uri)
 				libp2p.pubsub.addEventListener("message", this.handleMessage)
 				if (this.options.verbose) {
+					console.log(`[canvas-core] Using PeerId ${libp2p.peerId.toString()}`)
 					console.log(`[canvas-core] Subscribed to pubsub topic ${this.uri}`)
 				}
 
