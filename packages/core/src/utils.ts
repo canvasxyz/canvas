@@ -96,33 +96,50 @@ export const bootstrapList = [
 	"/ip4/137.66.27.235/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
 ]
 
-export const wait = (options: { delay: number; signal: AbortSignal }) =>
-	new Promise<void>((resolve, reject) => {
+export class AbortError extends Error {
+	constructor(readonly event: Event) {
+		super("Received abort signal")
+	}
+}
+
+export async function wait(options: { interval: number; signal: AbortSignal }) {
+	await new Promise<void>((resolve, reject) => {
 		let timeout: NodeJS.Timeout | undefined = undefined
 
 		const abort = (event: Event) => {
 			clearTimeout(timeout)
-			reject(event)
+			reject(new AbortError(event))
 		}
 
 		options.signal.addEventListener("abort", abort)
 		timeout = setTimeout(() => {
 			options.signal.removeEventListener("abort", abort)
 			resolve()
-		}, options.delay)
+		}, options.interval)
 	})
+}
+
+async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, T>> {
+	try {
+		const value = await f()
+		return { done: true, value }
+	} catch (err) {
+		if (err instanceof Error) {
+			return { done: false, value: err }
+		} else {
+			throw err
+		}
+	}
+}
 
 export async function retry<T>(
-	f: (signal: AbortSignal) => Promise<T>,
-	handleError: (err: any, n: number) => void,
-	options: { signal: AbortSignal; delay: number }
+	f: () => Promise<T>,
+	handleError: (err: Error, n: number) => void,
+	options: { interval: number; signal: AbortSignal }
 ): Promise<T> {
 	let n = 0
 	while (true) {
-		const result: IteratorResult<any, T> = await f(options.signal)
-			.then((value) => ({ done: true, value }))
-			.catch((err) => ({ done: false, value: err }))
-
+		const result = await getResult(f)
 		if (result.done) {
 			return result.value
 		} else if (options.signal.aborted) {
