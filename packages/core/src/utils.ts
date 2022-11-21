@@ -90,12 +90,6 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	return { uri: `ipfs://${cid}`, spec }
 }
 
-export const bootstrapList = [
-	"/ip4/137.66.12.223/tcp/4002/ws/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o",
-	"/ip4/137.66.11.73/tcp/4002/ws/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT",
-	"/ip4/137.66.27.235/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
-]
-
 export class AbortError extends Error {
 	constructor(readonly event: Event) {
 		super("Received abort signal")
