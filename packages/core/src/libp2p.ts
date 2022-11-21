@@ -2,7 +2,6 @@ import { createHash } from "node:crypto"
 
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
-import type { Multiaddr } from "@multiformats/multiaddr"
 import { webSockets } from "@libp2p/websockets"
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
@@ -11,6 +10,7 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { toHex } from "./utils.js"
 
@@ -19,6 +19,10 @@ const bootstrapList = [
 	"/ip4/137.66.11.73/tcp/4002/ws/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT",
 	"/ip4/137.66.27.235/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
 ]
+
+const IPColocationFactorWhitelist = new Set(
+	bootstrapList.map(multiaddr).map((multiaddr) => multiaddr.nodeAddress().address)
+)
 
 const announceFilter = (multiaddrs: Multiaddr[]) =>
 	multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr))
@@ -55,6 +59,7 @@ export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]
 				hash.update(msg.data || new Uint8Array([]))
 				return "0x" + hash.digest("hex")
 			},
+			scoreParams: { IPColocationFactorWhitelist },
 		}),
 	}
 }
