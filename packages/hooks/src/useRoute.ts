@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useContext } from "react"
+import { match } from "node-match-path"
 
 import { ModelValue } from "@canvas-js/interfaces"
 
@@ -47,7 +48,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 	const url = useMemo(() => {
 		if (applicationData === null) {
 			return null
-		} else if (applicationData.routes.includes(route)) {
+		} else if (applicationData.routes.some((pattern) => match(pattern, route))) {
 			return getRouteURL(host, route, params)
 		} else {
 			throw new Error(`${applicationData.uri} has no route ${JSON.stringify(route)}`)
