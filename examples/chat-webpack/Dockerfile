@@ -28,9 +28,9 @@ ENV NEXT_TELEMETRY_DISABLED 1
 ENV CANVAS_HOME /data
 
 RUN npm cache clean --force
-RUN npm install -g @canvas-js/cli ipfs-only-hash
+RUN npm install -g ipfs-only-hash
 
 COPY --from=builder /app ./
 
-RUN canvas install spec.canvas.js
-CMD canvas run $(ipfs-only-hash spec.canvas.js --cidVersion 0) --unchecked --static dist
+RUN npx canvas install spec.canvas.js
+CMD npx canvas run $(ipfs-only-hash spec.canvas.js --cidVersion 0) --unchecked --static dist
