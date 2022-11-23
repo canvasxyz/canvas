@@ -23,7 +23,7 @@ export default function Index({}) {
 	const { isLoading, error, data } = useCanvas()
 
 	return (
-		<>
+		<main>
 			<Head>
 				<title>Canvas Example App</title>
 				<meta name="viewport" content="initial-scale=1.0, width=device-width" />
@@ -40,6 +40,6 @@ export default function Index({}) {
 				</div>
 				<Connect />
 			</div>
-		</>
+		</main>
 	)
 }
