@@ -111,7 +111,7 @@ declare function useCanvas(): {
 
 declare function useRoute<T = Record<string, null | boolean | number | string>>(
 	route: string,
-	params: Record<string, string>
+	params: Record<string, null | boolean | number | string>
 ): {
 	error: Error | null
 	data: T[] | null

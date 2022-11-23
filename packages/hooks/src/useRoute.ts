@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useContext } from "react"
-import { match } from "node-match-path"
 
 import { ModelValue } from "@canvas-js/interfaces"
 
@@ -7,20 +6,25 @@ import { CanvasContext } from "./CanvasContext.js"
 
 const routePattern = /^(\/:?[a-zA-Z0-9_]+)+$/
 
-function getRouteURL(host: string, route: string, params: Record<string, string>): string {
+function getRouteURL(host: string, route: string, params: Record<string, null | boolean | number | string>): string {
 	if (!routePattern.test(route)) {
 		throw new Error("invalid route")
 	}
 
-	const components = route.slice(1).split("/")
-	const componentValues = components.map((component) => {
+	const queryParams = { ...params }
+
+	const path = route.slice(1).split("/")
+	const pathComponents = path.map((component) => {
 		if (component.startsWith(":")) {
-			const param = params[component.slice(1)]
-			if (typeof param !== "string") {
-				throw new Error(`missing param ${component}`)
+			const value = params[component.slice(1)]
+			if (value === undefined) {
+				throw new Error(`missing parameter ${component}`)
+			} else if (typeof value !== "string") {
+				throw new Error(`URL parameter ${component} must be a string`)
 			}
 
-			return encodeURIComponent(param)
+			delete queryParams[component.slice(1)]
+			return encodeURIComponent(value)
 		} else {
 			return component
 		}
@@ -30,12 +34,21 @@ function getRouteURL(host: string, route: string, params: Record<string, string>
 		host = host.slice(0, -1)
 	}
 
-	return `${host}/${componentValues.join("/")}`
+	// add the remainder of the params object to as URI-encoded JSON query params
+	const queryComponents = Object.entries(queryParams).map(
+		([key, value]) => `${key}=${encodeURIComponent(JSON.stringify(value))}`
+	)
+
+	if (queryComponents.length > 0) {
+		return `${host}/${pathComponents.join("/")}?${queryComponents.join("&")}`
+	} else {
+		return `${host}/${pathComponents.join("/")}`
+	}
 }
 
 export function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
 	route: string,
-	params: Record<string, string>
+	params: Record<string, string | number | null>
 ): { error: Error | null; data: T[] | null } {
 	const { host, data: applicationData } = useContext(CanvasContext)
 	if (host === null) {
@@ -48,10 +61,11 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 	const url = useMemo(() => {
 		if (applicationData === null) {
 			return null
-		} else if (applicationData.routes.some((pattern) => match(pattern, route))) {
+		} else if (applicationData.routes.includes(route)) {
 			return getRouteURL(host, route, params)
 		} else {
-			throw new Error(`${applicationData.uri} has no route ${JSON.stringify(route)}`)
+			setError(new Error(`${applicationData.uri} has no route ${JSON.stringify(route)}`))
+			return null
 		}
 	}, [host, applicationData, route, params])
 
