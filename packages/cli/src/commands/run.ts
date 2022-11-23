@@ -203,6 +203,8 @@ export async function handler(args: Args) {
 	api.post("/sessions", (req, res) => handleSession(core, req, res))
 
 	const app = express()
+	app.set("query parser", "simple")
+
 	const apiPath = args.static ? `/api` : "/"
 	app.use(bodyParser.json())
 	app.use(cors({ exposedHeaders: ["ETag", "Link"] }))

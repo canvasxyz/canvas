@@ -131,6 +131,7 @@ class Daemon {
 		providers: Record<string, ethers.providers.JsonRpcProvider>,
 		blockResolver: BlockResolver
 	) {
+		this.api.set("query parser", "simple")
 		this.api.use(
 			expressWinston.logger({
 				transports: [new winston.transports.Console()],
@@ -368,15 +369,14 @@ class Daemon {
 				if (core === undefined) {
 					return res.status(StatusCodes.NOT_FOUND).end()
 				}
+
 				const model = core.vm.models[modelName]
 				if (model === undefined) {
 					return res.status(StatusCodes.NOT_FOUND).end()
 				}
 
 				const query = `SELECT * FROM ${modelName} ORDER BY updated_at DESC LIMIT 10`
-				// @ts-ignore
 				const rows = core.modelStore.database.prepare(query).all()
-
 				return res.status(StatusCodes.OK).json(rows)
 			})
 		})

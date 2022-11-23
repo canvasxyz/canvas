@@ -62,6 +62,7 @@ const nextAppHandler = nextApp.getRequestHandler()
 const prefix = `/app/${core.cid.toString()}`
 
 const canvasRouteHandler = express()
+canvasRouteHandler.set("query parser", "simple")
 canvasRouteHandler.use(bodyParser.json())
 canvasRouteHandler.get("/app/:name", (req, res) => {
 	const { name } = req.params

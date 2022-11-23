@@ -55,6 +55,18 @@ export async function handleRoute(core: Core, pathComponents: string[], req: Req
 		return res.status(StatusCodes.BAD_REQUEST).end()
 	}
 
+	for (const [key, value] of Object.entries(req.query)) {
+		if (key in params) {
+			continue
+		} else if (typeof value === "string") {
+			try {
+				params[key] = JSON.parse(value)
+			} catch (err) {
+				return res.status(StatusCodes.BAD_REQUEST).end(`Invalid query param: ${key}=${value}`)
+			}
+		}
+	}
+
 	if (req.headers.accept === "text/event-stream") {
 		// subscription response
 		res.setHeader("Cache-Control", "no-cache")
