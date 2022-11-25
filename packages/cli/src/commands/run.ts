@@ -5,17 +5,14 @@ import fs from "node:fs"
 import yargs from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
-import serveStatic from "serve-static"
 import stoppable from "stoppable"
-import express, { Request, Response } from "express"
-import bodyParser from "body-parser"
+import express from "express"
 import cors from "cors"
 import { createLibp2p } from "libp2p"
 
-import { Core, constants, actionType, getLibp2pInit, BlockCache } from "@canvas-js/core"
+import { Core, constants, actionType, getLibp2pInit, BlockCache, getAPI } from "@canvas-js/core"
 
 import { getProviders, confirmOrExit, parseSpecArgument, getPeerId } from "../utils.js"
-import { handleRoute, handleAction, handleSession } from "../api.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -194,40 +191,32 @@ export async function handler(args: Args) {
 		console.log(chalk.green(`[canvas-core] Successfully replayed all ${i} entries from the action log.`))
 	}
 
-	const api = express.Router()
-	api.get("*", (req: Request, res: Response) => {
-		const pathComponents = req.path === "/" ? [] : req.path.slice(1).split("/")
-		handleRoute(core, pathComponents, req, res)
-	})
-	api.post("/actions", (req, res) => handleAction(core, req, res))
-	api.post("/sessions", (req, res) => handleSession(core, req, res))
-
 	const app = express()
-	app.set("query parser", "simple")
+	app.use(cors())
 
-	const apiPath = args.static ? `/api` : "/"
-	app.use(bodyParser.json())
-	app.use(cors({ exposedHeaders: ["ETag", "Link"] }))
-	app.use(apiPath, api)
-
-	if (args.static && !/^(.\/)?\w[\w/]*$/.test(args.static)) {
-		throw new Error("Invalid directory for static files")
-	}
-	if (args.static && !fs.existsSync(args.static)) {
-		throw new Error("Invalid directory for static files (path not found)")
-	}
 	if (args.static) {
-		app.use(serveStatic(args.static, { index: ["index.html", "index.htm"] }))
+		if (!/^(.\/)?\w[\w/]*$/.test(args.static)) {
+			throw new Error("Invalid directory for static files")
+		} else if (!fs.existsSync(args.static)) {
+			throw new Error("Invalid directory for static files (path not found)")
+		}
+
+		app.use("/api", getAPI(core))
+		app.use(express.static(args.static))
+	} else {
+		app.use(getAPI(core))
 	}
 
 	const apiPrefix = args.static ? `api/` : ""
 	const server = stoppable(
 		app.listen(args.port, () => {
 			console.log(`Serving ${core.uri}:`)
-			if (typeof args.static === "string") {
-				console.log(`└ GET http://localhost:${args.port}/`)
+			if (args.static) {
+				console.log(`└ GET http://localhost:${args.port}/*`)
+				console.log(`└ GET http://localhost:${args.port}/api`)
+			} else {
+				console.log(`└ GET http://localhost:${args.port}`)
 			}
-			console.log(`└ GET http://localhost:${args.port}${apiPath}`)
 			for (const name of Object.keys(core.vm.routes)) {
 				console.log(`└ GET http://localhost:${args.port}/${apiPrefix}${name.slice(1)}`)
 			}

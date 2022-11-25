@@ -14,7 +14,6 @@
     "@canvas-js/core": "0.0.29",
     "@canvas-js/interfaces": "0.0.29",
     "better-sqlite3": "^7.6.2",
-    "body-parser": "^1.20.0",
     "chalk": "^5.0.1",
     "cors": "^2.8.5",
     "ethers": "^5.7.0",
@@ -28,14 +27,12 @@
     "multiformats": "^10.0.2",
     "p-queue": "^7.3.0",
     "prompts": "^2.4.2",
-    "serve-static": "^1.15.0",
     "stoppable": "^1.1.0",
     "undici": "^5.11.0",
     "winston": "^3.8.2",
     "yargs": "^17.5.1"
   },
   "devDependencies": {
-    "@types/body-parser": "^1.19.2",
     "@types/cors": "^2.8.12",
     "@types/express": "^4.17.13",
     "@types/prompts": "^2.0.14",

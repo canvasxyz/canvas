@@ -108,11 +108,3 @@ export function getDirectorySize(directory: string): number {
 		}
 	}, 0)
 }
-
-export function startSignalServer(requestListener: http.RequestListener, listen: string | number, signal: AbortSignal) {
-	return new Promise<void>((resolve, reject) => {
-		const server = stoppable(http.createServer(requestListener), 0)
-		signal.addEventListener("abort", () => server.stop())
-		server.listen(listen, () => resolve())
-	})
-}

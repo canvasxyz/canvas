@@ -1,11 +1,8 @@
-import fs from "node:fs"
-import path from "node:path"
-
 import yargs from "yargs"
 import chalk from "chalk"
 import { Agent, fetch } from "undici"
 
-import { CANVAS_HOME, SOCKET_PATH, cidPattern } from "../utils.js"
+import { SOCKET_PATH, cidPattern } from "../utils.js"
 import { StatusCodes } from "http-status-codes"
 
 export const command = "stop <spec>"
