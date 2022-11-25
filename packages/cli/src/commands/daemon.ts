@@ -8,6 +8,7 @@ import chalk from "chalk"
 import { createLibp2p, Libp2p } from "libp2p"
 import { StatusCodes } from "http-status-codes"
 import express from "express"
+import cors from "cors"
 import winston from "winston"
 import expressWinston from "express-winston"
 import stoppable from "stoppable"
@@ -140,6 +141,7 @@ class Daemon {
 		blockResolver: BlockResolver
 	) {
 		this.app.use(express.json())
+		this.app.use(cors())
 		this.app.use(
 			expressWinston.logger({
 				transports: [new winston.transports.Console()],
