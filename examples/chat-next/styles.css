@@ -67,7 +67,7 @@ main {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
-	width: 360px;
+	width: 380px;
 }
 
 span.address {

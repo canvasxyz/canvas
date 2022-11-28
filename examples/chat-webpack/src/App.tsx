@@ -23,6 +23,7 @@ export const App: React.FC<{}> = ({}) => {
 						) : data ? (
 							<>
 								<p>{data.uri}</p>
+								<p>Peer ID: {data.peerId}</p>
 							</>
 						) : (
 							<ErrorMessage error={error} />

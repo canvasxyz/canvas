@@ -26,7 +26,16 @@ export default function Index({}) {
 						<div className="title-bar-text">Application</div>
 					</div>
 					<div className="window-body">
-						{isLoading ? <p>Loading...</p> : data ? <p>{data.uri}</p> : <ErrorMessage error={error} />}
+						{isLoading ? (
+							<p>Loading...</p>
+						) : data ? (
+							<>
+								<p>{data.uri}</p>
+								<p>Peer ID: {data.peerId}</p>
+							</>
+						) : (
+							<ErrorMessage error={error} />
+						)}
 					</div>
 				</div>
 				<Connect />
