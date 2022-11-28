@@ -20,11 +20,14 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const host = props.host
 
 	useEffect(() => {
-		fetch(host)
-			.then((res) => res.json())
-			.then((data: ApplicationData) => setData(data))
-			.catch((err) => setError(err))
-			.finally(() => setIsLoading(false))
+		const id = setInterval(() => {
+			fetch(host)
+				.then((res) => res.json())
+				.then((data: ApplicationData) => setData(data))
+				.catch((err) => setError(err))
+				.finally(() => setIsLoading(false))
+		})
+		return () => clearInterval(id)
 	}, [host])
 
 	return (

@@ -542,7 +542,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal: queryController.signal })
 		} catch (err: any) {
 			// show all errors, if we receive an AggregateError
-			console.log(chalk.red(`[canvas-core] Failed to dial peer ${peer.toString()}`, err.errors ?? err))
+			console.log(chalk.red(`[canvas-core] Failed to sync with ${peer.toString()}`, err.errors ?? err))
 			return
 		} finally {
 			this.controller.signal.removeEventListener("abort", abort)
