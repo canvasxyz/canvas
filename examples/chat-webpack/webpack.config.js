@@ -1,7 +1,6 @@
 const path = require("path")
 const webpack = require("webpack")
 const CopyWebpackPlugin = require("copy-webpack-plugin")
-const NodePolyfillPlugin = require("node-polyfill-webpack-plugin")
 
 module.exports = {
 	mode: "development",
@@ -33,16 +32,11 @@ module.exports = {
 		outputModule: true,
 	},
 	plugins: [
-		new NodePolyfillPlugin(),
-		new CopyWebpackPlugin({
-			patterns: [{ from: "public" }],
-		}),
-		new webpack.DefinePlugin({
-			"process.env.BUNDLER": JSON.stringify(process.argv[2]),
-		}),
+		new CopyWebpackPlugin({ patterns: [{ from: "public" }] }),
+		new webpack.DefinePlugin({ "process.env.HOST": JSON.stringify(process.env.HOST) }),
 	],
 	devServer: {
-		static: [path.join(__dirname, "dist"), path.join(__dirname, "public")],
+		static: [path.join(__dirname, "public")],
 		hot: true,
 	},
 }
