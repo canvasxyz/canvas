@@ -16,7 +16,7 @@ import Hash from "ipfs-only-hash"
 import PQueue from "p-queue"
 import { ethers } from "ethers"
 
-import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, getAPI } from "@canvas-js/core"
+import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, getAPI, CoreOptions } from "@canvas-js/core"
 
 import { CANVAS_HOME, getPeerId, getProviders, SOCKET_FILENAME, SOCKET_PATH } from "../utils.js"
 import { installSpec } from "./install.js"
@@ -43,6 +43,11 @@ export const builder = (yargs: yargs.Argv) =>
 		.option("unchecked", {
 			type: "boolean",
 			desc: "Run the node in unchecked mode, without verifying block hashes",
+		})
+		.option("verbose", {
+			type: "boolean",
+			desc: "Enable verbose logging",
+			default: false,
 		})
 		.option("chain-rpc", {
 			type: "array",
@@ -81,7 +86,11 @@ export async function handler(args: Args) {
 
 	const blockCache = new BlockCache(providers)
 
-	const daemon = new Daemon(libp2p, providers, blockCache.getBlock)
+	const daemon = new Daemon(libp2p, providers, blockCache.getBlock, {
+		offline: args.offline,
+		unchecked: args.unchecked,
+		verbose: args.verbose,
+	})
 
 	const controller = new AbortController()
 	controller.signal.addEventListener("abort", async () => {
@@ -133,13 +142,16 @@ class Daemon {
 	public readonly app = express()
 
 	private readonly queue = new PQueue({ concurrency: 1 })
+	private readonly options: CoreOptions
 	private readonly apps = new Map<string, { core: Core; api: express.Express }>()
 
 	constructor(
 		libp2p: Libp2p | undefined,
 		providers: Record<string, ethers.providers.JsonRpcProvider>,
-		blockResolver: BlockResolver
+		blockResolver: BlockResolver,
+		options: CoreOptions
 	) {
+		this.options = options
 		this.app.use(express.json())
 		this.app.use(cors())
 		this.app.use(
@@ -271,7 +283,15 @@ class Daemon {
 				const uri = `ipfs://${hash}`
 
 				try {
-					const core = await Core.initialize({ directory, uri, spec, libp2p, providers, blockResolver })
+					const core = await Core.initialize({
+						directory,
+						uri,
+						spec,
+						libp2p,
+						providers,
+						blockResolver,
+						...this.options,
+					})
 					const api = getAPI(core, { exposeModels: true, exposeActions: true, exposeSessions: true })
 					this.apps.set(name, { core, api })
 					console.log(`[canvas-cli] Started ${core.uri}`)

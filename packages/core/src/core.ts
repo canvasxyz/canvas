@@ -118,6 +118,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	) {
 		super()
 
+		this.options = options
+
 		const modelDatabasePath = directory && path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
 		this.modelStore = new ModelStore(modelDatabasePath, vm.models, vm.routes, { verbose: options.verbose })
 
