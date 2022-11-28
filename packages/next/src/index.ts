@@ -43,20 +43,22 @@ async function getPeerID() {
 	}
 }
 
-if (typeof LISTEN === "string") {
+const listen = LISTEN ? Number(LISTEN) : 4044
+
+if (NODE_ENV === "production") {
 	const peerId = await getPeerID()
 
 	console.log("[canvas-next] Using PeerId", peerId.toString())
 
 	let libp2p: Libp2p
 	if (typeof ANNOUNCE === "string") {
-		libp2p = await createLibp2p(getLibp2pInit(peerId, Number(LISTEN), [ANNOUNCE]))
+		libp2p = await createLibp2p(getLibp2pInit(peerId, listen, [ANNOUNCE]))
 	} else {
-		libp2p = await createLibp2p(getLibp2pInit(peerId, Number(LISTEN)))
+		libp2p = await createLibp2p(getLibp2pInit(peerId, listen))
 	}
 
 	await libp2p.start()
-	console.log("[canvas-next] Started libp2p", directory)
+	console.log("[canvas-next] Started libp2p")
 
 	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, offline: false, verbose })
 	global.core.addEventListener("close", () => libp2p.stop())
