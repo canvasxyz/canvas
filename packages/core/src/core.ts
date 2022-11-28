@@ -31,7 +31,7 @@ import {
 } from "@canvas-js/interfaces"
 
 import { actionType, sessionType } from "./codecs.js"
-import { signalInvalidType, wait, retry, toHex, BlockResolver, AbortError } from "./utils.js"
+import { signalInvalidType, wait, retry, toHex, BlockResolver, AbortError, CacheMap } from "./utils.js"
 import { encodeMessage, decodeMessage, getActionHash, getSessionHash } from "./encoding.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
@@ -72,6 +72,9 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly messageStore: MessageStore
 	public readonly mst: okra.Tree | null = null
 	public readonly rpcServer: RPC.Server | null = null
+
+	public readonly recentGossipSubPeers: CacheMap<string, { lastSeen: number }>
+	public readonly recentBacklogSyncPeers: CacheMap<string, { lastSeen: number }>
 
 	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
 	private readonly controller = new AbortController()
@@ -125,6 +128,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		const messageDatabasePath = directory && path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
 		this.messageStore = new MessageStore(uri, messageDatabasePath, { verbose: options.verbose })
+
+		this.recentGossipSubPeers = new CacheMap(1000)
+		this.recentBacklogSyncPeers = new CacheMap(1000)
 
 		if (directory !== null) {
 			// offline cores might be run with a non-null directory; we still want to update the MST
@@ -468,8 +474,19 @@ export class Core extends EventEmitter<CoreEvents> {
 		try {
 			await this.wait(Core.syncDelay)
 			while (!this.controller.signal.aborted) {
+				// Also save recently seen gossipsub peers.
+				// TODO: move this to its own service, maybe when we start pruning
+				// gossipsub peers based on accepted/rejected actions in canvas
+				try {
+					for (const [i, peer] of this.libp2p?.pubsub.getSubscribers(this.uri).entries() ?? []) {
+						this.recentGossipSubPeers.set(peer.toString(), { lastSeen: +new Date() })
+					}
+				} catch (err) {
+					console.log(chalk.red(`[canvas-core] Failed to identify gossipsub peers.`))
+				}
+
 				const peers = await retry(
-					() => this.findPeers(),
+					() => this.findSyncPeers(),
 					(err) => console.log(chalk.red(`[canvas-core] Failed to locate application peers.`), err.message),
 					{ signal: this.controller.signal, interval: Core.syncRetryInterval }
 				)
@@ -482,6 +499,7 @@ export class Core extends EventEmitter<CoreEvents> {
 					if (this.options.verbose) {
 						console.log(chalk.green(`[canvas-core] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`))
 					}
+					this.recentBacklogSyncPeers.set(peer.toString(), { lastSeen: +new Date() })
 
 					await this.sync(peer)
 				}
@@ -500,12 +518,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	async findPeers(): Promise<PeerId[]> {
+	async findSyncPeers(): Promise<PeerId[]> {
 		if (this.libp2p === null) {
 			return []
 		}
-
-		// this.libp2p.pubsub.getSubscribers(this.uri)
 
 		const queryController = new AbortController()
 		const abort = () => queryController.abort()

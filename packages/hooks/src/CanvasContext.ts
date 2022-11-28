@@ -8,7 +8,10 @@ export interface ApplicationData {
 	component: string | null
 	actions: string[]
 	routes: string[]
-	peers: string[]
+	peers: {
+		gossip: Record<string, { lastSeen: number }>
+		backlog: Record<string, { lastSeen: number }>
+	}
 }
 
 export interface CanvasContextValue {

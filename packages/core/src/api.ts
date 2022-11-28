@@ -4,6 +4,7 @@ import chalk from "chalk"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
 
+import type { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { ModelValue } from "@canvas-js/interfaces"
 import { Core } from "./core.js"
 
@@ -23,8 +24,6 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		const actions = Object.keys(actionParameters)
 		const routes = Object.keys(routeParameters)
 
-		const peers = core.libp2p?.pubsub.getSubscribers(core.uri).map((peerId) => peerId.toString()) ?? []
-
 		res.json({
 			uri: core.uri,
 			cid: core.cid.toString(),
@@ -32,7 +31,12 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			component,
 			actions,
 			routes,
-			peers,
+			peers: core.libp2p
+				? {
+						gossip: Object.fromEntries(core.recentGossipSubPeers),
+						backlog: Object.fromEntries(core.recentBacklogSyncPeers),
+				  }
+				: null,
 		})
 	})
 

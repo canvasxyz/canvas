@@ -26,7 +26,7 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 				.then((data: ApplicationData) => setData(data))
 				.catch((err) => setError(err))
 				.finally(() => setIsLoading(false))
-		})
+		}, 2500)
 		return () => clearInterval(id)
 	}, [host])
 
