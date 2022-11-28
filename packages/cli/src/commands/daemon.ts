@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import yargs, { boolean } from "yargs"
+import yargs from "yargs"
 import prompts from "prompts"
 import chalk from "chalk"
 import { createLibp2p, Libp2p } from "libp2p"
@@ -86,8 +86,9 @@ export async function handler(args: Args) {
 	const blockCache = new BlockCache(providers)
 
 	const daemon = new Daemon(libp2p, providers, blockCache.getBlock, {
-		unchecked: args.unchecked,
 		offline: args.offline,
+		unchecked: args.unchecked,
+		verbose: args.verbose,
 	})
 
 	const controller = new AbortController()
