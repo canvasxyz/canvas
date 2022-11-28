@@ -6,9 +6,9 @@ import { CanvasContext } from "./CanvasContext.js"
 
 const routePattern = /^(\/:?[a-zA-Z0-9_]+)+$/
 
-function getRouteURL(host: string, route: string, params: Record<string, null | boolean | number | string>): string {
+function getRouteURL(host: string, route: string, params: Record<string, ModelValue>): string {
 	if (!routePattern.test(route)) {
-		throw new Error("invalid route")
+		throw new Error("Invalid route")
 	}
 
 	const queryParams = { ...params }
@@ -48,52 +48,70 @@ function getRouteURL(host: string, route: string, params: Record<string, null | 
 
 export function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
 	route: string,
-	params: Record<string, string | number | null>
-): { error: Error | null; data: T[] | null } {
+	params: Record<string, ModelValue>,
+	options: { subscribe?: boolean } = { subscribe: true }
+): { error: Error | null; isLoading: boolean; data: T[] | null } {
 	const { host, data: applicationData } = useContext(CanvasContext)
 	if (host === null) {
 		throw new Error("No API endpoint provided! you must provide an API endpoint in a parent Canvas element.")
 	}
 
+	const [isLoading, setIsLoading] = useState(true)
 	const [error, setError] = useState<Error | null>(null)
 	const [data, setData] = useState<T[] | null>(null)
 
-	const url = useMemo(() => {
-		if (applicationData === null) {
-			return null
-		} else if (applicationData.routes.includes(route)) {
-			return getRouteURL(host, route, params)
-		} else {
-			setError(new Error(`${applicationData.uri} has no route ${JSON.stringify(route)}`))
-			return null
-		}
-	}, [host, applicationData, route, params])
+	const url = useMemo(() => getRouteURL(host, route, params), [host, route, params])
 
+	const subscribe = options.subscribe ?? true
 	useEffect(() => {
-		if (url === null) {
+		if (applicationData === null) {
+			return
+		} else if (!applicationData.routes.includes(route)) {
+			setError(new Error(`${applicationData.uri} has no route ${JSON.stringify(route)}`))
+			setData(null)
 			return
 		}
 
-		const source = new EventSource(url)
-		source.onmessage = (message: MessageEvent<string>) => {
-			const data = JSON.parse(message.data)
-			setData(data)
-			setError(null)
+		setIsLoading(true)
+
+		if (subscribe) {
+			const source = new EventSource(url)
+			source.onmessage = (message: MessageEvent<string>) => {
+				const data = JSON.parse(message.data)
+				setError(null)
+				setData(data)
+				setIsLoading(false)
+			}
+
+			source.onerror = (event) => {
+				console.error("Connection error in EventSource subscription:", event)
+				setError(new Error("Connection error"))
+				setData(null)
+				setIsLoading(false)
+			}
+
+			const handleBeforeUnload = () => source.close()
+			window.addEventListener("beforeunload", handleBeforeUnload)
+
+			return () => {
+				window.removeEventListener("beforeunload", handleBeforeUnload)
+				source.close()
+			}
+		} else {
+			fetch(url)
+				.then((res) => res.json())
+				.then((data) => {
+					setError(null)
+					setData(data)
+					setIsLoading(false)
+				})
+				.catch((err) => {
+					setError(err)
+					setData(null)
+					setIsLoading(false)
+				})
 		}
+	}, [route, url, applicationData, subscribe])
 
-		source.onerror = (event) => {
-			console.error("Connection error in EventSource subscription:", event)
-			setError(new Error("Connection error"))
-		}
-
-		const handleBeforeUnload = () => source.close()
-		window.addEventListener("beforeunload", handleBeforeUnload)
-
-		return () => {
-			window.removeEventListener("beforeunload", handleBeforeUnload)
-			source.close()
-		}
-	}, [url])
-
-	return { error, data }
+	return { error, data, isLoading }
 }

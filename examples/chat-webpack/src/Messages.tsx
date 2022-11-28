@@ -9,7 +9,6 @@ type Post = {
 	content: string
 	updated_at: number
 	likes: number
-	// my_likes?: number
 }
 
 export const Messages: React.FC<{}> = ({}) => {
@@ -37,7 +36,9 @@ export const Messages: React.FC<{}> = ({}) => {
 		[isReady, dispatch]
 	)
 	useEffect(() => {
-		if (isReady) inputRef.current?.focus()
+		if (isReady) {
+			inputRef.current?.focus()
+		}
 	}, [isReady])
 
 	const { data, error } = useRoute<Post>("/posts", {})
@@ -54,39 +55,46 @@ export const Messages: React.FC<{}> = ({}) => {
 			<div className="title-bar">
 				<div className="title-bar-text">Messages</div>
 			</div>
-			<div className="window-body">
-				<div id="scroll-container" ref={scrollContainer}>
+			{error ? (
+				<div className="window-body">
 					<ul className="tree-view">
-						{data &&
-							data.map((_, i, posts) => {
-								const post = posts[posts.length - i - 1]
-								return <Post key={post.id} {...post} />
-							})}
+						<li>{error.toString()}</li>
 					</ul>
 				</div>
-				<input
-					type="text"
-					disabled={!isReady}
-					ref={inputRef}
-					onKeyDown={handleKeyDown}
-					placeholder={isReady ? "" : "Start a session to chat"}
-				/>
-			</div>
+			) : (
+				<div className="window-body">
+					<div id="scroll-container" ref={scrollContainer}>
+						<ul className="tree-view">
+							<Posts posts={data} />
+						</ul>
+					</div>
+					<input
+						type="text"
+						disabled={!isReady}
+						ref={inputRef}
+						onKeyDown={handleKeyDown}
+						placeholder={isReady ? "" : "Start a session to chat"}
+					/>
+				</div>
+			)}
 		</div>
 	)
 }
 
-// function* RenderTimeline(posts: null | Post[]): Iterable<React.ReactNode> {
-// 	if (posts === null || posts.length === 0) {
-// 		return
-// 	}
-
-// 	let referenceDate = new Date(posts[posts.length - 1].updated_at).setHours(0)
-// 	for (let i = posts.length - 1; i >= 0; i--) {
-// 		const post = posts[i]
-// 		const date = new Date(posts[posts.length - 1].updated_at)
-// 	}
-// }
+const Posts: React.FC<{ posts: null | Post[] }> = (props) => {
+	if (props.posts === null) {
+		return null
+	} else {
+		return (
+			<>
+				{props.posts.map((_, i, posts) => {
+					const post = posts[posts.length - i - 1]
+					return <Post key={post.id} {...post} />
+				})}
+			</>
+		)
+	}
+}
 
 const Post: React.FC<Post> = ({ from_id, content, updated_at, likes }) => {
 	const address = `${from_id.slice(0, 5)}…${from_id.slice(-4)}`
