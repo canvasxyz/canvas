@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat-webpack",
-  "version": "0.0.29",
+  "version": "0.0.30",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,7 @@
     "start": "concurrently --kill-others -n backend,frontend \"canvas run $(ipfs-only-hash spec.canvas.js --cidVersion 0) --unchecked\" \"webpack server --port 3000\""
   },
   "dependencies": {
-    "@canvas-js/hooks": "0.0.29",
+    "@canvas-js/hooks": "0.0.30",
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.5",
     "98.css": "^0.1.18",
@@ -22,7 +22,7 @@
     "wagmi": "^0.7.7"
   },
   "devDependencies": {
-    "@canvas-js/cli": "0.0.29",
+    "@canvas-js/cli": "0.0.30",
     "concurrently": "^7.5.0",
     "css-loader": "^6.7.1",
     "style-loader": "^3.3.1",
