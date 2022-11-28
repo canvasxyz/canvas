@@ -5,6 +5,7 @@ const NodePolyfillPlugin = require("node-polyfill-webpack-plugin")
 
 module.exports = {
 	mode: "development",
+	stats: "minimal",
 	devtool: "inline-source-map",
 	entry: "./src/index.tsx",
 	output: {
