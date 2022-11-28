@@ -221,11 +221,12 @@ export async function handler(args: Args) {
 	const apiPrefix = args.static ? `api/` : ""
 	const server = stoppable(
 		app.listen(args.port, () => {
-			console.log(`Serving ${core.uri}:`)
 			if (args.static) {
-				console.log(`└ GET http://localhost:${args.port}/*`)
+				console.log(`Serving static bundle: http://localhost:${args.port}/`)
+				console.log(`Serving API for ${core.uri}:`)
 				console.log(`└ GET http://localhost:${args.port}/api`)
 			} else {
+				console.log(`Serving API for ${core.uri}:`)
 				console.log(`└ GET http://localhost:${args.port}`)
 			}
 			for (const name of Object.keys(core.vm.routes)) {
