@@ -23,7 +23,21 @@ export const App: React.FC<{}> = ({}) => {
 						) : data ? (
 							<>
 								<p>{data.uri}</p>
-								<p>Peer ID: {data.peerId}</p>
+								<p data-id={data.peerId}>
+									Peer ID: {data.peerId?.slice(0, 10)}...{data.peerId?.slice(data.peerId?.length - 3)}
+								</p>
+								<ul className="tree-view">
+									<li>
+										{data.peers?.length} peers
+										<ul>
+											{data.peers.map((peer) => (
+												<li key={peer} data-id={peer}>
+													{peer.slice(0, 10)}...{peer.slice(peer.length - 3)}
+												</li>
+											))}
+										</ul>
+									</li>
+								</ul>
 							</>
 						) : (
 							<ErrorMessage error={error} />
