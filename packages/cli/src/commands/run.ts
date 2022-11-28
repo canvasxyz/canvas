@@ -12,7 +12,7 @@ import { createLibp2p } from "libp2p"
 
 import { Core, constants, actionType, getLibp2pInit, BlockCache, getAPI } from "@canvas-js/core"
 
-import { getProviders, confirmOrExit, parseSpecArgument, getPeerId } from "../utils.js"
+import { getProviders, confirmOrExit, parseSpecArgument, getPeerId, installSpec, CANVAS_HOME } from "../utils.js"
 
 export const command = "run <spec>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -32,6 +32,12 @@ export const builder = (yargs: yargs.Argv) =>
 		.option("offline", {
 			type: "boolean",
 			desc: "Disable libp2p",
+			default: false,
+		})
+		.option("install", {
+			type: "boolean",
+			desc: "Install a local spec and run it in production mode",
+			default: false,
 		})
 		.option("listen", {
 			type: "number",
@@ -75,7 +81,12 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
-	const { directory, uri, spec } = parseSpecArgument(args.spec)
+	let { directory, uri, spec } = parseSpecArgument(args.spec)
+	if (directory === null && args.install) {
+		const cid = await installSpec(spec)
+		directory = path.resolve(CANVAS_HOME, cid)
+		uri = `ipfs://${cid}`
+	}
 
 	if (directory === null) {
 		if (args.replay || args.reset) {

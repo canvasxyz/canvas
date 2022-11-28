@@ -18,8 +18,7 @@ import { ethers } from "ethers"
 
 import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, getAPI, CoreOptions } from "@canvas-js/core"
 
-import { CANVAS_HOME, getPeerId, getProviders, SOCKET_FILENAME, SOCKET_PATH } from "../utils.js"
-import { installSpec } from "./install.js"
+import { CANVAS_HOME, getPeerId, getProviders, SOCKET_FILENAME, SOCKET_PATH, installSpec } from "../utils.js"
 
 import { Model } from "@canvas-js/interfaces"
 

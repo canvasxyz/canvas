@@ -2,12 +2,11 @@ import fs from "node:fs"
 import path from "node:path"
 import os from "node:os"
 import process from "node:process"
-import http from "node:http"
 
-import stoppable from "stoppable"
+import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
+import Hash from "ipfs-only-hash"
 import chalk from "chalk"
 import prompts from "prompts"
-import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 import { chainType, constants } from "@canvas-js/core"
 import { ethers } from "ethers"
@@ -64,6 +63,25 @@ export function parseSpecArgument(value: string): { directory: string | null; ur
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js/.jsx file"))
 		process.exit(1)
 	}
+}
+
+export async function installSpec(spec: string): Promise<string> {
+	const cid = await Hash.of(spec)
+	const directory = path.resolve(CANVAS_HOME, cid)
+	if (!fs.existsSync(directory)) {
+		console.log(`[canvas-cli] Creating app directory at ${directory}`)
+		fs.mkdirSync(directory)
+	}
+
+	const specPath = path.resolve(directory, constants.SPEC_FILENAME)
+	if (fs.existsSync(specPath)) {
+		console.log(`[canvas-cli] ${specPath} already exists`)
+	} else {
+		console.log(`[canvas-cli] Creating ${specPath}`)
+		fs.writeFileSync(specPath, spec, "utf-8")
+	}
+
+	return cid
 }
 
 export function getProviders(args?: (string | number)[]): Record<string, ethers.providers.JsonRpcProvider> {

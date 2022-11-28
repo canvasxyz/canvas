@@ -10,13 +10,6 @@ RUN npm install
 
 COPY . .
 
-ENV NEXT_TELEMETRY_DISABLED 1
-
-# Add `ARG` instructions below if you need `NEXT_PUBLIC_` variables
-# then put the value on your fly.toml
-# Example:
-# ARG NEXT_PUBLIC_EXAMPLE="value here"
-
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -24,13 +17,8 @@ FROM node:16-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
 ENV CANVAS_HOME /data
-
-RUN npm cache clean --force
-RUN npm install -g ipfs-only-hash
 
 COPY --from=builder /app ./
 
-RUN npx canvas install spec.canvas.js
-CMD npx canvas run $(ipfs-only-hash spec.canvas.js --cidVersion 0) --unchecked --static dist
+CMD npm run start

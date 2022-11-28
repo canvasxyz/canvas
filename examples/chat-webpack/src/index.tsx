@@ -12,10 +12,13 @@ import "./styles.css"
 
 const root = ReactDOM.createRoot(document.getElementById("root")!)
 
+// This is replaced by webpack at compile-time using DefinePlugin
+const host = process.env.HOST!
+
 root.render(
 	<React.StrictMode>
 		<WagmiConfig client={client}>
-			<Canvas host={process.env.BUNDLER === "server" ? "http://127.0.0.1:8000" : "/api"}>
+			<Canvas host={host}>
 				<App />
 			</Canvas>
 		</WagmiConfig>
