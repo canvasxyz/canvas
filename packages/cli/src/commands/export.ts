@@ -1,6 +1,5 @@
 import assert from "node:assert"
 import path from "node:path"
-import fs from "node:fs"
 
 import yargs from "yargs"
 import chalk from "chalk"
