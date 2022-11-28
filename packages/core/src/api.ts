@@ -139,27 +139,31 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 		res.setHeader("Connection", "keep-alive")
 		res.flushHeaders()
 
-		let data: Record<string, ModelValue>[] | null = null
-		const listener = async () => {
-			const newData = core.getRoute(route, params)
-			if (data === null || !compareResults(data, newData)) {
-				data = newData
-				res.write(`data: ${JSON.stringify(data)}\n\n`)
+		let oldValues: Record<string, ModelValue>[] | null = null
+		let closed = false
+		const listener = () => {
+			if (closed) {
+				return
+			}
+
+			let newValues: Record<string, ModelValue>[]
+			try {
+				newValues = core.getRoute(route, params)
+			} catch (err) {
+				closed = true
+				console.log(chalk.red("[canvas-cli] error evaluating route"), err)
+				res.status(StatusCodes.BAD_REQUEST)
+				res.end(`Route error: ${err}`)
+				return
+			}
+
+			if (oldValues === null || !compareResults(oldValues, newValues)) {
+				res.write(`data: ${JSON.stringify(newValues)}\n\n`)
+				oldValues = newValues
 			}
 		}
 
-		try {
-			await listener()
-		} catch (err) {
-			// kill the EventSource if this.core.getRoute() fails on first request
-			// TODO: is it possible that it succeeds now, but fails later with new `values`?
-			console.error(chalk.red("[canvas-cli] error fetching view"), err)
-			console.error(err)
-			res.status(StatusCodes.BAD_REQUEST)
-			res.end(`Route error: ${err}`)
-			return
-		}
-
+		listener()
 		core.addEventListener("action", listener)
 		res.on("close", () => core.removeEventListener("action", listener))
 	} else {

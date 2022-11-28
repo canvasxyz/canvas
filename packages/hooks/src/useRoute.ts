@@ -69,6 +69,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 		} else if (!applicationData.routes.includes(route)) {
 			setError(new Error(`${applicationData.uri} has no route ${JSON.stringify(route)}`))
 			setData(null)
+			setIsLoading(false)
 			return
 		}
 
@@ -78,16 +79,14 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 			const source = new EventSource(url)
 			source.onmessage = (message: MessageEvent<string>) => {
 				const data = JSON.parse(message.data)
-				setError(null)
 				setData(data)
 				setIsLoading(false)
 			}
 
 			source.onerror = (event) => {
-				console.error("Connection error in EventSource subscription:", event)
-				setError(new Error("Connection error"))
-				setData(null)
-				setIsLoading(false)
+				console.warn("Connection error in EventSource subscription")
+				console.warn(event)
+				setIsLoading(true)
 			}
 
 			const handleBeforeUnload = () => source.close()
