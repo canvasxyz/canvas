@@ -22,6 +22,9 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		const { component, routeParameters, actionParameters } = core.vm
 		const actions = Object.keys(actionParameters)
 		const routes = Object.keys(routeParameters)
+
+		const peers = core.libp2p?.pubsub.getSubscribers(core.uri).map((peerId) => peerId.toString()) ?? []
+
 		res.json({
 			uri: core.uri,
 			cid: core.cid.toString(),
@@ -29,6 +32,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			component,
 			actions,
 			routes,
+			peers,
 		})
 	})
 

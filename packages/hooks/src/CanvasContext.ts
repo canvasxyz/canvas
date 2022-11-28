@@ -8,6 +8,7 @@ export interface ApplicationData {
 	component: string | null
 	actions: string[]
 	routes: string[]
+	peers: string[]
 }
 
 export interface CanvasContextValue {
