@@ -1,7 +1,7 @@
 html {
 	background-color: #dfdfdf;
   background-image: url('../public/background.jpeg');
-  background-size: cover;
+  background-size: 100vw;
 	height: 80%;
 	width: 80%;
 }
