@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import yargs from "yargs"
+import yargs, { boolean } from "yargs"
 import prompts from "prompts"
 import chalk from "chalk"
 import { createLibp2p, Libp2p } from "libp2p"
@@ -12,7 +12,7 @@ import cors from "cors"
 import Hash from "ipfs-only-hash"
 import PQueue from "p-queue"
 
-import { BlockCache, Core, getLibp2pInit, constants, BlockResolver } from "@canvas-js/core"
+import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, CoreOptions } from "@canvas-js/core"
 
 import { CANVAS_HOME, getPeerId, getProviders, SOCKET_FILENAME, SOCKET_PATH, startSignalServer } from "../utils.js"
 import { handleAction, handleRoute, handleSession } from "../api.js"
@@ -42,6 +42,11 @@ export const builder = (yargs: yargs.Argv) =>
 		.option("unchecked", {
 			type: "boolean",
 			desc: "Run the node in unchecked mode, without verifying block hashes",
+		})
+		.option("verbose", {
+			type: "boolean",
+			desc: "Enable verbose logging",
+			default: false,
 		})
 		.option("chain-rpc", {
 			type: "array",
@@ -80,7 +85,10 @@ export async function handler(args: Args) {
 
 	const blockCache = new BlockCache(providers)
 
-	const daemon = new Daemon(libp2p, providers, blockCache.getBlock)
+	const daemon = new Daemon(libp2p, providers, blockCache.getBlock, {
+		unchecked: args.unchecked,
+		offline: args.offline,
+	})
 
 	const controller = new AbortController()
 	controller.signal.addEventListener("abort", async () => {
@@ -125,13 +133,17 @@ class Daemon {
 
 	private readonly queue = new PQueue({ concurrency: 1 })
 	private readonly cores = new Map<string, Core>()
+	private readonly options: CoreOptions
 
 	constructor(
 		libp2p: Libp2p | undefined,
 		providers: Record<string, ethers.providers.JsonRpcProvider>,
-		blockResolver: BlockResolver
+		blockResolver: BlockResolver,
+		options: CoreOptions
 	) {
 		this.api.set("query parser", "simple")
+		this.options = options
+
 		this.api.use(
 			expressWinston.logger({
 				transports: [new winston.transports.Console()],
@@ -266,7 +278,15 @@ class Daemon {
 				const uri = `ipfs://${hash}`
 
 				try {
-					const core = await Core.initialize({ directory, uri, spec, libp2p, providers, blockResolver })
+					const core = await Core.initialize({
+						directory,
+						uri,
+						spec,
+						libp2p,
+						providers,
+						blockResolver,
+						...this.options,
+					})
 					this.cores.set(name, core)
 					console.log(`[canvas-cli] Started ${core.uri}`)
 					res.status(StatusCodes.OK).end()

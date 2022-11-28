@@ -118,6 +118,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	) {
 		super()
 
+		this.options = options
+
 		const modelDatabasePath = directory && path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
 		this.modelStore = new ModelStore(modelDatabasePath, vm.models, vm.routes, { verbose: options.verbose })
 
@@ -239,6 +241,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
 		assert(timestamp < constants.BOUNDS_CHECK_UPPER_LIMIT, "action timestamp too far in the future")
 
+		console.log(this.options)
 		if (!this.options.unchecked) {
 			// check the action was signed with a valid, recent block
 			assert(block !== undefined, "action is missing block data")
