@@ -22,7 +22,14 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		const { component, routeParameters, actionParameters } = core.vm
 		const actions = Object.keys(actionParameters)
 		const routes = Object.keys(routeParameters)
-		res.json({ uri: core.uri, cid: core.cid.toString(), component, actions, routes })
+		res.json({
+			uri: core.uri,
+			cid: core.cid.toString(),
+			peerId: core.libp2p?.peerId.toString(),
+			component,
+			actions,
+			routes,
+		})
 	})
 
 	api.post("/actions", async (req, res) => {

@@ -4,6 +4,7 @@ import { createContext } from "react"
 export interface ApplicationData {
 	cid: string
 	uri: string
+	peerId: string | null
 	component: string | null
 	actions: string[]
 	routes: string[]
