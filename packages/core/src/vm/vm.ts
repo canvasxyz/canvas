@@ -130,12 +130,15 @@ export class VM {
 			)
 
 			if (indexes !== undefined) {
-				for (const indexPropertyName of indexes) {
-					assert(indexPropertyName !== "id", `"id" index is redundant`)
-					assert(
-						indexPropertyName in properties,
-						`model specified an invalid index "${indexPropertyName}" - can only index on other model properties`
-					)
+				for (const index of indexes) {
+					assert(index !== "id", `"id" index is redundant`)
+					const indexProperties = Array.isArray(index) ? index : [index]
+					for (const property of indexProperties) {
+						assert(
+							property in properties,
+							`model specified an invalid index "${property}" - can only index on other model properties`
+						)
+					}
 				}
 			}
 		}

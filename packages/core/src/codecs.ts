@@ -91,7 +91,8 @@ const modelPropertiesType = t.intersection([
 	t.record(t.string, modelTypeType),
 ])
 
-const modelIndexesType = t.partial({ indexes: t.array(t.string) })
+const indexType = t.union([t.string, t.array(t.string)])
+const modelIndexesType = t.partial({ indexes: t.array(indexType) })
 
 function isModel(u: unknown): u is Model {
 	if (!modelIndexesType.is(u)) {

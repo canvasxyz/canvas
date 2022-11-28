@@ -8,7 +8,7 @@ export type ModelType = "boolean" | "string" | "integer" | "float" | "datetime"
 /**
  * An `IndexType` defines a list of indexes to be generated and maintained for a model.
  */
-export type IndexType = string[]
+export type IndexType = (string | string[])[]
 
 /**
  * A `ModelValue` is a type-level representation of concrete model field types, ie

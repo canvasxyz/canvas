@@ -132,7 +132,7 @@ export class ModelStore {
 	private static modelTableName = (modelName: string) => `'${modelName}'`
 	private static deletedTableName = (modelName: string) => `'_${modelName}_deleted'`
 	private static propertyName = (propertyName: string) => `'${propertyName}'`
-	private static indexName = (modelName: string, propertyName: string) => `'${modelName}:${propertyName}'`
+	private static indexName = (modelName: string, i: number) => `'_${modelName}_index_${i}'`
 
 	private static getColumnType(type: ModelType): string {
 		switch (type) {
@@ -151,6 +151,11 @@ export class ModelStore {
 		}
 	}
 
+	// Wrap this in a local method for easier logging
+	private exec(sql: string) {
+		this.database.exec(sql)
+	}
+
 	private initializeModelTables(models: Record<string, Model>) {
 		for (const [name, { indexes, id, updated_at, ...properties }] of Object.entries(models)) {
 			assert(id === "string", "id property must be 'string'")
@@ -158,7 +163,7 @@ export class ModelStore {
 
 			const deletedTableName = ModelStore.deletedTableName(name)
 			const createDeletedTable = `CREATE TABLE IF NOT EXISTS ${deletedTableName} (id TEXT PRIMARY KEY NOT NULL, deleted_at INTEGER NOT NULL);`
-			this.database.exec(createDeletedTable)
+			this.exec(createDeletedTable)
 
 			const columns = ["id TEXT PRIMARY KEY NOT NULL", "updated_at INTEGER NOT NULL"]
 			for (const [property, type] of Object.entries(properties)) {
@@ -168,13 +173,14 @@ export class ModelStore {
 			const tableName = ModelStore.modelTableName(name)
 
 			const createTable = `CREATE TABLE IF NOT EXISTS ${tableName} (${columns.join(", ")});`
-			this.database.exec(createTable)
+			this.exec(createTable)
 
 			if (indexes !== undefined) {
-				for (const property of indexes) {
-					const indexName = ModelStore.indexName(name, property)
-					const propertyName = ModelStore.propertyName(property)
-					this.database.exec(`CREATE INDEX IF NOT EXISTS ${indexName} ON ${tableName} (${propertyName});`)
+				for (const [i, index] of indexes.entries()) {
+					const properties = Array.isArray(index) ? index : [index]
+					const indexName = ModelStore.indexName(name, i)
+					const propertyNames = properties.map(ModelStore.propertyName)
+					this.exec(`CREATE INDEX IF NOT EXISTS ${indexName} ON ${tableName} (${propertyNames.join(", ")});`)
 				}
 			}
 		}
