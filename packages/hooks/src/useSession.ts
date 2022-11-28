@@ -4,7 +4,7 @@ import { ethers } from "ethers"
 import { SessionPayload, getSessionSignatureData, Session } from "@canvas-js/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
-import { CANVAS_SESSION_KEY, getLatestBlock, urlJoin } from "./utils.js"
+import { getCanvasSessionKey, getLatestBlock, urlJoin } from "./utils.js"
 
 export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 	error: Error | null
@@ -27,14 +27,13 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 		if (signer === null) {
 			setSignerAddress(null)
 			setSigner(null)
-			setSessionWallet(null)
-			setSessionExpiration(null)
 		} else {
-			signer.getAddress().then((address) => {
-				setSigner(signer)
-				setSignerAddress(address)
-			})
+			setSignerAddress(signer._address)
+			setSigner(signer)
 		}
+
+		setSessionWallet(null)
+		setSessionExpiration(null)
 	}, [signer])
 
 	useEffect(() => {
@@ -44,20 +43,28 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 
 		setIsLoading(false)
 
-		const item = localStorage.getItem(CANVAS_SESSION_KEY)
+		const sessionKey = getCanvasSessionKey(signerAddress)
+		const item = localStorage.getItem(sessionKey)
 		if (item === null) {
 			return
 		}
 
-		const sessionObject = JSON.parse(item)
-		if (!isSessionObject(sessionObject)) {
-			localStorage.removeItem(CANVAS_SESSION_KEY)
+		let sessionObject: any
+		try {
+			sessionObject = JSON.parse(item)
+		} catch (err) {
+			localStorage.removeItem(sessionKey)
 			return
 		}
 
-		const { spec, forPublicKey, sessionPrivateKey, expiration } = sessionObject
-		if (data.uri !== spec || signerAddress !== forPublicKey || expiration < Date.now()) {
-			localStorage.removeItem(CANVAS_SESSION_KEY)
+		if (!isSessionObject(sessionObject)) {
+			localStorage.removeItem(sessionKey)
+			return
+		}
+
+		const { spec, sessionPrivateKey, expiration } = sessionObject
+		if (data.uri !== spec || expiration < Date.now()) {
+			localStorage.removeItem(sessionKey)
 			return
 		}
 
@@ -86,7 +93,6 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 
 			const sessionObject: SessionObject = {
 				spec: data.uri,
-				forPublicKey: signerAddress,
 				sessionPrivateKey: wallet.privateKey,
 				expiration: timestamp + sessionDuration,
 			}
@@ -117,7 +123,8 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 				throw new Error(message)
 			}
 
-			localStorage.setItem(CANVAS_SESSION_KEY, JSON.stringify(sessionObject))
+			const sessionKey = getCanvasSessionKey(signerAddress)
+			localStorage.setItem(sessionKey, JSON.stringify(sessionObject))
 			setSessionWallet(wallet)
 			setSessionExpiration(sessionObject.expiration)
 			setError(null)
@@ -136,15 +143,17 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 	const logout = useCallback(() => {
 		setSessionWallet(null)
 		setSessionExpiration(null)
-		localStorage.removeItem(CANVAS_SESSION_KEY)
-	}, [])
+		if (signerAddress !== null) {
+			const sessionKey = getCanvasSessionKey(signerAddress)
+			localStorage.removeItem(sessionKey)
+		}
+	}, [signerAddress])
 
 	const sessionAddress = sessionWallet && sessionWallet.address
 	return {
 		error,
 		isLoading,
 		isPending,
-		// isSuccess,
 		sessionAddress,
 		sessionExpiration,
 		login,
@@ -152,13 +161,12 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 	}
 }
 
-type SessionObject = { spec: string; forPublicKey: string; sessionPrivateKey: string; expiration: number }
+type SessionObject = { spec: string; sessionPrivateKey: string; expiration: number }
 
 function isSessionObject(obj: any): obj is SessionObject {
 	return (
 		typeof obj === "object" &&
 		typeof obj.spec === "string" &&
-		typeof obj.forPublicKey === "string" &&
 		typeof obj.sessionPrivateKey === "string" &&
 		typeof obj.expiration === "number"
 	)

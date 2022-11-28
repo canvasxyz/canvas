@@ -1,7 +1,7 @@
 import { ethers } from "ethers"
 import { ActionArgument, Block } from "@canvas-js/interfaces"
 
-export const CANVAS_SESSION_KEY = "CANVAS_SESSION"
+export const getCanvasSessionKey = (address: string) => `CANVAS_SESSION:${address}`
 
 export type Dispatch = (call: string, ...args: ActionArgument[]) => Promise<{ hash: string }>
 

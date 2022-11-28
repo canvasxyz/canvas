@@ -2,7 +2,7 @@ import { Action, ActionPayload, getActionSignatureData } from "@canvas-js/interf
 import { useCallback, useContext, useState } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"
-import { urlJoin, Dispatch, CANVAS_SESSION_KEY, getLatestBlock } from "./utils.js"
+import { urlJoin, Dispatch, getCanvasSessionKey, getLatestBlock } from "./utils.js"
 
 export function useCanvas(): {
 	isLoading: boolean
@@ -76,7 +76,8 @@ export function useCanvas(): {
 					if (message === "session not found" || message === "session expired") {
 						setSessionWallet(null)
 						setSessionExpiration(null)
-						localStorage.removeItem(CANVAS_SESSION_KEY)
+						const sessionKey = getCanvasSessionKey(signer._address)
+						localStorage.removeItem(sessionKey)
 					}
 
 					throw new Error(message)
