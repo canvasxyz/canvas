@@ -1,3 +1,4 @@
+import http from "node:http"
 import fs from "node:fs"
 import path from "node:path"
 
@@ -7,20 +8,20 @@ import chalk from "chalk"
 import { createLibp2p, Libp2p } from "libp2p"
 import { StatusCodes } from "http-status-codes"
 import express from "express"
-import bodyParser from "body-parser"
 import cors from "cors"
-import Hash from "ipfs-only-hash"
-import PQueue from "p-queue"
-
-import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, CoreOptions } from "@canvas-js/core"
-
-import { CANVAS_HOME, getPeerId, getProviders, SOCKET_FILENAME, SOCKET_PATH, startSignalServer } from "../utils.js"
-import { handleAction, handleRoute, handleSession } from "../api.js"
-import { installSpec } from "./install.js"
-
-import { ethers } from "ethers"
 import winston from "winston"
 import expressWinston from "express-winston"
+import stoppable from "stoppable"
+import Hash from "ipfs-only-hash"
+import PQueue from "p-queue"
+import { ethers } from "ethers"
+
+import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, getAPI, CoreOptions } from "@canvas-js/core"
+
+import { CANVAS_HOME, getPeerId, getProviders, SOCKET_FILENAME, SOCKET_PATH } from "../utils.js"
+import { installSpec } from "./install.js"
+
+import { Model } from "@canvas-js/interfaces"
 
 export const command = "daemon"
 export const desc = "Start the canvas daemon"
@@ -104,11 +105,11 @@ export async function handler(args: Args) {
 		fs.rmSync(SOCKET_PATH)
 	}
 
-	await startSignalServer(daemon.api, SOCKET_PATH, controller.signal)
+	await startSignalServer(daemon.app, SOCKET_PATH, controller.signal)
 	console.log(`[canvas-cli] Daemon API listening on ${SOCKET_PATH}`)
 
 	if (args.port !== undefined) {
-		await startSignalServer(daemon.api, args.port, controller.signal)
+		await startSignalServer(daemon.app, args.port, controller.signal)
 		console.log(`[canvas-cli] Daemon API listening on http://127.0.0.1:${args.port}`)
 	}
 
@@ -129,12 +130,20 @@ export async function handler(args: Args) {
 
 type Status = "running" | "stopped"
 
+type AppData = {
+	uri: string
+	cid: string
+	status: Status
+	models?: Record<string, Model>
+	actionParameters?: Record<string, string[]>
+}
+
 class Daemon {
-	public readonly api = express()
+	public readonly app = express()
 
 	private readonly queue = new PQueue({ concurrency: 1 })
-	private readonly cores = new Map<string, Core>()
 	private readonly options: CoreOptions
+	private readonly apps = new Map<string, { core: Core; api: express.Express }>()
 
 	constructor(
 		libp2p: Libp2p | undefined,
@@ -142,10 +151,10 @@ class Daemon {
 		blockResolver: BlockResolver,
 		options: CoreOptions
 	) {
-		this.api.set("query parser", "simple")
 		this.options = options
-
-		this.api.use(
+		this.app.use(express.json())
+		this.app.use(cors())
+		this.app.use(
 			expressWinston.logger({
 				transports: [new winston.transports.Console()],
 				format: winston.format.simple(),
@@ -160,33 +169,28 @@ class Daemon {
 				}, // optional: allows to skip some log messages based on request and/or response
 			})
 		)
-		this.api.use(bodyParser.json())
-		this.api.use(cors({ exposedHeaders: ["ETag", "Link"] }))
 
-		this.api.get("/app", (req, res) => {
+		this.app.get("/app", (req, res) => {
 			this.queue.add(async () => {
-				const apps: Record<string, { uri: string; cid: string; status: Status }> = {}
+				const apps: Record<string, AppData> = {}
 				for (const name of fs.readdirSync(CANVAS_HOME)) {
 					if (name === constants.PEER_ID_FILENAME || name === SOCKET_FILENAME) {
 						continue
 					}
-
-					const status = this.cores.has(name) ? "running" : "stopped"
 
 					const specPath = path.resolve(CANVAS_HOME, name, constants.SPEC_FILENAME)
 					if (fs.existsSync(specPath)) {
 						const spec = fs.readFileSync(specPath, "utf-8")
 						const cid = await Hash.of(spec)
 
-						const core = this.cores.get(name)
+						const app = this.apps.get(name)
 
 						apps[name] = {
 							uri: `ipfs://${cid}`,
-							// @ts-ignore
-							models: core && core.vm.models,
-							actionParameters: core && core.vm.actionParameters,
 							cid,
-							status,
+							status: app ? "running" : "stopped",
+							models: app && app.core.vm.models,
+							actionParameters: app && app.core.vm.actionParameters,
 						}
 					}
 				}
@@ -195,7 +199,7 @@ class Daemon {
 			})
 		})
 
-		this.api.put("/app/:name", (req, res) => {
+		this.app.put("/app/:name", (req, res) => {
 			const { name } = req.params
 
 			const contentType = req.headers["content-type"]
@@ -221,7 +225,7 @@ class Daemon {
 			})
 		})
 
-		this.api.delete("/app/:name", (req, res) => {
+		this.app.delete("/app/:name", (req, res) => {
 			const { name } = req.params
 
 			this.queue.add(() => {
@@ -235,7 +239,7 @@ class Daemon {
 			})
 		})
 
-		this.api.post("/app/install", async (req, res) => {
+		this.app.post("/app/install", async (req, res) => {
 			const { spec } = req.body
 
 			const multihash = await Hash.of(spec)
@@ -248,11 +252,11 @@ class Daemon {
 			res.status(StatusCodes.CREATED).end()
 		})
 
-		this.api.post("/app/:name/start", async (req, res) => {
+		this.app.post("/app/:name/start", async (req, res) => {
 			const { name } = req.params
 
 			this.queue.add(async () => {
-				if (this.cores.has(name)) {
+				if (this.apps.has(name)) {
 					return res.status(StatusCodes.CONFLICT).end()
 				}
 
@@ -288,7 +292,8 @@ class Daemon {
 						blockResolver,
 						...this.options,
 					})
-					this.cores.set(name, core)
+					const api = getAPI(core, { exposeModels: true, exposeActions: true, exposeSessions: true })
+					this.apps.set(name, { core, api })
 					console.log(`[canvas-cli] Started ${core.uri}`)
 					res.status(StatusCodes.OK).end()
 				} catch (err) {
@@ -298,131 +303,54 @@ class Daemon {
 			})
 		})
 
-		this.api.post("/app/:name/stop", (req, res) => {
+		this.app.post("/app/:name/stop", (req, res) => {
 			const { name } = req.params
 
 			this.queue.add(async () => {
-				const core = this.cores.get(name)
-				if (core === undefined) {
+				const app = this.apps.get(name)
+				if (app === undefined) {
 					return res.status(StatusCodes.CONFLICT).end()
 				}
 
 				try {
-					await core.close()
-					console.log(`[canvas-cli] Stopped ${core.uri}`)
+					await app.core.close()
+					console.log(`[canvas-cli] Stopped ${name} (${app.core.uri})`)
 					res.status(StatusCodes.OK).end()
 				} catch (err) {
 					const message = err instanceof Error ? err.message : (err as any).toString()
 					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
 				} finally {
-					this.cores.delete(name)
+					this.apps.delete(name)
 				}
 			})
 		})
 
-		this.api.get("/app/:name/actions", (req, res) => {
+		this.app.use("/app/:name", (req, res, next) => {
 			const { name } = req.params
 
 			this.queue.add(async () => {
-				const core = this.cores.get(name)
-				if (core === undefined) {
+				const app = this.apps.get(name)
+				if (app === undefined) {
 					return res.status(StatusCodes.NOT_FOUND).end()
 				}
 
-				const actions = []
-				for await (const entry of core.messageStore.getActionStream()) {
-					actions.push(entry)
-				}
-
-				return res.status(StatusCodes.OK).json(actions)
-			})
-		})
-
-		this.api.post("/app/:name/actions", (req, res) => {
-			const { name } = req.params
-
-			this.queue.add(async () => {
-				const core = this.cores.get(name)
-				if (core === undefined) {
-					return res.status(StatusCodes.NOT_FOUND).end()
-				}
-
-				await handleAction(core, req, res)
-			})
-		})
-
-		this.api.get("/app/:name/sessions", (req, res) => {
-			const { name } = req.params
-
-			this.queue.add(async () => {
-				const core = this.cores.get(name)
-				if (core === undefined) {
-					return res.status(StatusCodes.NOT_FOUND).end()
-				}
-
-				const sessions = []
-				for await (const entry of core.messageStore.getSessionStream()) {
-					sessions.push(entry)
-				}
-
-				return res.status(StatusCodes.OK).json(sessions)
-			})
-		})
-
-		this.api.post("/app/:name/sessions", (req, res) => {
-			const { name } = req.params
-
-			this.queue.add(async () => {
-				const core = this.cores.get(name)
-				if (core === undefined) {
-					return res.status(StatusCodes.NOT_FOUND).end()
-				}
-
-				await handleSession(core, req, res)
-			})
-		})
-
-		this.api.get("/app/:name/models/:modelName", (req, res) => {
-			const { modelName, name } = req.params
-
-			this.queue.add(async () => {
-				const core = this.cores.get(name)
-				if (core === undefined) {
-					return res.status(StatusCodes.NOT_FOUND).end()
-				}
-
-				const model = core.vm.models[modelName]
-				if (model === undefined) {
-					return res.status(StatusCodes.NOT_FOUND).end()
-				}
-
-				const query = `SELECT * FROM ${modelName} ORDER BY updated_at DESC LIMIT 10`
-				const rows = core.modelStore.database.prepare(query).all()
-				return res.status(StatusCodes.OK).json(rows)
-			})
-		})
-
-		this.api.get("/app/:name/*", (req, res) => {
-			const { name } = req.params
-			this.queue.add(async () => {
-				const core = this.cores.get(name)
-				if (core === undefined) {
-					return res.status(StatusCodes.NOT_FOUND).end()
-				}
-
-				const prefix = `/app/${name}`
-				const path = req.path.slice(prefix.length)
-				const pathComponents = path === "" || path === "/" ? [] : path.slice(1).split("/")
-
-				await handleRoute(core, pathComponents, req, res)
+				return app.api(req, res, next)
 			})
 		})
 	}
 
 	public async close() {
 		await this.queue.onIdle()
-		for (const core of this.cores.values()) {
+		for (const { core } of this.apps.values()) {
 			await core.close()
 		}
 	}
+}
+
+function startSignalServer(requestListener: http.RequestListener, listen: string | number, signal: AbortSignal) {
+	return new Promise<void>((resolve, reject) => {
+		const server = stoppable(http.createServer(requestListener), 0)
+		signal.addEventListener("abort", () => server.stop())
+		server.listen(listen, () => resolve())
+	})
 }

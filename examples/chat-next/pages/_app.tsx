@@ -9,8 +9,9 @@ import { client } from "../utils/client"
 import "98.css"
 import "styles.css"
 
+const host = "/app"
+
 export default function App({ Component, pageProps }: AppProps) {
-	const host = pageProps.host ?? "/"
 	return (
 		<React.StrictMode>
 			<WagmiConfig client={client}>

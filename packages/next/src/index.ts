@@ -6,14 +6,11 @@ import stoppable from "stoppable"
 import chalk from "chalk"
 import next from "next"
 import express from "express"
-import bodyParser from "body-parser"
-import { StatusCodes } from "http-status-codes"
 import { Libp2p, createLibp2p } from "libp2p"
-import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { createFromProtobuf, createEd25519PeerId, exportToProtobuf } from "@libp2p/peer-id-factory"
 import { ethers } from "ethers"
 
-import { constants, Core, getLibp2pInit } from "@canvas-js/core"
-import { handleAction, handleRoute, handleSession } from "./api.js"
+import { constants, Core, getLibp2pInit, getAPI } from "@canvas-js/core"
 
 const directory = process.env.CANVAS_PATH ?? null
 const specPath = process.env.CANVAS_SPEC ?? path.resolve(directory ?? ".", constants.SPEC_FILENAME)
@@ -31,9 +28,23 @@ if (typeof ETH_CHAIN_ID === "string" && typeof ETH_CHAIN_RPC === "string") {
 	providers[key] = new ethers.providers.JsonRpcProvider(ETH_CHAIN_RPC)
 }
 
+async function getPeerID() {
+	if (typeof PEER_ID === "string") {
+		return await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
+	}
+
+	const peerIdPath = path.resolve(directory ?? ".", constants.PEER_ID_FILENAME)
+	if (fs.existsSync(peerIdPath)) {
+		return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath)))
+	} else {
+		const peerId = await createEd25519PeerId()
+		fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
+		return peerId
+	}
+}
+
 if (typeof LISTEN === "string") {
-	const peerId =
-		typeof PEER_ID === "string" ? await createFromProtobuf(Buffer.from(PEER_ID, "base64")) : await createEd25519PeerId()
+	const peerId = await getPeerID()
 
 	console.log("[canvas-next] Using PeerId", peerId.toString())
 
@@ -57,62 +68,13 @@ const port = Number(process.env.PORT) || 3000
 const hostname = "localhost"
 const nextApp = next({ dev: process.env.NODE_ENV !== "production", hostname, port })
 await nextApp.prepare()
+
 const nextAppHandler = nextApp.getRequestHandler()
+const app = express()
+app.use("/app", getAPI(core))
+app.use("/", (req, res, next) => nextAppHandler(req, res))
 
-const prefix = `/app/${core.cid.toString()}`
-
-const canvasRouteHandler = express()
-canvasRouteHandler.set("query parser", "simple")
-canvasRouteHandler.use(bodyParser.json())
-canvasRouteHandler.get("/app/:name", (req, res) => {
-	const { name } = req.params
-	if (name !== core.cid.toString()) {
-		return res.status(StatusCodes.NOT_FOUND).end()
-	}
-
-	handleRoute(core, [], req, res)
-})
-
-canvasRouteHandler.get("/app/:name/*", (req, res) => {
-	const { name } = req.params
-	if (name !== core.cid.toString()) {
-		return res.status(StatusCodes.NOT_FOUND).end()
-	}
-
-	const path = req.path.slice(prefix.length)
-	const pathComponents = path === "" || path === "/" ? [] : path.slice(1).split("/")
-
-	handleRoute(core, pathComponents, req, res)
-})
-
-canvasRouteHandler.post("/app/:name/sessions", (req, res) => {
-	const { name } = req.params
-	if (name !== core.cid.toString()) {
-		return res.status(StatusCodes.NOT_FOUND).end()
-	}
-
-	handleSession(core, req, res)
-})
-
-canvasRouteHandler.post("/app/:name/actions", (req, res) => {
-	const { name } = req.params
-	if (name !== core.cid.toString()) {
-		return res.status(StatusCodes.NOT_FOUND).end()
-	}
-
-	handleAction(core, req, res)
-})
-
-const server = stoppable(
-	http.createServer((req, res) => {
-		if (typeof req.url === "string" && req.url.startsWith(prefix)) {
-			canvasRouteHandler(req, res)
-		} else {
-			nextAppHandler(req, res)
-		}
-	}),
-	0
-)
+const server = stoppable(http.createServer(app), 0)
 
 server.listen(port, () => console.log(`> Ready on http://${hostname}:${port}`))
 
