@@ -35,8 +35,11 @@ export const App: React.FC<{}> = ({}) => {
 										<li>
 											<ul>
 												{gossipPeers.map(([peerId, { lastSeen }]) => (
-													<li key={peerId} data-id={peerId}>
-														{peerId.slice(0, 10) + "..." + peerId.slice(peerId.length - 3)}
+													<li key={peerId} data-id={peerId} style={{ display: "flex" }}>
+														<div style={{ flex: 1 }}>
+															{peerId.slice(0, 10) + "..." + peerId.slice(peerId.length - 3)}
+														</div>
+														<div>{Math.round((Date.now() - lastSeen) / 1000 / 60)}min ago</div>
 													</li>
 												))}
 											</ul>
@@ -45,8 +48,11 @@ export const App: React.FC<{}> = ({}) => {
 										<li>
 											<ul>
 												{backlogPeers.map(([peerId, { lastSeen }]) => (
-													<li key={peerId} data-id={peerId}>
-														{peerId.slice(0, 10) + "..." + peerId.slice(peerId.length - 3)}
+													<li key={peerId} data-id={peerId} style={{ display: "flex" }}>
+														<div style={{ flex: 1 }}>
+															{peerId.slice(0, 10) + "..." + peerId.slice(peerId.length - 3)}
+														</div>
+														<div>{Math.round((Date.now() - lastSeen) / 1000 / 60)}min ago</div>
 													</li>
 												))}
 											</ul>
