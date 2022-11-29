@@ -11,6 +11,7 @@
     "dev": "HOST='http://localhost:8000' concurrently --kill-others -n backend,frontend 'canvas run spec.canvas.js --unchecked' 'webpack server --port 3000'"
   },
   "dependencies": {
+    "@canvas-js/cli": "0.0.33",
     "@canvas-js/hooks": "0.0.33",
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.5",
@@ -20,7 +21,6 @@
     "wagmi": "^0.7.7"
   },
   "devDependencies": {
-    "@canvas-js/cli": "0.0.33",
     "concurrently": "^7.5.0",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.7.1",
