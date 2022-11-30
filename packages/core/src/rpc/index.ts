@@ -1,3 +1,2 @@
-export { Server } from "./server.js"
-export { Client } from "./client.js"
+export { handleIncomingStream } from "./server.js"
 export { Message, sync } from "./sync.js"

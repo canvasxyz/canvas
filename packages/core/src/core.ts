@@ -71,7 +71,6 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly modelStore: ModelStore
 	public readonly messageStore: MessageStore
 	public readonly mst: okra.Tree | null = null
-	public readonly rpcServer: RPC.Server | null = null
 
 	public readonly recentGossipSubPeers: CacheMap<string, { lastSeen: number }>
 	public readonly recentBacklogSyncPeers: CacheMap<string, { lastSeen: number }>
@@ -137,8 +136,6 @@ export class Core extends EventEmitter<CoreEvents> {
 			this.mst = new okra.Tree(path.resolve(directory, constants.MST_FILENAME))
 
 			if (libp2p !== null && !this.options.offline) {
-				this.rpcServer = new RPC.Server({ mst: this.mst, messageStore: this.messageStore })
-
 				libp2p.pubsub.subscribe(this.uri)
 				libp2p.pubsub.addEventListener("message", this.handleMessage)
 				if (this.options.verbose) {
@@ -146,7 +143,7 @@ export class Core extends EventEmitter<CoreEvents> {
 					console.log(`[canvas-core] Subscribed to pubsub topic ${this.uri}`)
 				}
 
-				libp2p.handle(this.syncProtocol, this.handleIncomingStream)
+				libp2p.handle(this.syncProtocol, this.streamHandler)
 				this.startSyncService()
 				this.startAnnounceService()
 			}
@@ -385,8 +382,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {
-		if (this.rpcServer === null) {
+	private streamHandler: StreamHandler = async ({ connection, stream }) => {
+		if (this.mst === null) {
 			return
 		}
 
@@ -394,7 +391,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			console.log(`[canvas-core] Handling incoming stream ${stream.id} from peer ${connection.remotePeer.toString()}`)
 		}
 
-		await this.rpcServer.handleIncomingStream(stream)
+		await RPC.handleIncomingStream(stream, this.messageStore, this.mst)
 		if (this.options.verbose) {
 			console.log(`[canvas-core] Closed incoming stream ${stream.id}`)
 		}
@@ -404,9 +401,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		await wait({ signal: this.controller.signal, interval })
 	}
 
-	private static announceDelay = 1000 * 5
-	private static announceInterval = 1000 * 60 * 60 * 1
-	private static announceRetryInterval = 1000 * 5
 	private async startAnnounceService() {
 		if (this.options.verbose) {
 			console.log("[canvas-core] Staring announce service")
@@ -416,22 +410,22 @@ export class Core extends EventEmitter<CoreEvents> {
 		const abort = () => queryController.abort()
 		this.controller.signal.addEventListener("abort", abort)
 		try {
-			await this.wait(Core.announceDelay)
+			await this.wait(constants.ANNOUNCE_DELAY)
 			while (!queryController.signal.aborted) {
 				await retry(
 					() => this.announce(),
 					(err) => console.log(chalk.red(`[canvas-core] Failed to publish DHT rendezvous record.`), err.message),
-					{ signal: queryController.signal, interval: Core.announceRetryInterval }
+					{ signal: queryController.signal, interval: constants.ANNOUNCE_RETRY_INTERVAL }
 				)
-				await this.wait(Core.announceInterval)
+				await this.wait(constants.ANNOUNCE_INTERVAL)
 			}
 		} catch (err) {
 			if (err instanceof AbortError) {
 				if (this.options.verbose) {
-					console.log(`[canvas-core] Aborting peering service.`)
+					console.log(`[canvas-core] Aborting announce service.`)
 				}
 			} else {
-				console.log(chalk.red(`[canvas-core] Peering service crashed.`))
+				console.log(chalk.red(`[canvas-core] Announce service crashed.`))
 				console.log(err)
 			}
 		} finally {
@@ -463,16 +457,13 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private static syncDelay = 1000 * 10
-	private static syncInterval = 1000 * 60 * 1
-	private static syncRetryInterval = 1000 * 5
 	private async startSyncService() {
 		if (this.options.verbose) {
 			console.log("[canvas-core] Staring sync service")
 		}
 
 		try {
-			await this.wait(Core.syncDelay)
+			await this.wait(constants.SYNC_DELAY)
 			while (!this.controller.signal.aborted) {
 				// Also save recently seen gossipsub peers.
 				// TODO: move this to its own service, maybe when we start pruning
@@ -488,7 +479,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				const peers = await retry(
 					() => this.findSyncPeers(),
 					(err) => console.log(chalk.red(`[canvas-core] Failed to locate application peers.`), err.message),
-					{ signal: this.controller.signal, interval: Core.syncRetryInterval }
+					{ signal: this.controller.signal, interval: constants.SYNC_RETRY_INTERVAL }
 				)
 
 				if (this.options.verbose) {
@@ -504,7 +495,7 @@ export class Core extends EventEmitter<CoreEvents> {
 					await this.sync(peer)
 				}
 
-				await this.wait(Core.syncInterval)
+				await this.wait(constants.SYNC_INTERVAL)
 			}
 		} catch (err) {
 			if (err instanceof AbortError) {
@@ -548,7 +539,6 @@ export class Core extends EventEmitter<CoreEvents> {
 			return
 		}
 
-		// const { signal } = this.controller
 		const queryController = new AbortController()
 		const abort = () => queryController.abort()
 		this.controller.signal.addEventListener("abort", abort)
