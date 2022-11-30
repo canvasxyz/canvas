@@ -4,18 +4,16 @@ import chalk from "chalk"
 import type { Stream } from "@libp2p/interface-connection"
 
 import * as okra from "node-okra"
-import type { Action, Session } from "@canvas-js/interfaces"
+import type { Message } from "@canvas-js/interfaces"
 
 import { toHex } from "../utils.js"
 import { decodeMessage } from "../encoding.js"
 import { Client } from "./client.js"
 
-export type Message = ({ type: "session" } & Session) | ({ type: "action" } & Action)
-
 export async function sync(
 	mst: okra.Tree,
 	stream: Stream,
-	applyBatch: (messages: Iterable<[string, Message]>) => Promise<void>
+	applyBatch: (messages: [string, Message][]) => Promise<void>
 ): Promise<void> {
 	const target = new okra.Target(mst)
 	const client = new Client(stream)

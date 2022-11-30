@@ -37,7 +37,7 @@ import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
 import { ModelStore } from "./modelStore.js"
 
-import * as RPC from "./rpc/index.js"
+import { sync, handleIncomingStream } from "./rpc/index.js"
 import * as constants from "./constants.js"
 import { getLibp2pInit } from "./libp2p.js"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
@@ -391,7 +391,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			console.log(`[canvas-core] Handling incoming stream ${stream.id} from peer ${connection.remotePeer.toString()}`)
 		}
 
-		await RPC.handleIncomingStream(stream, this.messageStore, this.mst)
+		await handleIncomingStream(stream, this.messageStore, this.mst)
 		if (this.options.verbose) {
 			console.log(`[canvas-core] Closed incoming stream ${stream.id}`)
 		}
@@ -564,7 +564,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		let successCount = 0
 		let failureCount = 0
 
-		const applyBatch = (messages: Iterable<[string, RPC.Message]>) =>
+		const applyBatch = (messages: [string, Message][]) =>
 			this.queue.add(async () => {
 				for (const [hash, message] of messages) {
 					if (this.options.verbose) {
@@ -596,7 +596,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 
 		try {
-			await RPC.sync(this.mst, stream, applyBatch)
+			await sync(this.mst, stream, applyBatch)
 		} catch (err) {
 			console.log(chalk.red(`[canvas-core] ${err}`))
 		} finally {
