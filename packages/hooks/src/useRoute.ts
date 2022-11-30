@@ -110,7 +110,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 					setIsLoading(false)
 				})
 		}
-	}, [route, url, applicationData, subscribe])
+	}, [route, url, !!applicationData, subscribe])
 
 	return { error, data, isLoading }
 }
