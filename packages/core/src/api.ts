@@ -3,12 +3,16 @@ import assert from "node:assert"
 import chalk from "chalk"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
+import client from "prom-client"
 
-import type { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { ModelValue } from "@canvas-js/interfaces"
 import { Core } from "./core.js"
 
+const collectDefaultMetrics = client.collectDefaultMetrics
+collectDefaultMetrics()
+
 interface Options {
+	exposeMetrics: boolean
 	exposeModels: boolean
 	exposeSessions: boolean
 	exposeActions: boolean
@@ -67,6 +71,19 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
 		}
 	})
+
+	if (options.exposeMetrics) {
+		api.get("/metrics", async (req, res) => {
+			try {
+				const result = await client.register.metrics()
+				res.header("Content-Type", client.register.contentType)
+				res.end(result)
+			} catch (err: any) {
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR)
+				res.end()
+			}
+		})
+	}
 
 	for (const route of Object.keys(core.vm.routes)) {
 		api.get(route, (req, res) => handleRoute(core, route, req, res))
