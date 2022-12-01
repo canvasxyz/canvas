@@ -1,12 +1,12 @@
 import { useCallback, useContext, useEffect, useState } from "react"
-import { ethers } from "ethers"
 
-import { SessionPayload, getSessionSignatureData, Session } from "@canvas-js/interfaces"
+import { SessionPayload, Session } from "@canvas-js/interfaces"
+import { Signer } from "@canvas-js/signers"
 
 import { CanvasContext } from "./CanvasContext.js"
-import { getCanvasSessionKey, getLatestBlock, urlJoin } from "./utils.js"
+import { getCanvasSessionKey, urlJoin } from "./utils.js"
 
-export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
+export function useSession(signer: Signer | null): {
 	error: Error | null
 	isLoading: boolean
 	isPending: boolean
@@ -28,8 +28,10 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 			setSignerAddress(null)
 			setSigner(null)
 		} else {
-			setSignerAddress(signer._address)
-			setSigner(signer)
+			signer.getAddress().then((address) => {
+				setSignerAddress(address)
+				setSigner(signer)
+			})
 		}
 
 		setSessionWallet(null)
@@ -68,7 +70,7 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 			return
 		}
 
-		const wallet = new ethers.Wallet(sessionPrivateKey)
+		const wallet = signer!.createWallet(sessionPrivateKey)
 		setSessionWallet(wallet)
 		setSessionExpiration(expiration)
 	}, [host, data, signerAddress])
@@ -89,7 +91,7 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 		try {
 			const timestamp = Date.now()
 			const sessionDuration = 86400 * 1000
-			const wallet = ethers.Wallet.createRandom()
+			const wallet = signer.createWallet()
 
 			const sessionObject: SessionObject = {
 				spec: data.uri,
@@ -97,7 +99,7 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 				expiration: timestamp + sessionDuration,
 			}
 
-			const block = await getLatestBlock(signer.provider)
+			const block = await signer.getRecentBlock()
 
 			const payload: SessionPayload = {
 				from: signerAddress,
@@ -108,9 +110,7 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 				block,
 			}
 
-			const sessionSignatureData = getSessionSignatureData(payload)
-			const signature = await signer._signTypedData(...sessionSignatureData)
-			const session: Session = { signature, payload }
+			const session: Session = await signer.signSessionPayload(payload)
 
 			const res = await fetch(urlJoin(host, "sessions"), {
 				method: "POST",

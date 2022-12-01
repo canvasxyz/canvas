@@ -1,8 +1,8 @@
-import { Action, ActionPayload, getActionSignatureData } from "@canvas-js/interfaces"
+import { Action, ActionPayload } from "@canvas-js/interfaces"
 import { useCallback, useContext, useState } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"
-import { urlJoin, Dispatch, getCanvasSessionKey, getLatestBlock } from "./utils.js"
+import { urlJoin, Dispatch, getCanvasSessionKey } from "./utils.js"
 
 export function useCanvas(): {
 	isLoading: boolean
@@ -51,7 +51,7 @@ export function useCanvas(): {
 			console.log("set pending to true")
 
 			try {
-				const block = await getLatestBlock(signer.provider)
+				const block = await signer.getRecentBlock()
 				console.log("got block", block)
 
 				const address = await signer.getAddress()
@@ -59,12 +59,7 @@ export function useCanvas(): {
 
 				const payload: ActionPayload = { from: address, spec: data.uri, call, args, timestamp, block }
 
-				const signatureData = getActionSignatureData(payload)
-				const signature = await sessionWallet._signTypedData(...signatureData)
-				console.log("got signature", signature)
-
-				const action: Action = { session: sessionWallet.address, signature, payload }
-
+				const action: Action = await sessionWallet.signActionPayload(payload)
 				const res = await fetch(urlJoin(host, "actions"), {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
@@ -76,7 +71,8 @@ export function useCanvas(): {
 					if (message === "session not found" || message === "session expired") {
 						setSessionWallet(null)
 						setSessionExpiration(null)
-						const sessionKey = getCanvasSessionKey(signer._address)
+						const address = await signer.getAddress()
+						const sessionKey = getCanvasSessionKey(address)
 						localStorage.removeItem(sessionKey)
 					}
 

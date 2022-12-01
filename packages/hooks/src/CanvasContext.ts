@@ -1,4 +1,5 @@
-import { ethers } from "ethers"
+import { Chain, ChainId } from "@canvas-js/interfaces"
+import { Signer, Wallet } from "@canvas-js/signers"
 import { createContext } from "react"
 
 export interface ApplicationData {
@@ -22,10 +23,10 @@ export interface CanvasContextValue {
 	data: ApplicationData | null
 
 	// private (not returned from useCanvas hook)
-	signer: ethers.providers.JsonRpcSigner | null
-	setSigner: (signer: ethers.providers.JsonRpcSigner | null) => void
-	sessionWallet: ethers.Wallet | null
-	setSessionWallet: (sessionWallet: ethers.Wallet | null) => void
+	signer: Signer | null
+	setSigner: (signer: Signer | null) => void
+	sessionWallet: Wallet | null
+	setSessionWallet: (sessionWallet: Wallet | null) => void
 	sessionExpiration: number | null
 	setSessionExpiration: (sessionExpiration: number | null) => void
 }

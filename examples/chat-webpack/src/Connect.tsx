@@ -1,10 +1,11 @@
-import React, { useMemo } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 
 import { ethers } from "ethers"
 import { useAccount, useConnect, useDisconnect, useSigner } from "wagmi"
 import { useSession } from "@canvas-js/hooks"
 
 import { ErrorMessage } from "./ErrorMessage"
+import { Signer } from "@canvas-js/signers"
 
 export const Connect: React.FC<{}> = ({}) => {
 	const { connect, connectors, error: connectionError, isLoading: isConnectionLoading, pendingConnector } = useConnect()
@@ -51,7 +52,17 @@ export const Connect: React.FC<{}> = ({}) => {
 }
 
 const Login: React.FC<{}> = ({}) => {
-	const { error: signerError, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
+	const { error: signerError, data } = useSigner<ethers.providers.JsonRpcSigner>()
+
+	const [signer, setSigner] = useState<Signer | null>(null)
+
+	useEffect(() => {
+		if (data) {
+			setSigner(new Signer(data))
+		} else {
+			setSigner(null)
+		}
+	}, [data])
 
 	const {
 		error: sessionError,
@@ -61,7 +72,7 @@ const Login: React.FC<{}> = ({}) => {
 		logout,
 		isLoading,
 		isPending,
-	} = useSession(signer ?? null)
+	} = useSession(signer)
 
 	const [expirationDate, expirationTime] = useMemo(() => {
 		if (sessionExpiration === null) {

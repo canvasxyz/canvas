@@ -1,4 +1,4 @@
-import { ethers } from "ethers"
+import { Signer, Wallet } from "@canvas-js/signers"
 import React, { useState, useEffect } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"
@@ -13,8 +13,8 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const [data, setData] = useState<ApplicationData | null>(null)
 	const [error, setError] = useState<Error | null>(null)
 
-	const [signer, setSigner] = useState<ethers.providers.JsonRpcSigner | null>(null)
-	const [sessionWallet, setSessionWallet] = useState<ethers.Wallet | null>(null)
+	const [signer, setSigner] = useState<Signer | null>(null)
+	const [sessionWallet, setSessionWallet] = useState<Wallet | null>(null)
 	const [sessionExpiration, setSessionExpiration] = useState<number | null>(null)
 
 	const host = props.host

@@ -18,6 +18,7 @@
     "packages/next",
     "packages/hooks",
     "packages/bootstrap-peer",
+    "packages/signers",
     "examples/app-store",
     "examples/chat-webpack",
     "examples/chat-next"
