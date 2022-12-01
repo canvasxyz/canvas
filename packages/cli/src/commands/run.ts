@@ -58,6 +58,11 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "boolean",
 			desc: "Run the node in unchecked mode, without verifying block hashes",
 		})
+		.option("metrics", {
+			type: "boolean",
+			desc: "Expose Prometheus endpoint at /metrics",
+			default: false,
+		})
 		.option("verbose", {
 			type: "boolean",
 			desc: "Enable verbose logging",
@@ -154,7 +159,7 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const { replay, verbose, unchecked, offline, listen: peeringPort } = args
+	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen: peeringPort } = args
 
 	const peerId = await getPeerId()
 	const libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
@@ -180,17 +185,17 @@ export async function handler(args: Args) {
 		libp2p,
 		blockResolver: blockCache.getBlock,
 		unchecked,
-		verbose,
 		offline,
+		verbose,
 	})
 
 	if (directory !== null && replay) {
-		console.log(chalk.green(`[canvas-core] Replaying action log...`))
+		console.log(chalk.green(`[canvas-cli] Replaying action log...`))
 		const { vm, messageStore, modelStore } = core
 		let i = 0
 		for await (const [id, action] of messageStore.getActionStream()) {
 			if (!actionType.is(action)) {
-				console.log(chalk.red("[canvas-core]"), action)
+				console.log(chalk.red("[canvas-cli]"), action)
 				throw new Error("Invalid action value in action log")
 			}
 
@@ -199,7 +204,7 @@ export async function handler(args: Args) {
 			i++
 		}
 
-		console.log(chalk.green(`[canvas-core] Successfully replayed all ${i} entries from the action log.`))
+		console.log(chalk.green(`[canvas-cli] Successfully replayed all ${i} entries from the action log.`))
 	}
 
 	const app = express()
@@ -212,10 +217,10 @@ export async function handler(args: Args) {
 			throw new Error("Invalid directory for static files (path not found)")
 		}
 
-		app.use("/api", getAPI(core))
+		app.use("/api", getAPI(core, { exposeMetrics }))
 		app.use(express.static(args.static))
 	} else {
-		app.use(getAPI(core))
+		app.use(getAPI(core, { exposeMetrics }))
 	}
 
 	const apiPrefix = args.static ? `api/` : ""
@@ -245,9 +250,9 @@ export async function handler(args: Args) {
 		await new Promise<void>((resolve, reject) => server.stop((err) => (err ? reject(err) : resolve())))
 		console.log("[canvas-cli] API server stopped.")
 
-		if (args.verbose) console.log("[canvas-cli] Closing core...")
+		console.log("[canvas-cli] Closing core...")
 		await core.close()
-		if (args.verbose) console.log("[canvas-cli] Core closed.")
+		console.log("[canvas-cli] Core closed.")
 		await libp2p.stop()
 		blockCache.close()
 	})

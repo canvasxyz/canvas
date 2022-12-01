@@ -43,14 +43,19 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "boolean",
 			desc: "Run the node in unchecked mode, without verifying block hashes",
 		})
+		.option("chain-rpc", {
+			type: "array",
+			desc: "Provide an RPC endpoint for reading on-chain data",
+		})
+		.option("metrics", {
+			type: "boolean",
+			desc: "Expose Prometheus endpoint at /metrics",
+			default: false,
+		})
 		.option("verbose", {
 			type: "boolean",
 			desc: "Enable verbose logging",
 			default: false,
-		})
-		.option("chain-rpc", {
-			type: "array",
-			desc: "Provide an RPC endpoint for reading on-chain data",
 		})
 
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
@@ -291,7 +296,14 @@ class Daemon {
 						blockResolver,
 						...this.options,
 					})
-					const api = getAPI(core, { exposeModels: true, exposeActions: true, exposeSessions: true })
+
+					const api = getAPI(core, {
+						exposeModels: true,
+						exposeActions: true,
+						exposeSessions: true,
+						exposeMetrics: true,
+					})
+
 					this.apps.set(name, { core, api })
 					console.log(`[canvas-cli] Started ${core.uri}`)
 					res.status(StatusCodes.OK).end()
