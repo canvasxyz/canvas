@@ -1,16 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useMemo } from "react"
 
-import { ethers } from "ethers"
-import { useAccount, useConnect, useDisconnect, useSigner } from "wagmi"
 import { useSession } from "@canvas-js/hooks"
 
 import { ErrorMessage } from "./ErrorMessage"
-import { Signer } from "@canvas-js/signers"
+import { useSigner, useConnect, useDisconnect } from "./MultichainConnectContext"
 
 export const Connect: React.FC<{}> = ({}) => {
-	const { connect, connectors, error: connectionError, isLoading: isConnectionLoading, pendingConnector } = useConnect()
+	// TODO: Implement the error handling from wagmi
+	// const { connect, connectors, error: connectionError, isLoading: isConnectionLoading, pendingConnector } = useConnect()
+	const { connect, isConnected, address } = useConnect()
 	const { disconnect } = useDisconnect()
-	const { address, isConnected } = useAccount()
 
 	return (
 		<div className="window">
@@ -28,22 +27,15 @@ export const Connect: React.FC<{}> = ({}) => {
 				) : (
 					<>
 						<p>Connect to a provider:</p>
-						{connectors.map((connector) => (
-							<button
-								disabled={!connector.ready || isConnected}
-								key={connector.id}
-								onClick={() => connect({ connector })}
-								style={{ marginRight: 5 }}
-							>
-								{connector.name}
-								{!connector.ready && " (unsupported)"}
-								{isConnectionLoading && connector.id === pendingConnector?.id && " (connecting)"}
-							</button>
-						))}
+						<button disabled={isConnected} onClick={() => connect()} style={{ marginRight: 5 }}>
+							MetaMask
+							{/* {!connector.ready && " (unsupported)"}
+							{isConnectionLoading && connector.id === pendingConnector?.id && " (connecting)"} */}
+						</button>
 					</>
 				)}
 
-				<ErrorMessage error={connectionError} />
+				{/* <ErrorMessage error={connectionError} /> */}
 
 				<Login />
 			</div>
@@ -52,17 +44,7 @@ export const Connect: React.FC<{}> = ({}) => {
 }
 
 const Login: React.FC<{}> = ({}) => {
-	const { error: signerError, data } = useSigner<ethers.providers.JsonRpcSigner>()
-
-	const [signer, setSigner] = useState<Signer | null>(null)
-
-	useEffect(() => {
-		if (data) {
-			setSigner(new Signer(data))
-		} else {
-			setSigner(null)
-		}
-	}, [data])
+	const { signer } = useSigner()
 
 	const {
 		error: sessionError,
@@ -107,7 +89,7 @@ const Login: React.FC<{}> = ({}) => {
 				</>
 			)}
 
-			<ErrorMessage error={signerError} />
+			{/* <ErrorMessage error={signerError} /> */}
 			<ErrorMessage error={sessionError} />
 		</>
 	)

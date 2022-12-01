@@ -1,6 +1,5 @@
 import React from "react"
 import ReactDOM from "react-dom/client"
-import { WagmiConfig } from "wagmi"
 
 import { Canvas } from "@canvas-js/hooks"
 
@@ -9,6 +8,7 @@ import { App } from "./App"
 
 import "98.css"
 import "./styles.css"
+import { MultichainConnect } from "./MultichainConnect"
 
 const root = ReactDOM.createRoot(document.getElementById("root")!)
 
@@ -17,10 +17,12 @@ const host = process.env.HOST!
 
 root.render(
 	<React.StrictMode>
-		<WagmiConfig client={client}>
+		{/* <WagmiConfig client={client}> */}
+		<MultichainConnect>
 			<Canvas host={host}>
 				<App />
 			</Canvas>
-		</WagmiConfig>
+		</MultichainConnect>
+		{/* </WagmiConfig> */}
 	</React.StrictMode>
 )
