@@ -1,4 +1,4 @@
-import { Signer, Wallet } from "@canvas-js/signers"
+import type { Signer, Wallet } from "@canvas-js/signers/lib/interfaces"
 import React, { useState, useEffect } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"

@@ -1,5 +1,4 @@
-import { Chain, ChainId } from "@canvas-js/interfaces"
-import { Signer, Wallet } from "@canvas-js/signers"
+import type { Signer, Wallet } from "@canvas-js/signers/lib/interfaces"
 import { createContext } from "react"
 
 export interface ApplicationData {

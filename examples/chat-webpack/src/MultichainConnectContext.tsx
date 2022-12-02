@@ -1,7 +1,7 @@
 import { Chain } from "@canvas-js/interfaces"
-import type { Signer } from "@canvas-js/signers/lib/interfaces"
+import type { Connector, Signer } from "@canvas-js/signers/lib/interfaces"
 import { MetaMaskEthereumConnector } from "@canvas-js/signers/lib/metamask_ethereum"
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext } from "react"
 
 /**
  * An attempt at making something like wagmi
@@ -24,6 +24,9 @@ export interface MultichainConnectContextValue {
 
 	signer: Signer | null
 	setSigner: (signer: Signer | null) => void
+
+	connector: Connector | null
+	setConnector: (connector: Connector | null) => void
 }
 
 export const MultichainConnectContext = createContext<MultichainConnectContextValue>({
@@ -48,10 +51,15 @@ export const MultichainConnectContext = createContext<MultichainConnectContextVa
 	setSigner: (_) => {
 		throw new Error("Missing <MultichainConnectContext /> parent element")
 	},
+
+	connector: null,
+	setConnector: (_) => {
+		throw new Error("Missing <MultichainConnectContext /> parent element")
+	},
 })
 
 export const useConnect = () => {
-	const { signer, setSigner, setIsLoading, isConnected, setIsConnected, address, setAddress } =
+	const { signer, setSigner, connector, setConnector, setIsLoading, isConnected, setIsConnected, address, setAddress } =
 		useContext(MultichainConnectContext)
 
 	const connect = async (chain: Chain) => {
@@ -59,17 +67,22 @@ export const useConnect = () => {
 			return
 		}
 
+		if (connector) {
+			return
+		}
+
 		setIsLoading(true)
 
-		const connector = new MetaMaskEthereumConnector()
+		const newConnector = new MetaMaskEthereumConnector()
 
 		const onAccountsChanged = (accounts: string[]) => {
 			setAddress(accounts[0])
-			setSigner(connector.createSigner(accounts[0]))
+			setSigner(newConnector.createSigner(accounts[0]))
 		}
 
-		connector.enable({ onAccountsChanged })
+		await newConnector.enable({ onAccountsChanged })
 
+		setConnector(newConnector)
 		setIsLoading(false)
 		setIsConnected(true)
 	}
@@ -78,11 +91,16 @@ export const useConnect = () => {
 }
 
 export const useDisconnect = () => {
-	const { isConnected, setIsConnected } = useContext(MultichainConnectContext)
+	const { isConnected, setIsConnected, connector, setConnector } = useContext(MultichainConnectContext)
 
 	const disconnect = () => {
 		if (!isConnected) {
 			return
+		}
+
+		if (connector) {
+			connector.disable()
+			setConnector(null)
 		}
 		setIsConnected(false)
 	}

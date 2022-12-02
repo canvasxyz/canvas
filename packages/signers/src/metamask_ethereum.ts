@@ -10,8 +10,10 @@ import {
 } from "@canvas-js/interfaces"
 import { Connector, Signer, Wallet } from "./interfaces"
 
-export class MetaMaskEthereumConnector implements Connector<MetaMaskEthereumSigner> {
+export class MetaMaskEthereumConnector implements Connector {
 	provider: ethers.providers.Web3Provider
+	onAccountsChanged?: (accounts: string[]) => void
+	onNetwork?: (newNetwork: any, oldNetwork: any) => void
 
 	constructor() {
 		// enable
@@ -22,7 +24,7 @@ export class MetaMaskEthereumConnector implements Connector<MetaMaskEthereumSign
 	}
 
 	async enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }) {
-		this.provider.on("network", (newNetwork, oldNetwork) => {
+		this.onNetwork = (newNetwork, oldNetwork) => {
 			// Force page refreshes on network changes, see https://docs.ethers.io/v5/concepts/best-practices/
 			// When a Provider makes its initial connection, it emits a "network"
 			// event with a null oldNetwork along with the newNetwork. So, if the
@@ -30,14 +32,14 @@ export class MetaMaskEthereumConnector implements Connector<MetaMaskEthereumSign
 			if (oldNetwork) {
 				window.location.reload()
 			}
-		})
+		}
+		this.provider.on("network", this.onNetwork)
 
 		const ethereum = (window as any).ethereum
 
 		// this is not abstracted away by ethers
-		ethereum.on("accountsChanged", (accounts: string[]) => {
-			onAccountsChanged(accounts)
-		})
+		this.onAccountsChanged = onAccountsChanged
+		ethereum.on("accountsChanged", onAccountsChanged)
 
 		// TODO: use https://docs.metamask.io/guide/rpc-api.html#other-rpc-methods to switch active
 		// chain according to currently active node, if one exists
@@ -47,13 +49,23 @@ export class MetaMaskEthereumConnector implements Connector<MetaMaskEthereumSign
 		onAccountsChanged(accounts)
 	}
 
+	async disable() {
+		if (this.onNetwork) {
+			this.provider.removeListener("network", this.onNetwork)
+		}
+		if (this.onAccountsChanged) {
+			const ethereum = (window as any).ethereum
+			ethereum.removeListener("accountsChanged", this.onAccountsChanged)
+		}
+	}
+
 	createSigner(account: string) {
 		const providerSigner = this.provider.getSigner(account)
 		return new MetaMaskEthereumSigner(providerSigner)
 	}
 }
 
-export class MetaMaskEthereumSigner implements Signer<MetaMaskEthereumWallet> {
+export class MetaMaskEthereumSigner implements Signer {
 	signer: ethers.providers.JsonRpcSigner
 
 	constructor(signer: ethers.providers.JsonRpcSigner) {

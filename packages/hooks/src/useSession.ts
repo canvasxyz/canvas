@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useState } from "react"
 
 import { SessionPayload, Session } from "@canvas-js/interfaces"
-import { Signer } from "@canvas-js/signers"
+import type { Signer } from "@canvas-js/signers/lib/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
 import { getCanvasSessionKey, urlJoin } from "./utils.js"

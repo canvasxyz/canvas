@@ -1,14 +1,15 @@
 import { Action, ActionPayload, Block, Session, SessionPayload } from "@canvas-js/interfaces"
 
-export interface Connector<SignerClass extends Signer<any>> {
-	enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): void
-	createSigner(account: string): SignerClass
+export interface Connector {
+	enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void>
+	disable(): void
+	createSigner(account: string): Signer
 }
 
-export interface Signer<WalletClass extends Wallet> {
+export interface Signer {
 	getRecentBlock(): Promise<Block>
 	getAddress(): Promise<string>
-	createWallet(sessionPrivateKey?: string): WalletClass
+	createWallet(sessionPrivateKey?: string): Wallet
 	signSessionPayload(payload: SessionPayload): Promise<Session>
 }
 
