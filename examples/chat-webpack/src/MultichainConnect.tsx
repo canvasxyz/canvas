@@ -1,4 +1,4 @@
-import { Signer } from "@canvas-js/signers"
+import { Signer } from "@canvas-js/signers/lib/interfaces"
 import React, { useState } from "react"
 import { MultichainConnectContext } from "./MultichainConnectContext"
 

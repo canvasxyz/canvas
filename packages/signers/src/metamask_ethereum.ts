@@ -8,8 +8,9 @@ import {
 	Session,
 	SessionPayload,
 } from "@canvas-js/interfaces"
+import { Connector, Signer, Wallet } from "./interfaces"
 
-export class Connector {
+export class MetaMaskEthereumConnector implements Connector<MetaMaskEthereumSigner> {
 	provider: ethers.providers.Web3Provider
 
 	constructor() {
@@ -48,11 +49,11 @@ export class Connector {
 
 	createSigner(account: string) {
 		const providerSigner = this.provider.getSigner(account)
-		return new Signer(providerSigner)
+		return new MetaMaskEthereumSigner(providerSigner)
 	}
 }
 
-export class Signer {
+export class MetaMaskEthereumSigner implements Signer<MetaMaskEthereumWallet> {
 	signer: ethers.providers.JsonRpcSigner
 
 	constructor(signer: ethers.providers.JsonRpcSigner) {
@@ -75,10 +76,9 @@ export class Signer {
 	async getAddress() {
 		return this.signer.getAddress()
 	}
-
-	createWallet(sessionPrivateKey?: string): Wallet {
+	createWallet(sessionPrivateKey?: string): MetaMaskEthereumWallet {
 		const ethersWallet = sessionPrivateKey ? new ethers.Wallet(sessionPrivateKey) : ethers.Wallet.createRandom()
-		return new Wallet(ethersWallet)
+		return new MetaMaskEthereumWallet(ethersWallet)
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
@@ -88,7 +88,7 @@ export class Signer {
 	}
 }
 
-export class Wallet {
+export class MetaMaskEthereumWallet implements Wallet {
 	wallet: ethers.Wallet
 
 	constructor(wallet: ethers.Wallet) {

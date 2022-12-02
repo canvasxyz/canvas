@@ -1,4 +1,6 @@
-import { Connector, Signer } from "@canvas-js/signers"
+import { Chain } from "@canvas-js/interfaces"
+import type { Signer } from "@canvas-js/signers/lib/interfaces"
+import { MetaMaskEthereumConnector } from "@canvas-js/signers/lib/metamask_ethereum"
 import { createContext, useContext, useState } from "react"
 
 /**
@@ -52,14 +54,14 @@ export const useConnect = () => {
 	const { signer, setSigner, setIsLoading, isConnected, setIsConnected, address, setAddress } =
 		useContext(MultichainConnectContext)
 
-	const connect = async () => {
+	const connect = async (chain: Chain) => {
 		if (signer) {
 			return
 		}
 
 		setIsLoading(true)
 
-		const connector = new Connector()
+		const connector = new MetaMaskEthereumConnector()
 
 		const onAccountsChanged = (accounts: string[]) => {
 			setAddress(accounts[0])

@@ -27,10 +27,8 @@ export const Connect: React.FC<{}> = ({}) => {
 				) : (
 					<>
 						<p>Connect to a provider:</p>
-						<button disabled={isConnected} onClick={() => connect()} style={{ marginRight: 5 }}>
+						<button disabled={isConnected} onClick={() => connect("eth")} style={{ marginRight: 5 }}>
 							MetaMask
-							{/* {!connector.ready && " (unsupported)"}
-							{isConnectionLoading && connector.id === pendingConnector?.id && " (connecting)"} */}
 						</button>
 					</>
 				)}
