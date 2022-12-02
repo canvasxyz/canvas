@@ -1,6 +1,6 @@
 import { Chain } from "@canvas-js/interfaces"
 import type { Connector, Signer } from "@canvas-js/signers/lib/interfaces"
-import { MetaMaskEthereumConnector } from "@canvas-js/signers/lib/metamask_ethereum"
+import { MetaMaskEthereumConnector } from "@canvas-js/signers/lib/metamask_web_wallet"
 import { createContext, useContext } from "react"
 
 /**
