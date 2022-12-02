@@ -9,6 +9,49 @@ import {
 	SessionPayload,
 } from "@canvas-js/interfaces"
 
+export class Connector {
+	provider: ethers.providers.Web3Provider
+
+	constructor() {
+		// enable
+		// default to ETH
+		// The "any" network will allow spontaneous network changes
+		const ethereum = (window as any).ethereum
+		this.provider = new ethers.providers.Web3Provider(ethereum, "any")
+	}
+
+	async enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }) {
+		this.provider.on("network", (newNetwork, oldNetwork) => {
+			// Force page refreshes on network changes, see https://docs.ethers.io/v5/concepts/best-practices/
+			// When a Provider makes its initial connection, it emits a "network"
+			// event with a null oldNetwork along with the newNetwork. So, if the
+			// oldNetwork exists, it represents a changing network
+			if (oldNetwork) {
+				window.location.reload()
+			}
+		})
+
+		const ethereum = (window as any).ethereum
+
+		// this is not abstracted away by ethers
+		ethereum.on("accountsChanged", (accounts: string[]) => {
+			onAccountsChanged(accounts)
+		})
+
+		// TODO: use https://docs.metamask.io/guide/rpc-api.html#other-rpc-methods to switch active
+		// chain according to currently active node, if one exists
+		console.log("Attempting to enable Metamask")
+
+		const accounts: string[] = await this.provider.send("eth_requestAccounts", [])
+		onAccountsChanged(accounts)
+	}
+
+	createSigner(account: string) {
+		const providerSigner = this.provider.getSigner(account)
+		return new Signer(providerSigner)
+	}
+}
+
 export class Signer {
 	signer: ethers.providers.JsonRpcSigner
 

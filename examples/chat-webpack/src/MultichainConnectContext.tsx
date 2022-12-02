@@ -1,6 +1,5 @@
-import { Signer } from "@canvas-js/signers"
+import { Connector, Signer } from "@canvas-js/signers"
 import { createContext, useContext, useState } from "react"
-import { ethers } from "ethers"
 
 /**
  * An attempt at making something like wagmi
@@ -58,44 +57,16 @@ export const useConnect = () => {
 			return
 		}
 
-		// TODO: use https://docs.metamask.io/guide/rpc-api.html#other-rpc-methods to switch active
-		// chain according to currently active node, if one exists
-		console.log("Attempting to enable Metamask")
 		setIsLoading(true)
 
-		// this could all belong to a "Connector" abstraction? idk
+		const connector = new Connector()
 
-		// enable
-		// default to ETH
-		// The "any" network will allow spontaneous network changes
-		const ethereum = (window as any).ethereum
-		const provider = new ethers.providers.Web3Provider(ethereum, "any")
-
-		provider.on("network", (newNetwork, oldNetwork) => {
-			// Force page refreshes on network changes, see https://docs.ethers.io/v5/concepts/best-practices/
-			// When a Provider makes its initial connection, it emits a "network"
-			// event with a null oldNetwork along with the newNetwork. So, if the
-			// oldNetwork exists, it represents a changing network
-			if (oldNetwork) {
-				window.location.reload()
-			}
-		})
-		// this is not abstracted away by ethers
-		ethereum.on("accountsChanged", (accounts: string[]) => {
+		const onAccountsChanged = (accounts: string[]) => {
 			setAddress(accounts[0])
+			setSigner(connector.createSigner(accounts[0]))
+		}
 
-			const providerSigner = provider.getSigner(accounts[0])
-			setSigner(new Signer(providerSigner))
-		})
-
-		const accounts: string[] = await provider.send("eth_requestAccounts", [])
-
-		// getSigner
-		const providerSigner = provider.getSigner(accounts[0])
-		setSigner(new Signer(providerSigner))
-
-		// getAddress
-		setAddress(accounts[0])
+		connector.enable({ onAccountsChanged })
 
 		setIsLoading(false)
 		setIsConnected(true)
