@@ -63,18 +63,39 @@ export const useConnect = () => {
 		console.log("Attempting to enable Metamask")
 		setIsLoading(true)
 
+		// this could all belong to a "Connector" abstraction? idk
+
+		// enable
 		// default to ETH
-		const provider = new ethers.providers.Web3Provider((window as any).ethereum)
+		// The "any" network will allow spontaneous network changes
+		const ethereum = (window as any).ethereum
+		const provider = new ethers.providers.Web3Provider(ethereum, "any")
 
 		provider.on("network", (newNetwork, oldNetwork) => {
-			console.log(`network change from ${oldNetwork} to ${newNetwork}...`)
+			// Force page refreshes on network changes, see https://docs.ethers.io/v5/concepts/best-practices/
+			// When a Provider makes its initial connection, it emits a "network"
+			// event with a null oldNetwork along with the newNetwork. So, if the
+			// oldNetwork exists, it represents a changing network
+			if (oldNetwork) {
+				window.location.reload()
+			}
+		})
+		// this is not abstracted away by ethers
+		ethereum.on("accountsChanged", (accounts: string[]) => {
+			setAddress(accounts[0])
+
+			const providerSigner = provider.getSigner(accounts[0])
+			setSigner(new Signer(providerSigner))
 		})
 
-		await provider.send("eth_requestAccounts", [])
+		const accounts: string[] = await provider.send("eth_requestAccounts", [])
 
-		const providerSigner = provider.getSigner()
+		// getSigner
+		const providerSigner = provider.getSigner(accounts[0])
 		setSigner(new Signer(providerSigner))
-		setAddress(await providerSigner.getAddress())
+
+		// getAddress
+		setAddress(accounts[0])
 
 		setIsLoading(false)
 		setIsConnected(true)
