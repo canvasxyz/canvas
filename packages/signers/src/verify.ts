@@ -1,8 +1,7 @@
 import { TypedDataDomain, TypedDataField, utils } from "ethers"
 import { verifyTypedData } from "@ethersproject/wallet"
 
-import type { Action, ActionArgument, ActionPayload } from "./actions.js"
-import type { Session, SessionPayload } from "./sessions.js"
+import type { Action, ActionArgument, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
 
 /**
  * Ethereum compatible signer logic, used to generate and

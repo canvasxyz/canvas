@@ -3,7 +3,8 @@ import test from "ava"
 import { ethers } from "ethers"
 
 import { Core, compileSpec } from "@canvas-js/core"
-import { ActionArgument, getActionSignatureData } from "@canvas-js/interfaces"
+import { ActionArgument } from "@canvas-js/interfaces"
+import { getActionSignatureData } from "@canvas-js/signers"
 
 const signer = ethers.Wallet.createRandom()
 const signerAddress = signer.address.toLowerCase()

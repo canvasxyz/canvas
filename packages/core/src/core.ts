@@ -18,17 +18,8 @@ import type { StreamHandler } from "@libp2p/interface-registrar"
 
 import * as okra from "node-okra"
 
-import {
-	Action,
-	ActionPayload,
-	Block,
-	Session,
-	SessionPayload,
-	verifyActionSignature,
-	verifySessionSignature,
-	ModelValue,
-	Message,
-} from "@canvas-js/interfaces"
+import { Action, ActionPayload, Block, Session, SessionPayload, ModelValue, Message } from "@canvas-js/interfaces"
+import { verifyActionSignature, verifySessionSignature } from "@canvas-js/signers"
 
 import { actionType, sessionType } from "./codecs.js"
 import { signalInvalidType, wait, retry, toHex, BlockResolver, AbortError, CacheMap } from "./utils.js"
