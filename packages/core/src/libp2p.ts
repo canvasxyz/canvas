@@ -47,6 +47,7 @@ export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 		dht: kadDHT({ protocolPrefix: "/canvas", clientMode: false }),
+		metrics: { enabled: true },
 		pubsub: gossipsub({
 			doPX: true,
 			fallbackToFloodsub: false,
