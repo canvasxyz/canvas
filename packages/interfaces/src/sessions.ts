@@ -1,4 +1,3 @@
-import type { Block } from "./actions.js"
 import { Chain, ChainId } from "./contracts.js"
 
 /**
@@ -14,7 +13,7 @@ export type SessionPayload = {
 	timestamp: number
 	address: string
 	duration: number
-	block?: Block
+	blockhash: string | null
 	chain: Chain
 	chainId: ChainId
 }

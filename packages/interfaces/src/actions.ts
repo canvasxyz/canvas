@@ -29,7 +29,9 @@ export type ActionContext = {
 	from: string
 	spec: string
 	timestamp: number
-	block?: Block
+	chain: Chain
+	chainId: ChainId
+	blockhash: string | null
 }
 
 export type ActionPayload = ActionContext & {

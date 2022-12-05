@@ -57,7 +57,16 @@ export function useCanvas(): {
 				const address = await signer.getAddress()
 				console.log("from address", address)
 
-				const payload: ActionPayload = { from: address, spec: data.uri, call, args, timestamp, block }
+				const payload: ActionPayload = {
+					from: address,
+					spec: data.uri,
+					call,
+					args,
+					timestamp,
+					blockhash: block.blockhash,
+					chain: block.chain,
+					chainId: block.chainId,
+				}
 
 				const signatureData = getActionSignatureData(payload)
 				const signature = await sessionWallet._signTypedData(...signatureData)

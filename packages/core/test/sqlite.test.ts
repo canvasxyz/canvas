@@ -3,7 +3,7 @@ import test from "ava"
 import { ethers } from "ethers"
 
 import { Core, compileSpec } from "@canvas-js/core"
-import { ActionArgument, getActionSignatureData } from "@canvas-js/interfaces"
+import { ActionArgument, ActionPayload, getActionSignatureData } from "@canvas-js/interfaces"
 
 const signer = ethers.Wallet.createRandom()
 const signerAddress = signer.address.toLowerCase()
@@ -43,7 +43,16 @@ const { spec, uri } = await compileSpec({
 
 async function sign(call: string, args: ActionArgument[]) {
 	const timestamp = Date.now()
-	const actionPayload = { from: signerAddress, spec: uri, call, args, timestamp }
+	const actionPayload = {
+		from: signerAddress,
+		spec: uri,
+		call,
+		args,
+		timestamp,
+		blockhash: null,
+		chain: "eth",
+		chainId: 1,
+	} as ActionPayload
 	const actionSignatureData = getActionSignatureData(actionPayload)
 	const actionSignature = await signer._signTypedData(...actionSignatureData)
 	return { payload: actionPayload, session: null, signature: actionSignature }
