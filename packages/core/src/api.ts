@@ -3,16 +3,22 @@ import assert from "node:assert"
 import chalk from "chalk"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
+import client from "prom-client"
 
-import type { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { ModelValue } from "@canvas-js/interfaces"
 import { Core } from "./core.js"
 
+const collectDefaultMetrics = client.collectDefaultMetrics
+collectDefaultMetrics()
+
 interface Options {
+	exposeMetrics: boolean
 	exposeModels: boolean
 	exposeSessions: boolean
 	exposeActions: boolean
 }
+
+const gauges: Record<string, client.Gauge<string>> = {}
 
 export function getAPI(core: Core, options: Partial<Options> = {}): express.Express {
 	const api = express()
@@ -24,7 +30,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		const actions = Object.keys(actionParameters)
 		const routes = Object.keys(routeParameters)
 
-		res.json({
+		return res.json({
 			uri: core.uri,
 			cid: core.cid.toString(),
 			peerId: core.libp2p?.peerId.toString(),
@@ -50,7 +56,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			res.json({ hash })
 		} catch (err: any) {
 			console.log(chalk.red(`[canvas-core] Failed to apply action:`), err)
-			res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
 		}
 	})
 
@@ -64,9 +70,58 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			res.json({ hash })
 		} catch (err: any) {
 			console.log(chalk.red(`[canvas-core] Failed to create session:`), err)
-			res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
+			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
 		}
 	})
+
+	if (options.exposeMetrics) {
+		api.get("/metrics", async (req, res) => {
+			if (core.libp2p && core.libp2p.metrics) {
+				// update the prometheus client with the recorded metrics
+
+				for (const [system, components] of core.libp2p.metrics.getComponentMetrics().entries()) {
+					for (const [component, componentMetrics] of components.entries()) {
+						for (const [metricName, trackedMetric] of componentMetrics.entries()) {
+							// set the relevant gauges
+							const name = `${system}-${component}-${metricName}`.replace(/-/g, "_")
+							const labelName = trackedMetric.label ?? metricName.replace(/-/g, "_")
+							const help = trackedMetric.help ?? metricName.replace(/-/g, "_")
+							const gaugeOptions: client.GaugeConfiguration<string> = { name, help }
+							const metricValue = await trackedMetric.calculate()
+
+							if (typeof metricValue !== "number") {
+								// metric group
+								gaugeOptions.labelNames = [labelName]
+							}
+
+							if (!gauges[name]) {
+								// create metric if it's not been seen before
+								gauges[name] = new client.Gauge(gaugeOptions)
+							}
+
+							if (typeof metricValue !== "number") {
+								// metric group
+								Object.entries(metricValue).forEach(([key, value]) => {
+									gauges[name].set({ [labelName]: key }, value)
+								})
+							} else {
+								// metric value
+								gauges[name].set(metricValue)
+							}
+						}
+					}
+				}
+			}
+
+			try {
+				const result = await client.register.metrics()
+				res.header("Content-Type", client.register.contentType)
+				return res.end(result)
+			} catch (err: any) {
+				return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+			}
+		})
+	}
 
 	for (const route of Object.keys(core.vm.routes)) {
 		api.get(route, (req, res) => handleRoute(core, route, req, res))
@@ -130,8 +185,7 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 			try {
 				params[param] = JSON.parse(value)
 			} catch (err) {
-				res.status(StatusCodes.BAD_REQUEST).end(`Invalid query param value ${param}=${value}`)
-				return
+				return res.status(StatusCodes.BAD_REQUEST).end(`Invalid query param value ${param}=${value}`)
 			}
 		}
 	}
@@ -156,9 +210,7 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 			} catch (err) {
 				closed = true
 				console.log(chalk.red("[canvas-cli] error evaluating route"), err)
-				res.status(StatusCodes.BAD_REQUEST)
-				res.end(`Route error: ${err}`)
-				return
+				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err}`)
 			}
 
 			if (oldValues === null || !compareResults(oldValues, newValues)) {
@@ -176,9 +228,7 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 		try {
 			data = core.getRoute(route, params)
 		} catch (err) {
-			res.status(StatusCodes.BAD_REQUEST)
-			res.end(`Route error: ${err}`)
-			return
+			return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err}`)
 		}
 
 		return res.json(data)
