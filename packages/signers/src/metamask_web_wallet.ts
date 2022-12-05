@@ -59,7 +59,7 @@ export class MetaMaskEthereumConnector implements Connector {
 		}
 	}
 
-	createSigner(account: string) {
+	async createSigner(account: string) {
 		const providerSigner = this.provider.getSigner(account)
 		return new MetaMaskEthereumSigner(providerSigner)
 	}

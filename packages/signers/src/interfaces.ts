@@ -3,7 +3,7 @@ import { Action, ActionPayload, Block, Session, SessionPayload } from "@canvas-j
 export interface Connector {
 	enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void>
 	disable(): void
-	createSigner(account: string): Signer
+	createSigner(account: string): Promise<Signer>
 }
 
 export interface Signer {

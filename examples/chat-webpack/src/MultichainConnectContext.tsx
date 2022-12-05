@@ -1,7 +1,8 @@
-import { Chain } from "@canvas-js/interfaces"
-import type { Connector, Signer } from "@canvas-js/signers/lib/interfaces"
-import { MetaMaskEthereumConnector } from "@canvas-js/signers/lib/metamask_web_wallet"
 import { createContext, useContext } from "react"
+
+import { Chain } from "@canvas-js/interfaces"
+import type { Connector, Signer } from "@canvas-js/signers"
+import { MetaMaskEthereumConnector } from "@canvas-js/signers"
 
 /**
  * An attempt at making something like wagmi
@@ -75,9 +76,10 @@ export const useConnect = () => {
 
 		const newConnector = new MetaMaskEthereumConnector()
 
-		const onAccountsChanged = (accounts: string[]) => {
+		const onAccountsChanged = async (accounts: string[]) => {
 			setAddress(accounts[0])
-			setSigner(newConnector.createSigner(accounts[0]))
+			const newSigner = await newConnector.createSigner(accounts[0])
+			setSigner(newSigner)
 		}
 
 		await newConnector.enable({ onAccountsChanged })
