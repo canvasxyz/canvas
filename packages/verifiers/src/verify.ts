@@ -9,6 +9,7 @@ import { isU8a, isHex } from "@polkadot/util"
 import { checkAddress, encodeAddress, signatureVerify } from "@polkadot/util-crypto"
 
 export const addressSwapper = (options: { address: string; currentPrefix: number }): string => {
+	// TODO: do we need this?
 	if (!options.address) throw new Error("No address provided to swap")
 
 	if (!options.currentPrefix) return options.address
