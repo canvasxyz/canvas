@@ -99,6 +99,9 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 
 			const block = await getLatestBlock(signer.provider)
 
+			const chain = "eth"
+			const chainId = await signer.getChainId()
+
 			const payload: SessionPayload = {
 				from: signerAddress,
 				spec: data.uri,
@@ -106,6 +109,8 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 				duration: sessionDuration,
 				timestamp,
 				block,
+				chain,
+				chainId,
 			}
 
 			const sessionSignatureData = getSessionSignatureData(payload)

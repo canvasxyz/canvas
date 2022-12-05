@@ -1,4 +1,5 @@
 import type { Block } from "./actions.js"
+import { Chain, ChainId } from "./contracts.js"
 
 /**
  * A `SessionPayload` is the data signed by the user to initiate a session.
@@ -14,6 +15,8 @@ export type SessionPayload = {
 	address: string
 	duration: number
 	block?: Block
+	chain: Chain
+	chainId: ChainId
 }
 
 /**

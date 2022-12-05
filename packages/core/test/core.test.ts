@@ -108,6 +108,8 @@ test("Apply action signed with session key", async (t) => {
 		timestamp: Date.now(),
 		address: sessionSignerAddress,
 		duration: 60 * 60 * 1000, // 1 hour
+		chain: "eth",
+		chainId: 1,
 	}
 
 	const sessionSignatureData = getSessionSignatureData(sessionPayload)
@@ -140,6 +142,8 @@ test("Apply two actions signed with session keys", async (t) => {
 		timestamp: Date.now(),
 		address: sessionSignerAddress,
 		duration: 60 * 60 * 1000, // 1 hour
+		chain: "eth",
+		chainId: 1,
 	}
 
 	const sessionSignatureData = getSessionSignatureData(sessionPayload)
