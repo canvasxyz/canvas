@@ -1,0 +1,15 @@
+{
+  "name": "@canvas-js/verifiers",
+  "version": "0.0.33",
+  "description": "",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Canvas Technology Corporation (https://canvas.xyz)"
+}

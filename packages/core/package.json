@@ -52,12 +52,14 @@
 		"protobufjs": "~7.1.2",
 		"quickjs-emscripten": "^0.21.0",
 		"sucrase": "^3.28.0",
+		"typedarray-to-buffer": "^4.0.0",
 		"uint8arraylist": "^2.3.2",
 		"undici": "^5.11.0"
 	},
 	"devDependencies": {
 		"@ava/typescript": "^3.0.1",
 		"@types/node": "^18.0.0",
+		"@types/typedarray-to-buffer": "^4.0.0",
 		"ava": "^5.0.1",
 		"dotenv": "^16.0.3",
 		"protobufjs-cli": "~1.0.2",

@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react"
 
 import { Chain } from "@canvas-js/interfaces"
-import type { Connector, Signer } from "@canvas-js/signers"
+import { Connector, PolkadotWebWalletConnector, Signer } from "@canvas-js/signers"
 import { MetaMaskEthereumConnector } from "@canvas-js/signers"
 
 /**
@@ -74,7 +74,7 @@ export const useConnect = () => {
 
 		setIsLoading(true)
 
-		const newConnector = new MetaMaskEthereumConnector()
+		const newConnector = chain == "eth" ? new MetaMaskEthereumConnector() : new PolkadotWebWalletConnector()
 
 		const onAccountsChanged = async (accounts: string[]) => {
 			setAddress(accounts[0])

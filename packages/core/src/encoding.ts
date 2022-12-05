@@ -3,6 +3,8 @@ import { createHash } from "node:crypto"
 import { ethers } from "ethers"
 import * as t from "io-ts"
 import * as cbor from "microcbor"
+import { decodeAddress, encodeAddress } from "@polkadot/keyring"
+import { hexToU8a, isHex } from "@polkadot/util"
 
 import type { Block, Session, Action, Message } from "@canvas-js/interfaces"
 
@@ -69,16 +71,21 @@ const fromBinaryBlock = ({ blockhash, ...binaryBlock }: BinaryBlock): Block => (
 	blockhash: hexlify(blockhash).toLowerCase(),
 })
 
-const toBinarySession = (session: Session): BinarySession => ({
-	type: "session",
-	signature: arrayify(session.signature),
-	payload: {
-		...session.payload,
-		from: arrayify(session.payload.from),
-		address: arrayify(session.payload.address),
-		block: session.payload.block ? toBinaryBlock(session.payload.block) : null,
-	},
-})
+const toBinarySession = (session: Session): BinarySession => {
+	const isSubstrate = session.payload.chain == "substrate"
+
+	const response = {
+		type: "session",
+		signature: isSubstrate ? decodeAddress(session.signature) : arrayify(session.signature),
+		payload: {
+			...session.payload,
+			from: isSubstrate ? decodeAddress(session.payload.from) : arrayify(session.payload.from),
+			address: isSubstrate ? decodeAddress(session.payload.address) : arrayify(session.payload.address),
+			block: session.payload.block ? toBinaryBlock(session.payload.block) : null,
+		},
+	} as BinarySession
+	return response
+}
 
 function fromBinarySession({ signature, payload: { from, address, block, ...payload } }: BinarySession): Session {
 	const session: Session = {

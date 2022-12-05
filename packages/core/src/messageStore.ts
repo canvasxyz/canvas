@@ -1,7 +1,8 @@
 import assert from "node:assert"
-
+import toBuffer from "typedarray-to-buffer"
 import Database, * as sqlite from "better-sqlite3"
 import * as cbor from "microcbor"
+import { decodeAddress } from "@polkadot/keyring"
 
 import type { Action, Session, Block, ActionArgument, Chain, ChainId } from "@canvas-js/interfaces"
 
@@ -101,13 +102,17 @@ export class MessageStore {
 	}
 
 	public insertSession(hash: string | Buffer, session: Session) {
+		const isSubstrate = session.payload.chain == "substrate"
+
 		assert(session.payload.spec === this.uri, "insertSession: session.payload.spec did not match MessageStore.uri")
 
 		const record: SessionRecord = {
 			hash: typeof hash === "string" ? fromHex(hash) : hash,
-			signature: fromHex(session.signature),
-			from_address: fromHex(session.payload.from),
-			session_address: fromHex(session.payload.address),
+			signature: isSubstrate ? toBuffer(decodeAddress(session.signature)) : fromHex(session.signature),
+			from_address: isSubstrate ? toBuffer(decodeAddress(session.payload.from)) : fromHex(session.payload.from),
+			session_address: isSubstrate
+				? toBuffer(decodeAddress(session.payload.address))
+				: fromHex(session.payload.address),
 			duration: session.payload.duration,
 			timestamp: session.payload.timestamp,
 			block_id: null,

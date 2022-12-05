@@ -1,19 +1,5 @@
 import { Connector, Signer, Wallet } from "./interfaces.js"
 import { MetaMaskEthereumConnector } from "./metamask_web_wallet.js"
-import {
-	getActionSignatureData,
-	getSessionSignatureData,
-	verifyActionSignature,
-	verifySessionSignature,
-} from "./verify.js"
+import { PolkadotWebWalletConnector } from "./polkadot_web_wallet.js"
 
-export {
-	Connector,
-	Signer,
-	Wallet,
-	MetaMaskEthereumConnector,
-	getActionSignatureData,
-	getSessionSignatureData,
-	verifyActionSignature,
-	verifySessionSignature,
-}
+export { Connector, Signer, Wallet, MetaMaskEthereumConnector, PolkadotWebWalletConnector }

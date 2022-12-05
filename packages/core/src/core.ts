@@ -19,7 +19,7 @@ import type { StreamHandler } from "@libp2p/interface-registrar"
 import * as okra from "node-okra"
 
 import { Action, ActionPayload, Block, Session, SessionPayload, ModelValue, Message } from "@canvas-js/interfaces"
-import { verifyActionSignature, verifySessionSignature } from "@canvas-js/signers"
+import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
 
 import { actionType, sessionType } from "./codecs.js"
 import { signalInvalidType, wait, retry, toHex, BlockResolver, AbortError, CacheMap } from "./utils.js"
@@ -270,7 +270,6 @@ export class Core extends EventEmitter<CoreEvents> {
 	 */
 	public async applySession(session: Session): Promise<{ hash: string }> {
 		assert(sessionType.is(session), "invalid session")
-
 		const hash = getSessionHash(session)
 
 		const existingRecord = this.messageStore.getSessionByHash(hash)
@@ -309,6 +308,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(spec === this.uri, "session signed for wrong spec")
 
 		const verifiedAddress = verifySessionSignature(session)
+		console.log(verifiedAddress)
+		console.log(from)
 		assert(verifiedAddress.toLowerCase() === from.toLowerCase(), "session signed by wrong address")
 
 		// check the timestamp bounds

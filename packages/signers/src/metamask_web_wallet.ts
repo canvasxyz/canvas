@@ -1,7 +1,7 @@
 import { ethers } from "ethers"
 import { Action, ActionPayload, Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
 import { Connector, Signer, Wallet } from "./interfaces.js"
-import { getActionSignatureData, getSessionSignatureData } from "./verify.js"
+import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
 
 export class MetaMaskEthereumConnector implements Connector {
 	chain: Chain = "eth"
