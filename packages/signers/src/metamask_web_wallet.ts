@@ -3,6 +3,8 @@ import {
 	Action,
 	ActionPayload,
 	Block,
+	Chain,
+	ChainId,
 	getActionSignatureData,
 	getSessionSignatureData,
 	Session,
@@ -11,6 +13,7 @@ import {
 import { Connector, Signer, Wallet } from "./interfaces"
 
 export class MetaMaskEthereumConnector implements Connector {
+	chain: Chain = "eth"
 	provider: ethers.providers.Web3Provider
 	onAccountsChanged?: (accounts: string[]) => void
 	onNetwork?: (newNetwork: any, oldNetwork: any) => void
@@ -61,24 +64,29 @@ export class MetaMaskEthereumConnector implements Connector {
 
 	async createSigner(account: string) {
 		const providerSigner = this.provider.getSigner(account)
-		return new MetaMaskEthereumSigner(providerSigner)
+		// if the network changes, we will throw away this Signer
+		const network = await this.provider.getNetwork()
+		return new MetaMaskEthereumSigner(providerSigner, network)
 	}
 }
 
 export class MetaMaskEthereumSigner implements Signer {
+	chain: Chain = "eth"
 	signer: ethers.providers.JsonRpcSigner
+	network: ethers.providers.Network
 
-	constructor(signer: ethers.providers.JsonRpcSigner) {
+	constructor(signer: ethers.providers.JsonRpcSigner, network: ethers.providers.Network) {
 		this.signer = signer
+		this.network = network
 	}
 
 	async getRecentBlock(): Promise<Block> {
 		const { provider } = this.signer
-		const [network, providerBlock] = await Promise.all([provider.getNetwork(), provider.getBlock("latest")])
+		const providerBlock = await provider.getBlock("latest")
 
 		return {
-			chain: "eth",
-			chainId: network.chainId,
+			chain: this.chain,
+			chainId: this.network.chainId,
 			blocknum: providerBlock.number,
 			blockhash: providerBlock.hash,
 			timestamp: providerBlock.timestamp,
@@ -88,6 +96,15 @@ export class MetaMaskEthereumSigner implements Signer {
 	async getAddress() {
 		return this.signer.getAddress()
 	}
+
+	async getChain(): Promise<Chain> {
+		return this.chain
+	}
+
+	async getChainId(): Promise<ChainId> {
+		return this.network.chainId
+	}
+
 	createWallet(sessionPrivateKey?: string): MetaMaskEthereumWallet {
 		const ethersWallet = sessionPrivateKey ? new ethers.Wallet(sessionPrivateKey) : ethers.Wallet.createRandom()
 		return new MetaMaskEthereumWallet(ethersWallet)
