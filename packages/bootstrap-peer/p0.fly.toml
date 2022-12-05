@@ -9,8 +9,9 @@ processes = []
   builder = "heroku/buildpacks:20"
 
 [env]
-  PORT = "4002"
   BOOTSTRAP_LIST = "/dns4/canvas-bootstrap-p1.fly.dev/tcp/4002/ws/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT /dns4/canvas-bootstrap-p2.fly.dev/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3"
+  PORT = "4002"
+  METRICS_PORT = "9091"
 
 [[services]]
   internal_port = 4002
@@ -24,3 +25,7 @@ processes = []
   [[services.ports]]
     handlers = ["http"]
     port = 4002
+  
+[metrics]
+port = 9091
+path = "/metrics"
