@@ -1,4 +1,4 @@
-import { Action, ActionPayload, Block, Session, SessionPayload } from "@canvas-js/interfaces"
+import { Action, ActionPayload, Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
 
 export interface Connector {
 	enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void>
@@ -11,6 +11,8 @@ export interface Signer {
 	getAddress(): Promise<string>
 	createWallet(sessionPrivateKey?: string): Wallet
 	signSessionPayload(payload: SessionPayload): Promise<Session>
+	getChain(): Promise<Chain>
+	getChainId(): Promise<ChainId>
 }
 
 export interface Wallet {

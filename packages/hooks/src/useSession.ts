@@ -101,6 +101,9 @@ export function useSession(signer: Signer | null): {
 
 			const block = await signer.getRecentBlock()
 
+			const chain = await signer.getChain()
+			const chainId = await signer.getChainId()
+
 			const payload: SessionPayload = {
 				from: signerAddress,
 				spec: data.uri,
@@ -108,6 +111,8 @@ export function useSession(signer: Signer | null): {
 				duration: sessionDuration,
 				timestamp,
 				block,
+				chain,
+				chainId,
 			}
 
 			const session: Session = await signer.signSessionPayload(payload)

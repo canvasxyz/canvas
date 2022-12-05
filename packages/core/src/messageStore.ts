@@ -3,7 +3,7 @@ import assert from "node:assert"
 import Database, * as sqlite from "better-sqlite3"
 import * as cbor from "microcbor"
 
-import type { Action, Session, Block, ActionArgument } from "@canvas-js/interfaces"
+import type { Action, Session, Block, ActionArgument, Chain, ChainId } from "@canvas-js/interfaces"
 
 import { mapEntries, fromHex, toHex } from "./utils.js"
 import { chainType } from "./codecs.js"
@@ -35,6 +35,8 @@ type SessionRecord = {
 	duration: number
 	timestamp: number
 	block_id: number | null
+	chain: Chain
+	chain_id: ChainId
 }
 
 /**
@@ -109,6 +111,8 @@ export class MessageStore {
 			duration: session.payload.duration,
 			timestamp: session.payload.timestamp,
 			block_id: null,
+			chain: session.payload.chain,
+			chain_id: session.payload.chainId,
 		}
 
 		if (session.payload.block !== undefined) {
@@ -175,6 +179,8 @@ export class MessageStore {
 				timestamp: record.timestamp,
 				address: toHex(record.session_address),
 				duration: record.duration,
+				chain: record.chain,
+				chainId: record.chain_id,
 			},
 		}
 

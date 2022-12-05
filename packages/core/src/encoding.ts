@@ -45,6 +45,8 @@ const binarySessionPayloadType = t.type({
 	timestamp: t.number,
 	address: uint8ArrayType,
 	duration: t.number,
+	chain: chainType,
+	chainId: chainIdType,
 	block: t.union([t.null, binaryBlockType]),
 })
 
