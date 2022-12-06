@@ -1,12 +1,12 @@
 import { useCallback, useContext, useEffect, useState } from "react"
 
 import { SessionPayload, Session } from "@canvas-js/interfaces"
-import type { Signer } from "@canvas-js/signers/lib/interfaces"
+import type { SessionSigner } from "@canvas-js/signers/lib/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
 import { getCanvasSessionKey, urlJoin } from "./utils.js"
 
-export function useSession(signer: Signer | null): {
+export function useSession(signer: SessionSigner | null): {
 	error: Error | null
 	isLoading: boolean
 	isPending: boolean
@@ -15,7 +15,7 @@ export function useSession(signer: Signer | null): {
 	login: () => void
 	logout: () => void
 } {
-	const { host, data, setSigner, sessionWallet, setSessionWallet, sessionExpiration, setSessionExpiration } =
+	const { host, data, setSigner, actionSigner, setActionSigner, sessionExpiration, setSessionExpiration } =
 		useContext(CanvasContext)
 
 	const [error, setError] = useState<null | Error>(null)
@@ -34,7 +34,7 @@ export function useSession(signer: Signer | null): {
 			})
 		}
 
-		setSessionWallet(null)
+		setActionSigner(null)
 		setSessionExpiration(null)
 	}, [signer])
 
@@ -70,8 +70,8 @@ export function useSession(signer: Signer | null): {
 			return
 		}
 
-		const wallet = signer!.createWallet(sessionPrivateKey)
-		setSessionWallet(wallet)
+		const actionSigner = signer!.createActionSigner(sessionPrivateKey)
+		setActionSigner(actionSigner)
 		setSessionExpiration(expiration)
 	}, [host, data, signerAddress])
 
@@ -91,11 +91,11 @@ export function useSession(signer: Signer | null): {
 		try {
 			const timestamp = Date.now()
 			const sessionDuration = 86400 * 1000
-			const wallet = signer.createWallet()
+			const actionSigner = signer.createActionSigner()
 
 			const sessionObject: SessionObject = {
 				spec: data.uri,
-				sessionPrivateKey: wallet.privateKey,
+				sessionPrivateKey: actionSigner.privateKey,
 				expiration: timestamp + sessionDuration,
 			}
 
@@ -107,7 +107,7 @@ export function useSession(signer: Signer | null): {
 			const payload: SessionPayload = {
 				from: signerAddress,
 				spec: data.uri,
-				address: wallet.address,
+				address: actionSigner.address,
 				duration: sessionDuration,
 				timestamp,
 				blockhash: block.blockhash,
@@ -130,7 +130,7 @@ export function useSession(signer: Signer | null): {
 
 			const sessionKey = getCanvasSessionKey(signerAddress)
 			localStorage.setItem(sessionKey, JSON.stringify(sessionObject))
-			setSessionWallet(wallet)
+			setActionSigner(actionSigner)
 			setSessionExpiration(sessionObject.expiration)
 			setError(null)
 		} catch (err) {
@@ -146,7 +146,7 @@ export function useSession(signer: Signer | null): {
 	}, [host, data, signer, signerAddress])
 
 	const logout = useCallback(() => {
-		setSessionWallet(null)
+		setActionSigner(null)
 		setSessionExpiration(null)
 		if (signerAddress !== null) {
 			const sessionKey = getCanvasSessionKey(signerAddress)
@@ -154,7 +154,7 @@ export function useSession(signer: Signer | null): {
 		}
 	}, [signerAddress])
 
-	const sessionAddress = sessionWallet && sessionWallet.address
+	const sessionAddress = actionSigner && actionSigner.address
 	return {
 		error,
 		isLoading,

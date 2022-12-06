@@ -1,4 +1,4 @@
-import type { Signer, Wallet } from "@canvas-js/signers/lib/interfaces"
+import type { SessionSigner, ActionSigner } from "@canvas-js/signers/lib/interfaces"
 import { createContext } from "react"
 
 export interface ApplicationData {
@@ -22,10 +22,10 @@ export interface CanvasContextValue {
 	data: ApplicationData | null
 
 	// private (not returned from useCanvas hook)
-	signer: Signer | null
-	setSigner: (signer: Signer | null) => void
-	sessionWallet: Wallet | null
-	setSessionWallet: (sessionWallet: Wallet | null) => void
+	signer: SessionSigner | null
+	setSigner: (signer: SessionSigner | null) => void
+	actionSigner: ActionSigner | null
+	setActionSigner: (actionSigner: ActionSigner | null) => void
 	sessionExpiration: number | null
 	setSessionExpiration: (sessionExpiration: number | null) => void
 }
@@ -41,8 +41,8 @@ export const CanvasContext = createContext<CanvasContextValue>({
 		throw new Error("Missing <Canvas /> parent element")
 	},
 
-	sessionWallet: null,
-	setSessionWallet: (_) => {
+	actionSigner: null,
+	setActionSigner: (_) => {
 		throw new Error("Missing <Canvas /> parent element")
 	},
 

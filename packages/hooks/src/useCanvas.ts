@@ -19,8 +19,8 @@ export function useCanvas(): {
 		host,
 		data,
 		signer,
-		sessionWallet,
-		setSessionWallet,
+		actionSigner,
+		setActionSigner,
 		sessionExpiration,
 		setSessionExpiration,
 	} = useContext(CanvasContext)
@@ -34,7 +34,7 @@ export function useCanvas(): {
 				throw new Error("no host configured")
 			} else if (signer === null) {
 				throw new Error("dispatch() called without a provider")
-			} else if (sessionWallet === null || sessionExpiration === null) {
+			} else if (actionSigner === null || sessionExpiration === null) {
 				throw new Error("dispatch() called while logged out")
 			} else if (data === null) {
 				throw new Error("dispatch called before the application connection was established")
@@ -42,7 +42,7 @@ export function useCanvas(): {
 
 			const timestamp = Date.now()
 			if (sessionExpiration < timestamp) {
-				setSessionWallet(null)
+				setActionSigner(null)
 				setSessionExpiration(null)
 				throw new Error("Session expired. Please log in again.")
 			}
@@ -68,7 +68,7 @@ export function useCanvas(): {
 					chainId: block.chainId,
 				}
 
-				const action: Action = await sessionWallet.signActionPayload(payload)
+				const action: Action = await actionSigner.signActionPayload(payload)
 				const res = await fetch(urlJoin(host, "actions"), {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
@@ -78,7 +78,7 @@ export function useCanvas(): {
 				if (!res.ok) {
 					const message = await res.text()
 					if (message === "session not found" || message === "session expired") {
-						setSessionWallet(null)
+						setActionSigner(null)
 						setSessionExpiration(null)
 						const address = await signer.getAddress()
 						const sessionKey = getCanvasSessionKey(address)
@@ -94,9 +94,9 @@ export function useCanvas(): {
 				setIsPending(false)
 			}
 		},
-		[host, data, signer, sessionWallet, sessionExpiration]
+		[host, data, signer, actionSigner, sessionExpiration]
 	)
 
-	const isReady = !isPending && sessionWallet !== null
+	const isReady = !isPending && actionSigner !== null
 	return { isLoading, isPending, isReady, error, host, data, dispatch }
 }
