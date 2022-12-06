@@ -18,7 +18,16 @@ import type { StreamHandler } from "@libp2p/interface-registrar"
 
 import * as okra from "node-okra"
 
-import { Action, ActionPayload, Block, Session, SessionPayload, ModelValue, Message } from "@canvas-js/interfaces"
+import {
+	Action,
+	ActionPayload,
+	Session,
+	SessionPayload,
+	ModelValue,
+	Message,
+	Chain,
+	ChainId,
+} from "@canvas-js/interfaces"
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
 
 import { actionType, sessionType } from "./codecs.js"
@@ -28,7 +37,7 @@ import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
 import { ModelStore } from "./modelStore.js"
 
-import * as RPC from "./rpc/index.js"
+import { sync, handleIncomingStream } from "./rpc/index.js"
 import * as constants from "./constants.js"
 import { getLibp2pInit } from "./libp2p.js"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
@@ -173,13 +182,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	/**
 	 * Helper for verifying the blockhash for an action or session.
 	 */
-	public async verifyBlock(blockInfo: Block) {
-		const { chain, chainId, blocknum, blockhash, timestamp } = blockInfo
-		const block = await this.blockResolver(chain, chainId, blockhash)
-
-		// check the block retrieved from RPC matches metadata from the user
-		assert(block.number === blocknum, "action/session provided with invalid block number")
-		assert(block.timestamp === timestamp, "action/session provided with invalid timestamp")
+	public async verifyBlock({ chain, chainId, blockhash }: { chain: Chain; chainId: ChainId; blockhash: string }) {
+		await this.blockResolver(chain, chainId, blockhash)
 	}
 
 	/**
@@ -226,7 +230,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async validateAction(action: Action) {
-		const { timestamp, block, spec } = action.payload
+		const { timestamp, spec, blockhash, chain, chainId } = action.payload
 		const fromAddress = action.payload.from.toLowerCase()
 
 		assert(spec === this.uri, "action signed for wrong spec")
@@ -237,8 +241,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (!this.options.unchecked) {
 			// check the action was signed with a valid, recent block
-			assert(block !== undefined, "action is missing block data")
-			await this.verifyBlock(block)
+			assert(blockhash, "action is missing block data")
+			await this.verifyBlock({ blockhash, chain, chainId })
 		}
 
 		// verify the signature, either using a session signature or action signature
@@ -304,7 +308,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async validateSession(session: Session) {
-		const { from, spec, timestamp, block } = session.payload
+		const { from, spec, timestamp, blockhash, chain, chainId } = session.payload
 		assert(spec === this.uri, "session signed for wrong spec")
 
 		const verifiedAddress = verifySessionSignature(session)
@@ -318,8 +322,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (!this.options.unchecked) {
 			// check the session was signed with a valid, recent block
-			assert(block !== undefined, "session is missing block data")
-			await this.verifyBlock(block)
+			assert(blockhash, "session is missing block data")
+			await this.verifyBlock({ blockhash, chain, chainId })
 		}
 	}
 
@@ -383,7 +387,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			console.log(`[canvas-core] Handling incoming stream ${stream.id} from peer ${connection.remotePeer.toString()}`)
 		}
 
-		await RPC.handleIncomingStream(stream, this.messageStore, this.mst)
+		await handleIncomingStream(stream, this.messageStore, this.mst)
 		if (this.options.verbose) {
 			console.log(`[canvas-core] Closed incoming stream ${stream.id}`)
 		}
@@ -556,7 +560,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		let successCount = 0
 		let failureCount = 0
 
-		const applyBatch = (messages: Iterable<[string, RPC.Message]>) =>
+		const applyBatch = (messages: [string, Message][]) =>
 			this.queue.add(async () => {
 				for (const [hash, message] of messages) {
 					if (this.options.verbose) {
@@ -588,7 +592,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 
 		try {
-			await RPC.sync(this.mst, stream, applyBatch)
+			await sync(this.mst, stream, applyBatch)
 		} catch (err) {
 			console.log(chalk.red(`[canvas-core] ${err}`))
 		} finally {

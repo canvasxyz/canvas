@@ -243,12 +243,12 @@ export class VM {
 					mapEntries(contract.functions, (key, fn) =>
 						context.newFunction(`${name}.${key}`, (...argHandles: QuickJSHandle[]) => {
 							assert(this.actionContext !== null, "internal error: this.actionContext is null")
-							const { block } = this.actionContext
-							assert(block !== undefined, "action called a contract function but did not include a blockhash")
+							const { blockhash } = this.actionContext
+							assert(blockhash !== undefined, "action called a contract function but did not include a blockhash")
 							const args = argHandles.map(context.dump)
 							if (options.verbose) {
 								const call = chalk.green(`${name}.${key}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`)
-								console.log(`[canvas-vm] contract: ${call} at block ${block.blocknum} (${block.blockhash})`)
+								console.log(`[canvas-vm] contract: ${call} at block (${blockhash})`)
 							}
 
 							const deferred = context.newPromise()
@@ -327,14 +327,14 @@ export class VM {
 		const argHandles = args.map(this.wrapActionArgument)
 
 		// everything that goes into the VM must be deterministic, and deterministic means normalized!
-		const blockhash = context.block ? context.block.blockhash.toLowerCase() : null
+		const blockhash = context.blockhash ? context.blockhash.toLowerCase() : null
 		const thisArg = wrapJSON(
 			this.context,
 			blockhash
 				? {
 						hash: hash.toLowerCase(),
 						from: context.from.toLowerCase(),
-						block: { ...context.block, blockhash },
+						blockhash,
 				  }
 				: { hash: hash.toLowerCase(), from: context.from.toLowerCase() }
 		)

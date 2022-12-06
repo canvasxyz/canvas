@@ -110,9 +110,9 @@ export function useSession(signer: Signer | null): {
 				address: wallet.address,
 				duration: sessionDuration,
 				timestamp,
-				block,
-				chain,
-				chainId,
+				blockhash: block.blockhash,
+				chain: block.chain,
+				chainId: block.chainId,
 			}
 
 			const session: Session = await signer.signSessionPayload(payload)
