@@ -6,7 +6,7 @@ import { SignerPayloadRaw } from "@polkadot/types/types/extrinsic"
 import { ApiPromise, WsProvider } from "@polkadot/api"
 import { mnemonicGenerate } from "@polkadot/util-crypto"
 import { Connector, SessionSigner, ActionSigner } from "./interfaces"
-import { Block, SessionPayload, Session, Action, ActionPayload, Chain, ChainId } from "packages/interfaces/lib"
+import { Block, SessionPayload, Session, Action, ActionPayload, Chain, ChainId } from "@canvas-js/interfaces"
 import { addressSwapper } from "./utils.js"
 
 export class PolkadotWebWalletConnector implements Connector {
@@ -97,8 +97,6 @@ class PolkadotWebWalletSessionSigner implements SessionSigner {
 			type: "bytes",
 		}
 		const signature = (await this.signer.signRaw!(signerPayload)).signature
-		console.log(signerPayload)
-		console.log({ signature, payload })
 		return { signature, payload }
 	}
 }
