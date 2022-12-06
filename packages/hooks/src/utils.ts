@@ -3,7 +3,7 @@ import { ActionArgument, Block } from "@canvas-js/interfaces"
 
 export const getCanvasSessionKey = (address: string) => `CANVAS_SESSION:${address}`
 
-export type Dispatch = (call: string, ...args: ActionArgument[]) => Promise<{ hash: string }>
+export type Dispatch = (call: string, args: Record<string, ActionArgument>) => Promise<{ hash: string }>
 
 export async function getLatestBlock(provider: ethers.providers.Provider): Promise<Block> {
 	const [network, providerBlock] = await Promise.all([provider.getNetwork(), provider.getBlock("latest")])

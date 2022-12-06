@@ -18,7 +18,7 @@ const { spec, uri } = await compileSpec({
 	},
 })
 
-async function sign(signer: ethers.Wallet, session: string | null, call: string, args: ActionArgument[]) {
+async function sign(signer: ethers.Wallet, session: string | null, call: string, args: Record<string, ActionArgument>) {
 	const timestamp = Date.now()
 	const actionPayload: ActionPayload = {
 		from: signerAddress,
@@ -38,7 +38,7 @@ async function sign(signer: ethers.Wallet, session: string | null, call: string,
 test("test fetch and log IP address", async (t) => {
 	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true, offline: true })
 
-	const action = await sign(signer, null, "logIP", [])
+	const action = await sign(signer, null, "logIP", {})
 	await core.applyAction(action)
 	await core.close()
 

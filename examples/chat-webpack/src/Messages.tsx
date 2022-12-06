@@ -21,7 +21,7 @@ export const Messages: React.FC<{}> = ({}) => {
 			if (event.key === "Enter" && inputRef.current !== null) {
 				const input = inputRef.current
 				try {
-					const { hash } = await dispatch("createPost", input.value)
+					const { hash } = await dispatch("createPost", { content: input.value })
 					console.log("created post", hash)
 					input.value = ""
 					setTimeout(() => input.focus(), 0)
