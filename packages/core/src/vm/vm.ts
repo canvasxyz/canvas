@@ -317,7 +317,7 @@ export class VM {
 	 * Given a call, get a list of effects to pass to `store.applyEffects`, to be applied to the models.
 	 * Used by `.apply()` and when replaying actions.
 	 */
-	public async execute(hash: string, { call, args, ...context }: ActionPayload): Promise<Effect[]> {
+	public async execute(hash: string, { call, args, timestamp, ...context }: ActionPayload): Promise<Effect[]> {
 		assert(this.effects === null && this.actionContext === null, "cannot apply more than one action at once")
 
 		const actionHandle = this.actionHandles[call]
@@ -334,6 +334,7 @@ export class VM {
 			hash: hash.toLowerCase(),
 			from: context.from.toLowerCase(),
 			blockhash,
+			timestamp,
 		})
 
 		this.context.setProp(ctx, "db", this.dbHandle)
