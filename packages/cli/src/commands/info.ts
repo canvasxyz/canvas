@@ -39,7 +39,7 @@ export async function handler(args: Args) {
 	}
 
 	const vm = await VM.initialize(uri, spec, {}, { unchecked: true })
-	const { models, routeParameters, actionParameters, contractMetadata } = vm
+	const { models, routeParameters, actions, contractMetadata } = vm
 	vm.dispose()
 
 	console.log(`name: ${uri}\n`)
@@ -56,11 +56,7 @@ export async function handler(args: Args) {
 	console.log("")
 
 	console.log(chalk.green("===== actions ====="))
-	console.log(
-		Object.entries(actionParameters)
-			.map(([name, params]) => `${name}(${params.join(", ")})\n`)
-			.join("")
-	)
+	console.log(actions.map((name) => `${name}({ ...args })\n`).join(""))
 
 	console.log(chalk.green("===== contracts ====="))
 	Object.entries(contractMetadata).forEach(([name, { chain, chainId, address, abi }]) => {

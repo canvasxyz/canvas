@@ -26,8 +26,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	api.use(express.json())
 
 	api.get("/", (req, res) => {
-		const { component, routeParameters, actionParameters } = core.vm
-		const actions = Object.keys(actionParameters)
+		const { component, routeParameters, actions } = core.vm
 		const routes = Object.keys(routeParameters)
 
 		return res.json({

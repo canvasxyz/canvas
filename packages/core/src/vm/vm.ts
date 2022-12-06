@@ -63,9 +63,9 @@ export class VM {
 	}
 
 	public readonly models: Record<string, Model>
-	public readonly routeParameters: Record<string, string[]>
+	public readonly actions: string[]
 	public readonly routes: Record<string, string>
-	public readonly actionParameters: Record<string, string[]>
+	public readonly routeParameters: Record<string, string[]>
 	public readonly contracts: Record<string, ethers.Contract>
 	public readonly contractMetadata: Record<string, ContractMetadata>
 	public readonly component: string | null
@@ -144,14 +144,13 @@ export class VM {
 		}
 
 		// parse and validate action handlers
+		this.actions = []
 		this.actionHandles = actionsHandle.consume((handle) => unwrapObject(context, handle))
-		this.actionParameters = {}
 		const actionNamePattern = /^[a-zA-Z]+$/
 		for (const [name, handle] of Object.entries(this.actionHandles)) {
 			assertPattern(name, actionNamePattern, "invalid action name")
 			assert(context.typeof(handle) === "function", `actions.${name} is not a function`)
-			const source = call(context, "Function.prototype.toString", handle).consume(context.getString)
-			this.actionParameters[name] = parseFunctionParameters(source)
+			this.actions.push(name)
 		}
 
 		this.routes = {}
