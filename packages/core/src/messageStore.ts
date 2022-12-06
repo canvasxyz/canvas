@@ -195,7 +195,7 @@ export class MessageStore {
     session_address BLOB    REFERENCES sessions(session_address),
     from_address    BLOB    NOT NULL,
     timestamp       INTEGER NOT NULL,
-    blockhash       BLOB    NOT NULL,
+    blockhash       BLOB            ,
 		chain           TEXT    NOT NULL,
     chain_id        INTEGER NOT NULL,
     call            TEXT    NOT NULL,
@@ -210,7 +210,7 @@ export class MessageStore {
     session_address BLOB    NOT NULL UNIQUE,
     duration        INTEGER NOT NULL,
     timestamp       INTEGER NOT NULL,
-    blockhash       BLOB    NOT NULL,
+    blockhash       BLOB            ,
 		chain           TEXT    NOT NULL,
     chain_id        INTEGER NOT NULL
   );`
