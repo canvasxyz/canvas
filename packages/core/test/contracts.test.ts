@@ -4,7 +4,7 @@ import * as dotenv from "dotenv"
 import { ethers } from "ethers"
 
 import { Action, ActionArgument, ActionPayload } from "@canvas-js/interfaces"
-import { getActionSignatureData } from "@canvas-js/signers"
+import { getActionSignatureData } from "@canvas-js/verifiers"
 import { compileSpec, Core } from "@canvas-js/core"
 
 import { getCurrentBlock } from "./utils.js"

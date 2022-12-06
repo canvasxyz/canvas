@@ -4,7 +4,7 @@ import { ethers } from "ethers"
 
 import { Core, compileSpec } from "@canvas-js/core"
 import { ActionArgument } from "@canvas-js/interfaces"
-import { getActionSignatureData } from "@canvas-js/signers"
+import { getActionSignatureData } from "@canvas-js/verifiers"
 
 const signer = ethers.Wallet.createRandom()
 const signerAddress = signer.address.toLowerCase()
