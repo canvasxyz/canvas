@@ -19,7 +19,6 @@ import type {
 	SessionPayload,
 	Chain,
 	ChainId,
-	Block,
 } from "@canvas-js/interfaces"
 
 export const chainType: t.Type<Chain> = t.union([
@@ -31,28 +30,20 @@ export const chainType: t.Type<Chain> = t.union([
 
 export const chainIdType: t.Type<ChainId> = t.union([t.number, t.string])
 
-export const blockType: t.Type<Block> = t.type({
-	chain: chainType,
-	chainId: chainIdType,
-	blocknum: t.number,
-	blockhash: t.string,
-	timestamp: t.number,
-})
-
 export const actionArgumentType: t.Type<ActionArgument> = t.union([t.null, t.boolean, t.number, t.string])
 
 export const actionArgumentArrayType = t.array(actionArgumentType)
 
-export const actionPayloadType: t.Type<ActionPayload> = t.intersection([
-	t.type({
-		from: t.string,
-		spec: t.string,
-		timestamp: t.number,
-		call: t.string,
-		args: t.array(actionArgumentType),
-	}),
-	t.partial({ block: blockType }),
-])
+export const actionPayloadType: t.Type<ActionPayload> = t.type({
+	from: t.string,
+	spec: t.string,
+	timestamp: t.number,
+	call: t.string,
+	args: t.array(actionArgumentType),
+	chain: chainType,
+	chainId: chainIdType,
+	blockhash: t.union([t.string, t.null]),
+})
 
 export const actionType: t.Type<Action> = t.type({
 	payload: actionPayloadType,
@@ -60,16 +51,16 @@ export const actionType: t.Type<Action> = t.type({
 	signature: t.string,
 })
 
-export const sessionPayloadType: t.Type<SessionPayload> = t.intersection([
-	t.type({
-		from: t.string,
-		spec: t.string,
-		timestamp: t.number,
-		address: t.string,
-		duration: t.number,
-	}),
-	t.partial({ block: blockType }),
-])
+export const sessionPayloadType: t.Type<SessionPayload> = t.type({
+	from: t.string,
+	spec: t.string,
+	timestamp: t.number,
+	address: t.string,
+	duration: t.number,
+	chain: chainType,
+	chainId: chainIdType,
+	blockhash: t.union([t.string, t.null]),
+})
 
 export const sessionType: t.Type<Session> = t.type({
 	payload: sessionPayloadType,

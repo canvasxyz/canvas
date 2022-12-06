@@ -105,7 +105,9 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 				address: wallet.address,
 				duration: sessionDuration,
 				timestamp,
-				block,
+				blockhash: block.blockhash,
+				chain: block.chain,
+				chainId: block.chainId,
 			}
 
 			const sessionSignatureData = getSessionSignatureData(payload)

@@ -3,18 +3,9 @@ import assert from "node:assert"
 import Database, * as sqlite from "better-sqlite3"
 import * as cbor from "microcbor"
 
-import type { Action, Session, Block, ActionArgument } from "@canvas-js/interfaces"
+import type { Action, Session, ActionArgument, Chain, ChainId } from "@canvas-js/interfaces"
 
 import { mapEntries, fromHex, toHex } from "./utils.js"
-import { chainType } from "./codecs.js"
-
-type BlockRecord = {
-	chain: string
-	chain_id: number
-	blocknum: number
-	blockhash: Buffer
-	timestamp: number
-}
 
 type ActionRecord = {
 	hash: Buffer
@@ -22,9 +13,11 @@ type ActionRecord = {
 	from_address: Buffer
 	session_address: Buffer | null
 	timestamp: number
-	block_id: number | null
+	blockhash: Buffer | null
 	call: string
 	args: Buffer
+	chain: Chain
+	chain_id: ChainId
 }
 
 type SessionRecord = {
@@ -34,7 +27,9 @@ type SessionRecord = {
 	session_address: Buffer
 	duration: number
 	timestamp: number
-	block_id: number | null
+	blockhash: Buffer | null
+	chain: Chain
+	chain_id: ChainId
 }
 
 /**
@@ -60,7 +55,6 @@ export class MessageStore {
 			this.database = new Database(path)
 		}
 
-		this.database.exec(MessageStore.createBlocksTable)
 		this.database.exec(MessageStore.createSessionsTable)
 		this.database.exec(MessageStore.createActionsTable)
 
@@ -84,11 +78,9 @@ export class MessageStore {
 			timestamp: action.payload.timestamp,
 			call: action.payload.call,
 			args: Buffer.from(args.buffer, args.byteOffset, args.byteLength),
-			block_id: null,
-		}
-
-		if (action.payload.block !== undefined) {
-			record.block_id = this.getBlockId(action.payload.block)
+			blockhash: action.payload.blockhash ? fromHex(action.payload.blockhash) : null,
+			chain: action.payload.chain,
+			chain_id: action.payload.chainId,
 		}
 
 		if (action.session !== null) {
@@ -108,13 +100,12 @@ export class MessageStore {
 			session_address: fromHex(session.payload.address),
 			duration: session.payload.duration,
 			timestamp: session.payload.timestamp,
-			block_id: null,
+			blockhash: session.payload.blockhash ? fromHex(session.payload.blockhash) : null,
+			chain: session.payload.chain,
+			chain_id: session.payload.chainId,
 		}
 
-		if (session.payload.block !== undefined) {
-			record.block_id = this.getBlockId(session.payload.block)
-		}
-
+		console.log(record)
 		this.statements.insertSession.run(record)
 	}
 
@@ -136,11 +127,10 @@ export class MessageStore {
 				call: record.call,
 				args: cbor.decode(record.args) as ActionArgument[],
 				timestamp: record.timestamp,
+				chain: record.chain,
+				chainId: record.chain_id,
+				blockhash: record.blockhash ? toHex(record.blockhash) : null,
 			},
-		}
-
-		if (record.block_id !== null) {
-			action.payload.block = this.getBlock(record.block_id)
 		}
 
 		return action
@@ -175,11 +165,10 @@ export class MessageStore {
 				timestamp: record.timestamp,
 				address: toHex(record.session_address),
 				duration: record.duration,
+				chain: record.chain,
+				chainId: record.chain_id,
+				blockhash: record.blockhash ? toHex(record.blockhash) : null,
 			},
-		}
-
-		if (record.block_id !== null) {
-			session.payload.block = this.getBlock(record.block_id)
 		}
 
 		return session
@@ -199,57 +188,6 @@ export class MessageStore {
 		}
 	}
 
-	private getBlockId(block: Block): number {
-		const record: undefined | { id: number; blockhash: Buffer; timestamp: number } = this.statements.getBlockId.get({
-			chain: block.chain,
-			chain_id: block.chainId,
-			blocknum: block.blocknum,
-		})
-
-		if (record === undefined) {
-			const { lastInsertRowid } = this.statements.insertBlock.run({
-				chain: block.chain,
-				chain_id: block.chainId,
-				blockhash: fromHex(block.blockhash),
-				blocknum: block.blocknum,
-				timestamp: block.timestamp,
-			})
-
-			return Number(lastInsertRowid)
-		} else {
-			assert(block.blockhash === toHex(record.blockhash), "MessageStore.getBlockId: blockhashes did not match")
-			assert(block.timestamp === record.timestamp, "MessageStore.getBlockId: timestamps did not match")
-			return record.id
-		}
-	}
-
-	private getBlock(blockId: number): Block {
-		const record: undefined | BlockRecord = this.statements.getBlock.get({ id: blockId })
-		if (record === undefined) {
-			throw new Error("internal error: failed to look up block id")
-		}
-
-		assert(chainType.is(record.chain), `invalid chain type ${JSON.stringify(record.chain)}`)
-
-		return {
-			chain: record.chain,
-			chainId: record.chain_id,
-			blocknum: record.blocknum,
-			blockhash: toHex(record.blockhash),
-			timestamp: record.timestamp,
-		}
-	}
-
-	private static createBlocksTable = `CREATE TABLE IF NOT EXISTS blocks (
-    id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    chain     TEXT    NOT NULL,
-    chain_id  INTEGER NOT NULL,
-    blocknum  INTEGER NOT NULL,
-    blockhash BLOB    NOT NULL,
-    timestamp INTEGER NOT NULL,
-    UNIQUE(chain, chain_id, blocknum)
-  );`
-
 	private static createActionsTable = `CREATE TABLE IF NOT EXISTS actions (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     hash            BLOB    NOT NULL UNIQUE,
@@ -257,7 +195,9 @@ export class MessageStore {
     session_address BLOB    REFERENCES sessions(session_address),
     from_address    BLOB    NOT NULL,
     timestamp       INTEGER NOT NULL,
-    block_id        INTEGER REFERENCES blocks(id),
+    blockhash       BLOB            ,
+		chain           TEXT    NOT NULL,
+    chain_id        INTEGER NOT NULL,
     call            TEXT    NOT NULL,
     args            BLOB    NOT NULL
   );`
@@ -270,27 +210,22 @@ export class MessageStore {
     session_address BLOB    NOT NULL UNIQUE,
     duration        INTEGER NOT NULL,
     timestamp       INTEGER NOT NULL,
-    block_id        INTEGER REFERENCES blocks(id)
+    blockhash       BLOB            ,
+		chain           TEXT    NOT NULL,
+    chain_id        INTEGER NOT NULL
   );`
 
 	private static statements = {
-		insertBlock: `INSERT INTO BLOCKS (
-      chain, chain_id, blocknum, blockhash, timestamp
-    ) VALUES (
-      :chain, :chain_id, :blocknum, :blockhash, :timestamp
-    )`,
 		insertAction: `INSERT INTO actions (
-      hash, signature, session_address, from_address, timestamp, block_id, call, args
+      hash, signature, session_address, from_address, timestamp, blockhash, call, args, chain, chain_id
     ) VALUES (
-      :hash, :signature, :session_address, :from_address, :timestamp, :block_id, :call, :args
+      :hash, :signature, :session_address, :from_address, :timestamp, :blockhash, :call, :args, :chain, :chain_id
     )`,
 		insertSession: `INSERT INTO sessions (
-      hash, signature, from_address, session_address, duration, timestamp, block_id
+      hash, signature, from_address, session_address, duration, timestamp, blockhash, chain, chain_id
     ) VALUES (
-      :hash, :signature, :from_address, :session_address, :duration, :timestamp, :block_id
+      :hash, :signature, :from_address, :session_address, :duration, :timestamp, :blockhash, :chain, :chain_id
     )`,
-		getBlock: `SELECT * FROM blocks WHERE id = :id`,
-		getBlockId: `SELECT id, blockhash, timestamp FROM blocks WHERE chain = :chain AND chain_id = :chain_id AND blocknum = :blocknum`,
 		getActionByHash: `SELECT * FROM actions WHERE hash = :hash`,
 		getSessionByHash: `SELECT * FROM sessions WHERE hash = :hash`,
 		getSessionByAddress: `SELECT * FROM sessions WHERE session_address = :session_address`,

@@ -49,7 +49,16 @@ test("Test calling the public ENS resolver contract", async (t) => {
 	async function sign(call: string, args: ActionArgument[]): Promise<Action> {
 		const timestamp = Date.now()
 		const block = await getCurrentBlock(provider)
-		const actionPayload: ActionPayload = { from: signerAddress, spec: uri, call, args, timestamp, block }
+		const actionPayload: ActionPayload = {
+			from: signerAddress,
+			spec: uri,
+			call,
+			args,
+			timestamp,
+			chain: "eth",
+			chainId: 1,
+			blockhash: block.blockhash,
+		}
 		const actionSignatureData = getActionSignatureData(actionPayload)
 		const actionSignature = await signer._signTypedData(...actionSignatureData)
 
