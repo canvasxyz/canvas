@@ -13,7 +13,7 @@ type ActionRecord = {
 	from_address: Buffer
 	session_address: Buffer | null
 	timestamp: number
-	blockhash: string | null
+	blockhash: Buffer | null
 	call: string
 	args: Buffer
 	chain: Chain
@@ -27,7 +27,7 @@ type SessionRecord = {
 	session_address: Buffer
 	duration: number
 	timestamp: number
-	blockhash: string | null
+	blockhash: Buffer | null
 	chain: Chain
 	chain_id: ChainId
 }
@@ -78,7 +78,7 @@ export class MessageStore {
 			timestamp: action.payload.timestamp,
 			call: action.payload.call,
 			args: Buffer.from(args.buffer, args.byteOffset, args.byteLength),
-			blockhash: action.payload.blockhash,
+			blockhash: action.payload.blockhash ? fromHex(action.payload.blockhash) : null,
 			chain: action.payload.chain,
 			chain_id: action.payload.chainId,
 		}
@@ -100,7 +100,7 @@ export class MessageStore {
 			session_address: fromHex(session.payload.address),
 			duration: session.payload.duration,
 			timestamp: session.payload.timestamp,
-			blockhash: session.payload.blockhash,
+			blockhash: session.payload.blockhash ? fromHex(session.payload.blockhash) : null,
 			chain: session.payload.chain,
 			chain_id: session.payload.chainId,
 		}
@@ -129,7 +129,7 @@ export class MessageStore {
 				timestamp: record.timestamp,
 				chain: record.chain,
 				chainId: record.chain_id,
-				blockhash: record.blockhash,
+				blockhash: record.blockhash ? toHex(record.blockhash) : null,
 			},
 		}
 
@@ -167,7 +167,7 @@ export class MessageStore {
 				duration: record.duration,
 				chain: record.chain,
 				chainId: record.chain_id,
-				blockhash: record.blockhash,
+				blockhash: record.blockhash ? toHex(record.blockhash) : null,
 			},
 		}
 
