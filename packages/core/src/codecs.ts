@@ -32,14 +32,12 @@ export const chainIdType: t.Type<ChainId> = t.union([t.number, t.string])
 
 export const actionArgumentType: t.Type<ActionArgument> = t.union([t.null, t.boolean, t.number, t.string])
 
-export const actionArgumentArrayType = t.array(actionArgumentType)
-
 export const actionPayloadType: t.Type<ActionPayload> = t.type({
 	from: t.string,
 	spec: t.string,
 	timestamp: t.number,
 	call: t.string,
-	args: t.array(actionArgumentType),
+	args: t.record(t.string, actionArgumentType),
 	chain: chainType,
 	chainId: chainIdType,
 	blockhash: t.union([t.string, t.null]),

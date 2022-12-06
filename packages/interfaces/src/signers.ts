@@ -45,6 +45,8 @@ function serializeActionArgument(arg: ActionArgument): string {
 
 type SignatureData = [TypedDataDomain, Record<string, TypedDataField[]>, Record<string, string | string[]>]
 
+const namePattern = /^[a-zA-Z][a-zA-Z0-9]*$/
+
 /**
  * `getActionSignatureData` gets EIP-712 signing data for an individual action
  */
@@ -54,9 +56,18 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData {
 		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
 	}
 
+	const keys = Object.keys(payload.args).sort()
+	const params = keys.map((key) => {
+		if (namePattern.test(key)) {
+			return `${key}: ${serializeActionArgument(payload.args[key])}`
+		} else {
+			throw new Error("invalid argument name")
+		}
+	})
+
 	const actionValue = {
 		sendAction: payload.call,
-		params: payload.args.map(serializeActionArgument),
+		params: params,
 		application: payload.spec,
 		timestamp: payload.timestamp.toString(),
 	}

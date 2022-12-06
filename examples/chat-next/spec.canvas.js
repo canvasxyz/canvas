@@ -13,7 +13,7 @@ export const routes = {
 }
 
 export const actions = {
-	createPost(content) {
-		this.db.posts.set(this.hash, { content, from_id: this.from })
+	createPost({ content }, { db, hash, from }) {
+		db.posts.set(hash, { content, from_id: from })
 	},
 }

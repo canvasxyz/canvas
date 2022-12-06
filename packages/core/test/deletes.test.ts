@@ -12,20 +12,25 @@ test("Test setting and then deleting a record", async (t) => {
 	const { uri, spec } = await compileSpec({
 		models: { threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" } },
 		actions: {
-			newThread(title, link) {
+			newThread({ title, link }, { db, hash, from }) {
 				if (typeof title === "string" && typeof link === "string") {
-					this.db.threads.set(this.hash, { creator: this.from, title, link })
+					db.threads.set(hash, { creator: from, title, link })
 				}
 			},
-			deleteThread(threadId) {
+			deleteThread({ threadId }, { db }) {
 				if (typeof threadId === "string") {
-					this.db.threads.delete(threadId)
+					db.threads.delete(threadId)
 				}
 			},
 		},
 	})
 
-	async function sign(signer: ethers.Wallet, session: string | null, call: string, args: ActionArgument[]) {
+	async function sign(
+		signer: ethers.Wallet,
+		session: string | null,
+		call: string,
+		args: Record<string, ActionArgument>
+	) {
 		const timestamp = Date.now()
 		const actionPayload: ActionPayload = {
 			from: signerAddress,
@@ -44,7 +49,10 @@ test("Test setting and then deleting a record", async (t) => {
 
 	const core = await Core.initialize({ uri, directory: null, spec, unchecked: true, offline: true })
 
-	const newThreadAction = await sign(signer, null, "newThread", ["Hacker News", "https://news.ycombinator.com"])
+	const newThreadAction = await sign(signer, null, "newThread", {
+		title: "Hacker News",
+		link: "https://news.ycombinator.com",
+	})
 
 	const { hash: threadId } = await core.applyAction(newThreadAction)
 
@@ -58,7 +66,7 @@ test("Test setting and then deleting a record", async (t) => {
 		},
 	])
 
-	await sign(signer, null, "deleteThread", [threadId]).then((action) => core.applyAction(action))
+	await sign(signer, null, "deleteThread", { threadId }).then((action) => core.applyAction(action))
 
 	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [])
 
