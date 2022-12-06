@@ -1,6 +1,6 @@
 import { ethers } from "ethers"
 import { Action, ActionPayload, Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
-import { Connector, Signer, Wallet } from "./interfaces.js"
+import { Connector, SessionSigner, ActionSigner } from "./interfaces.js"
 import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
 
 export class MetaMaskEthereumConnector implements Connector {
@@ -53,7 +53,7 @@ export class MetaMaskEthereumConnector implements Connector {
 		}
 	}
 
-	async createSigner(account: string) {
+	async createSessionSigner(account: string) {
 		const providerSigner = this.provider.getSigner(account)
 		// if the network changes, we will throw away this Signer
 		const network = await this.provider.getNetwork()
@@ -61,7 +61,7 @@ export class MetaMaskEthereumConnector implements Connector {
 	}
 }
 
-export class MetaMaskEthereumSigner implements Signer {
+export class MetaMaskEthereumSigner implements SessionSigner {
 	chain: Chain = "eth"
 	signer: ethers.providers.JsonRpcSigner
 	network: ethers.providers.Network
@@ -96,9 +96,9 @@ export class MetaMaskEthereumSigner implements Signer {
 		return this.network.chainId
 	}
 
-	createWallet(sessionPrivateKey?: string): MetaMaskEthereumWallet {
+	createActionSigner(sessionPrivateKey?: string): MetaMaskEthereumActionSigner {
 		const ethersWallet = sessionPrivateKey ? new ethers.Wallet(sessionPrivateKey) : ethers.Wallet.createRandom()
-		return new MetaMaskEthereumWallet(ethersWallet)
+		return new MetaMaskEthereumActionSigner(ethersWallet)
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
@@ -108,7 +108,7 @@ export class MetaMaskEthereumSigner implements Signer {
 	}
 }
 
-export class MetaMaskEthereumWallet implements Wallet {
+export class MetaMaskEthereumActionSigner implements ActionSigner {
 	wallet: ethers.Wallet
 
 	constructor(wallet: ethers.Wallet) {

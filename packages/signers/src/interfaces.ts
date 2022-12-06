@@ -3,19 +3,19 @@ import { Action, ActionPayload, Block, Chain, ChainId, Session, SessionPayload }
 export interface Connector {
 	enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void>
 	disable(): void
-	createSigner(account: string): Promise<Signer>
+	createSessionSigner(account: string): Promise<SessionSigner>
 }
 
-export interface Signer {
+export interface SessionSigner {
 	getRecentBlock(): Promise<Block>
 	getAddress(): Promise<string>
-	createWallet(sessionPrivateKey?: string): Wallet
+	createActionSigner(sessionPrivateKey?: string): ActionSigner
 	signSessionPayload(payload: SessionPayload): Promise<Session>
 	getChain(): Promise<Chain>
 	getChainId(): Promise<ChainId>
 }
 
-export interface Wallet {
+export interface ActionSigner {
 	get address(): string
 	get privateKey(): string
 	signActionPayload(payload: ActionPayload): Promise<Action>

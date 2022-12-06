@@ -5,7 +5,7 @@ import { stringToHex } from "@polkadot/util"
 import { SignerPayloadRaw } from "@polkadot/types/types/extrinsic"
 import { ApiPromise, WsProvider } from "@polkadot/api"
 import { mnemonicGenerate } from "@polkadot/util-crypto"
-import { Connector, Signer, Wallet } from "./interfaces"
+import { Connector, SessionSigner, ActionSigner } from "./interfaces"
 import { Block, SessionPayload, Session, Action, ActionPayload, Chain, ChainId } from "packages/interfaces/lib"
 import { addressSwapper } from "./utils.js"
 
@@ -31,7 +31,7 @@ export class PolkadotWebWalletConnector implements Connector {
 	disable(): void {
 		throw new Error("Method not implemented.")
 	}
-	async createSigner(address: string): Promise<Signer> {
+	async createSessionSigner(address: string): Promise<SessionSigner> {
 		// finds an injector for an address
 		// web wallet stores addresses in testnet format for now, so we have to re-encode
 		const reencodedAddress = addressSwapper({
@@ -40,11 +40,11 @@ export class PolkadotWebWalletConnector implements Connector {
 		})
 		console.log("reencodedAddress:", reencodedAddress)
 		const injector = await web3FromAddress(reencodedAddress)
-		return new PolkadotWebWalletSigner(reencodedAddress, injector.signer)
+		return new PolkadotWebWalletSessionSigner(reencodedAddress, injector.signer)
 	}
 }
 
-class PolkadotWebWalletSigner implements Signer {
+class PolkadotWebWalletSessionSigner implements SessionSigner {
 	chain: Chain = "substrate"
 	chainId: ChainId = "edgeware"
 	address: string
@@ -83,10 +83,10 @@ class PolkadotWebWalletSigner implements Signer {
 	async getChainId(): Promise<ChainId> {
 		return this.chainId
 	}
-	createWallet(sessionPrivateKey?: string | undefined): Wallet {
+	createActionSigner(sessionPrivateKey?: string | undefined): ActionSigner {
 		const privateKey = sessionPrivateKey || mnemonicGenerate()
 
-		return new PolkadotWebWalletWallet(privateKey)
+		return new PolkadotWebWalletActionSigner(privateKey)
 	}
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
 		const message = stringToHex(JSON.stringify(payload))
@@ -103,7 +103,7 @@ class PolkadotWebWalletSigner implements Signer {
 	}
 }
 
-class PolkadotWebWalletWallet implements Wallet {
+class PolkadotWebWalletActionSigner implements ActionSigner {
 	keyring: Keyring
 	pair: ReturnType<typeof Keyring.prototype.addFromUri>
 	privateKeyMnemonic: string
