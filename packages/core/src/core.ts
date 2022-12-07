@@ -312,8 +312,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(spec === this.uri, "session signed for wrong spec")
 
 		const verifiedAddress = verifySessionSignature(session)
-		console.log(verifiedAddress)
-		console.log(from)
 		assert(verifiedAddress.toLowerCase() === from.toLowerCase(), "session signed by wrong address")
 
 		// check the timestamp bounds

@@ -125,7 +125,7 @@ class PolkadotWebWalletActionSigner implements ActionSigner {
 			data: message,
 			type: "bytes",
 		}
-		const signature = Buffer.from(this.pair.sign(JSON.stringify(signerPayload))).toString()
+		const signature = this.pair.sign(JSON.stringify(signerPayload)).toString()
 		return {
 			signature,
 			payload,

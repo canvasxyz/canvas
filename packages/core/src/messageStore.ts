@@ -110,7 +110,6 @@ export class MessageStore {
 			chain_id: session.payload.chainId,
 		}
 
-		console.log(record)
 		this.statements.insertSession.run(record)
 	}
 

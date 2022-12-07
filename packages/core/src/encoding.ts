@@ -61,12 +61,12 @@ const toBinarySession = (session: Session): BinarySession => {
 
 	const response = {
 		type: "session",
-		signature: decode(session.signature),
+		signature: arrayify(session.signature),
 		payload: {
 			...session.payload,
 			from: decode(session.payload.from),
 			address: decode(session.payload.address),
-			blockhash: session.payload.blockhash ? decode(session.payload.blockhash) : null,
+			blockhash: session.payload.blockhash ? arrayify(session.payload.blockhash) : null,
 		},
 	} as BinarySession
 	return response
@@ -76,12 +76,12 @@ function fromBinarySession({ signature, payload: { from, address, blockhash, ...
 	const encode = payload.chain == "substrate" ? encodeAddress : (x: string) => x
 
 	const session: Session = {
-		signature: encode(hexlify(signature)).toLowerCase(),
+		signature: hexlify(signature).toLowerCase(),
 		payload: {
 			...payload,
 			from: encode(hexlify(from)).toLowerCase(),
 			address: encode(hexlify(address)).toLowerCase(),
-			blockhash: blockhash ? encode(hexlify(blockhash)).toLowerCase() : null,
+			blockhash: blockhash ? hexlify(blockhash).toLowerCase() : null,
 		},
 	}
 
@@ -89,14 +89,16 @@ function fromBinarySession({ signature, payload: { from, address, blockhash, ...
 }
 
 const toBinaryAction = (action: Action): BinaryAction => {
+	const decode = action.payload.chain == "substrate" ? decodeAddress : arrayify
 	const blockhash = action.payload.blockhash
+
 	return {
 		type: "action",
 		signature: arrayify(action.signature),
-		session: action.session ? arrayify(action.session) : null,
+		session: action.session ? decode(action.session) : null,
 		payload: {
 			...action.payload,
-			from: arrayify(action.payload.from),
+			from: decode(action.payload.from),
 			blockhash: blockhash ? arrayify(blockhash) : null,
 		},
 	}

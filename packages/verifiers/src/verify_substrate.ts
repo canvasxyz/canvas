@@ -37,50 +37,18 @@ export const addressSwapper = (options: { address: string; currentPrefix: number
 	}
 }
 
-export const verifySubstrateActionSignature = (action: Action): string => {
+export const verifySubstrate = (message: Action | Session): string => {
 	const address = addressSwapper({
-		address: action.payload.from,
+		address: message.payload.from,
 		currentPrefix: 42,
 	})
-	return address
-}
-
-export const verifySubstrateSessionSignature = (session: Session): string => {
-	//
-	// substrate address handling
-	//
-
-	const address = addressSwapper({
-		address: session.payload.from,
-		currentPrefix: 42,
-	})
-
-	console.log("address:", address)
-
 	const hexPublicKey = u8aToHex(decodeAddress(address))
-	const signedMessage = stringToHex(JSON.stringify(session.payload))
+	const signedMessage = stringToHex(JSON.stringify(message.payload))
 	const signatureU8a =
-		session.signature.slice(0, 2) === "0x" ? hexToU8a(session.signature) : hexToU8a(`0x${session.signature}`)
+		message.signature.slice(0, 2) === "0x" ? hexToU8a(message.signature) : hexToU8a(`0x${message.signature}`)
 	if (signatureVerify(signedMessage, signatureU8a, hexPublicKey).isValid) {
 		return address
 	} else {
 		return ""
 	}
-
-	// only support whatever the default keyringoption is? idk
-	// const signerKeyring = new Keyring({ type: "ed25519" }).addFromAddress(address)
-	// const message = stringToHex(JSON.stringify(session.payload))
-	// const signatureString = session.signature
-	// const signatureU8a =
-	// 	signatureString.slice(0, 2) === "0x" ? hexToU8a(signatureString) : hexToU8a(`0x${signatureString}`)
-
-	// console.log(message)
-	// console.log(signatureString)
-	// console.log(signatureU8a.toString())
-	// console.log(address)
-	// if (signerKeyring.verify(message, signatureU8a, address)) {
-	// 	return address
-	// } else {
-	// 	return ""
-	// }
 }
