@@ -105,12 +105,14 @@ const toBinaryAction = (action: Action): BinaryAction => {
 }
 
 function fromBinaryAction({ signature, session, payload: { from, blockhash, ...payload } }: BinaryAction): Action {
+	const encode = payload.chain == "substrate" ? encodeAddress : (x: string) => x
+
 	const action: Action = {
 		signature: hexlify(signature).toLowerCase(),
-		session: session && hexlify(session).toLowerCase(),
+		session: session && encode(hexlify(session)).toLowerCase(),
 		payload: {
 			...payload,
-			from: hexlify(from).toLowerCase(),
+			from: encode(hexlify(from)).toLowerCase(),
 			blockhash: blockhash ? hexlify(blockhash).toLowerCase() : null,
 		},
 	}
