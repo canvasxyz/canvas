@@ -9,7 +9,7 @@ export interface Connector {
 export interface SessionSigner {
 	getRecentBlock(): Promise<Block>
 	getAddress(): Promise<string>
-	createActionSigner(sessionPrivateKey?: string): ActionSigner
+	createActionSigner(sessionPrivateKey?: string): Promise<ActionSigner>
 	signSessionPayload(payload: SessionPayload): Promise<Session>
 	getChain(): Promise<Chain>
 	getChainId(): Promise<ChainId>

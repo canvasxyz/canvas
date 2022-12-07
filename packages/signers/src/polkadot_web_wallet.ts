@@ -83,7 +83,7 @@ class PolkadotWebWalletSessionSigner implements SessionSigner {
 	async getChainId(): Promise<ChainId> {
 		return this.chainId
 	}
-	createActionSigner(sessionPrivateKey?: string | undefined): ActionSigner {
+	async createActionSigner(sessionPrivateKey?: string | undefined): Promise<ActionSigner> {
 		const privateKey = sessionPrivateKey || mnemonicGenerate()
 
 		return new PolkadotWebWalletActionSigner(privateKey)

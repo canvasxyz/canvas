@@ -53,7 +53,7 @@ export class MetaMaskEthereumConnector implements Connector {
 		}
 	}
 
-	async createSessionSigner(account: string) {
+	async createSessionSigner(account: string): Promise<SessionSigner> {
 		const providerSigner = this.provider.getSigner(account)
 		// if the network changes, we will throw away this Signer
 		const network = await this.provider.getNetwork()
@@ -96,7 +96,7 @@ export class MetaMaskEthereumSigner implements SessionSigner {
 		return this.network.chainId
 	}
 
-	createActionSigner(sessionPrivateKey?: string): MetaMaskEthereumActionSigner {
+	async createActionSigner(sessionPrivateKey?: string): Promise<MetaMaskEthereumActionSigner> {
 		const ethersWallet = sessionPrivateKey ? new ethers.Wallet(sessionPrivateKey) : ethers.Wallet.createRandom()
 		return new MetaMaskEthereumActionSigner(ethersWallet)
 	}
