@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react"
 
 import { Chain } from "@canvas-js/interfaces"
-import { Connector, PolkadotWebWalletConnector, Signer } from "@canvas-js/signers"
+import { Connector, PolkadotWebWalletConnector, SessionSigner } from "@canvas-js/signers"
 import { MetaMaskEthereumConnector } from "@canvas-js/signers"
 
 /**
@@ -23,8 +23,8 @@ export interface MultichainConnectContextValue {
 	isLoading: boolean
 	setIsLoading: (isLoading: boolean) => void
 
-	signer: Signer | null
-	setSigner: (signer: Signer | null) => void
+	signer: SessionSigner | null
+	setSigner: (signer: SessionSigner | null) => void
 
 	connector: Connector | null
 	setConnector: (connector: Connector | null) => void
@@ -78,7 +78,7 @@ export const useConnect = () => {
 
 		const onAccountsChanged = async (accounts: string[]) => {
 			setAddress(accounts[0])
-			const newSigner = await newConnector.createSigner(accounts[0])
+			const newSigner = await newConnector.createSessionSigner(accounts[0])
 			setSigner(newSigner)
 		}
 
