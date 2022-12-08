@@ -35,3 +35,44 @@ jobs:
 
       - name: Ensure Next.js example starts
         run: npm run start --workspace=@canvas-js/example-chat-next & sleep 10 ; kill $!
+
+  test:
+    name: canvas-hub API Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Change to hub directory
+        run: cd packages/hub
+
+      - name: Build
+        run: |
+          npm run build
+          npx prisma generate
+
+      - name: Migrate database
+        run: |
+          export DATABASE_URL=file:data-test/database.sqlite
+          npx prisma migrate dev
+
+      - name: Start daemon
+        run: |
+          export CANVAS_HOME=test
+          node node_modules/@canvas-js/cli/dist/index.js daemon --unchecked --offline &
+
+      - name: Run tests
+        run: |
+          export DATABASE_URL=file:data-test/database.sqlite
+          export NODE_ENV=development
+          export DAEMON_SOCKET=$(pwd)/test/daemon.sock
+          npm run test:ci
