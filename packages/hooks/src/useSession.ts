@@ -70,8 +70,9 @@ export function useSession(signer: SessionSigner | null): {
 			return
 		}
 
-		const actionSigner = signer!.createActionSigner(sessionPrivateKey)
-		setActionSigner(actionSigner)
+		signer!.createActionSigner(sessionPrivateKey).then((actionSigner) => {
+			setActionSigner(actionSigner)
+		})
 		setSessionExpiration(expiration)
 	}, [host, data, signerAddress])
 

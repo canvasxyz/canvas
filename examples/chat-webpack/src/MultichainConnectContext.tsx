@@ -1,8 +1,13 @@
 import { createContext, useContext } from "react"
 
 import { Chain } from "@canvas-js/interfaces"
-import { Connector, PolkadotWebWalletConnector, SessionSigner } from "@canvas-js/signers"
-import { MetaMaskEthereumConnector } from "@canvas-js/signers"
+import {
+	Connector,
+	MetaMaskEthereumConnector,
+	PolkadotWebWalletConnector,
+	KeplrWebWalletConnector,
+	SessionSigner,
+} from "@canvas-js/signers"
 
 /**
  * An attempt at making something like wagmi
@@ -74,7 +79,12 @@ export const useConnect = () => {
 
 		setIsLoading(true)
 
-		const newConnector = chain == "eth" ? new MetaMaskEthereumConnector() : new PolkadotWebWalletConnector()
+		const newConnector =
+			chain == "eth"
+				? new MetaMaskEthereumConnector()
+				: chain == "substrate"
+				? new PolkadotWebWalletConnector()
+				: new KeplrWebWalletConnector()
 
 		const onAccountsChanged = async (accounts: string[]) => {
 			setAddress(accounts[0])

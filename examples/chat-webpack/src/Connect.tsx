@@ -33,6 +33,9 @@ export const Connect: React.FC<{}> = ({}) => {
 						<button disabled={isConnected} onClick={() => connect("substrate")} style={{ marginRight: 5 }}>
 							Polkadot
 						</button>
+						<button disabled={isConnected} onClick={() => connect("cosmos")} style={{ marginRight: 5 }}>
+							Keplr
+						</button>
 					</>
 				)}
 
