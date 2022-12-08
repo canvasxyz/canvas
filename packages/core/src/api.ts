@@ -1,5 +1,8 @@
 import assert from "node:assert"
 
+import { WebSocketServer } from "ws"
+import type { Message } from "websocket"
+import type { Server } from "http"
 import chalk from "chalk"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
@@ -18,8 +21,70 @@ interface Options {
 	exposeActions: boolean
 }
 
+const gauges: Record<string, client.Gauge<string>> = {}
+
+export function bindWebsockets(server: Server, core: Core): Server {
+	const wss = new WebSocketServer({ noServer: true })
+	console.log("Binding Websockets")
+
+	let oldValues: Record<string, ModelValue>[] | null = null
+	const getListener = (ws: WebSocket, route: string, params: Record<string, ModelValue>) => () => {
+		if (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING) {
+			return
+		}
+		let newValues: Record<string, ModelValue>[]
+		try {
+			newValues = core.getRoute(route, params)
+		} catch (err: any) {
+			// closed = true
+			console.log(chalk.red("[canvas-cli] error evaluating route"), err)
+			return ws.send(JSON.stringify({ route, params, error: err.toString() }))
+		}
+		if (oldValues === null || !compareResults(oldValues, newValues)) {
+			return ws.send(JSON.stringify({ route, params, data: newValues }))
+			oldValues = newValues
+		}
+	}
+
+	wss.on("connect", (ws, request) => {
+		// Allow clients to subscribe to routes
+		ws.on("message", (data: Message) => {
+			if (data.toString() === "ping") return ws.send("pong")
+			try {
+				const message = JSON.parse(data.toString())
+				if (message.action === "subscribe") {
+					const { route, params } = message.data
+					const listener = getListener(ws, route, params)
+					core.addEventListener("action", listener)
+					listener()
+				} else if (message.action === "unsubscribe") {
+					// TODO: make factory return same instance
+					const { route, params } = message.data
+					const listener = getListener(ws, route, params)
+					core.removeEventListener("action", listener)
+				} else {
+					console.log(`Received unrecognized message ${JSON.stringify(message)}`)
+				}
+			} catch (error) {
+				console.log(`Received unknown message "${data}"`)
+			}
+		})
+		ws.on("close", (data: Message) => {
+			console.log(`Received close`)
+		})
+	})
+
+	server.on("upgrade", function upgrade(request, socket, head) {
+		wss.handleUpgrade(request, socket, head, (ws) => {
+			wss.emit("connect", ws, request)
+		})
+	})
+	return server
+}
+
 export function getAPI(core: Core, options: Partial<Options> = {}): express.Express {
 	const api = express()
+
 	api.set("query parser", "simple")
 	api.use(express.json())
 

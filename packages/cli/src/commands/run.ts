@@ -2,6 +2,8 @@ import process from "node:process"
 import path from "node:path"
 import fs from "node:fs"
 
+import http from "node:http"
+
 import yargs from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
@@ -10,7 +12,7 @@ import express from "express"
 import cors from "cors"
 import { createLibp2p } from "libp2p"
 
-import { Core, constants, actionType, getLibp2pInit, BlockCache, getAPI } from "@canvas-js/core"
+import { Core, constants, actionType, getLibp2pInit, BlockCache, getAPI, bindWebsockets } from "@canvas-js/core"
 
 import { getProviders, confirmOrExit, parseSpecArgument, getPeerId, installSpec, CANVAS_HOME } from "../utils.js"
 
@@ -223,9 +225,12 @@ export async function handler(args: Args) {
 		app.use(getAPI(core, { exposeMetrics }))
 	}
 
-	const apiPrefix = args.static ? `api/` : ""
+	const httpServer = http.createServer(app)
+	bindWebsockets(httpServer, core)
+
 	const server = stoppable(
-		app.listen(args.port, () => {
+		httpServer.listen(args.port, () => {
+			const apiPrefix = args.static ? `api/` : ""
 			if (args.static) {
 				console.log(`Serving static bundle: http://localhost:${args.port}/`)
 				console.log(`Serving API for ${core.uri}:`)
