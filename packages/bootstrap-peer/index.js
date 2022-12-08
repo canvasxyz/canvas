@@ -11,9 +11,9 @@ import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { createFromProtobuf } from "@libp2p/peer-id-factory"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
+import { CID } from "multiformats"
 
 import client from "prom-client"
-import { CID } from "multiformats"
 
 const { FLY_APP_NAME, PEER_ID, BOOTSTRAP_LIST, PORT, METRICS_PORT } = process.env
 
@@ -67,14 +67,11 @@ const libp2p = await createLibp2p({
 })
 
 libp2p.connectionManager.addEventListener("peer:connect", ({ detail: { id, remotePeer, remoteAddr, streams } }) => {
-	console.log(
-		`connected to ${remotePeer.toString()} on ${remoteAddr.toString()} (${id})`,
-		Object.fromEntries(streams.map((stream) => [stream.id, stream.stat]))
-	)
+	console.log(`connected to ${id}: ${remotePeer.toString()} on ${remoteAddr.toString()}`)
 })
 
-libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) => {
-	console.log(`disconnected from ${remotePeer.toString()} (${id})`)
+libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: { id } }) => {
+	console.log(`disconnected ${id}`)
 })
 
 await libp2p.start()
