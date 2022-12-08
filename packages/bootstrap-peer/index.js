@@ -1,4 +1,4 @@
-import dns from "node:dns"
+import dns from "node:dns/promises"
 import http from "node:http"
 
 import { createLibp2p } from "libp2p"
@@ -7,11 +7,13 @@ import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { kadDHT } from "@libp2p/kad-dht"
 import { bootstrap } from "@libp2p/bootstrap"
+import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { createFromProtobuf } from "@libp2p/peer-id-factory"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 
 import client from "prom-client"
+import { CID } from "multiformats"
 
 const { FLY_APP_NAME, PEER_ID, BOOTSTRAP_LIST, PORT, METRICS_PORT } = process.env
 
@@ -21,20 +23,28 @@ const peerId = await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
 
 const RELAY_HOP_TIMEOUT = 0x7fffffff
 
-const address = await new Promise((resolve, reject) => {
-	const url = `${FLY_APP_NAME}.fly.dev`
-	dns.resolve(url, (err, [address]) => {
-		if (err !== null || address === undefined) {
-			reject(err)
-		} else {
-			resolve(address)
-		}
-	})
-})
+const listen = [`/ip6/::/tcp/${PORT}/ws`]
+const announce = []
 
-const listen = [`/ip4/0.0.0.0/tcp/${PORT}/ws`]
-const announce = [`/ip4/${address}/tcp/${PORT}/ws`]
-const announceFilter = (multiaddrs) => multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr))
+try {
+	const [publicAddress] = await dns.resolve4(`${FLY_APP_NAME}.fly.dev`)
+	if (publicAddress !== undefined) {
+		announce.push(`/ip4/${publicAddress}/tcp/${PORT}/ws`)
+	}
+} catch (err) {
+	console.error(err)
+}
+
+try {
+	const [privateAddress] = await dns.resolve6(`${FLY_APP_NAME}.internal`)
+	if (privateAddress !== undefined) {
+		announce.push(`/ip6/${privateAddress}/tcp/${PORT}/ws`)
+	}
+} catch (err) {
+	console.error(err)
+}
+
+const announceFilter = (multiaddrs) => multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) || !isPrivate(multiaddr))
 
 const libp2p = await createLibp2p({
 	peerId,
@@ -45,7 +55,7 @@ const libp2p = await createLibp2p({
 	streamMuxers: [mplex()],
 	peerDiscovery: [bootstrap({ list: bootstrapList })],
 	dht: kadDHT({ protocolPrefix: "/canvas", clientMode: false }),
-	metrics: { enabled: true },
+	metrics: prometheusMetrics(),
 	relay: {
 		enabled: true,
 		hop: {
@@ -56,63 +66,70 @@ const libp2p = await createLibp2p({
 	},
 })
 
+libp2p.connectionManager.addEventListener("peer:connect", ({ detail: { id, remotePeer, remoteAddr, streams } }) => {
+	console.log(
+		`connected to ${remotePeer.toString()} on ${remoteAddr.toString()} (${id})`,
+		Object.fromEntries(streams.map((stream) => [stream.id, stream.stat]))
+	)
+})
+
+libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) => {
+	console.log(`disconnected from ${remotePeer.toString()} (${id})`)
+})
+
 await libp2p.start()
 
-const gauges = {}
-
-async function getMetrics() {
-	if (libp2p.metrics === undefined) {
-		return
-	}
-
-	for (const [system, components] of libp2p.metrics.getComponentMetrics().entries()) {
-		for (const [component, componentMetrics] of components.entries()) {
-			for (const [metricName, trackedMetric] of componentMetrics.entries()) {
-				// set the relevant gauges
-				const name = `${system}-${component}-${metricName}`.replace(/-/g, "_")
-				const labelName = trackedMetric.label ?? metricName.replace(/-/g, "_")
-				const help = trackedMetric.help ?? metricName.replace(/-/g, "_")
-				const gaugeOptions = { name, help }
-				const metricValue = await trackedMetric.calculate()
-
-				if (typeof metricValue !== "number") {
-					// metric group
-					gaugeOptions.labelNames = [labelName]
-				}
-
-				if (!gauges[name]) {
-					// create metric if it's not been seen before
-					gauges[name] = new client.Gauge(gaugeOptions)
-				}
-
-				if (typeof metricValue !== "number") {
-					// metric group
-					for (const [key, value] of Object.entries(metricValue)) {
-						gauges[name].set({ [labelName]: key }, value)
-					}
-				} else {
-					// metric value
-					gauges[name].set(metricValue)
-				}
-			}
-		}
-	}
-}
+const dhtProvidersPattern = /^\/dht\/providers\/([a-zA-Z0-9]+)$/
 
 const metrics = http.createServer(async (req, res) => {
-	if (req.url !== "/metrics") {
-		return res.writeHead(404).end()
-	} else if (req.method !== "GET") {
+	if (req.method !== "GET") {
 		return res.writeHead(405).end()
 	}
 
-	try {
-		await getMetrics()
-		const result = await client.register.metrics()
-		return res.writeHead(200, { "Content-Type": client.register.contentType }).end(result)
-	} catch (err) {
-		console.error(err)
-		return res.writeHead(500).end(err.toString())
+	if (req.url === "/metrics") {
+		try {
+			const result = await client.register.metrics()
+			return res.writeHead(200, { "Content-Type": client.register.contentType }).end(result)
+		} catch (err) {
+			console.error(err)
+			return res.writeHead(500).end(err.toString())
+		}
+	} else if (req.url === "/dht/routing-table") {
+		const wan = {}
+		const lan = {}
+		try {
+			for (const { peer } of libp2p.dht.wan.routingTable.kb.toIterable()) {
+				const addresses = await libp2p.peerStore.addressBook.get(peer)
+				wan[peer.toString()] = addresses.map(({ multiaddr }) => multiaddr.toString())
+			}
+
+			for (const { peer } of libp2p.dht.lan.routingTable.kb.toIterable()) {
+				const addresses = await libp2p.peerStore.addressBook.get(peer)
+				lan[peer.toString()] = addresses.map(({ multiaddr }) => multiaddr.toString())
+			}
+		} catch (err) {
+			return res.writeHead(500).end(err.toString())
+		}
+
+		return res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ wan, lan }))
+	} else if (dhtProvidersPattern.test(req.url)) {
+		const [_, cid] = dhtProvidersPattern.exec(req.url)
+		const providers = {}
+		try {
+			for await (const peerInfo of libp2p.contentRouting.findProviders(CID.parse(cid))) {
+				providers[peerInfo.id.toString()] = {
+					multiaddrs: peerInfo.multiaddrs.map((addr) => addr.toString()),
+					protocols: peerInfo,
+				}
+			}
+		} catch (err) {
+			console.error(err)
+			return res.writeHead(500).end(err.toString())
+		}
+
+		return res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(providers))
+	} else {
+		return res.writeHead(404).end()
 	}
 })
 
