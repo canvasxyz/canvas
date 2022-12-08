@@ -1,52 +1,47 @@
 import { createHash } from "node:crypto"
 
-import { ethers } from "ethers"
 import * as t from "io-ts"
 import * as cbor from "microcbor"
-import { decodeAddress, encodeAddress } from "@polkadot/keyring"
-import { hexToU8a, isHex } from "@polkadot/util"
 
 import type { Session, Action, Message } from "@canvas-js/interfaces"
 
-import { actionArgumentArrayType, chainIdType, chainType, uint8ArrayType } from "./codecs.js"
+import { actionArgumentType, chainIdType, chainType } from "./codecs.js"
 import { signalInvalidType } from "./utils.js"
-
-const { hexlify, arrayify } = ethers.utils
 
 const binaryActionPayloadType = t.type({
 	call: t.string,
-	args: actionArgumentArrayType,
-	from: uint8ArrayType,
+	args: t.record(t.string, actionArgumentType),
+	from: t.string,
 	spec: t.string,
 	timestamp: t.number,
 	chain: chainType,
 	chainId: chainIdType,
-	blockhash: t.union([t.null, uint8ArrayType]),
+	blockhash: t.union([t.null, t.string]),
 })
 
 export const binaryActionType = t.type({
 	type: t.literal("action"),
-	signature: uint8ArrayType,
-	session: t.union([t.null, uint8ArrayType]),
+	signature: t.string,
+	session: t.union([t.null, t.string]),
 	payload: binaryActionPayloadType,
 })
 
 export type BinaryAction = t.TypeOf<typeof binaryActionType>
 
 const binarySessionPayloadType = t.type({
-	from: uint8ArrayType,
+	from: t.string,
 	spec: t.string,
 	timestamp: t.number,
-	address: uint8ArrayType,
+	address: t.string,
 	duration: t.number,
 	chain: chainType,
 	chainId: chainIdType,
-	blockhash: t.union([t.null, uint8ArrayType]),
+	blockhash: t.union([t.null, t.string]),
 })
 
 export const binarySessionType = t.type({
 	type: t.literal("session"),
-	signature: uint8ArrayType,
+	signature: t.string,
 	payload: binarySessionPayloadType,
 })
 
@@ -57,42 +52,26 @@ export const binaryMessageType = t.union([binaryActionType, binarySessionType])
 export type BinaryMessage = t.TypeOf<typeof binaryMessageType>
 
 const toBinarySession = (session: Session): BinarySession => {
-	const decode =
-		session.payload.chain == "substrate"
-			? decodeAddress
-			: session.payload.chain == "cosmos"
-			? (x: string) => new TextEncoder().encode(x)
-			: arrayify
-
-	const response = {
+	return {
 		type: "session",
-		signature:
-			session.payload.chain == "cosmos" ? new TextEncoder().encode(session.signature) : arrayify(session.signature),
+		signature: session.signature,
 		payload: {
 			...session.payload,
-			from: decode(session.payload.from),
-			address: decode(session.payload.address),
-			blockhash: session.payload.blockhash ? arrayify(session.payload.blockhash) : null,
+			from: session.payload.from,
+			address: session.payload.address,
+			blockhash: session.payload.blockhash,
 		},
 	} as BinarySession
-	return response
 }
 
 function fromBinarySession({ signature, payload: { from, address, blockhash, ...payload } }: BinarySession): Session {
-	const encode =
-		payload.chain == "substrate"
-			? (x: Uint8Array) => encodeAddress(hexlify(x))
-			: payload.chain == "cosmos"
-			? (x: Uint8Array) => new TextDecoder().decode(x)
-			: (x: Uint8Array) => hexlify(x)
-
 	const session: Session = {
-		signature: payload.chain == "cosmos" ? new TextDecoder().decode(signature) : hexlify(signature).toLowerCase(),
+		signature: signature.toLowerCase(),
 		payload: {
 			...payload,
-			from: encode(from).toLowerCase(),
-			address: encode(address).toLowerCase(),
-			blockhash: blockhash ? hexlify(blockhash).toLowerCase() : null,
+			from: from.toLowerCase(),
+			address: address.toLowerCase(),
+			blockhash: blockhash ? blockhash.toLowerCase() : null,
 		},
 	}
 
@@ -100,45 +79,26 @@ function fromBinarySession({ signature, payload: { from, address, blockhash, ...
 }
 
 const toBinaryAction = (action: Action): BinaryAction => {
-	const decode =
-		action.payload.chain == "substrate"
-			? decodeAddress
-			: action.payload.chain == "cosmos"
-			? (x: string) => new TextEncoder().encode(x)
-			: arrayify
-	const blockhash = action.payload.blockhash
-
 	return {
 		type: "action",
-		signature: arrayify(action.signature),
-		session: action.session
-			? action.payload.chain == "cosmos"
-				? new TextEncoder().encode(action.session)
-				: decode(action.session)
-			: null,
+		signature: action.signature,
+		session: action.session,
 		payload: {
 			...action.payload,
-			from: decode(action.payload.from),
-			blockhash: blockhash ? arrayify(blockhash) : null,
+			from: action.payload.from,
+			blockhash: action.payload.blockhash,
 		},
 	}
 }
 
 function fromBinaryAction({ signature, session, payload: { from, blockhash, ...payload } }: BinaryAction): Action {
-	const encode =
-		payload.chain == "substrate"
-			? (x: Uint8Array) => encodeAddress(hexlify(x))
-			: payload.chain == "cosmos"
-			? (x: Uint8Array) => new TextDecoder().decode(x)
-			: (x: Uint8Array) => hexlify(x)
-
 	const action: Action = {
-		signature: hexlify(signature).toLowerCase(),
-		session: session && (payload.chain == "cosmos" ? new TextDecoder().decode(session) : encode(session).toLowerCase()),
+		signature: signature.toLowerCase(),
+		session: session && session.toLowerCase(),
 		payload: {
 			...payload,
-			from: encode(from).toLowerCase(),
-			blockhash: blockhash ? hexlify(blockhash).toLowerCase() : null,
+			from: from.toLowerCase(),
+			blockhash: blockhash ? blockhash.toLowerCase() : null,
 		},
 	}
 
