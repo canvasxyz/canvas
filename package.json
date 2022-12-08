@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsc --build --watch",
-    "build": "tsc --build && npm run build --workspace=@canvas-js/example-chat-next --workspace=@canvas-js/example-chat-webpack",
+    "build": "tsc --build && npm run build --workspace=@canvas-js/example-chat-next --workspace=@canvas-js/example-chat-webpack --workspace=@canvas-js/hub",
     "clean": "tsc --build --clean",
     "version": "npm version --git-tag-version=false --workspaces=true --include-workspace-root=true --workspaces-update=true --save --save-exact",
     "publish": "npm publish --workspace=packages --access public",
@@ -17,6 +17,7 @@
     "packages/cli",
     "packages/next",
     "packages/hooks",
+    "packages/hub",
     "packages/bootstrap-peer",
     "examples/app-store",
     "examples/chat-webpack",
