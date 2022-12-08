@@ -6,45 +6,43 @@ import * as cbor from "microcbor"
 
 import type { Session, Action, Message } from "@canvas-js/interfaces"
 
-import { actionArgumentType, chainIdType, chainType, uint8ArrayType } from "./codecs.js"
+import { actionArgumentType, chainIdType, chainType } from "./codecs.js"
 import { signalInvalidType } from "./utils.js"
-
-const { hexlify, arrayify } = ethers.utils
 
 const binaryActionPayloadType = t.type({
 	call: t.string,
 	args: t.record(t.string, actionArgumentType),
-	from: uint8ArrayType,
+	from: t.string,
 	spec: t.string,
 	timestamp: t.number,
 	chain: chainType,
 	chainId: chainIdType,
-	blockhash: t.union([t.null, uint8ArrayType]),
+	blockhash: t.union([t.null, t.string]),
 })
 
 export const binaryActionType = t.type({
 	type: t.literal("action"),
-	signature: uint8ArrayType,
-	session: t.union([t.null, uint8ArrayType]),
+	signature: t.string,
+	session: t.union([t.null, t.string]),
 	payload: binaryActionPayloadType,
 })
 
 export type BinaryAction = t.TypeOf<typeof binaryActionType>
 
 const binarySessionPayloadType = t.type({
-	from: uint8ArrayType,
+	from: t.string,
 	spec: t.string,
 	timestamp: t.number,
-	address: uint8ArrayType,
+	address: t.string,
 	duration: t.number,
 	chain: chainType,
 	chainId: chainIdType,
-	blockhash: t.union([t.null, uint8ArrayType]),
+	blockhash: t.union([t.null, t.string]),
 })
 
 export const binarySessionType = t.type({
 	type: t.literal("session"),
-	signature: uint8ArrayType,
+	signature: t.string,
 	payload: binarySessionPayloadType,
 })
 
@@ -55,27 +53,26 @@ export const binaryMessageType = t.union([binaryActionType, binarySessionType])
 export type BinaryMessage = t.TypeOf<typeof binaryMessageType>
 
 const toBinarySession = (session: Session): BinarySession => {
-	const { blockhash } = session.payload
 	return {
 		type: "session",
-		signature: arrayify(session.signature),
+		signature: session.signature,
 		payload: {
 			...session.payload,
-			from: arrayify(session.payload.from),
-			address: arrayify(session.payload.address),
-			blockhash: blockhash ? arrayify(blockhash) : null,
+			from: session.payload.from,
+			address: session.payload.address,
+			blockhash: session.payload.blockhash,
 		},
 	}
 }
 
 function fromBinarySession({ signature, payload: { from, address, blockhash, ...payload } }: BinarySession): Session {
 	const session: Session = {
-		signature: hexlify(signature).toLowerCase(),
+		signature: signature.toLowerCase(),
 		payload: {
 			...payload,
-			from: hexlify(from).toLowerCase(),
-			address: hexlify(address).toLowerCase(),
-			blockhash: blockhash ? hexlify(blockhash).toLowerCase() : null,
+			from: from.toLowerCase(),
+			address: address.toLowerCase(),
+			blockhash: blockhash ? blockhash.toLowerCase() : null,
 		},
 	}
 
@@ -83,27 +80,26 @@ function fromBinarySession({ signature, payload: { from, address, blockhash, ...
 }
 
 const toBinaryAction = (action: Action): BinaryAction => {
-	const blockhash = action.payload.blockhash
 	return {
 		type: "action",
-		signature: arrayify(action.signature),
-		session: action.session ? arrayify(action.session) : null,
+		signature: action.signature,
+		session: action.session,
 		payload: {
 			...action.payload,
-			from: arrayify(action.payload.from),
-			blockhash: blockhash ? arrayify(blockhash) : null,
+			from: action.payload.from,
+			blockhash: action.payload.blockhash,
 		},
 	}
 }
 
 function fromBinaryAction({ signature, session, payload: { from, blockhash, ...payload } }: BinaryAction): Action {
 	const action: Action = {
-		signature: hexlify(signature).toLowerCase(),
-		session: session && hexlify(session).toLowerCase(),
+		signature: signature.toLowerCase(),
+		session: session && session.toLowerCase(),
 		payload: {
 			...payload,
-			from: hexlify(from).toLowerCase(),
-			blockhash: blockhash ? hexlify(blockhash).toLowerCase() : null,
+			from: from.toLowerCase(),
+			blockhash: blockhash ? blockhash.toLowerCase() : null,
 		},
 	}
 
