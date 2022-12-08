@@ -259,12 +259,12 @@ export class Core extends EventEmitter<CoreEvents> {
 				"invalid session key (action.payload.from and session.payload.from do not match)"
 			)
 
-			const verifiedAddress = verifyActionSignature(action)
+			const verifiedAddress = await verifyActionSignature(action)
 			assert(verifiedAddress === sessionAddress, "invalid action signature (recovered address does not match)")
 			assert(verifiedAddress === session.payload.address, "invalid action signature (action, session do not match)")
 			assert(action.payload.spec === session.payload.spec, "action signed for wrong spec")
 		} else {
-			const verifiedAddress = verifyActionSignature(action)
+			const verifiedAddress = await verifyActionSignature(action)
 			assert(verifiedAddress === fromAddress, "action signed by wrong address")
 		}
 	}
@@ -311,7 +311,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		const { from, spec, timestamp, blockhash, chain, chainId } = session.payload
 		assert(spec === this.uri, "session signed for wrong spec")
 
-		const verifiedAddress = verifySessionSignature(session)
+		const verifiedAddress = await verifySessionSignature(session)
 		assert(verifiedAddress.toLowerCase() === from.toLowerCase(), "session signed by wrong address")
 
 		// check the timestamp bounds

@@ -91,7 +91,7 @@ export function useSession(signer: SessionSigner | null): {
 		try {
 			const timestamp = Date.now()
 			const sessionDuration = 86400 * 1000
-			const actionSigner = signer.createActionSigner()
+			const actionSigner = await signer.createActionSigner()
 
 			const sessionObject: SessionObject = {
 				spec: data.uri,
