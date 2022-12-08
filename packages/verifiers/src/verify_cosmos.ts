@@ -40,8 +40,49 @@ const cosmosChainSettings = {
 	},
 } as { [key: string]: ChainSettings }
 
-export const verifyCosmosActionSignature = (action: Action): string => {
-	return ""
+export const verifyCosmosActionSignature = async (action: Action): Promise<string> => {
+	const stdSignature = JSON.parse(action.signature)
+
+	const chain = cosmosChainSettings[action.payload.chainId]
+
+	const bech32Prefix = chain.bech32_prefix
+	if (!bech32Prefix) {
+		console.error("No bech32 prefix found.")
+		return ""
+	}
+
+	const generatedAddressWithCosmosPrefix = pubkeyToAddress(stdSignature.pub_key, "cosmos")
+
+	if (generatedAddressWithCosmosPrefix !== action.session) {
+		console.error(`Address not matched. Generated ${generatedAddressWithCosmosPrefix}, found ${action.session}.`)
+		return ""
+	}
+
+	let isValid: boolean
+	try {
+		// Generate sign doc from token and verify it against the signature
+		const generatedSignDoc = validationTokenToSignDoc(
+			Buffer.from(JSON.stringify(action.payload)),
+			generatedAddressWithCosmosPrefix
+		)
+
+		const { pubkey, signature } = decodeSignature(stdSignature)
+		const secpSignature = Secp256k1Signature.fromFixedLength(signature)
+		const messageHash = new Sha256(serializeSignDoc(generatedSignDoc)).digest()
+		isValid = await Secp256k1.verifySignature(secpSignature, messageHash, pubkey)
+		if (!isValid) {
+			console.error("Signature mismatch.")
+		}
+	} catch (e) {
+		console.error(`Signature verification failed: ${(e as any).message}`)
+		isValid = false
+	}
+
+	if (isValid) {
+		return generatedAddressWithCosmosPrefix
+	} else {
+		return ""
+	}
 }
 
 export const verifyCosmosSessionSignature = async (session: Session): Promise<string> => {
@@ -55,7 +96,6 @@ export const verifyCosmosSessionSignature = async (session: Session): Promise<st
 		return ""
 	}
 
-	console.log(stdSignature)
 	const generatedAddress = pubkeyToAddress(stdSignature.pub_key, bech32Prefix)
 	const generatedAddressWithCosmosPrefix = pubkeyToAddress(stdSignature.pub_key, "cosmos")
 

@@ -4,10 +4,11 @@ import { SessionPayload, Session } from "packages/interfaces/lib/sessions.js"
 import { Connector, SessionSigner, ActionSigner } from "./interfaces.js"
 
 import { OfflineSigner } from "@cosmjs/launchpad"
-import { DirectSecp256k1HdWallet, OfflineDirectSigner, makeAuthInfoBytes, makeSignDoc } from "@cosmjs/proto-signing"
+import { OfflineDirectSigner } from "@cosmjs/proto-signing"
+import { Secp256k1HdWallet } from "@cosmjs/amino"
 import { StargateClient } from "@cosmjs/stargate"
 import type { Window as KeplrWindow, ChainInfo } from "@keplr-wallet/types"
-import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
+import { validationTokenToSignDoc } from "@canvas-js/verifiers"
 import { Buffer } from "buffer"
 
 type ChainSettings = {
@@ -175,8 +176,8 @@ export class KeplrWebWalletSessionSigner implements SessionSigner {
 	}
 	async createActionSigner(sessionPrivateKey?: string | undefined): Promise<ActionSigner> {
 		const wallet = sessionPrivateKey
-			? await DirectSecp256k1HdWallet.fromMnemonic(sessionPrivateKey)
-			: await DirectSecp256k1HdWallet.generate()
+			? await Secp256k1HdWallet.fromMnemonic(sessionPrivateKey)
+			: await Secp256k1HdWallet.generate()
 
 		const accounts = await wallet.getAccounts()
 		const address = accounts[0].address
@@ -188,7 +189,6 @@ export class KeplrWebWalletSessionSigner implements SessionSigner {
 
 		const stdSignature = await keplr.signArbitrary(chainId, await this.getAddress(), JSON.stringify(payload))
 		const signature = JSON.stringify(stdSignature)
-		// const hexSignature = `0x${Buffer.from(signature, "base64").toString("hex")}`
 		return { signature, payload }
 	}
 	async getChain(): Promise<Chain> {
@@ -200,9 +200,9 @@ export class KeplrWebWalletSessionSigner implements SessionSigner {
 }
 
 export class KeplrWebWalletActionSigner implements ActionSigner {
-	wallet: DirectSecp256k1HdWallet
+	wallet: Secp256k1HdWallet
 	_address: string
-	constructor(wallet: DirectSecp256k1HdWallet, address: string) {
+	constructor(wallet: Secp256k1HdWallet, address: string) {
 		this.wallet = wallet
 		this._address = address
 	}
@@ -213,15 +213,8 @@ export class KeplrWebWalletActionSigner implements ActionSigner {
 		return this.wallet.mnemonic
 	}
 	async signActionPayload(payload: ActionPayload): Promise<Action> {
-		const generatedSignDoc = makeSignDoc(
-			Buffer.from(JSON.stringify(payload)),
-			// We are not signing a transaction so these fields don't matter
-			makeAuthInfoBytes([], [], 0, undefined, undefined),
-			"",
-			0
-		)
-
-		const { signature } = await this.wallet.signDirect(this.address, generatedSignDoc)
-		return { signature: signature.signature, payload, session: this.address }
+		const generatedSignDoc = validationTokenToSignDoc(Buffer.from(JSON.stringify(payload)), this.address)
+		const { signature } = await this.wallet.signAmino(this.address, generatedSignDoc)
+		return { signature: JSON.stringify(signature), payload, session: this.address }
 	}
 }
