@@ -63,9 +63,9 @@ export class VM {
 	}
 
 	public readonly models: Record<string, Model>
-	public readonly routeParameters: Record<string, string[]>
+	public readonly actions: string[]
 	public readonly routes: Record<string, string>
-	public readonly actionParameters: Record<string, string[]>
+	public readonly routeParameters: Record<string, string[]>
 	public readonly contracts: Record<string, ethers.Contract>
 	public readonly contractMetadata: Record<string, ContractMetadata>
 	public readonly component: string | null
@@ -144,14 +144,13 @@ export class VM {
 		}
 
 		// parse and validate action handlers
+		this.actions = []
 		this.actionHandles = actionsHandle.consume((handle) => unwrapObject(context, handle))
-		this.actionParameters = {}
 		const actionNamePattern = /^[a-zA-Z]+$/
 		for (const [name, handle] of Object.entries(this.actionHandles)) {
 			assertPattern(name, actionNamePattern, "invalid action name")
 			assert(context.typeof(handle) === "function", `actions.${name} is not a function`)
-			const source = call(context, "Function.prototype.toString", handle).consume(context.getString)
-			this.actionParameters[name] = parseFunctionParameters(source)
+			this.actions.push(name)
 		}
 
 		this.routes = {}
@@ -324,33 +323,31 @@ export class VM {
 		const actionHandle = this.actionHandles[call]
 		assert(actionHandle !== undefined, "invalid action call")
 
-		const argHandles = args.map(this.wrapActionArgument)
+		const argHandles = wrapObject(
+			this.context,
+			mapEntries(args, (_, arg) => this.wrapActionArgument(arg))
+		)
 
 		// everything that goes into the VM must be deterministic, and deterministic means normalized!
 		const blockhash = context.blockhash ? context.blockhash.toLowerCase() : null
-		const thisArg = wrapJSON(
-			this.context,
-			blockhash
-				? {
-						hash: hash.toLowerCase(),
-						from: context.from.toLowerCase(),
-						blockhash,
-				  }
-				: { hash: hash.toLowerCase(), from: context.from.toLowerCase() }
-		)
-		this.context.setProp(thisArg, "db", this.dbHandle)
-		this.context.setProp(thisArg, "contracts", this.contractsHandle)
+		const ctx = wrapJSON(this.context, {
+			hash: hash.toLowerCase(),
+			from: context.from.toLowerCase(),
+			blockhash,
+			timestamp: context.timestamp,
+		})
+
+		this.context.setProp(ctx, "db", this.dbHandle)
+		this.context.setProp(ctx, "contracts", this.contractsHandle)
 
 		// after setting this.effects here, always make sure to reset it to null before
 		// returning or throwing an error - or the core won't be able to process more actions
 		this.effects = []
 		this.actionContext = context
-		const promiseResult = this.context.callFunction(actionHandle, thisArg, ...argHandles)
+		const promiseResult = this.context.callFunction(actionHandle, this.context.undefined, argHandles, ctx)
 
-		thisArg.dispose()
-		for (const handle of argHandles) {
-			handle.dispose()
-		}
+		ctx.dispose()
+		argHandles.dispose()
 
 		if (isFail(promiseResult)) {
 			const error = promiseResult.error.consume(this.context.dump)

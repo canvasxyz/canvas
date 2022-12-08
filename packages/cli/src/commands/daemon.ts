@@ -139,7 +139,7 @@ type AppData = {
 	cid: string
 	status: Status
 	models?: Record<string, Model>
-	actionParameters?: Record<string, string[]>
+	actions?: string[]
 }
 
 class Daemon {
@@ -194,7 +194,7 @@ class Daemon {
 							cid,
 							status: app ? "running" : "stopped",
 							models: app && app.core.vm.models,
-							actionParameters: app && app.core.vm.actionParameters,
+							actions: app && app.core.vm.actions,
 						}
 					}
 				}

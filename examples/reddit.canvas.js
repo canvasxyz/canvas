@@ -30,19 +30,19 @@ export const models = {
 }
 
 export const actions = {
-	thread(id, title, link) {
-		db.threads.set(id, { creator: this.from, title, link })
+	thread({ id, title, link }, { db, from }) {
+		db.threads.set(id, { creator: from, title, link })
 	},
-	comment(id, thread_id, text) {
-		db.comments.set(id, { creator: this.from, thread_id, text })
+	comment({ id, thread_id, text }, { db, from }) {
+		db.comments.set(id, { creator: from, thread_id, text })
 	},
-	voteThread(thread_id, value) {
+	voteThread({ thread_id, value }, { db, from }) {
 		if (value !== 1 && value !== -1) return false
-		db.thread_votes.set(`${thread_id}/${this.from}`, { creator: this.from, thread_id, value })
+		db.thread_votes.set(`${thread_id}/${from}`, { creator: from, thread_id, value })
 	},
-	voteComment(comment_id, value) {
+	voteComment({ comment_id, value }, { db, from }) {
 		if (value !== 1 && value !== -1) return false
-		db.comment_votes.set(`${comment_id}/${this.from}`, { creator: this.from, comment_id, value })
+		db.comment_votes.set(`${comment_id}/${from}`, { creator: from, comment_id, value })
 	},
 }
 

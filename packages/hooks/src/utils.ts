@@ -2,7 +2,7 @@ import { ActionArgument } from "@canvas-js/interfaces"
 
 export const getCanvasSessionKey = (address: string) => `CANVAS_SESSION:${address}`
 
-export type Dispatch = (call: string, ...args: ActionArgument[]) => Promise<{ hash: string }>
+export type Dispatch = (call: string, args: Record<string, ActionArgument>) => Promise<{ hash: string }>
 
 // Copied from https://github.com/jfromaniello/url-join/blob/main/lib/url-join.js
 

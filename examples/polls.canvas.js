@@ -3,16 +3,14 @@ export const models = {
 		id: "string",
 		title: "string",
 		creator: "string",
-		created_at: "datetime",
 		updated_at: "datetime",
-		indexes: ["creator", "created_at"],
+		indexes: ["creator"],
 	},
 	cards: {
 		id: "string",
 		poll_id: "string",
 		text: "string",
 		creator: "string",
-		created_at: "datetime",
 		updated_at: "datetime",
 		indexes: ["poll_id"],
 	},
@@ -28,9 +26,9 @@ export const models = {
 }
 
 export const routes = {
-	"/polls/:page": "SELECT * FROM polls ORDER BY created_at DESC LIMIT 10 OFFSET (:page * 10)",
+	"/polls/:page": "SELECT * FROM polls ORDER BY updated_at DESC LIMIT 10 OFFSET (:page * 10)",
 	"/cards/:id/:page": `
-	SELECT cards.id, cards.poll_id, cards.text, cards.creator, cards.created_at,
+	SELECT cards.id, cards.poll_id, cards.text, cards.creator, cards.updated_at,
 	    group_concat(votes.creator || ':' || IIF(votes.is_agree, 'true', 'false'), ';') AS votes,
 	    count(votes.id) AS votes_count
 	FROM cards
@@ -52,39 +50,37 @@ export const contracts = {
 }
 
 export const actions = {
-	async createPoll(title) {
-		const [balance] = await this.contracts.milady.balanceOf(this.from)
+	async createPoll({ title }, ctx) {
+		const [balance] = await ctx.contracts.milady.balanceOf(ctx.from)
 		if (balance === 0) {
 			throw new Error("balance is zero")
 		}
 
-		this.db.polls.set(this.hash, {
-			creator: this.from,
-			created_at: this.timestamp,
+		ctx.db.polls.set(ctx.hash, {
+			creator: ctx.from,
 			title,
 		})
 	},
-	async createCard(pollId, text) {
-		const [balance] = await this.contracts.milady.balanceOf(this.from)
+	async createCard({ pollId, text }, ctx) {
+		const [balance] = await ctx.contracts.milady.balanceOf(ctx.from)
 		if (balance === 0) {
 			throw new Error("balance is zero")
 		}
 
-		this.db.cards.set(this.hash, {
-			creator: this.from,
-			created_at: this.timestamp,
+		ctx.db.cards.set(ctx.hash, {
+			creator: ctx.from,
 			poll_id: pollId,
 			text,
 		})
 	},
-	async createVote(cardId, value) {
-		const [balance] = await this.contracts.milady.balanceOf(this.from)
+	async createVote({ cardId, value }, ctx) {
+		const [balance] = await ctx.contracts.milady.balanceOf(ctx.from)
 		if (balance === 0) {
 			throw new Error("balance is zero")
 		}
 
-		this.db.votes.set(`${this.from}/${cardId}`, {
-			creator: this.from,
+		ctx.db.votes.set(`${ctx.from}/${cardId}`, {
+			creator: ctx.from,
 			card_id: cardId,
 			is_agree: value,
 			is_disagree: !value,

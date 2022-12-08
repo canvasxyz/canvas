@@ -3,35 +3,45 @@
 A programmable append-only log for peer-to-peer decentralized applications.
 
 ```typescript
-import { QuickJSWASMModule } from "quickjs-emscripten"
+import { ethers } from "ethers"
+import { Libp2p } from "libp2p"
 
-import { Action, Session, ModelValue, Model } from "@canvas-js/interfaces"
+import { Action, Session, ModelValue, Model, Chain, ChainId } from "@canvas-js/interfaces"
 
 interface CoreConfig {
-	name: string
+	// pass `null` to run in memory
 	directory: string | null
+	// defaults to ipfs:// hash of spec
+	uri?: string
 	spec: string
-	quickJS: QuickJSWASMModule
-	replay?: boolean
-	development?: boolean
+	libp2p?: Libp2p
+	providers?: Record<string, ethers.providers.JsonRpcProvider>
+	// defaults to fetching each block from the provider with no caching
+	blockResolver?: BlockResolver
+	unchecked?: boolean
+	verbose?: boolean
+	offline?: boolean
 }
+
+type BlockResolver = (chain: Chain, chainId: ChainId, blockhash: string) => Promise<ethers.providers.Block>
 
 declare class Core {
 	static initialize(config: CoreConfig): Promise<Core>
 
-	readonly name: string
+	readonly uri: string
+	readonly cid: CID
 	readonly directory: string | null
 	readonly models: Record<string, Model>
+	readonly actions: string[]
 	readonly routeParameters: Record<string, string[]>
-	readonly actionParameters: Record<string, string[]>
 
 	close(): Promise<void>
-	getRoute(route: string, params?: Record<string, ModelValue>): Record<string, ModelValue>[]
-	apply(action: Action): Promise<{ hash: string }>
-	session(session: Session): Promise<void>
+	getRoute(route: string, params: Record<string, ModelValue>): Record<string, ModelValue>[]
+	applyAction(action: Action): Promise<{ hash: string }>
+	applySession(session: Session): Promise<{ hash: string }>
 }
 ```
 
-`CoreConfig.name` must be the IPFS multihash of the spec (dag-pb using the default chunking settings), unless `CoreConfig.development` is set to `true`, in which case `CoreConfig.name` can be any string (typically a local path or filename).
+`CoreConfig.uri` must be the `ipfs://` CIDv0 URI of the spec (dag-pb using the default chunking settings), or a local `file:///` URI.
 
 (c) 2022 Canvas Technology Corporation

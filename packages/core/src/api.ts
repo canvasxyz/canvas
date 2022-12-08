@@ -18,16 +18,13 @@ interface Options {
 	exposeActions: boolean
 }
 
-const gauges: Record<string, client.Gauge<string>> = {}
-
 export function getAPI(core: Core, options: Partial<Options> = {}): express.Express {
 	const api = express()
 	api.set("query parser", "simple")
 	api.use(express.json())
 
 	api.get("/", (req, res) => {
-		const { component, routeParameters, actionParameters } = core.vm
-		const actions = Object.keys(actionParameters)
+		const { component, routeParameters, actions } = core.vm
 		const routes = Object.keys(routeParameters)
 
 		return res.json({
@@ -76,43 +73,6 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 
 	if (options.exposeMetrics) {
 		api.get("/metrics", async (req, res) => {
-			if (core.libp2p && core.libp2p.metrics) {
-				// update the prometheus client with the recorded metrics
-
-				for (const [system, components] of core.libp2p.metrics.getComponentMetrics().entries()) {
-					for (const [component, componentMetrics] of components.entries()) {
-						for (const [metricName, trackedMetric] of componentMetrics.entries()) {
-							// set the relevant gauges
-							const name = `${system}-${component}-${metricName}`.replace(/-/g, "_")
-							const labelName = trackedMetric.label ?? metricName.replace(/-/g, "_")
-							const help = trackedMetric.help ?? metricName.replace(/-/g, "_")
-							const gaugeOptions: client.GaugeConfiguration<string> = { name, help }
-							const metricValue = await trackedMetric.calculate()
-
-							if (typeof metricValue !== "number") {
-								// metric group
-								gaugeOptions.labelNames = [labelName]
-							}
-
-							if (!gauges[name]) {
-								// create metric if it's not been seen before
-								gauges[name] = new client.Gauge(gaugeOptions)
-							}
-
-							if (typeof metricValue !== "number") {
-								// metric group
-								Object.entries(metricValue).forEach(([key, value]) => {
-									gauges[name].set({ [labelName]: key }, value)
-								})
-							} else {
-								// metric value
-								gauges[name].set(metricValue)
-							}
-						}
-					}
-				}
-			}
-
 			try {
 				const result = await client.register.metrics()
 				res.header("Content-Type", client.register.contentType)

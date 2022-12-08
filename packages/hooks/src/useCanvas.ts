@@ -28,7 +28,7 @@ export function useCanvas(): {
 	const [isPending, setIsPending] = useState(false)
 
 	const dispatch: Dispatch = useCallback(
-		async (call, ...args) => {
+		async (call, args) => {
 			console.log("dispatch:", call, args)
 			if (host === null) {
 				throw new Error("no host configured")

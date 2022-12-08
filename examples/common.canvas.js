@@ -37,41 +37,41 @@ export const models = {
 }
 
 export const actions = {
-	thread(community, title, body, link) {
-		db.threads.set({ id: this.id, creator: this.from, community, title, body, link })
+	thread({ community, title, body, link }, { db, from, hash }) {
+		db.threads.set({ id: hash, creator: from, community, title, body, link })
 	},
-	updateThread(thread_id, title, body) {
-		const t = db.threads.find({ id: thread_id, creator: this.from })
+	updateThread({ thread_id, title, body }, { db, from, hash }) {
+		const t = db.threads.find({ id: thread_id, creator: from })
 		db.threads.set({ id: t.id, title, body })
 	},
-	deleteThread(thread_id) {
-		const c = db.threads.find({ id: thread_id, creator: this.from })
+	deleteThread({ thread_id }, { db, from }) {
+		const c = db.threads.find({ id: thread_id, creator: from })
 		db.threads.delete({ id: c.id })
 	},
-	comment(thread_id, body, parent_comment_id) {
-		db.comments.set({ id: this.id, creator: this.from, thread_id, body, parent_comment_id })
+	comment({ thread_id, body, parent_comment_id }, { db, from }) {
+		db.comments.set({ id: hash, creator: from, thread_id, body, parent_comment_id })
 	},
-	updateComment(comment_id, body) {
-		const c = db.comments.find({ id: comment_id, creator: this.from })
+	updateComment({ comment_id, body }, { db, from }) {
+		const c = db.comments.find({ id: comment_id, creator: from })
 		db.comments.set({ id: c.id, body })
 	},
-	deleteComment(comment_id) {
-		const c = db.comments.find({ id: comment_id, creator: this.from })
+	deleteComment({ comment_id }, { db, from }) {
+		const c = db.comments.find({ id: comment_id, creator: from })
 		db.comments.delete({ id: c.id })
 	},
-	reactThread(thread_id, value) {
-		assert(value === "like" || value === "dislike")
-		db.thread_reactions.set({ id: `${thread_id}/${this.from}`, creator: this.from, thread_id, value })
+	reactThread({ thread_id, value }, { db, from }) {
+		if (value !== "like" && value !== "dislike") return false
+		db.thread_reactions.set({ id: `${thread_id}/${from}`, creator: from, thread_id, value })
 	},
-	unreactThread(thread_id, value) {
-		db.thread_reactions.set({ id: `${thread_id}/${this.from}`, creator: this.from, thread_id, value: null })
+	unreactThread({ thread_id, value }, { db, from }) {
+		db.thread_reactions.set({ id: `${thread_id}/${from}`, creator: from, thread_id, value: null })
 	},
-	reactComment(comment_id, value) {
-		assert(value === "like" || value === "dislike")
-		db.comment_reactions.set({ id: `${comment_id}/${this.from}`, creator: this.from, comment_id, value })
+	reactComment({ comment_id, value }, { db, from }) {
+		if (value !== "like" && value !== "dislike") return false
+		db.comment_reactions.set({ id: `${comment_id}/${from}`, creator: from, comment_id, value })
 	},
-	unreactComment(comment_id, value) {
-		db.comment_reactions.set({ id: `${comment_id}/${this.from}`, creator: this.from, comment_id, value: null })
+	unreactComment({ comment_id, value }, { db, from }) {
+		db.comment_reactions.set({ id: `${comment_id}/${from}`, creator: from, comment_id, value: null })
 	},
 }
 

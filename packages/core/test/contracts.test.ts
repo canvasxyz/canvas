@@ -26,8 +26,8 @@ test("Test calling the public ENS resolver contract", async (t) => {
 	const { uri, spec } = await compileSpec({
 		models: {},
 		actions: {
-			async verify() {
-				const [balance] = await this.contracts.milady.balanceOf(this.from)
+			async verify({}, { contracts, from }) {
+				const [balance] = await contracts.milady.balanceOf(from)
 				if (balance === 0) {
 					throw new Error("balance is zero!")
 				}
@@ -47,7 +47,7 @@ test("Test calling the public ENS resolver contract", async (t) => {
 	const providers = { [`eth:${ETH_CHAIN_ID}`]: provider }
 	const core = await Core.initialize({ directory: null, uri, spec, providers, offline: true })
 
-	async function sign(call: string, args: ActionArgument[]): Promise<Action> {
+	async function sign(call: string, args: Record<string, ActionArgument>): Promise<Action> {
 		const timestamp = Date.now()
 		const block = await getCurrentBlock(provider)
 		const actionPayload: ActionPayload = {
@@ -66,7 +66,7 @@ test("Test calling the public ENS resolver contract", async (t) => {
 		return { payload: actionPayload, session: null, signature: actionSignature }
 	}
 
-	const action = await sign("verify", [])
+	const action = await sign("verify", {})
 	await t.throwsAsync(core.applyAction(action), { message: "balance is zero!" })
 	await core.close()
 })

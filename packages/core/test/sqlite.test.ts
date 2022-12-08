@@ -21,19 +21,19 @@ const { spec, uri } = await compileSpec({
 		},
 	},
 	actions: {
-		newThread(title, link) {
+		newThread({ title, link }, { db, hash, from }) {
 			if (typeof title === "string" && typeof link === "string") {
-				this.db.threads.set(this.hash, { creator: this.from, title, link })
+				db.threads.set(hash, { creator: from, title, link })
 			}
 		},
-		voteThread(threadId, value) {
+		voteThread({ threadId, value }, { db, from }) {
 			if (typeof threadId !== "string") {
 				throw new Error("threadId must be a string")
 			} else if (value !== 1 && value !== -1) {
 				throw new Error("invalid vote value")
 			}
 
-			this.db.thread_votes.set(`${threadId}/${this.from}`, { creator: this.from, thread_id: threadId, value })
+			db.thread_votes.set(`${threadId}/${from}`, { creator: from, thread_id: threadId, value })
 		},
 	},
 	routes: {
@@ -42,9 +42,9 @@ const { spec, uri } = await compileSpec({
 	},
 })
 
-async function sign(call: string, args: ActionArgument[]) {
+async function sign(call: string, args: Record<string, ActionArgument>) {
 	const timestamp = Date.now()
-	const actionPayload = {
+	const actionPayload: ActionPayload = {
 		from: signerAddress,
 		spec: uri,
 		call,
@@ -53,7 +53,7 @@ async function sign(call: string, args: ActionArgument[]) {
 		blockhash: null,
 		chain: "eth",
 		chainId: 1,
-	} as ActionPayload
+	}
 	const actionSignatureData = getActionSignatureData(actionPayload)
 	const actionSignature = await signer._signTypedData(...actionSignatureData)
 	return { payload: actionPayload, session: null, signature: actionSignature }
@@ -62,11 +62,11 @@ async function sign(call: string, args: ActionArgument[]) {
 test("get /all", async (t) => {
 	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true, offline: true })
 
-	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
-	const { hash } = await core.applyAction(action)
+	const action = await sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
+	const { hash: threadId } = await core.applyAction(action)
 
 	const expected = {
-		id: hash,
+		id: threadId,
 		title: "Hacker News",
 		creator: signerAddress,
 		link: "https://news.ycombinator.com",
@@ -75,10 +75,10 @@ test("get /all", async (t) => {
 
 	t.deepEqual(await core.getRoute("/all", {}), [{ ...expected, score: null }])
 
-	await sign("voteThread", [hash, 1]).then((action) => core.applyAction(action))
+	await sign("voteThread", { threadId, value: 1 }).then((action) => core.applyAction(action))
 	t.deepEqual(await core.getRoute("/all", {}), [{ ...expected, score: 1 }])
 
-	await sign("voteThread", [hash, -1]).then((action) => core.applyAction(action))
+	await sign("voteThread", { threadId, value: -1 }).then((action) => core.applyAction(action))
 	t.deepEqual(await core.getRoute("/all", {}), [{ ...expected, score: -1 }])
 
 	await core.close()
@@ -87,14 +87,16 @@ test("get /all", async (t) => {
 test("get /votes/:thread_id", async (t) => {
 	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
 
-	const action = await sign("newThread", ["Hacker News", "https://news.ycombinator.com"])
-	const { hash } = await core.applyAction(action)
+	const action = await sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
+	const { hash: threadId } = await core.applyAction(action)
 
-	await sign("voteThread", [hash, 1]).then((action) => core.applyAction(action))
-	t.deepEqual(await core.getRoute("/votes/:thread_id", { thread_id: hash }), [{ creator: signerAddress, value: 1 }])
+	await sign("voteThread", { threadId, value: 1 }).then((action) => core.applyAction(action))
+	t.deepEqual(await core.getRoute("/votes/:thread_id", { thread_id: threadId }), [{ creator: signerAddress, value: 1 }])
 
-	await sign("voteThread", [hash, -1]).then((action) => core.applyAction(action))
-	t.deepEqual(await core.getRoute("/votes/:thread_id", { thread_id: hash }), [{ creator: signerAddress, value: -1 }])
+	await sign("voteThread", { threadId, value: -1 }).then((action) => core.applyAction(action))
+	t.deepEqual(await core.getRoute("/votes/:thread_id", { thread_id: threadId }), [
+		{ creator: signerAddress, value: -1 },
+	])
 
 	await core.close()
 })

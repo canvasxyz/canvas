@@ -11,6 +11,7 @@ import { kadDHT } from "@libp2p/kad-dht"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
 import { toHex } from "./utils.js"
 
@@ -47,7 +48,7 @@ export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 		dht: kadDHT({ protocolPrefix: "/canvas", clientMode: false }),
-		metrics: { enabled: true },
+		metrics: prometheusMetrics(),
 		pubsub: gossipsub({
 			doPX: true,
 			fallbackToFloodsub: false,

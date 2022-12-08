@@ -60,7 +60,7 @@ export type Context<Models extends Record<string, Model>> = {
 
 export async function compileSpec<Models extends Record<string, Model>>(exports: {
 	models: Models
-	actions: Record<string, (this: Context<Models>, ...args: ActionArgument[]) => void>
+	actions: Record<string, (this: undefined, args: Record<string, ActionArgument>, ctx: Context<Models>) => void>
 	routes?: Record<string, string>
 	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
 }): Promise<{ uri: string; spec: string }> {
