@@ -22,7 +22,8 @@
     "@polkadot/wasm-crypto": "^6.4.1",
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.0",
-    "ethers": "^5.7.0"
+    "ethers": "^5.7.0",
+    "tweetnacl": "^1.0.3"
   },
   "resolve.fallback": {
     "crypto": false
