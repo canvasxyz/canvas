@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"
 
-const WS_KEEPALIVE = 3000 // TODO: 30SEC
+const WS_KEEPALIVE = 30000
 
 export interface CanvasProps {
 	host: string
@@ -24,38 +24,44 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const host = props.host
 
 	useEffect(() => {
+		if (isLoading) return
 		const wsHost = host.startsWith("/") ? `ws://${document.location.host}${host}` : host
 		const ws = new WebSocket(wsHost)
 
 		// Set up keep-alive
+		// TODO: try to reconnect, after close
 		ws.addEventListener("open", () => {
 			setWaitingForHeartbeat(false)
-			ws.addEventListener("pong", () => {
-				console.log("pong")
-				setWaitingForHeartbeat(false)
-			})
+			ws.addEventListener("pong", () => setWaitingForHeartbeat(false))
 		})
-		const interval = setInterval(() => {
+		const timer = setInterval(() => {
 			if (ws.readyState !== ws.OPEN) return
 			if (waitingForHeartbeat === true) {
 				console.log("ws: server timed out")
 				ws.close()
 				setWS(null)
-				clearInterval(interval)
-				// TODO: try to reconnect
+				clearInterval(timer)
 			} else {
 				setWaitingForHeartbeat(true)
 				ws.send("ping")
 			}
 		}, WS_KEEPALIVE)
 
+		ws.addEventListener("close", () => {
+			console.log("ws: connection closed")
+			setWS(null)
+			clearInterval(timer)
+		})
+
+		window.addEventListener("beforeunload", () => ws.close())
+
 		setWS(ws)
 		return () => {
 			ws.close()
 			setWS(null)
-			clearInterval(interval)
+			clearInterval(timer)
 		}
-	}, [host])
+	}, [host, isLoading])
 
 	useEffect(() => {
 		const id = setInterval(() => {

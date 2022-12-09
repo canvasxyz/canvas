@@ -90,16 +90,16 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 					} catch (err) {
 						console.log("ws: failed to parse message", evt.data)
 					}
-					// TODO: handle ws errors
 				}
 				ws.addEventListener("message", listener)
 				ws.send(JSON.stringify({ action: "subscribe", data: { route, params } }))
 
-				// TODO: also hook into beforeUnload, as below
 				return () => {
-					ws.removeEventListener("message", listener)
-					ws.send(JSON.stringify({ action: "unsubscribe", data: { route, params } }))
 					console.log("ws: unsubscribing", url)
+					ws.removeEventListener("message", listener)
+					if (ws.readyState === ws.OPEN) {
+						ws.send(JSON.stringify({ action: "unsubscribe", data: { route, params } }))
+					}
 				}
 			}
 

@@ -15,8 +15,12 @@ import { Core } from "./core.js"
 const collectDefaultMetrics = client.collectDefaultMetrics
 collectDefaultMetrics()
 
+const WS_KEEPALIVE = 30000
+const WS_KEEPALIVE_LATENCY = 3000
+
 type WebSocketID = {
 	id: string
+	lastMessage: number
 }
 
 interface Options {
@@ -65,10 +69,29 @@ export function bindWebsockets(server: Server, core: Core): Server {
 	}
 	wss.on("connect", (ws, request) => {
 		ws.id = uuidv4()
+		ws.lastMessage = +new Date()
+		console.log(chalk.green(`[canvas-core] ws-${ws.id}: opened connection`))
 
-		// Allow clients to subscribe to routes
+		ws.timer = setInterval(() => {
+			console.log("timer")
+			if (ws.lastMessage >= +new Date() - WS_KEEPALIVE + WS_KEEPALIVE_LATENCY) return
+			console.log(chalk.red(`[canvas-core] ws-${ws.id}: closed connection on timeout`))
+			ws.close()
+			clearInterval(ws.timer)
+		}, WS_KEEPALIVE)
+
 		ws.on("message", (data: Message) => {
-			if (data.toString() === "ping") return ws.send("pong")
+			ws.lastMessage = +new Date()
+
+			// Respond to keepalive pings
+			if (data.toString() === "ping") {
+				console.log(chalk.green(`[canvas-core] ws-${ws.id}: received ping`))
+				ws.send("pong")
+				return
+			}
+
+			// Allow clients to subscribe to routes
+			console.log(chalk.green(`[canvas-core] ws-${ws.id}: received message`))
 			try {
 				const message = JSON.parse(data.toString())
 				if (message.action === "subscribe") {
