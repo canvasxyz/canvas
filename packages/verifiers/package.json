@@ -11,5 +11,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Canvas Technology Corporation (https://canvas.xyz)"
+  "author": "Canvas Technology Corporation (https://canvas.xyz)",
+  "dependencies": {
+    "bs58": "^5.0.0"
+  }
 }
