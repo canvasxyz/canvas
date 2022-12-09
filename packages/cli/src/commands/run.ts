@@ -12,7 +12,7 @@ import express from "express"
 import cors from "cors"
 import { createLibp2p } from "libp2p"
 
-import { Core, constants, actionType, getLibp2pInit, BlockCache, getAPI, bindWebsockets } from "@canvas-js/core"
+import { Core, constants, actionType, getLibp2pInit, BlockCache, getAPI, setupWebsockets } from "@canvas-js/core"
 
 import { getProviders, confirmOrExit, parseSpecArgument, getPeerId, installSpec, CANVAS_HOME } from "../utils.js"
 
@@ -226,7 +226,7 @@ export async function handler(args: Args) {
 	}
 
 	const httpServer = http.createServer(app)
-	bindWebsockets(httpServer, core)
+	setupWebsockets(httpServer, core)
 
 	const server = stoppable(
 		httpServer.listen(args.port, () => {
