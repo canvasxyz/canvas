@@ -67,16 +67,45 @@ export function bindWebsockets(server: Server, core: Core): Server {
 		listeners[ws.id][route][JSON.stringify(params)] = listener
 		return listener
 	}
+
+	const sendApplicationData = (ws: WebSocket & WebSocketID) => {
+		console.log(chalk.green(`[canvas-core] ws-${ws.id}: sent application status`))
+		const { component, routeParameters, actions } = core.vm
+		const routes = Object.keys(routeParameters)
+		const message = JSON.stringify({
+			action: "application",
+			data: {
+				uri: core.uri,
+				cid: core.cid.toString(),
+				peerId: core.libp2p?.peerId.toString(),
+				component,
+				actions,
+				routes,
+				peers: core.libp2p
+					? {
+							gossip: Object.fromEntries(core.recentGossipSubPeers),
+							backlog: Object.fromEntries(core.recentBacklogSyncPeers),
+					  }
+					: null,
+			},
+		})
+		ws.send(message)
+	}
+
 	wss.on("connect", (ws, request) => {
 		ws.id = uuidv4()
 		ws.lastMessage = +new Date()
 		console.log(chalk.green(`[canvas-core] ws-${ws.id}: opened connection`))
+		sendApplicationData(ws)
 
 		ws.timer = setInterval(() => {
-			if (ws.lastMessage >= +new Date() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) return
-			console.log(chalk.red(`[canvas-core] ws-${ws.id}: closed connection on timeout`))
-			ws.close()
-			clearInterval(ws.timer)
+			if (ws.lastMessage >= +new Date() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) {
+				sendApplicationData(ws)
+			} else {
+				console.log(chalk.red(`[canvas-core] ws-${ws.id}: closed connection on timeout`))
+				ws.close()
+				clearInterval(ws.timer)
+			}
 		}, WS_KEEPALIVE)
 
 		ws.on("message", (data: Message) => {

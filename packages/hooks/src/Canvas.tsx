@@ -11,7 +11,6 @@ export interface CanvasProps {
 
 export const Canvas: React.FC<CanvasProps> = (props) => {
 	const [isLoading, setIsLoading] = useState(true)
-	const [waitingForHeartbeat, setWaitingForHeartbeat] = useState<boolean>(false)
 	const [data, setData] = useState<ApplicationData | null>(null)
 	const [error, setError] = useState<Error | null>(null)
 
@@ -20,18 +19,7 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const [sessionExpiration, setSessionExpiration] = useState<number | null>(null)
 
 	const host = props.host
-	const ws = useWebsocket({ isLoading, host })
-
-	useEffect(() => {
-		const id = setInterval(() => {
-			fetch(host)
-				.then((res) => res.json())
-				.then((data: ApplicationData) => setData(data))
-				.catch((err) => setError(err))
-				.finally(() => setIsLoading(false))
-		}, 2500)
-		return () => clearInterval(id)
-	}, [host])
+	const ws = useWebsocket({ setIsLoading, setData, setError, host })
 
 	return (
 		<CanvasContext.Provider

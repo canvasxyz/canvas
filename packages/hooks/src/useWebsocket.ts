@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react"
 
+import { ApplicationData } from "./CanvasContext.js"
+
 const WS_KEEPALIVE = 3000
 
 type WebSocketExt = {
@@ -7,13 +9,32 @@ type WebSocketExt = {
 	timer?: ReturnType<typeof setTimeout>
 }
 
-const setupWebsocket = (host: string, reconnect: Function, delay: number) => {
+type SetupParams = {
+	setIsLoading: Function
+	setData: Function
+	setError: Function
+	reconnect: Function
+}
+
+const setupWebsocket = (host: string, { setIsLoading, setData, setError, reconnect }: SetupParams, delay: number) => {
 	const wsHost = host.startsWith("/") ? `ws://${document.location.host}${host}` : host
 	const ws: WebSocket & WebSocketExt = new WebSocket(wsHost)
 
-	// Set up keep-alive
+	// Set up application data and keep-alive
 	ws.addEventListener("message", (event) => {
-		if (event.data === "pong") ws.waitingForHeartbeat = false
+		if (event.data === "pong") {
+			ws.waitingForHeartbeat = false
+			return
+		}
+		try {
+			const message = JSON.parse(event.data)
+			if (message.action === "application") {
+				setData(message.data)
+				setIsLoading(false)
+			}
+		} catch (err) {
+			console.log(err)
+		}
 	})
 	ws.addEventListener("open", (event) => {
 		ws.timer = setInterval(() => {
@@ -39,18 +60,27 @@ const setupWebsocket = (host: string, reconnect: Function, delay: number) => {
 	return ws
 }
 
-export function useWebsocket({ isLoading, host }: { isLoading: boolean; host: string }): WebSocket | null {
+export function useWebsocket({
+	setIsLoading,
+	setData,
+	setError,
+	host,
+}: {
+	setIsLoading: Function
+	setData: Function
+	setError: Function
+	host: string
+}): WebSocket | null {
 	const [ws, setWS] = useState<WebSocket | null>(null)
 
 	useEffect(() => {
-		if (isLoading) return
 		// Set up a websocket, and re-connect whenever connection fails
 		const reconnect = (delay: number) => {
 			const newDelay = delay < 10000 ? delay + 1000 : delay
-			setTimeout(() => setWS(setupWebsocket(host, reconnect, newDelay)), delay)
+			setTimeout(() => setWS(setupWebsocket(host, { setIsLoading, setData, setError, reconnect }, newDelay)), delay)
 		}
-		setWS(setupWebsocket(host, reconnect, 0))
-	}, [isLoading, host])
+		setWS(setupWebsocket(host, { setIsLoading, setData, setError, reconnect }, 0))
+	}, [host])
 
 	return ws
 }
