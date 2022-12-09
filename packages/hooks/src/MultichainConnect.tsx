@@ -1,6 +1,6 @@
 import type { Connector, SessionSigner } from "@canvas-js/signers"
 import React, { useState } from "react"
-import { MultichainConnectContext } from "./MultichainConnectContext"
+import { MultichainConnectContext } from "./MultichainConnectContext.js"
 
 interface MultichainConnectProps {
 	children: React.ReactNode

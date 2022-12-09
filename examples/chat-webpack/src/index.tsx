@@ -8,7 +8,7 @@ import { App } from "./App"
 
 import "98.css"
 import "./styles.css"
-import { MultichainConnect } from "./MultichainConnect"
+import { MultichainConnect } from "@canvas-js/hooks"
 
 const root = ReactDOM.createRoot(document.getElementById("root")!)
 

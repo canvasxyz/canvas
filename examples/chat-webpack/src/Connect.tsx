@@ -3,7 +3,7 @@ import React, { useMemo } from "react"
 import { useSession } from "@canvas-js/hooks"
 
 import { ErrorMessage } from "./ErrorMessage"
-import { useSigner, useConnect, useDisconnect } from "./MultichainConnectContext"
+import { useSigner, useConnect, useDisconnect } from "@canvas-js/hooks"
 
 export const Connect: React.FC<{}> = ({}) => {
 	// TODO: Implement the error handling from wagmi
