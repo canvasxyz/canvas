@@ -22,6 +22,7 @@ export interface CanvasContextValue {
 	data: ApplicationData | null
 
 	// private (not returned from useCanvas hook)
+	ws: WebSocket | null
 	signer: ethers.providers.JsonRpcSigner | null
 	setSigner: (signer: ethers.providers.JsonRpcSigner | null) => void
 	sessionWallet: ethers.Wallet | null
@@ -35,6 +36,7 @@ export const CanvasContext = createContext<CanvasContextValue>({
 	host: null,
 	error: null,
 	data: null,
+	ws: null,
 
 	signer: null,
 	setSigner: (_) => {

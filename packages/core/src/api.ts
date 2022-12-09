@@ -18,8 +18,11 @@ interface Options {
 	exposeActions: boolean
 }
 
+const gauges: Record<string, client.Gauge<string>> = {}
+
 export function getAPI(core: Core, options: Partial<Options> = {}): express.Express {
 	const api = express()
+
 	api.set("query parser", "simple")
 	api.use(express.json())
 
@@ -169,7 +172,7 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 				newValues = core.getRoute(route, params)
 			} catch (err) {
 				closed = true
-				console.log(chalk.red("[canvas-cli] error evaluating route"), err)
+				console.log(chalk.red("[canvas-core] error evaluating route"), err)
 				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err}`)
 			}
 
@@ -195,7 +198,7 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 	}
 }
 
-function compareResults(a: Record<string, ModelValue>[], b: Record<string, ModelValue>[]) {
+export function compareResults(a: Record<string, ModelValue>[], b: Record<string, ModelValue>[]) {
 	if (a.length !== b.length) {
 		return false
 	}

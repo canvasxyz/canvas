@@ -1,5 +1,5 @@
 import { ethers } from "ethers"
-import { ActionArgument, Block } from "@canvas-js/interfaces"
+import { ActionArgument, Block, ModelValue } from "@canvas-js/interfaces"
 
 export const getCanvasSessionKey = (address: string) => `CANVAS_SESSION:${address}`
 
@@ -83,4 +83,19 @@ function normalize(strArray: string[]) {
 export function urlJoin(...args: string[]) {
 	const parts = Array.from(Array.isArray(args[0]) ? args[0] : args)
 	return normalize(parts)
+}
+
+export function compareObjects(a: Record<string, ModelValue>, b: Record<string, ModelValue>) {
+	for (const key in a) {
+		if (a[key] !== b[key]) {
+			return false
+		}
+	}
+
+	for (const key in b) {
+		if (b[key] !== a[key]) {
+			return false
+		}
+	}
+	return true
 }
