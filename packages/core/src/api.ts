@@ -73,8 +73,7 @@ export function bindWebsockets(server: Server, core: Core): Server {
 		console.log(chalk.green(`[canvas-core] ws-${ws.id}: opened connection`))
 
 		ws.timer = setInterval(() => {
-			console.log("timer")
-			if (ws.lastMessage >= +new Date() - WS_KEEPALIVE + WS_KEEPALIVE_LATENCY) return
+			if (ws.lastMessage >= +new Date() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) return
 			console.log(chalk.red(`[canvas-core] ws-${ws.id}: closed connection on timeout`))
 			ws.close()
 			clearInterval(ws.timer)

@@ -64,6 +64,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 
 	const url = useMemo(() => getRouteURL(host, route, params), [host, route, params])
 
+	const readyState = ws?.readyState
 	const subscribe = options.subscribe ?? true
 	useEffect(() => {
 		if (applicationData === null || ws === null) {
@@ -137,7 +138,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 					setIsLoading(false)
 				})
 		}
-	}, [route, url, !!applicationData, subscribe, ws, ws?.readyState])
+	}, [route, url, !!applicationData, subscribe, ws, readyState])
 
 	return { error, data, isLoading }
 }
