@@ -35,7 +35,7 @@ export class PhantomWebWalletConnector implements Connector {
 		onAccountsChanged(accounts)
 	}
 	disable(): void {
-		throw new Error("Method not implemented.")
+		window.solana.disconnect()
 	}
 	async createSessionSigner(account: string): Promise<SessionSigner> {
 		// TODO: What should the chain ID be here? Does it matter for Solana?
