@@ -78,6 +78,10 @@ export function useCanvas(): {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify(action),
+				}).catch((err) => {
+					console.log(err)
+					if (err.message === "Failed to fetch") throw new Error("Could not reach server")
+					throw err
 				})
 
 				if (!res.ok) {
