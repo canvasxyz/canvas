@@ -6,6 +6,7 @@ import {
 	MetaMaskEthereumConnector,
 	PolkadotWebWalletConnector,
 	KeplrWebWalletConnector,
+	PhantomWebWalletConnector,
 	SessionSigner,
 } from "@canvas-js/signers"
 
@@ -84,6 +85,8 @@ export const useConnect = () => {
 				? new MetaMaskEthereumConnector()
 				: chain == "substrate"
 				? new PolkadotWebWalletConnector()
+				: chain == "solana"
+				? new PhantomWebWalletConnector()
 				: new KeplrWebWalletConnector()
 
 		const onAccountsChanged = async (accounts: string[]) => {
