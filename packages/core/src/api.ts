@@ -50,7 +50,7 @@ export function bindWebsockets(server: Server, core: Core): Server {
 				newValues = core.getRoute(route, params)
 			} catch (err: any) {
 				// closed = true
-				console.log(chalk.red("[canvas-cli] error evaluating route"), err)
+				console.log(chalk.red("[canvas-core] error evaluating route"), err)
 				return ws.send(JSON.stringify({ route, params, error: err.toString() }))
 			}
 			if (oldValues === null || !compareResults(oldValues, newValues)) {
@@ -77,25 +77,28 @@ export function bindWebsockets(server: Server, core: Core): Server {
 					core.addEventListener("action", listener)
 					listener()
 				} else if (message.action === "unsubscribe") {
-					// TODO: make factory return same instance
 					const { route, params } = message.data
 					const listener = getListener(ws, route, params)
 					core.removeEventListener("action", listener)
 				} else {
-					console.log(`Received unrecognized message ${JSON.stringify(message)}`)
+					console.log(chalk.red(`[canvas-core] ws-${ws.id}: unrecognized message ${data}`))
 				}
-			} catch (error) {
-				console.log(`Received unknown message "${data}"`, error)
+			} catch (err) {
+				console.log(chalk.red(`[canvas-core] ws-${ws.id}: unknown message "${data}"`, err))
 			}
 		})
+
+		// Clean up subscriptions when connection closes
 		ws.on("close", (data: Message) => {
-			console.log(`Received close`)
-			Object.entries(listeners[ws.id]).map(([route, listenersByParams]) => {
-				Object.entries(listenersByParams).map(([params, listener]) => {
-					core.removeEventListener("action", listener)
-					delete listeners[ws.id][route][params]
+			console.log(chalk.red(`[canvas-core] ws-${ws.id}: closed connection`))
+			if (listeners[ws.id]) {
+				Object.entries(listeners[ws.id]).map(([route, listenersByParams]) => {
+					Object.entries(listenersByParams).map(([params, listener]) => {
+						core.removeEventListener("action", listener)
+						delete listeners[ws.id][route][params]
+					})
 				})
-			})
+			}
 		})
 	})
 
@@ -259,7 +262,7 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 				newValues = core.getRoute(route, params)
 			} catch (err) {
 				closed = true
-				console.log(chalk.red("[canvas-cli] error evaluating route"), err)
+				console.log(chalk.red("[canvas-core] error evaluating route"), err)
 				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err}`)
 			}
 
