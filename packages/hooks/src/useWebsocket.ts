@@ -7,7 +7,7 @@ type WebSocketExt = {
 	timer?: ReturnType<typeof setTimeout>
 }
 
-const setupWebsocket = (host: string, reconnect: () => void) => {
+const setupWebsocket = (host: string, reconnect: Function, delay: number) => {
 	const wsHost = host.startsWith("/") ? `ws://${document.location.host}${host}` : host
 	const ws: WebSocket & WebSocketExt = new WebSocket(wsHost)
 
@@ -22,7 +22,7 @@ const setupWebsocket = (host: string, reconnect: () => void) => {
 				console.log("ws: closing connection, server did not respond to keep-alive")
 				ws.close()
 				clearInterval(ws.timer)
-				reconnect()
+				reconnect(delay)
 			} else {
 				ws.waitingForHeartbeat = true
 				ws.send("ping")
@@ -33,12 +33,7 @@ const setupWebsocket = (host: string, reconnect: () => void) => {
 	ws.addEventListener("close", () => {
 		console.log("ws: connection closed")
 		clearInterval(ws.timer)
-		reconnect()
-	})
-
-	window.addEventListener("beforeunload", () => {
-		console.log("ws: window unloading")
-		ws.close()
+		reconnect(delay)
 	})
 
 	return ws
@@ -50,8 +45,11 @@ export function useWebsocket({ isLoading, host }: { isLoading: boolean; host: st
 	useEffect(() => {
 		if (isLoading) return
 		// Set up a websocket, and re-connect whenever connection fails
-		const reconnect = () => setWS(setupWebsocket(host, reconnect))
-		setWS(setupWebsocket(host, reconnect))
+		const reconnect = (delay: number) => {
+			const newDelay = delay < 10000 ? delay + 1000 : delay
+			setTimeout(() => setWS(setupWebsocket(host, reconnect, newDelay)), delay)
+		}
+		setWS(setupWebsocket(host, reconnect, 0))
 	}, [isLoading, host])
 
 	return ws
