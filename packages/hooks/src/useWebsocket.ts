@@ -17,7 +17,13 @@ type SetupParams = {
 }
 
 const setupWebsocket = (host: string, { setIsLoading, setData, setError, reconnect }: SetupParams, delay: number) => {
-	const wsHost = host.startsWith("/") ? `ws://${document.location.host}${host}` : host
+	const wsHost = host.startsWith("/")
+		? `ws://${document.location.host}${host}`
+		: host.startsWith("http://")
+		? host.replace("http://", "ws://")
+		: host.startsWith("https://")
+		? host.replace("https://", "wss://")
+		: host
 	const ws: WebSocket & WebSocketExt = new WebSocket(wsHost)
 
 	// Set up application data and keep-alive
