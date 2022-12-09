@@ -10,7 +10,7 @@ import { Libp2p, createLibp2p } from "libp2p"
 import { createFromProtobuf, createEd25519PeerId, exportToProtobuf } from "@libp2p/peer-id-factory"
 import { ethers } from "ethers"
 
-import { constants, Core, getLibp2pInit, getAPI } from "@canvas-js/core"
+import { constants, Core, getLibp2pInit, getAPI, setupWebsockets } from "@canvas-js/core"
 
 const { CANVAS_PATH, CANVAS_SPEC, ANNOUNCE, LISTEN, PEER_ID, ETH_CHAIN_ID, ETH_CHAIN_RPC, NODE_ENV, VERBOSE, PORT } =
 	process.env
@@ -77,7 +77,10 @@ const app = express()
 app.use("/app", getAPI(core))
 app.use("/", (req, res, next) => nextAppHandler(req, res))
 
-const server = stoppable(http.createServer(app), 0)
+const httpServer = http.createServer(app)
+setupWebsockets(httpServer, core)
+
+const server = stoppable(httpServer, 0)
 
 server.listen(port, () => console.log(`> Ready on http://${hostname}:${port}`))
 

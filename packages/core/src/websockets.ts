@@ -1,3 +1,4 @@
+import url from "url"
 import { WebSocketServer } from "ws"
 import { v4 as uuidv4 } from "uuid"
 import type { Message } from "websocket"
@@ -137,6 +138,10 @@ export function setupWebsockets(server: Server, core: Core): Server {
 	})
 
 	server.on("upgrade", (request, socket, head) => {
+		if (request.url && url.parse(request.url).pathname?.startsWith("/_next")) {
+			return
+		}
+
 		wss.handleUpgrade(request, socket, head, (ws) => {
 			wss.emit("connect", ws, request)
 		})
