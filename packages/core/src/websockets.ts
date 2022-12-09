@@ -97,7 +97,6 @@ export function setupWebsockets(server: Server, core: Core): Server {
 
 			// Respond to keepalive pings
 			if (data.toString() === "ping") {
-				console.log(chalk.green(`[canvas-core] ws-${ws.id}: received ping`))
 				ws.send("pong")
 				return
 			}
