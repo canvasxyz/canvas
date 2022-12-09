@@ -18,7 +18,7 @@ type SetupParams = {
 
 const setupWebsocket = (host: string, { setIsLoading, setData, setError, reconnect }: SetupParams, delay: number) => {
 	const wsHost = host.startsWith("/")
-		? `ws://${document.location.host}${host}`
+		? `ws${document.location.protocol === "https:" ? "s" : ""}://${document.location.host}${host}`
 		: host.startsWith("http://")
 		? host.replace("http://", "ws://")
 		: host.startsWith("https://")
