@@ -106,7 +106,7 @@ export const useConnect = () => {
 }
 
 export const useDisconnect = () => {
-	const { isConnected, setIsConnected, connector, setConnector } = useContext(MultichainConnectContext)
+	const { isConnected, setIsConnected, connector, setConnector, setSigner } = useContext(MultichainConnectContext)
 
 	const disconnect = () => {
 		if (!isConnected) {
@@ -116,6 +116,7 @@ export const useDisconnect = () => {
 		if (connector) {
 			connector.disable()
 			setConnector(null)
+			setSigner(null)
 		}
 		setIsConnected(false)
 	}
