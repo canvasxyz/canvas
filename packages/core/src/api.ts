@@ -1,5 +1,6 @@
 import assert from "node:assert"
 
+import { v4 as uuidv4 } from "uuid"
 import { WebSocketServer } from "ws"
 import type { Message } from "websocket"
 import type { Server } from "http"
@@ -13,6 +14,10 @@ import { Core } from "./core.js"
 
 const collectDefaultMetrics = client.collectDefaultMetrics
 collectDefaultMetrics()
+
+type WebSocketID = {
+	id: string
+}
 
 interface Options {
 	exposeMetrics: boolean
@@ -28,25 +33,39 @@ export function bindWebsockets(server: Server, core: Core): Server {
 	console.log("Binding Websockets")
 
 	let oldValues: Record<string, ModelValue>[] | null = null
-	const getListener = (ws: WebSocket, route: string, params: Record<string, ModelValue>) => () => {
-		if (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING) {
-			return
-		}
-		let newValues: Record<string, ModelValue>[]
-		try {
-			newValues = core.getRoute(route, params)
-		} catch (err: any) {
-			// closed = true
-			console.log(chalk.red("[canvas-cli] error evaluating route"), err)
-			return ws.send(JSON.stringify({ route, params, error: err.toString() }))
-		}
-		if (oldValues === null || !compareResults(oldValues, newValues)) {
-			return ws.send(JSON.stringify({ route, params, data: newValues }))
-			oldValues = newValues
-		}
-	}
+	let listeners: Record<string, Record<string, Record<string, () => void>>> = {}
 
+	const getListener = (ws: WebSocket & WebSocketID, route: string, params: Record<string, ModelValue>) => {
+		if (listeners[ws.id] && listeners[ws.id][route] && listeners[ws.id][route][JSON.stringify(params)]) {
+			return () => listeners[ws.id][route][JSON.stringify(params)]
+		}
+
+		const listener = () => {
+			if (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING) {
+				return
+			}
+
+			let newValues: Record<string, ModelValue>[]
+			try {
+				newValues = core.getRoute(route, params)
+			} catch (err: any) {
+				// closed = true
+				console.log(chalk.red("[canvas-cli] error evaluating route"), err)
+				return ws.send(JSON.stringify({ route, params, error: err.toString() }))
+			}
+			if (oldValues === null || !compareResults(oldValues, newValues)) {
+				return ws.send(JSON.stringify({ route, params, data: newValues }))
+				oldValues = newValues
+			}
+		}
+		if (!listeners[ws.id]) listeners[ws.id] = {}
+		if (!listeners[ws.id][route]) listeners[ws.id][route] = {}
+		listeners[ws.id][route][JSON.stringify(params)] = listener
+		return listener
+	}
 	wss.on("connect", (ws, request) => {
+		ws.id = uuidv4()
+
 		// Allow clients to subscribe to routes
 		ws.on("message", (data: Message) => {
 			if (data.toString() === "ping") return ws.send("pong")
@@ -66,15 +85,21 @@ export function bindWebsockets(server: Server, core: Core): Server {
 					console.log(`Received unrecognized message ${JSON.stringify(message)}`)
 				}
 			} catch (error) {
-				console.log(`Received unknown message "${data}"`)
+				console.log(`Received unknown message "${data}"`, error)
 			}
 		})
 		ws.on("close", (data: Message) => {
 			console.log(`Received close`)
+			Object.entries(listeners[ws.id]).map(([route, listenersByParams]) => {
+				Object.entries(listenersByParams).map(([params, listener]) => {
+					core.removeEventListener("action", listener)
+					delete listeners[ws.id][route][params]
+				})
+			})
 		})
 	})
 
-	server.on("upgrade", function upgrade(request, socket, head) {
+	server.on("upgrade", (request, socket, head) => {
 		wss.handleUpgrade(request, socket, head, (ws) => {
 			wss.emit("connect", ws, request)
 		})
