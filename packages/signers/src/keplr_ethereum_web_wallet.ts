@@ -1,13 +1,13 @@
-import { Action, ActionPayload, Block } from "packages/interfaces/lib/actions.js"
-import { Chain, ChainId } from "packages/interfaces/lib/contracts.js"
-import { SessionPayload, Session } from "packages/interfaces/lib/sessions.js"
-import { Connector, SessionSigner, ActionSigner } from "./interfaces.js"
-
+import { StargateClient } from "@cosmjs/stargate"
 import { OfflineSigner } from "@cosmjs/launchpad"
 import { OfflineDirectSigner } from "@cosmjs/proto-signing"
 import { Secp256k1HdWallet } from "@cosmjs/amino"
-import { StargateClient } from "@cosmjs/stargate"
-import type { Window as KeplrWindow, ChainInfo } from "@keplr-wallet/types"
+import { Connector, SessionSigner, ActionSigner } from "./interfaces.js"
+import { SessionPayload, Session } from "packages/interfaces/lib/sessions.js"
+
+import { Window as KeplrWindow, ChainInfo, EthSignType } from "@keplr-wallet/types"
+import { Chain, ChainId } from "packages/interfaces/lib/contracts.js"
+import { ActionPayload, Action } from "packages/interfaces/lib/actions.js"
 import { validationTokenToSignDoc } from "@canvas-js/verifiers"
 import { Buffer } from "buffer"
 
@@ -31,19 +31,34 @@ type ChainSettings = {
 	}
 }
 
-export class KeplrWebWalletConnector implements Connector {
+export class EVMKeplrWebWalletConnector implements Connector {
 	_chainId: string | null
+	_chain: string | null
 	chainSettings: ChainSettings
+
+	// GETTERS/SETTERS
+	// private _accounts: readonly AccountData[]
+	// private _enabled: boolean
+	// private _enabling = false
+	// private _chainId: string
+	// private _offlineSigner: OfflineDirectSigner
+
+	// public readonly name = WalletId.KeplrEthereum
+	// public readonly label = "Keplr (Ethereum)"
+	// public readonly chain = ChainBase.CosmosSDK
+	// public readonly defaultNetwork = ChainNetwork.Evmos
+	// public readonly specificChains = ["evmos"]
 
 	constructor() {
 		this._chainId = null
+		this._chain = null
 		this.chainSettings = {
-			id: "osmosis-1",
-			url: "https://rpc-osmosis.blockapsis.com",
-			rpc: "https://rpc-osmosis.blockapsis.com",
+			id: "evmos_9001-2",
+			url: "https://tendermint.bd.evmos.org:26657/",
+			rpc: "https://tendermint.bd.evmos.org:26657/",
 			meta: {
-				bech32Prefix: "osmo",
-				name: "osmosis",
+				bech32Prefix: "evmos",
+				name: "evmos",
 				default_symbol: "...",
 				decimals: 4,
 				node: {
@@ -62,12 +77,12 @@ export class KeplrWebWalletConnector implements Connector {
 		}
 
 		// fetch chain id from URL using stargate client
+
 		const client = await StargateClient.connect(this.chainSettings.url)
 		const chainId = await client.getChainId()
 		this._chainId = chainId
 		client.disconnect()
 
-		// try {
 		try {
 			await window.keplr.enable(this._chainId)
 		} catch (err) {
@@ -124,20 +139,22 @@ export class KeplrWebWalletConnector implements Connector {
 		const accounts = await offlineSigner.getAccounts()
 		onAccountsChanged(accounts.map((account) => account.address))
 	}
+
 	disable(): void {
 		throw new Error("Method not implemented.")
 	}
+
 	async createSessionSigner(account: string): Promise<SessionSigner> {
 		if (!this._chainId) {
 			throw Error(`cannot create signer, chainId has not been set!`)
 		}
 		const providerSigner = window.keplr!.getOfflineSigner(this._chainId)
 		// const accounts = await providerSigner.getAccounts()
-		return new KeplrWebWalletSessionSigner(providerSigner, account, this._chainId, this.chainSettings)
+		return new EVMKeplrWebWalletSessionSigner(providerSigner, account, this._chainId, this.chainSettings)
 	}
 }
 
-export class KeplrWebWalletSessionSigner implements SessionSigner {
+export class EVMKeplrWebWalletSessionSigner implements SessionSigner {
 	signer: OfflineSigner & OfflineDirectSigner
 	address: string
 	chain: Chain = "cosmos"
@@ -156,10 +173,10 @@ export class KeplrWebWalletSessionSigner implements SessionSigner {
 		this.chainSettings = chainSettings
 	}
 
-	async getRecentBlock(): Promise<Block> {
+	async getRecentBlock() {
 		const client = await StargateClient.connect(this.chainSettings.url)
 		const height = await client.getHeight()
-		const block = await client.getBlock(height)
+		const block = await client.getBlock(height - 1)
 
 		return {
 			chain: this.chain,
@@ -173,6 +190,15 @@ export class KeplrWebWalletSessionSigner implements SessionSigner {
 	async getAddress(): Promise<string> {
 		return this.address
 	}
+
+	async getChain(): Promise<Chain> {
+		return this.chain
+	}
+
+	async getChainId(): Promise<ChainId> {
+		return this.chainId
+	}
+
 	async createActionSigner(sessionPrivateKey?: string | undefined): Promise<ActionSigner> {
 		const wallet = sessionPrivateKey
 			? await Secp256k1HdWallet.fromMnemonic(sessionPrivateKey)
@@ -180,25 +206,22 @@ export class KeplrWebWalletSessionSigner implements SessionSigner {
 
 		const accounts = await wallet.getAccounts()
 		const address = accounts[0].address
-		return new KeplrWebWalletActionSigner(wallet, address)
+		return new EVMKeplrWebWalletActionSigner(wallet, address)
 	}
-	async signSessionPayload(payload: SessionPayload): Promise<Session> {
-		const keplr = (window as KeplrWindow).keplr!
-		const chainId = this.chainId
 
-		const stdSignature = await keplr.signArbitrary(chainId, await this.getAddress(), JSON.stringify(payload))
-		const signature = JSON.stringify(stdSignature)
+	async signSessionPayload(payload: SessionPayload): Promise<Session> {
+		const signatureRaw = await window.keplr!.signEthereum(
+			this.chainId,
+			await this.getAddress(),
+			JSON.stringify(payload),
+			EthSignType.MESSAGE
+		)
+		const signature = `0x${Buffer.from(signatureRaw).toString("hex")}`
 		return { signature, payload }
-	}
-	async getChain(): Promise<Chain> {
-		return this.chain
-	}
-	async getChainId(): Promise<ChainId> {
-		return this.chainId
 	}
 }
 
-export class KeplrWebWalletActionSigner implements ActionSigner {
+export class EVMKeplrWebWalletActionSigner implements ActionSigner {
 	wallet: Secp256k1HdWallet
 	_address: string
 	constructor(wallet: Secp256k1HdWallet, address: string) {

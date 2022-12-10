@@ -39,6 +39,9 @@ export const Connect: React.FC<{}> = ({}) => {
 						<button disabled={isConnected} onClick={() => connect("solana")} style={{ marginRight: 5 }}>
 							Phantom
 						</button>
+						<button disabled={isConnected} onClick={() => connect("cosmos", "evmos")} style={{ marginRight: 5 }}>
+							Keplr evmos
+						</button>
 					</>
 				)}
 

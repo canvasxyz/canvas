@@ -3,6 +3,7 @@ import { verifyEthereumActionSignature, verifyEthereumSessionSignature } from ".
 import { verifyCosmosActionSignature, verifyCosmosSessionSignature } from "./verify_cosmos.js"
 import { verifySubstrate } from "./verify_substrate.js"
 import { verifySolanaActionSignature, verifySolanaSessionSignature } from "./verify_solana.js"
+import { verifyEvmosSessionSignature } from "./verify_evmos.js"
 
 /**
  * `verifyActionPayloadSignature` verifies an action signature matches a payload (does not check the payload)
@@ -13,7 +14,12 @@ export async function verifyActionSignature(action: Action): Promise<string> {
 	} else if (action.payload.chain == "substrate") {
 		return verifySubstrate(action)
 	} else if (action.payload.chain == "cosmos") {
-		return verifyCosmosActionSignature(action)
+		if (action.payload.chainId == "evmos_9001-2") {
+			console.log("evmos")
+			return ""
+		} else {
+			return verifyCosmosActionSignature(action)
+		}
 	} else if (action.payload.chain == "solana") {
 		return verifySolanaActionSignature(action)
 	} else {
@@ -25,12 +31,17 @@ export async function verifyActionSignature(action: Action): Promise<string> {
  * `verifySessionPayloadSignature` verifies a session signature matches a payload (does not check the payload)
  */
 export async function verifySessionSignature(session: Session): Promise<string> {
+	console.log(session)
 	if (session.payload.chain == "eth") {
 		return verifyEthereumSessionSignature(session)
 	} else if (session.payload.chain == "substrate") {
 		return verifySubstrate(session)
 	} else if (session.payload.chain == "cosmos") {
-		return verifyCosmosSessionSignature(session)
+		if (session.payload.chainId == "evmos_9001-2") {
+			return verifyEvmosSessionSignature(session)
+		} else {
+			return verifyCosmosSessionSignature(session)
+		}
 	} else if (session.payload.chain == "solana") {
 		return verifySolanaSessionSignature(session)
 	} else {

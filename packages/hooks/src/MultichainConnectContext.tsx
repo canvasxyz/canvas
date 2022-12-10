@@ -7,6 +7,7 @@ import {
 	PolkadotWebWalletConnector,
 	KeplrWebWalletConnector,
 	PhantomWebWalletConnector,
+	EVMKeplrWebWalletConnector,
 	SessionSigner,
 } from "@canvas-js/signers"
 
@@ -69,7 +70,7 @@ export const useConnect = () => {
 	const { signer, setSigner, connector, setConnector, setIsLoading, isConnected, setIsConnected, address, setAddress } =
 		useContext(MultichainConnectContext)
 
-	const connect = async (chain: Chain) => {
+	const connect = async (chain: Chain, chainId?: string) => {
 		if (signer) {
 			return
 		}
@@ -87,6 +88,8 @@ export const useConnect = () => {
 				? new PolkadotWebWalletConnector()
 				: chain == "solana"
 				? new PhantomWebWalletConnector()
+				: chainId == "evmos"
+				? new EVMKeplrWebWalletConnector()
 				: new KeplrWebWalletConnector()
 
 		const onAccountsChanged = async (accounts: string[]) => {
