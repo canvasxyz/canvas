@@ -36,11 +36,21 @@ const { spec, uri } = await compileSpec({
 		},
 	},
 	routes: {
-		"/all": () => {
-			return `SELECT threads.*, SUM(thread_votes.value) AS score FROM threads LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id GROUP BY threads.id ORDER BY threads.updated_at DESC`
+		"/all": (db) => {
+			return db.query(
+				`SELECT threads.*, SUM(thread_votes.value) AS score FROM threads LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id GROUP BY threads.id ORDER BY threads.updated_at DESC`
+			)
+			// return db
+			// 	.select("threads.*", db.sum("thread_votes.value").as("score"))
+			// 	.from("threads")
+			// 	.join("thread_votes", "threads.id = thread_votes.thread_id")
+			// 	.groupBy("threads.id")
+			// 	.orderBy("threads.updated_at")
+			// 	.order("desc")
 		},
-		"/votes/:thread_id": () => {
-			return "SELECT creator, value FROM thread_votes WHERE thread_id = :thread_id"
+		"/votes/:thread_id": (db, thread_id = "10") => {
+			return db.query("SELECT creator, value FROM thread_votes WHERE thread_id = :thread_id", [thread_id])
+			// return db.select(["creator, value"]).from("thread_votes").where("thread_id = ?", [thread_id])
 		},
 	},
 })
