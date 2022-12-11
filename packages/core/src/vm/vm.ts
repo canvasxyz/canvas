@@ -310,6 +310,9 @@ export class VM {
 		for (const handle of Object.values(this.actionHandles)) {
 			handle.dispose()
 		}
+		for (const handle of Object.values(this.routeHandles)) {
+			handle.dispose()
+		}
 
 		disposeCachedHandles(this.context)
 		this.context.dispose()
@@ -317,9 +320,9 @@ export class VM {
 	}
 
 	/**
-	 * Executes a route function.
+	 * Given a call to a route, get the result of the route function. Used by `.getRoute()`.
 	 */
-	public async run(
+	public async executeRoute(
 		route: string,
 		params: Record<string, string>,
 		execute: (sql: string) => Record<string, ModelValue>[]
@@ -327,24 +330,19 @@ export class VM {
 		const routeHandle = this.routeHandles[route]
 		assert(routeHandle !== undefined, "invalid route")
 
-		// since route functions are just used to build queries, a
-		// short-lived context is enough.
-		//
-		// TODO: check for shared state, and make sure this doesn't interfere with the context cache (in ./utils.js)
-		const context = this.runtime.newContext()
 		const argHandles = wrapObject(
-			context,
+			this.context,
 			mapEntries(params, (_, param) => this.wrapActionArgument(param))
 		)
-		const result = context.callFunction(routeHandle, context.undefined, argHandles)
+		const result = this.context.callFunction(routeHandle, this.context.undefined, argHandles)
 		argHandles.dispose()
 
 		if (isFail(result)) {
-			const error = result.error.consume(context.dump)
+			const error = result.error.consume(this.context.dump)
 			throw new ApplicationError(error)
 		}
 
-		const query = result.value.consume(context.dump)
+		const query = result.value.consume(this.context.dump)
 		if (typeof query !== "string") {
 			throw new Error("route function returned invalid query")
 		}

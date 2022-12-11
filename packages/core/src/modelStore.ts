@@ -115,7 +115,7 @@ export class ModelStore {
 
 	public getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]> {
 		assert(route in this.vm.routeHandles, "invalid route name")
-		return this.vm.run(route, params, (sql) =>
+		return this.vm.executeRoute(route, params, (sql) =>
 			this.database
 				.prepare(sql)
 				.all(mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value)))
