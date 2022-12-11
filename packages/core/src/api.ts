@@ -27,16 +27,14 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	api.use(express.json())
 
 	api.get("/", (req, res) => {
-		const { component, routeParameters, actions } = core.vm
-		const routes = Object.keys(routeParameters)
-
+		const { component, routes, actions } = core.vm
 		return res.json({
 			uri: core.uri,
 			cid: core.cid.toString(),
 			peerId: core.libp2p?.peerId.toString(),
 			component,
 			actions,
-			routes,
+			routes: Object.keys(routes),
 			peers: core.libp2p
 				? {
 						gossip: Object.fromEntries(core.recentGossipSubPeers),
@@ -131,10 +129,10 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 }
 
 async function handleRoute(core: Core, route: string, req: express.Request, res: express.Response) {
-	const routeParameters = core.vm.routeParameters[route]
+	const routeParameters = core.vm.routes[route]
 	assert(routeParameters !== undefined)
 
-	const params: Record<string, ModelValue> = {}
+	const params: Record<string, string> = {}
 	for (const param of routeParameters) {
 		const value = req.params[param]
 		assert(value !== undefined, `missing route param ${param}`)
@@ -162,14 +160,14 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 
 		let oldValues: Record<string, ModelValue>[] | null = null
 		let closed = false
-		const listener = () => {
+		const listener = async () => {
 			if (closed) {
 				return
 			}
 
 			let newValues: Record<string, ModelValue>[]
 			try {
-				newValues = core.getRoute(route, params)
+				newValues = await core.getRoute(route, params)
 			} catch (err) {
 				closed = true
 				console.log(chalk.red("[canvas-core] error evaluating route"), err)

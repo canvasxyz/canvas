@@ -64,11 +64,12 @@ export class VM {
 
 	public readonly models: Record<string, Model>
 	public readonly actions: string[]
-	public readonly routes: Record<string, string>
-	public readonly routeParameters: Record<string, string[]>
+	public readonly routes: Record<string, string[]>
 	public readonly contracts: Record<string, ethers.Contract>
 	public readonly contractMetadata: Record<string, ContractMetadata>
 	public readonly component: string | null
+
+	public readonly routeHandles: Record<string, QuickJSHandle>
 
 	private readonly actionHandles: Record<string, QuickJSHandle>
 	private readonly contractsHandle: QuickJSHandle
@@ -154,20 +155,19 @@ export class VM {
 		}
 
 		this.routes = {}
-		this.routeParameters = {}
+		this.routeHandles = {}
 		if (routesHandle !== undefined) {
 			assert(context.typeof(routesHandle) === "object", "`routes` export must be an object")
 
-			const routeHandles = routesHandle.consume((handle) => unwrapObject(context, handle))
+			this.routeHandles = routesHandle.consume((handle) => unwrapObject(context, handle))
 			const routeNamePattern = /^(\/:?[a-z_]+)+$/
 			const routeParameterPattern = /:([a-zA-Z0-9_]+)/g
-			for (const [name, handle] of Object.entries(routeHandles)) {
-				assert(context.typeof(handle) === "string", "route queries must be strings")
+			for (const [name, handle] of Object.entries(this.routeHandles)) {
 				assertPattern(name, routeNamePattern, "invalid route name")
-				this.routes[name] = handle.consume(context.getString)
-				this.routeParameters[name] = []
+				assert(context.typeof(handle) === "function", `${name} route must be a function`)
+				this.routes[name] = []
 				for (const [_, param] of name.matchAll(routeParameterPattern)) {
-					this.routeParameters[name].push(param)
+					this.routes[name].push(param)
 				}
 			}
 		}
@@ -301,6 +301,9 @@ export class VM {
 		}).consume((globalsHandle) => call(context, "Object.assign", null, context.global, globalsHandle).dispose())
 	}
 
+	/**
+	 * Cleans up this VM instance.
+	 */
 	public dispose() {
 		this.dbHandle.dispose()
 		this.contractsHandle.dispose()
@@ -311,6 +314,43 @@ export class VM {
 		disposeCachedHandles(this.context)
 		this.context.dispose()
 		this.runtime.dispose()
+	}
+
+	/**
+	 * Executes a route function.
+	 */
+	public async run(
+		route: string,
+		params: Record<string, string>,
+		execute: (sql: string) => Record<string, ModelValue>[]
+	): Promise<Record<string, ModelValue>[]> {
+		const routeHandle = this.routeHandles[route]
+		assert(routeHandle !== undefined, "invalid route")
+
+		// since route functions are just used to build queries, a
+		// short-lived context is enough.
+		//
+		// TODO: check for shared state, and make sure this doesn't interfere with the context cache (in ./utils.js)
+		const context = this.runtime.newContext()
+		const argHandles = wrapObject(
+			context,
+			mapEntries(params, (_, param) => this.wrapActionArgument(param))
+		)
+		const result = context.callFunction(routeHandle, context.undefined, argHandles)
+		argHandles.dispose()
+
+		if (isFail(result)) {
+			const error = result.error.consume(context.dump)
+			throw new ApplicationError(error)
+		}
+
+		const query = result.value.consume(context.dump)
+		if (typeof query !== "string") {
+			throw new Error("route function returned invalid query")
+		}
+		const results = execute(query)
+
+		return results
 	}
 
 	/**
