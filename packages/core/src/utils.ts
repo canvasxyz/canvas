@@ -61,15 +61,23 @@ export type Context<Models extends Record<string, Model>> = {
 export async function compileSpec<Models extends Record<string, Model>>(exports: {
 	models: Models
 	actions: Record<string, (this: undefined, args: Record<string, ActionArgument>, ctx: Context<Models>) => void>
-	routes?: Record<string, string>
+	routes?: Record<string, (...args: string[]) => string>
 	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
 }): Promise<{ uri: string; spec: string }> {
 	const { models, actions, routes, contracts } = exports
 
 	const actionEntries = Object.entries(actions).map(([name, action]) => {
+		assert(typeof action === "function")
 		const source = action.toString()
 		assert(source.startsWith(`${name}(`) || source.startsWith(`async ${name}(`))
 		return source
+	})
+
+	const routeEntries = Object.entries(routes || {}).map(([name, route]) => {
+		assert(typeof route === "function")
+		const source = route.toString()
+		if (source.startsWith(`${name}(`) || source.startsWith(`async ${name}(`)) return source
+		return `${JSON.stringify(name)}: ${source}`
 	})
 
 	const lines = [
@@ -78,7 +86,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	]
 
 	if (routes !== undefined) {
-		lines.push(`export const routes = ${JSON.stringify(routes, null, "  ")};`)
+		lines.push(`export const routes = {\n${routeEntries.join(",\n")}};`)
 	}
 
 	if (contracts !== undefined) {

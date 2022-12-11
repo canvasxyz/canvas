@@ -36,8 +36,12 @@ const { spec, uri } = await compileSpec({
 		},
 	},
 	routes: {
-		"/all": `SELECT threads.*, SUM(thread_votes.value) AS score FROM threads LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id GROUP BY threads.id ORDER BY threads.updated_at DESC`,
-		"/votes/:thread_id": "SELECT creator, value FROM thread_votes WHERE thread_id = :thread_id",
+		"/all": () => {
+			return `SELECT threads.*, SUM(thread_votes.value) AS score FROM threads LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id GROUP BY threads.id ORDER BY threads.updated_at DESC`
+		},
+		"/votes/:thread_id": () => {
+			return "SELECT creator, value FROM thread_votes WHERE thread_id = :thread_id"
+		},
 	},
 })
 
