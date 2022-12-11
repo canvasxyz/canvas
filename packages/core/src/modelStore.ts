@@ -115,11 +115,14 @@ export class ModelStore {
 
 	public getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]> {
 		assert(route in this.vm.routeHandles, "invalid route name")
-		return this.vm.executeRoute(route, params, (sql) =>
-			this.database
-				.prepare(sql)
-				.all(mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value)))
-		)
+		return this.vm.executeRoute(route, params, (sql) => {
+			const prepared = this.database.prepare(sql)
+			// Uses sqlite3_stmt_readonly() to make sure routes only SELECT data.
+			// Note that custom functions could still mutate the database.
+			assert(prepared.readonly === true, "invalid route, queries must be readonly")
+			assert(prepared.reader === true, "invalid route, queries must return data")
+			return prepared.all(mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value)))
+		})
 	}
 
 	// We have to be sure to quote these because, even though we validate that they're all [a-z_]+ elsewhere,
