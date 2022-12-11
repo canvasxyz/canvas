@@ -72,6 +72,10 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		}
 	})
 
+	for (const route of Object.keys(core.vm.routes)) {
+		api.get(route, (req, res) => handleRoute(core, route, req, res))
+	}
+
 	if (options.exposeMetrics) {
 		api.get("/metrics", async (req, res) => {
 			try {
@@ -82,10 +86,6 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 				return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
 			}
 		})
-	}
-
-	for (const route of Object.keys(core.vm.routes)) {
-		api.get(route, (req, res) => handleRoute(core, route, req, res))
 	}
 
 	if (options.exposeModels) {
@@ -187,7 +187,7 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 		// normal JSON response
 		let data
 		try {
-			data = core.getRoute(route, params)
+			data = await core.getRoute(route, params)
 		} catch (err) {
 			return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err}`)
 		}
