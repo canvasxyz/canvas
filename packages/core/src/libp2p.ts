@@ -30,6 +30,9 @@ const announceFilter = (multiaddrs: Multiaddr[]) =>
 
 const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
 
+const second = 1000
+const minute = 60 * second
+
 export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]): Libp2pOptions {
 	const announceAddresses =
 		announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId.toString()}`)
@@ -47,7 +50,11 @@ export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
-		dht: kadDHT({ protocolPrefix: "/canvas", clientMode: false }),
+		dht: kadDHT({
+			protocolPrefix: "/canvas",
+			clientMode: false,
+			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
+		}),
 		metrics: prometheusMetrics(),
 		pubsub: gossipsub({
 			doPX: true,
