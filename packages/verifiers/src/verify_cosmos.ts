@@ -38,6 +38,9 @@ const cosmosChainSettings = {
 	"osmosis-1": {
 		bech32_prefix: "osmo",
 	},
+	"evmos_9001-2": {
+		bech32_prefix: "evmos",
+	},
 } as { [key: string]: ChainSettings }
 
 export const verifyCosmosActionSignature = async (action: Action): Promise<string> => {

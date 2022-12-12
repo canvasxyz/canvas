@@ -70,6 +70,7 @@ export const useConnect = () => {
 	const { signer, setSigner, connector, setConnector, setIsLoading, isConnected, setIsConnected, address, setAddress } =
 		useContext(MultichainConnectContext)
 
+	// TODO: replace this call with a direct call to the connector
 	const connect = async (chain: Chain, chainId?: string) => {
 		if (signer) {
 			return

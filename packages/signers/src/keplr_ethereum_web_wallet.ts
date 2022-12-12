@@ -175,8 +175,7 @@ export class EVMKeplrWebWalletSessionSigner implements SessionSigner {
 
 	async getRecentBlock() {
 		const client = await StargateClient.connect(this.chainSettings.url)
-		const height = await client.getHeight()
-		const block = await client.getBlock(height - 1)
+		const block = await client.getBlock()
 
 		return {
 			chain: this.chain,
