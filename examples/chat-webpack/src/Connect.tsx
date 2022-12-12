@@ -8,7 +8,7 @@ import { useSigner, useConnect, useDisconnect } from "@canvas-js/hooks"
 export const Connect: React.FC<{}> = ({}) => {
 	// TODO: Implement the error handling from wagmi
 	// const { connect, connectors, error: connectionError, isLoading: isConnectionLoading, pendingConnector } = useConnect()
-	const { connect, isConnected, address } = useConnect()
+	const { connect, connectors, isConnected, address } = useConnect()
 	const { disconnect } = useDisconnect()
 
 	return (
@@ -26,22 +26,18 @@ export const Connect: React.FC<{}> = ({}) => {
 					</>
 				) : (
 					<>
-						<p>Connect to a provider:</p>
-						<button disabled={isConnected} onClick={() => connect("eth")} style={{ marginRight: 5 }}>
-							MetaMask
-						</button>
-						<button disabled={isConnected} onClick={() => connect("substrate")} style={{ marginRight: 5 }}>
-							Polkadot
-						</button>
-						<button disabled={isConnected} onClick={() => connect("cosmos")} style={{ marginRight: 5 }}>
-							Keplr
-						</button>
-						<button disabled={isConnected} onClick={() => connect("solana")} style={{ marginRight: 5 }}>
-							Phantom
-						</button>
-						<button disabled={isConnected} onClick={() => connect("cosmos", "evmos")} style={{ marginRight: 5 }}>
-							Keplr evmos
-						</button>
+						{connectors ? (
+							<>
+								<p>Connect to a provider:</p>
+								{connectors.map((connector, i) => (
+									<button key={i} disabled={isConnected} onClick={() => connect(connector)} style={{ marginRight: 5 }}>
+										{connector.label}
+									</button>
+								))}
+							</>
+						) : (
+							<p>No providers are available</p>
+						)}
 					</>
 				)}
 

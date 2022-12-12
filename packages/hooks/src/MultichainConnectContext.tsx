@@ -35,6 +35,8 @@ export interface MultichainConnectContextValue {
 
 	connector: Connector | null
 	setConnector: (connector: Connector | null) => void
+
+	connectors: Connector[] | null
 }
 
 export const MultichainConnectContext = createContext<MultichainConnectContextValue>({
@@ -64,34 +66,37 @@ export const MultichainConnectContext = createContext<MultichainConnectContextVa
 	setConnector: (_) => {
 		throw new Error("Missing <MultichainConnectContext /> parent element")
 	},
+
+	connectors: null,
 })
 
 export const useConnect = () => {
-	const { signer, setSigner, connector, setConnector, setIsLoading, isConnected, setIsConnected, address, setAddress } =
-		useContext(MultichainConnectContext)
+	const {
+		signer,
+		setSigner,
+		connector,
+		connectors,
+		setConnector,
+		setIsLoading,
+		isConnected,
+		setIsConnected,
+		address,
+		setAddress,
+	} = useContext(MultichainConnectContext)
 
 	// TODO: replace this call with a direct call to the connector
-	const connect = async (chain: Chain, chainId?: string) => {
+	const connect = async (newConnector: Connector) => {
 		if (signer) {
+			// the app is already logged in
 			return
 		}
 
 		if (connector) {
+			// the app is already connected
 			return
 		}
 
 		setIsLoading(true)
-
-		const newConnector =
-			chain == "eth"
-				? new MetaMaskEthereumConnector()
-				: chain == "substrate"
-				? new PolkadotWebWalletConnector()
-				: chain == "solana"
-				? new PhantomWebWalletConnector()
-				: chainId == "evmos"
-				? new EVMKeplrWebWalletConnector()
-				: new KeplrWebWalletConnector()
 
 		const onAccountsChanged = async (accounts: string[]) => {
 			setAddress(accounts[0])
@@ -101,12 +106,12 @@ export const useConnect = () => {
 
 		await newConnector.enable({ onAccountsChanged })
 
-		setConnector(newConnector)
+		setConnector(connector)
 		setIsLoading(false)
 		setIsConnected(true)
 	}
 
-	return { connect, isConnected, address }
+	return { connect, isConnected, connectors, address }
 }
 
 export const useDisconnect = () => {
@@ -120,8 +125,8 @@ export const useDisconnect = () => {
 		if (connector) {
 			connector.disable()
 			setConnector(null)
-			setSigner(null)
 		}
+		setSigner(null)
 		setIsConnected(false)
 	}
 	return { disconnect }

@@ -11,8 +11,7 @@ declare let window: any
 import * as solw3 from "@solana/web3.js"
 
 export class PhantomWebWalletConnector implements Connector {
-	// _chainId: string | null
-	// _chain: string | null
+	public readonly label = "Phantom"
 
 	constructor() {}
 

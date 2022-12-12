@@ -34,6 +34,7 @@ type ChainSettings = {
 export class KeplrWebWalletConnector implements Connector {
 	_chainId: string | null
 	chainSettings: ChainSettings
+	public readonly label = "Keplr"
 
 	constructor() {
 		this._chainId = null

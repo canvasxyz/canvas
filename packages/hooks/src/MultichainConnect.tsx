@@ -1,6 +1,13 @@
 import type { Connector, SessionSigner } from "@canvas-js/signers"
 import React, { useState } from "react"
 import { MultichainConnectContext } from "./MultichainConnectContext.js"
+import {
+	MetaMaskEthereumConnector,
+	PolkadotWebWalletConnector,
+	KeplrWebWalletConnector,
+	PhantomWebWalletConnector,
+	EVMKeplrWebWalletConnector,
+} from "@canvas-js/signers"
 
 interface MultichainConnectProps {
 	children: React.ReactNode
@@ -13,6 +20,14 @@ export const MultichainConnect: React.FC<MultichainConnectProps> = (props) => {
 	const [connector, setConnector] = useState<Connector | null>(null)
 	const [isLoading, setIsLoading] = useState<boolean>(false)
 	const [isConnected, setIsConnected] = useState<boolean>(false)
+
+	const connectors = [
+		new MetaMaskEthereumConnector(),
+		new PolkadotWebWalletConnector(),
+		new PhantomWebWalletConnector(),
+		new EVMKeplrWebWalletConnector(),
+		new KeplrWebWalletConnector(),
+	]
 
 	return (
 		<MultichainConnectContext.Provider
@@ -28,6 +43,7 @@ export const MultichainConnect: React.FC<MultichainConnectProps> = (props) => {
 				setAddress,
 				connector,
 				setConnector,
+				connectors,
 			}}
 		>
 			{props.children}

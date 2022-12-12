@@ -4,6 +4,7 @@ export interface Connector {
 	enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void>
 	disable(): void
 	createSessionSigner(account: string): Promise<SessionSigner>
+	label: string
 }
 
 export interface SessionSigner {

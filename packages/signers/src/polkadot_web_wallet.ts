@@ -10,6 +10,8 @@ import { Block, SessionPayload, Session, Action, ActionPayload, Chain, ChainId }
 import { addressSwapper } from "./utils.js"
 
 export class PolkadotWebWalletConnector implements Connector {
+	public readonly label = "Polkadot"
+
 	async enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void> {
 		// window.location.reload()
 

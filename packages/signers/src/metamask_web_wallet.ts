@@ -5,19 +5,21 @@ import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/veri
 
 export class MetaMaskEthereumConnector implements Connector {
 	chain: Chain = "eth"
-	provider: ethers.providers.Web3Provider
+	provider?: ethers.providers.Web3Provider
 	onAccountsChanged?: (accounts: string[]) => void
 	onNetwork?: (newNetwork: any, oldNetwork: any) => void
 
-	constructor() {
+	public readonly label = "MetaMask"
+
+	constructor() {}
+
+	async enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }) {
 		// enable
 		// default to ETH
 		// The "any" network will allow spontaneous network changes
 		const ethereum = (window as any).ethereum
 		this.provider = new ethers.providers.Web3Provider(ethereum, "any")
-	}
 
-	async enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }) {
 		this.onNetwork = (newNetwork, oldNetwork) => {
 			// Force page refreshes on network changes, see https://docs.ethers.io/v5/concepts/best-practices/
 			// When a Provider makes its initial connection, it emits a "network"
@@ -28,8 +30,6 @@ export class MetaMaskEthereumConnector implements Connector {
 			}
 		}
 		this.provider.on("network", this.onNetwork)
-
-		const ethereum = (window as any).ethereum
 
 		// this is not abstracted away by ethers
 		this.onAccountsChanged = onAccountsChanged
@@ -44,7 +44,7 @@ export class MetaMaskEthereumConnector implements Connector {
 	}
 
 	async disable() {
-		if (this.onNetwork) {
+		if (this.provider && this.onNetwork) {
 			this.provider.removeListener("network", this.onNetwork)
 		}
 		if (this.onAccountsChanged) {
@@ -54,6 +54,9 @@ export class MetaMaskEthereumConnector implements Connector {
 	}
 
 	async createSessionSigner(account: string): Promise<SessionSigner> {
+		if (!this.provider) {
+			throw Error("cannot create a SessionSigner, the wallet is not yet connected")
+		}
 		const providerSigner = this.provider.getSigner(account)
 		// if the network changes, we will throw away this Signer
 		const network = await this.provider.getNetwork()
