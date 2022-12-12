@@ -47,7 +47,8 @@ export const actions = {
 }
 
 export const routes = {
-	"/latest": `SELECT
+	"/latest": ({}, { db }) =>
+		db.queryRaw(`SELECT
             threads.*,
             SUM(
                 1 / (cast(strftime('%s','now') as float) * 1000 - thread_votes.updated_at) *
@@ -58,8 +59,9 @@ export const routes = {
             LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id
         GROUP BY threads.id
         ORDER BY threads.updated_at DESC
-        LIMIT 30`,
-	"/top": `SELECT
+        LIMIT 30`),
+	"/top": ({}, { db }) =>
+		db.queryRaw(`SELECT
             threads.*,
             SUM(
                 1 / (cast(strftime('%s','now') as float) * 1000 - thread_votes.updated_at) *
@@ -70,8 +72,9 @@ export const routes = {
             LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id
         GROUP BY threads.id
         ORDER BY score DESC
-        LIMIT 30`,
-	"/threads/:thread_id": `SELECT
+        LIMIT 30`),
+	"/threads/:thread_id": ({}, { db }) =>
+		db.queryRaw(`SELECT
             threads.*,
             SUM(
                 1 / (cast(strftime('%s','now') as float) * 1000 - thread_votes.updated_at) * thread_votes.value
@@ -81,8 +84,9 @@ export const routes = {
             LEFT JOIN comments ON comments.thread_id = threads.id
             LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id
             WHERE threads.id = :thread_id
-        GROUP BY threads.id`,
-	"/threads/:thread_id/comments": `SELECT
+        GROUP BY threads.id`),
+	"/threads/:thread_id/comments": ({}, { db }) =>
+		db.queryRaw(`SELECT
             comments.*,
             SUM(
                 1 / (cast(strftime('%s','now') as float) * 1000 - comment_votes.updated_at) * comment_votes.value
@@ -93,5 +97,5 @@ export const routes = {
             WHERE comments.thread_id = :thread_id
         GROUP BY comments.id
         ORDER BY score DESC
-        LIMIT 30`,
+        LIMIT 30`),
 }

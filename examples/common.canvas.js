@@ -48,7 +48,7 @@ export const actions = {
 		const c = db.threads.find({ id: thread_id, creator: from })
 		db.threads.delete({ id: c.id })
 	},
-	comment({ thread_id, body, parent_comment_id }, { db, from }) {
+	comment({ thread_id, body, parent_comment_id }, { db, from, hash }) {
 		db.comments.set({ id: hash, creator: from, thread_id, body, parent_comment_id })
 	},
 	updateComment({ comment_id, body }, { db, from }) {

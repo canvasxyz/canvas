@@ -39,7 +39,7 @@ export async function handler(args: Args) {
 	}
 
 	const vm = await VM.initialize(uri, spec, {}, { unchecked: true })
-	const { models, routeParameters, actions, contractMetadata } = vm
+	const { models, routes, actions, contractMetadata } = vm
 	vm.dispose()
 
 	console.log(`name: ${uri}\n`)
@@ -48,7 +48,7 @@ export async function handler(args: Args) {
 	console.log(`${JSON.stringify(models, null, "  ")}\n`)
 
 	console.log(chalk.green("===== routes ====="))
-	Object.keys(routeParameters).forEach((route) => console.log(`GET ${route}`))
+	Object.keys(routes).forEach((route) => console.log(`GET ${route}`))
 	console.log("POST /sessions")
 	console.log(printType(sessionType))
 	console.log("POST /actions")

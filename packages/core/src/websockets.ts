@@ -23,19 +23,19 @@ export function setupWebsockets(server: Server, core: Core): Server {
 	let oldValues: Record<string, ModelValue>[] | null = null
 	let listeners: Record<string, Record<string, Record<string, () => void>>> = {}
 
-	const getListener = (ws: WebSocket & WebSocketID, route: string, params: Record<string, ModelValue>) => {
+	const getListener = (ws: WebSocket & WebSocketID, route: string, params: Record<string, string>) => {
 		if (listeners[ws.id] && listeners[ws.id][route] && listeners[ws.id][route][JSON.stringify(params)]) {
 			return () => listeners[ws.id][route][JSON.stringify(params)]
 		}
 
-		const listener = () => {
+		const listener = async () => {
 			if (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING) {
 				return
 			}
 
 			let newValues: Record<string, ModelValue>[]
 			try {
-				newValues = core.getRoute(route, params)
+				newValues = await core.getRoute(route, params)
 			} catch (err: any) {
 				// closed = true
 				console.log(chalk.red("[canvas-core] error evaluating route"), err)
@@ -54,8 +54,7 @@ export function setupWebsockets(server: Server, core: Core): Server {
 
 	const sendApplicationData = (ws: WebSocket & WebSocketID) => {
 		console.log(chalk.green(`[canvas-core] ws-${ws.id}: sent application status`))
-		const { component, routeParameters, actions } = core.vm
-		const routes = Object.keys(routeParameters)
+		const { component, routes, actions } = core.vm
 		const message = JSON.stringify({
 			action: "application",
 			data: {
@@ -64,7 +63,7 @@ export function setupWebsockets(server: Server, core: Core): Server {
 				peerId: core.libp2p?.peerId.toString(),
 				component,
 				actions,
-				routes,
+				routes: Object.keys(routes),
 				peers: core.libp2p
 					? {
 							gossip: Object.fromEntries(core.recentGossipSubPeers),
