@@ -8,14 +8,14 @@
 // Not yet supported: Buffer (blob), BigInt (integer)
 type QueryArg = string | number | null
 
-export type QueryBuilder = {
-	query: {
-		raw: (q: string, args?: QueryArg[] | Record<string, QueryArg>) => QueryBuilderResult
+export type RouteContext = {
+	db: {
+		queryRaw: (q: string, args?: QueryArg[] | Record<string, QueryArg>) => Query
 		// select: ...
 	}
 }
 
-export class QueryBuilderResult {
+export class Query {
 	public query: string
 	public args: QueryArg[] | Record<string, QueryArg> | undefined
 	constructor(query: string, args?: QueryArg[] | Record<string, QueryArg>) {

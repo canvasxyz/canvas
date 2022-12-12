@@ -36,8 +36,8 @@ const { spec, uri } = await compileSpec({
 		},
 	},
 	routes: {
-		"/all": ({ offset = 0 }, { query }) => {
-			return query.raw(
+		"/all": ({ offset = 0 }, { db }) => {
+			return db.queryRaw(
 				`SELECT threads.*, SUM(thread_votes.value) AS score FROM threads LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id GROUP BY threads.id ORDER BY threads.updated_at DESC LIMIT 50 OFFSET :offset`,
 				{ offset }
 			)
@@ -49,8 +49,8 @@ const { spec, uri } = await compileSpec({
 			// 	.orderBy("threads.updated_at")
 			// 	.order("desc")
 		},
-		"/votes/:thread_id": ({ thread_id }, { query }) => {
-			return query.raw("SELECT creator, value FROM thread_votes WHERE thread_id = ? LIMIT 50", [
+		"/votes/:thread_id": ({ thread_id }, { db }) => {
+			return db.queryRaw("SELECT creator, value FROM thread_votes WHERE thread_id = ? LIMIT 50", [
 				thread_id,
 				// { offset: 0 },
 			])

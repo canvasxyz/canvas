@@ -15,8 +15,8 @@ import {
 	ContractMetadata,
 	Model,
 	ModelValue,
-	QueryBuilder,
-	QueryBuilderResult,
+	RouteContext,
+	Query,
 } from "@canvas-js/interfaces"
 
 import type { Effect } from "../modelStore.js"
@@ -327,7 +327,7 @@ export class VM {
 	public async executeRoute(
 		route: string,
 		params: Record<string, string | number>,
-		execute: (sql: string | QueryBuilderResult) => Record<string, ModelValue>[]
+		execute: (sql: string | Query) => Record<string, ModelValue>[]
 	): Promise<Record<string, ModelValue>[]> {
 		const routeHandle = this.routeHandles[route]
 		assert(routeHandle !== undefined, "invalid route")
@@ -338,8 +338,8 @@ export class VM {
 		)
 
 		const ctxHandle = wrapObject(this.context, {
-			query: wrapObject(this.context, {
-				raw: this.context.newFunction("rawQuery", (sqlHandle: QuickJSHandle, argsHandle: QuickJSHandle) => {
+			db: wrapObject(this.context, {
+				queryRaw: this.context.newFunction("queryRaw", (sqlHandle: QuickJSHandle, argsHandle: QuickJSHandle) => {
 					const objectHandle = this.context.newObject()
 					const flag = this.context.newNumber(1)
 					this.context.setProp(objectHandle, "query", sqlHandle)
@@ -363,7 +363,7 @@ export class VM {
 
 		const query = result.value.consume(this.context.dump)
 		if (typeof query !== "string" && !(typeof query === "object" && query.___CANVAS_QUERY_INTERNAL === 1)) {
-			throw new Error("route function must return a String or db.Query")
+			throw new Error("route function must return a String or ctx.db.Query")
 		}
 		const results = execute(query)
 
