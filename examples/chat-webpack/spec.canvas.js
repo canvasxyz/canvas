@@ -9,7 +9,10 @@ export const models = {
 }
 
 export const routes = {
-	"/posts": () => `SELECT id, from_id, content, updated_at FROM posts ORDER BY updated_at DESC LIMIT 50`,
+	"/posts": ({ offset }, { query }) =>
+		query.raw(`SELECT id, from_id, content, updated_at FROM posts ORDER BY updated_at DESC LIMIT 50 OFFSET :offset`, {
+			offset: offset ?? 0,
+		}),
 }
 
 export const actions = {

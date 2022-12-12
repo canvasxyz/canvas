@@ -3,7 +3,7 @@ import Database, * as sqlite from "better-sqlite3"
 import chalk from "chalk"
 
 import { QuickJSHandle } from "quickjs-emscripten"
-import type { ActionContext, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
+import type { ActionContext, Model, ModelType, ModelValue, QueryBuilderResult } from "@canvas-js/interfaces"
 import { mapEntries, signalInvalidType } from "./utils.js"
 import type { VM } from "./vm/index.js"
 
@@ -115,13 +115,21 @@ export class ModelStore {
 
 	public getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]> {
 		assert(route in this.vm.routeHandles, "invalid route name")
-		return this.vm.executeRoute(route, params, (sql) => {
-			const prepared = this.database.prepare(sql)
+		const filteredParams = mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value))
+		return this.vm.executeRoute(route, filteredParams, (query: string | QueryBuilderResult) => {
+			// TODO: Cache the prepared sql
+			const prepared = typeof query === "string" ? this.database.prepare(query) : this.database.prepare(query.query)
 			// Uses sqlite3_stmt_readonly() to make sure routes only SELECT data.
 			// Note that custom functions could still mutate the database.
 			assert(prepared.readonly === true, "invalid route, queries must be readonly")
 			assert(prepared.reader === true, "invalid route, queries must return data")
-			return prepared.all(mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value)))
+			try {
+				return prepared.all(typeof query === "string" ? null : query.args)
+			} catch (err: any) {
+				const params = typeof query === "string" ? "none" : JSON.stringify(query.args)
+				err.message = `${err.message} (parameters: ${params})`
+				throw err
+			}
 		})
 	}
 

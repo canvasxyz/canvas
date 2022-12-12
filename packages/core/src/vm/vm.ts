@@ -15,6 +15,8 @@ import {
 	ContractMetadata,
 	Model,
 	ModelValue,
+	QueryBuilder,
+	QueryBuilderResult,
 } from "@canvas-js/interfaces"
 
 import type { Effect } from "../modelStore.js"
@@ -320,12 +322,12 @@ export class VM {
 	}
 
 	/**
-	 * Given a call to a route, get the result of the route function. Used by `.getRoute()`.
+	 * Given a call to a route, get the result of the route function. Used by `modelStore.getRoute()`.
 	 */
 	public async executeRoute(
 		route: string,
-		params: Record<string, string>,
-		execute: (sql: string) => Record<string, ModelValue>[]
+		params: Record<string, string | number>,
+		execute: (sql: string | QueryBuilderResult) => Record<string, ModelValue>[]
 	): Promise<Record<string, ModelValue>[]> {
 		const routeHandle = this.routeHandles[route]
 		assert(routeHandle !== undefined, "invalid route")
@@ -334,7 +336,19 @@ export class VM {
 			this.context,
 			mapEntries(params, (_, param) => this.wrapActionArgument(param))
 		)
-		const result = this.context.callFunction(routeHandle, this.context.undefined, argHandles)
+		const ctxHandle = wrapObject(this.context, {
+			query: wrapObject(this.context, {
+				raw: this.context.newFunction("rawQuery", (sqlHandle: QuickJSHandle, argsHandle: QuickJSHandle) => {
+					const objectHandle = this.context.newObject()
+					this.context.setProp(objectHandle, "query", sqlHandle)
+					this.context.setProp(objectHandle, "args", argsHandle)
+					this.context.setProp(objectHandle, "___CANVAS_QUERY_INTERNAL", this.context.newNumber(1))
+					return objectHandle
+					// TODO: clean up? check for valid sql / args? optimize?
+				}),
+			}),
+		})
+		const result = this.context.callFunction(routeHandle, this.context.undefined, argHandles, ctxHandle)
 		argHandles.dispose()
 
 		if (isFail(result)) {
@@ -343,8 +357,8 @@ export class VM {
 		}
 
 		const query = result.value.consume(this.context.dump)
-		if (typeof query !== "string") {
-			throw new Error("route function returned invalid query")
+		if (typeof query !== "string" && !(typeof query === "object" && query.___CANVAS_QUERY_INTERNAL === 1)) {
+			throw new Error("route function must return a String or db.Query")
 		}
 		const results = execute(query)
 
@@ -352,7 +366,7 @@ export class VM {
 	}
 
 	/**
-	 * Given a call, get a list of effects to pass to `store.applyEffects`, to be applied to the models.
+	 * Given a call, get a list of effects to pass to `modelStore.applyEffects`, to be applied to the models.
 	 * Used by `.apply()` and when replaying actions.
 	 */
 	public async execute(hash: string, { call, args, ...context }: ActionPayload): Promise<Effect[]> {

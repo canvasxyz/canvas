@@ -171,7 +171,7 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 			} catch (err) {
 				closed = true
 				console.log(chalk.red("[canvas-core] error evaluating route"), err)
-				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err}`)
+				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${(err as Error).stack}`)
 			}
 
 			if (oldValues === null || !compareResults(oldValues, newValues)) {
@@ -189,7 +189,7 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 		try {
 			data = await core.getRoute(route, params)
 		} catch (err) {
-			return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err}`)
+			return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${(err as Error).stack}`)
 		}
 
 		return res.json(data)
