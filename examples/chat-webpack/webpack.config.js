@@ -33,6 +33,9 @@ module.exports = {
 			path: require.resolve("path-browserify"),
 			assert: false,
 		},
+		alias: {
+			process: "process/browser.js",
+		},
 	},
 	experiments: {
 		outputModule: true,
@@ -40,6 +43,10 @@ module.exports = {
 	plugins: [
 		new CopyWebpackPlugin({ patterns: [{ from: "public" }] }),
 		new webpack.DefinePlugin({ "process.env.HOST": JSON.stringify(process.env.HOST ?? "http://localhost:8000") }),
+		new webpack.ProvidePlugin({
+			process: "process/browser.js",
+			Buffer: ["buffer", "Buffer"],
+		}),
 	],
 	devServer: {
 		static: [path.join(__dirname, "public")],

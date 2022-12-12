@@ -13,9 +13,8 @@
   },
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "dependencies": {
+    "@ethereumjs/util": "^8.0.2",
     "bs58": "^5.0.0",
-    "tweetnacl": "^1.0.3",
-    "ethereumjs-util": "^7.1.5"
+    "tweetnacl": "^1.0.3"
   }
-
 }

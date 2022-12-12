@@ -1,5 +1,5 @@
 import bech32 from "bech32"
-import * as ethUtil from "ethereumjs-util"
+import * as ethUtil from "@ethereumjs/util"
 
 import { Action, Session } from "packages/interfaces/lib"
 import { verifyCosmosActionSignature } from "./verify_cosmos.js"
