@@ -36,9 +36,10 @@ const { spec, uri } = await compileSpec({
 		},
 	},
 	routes: {
-		"/all": (db) => {
-			return db.query(
-				`SELECT threads.*, SUM(thread_votes.value) AS score FROM threads LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id GROUP BY threads.id ORDER BY threads.updated_at DESC`
+		"/all": ({ offset }, { query }) => {
+			return query.raw(
+				`SELECT threads.*, SUM(thread_votes.value) AS score FROM threads LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id GROUP BY threads.id ORDER BY threads.updated_at DESC LIMIT 50 OFFSET :offset`,
+				{ offset: offset ?? 0 }
 			)
 			// return db
 			// 	.select("threads.*", db.sum("thread_votes.value").as("score"))
@@ -48,8 +49,11 @@ const { spec, uri } = await compileSpec({
 			// 	.orderBy("threads.updated_at")
 			// 	.order("desc")
 		},
-		"/votes/:thread_id": (db, thread_id = "10") => {
-			return db.query("SELECT creator, value FROM thread_votes WHERE thread_id = :thread_id", [thread_id])
+		"/votes/:thread_id": ({ thread_id }, { query }) => {
+			return query.raw("SELECT creator, value FROM thread_votes WHERE thread_id = ? LIMIT 50", [
+				thread_id,
+				// { offset: 0 },
+			])
 			// return db.select(["creator, value"]).from("thread_votes").where("thread_id = ?", [thread_id])
 		},
 	},

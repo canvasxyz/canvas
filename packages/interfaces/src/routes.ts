@@ -9,8 +9,10 @@
 type QueryArg = string | number | null
 
 export type QueryBuilder = {
-	query: (q: string, args?: QueryArg[] | Record<string, QueryArg>) => QueryBuilderResult
-	// select: ...
+	query: {
+		raw: (q: string, args?: QueryArg[] | Record<string, QueryArg>) => QueryBuilderResult
+		// select: ...
+	}
 }
 
 export class QueryBuilderResult {

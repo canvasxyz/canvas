@@ -336,19 +336,24 @@ export class VM {
 			this.context,
 			mapEntries(params, (_, param) => this.wrapActionArgument(param))
 		)
+
 		const ctxHandle = wrapObject(this.context, {
 			query: wrapObject(this.context, {
 				raw: this.context.newFunction("rawQuery", (sqlHandle: QuickJSHandle, argsHandle: QuickJSHandle) => {
 					const objectHandle = this.context.newObject()
+					const flag = this.context.newNumber(1)
 					this.context.setProp(objectHandle, "query", sqlHandle)
 					this.context.setProp(objectHandle, "args", argsHandle)
-					this.context.setProp(objectHandle, "___CANVAS_QUERY_INTERNAL", this.context.newNumber(1))
+					this.context.setProp(objectHandle, "___CANVAS_QUERY_INTERNAL", flag)
+					flag.dispose()
 					return objectHandle
-					// TODO: clean up? check for valid sql / args? optimize?
 				}),
 			}),
 		})
+
+		assert(this.context.typeof(routeHandle) === "function", `${route} route is not a function`)
 		const result = this.context.callFunction(routeHandle, this.context.undefined, argHandles, ctxHandle)
+		ctxHandle.dispose()
 		argHandles.dispose()
 
 		if (isFail(result)) {
