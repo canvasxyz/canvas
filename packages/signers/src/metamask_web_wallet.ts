@@ -4,6 +4,8 @@ import { Connector, SessionSigner, ActionSigner } from "./interfaces.js"
 import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
 
 export class MetaMaskEthereumConnector implements Connector {
+	id = "metamask"
+
 	chain: Chain = "eth"
 	provider?: ethers.providers.Web3Provider
 	onAccountsChanged?: (accounts: string[]) => void
@@ -12,6 +14,11 @@ export class MetaMaskEthereumConnector implements Connector {
 	public readonly label = "MetaMask"
 
 	constructor() {}
+
+	public get available() {
+		// @ts-ignore
+		return !!window.ethereum
+	}
 
 	async enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }) {
 		// enable

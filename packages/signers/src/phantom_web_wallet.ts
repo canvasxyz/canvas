@@ -11,9 +11,15 @@ declare let window: any
 import * as solw3 from "@solana/web3.js"
 
 export class PhantomWebWalletConnector implements Connector {
+	id = "phantom"
+
 	public readonly label = "Phantom"
 
 	constructor() {}
+
+	public get available() {
+		return window.solana && window.solana.isPhantom
+	}
 
 	async enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void> {
 		const available = window.solana && window.solana.isPhantom

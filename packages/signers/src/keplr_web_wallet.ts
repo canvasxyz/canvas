@@ -32,6 +32,8 @@ type ChainSettings = {
 }
 
 export class KeplrWebWalletConnector implements Connector {
+	id = "keplr"
+
 	_chainId: string | null
 	chainSettings: ChainSettings
 	public readonly label = "Keplr"
@@ -52,6 +54,10 @@ export class KeplrWebWalletConnector implements Connector {
 				},
 			},
 		}
+	}
+
+	public get available() {
+		return !!window.keplr
 	}
 
 	async enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void> {

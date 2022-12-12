@@ -1,4 +1,4 @@
-import { web3Accounts, web3Enable, web3FromAddress } from "@polkadot/extension-dapp"
+import { web3Accounts, web3Enable, web3FromAddress, isWeb3Injected } from "@polkadot/extension-dapp"
 import { Signer as PolkadotSigner } from "@polkadot/api/types"
 import { Keyring } from "@polkadot/api"
 import { stringToHex } from "@polkadot/util"
@@ -10,7 +10,13 @@ import { Block, SessionPayload, Session, Action, ActionPayload, Chain, ChainId }
 import { addressSwapper } from "./utils.js"
 
 export class PolkadotWebWalletConnector implements Connector {
+	id = "polkadot"
+
 	public readonly label = "Polkadot"
+
+	public get available() {
+		return isWeb3Injected
+	}
 
 	async enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void> {
 		// window.location.reload()

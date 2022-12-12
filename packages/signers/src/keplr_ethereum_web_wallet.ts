@@ -32,6 +32,8 @@ type ChainSettings = {
 }
 
 export class EVMKeplrWebWalletConnector implements Connector {
+	id = "evm_keplr"
+
 	_chainId: string | null
 	_chain: string | null
 	chainSettings: ChainSettings
@@ -66,6 +68,10 @@ export class EVMKeplrWebWalletConnector implements Connector {
 				},
 			},
 		}
+	}
+
+	public get available() {
+		return !!window.keplr
 	}
 
 	async enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void> {

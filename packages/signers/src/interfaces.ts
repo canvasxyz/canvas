@@ -1,6 +1,8 @@
 import { Action, ActionPayload, Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
 
 export interface Connector {
+	id: string
+	get available(): boolean
 	enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void>
 	disable(): void
 	createSessionSigner(account: string): Promise<SessionSigner>

@@ -29,11 +29,18 @@ export const Connect: React.FC<{}> = ({}) => {
 						{connectors ? (
 							<>
 								<p>Connect to a provider:</p>
-								{connectors.map((connector, i) => (
-									<button key={i} disabled={isConnected} onClick={() => connect(connector)} style={{ marginRight: 5 }}>
-										{connector.label}
-									</button>
-								))}
+								{connectors
+									.filter((connector) => connector.available)
+									.map((connector) => (
+										<button
+											key={connector.id}
+											disabled={isConnected}
+											onClick={() => connect(connector)}
+											style={{ marginRight: 5 }}
+										>
+											{connector.label}
+										</button>
+									))}
 							</>
 						) : (
 							<p>No providers are available</p>
