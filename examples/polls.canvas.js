@@ -26,11 +26,13 @@ export const models = {
 }
 
 export const routes = {
-	"/polls/:page": "SELECT * FROM polls ORDER BY updated_at DESC LIMIT 10 OFFSET (:page * 10)",
-	"/cards/:id/:page": `
-	SELECT cards.id, cards.poll_id, cards.text, cards.creator, cards.updated_at,
-	    group_concat(votes.creator || ':' || IIF(votes.is_agree, 'true', 'false'), ';') AS votes,
-	    count(votes.id) AS votes_count
+	"/polls/:page": ({ page = 0 }, { db }) =>
+		db.queryRaw("SELECT * FROM polls ORDER BY updated_at DESC LIMIT 10 OFFSET (:page * 10)", { page }),
+	"/cards/:id/:page": ({ id, page = 0 }, { db }) =>
+		db.queryRaw(
+			`SELECT cards.id, cards.poll_id, cards.text, cards.creator, cards.updated_at,
+	group_concat(votes.creator || ':' || IIF(votes.is_agree, 'true', 'false'), ';') AS votes,
+		count(votes.id) AS votes_count
 	FROM cards
 	LEFT JOIN votes ON cards.id = votes.card_id
 	WHERE cards.poll_id = :id
@@ -38,6 +40,8 @@ export const routes = {
 	ORDER BY votes_count DESC
 	LIMIT 10 OFFSET (:page * 10)
 	`,
+			{ id, page }
+		),
 }
 
 export const contracts = {

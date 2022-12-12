@@ -9,12 +9,12 @@ export const models = {
 }
 
 export const routes = {
-	"/highscores": "SELECT highscores.* FROM highscores ORDER BY score DESC LIMIT 10",
+	"/highscores": ({}, { db }) => db.queryRaw("SELECT highscores.* FROM highscores ORDER BY score DESC LIMIT 10"),
 }
 
 export const actions = {
-	createScore(score) {
-		this.db.highscores.set(this.hash, { score, from_id: this.from })
+	createScore({ score }, { db, hash, from }) {
+		db.highscores.set(hash, { score, from_id: from })
 	},
 }
 

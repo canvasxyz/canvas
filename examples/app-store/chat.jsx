@@ -17,26 +17,27 @@ export const models = {
 }
 
 export const routes = {
-	"/messages": `
+	"/messages": ({}, { db }) =>
+		db.queryRaw(`
 	SELECT messages.*,
 	    group_concat(reacts.creator || ':' || reacts.value, ';') AS reacts
 	FROM messages
 	LEFT JOIN reacts ON messages.id = reacts.message_id
 	GROUP BY messages.id
 	ORDER BY updated_at DESC
-	`,
+	`),
 }
 
 export const actions = {
-	message(text) {
-		this.db.messages.set(this.hash, {
-			creator: this.from,
+	message({ text }, { db, hash, from }) {
+		db.messages.set(hash, {
+			creator: from,
 			text,
 		})
 	},
-	react(messageId, value) {
-		this.db.reacts.set(`${this.from}/${messageId}`, {
-			creator: this.from,
+	react({ messageId, value }, { db, hash, from }) {
+		db.reacts.set(`${from}/${messageId}`, {
+			creator: from,
 			message_id: messageId,
 			value: value ? 1 : -1,
 		})
