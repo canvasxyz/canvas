@@ -10,25 +10,24 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
-import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+import { Multiaddr } from "@multiformats/multiaddr"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
 import { toHex } from "./utils.js"
 
 const bootstrapList = [
-	"/ip4/137.66.12.223/tcp/4002/ws/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o",
-	"/ip4/137.66.11.73/tcp/4002/ws/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT",
-	"/ip4/137.66.27.235/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
+	"/dns4/canvas-bootstrap-p0.fly.dev/tcp/4002/ws/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o",
+	"/dns4/canvas-bootstrap-p1.fly.dev/tcp/4002/ws/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT",
+	"/dns4/canvas-bootstrap-p2.fly.dev/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
 ]
-
-const IPColocationFactorWhitelist = new Set(
-	bootstrapList.map(multiaddr).map((multiaddr) => multiaddr.nodeAddress().address)
-)
 
 const announceFilter = (multiaddrs: Multiaddr[]) =>
 	multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr))
 
 const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
+
+const second = 1000
+const minute = 60 * second
 
 export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]): Libp2pOptions {
 	const announceAddresses =
@@ -47,7 +46,11 @@ export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
-		dht: kadDHT({ protocolPrefix: "/canvas", clientMode: false }),
+		dht: kadDHT({
+			protocolPrefix: "/canvas",
+			clientMode: false,
+			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
+		}),
 		metrics: prometheusMetrics(),
 		pubsub: gossipsub({
 			doPX: true,
@@ -61,7 +64,6 @@ export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]
 				hash.update(msg.data || new Uint8Array([]))
 				return "0x" + hash.digest("hex")
 			},
-			scoreParams: { IPColocationFactorWhitelist },
 		}),
 	}
 }
