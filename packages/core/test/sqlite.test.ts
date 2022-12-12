@@ -36,10 +36,10 @@ const { spec, uri } = await compileSpec({
 		},
 	},
 	routes: {
-		"/all": ({ offset }, { query }) => {
+		"/all": ({ offset = 0 }, { query }) => {
 			return query.raw(
 				`SELECT threads.*, SUM(thread_votes.value) AS score FROM threads LEFT JOIN thread_votes ON threads.id = thread_votes.thread_id GROUP BY threads.id ORDER BY threads.updated_at DESC LIMIT 50 OFFSET :offset`,
-				{ offset: offset ?? 0 }
+				{ offset }
 			)
 			// return db
 			// 	.select("threads.*", db.sum("thread_votes.value").as("score"))
