@@ -7,6 +7,7 @@ import {
 	KeplrWebWalletConnector,
 	PhantomWebWalletConnector,
 	EVMKeplrWebWalletConnector,
+	CosmosEvmWebWalletConnector,
 } from "@canvas-js/signers"
 
 interface MultichainConnectProps {
@@ -27,6 +28,7 @@ export const MultichainConnect: React.FC<MultichainConnectProps> = (props) => {
 		new PhantomWebWalletConnector(),
 		new EVMKeplrWebWalletConnector(),
 		new KeplrWebWalletConnector(),
+		new CosmosEvmWebWalletConnector(),
 	]
 
 	return (

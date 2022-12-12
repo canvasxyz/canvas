@@ -165,8 +165,7 @@ export class KeplrWebWalletSessionSigner implements SessionSigner {
 
 	async getRecentBlock(): Promise<Block> {
 		const client = await StargateClient.connect(this.chainSettings.url)
-		const height = await client.getHeight()
-		const block = await client.getBlock(height)
+		const block = await client.getBlock()
 
 		return {
 			chain: this.chain,
