@@ -17,7 +17,6 @@
     "packages/cli",
     "packages/next",
     "packages/hooks",
-    "packages/bootstrap-peer",
     "examples/app-store",
     "examples/chat-webpack",
     "examples/chat-next"
