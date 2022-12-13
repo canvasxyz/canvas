@@ -113,11 +113,9 @@ const metrics = http.createServer(async (req, res) => {
 		const [_, cid] = dhtProvidersPattern.exec(req.url)
 		const providers = {}
 		try {
-			for await (const peerInfo of libp2p.contentRouting.findProviders(CID.parse(cid))) {
-				providers[peerInfo.id.toString()] = {
-					multiaddrs: peerInfo.multiaddrs.map((addr) => addr.toString()),
-					protocols: peerInfo,
-				}
+			for await (const { id, multiaddrs } of libp2p.contentRouting.findProviders(CID.parse(cid))) {
+				const protocols = await libp2p.peerStore.protoBook.get(id)
+				providers[id.toString()] = { protocols, multiaddrs: multiaddrs.map((addr) => addr.toString()) }
 			}
 		} catch (err) {
 			console.error(err)
