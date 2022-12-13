@@ -45,7 +45,7 @@ function serializeActionArgument(arg: ActionArgument): string {
 
 type SignatureData = [TypedDataDomain, Record<string, TypedDataField[]>, Record<string, string | string[]>]
 
-const namePattern = /^[a-zA-Z][a-zA-Z0-9]*$/
+const namePattern = /^[a-zA-Z][a-zA-Z0-9_]*$/
 
 /**
  * `getActionSignatureData` gets EIP-712 signing data for an individual action
