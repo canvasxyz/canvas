@@ -10,12 +10,28 @@ processes = []
   auto_rollback = true
 
 [mounts]
-  source="canvas_chat_data"
-  destination="/data"
+  source = "canvas_chat_data"
+  destination = "/data"
 
 [[statics]]
   guest_path = "/app/dist"
   url_prefix = "/"
+
+[[services]]
+  http_checks = []
+  tcp_checks = []
+
+  internal_port = 4044
+  processes = ["app"]
+  protocol = "tcp"
+  [services.concurrency]
+    hard_limit = 100
+    soft_limit = 100
+    type = "connections"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 4044
 
 [[services]]
   internal_port = 8000
