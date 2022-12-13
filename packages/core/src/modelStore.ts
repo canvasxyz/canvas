@@ -124,10 +124,16 @@ export class ModelStore {
 			assert(prepared.readonly === true, "invalid route, queries must be readonly")
 			assert(prepared.reader === true, "invalid route, queries must return data")
 			try {
-				return prepared.all(typeof query === "string" ? null : query.args)
+				if (typeof query === "string" || query.args === undefined) {
+					return prepared.all()
+				} else {
+					return prepared.all(query.args)
+				}
 			} catch (err: any) {
+				// Show a little more debugging information for queries
 				const params = typeof query === "string" ? "none" : JSON.stringify(query.args)
-				err.message = `${err.message} (parameters: ${params})`
+				const formatted = (typeof query === "string" ? query : query.query).replace(/\n/g, " ")
+				err.message = `${err.message} (query: ${formatted}, parameters: ${params})`
 				throw err
 			}
 		})

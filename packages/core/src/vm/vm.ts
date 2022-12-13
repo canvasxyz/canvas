@@ -343,7 +343,9 @@ export class VM {
 					const objectHandle = this.context.newObject()
 					const flag = this.context.newNumber(1)
 					this.context.setProp(objectHandle, "query", sqlHandle)
-					this.context.setProp(objectHandle, "args", argsHandle)
+					if (argsHandle !== undefined) {
+						this.context.setProp(objectHandle, "args", argsHandle)
+					}
 					this.context.setProp(objectHandle, "___CANVAS_QUERY_INTERNAL", flag)
 					flag.dispose()
 					return objectHandle
