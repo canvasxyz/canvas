@@ -10,7 +10,7 @@ import prompts from "prompts"
 import stoppable from "stoppable"
 import express from "express"
 import cors from "cors"
-import { createLibp2p } from "libp2p"
+import { createLibp2p, Libp2p } from "libp2p"
 
 import { Core, constants, actionType, getLibp2pInit, BlockCache, getAPI, setupWebsockets } from "@canvas-js/core"
 
@@ -45,6 +45,10 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "number",
 			desc: "libp2p WebSocket transport port",
 			default: 4044,
+		})
+		.option("announce", {
+			type: "string",
+			desc: "Accept incoming libp2p connections on a public multiaddr",
 		})
 		.option("reset", {
 			type: "boolean",
@@ -161,10 +165,18 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen: peeringPort } = args
+	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen: peeringPort, announce } = args
 
 	const peerId = await getPeerId()
-	const libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+
+	let libp2p: Libp2p
+	if (announce !== undefined) {
+		console.log(`[canvas-cli] Announcing on ${announce}`)
+		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort, [announce]))
+	} else {
+		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+	}
+
 	await libp2p.start()
 
 	if (verbose) {
@@ -201,7 +213,7 @@ export async function handler(args: Args) {
 				throw new Error("Invalid action value in action log")
 			}
 
-			const effects = await vm.execute(id, action.payload)
+			const effects = await vm.executeAction(id, action.payload)
 			modelStore.applyEffects(action.payload, effects)
 			i++
 		}
