@@ -8,10 +8,11 @@ processes = []
   CANVAS_SPEC = "spec.canvas.js"
   LISTEN = "4002"
   PORT = "8000"
+  ANNOUNCE = "/dns4/canvas-chat-2.fly.dev/tcp/4002/ws"
 
 [mounts]
-  source="canvas_chat_data_2"
-  destination="/data2"
+  source = "canvas_chat_data_2"
+  destination = "/data2"
 
 [[services]]
   http_checks = []
