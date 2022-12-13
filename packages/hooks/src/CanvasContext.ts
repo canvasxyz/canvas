@@ -1,4 +1,4 @@
-import type { SessionSigner, ActionSigner } from "@canvas-js/signers/lib/interfaces"
+import type { SessionSigner, ActionSigner } from "@canvas-js/signers"
 import { createContext } from "react"
 
 export interface ApplicationData {

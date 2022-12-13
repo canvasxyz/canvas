@@ -34,12 +34,15 @@ type ChainSettings = {
 	bech32_prefix: string
 }
 
-const cosmosChainSettings = {
+export const cosmosChainSettings = {
 	"osmosis-1": {
 		bech32_prefix: "osmo",
 	},
 	"evmos_9001-2": {
 		bech32_prefix: "evmos",
+	},
+	"phoenix-1": {
+		bech32_prefix: "terra",
 	},
 } as { [key: string]: ChainSettings }
 

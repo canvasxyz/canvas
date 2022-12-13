@@ -4,6 +4,7 @@ import { verifyCosmosActionSignature, verifyCosmosSessionSignature } from "./ver
 import { verifySubstrate } from "./verify_substrate.js"
 import { verifySolanaActionSignature, verifySolanaSessionSignature } from "./verify_solana.js"
 import { verifyEvmosActionSignature, verifyEvmosSessionSignature } from "./verify_evmos.js"
+import { verifyTerraSessionSignature } from "./verify_terra.js"
 
 /**
  * `verifyActionPayloadSignature` verifies an action signature matches a payload (does not check the payload)
@@ -38,6 +39,8 @@ export async function verifySessionSignature(session: Session): Promise<string> 
 	} else if (session.payload.chain == "cosmos") {
 		if (session.payload.chainId == "evmos_9001-2") {
 			return verifyEvmosSessionSignature(session)
+		} else if (session.payload.chainId == "phoenix-1") {
+			return verifyTerraSessionSignature(session)
 		} else {
 			return verifyCosmosSessionSignature(session)
 		}

@@ -1,4 +1,4 @@
-import type { SessionSigner, ActionSigner } from "@canvas-js/signers/lib/interfaces"
+import type { SessionSigner, ActionSigner } from "@canvas-js/signers"
 import React, { useState, useEffect } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"
