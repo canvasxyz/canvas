@@ -213,7 +213,7 @@ export async function handler(args: Args) {
 				throw new Error("Invalid action value in action log")
 			}
 
-			const effects = await vm.executeAction(id, action.payload)
+			const effects = await vm.execute(id, action.payload)
 			modelStore.applyEffects(action.payload, effects)
 			i++
 		}
