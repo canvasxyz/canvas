@@ -36,7 +36,7 @@ export type ActionContext = {
 
 export type ActionPayload = ActionContext & {
 	call: string
-	args: Record<string, ActionArgument>
+	args: ActionArgument[]
 }
 
 /**

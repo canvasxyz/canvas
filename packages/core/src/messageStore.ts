@@ -10,11 +10,11 @@ import { mapEntries, fromHex, toHex } from "./utils.js"
 
 type ActionRecord = {
 	hash: Buffer
-	signature: string
-	from_address: string
-	session_address: string | null
+	signature: Buffer
+	from_address: Buffer
+	session_address: Buffer | null
 	timestamp: number
-	blockhash: string | null
+	blockhash: Buffer | null
 	call: string
 	args: Buffer
 	chain: Chain
@@ -23,12 +23,12 @@ type ActionRecord = {
 
 type SessionRecord = {
 	hash: Buffer
-	signature: string
-	from_address: string
-	session_address: string
+	signature: Buffer
+	from_address: Buffer
+	session_address: Buffer
 	duration: number
 	timestamp: number
-	blockhash: string | null
+	blockhash: Buffer | null
 	chain: Chain
 	chain_id: ChainId
 }
@@ -73,15 +73,19 @@ export class MessageStore {
 
 		const record: ActionRecord = {
 			hash: typeof hash === "string" ? fromHex(hash) : hash,
-			signature: action.signature.toLowerCase(),
-			session_address: action.session ? action.session.toLowerCase() : null,
-			from_address: action.payload.from.toLowerCase(),
+			signature: fromHex(action.signature),
+			session_address: null,
+			from_address: fromHex(action.payload.from),
 			timestamp: action.payload.timestamp,
 			call: action.payload.call,
 			args: Buffer.from(args.buffer, args.byteOffset, args.byteLength),
-			blockhash: action.payload.blockhash ? action.payload.blockhash.toLowerCase() : null,
+			blockhash: action.payload.blockhash ? fromHex(action.payload.blockhash) : null,
 			chain: action.payload.chain,
 			chain_id: action.payload.chainId,
+		}
+
+		if (action.session !== null) {
+			record.session_address = fromHex(action.session)
 		}
 
 		this.statements.insertAction.run(record)
@@ -96,12 +100,12 @@ export class MessageStore {
 
 		const record: SessionRecord = {
 			hash: typeof hash === "string" ? fromHex(hash) : hash,
-			signature: session.signature.toLowerCase(),
-			from_address: session.payload.from.toLowerCase(),
-			session_address: session.payload.address.toLowerCase(),
+			signature: decode(session.signature),
+			from_address: decode(session.payload.from),
+			session_address: decode(session.payload.address),
 			duration: session.payload.duration,
 			timestamp: session.payload.timestamp,
-			blockhash: session.payload.blockhash ? session.payload.blockhash.toLowerCase() : null,
+			blockhash: session.payload.blockhash ? decode(session.payload.blockhash) : null,
 			chain: session.payload.chain,
 			chain_id: session.payload.chainId,
 		}
@@ -119,17 +123,17 @@ export class MessageStore {
 
 	private parseActionRecord(record: ActionRecord): Action {
 		const action: Action = {
-			signature: record.signature,
-			session: record.session_address,
+			signature: toHex(record.signature),
+			session: record.session_address && toHex(record.session_address),
 			payload: {
 				spec: this.uri,
-				from: record.from_address,
+				from: toHex(record.from_address),
 				call: record.call,
-				args: cbor.decode(record.args) as Record<string, ActionArgument>,
+				args: cbor.decode(record.args) as ActionArgument[],
 				timestamp: record.timestamp,
 				chain: record.chain,
 				chainId: record.chain_id,
-				blockhash: record.blockhash,
+				blockhash: record.blockhash ? toHex(record.blockhash) : null,
 			},
 		}
 
@@ -145,11 +149,8 @@ export class MessageStore {
 	}
 
 	public getSessionByAddress(address: string): { hash: null; session: null } | { hash: string; session: Session } {
-		console.log(this.statements.getSessions.all())
-		console.log(address)
-
 		const record: undefined | SessionRecord = this.statements.getSessionByAddress.get({
-			session_address: address,
+			session_address: fromHex(address),
 		})
 
 		if (record === undefined) {
@@ -161,16 +162,16 @@ export class MessageStore {
 
 	private parseSessionRecord(record: SessionRecord): Session {
 		const session: Session = {
-			signature: record.signature,
+			signature: toHex(record.signature),
 			payload: {
 				spec: this.uri,
-				from: record.from_address,
+				from: toHex(record.from_address),
 				timestamp: record.timestamp,
-				address: record.session_address,
+				address: toHex(record.session_address),
 				duration: record.duration,
 				chain: record.chain,
 				chainId: record.chain_id,
-				blockhash: record.blockhash,
+				blockhash: record.blockhash ? toHex(record.blockhash) : null,
 			},
 		}
 
@@ -194,11 +195,11 @@ export class MessageStore {
 	private static createActionsTable = `CREATE TABLE IF NOT EXISTS actions (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     hash            BLOB    NOT NULL UNIQUE,
-    signature       TEXT    NOT NULL,
-    session_address TEXT    REFERENCES sessions(session_address),
-    from_address    TEXT    NOT NULL,
+    signature       BLOB    NOT NULL,
+    session_address BLOB    REFERENCES sessions(session_address),
+    from_address    BLOB    NOT NULL,
     timestamp       INTEGER NOT NULL,
-    blockhash       TEXT            ,
+    blockhash       BLOB            ,
 		chain           TEXT    NOT NULL,
     chain_id        INTEGER NOT NULL,
     call            TEXT    NOT NULL,
@@ -208,12 +209,12 @@ export class MessageStore {
 	private static createSessionsTable = `CREATE TABLE IF NOT EXISTS sessions (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     hash            BLOB    NOT NULL UNIQUE,
-    signature       TEXT    NOT NULL,
-    from_address    TEXT    NOT NULL,
-    session_address TEXT    NOT NULL UNIQUE,
+    signature       BLOB    NOT NULL,
+    from_address    BLOB    NOT NULL,
+    session_address BLOB    NOT NULL UNIQUE,
     duration        INTEGER NOT NULL,
     timestamp       INTEGER NOT NULL,
-    blockhash       TEXT            ,
+    blockhash       BLOB            ,
 		chain           TEXT    NOT NULL,
     chain_id        INTEGER NOT NULL
   );`
