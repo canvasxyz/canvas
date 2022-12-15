@@ -8,14 +8,14 @@ import { hexToU8a, isHex } from "@polkadot/util"
 
 import type { Session, Action, Message } from "@canvas-js/interfaces"
 
-import { actionArgumentArrayType, chainIdType, chainType, uint8ArrayType } from "./codecs.js"
+import { actionArgumentType, chainIdType, chainType, uint8ArrayType } from "./codecs.js"
 import { signalInvalidType } from "./utils.js"
 
 const { hexlify, arrayify } = ethers.utils
 
 const binaryActionPayloadType = t.type({
 	call: t.string,
-	args: actionArgumentArrayType,
+	args: t.record(t.string, actionArgumentType),
 	from: uint8ArrayType,
 	spec: t.string,
 	timestamp: t.number,

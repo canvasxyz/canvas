@@ -129,7 +129,7 @@ export class MessageStore {
 				spec: this.uri,
 				from: toHex(record.from_address),
 				call: record.call,
-				args: cbor.decode(record.args) as ActionArgument[],
+				args: cbor.decode(record.args) as Record<string, ActionArgument>,
 				timestamp: record.timestamp,
 				chain: record.chain,
 				chainId: record.chain_id,
