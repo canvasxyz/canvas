@@ -9,6 +9,7 @@ import {
 	EVMKeplrWebWalletConnector,
 	CosmosEvmWebWalletConnector,
 	TerraStationWebWalletConnector,
+	WalletConnectWebWalletConnector,
 } from "@canvas-js/signers"
 
 interface MultichainConnectProps {
@@ -31,6 +32,7 @@ export const MultichainConnect: React.FC<MultichainConnectProps> = (props) => {
 		new KeplrWebWalletConnector(),
 		new CosmosEvmWebWalletConnector(),
 		new TerraStationWebWalletConnector(),
+		new WalletConnectWebWalletConnector(),
 	]
 
 	return (

@@ -6,6 +6,7 @@ import { PhantomWebWalletConnector } from "./phantom_web_wallet.js"
 import { EVMKeplrWebWalletConnector } from "./keplr_ethereum_web_wallet.js"
 import { CosmosEvmWebWalletConnector } from "./cosmos_evm_metamask_web_wallet.js"
 import { TerraStationWebWalletConnector } from "./terra_station_web_wallet.js"
+import { WalletConnectWebWalletConnector } from "./walletconnect_web_wallet.js"
 
 export {
 	Connector,
@@ -18,4 +19,5 @@ export {
 	EVMKeplrWebWalletConnector,
 	CosmosEvmWebWalletConnector,
 	TerraStationWebWalletConnector,
+	WalletConnectWebWalletConnector,
 }

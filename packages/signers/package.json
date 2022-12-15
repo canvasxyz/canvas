@@ -23,10 +23,14 @@
     "@polkadot/wasm-crypto": "^6.4.1",
     "@terra-money/terra.js": "^3.1.7",
     "@terra-money/wallet-controller": "^3.11.2",
+    "@wagmi/core": "^0.8.3",
+    "@web3modal/ethereum": "^2.0.0-beta.9",
+    "@web3modal/html": "^2.0.0-beta.9",
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.0",
     "ethers": "^5.7.0",
     "tweetnacl": "^1.0.3",
+    "url": "^0.11.0",
     "web3": "^1.8.1"
   },
   "resolve.fallback": {
