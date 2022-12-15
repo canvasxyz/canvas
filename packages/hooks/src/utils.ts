@@ -1,21 +1,8 @@
-import { ethers } from "ethers"
-import { ActionArgument, Block, ModelValue } from "@canvas-js/interfaces"
+import { ActionArgument, ModelValue } from "@canvas-js/interfaces"
 
 export const getCanvasSessionKey = (address: string) => `CANVAS_SESSION:${address}`
 
 export type Dispatch = (call: string, args: Record<string, ActionArgument>) => Promise<{ hash: string }>
-
-export async function getLatestBlock(provider: ethers.providers.Provider): Promise<Block> {
-	const [network, providerBlock] = await Promise.all([provider.getNetwork(), provider.getBlock("latest")])
-
-	return {
-		chain: "eth",
-		chainId: network.chainId,
-		blocknum: providerBlock.number,
-		blockhash: providerBlock.hash,
-		timestamp: providerBlock.timestamp,
-	}
-}
 
 // Copied from https://github.com/jfromaniello/url-join/blob/main/lib/url-join.js
 

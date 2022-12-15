@@ -1,4 +1,4 @@
-import { ethers } from "ethers"
+import type { SessionSigner, ActionSigner } from "@canvas-js/signers"
 import { createContext } from "react"
 
 export interface ApplicationData {
@@ -23,10 +23,10 @@ export interface CanvasContextValue {
 
 	// private (not returned from useCanvas hook)
 	ws: WebSocket | null
-	signer: ethers.providers.JsonRpcSigner | null
-	setSigner: (signer: ethers.providers.JsonRpcSigner | null) => void
-	sessionWallet: ethers.Wallet | null
-	setSessionWallet: (sessionWallet: ethers.Wallet | null) => void
+	signer: SessionSigner | null
+	setSigner: (signer: SessionSigner | null) => void
+	actionSigner: ActionSigner | null
+	setActionSigner: (actionSigner: ActionSigner | null) => void
 	sessionExpiration: number | null
 	setSessionExpiration: (sessionExpiration: number | null) => void
 }
@@ -43,8 +43,8 @@ export const CanvasContext = createContext<CanvasContextValue>({
 		throw new Error("Missing <Canvas /> parent element")
 	},
 
-	sessionWallet: null,
-	setSessionWallet: (_) => {
+	actionSigner: null,
+	setActionSigner: (_) => {
 		throw new Error("Missing <Canvas /> parent element")
 	},
 

@@ -1,5 +1,5 @@
-import { ethers } from "ethers"
-import React, { useState, useEffect, useMemo } from "react"
+import type { SessionSigner, ActionSigner } from "@canvas-js/signers"
+import React, { useState } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"
 import { useWebsocket } from "./useWebsocket.js"
@@ -14,8 +14,8 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const [data, setData] = useState<ApplicationData | null>(null)
 	const [error, setError] = useState<Error | null>(null)
 
-	const [signer, setSigner] = useState<ethers.providers.JsonRpcSigner | null>(null)
-	const [sessionWallet, setSessionWallet] = useState<ethers.Wallet | null>(null)
+	const [signer, setSigner] = useState<SessionSigner | null>(null)
+	const [actionSigner, setActionSigner] = useState<ActionSigner | null>(null)
 	const [sessionExpiration, setSessionExpiration] = useState<number | null>(null)
 
 	const host = props.host
@@ -31,8 +31,8 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 				ws,
 				signer,
 				setSigner,
-				sessionWallet,
-				setSessionWallet,
+				actionSigner,
+				setActionSigner,
 				sessionExpiration,
 				setSessionExpiration,
 			}}

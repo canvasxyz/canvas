@@ -55,26 +55,30 @@ export const binaryMessageType = t.union([binaryActionType, binarySessionType])
 export type BinaryMessage = t.TypeOf<typeof binaryMessageType>
 
 const toBinarySession = (session: Session): BinarySession => {
-	const { blockhash } = session.payload
-	return {
+	const decode = arrayify
+
+	const response = {
 		type: "session",
 		signature: arrayify(session.signature),
 		payload: {
 			...session.payload,
-			from: arrayify(session.payload.from),
-			address: arrayify(session.payload.address),
-			blockhash: blockhash ? arrayify(blockhash) : null,
+			from: decode(session.payload.from),
+			address: decode(session.payload.address),
+			blockhash: session.payload.blockhash ? arrayify(session.payload.blockhash) : null,
 		},
-	}
+	} as BinarySession
+	return response
 }
 
 function fromBinarySession({ signature, payload: { from, address, blockhash, ...payload } }: BinarySession): Session {
+	const encode = hexlify
+
 	const session: Session = {
 		signature: hexlify(signature).toLowerCase(),
 		payload: {
 			...payload,
-			from: hexlify(from).toLowerCase(),
-			address: hexlify(address).toLowerCase(),
+			from: encode(from).toLowerCase(),
+			address: encode(address).toLowerCase(),
 			blockhash: blockhash ? hexlify(blockhash).toLowerCase() : null,
 		},
 	}
@@ -83,26 +87,30 @@ function fromBinarySession({ signature, payload: { from, address, blockhash, ...
 }
 
 const toBinaryAction = (action: Action): BinaryAction => {
+	const decode = arrayify
 	const blockhash = action.payload.blockhash
+
 	return {
 		type: "action",
 		signature: arrayify(action.signature),
-		session: action.session ? arrayify(action.session) : null,
+		session: action.session ? decode(action.session) : null,
 		payload: {
 			...action.payload,
-			from: arrayify(action.payload.from),
+			from: decode(action.payload.from),
 			blockhash: blockhash ? arrayify(blockhash) : null,
 		},
 	}
 }
 
 function fromBinaryAction({ signature, session, payload: { from, blockhash, ...payload } }: BinaryAction): Action {
+	const encode = hexlify
+
 	const action: Action = {
 		signature: hexlify(signature).toLowerCase(),
-		session: session && hexlify(session).toLowerCase(),
+		session: session && encode(session).toLowerCase(),
 		payload: {
 			...payload,
-			from: hexlify(from).toLowerCase(),
+			from: encode(from).toLowerCase(),
 			blockhash: blockhash ? hexlify(blockhash).toLowerCase() : null,
 		},
 	}

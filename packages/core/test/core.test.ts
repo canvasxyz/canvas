@@ -3,13 +3,8 @@ import test from "ava"
 import { ethers } from "ethers"
 
 import { Core, ApplicationError, compileSpec } from "@canvas-js/core"
-import {
-	ActionArgument,
-	ActionPayload,
-	getActionSignatureData,
-	getSessionSignatureData,
-	SessionPayload,
-} from "@canvas-js/interfaces"
+import { ActionArgument, ActionPayload, SessionPayload } from "@canvas-js/interfaces"
+import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
 
 const signer = ethers.Wallet.createRandom()
 const signerAddress = signer.address.toLowerCase()

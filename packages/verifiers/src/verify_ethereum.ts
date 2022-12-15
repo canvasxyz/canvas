@@ -1,8 +1,15 @@
 import { TypedDataDomain, TypedDataField, utils } from "ethers"
 import { verifyTypedData } from "@ethersproject/wallet"
 
-import type { Action, ActionArgument, ActionPayload } from "./actions.js"
-import type { Session, SessionPayload } from "./sessions.js"
+import type {
+	Action,
+	ActionArgument,
+	ActionPayload,
+	ActionToken,
+	Session,
+	SessionPayload,
+	SessionToken,
+} from "@canvas-js/interfaces"
 
 /**
  * Ethereum compatible signer logic, used to generate and
@@ -43,14 +50,12 @@ function serializeActionArgument(arg: ActionArgument): string {
 	}
 }
 
-type SignatureData = [TypedDataDomain, Record<string, TypedDataField[]>, Record<string, string | string[]>]
-
 const namePattern = /^[a-zA-Z][a-zA-Z0-9_]*$/
 
 /**
  * `getActionSignatureData` gets EIP-712 signing data for an individual action
  */
-export function getActionSignatureData(payload: ActionPayload): SignatureData {
+export function getActionSignatureData(payload: ActionPayload): SignatureData<ActionToken> {
 	const domain = {
 		name: "Canvas",
 		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
@@ -75,14 +80,6 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData {
 	return [domain, actionDataFields, actionValue]
 }
 
-/**
- * `verifyActionPayloadSignature` verifies an action signature matches a payload (does not check the payload)
- */
-export function verifyActionSignature(action: Action): string {
-	const [domain, types, value] = getActionSignatureData(action.payload)
-	return verifyTypedData(domain, types, value, action.signature).toLowerCase()
-}
-
 const sessionDataFields = {
 	Message: [
 		{ name: "loginTo", type: "string" },
@@ -92,10 +89,12 @@ const sessionDataFields = {
 	],
 }
 
+type SignatureData<TokenType> = [TypedDataDomain, Record<string, TypedDataField[]>, TokenType]
+
 /**
  * `getSessionSignatureData` gets EIP-712 signing data to start a session
  */
-export function getSessionSignatureData(payload: SessionPayload): SignatureData {
+export function getSessionSignatureData(payload: SessionPayload): SignatureData<SessionToken> {
 	const domain = {
 		name: "Canvas",
 		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
@@ -111,10 +110,12 @@ export function getSessionSignatureData(payload: SessionPayload): SignatureData 
 	return [domain, sessionDataFields, sessionValue]
 }
 
-/**
- * `verifySessionPayloadSignature` verifies a session signature matches a payload (does not check the payload)
- */
-export function verifySessionSignature(session: Session): string {
+export const verifyEthereumActionSignature = (action: Action): string => {
+	const [domain, types, value] = getActionSignatureData(action.payload)
+	return verifyTypedData(domain, types, value, action.signature).toLowerCase()
+}
+
+export const verifyEthereumSessionSignature = (session: Session): string => {
 	const [domain, types, value] = getSessionSignatureData(session.payload)
 	return verifyTypedData(domain, types, value, session.signature).toLowerCase()
 }

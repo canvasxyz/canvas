@@ -1,15 +1,15 @@
 import React, { useMemo } from "react"
 
-import { ethers } from "ethers"
-import { useAccount, useConnect, useDisconnect, useSigner } from "wagmi"
 import { useSession } from "@canvas-js/hooks"
 
 import { ErrorMessage } from "./ErrorMessage"
+import { useSigner, useConnect, useDisconnect } from "@canvas-js/hooks"
 
 export const Connect: React.FC<{}> = ({}) => {
-	const { connect, connectors, error: connectionError, isLoading: isConnectionLoading, pendingConnector } = useConnect()
+	// TODO: Implement the error handling from wagmi
+	// const { connect, connectors, error: connectionError, isLoading: isConnectionLoading, pendingConnector } = useConnect()
+	const { connect, connectors, isConnected, address } = useConnect()
 	const { disconnect } = useDisconnect()
-	const { address, isConnected } = useAccount()
 
 	return (
 		<div className="window">
@@ -26,23 +26,29 @@ export const Connect: React.FC<{}> = ({}) => {
 					</>
 				) : (
 					<>
-						<p>Connect to a provider:</p>
-						{connectors.map((connector) => (
-							<button
-								disabled={!connector.ready || isConnected}
-								key={connector.id}
-								onClick={() => connect({ connector })}
-								style={{ marginRight: 5 }}
-							>
-								{connector.name}
-								{!connector.ready && " (unsupported)"}
-								{isConnectionLoading && connector.id === pendingConnector?.id && " (connecting)"}
-							</button>
-						))}
+						{connectors ? (
+							<>
+								<p>Connect to a provider:</p>
+								{connectors
+									.filter((connector) => connector.available)
+									.map((connector) => (
+										<button
+											key={connector.id}
+											disabled={isConnected}
+											onClick={() => connect(connector)}
+											style={{ marginRight: 5 }}
+										>
+											{connector.label}
+										</button>
+									))}
+							</>
+						) : (
+							<p>No providers are available</p>
+						)}
 					</>
 				)}
 
-				<ErrorMessage error={connectionError} />
+				{/* <ErrorMessage error={connectionError} /> */}
 
 				<Login />
 			</div>
@@ -51,7 +57,7 @@ export const Connect: React.FC<{}> = ({}) => {
 }
 
 const Login: React.FC<{}> = ({}) => {
-	const { error: signerError, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
+	const { signer } = useSigner()
 
 	const {
 		error: sessionError,
@@ -61,7 +67,7 @@ const Login: React.FC<{}> = ({}) => {
 		logout,
 		isLoading,
 		isPending,
-	} = useSession(signer ?? null)
+	} = useSession(signer)
 
 	const [expirationDate, expirationTime] = useMemo(() => {
 		if (sessionExpiration === null) {
@@ -96,7 +102,7 @@ const Login: React.FC<{}> = ({}) => {
 				</>
 			)}
 
-			<ErrorMessage error={signerError} />
+			{/* <ErrorMessage error={signerError} /> */}
 			<ErrorMessage error={sessionError} />
 		</>
 	)

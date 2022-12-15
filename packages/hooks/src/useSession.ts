@@ -1,12 +1,12 @@
 import { useCallback, useContext, useEffect, useState } from "react"
-import { ethers } from "ethers"
 
-import { SessionPayload, getSessionSignatureData, Session } from "@canvas-js/interfaces"
+import { SessionPayload, Session } from "@canvas-js/interfaces"
+import type { SessionSigner } from "@canvas-js/signers/lib/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
-import { getCanvasSessionKey, getLatestBlock, urlJoin } from "./utils.js"
+import { getCanvasSessionKey, urlJoin } from "./utils.js"
 
-export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
+export function useSession(signer: SessionSigner | null): {
 	error: Error | null
 	isLoading: boolean
 	isPending: boolean
@@ -15,7 +15,7 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 	login: () => void
 	logout: () => void
 } {
-	const { host, data, setSigner, sessionWallet, setSessionWallet, sessionExpiration, setSessionExpiration } =
+	const { host, data, setSigner, actionSigner, setActionSigner, sessionExpiration, setSessionExpiration } =
 		useContext(CanvasContext)
 
 	const [error, setError] = useState<null | Error>(null)
@@ -28,11 +28,13 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 			setSignerAddress(null)
 			setSigner(null)
 		} else {
-			setSignerAddress(signer._address)
-			setSigner(signer)
+			signer.getAddress().then((address) => {
+				setSignerAddress(address)
+				setSigner(signer)
+			})
 		}
 
-		setSessionWallet(null)
+		setActionSigner(null)
 		setSessionExpiration(null)
 	}, [signer])
 
@@ -68,8 +70,9 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 			return
 		}
 
-		const wallet = new ethers.Wallet(sessionPrivateKey)
-		setSessionWallet(wallet)
+		signer!.createActionSigner(sessionPrivateKey).then((actionSigner) => {
+			setActionSigner(actionSigner)
+		})
 		setSessionExpiration(expiration)
 	}, [host, data, signerAddress])
 
@@ -89,20 +92,23 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 		try {
 			const timestamp = Date.now()
 			const sessionDuration = 86400 * 1000
-			const wallet = ethers.Wallet.createRandom()
+			const actionSigner = await signer.createActionSigner()
 
 			const sessionObject: SessionObject = {
 				spec: data.uri,
-				sessionPrivateKey: wallet.privateKey,
+				sessionPrivateKey: actionSigner.privateKey,
 				expiration: timestamp + sessionDuration,
 			}
 
-			const block = await getLatestBlock(signer.provider)
+			const block = await signer.getRecentBlock()
+
+			const chain = await signer.getChain()
+			const chainId = await signer.getChainId()
 
 			const payload: SessionPayload = {
 				from: signerAddress,
 				spec: data.uri,
-				address: wallet.address,
+				address: await actionSigner.address,
 				duration: sessionDuration,
 				timestamp,
 				blockhash: block.blockhash,
@@ -110,9 +116,7 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 				chainId: block.chainId,
 			}
 
-			const sessionSignatureData = getSessionSignatureData(payload)
-			const signature = await signer._signTypedData(...sessionSignatureData)
-			const session: Session = { signature, payload }
+			const session: Session = await signer.signSessionPayload(payload)
 
 			const res = await fetch(urlJoin(host, "sessions"), {
 				method: "POST",
@@ -127,7 +131,7 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 
 			const sessionKey = getCanvasSessionKey(signerAddress)
 			localStorage.setItem(sessionKey, JSON.stringify(sessionObject))
-			setSessionWallet(wallet)
+			setActionSigner(actionSigner)
 			setSessionExpiration(sessionObject.expiration)
 			setError(null)
 		} catch (err) {
@@ -143,7 +147,7 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 	}, [host, data, signer, signerAddress])
 
 	const logout = useCallback(() => {
-		setSessionWallet(null)
+		setActionSigner(null)
 		setSessionExpiration(null)
 		if (signerAddress !== null) {
 			const sessionKey = getCanvasSessionKey(signerAddress)
@@ -151,7 +155,7 @@ export function useSession(signer: ethers.providers.JsonRpcSigner | null): {
 		}
 	}, [signerAddress])
 
-	const sessionAddress = sessionWallet && sessionWallet.address
+	const sessionAddress = actionSigner && actionSigner.address
 	return {
 		error,
 		isLoading,

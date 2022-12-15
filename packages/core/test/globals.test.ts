@@ -2,7 +2,8 @@ import test from "ava"
 
 import { ethers } from "ethers"
 
-import { ActionArgument, ActionPayload, getActionSignatureData } from "@canvas-js/interfaces"
+import { ActionArgument, ActionPayload } from "@canvas-js/interfaces"
+import { getActionSignatureData } from "@canvas-js/verifiers"
 import { compileSpec, Core } from "@canvas-js/core"
 
 const signer = ethers.Wallet.createRandom()

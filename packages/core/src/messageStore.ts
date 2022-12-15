@@ -1,5 +1,4 @@
 import assert from "node:assert"
-
 import Database, * as sqlite from "better-sqlite3"
 import * as cbor from "microcbor"
 

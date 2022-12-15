@@ -25,3 +25,10 @@ export type Session = {
 	payload: SessionPayload
 	signature: string
 }
+
+export type SessionToken = {
+	loginTo: string
+	registerSessionAddress: string
+	registerSessionDuration: string
+	timestamp: string
+}
