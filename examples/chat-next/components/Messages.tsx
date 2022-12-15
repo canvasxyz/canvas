@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 
-import { useEnsName } from "wagmi"
+// import { useEnsName } from "wagmi"
 import { useCanvas, useRoute } from "@canvas-js/hooks"
 
 type Post = {
@@ -76,12 +76,13 @@ export const Messages: React.FC<{}> = ({}) => {
 
 const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
 	const address = `${from_id.slice(0, 5)}…${from_id.slice(-4)}`
+	// TODO: find an alternative to using wagmi for ens resolution
 	// use wagmi's internal cache for ens names
-	const { data, isError, isLoading } = useEnsName({ address: from_id })
+	// const { data, isError, isLoading } = useEnsName({ address: from_id })
 
 	return (
 		<li>
-			{data && <span className="address address-ens">[{data}]</span>}
+			{/* {data && <span className="address address-ens">[{data}]</span>} */}
 			<span className="address">{address} &gt;</span> {content}
 		</li>
 	)
