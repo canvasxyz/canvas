@@ -47,3 +47,10 @@ export type Action = {
 	session: string | null
 	signature: string
 }
+
+export type ActionToken = {
+	sendAction: string
+	params: string[]
+	application: string
+	timestamp: string
+}

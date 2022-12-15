@@ -1,7 +1,15 @@
 import { TypedDataDomain, TypedDataField, utils } from "ethers"
 import { verifyTypedData } from "@ethersproject/wallet"
 
-import type { Action, ActionArgument, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
+import type {
+	Action,
+	ActionArgument,
+	ActionPayload,
+	ActionToken,
+	Session,
+	SessionPayload,
+	SessionToken,
+} from "@canvas-js/interfaces"
 
 /**
  * Ethereum compatible signer logic, used to generate and
@@ -47,7 +55,7 @@ const namePattern = /^[a-zA-Z][a-zA-Z0-9]*$/
 /**
  * `getActionSignatureData` gets EIP-712 signing data for an individual action
  */
-export function getActionSignatureData(payload: ActionPayload): SignatureData {
+export function getActionSignatureData(payload: ActionPayload): SignatureData<ActionToken> {
 	const domain = {
 		name: "Canvas",
 		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
@@ -81,7 +89,7 @@ const sessionDataFields = {
 	],
 }
 
-type SignatureData = [TypedDataDomain, Record<string, TypedDataField[]>, Record<string, string | string[]>]
+type SignatureData<TokenType> = [TypedDataDomain, Record<string, TypedDataField[]>, TokenType]
 
 /**
  * `getSessionSignatureData` gets EIP-712 signing data to start a session
