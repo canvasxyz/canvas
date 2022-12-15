@@ -11,7 +11,6 @@
   ],
   "dependencies": {
     "@canvas-js/verifiers": "0.0.34-alpha4",
-    "@ethereumjs/util": "^8.0.2",
     "@ethersproject/abstract-signer": "^5.6.2",
     "@ethersproject/wallet": "^5.6.2",
     "@wagmi/core": "^0.8.3",
