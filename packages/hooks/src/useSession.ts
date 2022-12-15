@@ -108,7 +108,7 @@ export function useSession(signer: SessionSigner | null): {
 			const payload: SessionPayload = {
 				from: signerAddress,
 				spec: data.uri,
-				address: actionSigner.address,
+				address: await actionSigner.getAddress(),
 				duration: sessionDuration,
 				timestamp,
 				blockhash: block.blockhash,
