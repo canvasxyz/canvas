@@ -1,15 +1,5 @@
 import { createContext, useContext } from "react"
-
-import { Chain } from "@canvas-js/interfaces"
-import {
-	Connector,
-	MetaMaskEthereumConnector,
-	PolkadotWebWalletConnector,
-	KeplrWebWalletConnector,
-	PhantomWebWalletConnector,
-	EVMKeplrWebWalletConnector,
-	SessionSigner,
-} from "@canvas-js/signers"
+import { Connector, SessionSigner } from "@canvas-js/signers"
 
 /**
  * An attempt at making something like wagmi
