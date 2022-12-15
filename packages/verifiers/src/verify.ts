@@ -16,7 +16,6 @@ export async function verifyActionSignature(action: Action): Promise<string> {
  * `verifySessionPayloadSignature` verifies a session signature matches a payload (does not check the payload)
  */
 export async function verifySessionSignature(session: Session): Promise<string> {
-	console.log(session)
 	if (session.payload.chain == "eth") {
 		return verifyEthereumSessionSignature(session)
 	} else {
