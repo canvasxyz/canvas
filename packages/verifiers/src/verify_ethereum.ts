@@ -94,7 +94,7 @@ type SignatureData<TokenType> = [TypedDataDomain, Record<string, TypedDataField[
 /**
  * `getSessionSignatureData` gets EIP-712 signing data to start a session
  */
-export function getSessionSignatureData(payload: SessionPayload): SignatureData {
+export function getSessionSignatureData(payload: SessionPayload): SignatureData<SessionToken> {
 	const domain = {
 		name: "Canvas",
 		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
