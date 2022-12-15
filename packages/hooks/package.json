@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@canvas-js/interfaces": "0.0.34-alpha4",
-    "@canvas-js/signers": "0.0.33",
+    "@canvas-js/signers": "0.0.34-alpha4",
     "ethers": "^5.7.0",
     "socket.io-client": "^4.5.4"
   }
