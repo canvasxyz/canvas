@@ -3,7 +3,6 @@ import ReactDOM from "react-dom/client"
 
 import { Canvas } from "@canvas-js/hooks"
 
-import { client } from "./client"
 import { App } from "./App"
 
 import "98.css"
@@ -17,12 +16,10 @@ const host = process.env.HOST!
 
 root.render(
 	<React.StrictMode>
-		{/* <WagmiConfig client={client}> */}
 		<MultichainConnect>
 			<Canvas host={host}>
 				<App />
 			</Canvas>
 		</MultichainConnect>
-		{/* </WagmiConfig> */}
 	</React.StrictMode>
 )
