@@ -7,3 +7,4 @@ packages/**/lib/
 packages/**/dist/
 
 *.canvas
+.vscode

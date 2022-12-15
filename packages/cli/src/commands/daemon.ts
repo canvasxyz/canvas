@@ -17,10 +17,9 @@ import PQueue from "p-queue"
 import { ethers } from "ethers"
 
 import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, getAPI, CoreOptions } from "@canvas-js/core"
-
-import { CANVAS_HOME, getPeerId, getProviders, SOCKET_FILENAME, SOCKET_PATH, installSpec } from "../utils.js"
-
 import { Model } from "@canvas-js/interfaces"
+
+import { CANVAS_HOME, SOCKET_FILENAME, SOCKET_PATH, getPeerId, getProviders, installSpec } from "../utils.js"
 
 export const command = "daemon"
 export const desc = "Start the canvas daemon"
@@ -38,6 +37,10 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "number",
 			desc: "libp2p WebSocket transport port",
 			default: 4044,
+		})
+		.option("announce", {
+			type: "string",
+			desc: "Accept incoming libp2p connections on a public multiaddr",
 		})
 		.option("unchecked", {
 			type: "boolean",
@@ -84,7 +87,14 @@ export async function handler(args: Args) {
 	let libp2p: Libp2p | undefined = undefined
 	if (!args.offline) {
 		const peerId = await getPeerId()
-		libp2p = await createLibp2p(getLibp2pInit(peerId, args.listen))
+		console.log("[canvas-cli] Using PeerId", peerId.toString())
+
+		if (args.announce) {
+			libp2p = await createLibp2p(getLibp2pInit(peerId, args.listen, [args.announce]))
+		} else {
+			libp2p = await createLibp2p(getLibp2pInit(peerId, args.listen))
+		}
+
 		await libp2p.start()
 	}
 

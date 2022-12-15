@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/cli",
-  "version": "0.0.33",
+  "version": "0.0.34-alpha4",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "dist/index.js",
@@ -11,9 +11,10 @@
     "canvas": "dist/index.js"
   },
   "dependencies": {
-    "@canvas-js/core": "0.0.33",
-    "@canvas-js/interfaces": "0.0.33",
+    "@canvas-js/core": "0.0.34-alpha4",
+    "@canvas-js/interfaces": "0.0.34-alpha4",
     "@libp2p/kad-dht": "^6.1.0",
+    "@types/websocket": "^1.0.5",
     "better-sqlite3": "^8.0.0",
     "chalk": "^5.0.1",
     "cors": "^2.8.5",
@@ -28,8 +29,9 @@
     "multiformats": "^10.0.2",
     "p-queue": "^7.3.0",
     "prompts": "^2.4.2",
+    "socket.io": "^4.5.4",
     "stoppable": "^1.1.0",
-    "undici": "^5.11.0",
+    "undici": "^5.14.0",
     "winston": "^3.8.2",
     "yargs": "^17.5.1"
   },

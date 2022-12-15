@@ -3,6 +3,8 @@ import { useState, useEffect, useMemo, useContext } from "react"
 import { ModelValue } from "@canvas-js/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
+import { compareObjects } from "./utils.js"
+import type { IMessageEvent } from "websocket"
 
 const routePattern = /^(\/:?[a-zA-Z0-9_]+)+$/
 
@@ -51,7 +53,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 	params: Record<string, ModelValue>,
 	options: { subscribe?: boolean } = { subscribe: true }
 ): { error: Error | null; isLoading: boolean; data: T[] | null } {
-	const { host, data: applicationData } = useContext(CanvasContext)
+	const { host, ws, data: applicationData } = useContext(CanvasContext)
 	if (host === null) {
 		throw new Error("No API endpoint provided! you must provide an API endpoint in a parent Canvas element.")
 	}
@@ -62,9 +64,10 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 
 	const url = useMemo(() => getRouteURL(host, route, params), [host, route, params])
 
+	const readyState = ws?.readyState
 	const subscribe = options.subscribe ?? true
 	useEffect(() => {
-		if (applicationData === null) {
+		if (applicationData === null || ws === null) {
 			return
 		} else if (!applicationData.routes.includes(route)) {
 			setError(new Error(`${applicationData.uri} has no route ${JSON.stringify(route)}`))
@@ -76,26 +79,51 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 		setIsLoading(true)
 
 		if (subscribe) {
-			const source = new EventSource(url)
-			source.onmessage = (message: MessageEvent<string>) => {
-				const data = JSON.parse(message.data)
-				setData(data)
-				setIsLoading(false)
+			if (ws.readyState === ws.OPEN) {
+				const listener = (evt: IMessageEvent) => {
+					if (evt.data.toString() === "pong") return
+					try {
+						const message = JSON.parse(evt.data.toString())
+						if (message.route === route && compareObjects(message.params, params)) {
+							setData(message.data)
+							setIsLoading(false)
+						}
+					} catch (err) {
+						console.log("ws: failed to parse message", evt.data)
+					}
+				}
+				ws.addEventListener("message", listener)
+				ws.send(JSON.stringify({ action: "subscribe", data: { route, params } }))
+
+				return () => {
+					console.log("ws: unsubscribing", url)
+					ws.removeEventListener("message", listener)
+					if (ws.readyState === ws.OPEN) {
+						ws.send(JSON.stringify({ action: "unsubscribe", data: { route, params } }))
+					}
+				}
 			}
 
-			source.onerror = (event) => {
-				console.warn("Connection error in EventSource subscription")
-				console.warn(event)
-				setIsLoading(true)
-			}
+			// const source = new EventSource(url)
+			// source.onmessage = (message: MessageEvent<string>) => {
+			// 	const data = JSON.parse(message.data)
+			// 	setData(data)
+			// 	setIsLoading(false)
+			// }
 
-			const handleBeforeUnload = () => source.close()
-			window.addEventListener("beforeunload", handleBeforeUnload)
+			// source.onerror = (event) => {
+			// 	console.warn("Connection error in EventSource subscription")
+			// 	console.warn(event)
+			// 	setIsLoading(true)
+			// }
 
-			return () => {
-				window.removeEventListener("beforeunload", handleBeforeUnload)
-				source.close()
-			}
+			// const handleBeforeUnload = () => source.close()
+			// window.addEventListener("beforeunload", handleBeforeUnload)
+
+			// return () => {
+			// 	window.removeEventListener("beforeunload", handleBeforeUnload)
+			// 	source.close()
+			// }
 		} else {
 			fetch(url)
 				.then((res) => res.json())
@@ -110,7 +138,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 					setIsLoading(false)
 				})
 		}
-	}, [route, url, !!applicationData, subscribe])
+	}, [route, url, !!applicationData, subscribe, ws, readyState])
 
 	return { error, data, isLoading }
 }

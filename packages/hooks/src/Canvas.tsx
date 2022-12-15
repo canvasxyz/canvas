@@ -1,7 +1,8 @@
 import type { SessionSigner, ActionSigner } from "@canvas-js/signers"
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"
+import { useWebsocket } from "./useWebsocket.js"
 
 export interface CanvasProps {
 	host: string
@@ -18,17 +19,7 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const [sessionExpiration, setSessionExpiration] = useState<number | null>(null)
 
 	const host = props.host
-
-	useEffect(() => {
-		const id = setInterval(() => {
-			fetch(host)
-				.then((res) => res.json())
-				.then((data: ApplicationData) => setData(data))
-				.catch((err) => setError(err))
-				.finally(() => setIsLoading(false))
-		}, 2500)
-		return () => clearInterval(id)
-	}, [host])
+	const ws = useWebsocket({ setIsLoading, setData, setError, host })
 
 	return (
 		<CanvasContext.Provider
@@ -37,6 +28,7 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 				error,
 				host,
 				data,
+				ws,
 				signer,
 				setSigner,
 				actionSigner,

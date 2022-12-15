@@ -1,18 +1,18 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat-webpack",
-  "version": "0.0.33",
+  "version": "0.0.34-alpha4",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "HOST=/api webpack build",
-    "start": "canvas run spec.canvas.js --install --unchecked --static dist",
+    "start": "canvas run spec.canvas.js --install --unchecked --static dist --announce /dns4/canvas-chat.fly.dev/tcp/4044/ws",
     "dev": "HOST='http://localhost:8000' concurrently --kill-others -n backend,frontend 'canvas run spec.canvas.js --unchecked' 'webpack server --port 3000'"
   },
   "dependencies": {
-    "@canvas-js/cli": "0.0.33",
-    "@canvas-js/hooks": "0.0.33",
+    "@canvas-js/cli": "0.0.34-alpha4",
+    "@canvas-js/hooks": "0.0.34-alpha4",
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.5",
     "98.css": "^0.1.18",

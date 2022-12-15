@@ -7,5 +7,6 @@ interface InternalError {
 export class ApplicationError extends Error {
 	constructor(public readonly internalError: InternalError) {
 		super(internalError.message)
+		this.name = "Error within spec"
 	}
 }

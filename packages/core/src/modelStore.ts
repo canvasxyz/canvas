@@ -2,8 +2,10 @@ import assert from "node:assert"
 import Database, * as sqlite from "better-sqlite3"
 import chalk from "chalk"
 
-import type { ActionContext, Model, ModelType, ModelValue } from "@canvas-js/interfaces"
+import { QuickJSHandle } from "quickjs-emscripten"
+import type { ActionContext, Model, ModelType, ModelValue, Query } from "@canvas-js/interfaces"
 import { mapEntries, signalInvalidType } from "./utils.js"
+import type { VM } from "./vm/index.js"
 
 export type Effect =
 	| { type: "set"; model: string; id: string; values: Record<string, ModelValue> }
@@ -13,18 +15,13 @@ export class ModelStore {
 	public readonly database: sqlite.Database
 
 	private readonly transaction: (context: ActionContext, effects: Effect[]) => void
-	private readonly routeStatements: Record<string, sqlite.Statement> = {}
+	private readonly vm: VM
 	private readonly modelStatements: Record<
 		string,
 		Record<keyof ReturnType<typeof ModelStore.getModelStatements>, sqlite.Statement>
 	> = {}
 
-	constructor(
-		path: string | null,
-		models: Record<string, Model>,
-		routes: Record<string, string>,
-		options: { verbose?: boolean } = {}
-	) {
+	constructor(path: string | null, vm: VM, options: { verbose?: boolean } = {}) {
 		if (path === null) {
 			if (options.verbose) {
 				console.log("[canvas-core] Initializing new in-memory database")
@@ -40,17 +37,13 @@ export class ModelStore {
 			this.database = new Database(path)
 		}
 
-		this.initializeModelTables(models)
-		for (const [name, model] of Object.entries(models)) {
+		this.vm = vm
+
+		this.initializeModelTables(vm.models)
+		for (const [name, model] of Object.entries(vm.models)) {
 			this.modelStatements[name] = mapEntries(ModelStore.getModelStatements(name, model), (_, sql) =>
 				this.database.prepare(sql)
 			)
-		}
-
-		if (routes !== undefined) {
-			for (const [route, query] of Object.entries(routes)) {
-				this.routeStatements[route] = this.database.prepare(query)
-			}
 		}
 
 		this.transaction = this.database.transaction((context: ActionContext, effects: Effect[]): void => {
@@ -120,11 +113,30 @@ export class ModelStore {
 		this.database.close()
 	}
 
-	public getRoute(route: string, params: Record<string, ModelValue>): Record<string, ModelValue>[] {
-		assert(route in this.routeStatements, "invalid route name")
-		return this.routeStatements[route].all(
-			mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value))
-		)
+	public getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]> {
+		assert(route in this.vm.routeHandles, "invalid route name")
+		const filteredParams = mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value))
+		return this.vm.executeRoute(route, filteredParams, (query: string | Query) => {
+			// TODO: Cache the prepared sql
+			const prepared = typeof query === "string" ? this.database.prepare(query) : this.database.prepare(query.query)
+			// Uses sqlite3_stmt_readonly() to make sure routes only SELECT data.
+			// Note that custom functions could still mutate the database.
+			assert(prepared.readonly === true, "invalid route, queries must be readonly")
+			assert(prepared.reader === true, "invalid route, queries must return data")
+			try {
+				if (typeof query === "string" || query.args === undefined) {
+					return prepared.all()
+				} else {
+					return prepared.all(query.args)
+				}
+			} catch (err: any) {
+				// Show a little more debugging information for queries
+				const params = typeof query === "string" ? "none" : JSON.stringify(query.args)
+				const formatted = (typeof query === "string" ? query : query.query).replace(/\n/g, " ")
+				err.message = `${err.message} (query: ${formatted}, parameters: ${params})`
+				throw err
+			}
+		})
 	}
 
 	// We have to be sure to quote these because, even though we validate that they're all [a-z_]+ elsewhere,

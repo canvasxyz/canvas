@@ -2,15 +2,17 @@ import process from "node:process"
 import path from "node:path"
 import fs from "node:fs"
 
+import http from "node:http"
+
 import yargs from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
 import stoppable from "stoppable"
 import express from "express"
 import cors from "cors"
-import { createLibp2p } from "libp2p"
+import { createLibp2p, Libp2p } from "libp2p"
 
-import { Core, constants, actionType, getLibp2pInit, BlockCache, getAPI } from "@canvas-js/core"
+import { Core, constants, actionType, getLibp2pInit, BlockCache, getAPI, setupWebsockets } from "@canvas-js/core"
 
 import { getProviders, confirmOrExit, parseSpecArgument, getPeerId, installSpec, CANVAS_HOME } from "../utils.js"
 
@@ -43,6 +45,10 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "number",
 			desc: "libp2p WebSocket transport port",
 			default: 4044,
+		})
+		.option("announce", {
+			type: "string",
+			desc: "Accept incoming libp2p connections on a public multiaddr",
 		})
 		.option("reset", {
 			type: "boolean",
@@ -159,10 +165,18 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen: peeringPort } = args
+	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen: peeringPort, announce } = args
 
 	const peerId = await getPeerId()
-	const libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+
+	let libp2p: Libp2p
+	if (announce !== undefined) {
+		console.log(`[canvas-cli] Announcing on ${announce}`)
+		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort, [announce]))
+	} else {
+		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+	}
+
 	await libp2p.start()
 
 	if (verbose) {
@@ -223,9 +237,12 @@ export async function handler(args: Args) {
 		app.use(getAPI(core, { exposeMetrics }))
 	}
 
-	const apiPrefix = args.static ? `api/` : ""
+	const httpServer = http.createServer(app)
+	setupWebsockets(httpServer, core)
+
 	const server = stoppable(
-		app.listen(args.port, () => {
+		httpServer.listen(args.port, () => {
+			const apiPrefix = args.static ? `api/` : ""
 			if (args.static) {
 				console.log(`Serving static bundle: http://localhost:${args.port}/`)
 				console.log(`Serving API for ${core.uri}:`)

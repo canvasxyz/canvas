@@ -15,6 +15,8 @@ import {
 	ContractMetadata,
 	Model,
 	ModelValue,
+	RouteContext,
+	Query,
 } from "@canvas-js/interfaces"
 
 import type { Effect } from "../modelStore.js"
@@ -64,11 +66,12 @@ export class VM {
 
 	public readonly models: Record<string, Model>
 	public readonly actions: string[]
-	public readonly routes: Record<string, string>
-	public readonly routeParameters: Record<string, string[]>
+	public readonly routes: Record<string, string[]>
 	public readonly contracts: Record<string, ethers.Contract>
 	public readonly contractMetadata: Record<string, ContractMetadata>
 	public readonly component: string | null
+
+	public readonly routeHandles: Record<string, QuickJSHandle>
 
 	private readonly actionHandles: Record<string, QuickJSHandle>
 	private readonly contractsHandle: QuickJSHandle
@@ -154,20 +157,19 @@ export class VM {
 		}
 
 		this.routes = {}
-		this.routeParameters = {}
+		this.routeHandles = {}
 		if (routesHandle !== undefined) {
 			assert(context.typeof(routesHandle) === "object", "`routes` export must be an object")
 
-			const routeHandles = routesHandle.consume((handle) => unwrapObject(context, handle))
+			this.routeHandles = routesHandle.consume((handle) => unwrapObject(context, handle))
 			const routeNamePattern = /^(\/:?[a-z_]+)+$/
 			const routeParameterPattern = /:([a-zA-Z0-9_]+)/g
-			for (const [name, handle] of Object.entries(routeHandles)) {
-				assert(context.typeof(handle) === "string", "route queries must be strings")
+			for (const [name, handle] of Object.entries(this.routeHandles)) {
 				assertPattern(name, routeNamePattern, "invalid route name")
-				this.routes[name] = handle.consume(context.getString)
-				this.routeParameters[name] = []
+				assert(context.typeof(handle) === "function", `${name} route must be a function`)
+				this.routes[name] = []
 				for (const [_, param] of name.matchAll(routeParameterPattern)) {
-					this.routeParameters[name].push(param)
+					this.routes[name].push(param)
 				}
 			}
 		}
@@ -301,10 +303,16 @@ export class VM {
 		}).consume((globalsHandle) => call(context, "Object.assign", null, context.global, globalsHandle).dispose())
 	}
 
+	/**
+	 * Cleans up this VM instance.
+	 */
 	public dispose() {
 		this.dbHandle.dispose()
 		this.contractsHandle.dispose()
 		for (const handle of Object.values(this.actionHandles)) {
+			handle.dispose()
+		}
+		for (const handle of Object.values(this.routeHandles)) {
 			handle.dispose()
 		}
 
@@ -314,7 +322,58 @@ export class VM {
 	}
 
 	/**
-	 * Given a call, get a list of effects to pass to `store.applyEffects`, to be applied to the models.
+	 * Given a call to a route, get the result of the route function. Used by `modelStore.getRoute()`.
+	 */
+	public async executeRoute(
+		route: string,
+		params: Record<string, string | number>,
+		execute: (sql: string | Query) => Record<string, ModelValue>[]
+	): Promise<Record<string, ModelValue>[]> {
+		const routeHandle = this.routeHandles[route]
+		assert(routeHandle !== undefined, "invalid route")
+
+		const argHandles = wrapObject(
+			this.context,
+			mapEntries(params, (_, param) => this.wrapActionArgument(param))
+		)
+
+		const ctxHandle = wrapObject(this.context, {
+			db: wrapObject(this.context, {
+				queryRaw: this.context.newFunction("queryRaw", (sqlHandle: QuickJSHandle, argsHandle: QuickJSHandle) => {
+					const objectHandle = this.context.newObject()
+					const flag = this.context.newNumber(1)
+					this.context.setProp(objectHandle, "query", sqlHandle)
+					if (argsHandle !== undefined) {
+						this.context.setProp(objectHandle, "args", argsHandle)
+					}
+					this.context.setProp(objectHandle, "___CANVAS_QUERY_INTERNAL", flag)
+					flag.dispose()
+					return objectHandle
+				}),
+			}),
+		})
+
+		assert(this.context.typeof(routeHandle) === "function", `${route} route is not a function`)
+		const result = this.context.callFunction(routeHandle, this.context.undefined, argHandles, ctxHandle)
+		ctxHandle.dispose()
+		argHandles.dispose()
+
+		if (isFail(result)) {
+			const error = result.error.consume(this.context.dump)
+			throw new ApplicationError(error)
+		}
+
+		const query = result.value.consume(this.context.dump)
+		if (typeof query !== "string" && !(typeof query === "object" && query.___CANVAS_QUERY_INTERNAL === 1)) {
+			throw new Error("route function must return a String or ctx.db.Query")
+		}
+		const results = execute(query)
+
+		return results
+	}
+
+	/**
+	 * Given a call, get a list of effects to pass to `modelStore.applyEffects`, to be applied to the models.
 	 * Used by `.apply()` and when replaying actions.
 	 */
 	public async execute(hash: string, { call, args, ...context }: ActionPayload): Promise<Effect[]> {

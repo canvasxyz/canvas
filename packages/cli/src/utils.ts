@@ -3,6 +3,7 @@ import path from "node:path"
 import os from "node:os"
 import process from "node:process"
 
+import type { PeerId } from "@libp2p/interface-peer-id"
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 import Hash from "ipfs-only-hash"
 import chalk from "chalk"
@@ -21,7 +22,11 @@ if (!fs.existsSync(CANVAS_HOME)) {
 	fs.mkdirSync(CANVAS_HOME)
 }
 
-export async function getPeerId() {
+export async function getPeerId(): Promise<PeerId> {
+	if (process.env.PEER_ID !== undefined) {
+		return createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
+	}
+
 	const peerIdPath = path.resolve(CANVAS_HOME, constants.PEER_ID_FILENAME)
 	if (fs.existsSync(peerIdPath)) {
 		return createFromProtobuf(fs.readFileSync(peerIdPath))

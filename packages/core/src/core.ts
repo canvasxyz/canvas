@@ -123,7 +123,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.options = options
 
 		const modelDatabasePath = directory && path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
-		this.modelStore = new ModelStore(modelDatabasePath, vm.models, vm.routes, { verbose: options.verbose })
+		this.modelStore = new ModelStore(modelDatabasePath, vm, { verbose: options.verbose })
 
 		const messageDatabasePath = directory && path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
 		this.messageStore = new MessageStore(uri, messageDatabasePath, { verbose: options.verbose })
@@ -325,7 +325,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	public getRoute(route: string, params: Record<string, ModelValue>): Record<string, ModelValue>[] {
+	public async getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]> {
 		if (this.options.verbose) {
 			console.log("[canvas-core] getRoute:", route, params)
 		}
