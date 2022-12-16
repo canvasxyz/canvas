@@ -63,7 +63,7 @@ test("Test calling the public ENS resolver contract", async (t) => {
 		const actionSignatureData = getActionSignatureData(actionPayload)
 		const actionSignature = await signer._signTypedData(...actionSignatureData)
 
-		return { payload: actionPayload, session: null, signature: actionSignature }
+		return { type: "action", payload: actionPayload, session: null, signature: actionSignature }
 	}
 
 	const action = await sign("verify", {})

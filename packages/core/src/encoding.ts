@@ -8,6 +8,7 @@ import type { Session, Action, Message } from "@canvas-js/interfaces"
 
 import { actionArgumentType, chainIdType, chainType, uint8ArrayType } from "./codecs.js"
 import { signalInvalidType } from "./utils.js"
+import { decodeAddress, decodeBlockhash, encodeAddress, encodeBlockhash } from "./chains/index.js"
 
 const { hexlify, arrayify } = ethers.utils
 
@@ -50,72 +51,68 @@ export const binarySessionType = t.type({
 
 export type BinarySession = t.TypeOf<typeof binarySessionType>
 
-export const binaryMessageType = t.union([binaryActionType, binarySessionType])
+export const binaryMessageType: t.Type<BinaryAction | BinarySession> = t.union([binaryActionType, binarySessionType])
 
 export type BinaryMessage = t.TypeOf<typeof binaryMessageType>
 
-const toBinarySession = (session: Session): BinarySession => {
-	const decode = arrayify
+function toBinarySession(session: Session): BinarySession {
+	const { chain, chainId, from, address, blockhash } = session.payload
 
-	const response = {
+	return {
 		type: "session",
 		signature: arrayify(session.signature),
 		payload: {
 			...session.payload,
-			from: decode(session.payload.from),
-			address: decode(session.payload.address),
-			blockhash: session.payload.blockhash ? arrayify(session.payload.blockhash) : null,
-		},
-	} as BinarySession
-	return response
-}
-
-function fromBinarySession({ signature, payload: { from, address, blockhash, ...payload } }: BinarySession): Session {
-	const encode = hexlify
-
-	const session: Session = {
-		signature: hexlify(signature).toLowerCase(),
-		payload: {
-			...payload,
-			from: encode(from).toLowerCase(),
-			address: encode(address).toLowerCase(),
-			blockhash: blockhash ? hexlify(blockhash).toLowerCase() : null,
+			from: encodeAddress(chain, chainId, from),
+			address: encodeAddress(chain, chainId, address),
+			blockhash: blockhash ? encodeBlockhash(chain, chainId, blockhash) : null,
 		},
 	}
-
-	return session
 }
 
-const toBinaryAction = (action: Action): BinaryAction => {
-	const decode = arrayify
-	const blockhash = action.payload.blockhash
+function fromBinarySession(session: BinarySession): Session {
+	const { chain, chainId, from, address, blockhash } = session.payload
+
+	return {
+		type: "session",
+		signature: hexlify(session.signature),
+		payload: {
+			...session.payload,
+			from: decodeAddress(chain, chainId, from),
+			address: decodeAddress(chain, chainId, address),
+			blockhash: blockhash ? decodeBlockhash(chain, chainId, blockhash) : null,
+		},
+	}
+}
+
+function toBinaryAction(action: Action): BinaryAction {
+	const { chain, chainId, from, blockhash } = action.payload
 
 	return {
 		type: "action",
 		signature: arrayify(action.signature),
-		session: action.session ? decode(action.session) : null,
+		session: action.session ? encodeAddress(chain, chainId, action.session) : null,
 		payload: {
 			...action.payload,
-			from: decode(action.payload.from),
-			blockhash: blockhash ? arrayify(blockhash) : null,
+			from: encodeAddress(chain, chainId, from),
+			blockhash: blockhash ? encodeBlockhash(chain, chainId, blockhash) : null,
 		},
 	}
 }
 
-function fromBinaryAction({ signature, session, payload: { from, blockhash, ...payload } }: BinaryAction): Action {
-	const encode = hexlify
+function fromBinaryAction(action: BinaryAction): Action {
+	const { chain, chainId, from, blockhash } = action.payload
 
-	const action: Action = {
-		signature: hexlify(signature).toLowerCase(),
-		session: session && encode(session).toLowerCase(),
+	return {
+		type: "action",
+		signature: hexlify(action.signature),
+		session: action.session && decodeAddress(chain, chainId, action.session),
 		payload: {
-			...payload,
-			from: encode(from).toLowerCase(),
-			blockhash: blockhash ? hexlify(blockhash).toLowerCase() : null,
+			...action.payload,
+			from: decodeAddress(chain, chainId, from),
+			blockhash: blockhash ? decodeBlockhash(chain, chainId, blockhash) : null,
 		},
 	}
-
-	return action
 }
 
 export const encodeAction = (action: Action) => cbor.encode(toBinaryAction(action))
@@ -139,11 +136,9 @@ export function decodeMessage(data: Uint8Array): Message {
 	}
 
 	if (binaryMessage.type === "action") {
-		// @ts-expect-error
-		return { type: "action", ...fromBinaryAction(binaryMessage) }
+		return fromBinaryAction(binaryMessage as BinaryAction)
 	} else if (binaryMessage.type === "session") {
-		// @ts-expect-error
-		return { type: "session", ...fromBinarySession(binaryMessage) }
+		return fromBinarySession(binaryMessage as BinarySession)
 	} else {
 		signalInvalidType(binaryMessage.type)
 	}

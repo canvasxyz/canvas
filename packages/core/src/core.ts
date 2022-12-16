@@ -9,8 +9,9 @@ import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
 
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
-
+import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { createLibp2p, Libp2p } from "libp2p"
+
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
@@ -41,7 +42,6 @@ import { ModelStore } from "./modelStore.js"
 import { sync, handleIncomingStream } from "./rpc/index.js"
 import * as constants from "./constants.js"
 import { getLibp2pInit } from "./libp2p.js"
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
@@ -201,7 +201,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		await this.queue.add(() => this.applyActionInternal(hash, action))
-		await this.publishMessage(hash, { type: "action", ...action })
+		await this.publishMessage(hash, action)
 		return { hash }
 	}
 
@@ -283,7 +283,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		await this.queue.add(() => this.applySessionInternal(hash, session))
-		await this.publishMessage(hash, { type: "session", ...session })
+		await this.publishMessage(hash, session)
 		return { hash }
 	}
 
@@ -567,18 +567,16 @@ export class Core extends EventEmitter<CoreEvents> {
 					}
 
 					if (message.type === "session") {
-						const { type, ...session } = message
 						try {
-							await this.applySessionInternal(hash, session)
+							await this.applySessionInternal(hash, message)
 							successCount += 1
 						} catch (err) {
 							console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
 							failureCount += 1
 						}
 					} else if (message.type === "action") {
-						const { type, ...action } = message
 						try {
-							await this.applyActionInternal(hash, action)
+							await this.applyActionInternal(hash, message)
 							successCount += 1
 						} catch (err) {
 							console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)

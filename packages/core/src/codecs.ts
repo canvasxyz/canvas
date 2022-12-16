@@ -44,6 +44,7 @@ export const actionPayloadType: t.Type<ActionPayload> = t.type({
 })
 
 export const actionType: t.Type<Action> = t.type({
+	type: t.literal("action"),
 	payload: actionPayloadType,
 	session: t.union([t.string, t.null]),
 	signature: t.string,
@@ -61,6 +62,7 @@ export const sessionPayloadType: t.Type<SessionPayload> = t.type({
 })
 
 export const sessionType: t.Type<Session> = t.type({
+	type: t.literal("session"),
 	payload: sessionPayloadType,
 	signature: t.string,
 })

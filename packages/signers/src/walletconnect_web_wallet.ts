@@ -96,9 +96,9 @@ class WalletConnectWebWalletSessionSigner implements SessionSigner {
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
 		const [domain, types, value] = getSessionSignatureData(payload)
-		// @ts-ignore
+		// @ts-expect-error
 		const signature = await signTypedData({ domain, types, value })
-		return { signature, payload }
+		return { type: "session", signature, payload }
 	}
 
 	async getChain(): Promise<Chain> {

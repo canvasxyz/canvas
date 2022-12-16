@@ -22,6 +22,7 @@ export type SessionPayload = {
  * A `Session` is a `SessionPayload` and a signature
  */
 export type Session = {
+	type: "session"
 	payload: SessionPayload
 	signature: string
 }

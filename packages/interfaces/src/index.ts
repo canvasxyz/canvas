@@ -6,4 +6,4 @@ export * from "./contracts.js"
 
 import type { Session } from "./sessions.js"
 import type { Action } from "./actions.js"
-export type Message = ({ type: "session" } & Session) | ({ type: "action" } & Action)
+export type Message = Action | Session

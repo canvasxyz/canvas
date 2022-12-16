@@ -117,6 +117,7 @@ export class MessageStore {
 
 	private parseActionRecord(record: ActionRecord): Action {
 		const action: Action = {
+			type: "action",
 			signature: toHex(record.signature),
 			session: record.session_address && toHex(record.session_address),
 			payload: {
@@ -156,6 +157,7 @@ export class MessageStore {
 
 	private parseSessionRecord(record: SessionRecord): Session {
 		const session: Session = {
+			type: "session",
 			signature: toHex(record.signature),
 			payload: {
 				spec: this.uri,

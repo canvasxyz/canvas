@@ -3,7 +3,7 @@ import test from "ava"
 import { ethers } from "ethers"
 
 import { Core, compileSpec } from "@canvas-js/core"
-import { ActionArgument, ActionPayload } from "@canvas-js/interfaces"
+import { Action, ActionArgument, ActionPayload } from "@canvas-js/interfaces"
 import { getActionSignatureData } from "@canvas-js/verifiers"
 
 const signer = ethers.Wallet.createRandom()
@@ -60,7 +60,7 @@ const { spec, uri } = await compileSpec({
 	},
 })
 
-async function sign(call: string, args: Record<string, ActionArgument>) {
+async function sign(call: string, args: Record<string, ActionArgument>): Promise<Action> {
 	const timestamp = Date.now()
 	const actionPayload: ActionPayload = {
 		from: signerAddress,
@@ -74,7 +74,7 @@ async function sign(call: string, args: Record<string, ActionArgument>) {
 	}
 	const actionSignatureData = getActionSignatureData(actionPayload)
 	const actionSignature = await signer._signTypedData(...actionSignatureData)
-	return { payload: actionPayload, session: null, signature: actionSignature }
+	return { type: "action", payload: actionPayload, session: null, signature: actionSignature }
 }
 
 test("get /all", async (t) => {
