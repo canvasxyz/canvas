@@ -41,31 +41,24 @@ export const Messages: React.FC<{}> = ({}) => {
 
 	const [cursor, setCursor] = useState("")
 	const [pages, setPages] = useState<Record<string, Post[]>>({})
-	const [scrollback, setScrollback] = useState<Post[]>([])
+	const [messages, setMessages] = useState<Post[]>([])
 	const [latest, setLatest] = useState<Post[]>([]) // only used to trigger the LayoutEffect to scroll to bottom
+	const [trailing, setTrailing] = useState<Post[]>([]) // messages no longer in latest, but not in scrollback
 
-	// Subscribe to both the latest posts, and fetch previous pages.
-	const currCallback = useMemo(
-		() => (data: Post[] | null, error: Error | null) => {
-			if (!data) return
-			setLatest(data)
-		},
-		[pages, cursor]
-	)
-	const { data: curr, error } = useRoute<Post>("/posts", { before: "" }, undefined, currCallback)
-
-	const prevCallback = useMemo(
-		() => (data: Post[] | null, error: Error | null) => {
-			if (!data || cursor === "") return
-			setPages({ ...pages, [cursor]: data })
-		},
-		[pages, cursor, latest]
-	)
-	const { data: prev } = useRoute<Post>("/posts", { before: cursor }, undefined, prevCallback)
-
+	// Subscribe to both the latest posts, and scrollback
+	const { data: curr, error } = useRoute<Post>("/posts", { before: "" }, undefined, (data, error) => {
+		if (!data) return
+		const hashes = new Set(data.map((d) => d.id))
+		setLatest(data)
+		setTrailing(latest.filter((d) => !hashes.has(d.id)).concat(trailing))
+	})
+	const { data: prev } = useRoute<Post>("/posts", { before: cursor }, undefined, (data, error) => {
+		if (!data || cursor === "") return
+		setPages({ ...pages, [cursor]: data })
+	})
 	useEffect(() => {
-		const linearizedScrollback = Object.keys(pages).reduce((acc: Post[], page) => acc.concat(pages[page]), [])
-		setScrollback(latest.concat(linearizedScrollback))
+		const scrollback = Object.keys(pages).reduce((acc: Post[], page) => acc.concat(pages[page]), [])
+		setMessages(latest.concat(trailing).concat(scrollback))
 	}, [latest, pages])
 
 	// Load more on scroll
@@ -73,26 +66,26 @@ export const Messages: React.FC<{}> = ({}) => {
 		() =>
 			_.throttle((event) => {
 				if (event?.target?.scrollTop > 50) return
-				if (scrollback.length > 0)
+				if (messages.length > 0)
 					setTimeout(() => {
-						const earliestPost = scrollback[scrollback.length - 1]?.updated_at?.toString()
+						const earliestPost = messages[messages.length - 1]?.updated_at?.toString()
 						if (cursor === earliestPost) return // Nothing more to load
 						setCursor(earliestPost)
 					})
 			}, 750),
-		[scrollback, cursor]
+		[messages, cursor]
 	)
 
-	// Jump to bottom on load, and when the current page updates, but not when scrollback updates
+	// Jump to bottom on load, and when the current page updates, but not when messages updates
 	const scrollContainer = useRef<HTMLDivElement>(null)
 	useLayoutEffect(() => {
-		if (!curr?.length || !prev?.length || !scrollback?.length) return
+		if (!curr?.length || !prev?.length || !messages?.length) return
 		setTimeout(() => {
 			if (scrollContainer.current !== null) {
 				scrollContainer.current.scrollTop = scrollContainer.current.scrollHeight
 			}
 		})
-	}, [latest, curr?.length !== 0 && prev?.length !== 0 && scrollback.length !== 0])
+	}, [latest, curr?.length !== 0 && prev?.length !== 0 && messages.length !== 0])
 
 	return (
 		<div id="messages" className="window">
@@ -102,7 +95,7 @@ export const Messages: React.FC<{}> = ({}) => {
 			<div className="window-body">
 				<div id="scroll-container" ref={scrollContainer} onScroll={handleScroll}>
 					<ul className="tree-view">
-						<Posts posts={scrollback} />
+						<Posts posts={messages} />
 					</ul>
 				</div>
 				<input
@@ -141,7 +134,8 @@ const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
 	return (
 		<li>
 			{/* {data && <span className="address address-ens">[{data}]</span>} */}
-			<span className="address">{address} &gt;</span> {content}
+			<span className="address">{address} &gt;</span>
+			{content}
 		</li>
 	)
 }
