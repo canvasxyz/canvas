@@ -106,9 +106,8 @@ export class MetaMaskEthereumSigner implements SessionSigner {
 		return this.network.chainId
 	}
 
-	async createActionSigner(sessionPrivateKey?: string): Promise<MetaMaskEthereumActionSigner> {
-		const ethersWallet = sessionPrivateKey ? new ethers.Wallet(sessionPrivateKey) : ethers.Wallet.createRandom()
-		return new MetaMaskEthereumActionSigner(ethersWallet)
+	async createActionSigner(sessionPrivateKey?: string): Promise<ActionSigner> {
+		return new EthereumActionSigner(sessionPrivateKey)
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
@@ -118,11 +117,11 @@ export class MetaMaskEthereumSigner implements SessionSigner {
 	}
 }
 
-export class MetaMaskEthereumActionSigner implements ActionSigner {
+export class EthereumActionSigner implements ActionSigner {
 	wallet: ethers.Wallet
 
-	constructor(wallet: ethers.Wallet) {
-		this.wallet = wallet
+	constructor(sessionPrivateKey?: string) {
+		this.wallet = sessionPrivateKey ? new ethers.Wallet(sessionPrivateKey) : ethers.Wallet.createRandom()
 	}
 
 	get address(): string {

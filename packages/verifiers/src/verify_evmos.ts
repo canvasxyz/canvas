@@ -1,8 +1,6 @@
 import bech32 from "bech32"
 import * as ethUtil from "@ethereumjs/util"
-
-import { Action, Session } from "packages/interfaces/lib"
-import { verifyCosmosActionSignature } from "./verify_cosmos.js"
+import { Session } from "packages/interfaces/lib"
 
 type ChainSettings = {
 	bech32_prefix: string
@@ -13,10 +11,6 @@ const cosmosChainSettings = {
 		bech32_prefix: "evmos",
 	},
 } as { [key: string]: ChainSettings }
-
-export const verifyEvmosActionSignature = (action: Action) => {
-	return verifyCosmosActionSignature(action)
-}
 
 export const verifyEvmosSessionSignature = (session: Session) => {
 	//
@@ -37,7 +31,6 @@ export const verifyEvmosSessionSignature = (session: Session) => {
 	const chain = cosmosChainSettings[session.payload.chainId]
 
 	try {
-		// const ethAddress = Web3.utils.toChecksumAddress(lowercaseAddress);
 		const b32AddrBuf = ethUtil.Address.fromString(lowercaseAddress.toString()).toBuffer()
 		const b32Address = bech32.encode(chain.bech32_prefix, bech32.toWords(b32AddrBuf))
 

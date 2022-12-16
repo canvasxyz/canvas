@@ -6,9 +6,7 @@ import type { Block, SessionPayload, Session, Chain, ChainId } from "packages/in
 import Web3 from "web3"
 import { Address } from "@ethereumjs/util"
 import { StargateClient } from "@cosmjs/stargate"
-import { Secp256k1HdWallet } from "@cosmjs/amino"
-
-import { KeplrWebWalletActionSigner } from "./keplr_web_wallet.js"
+import { EthereumActionSigner } from "./metamask_web_wallet.js"
 
 type ChainSettings = {
 	id: string
@@ -145,18 +143,11 @@ class CosmosEvmWebWalletSessionSigner implements SessionSigner {
 		return this.account
 	}
 
-	async createActionSigner(sessionPrivateKey?: string | undefined): Promise<ActionSigner> {
-		const wallet = sessionPrivateKey
-			? await Secp256k1HdWallet.fromMnemonic(sessionPrivateKey)
-			: await Secp256k1HdWallet.generate()
-
-		const accounts = await wallet.getAccounts()
-		const address = accounts[0].address
-		return new KeplrWebWalletActionSigner(wallet, address)
+	async createActionSigner(sessionPrivateKey?: string): Promise<ActionSigner> {
+		return new EthereumActionSigner(sessionPrivateKey)
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
-		console.log(payload)
 		const web3 = new Web3((window as any).ethereum)
 		const signature = await web3.eth.personal.sign(JSON.stringify(payload), decodeEthAddress(this.account).address, "")
 		return { signature, payload }

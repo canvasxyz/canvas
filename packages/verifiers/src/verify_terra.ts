@@ -1,7 +1,7 @@
 import type { Session } from "packages/interfaces/lib"
 import { cosmosChainSettings } from "./verify_cosmos.js"
 import { Secp256k1, Secp256k1Signature, Sha256 } from "@cosmjs/crypto"
-import { pubkeyToAddress, serializeSignDoc, decodeSignature } from "@cosmjs/amino"
+import { pubkeyToAddress, decodeSignature } from "@cosmjs/amino"
 
 export const verifyTerraSessionSignature = async (session: Session) => {
 	// provided string should be serialized AminoSignResponse object

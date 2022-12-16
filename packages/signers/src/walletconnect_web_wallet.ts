@@ -1,4 +1,3 @@
-import { ethers } from "ethers"
 import { hexToNumber } from "web3-utils"
 import { connect, disconnect, getProvider, signTypedData, configureChains, createClient } from "@wagmi/core"
 import { WalletConnectConnector } from "wagmi/connectors/walletConnect"
@@ -10,8 +9,8 @@ import { EthereumClient, modalConnectors, walletConnectProvider } from "@web3mod
 import type { Block, Chain, ChainId, SessionPayload, Session } from "@canvas-js/interfaces"
 import { getSessionSignatureData } from "@canvas-js/verifiers"
 
-import { Connector, SessionSigner } from "./interfaces.js"
-import { MetaMaskEthereumActionSigner } from "./metamask_web_wallet.js"
+import { ActionSigner, Connector, SessionSigner } from "./interfaces.js"
+import { EthereumActionSigner } from "./metamask_web_wallet.js"
 import { _TypedDataEncoder } from "ethers/lib/utils.js"
 
 const PROJECT_ID = process.env.REACT_APP_WALLETCONNECT_PROJECT_ID || process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
@@ -89,9 +88,8 @@ class WalletConnectWebWalletSessionSigner implements SessionSigner {
 		return this.address
 	}
 
-	async createActionSigner(sessionPrivateKey?: string): Promise<MetaMaskEthereumActionSigner> {
-		const ethersWallet = sessionPrivateKey ? new ethers.Wallet(sessionPrivateKey) : ethers.Wallet.createRandom()
-		return new MetaMaskEthereumActionSigner(ethersWallet)
+	async createActionSigner(sessionPrivateKey?: string): Promise<ActionSigner> {
+		return new EthereumActionSigner(sessionPrivateKey)
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {

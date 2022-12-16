@@ -1,13 +1,12 @@
 import { web3Accounts, web3Enable, web3FromAddress, isWeb3Injected } from "@polkadot/extension-dapp"
 import { Signer as PolkadotSigner } from "@polkadot/api/types"
-import { Keyring } from "@polkadot/api"
 import { stringToHex } from "@polkadot/util"
 import { SignerPayloadRaw } from "@polkadot/types/types/extrinsic"
 import { ApiPromise, WsProvider } from "@polkadot/api"
-import { mnemonicGenerate } from "@polkadot/util-crypto"
 import { Connector, SessionSigner, ActionSigner } from "./interfaces"
-import { Block, SessionPayload, Session, Action, ActionPayload, Chain, ChainId } from "@canvas-js/interfaces"
+import { Block, SessionPayload, Session, Chain, ChainId } from "@canvas-js/interfaces"
 import { addressSwapper } from "./utils.js"
+import { EthereumActionSigner } from "./metamask_web_wallet"
 
 export class PolkadotWebWalletConnector implements Connector {
 	id = "polkadot"
@@ -91,10 +90,8 @@ class PolkadotWebWalletSessionSigner implements SessionSigner {
 	async getChainId(): Promise<ChainId> {
 		return this.chainId
 	}
-	async createActionSigner(sessionPrivateKey?: string | undefined): Promise<ActionSigner> {
-		const privateKey = sessionPrivateKey || mnemonicGenerate()
-
-		return new PolkadotWebWalletActionSigner(privateKey)
+	async createActionSigner(sessionPrivateKey?: string): Promise<ActionSigner> {
+		return new EthereumActionSigner(sessionPrivateKey)
 	}
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
 		const message = stringToHex(JSON.stringify(payload))
@@ -106,38 +103,5 @@ class PolkadotWebWalletSessionSigner implements SessionSigner {
 		}
 		const signature = (await this.signer.signRaw!(signerPayload)).signature
 		return { signature, payload }
-	}
-}
-
-class PolkadotWebWalletActionSigner implements ActionSigner {
-	keyring: Keyring
-	pair: ReturnType<typeof Keyring.prototype.addFromUri>
-	privateKeyMnemonic: string
-
-	constructor(privateKey: string) {
-		this.keyring = new Keyring()
-		this.pair = this.keyring.addFromUri(privateKey, {}, "ed25519")
-		this.privateKeyMnemonic = privateKey
-	}
-	get address(): string {
-		return this.pair.address
-	}
-	get privateKey(): string {
-		return this.privateKeyMnemonic
-	}
-	async signActionPayload(payload: ActionPayload): Promise<Action> {
-		const message = stringToHex(JSON.stringify(payload))
-		const address = this.address
-		const signerPayload: SignerPayloadRaw = {
-			address: address,
-			data: message,
-			type: "bytes",
-		}
-		const signature = this.pair.sign(JSON.stringify(signerPayload)).toString()
-		return {
-			signature,
-			payload,
-			session: address,
-		}
 	}
 }

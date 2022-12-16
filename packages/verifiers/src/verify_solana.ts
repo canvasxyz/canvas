@@ -24,12 +24,6 @@ const verifySolana = (message: Action | Session, expectedAddress: string): strin
 	return expectedAddress.toLowerCase()
 }
 
-export const verifySolanaActionSignature = (action: Action): string => {
-	if (!action.session) {
-		return ""
-	}
-	return verifySolana(action, action.session)
-}
 export const verifySolanaSessionSignature = (session: Session): string => {
 	return verifySolana(session, session.payload.from)
 }

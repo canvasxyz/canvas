@@ -2,7 +2,7 @@ import { decodeAddress } from "@polkadot/keyring"
 import { stringToHex, hexToU8a, isU8a, isHex, u8aToHex } from "@polkadot/util"
 import { checkAddress, encodeAddress, signatureVerify } from "@polkadot/util-crypto"
 
-import type { Action, Session } from "@canvas-js/interfaces"
+import type { Session } from "@canvas-js/interfaces"
 
 export const addressSwapper = (options: { address: string; currentPrefix: number }): string => {
 	// TODO: do we need this?
@@ -37,7 +37,7 @@ export const addressSwapper = (options: { address: string; currentPrefix: number
 	}
 }
 
-export const verifySubstrate = (message: Action | Session): string => {
+export const verifySubstrate = (message: Session): string => {
 	const address = addressSwapper({
 		address: message.payload.from,
 		currentPrefix: 42,

@@ -1,15 +1,13 @@
-import { Action, ActionPayload, Block } from "packages/interfaces/lib/actions.js"
+import { Block } from "packages/interfaces/lib/actions.js"
 import { Chain, ChainId } from "packages/interfaces/lib/contracts.js"
 import { SessionPayload, Session } from "packages/interfaces/lib/sessions.js"
 import { Connector, SessionSigner, ActionSigner } from "./interfaces.js"
 
 import { OfflineSigner } from "@cosmjs/launchpad"
 import { OfflineDirectSigner } from "@cosmjs/proto-signing"
-import { Secp256k1HdWallet } from "@cosmjs/amino"
 import { StargateClient } from "@cosmjs/stargate"
 import type { Window as KeplrWindow, ChainInfo } from "@keplr-wallet/types"
-import { validationTokenToSignDoc } from "@canvas-js/verifiers"
-import { Buffer } from "buffer"
+import { EthereumActionSigner } from "./metamask_web_wallet.js"
 
 declare global {
 	// eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -179,14 +177,8 @@ export class KeplrWebWalletSessionSigner implements SessionSigner {
 	async getAddress(): Promise<string> {
 		return this.address
 	}
-	async createActionSigner(sessionPrivateKey?: string | undefined): Promise<ActionSigner> {
-		const wallet = sessionPrivateKey
-			? await Secp256k1HdWallet.fromMnemonic(sessionPrivateKey)
-			: await Secp256k1HdWallet.generate()
-
-		const accounts = await wallet.getAccounts()
-		const address = accounts[0].address
-		return new KeplrWebWalletActionSigner(wallet, address)
+	async createActionSigner(sessionPrivateKey?: string): Promise<ActionSigner> {
+		return new EthereumActionSigner(sessionPrivateKey)
 	}
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
 		const keplr = (window as KeplrWindow).keplr!
@@ -201,25 +193,5 @@ export class KeplrWebWalletSessionSigner implements SessionSigner {
 	}
 	async getChainId(): Promise<ChainId> {
 		return this.chainId
-	}
-}
-
-export class KeplrWebWalletActionSigner implements ActionSigner {
-	wallet: Secp256k1HdWallet
-	_address: string
-	constructor(wallet: Secp256k1HdWallet, address: string) {
-		this.wallet = wallet
-		this._address = address
-	}
-	get address(): string {
-		return this._address
-	}
-	get privateKey(): string {
-		return this.wallet.mnemonic
-	}
-	async signActionPayload(payload: ActionPayload): Promise<Action> {
-		const generatedSignDoc = validationTokenToSignDoc(Buffer.from(JSON.stringify(payload)), this.address)
-		const { signature } = await this.wallet.signAmino(this.address, generatedSignDoc)
-		return { signature: JSON.stringify(signature), payload, session: this.address }
 	}
 }

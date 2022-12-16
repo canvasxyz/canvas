@@ -1,14 +1,14 @@
-import { Action, ActionPayload, Block } from "packages/interfaces/lib/actions.js"
+import { Block } from "packages/interfaces/lib/actions.js"
 import { Chain, ChainId } from "packages/interfaces/lib/contracts.js"
 import { SessionPayload, Session } from "packages/interfaces/lib/sessions.js"
 import { Connector, SessionSigner, ActionSigner } from "./interfaces.js"
-import nacl from "tweetnacl"
 
 import { Buffer } from "buffer"
 
 declare let window: any
 
 import * as solw3 from "@solana/web3.js"
+import { EthereumActionSigner } from "./metamask_web_wallet.js"
 
 export class PhantomWebWalletConnector implements Connector {
 	id = "phantom"
@@ -76,12 +76,8 @@ export class PhantomWebWalletSessionSigner implements SessionSigner {
 	async getAddress(): Promise<string> {
 		return this.address
 	}
-	async createActionSigner(sessionPrivateKey?: string | undefined): Promise<ActionSigner> {
-		const keypair = sessionPrivateKey
-			? solw3.Keypair.fromSecretKey(Buffer.from(sessionPrivateKey, "hex"))
-			: solw3.Keypair.generate()
-
-		return new PhantomWebWalletActionSigner(keypair)
+	async createActionSigner(sessionPrivateKey?: string): Promise<ActionSigner> {
+		return new EthereumActionSigner(sessionPrivateKey)
 	}
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
 		const { signature } = await window.solana.signMessage(Buffer.from(JSON.stringify(payload)), "utf8")
@@ -93,23 +89,5 @@ export class PhantomWebWalletSessionSigner implements SessionSigner {
 	}
 	async getChainId(): Promise<ChainId> {
 		return this.chainId
-	}
-}
-
-export class PhantomWebWalletActionSigner implements ActionSigner {
-	keypair: solw3.Keypair
-	constructor(keypair: solw3.Keypair) {
-		this.keypair = keypair
-	}
-	get address(): string {
-		return this.keypair.publicKey.toBase58()
-	}
-	get privateKey(): string {
-		return Buffer.from(this.keypair.secretKey).toString("hex")
-	}
-	async signActionPayload(payload: ActionPayload): Promise<Action> {
-		const signature = nacl.sign.detached(Buffer.from(JSON.stringify(payload)), this.keypair.secretKey)
-		const signatureB64 = Buffer.from(signature as Uint8Array).toString("base64")
-		return { signature: signatureB64, payload: payload, session: this.address }
 	}
 }

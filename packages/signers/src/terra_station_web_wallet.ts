@@ -1,8 +1,7 @@
 import { Extension, LCDClient, TendermintAPI } from "@terra-money/terra.js"
 import { ActionSigner, Connector, SessionSigner } from "./interfaces.js"
 import { Block, SessionPayload, Session, Chain, ChainId } from "@canvas-js/interfaces"
-import { Secp256k1HdWallet } from "@cosmjs/amino"
-import { KeplrWebWalletActionSigner } from "./keplr_web_wallet.js"
+import { EthereumActionSigner } from "./metamask_web_wallet.js"
 
 type TerraAddress = {
 	address: string
@@ -95,14 +94,8 @@ export class TerraStationWebWalletSessionSigner implements SessionSigner {
 		return this.chainId
 	}
 
-	async createActionSigner(sessionPrivateKey?: string | undefined): Promise<ActionSigner> {
-		const wallet = sessionPrivateKey
-			? await Secp256k1HdWallet.fromMnemonic(sessionPrivateKey)
-			: await Secp256k1HdWallet.generate()
-
-		const accounts = await wallet.getAccounts()
-		const address = accounts[0].address
-		return new KeplrWebWalletActionSigner(wallet, address)
+	async createActionSigner(sessionPrivateKey?: string): Promise<ActionSigner> {
+		return new EthereumActionSigner(sessionPrivateKey)
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
