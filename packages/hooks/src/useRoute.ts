@@ -51,7 +51,8 @@ function getRouteURL(host: string, route: string, params: Record<string, ModelVa
 export function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
 	route: string,
 	params: Record<string, ModelValue>,
-	options: { subscribe?: boolean } = { subscribe: true }
+	options: { subscribe?: boolean } = { subscribe: true },
+	callback?: (data: T[] | null, error: Error | null) => void
 ): { error: Error | null; isLoading: boolean; data: T[] | null } {
 	const { host, ws, data: applicationData } = useContext(CanvasContext)
 	if (host === null) {
@@ -66,6 +67,24 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 
 	const readyState = ws?.readyState
 	const subscribe = options.subscribe ?? true
+
+	const listener = useMemo(
+		() => (evt: IMessageEvent) => {
+			if (evt.data.toString() === "pong") return
+			try {
+				const message = JSON.parse(evt.data.toString())
+				if (message.route === route && compareObjects(message.params, params)) {
+					setData(message.data)
+					setIsLoading(false)
+					if (callback) setTimeout(() => callback(message.data, null))
+				}
+			} catch (err) {
+				console.log("ws: failed to parse message", evt.data)
+			}
+		},
+		[callback]
+	)
+
 	useEffect(() => {
 		if (applicationData === null || ws === null) {
 			return
@@ -73,6 +92,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 			setError(new Error(`${applicationData.uri} has no route ${JSON.stringify(route)}`))
 			setData(null)
 			setIsLoading(false)
+			if (callback) setTimeout(() => callback(null, error))
 			return
 		}
 
@@ -80,23 +100,12 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 
 		if (subscribe) {
 			if (ws.readyState === ws.OPEN) {
-				const listener = (evt: IMessageEvent) => {
-					if (evt.data.toString() === "pong") return
-					try {
-						const message = JSON.parse(evt.data.toString())
-						if (message.route === route && compareObjects(message.params, params)) {
-							setData(message.data)
-							setIsLoading(false)
-						}
-					} catch (err) {
-						console.log("ws: failed to parse message", evt.data)
-					}
-				}
+				// console.log("ws: subscribing", url)
 				ws.addEventListener("message", listener)
 				ws.send(JSON.stringify({ action: "subscribe", data: { route, params } }))
 
 				return () => {
-					console.log("ws: unsubscribing", url)
+					// console.log("ws: unsubscribing", url)
 					ws.removeEventListener("message", listener)
 					if (ws.readyState === ws.OPEN) {
 						ws.send(JSON.stringify({ action: "unsubscribe", data: { route, params } }))
@@ -109,12 +118,14 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 			// 	const data = JSON.parse(message.data)
 			// 	setData(data)
 			// 	setIsLoading(false)
+			//  if (callback) callback(message.data, null)
 			// }
 
 			// source.onerror = (event) => {
 			// 	console.warn("Connection error in EventSource subscription")
 			// 	console.warn(event)
 			// 	setIsLoading(true)
+			//  if (callback) callback(null, new Error("Connection error in EventSource subscription"))
 			// }
 
 			// const handleBeforeUnload = () => source.close()
@@ -131,14 +142,16 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 					setError(null)
 					setData(data)
 					setIsLoading(false)
+					if (callback) setTimeout(() => callback(data, null))
 				})
 				.catch((err) => {
 					setError(err)
 					setData(null)
 					setIsLoading(false)
+					if (callback) setTimeout(() => callback(null, err))
 				})
 		}
-	}, [route, url, !!applicationData, subscribe, ws, readyState])
+	}, [route, url, !!applicationData, subscribe, ws, readyState, callback])
 
 	return { error, data, isLoading }
 }
