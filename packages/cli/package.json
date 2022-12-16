@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/cli",
-  "version": "0.0.34-alpha4",
+  "version": "0.0.34-alpha5",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "dist/index.js",
@@ -11,8 +11,8 @@
     "canvas": "dist/index.js"
   },
   "dependencies": {
-    "@canvas-js/core": "0.0.34-alpha4",
-    "@canvas-js/interfaces": "0.0.34-alpha4",
+    "@canvas-js/core": "0.0.34-alpha5",
+    "@canvas-js/interfaces": "0.0.34-alpha5",
     "@libp2p/kad-dht": "^6.1.0",
     "@types/websocket": "^1.0.5",
     "better-sqlite3": "^8.0.0",
