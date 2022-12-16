@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/verifiers",
-  "version": "0.0.34-alpha5",
+  "version": "0.0.34-alpha6",
   "description": "",
   "type": "module",
   "main": "lib/index.js",
