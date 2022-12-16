@@ -54,25 +54,26 @@ export function encodeBlockhash(chain: Chain, chainId: ChainId, blockhash: strin
 	if (chain === "eth") {
 		return arrayify(blockhash)
 	} else if (chain === "cosmos") {
+		return arrayify(blockhash)
 	} else if (chain === "solana") {
 		return base58.decode(blockhash)
 	} else if (chain === "substrate") {
+		return arrayify(blockhash)
 	} else {
 		signalInvalidType(chain)
 	}
-
-	throw new Error(`blockhashes not implemented for chain type ${chain}`)
 }
 
 export function decodeBlockhash(chain: Chain, chainId: ChainId, blockhash: Uint8Array): string {
 	if (chain === "eth") {
-		return hexlify(blockhash).toLowerCase()
+		return hexlify(blockhash)
 	} else if (chain === "cosmos") {
+		return hexlify(blockhash)
 	} else if (chain === "solana") {
+		return base58.encode(blockhash)
 	} else if (chain === "substrate") {
+		return hexlify(blockhash)
 	} else {
 		signalInvalidType(chain)
 	}
-
-	throw new Error(`blockhashes not implemented for chain type ${chain}`)
 }
