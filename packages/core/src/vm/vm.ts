@@ -387,12 +387,10 @@ export class VM {
 			mapEntries(args, (_, arg) => this.wrapActionArgument(arg))
 		)
 
-		// everything that goes into the VM must be deterministic, and deterministic means normalized!
-		const blockhash = context.blockhash ? context.blockhash.toLowerCase() : null
 		const ctx = wrapJSON(this.context, {
-			hash: hash.toLowerCase(),
-			from: context.from.toLowerCase(),
-			blockhash,
+			hash: hash,
+			from: context.from,
+			blockhash: context.blockhash,
 			timestamp: context.timestamp,
 		})
 

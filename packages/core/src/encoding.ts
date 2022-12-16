@@ -55,7 +55,7 @@ export const binaryMessageType: t.Type<BinaryAction | BinarySession> = t.union([
 
 export type BinaryMessage = t.TypeOf<typeof binaryMessageType>
 
-function toBinarySession(session: Session): BinarySession {
+export function toBinarySession(session: Session): BinarySession {
 	const { chain, chainId, from, address, blockhash } = session.payload
 
 	return {
@@ -70,7 +70,7 @@ function toBinarySession(session: Session): BinarySession {
 	}
 }
 
-function fromBinarySession(session: BinarySession): Session {
+export function fromBinarySession(session: BinarySession): Session {
 	const { chain, chainId, from, address, blockhash } = session.payload
 
 	return {
@@ -85,7 +85,7 @@ function fromBinarySession(session: BinarySession): Session {
 	}
 }
 
-function toBinaryAction(action: Action): BinaryAction {
+export function toBinaryAction(action: Action): BinaryAction {
 	const { chain, chainId, from, blockhash } = action.payload
 
 	return {
@@ -100,7 +100,7 @@ function toBinaryAction(action: Action): BinaryAction {
 	}
 }
 
-function fromBinaryAction(action: BinaryAction): Action {
+export function fromBinaryAction(action: BinaryAction): Action {
 	const { chain, chainId, from, blockhash } = action.payload
 
 	return {
@@ -115,9 +115,10 @@ function fromBinaryAction(action: BinaryAction): Action {
 	}
 }
 
-export const encodeAction = (action: Action) => cbor.encode(toBinaryAction(action))
-
-export const encodeSession = (session: Session) => cbor.encode(toBinarySession(session))
+export const encodeBinaryAction = (action: BinaryAction) => cbor.encode(action)
+export const encodeBinarySession = (session: BinarySession) => cbor.encode(session)
+export const encodeAction = (action: Action) => encodeBinaryAction(toBinaryAction(action))
+export const encodeSession = (session: Session) => encodeBinarySession(toBinarySession(session))
 
 export function encodeMessage(message: Message): Uint8Array {
 	if (message.type === "action") {
@@ -129,33 +130,37 @@ export function encodeMessage(message: Message): Uint8Array {
 	}
 }
 
-export function decodeMessage(data: Uint8Array): Message {
+export function decodeBinaryMessage(data: Uint8Array): BinaryMessage {
 	const binaryMessage = cbor.decode(data)
 	if (!binaryMessageType.is(binaryMessage)) {
 		throw new Error("invalid message")
 	}
 
+	return binaryMessage
+}
+
+export function decodeMessage(data: Uint8Array): Message {
+	const binaryMessage = decodeBinaryMessage(data)
+
 	if (binaryMessage.type === "action") {
-		return fromBinaryAction(binaryMessage as BinaryAction)
+		return fromBinaryAction(binaryMessage)
 	} else if (binaryMessage.type === "session") {
-		return fromBinarySession(binaryMessage as BinarySession)
+		return fromBinarySession(binaryMessage)
 	} else {
-		signalInvalidType(binaryMessage.type)
+		signalInvalidType(binaryMessage)
 	}
 }
 
-/**
- * Guaranteed to encode hex as lower-case
- */
-export function getActionHash(action: Action): string {
-	const data = cbor.encode(toBinaryAction(action))
-	return "0x" + createHash("sha256").update(data).digest("hex")
+export function normalizeAction(action: Action): [Buffer, BinaryAction] {
+	const binaryAction = toBinaryAction(action)
+	const data = cbor.encode(binaryAction)
+	const hash = createHash("sha256").update(data).digest()
+	return [hash, binaryAction]
 }
 
-/**
- * Guaranteed to encode hex as lower-case
- */
-export function getSessionHash(session: Session): string {
-	const data = cbor.encode(toBinarySession(session))
-	return "0x" + createHash("sha256").update(data).digest("hex")
+export function normalizeSession(session: Session): [Buffer, BinarySession] {
+	const binarySession = toBinarySession(session)
+	const data = cbor.encode(binarySession)
+	const hash = createHash("sha256").update(data).digest()
+	return [hash, binarySession]
 }
