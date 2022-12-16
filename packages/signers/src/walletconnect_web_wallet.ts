@@ -1,5 +1,5 @@
 import { ethers } from "ethers"
-import { hexToNumber } from "web3-utils"
+import web3utils from "web3-utils"
 import { connect, disconnect, getProvider, signTypedData, configureChains, createClient } from "@wagmi/core"
 import { WalletConnectConnector } from "wagmi/connectors/walletConnect"
 
@@ -79,9 +79,9 @@ class WalletConnectWebWalletSessionSigner implements SessionSigner {
 		return {
 			chain: await this.getChain(),
 			chainId: await this.getChainId(),
-			blocknum: hexToNumber(block.number),
+			blocknum: web3utils.hexToNumber(block.number),
 			blockhash: block.hash,
-			timestamp: hexToNumber(block.timestamp),
+			timestamp: web3utils.hexToNumber(block.timestamp),
 		}
 	}
 
