@@ -30,6 +30,8 @@ import {
 } from "@canvas-js/interfaces"
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
 
+import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
+
 import { actionType, sessionType } from "./codecs.js"
 import { signalInvalidType, wait, retry, toHex, BlockResolver, AbortError, CacheMap } from "./utils.js"
 import { encodeMessage, decodeMessage, getActionHash, getSessionHash } from "./encoding.js"

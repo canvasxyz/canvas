@@ -1,12 +1,11 @@
 {
-  "include": ["src", "types"],
   "extends": "../../tsconfig.base.json",
+  "include": ["src"],
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "lib"
+    "outDir": "lib",
   },
   "references": [
-    { "path": "../interfaces" },
-    { "path": "../verifiers" }
+    { "path": "../interfaces" }
   ]
 }

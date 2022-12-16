@@ -7,14 +7,14 @@ import { mainnet } from "@wagmi/core/chains"
 
 import { EthereumClient, modalConnectors, walletConnectProvider } from "@web3modal/ethereum"
 
-import { Connector, SessionSigner } from "./interfaces.js"
 import type { Block, Chain, ChainId, SessionPayload, Session } from "@canvas-js/interfaces"
 import { getSessionSignatureData } from "@canvas-js/verifiers"
+
+import { Connector, SessionSigner } from "./interfaces.js"
 import { MetaMaskEthereumActionSigner } from "./metamask_web_wallet.js"
 import { _TypedDataEncoder } from "ethers/lib/utils.js"
 
-// TODO: Figure out how to set this at build time/run time
-const PROJECT_ID = "<PROJECT ID>"
+const PROJECT_ID = process.env.REACT_APP_WALLETCONNECT_PROJECT_ID || process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
 const chains = [mainnet]
 
 export class WalletConnectWebWalletConnector implements Connector {
@@ -22,14 +22,15 @@ export class WalletConnectWebWalletConnector implements Connector {
 	label = "WalletConnect"
 
 	get available(): boolean {
-		return true
+		// Only available if the project id has been set
+		return !!PROJECT_ID
 	}
 
 	async enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void> {
 		console.log("Attempting to enable WalletConnect")
 
 		// Wagmi Core Client
-		const { provider } = configureChains(chains, [walletConnectProvider({ projectId: PROJECT_ID })])
+		const { provider } = configureChains(chains, [walletConnectProvider({ projectId: PROJECT_ID! })])
 		const wagmiClient = createClient({
 			connectors: modalConnectors({ appName: "web3Modal", chains }),
 			provider,

@@ -98,6 +98,7 @@ const Posts: React.FC<{ posts: null | Post[] }> = (props) => {
 
 const Post: React.FC<Post> = ({ from_id, content, updated_at, likes }) => {
 	const address = `${from_id.slice(0, 5)}…${from_id.slice(-4)}`
+	// TODO: find an alternative to using wagmi for ens resolution
 	// use wagmi's internal cache for ens names
 	// const { data, isError, isLoading } = useEnsName({ address: from_id })
 
