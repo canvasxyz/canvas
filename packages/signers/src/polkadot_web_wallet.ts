@@ -6,7 +6,7 @@ import { ApiPromise, WsProvider } from "@polkadot/api"
 import { Connector, SessionSigner, ActionSigner } from "./interfaces"
 import { Block, SessionPayload, Session, Chain, ChainId } from "@canvas-js/interfaces"
 import { addressSwapper } from "./utils.js"
-import { EthereumActionSigner } from "./metamask_web_wallet"
+import { EthereumActionSigner } from "./metamask_web_wallet.js"
 
 export class PolkadotWebWalletConnector implements Connector {
 	id = "polkadot"

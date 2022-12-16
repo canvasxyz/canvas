@@ -58,12 +58,6 @@ export const verifyCosmosSessionSignature = async (session: Session): Promise<st
 	}
 
 	const generatedAddress = pubkeyToAddress(stdSignature.pub_key, bech32Prefix)
-	const generatedAddressWithCosmosPrefix = pubkeyToAddress(stdSignature.pub_key, "cosmos")
-
-	if (generatedAddress !== session.payload.from && generatedAddressWithCosmosPrefix !== session.payload.from) {
-		console.error(`Address not matched. Generated ${generatedAddress}, found ${session.payload.from}.`)
-		return ""
-	}
 
 	let isValid: boolean
 	try {
