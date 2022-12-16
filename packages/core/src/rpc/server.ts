@@ -13,7 +13,7 @@ import * as okra from "node-okra"
 import RPC from "../../rpc/sync/index.cjs"
 
 import type { MessageStore } from "../messageStore.js"
-import { encodeAction, encodeBinaryAction, encodeBinarySession, encodeSession } from "../encoding.js"
+import { encodeBinaryAction, encodeBinarySession } from "../encoding.js"
 import { toBuffer, toHex } from "../utils.js"
 
 export async function handleIncomingStream(stream: Stream, messageStore: MessageStore, mst: okra.Tree) {

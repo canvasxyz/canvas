@@ -19,25 +19,13 @@ import type { StreamHandler } from "@libp2p/interface-registrar"
 
 import * as okra from "node-okra"
 
-import {
-	Action,
-	ActionPayload,
-	Session,
-	SessionPayload,
-	ModelValue,
-	Message,
-	Chain,
-	ChainId,
-} from "@canvas-js/interfaces"
+import { Action, ActionPayload, Session, SessionPayload, ModelValue, Chain, ChainId } from "@canvas-js/interfaces"
 
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
 
 import { actionType, sessionType } from "./codecs.js"
 import { signalInvalidType, wait, retry, toHex, BlockResolver, AbortError, CacheMap, fromHex } from "./utils.js"
 import {
-	encodeMessage,
-	decodeMessage,
-	encodeAction,
 	normalizeAction,
 	BinaryMessage,
 	BinaryAction,

@@ -4,10 +4,9 @@ import { ethers } from "ethers"
 import * as t from "io-ts"
 import * as cbor from "microcbor"
 
-import type { Session, Action, Message } from "@canvas-js/interfaces"
+import type { Session, Action } from "@canvas-js/interfaces"
 
 import { actionArgumentType, chainIdType, chainType, uint8ArrayType } from "./codecs.js"
-import { signalInvalidType } from "./utils.js"
 import { decodeAddress, decodeBlockhash, encodeAddress, encodeBlockhash } from "./chains/index.js"
 
 const { hexlify, arrayify } = ethers.utils
@@ -117,18 +116,6 @@ export function fromBinaryAction(action: BinaryAction): Action {
 
 export const encodeBinaryAction = (action: BinaryAction) => cbor.encode(action)
 export const encodeBinarySession = (session: BinarySession) => cbor.encode(session)
-export const encodeAction = (action: Action) => encodeBinaryAction(toBinaryAction(action))
-export const encodeSession = (session: Session) => encodeBinarySession(toBinarySession(session))
-
-export function encodeMessage(message: Message): Uint8Array {
-	if (message.type === "action") {
-		return encodeAction(message)
-	} else if (message.type === "session") {
-		return encodeSession(message)
-	} else {
-		signalInvalidType(message)
-	}
-}
 
 export function decodeBinaryMessage(data: Uint8Array): BinaryMessage {
 	const binaryMessage = cbor.decode(data)
@@ -137,18 +124,6 @@ export function decodeBinaryMessage(data: Uint8Array): BinaryMessage {
 	}
 
 	return binaryMessage
-}
-
-export function decodeMessage(data: Uint8Array): Message {
-	const binaryMessage = decodeBinaryMessage(data)
-
-	if (binaryMessage.type === "action") {
-		return fromBinaryAction(binaryMessage)
-	} else if (binaryMessage.type === "session") {
-		return fromBinarySession(binaryMessage)
-	} else {
-		signalInvalidType(binaryMessage)
-	}
 }
 
 export function normalizeAction(action: Action): [Buffer, BinaryAction] {
