@@ -51,6 +51,7 @@ main {
 
 #scroll-container {
 	overflow-y: scroll;
+	overscroll-behavior: none;
 	flex-grow: 1;
 	height: 0px;
 

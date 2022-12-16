@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react"
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from "react"
+import _ from "lodash"
 
 // import { useEnsName } from "wagmi"
 import { useCanvas, useRoute } from "@canvas-js/hooks"
@@ -38,14 +39,60 @@ export const Messages: React.FC<{}> = ({}) => {
 		if (isReady) inputRef.current?.focus()
 	}, [isReady])
 
-	const { data, error } = useRoute<Post>("/posts", {})
+	const [cursor, setCursor] = useState("")
+	const [pages, setPages] = useState<Record<string, Post[]>>({})
+	const [scrollback, setScrollback] = useState<Post[]>([])
+	const [latest, setLatest] = useState<Post[]>([]) // only used to trigger the LayoutEffect to scroll to bottom
 
+	// Subscribe to both the latest posts, and fetch previous pages.
+	const currCallback = useMemo(
+		() => (data: Post[] | null, error: Error | null) => {
+			if (!data) return
+			setLatest(data)
+		},
+		[pages, cursor]
+	)
+	const { data: curr, error } = useRoute<Post>("/posts", { before: "" }, undefined, currCallback)
+
+	const prevCallback = useMemo(
+		() => (data: Post[] | null, error: Error | null) => {
+			if (!data || cursor === "") return
+			setPages({ ...pages, [cursor]: data })
+		},
+		[pages, cursor, latest]
+	)
+	const { data: prev } = useRoute<Post>("/posts", { before: cursor }, undefined, prevCallback)
+
+	useEffect(() => {
+		const linearizedScrollback = Object.keys(pages).reduce((acc: Post[], page) => acc.concat(pages[page]), [])
+		setScrollback(latest.concat(linearizedScrollback))
+	}, [latest, pages])
+
+	// Load more on scroll
+	const handleScroll = useMemo(
+		() =>
+			_.throttle((event) => {
+				if (event?.target?.scrollTop > 50) return
+				if (scrollback.length > 0)
+					setTimeout(() => {
+						const earliestPost = scrollback[scrollback.length - 1]?.updated_at?.toString()
+						if (cursor === earliestPost) return // Nothing more to load
+						setCursor(earliestPost)
+					})
+			}, 750),
+		[scrollback, cursor]
+	)
+
+	// Jump to bottom on load, and when the current page updates, but not when scrollback updates
 	const scrollContainer = useRef<HTMLDivElement>(null)
 	useLayoutEffect(() => {
-		if (scrollContainer.current !== null) {
-			scrollContainer.current.scrollTop = scrollContainer.current.scrollHeight
-		}
-	}, [data])
+		if (!curr?.length || !prev?.length || !scrollback?.length) return
+		setTimeout(() => {
+			if (scrollContainer.current !== null) {
+				scrollContainer.current.scrollTop = scrollContainer.current.scrollHeight
+			}
+		})
+	}, [latest, curr?.length !== 0 && prev?.length !== 0 && scrollback.length !== 0])
 
 	return (
 		<div id="messages" className="window">
@@ -53,13 +100,9 @@ export const Messages: React.FC<{}> = ({}) => {
 				<div className="title-bar-text">Messages</div>
 			</div>
 			<div className="window-body">
-				<div id="scroll-container" ref={scrollContainer}>
+				<div id="scroll-container" ref={scrollContainer} onScroll={handleScroll}>
 					<ul className="tree-view">
-						{data &&
-							data.map((_, i, posts) => {
-								const post = posts[posts.length - i - 1]
-								return <Post key={post.id} {...post} />
-							})}
+						<Posts posts={scrollback} />
 					</ul>
 				</div>
 				<input
@@ -72,6 +115,21 @@ export const Messages: React.FC<{}> = ({}) => {
 			</div>
 		</div>
 	)
+}
+
+const Posts: React.FC<{ posts: null | Post[] }> = (props) => {
+	if (props.posts === null) {
+		return null
+	} else {
+		return (
+			<>
+				{props.posts.map((_, i, posts) => {
+					const post = posts[posts.length - i - 1]
+					return <Post key={post.id} {...post} />
+				})}
+			</>
+		)
+	}
 }
 
 const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
