@@ -13,6 +13,13 @@
   },
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "dependencies": {
+    "@cosmjs/amino": "^0.29.5",
+    "@cosmjs/crypto": "^0.29.5",
+    "@cosmjs/encoding": "^0.29.5",
+    "@ethereumjs/util": "^8.0.3",
+    "@polkadot/keyring": "^10.2.1",
+    "@polkadot/util": "^10.2.1",
+    "@polkadot/util-crypto": "^10.2.1",
     "bs58": "^5.0.0",
     "tweetnacl": "^1.0.3"
   }
