@@ -134,8 +134,7 @@ const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
 	return (
 		<li>
 			{/* {data && <span className="address address-ens">[{data}]</span>} */}
-			<span className="address">{address} &gt;</span>
-			{content}
+			<span className="address">{address} &gt;</span> {content}
 		</li>
 	)
 }
