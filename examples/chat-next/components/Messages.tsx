@@ -79,7 +79,7 @@ export const Messages: React.FC<{}> = ({}) => {
 	// Jump to bottom on load, and when the current page updates, but not when messages updates
 	const scrollContainer = useRef<HTMLDivElement>(null)
 	useLayoutEffect(() => {
-		if (!curr?.length || !prev?.length || !messages?.length) return
+		if (!curr?.length || !messages?.length) return
 		setTimeout(() => {
 			if (scrollContainer.current !== null) {
 				scrollContainer.current.scrollTop = scrollContainer.current.scrollHeight
