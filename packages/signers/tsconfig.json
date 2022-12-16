@@ -4,5 +4,9 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib"
-  }
+  },
+  "references": [
+    {"path": "../interfaces"},
+    {"path": "../verifiers"}
+  ]
 }

@@ -7,6 +7,7 @@
     "jsx": "react",
   },
   "references": [
-    { "path": "../interfaces" }
+    { "path": "../interfaces" },
+    { "path": "../signers" }
   ]
 }

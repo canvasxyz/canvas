@@ -10,6 +10,7 @@
     "lib"
   ],
   "dependencies": {
+    "@canvas-js/interfaces": "0.0.34-alpha4",
     "@canvas-js/verifiers": "0.0.34-alpha4",
     "@ethersproject/abstract-signer": "^5.6.2",
     "@ethersproject/wallet": "^5.6.2",

@@ -7,9 +7,10 @@ import { mainnet } from "@wagmi/core/chains"
 
 import { EthereumClient, modalConnectors, walletConnectProvider } from "@web3modal/ethereum"
 
-import { Connector, SessionSigner } from "./interfaces.js"
 import type { Block, Chain, ChainId, SessionPayload, Session } from "@canvas-js/interfaces"
 import { getSessionSignatureData } from "@canvas-js/verifiers"
+
+import { Connector, SessionSigner } from "./interfaces.js"
 import { MetaMaskEthereumActionSigner } from "./metamask_web_wallet.js"
 import { _TypedDataEncoder } from "ethers/lib/utils.js"
 

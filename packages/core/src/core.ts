@@ -28,6 +28,7 @@ import {
 	Chain,
 	ChainId,
 } from "@canvas-js/interfaces"
+
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
 
 import { actionType, sessionType } from "./codecs.js"
