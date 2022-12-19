@@ -1,13 +1,12 @@
 import { ethers } from "ethers"
-import web3utils from "web3-utils"
-import { connect, disconnect, getProvider, signTypedData, configureChains, createClient } from "@wagmi/core"
+import { connect, disconnect, signTypedData, configureChains, createClient } from "@wagmi/core"
 import { WalletConnectConnector } from "wagmi/connectors/walletConnect"
 
 import { mainnet } from "@wagmi/core/chains"
 
 import { EthereumClient, modalConnectors, walletConnectProvider } from "@web3modal/ethereum"
 
-import type { Block, Chain, ChainId, SessionPayload, Session } from "@canvas-js/interfaces"
+import type { Chain, ChainId, SessionPayload, Session } from "@canvas-js/interfaces"
 import { getSessionSignatureData } from "@canvas-js/verifiers"
 
 import { Connector, SessionSigner } from "./interfaces.js"
