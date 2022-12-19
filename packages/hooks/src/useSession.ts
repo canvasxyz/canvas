@@ -4,7 +4,7 @@ import { SessionPayload, Session } from "@canvas-js/interfaces"
 import type { SessionSigner } from "@canvas-js/signers/lib/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
-import { getCanvasSessionKey, urlJoin } from "./utils.js"
+import { getCanvasSessionKey, getRecentBlock, urlJoin } from "./utils.js"
 
 export function useSession(signer: SessionSigner | null): {
 	error: Error | null
@@ -100,10 +100,10 @@ export function useSession(signer: SessionSigner | null): {
 				expiration: timestamp + sessionDuration,
 			}
 
-			const block = await signer.getRecentBlock()
-
 			const chain = await signer.getChain()
 			const chainId = await signer.getChainId()
+
+			const block = await getRecentBlock(host, chain, chainId)
 
 			const payload: SessionPayload = {
 				from: signerAddress,

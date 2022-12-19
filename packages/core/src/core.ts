@@ -180,6 +180,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.dispatchEvent(new Event("close"))
 	}
 
+	public async getLatestBlock({ chain, chainId }: { chain: Chain; chainId: ChainId }): Promise<ethers.providers.Block> {
+		return this.blockResolver(chain, chainId, "latest")
+	}
+
 	/**
 	 * Helper for verifying the blockhash for an action or session.
 	 */

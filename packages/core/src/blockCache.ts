@@ -9,12 +9,15 @@ import * as constants from "./constants.js"
 export class BlockCache {
 	private readonly controller = new AbortController()
 	private readonly caches: Record<string, CacheMap<string, ethers.providers.Block>> = {}
+	private latestBlockHash: Record<string, string> = {}
+
 	constructor(private readonly providers: Record<string, ethers.providers.Provider>) {
 		for (const [key, provider] of Object.entries(providers)) {
 			this.caches[key] = new CacheMap(constants.BLOCK_CACHE_SIZE)
 			const handleBlock = async (blocknum: number) => {
 				const block = await this.providers[key].getBlock(blocknum)
 				this.caches[key].add(block.hash, block)
+				this.latestBlockHash[key] = block.hash
 			}
 
 			provider.on("block", handleBlock)
@@ -36,6 +39,15 @@ export class BlockCache {
 		assert(provider !== undefined && cache !== undefined, `No provider for ${chain}:${chainId}`)
 
 		blockhash = blockhash.toLowerCase()
+
+		if (blockhash == "latest") {
+			if (this.latestBlockHash[key]) {
+				blockhash = this.latestBlockHash[key]
+			} else {
+				throw Error("No latest block exists yet")
+			}
+		}
+
 		let block = cache.get(blockhash)
 		if (block === undefined) {
 			try {
@@ -46,7 +58,7 @@ export class BlockCache {
 				throw err
 			}
 
-			cache.add(blockhash, block)
+			cache.add(block.hash.toLowerCase(), block)
 		}
 
 		return block

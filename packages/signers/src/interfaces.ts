@@ -10,7 +10,6 @@ export interface Connector {
 }
 
 export interface SessionSigner {
-	getRecentBlock(): Promise<Block>
 	getAddress(): Promise<string>
 	createActionSigner(sessionPrivateKey?: string): Promise<ActionSigner>
 	signSessionPayload(payload: SessionPayload): Promise<Session>

@@ -1,8 +1,10 @@
-import { ActionArgument, ModelValue } from "@canvas-js/interfaces"
+import { ActionArgument, Block, Chain, ChainId, ModelValue } from "@canvas-js/interfaces"
 
 export const getCanvasSessionKey = (address: string) => `CANVAS_SESSION:${address}`
 
 export type Dispatch = (call: string, args: Record<string, ActionArgument>) => Promise<{ hash: string }>
+
+export const getRecentEthereumBlock = async () => {}
 
 // Copied from https://github.com/jfromaniello/url-join/blob/main/lib/url-join.js
 
@@ -85,4 +87,17 @@ export function compareObjects(a: Record<string, ModelValue>, b: Record<string, 
 		}
 	}
 	return true
+}
+
+export async function getRecentBlock(host: string, chain: Chain, chainId: ChainId): Promise<Block> {
+	const res = await fetch(urlJoin(host, "latest_block", chain, chainId.toString()), { method: "GET" })
+	const block = await res.json()
+
+	return {
+		chain,
+		chainId,
+		blocknum: block.number,
+		blockhash: block.hash,
+		timestamp: block.timestamp,
+	}
 }

@@ -72,19 +72,6 @@ class WalletConnectWebWalletSessionSigner implements SessionSigner {
 		this.chainId = chainId
 	}
 
-	async getRecentBlock(): Promise<Block> {
-		const provider = await getProvider({ chainId: this.chainId })
-		const block = await provider.getBlock("latest")
-
-		return {
-			chain: await this.getChain(),
-			chainId: await this.getChainId(),
-			blocknum: hexToNumber(block.number),
-			blockhash: block.hash,
-			timestamp: hexToNumber(block.timestamp),
-		}
-	}
-
 	async getAddress(): Promise<string> {
 		return this.address
 	}

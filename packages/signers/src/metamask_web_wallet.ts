@@ -1,5 +1,5 @@
 import { ethers } from "ethers"
-import { Action, ActionPayload, Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
+import { Action, ActionPayload, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
 import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
 import { Connector, SessionSigner, ActionSigner } from "./interfaces.js"
 
@@ -79,19 +79,6 @@ export class MetaMaskEthereumSigner implements SessionSigner {
 	constructor(signer: ethers.providers.JsonRpcSigner, network: ethers.providers.Network) {
 		this.signer = signer
 		this.network = network
-	}
-
-	async getRecentBlock(): Promise<Block> {
-		const { provider } = this.signer
-		const providerBlock = await provider.getBlock("latest")
-
-		return {
-			chain: this.chain,
-			chainId: this.network.chainId,
-			blocknum: providerBlock.number,
-			blockhash: providerBlock.hash,
-			timestamp: providerBlock.timestamp,
-		}
 	}
 
 	async getAddress() {
