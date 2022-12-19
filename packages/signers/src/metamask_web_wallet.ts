@@ -114,7 +114,7 @@ export class MetaMaskEthereumSigner implements SessionSigner {
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
 		const sessionSignatureData = getSessionSignatureData(payload)
 		const signature = await this.signer._signTypedData(...sessionSignatureData)
-		return { signature, payload }
+		return { type: "session", signature, payload }
 	}
 }
 
@@ -136,6 +136,6 @@ export class MetaMaskEthereumActionSigner implements ActionSigner {
 	async signActionPayload(payload: ActionPayload): Promise<Action> {
 		const signatureData = getActionSignatureData(payload)
 		const signature = await this.wallet._signTypedData(...signatureData)
-		return { session: this.wallet.address, signature, payload }
+		return { type: "action", session: this.wallet.address, signature, payload }
 	}
 }

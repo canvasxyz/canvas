@@ -7,10 +7,11 @@ import PQueue from "p-queue"
 import { ethers } from "ethers"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
-
+import * as cbor from "microcbor"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
-
+import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { createLibp2p, Libp2p } from "libp2p"
+
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
@@ -18,22 +19,22 @@ import type { StreamHandler } from "@libp2p/interface-registrar"
 
 import * as okra from "node-okra"
 
-import {
-	Action,
-	ActionPayload,
-	Session,
-	SessionPayload,
-	ModelValue,
-	Message,
-	Chain,
-	ChainId,
-} from "@canvas-js/interfaces"
+import { Action, ActionPayload, Session, SessionPayload, ModelValue, Chain, ChainId } from "@canvas-js/interfaces"
 
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
 
 import { actionType, sessionType } from "./codecs.js"
-import { signalInvalidType, wait, retry, toHex, BlockResolver, AbortError, CacheMap } from "./utils.js"
-import { encodeMessage, decodeMessage, getActionHash, getSessionHash } from "./encoding.js"
+import { signalInvalidType, wait, retry, toHex, BlockResolver, AbortError, CacheMap, fromHex } from "./utils.js"
+import {
+	normalizeAction,
+	BinaryMessage,
+	BinaryAction,
+	fromBinaryAction,
+	fromBinarySession,
+	normalizeSession,
+	BinarySession,
+	decodeBinaryMessage,
+} from "./encoding.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
 import { ModelStore } from "./modelStore.js"
@@ -41,7 +42,6 @@ import { ModelStore } from "./modelStore.js"
 import { sync, handleIncomingStream } from "./rpc/index.js"
 import * as constants from "./constants.js"
 import { getLibp2pInit } from "./libp2p.js"
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
@@ -193,19 +193,27 @@ export class Core extends EventEmitter<CoreEvents> {
 	public async applyAction(action: Action): Promise<{ hash: string }> {
 		assert(actionType.is(action), "Invalid action value")
 
-		const hash = getActionHash(action)
-
-		const existingRecord = this.messageStore.getActionByHash(hash)
+		// Since this method is the external entrypoint for actions
+		// (ie used by the HTTP API) we have to calculate the hash ourselves.
+		// We ALSO need to "normalize" the action - making sure that the
+		// binary values like address and blockhash have canonical values for
+		// the appropriate chain. We can't just call toLowerCase() since some
+		// chains use base58 for these values. Instead, the simplest way for us
+		// to guarantee canonicality is to encode and then decode again.
+		const [hashBuffer, binaryAction] = normalizeAction(action)
+		const hash = toHex(hashBuffer)
+		const existingRecord = this.messageStore.getActionByHash(hashBuffer)
 		if (existingRecord !== null) {
 			return { hash }
 		}
 
-		await this.queue.add(() => this.applyActionInternal(hash, action))
-		await this.publishMessage(hash, { type: "action", ...action })
+		await this.queue.add(() => this.applyActionInternal(hash, binaryAction))
+		await this.publishMessage(hash, binaryAction)
 		return { hash }
 	}
 
-	private async applyActionInternal(hash: string, action: Action) {
+	private async applyActionInternal(hash: string, binaryAction: BinaryAction) {
+		const action = fromBinaryAction(binaryAction)
 		if (this.options.verbose) {
 			console.log(chalk.green(`[canvas-core] Applying action ${hash}`), action)
 		}
@@ -213,10 +221,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		await this.validateAction(action)
 
 		const effects = await this.vm.execute(hash, action.payload)
-		this.messageStore.insertAction(hash, action)
+		this.messageStore.insertAction(hash, binaryAction)
 		this.modelStore.applyEffects(action.payload, effects)
 		if (this.mst !== null) {
-			const hashBuffer = Buffer.from(hash.slice(2), "hex")
+			const hashBuffer = fromHex(hash)
 			const leafBuffer = Buffer.alloc(14)
 			leafBuffer.writeUintBE(action.payload.timestamp * 2 + 1, 0, 6)
 			hashBuffer.copy(leafBuffer, 6, 0, 8)
@@ -232,7 +240,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private async validateAction(action: Action) {
 		const { timestamp, spec, blockhash, chain, chainId } = action.payload
-		const fromAddress = action.payload.from.toLowerCase()
+		const fromAddress = action.payload.from
 
 		assert(spec === this.uri, "action signed for wrong spec")
 
@@ -248,9 +256,11 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
-			const sessionAddress = action.session.toLowerCase()
-			const { session } = this.messageStore.getSessionByAddress(sessionAddress)
-			assert(session !== null, "session not found")
+			const { session: binarySession } = this.messageStore.getSessionByAddress(chain, chainId, action.session)
+			assert(binarySession !== null, "session not found")
+			const session = fromBinarySession(binarySession)
+			assert(session.payload.chain === action.payload.chain, "session and action chains must match")
+			assert(session.payload.chainId === action.payload.chainId, "session and action chain IDs must match")
 			assert(session.payload.timestamp + session.payload.duration > timestamp, "session expired")
 			assert(session.payload.timestamp <= timestamp, "session timestamp must precede action timestamp")
 
@@ -261,7 +271,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			)
 
 			const verifiedAddress = await verifyActionSignature(action)
-			assert(verifiedAddress === sessionAddress, "invalid action signature (recovered address does not match)")
+			assert(verifiedAddress === action.session, "invalid action signature (recovered address does not match)")
 			assert(verifiedAddress === session.payload.address, "invalid action signature (action, session do not match)")
 			assert(action.payload.spec === session.payload.spec, "action signed for wrong spec")
 		} else {
@@ -275,25 +285,26 @@ export class Core extends EventEmitter<CoreEvents> {
 	 */
 	public async applySession(session: Session): Promise<{ hash: string }> {
 		assert(sessionType.is(session), "invalid session")
-		const hash = getSessionHash(session)
-
-		const existingRecord = this.messageStore.getSessionByHash(hash)
+		const [hashBuffer, binarySession] = normalizeSession(session)
+		const hash = "0x" + hashBuffer.toString("hex")
+		const existingRecord = this.messageStore.getSessionByHash(hashBuffer)
 		if (existingRecord !== null) {
 			return { hash }
 		}
 
-		await this.queue.add(() => this.applySessionInternal(hash, session))
-		await this.publishMessage(hash, { type: "session", ...session })
+		await this.queue.add(() => this.applySessionInternal(hash, binarySession))
+		await this.publishMessage(hash, binarySession)
 		return { hash }
 	}
 
-	private async applySessionInternal(hash: string, session: Session) {
+	private async applySessionInternal(hash: string, binarySession: BinarySession) {
+		const session = fromBinarySession(binarySession)
 		if (this.options.verbose) {
 			console.log(chalk.green(`[canvas-core] Applying session ${hash}`), session)
 		}
 
 		await this.validateSession(session)
-		this.messageStore.insertSession(hash, session)
+		this.messageStore.insertSession(hash, binarySession)
 		if (this.mst !== null) {
 			const hashBuffer = Buffer.from(hash.slice(2), "hex")
 			const leafBuffer = Buffer.alloc(14)
@@ -313,7 +324,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(spec === this.uri, "session signed for wrong spec")
 
 		const verifiedAddress = await verifySessionSignature(session)
-		assert(verifiedAddress.toLowerCase() === from.toLowerCase(), "session signed by wrong address")
+		assert(verifiedAddress === from, "session signed by wrong address")
 
 		// check the timestamp bounds
 		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "session timestamp too far in the past")
@@ -334,7 +345,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		return this.modelStore.getRoute(route, params)
 	}
 
-	private async publishMessage(hash: string, message: Message) {
+	private async publishMessage(hash: string, message: BinaryMessage) {
 		if (this.libp2p === null || this.options.offline) {
 			return
 		}
@@ -344,7 +355,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		await this.libp2p.pubsub
-			.publish(this.uri, encodeMessage(message))
+			.publish(this.uri, cbor.encode(message))
 			.then(({ recipients }) => {
 				if (this.options.verbose) {
 					console.log(`[canvas-core] Published message to ${recipients.length} peers`)
@@ -356,21 +367,20 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 	}
 
-	private handleMessage = async ({ detail: { topic, data } }: CustomEvent<SignedMessage | UnsignedMessage>) => {
-		if (topic !== this.uri) {
+	private handleMessage = async ({ detail: message }: CustomEvent<SignedMessage | UnsignedMessage>) => {
+		if (message.topic !== this.uri || message.type !== "signed") {
 			return
 		}
 
-		const hash = toHex(createHash("sha256").update(data).digest())
-
-		const message = decodeMessage(data)
+		const binaryMessage = decodeBinaryMessage(message.data)
+		const hash = toHex(createHash("sha256").update(message.data).digest())
 		try {
-			if (message.type === "action") {
-				await this.queue.add(() => this.applyActionInternal(hash, message))
-			} else if (message.type === "session") {
-				await this.queue.add(() => this.applySessionInternal(hash, message))
+			if (binaryMessage.type === "action") {
+				await this.queue.add(() => this.applyActionInternal(hash, binaryMessage))
+			} else if (binaryMessage.type === "session") {
+				await this.queue.add(() => this.applySessionInternal(hash, binaryMessage))
 			} else {
-				signalInvalidType(message)
+				signalInvalidType(binaryMessage)
 			}
 		} catch (err) {
 			console.log(chalk.red("[canvas-core] Error applying peer message"), err)
@@ -559,7 +569,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		let successCount = 0
 		let failureCount = 0
 
-		const applyBatch = (messages: [string, Message][]) =>
+		const applyBatch = (messages: [string, BinaryMessage][]) =>
 			this.queue.add(async () => {
 				for (const [hash, message] of messages) {
 					if (this.options.verbose) {
@@ -567,18 +577,16 @@ export class Core extends EventEmitter<CoreEvents> {
 					}
 
 					if (message.type === "session") {
-						const { type, ...session } = message
 						try {
-							await this.applySessionInternal(hash, session)
+							await this.applySessionInternal(hash, message)
 							successCount += 1
 						} catch (err) {
 							console.log(chalk.red(`[canvas-core] Failed to apply session ${hash}`), err)
 							failureCount += 1
 						}
 					} else if (message.type === "action") {
-						const { type, ...action } = message
 						try {
-							await this.applyActionInternal(hash, action)
+							await this.applyActionInternal(hash, message)
 							successCount += 1
 						} catch (err) {
 							console.log(chalk.red(`[canvas-core] Failed to apply action ${hash}`), err)

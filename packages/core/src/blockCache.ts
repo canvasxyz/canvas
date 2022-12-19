@@ -35,7 +35,6 @@ export class BlockCache {
 		const cache = this.caches[key]
 		assert(provider !== undefined && cache !== undefined, `No provider for ${chain}:${chainId}`)
 
-		blockhash = blockhash.toLowerCase()
 		let block = cache.get(blockhash)
 		if (block === undefined) {
 			try {

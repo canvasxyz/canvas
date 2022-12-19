@@ -3,7 +3,7 @@ import test from "ava"
 import { ethers } from "ethers"
 
 import { Core, ApplicationError, compileSpec } from "@canvas-js/core"
-import { ActionArgument, ActionPayload, SessionPayload } from "@canvas-js/interfaces"
+import { Action, ActionArgument, ActionPayload, SessionPayload } from "@canvas-js/interfaces"
 import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
 
 const signer = ethers.Wallet.createRandom()
@@ -38,7 +38,7 @@ const { spec, uri } = await compileSpec({
 	},
 })
 
-async function sign(call: string, args: Record<string, ActionArgument>) {
+async function sign(call: string, args: Record<string, ActionArgument>): Promise<Action> {
 	const timestamp = Date.now()
 	const actionPayload: ActionPayload = {
 		from: signerAddress,
@@ -52,7 +52,7 @@ async function sign(call: string, args: Record<string, ActionArgument>) {
 	}
 	const actionSignatureData = getActionSignatureData(actionPayload)
 	const actionSignature = await signer._signTypedData(...actionSignatureData)
-	return { payload: actionPayload, session: null, signature: actionSignature }
+	return { type: "action", payload: actionPayload, session: null, signature: actionSignature }
 }
 
 test("Apply signed action", async (t) => {
@@ -101,7 +101,7 @@ test("Apply two signed actions", async (t) => {
 const sessionSigner = ethers.Wallet.createRandom()
 const sessionSignerAddress = await sessionSigner.getAddress()
 
-async function signWithSession(call: string, args: Record<string, ActionArgument>) {
+async function signWithSession(call: string, args: Record<string, ActionArgument>): Promise<Action> {
 	const timestamp = Date.now()
 	const actionPayload: ActionPayload = {
 		from: signerAddress,
@@ -115,7 +115,7 @@ async function signWithSession(call: string, args: Record<string, ActionArgument
 	}
 	const actionSignatureData = getActionSignatureData(actionPayload)
 	const actionSignature = await sessionSigner._signTypedData(...actionSignatureData)
-	return { payload: actionPayload, session: sessionSignerAddress, signature: actionSignature }
+	return { type: "action", payload: actionPayload, session: sessionSignerAddress, signature: actionSignature }
 }
 
 test("Apply action signed with session key", async (t) => {
@@ -134,7 +134,7 @@ test("Apply action signed with session key", async (t) => {
 
 	const sessionSignatureData = getSessionSignatureData(sessionPayload)
 	const sessionSignature = await signer._signTypedData(...sessionSignatureData)
-	await core.applySession({ payload: sessionPayload, signature: sessionSignature })
+	await core.applySession({ type: "session", payload: sessionPayload, signature: sessionSignature })
 
 	const action = await signWithSession("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 
@@ -169,7 +169,7 @@ test("Apply two actions signed with session keys", async (t) => {
 
 	const sessionSignatureData = getSessionSignatureData(sessionPayload)
 	const sessionSignature = await signer._signTypedData(...sessionSignatureData)
-	await core.applySession({ payload: sessionPayload, signature: sessionSignature })
+	await core.applySession({ type: "session", payload: sessionPayload, signature: sessionSignature })
 
 	const newThreadAction = await sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: threadId } = await core.applyAction(newThreadAction)
