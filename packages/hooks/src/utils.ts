@@ -91,13 +91,5 @@ export function compareObjects(a: Record<string, ModelValue>, b: Record<string, 
 
 export async function getRecentBlock(host: string, chain: Chain, chainId: ChainId): Promise<Block> {
 	const res = await fetch(urlJoin(host, "latest_block", chain, chainId.toString()), { method: "GET" })
-	const block = await res.json()
-
-	return {
-		chain,
-		chainId,
-		blocknum: block.number,
-		blockhash: block.hash,
-		timestamp: block.timestamp,
-	}
+	return res.json()
 }

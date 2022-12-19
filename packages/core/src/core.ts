@@ -27,6 +27,7 @@ import {
 	Message,
 	Chain,
 	ChainId,
+	Block,
 } from "@canvas-js/interfaces"
 
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
@@ -42,6 +43,7 @@ import { sync, handleIncomingStream } from "./rpc/index.js"
 import * as constants from "./constants.js"
 import { getLibp2pInit } from "./libp2p.js"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { ethersBlockToCanvasBlock } from "./blockCache.js"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
@@ -88,10 +90,11 @@ export class Core extends EventEmitter<CoreEvents> {
 		const vm = await VM.initialize(uri, spec, providers || {})
 
 		if (blockResolver === undefined) {
-			blockResolver = (chain, chainId, blockhash) => {
+			blockResolver = async (chain, chainId, blockhash) => {
 				const key = `${chain}:${chainId}`
 				assert(providers !== undefined && key in providers, `no provider for ${chain}:${chainId}`)
-				return providers[key].getBlock(blockhash)
+				const ethBlock = await providers[key].getBlock(blockhash)
+				return ethersBlockToCanvasBlock(chainId, ethBlock)
 			}
 		}
 
@@ -180,7 +183,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.dispatchEvent(new Event("close"))
 	}
 
-	public async getLatestBlock({ chain, chainId }: { chain: Chain; chainId: ChainId }): Promise<ethers.providers.Block> {
+	public async getLatestBlock({ chain, chainId }: { chain: Chain; chainId: ChainId }): Promise<Block> {
 		return this.blockResolver(chain, chainId, "latest")
 	}
 

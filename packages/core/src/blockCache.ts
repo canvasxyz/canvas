@@ -5,6 +5,17 @@ import { ethers } from "ethers"
 
 import { BlockResolver, CacheMap } from "./utils.js"
 import * as constants from "./constants.js"
+import { Block, ChainId } from "@canvas-js/interfaces"
+
+export const ethersBlockToCanvasBlock = (chainId: ChainId, ethBlock: ethers.providers.Block): Block => {
+	return {
+		chain: "eth",
+		chainId,
+		blocknum: ethBlock.number,
+		blockhash: ethBlock.hash,
+		timestamp: ethBlock.timestamp,
+	}
+}
 
 export class BlockCache {
 	private readonly controller = new AbortController()
@@ -61,6 +72,6 @@ export class BlockCache {
 			cache.add(block.hash.toLowerCase(), block)
 		}
 
-		return block
+		return ethersBlockToCanvasBlock(chainId, block)
 	}
 }
