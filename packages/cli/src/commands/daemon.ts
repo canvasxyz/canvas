@@ -167,6 +167,7 @@ class Daemon {
 	) {
 		this.options = options
 		this.app.use(express.json())
+		this.app.use(express.text())
 		this.app.use(cors())
 		this.app.use(
 			expressWinston.logger({
@@ -215,9 +216,7 @@ class Daemon {
 
 		this.app.put("/app/:name", (req, res) => {
 			const { name } = req.params
-
-			const contentType = req.headers["content-type"]
-			if (contentType !== "text/javascript" || typeof req.body !== "string") {
+			if (typeof req.body !== "string") {
 				return res.status(StatusCodes.NOT_ACCEPTABLE).end()
 			}
 
@@ -253,17 +252,17 @@ class Daemon {
 			})
 		})
 
-		this.app.post("/app/install", async (req, res) => {
-			const { spec } = req.body
+		this.app.post("/app", (req, res) => {
+			if (typeof req.body !== "string") {
+				return res.status(StatusCodes.BAD_REQUEST).end()
+			}
 
-			const multihash = await Hash.of(spec)
-			console.log(`installing app with hash ${multihash}`)
-
-			await installSpec(spec)
-
-			console.log(`installed app with hash ${multihash}`)
-
-			res.status(StatusCodes.CREATED).end()
+			this.queue.add(async () => {
+				const hash = await installSpec(req.body)
+				console.log(`[canvas-cli] Installed app with hash ${hash}`)
+				res.setHeader("Location", `/app/${hash}`)
+				res.status(StatusCodes.CREATED).end()
+			})
 		})
 
 		this.app.post("/app/:name/start", async (req, res) => {
