@@ -78,7 +78,6 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			const block = await core.getLatestBlock({ chain: chain as Chain, chainId })
 			return res.status(StatusCodes.OK).json(block)
 		} catch (e) {
-			console.log(e)
 			return res.status(StatusCodes.NOT_FOUND).end()
 		}
 	})
