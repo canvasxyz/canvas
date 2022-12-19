@@ -1,5 +1,5 @@
 import { ethers } from "ethers"
-import { hexToNumber } from "web3-utils"
+import web3utils from "web3-utils"
 import { connect, disconnect, getProvider, signTypedData, configureChains, createClient } from "@wagmi/core"
 import { WalletConnectConnector } from "wagmi/connectors/walletConnect"
 

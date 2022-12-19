@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/interfaces",
-  "version": "0.0.34-alpha4",
+  "version": "0.0.34-alpha6",
   "type": "module",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -11,6 +11,5 @@
   "devDependencies": {
     "typescript": "^4.7.2"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }
