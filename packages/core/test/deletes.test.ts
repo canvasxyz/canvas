@@ -2,7 +2,7 @@ import test from "ava"
 
 import { ethers } from "ethers"
 
-import { ActionArgument, ActionPayload } from "@canvas-js/interfaces"
+import { Action, ActionArgument, ActionPayload } from "@canvas-js/interfaces"
 import { getActionSignatureData } from "@canvas-js/verifiers"
 import { Core, compileSpec } from "@canvas-js/core"
 
@@ -31,7 +31,7 @@ test("Test setting and then deleting a record", async (t) => {
 		session: string | null,
 		call: string,
 		args: Record<string, ActionArgument>
-	) {
+	): Promise<Action> {
 		const timestamp = Date.now()
 		const actionPayload: ActionPayload = {
 			from: signerAddress,
@@ -43,9 +43,10 @@ test("Test setting and then deleting a record", async (t) => {
 			chainId: 1,
 			blockhash: null,
 		}
+
 		const actionSignatureData = getActionSignatureData(actionPayload)
 		const actionSignature = await signer._signTypedData(...actionSignatureData)
-		return { payload: actionPayload, session, signature: actionSignature }
+		return { type: "action", payload: actionPayload, session, signature: actionSignature }
 	}
 
 	const core = await Core.initialize({ uri, directory: null, spec, unchecked: true, offline: true })

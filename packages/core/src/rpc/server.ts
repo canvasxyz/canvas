@@ -13,7 +13,7 @@ import * as okra from "node-okra"
 import RPC from "../../rpc/sync/index.cjs"
 
 import type { MessageStore } from "../messageStore.js"
-import { encodeAction, encodeSession } from "../encoding.js"
+import { encodeBinaryAction, encodeBinarySession } from "../encoding.js"
 import { toBuffer, toHex } from "../utils.js"
 
 export async function handleIncomingStream(stream: Stream, messageStore: MessageStore, mst: okra.Tree) {
@@ -80,14 +80,14 @@ function getValues(
 				if (session === null) {
 					throw new Error(`session not found: ${toHex(hash)}`)
 				} else {
-					return encodeSession(session)
+					return encodeBinarySession(session)
 				}
 			} else {
 				const action = messageStore.getActionByHash(toBuffer(hash))
 				if (action === null) {
 					throw new Error(`action not found: ${toHex(hash)}`)
 				} else {
-					return encodeAction(action)
+					return encodeBinaryAction(action)
 				}
 			}
 		}),

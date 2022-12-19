@@ -4,16 +4,15 @@ import chalk from "chalk"
 import type { Stream } from "@libp2p/interface-connection"
 
 import * as okra from "node-okra"
-import type { Message } from "@canvas-js/interfaces"
 
 import { toHex } from "../utils.js"
-import { decodeMessage } from "../encoding.js"
+import { BinaryMessage, decodeBinaryMessage } from "../encoding.js"
 import { Client } from "./client.js"
 
 export async function sync(
 	mst: okra.Tree,
 	stream: Stream,
-	applyBatch: (messages: [string, Message][]) => Promise<void>
+	applyBatch: (messages: [string, BinaryMessage][]) => Promise<void>
 ): Promise<void> {
 	const target = new okra.Target(mst)
 	const client = new Client(stream)
@@ -47,7 +46,7 @@ export async function sync(
 				throw new Error("expected values.length to match leaves.length")
 			}
 
-			const messages: [string, Message][] = []
+			const messages: [string, BinaryMessage][] = []
 
 			for (const [i, value] of values.entries()) {
 				const { hash } = leaves[i]
@@ -55,7 +54,7 @@ export async function sync(
 					throw new Error(`the value received for ${toHex(hash)} did not match the hash`)
 				}
 
-				messages.push([toHex(hash), decodeMessage(value)])
+				messages.push([toHex(hash), decodeBinaryMessage(value)])
 			}
 
 			await applyBatch(messages)

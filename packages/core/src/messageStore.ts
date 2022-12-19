@@ -4,7 +4,9 @@ import * as cbor from "microcbor"
 
 import type { Action, Session, ActionArgument, Chain, ChainId } from "@canvas-js/interfaces"
 
-import { mapEntries, fromHex, toHex } from "./utils.js"
+import { mapEntries, fromHex, toHex, toBuffer } from "./utils.js"
+import { BinaryAction, BinarySession, fromBinaryAction, fromBinarySession } from "./encoding.js"
+import { encodeAddress } from "./chains/index.js"
 
 type ActionRecord = {
 	hash: Buffer
@@ -64,42 +66,36 @@ export class MessageStore {
 		this.database.close()
 	}
 
-	public insertAction(hash: string | Buffer, action: Action) {
+	public insertAction(hash: string | Buffer, action: BinaryAction) {
 		assert(action.payload.spec === this.uri, "insertAction: action.payload.spec did not match MessageStore.name")
-
-		const args = cbor.encode(action.payload.args)
 
 		const record: ActionRecord = {
 			hash: typeof hash === "string" ? fromHex(hash) : hash,
-			signature: fromHex(action.signature),
-			session_address: null,
-			from_address: fromHex(action.payload.from),
+			signature: toBuffer(action.signature),
+			session_address: action.session ? toBuffer(action.session) : null,
+			from_address: toBuffer(action.payload.from),
 			timestamp: action.payload.timestamp,
 			call: action.payload.call,
-			args: Buffer.from(args.buffer, args.byteOffset, args.byteLength),
-			blockhash: action.payload.blockhash ? fromHex(action.payload.blockhash) : null,
+			args: toBuffer(cbor.encode(action.payload.args)),
+			blockhash: action.payload.blockhash ? toBuffer(action.payload.blockhash) : null,
 			chain: action.payload.chain,
 			chain_id: action.payload.chainId,
-		}
-
-		if (action.session !== null) {
-			record.session_address = fromHex(action.session)
 		}
 
 		this.statements.insertAction.run(record)
 	}
 
-	public insertSession(hash: string | Buffer, session: Session) {
+	public insertSession(hash: string | Buffer, session: BinarySession) {
 		assert(session.payload.spec === this.uri, "insertSession: session.payload.spec did not match MessageStore.uri")
 
 		const record: SessionRecord = {
 			hash: typeof hash === "string" ? fromHex(hash) : hash,
-			signature: fromHex(session.signature),
-			from_address: fromHex(session.payload.from),
-			session_address: fromHex(session.payload.address),
+			signature: toBuffer(session.signature),
+			from_address: toBuffer(session.payload.from),
+			session_address: toBuffer(session.payload.address),
 			duration: session.payload.duration,
 			timestamp: session.payload.timestamp,
-			blockhash: session.payload.blockhash ? fromHex(session.payload.blockhash) : null,
+			blockhash: session.payload.blockhash ? toBuffer(session.payload.blockhash) : null,
 			chain: session.payload.chain,
 			chain_id: session.payload.chainId,
 		}
@@ -107,34 +103,32 @@ export class MessageStore {
 		this.statements.insertSession.run(record)
 	}
 
-	public getActionByHash(hash: string | Buffer): Action | null {
-		const record: undefined | ActionRecord = this.statements.getActionByHash.get({
-			hash: typeof hash === "string" ? fromHex(hash) : hash,
-		})
-
+	public getActionByHash(hash: Buffer): BinaryAction | null {
+		const record: undefined | ActionRecord = this.statements.getActionByHash.get({ hash })
 		return record === undefined ? null : this.parseActionRecord(record)
 	}
 
-	private parseActionRecord(record: ActionRecord): Action {
-		const action: Action = {
-			signature: toHex(record.signature),
-			session: record.session_address && toHex(record.session_address),
+	private parseActionRecord(record: ActionRecord): BinaryAction {
+		const action: BinaryAction = {
+			type: "action",
+			signature: record.signature,
+			session: record.session_address,
 			payload: {
 				spec: this.uri,
-				from: toHex(record.from_address),
+				from: record.from_address,
 				call: record.call,
 				args: cbor.decode(record.args) as Record<string, ActionArgument>,
 				timestamp: record.timestamp,
 				chain: record.chain,
 				chainId: record.chain_id,
-				blockhash: record.blockhash ? toHex(record.blockhash) : null,
+				blockhash: record.blockhash,
 			},
 		}
 
 		return action
 	}
 
-	public getSessionByHash(hash: Buffer | string): Session | null {
+	public getSessionByHash(hash: Buffer | string): BinarySession | null {
 		const record: undefined | SessionRecord = this.statements.getSessionByHash.get({
 			hash: typeof hash === "string" ? fromHex(hash) : hash,
 		})
@@ -142,9 +136,13 @@ export class MessageStore {
 		return record === undefined ? null : this.parseSessionRecord(record)
 	}
 
-	public getSessionByAddress(address: string): { hash: null; session: null } | { hash: string; session: Session } {
+	public getSessionByAddress(
+		chain: Chain,
+		chainId: ChainId,
+		address: string
+	): { hash: null; session: null } | { hash: string; session: BinarySession } {
 		const record: undefined | SessionRecord = this.statements.getSessionByAddress.get({
-			session_address: fromHex(address),
+			session_address: toBuffer(encodeAddress(chain, chainId, address)),
 		})
 
 		if (record === undefined) {
@@ -154,18 +152,19 @@ export class MessageStore {
 		}
 	}
 
-	private parseSessionRecord(record: SessionRecord): Session {
-		const session: Session = {
-			signature: toHex(record.signature),
+	private parseSessionRecord(record: SessionRecord): BinarySession {
+		const session: BinarySession = {
+			type: "session",
+			signature: record.signature,
 			payload: {
 				spec: this.uri,
-				from: toHex(record.from_address),
+				from: record.from_address,
 				timestamp: record.timestamp,
-				address: toHex(record.session_address),
+				address: record.session_address,
 				duration: record.duration,
 				chain: record.chain,
 				chainId: record.chain_id,
-				blockhash: record.blockhash ? toHex(record.blockhash) : null,
+				blockhash: record.blockhash,
 			},
 		}
 
@@ -176,13 +175,13 @@ export class MessageStore {
 	// https://github.com/WiseLibs/better-sqlite3/issues/406
 	public *getActionStream(): Iterable<[string, Action]> {
 		for (const record of this.statements.getActions.iterate({}) as Iterable<ActionRecord>) {
-			yield [toHex(record.hash), this.parseActionRecord(record)]
+			yield [toHex(record.hash), fromBinaryAction(this.parseActionRecord(record))]
 		}
 	}
 
 	public *getSessionStream(): Iterable<[string, Session]> {
 		for (const record of this.statements.getSessions.iterate({}) as Iterable<SessionRecord>) {
-			yield [toHex(record.hash), this.parseSessionRecord(record)]
+			yield [toHex(record.hash), fromBinarySession(this.parseSessionRecord(record))]
 		}
 	}
 

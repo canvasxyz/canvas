@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat-next",
-  "version": "0.0.34-alpha6",
+  "version": "0.0.35",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -11,10 +11,10 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@canvas-js/core": "0.0.34-alpha6",
-    "@canvas-js/hooks": "0.0.34-alpha6",
-    "@canvas-js/interfaces": "0.0.34-alpha6",
-    "@canvas-js/next": "0.0.34-alpha6",
+    "@canvas-js/core": "0.0.35",
+    "@canvas-js/hooks": "0.0.35",
+    "@canvas-js/interfaces": "0.0.35",
+    "@canvas-js/next": "0.0.35",
     "@types/lodash": "^4.14.191",
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.5",
@@ -25,7 +25,7 @@
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "stoppable": "^1.1.0",
-    "wagmi": "^0.9.3"
+    "wagmi": "^0.9.4"
   },
   "devDependencies": {
     "@types/use-sync-external-store": "^0.0.3"

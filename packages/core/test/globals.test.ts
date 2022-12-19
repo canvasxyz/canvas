@@ -2,7 +2,7 @@ import test from "ava"
 
 import { ethers } from "ethers"
 
-import { ActionArgument, ActionPayload } from "@canvas-js/interfaces"
+import { Action, ActionArgument, ActionPayload } from "@canvas-js/interfaces"
 import { getActionSignatureData } from "@canvas-js/verifiers"
 import { compileSpec, Core } from "@canvas-js/core"
 
@@ -19,7 +19,12 @@ const { spec, uri } = await compileSpec({
 	},
 })
 
-async function sign(signer: ethers.Wallet, session: string | null, call: string, args: Record<string, ActionArgument>) {
+async function sign(
+	signer: ethers.Wallet,
+	session: string | null,
+	call: string,
+	args: Record<string, ActionArgument>
+): Promise<Action> {
 	const timestamp = Date.now()
 	const actionPayload: ActionPayload = {
 		from: signerAddress,
@@ -33,7 +38,7 @@ async function sign(signer: ethers.Wallet, session: string | null, call: string,
 	}
 	const actionSignatureData = getActionSignatureData(actionPayload)
 	const actionSignature = await signer._signTypedData(...actionSignatureData)
-	return { payload: actionPayload, session, signature: actionSignature }
+	return { type: "action", payload: actionPayload, session, signature: actionSignature }
 }
 
 test("test fetch and log IP address", async (t) => {

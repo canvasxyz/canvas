@@ -43,6 +43,7 @@ export type ActionPayload = ActionContext & {
  * An `Action` is an `ActionPayload` and a signature.
  */
 export type Action = {
+	type: "action"
 	payload: ActionPayload
 	session: string | null
 	signature: string
