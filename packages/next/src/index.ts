@@ -8,9 +8,10 @@ import next from "next"
 import express from "express"
 import { Libp2p, createLibp2p } from "libp2p"
 import { createFromProtobuf, createEd25519PeerId, exportToProtobuf } from "@libp2p/peer-id-factory"
-import { ethers } from "ethers"
 
 import { constants, Core, getLibp2pInit, getAPI, setupWebsockets } from "@canvas-js/core"
+import { BlockProvider } from "@canvas-js/interfaces"
+import { EthereumBlockProvider } from "@canvas-js/signers"
 
 const { CANVAS_PATH, CANVAS_SPEC, ANNOUNCE, LISTEN, PEER_ID, ETH_CHAIN_ID, ETH_CHAIN_RPC, NODE_ENV, VERBOSE, PORT } =
 	process.env
@@ -21,12 +22,12 @@ const spec = fs.readFileSync(specPath, "utf-8")
 
 const verbose = NODE_ENV !== "production" || VERBOSE === "true"
 
-const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
+const providers: Record<string, BlockProvider> = {}
 let unchecked = true
 if (typeof ETH_CHAIN_ID === "string" && typeof ETH_CHAIN_RPC === "string") {
 	unchecked = false
 	const key = `eth:${ETH_CHAIN_ID}`
-	providers[key] = new ethers.providers.JsonRpcProvider(ETH_CHAIN_RPC)
+	providers[key] = new EthereumBlockProvider(ETH_CHAIN_ID, ETH_CHAIN_RPC)
 }
 
 async function getPeerID() {

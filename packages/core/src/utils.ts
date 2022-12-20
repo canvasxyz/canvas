@@ -1,6 +1,5 @@
 import assert from "node:assert"
 
-import { ethers } from "ethers"
 import Hash from "ipfs-only-hash"
 
 import type {
@@ -12,6 +11,7 @@ import type {
 	ModelValue,
 	RouteContext,
 	Query,
+	Block,
 } from "@canvas-js/interfaces"
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
@@ -196,4 +196,4 @@ export class CacheMap<K, V> extends Map<K, V> {
 	}
 }
 
-export type BlockResolver = (chain: Chain, chainId: ChainId, blockhash: string) => Promise<ethers.providers.Block>
+export type BlockResolver = (chain: Chain, chainId: ChainId, blockhash: string) => Promise<Block>

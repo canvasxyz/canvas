@@ -2,7 +2,7 @@ import { Action, ActionPayload } from "@canvas-js/interfaces"
 import { useCallback, useContext, useState } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"
-import { urlJoin, Dispatch, getCanvasSessionKey } from "./utils.js"
+import { getRecentBlock, urlJoin, Dispatch, getCanvasSessionKey } from "./utils.js"
 
 export function useCanvas(): {
 	isLoading: boolean
@@ -51,7 +51,10 @@ export function useCanvas(): {
 			console.log("set pending to true")
 
 			try {
-				const block = await signer.getRecentBlock()
+				const chain = await signer.getChain()
+				const chainId = await signer.getChainId()
+
+				const block = await getRecentBlock(host, chain, chainId)
 				console.log("got block", block)
 
 				const address = await signer.getAddress()

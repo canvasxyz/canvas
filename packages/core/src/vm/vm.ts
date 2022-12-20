@@ -17,6 +17,7 @@ import {
 	ModelValue,
 	RouteContext,
 	Query,
+	BlockProvider,
 } from "@canvas-js/interfaces"
 
 import type { Effect } from "../modelStore.js"
@@ -37,6 +38,7 @@ import {
 } from "./utils.js"
 
 import * as constants from "../constants.js"
+import { EthereumBlockProvider } from "@canvas-js/signers"
 
 type Options = { verbose?: boolean; unchecked?: boolean }
 
@@ -44,7 +46,7 @@ export class VM {
 	public static async initialize(
 		uri: string,
 		spec: string,
-		providers: Record<string, ethers.providers.JsonRpcProvider>,
+		providers: Record<string, BlockProvider>,
 		options: Options = {}
 	): Promise<VM> {
 		const quickJS = await getQuickJS()
@@ -84,7 +86,7 @@ export class VM {
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
 		moduleHandle: QuickJSHandle,
-		providers: Record<string, ethers.providers.JsonRpcProvider>,
+		providers: Record<string, BlockProvider>,
 		options: Options
 	) {
 		const {
@@ -200,9 +202,11 @@ export class VM {
 						console.log(`[canvas-vm] Skipping contract setup`)
 					}
 				} else {
-					const provider = providers[`${chain}:${chainId}`]
-					assert(provider !== undefined, `Spec requires an RPC endpoint for ${chain}:${chainId}`)
-					this.contracts[name] = new ethers.Contract(address, abi, provider)
+					if (chain == "eth") {
+						const provider = providers[`${chain}:${chainId}`] as EthereumBlockProvider
+						assert(provider !== undefined, `Spec requires an RPC endpoint for ${chain}:${chainId}`)
+						this.contracts[name] = new ethers.Contract(address, abi, provider.provider)
+					}
 				}
 			}
 		}
