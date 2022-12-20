@@ -31,6 +31,7 @@ export type ActionContext = {
 	timestamp: number
 	chain: Chain
 	chainId: ChainId
+	blocknum: number | null
 	blockhash: string | null
 }
 

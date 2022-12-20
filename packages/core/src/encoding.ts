@@ -19,6 +19,7 @@ const binaryActionPayloadType = t.type({
 	timestamp: t.number,
 	chain: chainType,
 	chainId: chainIdType,
+	blocknum: t.union([t.null, t.number]),
 	blockhash: t.union([t.null, uint8ArrayType]),
 })
 
@@ -39,6 +40,7 @@ const binarySessionPayloadType = t.type({
 	duration: t.number,
 	chain: chainType,
 	chainId: chainIdType,
+	blocknum: t.union([t.null, t.number]),
 	blockhash: t.union([t.null, uint8ArrayType]),
 })
 

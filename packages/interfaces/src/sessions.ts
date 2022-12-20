@@ -13,6 +13,7 @@ export type SessionPayload = {
 	timestamp: number
 	address: string
 	duration: number
+	blocknum: number | null
 	blockhash: string | null
 	chain: Chain
 	chainId: ChainId

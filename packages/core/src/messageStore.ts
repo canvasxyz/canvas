@@ -14,6 +14,7 @@ type ActionRecord = {
 	from_address: Buffer
 	session_address: Buffer | null
 	timestamp: number
+	blocknum: number | null
 	blockhash: Buffer | null
 	call: string
 	args: Buffer
@@ -28,6 +29,7 @@ type SessionRecord = {
 	session_address: Buffer
 	duration: number
 	timestamp: number
+	blocknum: number | null
 	blockhash: Buffer | null
 	chain: Chain
 	chain_id: ChainId

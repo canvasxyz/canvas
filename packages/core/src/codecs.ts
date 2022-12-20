@@ -40,6 +40,7 @@ export const actionPayloadType: t.Type<ActionPayload> = t.type({
 	args: t.record(t.string, actionArgumentType),
 	chain: chainType,
 	chainId: chainIdType,
+	blocknum: t.union([t.number, t.null]),
 	blockhash: t.union([t.string, t.null]),
 })
 
@@ -58,6 +59,7 @@ export const sessionPayloadType: t.Type<SessionPayload> = t.type({
 	duration: t.number,
 	chain: chainType,
 	chainId: chainIdType,
+	blocknum: t.union([t.number, t.null]),
 	blockhash: t.union([t.string, t.null]),
 })
 
