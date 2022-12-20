@@ -80,13 +80,13 @@ $ git add .
 $ git commit -m "made some changes"
 ```
 
-Bump the version, explicitly passing a `0.0.X` version number into the NPM script, make a manual commit just for the version bump, and publish the packages together:
+There is a bug in the NPM CLI that causes some workspace packages to not update their dependencies to other workspace packages to the new version. As a workaround, we have a custom script in `version.sh` that sets the version and dependencies for all the modules in `packages/` and `examples/`. Pass an explicit a `0.0.X` version number as the first argument:
 
 ```
-$ npm run version -- 0.0.X
+$ ./version.sh 0.0.X
 ```
 
-> ⚠️ There is a bug in the NPM CLI that causes some workspace packages to not update their dependencies to other workspace packages to the new version. Until we come up with a workaround, you have to manually check the package.json dependencies of all workspace packages in both `packages/` and `examples/` and bump their dependencies to your new `0.0.X` by hand.
+Then make a manual commit just for the version bump, and publish the packages together:
 
 ```
 $ git add .
