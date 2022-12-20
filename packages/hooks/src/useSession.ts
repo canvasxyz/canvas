@@ -111,6 +111,7 @@ export function useSession(signer: SessionSigner | null): {
 				address: await actionSigner.address,
 				duration: sessionDuration,
 				timestamp,
+				blocknum: block.blocknum,
 				blockhash: block.blockhash,
 				chain: block.chain,
 				chainId: block.chainId,
