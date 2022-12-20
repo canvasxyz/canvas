@@ -17,7 +17,7 @@ import PQueue from "p-queue"
 import { ethers } from "ethers"
 
 import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, getAPI, CoreOptions } from "@canvas-js/core"
-import { Model } from "@canvas-js/interfaces"
+import { BlockProvider, Model } from "@canvas-js/interfaces"
 
 import { CANVAS_HOME, SOCKET_FILENAME, SOCKET_PATH, getPeerId, getProviders, installSpec } from "../utils.js"
 
@@ -161,7 +161,7 @@ class Daemon {
 
 	constructor(
 		libp2p: Libp2p | undefined,
-		providers: Record<string, ethers.providers.JsonRpcProvider>,
+		providers: Record<string, BlockProvider>,
 		blockResolver: BlockResolver,
 		options: CoreOptions
 	) {

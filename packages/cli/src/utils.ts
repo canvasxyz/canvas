@@ -10,7 +10,8 @@ import chalk from "chalk"
 import prompts from "prompts"
 
 import { chainType, constants } from "@canvas-js/core"
-import { ethers } from "ethers"
+import { BlockProvider } from "@canvas-js/interfaces"
+import { EthereumBlockProvider } from "@canvas-js/signers"
 
 export const CANVAS_HOME = process.env.CANVAS_HOME ?? path.resolve(os.homedir(), ".canvas")
 export const SOCKET_FILENAME = "daemon.sock"
@@ -89,8 +90,8 @@ export async function installSpec(spec: string): Promise<string> {
 	return cid
 }
 
-export function getProviders(args?: (string | number)[]): Record<string, ethers.providers.JsonRpcProvider> {
-	const providers: Record<string, ethers.providers.JsonRpcProvider> = {}
+export function getProviders(args?: (string | number)[]): Record<string, BlockProvider> {
+	const providers: Record<string, BlockProvider> = {}
 
 	if (args !== undefined) {
 		for (let i = 0; i < args.length; i += 3) {
@@ -106,12 +107,16 @@ export function getProviders(args?: (string | number)[]): Record<string, ethers.
 				process.exit(1)
 			}
 
-			const key = `${chain}:${id}`
-			providers[key] = new ethers.providers.JsonRpcProvider(url)
+			if (chain == "eth") {
+				const key = `${chain}:${id}`
+				providers[key] = new EthereumBlockProvider(id, url)
+			} else {
+				console.log(`'chain' value (${chain}) was not 'eth', all other RPCs are currently unsupported`)
+			}
 		}
 	} else if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
 		const key = `eth:${process.env.ETH_CHAIN_ID}`
-		providers[key] = new ethers.providers.JsonRpcProvider(process.env.ETH_CHAIN_RPC)
+		providers[key] = new EthereumBlockProvider(process.env.ETH_CHAIN_ID, process.env.ETH_CHAIN_RPC)
 		console.log(
 			`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
 		)

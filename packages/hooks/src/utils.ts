@@ -91,5 +91,8 @@ export function compareObjects(a: Record<string, ModelValue>, b: Record<string, 
 
 export async function getRecentBlock(host: string, chain: Chain, chainId: ChainId): Promise<Block> {
 	const res = await fetch(urlJoin(host, "latest_block", chain, chainId.toString()), { method: "GET" })
-	return res.json()
+	const block = res.json()
+	// ethereum returns the chain id as a string but we are using a number (1, 5, etc)
+	// this line replaces the chainId that comes from the API with our own chainId
+	return { ...block, chainId }
 }

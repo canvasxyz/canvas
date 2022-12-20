@@ -1,39 +1,27 @@
 import assert from "node:assert"
 
 import chalk from "chalk"
-import { ethers } from "ethers"
 
 import { BlockResolver, CacheMap } from "./utils.js"
 import * as constants from "./constants.js"
-import { Block, ChainId } from "@canvas-js/interfaces"
-
-export const ethersBlockToCanvasBlock = (chainId: ChainId, ethBlock: ethers.providers.Block): Block => {
-	return {
-		chain: "eth",
-		chainId,
-		blocknum: ethBlock.number,
-		blockhash: ethBlock.hash,
-		timestamp: ethBlock.timestamp,
-	}
-}
+import { Block, BlockProvider, ChainId } from "@canvas-js/interfaces"
 
 export class BlockCache {
 	private readonly controller = new AbortController()
-	private readonly caches: Record<string, CacheMap<string, ethers.providers.Block>> = {}
+	private readonly caches: Record<string, CacheMap<string, Block>> = {}
 	private latestBlockHash: Record<string, string> = {}
 
-	constructor(private readonly providers: Record<string, ethers.providers.Provider>) {
+	constructor(private readonly providers: Record<string, BlockProvider>) {
 		for (const [key, provider] of Object.entries(providers)) {
 			this.caches[key] = new CacheMap(constants.BLOCK_CACHE_SIZE)
-			const handleBlock = async (blocknum: number) => {
-				const block = await this.providers[key].getBlock(blocknum)
-				this.caches[key].add(block.hash, block)
-				this.latestBlockHash[key] = block.hash
+			const handleBlock = async (block: Block) => {
+				this.caches[key].add(block.blockhash, block)
+				this.latestBlockHash[key] = block.blockhash
 			}
 
-			provider.on("block", handleBlock)
+			provider.onBlock(handleBlock)
 			this.controller.signal.addEventListener("abort", () => {
-				provider.removeListener("block", handleBlock)
+				provider.removeOnBlock()
 				this.caches[key].clear()
 			})
 		}
@@ -69,9 +57,9 @@ export class BlockCache {
 				throw err
 			}
 
-			cache.add(block.hash.toLowerCase(), block)
+			cache.add(block.blockhash.toLowerCase(), block)
 		}
 
-		return ethersBlockToCanvasBlock(chainId, block)
+		return block
 	}
 }

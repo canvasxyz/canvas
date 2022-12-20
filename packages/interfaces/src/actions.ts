@@ -55,3 +55,12 @@ export type ActionToken = {
 	application: string
 	timestamp: string
 }
+
+export interface BlockProvider {
+	chain: Chain
+	chainId: ChainId
+
+	getBlock: (key: number | string) => Promise<Block>
+	onBlock: (cb: (block: Block) => void) => void
+	removeOnBlock: () => void
+}

@@ -28,6 +28,7 @@ import {
 	Chain,
 	ChainId,
 	Block,
+	BlockProvider,
 } from "@canvas-js/interfaces"
 
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
@@ -51,7 +52,6 @@ import { ModelStore } from "./modelStore.js"
 import { sync, handleIncomingStream } from "./rpc/index.js"
 import * as constants from "./constants.js"
 import { getLibp2pInit } from "./libp2p.js"
-import { ethersBlockToCanvasBlock } from "./blockCache.js"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
@@ -60,7 +60,7 @@ export interface CoreConfig extends CoreOptions {
 	uri?: string
 	spec: string
 	libp2p?: Libp2p
-	providers?: Record<string, ethers.providers.JsonRpcProvider>
+	providers?: Record<string, BlockProvider>
 	// defaults to fetching each block from the provider with no caching
 	blockResolver?: BlockResolver
 }
@@ -101,8 +101,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			blockResolver = async (chain, chainId, blockhash) => {
 				const key = `${chain}:${chainId}`
 				assert(providers !== undefined && key in providers, `no provider for ${chain}:${chainId}`)
-				const ethBlock = await providers[key].getBlock(blockhash)
-				return ethersBlockToCanvasBlock(chainId, ethBlock)
+				return await providers[key].getBlock(blockhash)
 			}
 		}
 
@@ -275,7 +274,10 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(binarySession !== null, "session not found")
 			const session = fromBinarySession(binarySession)
 			assert(session.payload.chain === action.payload.chain, "session and action chains must match")
-			assert(session.payload.chainId === action.payload.chainId, "session and action chain IDs must match")
+			assert(
+				session.payload.chainId.toString() === action.payload.chainId.toString(),
+				"session and action chain IDs must match"
+			)
 			assert(session.payload.timestamp + session.payload.duration > timestamp, "session expired")
 			assert(session.payload.timestamp <= timestamp, "session timestamp must precede action timestamp")
 
