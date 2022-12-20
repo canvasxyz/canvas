@@ -4,8 +4,6 @@ export const getCanvasSessionKey = (address: string) => `CANVAS_SESSION:${addres
 
 export type Dispatch = (call: string, args: Record<string, ActionArgument>) => Promise<{ hash: string }>
 
-export const getRecentEthereumBlock = async () => {}
-
 // Copied from https://github.com/jfromaniello/url-join/blob/main/lib/url-join.js
 
 function normalize(strArray: string[]) {
