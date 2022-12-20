@@ -214,20 +214,25 @@ export class Core extends EventEmitter<CoreEvents> {
 		// the appropriate chain. We can't just call toLowerCase() since some
 		// chains use base58 for these values. Instead, the simplest way for us
 		// to guarantee canonicality is to encode and then decode again.
-		const [hashBuffer, binaryAction] = normalizeAction(action)
-		const hash = toHex(hashBuffer)
-		const existingRecord = this.messageStore.getActionByHash(hashBuffer)
+		const [hash, binaryAction, data] = normalizeAction(action)
+		const existingRecord = this.messageStore.getActionByHash(hash)
 		if (existingRecord !== null) {
-			return { hash }
+			return { hash: toHex(hash) }
 		}
 
 		await this.queue.add(() => this.applyActionInternal(hash, binaryAction))
-		await this.publishMessage(hash, binaryAction)
-		return { hash }
+
+		await this.publishMessage(hash, data)
+		return { hash: toHex(hash) }
 	}
 
-	private async applyActionInternal(hash: string, binaryAction: BinaryAction) {
+	private async applyActionInternal(hashBuffer: Buffer, binaryAction: BinaryAction) {
+		// We deliberately translate actions to BinaryActions and back in order to
+		// guarantee consistent address capitalization etc. fromBinaryAction serves
+		// as a normalizer; if we want to change the canonical format for anythingl
+		// we would do it there.
 		const action = fromBinaryAction(binaryAction)
+		const hash = toHex(hashBuffer)
 		if (this.options.verbose) {
 			console.log(chalk.green(`[canvas-core] Applying action ${hash}`), action)
 		}
@@ -238,7 +243,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.messageStore.insertAction(hash, binaryAction)
 		this.modelStore.applyEffects(action.payload, effects)
 		if (this.mst !== null) {
-			const hashBuffer = fromHex(hash)
 			const leafBuffer = Buffer.alloc(14)
 			leafBuffer.writeUintBE(action.payload.timestamp * 2 + 1, 0, 6)
 			hashBuffer.copy(leafBuffer, 6, 0, 8)
@@ -302,19 +306,19 @@ export class Core extends EventEmitter<CoreEvents> {
 	 */
 	public async applySession(session: Session): Promise<{ hash: string }> {
 		assert(sessionType.is(session), "invalid session")
-		const [hashBuffer, binarySession] = normalizeSession(session)
-		const hash = "0x" + hashBuffer.toString("hex")
-		const existingRecord = this.messageStore.getSessionByHash(hashBuffer)
+		const [hash, binarySession, data] = normalizeSession(session)
+		const existingRecord = this.messageStore.getSessionByHash(hash)
 		if (existingRecord !== null) {
-			return { hash }
+			return { hash: toHex(hash) }
 		}
 
 		await this.queue.add(() => this.applySessionInternal(hash, binarySession))
-		await this.publishMessage(hash, binarySession)
-		return { hash }
+		await this.publishMessage(hash, data)
+		return { hash: toHex(hash) }
 	}
 
-	private async applySessionInternal(hash: string, binarySession: BinarySession) {
+	private async applySessionInternal(hashBuffer: Buffer, binarySession: BinarySession) {
+		const hash = toHex(hashBuffer)
 		const session = fromBinarySession(binarySession)
 		if (this.options.verbose) {
 			console.log(chalk.green(`[canvas-core] Applying session ${hash}`), session)
@@ -323,7 +327,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		await this.validateSession(session)
 		this.messageStore.insertSession(hash, binarySession)
 		if (this.mst !== null) {
-			const hashBuffer = Buffer.from(hash.slice(2), "hex")
 			const leafBuffer = Buffer.alloc(14)
 			leafBuffer.writeUintBE(session.payload.timestamp * 2, 0, 6)
 			hashBuffer.copy(leafBuffer, 6, 0, 8)
@@ -362,17 +365,17 @@ export class Core extends EventEmitter<CoreEvents> {
 		return this.modelStore.getRoute(route, params)
 	}
 
-	private async publishMessage(hash: string, message: BinaryMessage) {
+	private async publishMessage(hash: Buffer, data: Uint8Array) {
 		if (this.libp2p === null || this.options.offline) {
 			return
 		}
 
 		if (this.options.verbose) {
-			console.log(`[canvas-core] Publishing action ${hash} to GossipSub`)
+			console.log(`[canvas-core] Publishing action ${toHex(hash)} to GossipSub`)
 		}
 
 		await this.libp2p.pubsub
-			.publish(this.uri, cbor.encode(message))
+			.publish(this.uri, data)
 			.then(({ recipients }) => {
 				if (this.options.verbose) {
 					console.log(`[canvas-core] Published message to ${recipients.length} peers`)
@@ -390,7 +393,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		const binaryMessage = decodeBinaryMessage(message.data)
-		const hash = toHex(createHash("sha256").update(message.data).digest())
+		const hash = createHash("sha256").update(message.data).digest()
 		try {
 			if (binaryMessage.type === "action") {
 				await this.queue.add(() => this.applyActionInternal(hash, binaryMessage))
@@ -586,7 +589,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		let successCount = 0
 		let failureCount = 0
 
-		const applyBatch = (messages: [string, BinaryMessage][]) =>
+		const applyBatch = (messages: [Buffer, BinaryMessage][]) =>
 			this.queue.add(async () => {
 				for (const [hash, message] of messages) {
 					if (this.options.verbose) {
