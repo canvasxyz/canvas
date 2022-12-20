@@ -1,13 +1,12 @@
 import { ethers } from "ethers"
-import web3utils from "web3-utils"
-import { connect, disconnect, getProvider, signTypedData, configureChains, createClient } from "@wagmi/core"
+import { connect, disconnect, signTypedData, configureChains, createClient } from "@wagmi/core"
 import { WalletConnectConnector } from "wagmi/connectors/walletConnect"
 
 import { mainnet } from "@wagmi/core/chains"
 
 import { EthereumClient, modalConnectors, walletConnectProvider } from "@web3modal/ethereum"
 
-import type { Block, Chain, ChainId, SessionPayload, Session } from "@canvas-js/interfaces"
+import type { Chain, ChainId, SessionPayload, Session } from "@canvas-js/interfaces"
 import { getSessionSignatureData } from "@canvas-js/verifiers"
 
 import { Connector, SessionSigner } from "./interfaces.js"
@@ -70,19 +69,6 @@ class WalletConnectWebWalletSessionSigner implements SessionSigner {
 	constructor(address: string, chainId: number) {
 		this.address = address
 		this.chainId = chainId
-	}
-
-	async getRecentBlock(): Promise<Block> {
-		const provider = await getProvider({ chainId: this.chainId })
-		const block = await provider.getBlock("latest")
-
-		return {
-			chain: await this.getChain(),
-			chainId: await this.getChainId(),
-			blocknum: web3utils.hexToNumber(block.number),
-			blockhash: block.hash,
-			timestamp: web3utils.hexToNumber(block.timestamp),
-		}
 	}
 
 	async getAddress(): Promise<string> {

@@ -5,7 +5,7 @@ import express from "express"
 import { StatusCodes } from "http-status-codes"
 import client from "prom-client"
 
-import type { ModelValue } from "@canvas-js/interfaces"
+import type { Chain, ModelValue } from "@canvas-js/interfaces"
 import { Core } from "./core.js"
 
 const collectDefaultMetrics = client.collectDefaultMetrics
@@ -69,6 +69,16 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		} catch (err: any) {
 			console.log(chalk.red(`[canvas-core] Failed to create session:`), err)
 			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
+		}
+	})
+
+	api.get("/latest_block/:chain/:chainId", async (req, res) => {
+		const { chain, chainId } = req.params
+		try {
+			const block = await core.getLatestBlock({ chain: chain as Chain, chainId })
+			return res.status(StatusCodes.OK).json(block)
+		} catch (e) {
+			return res.status(StatusCodes.NOT_FOUND).end()
 		}
 	})
 

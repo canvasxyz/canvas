@@ -19,7 +19,17 @@ import type { StreamHandler } from "@libp2p/interface-registrar"
 
 import * as okra from "node-okra"
 
-import { Action, ActionPayload, Session, SessionPayload, ModelValue, Chain, ChainId } from "@canvas-js/interfaces"
+import {
+	Action,
+	ActionPayload,
+	Session,
+	SessionPayload,
+	ModelValue,
+	Chain,
+	ChainId,
+	Block,
+	BlockProvider,
+} from "@canvas-js/interfaces"
 
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
 
@@ -50,7 +60,7 @@ export interface CoreConfig extends CoreOptions {
 	uri?: string
 	spec: string
 	libp2p?: Libp2p
-	providers?: Record<string, ethers.providers.JsonRpcProvider>
+	providers?: Record<string, BlockProvider>
 	// defaults to fetching each block from the provider with no caching
 	blockResolver?: BlockResolver
 }
@@ -88,10 +98,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		const vm = await VM.initialize(uri, spec, providers || {})
 
 		if (blockResolver === undefined) {
-			blockResolver = (chain, chainId, blockhash) => {
+			blockResolver = async (chain, chainId, blockhash) => {
 				const key = `${chain}:${chainId}`
 				assert(providers !== undefined && key in providers, `no provider for ${chain}:${chainId}`)
-				return providers[key].getBlock(blockhash)
+				return await providers[key].getBlock(blockhash)
 			}
 		}
 
@@ -180,6 +190,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.dispatchEvent(new Event("close"))
 	}
 
+	public async getLatestBlock({ chain, chainId }: { chain: Chain; chainId: ChainId }): Promise<Block> {
+		return this.blockResolver(chain, chainId, "latest")
+	}
+
 	/**
 	 * Helper for verifying the blockhash for an action or session.
 	 */
@@ -260,7 +274,10 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(binarySession !== null, "session not found")
 			const session = fromBinarySession(binarySession)
 			assert(session.payload.chain === action.payload.chain, "session and action chains must match")
-			assert(session.payload.chainId === action.payload.chainId, "session and action chain IDs must match")
+			assert(
+				session.payload.chainId.toString() === action.payload.chainId.toString(),
+				"session and action chain IDs must match"
+			)
 			assert(session.payload.timestamp + session.payload.duration > timestamp, "session expired")
 			assert(session.payload.timestamp <= timestamp, "session timestamp must precede action timestamp")
 
