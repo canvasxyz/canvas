@@ -46,6 +46,7 @@ async function sign(call: string, args: Record<string, ActionArgument>): Promise
 		call,
 		args,
 		timestamp,
+		blocknum: null,
 		blockhash: null,
 		chain: "eth",
 		chainId: 1,
@@ -109,6 +110,7 @@ async function signWithSession(call: string, args: Record<string, ActionArgument
 		call,
 		args,
 		timestamp,
+		blocknum: null,
 		blockhash: null,
 		chain: "eth",
 		chainId: 1,
@@ -129,6 +131,7 @@ test("Apply action signed with session key", async (t) => {
 		duration: 60 * 60 * 1000, // 1 hour
 		chain: "eth",
 		chainId: 1,
+		blocknum: null,
 		blockhash: null,
 	}
 
@@ -164,6 +167,7 @@ test("Apply two actions signed with session keys", async (t) => {
 		duration: 60 * 60 * 1000, // 1 hour
 		chain: "eth",
 		chainId: 1,
+		blocknum: null,
 		blockhash: null,
 	}
 

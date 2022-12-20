@@ -58,6 +58,7 @@ test("Test calling the public ENS resolver contract", async (t) => {
 			timestamp,
 			chain: "eth",
 			chainId: 1,
+			blocknum: block.blocknum,
 			blockhash: block.blockhash,
 		}
 		const actionSignatureData = getActionSignatureData(actionPayload)

@@ -41,6 +41,7 @@ test("Test setting and then deleting a record", async (t) => {
 			timestamp,
 			chain: "eth",
 			chainId: 1,
+			blocknum: null,
 			blockhash: null,
 		}
 

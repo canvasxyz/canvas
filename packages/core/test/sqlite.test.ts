@@ -68,6 +68,7 @@ async function sign(call: string, args: Record<string, ActionArgument>): Promise
 		call,
 		args,
 		timestamp,
+		blocknum: null,
 		blockhash: null,
 		chain: "eth",
 		chainId: 1,

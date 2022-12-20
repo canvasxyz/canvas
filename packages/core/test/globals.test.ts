@@ -34,6 +34,7 @@ async function sign(
 		timestamp,
 		chain: "eth",
 		chainId: 1,
+		blocknum: null,
 		blockhash: null,
 	}
 	const actionSignatureData = getActionSignatureData(actionPayload)
