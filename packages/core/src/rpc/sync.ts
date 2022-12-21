@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto"
 
 import chalk from "chalk"
-import type { Stream } from "@libp2p/interface-connection"
+import type { Duplex } from "it-stream-types"
+import type { Uint8ArrayList } from "uint8arraylist"
 
 import * as okra from "node-okra"
 
@@ -11,7 +12,7 @@ import { Client } from "./client.js"
 
 export async function sync(
 	mst: okra.Tree,
-	stream: Stream,
+	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
 	applyBatch: (messages: [Buffer, BinaryMessage][]) => Promise<void>
 ): Promise<void> {
 	const target = new okra.Target(mst)

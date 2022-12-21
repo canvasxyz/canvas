@@ -4,7 +4,7 @@ import chalk from "chalk"
 
 import type { Uint8ArrayList } from "uint8arraylist"
 import type { Stream } from "@libp2p/interface-connection"
-import type { Source } from "it-stream-types"
+import type { Duplex, Source } from "it-stream-types"
 import { pipe } from "it-pipe"
 import * as lp from "it-length-prefixed"
 
@@ -16,7 +16,11 @@ import type { MessageStore } from "../messageStore.js"
 import { encodeBinaryAction, encodeBinarySession } from "../encoding.js"
 import { toBuffer, toHex } from "../utils.js"
 
-export async function handleIncomingStream(stream: Stream, messageStore: MessageStore, mst: okra.Tree) {
+export async function handleIncomingStream(
+	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
+	messageStore: MessageStore,
+	mst: okra.Tree
+) {
 	const txn = new okra.Source(mst)
 
 	async function* handle(source: Source<Uint8ArrayList>): AsyncIterable<Uint8Array> {

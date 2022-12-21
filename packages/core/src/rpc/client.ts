@@ -1,7 +1,6 @@
 import assert from "node:assert"
 
-import type { Stream } from "@libp2p/interface-connection"
-import type { Source } from "it-stream-types"
+import type { Duplex, Source } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
@@ -15,7 +14,7 @@ export class Client {
 	private seq = 0
 	private readonly responses: AsyncIterator<RPC.Response>
 	private readonly requests: Pushable<RPC.Request>
-	constructor({ source, sink }: Stream) {
+	constructor({ source, sink }: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>) {
 		this.responses = pipe(source, lp.decode(), Client.decodeResponses)
 		this.requests = pushable({ objectMode: true })
 		pipe(this.requests, Client.encodeRequests, lp.encode(), sink)
