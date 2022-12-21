@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from "react"
 import _ from "lodash"
 
-// import { useEnsName } from "wagmi"
+import { useEnsName } from "wagmi"
 import { useCanvas, useRoute } from "@canvas-js/hooks"
 
 type Post = {
@@ -66,8 +66,8 @@ export const Messages: React.FC<{}> = ({}) => {
 	// Load more on scroll
 	const handleScroll = useMemo(
 		() =>
-			_.throttle((event) => {
-				if (event?.target?.scrollTop > 50) return
+			_.throttle((event: React.UIEvent<HTMLElement>) => {
+				if ((event?.target as HTMLElement)?.scrollTop > 50) return
 				if (messages.length > 0)
 					setTimeout(() => {
 						const earliestPost = messages[messages.length - 1]?.updated_at?.toString()
@@ -137,13 +137,12 @@ const Posts: React.FC<{ posts: null | Post[] }> = (props) => {
 
 const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
 	const address = `${from_id.slice(0, 5)}…${from_id.slice(-4)}`
-	// TODO: find an alternative to using wagmi for ens resolution
 	// use wagmi's internal cache for ens names
-	// const { data, isError, isLoading } = useEnsName({ address: from_id })
+	const { data, isError, isLoading } = useEnsName({ address: from_id })
 
 	return (
 		<li>
-			{/* {data && <span className="address address-ens">[{data}]</span>} */}
+			{data && <span className="address address-ens">[{data}]</span>}
 			<span className="address">{address} &gt;</span> {content}
 		</li>
 	)

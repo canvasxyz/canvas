@@ -1,19 +1,19 @@
+import web3 from "web3"
 import { ethers } from "ethers"
-import { connect, disconnect, signTypedData, configureChains, createClient } from "@wagmi/core"
-import { WalletConnectConnector } from "wagmi/connectors/walletConnect"
+import { connect, disconnect, signTypedData, getProvider, configureChains, createClient } from "@wagmi/core"
+import { WalletConnectConnector } from "@wagmi/connectors/walletConnect"
 
 import { mainnet } from "@wagmi/core/chains"
 
 import { EthereumClient, modalConnectors, walletConnectProvider } from "@web3modal/ethereum"
 
-import type { Chain, ChainId, SessionPayload, Session } from "@canvas-js/interfaces"
+import type { Block, Chain, ChainId, SessionPayload, Session } from "@canvas-js/interfaces"
 import { getSessionSignatureData } from "@canvas-js/verifiers"
 
 import { Connector, SessionSigner } from "./interfaces.js"
 import { MetaMaskEthereumActionSigner } from "./metamask_web_wallet.js"
 import { _TypedDataEncoder } from "ethers/lib/utils.js"
 
-const PROJECT_ID = process.env.REACT_APP_WALLETCONNECT_PROJECT_ID || process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
 const chains = [mainnet]
 
 export class WalletConnectWebWalletConnector implements Connector {
@@ -22,10 +22,15 @@ export class WalletConnectWebWalletConnector implements Connector {
 
 	get available(): boolean {
 		// Only available if the project id has been set
+		const PROJECT_ID =
+			process.env.REACT_APP_WALLETCONNECT_PROJECT_ID || process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
 		return !!PROJECT_ID
 	}
 
 	async enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void> {
+		const PROJECT_ID =
+			process.env.REACT_APP_WALLETCONNECT_PROJECT_ID || process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+
 		console.log("Attempting to enable WalletConnect")
 
 		// Wagmi Core Client
@@ -93,5 +98,18 @@ class WalletConnectWebWalletSessionSigner implements SessionSigner {
 
 	async getChainId(): Promise<ChainId> {
 		return this.chainId
+	}
+
+	async getRecentBlock(): Promise<Block> {
+		const provider = await getProvider({ chainId: this.chainId })
+		const block = await provider.getBlock("latest")
+
+		return {
+			chain: await this.getChain(),
+			chainId: await this.getChainId(),
+			blocknum: web3.utils.hexToNumber(block.number),
+			blockhash: block.hash,
+			timestamp: web3.utils.hexToNumber(block.timestamp),
+		}
 	}
 }

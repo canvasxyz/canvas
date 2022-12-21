@@ -128,16 +128,16 @@ export function decodeBinaryMessage(data: Uint8Array): BinaryMessage {
 	return binaryMessage
 }
 
-export function normalizeAction(action: Action): [Buffer, BinaryAction] {
+export function normalizeAction(action: Action): [hash: Buffer, action: BinaryAction, data: Uint8Array] {
 	const binaryAction = toBinaryAction(action)
 	const data = cbor.encode(binaryAction)
 	const hash = createHash("sha256").update(data).digest()
-	return [hash, binaryAction]
+	return [hash, binaryAction, data]
 }
 
-export function normalizeSession(session: Session): [Buffer, BinarySession] {
+export function normalizeSession(session: Session): [hash: Buffer, session: BinarySession, data: Uint8Array] {
 	const binarySession = toBinarySession(session)
 	const data = cbor.encode(binarySession)
 	const hash = createHash("sha256").update(data).digest()
-	return [hash, binarySession]
+	return [hash, binarySession, data]
 }

@@ -58,7 +58,6 @@
     "prom-client": "^14.1.0",
     "protobufjs": "~7.1.2",
     "quickjs-emscripten": "^0.21.0",
-    "socket.io": "^4.5.4",
     "sucrase": "^3.28.0",
     "typedarray-to-buffer": "^4.0.0",
     "uint8arraylist": "^2.3.2",

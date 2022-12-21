@@ -12,7 +12,7 @@ import { Client } from "./client.js"
 export async function sync(
 	mst: okra.Tree,
 	stream: Stream,
-	applyBatch: (messages: [string, BinaryMessage][]) => Promise<void>
+	applyBatch: (messages: [Buffer, BinaryMessage][]) => Promise<void>
 ): Promise<void> {
 	const target = new okra.Target(mst)
 	const client = new Client(stream)
@@ -46,7 +46,7 @@ export async function sync(
 				throw new Error("expected values.length to match leaves.length")
 			}
 
-			const messages: [string, BinaryMessage][] = []
+			const messages: [Buffer, BinaryMessage][] = []
 
 			for (const [i, value] of values.entries()) {
 				const { hash } = leaves[i]
@@ -54,7 +54,7 @@ export async function sync(
 					throw new Error(`the value received for ${toHex(hash)} did not match the hash`)
 				}
 
-				messages.push([toHex(hash), decodeBinaryMessage(value)])
+				messages.push([hash, decodeBinaryMessage(value)])
 			}
 
 			await applyBatch(messages)
