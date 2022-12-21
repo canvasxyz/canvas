@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useState } from "react"
 
-import { SessionPayload, Session } from "@canvas-js/interfaces"
+import { Block, SessionPayload, Session } from "@canvas-js/interfaces"
 import type { SessionSigner } from "@canvas-js/signers/lib/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
@@ -103,23 +103,11 @@ export function useSession(signer: SessionSigner | null): {
 			const chain = await signer.getChain()
 			const chainId = await signer.getChainId()
 
-			let block
+			let block: Block
 			try {
 				block = await getRecentBlock(host, chain, chainId)
 			} catch (err) {
-				block = signer.getRecentBlock()
-				// +               const { provider } = this.signer
-				// +               const providerBlock = await provider.getBlock("latest")
-				// +
-				// +               return {
-				// +                       chain: this.chain,
-				// +                       chainId: this.network.chainId,
-				// +                       blocknum: providerBlock.number,
-				// +                       blockhash: providerBlock.hash,
-				// +                       timestamp: providerBlock.timestamp,
-				// +               }
-				// 				console.log(signer)
-				return
+				block = await signer.getRecentBlock()
 			}
 
 			const payload: SessionPayload = {
