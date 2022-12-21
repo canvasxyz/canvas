@@ -1,6 +1,6 @@
 import { ethers } from "ethers"
 import { connect, disconnect, signTypedData, configureChains, createClient } from "@wagmi/core"
-import { WalletConnectConnector } from "wagmi/connectors/walletConnect"
+import { WalletConnectConnector } from "@wagmi/connectors/walletConnect"
 
 import { mainnet } from "@wagmi/core/chains"
 
