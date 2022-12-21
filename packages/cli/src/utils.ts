@@ -11,7 +11,7 @@ import prompts from "prompts"
 
 import { chainType, constants } from "@canvas-js/core"
 import { BlockProvider } from "@canvas-js/interfaces"
-import { EthereumBlockProvider } from "@canvas-js/signers"
+import { CosmosBlockProvider, EthereumBlockProvider } from "@canvas-js/signers"
 
 export const CANVAS_HOME = process.env.CANVAS_HOME ?? path.resolve(os.homedir(), ".canvas")
 export const SOCKET_FILENAME = "daemon.sock"
@@ -99,17 +99,19 @@ export function getProviders(args?: (string | number)[]): Record<string, BlockPr
 			if (!chainType.is(chain)) {
 				console.log(chalk.red(`[canvas-cli] Invalid chain "${chain}", should be a ${chainType.name}`))
 				process.exit(1)
-			} else if (typeof id !== "number") {
-				console.log(chalk.red(`Invalid chain id "${id}", should be a number e.g. 1`))
-				process.exit(1)
+				// } else if (typeof id !== "number") {
+				// 	console.log(chalk.red(`Invalid chain id "${id}", should be a number e.g. 1`))
+				// 	process.exit(1)
 			} else if (typeof url !== "string") {
 				console.log(chalk.red(`Invalid chain rpc "${url}", should be a url`))
 				process.exit(1)
 			}
 
+			const key = `${chain}:${id}`
 			if (chain == "eth") {
-				const key = `${chain}:${id}`
 				providers[key] = new EthereumBlockProvider(id, url)
+			} else if (chain == "cosmos") {
+				providers[key] = new CosmosBlockProvider(id, url)
 			} else {
 				console.log(`'chain' value (${chain}) was not 'eth', all other RPCs are currently unsupported`)
 			}

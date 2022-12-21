@@ -13,7 +13,6 @@
     "@canvas-js/interfaces": "0.0.36",
     "@canvas-js/verifiers": "0.0.36",
     "@cosmjs/stargate": "^0.29.5",
-    "@cosmjs/tendermint-rpc": "^0.29.5",
     "@ethersproject/abstract-signer": "^5.6.2",
     "@ethersproject/wallet": "^5.6.2",
     "@wagmi/core": "^0.8.3",

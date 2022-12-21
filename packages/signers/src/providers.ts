@@ -1,8 +1,6 @@
 import { ethers } from "ethers"
 import { StargateClient } from "@cosmjs/stargate"
-import { Tendermint34Client, NewBlockHeaderEvent } from "@cosmjs/tendermint-rpc"
 import { Block, BlockProvider, Chain, ChainId } from "@canvas-js/interfaces"
-import { Listener, Stream } from "xstream"
 
 export const ethersBlockToCanvasBlock = (chainId: ChainId, ethBlock: ethers.providers.Block): Block => {
 	return {
@@ -56,9 +54,7 @@ export class CosmosBlockProvider implements BlockProvider {
 	chainId: ChainId
 	url: string
 
-	tmClient?: Tendermint34Client
-	stream?: Stream<NewBlockHeaderEvent>
-	blockListener?: any
+	blockTimer?: any
 
 	constructor(chainId: ChainId, url: string) {
 		this.chainId = chainId
@@ -67,7 +63,7 @@ export class CosmosBlockProvider implements BlockProvider {
 
 	async getBlock({ blocknum }: { blocknum?: number }) {
 		if (!blocknum) {
-			console.log("No key given for `getBlock`, CosmosBlockProvider requires a blocknum")
+			console.log(`Retrieving latest block for ${this.chain}:${this.chainId}`)
 		}
 		const client = await StargateClient.connect(this.url)
 
@@ -84,30 +80,23 @@ export class CosmosBlockProvider implements BlockProvider {
 	}
 
 	async onBlock(cb: (block: Block) => void) {
-		if (this.tmClient || this.stream || this.blockListener) {
-			// stream and/or blockListener already exists, abort
-			console.log(`tmClient already exists on CosmosBlockProvider, cannot create a new block subscription`)
+		if (this.blockTimer) {
+			console.log("Attempted to set `onBlock` callback, but it has already been set")
+			// already polling
+			return
 		}
-		this.tmClient = await Tendermint34Client.connect(this.url)
-		this.stream = this.tmClient.subscribeNewBlockHeader()
-
-		this.blockListener = {
-			next: async (e) => {
-				const block = await this.getBlock({ blocknum: e.height })
-				cb(block)
-			},
-		} as Partial<Listener<NewBlockHeaderEvent>>
-
-		this.stream.addListener(this.blockListener)
+		// TODO: Make this configurable for different Cosmos chains?
+		const pollingInternalMs = 10000
+		this.blockTimer = setInterval(async () => {
+			// get the latest block
+			const block = await this.getBlock({})
+			cb(block)
+		}, pollingInternalMs)
 	}
 
 	removeOnBlock() {
-		if (this.stream && this.blockListener) {
-			this.stream.removeListener(this.blockListener)
-			this.tmClient?.disconnect()
-			this.tmClient = undefined
-			this.stream = undefined
-			this.blockListener = undefined
+		if (this.blockTimer) {
+			clearInterval(this.blockTimer)
 		}
 	}
 }
