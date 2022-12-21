@@ -7,7 +7,14 @@ import * as cbor from "microcbor"
 import type { Session, Action } from "@canvas-js/interfaces"
 
 import { actionArgumentType, chainIdType, chainType, uint8ArrayType } from "./codecs.js"
-import { decodeAddress, decodeBlockhash, encodeAddress, encodeBlockhash } from "./chains/index.js"
+import {
+	decodeAddress,
+	decodeBlockhash,
+	decodeSignature,
+	encodeAddress,
+	encodeBlockhash,
+	encodeSignature,
+} from "./chains/index.js"
 
 const { hexlify, arrayify } = ethers.utils
 
@@ -61,7 +68,7 @@ export function toBinarySession(session: Session): BinarySession {
 
 	return {
 		type: "session",
-		signature: arrayify(session.signature),
+		signature: encodeSignature(chain, chainId, session.signature),
 		payload: {
 			...session.payload,
 			from: encodeAddress(chain, chainId, from),
@@ -73,10 +80,9 @@ export function toBinarySession(session: Session): BinarySession {
 
 export function fromBinarySession(session: BinarySession): Session {
 	const { chain, chainId, from, address, blockhash } = session.payload
-
 	return {
 		type: "session",
-		signature: hexlify(session.signature),
+		signature: decodeSignature(chain, chainId, session.signature),
 		payload: {
 			...session.payload,
 			from: decodeAddress(chain, chainId, from),
@@ -91,7 +97,7 @@ export function toBinaryAction(action: Action): BinaryAction {
 
 	return {
 		type: "action",
-		signature: arrayify(action.signature),
+		signature: encodeSignature(chain, chainId, action.signature),
 		session: action.session ? encodeAddress(chain, chainId, action.session) : null,
 		payload: {
 			...action.payload,
@@ -106,7 +112,7 @@ export function fromBinaryAction(action: BinaryAction): Action {
 
 	return {
 		type: "action",
-		signature: hexlify(action.signature),
+		signature: decodeSignature(chain, chainId, action.signature),
 		session: action.session && decodeAddress(chain, chainId, action.session),
 		payload: {
 			...action.payload,

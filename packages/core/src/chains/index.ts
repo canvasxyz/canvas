@@ -9,13 +9,34 @@ import { signalInvalidType } from "../utils.js"
 
 const { arrayify, hexlify, base58 } = ethers.utils
 
+export function encodeSignature(chain: Chain, chainId: ChainId, signature: string): Uint8Array {
+	if (chain == "eth") {
+		return arrayify(signature)
+	} else if (chain == "cosmos") {
+		// "utf-8"?
+		return new TextEncoder().encode(signature)
+	} else {
+		throw Error("unsupported")
+	}
+}
+
+export function decodeSignature(chain: Chain, chainId: ChainId, signature: Uint8Array): string {
+	if (chain == "eth") {
+		return hexlify(signature)
+	} else if (chain == "cosmos") {
+		return new TextDecoder().decode(signature)
+	} else {
+		throw Error("unsupported")
+	}
+}
+
 export function encodeAddress(chain: Chain, chainId: ChainId, address: string): Uint8Array {
 	if (chain === "eth") {
 		return arrayify(address)
 	} else if (chain === "cosmos") {
 		if (chainId in bech32Prefixes) {
 			const { prefix, words } = bech32.decode(address)
-			if (prefix !== bech32Prefixes[chainId]) {
+			if (prefix !== bech32Prefixes[chainId] && prefix !== "cosmos") {
 				throw new Error(`cosmos address ${address} does not match the provided chainId ${chainId}`)
 			}
 
