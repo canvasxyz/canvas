@@ -15,6 +15,7 @@ export interface SessionSigner {
 	signSessionPayload(payload: SessionPayload): Promise<Session>
 	getChain(): Promise<Chain>
 	getChainId(): Promise<ChainId>
+	getRecentBlock(): Promise<Block>
 }
 
 export interface ActionSigner {

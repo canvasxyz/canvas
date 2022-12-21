@@ -28,31 +28,21 @@ module.exports = {
 	resolve: {
 		extensions: [".tsx", ".ts", ".js"],
 		fallback: {
-			crypto: require.resolve("crypto-browserify"),
-			stream: require.resolve("stream-browserify"),
-			path: require.resolve("path-browserify"),
-			assert: false,
-		},
-		alias: {
-			process: "process/browser.js",
-		},
+			stream: false,
+			process: false,
+			buffer: require.resolve("buffer"),
+		}, // TODO: remove this when dependencies have been cleaned up
 	},
 	experiments: {
 		outputModule: true,
 	},
 	plugins: [
 		new CopyWebpackPlugin({ patterns: [{ from: "public" }] }),
+		new webpack.ProvidePlugin({ Buffer: ["buffer", "Buffer"] }),
 		new webpack.DefinePlugin({ "process.env.HOST": JSON.stringify(process.env.HOST ?? "http://localhost:8000") }),
-		new webpack.ProvidePlugin({
-			process: "process/browser.js",
-			Buffer: ["buffer", "Buffer"],
-		}),
 	],
 	devServer: {
 		static: [path.join(__dirname, "public")],
 		hot: true,
-		historyApiFallback: {
-			index: "index.html",
-		},
 	},
 }

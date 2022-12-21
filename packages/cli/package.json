@@ -29,7 +29,6 @@
     "multiformats": "^10.0.2",
     "p-queue": "^7.3.0",
     "prompts": "^2.4.2",
-    "socket.io": "^4.5.4",
     "stoppable": "^1.1.0",
     "undici": "^5.14.0",
     "winston": "^3.8.2",

@@ -1,4 +1,4 @@
-import { Action, ActionPayload } from "@canvas-js/interfaces"
+import { Action, ActionPayload, Block } from "@canvas-js/interfaces"
 import { useCallback, useContext, useState } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"
@@ -54,7 +54,12 @@ export function useCanvas(): {
 				const chain = await signer.getChain()
 				const chainId = await signer.getChainId()
 
-				const block = await getRecentBlock(host, chain, chainId)
+				let block: Block
+				try {
+					block = await getRecentBlock(host, chain, chainId)
+				} catch (err) {
+					block = await signer.getRecentBlock()
+				}
 				console.log("got block", block)
 
 				const address = await signer.getAddress()
