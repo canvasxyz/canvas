@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat-webpack",
-  "version": "0.0.34-alpha4",
+  "version": "0.0.36",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -15,10 +15,11 @@
     "@canvas-js/hooks": "0.0.36",
     "@types/react": "^18.0.9",
     "@types/react-dom": "^18.0.5",
+    "@wagmi/chains": "^0.1.5",
     "98.css": "^0.1.18",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
-    "wagmi": "^0.7.7"
+    "wagmi": "^0.9.4"
   },
   "devDependencies": {
     "concurrently": "^7.5.0",

@@ -51,9 +51,9 @@ export const Connect: React.FC<{}> = ({}) => {
 }
 
 const Login: React.FC<{}> = ({}) => {
-	const { error: signerError, data: originalSigner } = useSigner<ethers.providers.JsonRpcSigner>()
+	const { error: signerError, data: ethersSigner } = useSigner<ethers.providers.JsonRpcSigner>()
 	const { chain } = useNetwork()
-	const signer = useCanvasSigner(originalSigner!, ethers.providers.getNetwork(chain?.id!))
+	const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
 
 	const {
 		error: sessionError,
