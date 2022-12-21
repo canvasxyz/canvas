@@ -50,7 +50,7 @@ export class BlockCache {
 		let block = cache.get(blockhash)
 		if (block === undefined) {
 			try {
-				block = await provider.getBlock(blockhash)
+				block = await provider.getBlock({ blockhash })
 			} catch (err) {
 				// TODO: catch rpc errors and identify those separately vs invalid blockhash errors
 				console.log(chalk.red("Failed to fetch block from RPC provider"))

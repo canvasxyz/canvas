@@ -101,7 +101,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			blockResolver = async (chain, chainId, blockhash) => {
 				const key = `${chain}:${chainId}`
 				assert(providers !== undefined && key in providers, `no provider for ${chain}:${chainId}`)
-				return await providers[key].getBlock(blockhash)
+				return await providers[key].getBlock({ blockhash })
 			}
 		}
 

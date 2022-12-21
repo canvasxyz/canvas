@@ -19,14 +19,6 @@ export type Block = {
 	timestamp: number
 }
 
-export interface BlockProvider {
-	chain: Chain
-	chainId: ChainId
-	getBlock: (key: string | number) => Promise<Block>
-	onBlock: (cb: (block: Block) => void) => void
-	removeOnBlock: () => void
-}
-
 /**
  * An `ActionPayload` is the data signed by the user, either directly
  * or using a session key, to execute an action in a Canvas application.
@@ -69,7 +61,7 @@ export interface BlockProvider {
 	chain: Chain
 	chainId: ChainId
 
-	getBlock: (key: number | string) => Promise<Block>
+	getBlock: ({ blocknum, blockhash }: { blocknum?: number; blockhash?: string }) => Promise<Block>
 	onBlock: (cb: (block: Block) => void) => void
 	removeOnBlock: () => void
 }
