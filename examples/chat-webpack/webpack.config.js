@@ -27,6 +27,7 @@ module.exports = {
 	},
 	resolve: {
 		extensions: [".tsx", ".ts", ".js"],
+		fallback: { stream: false, process: false }, // TODO: remove this when dependencies have been cleaned up
 	},
 	experiments: {
 		outputModule: true,

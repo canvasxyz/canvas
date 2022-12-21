@@ -103,7 +103,24 @@ export function useSession(signer: SessionSigner | null): {
 			const chain = await signer.getChain()
 			const chainId = await signer.getChainId()
 
-			const block = await getRecentBlock(host, chain, chainId)
+			let block
+			try {
+				block = await getRecentBlock(host, chain, chainId)
+			} catch (err) {
+				block = signer.getRecentBlock()
+				// +               const { provider } = this.signer
+				// +               const providerBlock = await provider.getBlock("latest")
+				// +
+				// +               return {
+				// +                       chain: this.chain,
+				// +                       chainId: this.network.chainId,
+				// +                       blocknum: providerBlock.number,
+				// +                       blockhash: providerBlock.hash,
+				// +                       timestamp: providerBlock.timestamp,
+				// +               }
+				// 				console.log(signer)
+				return
+			}
 
 			const payload: SessionPayload = {
 				from: signerAddress,
