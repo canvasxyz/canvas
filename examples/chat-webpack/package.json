@@ -22,6 +22,7 @@
     "wagmi": "^0.9.4"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.191",
     "concurrently": "^7.5.0",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.7.1",
