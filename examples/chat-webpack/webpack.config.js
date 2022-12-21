@@ -27,13 +27,18 @@ module.exports = {
 	},
 	resolve: {
 		extensions: [".tsx", ".ts", ".js"],
-		fallback: { stream: false, process: false }, // TODO: remove this when dependencies have been cleaned up
+		fallback: {
+			stream: false,
+			process: false,
+			buffer: require.resolve("buffer"),
+		}, // TODO: remove this when dependencies have been cleaned up
 	},
 	experiments: {
 		outputModule: true,
 	},
 	plugins: [
 		new CopyWebpackPlugin({ patterns: [{ from: "public" }] }),
+		new webpack.ProvidePlugin({ Buffer: ["buffer", "Buffer"] }),
 		new webpack.DefinePlugin({ "process.env.HOST": JSON.stringify(process.env.HOST ?? "http://localhost:8000") }),
 	],
 	devServer: {
