@@ -28,6 +28,8 @@ module.exports = {
 	resolve: {
 		extensions: [".tsx", ".ts", ".js"],
 		fallback: {
+			crypto: require.resolve("crypto-browserify"),
+			path: require.resolve("path-browserify"),
 			stream: false,
 			process: false,
 			buffer: require.resolve("buffer"),
