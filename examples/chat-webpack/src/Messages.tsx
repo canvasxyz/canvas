@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from "react"
-import _ from "lodash"
+import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 
-// import { useEnsName } from "wagmi"
+import { useEnsName } from "wagmi"
 import { useCanvas, useRoute } from "@canvas-js/hooks"
 
 type Post = {
@@ -9,6 +8,7 @@ type Post = {
 	from_id: `0x${string}`
 	content: string
 	updated_at: number
+	likes: number
 }
 
 export const Messages: React.FC<{}> = ({}) => {
@@ -41,53 +41,14 @@ export const Messages: React.FC<{}> = ({}) => {
 		}
 	}, [isReady])
 
-	const [cursor, setCursor] = useState("")
-	const [pages, setPages] = useState<Record<string, Post[]>>({})
-	const [messages, setMessages] = useState<Post[]>([])
-	const [latest, setLatest] = useState<Post[]>([]) // only used to trigger the LayoutEffect to scroll to bottom
-	const [trailing, setTrailing] = useState<Post[]>([]) // messages no longer in latest, but not in scrollback
+	const { data, error } = useRoute<Post>("/posts", {})
 
-	// Subscribe to both the latest posts, and scrollback
-	const { data: curr, error } = useRoute<Post>("/posts", { before: "" }, undefined, (data, error) => {
-		if (!data) return
-		const hashes = new Set(data.map((d) => d.id))
-		setLatest(data)
-		setTrailing(latest.filter((d) => !hashes.has(d.id)).concat(trailing))
-	})
-	const { data: prev } = useRoute<Post>("/posts", { before: cursor }, undefined, (data, error) => {
-		if (!data || cursor === "") return
-		setPages({ ...pages, [cursor]: data })
-	})
-	useEffect(() => {
-		const scrollback = Object.keys(pages).reduce((acc: Post[], page) => acc.concat(pages[page]), [])
-		setMessages(latest.concat(trailing).concat(scrollback))
-	}, [latest, pages])
-
-	// Load more on scroll
-	const handleScroll = useMemo(
-		() =>
-			_.throttle((event) => {
-				if (event?.target?.scrollTop > 50) return
-				if (messages.length > 0)
-					setTimeout(() => {
-						const earliestPost = messages[messages.length - 1]?.updated_at?.toString()
-						if (cursor === earliestPost) return // Nothing more to load
-						setCursor(earliestPost)
-					})
-			}, 750),
-		[messages, cursor]
-	)
-
-	// Jump to bottom on load, and when the current page updates, but not when messages updates
 	const scrollContainer = useRef<HTMLDivElement>(null)
 	useLayoutEffect(() => {
-		if (!curr?.length || !messages?.length) return
-		setTimeout(() => {
-			if (scrollContainer.current !== null) {
-				scrollContainer.current.scrollTop = scrollContainer.current.scrollHeight
-			}
-		})
-	}, [latest, curr?.length !== 0 && prev?.length !== 0 && messages.length !== 0])
+		if (scrollContainer.current !== null) {
+			scrollContainer.current.scrollTop = scrollContainer.current.scrollHeight
+		}
+	}, [data])
 
 	return (
 		<div id="messages" className="window">
@@ -102,9 +63,9 @@ export const Messages: React.FC<{}> = ({}) => {
 				</div>
 			) : (
 				<div className="window-body">
-					<div id="scroll-container" ref={scrollContainer} onScroll={handleScroll}>
+					<div id="scroll-container" ref={scrollContainer}>
 						<ul className="tree-view">
-							<Posts posts={messages} />
+							<Posts posts={data} />
 						</ul>
 					</div>
 					<input
@@ -135,15 +96,14 @@ const Posts: React.FC<{ posts: null | Post[] }> = (props) => {
 	}
 }
 
-const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
+const Post: React.FC<Post> = ({ from_id, content, updated_at, likes }) => {
 	const address = `${from_id.slice(0, 5)}…${from_id.slice(-4)}`
-	// TODO: find an alternative to using wagmi for ens resolution
 	// use wagmi's internal cache for ens names
-	// const { data, isError, isLoading } = useEnsName({ address: from_id })
+	const { data, isError, isLoading } = useEnsName({ address: from_id })
 
 	return (
 		<li>
-			{/* {data && <span className="address address-ens">[{data}]</span>} */}
+			{data && <span className="address address-ens">[{data}]</span>}
 			<span className="address">{address} &gt;</span> {content}
 		</li>
 	)
