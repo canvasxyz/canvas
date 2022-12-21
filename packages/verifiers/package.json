@@ -13,6 +13,7 @@
   },
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "dependencies": {
+    "@canvas-js/interfaces": "0.0.36",
     "bs58": "^5.0.0",
     "tweetnacl": "^1.0.3"
   }

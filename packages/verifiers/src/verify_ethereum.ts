@@ -1,15 +1,8 @@
 import { TypedDataDomain, TypedDataField, utils } from "ethers"
 import { verifyTypedData } from "@ethersproject/wallet"
 
-import type {
-	Action,
-	ActionArgument,
-	ActionPayload,
-	ActionToken,
-	Session,
-	SessionPayload,
-	SessionToken,
-} from "@canvas-js/interfaces"
+import { makeActionToken, makeSessionToken } from "@canvas-js/interfaces"
+import type { Action, ActionPayload, ActionToken, Session, SessionPayload, SessionToken } from "@canvas-js/interfaces"
 
 /**
  * Ethereum compatible signer logic, used to generate and
@@ -29,29 +22,6 @@ const actionDataFields = {
 	],
 }
 
-// JSON.stringify has lossy behavior on the number values +/-Infinity, NaN, and -0.
-// We never actually parse these serialized arguments anywhere - the only purpose here
-// is to map them injectively to strings for signing.
-function serializeActionArgument(arg: ActionArgument): string {
-	if (typeof arg === "number") {
-		if (isNaN(arg)) {
-			return "NaN"
-		} else if (Object.is(arg, -0)) {
-			return "-0"
-		} else if (arg === Infinity) {
-			return "Infinity"
-		} else if (arg === -Infinity) {
-			return "-Infinity"
-		} else {
-			return arg.toString()
-		}
-	} else {
-		return JSON.stringify(arg)
-	}
-}
-
-const namePattern = /^[a-zA-Z][a-zA-Z0-9_]*$/
-
 /**
  * `getActionSignatureData` gets EIP-712 signing data for an individual action
  */
@@ -61,23 +31,9 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData<Ac
 		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
 	}
 
-	const keys = Object.keys(payload.args).sort()
-	const params = keys.map((key) => {
-		if (namePattern.test(key)) {
-			return `${key}: ${serializeActionArgument(payload.args[key])}`
-		} else {
-			throw new Error("invalid argument name")
-		}
-	})
+	const actionToken = makeActionToken(payload)
 
-	const actionValue = {
-		sendAction: payload.call,
-		params: params,
-		application: payload.spec,
-		timestamp: payload.timestamp.toString(),
-	}
-
-	return [domain, actionDataFields, actionValue]
+	return [domain, actionDataFields, actionToken]
 }
 
 const sessionDataFields = {
@@ -100,14 +56,9 @@ export function getSessionSignatureData(payload: SessionPayload): SignatureData<
 		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
 	}
 
-	const sessionValue = {
-		loginTo: payload.spec,
-		registerSessionAddress: payload.address.toLowerCase(),
-		registerSessionDuration: payload.duration.toString(),
-		timestamp: payload.timestamp.toString(),
-	}
+	const sessionToken = makeSessionToken(payload)
 
-	return [domain, sessionDataFields, sessionValue]
+	return [domain, sessionDataFields, sessionToken]
 }
 
 export const verifyEthereumActionSignature = (action: Action): string => {
