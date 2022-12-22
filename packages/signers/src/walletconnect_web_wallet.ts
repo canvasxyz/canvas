@@ -11,7 +11,7 @@ import type { Block, Chain, ChainId, SessionPayload, Session } from "@canvas-js/
 import { getSessionSignatureData } from "@canvas-js/verifiers"
 
 import { Connector, SessionSigner } from "./interfaces.js"
-import { MetaMaskEthereumActionSigner } from "./metamask_web_wallet.js"
+import { MetaMaskEthereumActionWallet } from "./metamask_web_wallet.js"
 import { _TypedDataEncoder } from "ethers/lib/utils.js"
 
 const chains = [mainnet]
@@ -80,9 +80,9 @@ class WalletConnectWebWalletSessionSigner implements SessionSigner {
 		return this.address
 	}
 
-	async createActionSigner(sessionPrivateKey?: string): Promise<MetaMaskEthereumActionSigner> {
+	async createActionWallet(sessionPrivateKey?: string): Promise<MetaMaskEthereumActionWallet> {
 		const ethersWallet = sessionPrivateKey ? new ethers.Wallet(sessionPrivateKey) : ethers.Wallet.createRandom()
-		return new MetaMaskEthereumActionSigner(ethersWallet)
+		return new MetaMaskEthereumActionWallet(ethersWallet)
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {

@@ -2,7 +2,7 @@ import web3 from "web3"
 import { ethers } from "ethers"
 import { Action, ActionPayload, Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
 import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
-import { Connector, SessionSigner, ActionSigner } from "./interfaces.js"
+import { Connector, SessionSigner, ActionWallet } from "./interfaces.js"
 
 export class MetaMaskEthereumConnector implements Connector {
 	id = "metamask"
@@ -94,9 +94,9 @@ export class MetaMaskEthereumSigner implements SessionSigner {
 		return this.network.chainId
 	}
 
-	async createActionSigner(sessionPrivateKey?: string): Promise<MetaMaskEthereumActionSigner> {
+	async createActionWallet(sessionPrivateKey?: string): Promise<MetaMaskEthereumActionWallet> {
 		const ethersWallet = sessionPrivateKey ? new ethers.Wallet(sessionPrivateKey) : ethers.Wallet.createRandom()
-		return new MetaMaskEthereumActionSigner(ethersWallet)
+		return new MetaMaskEthereumActionWallet(ethersWallet)
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
@@ -119,7 +119,7 @@ export class MetaMaskEthereumSigner implements SessionSigner {
 	}
 }
 
-export class MetaMaskEthereumActionSigner implements ActionSigner {
+export class MetaMaskEthereumActionWallet implements ActionWallet {
 	wallet: ethers.Wallet
 
 	constructor(wallet: ethers.Wallet) {
