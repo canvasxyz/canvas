@@ -1,12 +1,12 @@
 import { useCallback, useContext, useEffect, useState } from "react"
 
 import { Block, SessionPayload, Session } from "@canvas-js/interfaces"
-import type { SessionWallet } from "@canvas-js/signers/lib/interfaces"
+import type { SessionSigner } from "@canvas-js/signers/lib/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
 import { getCanvasSessionKey, getRecentBlock, urlJoin } from "./utils.js"
 
-export function useSession(sessionWallet: SessionWallet | null): {
+export function useSession(signer: SessionSigner | null): {
 	error: Error | null
 	isLoading: boolean
 	isPending: boolean
@@ -15,7 +15,7 @@ export function useSession(sessionWallet: SessionWallet | null): {
 	login: () => void
 	logout: () => void
 } {
-	const { host, data, setSessionWallet, actionWallet, setActionWallet, sessionExpiration, setSessionExpiration } =
+	const { host, data, setSigner, actionWallet, setActionWallet, sessionExpiration, setSessionExpiration } =
 		useContext(CanvasContext)
 
 	const [error, setError] = useState<null | Error>(null)
@@ -24,19 +24,19 @@ export function useSession(sessionWallet: SessionWallet | null): {
 
 	const [signerAddress, setSignerAddress] = useState<string | null>(null)
 	useEffect(() => {
-		if (sessionWallet === null) {
+		if (signer === null) {
 			setSignerAddress(null)
-			setSessionWallet(null)
+			setSigner(null)
 		} else {
-			sessionWallet.getAddress().then((address) => {
+			signer.getAddress().then((address) => {
 				setSignerAddress(address)
-				setSessionWallet(sessionWallet)
+				setSigner(signer)
 			})
 		}
 
 		setActionWallet(null)
 		setSessionExpiration(null)
-	}, [sessionWallet])
+	}, [signer])
 
 	useEffect(() => {
 		if (host === null || data === null || signerAddress === null) {
@@ -70,7 +70,7 @@ export function useSession(sessionWallet: SessionWallet | null): {
 			return
 		}
 
-		sessionWallet!.createActionWallet(sessionPrivateKey).then((actionWallet) => {
+		signer!.createActionWallet(sessionPrivateKey).then((actionWallet) => {
 			setActionWallet(actionWallet)
 		})
 		setSessionExpiration(expiration)
@@ -79,7 +79,7 @@ export function useSession(sessionWallet: SessionWallet | null): {
 	const login = useCallback(async () => {
 		if (host === null) {
 			return setError(new Error("no host configured"))
-		} else if (sessionWallet === null) {
+		} else if (signer === null) {
 			return setError(new Error("login() called without a signer"))
 		} else if (signerAddress === null) {
 			return setError(new Error("login() called before the signer was ready"))
@@ -92,7 +92,7 @@ export function useSession(sessionWallet: SessionWallet | null): {
 		try {
 			const timestamp = Date.now()
 			const sessionDuration = 86400 * 1000
-			const actionWallet = await sessionWallet.createActionWallet()
+			const actionWallet = await signer.createActionWallet()
 
 			const sessionObject: SessionObject = {
 				spec: data.uri,
@@ -100,14 +100,14 @@ export function useSession(sessionWallet: SessionWallet | null): {
 				expiration: timestamp + sessionDuration,
 			}
 
-			const chain = await sessionWallet.getChain()
-			const chainId = await sessionWallet.getChainId()
+			const chain = await signer.getChain()
+			const chainId = await signer.getChainId()
 
 			let block: Block
 			try {
 				block = await getRecentBlock(host, chain, chainId)
 			} catch (err) {
-				block = await sessionWallet.getRecentBlock()
+				block = await signer.getRecentBlock()
 			}
 
 			const payload: SessionPayload = {
@@ -121,7 +121,7 @@ export function useSession(sessionWallet: SessionWallet | null): {
 				chainId: block.chainId,
 			}
 
-			const session: Session = await sessionWallet.signSessionPayload(payload)
+			const session: Session = await signer.signSessionPayload(payload)
 
 			const res = await fetch(urlJoin(host, "sessions"), {
 				method: "POST",
@@ -149,7 +149,7 @@ export function useSession(sessionWallet: SessionWallet | null): {
 		} finally {
 			setIsPending(false)
 		}
-	}, [host, data, sessionWallet, signerAddress])
+	}, [host, data, signer, signerAddress])
 
 	const logout = useCallback(() => {
 		setActionWallet(null)

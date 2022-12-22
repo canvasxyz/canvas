@@ -5,11 +5,11 @@ export interface Connector {
 	get available(): boolean
 	enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void>
 	disable(): void
-	createSessionWallet(account: string): Promise<SessionWallet>
+	createSessionSigner(account: string): Promise<SessionSigner>
 	label: string
 }
 
-export interface SessionWallet {
+export interface SessionSigner {
 	getAddress(): Promise<string>
 	createActionWallet(sessionPrivateKey?: string): Promise<ActionWallet>
 	signSessionPayload(payload: SessionPayload): Promise<Session>

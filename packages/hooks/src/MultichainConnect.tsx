@@ -1,4 +1,4 @@
-import type { Connector, SessionWallet } from "@canvas-js/signers"
+import type { Connector, SessionSigner } from "@canvas-js/signers"
 import React, { useState } from "react"
 import { MultichainConnectContext } from "./MultichainConnectContext.js"
 
@@ -10,7 +10,7 @@ interface MultichainConnectProps {
 export const MultichainConnect: React.FC<MultichainConnectProps> = (props) => {
 	const error = null
 	const [address, setAddress] = useState<string | null>(null)
-	const [sessionWallet, setSessionWallet] = useState<SessionWallet | null>(null)
+	const [signer, setSigner] = useState<SessionSigner | null>(null)
 	const [connector, setConnector] = useState<Connector | null>(null)
 	const [isLoading, setIsLoading] = useState<boolean>(false)
 	const [isConnected, setIsConnected] = useState<boolean>(false)
@@ -19,8 +19,8 @@ export const MultichainConnect: React.FC<MultichainConnectProps> = (props) => {
 		<MultichainConnectContext.Provider
 			value={{
 				error,
-				sessionWallet,
-				setSessionWallet,
+				signer,
+				setSigner,
 				isLoading,
 				setIsLoading,
 				isConnected,

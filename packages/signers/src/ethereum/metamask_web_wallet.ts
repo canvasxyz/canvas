@@ -1,9 +1,8 @@
 import web3 from "web3"
 import { ethers } from "ethers"
-import { Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
-import { getSessionSignatureData } from "@canvas-js/verifiers"
-import { Connector, SessionWallet } from "../interfaces.js"
-import { EthereumActionWallet } from "./ethereum_action_wallet.js"
+import { Action, ActionPayload, Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
+import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
+import { Connector, SessionSigner, ActionWallet } from "./interfaces.js"
 
 export class MetaMaskEthereumConnector implements Connector {
 	id = "metamask"
@@ -62,18 +61,18 @@ export class MetaMaskEthereumConnector implements Connector {
 		}
 	}
 
-	async createSessionWallet(account: string): Promise<SessionWallet> {
+	async createSessionSigner(account: string): Promise<SessionSigner> {
 		if (!this.provider) {
-			throw Error("cannot create a SessionWallet, the wallet is not yet connected")
+			throw Error("cannot create a SessionSigner, the wallet is not yet connected")
 		}
 		const providerSigner = this.provider.getSigner(account)
 		// if the network changes, we will throw away this Signer
 		const network = await this.provider.getNetwork()
-		return new MetaMaskEthereumSessionWallet(providerSigner, network)
+		return new MetaMaskEthereumSigner(providerSigner, network)
 	}
 }
 
-export class MetaMaskEthereumSessionWallet implements SessionWallet {
+export class MetaMaskEthereumSigner implements SessionSigner {
 	chain: Chain = "eth"
 	signer: ethers.providers.JsonRpcSigner
 	network: ethers.providers.Network

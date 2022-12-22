@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react"
-import { Connector, SessionWallet } from "@canvas-js/signers"
+import { Connector, SessionSigner } from "@canvas-js/signers"
 
 /**
  * An attempt at making something like wagmi
@@ -20,8 +20,8 @@ export interface MultichainConnectContextValue {
 	isLoading: boolean
 	setIsLoading: (isLoading: boolean) => void
 
-	sessionWallet: SessionWallet | null
-	setSessionWallet: (sessionWallet: SessionWallet | null) => void
+	signer: SessionSigner | null
+	setSigner: (signer: SessionSigner | null) => void
 
 	connector: Connector | null
 	setConnector: (connector: Connector | null) => void
@@ -47,8 +47,8 @@ export const MultichainConnectContext = createContext<MultichainConnectContextVa
 		throw new Error("Missing <MultichainConnectContext /> parent element")
 	},
 
-	sessionWallet: null,
-	setSessionWallet: (_) => {
+	signer: null,
+	setSigner: (_) => {
 		throw new Error("Missing <MultichainConnectContext /> parent element")
 	},
 
@@ -62,8 +62,8 @@ export const MultichainConnectContext = createContext<MultichainConnectContextVa
 
 export const useConnect = () => {
 	const {
-		sessionWallet,
-		setSessionWallet,
+		signer,
+		setSigner,
 		connector,
 		connectors,
 		setConnector,
@@ -76,7 +76,7 @@ export const useConnect = () => {
 
 	// TODO: replace this call with a direct call to the connector
 	const connect = async (newConnector: Connector) => {
-		if (sessionWallet) {
+		if (signer) {
 			// the app is already logged in
 			return
 		}
@@ -90,8 +90,8 @@ export const useConnect = () => {
 
 		const onAccountsChanged = async (accounts: string[]) => {
 			setAddress(accounts[0])
-			const newSessionWallet = await newConnector.createSessionWallet(accounts[0])
-			setSessionWallet(newSessionWallet)
+			const newSigner = await newConnector.createSessionSigner(accounts[0])
+			setSigner(newSigner)
 		}
 
 		await newConnector.enable({ onAccountsChanged })
@@ -105,8 +105,7 @@ export const useConnect = () => {
 }
 
 export const useDisconnect = () => {
-	const { isConnected, setIsConnected, connector, setConnector, setSessionWallet } =
-		useContext(MultichainConnectContext)
+	const { isConnected, setIsConnected, connector, setConnector, setSigner } = useContext(MultichainConnectContext)
 
 	const disconnect = () => {
 		if (!isConnected) {
@@ -117,13 +116,13 @@ export const useDisconnect = () => {
 			connector.disable()
 			setConnector(null)
 		}
-		setSessionWallet(null)
+		setSigner(null)
 		setIsConnected(false)
 	}
 	return { disconnect }
 }
 
-export const useSessionWallet = () => {
-	const { sessionWallet } = useContext(MultichainConnectContext)
-	return { sessionWallet }
+export const useSigner = () => {
+	const { signer } = useContext(MultichainConnectContext)
+	return { signer }
 }

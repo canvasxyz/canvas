@@ -18,7 +18,7 @@ export function useCanvas(): {
 		error,
 		host,
 		data,
-		sessionWallet,
+		signer,
 		actionWallet,
 		setActionWallet,
 		sessionExpiration,
@@ -32,7 +32,7 @@ export function useCanvas(): {
 			console.log("dispatch:", call, args)
 			if (host === null) {
 				throw new Error("no host configured")
-			} else if (sessionWallet === null) {
+			} else if (signer === null) {
 				throw new Error("dispatch() called without a provider")
 			} else if (actionWallet === null || sessionExpiration === null) {
 				throw new Error("dispatch() called while logged out")
@@ -51,18 +51,18 @@ export function useCanvas(): {
 			console.log("set pending to true")
 
 			try {
-				const chain = await sessionWallet.getChain()
-				const chainId = await sessionWallet.getChainId()
+				const chain = await signer.getChain()
+				const chainId = await signer.getChainId()
 
 				let block: Block
 				try {
 					block = await getRecentBlock(host, chain, chainId)
 				} catch (err) {
-					block = await sessionWallet.getRecentBlock()
+					block = await signer.getRecentBlock()
 				}
 				console.log("got block", block)
 
-				const address = await sessionWallet.getAddress()
+				const address = await signer.getAddress()
 				console.log("from address", address)
 
 				const payload: ActionPayload = {
@@ -92,7 +92,7 @@ export function useCanvas(): {
 					if (message === "session not found" || message === "session expired") {
 						setActionWallet(null)
 						setSessionExpiration(null)
-						const address = await sessionWallet.getAddress()
+						const address = await signer.getAddress()
 						const sessionKey = getCanvasSessionKey(address)
 						localStorage.removeItem(sessionKey)
 					}
@@ -106,7 +106,7 @@ export function useCanvas(): {
 				setIsPending(false)
 			}
 		},
-		[host, data, sessionWallet, actionWallet, sessionExpiration]
+		[host, data, signer, actionWallet, sessionExpiration]
 	)
 
 	const isReady = !isPending && actionWallet !== null
