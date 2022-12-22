@@ -73,7 +73,7 @@ export class CosmosBlockProvider implements BlockProvider {
 			chain: this.chain,
 			chainId: this.chainId,
 			blocknum: block.header.height,
-			blockhash: block.id,
+			blockhash: `0x${block.id}`,
 			// seconds since epoch
 			timestamp: Math.floor(new Date(block.header.time).getTime() / 1000),
 		}
