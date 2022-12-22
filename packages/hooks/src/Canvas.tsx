@@ -1,4 +1,4 @@
-import type { SessionSigner, ActionWallet } from "@canvas-js/signers"
+import type { SessionSigner, ActionSigner } from "@canvas-js/signers"
 import React, { useState } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"
@@ -15,7 +15,7 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const [error, setError] = useState<Error | null>(null)
 
 	const [signer, setSigner] = useState<SessionSigner | null>(null)
-	const [actionWallet, setActionWallet] = useState<ActionWallet | null>(null)
+	const [actionSigner, setActionSigner] = useState<ActionSigner | null>(null)
 	const [sessionExpiration, setSessionExpiration] = useState<number | null>(null)
 
 	const host = props.host
@@ -31,8 +31,8 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 				ws,
 				signer,
 				setSigner,
-				actionWallet,
-				setActionWallet,
+				actionSigner,
+				setActionSigner,
 				sessionExpiration,
 				setSessionExpiration,
 			}}

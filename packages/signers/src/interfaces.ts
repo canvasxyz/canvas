@@ -11,14 +11,14 @@ export interface Connector {
 
 export interface SessionSigner {
 	getAddress(): Promise<string>
-	createActionWallet(sessionPrivateKey?: string): Promise<ActionWallet>
+	createActionSigner(sessionPrivateKey?: string): Promise<ActionSigner>
 	signSessionPayload(payload: SessionPayload): Promise<Session>
 	getChain(): Promise<Chain>
 	getChainId(): Promise<ChainId>
 	getRecentBlock(): Promise<Block>
 }
 
-export interface ActionWallet {
+export interface ActionSigner {
 	get address(): string
 	get privateKey(): string
 	signActionPayload(payload: ActionPayload): Promise<Action>

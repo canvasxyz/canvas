@@ -15,7 +15,7 @@ export function useSession(signer: SessionSigner | null): {
 	login: () => void
 	logout: () => void
 } {
-	const { host, data, setSigner, actionWallet, setActionWallet, sessionExpiration, setSessionExpiration } =
+	const { host, data, setSigner, actionSigner, setActionSigner, sessionExpiration, setSessionExpiration } =
 		useContext(CanvasContext)
 
 	const [error, setError] = useState<null | Error>(null)
@@ -34,7 +34,7 @@ export function useSession(signer: SessionSigner | null): {
 			})
 		}
 
-		setActionWallet(null)
+		setActionSigner(null)
 		setSessionExpiration(null)
 	}, [signer])
 
@@ -70,8 +70,8 @@ export function useSession(signer: SessionSigner | null): {
 			return
 		}
 
-		signer!.createActionWallet(sessionPrivateKey).then((actionWallet) => {
-			setActionWallet(actionWallet)
+		signer!.createActionSigner(sessionPrivateKey).then((actionSigner) => {
+			setActionSigner(actionSigner)
 		})
 		setSessionExpiration(expiration)
 	}, [host, data, signerAddress])
@@ -92,11 +92,11 @@ export function useSession(signer: SessionSigner | null): {
 		try {
 			const timestamp = Date.now()
 			const sessionDuration = 86400 * 1000
-			const actionWallet = await signer.createActionWallet()
+			const actionSigner = await signer.createActionSigner()
 
 			const sessionObject: SessionObject = {
 				spec: data.uri,
-				sessionPrivateKey: actionWallet.privateKey,
+				sessionPrivateKey: actionSigner.privateKey,
 				expiration: timestamp + sessionDuration,
 			}
 
@@ -113,7 +113,7 @@ export function useSession(signer: SessionSigner | null): {
 			const payload: SessionPayload = {
 				from: signerAddress,
 				spec: data.uri,
-				address: await actionWallet.address,
+				address: await actionSigner.address,
 				duration: sessionDuration,
 				timestamp,
 				blockhash: block.blockhash,
@@ -136,7 +136,7 @@ export function useSession(signer: SessionSigner | null): {
 
 			const sessionKey = getCanvasSessionKey(signerAddress)
 			localStorage.setItem(sessionKey, JSON.stringify(sessionObject))
-			setActionWallet(actionWallet)
+			setActionSigner(actionSigner)
 			setSessionExpiration(sessionObject.expiration)
 			setError(null)
 		} catch (err) {
@@ -152,7 +152,7 @@ export function useSession(signer: SessionSigner | null): {
 	}, [host, data, signer, signerAddress])
 
 	const logout = useCallback(() => {
-		setActionWallet(null)
+		setActionSigner(null)
 		setSessionExpiration(null)
 		if (signerAddress !== null) {
 			const sessionKey = getCanvasSessionKey(signerAddress)
@@ -160,7 +160,7 @@ export function useSession(signer: SessionSigner | null): {
 		}
 	}, [signerAddress])
 
-	const sessionAddress = actionWallet && actionWallet.address
+	const sessionAddress = actionSigner && actionSigner.address
 	return {
 		error,
 		isLoading,
