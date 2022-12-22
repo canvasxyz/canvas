@@ -3,7 +3,7 @@ import { MetaMaskEthereumConnector, MetaMaskEthereumSigner } from "./metamask_we
 import { WalletConnectWebWalletConnector } from "./walletconnect_web_wallet.js"
 
 export { CosmosBlockProvider, ethersBlockToCanvasBlock, EthereumBlockProvider } from "./providers.js"
-import { KeplrWebWalletConnector } from "./keplr_web_wallet.js"
+import { KeplrWebWalletConnector } from "./cosmos/keplr_web_wallet.js"
 export {
 	Connector,
 	SessionSigner,

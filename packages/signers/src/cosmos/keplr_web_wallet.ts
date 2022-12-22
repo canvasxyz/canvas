@@ -1,16 +1,12 @@
-import { Block } from "packages/interfaces/lib/actions.js"
-import { Chain, ChainId } from "packages/interfaces/lib/contracts.js"
-import { Action, ActionPayload, SessionPayload, Session, makeActionToken } from "@canvas-js/interfaces"
-import { Connector, SessionSigner, ActionSigner } from "./interfaces.js"
-
-import { bech32 } from "bech32"
-
 import { Secp256k1HdWallet } from "@cosmjs/amino"
 import { OfflineSigner } from "@cosmjs/launchpad"
 import { OfflineDirectSigner } from "@cosmjs/proto-signing"
 import { StargateClient } from "@cosmjs/stargate"
 import type { Window as KeplrWindow, ChainInfo } from "@keplr-wallet/types"
-import { validationTokenToSignDoc } from "@canvas-js/verifiers"
+
+import type { Block, Chain, ChainId, SessionPayload, Session } from "@canvas-js/interfaces"
+import { Connector, SessionSigner, ActionSigner } from "../interfaces.js"
+import { CosmosActionSigner } from "./cosmos_action_signer.js"
 
 declare global {
 	// eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -184,7 +180,7 @@ export class KeplrWebWalletSessionSigner implements SessionSigner {
 		const accounts = await wallet.getAccounts()
 		const cosmosAddress = accounts[0].address
 
-		return new KeplrWebWalletActionSigner(wallet, cosmosAddress, "osmo")
+		return new CosmosActionSigner(wallet, cosmosAddress, "osmo")
 	}
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
 		const keplr = (window as KeplrWindow).keplr!
@@ -206,31 +202,5 @@ export class KeplrWebWalletSessionSigner implements SessionSigner {
 	}
 	async getChainId(): Promise<ChainId> {
 		return this.chainId
-	}
-}
-
-export class KeplrWebWalletActionSigner implements ActionSigner {
-	wallet: Secp256k1HdWallet
-	cosmosAddress: string
-	bech32Prefix: string
-
-	constructor(wallet: Secp256k1HdWallet, cosmosAddress: string, bech32Prefix: string) {
-		this.wallet = wallet
-		this.cosmosAddress = cosmosAddress
-		this.bech32Prefix = bech32Prefix
-	}
-	get address(): string {
-		const { prefix, words } = bech32.decode(this.cosmosAddress)
-		const chainAddress = bech32.encode(this.bech32Prefix, words)
-		return chainAddress
-	}
-	get privateKey(): string {
-		return this.wallet.mnemonic
-	}
-	async signActionPayload(payload: ActionPayload): Promise<Action> {
-		const actionToken = makeActionToken(payload)
-		const generatedSignDoc = validationTokenToSignDoc(Buffer.from(JSON.stringify(actionToken)), this.address)
-		const { signature } = await this.wallet.signAmino(this.cosmosAddress, generatedSignDoc)
-		return { signature: JSON.stringify(signature), payload, session: this.address, type: "action" }
 	}
 }
