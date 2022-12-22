@@ -19,6 +19,11 @@ const chains = [mainnet]
 export class WalletConnectWebWalletConnector implements Connector {
 	id = "walletconnect_web"
 	label = "WalletConnect"
+	projectId: string
+
+	constructor(projectId: string) {
+		this.projectId = projectId
+	}
 
 	get available(): boolean {
 		// Only available if the project id has been set
