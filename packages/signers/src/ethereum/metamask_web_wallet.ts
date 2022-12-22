@@ -1,8 +1,9 @@
 import web3 from "web3"
 import { ethers } from "ethers"
-import { Action, ActionPayload, Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
-import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
-import { Connector, SessionSigner, ActionSigner } from "./interfaces.js"
+import { Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
+import { getSessionSignatureData } from "@canvas-js/verifiers"
+import { Connector, SessionSigner } from "../interfaces.js"
+import { EthereumActionSigner } from "./ethereum_action_signer.js"
 
 export class MetaMaskEthereumConnector implements Connector {
 	id = "metamask"
@@ -94,9 +95,9 @@ export class MetaMaskEthereumSigner implements SessionSigner {
 		return this.network.chainId
 	}
 
-	async createActionSigner(sessionPrivateKey?: string): Promise<MetaMaskEthereumActionSigner> {
+	async createActionSigner(sessionPrivateKey?: string): Promise<EthereumActionSigner> {
 		const ethersWallet = sessionPrivateKey ? new ethers.Wallet(sessionPrivateKey) : ethers.Wallet.createRandom()
-		return new MetaMaskEthereumActionSigner(ethersWallet)
+		return new EthereumActionSigner(ethersWallet)
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
@@ -116,27 +117,5 @@ export class MetaMaskEthereumSigner implements SessionSigner {
 			blockhash: block.hash,
 			timestamp: web3.utils.hexToNumber(block.timestamp),
 		}
-	}
-}
-
-export class MetaMaskEthereumActionSigner implements ActionSigner {
-	wallet: ethers.Wallet
-
-	constructor(wallet: ethers.Wallet) {
-		this.wallet = wallet
-	}
-
-	get address(): string {
-		return this.wallet.address
-	}
-
-	get privateKey(): string {
-		return this.wallet.privateKey
-	}
-
-	async signActionPayload(payload: ActionPayload): Promise<Action> {
-		const signatureData = getActionSignatureData(payload)
-		const signature = await this.wallet._signTypedData(...signatureData)
-		return { type: "action", session: this.wallet.address, signature, payload }
 	}
 }
