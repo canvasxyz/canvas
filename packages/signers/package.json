@@ -12,9 +12,13 @@
   "dependencies": {
     "@canvas-js/interfaces": "0.0.36",
     "@canvas-js/verifiers": "0.0.36",
+    "@cosmjs/amino": "^0.29.5",
+    "@cosmjs/launchpad": "^0.27.1",
+    "@cosmjs/proto-signing": "^0.29.5",
     "@cosmjs/stargate": "^0.29.5",
     "@ethersproject/abstract-signer": "^5.6.2",
     "@ethersproject/wallet": "^5.6.2",
+    "@keplr-wallet/types": "^0.11.27",
     "@wagmi/core": "^0.8.3",
     "@web3modal/ethereum": "^2.0.0-beta.9",
     "@web3modal/html": "^2.0.0-beta.9",
