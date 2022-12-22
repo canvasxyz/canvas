@@ -1,8 +1,9 @@
 import web3 from "web3"
 import { ethers } from "ethers"
-import { Action, ActionPayload, Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
-import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
-import { Connector, SessionWallet, ActionWallet } from "./interfaces.js"
+import { Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
+import { getSessionSignatureData } from "@canvas-js/verifiers"
+import { Connector, SessionWallet } from "../interfaces.js"
+import { EthereumActionWallet } from "./ethereum_action_wallet.js"
 
 export class MetaMaskEthereumConnector implements Connector {
 	id = "metamask"
@@ -94,9 +95,9 @@ export class MetaMaskEthereumSessionWallet implements SessionWallet {
 		return this.network.chainId
 	}
 
-	async createActionWallet(sessionPrivateKey?: string): Promise<MetaMaskEthereumActionWallet> {
+	async createActionWallet(sessionPrivateKey?: string): Promise<EthereumActionWallet> {
 		const ethersWallet = sessionPrivateKey ? new ethers.Wallet(sessionPrivateKey) : ethers.Wallet.createRandom()
-		return new MetaMaskEthereumActionWallet(ethersWallet)
+		return new EthereumActionWallet(ethersWallet)
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
@@ -116,27 +117,5 @@ export class MetaMaskEthereumSessionWallet implements SessionWallet {
 			blockhash: block.hash,
 			timestamp: web3.utils.hexToNumber(block.timestamp),
 		}
-	}
-}
-
-export class MetaMaskEthereumActionWallet implements ActionWallet {
-	wallet: ethers.Wallet
-
-	constructor(wallet: ethers.Wallet) {
-		this.wallet = wallet
-	}
-
-	get address(): string {
-		return this.wallet.address
-	}
-
-	get privateKey(): string {
-		return this.wallet.privateKey
-	}
-
-	async signActionPayload(payload: ActionPayload): Promise<Action> {
-		const signatureData = getActionSignatureData(payload)
-		const signature = await this.wallet._signTypedData(...signatureData)
-		return { type: "action", session: this.wallet.address, signature, payload }
 	}
 }

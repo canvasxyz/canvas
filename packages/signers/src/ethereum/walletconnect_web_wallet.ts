@@ -10,8 +10,8 @@ import { EthereumClient, modalConnectors, walletConnectProvider } from "@web3mod
 import type { Block, Chain, ChainId, SessionPayload, Session } from "@canvas-js/interfaces"
 import { getSessionSignatureData } from "@canvas-js/verifiers"
 
-import { Connector, SessionWallet } from "./interfaces.js"
-import { MetaMaskEthereumActionWallet } from "./metamask_web_wallet.js"
+import { Connector, SessionWallet } from "../interfaces.js"
+import { EthereumActionWallet } from "./ethereum_action_wallet.js"
 import { _TypedDataEncoder } from "ethers/lib/utils.js"
 
 const chains = [mainnet]
@@ -80,9 +80,9 @@ class WalletConnectWebWalletSessionWallet implements SessionWallet {
 		return this.address
 	}
 
-	async createActionWallet(sessionPrivateKey?: string): Promise<MetaMaskEthereumActionWallet> {
+	async createActionWallet(sessionPrivateKey?: string): Promise<EthereumActionWallet> {
 		const ethersWallet = sessionPrivateKey ? new ethers.Wallet(sessionPrivateKey) : ethers.Wallet.createRandom()
-		return new MetaMaskEthereumActionWallet(ethersWallet)
+		return new EthereumActionWallet(ethersWallet)
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
