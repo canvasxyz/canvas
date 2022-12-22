@@ -1,14 +1,14 @@
 import test from "ava"
 import { ethers } from "ethers"
 import type { ActionPayload } from "@canvas-js/interfaces"
-import { EthereumActionWallet } from "@canvas-js/signers"
+import { EthereumActionSigner } from "@canvas-js/signers"
 import { verifyActionSignature } from "@canvas-js/verifiers"
 
 test("Sign an action for ethereum", async (t) => {
 	const sessionWallet = ethers.Wallet.createRandom()
 
 	const ethersWallet = ethers.Wallet.createRandom()
-	const wallet = new EthereumActionWallet(ethersWallet)
+	const wallet = new EthereumActionSigner(ethersWallet)
 
 	const payload: ActionPayload = {
 		from: sessionWallet.address,

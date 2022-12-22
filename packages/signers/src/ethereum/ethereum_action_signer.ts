@@ -1,9 +1,9 @@
 import { ethers } from "ethers"
 import { Action, ActionPayload } from "@canvas-js/interfaces"
 import { getActionSignatureData } from "@canvas-js/verifiers"
-import { ActionWallet } from "../interfaces.js"
+import { ActionSigner } from "../interfaces.js"
 
-export class EthereumActionWallet implements ActionWallet {
+export class EthereumActionSigner implements ActionSigner {
 	wallet: ethers.Wallet
 
 	constructor(wallet: ethers.Wallet) {
