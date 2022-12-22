@@ -9,6 +9,9 @@
   "files": [
     "lib"
   ],
+  "scripts": {
+    "test": "ava"
+  },
   "dependencies": {
     "@canvas-js/interfaces": "0.0.36",
     "@canvas-js/verifiers": "0.0.36",
@@ -26,5 +29,8 @@
   },
   "resolve.fallback": {
     "crypto": false
+  },
+  "devDependencies": {
+    "ava": "^5.1.0"
   }
 }
