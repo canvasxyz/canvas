@@ -5,13 +5,13 @@ import { EthereumActionSigner } from "@canvas-js/signers"
 import { verifyActionSignature } from "@canvas-js/verifiers"
 
 test("Sign an action for ethereum", async (t) => {
-	const sessionWallet = ethers.Wallet.createRandom()
+	const parentWallet = ethers.Wallet.createRandom()
 
-	const ethersWallet = ethers.Wallet.createRandom()
-	const wallet = new EthereumActionSigner(ethersWallet)
+	const childWallet = ethers.Wallet.createRandom()
+	const signer = new EthereumActionSigner(childWallet)
 
 	const payload: ActionPayload = {
-		from: sessionWallet.address,
+		from: parentWallet.address,
 		spec: "ipfs://something.spec.js",
 		call: "post",
 		args: { title: "Hello world!", text: "Lorem ipsum dolor sit amet" },
@@ -21,8 +21,8 @@ test("Sign an action for ethereum", async (t) => {
 		chainId: 1,
 	}
 
-	const action = await wallet.signActionPayload(payload)
+	const action = await signer.signActionPayload(payload)
 
 	const recoveredAddress = await verifyActionSignature(action)
-	t.deepEqual(recoveredAddress, ethersWallet.address.toLowerCase())
+	t.deepEqual(recoveredAddress, childWallet.address.toLowerCase())
 })
