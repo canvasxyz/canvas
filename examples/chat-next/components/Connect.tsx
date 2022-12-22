@@ -2,7 +2,7 @@ import React, { useMemo } from "react"
 
 import { ethers } from "ethers"
 import { useAccount, useConnect, useDisconnect, useSigner, useNetwork } from "wagmi"
-import { useSession, useCanvasSigner } from "@canvas-js/hooks"
+import { useSession, useCanvasSessionWallet } from "@canvas-js/hooks"
 
 import { ErrorMessage } from "./ErrorMessage"
 
@@ -53,7 +53,7 @@ export const Connect: React.FC<{}> = ({}) => {
 const Login: React.FC<{}> = ({}) => {
 	const { error: signerError, data: ethersSigner } = useSigner<ethers.providers.JsonRpcSigner>()
 	const { chain } = useNetwork()
-	const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
+	const signer = useCanvasSessionWallet(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
 
 	const {
 		error: sessionError,
