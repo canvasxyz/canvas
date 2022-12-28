@@ -24,6 +24,7 @@ import type {
 export const chainType: t.Type<Chain> = t.union([
 	t.literal("eth"),
 	t.literal("cosmos"),
+	t.literal("near"),
 	t.literal("solana"),
 	t.literal("substrate"),
 ])
