@@ -118,3 +118,5 @@ export ETH_CHAIN_RPC=https://mainnet.infura.io/v3/MY_API_KEY
 ```
 
 ... then `npm run test` will also run the contract call tests in `packages/canvas-core/test/contracts.test.ts`. If `.env` is missing these tests will be skipped.
+
+test...
