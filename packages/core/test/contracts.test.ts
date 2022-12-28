@@ -3,7 +3,7 @@ import test from "ava"
 import * as dotenv from "dotenv"
 
 import { compileSpec, Core } from "@canvas-js/core"
-import { EthereumBlockProvider } from "@canvas-js/signers"
+import { EthereumBlockProvider } from "@canvas-js/verifiers"
 import { TestSigner } from "./utils.js"
 
 dotenv.config({ path: "../../.env" })

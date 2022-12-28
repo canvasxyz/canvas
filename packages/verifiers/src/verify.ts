@@ -1,5 +1,5 @@
 import type { Action, Session } from "@canvas-js/interfaces"
-import { verifyEthereumActionSignature, verifyEthereumSessionSignature } from "./verify_ethereum.js"
+import { verifyEthereumActionSignature, verifyEthereumSessionSignature } from "./ethereum/verify_ethereum.js"
 
 /**
  * `verifyActionPayloadSignature` verifies an action signature matches a payload (does not check the payload)

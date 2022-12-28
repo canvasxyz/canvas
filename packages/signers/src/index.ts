@@ -3,7 +3,6 @@ import { MetaMaskEthereumConnector, MetaMaskEthereumSigner } from "./ethereum/me
 import { WalletConnectWebWalletConnector } from "./ethereum/walletconnect_web_wallet.js"
 import { EthereumActionSigner } from "./ethereum/ethereum_action_signer.js"
 
-export { ethersBlockToCanvasBlock, EthereumBlockProvider } from "./providers.js"
 export {
 	Connector,
 	SessionSigner,
