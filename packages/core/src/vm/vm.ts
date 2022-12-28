@@ -15,10 +15,10 @@ import {
 	ContractMetadata,
 	Model,
 	ModelValue,
-	RouteContext,
 	Query,
 	BlockProvider,
 } from "@canvas-js/interfaces"
+import { EthereumBlockProvider } from "@canvas-js/signers"
 
 import type { Effect } from "../modelStore.js"
 import { chainIdType, chainType, modelsType } from "../codecs.js"
@@ -38,7 +38,6 @@ import {
 } from "./utils.js"
 
 import * as constants from "../constants.js"
-import { EthereumBlockProvider } from "@canvas-js/signers"
 
 type Options = { verbose?: boolean; unchecked?: boolean }
 
@@ -203,8 +202,8 @@ export class VM {
 					}
 				} else {
 					if (chain == "eth") {
-						const provider = providers[`${chain}:${chainId}`] as EthereumBlockProvider
-						assert(provider !== undefined, `Spec requires an RPC endpoint for ${chain}:${chainId}`)
+						const provider = providers[`${chain}:${chainId}`]
+						assert(provider instanceof EthereumBlockProvider, `Spec requires an RPC endpoint for ${chain}:${chainId}`)
 						this.contracts[name] = new ethers.Contract(address, abi, provider.provider)
 					}
 				}
