@@ -4,8 +4,8 @@ import * as cbor from "microcbor"
 
 import type { Action, Session, ActionArgument, Chain, ChainId } from "@canvas-js/interfaces"
 
-import { mapEntries, fromHex, toHex, toBuffer } from "./utils.js"
-import { BinaryAction, BinarySession, fromBinaryAction, fromBinarySession } from "./encoding.js"
+import { mapEntries, fromHex, toHex, toBuffer, signalInvalidType } from "./utils.js"
+import { BinaryAction, BinaryMessage, BinarySession, fromBinaryAction, fromBinarySession } from "./encoding.js"
 import { encodeAddress } from "./chains/index.js"
 
 type ActionRecord = {
@@ -64,6 +64,16 @@ export class MessageStore {
 
 	public close() {
 		this.database.close()
+	}
+
+	public insert(hash: string | Buffer, binaryMessage: BinaryMessage) {
+		if (binaryMessage.type === "action") {
+			this.insertAction(hash, binaryMessage)
+		} else if (binaryMessage.type === "session") {
+			this.insertSession(hash, binaryMessage)
+		} else {
+			signalInvalidType(binaryMessage)
+		}
 	}
 
 	public insertAction(hash: string | Buffer, action: BinaryAction) {

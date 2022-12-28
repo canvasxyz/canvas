@@ -102,7 +102,7 @@ export function getSessionSignatureData(payload: SessionPayload): SignatureData<
 
 	const sessionValue = {
 		loginTo: payload.spec,
-		registerSessionAddress: payload.address.toLowerCase(),
+		registerSessionAddress: payload.address,
 		registerSessionDuration: payload.duration.toString(),
 		timestamp: payload.timestamp.toString(),
 	}
@@ -112,10 +112,10 @@ export function getSessionSignatureData(payload: SessionPayload): SignatureData<
 
 export const verifyEthereumActionSignature = (action: Action): string => {
 	const [domain, types, value] = getActionSignatureData(action.payload)
-	return verifyTypedData(domain, types, value, action.signature).toLowerCase()
+	return verifyTypedData(domain, types, value, action.signature)
 }
 
 export const verifyEthereumSessionSignature = (session: Session): string => {
 	const [domain, types, value] = getSessionSignatureData(session.payload)
-	return verifyTypedData(domain, types, value, session.signature).toLowerCase()
+	return verifyTypedData(domain, types, value, session.signature)
 }

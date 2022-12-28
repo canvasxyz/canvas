@@ -37,8 +37,6 @@ export class BlockCache {
 		const cache = this.caches[key]
 		assert(provider !== undefined && cache !== undefined, `No provider for ${chain}:${chainId}`)
 
-		blockhash = blockhash.toLowerCase()
-
 		if (blockhash == "latest") {
 			if (this.latestBlockHash[key]) {
 				blockhash = this.latestBlockHash[key]
@@ -57,7 +55,7 @@ export class BlockCache {
 				throw err
 			}
 
-			cache.add(block.blockhash.toLowerCase(), block)
+			cache.add(block.blockhash, block)
 		}
 
 		return block

@@ -1,13 +1,8 @@
 import test from "ava"
 
-import { ethers } from "ethers"
-
-import { Action, ActionArgument, ActionPayload } from "@canvas-js/interfaces"
-import { getActionSignatureData } from "@canvas-js/verifiers"
 import { compileSpec, Core } from "@canvas-js/core"
 
-const signer = ethers.Wallet.createRandom()
-const signerAddress = signer.address.toLowerCase()
+import { TestSigner } from "./utils.js"
 
 const { spec, uri } = await compileSpec({
 	models: {},
@@ -19,32 +14,12 @@ const { spec, uri } = await compileSpec({
 	},
 })
 
-async function sign(
-	signer: ethers.Wallet,
-	session: string | null,
-	call: string,
-	args: Record<string, ActionArgument>
-): Promise<Action> {
-	const timestamp = Date.now()
-	const actionPayload: ActionPayload = {
-		from: signerAddress,
-		spec: uri,
-		call,
-		args,
-		timestamp,
-		chain: "eth",
-		chainId: 1,
-		blockhash: null,
-	}
-	const actionSignatureData = getActionSignatureData(actionPayload)
-	const actionSignature = await signer._signTypedData(...actionSignatureData)
-	return { type: "action", payload: actionPayload, session, signature: actionSignature }
-}
+const signer = new TestSigner(uri)
 
 test("test fetch and log IP address", async (t) => {
 	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true, offline: true })
 
-	const action = await sign(signer, null, "logIP", {})
+	const action = await signer.sign("logIP", {})
 	await core.applyAction(action)
 	await core.close()
 
