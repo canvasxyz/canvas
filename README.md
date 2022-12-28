@@ -5,8 +5,7 @@
 [![npm](https://img.shields.io/npm/v/@canvas-js/core?color=33cd56&logo=npm)](https://www.npmjs.com/package/@canvas-js/core)
 
 Canvas is a new architecture for decentralized applications, where
-every user interaction is a signed message exchanged over a
-peer-to-peer network.
+every user interaction is a signed message exchanged over a peer-to-peer network.
 
 For more information, see the [Canvas docs](https://canvasxyz.github.io/canvas-docs/docs)!
 

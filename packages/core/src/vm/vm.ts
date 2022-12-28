@@ -38,7 +38,7 @@ import {
 } from "./utils.js"
 
 import * as constants from "../constants.js"
-import { EthereumBlockProvider } from "@canvas-js/signers"
+import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
 type Options = { verbose?: boolean; unchecked?: boolean }
 

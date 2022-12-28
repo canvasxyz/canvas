@@ -11,7 +11,7 @@ import { createFromProtobuf, createEd25519PeerId, exportToProtobuf } from "@libp
 
 import { constants, Core, getLibp2pInit, getAPI, setupWebsockets } from "@canvas-js/core"
 import { BlockProvider } from "@canvas-js/interfaces"
-import { EthereumBlockProvider } from "@canvas-js/signers"
+import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
 const { CANVAS_PATH, CANVAS_SPEC, ANNOUNCE, LISTEN, PEER_ID, ETH_CHAIN_ID, ETH_CHAIN_RPC, NODE_ENV, VERBOSE, PORT } =
 	process.env

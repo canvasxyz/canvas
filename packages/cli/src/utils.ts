@@ -11,7 +11,7 @@ import prompts from "prompts"
 
 import { chainType, constants } from "@canvas-js/core"
 import { BlockProvider } from "@canvas-js/interfaces"
-import { EthereumBlockProvider } from "@canvas-js/signers"
+import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
 export const CANVAS_HOME = process.env.CANVAS_HOME ?? path.resolve(os.homedir(), ".canvas")
 export const SOCKET_FILENAME = "daemon.sock"
