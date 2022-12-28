@@ -27,6 +27,8 @@ export function encodeAddress(chain: Chain, chainId: ChainId, address: string): 
 		return base58.decode(address)
 	} else if (chain === "substrate") {
 		return decodeSS58Address(address)
+	} else if (chain === "near") {
+		throw Error("The NEAR chain is not supported")
 	} else {
 		signalInvalidType(chain)
 	}
@@ -45,6 +47,8 @@ export function decodeAddress(chain: Chain, chainId: ChainId, address: Uint8Arra
 		return base58.encode(address)
 	} else if (chain === "substrate") {
 		return encodeSS58Address(address)
+	} else if (chain === "near") {
+		throw Error("The NEAR chain is not supported")
 	} else {
 		signalInvalidType(chain)
 	}
@@ -59,6 +63,8 @@ export function encodeBlockhash(chain: Chain, chainId: ChainId, blockhash: strin
 		return base58.decode(blockhash)
 	} else if (chain === "substrate") {
 		return arrayify(blockhash)
+	} else if (chain === "near") {
+		throw Error("The NEAR chain is not supported")
 	} else {
 		signalInvalidType(chain)
 	}
@@ -73,6 +79,8 @@ export function decodeBlockhash(chain: Chain, chainId: ChainId, blockhash: Uint8
 		return base58.encode(blockhash)
 	} else if (chain === "substrate") {
 		return hexlify(blockhash)
+	} else if (chain === "near") {
+		throw Error("The NEAR chain is not supported")
 	} else {
 		signalInvalidType(chain)
 	}
