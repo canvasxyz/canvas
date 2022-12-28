@@ -23,5 +23,8 @@
     "examples/app-store",
     "examples/chat-webpack",
     "examples/chat-next"
-  ]
+  ],
+  "dependencies": {
+    "wagmi": "^0.10.0"
+  }
 }
