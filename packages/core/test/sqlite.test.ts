@@ -1,8 +1,6 @@
 import test from "ava"
 
 import { Core, compileSpec } from "@canvas-js/core"
-import { Action, ActionArgument, ActionPayload } from "@canvas-js/interfaces"
-import { getActionSignatureData } from "@canvas-js/verifiers"
 
 import { TestSigner } from "./utils.js"
 
