@@ -3,7 +3,6 @@ import assert from "node:assert"
 import chalk from "chalk"
 
 import type { Uint8ArrayList } from "uint8arraylist"
-import type { Stream } from "@libp2p/interface-connection"
 import type { Duplex, Source } from "it-stream-types"
 import { pipe } from "it-pipe"
 import * as lp from "it-length-prefixed"
@@ -13,7 +12,7 @@ import * as okra from "node-okra"
 import RPC from "../../rpc/sync/index.cjs"
 
 import type { MessageStore } from "../messageStore.js"
-import { encodeBinaryAction, encodeBinarySession } from "../encoding.js"
+import { encodeBinaryMessage } from "../encoding.js"
 import { toBuffer, toHex } from "../utils.js"
 
 export async function handleIncomingStream(
@@ -84,14 +83,14 @@ function getValues(
 				if (session === null) {
 					throw new Error(`session not found: ${toHex(hash)}`)
 				} else {
-					return encodeBinarySession(session)
+					return encodeBinaryMessage(session)
 				}
 			} else {
 				const action = messageStore.getActionByHash(toBuffer(hash))
 				if (action === null) {
 					throw new Error(`action not found: ${toHex(hash)}`)
 				} else {
-					return encodeBinaryAction(action)
+					return encodeBinaryMessage(action)
 				}
 			}
 		}),

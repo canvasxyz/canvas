@@ -4,10 +4,11 @@ import { ethers } from "ethers"
 import * as t from "io-ts"
 import * as cbor from "microcbor"
 
-import type { Session, Action } from "@canvas-js/interfaces"
+import type { Session, Action, Message } from "@canvas-js/interfaces"
 
 import { actionArgumentType, chainIdType, chainType, uint8ArrayType } from "./codecs.js"
 import { decodeAddress, decodeBlockhash, encodeAddress, encodeBlockhash } from "./chains/index.js"
+import { signalInvalidType } from "./utils.js"
 
 const { hexlify, arrayify } = ethers.utils
 
@@ -114,8 +115,17 @@ export function fromBinaryAction(action: BinaryAction): Action {
 	}
 }
 
-export const encodeBinaryAction = (action: BinaryAction) => cbor.encode(action)
-export const encodeBinarySession = (session: BinarySession) => cbor.encode(session)
+export function fromBinaryMessage(binaryMessage: BinaryMessage): Message {
+	if (binaryMessage.type === "action") {
+		return fromBinaryAction(binaryMessage)
+	} else if (binaryMessage.type === "session") {
+		return fromBinarySession(binaryMessage)
+	} else {
+		signalInvalidType(binaryMessage)
+	}
+}
+
+export const encodeBinaryMessage = (message: BinaryMessage) => cbor.encode(message)
 
 export function decodeBinaryMessage(data: Uint8Array): BinaryMessage {
 	const binaryMessage = cbor.decode(data)
@@ -138,4 +148,14 @@ export function normalizeSession(session: Session): [hash: Buffer, session: Bina
 	const data = cbor.encode(binarySession)
 	const hash = createHash("sha256").update(data).digest()
 	return [hash, binarySession, data]
+}
+
+export function normalizeMessage(message: Message): [hash: Buffer, binaryMessage: BinaryMessage, data: Uint8Array] {
+	if (message.type === "action") {
+		return normalizeAction(message)
+	} else if (message.type === "session") {
+		return normalizeSession(message)
+	} else {
+		signalInvalidType(message)
+	}
 }

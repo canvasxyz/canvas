@@ -5,8 +5,9 @@ import { encodeAddress, decodeAddress } from "@canvas-js/core"
 test("eth address", (t) => {
 	const chain = "eth"
 	const chainId = 1
-	const address = "0x834502f7674efd11c2af6de5ecef41b2cee36dd8"
+	const address = "0x834502F7674EfD11c2Af6DE5eCEf41b2ceE36DD8"
 	t.is(decodeAddress(chain, chainId, encodeAddress(chain, chainId, address)), address)
+	t.is(decodeAddress(chain, chainId, encodeAddress(chain, chainId, address.toLowerCase())), address)
 })
 
 test("cosmos address", (t) => {

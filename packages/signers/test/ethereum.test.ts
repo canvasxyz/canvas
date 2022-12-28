@@ -24,5 +24,5 @@ test("Sign an action for ethereum", async (t) => {
 	const action = await signer.signActionPayload(payload)
 
 	const recoveredAddress = await verifyActionSignature(action)
-	t.deepEqual(recoveredAddress, childWallet.address.toLowerCase())
+	t.deepEqual(recoveredAddress, childWallet.address)
 })

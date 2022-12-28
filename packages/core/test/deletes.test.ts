@@ -1,60 +1,30 @@
 import test from "ava"
 
-import { ethers } from "ethers"
-
-import { Action, ActionArgument, ActionPayload } from "@canvas-js/interfaces"
-import { getActionSignatureData } from "@canvas-js/verifiers"
 import { Core, compileSpec } from "@canvas-js/core"
 
-const signer = ethers.Wallet.createRandom()
-const signerAddress = signer.address.toLowerCase()
+import { TestSigner } from "./utils.js"
+
+const { uri, spec } = await compileSpec({
+	models: { threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" } },
+	actions: {
+		newThread({ title, link }, { db, hash, from }) {
+			if (typeof title === "string" && typeof link === "string") {
+				db.threads.set(hash, { creator: from, title, link })
+			}
+		},
+		deleteThread({ threadId }, { db }) {
+			if (typeof threadId === "string") {
+				db.threads.delete(threadId)
+			}
+		},
+	},
+})
+const signer = new TestSigner(uri)
 
 test("Test setting and then deleting a record", async (t) => {
-	const { uri, spec } = await compileSpec({
-		models: { threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" } },
-		actions: {
-			newThread({ title, link }, { db, hash, from }) {
-				if (typeof title === "string" && typeof link === "string") {
-					db.threads.set(hash, { creator: from, title, link })
-				}
-			},
-			deleteThread({ threadId }, { db }) {
-				if (typeof threadId === "string") {
-					db.threads.delete(threadId)
-				}
-			},
-		},
-	})
-
-	async function sign(
-		signer: ethers.Wallet,
-		session: string | null,
-		call: string,
-		args: Record<string, ActionArgument>
-	): Promise<Action> {
-		const timestamp = Date.now()
-		const actionPayload: ActionPayload = {
-			from: signerAddress,
-			spec: uri,
-			call,
-			args,
-			timestamp,
-			chain: "eth",
-			chainId: 1,
-			blockhash: null,
-		}
-
-		const actionSignatureData = getActionSignatureData(actionPayload)
-		const actionSignature = await signer._signTypedData(...actionSignatureData)
-		return { type: "action", payload: actionPayload, session, signature: actionSignature }
-	}
-
 	const core = await Core.initialize({ uri, directory: null, spec, unchecked: true, offline: true })
 
-	const newThreadAction = await sign(signer, null, "newThread", {
-		title: "Hacker News",
-		link: "https://news.ycombinator.com",
-	})
+	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 
 	const { hash: threadId } = await core.applyAction(newThreadAction)
 
@@ -63,12 +33,12 @@ test("Test setting and then deleting a record", async (t) => {
 			id: threadId,
 			title: "Hacker News",
 			link: "https://news.ycombinator.com",
-			creator: signerAddress,
+			creator: signer.wallet.address,
 			updated_at: newThreadAction.payload.timestamp,
 		},
 	])
 
-	await sign(signer, null, "deleteThread", { threadId }).then((action) => core.applyAction(action))
+	await signer.sign("deleteThread", { threadId }).then((action) => core.applyAction(action))
 
 	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [])
 
