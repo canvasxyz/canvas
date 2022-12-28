@@ -7,7 +7,6 @@
   },
   "references": [
     { "path": "../interfaces" },
-    { "path": "../verifiers" },
-    { "path": "../signers" }
+    { "path": "../verifiers" }
   ]
 }

@@ -22,7 +22,6 @@
   "dependencies": {
     "@canvas-js/interfaces": "0.0.36",
     "@canvas-js/verifiers": "0.0.36",
-    "@canvas-js/signers": "0.0.36",
     "@chainsafe/libp2p-gossipsub": "^5.3.0",
     "@chainsafe/libp2p-noise": "^10.2.0",
     "@libp2p/bootstrap": "^5.0.1",

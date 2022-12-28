@@ -1,5 +1,5 @@
 import type { Action, ActionArgument, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
-import { EthereumBlockProvider } from "@canvas-js/signers"
+import { EthereumBlockProvider } from "@canvas-js/verifiers"
 import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
 import { ethers } from "ethers"
 

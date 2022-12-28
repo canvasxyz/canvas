@@ -18,7 +18,7 @@ import {
 	Query,
 	BlockProvider,
 } from "@canvas-js/interfaces"
-import { EthereumBlockProvider } from "@canvas-js/signers"
+import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
 import type { Effect } from "../modelStore.js"
 import { chainIdType, chainType, modelsType } from "../codecs.js"
@@ -38,7 +38,6 @@ import {
 } from "./utils.js"
 
 import * as constants from "../constants.js"
-import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
 type Options = { verbose?: boolean; unchecked?: boolean }
 
