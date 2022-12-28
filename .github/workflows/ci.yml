@@ -1,8 +1,5 @@
 name: CI
-on:
-  push:
-    branches: ["*"]
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
   test:
