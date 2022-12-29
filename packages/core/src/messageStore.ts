@@ -1,6 +1,7 @@
 import assert from "node:assert"
 import Database, * as sqlite from "better-sqlite3"
 import * as cbor from "microcbor"
+import { CID } from "multiformats"
 
 import type { Action, Session, ActionArgument, Chain, ChainId } from "@canvas-js/interfaces"
 
@@ -14,11 +15,12 @@ type ActionRecord = {
 	from_address: Buffer
 	session_address: Buffer | null
 	timestamp: number
-	blockhash: Buffer | null
 	call: string
 	args: Buffer
 	chain: Chain
 	chain_id: ChainId
+	blockhash: Buffer | null
+	source: Buffer | null
 }
 
 type SessionRecord = {
@@ -28,20 +30,26 @@ type SessionRecord = {
 	session_address: Buffer
 	duration: number
 	timestamp: number
-	blockhash: Buffer | null
 	chain: Chain
 	chain_id: ChainId
+	blockhash: Buffer | null
+	source: Buffer | null
 }
 
 /**
  * The message log archives messages in its own separate SQLite database.
  */
-
 export class MessageStore {
 	public readonly database: sqlite.Database
 	private readonly statements: Record<keyof typeof MessageStore.statements, sqlite.Statement>
+	private readonly sourceURIs: Record<string, CID>
 
-	constructor(public readonly uri: string, path: string | null, options: { verbose?: boolean } = {}) {
+	constructor(
+		public readonly uri: string,
+		public readonly path: string | null,
+		private readonly sources: CID[],
+		private readonly options: { verbose?: boolean } = {}
+	) {
 		if (path === null) {
 			if (options.verbose) {
 				console.log("[canvas-core] Initializing in-memory message store")
@@ -60,6 +68,7 @@ export class MessageStore {
 		this.database.exec(MessageStore.createActionsTable)
 
 		this.statements = mapEntries(MessageStore.statements, (_, sql) => this.database.prepare(sql))
+		this.sourceURIs = Object.fromEntries(sources.map((cid) => [`ipfs://${cid.toString()}`, cid]))
 	}
 
 	public close() {
@@ -77,7 +86,11 @@ export class MessageStore {
 	}
 
 	public insertAction(hash: string | Buffer, action: BinaryAction) {
-		assert(action.payload.spec === this.uri, "insertAction: action.payload.spec did not match MessageStore.name")
+		const sourceCID: CID | undefined = this.sourceURIs[action.payload.spec]
+		assert(
+			action.payload.spec === this.uri || sourceCID !== undefined,
+			"insertAction: action.payload.spec not found in MessageStore.sources"
+		)
 
 		const record: ActionRecord = {
 			hash: typeof hash === "string" ? fromHex(hash) : hash,
@@ -87,16 +100,21 @@ export class MessageStore {
 			timestamp: action.payload.timestamp,
 			call: action.payload.call,
 			args: toBuffer(cbor.encode(action.payload.args)),
-			blockhash: action.payload.blockhash ? toBuffer(action.payload.blockhash) : null,
 			chain: action.payload.chain,
 			chain_id: action.payload.chainId,
+			blockhash: action.payload.blockhash ? toBuffer(action.payload.blockhash) : null,
+			source: sourceCID ? toBuffer(sourceCID.bytes) : null,
 		}
 
 		this.statements.insertAction.run(record)
 	}
 
 	public insertSession(hash: string | Buffer, session: BinarySession) {
-		assert(session.payload.spec === this.uri, "insertSession: session.payload.spec did not match MessageStore.uri")
+		const sourceCID: CID | undefined = this.sourceURIs[session.payload.spec]
+		assert(
+			session.payload.spec === this.uri || sourceCID !== undefined,
+			"insertSession: session.payload.spec not found in MessageStore.sources"
+		)
 
 		const record: SessionRecord = {
 			hash: typeof hash === "string" ? fromHex(hash) : hash,
@@ -108,6 +126,7 @@ export class MessageStore {
 			blockhash: session.payload.blockhash ? toBuffer(session.payload.blockhash) : null,
 			chain: session.payload.chain,
 			chain_id: session.payload.chainId,
+			source: sourceCID ? toBuffer(sourceCID.bytes) : null,
 		}
 
 		this.statements.insertSession.run(record)
@@ -202,11 +221,12 @@ export class MessageStore {
     session_address BLOB    REFERENCES sessions(session_address),
     from_address    BLOB    NOT NULL,
     timestamp       INTEGER NOT NULL,
-    blockhash       BLOB            ,
+    call            TEXT    NOT NULL,
+    args            BLOB    NOT NULL,
 		chain           TEXT    NOT NULL,
     chain_id        INTEGER NOT NULL,
-    call            TEXT    NOT NULL,
-    args            BLOB    NOT NULL
+    blockhash       BLOB,
+		source          BLOB
   );`
 
 	private static createSessionsTable = `CREATE TABLE IF NOT EXISTS sessions (
@@ -217,26 +237,38 @@ export class MessageStore {
     session_address BLOB    NOT NULL UNIQUE,
     duration        INTEGER NOT NULL,
     timestamp       INTEGER NOT NULL,
-    blockhash       BLOB            ,
 		chain           TEXT    NOT NULL,
-    chain_id        INTEGER NOT NULL
+    chain_id        INTEGER NOT NULL,
+    blockhash       BLOB,
+		source          BLOB
   );`
 
 	private static statements = {
 		insertAction: `INSERT INTO actions (
-      hash, signature, session_address, from_address, timestamp, blockhash, call, args, chain, chain_id
+      hash, signature, session_address, from_address, timestamp, call, args, chain, chain_id, blockhash, source
     ) VALUES (
-      :hash, :signature, :session_address, :from_address, :timestamp, :blockhash, :call, :args, :chain, :chain_id
+      :hash, :signature, :session_address, :from_address, :timestamp, :call, :args, :chain, :chain_id, :blockhash, :source
     )`,
 		insertSession: `INSERT INTO sessions (
-      hash, signature, from_address, session_address, duration, timestamp, blockhash, chain, chain_id
+      hash, signature, from_address, session_address, duration, timestamp, chain, chain_id, blockhash, source
     ) VALUES (
-      :hash, :signature, :from_address, :session_address, :duration, :timestamp, :blockhash, :chain, :chain_id
+      :hash, :signature, :from_address, :session_address, :duration, :timestamp, :chain, :chain_id, :blockhash, :source
     )`,
 		getActionByHash: `SELECT * FROM actions WHERE hash = :hash`,
 		getSessionByHash: `SELECT * FROM sessions WHERE hash = :hash`,
 		getSessionByAddress: `SELECT * FROM sessions WHERE session_address = :session_address`,
 		getSessions: `SELECT * FROM sessions`,
 		getActions: `SELECT * FROM actions`,
+	}
+}
+
+const ipfsURIPattern = /^ipfs\/\/:([a-zA-Z0-9]+)$/
+function parseCID(uri: string): CID | null {
+	const match = ipfsURIPattern.exec(uri)
+	if (match) {
+		const [_, cid] = match
+		return CID.parse(cid)
+	} else {
+		return null
 	}
 }

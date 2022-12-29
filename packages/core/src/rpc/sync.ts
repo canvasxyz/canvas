@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import assert from "node:assert"
 
 import chalk from "chalk"
 import type { Duplex } from "it-stream-types"
@@ -6,14 +7,14 @@ import type { Uint8ArrayList } from "uint8arraylist"
 
 import * as okra from "node-okra"
 
-import { toHex } from "../utils.js"
 import { BinaryMessage, decodeBinaryMessage } from "../encoding.js"
 import { Client } from "./client.js"
 
 export async function sync(
 	mst: okra.Tree,
 	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
-	applyBatch: (messages: [Buffer, BinaryMessage][]) => Promise<void>
+	handleMessage: (hash: Buffer, data: Uint8Array, message: BinaryMessage) => Promise<void>
+	// applyBatch: (messages: [hash: Buffer, data: Uint8Array, message: BinaryMessage][]) => Promise<void>
 ): Promise<void> {
 	const target = new okra.Target(mst)
 	const client = new Client(stream)
@@ -35,30 +36,27 @@ export async function sync(
 			return
 		}
 
-		const chidlren = await client.getChildren(level, sourceRoot)
+		const children = await client.getChildren(level, sourceRoot)
 		if (level > 1) {
-			for (const { leaf, hash } of chidlren) {
+			for (const { leaf, hash } of children) {
 				await scan(level - 1, leaf, hash)
 			}
 		} else {
-			const leaves = target.filter(chidlren)
+			const leaves = target.filter(children)
 			const values = await client.getValues(leaves)
-			if (values.length !== leaves.length) {
-				throw new Error("expected values.length to match leaves.length")
-			}
+			assert(values.length === leaves.length, "expected values.length to match leaves.length")
 
-			const messages: [Buffer, BinaryMessage][] = []
+			// const messages: [hash: Buffer, data: Uint8Array, message: BinaryMessage][] = []
 
-			for (const [i, value] of values.entries()) {
+			for (const [i, data] of values.entries()) {
 				const { hash } = leaves[i]
-				if (!createHash("sha256").update(value).digest().equals(hash)) {
-					throw new Error(`the value received for ${toHex(hash)} did not match the hash`)
-				}
-
-				messages.push([hash, decodeBinaryMessage(value)])
+				assert(createHash("sha256").update(data).digest().equals(hash), "received bad value for hash")
+				const message = decodeBinaryMessage(data)
+				await handleMessage(hash, data, message)
+				// messages.push([hash, value, decodeBinaryMessage(value)])
 			}
 
-			await applyBatch(messages)
+			// await applyBatch(messages)
 		}
 	}
 
