@@ -24,7 +24,7 @@ import {
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
 
 import { actionType, sessionType } from "./codecs.js"
-import { toHex, BlockResolver, signalInvalidType } from "./utils.js"
+import { toHex, BlockResolver, signalInvalidType, CacheMap } from "./utils.js"
 import { normalizeAction, fromBinaryAction, fromBinarySession, normalizeSession, BinaryMessage } from "./encoding.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
@@ -63,8 +63,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly modelStore: ModelStore
 	public readonly messageStore: MessageStore
 
-	// public readonly recentGossipSubPeers: CacheMap<string, { lastSeen: number }>
-	// public readonly recentBacklogSyncPeers: CacheMap<string, { lastSeen: number }>
+	public readonly recentGossipSubPeers = new CacheMap<string, { lastSeen: number }>(1000)
+	public readonly recentBacklogSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
 
 	private readonly source: Source | null = null
 	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
