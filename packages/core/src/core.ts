@@ -129,6 +129,8 @@ export class Core extends EventEmitter<CoreEvents> {
 				applyMessage: this.applyMessage,
 				messageStore: this.messageStore,
 				libp2p,
+				verbose: options.verbose,
+				offline: options.offline,
 			})
 		}
 	}

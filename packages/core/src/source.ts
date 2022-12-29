@@ -191,6 +191,7 @@ export class Source {
 					(err) => console.log(chalk.red("[canvas-core] Failed to publish DHT provider record."), err.message),
 					{ signal: queryController.signal, interval: constants.ANNOUNCE_RETRY_INTERVAL }
 				)
+
 				await this.wait(constants.ANNOUNCE_INTERVAL)
 			}
 		} catch (err) {
