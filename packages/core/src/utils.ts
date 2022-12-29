@@ -78,8 +78,11 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	const actionEntries = Object.entries(actions).map(([name, action]) => {
 		assert(typeof action === "function")
 		const source = action.toString()
-		assert(source.startsWith(`${name}(`) || source.startsWith(`async ${name}(`))
-		return source
+		if (source.startsWith(`${name}(`) || source.startsWith(`async ${name}(`)) {
+			return source
+		} else {
+			return `${name}: ${source}`
+		}
 	})
 
 	const routeEntries = Object.entries(routes || {}).map(([name, route]) => {

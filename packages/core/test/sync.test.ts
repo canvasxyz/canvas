@@ -26,6 +26,7 @@ const { uri, spec } = await compileSpec({
 	actions: { log: ({ message }, {}) => console.log(message) },
 })
 
+// creates an in-memory bi-directional connection
 function connect(): [
 	source: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
 	target: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>
