@@ -10,8 +10,8 @@ export interface ApplicationData {
 	routes: string[]
 	peers: {
 		gossip: Record<string, { lastSeen: number }>
-		backlog: Record<string, { lastSeen: number }>
-	}
+		sync: Record<string, { lastSeen: number }>
+	} | null
 }
 
 export interface CanvasContextValue {

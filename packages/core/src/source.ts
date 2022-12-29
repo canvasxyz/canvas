@@ -12,7 +12,7 @@ import type { StreamHandler } from "@libp2p/interface-registrar"
 
 import * as okra from "node-okra"
 
-import { wait, retry, AbortError, toHex, signalInvalidType } from "./utils.js"
+import { wait, retry, AbortError, toHex, signalInvalidType, CacheMap } from "./utils.js"
 import { BinaryAction, BinaryMessage, BinarySession, decodeBinaryMessage } from "./encoding.js"
 import { sync, handleIncomingStream } from "./rpc/index.js"
 import * as constants from "./constants.js"
@@ -27,6 +27,8 @@ interface MessageStore {
 export interface SourceOptions {
 	verbose?: boolean
 	offline?: boolean
+	recentGossipPeers?: CacheMap<string, { lastSeen: number }>
+	recentSyncPeers?: CacheMap<string, { lastSeen: number }>
 }
 
 export interface SourceConfig extends SourceOptions {
@@ -237,13 +239,19 @@ export class Source {
 	 * and calls this.sync(peerId) for each of them every constants.SYNC_INTERVAL milliseconds
 	 */
 	private async startSyncService() {
+		assert(this.libp2p !== null)
 		if (this.options.verbose) {
 			console.log("[canvas-core] Staring sync service.")
 		}
 
 		try {
 			await this.wait(constants.SYNC_DELAY)
+
 			while (!this.controller.signal.aborted) {
+				for (const peer of this.libp2p.pubsub.getSubscribers(this.uri)) {
+					this.options.recentGossipPeers?.set(peer.toString(), { lastSeen: Date.now() })
+				}
+
 				const peers = await retry(
 					() => this.findSyncPeers(),
 					(err) => console.log(chalk.red(`[canvas-core] Failed to locate application peers.`), err.message),
@@ -330,7 +338,7 @@ export class Source {
 			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal: queryController.signal })
 		} catch (err: any) {
 			// show all errors, if we receive an AggregateError
-			console.log(chalk.red(`[canvas-core] Failed to dial peer ${peer.toString()}.`, err.errors ?? err))
+			console.log(chalk.red(`[canvas-core] Failed to dial peer ${peer.toString()}.`), err.errors ?? err)
 			return
 		} finally {
 			this.controller.signal.removeEventListener("abort", abort)
@@ -339,6 +347,9 @@ export class Source {
 		if (this.options.verbose) {
 			console.log(`[canvas-core] Opened outgoing stream ${stream.id} to ${peer.toString()}.`)
 		}
+
+		// wait until we've successfully dialed the peer before update its lastSeen
+		this.options.recentSyncPeers?.set(peer.toString(), { lastSeen: Date.now() })
 
 		const closeStream = () => stream.close()
 		this.controller.signal.addEventListener("abort", closeStream)
@@ -373,7 +384,9 @@ export class Source {
 		}
 
 		console.log(
-			`[canvas-core] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
+			chalk.green(
+				`[canvas-core] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
+			)
 		)
 
 		if (this.options.verbose) {

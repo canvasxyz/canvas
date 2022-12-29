@@ -63,8 +63,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly modelStore: ModelStore
 	public readonly messageStore: MessageStore
 
-	public readonly recentGossipSubPeers = new CacheMap<string, { lastSeen: number }>(1000)
-	public readonly recentBacklogSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
+	public readonly recentGossipPeers = new CacheMap<string, { lastSeen: number }>(1000)
+	public readonly recentSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
 
 	private readonly source: Source | null = null
 	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
@@ -119,9 +119,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		const messageDatabasePath = directory && path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
 		this.messageStore = new MessageStore(uri, messageDatabasePath, [], { verbose: options.verbose })
 
-		// this.recentGossipSubPeers = new CacheMap(1000)
-		// this.recentBacklogSyncPeers = new CacheMap(1000)
-
 		if (directory !== null) {
 			this.source = Source.initialize({
 				path: path.resolve(directory, constants.MST_FILENAME),
@@ -129,6 +126,8 @@ export class Core extends EventEmitter<CoreEvents> {
 				applyMessage: this.applyMessage,
 				messageStore: this.messageStore,
 				libp2p,
+				recentGossipPeers: this.recentGossipPeers,
+				recentSyncPeers: this.recentSyncPeers,
 				verbose: options.verbose,
 				offline: options.offline,
 			})
