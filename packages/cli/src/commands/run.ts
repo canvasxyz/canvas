@@ -168,6 +168,7 @@ export async function handler(args: Args) {
 	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen: peeringPort, announce } = args
 
 	const peerId = await getPeerId()
+	console.log(`[canvas-cli] Using PeerId ${peerId.toString()}`)
 
 	let libp2p: Libp2p
 	if (announce !== undefined) {
