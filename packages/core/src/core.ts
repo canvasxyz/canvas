@@ -18,6 +18,7 @@ import {
 	BlockProvider,
 	Chain,
 	ChainId,
+	Block,
 } from "@canvas-js/interfaces"
 
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
@@ -308,5 +309,9 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(this.blockResolver !== null, "missing blockResolver")
 		const block = await this.blockResolver(chain, chainId, blockhash)
 		// TODO: add blocknums to messages, verify blocknum and blockhash match
+	}
+
+	public async getLatestBlock({ chain, chainId }: { chain: Chain; chainId: ChainId }): Promise<Block> {
+		return this.blockResolver(chain, chainId, "latest")
 	}
 }
