@@ -14,7 +14,6 @@ export async function sync(
 	mst: okra.Tree,
 	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
 	handleMessage: (hash: Buffer, data: Uint8Array, message: BinaryMessage) => Promise<void>
-	// applyBatch: (messages: [hash: Buffer, data: Uint8Array, message: BinaryMessage][]) => Promise<void>
 ): Promise<void> {
 	const target = new okra.Target(mst)
 	const client = new Client(stream)
@@ -46,17 +45,12 @@ export async function sync(
 			const values = await client.getValues(leaves)
 			assert(values.length === leaves.length, "expected values.length to match leaves.length")
 
-			// const messages: [hash: Buffer, data: Uint8Array, message: BinaryMessage][] = []
-
 			for (const [i, data] of values.entries()) {
 				const { hash } = leaves[i]
 				assert(createHash("sha256").update(data).digest().equals(hash), "received bad value for hash")
 				const message = decodeBinaryMessage(data)
 				await handleMessage(hash, data, message)
-				// messages.push([hash, value, decodeBinaryMessage(value)])
 			}
-
-			// await applyBatch(messages)
 		}
 	}
 
