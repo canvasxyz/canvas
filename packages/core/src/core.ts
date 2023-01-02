@@ -24,7 +24,7 @@ import {
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
 
 import { actionType, sessionType } from "./codecs.js"
-import { toHex, BlockResolver, signalInvalidType, CacheMap } from "./utils.js"
+import { toHex, BlockResolver, signalInvalidType, CacheMap, parseIPFSURI } from "./utils.js"
 import { normalizeAction, fromBinaryAction, fromBinarySession, normalizeSession, BinaryMessage } from "./encoding.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
@@ -66,7 +66,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly recentGossipPeers = new CacheMap<string, { lastSeen: number }>(1000)
 	public readonly recentSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
 
-	private readonly source: Source | null = null
+	// private readonly source: Source | null = null
+	private readonly sources: Record<string, Source> | null = null
 	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
 
 	public static async initialize({ directory, uri, spec, libp2p, providers, blockResolver, ...options }: CoreConfig) {
@@ -114,13 +115,14 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.options = options
 
 		const modelDatabasePath = directory && path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
-		this.modelStore = new ModelStore(modelDatabasePath, vm, { verbose: options.verbose })
+		this.modelStore = new ModelStore(modelDatabasePath, vm, options)
 
 		const messageDatabasePath = directory && path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
-		this.messageStore = new MessageStore(uri, messageDatabasePath, vm.sources, { verbose: options.verbose })
+		this.messageStore = new MessageStore(uri, messageDatabasePath, vm.sources, options)
 
 		if (directory !== null) {
-			this.source = Source.initialize({
+			this.sources = {}
+			this.sources[this.uri] = Source.initialize({
 				path: path.resolve(directory, constants.MST_FILENAME),
 				cid,
 				applyMessage: this.applyMessage,
@@ -128,9 +130,21 @@ export class Core extends EventEmitter<CoreEvents> {
 				libp2p,
 				recentGossipPeers: this.recentGossipPeers,
 				recentSyncPeers: this.recentSyncPeers,
-				verbose: options.verbose,
-				offline: options.offline,
+				...options,
 			})
+
+			for (const source of vm.sources) {
+				const cid = parseIPFSURI(source)
+				assert(cid !== null)
+				this.sources[source] = Source.initialize({
+					path: path.resolve(directory, `${cid.toString()}.okra`),
+					cid,
+					applyMessage: this.applyMessage,
+					messageStore: this.messageStore,
+					libp2p,
+					...options,
+				})
+			}
 		}
 	}
 
@@ -141,8 +155,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.messageStore.close()
 		this.modelStore.close()
 
-		if (this.source !== null) {
-			await this.source.close()
+		if (this.sources !== null) {
+			for (const source of Object.values(this.sources)) {
+				await source.close()
+			}
 		}
 
 		this.dispatchEvent(new Event("close"))
@@ -171,9 +187,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		await this.applyMessage(hash, message)
 
-		if (this.source !== null) {
-			this.source.insertMessage(hash, message)
-			await this.source.publishMessage(hash, data)
+		if (this.sources !== null) {
+			this.sources[this.uri].insertMessage(hash, message)
+			await this.sources[this.uri].publishMessage(hash, data)
 		}
 
 		return { hash: toHex(hash) }
@@ -194,9 +210,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		await this.applyMessage(hash, message)
 
-		if (this.source !== null) {
-			this.source.insertMessage(hash, message)
-			await this.source.publishMessage(hash, data)
+		if (this.sources !== null) {
+			this.sources[this.uri].insertMessage(hash, message)
+			await this.sources[this.uri].publishMessage(hash, data)
 		}
 
 		return { hash: toHex(hash) }
@@ -206,7 +222,10 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Apply a message.
 	 * For actions: validate, execute, apply effects, insert into message store.
 	 * For sessions: validate, insert into message store.
-	 * This method is also passed to Source as the callback for GossipSub and MST sync messages.
+	 * This method is called directly from Core.applySession and Core.applyAction and is
+	 * also passed to Source as the callback for GossipSub and MST sync messages.
+	 * Note the this does NOT call sources[uri].insertMessage OR sources[uri].publishMessage -
+	 * that's the responsibility of the caller.
 	 */
 	private applyMessage = async (hash: Buffer, message: BinaryMessage) => {
 		const id = toHex(hash)
