@@ -76,8 +76,6 @@ test("Apply two signed actions", async (t) => {
 		},
 	])
 
-	t.pass()
-
 	await core.close()
 })
 
@@ -126,8 +124,6 @@ test("Apply two actions signed with session keys", async (t) => {
 		},
 	])
 
-	t.pass()
-
 	await core.close()
 })
 
@@ -159,6 +155,26 @@ test("Apply an action that throws an error", async (t) => {
 		instanceOf: ApplicationError,
 		message: "invalid vote value",
 	})
+
+	await core.close()
+})
+
+test("Create an in-memory Core with a file:// URI", async (t) => {
+	const uri = "file:///dev/null"
+	const signer = new TestSigner(uri)
+	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
+	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
+	const { hash: threadId } = await core.applyAction(newThreadAction)
+
+	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
+		{
+			id: threadId,
+			title: "Hacker News",
+			link: "https://news.ycombinator.com",
+			creator: signer.wallet.address,
+			updated_at: newThreadAction.payload.timestamp,
+		},
+	])
 
 	await core.close()
 })
