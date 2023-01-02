@@ -39,15 +39,19 @@ import {
 
 import * as constants from "../constants.js"
 
-type Options = { verbose?: boolean; unchecked?: boolean }
+interface VMOptions {
+	verbose?: boolean
+	unchecked?: boolean
+}
+
+interface VMConfig extends VMOptions {
+	uri: string
+	spec: string
+	providers?: Record<string, BlockProvider>
+}
 
 export class VM {
-	public static async initialize(
-		uri: string,
-		spec: string,
-		providers: Record<string, BlockProvider>,
-		options: Options = {}
-	): Promise<VM> {
+	public static async initialize({ uri, spec, providers, ...options }: VMConfig): Promise<VM> {
 		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
@@ -62,7 +66,7 @@ export class VM {
 		})
 
 		const moduleHandle = await loadModule(context, uri, transpiledSpec)
-		return new VM(uri, runtime, context, moduleHandle, providers, options)
+		return new VM(uri, runtime, context, moduleHandle, providers ?? {}, options)
 	}
 
 	public readonly models: Record<string, Model>
@@ -89,7 +93,7 @@ export class VM {
 		public readonly context: QuickJSContext,
 		moduleHandle: QuickJSHandle,
 		providers: Record<string, BlockProvider>,
-		options: Options
+		options: VMOptions
 	) {
 		const {
 			models: modelsHandle,

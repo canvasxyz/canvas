@@ -38,7 +38,7 @@ export async function handler(args: Args) {
 		spec = fs.readFileSync(args.spec, "utf-8")
 	}
 
-	const vm = await VM.initialize(uri, spec, {}, { unchecked: true })
+	const vm = await VM.initialize({ uri, spec, unchecked: true })
 	const { models, routes, actions, contractMetadata } = vm
 	vm.dispose()
 
