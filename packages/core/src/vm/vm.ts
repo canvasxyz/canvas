@@ -301,13 +301,12 @@ export class VM {
 				log: context.newFunction("log", (...args: any[]) => console.log("[canvas-vm]", ...args.map(context.dump))),
 			}),
 
-			assert: context.newFunction("assert", (condition: QuickJSHandle, message: QuickJSHandle) => {
-				if (context.dump(condition)) {
-					return
+			assert: context.newFunction("assert", (condition: QuickJSHandle, message?: QuickJSHandle) => {
+				if (message === undefined) {
+					assert(context.dump(condition))
 				} else {
-					throw new Error(context.getString(message))
+					assert(context.dump(condition), context.getString(message))
 				}
-				// assert(context.dump(condition), context.getString(message))
 			}),
 
 			// fetch:

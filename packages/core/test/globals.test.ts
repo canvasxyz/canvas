@@ -1,4 +1,5 @@
 import test from "ava"
+import assert from "node:assert"
 
 import { compileSpec, Core } from "@canvas-js/core"
 
@@ -11,17 +12,33 @@ const { spec, uri } = await compileSpec({
 			const res = await fetch("https://ipv4.icanhazip.com/")
 			console.log("my IP address is", res)
 		},
+
+		async echo({ text }) {
+			assert(typeof text === "string")
+			console.log(text)
+		},
 	},
 })
 
 const signer = new TestSigner(uri)
 
-test("test fetch and log IP address", async (t) => {
+test("test fetch() and log IP address", async (t) => {
 	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true, offline: true })
 
 	const action = await signer.sign("logIP", {})
-	await core.applyAction(action)
-	await core.close()
+	await t.notThrowsAsync(() => core.applyAction(action))
 
-	t.pass()
+	await core.close()
+})
+
+test("test assert()", async (t) => {
+	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true, offline: true })
+
+	const successAction = await signer.sign("echo", { text: "hello world" })
+	await t.notThrowsAsync(() => core.applyAction(successAction))
+
+	const failureAction = await signer.sign("echo", { text: 5 })
+	await t.throwsAsync(() => core.applyAction(failureAction), { message: "false == true" })
+
+	await core.close()
 })
