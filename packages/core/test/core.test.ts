@@ -81,26 +81,6 @@ test("Apply two signed actions", async (t) => {
 	await core.close()
 })
 
-// const sessionSigner = ethers.Wallet.createRandom()
-// const sessionSignerAddress = await sessionSigner.getAddress()
-
-// async function signWithSession(call: string, args: Record<string, ActionArgument>): Promise<Action> {
-// 	const timestamp = Date.now()
-// 	const actionPayload: ActionPayload = {
-// 		from: signer.wallet.address,
-// 		spec: uri,
-// 		call,
-// 		args,
-// 		timestamp,
-// 		blockhash: null,
-// 		chain: "eth",
-// 		chainId: 1,
-// 	}
-// 	const actionSignatureData = getActionSignatureData(actionPayload)
-// 	const actionSignature = await sessionSigner._signTypedData(...actionSignatureData)
-// 	return { type: "action", payload: actionPayload, session: sessionSignerAddress, signature: actionSignature }
-// }
-
 test("Apply action signed with session key", async (t) => {
 	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
 	const session = await sessionSigner.session()
@@ -162,7 +142,8 @@ test("Apply an action with a missing signature", async (t) => {
 test("Apply an action signed by wrong address", async (t) => {
 	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
 	const action = await signer.sign("newThread", { title: "Example Website", link: "http://example.com" })
-	action.payload.from = ethers.Wallet.createRandom().address
+	const { address } = ethers.Wallet.createRandom()
+	action.payload.from = address
 	await t.throwsAsync(core.applyAction(action), { instanceOf: Error, message: "action signed by wrong address" })
 	await core.close()
 })

@@ -5,7 +5,7 @@ import { CID } from "multiformats"
 
 import type { Action, Session, ActionArgument, Chain, ChainId } from "@canvas-js/interfaces"
 
-import { mapEntries, fromHex, toHex, toBuffer, signalInvalidType } from "./utils.js"
+import { mapEntries, fromHex, toHex, toBuffer, signalInvalidType, parseIPFSURI } from "./utils.js"
 import { BinaryAction, BinaryMessage, BinarySession, fromBinaryAction, fromBinarySession } from "./encoding.js"
 import { encodeAddress } from "./chains/index.js"
 
@@ -47,7 +47,7 @@ export class MessageStore {
 	constructor(
 		public readonly uri: string,
 		public readonly path: string | null,
-		private readonly sources: CID[],
+		private readonly sources: Set<string> = new Set([]),
 		private readonly options: { verbose?: boolean } = {}
 	) {
 		if (path === null) {
@@ -68,7 +68,12 @@ export class MessageStore {
 		this.database.exec(MessageStore.createActionsTable)
 
 		this.statements = mapEntries(MessageStore.statements, (_, sql) => this.database.prepare(sql))
-		this.sourceURIs = Object.fromEntries(sources.map((cid) => [`ipfs://${cid.toString()}`, cid]))
+		this.sourceURIs = {}
+		for (const uri of sources) {
+			const cid = parseIPFSURI(uri)
+			assert(cid !== null, "sources must be ipfs:// URIs")
+			this.sourceURIs[uri] = cid
+		}
 	}
 
 	public close() {
@@ -259,16 +264,5 @@ export class MessageStore {
 		getSessionByAddress: `SELECT * FROM sessions WHERE session_address = :session_address`,
 		getSessions: `SELECT * FROM sessions`,
 		getActions: `SELECT * FROM actions`,
-	}
-}
-
-const ipfsURIPattern = /^ipfs\/\/:([a-zA-Z0-9]+)$/
-function parseCID(uri: string): CID | null {
-	const match = ipfsURIPattern.exec(uri)
-	if (match) {
-		const [_, cid] = match
-		return CID.parse(cid)
-	} else {
-		return null
 	}
 }

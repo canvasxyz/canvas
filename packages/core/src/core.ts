@@ -117,7 +117,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.modelStore = new ModelStore(modelDatabasePath, vm, { verbose: options.verbose })
 
 		const messageDatabasePath = directory && path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
-		this.messageStore = new MessageStore(uri, messageDatabasePath, [], { verbose: options.verbose })
+		this.messageStore = new MessageStore(uri, messageDatabasePath, vm.sources, { verbose: options.verbose })
 
 		if (directory !== null) {
 			this.source = Source.initialize({
@@ -247,7 +247,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		const { timestamp, spec, blockhash, chain, chainId } = action.payload
 		const fromAddress = action.payload.from
 
-		assert(spec === this.uri, "action signed for wrong spec")
+		assert(spec === this.uri || this.vm.sources.has(spec), "action signed for wrong spec")
 
 		// check the timestamp bounds
 		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
@@ -272,13 +272,19 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(session.payload.spec === spec, "action referenced a session for the wrong spec")
 			assert(
 				session.payload.from === fromAddress,
-				"invalid session key (action.payload.from and session.payload.from do not match)"
+				"invalid session (action.payload.from and session.payload.from do not match)"
 			)
 
 			const verifiedAddress = await verifyActionSignature(action)
-			assert(verifiedAddress === action.session, "invalid action signature (recovered address does not match)")
+			assert(
+				verifiedAddress === action.session,
+				"invalid action signature (recovered session address does not match action.session)"
+			)
 			assert(verifiedAddress === session.payload.address, "invalid action signature (action, session do not match)")
-			assert(action.payload.spec === session.payload.spec, "action signed for wrong spec")
+			assert(
+				action.payload.spec === session.payload.spec,
+				"invalid session (action.payload.spec and session.payload.spec do not match)"
+			)
 		} else {
 			const verifiedAddress = await verifyActionSignature(action)
 			assert(verifiedAddress === fromAddress, "action signed by wrong address")
@@ -287,7 +293,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private async validateSession(session: Session) {
 		const { from, spec, timestamp, blockhash, chain, chainId } = session.payload
-		assert(spec === this.uri, "session signed for wrong spec")
+		assert(spec === this.uri || this.vm.sources.has(spec), "session signed for wrong spec")
 
 		const verifiedAddress = await verifySessionSignature(session)
 		assert(verifiedAddress === from, "session signed by wrong address")

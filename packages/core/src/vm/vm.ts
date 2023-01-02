@@ -23,7 +23,7 @@ import { EthereumBlockProvider } from "@canvas-js/verifiers"
 import type { Effect } from "../modelStore.js"
 import { chainIdType, chainType, modelsType } from "../codecs.js"
 import { ApplicationError } from "../errors.js"
-import { mapEntries, signalInvalidType } from "../utils.js"
+import { mapEntries, signalInvalidType, ipfsURIPattern } from "../utils.js"
 
 import {
 	loadModule,
@@ -62,7 +62,7 @@ export class VM {
 		})
 
 		const moduleHandle = await loadModule(context, uri, transpiledSpec)
-		return new VM(runtime, context, moduleHandle, providers, options)
+		return new VM(uri, runtime, context, moduleHandle, providers, options)
 	}
 
 	public readonly models: Record<string, Model>
@@ -70,11 +70,13 @@ export class VM {
 	public readonly routes: Record<string, string[]>
 	public readonly contracts: Record<string, ethers.Contract>
 	public readonly contractMetadata: Record<string, ContractMetadata>
-	public readonly component: string | null
+	public readonly component: string | null = null
+	public readonly sources: Set<string> = new Set([])
 
 	public readonly routeHandles: Record<string, QuickJSHandle>
 
 	private readonly actionHandles: Record<string, QuickJSHandle>
+	private readonly sourceHandles: Record<string, Record<string, QuickJSHandle>>
 	private readonly contractsHandle: QuickJSHandle
 	private readonly dbHandle: QuickJSHandle
 
@@ -82,6 +84,7 @@ export class VM {
 	private actionContext: ActionContext | null = null
 
 	constructor(
+		public readonly uri: string,
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
 		moduleHandle: QuickJSHandle,
@@ -94,6 +97,7 @@ export class VM {
 			actions: actionsHandle,
 			contracts: contractsHandle,
 			component: componentHandle,
+			sources: sourcesHandle,
 			...rest
 		} = moduleHandle.consume((handle) => unwrapObject(context, handle))
 
@@ -112,7 +116,11 @@ export class VM {
 		)
 		assert(
 			componentHandle === undefined || context.typeof(componentHandle) === "function",
-			"`component` export must be string"
+			"`component` export must be a function"
+		)
+		assert(
+			sourcesHandle === undefined || context.typeof(sourcesHandle) === "object",
+			"`sources` export must be an object"
 		)
 
 		this.models = validate(modelsType, modelsHandle.consume(context.dump), "invalid `models` export")
@@ -210,11 +218,23 @@ export class VM {
 			}
 		}
 
-		if (componentHandle === undefined) {
-			this.component = null
-		} else {
+		if (componentHandle !== undefined) {
 			this.component = call(context, "Function.prototype.toString", componentHandle).consume(context.getString)
 			componentHandle.dispose()
+		}
+
+		this.sourceHandles = {}
+		if (sourcesHandle !== undefined) {
+			const sourceHandles = sourcesHandle.consume((handle) => unwrapObject(context, handle))
+			for (const [source, sourceHandle] of Object.entries(sourceHandles)) {
+				assert(ipfsURIPattern.test(source), "the keys of the `source` export must be ipfs:// URIs")
+				assert(context.typeof(sourceHandle) === "object", `sources["${source}"] must be an object`)
+				this.sourceHandles[source] = sourceHandle.consume((handle) => unwrapObject(context, handle))
+				this.sources.add(source)
+				for (const [name, handle] of Object.entries(this.sourceHandles[source])) {
+					assert(context.typeof(handle) === "function", `sources["${source}"].${name} is not a function`)
+				}
+			}
 		}
 
 		this.dbHandle = wrapObject(
@@ -277,6 +297,15 @@ export class VM {
 				log: context.newFunction("log", (...args: any[]) => console.log("[canvas-vm]", ...args.map(context.dump))),
 			}),
 
+			assert: context.newFunction("assert", (condition: QuickJSHandle, message: QuickJSHandle) => {
+				if (context.dump(condition)) {
+					return
+				} else {
+					throw new Error(context.getString(message))
+				}
+				// assert(context.dump(condition), context.getString(message))
+			}),
+
 			// fetch:
 			fetch: context.newFunction("fetch", (urlHandle: QuickJSHandle) => {
 				assert(context.typeof(urlHandle) === "string", "url must be a string")
@@ -312,9 +341,17 @@ export class VM {
 	public dispose() {
 		this.dbHandle.dispose()
 		this.contractsHandle.dispose()
+
 		for (const handle of Object.values(this.actionHandles)) {
 			handle.dispose()
 		}
+
+		for (const source of Object.values(this.sourceHandles)) {
+			for (const handle of Object.values(source)) {
+				handle.dispose()
+			}
+		}
+
 		for (const handle of Object.values(this.routeHandles)) {
 			handle.dispose()
 		}
@@ -375,6 +412,19 @@ export class VM {
 		return results
 	}
 
+	private getActionHandle(spec: string, call: string): QuickJSHandle {
+		if (spec === this.uri) {
+			const handle = this.actionHandles[call]
+			assert(handle !== undefined, "invalid action call")
+			return handle
+		} else {
+			const source = this.sourceHandles[spec]
+			assert(source !== undefined, `no source with URI ${spec}`)
+			assert(source[call] !== undefined, "invalid source call")
+			return source[call]
+		}
+	}
+
 	/**
 	 * Given a call, get a list of effects to pass to `modelStore.applyEffects`, to be applied to the models.
 	 * Used by `.apply()` and when replaying actions.
@@ -382,8 +432,7 @@ export class VM {
 	public async execute(hash: string, { call, args, ...context }: ActionPayload): Promise<Effect[]> {
 		assert(this.effects === null && this.actionContext === null, "cannot apply more than one action at once")
 
-		const actionHandle = this.actionHandles[call]
-		assert(actionHandle !== undefined, "invalid action call")
+		const actionHandle = this.getActionHandle(context.spec, call)
 
 		const argHandles = wrapObject(
 			this.context,
@@ -391,6 +440,7 @@ export class VM {
 		)
 
 		const ctx = wrapJSON(this.context, {
+			spec: context.spec,
 			hash: hash,
 			from: context.from,
 			blockhash: context.blockhash,
