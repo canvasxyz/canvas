@@ -9,7 +9,7 @@
     "clean": "tsc --build --clean",
     "version": "npm version --git-tag-version=false --workspaces=true --include-workspace-root=true --workspaces-update=true --save --save-exact",
     "publish": "npm publish --workspace=packages --access public",
-    "test": "npm run test --workspace=@canvas-js/core"
+    "test": "npm run test --workspace=@canvas-js/core --workspace=@canvas-js/signers"
   },
   "workspaces": [
     "packages/interfaces",
