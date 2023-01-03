@@ -37,8 +37,8 @@ export const models = {
 }
 
 export const actions = {
-	thread({ community, title, body, link }, { db, from, hash }) {
-		db.threads.set({ id: hash, creator: from, community, title, body, link })
+	thread({ community, title, body, link, topic }, { db, from, hash }) {
+		db.threads.set({ id: hash, creator: from, community, title, body, link, topic })
 	},
 	updateThread({ thread_id, title, body }, { db, from, hash }) {
 		const t = db.threads.find({ id: thread_id, creator: from })

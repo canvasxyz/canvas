@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/cli",
-  "version": "0.0.38",
+  "version": "0.0.39",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "dist/index.js",
@@ -11,14 +11,14 @@
     "canvas": "dist/index.js"
   },
   "dependencies": {
-    "@canvas-js/core": "0.0.38",
-    "@canvas-js/interfaces": "0.0.38",
+    "@canvas-js/core": "0.0.39",
+    "@canvas-js/interfaces": "0.0.39",
     "@libp2p/kad-dht": "^6.1.0",
     "@types/websocket": "^1.0.5",
     "better-sqlite3": "^8.0.0",
     "chalk": "^5.0.1",
     "cors": "^2.8.5",
-    "ethers": "^5.7.0",
+    "ethers": "^5.7.2",
     "express": "^4.18.1",
     "express-winston": "^4.2.0",
     "fp-ts": "^2.11.9",
