@@ -266,3 +266,14 @@ export class MessageStore {
 		getActions: `SELECT * FROM actions`,
 	}
 }
+
+const ipfsURIPattern = /^ipfs\/\/:([a-zA-Z0-9]+)$/
+function parseCID(uri: string): CID | null {
+	const match = ipfsURIPattern.exec(uri)
+	if (match) {
+		const [_, cid] = match
+		return CID.parse(cid)
+	} else {
+		return null
+	}
+}

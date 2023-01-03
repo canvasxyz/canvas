@@ -10,7 +10,7 @@ processes = []
   auto_rollback = true
 
 [mounts]
-  source = "canvas_chat_data"
+  source = "data"
   destination = "/data"
 
 [[statics]]
