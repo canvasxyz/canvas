@@ -50,7 +50,7 @@ async function insert(mst: okra.Tree, hash: Buffer, binaryMessage: BinaryMessage
 async function testSync(sourceMessages: Message[], targetMessages: Message[]): Promise<Message[]> {
 	const directory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(directory)
-	const sourceMessageStore = new MessageStore(uri, path.resolve(directory, "source.sqlite"), [])
+	const sourceMessageStore = new MessageStore(uri, path.resolve(directory, "source.sqlite"))
 	const sourceMST = new okra.Tree(path.resolve(directory, "source.okra"))
 	const targetMST = new okra.Tree(path.resolve(directory, "target.okra"))
 
