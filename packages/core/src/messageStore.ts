@@ -159,6 +159,11 @@ export class MessageStore {
 			},
 		}
 
+		if (record.source !== null) {
+			const cid = CID.decode(record.source)
+			action.payload.spec = `ipfs://${cid.toString()}`
+		}
+
 		return action
 	}
 
@@ -200,6 +205,11 @@ export class MessageStore {
 				chainId: record.chain_id,
 				blockhash: record.blockhash,
 			},
+		}
+
+		if (record.source !== null) {
+			const cid = CID.decode(record.source)
+			session.payload.spec = `ipfs://${cid.toString()}`
 		}
 
 		return session

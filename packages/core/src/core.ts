@@ -233,7 +233,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			const action = fromBinaryAction(message)
 
 			if (this.options.verbose) {
-				console.log(chalk.green(`[canvas-core] Applying action ${id}`), action)
+				console.log(`[canvas-core] Applying action ${id}`, action)
 			}
 
 			await this.validateAction(action)
@@ -249,7 +249,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			const session = fromBinarySession(message)
 
 			if (this.options.verbose) {
-				console.log(chalk.green(`[canvas-core] Applying session ${id}`), session)
+				console.log(`[canvas-core] Applying session ${id}`, session)
 			}
 
 			await this.validateSession(session)
