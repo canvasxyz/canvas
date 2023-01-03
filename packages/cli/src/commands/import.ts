@@ -67,7 +67,6 @@ export async function handler(args: Args) {
 	})
 
 	rl.on("close", async () => {
-		await core.onIdle()
 		console.log(`[canvas-cli] Imported ${actionCount} actions, ${sessionCount} sessions`)
 	})
 }

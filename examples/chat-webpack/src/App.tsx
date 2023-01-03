@@ -10,7 +10,7 @@ export const App: React.FC<{}> = ({}) => {
 	const { isLoading, error, data, host } = useCanvas()
 
 	const gossipPeers = data?.peers ? Object.entries(data.peers.gossip) : []
-	const backlogPeers = data?.peers ? Object.entries(data.peers.backlog) : []
+	const syncPeers = data?.peers ? Object.entries(data.peers.sync) : []
 
 	return (
 		<>
@@ -31,7 +31,7 @@ export const App: React.FC<{}> = ({}) => {
 								</p>
 								{data.peers && (
 									<ul className="tree-view">
-										<li>{gossipPeers.length + " gossip peers"}</li>
+										<li>{gossipPeers.length} gossip peers</li>
 										<li>
 											<ul>
 												{gossipPeers.map(([peerId, { lastSeen }]) => (
@@ -44,10 +44,10 @@ export const App: React.FC<{}> = ({}) => {
 												))}
 											</ul>
 										</li>
-										<li>{backlogPeers.length + " backlog sync peers"}</li>
+										<li>{syncPeers.length} sync peers</li>
 										<li>
 											<ul>
-												{backlogPeers.map(([peerId, { lastSeen }]) => (
+												{syncPeers.map(([peerId, { lastSeen }]) => (
 													<li key={peerId} data-id={peerId} style={{ display: "flex" }}>
 														<div style={{ flex: 1 }}>
 															{peerId.slice(0, 10) + "..." + peerId.slice(peerId.length - 3)}

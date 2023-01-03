@@ -64,12 +64,10 @@ export function setupWebsockets(server: Server, core: Core): Server {
 				component,
 				actions,
 				routes: Object.keys(routes),
-				peers: core.libp2p
-					? {
-							gossip: Object.fromEntries(core.recentGossipSubPeers),
-							backlog: Object.fromEntries(core.recentBacklogSyncPeers),
-					  }
-					: null,
+				peers: core.libp2p && {
+					gossip: Object.fromEntries(core.recentGossipPeers),
+					sync: Object.fromEntries(core.recentSyncPeers),
+				},
 			},
 		})
 		ws.send(message)

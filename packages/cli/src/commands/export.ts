@@ -23,7 +23,7 @@ export async function handler(args: Args) {
 	const { directory, uri } = parseSpecArgument(args.spec)
 	assert(directory !== null, "Cannot export from local specs because they do not persist any data")
 
-	const messageStore = new MessageStore(uri, path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME))
+	const messageStore = new MessageStore(uri, path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME), [])
 
 	let i = 0
 	for await (const [_, session] of messageStore.getSessionStream()) {
