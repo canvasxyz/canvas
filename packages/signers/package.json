@@ -22,7 +22,7 @@
     "@web3modal/html": "^2.0.0-beta.9",
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.0",
-    "ethers": "^5.7.0",
+    "ethers": "^5.7.2",
     "tweetnacl": "^1.0.3",
     "url": "^0.11.0",
     "web3": "^1.8.1"

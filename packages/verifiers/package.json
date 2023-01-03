@@ -14,6 +14,7 @@
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "dependencies": {
     "bs58": "^5.0.0",
+    "ethers": "^5.7.2",
     "tweetnacl": "^1.0.3"
   }
 }
