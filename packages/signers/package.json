@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/signers",
-  "version": "0.0.37",
+  "version": "0.0.38",
   "type": "module",
   "description": "Utilities for signing and verifying Canvas actions and sessions",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
@@ -13,8 +13,8 @@
     "test": "ava"
   },
   "dependencies": {
-    "@canvas-js/interfaces": "0.0.37",
-    "@canvas-js/verifiers": "0.0.37",
+    "@canvas-js/interfaces": "0.0.38",
+    "@canvas-js/verifiers": "0.0.38",
     "@ethersproject/abstract-signer": "^5.6.2",
     "@ethersproject/wallet": "^5.6.2",
     "@wagmi/core": "^0.8.3",
