@@ -231,11 +231,12 @@ export class Core extends EventEmitter<CoreEvents> {
 		const id = toHex(hash)
 		if (message.type === "action") {
 			const action = fromBinaryAction(message)
-			await this.validateAction(action)
 
 			if (this.options.verbose) {
 				console.log(chalk.green(`[canvas-core] Applying action ${id}`), action)
 			}
+
+			await this.validateAction(action)
 
 			// only execute one action at a time.
 			await this.queue.add(async () => {
@@ -244,19 +245,15 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 
 			this.messageStore.insertAction(hash, message)
-
-			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
 		} else if (message.type === "session") {
 			const session = fromBinarySession(message)
-			await this.validateSession(session)
 
 			if (this.options.verbose) {
 				console.log(chalk.green(`[canvas-core] Applying session ${id}`), session)
 			}
 
+			await this.validateSession(session)
 			this.messageStore.insertSession(hash, message)
-
-			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
 		} else {
 			signalInvalidType(message)
 		}
