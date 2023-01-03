@@ -126,6 +126,15 @@ export async function handler(args: Args) {
 			fs.rmSync(mstPath)
 			console.log(`[canvas-cli] Deleted ${mstPath}`)
 		}
+
+		const sourceMSTPattern = /^[a-zA-Z0-9]+\.okra$/
+		for (const name of fs.readdirSync(directory)) {
+			if (sourceMSTPattern.test(name)) {
+				const sourceMSTPath = path.resolve(directory, name)
+				fs.rmSync(sourceMSTPath)
+				console.log(`[canvas-cli] Deleted ${sourceMSTPath}`)
+			}
+		}
 	} else if (args.replay) {
 		await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
 		const modelsPath = path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
