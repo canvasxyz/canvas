@@ -1,15 +1,7 @@
 import { TypedDataDomain, TypedDataField, utils } from "ethers"
 import { verifyTypedData } from "@ethersproject/wallet"
 
-import type {
-	Action,
-	ActionArgument,
-	ActionPayload,
-	ActionToken,
-	Session,
-	SessionPayload,
-	SessionToken,
-} from "@canvas-js/interfaces"
+import type { Action, ActionArgument, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
 
 /**
  * Ethereum compatible signer logic, used to generate and
@@ -22,10 +14,14 @@ import type {
 
 const actionDataFields = {
 	Message: [
-		{ name: "sendAction", type: "string" },
-		{ name: "params", type: "string[]" },
-		{ name: "application", type: "string" },
+		{ name: "from", type: "string" },
+		{ name: "spec", type: "string" },
 		{ name: "timestamp", type: "uint256" },
+		{ name: "chain", type: "string" },
+		{ name: "chainId", type: "uint256" },
+		{ name: "blockhash", type: "string" },
+		{ name: "call", type: "string" },
+		{ name: "args", type: "string[]" },
 	],
 }
 
@@ -55,7 +51,11 @@ const namePattern = /^[a-zA-Z][a-zA-Z0-9_]*$/
 /**
  * `getActionSignatureData` gets EIP-712 signing data for an individual action
  */
-export function getActionSignatureData(payload: ActionPayload): SignatureData<ActionToken> {
+export function getActionSignatureData(payload: ActionPayload): SignatureData<
+	Omit<ActionPayload, "args"> & {
+		args: string[]
+	}
+> {
 	const domain = {
 		name: "Canvas",
 		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
@@ -64,17 +64,16 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData<Ac
 	const keys = Object.keys(payload.args).sort()
 	const params = keys.map((key) => {
 		if (namePattern.test(key)) {
-			return `${key}: ${serializeActionArgument(payload.args[key])}`
+			return `${serializeActionArgument(payload.args[key])}`
 		} else {
 			throw new Error("invalid argument name")
 		}
 	})
 
+	// Replace the params field with a list of values instead of a record
 	const actionValue = {
-		sendAction: payload.call,
-		params: params,
-		application: payload.spec,
-		timestamp: payload.timestamp.toString(),
+		...payload,
+		args: params,
 	}
 
 	return [domain, actionDataFields, actionValue]
@@ -82,29 +81,32 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData<Ac
 
 const sessionDataFields = {
 	Message: [
-		{ name: "loginTo", type: "string" },
-		{ name: "registerSessionAddress", type: "string" },
-		{ name: "registerSessionDuration", type: "uint256" },
+		{ name: "from", type: "string" },
+		{ name: "spec", type: "string" },
 		{ name: "timestamp", type: "uint256" },
+		{ name: "address", type: "string" },
+		{ name: "duration", type: "uint256" },
+		{ name: "blockhash", type: "string" },
+		{ name: "chain", type: "string" },
+		{ name: "chainId", type: "uint256" },
 	],
 }
 
-type SignatureData<TokenType> = [TypedDataDomain, Record<string, TypedDataField[]>, TokenType]
+type SignatureData<PayloadType> = [TypedDataDomain, Record<string, TypedDataField[]>, PayloadType]
 
 /**
  * `getSessionSignatureData` gets EIP-712 signing data to start a session
  */
-export function getSessionSignatureData(payload: SessionPayload): SignatureData<SessionToken> {
+export function getSessionSignatureData(payload: SessionPayload): SignatureData<SessionPayload> {
 	const domain = {
 		name: "Canvas",
 		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
 	}
-
 	const sessionValue = {
-		loginTo: payload.spec,
-		registerSessionAddress: payload.address,
-		registerSessionDuration: payload.duration.toString(),
-		timestamp: payload.timestamp.toString(),
+		...payload,
+		// EIP-712 does not accept null values as a type, so we replace the null blockhash
+		// with an empty string
+		blockhash: payload.blockhash || "",
 	}
 
 	return [domain, sessionDataFields, sessionValue]
