@@ -74,6 +74,9 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData<
 	const actionValue = {
 		...payload,
 		args: params,
+		// EIP-712 does not accept null values as a type, so we replace the null blockhash
+		// with an empty string
+		blockhash: payload.blockhash || "",
 	}
 
 	return [domain, actionDataFields, actionValue]
