@@ -4,15 +4,15 @@ kill_timeout = 30
 processes = []
 
 [env]
-  CANVAS_PATH = "/data2"
+  CANVAS_PATH = "/data"
   CANVAS_SPEC = "spec.canvas.js"
   LISTEN = "4002"
   PORT = "8000"
   ANNOUNCE = "/dns4/canvas-chat-2.fly.dev/tcp/4002/ws"
 
 [mounts]
-  source = "canvas_chat_data_2"
-  destination = "/data2"
+  source = "data"
+  destination = "/data"
 
 [[services]]
   http_checks = []

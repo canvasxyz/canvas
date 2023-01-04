@@ -37,8 +37,8 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			routes: Object.keys(routes),
 			peers: core.libp2p
 				? {
-						gossip: Object.fromEntries(core.recentGossipSubPeers),
-						backlog: Object.fromEntries(core.recentBacklogSyncPeers),
+						gossip: Object.fromEntries(core.recentGossipPeers),
+						sync: Object.fromEntries(core.recentSyncPeers),
 				  }
 				: null,
 		})

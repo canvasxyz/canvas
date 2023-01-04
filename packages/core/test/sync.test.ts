@@ -50,7 +50,7 @@ async function insert(mst: okra.Tree, hash: Buffer, binaryMessage: BinaryMessage
 async function testSync(sourceMessages: Message[], targetMessages: Message[]): Promise<Message[]> {
 	const directory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(directory)
-	const sourceMessageStore = new MessageStore(uri, path.resolve(directory, "source.sqlite"))
+	const sourceMessageStore = new MessageStore(uri, path.resolve(directory, "source.sqlite"), [])
 	const sourceMST = new okra.Tree(path.resolve(directory, "source.okra"))
 	const targetMST = new okra.Tree(path.resolve(directory, "target.okra"))
 
@@ -66,13 +66,11 @@ async function testSync(sourceMessages: Message[], targetMessages: Message[]): P
 	}
 
 	const messages: Message[] = []
-	async function applyBatch(binaryMessages: [Buffer, BinaryMessage][]) {
-		for (const [_, message] of binaryMessages) {
-			if (message.type === "action") {
-				messages.push(fromBinaryAction(message))
-			} else {
-				messages.push(fromBinarySession(message))
-			}
+	async function handleMessage(hash: Buffer, data: Uint8Array, message: BinaryMessage) {
+		if (message.type === "action") {
+			messages.push(fromBinaryAction(message))
+		} else {
+			messages.push(fromBinarySession(message))
 		}
 	}
 
@@ -80,7 +78,7 @@ async function testSync(sourceMessages: Message[], targetMessages: Message[]): P
 		const [source, target] = connect()
 		await Promise.all([
 			handleIncomingStream(source, sourceMessageStore, sourceMST),
-			sync(targetMST, target, applyBatch),
+			sync(targetMST, target, handleMessage),
 		])
 
 		return messages

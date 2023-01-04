@@ -11,9 +11,14 @@ import * as okra from "node-okra"
 
 import RPC from "../../rpc/sync/index.cjs"
 
-import type { MessageStore } from "../messageStore.js"
-import { encodeBinaryMessage } from "../encoding.js"
+import { BinaryAction, BinarySession, encodeBinaryMessage } from "../encoding.js"
 import { toBuffer, toHex } from "../utils.js"
+
+// We declare this interface to enforce that handleIncomingStream only has read access to the message store.
+interface MessageStore {
+	getSessionByHash(hash: Buffer): BinarySession | null
+	getActionByHash(hash: Buffer): BinaryAction | null
+}
 
 export async function handleIncomingStream(
 	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
