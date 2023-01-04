@@ -64,7 +64,7 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData<
 	const keys = Object.keys(payload.args).sort()
 	const params = keys.map((key) => {
 		if (namePattern.test(key)) {
-			return `${serializeActionArgument(payload.args[key])}`
+			return `${key}: ${serializeActionArgument(payload.args[key])}`
 		} else {
 			throw new Error("invalid argument name")
 		}
