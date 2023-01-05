@@ -2,7 +2,7 @@ import { Action, ActionPayload, Block, Chain, ChainId, Session, SessionPayload }
 
 export interface Connector {
 	id: string
-	get available(): boolean
+	available: boolean
 	enable({ onAccountsChanged }: { onAccountsChanged: (accounts: string[]) => void }): Promise<void>
 	disable(): void
 	createSessionSigner(account: string): Promise<SessionSigner>
@@ -19,7 +19,7 @@ export interface SessionSigner {
 }
 
 export interface ActionSigner {
-	get address(): string
-	get privateKey(): string
+	address: string
+	privateKey: string
 	signActionPayload(payload: ActionPayload): Promise<Action>
 }
