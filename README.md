@@ -93,6 +93,8 @@ $ git commit -m "v0.0.X"
 $ npm run publish
 ```
 
+When the bug is fixed, we should be able to replace the `version.sh` script with `npm version --git-tag-version=false --workspaces=true --include-workspace-root=true --workspaces-update=true --save --save-exact`.
+
 ### Linting and Code Formatting
 
 We use `prettier` for code formatting. You should install the relevant
