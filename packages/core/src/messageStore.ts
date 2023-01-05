@@ -5,7 +5,7 @@ import { CID } from "multiformats"
 
 import type { Action, Session, ActionArgument, Chain, ChainId } from "@canvas-js/interfaces"
 
-import { mapEntries, fromHex, toHex, toBuffer, signalInvalidType } from "./utils.js"
+import { mapEntries, fromHex, toHex, toBuffer, signalInvalidType, parseIPFSURI } from "./utils.js"
 import { BinaryAction, BinaryMessage, BinarySession, fromBinaryAction, fromBinarySession } from "./encoding.js"
 import { encodeAddress } from "./chains/index.js"
 
@@ -42,13 +42,13 @@ type SessionRecord = {
 export class MessageStore {
 	public readonly database: sqlite.Database
 	private readonly statements: Record<keyof typeof MessageStore.statements, sqlite.Statement>
-	private readonly sourceURIs: Record<string, CID>
+	private readonly sourceCIDs: Record<string, CID>
 
 	constructor(
-		public readonly uri: string,
-		public readonly path: string | null,
-		private readonly sources: CID[],
-		private readonly options: { verbose?: boolean } = {}
+		private readonly uri: string,
+		path: string | null,
+		sources: Set<string> = new Set([]),
+		options: { verbose?: boolean } = {}
 	) {
 		if (path === null) {
 			if (options.verbose) {
@@ -68,7 +68,12 @@ export class MessageStore {
 		this.database.exec(MessageStore.createActionsTable)
 
 		this.statements = mapEntries(MessageStore.statements, (_, sql) => this.database.prepare(sql))
-		this.sourceURIs = Object.fromEntries(sources.map((cid) => [`ipfs://${cid.toString()}`, cid]))
+		this.sourceCIDs = {}
+		for (const uri of sources) {
+			const cid = parseIPFSURI(uri)
+			assert(cid !== null, "sources must be ipfs:// URIs")
+			this.sourceCIDs[uri] = cid
+		}
 	}
 
 	public close() {
@@ -86,7 +91,7 @@ export class MessageStore {
 	}
 
 	public insertAction(hash: string | Buffer, action: BinaryAction) {
-		const sourceCID: CID | undefined = this.sourceURIs[action.payload.spec]
+		const sourceCID: CID | undefined = this.sourceCIDs[action.payload.spec]
 		assert(
 			action.payload.spec === this.uri || sourceCID !== undefined,
 			"insertAction: action.payload.spec not found in MessageStore.sources"
@@ -110,7 +115,7 @@ export class MessageStore {
 	}
 
 	public insertSession(hash: string | Buffer, session: BinarySession) {
-		const sourceCID: CID | undefined = this.sourceURIs[session.payload.spec]
+		const sourceCID: CID | undefined = this.sourceCIDs[session.payload.spec]
 		assert(
 			session.payload.spec === this.uri || sourceCID !== undefined,
 			"insertSession: session.payload.spec not found in MessageStore.sources"
@@ -154,6 +159,11 @@ export class MessageStore {
 			},
 		}
 
+		if (record.source !== null) {
+			const cid = CID.decode(record.source)
+			action.payload.spec = `ipfs://${cid.toString()}`
+		}
+
 		return action
 	}
 
@@ -195,6 +205,11 @@ export class MessageStore {
 				chainId: record.chain_id,
 				blockhash: record.blockhash,
 			},
+		}
+
+		if (record.source !== null) {
+			const cid = CID.decode(record.source)
+			session.payload.spec = `ipfs://${cid.toString()}`
 		}
 
 		return session

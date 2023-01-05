@@ -24,7 +24,7 @@ import {
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
 
 import { actionType, sessionType } from "./codecs.js"
-import { toHex, BlockResolver, signalInvalidType, CacheMap } from "./utils.js"
+import { toHex, BlockResolver, signalInvalidType, CacheMap, parseIPFSURI } from "./utils.js"
 import { normalizeAction, fromBinaryAction, fromBinarySession, normalizeSession, BinaryMessage } from "./encoding.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
@@ -66,7 +66,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly recentGossipPeers = new CacheMap<string, { lastSeen: number }>(1000)
 	public readonly recentSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
 
-	private readonly source: Source | null = null
+	// private readonly source: Source | null = null
+	private readonly sources: Record<string, Source> | null = null
 	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
 
 	public static async initialize({ directory, uri, spec, libp2p, providers, blockResolver, ...options }: CoreConfig) {
@@ -75,7 +76,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			uri = `ipfs://${cid.toString()}`
 		}
 
-		const vm = await VM.initialize(uri, spec, providers || {})
+		const vm = await VM.initialize({ uri, spec, providers: providers ?? {}, ...options })
 
 		if (blockResolver === undefined) {
 			blockResolver = async (chain, chainId, blockhash) => {
@@ -114,13 +115,14 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.options = options
 
 		const modelDatabasePath = directory && path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
-		this.modelStore = new ModelStore(modelDatabasePath, vm, { verbose: options.verbose })
+		this.modelStore = new ModelStore(modelDatabasePath, vm, options)
 
 		const messageDatabasePath = directory && path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
-		this.messageStore = new MessageStore(uri, messageDatabasePath, [], { verbose: options.verbose })
+		this.messageStore = new MessageStore(uri, messageDatabasePath, vm.sources, options)
 
 		if (directory !== null) {
-			this.source = Source.initialize({
+			this.sources = {}
+			this.sources[this.uri] = Source.initialize({
 				path: path.resolve(directory, constants.MST_FILENAME),
 				cid,
 				applyMessage: this.applyMessage,
@@ -128,9 +130,21 @@ export class Core extends EventEmitter<CoreEvents> {
 				libp2p,
 				recentGossipPeers: this.recentGossipPeers,
 				recentSyncPeers: this.recentSyncPeers,
-				verbose: options.verbose,
-				offline: options.offline,
+				...options,
 			})
+
+			for (const source of vm.sources) {
+				const cid = parseIPFSURI(source)
+				assert(cid !== null)
+				this.sources[source] = Source.initialize({
+					path: path.resolve(directory, `${cid.toString()}.okra`),
+					cid,
+					applyMessage: this.applyMessage,
+					messageStore: this.messageStore,
+					libp2p,
+					...options,
+				})
+			}
 		}
 	}
 
@@ -141,8 +155,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.messageStore.close()
 		this.modelStore.close()
 
-		if (this.source !== null) {
-			await this.source.close()
+		if (this.sources !== null) {
+			for (const source of Object.values(this.sources)) {
+				await source.close()
+			}
 		}
 
 		this.dispatchEvent(new Event("close"))
@@ -171,9 +187,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		await this.applyMessage(hash, message)
 
-		if (this.source !== null) {
-			this.source.insertMessage(hash, message)
-			await this.source.publishMessage(hash, data)
+		if (this.sources !== null) {
+			this.sources[this.uri].insertMessage(hash, message)
+			await this.sources[this.uri].publishMessage(hash, data)
 		}
 
 		return { hash: toHex(hash) }
@@ -194,9 +210,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		await this.applyMessage(hash, message)
 
-		if (this.source !== null) {
-			this.source.insertMessage(hash, message)
-			await this.source.publishMessage(hash, data)
+		if (this.sources !== null) {
+			this.sources[this.uri].insertMessage(hash, message)
+			await this.sources[this.uri].publishMessage(hash, data)
 		}
 
 		return { hash: toHex(hash) }
@@ -206,17 +222,21 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Apply a message.
 	 * For actions: validate, execute, apply effects, insert into message store.
 	 * For sessions: validate, insert into message store.
-	 * This method is also passed to Source as the callback for GossipSub and MST sync messages.
+	 * This method is called directly from Core.applySession and Core.applyAction and is
+	 * also passed to Source as the callback for GossipSub and MST sync messages.
+	 * Note the this does NOT call sources[uri].insertMessage OR sources[uri].publishMessage -
+	 * that's the responsibility of the caller.
 	 */
 	private applyMessage = async (hash: Buffer, message: BinaryMessage) => {
 		const id = toHex(hash)
 		if (message.type === "action") {
 			const action = fromBinaryAction(message)
-			await this.validateAction(action)
 
 			if (this.options.verbose) {
-				console.log(chalk.green(`[canvas-core] Applying action ${id}`), action)
+				console.log(`[canvas-core] Applying action ${id}`, action)
 			}
+
+			await this.validateAction(action)
 
 			// only execute one action at a time.
 			await this.queue.add(async () => {
@@ -225,18 +245,16 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 
 			this.messageStore.insertAction(hash, message)
-
 			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
 		} else if (message.type === "session") {
 			const session = fromBinarySession(message)
-			await this.validateSession(session)
 
 			if (this.options.verbose) {
-				console.log(chalk.green(`[canvas-core] Applying session ${id}`), session)
+				console.log(`[canvas-core] Applying session ${id}`, session)
 			}
 
+			await this.validateSession(session)
 			this.messageStore.insertSession(hash, message)
-
 			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
 		} else {
 			signalInvalidType(message)
@@ -247,7 +265,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		const { timestamp, spec, blockhash, chain, chainId } = action.payload
 		const fromAddress = action.payload.from
 
-		assert(spec === this.uri, "action signed for wrong spec")
+		assert(spec === this.uri || this.vm.sources.has(spec), "action signed for wrong spec")
 
 		// check the timestamp bounds
 		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
@@ -272,13 +290,19 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(session.payload.spec === spec, "action referenced a session for the wrong spec")
 			assert(
 				session.payload.from === fromAddress,
-				"invalid session key (action.payload.from and session.payload.from do not match)"
+				"invalid session (action.payload.from and session.payload.from do not match)"
 			)
 
 			const verifiedAddress = await verifyActionSignature(action)
-			assert(verifiedAddress === action.session, "invalid action signature (recovered address does not match)")
+			assert(
+				verifiedAddress === action.session,
+				"invalid action signature (recovered session address does not match action.session)"
+			)
 			assert(verifiedAddress === session.payload.address, "invalid action signature (action, session do not match)")
-			assert(action.payload.spec === session.payload.spec, "action signed for wrong spec")
+			assert(
+				action.payload.spec === session.payload.spec,
+				"invalid session (action.payload.spec and session.payload.spec do not match)"
+			)
 		} else {
 			const verifiedAddress = await verifyActionSignature(action)
 			assert(verifiedAddress === fromAddress, "action signed by wrong address")
@@ -287,7 +311,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private async validateSession(session: Session) {
 		const { from, spec, timestamp, blockhash, chain, chainId } = session.payload
-		assert(spec === this.uri, "session signed for wrong spec")
+		assert(spec === this.uri || this.vm.sources.has(spec), "session signed for wrong spec")
 
 		const verifiedAddress = await verifySessionSignature(session)
 		assert(verifiedAddress === from, "session signed by wrong address")

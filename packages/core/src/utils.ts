@@ -1,6 +1,7 @@
 import assert from "node:assert"
 
 import Hash from "ipfs-only-hash"
+import { CID } from "multiformats"
 
 import type {
 	ActionArgument,
@@ -13,6 +14,18 @@ import type {
 	Query,
 	Block,
 } from "@canvas-js/interfaces"
+
+export const ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
+
+export function parseIPFSURI(uri: string): CID | null {
+	const match = ipfsURIPattern.exec(uri)
+	if (match) {
+		const [_, cid] = match
+		return CID.parse(cid)
+	} else {
+		return null
+	}
+}
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
 export interface JSONArray extends Array<JSONValue> {}
@@ -67,15 +80,14 @@ export type Context<Models extends Record<string, Model>> = {
 	contracts: Record<string, Record<string, (...args: any[]) => Promise<any[]>>>
 }
 
-export async function compileSpec<Models extends Record<string, Model>>(exports: {
-	models: Models
-	actions: Record<string, (this: undefined, args: Record<string, ActionArgument>, ctx: Context<Models>) => void>
-	routes?: Record<string, (params: Record<string, string>, db: RouteContext) => Query>
-	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
-}): Promise<{ uri: string; spec: string }> {
-	const { models, actions, routes, contracts } = exports
+type ActionHandler<Models extends Record<string, Model>> = (
+	args: Record<string, ActionArgument>,
+	ctx: Context<Models>
+) => void
 
-	const actionEntries = Object.entries(actions).map(([name, action]) => {
+// this is used for both `actions` and `sources`
+function compileActionHandlers<Models extends Record<string, Model>>(actions: Record<string, ActionHandler<Models>>) {
+	const entries = Object.entries(actions).map(([name, action]) => {
 		assert(typeof action === "function")
 		const source = action.toString()
 		if (source.startsWith(`${name}(`) || source.startsWith(`async ${name}(`)) {
@@ -85,15 +97,29 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 		}
 	})
 
+	return entries
+}
+
+export async function compileSpec<Models extends Record<string, Model>>(exports: {
+	models: Models
+	actions: Record<string, ActionHandler<Models>>
+	routes?: Record<string, (params: Record<string, string>, db: RouteContext) => Query>
+	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
+	sources?: Record<string, Record<string, ActionHandler<Models>>>
+}): Promise<{ uri: string; spec: string }> {
+	const { models, actions, routes, contracts, sources } = exports
+
+	const actionEntries = compileActionHandlers(actions)
+
 	const routeEntries = Object.entries(routes || {}).map(([name, route]) => {
 		assert(typeof route === "function")
 		const source = route.toString()
 		if (source.startsWith(`${name}(`) || source.startsWith(`async ${name}(`)) return source
-		return `${JSON.stringify(name)}: ${source}`
+		return `\t"${name}": ${source}`
 	})
 
 	const lines = [
-		`export const models = ${JSON.stringify(models)};`,
+		`export const models = ${JSON.stringify(models, null, "\t")};`,
 		`export const actions = {\n${actionEntries.join(",\n")}};`,
 	]
 
@@ -102,7 +128,16 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	}
 
 	if (contracts !== undefined) {
-		lines.push(`export const contracts = ${JSON.stringify(contracts, null, "  ")};`)
+		lines.push(`export const contracts = ${JSON.stringify(contracts, null, "\t")};`)
+	}
+
+	if (sources !== undefined) {
+		lines.push(`export const sources = {`)
+		for (const [uri, actions] of Object.entries(sources)) {
+			const entries = compileActionHandlers(actions)
+			lines.push(`\t["${uri}"]: {\n${entries.map((line) => `\t\t${line}`).join(",\n")}\n\t},`)
+		}
+		lines.push(`};`)
 	}
 
 	const spec = lines.join("\n")

@@ -76,30 +76,8 @@ test("Apply two signed actions", async (t) => {
 		},
 	])
 
-	t.pass()
-
 	await core.close()
 })
-
-// const sessionSigner = ethers.Wallet.createRandom()
-// const sessionSignerAddress = await sessionSigner.getAddress()
-
-// async function signWithSession(call: string, args: Record<string, ActionArgument>): Promise<Action> {
-// 	const timestamp = Date.now()
-// 	const actionPayload: ActionPayload = {
-// 		from: signer.wallet.address,
-// 		spec: uri,
-// 		call,
-// 		args,
-// 		timestamp,
-// 		blockhash: null,
-// 		chain: "eth",
-// 		chainId: 1,
-// 	}
-// 	const actionSignatureData = getActionSignatureData(actionPayload)
-// 	const actionSignature = await sessionSigner._signTypedData(...actionSignatureData)
-// 	return { type: "action", payload: actionPayload, session: sessionSignerAddress, signature: actionSignature }
-// }
 
 test("Apply action signed with session key", async (t) => {
 	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
@@ -146,8 +124,6 @@ test("Apply two actions signed with session keys", async (t) => {
 		},
 	])
 
-	t.pass()
-
 	await core.close()
 })
 
@@ -162,7 +138,8 @@ test("Apply an action with a missing signature", async (t) => {
 test("Apply an action signed by wrong address", async (t) => {
 	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
 	const action = await signer.sign("newThread", { title: "Example Website", link: "http://example.com" })
-	action.payload.from = ethers.Wallet.createRandom().address
+	const { address } = ethers.Wallet.createRandom()
+	action.payload.from = address
 	await t.throwsAsync(core.applyAction(action), { instanceOf: Error, message: "action signed by wrong address" })
 	await core.close()
 })
@@ -178,6 +155,26 @@ test("Apply an action that throws an error", async (t) => {
 		instanceOf: ApplicationError,
 		message: "invalid vote value",
 	})
+
+	await core.close()
+})
+
+test("Create an in-memory Core with a file:// URI", async (t) => {
+	const uri = "file:///dev/null"
+	const signer = new TestSigner(uri)
+	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
+	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
+	const { hash: threadId } = await core.applyAction(newThreadAction)
+
+	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
+		{
+			id: threadId,
+			title: "Hacker News",
+			link: "https://news.ycombinator.com",
+			creator: signer.wallet.address,
+			updated_at: newThreadAction.payload.timestamp,
+		},
+	])
 
 	await core.close()
 })

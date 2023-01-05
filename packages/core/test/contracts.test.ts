@@ -45,5 +45,6 @@ test("contracts (milady balanceOf)", async (t) => {
 
 	const action = await signer.sign("verify", {})
 	await t.throwsAsync(core.applyAction(action), { message: "balance is zero!" })
+
 	await core.close()
 })
