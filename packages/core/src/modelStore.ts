@@ -2,7 +2,6 @@ import assert from "node:assert"
 import Database, * as sqlite from "better-sqlite3"
 import chalk from "chalk"
 
-import { QuickJSHandle } from "quickjs-emscripten"
 import type { ActionContext, Model, ModelType, ModelValue, Query } from "@canvas-js/interfaces"
 import { mapEntries, signalInvalidType } from "./utils.js"
 import type { VM } from "./vm/index.js"
