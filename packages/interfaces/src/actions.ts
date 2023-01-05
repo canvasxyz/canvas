@@ -57,13 +57,6 @@ export type Action = {
 	signature: string
 }
 
-export type ActionToken = {
-	sendAction: string
-	params: string[]
-	application: string
-	timestamp: string
-}
-
 export interface BlockProvider {
 	chain: Chain
 	chainId: ChainId
