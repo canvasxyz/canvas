@@ -245,6 +245,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			})
 
 			this.messageStore.insertAction(hash, message)
+			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
 		} else if (message.type === "session") {
 			const session = fromBinarySession(message)
 
@@ -254,6 +255,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			await this.validateSession(session)
 			this.messageStore.insertSession(hash, message)
+			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
 		} else {
 			signalInvalidType(message)
 		}
