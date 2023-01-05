@@ -11,22 +11,6 @@ import type { Chain, ChainId } from "./contracts.js"
  */
 export type ActionArgument = null | boolean | number | string
 
-export type Block = {
-	chain: Chain
-	chainId: ChainId
-	blocknum: number
-	blockhash: string
-	timestamp: number
-}
-
-export interface BlockProvider {
-	chain: Chain
-	chainId: ChainId
-	getBlock: (key: string | number) => Promise<Block>
-	onBlock: (cb: (block: Block) => void) => void
-	removeOnBlock: () => void
-}
-
 /**
  * An `ActionPayload` is the data signed by the user, either directly
  * or using a session key, to execute an action in a Canvas application.
@@ -55,13 +39,4 @@ export type Action = {
 	payload: ActionPayload
 	session: string | null
 	signature: string
-}
-
-export interface BlockProvider {
-	chain: Chain
-	chainId: ChainId
-
-	getBlock: (key: number | string) => Promise<Block>
-	onBlock: (cb: (block: Block) => void) => void
-	removeOnBlock: () => void
 }
