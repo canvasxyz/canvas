@@ -13,7 +13,7 @@
     "test": "ava"
   },
   "dependencies": {
-    "@canvas-js/interfaces": "0.0.38",
+    "@canvas-js/interfaces": "0.0.39",
     "@canvas-js/verifiers": "0.0.39",
     "@ethersproject/abstract-signer": "^5.6.2",
     "@ethersproject/wallet": "^5.6.2",

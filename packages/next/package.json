@@ -15,8 +15,8 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@canvas-js/core": "0.0.38",
-    "@canvas-js/interfaces": "0.0.38",
+    "@canvas-js/core": "0.0.39",
+    "@canvas-js/interfaces": "0.0.39",
     "@libp2p/peer-id-factory": "^1.0.19",
     "chalk": "^5.1.2",
     "ethers": "^5.7.2",
