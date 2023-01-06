@@ -14,7 +14,7 @@ import expressWinston from "express-winston"
 import stoppable from "stoppable"
 import Hash from "ipfs-only-hash"
 import PQueue from "p-queue"
-import { ethers } from "ethers"
+import client from "prom-client"
 
 import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, getAPI, CoreOptions } from "@canvas-js/core"
 import { BlockProvider, Model } from "@canvas-js/interfaces"
@@ -94,8 +94,6 @@ export async function handler(args: Args) {
 		} else {
 			libp2p = await createLibp2p(getLibp2pInit(peerId, args.listen))
 		}
-
-		await libp2p.start()
 	}
 
 	const blockCache = new BlockCache(providers)
@@ -156,16 +154,14 @@ class Daemon {
 	public readonly app = express()
 
 	private readonly queue = new PQueue({ concurrency: 1 })
-	private readonly options: CoreOptions
 	private readonly apps = new Map<string, { core: Core; api: express.Express }>()
 
 	constructor(
 		libp2p: Libp2p | undefined,
 		providers: Record<string, BlockProvider>,
 		blockResolver: BlockResolver,
-		options: CoreOptions
+		private readonly options: CoreOptions & { exposeMetrics?: boolean }
 	) {
-		this.options = options
 		this.app.use(express.json())
 		this.app.use(express.text())
 		this.app.use(cors())
@@ -310,7 +306,7 @@ class Daemon {
 						exposeModels: true,
 						exposeActions: true,
 						exposeSessions: true,
-						exposeMetrics: true,
+						exposeMetrics: false,
 					})
 
 					this.apps.set(name, { core, api })
@@ -357,6 +353,18 @@ class Daemon {
 				return app.api(req, res, next)
 			})
 		})
+
+		if (this.options.exposeMetrics) {
+			this.app.get("/metrics", async (req, res) => {
+				try {
+					const result = await client.register.metrics()
+					res.header("Content-Type", client.register.contentType)
+					return res.end(result)
+				} catch (err: any) {
+					return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+				}
+			})
+		}
 	}
 
 	public async close() {

@@ -187,8 +187,6 @@ export async function handler(args: Args) {
 		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
 	}
 
-	await libp2p.start()
-
 	if (verbose) {
 		libp2p.connectionManager.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
 			console.log(`[canvas-cli] Connected to ${remotePeer.toString()} (${id})`)

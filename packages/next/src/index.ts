@@ -59,7 +59,6 @@ if (NODE_ENV === "production") {
 		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
 	}
 
-	await libp2p.start()
 	console.log("[canvas-next] Started libp2p")
 
 	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, offline: false, verbose })
