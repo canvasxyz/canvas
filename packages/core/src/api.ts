@@ -3,13 +3,10 @@ import assert from "node:assert"
 import chalk from "chalk"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
-import client from "prom-client"
 
 import type { Chain, ModelValue } from "@canvas-js/interfaces"
 import { Core } from "./core.js"
-
-const collectDefaultMetrics = client.collectDefaultMetrics
-collectDefaultMetrics()
+import { getMetrics } from "./metrics.js"
 
 interface Options {
 	exposeMetrics: boolean
@@ -17,8 +14,6 @@ interface Options {
 	exposeSessions: boolean
 	exposeActions: boolean
 }
-
-const gauges: Record<string, client.Gauge<string>> = {}
 
 export function getAPI(core: Core, options: Partial<Options> = {}): express.Express {
 	const api = express()
@@ -87,15 +82,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	}
 
 	if (options.exposeMetrics) {
-		api.get("/metrics", async (req, res) => {
-			try {
-				const result = await client.register.metrics()
-				res.header("Content-Type", client.register.contentType)
-				return res.end(result)
-			} catch (err: any) {
-				return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
-			}
-		})
+		api.get("/metrics", getMetrics)
 	}
 
 	if (options.exposeModels) {

@@ -16,6 +16,7 @@ import { wait, retry, AbortError, toHex, signalInvalidType, CacheMap } from "./u
 import { BinaryAction, BinaryMessage, BinarySession, decodeBinaryMessage } from "./encoding.js"
 import { sync, handleIncomingStream } from "./rpc/index.js"
 import * as constants from "./constants.js"
+import { metrics } from "./metrics.js"
 
 // We declare this interface to enforce that Source only has read access to the message store.
 // All the writes still happen in Core.
@@ -262,8 +263,13 @@ export class Source {
 			await this.wait(constants.SYNC_DELAY)
 
 			while (!this.controller.signal.aborted) {
-				for (const peer of this.libp2p.pubsub.getSubscribers(this.uri)) {
-					this.options.recentGossipPeers?.set(peer.toString(), { lastSeen: Date.now() })
+				const subscribers = this.libp2p.pubsub.getSubscribers(this.uri)
+				console.log("setting canvas_gossipsub_subscribers to", subscribers.length)
+				metrics.canvas_gossipsub_subscribers.set({ uri: this.uri }, subscribers.length)
+				if (this.options.recentGossipPeers) {
+					for (const peer of subscribers) {
+						this.options.recentGossipPeers.set(peer.toString(), { lastSeen: Date.now() })
+					}
 				}
 
 				const peers = await retry(
@@ -272,6 +278,8 @@ export class Source {
 					{ signal: this.controller.signal, interval: constants.SYNC_RETRY_INTERVAL }
 				)
 
+				console.log("setting canvas_sync_peers to", peers.length)
+				metrics.canvas_sync_peers.set({ uri: this.uri }, peers.length)
 				if (this.options.verbose) {
 					console.log(chalk.green(`[canvas-core] [${cid}] Found ${peers.length} peers.`))
 				}
@@ -394,9 +402,12 @@ export class Source {
 			}
 		}
 
+		const timer = metrics.canvas_sync_time.startTimer()
 		try {
 			await sync(this.mst, stream, handleMessage)
+			timer({ uri: this.uri, status: "success" })
 		} catch (err) {
+			timer({ uri: this.uri, status: "failure" })
 			console.log(chalk.red(`[canvas-core] [${cid}] Failed to sync with peer ${peer.toString()}`), err)
 		} finally {
 			this.controller.signal.removeEventListener("abort", closeStream)

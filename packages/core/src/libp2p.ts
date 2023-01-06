@@ -14,6 +14,7 @@ import { Multiaddr } from "@multiformats/multiaddr"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
 import { toHex } from "./utils.js"
+import { libp2pRegister } from "./metrics.js"
 
 const bootstrapList = [
 	"/dns4/canvas-bootstrap-p0.fly.dev/tcp/4002/ws/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o",
@@ -51,7 +52,7 @@ export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]
 			clientMode: false,
 			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
 		}),
-		metrics: prometheusMetrics(),
+		metrics: prometheusMetrics({ registry: libp2pRegister }),
 		pubsub: gossipsub({
 			doPX: true,
 			fallbackToFloodsub: false,
