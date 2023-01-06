@@ -102,6 +102,7 @@ export async function handler(args: Args) {
 		offline: args.offline,
 		unchecked: args.unchecked,
 		verbose: args.verbose,
+		exposeMetrics: args.metrics,
 	})
 
 	const controller = new AbortController()
