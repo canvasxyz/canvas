@@ -1,7 +1,7 @@
 import { TypedDataDomain, TypedDataField, utils } from "ethers"
 import { verifyTypedData } from "@ethersproject/wallet"
 
-import type { Action, ActionArgument, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
+import { Action, ActionPayload, Session, SessionPayload, serializeActionArgument } from "@canvas-js/interfaces"
 
 /**
  * Ethereum compatible signer logic, used to generate and
@@ -23,27 +23,6 @@ const actionDataFields = {
 		{ name: "call", type: "string" },
 		{ name: "args", type: "string[]" },
 	],
-}
-
-// JSON.stringify has lossy behavior on the number values +/-Infinity, NaN, and -0.
-// We never actually parse these serialized arguments anywhere - the only purpose here
-// is to map them injectively to strings for signing.
-function serializeActionArgument(arg: ActionArgument): string {
-	if (typeof arg === "number") {
-		if (isNaN(arg)) {
-			return "NaN"
-		} else if (Object.is(arg, -0)) {
-			return "-0"
-		} else if (arg === Infinity) {
-			return "Infinity"
-		} else if (arg === -Infinity) {
-			return "-Infinity"
-		} else {
-			return arg.toString()
-		}
-	} else {
-		return JSON.stringify(arg)
-	}
 }
 
 const namePattern = /^[a-zA-Z][a-zA-Z0-9_]*$/
