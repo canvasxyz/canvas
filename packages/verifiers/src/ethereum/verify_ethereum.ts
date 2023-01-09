@@ -18,7 +18,7 @@ const actionDataFields = {
 		{ name: "spec", type: "string" },
 		{ name: "timestamp", type: "uint256" },
 		{ name: "chain", type: "string" },
-		{ name: "chainId", type: "uint256" },
+		{ name: "chainId", type: "string" },
 		{ name: "blockhash", type: "string" },
 		{ name: "call", type: "string" },
 		{ name: "args", type: "string[]" },
@@ -70,7 +70,7 @@ const sessionDataFields = {
 		{ name: "duration", type: "uint256" },
 		{ name: "blockhash", type: "string" },
 		{ name: "chain", type: "string" },
-		{ name: "chainId", type: "uint256" },
+		{ name: "chainId", type: "string" },
 	],
 }
 
