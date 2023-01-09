@@ -15,8 +15,8 @@ import stoppable from "stoppable"
 import Hash from "ipfs-only-hash"
 import PQueue from "p-queue"
 import { ethers } from "ethers"
+import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, getAPI, CoreOptions, VM } from "@canvas-js/core"
 
-import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, getAPI, CoreOptions } from "@canvas-js/core"
 import { BlockProvider, Model } from "@canvas-js/interfaces"
 
 import { CANVAS_HOME, SOCKET_FILENAME, SOCKET_PATH, getPeerId, getProviders, installSpec } from "../utils.js"
@@ -355,6 +355,31 @@ class Daemon {
 				}
 
 				return app.api(req, res, next)
+			})
+		})
+
+		this.app.post("/check", (req, res) => {
+			if (typeof req.body.spec !== "string") {
+				return res.status(StatusCodes.BAD_REQUEST).end()
+			}
+
+			const spec = req.body.spec
+			console.log(spec)
+
+			this.queue.add(async () => {
+				try {
+					const result = await VM.validateWithoutCreating({
+						uri: "",
+						spec,
+						providers: {},
+					})
+					res.status(StatusCodes.OK).json(result)
+				} catch (e) {
+					res.status(StatusCodes.OK).json({
+						valid: false,
+						errors: [(e as any).message],
+					})
+				}
 			})
 		})
 	}
