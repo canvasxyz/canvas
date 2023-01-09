@@ -43,11 +43,12 @@ export type Action = {
 
 /**
  * Serialize an ActionPayload into a string suitable for signing on non-ETH chains.
- * The format is equivalent to JSON.strinfigy(payload, null, "  "), but with sorted
+ * The format is equivalent to JSON.stringify(payload, null, "  "), but with sorted
  * object keys and with special handling for NaN, -0, and +/- Infinity.
  */
 export function serializeActionPayload(payload: ActionPayload): string {
-	const argKeys = Object.keys(payload.args).sort()
+  if (payload === undefined || payload === null) return ''
+	const argKeys = Object.keys(payload.args || []).sort()
 	const serializedArgEntries = argKeys.map(
 		(key) => `\n    ${JSON.stringify(key)}: ${serializeActionArgument(payload.args[key])}`
 	)

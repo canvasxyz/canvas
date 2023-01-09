@@ -29,7 +29,7 @@ export type Session = {
 
 /**
  * Serialize an SessionPayload into a string suitable for signing on non-ETH chains.
- * The format is equivalent to JSON.strinfigy(payload, null, "  ") but with sorted
+ * The format is equivalent to JSON.stringify(payload, null, "  ") but with sorted
  * object keys.
  */
 export function serializeSessionPayload(payload: SessionPayload): string {
