@@ -7,7 +7,8 @@ import { transform } from "sucrase"
 import { ethers } from "ethers"
 
 import * as t from "io-ts"
-import { PathReporter } from "io-ts/lib/PathReporter.js"
+import * as E from "fp-ts/Either"
+import * as R from "fp-ts/Record"
 
 import {
 	ActionArgument,
@@ -23,7 +24,7 @@ import {
 import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
 import type { Effect } from "../modelStore.js"
-import { chainIdType, chainType, modelsType } from "../codecs.js"
+import { contractMetadatasType, modelsType } from "../codecs.js"
 import { ApplicationError } from "../errors.js"
 import { mapEntries, signalInvalidType, ipfsURIPattern } from "../utils.js"
 
@@ -37,11 +38,12 @@ import {
 	resolvePromise,
 	unwrapArray,
 	wrapArray,
+	mergeValidationResults6,
 } from "./utils.js"
 
 import * as constants from "../constants.js"
+import { isLeft, left, right } from "fp-ts/lib/Either.js"
 import { pipe } from "fp-ts/lib/function.js"
-import { isRight } from "fp-ts/lib/Either.js"
 
 interface VMOptions {
 	verbose?: boolean
@@ -54,88 +56,58 @@ interface VMConfig extends VMOptions {
 	providers?: Record<string, BlockProvider>
 }
 
-type ValidateResult<ResultType> = { valid: true; result: ResultType } | { valid: false; errors: string[] }
-
-// function validateIoTs<O>(t: t.Type<any, O, any>, v: any): ValidateResult<O> {
-// 	return pipe(
-// 		t.decode(v),
-// 		fold(
-// 			(errors) => {
-// 				console.log(errors)
-// 				return { valid: false, errors: errors.map((e) => e.message || "") } as ValidateResult<O>
-// 			},
-// 			(result) => ({ valid: true, result } as ValidateResult<O>)
-// 		)
-// 	)
-// }
-
 function validateModels(
 	context: QuickJSContext,
 	modelsHandle?: QuickJSHandle
-): ValidateResult<{ models: Record<string, Model> }> {
+): t.Validation<{ models: Record<string, Model> }> {
+	// if there is no models handle, then return
 	if (modelsHandle == undefined) {
-		return {
-			valid: false,
-			errors: ["Spec is missing `models` export"],
-		}
+		return left([
+			{
+				value: null,
+				context: [],
+				message: "Spec is missing `models` export",
+			},
+		])
 	}
 
 	let models
-	try {
-		models = validate(modelsType, modelsHandle.consume(context.dump))
-	} catch (e) {
-		return {
-			valid: false,
-			errors: ["`models` export is invalid"],
-		}
+	const modelsRawValue = modelsHandle.consume(context.dump)
+
+	// validate models type
+	const modelsTypeRes = modelsType.decode(modelsRawValue)
+
+	// if there are any errors, then return
+	if (isLeft(modelsTypeRes)) {
+		return modelsTypeRes
+	} else {
+		models = modelsTypeRes.right
 	}
 
-	const errors = []
+	const errors: t.ValidationError[] = []
 
-	const modelNamePattern = /^[a-z_]+$/
-	const modelPropertyNamePattern = /^[a-z_]+$/
+	// check indexes for errors
 	for (const [name, model] of Object.entries(models)) {
-		if (!modelNamePattern.test(name)) {
-			errors.push(`Model name ${name} is invalid: model names must match ${modelNamePattern}`)
-		}
-		if (name.startsWith("_")) {
-			errors.push(`Model name ${name} is invalid: model names must not begin with an underscore`)
-		}
-
 		const { indexes, ...properties } = model
-		for (const property of Object.keys(properties)) {
-			if (!modelPropertyNamePattern.test(property)) {
-				errors.push(
-					`Model property ${name}.${property} is invalid: model properties must match ${modelPropertyNamePattern}`
-				)
-			}
-
-			if (property.startsWith("_")) {
-				errors.push(
-					`Model property ${name}.${property} is invalid: model property names must not begin with an underscore`
-				)
-			}
-		}
-
-		if (properties.id !== "string") {
-			errors.push(`Model ${name} is invalid: models must include the property { id: string }`)
-		}
-
-		if (properties.updated_at !== "datetime") {
-			errors.push(`Model ${name} is invalid: models must include the property { updated_at: datetime }`)
-		}
-
 		if (indexes !== undefined) {
 			for (const index of indexes) {
+				// Can this check be done inside io-ts?
 				if (index == "id") {
-					errors.push(`"id" index is redundant`)
+					errors.push({
+						value: model,
+						context: [],
+						message: `"id" index is redundant`,
+					})
 				}
 				const indexProperties = Array.isArray(index) ? index : [index]
 				for (const property of indexProperties) {
+					// TODO: check that index refers to an existing field on another model
 					if (!(property in properties)) {
-						errors.push(
-							`Model ${name} specified an invalid index "${property}": can only index on other model properties`
-						)
+						errors.push({
+							value: property,
+							context: [],
+							message: `Model ${name} specified an invalid index "${property}": can only index on other model properties`,
+						})
 					}
 				}
 			}
@@ -143,69 +115,70 @@ function validateModels(
 	}
 
 	if (errors) {
-		return { valid: false, errors }
+		return left(errors)
 	} else {
-		return { valid: true, result: { models } }
+		return right({ models })
 	}
 }
 
 function validateActions(
 	context: QuickJSContext,
 	actionsHandle?: QuickJSHandle
-): ValidateResult<{ actions: string[]; actionHandles: Record<string, QuickJSHandle> }> {
+): t.Validation<{ actions: string[]; actionHandles: Record<string, QuickJSHandle> }> {
 	if (!actionsHandle) {
-		return {
-			valid: false,
-			errors: ["Spec is missing `actions` export"],
-		}
+		return left([
+			{
+				value: null,
+				context: [],
+				message: "Spec is missing `actions` export",
+			},
+		])
 	}
 
 	if (context.typeof(actionsHandle) !== "object") {
-		return {
-			valid: false,
-			errors: ["`actions` export must be an object"],
-		}
+		return left([
+			{
+				value: null,
+				context: [],
+				message: "`actions` export must be an object",
+			},
+		])
 	}
 
 	// parse and validate action handlers
-	const errors = []
+	const errors: t.ValidationError[] = []
 
 	const actions: string[] = []
 	const actionHandles = actionsHandle.consume((handle) => unwrapObject(context, handle))
 	const actionNamePattern = /^[a-zA-Z]+$/
 	for (const [name, handle] of Object.entries(actionHandles)) {
 		if (!actionNamePattern.test(name)) {
-			errors.push(`${name} is invalid: action names must match ${actionNamePattern}`)
+			errors.push({
+				value: name,
+				context: [],
+				message: `${name} is invalid: action names must match ${actionNamePattern}`,
+			})
 		}
 
 		if (context.typeof(handle) !== "function") {
-			errors.push(`Action ${name} is invalid: actions.${name} is not a function`)
+			errors.push({
+				value: name,
+				context: [],
+				message: `Action ${name} is invalid: actions.${name} is not a function`,
+			})
 		}
 
 		actions.push(name)
 	}
 
 	if (errors) {
-		return { valid: false, errors }
+		return left(errors)
 	} else {
-		return { valid: true, result: { actions, actionHandles } }
+		return right({ actions, actionHandles })
 	}
 }
 
-function validateContractMetadata(
-	context: QuickJSContext,
-	providers: Record<string, BlockProvider>,
-	options: VMOptions,
-	name: string,
-	contractHandle: QuickJSHandle
-): ValidateResult<{ contract?: ethers.Contract; contractMetadata: ContractMetadata }> {
-	const errors = []
-
-	const contractNamePattern = /^[a-zA-Z]+$/
-	if (!contractNamePattern.test(name)) {
-		errors.push(`Contract ${name} is invalid: contract names must match ${contractNamePattern}`)
-	}
-
+function extractContractMetadata(context: QuickJSContext, contractHandle: QuickJSHandle): ContractMetadata {
 	const contract = contractHandle.consume((handle) => unwrapObject(context, handle))
 	const chain = contract.chain.consume(context.getString)
 	const chainId = contract.chainId.consume(context.getNumber)
@@ -214,42 +187,30 @@ function validateContractMetadata(
 		.consume((handle) => unwrapArray(context, handle))
 		.map((item) => item.consume(context.getString))
 
-	if (!chainType.is(chain)) {
-		errors.push(`Contract ${name} is invalid: invalid chain (${chain})`)
-	}
+	return { chain: chain as Chain, chainId, address, abi }
+}
 
-	if (!chainIdType.is(chainId)) {
-		errors.push(`Contract ${name} is invalid: invalid chain id (${chainId})`)
-	}
+function validateContract(
+	providers: Record<string, BlockProvider>,
+	name: string,
+	contractMetadata: ContractMetadata
+): t.Validation<ethers.Contract | undefined> {
+	const { chain, chainId, address, abi } = contractMetadata
 
-	let contractResult
-	if (options.unchecked) {
-		if (options.verbose) {
-			console.log(`[canvas-vm] Skipping contract setup`)
-		}
-	} else {
-		if (chain == "eth") {
-			const provider = providers[`${chain}:${chainId}`]
-			if (provider instanceof EthereumBlockProvider) {
-				contractResult = new ethers.Contract(address, abi, provider.provider)
-			} else {
-				errors.push(`Contract ${name} is invalid: spec requires an RPC endpoint for ${chain}:${chainId}`)
-			}
+	if (chain == "eth") {
+		const provider = providers[`${chain}:${chainId}`]
+		if (provider instanceof EthereumBlockProvider) {
+			return right(new ethers.Contract(address, abi, provider.provider))
 		}
 	}
 
-	if (errors) {
-		return { valid: false, errors }
-	} else {
-		const contractMetadata = { chain: chain as Chain, chainId, address, abi }
-		return {
-			valid: true,
-			result: {
-				contractMetadata,
-				contract: contractResult,
-			},
-		}
-	}
+	return left([
+		{
+			value: `${chain}:${chainId}`,
+			context: [],
+			message: `Contract ${name} is invalid: spec requires an RPC endpoint for ${chain}:${chainId}`,
+		},
+	])
 }
 
 function validateContracts(
@@ -257,58 +218,78 @@ function validateContracts(
 	providers: Record<string, BlockProvider>,
 	options: VMOptions,
 	contractsHandle?: QuickJSHandle
-): ValidateResult<{ contracts: Record<string, ethers.Contract>; contractMetadata: Record<string, ContractMetadata> }> {
-	if (contractsHandle && context.typeof(contractsHandle) !== "object") {
-		return { valid: false, errors: ["`contracts` export must be an object"] }
+): t.Validation<{ contracts: Record<string, ethers.Contract>; contractMetadata: Record<string, ContractMetadata> }> {
+	if (!contractsHandle) {
+		return right({ contracts: {}, contractMetadata: {} })
 	}
 
-	const contracts: Record<string, ethers.Contract> = {}
-	const contractMetadata: Record<string, ContractMetadata> = {}
+	if (context.typeof(contractsHandle) !== "object") {
+		return left([
+			{
+				value: null,
+				context: [],
+				message: "`contracts` export must be an object",
+			},
+		])
+	}
 
-	let errors: string[] = []
-	if (contractsHandle) {
-		// parse and validate contracts
-		const contractHandles = contractsHandle.consume((handle) => unwrapObject(context, handle))
+	// unwrap the contract metadata
+	const contractMetadatas = pipe(
+		contractsHandle.consume((handle) => unwrapObject(context, handle)),
+		R.map((contractHandle: QuickJSHandle) => extractContractMetadata(context, contractHandle))
+	)
 
-		for (const [name, contractHandle] of Object.entries(contractHandles)) {
-			const contractMetadataValidationResult = validateContractMetadata(
-				context,
-				providers,
-				options,
-				name,
-				contractHandle
-			)
-			if (contractMetadataValidationResult.valid) {
-				const result = contractMetadataValidationResult.result
+	const contractMetadataValidation = contractMetadatasType.decode(contractMetadatas)
 
-				if (result.contract) {
-					contracts[name] = result.contract
-				}
-				contractMetadata[name] = result.contractMetadata
+	if (isLeft(contractMetadataValidation)) {
+		return contractMetadataValidation
+	}
+
+	let errors: t.ValidationError[] = []
+	let contracts: Record<string, ethers.Contract> = {}
+
+	if (options.unchecked) {
+		if (options.verbose) {
+			console.log(`[canvas-vm] Skipping contract setup`)
+		}
+	} else {
+		for (const [name, contractMetadata] of Object.entries(contractMetadatas)) {
+			const contractValidation = validateContract(providers, name, contractMetadata)
+			if (isLeft(contractValidation)) {
+				errors = errors.concat(contractValidation.left)
 			} else {
-				errors.concat(contractMetadataValidationResult.errors)
+				if (contractValidation.right) {
+					contracts[name] = contractValidation.right
+				}
 			}
 		}
 	}
+
 	if (errors) {
-		return { valid: false, errors }
+		return left(errors)
 	} else {
-		return { valid: true, result: { contracts, contractMetadata } }
+		return right({ contracts, contractMetadata: contractMetadatas })
 	}
 }
 
 function validateRoutes(
 	context: QuickJSContext,
 	routesHandle?: QuickJSHandle
-): ValidateResult<{ routes: Record<string, string[]>; routeHandles: Record<string, QuickJSHandle> }> {
+): t.Validation<{ routes: Record<string, string[]>; routeHandles: Record<string, QuickJSHandle> }> {
 	const routes: Record<string, string[]> = {}
 	let routeHandles: Record<string, QuickJSHandle> = {}
 
-	const errors = []
+	const errors: t.ValidationError[] = []
 
 	if (routesHandle !== undefined) {
 		if (context.typeof(routesHandle) != "object") {
-			return { valid: false, errors: ["`routes` export must be an object"] }
+			return left([
+				{
+					value: null,
+					context: [],
+					message: "`routes` export must be an object",
+				},
+			])
 		}
 
 		routeHandles = routesHandle.consume((handle) => unwrapObject(context, handle))
@@ -318,11 +299,19 @@ function validateRoutes(
 
 		for (const [name, handle] of Object.entries(routeHandles)) {
 			if (!routeNamePattern.test(name)) {
-				errors.push(`Route ${name} is invalid: the name must match the regex ${routeNamePattern}`)
+				errors.push({
+					value: name,
+					context: [],
+					message: `Route ${name} is invalid: the name must match the regex ${routeNamePattern}`,
+				})
 			}
 
 			if (context.typeof(handle) !== "function") {
-				errors.push(`Route ${name} is invalid: the route must be a function`)
+				errors.push({
+					value: name,
+					context: [],
+					message: `Route ${name} is invalid: the route must be a function`,
+				})
 			}
 
 			routes[name] = []
@@ -333,70 +322,88 @@ function validateRoutes(
 	}
 
 	if (errors) {
-		return { valid: false, errors }
+		return left(errors)
 	} else {
-		return { valid: true, result: { routes, routeHandles } }
+		return right({ routes, routeHandles })
 	}
 }
 
 function validateComponents(
 	context: QuickJSContext,
 	componentHandle: QuickJSHandle
-): ValidateResult<{ component: string | null }> {
+): t.Validation<{ component: string | null }> {
 	let component: string | null = null
 
 	if (componentHandle) {
 		if (context.typeof(componentHandle) !== "function") {
-			return {
-				valid: false,
-				errors: ["`component` export must be a function"],
-			}
+			return left([
+				{
+					value: null,
+					context: [],
+					message: "`component` export must be a function",
+				},
+			])
 		}
 
 		component = call(context, "Function.prototype.toString", componentHandle).consume(context.getString)
 		componentHandle.dispose()
 	}
-	return {
-		valid: true,
-		result: { component },
-	}
+	return right({ component })
 }
 
 function validateSources(
 	context: QuickJSContext,
 	sourcesHandle: QuickJSHandle
-): ValidateResult<{ sources: Set<string>; sourceHandles: Record<string, Record<string, QuickJSHandle>> }> {
+): t.Validation<{ sources: Set<string>; sourceHandles: Record<string, Record<string, QuickJSHandle>> }> {
 	if (sourcesHandle && context.typeof(sourcesHandle) !== "object") {
-		return { valid: false, errors: ["`sources` export must be an object"] }
+		return left([
+			{
+				value: null,
+				context: [],
+				message: "`sources` export must be an object",
+			},
+		])
 	}
 
 	const sourceHandles: Record<string, Record<string, QuickJSHandle>> = {}
 	const sources = new Set<string>()
-	const errors = []
+	const errors: t.ValidationError[] = []
 
 	if (sourcesHandle !== undefined) {
 		for (const [source, sourceHandle] of Object.entries(
 			sourcesHandle.consume((handle) => unwrapObject(context, handle))
 		)) {
 			if (!ipfsURIPattern.test(source)) {
-				errors.push(`Source ${source} is invalid: the keys must be ipfs:// URIs`)
+				errors.push({
+					value: source,
+					context: [],
+					message: `Source ${source} is invalid: the keys must be ipfs:// URIs`,
+				})
 			}
 			if (context.typeof(sourceHandle) !== "object") {
-				errors.push(`Source ${source} is invalid: sources["${source}"] must be an object`)
+				errors.push({
+					value: source,
+					context: [],
+					message: `Source ${source} is invalid: sources["${source}"] must be an object`,
+				})
 			}
 
 			sourceHandles[source] = sourceHandle.consume((handle) => unwrapObject(context, handle))
 			sources.add(source)
 			for (const [name, handle] of Object.entries(sourceHandles[source])) {
 				if (context.typeof(handle) !== "function")
-					errors.push(`sources["${source}"].${name} is invalid: sources["${source}"].${name} is not a function`)
+					errors.push({
+						value: source,
+						context: [],
+						message: `sources["${source}"].${name} is invalid: sources["${source}"].${name} is not a function`,
+					})
 			}
 		}
 	}
 	if (errors) {
-		return { valid: false, errors }
+		return left(errors)
 	} else {
-		return { valid: true, result: { sources, sourceHandles } }
+		return right({ sources, sourceHandles })
 	}
 }
 
@@ -460,7 +467,7 @@ export class VM {
 		moduleHandle: QuickJSHandle,
 		providers: Record<string, BlockProvider>,
 		options: VMOptions
-	): ValidateResult<{
+	): t.Validation<{
 		models: Record<string, Model>
 		actions: string[]
 		routes: Record<string, string[]>
@@ -493,57 +500,14 @@ export class VM {
 			handle.dispose()
 		}
 
-		const modelsValidationResult = validateModels(context, modelsHandle)
-		const actionsValidationResult = validateActions(context, actionsHandle)
-		const contractsValidationResult = validateContracts(context, providers, options, contractsHandle)
-		const routesValidationResult = validateRoutes(context, routesHandle)
-		const componentsValidationResult = validateComponents(context, componentHandle)
-		const sourcesValidationResult = validateSources(context, sourcesHandle)
-
-		// if all of the checks have passed, return the extracted values
-		if (
-			modelsValidationResult.valid &&
-			actionsValidationResult.valid &&
-			contractsValidationResult.valid &&
-			routesValidationResult.valid &&
-			componentsValidationResult.valid &&
-			sourcesValidationResult.valid
-		) {
-			return {
-				valid: true,
-				result: {
-					models: modelsValidationResult.result.models,
-					actionHandles: actionsValidationResult.result.actionHandles,
-					actions: actionsValidationResult.result.actions,
-					contractMetadata: contractsValidationResult.result.contractMetadata,
-					contracts: contractsValidationResult.result.contracts,
-					routeHandles: routesValidationResult.result.routeHandles,
-					routes: routesValidationResult.result.routes,
-					component: componentsValidationResult.result.component,
-					sourceHandles: sourcesValidationResult.result.sourceHandles,
-					sources: sourcesValidationResult.result.sources,
-				},
-			}
-		} else {
-			// otherwise, collect the errors and return them
-			const validationResults = [
-				modelsValidationResult,
-				actionsValidationResult,
-				contractsValidationResult,
-				routesValidationResult,
-				componentsValidationResult,
-				sourcesValidationResult,
-			]
-
-			let errors: string[] = []
-			for (const validationResult of validationResults) {
-				if (!validationResult.valid) {
-					errors = errors.concat(validationResult.errors)
-				}
-			}
-
-			return { valid: false, errors }
-		}
+		return mergeValidationResults6(
+			validateModels(context, modelsHandle),
+			validateActions(context, actionsHandle),
+			validateContracts(context, providers, options, contractsHandle),
+			validateRoutes(context, routesHandle),
+			validateComponents(context, componentHandle),
+			validateSources(context, sourcesHandle)
+		)
 	}
 
 	constructor(
@@ -554,22 +518,22 @@ export class VM {
 		providers: Record<string, BlockProvider>,
 		options: VMOptions
 	) {
-		// call validation code here
-
 		const validationResult = VM.validate(context, moduleHandle, providers, options)
-		if (!validationResult.valid) {
-			throw Error(validationResult.errors[0])
+
+		if (isLeft(validationResult)) {
+			throw Error(validationResult.left[0].message)
 		} else {
-			this.models = validationResult.result.models
-			this.actions = validationResult.result.actions
-			this.routes = validationResult.result.routes
-			this.contracts = validationResult.result.contracts
-			this.contractMetadata = validationResult.result.contractMetadata
-			this.component = validationResult.result.component
-			this.sources = validationResult.result.sources
-			this.routeHandles = validationResult.result.routeHandles
-			this.actionHandles = validationResult.result.actionHandles
-			this.sourceHandles = validationResult.result.sourceHandles
+			const validatedData = validationResult.right
+			this.models = validatedData.models
+			this.actions = validatedData.actions
+			this.routes = validatedData.routes
+			this.contracts = validatedData.contracts
+			this.contractMetadata = validatedData.contractMetadata
+			this.component = validatedData.component
+			this.sources = validatedData.sources
+			this.routeHandles = validatedData.routeHandles
+			this.actionHandles = validatedData.actionHandles
+			this.sourceHandles = validatedData.sourceHandles
 		}
 
 		this.dbHandle = wrapObject(
@@ -892,6 +856,3 @@ function validate<T>(type: t.Type<T>, value: any, message?: string): T {
 		throw new Error(message)
 	}
 }
-
-const assertPattern = (value: string, pattern: RegExp, message: string) =>
-	assert(pattern.test(value), `${message}: ${JSON.stringify(value)} does not match pattern ${pattern.source}`)

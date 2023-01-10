@@ -1,6 +1,9 @@
 import assert from "node:assert"
 
 import { isFail, QuickJSContext, QuickJSHandle, VmCallResult } from "quickjs-emscripten"
+import * as t from "io-ts"
+import { isLeft, isRight, left, right } from "fp-ts/lib/Either.js"
+import { partition } from "fp-ts/lib/Array"
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
 export interface JSONArray extends Array<JSONValue> {}
@@ -197,4 +200,42 @@ export function wrapJSON(context: QuickJSContext, jsonValue: JSONValue): QuickJS
  */
 export function unwrapJSON(context: QuickJSContext, handle: QuickJSHandle): JSONValue {
 	return JSON.parse(call(context, "JSON.stringify", null, handle).consume(context.getString))
+}
+
+/**
+ * Merge the results of 6 io-ts validations
+ *
+ * The t.Validation type is an Either<Errors, A> type, where Errors is a list of validation errors
+ * If all of the validations have passed, then combine the results into a single object.
+ * If any validations have failed (i.e "is left"/has errors) then concatenate the errors and return them.
+ */
+export function mergeValidationResults6<A, B, C, D, E, F>(
+	tA: t.Validation<A>,
+	tB: t.Validation<B>,
+	tC: t.Validation<C>,
+	tD: t.Validation<D>,
+	tE: t.Validation<E>,
+	tF: t.Validation<F>
+): t.Validation<A & B & C & D & E & F> {
+	if (isRight(tA) && isRight(tB) && isRight(tC) && isRight(tD) && isRight(tE) && isRight(tF)) {
+		return right({
+			...tA.right,
+			...tB.right,
+			...tC.right,
+			...tD.right,
+			...tE.right,
+			...tF.right,
+		})
+	} else {
+		return left(
+			[tA, tB, tC, tD, tE, tF].reduce(
+				(prev, curr) => (isLeft(curr) ? prev.concat(curr.left) : []),
+				[] as t.ValidationError[]
+			)
+		)
+	}
+}
+
+export function mergeValidationResultsN<A>(ts: t.Validation<Record<string, A>>[]): t.Validation<Record<string, A>> {
+	return ts[0]
 }

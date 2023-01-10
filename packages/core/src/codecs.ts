@@ -68,6 +68,29 @@ export const sessionType: t.Type<Session> = t.type({
 	signature: t.string,
 })
 
+const modelPropertyNameType = new t.Type<string>(
+	"ModelPropertyName",
+	(input: unknown): input is string => t.string.is(input),
+	(input: unknown, context: t.Context) => {
+		if (!t.string.is(input)) {
+			return t.failure(input, context, `Model property name ${input} is invalid - it must be a string`)
+		}
+
+		const modelPropertyNamePattern = /^[a-z][a-z_]*$/
+
+		if (!modelPropertyNamePattern.test(input)) {
+			t.failure(
+				input,
+				context,
+				`Model property ${input} is invalid: model properties must match ${modelPropertyNamePattern}`
+			)
+		}
+
+		return t.success("")
+	},
+	t.identity
+)
+
 export const modelTypeType: t.Type<ModelType> = t.union([
 	t.literal("boolean"),
 	t.literal("string"),
@@ -80,7 +103,7 @@ export const modelValueType: t.Type<ModelValue> = t.union([t.null, t.boolean, t.
 
 const modelPropertiesType = t.intersection([
 	t.type({ id: t.literal("string"), updated_at: t.literal("datetime") }),
-	t.record(t.string, modelTypeType),
+	t.record(modelPropertyNameType, modelTypeType),
 ])
 
 const indexType = t.union([t.string, t.array(t.string)])
@@ -103,7 +126,25 @@ export const modelType: t.Type<Model> = new t.Type(
 	t.identity
 )
 
-export const modelsType = t.record(t.string, modelType)
+const modelNameType = new t.Type<string>(
+	"ModelName",
+	(input: unknown): input is string => t.string.is(input),
+	(input: unknown, context: t.Context) => {
+		if (!t.string.is(input)) {
+			return t.failure(input, context, `Model name ${input} is invalid - it must be a string`)
+		}
+
+		const modelNamePattern = /^[a-z][a-z_]*$/
+		if (!modelNamePattern.test(input)) {
+			return t.failure(input, context, `Model name ${input} is invalid: model names must match ${modelNamePattern}`)
+		}
+
+		return t.success(input)
+	},
+	t.identity
+)
+
+export const modelsType = t.record(modelNameType, modelType)
 
 const isUint8Array = (u: unknown): u is Uint8Array => u instanceof Uint8Array
 
@@ -113,3 +154,34 @@ export const uint8ArrayType = new t.Type(
 	(i, context) => (isUint8Array(i) ? t.success(i) : t.failure(i, context)),
 	t.identity
 )
+
+export const contractMetadataType = t.type({
+	chain: chainType,
+	chainId: chainIdType,
+	address: t.string,
+	abi: t.array(t.string),
+})
+
+export const contractNameType = new t.Type<string>(
+	"ContractNameType",
+	(input: unknown): input is string => t.string.is(input),
+	(input: unknown, context: t.Context) => {
+		if (!t.string.is(input)) {
+			return t.failure(input, context, `Contract name is invalid: it must be a string`)
+		}
+
+		const contractNamePattern = /^[a-zA-Z]+$/
+		if (!contractNamePattern.test(input)) {
+			return t.failure(
+				input,
+				context,
+				`Contract name ${input} is invalid: it must match the regex ${contractNamePattern}`
+			)
+		}
+
+		return t.success(input)
+	},
+	t.identity
+)
+
+export const contractMetadatasType = t.record(contractNameType, contractMetadataType)
