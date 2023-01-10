@@ -12,7 +12,16 @@ import express from "express"
 import cors from "cors"
 import { createLibp2p, Libp2p } from "libp2p"
 
-import { Core, constants, actionType, getLibp2pInit, BlockCache, getAPI, setupWebsockets } from "@canvas-js/core"
+import {
+	Core,
+	constants,
+	actionType,
+	getLibp2pInit,
+	BlockCache,
+	getAPI,
+	setupWebsockets,
+	startPingService,
+} from "@canvas-js/core"
 
 import { getProviders, confirmOrExit, parseSpecArgument, getPeerId, installSpec, CANVAS_HOME } from "../utils.js"
 
@@ -269,6 +278,8 @@ export async function handler(args: Args) {
 	)
 
 	const controller = new AbortController()
+
+	startPingService(libp2p, controller, { verbose })
 
 	controller.signal.addEventListener("abort", async () => {
 		console.log("[canvas-cli] Stopping API server...")
