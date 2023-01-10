@@ -166,6 +166,7 @@ export async function startPingService(
 			} catch (err) {
 				if (verbose) {
 					console.log(`[canvas-core] Ping ${peer.toString()} failed`)
+					console.error(err)
 				}
 				await wanRoutingTable.remove(peer)
 			}
@@ -190,6 +191,7 @@ export async function startPingService(
 			} catch (err) {
 				if (verbose) {
 					console.log(`[canvas-core] Ping ${peer.toString()} failed`)
+					console.error(err)
 				}
 				await lanRoutingTable.remove(peer)
 			}
