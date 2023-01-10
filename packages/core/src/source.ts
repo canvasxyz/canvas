@@ -3,6 +3,7 @@ import { createHash } from "node:crypto"
 
 import chalk from "chalk"
 import { CID } from "multiformats/cid"
+import { TimeoutController } from "timeout-abort-controller"
 
 import { Libp2p } from "libp2p"
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
@@ -17,8 +18,6 @@ import { BinaryAction, BinaryMessage, BinarySession, decodeBinaryMessage } from 
 import { sync, handleIncomingStream } from "./rpc/index.js"
 import * as constants from "./constants.js"
 import { metrics } from "./metrics.js"
-import anySignal from "any-signal"
-import { TimeoutController } from "timeout-abort-controller"
 
 // We declare this interface to enforce that Source only has read access to the message store.
 // All the writes still happen in Core.
@@ -225,10 +224,7 @@ export class Source {
 		const abort = () => queryController.abort()
 		this.controller.signal.addEventListener("abort", abort)
 		try {
-			await this.libp2p.contentRouting.provide(this.cid, {
-				signal: anySignal([this.controller.signal, queryController.signal]),
-			})
-
+			await this.libp2p.contentRouting.provide(this.cid, { signal: queryController.signal })
 			console.log(chalk.green(`[canvas-core] [${cid}] Successfully published DHT provider record.`))
 		} finally {
 			this.controller.signal.removeEventListener("abort", abort)
