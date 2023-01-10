@@ -3,7 +3,6 @@ import assert from "node:assert"
 import { isFail, QuickJSContext, QuickJSHandle, VmCallResult } from "quickjs-emscripten"
 import * as t from "io-ts"
 import { isLeft, isRight, left, right } from "fp-ts/lib/Either.js"
-import { partition } from "fp-ts/lib/Array"
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
 export interface JSONArray extends Array<JSONValue> {}
@@ -227,15 +226,12 @@ export function mergeValidationResults6<A, B, C, D, E, F>(
 			...tF.right,
 		})
 	} else {
-		return left(
-			[tA, tB, tC, tD, tE, tF].reduce(
-				(prev, curr) => (isLeft(curr) ? prev.concat(curr.left) : []),
-				[] as t.ValidationError[]
-			)
-		)
+		let errors: t.ValidationError[] = []
+		for (const result of [tA, tB, tC, tD, tE, tF]) {
+			if (isLeft(result)) {
+				errors = errors.concat(result.left)
+			}
+		}
+		return left(errors)
 	}
-}
-
-export function mergeValidationResultsN<A>(ts: t.Validation<Record<string, A>>[]): t.Validation<Record<string, A>> {
-	return ts[0]
 }
