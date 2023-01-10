@@ -16,7 +16,16 @@ import Hash from "ipfs-only-hash"
 import PQueue from "p-queue"
 import client from "prom-client"
 
-import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, getAPI, CoreOptions } from "@canvas-js/core"
+import {
+	BlockCache,
+	Core,
+	getLibp2pInit,
+	constants,
+	BlockResolver,
+	getAPI,
+	CoreOptions,
+	startPingService,
+} from "@canvas-js/core"
 import { BlockProvider, Model } from "@canvas-js/interfaces"
 
 import { CANVAS_HOME, SOCKET_FILENAME, SOCKET_PATH, getPeerId, getProviders, installSpec } from "../utils.js"
@@ -84,6 +93,8 @@ export async function handler(args: Args) {
 		}
 	}
 
+	const controller = new AbortController()
+
 	let libp2p: Libp2p | undefined = undefined
 	if (!args.offline) {
 		const peerId = await getPeerId()
@@ -94,6 +105,8 @@ export async function handler(args: Args) {
 		} else {
 			libp2p = await createLibp2p(getLibp2pInit(peerId, args.listen))
 		}
+
+		startPingService(libp2p, controller)
 	}
 
 	const blockCache = new BlockCache(providers)
@@ -105,7 +118,6 @@ export async function handler(args: Args) {
 		exposeMetrics: args.metrics,
 	})
 
-	const controller = new AbortController()
 	controller.signal.addEventListener("abort", async () => {
 		await daemon.close()
 		if (libp2p !== undefined) {

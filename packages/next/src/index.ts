@@ -9,7 +9,7 @@ import express from "express"
 import { Libp2p, createLibp2p } from "libp2p"
 import { createFromProtobuf, createEd25519PeerId, exportToProtobuf } from "@libp2p/peer-id-factory"
 
-import { constants, Core, getLibp2pInit, getAPI, setupWebsockets } from "@canvas-js/core"
+import { constants, Core, getLibp2pInit, getAPI, setupWebsockets, startPingService } from "@canvas-js/core"
 import { BlockProvider } from "@canvas-js/interfaces"
 import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
@@ -45,9 +45,10 @@ async function getPeerID() {
 	}
 }
 
-const peeringPort = Number(LISTEN) || 4044
+const controller = new AbortController()
 
 if (NODE_ENV === "production") {
+	const peeringPort = Number(LISTEN) || 4044
 	const peerId = await getPeerID()
 
 	console.log("[canvas-next] Using PeerId", peerId.toString())
@@ -61,8 +62,10 @@ if (NODE_ENV === "production") {
 
 	console.log("[canvas-next] Started libp2p")
 
-	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, offline: false, verbose })
-	global.core.addEventListener("close", () => libp2p.stop())
+	startPingService(libp2p, controller)
+	controller.signal.addEventListener("abort", () => libp2p.stop())
+
+	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, verbose })
 } else {
 	global.core = await Core.initialize({ directory, spec, providers, unchecked, offline: true, verbose })
 }
@@ -96,6 +99,7 @@ process.on("SIGINT", () => {
 
 		nextApp.close().then(() => {
 			server.stop()
+			controller.abort()
 			global.core.close()
 		})
 	}

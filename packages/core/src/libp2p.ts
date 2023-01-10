@@ -1,20 +1,26 @@
 import { createHash } from "node:crypto"
 
-import type { Libp2pOptions } from "libp2p"
+import type { Libp2p, Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
+import type { RoutingTable } from "@libp2p/kad-dht/dist/src/routing-table/index.js"
+
 import { webSockets } from "@libp2p/websockets"
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
+import { prometheusMetrics } from "@libp2p/prometheus-metrics"
+
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 import { Multiaddr } from "@multiformats/multiaddr"
-import { prometheusMetrics } from "@libp2p/prometheus-metrics"
+import { TimeoutController } from "timeout-abort-controller"
+import anySignal from "any-signal"
 
-import { toHex } from "./utils.js"
+import { AbortError, toHex, wait } from "./utils.js"
 import { libp2pRegister } from "./metrics.js"
+import * as constants from "./constants.js"
 
 const bootstrapList = [
 	"/dns4/canvas-bootstrap-p0.fly.dev/tcp/4002/ws/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o",
@@ -66,5 +72,91 @@ export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]
 				return "0x" + hash.digest("hex")
 			},
 		}),
+	}
+}
+
+// Augment RoutingTable.kb.toIterable() signature
+declare module "@libp2p/kad-dht/dist/src/routing-table/index.js" {
+	interface KBucket {
+		peer: PeerId
+	}
+}
+
+export async function startPingService(
+	libp2p: Libp2p,
+	controller: AbortController,
+	{ verbose }: { verbose?: boolean } = {}
+) {
+	function ping(routingTable: RoutingTable, peerId: PeerId) {
+		routingTable.pingQueue.add(async () => {
+			// These are declared as private in RoutingTable :/
+			// @ts-expect-error
+			const pingTimeout: number = routingTable.pingTimeout
+			// @ts-expect-error
+			const protocol: string = routingTable.protocol
+
+			const timeoutController = new TimeoutController(pingTimeout)
+			const options = { signal: anySignal([controller.signal, timeoutController.signal]) }
+
+			if (verbose) {
+				console.log("[canvas-core] [ping] Pinging", peerId)
+			}
+
+			try {
+				const connection = await libp2p.connectionManager.openConnection(peerId, options)
+				const stream = await connection.newStream(protocol, options)
+				stream.close()
+				if (verbose) {
+					console.log("[canvas-core] [ping] Ping succeeded", peerId)
+				}
+			} catch (err) {
+				if (verbose) {
+					console.log("[canvas-core] [ping] Ping failed. Removing", peerId)
+				}
+				await routingTable.remove(peerId)
+			}
+		})
+	}
+
+	const wanRoutingTable = libp2p.dht.wan.routingTable as RoutingTable
+	const lanRoutingTable = libp2p.dht.lan.routingTable as RoutingTable
+
+	wanRoutingTable.kb?.on("added", ({ peer }) => ping(wanRoutingTable, peer))
+	lanRoutingTable.kb?.on("added", ({ peer }) => ping(lanRoutingTable, peer))
+
+	try {
+		console.log("[canvas-core] Starting ping service")
+
+		while (!controller.signal.aborted) {
+			await wait({ signal: controller.signal, interval: constants.DHT_PING_INTERVAL })
+
+			await lanRoutingTable.pingQueue.onIdle()
+			console.log("[canvas-core] [ping] Starting LAN routing table ping")
+
+			for (const { peer } of lanRoutingTable.kb?.toIterable() ?? []) {
+				if (!peer.equals(libp2p.peerId)) {
+					ping(lanRoutingTable, peer)
+				}
+			}
+
+			console.log("[canvas-core] [ping] Finished LAN routing table ping")
+
+			await wanRoutingTable.pingQueue.onIdle()
+			console.log("[canvas-core] [ping] Starting WAN routing table ping")
+
+			for (const { peer } of wanRoutingTable.kb?.toIterable() ?? []) {
+				if (!peer.equals(libp2p.peerId)) {
+					ping(wanRoutingTable, peer)
+				}
+			}
+
+			console.log("[canvas-core] [ping] Finished WAN routing table ping")
+		}
+	} catch (err) {
+		if (err instanceof AbortError) {
+			console.log("[canvas-core] [ping] Aborting ping service")
+		} else {
+			console.error("[canvas-core] [ping] Ping service crashed", err)
+		}
 	}
 }

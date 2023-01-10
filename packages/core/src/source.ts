@@ -17,6 +17,8 @@ import { BinaryAction, BinaryMessage, BinarySession, decodeBinaryMessage } from 
 import { sync, handleIncomingStream } from "./rpc/index.js"
 import * as constants from "./constants.js"
 import { metrics } from "./metrics.js"
+import anySignal from "any-signal"
+import { TimeoutController } from "timeout-abort-controller"
 
 // We declare this interface to enforce that Source only has read access to the message store.
 // All the writes still happen in Core.
@@ -185,38 +187,27 @@ export class Source {
 	private async startAnnounceService() {
 		const cid = this.cid.toString()
 
-		if (this.options.verbose) {
-			console.log(`[canvas-core] [${cid}] Staring announce service`)
-		}
-
-		const queryController = new AbortController()
-		const abort = () => queryController.abort()
-		this.controller.signal.addEventListener("abort", abort)
+		console.log(`[canvas-core] [${cid}] Staring announce service`)
 
 		try {
 			await this.wait(constants.ANNOUNCE_DELAY)
-			while (!queryController.signal.aborted) {
+			while (!this.controller.signal.aborted) {
 				await retry(
 					() => this.announce(),
 					(err) => console.log(chalk.red(`[canvas-core] [${cid}] Failed to publish DHT provider record:`), err.message),
-					{ signal: queryController.signal, interval: constants.ANNOUNCE_RETRY_INTERVAL }
+					{ signal: this.controller.signal, interval: constants.ANNOUNCE_RETRY_INTERVAL }
 				)
 
 				await this.wait(constants.ANNOUNCE_INTERVAL)
 			}
 		} catch (err) {
 			if (err instanceof AbortError) {
-				if (this.options.verbose) {
-					console.log(`[canvas-core] [${cid}] Aborting announce service`)
-				}
+				console.log(`[canvas-core] [${cid}] Aborting announce service`)
 			} else if (err instanceof Error) {
 				console.log(chalk.red(`[canvas-core] [${cid}] Announce service crashed:`), err.message)
 			} else {
 				console.error(err)
 			}
-		} finally {
-			this.controller.signal.removeEventListener("abort", abort)
-			queryController.abort()
 		}
 	}
 
@@ -228,22 +219,14 @@ export class Source {
 
 		const cid = this.cid.toString()
 
-		if (this.options.verbose) {
-			console.log(chalk.green(`[canvas-core] [${cid}] Publishing DHT provider record ${this.cid.toString()}...`))
-		}
+		console.log(chalk.green(`[canvas-core] [${cid}] Publishing DHT provider record...`))
 
-		const queryController = new AbortController()
-		const abort = () => queryController.abort()
-		this.controller.signal.addEventListener("abort", abort)
-		try {
-			await this.libp2p.contentRouting.provide(this.cid, { signal: queryController.signal })
-		} finally {
-			this.controller.signal.removeEventListener("abort", abort)
-		}
+		const queryController = new TimeoutController(constants.ANNOUNCE_TIMEOUT)
+		await this.libp2p.contentRouting.provide(this.cid, {
+			signal: anySignal([this.controller.signal, queryController.signal]),
+		})
 
-		if (this.options.verbose) {
-			console.log(chalk.green(`[canvas-core] [${cid}] Successfully published DHT provider record.`))
-		}
+		console.log(chalk.green(`[canvas-core] [${cid}] Successfully published DHT provider record.`))
 	}
 
 	/**
@@ -255,16 +238,14 @@ export class Source {
 
 		const cid = this.cid.toString()
 
-		if (this.options.verbose) {
-			console.log(`[canvas-core] [${cid}] Staring sync service`)
-		}
+		console.log(`[canvas-core] [${cid}] Staring sync service`)
 
 		try {
 			await this.wait(constants.SYNC_DELAY)
 
 			while (!this.controller.signal.aborted) {
 				const subscribers = this.libp2p.pubsub.getSubscribers(this.uri)
-				console.log("setting canvas_gossipsub_subscribers to", subscribers.length)
+
 				metrics.canvas_gossipsub_subscribers.set({ uri: this.uri }, subscribers.length)
 				if (this.options.recentGossipPeers) {
 					for (const peer of subscribers) {
@@ -278,18 +259,14 @@ export class Source {
 					{ signal: this.controller.signal, interval: constants.SYNC_RETRY_INTERVAL }
 				)
 
-				console.log("setting canvas_sync_peers to", peers.length)
 				metrics.canvas_sync_peers.set({ uri: this.uri }, peers.length)
-				if (this.options.verbose) {
-					console.log(chalk.green(`[canvas-core] [${cid}] Found ${peers.length} peers.`))
-				}
+
+				console.log(chalk.green(`[canvas-core] [${cid}] Found ${peers.length} peers.`))
 
 				for (const [i, peer] of peers.entries()) {
-					if (this.options.verbose) {
-						console.log(
-							chalk.green(`[canvas-core] [${cid}] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`)
-						)
-					}
+					console.log(
+						chalk.green(`[canvas-core] [${cid}] Initiating sync with ${peer.toString()} (${i + 1}/${peers.length})`)
+					)
 
 					await this.sync(peer)
 				}
@@ -298,9 +275,7 @@ export class Source {
 			}
 		} catch (err) {
 			if (err instanceof AbortError) {
-				if (this.options.verbose) {
-					console.log(`[canvas-core] [${cid}] Aborting sync service`)
-				}
+				console.log(`[canvas-core] [${cid}] Aborting sync service`)
 			} else if (err instanceof Error) {
 				console.log(chalk.red(`[canvas-core] [${cid}] Sync service crashed:`), err.message)
 			} else {
@@ -321,29 +296,21 @@ export class Source {
 
 		const cid = this.cid.toString()
 
-		if (this.options.verbose) {
-			console.log(`[canvas-core] [${cid}] Querying DHT for application peers...`)
-		}
+		console.log(`[canvas-core] [${cid}] Querying DHT for application peers...`)
 
-		const queryController = new AbortController()
-		const abort = () => queryController.abort()
-		this.controller.signal.addEventListener("abort", abort)
+		const queryController = new TimeoutController(constants.FIND_PEERS_TIMEOUT)
+		const signal = anySignal([this.controller.signal, queryController.signal])
 
-		const { contentRouting } = this.libp2p
-		try {
-			const peers: PeerId[] = []
-			for await (const { id } of contentRouting.findProviders(this.cid, { signal: queryController.signal })) {
-				if (id.equals(this.libp2p.peerId)) {
-					continue
-				} else {
-					peers.push(id)
-				}
+		const peers: PeerId[] = []
+		for await (const { id } of this.libp2p.contentRouting.findProviders(this.cid, { signal })) {
+			if (id.equals(this.libp2p.peerId)) {
+				continue
+			} else {
+				peers.push(id)
 			}
-
-			return peers
-		} finally {
-			this.controller.signal.removeEventListener("abort", abort)
 		}
+
+		return peers
 	}
 
 	/**
@@ -356,19 +323,16 @@ export class Source {
 
 		const cid = this.cid.toString()
 
-		const queryController = new AbortController()
-		const abort = () => queryController.abort()
-		this.controller.signal.addEventListener("abort", abort)
+		const queryController = new TimeoutController(constants.DIAL_PEER_TIMEOUT)
+		const signal = anySignal([this.controller.signal, queryController.signal])
 
 		let stream: Stream
 		try {
-			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal: queryController.signal })
+			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal })
 		} catch (err: any) {
 			// show all errors, if we receive an AggregateError
 			console.log(chalk.red(`[canvas-core] [${cid}] Failed to dial peer ${peer.toString()}`), err.errors ?? err)
 			return
-		} finally {
-			this.controller.signal.removeEventListener("abort", abort)
 		}
 
 		if (this.options.verbose) {
