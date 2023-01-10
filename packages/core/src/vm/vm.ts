@@ -7,7 +7,6 @@ import { transform } from "sucrase"
 import { ethers } from "ethers"
 
 import * as t from "io-ts"
-import * as E from "fp-ts/Either"
 import * as R from "fp-ts/Record"
 
 import {
@@ -71,18 +70,15 @@ function validateModels(
 		])
 	}
 
-	let models
-	const modelsRawValue = modelsHandle.consume(context.dump)
-
 	// validate models type
-	const modelsTypeRes = modelsType.decode(modelsRawValue)
+	const modelsTypeRes = modelsType.decode(modelsHandle.consume(context.dump))
 
 	// if there are any errors, then return
 	if (isLeft(modelsTypeRes)) {
 		return modelsTypeRes
-	} else {
-		models = modelsTypeRes.right
 	}
+
+	const models = modelsTypeRes.right
 
 	const errors: t.ValidationError[] = []
 
