@@ -279,7 +279,7 @@ export async function handler(args: Args) {
 
 	const controller = new AbortController()
 
-	startPingService(libp2p, controller)
+	startPingService(libp2p, controller, { verbose })
 
 	controller.signal.addEventListener("abort", async () => {
 		console.log("[canvas-cli] Stopping API server...")

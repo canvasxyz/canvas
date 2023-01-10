@@ -62,7 +62,7 @@ if (NODE_ENV === "production") {
 
 	console.log("[canvas-next] Started libp2p")
 
-	startPingService(libp2p, controller)
+	startPingService(libp2p, controller, { verbose })
 	controller.signal.addEventListener("abort", () => libp2p.stop())
 
 	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, verbose })

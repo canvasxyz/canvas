@@ -106,7 +106,7 @@ export async function handler(args: Args) {
 			libp2p = await createLibp2p(getLibp2pInit(peerId, args.listen))
 		}
 
-		startPingService(libp2p, controller)
+		startPingService(libp2p, controller, { verbose: args.verbose })
 	}
 
 	const blockCache = new BlockCache(providers)
