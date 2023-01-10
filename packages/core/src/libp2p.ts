@@ -16,7 +16,6 @@ import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 import { Multiaddr } from "@multiformats/multiaddr"
 import { TimeoutController } from "timeout-abort-controller"
-import anySignal from "any-signal"
 
 import { AbortError, toHex, wait } from "./utils.js"
 import { libp2pRegister } from "./metrics.js"
@@ -87,42 +86,115 @@ export async function startPingService(
 	controller: AbortController,
 	{ verbose }: { verbose?: boolean } = {}
 ) {
-	function ping(routingTable: RoutingTable, peerId: PeerId) {
-		routingTable.pingQueue.add(async () => {
-			// These are declared as private in RoutingTable :/
-			// @ts-expect-error
-			const pingTimeout: number = routingTable.pingTimeout
-			// @ts-expect-error
-			const protocol: string = routingTable.protocol
+	async function ping(routingTable: RoutingTable, peer: PeerId) {
+		// These are declared as private in RoutingTable :/
+		// @ts-expect-error
+		const pingTimeout: number = routingTable.pingTimeout
+		// @ts-expect-error
+		const protocol: string = routingTable.protocol
 
-			const timeoutController = new TimeoutController(pingTimeout)
-			const options = { signal: anySignal([controller.signal, timeoutController.signal]) }
+		const timeoutController = new TimeoutController(pingTimeout)
+		const abort = () => timeoutController.abort()
+		controller.signal.addEventListener("abort", abort)
 
+		try {
+			const connection = await libp2p.connectionManager.openConnection(peer, { signal: timeoutController.signal })
+			const stream = await connection.newStream(protocol, { signal: timeoutController.signal })
+			stream.close()
+		} finally {
+			controller.signal.removeEventListener("abort", abort)
+		}
+	}
+
+	async function pingTable(routingTable: RoutingTable): Promise<[successCount: number, failureCount: number]> {
+		let successCount = 0
+		let failureCount = 0
+		let peerIndex = 0
+
+		for (const { peer } of routingTable.kb?.toIterable() ?? []) {
 			if (verbose) {
-				console.log("[canvas-core] [ping] Pinging", peerId)
+				console.log(`[canvas-core] Ping ${peer.toString()} (${++peerIndex}/${routingTable.size})`)
+			}
+
+			if (peer.equals(libp2p.peerId)) {
+				if (verbose) {
+					console.log(`[canvas-core] Ping ${peer.toString()} skipped (is self)`)
+				}
+				successCount += 1
+				continue
 			}
 
 			try {
-				const connection = await libp2p.connectionManager.openConnection(peerId, options)
-				const stream = await connection.newStream(protocol, options)
-				stream.close()
+				await ping(routingTable, peer)
 				if (verbose) {
-					console.log("[canvas-core] [ping] Ping succeeded", peerId)
+					console.log(`[canvas-core] Ping ${peer.toString()} succeeded`)
 				}
+
+				successCount += 1
 			} catch (err) {
 				if (verbose) {
-					console.log("[canvas-core] [ping] Ping failed. Removing", peerId)
+					console.log(`[canvas-core] Ping ${peer.toString()} failed`)
+					console.error(err)
 				}
-				await routingTable.remove(peerId)
+
+				failureCount += 1
+				await routingTable.remove(peer)
 			}
-		})
+		}
+
+		return [successCount, failureCount]
 	}
 
 	const wanRoutingTable = libp2p.dht.wan.routingTable as RoutingTable
 	const lanRoutingTable = libp2p.dht.lan.routingTable as RoutingTable
 
-	wanRoutingTable.kb?.on("added", ({ peer }) => ping(wanRoutingTable, peer))
-	lanRoutingTable.kb?.on("added", ({ peer }) => ping(lanRoutingTable, peer))
+	wanRoutingTable.kb?.on("added", ({ peer }) => {
+		wanRoutingTable.pingQueue.add(async () => {
+			if (peer.equals(libp2p.peerId)) {
+				return
+			}
+
+			if (verbose) {
+				console.log(`[canvas-core] Ping ${peer.toString()}`)
+			}
+
+			try {
+				await ping(wanRoutingTable, peer)
+				if (verbose) {
+					console.log(`[canvas-core] Ping ${peer.toString()} succeeded`)
+				}
+			} catch (err) {
+				if (verbose) {
+					console.log(`[canvas-core] Ping ${peer.toString()} failed`)
+				}
+				await wanRoutingTable.remove(peer)
+			}
+		})
+	})
+
+	lanRoutingTable.kb?.on("added", ({ peer }) => {
+		lanRoutingTable.pingQueue.add(async () => {
+			if (peer.equals(libp2p.peerId)) {
+				return
+			}
+
+			if (verbose) {
+				console.log(`[canvas-core] Ping ${peer.toString()}`)
+			}
+
+			try {
+				await ping(lanRoutingTable, peer)
+				if (verbose) {
+					console.log(`[canvas-core] Ping ${peer.toString()} succeeded`)
+				}
+			} catch (err) {
+				if (verbose) {
+					console.log(`[canvas-core] Ping ${peer.toString()} failed`)
+				}
+				await lanRoutingTable.remove(peer)
+			}
+		})
+	})
 
 	try {
 		console.log("[canvas-core] Starting ping service")
@@ -130,33 +202,27 @@ export async function startPingService(
 		while (!controller.signal.aborted) {
 			await wait({ signal: controller.signal, interval: constants.DHT_PING_INTERVAL })
 
-			await lanRoutingTable.pingQueue.onIdle()
-			console.log("[canvas-core] [ping] Starting LAN routing table ping")
+			await lanRoutingTable.pingQueue.add(async () => {
+				console.log(`[canvas-core] Starting LAN routing table ping (${lanRoutingTable.size} entries)`)
+				const [successCount, failureCount] = await pingTable(lanRoutingTable)
+				console.log(
+					`[canvas-core] Finished LAN routing table ping (${successCount} responses, ${failureCount} evicted)`
+				)
+			})
 
-			for (const { peer } of lanRoutingTable.kb?.toIterable() ?? []) {
-				if (!peer.equals(libp2p.peerId)) {
-					ping(lanRoutingTable, peer)
-				}
-			}
-
-			console.log("[canvas-core] [ping] Finished LAN routing table ping")
-
-			await wanRoutingTable.pingQueue.onIdle()
-			console.log("[canvas-core] [ping] Starting WAN routing table ping")
-
-			for (const { peer } of wanRoutingTable.kb?.toIterable() ?? []) {
-				if (!peer.equals(libp2p.peerId)) {
-					ping(wanRoutingTable, peer)
-				}
-			}
-
-			console.log("[canvas-core] [ping] Finished WAN routing table ping")
+			await wanRoutingTable.pingQueue.add(async () => {
+				console.log(`[canvas-core] Starting WAN routing table ping (${wanRoutingTable.size} entries)`)
+				const [successCount, failureCount] = await pingTable(wanRoutingTable)
+				console.log(
+					`[canvas-core] Finished WAN routing table ping (${successCount} responses, ${failureCount} evicted)`
+				)
+			})
 		}
 	} catch (err) {
 		if (err instanceof AbortError) {
-			console.log("[canvas-core] [ping] Aborting ping service")
+			console.log("[canvas-core] Aborting ping service")
 		} else {
-			console.error("[canvas-core] [ping] Ping service crashed", err)
+			console.error("[canvas-core] Ping service crashed", err)
 		}
 	}
 }

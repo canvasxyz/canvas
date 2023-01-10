@@ -222,11 +222,17 @@ export class Source {
 		console.log(chalk.green(`[canvas-core] [${cid}] Publishing DHT provider record...`))
 
 		const queryController = new TimeoutController(constants.ANNOUNCE_TIMEOUT)
-		await this.libp2p.contentRouting.provide(this.cid, {
-			signal: anySignal([this.controller.signal, queryController.signal]),
-		})
+		const abort = () => queryController.abort()
+		this.controller.signal.addEventListener("abort", abort)
+		try {
+			await this.libp2p.contentRouting.provide(this.cid, {
+				signal: anySignal([this.controller.signal, queryController.signal]),
+			})
 
-		console.log(chalk.green(`[canvas-core] [${cid}] Successfully published DHT provider record.`))
+			console.log(chalk.green(`[canvas-core] [${cid}] Successfully published DHT provider record.`))
+		} finally {
+			this.controller.signal.removeEventListener("abort", abort)
+		}
 	}
 
 	/**
@@ -261,7 +267,7 @@ export class Source {
 
 				metrics.canvas_sync_peers.set({ uri: this.uri }, peers.length)
 
-				console.log(chalk.green(`[canvas-core] [${cid}] Found ${peers.length} peers.`))
+				console.log(chalk.green(`[canvas-core] [${cid}] Found ${peers.length} application peers.`))
 
 				for (const [i, peer] of peers.entries()) {
 					console.log(
@@ -299,18 +305,25 @@ export class Source {
 		console.log(`[canvas-core] [${cid}] Querying DHT for application peers...`)
 
 		const queryController = new TimeoutController(constants.FIND_PEERS_TIMEOUT)
-		const signal = anySignal([this.controller.signal, queryController.signal])
+		const abort = () => queryController.abort()
+		this.controller.signal.addEventListener("abort", abort)
 
-		const peers: PeerId[] = []
-		for await (const { id } of this.libp2p.contentRouting.findProviders(this.cid, { signal })) {
-			if (id.equals(this.libp2p.peerId)) {
-				continue
-			} else {
-				peers.push(id)
+		try {
+			const peers: PeerId[] = []
+			for await (const { id } of this.libp2p.contentRouting.findProviders(this.cid, {
+				signal: queryController.signal,
+			})) {
+				if (id.equals(this.libp2p.peerId)) {
+					continue
+				} else {
+					peers.push(id)
+				}
 			}
-		}
 
-		return peers
+			return peers
+		} finally {
+			this.controller.signal.removeEventListener("abort", abort)
+		}
 	}
 
 	/**
@@ -324,15 +337,21 @@ export class Source {
 		const cid = this.cid.toString()
 
 		const queryController = new TimeoutController(constants.DIAL_PEER_TIMEOUT)
-		const signal = anySignal([this.controller.signal, queryController.signal])
+		const abort = () => queryController.abort()
+		this.controller.signal.addEventListener("abort", abort)
 
 		let stream: Stream
 		try {
-			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal })
+			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal: queryController.signal })
 		} catch (err: any) {
-			// show all errors, if we receive an AggregateError
-			console.log(chalk.red(`[canvas-core] [${cid}] Failed to dial peer ${peer.toString()}`), err.errors ?? err)
+			console.log(chalk.red(`[canvas-core] [${cid}] Failed to dial peer ${peer.toString()}`))
+			if (this.options.verbose) {
+				console.log(err)
+			}
+
 			return
+		} finally {
+			this.controller.signal.removeEventListener("abort", abort)
 		}
 
 		if (this.options.verbose) {
