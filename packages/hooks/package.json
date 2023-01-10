@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/hooks",
-  "version": "0.0.43",
+  "version": "0.0.44",
   "type": "module",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -16,8 +16,8 @@
     "typescript": "^4.9.4"
   },
   "dependencies": {
-    "@canvas-js/interfaces": "0.0.43",
-    "@canvas-js/signers": "0.0.43",
+    "@canvas-js/interfaces": "0.0.44",
+    "@canvas-js/signers": "0.0.44",
     "ethers": "^5.7.2"
   }
 }

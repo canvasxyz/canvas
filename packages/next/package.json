@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/next",
-  "version": "0.0.43",
+  "version": "0.0.44",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "dist/index.js",
@@ -15,8 +15,8 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@canvas-js/core": "0.0.43",
-    "@canvas-js/interfaces": "0.0.43",
+    "@canvas-js/core": "0.0.44",
+    "@canvas-js/interfaces": "0.0.44",
     "@libp2p/peer-id-factory": "^1.0.20",
     "chalk": "^5.2.0",
     "ethers": "^5.7.2",
