@@ -364,7 +364,6 @@ class Daemon {
 			}
 
 			const spec = req.body.spec
-			console.log(spec)
 
 			this.queue.add(async () => {
 				try {

@@ -66,7 +66,12 @@ export class VM {
 		return new VM(uri, runtime, context, moduleHandle, providers ?? {}, options)
 	}
 
-	public static async validateWithoutCreating({ uri, spec, providers, ...options }: VMConfig): Promise<any> {
+	public static async validateWithoutCreating({
+		uri,
+		spec,
+		providers,
+		...options
+	}: VMConfig): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
 		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
@@ -81,11 +86,17 @@ export class VM {
 		})
 
 		const moduleHandle = await loadModule(context, uri, transpiledSpec)
-		const validationResult = validateCanvasSpec(context, moduleHandle, providers ?? {}, options)
-		if (isLeft(validationResult)) {
-			return { valid: false, errors: validationResult.left.map((error) => error.message) }
+		const { validation, warnings } = validateCanvasSpec(context, moduleHandle, providers ?? {}, options)
+
+		if (isLeft(validation)) {
+			return {
+				valid: false,
+				// use flatMap to remove null values
+				errors: validation.left.flatMap((err) => (err.message ? [err.message] : [])),
+				warnings,
+			}
 		} else {
-			return { valid: true }
+			return { valid: true, errors: [], warnings }
 		}
 	}
 
@@ -115,12 +126,12 @@ export class VM {
 		providers: Record<string, BlockProvider>,
 		options: VMOptions
 	) {
-		const validationResult = validateCanvasSpec(context, moduleHandle, providers, options)
+		const { validation } = validateCanvasSpec(context, moduleHandle, providers, options)
 
-		if (isLeft(validationResult)) {
-			throw Error(validationResult.left[0].message)
+		if (isLeft(validation)) {
+			throw Error(validation.left[0].message)
 		} else {
-			const validatedData = validationResult.right
+			const validatedData = validation.right
 			this.models = validatedData.models
 			this.actions = validatedData.actions
 			this.routes = validatedData.routes
