@@ -32,7 +32,8 @@ function validateModels(
 	}
 
 	// validate models type
-	const modelsTypeRes = modelsType.decode(modelsHandle.consume(context.dump))
+	const modelData = modelsHandle.consume(context.dump)
+	const modelsTypeRes = modelsType.decode(modelData)
 
 	// if there are any errors, then return
 	if (isLeft(modelsTypeRes)) {

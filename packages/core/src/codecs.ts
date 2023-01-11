@@ -19,7 +19,9 @@ import type {
 	SessionPayload,
 	Chain,
 	ChainId,
+	IndexType,
 } from "@canvas-js/interfaces"
+import { isRight } from "fp-ts/lib/Either.js"
 
 export const chainType: t.Type<Chain> = t.union([
 	t.literal("eth"),
@@ -86,7 +88,7 @@ const modelPropertyNameType = new t.Type<string>(
 			)
 		}
 
-		return t.success("")
+		return t.success(input)
 	},
 	t.identity
 )
@@ -106,23 +108,66 @@ const modelPropertiesType = t.intersection([
 	t.record(modelPropertyNameType, modelTypeType),
 ])
 
-const indexType = t.union([t.string, t.array(t.string)])
-const modelIndexesType = t.partial({ indexes: t.array(indexType) })
-
-function isModel(u: unknown): u is Model {
-	if (!modelIndexesType.is(u)) {
-		return false
+function decodeIndex(i: unknown, context: t.Context): t.Validation<string | string[]> {
+	let indices: string[]
+	if (t.string.is(i)) {
+		indices = [i]
+	} else if (t.array(t.string).is(i)) {
+		indices = i
+	} else {
+		return t.failure(i, context, `Index is invalid: ${i} is not a string or a list of strings`)
 	}
 
-	const { indexes, ...properties } = u
+	// check is not id or updated_at
+	for (const index of indices) {
+		if (index == "id") {
+			return t.failure(i, context, `Index is invalid: "id" is already an index by default`)
+		}
 
-	return modelPropertiesType.is(properties)
+		if (index == "updated_at") {
+			return t.failure(i, context, `Index is invalid: "updated_at" is already an index by default`)
+		}
+	}
+
+	return t.success(i)
+}
+
+const singleIndexType = new t.Type(
+	"SingleIndexType",
+	(u: unknown): u is string | string[] => isRight(decodeIndex(u, [])),
+	decodeIndex,
+	t.identity
+)
+
+const modelIndexesType = t.partial({ indexes: t.array(singleIndexType) })
+
+function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
+	// get the model name if it exists
+	const contextParent = context[context.length - 1]
+	const modelName = contextParent ? contextParent.key : ""
+	const modelNameInsert = modelName ? ` '${modelName}'` : ""
+
+	if (!t.UnknownRecord.is(i)) {
+		return t.failure(i, context, `Model${modelNameInsert} must be an object`)
+	}
+
+	const { indexes, ...properties } = i
+
+	if (indexes && !t.array(singleIndexType).is(indexes)) {
+		t.failure(i, context, `Model${modelNameInsert} definition contains invalid indexes (${indexes})`)
+	}
+
+	if (!modelPropertiesType.is(properties)) {
+		t.failure(i, context, `Model${modelNameInsert} properties ${JSON.stringify(properties)} are invalid`)
+	}
+
+	return t.success(i as Model)
 }
 
 export const modelType: t.Type<Model> = new t.Type(
 	"Model",
-	isModel,
-	(i: unknown, context: t.Context) => (isModel(i) ? t.success(i) : t.failure(i, context)),
+	(u: unknown): u is Model => isRight(decodeModel(u, [])),
+	decodeModel,
 	t.identity
 )
 
@@ -131,7 +176,7 @@ const modelNameType = new t.Type<string>(
 	(input: unknown): input is string => t.string.is(input),
 	(input: unknown, context: t.Context) => {
 		if (!t.string.is(input)) {
-			return t.failure(input, context, `Model name ${input} is invalid - it must be a string`)
+			return t.failure(input, context, `Model name ${input} is invalid: it must be a string`)
 		}
 
 		const modelNamePattern = /^[a-z][a-z_]*$/

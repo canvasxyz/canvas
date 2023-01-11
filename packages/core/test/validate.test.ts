@@ -53,6 +53,52 @@ const VALIDATION_TEST_FIXTURES = [
 			warnings: [],
 		},
 	},
+	{
+		name: "accept model with valid indexes",
+		spec: `
+      export const models = {
+        thing: {
+          something: "string",
+          indexes: ["something"]
+        }
+      }
+      export const actions = {}
+    `,
+		expectedResult: {
+			valid: true,
+			errors: [],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject model with invalid indexes",
+		spec: `
+      export const models = {
+        thing: {indexes: [1]}
+      }
+      export const actions = {}
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ["Model definition contains invalid indexes (1)"],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject model with invalid properties",
+		spec: `
+      export const models = {
+        thing: {
+          id: "string"
+        }
+      }
+      export const actions = {}`,
+		expected: {
+			valid: false,
+			errors: [`Model properties {"id":"string"} are invalid`],
+			warnings: [],
+		},
+	},
 ]
 
 for (const { name, spec, expectedResult } of VALIDATION_TEST_FIXTURES) {
