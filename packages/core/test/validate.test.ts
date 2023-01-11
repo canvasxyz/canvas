@@ -1,74 +1,66 @@
 // tests for checking whether specs are valid
 
-import test, { ExecutionContext } from "ava"
+import test from "ava"
 import { VM } from "@canvas-js/core"
 
-async function checkSpec(
-	t: ExecutionContext<any>,
-	spec: string,
-	expectedResult: { valid: boolean; errors: string[]; warnings: string[] }
-) {
-	const result = await VM.validateWithoutCreating({
-		uri: "...",
-		spec: spec,
-	})
-	t.deepEqual(result, expectedResult)
-}
-
-test("reject a blank spec", async (t) => {
-	await checkSpec(t, "", {
-		valid: false,
-		errors: ["Spec is missing `models` export", "Spec is missing `actions` export"],
-		warnings: [],
-	})
-})
-
-test("accept a minimal spec", async (t) => {
-	await checkSpec(
-		t,
-		`
-  export const models = {};
-  export const actions = {};
-  `,
-		{
+const VALIDATION_TEST_FIXTURES = [
+	{
+		name: "reject a blank spec",
+		spec: "",
+		expectedResult: {
+			valid: false,
+			errors: ["Spec is missing `models` export", "Spec is missing `actions` export"],
+			warnings: [],
+		},
+	},
+	{
+		name: "accept a minimal spec",
+		spec: `
+      export const models = {};
+      export const actions = {};
+    `,
+		expectedResult: {
 			valid: true,
 			errors: [],
 			warnings: [],
-		}
-	)
-})
-
-test("accept a spec with extraneous exports, with warning", async (t) => {
-	await checkSpec(
-		t,
-		`
-  export const models = {};
-  export const actions = {};
-  export const foobar = {};
-  export const whatever = {};
-
-  `,
-		{
+		},
+	},
+	{
+		name: "accept a spec with extraneous exports, with warning",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const foobar = {};
+      export const whatever = {};
+    `,
+		expectedResult: {
 			valid: true,
 			errors: [],
 			warnings: ['Warning: extraneous export "foobar"', 'Warning: extraneous export "whatever"'],
-		}
-	)
-})
-
-test("reject invalid model name", async (t) => {
-	await checkSpec(
-		t,
-		`
-    export const models = {
-      _Something: {}
-    }
-    export const actions = {}
-  `,
-		{
+		},
+	},
+	{
+		name: "reject invalid model name",
+		spec: `
+      export const models = {
+        _Something: {}
+      }
+      export const actions = {}
+    `,
+		expectedResult: {
 			valid: false,
 			errors: ["Model name _Something is invalid: model names must match /^[a-z][a-z_]*$/"],
 			warnings: [],
-		}
-	)
-})
+		},
+	},
+]
+
+for (const { name, spec, expectedResult } of VALIDATION_TEST_FIXTURES) {
+	test(name, async (t) => {
+		const result = await VM.validateWithoutCreating({
+			uri: "...",
+			spec: spec,
+		})
+		t.deepEqual(result, expectedResult)
+	})
+}
