@@ -8,7 +8,7 @@ import * as t from "io-ts"
  * on the server).
  */
 
-import type {
+import {
 	ActionArgument,
 	ActionPayload,
 	Action,
@@ -20,7 +20,7 @@ import type {
 	Chain,
 	ChainId,
 } from "@canvas-js/interfaces"
-import { isLeft, isRight } from "fp-ts/lib/Either.js"
+import { isLeft, isRight, left } from "fp-ts/lib/Either.js"
 
 export const chainType: t.Type<Chain> = t.union([
 	t.literal("eth"),
@@ -118,11 +118,6 @@ export const modelTypeType: t.Type<ModelType> = t.union([
 
 export const modelValueType: t.Type<ModelValue> = t.union([t.null, t.boolean, t.number, t.string])
 
-const modelPropertiesType = t.intersection([
-	t.type({ id: t.literal("string"), updated_at: t.literal("datetime") }),
-	t.record(modelPropertyNameType, modelTypeType),
-])
-
 function decodeSingleIndex(i: unknown, context: t.Context): t.Validation<string | string[]> {
 	let indices: string[]
 	if (t.string.is(i)) {
@@ -156,6 +151,11 @@ const singleIndexType = new t.Type<string | string[]>(
 )
 
 function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
+	/***
+	 * Unfortunately, this has to be validated imperatively because io-ts doesn't
+	 * handle intersection + record types properly
+	 */
+
 	// get the model name if it exists
 	const contextParent = context[context.length - 1]
 	const modelName = contextParent ? contextParent.key : ""
@@ -165,20 +165,43 @@ function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
 		return t.failure(i, context, `Model${modelNameInsert} must be an object`)
 	}
 
-	const { indexes, ...properties } = i
+	const { indexes, id, updated_at, ...properties } = i
+
+	let errors: t.ValidationError[] = []
+	let success = true
+
+	if (!id) {
+		errors.push({
+			value: i,
+			context,
+			message: `Model${modelNameInsert} is invalid: there is no 'id' field`,
+		})
+	}
+
+	if (!updated_at) {
+		errors.push({
+			value: i,
+			context,
+			message: `Model${modelNameInsert} is invalid: there is no 'updated_at' field`,
+		})
+	}
 
 	if (indexes) {
 		const indexesValidationResult = t.array(singleIndexType).decode(indexes)
 		if (isLeft(indexesValidationResult)) {
-			return indexesValidationResult
+			errors = errors.concat(indexesValidationResult.left)
+			success = false
 		}
 	}
 
-	if (!modelPropertiesType.is(properties)) {
-		return t.failure(i, context, `Model${modelNameInsert} properties ${JSON.stringify(properties)} are invalid`)
+	const remainingPropertiesType = t.record(modelPropertyNameType, modelTypeType)
+	const remainingPropertiesTypeValidation = remainingPropertiesType.decode(properties)
+	if (isLeft(remainingPropertiesTypeValidation)) {
+		errors = errors.concat(remainingPropertiesTypeValidation.left)
+		success = false
 	}
 
-	return t.success(i as Model)
+	return errors || !success ? left(errors) : t.success(i as Model)
 }
 
 export const modelType: t.Type<Model> = new t.Type("Model", decodeToIs(decodeModel), decodeModel, t.identity)
