@@ -53,6 +53,7 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData<
 	const actionValue = {
 		...payload,
 		args: params,
+		chainId: payload.chainId.toString(),
 		// EIP-712 does not accept null values as a type, so we replace the null blockhash
 		// with an empty string
 		blockhash: payload.blockhash || "",
@@ -88,6 +89,7 @@ export function getSessionSignatureData(payload: SessionPayload): SignatureData<
 		...payload,
 		// EIP-712 does not accept null values as a type, so we replace the null blockhash
 		// with an empty string
+		chainId: payload.chainId.toString(),
 		blockhash: payload.blockhash || "",
 	}
 
