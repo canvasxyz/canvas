@@ -201,6 +201,42 @@ const VALIDATION_TEST_FIXTURES = [
 			warnings: [],
 		},
 	},
+	{
+		name: "reject model where extra fields have invalid type names",
+		spec: `
+      export const models = {
+        thing: {
+          id: "string",
+          updated_at: "datetime",
+          something: "whatever"
+        }
+      }
+      export const actions = {}
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ["Model 'thing' is invalid: 'something' field has an invalid type ('whatever')"],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject model where extra fields have invalid names",
+		spec: `
+      export const models = {
+        thing: {
+          id: "string",
+          updated_at: "datetime",
+          _Hello: "string"
+        }
+      }
+      export const actions = {}
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ["Model property _Hello is invalid: model properties must match /^[a-z][a-z_]*$/"],
+			warnings: [],
+		},
+	},
 ]
 
 for (const { name, spec, expectedResult } of VALIDATION_TEST_FIXTURES) {

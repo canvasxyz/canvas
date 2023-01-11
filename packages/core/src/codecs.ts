@@ -91,7 +91,7 @@ const decodeModelPropertyName = (input: unknown, context: t.Context): t.Validati
 	const modelPropertyNamePattern = /^[a-z][a-z_]*$/
 
 	if (!modelPropertyNamePattern.test(input)) {
-		t.failure(
+		return t.failure(
 			input,
 			context,
 			`Model property ${input} is invalid: model properties must match ${modelPropertyNamePattern}`
@@ -212,11 +212,21 @@ function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
 		}
 	}
 
-	const remainingPropertiesType = t.record(modelPropertyNameType, modelTypeType)
-	const remainingPropertiesTypeValidation = remainingPropertiesType.decode(properties)
-	if (isLeft(remainingPropertiesTypeValidation)) {
-		errors = errors.concat(remainingPropertiesTypeValidation.left)
-		success = false
+	for (const [k, v] of Object.entries(properties)) {
+		const modelPropertyNameValidationResult = modelPropertyNameType.decode(k)
+		if (isLeft(modelPropertyNameValidationResult)) {
+			errors = errors.concat(modelPropertyNameValidationResult.left)
+			success = false
+		}
+
+		if (!modelTypeType.is(v)) {
+			errors.push({
+				value: i,
+				context,
+				message: `Model${modelNameInsert} is invalid: '${k}' field has an invalid type ('${v}')`,
+			})
+			success = false
+		}
 	}
 
 	return errors || !success ? left(errors) : t.success(i as Model)
@@ -224,23 +234,19 @@ function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
 
 export const modelType: t.Type<Model> = new t.Type("Model", decodeToIs(decodeModel), decodeModel, t.identity)
 
-const modelNameType = new t.Type<string>(
-	"ModelName",
-	(input: unknown): input is string => t.string.is(input),
-	(input: unknown, context: t.Context) => {
-		if (!t.string.is(input)) {
-			return t.failure(input, context, `Model name ${input} is invalid: it must be a string`)
-		}
+const decodeModelName = (input: unknown, context: t.Context): t.Validation<string> => {
+	if (!t.string.is(input)) {
+		return t.failure(input, context, `Model name ${input} is invalid: it must be a string`)
+	}
 
-		const modelNamePattern = /^[a-z][a-z_]*$/
-		if (!modelNamePattern.test(input)) {
-			return t.failure(input, context, `Model name ${input} is invalid: model names must match ${modelNamePattern}`)
-		}
+	const modelNamePattern = /^[a-z][a-z_]*$/
+	if (!modelNamePattern.test(input)) {
+		return t.failure(input, context, `Model name ${input} is invalid: model names must match ${modelNamePattern}`)
+	}
 
-		return t.success(input)
-	},
-	t.identity
-)
+	return t.success(input)
+}
+const modelNameType = new t.Type<string>("ModelName", decodeToIs(decodeModelName), decodeModelName, t.identity)
 
 export const modelsType = t.record(modelNameType, modelType)
 
