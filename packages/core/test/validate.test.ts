@@ -58,6 +58,8 @@ const VALIDATION_TEST_FIXTURES = [
 		spec: `
       export const models = {
         thing: {
+          id: "string",
+          updated_at: "datetime",
           something: "string",
           indexes: ["something"]
         }
@@ -71,7 +73,7 @@ const VALIDATION_TEST_FIXTURES = [
 		},
 	},
 	{
-		name: "reject model with invalid indexes",
+		name: "reject model with invalid type indexes",
 		spec: `
       export const models = {
         thing: {indexes: [1]}
@@ -80,22 +82,35 @@ const VALIDATION_TEST_FIXTURES = [
     `,
 		expectedResult: {
 			valid: false,
-			errors: ["Model definition contains invalid indexes (1)"],
+			errors: ["Index is invalid: 1 is not a string or a list of strings"],
 			warnings: [],
 		},
 	},
 	{
-		name: "reject model with invalid properties",
+		name: "reject model with id index",
 		spec: `
       export const models = {
-        thing: {
-          id: "string"
-        }
+        thing: {indexes: ["id"]}
       }
-      export const actions = {}`,
-		expected: {
+      export const actions = {}
+    `,
+		expectedResult: {
 			valid: false,
-			errors: [`Model properties {"id":"string"} are invalid`],
+			errors: ['Index is invalid: "id" is already an index by default'],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject model with 'updated_at' index",
+		spec: `
+      export const models = {
+        thing: {indexes: ["updated_at"]}
+      }
+      export const actions = {}
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ['Index is invalid: "updated_at" is already an index by default'],
 			warnings: [],
 		},
 	},

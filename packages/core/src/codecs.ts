@@ -19,9 +19,8 @@ import type {
 	SessionPayload,
 	Chain,
 	ChainId,
-	IndexType,
 } from "@canvas-js/interfaces"
-import { isRight } from "fp-ts/lib/Either.js"
+import { isLeft, isRight } from "fp-ts/lib/Either.js"
 
 export const chainType: t.Type<Chain> = t.union([
 	t.literal("eth"),
@@ -70,26 +69,42 @@ export const sessionType: t.Type<Session> = t.type({
 	signature: t.string,
 })
 
+/**
+ * This function converts a decode function into an is function (for defining io-ts types)
+ * by throwing away the errors and returned value, just returning whether the input data
+ * was validated or not.
+ * @param decodeFunc
+ * @returns
+ */
+function decodeToIs<T>(decodeFunc: (input: unknown, context: t.Context) => t.Validation<T>): t.Is<T> {
+	function is(input: unknown): input is T {
+		return isRight(decodeFunc(input, []))
+	}
+	return is
+}
+
+const decodeModelPropertyName = (input: unknown, context: t.Context): t.Validation<string> => {
+	if (!t.string.is(input)) {
+		return t.failure(input, context, `Model property name ${input} is invalid - it must be a string`)
+	}
+
+	const modelPropertyNamePattern = /^[a-z][a-z_]*$/
+
+	if (!modelPropertyNamePattern.test(input)) {
+		t.failure(
+			input,
+			context,
+			`Model property ${input} is invalid: model properties must match ${modelPropertyNamePattern}`
+		)
+	}
+
+	return t.success(input)
+}
+
 const modelPropertyNameType = new t.Type<string>(
 	"ModelPropertyName",
-	(input: unknown): input is string => t.string.is(input),
-	(input: unknown, context: t.Context) => {
-		if (!t.string.is(input)) {
-			return t.failure(input, context, `Model property name ${input} is invalid - it must be a string`)
-		}
-
-		const modelPropertyNamePattern = /^[a-z][a-z_]*$/
-
-		if (!modelPropertyNamePattern.test(input)) {
-			t.failure(
-				input,
-				context,
-				`Model property ${input} is invalid: model properties must match ${modelPropertyNamePattern}`
-			)
-		}
-
-		return t.success(input)
-	},
+	decodeToIs(decodeModelPropertyName),
+	decodeModelPropertyName,
 	t.identity
 )
 
@@ -108,7 +123,7 @@ const modelPropertiesType = t.intersection([
 	t.record(modelPropertyNameType, modelTypeType),
 ])
 
-function decodeIndex(i: unknown, context: t.Context): t.Validation<string | string[]> {
+function decodeSingleIndex(i: unknown, context: t.Context): t.Validation<string | string[]> {
 	let indices: string[]
 	if (t.string.is(i)) {
 		indices = [i]
@@ -132,14 +147,12 @@ function decodeIndex(i: unknown, context: t.Context): t.Validation<string | stri
 	return t.success(i)
 }
 
-const singleIndexType = new t.Type(
+const singleIndexType = new t.Type<string | string[]>(
 	"SingleIndexType",
-	(u: unknown): u is string | string[] => isRight(decodeIndex(u, [])),
-	decodeIndex,
+	decodeToIs(decodeSingleIndex),
+	decodeSingleIndex,
 	t.identity
 )
-
-const modelIndexesType = t.partial({ indexes: t.array(singleIndexType) })
 
 function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
 	// get the model name if it exists
@@ -153,23 +166,21 @@ function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
 
 	const { indexes, ...properties } = i
 
-	if (indexes && !t.array(singleIndexType).is(indexes)) {
-		t.failure(i, context, `Model${modelNameInsert} definition contains invalid indexes (${indexes})`)
+	if (indexes) {
+		const indexesValidationResult = t.array(singleIndexType).decode(indexes)
+		if (isLeft(indexesValidationResult)) {
+			return indexesValidationResult
+		}
 	}
 
 	if (!modelPropertiesType.is(properties)) {
-		t.failure(i, context, `Model${modelNameInsert} properties ${JSON.stringify(properties)} are invalid`)
+		return t.failure(i, context, `Model${modelNameInsert} properties ${JSON.stringify(properties)} are invalid`)
 	}
 
 	return t.success(i as Model)
 }
 
-export const modelType: t.Type<Model> = new t.Type(
-	"Model",
-	(u: unknown): u is Model => isRight(decodeModel(u, [])),
-	decodeModel,
-	t.identity
-)
+export const modelType: t.Type<Model> = new t.Type("Model", decodeToIs(decodeModel), decodeModel, t.identity)
 
 const modelNameType = new t.Type<string>(
 	"ModelName",
@@ -207,25 +218,27 @@ export const contractMetadataType = t.type({
 	abi: t.array(t.string),
 })
 
+const decodeContractNameType = (input: unknown, context: t.Context): t.Validation<string> => {
+	if (!t.string.is(input)) {
+		return t.failure(input, context, `Contract name is invalid: it must be a string`)
+	}
+
+	const contractNamePattern = /^[a-zA-Z]+$/
+	if (!contractNamePattern.test(input)) {
+		return t.failure(
+			input,
+			context,
+			`Contract name ${input} is invalid: it must match the regex ${contractNamePattern}`
+		)
+	}
+
+	return t.success(input)
+}
+
 export const contractNameType = new t.Type<string>(
 	"ContractNameType",
-	(input: unknown): input is string => t.string.is(input),
-	(input: unknown, context: t.Context) => {
-		if (!t.string.is(input)) {
-			return t.failure(input, context, `Contract name is invalid: it must be a string`)
-		}
-
-		const contractNamePattern = /^[a-zA-Z]+$/
-		if (!contractNamePattern.test(input)) {
-			return t.failure(
-				input,
-				context,
-				`Contract name ${input} is invalid: it must match the regex ${contractNamePattern}`
-			)
-		}
-
-		return t.success(input)
-	},
+	decodeToIs(decodeContractNameType),
+	decodeContractNameType,
 	t.identity
 )
 
