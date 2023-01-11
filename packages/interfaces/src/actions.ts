@@ -47,24 +47,24 @@ export type Action = {
  * object keys and with special handling for NaN, -0, and +/- Infinity.
  */
 export function serializeActionPayload(payload: ActionPayload): string {
-  if (payload === undefined || payload === null) return ''
+	if (payload === undefined || payload === null) return ""
 	const argKeys = Object.keys(payload.args || []).sort()
 	const serializedArgEntries = argKeys.map(
-		(key) => `\n    ${JSON.stringify(key)}: ${serializeActionArgument(payload.args[key])}`
+		(key) => `${JSON.stringify(key)}:${serializeActionArgument(payload.args[key])}`
 	)
 
-	const serializedArgs = serializedArgEntries.length === 0 ? "{}" : `{${serializedArgEntries.join(",")}\n  }`
+	const serializedArgs = serializedArgEntries.length === 0 ? "{}" : `{${serializedArgEntries.join(",")}}`
 
 	const payloadEntries = Object.entries(payload).sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
 	const serializedPayloadEntries = payloadEntries.map(([key, value]) => {
 		if (key === "args") {
-			return `\n  ${JSON.stringify(key)}: ${serializedArgs}`
+			return `${JSON.stringify(key)}:${serializedArgs}`
 		} else {
-			return `\n  ${JSON.stringify(key)}: ${JSON.stringify(value)}`
+			return `${JSON.stringify(key)}:${JSON.stringify(value)}`
 		}
 	})
 
-	return `{${serializedPayloadEntries.join(",")}\n}`
+	return `{${serializedPayloadEntries.join(",")}}`
 }
 
 // JSON.stringify has lossy behavior on the number values +/-Infinity, NaN, and -0.
