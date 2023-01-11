@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-app-store",
-  "version": "0.0.44",
+  "version": "0.0.45",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -10,8 +10,8 @@
     "dev": "concurrently --kill-others \"webpack server\" \"canvas run ./flappy.jsx --unchecked --port=8000\" \"canvas run ./chat.jsx --unchecked --port=8001\""
   },
   "dependencies": {
-    "@canvas-js/cli": "0.0.44",
-    "@canvas-js/hooks": "0.0.44",
+    "@canvas-js/cli": "0.0.45",
+    "@canvas-js/hooks": "0.0.45",
     "@types/react": "^18.0.26",
     "@types/react-dom": "^18.0.10",
     "concurrently": "^7.6.0",
