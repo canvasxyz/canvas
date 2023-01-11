@@ -77,13 +77,22 @@ export class VM {
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
-		const { code: transpiledSpec } = transform(spec, {
-			transforms: ["jsx"],
-			jsxPragma: "React.createElement",
-			jsxFragmentPragma: "React.Fragment",
-			disableESTransforms: true,
-			production: true,
-		})
+		let transpiledSpec: string
+		try {
+			transpiledSpec = transform(spec, {
+				transforms: ["jsx"],
+				jsxPragma: "React.createElement",
+				jsxFragmentPragma: "React.Fragment",
+				disableESTransforms: true,
+				production: true,
+			}).code
+		} catch (e: any) {
+			return {
+				valid: false,
+				errors: [e.message],
+				warnings: [],
+			}
+		}
 
 		const moduleHandle = await loadModule(context, uri, transpiledSpec)
 		const { validation, warnings } = validateCanvasSpec(context, moduleHandle, providers ?? {}, options)
@@ -92,7 +101,7 @@ export class VM {
 			return {
 				valid: false,
 				// use flatMap to remove null values
-				errors: validation.left.flatMap((err) => (err.message ? [err.message] : [])),
+				errors: validation.left.flatMap((err) => (err && err.message ? [err.message] : [])),
 				warnings,
 			}
 		} else {
