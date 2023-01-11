@@ -170,20 +170,38 @@ function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
 	let errors: t.ValidationError[] = []
 	let success = true
 
-	if (!id) {
+	if (id) {
+		if (id !== "string") {
+			errors.push({
+				value: i,
+				context,
+				message: `Model${modelNameInsert} is invalid: 'id' field should be 'string', but is the wrong type ${id}`,
+			})
+		}
+	} else {
 		errors.push({
 			value: i,
 			context,
 			message: `Model${modelNameInsert} is invalid: there is no 'id' field`,
 		})
+		success = false
 	}
 
-	if (!updated_at) {
+	if (updated_at) {
+		if (updated_at !== "datetime") {
+			errors.push({
+				value: i,
+				context,
+				message: `Model${modelNameInsert} is invalid: 'updated_at' field should be 'datetime', but is the wrong type ${updated_at}`,
+			})
+		}
+	} else {
 		errors.push({
 			value: i,
 			context,
 			message: `Model${modelNameInsert} is invalid: there is no 'updated_at' field`,
 		})
+		success = false
 	}
 
 	if (indexes) {

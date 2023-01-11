@@ -181,6 +181,26 @@ const VALIDATION_TEST_FIXTURES = [
 			warnings: [],
 		},
 	},
+	{
+		name: "reject model where id and updated_at are wrong type",
+		spec: `
+      export const models = {
+        thing: {
+          id: "number",
+          updated_at: "number",
+        }
+      }
+      export const actions = {}
+    `,
+		expectedResult: {
+			valid: false,
+			errors: [
+				"Model 'thing' is invalid: 'id' field should be 'string', but is the wrong type number",
+				"Model 'thing' is invalid: 'updated_at' field should be 'datetime', but is the wrong type number",
+			],
+			warnings: [],
+		},
+	},
 ]
 
 for (const { name, spec, expectedResult } of VALIDATION_TEST_FIXTURES) {
