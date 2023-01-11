@@ -133,18 +133,19 @@ function decodeSingleIndex(i: unknown, context: t.Context): t.Validation<string 
 		return t.failure(i, context, `Index is invalid: ${i} is not a string or a list of strings`)
 	}
 
+	let errors: t.ValidationError[] = []
 	// check is not id or updated_at
 	for (const index of indices) {
 		if (index == "id") {
-			return t.failure(i, context, `Index is invalid: "id" is already an index by default`)
+			errors.push({ value: i, context, message: `Index is invalid: "id" is already an index by default` })
 		}
 
 		if (index == "updated_at") {
-			return t.failure(i, context, `Index is invalid: "updated_at" is already an index by default`)
+			errors.push({ value: i, context, message: `Index is invalid: "updated_at" is already an index by default` })
 		}
 	}
 
-	return t.success(i)
+	return errors ? t.failures(errors) : t.success(i)
 }
 
 const singleIndexType = new t.Type<string | string[]>(

@@ -87,7 +87,7 @@ const VALIDATION_TEST_FIXTURES = [
 		},
 	},
 	{
-		name: "reject model with id index",
+		name: "reject model with 'id' index",
 		spec: `
       export const models = {
         thing: {indexes: ["id"]}
@@ -111,6 +111,23 @@ const VALIDATION_TEST_FIXTURES = [
 		expectedResult: {
 			valid: false,
 			errors: ['Index is invalid: "updated_at" is already an index by default'],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject model with 'id' and 'updated_at' index",
+		spec: `
+        export const models = {
+          thing: {indexes: ["id", "updated_at"]}
+        }
+        export const actions = {}
+      `,
+		expectedResult: {
+			valid: false,
+			errors: [
+				'Index is invalid: "id" is already an index by default',
+				'Index is invalid: "updated_at" is already an index by default',
+			],
 			warnings: [],
 		},
 	},
