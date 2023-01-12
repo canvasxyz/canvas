@@ -454,12 +454,10 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 ]
 
-const { ETH_CHAIN_ID, ETH_CHAIN_RPC } = process.env
-
 for (const { name, spec, expectedResult } of VALIDATION_TEST_FIXTURES) {
 	test(name, async (t) => {
-		const provider = new EthereumBlockProvider(ETH_CHAIN_ID!, ETH_CHAIN_RPC!)
-		const providers = { [`eth:${ETH_CHAIN_ID}`]: provider }
+		const provider = new EthereumBlockProvider("1", "dummy_website")
+		const providers = { [`eth:1`]: provider }
 
 		const result = await VM.validateWithoutCreating({
 			uri: "...",
