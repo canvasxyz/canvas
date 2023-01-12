@@ -89,7 +89,7 @@ export class VM {
 		} catch (e: any) {
 			return {
 				valid: false,
-				errors: [e.message],
+				errors: [`Syntax error: ${e.message}`],
 				warnings: [],
 			}
 		}

@@ -33,6 +33,11 @@ const VALIDATION_TEST_FIXTURES: {
 		expectedResult: errors(["Spec is missing `models` export", "Spec is missing `actions` export"]),
 	},
 	{
+		name: "reject a syntactically invalid spec",
+		spec: "SAD!@$£WTEGJSWO£W$",
+		expectedResult: errors(['Syntax error: Unexpected token, expected ";" (1:4)']),
+	},
+	{
 		name: "accept a minimal spec",
 		spec: `
       export const models = {};
