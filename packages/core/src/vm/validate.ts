@@ -49,14 +49,6 @@ function validateModels(
 		const { indexes, ...properties } = model
 		if (indexes !== undefined) {
 			for (const index of indexes) {
-				// Can this check be done inside io-ts?
-				if (index == "id") {
-					errors.push({
-						value: model,
-						context: [],
-						message: `"id" index is redundant`,
-					})
-				}
 				const indexProperties = Array.isArray(index) ? index : [index]
 				for (const property of indexProperties) {
 					// TODO: check that index refers to an existing field on another model
