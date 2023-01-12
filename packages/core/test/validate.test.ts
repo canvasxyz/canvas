@@ -452,6 +452,72 @@ const VALIDATION_TEST_FIXTURES: {
 			warnings: [],
 		},
 	},
+	{
+		name: "accept empty sources",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const sources = {
+
+      }
+    `,
+		expectedResult: {
+			valid: true,
+			errors: [],
+			warnings: [],
+		},
+	},
+	{
+		name: "accept a valid source",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const sources = {
+        "ipfs://abcdefhijklmnop": {
+          doSourceThing: () => {}
+        }
+      }
+    `,
+		expectedResult: {
+			valid: true,
+			errors: [],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject source with invalid name",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const sources = {
+        "something.py": {}
+      }
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ["Source something.py is invalid: the keys must be ipfs:// URIs"],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject a valid source with invalid values",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const sources = {
+        "ipfs://abcdefhijklmnop": {
+          doSourceThing: 100
+        }
+      }
+    `,
+		expectedResult: {
+			valid: false,
+			errors: [
+				`sources["ipfs://abcdefhijklmnop"].doSourceThing is invalid: sources["ipfs://abcdefhijklmnop"].doSourceThing is not a function`,
+			],
+			warnings: [],
+		},
+	},
 ]
 
 for (const { name, spec, expectedResult } of VALIDATION_TEST_FIXTURES) {
