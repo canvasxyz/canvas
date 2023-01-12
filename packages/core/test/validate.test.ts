@@ -31,6 +31,21 @@ const VALIDATION_TEST_FIXTURES: {
 		},
 	},
 	{
+		name: "accept a spec with empty optional exports",
+		spec: `
+		  export const models = {};
+			export const actions = {};
+			export const contracts = {};
+			export const routes = {};
+			export const sources = {};
+		`,
+		expectedResult: {
+			valid: true,
+			errors: [],
+			warnings: [],
+		},
+	},
+	{
 		name: "accept a spec with extraneous exports, with warning",
 		spec: `
       export const models = {};
@@ -301,21 +316,6 @@ const VALIDATION_TEST_FIXTURES: {
 		},
 	},
 	{
-		name: "accept valid (empty) contracts",
-		spec: `
-      export const models = {};
-      export const actions = {};
-      export const contracts = {
-
-      };
-    `,
-		expectedResult: {
-			valid: true,
-			errors: [],
-			warnings: [],
-		},
-	},
-	{
 		name: "reject contracts not defined as an object",
 		spec: `
       export const models = {};
@@ -365,19 +365,6 @@ const VALIDATION_TEST_FIXTURES: {
 		expectedResult: {
 			valid: false,
 			errors: ["Contract milady is invalid: spec requires an RPC endpoint for eth:5"],
-			warnings: [],
-		},
-	},
-	{
-		name: "accept valid empty routes",
-		spec: `
-      export const models = {};
-      export const actions = {};
-      export const routes = {};
-    `,
-		expectedResult: {
-			valid: true,
-			errors: [],
 			warnings: [],
 		},
 	},
@@ -449,21 +436,6 @@ const VALIDATION_TEST_FIXTURES: {
 		expectedResult: {
 			valid: false,
 			errors: ["`component` export must be a function"],
-			warnings: [],
-		},
-	},
-	{
-		name: "accept empty sources",
-		spec: `
-      export const models = {};
-      export const actions = {};
-      export const sources = {
-
-      }
-    `,
-		expectedResult: {
-			valid: true,
-			errors: [],
 			warnings: [],
 		},
 	},
