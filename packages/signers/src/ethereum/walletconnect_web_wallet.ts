@@ -102,7 +102,7 @@ class WalletConnectWebWalletSessionSigner implements SessionSigner {
 	}
 
 	async getChainId(): Promise<ChainId> {
-		return this.chainId
+		return this.chainId.toString()
 	}
 
 	async getRecentBlock(): Promise<Block> {

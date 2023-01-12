@@ -18,7 +18,7 @@ test("Sign an action for ethereum", async (t) => {
 		timestamp: 123456789,
 		blockhash: "0x123456789",
 		chain: "eth",
-		chainId: 1,
+		chainId: "1",
 	}
 
 	const action = await signer.signActionPayload(payload)

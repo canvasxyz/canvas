@@ -1,4 +1,4 @@
-import type { Chain, ChainId } from "./contracts.js"
+import type { Chain } from "./contracts.js"
 
 /**
  * An `ActionArgument` is type-level representation of concrete action argument
@@ -22,7 +22,7 @@ export type ActionContext = {
 	spec: string
 	timestamp: number
 	chain: Chain
-	chainId: ChainId
+	chainId: string
 	blockhash: string | null
 }
 
@@ -53,8 +53,8 @@ export function serializeActionPayload(payload: ActionPayload): string {
 	// args is the only parameter of payload that needs sorting
 	return JSON.stringify(
 		{
-			args: { toJSON: () => JSON.stringify(payload.args, Object.keys(payload.args).sort()) },
 			...payload,
+			args: { toJSON: () => JSON.stringify(payload.args, Object.keys(payload.args).sort()) },
 		},
 		Object.keys(payload).sort()
 	)

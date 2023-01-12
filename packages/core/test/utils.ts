@@ -15,7 +15,7 @@ export class TestSigner {
 			args,
 			timestamp: Date.now(),
 			chain: "eth",
-			chainId: 1,
+			chainId: "1",
 			blockhash: null,
 		}
 
@@ -42,7 +42,7 @@ export class TestSessionSigner {
 			spec: this.signer.uri,
 			timestamp: Date.now(),
 			chain: "eth",
-			chainId: 1,
+			chainId: "1",
 			blockhash: null,
 		}
 
@@ -64,7 +64,7 @@ export class TestSessionSigner {
 			args,
 			timestamp: Date.now(),
 			chain: "eth",
-			chainId: 1,
+			chainId: "1",
 			blockhash: null,
 		}
 

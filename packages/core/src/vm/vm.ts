@@ -197,14 +197,14 @@ export class VM {
 				assertPattern(name, contractNamePattern, "invalid contract name")
 				const contract = contractHandle.consume((handle) => unwrapObject(context, handle))
 				const chain = contract.chain.consume(context.getString)
-				const chainId = contract.chainId.consume(context.getNumber)
+				const chainId = contract.chainId.consume(context.getString)
 				const address = contract.address.consume(context.getString)
 				const abi = contract.abi
 					.consume((handle) => unwrapArray(context, handle))
 					.map((item) => item.consume(context.getString))
 
-				assert(chainType.is(chain), "invalid chain")
-				assert(chainIdType.is(chainId), "invalid chain id")
+				assert(chainType.is(chain), `invalid chain: ${chain}`)
+				assert(chainIdType.is(chainId), `invalid chain id: ${chainId}`)
 
 				this.contractMetadata[name] = { chain, chainId, address, abi }
 

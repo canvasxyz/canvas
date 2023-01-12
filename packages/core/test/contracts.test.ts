@@ -30,7 +30,7 @@ test("contracts (milady balanceOf)", async (t) => {
 		contracts: {
 			milady: {
 				chain: "eth",
-				chainId: 1,
+				chainId: "1",
 				address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
 				abi: ["function balanceOf(address owner) view returns (uint balance)"],
 			},

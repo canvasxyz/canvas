@@ -92,7 +92,7 @@ export class MetaMaskEthereumSigner implements SessionSigner {
 	}
 
 	async getChainId(): Promise<ChainId> {
-		return this.network.chainId
+		return this.network.chainId.toString()
 	}
 
 	async createActionSigner(sessionPrivateKey?: string): Promise<EthereumActionSigner> {

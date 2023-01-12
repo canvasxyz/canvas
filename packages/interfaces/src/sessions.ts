@@ -1,4 +1,4 @@
-import { Chain, ChainId } from "./contracts.js"
+import { Chain } from "./contracts.js"
 
 /**
  * A `SessionPayload` is the data signed by the user to initiate a session.
@@ -14,7 +14,7 @@ export type SessionPayload = {
 	address: string
 	duration: number
 	chain: Chain
-	chainId: ChainId
+	chainId: string
 	blockhash: string | null
 }
 
