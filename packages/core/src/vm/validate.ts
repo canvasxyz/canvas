@@ -239,7 +239,7 @@ function validateRoutes(
 		routeHandles = routesHandle.consume((handle) => unwrapObject(context, handle))
 
 		const routeNamePattern = /^(\/:?[a-z_]+)+$/
-		const routeParameterPattern = /:([a-zA-Z0-9_]+)/g
+		const routeParameterPattern = /:([a-z_]+)/g
 
 		for (const [name, handle] of Object.entries(routeHandles)) {
 			if (!routeNamePattern.test(name)) {
