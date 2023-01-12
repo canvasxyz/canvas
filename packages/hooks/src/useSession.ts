@@ -113,7 +113,7 @@ export function useSession(signer: SessionSigner | null): {
 			const payload: SessionPayload = {
 				from: signerAddress,
 				spec: data.uri,
-				address: await actionSigner.address,
+				address: actionSigner.address,
 				duration: sessionDuration,
 				timestamp,
 				blockhash: block.blockhash,
@@ -121,7 +121,7 @@ export function useSession(signer: SessionSigner | null): {
 				chainId: block.chainId,
 			}
 
-			const session: Session = await signer.signSessionPayload(payload)
+			const session = await signer.signSessionPayload(payload)
 
 			const res = await fetch(urlJoin(host, "sessions"), {
 				method: "POST",

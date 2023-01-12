@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/core",
-  "version": "0.0.40",
+  "version": "0.0.45",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "types": "./lib/index.d.ts",
@@ -20,8 +20,8 @@
     "test": "ava"
   },
   "dependencies": {
-    "@canvas-js/interfaces": "0.0.40",
-    "@canvas-js/verifiers": "0.0.40",
+    "@canvas-js/interfaces": "0.0.45",
+    "@canvas-js/verifiers": "0.0.45",
     "@chainsafe/libp2p-gossipsub": "^5.4.1",
     "@chainsafe/libp2p-noise": "^10.2.0",
     "@libp2p/bootstrap": "^5.0.2",
@@ -38,6 +38,7 @@
     "@multiformats/multiaddr": "^11.1.4",
     "@polkadot/util-crypto": "^10.2.1",
     "@types/better-sqlite3": "^7.6.3",
+    "any-signal": "^3.0.1",
     "bech32": "^2.0.0",
     "better-sqlite3": "^8.0.1",
     "chalk": "^5.2.0",
@@ -58,6 +59,7 @@
     "protobufjs": "~7.1.2",
     "quickjs-emscripten": "^0.21.1",
     "sucrase": "^3.29.0",
+    "timeout-abort-controller": "^3.0.0",
     "typedarray-to-buffer": "^4.0.0",
     "uint8arraylist": "^2.4.3",
     "undici": "^5.14.0",

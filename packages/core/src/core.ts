@@ -1,7 +1,6 @@
 import assert from "node:assert"
 import path from "node:path"
 
-import chalk from "chalk"
 import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
@@ -33,6 +32,7 @@ import { ModelStore } from "./modelStore.js"
 import * as constants from "./constants.js"
 import { getLibp2pInit } from "./libp2p.js"
 import { Source } from "./source.js"
+import { metrics } from "./metrics.js"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
@@ -246,6 +246,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			this.messageStore.insertAction(hash, message)
 			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
+
+			metrics.canvas_messages.inc({ type: "action", uri: action.payload.spec }, 1)
 		} else if (message.type === "session") {
 			const session = fromBinarySession(message)
 
@@ -256,6 +258,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			await this.validateSession(session)
 			this.messageStore.insertSession(hash, message)
 			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
+			metrics.canvas_messages.inc({ type: "session", uri: session.payload.spec }, 1)
 		} else {
 			signalInvalidType(message)
 		}

@@ -14,9 +14,20 @@ import expressWinston from "express-winston"
 import stoppable from "stoppable"
 import Hash from "ipfs-only-hash"
 import PQueue from "p-queue"
-import { ethers } from "ethers"
-import { BlockCache, Core, getLibp2pInit, constants, BlockResolver, getAPI, CoreOptions, VM } from "@canvas-js/core"
 
+import client from "prom-client"
+
+import {
+	BlockCache,
+	Core,
+	getLibp2pInit,
+	constants,
+	BlockResolver,
+	getAPI,
+	CoreOptions,
+	startPingService,
+	VM,
+} from "@canvas-js/core"
 import { BlockProvider, Model } from "@canvas-js/interfaces"
 
 import { CANVAS_HOME, SOCKET_FILENAME, SOCKET_PATH, getPeerId, getProviders, installSpec } from "../utils.js"
@@ -84,6 +95,8 @@ export async function handler(args: Args) {
 		}
 	}
 
+	const controller = new AbortController()
+
 	let libp2p: Libp2p | undefined = undefined
 	if (!args.offline) {
 		const peerId = await getPeerId()
@@ -95,7 +108,7 @@ export async function handler(args: Args) {
 			libp2p = await createLibp2p(getLibp2pInit(peerId, args.listen))
 		}
 
-		await libp2p.start()
+		startPingService(libp2p, controller, { verbose: args.verbose })
 	}
 
 	const blockCache = new BlockCache(providers)
@@ -104,9 +117,9 @@ export async function handler(args: Args) {
 		offline: args.offline,
 		unchecked: args.unchecked,
 		verbose: args.verbose,
+		exposeMetrics: args.metrics,
 	})
 
-	const controller = new AbortController()
 	controller.signal.addEventListener("abort", async () => {
 		await daemon.close()
 		if (libp2p !== undefined) {
@@ -156,16 +169,14 @@ class Daemon {
 	public readonly app = express()
 
 	private readonly queue = new PQueue({ concurrency: 1 })
-	private readonly options: CoreOptions
 	private readonly apps = new Map<string, { core: Core; api: express.Express }>()
 
 	constructor(
 		libp2p: Libp2p | undefined,
 		providers: Record<string, BlockProvider>,
 		blockResolver: BlockResolver,
-		options: CoreOptions
+		private readonly options: CoreOptions & { exposeMetrics?: boolean }
 	) {
-		this.options = options
 		this.app.use(express.json())
 		this.app.use(express.text())
 		this.app.use(cors())
@@ -310,7 +321,7 @@ class Daemon {
 						exposeModels: true,
 						exposeActions: true,
 						exposeSessions: true,
-						exposeMetrics: true,
+						exposeMetrics: false,
 					})
 
 					this.apps.set(name, { core, api })
@@ -381,6 +392,18 @@ class Daemon {
 				}
 			})
 		})
+
+		if (this.options.exposeMetrics) {
+			this.app.get("/metrics", async (req, res) => {
+				try {
+					const result = await client.register.metrics()
+					res.header("Content-Type", client.register.contentType)
+					return res.end(result)
+				} catch (err: any) {
+					return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+				}
+			})
+		}
 	}
 
 	public async close() {

@@ -26,3 +26,13 @@ export type Session = {
 	payload: SessionPayload
 	signature: string
 }
+
+/**
+ * Serialize an SessionPayload into a string suitable for signing on non-ETH chains.
+ * The format is equivalent to JSON.stringify(payload, null, "  ") but with sorted
+ * object keys.
+ */
+export function serializeSessionPayload(payload: SessionPayload): string {
+	const keys = Object.keys(payload).sort()
+	return JSON.stringify(payload, keys, "  ")
+}
