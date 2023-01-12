@@ -97,8 +97,8 @@ const VALIDATION_TEST_FIXTURES: {
         thing: {
           id: "string",
           updated_at: "datetime",
-          // something: "string",
-          indexes: []
+          something: "string",
+          indexes: ["something"]
         }
       }
       export const actions = {}
@@ -181,6 +181,24 @@ const VALIDATION_TEST_FIXTURES: {
 				'Index is invalid: "id" is already an index by default',
 				'Index is invalid: "updated_at" is already an index by default',
 			],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject model with index for field that doesn't exist",
+		spec: `
+      export const models = {
+        thing: {
+          id: "string",
+          updated_at: "datetime",
+          indexes: ["whatever"]
+        }
+      }
+      export const actions = {}
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ['Index is invalid: "whatever" is not a field on model "thing"'],
 			warnings: [],
 		},
 	},

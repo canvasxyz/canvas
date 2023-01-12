@@ -64,7 +64,7 @@ function validateModels(
 						errors.push({
 							value: property,
 							context: [],
-							message: `Model ${name} specified an invalid index "${property}": can only index on other model properties`,
+							message: `Index is invalid: "${property}" is not a field on model "${name}"`,
 						})
 					}
 				}
