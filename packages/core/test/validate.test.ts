@@ -146,45 +146,6 @@ const VALIDATION_TEST_FIXTURES: {
 		},
 	},
 	{
-		name: "reject model with 'updated_at' index",
-		spec: `
-      export const models = {
-        thing: {
-          id: "string",
-          updated_at: "datetime",
-          indexes: ["updated_at"]
-        }
-      }
-      export const actions = {}
-    `,
-		expectedResult: {
-			valid: false,
-			errors: ['Index is invalid: "updated_at" is already an index by default'],
-			warnings: [],
-		},
-	},
-	{
-		name: "reject model with 'id' and 'updated_at' index",
-		spec: `
-      export const models = {
-        thing: {
-          id: "string",
-          updated_at: "datetime",
-          indexes: ["id", "updated_at"]
-        }
-      }
-      export const actions = {}
-    `,
-		expectedResult: {
-			valid: false,
-			errors: [
-				'Index is invalid: "id" is already an index by default',
-				'Index is invalid: "updated_at" is already an index by default',
-			],
-			warnings: [],
-		},
-	},
-	{
 		name: "reject model with index for field that doesn't exist",
 		spec: `
       export const models = {

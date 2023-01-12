@@ -129,14 +129,10 @@ function decodeSingleIndex(i: unknown, context: t.Context): t.Validation<string 
 	}
 
 	let errors: t.ValidationError[] = []
-	// check is not id or updated_at
+	// check is not id
 	for (const index of indices) {
 		if (index == "id") {
 			errors.push({ value: i, context, message: `Index is invalid: "id" is already an index by default` })
-		}
-
-		if (index == "updated_at") {
-			errors.push({ value: i, context, message: `Index is invalid: "updated_at" is already an index by default` })
 		}
 	}
 
