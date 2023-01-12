@@ -368,6 +368,62 @@ const VALIDATION_TEST_FIXTURES: {
 			warnings: [],
 		},
 	},
+	{
+		name: "accept valid empty routes",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const routes = {};
+    `,
+		expectedResult: {
+			valid: true,
+			errors: [],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject routes if not object",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const routes = 123456;
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ["`routes` export must be an object"],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject routes with invalid name",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const routes = {
+        _Invalid: () => {}
+      };
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ["Route _Invalid is invalid: the name must match the regex /^(\\/:?[a-z_]+)+$/"],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject routes that are not functions",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const routes = {
+        "/valid_route": 123
+      };
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ["Route /valid_route is invalid: the route must be a function"],
+			warnings: [],
+		},
+	},
 ]
 
 const { ETH_CHAIN_ID, ETH_CHAIN_RPC } = process.env
