@@ -3,7 +3,7 @@
  */
 export type Chain = "eth" | "cosmos" | "solana" | "substrate" | "near"
 
-export type ChainId = number | string
+export type ChainId = string
 
 /**
  * A `ContractMetadata` defines the metadata for a contract read by a
@@ -11,11 +11,13 @@ export type ChainId = number | string
  * refer to contracts on many different chains and chain architectures.
  *
  * By default we support Ethereum-based chains with chain = `eth`,
- * a numerical chainId, and an ethers.js-style human readable ABI.
+ * and an ethers.js-style human readable ABI.
+ *
+ * Note that `chainId` must be a string.
  */
 export type ContractMetadata = {
 	chain: Chain
-	chainId: ChainId
+	chainId: string
 	address: string
 	abi: string[]
 }

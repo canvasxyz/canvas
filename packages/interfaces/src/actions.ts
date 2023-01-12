@@ -1,4 +1,4 @@
-import type { Chain, ChainId } from "./contracts.js"
+import type { Chain } from "./contracts.js"
 
 /**
  * An `ActionArgument` is type-level representation of concrete action argument
@@ -22,7 +22,7 @@ export type ActionContext = {
 	spec: string
 	timestamp: number
 	chain: Chain
-	chainId: ChainId
+	chainId: string
 	blockhash: string | null
 }
 
@@ -43,45 +43,23 @@ export type Action = {
 
 /**
  * Serialize an ActionPayload into a string suitable for signing on non-ETH chains.
- * The format is equivalent to JSON.stringify(payload, null, "  "), but with sorted
- * object keys and with special handling for NaN, -0, and +/- Infinity.
+ * The format is equivalent to JSON.stringify() with sorted object keys.
+ *
+ * -0 is serialized as 0, and NaN, Infinity, -Infinity are serialized as null.
  */
 export function serializeActionPayload(payload: ActionPayload): string {
-  if (payload === undefined || payload === null) return ''
-	const argKeys = Object.keys(payload.args || []).sort()
-	const serializedArgEntries = argKeys.map(
-		(key) => `\n    ${JSON.stringify(key)}: ${serializeActionArgument(payload.args[key])}`
+	if (payload === undefined || payload === null) return ""
+
+	// args is the only parameter of payload that needs sorting
+	return JSON.stringify(
+		{
+			...payload,
+			args: { toJSON: () => JSON.stringify(payload.args, Object.keys(payload.args).sort()) },
+		},
+		Object.keys(payload).sort()
 	)
-
-	const serializedArgs = serializedArgEntries.length === 0 ? "{}" : `{${serializedArgEntries.join(",")}\n  }`
-
-	const payloadEntries = Object.entries(payload).sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
-	const serializedPayloadEntries = payloadEntries.map(([key, value]) => {
-		if (key === "args") {
-			return `\n  ${JSON.stringify(key)}: ${serializedArgs}`
-		} else {
-			return `\n  ${JSON.stringify(key)}: ${JSON.stringify(value)}`
-		}
-	})
-
-	return `{${serializedPayloadEntries.join(",")}\n}`
 }
 
-// JSON.stringify has lossy behavior on the number values +/-Infinity, NaN, and -0.
-// We never actually parse these serialized arguments anywhere - the only purpose here
-// is to map them injectively to strings for signing.
 export function serializeActionArgument(arg: ActionArgument): string {
-	if (typeof arg === "number") {
-		if (isNaN(arg)) {
-			return "NaN"
-		} else if (Object.is(arg, -0)) {
-			return "-0.0"
-		} else if (arg === Infinity) {
-			return "+Infinity"
-		} else if (arg === -Infinity) {
-			return "-Infinity"
-		}
-	}
-
 	return JSON.stringify(arg)
 }

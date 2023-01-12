@@ -5,7 +5,7 @@ import { Block, BlockProvider, Chain, ChainId } from "@canvas-js/interfaces"
 export const ethersBlockToCanvasBlock = (chainId: ChainId, ethBlock: ethers.providers.Block): Block => {
 	return {
 		chain: "eth",
-		chainId,
+		chainId: chainId.toString(),
 		blocknum: ethBlock.number,
 		blockhash: ethBlock.hash,
 		timestamp: ethBlock.timestamp,

@@ -286,7 +286,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(binarySession !== null, "session not found")
 			const session = fromBinarySession(binarySession)
 			assert(session.payload.chain === action.payload.chain, "session and action chains must match")
-			assert(session.payload.chainId === action.payload.chainId, "session and action chain IDs must match")
+			assert(session.payload.chainId === action.payload.chainId, `session and action chain IDs must match`)
 			assert(session.payload.timestamp + session.payload.duration > timestamp, "session expired")
 			assert(session.payload.timestamp <= timestamp, "session timestamp must precede action timestamp")
 

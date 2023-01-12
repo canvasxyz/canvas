@@ -1,4 +1,4 @@
-import { Chain, ChainId } from "./contracts.js"
+import { Chain } from "./contracts.js"
 
 /**
  * A `SessionPayload` is the data signed by the user to initiate a session.
@@ -14,7 +14,7 @@ export type SessionPayload = {
 	address: string
 	duration: number
 	chain: Chain
-	chainId: ChainId
+	chainId: string
 	blockhash: string | null
 }
 
@@ -29,10 +29,8 @@ export type Session = {
 
 /**
  * Serialize an SessionPayload into a string suitable for signing on non-ETH chains.
- * The format is equivalent to JSON.stringify(payload, null, "  ") but with sorted
- * object keys.
+ * The format is equivalent to JSON.stringify() with sorted object keys.
  */
 export function serializeSessionPayload(payload: SessionPayload): string {
-	const keys = Object.keys(payload).sort()
-	return JSON.stringify(payload, keys, "  ")
+	return JSON.stringify(payload, Object.keys(payload).sort())
 }

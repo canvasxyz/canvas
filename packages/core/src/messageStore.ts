@@ -239,7 +239,7 @@ export class MessageStore {
     call            TEXT    NOT NULL,
     args            BLOB    NOT NULL,
 		chain           TEXT    NOT NULL,
-    chain_id        INTEGER NOT NULL,
+    chain_id        TEXT    NOT NULL,
     blockhash       BLOB,
 		source          BLOB
   );`
@@ -253,7 +253,7 @@ export class MessageStore {
     duration        INTEGER NOT NULL,
     timestamp       INTEGER NOT NULL,
 		chain           TEXT    NOT NULL,
-    chain_id        INTEGER NOT NULL,
+    chain_id        TEXT    NOT NULL,
     blockhash       BLOB,
 		source          BLOB
   );`
