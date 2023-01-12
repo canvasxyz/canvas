@@ -2,6 +2,7 @@
 
 import test from "ava"
 import { VM } from "@canvas-js/core"
+import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
 const VALIDATION_TEST_FIXTURES: {
 	name: string
@@ -299,13 +300,67 @@ const VALIDATION_TEST_FIXTURES: {
 			warnings: [],
 		},
 	},
+	{
+		name: "accept valid (empty) contracts",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const contracts = {
+
+      };
+    `,
+		expectedResult: {
+			valid: true,
+			errors: [],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject contracts not defined as an object",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const contracts = 123456;
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ["`contracts` export must be an object"],
+			warnings: [],
+		},
+	},
+	{
+		name: "accept valid contract",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const contracts = {
+        milady: {
+          chain: "eth",
+          chainId: 1,
+          address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
+          abi: ["function balanceOf(address owner) view returns (uint balance)"],
+        },
+      };
+    `,
+		expectedResult: {
+			valid: true,
+			errors: [],
+			warnings: [],
+		},
+	},
 ]
+
+const { ETH_CHAIN_ID, ETH_CHAIN_RPC } = process.env
 
 for (const { name, spec, expectedResult } of VALIDATION_TEST_FIXTURES) {
 	test(name, async (t) => {
+		const provider = new EthereumBlockProvider(ETH_CHAIN_ID!, ETH_CHAIN_RPC!)
+		const providers = { [`eth:${ETH_CHAIN_ID}`]: provider }
+
 		const result = await VM.validateWithoutCreating({
 			uri: "...",
 			spec: spec,
+			providers,
 		})
 		t.deepEqual(result, expectedResult)
 	})
