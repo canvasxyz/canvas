@@ -3,7 +3,11 @@
 import test from "ava"
 import { VM } from "@canvas-js/core"
 
-const VALIDATION_TEST_FIXTURES = [
+const VALIDATION_TEST_FIXTURES: {
+	name: string
+	spec: string
+	expectedResult: Awaited<ReturnType<typeof VM.validateWithoutCreating>>
+}[] = [
 	{
 		name: "reject a blank spec",
 		spec: "",
@@ -234,6 +238,64 @@ const VALIDATION_TEST_FIXTURES = [
 		expectedResult: {
 			valid: false,
 			errors: ["Model property _Hello is invalid: model properties must match /^[a-z][a-z_]*$/"],
+			warnings: [],
+		},
+	},
+	{
+		name: "accept valid action",
+		spec: `
+      export const models = {};
+      export const actions = {
+        doThing({}, {}) {
+
+        }
+      }
+    `,
+		expectedResult: {
+			valid: true,
+			errors: [],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject actions not defined as an object",
+		spec: `
+      export const models = {};
+      export const actions = "not an object";
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ["`actions` export must be an object"],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject action with invalid name",
+		spec: `
+      export const models = {};
+      export const actions = {
+        _doThing({}, {}) {
+
+        }
+      }
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ["_doThing is invalid: action names must match /^[a-zA-Z]+$/"],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject action not defined as a function",
+		spec: `
+      export const models = {};
+      export const actions = {
+        doThing: 1234
+      }
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ["Action doThing is invalid: actions.doThing is not a function"],
 			warnings: [],
 		},
 	},
