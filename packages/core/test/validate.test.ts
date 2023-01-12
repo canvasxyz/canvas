@@ -424,6 +424,34 @@ const VALIDATION_TEST_FIXTURES: {
 			warnings: [],
 		},
 	},
+	{
+		name: "accept component",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const component = ({ react: { useRef, useState }, useRoute, dispatch }) => {
+        return <div></div>
+      };
+    `,
+		expectedResult: {
+			valid: true,
+			errors: [],
+			warnings: [],
+		},
+	},
+	{
+		name: "reject component if it is not a function",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const component = {};
+    `,
+		expectedResult: {
+			valid: false,
+			errors: ["`component` export must be a function"],
+			warnings: [],
+		},
+	},
 ]
 
 const { ETH_CHAIN_ID, ETH_CHAIN_RPC } = process.env
