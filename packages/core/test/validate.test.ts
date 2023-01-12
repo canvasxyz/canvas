@@ -4,6 +4,24 @@ import test from "ava"
 import { VM } from "@canvas-js/core"
 import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
+const success = {
+	valid: true,
+	errors: [],
+	warnings: [],
+}
+
+const errors = (e: any) => ({
+	valid: false,
+	errors: e,
+	warnings: [],
+})
+
+const warnings = (w: any) => ({
+	valid: true,
+	errors: [],
+	warnings: w,
+})
+
 const VALIDATION_TEST_FIXTURES: {
 	name: string
 	spec: string
@@ -12,11 +30,7 @@ const VALIDATION_TEST_FIXTURES: {
 	{
 		name: "reject a blank spec",
 		spec: "",
-		expectedResult: {
-			valid: false,
-			errors: ["Spec is missing `models` export", "Spec is missing `actions` export"],
-			warnings: [],
-		},
+		expectedResult: errors(["Spec is missing `models` export", "Spec is missing `actions` export"]),
 	},
 	{
 		name: "accept a minimal spec",
@@ -24,11 +38,7 @@ const VALIDATION_TEST_FIXTURES: {
       export const models = {};
       export const actions = {};
     `,
-		expectedResult: {
-			valid: true,
-			errors: [],
-			warnings: [],
-		},
+		expectedResult: success,
 	},
 	{
 		name: "accept a spec with empty optional exports",
@@ -39,11 +49,7 @@ const VALIDATION_TEST_FIXTURES: {
 			export const routes = {};
 			export const sources = {};
 		`,
-		expectedResult: {
-			valid: true,
-			errors: [],
-			warnings: [],
-		},
+		expectedResult: success,
 	},
 	{
 		name: "accept a spec with extraneous exports, with warning",
@@ -53,11 +59,7 @@ const VALIDATION_TEST_FIXTURES: {
       export const foobar = {};
       export const whatever = {};
     `,
-		expectedResult: {
-			valid: true,
-			errors: [],
-			warnings: ['Warning: extraneous export "foobar"', 'Warning: extraneous export "whatever"'],
-		},
+		expectedResult: warnings(['Warning: extraneous export "foobar"', 'Warning: extraneous export "whatever"']),
 	},
 	{
 		name: "reject invalid model name",
@@ -67,11 +69,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["Model name _Something is invalid: model names must match /^[a-z][a-z_]*$/"],
-			warnings: [],
-		},
+		expectedResult: errors(["Model name _Something is invalid: model names must match /^[a-z][a-z_]*$/"]),
 	},
 	{
 		name: "accept model",
@@ -84,11 +82,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: {
-			valid: true,
-			errors: [],
-			warnings: [],
-		},
+		expectedResult: success,
 	},
 	{
 		name: "accept model with valid indexes",
@@ -103,11 +97,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: {
-			valid: true,
-			errors: [],
-			warnings: [],
-		},
+		expectedResult: success,
 	},
 	{
 		name: "reject model with invalid type indexes",
@@ -121,11 +111,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["Index is invalid: 1 is not a string or a list of strings"],
-			warnings: [],
-		},
+		expectedResult: errors(["Index is invalid: 1 is not a string or a list of strings"]),
 	},
 	{
 		name: "reject model with 'id' index",
@@ -139,11 +125,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: {
-			valid: false,
-			errors: ['Index is invalid: "id" is already an index by default'],
-			warnings: [],
-		},
+		expectedResult: errors(['Index is invalid: "id" is already an index by default']),
 	},
 	{
 		name: "reject model with index for field that doesn't exist",
@@ -157,11 +139,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: {
-			valid: false,
-			errors: ['Index is invalid: "whatever" is not a field on model "thing"'],
-			warnings: [],
-		},
+		expectedResult: errors(['Index is invalid: "whatever" is not a field on model "thing"']),
 	},
 	{
 		name: "reject model with missing properties",
@@ -171,14 +149,10 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: {
-			valid: false,
-			errors: [
-				"Model 'thing' is invalid: there is no 'id' field",
-				"Model 'thing' is invalid: there is no 'updated_at' field",
-			],
-			warnings: [],
-		},
+		expectedResult: errors([
+			"Model 'thing' is invalid: there is no 'id' field",
+			"Model 'thing' is invalid: there is no 'updated_at' field",
+		]),
 	},
 	{
 		name: "reject model where id and updated_at are wrong type",
@@ -191,14 +165,10 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: {
-			valid: false,
-			errors: [
-				"Model 'thing' is invalid: 'id' field should be 'string', but is the wrong type number",
-				"Model 'thing' is invalid: 'updated_at' field should be 'datetime', but is the wrong type number",
-			],
-			warnings: [],
-		},
+		expectedResult: errors([
+			"Model 'thing' is invalid: 'id' field should be 'string', but is the wrong type number",
+			"Model 'thing' is invalid: 'updated_at' field should be 'datetime', but is the wrong type number",
+		]),
 	},
 	{
 		name: "reject model where extra fields have invalid type names",
@@ -212,11 +182,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["Model 'thing' is invalid: 'something' field has an invalid type ('whatever')"],
-			warnings: [],
-		},
+		expectedResult: errors(["Model 'thing' is invalid: 'something' field has an invalid type ('whatever')"]),
 	},
 	{
 		name: "reject model where extra fields have invalid names",
@@ -230,11 +196,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["Model property _Hello is invalid: model properties must match /^[a-z][a-z_]*$/"],
-			warnings: [],
-		},
+		expectedResult: errors(["Model property _Hello is invalid: model properties must match /^[a-z][a-z_]*$/"]),
 	},
 	{
 		name: "accept valid action",
@@ -246,11 +208,7 @@ const VALIDATION_TEST_FIXTURES: {
         }
       }
     `,
-		expectedResult: {
-			valid: true,
-			errors: [],
-			warnings: [],
-		},
+		expectedResult: success,
 	},
 	{
 		name: "reject actions not defined as an object",
@@ -258,11 +216,7 @@ const VALIDATION_TEST_FIXTURES: {
       export const models = {};
       export const actions = "not an object";
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["`actions` export must be an object"],
-			warnings: [],
-		},
+		expectedResult: errors(["`actions` export must be an object"]),
 	},
 	{
 		name: "reject action with invalid name",
@@ -274,11 +228,7 @@ const VALIDATION_TEST_FIXTURES: {
         }
       }
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["_doThing is invalid: action names must match /^[a-zA-Z]+$/"],
-			warnings: [],
-		},
+		expectedResult: errors(["_doThing is invalid: action names must match /^[a-zA-Z]+$/"]),
 	},
 	{
 		name: "reject action not defined as a function",
@@ -288,11 +238,7 @@ const VALIDATION_TEST_FIXTURES: {
         doThing: 1234
       }
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["Action doThing is invalid: actions.doThing is not a function"],
-			warnings: [],
-		},
+		expectedResult: errors(["Action doThing is invalid: actions.doThing is not a function"]),
 	},
 	{
 		name: "reject contracts not defined as an object",
@@ -301,11 +247,7 @@ const VALIDATION_TEST_FIXTURES: {
       export const actions = {};
       export const contracts = 123456;
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["`contracts` export must be an object"],
-			warnings: [],
-		},
+		expectedResult: errors(["`contracts` export must be an object"]),
 	},
 	{
 		name: "accept valid contract",
@@ -321,11 +263,7 @@ const VALIDATION_TEST_FIXTURES: {
         },
       };
     `,
-		expectedResult: {
-			valid: true,
-			errors: [],
-			warnings: [],
-		},
+		expectedResult: success,
 	},
 	{
 		name: "reject contract if chain not supported",
@@ -341,11 +279,7 @@ const VALIDATION_TEST_FIXTURES: {
         },
       };
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["Contract milady is invalid: spec requires an RPC endpoint for eth:5"],
-			warnings: [],
-		},
+		expectedResult: errors(["Contract milady is invalid: spec requires an RPC endpoint for eth:5"]),
 	},
 	{
 		name: "reject routes if not object",
@@ -354,11 +288,7 @@ const VALIDATION_TEST_FIXTURES: {
       export const actions = {};
       export const routes = 123456;
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["`routes` export must be an object"],
-			warnings: [],
-		},
+		expectedResult: errors(["`routes` export must be an object"]),
 	},
 	{
 		name: "reject routes with invalid name",
@@ -369,11 +299,7 @@ const VALIDATION_TEST_FIXTURES: {
         _Invalid: () => {}
       };
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["Route _Invalid is invalid: the name must match the regex /^(\\/:?[a-z_]+)+$/"],
-			warnings: [],
-		},
+		expectedResult: errors(["Route _Invalid is invalid: the name must match the regex /^(\\/:?[a-z_]+)+$/"]),
 	},
 	{
 		name: "reject routes that are not functions",
@@ -384,11 +310,7 @@ const VALIDATION_TEST_FIXTURES: {
         "/valid_route": 123
       };
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["Route /valid_route is invalid: the route must be a function"],
-			warnings: [],
-		},
+		expectedResult: errors(["Route /valid_route is invalid: the route must be a function"]),
 	},
 	{
 		name: "accept component",
@@ -399,11 +321,7 @@ const VALIDATION_TEST_FIXTURES: {
         return <div></div>
       };
     `,
-		expectedResult: {
-			valid: true,
-			errors: [],
-			warnings: [],
-		},
+		expectedResult: success,
 	},
 	{
 		name: "reject component if it is not a function",
@@ -412,11 +330,7 @@ const VALIDATION_TEST_FIXTURES: {
       export const actions = {};
       export const component = {};
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["`component` export must be a function"],
-			warnings: [],
-		},
+		expectedResult: errors(["`component` export must be a function"]),
 	},
 	{
 		name: "accept a valid source",
@@ -429,11 +343,7 @@ const VALIDATION_TEST_FIXTURES: {
         }
       }
     `,
-		expectedResult: {
-			valid: true,
-			errors: [],
-			warnings: [],
-		},
+		expectedResult: success,
 	},
 	{
 		name: "reject source with invalid name",
@@ -444,11 +354,7 @@ const VALIDATION_TEST_FIXTURES: {
         "something.py": {}
       }
     `,
-		expectedResult: {
-			valid: false,
-			errors: ["Source something.py is invalid: the keys must be ipfs:// URIs"],
-			warnings: [],
-		},
+		expectedResult: errors(["Source something.py is invalid: the keys must be ipfs:// URIs"]),
 	},
 	{
 		name: "reject a valid source with invalid values",
@@ -461,13 +367,9 @@ const VALIDATION_TEST_FIXTURES: {
         }
       }
     `,
-		expectedResult: {
-			valid: false,
-			errors: [
-				`sources["ipfs://abcdefhijklmnop"].doSourceThing is invalid: sources["ipfs://abcdefhijklmnop"].doSourceThing is not a function`,
-			],
-			warnings: [],
-		},
+		expectedResult: errors([
+			`sources["ipfs://abcdefhijklmnop"].doSourceThing is invalid: sources["ipfs://abcdefhijklmnop"].doSourceThing is not a function`,
+		]),
 	},
 ]
 
