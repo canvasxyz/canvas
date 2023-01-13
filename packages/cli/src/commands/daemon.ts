@@ -107,6 +107,16 @@ export async function handler(args: Args) {
 		}
 
 		startPingService(libp2p, controller, { verbose: args.verbose })
+
+		if (args.verbose) {
+			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
+				console.log(`[canvas-cli] Connected to ${remotePeer.toString()} (${id})`)
+			)
+
+			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
+				console.log(`[canvas-cli] Disconnected from ${remotePeer.toString()} (${id})`)
+			)
+		}
 	}
 
 	const blockCache = new BlockCache(providers)
