@@ -88,7 +88,7 @@ function getErrors(validation: t.Validation<any>): t.Errors {
 
 const decodeModelPropertyName = (input: unknown, context: t.Context): t.Validation<string> => {
 	if (!t.string.is(input)) {
-		return t.failure(input, context, `Model property name ${input} is invalid - it must be a string`)
+		return t.failure(input, context, `Model property name ${input} is invalid: it must be a string`)
 	}
 
 	const modelPropertyNamePattern = /^[a-z][a-z_]*$/

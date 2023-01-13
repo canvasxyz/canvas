@@ -199,7 +199,6 @@ export class ModelStore {
 
 	private static getModelStatements(name: string, { id, updated_at, indexes, ...properties }: Model) {
 		const keys = ["updated_at", ...Object.keys(properties)]
-
 		const values = keys.map((key) => `:${key}`).join(", ")
 		const updates = keys.map((key) => `${ModelStore.propertyName(key)} = :${key}`).join(", ")
 

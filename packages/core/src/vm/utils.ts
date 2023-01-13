@@ -200,38 +200,3 @@ export function wrapJSON(context: QuickJSContext, jsonValue: JSONValue): QuickJS
 export function unwrapJSON(context: QuickJSContext, handle: QuickJSHandle): JSONValue {
 	return JSON.parse(call(context, "JSON.stringify", null, handle).consume(context.getString))
 }
-
-/**
- * Merge the results of 6 io-ts validations
- *
- * The t.Validation type is an Either<Errors, A> type, where Errors is a list of validation errors
- * If all of the validations have passed, then combine the results into a single object.
- * If any validations have failed (i.e "is left"/has errors) then concatenate the errors and return them.
- */
-export function mergeValidationResults6<A, B, C, D, E, F>(
-	tA: t.Validation<A>,
-	tB: t.Validation<B>,
-	tC: t.Validation<C>,
-	tD: t.Validation<D>,
-	tE: t.Validation<E>,
-	tF: t.Validation<F>
-): t.Validation<A & B & C & D & E & F> {
-	if (isRight(tA) && isRight(tB) && isRight(tC) && isRight(tD) && isRight(tE) && isRight(tF)) {
-		return right({
-			...tA.right,
-			...tB.right,
-			...tC.right,
-			...tD.right,
-			...tE.right,
-			...tF.right,
-		})
-	} else {
-		let errors: t.ValidationError[] = []
-		for (const result of [tA, tB, tC, tD, tE, tF]) {
-			if (isLeft(result)) {
-				errors = errors.concat(result.left)
-			}
-		}
-		return left(errors)
-	}
-}
