@@ -14,14 +14,14 @@ const second = 1000
 const minute = second * 60
 const hour = minute * 60
 
-export const DHT_PING_INTERVAL = 3 * minute
+export const DHT_PING_INTERVAL = 5 * minute
 
-export const ANNOUNCE_DELAY = 5 * second
+export const ANNOUNCE_DELAY = 20 * second
 export const ANNOUNCE_INTERVAL = 1 * hour
 export const ANNOUNCE_TIMEOUT = 30 * second
 export const ANNOUNCE_RETRY_INTERVAL = 5 * second
 
-export const SYNC_DELAY = 20 * second
+export const SYNC_DELAY = 5 * second
 export const SYNC_INTERVAL = 1 * minute
 export const SYNC_RETRY_INTERVAL = 5 * second
 export const FIND_PEERS_TIMEOUT = 30 * second
