@@ -8,12 +8,11 @@ import * as t from "io-ts"
  * on the server).
  */
 
-import {
+import type {
 	ActionArgument,
 	ActionPayload,
 	Action,
 	ModelType,
-	ModelValue,
 	Model,
 	Session,
 	SessionPayload,
@@ -98,7 +97,7 @@ const decodeModelPropertyName = (input: unknown, context: t.Context): t.Validati
 		return t.failure(
 			input,
 			context,
-			`Model property ${input} is invalid: model properties must match ${modelPropertyNamePattern}`
+			`Model property '${input}' is invalid: model properties must match ${modelPropertyNamePattern}`
 		)
 	}
 
@@ -134,7 +133,7 @@ function decodeSingleIndex(i: unknown, context: t.Context): t.Validation<string 
 	// check is not id
 	for (const index of indices) {
 		if (index == "id") {
-			errors.push({ value: i, context, message: `Index is invalid: "id" is already an index by default` })
+			errors.push({ value: i, context, message: `Index is invalid: 'id' is already an index by default` })
 		}
 	}
 
@@ -222,12 +221,12 @@ export const modelType: t.Type<Model> = new t.Type("Model", decodeToIs(decodeMod
 
 const decodeModelName = (input: unknown, context: t.Context): t.Validation<string> => {
 	if (!t.string.is(input)) {
-		return t.failure(input, context, `Model name ${input} is invalid: it must be a string`)
+		return t.failure(input, context, `Model name '${input}' is invalid: it must be a string`)
 	}
 
 	const modelNamePattern = /^[a-z][a-z_]*$/
 	if (!modelNamePattern.test(input)) {
-		return t.failure(input, context, `Model name ${input} is invalid: model names must match ${modelNamePattern}`)
+		return t.failure(input, context, `Model name '${input}' is invalid: model names must match ${modelNamePattern}`)
 	}
 
 	return t.success(input)

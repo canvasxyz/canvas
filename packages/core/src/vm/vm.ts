@@ -98,7 +98,7 @@ function validateCanvasSpec(
 	}
 
 	for (const [name, handle] of Object.entries(rest)) {
-		const extraneousExportWarning = `Warning: extraneous export ${JSON.stringify(name)}`
+		const extraneousExportWarning = `Warning: extraneous export \`${name}\``
 		console.log(chalk.yellow(`[canvas-vm] ${extraneousExportWarning}`))
 		warnings.push(extraneousExportWarning)
 		handle.dispose()
@@ -133,12 +133,12 @@ function validateCanvasSpec(
 
 				if (indexes !== undefined) {
 					for (const index of indexes) {
-						assertLogError(index !== "id", `"id" index is redundant`)
+						assertLogError(index !== "id", `Index is invalid: 'id' index is redundant`)
 						const indexProperties = Array.isArray(index) ? index : [index]
 						for (const property of indexProperties) {
 							assertLogError(
 								property in properties,
-								`Index is invalid: "${property}" is not a field on model "${name}"`
+								`Index is invalid: '${property}' is not a field on model '${name}'`
 							)
 						}
 					}
@@ -161,11 +161,11 @@ function validateCanvasSpec(
 			if (
 				assertLogError(
 					actionNamePattern.test(name),
-					`Action ${name} is invalid: action names must match ${actionNamePattern}`
+					`Action '${name}' is invalid: action names must match ${actionNamePattern}`
 				) &&
 				assertLogError(
 					context.typeof(handle) === "function",
-					`Action ${name} is invalid: actions.${name} is not a function`
+					`Action '${name}' is invalid: 'actions.${name}' is not a function`
 				)
 			) {
 				actions.push(name)
@@ -183,9 +183,12 @@ function validateCanvasSpec(
 			for (const [name, handle] of Object.entries(routeHandles)) {
 				assertLogError(
 					routeNamePattern.test(name),
-					`Route ${name} is invalid: the name must match the regex ${routeNamePattern}`
+					`Route '${name}' is invalid: the name must match the regex ${routeNamePattern}`
 				)
-				assertLogError(context.typeof(handle) === "function", `Route ${name} is invalid: the route must be a function`)
+				assertLogError(
+					context.typeof(handle) === "function",
+					`Route '${name}' is invalid: the route must be a function`
+				)
 				routes[name] = []
 				for (const [_, param] of name.matchAll(routeParameterPattern)) {
 					routes[name].push(param)
@@ -232,7 +235,7 @@ function validateCanvasSpec(
 								errors.push({
 									value: null,
 									context: [],
-									message: `Contract ${name} is invalid: spec requires an RPC endpoint for ${chain}:${chainId}`,
+									message: `Contract '${name}' is invalid: spec requires an RPC endpoint for ${chain}:${chainId}`,
 								})
 							}
 						}
@@ -257,14 +260,14 @@ function validateCanvasSpec(
 			for (const [source, sourceHandle] of Object.entries(
 				sourcesHandle.consume((handle) => unwrapObject(context, handle))
 			)) {
-				assertLogError(ipfsURIPattern.test(source), `Source "${source}" is invalid: the keys must be ipfs:// URIs`)
+				assertLogError(ipfsURIPattern.test(source), `Source '${source}' is invalid: the keys must be ipfs:// URIs`)
 				assertLogError(context.typeof(sourceHandle) === "object", `sources["${source}"] must be an object`)
 				sourceHandles[source] = sourceHandle.consume((handle) => unwrapObject(context, handle))
 				sources.add(source)
 				for (const [name, handle] of Object.entries(sourceHandles[source])) {
 					assertLogError(
 						context.typeof(handle) === "function",
-						`Source "${source}" is invalid: sources["${source}"].${name} is not a function`
+						`Source '${source}' is invalid: sources["${source}"].${name} is not a function`
 					)
 				}
 			}

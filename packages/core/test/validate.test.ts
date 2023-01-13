@@ -64,7 +64,7 @@ const VALIDATION_TEST_FIXTURES: {
       export const foobar = {};
       export const whatever = {};
     `,
-		expectedResult: warnings(['Warning: extraneous export "foobar"', 'Warning: extraneous export "whatever"']),
+		expectedResult: warnings(["Warning: extraneous export `foobar`", "Warning: extraneous export `whatever`"]),
 	},
 	{
 		name: "reject invalid model name",
@@ -74,7 +74,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: errors(["Model name _Something is invalid: model names must match /^[a-z][a-z_]*$/"]),
+		expectedResult: errors(["Model name '_Something' is invalid: model names must match /^[a-z][a-z_]*$/"]),
 	},
 	{
 		name: "accept model",
@@ -130,7 +130,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: errors(['Index is invalid: "id" is already an index by default']),
+		expectedResult: errors(["Index is invalid: 'id' is already an index by default"]),
 	},
 	{
 		name: "reject model with index for field that doesn't exist",
@@ -144,7 +144,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: errors(['Index is invalid: "whatever" is not a field on model "thing"']),
+		expectedResult: errors(["Index is invalid: 'whatever' is not a field on model 'thing'"]),
 	},
 	{
 		name: "reject model with missing properties",
@@ -201,7 +201,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
       export const actions = {}
     `,
-		expectedResult: errors(["Model property _Hello is invalid: model properties must match /^[a-z][a-z_]*$/"]),
+		expectedResult: errors(["Model property '_Hello' is invalid: model properties must match /^[a-z][a-z_]*$/"]),
 	},
 	{
 		name: "accept valid action",
@@ -233,7 +233,7 @@ const VALIDATION_TEST_FIXTURES: {
         }
       }
     `,
-		expectedResult: errors(["Action _doThing is invalid: action names must match /^[a-zA-Z]+$/"]),
+		expectedResult: errors(["Action '_doThing' is invalid: action names must match /^[a-zA-Z]+$/"]),
 	},
 	{
 		name: "reject action not defined as a function",
@@ -243,7 +243,7 @@ const VALIDATION_TEST_FIXTURES: {
         doThing: 1234
       }
     `,
-		expectedResult: errors(["Action doThing is invalid: actions.doThing is not a function"]),
+		expectedResult: errors(["Action 'doThing' is invalid: 'actions.doThing' is not a function"]),
 	},
 	{
 		name: "reject contracts not defined as an object",
@@ -284,7 +284,7 @@ const VALIDATION_TEST_FIXTURES: {
         },
       };
     `,
-		expectedResult: errors(["Contract milady is invalid: spec requires an RPC endpoint for eth:5"]),
+		expectedResult: errors(["Contract 'milady' is invalid: spec requires an RPC endpoint for eth:5"]),
 	},
 	{
 		name: "reject routes if not object",
@@ -304,7 +304,7 @@ const VALIDATION_TEST_FIXTURES: {
         _Invalid: () => {}
       };
     `,
-		expectedResult: errors(["Route _Invalid is invalid: the name must match the regex /^(\\/:?[a-z_]+)+$/"]),
+		expectedResult: errors(["Route '_Invalid' is invalid: the name must match the regex /^(\\/:?[a-z_]+)+$/"]),
 	},
 	{
 		name: "reject routes that are not functions",
@@ -315,7 +315,7 @@ const VALIDATION_TEST_FIXTURES: {
         "/valid_route": 123
       };
     `,
-		expectedResult: errors(["Route /valid_route is invalid: the route must be a function"]),
+		expectedResult: errors(["Route '/valid_route' is invalid: the route must be a function"]),
 	},
 	{
 		name: "accept component",
@@ -359,7 +359,7 @@ const VALIDATION_TEST_FIXTURES: {
         "something.py": {}
       }
     `,
-		expectedResult: errors(['Source "something.py" is invalid: the keys must be ipfs:// URIs']),
+		expectedResult: errors(["Source 'something.py' is invalid: the keys must be ipfs:// URIs"]),
 	},
 	{
 		name: "reject a valid source with invalid values",
@@ -373,7 +373,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
     `,
 		expectedResult: errors([
-			`Source "ipfs://abcdefhijklmnop" is invalid: sources["ipfs://abcdefhijklmnop"].doSourceThing is not a function`,
+			`Source 'ipfs://abcdefhijklmnop' is invalid: sources["ipfs://abcdefhijklmnop"].doSourceThing is not a function`,
 		]),
 	},
 ]
