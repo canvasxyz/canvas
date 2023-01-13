@@ -197,11 +197,11 @@ export async function handler(args: Args) {
 	}
 
 	if (verbose) {
-		libp2p.connectionManager.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
+		libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
 			console.log(`[canvas-cli] Connected to ${remotePeer.toString()} (${id})`)
 		)
 
-		libp2p.connectionManager.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
+		libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
 			console.log(`[canvas-cli] Disconnected from ${remotePeer.toString()} (${id})`)
 		)
 	}
