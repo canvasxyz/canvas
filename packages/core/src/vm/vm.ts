@@ -88,7 +88,6 @@ function validateCanvasSpec(
 	 */
 	const assertLogError = (cond: boolean, message: string) => {
 		if (!cond) {
-			console.log(message)
 			errors.push({
 				value: null,
 				context: [],
