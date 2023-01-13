@@ -233,7 +233,7 @@ const VALIDATION_TEST_FIXTURES: {
         }
       }
     `,
-		expectedResult: errors(["_doThing is invalid: action names must match /^[a-zA-Z]+$/"]),
+		expectedResult: errors(["Action _doThing is invalid: action names must match /^[a-zA-Z]+$/"]),
 	},
 	{
 		name: "reject action not defined as a function",
@@ -359,7 +359,7 @@ const VALIDATION_TEST_FIXTURES: {
         "something.py": {}
       }
     `,
-		expectedResult: errors(["Source something.py is invalid: the keys must be ipfs:// URIs"]),
+		expectedResult: errors(['Source "something.py" is invalid: the keys must be ipfs:// URIs']),
 	},
 	{
 		name: "reject a valid source with invalid values",
@@ -373,7 +373,7 @@ const VALIDATION_TEST_FIXTURES: {
       }
     `,
 		expectedResult: errors([
-			`sources["ipfs://abcdefhijklmnop"].doSourceThing is invalid: sources["ipfs://abcdefhijklmnop"].doSourceThing is not a function`,
+			`Source "ipfs://abcdefhijklmnop" is invalid: sources["ipfs://abcdefhijklmnop"].doSourceThing is not a function`,
 		]),
 	},
 ]

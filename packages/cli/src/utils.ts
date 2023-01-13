@@ -100,7 +100,7 @@ export function getProviders(args?: (string | number)[]): Record<string, BlockPr
 				console.log(chalk.red(`[canvas-cli] Invalid chain "${chain}", should be a ${chainType.name}`))
 				process.exit(1)
 			} else if (typeof id !== "number") {
-				console.log(chalk.red(`Invalid chain id "${id}", should be a number e.g. 1`))
+				console.log(chalk.red(`Invalid chain id "${id}", should be e.g. 1`))
 				process.exit(1)
 			} else if (typeof url !== "string") {
 				console.log(chalk.red(`Invalid chain rpc "${url}", should be a url`))
@@ -109,7 +109,7 @@ export function getProviders(args?: (string | number)[]): Record<string, BlockPr
 
 			if (chain == "eth") {
 				const key = `${chain}:${id}`
-				providers[key] = new EthereumBlockProvider(id, url)
+				providers[key] = new EthereumBlockProvider(id.toString(), url)
 			} else {
 				console.log(`'chain' value (${chain}) was not 'eth', all other RPCs are currently unsupported`)
 			}
