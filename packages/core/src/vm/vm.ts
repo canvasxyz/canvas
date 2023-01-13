@@ -117,20 +117,9 @@ function validateCanvasSpec(
 			}
 		} else {
 			models = modelsValidation.right
-			// validate models
-			const modelNamePattern = /^[a-z][a-z_]*$/
-			const modelPropertyNamePattern = /^[a-z][a-z_]*$/
+			// validate indexes
 			for (const [name, model] of Object.entries(models)) {
-				assertLogError(modelNamePattern.test(name), "invalid model name")
 				const { indexes, ...properties } = model
-				for (const property of Object.keys(properties)) {
-					assertLogError(modelPropertyNamePattern.test(property), `invalid model property name: ${property}`)
-				}
-				assertLogError(
-					properties.id === "string" && properties.updated_at === "datetime",
-					`Models must include properties { id: "string" } and { updated_at: "datetime" }`
-				)
-
 				if (indexes !== undefined) {
 					for (const index of indexes) {
 						assertLogError(index !== "id", `Index is invalid: 'id' index is redundant`)
