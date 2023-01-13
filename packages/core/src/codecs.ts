@@ -116,8 +116,6 @@ export const modelTypeType: t.Type<ModelType> = t.union([
 	t.literal("datetime"),
 ])
 
-export const modelValueType: t.Type<ModelValue> = t.union([t.null, t.boolean, t.number, t.string])
-
 function decodeSingleIndex(i: unknown, context: t.Context): t.Validation<string | string[]> {
 	let indices: string[]
 	if (t.string.is(i)) {
@@ -254,36 +252,3 @@ export const uint8ArrayType = new t.Type(
 	(i, context) => (isUint8Array(i) ? t.success(i) : t.failure(i, context)),
 	t.identity
 )
-
-export const contractMetadataType = t.type({
-	chain: chainType,
-	chainId: chainIdType,
-	address: t.string,
-	abi: t.array(t.string),
-})
-
-const decodeContractNameType = (input: unknown, context: t.Context): t.Validation<string> => {
-	if (!t.string.is(input)) {
-		return t.failure(input, context, `Contract name is invalid: it must be a string`)
-	}
-
-	const contractNamePattern = /^[a-zA-Z]+$/
-	if (!contractNamePattern.test(input)) {
-		return t.failure(
-			input,
-			context,
-			`Contract name ${input} is invalid: it must match the regex ${contractNamePattern}`
-		)
-	}
-
-	return t.success(input)
-}
-
-export const contractNameType = new t.Type<string>(
-	"ContractNameType",
-	decodeToIs(decodeContractNameType),
-	decodeContractNameType,
-	t.identity
-)
-
-export const contractMetadatasType = t.record(contractNameType, contractMetadataType)
