@@ -278,7 +278,7 @@ function validateCanvasSpec(
 }
 
 export class VM {
-	public static async initialize({ uri, spec, providers, ...options }: VMConfig): Promise<VM> {
+	public static async initialize({ uri, spec, providers, ...options }: VMConfig): Promise<t.Validation<VM>> {
 		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
@@ -297,11 +297,10 @@ export class VM {
 		const { validation } = validateCanvasSpec(context, moduleHandle, providers ?? {}, options)
 
 		if (isLeft(validation)) {
-			const messages = validation.left.flatMap((err: t.ValidationError) => (err.message ? [err.message] : []))
-			console.log(messages)
-			throw Error("Invalid spec")
+			// return errors
+			return validation
 		} else {
-			return new VM(uri, runtime, context, options, validation.right)
+			return right(new VM(uri, runtime, context, options, validation.right))
 		}
 	}
 
