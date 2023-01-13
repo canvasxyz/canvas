@@ -122,7 +122,6 @@ function validateCanvasSpec(
 				const { indexes, ...properties } = model
 				if (indexes !== undefined) {
 					for (const index of indexes) {
-						assertLogError(index !== "id", `Index is invalid: 'id' index is redundant`)
 						const indexProperties = Array.isArray(index) ? index : [index]
 						for (const property of indexProperties) {
 							assertLogError(
@@ -137,16 +136,14 @@ function validateCanvasSpec(
 	}
 
 	// validate actions
-	const actions: string[] = []
-	let actionHandles: Record<string, QuickJSHandle> = {}
+	const actionHandles: Record<string, QuickJSHandle> = {}
 
 	if (
 		assertLogError(actionsHandle !== undefined, "Spec is missing `actions` export") &&
 		assertLogError(context.typeof(actionsHandle) === "object", "`actions` export must be an object")
 	) {
-		actionHandles = actionsHandle.consume((handle) => unwrapObject(context, handle))
 		const actionNamePattern = /^[a-zA-Z]+$/
-		for (const [name, handle] of Object.entries(actionHandles)) {
+		for (const [name, handle] of Object.entries(actionsHandle.consume((handle) => unwrapObject(context, handle)))) {
 			if (
 				assertLogError(
 					actionNamePattern.test(name),
@@ -157,7 +154,7 @@ function validateCanvasSpec(
 					`Action '${name}' is invalid: 'actions.${name}' is not a function`
 				)
 			) {
-				actions.push(name)
+				actionHandles[name] = handle
 			}
 		}
 	}
@@ -243,7 +240,6 @@ function validateCanvasSpec(
 	}
 
 	const sourceHandles: Record<string, Record<string, QuickJSHandle>> = {}
-	const sources: Set<string> = new Set([])
 	if (sourcesHandle !== undefined) {
 		if (assertLogError(context.typeof(sourcesHandle) === "object", "`sources` export must be an object")) {
 			for (const [source, sourceHandle] of Object.entries(
@@ -252,7 +248,6 @@ function validateCanvasSpec(
 				assertLogError(ipfsURIPattern.test(source), `Source '${source}' is invalid: the keys must be ipfs:// URIs`)
 				assertLogError(context.typeof(sourceHandle) === "object", `sources["${source}"] must be an object`)
 				sourceHandles[source] = sourceHandle.consume((handle) => unwrapObject(context, handle))
-				sources.add(source)
 				for (const [name, handle] of Object.entries(sourceHandles[source])) {
 					assertLogError(
 						context.typeof(handle) === "function",
@@ -268,12 +263,12 @@ function validateCanvasSpec(
 			? left(errors)
 			: right({
 					models,
-					actions,
+					actions: Object.keys(actionHandles),
 					routes,
 					contracts,
 					contractMetadata,
 					component,
-					sources,
+					sources: new Set(Object.keys(sourceHandles)),
 					routeHandles,
 					actionHandles,
 					sourceHandles,
