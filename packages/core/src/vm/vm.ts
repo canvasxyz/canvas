@@ -86,7 +86,7 @@ function validateCanvasSpec(
 	 * This function is a replacement for `assert`, but instead of throwing an error
 	 * it adds the `errors` list and returns the evaluated condition.
 	 */
-	const assertSaveError = (cond: boolean, message: string) => {
+	const assertLogError = (cond: boolean, message: string) => {
 		if (!cond) {
 			console.log(message)
 			errors.push({
@@ -108,8 +108,8 @@ function validateCanvasSpec(
 	// validate models
 	let models: Record<string, Model> = {}
 	if (
-		assertSaveError(modelsHandle !== undefined, "Spec is missing `models` export") &&
-		assertSaveError(context.typeof(modelsHandle) === "object", "`models` export must be an object")
+		assertLogError(modelsHandle !== undefined, "Spec is missing `models` export") &&
+		assertLogError(context.typeof(modelsHandle) === "object", "`models` export must be an object")
 	) {
 		const modelsValidation = modelsType.decode(modelsHandle.consume(context.dump))
 		if (isLeft(modelsValidation)) {
@@ -122,22 +122,22 @@ function validateCanvasSpec(
 			const modelNamePattern = /^[a-z][a-z_]*$/
 			const modelPropertyNamePattern = /^[a-z][a-z_]*$/
 			for (const [name, model] of Object.entries(models)) {
-				assertSaveError(modelNamePattern.test(name), "invalid model name")
+				assertLogError(modelNamePattern.test(name), "invalid model name")
 				const { indexes, ...properties } = model
 				for (const property of Object.keys(properties)) {
-					assertSaveError(modelPropertyNamePattern.test(property), `invalid model property name: ${property}`)
+					assertLogError(modelPropertyNamePattern.test(property), `invalid model property name: ${property}`)
 				}
-				assertSaveError(
+				assertLogError(
 					properties.id === "string" && properties.updated_at === "datetime",
 					`Models must include properties { id: "string" } and { updated_at: "datetime" }`
 				)
 
 				if (indexes !== undefined) {
 					for (const index of indexes) {
-						assertSaveError(index !== "id", `"id" index is redundant`)
+						assertLogError(index !== "id", `"id" index is redundant`)
 						const indexProperties = Array.isArray(index) ? index : [index]
 						for (const property of indexProperties) {
-							assertSaveError(
+							assertLogError(
 								property in properties,
 								`Index is invalid: "${property}" is not a field on model "${name}"`
 							)
@@ -153,18 +153,18 @@ function validateCanvasSpec(
 	let actionHandles: Record<string, QuickJSHandle> = {}
 
 	if (
-		assertSaveError(actionsHandle !== undefined, "Spec is missing `actions` export") &&
-		assertSaveError(context.typeof(actionsHandle) === "object", "`actions` export must be an object")
+		assertLogError(actionsHandle !== undefined, "Spec is missing `actions` export") &&
+		assertLogError(context.typeof(actionsHandle) === "object", "`actions` export must be an object")
 	) {
 		actionHandles = actionsHandle.consume((handle) => unwrapObject(context, handle))
 		const actionNamePattern = /^[a-zA-Z]+$/
 		for (const [name, handle] of Object.entries(actionHandles)) {
 			if (
-				assertSaveError(
+				assertLogError(
 					actionNamePattern.test(name),
 					`Action ${name} is invalid: action names must match ${actionNamePattern}`
 				) &&
-				assertSaveError(
+				assertLogError(
 					context.typeof(handle) === "function",
 					`Action ${name} is invalid: actions.${name} is not a function`
 				)
@@ -177,16 +177,16 @@ function validateCanvasSpec(
 	const routes: Record<string, string[]> = {}
 	let routeHandles: Record<string, QuickJSHandle> = {}
 	if (routesHandle !== undefined) {
-		if (assertSaveError(context.typeof(routesHandle) === "object", "`routes` export must be an object")) {
+		if (assertLogError(context.typeof(routesHandle) === "object", "`routes` export must be an object")) {
 			routeHandles = routesHandle.consume((handle) => unwrapObject(context, handle))
 			const routeNamePattern = /^(\/:?[a-z_]+)+$/
 			const routeParameterPattern = /:([a-zA-Z0-9_]+)/g
 			for (const [name, handle] of Object.entries(routeHandles)) {
-				assertSaveError(
+				assertLogError(
 					routeNamePattern.test(name),
 					`Route ${name} is invalid: the name must match the regex ${routeNamePattern}`
 				)
-				assertSaveError(context.typeof(handle) === "function", `Route ${name} is invalid: the route must be a function`)
+				assertLogError(context.typeof(handle) === "function", `Route ${name} is invalid: the route must be a function`)
 				routes[name] = []
 				for (const [_, param] of name.matchAll(routeParameterPattern)) {
 					routes[name].push(param)
@@ -200,12 +200,12 @@ function validateCanvasSpec(
 	const contractMetadata: Record<string, ContractMetadata> = {}
 
 	if (contractsHandle !== undefined) {
-		if (assertSaveError(context.typeof(contractsHandle) === "object", "`contracts` export must be an object")) {
+		if (assertLogError(context.typeof(contractsHandle) === "object", "`contracts` export must be an object")) {
 			// parse and validate contracts
 			const contractHandles = contractsHandle.consume((handle) => unwrapObject(context, handle))
 			const contractNamePattern = /^[a-zA-Z]+$/
 			for (const [name, contractHandle] of Object.entries(contractHandles)) {
-				assertSaveError(contractNamePattern.test(name), "invalid contract name")
+				assertLogError(contractNamePattern.test(name), "invalid contract name")
 				const contract = contractHandle.consume((handle) => unwrapObject(context, handle))
 				const chain = contract.chain.consume(context.getString)
 				const chainId = contract.chainId.consume(context.getString)
@@ -215,8 +215,8 @@ function validateCanvasSpec(
 					.map((item) => item.consume(context.getString))
 
 				if (
-					assertSaveError(chainType.is(chain), `invalid chain: ${chain}`) &&
-					assertSaveError(chainIdType.is(chainId), `invalid chain id: ${chainId}`)
+					assertLogError(chainType.is(chain), `invalid chain: ${chain}`) &&
+					assertLogError(chainIdType.is(chainId), `invalid chain id: ${chainId}`)
 				) {
 					contractMetadata[name] = { chain: chain as Chain, chainId, address, abi }
 
@@ -245,7 +245,7 @@ function validateCanvasSpec(
 
 	let component: string | null = null
 	if (componentHandle !== undefined) {
-		if (assertSaveError(context.typeof(componentHandle) === "function", "`component` export must be a function")) {
+		if (assertLogError(context.typeof(componentHandle) === "function", "`component` export must be a function")) {
 			component = call(context, "Function.prototype.toString", componentHandle).consume(context.getString)
 			componentHandle.dispose()
 		}
@@ -254,16 +254,16 @@ function validateCanvasSpec(
 	const sourceHandles: Record<string, Record<string, QuickJSHandle>> = {}
 	const sources: Set<string> = new Set([])
 	if (sourcesHandle !== undefined) {
-		if (assertSaveError(context.typeof(sourcesHandle) === "object", "`sources` export must be an object")) {
+		if (assertLogError(context.typeof(sourcesHandle) === "object", "`sources` export must be an object")) {
 			for (const [source, sourceHandle] of Object.entries(
 				sourcesHandle.consume((handle) => unwrapObject(context, handle))
 			)) {
-				assertSaveError(ipfsURIPattern.test(source), `Source "${source}" is invalid: the keys must be ipfs:// URIs`)
-				assertSaveError(context.typeof(sourceHandle) === "object", `sources["${source}"] must be an object`)
+				assertLogError(ipfsURIPattern.test(source), `Source "${source}" is invalid: the keys must be ipfs:// URIs`)
+				assertLogError(context.typeof(sourceHandle) === "object", `sources["${source}"] must be an object`)
 				sourceHandles[source] = sourceHandle.consume((handle) => unwrapObject(context, handle))
 				sources.add(source)
 				for (const [name, handle] of Object.entries(sourceHandles[source])) {
-					assertSaveError(
+					assertLogError(
 						context.typeof(handle) === "function",
 						`Source "${source}" is invalid: sources["${source}"].${name} is not a function`
 					)
