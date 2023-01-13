@@ -83,6 +83,10 @@ function decodeToIs<T>(decodeFunc: (input: unknown, context: t.Context) => t.Val
 	return is
 }
 
+function getErrors(validation: t.Validation<any>): t.Errors {
+	return isLeft(validation) ? validation.left : []
+}
+
 const decodeModelPropertyName = (input: unknown, context: t.Context): t.Validation<string> => {
 	if (!t.string.is(input)) {
 		return t.failure(input, context, `Model property name ${input} is invalid - it must be a string`)
@@ -162,7 +166,6 @@ function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
 	const { indexes, id, updated_at, ...properties } = i
 
 	let errors: t.ValidationError[] = []
-	let success = true
 
 	if (id) {
 		if (id !== "string") {
@@ -178,7 +181,6 @@ function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
 			context,
 			message: `Model${modelNameInsert} is invalid: there is no 'id' field`,
 		})
-		success = false
 	}
 
 	if (updated_at) {
@@ -195,23 +197,14 @@ function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
 			context,
 			message: `Model${modelNameInsert} is invalid: there is no 'updated_at' field`,
 		})
-		success = false
 	}
 
 	if (indexes) {
-		const indexesValidationResult = t.array(singleIndexType).decode(indexes)
-		if (isLeft(indexesValidationResult)) {
-			errors = errors.concat(indexesValidationResult.left)
-			success = false
-		}
+		errors = errors.concat(getErrors(t.array(singleIndexType).decode(indexes)))
 	}
 
 	for (const [k, v] of Object.entries(properties)) {
-		const modelPropertyNameValidationResult = modelPropertyNameType.decode(k)
-		if (isLeft(modelPropertyNameValidationResult)) {
-			errors = errors.concat(modelPropertyNameValidationResult.left)
-			success = false
-		}
+		errors = errors.concat(getErrors(modelPropertyNameType.decode(k)))
 
 		if (!modelTypeType.is(v)) {
 			errors.push({
@@ -219,11 +212,10 @@ function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
 				context,
 				message: `Model${modelNameInsert} is invalid: '${k}' field has an invalid type ('${v}')`,
 			})
-			success = false
 		}
 	}
 
-	return errors || !success ? left(errors) : t.success(i as Model)
+	return errors ? left(errors) : t.success(i as Model)
 }
 
 export const modelType: t.Type<Model> = new t.Type("Model", decodeToIs(decodeModel), decodeModel, t.identity)
