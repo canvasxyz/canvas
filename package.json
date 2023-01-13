@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsc --build --watch",
-    "build": "tsc --build && npm run build --workspace=@canvas-js/example-chat-next --workspace=@canvas-js/example-chat-webpack",
+    "build": "tsc --build",
     "clean": "tsc --build --clean",
     "publish": "npm publish --workspace=packages --access public",
     "test": "npm run test --workspace=@canvas-js/core --workspace=@canvas-js/signers"

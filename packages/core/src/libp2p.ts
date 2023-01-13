@@ -98,7 +98,7 @@ export async function startPingService(
 		controller.signal.addEventListener("abort", abort)
 
 		try {
-			const connection = await libp2p.connectionManager.openConnection(peer, { signal: timeoutController.signal })
+			const connection = await libp2p.dial(peer, { signal: timeoutController.signal })
 			const stream = await connection.newStream(protocol, { signal: timeoutController.signal })
 			stream.close()
 		} finally {
