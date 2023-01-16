@@ -52,12 +52,10 @@ interface VMConfig extends VMOptions {
 
 type SpecValidationResult = {
 	models: Record<string, Model>
-	actions: string[]
 	routes: Record<string, string[]>
 	contracts: Record<string, ethers.Contract>
 	contractMetadata: Record<string, ContractMetadata>
 	component: string | null
-	sources: Set<string>
 	routeHandles: Record<string, QuickJSHandle>
 	actionHandles: Record<string, QuickJSHandle>
 	sourceHandles: Record<string, Record<string, QuickJSHandle>>
@@ -263,12 +261,10 @@ function validateCanvasSpec(
 			? left(errors)
 			: right({
 					models,
-					actions: Object.keys(actionHandles),
 					routes,
 					contracts,
 					contractMetadata,
 					component,
-					sources: new Set(Object.keys(sourceHandles)),
 					routeHandles,
 					actionHandles,
 					sourceHandles,
@@ -374,7 +370,7 @@ export class VM {
 		specValidationResult: SpecValidationResult
 	) {
 		this.models = specValidationResult.models
-		this.actions = specValidationResult.actions
+		this.actions = Object.keys(specValidationResult.actionHandles)
 		this.routes = specValidationResult.routes
 		this.contracts = specValidationResult.contracts
 		this.contractMetadata = specValidationResult.contractMetadata
@@ -382,7 +378,7 @@ export class VM {
 		this.actionHandles = specValidationResult.actionHandles
 		this.sourceHandles = specValidationResult.sourceHandles
 		this.component = specValidationResult.component
-		this.sources = specValidationResult.sources
+		this.sources = new Set(Object.keys(this.sourceHandles))
 
 		this.dbHandle = wrapObject(
 			context,
