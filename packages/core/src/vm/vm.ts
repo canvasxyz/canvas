@@ -52,7 +52,6 @@ interface VMConfig extends VMOptions {
 
 type SpecValidationResult = {
 	models: Record<string, Model>
-	routes: Record<string, string[]>
 	contractMetadata: Record<string, ContractMetadata>
 	component: string | null
 	routeHandles: Record<string, QuickJSHandle>
@@ -156,13 +155,11 @@ function validateCanvasSpec(
 		}
 	}
 
-	const routes: Record<string, string[]> = {}
 	let routeHandles: Record<string, QuickJSHandle> = {}
 	if (routesHandle !== undefined) {
 		if (assertLogError(context.typeof(routesHandle) === "object", "`routes` export must be an object")) {
 			routeHandles = routesHandle.consume((handle) => unwrapObject(context, handle))
 			const routeNamePattern = /^(\/:?[a-z_]+)+$/
-			const routeParameterPattern = /:([a-zA-Z0-9_]+)/g
 			for (const [name, handle] of Object.entries(routeHandles)) {
 				assertLogError(
 					routeNamePattern.test(name),
@@ -172,16 +169,11 @@ function validateCanvasSpec(
 					context.typeof(handle) === "function",
 					`Route '${name}' is invalid: the route must be a function`
 				)
-				routes[name] = []
-				for (const [_, param] of name.matchAll(routeParameterPattern)) {
-					routes[name].push(param)
-				}
 			}
 		}
 	}
 
 	// validate contracts
-	const contracts: Record<string, ethers.Contract> = {}
 	const contractMetadata: Record<string, ContractMetadata> = {}
 
 	if (contractsHandle !== undefined) {
@@ -258,7 +250,6 @@ function validateCanvasSpec(
 			? left(errors)
 			: right({
 					models,
-					routes,
 					contractMetadata,
 					component,
 					routeHandles,
@@ -367,14 +358,15 @@ export class VM {
 		providers: Record<string, BlockProvider> = {}
 	) {
 		this.models = specValidationResult.models
-		this.actions = Object.keys(specValidationResult.actionHandles)
-		this.routes = specValidationResult.routes
 		this.contractMetadata = specValidationResult.contractMetadata
 		this.routeHandles = specValidationResult.routeHandles
 		this.actionHandles = specValidationResult.actionHandles
 		this.sourceHandles = specValidationResult.sourceHandles
 		this.component = specValidationResult.component
+
+		// Generate public fields that are derived from the passed in arguments
 		this.sources = new Set(Object.keys(this.sourceHandles))
+		this.actions = Object.keys(specValidationResult.actionHandles)
 
 		this.contracts = {}
 		if (options.unchecked) {
@@ -390,6 +382,15 @@ export class VM {
 					throw Error(`Cannot initialise VM, no provider exists for ${chain}:${chainId}`)
 				}
 			})
+		}
+
+		this.routes = {}
+		const routeParameterPattern = /:([a-zA-Z0-9_]+)/g
+		for (const name of Object.keys(this.routeHandles)) {
+			this.routes[name] = []
+			for (const [_, param] of name.matchAll(routeParameterPattern)) {
+				this.routes[name].push(param)
+			}
 		}
 
 		this.dbHandle = wrapObject(
