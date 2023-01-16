@@ -53,7 +53,6 @@ interface VMConfig extends VMOptions {
 type SpecValidationResult = {
 	models: Record<string, Model>
 	routes: Record<string, string[]>
-	contracts: Record<string, ethers.Contract>
 	contractMetadata: Record<string, ContractMetadata>
 	component: string | null
 	routeHandles: Record<string, QuickJSHandle>
@@ -213,9 +212,7 @@ function validateCanvasSpec(
 					} else {
 						if (chain == "eth") {
 							const provider = providers[`${chain}:${chainId}`]
-							if (provider instanceof EthereumBlockProvider) {
-								contracts[name] = new ethers.Contract(address, abi, provider.provider)
-							} else {
+							if (!provider) {
 								errors.push({
 									value: null,
 									context: [],
@@ -262,7 +259,6 @@ function validateCanvasSpec(
 			: right({
 					models,
 					routes,
-					contracts,
 					contractMetadata,
 					component,
 					routeHandles,
@@ -296,7 +292,7 @@ export class VM {
 			// return errors
 			return validation
 		} else {
-			return right(new VM(uri, runtime, context, options, validation.right))
+			return right(new VM(uri, runtime, context, options, validation.right, providers))
 		}
 	}
 
@@ -367,18 +363,34 @@ export class VM {
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
 		options: VMOptions,
-		specValidationResult: SpecValidationResult
+		specValidationResult: SpecValidationResult,
+		providers: Record<string, BlockProvider> = {}
 	) {
 		this.models = specValidationResult.models
 		this.actions = Object.keys(specValidationResult.actionHandles)
 		this.routes = specValidationResult.routes
-		this.contracts = specValidationResult.contracts
 		this.contractMetadata = specValidationResult.contractMetadata
 		this.routeHandles = specValidationResult.routeHandles
 		this.actionHandles = specValidationResult.actionHandles
 		this.sourceHandles = specValidationResult.sourceHandles
 		this.component = specValidationResult.component
 		this.sources = new Set(Object.keys(this.sourceHandles))
+
+		this.contracts = {}
+		if (options.unchecked) {
+			if (options.verbose) {
+				console.log(`[canvas-vm] Skipping contract setup`)
+			}
+		} else {
+			Object.entries(specValidationResult.contractMetadata).map(([name, { chain, chainId, address, abi }]) => {
+				const provider = providers[`${chain}:${chainId}`]
+				if (provider instanceof EthereumBlockProvider) {
+					this.contracts[name] = new ethers.Contract(address, abi, provider.provider)
+				} else {
+					throw Error(`Cannot initialise VM, no provider exists for ${chain}:${chainId}`)
+				}
+			})
+		}
 
 		this.dbHandle = wrapObject(
 			context,
