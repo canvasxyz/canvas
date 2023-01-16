@@ -50,12 +50,12 @@ interface VMConfig extends VMOptions {
 	providers?: Record<string, BlockProvider>
 }
 
-type SpecValidationResult = {
-	models: Record<string, Model>
+type Exports = {
+	actionHandles: Record<string, QuickJSHandle>
 	contractMetadata: Record<string, ContractMetadata>
 	component: string | null
+	models: Record<string, Model>
 	routeHandles: Record<string, QuickJSHandle>
-	actionHandles: Record<string, QuickJSHandle>
 	sourceHandles: Record<string, Record<string, QuickJSHandle>>
 }
 
@@ -64,7 +64,7 @@ function validateCanvasSpec(
 	moduleHandle: QuickJSHandle,
 	providers: Record<string, BlockProvider>,
 	options: VMOptions
-): { validation: t.Validation<SpecValidationResult>; warnings: string[] } {
+): { validation: t.Validation<Exports>; warnings: string[] } {
 	const {
 		models: modelsHandle,
 		routes: routesHandle,
@@ -354,19 +354,19 @@ export class VM {
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
 		options: VMOptions,
-		specValidationResult: SpecValidationResult,
+		exports: Exports,
 		providers: Record<string, BlockProvider> = {}
 	) {
-		this.models = specValidationResult.models
-		this.contractMetadata = specValidationResult.contractMetadata
-		this.routeHandles = specValidationResult.routeHandles
-		this.actionHandles = specValidationResult.actionHandles
-		this.sourceHandles = specValidationResult.sourceHandles
-		this.component = specValidationResult.component
+		this.models = exports.models
+		this.contractMetadata = exports.contractMetadata
+		this.routeHandles = exports.routeHandles
+		this.actionHandles = exports.actionHandles
+		this.sourceHandles = exports.sourceHandles
+		this.component = exports.component
 
 		// Generate public fields that are derived from the passed in arguments
 		this.sources = new Set(Object.keys(this.sourceHandles))
-		this.actions = Object.keys(specValidationResult.actionHandles)
+		this.actions = Object.keys(exports.actionHandles)
 
 		this.contracts = {}
 		if (options.unchecked) {
@@ -374,7 +374,7 @@ export class VM {
 				console.log(`[canvas-vm] Skipping contract setup`)
 			}
 		} else {
-			Object.entries(specValidationResult.contractMetadata).map(([name, { chain, chainId, address, abi }]) => {
+			Object.entries(exports.contractMetadata).map(([name, { chain, chainId, address, abi }]) => {
 				const provider = providers[`${chain}:${chainId}`]
 				if (provider instanceof EthereumBlockProvider) {
 					this.contracts[name] = new ethers.Contract(address, abi, provider.provider)
