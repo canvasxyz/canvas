@@ -320,22 +320,6 @@ const VALIDATION_TEST_FIXTURES: {
 		expectedResult: success,
 	},
 	{
-		name: "reject contract if chain not supported",
-		spec: `
-      export const models = {};
-      export const actions = {};
-      export const contracts = {
-        milady: {
-          chain: "eth",
-          chainId: "5",
-          address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
-          abi: ["function balanceOf(address owner) view returns (uint balance)"],
-        },
-      };
-    `,
-		expectedResult: errors(["Contract 'milady' is invalid: spec requires an RPC endpoint for eth:5"]),
-	},
-	{
 		name: "reject routes if not object",
 		spec: `
       export const models = {};

@@ -76,9 +76,7 @@ function disposeExports(exports: Exports) {
 
 function validateCanvasSpec(
 	context: QuickJSContext,
-	moduleHandle: QuickJSHandle,
-	providers: Record<string, BlockProvider>,
-	options: VMOptions
+	moduleHandle: QuickJSHandle
 ): { validation: t.Validation<Exports>; warnings: string[] } {
 	const {
 		models: modelsHandle,
@@ -220,23 +218,6 @@ function validateCanvasSpec(
 					)
 				) {
 					exports.contractMetadata[name] = { chain: chain as Chain, chainId, address, abi }
-
-					if (options.unchecked) {
-						if (options.verbose) {
-							console.log(`[canvas-vm] Skipping contract setup`)
-						}
-					} else {
-						if (chain == "eth") {
-							const provider = providers[`${chain}:${chainId}`]
-							if (!provider) {
-								errors.push({
-									value: null,
-									context: [],
-									message: `Contract '${name}' is invalid: spec requires an RPC endpoint for ${chain}:${chainId}`,
-								})
-							}
-						}
-					}
 				}
 			}
 		} else {
@@ -302,7 +283,7 @@ export class VM {
 
 		const moduleHandle = await loadModule(context, uri, transpiledSpec)
 
-		const { validation } = validateCanvasSpec(context, moduleHandle, providers ?? {}, options)
+		const { validation } = validateCanvasSpec(context, moduleHandle)
 
 		if (isLeft(validation)) {
 			// return errors
@@ -342,7 +323,7 @@ export class VM {
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
 		const moduleHandle = await loadModule(context, uri, transpiledSpec)
-		const { validation, warnings } = validateCanvasSpec(context, moduleHandle, providers ?? {}, options)
+		const { validation, warnings } = validateCanvasSpec(context, moduleHandle)
 
 		let result: { valid: boolean; errors: string[]; warnings: string[] }
 		if (isLeft(validation)) {
@@ -403,6 +384,7 @@ export class VM {
 		this.actions = Object.keys(this.actionHandles)
 
 		this.contracts = {}
+
 		if (options.unchecked) {
 			if (options.verbose) {
 				console.log(`[canvas-vm] Skipping contract setup`)
