@@ -387,11 +387,7 @@ class Daemon {
 
 			this.queue.add(async () => {
 				try {
-					const result = await VM.validate({
-						uri: "",
-						spec,
-						providers: {},
-					})
+					const result = await VM.validate(spec)
 					res.status(StatusCodes.OK).json(result)
 				} catch (e) {
 					res.status(StatusCodes.OK).json({

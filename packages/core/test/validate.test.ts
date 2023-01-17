@@ -2,7 +2,6 @@
 
 import test from "ava"
 import { VM } from "@canvas-js/core"
-import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
 const success = {
 	valid: true,
@@ -413,14 +412,7 @@ const VALIDATION_TEST_FIXTURES: {
 
 for (const { name, spec, expectedResult } of VALIDATION_TEST_FIXTURES) {
 	test(name, async (t) => {
-		const provider = new EthereumBlockProvider("1", "dummy_website")
-		const providers = { [`eth:1`]: provider }
-
-		const result = await VM.validate({
-			uri: "...",
-			spec: spec,
-			providers,
-		})
+		const result = await VM.validate(spec)
 		t.deepEqual(result, expectedResult)
 	})
 }
