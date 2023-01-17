@@ -8,6 +8,7 @@ import * as t from "io-ts"
 import { actionType, constants, sessionType, VM } from "@canvas-js/core"
 
 import { parseSpecArgument } from "../utils.js"
+import { isRight } from "fp-ts/lib/Either.js"
 
 export const command = "info <spec>"
 export const desc = "Show the models, views, and actions for a spec"
@@ -38,32 +39,37 @@ export async function handler(args: Args) {
 		spec = fs.readFileSync(args.spec, "utf-8")
 	}
 
-	const vm = await VM.initialize({ uri, spec, unchecked: true })
-	const { models, routes, actions, contractMetadata } = vm
-	vm.dispose()
+	try {
+		const vm = await VM.initialize({ uri, spec, unchecked: true })
 
-	console.log(`name: ${uri}\n`)
+		const { models, routes, actions, contractMetadata } = vm
+		vm.dispose()
 
-	console.log(chalk.green("===== models ====="))
-	console.log(`${JSON.stringify(models, null, "  ")}\n`)
+		console.log(`name: ${uri}\n`)
 
-	console.log(chalk.green("===== routes ====="))
-	Object.keys(routes).forEach((route) => console.log(`GET ${route}`))
-	console.log("POST /sessions")
-	console.log(printType(sessionType))
-	console.log("POST /actions")
-	console.log(printType(actionType))
-	console.log("")
+		console.log(chalk.green("===== models ====="))
+		console.log(`${JSON.stringify(models, null, "  ")}\n`)
 
-	console.log(chalk.green("===== actions ====="))
-	console.log(actions.map((name) => `${name}({ ...args })\n`).join(""))
+		console.log(chalk.green("===== routes ====="))
+		Object.keys(routes).forEach((route) => console.log(`GET ${route}`))
+		console.log("POST /sessions")
+		console.log(printType(sessionType))
+		console.log("POST /actions")
+		console.log(printType(actionType))
+		console.log("")
 
-	console.log(chalk.green("===== contracts ====="))
-	Object.entries(contractMetadata).forEach(([name, { chain, chainId, address, abi }]) => {
-		console.log(`${name}: ${address} on ${chain} ${chainId}`)
-		abi.forEach((line) => console.log(`- ${line}`))
-	})
-	console.log("")
+		console.log(chalk.green("===== actions ====="))
+		console.log(actions.map((name) => `${name}({ ...args })\n`).join(""))
+
+		console.log(chalk.green("===== contracts ====="))
+		Object.entries(contractMetadata).forEach(([name, { chain, chainId, address, abi }]) => {
+			console.log(`${name}: ${address} on ${chain} ${chainId}`)
+			abi.forEach((line) => console.log(`- ${line}`))
+		})
+		console.log("")
+	} catch (e: any) {
+		console.log(chalk.red(e.message))
+	}
 
 	process.exit(0)
 }

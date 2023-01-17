@@ -25,6 +25,7 @@ import {
 	getAPI,
 	CoreOptions,
 	startPingService,
+	VM,
 } from "@canvas-js/core"
 import { BlockProvider, Model } from "@canvas-js/interfaces"
 
@@ -374,6 +375,30 @@ class Daemon {
 				}
 
 				return app.api(req, res, next)
+			})
+		})
+
+		this.app.post("/check", (req, res) => {
+			if (typeof req.body.spec !== "string") {
+				return res.status(StatusCodes.BAD_REQUEST).end()
+			}
+
+			const spec = req.body.spec
+
+			this.queue.add(async () => {
+				try {
+					const result = await VM.validate({
+						uri: "",
+						spec,
+						providers: {},
+					})
+					res.status(StatusCodes.OK).json(result)
+				} catch (e) {
+					res.status(StatusCodes.OK).json({
+						valid: false,
+						errors: [(e as any).message],
+					})
+				}
 			})
 		})
 

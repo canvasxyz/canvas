@@ -75,7 +75,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (uri === undefined) {
 			uri = `ipfs://${cid.toString()}`
 		}
-
 		const vm = await VM.initialize({ uri, spec, providers: providers ?? {}, ...options })
 
 		if (blockResolver === undefined) {

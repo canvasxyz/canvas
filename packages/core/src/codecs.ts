@@ -13,13 +13,13 @@ import type {
 	ActionPayload,
 	Action,
 	ModelType,
-	ModelValue,
 	Model,
 	Session,
 	SessionPayload,
 	Chain,
 	ChainId,
 } from "@canvas-js/interfaces"
+import { isLeft, isRight, left } from "fp-ts/lib/Either.js"
 
 export const chainType: t.Type<Chain> = t.union([
 	t.literal("eth"),
@@ -68,6 +68,49 @@ export const sessionType: t.Type<Session> = t.type({
 	signature: t.string,
 })
 
+/**
+ * This function converts a decode function into an is function (for defining io-ts types)
+ * by throwing away the errors and returned value, just returning whether the input data
+ * was validated or not.
+ * @param decodeFunc
+ * @returns
+ */
+function decodeToIs<T>(decodeFunc: (input: unknown, context: t.Context) => t.Validation<T>): t.Is<T> {
+	function is(input: unknown): input is T {
+		return isRight(decodeFunc(input, []))
+	}
+	return is
+}
+
+function getErrors(validation: t.Validation<any>): t.Errors {
+	return isLeft(validation) ? validation.left : []
+}
+
+const decodeModelPropertyName = (input: unknown, context: t.Context): t.Validation<string> => {
+	if (!t.string.is(input)) {
+		return t.failure(input, context, `Model property name ${input} is invalid: it must be a string`)
+	}
+
+	const modelPropertyNamePattern = /^[a-z][a-z_]*$/
+
+	if (!modelPropertyNamePattern.test(input)) {
+		return t.failure(
+			input,
+			context,
+			`Model property '${input}' is invalid: model properties must match ${modelPropertyNamePattern}`
+		)
+	}
+
+	return t.success(input)
+}
+
+const modelPropertyNameType = new t.Type<string>(
+	"ModelPropertyName",
+	decodeToIs(decodeModelPropertyName),
+	decodeModelPropertyName,
+	t.identity
+)
+
 export const modelTypeType: t.Type<ModelType> = t.union([
 	t.literal("boolean"),
 	t.literal("string"),
@@ -76,34 +119,121 @@ export const modelTypeType: t.Type<ModelType> = t.union([
 	t.literal("datetime"),
 ])
 
-export const modelValueType: t.Type<ModelValue> = t.union([t.null, t.boolean, t.number, t.string])
-
-const modelPropertiesType = t.intersection([
-	t.type({ id: t.literal("string"), updated_at: t.literal("datetime") }),
-	t.record(t.string, modelTypeType),
-])
-
-const indexType = t.union([t.string, t.array(t.string)])
-const modelIndexesType = t.partial({ indexes: t.array(indexType) })
-
-function isModel(u: unknown): u is Model {
-	if (!modelIndexesType.is(u)) {
-		return false
+function decodeSingleIndex(i: unknown, context: t.Context): t.Validation<string | string[]> {
+	let indices: string[]
+	if (t.string.is(i)) {
+		indices = [i]
+	} else if (t.array(t.string).is(i)) {
+		indices = i
+	} else {
+		return t.failure(i, context, `Index is invalid: ${i} is not a string or a list of strings`)
 	}
 
-	const { indexes, ...properties } = u
+	let errors: t.ValidationError[] = []
+	// check is not id
+	for (const index of indices) {
+		if (index == "id") {
+			errors.push({ value: i, context, message: `Index is invalid: 'id' is already an index by default` })
+		}
+	}
 
-	return modelPropertiesType.is(properties)
+	return errors ? t.failures(errors) : t.success(i)
 }
 
-export const modelType: t.Type<Model> = new t.Type(
-	"Model",
-	isModel,
-	(i: unknown, context: t.Context) => (isModel(i) ? t.success(i) : t.failure(i, context)),
+const singleIndexType = new t.Type<string | string[]>(
+	"SingleIndexType",
+	decodeToIs(decodeSingleIndex),
+	decodeSingleIndex,
 	t.identity
 )
 
-export const modelsType = t.record(t.string, modelType)
+function decodeModel(i: unknown, context: t.Context): t.Validation<Model> {
+	/***
+	 * Unfortunately, this has to be validated imperatively because io-ts doesn't
+	 * handle intersection + record types properly
+	 */
+
+	// get the model name if it exists
+	const contextParent = context[context.length - 1]
+	const modelName = contextParent ? contextParent.key : ""
+	const modelNameInsert = modelName ? ` '${modelName}'` : ""
+
+	if (!t.UnknownRecord.is(i)) {
+		return t.failure(i, context, `Model${modelNameInsert} must be an object`)
+	}
+
+	const { indexes, id, updated_at, ...properties } = i
+
+	let errors: t.ValidationError[] = []
+
+	if (id) {
+		if (id !== "string") {
+			errors.push({
+				value: i,
+				context,
+				message: `Model${modelNameInsert} is invalid: 'id' field should be 'string', but is the wrong type ${id}`,
+			})
+		}
+	} else {
+		errors.push({
+			value: i,
+			context,
+			message: `Model${modelNameInsert} is invalid: there is no 'id' field`,
+		})
+	}
+
+	if (updated_at) {
+		if (updated_at !== "datetime") {
+			errors.push({
+				value: i,
+				context,
+				message: `Model${modelNameInsert} is invalid: 'updated_at' field should be 'datetime', but is the wrong type ${updated_at}`,
+			})
+		}
+	} else {
+		errors.push({
+			value: i,
+			context,
+			message: `Model${modelNameInsert} is invalid: there is no 'updated_at' field`,
+		})
+	}
+
+	if (indexes) {
+		errors = errors.concat(getErrors(t.array(singleIndexType).decode(indexes)))
+	}
+
+	for (const [k, v] of Object.entries(properties)) {
+		errors = errors.concat(getErrors(modelPropertyNameType.decode(k)))
+
+		if (!modelTypeType.is(v)) {
+			errors.push({
+				value: i,
+				context,
+				message: `Model${modelNameInsert} is invalid: '${k}' field has an invalid type ('${v}')`,
+			})
+		}
+	}
+
+	return errors ? left(errors) : t.success(i as Model)
+}
+
+export const modelType: t.Type<Model> = new t.Type("Model", decodeToIs(decodeModel), decodeModel, t.identity)
+
+const decodeModelName = (input: unknown, context: t.Context): t.Validation<string> => {
+	if (!t.string.is(input)) {
+		return t.failure(input, context, `Model name '${input}' is invalid: it must be a string`)
+	}
+
+	const modelNamePattern = /^[a-z][a-z_]*$/
+	if (!modelNamePattern.test(input)) {
+		return t.failure(input, context, `Model name '${input}' is invalid: model names must match ${modelNamePattern}`)
+	}
+
+	return t.success(input)
+}
+const modelNameType = new t.Type<string>("ModelName", decodeToIs(decodeModelName), decodeModelName, t.identity)
+
+export const modelsType = t.record(modelNameType, modelType)
 
 const isUint8Array = (u: unknown): u is Uint8Array => u instanceof Uint8Array
 
