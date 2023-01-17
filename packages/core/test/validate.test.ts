@@ -63,7 +63,7 @@ const VALIDATION_TEST_FIXTURES: {
       export const foobar = {};
       export const whatever = {};
     `,
-		expectedResult: warnings(["Warning: extraneous export `foobar`", "Warning: extraneous export `whatever`"]),
+		expectedResult: warnings(["extraneous export `foobar`", "extraneous export `whatever`"]),
 	},
 	{
 		name: "reject invalid model name",

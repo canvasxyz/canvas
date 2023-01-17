@@ -3,7 +3,7 @@ import chalk from "chalk"
 import { QuickJSContext, QuickJSHandle } from "quickjs-emscripten"
 
 import * as t from "io-ts"
-import { isLeft, left, right } from "fp-ts/lib/Either.js"
+import { isLeft } from "fp-ts/lib/Either.js"
 
 import { Chain } from "@canvas-js/interfaces"
 
@@ -17,7 +17,7 @@ import { Exports, disposeExports } from "./exports.js"
 export function validateCanvasSpec(
 	context: QuickJSContext,
 	moduleHandle: QuickJSHandle
-): { validation: t.Validation<Exports>; warnings: string[] } {
+): { exports: Exports | null; errors: string[]; warnings: string[] } {
 	const {
 		models: modelsHandle,
 		routes: routesHandle,
@@ -37,11 +37,7 @@ export function validateCanvasSpec(
 	 */
 	const assertLogError = (cond: boolean, message: string) => {
 		if (!cond) {
-			errors.push({
-				value: null,
-				context: [],
-				message,
-			})
+			errors.push({ value: null, context: [], message })
 		}
 		return cond
 	}
@@ -56,9 +52,7 @@ export function validateCanvasSpec(
 	}
 
 	for (const [name, handle] of Object.entries(rest)) {
-		const extraneousExportWarning = `Warning: extraneous export \`${name}\``
-		console.log(chalk.yellow(`[canvas-vm] ${extraneousExportWarning}`))
-		warnings.push(extraneousExportWarning)
+		warnings.push(`extraneous export \`${name}\``)
 		handle.dispose()
 	}
 
@@ -195,13 +189,11 @@ export function validateCanvasSpec(
 	if (errors.length > 0) {
 		disposeExports(exports)
 		return {
-			validation: left(errors),
+			exports: null,
+			errors: errors.flatMap((err) => (err.message ? [err.message] : [])),
 			warnings,
 		}
 	} else {
-		return {
-			validation: right(exports),
-			warnings,
-		}
+		return { exports, errors: [], warnings }
 	}
 }

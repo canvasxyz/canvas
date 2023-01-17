@@ -6,7 +6,6 @@ import { getQuickJS, isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime } fro
 import { transform } from "sucrase"
 import { ethers } from "ethers"
 import Hash from "ipfs-only-hash"
-import { isLeft } from "fp-ts/lib/Either.js"
 
 import {
 	ActionArgument,
@@ -66,14 +65,17 @@ export class VM {
 
 		const moduleHandle = await loadModule(context, uri, transpiledSpec)
 
-		const { validation } = validateCanvasSpec(context, moduleHandle)
+		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
-		if (isLeft(validation)) {
+		if (exports === null) {
 			// return errors
-			const joinedMessage = validation.left.flatMap((err) => (err.message ? [err.message] : [])).join("\n")
-			throw Error(joinedMessage)
+			throw Error(errors.join("\n"))
 		} else {
-			return new VM(uri, runtime, context, options, validation.right, providers)
+			for (const warning of warnings) {
+				console.log(chalk.yellow(`[canvas-vm] Warning: ${warning}`))
+			}
+
+			return new VM(uri, runtime, context, options, exports, providers)
 		}
 	}
 
@@ -101,22 +103,15 @@ export class VM {
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
 		const cid = await Hash.of(spec)
-		const uri = `ipfs://${cid}`
-		const moduleHandle = await loadModule(context, uri, transpiledSpec)
-		const { validation, warnings } = validateCanvasSpec(context, moduleHandle)
+		const moduleHandle = await loadModule(context, `ipfs://${cid}`, transpiledSpec)
+		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
 		let result: { valid: boolean; errors: string[]; warnings: string[] }
-		if (isLeft(validation)) {
-			result = {
-				valid: false,
-				// use flatMap to remove null values
-				errors: validation.left.flatMap((err) => (err && err.message ? [err.message] : [])),
-				warnings,
-			}
+		if (exports === null) {
+			result = { valid: false, errors, warnings }
 		} else {
 			// dispose handles in the validation object
-			disposeExports(validation.right)
-
+			disposeExports(exports)
 			result = { valid: true, errors: [], warnings }
 		}
 
