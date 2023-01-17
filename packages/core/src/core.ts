@@ -2,7 +2,6 @@ import assert from "node:assert"
 import path from "node:path"
 
 import PQueue from "p-queue"
-import { isLeft } from "fp-ts/lib/Either.js"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
@@ -76,15 +75,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (uri === undefined) {
 			uri = `ipfs://${cid.toString()}`
 		}
-
-		const vmValidation = await VM.initialize({ uri, spec, providers: providers ?? {}, ...options })
-
-		// just throw the first error that was generated
-		if (isLeft(vmValidation)) {
-			const error = vmValidation.left[0]
-			throw Error(error.message)
-		}
-		const vm = vmValidation.right
+		const vm = await VM.initialize({ uri, spec, providers: providers ?? {}, ...options })
 
 		if (blockResolver === undefined) {
 			blockResolver = async (chain, chainId, blockhash) => {

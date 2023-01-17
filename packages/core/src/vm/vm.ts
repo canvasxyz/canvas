@@ -286,7 +286,7 @@ function validateCanvasSpec(
 }
 
 export class VM {
-	public static async initialize({ uri, spec, providers, ...options }: VMConfig): Promise<t.Validation<VM>> {
+	public static async initialize({ uri, spec, providers, ...options }: VMConfig): Promise<VM> {
 		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
@@ -306,9 +306,10 @@ export class VM {
 
 		if (isLeft(validation)) {
 			// return errors
-			return validation
+			const joinedMessage = validation.left.flatMap((err) => (err.message ? [err.message] : [])).join("\n")
+			throw Error(joinedMessage)
 		} else {
-			return right(new VM(uri, runtime, context, options, validation.right, providers))
+			return new VM(uri, runtime, context, options, validation.right, providers)
 		}
 	}
 

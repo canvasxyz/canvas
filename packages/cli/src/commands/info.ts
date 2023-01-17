@@ -39,10 +39,11 @@ export async function handler(args: Args) {
 		spec = fs.readFileSync(args.spec, "utf-8")
 	}
 
-	const vmValidation = await VM.initialize({ uri, spec, unchecked: true })
-	if (isRight(vmValidation)) {
-		const { models, routes, actions, contractMetadata } = vmValidation.right
-		vmValidation.right.dispose()
+	try {
+		const vm = await VM.initialize({ uri, spec, unchecked: true })
+
+		const { models, routes, actions, contractMetadata } = vm
+		vm.dispose()
 
 		console.log(`name: ${uri}\n`)
 
@@ -66,14 +67,10 @@ export async function handler(args: Args) {
 			abi.forEach((line) => console.log(`- ${line}`))
 		})
 		console.log("")
-	} else {
-		// print errors
-		for (const error of vmValidation.left) {
-			if (error.message) {
-				console.log(chalk.red(error.message))
-			}
-		}
+	} catch (e: any) {
+		console.log(chalk.red(e.message))
 	}
+
 	process.exit(0)
 }
 
