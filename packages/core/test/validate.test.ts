@@ -271,6 +271,23 @@ const VALIDATION_TEST_FIXTURES: {
 		expectedResult: success,
 	},
 	{
+		name: "reject contract with extra fields",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const contracts = {
+        milady: {
+					somethingElse: "hello",
+          chain: "eth",
+          chainId: 1,
+          address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
+          abi: ["function balanceOf(address owner) view returns (uint balance)"],
+        },
+      };
+    `,
+		expectedResult: success,
+	},
+	{
 		name: "reject contract if chain not supported",
 		spec: `
       export const models = {};

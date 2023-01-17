@@ -59,6 +59,22 @@ type Exports = {
 	sourceHandles: Record<string, Record<string, QuickJSHandle>>
 }
 
+function disposeExports(exports: Exports) {
+	for (const handle of Object.values(exports.actionHandles)) {
+		handle.dispose()
+	}
+
+	for (const handle of Object.values(exports.routeHandles)) {
+		handle.dispose()
+	}
+
+	for (const sourceHandlesMap of Object.values(exports.sourceHandles)) {
+		for (const handle of Object.values(sourceHandlesMap)) {
+			handle.dispose()
+		}
+	}
+}
+
 function validateCanvasSpec(
 	context: QuickJSContext,
 	moduleHandle: QuickJSHandle,
@@ -75,7 +91,7 @@ function validateCanvasSpec(
 		...rest
 	} = moduleHandle.consume((handle) => unwrapObject(context, handle))
 
-	const warnings = []
+	const warnings: string[] = []
 	const errors: t.ValidationError[] = []
 
 	/**
@@ -93,6 +109,15 @@ function validateCanvasSpec(
 		return cond
 	}
 
+	const exports = {
+		models: {},
+		contractMetadata: {},
+		component: null,
+		routeHandles: {},
+		actionHandles: {},
+		sourceHandles: {},
+	} as Exports
+
 	for (const [name, handle] of Object.entries(rest)) {
 		const extraneousExportWarning = `Warning: extraneous export \`${name}\``
 		console.log(chalk.yellow(`[canvas-vm] ${extraneousExportWarning}`))
@@ -101,7 +126,6 @@ function validateCanvasSpec(
 	}
 
 	// validate models
-	let models: Record<string, Model> = {}
 	if (
 		assertLogError(modelsHandle !== undefined, "Spec is missing `models` export") &&
 		assertLogError(context.typeof(modelsHandle) === "object", "`models` export must be an object")
@@ -112,9 +136,9 @@ function validateCanvasSpec(
 				errors.push(error)
 			}
 		} else {
-			models = modelsValidation.right
+			exports.models = modelsValidation.right
 			// validate indexes
-			for (const [name, model] of Object.entries(models)) {
+			for (const [name, model] of Object.entries(exports.models)) {
 				const { indexes, ...properties } = model
 				if (indexes !== undefined) {
 					for (const index of indexes) {
@@ -132,35 +156,35 @@ function validateCanvasSpec(
 	}
 
 	// validate actions
-	const actionHandles: Record<string, QuickJSHandle> = {}
-
-	if (
-		assertLogError(actionsHandle !== undefined, "Spec is missing `actions` export") &&
-		assertLogError(context.typeof(actionsHandle) === "object", "`actions` export must be an object")
-	) {
-		const actionNamePattern = /^[a-zA-Z]+$/
-		for (const [name, handle] of Object.entries(actionsHandle.consume((handle) => unwrapObject(context, handle)))) {
-			if (
-				assertLogError(
-					actionNamePattern.test(name),
-					`Action '${name}' is invalid: action names must match ${actionNamePattern}`
-				) &&
-				assertLogError(
-					context.typeof(handle) === "function",
-					`Action '${name}' is invalid: 'actions.${name}' is not a function`
-				)
-			) {
-				actionHandles[name] = handle
+	if (assertLogError(actionsHandle !== undefined, "Spec is missing `actions` export")) {
+		if (assertLogError(context.typeof(actionsHandle) === "object", "`actions` export must be an object")) {
+			const actionNamePattern = /^[a-zA-Z]+$/
+			for (const [name, handle] of Object.entries(actionsHandle.consume((handle) => unwrapObject(context, handle)))) {
+				if (
+					assertLogError(
+						actionNamePattern.test(name),
+						`Action '${name}' is invalid: action names must match ${actionNamePattern}`
+					) &&
+					assertLogError(
+						context.typeof(handle) === "function",
+						`Action '${name}' is invalid: 'actions.${name}' is not a function`
+					)
+				) {
+					exports.actionHandles[name] = handle
+				} else {
+					handle.dispose()
+				}
 			}
+		} else {
+			actionsHandle.dispose()
 		}
 	}
 
-	let routeHandles: Record<string, QuickJSHandle> = {}
 	if (routesHandle !== undefined) {
 		if (assertLogError(context.typeof(routesHandle) === "object", "`routes` export must be an object")) {
-			routeHandles = routesHandle.consume((handle) => unwrapObject(context, handle))
+			exports.routeHandles = routesHandle.consume((handle) => unwrapObject(context, handle))
 			const routeNamePattern = /^(\/:?[a-z_]+)+$/
-			for (const [name, handle] of Object.entries(routeHandles)) {
+			for (const [name, handle] of Object.entries(exports.routeHandles)) {
 				assertLogError(
 					routeNamePattern.test(name),
 					`Route '${name}' is invalid: the name must match the regex ${routeNamePattern}`
@@ -170,12 +194,12 @@ function validateCanvasSpec(
 					`Route '${name}' is invalid: the route must be a function`
 				)
 			}
+		} else {
+			routesHandle.dispose()
 		}
 	}
 
 	// validate contracts
-	const contractMetadata: Record<string, ContractMetadata> = {}
-
 	if (contractsHandle !== undefined) {
 		if (assertLogError(context.typeof(contractsHandle) === "object", "`contracts` export must be an object")) {
 			// parse and validate contracts
@@ -184,18 +208,26 @@ function validateCanvasSpec(
 			for (const [name, contractHandle] of Object.entries(contractHandles)) {
 				assertLogError(contractNamePattern.test(name), "invalid contract name")
 				const contract = contractHandle.consume((handle) => unwrapObject(context, handle))
-				const chain = contract.chain.consume(context.getString)
-				const chainId = contract.chainId.consume(context.getString)
-				const address = contract.address.consume(context.getString)
-				const abi = contract.abi
+				const { chain: chainHandle, chainId: chainIdHandle, address: addressHandle, abi: abiHandle, ...rest } = contract
+
+				const chain = chainHandle.consume(context.getString)
+				const chainId = chainIdHandle.consume(context.getString)
+				const address = addressHandle.consume(context.getString)
+				const abi = abiHandle
 					.consume((handle) => unwrapArray(context, handle))
 					.map((item) => item.consume(context.getString))
+
+				// // dispose any other handles
+				// for (const handle of Object.values(rest)) {
+				// 	handle.dispose()
+				// }
+				// contract.dispose()
 
 				if (
 					assertLogError(chainType.is(chain), `invalid chain: ${chain}`) &&
 					assertLogError(chainIdType.is(chainId), `invalid chain id: ${chainId}`)
 				) {
-					contractMetadata[name] = { chain: chain as Chain, chainId, address, abi }
+					exports.contractMetadata[name] = { chain: chain as Chain, chainId, address, abi }
 
 					if (options.unchecked) {
 						if (options.verbose) {
@@ -215,18 +247,18 @@ function validateCanvasSpec(
 					}
 				}
 			}
+		} else {
+			contractsHandle.dispose()
 		}
 	}
 
-	let component: string | null = null
 	if (componentHandle !== undefined) {
 		if (assertLogError(context.typeof(componentHandle) === "function", "`component` export must be a function")) {
-			component = call(context, "Function.prototype.toString", componentHandle).consume(context.getString)
-			componentHandle.dispose()
+			exports.component = call(context, "Function.prototype.toString", componentHandle).consume(context.getString)
 		}
+		componentHandle.dispose()
 	}
 
-	const sourceHandles: Record<string, Record<string, QuickJSHandle>> = {}
 	if (sourcesHandle !== undefined) {
 		if (assertLogError(context.typeof(sourcesHandle) === "object", "`sources` export must be an object")) {
 			for (const [source, sourceHandle] of Object.entries(
@@ -234,30 +266,31 @@ function validateCanvasSpec(
 			)) {
 				assertLogError(ipfsURIPattern.test(source), `Source '${source}' is invalid: the keys must be ipfs:// URIs`)
 				assertLogError(context.typeof(sourceHandle) === "object", `sources["${source}"] must be an object`)
-				sourceHandles[source] = sourceHandle.consume((handle) => unwrapObject(context, handle))
-				for (const [name, handle] of Object.entries(sourceHandles[source])) {
+				exports.sourceHandles[source] = sourceHandle.consume((handle) => unwrapObject(context, handle))
+				for (const [name, handle] of Object.entries(exports.sourceHandles[source])) {
 					assertLogError(
 						context.typeof(handle) === "function",
 						`Source '${source}' is invalid: sources["${source}"].${name} is not a function`
 					)
 				}
 			}
+		} else {
+			sourcesHandle.dispose()
 		}
 	}
 
-	const validation =
-		errors.length > 0
-			? left(errors)
-			: right({
-					models,
-					contractMetadata,
-					component,
-					routeHandles,
-					actionHandles,
-					sourceHandles,
-			  })
-
-	return { validation, warnings }
+	if (errors.length > 0) {
+		disposeExports(exports)
+		return {
+			validation: left(errors),
+			warnings,
+		}
+	} else {
+		return {
+			validation: right(exports),
+			warnings,
+		}
+	}
 }
 
 export class VM {
@@ -293,11 +326,6 @@ export class VM {
 		providers,
 		...options
 	}: VMConfig): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
-		const quickJS = await getQuickJS()
-		const runtime = quickJS.newRuntime()
-		const context = runtime.newContext()
-		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
-
 		let transpiledSpec: string
 		try {
 			transpiledSpec = transform(spec, {
@@ -315,19 +343,34 @@ export class VM {
 			}
 		}
 
+		const quickJS = await getQuickJS()
+		const runtime = quickJS.newRuntime()
+		const context = runtime.newContext()
+		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
+
 		const moduleHandle = await loadModule(context, uri, transpiledSpec)
 		const { validation, warnings } = validateCanvasSpec(context, moduleHandle, providers ?? {}, options)
 
+		let result: { valid: boolean; errors: string[]; warnings: string[] }
 		if (isLeft(validation)) {
-			return {
+			result = {
 				valid: false,
 				// use flatMap to remove null values
 				errors: validation.left.flatMap((err) => (err && err.message ? [err.message] : [])),
 				warnings,
 			}
 		} else {
-			return { valid: true, errors: [], warnings }
+			// dispose handles in the validation object
+			disposeExports(validation.right)
+
+			result = { valid: true, errors: [], warnings }
 		}
+
+		disposeCachedHandles(context)
+		context.dispose()
+		runtime.dispose()
+
+		return result
 	}
 
 	public readonly models: Record<string, Model>
