@@ -25,7 +25,7 @@ const warnings = (w: any) => ({
 const VALIDATION_TEST_FIXTURES: {
 	name: string
 	spec: string
-	expectedResult: Awaited<ReturnType<typeof VM.validateWithoutCreating>>
+	expectedResult: Awaited<ReturnType<typeof VM.validate>>
 }[] = [
 	{
 		name: "reject a blank spec",
@@ -416,7 +416,7 @@ for (const { name, spec, expectedResult } of VALIDATION_TEST_FIXTURES) {
 		const provider = new EthereumBlockProvider("1", "dummy_website")
 		const providers = { [`eth:1`]: provider }
 
-		const result = await VM.validateWithoutCreating({
+		const result = await VM.validate({
 			uri: "...",
 			spec: spec,
 			providers,

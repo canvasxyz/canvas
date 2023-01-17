@@ -387,7 +387,7 @@ class Daemon {
 
 			this.queue.add(async () => {
 				try {
-					const result = await VM.validateWithoutCreating({
+					const result = await VM.validate({
 						uri: "",
 						spec,
 						providers: {},

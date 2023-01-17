@@ -294,7 +294,7 @@ export class VM {
 		}
 	}
 
-	public static async validateWithoutCreating({
+	public static async validate({
 		uri,
 		spec,
 		providers,
