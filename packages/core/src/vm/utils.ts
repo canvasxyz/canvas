@@ -1,8 +1,6 @@
 import assert from "node:assert"
 
 import { isFail, QuickJSContext, QuickJSHandle, VmCallResult } from "quickjs-emscripten"
-import * as t from "io-ts"
-import { isLeft, isRight, left, right } from "fp-ts/lib/Either.js"
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
 export interface JSONArray extends Array<JSONValue> {}
