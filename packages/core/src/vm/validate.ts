@@ -1,5 +1,3 @@
-import chalk from "chalk"
-
 import { QuickJSContext, QuickJSHandle } from "quickjs-emscripten"
 
 import * as t from "io-ts"
