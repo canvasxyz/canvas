@@ -262,7 +262,7 @@ const VALIDATION_TEST_FIXTURES: {
       export const contracts = {
         milady: {
           chain: "eth",
-          chainId: 1,
+          chainId: "1",
           address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
           abi: ["function balanceOf(address owner) view returns (uint balance)"],
         },
@@ -279,7 +279,7 @@ const VALIDATION_TEST_FIXTURES: {
         milady: {
 					somethingElse: "hello",
           chain: "eth",
-          chainId: 1,
+          chainId: "1",
           address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
           abi: ["function balanceOf(address owner) view returns (uint balance)"],
         },
@@ -295,7 +295,7 @@ const VALIDATION_TEST_FIXTURES: {
       export const contracts = {
         milady: {
           chain: "eth",
-          chainId: 5,
+          chainId: "5",
           address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
           abi: ["function balanceOf(address owner) view returns (uint balance)"],
         },

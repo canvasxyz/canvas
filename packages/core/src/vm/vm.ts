@@ -207,21 +207,8 @@ function validateCanvasSpec(
 			const contractNamePattern = /^[a-zA-Z]+$/
 			for (const [name, contractHandle] of Object.entries(contractHandles)) {
 				assertLogError(contractNamePattern.test(name), "invalid contract name")
-				const contract = contractHandle.consume((handle) => unwrapObject(context, handle))
-				const { chain: chainHandle, chainId: chainIdHandle, address: addressHandle, abi: abiHandle, ...rest } = contract
-
-				const chain = chainHandle.consume(context.getString)
-				const chainId = chainIdHandle.consume(context.getString)
-				const address = addressHandle.consume(context.getString)
-				const abi = abiHandle
-					.consume((handle) => unwrapArray(context, handle))
-					.map((item) => item.consume(context.getString))
-
-				// // dispose any other handles
-				// for (const handle of Object.values(rest)) {
-				// 	handle.dispose()
-				// }
-				// contract.dispose()
+				const contract = contractHandle.consume(context.dump)
+				const { chain, chainId, address, abi, ...rest } = contract
 
 				if (
 					assertLogError(chainType.is(chain), `invalid chain: ${chain}`) &&
