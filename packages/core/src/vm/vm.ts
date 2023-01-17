@@ -36,7 +36,6 @@ import {
 	wrapJSON,
 	resolvePromise,
 	wrapArray,
-	unwrapArray,
 } from "./utils.js"
 
 interface VMOptions {
@@ -362,17 +361,15 @@ export class VM {
 
 	public readonly models: Record<string, Model>
 	public readonly actions: string[]
+	public readonly component: string | null
 	public readonly routes: Record<string, string[]>
 	public readonly contracts: Record<string, ethers.Contract>
 	public readonly contractMetadata: Record<string, ContractMetadata>
-	public readonly routeHandles: Record<string, QuickJSHandle>
-	private readonly actionHandles: Record<string, QuickJSHandle>
-	private readonly sourceHandles: Record<string, Record<string, QuickJSHandle>>
-
-	// public readonly models: Record<string, Model>
-	public readonly component: string | null
 	public readonly sources: Set<string>
 
+	private readonly routeHandles: Record<string, QuickJSHandle>
+	private readonly actionHandles: Record<string, QuickJSHandle>
+	private readonly sourceHandles: Record<string, Record<string, QuickJSHandle>>
 	private readonly contractsHandle: QuickJSHandle
 	private readonly dbHandle: QuickJSHandle
 
@@ -396,7 +393,7 @@ export class VM {
 
 		// Generate public fields that are derived from the passed in arguments
 		this.sources = new Set(Object.keys(this.sourceHandles))
-		this.actions = Object.keys(exports.actionHandles)
+		this.actions = Object.keys(this.actionHandles)
 
 		this.contracts = {}
 		if (options.unchecked) {
@@ -404,7 +401,7 @@ export class VM {
 				console.log(`[canvas-vm] Skipping contract setup`)
 			}
 		} else {
-			Object.entries(exports.contractMetadata).map(([name, { chain, chainId, address, abi }]) => {
+			Object.entries(this.contractMetadata).map(([name, { chain, chainId, address, abi }]) => {
 				const provider = providers[`${chain}:${chainId}`]
 				if (provider instanceof EthereumBlockProvider) {
 					this.contracts[name] = new ethers.Contract(address, abi, provider.provider)
@@ -527,19 +524,14 @@ export class VM {
 		this.dbHandle.dispose()
 		this.contractsHandle.dispose()
 
-		for (const handle of Object.values(this.actionHandles)) {
-			handle.dispose()
-		}
-
-		for (const source of Object.values(this.sourceHandles)) {
-			for (const handle of Object.values(source)) {
-				handle.dispose()
-			}
-		}
-
-		for (const handle of Object.values(this.routeHandles)) {
-			handle.dispose()
-		}
+		disposeExports({
+			actionHandles: this.actionHandles,
+			component: this.component,
+			contractMetadata: this.contractMetadata,
+			models: this.models,
+			routeHandles: this.routeHandles,
+			sourceHandles: this.sourceHandles,
+		})
 
 		disposeCachedHandles(this.context)
 		this.context.dispose()
