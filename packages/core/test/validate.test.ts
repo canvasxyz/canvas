@@ -271,6 +271,38 @@ const VALIDATION_TEST_FIXTURES: {
 		expectedResult: success,
 	},
 	{
+		name: "reject contract with invalid chain",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const contracts = {
+        milady: {
+          chain: "bitcoin",
+          chainId: "1",
+          address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
+          abi: ["function balanceOf(address owner) view returns (uint balance)"],
+        },
+      };
+    `,
+		expectedResult: errors(["Contract 'milady' is invalid: chain \"bitcoin\" is invalid"]),
+	},
+	{
+		name: "reject contract with invalid chainId",
+		spec: `
+      export const models = {};
+      export const actions = {};
+      export const contracts = {
+        milady: {
+          chain: "eth",
+          chainId: [],
+          address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
+          abi: ["function balanceOf(address owner) view returns (uint balance)"],
+        },
+      };
+    `,
+		expectedResult: errors(["Contract 'milady' is invalid: chain id [] is invalid"]),
+	},
+	{
 		name: "reject contract with extra fields",
 		spec: `
       export const models = {};
