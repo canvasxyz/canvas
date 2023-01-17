@@ -216,7 +216,7 @@ function validateCanvasSpec(
 					) &&
 					assertLogError(
 						chainIdType.is(chainId),
-						`Contract '${name}' is invalid: chain id ${JSON.stringify(chain)} is invalid`
+						`Contract '${name}' is invalid: chain id ${JSON.stringify(chainId)} is invalid`
 					)
 				) {
 					exports.contractMetadata[name] = { chain: chain as Chain, chainId, address, abi }
