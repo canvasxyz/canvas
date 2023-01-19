@@ -20,6 +20,7 @@
     "packages/verifiers",
     "examples/app-store",
     "examples/chat-webpack",
-    "examples/chat-next"
+    "examples/chat-next",
+    "examples/notes"
   ]
 }
