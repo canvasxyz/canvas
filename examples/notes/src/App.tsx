@@ -134,7 +134,7 @@ export const App: React.FC<{}> = ({}) => {
 							<Icon icon="wastebasket" fontSize="36px"></Icon>
 						</div>
 					</div>
-					<div className="flex-col grow" onClick={() => setSelectedNote(null)}>
+					<div className="overflow-auto" onClick={() => setSelectedNote(null)}>
 						{Object.entries(localNotes)
 							.sort(([key_1, note_1], [key_2, note_2]) => {
 								return note_2.updated_at - note_1.updated_at
@@ -182,6 +182,7 @@ export const App: React.FC<{}> = ({}) => {
 									dirty: true,
 								} as LocalNote
 								newLocalNotes[newLocalNote.local_key] = newLocalNote
+								setSelectedNote(newLocalNote.local_key)
 								setLocalNotes(newLocalNotes)
 							}}
 						>
