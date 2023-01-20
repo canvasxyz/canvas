@@ -72,7 +72,6 @@ export const App: React.FC<{}> = ({}) => {
 	const [selectedNote, setSelectedNote] = useState<string | null>(null)
 	const { isLoading, host, dispatch } = useCanvas()
 	const { data, error } = useRoute<Note>("/notes", {})
-	const [portalVisible, setPortalVisible] = useState(false)
 
 	const [localNotes, setLocalNotes] = useState<Record<string, LocalNote>>({})
 	const currentNote: LocalNote | null = selectedNote ? localNotes[selectedNote] : null
@@ -104,12 +103,6 @@ export const App: React.FC<{}> = ({}) => {
 			setLocalNotes({ ...localNotes, ...localNoteChanges })
 		}
 	}, [data])
-
-	useEffect(() => {
-		;(window as any).showPortal = () => {
-			setPortalVisible(!portalVisible)
-		}
-	})
 
 	const updateLocalNote = (localKey: string, changedFields: Record<string, any>) => {
 		const newLocalNotes = {
@@ -316,21 +309,6 @@ export const App: React.FC<{}> = ({}) => {
 					)}
 				</div>
 			</div>
-			{/* portal background */}
-			{portalVisible && (
-				<>
-					<div className="absolute left-0 top-0 overflow-hidden h-screen w-screen bg-gray-500 opacity-50"></div>
-					<div className="absolute left-0 top-0 overflow-hidden h-screen w-screen">
-						<div className="m-auto mt-48 opacity-100 bg-red-500 w-80 z-20 p-5">
-							<div className="text-xl font-bold">Log in</div>
-							<Connect></Connect>
-							<div className="border border-black rounded" onClick={() => setPortalVisible(false)}>
-								Close
-							</div>
-						</div>
-					</div>
-				</>
-			)}
 		</>
 	)
 }
