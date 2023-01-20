@@ -146,7 +146,7 @@ export const App: React.FC<{}> = ({}) => {
 									}}
 								>
 									<div className="text-sm font-bold">
-										{note.title.substring(0, 30)}
+										{note.title.substring(0, 30) || "Untitled"}
 										{note.title.length > 30 && "..."}
 									</div>
 									<div className="text-sm">
@@ -173,7 +173,7 @@ export const App: React.FC<{}> = ({}) => {
 									local_key: uuidv4(),
 									title: "",
 									body: "",
-									updated_at: new Date().getTime() / 1000,
+									updated_at: Math.floor(new Date().getTime()),
 									dirty: true,
 								} as LocalNote
 								newLocalNotes[newLocalNote.local_key] = newLocalNote
@@ -247,7 +247,7 @@ export const App: React.FC<{}> = ({}) => {
 						<div className="pl-5 pr-5 pt-3 pb-3 grow">
 							<input
 								type="text"
-								className="text-xl font-bold"
+								className="text-xl font-bold border border-black"
 								value={currentNote.title}
 								onChange={(e) => {
 									const newLocalNotes = {
