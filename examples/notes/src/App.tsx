@@ -203,9 +203,9 @@ export const App: React.FC<{}> = ({}) => {
 							<Icon icon="compose" fontSize="36px"></Icon>
 						</div>
 						<div className="flex-grow"></div>
-						<div className="shrink">
+						{/* <div className="shrink">
 							<input className="border border-gray-400 rounded h-10 p-2" type="text" placeholder="Search"></input>
-						</div>
+						</div> */}
 
 						{!isConnected ? (
 							<div className="shrink pl-3">
