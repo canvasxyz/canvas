@@ -12,21 +12,84 @@ addIcon("wastebasket", wastebasket)
 
 type Note = {
 	id: string
+	localKey: string
 	title: string
 	body: string
 	from_id: string
-	updated_at: "datetime"
+	updated_at: number
+}
 
-	// updated_at: Date
+type LocalNote = {
+	id?: string
+	localKey: string
+	title: string
+	body: string
+	from_id?: string
+	updated_at: number
+	dirty: boolean
+}
+
+function formatUpdatedAt(updatedAtTs: number) {
+	const now = new Date()
+	const updatedAt = new Date(updatedAtTs)
+
+	const dayMs = 1000 * 60 * 60 * 24
+
+	// create new date objects with the local dates for now and updatedAt
+	// where the hour/minute/second/millisecond fields are 0
+	const day0now = new Date(now.getFullYear(), now.getMonth(), now.getDay())
+	const day0updatedAt = new Date(updatedAt.getFullYear(), updatedAt.getMonth(), updatedAt.getDay())
+
+	const diffMs = day0updatedAt.getTime() - day0now.getTime()
+	const diffDays = diffMs / dayMs
+
+	if (diffDays == 0) {
+		// return time
+		return updatedAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "numeric" })
+	} else if (diffDays < 7) {
+		// return day of week
+		return updatedAt.toLocaleDateString(undefined, { weekday: "long" })
+	} else {
+		return updatedAt.toLocaleDateString()
+	}
 }
 
 export const App: React.FC<{}> = ({}) => {
-	const [selectedNote, setSelectedNote] = useState<number | null>(0)
+	const [selectedNote, setSelectedNote] = useState<string | null>(null)
 	const { isLoading, host, dispatch } = useCanvas()
 	const { data, error } = useRoute<Note>("/notes", {})
 	const [portalVisible, setPortalVisible] = useState(false)
 
-	const currentNote = selectedNote !== null && data != null ? data[selectedNote] : null
+	const [localNotes, setLocalNotes] = useState<Record<string, LocalNote>>({})
+	const currentNote: LocalNote | null = selectedNote ? localNotes[selectedNote] : null
+
+	useEffect(() => {
+		const localNoteChanges: Record<string, LocalNote> = {}
+
+		for (const note of data || []) {
+			const localNote = localNotes[note.id]
+			// does localNote exist?
+			// if no, create note
+			if (!localNote) {
+				localNoteChanges[note.id] = { ...note, dirty: false }
+				continue
+			}
+
+			// is the note on daemon newer?
+			if (note.updated_at > localNote.updated_at) {
+				// is corresponding local note dirty?
+				// if yes, don't copy
+				// otherwise overwrite note
+				if (!localNote.dirty) {
+					localNoteChanges[note.id] = { ...note, dirty: false }
+				}
+			}
+		}
+
+		if (Object.entries(localNoteChanges).length > 0) {
+			setLocalNotes({ ...localNotes, ...localNoteChanges })
+		}
+	}, [data])
 
 	useEffect(() => {
 		;(window as any).showPortal = () => {
@@ -44,7 +107,7 @@ export const App: React.FC<{}> = ({}) => {
 						<div
 							className="shrink border border-white hover:border-gray-300 hover:bg-gray-100 rounded hover:cursor-pointer"
 							onClick={() => {
-								if (currentNote) {
+								if (currentNote !== null && currentNote.id) {
 									dispatch("deleteNote", { id: currentNote.id })
 								}
 							}}
@@ -59,28 +122,33 @@ export const App: React.FC<{}> = ({}) => {
 							setSelectedNote(null)
 						}}
 					>
-						{(data || []).map((note: Note, index: number) => (
-							<div
-								key={`node-${index}`}
-								className={`pt-2 pb-2 pl-4 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer ${
-									selectedNote == index ? "bg-gray-100" : "bg-white"
-								}`}
-								onClick={(e) => {
-									console.log("clicked on element")
-									e.stopPropagation()
-									setSelectedNote(index)
-								}}
-							>
-								<div className="text-sm font-bold">
-									{note.title.substring(0, 30)}
-									{note.title.length > 30 && "..."}
+						{Object.entries(localNotes)
+							.sort(([key_1, note_1], [key_2, note_2]) => {
+								return note_2.updated_at - note_1.updated_at
+							})
+							.map(([key, note]) => (
+								<div
+									key={`node-${note.id}`}
+									className={`pt-2 pb-2 pl-4 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer ${
+										selectedNote == note.id ? "bg-gray-100" : "bg-white"
+									}`}
+									onClick={(e) => {
+										e.stopPropagation()
+										setSelectedNote(note.id || null)
+									}}
+								>
+									<div className="text-sm font-bold">
+										{note.title.substring(0, 30)}
+										{note.title.length > 30 && "..."}
+									</div>
+									<div className="text-sm">
+										{formatUpdatedAt(note.updated_at)}
+										&nbsp;
+										{note.body.substring(0, 30)}
+										{note.body.length > 30 && "..."}
+									</div>
 								</div>
-								<div className="text-sm">
-									{note.body.substring(0, 30)}
-									{note.body.length > 30 && "..."}
-								</div>
-							</div>
-						))}
+							))}
 					</div>
 				</div>
 				{/* main content */}
