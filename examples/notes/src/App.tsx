@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react"
+import { v4 as uuidv4 } from "uuid"
+
 import { Connect } from "./Connect"
 
 import { ethers } from "ethers"
@@ -16,7 +18,7 @@ addIcon("wastebasket", wastebasket)
 
 type Note = {
 	id: string
-	localKey: string
+	local_key: string
 	title: string
 	body: string
 	from_id: string
@@ -25,7 +27,7 @@ type Note = {
 
 type LocalNote = {
 	id?: string
-	localKey: string
+	local_key: string
 	title: string
 	body: string
 	from_id?: string
@@ -79,11 +81,11 @@ export const App: React.FC<{}> = ({}) => {
 		const localNoteChanges: Record<string, LocalNote> = {}
 
 		for (const note of data || []) {
-			const localNote = localNotes[note.id]
+			const localNote = localNotes[note.local_key]
 			// does localNote exist?
 			// if no, create note
 			if (!localNote) {
-				localNoteChanges[note.id] = { ...note, dirty: false }
+				localNoteChanges[note.local_key] = { ...note, dirty: false }
 				continue
 			}
 
@@ -93,7 +95,7 @@ export const App: React.FC<{}> = ({}) => {
 				// if yes, don't copy
 				// otherwise overwrite note
 				if (!localNote.dirty) {
-					localNoteChanges[note.id] = { ...note, dirty: false }
+					localNoteChanges[note.local_key] = { ...note, dirty: false }
 				}
 			}
 		}
@@ -127,26 +129,20 @@ export const App: React.FC<{}> = ({}) => {
 							<Icon icon="wastebasket" fontSize="36px"></Icon>
 						</div>
 					</div>
-					<div
-						className="flex-col grow"
-						onClick={() => {
-							console.log("clicked on list")
-							setSelectedNote(null)
-						}}
-					>
+					<div className="flex-col grow" onClick={() => setSelectedNote(null)}>
 						{Object.entries(localNotes)
 							.sort(([key_1, note_1], [key_2, note_2]) => {
 								return note_2.updated_at - note_1.updated_at
 							})
 							.map(([key, note]) => (
 								<div
-									key={`node-${note.id}`}
+									key={`node-${note.local_key}`}
 									className={`pt-2 pb-2 pl-4 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer ${
-										selectedNote == note.id ? "bg-gray-100" : "bg-white"
+										selectedNote == note.local_key ? "bg-gray-100" : "bg-white"
 									}`}
 									onClick={(e) => {
 										e.stopPropagation()
-										setSelectedNote(note.id || null)
+										setSelectedNote(note.local_key)
 									}}
 								>
 									<div className="text-sm font-bold">
@@ -172,7 +168,16 @@ export const App: React.FC<{}> = ({}) => {
 						<div
 							className="shrink border border-white hover:border-gray-300 hover:bg-gray-100 rounded hover:cursor-pointer"
 							onClick={() => {
-								dispatch("createNote", { content: "whatever", title: "something" })
+								const newLocalNotes = { ...localNotes }
+								const newLocalNote = {
+									local_key: uuidv4(),
+									title: "",
+									body: "",
+									updated_at: new Date().getTime() / 1000,
+									dirty: true,
+								} as LocalNote
+								newLocalNotes[newLocalNote.local_key] = newLocalNote
+								setLocalNotes(newLocalNotes)
 							}}
 						>
 							<Icon icon="compose" fontSize="36px"></Icon>
@@ -257,7 +262,28 @@ export const App: React.FC<{}> = ({}) => {
 								}}
 							/>
 							<div className="pt-2">{currentNote.body}</div>
-							<div className="absolute right-10 bottom-10 border border-gray-400 p-3 rounded-lg bg-gray-200 hover:bg-gray-300 hover:cursor-pointer">
+							<div
+								className="absolute right-10 bottom-10 border border-gray-400 p-3 rounded-lg bg-gray-200 hover:bg-gray-300 hover:cursor-pointer"
+								onClick={() => {
+									// update canvas
+									dispatch("createUpdateNote", {
+										id: currentNote.id || "",
+										local_key: currentNote.local_key,
+										body: currentNote.body,
+										title: currentNote.title,
+									})
+
+									// set the note to clean
+									const newLocalNotes = {
+										...localNotes,
+									}
+									newLocalNotes[selectedNote] = {
+										...currentNote,
+										dirty: false,
+									}
+									setLocalNotes(newLocalNotes)
+								}}
+							>
 								Save
 							</div>
 						</div>
