@@ -71,6 +71,8 @@ export function useSession(signer: SessionSigner | null): {
 		}
 
 		signer!.createActionSigner(sessionPrivateKey).then((actionSigner) => {
+			console.log("set ActionSigner on load localStorage?")
+			console.log(actionSigner.address)
 			setActionSigner(actionSigner)
 		})
 		setSessionExpiration(expiration)
@@ -136,6 +138,7 @@ export function useSession(signer: SessionSigner | null): {
 
 			const sessionKey = getCanvasSessionKey(signerAddress)
 			localStorage.setItem(sessionKey, JSON.stringify(sessionObject))
+			console.log("set ActionSigner on login")
 			setActionSigner(actionSigner)
 			setSessionExpiration(sessionObject.expiration)
 			setError(null)

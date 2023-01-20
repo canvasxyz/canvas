@@ -3,7 +3,7 @@ import { ethers } from "ethers"
 import { useAccount, useConnect, useDisconnect, useSigner, useNetwork, Connector } from "wagmi"
 import { useSession, useCanvasSigner } from "@canvas-js/hooks"
 
-type ConnectionState = "disconnected" | "awaiting_connection" | "awaiting_session" | "connected"
+type ConnectionState = "page_loaded" | "disconnected" | "awaiting_connection" | "awaiting_session" | "connected"
 
 export const useConnectOneStep = ({
 	connector,
@@ -16,31 +16,48 @@ export const useConnectOneStep = ({
 	errors: string[]
 	address: string | null
 } => {
-	const [connectionState, setConnectionState] = useState<ConnectionState>("disconnected")
+	const [connectionState, setConnectionState] = useState<ConnectionState>("page_loaded")
 	const [address, setAddress] = useState<string | null>(null)
 	const [errors, setErrors] = useState<string[]>([])
 
 	// wagmi login state
 	const { connect: wagmiConnect } = useConnect()
 	const { disconnect: wagmiDisconnect } = useDisconnect()
-	const { isConnected: wagmiIsConnected, status: wagmiAccountStatus, address: wagmiAccountAddress } = useAccount()
+	const {
+		isConnected: wagmiIsConnected,
+		status: wagmiAccountStatus,
+		address: wagmiAccountAddress,
+		status,
+	} = useAccount()
 	const { error: signerError, data: ethersSigner } = useSigner<ethers.providers.JsonRpcSigner>()
 	const { chain } = useNetwork()
 
+	console.log(`wagmi account status: ${status}`)
 	// canvas login state
 	const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
-	const { error: sessionError, sessionAddress, login, logout, isLoading: canvasIsLoading } = useSession(signer!)
+	const {
+		error: sessionError,
+		sessionAddress,
+		login,
+		logout,
+		isLoading: canvasIsLoading,
+		isPending: canvasIsPending,
+	} = useSession(signer!)
 
 	const reset = () => {
+		console.log("reset")
 		wagmiDisconnect()
 		setAddress(null)
+		setConnectionState("disconnected")
 	}
 
 	useEffect(() => {
 		// get the wallet address when wagmi connects
 		if (wagmiAccountStatus == "connected") {
-			console.log(`wagmiAccountStatus change: ${wagmiAccountStatus}`)
-			if (connectionState == "awaiting_connection") {
+			console.log("wagmi is connected")
+			console.log(connectionState)
+			if (connectionState == "awaiting_connection" || connectionState == "connected") {
+				console.log(wagmiAccountAddress)
 				setAddress(wagmiAccountAddress)
 			}
 		}
@@ -64,7 +81,8 @@ export const useConnectOneStep = ({
 
 	useEffect(() => {
 		if (wagmiIsConnected) {
-			if (connectionState !== "awaiting_connection") {
+			if (connectionState !== "awaiting_connection" && connectionState !== "page_loaded") {
+				console.log(connectionState)
 				reset()
 				return
 			}
@@ -77,6 +95,7 @@ export const useConnectOneStep = ({
 				login()
 
 				setConnectionState("awaiting_session")
+			} else if (connectionState == "connected") {
 			} else {
 				reset()
 			}
@@ -84,14 +103,16 @@ export const useConnectOneStep = ({
 	}, [signer, canvasIsLoading])
 
 	useEffect(() => {
-		if (sessionAddress) {
+		if (canvasIsPending == false) {
 			if (connectionState == "awaiting_session") {
+				setConnectionState("connected")
+			} else if (connectionState == "page_loaded") {
 				setConnectionState("connected")
 			} else {
 				reset()
 			}
 		}
-	}, [sessionAddress])
+	}, [canvasIsPending])
 
 	useEffect(() => {
 		if (signerError) {
