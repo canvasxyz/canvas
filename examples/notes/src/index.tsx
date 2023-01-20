@@ -7,7 +7,6 @@ import { Canvas } from "@canvas-js/hooks"
 import { client } from "./client"
 import { App } from "./App"
 
-import "98.css"
 import "./styles.css"
 
 const root = ReactDOM.createRoot(document.getElementById("root")!)

@@ -1,72 +1,142 @@
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { Connect } from "./Connect"
 
-import { useCanvas } from "@canvas-js/hooks"
+import { useCanvas, useRoute } from "@canvas-js/hooks"
 
-import { ErrorMessage } from "./ErrorMessage"
-import { Messages } from "./Messages"
+import { Icon, addIcon } from "@iconify/react/dist/offline"
+import compose from "@iconify/icons-openmoji/compose"
+import wastebasket from "@iconify/icons-openmoji/wastebasket"
+
+addIcon("compose", compose)
+addIcon("wastebasket", wastebasket)
+
+type Note = {
+	id: string
+	title: string
+	body: string
+	from_id: string
+	updated_at: "datetime"
+
+	// updated_at: Date
+}
 
 export const App: React.FC<{}> = ({}) => {
-	const { isLoading, error, data, host } = useCanvas()
+	const [selectedNote, setSelectedNote] = useState<number | null>(0)
+	const { isLoading, host, dispatch } = useCanvas()
+	const { data, error } = useRoute<Note>("/notes", {})
+	const [portalVisible, setPortalVisible] = useState(false)
 
-	const gossipPeers = data?.peers ? Object.entries(data.peers.gossip) : []
-	const syncPeers = data?.peers ? Object.entries(data.peers.sync) : []
+	const currentNote = selectedNote !== null && data != null ? data[selectedNote] : null
+
+	useEffect(() => {
+		;(window as any).showPortal = () => {
+			setPortalVisible(!portalVisible)
+		}
+	})
 
 	return (
 		<>
-			<Messages />
-			<div id="sidebar">
-				<div className="window">
-					<div className="title-bar">
-						<div className="title-bar-text">Application</div>
+			<div className="flex flex-row h-screen overflow-hidden bg-white">
+				{/* sidebar */}
+				<div className="w-64 h-full border-solid border-black border-r flex-col flex shrink">
+					<div className="h-16 border-b border-black flex shrink p-3">
+						<div className="flex-grow"></div>
+						<div
+							className="shrink border border-white hover:border-gray-300 hover:bg-gray-100 rounded hover:cursor-pointer"
+							onClick={() => {
+								if (currentNote) {
+									dispatch("deleteNote", { id: currentNote.id })
+								}
+							}}
+						>
+							<Icon icon="wastebasket" fontSize="36px"></Icon>
+						</div>
 					</div>
-					<div className="window-body">
-						{isLoading ? (
-							<p>Loading...</p>
-						) : data ? (
-							<div>
-								<p>{data.uri}</p>
-								<p data-id={data.peerId}>
-									Peer ID: {data.peerId?.slice(0, 10)}...{data.peerId?.slice(data.peerId?.length - 3)}
-								</p>
-								{data.peers && (
-									<ul className="tree-view">
-										<li>{gossipPeers.length} gossip peers</li>
-										<li>
-											<ul>
-												{gossipPeers.map(([peerId, { lastSeen }]) => (
-													<li key={peerId} data-id={peerId} style={{ display: "flex" }}>
-														<div style={{ flex: 1 }}>
-															{peerId.slice(0, 10) + "..." + peerId.slice(peerId.length - 3)}
-														</div>
-														<div>{Math.round((Date.now() - lastSeen) / 1000 / 60)}min ago</div>
-													</li>
-												))}
-											</ul>
-										</li>
-										<li>{syncPeers.length} sync peers</li>
-										<li>
-											<ul>
-												{syncPeers.map(([peerId, { lastSeen }]) => (
-													<li key={peerId} data-id={peerId} style={{ display: "flex" }}>
-														<div style={{ flex: 1 }}>
-															{peerId.slice(0, 10) + "..." + peerId.slice(peerId.length - 3)}
-														</div>
-														<div>{Math.round((Date.now() - lastSeen) / 1000 / 60)}min ago</div>
-													</li>
-												))}
-											</ul>
-										</li>
-									</ul>
-								)}
+					<div
+						className="flex-col grow"
+						onClick={() => {
+							console.log("clicked on list")
+							setSelectedNote(null)
+						}}
+					>
+						{(data || []).map((note: Note, index: number) => (
+							<div
+								key={`node-${index}`}
+								className={`pt-2 pb-2 pl-4 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer ${
+									selectedNote == index ? "bg-gray-100" : "bg-white"
+								}`}
+								onClick={(e) => {
+									console.log("clicked on element")
+									e.stopPropagation()
+									setSelectedNote(index)
+								}}
+							>
+								<div className="text-sm font-bold">
+									{note.title.substring(0, 30)}
+									{note.title.length > 30 && "..."}
+								</div>
+								<div className="text-sm">
+									{note.body.substring(0, 30)}
+									{note.body.length > 30 && "..."}
+								</div>
 							</div>
-						) : (
-							<ErrorMessage error={error} />
-						)}
+						))}
 					</div>
 				</div>
-				<Connect />
+				{/* main content */}
+				<div className="overflow-y-auto overflow-x-hidden relative flex flex-col grow">
+					{/* top bar? */}
+					<div className="h-16 border-b border-black p-3 flex">
+						<div
+							className="shrink border border-white hover:border-gray-300 hover:bg-gray-100 rounded hover:cursor-pointer"
+							onClick={() => {
+								dispatch("createNote", { content: "whatever", title: "something" })
+							}}
+						>
+							<Icon icon="compose" fontSize="36px"></Icon>
+						</div>
+						<div className="flex-grow"></div>
+						<div className="shrink">
+							<input className="border border-gray-400 rounded h-10 p-2" type="text" placeholder="Search"></input>
+						</div>
+						<div className="shrink pl-3">
+							<div
+								className="border border-blue-400 bg-blue-50 rounded h-10 p-2 font-semibold"
+								onClick={() => setPortalVisible(true)}
+							>
+								Log in
+							</div>
+						</div>
+					</div>
+					{/* note content area */}
+					{currentNote ? (
+						<div className="pl-5 pr-5 pt-3 pb-3 grow">
+							<div className="text-xl font-bold">{currentNote.title}</div>
+							<div className="pt-2">{currentNote.body}</div>
+							<div className="absolute right-10 bottom-10 border border-gray-400 p-3 rounded-lg bg-gray-200 hover:bg-gray-300 hover:cursor-pointer">
+								Save
+							</div>
+						</div>
+					) : (
+						<div className="m-auto text-3xl font-semibold text-gray-500">No note is selected</div>
+					)}
+				</div>
 			</div>
+			{/* portal background */}
+			{portalVisible && (
+				<>
+					<div className="absolute left-0 top-0 overflow-hidden h-screen w-screen bg-gray-500 opacity-50"></div>
+					<div className="absolute left-0 top-0 overflow-hidden h-screen w-screen">
+						<div className="m-auto mt-48 opacity-100 bg-red-500 w-80 z-20 p-5">
+							<div className="text-xl font-bold">Log in</div>
+							<Connect></Connect>
+							<div className="border border-black rounded" onClick={() => setPortalVisible(false)}>
+								Close
+							</div>
+						</div>
+					</div>
+				</>
+			)}
 		</>
 	)
 }

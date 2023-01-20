@@ -1,7 +1,8 @@
 export const models = {
-	posts: {
+	notes: {
 		id: "string",
-		content: "string",
+		title: "string",
+		body: "string",
 		from_id: "string",
 		updated_at: "datetime",
 		indexes: ["updated_at"],
@@ -9,14 +10,26 @@ export const models = {
 }
 
 export const routes = {
-	"/posts": ({ offset = 0 }, { db }) =>
-		db.queryRaw(`SELECT id, from_id, content, updated_at FROM posts ORDER BY updated_at DESC LIMIT 50 OFFSET :offset`, {
-			offset,
-		}),
+	"/notes": ({ offset = 0 }, { db }) =>
+		db.queryRaw(
+			`SELECT id, from_id, title, body, updated_at FROM notes ORDER BY updated_at DESC LIMIT 50 OFFSET :offset`,
+			{
+				offset,
+			}
+		),
 }
 
 export const actions = {
-	createPost({ content }, { db, hash, from }) {
-		db.posts.set(hash, { content, from_id: from })
+	createNote({ content, title }, { db, hash, from }) {
+		db.notes.set(`${from}/${hash}`, { title, body: content, from_id: from })
+	},
+
+	deleteNote({ id }, { db, hash, from }) {
+		const hash = id.split("/")[1]
+		db.notes.delete(`${from}/${hash}`)
+	},
+
+	updateNote({ content, id, title }, { db, hash, from }) {
+		db.notes.set(`${from}/${id}`, { title, body: content, from_id: from })
 	},
 }
