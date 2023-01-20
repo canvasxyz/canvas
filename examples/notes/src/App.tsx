@@ -144,8 +144,10 @@ export const App: React.FC<{}> = ({}) => {
 									<div className="text-sm">
 										{formatUpdatedAt(note.updated_at)}
 										&nbsp;
-										{note.body.substring(0, 30)}
-										{note.body.length > 30 && "..."}
+										<span className="pl-2 text-gray-400">
+											{note.body.substring(0, 30)}
+											{note.body.length > 30 && "..."}
+										</span>
 									</div>
 								</div>
 							))}
