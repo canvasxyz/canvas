@@ -61,7 +61,7 @@ function formatUpdatedAt(updatedAtTs: number) {
 export const App: React.FC<{}> = ({}) => {
 	const { connect, connectors } = useConnect()
 	const { disconnect } = useDisconnect()
-	const { isConnected } = useAccount()
+	const { isConnected, address } = useAccount()
 	const { error: signerError, data: ethersSigner } = useSigner<ethers.providers.JsonRpcSigner>()
 	const { chain } = useNetwork()
 	const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
@@ -214,6 +214,9 @@ export const App: React.FC<{}> = ({}) => {
 						) : (
 							<>
 								<div className="shrink pl-3">
+									<div className="rounded h-10 p-2">Connected as {address?.substring(0, 8)}...</div>
+								</div>
+								<div className="shrink pl-3">
 									<div
 										className="border border-red-400 bg-red-50 rounded h-10 p-2 font-semibold hover:cursor-pointer hover:bg-red-100 select-none"
 										onClick={() => {
@@ -280,22 +283,25 @@ export const App: React.FC<{}> = ({}) => {
 									className="absolute right-10 bottom-10 border border-gray-400 p-3 rounded-lg bg-gray-200 hover:bg-gray-300 hover:cursor-pointer"
 									onClick={() => {
 										// update canvas
-										dispatch("createUpdateNote", {
-											id: currentNote.id || "",
-											local_key: currentNote.local_key,
-											body: currentNote.body,
-											title: currentNote.title,
-										})
-
-										// set the note to clean
-										const newLocalNotes = {
-											...localNotes,
+										try {
+											dispatch("createUpdateNote", {
+												id: currentNote.id || "",
+												local_key: currentNote.local_key,
+												body: currentNote.body,
+												title: currentNote.title,
+											})
+											// set the note to clean
+											const newLocalNotes = {
+												...localNotes,
+											}
+											newLocalNotes[selectedNote] = {
+												...currentNote,
+												dirty: false,
+											}
+											setLocalNotes(newLocalNotes)
+										} catch (e) {
+											console.log(e)
 										}
-										newLocalNotes[selectedNote] = {
-											...currentNote,
-											dirty: false,
-										}
-										setLocalNotes(newLocalNotes)
 									}}
 								>
 									Save
