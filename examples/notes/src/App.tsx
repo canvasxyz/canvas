@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
 
-import { ethers } from "ethers"
-import { useAccount, useConnect, useDisconnect, useSigner, useNetwork } from "wagmi"
-import { useSession, useCanvasSigner } from "@canvas-js/hooks"
-
+import { useConnectOneStep } from "./useConnectOneStep"
+import { useConnect } from "wagmi"
 import { useCanvas, useRoute } from "@canvas-js/hooks"
 
 import { Icon, addIcon } from "@iconify/react/dist/offline"
@@ -59,16 +57,12 @@ function formatUpdatedAt(updatedAtTs: number) {
 }
 
 export const App: React.FC<{}> = ({}) => {
-	const { connect, connectors } = useConnect()
-	const { disconnect } = useDisconnect()
-	const { isConnected, address } = useAccount()
-	const { error: signerError, data: ethersSigner } = useSigner<ethers.providers.JsonRpcSigner>()
-	const { chain } = useNetwork()
-	const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
-	const { error: sessionError, sessionAddress, login, logout, isPending } = useSession(signer!)
+	const { connectors } = useConnect()
+	const connector = connectors[0]
+	const { connectionState, connect, disconnect, errors, address } = useConnectOneStep({ connector })
 
 	const [selectedNote, setSelectedNote] = useState<string | null>(null)
-	const { isLoading, host, dispatch } = useCanvas()
+	const { dispatch } = useCanvas()
 	const { data, error } = useRoute<Note>("/notes", {})
 
 	const [localNotes, setLocalNotes] = useState<Record<string, LocalNote>>({})
@@ -197,14 +191,17 @@ export const App: React.FC<{}> = ({}) => {
 						{/* <div className="shrink">
 							<input className="border border-gray-400 rounded h-10 p-2" type="text" placeholder="Search"></input>
 						</div> */}
+						{errors.map((error, idx) => (
+							<div key={`error-${idx}`}>{error}</div>
+						))}
 
-						{!isConnected ? (
+						{connectionState !== "connected" ? (
 							<div className="shrink pl-3">
 								<div
 									className="border border-green-400 bg-green-50 rounded h-10 p-2 font-semibold hover:cursor-pointer hover:bg-green-100 select-none"
 									onClick={() => {
 										if (connectors && connectors.length > 0) {
-											connect({ connector: connectors[0] })
+											connect()
 										}
 									}}
 								>
@@ -227,31 +224,6 @@ export const App: React.FC<{}> = ({}) => {
 									>
 										Disconnect
 									</div>
-								</div>
-								<div className="shrink pl-3">
-									{sessionAddress === null ? (
-										<div
-											className="border border-blue-400 bg-blue-50 rounded h-10 p-2 font-semibold hover:cursor-pointer hover:bg-blue-100 select-none"
-											onClick={() => {
-												if (!isLoading && !isPending) {
-													login()
-												}
-											}}
-										>
-											Log in
-										</div>
-									) : (
-										<div
-											className="border border-blue-400 bg-blue-50 rounded h-10 p-2 font-semibold hover:cursor-pointer hover:bg-blue-100 select-none"
-											onClick={() => {
-												if (!isLoading) {
-													logout()
-												}
-											}}
-										>
-											Log out
-										</div>
-									)}
 								</div>
 							</>
 						)}
