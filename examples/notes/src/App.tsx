@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
 
-import { Connect } from "./Connect"
-
 import { ethers } from "ethers"
 import { useAccount, useConnect, useDisconnect, useSigner, useNetwork } from "wagmi"
 import { useSession, useCanvasSigner } from "@canvas-js/hooks"
