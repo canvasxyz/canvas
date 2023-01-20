@@ -22,11 +22,11 @@ export const routes = {
 
 export const actions = {
 	createUpdateNote({ body, id, title, local_key }, { db, hash, from }) {
-		const key = id ? `${from}/${id}` : `${from}/${hash}`
+		const key = id ? `${from}/${id.split("/")[1]}` : `${from}/${hash}`
 		db.notes.set(key, { title, body, from_id: from, local_key })
 	},
 
 	deleteNote({ id }, { db, from }) {
-		db.notes.delete(`${from}/${id}`)
+		db.notes.delete(`${from}/${id.split("/")[1]}`)
 	},
 }

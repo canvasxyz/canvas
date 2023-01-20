@@ -111,6 +111,19 @@ export const App: React.FC<{}> = ({}) => {
 		}
 	})
 
+	const updateLocalNote = (localKey: string, changedFields: Record<string, any>) => {
+		const newLocalNotes = {
+			...localNotes,
+		}
+		const localNote = localNotes[localKey]
+		newLocalNotes[localKey] = {
+			...localNote,
+			...changedFields,
+			dirty: true,
+		}
+		setLocalNotes(newLocalNotes)
+	}
+
 	return (
 		<>
 			<div className="flex flex-row h-screen overflow-hidden bg-white">
@@ -121,8 +134,15 @@ export const App: React.FC<{}> = ({}) => {
 						<div
 							className="shrink border border-white hover:border-gray-300 hover:bg-gray-100 rounded hover:cursor-pointer"
 							onClick={() => {
-								if (currentNote !== null && currentNote.id) {
-									dispatch("deleteNote", { id: currentNote.id })
+								if (selectedNote && currentNote) {
+									// delete from local copy
+									const { [selectedNote]: deletedLocalNote, ...otherLocalNotes } = localNotes
+									setLocalNotes(otherLocalNotes)
+
+									// delete on canvas
+									if (currentNote.id) {
+										dispatch("deleteNote", { id: currentNote.id })
+									}
 								}
 							}}
 						>
@@ -153,8 +173,8 @@ export const App: React.FC<{}> = ({}) => {
 										{formatUpdatedAt(note.updated_at)}
 										&nbsp;
 										<span className="pl-2 text-gray-400">
-											{note.body.substring(0, 30)}
-											{note.body.length > 30 && "..."}
+											{note.body.substring(0, 15)}
+											{note.body.length > 15 && "..."}
 										</span>
 									</div>
 								</div>
@@ -245,47 +265,51 @@ export const App: React.FC<{}> = ({}) => {
 					{/* note content area */}
 					{currentNote && selectedNote ? (
 						<div className="pl-5 pr-5 pt-3 pb-3 grow">
-							<input
-								type="text"
-								className="text-xl font-bold border border-black"
-								value={currentNote.title}
-								onChange={(e) => {
-									const newLocalNotes = {
-										...localNotes,
-									}
-									newLocalNotes[selectedNote] = {
-										...currentNote,
-										title: e.target.value,
-										dirty: true,
-									}
-									setLocalNotes(newLocalNotes)
-								}}
-							/>
-							<div className="pt-2">{currentNote.body}</div>
-							<div
-								className="absolute right-10 bottom-10 border border-gray-400 p-3 rounded-lg bg-gray-200 hover:bg-gray-300 hover:cursor-pointer"
-								onClick={() => {
-									// update canvas
-									dispatch("createUpdateNote", {
-										id: currentNote.id || "",
-										local_key: currentNote.local_key,
-										body: currentNote.body,
-										title: currentNote.title,
-									})
-
-									// set the note to clean
-									const newLocalNotes = {
-										...localNotes,
-									}
-									newLocalNotes[selectedNote] = {
-										...currentNote,
-										dirty: false,
-									}
-									setLocalNotes(newLocalNotes)
-								}}
-							>
-								Save
+							<div className="flex flex-col">
+								<input
+									placeholder="Title"
+									type="text"
+									className="text-xl font-bold border border-black p-1 rounded-md"
+									value={currentNote.title}
+									onChange={(e) => {
+										updateLocalNote(selectedNote, { title: e.target.value })
+									}}
+								/>
+								<textarea
+									placeholder="..."
+									className="border border-black p-1 mt-2 rounded-md h-200"
+									value={currentNote.body}
+									onChange={(e) => {
+										updateLocalNote(selectedNote, { body: e.target.value })
+									}}
+								/>
 							</div>
+							{currentNote.dirty && (
+								<div
+									className="absolute right-10 bottom-10 border border-gray-400 p-3 rounded-lg bg-gray-200 hover:bg-gray-300 hover:cursor-pointer"
+									onClick={() => {
+										// update canvas
+										dispatch("createUpdateNote", {
+											id: currentNote.id || "",
+											local_key: currentNote.local_key,
+											body: currentNote.body,
+											title: currentNote.title,
+										})
+
+										// set the note to clean
+										const newLocalNotes = {
+											...localNotes,
+										}
+										newLocalNotes[selectedNote] = {
+											...currentNote,
+											dirty: false,
+										}
+										setLocalNotes(newLocalNotes)
+									}}
+								>
+									Save
+								</div>
+							)}
 						</div>
 					) : (
 						<div className="m-auto text-3xl font-semibold text-gray-500">No note is selected</div>
