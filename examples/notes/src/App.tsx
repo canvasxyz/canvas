@@ -177,9 +177,24 @@ export const App: React.FC<{}> = ({}) => {
 						</div>
 					</div>
 					{/* note content area */}
-					{currentNote ? (
+					{currentNote && selectedNote ? (
 						<div className="pl-5 pr-5 pt-3 pb-3 grow">
-							<div className="text-xl font-bold">{currentNote.title}</div>
+							<input
+								type="text"
+								className="text-xl font-bold"
+								value={currentNote.title}
+								onChange={(e) => {
+									const newLocalNotes = {
+										...localNotes,
+									}
+									newLocalNotes[selectedNote] = {
+										...currentNote,
+										title: e.target.value,
+										dirty: true,
+									}
+									setLocalNotes(newLocalNotes)
+								}}
+							/>
 							<div className="pt-2">{currentNote.body}</div>
 							<div className="absolute right-10 bottom-10 border border-gray-400 p-3 rounded-lg bg-gray-200 hover:bg-gray-300 hover:cursor-pointer">
 								Save
