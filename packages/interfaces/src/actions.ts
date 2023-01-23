@@ -5,9 +5,8 @@ import type { Chain } from "./contracts.js"
  * types, ie TypeScript types that describe the possible JavaScript values
  * that we put into and get out of action calls.
  *
- * The action timestamp may be expressed as a number or blockhash. We provide
- * `Block` for this. The action processor may choose to check `timestamp`
- * and/or `block` depending on which is provided.
+ * The `blockhash` is optional, and if provided, may be used by nodes to validate
+ * `timestamp`.
  */
 export type ActionArgument = null | boolean | number | string
 

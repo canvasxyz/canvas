@@ -113,9 +113,9 @@ export function useSession(signer: SessionSigner | null): {
 			const payload: SessionPayload = {
 				from: signerAddress,
 				app: data.uri,
-				address: actionSigner.address,
-				duration: sessionDuration,
-				timestamp,
+				sessionAddress: actionSigner.address,
+				sessionDuration,
+				sessionIssued: timestamp,
 				blockhash: block.blockhash,
 				chain: block.chain,
 				chainId: block.chainId,

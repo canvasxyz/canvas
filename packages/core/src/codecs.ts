@@ -54,9 +54,9 @@ export const actionType: t.Type<Action> = t.type({
 export const sessionPayloadType: t.Type<SessionPayload> = t.type({
 	from: t.string,
 	app: t.string,
-	timestamp: t.number,
-	address: t.string,
-	duration: t.number,
+	sessionAddress: t.string,
+	sessionDuration: t.number,
+	sessionIssued: t.number,
 	chain: chainType,
 	chainId: chainIdType,
 	blockhash: t.union([t.string, t.null]),

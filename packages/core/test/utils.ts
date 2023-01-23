@@ -36,11 +36,11 @@ export class TestSessionSigner {
 
 	async session(): Promise<Session> {
 		const sessionPayload: SessionPayload = {
-			address: this.wallet.address,
-			duration: 60 * 60 * 24,
+			sessionAddress: this.wallet.address,
+			sessionDuration: 60 * 60 * 24,
+			sessionIssued: Date.now(),
 			from: this.signer.wallet.address,
 			app: this.signer.uri,
-			timestamp: Date.now(),
 			chain: "ethereum",
 			chainId: "1",
 			blockhash: null,

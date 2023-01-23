@@ -66,9 +66,9 @@ const sessionDataFields = {
 	Message: [
 		{ name: "from", type: "string" },
 		{ name: "spec", type: "string" },
-		{ name: "timestamp", type: "uint256" },
-		{ name: "address", type: "string" },
-		{ name: "duration", type: "uint256" },
+		{ name: "sessionAddress", type: "string" },
+		{ name: "sessionDuration", type: "uint256" },
+		{ name: "sessionIssued", type: "uint256" },
 		{ name: "blockhash", type: "string" },
 		{ name: "chain", type: "string" },
 		{ name: "chainId", type: "string" },

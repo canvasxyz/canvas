@@ -42,7 +42,12 @@ function connect(): [
 async function insert(mst: okra.Tree, hash: Buffer, binaryMessage: BinaryMessage) {
 	const leaf = Buffer.alloc(14)
 	const offset = binaryMessage.type === "action" ? 1 : 0
-	leaf.writeUintBE(binaryMessage.payload.timestamp * 2 + offset, 0, 6)
+	leaf.writeUintBE(
+		(binaryMessage.type === "action" ? binaryMessage.payload.timestamp : binaryMessage.payload.sessionIssued) * 2 +
+			offset,
+		0,
+		6
+	)
 	hash.copy(leaf, 6, 0, 8)
 	mst.insert(leaf, hash)
 }

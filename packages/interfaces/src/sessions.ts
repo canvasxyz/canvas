@@ -3,16 +3,15 @@ import { Chain } from "./contracts.js"
 /**
  * A `SessionPayload` is the data signed by the user to initiate a session.
  *
- * The session timestamp may be expressed as a number or blockhash. We use
- * `Block` for this. The message processor may choose to check `timestamp`
- * and/or `block` depending on which is provided.
+ * The `blockhash` is optional, and if provided, may be used by nodes to validate
+ * `sessionIssued`.
  */
 export type SessionPayload = {
 	app: string
 	from: string
-	timestamp: number
-	address: string
-	duration: number
+	sessionAddress: string
+	sessionDuration: number
+	sessionIssued: number
 	chain: Chain
 	chainId: string
 	blockhash: string | null

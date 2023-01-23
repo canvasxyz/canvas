@@ -28,8 +28,8 @@ type SessionRecord = {
 	signature: Buffer
 	from_address: Buffer
 	session_address: Buffer
-	duration: number
-	timestamp: number
+	session_duration: number
+	session_issued: number
 	chain: Chain
 	chain_id: ChainId
 	blockhash: Buffer | null
@@ -125,9 +125,9 @@ export class MessageStore {
 			hash: typeof hash === "string" ? fromHex(hash) : hash,
 			signature: toBuffer(session.signature),
 			from_address: toBuffer(session.payload.from),
-			session_address: toBuffer(session.payload.address),
-			duration: session.payload.duration,
-			timestamp: session.payload.timestamp,
+			session_address: toBuffer(session.payload.sessionAddress),
+			session_duration: session.payload.sessionDuration,
+			session_issued: session.payload.sessionIssued,
 			blockhash: session.payload.blockhash ? toBuffer(session.payload.blockhash) : null,
 			chain: session.payload.chain,
 			chain_id: session.payload.chainId,
@@ -198,9 +198,9 @@ export class MessageStore {
 			payload: {
 				app: this.uri,
 				from: record.from_address,
-				timestamp: record.timestamp,
-				address: record.session_address,
-				duration: record.duration,
+				sessionAddress: record.session_address,
+				sessionDuration: record.session_duration,
+				sessionIssued: record.session_issued,
 				chain: record.chain,
 				chainId: record.chain_id,
 				blockhash: record.blockhash,
@@ -245,17 +245,17 @@ export class MessageStore {
   );`
 
 	private static createSessionsTable = `CREATE TABLE IF NOT EXISTS sessions (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    hash            BLOB    NOT NULL UNIQUE,
-    signature       BLOB    NOT NULL,
-    from_address    BLOB    NOT NULL,
-    session_address BLOB    NOT NULL UNIQUE,
-    duration        INTEGER NOT NULL,
-    timestamp       INTEGER NOT NULL,
-		chain           TEXT    NOT NULL,
-    chain_id        TEXT    NOT NULL,
-    blockhash       BLOB,
-		source          BLOB
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    hash             BLOB    NOT NULL UNIQUE,
+    signature        BLOB    NOT NULL,
+    from_address     BLOB    NOT NULL,
+    session_address  BLOB    NOT NULL UNIQUE,
+    session_duration INTEGER NOT NULL,
+    session_issued   INTEGER NOT NULL,
+		chain            TEXT    NOT NULL,
+    chain_id         TEXT    NOT NULL,
+    blockhash        BLOB,
+		source           BLOB
   );`
 
 	private static statements = {
@@ -265,9 +265,9 @@ export class MessageStore {
       :hash, :signature, :session_address, :from_address, :timestamp, :call, :args, :chain, :chain_id, :blockhash, :source
     )`,
 		insertSession: `INSERT INTO sessions (
-      hash, signature, from_address, session_address, duration, timestamp, chain, chain_id, blockhash, source
+      hash, signature, from_address, session_address, session_duration, session_issued, chain, chain_id, blockhash, source
     ) VALUES (
-      :hash, :signature, :from_address, :session_address, :duration, :timestamp, :chain, :chain_id, :blockhash, :source
+      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :chain_id, :blockhash, :source
     )`,
 		getActionByHash: `SELECT * FROM actions WHERE hash = :hash`,
 		getSessionByHash: `SELECT * FROM sessions WHERE hash = :hash`,

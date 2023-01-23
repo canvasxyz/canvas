@@ -286,8 +286,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			const session = fromBinarySession(binarySession)
 			assert(session.payload.chain === action.payload.chain, "session and action chains must match")
 			assert(session.payload.chainId === action.payload.chainId, `session and action chain IDs must match`)
-			assert(session.payload.timestamp + session.payload.duration > timestamp, "session expired")
-			assert(session.payload.timestamp <= timestamp, "session timestamp must precede action timestamp")
+			assert(session.payload.sessionIssued + session.payload.sessionDuration > timestamp, "session expired")
+			assert(session.payload.sessionIssued <= timestamp, "session issued timestamp must precede action timestamp")
 
 			assert(session.payload.app === app, "action referenced a session for the wrong application")
 			assert(
@@ -300,7 +300,10 @@ export class Core extends EventEmitter<CoreEvents> {
 				verifiedAddress === action.session,
 				"invalid action signature (recovered session address does not match action.session)"
 			)
-			assert(verifiedAddress === session.payload.address, "invalid action signature (action, session do not match)")
+			assert(
+				verifiedAddress === session.payload.sessionAddress,
+				"invalid action signature (action, session do not match)"
+			)
 			assert(
 				action.payload.app === session.payload.app,
 				"invalid session (action.payload.app and session.payload.app do not match)"
@@ -312,15 +315,15 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async validateSession(session: Session) {
-		const { from, app, timestamp, blockhash, chain, chainId } = session.payload
+		const { from, app, sessionIssued, blockhash, chain, chainId } = session.payload
 		assert(app === this.uri || this.vm.sources.has(app), "session signed for wrong application")
 
 		const verifiedAddress = await verifySessionSignature(session)
 		assert(verifiedAddress === from, "session signed by wrong address")
 
 		// check the timestamp bounds
-		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "session timestamp too far in the past")
-		assert(timestamp < constants.BOUNDS_CHECK_UPPER_LIMIT, "session timestamp too far in the future")
+		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
+		assert(sessionIssued < constants.BOUNDS_CHECK_UPPER_LIMIT, "session issued too far in the future")
 
 		if (!this.options.unchecked) {
 			// check the session was signed with a valid, recent block

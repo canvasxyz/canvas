@@ -35,9 +35,9 @@ export type BinaryAction = t.TypeOf<typeof binaryActionType>
 const binarySessionPayloadType = t.type({
 	from: uint8ArrayType,
 	app: t.string,
-	timestamp: t.number,
-	address: uint8ArrayType,
-	duration: t.number,
+	sessionAddress: uint8ArrayType,
+	sessionDuration: t.number,
+	sessionIssued: t.number,
 	chain: chainType,
 	chainId: chainIdType,
 	blockhash: t.union([t.null, uint8ArrayType]),
@@ -56,7 +56,7 @@ export const binaryMessageType: t.Type<BinaryAction | BinarySession> = t.union([
 export type BinaryMessage = t.TypeOf<typeof binaryMessageType>
 
 export function toBinarySession(session: Session): BinarySession {
-	const { chain, chainId, from, address, blockhash } = session.payload
+	const { chain, chainId, from, sessionAddress, blockhash } = session.payload
 
 	return {
 		type: "session",
@@ -64,14 +64,14 @@ export function toBinarySession(session: Session): BinarySession {
 		payload: {
 			...session.payload,
 			from: encodeAddress(chain, chainId, from),
-			address: encodeAddress(chain, chainId, address),
+			sessionAddress: encodeAddress(chain, chainId, sessionAddress),
 			blockhash: blockhash ? encodeBlockhash(chain, chainId, blockhash) : null,
 		},
 	}
 }
 
 export function fromBinarySession(session: BinarySession): Session {
-	const { chain, chainId, from, address, blockhash } = session.payload
+	const { chain, chainId, from, sessionAddress, blockhash } = session.payload
 
 	return {
 		type: "session",
@@ -79,7 +79,7 @@ export function fromBinarySession(session: BinarySession): Session {
 		payload: {
 			...session.payload,
 			from: decodeAddress(chain, chainId, from),
-			address: decodeAddress(chain, chainId, address),
+			sessionAddress: decodeAddress(chain, chainId, sessionAddress),
 			blockhash: blockhash ? decodeBlockhash(chain, chainId, blockhash) : null,
 		},
 	}
