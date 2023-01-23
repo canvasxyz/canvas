@@ -32,7 +32,6 @@ export const useConnectOneStep = ({
 	const { error: signerError, data: ethersSigner } = useSigner<ethers.providers.JsonRpcSigner>()
 	const { chain } = useNetwork()
 
-	console.log(`wagmi account status: ${status}`)
 	// canvas login state
 	const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
 	const {
@@ -51,10 +50,13 @@ export const useConnectOneStep = ({
 		setConnectionState("disconnected")
 	}
 
+	// watch the state of wagmi and the canvas login hook
+	// make state changes if necessary
+
 	useEffect(() => {
 		// get the wallet address when wagmi connects
 		if (wagmiAccountStatus == "connected") {
-			console.log("wagmi is connected")
+			console.log(`w2 wagmi:${wagmiAccountStatus} canvas:${connectionState}`)
 			console.log(connectionState)
 			if (connectionState == "awaiting_connection" || connectionState == "connected") {
 				console.log(wagmiAccountAddress)
@@ -63,31 +65,27 @@ export const useConnectOneStep = ({
 		}
 	}, [wagmiAccountStatus])
 
-	const connect = () => {
-		if (connectionState !== "disconnected") {
-			setErrors(["Cannot connect: must be in the disconnected state"])
-			return
-		}
-
-		if (wagmiIsConnected) {
-			setErrors(["Cannot connect, wagmi is already connected"])
-			reset()
-			return
-		}
-
-		wagmiConnect({ connector })
-		setConnectionState("awaiting_connection")
-	}
-
 	useEffect(() => {
 		if (wagmiIsConnected) {
-			if (connectionState !== "awaiting_connection" && connectionState !== "page_loaded") {
+			console.log(`w1 wagmi:${wagmiAccountStatus} canvas:${connectionState}`)
+			if (connectionState == "awaiting_connection" || connectionState == "page_loaded") {
+			} else {
 				console.log(connectionState)
 				reset()
 				return
 			}
 		}
 	}, [wagmiIsConnected])
+
+	useEffect(() => {
+		if (signer && !canvasIsLoading) {
+			console.log(`signer ? -> ${signer}`)
+		}
+	}, [signer])
+
+	useEffect(() => {
+		console.log(`canvasIsLoading: ${!canvasIsLoading} -> ${canvasIsLoading}`)
+	}, [canvasIsLoading])
 
 	useEffect(() => {
 		if (signer && !canvasIsLoading) {
@@ -114,6 +112,36 @@ export const useConnectOneStep = ({
 		}
 	}, [canvasIsPending])
 
+	// functions that can be called from the app
+
+	const connect = () => {
+		if (connectionState !== "disconnected") {
+			setErrors(["Cannot connect: must be in the disconnected state"])
+			return
+		}
+
+		if (wagmiIsConnected) {
+			setErrors(["Cannot connect, wagmi is already connected"])
+			reset()
+			return
+		}
+
+		wagmiConnect({ connector })
+		setConnectionState("awaiting_connection")
+	}
+
+	const disconnect = () => {
+		if (connectionState == "disconnected") {
+			setErrors(["Cannot disconnect: already disconnected"])
+			return
+		}
+		logout()
+		wagmiDisconnect()
+		setConnectionState("disconnected")
+	}
+
+	// return errors
+
 	useEffect(() => {
 		if (signerError) {
 			setErrors([signerError.message])
@@ -125,16 +153,6 @@ export const useConnectOneStep = ({
 			setErrors([sessionError.message])
 		}
 	}, [sessionError])
-
-	const disconnect = () => {
-		if (connectionState == "disconnected") {
-			setErrors(["Cannot disconnect: already disconnected"])
-			return
-		}
-		logout()
-		wagmiDisconnect()
-		setConnectionState("disconnected")
-	}
 
 	return { connectionState, connect, disconnect, errors, address }
 }
