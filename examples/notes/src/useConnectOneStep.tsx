@@ -58,7 +58,11 @@ export const useConnectOneStep = ({
 
 	useEffect(() => {
 		if (canvasState == "logged_in") {
-			if (connectionState == "awaiting_session" || connectionState == "disconnected") {
+			if (
+				connectionState == "awaiting_session" ||
+				connectionState == "awaiting_connection" ||
+				connectionState == "disconnected"
+			) {
 				setConnectionState("connected")
 			} else {
 				reset()
