@@ -32,8 +32,6 @@ const actionDataFields = {
 	],
 }
 
-const namePattern = /^[a-zA-Z][a-zA-Z0-9_]*$/
-
 /**
  * `getActionSignatureData` gets EIP-712 signing data for an individual action
  */
@@ -42,7 +40,7 @@ export function getActionSignatureData(
 ): SignatureData<Omit<ActionPayload, "callArgs"> & { callArgs: string }> {
 	const domain = {
 		name: "Canvas",
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
+		salt: utils.hexlify(utils.zeroPad(utils.arrayify(0), 32)),
 	}
 
 	// Rewrite fields with custom serializations. EIP-712 does not
