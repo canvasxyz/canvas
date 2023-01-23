@@ -6,7 +6,7 @@ import type { SessionSigner } from "@canvas-js/signers/lib/interfaces"
 import { CanvasContext } from "./CanvasContext.js"
 import { getCanvasSessionKey, getRecentBlock, urlJoin } from "./utils.js"
 
-type UseSessionState = "initialized" | "logged_out" | "pending" | "logged_in"
+type UseSessionState = "logged_out" | "pending" | "logged_in"
 
 function getSessionPrivateKeyFromLocalStorage(host: string, data: { uri: string }, signerAddress: string) {
 	const sessionKey = getCanvasSessionKey(signerAddress)
@@ -96,7 +96,7 @@ export function useSession(signer: SessionSigner | null): {
 	const { host, data, setSigner, actionSigner, setActionSigner, sessionExpiration, setSessionExpiration } =
 		useContext(CanvasContext)
 
-	const [state, setState] = useState<UseSessionState>("initialized")
+	const [state, setState] = useState<UseSessionState>("logged_out")
 	const [error, setError] = useState<null | Error>(null)
 
 	const [signerAddress, setSignerAddress] = useState<string | null>(null)
@@ -118,7 +118,7 @@ export function useSession(signer: SessionSigner | null): {
 
 	// Try to log in by loading data from localStorage
 	useEffect(() => {
-		if (state !== "initialized") {
+		if (state !== "logged_out") {
 			return
 		}
 
@@ -134,8 +134,6 @@ export function useSession(signer: SessionSigner | null): {
 				setSessionExpiration(expiration)
 				setState("logged_in")
 			})
-		} else {
-			setState("logged_out")
 		}
 	}, [host, data, signerAddress])
 
