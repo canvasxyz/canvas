@@ -66,6 +66,14 @@ export const useConnectOneStep = ({
 		}
 	}, [canvasState])
 
+	useEffect(() => {
+		// log out if wagmi is disconnected while logged in
+		if (wagmiAccountStatus == "disconnected" && canvasState == "logged_in" && connectionState == "connected") {
+			logout()
+			setConnectionState("disconnected")
+		}
+	}, [wagmiAccountStatus])
+
 	// functions that can be called from the app
 
 	const connect = () => {
