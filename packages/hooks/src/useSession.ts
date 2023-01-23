@@ -64,8 +64,8 @@ export function useSession(signer: SessionSigner | null): {
 			return
 		}
 
-		const { spec, sessionPrivateKey, expiration } = sessionObject
-		if (data.uri !== spec || expiration < Date.now()) {
+		const { app, sessionPrivateKey, expiration } = sessionObject
+		if (data.uri !== app || expiration < Date.now()) {
 			localStorage.removeItem(sessionKey)
 			return
 		}
@@ -95,7 +95,7 @@ export function useSession(signer: SessionSigner | null): {
 			const actionSigner = await signer.createActionSigner()
 
 			const sessionObject: SessionObject = {
-				spec: data.uri,
+				app: data.uri,
 				sessionPrivateKey: actionSigner.privateKey,
 				expiration: timestamp + sessionDuration,
 			}
@@ -112,11 +112,11 @@ export function useSession(signer: SessionSigner | null): {
 
 			const payload: SessionPayload = {
 				from: signerAddress,
-				spec: data.uri,
-				address: actionSigner.address,
-				duration: sessionDuration,
-				timestamp,
-				blockhash: block.blockhash,
+				app: data.uri,
+				sessionAddress: actionSigner.address,
+				sessionDuration,
+				sessionIssued: timestamp,
+				block: block.blockhash,
 				chain: block.chain,
 				chainId: block.chainId,
 			}
@@ -172,12 +172,12 @@ export function useSession(signer: SessionSigner | null): {
 	}
 }
 
-type SessionObject = { spec: string; sessionPrivateKey: string; expiration: number }
+type SessionObject = { app: string; sessionPrivateKey: string; expiration: number }
 
 function isSessionObject(obj: any): obj is SessionObject {
 	return (
 		typeof obj === "object" &&
-		typeof obj.spec === "string" &&
+		typeof obj.app === "string" &&
 		typeof obj.sessionPrivateKey === "string" &&
 		typeof obj.expiration === "number"
 	)

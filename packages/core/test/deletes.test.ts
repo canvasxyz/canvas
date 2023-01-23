@@ -4,7 +4,7 @@ import { Core, compileSpec } from "@canvas-js/core"
 
 import { TestSigner } from "./utils.js"
 
-const { uri, spec } = await compileSpec({
+const { uri, app } = await compileSpec({
 	models: { threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" } },
 	actions: {
 		newThread({ title, link }, { db, hash, from }) {
@@ -22,7 +22,7 @@ const { uri, spec } = await compileSpec({
 const signer = new TestSigner(uri)
 
 test("Test setting and then deleting a record", async (t) => {
-	const core = await Core.initialize({ uri, directory: null, spec, unchecked: true, offline: true })
+	const core = await Core.initialize({ uri, directory: null, app, unchecked: true, offline: true })
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 

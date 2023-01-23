@@ -16,10 +16,10 @@ type ActionRecord = {
 	session_address: Buffer | null
 	timestamp: number
 	call: string
-	args: Buffer
+	call_args: Buffer
 	chain: Chain
 	chain_id: ChainId
-	blockhash: Buffer | null
+	block: Buffer | null
 	source: Buffer | null
 }
 
@@ -28,11 +28,11 @@ type SessionRecord = {
 	signature: Buffer
 	from_address: Buffer
 	session_address: Buffer
-	duration: number
-	timestamp: number
+	session_duration: number
+	session_issued: number
 	chain: Chain
 	chain_id: ChainId
-	blockhash: Buffer | null
+	block: Buffer | null
 	source: Buffer | null
 }
 
@@ -91,10 +91,10 @@ export class MessageStore {
 	}
 
 	public insertAction(hash: string | Buffer, action: BinaryAction) {
-		const sourceCID: CID | undefined = this.sourceCIDs[action.payload.spec]
+		const sourceCID: CID | undefined = this.sourceCIDs[action.payload.app]
 		assert(
-			action.payload.spec === this.uri || sourceCID !== undefined,
-			"insertAction: action.payload.spec not found in MessageStore.sources"
+			action.payload.app === this.uri || sourceCID !== undefined,
+			"insertAction: action.payload.app not found in MessageStore.sources"
 		)
 
 		const record: ActionRecord = {
@@ -104,10 +104,10 @@ export class MessageStore {
 			from_address: toBuffer(action.payload.from),
 			timestamp: action.payload.timestamp,
 			call: action.payload.call,
-			args: toBuffer(cbor.encode(action.payload.args)),
+			call_args: toBuffer(cbor.encode(action.payload.callArgs)),
 			chain: action.payload.chain,
 			chain_id: action.payload.chainId,
-			blockhash: action.payload.blockhash ? toBuffer(action.payload.blockhash) : null,
+			block: action.payload.block ? toBuffer(action.payload.block) : null,
 			source: sourceCID ? toBuffer(sourceCID.bytes) : null,
 		}
 
@@ -115,20 +115,20 @@ export class MessageStore {
 	}
 
 	public insertSession(hash: string | Buffer, session: BinarySession) {
-		const sourceCID: CID | undefined = this.sourceCIDs[session.payload.spec]
+		const sourceCID: CID | undefined = this.sourceCIDs[session.payload.app]
 		assert(
-			session.payload.spec === this.uri || sourceCID !== undefined,
-			"insertSession: session.payload.spec not found in MessageStore.sources"
+			session.payload.app === this.uri || sourceCID !== undefined,
+			"insertSession: session.payload.app not found in MessageStore.sources"
 		)
 
 		const record: SessionRecord = {
 			hash: typeof hash === "string" ? fromHex(hash) : hash,
 			signature: toBuffer(session.signature),
 			from_address: toBuffer(session.payload.from),
-			session_address: toBuffer(session.payload.address),
-			duration: session.payload.duration,
-			timestamp: session.payload.timestamp,
-			blockhash: session.payload.blockhash ? toBuffer(session.payload.blockhash) : null,
+			session_address: toBuffer(session.payload.sessionAddress),
+			session_duration: session.payload.sessionDuration,
+			session_issued: session.payload.sessionIssued,
+			block: session.payload.block ? toBuffer(session.payload.block) : null,
 			chain: session.payload.chain,
 			chain_id: session.payload.chainId,
 			source: sourceCID ? toBuffer(sourceCID.bytes) : null,
@@ -148,20 +148,20 @@ export class MessageStore {
 			signature: record.signature,
 			session: record.session_address,
 			payload: {
-				spec: this.uri,
+				app: this.uri,
 				from: record.from_address,
 				call: record.call,
-				args: cbor.decode(record.args) as Record<string, ActionArgument>,
+				callArgs: cbor.decode(record.call_args) as Record<string, ActionArgument>,
 				timestamp: record.timestamp,
 				chain: record.chain,
 				chainId: record.chain_id,
-				blockhash: record.blockhash,
+				block: record.block,
 			},
 		}
 
 		if (record.source !== null) {
 			const cid = CID.decode(record.source)
-			action.payload.spec = `ipfs://${cid.toString()}`
+			action.payload.app = `ipfs://${cid.toString()}`
 		}
 
 		return action
@@ -196,20 +196,20 @@ export class MessageStore {
 			type: "session",
 			signature: record.signature,
 			payload: {
-				spec: this.uri,
+				app: this.uri,
 				from: record.from_address,
-				timestamp: record.timestamp,
-				address: record.session_address,
-				duration: record.duration,
+				sessionAddress: record.session_address,
+				sessionDuration: record.session_duration,
+				sessionIssued: record.session_issued,
 				chain: record.chain,
 				chainId: record.chain_id,
-				blockhash: record.blockhash,
+				block: record.block,
 			},
 		}
 
 		if (record.source !== null) {
 			const cid = CID.decode(record.source)
-			session.payload.spec = `ipfs://${cid.toString()}`
+			session.payload.app = `ipfs://${cid.toString()}`
 		}
 
 		return session
@@ -237,37 +237,37 @@ export class MessageStore {
     from_address    BLOB    NOT NULL,
     timestamp       INTEGER NOT NULL,
     call            TEXT    NOT NULL,
-    args            BLOB    NOT NULL,
+    call_args       BLOB    NOT NULL,
 		chain           TEXT    NOT NULL,
     chain_id        TEXT    NOT NULL,
-    blockhash       BLOB,
+    block           BLOB,
 		source          BLOB
   );`
 
 	private static createSessionsTable = `CREATE TABLE IF NOT EXISTS sessions (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    hash            BLOB    NOT NULL UNIQUE,
-    signature       BLOB    NOT NULL,
-    from_address    BLOB    NOT NULL,
-    session_address BLOB    NOT NULL UNIQUE,
-    duration        INTEGER NOT NULL,
-    timestamp       INTEGER NOT NULL,
-		chain           TEXT    NOT NULL,
-    chain_id        TEXT    NOT NULL,
-    blockhash       BLOB,
-		source          BLOB
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    hash             BLOB    NOT NULL UNIQUE,
+    signature        BLOB    NOT NULL,
+    from_address     BLOB    NOT NULL,
+    session_address  BLOB    NOT NULL UNIQUE,
+    session_duration INTEGER NOT NULL,
+    session_issued   INTEGER NOT NULL,
+		chain            TEXT    NOT NULL,
+    chain_id         TEXT    NOT NULL,
+    block            BLOB,
+		source           BLOB
   );`
 
 	private static statements = {
 		insertAction: `INSERT INTO actions (
-      hash, signature, session_address, from_address, timestamp, call, args, chain, chain_id, blockhash, source
+      hash, signature, session_address, from_address, timestamp, call, call_args, chain, chain_id, block, source
     ) VALUES (
-      :hash, :signature, :session_address, :from_address, :timestamp, :call, :args, :chain, :chain_id, :blockhash, :source
+      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :chain_id, :block, :source
     )`,
 		insertSession: `INSERT INTO sessions (
-      hash, signature, from_address, session_address, duration, timestamp, chain, chain_id, blockhash, source
+      hash, signature, from_address, session_address, session_duration, session_issued, chain, chain_id, block, source
     ) VALUES (
-      :hash, :signature, :from_address, :session_address, :duration, :timestamp, :chain, :chain_id, :blockhash, :source
+      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :chain_id, :block, :source
     )`,
 		getActionByHash: `SELECT * FROM actions WHERE hash = :hash`,
 		getSessionByHash: `SELECT * FROM sessions WHERE hash = :hash`,

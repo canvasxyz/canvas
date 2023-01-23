@@ -1,31 +1,27 @@
 import { Chain } from "./contracts.js"
 
 /**
- * A `SessionPayload` is the data signed by the user to initiate a session.
+ * A `Session` is the data signed by the user to allow them to execute
+ * multiple `Action` events using a delegated key.
  *
- * The session timestamp may be expressed as a number or blockhash. We use
- * `Block` for this. The message processor may choose to check `timestamp`
- * and/or `block` depending on which is provided.
- */
-export type SessionPayload = {
-	from: string
-	spec: string
-	timestamp: number
-	address: string
-	duration: number
-	chain: Chain
-	chainId: string
-	blockhash: string | null
-}
-
-/**
- * A `Session` is a `SessionPayload` and a signature
+ * `block` is optional, and may be used to validate `sessionIssued`.
  */
 export type Session = {
 	type: "session"
-	payload: SessionPayload
+	payload: {
+		app: string
+		block: string | null
+		chain: Chain
+		chainId: string
+		from: string
+		sessionAddress: string
+		sessionDuration: number
+		sessionIssued: number
+	}
 	signature: string
 }
+
+export type SessionPayload = Session["payload"]
 
 /**
  * Serialize an SessionPayload into a string suitable for signing on non-ETH chains.

@@ -303,12 +303,12 @@ class Daemon {
 					return res.status(StatusCodes.NOT_FOUND).end()
 				}
 
-				const spec = fs.readFileSync(specPath, "utf-8")
+				const app = fs.readFileSync(specPath, "utf-8")
 				let hash
 				try {
-					hash = await Hash.of(spec)
+					hash = await Hash.of(app)
 				} catch (err) {
-					console.log(spec)
+					console.log(app)
 					const message = err instanceof Error ? err.message : (err as any).toString()
 					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
 				}
@@ -319,7 +319,7 @@ class Daemon {
 					const core = await Core.initialize({
 						directory,
 						uri,
-						spec,
+						app,
 						libp2p,
 						providers,
 						blockResolver,
@@ -379,15 +379,15 @@ class Daemon {
 		})
 
 		this.app.post("/check", (req, res) => {
-			if (typeof req.body.spec !== "string") {
+			if (typeof req.body.app !== "string") {
 				return res.status(StatusCodes.BAD_REQUEST).end()
 			}
 
-			const spec = req.body.spec
+			const app = req.body.app
 
 			this.queue.add(async () => {
 				try {
-					const result = await VM.validate(spec)
+					const result = await VM.validate(app)
 					res.status(StatusCodes.OK).json(result)
 				} catch (e) {
 					res.status(StatusCodes.OK).json({

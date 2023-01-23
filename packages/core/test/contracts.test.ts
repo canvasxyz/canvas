@@ -17,7 +17,7 @@ test("contracts (milady balanceOf)", async (t) => {
 		return
 	}
 
-	const { uri, spec } = await compileSpec({
+	const { uri, app } = await compileSpec({
 		models: {},
 		actions: {
 			async verify({}, { contracts, from }) {
@@ -29,7 +29,7 @@ test("contracts (milady balanceOf)", async (t) => {
 		},
 		contracts: {
 			milady: {
-				chain: "eth",
+				chain: "ethereum",
 				chainId: "1",
 				address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
 				abi: ["function balanceOf(address owner) view returns (uint balance)"],
@@ -38,8 +38,8 @@ test("contracts (milady balanceOf)", async (t) => {
 	})
 
 	const provider = new EthereumBlockProvider(ETH_CHAIN_ID, ETH_CHAIN_RPC)
-	const providers = { [`eth:${ETH_CHAIN_ID}`]: provider }
-	const core = await Core.initialize({ directory: null, uri, spec, providers, offline: true })
+	const providers = { [`ethereum:${ETH_CHAIN_ID}`]: provider }
+	const core = await Core.initialize({ directory: null, uri, app, providers, offline: true })
 
 	const signer = new TestSigner(uri, provider)
 

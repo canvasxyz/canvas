@@ -8,7 +8,7 @@ import { EthereumActionSigner } from "./ethereum_action_signer.js"
 export class MetaMaskEthereumConnector implements Connector {
 	id = "metamask"
 
-	chain: Chain = "eth"
+	chain: Chain = "ethereum"
 	provider?: ethers.providers.Web3Provider
 	onAccountsChanged?: (accounts: string[]) => void
 	onNetwork?: (newNetwork: any, oldNetwork: any) => void
@@ -74,7 +74,7 @@ export class MetaMaskEthereumConnector implements Connector {
 }
 
 export class MetaMaskEthereumSigner implements SessionSigner {
-	chain: Chain = "eth"
+	chain: Chain = "ethereum"
 	signer: ethers.providers.JsonRpcSigner
 	network: ethers.providers.Network
 

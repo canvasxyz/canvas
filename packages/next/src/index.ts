@@ -26,7 +26,7 @@ const providers: Record<string, BlockProvider> = {}
 let unchecked = true
 if (typeof ETH_CHAIN_ID === "string" && typeof ETH_CHAIN_RPC === "string") {
 	unchecked = false
-	const key = `eth:${ETH_CHAIN_ID}`
+	const key = `ethereum:${ETH_CHAIN_ID}`
 	providers[key] = new EthereumBlockProvider(ETH_CHAIN_ID, ETH_CHAIN_RPC)
 }
 
@@ -65,9 +65,9 @@ if (NODE_ENV === "production") {
 	startPingService(libp2p, controller, { verbose })
 	controller.signal.addEventListener("abort", () => libp2p.stop())
 
-	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, verbose })
+	global.core = await Core.initialize({ directory, app: spec, providers, unchecked, libp2p, verbose })
 } else {
-	global.core = await Core.initialize({ directory, spec, providers, unchecked, offline: true, verbose })
+	global.core = await Core.initialize({ directory, app: spec, providers, unchecked, offline: true, verbose })
 }
 
 const port = Number(PORT) || 3000

@@ -5,7 +5,7 @@ import { verifyEthereumActionSignature, verifyEthereumSessionSignature } from ".
  * `verifyActionPayloadSignature` verifies an action signature matches a payload (does not check the payload)
  */
 export async function verifyActionSignature(action: Action): Promise<string> {
-	if (action.payload.chain == "eth") {
+	if (action.payload.chain == "ethereum") {
 		return verifyEthereumActionSignature(action)
 	} else {
 		throw Error(`chain ${action.payload.chain} is not supported`)
@@ -16,7 +16,7 @@ export async function verifyActionSignature(action: Action): Promise<string> {
  * `verifySessionPayloadSignature` verifies a session signature matches a payload (does not check the payload)
  */
 export async function verifySessionSignature(session: Session): Promise<string> {
-	if (session.payload.chain == "eth") {
+	if (session.payload.chain == "ethereum") {
 		return verifyEthereumSessionSignature(session)
 	} else {
 		throw Error(`chain ${session.payload.chain} is not supported`)

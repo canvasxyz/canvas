@@ -3,7 +3,7 @@ import test from "ava"
 import { encodeAddress, decodeAddress } from "@canvas-js/core"
 
 test("eth address", (t) => {
-	const chain = "eth"
+	const chain = "ethereum"
 	const chainId = "1"
 	const address = "0x834502F7674EfD11c2Af6DE5eCEf41b2ceE36DD8"
 	t.is(decodeAddress(chain, chainId, encodeAddress(chain, chainId, address)), address)

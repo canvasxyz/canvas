@@ -67,11 +67,11 @@ export function useCanvas(): {
 
 				const payload: ActionPayload = {
 					from: address,
-					spec: data.uri,
+					app: data.uri,
 					call,
-					args,
+					callArgs: args,
 					timestamp,
-					blockhash: block.blockhash,
+					block: block.blockhash,
 					chain: block.chain,
 					chainId: block.chainId,
 				}

@@ -98,7 +98,7 @@ class WalletConnectWebWalletSessionSigner implements SessionSigner {
 	}
 
 	async getChain(): Promise<Chain> {
-		return "eth"
+		return "ethereum"
 	}
 
 	async getChainId(): Promise<ChainId> {

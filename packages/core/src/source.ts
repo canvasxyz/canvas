@@ -100,7 +100,7 @@ export class Source {
 		if (message.type === "action") {
 			leaf.writeUintBE(message.payload.timestamp * 2 + 1, 0, 6)
 		} else if (message.type === "session") {
-			leaf.writeUintBE(message.payload.timestamp * 2, 0, 6)
+			leaf.writeUintBE(message.payload.sessionIssued * 2, 0, 6)
 		} else {
 			signalInvalidType(message)
 		}

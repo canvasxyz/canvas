@@ -1,45 +1,43 @@
 import type { Chain } from "./contracts.js"
 
 /**
- * An `ActionArgument` is type-level representation of concrete action argument
- * types, ie TypeScript types that describe the possible JavaScript values
- * that we put into and get out of action calls.
+ * An `ActionArgument` defines what types of data may be passed to actions.
  *
- * The action timestamp may be expressed as a number or blockhash. We provide
- * `Block` for this. The action processor may choose to check `timestamp`
- * and/or `block` depending on which is provided.
+ * These are the same as datatypes supported by JSON serialization, except
+ * TypeScript does not enforce standard serializations of -0, +/-Infinity,
+ * and NaN, which all stringify as `null`.
  */
 export type ActionArgument = null | boolean | number | string
 
 /**
- * An `ActionPayload` is the data signed by the user, either directly
- * or using a session key, to execute an action in a Canvas application.
- */
-export type ActionPayload = {
-	from: string
-	spec: string
-	timestamp: number
-	chain: Chain
-	chainId: string
-	blockhash: string | null
-	call: string
-	args: Record<string, ActionArgument>
-}
-
-/**
- * An `ActionContext` is an `ActionPayload` minus `call` and `args`.
- */
-export interface ActionContext extends Omit<ActionPayload, "call" | "args"> {}
-
-/**
- * An `Action` is an `ActionPayload` and a signature.
+ * An `Action` is the data signed by the user, either directly or
+ * using a session key, to execute an action in a Canvas application.
+ *
+ * `block` is optional, and may be used by nodes to validate `timestamp`.
  */
 export type Action = {
 	type: "action"
-	payload: ActionPayload
+	payload: {
+		app: string
+		block: string | null
+		call: string
+		callArgs: Record<string, ActionArgument>
+		chain: Chain
+		chainId: string
+		from: string
+		timestamp: number
+	}
 	session: string | null
 	signature: string
 }
+
+export type ActionPayload = Action["payload"]
+
+/**
+ * An `ActionContext` is an `ActionPayload` minus `call` and `callArgs`,
+ * used for processing effects of actions.
+ */
+export interface ActionContext extends Omit<ActionPayload, "call" | "callArgs"> {}
 
 /**
  * Serialize an ActionPayload into a string suitable for signing on non-ETH chains.
@@ -50,14 +48,18 @@ export type Action = {
 export function serializeActionPayload(payload: ActionPayload): string {
 	if (payload === undefined || payload === null) return ""
 
-	// args is the only parameter of payload that needs sorting
+	// callArgs is the only parameter of payload that needs sorting
 	return JSON.stringify(
 		{
 			...payload,
-			args: { toJSON: () => JSON.stringify(payload.args, Object.keys(payload.args).sort()) },
+			callArgs: { toJSON: () => JSON.stringify(payload.callArgs, Object.keys(payload.callArgs).sort()) },
 		},
 		Object.keys(payload).sort()
 	)
+}
+
+export function serializeActionCallArgs(callArgs: Record<string, ActionArgument>) {
+	return JSON.stringify(callArgs, Object.keys(callArgs).sort())
 }
 
 export function serializeActionArgument(arg: ActionArgument): string {

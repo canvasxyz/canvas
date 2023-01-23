@@ -7,21 +7,21 @@ export class TestSigner {
 	readonly wallet = ethers.Wallet.createRandom()
 	constructor(readonly uri: string, readonly provider?: EthereumBlockProvider) {}
 
-	async sign(call: string, args: Record<string, ActionArgument>): Promise<Action> {
+	async sign(call: string, callArgs: Record<string, ActionArgument>): Promise<Action> {
 		const actionPayload: ActionPayload = {
 			from: this.wallet.address,
-			spec: this.uri,
+			app: this.uri,
 			call,
-			args,
+			callArgs,
 			timestamp: Date.now(),
-			chain: "eth",
+			chain: "ethereum",
 			chainId: "1",
-			blockhash: null,
+			block: null,
 		}
 
 		if (this.provider !== undefined) {
 			const block = await this.provider.getBlock("latest")
-			actionPayload.blockhash = block.blockhash
+			actionPayload.block = block.blockhash
 		}
 
 		const actionSignatureData = getActionSignatureData(actionPayload)
@@ -36,19 +36,19 @@ export class TestSessionSigner {
 
 	async session(): Promise<Session> {
 		const sessionPayload: SessionPayload = {
-			address: this.wallet.address,
-			duration: 60 * 60 * 24,
+			sessionAddress: this.wallet.address,
+			sessionDuration: 60 * 60 * 24,
+			sessionIssued: Date.now(),
 			from: this.signer.wallet.address,
-			spec: this.signer.uri,
-			timestamp: Date.now(),
-			chain: "eth",
+			app: this.signer.uri,
+			chain: "ethereum",
 			chainId: "1",
-			blockhash: null,
+			block: null,
 		}
 
 		if (this.signer.provider !== undefined) {
 			const block = await this.signer.provider.getBlock("latest")
-			sessionPayload.blockhash = block.blockhash
+			sessionPayload.block = block.blockhash
 		}
 
 		const sessionSignatureData = getSessionSignatureData(sessionPayload)
@@ -56,21 +56,21 @@ export class TestSessionSigner {
 		return { type: "session", payload: sessionPayload, signature: sessionSignature }
 	}
 
-	async sign(call: string, args: Record<string, ActionArgument>): Promise<Action> {
+	async sign(call: string, callArgs: Record<string, ActionArgument>): Promise<Action> {
 		const actionPayload: ActionPayload = {
 			from: this.signer.wallet.address,
-			spec: this.signer.uri,
+			app: this.signer.uri,
 			call,
-			args,
+			callArgs,
 			timestamp: Date.now(),
-			chain: "eth",
+			chain: "ethereum",
 			chainId: "1",
-			blockhash: null,
+			block: null,
 		}
 
 		if (this.signer.provider !== undefined) {
 			const block = await this.signer.provider.getBlock("latest")
-			actionPayload.blockhash = block.blockhash
+			actionPayload.block = block.blockhash
 		}
 
 		const actionSignatureData = getActionSignatureData(actionPayload)
