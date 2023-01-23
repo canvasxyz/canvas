@@ -7,7 +7,7 @@
     "dev": "tsc --build --watch",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "publish": "npm publish --workspace=packages --access public",
+    "publish": "npm run build && npm publish --workspace=packages --access public",
     "test": "npm run test --workspace=@canvas-js/core --workspace=@canvas-js/signers"
   },
   "workspaces": [
