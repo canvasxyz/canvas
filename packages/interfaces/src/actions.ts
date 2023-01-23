@@ -22,13 +22,13 @@ export type ActionPayload = {
 	chainId: string
 	blockhash: string | null
 	call: string
-	args: Record<string, ActionArgument>
+	callArgs: Record<string, ActionArgument>
 }
 
 /**
- * An `ActionContext` is an `ActionPayload` minus `call` and `args`.
+ * An `ActionContext` is an `ActionPayload` minus `call` and `callArgs`.
  */
-export interface ActionContext extends Omit<ActionPayload, "call" | "args"> {}
+export interface ActionContext extends Omit<ActionPayload, "call" | "callArgs"> {}
 
 /**
  * An `Action` is an `ActionPayload` and a signature.
@@ -49,14 +49,18 @@ export type Action = {
 export function serializeActionPayload(payload: ActionPayload): string {
 	if (payload === undefined || payload === null) return ""
 
-	// args is the only parameter of payload that needs sorting
+	// callArgs is the only parameter of payload that needs sorting
 	return JSON.stringify(
 		{
 			...payload,
-			args: { toJSON: () => JSON.stringify(payload.args, Object.keys(payload.args).sort()) },
+			callArgs: { toJSON: () => JSON.stringify(payload.callArgs, Object.keys(payload.callArgs).sort()) },
 		},
 		Object.keys(payload).sort()
 	)
+}
+
+export function serializeActionCallArgs(callArgs: Record<string, ActionArgument>) {
+	return JSON.stringify(callArgs, Object.keys(callArgs).sort())
 }
 
 export function serializeActionArgument(arg: ActionArgument): string {

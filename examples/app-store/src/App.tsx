@@ -156,9 +156,9 @@ export const Modular: React.FC<{ component: string | null; dispatch: Function }>
 	}, [component])
 
 	const wrappedDispatch = useCallback(
-		(call: string, ...args: string[]) => {
-			console.log("called dispatch:", call, ...args)
-			return dispatch.call(null, call, ...args).catch((err: Error) => {
+		(call: string, ...callArgs: string[]) => {
+			console.log("called dispatch:", call, ...callArgs)
+			return dispatch.call(null, call, ...callArgs).catch((err: Error) => {
 				console.error(err)
 				throw err
 			})

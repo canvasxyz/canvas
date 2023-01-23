@@ -14,7 +14,7 @@ test("Sign an action for ethereum", async (t) => {
 		from: parentWallet.address,
 		app: "ipfs://something.spec.js",
 		call: "post",
-		args: { title: "Hello world!", text: "Lorem ipsum dolor sit amet" },
+		callArgs: { title: "Hello world!", text: "Lorem ipsum dolor sit amet" },
 		timestamp: 123456789,
 		blockhash: "0x123456789",
 		chain: "ethereum",

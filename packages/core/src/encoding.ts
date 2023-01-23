@@ -14,7 +14,7 @@ const { hexlify, arrayify } = ethers.utils
 
 const binaryActionPayloadType = t.type({
 	call: t.string,
-	args: t.record(t.string, actionArgumentType),
+	callArgs: t.record(t.string, actionArgumentType),
 	from: uint8ArrayType,
 	app: t.string,
 	timestamp: t.number,

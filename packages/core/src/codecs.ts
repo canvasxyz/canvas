@@ -38,7 +38,7 @@ export const actionPayloadType: t.Type<ActionPayload> = t.type({
 	app: t.string,
 	timestamp: t.number,
 	call: t.string,
-	args: t.record(t.string, actionArgumentType),
+	callArgs: t.record(t.string, actionArgumentType),
 	chain: chainType,
 	chainId: chainIdType,
 	blockhash: t.union([t.string, t.null]),

@@ -7,12 +7,12 @@ export class TestSigner {
 	readonly wallet = ethers.Wallet.createRandom()
 	constructor(readonly uri: string, readonly provider?: EthereumBlockProvider) {}
 
-	async sign(call: string, args: Record<string, ActionArgument>): Promise<Action> {
+	async sign(call: string, callArgs: Record<string, ActionArgument>): Promise<Action> {
 		const actionPayload: ActionPayload = {
 			from: this.wallet.address,
 			app: this.uri,
 			call,
-			args,
+			callArgs,
 			timestamp: Date.now(),
 			chain: "ethereum",
 			chainId: "1",
@@ -56,12 +56,12 @@ export class TestSessionSigner {
 		return { type: "session", payload: sessionPayload, signature: sessionSignature }
 	}
 
-	async sign(call: string, args: Record<string, ActionArgument>): Promise<Action> {
+	async sign(call: string, callArgs: Record<string, ActionArgument>): Promise<Action> {
 		const actionPayload: ActionPayload = {
 			from: this.signer.wallet.address,
 			app: this.signer.uri,
 			call,
-			args,
+			callArgs,
 			timestamp: Date.now(),
 			chain: "ethereum",
 			chainId: "1",

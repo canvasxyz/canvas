@@ -1,7 +1,14 @@
 import { TypedDataDomain, TypedDataField, utils } from "ethers"
 import { verifyTypedData } from "@ethersproject/wallet"
 
-import { Action, ActionPayload, Session, SessionPayload, serializeActionArgument } from "@canvas-js/interfaces"
+import {
+	Action,
+	ActionPayload,
+	Session,
+	SessionPayload,
+	serializeActionArgument,
+	serializeActionCallArgs,
+} from "@canvas-js/interfaces"
 
 /**
  * Ethereum compatible signer logic, used to generate and
@@ -21,7 +28,7 @@ const actionDataFields = {
 		{ name: "chainId", type: "string" },
 		{ name: "blockhash", type: "string" },
 		{ name: "call", type: "string" },
-		{ name: "args", type: "string[]" },
+		{ name: "callArgs", type: "string" },
 	],
 }
 
@@ -30,32 +37,24 @@ const namePattern = /^[a-zA-Z][a-zA-Z0-9_]*$/
 /**
  * `getActionSignatureData` gets EIP-712 signing data for an individual action
  */
-export function getActionSignatureData(payload: ActionPayload): SignatureData<
-	Omit<ActionPayload, "args"> & {
-		args: string[]
-	}
-> {
+export function getActionSignatureData(
+	payload: ActionPayload
+): SignatureData<Omit<ActionPayload, "callArgs"> & { callArgs: string }> {
 	const domain = {
 		name: "Canvas",
 		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
 	}
 
-	const keys = Object.keys(payload.args).sort()
-	const params = keys.map((key) => {
-		if (namePattern.test(key)) {
-			return `${key}: ${serializeActionArgument(payload.args[key])}`
-		} else {
-			throw new Error("invalid argument name")
-		}
-	})
-
-	// Replace the params field with a list of values instead of a record
+	// Rewrite fields with custom serializations. EIP-712 does not
+	// accept null values as a type, so we replace the null blockhash
+	// with an empty string
+	//
+	// Previously chainId may have been an integer. Since TS is not
+	// enforced at runtime, call .toString() to be sure
 	const actionValue = {
 		...payload,
-		args: params,
+		callArgs: serializeActionCallArgs(payload.callArgs),
 		chainId: payload.chainId.toString(),
-		// EIP-712 does not accept null values as a type, so we replace the null blockhash
-		// with an empty string
 		blockhash: payload.blockhash || "",
 	}
 
@@ -85,10 +84,15 @@ export function getSessionSignatureData(payload: SessionPayload): SignatureData<
 		name: "Canvas",
 		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
 	}
+
+	// Rewrite fields with custom serializations. EIP-712 does not
+	// accept null values as a type, so we replace the null blockhash
+	// with an empty string.
+	//
+	// Previously chainId may have been an integer. Since TS is not
+	// enforced at runtime, call .toString() to be sure
 	const sessionValue = {
 		...payload,
-		// EIP-712 does not accept null values as a type, so we replace the null blockhash
-		// with an empty string
 		chainId: payload.chainId.toString(),
 		blockhash: payload.blockhash || "",
 	}

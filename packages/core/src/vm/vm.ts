@@ -370,14 +370,14 @@ export class VM {
 	 * Given a call, get a list of effects to pass to `modelStore.applyEffects`, to be applied to the models.
 	 * Used by `.apply()` and when replaying actions.
 	 */
-	public async execute(hash: string, { call, args, ...context }: ActionPayload): Promise<Effect[]> {
+	public async execute(hash: string, { call, callArgs, ...context }: ActionPayload): Promise<Effect[]> {
 		assert(this.effects === null && this.actionContext === null, "cannot apply more than one action at once")
 
 		const actionHandle = this.getActionHandle(context.app, call)
 
 		const argHandles = wrapObject(
 			this.context,
-			mapEntries(args, (_, arg) => this.wrapActionArgument(arg))
+			mapEntries(callArgs, (_, arg) => this.wrapActionArgument(arg))
 		)
 
 		const ctx = wrapJSON(this.context, {

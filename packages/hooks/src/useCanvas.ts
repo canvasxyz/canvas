@@ -69,7 +69,7 @@ export function useCanvas(): {
 					from: address,
 					app: data.uri,
 					call,
-					args,
+					callArgs: args,
 					timestamp,
 					blockhash: block.blockhash,
 					chain: block.chain,

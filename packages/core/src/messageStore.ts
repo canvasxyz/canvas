@@ -16,7 +16,7 @@ type ActionRecord = {
 	session_address: Buffer | null
 	timestamp: number
 	call: string
-	args: Buffer
+	call_args: Buffer
 	chain: Chain
 	chain_id: ChainId
 	blockhash: Buffer | null
@@ -104,7 +104,7 @@ export class MessageStore {
 			from_address: toBuffer(action.payload.from),
 			timestamp: action.payload.timestamp,
 			call: action.payload.call,
-			args: toBuffer(cbor.encode(action.payload.args)),
+			call_args: toBuffer(cbor.encode(action.payload.callArgs)),
 			chain: action.payload.chain,
 			chain_id: action.payload.chainId,
 			blockhash: action.payload.blockhash ? toBuffer(action.payload.blockhash) : null,
@@ -151,7 +151,7 @@ export class MessageStore {
 				app: this.uri,
 				from: record.from_address,
 				call: record.call,
-				args: cbor.decode(record.args) as Record<string, ActionArgument>,
+				callArgs: cbor.decode(record.call_args) as Record<string, ActionArgument>,
 				timestamp: record.timestamp,
 				chain: record.chain,
 				chainId: record.chain_id,
@@ -237,7 +237,7 @@ export class MessageStore {
     from_address    BLOB    NOT NULL,
     timestamp       INTEGER NOT NULL,
     call            TEXT    NOT NULL,
-    args            BLOB    NOT NULL,
+    call_args       BLOB    NOT NULL,
 		chain           TEXT    NOT NULL,
     chain_id        TEXT    NOT NULL,
     blockhash       BLOB,
@@ -260,9 +260,9 @@ export class MessageStore {
 
 	private static statements = {
 		insertAction: `INSERT INTO actions (
-      hash, signature, session_address, from_address, timestamp, call, args, chain, chain_id, blockhash, source
+      hash, signature, session_address, from_address, timestamp, call, call_args, chain, chain_id, blockhash, source
     ) VALUES (
-      :hash, :signature, :session_address, :from_address, :timestamp, :call, :args, :chain, :chain_id, :blockhash, :source
+      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :chain_id, :blockhash, :source
     )`,
 		insertSession: `INSERT INTO sessions (
       hash, signature, from_address, session_address, session_duration, session_issued, chain, chain_id, blockhash, source
