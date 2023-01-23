@@ -16,7 +16,7 @@ test("Sign an action for ethereum", async (t) => {
 		call: "post",
 		callArgs: { title: "Hello world!", text: "Lorem ipsum dolor sit amet" },
 		timestamp: 123456789,
-		blockhash: "0x123456789",
+		block: "0x123456789",
 		chain: "ethereum",
 		chainId: "1",
 	}

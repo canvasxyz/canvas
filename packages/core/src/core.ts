@@ -264,7 +264,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async validateAction(action: Action) {
-		const { timestamp, app, blockhash, chain, chainId } = action.payload
+		const { timestamp, app, block, chain, chainId } = action.payload
 		const fromAddress = action.payload.from
 
 		assert(app === this.uri || this.vm.sources.has(app), "action signed for wrong application")
@@ -275,8 +275,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (!this.options.unchecked) {
 			// check the action was signed with a valid, recent block
-			assert(blockhash, "action is missing block data")
-			await this.validateBlock({ blockhash, chain, chainId })
+			assert(block, "action is missing block data")
+			await this.validateBlock({ blockhash: block, chain, chainId })
 		}
 
 		// verify the signature, either using a session signature or action signature
@@ -315,7 +315,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async validateSession(session: Session) {
-		const { from, app, sessionIssued, blockhash, chain, chainId } = session.payload
+		const { from, app, sessionIssued, block, chain, chainId } = session.payload
 		assert(app === this.uri || this.vm.sources.has(app), "session signed for wrong application")
 
 		const verifiedAddress = await verifySessionSignature(session)
@@ -327,8 +327,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		if (!this.options.unchecked) {
 			// check the session was signed with a valid, recent block
-			assert(blockhash, "session is missing block data")
-			await this.validateBlock({ blockhash, chain, chainId })
+			assert(block, "session is missing block data")
+			await this.validateBlock({ blockhash: block, chain, chainId })
 		}
 	}
 

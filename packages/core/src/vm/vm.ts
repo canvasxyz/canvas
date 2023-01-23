@@ -214,12 +214,15 @@ export class VM {
 					mapEntries(contract.functions, (key, fn) =>
 						context.newFunction(`${name}.${key}`, (...argHandles: QuickJSHandle[]) => {
 							assert(this.actionContext !== null, "internal error: this.actionContext is null")
-							const { blockhash } = this.actionContext
-							assert(blockhash !== undefined, "action called a contract function but did not include a blockhash")
+							const { block } = this.actionContext
+							assert(
+								block !== undefined,
+								"action called a contract function but did not include a blockhash or block identifier"
+							)
 							const args = argHandles.map(context.dump)
 							if (options.verbose) {
 								const call = chalk.green(`${name}.${key}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`)
-								console.log(`[canvas-vm] contract: ${call} at block (${blockhash})`)
+								console.log(`[canvas-vm] contract: ${call} at block (${block})`)
 							}
 
 							const deferred = context.newPromise()
@@ -384,7 +387,7 @@ export class VM {
 			app: context.app,
 			hash: hash,
 			from: context.from,
-			blockhash: context.blockhash,
+			block: context.block,
 			timestamp: context.timestamp,
 		})
 

@@ -4,14 +4,13 @@ import { Chain } from "./contracts.js"
  * A `Session` is the data signed by the user to allow them to execute
  * multiple `Action` events using a delegated key.
  *
- * `blockhash` is optional, and may be used by nodes to validate
- *`sessionIssued`.
+ * `block` is optional, and may be used to validate `sessionIssued`.
  */
 export type Session = {
 	type: "session"
 	payload: {
 		app: string
-		blockhash: string | null
+		block: string | null
 		chain: Chain
 		chainId: string
 		from: string

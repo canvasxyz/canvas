@@ -41,7 +41,7 @@ export const actionPayloadType: t.Type<ActionPayload> = t.type({
 	callArgs: t.record(t.string, actionArgumentType),
 	chain: chainType,
 	chainId: chainIdType,
-	blockhash: t.union([t.string, t.null]),
+	block: t.union([t.string, t.null]),
 })
 
 export const actionType: t.Type<Action> = t.type({
@@ -59,7 +59,7 @@ export const sessionPayloadType: t.Type<SessionPayload> = t.type({
 	sessionIssued: t.number,
 	chain: chainType,
 	chainId: chainIdType,
-	blockhash: t.union([t.string, t.null]),
+	block: t.union([t.string, t.null]),
 })
 
 export const sessionType: t.Type<Session> = t.type({

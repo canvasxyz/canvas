@@ -16,12 +16,12 @@ export class TestSigner {
 			timestamp: Date.now(),
 			chain: "ethereum",
 			chainId: "1",
-			blockhash: null,
+			block: null,
 		}
 
 		if (this.provider !== undefined) {
 			const block = await this.provider.getBlock("latest")
-			actionPayload.blockhash = block.blockhash
+			actionPayload.block = block.blockhash
 		}
 
 		const actionSignatureData = getActionSignatureData(actionPayload)
@@ -43,12 +43,12 @@ export class TestSessionSigner {
 			app: this.signer.uri,
 			chain: "ethereum",
 			chainId: "1",
-			blockhash: null,
+			block: null,
 		}
 
 		if (this.signer.provider !== undefined) {
 			const block = await this.signer.provider.getBlock("latest")
-			sessionPayload.blockhash = block.blockhash
+			sessionPayload.block = block.blockhash
 		}
 
 		const sessionSignatureData = getSessionSignatureData(sessionPayload)
@@ -65,12 +65,12 @@ export class TestSessionSigner {
 			timestamp: Date.now(),
 			chain: "ethereum",
 			chainId: "1",
-			blockhash: null,
+			block: null,
 		}
 
 		if (this.signer.provider !== undefined) {
 			const block = await this.signer.provider.getBlock("latest")
-			actionPayload.blockhash = block.blockhash
+			actionPayload.block = block.blockhash
 		}
 
 		const actionSignatureData = getActionSignatureData(actionPayload)

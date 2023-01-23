@@ -71,7 +71,7 @@ export function useCanvas(): {
 					call,
 					callArgs: args,
 					timestamp,
-					blockhash: block.blockhash,
+					block: block.blockhash,
 					chain: block.chain,
 					chainId: block.chainId,
 				}

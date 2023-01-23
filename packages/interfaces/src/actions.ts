@@ -13,13 +13,13 @@ export type ActionArgument = null | boolean | number | string
  * An `Action` is the data signed by the user, either directly or
  * using a session key, to execute an action in a Canvas application.
  *
- * `blockhash` is optional, and may be used by nodes to validate `timestamp`.
+ * `block` is optional, and may be used by nodes to validate `timestamp`.
  */
 export type Action = {
 	type: "action"
 	payload: {
 		app: string
-		blockhash: string | null
+		block: string | null
 		call: string
 		callArgs: Record<string, ActionArgument>
 		chain: Chain

@@ -22,7 +22,7 @@ import {
 const actionDataFields = {
 	Message: [
 		{ name: "app", type: "string" },
-		{ name: "blockhash", type: "string" },
+		{ name: "block", type: "string" },
 		{ name: "call", type: "string" },
 		{ name: "callArgs", type: "string" },
 		{ name: "chain", type: "string" },
@@ -53,7 +53,7 @@ export function getActionSignatureData(
 		...payload,
 		callArgs: serializeActionCallArgs(payload.callArgs),
 		chainId: payload.chainId.toString(),
-		blockhash: payload.blockhash || "",
+		block: payload.block || "",
 	}
 
 	return [domain, actionDataFields, actionValue]
@@ -62,7 +62,7 @@ export function getActionSignatureData(
 const sessionDataFields = {
 	Message: [
 		{ name: "app", type: "string" },
-		{ name: "blockhash", type: "string" },
+		{ name: "block", type: "string" },
 		{ name: "chain", type: "string" },
 		{ name: "chainId", type: "string" },
 		{ name: "from", type: "string" },
@@ -92,7 +92,7 @@ export function getSessionSignatureData(payload: SessionPayload): SignatureData<
 	const sessionValue = {
 		...payload,
 		chainId: payload.chainId.toString(),
-		blockhash: payload.blockhash || "",
+		block: payload.block || "",
 	}
 
 	return [domain, sessionDataFields, sessionValue]

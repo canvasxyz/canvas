@@ -19,7 +19,7 @@ type ActionRecord = {
 	call_args: Buffer
 	chain: Chain
 	chain_id: ChainId
-	blockhash: Buffer | null
+	block: Buffer | null
 	source: Buffer | null
 }
 
@@ -32,7 +32,7 @@ type SessionRecord = {
 	session_issued: number
 	chain: Chain
 	chain_id: ChainId
-	blockhash: Buffer | null
+	block: Buffer | null
 	source: Buffer | null
 }
 
@@ -107,7 +107,7 @@ export class MessageStore {
 			call_args: toBuffer(cbor.encode(action.payload.callArgs)),
 			chain: action.payload.chain,
 			chain_id: action.payload.chainId,
-			blockhash: action.payload.blockhash ? toBuffer(action.payload.blockhash) : null,
+			block: action.payload.block ? toBuffer(action.payload.block) : null,
 			source: sourceCID ? toBuffer(sourceCID.bytes) : null,
 		}
 
@@ -128,7 +128,7 @@ export class MessageStore {
 			session_address: toBuffer(session.payload.sessionAddress),
 			session_duration: session.payload.sessionDuration,
 			session_issued: session.payload.sessionIssued,
-			blockhash: session.payload.blockhash ? toBuffer(session.payload.blockhash) : null,
+			block: session.payload.block ? toBuffer(session.payload.block) : null,
 			chain: session.payload.chain,
 			chain_id: session.payload.chainId,
 			source: sourceCID ? toBuffer(sourceCID.bytes) : null,
@@ -155,7 +155,7 @@ export class MessageStore {
 				timestamp: record.timestamp,
 				chain: record.chain,
 				chainId: record.chain_id,
-				blockhash: record.blockhash,
+				block: record.block,
 			},
 		}
 
@@ -203,7 +203,7 @@ export class MessageStore {
 				sessionIssued: record.session_issued,
 				chain: record.chain,
 				chainId: record.chain_id,
-				blockhash: record.blockhash,
+				block: record.block,
 			},
 		}
 
@@ -240,7 +240,7 @@ export class MessageStore {
     call_args       BLOB    NOT NULL,
 		chain           TEXT    NOT NULL,
     chain_id        TEXT    NOT NULL,
-    blockhash       BLOB,
+    block           BLOB,
 		source          BLOB
   );`
 
@@ -254,20 +254,20 @@ export class MessageStore {
     session_issued   INTEGER NOT NULL,
 		chain            TEXT    NOT NULL,
     chain_id         TEXT    NOT NULL,
-    blockhash        BLOB,
+    block            BLOB,
 		source           BLOB
   );`
 
 	private static statements = {
 		insertAction: `INSERT INTO actions (
-      hash, signature, session_address, from_address, timestamp, call, call_args, chain, chain_id, blockhash, source
+      hash, signature, session_address, from_address, timestamp, call, call_args, chain, chain_id, block, source
     ) VALUES (
-      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :chain_id, :blockhash, :source
+      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :chain_id, :block, :source
     )`,
 		insertSession: `INSERT INTO sessions (
-      hash, signature, from_address, session_address, session_duration, session_issued, chain, chain_id, blockhash, source
+      hash, signature, from_address, session_address, session_duration, session_issued, chain, chain_id, block, source
     ) VALUES (
-      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :chain_id, :blockhash, :source
+      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :chain_id, :block, :source
     )`,
 		getActionByHash: `SELECT * FROM actions WHERE hash = :hash`,
 		getSessionByHash: `SELECT * FROM sessions WHERE hash = :hash`,

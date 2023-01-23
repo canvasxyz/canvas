@@ -54,6 +54,7 @@ export function decodeAddress(chain: Chain, chainId: ChainId, address: Uint8Arra
 	}
 }
 
+// encode block identifier (blockhash for eth, block number for cosmos)
 export function encodeBlockhash(chain: Chain, chainId: ChainId, blockhash: string): Uint8Array {
 	if (chain === "ethereum") {
 		return arrayify(blockhash)
@@ -70,6 +71,7 @@ export function encodeBlockhash(chain: Chain, chainId: ChainId, blockhash: strin
 	}
 }
 
+// decode block identifier (blockhash for eth, block number for cosmos)
 export function decodeBlockhash(chain: Chain, chainId: ChainId, blockhash: Uint8Array): string {
 	if (chain === "ethereum") {
 		return hexlify(blockhash)

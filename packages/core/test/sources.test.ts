@@ -116,7 +116,7 @@ test("Apply source actions", async (t) => {
 			call_args: toBuffer(cbor.encode(sourceAction.payload.callArgs)),
 			chain: "ethereum",
 			chain_id: "1",
-			blockhash: null,
+			block: null,
 			source: toBuffer(sourceCID.bytes),
 		},
 		{
@@ -130,7 +130,7 @@ test("Apply source actions", async (t) => {
 			call_args: toBuffer(cbor.encode(createAction.payload.callArgs)),
 			chain: "ethereum",
 			chain_id: "1",
-			blockhash: null,
+			block: null,
 			source: null,
 		},
 		{
@@ -144,7 +144,7 @@ test("Apply source actions", async (t) => {
 			call_args: toBuffer(cbor.encode(voteAction.payload.callArgs)),
 			chain: "ethereum",
 			chain_id: "1",
-			blockhash: null,
+			block: null,
 			source: null,
 		},
 		{
@@ -158,7 +158,7 @@ test("Apply source actions", async (t) => {
 			call_args: toBuffer(cbor.encode(voteSourceAction.payload.callArgs)),
 			chain: "ethereum",
 			chain_id: "1",
-			blockhash: null,
+			block: null,
 			source: null,
 		},
 	])

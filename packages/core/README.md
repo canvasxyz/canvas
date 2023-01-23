@@ -25,7 +25,7 @@ interface CoreConfig {
 	offline?: boolean
 }
 
-type BlockResolver = (chain: Chain, chainId: ChainId, blockhash: string) => Promise<ethers.providers.Block>
+type BlockResolver = (chain: Chain, chainId: ChainId, block: string) => Promise<ethers.providers.Block>
 
 declare class Core {
 	static initialize(config: CoreConfig): Promise<Core>
