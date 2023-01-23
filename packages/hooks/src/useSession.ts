@@ -1,15 +1,93 @@
 import { useCallback, useContext, useEffect, useState } from "react"
 
-import { Block, SessionPayload, Session } from "@canvas-js/interfaces"
+import { Block, SessionPayload } from "@canvas-js/interfaces"
 import type { SessionSigner } from "@canvas-js/signers/lib/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
 import { getCanvasSessionKey, getRecentBlock, urlJoin } from "./utils.js"
 
+type UseSessionState = "initialized" | "logged_out" | "pending" | "logged_in"
+
+function getSessionPrivateKeyFromLocalStorage(host: string, data: { uri: string }, signerAddress: string) {
+	const sessionKey = getCanvasSessionKey(signerAddress)
+	const item = localStorage.getItem(sessionKey)
+	if (item === null) {
+		return
+	}
+
+	let sessionObject: any
+	try {
+		sessionObject = JSON.parse(item)
+	} catch (err) {
+		localStorage.removeItem(sessionKey)
+		return
+	}
+
+	if (!isSessionObject(sessionObject)) {
+		localStorage.removeItem(sessionKey)
+		return
+	}
+
+	const { spec, sessionPrivateKey, expiration } = sessionObject
+	if (data.uri !== spec || expiration < Date.now()) {
+		localStorage.removeItem(sessionKey)
+		return
+	}
+
+	return { sessionPrivateKey, expiration }
+}
+
+async function getSessionObject(signer: SessionSigner, signerAddress: string, data: { uri: string }, host: string) {
+	const timestamp = Date.now()
+	const sessionDuration = 86400 * 1000
+	const actionSigner = await signer.createActionSigner()
+
+	const sessionObject: SessionObject = {
+		spec: data.uri,
+		sessionPrivateKey: actionSigner.privateKey,
+		expiration: timestamp + sessionDuration,
+	}
+
+	const chain = await signer.getChain()
+	const chainId = await signer.getChainId()
+
+	let block: Block
+	try {
+		block = await getRecentBlock(host, chain, chainId)
+	} catch (err) {
+		block = await signer.getRecentBlock()
+	}
+
+	const payload: SessionPayload = {
+		from: signerAddress,
+		spec: data.uri,
+		address: actionSigner.address,
+		duration: sessionDuration,
+		timestamp,
+		blockhash: block.blockhash,
+		chain: block.chain,
+		chainId: block.chainId,
+	}
+
+	const session = await signer.signSessionPayload(payload)
+
+	const res = await fetch(urlJoin(host, "sessions"), {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(session),
+	})
+
+	if (!res.ok) {
+		const message = await res.text()
+		throw new Error(message)
+	}
+
+	return sessionObject
+}
+
 export function useSession(signer: SessionSigner | null): {
 	error: Error | null
-	isLoading: boolean
-	isPending: boolean
+	state: UseSessionState
 	sessionAddress: string | null
 	sessionExpiration: number | null
 	login: () => void
@@ -18,11 +96,11 @@ export function useSession(signer: SessionSigner | null): {
 	const { host, data, setSigner, actionSigner, setActionSigner, sessionExpiration, setSessionExpiration } =
 		useContext(CanvasContext)
 
+	const [state, setState] = useState<UseSessionState>("initialized")
 	const [error, setError] = useState<null | Error>(null)
-	const [isLoading, setIsLoading] = useState(true)
-	const [isPending, setIsPending] = useState(false)
 
 	const [signerAddress, setSignerAddress] = useState<string | null>(null)
+
 	useEffect(() => {
 		if (signer === null) {
 			setSignerAddress(null)
@@ -38,47 +116,32 @@ export function useSession(signer: SessionSigner | null): {
 		setSessionExpiration(null)
 	}, [signer])
 
+	// Try to log in by loading data from localStorage
 	useEffect(() => {
+		if (state !== "initialized") {
+			return
+		}
+
 		if (host === null || data === null || signerAddress === null) {
 			return
 		}
 
-		setIsLoading(false)
-
-		const sessionKey = getCanvasSessionKey(signerAddress)
-		const item = localStorage.getItem(sessionKey)
-		if (item === null) {
-			return
+		const res = getSessionPrivateKeyFromLocalStorage(host, data, signerAddress)
+		if (res) {
+			const { sessionPrivateKey, expiration } = res
+			signer!.createActionSigner(sessionPrivateKey).then((actionSigner) => {
+				setActionSigner(actionSigner)
+				setSessionExpiration(expiration)
+				setState("logged_in")
+			})
+		} else {
+			setState("logged_out")
 		}
-
-		let sessionObject: any
-		try {
-			sessionObject = JSON.parse(item)
-		} catch (err) {
-			localStorage.removeItem(sessionKey)
-			return
-		}
-
-		if (!isSessionObject(sessionObject)) {
-			localStorage.removeItem(sessionKey)
-			return
-		}
-
-		const { spec, sessionPrivateKey, expiration } = sessionObject
-		if (data.uri !== spec || expiration < Date.now()) {
-			localStorage.removeItem(sessionKey)
-			return
-		}
-
-		signer!.createActionSigner(sessionPrivateKey).then((actionSigner) => {
-			console.log("set ActionSigner on load localStorage?")
-			console.log(actionSigner.address)
-			setActionSigner(actionSigner)
-		})
-		setSessionExpiration(expiration)
 	}, [host, data, signerAddress])
 
+	// Log in by clicking the log in button
 	const login = useCallback(async () => {
+		console.log("login function called...")
 		if (host === null) {
 			return setError(new Error("no host configured"))
 		} else if (signer === null) {
@@ -89,74 +152,31 @@ export function useSession(signer: SessionSigner | null): {
 			return setError(new Error("login() called before the application connection was established"))
 		}
 
-		setIsPending(true)
+		setState("pending")
 
 		try {
-			const timestamp = Date.now()
-			const sessionDuration = 86400 * 1000
-			const actionSigner = await signer.createActionSigner()
-
-			const sessionObject: SessionObject = {
-				spec: data.uri,
-				sessionPrivateKey: actionSigner.privateKey,
-				expiration: timestamp + sessionDuration,
-			}
-
-			const chain = await signer.getChain()
-			const chainId = await signer.getChainId()
-
-			let block: Block
-			try {
-				block = await getRecentBlock(host, chain, chainId)
-			} catch (err) {
-				block = await signer.getRecentBlock()
-			}
-
-			const payload: SessionPayload = {
-				from: signerAddress,
-				spec: data.uri,
-				address: actionSigner.address,
-				duration: sessionDuration,
-				timestamp,
-				blockhash: block.blockhash,
-				chain: block.chain,
-				chainId: block.chainId,
-			}
-
-			const session = await signer.signSessionPayload(payload)
-
-			const res = await fetch(urlJoin(host, "sessions"), {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(session),
-			})
-
-			if (!res.ok) {
-				const message = await res.text()
-				throw new Error(message)
-			}
-
+			const sessionObject = await getSessionObject(signer, signerAddress, data, host)
 			const sessionKey = getCanvasSessionKey(signerAddress)
 			localStorage.setItem(sessionKey, JSON.stringify(sessionObject))
-			console.log("set ActionSigner on login")
 			setActionSigner(actionSigner)
 			setSessionExpiration(sessionObject.expiration)
 			setError(null)
+			setState("logged_in")
 		} catch (err) {
 			console.error(err)
+			setState("logged_out")
 			if (err instanceof Error) {
 				setError(err)
 			} else {
 				throw err
 			}
-		} finally {
-			setIsPending(false)
 		}
 	}, [host, data, signer, signerAddress])
 
 	const logout = useCallback(() => {
 		setActionSigner(null)
 		setSessionExpiration(null)
+		setState("logged_out")
 		if (signerAddress !== null) {
 			const sessionKey = getCanvasSessionKey(signerAddress)
 			localStorage.removeItem(sessionKey)
@@ -166,8 +186,7 @@ export function useSession(signer: SessionSigner | null): {
 	const sessionAddress = actionSigner && actionSigner.address
 	return {
 		error,
-		isLoading,
-		isPending,
+		state,
 		sessionAddress,
 		sessionExpiration,
 		login,
