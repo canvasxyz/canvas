@@ -91,10 +91,10 @@ export class MessageStore {
 	}
 
 	public insertAction(hash: string | Buffer, action: BinaryAction) {
-		const sourceCID: CID | undefined = this.sourceCIDs[action.payload.spec]
+		const sourceCID: CID | undefined = this.sourceCIDs[action.payload.app]
 		assert(
-			action.payload.spec === this.uri || sourceCID !== undefined,
-			"insertAction: action.payload.spec not found in MessageStore.sources"
+			action.payload.app === this.uri || sourceCID !== undefined,
+			"insertAction: action.payload.app not found in MessageStore.sources"
 		)
 
 		const record: ActionRecord = {
@@ -115,10 +115,10 @@ export class MessageStore {
 	}
 
 	public insertSession(hash: string | Buffer, session: BinarySession) {
-		const sourceCID: CID | undefined = this.sourceCIDs[session.payload.spec]
+		const sourceCID: CID | undefined = this.sourceCIDs[session.payload.app]
 		assert(
-			session.payload.spec === this.uri || sourceCID !== undefined,
-			"insertSession: session.payload.spec not found in MessageStore.sources"
+			session.payload.app === this.uri || sourceCID !== undefined,
+			"insertSession: session.payload.app not found in MessageStore.sources"
 		)
 
 		const record: SessionRecord = {
@@ -148,7 +148,7 @@ export class MessageStore {
 			signature: record.signature,
 			session: record.session_address,
 			payload: {
-				spec: this.uri,
+				app: this.uri,
 				from: record.from_address,
 				call: record.call,
 				args: cbor.decode(record.args) as Record<string, ActionArgument>,
@@ -161,7 +161,7 @@ export class MessageStore {
 
 		if (record.source !== null) {
 			const cid = CID.decode(record.source)
-			action.payload.spec = `ipfs://${cid.toString()}`
+			action.payload.app = `ipfs://${cid.toString()}`
 		}
 
 		return action
@@ -196,7 +196,7 @@ export class MessageStore {
 			type: "session",
 			signature: record.signature,
 			payload: {
-				spec: this.uri,
+				app: this.uri,
 				from: record.from_address,
 				timestamp: record.timestamp,
 				address: record.session_address,
@@ -209,7 +209,7 @@ export class MessageStore {
 
 		if (record.source !== null) {
 			const cid = CID.decode(record.source)
-			session.payload.spec = `ipfs://${cid.toString()}`
+			session.payload.app = `ipfs://${cid.toString()}`
 		}
 
 		return session

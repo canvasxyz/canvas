@@ -8,8 +8,8 @@ import { Chain } from "./contracts.js"
  * and/or `block` depending on which is provided.
  */
 export type SessionPayload = {
+	app: string
 	from: string
-	spec: string
 	timestamp: number
 	address: string
 	duration: number

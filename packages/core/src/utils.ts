@@ -106,7 +106,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	routes?: Record<string, (params: Record<string, string>, db: RouteContext) => Query>
 	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
 	sources?: Record<string, Record<string, ActionHandler<Models>>>
-}): Promise<{ uri: string; spec: string }> {
+}): Promise<{ uri: string; app: string }> {
 	const { models, actions, routes, contracts, sources } = exports
 
 	const actionEntries = compileActionHandlers(actions)
@@ -140,9 +140,9 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 		lines.push(`};`)
 	}
 
-	const spec = lines.join("\n")
-	const cid = await Hash.of(spec)
-	return { uri: `ipfs://${cid}`, spec }
+	const app = lines.join("\n")
+	const cid = await Hash.of(app)
+	return { uri: `ipfs://${cid}`, app }
 }
 
 export class AbortError extends Error {

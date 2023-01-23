@@ -44,18 +44,18 @@ interface VMOptions {
 
 interface VMConfig extends VMOptions {
 	uri: string
-	spec: string
+	app: string
 	providers?: Record<string, BlockProvider>
 }
 
 export class VM {
-	public static async initialize({ uri, spec, providers, ...options }: VMConfig): Promise<VM> {
+	public static async initialize({ uri, app, providers, ...options }: VMConfig): Promise<VM> {
 		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
-		const { code: transpiledSpec } = transform(spec, {
+		const { code: transpiledSpec } = transform(app, {
 			transforms: ["jsx"],
 			jsxPragma: "React.createElement",
 			jsxFragmentPragma: "React.Fragment",
@@ -79,10 +79,10 @@ export class VM {
 		}
 	}
 
-	public static async validate(spec: string): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+	public static async validate(app: string): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
 		let transpiledSpec: string
 		try {
-			transpiledSpec = transform(spec, {
+			transpiledSpec = transform(app, {
 				transforms: ["jsx"],
 				jsxPragma: "React.createElement",
 				jsxFragmentPragma: "React.Fragment",
@@ -102,7 +102,7 @@ export class VM {
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
-		const cid = await Hash.of(spec)
+		const cid = await Hash.of(app)
 		const moduleHandle = await loadModule(context, `ipfs://${cid}`, transpiledSpec)
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
@@ -353,14 +353,14 @@ export class VM {
 		return results
 	}
 
-	private getActionHandle(spec: string, call: string): QuickJSHandle {
-		if (spec === this.uri) {
+	private getActionHandle(app: string, call: string): QuickJSHandle {
+		if (app === this.uri) {
 			const handle = this.actionHandles[call]
 			assert(handle !== undefined, "invalid action call")
 			return handle
 		} else {
-			const source = this.sourceHandles[spec]
-			assert(source !== undefined, `no source with URI ${spec}`)
+			const source = this.sourceHandles[app]
+			assert(source !== undefined, `no source with URI ${app}`)
 			assert(source[call] !== undefined, "invalid source call")
 			return source[call]
 		}
@@ -373,7 +373,7 @@ export class VM {
 	public async execute(hash: string, { call, args, ...context }: ActionPayload): Promise<Effect[]> {
 		assert(this.effects === null && this.actionContext === null, "cannot apply more than one action at once")
 
-		const actionHandle = this.getActionHandle(context.spec, call)
+		const actionHandle = this.getActionHandle(context.app, call)
 
 		const argHandles = wrapObject(
 			this.context,
@@ -381,7 +381,7 @@ export class VM {
 		)
 
 		const ctx = wrapJSON(this.context, {
-			spec: context.spec,
+			app: context.app,
 			hash: hash,
 			from: context.from,
 			blockhash: context.blockhash,

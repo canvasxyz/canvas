@@ -16,7 +16,7 @@ const binaryActionPayloadType = t.type({
 	call: t.string,
 	args: t.record(t.string, actionArgumentType),
 	from: uint8ArrayType,
-	spec: t.string,
+	app: t.string,
 	timestamp: t.number,
 	chain: chainType,
 	chainId: chainIdType,
@@ -34,7 +34,7 @@ export type BinaryAction = t.TypeOf<typeof binaryActionType>
 
 const binarySessionPayloadType = t.type({
 	from: uint8ArrayType,
-	spec: t.string,
+	app: t.string,
 	timestamp: t.number,
 	address: uint8ArrayType,
 	duration: t.number,

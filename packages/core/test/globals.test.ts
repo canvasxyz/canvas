@@ -5,7 +5,7 @@ import { compileSpec, Core } from "@canvas-js/core"
 
 import { TestSigner } from "./utils.js"
 
-const { spec, uri } = await compileSpec({
+const { app, uri } = await compileSpec({
 	models: {},
 	actions: {
 		async logIP() {
@@ -23,7 +23,7 @@ const { spec, uri } = await compileSpec({
 const signer = new TestSigner(uri)
 
 test("test fetch() and log IP address", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true, offline: true })
+	const core = await Core.initialize({ uri, app, directory: null, unchecked: true, offline: true })
 
 	const action = await signer.sign("logIP", {})
 	await t.notThrowsAsync(() => core.applyAction(action))
@@ -32,7 +32,7 @@ test("test fetch() and log IP address", async (t) => {
 })
 
 test("test assert()", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true, offline: true })
+	const core = await Core.initialize({ uri, app, directory: null, unchecked: true, offline: true })
 
 	const successAction = await signer.sign("echo", { text: "hello world" })
 	await t.notThrowsAsync(() => core.applyAction(successAction))

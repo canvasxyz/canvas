@@ -50,29 +50,29 @@ export async function confirmOrExit(message: string) {
 
 export const cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 
-export function parseSpecArgument(value: string): { directory: string | null; uri: string; spec: string } {
+export function parseSpecArgument(value: string): { directory: string | null; uri: string; app: string } {
 	if (cidPattern.test(value)) {
 		const directory = path.resolve(CANVAS_HOME, value)
 		const specPath = path.resolve(directory, constants.SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
-			const spec = fs.readFileSync(specPath, "utf-8")
-			return { directory, uri: `ipfs://${value}`, spec }
+			const app = fs.readFileSync(specPath, "utf-8")
+			return { directory, uri: `ipfs://${value}`, app }
 		} else {
 			console.error(chalk.red(`[canvas-cli] App ${value} is not installed.`))
 			process.exit(1)
 		}
 	} else if (value.endsWith(".js") || value.endsWith(".jsx")) {
 		const specPath = path.resolve(value)
-		const spec = fs.readFileSync(specPath, "utf-8")
-		return { directory: null, uri: `file://${specPath}`, spec }
+		const app = fs.readFileSync(specPath, "utf-8")
+		return { directory: null, uri: `file://${specPath}`, app }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js/.jsx file"))
 		process.exit(1)
 	}
 }
 
-export async function installSpec(spec: string): Promise<string> {
-	const cid = await Hash.of(spec)
+export async function installSpec(app: string): Promise<string> {
+	const cid = await Hash.of(app)
 	const directory = path.resolve(CANVAS_HOME, cid)
 	if (!fs.existsSync(directory)) {
 		console.log(`[canvas-cli] Creating app directory at ${directory}`)
@@ -84,7 +84,7 @@ export async function installSpec(spec: string): Promise<string> {
 		console.log(`[canvas-cli] ${specPath} already exists`)
 	} else {
 		console.log(`[canvas-cli] Creating ${specPath}`)
-		fs.writeFileSync(specPath, spec, "utf-8")
+		fs.writeFileSync(specPath, app, "utf-8")
 	}
 
 	return cid
@@ -107,7 +107,7 @@ export function getProviders(args?: (string | number)[]): Record<string, BlockPr
 				process.exit(1)
 			}
 
-			if (chain == "eth") {
+			if (chain == "ethereum") {
 				const key = `${chain}:${id}`
 				providers[key] = new EthereumBlockProvider(id.toString(), url)
 			} else {

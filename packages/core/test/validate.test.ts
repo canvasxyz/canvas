@@ -23,22 +23,22 @@ const warnings = (w: any) => ({
 
 const VALIDATION_TEST_FIXTURES: {
 	name: string
-	spec: string
+	app: string
 	expectedResult: Awaited<ReturnType<typeof VM.validate>>
 }[] = [
 	{
 		name: "reject a blank spec",
-		spec: "",
+		app: "",
 		expectedResult: errors(["Spec is missing `models` export", "Spec is missing `actions` export"]),
 	},
 	{
 		name: "reject a syntactically invalid spec",
-		spec: "SAD!@$£WTEGJSWO£W$",
+		app: "SAD!@$£WTEGJSWO£W$",
 		expectedResult: errors(['Syntax error: Unexpected token, expected ";" (1:4)']),
 	},
 	{
 		name: "accept a minimal spec",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
     `,
@@ -46,7 +46,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "accept a spec with empty optional exports",
-		spec: `
+		app: `
 		  export const models = {};
 			export const actions = {};
 			export const contracts = {};
@@ -57,7 +57,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "accept a spec with extraneous exports, with warning",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const foobar = {};
@@ -67,7 +67,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject invalid model name",
-		spec: `
+		app: `
       export const models = {
         _Something: {}
       }
@@ -77,7 +77,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "accept model",
-		spec: `
+		app: `
       export const models = {
         thing: {
           id: "string",
@@ -90,7 +90,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "accept model with valid indexes",
-		spec: `
+		app: `
       export const models = {
         thing: {
           id: "string",
@@ -105,7 +105,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject model with invalid type indexes",
-		spec: `
+		app: `
       export const models = {
         thing: {
           id: "string",
@@ -119,7 +119,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject model with 'id' index",
-		spec: `
+		app: `
       export const models = {
         thing: {
           id: "string",
@@ -133,7 +133,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject model with index for field that doesn't exist",
-		spec: `
+		app: `
       export const models = {
         thing: {
           id: "string",
@@ -147,7 +147,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject model with missing properties",
-		spec: `
+		app: `
       export const models = {
         thing: {}
       }
@@ -160,7 +160,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject model where id and updated_at are wrong type",
-		spec: `
+		app: `
       export const models = {
         thing: {
           id: "number",
@@ -176,7 +176,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject model where extra fields have invalid type names",
-		spec: `
+		app: `
       export const models = {
         thing: {
           id: "string",
@@ -190,7 +190,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject model where extra fields have invalid names",
-		spec: `
+		app: `
       export const models = {
         thing: {
           id: "string",
@@ -204,7 +204,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "accept valid action",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {
         doThing({}, {}) {
@@ -216,7 +216,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject actions not defined as an object",
-		spec: `
+		app: `
       export const models = {};
       export const actions = "not an object";
     `,
@@ -224,7 +224,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject action with invalid name",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {
         _doThing({}, {}) {
@@ -236,7 +236,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject action not defined as a function",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {
         doThing: 1234
@@ -246,7 +246,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject contracts not defined as an object",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const contracts = 123456;
@@ -255,12 +255,12 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "accept valid contract",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const contracts = {
         milady: {
-          chain: "eth",
+          chain: "ethereum",
           chainId: "1",
           address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
           abi: ["function balanceOf(address owner) view returns (uint balance)"],
@@ -271,7 +271,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject contract with invalid chain",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const contracts = {
@@ -287,12 +287,12 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject contract with invalid chainId",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const contracts = {
         milady: {
-          chain: "eth",
+          chain: "ethereum",
           chainId: [],
           address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
           abi: ["function balanceOf(address owner) view returns (uint balance)"],
@@ -303,13 +303,13 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject contract with extra fields",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const contracts = {
         milady: {
 					somethingElse: "hello",
-          chain: "eth",
+          chain: "ethereum",
           chainId: "1",
           address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
           abi: ["function balanceOf(address owner) view returns (uint balance)"],
@@ -320,7 +320,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject routes if not object",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const routes = 123456;
@@ -329,7 +329,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject routes with invalid name",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const routes = {
@@ -340,7 +340,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject routes that are not functions",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const routes = {
@@ -351,7 +351,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "accept component",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const component = ({ react: { useRef, useState }, useRoute, dispatch }) => {
@@ -362,7 +362,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject component if it is not a function",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const component = {};
@@ -371,7 +371,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "accept a valid source",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const sources = {
@@ -384,7 +384,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject source with invalid name",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const sources = {
@@ -395,7 +395,7 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 	{
 		name: "reject a valid source with invalid values",
-		spec: `
+		app: `
       export const models = {};
       export const actions = {};
       export const sources = {
@@ -410,9 +410,9 @@ const VALIDATION_TEST_FIXTURES: {
 	},
 ]
 
-for (const { name, spec, expectedResult } of VALIDATION_TEST_FIXTURES) {
+for (const { name, app, expectedResult } of VALIDATION_TEST_FIXTURES) {
 	test(name, async (t) => {
-		const result = await VM.validate(spec)
+		const result = await VM.validate(app)
 		t.deepEqual(result, expectedResult)
 	})
 }

@@ -25,13 +25,13 @@ import {
 
 import { getProviders, confirmOrExit, parseSpecArgument, getPeerId, installSpec, CANVAS_HOME } from "../utils.js"
 
-export const command = "run <spec>"
+export const command = "run <app>"
 export const desc = "Run an app, by path or IPFS hash"
 
 export const builder = (yargs: yargs.Argv) =>
 	yargs
-		.positional("spec", {
-			describe: "Path to spec file, or IPFS hash of spec",
+		.positional("app", {
+			describe: "Path to app file, or IPFS hash of app",
 			type: "string",
 			demandOption: true,
 		})
@@ -47,7 +47,7 @@ export const builder = (yargs: yargs.Argv) =>
 		})
 		.option("install", {
 			type: "boolean",
-			desc: "Install a local spec and run it in production mode",
+			desc: "Install a local app and run it in production mode",
 			default: false,
 		})
 		.option("listen", {
@@ -101,9 +101,9 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
-	let { directory, uri, spec } = parseSpecArgument(args.spec)
+	let { directory, uri, app: appArg } = parseSpecArgument(args.app)
 	if (directory === null && args.install) {
-		const cid = await installSpec(spec)
+		const cid = await installSpec(appArg)
 		directory = path.resolve(CANVAS_HOME, cid)
 		uri = `ipfs://${cid}`
 	}
@@ -176,10 +176,10 @@ export async function handler(args: Args) {
 
 	if (directory === null) {
 		console.log(
-			chalk.yellow(`✦ ${chalk.bold("Using development mode.")} Actions will be signed with the spec filename.`)
+			chalk.yellow(`✦ ${chalk.bold("Using development mode.")} Actions will be signed with the app filename.`)
 		)
 		console.log(chalk.yellow(`✦ ${chalk.bold("Using in-memory database.")} Data will be lost on restart.`))
-		console.log(chalk.yellow(`✦ ${chalk.bold("To persist data, install the spec:")} canvas install ${args.spec}`))
+		console.log(chalk.yellow(`✦ ${chalk.bold("To persist data, install the app:")} canvas install ${args.app}`))
 		console.log("")
 	}
 
@@ -211,7 +211,7 @@ export async function handler(args: Args) {
 	const core = await Core.initialize({
 		directory,
 		uri,
-		spec,
+		app: appArg,
 		providers,
 		libp2p,
 		blockResolver: blockCache.getBlock,

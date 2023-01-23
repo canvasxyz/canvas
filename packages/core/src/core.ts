@@ -37,9 +37,9 @@ import { metrics } from "./metrics.js"
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
 	directory: string | null
-	// defaults to ipfs:// hash of spec
+	// defaults to ipfs:// hash of application
 	uri?: string
-	spec: string
+	app: string
 	libp2p?: Libp2p
 	providers?: Record<string, BlockProvider>
 	// defaults to fetching each block from the provider with no caching
@@ -70,12 +70,12 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly sources: Record<string, Source> | null = null
 	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
 
-	public static async initialize({ directory, uri, spec, libp2p, providers, blockResolver, ...options }: CoreConfig) {
-		const cid = await Hash.of(spec).then(CID.parse)
+	public static async initialize({ directory, uri, app, libp2p, providers, blockResolver, ...options }: CoreConfig) {
+		const cid = await Hash.of(app).then(CID.parse)
 		if (uri === undefined) {
 			uri = `ipfs://${cid.toString()}`
 		}
-		const vm = await VM.initialize({ uri, spec, providers: providers ?? {}, ...options })
+		const vm = await VM.initialize({ uri, app, providers: providers ?? {}, ...options })
 
 		if (blockResolver === undefined) {
 			blockResolver = async (chain, chainId, blockhash) => {
@@ -86,16 +86,16 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		if (options.offline) {
-			return new Core(directory, uri, cid, spec, vm, null, blockResolver, options)
+			return new Core(directory, uri, cid, app, vm, null, blockResolver, options)
 		} else if (libp2p === undefined) {
 			const peerId = await createEd25519PeerId()
 			const libp2p = await createLibp2p(getLibp2pInit(peerId))
 			await libp2p.start()
-			const core = new Core(directory, uri, cid, spec, vm, libp2p, blockResolver, options)
+			const core = new Core(directory, uri, cid, app, vm, libp2p, blockResolver, options)
 			core.addEventListener("close", () => libp2p.stop())
 			return core
 		} else {
-			return new Core(directory, uri, cid, spec, vm, libp2p, blockResolver, options)
+			return new Core(directory, uri, cid, app, vm, libp2p, blockResolver, options)
 		}
 	}
 
@@ -103,7 +103,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly directory: string | null,
 		public readonly uri: string,
 		public readonly cid: CID,
-		public readonly spec: string,
+		public readonly app: string,
 		public readonly vm: VM,
 		public readonly libp2p: Libp2p | null,
 		private readonly blockResolver: BlockResolver,
@@ -246,7 +246,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			this.messageStore.insertAction(hash, message)
 			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
 
-			metrics.canvas_messages.inc({ type: "action", uri: action.payload.spec }, 1)
+			metrics.canvas_messages.inc({ type: "action", uri: action.payload.app }, 1)
 		} else if (message.type === "session") {
 			const session = fromBinarySession(message)
 
@@ -257,17 +257,17 @@ export class Core extends EventEmitter<CoreEvents> {
 			await this.validateSession(session)
 			this.messageStore.insertSession(hash, message)
 			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
-			metrics.canvas_messages.inc({ type: "session", uri: session.payload.spec }, 1)
+			metrics.canvas_messages.inc({ type: "session", uri: session.payload.app }, 1)
 		} else {
 			signalInvalidType(message)
 		}
 	}
 
 	private async validateAction(action: Action) {
-		const { timestamp, spec, blockhash, chain, chainId } = action.payload
+		const { timestamp, app, blockhash, chain, chainId } = action.payload
 		const fromAddress = action.payload.from
 
-		assert(spec === this.uri || this.vm.sources.has(spec), "action signed for wrong spec")
+		assert(app === this.uri || this.vm.sources.has(app), "action signed for wrong application")
 
 		// check the timestamp bounds
 		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
@@ -289,7 +289,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(session.payload.timestamp + session.payload.duration > timestamp, "session expired")
 			assert(session.payload.timestamp <= timestamp, "session timestamp must precede action timestamp")
 
-			assert(session.payload.spec === spec, "action referenced a session for the wrong spec")
+			assert(session.payload.app === app, "action referenced a session for the wrong application")
 			assert(
 				session.payload.from === fromAddress,
 				"invalid session (action.payload.from and session.payload.from do not match)"
@@ -302,8 +302,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			)
 			assert(verifiedAddress === session.payload.address, "invalid action signature (action, session do not match)")
 			assert(
-				action.payload.spec === session.payload.spec,
-				"invalid session (action.payload.spec and session.payload.spec do not match)"
+				action.payload.app === session.payload.app,
+				"invalid session (action.payload.app and session.payload.app do not match)"
 			)
 		} else {
 			const verifiedAddress = await verifyActionSignature(action)
@@ -312,8 +312,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async validateSession(session: Session) {
-		const { from, spec, timestamp, blockhash, chain, chainId } = session.payload
-		assert(spec === this.uri || this.vm.sources.has(spec), "session signed for wrong spec")
+		const { from, app, timestamp, blockhash, chain, chainId } = session.payload
+		assert(app === this.uri || this.vm.sources.has(app), "session signed for wrong application")
 
 		const verifiedAddress = await verifySessionSignature(session)
 		assert(verifiedAddress === from, "session signed by wrong address")

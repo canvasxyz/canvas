@@ -16,8 +16,8 @@ export type ActionArgument = null | boolean | number | string
  * or using a session key, to execute an action in a Canvas application.
  */
 export type ActionPayload = {
+	app: string
 	from: string
-	spec: string
 	timestamp: number
 	chain: Chain
 	chainId: string

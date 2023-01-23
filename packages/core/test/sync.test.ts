@@ -21,7 +21,7 @@ import { handleIncomingStream, sync } from "@canvas-js/core/lib/rpc/index.js"
 
 import { TestSigner } from "./utils.js"
 
-const { uri, spec } = await compileSpec({
+const { uri, app } = await compileSpec({
 	models: {},
 	actions: { log: ({ message }, {}) => console.log(message) },
 })

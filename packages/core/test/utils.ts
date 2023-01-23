@@ -10,11 +10,11 @@ export class TestSigner {
 	async sign(call: string, args: Record<string, ActionArgument>): Promise<Action> {
 		const actionPayload: ActionPayload = {
 			from: this.wallet.address,
-			spec: this.uri,
+			app: this.uri,
 			call,
 			args,
 			timestamp: Date.now(),
-			chain: "eth",
+			chain: "ethereum",
 			chainId: "1",
 			blockhash: null,
 		}
@@ -39,9 +39,9 @@ export class TestSessionSigner {
 			address: this.wallet.address,
 			duration: 60 * 60 * 24,
 			from: this.signer.wallet.address,
-			spec: this.signer.uri,
+			app: this.signer.uri,
 			timestamp: Date.now(),
-			chain: "eth",
+			chain: "ethereum",
 			chainId: "1",
 			blockhash: null,
 		}
@@ -59,11 +59,11 @@ export class TestSessionSigner {
 	async sign(call: string, args: Record<string, ActionArgument>): Promise<Action> {
 		const actionPayload: ActionPayload = {
 			from: this.signer.wallet.address,
-			spec: this.signer.uri,
+			app: this.signer.uri,
 			call,
 			args,
 			timestamp: Date.now(),
-			chain: "eth",
+			chain: "ethereum",
 			chainId: "1",
 			blockhash: null,
 		}

@@ -11,12 +11,12 @@ import { Core, actionType, sessionType, constants } from "@canvas-js/core"
 
 import { getProviders, parseSpecArgument } from "../utils.js"
 
-export const command = "import <spec>"
+export const command = "import <app>"
 export const desc = "Import actions and sessions from stdin"
 export const builder = (yargs: yargs.Argv) =>
 	yargs
-		.positional("spec", {
-			describe: "CID of spec",
+		.positional("app", {
+			describe: "CID of app",
 			type: "string",
 			demandOption: true,
 		})
@@ -29,14 +29,14 @@ export const builder = (yargs: yargs.Argv) =>
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { uri, directory } = parseSpecArgument(args.spec)
-	assert(directory !== null, "Cannot import to development specs since they do not persist any data")
+	const { uri, directory } = parseSpecArgument(args.app)
+	assert(directory !== null, "Cannot import to development apps since they do not persist any data")
 
-	const spec = fs.readFileSync(path.resolve(directory, constants.SPEC_FILENAME), "utf-8")
+	const app = fs.readFileSync(path.resolve(directory, constants.SPEC_FILENAME), "utf-8")
 
 	const providers = getProviders(args["chain-rpc"])
 
-	const core = await Core.initialize({ uri, directory, spec, providers })
+	const core = await Core.initialize({ uri, directory, app, providers })
 
 	const rl = readline.createInterface({
 		input: process.stdin,

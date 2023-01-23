@@ -4,7 +4,7 @@ import { Block, BlockProvider, Chain, ChainId } from "@canvas-js/interfaces"
 
 export const ethersBlockToCanvasBlock = (chainId: ChainId, ethBlock: ethers.providers.Block): Block => {
 	return {
-		chain: "eth",
+		chain: "ethereum",
 		chainId: chainId.toString(),
 		blocknum: ethBlock.number,
 		blockhash: ethBlock.hash,
@@ -15,7 +15,7 @@ export const ethersBlockToCanvasBlock = (chainId: ChainId, ethBlock: ethers.prov
 type BlockCallback = (block: Block) => void
 
 export class EthereumBlockProvider implements BlockProvider {
-	chain = "eth" as Chain
+	chain = "ethereum" as Chain
 	chainId: ChainId
 	provider: ethers.providers.Provider
 	handler?: ethers.providers.Listener

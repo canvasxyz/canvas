@@ -13,9 +13,9 @@ import { Action, Session, ModelValue, Model, Chain, ChainId } from "@canvas-js/i
 interface CoreConfig {
 	// pass `null` to run in memory
 	directory: string | null
-	// defaults to ipfs:// hash of spec
+	// defaults to ipfs:// hash of app
 	uri?: string
-	spec: string
+	app: string
 	libp2p?: Libp2p
 	providers?: Record<string, ethers.providers.JsonRpcProvider>
 	// defaults to fetching each block from the provider with no caching
@@ -44,7 +44,7 @@ declare class Core {
 }
 ```
 
-`CoreConfig.uri` must be the `ipfs://` CIDv0 URI of the spec (dag-pb using the default chunking settings), or a local `file:///` URI.
+`CoreConfig.uri` must be the `ipfs://` CIDv0 URI of the app (dag-pb using the default chunking settings), or a local `file:///` URI.
 
 ## Metrics
 

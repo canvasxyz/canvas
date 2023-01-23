@@ -22,7 +22,7 @@ import type {
 import { isLeft, isRight, left } from "fp-ts/lib/Either.js"
 
 export const chainType: t.Type<Chain> = t.union([
-	t.literal("eth"),
+	t.literal("ethereum"),
 	t.literal("cosmos"),
 	t.literal("near"),
 	t.literal("solana"),
@@ -35,7 +35,7 @@ export const actionArgumentType: t.Type<ActionArgument> = t.union([t.null, t.boo
 
 export const actionPayloadType: t.Type<ActionPayload> = t.type({
 	from: t.string,
-	spec: t.string,
+	app: t.string,
 	timestamp: t.number,
 	call: t.string,
 	args: t.record(t.string, actionArgumentType),
@@ -53,7 +53,7 @@ export const actionType: t.Type<Action> = t.type({
 
 export const sessionPayloadType: t.Type<SessionPayload> = t.type({
 	from: t.string,
-	spec: t.string,
+	app: t.string,
 	timestamp: t.number,
 	address: t.string,
 	duration: t.number,
