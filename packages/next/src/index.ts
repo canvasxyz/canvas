@@ -26,7 +26,7 @@ const providers: Record<string, BlockProvider> = {}
 let unchecked = true
 if (typeof ETH_CHAIN_ID === "string" && typeof ETH_CHAIN_RPC === "string") {
 	unchecked = false
-	const key = `eth:${ETH_CHAIN_ID}`
+	const key = `ethereum:${ETH_CHAIN_ID}`
 	providers[key] = new EthereumBlockProvider(ETH_CHAIN_ID, ETH_CHAIN_RPC)
 }
 

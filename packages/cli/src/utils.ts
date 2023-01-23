@@ -115,7 +115,7 @@ export function getProviders(args?: (string | number)[]): Record<string, BlockPr
 			}
 		}
 	} else if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
-		const key = `eth:${process.env.ETH_CHAIN_ID}`
+		const key = `ethereum:${process.env.ETH_CHAIN_ID}`
 		providers[key] = new EthereumBlockProvider(process.env.ETH_CHAIN_ID, process.env.ETH_CHAIN_RPC)
 		console.log(
 			`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`

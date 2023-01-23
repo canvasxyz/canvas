@@ -21,14 +21,14 @@ import {
 
 const actionDataFields = {
 	Message: [
-		{ name: "from", type: "string" },
-		{ name: "spec", type: "string" },
-		{ name: "timestamp", type: "uint256" },
-		{ name: "chain", type: "string" },
-		{ name: "chainId", type: "string" },
+		{ name: "app", type: "string" },
 		{ name: "blockhash", type: "string" },
 		{ name: "call", type: "string" },
 		{ name: "callArgs", type: "string" },
+		{ name: "chain", type: "string" },
+		{ name: "chainId", type: "string" },
+		{ name: "from", type: "string" },
+		{ name: "timestamp", type: "uint256" },
 	],
 }
 
@@ -63,14 +63,14 @@ export function getActionSignatureData(
 
 const sessionDataFields = {
 	Message: [
-		{ name: "from", type: "string" },
-		{ name: "spec", type: "string" },
-		{ name: "sessionAddress", type: "string" },
-		{ name: "sessionDuration", type: "uint256" },
-		{ name: "sessionIssued", type: "uint256" },
+		{ name: "app", type: "string" },
 		{ name: "blockhash", type: "string" },
 		{ name: "chain", type: "string" },
 		{ name: "chainId", type: "string" },
+		{ name: "from", type: "string" },
+		{ name: "sessionAddress", type: "string" },
+		{ name: "sessionDuration", type: "uint256" },
+		{ name: "sessionIssued", type: "uint256" },
 	],
 }
 

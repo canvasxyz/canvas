@@ -1,44 +1,43 @@
 import type { Chain } from "./contracts.js"
 
 /**
- * An `ActionArgument` is type-level representation of concrete action argument
- * types, ie TypeScript types that describe the possible JavaScript values
- * that we put into and get out of action calls.
+ * An `ActionArgument` defines what types of data may be passed to actions.
  *
- * The `blockhash` is optional, and if provided, may be used by nodes to validate
- * `timestamp`.
+ * These are the same as datatypes supported by JSON serialization, except
+ * TypeScript does not enforce standard serializations of -0, +/-Infinity,
+ * and NaN, which all stringify as `null`.
  */
 export type ActionArgument = null | boolean | number | string
 
 /**
- * An `ActionPayload` is the data signed by the user, either directly
- * or using a session key, to execute an action in a Canvas application.
- */
-export type ActionPayload = {
-	app: string
-	from: string
-	timestamp: number
-	chain: Chain
-	chainId: string
-	blockhash: string | null
-	call: string
-	callArgs: Record<string, ActionArgument>
-}
-
-/**
- * An `ActionContext` is an `ActionPayload` minus `call` and `callArgs`.
- */
-export interface ActionContext extends Omit<ActionPayload, "call" | "callArgs"> {}
-
-/**
- * An `Action` is an `ActionPayload` and a signature.
+ * An `Action` is the data signed by the user, either directly or
+ * using a session key, to execute an action in a Canvas application.
+ *
+ * `blockhash` is optional, and may be used by nodes to validate `timestamp`.
  */
 export type Action = {
 	type: "action"
-	payload: ActionPayload
+	payload: {
+		app: string
+		blockhash: string | null
+		call: string
+		callArgs: Record<string, ActionArgument>
+		chain: Chain
+		chainId: string
+		from: string
+		timestamp: number
+	}
 	session: string | null
 	signature: string
 }
+
+export type ActionPayload = Action["payload"]
+
+/**
+ * An `ActionContext` is an `ActionPayload` minus `call` and `callArgs`,
+ * used for processing effects of actions.
+ */
+export interface ActionContext extends Omit<ActionPayload, "call" | "callArgs"> {}
 
 /**
  * Serialize an ActionPayload into a string suitable for signing on non-ETH chains.
