@@ -14,22 +14,22 @@ export type ActionArgument = null | boolean | number | string
 /**
  * An `ActionPayload` is the data signed by the user, either directly
  * or using a session key, to execute an action in a Canvas application.
- *
- * It is made of an `ActionContext` joined with `call` and `args`.
  */
-export type ActionContext = {
+export type ActionPayload = {
 	from: string
 	spec: string
 	timestamp: number
 	chain: Chain
 	chainId: string
 	blockhash: string | null
-}
-
-export type ActionPayload = ActionContext & {
 	call: string
 	args: Record<string, ActionArgument>
 }
+
+/**
+ * An `ActionContext` is an `ActionPayload` minus `call` and `args`.
+ */
+export interface ActionContext extends Omit<ActionPayload, "call" | "args"> {}
 
 /**
  * An `Action` is an `ActionPayload` and a signature.
