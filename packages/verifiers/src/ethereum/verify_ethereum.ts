@@ -79,13 +79,10 @@ type SignatureData<PayloadType> = [TypedDataDomain, Record<string, TypedDataFiel
 /**
  * `getSessionSignatureData` gets EIP-712 signing data to start a session
  */
-export function getSessionSignatureData(
-	payload: SessionPayload,
-	appName: string = "Canvas"
-): SignatureData<SessionPayload> {
+export function getSessionSignatureData(payload: SessionPayload): SignatureData<SessionPayload> {
 	const domain = {
-		name: appName,
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
+		name: payload.appName,
+		salt: utils.hexlify(utils.zeroPad(utils.arrayify(0), 32)),
 	}
 
 	// Rewrite fields with custom serializations. EIP-712 does not
