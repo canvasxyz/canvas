@@ -17,6 +17,7 @@ export function validateCanvasSpec(
 	moduleHandle: QuickJSHandle
 ): { exports: Exports | null; errors: string[]; warnings: string[] } {
 	const {
+		name: nameHandle,
 		models: modelsHandle,
 		routes: routesHandle,
 		actions: actionsHandle,
@@ -41,6 +42,7 @@ export function validateCanvasSpec(
 	}
 
 	const exports: Exports = {
+		name: null,
 		models: {},
 		contractMetadata: {},
 		component: null,
@@ -52,6 +54,14 @@ export function validateCanvasSpec(
 	for (const [name, handle] of Object.entries(rest)) {
 		warnings.push(`extraneous export \`${name}\``)
 		handle.dispose()
+	}
+
+	// validate name
+	if (nameHandle) {
+		assertLogError(context.typeof(nameHandle) === "string", "`name` export must be a string if provided")
+		exports.name = nameHandle.consume(context.dump)
+	} else {
+		exports.name = null
 	}
 
 	// validate models

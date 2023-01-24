@@ -76,6 +76,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			uri = `ipfs://${cid.toString()}`
 		}
 		const vm = await VM.initialize({ uri, app, providers: providers ?? {}, ...options })
+		const appName = vm.appName
 
 		if (blockResolver === undefined) {
 			blockResolver = async (chain, chainId, blockhash) => {
@@ -86,16 +87,16 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		if (options.offline) {
-			return new Core(directory, uri, cid, app, vm, null, blockResolver, options)
+			return new Core(directory, uri, cid, app, appName, vm, null, blockResolver, options)
 		} else if (libp2p === undefined) {
 			const peerId = await createEd25519PeerId()
 			const libp2p = await createLibp2p(getLibp2pInit(peerId))
 			await libp2p.start()
-			const core = new Core(directory, uri, cid, app, vm, libp2p, blockResolver, options)
+			const core = new Core(directory, uri, cid, app, appName, vm, libp2p, blockResolver, options)
 			core.addEventListener("close", () => libp2p.stop())
 			return core
 		} else {
-			return new Core(directory, uri, cid, app, vm, libp2p, blockResolver, options)
+			return new Core(directory, uri, cid, app, appName, vm, libp2p, blockResolver, options)
 		}
 	}
 
@@ -104,6 +105,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly uri: string,
 		public readonly cid: CID,
 		public readonly app: string,
+		public readonly appName: string,
 		public readonly vm: VM,
 		public readonly libp2p: Libp2p | null,
 		private readonly blockResolver: BlockResolver,
@@ -264,10 +266,12 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async validateAction(action: Action) {
-		const { timestamp, app, block, chain, chainId } = action.payload
+		const { timestamp, app, appName, block, chain, chainId } = action.payload
 		const fromAddress = action.payload.from
 
 		assert(app === this.uri || this.vm.sources.has(app), "action signed for wrong application")
+		assert(appName === this.appName || this.vm.sources.has(app), "action signed for wrong application")
+		// TODO: verify that actions signed for a previous app were valid within that app
 
 		// check the timestamp bounds
 		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
@@ -315,8 +319,11 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async validateSession(session: Session) {
-		const { from, app, sessionIssued, block, chain, chainId } = session.payload
+		const { from, app, appName, sessionIssued, block, chain, chainId } = session.payload
 		assert(app === this.uri || this.vm.sources.has(app), "session signed for wrong application")
+		assert(appName === this.appName || this.vm.sources.has(app), "session signed for wrong application")
+		// TODO: verify that sessions signed for a previous app were valid within that app,
+		// e.g. that their appName matches
 
 		const verifiedAddress = await verifySessionSignature(session)
 		assert(verifiedAddress === from, "session signed by wrong address")

@@ -21,7 +21,8 @@ import { handleIncomingStream, sync } from "@canvas-js/core/lib/rpc/index.js"
 
 import { TestSigner } from "./utils.js"
 
-const { uri, app } = await compileSpec({
+const { uri, app, appName } = await compileSpec({
+	name: "Test App",
 	models: {},
 	actions: { log: ({ message }, {}) => console.log(message) },
 })
@@ -97,7 +98,7 @@ async function testSync(sourceMessages: Message[], targetMessages: Message[]): P
 	}
 }
 
-const signer = new TestSigner(uri)
+const signer = new TestSigner(uri, appName)
 
 test("sync two MSTs", async (t) => {
 	const a = await signer.sign("log", { message: "a" })

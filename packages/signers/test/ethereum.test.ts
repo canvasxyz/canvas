@@ -10,9 +10,11 @@ test("Sign an action for ethereum", async (t) => {
 	const childWallet = ethers.Wallet.createRandom()
 	const signer = new EthereumActionSigner(childWallet)
 
+	const appName = "Test App"
 	const payload: ActionPayload = {
 		from: parentWallet.address,
 		app: "ipfs://something.spec.js",
+		appName: "Test App",
 		call: "post",
 		callArgs: { title: "Hello world!", text: "Lorem ipsum dolor sit amet" },
 		timestamp: 123456789,

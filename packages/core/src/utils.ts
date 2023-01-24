@@ -101,13 +101,16 @@ function compileActionHandlers<Models extends Record<string, Model>>(actions: Re
 }
 
 export async function compileSpec<Models extends Record<string, Model>>(exports: {
+	name: string
 	models: Models
 	actions: Record<string, ActionHandler<Models>>
 	routes?: Record<string, (params: Record<string, string>, db: RouteContext) => Query>
 	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
 	sources?: Record<string, Record<string, ActionHandler<Models>>>
-}): Promise<{ uri: string; app: string }> {
-	const { models, actions, routes, contracts, sources } = exports
+}): Promise<{ uri: string; app: string; appName: string }> {
+	const { name, models, actions, routes, contracts, sources } = exports
+
+	const appName = name || "Canvas App"
 
 	const actionEntries = compileActionHandlers(actions)
 
@@ -119,6 +122,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	})
 
 	const lines = [
+		`export const name = ${JSON.stringify(appName)};`,
 		`export const models = ${JSON.stringify(models, null, "\t")};`,
 		`export const actions = {\n${actionEntries.join(",\n")}};`,
 	]
@@ -142,7 +146,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 
 	const app = lines.join("\n")
 	const cid = await Hash.of(app)
-	return { uri: `ipfs://${cid}`, app }
+	return { uri: `ipfs://${cid}`, app, appName }
 }
 
 export class AbortError extends Error {

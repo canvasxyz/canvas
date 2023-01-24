@@ -12,6 +12,7 @@ import { encodeAddress } from "./chains/index.js"
 type ActionRecord = {
 	hash: Buffer
 	signature: Buffer
+	// action payload
 	from_address: Buffer
 	session_address: Buffer | null
 	timestamp: number
@@ -20,12 +21,14 @@ type ActionRecord = {
 	chain: Chain
 	chain_id: ChainId
 	block: Buffer | null
-	source: Buffer | null
+	source: Buffer | null // source instead of app hash
+	app_name: string
 }
 
 type SessionRecord = {
 	hash: Buffer
 	signature: Buffer
+	// session payload
 	from_address: Buffer
 	session_address: Buffer
 	session_duration: number
@@ -33,7 +36,8 @@ type SessionRecord = {
 	chain: Chain
 	chain_id: ChainId
 	block: Buffer | null
-	source: Buffer | null
+	source: Buffer | null // source instead of app hash
+	app_name: string
 }
 
 /**
@@ -109,6 +113,7 @@ export class MessageStore {
 			chain_id: action.payload.chainId,
 			block: action.payload.block ? toBuffer(action.payload.block) : null,
 			source: sourceCID ? toBuffer(sourceCID.bytes) : null,
+			app_name: action.payload.appName,
 		}
 
 		this.statements.insertAction.run(record)
@@ -132,6 +137,7 @@ export class MessageStore {
 			chain: session.payload.chain,
 			chain_id: session.payload.chainId,
 			source: sourceCID ? toBuffer(sourceCID.bytes) : null,
+			app_name: session.payload.appName,
 		}
 
 		this.statements.insertSession.run(record)
@@ -149,6 +155,7 @@ export class MessageStore {
 			session: record.session_address,
 			payload: {
 				app: this.uri,
+				appName: record.app_name,
 				from: record.from_address,
 				call: record.call,
 				callArgs: cbor.decode(record.call_args) as Record<string, ActionArgument>,
@@ -197,6 +204,7 @@ export class MessageStore {
 			signature: record.signature,
 			payload: {
 				app: this.uri,
+				appName: record.app_name,
 				from: record.from_address,
 				sessionAddress: record.session_address,
 				sessionDuration: record.session_duration,

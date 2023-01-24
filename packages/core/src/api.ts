@@ -25,6 +25,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		const { component, routes, actions } = core.vm
 		return res.json({
 			uri: core.uri,
+			appName: core.appName,
 			cid: core.cid.toString(),
 			peerId: core.libp2p?.peerId.toString(),
 			component,

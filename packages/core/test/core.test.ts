@@ -6,7 +6,8 @@ import { Core, ApplicationError, compileSpec } from "@canvas-js/core"
 
 import { TestSessionSigner, TestSigner } from "./utils.js"
 
-const { app, uri } = await compileSpec({
+const { app, uri, appName } = await compileSpec({
+	name: "Test App",
 	models: {
 		threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" },
 		thread_votes: {
@@ -35,7 +36,7 @@ const { app, uri } = await compileSpec({
 	},
 })
 
-const signer = new TestSigner(uri)
+const signer = new TestSigner(uri, appName)
 const sessionSigner = new TestSessionSigner(signer)
 
 test("Apply signed action", async (t) => {
@@ -161,7 +162,7 @@ test("Apply an action that throws an error", async (t) => {
 
 test("Create an in-memory Core with a file:// URI", async (t) => {
 	const uri = "file:///dev/null"
-	const signer = new TestSigner(uri)
+	const signer = new TestSigner(uri, appName)
 	const core = await Core.initialize({ uri, app, directory: null, unchecked: true })
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: threadId } = await core.applyAction(newThreadAction)

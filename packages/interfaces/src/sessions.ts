@@ -10,6 +10,7 @@ export type Session = {
 	type: "session"
 	payload: {
 		app: string
+		appName: string
 		block: string | null
 		chain: Chain
 		chainId: string
