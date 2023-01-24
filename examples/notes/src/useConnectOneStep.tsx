@@ -89,7 +89,6 @@ export const useConnectOneStep = ({
 		console.log("connect button clicked...")
 		if (connectionState !== "disconnected") {
 			setErrors(["Cannot connect: must be in the disconnected state"])
-			reset()
 			return
 		}
 
