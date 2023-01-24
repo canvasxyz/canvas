@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "HOST=/api webpack build",
     "start": "canvas run spec.canvas.js --install --unchecked --static dist --announce /dns4/canvas-chat.fly.dev/tcp/4044/ws",
-    "dev": "HOST='http://localhost:8000' concurrently --kill-others -n backend,frontend 'canvas run spec.canvas.js --unchecked' 'webpack server --port 3000'"
+    "dev": "HOST='http://localhost:8000' concurrently --kill-others -n backend,frontend 'canvas run spec.canvas.js --unchecked --offline' 'webpack server --port 3000'"
   },
   "dependencies": {
     "@canvas-js/cli": "0.0.48-pre",
