@@ -5,10 +5,12 @@ import { useAccount, useConnect, useDisconnect, useSigner, useNetwork } from "wa
 import { useSession, useCanvasSigner } from "@canvas-js/hooks"
 
 import { ErrorMessage } from "./ErrorMessage"
+import { useConnectOneStep } from "./useConnectOneStep"
 
 export const Connect: React.FC<{}> = ({}) => {
-	const { connect, connectors, error: connectionError, isLoading: isConnectionLoading, pendingConnector } = useConnect()
-	const { disconnect } = useDisconnect()
+	const { connectors } = useConnect()
+	const { connect, connectionState, disconnect, errors } = useConnectOneStep()
+
 	const { address, isConnected } = useAccount()
 
 	return (
@@ -17,89 +19,40 @@ export const Connect: React.FC<{}> = ({}) => {
 				<div className="title-bar-text">Connect</div>
 			</div>
 			<div className="window-body">
-				{isConnected ? (
+				{connectionState == "connected" ? (
 					<>
 						<p>Connected to {address}.</p>
 						<button disabled={!isConnected} onClick={() => disconnect()}>
 							Disconnect
 						</button>
 					</>
+				) : connectionState == "awaiting_connection" ? (
+					<>
+						<p>Connecting...</p>
+					</>
+				) : connectionState == "awaiting_session" ? (
+					<>
+						<p>Logging in...</p>
+					</>
 				) : (
 					<>
 						<p>Connect to a provider:</p>
 						{connectors.map((connector) => (
 							<button
-								disabled={!connector.ready || isConnected}
+								disabled={!connector.ready}
 								key={connector.id}
 								onClick={() => connect({ connector })}
 								style={{ marginRight: 5 }}
 							>
 								{connector.name}
 								{!connector.ready && " (unsupported)"}
-								{isConnectionLoading && connector.id === pendingConnector?.id && " (connecting)"}
 							</button>
 						))}
 					</>
 				)}
 
-				<ErrorMessage error={connectionError} />
-
-				<Login />
+				{errors.length > 0 && <ErrorMessage error={{ name: "", message: errors[0] }} />}
 			</div>
 		</div>
-	)
-}
-
-const Login: React.FC<{}> = ({}) => {
-	const { error: signerError, data: ethersSigner } = useSigner<ethers.providers.JsonRpcSigner>()
-	const { chain } = useNetwork()
-	const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
-
-	const {
-		error: sessionError,
-		sessionAddress,
-		sessionExpiration,
-		login,
-		logout,
-		isLoading,
-		isPending,
-	} = useSession(signer!)
-
-	const [expirationDate, expirationTime] = useMemo(() => {
-		if (sessionExpiration === null) {
-			return [null, null]
-		}
-
-		const date = new Date(sessionExpiration)
-		return [date.toLocaleDateString(), date.toLocaleTimeString()]
-	}, [sessionExpiration])
-
-	if (signer === undefined || signer === null) {
-		return null
-	}
-
-	return (
-		<>
-			{sessionAddress === null ? (
-				<>
-					{isLoading ? <p>Loading...</p> : <p>Click Login to begin a new session.</p>}
-					<button disabled={isLoading || isPending} onClick={login}>
-						{isPending ? "Waiting for login" : "Login"}
-					</button>
-				</>
-			) : (
-				<>
-					<p>
-						Using session {sessionAddress}, which expires on {expirationDate} at {expirationTime}.
-					</p>
-					<button disabled={isLoading} onClick={logout}>
-						Logout
-					</button>
-				</>
-			)}
-
-			<ErrorMessage error={signerError} />
-			<ErrorMessage error={sessionError} />
-		</>
 	)
 }
