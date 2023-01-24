@@ -49,9 +49,14 @@ export const useConnectOneStep = ({
 	useEffect(() => {
 		if (signer && canvasState == "logged_out") {
 			if (connectionState == "awaiting_connection") {
-				login()
-
 				setConnectionState("awaiting_session")
+				login()
+			} else {
+				if (connectionState == "awaiting_session") {
+					// log in must have failed, reset
+					console.log("canvas login aborted")
+					reset()
+				}
 			}
 		}
 	}, [signer, canvasState])
