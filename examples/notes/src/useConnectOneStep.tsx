@@ -30,8 +30,7 @@ export const useConnectOneStep = ({
 	const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
 	const { error: sessionError, login, logout, state: canvasState } = useSession(signer!)
 
-	const reset = () => {
-		console.log("reset")
+	const logoutEverything = () => {
 		logout()
 		wagmiDisconnect()
 		setConnectionState("disconnected")
@@ -55,7 +54,7 @@ export const useConnectOneStep = ({
 				if (connectionState == "awaiting_session") {
 					// log in must have failed, reset
 					console.log("canvas login aborted")
-					reset()
+					logoutEverything()
 				}
 			}
 		}
@@ -70,7 +69,7 @@ export const useConnectOneStep = ({
 			) {
 				setConnectionState("connected")
 			} else {
-				reset()
+				logoutEverything()
 			}
 		}
 	}, [canvasState])
@@ -78,8 +77,7 @@ export const useConnectOneStep = ({
 	useEffect(() => {
 		// log out if wagmi is disconnected while logged in
 		if (wagmiAccountStatus == "disconnected" && canvasState == "logged_in" && connectionState == "connected") {
-			logout()
-			setConnectionState("disconnected")
+			logoutEverything()
 		}
 	}, [wagmiAccountStatus])
 
@@ -106,9 +104,7 @@ export const useConnectOneStep = ({
 			setErrors(["Cannot disconnect: already disconnected"])
 			return
 		}
-		logout()
-		wagmiDisconnect()
-		setConnectionState("disconnected")
+		logoutEverything()
 	}
 
 	// return errors
