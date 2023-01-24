@@ -14,7 +14,7 @@ export class TestSigner {
 			appName: this.appName,
 			call,
 			callArgs,
-			timestamp: Date.now(),
+			timestamp: +Date.now(),
 			chain: "ethereum",
 			chainId: "1",
 			block: null,
@@ -38,8 +38,8 @@ export class TestSessionSigner {
 	async session(): Promise<Session> {
 		const sessionPayload: SessionPayload = {
 			sessionAddress: this.wallet.address,
-			sessionDuration: 60 * 60 * 24,
-			sessionIssued: Date.now(),
+			sessionDuration: 60 * 60 * 24 * 1000,
+			sessionIssued: +Date.now(),
 			from: this.signer.wallet.address,
 			app: this.signer.uri,
 			appName: this.signer.appName,

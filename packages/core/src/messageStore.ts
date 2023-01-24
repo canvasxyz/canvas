@@ -249,7 +249,8 @@ export class MessageStore {
 		chain           TEXT    NOT NULL,
     chain_id        TEXT    NOT NULL,
     block           BLOB,
-		source          BLOB
+    source          BLOB,
+    app_name        TEXT    NOT NULL
   );`
 
 	private static createSessionsTable = `CREATE TABLE IF NOT EXISTS sessions (
@@ -263,19 +264,20 @@ export class MessageStore {
 		chain            TEXT    NOT NULL,
     chain_id         TEXT    NOT NULL,
     block            BLOB,
-		source           BLOB
+		source           BLOB,
+    app_name         TEXT    NOT NULL
   );`
 
 	private static statements = {
 		insertAction: `INSERT INTO actions (
-      hash, signature, session_address, from_address, timestamp, call, call_args, chain, chain_id, block, source
+      hash, signature, session_address, from_address, timestamp, call, call_args, chain, chain_id, block, source, app_name
     ) VALUES (
-      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :chain_id, :block, :source
+      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :chain_id, :block, :source, :app_name
     )`,
 		insertSession: `INSERT INTO sessions (
-      hash, signature, from_address, session_address, session_duration, session_issued, chain, chain_id, block, source
+      hash, signature, from_address, session_address, session_duration, session_issued, chain, chain_id, block, source, app_name
     ) VALUES (
-      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :chain_id, :block, :source
+      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :chain_id, :block, :source, :app_name
     )`,
 		getActionByHash: `SELECT * FROM actions WHERE hash = :hash`,
 		getSessionByHash: `SELECT * FROM sessions WHERE hash = :hash`,

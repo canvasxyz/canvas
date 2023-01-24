@@ -13,15 +13,15 @@ import { signalInvalidType } from "./utils.js"
 const { hexlify, arrayify } = ethers.utils
 
 const binaryActionPayloadType = t.type({
-	call: t.string,
-	callArgs: t.record(t.string, actionArgumentType),
-	from: uint8ArrayType,
 	app: t.string,
 	appName: t.string,
-	timestamp: t.number,
+	block: t.union([t.null, uint8ArrayType]),
+	call: t.string,
+	callArgs: t.record(t.string, actionArgumentType),
 	chain: chainType,
 	chainId: chainIdType,
-	block: t.union([t.null, uint8ArrayType]),
+	from: uint8ArrayType,
+	timestamp: t.number,
 })
 
 export const binaryActionType = t.type({
@@ -34,15 +34,15 @@ export const binaryActionType = t.type({
 export type BinaryAction = t.TypeOf<typeof binaryActionType>
 
 const binarySessionPayloadType = t.type({
-	from: uint8ArrayType,
 	app: t.string,
 	appName: t.string,
+	block: t.union([t.null, uint8ArrayType]),
+	chain: chainType,
+	chainId: chainIdType,
+	from: uint8ArrayType,
 	sessionAddress: uint8ArrayType,
 	sessionDuration: t.number,
 	sessionIssued: t.number,
-	chain: chainType,
-	chainId: chainIdType,
-	block: t.union([t.null, uint8ArrayType]),
 })
 
 export const binarySessionType = t.type({
@@ -127,14 +127,18 @@ export function fromBinaryMessage(binaryMessage: BinaryMessage): Message {
 	}
 }
 
-export const encodeBinaryMessage = (message: BinaryMessage) => cbor.encode(message)
+export function encodeBinaryMessage(binaryMessage: BinaryMessage): Uint8Array {
+	if (!binaryMessageType.is(binaryMessage)) {
+		throw new Error("invalid message")
+	}
+	return cbor.encode(binaryMessage)
+}
 
 export function decodeBinaryMessage(data: Uint8Array): BinaryMessage {
 	const binaryMessage = cbor.decode(data)
 	if (!binaryMessageType.is(binaryMessage)) {
 		throw new Error("invalid message")
 	}
-
 	return binaryMessage
 }
 

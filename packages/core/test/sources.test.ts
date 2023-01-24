@@ -120,6 +120,7 @@ test("Apply source actions", async (t) => {
 			chain_id: "1",
 			block: null,
 			source: toBuffer(sourceCID.bytes),
+			app_name: "Test App",
 		},
 		{
 			id: 2,
@@ -134,6 +135,7 @@ test("Apply source actions", async (t) => {
 			chain_id: "1",
 			block: null,
 			source: null,
+			app_name: "Test App 2",
 		},
 		{
 			id: 3,
@@ -148,6 +150,7 @@ test("Apply source actions", async (t) => {
 			chain_id: "1",
 			block: null,
 			source: null,
+			app_name: "Test App 2",
 		},
 		{
 			id: 4,
@@ -162,6 +165,7 @@ test("Apply source actions", async (t) => {
 			chain_id: "1",
 			block: null,
 			source: null,
+			app_name: "Test App 2",
 		},
 	])
 
