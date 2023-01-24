@@ -99,17 +99,11 @@ export function useSession(signer: SessionSigner | null): {
 	const [state, setState] = useState<UseSessionState>("logged_out")
 	const [error, setError] = useState<null | Error>(null)
 
-	const [signerAddress, setSignerAddress] = useState<string | null>(null)
-
 	useEffect(() => {
 		if (signer === null) {
-			setSignerAddress(null)
 			setSigner(null)
 		} else {
-			signer.getAddress().then((address) => {
-				setSignerAddress(address)
-				setSigner(signer)
-			})
+			setSigner(signer)
 		}
 
 		setActionSigner(null)
@@ -122,20 +116,22 @@ export function useSession(signer: SessionSigner | null): {
 			return
 		}
 
-		if (host === null || data === null || signerAddress === null) {
+		if (host === null || data === null || signer === null) {
 			return
 		}
 
-		const res = getSessionPrivateKeyFromLocalStorage(host, data, signerAddress)
-		if (res) {
-			const { sessionPrivateKey, expiration } = res
-			signer!.createActionSigner(sessionPrivateKey).then((actionSigner) => {
-				setActionSigner(actionSigner)
-				setSessionExpiration(expiration)
-				setState("logged_in")
-			})
-		}
-	}, [host, data, signerAddress])
+		signer.getAddress().then((signerAddress) => {
+			const res = getSessionPrivateKeyFromLocalStorage(host, data, signerAddress)
+			if (res) {
+				const { sessionPrivateKey, expiration } = res
+				signer!.createActionSigner(sessionPrivateKey).then((actionSigner) => {
+					setActionSigner(actionSigner)
+					setSessionExpiration(expiration)
+					setState("logged_in")
+				})
+			}
+		})
+	}, [host, data, signer])
 
 	// Log in by clicking the log in button
 	const login = useCallback(async () => {
@@ -144,8 +140,6 @@ export function useSession(signer: SessionSigner | null): {
 			return setError(new Error("no host configured"))
 		} else if (signer === null) {
 			return setError(new Error("login() called without a signer"))
-		} else if (signerAddress === null) {
-			return setError(new Error("login() called before the signer was ready"))
 		} else if (data === null) {
 			return setError(new Error("login() called before the application connection was established"))
 		}
@@ -153,6 +147,7 @@ export function useSession(signer: SessionSigner | null): {
 		setState("pending")
 
 		try {
+			const signerAddress = await signer.getAddress()
 			const sessionObject = await getSessionObject(signer, signerAddress, data, host)
 			const sessionKey = getCanvasSessionKey(signerAddress)
 			localStorage.setItem(sessionKey, JSON.stringify(sessionObject))
@@ -169,17 +164,19 @@ export function useSession(signer: SessionSigner | null): {
 				throw err
 			}
 		}
-	}, [host, data, signer, signerAddress])
+	}, [host, data, signer])
 
-	const logout = useCallback(() => {
+	const logout = async () => {
 		setActionSigner(null)
 		setSessionExpiration(null)
 		setState("logged_out")
-		if (signerAddress !== null) {
+
+		if (signer !== null) {
+			const signerAddress = await signer?.getAddress()
 			const sessionKey = getCanvasSessionKey(signerAddress)
 			localStorage.removeItem(sessionKey)
 		}
-	}, [signerAddress])
+	}
 
 	const sessionAddress = actionSigner && actionSigner.address
 	return {
