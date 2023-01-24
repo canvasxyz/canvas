@@ -193,10 +193,10 @@ export const App: React.FC<{}> = ({}) => {
 							<input className="border border-gray-400 rounded h-10 p-2" type="text" placeholder="Search"></input>
 						</div> */}
 						{errors.map((error, idx) => (
-							<div key={`error-${idx}`}>{error}</div>
+							<div key={`error-${idx}`}>{error.substring(0, 40)}</div>
 						))}
 
-						{connectionState !== "connected" ? (
+						{connectionState == "disconnected" ? (
 							<div className="shrink pl-3">
 								<div
 									className="border border-green-400 bg-green-50 rounded h-10 p-2 font-semibold hover:cursor-pointer hover:bg-green-100 select-none"
@@ -209,11 +209,26 @@ export const App: React.FC<{}> = ({}) => {
 									Connect Wallet
 								</div>
 							</div>
+						) : connectionState == "awaiting_connection" ? (
+							<div className="shrink pl-3">
+								<div className="border border-orange-400 bg-orange-50 rounded h-10 p-2 font-semibold hover:cursor-pointer hover:bg-orange-100 select-none">
+									Connecting...
+								</div>
+							</div>
+						) : connectionState == "awaiting_session" ? (
+							<div className="shrink pl-3">
+								<div className="border border-orange-400 bg-orange-50 rounded h-10 p-2 font-semibold hover:cursor-pointer hover:bg-orange-100 select-none">
+									Logging in...
+								</div>
+							</div>
 						) : (
 							<>
-								<div className="shrink pl-3">
-									<div className="rounded h-10 p-2">Connected as {address?.substring(0, 8)}...</div>
-								</div>
+								{connectionState == "connected" && (
+									<div className="shrink pl-3">
+										<div className="rounded h-10 p-2">Connected as {address?.substring(0, 8)}...</div>
+									</div>
+								)}
+
 								<div className="shrink pl-3">
 									<div
 										className="border border-red-400 bg-red-50 rounded h-10 p-2 font-semibold hover:cursor-pointer hover:bg-red-100 select-none"
