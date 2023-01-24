@@ -122,6 +122,7 @@ export class VM {
 		return result
 	}
 
+	public readonly appName: string
 	public readonly models: Record<string, Model>
 	public readonly actions: string[]
 	public readonly component: string | null
@@ -152,6 +153,8 @@ export class VM {
 		this.routeHandles = exports.routeHandles
 		this.actionHandles = exports.actionHandles
 		this.sourceHandles = exports.sourceHandles
+
+		this.appName = exports.name || "Canvas"
 		this.component = exports.component
 
 		// Generate public fields that are derived from the passed in arguments
@@ -292,6 +295,7 @@ export class VM {
 		this.contractsHandle.dispose()
 
 		disposeExports({
+			name: this.appName,
 			actionHandles: this.actionHandles,
 			component: this.component,
 			contractMetadata: this.contractMetadata,

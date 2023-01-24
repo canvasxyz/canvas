@@ -12,6 +12,7 @@ import { encodeAddress } from "./chains/index.js"
 type ActionRecord = {
 	hash: Buffer
 	signature: Buffer
+	// action payload
 	from_address: Buffer
 	session_address: Buffer | null
 	timestamp: number
@@ -20,12 +21,14 @@ type ActionRecord = {
 	chain: Chain
 	chain_id: ChainId
 	block: Buffer | null
-	source: Buffer | null
+	source: Buffer | null // source instead of app hash
+	app_name: string
 }
 
 type SessionRecord = {
 	hash: Buffer
 	signature: Buffer
+	// session payload
 	from_address: Buffer
 	session_address: Buffer
 	session_duration: number
@@ -33,7 +36,8 @@ type SessionRecord = {
 	chain: Chain
 	chain_id: ChainId
 	block: Buffer | null
-	source: Buffer | null
+	source: Buffer | null // source instead of app hash
+	app_name: string
 }
 
 /**
@@ -109,6 +113,7 @@ export class MessageStore {
 			chain_id: action.payload.chainId,
 			block: action.payload.block ? toBuffer(action.payload.block) : null,
 			source: sourceCID ? toBuffer(sourceCID.bytes) : null,
+			app_name: action.payload.appName,
 		}
 
 		this.statements.insertAction.run(record)
@@ -132,6 +137,7 @@ export class MessageStore {
 			chain: session.payload.chain,
 			chain_id: session.payload.chainId,
 			source: sourceCID ? toBuffer(sourceCID.bytes) : null,
+			app_name: session.payload.appName,
 		}
 
 		this.statements.insertSession.run(record)
@@ -149,6 +155,7 @@ export class MessageStore {
 			session: record.session_address,
 			payload: {
 				app: this.uri,
+				appName: record.app_name,
 				from: record.from_address,
 				call: record.call,
 				callArgs: cbor.decode(record.call_args) as Record<string, ActionArgument>,
@@ -197,6 +204,7 @@ export class MessageStore {
 			signature: record.signature,
 			payload: {
 				app: this.uri,
+				appName: record.app_name,
 				from: record.from_address,
 				sessionAddress: record.session_address,
 				sessionDuration: record.session_duration,
@@ -241,7 +249,8 @@ export class MessageStore {
 		chain           TEXT    NOT NULL,
     chain_id        TEXT    NOT NULL,
     block           BLOB,
-		source          BLOB
+    source          BLOB,
+    app_name        TEXT    NOT NULL
   );`
 
 	private static createSessionsTable = `CREATE TABLE IF NOT EXISTS sessions (
@@ -255,19 +264,20 @@ export class MessageStore {
 		chain            TEXT    NOT NULL,
     chain_id         TEXT    NOT NULL,
     block            BLOB,
-		source           BLOB
+		source           BLOB,
+    app_name         TEXT    NOT NULL
   );`
 
 	private static statements = {
 		insertAction: `INSERT INTO actions (
-      hash, signature, session_address, from_address, timestamp, call, call_args, chain, chain_id, block, source
+      hash, signature, session_address, from_address, timestamp, call, call_args, chain, chain_id, block, source, app_name
     ) VALUES (
-      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :chain_id, :block, :source
+      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :chain_id, :block, :source, :app_name
     )`,
 		insertSession: `INSERT INTO sessions (
-      hash, signature, from_address, session_address, session_duration, session_issued, chain, chain_id, block, source
+      hash, signature, from_address, session_address, session_duration, session_issued, chain, chain_id, block, source, app_name
     ) VALUES (
-      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :chain_id, :block, :source
+      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :chain_id, :block, :source, :app_name
     )`,
 		getActionByHash: `SELECT * FROM actions WHERE hash = :hash`,
 		getSessionByHash: `SELECT * FROM sessions WHERE hash = :hash`,

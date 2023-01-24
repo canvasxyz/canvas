@@ -59,6 +59,7 @@ export function setupWebsockets(server: Server, core: Core): Server {
 			action: "application",
 			data: {
 				uri: core.uri,
+				appName: core.appName,
 				cid: core.cid.toString(),
 				peerId: core.libp2p?.peerId.toString(),
 				component,

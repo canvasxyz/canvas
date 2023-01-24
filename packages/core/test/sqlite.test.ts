@@ -4,7 +4,8 @@ import { Core, compileSpec } from "@canvas-js/core"
 
 import { TestSigner } from "./utils.js"
 
-const { app, uri } = await compileSpec({
+const { app, uri, appName } = await compileSpec({
+	name: "Test App",
 	models: {
 		threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" },
 		thread_votes: {
@@ -55,7 +56,7 @@ const { app, uri } = await compileSpec({
 	},
 })
 
-const signer = new TestSigner(uri)
+const signer = new TestSigner(uri, appName)
 
 test("get /all", async (t) => {
 	const core = await Core.initialize({ uri, app, directory: null, unchecked: true, offline: true })

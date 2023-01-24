@@ -5,15 +5,16 @@ import { ethers } from "ethers"
 
 export class TestSigner {
 	readonly wallet = ethers.Wallet.createRandom()
-	constructor(readonly uri: string, readonly provider?: EthereumBlockProvider) {}
+	constructor(readonly uri: string, readonly appName: string, readonly provider?: EthereumBlockProvider) {}
 
 	async sign(call: string, callArgs: Record<string, ActionArgument>): Promise<Action> {
 		const actionPayload: ActionPayload = {
 			from: this.wallet.address,
 			app: this.uri,
+			appName: this.appName,
 			call,
 			callArgs,
-			timestamp: Date.now(),
+			timestamp: +Date.now(),
 			chain: "ethereum",
 			chainId: "1",
 			block: null,
@@ -37,10 +38,11 @@ export class TestSessionSigner {
 	async session(): Promise<Session> {
 		const sessionPayload: SessionPayload = {
 			sessionAddress: this.wallet.address,
-			sessionDuration: 60 * 60 * 24,
-			sessionIssued: Date.now(),
+			sessionDuration: 60 * 60 * 24 * 1000,
+			sessionIssued: +Date.now(),
 			from: this.signer.wallet.address,
 			app: this.signer.uri,
+			appName: this.signer.appName,
 			chain: "ethereum",
 			chainId: "1",
 			block: null,
@@ -60,6 +62,7 @@ export class TestSessionSigner {
 		const actionPayload: ActionPayload = {
 			from: this.signer.wallet.address,
 			app: this.signer.uri,
+			appName: this.signer.appName,
 			call,
 			callArgs,
 			timestamp: Date.now(),

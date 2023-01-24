@@ -113,6 +113,7 @@ export function useSession(signer: SessionSigner | null): {
 			const payload: SessionPayload = {
 				from: signerAddress,
 				app: data.uri,
+				appName: data.appName,
 				sessionAddress: actionSigner.address,
 				sessionDuration,
 				sessionIssued: timestamp,

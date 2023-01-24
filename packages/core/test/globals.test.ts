@@ -5,7 +5,8 @@ import { compileSpec, Core } from "@canvas-js/core"
 
 import { TestSigner } from "./utils.js"
 
-const { app, uri } = await compileSpec({
+const { app, uri, appName } = await compileSpec({
+	name: "Test App",
 	models: {},
 	actions: {
 		async logIP() {
@@ -20,7 +21,7 @@ const { app, uri } = await compileSpec({
 	},
 })
 
-const signer = new TestSigner(uri)
+const signer = new TestSigner(uri, appName)
 
 test("test fetch() and log IP address", async (t) => {
 	const core = await Core.initialize({ uri, app, directory: null, unchecked: true, offline: true })

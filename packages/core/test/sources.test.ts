@@ -8,6 +8,7 @@ import { TestSigner } from "./utils.js"
 import { fromHex, parseIPFSURI, toBuffer } from "@canvas-js/core/lib/utils.js"
 
 const MessageBoard = await compileSpec({
+	name: "Test App",
 	models: {
 		posts: { id: "string", content: "string", from: "string", updated_at: "datetime" },
 	},
@@ -20,6 +21,7 @@ const MessageBoard = await compileSpec({
 })
 
 const MessageBoardWithVotes = await compileSpec({
+	name: "Test App 2",
 	models: {
 		posts: { id: "string", content: "string", from: "string", updated_at: "datetime" },
 		votes: {
@@ -50,8 +52,8 @@ const MessageBoardWithVotes = await compileSpec({
 	},
 })
 
-const signer = new TestSigner(MessageBoardWithVotes.uri)
-const sourceSigner = new TestSigner(MessageBoard.uri)
+const signer = new TestSigner(MessageBoardWithVotes.uri, MessageBoardWithVotes.appName)
+const sourceSigner = new TestSigner(MessageBoard.uri, MessageBoard.appName)
 
 test("Apply source actions", async (t) => {
 	const core = await Core.initialize({
@@ -118,6 +120,7 @@ test("Apply source actions", async (t) => {
 			chain_id: "1",
 			block: null,
 			source: toBuffer(sourceCID.bytes),
+			app_name: "Test App",
 		},
 		{
 			id: 2,
@@ -132,6 +135,7 @@ test("Apply source actions", async (t) => {
 			chain_id: "1",
 			block: null,
 			source: null,
+			app_name: "Test App 2",
 		},
 		{
 			id: 3,
@@ -146,6 +150,7 @@ test("Apply source actions", async (t) => {
 			chain_id: "1",
 			block: null,
 			source: null,
+			app_name: "Test App 2",
 		},
 		{
 			id: 4,
@@ -160,6 +165,7 @@ test("Apply source actions", async (t) => {
 			chain_id: "1",
 			block: null,
 			source: null,
+			app_name: "Test App 2",
 		},
 	])
 
