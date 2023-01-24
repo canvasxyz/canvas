@@ -100,12 +100,7 @@ export function useSession(signer: SessionSigner | null): {
 	const [error, setError] = useState<null | Error>(null)
 
 	useEffect(() => {
-		if (signer === null) {
-			setSigner(null)
-		} else {
-			setSigner(signer)
-		}
-
+		setSigner(signer)
 		setActionSigner(null)
 		setSessionExpiration(null)
 	}, [signer])
