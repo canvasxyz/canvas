@@ -1,10 +1,11 @@
 import { useCallback, useContext, useEffect, useState } from "react"
 
-import { Block, SessionPayload, Session } from "@canvas-js/interfaces"
+import { Block, SessionPayload } from "@canvas-js/interfaces"
 import type { SessionSigner } from "@canvas-js/signers/lib/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
-import { getCanvasSessionKey, getRecentBlock, urlJoin } from "./utils.js"
+import { getRecentBlock, urlJoin } from "./utils.js"
+import { getSessionObject, setSessionObject, removeSessionObject, SessionObject } from "./sessionKeyStorage.js"
 
 export function useSession(signer: SessionSigner | null): {
 	error: Error | null
@@ -45,35 +46,14 @@ export function useSession(signer: SessionSigner | null): {
 
 		setIsLoading(false)
 
-		const sessionKey = getCanvasSessionKey(signerAddress)
-		const item = localStorage.getItem(sessionKey)
-		if (item === null) {
-			return
+		const sessionObject = getSessionObject(data, signerAddress)
+		if (sessionObject) {
+			const { sessionPrivateKey, expiration } = sessionObject
+			signer!.createActionSigner(sessionPrivateKey).then((actionSigner) => {
+				setActionSigner(actionSigner)
+			})
+			setSessionExpiration(expiration)
 		}
-
-		let sessionObject: any
-		try {
-			sessionObject = JSON.parse(item)
-		} catch (err) {
-			localStorage.removeItem(sessionKey)
-			return
-		}
-
-		if (!isSessionObject(sessionObject)) {
-			localStorage.removeItem(sessionKey)
-			return
-		}
-
-		const { app, sessionPrivateKey, expiration } = sessionObject
-		if (data.uri !== app || expiration < Date.now()) {
-			localStorage.removeItem(sessionKey)
-			return
-		}
-
-		signer!.createActionSigner(sessionPrivateKey).then((actionSigner) => {
-			setActionSigner(actionSigner)
-		})
-		setSessionExpiration(expiration)
 	}, [host, data, signerAddress])
 
 	const login = useCallback(async () => {
@@ -135,8 +115,8 @@ export function useSession(signer: SessionSigner | null): {
 				throw new Error(message)
 			}
 
-			const sessionKey = getCanvasSessionKey(signerAddress)
-			localStorage.setItem(sessionKey, JSON.stringify(sessionObject))
+			setSessionObject(signerAddress, sessionObject)
+
 			setActionSigner(actionSigner)
 			setSessionExpiration(sessionObject.expiration)
 			setError(null)
@@ -156,8 +136,7 @@ export function useSession(signer: SessionSigner | null): {
 		setActionSigner(null)
 		setSessionExpiration(null)
 		if (signerAddress !== null) {
-			const sessionKey = getCanvasSessionKey(signerAddress)
-			localStorage.removeItem(sessionKey)
+			removeSessionObject(signerAddress)
 		}
 	}, [signerAddress])
 
@@ -171,15 +150,4 @@ export function useSession(signer: SessionSigner | null): {
 		login,
 		logout,
 	}
-}
-
-type SessionObject = { app: string; sessionPrivateKey: string; expiration: number }
-
-function isSessionObject(obj: any): obj is SessionObject {
-	return (
-		typeof obj === "object" &&
-		typeof obj.app === "string" &&
-		typeof obj.sessionPrivateKey === "string" &&
-		typeof obj.expiration === "number"
-	)
 }
