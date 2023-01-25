@@ -143,7 +143,7 @@ export const App: React.FC<{}> = ({}) => {
 								<div
 									key={`node-${note.local_key}`}
 									className={`pt-2 pb-2 pl-4 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer ${
-										selectedNote == note.local_key ? "bg-gray-100" : "bg-white"
+										selectedNote == note.local_key ? "bg-gray-200" : "bg-gray-50"
 									}`}
 									onClick={(e) => {
 										e.stopPropagation()
