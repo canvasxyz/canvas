@@ -19,9 +19,9 @@ import {
 	ChainId,
 	Block,
 	Message,
-	Verifier,
+	ChainImplementation,
 } from "@canvas-js/interfaces"
-import { ethereumVerifier } from "@canvas-js/chain-ethereum"
+import ethereum from "@canvas-js/chain-ethereum"
 
 import { actionType, sessionType } from "./codecs.js"
 import { toHex, BlockResolver, signalInvalidType, CacheMap, parseIPFSURI, stringify } from "./utils.js"
@@ -42,7 +42,7 @@ export interface CoreConfig extends CoreOptions {
 	uri?: string
 	spec: string
 	libp2p: Libp2p | null // pass null to run offline
-	verifiers?: Verifier[]
+	chains?: ChainImplementation<unknown, unknown>[]
 	providers?: Record<string, BlockProvider>
 	// defaults to fetching each block from the provider with no caching
 	blockResolver?: BlockResolver
@@ -78,7 +78,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			spec,
 			libp2p,
 			providers = {},
-			verifiers = [ethereumVerifier],
+			chains = [ethereum],
 			blockResolver = async (chain, chainId, blockhash) => {
 				const key = `${chain}:${chainId}`
 				assert(providers !== undefined && key in providers, `no provider for ${chain}:${chainId}`)
@@ -92,7 +92,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		const vm = await VM.initialize({ app, spec, providers, ...options })
 		const appName = vm.appName
 
-		return new Core(directory, app, cid, app, appName, vm, libp2p, blockResolver, verifiers, options)
+		return new Core(directory, app, cid, app, appName, vm, libp2p, blockResolver, chains, options)
 	}
 
 	private constructor(
@@ -104,7 +104,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly vm: VM,
 		public readonly libp2p: Libp2p | null,
 		private readonly blockResolver: BlockResolver,
-		private readonly verifiers: Verifier[],
+		private readonly chains: ChainImplementation<unknown, unknown>[],
 		private readonly options: CoreOptions
 	) {
 		super()
@@ -301,8 +301,8 @@ export class Core extends EventEmitter<CoreEvents> {
 			)
 		}
 
-		const verifier = this.getVerifier(chain, chainId)
-		await verifier.verifyAction(action)
+		const { verifyAction } = this.getChainImplementation(chain, chainId)
+		await verifyAction(action)
 	}
 
 	private async validateSession(session: Session) {
@@ -316,8 +316,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		// TODO: verify that sessions signed for a previous app were valid within that app,
 		// e.g. that their appName matches
 
-		const verifier = this.getVerifier(chain, chainId)
-		await verifier.verifySession(session)
+		const { verifySession } = this.getChainImplementation(chain, chainId)
+		await verifySession(session)
 
 		// check the timestamp bounds
 		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
@@ -330,14 +330,14 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	private getVerifier(chain: Chain, chainId: ChainId): Verifier {
-		for (const verifier of this.verifiers) {
-			if (verifier.match(chain, chainId)) {
-				return verifier
+	private getChainImplementation(chain: Chain, chainId: ChainId): ChainImplementation<unknown, unknown> {
+		for (const implementation of this.chains) {
+			if (implementation.match(chain, chainId)) {
+				return implementation
 			}
 		}
 
-		throw new Error(`Could not find matching verifier for chain ${chain}:${chainId}`)
+		throw new Error(`Could not find matching chain implementation for ${chain}:${chainId}`)
 	}
 
 	/**

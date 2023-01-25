@@ -2,7 +2,7 @@ import test from "ava"
 import { ethers } from "ethers"
 import type { ActionPayload } from "@canvas-js/interfaces"
 import { EthereumActionSigner } from "@canvas-js/signers"
-import { ethereumVerifier } from "@canvas-js/chain-ethereum"
+import ethereum from "@canvas-js/chain-ethereum"
 
 test("Sign an action for ethereum", async (t) => {
 	const parentWallet = ethers.Wallet.createRandom()
@@ -24,5 +24,5 @@ test("Sign an action for ethereum", async (t) => {
 	}
 
 	const action = await signer.signActionPayload(payload)
-	await t.notThrowsAsync(() => ethereumVerifier.verifyAction(action))
+	await t.notThrowsAsync(() => ethereum.verifyAction(action))
 })
