@@ -113,7 +113,6 @@ export function useSession(signer: SessionSigner | null): {
 			}
 
 			setSessionObject(signerAddress, sessionObject)
-
 			setActionSigner(actionSigner)
 			setSessionExpiration(sessionObject.expiration)
 			setError(null)
