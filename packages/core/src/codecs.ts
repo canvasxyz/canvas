@@ -18,6 +18,7 @@ import type {
 	SessionPayload,
 	Chain,
 	ChainId,
+	Message,
 } from "@canvas-js/interfaces"
 import { isLeft, isRight, left } from "fp-ts/lib/Either.js"
 
@@ -69,6 +70,8 @@ export const sessionType: t.Type<Session> = t.type({
 	payload: sessionPayloadType,
 	signature: t.string,
 })
+
+export const messageType: t.Type<Message> = t.union([actionType, sessionType])
 
 /**
  * This function converts a decode function into an is function (for defining io-ts types)

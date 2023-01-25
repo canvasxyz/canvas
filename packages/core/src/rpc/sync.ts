@@ -7,13 +7,15 @@ import type { Uint8ArrayList } from "uint8arraylist"
 
 import * as okra from "node-okra"
 
-import { BinaryMessage, decodeBinaryMessage } from "../encoding.js"
+import { Message } from "@canvas-js/interfaces"
+
 import { Client } from "./client.js"
+import { actionType, messageType } from "../codecs.js"
 
 export async function sync(
 	mst: okra.Tree,
 	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
-	handleMessage: (hash: Buffer, data: Uint8Array, message: BinaryMessage) => Promise<void>
+	handleMessage: (hash: Buffer, data: Uint8Array, message: Message) => Promise<void>
 ): Promise<void> {
 	const target = new okra.Target(mst)
 	const client = new Client(stream)
@@ -48,7 +50,8 @@ export async function sync(
 			for (const [i, data] of values.entries()) {
 				const { hash } = leaves[i]
 				assert(createHash("sha256").update(data).digest().equals(hash), "received bad value for hash")
-				const message = decodeBinaryMessage(data)
+				const message = JSON.parse(new TextDecoder().decode(data))
+				assert(messageType.is(message), "invalid message")
 				await handleMessage(hash, data, message)
 			}
 		}

@@ -1,11 +1,10 @@
 import test from "ava"
 import assert from "node:assert"
-import * as cbor from "microcbor"
 
 import { Core, compileSpec } from "@canvas-js/core"
 
 import { TestSigner } from "./utils.js"
-import { fromHex, parseIPFSURI, toBuffer } from "@canvas-js/core/lib/utils.js"
+import { fromHex, parseIPFSURI, stringify } from "@canvas-js/core/lib/utils.js"
 
 const MessageBoard = await compileSpec({
 	name: "Test App",
@@ -110,61 +109,62 @@ test("Apply source actions", async (t) => {
 		{
 			id: 1,
 			hash: fromHex(sourceActionHash),
-			signature: fromHex(sourceAction.signature),
-			from_address: fromHex(sourceSigner.wallet.address),
+			signature: sourceAction.signature,
+			from_address: sourceSigner.wallet.address,
 			session_address: null,
 			timestamp: sourceAction.payload.timestamp,
 			call: sourceAction.payload.call,
-			call_args: toBuffer(cbor.encode(sourceAction.payload.callArgs)),
+			call_args: stringify(sourceAction.payload.callArgs),
 			chain: "ethereum",
 			chain_id: "1",
 			block: null,
-			source: toBuffer(sourceCID.bytes),
+			app: MessageBoard.uri,
+
 			app_name: "Test App",
 		},
 		{
 			id: 2,
 			hash: fromHex(createActionHash),
-			signature: fromHex(createAction.signature),
-			from_address: fromHex(signer.wallet.address),
+			signature: createAction.signature,
+			from_address: signer.wallet.address,
 			session_address: null,
 			timestamp: createAction.payload.timestamp,
 			call: createAction.payload.call,
-			call_args: toBuffer(cbor.encode(createAction.payload.callArgs)),
+			call_args: stringify(createAction.payload.callArgs),
 			chain: "ethereum",
 			chain_id: "1",
 			block: null,
-			source: null,
+			app: MessageBoardWithVotes.uri,
 			app_name: "Test App 2",
 		},
 		{
 			id: 3,
 			hash: fromHex(voteActionHash),
-			signature: fromHex(voteAction.signature),
-			from_address: fromHex(signer.wallet.address),
+			signature: voteAction.signature,
+			from_address: signer.wallet.address,
 			session_address: null,
 			timestamp: voteAction.payload.timestamp,
 			call: voteAction.payload.call,
-			call_args: toBuffer(cbor.encode(voteAction.payload.callArgs)),
+			call_args: stringify(voteAction.payload.callArgs),
 			chain: "ethereum",
 			chain_id: "1",
 			block: null,
-			source: null,
+			app: MessageBoardWithVotes.uri,
 			app_name: "Test App 2",
 		},
 		{
 			id: 4,
 			hash: fromHex(voteSourceActionHash),
-			signature: fromHex(voteSourceAction.signature),
-			from_address: fromHex(signer.wallet.address),
+			signature: voteSourceAction.signature,
+			from_address: signer.wallet.address,
 			session_address: null,
 			timestamp: voteSourceAction.payload.timestamp,
 			call: voteSourceAction.payload.call,
-			call_args: toBuffer(cbor.encode(voteSourceAction.payload.callArgs)),
+			call_args: stringify(voteSourceAction.payload.callArgs),
 			chain: "ethereum",
 			chain_id: "1",
 			block: null,
-			source: null,
+			app: MessageBoardWithVotes.uri,
 			app_name: "Test App 2",
 		},
 	])

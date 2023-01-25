@@ -1,5 +1,6 @@
 import assert from "node:assert"
 import path from "node:path"
+import { createHash } from "node:crypto"
 
 import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
@@ -18,13 +19,14 @@ import {
 	Chain,
 	ChainId,
 	Block,
+	Message,
 } from "@canvas-js/interfaces"
 
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
 
 import { actionType, sessionType } from "./codecs.js"
-import { toHex, BlockResolver, signalInvalidType, CacheMap, parseIPFSURI } from "./utils.js"
-import { normalizeAction, fromBinaryAction, fromBinarySession, normalizeSession, BinaryMessage } from "./encoding.js"
+import { toHex, BlockResolver, signalInvalidType, CacheMap, parseIPFSURI, stringify } from "./utils.js"
+
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
 import { ModelStore } from "./modelStore.js"
@@ -179,17 +181,17 @@ export class Core extends EventEmitter<CoreEvents> {
 	public async applyAction(action: Action): Promise<{ hash: string }> {
 		assert(actionType.is(action), "Invalid action value")
 
-		const [hash, message, data] = normalizeAction(action)
-
+		const data = Buffer.from(stringify(action))
+		const hash = createHash("sha256").update(data).digest()
 		const existingRecord = this.messageStore.getActionByHash(hash)
 		if (existingRecord !== null) {
 			return { hash: toHex(hash) }
 		}
 
-		await this.applyMessage(hash, message)
+		await this.applyMessage(hash, action)
 
 		if (this.sources !== null) {
-			this.sources[this.uri].insertMessage(hash, message)
+			this.sources[this.uri].insertMessage(hash, action)
 			await this.sources[this.uri].publishMessage(hash, data)
 		}
 
@@ -202,17 +204,18 @@ export class Core extends EventEmitter<CoreEvents> {
 	public async applySession(session: Session): Promise<{ hash: string }> {
 		assert(sessionType.is(session), "invalid session")
 
-		const [hash, message, data] = normalizeSession(session)
+		const data = Buffer.from(stringify(session))
+		const hash = createHash("sha256").update(data).digest()
 
 		const existingRecord = this.messageStore.getSessionByHash(hash)
 		if (existingRecord !== null) {
 			return { hash: toHex(hash) }
 		}
 
-		await this.applyMessage(hash, message)
+		await this.applyMessage(hash, session)
 
 		if (this.sources !== null) {
-			this.sources[this.uri].insertMessage(hash, message)
+			this.sources[this.uri].insertMessage(hash, session)
 			await this.sources[this.uri].publishMessage(hash, data)
 		}
 
@@ -228,38 +231,33 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Note the this does NOT call sources[uri].insertMessage OR sources[uri].publishMessage -
 	 * that's the responsibility of the caller.
 	 */
-	private applyMessage = async (hash: Buffer, message: BinaryMessage) => {
+	private applyMessage = async (hash: Buffer, message: Message) => {
 		const id = toHex(hash)
 		if (message.type === "action") {
-			const action = fromBinaryAction(message)
-
 			if (this.options.verbose) {
-				console.log(`[canvas-core] Applying action ${id}`, action)
+				console.log(`[canvas-core] Applying action ${id}`, message)
 			}
 
-			await this.validateAction(action)
+			await this.validateAction(message)
 
 			// only execute one action at a time.
 			await this.queue.add(async () => {
-				const effects = await this.vm.execute(id, action.payload)
-				this.modelStore.applyEffects(action.payload, effects)
+				const effects = await this.vm.execute(id, message.payload)
+				this.modelStore.applyEffects(message.payload, effects)
 			})
 
 			this.messageStore.insertAction(hash, message)
-			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
-
-			metrics.canvas_messages.inc({ type: "action", uri: action.payload.app }, 1)
+			this.dispatchEvent(new CustomEvent("action", { detail: message.payload }))
+			metrics.canvas_messages.inc({ type: "action", uri: message.payload.app }, 1)
 		} else if (message.type === "session") {
-			const session = fromBinarySession(message)
-
 			if (this.options.verbose) {
-				console.log(`[canvas-core] Applying session ${id}`, session)
+				console.log(`[canvas-core] Applying session ${id}`, message)
 			}
 
-			await this.validateSession(session)
+			await this.validateSession(message)
 			this.messageStore.insertSession(hash, message)
-			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
-			metrics.canvas_messages.inc({ type: "session", uri: session.payload.app }, 1)
+			this.dispatchEvent(new CustomEvent("session", { detail: message.payload }))
+			metrics.canvas_messages.inc({ type: "session", uri: message.payload.app }, 1)
 		} else {
 			signalInvalidType(message)
 		}
@@ -285,9 +283,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
-			const { session: binarySession } = this.messageStore.getSessionByAddress(chain, chainId, action.session)
-			assert(binarySession !== null, "session not found")
-			const session = fromBinarySession(binarySession)
+			const { session } = this.messageStore.getSessionByAddress(chain, chainId, action.session)
+			assert(session !== null, "session not found")
 			assert(session.payload.chain === action.payload.chain, "session and action chains must match")
 			assert(session.payload.chainId === action.payload.chainId, `session and action chain IDs must match`)
 			assert(session.payload.sessionIssued + session.payload.sessionDuration > timestamp, "session expired")

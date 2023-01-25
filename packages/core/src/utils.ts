@@ -15,6 +15,9 @@ import type {
 	Block,
 } from "@canvas-js/interfaces"
 
+import { configure } from "safe-stable-stringify"
+export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
+
 export const ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
 
 export function parseIPFSURI(uri: string): CID | null {
@@ -66,8 +69,7 @@ type ValueTypes = {
 }
 
 type Values<M extends Model> = { [K in Exclude<keyof M, "indexes" | "id" | "updated_at">]: ValueTypes[M[K]] }
-
-export type Context<Models extends Record<string, Model>> = {
+type Context<Models extends Record<string, Model>> = {
 	timestamp: number
 	hash: string
 	from: string
