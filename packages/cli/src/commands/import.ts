@@ -32,11 +32,11 @@ export async function handler(args: Args) {
 	const { uri, directory } = parseSpecArgument(args.app)
 	assert(directory !== null, "Cannot import to development apps since they do not persist any data")
 
-	const app = fs.readFileSync(path.resolve(directory, constants.SPEC_FILENAME), "utf-8")
+	const spec = fs.readFileSync(path.resolve(directory, constants.SPEC_FILENAME), "utf-8")
 
 	const providers = getProviders(args["chain-rpc"])
 
-	const core = await Core.initialize({ uri, directory, app, providers })
+	const core = await Core.initialize({ uri, directory, spec, providers, libp2p: null })
 
 	const rl = readline.createInterface({
 		input: process.stdin,

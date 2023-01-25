@@ -1,14 +1,10 @@
 import { TypedDataDomain, TypedDataField, utils } from "ethers"
 import { verifyTypedData } from "@ethersproject/wallet"
 
-import {
-	Action,
-	ActionPayload,
-	Session,
-	SessionPayload,
-	serializeActionArgument,
-	serializeActionCallArgs,
-} from "@canvas-js/interfaces"
+import { configure } from "safe-stable-stringify"
+const serialize = configure({ circularValue: Error, bigint: false, deterministic: true, strict: true })
+
+import { Action, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
 
 /**
  * Ethereum compatible signer logic, used to generate and
@@ -29,15 +25,15 @@ const actionDataFields = {
 		{ name: "chain", type: "string" },
 		{ name: "chainId", type: "string" },
 		{ name: "from", type: "string" },
-		{ name: "timestamp", type: "uint256" },
+		{ name: "timestamp", type: "uint64" },
 	],
 }
 
-/**
- * `getActionSignatureData` gets EIP-712 signing data for an individual action
- */
 type ActionPayloadSignable = Omit<ActionPayload, "callArgs"> & { callArgs: string }
 
+/**
+ * gets EIP-712 signing data for an individual action
+ */
 export function getActionSignatureData(payload: ActionPayload): SignatureData<ActionPayloadSignable> {
 	const domain = {
 		name: payload.appName,
@@ -47,12 +43,12 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData<Ac
 	// Rewrite fields with custom serializations. EIP-712 does not
 	// accept null values as a type, so we replace the null blockhash
 	// with an empty string
-	//
+
 	// Previously chainId may have been an integer. Since TS is not
 	// enforced at runtime, call .toString() to be sure
 	const actionValue = {
 		...payload,
-		callArgs: serializeActionCallArgs(payload.callArgs),
+		callArgs: serialize(payload.callArgs),
 		chainId: payload.chainId.toString(),
 		block: payload.block || "",
 	}
@@ -69,15 +65,15 @@ const sessionDataFields = {
 		{ name: "chainId", type: "string" },
 		{ name: "from", type: "string" },
 		{ name: "sessionAddress", type: "string" },
-		{ name: "sessionDuration", type: "uint256" },
-		{ name: "sessionIssued", type: "uint256" },
+		{ name: "sessionDuration", type: "uint64" },
+		{ name: "sessionIssued", type: "uint64" },
 	],
 }
 
 type SignatureData<PayloadType> = [TypedDataDomain, Record<string, TypedDataField[]>, PayloadType]
 
 /**
- * `getSessionSignatureData` gets EIP-712 signing data to start a session
+ * gets EIP-712 signing data to start a session
  */
 export function getSessionSignatureData(payload: SessionPayload): SignatureData<SessionPayload> {
 	const domain = {

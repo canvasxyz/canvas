@@ -40,7 +40,7 @@ test("contracts (milady balanceOf)", async (t) => {
 
 	const provider = new EthereumBlockProvider(ETH_CHAIN_ID, ETH_CHAIN_RPC)
 	const providers = { [`ethereum:${ETH_CHAIN_ID}`]: provider }
-	const core = await Core.initialize({ directory: null, uri: app, app: spec, providers, offline: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, providers })
 
 	const signer = new TestSigner(app, appName, provider)
 

@@ -50,21 +50,21 @@ export async function confirmOrExit(message: string) {
 
 export const cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 
-export function parseSpecArgument(value: string): { directory: string | null; uri: string; app: string } {
+export function parseSpecArgument(value: string): { directory: string | null; uri: string; spec: string } {
 	if (cidPattern.test(value)) {
 		const directory = path.resolve(CANVAS_HOME, value)
 		const specPath = path.resolve(directory, constants.SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
-			const app = fs.readFileSync(specPath, "utf-8")
-			return { directory, uri: `ipfs://${value}`, app }
+			const spec = fs.readFileSync(specPath, "utf-8")
+			return { directory, uri: `ipfs://${value}`, spec }
 		} else {
 			console.error(chalk.red(`[canvas-cli] App ${value} is not installed.`))
 			process.exit(1)
 		}
 	} else if (value.endsWith(".js") || value.endsWith(".jsx")) {
 		const specPath = path.resolve(value)
-		const app = fs.readFileSync(specPath, "utf-8")
-		return { directory: null, uri: `file://${specPath}`, app }
+		const spec = fs.readFileSync(specPath, "utf-8")
+		return { directory: null, uri: `file://${specPath}`, spec }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js/.jsx file"))
 		process.exit(1)

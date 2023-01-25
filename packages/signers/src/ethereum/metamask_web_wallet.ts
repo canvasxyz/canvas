@@ -1,7 +1,8 @@
 import web3 from "web3"
 import { ethers } from "ethers"
 import { Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
-import { getSessionSignatureData } from "@canvas-js/verifiers"
+import { signSession } from "@canvas-js/chain-ethereum"
+
 import { Connector, SessionSigner } from "../interfaces.js"
 import { EthereumActionSigner } from "./ethereum_action_signer.js"
 
@@ -101,9 +102,7 @@ export class MetaMaskEthereumSigner implements SessionSigner {
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
-		const sessionSignatureData = getSessionSignatureData(payload)
-		const signature = await this.signer._signTypedData(...sessionSignatureData)
-		return { type: "session", signature, payload }
+		return signSession(this.signer, payload)
 	}
 
 	async getRecentBlock(): Promise<Block> {

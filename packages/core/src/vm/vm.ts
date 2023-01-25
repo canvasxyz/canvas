@@ -43,19 +43,19 @@ interface VMOptions {
 }
 
 interface VMConfig extends VMOptions {
-	uri: string
 	app: string
+	spec: string
 	providers?: Record<string, BlockProvider>
 }
 
 export class VM {
-	public static async initialize({ uri, app, providers, ...options }: VMConfig): Promise<VM> {
+	public static async initialize({ app, spec, providers, ...options }: VMConfig): Promise<VM> {
 		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
-		const { code: transpiledSpec } = transform(app, {
+		const { code: transpiledSpec } = transform(spec, {
 			transforms: ["jsx"],
 			jsxPragma: "React.createElement",
 			jsxFragmentPragma: "React.Fragment",
@@ -63,7 +63,7 @@ export class VM {
 			production: true,
 		})
 
-		const moduleHandle = await loadModule(context, uri, transpiledSpec)
+		const moduleHandle = await loadModule(context, app, transpiledSpec)
 
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
@@ -75,14 +75,14 @@ export class VM {
 				console.log(chalk.yellow(`[canvas-vm] Warning: ${warning}`))
 			}
 
-			return new VM(uri, runtime, context, options, exports, providers)
+			return new VM(app, runtime, context, options, exports, providers)
 		}
 	}
 
-	public static async validate(app: string): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+	public static async validate(spec: string): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
 		let transpiledSpec: string
 		try {
-			transpiledSpec = transform(app, {
+			transpiledSpec = transform(spec, {
 				transforms: ["jsx"],
 				jsxPragma: "React.createElement",
 				jsxFragmentPragma: "React.Fragment",
@@ -102,7 +102,7 @@ export class VM {
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
-		const cid = await Hash.of(app)
+		const cid = await Hash.of(spec)
 		const moduleHandle = await loadModule(context, `ipfs://${cid}`, transpiledSpec)
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
@@ -141,7 +141,7 @@ export class VM {
 	private actionContext: ActionContext | null = null
 
 	constructor(
-		public readonly uri: string,
+		public readonly app: string,
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
 		options: VMOptions,
@@ -361,7 +361,7 @@ export class VM {
 	}
 
 	private getActionHandle(app: string, call: string): QuickJSHandle {
-		if (app === this.uri) {
+		if (app === this.app) {
 			const handle = this.actionHandles[call]
 			assert(handle !== undefined, "invalid action call")
 			return handle

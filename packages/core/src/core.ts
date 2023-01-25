@@ -6,8 +6,7 @@ import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
-import { createLibp2p, Libp2p } from "libp2p"
+import { Libp2p } from "libp2p"
 
 import {
 	Action,
@@ -20,9 +19,9 @@ import {
 	ChainId,
 	Block,
 	Message,
+	Verifier,
 } from "@canvas-js/interfaces"
-
-import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
+import { ethereumVerifier } from "@canvas-js/chain-ethereum"
 
 import { actionType, sessionType } from "./codecs.js"
 import { toHex, BlockResolver, signalInvalidType, CacheMap, parseIPFSURI, stringify } from "./utils.js"
@@ -32,17 +31,18 @@ import { MessageStore } from "./messageStore.js"
 import { ModelStore } from "./modelStore.js"
 
 import * as constants from "./constants.js"
-import { getLibp2pInit } from "./libp2p.js"
 import { Source } from "./source.js"
 import { metrics } from "./metrics.js"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
 	directory: string | null
+
 	// defaults to ipfs:// hash of application
 	uri?: string
-	app: string
-	libp2p?: Libp2p
+	spec: string
+	libp2p: Libp2p | null // pass null to run offline
+	verifiers?: Verifier[]
 	providers?: Record<string, BlockProvider>
 	// defaults to fetching each block from the provider with no caching
 	blockResolver?: BlockResolver
@@ -51,7 +51,6 @@ export interface CoreConfig extends CoreOptions {
 export interface CoreOptions {
 	unchecked?: boolean
 	verbose?: boolean
-	offline?: boolean
 }
 
 interface CoreEvents {
@@ -72,34 +71,28 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly sources: Record<string, Source> | null = null
 	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
 
-	public static async initialize({ directory, uri, app, libp2p, providers, blockResolver, ...options }: CoreConfig) {
-		const cid = await Hash.of(app).then(CID.parse)
-		if (uri === undefined) {
-			uri = `ipfs://${cid.toString()}`
-		}
-		const vm = await VM.initialize({ uri, app, providers: providers ?? {}, ...options })
-		const appName = vm.appName
-
-		if (blockResolver === undefined) {
+	public static async initialize(config: CoreConfig) {
+		const {
+			directory,
+			uri,
+			spec,
+			libp2p,
+			providers = {},
+			verifiers = [ethereumVerifier],
 			blockResolver = async (chain, chainId, blockhash) => {
 				const key = `${chain}:${chainId}`
 				assert(providers !== undefined && key in providers, `no provider for ${chain}:${chainId}`)
 				return await providers[key].getBlock(blockhash)
-			}
-		}
+			},
+			...options
+		} = config
 
-		if (options.offline) {
-			return new Core(directory, uri, cid, app, appName, vm, null, blockResolver, options)
-		} else if (libp2p === undefined) {
-			const peerId = await createEd25519PeerId()
-			const libp2p = await createLibp2p(getLibp2pInit(peerId))
-			await libp2p.start()
-			const core = new Core(directory, uri, cid, app, appName, vm, libp2p, blockResolver, options)
-			core.addEventListener("close", () => libp2p.stop())
-			return core
-		} else {
-			return new Core(directory, uri, cid, app, appName, vm, libp2p, blockResolver, options)
-		}
+		const cid = await Hash.of(spec).then(CID.parse)
+		const app = uri ?? `ipfs://${cid.toString()}`
+		const vm = await VM.initialize({ app, spec, providers, ...options })
+		const appName = vm.appName
+
+		return new Core(directory, app, cid, app, appName, vm, libp2p, blockResolver, verifiers, options)
 	}
 
 	private constructor(
@@ -111,6 +104,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly vm: VM,
 		public readonly libp2p: Libp2p | null,
 		private readonly blockResolver: BlockResolver,
+		private readonly verifiers: Verifier[],
 		private readonly options: CoreOptions
 	) {
 		super()
@@ -267,8 +261,14 @@ export class Core extends EventEmitter<CoreEvents> {
 		const { timestamp, app, appName, block, chain, chainId } = action.payload
 		const fromAddress = action.payload.from
 
-		assert(app === this.uri || this.vm.sources.has(app), "action signed for wrong application")
-		assert(appName === this.appName || this.vm.sources.has(app), "action signed for wrong application")
+		assert(
+			app === this.uri || this.vm.sources.has(app),
+			`action signed for wrong application (invalid app: expected ${this.uri}, found ${app})`
+		)
+		assert(
+			appName === this.appName || this.vm.sources.has(app),
+			"action signed for wrong application (invalid appName)"
+		)
 		// TODO: verify that actions signed for a previous app were valid within that app
 
 		// check the timestamp bounds
@@ -285,6 +285,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (action.session !== null) {
 			const { session } = this.messageStore.getSessionByAddress(chain, chainId, action.session)
 			assert(session !== null, "session not found")
+			assert(
+				action.payload.app === session.payload.app,
+				"invalid session (action.payload.app and session.payload.app do not match)"
+			)
 			assert(session.payload.chain === action.payload.chain, "session and action chains must match")
 			assert(session.payload.chainId === action.payload.chainId, `session and action chain IDs must match`)
 			assert(session.payload.sessionIssued + session.payload.sessionDuration > timestamp, "session expired")
@@ -295,35 +299,25 @@ export class Core extends EventEmitter<CoreEvents> {
 				session.payload.from === fromAddress,
 				"invalid session (action.payload.from and session.payload.from do not match)"
 			)
-
-			const verifiedAddress = await verifyActionSignature(action)
-			assert(
-				verifiedAddress === action.session,
-				"invalid action signature (recovered session address does not match action.session)"
-			)
-			assert(
-				verifiedAddress === session.payload.sessionAddress,
-				"invalid action signature (action, session do not match)"
-			)
-			assert(
-				action.payload.app === session.payload.app,
-				"invalid session (action.payload.app and session.payload.app do not match)"
-			)
-		} else {
-			const verifiedAddress = await verifyActionSignature(action)
-			assert(verifiedAddress === fromAddress, "action signed by wrong address")
 		}
+
+		const verifier = this.getVerifier(chain, chainId)
+		await verifier.verifyAction(action)
 	}
 
 	private async validateSession(session: Session) {
-		const { from, app, appName, sessionIssued, block, chain, chainId } = session.payload
-		assert(app === this.uri || this.vm.sources.has(app), "session signed for wrong application")
-		assert(appName === this.appName || this.vm.sources.has(app), "session signed for wrong application")
+		const { app, appName, sessionIssued, block, chain, chainId } = session.payload
+		assert(app === this.uri || this.vm.sources.has(app), "session signed for wrong application (app invalid)")
+		assert(
+			appName === this.appName || this.vm.sources.has(app),
+			"session signed for wrong application (appName invalid)"
+		)
+
 		// TODO: verify that sessions signed for a previous app were valid within that app,
 		// e.g. that their appName matches
 
-		const verifiedAddress = await verifySessionSignature(session)
-		assert(verifiedAddress === from, "session signed by wrong address")
+		const verifier = this.getVerifier(chain, chainId)
+		await verifier.verifySession(session)
 
 		// check the timestamp bounds
 		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
@@ -334,6 +328,16 @@ export class Core extends EventEmitter<CoreEvents> {
 			assert(block, "session is missing block data")
 			await this.validateBlock({ blockhash: block, chain, chainId })
 		}
+	}
+
+	private getVerifier(chain: Chain, chainId: ChainId): Verifier {
+		for (const verifier of this.verifiers) {
+			if (verifier.match(chain, chainId)) {
+				return verifier
+			}
+		}
+
+		throw new Error(`Could not find matching verifier for chain ${chain}:${chainId}`)
 	}
 
 	/**

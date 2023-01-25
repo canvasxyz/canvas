@@ -24,7 +24,7 @@ const { spec, app, appName } = await compileSpec({
 const signer = new TestSigner(app, appName)
 
 test("test fetch() and log IP address", async (t) => {
-	const core = await Core.initialize({ uri: app, app: spec, directory: null, unchecked: true, offline: true })
+	const core = await Core.initialize({ uri: app, spec, directory: null, libp2p: null, unchecked: true })
 
 	const action = await signer.sign("logIP", {})
 	await t.notThrowsAsync(() => core.applyAction(action))
@@ -33,7 +33,7 @@ test("test fetch() and log IP address", async (t) => {
 })
 
 test("test assert()", async (t) => {
-	const core = await Core.initialize({ uri: app, app: spec, directory: null, unchecked: true, offline: true })
+	const core = await Core.initialize({ uri: app, spec, directory: null, libp2p: null, unchecked: true })
 
 	const successAction = await signer.sign("echo", { text: "hello world" })
 	await t.notThrowsAsync(() => core.applyAction(successAction))

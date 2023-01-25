@@ -101,9 +101,9 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
-	let { directory, uri, app: appArg } = parseSpecArgument(args.app)
+	let { directory, uri, spec } = parseSpecArgument(args.app)
 	if (directory === null && args.install) {
-		const cid = await installSpec(appArg)
+		const cid = await installSpec(spec)
 		directory = path.resolve(CANVAS_HOME, cid)
 		uri = `ipfs://${cid}`
 	}
@@ -188,22 +188,24 @@ export async function handler(args: Args) {
 	const peerId = await getPeerId()
 	console.log(`[canvas-cli] Using PeerId ${peerId.toString()}`)
 
-	let libp2p: Libp2p
-	if (announce !== undefined) {
-		console.log(`[canvas-cli] Announcing on ${announce}`)
-		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort, [announce]))
-	} else {
-		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
-	}
+	let libp2p: Libp2p | null = null
+	if (!offline) {
+		if (announce !== undefined) {
+			console.log(`[canvas-cli] Announcing on ${announce}`)
+			libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort, [announce]))
+		} else {
+			libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+		}
 
-	if (verbose) {
-		libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
-			console.log(`[canvas-cli] Connected to ${remotePeer.toString()} (${id})`)
-		)
+		if (verbose) {
+			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
+				console.log(`[canvas-cli] Connected to ${remotePeer.toString()} (${id})`)
+			)
 
-		libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
-			console.log(`[canvas-cli] Disconnected from ${remotePeer.toString()} (${id})`)
-		)
+			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
+				console.log(`[canvas-cli] Disconnected from ${remotePeer.toString()} (${id})`)
+			)
+		}
 	}
 
 	const blockCache = new BlockCache(providers)
@@ -211,12 +213,11 @@ export async function handler(args: Args) {
 	const core = await Core.initialize({
 		directory,
 		uri,
-		app: appArg,
+		spec: spec,
 		providers,
 		libp2p,
 		blockResolver: blockCache.getBlock,
 		unchecked,
-		offline,
 		verbose,
 	})
 
@@ -279,7 +280,9 @@ export async function handler(args: Args) {
 
 	const controller = new AbortController()
 
-	startPingService(libp2p, controller, { verbose })
+	if (libp2p !== null) {
+		startPingService(libp2p, controller, { verbose })
+	}
 
 	controller.signal.addEventListener("abort", async () => {
 		console.log("[canvas-cli] Stopping API server...")
@@ -289,7 +292,9 @@ export async function handler(args: Args) {
 		console.log("[canvas-cli] Closing core...")
 		await core.close()
 		console.log("[canvas-cli] Core closed.")
-		await libp2p.stop()
+		if (libp2p !== null) {
+			await libp2p.stop()
+		}
 		blockCache.close()
 	})
 

@@ -1,12 +1,11 @@
 {
-  "include": ["src", "types"],
+  "include": ["src"],
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib"
   },
   "references": [
-    { "path": "../interfaces" },
-    { "path": "../chain-ethereum" }
+    {"path": "../interfaces"}
   ]
 }

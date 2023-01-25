@@ -17,7 +17,7 @@
     "packages/next",
     "packages/hooks",
     "packages/signers",
-    "packages/verifiers",
+    "packages/chain-ethereum",
     "examples/app-store",
     "examples/chat-webpack",
     "examples/chat-next"

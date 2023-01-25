@@ -1,0 +1,17 @@
+{
+  "name": "@canvas-js/chain-ethereum",
+  "version": "0.0.47",
+  "type": "module",
+  "author": "Canvas Technology Corporation (https://canvas.xyz)",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "dependencies": {
+    "safe-stable-stringify": "^2.4.2"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.4"
+  }
+}

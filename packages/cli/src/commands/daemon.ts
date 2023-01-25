@@ -96,7 +96,7 @@ export async function handler(args: Args) {
 
 	const controller = new AbortController()
 
-	let libp2p: Libp2p | undefined = undefined
+	let libp2p: Libp2p | null = null
 	if (!args.offline) {
 		const peerId = await getPeerId()
 		console.log("[canvas-cli] Using PeerId", peerId.toString())
@@ -131,7 +131,7 @@ export async function handler(args: Args) {
 
 	controller.signal.addEventListener("abort", async () => {
 		await daemon.close()
-		if (libp2p !== undefined) {
+		if (libp2p !== null) {
 			await libp2p.stop()
 		}
 		blockCache.close()
@@ -181,10 +181,10 @@ class Daemon {
 	private readonly apps = new Map<string, { core: Core; api: express.Express }>()
 
 	constructor(
-		libp2p: Libp2p | undefined,
+		readonly libp2p: Libp2p | null,
 		providers: Record<string, BlockProvider>,
 		blockResolver: BlockResolver,
-		private readonly options: CoreOptions & { exposeMetrics?: boolean }
+		private readonly options: CoreOptions & { exposeMetrics?: boolean; offline?: boolean }
 	) {
 		this.app.use(express.json())
 		this.app.use(express.text())
@@ -303,12 +303,11 @@ class Daemon {
 					return res.status(StatusCodes.NOT_FOUND).end()
 				}
 
-				const app = fs.readFileSync(specPath, "utf-8")
+				const spec = fs.readFileSync(specPath, "utf-8")
 				let hash
 				try {
-					hash = await Hash.of(app)
+					hash = await Hash.of(spec)
 				} catch (err) {
-					console.log(app)
 					const message = err instanceof Error ? err.message : (err as any).toString()
 					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
 				}
@@ -319,7 +318,7 @@ class Daemon {
 					const core = await Core.initialize({
 						directory,
 						uri,
-						app,
+						spec,
 						libp2p,
 						providers,
 						blockResolver,

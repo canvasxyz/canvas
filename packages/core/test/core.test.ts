@@ -40,7 +40,7 @@ const signer = new TestSigner(app, appName)
 const sessionSigner = new TestSessionSigner(signer)
 
 test("Apply signed action", async (t) => {
-	const core = await Core.initialize({ uri: app, app: spec, directory: null, unchecked: true, offline: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 
 	const action = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash } = await core.applyAction(action)
@@ -59,7 +59,7 @@ test("Apply signed action", async (t) => {
 })
 
 test("Apply two signed actions", async (t) => {
-	const core = await Core.initialize({ uri: app, app: spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: newThreadHash } = await core.applyAction(newThreadAction)
@@ -81,7 +81,7 @@ test("Apply two signed actions", async (t) => {
 })
 
 test("Apply action signed with session key", async (t) => {
-	const core = await Core.initialize({ uri: app, app: spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 	const session = await sessionSigner.session()
 	await core.applySession(session)
 
@@ -102,7 +102,7 @@ test("Apply action signed with session key", async (t) => {
 })
 
 test("Apply two actions signed with session keys", async (t) => {
-	const core = await Core.initialize({ directory: null, uri: app, app: spec, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 
 	const session = await sessionSigner.session()
 	await core.applySession(session)
@@ -129,7 +129,7 @@ test("Apply two actions signed with session keys", async (t) => {
 })
 
 test("Apply an action with a missing signature", async (t) => {
-	const core = await Core.initialize({ uri: app, app: spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 	const action = await signer.sign("newThread", { title: "Example Website", link: "http://example.com" })
 	action.signature = "0x00"
 	await t.throwsAsync(core.applyAction(action), { instanceOf: Error, code: "INVALID_ARGUMENT" })
@@ -137,16 +137,16 @@ test("Apply an action with a missing signature", async (t) => {
 })
 
 test("Apply an action signed by wrong address", async (t) => {
-	const core = await Core.initialize({ uri: app, app: spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 	const action = await signer.sign("newThread", { title: "Example Website", link: "http://example.com" })
 	const { address } = ethers.Wallet.createRandom()
 	action.payload.from = address
-	await t.throwsAsync(core.applyAction(action), { instanceOf: Error, message: "action signed by wrong address" })
+	await t.throwsAsync(core.applyAction(action), { instanceOf: Error, message: /^Invalid action signature/ })
 	await core.close()
 })
 
 test("Apply an action that throws an error", async (t) => {
-	const core = await Core.initialize({ uri: app, app: spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: threadId } = await core.applyAction(newThreadAction)
@@ -163,7 +163,7 @@ test("Apply an action that throws an error", async (t) => {
 test("Create an in-memory Core with a file:// URI", async (t) => {
 	const uri = "file:///dev/null"
 	const signer = new TestSigner(uri, appName)
-	const core = await Core.initialize({ uri, app: spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: threadId } = await core.applyAction(newThreadAction)
 

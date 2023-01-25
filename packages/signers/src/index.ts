@@ -1,6 +1,5 @@
 import { Connector, SessionSigner, ActionSigner } from "./interfaces.js"
 import { MetaMaskEthereumConnector, MetaMaskEthereumSigner } from "./ethereum/metamask_web_wallet.js"
-import { WalletConnectWebWalletConnector } from "./ethereum/walletconnect_web_wallet.js"
 import { EthereumActionSigner } from "./ethereum/ethereum_action_signer.js"
 
 export {
@@ -10,5 +9,4 @@ export {
 	MetaMaskEthereumConnector,
 	MetaMaskEthereumSigner,
 	EthereumActionSigner,
-	WalletConnectWebWalletConnector,
 }

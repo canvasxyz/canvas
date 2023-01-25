@@ -2,7 +2,7 @@ import test from "ava"
 import { ethers } from "ethers"
 import type { ActionPayload } from "@canvas-js/interfaces"
 import { EthereumActionSigner } from "@canvas-js/signers"
-import { verifyActionSignature } from "@canvas-js/verifiers"
+import { ethereumVerifier } from "@canvas-js/chain-ethereum"
 
 test("Sign an action for ethereum", async (t) => {
 	const parentWallet = ethers.Wallet.createRandom()
@@ -24,7 +24,5 @@ test("Sign an action for ethereum", async (t) => {
 	}
 
 	const action = await signer.signActionPayload(payload)
-
-	const recoveredAddress = await verifyActionSignature(action)
-	t.deepEqual(recoveredAddress, childWallet.address)
+	await ethereumVerifier.verifyAction(action)
 })

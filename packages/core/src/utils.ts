@@ -146,9 +146,9 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 		lines.push(`};`)
 	}
 
-	const app = lines.join("\n")
-	const cid = await Hash.of(app)
-	return { app: `ipfs://${cid}`, spec: app, appName }
+	const spec = lines.join("\n")
+	const cid = await Hash.of(spec)
+	return { app: `ipfs://${cid}`, spec, appName }
 }
 
 export class AbortError extends Error {

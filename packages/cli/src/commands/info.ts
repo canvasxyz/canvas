@@ -23,24 +23,10 @@ export const builder = (yargs: yargs.Argv) =>
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { uri, directory } = parseSpecArgument(args.app)
-
-	let app: string
-	if (directory !== null) {
-		const specPath = path.resolve(directory, constants.SPEC_FILENAME)
-		if (fs.existsSync(specPath)) {
-			app = fs.readFileSync(specPath, "utf-8")
-		} else {
-			console.log(chalk.yellow(`[canvas-cli] The spec ${args.app} is not installed locally.`))
-			console.log(chalk.yellow(`[canvas-cli] Try runing "canvas install ${args.app}"`))
-			process.exit(1)
-		}
-	} else {
-		app = fs.readFileSync(args.app, "utf-8")
-	}
+	const { uri, spec, directory } = parseSpecArgument(args.app)
 
 	try {
-		const vm = await VM.initialize({ uri, app, unchecked: true })
+		const vm = await VM.initialize({ app: uri, spec, unchecked: true })
 
 		const { models, routes, actions, contractMetadata } = vm
 		vm.dispose()

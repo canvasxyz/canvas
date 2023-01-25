@@ -65,9 +65,9 @@ if (NODE_ENV === "production") {
 	startPingService(libp2p, controller, { verbose })
 	controller.signal.addEventListener("abort", () => libp2p.stop())
 
-	global.core = await Core.initialize({ directory, app: spec, providers, unchecked, libp2p, verbose })
+	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, verbose })
 } else {
-	global.core = await Core.initialize({ directory, app: spec, providers, unchecked, offline: true, verbose })
+	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p: null, verbose })
 }
 
 const port = Number(PORT) || 3000
