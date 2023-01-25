@@ -21,7 +21,7 @@ import { handleIncomingStream, sync } from "@canvas-js/core/lib/rpc/index.js"
 
 import { TestSigner } from "./utils.js"
 
-const { uri, app, appName } = await compileSpec({
+const { app, appName } = await compileSpec({
 	name: "Test App",
 	models: {},
 	actions: { log: ({ message }, {}) => console.log(message) },
@@ -55,7 +55,7 @@ async function insert(mst: okra.Tree, hash: Buffer, message: Message) {
 async function testSync(sourceMessages: Message[], targetMessages: Message[]): Promise<Message[]> {
 	const directory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(directory)
-	const sourceMessageStore = new MessageStore(uri, path.resolve(directory, "source.sqlite"))
+	const sourceMessageStore = new MessageStore(app, path.resolve(directory, "source.sqlite"))
 	const sourceMST = new okra.Tree(path.resolve(directory, "source.okra"))
 	const targetMST = new okra.Tree(path.resolve(directory, "target.okra"))
 
@@ -95,7 +95,7 @@ async function testSync(sourceMessages: Message[], targetMessages: Message[]): P
 	}
 }
 
-const signer = new TestSigner(uri, appName)
+const signer = new TestSigner(app, appName)
 
 test("sync two MSTs", async (t) => {
 	const a = await signer.sign("log", { message: "a" })

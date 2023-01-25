@@ -109,7 +109,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	routes?: Record<string, (params: Record<string, string>, db: RouteContext) => Query>
 	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
 	sources?: Record<string, Record<string, ActionHandler<Models>>>
-}): Promise<{ uri: string; app: string; appName: string }> {
+}): Promise<{ app: string; spec: string; appName: string }> {
 	const { name, models, actions, routes, contracts, sources } = exports
 
 	const appName = name || "Canvas App"
@@ -148,7 +148,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 
 	const app = lines.join("\n")
 	const cid = await Hash.of(app)
-	return { uri: `ipfs://${cid}`, app, appName }
+	return { app: `ipfs://${cid}`, spec: app, appName }
 }
 
 export class AbortError extends Error {

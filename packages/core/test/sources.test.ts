@@ -42,7 +42,7 @@ const MessageBoardWithVotes = await compileSpec({
 		},
 	},
 	sources: {
-		[MessageBoard.uri]: {
+		[MessageBoard.app]: {
 			createPost({ content }, { db, hash, from }) {
 				assert(typeof content === "string")
 				db.posts.set(hash, { content, from })
@@ -51,13 +51,13 @@ const MessageBoardWithVotes = await compileSpec({
 	},
 })
 
-const signer = new TestSigner(MessageBoardWithVotes.uri, MessageBoardWithVotes.appName)
-const sourceSigner = new TestSigner(MessageBoard.uri, MessageBoard.appName)
+const signer = new TestSigner(MessageBoardWithVotes.app, MessageBoardWithVotes.appName)
+const sourceSigner = new TestSigner(MessageBoard.app, MessageBoard.appName)
 
 test("Apply source actions", async (t) => {
 	const core = await Core.initialize({
-		uri: MessageBoardWithVotes.uri,
-		app: MessageBoardWithVotes.app,
+		uri: MessageBoardWithVotes.app,
+		app: MessageBoardWithVotes.spec,
 		directory: null,
 		unchecked: true,
 		offline: true,
@@ -102,7 +102,7 @@ test("Apply source actions", async (t) => {
 		},
 	])
 
-	const sourceCID = parseIPFSURI(MessageBoard.uri)
+	const sourceCID = parseIPFSURI(MessageBoard.app)
 	assert(sourceCID !== null)
 
 	t.deepEqual(core.messageStore.database.prepare("SELECT * FROM actions").all(), [
@@ -118,7 +118,7 @@ test("Apply source actions", async (t) => {
 			chain: "ethereum",
 			chain_id: "1",
 			block: null,
-			app: MessageBoard.uri,
+			app: MessageBoard.app,
 
 			app_name: "Test App",
 		},
@@ -134,7 +134,7 @@ test("Apply source actions", async (t) => {
 			chain: "ethereum",
 			chain_id: "1",
 			block: null,
-			app: MessageBoardWithVotes.uri,
+			app: MessageBoardWithVotes.app,
 			app_name: "Test App 2",
 		},
 		{
@@ -149,7 +149,7 @@ test("Apply source actions", async (t) => {
 			chain: "ethereum",
 			chain_id: "1",
 			block: null,
-			app: MessageBoardWithVotes.uri,
+			app: MessageBoardWithVotes.app,
 			app_name: "Test App 2",
 		},
 		{
@@ -164,7 +164,7 @@ test("Apply source actions", async (t) => {
 			chain: "ethereum",
 			chain_id: "1",
 			block: null,
-			app: MessageBoardWithVotes.uri,
+			app: MessageBoardWithVotes.app,
 			app_name: "Test App 2",
 		},
 	])
