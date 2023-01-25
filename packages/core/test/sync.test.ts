@@ -2,6 +2,7 @@ import os from "node:os"
 import fs from "node:fs"
 import path from "node:path"
 import stream from "node:stream"
+import { createHash } from "node:crypto"
 
 import test from "ava"
 
@@ -14,14 +15,14 @@ import type { Uint8ArrayList } from "uint8arraylist"
 
 import type { Message } from "@canvas-js/interfaces"
 
-import { BinaryMessage, fromBinaryAction, fromBinarySession, normalizeMessage } from "@canvas-js/core/lib/encoding.js"
 import { MessageStore } from "@canvas-js/core/lib/messageStore.js"
-import { compileSpec } from "@canvas-js/core/lib/utils.js"
+import { compileSpec, stringify } from "@canvas-js/core/lib/utils.js"
 import { handleIncomingStream, sync } from "@canvas-js/core/lib/rpc/index.js"
 
 import { TestSigner } from "./utils.js"
 
-const { uri, app } = await compileSpec({
+const { app, appName } = await compileSpec({
+	name: "Test App",
 	models: {},
 	actions: { log: ({ message }, {}) => console.log(message) },
 })
@@ -39,12 +40,11 @@ function connect(): [
 	]
 }
 
-async function insert(mst: okra.Tree, hash: Buffer, binaryMessage: BinaryMessage) {
+async function insert(mst: okra.Tree, hash: Buffer, message: Message) {
 	const leaf = Buffer.alloc(14)
-	const offset = binaryMessage.type === "action" ? 1 : 0
+	const offset = message.type === "action" ? 1 : 0
 	leaf.writeUintBE(
-		(binaryMessage.type === "action" ? binaryMessage.payload.timestamp : binaryMessage.payload.sessionIssued) * 2 +
-			offset,
+		(message.type === "action" ? message.payload.timestamp : message.payload.sessionIssued) * 2 + offset,
 		0,
 		6
 	)
@@ -55,28 +55,26 @@ async function insert(mst: okra.Tree, hash: Buffer, binaryMessage: BinaryMessage
 async function testSync(sourceMessages: Message[], targetMessages: Message[]): Promise<Message[]> {
 	const directory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(directory)
-	const sourceMessageStore = new MessageStore(uri, path.resolve(directory, "source.sqlite"))
+	const sourceMessageStore = new MessageStore(app, path.resolve(directory, "source.sqlite"))
 	const sourceMST = new okra.Tree(path.resolve(directory, "source.okra"))
 	const targetMST = new okra.Tree(path.resolve(directory, "target.okra"))
 
 	for (const message of sourceMessages) {
-		const [hash, binaryMessage] = normalizeMessage(message)
-		insert(sourceMST, hash, binaryMessage)
-		sourceMessageStore.insert(hash, binaryMessage)
+		const data = Buffer.from(stringify(message))
+		const hash = createHash("sha256").update(data).digest()
+		insert(sourceMST, hash, message)
+		sourceMessageStore.insert(hash, message)
 	}
 
 	for (const message of targetMessages) {
-		const [hash, binaryMessage] = normalizeMessage(message)
-		insert(targetMST, hash, binaryMessage)
+		const data = Buffer.from(stringify(message))
+		const hash = createHash("sha256").update(data).digest()
+		insert(targetMST, hash, message)
 	}
 
 	const messages: Message[] = []
-	async function handleMessage(hash: Buffer, data: Uint8Array, message: BinaryMessage) {
-		if (message.type === "action") {
-			messages.push(fromBinaryAction(message))
-		} else {
-			messages.push(fromBinarySession(message))
-		}
+	async function handleMessage(hash: Buffer, data: Uint8Array, message: Message) {
+		messages.push(message)
 	}
 
 	try {
@@ -97,7 +95,7 @@ async function testSync(sourceMessages: Message[], targetMessages: Message[]): P
 	}
 }
 
-const signer = new TestSigner(uri)
+const signer = new TestSigner(app, appName)
 
 test("sync two MSTs", async (t) => {
 	const a = await signer.sign("log", { message: "a" })

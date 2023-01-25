@@ -68,6 +68,7 @@ export function useCanvas(): {
 				const payload: ActionPayload = {
 					from: address,
 					app: data.uri,
+					appName: data.appName,
 					call,
 					callArgs: args,
 					timestamp,

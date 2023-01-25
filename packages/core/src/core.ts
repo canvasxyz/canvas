@@ -1,5 +1,6 @@
 import assert from "node:assert"
 import path from "node:path"
+import { createHash } from "node:crypto"
 
 import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
@@ -18,13 +19,14 @@ import {
 	Chain,
 	ChainId,
 	Block,
+	Message,
 } from "@canvas-js/interfaces"
 
 import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
 
 import { actionType, sessionType } from "./codecs.js"
-import { toHex, BlockResolver, signalInvalidType, CacheMap, parseIPFSURI } from "./utils.js"
-import { normalizeAction, fromBinaryAction, fromBinarySession, normalizeSession, BinaryMessage } from "./encoding.js"
+import { toHex, BlockResolver, signalInvalidType, CacheMap, parseIPFSURI, stringify } from "./utils.js"
+
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
 import { ModelStore } from "./modelStore.js"
@@ -76,6 +78,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			uri = `ipfs://${cid.toString()}`
 		}
 		const vm = await VM.initialize({ uri, app, providers: providers ?? {}, ...options })
+		const appName = vm.appName
 
 		if (blockResolver === undefined) {
 			blockResolver = async (chain, chainId, blockhash) => {
@@ -86,16 +89,16 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		if (options.offline) {
-			return new Core(directory, uri, cid, app, vm, null, blockResolver, options)
+			return new Core(directory, uri, cid, app, appName, vm, null, blockResolver, options)
 		} else if (libp2p === undefined) {
 			const peerId = await createEd25519PeerId()
 			const libp2p = await createLibp2p(getLibp2pInit(peerId))
 			await libp2p.start()
-			const core = new Core(directory, uri, cid, app, vm, libp2p, blockResolver, options)
+			const core = new Core(directory, uri, cid, app, appName, vm, libp2p, blockResolver, options)
 			core.addEventListener("close", () => libp2p.stop())
 			return core
 		} else {
-			return new Core(directory, uri, cid, app, vm, libp2p, blockResolver, options)
+			return new Core(directory, uri, cid, app, appName, vm, libp2p, blockResolver, options)
 		}
 	}
 
@@ -104,6 +107,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly uri: string,
 		public readonly cid: CID,
 		public readonly app: string,
+		public readonly appName: string,
 		public readonly vm: VM,
 		public readonly libp2p: Libp2p | null,
 		private readonly blockResolver: BlockResolver,
@@ -177,17 +181,17 @@ export class Core extends EventEmitter<CoreEvents> {
 	public async applyAction(action: Action): Promise<{ hash: string }> {
 		assert(actionType.is(action), "Invalid action value")
 
-		const [hash, message, data] = normalizeAction(action)
-
+		const data = Buffer.from(stringify(action))
+		const hash = createHash("sha256").update(data).digest()
 		const existingRecord = this.messageStore.getActionByHash(hash)
 		if (existingRecord !== null) {
 			return { hash: toHex(hash) }
 		}
 
-		await this.applyMessage(hash, message)
+		await this.applyMessage(hash, action)
 
 		if (this.sources !== null) {
-			this.sources[this.uri].insertMessage(hash, message)
+			this.sources[this.uri].insertMessage(hash, action)
 			await this.sources[this.uri].publishMessage(hash, data)
 		}
 
@@ -200,17 +204,18 @@ export class Core extends EventEmitter<CoreEvents> {
 	public async applySession(session: Session): Promise<{ hash: string }> {
 		assert(sessionType.is(session), "invalid session")
 
-		const [hash, message, data] = normalizeSession(session)
+		const data = Buffer.from(stringify(session))
+		const hash = createHash("sha256").update(data).digest()
 
 		const existingRecord = this.messageStore.getSessionByHash(hash)
 		if (existingRecord !== null) {
 			return { hash: toHex(hash) }
 		}
 
-		await this.applyMessage(hash, message)
+		await this.applyMessage(hash, session)
 
 		if (this.sources !== null) {
-			this.sources[this.uri].insertMessage(hash, message)
+			this.sources[this.uri].insertMessage(hash, session)
 			await this.sources[this.uri].publishMessage(hash, data)
 		}
 
@@ -226,48 +231,45 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Note the this does NOT call sources[uri].insertMessage OR sources[uri].publishMessage -
 	 * that's the responsibility of the caller.
 	 */
-	private applyMessage = async (hash: Buffer, message: BinaryMessage) => {
+	private applyMessage = async (hash: Buffer, message: Message) => {
 		const id = toHex(hash)
 		if (message.type === "action") {
-			const action = fromBinaryAction(message)
-
 			if (this.options.verbose) {
-				console.log(`[canvas-core] Applying action ${id}`, action)
+				console.log(`[canvas-core] Applying action ${id}`, message)
 			}
 
-			await this.validateAction(action)
+			await this.validateAction(message)
 
 			// only execute one action at a time.
 			await this.queue.add(async () => {
-				const effects = await this.vm.execute(id, action.payload)
-				this.modelStore.applyEffects(action.payload, effects)
+				const effects = await this.vm.execute(id, message.payload)
+				this.modelStore.applyEffects(message.payload, effects)
 			})
 
 			this.messageStore.insertAction(hash, message)
-			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
-
-			metrics.canvas_messages.inc({ type: "action", uri: action.payload.app }, 1)
+			this.dispatchEvent(new CustomEvent("action", { detail: message.payload }))
+			metrics.canvas_messages.inc({ type: "action", uri: message.payload.app }, 1)
 		} else if (message.type === "session") {
-			const session = fromBinarySession(message)
-
 			if (this.options.verbose) {
-				console.log(`[canvas-core] Applying session ${id}`, session)
+				console.log(`[canvas-core] Applying session ${id}`, message)
 			}
 
-			await this.validateSession(session)
+			await this.validateSession(message)
 			this.messageStore.insertSession(hash, message)
-			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
-			metrics.canvas_messages.inc({ type: "session", uri: session.payload.app }, 1)
+			this.dispatchEvent(new CustomEvent("session", { detail: message.payload }))
+			metrics.canvas_messages.inc({ type: "session", uri: message.payload.app }, 1)
 		} else {
 			signalInvalidType(message)
 		}
 	}
 
 	private async validateAction(action: Action) {
-		const { timestamp, app, block, chain, chainId } = action.payload
+		const { timestamp, app, appName, block, chain, chainId } = action.payload
 		const fromAddress = action.payload.from
 
 		assert(app === this.uri || this.vm.sources.has(app), "action signed for wrong application")
+		assert(appName === this.appName || this.vm.sources.has(app), "action signed for wrong application")
+		// TODO: verify that actions signed for a previous app were valid within that app
 
 		// check the timestamp bounds
 		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
@@ -281,9 +283,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
-			const { session: binarySession } = this.messageStore.getSessionByAddress(chain, chainId, action.session)
-			assert(binarySession !== null, "session not found")
-			const session = fromBinarySession(binarySession)
+			const { session } = this.messageStore.getSessionByAddress(chain, chainId, action.session)
+			assert(session !== null, "session not found")
 			assert(session.payload.chain === action.payload.chain, "session and action chains must match")
 			assert(session.payload.chainId === action.payload.chainId, `session and action chain IDs must match`)
 			assert(session.payload.sessionIssued + session.payload.sessionDuration > timestamp, "session expired")
@@ -315,8 +316,11 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	private async validateSession(session: Session) {
-		const { from, app, sessionIssued, block, chain, chainId } = session.payload
+		const { from, app, appName, sessionIssued, block, chain, chainId } = session.payload
 		assert(app === this.uri || this.vm.sources.has(app), "session signed for wrong application")
+		assert(appName === this.appName || this.vm.sources.has(app), "session signed for wrong application")
+		// TODO: verify that sessions signed for a previous app were valid within that app,
+		// e.g. that their appName matches
 
 		const verifiedAddress = await verifySessionSignature(session)
 		assert(verifiedAddress === from, "session signed by wrong address")

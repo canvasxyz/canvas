@@ -4,86 +4,10 @@ import { Block, SessionPayload } from "@canvas-js/interfaces"
 import type { SessionSigner } from "@canvas-js/signers/lib/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
-import { getCanvasSessionKey, getRecentBlock, urlJoin } from "./utils.js"
+import { getRecentBlock, urlJoin } from "./utils.js"
+import { getSessionObject, setSessionObject, removeSessionObject, SessionObject } from "./sessionKeyStorage.js"
 
 type UseSessionState = "logged_out" | "pending" | "logged_in"
-
-function getSessionPrivateKeyFromLocalStorage(host: string, data: { uri: string }, signerAddress: string) {
-	const sessionKey = getCanvasSessionKey(signerAddress)
-	const item = localStorage.getItem(sessionKey)
-	if (item === null) {
-		return
-	}
-
-	let sessionObject: any
-	try {
-		sessionObject = JSON.parse(item)
-	} catch (err) {
-		localStorage.removeItem(sessionKey)
-		return
-	}
-
-	if (!isSessionObject(sessionObject)) {
-		localStorage.removeItem(sessionKey)
-		return
-	}
-
-	const { app, sessionPrivateKey, expiration } = sessionObject
-	if (data.uri !== app || expiration < Date.now()) {
-		localStorage.removeItem(sessionKey)
-		return
-	}
-
-	return { sessionPrivateKey, expiration }
-}
-
-async function getSessionObject(signer: SessionSigner, signerAddress: string, data: { uri: string }, host: string) {
-	const timestamp = Date.now()
-	const sessionDuration = 86400 * 1000
-	const actionSigner = await signer.createActionSigner()
-
-	const sessionObject: SessionObject = {
-		app: data.uri,
-		sessionPrivateKey: actionSigner.privateKey,
-		expiration: timestamp + sessionDuration,
-	}
-
-	const chain = await signer.getChain()
-	const chainId = await signer.getChainId()
-
-	let block: Block
-	try {
-		block = await getRecentBlock(host, chain, chainId)
-	} catch (err) {
-		block = await signer.getRecentBlock()
-	}
-
-	const payload: SessionPayload = {
-		app: data.uri,
-		from: signerAddress,
-		sessionAddress: actionSigner.address,
-		sessionDuration: sessionDuration,
-		sessionIssued: timestamp,
-		block: block.blockhash,
-		chain: block.chain,
-		chainId: block.chainId,
-	}
-
-	const session = await signer.signSessionPayload(payload)
-
-	const res = await fetch(urlJoin(host, "sessions"), {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(session),
-	})
-
-	if (!res.ok) {
-		const message = await res.text()
-		throw new Error(message)
-	}
-
-	return sessionObject
-}
 
 export function useSession(signer: SessionSigner | null): {
 	error: Error | null
@@ -116,9 +40,9 @@ export function useSession(signer: SessionSigner | null): {
 		}
 
 		signer.getAddress().then((signerAddress) => {
-			const res = getSessionPrivateKeyFromLocalStorage(host, data, signerAddress)
-			if (res) {
-				const { sessionPrivateKey, expiration } = res
+			const sessionObject = getSessionObject(data, signerAddress)
+			if (sessionObject) {
+				const { sessionPrivateKey, expiration } = sessionObject
 				signer!.createActionSigner(sessionPrivateKey).then((actionSigner) => {
 					setActionSigner(actionSigner)
 					setSessionExpiration(expiration)
@@ -143,9 +67,53 @@ export function useSession(signer: SessionSigner | null): {
 
 		try {
 			const signerAddress = await signer.getAddress()
-			const sessionObject = await getSessionObject(signer, signerAddress, data, host)
-			const sessionKey = getCanvasSessionKey(signerAddress)
-			localStorage.setItem(sessionKey, JSON.stringify(sessionObject))
+			const timestamp = Date.now()
+			const sessionDuration = 86400 * 1000
+			const actionSigner = await signer.createActionSigner()
+
+			const sessionObject: SessionObject = {
+				app: data.uri,
+				sessionPrivateKey: actionSigner.privateKey,
+				expiration: timestamp + sessionDuration,
+			}
+
+			const chain = await signer.getChain()
+			const chainId = await signer.getChainId()
+
+			let block: Block
+			try {
+				block = await getRecentBlock(host, chain, chainId)
+			} catch (err) {
+				block = await signer.getRecentBlock()
+			}
+
+			const payload: SessionPayload = {
+				app: data.uri,
+				appName: data.appName,
+				from: signerAddress,
+				sessionAddress: actionSigner.address,
+				sessionDuration: sessionDuration,
+				sessionIssued: timestamp,
+				block: block.blockhash,
+				chain: block.chain,
+				chainId: block.chainId,
+			}
+
+			const session = await signer.signSessionPayload(payload)
+
+			const res = await fetch(urlJoin(host, "sessions"), {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(session),
+			})
+
+			if (!res.ok) {
+				const message = await res.text()
+				throw new Error(message)
+			}
+
+			setSessionObject(signerAddress, sessionObject)
+
 			setActionSigner(actionSigner)
 			setSessionExpiration(sessionObject.expiration)
 			setError(null)
@@ -168,8 +136,7 @@ export function useSession(signer: SessionSigner | null): {
 
 		if (signer !== null) {
 			const signerAddress = await signer?.getAddress()
-			const sessionKey = getCanvasSessionKey(signerAddress)
-			localStorage.removeItem(sessionKey)
+			removeSessionObject(signerAddress)
 		}
 	}
 
@@ -182,15 +149,4 @@ export function useSession(signer: SessionSigner | null): {
 		login,
 		logout,
 	}
-}
-
-type SessionObject = { app: string; sessionPrivateKey: string; expiration: number }
-
-function isSessionObject(obj: any): obj is SessionObject {
-	return (
-		typeof obj === "object" &&
-		typeof obj.app === "string" &&
-		typeof obj.sessionPrivateKey === "string" &&
-		typeof obj.expiration === "number"
-	)
 }

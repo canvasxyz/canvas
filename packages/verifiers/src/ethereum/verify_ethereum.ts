@@ -22,6 +22,7 @@ import {
 const actionDataFields = {
 	Message: [
 		{ name: "app", type: "string" },
+		{ name: "appName", type: "string" },
 		{ name: "block", type: "string" },
 		{ name: "call", type: "string" },
 		{ name: "callArgs", type: "string" },
@@ -35,11 +36,11 @@ const actionDataFields = {
 /**
  * `getActionSignatureData` gets EIP-712 signing data for an individual action
  */
-export function getActionSignatureData(
-	payload: ActionPayload
-): SignatureData<Omit<ActionPayload, "callArgs"> & { callArgs: string }> {
+type ActionPayloadSignable = Omit<ActionPayload, "callArgs"> & { callArgs: string }
+
+export function getActionSignatureData(payload: ActionPayload): SignatureData<ActionPayloadSignable> {
 	const domain = {
-		name: "Canvas",
+		name: payload.appName,
 		salt: utils.hexlify(utils.zeroPad(utils.arrayify(0), 32)),
 	}
 
@@ -62,6 +63,7 @@ export function getActionSignatureData(
 const sessionDataFields = {
 	Message: [
 		{ name: "app", type: "string" },
+		{ name: "appName", type: "string" },
 		{ name: "block", type: "string" },
 		{ name: "chain", type: "string" },
 		{ name: "chainId", type: "string" },
@@ -79,8 +81,8 @@ type SignatureData<PayloadType> = [TypedDataDomain, Record<string, TypedDataFiel
  */
 export function getSessionSignatureData(payload: SessionPayload): SignatureData<SessionPayload> {
 	const domain = {
-		name: "Canvas",
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(payload.from), 32)),
+		name: payload.appName,
+		salt: utils.hexlify(utils.zeroPad(utils.arrayify(0), 32)),
 	}
 
 	// Rewrite fields with custom serializations. EIP-712 does not

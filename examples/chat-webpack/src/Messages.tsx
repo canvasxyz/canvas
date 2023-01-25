@@ -48,16 +48,25 @@ export const Messages: React.FC<{}> = ({}) => {
 	const [trailing, setTrailing] = useState<Post[]>([]) // messages no longer in latest, but not in scrollback
 
 	// Subscribe to both the latest posts, and scrollback
-	const { data: curr, error } = useRoute<Post>("/posts", { before: "" }, undefined, (data, error) => {
-		if (!data) return
-		const hashes = new Set(data.map((d) => d.id))
-		setLatest(data)
-		setTrailing(latest.filter((d) => !hashes.has(d.id)).concat(trailing))
-	})
-	const { data: prev } = useRoute<Post>("/posts", { before: cursor }, undefined, (data, error) => {
-		if (!data || cursor === "") return
-		setPages({ ...pages, [cursor]: data })
-	})
+	const callbackLatest = useCallback(
+		(data: Post[] | null, error: Error | null) => {
+			if (!data) return
+			const hashes = new Set(data.map((d) => d.id))
+			setLatest(data)
+			setTrailing(latest.filter((d) => !hashes.has(d.id)).concat(trailing))
+		},
+		[trailing, setTrailing]
+	)
+	const callbackPrev = useCallback(
+		(data: Post[] | null, error: Error | null) => {
+			if (!data || cursor === "") return
+			setPages({ ...pages, [cursor]: data })
+		},
+		[cursor]
+	)
+
+	const { data: curr, error } = useRoute<Post>("/posts", { before: "" }, undefined, callbackLatest)
+	const { data: prev } = useRoute<Post>("/posts", { before: cursor }, undefined, callbackPrev)
 	useEffect(() => {
 		const scrollback = Object.keys(pages).reduce((acc: Post[], page) => acc.concat(pages[page]), [])
 		setMessages(latest.concat(trailing).concat(scrollback))

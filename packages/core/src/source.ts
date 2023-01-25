@@ -13,17 +13,19 @@ import type { StreamHandler } from "@libp2p/interface-registrar"
 
 import * as okra from "node-okra"
 
+import { Action, Message, Session } from "@canvas-js/interfaces"
+
 import { wait, retry, AbortError, toHex, signalInvalidType, CacheMap } from "./utils.js"
-import { BinaryAction, BinaryMessage, BinarySession, decodeBinaryMessage } from "./encoding.js"
 import { sync, handleIncomingStream } from "./rpc/index.js"
 import * as constants from "./constants.js"
 import { metrics } from "./metrics.js"
+import { messageType } from "./codecs.js"
 
 // We declare this interface to enforce that Source only has read access to the message store.
 // All the writes still happen in Core.
 interface MessageStore {
-	getSessionByHash(hash: Buffer): BinarySession | null
-	getActionByHash(hash: Buffer): BinaryAction | null
+	getSessionByHash(hash: Buffer): Session | null
+	getActionByHash(hash: Buffer): Action | null
 }
 
 export interface SourceOptions {
@@ -36,7 +38,7 @@ export interface SourceOptions {
 export interface SourceConfig extends SourceOptions {
 	path: string
 	cid: CID
-	applyMessage: (hash: Buffer, message: BinaryMessage) => Promise<void>
+	applyMessage: (hash: Buffer, message: Message) => Promise<void>
 	messageStore: MessageStore
 	libp2p: Libp2p | null
 }
@@ -56,7 +58,7 @@ export class Source {
 	private constructor(
 		path: string,
 		private readonly cid: CID,
-		private readonly applyMessage: (hash: Buffer, message: BinaryMessage) => Promise<void>,
+		private readonly applyMessage: (hash: Buffer, message: Message) => Promise<void>,
 		private readonly messageStore: MessageStore,
 		private readonly libp2p: Libp2p | null,
 		private readonly options: SourceOptions
@@ -95,7 +97,7 @@ export class Source {
 	 * Insert the message into the MST.
 	 * This is synchronous and internally opens a locking write transaction.
 	 */
-	public insertMessage(hash: Buffer, message: BinaryMessage) {
+	public insertMessage(hash: Buffer, message: Message) {
 		const leaf = Buffer.alloc(14)
 		if (message.type === "action") {
 			leaf.writeUintBE(message.payload.timestamp * 2 + 1, 0, 6)
@@ -138,17 +140,18 @@ export class Source {
 	/**
 	 * handleMessage is attached as a listener to *all* libp2p GosssipSub messages
 	 */
-	private handleMessage = async ({ detail: message }: CustomEvent<SignedMessage | UnsignedMessage>) => {
+	private handleMessage = async ({ detail: { type, topic, data } }: CustomEvent<SignedMessage | UnsignedMessage>) => {
 		// the first step is to check if the message is even for our topic in the first place.
-		if (message.type !== "signed" || message.topic !== this.uri) {
+		if (type !== "signed" || topic !== this.uri) {
 			return
 		}
 
 		try {
-			const binaryMessage = decodeBinaryMessage(message.data)
-			const hash = createHash("sha256").update(message.data).digest()
-			await this.applyMessage(hash, binaryMessage)
-			this.insertMessage(hash, binaryMessage)
+			const message = JSON.parse(new TextDecoder().decode(data))
+			assert(messageType.is(message), "invalid message")
+			const hash = createHash("sha256").update(data).digest()
+			await this.applyMessage(hash, message)
+			this.insertMessage(hash, message)
 		} catch (err: any) {
 			const cid = this.cid.toString()
 			console.log(chalk.red(`[canvas-core] [${cid}] Error applying GossipSub message:`), err.message)
@@ -364,7 +367,7 @@ export class Source {
 		let failureCount = 0
 
 		// this is the callback passed to `sync`, invoked per MST sync message
-		const handleMessage = async (hash: Buffer, data: Uint8Array, message: BinaryMessage) => {
+		const handleMessage = async (hash: Buffer, data: Uint8Array, message: Message) => {
 			const id = toHex(hash)
 			if (this.options.verbose) {
 				console.log(chalk.green(`[canvas-core] [${cid}] Received missing ${message.type} ${id}`))

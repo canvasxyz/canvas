@@ -11,13 +11,13 @@ import * as okra from "node-okra"
 
 import RPC from "../../rpc/sync/index.cjs"
 
-import { BinaryAction, BinarySession, encodeBinaryMessage } from "../encoding.js"
-import { toBuffer, toHex } from "../utils.js"
+import { toBuffer, toHex, stringify } from "../utils.js"
+import { Action, Session } from "@canvas-js/interfaces"
 
 // We declare this interface to enforce that handleIncomingStream only has read access to the message store.
 interface MessageStore {
-	getSessionByHash(hash: Buffer): BinarySession | null
-	getActionByHash(hash: Buffer): BinaryAction | null
+	getSessionByHash(hash: Buffer): Session | null
+	getActionByHash(hash: Buffer): Action | null
 }
 
 export async function handleIncomingStream(
@@ -88,14 +88,14 @@ function getValues(
 				if (session === null) {
 					throw new Error(`session not found: ${toHex(hash)}`)
 				} else {
-					return encodeBinaryMessage(session)
+					return new TextEncoder().encode(stringify(session))
 				}
 			} else {
 				const action = messageStore.getActionByHash(toBuffer(hash))
 				if (action === null) {
 					throw new Error(`action not found: ${toHex(hash)}`)
 				} else {
-					return encodeBinaryMessage(action)
+					return new TextEncoder().encode(stringify(action))
 				}
 			}
 		}),

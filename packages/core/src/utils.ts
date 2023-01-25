@@ -15,6 +15,9 @@ import type {
 	Block,
 } from "@canvas-js/interfaces"
 
+import { configure } from "safe-stable-stringify"
+export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
+
 export const ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
 
 export function parseIPFSURI(uri: string): CID | null {
@@ -66,8 +69,7 @@ type ValueTypes = {
 }
 
 type Values<M extends Model> = { [K in Exclude<keyof M, "indexes" | "id" | "updated_at">]: ValueTypes[M[K]] }
-
-export type Context<Models extends Record<string, Model>> = {
+type Context<Models extends Record<string, Model>> = {
 	timestamp: number
 	hash: string
 	from: string
@@ -101,13 +103,16 @@ function compileActionHandlers<Models extends Record<string, Model>>(actions: Re
 }
 
 export async function compileSpec<Models extends Record<string, Model>>(exports: {
+	name: string
 	models: Models
 	actions: Record<string, ActionHandler<Models>>
 	routes?: Record<string, (params: Record<string, string>, db: RouteContext) => Query>
 	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
 	sources?: Record<string, Record<string, ActionHandler<Models>>>
-}): Promise<{ uri: string; app: string }> {
-	const { models, actions, routes, contracts, sources } = exports
+}): Promise<{ app: string; spec: string; appName: string }> {
+	const { name, models, actions, routes, contracts, sources } = exports
+
+	const appName = name || "Canvas App"
 
 	const actionEntries = compileActionHandlers(actions)
 
@@ -119,6 +124,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	})
 
 	const lines = [
+		`export const name = ${JSON.stringify(appName)};`,
 		`export const models = ${JSON.stringify(models, null, "\t")};`,
 		`export const actions = {\n${actionEntries.join(",\n")}};`,
 	]
@@ -142,7 +148,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 
 	const app = lines.join("\n")
 	const cid = await Hash.of(app)
-	return { uri: `ipfs://${cid}`, app }
+	return { app: `ipfs://${cid}`, spec: app, appName }
 }
 
 export class AbortError extends Error {

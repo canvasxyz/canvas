@@ -3,6 +3,7 @@ import { ContractMetadata, Model } from "@canvas-js/interfaces"
 import { QuickJSHandle } from "quickjs-emscripten"
 
 export type Exports = {
+	name: string | null
 	actionHandles: Record<string, QuickJSHandle>
 	contractMetadata: Record<string, ContractMetadata>
 	component: string | null
