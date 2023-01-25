@@ -17,7 +17,7 @@ test("contracts (milady balanceOf)", async (t) => {
 		return
 	}
 
-	const { uri, app, appName } = await compileSpec({
+	const { app, spec, appName } = await compileSpec({
 		name: "Test App",
 		models: {},
 		actions: {
@@ -40,9 +40,9 @@ test("contracts (milady balanceOf)", async (t) => {
 
 	const provider = new EthereumBlockProvider(ETH_CHAIN_ID, ETH_CHAIN_RPC)
 	const providers = { [`ethereum:${ETH_CHAIN_ID}`]: provider }
-	const core = await Core.initialize({ directory: null, uri, app, providers, offline: true })
+	const core = await Core.initialize({ directory: null, uri: app, app: spec, providers, offline: true })
 
-	const signer = new TestSigner(uri, appName, provider)
+	const signer = new TestSigner(app, appName, provider)
 
 	const action = await signer.sign("verify", {})
 	await t.throwsAsync(core.applyAction(action), { message: "balance is zero!" })
