@@ -56,6 +56,19 @@ function formatUpdatedAt(updatedAtTs: number) {
 	}
 }
 
+const IconButton = ({ icon, onClick, disabled }: { onClick: () => void; icon: string; disabled: boolean }) => {
+	return (
+		<div
+			className={`shrink border border-white hover:border-gray-300 hover:bg-gray-100 rounded ${
+				disabled ? "hover:cursor-not-allowed" : "hover:cursor-pointer"
+			}`}
+			onClick={disabled ? () => {} : onClick}
+		>
+			<Icon inline={false} icon={icon} height="100%"></Icon>
+		</div>
+	)
+}
+
 export const App: React.FC<{}> = ({}) => {
 	const { connectors } = useConnect()
 	const connector = connectors[0]
@@ -116,8 +129,7 @@ export const App: React.FC<{}> = ({}) => {
 				<div className="w-64 h-full border-solid border-black border-r flex-col flex shrink">
 					<div className="h-16 border-b border-black flex shrink p-3">
 						<div className="flex-grow"></div>
-						<div
-							className="shrink border border-white hover:border-gray-300 hover:bg-gray-100 rounded hover:cursor-pointer"
+						<IconButton
 							onClick={() => {
 								if (selectedNote && currentNote) {
 									// delete from local copy
@@ -130,9 +142,9 @@ export const App: React.FC<{}> = ({}) => {
 									}
 								}
 							}}
-						>
-							<Icon icon="wastebasket" fontSize="36px"></Icon>
-						</div>
+							icon="wastebasket"
+							disabled={connectionState !== "connected"}
+						/>
 					</div>
 					<div className="overflow-auto" onClick={() => setSelectedNote(null)}>
 						{Object.entries(localNotes)
@@ -170,8 +182,7 @@ export const App: React.FC<{}> = ({}) => {
 				<div className="overflow-y-auto overflow-x-hidden relative flex flex-col grow">
 					{/* top bar? */}
 					<div className="h-16 border-b border-black p-3 flex">
-						<div
-							className="shrink border border-white hover:border-gray-300 hover:bg-gray-100 rounded hover:cursor-pointer"
+						<IconButton
 							onClick={() => {
 								const newLocalNotes = { ...localNotes }
 								const newLocalNote = {
@@ -185,9 +196,9 @@ export const App: React.FC<{}> = ({}) => {
 								setSelectedNote(newLocalNote.local_key)
 								setLocalNotes(newLocalNotes)
 							}}
-						>
-							<Icon icon="compose" fontSize="36px"></Icon>
-						</div>
+							icon="compose"
+							disabled={connectionState !== "connected"}
+						/>
 						<div className="flex-grow"></div>
 						{/* <div className="shrink">
 							<input className="border border-gray-400 rounded h-10 p-2" type="text" placeholder="Search"></input>
