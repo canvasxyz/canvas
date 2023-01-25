@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/verifiers",
-  "version": "0.0.48-pre",
+  "version": "0.0.48",
   "description": "",
   "type": "module",
   "main": "lib/index.js",
@@ -13,7 +13,7 @@
   },
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "dependencies": {
-    "@canvas-js/interfaces": "0.0.48-pre",
+    "@canvas-js/interfaces": "0.0.48",
     "@ethersproject/wallet": "^5.7.0",
     "bs58": "^5.0.0",
     "ethers": "^5.7.2",
