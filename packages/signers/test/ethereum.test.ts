@@ -24,5 +24,5 @@ test("Sign an action for ethereum", async (t) => {
 	}
 
 	const action = await signer.signActionPayload(payload)
-	await ethereumVerifier.verifyAction(action)
+	await t.notThrowsAsync(() => ethereumVerifier.verifyAction(action))
 })
