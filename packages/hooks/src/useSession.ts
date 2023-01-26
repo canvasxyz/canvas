@@ -12,7 +12,7 @@ const hour = 60 * minute
 export function useSession<Signer, DelegatedSigner>(
 	chainImplementation: ChainImplementation<Signer, DelegatedSigner>,
 	signer: Signer | null,
-	options: { autoLogin?: boolean; sessionDuration?: number; unchecked?: boolean } = {}
+	options: { sessionDuration?: number; unchecked?: boolean } = {}
 ): {
 	isLoading: boolean
 	isPending: boolean
