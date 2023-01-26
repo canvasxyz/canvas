@@ -58,7 +58,7 @@ const IconButton = ({ icon, onClick, disabled }: { onClick: () => void; icon: an
 			className={`shrink border rounded ${
 				disabled
 					? "bg-gray-200 hover:cursor-not-allowed"
-					: "bg-gray-50 border-gray-200 hover:cursor-pointer hover:border-gray-300 hover:bg-gray-100"
+					: "bg-gray-50 border-gray-400 drop-shadow-md hover:drop-shadow active:drop-shadow-sm hover:cursor-pointer hover:border-gray-300 hover:bg-gray-100"
 			}`}
 			onClick={disabled ? () => {} : onClick}
 		>
@@ -208,7 +208,7 @@ export const App: React.FC<{}> = ({}) => {
 						{connectionState == "disconnected" ? (
 							<div className="shrink pl-3">
 								<div
-									className="border border-green-400 bg-green-50 rounded h-10 p-2 font-semibold hover:cursor-pointer hover:bg-green-100 select-none"
+									className="border border-green-400 bg-green-50 rounded h-10 p-2 drop-shadow-md hover:drop-shadow active:drop-shadow-sm font-semibold hover:cursor-pointer hover:bg-green-100 select-none"
 									onClick={() => {
 										if (connectors && connectors.length > 0) {
 											connect()
@@ -240,7 +240,7 @@ export const App: React.FC<{}> = ({}) => {
 
 								<div className="shrink pl-3">
 									<div
-										className="border border-red-400 bg-red-50 rounded h-10 p-2 font-semibold hover:cursor-pointer hover:bg-red-100 select-none"
+										className="border border-red-400 bg-red-50 rounded h-10 p-2 drop-shadow-md hover:drop-shadow active:drop-shadow-sm font-semibold hover:cursor-pointer hover:bg-red-100 select-none"
 										onClick={() => {
 											if (connectors && connectors.length > 0) {
 												disconnect()
