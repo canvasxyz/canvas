@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react"
 
+import { ApplicationData } from "./CanvasContext.js"
+
 const WS_KEEPALIVE = 3000
 
 type WebSocketExt = {
@@ -8,10 +10,10 @@ type WebSocketExt = {
 }
 
 type SetupParams = {
-	setIsLoading: Function
-	setData: Function
-	setError: Function
-	reconnect: Function
+	setIsLoading: (isLoading: boolean) => void
+	setData: (data: ApplicationData) => void
+	setError: (error: Error | null) => void
+	reconnect: (delay: number) => void
 }
 
 const setupWebsocket = (host: string, { setIsLoading, setData, setError, reconnect }: SetupParams, delay: number) => {
@@ -22,6 +24,7 @@ const setupWebsocket = (host: string, { setIsLoading, setData, setError, reconne
 		: host.startsWith("https://")
 		? host.replace("https://", "wss://")
 		: host
+
 	const ws: WebSocket & WebSocketExt = new WebSocket(wsHost)
 
 	// Set up application data and keep-alive
@@ -40,6 +43,7 @@ const setupWebsocket = (host: string, { setIsLoading, setData, setError, reconne
 			console.log(err)
 		}
 	})
+
 	ws.addEventListener("open", (event) => {
 		ws.timer = setInterval(() => {
 			if (ws.readyState !== ws.OPEN) return
@@ -70,9 +74,9 @@ export function useWebsocket({
 	setError,
 	host,
 }: {
-	setIsLoading: Function
-	setData: Function
-	setError: Function
+	setIsLoading: (isLoading: boolean) => void
+	setData: (data: ApplicationData) => void
+	setError: (error: Error | null) => void
 	host: string
 }): WebSocket | null {
 	const [ws, setWS] = useState<WebSocket | null>(null)
@@ -83,8 +87,9 @@ export function useWebsocket({
 			const newDelay = delay < 10000 ? delay + 1000 : delay
 			setTimeout(() => setWS(setupWebsocket(host, { setIsLoading, setData, setError, reconnect }, newDelay)), delay)
 		}
+
 		setWS(setupWebsocket(host, { setIsLoading, setData, setError, reconnect }, 0))
-	}, [host])
+	}, [])
 
 	return ws
 }

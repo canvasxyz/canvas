@@ -83,6 +83,8 @@ export function useSession<Signer, DelegatedSigner>(
 			throw new Error("login() called before the application connection was established")
 		} else if (signer === null) {
 			throw new Error("login() called without a signer")
+		} else if (isPending) {
+			throw new Error("another login() call is already pending")
 		}
 
 		try {
@@ -134,12 +136,12 @@ export function useSession<Signer, DelegatedSigner>(
 		} finally {
 			setIsPending(false)
 		}
-	}, [signer, host, data])
+	}, [signer, host, data, isPending])
 
 	const logout = useCallback(async () => {
 		if (signer !== null) {
 			const signerAddress = await getSignerAddress(signer)
-			removeSessionObject(chainImplementation.chain, chainImplementation.chainId, signerAddress)
+			removeSessionObject(chain, chainId, signerAddress)
 		}
 
 		setSessionSigner(null)
@@ -183,6 +185,15 @@ export function useSession<Signer, DelegatedSigner>(
 				return await res.json()
 			} else {
 				const message = await res.text()
+
+				if (message === "session not found" || message === "session expired") {
+					const signerAddress = await getSignerAddress(signer)
+					removeSessionObject(chain, chainId, signerAddress)
+					setSessionSigner(null)
+					setSessionAddress(null)
+					setSessionExpiration(null)
+				}
+
 				throw new Error(message)
 			}
 		},
