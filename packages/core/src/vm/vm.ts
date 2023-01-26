@@ -170,17 +170,16 @@ export class VM {
 				console.log(`[canvas-vm] Skipping contract setup`)
 			}
 		} else {
-			Object.entries(this.contractMetadata).map(([name, { chain, chainId, address, abi }]) => {
-				for (const implementation of chains) {
-					if (implementation.chain === chain && implementation.chainId === chainId) {
-						if (implementation instanceof EthereumChainImplementation) {
-							this.contracts[name] = new ethers.Contract(address, abi, implementation.provider)
-						}
-					}
+			for (const [name, { chain, chainId, address, abi }] of Object.entries(this.contractMetadata)) {
+				const implementation = chains.find(
+					(implementation) => implementation.chain === chain && implementation.chainId === chainId
+				)
 
-					throw Error(`Cannot initialise VM, no provider exists for ${chain}:${chainId}`)
-				}
-			})
+				assert(implementation !== undefined, `no chain implmentation for ${chain}:${chainId}`)
+				assert(implementation instanceof EthereumChainImplementation)
+				assert(implementation.provider !== undefined, `no ethers provider for ${chain}:${chainId}`)
+				this.contracts[name] = new ethers.Contract(address, abi, implementation.provider)
+			}
 		}
 
 		this.routes = {}
