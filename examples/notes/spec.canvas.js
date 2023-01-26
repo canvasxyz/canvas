@@ -12,12 +12,7 @@ export const models = {
 
 export const routes = {
 	"/notes": ({ offset = 0 }, { db }) =>
-		db.queryRaw(
-			`SELECT id, from_id, title, body, updated_at, local_key FROM notes ORDER BY updated_at DESC LIMIT 50 OFFSET :offset`,
-			{
-				offset,
-			}
-		),
+		db.queryRaw(`SELECT id, from_id, title, body, updated_at, local_key FROM notes ORDER BY updated_at DESC LIMIT 50`),
 }
 
 export const actions = {
