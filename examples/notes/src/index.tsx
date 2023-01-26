@@ -8,6 +8,7 @@ import { client } from "./client"
 import { App } from "./App"
 
 import "./styles.css"
+import "toastify-js/src/toastify.css"
 
 const root = ReactDOM.createRoot(document.getElementById("root")!)
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
+import Toastify from "toastify-js"
 
 import { useConnectOneStep } from "./useConnectOneStep"
 import { useConnect } from "wagmi"
@@ -120,6 +121,23 @@ export const App: React.FC<{}> = ({}) => {
 		setLocalNotes(newLocalNotes)
 	}
 
+	const showError = (errorMessage: string) => {
+		Toastify({
+			text: errorMessage,
+			duration: 3000,
+			// destination: "https://github.com/apvarun/toastify-js",
+			newWindow: true,
+			close: true,
+			gravity: "top", // `top` or `bottom`
+			position: "center", // `left`, `center` or `right`
+			stopOnFocus: true, // Prevents dismissing of toast on hover
+			style: {
+				background: "red",
+			},
+			onClick: function () {}, // Callback after click
+		}).showToast()
+	}
+
 	return (
 		<>
 			<div className="flex flex-row h-screen overflow-hidden bg-white">
@@ -128,7 +146,7 @@ export const App: React.FC<{}> = ({}) => {
 					<div className="h-16 border-b border-black flex shrink p-3">
 						<div className="flex-grow"></div>
 						<IconButton
-							onClick={() => {
+							onClick={async () => {
 								if (selectedNote && currentNote) {
 									// delete from local copy
 									const { [selectedNote]: deletedLocalNote, ...otherLocalNotes } = localNotes
@@ -136,7 +154,11 @@ export const App: React.FC<{}> = ({}) => {
 
 									// delete on canvas
 									if (currentNote.id) {
-										dispatch("deleteNote", { id: currentNote.id })
+										try {
+											await dispatch("deleteNote", { id: currentNote.id })
+										} catch (e: any) {
+											showError(`Could not delete note: ${e.message}`)
+										}
 									}
 								}
 							}}
@@ -278,10 +300,10 @@ export const App: React.FC<{}> = ({}) => {
 							{currentNote.dirty && (
 								<div
 									className="absolute right-10 bottom-10 border border-gray-400 p-3 rounded-lg bg-gray-200 hover:bg-gray-300 hover:cursor-pointer"
-									onClick={() => {
+									onClick={async () => {
 										// update canvas
 										try {
-											dispatch("createUpdateNote", {
+											await dispatch("createUpdateNote", {
 												id: currentNote.id || "",
 												local_key: currentNote.local_key,
 												body: currentNote.body,
@@ -296,8 +318,10 @@ export const App: React.FC<{}> = ({}) => {
 												dirty: false,
 											}
 											setLocalNotes(newLocalNotes)
-										} catch (e) {
-											console.log(e)
+										} catch (e: any) {
+											if (e.message) {
+												showError(`Could not save note: ${e.message}`)
+											}
 										}
 									}}
 								>
