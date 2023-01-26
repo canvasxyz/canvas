@@ -1,4 +1,4 @@
-import { Action, ActionPayload, Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
+import { Action, ActionPayload, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
 
 export interface Connector {
 	id: string
@@ -15,7 +15,7 @@ export interface SessionSigner {
 	signSessionPayload(payload: SessionPayload): Promise<Session>
 	getChain(): Promise<Chain>
 	getChainId(): Promise<ChainId>
-	getRecentBlock(): Promise<Block>
+	// getRecentBlock(): Promise<Block>
 }
 
 export interface ActionSigner {

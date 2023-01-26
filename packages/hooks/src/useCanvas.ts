@@ -1,115 +1,115 @@
-import { Action, ActionPayload, Block } from "@canvas-js/interfaces"
-import { useCallback, useContext, useState } from "react"
+// import { Action, ActionPayload, Block } from "@canvas-js/interfaces"
+// import { useCallback, useContext, useState } from "react"
 
-import { CanvasContext, ApplicationData } from "./CanvasContext.js"
-import { getRecentBlock, urlJoin, Dispatch, getCanvasSessionKey } from "./utils.js"
+// import { CanvasContext, ApplicationData } from "./CanvasContext.js"
+// import { getRecentBlock, urlJoin, Dispatch, getCanvasSessionKey } from "./utils.js"
 
-export function useCanvas(): {
-	isLoading: boolean
-	isPending: boolean
-	isReady: boolean
-	error: Error | null
-	host: string | null
-	data: ApplicationData | null
-	dispatch: Dispatch
-} {
-	const {
-		isLoading,
-		error,
-		host,
-		data,
-		signer,
-		actionSigner,
-		setActionSigner,
-		sessionExpiration,
-		setSessionExpiration,
-	} = useContext(CanvasContext)
+// export function useCanvas(): {
+// 	isLoading: boolean
+// 	isPending: boolean
+// 	isReady: boolean
+// 	error: Error | null
+// 	host: string | null
+// 	data: ApplicationData | null
+// 	dispatch: Dispatch
+// } {
+// 	const {
+// 		isLoading,
+// 		error,
+// 		host,
+// 		data,
+// 		signer,
+// 		actionSigner,
+// 		setActionSigner,
+// 		sessionExpiration,
+// 		setSessionExpiration,
+// 	} = useContext(CanvasContext)
 
-	const [isPending, setIsPending] = useState(false)
+// 	const [isPending, setIsPending] = useState(false)
 
-	const dispatch: Dispatch = useCallback(
-		async (call, args) => {
-			console.log("dispatch:", call, args)
-			if (host === null) {
-				throw new Error("no host configured")
-			} else if (signer === null) {
-				throw new Error("dispatch() called without a provider")
-			} else if (actionSigner === null || sessionExpiration === null) {
-				throw new Error("dispatch() called while logged out")
-			} else if (data === null) {
-				throw new Error("dispatch called before the application connection was established")
-			}
+// 	const dispatch: Dispatch = useCallback(
+// 		async (call, args) => {
+// 			console.log("dispatch:", call, args)
+// 			if (host === null) {
+// 				throw new Error("no host configured")
+// 			} else if (signer === null) {
+// 				throw new Error("dispatch() called without a provider")
+// 			} else if (actionSigner === null || sessionExpiration === null) {
+// 				throw new Error("dispatch() called while logged out")
+// 			} else if (data === null) {
+// 				throw new Error("dispatch called before the application connection was established")
+// 			}
 
-			const timestamp = Date.now()
-			if (sessionExpiration < timestamp) {
-				setActionSigner(null)
-				setSessionExpiration(null)
-				throw new Error("Session expired. Please log in again.")
-			}
+// 			const timestamp = Date.now()
+// 			if (sessionExpiration < timestamp) {
+// 				setActionSigner(null)
+// 				setSessionExpiration(null)
+// 				throw new Error("Session expired. Please log in again.")
+// 			}
 
-			setIsPending(true)
-			console.log("set pending to true")
+// 			setIsPending(true)
+// 			console.log("set pending to true")
 
-			try {
-				const chain = await signer.getChain()
-				const chainId = await signer.getChainId()
+// 			try {
+// 				const chain = await signer.getChain()
+// 				const chainId = await signer.getChainId()
 
-				let block: Block
-				try {
-					block = await getRecentBlock(host, chain, chainId)
-				} catch (err) {
-					block = await signer.getRecentBlock()
-				}
-				console.log("got block", block)
+// 				let block: Block
+// 				try {
+// 					block = await getRecentBlock(host, chain, chainId)
+// 				} catch (err) {
+// 					block = await signer.getRecentBlock()
+// 				}
+// 				console.log("got block", block)
 
-				const address = await signer.getAddress()
-				console.log("from address", address)
+// 				const address = await signer.getAddress()
+// 				console.log("from address", address)
 
-				const payload: ActionPayload = {
-					from: address,
-					app: data.uri,
-					appName: data.appName,
-					call,
-					callArgs: args,
-					timestamp,
-					block: block.blockhash,
-					chain: block.chain,
-					chainId: block.chainId,
-				}
+// 				const payload: ActionPayload = {
+// 					from: address,
+// 					app: data.uri,
+// 					appName: data.appName,
+// 					call,
+// 					callArgs: args,
+// 					timestamp,
+// 					block: block.blockhash,
+// 					chain: block.chain,
+// 					chainId: block.chainId,
+// 				}
 
-				const action: Action = await actionSigner.signActionPayload(payload)
-				const res = await fetch(urlJoin(host, "actions"), {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(action),
-				}).catch((err) => {
-					console.log(err)
-					if (err.message === "Failed to fetch") throw new Error("Could not reach server")
-					throw err
-				})
+// 				const action: Action = await actionSigner.signActionPayload(payload)
+// 				const res = await fetch(urlJoin(host, "actions"), {
+// 					method: "POST",
+// 					headers: { "Content-Type": "application/json" },
+// 					body: JSON.stringify(action),
+// 				}).catch((err) => {
+// 					console.log(err)
+// 					if (err.message === "Failed to fetch") throw new Error("Could not reach server")
+// 					throw err
+// 				})
 
-				if (!res.ok) {
-					const message = await res.text()
-					if (message === "session not found" || message === "session expired") {
-						setActionSigner(null)
-						setSessionExpiration(null)
-						const address = await signer.getAddress()
-						const sessionKey = getCanvasSessionKey(address)
-						localStorage.removeItem(sessionKey)
-					}
+// 				if (!res.ok) {
+// 					const message = await res.text()
+// 					if (message === "session not found" || message === "session expired") {
+// 						setActionSigner(null)
+// 						setSessionExpiration(null)
+// 						const address = await signer.getAddress()
+// 						const sessionKey = getCanvasSessionKey(address)
+// 						localStorage.removeItem(sessionKey)
+// 					}
 
-					throw new Error(message)
-				}
+// 					throw new Error(message)
+// 				}
 
-				const { hash } = await res.json()
-				return { hash }
-			} finally {
-				setIsPending(false)
-			}
-		},
-		[host, data, signer, actionSigner, sessionExpiration]
-	)
+// 				const { hash } = await res.json()
+// 				return { hash }
+// 			} finally {
+// 				setIsPending(false)
+// 			}
+// 		},
+// 		[host, data, signer, actionSigner, sessionExpiration]
+// 	)
 
-	const isReady = !isPending && actionSigner !== null
-	return { isLoading, isPending, isReady, error, host, data, dispatch }
-}
+// 	const isReady = !isPending && actionSigner !== null
+// 	return { isLoading, isPending, isReady, error, host, data, dispatch }
+// }

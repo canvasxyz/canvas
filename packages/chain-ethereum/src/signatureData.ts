@@ -1,10 +1,9 @@
 import { TypedDataDomain, TypedDataField, utils } from "ethers"
-import { verifyTypedData } from "@ethersproject/wallet"
+
+import { ActionPayload, SessionPayload } from "@canvas-js/interfaces"
 
 import { configure } from "safe-stable-stringify"
 const serialize = configure({ circularValue: Error, bigint: false, deterministic: true, strict: true })
-
-import { Action, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
 
 /**
  * Ethereum compatible signer logic, used to generate and
@@ -15,7 +14,7 @@ import { Action, ActionPayload, Session, SessionPayload } from "@canvas-js/inter
 // by web3.js, which is less permissive than ethers when generating
 // signTypedData messages.
 
-const actionDataFields = {
+export const actionDataFields = {
 	Message: [
 		{ name: "app", type: "string" },
 		{ name: "appName", type: "string" },
@@ -56,7 +55,7 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData<Ac
 	return [domain, actionDataFields, actionValue]
 }
 
-const sessionDataFields = {
+export const sessionDataFields = {
 	Message: [
 		{ name: "app", type: "string" },
 		{ name: "appName", type: "string" },
@@ -94,14 +93,4 @@ export function getSessionSignatureData(payload: SessionPayload): SignatureData<
 	}
 
 	return [domain, sessionDataFields, sessionValue]
-}
-
-export const verifyEthereumActionSignature = (action: Action): string => {
-	const [domain, types, value] = getActionSignatureData(action.payload)
-	return verifyTypedData(domain, types, value, action.signature)
-}
-
-export const verifyEthereumSessionSignature = (session: Session): string => {
-	const [domain, types, value] = getSessionSignatureData(session.payload)
-	return verifyTypedData(domain, types, value, session.signature)
 }

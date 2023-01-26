@@ -1,7 +1,9 @@
 import { ethers } from "ethers"
 import { Action, ActionPayload } from "@canvas-js/interfaces"
-import ethereum from "@canvas-js/chain-ethereum"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { ActionSigner } from "../interfaces.js"
+
+const { signAction, signDelegatedAction } = new EthereumChainImplementation()
 
 export class EthereumActionSigner implements ActionSigner {
 	wallet: ethers.Wallet
@@ -20,9 +22,9 @@ export class EthereumActionSigner implements ActionSigner {
 
 	async signActionPayload(payload: ActionPayload): Promise<Action> {
 		if (payload.from === this.wallet.address) {
-			return ethereum.signAction(this.wallet, payload)
+			return signAction(this.wallet, payload)
 		} else {
-			return ethereum.signDelegatedAction(this.wallet, payload)
+			return signDelegatedAction(this.wallet, payload)
 		}
 	}
 }

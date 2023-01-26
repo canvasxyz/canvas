@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react"
 
-import { ApplicationData } from "./CanvasContext.js"
-
 const WS_KEEPALIVE = 3000
 
 type WebSocketExt = {

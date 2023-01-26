@@ -68,15 +68,15 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		}
 	})
 
-	api.get("/latest_block/:chain/:chainId", async (req, res) => {
-		const { chain, chainId } = req.params
-		try {
-			const block = await core.getLatestBlock({ chain: chain as Chain, chainId })
-			return res.status(StatusCodes.OK).json(block)
-		} catch (e) {
-			return res.status(StatusCodes.NOT_FOUND).end()
-		}
-	})
+	// api.get("/latest_block/:chain/:chainId", async (req, res) => {
+	// 	const { chain, chainId } = req.params
+	// 	try {
+	// 		const block = await core.getLatestBlock({ chain: chain as Chain, chainId })
+	// 		return res.status(StatusCodes.OK).json(block)
+	// 	} catch (e) {
+	// 		return res.status(StatusCodes.NOT_FOUND).end()
+	// 	}
+	// })
 
 	for (const route of Object.keys(core.vm.routes)) {
 		api.get(route, (req, res) => handleRoute(core, route, req, res))

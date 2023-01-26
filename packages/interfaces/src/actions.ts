@@ -23,12 +23,12 @@ export type Action = {
 	payload: {
 		app: string
 		appName: string
-		block: string | null
+		from: string
 		call: string
 		callArgs: Record<string, ActionArgument>
 		chain: Chain
 		chainId: string
-		from: string
+		block: string | null
 		timestamp: number
 	}
 	session: string | null

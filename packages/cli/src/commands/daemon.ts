@@ -16,20 +16,11 @@ import Hash from "ipfs-only-hash"
 import PQueue from "p-queue"
 import client from "prom-client"
 
-import {
-	BlockCache,
-	Core,
-	getLibp2pInit,
-	constants,
-	BlockResolver,
-	getAPI,
-	CoreOptions,
-	startPingService,
-	VM,
-} from "@canvas-js/core"
-import { BlockProvider, Model } from "@canvas-js/interfaces"
+import { Core, getLibp2pInit, constants, getAPI, CoreOptions, startPingService, VM } from "@canvas-js/core"
+import { ChainImplementation, Model } from "@canvas-js/interfaces"
 
-import { CANVAS_HOME, SOCKET_FILENAME, SOCKET_PATH, getPeerId, getProviders, installSpec } from "../utils.js"
+import { CANVAS_HOME, SOCKET_FILENAME, SOCKET_PATH, getPeerId, getChainImplementations, installSpec } from "../utils.js"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 export const command = "daemon"
 export const desc = "Start the canvas daemon"
@@ -76,8 +67,8 @@ type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	// read rpcs from --chain-rpc arguments or environment variables
 	// prompt to run in unchecked mode, if no rpcs were provided
-	const providers = getProviders(args["chain-rpc"])
-	if (Object.keys(providers).length === 0 && !args.unchecked) {
+	const chains = getChainImplementations(args["chain-rpc"])
+	if (chains.length === 0 && !args.unchecked) {
 		const { confirm } = await prompts({
 			type: "confirm",
 			name: "confirm",
@@ -88,6 +79,7 @@ export async function handler(args: Args) {
 		if (confirm) {
 			args.unchecked = true
 			args.offline = true
+			chains.push(new EthereumChainImplementation())
 			console.log(chalk.yellow(`✦ ${chalk.bold("Using unchecked mode.")} Actions will not require a valid block hash.`))
 		} else {
 			console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
@@ -120,9 +112,7 @@ export async function handler(args: Args) {
 		}
 	}
 
-	const blockCache = new BlockCache(providers)
-
-	const daemon = new Daemon(libp2p, providers, blockCache.getBlock, {
+	const daemon = new Daemon(libp2p, [new EthereumChainImplementation()], {
 		offline: args.offline,
 		unchecked: args.unchecked,
 		verbose: args.verbose,
@@ -134,7 +124,6 @@ export async function handler(args: Args) {
 		if (libp2p !== null) {
 			await libp2p.stop()
 		}
-		blockCache.close()
 	})
 
 	if (fs.existsSync(SOCKET_PATH)) {
@@ -181,9 +170,8 @@ class Daemon {
 	private readonly apps = new Map<string, { core: Core; api: express.Express }>()
 
 	constructor(
-		readonly libp2p: Libp2p | null,
-		providers: Record<string, BlockProvider>,
-		blockResolver: BlockResolver,
+		private readonly libp2p: Libp2p | null,
+		private readonly chains: ChainImplementation[],
 		private readonly options: CoreOptions & { exposeMetrics?: boolean; offline?: boolean }
 	) {
 		this.app.use(express.json())
@@ -315,15 +303,7 @@ class Daemon {
 				const uri = `ipfs://${hash}`
 
 				try {
-					const core = await Core.initialize({
-						directory,
-						uri,
-						spec,
-						libp2p,
-						providers,
-						blockResolver,
-						...this.options,
-					})
+					const core = await Core.initialize({ directory, uri, spec, libp2p, chains, ...this.options })
 
 					const api = getAPI(core, {
 						exposeModels: true,

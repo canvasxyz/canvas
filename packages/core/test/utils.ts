@@ -1,11 +1,15 @@
-import ethereum from "@canvas-js/chain-ethereum"
-import type { Action, ActionArgument, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
-import { EthereumBlockProvider } from "@canvas-js/verifiers"
 import { ethers } from "ethers"
+
+import type { Action, ActionArgument, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 export class TestSigner {
 	readonly wallet = ethers.Wallet.createRandom()
-	constructor(readonly uri: string, readonly appName: string, readonly provider?: EthereumBlockProvider) {}
+	constructor(
+		readonly uri: string,
+		readonly appName: string,
+		readonly chainImplementation: EthereumChainImplementation = new EthereumChainImplementation()
+	) {}
 
 	async sign(call: string, callArgs: Record<string, ActionArgument>): Promise<Action> {
 		const actionPayload: ActionPayload = {
@@ -20,12 +24,12 @@ export class TestSigner {
 			block: null,
 		}
 
-		if (this.provider !== undefined) {
-			const block = await this.provider.getBlock("latest")
-			actionPayload.block = block.blockhash
+		if (this.chainImplementation.provider !== undefined) {
+			const block = await this.chainImplementation.provider.getBlock("latest")
+			actionPayload.block = block.hash
 		}
 
-		return ethereum.signAction(this.wallet, actionPayload)
+		return this.chainImplementation.signAction(this.wallet, actionPayload)
 	}
 }
 
@@ -46,12 +50,12 @@ export class TestSessionSigner {
 			block: null,
 		}
 
-		if (this.signer.provider !== undefined) {
-			const block = await this.signer.provider.getBlock("latest")
-			sessionPayload.block = block.blockhash
+		if (this.signer.chainImplementation.provider !== undefined) {
+			const block = await this.signer.chainImplementation.provider.getBlock("latest")
+			sessionPayload.block = block.hash
 		}
 
-		return await ethereum.signSession(this.signer.wallet, sessionPayload)
+		return await this.signer.chainImplementation.signSession(this.signer.wallet, sessionPayload)
 	}
 
 	async sign(call: string, callArgs: Record<string, ActionArgument>): Promise<Action> {
@@ -67,11 +71,11 @@ export class TestSessionSigner {
 			block: null,
 		}
 
-		if (this.signer.provider !== undefined) {
-			const block = await this.signer.provider.getBlock("latest")
-			actionPayload.block = block.blockhash
+		if (this.signer.chainImplementation.provider !== undefined) {
+			const block = await this.signer.chainImplementation.provider.getBlock("latest")
+			actionPayload.block = block.hash
 		}
 
-		return await ethereum.signDelegatedAction(this.wallet, actionPayload)
+		return await this.signer.chainImplementation.signDelegatedAction(this.wallet, actionPayload)
 	}
 }

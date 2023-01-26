@@ -1,4 +1,5 @@
 import assert from "node:assert"
+import { createHash } from "node:crypto"
 
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats"
@@ -12,10 +13,10 @@ import type {
 	ModelValue,
 	RouteContext,
 	Query,
-	Block,
 } from "@canvas-js/interfaces"
 
 import { configure } from "safe-stable-stringify"
+
 export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
 
 export const ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
@@ -239,5 +240,3 @@ export class CacheMap<K, V> extends Map<K, V> {
 		}
 	}
 }
-
-export type BlockResolver = (chain: Chain, chainId: ChainId, blockhash: string) => Promise<Block>

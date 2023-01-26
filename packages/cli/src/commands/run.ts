@@ -12,18 +12,17 @@ import express from "express"
 import cors from "cors"
 import { createLibp2p, Libp2p } from "libp2p"
 
-import {
-	Core,
-	constants,
-	actionType,
-	getLibp2pInit,
-	BlockCache,
-	getAPI,
-	setupWebsockets,
-	startPingService,
-} from "@canvas-js/core"
+import { Core, constants, actionType, getLibp2pInit, getAPI, setupWebsockets, startPingService } from "@canvas-js/core"
 
-import { getProviders, confirmOrExit, parseSpecArgument, getPeerId, installSpec, CANVAS_HOME } from "../utils.js"
+import {
+	getChainImplementations,
+	confirmOrExit,
+	parseSpecArgument,
+	getPeerId,
+	installSpec,
+	CANVAS_HOME,
+} from "../utils.js"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 export const command = "run <app>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -155,9 +154,8 @@ export async function handler(args: Args) {
 
 	// read rpcs from --chain-rpc arguments or environment variables
 	// prompt to run in unchecked mode, if no rpcs were provided
-	const providers = getProviders(args["chain-rpc"])
-
-	if (Object.keys(providers).length === 0 && !args.unchecked) {
+	const chains = getChainImplementations(args["chain-rpc"])
+	if (chains.length === 0 && !args.unchecked) {
 		const { confirm } = await prompts({
 			type: "confirm",
 			name: "confirm",
@@ -168,6 +166,7 @@ export async function handler(args: Args) {
 		if (confirm) {
 			args.unchecked = true
 			args.offline = true
+			chains.push(new EthereumChainImplementation())
 			console.log(chalk.yellow(`✦ ${chalk.bold("Using unchecked mode.")} Actions will not require a valid block hash.`))
 		} else {
 			console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
@@ -208,15 +207,11 @@ export async function handler(args: Args) {
 		}
 	}
 
-	const blockCache = new BlockCache(providers)
-
 	const core = await Core.initialize({
 		directory,
 		uri,
 		spec: spec,
-		providers,
 		libp2p,
-		blockResolver: blockCache.getBlock,
 		unchecked,
 		verbose,
 	})
@@ -295,7 +290,6 @@ export async function handler(args: Args) {
 		if (libp2p !== null) {
 			await libp2p.stop()
 		}
-		blockCache.close()
 	})
 
 	let stopping = false

@@ -16,7 +16,6 @@
     "packages/cli",
     "packages/next",
     "packages/hooks",
-    "packages/signers",
     "packages/chain-ethereum",
     "examples/app-store",
     "examples/chat-webpack",

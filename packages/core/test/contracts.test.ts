@@ -3,8 +3,9 @@ import test from "ava"
 import * as dotenv from "dotenv"
 
 import { compileSpec, Core } from "@canvas-js/core"
-import { EthereumBlockProvider } from "@canvas-js/verifiers"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { TestSigner } from "./utils.js"
+import { ethers } from "ethers"
 
 dotenv.config({ path: "../../.env" })
 
@@ -38,14 +39,18 @@ test("contracts (milady balanceOf)", async (t) => {
 		},
 	})
 
-	const provider = new EthereumBlockProvider(ETH_CHAIN_ID, ETH_CHAIN_RPC)
-	const providers = { [`ethereum:${ETH_CHAIN_ID}`]: provider }
-	const core = await Core.initialize({ spec, directory: null, libp2p: null, providers })
+	const provider = new ethers.providers.JsonRpcProvider(ETH_CHAIN_RPC)
+	const chainImplementation = new EthereumChainImplementation(ETH_CHAIN_ID, provider)
+	const core = await Core.initialize({
+		spec,
+		directory: null,
+		libp2p: null,
+		chains: [chainImplementation],
+	})
 
-	const signer = new TestSigner(app, appName, provider)
+	const signer = new TestSigner(app, appName, chainImplementation)
 
 	const action = await signer.sign("verify", {})
 	await t.throwsAsync(core.applyAction(action), { message: "balance is zero!" })
-
 	await core.close()
 })

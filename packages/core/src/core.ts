@@ -14,17 +14,15 @@ import {
 	Session,
 	SessionPayload,
 	ModelValue,
-	BlockProvider,
 	Chain,
 	ChainId,
-	Block,
 	Message,
 	ChainImplementation,
 } from "@canvas-js/interfaces"
-import ethereum from "@canvas-js/chain-ethereum"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import { actionType, sessionType } from "./codecs.js"
-import { toHex, BlockResolver, signalInvalidType, CacheMap, parseIPFSURI, stringify } from "./utils.js"
+import { toHex, signalInvalidType, CacheMap, parseIPFSURI, stringify } from "./utils.js"
 
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
@@ -43,9 +41,6 @@ export interface CoreConfig extends CoreOptions {
 	spec: string
 	libp2p: Libp2p | null // pass null to run offline
 	chains?: ChainImplementation<unknown, unknown>[]
-	providers?: Record<string, BlockProvider>
-	// defaults to fetching each block from the provider with no caching
-	blockResolver?: BlockResolver
 }
 
 export interface CoreOptions {
@@ -72,27 +67,14 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
 
 	public static async initialize(config: CoreConfig) {
-		const {
-			directory,
-			uri,
-			spec,
-			libp2p,
-			providers = {},
-			chains = [ethereum],
-			blockResolver = async (chain, chainId, blockhash) => {
-				const key = `${chain}:${chainId}`
-				assert(providers !== undefined && key in providers, `no provider for ${chain}:${chainId}`)
-				return await providers[key].getBlock(blockhash)
-			},
-			...options
-		} = config
+		const { directory, uri, spec, libp2p, chains = [new EthereumChainImplementation()], ...options } = config
 
 		const cid = await Hash.of(spec).then(CID.parse)
 		const app = uri ?? `ipfs://${cid.toString()}`
-		const vm = await VM.initialize({ app, spec, providers, ...options })
+		const vm = await VM.initialize({ app, spec, chains, ...options })
 		const appName = vm.appName
 
-		return new Core(directory, app, cid, app, appName, vm, libp2p, blockResolver, chains, options)
+		return new Core(directory, app, cid, app, appName, vm, libp2p, chains, options)
 	}
 
 	private constructor(
@@ -103,7 +85,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly appName: string,
 		public readonly vm: VM,
 		public readonly libp2p: Libp2p | null,
-		private readonly blockResolver: BlockResolver,
 		private readonly chains: ChainImplementation<unknown, unknown>[],
 		private readonly options: CoreOptions
 	) {
@@ -275,11 +256,11 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
 		assert(timestamp < constants.BOUNDS_CHECK_UPPER_LIMIT, "action timestamp too far in the future")
 
-		if (!this.options.unchecked) {
-			// check the action was signed with a valid, recent block
-			assert(block, "action is missing block data")
-			await this.validateBlock({ blockhash: block, chain, chainId })
-		}
+		// if (!this.options.unchecked) {
+		// 	// check the action was signed with a valid, recent block
+		// 	assert(block, "action is missing block data")
+		// 	await this.validateBlock({ blockhash: block, chain, chainId })
+		// }
 
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
@@ -323,16 +304,16 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
 		assert(sessionIssued < constants.BOUNDS_CHECK_UPPER_LIMIT, "session issued too far in the future")
 
-		if (!this.options.unchecked) {
-			// check the session was signed with a valid, recent block
-			assert(block, "session is missing block data")
-			await this.validateBlock({ blockhash: block, chain, chainId })
-		}
+		// if (!this.options.unchecked) {
+		// 	// check the session was signed with a valid, recent block
+		// 	assert(block, "session is missing block data")
+		// 	await this.validateBlock({ blockhash: block, chain, chainId })
+		// }
 	}
 
 	private getChainImplementation(chain: Chain, chainId: ChainId): ChainImplementation<unknown, unknown> {
 		for (const implementation of this.chains) {
-			if (implementation.match(chain, chainId)) {
+			if (implementation.chain === chain && implementation.chainId === chainId) {
 				return implementation
 			}
 		}
@@ -340,16 +321,12 @@ export class Core extends EventEmitter<CoreEvents> {
 		throw new Error(`Could not find matching chain implementation for ${chain}:${chainId}`)
 	}
 
-	/**
-	 * Helper for verifying the blockhash for an action or session.
-	 */
-	private async validateBlock({ chain, chainId, blockhash }: { chain: Chain; chainId: ChainId; blockhash: string }) {
-		assert(this.blockResolver !== null, "missing blockResolver")
-		const block = await this.blockResolver(chain, chainId, blockhash)
-		// TODO: add blocknums to messages, verify blocknum and blockhash match
-	}
-
-	public async getLatestBlock({ chain, chainId }: { chain: Chain; chainId: ChainId }): Promise<Block> {
-		return this.blockResolver(chain, chainId, "latest")
-	}
+	// /**
+	//  * Helper for verifying the blockhash for an action or session.
+	//  */
+	// private async validateBlock({ chain, chainId, blockhash }: { chain: Chain; chainId: ChainId; blockhash: string }) {
+	// 	assert(this.blockResolver !== null, "missing blockResolver")
+	// 	const block = await this.blockResolver(chain, chainId, blockhash)
+	// 	// TODO: add blocknums to messages, verify blocknum and blockhash match
+	// }
 }

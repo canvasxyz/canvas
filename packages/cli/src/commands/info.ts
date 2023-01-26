@@ -5,10 +5,9 @@ import yargs from "yargs"
 import chalk from "chalk"
 import * as t from "io-ts"
 
-import { actionType, constants, sessionType, VM } from "@canvas-js/core"
+import { actionType, sessionType, VM } from "@canvas-js/core"
 
 import { parseSpecArgument } from "../utils.js"
-import { isRight } from "fp-ts/lib/Either.js"
 
 export const command = "info <app>"
 export const desc = "Show the models, views, and actions for a app"
@@ -23,11 +22,10 @@ export const builder = (yargs: yargs.Argv) =>
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { uri, spec, directory } = parseSpecArgument(args.app)
+	const { uri, spec } = parseSpecArgument(args.app)
 
 	try {
-		const vm = await VM.initialize({ app: uri, spec, unchecked: true })
-
+		const vm = await VM.initialize({ app: uri, spec, chains: [], unchecked: true })
 		const { models, routes, actions, contractMetadata } = vm
 		vm.dispose()
 

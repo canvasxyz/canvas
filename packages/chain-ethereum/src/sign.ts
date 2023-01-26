@@ -1,7 +1,7 @@
 import type { TypedDataSigner, Signer as AbstractSigner } from "@ethersproject/abstract-signer"
 import type { Action, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
 
-import { getActionSignatureData, getSessionSignatureData } from "./types.js"
+import { getActionSignatureData, getSessionSignatureData } from "./signatureData.js"
 
 export async function signAction(
 	signer: AbstractSigner & TypedDataSigner,

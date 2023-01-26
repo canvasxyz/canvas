@@ -15,9 +15,8 @@ import {
 	Model,
 	ModelValue,
 	Query,
-	BlockProvider,
+	ChainImplementation,
 } from "@canvas-js/interfaces"
-import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
 import * as constants from "../constants.js"
 import type { Effect } from "../modelStore.js"
@@ -36,6 +35,7 @@ import {
 } from "./utils.js"
 import { validateCanvasSpec } from "./validate.js"
 import { Exports, disposeExports } from "./exports.js"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 interface VMOptions {
 	verbose?: boolean
@@ -45,11 +45,13 @@ interface VMOptions {
 interface VMConfig extends VMOptions {
 	app: string
 	spec: string
-	providers?: Record<string, BlockProvider>
+	chains: ChainImplementation[]
 }
 
 export class VM {
-	public static async initialize({ app, spec, providers, ...options }: VMConfig): Promise<VM> {
+	public static async initialize(config: VMConfig): Promise<VM> {
+		const { app, spec, chains = [new EthereumChainImplementation()], ...options } = config
+
 		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
@@ -75,7 +77,7 @@ export class VM {
 				console.log(chalk.yellow(`[canvas-vm] Warning: ${warning}`))
 			}
 
-			return new VM(app, runtime, context, options, exports, providers)
+			return new VM(app, runtime, context, chains, options, exports)
 		}
 	}
 
@@ -144,9 +146,9 @@ export class VM {
 		public readonly app: string,
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
+		chains: ChainImplementation[],
 		options: VMOptions,
-		exports: Exports,
-		providers: Record<string, BlockProvider> = {}
+		exports: Exports
 	) {
 		this.models = exports.models
 		this.contractMetadata = exports.contractMetadata
@@ -169,10 +171,13 @@ export class VM {
 			}
 		} else {
 			Object.entries(this.contractMetadata).map(([name, { chain, chainId, address, abi }]) => {
-				const provider = providers[`${chain}:${chainId}`]
-				if (provider instanceof EthereumBlockProvider) {
-					this.contracts[name] = new ethers.Contract(address, abi, provider.provider)
-				} else {
+				for (const implementation of chains) {
+					if (implementation.chain === chain && implementation.chainId === chainId) {
+						if (implementation instanceof EthereumChainImplementation) {
+							this.contracts[name] = new ethers.Contract(address, abi, implementation.provider)
+						}
+					}
+
 					throw Error(`Cannot initialise VM, no provider exists for ${chain}:${chainId}`)
 				}
 			})

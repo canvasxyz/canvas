@@ -1,10 +1,11 @@
-import web3 from "web3"
 import { ethers } from "ethers"
-import { Block, Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
-import etherem from "@canvas-js/chain-ethereum"
+import { Chain, ChainId, Session, SessionPayload } from "@canvas-js/interfaces"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import { Connector, SessionSigner } from "../interfaces.js"
 import { EthereumActionSigner } from "./ethereum_action_signer.js"
+
+const { signSession } = new EthereumChainImplementation()
 
 export class MetaMaskEthereumConnector implements Connector {
 	id = "metamask"
@@ -102,19 +103,19 @@ export class MetaMaskEthereumSigner implements SessionSigner {
 	}
 
 	async signSessionPayload(payload: SessionPayload): Promise<Session> {
-		return etherem.signSession(this.signer, payload)
+		return signSession(this.signer, payload)
 	}
 
-	async getRecentBlock(): Promise<Block> {
-		const { provider } = this.signer
-		const block = await provider.getBlock("latest")
+	// async getRecentBlock(): Promise<Block> {
+	// 	const { provider } = this.signer
+	// 	const block = await provider.getBlock("latest")
 
-		return {
-			chain: await this.getChain(),
-			chainId: await this.getChainId(),
-			blocknum: web3.utils.hexToNumber(block.number),
-			blockhash: block.hash,
-			timestamp: web3.utils.hexToNumber(block.timestamp),
-		}
-	}
+	// 	return {
+	// 		chain: await this.getChain(),
+	// 		chainId: await this.getChainId(),
+	// 		blocknum: web3.utils.hexToNumber(block.number),
+	// 		blockhash: block.hash,
+	// 		timestamp: web3.utils.hexToNumber(block.timestamp),
+	// 	}
+	// }
 }

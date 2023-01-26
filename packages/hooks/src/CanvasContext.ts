@@ -1,4 +1,4 @@
-import type { SessionSigner, ActionSigner } from "@canvas-js/signers"
+// import type { SessionSigner, ActionSigner } from "@canvas-js/signers"
 import { createContext } from "react"
 
 export interface ApplicationData {
@@ -24,12 +24,12 @@ export interface CanvasContextValue {
 
 	// private (not returned from useCanvas hook)
 	ws: WebSocket | null
-	signer: SessionSigner | null
-	setSigner: (signer: SessionSigner | null) => void
-	actionSigner: ActionSigner | null
-	setActionSigner: (actionSigner: ActionSigner | null) => void
-	sessionExpiration: number | null
-	setSessionExpiration: (sessionExpiration: number | null) => void
+	// signer: SessionSigner | null
+	// setSigner: (signer: SessionSigner | null) => void
+	// actionSigner: ActionSigner | null
+	// setActionSigner: (actionSigner: ActionSigner | null) => void
+	// sessionExpiration: number | null
+	// setSessionExpiration: (sessionExpiration: number | null) => void
 }
 
 export const CanvasContext = createContext<CanvasContextValue>({
@@ -39,18 +39,18 @@ export const CanvasContext = createContext<CanvasContextValue>({
 	data: null,
 	ws: null,
 
-	signer: null,
-	setSigner: (_) => {
-		throw new Error("Missing <Canvas /> parent element")
-	},
+	// signer: null,
+	// setSigner: (_) => {
+	// 	throw new Error("Missing <Canvas /> parent element")
+	// },
 
-	actionSigner: null,
-	setActionSigner: (_) => {
-		throw new Error("Missing <Canvas /> parent element")
-	},
+	// actionSigner: null,
+	// setActionSigner: (_) => {
+	// 	throw new Error("Missing <Canvas /> parent element")
+	// },
 
-	sessionExpiration: null,
-	setSessionExpiration: (_) => {
-		throw new Error("Missing <Canvas /> parent element")
-	},
+	// sessionExpiration: null,
+	// setSessionExpiration: (_) => {
+	// 	throw new Error("Missing <Canvas /> parent element")
+	// },
 })
