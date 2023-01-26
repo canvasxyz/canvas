@@ -17,6 +17,10 @@ export const routes = {
 
 export const actions = {
 	createUpdateNote({ body, id, title, local_key }, { db, hash, from }) {
+		if (!title) {
+			throw Error("Note must have a title")
+		}
+
 		const key = id ? `${from}/${id.split("/")[1]}` : `${from}/${hash}`
 		db.notes.set(key, { title, body, from_id: from, local_key })
 	},
