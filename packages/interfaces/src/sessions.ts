@@ -1,4 +1,7 @@
+import { sha256 } from "crypto-hash"
+
 import { Chain } from "./contracts.js"
+import { stringify } from "./stringify.js"
 
 /**
  * A `Session` is the data signed by the user to allow them to execute
@@ -29,5 +32,14 @@ export type SessionPayload = Session["payload"]
  * The format is equivalent to JSON.stringify() with sorted object keys.
  */
 export function serializeSessionPayload(payload: SessionPayload): string {
-	return JSON.stringify(payload, Object.keys(payload).sort())
+	return stringify(payload)
+}
+
+export function serializeSession(session: Session): string {
+	return stringify(session)
+}
+
+export async function getSessionHash(session: Session): Promise<string> {
+	const hash = await sha256(stringify(session))
+	return "0x" + hash
 }

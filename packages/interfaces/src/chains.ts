@@ -1,18 +1,22 @@
+import type { Chain, ChainId } from "./contracts.js"
 import type { Action, ActionPayload } from "./actions.js"
 import type { Session, SessionPayload } from "./sessions.js"
 
-export interface ChainImplementation<Signer, DelegatedSigner> {
-	match(chain: string, chainId: string): boolean
+export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown> {
+	chain: Chain
+	chainId: ChainId
+	// match(chain: string, chainId: string): boolean
 
 	verifyAction(action: Action): Promise<void>
 	verifySession(session: Session): Promise<void>
 
-	importDelegatedSigner(session: Session, privateKey: string): DelegatedSigner
-	exportDelegatedSigner(session: Session, wallet: DelegatedSigner): string
-
-	generateDelegatedSigner(): Promise<[address: string, wallet: DelegatedSigner]>
+	generateDelegatedSigner(): Promise<[address: string, delegatedSigner: DelegatedSigner]>
+	importDelegatedSigner(privateKey: string): DelegatedSigner
+	exportDelegatedSigner(delegatedSigner: DelegatedSigner): string
 
 	signSession(signer: Signer, payload: SessionPayload): Promise<Session>
 	signAction(signer: Signer, payload: ActionPayload): Promise<Action>
-	signDelegatedAction(signer: DelegatedSigner, payload: ActionPayload): Promise<Action>
+	signDelegatedAction(delegatedSigner: DelegatedSigner, payload: ActionPayload): Promise<Action>
+
+	getLatestBlock(): Promise<string>
 }
