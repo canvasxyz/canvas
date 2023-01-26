@@ -5,12 +5,8 @@ import { useConnectOneStep } from "./useConnectOneStep"
 import { useConnect } from "wagmi"
 import { useCanvas, useRoute } from "@canvas-js/hooks"
 
-import { Icon, addIcon } from "@iconify/react/dist/offline"
-import compose from "@iconify/icons-openmoji/compose"
-import wastebasket from "@iconify/icons-openmoji/wastebasket"
-
-addIcon("compose", compose)
-addIcon("wastebasket", wastebasket)
+import ComposeIcon from "./icons/compose.svg"
+import WastebasketIcon from "./icons/wastebasket.svg"
 
 type Note = {
 	id: string
@@ -56,15 +52,17 @@ function formatUpdatedAt(updatedAtTs: number) {
 	}
 }
 
-const IconButton = ({ icon, onClick, disabled }: { onClick: () => void; icon: string; disabled: boolean }) => {
+const IconButton = ({ icon, onClick, disabled }: { onClick: () => void; icon: any; disabled: boolean }) => {
 	return (
 		<div
-			className={`shrink border border-white hover:border-gray-300 hover:bg-gray-100 rounded ${
-				disabled ? "hover:cursor-not-allowed" : "hover:cursor-pointer"
+			className={`shrink border rounded ${
+				disabled
+					? "bg-gray-200 hover:cursor-not-allowed"
+					: "bg-gray-50 border-gray-200 hover:cursor-pointer hover:border-gray-300 hover:bg-gray-100"
 			}`}
 			onClick={disabled ? () => {} : onClick}
 		>
-			<Icon inline={false} icon={icon} height="100%"></Icon>
+			{icon({ className: disabled ? "stroke-gray-500" : "stroke-black", width: "36px" })}
 		</div>
 	)
 }
@@ -142,7 +140,7 @@ export const App: React.FC<{}> = ({}) => {
 									}
 								}
 							}}
-							icon="wastebasket"
+							icon={WastebasketIcon}
 							disabled={connectionState !== "connected"}
 						/>
 					</div>
@@ -196,7 +194,7 @@ export const App: React.FC<{}> = ({}) => {
 								setSelectedNote(newLocalNote.local_key)
 								setLocalNotes(newLocalNotes)
 							}}
-							icon="compose"
+							icon={ComposeIcon}
 							disabled={connectionState !== "connected"}
 						/>
 						<div className="flex-grow"></div>
