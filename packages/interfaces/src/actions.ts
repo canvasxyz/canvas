@@ -44,17 +44,23 @@ export type ActionPayload = Action["payload"]
 export interface ActionContext extends Omit<ActionPayload, "call" | "callArgs"> {}
 
 /**
- * Serialize an ActionPayload into a string suitable for signing on non-ETH chains.
+ * Serialize an `ActionPayload` into a string suitable for signing on non-ETH chains.
  * The format is equivalent to JSON.stringify() with sorted object keys.
  */
 export function serializeActionPayload(payload: ActionPayload): string {
 	return stringify(payload)
 }
 
+/**
+ * Serialize a `Session` for storage or hashing.
+ */
 export function serializeAction(action: Action): string {
 	return stringify(action)
 }
 
+/**
+ * Unique identifier for signed actions.
+ */
 export async function getActionHash(action: Action): Promise<string> {
 	const hash = await sha256(stringify(action))
 	return "0x" + hash
