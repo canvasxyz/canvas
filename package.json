@@ -1,13 +1,13 @@
 {
   "name": "canvas",
   "private": true,
-  "version": "0.0.49",
+  "version": "0.0.50-pre",
   "type": "module",
   "scripts": {
     "dev": "tsc --build --watch",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "publish": "npm run build && npm publish --workspace=packages --access public",
+    "publish": "npm run build && npm publish --workspace=packages --access public --tag beta",
     "test": "npm run test --workspace=@canvas-js/core"
   },
   "workspaces": [
