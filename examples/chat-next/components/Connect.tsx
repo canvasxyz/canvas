@@ -1,12 +1,14 @@
-import React, { useMemo } from "react"
+import React, { useContext, useEffect, useMemo } from "react"
 
 import { ethers } from "ethers"
-import { useAccount, useConnect, useDisconnect, useSigner, useNetwork } from "wagmi"
-import { useSession, useCanvasSigner } from "@canvas-js/hooks"
+import { useAccount, useConnect, useDisconnect, useSigner, useNetwork, useProvider } from "wagmi"
+
+import { Client, useSession } from "@canvas-js/hooks"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import { ErrorMessage } from "./ErrorMessage"
 
-export const Connect: React.FC<{}> = ({}) => {
+export const Connect: React.FC<{ setClient: (client: Client | null) => void }> = ({ setClient }) => {
 	const { connect, connectors, error: connectionError, isLoading: isConnectionLoading, pendingConnector } = useConnect()
 	const { disconnect } = useDisconnect()
 	const { address, isConnected } = useAccount()
@@ -44,26 +46,28 @@ export const Connect: React.FC<{}> = ({}) => {
 
 				<ErrorMessage error={connectionError} />
 
-				<Login />
+				<Login setClient={setClient} />
 			</div>
 		</div>
 	)
 }
 
-const Login: React.FC<{}> = ({}) => {
-	const { error: signerError, data: ethersSigner } = useSigner<ethers.providers.JsonRpcSigner>()
+const Login: React.FC<{ setClient: (client: Client | null) => void }> = ({ setClient }) => {
+	const { error, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
 	const { chain } = useNetwork()
-	const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
+	const provider = useProvider<ethers.providers.JsonRpcProvider>()
 
-	const {
-		error: sessionError,
-		sessionAddress,
-		sessionExpiration,
-		login,
-		logout,
-		isLoading,
-		isPending,
-	} = useSession(signer!)
+	const chainImplementation = useMemo(() => {
+		console.log("chain", chain)
+		return new EthereumChainImplementation(chain?.id.toString() ?? "1", provider)
+	}, [chain?.id, provider])
+
+	const { sessionAddress, sessionExpiration, login, logout, isLoading, isPending, client } = useSession(
+		chainImplementation,
+		signer
+	)
+
+	useEffect(() => setClient(client), [client])
 
 	const [expirationDate, expirationTime] = useMemo(() => {
 		if (sessionExpiration === null) {
@@ -74,7 +78,7 @@ const Login: React.FC<{}> = ({}) => {
 		return [date.toLocaleDateString(), date.toLocaleTimeString()]
 	}, [sessionExpiration])
 
-	if (signer === undefined || signer === null) {
+	if (signer === undefined) {
 		return null
 	}
 
@@ -98,8 +102,7 @@ const Login: React.FC<{}> = ({}) => {
 				</>
 			)}
 
-			<ErrorMessage error={signerError} />
-			<ErrorMessage error={sessionError} />
+			<ErrorMessage error={error} />
 		</>
 	)
 }

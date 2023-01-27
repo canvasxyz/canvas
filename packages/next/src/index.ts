@@ -23,7 +23,6 @@ const spec = fs.readFileSync(specPath, "utf-8")
 
 const verbose = NODE_ENV !== "production" || VERBOSE === "true"
 
-// const providers: Record<string, BlockProvider> = {}
 const chains: ChainImplementation[] = []
 let unchecked = true
 if (typeof ETH_CHAIN_ID === "string" && typeof ETH_CHAIN_RPC === "string") {
