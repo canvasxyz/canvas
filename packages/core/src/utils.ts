@@ -1,5 +1,4 @@
 import assert from "node:assert"
-import { createHash } from "node:crypto"
 
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats"

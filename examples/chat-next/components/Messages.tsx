@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 
 import { useEnsName } from "wagmi"
-import { Client, useCanvas, useRoute } from "@canvas-js/hooks"
+import { Client, useRoute } from "@canvas-js/hooks"
 
 type Post = {
 	id: string

@@ -62,7 +62,6 @@ export class Core extends EventEmitter<CoreEvents> {
 	public readonly recentGossipPeers = new CacheMap<string, { lastSeen: number }>(1000)
 	public readonly recentSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
 
-	// private readonly source: Source | null = null
 	private readonly sources: Record<string, Source> | null = null
 	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
 
