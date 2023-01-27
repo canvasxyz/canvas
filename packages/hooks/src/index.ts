@@ -1,6 +1,6 @@
 export { Canvas } from "./Canvas.js"
 export { useCanvas } from "./useCanvas.js"
-export { useSession } from "./useSession.js"
+export { useSession, type Client } from "./useSession.js"
 export { useRoute } from "./useRoute.js"
 // export { useConnect, useSigner, useDisconnect } from "./MultichainConnectContext.js"
 // export { useCanvasSigner } from "./useCanvasSigner.js"

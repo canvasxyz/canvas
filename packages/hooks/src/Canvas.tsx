@@ -14,7 +14,7 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const [error, setError] = useState<Error | null>(null)
 
 	const host = props.host
-	const ws = useWebsocket({ setIsLoading, setData, setError, host })
+	const ws = useWebsocket({ host, setIsLoading, setData, setError })
 
 	return <CanvasContext.Provider value={{ isLoading, error, host, data, ws }}>{props.children}</CanvasContext.Provider>
 }
