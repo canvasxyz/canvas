@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "@canvas-js/interfaces": "0.0.49",
-    "@canvas-js/signers": "0.0.49",
     "ethers": "^5.7.2"
   }
 }

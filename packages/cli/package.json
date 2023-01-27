@@ -11,6 +11,7 @@
     "canvas": "dist/index.js"
   },
   "dependencies": {
+    "@canvas-js/chain-ethereum": "0.0.49",
     "@canvas-js/core": "0.0.49",
     "@canvas-js/interfaces": "0.0.49",
     "@libp2p/interface-peer-id": "^2.0.0",

@@ -5,7 +5,6 @@ import type { Session, SessionPayload } from "./sessions.js"
 export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown> {
 	chain: Chain
 	chainId: ChainId
-	// match(chain: string, chainId: string): boolean
 
 	verifyAction(action: Action): Promise<void>
 	verifySession(session: Session): Promise<void>
