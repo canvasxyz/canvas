@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/chain-ethereum",
-  "version": "0.0.50-pre",
+  "version": "v0.0.50-pre2",
   "type": "module",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "main": "lib/index.js",

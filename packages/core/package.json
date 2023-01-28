@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/core",
-  "version": "0.0.50-pre",
+  "version": "v0.0.50-pre2",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "types": "./lib/index.d.ts",
@@ -20,8 +20,8 @@
     "test": "ava"
   },
   "dependencies": {
-    "@canvas-js/interfaces": "0.0.50-pre",
-    "@canvas-js/chain-ethereum": "0.0.50-pre",
+    "@canvas-js/interfaces": "v0.0.50-pre2",
+    "@canvas-js/chain-ethereum": "v0.0.50-pre2",
     "@chainsafe/libp2p-gossipsub": "^6.0.0",
     "@chainsafe/libp2p-noise": "^11.0.0",
     "@libp2p/bootstrap": "^6.0.0",
