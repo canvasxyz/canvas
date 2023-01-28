@@ -1,7 +1,7 @@
 {
   "name": "canvas",
   "private": true,
-  "version": "v0.0.50-pre3",
+  "version": "0.0.50-pre4",
   "type": "module",
   "scripts": {
     "dev": "tsc --build --watch",
