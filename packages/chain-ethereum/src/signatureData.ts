@@ -10,10 +10,8 @@ const serialize = configure({ circularValue: Error, bigint: false, deterministic
  * verify EIP-712 signed data for wallets like Metamask.
  */
 
-// TODO: ensure signed actions and sessions match what's expected
-// by web3.js, which is less permissive than ethers when generating
-// signTypedData messages.
-
+// "You should not pass the EIP712Domain into ethers. It will compute it for you."
+// - https://github.com/ethers-io/ethers.js/issues/687
 export const actionDataFields = {
 	Message: [
 		{ name: "app", type: "string" },
@@ -36,7 +34,6 @@ type ActionPayloadSignable = Omit<ActionPayload, "callArgs"> & { callArgs: strin
 export function getActionSignatureData(payload: ActionPayload): SignatureData<ActionPayloadSignable> {
 	const domain = {
 		name: payload.appName,
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(0), 32)),
 	}
 
 	// Rewrite fields with custom serializations. EIP-712 does not
@@ -55,6 +52,8 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData<Ac
 	return [domain, actionDataFields, actionValue]
 }
 
+// "You should not pass the EIP712Domain into ethers. It will compute it for you."
+// - https://github.com/ethers-io/ethers.js/issues/687
 export const sessionDataFields = {
 	Message: [
 		{ name: "app", type: "string" },
@@ -77,7 +76,6 @@ type SignatureData<PayloadType> = [TypedDataDomain, Record<string, TypedDataFiel
 export function getSessionSignatureData(payload: SessionPayload): SignatureData<SessionPayload> {
 	const domain = {
 		name: payload.appName,
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(0), 32)),
 	}
 
 	// Rewrite fields with custom serializations. EIP-712 does not
