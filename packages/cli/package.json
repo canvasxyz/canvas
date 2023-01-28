@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/cli",
-  "version": "v0.0.50-pre2",
+  "version": "v0.0.50-pre3",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "dist/index.js",
@@ -11,9 +11,9 @@
     "canvas": "dist/index.js"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "v0.0.50-pre2",
-    "@canvas-js/core": "v0.0.50-pre2",
-    "@canvas-js/interfaces": "v0.0.50-pre2",
+    "@canvas-js/chain-ethereum": "v0.0.50-pre3",
+    "@canvas-js/core": "v0.0.50-pre3",
+    "@canvas-js/interfaces": "v0.0.50-pre3",
     "@libp2p/interface-peer-id": "^2.0.0",
     "@types/websocket": "^1.0.5",
     "better-sqlite3": "^8.0.1",
