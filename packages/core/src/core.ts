@@ -157,6 +157,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		const data = Buffer.from(stringify(action))
 		const hash = createHash("sha256").update(data).digest()
+
 		const existingRecord = this.messageStore.getActionByHash(hash)
 		if (existingRecord !== null) {
 			return { hash: toHex(hash) }

@@ -1,4 +1,4 @@
-import { sha256 } from "crypto-hash"
+import shajs from "sha.js"
 
 import type { Chain } from "./contracts.js"
 import { stringify } from "./stringify.js"
@@ -61,7 +61,7 @@ export function serializeAction(action: Action): string {
 /**
  * Unique identifier for signed actions.
  */
-export async function getActionHash(action: Action): Promise<string> {
-	const hash = await sha256(stringify(action))
+export function getActionHash(action: Action): string {
+	const hash = shajs("sha256").update(stringify(action)).digest("hex")
 	return "0x" + hash
 }

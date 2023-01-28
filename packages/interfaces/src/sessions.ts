@@ -1,4 +1,4 @@
-import { sha256 } from "crypto-hash"
+import shajs from "sha.js"
 
 import { Chain } from "./contracts.js"
 import { stringify } from "./stringify.js"
@@ -45,7 +45,7 @@ export function serializeSession(session: Session): string {
 /**
  * Unique identifier for signed sessions.
  */
-export async function getSessionHash(session: Session): Promise<string> {
-	const hash = await sha256(stringify(session))
+export function getSessionHash(session: Session): string {
+	const hash = shajs("sha256").update(stringify(session)).digest("hex")
 	return "0x" + hash
 }
