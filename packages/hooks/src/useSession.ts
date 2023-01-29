@@ -11,6 +11,14 @@ const hour = 60 * minute
 
 export type Client = Record<string, (callArgs: Record<string, ActionArgument>) => Promise<{ hash: string }>>
 
+/**
+ * isLoading === true: waiting for application data from host, & checking localStorage for sessionObject
+ * isLoading === false && sessionAddress === null: logged out, need to call login()
+ * isLoading === false && sessionAddress !== null: we have a session and `client` will be non-null
+ *
+ * `client`, `sessionAddress`, and `sessionExpiration` are either all null or all non-null.
+ */
+
 export function useSession<Signer, DelegatedSigner>(
 	chainImplementation: ChainImplementation<Signer, DelegatedSigner>,
 	signer: Signer | null | undefined,
