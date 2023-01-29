@@ -21,7 +21,7 @@ To use the Canvas hooks, you must first wrap your application in a parent `Canva
 
 ## `useCanvas`
 
-You can then access metadata about application and the host using the `useCanvas` hook anywhere inside the parent `Canvas` element.
+You can then access metadata about the host and the application the host is serving using the `useCanvas` hook anywhere inside the parent `Canvas` element.
 
 ```tsx
 import { useCanvas } from "@canvas-js/hooks"
@@ -32,6 +32,8 @@ function MyApp({}) {
 	return <div>{/* ...*/}</div>
 }
 ```
+
+`isLoading` is initially `true` while the hook makes an initial HTTP request for application metadata, and then sets to `false` when either `data` or `error` is non-null.
 
 ```ts
 interface ApplicationData {
@@ -57,6 +59,8 @@ declare function useCanvas(): {
 ```
 
 ### `useRoute`
+
+`useRoute` is the primary way to fetch data from your application.
 
 There are two ways to use the `useRoute` hook to fetch data. The `Canvas` element internally establishes a websocket connection to the host, and, by default, the `useRoute` hook will use that websocket connection to subscribe to a given route with given params.
 
@@ -147,6 +151,14 @@ function MyApp({}) {
 	return <div>{/* ...*/}</div>
 }
 ```
+
+The `useSession` hook is in one of the following three states:
+
+- `isLoading === true`: waiting for application data from host, & checking localStorage for sessionObject
+- `isLoading === false && sessionAddress === null`: logged out, need to call login()
+- `isLoading === false && sessionAddress !== null`: we have a session and `client` will be non-null
+
+`client`, `sessionAddress`, and `sessionExpiration` are either all null or all non-null.
 
 ```ts
 import { ChainImplementation, Argument } from "@canvas-js/hooks"
