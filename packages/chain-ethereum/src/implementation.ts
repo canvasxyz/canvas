@@ -1,18 +1,79 @@
 import { ethers } from "ethers"
+import { verifyTypedData } from "@ethersproject/wallet"
 import type { TypedDataSigner, Signer } from "@ethersproject/abstract-signer"
-import type { ActionPayload, Chain, ChainId, ChainImplementation } from "@canvas-js/interfaces"
 
-import { verifyAction, verifySession } from "./verify.js"
-import { signAction, signSession } from "./sign.js"
+import type {
+	Action,
+	ActionPayload,
+	Chain,
+	ChainId,
+	ChainImplementation,
+	Session,
+	SessionPayload,
+} from "@canvas-js/interfaces"
+import { getActionSignatureData, getSessionSignatureData } from "./signatureData.js"
 
+/**
+ * Sign an action. Supports both directly signing from your wallet,
+ * and signing via a delegated session key.
+ */
+export async function signAction(
+	signer: Signer & TypedDataSigner,
+	payload: ActionPayload,
+	sessionAddress: string | null
+): Promise<Action> {
+	const address = await signer.getAddress()
+	if (sessionAddress === null) {
+		if (address !== payload.from) {
+			throw new Error("Signer address did not match payload.from")
+		}
+	} else {
+		if (address !== sessionAddress) {
+			throw new Error("Signer address did not match session.payload.sessionAddress")
+		}
+	}
+
+	const signatureData = getActionSignatureData(payload)
+	const signature = await signer._signTypedData(...signatureData)
+
+	return { type: "action", session: sessionAddress, signature, payload }
+}
+
+/**
+ * Ethereum chain export.
+ */
 export class EthereumChainImplementation implements ChainImplementation<TypedDataSigner & Signer, ethers.Wallet> {
 	public readonly chain: Chain = "ethereum"
 
 	constructor(public readonly chainId: ChainId = "1", public readonly provider?: ethers.providers.JsonRpcProvider) {}
 
-	verifyAction = verifyAction
-	verifySession = verifySession
-	signSession = signSession
+	async verifyAction(action: Action): Promise<void> {
+		const expectedAddress = action.session ?? action.payload.from
+		const [domain, types, value] = getActionSignatureData(action.payload)
+		const recoveredAddress = verifyTypedData(domain, types, value, action.signature)
+		if (recoveredAddress !== expectedAddress) {
+			throw new Error(`Invalid action signature: expected ${expectedAddress}, recovered ${recoveredAddress}`)
+		}
+	}
+
+	async verifySession(session: Session): Promise<void> {
+		const [domain, types, value] = getSessionSignatureData(session.payload)
+		const recoveredAddress = verifyTypedData(domain, types, value, session.signature)
+		if (recoveredAddress !== session.payload.from) {
+			throw new Error(`Invalid session signature: expected ${session.payload.from}, recovered ${recoveredAddress}`)
+		}
+	}
+
+	async signSession(signer: Signer & TypedDataSigner, payload: SessionPayload): Promise<Session> {
+		const address = await signer.getAddress()
+		if (payload.from !== address) {
+			throw new Error("Signer address did not match payload.from")
+		}
+
+		const signatureData = getSessionSignatureData(payload)
+		const signature = await signer._signTypedData(...signatureData)
+		return { type: "session", signature, payload }
+	}
 
 	getSignerAddress = async (signer: TypedDataSigner & Signer) => signer.getAddress()
 	getDelegatedSignerAddress = async (wallet: ethers.Wallet) => wallet.address
