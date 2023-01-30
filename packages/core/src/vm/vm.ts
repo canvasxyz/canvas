@@ -15,9 +15,8 @@ import {
 	Model,
 	ModelValue,
 	Query,
-	BlockProvider,
+	ChainImplementation,
 } from "@canvas-js/interfaces"
-import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
 import * as constants from "../constants.js"
 import type { Effect } from "../modelStore.js"
@@ -36,6 +35,7 @@ import {
 } from "./utils.js"
 import { validateCanvasSpec } from "./validate.js"
 import { Exports, disposeExports } from "./exports.js"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 interface VMOptions {
 	verbose?: boolean
@@ -43,19 +43,21 @@ interface VMOptions {
 }
 
 interface VMConfig extends VMOptions {
-	uri: string
 	app: string
-	providers?: Record<string, BlockProvider>
+	spec: string
+	chains: ChainImplementation[]
 }
 
 export class VM {
-	public static async initialize({ uri, app, providers, ...options }: VMConfig): Promise<VM> {
+	public static async initialize(config: VMConfig): Promise<VM> {
+		const { app, spec, chains = [new EthereumChainImplementation()], ...options } = config
+
 		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
-		const { code: transpiledSpec } = transform(app, {
+		const { code: transpiledSpec } = transform(spec, {
 			transforms: ["jsx"],
 			jsxPragma: "React.createElement",
 			jsxFragmentPragma: "React.Fragment",
@@ -63,7 +65,7 @@ export class VM {
 			production: true,
 		})
 
-		const moduleHandle = await loadModule(context, uri, transpiledSpec)
+		const moduleHandle = await loadModule(context, app, transpiledSpec)
 
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
@@ -75,14 +77,14 @@ export class VM {
 				console.log(chalk.yellow(`[canvas-vm] Warning: ${warning}`))
 			}
 
-			return new VM(uri, runtime, context, options, exports, providers)
+			return new VM(app, runtime, context, chains, options, exports)
 		}
 	}
 
-	public static async validate(app: string): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
+	public static async validate(spec: string): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
 		let transpiledSpec: string
 		try {
-			transpiledSpec = transform(app, {
+			transpiledSpec = transform(spec, {
 				transforms: ["jsx"],
 				jsxPragma: "React.createElement",
 				jsxFragmentPragma: "React.Fragment",
@@ -102,7 +104,7 @@ export class VM {
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
-		const cid = await Hash.of(app)
+		const cid = await Hash.of(spec)
 		const moduleHandle = await loadModule(context, `ipfs://${cid}`, transpiledSpec)
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
@@ -141,12 +143,12 @@ export class VM {
 	private actionContext: ActionContext | null = null
 
 	constructor(
-		public readonly uri: string,
+		public readonly app: string,
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
+		chains: ChainImplementation[],
 		options: VMOptions,
-		exports: Exports,
-		providers: Record<string, BlockProvider> = {}
+		exports: Exports
 	) {
 		this.models = exports.models
 		this.contractMetadata = exports.contractMetadata
@@ -168,14 +170,16 @@ export class VM {
 				console.log(`[canvas-vm] Skipping contract setup`)
 			}
 		} else {
-			Object.entries(this.contractMetadata).map(([name, { chain, chainId, address, abi }]) => {
-				const provider = providers[`${chain}:${chainId}`]
-				if (provider instanceof EthereumBlockProvider) {
-					this.contracts[name] = new ethers.Contract(address, abi, provider.provider)
-				} else {
-					throw Error(`Cannot initialise VM, no provider exists for ${chain}:${chainId}`)
-				}
-			})
+			for (const [name, { chain, chainId, address, abi }] of Object.entries(this.contractMetadata)) {
+				const implementation = chains.find(
+					(implementation) => implementation.chain === chain && implementation.chainId === chainId
+				)
+
+				assert(implementation !== undefined, `no chain implmentation for ${chain}:${chainId}`)
+				assert(implementation instanceof EthereumChainImplementation)
+				assert(implementation.provider !== undefined, `no ethers provider for ${chain}:${chainId}`)
+				this.contracts[name] = new ethers.Contract(address, abi, implementation.provider)
+			}
 		}
 
 		this.routes = {}
@@ -361,7 +365,7 @@ export class VM {
 	}
 
 	private getActionHandle(app: string, call: string): QuickJSHandle {
-		if (app === this.uri) {
+		if (app === this.app) {
 			const handle = this.actionHandles[call]
 			assert(handle !== undefined, "invalid action call")
 			return handle

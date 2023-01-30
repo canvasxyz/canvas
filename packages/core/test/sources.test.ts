@@ -57,10 +57,10 @@ const sourceSigner = new TestSigner(MessageBoard.app, MessageBoard.appName)
 test("Apply source actions", async (t) => {
 	const core = await Core.initialize({
 		uri: MessageBoardWithVotes.app,
-		app: MessageBoardWithVotes.spec,
+		spec: MessageBoardWithVotes.spec,
 		directory: null,
+		libp2p: null,
 		unchecked: true,
-		offline: true,
 	})
 
 	const sourceAction = await sourceSigner.sign("createPost", { content: "hello world" })

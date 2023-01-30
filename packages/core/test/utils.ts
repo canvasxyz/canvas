@@ -1,11 +1,15 @@
-import type { Action, ActionArgument, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
-import { EthereumBlockProvider } from "@canvas-js/verifiers"
-import { getActionSignatureData, getSessionSignatureData } from "@canvas-js/verifiers"
 import { ethers } from "ethers"
+
+import type { Action, ActionArgument, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 export class TestSigner {
 	readonly wallet = ethers.Wallet.createRandom()
-	constructor(readonly uri: string, readonly appName: string, readonly provider?: EthereumBlockProvider) {}
+	constructor(
+		readonly uri: string,
+		readonly appName: string,
+		readonly chainImplementation: EthereumChainImplementation = new EthereumChainImplementation()
+	) {}
 
 	async sign(call: string, callArgs: Record<string, ActionArgument>): Promise<Action> {
 		const actionPayload: ActionPayload = {
@@ -20,14 +24,12 @@ export class TestSigner {
 			block: null,
 		}
 
-		if (this.provider !== undefined) {
-			const block = await this.provider.getBlock("latest")
-			actionPayload.block = block.blockhash
+		if (this.chainImplementation.provider !== undefined) {
+			const block = await this.chainImplementation.provider.getBlock("latest")
+			actionPayload.block = block.hash
 		}
 
-		const actionSignatureData = getActionSignatureData(actionPayload)
-		const actionSignature = await this.wallet._signTypedData(...actionSignatureData)
-		return { type: "action", payload: actionPayload, session: null, signature: actionSignature }
+		return this.chainImplementation.signAction(this.wallet, actionPayload)
 	}
 }
 
@@ -48,14 +50,12 @@ export class TestSessionSigner {
 			block: null,
 		}
 
-		if (this.signer.provider !== undefined) {
-			const block = await this.signer.provider.getBlock("latest")
-			sessionPayload.block = block.blockhash
+		if (this.signer.chainImplementation.provider !== undefined) {
+			const block = await this.signer.chainImplementation.provider.getBlock("latest")
+			sessionPayload.block = block.hash
 		}
 
-		const sessionSignatureData = getSessionSignatureData(sessionPayload)
-		const sessionSignature = await this.signer.wallet._signTypedData(...sessionSignatureData)
-		return { type: "session", payload: sessionPayload, signature: sessionSignature }
+		return await this.signer.chainImplementation.signSession(this.signer.wallet, sessionPayload)
 	}
 
 	async sign(call: string, callArgs: Record<string, ActionArgument>): Promise<Action> {
@@ -71,13 +71,11 @@ export class TestSessionSigner {
 			block: null,
 		}
 
-		if (this.signer.provider !== undefined) {
-			const block = await this.signer.provider.getBlock("latest")
-			actionPayload.block = block.blockhash
+		if (this.signer.chainImplementation.provider !== undefined) {
+			const block = await this.signer.chainImplementation.provider.getBlock("latest")
+			actionPayload.block = block.hash
 		}
 
-		const actionSignatureData = getActionSignatureData(actionPayload)
-		const actionSignature = await this.wallet._signTypedData(...actionSignatureData)
-		return { type: "action", payload: actionPayload, session: this.wallet.address, signature: actionSignature }
+		return await this.signer.chainImplementation.signDelegatedAction(this.wallet, actionPayload)
 	}
 }

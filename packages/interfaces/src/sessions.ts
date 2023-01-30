@@ -1,4 +1,7 @@
+import shajs from "sha.js"
+
 import { Chain } from "./contracts.js"
+import { stringify } from "./stringify.js"
 
 /**
  * A `Session` is the data signed by the user to allow them to execute
@@ -25,9 +28,24 @@ export type Session = {
 export type SessionPayload = Session["payload"]
 
 /**
- * Serialize an SessionPayload into a string suitable for signing on non-ETH chains.
+ * Serialize a `SessionPayload` into a string suitable for signing on non-ETH chains.
  * The format is equivalent to JSON.stringify() with sorted object keys.
  */
 export function serializeSessionPayload(payload: SessionPayload): string {
-	return JSON.stringify(payload, Object.keys(payload).sort())
+	return stringify(payload)
+}
+
+/**
+ * Serialize a `Session` for storage or hashing.
+ */
+export function serializeSession(session: Session): string {
+	return stringify(session)
+}
+
+/**
+ * Unique identifier for signed sessions.
+ */
+export function getSessionHash(session: Session): string {
+	const hash = shajs("sha256").update(stringify(session)).digest("hex")
+	return "0x" + hash
 }

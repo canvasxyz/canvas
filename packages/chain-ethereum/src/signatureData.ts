@@ -1,25 +1,18 @@
 import { TypedDataDomain, TypedDataField, utils } from "ethers"
-import { verifyTypedData } from "@ethersproject/wallet"
 
-import {
-	Action,
-	ActionPayload,
-	Session,
-	SessionPayload,
-	serializeActionArgument,
-	serializeActionCallArgs,
-} from "@canvas-js/interfaces"
+import { ActionPayload, SessionPayload } from "@canvas-js/interfaces"
+
+import { configure } from "safe-stable-stringify"
+const serialize = configure({ circularValue: Error, bigint: false, deterministic: true, strict: true })
 
 /**
  * Ethereum compatible signer logic, used to generate and
  * verify EIP-712 signed data for wallets like Metamask.
  */
 
-// TODO: ensure signed actions and sessions match what's expected
-// by web3.js, which is less permissive than ethers when generating
-// signTypedData messages.
-
-const actionDataFields = {
+// "You should not pass the EIP712Domain into ethers. It will compute it for you."
+// - https://github.com/ethers-io/ethers.js/issues/687
+export const actionDataFields = {
 	Message: [
 		{ name: "app", type: "string" },
 		{ name: "appName", type: "string" },
@@ -29,30 +22,29 @@ const actionDataFields = {
 		{ name: "chain", type: "string" },
 		{ name: "chainId", type: "string" },
 		{ name: "from", type: "string" },
-		{ name: "timestamp", type: "uint256" },
+		{ name: "timestamp", type: "uint64" },
 	],
 }
 
-/**
- * `getActionSignatureData` gets EIP-712 signing data for an individual action
- */
 type ActionPayloadSignable = Omit<ActionPayload, "callArgs"> & { callArgs: string }
 
+/**
+ * gets EIP-712 signing data for an individual action
+ */
 export function getActionSignatureData(payload: ActionPayload): SignatureData<ActionPayloadSignable> {
 	const domain = {
 		name: payload.appName,
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(0), 32)),
 	}
 
 	// Rewrite fields with custom serializations. EIP-712 does not
 	// accept null values as a type, so we replace the null blockhash
 	// with an empty string
-	//
+
 	// Previously chainId may have been an integer. Since TS is not
 	// enforced at runtime, call .toString() to be sure
 	const actionValue = {
 		...payload,
-		callArgs: serializeActionCallArgs(payload.callArgs),
+		callArgs: serialize(payload.callArgs),
 		chainId: payload.chainId.toString(),
 		block: payload.block || "",
 	}
@@ -60,7 +52,9 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData<Ac
 	return [domain, actionDataFields, actionValue]
 }
 
-const sessionDataFields = {
+// "You should not pass the EIP712Domain into ethers. It will compute it for you."
+// - https://github.com/ethers-io/ethers.js/issues/687
+export const sessionDataFields = {
 	Message: [
 		{ name: "app", type: "string" },
 		{ name: "appName", type: "string" },
@@ -69,20 +63,19 @@ const sessionDataFields = {
 		{ name: "chainId", type: "string" },
 		{ name: "from", type: "string" },
 		{ name: "sessionAddress", type: "string" },
-		{ name: "sessionDuration", type: "uint256" },
-		{ name: "sessionIssued", type: "uint256" },
+		{ name: "sessionDuration", type: "uint64" },
+		{ name: "sessionIssued", type: "uint64" },
 	],
 }
 
 type SignatureData<PayloadType> = [TypedDataDomain, Record<string, TypedDataField[]>, PayloadType]
 
 /**
- * `getSessionSignatureData` gets EIP-712 signing data to start a session
+ * gets EIP-712 signing data to start a session
  */
 export function getSessionSignatureData(payload: SessionPayload): SignatureData<SessionPayload> {
 	const domain = {
 		name: payload.appName,
-		salt: utils.hexlify(utils.zeroPad(utils.arrayify(0), 32)),
 	}
 
 	// Rewrite fields with custom serializations. EIP-712 does not
@@ -98,14 +91,4 @@ export function getSessionSignatureData(payload: SessionPayload): SignatureData<
 	}
 
 	return [domain, sessionDataFields, sessionValue]
-}
-
-export const verifyEthereumActionSignature = (action: Action): string => {
-	const [domain, types, value] = getActionSignatureData(action.payload)
-	return verifyTypedData(domain, types, value, action.signature)
-}
-
-export const verifyEthereumSessionSignature = (session: Session): string => {
-	const [domain, types, value] = getSessionSignatureData(session.payload)
-	return verifyTypedData(domain, types, value, session.signature)
 }

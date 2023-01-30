@@ -1,3 +1,5 @@
+import type { Chain, ChainId } from "@canvas-js/interfaces"
+
 import { getCanvasSessionKey } from "./utils.js"
 
 export type SessionObject = { app: string; sessionPrivateKey: string; expiration: number }
@@ -11,8 +13,8 @@ function isSessionObject(obj: any): obj is SessionObject {
 	)
 }
 
-export function getSessionObject(data: { uri: string }, signerAddress: string): SessionObject | null {
-	const sessionKey = getCanvasSessionKey(signerAddress)
+export function getSessionObject(chain: Chain, chainId: ChainId, signerAddress: string): SessionObject | null {
+	const sessionKey = getCanvasSessionKey(chain, chainId, signerAddress)
 	const item = localStorage.getItem(sessionKey)
 	if (item === null) {
 		return null
@@ -31,20 +33,15 @@ export function getSessionObject(data: { uri: string }, signerAddress: string): 
 		return null
 	}
 
-	const { app, expiration } = sessionObject
-	if (data.uri !== app || expiration < Date.now()) {
-		localStorage.removeItem(sessionKey)
-		return null
-	}
 	return sessionObject
 }
 
-export function setSessionObject(signerAddress: string, sessionObject: SessionObject) {
-	const sessionKey = getCanvasSessionKey(signerAddress)
+export function setSessionObject(chain: Chain, chainId: ChainId, signerAddress: string, sessionObject: SessionObject) {
+	const sessionKey = getCanvasSessionKey(chain, chainId, signerAddress)
 	localStorage.setItem(sessionKey, JSON.stringify(sessionObject))
 }
 
-export function removeSessionObject(signerAddress: string) {
-	const sessionKey = getCanvasSessionKey(signerAddress)
+export function removeSessionObject(chain: Chain, chainId: ChainId, signerAddress: string) {
+	const sessionKey = getCanvasSessionKey(chain, chainId, signerAddress)
 	localStorage.removeItem(sessionKey)
 }

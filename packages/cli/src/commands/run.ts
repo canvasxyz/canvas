@@ -12,18 +12,17 @@ import express from "express"
 import cors from "cors"
 import { createLibp2p, Libp2p } from "libp2p"
 
-import {
-	Core,
-	constants,
-	actionType,
-	getLibp2pInit,
-	BlockCache,
-	getAPI,
-	setupWebsockets,
-	startPingService,
-} from "@canvas-js/core"
+import { Core, constants, actionType, getLibp2pInit, getAPI, setupWebsockets, startPingService } from "@canvas-js/core"
 
-import { getProviders, confirmOrExit, parseSpecArgument, getPeerId, installSpec, CANVAS_HOME } from "../utils.js"
+import {
+	getChainImplementations,
+	confirmOrExit,
+	parseSpecArgument,
+	getPeerId,
+	installSpec,
+	CANVAS_HOME,
+} from "../utils.js"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 export const command = "run <app>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -101,9 +100,9 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
-	let { directory, uri, app: appArg } = parseSpecArgument(args.app)
+	let { directory, uri, spec } = parseSpecArgument(args.app)
 	if (directory === null && args.install) {
-		const cid = await installSpec(appArg)
+		const cid = await installSpec(spec)
 		directory = path.resolve(CANVAS_HOME, cid)
 		uri = `ipfs://${cid}`
 	}
@@ -155,9 +154,8 @@ export async function handler(args: Args) {
 
 	// read rpcs from --chain-rpc arguments or environment variables
 	// prompt to run in unchecked mode, if no rpcs were provided
-	const providers = getProviders(args["chain-rpc"])
-
-	if (Object.keys(providers).length === 0 && !args.unchecked) {
+	const chains = getChainImplementations(args["chain-rpc"])
+	if (chains.length === 0 && !args.unchecked) {
 		const { confirm } = await prompts({
 			type: "confirm",
 			name: "confirm",
@@ -168,6 +166,7 @@ export async function handler(args: Args) {
 		if (confirm) {
 			args.unchecked = true
 			args.offline = true
+			chains.push(new EthereumChainImplementation())
 			console.log(chalk.yellow(`✦ ${chalk.bold("Using unchecked mode.")} Actions will not require a valid block hash.`))
 		} else {
 			console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
@@ -188,35 +187,32 @@ export async function handler(args: Args) {
 	const peerId = await getPeerId()
 	console.log(`[canvas-cli] Using PeerId ${peerId.toString()}`)
 
-	let libp2p: Libp2p
-	if (announce !== undefined) {
-		console.log(`[canvas-cli] Announcing on ${announce}`)
-		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort, [announce]))
-	} else {
-		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+	let libp2p: Libp2p | null = null
+	if (!offline) {
+		if (announce !== undefined) {
+			console.log(`[canvas-cli] Announcing on ${announce}`)
+			libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort, [announce]))
+		} else {
+			libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+		}
+
+		if (verbose) {
+			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
+				console.log(`[canvas-cli] Connected to ${remotePeer.toString()} (${id})`)
+			)
+
+			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
+				console.log(`[canvas-cli] Disconnected from ${remotePeer.toString()} (${id})`)
+			)
+		}
 	}
-
-	if (verbose) {
-		libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
-			console.log(`[canvas-cli] Connected to ${remotePeer.toString()} (${id})`)
-		)
-
-		libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
-			console.log(`[canvas-cli] Disconnected from ${remotePeer.toString()} (${id})`)
-		)
-	}
-
-	const blockCache = new BlockCache(providers)
 
 	const core = await Core.initialize({
 		directory,
 		uri,
-		app: appArg,
-		providers,
+		spec: spec,
 		libp2p,
-		blockResolver: blockCache.getBlock,
 		unchecked,
-		offline,
 		verbose,
 	})
 
@@ -279,7 +275,9 @@ export async function handler(args: Args) {
 
 	const controller = new AbortController()
 
-	startPingService(libp2p, controller, { verbose })
+	if (libp2p !== null) {
+		startPingService(libp2p, controller, { verbose })
+	}
 
 	controller.signal.addEventListener("abort", async () => {
 		console.log("[canvas-cli] Stopping API server...")
@@ -289,8 +287,9 @@ export async function handler(args: Args) {
 		console.log("[canvas-cli] Closing core...")
 		await core.close()
 		console.log("[canvas-cli] Core closed.")
-		await libp2p.stop()
-		blockCache.close()
+		if (libp2p !== null) {
+			await libp2p.stop()
+		}
 	})
 
 	let stopping = false

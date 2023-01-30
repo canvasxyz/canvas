@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from "react"
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo, useContext } from "react"
 import _ from "lodash"
 
 import { useEnsName } from "wagmi"
-import { useCanvas, useRoute } from "@canvas-js/hooks"
+import { useRoute } from "@canvas-js/hooks"
+
+import { AppContext } from "./AppContext"
 
 type Post = {
 	id: string
@@ -13,15 +15,14 @@ type Post = {
 
 export const Messages: React.FC<{}> = ({}) => {
 	const inputRef = useRef<HTMLInputElement>(null)
-
-	const { isReady, dispatch } = useCanvas()
+	const { client } = useContext(AppContext)
 
 	const handleKeyDown = useCallback(
 		async (event: React.KeyboardEvent<HTMLInputElement>) => {
-			if (event.key === "Enter" && inputRef.current !== null) {
-				const input = inputRef.current
+			const input = inputRef.current
+			if (event.key === "Enter" && input !== null && client !== null) {
 				try {
-					const { hash } = await dispatch("createPost", { content: input.value })
+					const { hash } = await client.createPost({ content: input.value })
 					console.log("created post", hash)
 					input.value = ""
 					setTimeout(() => input.focus(), 0)
@@ -33,8 +34,10 @@ export const Messages: React.FC<{}> = ({}) => {
 				}
 			}
 		},
-		[isReady, dispatch]
+		[client]
 	)
+
+	const isReady = client !== null
 	useEffect(() => {
 		if (isReady) {
 			inputRef.current?.focus()

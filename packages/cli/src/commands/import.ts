@@ -9,7 +9,8 @@ import chalk from "chalk"
 
 import { Core, actionType, sessionType, constants } from "@canvas-js/core"
 
-import { getProviders, parseSpecArgument } from "../utils.js"
+import { getChainImplementations, parseSpecArgument } from "../utils.js"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 export const command = "import <app>"
 export const desc = "Import actions and sessions from stdin"
@@ -20,10 +21,13 @@ export const builder = (yargs: yargs.Argv) =>
 			type: "string",
 			demandOption: true,
 		})
-
 		.option("chain-rpc", {
 			type: "array",
 			desc: "Provide an RPC endpoint for reading on-chain data",
+		})
+		.option("unchecked", {
+			type: "boolean",
+			desc: "Run the node in unchecked mode, without verifying block hashes",
 		})
 
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
@@ -32,11 +36,14 @@ export async function handler(args: Args) {
 	const { uri, directory } = parseSpecArgument(args.app)
 	assert(directory !== null, "Cannot import to development apps since they do not persist any data")
 
-	const app = fs.readFileSync(path.resolve(directory, constants.SPEC_FILENAME), "utf-8")
+	const spec = fs.readFileSync(path.resolve(directory, constants.SPEC_FILENAME), "utf-8")
 
-	const providers = getProviders(args["chain-rpc"])
+	const chains = getChainImplementations(args["chain-rpc"])
+	if (chains.length === 0 && !args.unchecked) {
+		chains.push(new EthereumChainImplementation())
+	}
 
-	const core = await Core.initialize({ uri, directory, app, providers })
+	const core = await Core.initialize({ uri, directory, spec, chains, libp2p: null })
 
 	const rl = readline.createInterface({
 		input: process.stdin,

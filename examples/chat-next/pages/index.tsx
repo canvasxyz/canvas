@@ -1,9 +1,8 @@
-import React from "react"
+import React, { useState } from "react"
 import dynamic from "next/dynamic"
-import { GetServerSideProps } from "next"
 import Head from "next/head"
 
-import { useCanvas } from "@canvas-js/hooks"
+import { Client, useCanvas } from "@canvas-js/hooks"
 
 import { ErrorMessage } from "../components/ErrorMessage"
 
@@ -12,6 +11,8 @@ const Messages = dynamic(() => import("../components/Messages").then(({ Messages
 
 export default function Index({}) {
 	const { isLoading, error, data } = useCanvas()
+
+	const [client, setClient] = useState<Client | null>(null)
 
 	const gossipPeers = data?.peers ? Object.entries(data.peers.gossip) : []
 	const syncPeers = data?.peers ? Object.entries(data.peers.sync) : []
@@ -22,7 +23,7 @@ export default function Index({}) {
 				<title>Canvas Example App</title>
 				<meta name="viewport" content="initial-scale=1.0, width=device-width" />
 			</Head>
-			<Messages />
+			<Messages client={client} />
 			<div id="sidebar">
 				<div className="window">
 					<div className="title-bar">
@@ -73,7 +74,7 @@ export default function Index({}) {
 						)}
 					</div>
 				</div>
-				<Connect />
+				<Connect setClient={setClient} />
 			</div>
 		</main>
 	)

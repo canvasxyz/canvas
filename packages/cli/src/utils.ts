@@ -10,8 +10,9 @@ import chalk from "chalk"
 import prompts from "prompts"
 
 import { chainType, constants } from "@canvas-js/core"
-import { BlockProvider } from "@canvas-js/interfaces"
-import { EthereumBlockProvider } from "@canvas-js/verifiers"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+import { ChainImplementation } from "@canvas-js/interfaces"
+import { ethers } from "ethers"
 
 export const CANVAS_HOME = process.env.CANVAS_HOME ?? path.resolve(os.homedir(), ".canvas")
 export const SOCKET_FILENAME = "daemon.sock"
@@ -50,21 +51,21 @@ export async function confirmOrExit(message: string) {
 
 export const cidPattern = /^Qm[a-zA-Z0-9]{44}$/
 
-export function parseSpecArgument(value: string): { directory: string | null; uri: string; app: string } {
+export function parseSpecArgument(value: string): { directory: string | null; uri: string; spec: string } {
 	if (cidPattern.test(value)) {
 		const directory = path.resolve(CANVAS_HOME, value)
 		const specPath = path.resolve(directory, constants.SPEC_FILENAME)
 		if (fs.existsSync(specPath)) {
-			const app = fs.readFileSync(specPath, "utf-8")
-			return { directory, uri: `ipfs://${value}`, app }
+			const spec = fs.readFileSync(specPath, "utf-8")
+			return { directory, uri: `ipfs://${value}`, spec }
 		} else {
 			console.error(chalk.red(`[canvas-cli] App ${value} is not installed.`))
 			process.exit(1)
 		}
 	} else if (value.endsWith(".js") || value.endsWith(".jsx")) {
 		const specPath = path.resolve(value)
-		const app = fs.readFileSync(specPath, "utf-8")
-		return { directory: null, uri: `file://${specPath}`, app }
+		const spec = fs.readFileSync(specPath, "utf-8")
+		return { directory: null, uri: `file://${specPath}`, spec }
 	} else {
 		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js/.jsx file"))
 		process.exit(1)
@@ -90,17 +91,17 @@ export async function installSpec(app: string): Promise<string> {
 	return cid
 }
 
-export function getProviders(args?: (string | number)[]): Record<string, BlockProvider> {
-	const providers: Record<string, BlockProvider> = {}
+export function getChainImplementations(args?: (string | number)[]): ChainImplementation[] {
+	const chains: ChainImplementation[] = []
 
 	if (args !== undefined) {
 		for (let i = 0; i < args.length; i += 3) {
-			const [chain, id, url] = args.slice(i, i + 3)
+			const [chain, chainId, url] = args.slice(i, i + 3)
 			if (!chainType.is(chain)) {
 				console.log(chalk.red(`[canvas-cli] Invalid chain "${chain}", should be a ${chainType.name}`))
 				process.exit(1)
-			} else if (typeof id !== "number") {
-				console.log(chalk.red(`Invalid chain id "${id}", should be e.g. 1`))
+			} else if (typeof chainId !== "number") {
+				console.log(chalk.red(`Invalid chain id "${chainId}", should be e.g. 1`))
 				process.exit(1)
 			} else if (typeof url !== "string") {
 				console.log(chalk.red(`Invalid chain rpc "${url}", should be a url`))
@@ -108,21 +109,21 @@ export function getProviders(args?: (string | number)[]): Record<string, BlockPr
 			}
 
 			if (chain == "ethereum") {
-				const key = `${chain}:${id}`
-				providers[key] = new EthereumBlockProvider(id.toString(), url)
+				const provider = new ethers.providers.JsonRpcProvider(url)
+				chains.push(new EthereumChainImplementation(chainId.toString(), provider))
 			} else {
 				console.log(`'chain' value (${chain}) was not 'eth', all other RPCs are currently unsupported`)
 			}
 		}
 	} else if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
-		const key = `ethereum:${process.env.ETH_CHAIN_ID}`
-		providers[key] = new EthereumBlockProvider(process.env.ETH_CHAIN_ID, process.env.ETH_CHAIN_RPC)
+		const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_CHAIN_RPC)
+		chains.push(new EthereumChainImplementation(process.env.ETH_CHAIN_ID, provider))
 		console.log(
 			`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
 		)
 	}
 
-	return providers
+	return chains
 }
 
 export function getDirectorySize(directory: string): number {

@@ -1,5 +1,5 @@
 {
-  "name": "@canvas-js/hooks",
+  "name": "@canvas-js/chain-ethereum",
   "version": "v0.0.50-pre3",
   "type": "module",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
@@ -8,15 +8,10 @@
   "files": [
     "lib"
   ],
-  "peerDependencies": {
-    "@types/react": "^18.0.26",
-    "react": "^18.2.0"
+  "dependencies": {
+    "safe-stable-stringify": "^2.4.2"
   },
   "devDependencies": {
     "typescript": "^4.9.4"
-  },
-  "dependencies": {
-    "@canvas-js/interfaces": "v0.0.50-pre3",
-    "ethers": "^5.7.2"
   }
 }

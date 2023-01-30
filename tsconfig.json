@@ -7,8 +7,6 @@
     { "path": "./packages/next" },
     { "path": "./packages/interfaces" },
     { "path": "./packages/hooks" },
-    { "path": "./packages/signers" },
-    { "path": "./packages/signers/test" },
-    { "path": "./packages/verifiers" }
+    { "path": "./packages/chain-ethereum" }
   ]
 }

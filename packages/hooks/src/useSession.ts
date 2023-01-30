@@ -1,110 +1,122 @@
-import { useCallback, useContext, useEffect, useState } from "react"
+import { useCallback, useContext, useEffect, useMemo, useState } from "react"
 
-import { Block, SessionPayload } from "@canvas-js/interfaces"
-import type { SessionSigner } from "@canvas-js/signers/lib/interfaces"
+import { ActionArgument, ChainImplementation } from "@canvas-js/interfaces"
 
-import { CanvasContext } from "./CanvasContext.js"
-import { getRecentBlock, urlJoin } from "./utils.js"
+import { ApplicationData, CanvasContext } from "./CanvasContext.js"
 import { getSessionObject, setSessionObject, removeSessionObject, SessionObject } from "./sessionKeyStorage.js"
 
-export function useSession(signer: SessionSigner | null): {
-	error: Error | null
+const second = 1000
+const minute = 60 * second
+const hour = 60 * minute
+
+export type Client = Record<string, (callArgs: Record<string, ActionArgument>) => Promise<{ hash: string }>>
+
+/**
+ * isLoading === true: waiting for application data from host, & checking localStorage for sessionObject
+ * isLoading === false && sessionAddress === null: logged out, need to call login()
+ * isLoading === false && sessionAddress !== null: we have a session and `client` will be non-null
+ *
+ * `client`, `sessionAddress`, and `sessionExpiration` are either all null or all non-null.
+ */
+
+export function useSession<Signer, DelegatedSigner>(
+	chainImplementation: ChainImplementation<Signer, DelegatedSigner>,
+	signer: Signer | null | undefined,
+	options: { sessionDuration?: number; unchecked?: boolean } = {}
+): {
 	isLoading: boolean
 	isPending: boolean
 	sessionAddress: string | null
 	sessionExpiration: number | null
 	login: () => void
 	logout: () => void
+	client: Client | null
 } {
-	const { host, data, setSigner, actionSigner, setActionSigner, sessionExpiration, setSessionExpiration } =
-		useContext(CanvasContext)
+	const { chain, chainId } = chainImplementation
 
-	const [error, setError] = useState<null | Error>(null)
+	const { host, data } = useContext(CanvasContext)
+
 	const [isLoading, setIsLoading] = useState(true)
 	const [isPending, setIsPending] = useState(false)
 
-	const [signerAddress, setSignerAddress] = useState<string | null>(null)
-	useEffect(() => {
-		if (signer === null) {
-			setSignerAddress(null)
-			setSigner(null)
-		} else {
-			signer.getAddress().then((address) => {
-				setSignerAddress(address)
-				setSigner(signer)
-			})
+	const [sessionSigner, setSessionSigner] = useState<DelegatedSigner | null>(null)
+	const [sessionAddress, setSessionAddress] = useState<string | null>(null)
+	const [sessionExpiration, setSessionExpiration] = useState<number | null>(null)
+
+	const loadSavedSession = useCallback(async (data: ApplicationData, signer: Signer) => {
+		const signerAddress = await chainImplementation.getSignerAddress(signer)
+		const sessionObject = getSessionObject(chain, chainId, signerAddress)
+
+		if (sessionObject !== null) {
+			if (sessionObject.app !== data.uri || sessionObject.expiration < Date.now()) {
+				removeSessionObject(chain, chainId, signerAddress)
+			} else {
+				const delegatedSigner = chainImplementation.importDelegatedSigner(sessionObject.sessionPrivateKey)
+				const sessionAddress = await chainImplementation.getDelegatedSignerAddress(delegatedSigner)
+				setSessionAddress(sessionAddress)
+				setSessionSigner(delegatedSigner)
+				setSessionExpiration(sessionObject.expiration)
+				setIsLoading(false)
+				return
+			}
 		}
 
-		setActionSigner(null)
+		setSessionAddress(null)
+		setSessionSigner(null)
 		setSessionExpiration(null)
-	}, [signer])
+		setIsLoading(false)
+	}, [])
 
 	useEffect(() => {
-		if (host === null || data === null || signerAddress === null) {
+		if (host === null || data === null || signer === null || signer === undefined) {
 			return
 		}
 
-		setIsLoading(false)
-
-		const sessionObject = getSessionObject(data, signerAddress)
-		if (sessionObject) {
-			const { sessionPrivateKey, expiration } = sessionObject
-			signer!.createActionSigner(sessionPrivateKey).then((actionSigner) => {
-				setActionSigner(actionSigner)
-			})
-			setSessionExpiration(expiration)
-		}
-	}, [host, data, signerAddress])
+		loadSavedSession(data, signer)
+	}, [host, data, signer])
 
 	const login = useCallback(async () => {
 		if (host === null) {
-			return setError(new Error("no host configured"))
-		} else if (signer === null) {
-			return setError(new Error("login() called without a signer"))
-		} else if (signerAddress === null) {
-			return setError(new Error("login() called before the signer was ready"))
+			throw new Error("no host configured")
 		} else if (data === null) {
-			return setError(new Error("login() called before the application connection was established"))
+			throw new Error("login() called before the application connection was established")
+		} else if (signer === null || signer === undefined) {
+			throw new Error("login() called without a signer")
+		} else if (isPending) {
+			throw new Error("another login() call is already pending")
 		}
 
-		setIsPending(true)
-
 		try {
-			const timestamp = Date.now()
-			const sessionDuration = 86400 * 1000
-			const actionSigner = await signer.createActionSigner()
+			setIsPending(true)
+
+			const signerAddress = await chainImplementation.getSignerAddress(signer)
+			const sessionIssued = Date.now()
+			const sessionDuration = options.sessionDuration ?? 24 * hour
+
+			const delegatedSigner = await chainImplementation.generateDelegatedSigner()
+			const sessionAddress = await chainImplementation.getDelegatedSignerAddress(delegatedSigner)
 
 			const sessionObject: SessionObject = {
 				app: data.uri,
-				sessionPrivateKey: actionSigner.privateKey,
-				expiration: timestamp + sessionDuration,
+				sessionPrivateKey: chainImplementation.exportDelegatedSigner(delegatedSigner),
+				expiration: sessionIssued + sessionDuration,
 			}
 
-			const chain = await signer.getChain()
-			const chainId = await signer.getChainId()
+			const block = options.unchecked ? null : await chainImplementation.getLatestBlock()
 
-			let block: Block
-			try {
-				block = await getRecentBlock(host, chain, chainId)
-			} catch (err) {
-				block = await signer.getRecentBlock()
-			}
-
-			const payload: SessionPayload = {
+			const session = await chainImplementation.signSession(signer, {
 				from: signerAddress,
 				app: data.uri,
 				appName: data.appName,
-				sessionAddress: actionSigner.address,
+				sessionAddress,
 				sessionDuration,
-				sessionIssued: timestamp,
-				block: block.blockhash,
-				chain: block.chain,
-				chainId: block.chainId,
-			}
+				sessionIssued,
+				block,
+				chain,
+				chainId,
+			})
 
-			const session = await signer.signSessionPayload(payload)
-
-			const res = await fetch(urlJoin(host, "sessions"), {
+			const res = await fetch(`${host}/sessions`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(session),
@@ -115,39 +127,93 @@ export function useSession(signer: SessionSigner | null): {
 				throw new Error(message)
 			}
 
-			setSessionObject(signerAddress, sessionObject)
+			setSessionObject(chain, chainId, signerAddress, sessionObject)
 
-			setActionSigner(actionSigner)
+			setSessionSigner(delegatedSigner)
+			setSessionAddress(sessionAddress)
 			setSessionExpiration(sessionObject.expiration)
-			setError(null)
-		} catch (err) {
-			console.error(err)
-			if (err instanceof Error) {
-				setError(err)
-			} else {
-				throw err
-			}
 		} finally {
 			setIsPending(false)
 		}
-	}, [host, data, signer, signerAddress])
+	}, [signer, host, data, isPending])
 
-	const logout = useCallback(() => {
-		setActionSigner(null)
-		setSessionExpiration(null)
-		if (signerAddress !== null) {
-			removeSessionObject(signerAddress)
+	const logout = useCallback(async () => {
+		if (signer) {
+			const signerAddress = await chainImplementation.getSignerAddress(signer)
+			removeSessionObject(chain, chainId, signerAddress)
 		}
-	}, [signerAddress])
 
-	const sessionAddress = actionSigner && actionSigner.address
+		setSessionSigner(null)
+		setSessionAddress(null)
+		setSessionExpiration(null)
+	}, [signer])
+
+	const dispatch = useCallback(
+		async (call: string, callArgs: Record<string, ActionArgument>): Promise<{ hash: string }> => {
+			if (host === null) {
+				throw new Error("no host configured")
+			} else if (data === null) {
+				throw new Error("dispatch() called before the application connection was established")
+			} else if (signer === null || signer === undefined) {
+				throw new Error("dispatch() called without a signer")
+			} else if (sessionSigner === null || sessionExpiration === null) {
+				throw new Error("dispatch() called before login")
+			} else if (sessionExpiration < Date.now()) {
+				throw new Error("session expired, please log in again")
+			}
+
+			const action = await chainImplementation.signDelegatedAction(sessionSigner, {
+				app: data.uri,
+				appName: data.appName,
+				from: await chainImplementation.getSignerAddress(signer),
+				call,
+				callArgs,
+				chain,
+				chainId,
+				timestamp: Date.now(),
+				block: options.unchecked ? null : await chainImplementation.getLatestBlock(),
+			})
+
+			console.log(action)
+
+			const res = await fetch(`${host}/actions`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(action),
+			})
+
+			if (res.ok) {
+				return await res.json()
+			} else {
+				const message = await res.text()
+
+				if (message === "session not found" || message === "session expired") {
+					const signerAddress = await chainImplementation.getSignerAddress(signer)
+					removeSessionObject(chain, chainId, signerAddress)
+					setSessionSigner(null)
+					setSessionAddress(null)
+					setSessionExpiration(null)
+				}
+
+				throw new Error(message)
+			}
+		},
+
+		[host, data, signer, sessionSigner, sessionExpiration]
+	)
+
+	const client = useMemo<Client | null>(
+		() => data && Object.fromEntries(data.actions.map((action) => [action, (args) => dispatch(action, args)])),
+		[data, dispatch]
+	)
+
 	return {
-		error,
 		isLoading,
 		isPending,
 		sessionAddress,
 		sessionExpiration,
 		login,
 		logout,
+		client: signer && sessionSigner && Date.now() < (sessionExpiration ?? 0) ? client : null,
 	}
 }

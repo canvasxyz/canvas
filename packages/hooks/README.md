@@ -2,6 +2,15 @@
 
 React hooks for using Canvas in your frontend application.
 
+## Table of Contents
+
+- [`<Canvas />`](#canvas)
+- [`useCanvas`](#usecanvas)
+- [`useRoute`](#useroute)
+- [`useSession`](#usesession)
+
+## `<Canvas />`
+
 To use the Canvas hooks, you must first wrap your application in a parent `Canvas` element, which initializes state and sets an internal React context for the hooks to use. The only thing you have to pass the `Canvas` element is a `host: string` URL of a canvas app's HTTP API server.
 
 ```tsx
@@ -10,112 +19,163 @@ To use the Canvas hooks, you must first wrap your application in a parent `Canva
 </Canvas>
 ```
 
-Next, in just one location in your app (ideally a dedicated login/authentication component), acquire an `ethers.providers.JsonRpcSigner` for the user and pass it into the Canvas `useSession` hook. This example uses `wagmi` and assumes the the user has already connected using the wagmi `useConnect()` hook.
+## `useCanvas`
+
+You can then access metadata about the host and the application the host is serving using the `useCanvas` hook anywhere inside the parent `Canvas` element.
 
 ```tsx
-import React from "react"
-
-import { ethers } from "ethers"
-import { useSigner } from "wagmi"
-import { useSession } from "@canvas-js/hooks"
-
-const Login: React.FC<{}> = ({}) => {
-	const { error: signerError, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
-
-	const {
-		error: sessionError,
-		sessionAddress,
-		sessionExpiration,
-		login,
-		logout,
-		isLoading,
-		isPending,
-	} = useSession(signer ?? null)
-
-	if (sessionAddress === null) {
-		return (
-			<div>
-				{isLoading ? <p>Loading...</p> : <p>Click Login to begin a new session.</p>}
-				<button disabled={isLoading || isPending} onClick={login}>
-					Login
-				</button>
-			</div>
-		)
-	} else {
-		return (
-			<div>
-				<p>Using session {sessionAddress}.</p>
-				<button disabled={isLoading} onClick={logout}>
-					Logout
-				</button>
-			</div>
-		)
-	}
-}
-```
-
-`useSession` returns some status values along with `login()` and `logout()` methods. `login()` creates a new session and stores it in localStorage and an internal React context; `logout()` reset the context value and clears localStorage.
-
-You only need to include `useSession` in one place in your entire application, and it should attach natually to the regular wallet connect flow.
-
-The `useCanvas` can be imported any number of times anywhere throughout your application. `useCanvas` returns metadata about the connected application, and an async `dispatch()` method that is used to create and send actions.
-
-```tsx
-import { useCallback } from "react"
 import { useCanvas } from "@canvas-js/hooks"
 
-export function SomeComponent(props: {}) {
-	const { isReady, dispatch } = useCanvas()
+function MyApp({}) {
+	const { host, isLoading, data, error } = useCanvas()
 
-	const [count, setCount] = useState(0)
-
-	const handleClick = useCallback(() => {
-		dispatch("poke", count)
-		setCount(count + 1)
-	}, [dispatch, count])
-
-	return <button disabled={isReady} onClick={handleClick}></button>
+	return <div>{/* ...*/}</div>
 }
 ```
 
-Here, when the button is clicked, we dispatch a `poke` action with a single integer argument. The signing, timestamp, current block, and so on are all handled internally by the dispatch method using the session wallet held by the internal React context.
-
-Lastly, to subscribe to a route, pass the `useRoute` a string route and an object of params. `useRoute` works like the `useSWR` hook, returning an error or an array of results. Internally, it uses the [EventSource API](https://developer.mozilla.org/en-US/docs/Web/API/EventSource).
+`isLoading` is initially `true` while the hook makes an initial HTTP request for application metadata, and then sets to `false` when either `data` or `error` is non-null.
 
 ```ts
-declare function useSession(signer: ethers.providers.JsonRpcSigner | null): {
+interface ApplicationData {
+	cid: string
+	uri: string
+	appName: string
+	component: string | null
+	actions: string[]
+	routes: string[]
+	peerId: string | null
+	peers: {
+		gossip: Record<string, { lastSeen: number }>
+		sync: Record<string, { lastSeen: number }>
+	} | null
+}
+
+declare function useCanvas(): {
+	host: string | null
+	data: ApplicationData | null
 	error: Error | null
+	isLoading: boolean
+}
+```
+
+### `useRoute`
+
+`useRoute` is the primary way to fetch data from your application.
+
+There are two ways to use the `useRoute` hook to fetch data. The `Canvas` element internally establishes a websocket connection to the host, and, by default, the `useRoute` hook will use that websocket connection to subscribe to a given route with given params.
+
+For example, subscribing to the posts for a specific user might look like this:
+
+```tsx
+import { useRoute } from "@canvas-js/hooks"
+
+function MyApp({}) {
+	const { data, error, isLoading } = useRoute<{ content: string }>("/posts/:user", { user: "joel" })
+	// data: { content: string }[] | null
+	// error: Error | null
+	// isLoading: boolean
+
+	return <div>{/* ...*/}</div>
+}
+```
+
+The hook will re-render every time the resulting `data` changes (compared deep equality). Use this pattern when you want the host to push data to the client. **Don't** use this pattern if the parameter values (`{ user: "joel" }` in the example) change often. For subscriptions, routes are bound to concrete parameter values, so changing the parameters forces the hook to unsubscribe and re-subscribe.
+
+The `useRoute` hook can also fetch routes without subscribing to them. Pass a `{ subscribe: false }` options object as the third argument and the hook will use regulular HTTP GET requests, re-fetching the route data every time any of the parameter values change (and only then).
+
+```tsx
+import { useRoute } from "@canvas-js/hooks"
+
+function MyApp({}) {
+	const { data, error, isLoading } = useRoute<{ content: string }>(
+		"/posts/:user",
+		{ user: "joel" },
+		{ subscribe: false }
+	)
+	// data: { content: string }[] | null
+	// error: Error | null
+	// isLoading: boolean
+
+	return <div>{/* ...*/}</div>
+}
+```
+
+```ts
+import { ModelValue } from "@canvas-js/interfaces"
+
+function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
+	route: string,
+	params: Record<string, ModelValue>,
+	options: { subscribe?: boolean } = { subscribe: true }
+): { error: Error | null; isLoading: boolean; data: T[] | null }
+```
+
+## `useSession`
+
+In an example Ethereum app with a `createPost(args: { content: string })` action, using `useSession` with `wagmi` might look like this:
+
+```tsx
+import { useProvider, useSigner, useNetwork } from "wagmi"
+import { EthereumChainImplementation } from "@canvas-js/ethereum"
+
+// class EthereumChainImplementation implements ChainImplementation<ethers.providers.JsonRpcSigner, ethers.Wallet> {
+//   constructor(chainId: string, provider?: ethers.providers.JsonRpcProvider)
+// }
+
+function MyApp({}) {
+	const provider = useProvider<ethers.providers.JsonRpcProvider>()
+	const { error, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
+	const { chain } = useNetwork()
+
+	const chainImplementation = useMemo(
+		() => new EthereumChainImplementation(chain?.id?.toString(), provider),
+		[provider, chain?.id]
+	)
+
+	const { login, logout, client } = useSession(chainImplementation, signer)
+
+	const handleSubmit = useCallback(
+		async (content: string) => {
+			if (client !== null) {
+				try {
+					const { hash } = await client.createPost({ content })
+					console.log("successfully posted action", hash)
+				} catch (err) {
+					console.error(err)
+				}
+			}
+		},
+		[client]
+	)
+
+	return <div>{/* ...*/}</div>
+}
+```
+
+The `useSession` hook is in one of the following three states:
+
+- `isLoading === true`: waiting for application data from host, & checking localStorage for sessionObject
+- `isLoading === false && sessionAddress === null`: logged out, need to call login()
+- `isLoading === false && sessionAddress !== null`: we have a session and `client` will be non-null
+
+`client`, `sessionAddress`, and `sessionExpiration` are either all null or all non-null.
+
+```ts
+import { ChainImplementation, Argument } from "@canvas-js/hooks"
+
+export type Client = Record<string, (callArgs: Record<string, ActionArgument>) => Promise<{ hash: string }>>
+
+export function useSession<Signer, DelegatedSigner>(
+	chainImplementation: ChainImplementation<Signer, DelegatedSigner>,
+	signer: Signer | null | undefined,
+	options: { sessionDuration?: number; unchecked?: boolean } = {}
+): {
 	isLoading: boolean
 	isPending: boolean
 	sessionAddress: string | null
 	sessionExpiration: number | null
 	login: () => void
 	logout: () => void
-}
-
-declare function useCanvas(): {
-	dispatch: (call: string, ...args: (null | boolean | number | string)[]) => Promise<{ hash: string }>
-	isLoading: boolean
-	isPending: boolean
-	isReady: boolean
-	error: Error | null
-	host: string | null
-	data: {
-		cid: string
-		uri: string
-		component: string | null
-		actions: string[]
-		routes: string[]
-	} | null
-}
-
-declare function useRoute<T = Record<string, null | boolean | number | string>>(
-	route: string,
-	params: Record<string, null | boolean | number | string>
-): {
-	error: Error | null
-	data: T[] | null
+	client: Client | null
 }
 ```
-
-(c) 2022 Canvas Technology Corporation

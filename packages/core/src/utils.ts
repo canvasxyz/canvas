@@ -12,10 +12,10 @@ import type {
 	ModelValue,
 	RouteContext,
 	Query,
-	Block,
 } from "@canvas-js/interfaces"
 
 import { configure } from "safe-stable-stringify"
+
 export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
 
 export const ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
@@ -146,9 +146,9 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 		lines.push(`};`)
 	}
 
-	const app = lines.join("\n")
-	const cid = await Hash.of(app)
-	return { app: `ipfs://${cid}`, spec: app, appName }
+	const spec = lines.join("\n")
+	const cid = await Hash.of(spec)
+	return { app: `ipfs://${cid}`, spec, appName }
 }
 
 export class AbortError extends Error {
@@ -239,5 +239,3 @@ export class CacheMap<K, V> extends Map<K, V> {
 		}
 	}
 }
-
-export type BlockResolver = (chain: Chain, chainId: ChainId, blockhash: string) => Promise<Block>
