@@ -17,6 +17,7 @@
     "packages/next",
     "packages/hooks",
     "packages/chain-ethereum",
+    "packages/chain-solana",
     "examples/app-store",
     "examples/chat-webpack",
     "examples/chat-next"
