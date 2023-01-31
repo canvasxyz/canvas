@@ -8,6 +8,7 @@
     { "path": "./packages/interfaces" },
     { "path": "./packages/hooks" },
     { "path": "./packages/chain-ethereum" },
+    { "path": "./packages/chain-cosmos" },
     { "path": "./packages/chain-solana" }
   ]
 }

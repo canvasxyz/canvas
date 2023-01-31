@@ -17,9 +17,17 @@
     "packages/next",
     "packages/hooks",
     "packages/chain-ethereum",
+    "packages/chain-cosmos",
     "packages/chain-solana",
     "examples/app-store",
     "examples/chat-webpack",
     "examples/chat-next"
-  ]
+  ],
+  "dependencies": {
+    "@cosmjs/amino": "^0.29.5",
+    "@cosmjs/crypto": "^0.29.5"
+  },
+  "devDependencies": {
+    "@keplr-wallet/types": "^0.11.38"
+  }
 }

@@ -3,7 +3,7 @@ import { TypedDataDomain, TypedDataField, utils } from "ethers"
 import { ActionPayload, SessionPayload } from "@canvas-js/interfaces"
 
 import { configure } from "safe-stable-stringify"
-const serialize = configure({ circularValue: Error, bigint: false, deterministic: true, strict: true })
+const jsonStableStringify = configure({ circularValue: Error, bigint: false, deterministic: true, strict: true })
 
 /**
  * Ethereum compatible signer logic, used to generate and
@@ -44,7 +44,7 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData<Ac
 	// enforced at runtime, call .toString() to be sure
 	const actionValue = {
 		...payload,
-		callArgs: serialize(payload.callArgs),
+		callArgs: jsonStableStringify(payload.callArgs),
 		chainId: payload.chainId.toString(),
 		block: payload.block || "",
 	}
