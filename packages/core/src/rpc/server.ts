@@ -11,21 +11,18 @@ import * as okra from "node-okra"
 
 import RPC from "../../rpc/sync/index.cjs"
 
-import { toBuffer, toHex, stringify } from "../utils.js"
-import { Action, Session } from "@canvas-js/interfaces"
+import { toBuffer, stringify, signalInvalidType } from "../utils.js"
 
-// We declare this interface to enforce that handleIncomingStream only has read access to the message store.
-interface MessageStore {
-	getSessionByHash(hash: Buffer): Session | null
-	getActionByHash(hash: Buffer): Action | null
-}
+import { type MessageStore, toKey } from "./utils.js"
+
+const { CANVAS_SESSION, CANVAS_ACTION } = RPC.MessageRequest.MessageType
 
 export async function handleIncomingStream(
 	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
 	messageStore: MessageStore,
 	mst: okra.Tree
 ) {
-	const txn = new okra.Source(mst)
+	const txn = new okra.Transaction(mst, { readOnly: true })
 
 	async function* handle(source: Source<Uint8ArrayList>): AsyncIterable<Uint8Array> {
 		for await (const msg of source) {
@@ -40,63 +37,59 @@ export async function handleIncomingStream(
 	} catch (err) {
 		console.log(chalk.red(`[canvas-core] Error handling incoming sync:`), err)
 	} finally {
-		txn.close()
+		txn.abort()
 	}
 }
 
-function handleRequest(messageStore: MessageStore, txn: okra.Source, req: RPC.Request): RPC.Response {
+function handleRequest(messageStore: MessageStore, txn: okra.Transaction, req: RPC.Request): RPC.Response {
 	switch (req.request) {
 		case "getRoot":
 			assert(req.getRoot)
-			return RPC.Response.create({ seq: req.seq, getRoot: getRoot(txn, req.getRoot) })
+			return RPC.Response.create({ seq: req.seq, getRoot: getRoot(req.getRoot, txn) })
 		case "getChildren":
 			assert(req.getChildren)
-			return RPC.Response.create({ seq: req.seq, getChildren: getChildren(txn, req.getChildren) })
-		case "getValues":
-			assert(req.getValues)
-			return RPC.Response.create({ seq: req.seq, getValues: getValues(messageStore, req.getValues) })
+			return RPC.Response.create({ seq: req.seq, getChildren: getChildren(req.getChildren, txn) })
+		case "getMessages":
+			assert(req.getMessages)
+			return RPC.Response.create({ seq: req.seq, getMessages: getMessages(req.getMessages, txn, messageStore) })
 		default:
 			throw new Error("invalid request type")
 	}
 }
 
-function getRoot(txn: okra.Source, {}: RPC.Request.IGetRootRequest): RPC.Response.IGetRootResponse {
-	return { hash: txn.getRootHash(), level: txn.getRootLevel() }
+function getRoot({}: RPC.Request.IGetRootRequest, txn: okra.Transaction): RPC.Response.IGetRootResponse {
+	const { level, hash } = txn.getRoot()
+	return { level, hash }
 }
 
 function getChildren(
-	txn: okra.Source,
-	{ level, leaf }: RPC.Request.IGetChildrenRequest
+	{ level, key }: RPC.Request.IGetChildrenRequest,
+	txn: okra.Transaction
 ): RPC.Response.IGetChildrenResponse {
 	assert(typeof level === "number" && level > 0)
-	assert(leaf instanceof Uint8Array)
-	return { nodes: txn.getChildren(level, toBuffer(leaf)) }
+	assert(key instanceof Uint8Array)
+	return { nodes: txn.getChildren(level, toKey(key)) }
 }
 
-function getValues(
-	messageStore: MessageStore,
-	{ nodes }: RPC.Request.IGetValuesRequest
-): RPC.Response.IGetValuesResponse {
-	assert(nodes)
+function getMessages(
+	{ messages }: RPC.Request.IGetMessagesRequest,
+	txn: okra.Transaction,
+	messageStore: MessageStore
+): RPC.Response.IGetMessagesResponse {
+	assert(messages)
+	const encoder = new TextEncoder()
 	return {
-		values: nodes.map(({ leaf, hash }, i) => {
-			assert(leaf instanceof Uint8Array)
-			assert(hash instanceof Uint8Array)
-			const timestamp = toBuffer(leaf).readUintBE(0, 6)
-			if (timestamp % 2 === 0) {
-				const session = messageStore.getSessionByHash(toBuffer(hash))
-				if (session === null) {
-					throw new Error(`session not found: ${toHex(hash)}`)
-				} else {
-					return new TextEncoder().encode(stringify(session))
-				}
+		messages: messages.map(RPC.MessageRequest.create).map(({ type, id }) => {
+			if (type === CANVAS_SESSION) {
+				const session = messageStore.getSessionByHash(toBuffer(id))
+				assert(session !== null, "requested session not found in message store")
+				return encoder.encode(stringify(session))
+			} else if (type === CANVAS_ACTION) {
+				const action = messageStore.getActionByHash(toBuffer(id))
+				assert(action !== null, "requested action not found in message store")
+				return encoder.encode(stringify(action))
 			} else {
-				const action = messageStore.getActionByHash(toBuffer(hash))
-				if (action === null) {
-					throw new Error(`action not found: ${toHex(hash)}`)
-				} else {
-					return new TextEncoder().encode(stringify(action))
-				}
+				signalInvalidType(type)
 			}
 		}),
 	}

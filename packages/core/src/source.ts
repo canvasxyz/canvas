@@ -16,7 +16,7 @@ import * as okra from "node-okra"
 import { Action, Message, Session } from "@canvas-js/interfaces"
 
 import { wait, retry, AbortError, toHex, signalInvalidType, CacheMap } from "./utils.js"
-import { sync, handleIncomingStream } from "./rpc/index.js"
+import { sync, handleIncomingStream, getMessageKey } from "./rpc/index.js"
 import * as constants from "./constants.js"
 import { metrics } from "./metrics.js"
 import { messageType } from "./codecs.js"
@@ -70,7 +70,7 @@ export class Source {
 
 		if (libp2p !== null && !this.options.offline) {
 			libp2p.pubsub.subscribe(this.uri)
-			libp2p.pubsub.addEventListener("message", this.handleMessage)
+			libp2p.pubsub.addEventListener("message", this.handleGossipMessage)
 			if (this.options.verbose) {
 				console.log(`[canvas-core] [${cid.toString()}] Subscribed to pubsub topic ${this.uri}`)
 			}
@@ -87,28 +87,24 @@ export class Source {
 		if (this.libp2p !== null && !this.options.offline) {
 			this.libp2p.unhandle(this.syncProtocol)
 			this.libp2p.pubsub.unsubscribe(this.uri)
-			this.libp2p.pubsub.removeEventListener("message", this.handleMessage)
+			this.libp2p.pubsub.removeEventListener("message", this.handleGossipMessage)
 		}
 
 		this.mst.close()
 	}
 
 	/**
-	 * Insert the message into the MST.
-	 * This is synchronous and internally opens a locking write transaction.
+	 * Synchronously the message into the MST. This is only called from core to insert local-origin messages.
 	 */
 	public insertMessage(hash: Buffer, message: Message) {
-		const leaf = Buffer.alloc(14)
-		if (message.type === "action") {
-			leaf.writeUintBE(message.payload.timestamp * 2 + 1, 0, 6)
-		} else if (message.type === "session") {
-			leaf.writeUintBE(message.payload.sessionIssued * 2, 0, 6)
-		} else {
-			signalInvalidType(message)
+		const txn = new okra.Transaction(this.mst, { readOnly: false })
+		try {
+			txn.set(getMessageKey(hash, message), hash)
+			txn.commit()
+		} catch (err) {
+			txn.abort()
+			throw err
 		}
-
-		hash.copy(leaf, 6, 0, 8)
-		this.mst.insert(leaf, hash)
 	}
 
 	/**
@@ -138,21 +134,26 @@ export class Source {
 	}
 
 	/**
-	 * handleMessage is attached as a listener to *all* libp2p GosssipSub messages
+	 * handleGossipMessage is attached as a listener to *all* libp2p GosssipSub messages.
 	 */
-	private handleMessage = async ({ detail: { type, topic, data } }: CustomEvent<SignedMessage | UnsignedMessage>) => {
+	private handleGossipMessage = async ({
+		detail: { type, topic, data },
+	}: CustomEvent<SignedMessage | UnsignedMessage>) => {
 		// the first step is to check if the message is even for our topic in the first place.
 		if (type !== "signed" || topic !== this.uri) {
 			return
 		}
 
+		const txn = new okra.Transaction(this.mst, { readOnly: false })
 		try {
 			const message = JSON.parse(new TextDecoder().decode(data))
 			assert(messageType.is(message), "invalid message")
 			const hash = createHash("sha256").update(data).digest()
 			await this.applyMessage(hash, message)
-			this.insertMessage(hash, message)
+			txn.set(getMessageKey(hash, message), hash)
+			txn.commit()
 		} catch (err: any) {
+			txn.abort()
 			const cid = this.cid.toString()
 			console.log(chalk.red(`[canvas-core] [${cid}] Error applying GossipSub message:`), err.message)
 		}
@@ -366,8 +367,9 @@ export class Source {
 		let successCount = 0
 		let failureCount = 0
 
-		// this is the callback passed to `sync`, invoked per MST sync message
-		const handleMessage = async (hash: Buffer, data: Uint8Array, message: Message) => {
+		// this is the callback passed to `sync`, invoked with each missing message identified during MST sync.
+		// if handleSyncMessage succeeds, then sync() will automatically insert the message into the MST.
+		const handleSyncMessage = async (hash: Buffer, data: Uint8Array, message: Message) => {
 			const id = toHex(hash)
 			if (this.options.verbose) {
 				console.log(chalk.green(`[canvas-core] [${cid}] Received missing ${message.type} ${id}`))
@@ -375,18 +377,23 @@ export class Source {
 
 			try {
 				await this.applyMessage(hash, message)
-				this.insertMessage(hash, message)
-				await this.publishMessage(hash, data)
 				successCount += 1
 			} catch (err: any) {
-				console.log(chalk.red(`[canvas-core] [${cid}] Failed to apply ${message.type} ${id}:`), err.message)
+				console.log(chalk.red(`[canvas-core] [${cid}] Failed to apply ${message.type} ${id}:`), err)
 				failureCount += 1
+				throw err
+			}
+
+			try {
+				await this.publishMessage(hash, data)
+			} catch (err) {
+				console.log(chalk.red(`[canvas-core] [${cid}] Failed to publish ${message.type} ${id} to GossipSub:`), err)
 			}
 		}
 
 		const timer = metrics.canvas_sync_time.startTimer()
 		try {
-			await sync(this.mst, stream, handleMessage)
+			await sync(this.messageStore, this.mst, stream, handleSyncMessage)
 			timer({ uri: this.uri, status: "success" })
 		} catch (err) {
 			timer({ uri: this.uri, status: "failure" })

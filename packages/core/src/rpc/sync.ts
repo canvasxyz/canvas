@@ -9,62 +9,105 @@ import * as okra from "node-okra"
 
 import { Message } from "@canvas-js/interfaces"
 
+import RPC from "../../rpc/sync/index.cjs"
+
+import { actionType, sessionType } from "../codecs.js"
+import { signalInvalidType } from "../utils.js"
+
 import { Client } from "./client.js"
-import { actionType, messageType } from "../codecs.js"
+import { type MessageStore, getMessageType, equalNodes, getMessageKey } from "./utils.js"
+
+const { CANVAS_SESSION, CANVAS_ACTION } = RPC.MessageRequest.MessageType
 
 export async function sync(
+	messageStore: MessageStore,
 	mst: okra.Tree,
 	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
 	handleMessage: (hash: Buffer, data: Uint8Array, message: Message) => Promise<void>
 ): Promise<void> {
-	const target = new okra.Target(mst)
+	const txn = new okra.Transaction(mst, { readOnly: false })
+	const cursor = new okra.Cursor(txn)
 	const client = new Client(stream)
 
-	async function enter(targetLevel: number, sourceLevel: number, sourceRoot: Buffer, sourceHash: Buffer) {
-		if (sourceLevel > targetLevel) {
-			const children = await client.getChildren(sourceLevel, sourceRoot)
-			for (const { leaf, hash } of children) {
-				await enter(targetLevel, sourceLevel - 1, leaf, hash)
+	async function enter(targetLevel: number, sourceNode: okra.Node) {
+		if (sourceNode.level > targetLevel) {
+			const children = await client.getChildren(sourceNode.level, sourceNode.key)
+			for (const sourceChild of children) {
+				await enter(targetLevel, sourceChild)
 			}
 		} else {
-			await scan(sourceLevel, sourceRoot, sourceHash)
+			await scan(sourceNode)
 		}
 	}
 
-	async function scan(level: number, sourceRoot: Buffer, sourceHash: Buffer) {
-		const { leaf: targetRoot, hash: targetHash } = target.seek(level, sourceRoot)
-		if (targetRoot.equals(sourceRoot) && targetHash.equals(sourceHash)) {
+	async function scan(sourceNode: okra.Node) {
+		const targetNode = cursor.seek(sourceNode.level, sourceNode.key)
+		assert(targetNode !== null, "expected targetNode to not be null")
+		if (equalNodes(sourceNode, targetNode)) {
 			return
 		}
 
-		const children = await client.getChildren(level, sourceRoot)
-		if (level > 1) {
-			for (const { leaf, hash } of children) {
-				await scan(level - 1, leaf, hash)
+		const children = await client.getChildren(sourceNode.level, sourceNode.key)
+		if (sourceNode.level > 1) {
+			for (const sourceChild of children) {
+				await scan(sourceChild)
 			}
 		} else {
-			const leaves = target.filter(children)
-			const values = await client.getValues(leaves)
-			assert(values.length === leaves.length, "expected values.length to match leaves.length")
+			const requests: { type: RPC.MessageRequest.MessageType; id: Buffer }[] = []
+			for (const { key, value } of children) {
+				if (key === null) {
+					continue
+				}
 
-			for (const [i, data] of values.entries()) {
-				const { hash } = leaves[i]
-				assert(createHash("sha256").update(data).digest().equals(hash), "received bad value for hash")
-				const message = JSON.parse(new TextDecoder().decode(data))
-				assert(messageType.is(message), "invalid message")
-				await handleMessage(hash, data, message)
+				assert(value !== undefined, "expected leaf nodes to have a Buffer .value")
+				const type = getMessageType(key)
+				if (type === CANVAS_SESSION) {
+					if (messageStore.getSessionByHash(value) === null) {
+						requests.push({ type, id: value })
+					}
+				} else if (type === CANVAS_ACTION) {
+					if (messageStore.getActionByHash(value) === null) {
+						requests.push({ type, id: value })
+					}
+				} else {
+					signalInvalidType(type)
+				}
+			}
+
+			const decoder = new TextDecoder()
+
+			const messages = await client.getMessages(requests)
+
+			for (const [i, data] of messages.entries()) {
+				const { id, type } = requests[i]
+				assert(createHash("sha256").update(data).digest().equals(id), "message response did not match the request hash")
+
+				const message = JSON.parse(decoder.decode(data))
+				if (type === CANVAS_SESSION) {
+					assert(sessionType.is(message), "invalid session")
+				} else if (type === CANVAS_ACTION) {
+					assert(actionType.is(message), "invalid action")
+				} else {
+					signalInvalidType(type)
+				}
+
+				await handleMessage(id, data, message)
+				txn.set(getMessageKey(id, message), id)
 			}
 		}
 	}
 
 	try {
-		const { level: sourceLevel, hash: sourceValue } = await client.getRoot()
-		const sourceRoot = Buffer.alloc(14)
-		await enter(target.getRootLevel(), sourceLevel, sourceRoot, sourceValue)
+		const { level: sourceLevel, hash: sourceHash } = await client.getRoot()
+		const { level: targetLevel } = txn.getRoot()
+		await enter(targetLevel, { level: sourceLevel, key: null, hash: sourceHash })
+		cursor.close()
+		txn.commit()
 	} catch (err) {
 		console.log(chalk.red(`[canvas-core] Error performing outgoing sync:`), err)
+		cursor.close()
+		txn.abort()
 	} finally {
 		client.end()
-		target.close()
 	}
 }
