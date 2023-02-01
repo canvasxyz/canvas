@@ -170,6 +170,7 @@ type AppData = {
 	uri: string
 	cid: string
 	status: Status
+	appName?: string
 	models?: Record<string, Model>
 	actions?: string[]
 }
@@ -224,6 +225,7 @@ class Daemon {
 							uri: `ipfs://${cid}`,
 							cid,
 							status: app ? "running" : "stopped",
+							appName: app && app.core.vm.appName,
 							models: app && app.core.vm.models,
 							actions: app && app.core.vm.actions,
 						}
