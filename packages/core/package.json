@@ -49,7 +49,7 @@
     "it-stream-types": "^1.0.5",
     "libp2p": "^0.42.0",
     "multiformats": "^11.0.0",
-    "node-okra": "^0.1.0",
+    "node-okra": "^0.2.0",
     "p-queue": "^7.3.0",
     "prom-client": "^14.1.1",
     "protobufjs": "~7.1.2",
