@@ -70,6 +70,10 @@ export class Source {
 			}
 
 			libp2p.handle(this.syncProtocol, this.streamHandler)
+			if (this.options.verbose) {
+				console.log(`[canvas-core] [${cid.toString()}] Attached stream handler for protocol ${this.syncProtocol}`)
+			}
+
 			this.startSyncService()
 			this.startAnnounceService()
 		}
