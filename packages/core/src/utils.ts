@@ -20,13 +20,13 @@ export const stringify = configure({ bigint: false, circularValue: Error, strict
 
 export const ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
 
-export function parseIPFSURI(uri: string): CID | null {
+export function parseIPFSURI(uri: string): CID {
 	const match = ipfsURIPattern.exec(uri)
 	if (match) {
 		const [_, cid] = match
 		return CID.parse(cid)
 	} else {
-		return null
+		throw new Error("invalid ipfs:// URI")
 	}
 }
 

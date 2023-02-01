@@ -4,7 +4,7 @@ import assert from "node:assert"
 import { Core, compileSpec } from "@canvas-js/core"
 
 import { TestSigner } from "./utils.js"
-import { fromHex, parseIPFSURI, stringify } from "@canvas-js/core/lib/utils.js"
+import { fromHex, stringify } from "@canvas-js/core/lib/utils.js"
 
 const MessageBoard = await compileSpec({
 	name: "Test App",
@@ -101,9 +101,6 @@ test("Apply source actions", async (t) => {
 			updated_at: voteSourceAction.payload.timestamp,
 		},
 	])
-
-	const sourceCID = parseIPFSURI(MessageBoard.app)
-	assert(sourceCID !== null)
 
 	t.deepEqual(core.messageStore.database.prepare("SELECT * FROM actions").all(), [
 		{

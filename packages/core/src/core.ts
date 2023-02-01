@@ -21,8 +21,10 @@ import {
 } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
+import * as okra from "node-okra"
+
 import { actionType, sessionType } from "./codecs.js"
-import { toHex, signalInvalidType, CacheMap, parseIPFSURI, stringify } from "./utils.js"
+import { toHex, signalInvalidType, CacheMap, parseIPFSURI, stringify, mapEntries } from "./utils.js"
 
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
@@ -58,6 +60,7 @@ interface CoreEvents {
 export class Core extends EventEmitter<CoreEvents> {
 	public readonly modelStore: ModelStore
 	public readonly messageStore: MessageStore
+	public readonly mst: okra.Tree | null = null
 
 	public readonly recentGossipPeers = new CacheMap<string, { lastSeen: number }>(1000)
 	public readonly recentSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
@@ -98,30 +101,24 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.messageStore = new MessageStore(uri, messageDatabasePath, vm.sources, options)
 
 		if (directory !== null) {
-			this.sources = {}
-			this.sources[this.uri] = Source.initialize({
-				path: path.resolve(directory, constants.MST_FILENAME),
-				cid,
-				applyMessage: this.applyMessage,
-				messageStore: this.messageStore,
-				libp2p,
-				recentGossipPeers: this.recentGossipPeers,
-				recentSyncPeers: this.recentSyncPeers,
-				...options,
-			})
+			const mstPath = directory && path.resolve(directory, constants.MST_FILENAME)
 
-			for (const source of vm.sources) {
-				const cid = parseIPFSURI(source)
-				assert(cid !== null)
-				this.sources[source] = Source.initialize({
-					path: path.resolve(directory, `${cid.toString()}.okra`),
+			const sources = Object.fromEntries([this.uri, ...vm.sources].map((uri) => [uri, parseIPFSURI(uri)]))
+			const mst = new okra.Tree(mstPath, { dbs: Object.values(sources).map((cid) => cid.toString()) })
+
+			this.mst = mst
+			this.sources = mapEntries(sources, (uri, cid) =>
+				Source.initialize({
 					cid,
+					mst,
 					applyMessage: this.applyMessage,
 					messageStore: this.messageStore,
 					libp2p,
+					recentGossipPeers: this.recentGossipPeers,
+					recentSyncPeers: this.recentSyncPeers,
 					...options,
 				})
-			}
+			)
 		}
 	}
 

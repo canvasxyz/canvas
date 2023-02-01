@@ -10,13 +10,8 @@ import type * as okra from "node-okra"
 
 import RPC from "../../rpc/sync/index.cjs"
 
-import { signalInvalidType, toBuffer } from "../utils.js"
+import { toBuffer } from "../utils.js"
 import { toNode } from "./utils.js"
-import { Message } from "@canvas-js/interfaces"
-import { actionType, sessionType } from "../codecs.js"
-import { createHash } from "node:crypto"
-
-const { CANVAS_SESSION, CANVAS_ACTION } = RPC.MessageRequest.MessageType
 
 export class Client {
 	private seq = 0

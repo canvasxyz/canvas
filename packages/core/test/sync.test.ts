@@ -40,58 +40,56 @@ function connect(): [
 	]
 }
 
+function initialize(messageStore: MessageStore, mst: okra.Tree, messages: Iterable<Message>) {
+	const txn = new okra.Transaction(mst, { readOnly: false })
+	try {
+		for (const message of messages) {
+			const data = Buffer.from(stringify(message))
+			const hash = createHash("sha256").update(data).digest()
+			txn.set(getMessageKey(hash, message), hash)
+			messageStore.insert(hash, message)
+		}
+		txn.commit()
+	} catch (err) {
+		txn.abort()
+		throw err
+	}
+}
+
 async function testSync(sourceMessages: Iterable<Message>, targetMessages: Iterable<Message>): Promise<Message[]> {
 	const directory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(directory)
+
 	const sourceMessageStore = new MessageStore(app, path.resolve(directory, "source.sqlite"))
 	const targetMessageStore = new MessageStore(app, path.resolve(directory, "target.sqlite"))
 	const sourceMST = new okra.Tree(path.resolve(directory, "source.okra"))
 	const targetMST = new okra.Tree(path.resolve(directory, "target.okra"))
 
-	const sourceTxn = new okra.Transaction(sourceMST, { readOnly: false })
-	try {
-		for (const message of sourceMessages) {
-			const data = Buffer.from(stringify(message))
-			const hash = createHash("sha256").update(data).digest()
-			sourceTxn.set(getMessageKey(hash, message), hash)
-			sourceMessageStore.insert(hash, message)
-		}
-		sourceTxn.commit()
-	} catch (err) {
-		sourceTxn.abort()
-		throw err
-	}
+	initialize(sourceMessageStore, sourceMST, sourceMessages)
+	initialize(targetMessageStore, targetMST, targetMessages)
 
-	const targetTxn = new okra.Transaction(targetMST, { readOnly: false })
-	try {
-		for (const message of targetMessages) {
-			const data = Buffer.from(stringify(message))
-			const hash = createHash("sha256").update(data).digest()
-			targetTxn.set(getMessageKey(hash, message), hash)
-			targetMessageStore.insert(hash, message)
-		}
-		targetTxn.commit()
-	} catch (err) {
-		targetTxn.abort()
-		throw err
-	}
-
-	const messages: Message[] = []
-
+	const delta: Message[] = []
 	try {
 		const [source, target] = connect()
+		const sourceTxn = new okra.Transaction(sourceMST, { readOnly: true })
+		const targetTxn = new okra.Transaction(targetMST, { readOnly: false })
+
 		await Promise.all([
-			handleIncomingStream(source, sourceMessageStore, sourceMST),
-			sync(targetMessageStore, targetMST, target, async (hash, data, message) => void messages.push(message)),
+			handleIncomingStream(source, sourceMessageStore, sourceTxn),
+			sync(targetMessageStore, targetTxn, target, async (hash, data, message) => void delta.push(message)),
 		])
 
-		return messages
+		sourceTxn.abort()
+		targetTxn.commit()
+
+		return delta
 	} catch (err) {
 		throw err
 	} finally {
 		targetMST.close()
 		sourceMST.close()
 		sourceMessageStore.close()
+		targetMessageStore.close()
 		fs.rmSync(directory, { recursive: true })
 	}
 }
@@ -111,22 +109,28 @@ test("sync two tiny MSTs", async (t) => {
 })
 
 test("sync two big MSTs", async (t) => {
-	const needle = await signer.sign("log", { message: nanoid() })
+	const count = 1000
+	const index = Math.floor(Math.random() * count)
 
 	const messages: Message[] = []
-	for (let i = 0; i < 1000; i++) {
+	for (let i = 0; i < count; i++) {
 		messages.push(await signer.sign("log", { message: nanoid() }))
 	}
 
 	function* sourceMessages(): Generator<Message> {
 		for (const message of messages) yield message
-		yield needle
 	}
 
 	function* targetMessages(): Generator<Message> {
-		for (const message of messages) yield message
+		for (const [i, message] of messages.entries()) {
+			if (i === index) {
+				continue
+			} else {
+				yield message
+			}
+		}
 	}
 
 	const delta = await testSync(sourceMessages(), targetMessages())
-	t.deepEqual(delta, [needle])
+	t.deepEqual(delta, [messages[index]])
 })

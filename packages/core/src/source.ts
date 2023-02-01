@@ -30,37 +30,33 @@ export interface SourceOptions {
 }
 
 export interface SourceConfig extends SourceOptions {
-	path: string
 	cid: CID
-	applyMessage: (hash: Buffer, message: Message) => Promise<void>
 	messageStore: MessageStore
+	mst: okra.Tree
 	libp2p: Libp2p | null
+	applyMessage: (hash: Buffer, message: Message) => Promise<void>
 }
 
 export class Source {
-	public readonly mst: okra.Tree
-
 	private readonly uri: string
 	private readonly syncProtocol: string
 	private readonly controller = new AbortController()
 
 	public static initialize(config: SourceConfig) {
-		const { path, cid, libp2p, applyMessage, messageStore, ...options } = config
-		return new Source(path, cid, applyMessage, messageStore, libp2p, options)
+		const { cid, libp2p, messageStore, mst, applyMessage, ...options } = config
+		return new Source(cid, messageStore, mst, libp2p, applyMessage, options)
 	}
 
 	private constructor(
-		path: string,
 		private readonly cid: CID,
-		private readonly applyMessage: (hash: Buffer, message: Message) => Promise<void>,
 		private readonly messageStore: MessageStore,
+		private readonly mst: okra.Tree,
 		private readonly libp2p: Libp2p | null,
+		private readonly applyMessage: (hash: Buffer, message: Message) => Promise<void>,
 		private readonly options: SourceOptions
 	) {
 		this.uri = `ipfs://${cid.toString()}`
 		this.syncProtocol = `/x/canvas/sync/v1/${cid.toString()}`
-
-		this.mst = new okra.Tree(path)
 
 		if (libp2p !== null && !this.options.offline) {
 			libp2p.pubsub.subscribe(this.uri)
@@ -87,15 +83,14 @@ export class Source {
 			this.libp2p.pubsub.unsubscribe(this.uri)
 			this.libp2p.pubsub.removeEventListener("message", this.handleGossipMessage)
 		}
-
-		this.mst.close()
 	}
 
 	/**
 	 * Synchronously the message into the MST. This is only called from core to insert local-origin messages.
 	 */
 	public insertMessage(hash: Buffer, message: Message) {
-		const txn = new okra.Transaction(this.mst, { readOnly: false })
+		const txn = new okra.Transaction(this.mst, { readOnly: false, dbi: this.cid.toString() })
+
 		try {
 			txn.set(getMessageKey(hash, message), hash)
 			txn.commit()
@@ -144,7 +139,7 @@ export class Source {
 			return
 		}
 
-		const txn = new okra.Transaction(this.mst, { readOnly: false })
+		const txn = new okra.Transaction(this.mst, { readOnly: false, dbi: this.cid.toString() })
 		try {
 			const message = JSON.parse(new TextDecoder().decode(data))
 			assert(messageType.is(message), "invalid message")
@@ -164,10 +159,10 @@ export class Source {
 	}
 
 	/**
-	 * Handle incoming libp2p streams on the /x/canvas/sync/${cid} protocol.
+	 * Handle incoming libp2p streams on the /x/canvas/sync/v1/${cid} protocol.
 	 * Incoming streams are simple; we essentially just open a read-only
-	 * MST transaction and respond to as many getChildren requests as the
-	 * client needs to make.
+	 * MST transaction and respond to as many getRoot/getChildren/getMessages
+	 * requests as the client needs to make.
 	 */
 	private streamHandler: StreamHandler = async ({ connection, stream }) => {
 		const cid = this.cid.toString()
@@ -177,9 +172,20 @@ export class Source {
 			console.log(`[canvas-core] [${cid}] Opened incoming stream ${stream.id} from peer ${peerId}`)
 		}
 
-		await handleIncomingStream(stream, this.messageStore, this.mst)
-		if (this.options.verbose) {
-			console.log(`[canvas-core] [${cid}] Closed incoming stream ${stream.id}`)
+		const txn = new okra.Transaction(this.mst, { readOnly: true, dbi: cid })
+		try {
+			await handleIncomingStream(stream, this.messageStore, txn)
+		} catch (err) {
+			if (err instanceof Error) {
+				console.log(chalk.red(`[canvas-core] Error handling incoming sync (${err.message})`))
+			} else {
+				throw err
+			}
+		} finally {
+			txn.abort()
+			if (this.options.verbose) {
+				console.log(`[canvas-core] [${cid}] Closed incoming stream ${stream.id}`)
+			}
 		}
 	}
 
@@ -405,10 +411,13 @@ export class Source {
 		}
 
 		const timer = metrics.canvas_sync_time.startTimer()
+		const txn = new okra.Transaction(this.mst, { readOnly: false, dbi: cid })
 		try {
-			await sync(this.messageStore, this.mst, stream, handleSyncMessage)
+			await sync(this.messageStore, txn, stream, handleSyncMessage)
+			txn.commit()
 			timer({ uri: this.uri, status: "success" })
 		} catch (err) {
+			txn.abort()
 			timer({ uri: this.uri, status: "failure" })
 			if (err instanceof Error) {
 				console.log(chalk.red(`[canvas-core] [${cid}] Failed to sync with peer ${peer.toString()} (${err.message})`))
