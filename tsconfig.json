@@ -9,6 +9,7 @@
     { "path": "./packages/hooks" },
     { "path": "./packages/chain-ethereum" },
     { "path": "./packages/chain-cosmos" },
-    { "path": "./packages/chain-solana" }
+    { "path": "./packages/chain-solana" },
+    { "path": "./packages/chain-substrate" }
   ]
 }
