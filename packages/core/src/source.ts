@@ -13,20 +13,14 @@ import type { StreamHandler } from "@libp2p/interface-registrar"
 
 import * as okra from "node-okra"
 
-import { Action, Message, Session } from "@canvas-js/interfaces"
+import { Message } from "@canvas-js/interfaces"
+import type { MessageStore } from "./messageStore.js"
 
-import { wait, retry, AbortError, toHex, signalInvalidType, CacheMap } from "./utils.js"
+import { wait, retry, AbortError, toHex, CacheMap } from "./utils.js"
 import { sync, handleIncomingStream, getMessageKey } from "./rpc/index.js"
 import * as constants from "./constants.js"
 import { metrics } from "./metrics.js"
 import { messageType } from "./codecs.js"
-
-// We declare this interface to enforce that Source only has read access to the message store.
-// All the writes still happen in Core.
-interface MessageStore {
-	getSessionByHash(hash: Buffer): Session | null
-	getActionByHash(hash: Buffer): Action | null
-}
 
 export interface SourceOptions {
 	verbose?: boolean
@@ -64,7 +58,7 @@ export class Source {
 		private readonly options: SourceOptions
 	) {
 		this.uri = `ipfs://${cid.toString()}`
-		this.syncProtocol = `/x/canvas/sync/${cid.toString()}`
+		this.syncProtocol = `/x/canvas/sync/v1/${cid.toString()}`
 
 		this.mst = new okra.Tree(path)
 
