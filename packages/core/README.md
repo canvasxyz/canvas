@@ -2,6 +2,18 @@
 
 A programmable append-only log for peer-to-peer decentralized applications.
 
+## Development
+
+Regenerate the RPC protobuf message types with `npm run generate-rpc`.
+
+The package should be built with typescript in composite build mode from the repo root, not from the package directory here.
+
+## Testing
+
+```
+npm run test
+```
+
 ## API
 
 ```typescript
@@ -45,41 +57,5 @@ declare class Core {
 ```
 
 `CoreConfig.uri` must be the `ipfs://` CIDv0 URI of the app (dag-pb using the default chunking settings), or a local `file:///` URI.
-
-## Metrics
-
-### `canvas_sync_time`
-
-A histogram of MST sync times.
-
-| label name | type     | description                       |
-| ---------- | -------- | --------------------------------- |
-| `uri`      | `string` | the source `ipfs://` URI          |
-| `status`   | `string` | either `"success"` or `"failure"` |
-
-### `canvas_messages`
-
-A counter of messages applied
-
-| label name | type     | description                      |
-| ---------- | -------- | -------------------------------- |
-| `type`     | `string` | either `"action"` or `"session"` |
-| `uri`      | `string` | the source `ipfs://` URI         |
-
-### `canvas_gossipsub_subscribers`
-
-A gauge counting GossipSub topic subscribers.
-
-| label name | type     | description              |
-| ---------- | -------- | ------------------------ |
-| `uri`      | `string` | the source `ipfs://` URI |
-
-### `canvas_sync_peers`
-
-A gauge counting the observed active DHT application peers.
-
-| label name | type     | description              |
-| ---------- | -------- | ------------------------ |
-| `uri`      | `string` | the source `ipfs://` URI |
 
 (c) 2022 Canvas Technology Corporation
