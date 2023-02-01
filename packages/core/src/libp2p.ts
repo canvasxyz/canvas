@@ -132,13 +132,16 @@ export async function startPingService(
 
 				successCount += 1
 			} catch (err) {
-				if (verbose) {
-					console.log(`[canvas-core] Ping ${peer.toString()} failed`)
-					console.error(err)
-				}
+				if (err instanceof Error) {
+					if (verbose) {
+						console.log(`[canvas-core] Ping ${peer.toString()} failed (${err.message})`)
+					}
 
-				failureCount += 1
-				await routingTable.remove(peer)
+					failureCount += 1
+					await routingTable.remove(peer)
+				} else {
+					throw err
+				}
 			}
 		}
 
@@ -164,11 +167,15 @@ export async function startPingService(
 					console.log(`[canvas-core] Ping ${peer.toString()} succeeded`)
 				}
 			} catch (err) {
-				if (verbose) {
-					console.log(`[canvas-core] Ping ${peer.toString()} failed`)
-					console.error(err)
+				if (err instanceof Error) {
+					if (verbose) {
+						console.log(`[canvas-core] Ping ${peer.toString()} failed (${err.message})`)
+					}
+
+					await wanRoutingTable.remove(peer)
+				} else {
+					throw err
 				}
-				await wanRoutingTable.remove(peer)
 			}
 		})
 	})
@@ -189,11 +196,15 @@ export async function startPingService(
 					console.log(`[canvas-core] Ping ${peer.toString()} succeeded`)
 				}
 			} catch (err) {
-				if (verbose) {
-					console.log(`[canvas-core] Ping ${peer.toString()} failed`)
-					console.error(err)
+				if (err instanceof Error) {
+					if (verbose) {
+						console.log(`[canvas-core] Ping ${peer.toString()} failed (${err.message})`)
+					}
+
+					await lanRoutingTable.remove(peer)
+				} else {
+					throw err
 				}
-				await lanRoutingTable.remove(peer)
 			}
 		})
 	})
@@ -223,8 +234,10 @@ export async function startPingService(
 	} catch (err) {
 		if (err instanceof AbortError) {
 			console.log("[canvas-core] Aborting ping service")
+		} else if (err instanceof Error) {
+			console.error(`[canvas-core] Ping service crashed (${err.message})`)
 		} else {
-			console.error("[canvas-core] Ping service crashed", err)
+			throw err
 		}
 	}
 }

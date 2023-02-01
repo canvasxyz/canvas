@@ -119,16 +119,18 @@ export class Source {
 			console.log(`[canvas-core] [${cid}] Publishing message ${toHex(hash)} to GossipSub...`)
 		}
 
-		await this.libp2p.pubsub
-			.publish(this.uri, data)
-			.then(({ recipients }) => {
-				if (this.options.verbose) {
-					console.log(`[canvas-core] [${cid}] Published ${toHex(hash)} to ${recipients.length} peers.`)
-				}
-			})
-			.catch((err: any) => {
-				console.log(chalk.red(`[canvas-core] [${cid}] Failed to publish ${toHex(hash)} to GossipSub:`), err)
-			})
+		try {
+			const { recipients } = await this.libp2p.pubsub.publish(this.uri, data)
+			if (this.options.verbose) {
+				console.log(`[canvas-core] [${cid}] Published ${toHex(hash)} to ${recipients.length} peers.`)
+			}
+		} catch (err) {
+			if (err instanceof Error) {
+				console.log(chalk.red(`[canvas-core] [${cid}] Failed to publish ${toHex(hash)} to GossipSub (${err.message})`))
+			} else {
+				throw err
+			}
+		}
 	}
 
 	/**
@@ -152,8 +154,12 @@ export class Source {
 			txn.commit()
 		} catch (err: any) {
 			txn.abort()
-			const cid = this.cid.toString()
-			console.log(chalk.red(`[canvas-core] [${cid}] Error applying GossipSub message:`), err.message)
+			if (err instanceof Error) {
+				const cid = this.cid.toString()
+				console.log(chalk.red(`[canvas-core] [${cid}] Error applying GossipSub message (${err.message})`))
+			} else {
+				throw err
+			}
 		}
 	}
 
@@ -205,9 +211,9 @@ export class Source {
 			if (err instanceof AbortError) {
 				console.log(`[canvas-core] [${cid}] Aborting announce service`)
 			} else if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-core] [${cid}] Announce service crashed:`), err.message)
+				console.log(chalk.red(`[canvas-core] [${cid}] Announce service crashed (${err.message})`))
 			} else {
-				console.error(err)
+				throw err
 			}
 		}
 	}
@@ -281,9 +287,9 @@ export class Source {
 			if (err instanceof AbortError) {
 				console.log(`[canvas-core] [${cid}] Aborting sync service`)
 			} else if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-core] [${cid}] Sync service crashed:`), err.message)
+				console.log(chalk.red(`[canvas-core] [${cid}] Sync service crashed (${err.message})`))
 			} else {
-				console.error(err)
+				throw err
 			}
 		}
 	}
@@ -342,12 +348,12 @@ export class Source {
 		try {
 			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal: queryController.signal })
 		} catch (err: any) {
-			console.log(chalk.red(`[canvas-core] [${cid}] Failed to dial peer ${peer.toString()}`))
-			if (this.options.verbose) {
-				console.log(err)
+			if (err instanceof Error) {
+				console.log(chalk.red(`[canvas-core] [${cid}] Failed to dial peer ${peer.toString()} (${err.message})`))
+				return
+			} else {
+				throw err
 			}
-
-			return
 		} finally {
 			this.controller.signal.removeEventListener("abort", abort)
 		}
@@ -376,16 +382,25 @@ export class Source {
 			try {
 				await this.applyMessage(hash, message)
 				successCount += 1
-			} catch (err: any) {
-				console.log(chalk.red(`[canvas-core] [${cid}] Failed to apply ${message.type} ${id}:`), err)
-				failureCount += 1
+			} catch (err) {
+				if (err instanceof Error) {
+					console.log(chalk.red(`[canvas-core] [${cid}] Failed to apply ${message.type} ${id} (${err.message})`))
+					failureCount += 1
+				}
+
 				throw err
 			}
 
 			try {
 				await this.publishMessage(hash, data)
 			} catch (err) {
-				console.log(chalk.red(`[canvas-core] [${cid}] Failed to publish ${message.type} ${id} to GossipSub:`), err)
+				if (err instanceof Error) {
+					console.log(
+						chalk.red(`[canvas-core] [${cid}] Failed to publish ${message.type} ${id} to GossipSub (${err.message})`)
+					)
+				} else {
+					throw err
+				}
 			}
 		}
 
@@ -395,7 +410,11 @@ export class Source {
 			timer({ uri: this.uri, status: "success" })
 		} catch (err) {
 			timer({ uri: this.uri, status: "failure" })
-			console.log(chalk.red(`[canvas-core] [${cid}] Failed to sync with peer ${peer.toString()}`), err)
+			if (err instanceof Error) {
+				console.log(chalk.red(`[canvas-core] [${cid}] Failed to sync with peer ${peer.toString()} (${err.message})`))
+			} else {
+				throw err
+			}
 		} finally {
 			this.controller.signal.removeEventListener("abort", closeStream)
 		}

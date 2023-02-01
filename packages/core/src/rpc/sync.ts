@@ -104,9 +104,14 @@ export async function sync(
 		cursor.close()
 		txn.commit()
 	} catch (err) {
-		console.log(chalk.red(`[canvas-core] Error performing outgoing sync:`), err)
 		cursor.close()
 		txn.abort()
+
+		if (err instanceof Error) {
+			console.log(chalk.red(`[canvas-core] Error performing outgoing sync (${err.message})`))
+		} else {
+			throw err
+		}
 	} finally {
 		client.end()
 	}

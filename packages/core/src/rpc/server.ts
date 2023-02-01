@@ -35,7 +35,11 @@ export async function handleIncomingStream(
 	try {
 		await pipe(stream, lp.decode(), handle, lp.encode(), stream)
 	} catch (err) {
-		console.log(chalk.red(`[canvas-core] Error handling incoming sync:`), err)
+		if (err instanceof Error) {
+			console.log(chalk.red(`[canvas-core] Error handling incoming sync (${err.message})`))
+		} else {
+			throw err
+		}
 	} finally {
 		txn.abort()
 	}
