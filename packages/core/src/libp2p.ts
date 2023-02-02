@@ -30,7 +30,7 @@ const bootstrapList = [
 const announceFilter = (multiaddrs: Multiaddr[]) =>
 	multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr))
 
-// const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
+const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
 
 const second = 1000
 const minute = 60 * second
@@ -50,7 +50,7 @@ export function getLibp2pInit(config: {
 	}
 
 	return {
-		// connectionGater: { denyDialMultiaddr },
+		connectionGater: { denyDialMultiaddr },
 		peerId: config.peerId,
 		addresses: { listen: listenAddresses, announce: announceAddresses, announceFilter },
 		transports: [webSockets()],
@@ -64,6 +64,7 @@ export function getLibp2pInit(config: {
 		}),
 		metrics: prometheusMetrics({ registry: libp2pRegister }),
 		pubsub: gossipsub({
+			emitSelf: true,
 			doPX: true,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
