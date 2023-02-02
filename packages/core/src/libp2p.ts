@@ -30,28 +30,33 @@ const bootstrapList = [
 const announceFilter = (multiaddrs: Multiaddr[]) =>
 	multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr))
 
-const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
+// const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
 
 const second = 1000
 const minute = 60 * second
 
-export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]): Libp2pOptions {
+export function getLibp2pInit(config: {
+	peerId: PeerId
+	port?: number
+	announce?: string[]
+	bootstrap?: string[]
+}): Libp2pOptions {
 	const announceAddresses =
-		announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId.toString()}`)
+		config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId.toString()}`)
 
 	const listenAddresses: string[] = []
-	if (port !== undefined) {
-		listenAddresses.push(`/ip4/0.0.0.0/tcp/${port}/ws`)
+	if (config.port !== undefined) {
+		listenAddresses.push(`/ip4/0.0.0.0/tcp/${config.port}/ws`)
 	}
 
 	return {
-		connectionGater: { denyDialMultiaddr },
-		peerId: peerId,
+		// connectionGater: { denyDialMultiaddr },
+		peerId: config.peerId,
 		addresses: { listen: listenAddresses, announce: announceAddresses, announceFilter },
 		transports: [webSockets()],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
-		peerDiscovery: [bootstrap({ list: bootstrapList })],
+		peerDiscovery: [bootstrap({ list: config.bootstrap ?? bootstrapList })],
 		dht: kadDHT({
 			protocolPrefix: "/canvas",
 			clientMode: false,
@@ -67,7 +72,7 @@ export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]
 			msgIdToStrFn: (id) => toHex(id),
 			fastMsgIdFn: (msg) => {
 				const hash = createHash("sha256")
-				hash.update(msg.data || new Uint8Array([]))
+				hash.update(msg.data || "")
 				return "0x" + hash.digest("hex")
 			},
 		}),

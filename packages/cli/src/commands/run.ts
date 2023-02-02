@@ -191,9 +191,9 @@ export async function handler(args: Args) {
 	if (!offline) {
 		if (announce !== undefined) {
 			console.log(`[canvas-cli] Announcing on ${announce}`)
-			libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort, [announce]))
+			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort, announce: [announce] }))
 		} else {
-			libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort }))
 		}
 
 		if (verbose) {
