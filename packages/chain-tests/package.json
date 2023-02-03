@@ -1,0 +1,28 @@
+{
+  "name": "@canvas-js/chain-tests",
+  "version": "0.0.50-pre4",
+  "author": "Canvas Technology Corporation (https://canvas.xyz)",
+  "type": "module",
+  "types": "./lib/index.d.ts",
+  "main": "./lib/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "test": "ava"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@canvas-js/chain-ethereum": "0.0.50-pre4",
+    "@canvas-js/chain-solana": "0.0.50-pre4",
+    "@canvas-js/interfaces": "0.0.50-pre4",
+    "@ava/typescript": "^3.0.1",
+    "ava": "^5.1.0",
+    "ethers": "^5.7.2",
+    "typescript": "^4.9.4",
+    "tweetnacl": "^1.0.3"
+  }
+}

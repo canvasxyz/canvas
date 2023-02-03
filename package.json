@@ -8,7 +8,8 @@
     "build": "tsc --build",
     "clean": "tsc --build --clean",
     "publish": "npm run build && npm publish --workspace=packages --access public --tag beta",
-    "test": "npm run test --workspace=@canvas-js/core"
+    "test": "npm run test --workspace=@canvas-js/core",
+    "chain-test": "npm run test --workspace=@canvas-js/chain-tests"
   },
   "workspaces": [
     "packages/interfaces",
@@ -20,6 +21,7 @@
     "packages/chain-cosmos",
     "packages/chain-solana",
     "packages/chain-substrate",
+    "packages/chain-tests",
     "examples/app-store",
     "examples/chat-webpack",
     "examples/chat-next"
