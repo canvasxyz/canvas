@@ -20,7 +20,7 @@ const getActionSignatureData = (payload: ActionPayload): string => {
 const getSessionSignatureData = (payload: SessionPayload): string => {
 	return serializeSessionPayload(payload)
 }
-export type ExtensionAndAddress = { extension: InjectedExtension; address: string }
+type ExtensionAndAddress = { extension: InjectedExtension; address: string }
 type SubstrateMnemonic = string
 
 /**
