@@ -1,5 +1,5 @@
 import test from "ava"
-import { ChainImplementation, SessionPayload, WalletMock } from "@canvas-js/interfaces"
+import { ActionPayload, ChainImplementation, SessionPayload, WalletMock } from "@canvas-js/interfaces"
 import { EthereumChainImplementation, EthereumWalletMock } from "@canvas-js/chain-ethereum"
 import { SolanaChainImplementation, SolanaWalletMock } from "@canvas-js/chain-solana"
 import { SubstrateChainImplementation, SubstrateWalletMock } from "@canvas-js/chain-substrate"
@@ -28,7 +28,10 @@ const IMPLEMENTATIONS = [
 	},
 ] as MockedImplementation<any>[]
 
-for (const { implementationName, chainImplementation, walletMock } of IMPLEMENTATIONS) {
+for (const testCase of IMPLEMENTATIONS) {
+	const chainImplementation: ChainImplementation<any> = testCase.chainImplementation
+	const { implementationName, walletMock } = testCase
+
 	test(`${implementationName} Sign a session successfully`, async (t) => {
 		const signer = walletMock.createSigner()
 
@@ -77,6 +80,51 @@ for (const { implementationName, chainImplementation, walletMock } of IMPLEMENTA
 		out.payload.from = "other address"
 		await t.throwsAsync(async () => {
 			await chainImplementation.verifySession(out)
+		})
+	})
+
+	test(`${implementationName} Directly sign an action successfully`, async (t) => {
+		const signer = walletMock.createSigner()
+
+		const from = await chainImplementation.getSignerAddress(signer)
+
+		const actionPayload: ActionPayload = {
+			app: "ipfs://...",
+			appName: "Canvas",
+			from,
+			call: "doSomething",
+			callArgs: {},
+			block: "any block value",
+			chain: chainImplementation.chain,
+			chainId: chainImplementation.chainId,
+			timestamp: 10000000,
+		}
+		const out = await chainImplementation.signAction(signer, actionPayload)
+		t.notThrows(async () => {
+			await chainImplementation.verifyAction(out)
+		})
+	})
+
+	test(`${implementationName} Directly signing a session fails if "from" value is incorrect`, async (t) => {
+		const signer = walletMock.createSigner()
+
+		const from = await chainImplementation.getSignerAddress(signer)
+
+		const actionPayload: ActionPayload = {
+			app: "ipfs://...",
+			appName: "Canvas",
+			from,
+			call: "doSomething",
+			callArgs: {},
+			block: "any block value",
+			chain: chainImplementation.chain,
+			chainId: chainImplementation.chainId,
+			timestamp: 10000000,
+		}
+		let out = await chainImplementation.signAction(signer, actionPayload)
+		out.payload.from = "something else "
+		await t.throwsAsync(async () => {
+			await chainImplementation.verifyAction(out)
 		})
 	})
 }

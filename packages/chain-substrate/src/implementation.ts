@@ -35,7 +35,7 @@ export class SubstrateChainImplementation implements ChainImplementation<Extensi
 	async verifyAction(action: Action): Promise<void> {
 		const signerAddress = action.session ?? action.payload.from
 		const message = getActionSignatureData(action.payload)
-		const signatureBytes = new Buffer(action.signature, "hex")
+		const signatureBytes = Buffer.from(action.signature.slice(2), "hex")
 		const valid = signatureVerify(message, signatureBytes, signerAddress).isValid
 		if (!valid) {
 			throw new Error("Invalid action signature")
@@ -44,7 +44,7 @@ export class SubstrateChainImplementation implements ChainImplementation<Extensi
 
 	async verifySession(session: Session): Promise<void> {
 		const message = getSessionSignatureData(session.payload)
-		const signatureBytes = new Buffer(session.signature.slice(2), "hex")
+		const signatureBytes = Buffer.from(session.signature.slice(2), "hex")
 		const valid = signatureVerify(message, signatureBytes, session.payload.from).isValid
 		if (!valid) {
 			throw new Error("Invalid action signature")
