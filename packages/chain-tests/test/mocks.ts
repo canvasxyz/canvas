@@ -1,17 +1,13 @@
-import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
-import { SolanaChainImplementation } from "@canvas-js/chain-solana"
-import { ExtensionAndAddress, SubstrateChainImplementation } from "@canvas-js/chain-substrate"
-import { ChainImplementation } from "@canvas-js/interfaces"
 import { Wallet } from "ethers"
 import * as solw3 from "@solana/web3.js"
 import nacl from "tweetnacl"
 import { Keyring } from "@polkadot/api"
 import { mnemonicGenerate } from "@polkadot/util-crypto"
 
-export interface WalletMock<CI extends ChainImplementation> {
-	createSigner: () => Parameters<CI["getSignerAddress"]>[0]
-}
-typeof EthereumChainImplementation
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+import { SolanaChainImplementation } from "@canvas-js/chain-solana"
+import { ExtensionAndAddress, SubstrateChainImplementation } from "@canvas-js/chain-substrate"
+import { WalletMock } from "@canvas-js/interfaces"
 
 export class EthereumWalletMock implements WalletMock<EthereumChainImplementation> {
 	createSigner() {
