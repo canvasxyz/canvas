@@ -34,7 +34,3 @@ export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown
 
 	getLatestBlock(): Promise<string>
 }
-
-export interface WalletMock<CI extends ChainImplementation> {
-	createSigner: () => Parameters<CI["getSignerAddress"]>[0]
-}

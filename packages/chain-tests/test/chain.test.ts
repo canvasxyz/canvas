@@ -1,39 +1,44 @@
 import test from "ava"
-import { ActionPayload, ChainImplementation, SessionPayload, WalletMock } from "@canvas-js/interfaces"
-import { EthereumChainImplementation, EthereumWalletMock } from "@canvas-js/chain-ethereum"
-import { SolanaChainImplementation, SolanaWalletMock } from "@canvas-js/chain-solana"
-import { SubstrateChainImplementation, SubstrateWalletMock } from "@canvas-js/chain-substrate"
+import { ActionPayload, ChainImplementation, SessionPayload } from "@canvas-js/interfaces"
+import { createMockEthereumSigner, EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+import { createMockSolanaSigner, SolanaChainImplementation } from "@canvas-js/chain-solana"
+import { createMockSubstrateSigner, SubstrateChainImplementation } from "@canvas-js/chain-substrate"
 
 interface MockedImplementation<CI extends ChainImplementation> {
 	implementationName: string
 	chainImplementation: CI
-	walletMock: WalletMock<CI>
+	createMockSigner: () => CI extends ChainImplementation<infer Signer, any> ? Signer : never
 }
 
 const IMPLEMENTATIONS = [
 	{
 		implementationName: "ethereum",
 		chainImplementation: new EthereumChainImplementation(),
-		walletMock: new EthereumWalletMock(),
+		createMockSigner: createMockEthereumSigner,
 	},
 	{
 		implementationName: "solana",
 		chainImplementation: new SolanaChainImplementation(),
-		walletMock: new SolanaWalletMock(),
+		createMockSigner: createMockSolanaSigner,
 	},
 	{
 		implementationName: "substrate",
 		chainImplementation: new SubstrateChainImplementation(),
-		walletMock: new SubstrateWalletMock(),
+		createMockSigner: createMockSubstrateSigner,
 	},
 ] as MockedImplementation<any>[]
 
 for (const testCase of IMPLEMENTATIONS) {
-	const chainImplementation: ChainImplementation<any> = testCase.chainImplementation
-	const { implementationName, walletMock } = testCase
+	runTestSuite(testCase)
+}
 
+function runTestSuite<T extends ChainImplementation<S, any>, S>({
+	chainImplementation,
+	implementationName,
+	createMockSigner,
+}: MockedImplementation<T>) {
 	test(`${implementationName} Sign a session successfully`, async (t) => {
-		const signer = walletMock.createSigner()
+		const signer = createMockSigner()
 
 		const from = await chainImplementation.getSignerAddress(signer)
 		const delegatedSigner = await chainImplementation.generateDelegatedSigner()
@@ -58,7 +63,7 @@ for (const testCase of IMPLEMENTATIONS) {
 	})
 
 	test(`${implementationName} Signing a session fails if "from" value is incorrect`, async (t) => {
-		const signer = walletMock.createSigner()
+		const signer = createMockSigner()
 
 		const delegatedSigner = await chainImplementation.generateDelegatedSigner()
 		const from = await chainImplementation.getSignerAddress(signer)
@@ -84,7 +89,7 @@ for (const testCase of IMPLEMENTATIONS) {
 	})
 
 	test(`${implementationName} Directly sign an action successfully`, async (t) => {
-		const signer = walletMock.createSigner()
+		const signer = createMockSigner()
 
 		const from = await chainImplementation.getSignerAddress(signer)
 
@@ -106,7 +111,7 @@ for (const testCase of IMPLEMENTATIONS) {
 	})
 
 	test(`${implementationName} Directly signing a session fails if "from" value is incorrect`, async (t) => {
-		const signer = walletMock.createSigner()
+		const signer = createMockSigner()
 
 		const from = await chainImplementation.getSignerAddress(signer)
 
@@ -129,7 +134,7 @@ for (const testCase of IMPLEMENTATIONS) {
 	})
 
 	test(`${implementationName} Sign an action successfully with delegated signer`, async (t) => {
-		const signer = walletMock.createSigner()
+		const signer = createMockSigner()
 
 		const delegatedSigner = await chainImplementation.generateDelegatedSigner()
 		const from = await chainImplementation.getSignerAddress(signer)
