@@ -127,4 +127,27 @@ for (const testCase of IMPLEMENTATIONS) {
 			await chainImplementation.verifyAction(out)
 		})
 	})
+
+	test(`${implementationName} Sign an action successfully with delegated signer`, async (t) => {
+		const signer = walletMock.createSigner()
+
+		const delegatedSigner = await chainImplementation.generateDelegatedSigner()
+		const from = await chainImplementation.getSignerAddress(signer)
+
+		const actionPayload: ActionPayload = {
+			app: "ipfs://...",
+			appName: "Canvas",
+			from,
+			call: "doSomething",
+			callArgs: {},
+			block: "any block value",
+			chain: chainImplementation.chain,
+			chainId: chainImplementation.chainId,
+			timestamp: 10000000,
+		}
+		const out = await chainImplementation.signDelegatedAction(delegatedSigner, actionPayload)
+		t.notThrows(async () => {
+			await chainImplementation.verifyAction(out)
+		})
+	})
 }

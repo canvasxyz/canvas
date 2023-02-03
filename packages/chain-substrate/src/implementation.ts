@@ -101,13 +101,13 @@ export class SubstrateChainImplementation implements ChainImplementation<Extensi
 		const pair = keyring.addFromUri(mnemonic, {}) // use sr25519 by default
 		const message = getActionSignatureData(payload)
 		const signatureBytes = pair.sign(message)
-		const signature = new Buffer(signatureBytes).toString("hex")
+		const signature = Buffer.from(signatureBytes).toString("hex")
 
 		const action: Action = {
 			type: "action",
 			payload: payload,
 			session: pair.address,
-			signature,
+			signature: `0x${signature}`,
 		}
 		return action
 	}
