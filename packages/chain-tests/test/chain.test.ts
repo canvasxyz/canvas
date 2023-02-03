@@ -1,8 +1,9 @@
 import test from "ava"
 import { ChainImplementation, SessionPayload } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
-import { EthereumWalletMock, SolanaMock, WalletMock } from "./mocks.js"
+import { EthereumWalletMock, SolanaMock, SubstrateMock, WalletMock } from "./mocks.js"
 import { SolanaChainImplementation } from "@canvas-js/chain-solana"
+import { SubstrateChainImplementation } from "@canvas-js/chain-substrate"
 
 interface Implementation<CI extends ChainImplementation> {
 	implementationName: string
@@ -20,6 +21,11 @@ const IMPLEMENTATIONS = [
 		implementationName: "solana",
 		chainImplementation: new SolanaChainImplementation(),
 		mock: new SolanaMock(),
+	},
+	{
+		implementationName: "substrate",
+		chainImplementation: new SubstrateChainImplementation(),
+		mock: new SubstrateMock(),
 	},
 ] as Implementation<any>[]
 
