@@ -1,0 +1,15 @@
+{
+  "exclude": ["lib"],
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "lib"
+  },
+  "references": [
+    { "path": "../." },
+    { "path": "../../interfaces" },
+    { "path": "../../chain-ethereum" },
+    { "path": "../../chain-solana" },
+    { "path": "../../chain-substrate" }
+  ]
+}
