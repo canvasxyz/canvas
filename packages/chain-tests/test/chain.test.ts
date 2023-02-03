@@ -8,30 +8,30 @@ import { SubstrateChainImplementation } from "@canvas-js/chain-substrate"
 interface MockedImplementation<CI extends ChainImplementation> {
 	implementationName: string
 	chainImplementation: CI
-	mock: WalletMock<CI>
+	walletMock: WalletMock<CI>
 }
 
 const IMPLEMENTATIONS = [
 	{
 		implementationName: "ethereum",
 		chainImplementation: new EthereumChainImplementation(),
-		mock: new EthereumWalletMock(),
+		walletMock: new EthereumWalletMock(),
 	},
 	{
 		implementationName: "solana",
 		chainImplementation: new SolanaChainImplementation(),
-		mock: new SolanaMock(),
+		walletMock: new SolanaMock(),
 	},
 	{
 		implementationName: "substrate",
 		chainImplementation: new SubstrateChainImplementation(),
-		mock: new SubstrateMock(),
+		walletMock: new SubstrateMock(),
 	},
 ] as MockedImplementation<any>[]
 
-for (const { implementationName, chainImplementation, mock } of IMPLEMENTATIONS) {
+for (const { implementationName, chainImplementation, walletMock } of IMPLEMENTATIONS) {
 	test(`${implementationName} Sign a session successfully`, async (t) => {
-		const signer = mock.createSigner()
+		const signer = walletMock.createSigner()
 
 		const from = await chainImplementation.getSignerAddress(signer)
 		const delegatedSigner = await chainImplementation.generateDelegatedSigner()
@@ -56,7 +56,7 @@ for (const { implementationName, chainImplementation, mock } of IMPLEMENTATIONS)
 	})
 
 	test(`${implementationName} Signing a session fails if "from" value is incorrect`, async (t) => {
-		const signer = mock.createSigner()
+		const signer = walletMock.createSigner()
 
 		const delegatedSigner = await chainImplementation.generateDelegatedSigner()
 		const from = await chainImplementation.getSignerAddress(signer)
