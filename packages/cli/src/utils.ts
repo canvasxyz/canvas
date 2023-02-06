@@ -109,14 +109,14 @@ export function getChainImplementations(args?: (string | number)[]): ChainImplem
 			}
 
 			if (chain == "ethereum") {
-				const provider = new ethers.providers.JsonRpcProvider(url)
+				const provider = new ethers.JsonRpcProvider(url)
 				chains.push(new EthereumChainImplementation(chainId.toString(), provider))
 			} else {
 				console.log(`'chain' value (${chain}) was not 'eth', all other RPCs are currently unsupported`)
 			}
 		}
 	} else if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
-		const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_CHAIN_RPC)
+		const provider = new ethers.JsonRpcProvider(process.env.ETH_CHAIN_RPC)
 		chains.push(new EthereumChainImplementation(process.env.ETH_CHAIN_ID, provider))
 		console.log(
 			`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`

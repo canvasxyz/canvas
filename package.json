@@ -8,7 +8,8 @@
     "build": "tsc --build",
     "clean": "tsc --build --clean",
     "publish": "npm run build && npm publish --workspace=packages --access public --tag beta",
-    "test": "npm run test --workspace=@canvas-js/core"
+    "test": "npm run test --workspace=@canvas-js/core --workspace=@canvas-js/interfaces",
+    "chain-test": "npm run test --workspace=@canvas-js/interfaces"
   },
   "workspaces": [
     "packages/interfaces",

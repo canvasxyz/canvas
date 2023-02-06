@@ -1,3 +1,4 @@
+import assert from "node:assert"
 import { ethers } from "ethers"
 
 import type { Action, ActionArgument, ActionPayload, Session, SessionPayload } from "@canvas-js/interfaces"
@@ -28,6 +29,8 @@ export class TestSigner {
 
 		if (this.chainImplementation.provider !== undefined) {
 			const block = await this.chainImplementation.provider.getBlock("latest")
+			assert(block !== null)
+
 			actionPayload.block = block.hash
 		}
 
@@ -56,6 +59,8 @@ export class TestSessionSigner {
 
 		if (this.signer.chainImplementation.provider !== undefined) {
 			const block = await this.signer.chainImplementation.provider.getBlock("latest")
+			assert(block !== null)
+
 			sessionPayload.block = block.hash
 		}
 
@@ -77,6 +82,8 @@ export class TestSessionSigner {
 
 		if (this.signer.chainImplementation.provider !== undefined) {
 			const block = await this.signer.chainImplementation.provider.getBlock("latest")
+			assert(block !== null)
+
 			actionPayload.block = block.hash
 		}
 

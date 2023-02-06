@@ -1,4 +1,4 @@
-import * as solw3 from "@solana/web3.js"
+import solw3 from "@solana/web3.js"
 import nacl from "tweetnacl"
 import bs58 from "bs58"
 
@@ -11,7 +11,7 @@ import type {
 	Session,
 	SessionPayload,
 } from "@canvas-js/interfaces"
-import { serializeActionPayload, serializeSessionPayload, getActionHash } from "@canvas-js/interfaces"
+import { serializeActionPayload, serializeSessionPayload } from "@canvas-js/interfaces"
 
 const getActionSignatureData = (payload: ActionPayload): Uint8Array => {
 	return new TextEncoder().encode(serializeActionPayload(payload))

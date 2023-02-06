@@ -1,5 +1,4 @@
-import { TypedDataDomain, TypedDataField, utils } from "ethers"
-
+import { TypedDataDomain, TypedDataField } from "ethers"
 import { ActionPayload, SessionPayload } from "@canvas-js/interfaces"
 
 import { configure } from "safe-stable-stringify"
