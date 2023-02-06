@@ -10,6 +10,8 @@
   ],
   "dependencies": {
     "@canvas-js/interfaces": "0.0.50-pre4",
+    "@solana/web3.js": "^1.73.2",
+    "bs58": "^5.0.0",
     "safe-stable-stringify": "^2.4.2",
     "tweetnacl": "^1.0.3"
   },

@@ -11,7 +11,7 @@ import type {
 	Session,
 	SessionPayload,
 } from "@canvas-js/interfaces"
-import { serializeActionPayload, serializeSessionPayload, getActionHash } from "@canvas-js/interfaces"
+import { serializeActionPayload, serializeSessionPayload } from "@canvas-js/interfaces"
 
 const getActionSignatureData = (payload: ActionPayload): Uint8Array => {
 	return new TextEncoder().encode(serializeActionPayload(payload))
