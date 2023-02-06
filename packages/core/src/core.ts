@@ -111,18 +111,31 @@ export class Core extends EventEmitter<CoreEvents> {
 				// or that the app was using a previous version of okra.
 				fs.mkdirSync(mstPath)
 				this.mst = new okra.Tree(mstPath, { dbs: Object.values(sources).map((cid) => cid.toString()) })
+
+				if (options.verbose) {
+					console.log("[canvas-core] Rebuilding MST index from model store")
+				}
+
 				for (const [uri, cid] of Object.entries(sources)) {
 					const txn = new okra.Transaction(this.mst, { readOnly: false, dbi: cid.toString() })
 					try {
+						let actionCount = 0
 						for (const [hash, session] of this.messageStore.getSessionStream({ app: uri })) {
 							txn.set(getMessageKey(hash, session), hash)
+							actionCount++
 						}
 
+						let sessionCount = 0
 						for (const [hash, action] of this.messageStore.getActionStream({ app: uri })) {
 							txn.set(getMessageKey(hash, action), hash)
+							sessionCount++
 						}
 
 						txn.commit()
+
+						if (options.verbose) {
+							console.log(`[canvas-core] Indexed ${sessionCount} sessions and ${actionCount} actions for app ${uri}`)
+						}
 					} catch (err) {
 						txn.abort()
 						this.mst.close()
@@ -131,6 +144,10 @@ export class Core extends EventEmitter<CoreEvents> {
 						this.modelStore.close()
 						throw err
 					}
+				}
+
+				if (options.verbose) {
+					console.log("[canvas-core] Succesfully re-indexed the MST")
 				}
 			} else {
 				this.mst = new okra.Tree(mstPath, { dbs: Object.values(sources).map((cid) => cid.toString()) })

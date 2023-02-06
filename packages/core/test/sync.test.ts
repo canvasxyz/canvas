@@ -62,8 +62,11 @@ async function testSync(sourceMessages: Iterable<Message>, targetMessages: Itera
 
 	const sourceMessageStore = new MessageStore(app, path.resolve(directory, "source.sqlite"))
 	const targetMessageStore = new MessageStore(app, path.resolve(directory, "target.sqlite"))
-	const sourceMST = new okra.Tree(path.resolve(directory, "source.okra"))
-	const targetMST = new okra.Tree(path.resolve(directory, "target.okra"))
+	const [sourceMSTPath, targetMSTPath] = [path.resolve(directory, "source"), path.resolve(directory, "target")]
+	fs.mkdirSync(sourceMSTPath)
+	fs.mkdirSync(targetMSTPath)
+	const sourceMST = new okra.Tree(sourceMSTPath)
+	const targetMST = new okra.Tree(targetMSTPath)
 
 	initialize(sourceMessageStore, sourceMST, sourceMessages)
 	initialize(targetMessageStore, targetMST, targetMessages)
