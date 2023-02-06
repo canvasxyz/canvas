@@ -1,4 +1,4 @@
-import * as solw3 from "@solana/web3.js"
+import solw3 from "@solana/web3.js"
 import nacl from "tweetnacl"
 import bs58 from "bs58"
 
