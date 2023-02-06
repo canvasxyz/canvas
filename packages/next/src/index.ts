@@ -27,7 +27,7 @@ const chains: ChainImplementation[] = []
 let unchecked = true
 if (typeof ETH_CHAIN_ID === "string" && typeof ETH_CHAIN_RPC === "string") {
 	unchecked = false
-	chains.push(new EthereumChainImplementation(ETH_CHAIN_ID, new ethers.JsonRpcProvider(ETH_CHAIN_RPC)))
+	chains.push(new EthereumChainImplementation(ETH_CHAIN_ID, new ethers.providers.JsonRpcProvider(ETH_CHAIN_RPC)))
 } else {
 	chains.push(new EthereumChainImplementation())
 }

@@ -165,7 +165,9 @@ export class VM {
 		this.actions = Object.keys(this.actionHandles)
 
 		this.contracts = {}
-		const functionNames: Record<string, string[]> = {}
+
+		// add this back for ethers@v6
+		// const functionNames: Record<string, string[]> = {}
 
 		if (options.unchecked) {
 			if (options.verbose) {
@@ -181,7 +183,8 @@ export class VM {
 				assert(implementation instanceof EthereumChainImplementation)
 				assert(implementation.provider !== undefined, `no ethers provider for ${chain}:${chainId}`)
 				const contract = new ethers.Contract(address, abi, implementation.provider)
-				functionNames[name] = abi.map((abi) => contract.interface.getFunctionName(abi))
+
+				// functionNames[name] = abi.map((abi) => contract.interface.getFunctionName(abi))
 				this.contracts[name] = contract
 			}
 		}
@@ -221,7 +224,9 @@ export class VM {
 			context,
 			mapEntries(this.contracts, (contractName, contract) => {
 				const functionHandles: Record<string, QuickJSHandle> = {}
-				for (const functionName of functionNames[contractName]) {
+
+				for (const functionName of Object.keys(contract.functions)) {
+					// for (const functionName of functionNames[contractName]) {
 					functionHandles[functionName] = context.newFunction(
 						`${contractName}.${functionName}`,
 						(...argHandles: QuickJSHandle[]) => {
@@ -242,9 +247,9 @@ export class VM {
 
 							const deferred = context.newPromise()
 
-							contract
-								.getFunction(functionName)
-								.staticCallResult(...args)
+							// const result = contract.getFunction(functionName).staticCallResult(...args)
+							const result = contract.functions[functionName](...args)
+							result
 								.then((result: ContractFunctionResult[]) =>
 									wrapArray(context, result.map(this.wrapContractFunctionResult)).consume(deferred.resolve)
 								)
@@ -254,6 +259,7 @@ export class VM {
 							return deferred.handle
 						}
 					)
+					// }
 				}
 
 				return wrapObject(context, functionHandles)
@@ -507,6 +513,8 @@ export class VM {
 			// TODO: support real bigints
 			// return newBigInt(this.context, value)
 			return this.context.newNumber(Number(value))
+		} else if (ethers.BigNumber.isBigNumber(value)) {
+			return this.context.newNumber(value.toNumber())
 		} else {
 			console.error(value)
 			throw new Error("Unsupported value type in contract function result")
@@ -514,4 +522,4 @@ export class VM {
 	}
 }
 
-type ContractFunctionResult = string | boolean | number | bigint
+type ContractFunctionResult = string | boolean | number | bigint | ethers.BigNumber
