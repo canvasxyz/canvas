@@ -1,5 +1,5 @@
-import { Wallet } from "ethers"
+import { ethers } from "ethers"
 
-export function createMockEthereumSigner() {
-	return Wallet.createRandom()
+export function createMockEthereumSigner(): ethers.Signer {
+	return ethers.Wallet.createRandom()
 }

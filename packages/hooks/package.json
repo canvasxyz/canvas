@@ -17,6 +17,6 @@
   },
   "dependencies": {
     "@canvas-js/interfaces": "0.0.50-pre4",
-    "ethers": "^5.7.2"
+    "ethers": "^6.0.2"
   }
 }
