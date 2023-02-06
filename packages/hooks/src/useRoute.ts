@@ -4,7 +4,6 @@ import { ModelValue } from "@canvas-js/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
 import { compareObjects } from "./utils.js"
-import type { IMessageEvent } from "websocket"
 
 const routePattern = /^(\/:?[a-zA-Z0-9_]+)+$/
 
@@ -69,7 +68,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 	const subscribe = options.subscribe ?? true
 
 	const listener = useMemo(
-		() => (evt: IMessageEvent) => {
+		() => (evt: MessageEvent) => {
 			if (evt.data.toString() === "pong") return
 			try {
 				const message = JSON.parse(evt.data.toString())

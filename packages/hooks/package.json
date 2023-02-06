@@ -16,7 +16,6 @@
     "typescript": "^4.9.4"
   },
   "dependencies": {
-    "@canvas-js/interfaces": "0.0.50-pre4",
-    "ethers": "^6.0.2"
+    "@canvas-js/interfaces": "0.0.50-pre4"
   }
 }
