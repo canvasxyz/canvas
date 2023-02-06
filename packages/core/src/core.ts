@@ -1,5 +1,6 @@
 import assert from "node:assert"
 import path from "node:path"
+import fs from "node:fs"
 import { createHash } from "node:crypto"
 
 import PQueue from "p-queue"
@@ -21,8 +22,10 @@ import {
 } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
+import * as okra from "node-okra"
+
 import { actionType, sessionType } from "./codecs.js"
-import { toHex, signalInvalidType, CacheMap, parseIPFSURI, stringify } from "./utils.js"
+import { toHex, signalInvalidType, CacheMap, parseIPFSURI, stringify, mapEntries } from "./utils.js"
 
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
@@ -31,6 +34,7 @@ import { ModelStore } from "./modelStore.js"
 import * as constants from "./constants.js"
 import { Source } from "./source.js"
 import { metrics } from "./metrics.js"
+import { getMessageKey } from "./rpc/utils.js"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
@@ -58,6 +62,7 @@ interface CoreEvents {
 export class Core extends EventEmitter<CoreEvents> {
 	public readonly modelStore: ModelStore
 	public readonly messageStore: MessageStore
+	public readonly mst: okra.Tree | null = null
 
 	public readonly recentGossipPeers = new CacheMap<string, { lastSeen: number }>(1000)
 	public readonly recentSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
@@ -98,30 +103,68 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.messageStore = new MessageStore(uri, messageDatabasePath, vm.sources, options)
 
 		if (directory !== null) {
-			this.sources = {}
-			this.sources[this.uri] = Source.initialize({
-				path: path.resolve(directory, constants.MST_FILENAME),
-				cid,
-				applyMessage: this.applyMessage,
-				messageStore: this.messageStore,
-				libp2p,
-				recentGossipPeers: this.recentGossipPeers,
-				recentSyncPeers: this.recentSyncPeers,
-				...options,
-			})
+			const sources = Object.fromEntries([this.uri, ...vm.sources].map((uri) => [uri, parseIPFSURI(uri)]))
 
-			for (const source of vm.sources) {
-				const cid = parseIPFSURI(source)
-				assert(cid !== null)
-				this.sources[source] = Source.initialize({
-					path: path.resolve(directory, `${cid.toString()}.okra`),
+			const mstPath = path.resolve(directory, constants.MST_DIRECTORY_NAME)
+			if (!fs.existsSync(mstPath)) {
+				// if the directory doesn't exist, it either means that we're starting the app for the first time,
+				// or that the app was using a previous version of okra.
+				fs.mkdirSync(mstPath)
+				this.mst = new okra.Tree(mstPath, { dbs: Object.values(sources).map((cid) => cid.toString()) })
+
+				if (options.verbose) {
+					console.log("[canvas-core] Rebuilding MST index from model store")
+				}
+
+				for (const [uri, cid] of Object.entries(sources)) {
+					const txn = new okra.Transaction(this.mst, { readOnly: false, dbi: cid.toString() })
+					try {
+						let sessionCount = 0
+						for (const [hash, session] of this.messageStore.getSessionStream({ app: uri })) {
+							txn.set(getMessageKey(hash, session), hash)
+							sessionCount++
+						}
+
+						let actionCount = 0
+						for (const [hash, action] of this.messageStore.getActionStream({ app: uri })) {
+							txn.set(getMessageKey(hash, action), hash)
+							actionCount++
+						}
+
+						txn.commit()
+
+						if (options.verbose) {
+							console.log(`[canvas-core] Indexed ${sessionCount} sessions and ${actionCount} actions for app ${uri}`)
+						}
+					} catch (err) {
+						txn.abort()
+						this.mst.close()
+						this.vm.dispose()
+						this.messageStore.close()
+						this.modelStore.close()
+						throw err
+					}
+				}
+
+				if (options.verbose) {
+					console.log("[canvas-core] Succesfully re-indexed the MST")
+				}
+			} else {
+				this.mst = new okra.Tree(mstPath, { dbs: Object.values(sources).map((cid) => cid.toString()) })
+			}
+
+			this.sources = mapEntries(sources, (uri, cid) =>
+				Source.initialize({
 					cid,
+					mst: this.mst!, // this is guaranteed to be non-null
 					applyMessage: this.applyMessage,
 					messageStore: this.messageStore,
 					libp2p,
+					recentGossipPeers: this.recentGossipPeers,
+					recentSyncPeers: this.recentSyncPeers,
 					...options,
 				})
-			}
+			)
 		}
 	}
 
@@ -131,6 +174,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.vm.dispose()
 		this.messageStore.close()
 		this.modelStore.close()
+
+		if (this.mst !== null) {
+			this.mst.close()
+		}
 
 		if (this.sources !== null) {
 			for (const source of Object.values(this.sources)) {

@@ -94,9 +94,9 @@ export async function handler(args: Args) {
 		console.log("[canvas-cli] Using PeerId", peerId.toString())
 
 		if (args.announce) {
-			libp2p = await createLibp2p(getLibp2pInit(peerId, args.listen, [args.announce]))
+			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: args.listen, announce: [args.announce] }))
 		} else {
-			libp2p = await createLibp2p(getLibp2pInit(peerId, args.listen))
+			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: args.listen }))
 		}
 
 		startPingService(libp2p, controller, { verbose: args.verbose })

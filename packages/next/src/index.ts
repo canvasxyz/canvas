@@ -57,9 +57,9 @@ if (NODE_ENV === "production") {
 
 	let libp2p: Libp2p
 	if (typeof ANNOUNCE === "string") {
-		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort, [ANNOUNCE]))
+		libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort, announce: [ANNOUNCE] }))
 	} else {
-		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+		libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort }))
 	}
 
 	console.log("[canvas-next] Started libp2p")

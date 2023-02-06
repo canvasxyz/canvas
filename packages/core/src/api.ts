@@ -7,6 +7,7 @@ import { StatusCodes } from "http-status-codes"
 import type { Chain, ModelValue } from "@canvas-js/interfaces"
 import { Core } from "./core.js"
 import { getMetrics } from "./metrics.js"
+import { toHex } from "./utils.js"
 
 interface Options {
 	exposeMetrics: boolean
@@ -103,8 +104,8 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		// TODO: pagination
 		api.get("/actions", (req, res) => {
 			const actions = []
-			for (const entry of core.messageStore.getActionStream()) {
-				actions.push(entry)
+			for (const [hash, action] of core.messageStore.getActionStream()) {
+				actions.push([toHex(hash), action])
 			}
 
 			return res.status(StatusCodes.OK).json(actions)
@@ -115,8 +116,8 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		// TODO: pagination
 		api.get("/sessions", (req, res) => {
 			const sessions = []
-			for (const entry of core.messageStore.getSessionStream()) {
-				sessions.push(entry)
+			for (const [hash, session] of core.messageStore.getSessionStream()) {
+				sessions.push([toHex(hash), session])
 			}
 
 			return res.status(StatusCodes.OK).json(sessions)

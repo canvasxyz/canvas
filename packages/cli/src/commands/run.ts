@@ -129,19 +129,10 @@ export async function handler(args: Args) {
 			console.log(`[canvas-cli] Deleted ${modelsPath}`)
 		}
 
-		const mstPath = path.resolve(directory, constants.MST_FILENAME)
+		const mstPath = path.resolve(directory, constants.MST_DIRECTORY_NAME)
 		if (fs.existsSync(mstPath)) {
-			fs.rmSync(mstPath)
+			fs.rmSync(mstPath, { recursive: true })
 			console.log(`[canvas-cli] Deleted ${mstPath}`)
-		}
-
-		const sourceMSTPattern = /^[a-zA-Z0-9]+\.okra$/
-		for (const name of fs.readdirSync(directory)) {
-			if (sourceMSTPattern.test(name)) {
-				const sourceMSTPath = path.resolve(directory, name)
-				fs.rmSync(sourceMSTPath)
-				console.log(`[canvas-cli] Deleted ${sourceMSTPath}`)
-			}
 		}
 	} else if (args.replay) {
 		await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
@@ -191,9 +182,9 @@ export async function handler(args: Args) {
 	if (!offline) {
 		if (announce !== undefined) {
 			console.log(`[canvas-cli] Announcing on ${announce}`)
-			libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort, [announce]))
+			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort, announce: [announce] }))
 		} else {
-			libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort }))
 		}
 
 		if (verbose) {

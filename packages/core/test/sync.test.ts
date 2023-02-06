@@ -17,7 +17,7 @@ import type { Message } from "@canvas-js/interfaces"
 
 import { MessageStore } from "@canvas-js/core/lib/messageStore.js"
 import { compileSpec, stringify } from "@canvas-js/core/lib/utils.js"
-import { handleIncomingStream, sync } from "@canvas-js/core/lib/rpc/index.js"
+import { getMessageKey, handleIncomingStream, sync } from "@canvas-js/core/lib/rpc/index.js"
 
 import { TestSigner } from "./utils.js"
 
@@ -40,64 +40,64 @@ function connect(): [
 	]
 }
 
-async function insert(mst: okra.Tree, hash: Buffer, message: Message) {
-	const leaf = Buffer.alloc(14)
-	const offset = message.type === "action" ? 1 : 0
-	leaf.writeUintBE(
-		(message.type === "action" ? message.payload.timestamp : message.payload.sessionIssued) * 2 + offset,
-		0,
-		6
-	)
-	hash.copy(leaf, 6, 0, 8)
-	mst.insert(leaf, hash)
+function initialize(messageStore: MessageStore, mst: okra.Tree, messages: Iterable<Message>) {
+	const txn = new okra.Transaction(mst, { readOnly: false })
+	try {
+		for (const message of messages) {
+			const data = Buffer.from(stringify(message))
+			const hash = createHash("sha256").update(data).digest()
+			txn.set(getMessageKey(hash, message), hash)
+			messageStore.insert(hash, message)
+		}
+		txn.commit()
+	} catch (err) {
+		txn.abort()
+		throw err
+	}
 }
 
-async function testSync(sourceMessages: Message[], targetMessages: Message[]): Promise<Message[]> {
+async function testSync(sourceMessages: Iterable<Message>, targetMessages: Iterable<Message>): Promise<Message[]> {
 	const directory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(directory)
+
 	const sourceMessageStore = new MessageStore(app, path.resolve(directory, "source.sqlite"))
-	const sourceMST = new okra.Tree(path.resolve(directory, "source.okra"))
-	const targetMST = new okra.Tree(path.resolve(directory, "target.okra"))
+	const targetMessageStore = new MessageStore(app, path.resolve(directory, "target.sqlite"))
+	const [sourceMSTPath, targetMSTPath] = [path.resolve(directory, "source"), path.resolve(directory, "target")]
+	fs.mkdirSync(sourceMSTPath)
+	fs.mkdirSync(targetMSTPath)
+	const sourceMST = new okra.Tree(sourceMSTPath)
+	const targetMST = new okra.Tree(targetMSTPath)
 
-	for (const message of sourceMessages) {
-		const data = Buffer.from(stringify(message))
-		const hash = createHash("sha256").update(data).digest()
-		insert(sourceMST, hash, message)
-		sourceMessageStore.insert(hash, message)
-	}
+	initialize(sourceMessageStore, sourceMST, sourceMessages)
+	initialize(targetMessageStore, targetMST, targetMessages)
 
-	for (const message of targetMessages) {
-		const data = Buffer.from(stringify(message))
-		const hash = createHash("sha256").update(data).digest()
-		insert(targetMST, hash, message)
-	}
-
-	const messages: Message[] = []
-	async function handleMessage(hash: Buffer, data: Uint8Array, message: Message) {
-		messages.push(message)
-	}
-
+	const delta: Message[] = []
 	try {
 		const [source, target] = connect()
+		const sourceTxn = new okra.Transaction(sourceMST, { readOnly: true })
+		const targetTxn = new okra.Transaction(targetMST, { readOnly: false })
+
 		await Promise.all([
-			handleIncomingStream(source, sourceMessageStore, sourceMST),
-			sync(targetMST, target, handleMessage),
+			handleIncomingStream(source, sourceMessageStore, sourceTxn),
+			sync(targetMessageStore, targetTxn, target, async (hash, data, message) => void delta.push(message)),
 		])
 
-		return messages
-	} catch (err) {
-		throw err
+		sourceTxn.abort()
+		targetTxn.commit()
+
+		return delta
 	} finally {
 		targetMST.close()
 		sourceMST.close()
 		sourceMessageStore.close()
+		targetMessageStore.close()
 		fs.rmSync(directory, { recursive: true })
 	}
 }
 
 const signer = new TestSigner(app, appName)
 
-test("sync two MSTs", async (t) => {
+test("sync two tiny MSTs", async (t) => {
 	const a = await signer.sign("log", { message: "a" })
 	const b = await signer.sign("log", { message: "b" })
 	const c = await signer.sign("log", { message: "c" })
@@ -107,4 +107,31 @@ test("sync two MSTs", async (t) => {
 
 	const delta = await testSync([a, b, c, d, f], [a, d, e, f])
 	t.deepEqual(delta, [b, c])
+})
+
+test("sync two big MSTs", async (t) => {
+	const count = 1000
+	const index = Math.floor(Math.random() * count)
+
+	const messages: Message[] = []
+	for (let i = 0; i < count; i++) {
+		messages.push(await signer.sign("log", { message: nanoid() }))
+	}
+
+	function* sourceMessages(): Generator<Message> {
+		for (const message of messages) yield message
+	}
+
+	function* targetMessages(): Generator<Message> {
+		for (const [i, message] of messages.entries()) {
+			if (i === index) {
+				continue
+			} else {
+				yield message
+			}
+		}
+	}
+
+	const delta = await testSync(sourceMessages(), targetMessages())
+	t.deepEqual(delta, [messages[index]])
 })

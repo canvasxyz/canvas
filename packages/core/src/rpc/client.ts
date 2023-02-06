@@ -6,9 +6,12 @@ import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
 
+import type * as okra from "node-okra"
+
 import RPC from "../../rpc/sync/index.cjs"
 
 import { toBuffer } from "../utils.js"
+import { toNode } from "./utils.js"
 
 export class Client {
 	private seq = 0
@@ -24,25 +27,26 @@ export class Client {
 		this.requests.end()
 	}
 
-	public async getRoot() {
+	public async getRoot(): Promise<{ level: number; hash: Buffer }> {
 		const { getRoot } = await this.get({ getRoot: {} })
 		assert(getRoot, "Invalid RPC response")
 		const { level, hash } = RPC.Response.GetRootResponse.create(getRoot)
 		return { level, hash: toBuffer(hash) }
 	}
 
-	public async getChildren(level: number, leaf: Uint8Array) {
-		const { getChildren } = await this.get({ getChildren: { level, leaf } })
+	public async getChildren(level: number, key: Uint8Array | null): Promise<okra.Node[]> {
+		const { getChildren } = await this.get({ getChildren: { level, key } })
 		assert(getChildren, "Invalid RPC response")
 		const { nodes } = RPC.Response.GetChildrenResponse.create(getChildren)
-		return nodes.map(RPC.Node.create).map(({ leaf, hash }) => ({ leaf: toBuffer(leaf), hash: toBuffer(hash) }))
+		return nodes.map(RPC.Node.create).map(toNode)
 	}
 
-	public async getValues(nodes: { leaf: Uint8Array; hash: Uint8Array }[]) {
-		const { getValues } = await this.get({ getValues: { nodes } })
-		assert(getValues, "Invalid RPC response")
-		const { values } = RPC.Response.GetValuesResponse.create(getValues)
-		return values
+	public async getMessages(requests: { type: RPC.MessageRequest.MessageType; id: Buffer }[]): Promise<Buffer[]> {
+		const { getMessages } = await this.get({ getMessages: { messages: requests } })
+		assert(getMessages, "Invalid RPC response")
+		const { messages: responses } = RPC.Response.GetMessagesResponse.create(getMessages)
+		assert(responses.length === requests.length, "expected responses.length to match requests.length")
+		return responses.map(toBuffer)
 	}
 
 	private async get(req: RPC.IRequest) {

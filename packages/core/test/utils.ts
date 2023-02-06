@@ -6,6 +6,8 @@ import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 export class TestSigner {
 	readonly wallet = ethers.Wallet.createRandom()
+	private timestamp = Date.now()
+
 	constructor(
 		readonly uri: string,
 		readonly appName: string,
@@ -19,7 +21,7 @@ export class TestSigner {
 			appName: this.appName,
 			call,
 			callArgs,
-			timestamp: Date.now(),
+			timestamp: this.timestamp++,
 			chain: "ethereum",
 			chainId: "1",
 			block: null,
@@ -38,13 +40,15 @@ export class TestSigner {
 
 export class TestSessionSigner {
 	readonly wallet = ethers.Wallet.createRandom()
+	private timestamp = Date.now()
+
 	constructor(readonly signer: TestSigner) {}
 
 	async session(): Promise<Session> {
 		const sessionPayload: SessionPayload = {
 			sessionAddress: this.wallet.address,
 			sessionDuration: 60 * 60 * 24 * 1000,
-			sessionIssued: Date.now(),
+			sessionIssued: this.timestamp++,
 			from: this.signer.wallet.address,
 			app: this.signer.uri,
 			appName: this.signer.appName,
@@ -70,7 +74,7 @@ export class TestSessionSigner {
 			appName: this.signer.appName,
 			call,
 			callArgs,
-			timestamp: Date.now(),
+			timestamp: this.timestamp++,
 			chain: "ethereum",
 			chainId: "1",
 			block: null,

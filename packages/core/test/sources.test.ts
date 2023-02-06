@@ -1,10 +1,19 @@
-import test from "ava"
+import os from "node:os"
+import fs from "node:fs"
+import path from "node:path"
 import assert from "node:assert"
+
+import test from "ava"
+
+import * as okra from "node-okra"
+import { nanoid } from "nanoid"
 
 import { Core, compileSpec } from "@canvas-js/core"
 
 import { TestSigner } from "./utils.js"
 import { fromHex, parseIPFSURI, stringify } from "@canvas-js/core/lib/utils.js"
+import { getMessageKey } from "@canvas-js/core/lib/rpc/utils.js"
+import * as constants from "@canvas-js/core/lib/constants.js"
 
 const MessageBoard = await compileSpec({
 	name: "Test App",
@@ -102,9 +111,6 @@ test("Apply source actions", async (t) => {
 		},
 	])
 
-	const sourceCID = parseIPFSURI(MessageBoard.app)
-	assert(sourceCID !== null)
-
 	t.deepEqual(core.messageStore.database.prepare("SELECT * FROM actions").all(), [
 		{
 			id: 1,
@@ -170,4 +176,81 @@ test("Apply source actions", async (t) => {
 	])
 
 	await core.close()
+})
+
+test("Build missing MST index on core startup", async (t) => {
+	const directory = path.resolve(os.tmpdir(), nanoid())
+	fs.mkdirSync(directory)
+
+	const messageKeys: Record<string, Buffer[]> = {}
+
+	try {
+		// apply a mix of source and direct actions
+		await t.notThrowsAsync(async () => {
+			const core = await Core.initialize({
+				directory,
+				uri: MessageBoardWithVotes.app,
+				spec: MessageBoardWithVotes.spec,
+				libp2p: null,
+				unchecked: true,
+			})
+
+			const sourceAction = await sourceSigner.sign("createPost", { content: "hello world" })
+			const { hash: sourceActionHash } = await core.applyAction(sourceAction)
+			const createAction = await signer.sign("create", { content: "lorem ipsum" })
+			const { hash: createActionHash } = await core.applyAction(createAction)
+			const voteAction = await signer.sign("vote", { post_id: createActionHash, value: 1 })
+			const { hash: voteActionHash } = await core.applyAction(voteAction)
+			const voteSourceAction = await signer.sign("vote", { post_id: sourceActionHash, value: -1 })
+			const { hash: voteSourceActionHash } = await core.applyAction(voteSourceAction)
+
+			await core.close()
+
+			const sourceDBI = parseIPFSURI(MessageBoard.app).toString()
+			messageKeys[sourceDBI] = [getMessageKey(sourceActionHash, sourceAction)]
+			const dbi = core.cid.toString()
+			messageKeys[dbi] = [
+				getMessageKey(createActionHash, createAction),
+				getMessageKey(voteActionHash, voteAction),
+				getMessageKey(voteSourceActionHash, voteSourceAction),
+			]
+		})
+
+		const mstPath = path.resolve(directory, constants.MST_DIRECTORY_NAME)
+		t.true(fs.existsSync(mstPath))
+		t.true(fs.statSync(mstPath).isDirectory())
+
+		// delete the MST directory
+		fs.rmSync(mstPath, { recursive: true })
+
+		// open the core again
+		const core = await Core.initialize({
+			directory,
+			uri: MessageBoardWithVotes.app,
+			spec: MessageBoardWithVotes.spec,
+			libp2p: null,
+			unchecked: true,
+		})
+
+		// expect the MST directory exists
+		t.true(fs.existsSync(mstPath))
+		t.true(fs.statSync(mstPath).isDirectory())
+
+		try {
+			for (const [dbi, keys] of Object.entries(messageKeys)) {
+				const txn = new okra.Transaction(core.mst!, { dbi, readOnly: true })
+				try {
+					for (const key of keys) {
+						t.true(txn.get(key) !== null)
+					}
+				} finally {
+					txn.abort()
+				}
+			}
+		} finally {
+			await core.close()
+		}
+	} finally {
+		fs.rmSync(directory, { recursive: true })
+	}
 })
