@@ -200,26 +200,26 @@ export class MessageStore {
 
 	// we can use statement.iterate() instead of paging manually
 	// https://github.com/WiseLibs/better-sqlite3/issues/406
-	public *getActionStream({ app }: { app?: string } = {}): Iterable<[string, Action]> {
+	public *getActionStream({ app }: { app?: string } = {}): Iterable<[Buffer, Action]> {
 		if (app === undefined) {
 			for (const record of this.statements.getActions.iterate({}) as Iterable<ActionRecord>) {
-				yield [toHex(record.hash), MessageStore.parseActionRecord(record)]
+				yield [record.hash, MessageStore.parseActionRecord(record)]
 			}
 		} else {
 			for (const record of this.statements.getActionsByApp.iterate({ app }) as Iterable<ActionRecord>) {
-				yield [toHex(record.hash), MessageStore.parseActionRecord(record)]
+				yield [record.hash, MessageStore.parseActionRecord(record)]
 			}
 		}
 	}
 
-	public *getSessionStream({ app }: { app?: string } = {}): Iterable<[string, Session]> {
+	public *getSessionStream({ app }: { app?: string } = {}): Iterable<[Buffer, Session]> {
 		if (app === undefined) {
 			for (const record of this.statements.getSessions.iterate({}) as Iterable<SessionRecord>) {
-				yield [toHex(record.hash), MessageStore.parseSessionRecord(record)]
+				yield [record.hash, MessageStore.parseSessionRecord(record)]
 			}
 		} else {
 			for (const record of this.statements.getSessionsByApp.iterate({ app }) as Iterable<SessionRecord>) {
-				yield [toHex(record.hash), MessageStore.parseSessionRecord(record)]
+				yield [record.hash, MessageStore.parseSessionRecord(record)]
 			}
 		}
 	}

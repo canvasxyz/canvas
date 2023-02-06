@@ -1,5 +1,6 @@
 import assert from "node:assert"
 import path from "node:path"
+import fs from "node:fs"
 import { createHash } from "node:crypto"
 
 import PQueue from "p-queue"
@@ -33,6 +34,7 @@ import { ModelStore } from "./modelStore.js"
 import * as constants from "./constants.js"
 import { Source } from "./source.js"
 import { metrics } from "./metrics.js"
+import { getMessageKey } from "./rpc/utils.js"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
@@ -101,16 +103,43 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.messageStore = new MessageStore(uri, messageDatabasePath, vm.sources, options)
 
 		if (directory !== null) {
-			const mstPath = directory && path.resolve(directory, constants.MST_FILENAME)
-
 			const sources = Object.fromEntries([this.uri, ...vm.sources].map((uri) => [uri, parseIPFSURI(uri)]))
-			const mst = new okra.Tree(mstPath, { dbs: Object.values(sources).map((cid) => cid.toString()) })
 
-			this.mst = mst
+			const mstPath = path.resolve(directory, constants.MST_DIRECTORY_NAME)
+			if (!fs.existsSync(mstPath)) {
+				// if the directory doesn't exist, it either means that we're starting the app for the first time,
+				// or that the app was using a previous version of okra.
+				fs.mkdirSync(mstPath)
+				this.mst = new okra.Tree(mstPath, { dbs: Object.values(sources).map((cid) => cid.toString()) })
+				for (const [uri, cid] of Object.entries(sources)) {
+					const txn = new okra.Transaction(this.mst, { readOnly: false, dbi: cid.toString() })
+					try {
+						for (const [hash, session] of this.messageStore.getSessionStream({ app: uri })) {
+							txn.set(getMessageKey(hash, session), hash)
+						}
+
+						for (const [hash, action] of this.messageStore.getActionStream({ app: uri })) {
+							txn.set(getMessageKey(hash, action), hash)
+						}
+
+						txn.commit()
+					} catch (err) {
+						txn.abort()
+						this.mst.close()
+						this.vm.dispose()
+						this.messageStore.close()
+						this.modelStore.close()
+						throw err
+					}
+				}
+			} else {
+				this.mst = new okra.Tree(mstPath, { dbs: Object.values(sources).map((cid) => cid.toString()) })
+			}
+
 			this.sources = mapEntries(sources, (uri, cid) =>
 				Source.initialize({
 					cid,
-					mst,
+					mst: this.mst!, // this is guaranteed to be non-null
 					applyMessage: this.applyMessage,
 					messageStore: this.messageStore,
 					libp2p,
@@ -128,6 +157,10 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.vm.dispose()
 		this.messageStore.close()
 		this.modelStore.close()
+
+		if (this.mst !== null) {
+			this.mst.close()
+		}
 
 		if (this.sources !== null) {
 			for (const source of Object.values(this.sources)) {
