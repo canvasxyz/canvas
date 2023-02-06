@@ -1,15 +1,7 @@
-import type { Window as KeplrWindow, OfflineAminoSigner } from "@keplr-wallet/types"
-import {
-	AminoMsg,
-	StdSignDoc,
-	StdFee,
-	Secp256k1Wallet,
-	serializeSignDoc,
-	decodeSignature,
-	rawSecp256k1PubkeyToRawAddress,
-} from "@cosmjs/amino"
+import type { OfflineAminoSigner } from "@keplr-wallet/types"
+import { Secp256k1Wallet, serializeSignDoc, decodeSignature, rawSecp256k1PubkeyToRawAddress } from "@cosmjs/amino"
 import { Secp256k1, Secp256k1Signature, Random, Sha256, ExtendedSecp256k1Signature } from "@cosmjs/crypto"
-import { Bech32 } from "@cosmjs/encoding"
+import { fromBech32, toBech32 } from "@cosmjs/encoding"
 
 import type {
 	Action,
@@ -20,8 +12,8 @@ import type {
 	Session,
 	SessionPayload,
 } from "@canvas-js/interfaces"
-import { serializeActionPayload, serializeSessionPayload, getActionHash } from "@canvas-js/interfaces"
-import { getActionSignatureData, getSessionSignatureData } from "./signatureData"
+
+import { getActionSignatureData, getSessionSignatureData } from "./signatureData.js"
 
 type Secp256k1WalletPrivateKey = Uint8Array
 
@@ -43,7 +35,7 @@ export class CosmosChainImplementation implements ChainImplementation<OfflineAmi
 		const extendedSecp256k1Signature = ExtendedSecp256k1Signature.fromFixedLength(signatureBytes)
 		const pubkey = Secp256k1.compressPubkey(Secp256k1.recoverPubkey(extendedSecp256k1Signature, signDocDigest))
 
-		if (actionSignerAddress !== Bech32.encode(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
+		if (actionSignerAddress !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
 			throw new Error("Invalid action signature")
 		}
 	}
@@ -51,13 +43,14 @@ export class CosmosChainImplementation implements ChainImplementation<OfflineAmi
 	async verifySession(session: Session): Promise<void> {
 		const signDocPayload = await getSessionSignatureData(session.payload, session.payload.from) // TODO
 		const signDocDigest = new Sha256(serializeSignDoc(signDocPayload)).digest()
-		const prefix = Bech32.decode(session.payload.from).prefix
+		const { prefix } = fromBech32(session.payload.from)
 
 		// decode "{ pub_key, signature }" to an object with { pubkey, signature } using the amino helper
 		const { pubkey, signature: decodedSignature } = decodeSignature(JSON.parse(session.signature))
-		if (session.payload.from !== Bech32.encode(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
+		if (session.payload.from !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
 			throw new Error("Session signed with a pubkey that doesn't match the session address")
 		}
+
 		const secpSignature = Secp256k1Signature.fromFixedLength(decodedSignature)
 		const valid = await Secp256k1.verifySignature(secpSignature, signDocDigest, pubkey)
 
