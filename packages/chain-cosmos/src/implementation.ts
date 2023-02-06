@@ -29,14 +29,22 @@ export class CosmosChainImplementation implements ChainImplementation<OfflineAmi
 		const actionSignerAddress = action.session ?? action.payload.from
 		const signDocPayload = await getActionSignatureData(action.payload, actionSignerAddress)
 		const signDocDigest = new Sha256(serializeSignDoc(signDocPayload)).digest()
-		const prefix = "cosmos" // not: Bech32.decode(payload.from).prefix;
+		const prefix = "cosmos" // not: fromBech32(payload.from).prefix;
 
-		const signatureBytes = Buffer.from(action.signature, "hex")
-		const extendedSecp256k1Signature = ExtendedSecp256k1Signature.fromFixedLength(signatureBytes)
-		const pubkey = Secp256k1.compressPubkey(Secp256k1.recoverPubkey(extendedSecp256k1Signature, signDocDigest))
+		const { pubkey, signature: decodedSignature } = decodeSignature(JSON.parse(action.signature))
+		if (action.session && action.session !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
+			// Delegated signatures: If session exists, pubkey should be the public key for `action.session`
+			throw new Error("Action signed with a pubkey that doesn't match the session address")
+		}
+		if (!action.session && action.payload.from !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
+			// Direct signatures: If session is null, pubkey should be the public key for `action.payload.from`
+			throw new Error("Action signed with a pubkey that doesn't match the from address")
+		}
+		const secpSignature = Secp256k1Signature.fromFixedLength(decodedSignature)
+		const valid = await Secp256k1.verifySignature(secpSignature, signDocDigest, pubkey)
 
-		if (actionSignerAddress !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
-			throw new Error("Invalid action signature")
+		if (!valid) {
+			throw new Error("Invalid session signature")
 		}
 	}
 
@@ -78,38 +86,40 @@ export class CosmosChainImplementation implements ChainImplementation<OfflineAmi
 	async signSession(signer: OfflineAminoSigner, payload: SessionPayload): Promise<Session> {
 		const address = (await signer.getAccounts())[0].address
 		const signDoc = await getSessionSignatureData(payload, address)
-		// Note that this is a StdSignature, not an extended signature.
 		const {
 			signature: { pub_key, signature },
 		} = await signer.signAmino(address, signDoc)
-		const session: Session = { type: "session", signature, payload }
+		const session: Session = { type: "session", signature: JSON.stringify({ pub_key, signature }), payload }
 		return session
 	}
 
 	async signAction(signer: OfflineAminoSigner, payload: ActionPayload): Promise<Action> {
 		const address = (await signer.getAccounts())[0].address
 		const signDoc = await getActionSignatureData(payload, address)
-		// Note that this is a StdSignature, not an extended signature.
-		// Delegated actions are signed with an extended signature. This method should return an
-		// extended signature too, so pubkey recovery is possible.
+		if (address !== payload.from) {
+			throw new Error("Direct signAction called with address that doesn't match action.payload.from")
+		}
 		const {
 			signature: { pub_key, signature },
 		} = await signer.signAmino(address, signDoc)
-		const action: Action = { type: "action", payload, session: null, signature }
+		const action: Action = { type: "action", payload, session: null, signature: JSON.stringify({ pub_key, signature }) }
 		return action
 	}
 
 	async signDelegatedAction(privkey: Secp256k1WalletPrivateKey, payload: ActionPayload) {
-		const wallet = await Secp256k1Wallet.fromKey(privkey)
-		const accountData = (await wallet.getAccounts())[0]
-		if (accountData.address !== payload.from) {
-			throw new Error(`Signer address did not match payload.from: ${accountData.address} vs. ${payload.from}`)
+		const signer = await Secp256k1Wallet.fromKey(privkey)
+		const accountData = (await signer.getAccounts())[0]
+		const signDoc = await getActionSignatureData(payload, accountData.address)
+
+		const {
+			signature: { pub_key, signature },
+		} = await signer.signAmino(accountData.address, signDoc)
+		const action: Action = {
+			type: "action",
+			payload,
+			session: accountData.address,
+			signature: JSON.stringify({ pub_key, signature }),
 		}
-		const signDoc = serializeSignDoc(await getActionSignatureData(payload, accountData.address))
-		const digest = new Sha256(signDoc).digest()
-		const extendedSignature = await Secp256k1.createSignature(digest, privkey)
-		const signature = Buffer.from(extendedSignature.toFixedLength()).toString("hex")
-		const action: Action = { type: "action", payload, session: null, signature }
 		return action
 	}
 

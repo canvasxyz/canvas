@@ -3,11 +3,12 @@ import { ActionPayload, ChainImplementation, SessionPayload } from "@canvas-js/i
 import { createMockEthereumSigner, EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { createMockSolanaSigner, SolanaChainImplementation } from "@canvas-js/chain-solana"
 import { createMockSubstrateSigner, SubstrateChainImplementation } from "@canvas-js/chain-substrate"
+import { createMockCosmosSigner, CosmosChainImplementation } from "@canvas-js/chain-cosmos"
 
 interface MockedImplementation<CI extends ChainImplementation> {
 	implementationName: string
 	chainImplementation: CI
-	createMockSigner: () => CI extends ChainImplementation<infer Signer, any> ? Signer : never
+	createMockSigner: () => CI extends ChainImplementation<infer Signer, any> ? Promise<Signer> : never
 }
 
 const IMPLEMENTATIONS = [
@@ -26,6 +27,11 @@ const IMPLEMENTATIONS = [
 		chainImplementation: new SubstrateChainImplementation(),
 		createMockSigner: createMockSubstrateSigner,
 	},
+	{
+		implementationName: "cosmos",
+		chainImplementation: new CosmosChainImplementation(),
+		createMockSigner: createMockCosmosSigner,
+	},
 ] as MockedImplementation<any>[]
 
 for (const testCase of IMPLEMENTATIONS) {
@@ -38,7 +44,7 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 	createMockSigner,
 }: MockedImplementation<T>) {
 	test(`${implementationName} Sign and verify a session successfully`, async (t) => {
-		const signer = createMockSigner()
+		const signer = await createMockSigner()
 
 		const from = await chainImplementation.getSignerAddress(signer)
 		const delegatedSigner = await chainImplementation.generateDelegatedSigner()
@@ -63,7 +69,7 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 	})
 
 	test(`${implementationName} Verifying a session fails if "from" value is incorrect`, async (t) => {
-		const signer = createMockSigner()
+		const signer = await createMockSigner()
 
 		const delegatedSigner = await chainImplementation.generateDelegatedSigner()
 		const from = await chainImplementation.getSignerAddress(signer)
@@ -89,7 +95,7 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 	})
 
 	test(`${implementationName} Directly sign an action successfully`, async (t) => {
-		const signer = createMockSigner()
+		const signer = await createMockSigner()
 
 		const from = await chainImplementation.getSignerAddress(signer)
 
@@ -111,7 +117,7 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 	})
 
 	test(`${implementationName} Verifying an invalid direct signature fails if "from" value is incorrect`, async (t) => {
-		const signer = createMockSigner()
+		const signer = await createMockSigner()
 
 		const from = await chainImplementation.getSignerAddress(signer)
 
@@ -134,7 +140,7 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 	})
 
 	test(`${implementationName} Sign an action successfully with delegated signer`, async (t) => {
-		const signer = createMockSigner()
+		const signer = await createMockSigner()
 
 		const delegatedSigner = await chainImplementation.generateDelegatedSigner()
 		const from = await chainImplementation.getSignerAddress(signer)
