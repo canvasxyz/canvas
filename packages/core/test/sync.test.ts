@@ -86,8 +86,6 @@ async function testSync(sourceMessages: Iterable<Message>, targetMessages: Itera
 		targetTxn.commit()
 
 		return delta
-	} catch (err) {
-		throw err
 	} finally {
 		targetMST.close()
 		sourceMST.close()

@@ -21,7 +21,7 @@ import {
 import * as constants from "../constants.js"
 import type { Effect } from "../modelStore.js"
 import { ApplicationError } from "../errors.js"
-import { mapEntries, signalInvalidType } from "../utils.js"
+import { mapEntries, signalInvalidType, toHex } from "../utils.js"
 
 import {
 	loadModule,
@@ -381,7 +381,7 @@ export class VM {
 	 * Given a call, get a list of effects to pass to `modelStore.applyEffects`, to be applied to the models.
 	 * Used by `.apply()` and when replaying actions.
 	 */
-	public async execute(hash: string, { call, callArgs, ...context }: ActionPayload): Promise<Effect[]> {
+	public async execute(hash: string | Buffer, { call, callArgs, ...context }: ActionPayload): Promise<Effect[]> {
 		assert(this.effects === null && this.actionContext === null, "cannot apply more than one action at once")
 
 		const actionHandle = this.getActionHandle(context.app, call)
@@ -393,7 +393,7 @@ export class VM {
 
 		const ctx = wrapJSON(this.context, {
 			app: context.app,
-			hash: hash,
+			hash: typeof hash === "string" ? hash : toHex(hash),
 			from: context.from,
 			block: context.block,
 			timestamp: context.timestamp,

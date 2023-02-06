@@ -119,16 +119,16 @@ export class Core extends EventEmitter<CoreEvents> {
 				for (const [uri, cid] of Object.entries(sources)) {
 					const txn = new okra.Transaction(this.mst, { readOnly: false, dbi: cid.toString() })
 					try {
-						let actionCount = 0
+						let sessionCount = 0
 						for (const [hash, session] of this.messageStore.getSessionStream({ app: uri })) {
 							txn.set(getMessageKey(hash, session), hash)
-							actionCount++
+							sessionCount++
 						}
 
-						let sessionCount = 0
+						let actionCount = 0
 						for (const [hash, action] of this.messageStore.getActionStream({ app: uri })) {
 							txn.set(getMessageKey(hash, action), hash)
-							sessionCount++
+							actionCount++
 						}
 
 						txn.commit()

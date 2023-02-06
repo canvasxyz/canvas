@@ -23,9 +23,6 @@ import {
 	CANVAS_HOME,
 } from "../utils.js"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
-import { ethers } from "ethers"
-
-const { hexlify } = ethers.utils
 
 export const command = "run <app>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -220,7 +217,7 @@ export async function handler(args: Args) {
 				throw new Error("Invalid action value in action log")
 			}
 
-			const effects = await vm.execute(hexlify(id), action.payload)
+			const effects = await vm.execute(id, action.payload)
 			modelStore.applyEffects(action.payload, effects)
 			i++
 		}

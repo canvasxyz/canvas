@@ -4,7 +4,7 @@ import type { Action, Message, Session } from "@canvas-js/interfaces"
 
 import RPC from "../../rpc/sync/index.cjs"
 
-import { signalInvalidType, toBuffer } from "../utils.js"
+import { fromHex, signalInvalidType, toBuffer } from "../utils.js"
 
 // We declare this interface to enforce that handleIncomingStream only has read access to the message store.
 export interface MessageStore {
@@ -16,7 +16,7 @@ const { CANVAS_SESSION, CANVAS_ACTION } = RPC.MessageRequest.MessageType
 
 export const getMessageType = (key: Buffer) => (key.readUintBE(0, 6) % 2 === 0 ? CANVAS_SESSION : CANVAS_ACTION)
 
-export const getMessageKey = (hash: Buffer, message: Message) => {
+export const getMessageKey = (hash: Buffer | string, message: Message) => {
 	const key = Buffer.alloc(14)
 	if (message.type === "action") {
 		key.writeUintBE(message.payload.timestamp * 2 + 1, 0, 6)
@@ -26,7 +26,12 @@ export const getMessageKey = (hash: Buffer, message: Message) => {
 		signalInvalidType(message)
 	}
 
-	hash.copy(key, 6, 0, 8)
+	if (typeof hash === "string") {
+		fromHex(hash).copy(key, 6, 0, 8)
+	} else {
+		hash.copy(key, 6, 0, 8)
+	}
+
 	return key
 }
 
