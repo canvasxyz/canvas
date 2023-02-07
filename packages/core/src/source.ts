@@ -21,11 +21,10 @@ import { metrics } from "./metrics.js"
 import { messageType } from "./codecs.js"
 import { MST } from "./mst.js"
 
-export interface SourceOptions {
-	verbose?: boolean
-	offline?: boolean
+interface SourceOptions {
 	recentGossipPeers?: CacheMap<string, { lastSeen: number }>
 	recentSyncPeers?: CacheMap<string, { lastSeen: number }>
+	verbose?: boolean
 }
 
 export interface SourceConfig extends SourceOptions {
@@ -57,7 +56,7 @@ export class Source {
 		this.uri = `ipfs://${cid.toString()}`
 		this.syncProtocol = `/x/canvas/sync/v1/${cid.toString()}`
 
-		if (libp2p !== null && !this.options.offline) {
+		if (libp2p !== null) {
 			libp2p.pubsub.subscribe(this.uri)
 			libp2p.pubsub.addEventListener("message", this.handleGossipMessage)
 			if (this.options.verbose) {
@@ -77,7 +76,7 @@ export class Source {
 	public async close() {
 		this.controller.abort()
 
-		if (this.libp2p !== null && !this.options.offline) {
+		if (this.libp2p !== null) {
 			this.libp2p.unhandle(this.syncProtocol)
 			this.libp2p.pubsub.unsubscribe(this.uri)
 			this.libp2p.pubsub.removeEventListener("message", this.handleGossipMessage)
@@ -85,19 +84,10 @@ export class Source {
 	}
 
 	/**
-	 * Insert a message into the MST. This is only called from core to insert local-origin messages.
-	 */
-	public async insertMessage(hash: Buffer, message: Message): Promise<void> {
-		await this.mst.write(this.uri, (txn) => {
-			txn.set(getMessageKey(hash, message), hash)
-		})
-	}
-
-	/**
 	 * Publish a message to the GossipSub topic.
 	 */
 	public async publishMessage(hash: Buffer, data: Uint8Array) {
-		if (this.libp2p === null || this.options.offline) {
+		if (this.libp2p === null) {
 			return
 		}
 
@@ -400,8 +390,7 @@ export class Source {
 		try {
 			await this.mst.write(this.uri, async (txn) => {
 				await sync(this.messageStore, txn, stream, handleSyncMessage)
-				const root = txn.getRoot()
-				const rootHash = toHex(root.hash)
+				const { hash: rootHash } = txn.getRoot()
 
 				console.log(
 					chalk.green(
@@ -409,9 +398,7 @@ export class Source {
 					)
 				)
 
-				if (this.options.verbose) {
-					console.log(`[canvas-core] [${this.cid}] The current merkle root is ${rootHash}`)
-				}
+				console.log(`[canvas-core] [${this.cid}] The current merkle root is ${toHex(rootHash)}`)
 
 				timer({ uri: this.uri, status: "success" })
 			})

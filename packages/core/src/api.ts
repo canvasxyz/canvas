@@ -4,7 +4,7 @@ import chalk from "chalk"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
 
-import type { Chain, ModelValue } from "@canvas-js/interfaces"
+import type { ModelValue } from "@canvas-js/interfaces"
 import { Core } from "./core.js"
 import { getMetrics } from "./metrics.js"
 import { toHex } from "./utils.js"
@@ -25,7 +25,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	api.get("/", (req, res) => {
 		const { component, routes, actions } = core.vm
 		return res.json({
-			uri: core.uri,
+			uri: core.app,
 			appName: core.appName,
 			cid: core.cid.toString(),
 			peerId: core.libp2p?.peerId.toString(),

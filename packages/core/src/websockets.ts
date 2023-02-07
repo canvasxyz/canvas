@@ -61,7 +61,7 @@ export function setupWebsockets(server: Server, core: Core): Server {
 		const message = JSON.stringify({
 			action: "application",
 			data: {
-				uri: core.uri,
+				uri: core.app,
 				appName: core.appName,
 				cid: core.cid.toString(),
 				peerId: core.libp2p?.peerId.toString(),

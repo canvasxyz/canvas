@@ -32,6 +32,7 @@ import * as constants from "./constants.js"
 import { Source } from "./source.js"
 import { metrics } from "./metrics.js"
 import { MST } from "./mst.js"
+import { getMessageKey } from "./rpc/utils.js"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
@@ -66,7 +67,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		const { directory, uri, spec, libp2p, chains = [new EthereumChainImplementation()], ...options } = config
 
 		const cid = await Hash.of(spec).then(CID.parse)
-		const app = uri ?? `ipfs://${cid.toString()}`
+		const app = uri ?? `ipfs://${cid}`
 		const vm = await VM.initialize({ app, spec, chains, ...options })
 		const appName = vm.appName
 
@@ -88,12 +89,11 @@ export class Core extends EventEmitter<CoreEvents> {
 			mst = await MST.initialize(directory, [app, ...vm.sources], importMessages, options)
 		}
 
-		return new Core(directory, app, cid, app, appName, vm, modelStore, messageStore, mst, libp2p, chains, options)
+		return new Core(directory, cid, app, appName, vm, modelStore, messageStore, mst, libp2p, chains, options)
 	}
 
 	private constructor(
 		public readonly directory: string | null,
-		public readonly uri: string,
 		public readonly cid: CID,
 		public readonly app: string,
 		public readonly appName: string,
@@ -110,7 +110,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.options = options
 
 		if (mst !== null) {
-			const sourceCIDs: Record<string, CID> = { [this.uri]: this.cid }
+			const sourceCIDs: Record<string, CID> = { [this.app]: this.cid }
 			for (const uri of vm.sources) {
 				sourceCIDs[uri] = parseIPFSURI(uri)
 			}
@@ -158,45 +158,49 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Executes an action.
 	 */
 	public async applyAction(action: Action): Promise<{ hash: string }> {
-		assert(actionType.is(action), "Invalid action value")
+		assert(actionType.is(action), "invalid action object")
+		assert(action.payload.app === this.app, `expected action.payload.app to be ${this.app}`)
 
 		const data = Buffer.from(stringify(action))
 		const hash = createHash("sha256").update(data).digest()
 
-		const existingRecord = this.messageStore.getActionByHash(hash)
-		if (existingRecord !== null) {
-			return { hash: toHex(hash) }
-		}
-
 		await this.applyMessage(hash, action)
 
+		if (this.mst !== null) {
+			await this.mst.write(this.app, (txn) => {
+				txn.set(getMessageKey(hash, action), hash)
+			})
+		}
+
 		if (this.sources !== null) {
-			this.sources[this.uri].insertMessage(hash, action)
-			await this.sources[this.uri].publishMessage(hash, data)
+			await this.sources[this.app].publishMessage(hash, data)
 		}
 
 		return { hash: toHex(hash) }
 	}
 
 	/**
-	 * Create a new session.
+	 * Apply a new session. This is a "local" entrypoint and can only be used for
+	 * sessions signed for the root app (session.payload.app === this.app).
+	 * It applies the message, inserts it into the MST, and publishes to GossipSub.
 	 */
 	public async applySession(session: Session): Promise<{ hash: string }> {
-		assert(sessionType.is(session), "invalid session")
+		assert(sessionType.is(session), "invalid session object")
+		assert(session.payload.app === this.app, `expected session.payload.app to be ${this.app}`)
 
 		const data = Buffer.from(stringify(session))
 		const hash = createHash("sha256").update(data).digest()
 
-		const existingRecord = this.messageStore.getSessionByHash(hash)
-		if (existingRecord !== null) {
-			return { hash: toHex(hash) }
-		}
-
 		await this.applyMessage(hash, session)
 
+		if (this.mst !== null) {
+			await this.mst.write(this.app, (txn) => {
+				txn.set(getMessageKey(hash, session), hash)
+			})
+		}
+
 		if (this.sources !== null) {
-			this.sources[this.uri].insertMessage(hash, session)
-			await this.sources[this.uri].publishMessage(hash, data)
+			await this.sources[this.app].publishMessage(hash, data)
 		}
 
 		return { hash: toHex(hash) }
@@ -208,12 +212,17 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * For sessions: validate, insert into message store.
 	 * This method is called directly from Core.applySession and Core.applyAction and is
 	 * also passed to Source as the callback for GossipSub and MST sync messages.
-	 * Note the this does NOT call sources[uri].insertMessage OR sources[uri].publishMessage -
+	 * Note the this does NOT insert into the MST or publish to GossipSub -
 	 * that's the responsibility of the caller.
 	 */
 	private applyMessage = async (hash: Buffer, message: Message) => {
 		const id = toHex(hash)
 		if (message.type === "action") {
+			const existingRecord = this.messageStore.getActionByHash(hash)
+			if (existingRecord !== null) {
+				return
+			}
+
 			if (this.options.verbose) {
 				console.log(`[canvas-core] Applying action ${id}`, message)
 			}
@@ -229,6 +238,11 @@ export class Core extends EventEmitter<CoreEvents> {
 			this.dispatchEvent(new CustomEvent("action", { detail: message.payload }))
 			metrics.canvas_messages.inc({ type: "action", uri: message.payload.app }, 1)
 		} else if (message.type === "session") {
+			const existingRecord = this.messageStore.getSessionByHash(hash)
+			if (existingRecord !== null) {
+				return
+			}
+
 			if (this.options.verbose) {
 				console.log(`[canvas-core] Applying session ${id}`, message)
 			}
@@ -249,8 +263,8 @@ export class Core extends EventEmitter<CoreEvents> {
 		const fromAddress = action.payload.from
 
 		assert(
-			app === this.uri || this.vm.sources.has(app),
-			`action signed for wrong application (invalid app: expected ${this.uri}, found ${app})`
+			app === this.app || this.vm.sources.has(app),
+			`action signed for wrong application (invalid app: expected ${this.app}, found ${app})`
 		)
 		assert(
 			appName === this.appName || this.vm.sources.has(app),
@@ -295,7 +309,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private async validateSession(session: Session) {
 		const { app, appName, sessionIssued, block, chain, chainId } = session.payload
-		assert(app === this.uri || this.vm.sources.has(app), "session signed for wrong application (app invalid)")
+		assert(app === this.app || this.vm.sources.has(app), "session signed for wrong application (app invalid)")
 		assert(
 			appName === this.appName || this.vm.sources.has(app),
 			"session signed for wrong application (appName invalid)"
