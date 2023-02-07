@@ -64,7 +64,7 @@ export function getLibp2pInit(config: {
 		}),
 		metrics: prometheusMetrics({ registry: libp2pRegister }),
 		pubsub: gossipsub({
-			emitSelf: true,
+			emitSelf: false,
 			doPX: true,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
