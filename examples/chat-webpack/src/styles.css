@@ -66,3 +66,12 @@ span.address-ens {
 	color: #777;
 	margin-right: 3px;
 }
+
+#gossip-peers li,
+#sync-peers li {
+	display: block;
+}
+
+.last-seen {
+	color: gray;
+}

@@ -18,6 +18,8 @@ export const App: React.FC<{}> = ({}) => {
 	const gossipPeers = data?.peers ? Object.entries(data.peers.gossip) : []
 	const syncPeers = data?.peers ? Object.entries(data.peers.sync) : []
 
+	const now = Date.now()
+
 	return (
 		<AppContext.Provider value={{ client, setClient }}>
 			<Messages />
@@ -33,28 +35,28 @@ export const App: React.FC<{}> = ({}) => {
 							<p>Loading...</p>
 						) : data ? (
 							<div>
-								<p>{data.uri}</p>
-								<p data-id={data.peerId}>Host Peer ID: {data.peerId}</p>
+								<p>App: {data.uri}</p>
+								<p data-id={data.peerId}>Host: {data.peerId}</p>
 								{data.peers && (
 									<ul className="tree-view">
 										<li>{gossipPeers.length} gossip peers</li>
 										<li>
-											<ul>
+											<ul id="gossip-peers">
 												{gossipPeers.map(([peerId, { lastSeen }]) => (
-													<li key={peerId} data-id={peerId} style={{ display: "flex" }}>
-														<div style={{ flex: 1 }}>{peerId}</div>
-														<div>{Math.round((Date.now() - lastSeen) / minute)}min ago</div>
+													<li key={peerId} data-id={peerId} style={{ display: "block" }}>
+														<div className="peer-id">{peerId}</div>
+														<div className="last-seen">last seen {Math.round((now - lastSeen) / minute)}min ago</div>
 													</li>
 												))}
 											</ul>
 										</li>
 										<li>{syncPeers.length} sync peers</li>
 										<li>
-											<ul>
+											<ul id="sync-peers">
 												{syncPeers.map(([peerId, { lastSeen }]) => (
-													<li key={peerId} data-id={peerId} style={{ display: "flex" }}>
-														<div style={{ flex: 1 }}>{peerId}</div>
-														<div>{Math.round((Date.now() - lastSeen) / minute)}min ago</div>
+													<li key={peerId} data-id={peerId} style={{ display: "block" }}>
+														<div className="peer-id">{peerId}</div>
+														<div className="last-seen">last seen {Math.round((now - lastSeen) / minute)}min ago</div>
 													</li>
 												))}
 											</ul>
