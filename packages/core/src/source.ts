@@ -405,6 +405,19 @@ export class Source {
 		try {
 			await this.mst.write(this.uri, async (txn) => {
 				await sync(this.messageStore, txn, stream, handleSyncMessage)
+				const root = txn.getRoot()
+				const rootHash = toHex(root.hash)
+
+				console.log(
+					chalk.green(
+						`[canvas-core] [${cid}] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
+					)
+				)
+
+				if (this.options.verbose) {
+					console.log(`[canvas-core] [${cid}] The current merkle root is ${rootHash}`)
+				}
+
 				timer({ uri: this.uri, status: "success" })
 			})
 		} catch (err) {
@@ -417,12 +430,6 @@ export class Source {
 				throw err
 			}
 		}
-
-		console.log(
-			chalk.green(
-				`[canvas-core] [${cid}] Sync with ${peer.toString()} completed. Applied ${successCount} new messages with ${failureCount} failures.`
-			)
-		)
 
 		if (this.options.verbose) {
 			console.log(`[canvas-core] [${cid}] Closing outgoing stream ${stream.id}`)
