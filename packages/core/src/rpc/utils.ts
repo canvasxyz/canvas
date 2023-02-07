@@ -1,4 +1,4 @@
-import type * as okra from "node-okra"
+import type { Node } from "node-okra"
 
 import type { Action, Message, Session } from "@canvas-js/interfaces"
 
@@ -37,7 +37,7 @@ export const getMessageKey = (hash: Buffer | string, message: Message) => {
 
 export const toKey = (array: Uint8Array) => (array.length === 0 ? null : toBuffer(array))
 
-export const toNode = ({ level, key, hash, value }: RPC.Node): okra.Node => {
+export const toNode = ({ level, key, hash, value }: RPC.Node): Node => {
 	if (value) {
 		return { level, key: toKey(key), hash: toBuffer(hash), value: toBuffer(value) }
 	} else {
@@ -48,5 +48,4 @@ export const toNode = ({ level, key, hash, value }: RPC.Node): okra.Node => {
 export const equalKeys = (a: Buffer | null, b: Buffer | null) =>
 	(a === null && b === null) || (a !== null && b !== null && a.equals(b))
 
-export const equalNodes = (a: okra.Node, b: okra.Node) =>
-	a.level === b.level && equalKeys(a.key, b.key) && a.hash.equals(b.hash)
+export const equalNodes = (a: Node, b: Node) => a.level === b.level && equalKeys(a.key, b.key) && a.hash.equals(b.hash)

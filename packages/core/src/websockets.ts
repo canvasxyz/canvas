@@ -53,12 +53,15 @@ export function setupWebsockets(server: Server, core: Core): Server {
 	}
 
 	const sendApplicationData = (ws: WebSocket & WebSocketID) => {
-		console.log(chalk.green(`[canvas-core] ws-${ws.id}: sent application status`))
+		if (core.options.verbose) {
+			console.log(chalk.green(`[canvas-core] ws-${ws.id}: sent application status`))
+		}
+
 		const { component, routes, actions } = core.vm
 		const message = JSON.stringify({
 			action: "application",
 			data: {
-				uri: core.uri,
+				uri: core.app,
 				appName: core.appName,
 				cid: core.cid.toString(),
 				peerId: core.libp2p?.peerId.toString(),
@@ -76,8 +79,10 @@ export function setupWebsockets(server: Server, core: Core): Server {
 
 	wss.on("connect", (ws, request) => {
 		ws.id = uuidv4()
-		ws.lastMessage = +new Date()
-		console.log(chalk.green(`[canvas-core] ws-${ws.id}: opened connection`))
+		ws.lastMessage = Date.now()
+		if (core.options.verbose) {
+			console.log(chalk.green(`[canvas-core] ws-${ws.id}: opened connection`))
+		}
 		sendApplicationData(ws)
 
 		ws.timer = setInterval(() => {
@@ -100,7 +105,10 @@ export function setupWebsockets(server: Server, core: Core): Server {
 			}
 
 			// Allow clients to subscribe to routes
-			console.log(chalk.green(`[canvas-core] ws-${ws.id}: received message`))
+			if (core.options.verbose) {
+				console.log(chalk.green(`[canvas-core] ws-${ws.id}: received message`))
+			}
+
 			try {
 				const message = JSON.parse(data.toString())
 				if (message.action === "subscribe") {
@@ -122,7 +130,10 @@ export function setupWebsockets(server: Server, core: Core): Server {
 
 		// Clean up subscriptions when connection closes
 		ws.on("close", (data: Message) => {
-			console.log(chalk.red(`[canvas-core] ws-${ws.id}: closed connection`))
+			if (core.options.verbose) {
+				console.log(`[canvas-core] ws-${ws.id}: closed connection`)
+			}
+
 			if (listeners[ws.id]) {
 				Object.entries(listeners[ws.id]).map(([route, listenersByParams]) => {
 					Object.entries(listenersByParams).map(([params, listener]) => {

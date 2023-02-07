@@ -1,9 +1,11 @@
 import assert from "node:assert"
+import path from "node:path"
 import Database, * as sqlite from "better-sqlite3"
 
 import type { Action, Session, ActionArgument, Chain, ChainId, Message } from "@canvas-js/interfaces"
 
 import { mapEntries, fromHex, toHex, signalInvalidType, stringify } from "./utils.js"
+import { MESSAGE_DATABASE_FILENAME } from "./constants.js"
 
 type ActionRecord = {
 	hash: Buffer
@@ -47,22 +49,24 @@ export class MessageStore {
 
 	constructor(
 		private readonly app: string,
-		private readonly path: string | null,
+		private readonly directory: string | null,
 		private readonly sources: Set<string> = new Set([]),
 		private readonly options: { verbose?: boolean } = {}
 	) {
-		if (path === null) {
+		if (directory === null) {
 			if (options.verbose) {
 				console.log("[canvas-core] Initializing in-memory message store")
 			}
 
 			this.database = new Database(":memory:")
 		} else {
+			const databasePath = path.resolve(directory, MESSAGE_DATABASE_FILENAME)
+
 			if (options.verbose) {
-				console.log(`[canvas-core] Initializing message store at ${path}`)
+				console.log(`[canvas-core] Initializing message store at ${databasePath}`)
 			}
 
-			this.database = new Database(path)
+			this.database = new Database(databasePath)
 		}
 
 		this.database.exec(MessageStore.createSessionsTable)

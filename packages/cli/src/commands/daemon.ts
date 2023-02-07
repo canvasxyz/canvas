@@ -315,7 +315,7 @@ class Daemon {
 					})
 
 					this.apps.set(name, { core, api })
-					console.log(`[canvas-cli] Started ${core.uri}`)
+					console.log(`[canvas-cli] Started ${core.app}`)
 					res.status(StatusCodes.OK).end()
 				} catch (err) {
 					const message = err instanceof Error ? err.message : (err as any).toString()
@@ -335,7 +335,7 @@ class Daemon {
 
 				try {
 					await app.core.close()
-					console.log(`[canvas-cli] Stopped ${name} (${app.core.uri})`)
+					console.log(`[canvas-cli] Stopped ${name} (${app.core.app})`)
 					res.status(StatusCodes.OK).end()
 				} catch (err) {
 					const message = err instanceof Error ? err.message : (err as any).toString()

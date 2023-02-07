@@ -6,7 +6,7 @@ import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
 
-import type * as okra from "node-okra"
+import type { Node } from "node-okra"
 
 import RPC from "../../rpc/sync/index.cjs"
 
@@ -34,7 +34,7 @@ export class Client {
 		return { level, hash: toBuffer(hash) }
 	}
 
-	public async getChildren(level: number, key: Uint8Array | null): Promise<okra.Node[]> {
+	public async getChildren(level: number, key: Uint8Array | null): Promise<Node[]> {
 		const { getChildren } = await this.get({ getChildren: { level, key } })
 		assert(getChildren, "Invalid RPC response")
 		const { nodes } = RPC.Response.GetChildrenResponse.create(getChildren)

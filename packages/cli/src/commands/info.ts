@@ -27,7 +27,7 @@ export async function handler(args: Args) {
 	try {
 		const vm = await VM.initialize({ app: uri, spec, chains: [], unchecked: true })
 		const { models, routes, actions, contractMetadata } = vm
-		vm.dispose()
+		await vm.close()
 
 		console.log(`name: ${uri}\n`)
 

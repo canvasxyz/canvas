@@ -249,10 +249,10 @@ export async function handler(args: Args) {
 			const apiPrefix = args.static ? `api/` : ""
 			if (args.static) {
 				console.log(`Serving static bundle: http://localhost:${args.port}/`)
-				console.log(`Serving API for ${core.uri}:`)
+				console.log(`Serving API for ${core.app}:`)
 				console.log(`└ GET http://localhost:${args.port}/api`)
 			} else {
-				console.log(`Serving API for ${core.uri}:`)
+				console.log(`Serving API for ${core.app}:`)
 				console.log(`└ GET http://localhost:${args.port}`)
 			}
 			for (const name of Object.keys(core.vm.routes)) {

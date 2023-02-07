@@ -64,7 +64,7 @@ export function getLibp2pInit(config: {
 		}),
 		metrics: prometheusMetrics({ registry: libp2pRegister }),
 		pubsub: gossipsub({
-			emitSelf: true,
+			emitSelf: false,
 			doPX: true,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
@@ -139,12 +139,14 @@ export async function startPingService(
 				successCount += 1
 			} catch (err) {
 				if (err instanceof Error) {
-					if (verbose) {
-						console.log(`[canvas-core] Ping ${peer.toString()} failed (${err.message})`)
-					}
+					if (routingTable.isStarted()) {
+						if (verbose) {
+							console.log(`[canvas-core] Ping ${peer.toString()} failed (${err.message})`)
+						}
 
-					failureCount += 1
-					await routingTable.remove(peer)
+						failureCount += 1
+						await routingTable.remove(peer)
+					}
 				} else {
 					throw err
 				}
@@ -174,11 +176,13 @@ export async function startPingService(
 				}
 			} catch (err) {
 				if (err instanceof Error) {
-					if (verbose) {
-						console.log(`[canvas-core] Ping ${peer.toString()} failed (${err.message})`)
-					}
+					if (wanRoutingTable.isStarted()) {
+						if (verbose) {
+							console.log(`[canvas-core] Ping ${peer.toString()} failed (${err.message})`)
+						}
 
-					await wanRoutingTable.remove(peer)
+						await wanRoutingTable.remove(peer)
+					}
 				} else {
 					throw err
 				}
@@ -203,11 +207,13 @@ export async function startPingService(
 				}
 			} catch (err) {
 				if (err instanceof Error) {
-					if (verbose) {
-						console.log(`[canvas-core] Ping ${peer.toString()} failed (${err.message})`)
-					}
+					if (lanRoutingTable.isStarted()) {
+						if (verbose) {
+							console.log(`[canvas-core] Ping ${peer.toString()} failed (${err.message})`)
+						}
 
-					await lanRoutingTable.remove(peer)
+						await lanRoutingTable.remove(peer)
+					}
 				} else {
 					throw err
 				}

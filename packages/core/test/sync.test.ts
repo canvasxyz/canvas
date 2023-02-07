@@ -57,12 +57,14 @@ function initialize(messageStore: MessageStore, mst: okra.Tree, messages: Iterab
 }
 
 async function testSync(sourceMessages: Iterable<Message>, targetMessages: Iterable<Message>): Promise<Message[]> {
-	const directory = path.resolve(os.tmpdir(), nanoid())
-	fs.mkdirSync(directory)
+	const sourceDirectory = path.resolve(os.tmpdir(), nanoid())
+	const targetDirectory = path.resolve(os.tmpdir(), nanoid())
+	fs.mkdirSync(sourceDirectory)
+	fs.mkdirSync(targetDirectory)
 
-	const sourceMessageStore = new MessageStore(app, path.resolve(directory, "source.sqlite"))
-	const targetMessageStore = new MessageStore(app, path.resolve(directory, "target.sqlite"))
-	const [sourceMSTPath, targetMSTPath] = [path.resolve(directory, "source"), path.resolve(directory, "target")]
+	const sourceMessageStore = new MessageStore(app, sourceDirectory)
+	const targetMessageStore = new MessageStore(app, targetDirectory)
+	const [sourceMSTPath, targetMSTPath] = [path.resolve(sourceDirectory, "mst"), path.resolve(targetDirectory, "mst")]
 	fs.mkdirSync(sourceMSTPath)
 	fs.mkdirSync(targetMSTPath)
 	const sourceMST = new okra.Tree(sourceMSTPath)
@@ -91,7 +93,8 @@ async function testSync(sourceMessages: Iterable<Message>, targetMessages: Itera
 		sourceMST.close()
 		sourceMessageStore.close()
 		targetMessageStore.close()
-		fs.rmSync(directory, { recursive: true })
+		fs.rmSync(sourceDirectory, { recursive: true })
+		fs.rmSync(targetDirectory, { recursive: true })
 	}
 }
 
