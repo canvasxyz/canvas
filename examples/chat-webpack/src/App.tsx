@@ -19,6 +19,8 @@ export const App: React.FC<{}> = ({}) => {
 	const syncPeers = data?.peers ? Object.entries(data.peers.sync) : []
 
 	const now = Date.now()
+	console.log(data)
+	const root = data && data.merkleRoots && data.merkleRoots[data.uri]
 
 	return (
 		<AppContext.Provider value={{ client, setClient }}>
@@ -36,7 +38,8 @@ export const App: React.FC<{}> = ({}) => {
 						) : data ? (
 							<div>
 								<p>App: {data.uri}</p>
-								<p data-id={data.peerId}>Host: {data.peerId}</p>
+								{data.peerId && <p data-id={data.peerId}>Host: {data.peerId}</p>}
+								{root && <p>Merkle root: {root}</p>}
 								{data.peers && (
 									<ul className="tree-view">
 										<li>{gossipPeers.length} gossip peers</li>
