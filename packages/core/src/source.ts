@@ -389,16 +389,18 @@ export class Source {
 		const timer = metrics.canvas_sync_time.startTimer()
 		try {
 			await this.mst.write(this.uri, async (txn) => {
-				await sync(this.messageStore, txn, stream, handleSyncMessage)
-				const { hash: rootHash } = txn.getRoot()
+				const { hash: oldRoot } = txn.getRoot()
+				console.log(`[canvas-core] [${this.cid}] The old merkle root is ${chalk.bold(toHex(oldRoot))}`)
 
+				await sync(this.messageStore, txn, stream, handleSyncMessage)
+
+				const { hash: newRoot } = txn.getRoot()
+				console.log(`[canvas-core] [${this.cid}] The new merkle root is ${chalk.bold(toHex(newRoot))}`)
 				console.log(
 					chalk.green(
 						`[canvas-core] [${this.cid}] Sync with ${peer} completed. Applied ${successCount} new messages with ${failureCount} failures.`
 					)
 				)
-
-				console.log(`[canvas-core] [${this.cid}] The current merkle root is ${toHex(rootHash)}`)
 
 				timer({ uri: this.uri, status: "success" })
 			})
