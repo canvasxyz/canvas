@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@ava/typescript": "^3.0.1",
+    "@canvas-js/chain-cosmos": "0.0.50",
     "@canvas-js/chain-ethereum": "0.0.50",
     "@canvas-js/chain-solana": "0.0.50",
     "@canvas-js/chain-substrate": "0.0.50",
