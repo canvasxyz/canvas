@@ -3,7 +3,6 @@ import path from "node:path"
 import fs from "node:fs"
 import { createHash } from "node:crypto"
 
-import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
@@ -22,8 +21,6 @@ import {
 } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
-import * as okra from "node-okra"
-
 import { actionType, sessionType } from "./codecs.js"
 import { toHex, signalInvalidType, CacheMap, parseIPFSURI, stringify, mapEntries } from "./utils.js"
 
@@ -34,7 +31,7 @@ import { ModelStore } from "./modelStore.js"
 import * as constants from "./constants.js"
 import { Source } from "./source.js"
 import { metrics } from "./metrics.js"
-import { getMessageKey } from "./rpc/utils.js"
+import { MST } from "./mst.js"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
@@ -60,15 +57,10 @@ interface CoreEvents {
 }
 
 export class Core extends EventEmitter<CoreEvents> {
-	public readonly modelStore: ModelStore
-	public readonly messageStore: MessageStore
-	public readonly mst: okra.Tree | null = null
-
 	public readonly recentGossipPeers = new CacheMap<string, { lastSeen: number }>(1000)
 	public readonly recentSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
 
 	private readonly sources: Record<string, Source> | null = null
-	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
 
 	public static async initialize(config: CoreConfig) {
 		const { directory, uri, spec, libp2p, chains = [new EthereumChainImplementation()], ...options } = config
@@ -78,7 +70,25 @@ export class Core extends EventEmitter<CoreEvents> {
 		const vm = await VM.initialize({ app, spec, chains, ...options })
 		const appName = vm.appName
 
-		return new Core(directory, app, cid, app, appName, vm, libp2p, chains, options)
+		const modelStore = new ModelStore(directory, vm, options)
+		const messageStore = new MessageStore(app, directory, vm.sources, options)
+
+		let mst: MST | null = null
+		if (directory !== null) {
+			// only called if the MST directory does not exist
+			async function* importMessages(dbi: string): AsyncIterable<[Buffer, Message]> {
+				if (options.verbose) {
+					console.log(`[canvas-core] Rebuilding MST index ${dbi} from model store`)
+				}
+
+				yield* messageStore.getSessionStream({ app: dbi })
+				yield* messageStore.getActionStream({ app: dbi })
+			}
+
+			mst = await MST.initialize(directory, [app, ...vm.sources], importMessages, options)
+		}
+
+		return new Core(directory, app, cid, app, appName, vm, modelStore, messageStore, mst, libp2p, chains, options)
 	}
 
 	private constructor(
@@ -88,75 +98,27 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly app: string,
 		public readonly appName: string,
 		public readonly vm: VM,
+		public readonly modelStore: ModelStore,
+		public readonly messageStore: MessageStore,
+		public readonly mst: MST | null,
 		public readonly libp2p: Libp2p | null,
 		private readonly chains: ChainImplementation<unknown, unknown>[],
-		private readonly options: CoreOptions
+		public readonly options: CoreOptions
 	) {
 		super()
 
 		this.options = options
 
-		const modelDatabasePath = directory && path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
-		this.modelStore = new ModelStore(modelDatabasePath, vm, options)
-
-		const messageDatabasePath = directory && path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
-		this.messageStore = new MessageStore(uri, messageDatabasePath, vm.sources, options)
-
-		if (directory !== null) {
-			const sources = Object.fromEntries([this.uri, ...vm.sources].map((uri) => [uri, parseIPFSURI(uri)]))
-
-			const mstPath = path.resolve(directory, constants.MST_DIRECTORY_NAME)
-			if (!fs.existsSync(mstPath)) {
-				// if the directory doesn't exist, it either means that we're starting the app for the first time,
-				// or that the app was using a previous version of okra.
-				fs.mkdirSync(mstPath)
-				this.mst = new okra.Tree(mstPath, { dbs: Object.values(sources).map((cid) => cid.toString()) })
-
-				if (options.verbose) {
-					console.log("[canvas-core] Rebuilding MST index from model store")
-				}
-
-				for (const [uri, cid] of Object.entries(sources)) {
-					const txn = new okra.Transaction(this.mst, { readOnly: false, dbi: cid.toString() })
-					try {
-						let sessionCount = 0
-						for (const [hash, session] of this.messageStore.getSessionStream({ app: uri })) {
-							txn.set(getMessageKey(hash, session), hash)
-							sessionCount++
-						}
-
-						let actionCount = 0
-						for (const [hash, action] of this.messageStore.getActionStream({ app: uri })) {
-							txn.set(getMessageKey(hash, action), hash)
-							actionCount++
-						}
-
-						txn.commit()
-
-						if (options.verbose) {
-							console.log(`[canvas-core] Indexed ${sessionCount} sessions and ${actionCount} actions for app ${uri}`)
-						}
-					} catch (err) {
-						txn.abort()
-						this.mst.close()
-						this.vm.dispose()
-						this.messageStore.close()
-						this.modelStore.close()
-						throw err
-					}
-				}
-
-				if (options.verbose) {
-					console.log("[canvas-core] Succesfully re-indexed the MST")
-				}
-			} else {
-				this.mst = new okra.Tree(mstPath, { dbs: Object.values(sources).map((cid) => cid.toString()) })
+		if (mst !== null) {
+			const sourceCIDs: Record<string, CID> = { [this.uri]: this.cid }
+			for (const uri of vm.sources) {
+				sourceCIDs[uri] = parseIPFSURI(uri)
 			}
 
-			this.sources = mapEntries(sources, (uri, cid) =>
+			this.sources = mapEntries(sourceCIDs, (_, cid) =>
 				Source.initialize({
 					cid,
-					mst: this.mst!, // this is guaranteed to be non-null
+					mst,
 					applyMessage: this.applyMessage,
 					messageStore: this.messageStore,
 					libp2p,
@@ -169,21 +131,17 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public async close() {
-		await this.queue.onIdle()
-
-		this.vm.dispose()
-		this.messageStore.close()
-		this.modelStore.close()
+		if (this.sources !== null) {
+			await Promise.all(Object.values(this.sources).map((source) => source.close()))
+		}
 
 		if (this.mst !== null) {
-			this.mst.close()
+			await this.mst.close()
 		}
 
-		if (this.sources !== null) {
-			for (const source of Object.values(this.sources)) {
-				await source.close()
-			}
-		}
+		await this.vm.close()
+		this.messageStore.close()
+		this.modelStore.close()
 
 		this.dispatchEvent(new Event("close"))
 	}
@@ -262,13 +220,12 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			await this.validateAction(message)
 
-			// only execute one action at a time.
-			await this.queue.add(async () => {
-				const effects = await this.vm.execute(id, message.payload)
-				this.modelStore.applyEffects(message.payload, effects)
-			})
+			const effects = await this.vm.execute(id, message.payload)
+
+			this.modelStore.applyEffects(message.payload, effects)
 
 			this.messageStore.insertAction(hash, message)
+
 			this.dispatchEvent(new CustomEvent("action", { detail: message.payload }))
 			metrics.canvas_messages.inc({ type: "action", uri: message.payload.app }, 1)
 		} else if (message.type === "session") {
@@ -277,7 +234,9 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 
 			await this.validateSession(message)
+
 			this.messageStore.insertSession(hash, message)
+
 			this.dispatchEvent(new CustomEvent("session", { detail: message.payload }))
 			metrics.canvas_messages.inc({ type: "session", uri: message.payload.app }, 1)
 		} else {
@@ -297,6 +256,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			appName === this.appName || this.vm.sources.has(app),
 			"action signed for wrong application (invalid appName)"
 		)
+
 		// TODO: verify that actions signed for a previous app were valid within that app
 
 		// check the timestamp bounds

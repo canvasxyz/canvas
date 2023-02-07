@@ -5,15 +5,15 @@ import assert from "node:assert"
 
 import test from "ava"
 
-import * as okra from "node-okra"
 import { nanoid } from "nanoid"
 
 import { Core, compileSpec } from "@canvas-js/core"
 
 import { TestSigner } from "./utils.js"
-import { fromHex, parseIPFSURI, stringify } from "@canvas-js/core/lib/utils.js"
+import { fromHex, stringify, toHex } from "@canvas-js/core/lib/utils.js"
 import { getMessageKey } from "@canvas-js/core/lib/rpc/utils.js"
 import * as constants from "@canvas-js/core/lib/constants.js"
+import { Message } from "@canvas-js/interfaces"
 
 const MessageBoard = await compileSpec({
 	name: "Test App",
@@ -182,7 +182,13 @@ test("Build missing MST index on core startup", async (t) => {
 	const directory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(directory)
 
-	const messageKeys: Record<string, Buffer[]> = {}
+	type Entry = { key: Buffer; value: Buffer }
+	const getEntry = (hash: string, message: Message): Entry => {
+		const hashBuffer = fromHex(hash)
+		return { key: getMessageKey(hashBuffer, message), value: hashBuffer }
+	}
+
+	const mstEntries: Record<string, Entry[]> = {}
 
 	try {
 		// apply a mix of source and direct actions
@@ -206,13 +212,11 @@ test("Build missing MST index on core startup", async (t) => {
 
 			await core.close()
 
-			const sourceDBI = parseIPFSURI(MessageBoard.app).toString()
-			messageKeys[sourceDBI] = [getMessageKey(sourceActionHash, sourceAction)]
-			const dbi = core.cid.toString()
-			messageKeys[dbi] = [
-				getMessageKey(createActionHash, createAction),
-				getMessageKey(voteActionHash, voteAction),
-				getMessageKey(voteSourceActionHash, voteSourceAction),
+			mstEntries[MessageBoard.app] = [getEntry(sourceActionHash, sourceAction)]
+			mstEntries[MessageBoardWithVotes.app] = [
+				getEntry(createActionHash, createAction),
+				getEntry(voteActionHash, voteAction),
+				getEntry(voteSourceActionHash, voteSourceAction),
 			]
 		})
 
@@ -232,20 +236,16 @@ test("Build missing MST index on core startup", async (t) => {
 			unchecked: true,
 		})
 
-		// expect the MST directory exists
 		t.true(fs.existsSync(mstPath))
 		t.true(fs.statSync(mstPath).isDirectory())
 
 		try {
-			for (const [dbi, keys] of Object.entries(messageKeys)) {
-				const txn = new okra.Transaction(core.mst!, { dbi, readOnly: true })
-				try {
-					for (const key of keys) {
-						t.true(txn.get(key) !== null)
+			for (const [dbi, entries] of Object.entries(mstEntries)) {
+				await core.mst!.read(dbi, (txn) => {
+					for (const { key, value } of entries) {
+						t.deepEqual(value, txn.get(key), `key ${toHex(key)}`)
 					}
-				} finally {
-					txn.abort()
-				}
+				})
 			}
 		} finally {
 			await core.close()

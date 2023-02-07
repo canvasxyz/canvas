@@ -1,3 +1,4 @@
+import path from "node:path"
 import assert from "node:assert"
 import Database, * as sqlite from "better-sqlite3"
 import chalk from "chalk"
@@ -5,6 +6,7 @@ import chalk from "chalk"
 import type { ActionContext, Model, ModelType, ModelValue, Query } from "@canvas-js/interfaces"
 import { mapEntries, signalInvalidType } from "./utils.js"
 import type { VM } from "./vm/index.js"
+import { MODEL_DATABASE_FILENAME } from "./constants.js"
 
 export type Effect =
 	| { type: "set"; model: string; id: string; values: Record<string, ModelValue> }
@@ -20,8 +22,8 @@ export class ModelStore {
 		Record<keyof ReturnType<typeof ModelStore.getModelStatements>, sqlite.Statement>
 	> = {}
 
-	constructor(path: string | null, vm: VM, options: { verbose?: boolean } = {}) {
-		if (path === null) {
+	constructor(directory: string | null, vm: VM, options: { verbose?: boolean } = {}) {
+		if (directory === null) {
 			if (options.verbose) {
 				console.log("[canvas-core] Initializing new in-memory database")
 				console.warn(chalk.yellow("[canvas-core] All data will be lost on close!"))
@@ -29,11 +31,13 @@ export class ModelStore {
 
 			this.database = new Database(":memory:")
 		} else {
+			const databasePath = path.resolve(directory, MODEL_DATABASE_FILENAME)
+
 			if (options.verbose) {
-				console.log(`[canvas-core] Initializing database at ${path}`)
+				console.log(`[canvas-core] Initializing model store at ${databasePath}`)
 			}
 
-			this.database = new Database(path)
+			this.database = new Database(databasePath)
 		}
 
 		this.vm = vm

@@ -6,6 +6,7 @@ import { getQuickJS, isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime } fro
 import { transform } from "sucrase"
 import { ethers } from "ethers"
 import Hash from "ipfs-only-hash"
+import PQueue from "p-queue"
 
 import {
 	ActionArgument,
@@ -140,6 +141,7 @@ export class VM {
 	private readonly contractsHandle: QuickJSHandle
 	private readonly dbHandle: QuickJSHandle
 
+	private readonly queue = new PQueue({ concurrency: 1 })
 	private effects: Effect[] | null = null
 	private actionContext: ActionContext | null = null
 
@@ -313,7 +315,8 @@ export class VM {
 	/**
 	 * Cleans up this VM instance.
 	 */
-	public dispose() {
+	public async close() {
+		await this.queue.onIdle()
 		this.dbHandle.dispose()
 		this.contractsHandle.dispose()
 
@@ -398,33 +401,41 @@ export class VM {
 
 	/**
 	 * Given a call, get a list of effects to pass to `modelStore.applyEffects`, to be applied to the models.
-	 * Used by `.apply()` and when replaying actions.
+	 * Used by `.applyAction()` and when replaying actions.
 	 */
 	public async execute(hash: string | Buffer, { call, callArgs, ...context }: ActionPayload): Promise<Effect[]> {
-		assert(this.effects === null && this.actionContext === null, "cannot apply more than one action at once")
+		const effects: Effect[] = []
 
-		const actionHandle = this.getActionHandle(context.app, call)
+		// after setting this.effects here, always make sure to reset it to null before
+		// returning or throwing an error - or the core won't be able to process more actions
+		this.effects = effects
+		this.actionContext = context
+		try {
+			await this.queue.add(() => this.executeInternal(typeof hash === "string" ? hash : toHex(hash), call, callArgs))
+		} finally {
+			this.effects = null
+			this.actionContext = null
+		}
+
+		return effects
+	}
+
+	/**
+	 * Assumes this.effects and this.actionContext are already set
+	 */
+	private async executeInternal(hash: string, call: string, callArgs: Record<string, ActionArgument>) {
+		assert(this.effects !== null && this.actionContext !== null)
+		const actionHandle = this.getActionHandle(this.actionContext.app, call)
 
 		const argHandles = wrapObject(
 			this.context,
 			mapEntries(callArgs, (_, arg) => this.wrapActionArgument(arg))
 		)
 
-		const ctx = wrapJSON(this.context, {
-			app: context.app,
-			hash: typeof hash === "string" ? hash : toHex(hash),
-			from: context.from,
-			block: context.block,
-			timestamp: context.timestamp,
-		})
-
+		const ctx = wrapJSON(this.context, { hash, ...this.actionContext })
 		this.context.setProp(ctx, "db", this.dbHandle)
 		this.context.setProp(ctx, "contracts", this.contractsHandle)
 
-		// after setting this.effects here, always make sure to reset it to null before
-		// returning or throwing an error - or the core won't be able to process more actions
-		this.effects = []
-		this.actionContext = context
 		const promiseResult = this.context.callFunction(actionHandle, this.context.undefined, argHandles, ctx)
 
 		ctx.dispose()
@@ -453,11 +464,6 @@ export class VM {
 			this.effects = null
 			throw new Error("action rejected: unexpected return value")
 		}
-
-		const effects = this.effects
-		this.effects = null
-		this.actionContext = null
-		return effects
 	}
 
 	public wrapActionArgument = (arg: ActionArgument): QuickJSHandle => {
