@@ -8,6 +8,7 @@ export interface ApplicationData {
 	component: string | null
 	actions: string[]
 	routes: string[]
+	merkleRoots: Record<string, string>
 	peers: {
 		gossip: Record<string, { lastSeen: number }>
 		sync: Record<string, { lastSeen: number }>

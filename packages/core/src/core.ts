@@ -1,6 +1,4 @@
 import assert from "node:assert"
-import path from "node:path"
-import fs from "node:fs"
 import { createHash } from "node:crypto"
 
 import Hash from "ipfs-only-hash"

@@ -8,10 +8,13 @@ import { Message } from "@canvas-js/interfaces"
 
 import { getMessageKey } from "./rpc/index.js"
 import { MST_DIRECTORY_NAME } from "./constants.js"
+import { toHex } from "./utils.js"
 
 export class MST {
 	private readonly tree: Tree
 	private readonly queue = new PQueue({ concurrency: 1 })
+
+	public readonly roots: Record<string, string> = {}
 
 	public static async initialize(
 		directory: string,
@@ -41,7 +44,7 @@ export class MST {
 		}
 	}
 
-	private constructor(treePath: string, dbs: string[]) {
+	private constructor(treePath: string, public readonly dbs: string[]) {
 		this.tree = new Tree(treePath, { dbs })
 	}
 
@@ -60,6 +63,8 @@ export class MST {
 
 			try {
 				await callback(txn)
+				const { hash } = txn.getRoot()
+				this.roots[dbi] = toHex(hash)
 			} catch (err) {
 				txn.abort()
 				throw err

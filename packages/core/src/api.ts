@@ -22,22 +22,22 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	api.set("query parser", "simple")
 	api.use(express.json())
 
-	api.get("/", (req, res) => {
+	api.get("/", async (req, res) => {
 		const { component, routes, actions } = core.vm
+
 		return res.json({
 			uri: core.app,
 			appName: core.appName,
 			cid: core.cid.toString(),
-			peerId: core.libp2p?.peerId.toString(),
+			peerId: core.libp2p && core.libp2p.peerId.toString(),
 			component,
 			actions,
 			routes: Object.keys(routes),
-			peers: core.libp2p
-				? {
-						gossip: Object.fromEntries(core.recentGossipPeers),
-						sync: Object.fromEntries(core.recentSyncPeers),
-				  }
-				: null,
+			merkleRoots: core.mst && core.mst.roots,
+			peers: core.libp2p && {
+				gossip: Object.fromEntries(core.recentGossipPeers),
+				sync: Object.fromEntries(core.recentSyncPeers),
+			},
 		})
 	})
 
@@ -68,16 +68,6 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
 		}
 	})
-
-	// api.get("/latest_block/:chain/:chainId", async (req, res) => {
-	// 	const { chain, chainId } = req.params
-	// 	try {
-	// 		const block = await core.getLatestBlock({ chain: chain as Chain, chainId })
-	// 		return res.status(StatusCodes.OK).json(block)
-	// 	} catch (e) {
-	// 		return res.status(StatusCodes.NOT_FOUND).end()
-	// 	}
-	// })
 
 	for (const route of Object.keys(core.vm.routes)) {
 		api.get(route, (req, res) => handleRoute(core, route, req, res))
@@ -169,8 +159,12 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 				newValues = await core.getRoute(route, params)
 			} catch (err) {
 				closed = true
-				console.log(chalk.red("[canvas-core] error evaluating route"), err)
-				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${(err as Error).stack}`)
+				if (err instanceof Error) {
+					console.log(chalk.red(`[canvas-core] error evaluating route (${err.message})`))
+					return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err.stack}`)
+				} else {
+					throw err
+				}
 			}
 
 			if (oldValues === null || !compareResults(oldValues, newValues)) {
@@ -188,7 +182,11 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 		try {
 			data = await core.getRoute(route, params)
 		} catch (err) {
-			return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${(err as Error).stack}`)
+			if (err instanceof Error) {
+				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err.stack}`)
+			} else {
+				throw err
+			}
 		}
 
 		return res.json(data)

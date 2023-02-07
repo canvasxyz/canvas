@@ -64,10 +64,11 @@ export function setupWebsockets(server: Server, core: Core): Server {
 				uri: core.app,
 				appName: core.appName,
 				cid: core.cid.toString(),
-				peerId: core.libp2p?.peerId.toString(),
+				peerId: core.libp2p && core.libp2p.peerId.toString(),
 				component,
 				actions,
 				routes: Object.keys(routes),
+				merkleRoots: core.mst && core.mst.roots,
 				peers: core.libp2p && {
 					gossip: Object.fromEntries(core.recentGossipPeers),
 					sync: Object.fromEntries(core.recentSyncPeers),
