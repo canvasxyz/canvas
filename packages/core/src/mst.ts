@@ -45,10 +45,10 @@ export class MST {
 		this.tree = new Tree(treePath, { dbs })
 	}
 
-	public async read(dbi: string, callback: (txn: Transaction) => void | Promise<void>) {
+	public async read<T = void>(dbi: string, callback: (txn: Transaction) => T | Promise<T>): Promise<T> {
 		const txn = new Transaction(this.tree, { readOnly: true, dbi })
 		try {
-			await callback(txn)
+			return await callback(txn)
 		} finally {
 			txn.abort()
 		}
