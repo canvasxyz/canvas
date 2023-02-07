@@ -155,11 +155,13 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	/**
-	 * Executes an action.
+	 * Apply an action. This is the "local" entrypoint called by the HTTP API.
+	 * It executes the action, applies the effects to the model store,
+	 * inserts the action into the message store, updates the MST index,
+	 * and publishes to GossipSub.
 	 */
 	public async applyAction(action: Action): Promise<{ hash: string }> {
 		assert(actionType.is(action), "invalid action object")
-		assert(action.payload.app === this.app, `expected action.payload.app to be ${this.app}`)
 
 		const data = Buffer.from(stringify(action))
 		const hash = createHash("sha256").update(data).digest()
@@ -180,13 +182,12 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	/**
-	 * Apply a new session. This is a "local" entrypoint and can only be used for
-	 * sessions signed for the root app (session.payload.app === this.app).
-	 * It applies the message, inserts it into the MST, and publishes to GossipSub.
+	 * Apply a session. This is the "local" entrypoint called by the HTTP API.
+	 * It inserts the session into the message store, updates the MST index,
+	 * and publishes to GossipSub.
 	 */
 	public async applySession(session: Session): Promise<{ hash: string }> {
 		assert(sessionType.is(session), "invalid session object")
-		assert(session.payload.app === this.app, `expected session.payload.app to be ${this.app}`)
 
 		const data = Buffer.from(stringify(session))
 		const hash = createHash("sha256").update(data).digest()
@@ -212,7 +213,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * For sessions: validate, insert into message store.
 	 * This method is called directly from Core.applySession and Core.applyAction and is
 	 * also passed to Source as the callback for GossipSub and MST sync messages.
-	 * Note the this does NOT insert into the MST or publish to GossipSub -
+	 * Note the this does NOT update the MST index or publish to GossipSub -
 	 * that's the responsibility of the caller.
 	 */
 	private applyMessage = async (hash: Buffer, message: Message) => {
@@ -266,6 +267,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			app === this.app || this.vm.sources.has(app),
 			`action signed for wrong application (invalid app: expected ${this.app}, found ${app})`
 		)
+
 		assert(
 			appName === this.appName || this.vm.sources.has(app),
 			"action signed for wrong application (invalid appName)"
@@ -309,7 +311,9 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	private async validateSession(session: Session) {
 		const { app, appName, sessionIssued, block, chain, chainId } = session.payload
+
 		assert(app === this.app || this.vm.sources.has(app), "session signed for wrong application (app invalid)")
+
 		assert(
 			appName === this.appName || this.vm.sources.has(app),
 			"session signed for wrong application (appName invalid)"
