@@ -9,7 +9,7 @@
     "lib"
   ],
   "scripts": {
-    "test": "ava --match 'terra Sign and verify a session successfully'"
+    "test": "ava"
   },
   "dependencies": {
     "safe-stable-stringify": "^2.4.2",
