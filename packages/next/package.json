@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/next",
-  "version": "0.0.51",
+  "version": "0.0.52",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "dist/index.js",
@@ -15,9 +15,9 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.0.51",
-    "@canvas-js/core": "0.0.51",
-    "@canvas-js/interfaces": "0.0.51",
+    "@canvas-js/chain-ethereum": "0.0.52",
+    "@canvas-js/core": "0.0.52",
+    "@canvas-js/interfaces": "0.0.52",
     "@libp2p/peer-id-factory": "^2.0.0",
     "chalk": "^5.2.0",
     "ethers": "^5.7.1 <6",
