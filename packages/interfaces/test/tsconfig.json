@@ -11,6 +11,7 @@
     { "path": "../../chain-ethereum" },
     { "path": "../../chain-solana" },
     { "path": "../../chain-substrate" },
-    { "path": "../../chain-cosmos" }
+    { "path": "../../chain-cosmos" },
+    { "path": "../../chain-terra" }
   ]
 }

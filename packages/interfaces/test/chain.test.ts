@@ -4,6 +4,7 @@ import { createMockEthereumSigner, EthereumChainImplementation } from "@canvas-j
 import { createMockSolanaSigner, SolanaChainImplementation } from "@canvas-js/chain-solana"
 import { createMockSubstrateSigner, SubstrateChainImplementation } from "@canvas-js/chain-substrate"
 import { createMockCosmosSigner, CosmosChainImplementation } from "@canvas-js/chain-cosmos"
+import { createMockTerraSigner, TerraChainImplementation } from "@canvas-js/chain-terra"
 
 interface MockedImplementation<CI extends ChainImplementation> {
 	implementationName: string
@@ -31,6 +32,11 @@ const IMPLEMENTATIONS = [
 		implementationName: "cosmos",
 		chainImplementation: new CosmosChainImplementation(),
 		createMockSigner: createMockCosmosSigner,
+	},
+	{
+		implementationName: "terra",
+		chainImplementation: new TerraChainImplementation(),
+		createMockSigner: createMockTerraSigner,
 	},
 ] as MockedImplementation<any>[]
 
@@ -63,9 +69,8 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 		} as SessionPayload
 
 		let out = await chainImplementation.signSession(signer, sessionPayload)
-		t.notThrows(async () => {
-			await chainImplementation.verifySession(out)
-		})
+		await chainImplementation.verifySession(out)
+		t.pass()
 	})
 
 	test(`${implementationName} Verifying a session fails if "from" value is incorrect`, async (t) => {
@@ -88,7 +93,10 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 		} as SessionPayload
 
 		let out = await chainImplementation.signSession(signer, sessionPayload)
-		out.payload.from = "other address"
+
+		// replace the from address with another address
+		const anotherSigner = await createMockSigner()
+		out.payload.from = await chainImplementation.getSignerAddress(anotherSigner)
 		await t.throwsAsync(async () => {
 			await chainImplementation.verifySession(out)
 		})
@@ -111,9 +119,8 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 			timestamp: 10000000,
 		}
 		const out = await chainImplementation.signAction(signer, actionPayload)
-		t.notThrows(async () => {
-			await chainImplementation.verifyAction(out)
-		})
+		await chainImplementation.verifyAction(out)
+		t.pass()
 	})
 
 	test(`${implementationName} Verifying an invalid direct signature fails if "from" value is incorrect`, async (t) => {
@@ -157,8 +164,7 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 			timestamp: 10000000,
 		}
 		const out = await chainImplementation.signDelegatedAction(delegatedSigner, actionPayload)
-		t.notThrows(async () => {
-			await chainImplementation.verifyAction(out)
-		})
+		await chainImplementation.verifyAction(out)
+		t.pass()
 	})
 }
