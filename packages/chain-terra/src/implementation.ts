@@ -1,6 +1,7 @@
 import { Secp256k1Wallet, serializeSignDoc, decodeSignature, rawSecp256k1PubkeyToRawAddress } from "@cosmjs/amino"
 import { Secp256k1, Secp256k1Signature, Random, Sha256 } from "@cosmjs/crypto"
-import { fromBech32, toBech32, fromBase64, toBase64 } from "@cosmjs/encoding"
+import { fromBech32, toBase64, toBech32 } from "@cosmjs/encoding"
+import { FixedExtension } from "@terra-money/wallet-controller/modules/legacy-extension"
 
 import {
 	Action,
@@ -14,8 +15,7 @@ import {
 	SessionPayload,
 } from "@canvas-js/interfaces"
 
-import { getActionSignatureData, getSessionSignatureData } from "./signatureData.js"
-import { FixedExtension } from "@terra-money/wallet-controller/modules/legacy-extension"
+import { getActionSignatureData } from "./signatureData.js"
 
 type Secp256k1WalletPrivateKey = Uint8Array
 
@@ -23,18 +23,15 @@ type Secp256k1WalletPrivateKey = Uint8Array
  * Terra chain export.
  */
 export class TerraChainImplementation implements ChainImplementation<FixedExtension, Secp256k1WalletPrivateKey> {
-	// TODO: should this be terra?
 	public readonly chain: Chain = "cosmos"
 
 	constructor(public readonly chainId: ChainId = "phoenix-1") {}
 
 	async verifyAction(action: Action): Promise<void> {
-		const actionSignerAddress = action.session ?? action.payload.from
-		const signDocPayload = await getActionSignatureData(action.payload, actionSignerAddress)
-		const signDocDigest = new Sha256(serializeSignDoc(signDocPayload)).digest()
 		const prefix = "cosmos" // not: fromBech32(payload.from).prefix;
 
 		const { pubkey, signature: decodedSignature } = decodeSignature(JSON.parse(action.signature))
+
 		if (action.session && action.session !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
 			// Delegated signatures: If session exists, pubkey should be the public key for `action.session`
 			throw new Error("Action signed with a pubkey that doesn't match the session address")
@@ -43,6 +40,13 @@ export class TerraChainImplementation implements ChainImplementation<FixedExtens
 			// Direct signatures: If session is null, pubkey should be the public key for `action.payload.from`
 			throw new Error("Action signed with a pubkey that doesn't match the from address")
 		}
+		const serializedPayload: Uint8Array = action.session
+			? // delegated signer
+			  serializeSignDoc(await getActionSignatureData(action.payload, action.session))
+			: // direct signer
+			  Buffer.from(serializeActionPayload(action.payload))
+
+		const signDocDigest = new Sha256(serializedPayload).digest()
 		const secpSignature = Secp256k1Signature.fromFixedLength(decodedSignature)
 		const valid = await Secp256k1.verifySignature(secpSignature, signDocDigest, pubkey)
 
@@ -51,19 +55,16 @@ export class TerraChainImplementation implements ChainImplementation<FixedExtens
 		}
 	}
 
-	async verifySession({ payload, signature }: Session): Promise<void> {
-		const { prefix } = fromBech32(payload.from)
-		const signDocDigest = new Sha256(Buffer.from(serializeSessionPayload(payload))).digest()
+	async verifySession(session: Session): Promise<void> {
+		// Terra implementation
+		// This doesn't make a SignDoc
+		const signDocPayload = Buffer.from(serializeSessionPayload(session.payload))
+		const signDocDigest = new Sha256(signDocPayload).digest()
+		const { prefix } = fromBech32(session.payload.from)
 
 		// decode "{ pub_key, signature }" to an object with { pubkey, signature }
-		const signatureObj = JSON.parse(signature)
-		console.log(signatureObj.signature)
-		console.log(fromBase64(signatureObj.signature))
-		console.log(signatureObj.pub_key.value)
-		// does pub key need == at the end? where does this even come from
-		console.log(signatureObj.pub_key.value.length)
-		const { pubkey, signature: decodedSignature } = decodeSignature(signatureObj)
-		if (payload.from !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
+		const { pubkey, signature: decodedSignature } = decodeSignature(JSON.parse(session.signature))
+		if (session.payload.from !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
 			throw new Error("Session signed with a pubkey that doesn't match the session address")
 		}
 
@@ -75,8 +76,7 @@ export class TerraChainImplementation implements ChainImplementation<FixedExtens
 	}
 
 	getSignerAddress = async (signer: FixedExtension) => {
-		const connectResponse = await signer.connect()
-		return connectResponse.address!
+		return (await signer.connect()).address!
 	}
 	getDelegatedSignerAddress = async (privkey: Secp256k1WalletPrivateKey) => {
 		const wallet = await Secp256k1Wallet.fromKey(privkey)
@@ -92,38 +92,36 @@ export class TerraChainImplementation implements ChainImplementation<FixedExtens
 	}
 
 	async signSession(signer: FixedExtension, payload: SessionPayload): Promise<Session> {
-		const bytesToSign = Buffer.from(serializeSessionPayload(payload))
-		const { result } = (await signer.signBytes(bytesToSign)).payload
+		const result = await signer.signBytes(Buffer.from(serializeSessionPayload(payload)))
 
 		const signature = JSON.stringify({
 			pub_key: {
 				type: "tendermint/PubKeySecp256k1",
-				value: toBase64(Buffer.from(result.public_key)),
+				value: result.payload.result.public_key,
 			},
-			signature: result.signature,
+			signature: result.payload.result.signature,
 		})
 
 		return { type: "session", signature, payload }
 	}
 
 	async signAction(signer: FixedExtension, payload: ActionPayload): Promise<Action> {
-		const address = await this.getSignerAddress(signer)
+		const address = (await signer.connect()).address!
 		if (address !== payload.from) {
 			throw new Error("Direct signAction called with address that doesn't match action.payload.from")
 		}
 
-		const bytesToSign = Buffer.from(serializeActionPayload(payload))
-		const { result } = await (await signer.signBytes(bytesToSign)).payload
+		const result = await signer.signBytes(Buffer.from(serializeActionPayload(payload)))
 
 		const signature = JSON.stringify({
 			pub_key: {
 				type: "tendermint/PubKeySecp256k1",
-				value: result.public_key,
+				value: result.payload.result.public_key,
 			},
-			signature: result.signature,
+			signature: result.payload.result.signature,
 		})
 
-		return { type: "action", signature, payload, session: address }
+		return { type: "action", payload, session: null, signature }
 	}
 
 	async signDelegatedAction(privkey: Secp256k1WalletPrivateKey, payload: ActionPayload) {
