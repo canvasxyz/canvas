@@ -5,6 +5,7 @@ import { createMockSolanaSigner, SolanaChainImplementation } from "@canvas-js/ch
 import { createMockSubstrateSigner, SubstrateChainImplementation } from "@canvas-js/chain-substrate"
 import { createMockCosmosSigner, CosmosChainImplementation } from "@canvas-js/chain-cosmos"
 import { createMockTerraSigner, TerraChainImplementation } from "@canvas-js/chain-terra"
+import { createMockKeplrEthereumSigner, KeplrEthereumChainImplementation } from "@canvas-js/chain-keplr-ethereum"
 
 interface MockedImplementation<CI extends ChainImplementation> {
 	implementationName: string
@@ -37,6 +38,11 @@ const IMPLEMENTATIONS = [
 		implementationName: "terra",
 		chainImplementation: new TerraChainImplementation(),
 		createMockSigner: createMockTerraSigner,
+	},
+	{
+		implementationName: "keplr-ethereum",
+		chainImplementation: new KeplrEthereumChainImplementation(),
+		createMockSigner: createMockKeplrEthereumSigner,
 	},
 ] as MockedImplementation<any>[]
 
