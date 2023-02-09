@@ -76,11 +76,11 @@ export class CosmosChainImplementation implements ChainImplementation<OfflineAmi
 	}
 
 	isSigner(signer: unknown): signer is OfflineAminoSigner {
-		return !(signer instanceof ArrayBuffer)
+		return !(signer instanceof Uint8Array)
 	}
 
 	isDelegatedSigner(delegatedSigner: unknown): delegatedSigner is Secp256k1WalletPrivateKey {
-		return delegatedSigner instanceof ArrayBuffer
+		return delegatedSigner instanceof Uint8Array
 	}
 
 	async signSession(signer: OfflineAminoSigner, payload: SessionPayload): Promise<Session> {

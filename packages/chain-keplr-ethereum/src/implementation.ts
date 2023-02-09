@@ -34,7 +34,8 @@ export class KeplrEthereumChainImplementation
 {
 	public readonly chain: Chain = "cosmos"
 
-	constructor(public readonly chainId: ChainId = "osmosis-1", public readonly bech32Prefix: string = "osmo") {}
+	// chainId is unused
+	constructor(public readonly chainId: ChainId = "evmos_9001-1", public readonly bech32Prefix: string = "evmos") {}
 
 	async verifyAction(action: Action): Promise<void> {
 		if (action.session) {
@@ -110,12 +111,11 @@ export class KeplrEthereumChainImplementation
 	}
 
 	isSigner(signer: unknown): signer is KeplrEthereumSigner {
-		throw Error("Not implemented!")
+		return !(signer instanceof Uint8Array)
 	}
 
 	isDelegatedSigner(delegatedSigner: unknown): delegatedSigner is Secp256k1WalletPrivateKey {
-		// copy from cosmos
-		throw Error("Not implemented!")
+		return signer instanceof Uint8Array
 	}
 
 	async signSession(signer: KeplrEthereumSigner, payload: SessionPayload): Promise<Session> {
