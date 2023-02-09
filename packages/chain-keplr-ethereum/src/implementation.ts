@@ -115,7 +115,7 @@ export class KeplrEthereumChainImplementation
 	}
 
 	isDelegatedSigner(delegatedSigner: unknown): delegatedSigner is Secp256k1WalletPrivateKey {
-		return signer instanceof Uint8Array
+		return delegatedSigner instanceof Uint8Array
 	}
 
 	async signSession(signer: KeplrEthereumSigner, payload: SessionPayload): Promise<Session> {
