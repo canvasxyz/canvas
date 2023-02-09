@@ -36,12 +36,14 @@ export class EvmosChainImplementation implements ChainImplementation<EvmMetaMask
 
 	async verifyAction(action: Action): Promise<void> {
 		if (action.session) {
+			const cosmosPrefix = "cosmos"
 			// using delegated signer
 			const signDocPayload = await getActionSignatureData(action.payload, action.session)
 			const signDocDigest = new Sha256(serializeSignDoc(signDocPayload)).digest()
 
 			const { pubkey, signature: decodedSignature } = decodeSignature(JSON.parse(action.signature))
-			const addressFromPubKey = toBech32(this.bech32Prefix, rawSecp256k1PubkeyToRawAddress(pubkey))
+			const addressFromPubKey = toBech32(cosmosPrefix, rawSecp256k1PubkeyToRawAddress(pubkey))
+
 			if (action.session !== addressFromPubKey) {
 				// Delegated signatures: If session exists, pubkey should be the public key for `action.session`
 				throw new Error("Action signed with a pubkey that doesn't match the session address")
@@ -138,7 +140,19 @@ export class EvmosChainImplementation implements ChainImplementation<EvmMetaMask
 	}
 
 	async signDelegatedAction(privkey: Secp256k1WalletPrivateKey, payload: ActionPayload): Promise<Action> {
-		throw Error("Not implemented!")
+		const signer = await Secp256k1Wallet.fromKey(privkey)
+		const accountData = (await signer.getAccounts())[0]
+		const signDoc = await getActionSignatureData(payload, accountData.address)
+
+		const {
+			signature: { pub_key, signature },
+		} = await signer.signAmino(accountData.address, signDoc)
+		return {
+			type: "action",
+			payload,
+			session: accountData.address,
+			signature: JSON.stringify({ pub_key, signature }),
+		}
 	}
 
 	importDelegatedSigner = (privkeyString: string) => Buffer.from(privkeyString, "hex")
