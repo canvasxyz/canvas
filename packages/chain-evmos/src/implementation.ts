@@ -4,16 +4,18 @@ import {
 	Chain,
 	ChainId,
 	ChainImplementation,
+	serializeActionPayload,
 	serializeSessionPayload,
 	Session,
 	SessionPayload,
 } from "@canvas-js/interfaces"
 import { ethers } from "ethers"
 import { configure as configureStableStringify } from "safe-stable-stringify"
-import { Secp256k1Wallet } from "@cosmjs/amino"
-import { Random } from "@cosmjs/crypto"
+import { decodeSignature, rawSecp256k1PubkeyToRawAddress, Secp256k1Wallet, serializeSignDoc } from "@cosmjs/amino"
+import { Random, Secp256k1, Secp256k1Signature, Sha256 } from "@cosmjs/crypto"
 import { toBech32 } from "@cosmjs/encoding"
 import { EvmMetaMaskSigner } from "./signerInterface.js"
+import { getActionSignatureData } from "./signatureData.js"
 
 type Secp256k1WalletPrivateKey = Uint8Array
 
@@ -33,27 +35,37 @@ export class EvmosChainImplementation implements ChainImplementation<EvmMetaMask
 	constructor(public readonly chainId: ChainId = "osmosis-1", public readonly bech32Prefix: string = "osmo") {}
 
 	async verifyAction(action: Action): Promise<void> {
-		// const actionSignerAddress = action.session ?? action.payload.from
-		// const signDocPayload = await getActionSignatureData(action.payload, actionSignerAddress)
-		// const signDocDigest = new Sha256(serializeSignDoc(signDocPayload)).digest()
-		// const prefix = "cosmos" // not: fromBech32(payload.from).prefix;
+		if (action.session) {
+			// using delegated signer
+			const signDocPayload = await getActionSignatureData(action.payload, action.session)
+			const signDocDigest = new Sha256(serializeSignDoc(signDocPayload)).digest()
 
-		// const { pubkey, signature: decodedSignature } = decodeSignature(JSON.parse(action.signature))
-		// if (action.session && action.session !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
-		// 	// Delegated signatures: If session exists, pubkey should be the public key for `action.session`
-		// 	throw new Error("Action signed with a pubkey that doesn't match the session address")
-		// }
-		// if (!action.session && action.payload.from !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
-		// 	// Direct signatures: If session is null, pubkey should be the public key for `action.payload.from`
-		// 	throw new Error("Action signed with a pubkey that doesn't match the from address")
-		// }
-		// const secpSignature = Secp256k1Signature.fromFixedLength(decodedSignature)
-		// const valid = await Secp256k1.verifySignature(secpSignature, signDocDigest, pubkey)
+			const { pubkey, signature: decodedSignature } = decodeSignature(JSON.parse(action.signature))
+			const addressFromPubKey = toBech32(this.bech32Prefix, rawSecp256k1PubkeyToRawAddress(pubkey))
+			if (action.session !== addressFromPubKey) {
+				// Delegated signatures: If session exists, pubkey should be the public key for `action.session`
+				throw new Error("Action signed with a pubkey that doesn't match the session address")
+			}
+			const secpSignature = Secp256k1Signature.fromFixedLength(decodedSignature)
+			const valid = await Secp256k1.verifySignature(secpSignature, signDocDigest, pubkey)
+			if (!valid) {
+				throw new Error("Invalid session signature")
+			}
+		} else {
+			// using direct signer
+			// get address from pubkey
+			const msgBuffer = Buffer.from(sortedStringify(action.payload))
+			const msgHash = ethers.utils.hashMessage(msgBuffer)
+			const publicKey = ethers.utils.recoverPublicKey(msgHash, action.signature.trim())
+			const lowercaseEthAddress = ethers.utils.computeAddress(publicKey).toLowerCase()
 
-		// if (!valid) {
-		// 	throw new Error("Invalid session signature")
-		// }
-		throw Error("Not implemented!")
+			// convert to cosmos address
+			const addressFromPubKey = encodeEthAddress(this.bech32Prefix, lowercaseEthAddress)
+			if (action.payload.from !== addressFromPubKey) {
+				// Direct signatures: If session is null, pubkey should be the public key for `action.payload.from`
+				throw new Error("Action signed with a pubkey that doesn't match the from address")
+			}
+		}
 	}
 
 	async verifySession(session: Session): Promise<void> {
@@ -114,7 +126,15 @@ export class EvmosChainImplementation implements ChainImplementation<EvmMetaMask
 	}
 
 	async signAction(signer: EvmMetaMaskSigner, payload: ActionPayload): Promise<Action> {
-		throw Error("Not implemented!")
+		const address = await this.getSignerAddress(signer)
+		const dataToSign = serializeActionPayload(payload)
+		const signature = await signer.eth.personal.sign(dataToSign, address, "")
+		return {
+			payload,
+			signature,
+			type: "action",
+			session: null,
+		}
 	}
 
 	async signDelegatedAction(privkey: Secp256k1WalletPrivateKey, payload: ActionPayload): Promise<Action> {
