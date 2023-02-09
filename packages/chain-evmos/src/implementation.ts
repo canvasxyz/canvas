@@ -26,13 +26,14 @@ const sortedStringify = configureStableStringify({
 	deterministic: true,
 })
 
-const encodeEthAddress = (bech32Prefix: string, address: string) =>
+const encodeEthAddressAsBech32 = (bech32Prefix: string, address: string) =>
 	toBech32(bech32Prefix, ethers.utils.arrayify(address))
 
 export class EvmosChainImplementation implements ChainImplementation<EvmMetaMaskSigner, Secp256k1WalletPrivateKey> {
 	public readonly chain: Chain = "cosmos"
 
-	constructor(public readonly chainId: ChainId = "osmosis-1", public readonly bech32Prefix: string = "osmo") {}
+	// chainId is unused, so we can default to anything here
+	constructor(public readonly chainId: ChainId = "evmos_9001-1", public readonly bech32Prefix: string = "evmos") {}
 
 	async verifyAction(action: Action): Promise<void> {
 		if (action.session) {
@@ -62,7 +63,7 @@ export class EvmosChainImplementation implements ChainImplementation<EvmMetaMask
 			const lowercaseEthAddress = ethers.utils.computeAddress(publicKey).toLowerCase()
 
 			// convert to cosmos address
-			const addressFromPubKey = encodeEthAddress(this.bech32Prefix, lowercaseEthAddress)
+			const addressFromPubKey = encodeEthAddressAsBech32(this.bech32Prefix, lowercaseEthAddress)
 			if (action.payload.from !== addressFromPubKey) {
 				// Direct signatures: If session is null, pubkey should be the public key for `action.payload.from`
 				throw new Error("Action signed with a pubkey that doesn't match the from address")
@@ -85,7 +86,7 @@ export class EvmosChainImplementation implements ChainImplementation<EvmMetaMask
 
 		let isValid
 		try {
-			if (session.payload.from === encodeEthAddress(this.bech32Prefix, lowercaseAddress)) isValid = true
+			if (session.payload.from === encodeEthAddressAsBech32(this.bech32Prefix, lowercaseAddress)) isValid = true
 		} catch (e) {
 			isValid = false
 		}
@@ -98,22 +99,19 @@ export class EvmosChainImplementation implements ChainImplementation<EvmMetaMask
 	getSignerAddress = async (signer: EvmMetaMaskSigner): Promise<string> => {
 		const accounts = await signer.eth.getAccounts()
 		const address = accounts[0]
-		// convert to cosmos address
 		return toBech32(this.bech32Prefix, ethers.utils.arrayify(address))
 	}
-	// encodeEthAddress(app.chain?.meta.bech32Prefix || 'inj', acc)
 	getDelegatedSignerAddress = async (privkey: Secp256k1WalletPrivateKey) => {
 		const wallet = await Secp256k1Wallet.fromKey(privkey)
 		return (await wallet.getAccounts())[0].address
 	}
 
 	isSigner(signer: unknown): signer is EvmMetaMaskSigner {
-		throw Error("Not implemented!")
+		return !(delegatedSigner instanceof Uint8Array)
 	}
 
 	isDelegatedSigner(delegatedSigner: unknown): delegatedSigner is Secp256k1WalletPrivateKey {
-		// copy from cosmos
-		throw Error("Not implemented!")
+		return delegatedSigner instanceof Uint8Array
 	}
 
 	async signSession(signer: EvmMetaMaskSigner, payload: SessionPayload): Promise<Session> {
