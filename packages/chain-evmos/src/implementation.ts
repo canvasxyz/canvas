@@ -107,7 +107,7 @@ export class EvmosChainImplementation implements ChainImplementation<EvmMetaMask
 	}
 
 	isSigner(signer: unknown): signer is EvmMetaMaskSigner {
-		return !(delegatedSigner instanceof Uint8Array)
+		return !(signer instanceof Uint8Array)
 	}
 
 	isDelegatedSigner(delegatedSigner: unknown): delegatedSigner is Secp256k1WalletPrivateKey {
