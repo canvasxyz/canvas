@@ -4,10 +4,27 @@
 [![node](https://img.shields.io/node/v/@canvas-js/core.svg)](https://www.npmjs.com/package/@canvas-js/core)
 [![npm](https://img.shields.io/npm/v/@canvas-js/core?color=33cd56&logo=npm)](https://www.npmjs.com/package/@canvas-js/core)
 
-Canvas is a new architecture for decentralized applications, where
-every user interaction is a signed message exchanged over a peer-to-peer network.
+Canvas is a peer-to-peer backend for decentralized applications,
+where every user interaction is a signed message distributed over
+[libp2p](https://libp2p.io/). Every user action is [efficiently
+synchronized](https://github.com/canvasxyz/okra) using [collaborative
+data types](https://crdt.tech/) and merged into SQLite databases.
 
-For more information, see the [Canvas docs](https://canvasxyz.github.io/canvas-docs/docs)!
+Unlike libp2p, Canvas provides:
+
+* persistence
+* efficient sync for past actions
+* the ability to read from chains
+* a concise language for expressing different versions of applications, and upgrading between them
+* built-in support for a wide range of cryptographies and signature formats
+
+Unlike Web3 databases and data blockchains, Canvas does not lock you
+into any proprietary data formats, nor will it ever require you to use
+a token. Canvas is built to be neutral infrastructure that enables a
+wide range of protocols to be constructed on top of it.
+
+For more information, see the [Canvas
+documentation](https://canvasxyz.github.io/canvas-docs/docs).
 
 ## Using Canvas
 
@@ -29,21 +46,11 @@ npm install -g @canvas-js/cli
 
 You can run each command with --help for more detailed documentation.
 
-## Developing Canvas
+## Contributing to Canvas
 
-To use your local development version of Canvas as the CLI:
-
-```
-./install.sh
-```
-
-This will put a stub shell script at `$(npm config get prefix)/bin/canvas`
-that calls `node ${PWD}/packages/canvas-cli/index.js $@`.
-
-Note that if you are using system Node, writing to /usr/local/bin/canvas
-will require sudo. In that case, you should install
-[NVM](https://github.com/nvm-sh/nvm#installing-and-updating) and set your
-default Node with `nvm alias default v18`.
+Canvas is currently developed and maintained by a small team. For 
+suggestions or contributions, we recommend first opening an issue or 
+discussing with an existing contributor, before opening a pull request.
 
 ### Building
 
@@ -60,6 +67,22 @@ To run the example app in development mode:
 ```
 npm run dev-example-chat
 ```
+
+### Using a development instance of Canvas
+
+To use your local development version of Canvas in the CLI:
+
+```
+./install.sh
+```
+
+This will put a stub shell script at `$(npm config get prefix)/bin/canvas`
+that calls `node ${PWD}/packages/canvas-cli/index.js $@`.
+
+Note that if you are using system Node, writing to /usr/local/bin/canvas
+will require sudo. In that case, you should install
+[NVM](https://github.com/nvm-sh/nvm#installing-and-updating) and set your
+default Node with `nvm alias default v18`.
 
 ### Publishing to NPM
 
