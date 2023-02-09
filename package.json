@@ -22,7 +22,6 @@
     "packages/chain-solana",
     "packages/chain-substrate",
     "packages/chain-terra",
-    "examples/app-store",
     "examples/chat-webpack",
     "examples/chat-next"
   ]
