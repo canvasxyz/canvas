@@ -13,7 +13,7 @@ type Post = {
 	updated_at: number
 }
 
-export const Messages: React.FC<{}> = ({}) => {
+export const Messages: React.FC<> = () => {
 	const inputRef = useRef<HTMLInputElement>(null)
 	const { client } = useContext(AppContext)
 

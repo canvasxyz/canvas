@@ -40,11 +40,10 @@ export class TerraChainImplementation implements ChainImplementation<FixedExtens
 			// Direct signatures: If session is null, pubkey should be the public key for `action.payload.from`
 			throw new Error("Action signed with a pubkey that doesn't match the from address")
 		}
+		// delegated signer signs using signdoc, direct signer signs payload directly
 		const serializedPayload: Uint8Array = action.session
-			? // delegated signer signs using signdoc
-			  serializeSignDoc(await getActionSignatureData(action.payload, action.session))
-			: // direct signer signs payload directly
-			  Buffer.from(serializeActionPayload(action.payload))
+			? serializeSignDoc(await getActionSignatureData(action.payload, action.session))
+			: Buffer.from(serializeActionPayload(action.payload))
 
 		const signDocDigest = new Sha256(serializedPayload).digest()
 		const secpSignature = Secp256k1Signature.fromFixedLength(decodedSignature)

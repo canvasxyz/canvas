@@ -47,7 +47,7 @@ function handleRequest(messageStore: MessageStore, txn: okra.Transaction, req: R
 	}
 }
 
-function getRoot({}: RPC.Request.IGetRootRequest, txn: okra.Transaction): RPC.Response.IGetRootResponse {
+function getRoot(req: RPC.Request.IGetRootRequest, txn: okra.Transaction): RPC.Response.IGetRootResponse {
 	const { level, hash } = txn.getRoot()
 	return { level, hash }
 }

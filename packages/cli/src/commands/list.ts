@@ -13,7 +13,7 @@ export const desc = "List all apps in the data directory"
 
 export const builder = (yargs: yargs.Argv) => yargs
 
-export async function handler({}) {
+export async function handler() {
 	console.log(`Showing local apps in ${CANVAS_HOME}\n`)
 	for (const name of fs.readdirSync(CANVAS_HOME)) {
 		if (name === constants.PEER_ID_FILENAME || name === SOCKET_FILENAME) {

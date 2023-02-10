@@ -12,7 +12,7 @@ const Connect = dynamic(() => import("components/Connect").then(({ Connect }) =>
 
 const Messages = dynamic(() => import("components/Messages").then(({ Messages }) => Messages), { ssr: false })
 
-export default function Index({}) {
+export default function Index() {
 	const [client, setClient] = useState<Client | null>(null)
 
 	return (

@@ -48,10 +48,10 @@ export const actions = {
 		this.db.posts.set(this.hash, { content, from_id: this.from })
 	},
 	like(postId) {
-		this.db.likes.set(\`\$\{this.from}/\$\{postId}\`, { post_id: postId, value: true })
+		this.db.likes.set(\`$\{this.from}/$\{postId}\`, { post_id: postId, value: true })
 	},
 	unlike(postId) {
-		this.db.likes.set(\`\$\{this.from}/\$\{postId}\`, { post_id: postId, value: false })
+		this.db.likes.set(\`$\{this.from}/$\{postId}\`, { post_id: postId, value: false })
 	},
 }
 `
