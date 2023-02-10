@@ -94,9 +94,9 @@ export async function startPingService(
 ) {
 	async function ping(routingTable: RoutingTable, peer: PeerId) {
 		// These are declared as private in RoutingTable :/
-		// @ts-expect-error
+		// @ts-expect-error accesses private fields
 		const pingTimeout: number = routingTable.pingTimeout
-		// @ts-expect-error
+		// @ts-expect-error accesses private fields
 		const protocol: string = routingTable.protocol
 
 		const timeoutController = new TimeoutController(pingTimeout)

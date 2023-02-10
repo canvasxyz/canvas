@@ -75,6 +75,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		let mst: MST | null = null
 		if (directory !== null) {
 			// only called if the MST directory does not exist
+			// eslint-disable-next-line
 			async function* importMessages(dbi: string): AsyncIterable<[Buffer, Message]> {
 				if (options.verbose) {
 					console.log(`[canvas-core] Rebuilding MST index ${dbi} from model store`)

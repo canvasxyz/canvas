@@ -89,7 +89,7 @@ const server = stoppable(httpServer, 0)
 
 server.listen(port, () => console.log(`> Ready on http://${hostname}:${port}`))
 
-let stopping: boolean = false
+let stopping = false
 process.on("SIGINT", () => {
 	if (stopping) {
 		process.exit(1)
