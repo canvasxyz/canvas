@@ -34,8 +34,10 @@ const sortedStringify = configureStableStringify({
 const encodeEthAddress = (bech32Prefix: string, address: string) =>
 	toBech32(bech32Prefix, ethers.utils.arrayify(address))
 
-function isKeplrEthereumSigner(signer: CosmosSigner): signer is KeplrEthereumSigner {
+function isKeplrEthereumSigner(signer: unknown): signer is KeplrEthereumSigner {
 	return (
+		!!signer &&
+		typeof signer == "object" &&
 		"signEthereum" in signer &&
 		typeof signer.signEthereum == "function" &&
 		"getOfflineSigner" in signer &&
@@ -43,8 +45,10 @@ function isKeplrEthereumSigner(signer: CosmosSigner): signer is KeplrEthereumSig
 	)
 }
 
-function isOfflineAminoSigner(signer: CosmosSigner): signer is OfflineAminoSigner {
+function isOfflineAminoSigner(signer: unknown): signer is OfflineAminoSigner {
 	return (
+		!!signer &&
+		typeof signer == "object" &&
 		"getAccounts" in signer &&
 		typeof signer.getAccounts == "function" &&
 		"signAmino" in signer &&
@@ -52,7 +56,11 @@ function isOfflineAminoSigner(signer: CosmosSigner): signer is OfflineAminoSigne
 	)
 }
 
-function isFixedExtension(signer: CosmosSigner): signer is FixedExtension {
+function isFixedExtension(signer: unknown): signer is FixedExtension {
+	if (!(!!signer && typeof signer == "object")) {
+		return false
+	}
+
 	const functions = ["post", "sign", "signBytes", "info", "connect", "inTransactionProgress", "disconnect"]
 	for (const funcName of functions) {
 		// @ts-ignore
@@ -204,7 +212,10 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 	}
 
 	isSigner(signer: unknown): signer is OfflineAminoSigner {
-		return !(signer instanceof Uint8Array)
+		return (
+			typeof signer == "object" &&
+			(isKeplrEthereumSigner(signer) || isFixedExtension(signer) || isOfflineAminoSigner(signer))
+		)
 	}
 
 	isDelegatedSigner(delegatedSigner: unknown): delegatedSigner is Secp256k1WalletPrivateKey {
