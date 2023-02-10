@@ -77,8 +77,7 @@ function isTerraFixedExtension(signer: unknown): signer is TerraFixedExtension {
 
 	const functions = ["post", "sign", "signBytes", "info", "connect", "inTransactionProgress", "disconnect"]
 	for (const funcName of functions) {
-		// @ts-ignore
-		if (!(funcName in signer && typeof signer[funcName] == "function")) {
+		if (!(funcName in signer && typeof (signer as any)[funcName] == "function")) {
 			return false
 		}
 	}
