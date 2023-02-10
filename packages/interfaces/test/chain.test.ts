@@ -49,7 +49,7 @@ const IMPLEMENTATIONS = [
 		createMockSigner: createMockKeplrEthereumSigner,
 	},
 	{
-		implementationName: "cosmos-metamask-evmos",
+		implementationName: "cosmos-metamask-evm",
 		chainImplementation: new CosmosChainImplementation("evmos_9001-2", "evmos"),
 		createMockSigner: createMockEvmosSigner,
 	},
