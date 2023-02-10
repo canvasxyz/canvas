@@ -7,13 +7,12 @@
 Canvas is a platform for decentralized applications, where every user
 interaction is a signed message distributed over a [peer-to-peer
 network](https://libp2p.io/). User actions are [efficiently
-sychronized](https://github.com/canvasxyz/okra) and executed, and
-their effects are merged using [collaborative data
-types](https://crdt.tech/). This makes it possible to build
-decentralized applications with a Web2-like developer experience, and
-near-realtime responsiveness.
+sychronized](https://github.com/canvasxyz/okra) and merged using
+[collaborative data types](https://crdt.tech/), making it possible
+to build decentralized applications with near-realtime responsiveness
+and no token transactions.
 
-Compared to libp2p, Canvas provides:
+Compared to using libp2p directly, Canvas provides:
 
 * persistence
 * efficient sync for past actions
