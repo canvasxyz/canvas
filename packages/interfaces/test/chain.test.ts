@@ -17,21 +17,21 @@ interface MockedImplementation<CI extends ChainImplementation> {
 }
 
 const IMPLEMENTATIONS = [
-	// {
-	// 	implementationName: "ethereum",
-	// 	chainImplementation: new EthereumChainImplementation(),
-	// 	createMockSigner: createMockEthereumSigner,
-	// },
-	// {
-	// 	implementationName: "solana",
-	// 	chainImplementation: new SolanaChainImplementation(),
-	// 	createMockSigner: createMockSolanaSigner,
-	// },
-	// {
-	// 	implementationName: "substrate",
-	// 	chainImplementation: new SubstrateChainImplementation(),
-	// 	createMockSigner: createMockSubstrateSigner,
-	// },
+	{
+		implementationName: "ethereum",
+		chainImplementation: new EthereumChainImplementation(),
+		createMockSigner: createMockEthereumSigner,
+	},
+	{
+		implementationName: "solana",
+		chainImplementation: new SolanaChainImplementation(),
+		createMockSigner: createMockSolanaSigner,
+	},
+	{
+		implementationName: "substrate",
+		chainImplementation: new SubstrateChainImplementation(),
+		createMockSigner: createMockSubstrateSigner,
+	},
 	{
 		implementationName: "cosmos",
 		chainImplementation: new CosmosChainImplementation(),
