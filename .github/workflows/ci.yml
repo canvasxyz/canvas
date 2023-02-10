@@ -2,7 +2,7 @@ name: CI
 on: [push, workflow_dispatch]
 
 jobs:
-  test:
+  lint:
     name: Lint
     runs-on: ubuntu-latest
 
@@ -21,7 +21,6 @@ jobs:
       - name: Run eslint
         run: npm run lint
 
-jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
