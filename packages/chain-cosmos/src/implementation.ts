@@ -3,7 +3,7 @@ import { Secp256k1Wallet, serializeSignDoc, decodeSignature, rawSecp256k1PubkeyT
 import { Secp256k1, Secp256k1Signature, Random, Sha256 } from "@cosmjs/crypto"
 import { fromBech32, toBech32 } from "@cosmjs/encoding"
 import { ethers } from "ethers"
-import { FixedExtension } from "@terra-money/wallet-controller/modules/legacy-extension"
+import { FixedExtension as TerraFixedExtension } from "@terra-money/wallet-controller/modules/legacy-extension"
 import {
 	Action,
 	ActionPayload,
@@ -22,7 +22,7 @@ import { configure as configureStableStringify } from "safe-stable-stringify"
 
 type Secp256k1WalletPrivateKey = Uint8Array
 
-type CosmosSigner = EvmMetaMaskSigner | KeplrEthereumSigner | OfflineAminoSigner | FixedExtension
+type CosmosSigner = EvmMetaMaskSigner | KeplrEthereumSigner | OfflineAminoSigner | TerraFixedExtension
 
 const sortedStringify = configureStableStringify({
 	bigint: false,
@@ -70,7 +70,7 @@ function isOfflineAminoSigner(signer: unknown): signer is OfflineAminoSigner {
 	)
 }
 
-function isFixedExtension(signer: unknown): signer is FixedExtension {
+function isTerraFixedExtension(signer: unknown): signer is TerraFixedExtension {
 	if (!(!!signer && typeof signer == "object")) {
 		return false
 	}
@@ -217,7 +217,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 			return toBech32(this.bech32Prefix, ethers.utils.arrayify(address))
 		} else if (isOfflineAminoSigner(signer)) {
 			return (await signer.getAccounts())[0].address
-		} else if (isFixedExtension(signer)) {
+		} else if (isTerraFixedExtension(signer)) {
 			return (await signer.connect()).address!
 		} else {
 			throw Error(`getSignerAddress called with invalid signer object!`)
@@ -233,7 +233,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 			typeof signer == "object" &&
 			(isEvmMetaMaskSigner(signer) ||
 				isKeplrEthereumSigner(signer) ||
-				isFixedExtension(signer) ||
+				isTerraFixedExtension(signer) ||
 				isOfflineAminoSigner(signer))
 		)
 	}
@@ -255,7 +255,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 		} else if (isOfflineAminoSigner(signer)) {
 			const signDoc = await getSessionSignatureData(payload, address)
 			signature = JSON.stringify((await signer.signAmino(address, signDoc)).signature)
-		} else if (isFixedExtension(signer)) {
+		} else if (isTerraFixedExtension(signer)) {
 			const result = await signer.signBytes(Buffer.from(serializeSessionPayload(payload)))
 
 			signature = JSON.stringify({
@@ -288,7 +288,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 		} else if (isOfflineAminoSigner(signer)) {
 			const signDoc = await getActionSignatureData(payload, address)
 			signature = JSON.stringify((await signer.signAmino(address, signDoc)).signature)
-		} else if (isFixedExtension(signer)) {
+		} else if (isTerraFixedExtension(signer)) {
 			const result = await signer.signBytes(Buffer.from(serializeActionPayload(payload)))
 			signature = JSON.stringify({
 				pub_key: {
