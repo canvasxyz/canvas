@@ -2,7 +2,7 @@ import React, { useState } from "react"
 import dynamic from "next/dynamic"
 import Head from "next/head"
 
-import { Client, useCanvas } from "@canvas-js/hooks"
+import { Client } from "@canvas-js/hooks"
 
 const Application = dynamic(() => import("components/Application").then(({ Application }) => Application), {
 	ssr: false,
