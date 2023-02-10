@@ -10,7 +10,7 @@ import { AppContext } from "./AppContext"
 const second = 1000
 const minute = 60 * second
 
-export const App: React.FC<{}> = () => {
+export const App: React.FC = ({}) => {
 	const { isLoading, error, data } = useCanvas()
 
 	const [client, setClient] = useState<Client | null>(null)

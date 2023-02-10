@@ -8,7 +8,7 @@ import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { ErrorMessage } from "./ErrorMessage"
 import { AppContext } from "./AppContext"
 
-export const Connect: React.FC<{}> = () => {
+export const Connect: React.FC = ({}) => {
 	const { connect, connectors, error: connectionError, isLoading: isConnectionLoading, pendingConnector } = useConnect()
 	const { disconnect } = useDisconnect()
 	const { address, isConnected } = useAccount()
@@ -52,7 +52,7 @@ export const Connect: React.FC<{}> = () => {
 	)
 }
 
-const Login: React.FC<{}> = () => {
+const Login: React.FC = ({}) => {
 	const { error, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
 	const { chain } = useNetwork()
 	const provider = useProvider<ethers.providers.JsonRpcProvider>()
