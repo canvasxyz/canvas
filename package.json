@@ -19,10 +19,8 @@
     "packages/hooks",
     "packages/chain-ethereum",
     "packages/chain-cosmos",
-    "packages/chain-keplr-ethereum",
     "packages/chain-solana",
     "packages/chain-substrate",
-    "packages/chain-terra",
     "examples/app-store",
     "examples/chat-webpack",
     "examples/chat-next"
