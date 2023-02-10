@@ -18,7 +18,7 @@ export async function createMockTerraSigner(): Promise<FixedExtension> {
 	const privkeyBytes = Random.getBytes(entropyLength)
 	const wallet = new RawKey(Buffer.from(privkeyBytes))
 
-	const address: string = wallet.accAddress("cosmos")
+	const address: string = wallet.accAddress("terra")
 
 	return {
 		post: (data: any) => {

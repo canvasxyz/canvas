@@ -91,7 +91,7 @@ function isFixedExtension(signer: unknown): signer is FixedExtension {
 export class CosmosChainImplementation implements ChainImplementation<CosmosSigner, Secp256k1WalletPrivateKey> {
 	public readonly chain: Chain = "cosmos"
 
-	constructor(public readonly chainId: ChainId = "mainnet", public readonly bech32Prefix: string = "osmo") {}
+	constructor(public readonly chainId: ChainId, public readonly bech32Prefix: string) {}
 
 	private async verifyDelegatedAction(action: Action, session: string): Promise<boolean> {
 		const signDocPayload = await getActionSignatureData(action.payload, session)
@@ -110,7 +110,6 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 	}
 
 	private async verifyDirectAction(action: Action): Promise<boolean> {
-		const prefix = "cosmos" // not: fromBech32(payload.from).prefix;
 		let isValid: boolean
 		if (action.signature.slice(0, 2) == "0x") {
 			// eth
@@ -120,7 +119,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 			// cosmos signed
 			const { pubkey, signature: decodedSignature } = decodeSignature(JSON.parse(action.signature))
 			// direct
-			if (action.payload.from !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
+			if (action.payload.from !== toBech32(this.bech32Prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
 				// Direct signatures: If session is null, pubkey should be the public key for `action.payload.from`
 				throw new Error("Action signed with a pubkey that doesn't match the from address")
 			}

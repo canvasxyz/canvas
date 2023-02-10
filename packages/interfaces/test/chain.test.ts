@@ -35,22 +35,22 @@ const IMPLEMENTATIONS = [
 	},
 	{
 		implementationName: "cosmos",
-		chainImplementation: new CosmosChainImplementation(),
+		chainImplementation: new CosmosChainImplementation("osmosis-1", "cosmos"),
 		createMockSigner: createMockCosmosSigner,
 	},
 	{
 		implementationName: "cosmos-terra",
-		chainImplementation: new CosmosChainImplementation(),
+		chainImplementation: new CosmosChainImplementation("mainnet", "terra"),
 		createMockSigner: createMockTerraSigner,
 	},
 	{
 		implementationName: "cosmos-keplr-ethereum",
-		chainImplementation: new CosmosChainImplementation(),
+		chainImplementation: new CosmosChainImplementation("injective-1", "inj"),
 		createMockSigner: createMockKeplrEthereumSigner,
 	},
 	{
 		implementationName: "cosmos-metamask-evmos",
-		chainImplementation: new CosmosChainImplementation(),
+		chainImplementation: new CosmosChainImplementation("evmos_9001-2", "evmos"),
 		createMockSigner: createMockEvmosSigner,
 	},
 ] as MockedImplementation<any>[]
