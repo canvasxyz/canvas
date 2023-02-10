@@ -17,12 +17,12 @@ import {
 import { serializeSessionPayload } from "@canvas-js/interfaces"
 
 import { getActionSignatureData, getSessionSignatureData } from "./signatureData.js"
-import { KeplrEthereumSigner } from "./signerInterface.js"
+import { EvmMetaMaskSigner, KeplrEthereumSigner } from "./signerInterface.js"
 import { configure as configureStableStringify } from "safe-stable-stringify"
 
 type Secp256k1WalletPrivateKey = Uint8Array
 
-type CosmosSigner = KeplrEthereumSigner | OfflineAminoSigner | FixedExtension
+type CosmosSigner = EvmMetaMaskSigner | KeplrEthereumSigner | OfflineAminoSigner | FixedExtension
 
 const sortedStringify = configureStableStringify({
 	bigint: false,
@@ -33,6 +33,20 @@ const sortedStringify = configureStableStringify({
 
 const encodeEthAddress = (bech32Prefix: string, address: string) =>
 	toBech32(bech32Prefix, ethers.utils.arrayify(address))
+
+function isEvmMetaMaskSigner(signer: unknown): signer is EvmMetaMaskSigner {
+	return (
+		!!signer &&
+		typeof signer == "object" &&
+		"eth" in signer &&
+		!!signer.eth &&
+		typeof signer.eth == "object" &&
+		"personal" in signer.eth &&
+		typeof signer.eth.personal == "object" &&
+		"getAccounts" in signer.eth &&
+		typeof signer.eth.getAccounts == "function"
+	)
+}
 
 function isKeplrEthereumSigner(signer: unknown): signer is KeplrEthereumSigner {
 	return (
@@ -193,7 +207,11 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 	}
 
 	getSignerAddress = async (signer: CosmosSigner) => {
-		if (isKeplrEthereumSigner(signer)) {
+		if (isEvmMetaMaskSigner(signer)) {
+			const accounts = await signer.eth.getAccounts()
+			const address = accounts[0]
+			return toBech32(this.bech32Prefix, ethers.utils.arrayify(address))
+		} else if (isKeplrEthereumSigner(signer)) {
 			const accounts = await signer.getOfflineSigner(this.chainId).getAccounts()
 			const address = accounts[0].address
 			// convert to cosmos address
@@ -214,7 +232,10 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 	isSigner(signer: unknown): signer is OfflineAminoSigner {
 		return (
 			typeof signer == "object" &&
-			(isKeplrEthereumSigner(signer) || isFixedExtension(signer) || isOfflineAminoSigner(signer))
+			(isEvmMetaMaskSigner(signer) ||
+				isKeplrEthereumSigner(signer) ||
+				isFixedExtension(signer) ||
+				isOfflineAminoSigner(signer))
 		)
 	}
 
@@ -225,7 +246,10 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 	async signSession(signer: CosmosSigner, payload: SessionPayload): Promise<Session> {
 		let signature: string
 		const address = await this.getSignerAddress(signer)
-		if (isKeplrEthereumSigner(signer)) {
+		if (isEvmMetaMaskSigner(signer)) {
+			const dataToSign = serializeSessionPayload(payload)
+			signature = await signer.eth.personal.sign(dataToSign, address, "")
+		} else if (isKeplrEthereumSigner(signer)) {
 			const dataToSign = serializeSessionPayload(payload)
 			const rawSignature = await signer.signEthereum(this.chainId, address, dataToSign, "message")
 			signature = `0x${Buffer.from(rawSignature).toString("hex")}`
@@ -255,7 +279,10 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 		}
 
 		let signature: string
-		if (isKeplrEthereumSigner(signer)) {
+		if (isEvmMetaMaskSigner(signer)) {
+			const dataToSign = serializeActionPayload(payload)
+			signature = await signer.eth.personal.sign(dataToSign, address, "")
+		} else if (isKeplrEthereumSigner(signer)) {
 			const dataToSign = serializeActionPayload(payload)
 			const rawSignature = await signer.signEthereum(this.chainId, address, dataToSign, "message")
 			signature = `0x${Buffer.from(rawSignature).toString("hex")}`

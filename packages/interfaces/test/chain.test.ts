@@ -7,6 +7,7 @@ import {
 	createMockCosmosSigner,
 	createMockTerraSigner,
 	createMockKeplrEthereumSigner,
+	createMockEvmosSigner,
 	CosmosChainImplementation,
 } from "@canvas-js/chain-cosmos"
 
@@ -46,6 +47,11 @@ const IMPLEMENTATIONS = [
 		implementationName: "cosmos-keplr-ethereum",
 		chainImplementation: new CosmosChainImplementation(),
 		createMockSigner: createMockKeplrEthereumSigner,
+	},
+	{
+		implementationName: "cosmos-metamask-evmos",
+		chainImplementation: new CosmosChainImplementation(),
+		createMockSigner: createMockEvmosSigner,
 	},
 ] as MockedImplementation<any>[]
 

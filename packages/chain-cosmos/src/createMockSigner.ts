@@ -4,7 +4,7 @@ import { RawKey } from "@terra-money/feather.js"
 import { FixedExtension } from "@terra-money/wallet-controller/modules/legacy-extension"
 import { ethers } from "ethers"
 import { arrayify } from "ethers/lib/utils.js"
-import { KeplrEthereumSigner } from "./signerInterface.js"
+import { EvmMetaMaskSigner, KeplrEthereumSigner } from "./signerInterface.js"
 
 export async function createMockCosmosSigner() {
 	const entropyLength = 4 * Math.floor((11 * 24) / 33)
@@ -71,6 +71,22 @@ export async function createMockKeplrEthereumSigner(): Promise<KeplrEthereumSign
 		signEthereum: async (chainId: string, address: string, dataToSign: string, ethSignType) => {
 			const signatureStr = await wallet.signMessage(dataToSign)
 			return arrayify(signatureStr)
+		},
+	}
+}
+
+export async function createMockEvmosSigner(): Promise<EvmMetaMaskSigner> {
+	const wallet = ethers.Wallet.createRandom()
+	return {
+		eth: {
+			personal: {
+				sign: async (dataToSign: string, address: string, password: string) => {
+					return wallet.signMessage(dataToSign)
+				},
+			},
+			getAccounts: async () => {
+				return [wallet.address]
+			},
 		},
 	}
 }
