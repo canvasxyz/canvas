@@ -3,8 +3,13 @@ import { ActionPayload, ChainImplementation, SessionPayload } from "@canvas-js/i
 import { createMockEthereumSigner, EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { createMockSolanaSigner, SolanaChainImplementation } from "@canvas-js/chain-solana"
 import { createMockSubstrateSigner, SubstrateChainImplementation } from "@canvas-js/chain-substrate"
-import { createMockCosmosSigner, CosmosChainImplementation } from "@canvas-js/chain-cosmos"
-import { createMockTerraSigner, TerraChainImplementation } from "@canvas-js/chain-terra"
+import {
+	createMockCosmosSigner,
+	createMockTerraSigner,
+	createMockKeplrEthereumSigner,
+	createMockEvmosSigner,
+	CosmosChainImplementation,
+} from "@canvas-js/chain-cosmos"
 
 interface MockedImplementation<CI extends ChainImplementation> {
 	implementationName: string
@@ -30,13 +35,23 @@ const IMPLEMENTATIONS = [
 	},
 	{
 		implementationName: "cosmos",
-		chainImplementation: new CosmosChainImplementation(),
+		chainImplementation: new CosmosChainImplementation("osmosis-1", "cosmos"),
 		createMockSigner: createMockCosmosSigner,
 	},
 	{
-		implementationName: "terra",
-		chainImplementation: new TerraChainImplementation(),
+		implementationName: "cosmos-terra",
+		chainImplementation: new CosmosChainImplementation("mainnet", "terra"),
 		createMockSigner: createMockTerraSigner,
+	},
+	{
+		implementationName: "cosmos-keplr-ethereum",
+		chainImplementation: new CosmosChainImplementation("injective-1", "inj"),
+		createMockSigner: createMockKeplrEthereumSigner,
+	},
+	{
+		implementationName: "cosmos-metamask-evm",
+		chainImplementation: new CosmosChainImplementation("evmos_9001-2", "evmos"),
+		createMockSigner: createMockEvmosSigner,
 	},
 ] as MockedImplementation<any>[]
 

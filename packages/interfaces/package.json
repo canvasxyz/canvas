@@ -21,7 +21,6 @@
     "@canvas-js/chain-ethereum": "0.0.52",
     "@canvas-js/chain-solana": "0.0.52",
     "@canvas-js/chain-substrate": "0.0.52",
-    "@canvas-js/chain-terra": "0.0.52",
     "@canvas-js/interfaces": "0.0.52",
     "@types/sha.js": "^2.4.0",
     "ava": "^5.1.0",

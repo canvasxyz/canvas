@@ -22,7 +22,6 @@
     "packages/chain-cosmos",
     "packages/chain-solana",
     "packages/chain-substrate",
-    "packages/chain-terra",
     "examples/chat-webpack",
     "examples/chat-next"
   ],
