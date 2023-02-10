@@ -3,9 +3,12 @@ import { ActionPayload, ChainImplementation, SessionPayload } from "@canvas-js/i
 import { createMockEthereumSigner, EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { createMockSolanaSigner, SolanaChainImplementation } from "@canvas-js/chain-solana"
 import { createMockSubstrateSigner, SubstrateChainImplementation } from "@canvas-js/chain-substrate"
-import { createMockCosmosSigner, CosmosChainImplementation } from "@canvas-js/chain-cosmos"
-import { createMockTerraSigner, TerraChainImplementation } from "@canvas-js/chain-terra"
-import { createMockKeplrEthereumSigner, KeplrEthereumChainImplementation } from "@canvas-js/chain-keplr-ethereum"
+import {
+	createMockCosmosSigner,
+	createMockTerraSigner,
+	createMockKeplrEthereumSigner,
+	CosmosChainImplementation,
+} from "@canvas-js/chain-cosmos"
 
 interface MockedImplementation<CI extends ChainImplementation> {
 	implementationName: string
@@ -14,34 +17,34 @@ interface MockedImplementation<CI extends ChainImplementation> {
 }
 
 const IMPLEMENTATIONS = [
-	{
-		implementationName: "ethereum",
-		chainImplementation: new EthereumChainImplementation(),
-		createMockSigner: createMockEthereumSigner,
-	},
-	{
-		implementationName: "solana",
-		chainImplementation: new SolanaChainImplementation(),
-		createMockSigner: createMockSolanaSigner,
-	},
-	{
-		implementationName: "substrate",
-		chainImplementation: new SubstrateChainImplementation(),
-		createMockSigner: createMockSubstrateSigner,
-	},
+	// {
+	// 	implementationName: "ethereum",
+	// 	chainImplementation: new EthereumChainImplementation(),
+	// 	createMockSigner: createMockEthereumSigner,
+	// },
+	// {
+	// 	implementationName: "solana",
+	// 	chainImplementation: new SolanaChainImplementation(),
+	// 	createMockSigner: createMockSolanaSigner,
+	// },
+	// {
+	// 	implementationName: "substrate",
+	// 	chainImplementation: new SubstrateChainImplementation(),
+	// 	createMockSigner: createMockSubstrateSigner,
+	// },
 	{
 		implementationName: "cosmos",
 		chainImplementation: new CosmosChainImplementation(),
 		createMockSigner: createMockCosmosSigner,
 	},
 	{
-		implementationName: "terra",
-		chainImplementation: new TerraChainImplementation(),
+		implementationName: "cosmos-terra",
+		chainImplementation: new CosmosChainImplementation(),
 		createMockSigner: createMockTerraSigner,
 	},
 	{
-		implementationName: "keplr-ethereum",
-		chainImplementation: new KeplrEthereumChainImplementation(),
+		implementationName: "cosmos-keplr-ethereum",
+		chainImplementation: new CosmosChainImplementation(),
 		createMockSigner: createMockKeplrEthereumSigner,
 	},
 ] as MockedImplementation<any>[]
