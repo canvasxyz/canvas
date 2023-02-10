@@ -100,6 +100,7 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
+	// eslint-disable-next-line
 	let { directory, uri, spec } = parseSpecArgument(args.app)
 	if (directory === null && args.install) {
 		const cid = await installSpec(spec)

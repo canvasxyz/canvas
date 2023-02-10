@@ -68,7 +68,7 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 			sessionIssued: 1,
 		} as SessionPayload
 
-		let out = await chainImplementation.signSession(signer, sessionPayload)
+		const out = await chainImplementation.signSession(signer, sessionPayload)
 		await chainImplementation.verifySession(out)
 		t.pass()
 	})
@@ -92,7 +92,7 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 			sessionIssued: 1,
 		} as SessionPayload
 
-		let out = await chainImplementation.signSession(signer, sessionPayload)
+		const out = await chainImplementation.signSession(signer, sessionPayload)
 
 		// replace the from address with another address
 		const anotherSigner = await createMockSigner()
@@ -139,7 +139,7 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 			chainId: chainImplementation.chainId,
 			timestamp: 10000000,
 		}
-		let out = await chainImplementation.signAction(signer, actionPayload)
+		const out = await chainImplementation.signAction(signer, actionPayload)
 		out.payload.from = "something else "
 		await t.throwsAsync(async () => {
 			await chainImplementation.verifyAction(out)

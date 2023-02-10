@@ -134,7 +134,7 @@ function decodeSingleIndex(i: unknown, context: t.Context): t.Validation<string 
 		return t.failure(i, context, `Index is invalid: ${i} is not a string or a list of strings`)
 	}
 
-	let errors: t.ValidationError[] = []
+	const errors: t.ValidationError[] = []
 	// check is not id
 	for (const index of indices) {
 		if (index == "id") {

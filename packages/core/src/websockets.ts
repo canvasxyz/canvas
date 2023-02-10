@@ -21,7 +21,7 @@ export function setupWebsockets(server: Server, core: Core): Server {
 	const wss = new WebSocketServer({ noServer: true })
 
 	let oldValues: Record<string, ModelValue>[] | null = null
-	let listeners: Record<string, Record<string, Record<string, () => void>>> = {}
+	const listeners: Record<string, Record<string, Record<string, () => void>>> = {}
 
 	const getListener = (ws: WebSocket & WebSocketID, route: string, params: Record<string, string>) => {
 		if (listeners[ws.id] && listeners[ws.id][route] && listeners[ws.id][route][JSON.stringify(params)]) {

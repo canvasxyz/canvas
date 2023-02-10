@@ -138,7 +138,7 @@ export async function handler(args: Args) {
 		console.log(`[canvas-cli] Daemon API listening on http://127.0.0.1:${args.port}`)
 	}
 
-	let stopping: boolean = false
+	let stopping = false
 	process.on("SIGINT", () => {
 		if (stopping) {
 			process.exit(1)

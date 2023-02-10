@@ -7,7 +7,7 @@ import { ErrorMessage } from "../components/ErrorMessage"
 const second = 1000
 const minute = 60 * second
 
-export function Application({}: {}) {
+export function Application() {
 	const { isLoading, error, data } = useCanvas()
 
 	const gossipPeers = data?.peers ? Object.entries(data.peers.gossip) : []

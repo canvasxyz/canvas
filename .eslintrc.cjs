@@ -7,7 +7,7 @@ module.exports = {
     browser: true,
     node: true,
   },
-  ignorePatterns: ["*.d.ts", "**/dist/**/*.js", "**/lib/**/*.js"],
+  ignorePatterns: ["webpack.config.js", "*.d.ts", "*.cts", "**/dist/**/*.js", "**/lib/**/*.js"],
   settings: {
     "import/parsers": {
       "@typescript-eslint/parser": [".ts", ".tsx"]
@@ -25,5 +25,11 @@ module.exports = {
   },
   rules: {
     "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/no-empty-interface": "off",
+    "no-constant-condition": "off",
+    "no-empty-pattern": "off",
   }
 };
