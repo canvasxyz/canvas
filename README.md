@@ -4,24 +4,27 @@
 [![node](https://img.shields.io/node/v/@canvas-js/core.svg)](https://www.npmjs.com/package/@canvas-js/core)
 [![npm](https://img.shields.io/npm/v/@canvas-js/core?color=33cd56&logo=npm)](https://www.npmjs.com/package/@canvas-js/core)
 
-Canvas is a peer-to-peer backend for decentralized applications,
-where every user interaction is a signed message distributed over
-[libp2p](https://libp2p.io/). Every user action is [efficiently
-synchronized](https://github.com/canvasxyz/okra) using [collaborative
-data types](https://crdt.tech/) and merged into SQLite databases.
+Canvas is a platform for decentralized applications, where every user
+interaction is a signed message distributed over a [peer-to-peer
+network](https://libp2p.io/). User actions are [efficiently
+sychronized](https://github.com/canvasxyz/okra) and executed, and
+their effects are merged using [collaborative data
+types](https://crdt.tech/). This makes it possible to build
+decentralized applications with a Web2-like developer experience, and
+near-realtime responsiveness.
 
-Unlike libp2p, Canvas provides:
+Compared to libp2p, Canvas provides:
 
 * persistence
 * efficient sync for past actions
-* the ability to read from chains
-* a concise language for expressing different versions of applications, and upgrading between them
-* built-in support for a wide range of cryptographies and signature formats
+* a concise language for defining applications, and upgrading between different versions
+* a SQL database and customizable view functions
+* a set of hooks for reading from chains
+* support for a wide range of cryptographies/signature formats
 
-Unlike Web3 databases and data blockchains, Canvas does not lock you
-into any proprietary data formats, nor will it ever require you to use
-a token. Canvas is built to be neutral infrastructure that enables a
-wide range of protocols to be constructed on top of it.
+Canvas is designed to be maximally interoperable and data-agnostic. We
+expect to support a wide range of signed data formats, plus the
+ability to sync Canvas networks to non-blockchain data sources.
 
 For more information, see the [Canvas
 documentation](https://canvasxyz.github.io/canvas-docs/docs).
@@ -46,10 +49,14 @@ npm install -g @canvas-js/cli
 
 You can run each command with --help for more detailed documentation.
 
-## Contributing to Canvas
+## Contributing
 
 Canvas is currently developed and maintained by a small team. For
 suggestions or contributions, we recommend first opening an issue or
 discussing with an existing contributor before opening a pull request.
 
 For information about how to build this repo, see DEVELOPING.md.
+
+## License
+
+MIT © 2023 Canvas Technology Corporation
