@@ -37,47 +37,47 @@ const encodeEthAddress = (bech32Prefix: string, address: string) =>
 function isEvmMetaMaskSigner(signer: unknown): signer is EvmMetaMaskSigner {
 	return (
 		!!signer &&
-		typeof signer == "object" &&
+		typeof signer === "object" &&
 		"eth" in signer &&
 		!!signer.eth &&
-		typeof signer.eth == "object" &&
+		typeof signer.eth === "object" &&
 		"personal" in signer.eth &&
-		typeof signer.eth.personal == "object" &&
+		typeof signer.eth.personal === "object" &&
 		"getAccounts" in signer.eth &&
-		typeof signer.eth.getAccounts == "function"
+		typeof signer.eth.getAccounts === "function"
 	)
 }
 
 function isKeplrEthereumSigner(signer: unknown): signer is KeplrEthereumSigner {
 	return (
 		!!signer &&
-		typeof signer == "object" &&
+		typeof signer === "object" &&
 		"signEthereum" in signer &&
-		typeof signer.signEthereum == "function" &&
+		typeof signer.signEthereum === "function" &&
 		"getOfflineSigner" in signer &&
-		typeof signer.getOfflineSigner == "function"
+		typeof signer.getOfflineSigner === "function"
 	)
 }
 
 function isOfflineAminoSigner(signer: unknown): signer is OfflineAminoSigner {
 	return (
 		!!signer &&
-		typeof signer == "object" &&
+		typeof signer === "object" &&
 		"getAccounts" in signer &&
-		typeof signer.getAccounts == "function" &&
+		typeof signer.getAccounts === "function" &&
 		"signAmino" in signer &&
-		typeof signer.signAmino == "function"
+		typeof signer.signAmino === "function"
 	)
 }
 
 function isTerraFixedExtension(signer: unknown): signer is TerraFixedExtension {
-	if (!(!!signer && typeof signer == "object")) {
+	if (!(!!signer && typeof signer === "object")) {
 		return false
 	}
 
 	const functions = ["post", "sign", "signBytes", "info", "connect", "inTransactionProgress", "disconnect"]
 	for (const funcName of functions) {
-		if (!(funcName in signer && typeof (signer as any)[funcName] == "function")) {
+		if (!(funcName in signer && typeof (signer as any)[funcName] === "function")) {
 			return false
 		}
 	}
@@ -110,7 +110,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 
 	private async verifyDirectAction(action: Action): Promise<boolean> {
 		let isValid: boolean
-		if (action.signature.slice(0, 2) == "0x") {
+		if (action.signature.slice(0, 2) === "0x") {
 			// eth
 			const message = Buffer.from(sortedStringify(action.payload))
 			isValid = await this.verifyEthSign(message, action.signature, action.payload.from)
@@ -192,7 +192,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 		const { signature } = session
 
 		let isValid
-		if (signature.slice(0, 2) == "0x") {
+		if (signature.slice(0, 2) === "0x") {
 			const message = Buffer.from(sortedStringify(session.payload))
 			isValid = await this.verifyEthSign(message, session.signature, session.payload.from)
 		} else {
@@ -229,7 +229,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 
 	isSigner(signer: unknown): signer is OfflineAminoSigner {
 		return (
-			typeof signer == "object" &&
+			typeof signer === "object" &&
 			(isEvmMetaMaskSigner(signer) ||
 				isKeplrEthereumSigner(signer) ||
 				isTerraFixedExtension(signer) ||
