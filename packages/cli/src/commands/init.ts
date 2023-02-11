@@ -20,8 +20,8 @@ export async function handler(args: Args) {
 		return
 	}
 
-	const content = `# This is an example Canvas spec that implements a simple chat application.
-# Try running it using \`canvas run --unchecked\` to get started!
+	const content = `// This is an example Canvas spec that implements a simple chat application.
+// Try running it using \`canvas run --unchecked\` to get started.
 
 export const models = {
 	posts: {
@@ -39,8 +39,7 @@ export const models = {
 }
 
 export const routes = {
-	"/posts":
-	"SELECT posts.id, posts.from_id, posts.content, posts.updated_at, COUNT(IIF(likes.value, 1, NULL)) as likes FROM posts LEFT JOIN likes ON likes.post_id = posts.id GROUP BY posts.id ORDER BY posts.updated_at DESC LIMIT 50",
+	"/posts": ({ offset = 0 }, { db }) => db.queryRaw("SELECT posts.id, posts.from_id, posts.content, posts.updated_at, COUNT(IIF(likes.value, 1, NULL)) as likes FROM posts LEFT JOIN likes ON likes.post_id = posts.id GROUP BY posts.id ORDER BY posts.updated_at DESC LIMIT 50 OFFSET :offset", { offset })
 }
 
 export const actions = {
@@ -56,5 +55,6 @@ export const actions = {
 }
 `
 	fs.writeFileSync(args.filename, content)
-	console.log(`Created sample spec at ${args.filename}`)
+	console.log(`Created sample spec at ${args.filename}.`)
+	console.log(`Try \`canvas run --unchecked ${args.filename}\` to get started!`)
 }
