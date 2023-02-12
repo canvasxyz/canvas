@@ -25,8 +25,7 @@ Canvas is designed to be maximally interoperable and data-agnostic. We
 expect to support a wide range of signed data formats, plus the
 ability to sync Canvas networks to non-blockchain data sources.
 
-For more information, see the [Canvas
-documentation](https://canvasxyz.github.io/canvas-docs/docs).
+For more information, see the [Canvas documentation](https://docs.canvas.xyz).
 
 ## Using Canvas
 
