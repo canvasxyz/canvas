@@ -37,7 +37,7 @@ export const Connect: React.FC = ({}) => {
 								style={{ marginRight: 5 }}
 							>
 								{connector.name}
-								{!connector.ready && " (unsupported)"}
+								{!connector.ready && " (unavailable)"}
 								{isConnectionLoading && connector.id === pendingConnector?.id && " (connecting)"}
 							</button>
 						))}
