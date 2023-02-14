@@ -1,11 +1,38 @@
 # @canvas-js/cli
 
-Command line interface for using Canvas.
+This package includes the command line interface for using Canvas. To install it, run:
+
+```
+npm install -g @canvas-js/cli
+```
+
+The CLI includes a built-in IPFS node, SQLite, the QuickJS VM for
+processing actions, and an API server. Use the `--help` flag to learn more.
+
+```
+canvas <command>
+
+Commands:
+  canvas init <filename>  Create a sample spec for demonstration purposes
+  canvas info <spec>      Show the models, views, and actions for a spec
+  canvas run <spec>       Run an app, by path or IPFS hash
+  canvas export <spec>    Export actions and sessions as JSON to stdout
+  canvas import <spec>    Import actions and sessions from stdin
+  canvas list             List all specs in the data directory
+  canvas install <spec>   Install an app in the canvas home directory
+  canvas daemon           Start the canvas daemon
+  canvas start <spec>     Start an app on the daemon
+  canvas stop <spec>      Stop an app on the daemon
+
+Options:
+  --version  Show version number                                       [boolean]
+  --help     Show help                                                 [boolean]
+```
 
 ## Core HTTP API
 
 ```
-$ canvas run QmFoo
+$ canvas run <QmFoo...>
 ```
 
 Binds to `http://127.0.0.1:8000` by default.
@@ -33,4 +60,4 @@ Binds to `~/.canvas/daemon.sock`. Pass a `--port` argument to additionally bind 
 - `POST /app/some-app-name/sessions` - same as session application in the Core API.
 - `GET /app/some-app-name/some/route/path` - same as fetching routes in the Core API. Either returns a `text/event-stream` or a `application/json` array, depending on the requested `Accpet` header.
 
-(c) 2022 Canvas Technology Corporation
+MIT (c) 2023 Canvas Technology Corporation
