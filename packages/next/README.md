@@ -28,5 +28,3 @@ Now, `npm run dev` will automatically look for `spec.canvas.js` in your
 project's root directory, and start a non-persistent development server.
 
 `npm run start` will start a production server.
-
-MIT (c) 2023 Canvas Technology Corporation

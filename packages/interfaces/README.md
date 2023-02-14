@@ -30,6 +30,3 @@ which stores them in a database and [MST](https://github.com/canvasxyz/okra).
 
 Canvas will also support custom action payloads. More documentation on
 this will be included in an upcoming release.
-
-
-MIT (c) 2023 Canvas Technology Corporation

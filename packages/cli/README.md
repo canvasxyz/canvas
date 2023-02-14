@@ -59,5 +59,3 @@ Binds to `~/.canvas/daemon.sock`. Pass a `--port` argument to additionally bind 
 - `POST /app/some-app-name/actions` - same as action application in the Core API.
 - `POST /app/some-app-name/sessions` - same as session application in the Core API.
 - `GET /app/some-app-name/some/route/path` - same as fetching routes in the Core API. Either returns a `text/event-stream` or a `application/json` array, depending on the requested `Accpet` header.
-
-MIT (c) 2023 Canvas Technology Corporation

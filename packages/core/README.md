@@ -131,6 +131,3 @@ A gauge counting the observed active DHT application peers.
 | label name | type     | description              |
 | ---------- | -------- | ------------------------ |
 | `uri`      | `string` | the source `ipfs://` URI |
-
-
-(c) 2022 Canvas Technology Corporation

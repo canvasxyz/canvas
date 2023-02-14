@@ -196,5 +196,3 @@ export function useSession<Signer, DelegatedSigner>(
 	client: Client | null
 }
 ```
-
-MIT (c) 2023 Canvas Technology Corporation
