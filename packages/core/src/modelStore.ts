@@ -116,7 +116,7 @@ export class ModelStore {
 		this.database.close()
 	}
 
-	public getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]> {
+	public getRoute(route: string, params: Record<string, string> = {}): Promise<Record<string, ModelValue>[]> {
 		assert(route in this.vm.routes, "invalid route name")
 		const filteredParams = mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value))
 		return this.vm.executeRoute(route, filteredParams, (query: string | Query) => {

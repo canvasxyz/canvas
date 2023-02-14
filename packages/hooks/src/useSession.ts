@@ -79,7 +79,7 @@ export function useSession<Signer, DelegatedSigner>(
 		if (host === null) {
 			throw new Error("no host configured")
 		} else if (data === null) {
-			throw new Error("login() called before the application connection was established")
+			throw new Error("login() called before a connection to the Canvas node was established")
 		} else if (signer === null || signer === undefined) {
 			throw new Error("login() called without a signer")
 		} else if (isPending) {

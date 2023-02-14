@@ -278,7 +278,7 @@ export async function handler(args: Args) {
 
 		console.log("[canvas-cli] Closing core...")
 		await core.close()
-		console.log("[canvas-cli] Core closed.")
+		console.log("[canvas-cli] Core closed, press Ctrl+C to terminate immediately.")
 		if (libp2p !== null) {
 			await libp2p.stop()
 		}
