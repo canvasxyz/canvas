@@ -48,6 +48,7 @@ export function validateCanvasSpec(
 		component: null,
 		routeHandles: {},
 		actionHandles: {},
+		customAction: null,
 		sourceHandles: {},
 	}
 
@@ -100,18 +101,59 @@ export function validateCanvasSpec(
 			const actionNamePattern = /^[a-zA-Z]+$/
 			for (const [name, handle] of Object.entries(actionsHandle.consume((handle) => unwrapObject(context, handle)))) {
 				if (
-					assertLogError(
+					!assertLogError(
 						actionNamePattern.test(name),
 						`Action '${name}' is invalid: action names must match ${actionNamePattern}`
-					) &&
+					)
+				) {
+					handle.dispose()
+					continue
+				}
+
+				if (context.typeof(handle) === "object") {
+					// evaluate object
+					const customAction = handle.consume((customActionHandle) => unwrapObject(context, customActionHandle))
+					// check if it has the right fields/types
+					// should be an object
+					if (
+						!assertLogError(
+							context.typeof(customAction["schema"]) === "object",
+							`Custom action schema is invalid: it should be an object`
+						)
+					) {
+						continue
+					}
+
+					if (
+						!assertLogError(
+							context.typeof(customAction["fn"]) === "function",
+							`Custom action function is invalid: it should be a function`
+						)
+					) {
+						continue
+					}
+
+					if (
+						!assertLogError(exports.customAction == null, `Contract is invalid: more than one custom action is defined`)
+					) {
+						continue
+					}
+
+					exports.customAction = {
+						name,
+						schema: customAction["schema"],
+						fn: customAction["fn"],
+					}
+				} else if (
 					assertLogError(
 						context.typeof(handle) === "function",
-						`Action '${name}' is invalid: 'actions.${name}' is not a function`
+						`Action '${name}' is invalid: 'actions.${name}' is not a function or valid custom action`
 					)
 				) {
 					exports.actionHandles[name] = handle
 				} else {
 					handle.dispose()
+					continue
 				}
 			}
 		} else {
