@@ -242,7 +242,7 @@ const VALIDATION_TEST_FIXTURES: {
         doThing: 1234
       }
     `,
-		expectedResult: errors(["Action 'doThing' is invalid: 'actions.doThing' is not a function"]),
+		expectedResult: errors(["Action 'doThing' is invalid: 'actions.doThing' is not a function or valid custom action"]),
 	},
 	{
 		name: "reject contracts not defined as an object",
