@@ -19,7 +19,6 @@ export const App: React.FC = ({}) => {
 	const syncPeers = data?.peers ? Object.entries(data.peers.sync) : []
 
 	const now = Date.now()
-	console.log(data)
 	const root = data && data.merkleRoots && data.merkleRoots[data.uri]
 
 	return (

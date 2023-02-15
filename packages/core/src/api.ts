@@ -60,6 +60,15 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
 		}
 
+		if (req.body.hasSession) {
+			try {
+				const { session } = core.messageStore.getSessionByAddress(req.body.chain, req.body.chainId, req.body.hasSession)
+				return res.json({ hasSession: session !== null })
+			} catch (err) {
+				return res.json({ hasSession: false })
+			}
+		}
+
 		try {
 			const { hash } = await core.applySession(req.body)
 			res.json({ hash })
