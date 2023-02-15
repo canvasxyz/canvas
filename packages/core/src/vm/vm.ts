@@ -325,6 +325,7 @@ export class VM {
 			actionHandles: this.actionHandles,
 			component: this.component,
 			contractMetadata: this.contractMetadata,
+			customAction: null,
 			models: this.models,
 			routeHandles: this.routeHandles,
 			sourceHandles: this.sourceHandles,
