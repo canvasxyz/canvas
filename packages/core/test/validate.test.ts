@@ -438,6 +438,17 @@ const VALIDATION_TEST_FIXTURES: {
     `,
 		expectedResult: errors(["Custom action schema is invalid: it should be an object"]),
 	},
+	{
+		name: "reject if more than one custom action is defined",
+		app: `
+      export const models = {};
+      export const actions = {
+        doThing: customAction({}, () => {}),
+        doOtherThing: customAction({}, () => {})
+      };
+    `,
+		expectedResult: errors(["Contract is invalid: more than one custom action is defined"]),
+	},
 ]
 
 for (const { name, app, expectedResult } of VALIDATION_TEST_FIXTURES) {

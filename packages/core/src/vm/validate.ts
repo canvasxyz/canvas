@@ -154,6 +154,7 @@ export function validateCanvasSpec(
 					if (
 						!assertLogError(exports.customAction == null, `Contract is invalid: more than one custom action is defined`)
 					) {
+						disposeObject(customAction)
 						continue
 					}
 
