@@ -36,7 +36,7 @@ import {
 	// newBigInt,
 } from "./utils.js"
 import { validateCanvasSpec } from "./validate.js"
-import { Exports, disposeExports } from "./exports.js"
+import { CustomActionDefinition, Exports, disposeExports } from "./exports.js"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 interface VMOptions {
