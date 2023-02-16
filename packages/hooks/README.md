@@ -1,7 +1,12 @@
-# @canvas-js/hooks
+# Canvas React Hooks
 
-This package includes React hooks for using Canvas in your frontend
+Canvas provides React hooks for using Canvas in your frontend
 application.
+
+The React hooks are currently tested with Ethereum-compatible chains
+only, with [Ethers v5](https://docs.ethers.org/v5/) and
+[wagmi](https://wagmi.sh/).
+
 
 ## Table of Contents
 

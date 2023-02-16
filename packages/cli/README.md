@@ -1,6 +1,10 @@
-# @canvas-js/cli
+# Canvas Command Line
 
-This package includes the command line interface for using Canvas. To install it, run:
+Canvas provides a command line interface for starting a node for any
+Canvas contract. This is the primary and recommended way to run
+applications and join the peer-to-peer network.
+
+To install the CLI, run:
 
 ```
 npm install -g @canvas-js/cli
@@ -29,7 +33,44 @@ Options:
   --help     Show help                                                 [boolean]
 ```
 
-## Core HTTP API
+## `canvas run`
+
+To run a Canvas node, here are a few important options:
+
+- `--chain-rpc` is used to provide the node with RPC URLs where it can get blockchain data. You should provide an RPC node for each unique chain ID that you want your contracts to support. The set of supported chains is automatically relayed to the frontend, so any React hooks can prompt the user to switch to the right chain.
+- Running an application by its filename will run it in development mode. To run an application in production mode, provide `--install` or run it by providing its IPFS hash.
+- `--static` can be used to serve static files alongside an application. This can be used to serve a Canvas frontend at the base URL `/` which talks to APIs served under the `/api` path.
+
+```
+canvas run <app>
+
+Run an app, by path or IPFS hash
+
+Positionals:
+  app  Path to app file, or IPFS hash of app                 [string] [required]
+
+Options:
+  --version    Show version number                                     [boolean]
+  --help       Show help                                               [boolean]
+  --port       Port to bind the Core API                [number] [default: 8000]
+  --offline    Disable libp2p                         [boolean] [default: false]
+  --install    Install a local app and run it in production mode
+                                                      [boolean] [default: false]
+  --listen     libp2p WebSocket transport port          [number] [default: 4044]
+  --announce   Accept incoming libp2p connections on a public multiaddr [string]
+  --reset      Reset the message log and model databases
+                                                      [boolean] [default: false]
+  --replay     Reconstruct the model database by replying the message log
+                                                      [boolean] [default: false]
+  --unchecked  Run the node in unchecked mode, without verifying block hashes
+                                                                       [boolean]
+  --metrics    Expose Prometheus endpoint at /metrics [boolean] [default: false]
+  --verbose    Enable verbose logging                 [boolean] [default: false]
+  --chain-rpc  Provide an RPC endpoint for reading on-chain data         [array]
+  --static     Serve a static directory from /, and API routes from /api[string]
+```
+
+## Single-Core HTTP API
 
 ```
 $ canvas run <QmFoo...>
@@ -40,7 +81,7 @@ Binds to `http://127.0.0.1:8000` by default.
 - `GET /` - get metadata about the application. Returns `{ uri: string; cid: string; actions: string[]; routes: string[] }`.
 - `POST /actions` - apply an action.
 - `POST /sessions` - apply a session.
-- `GET /some/route/path` - Get the value of a route, or open an server-sent event connection. Either returns a `text/event-stream` or a `application/json` array, depending on the requested `Accpet` header.
+- `GET /some/route/path` - Get the value of a route, or open an server-sent event connection. Either returns a `text/event-stream` or a `application/json` array, depending on the requested `Accept` header.
 
 ## Daemon HTTP API
 
