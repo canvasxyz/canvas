@@ -6,7 +6,6 @@ export type Exports = {
 	name: string | null
 	actionHandles: Record<string, QuickJSHandle>
 	contractMetadata: Record<string, ContractMetadata>
-	component: string | null
 	models: Record<string, Model>
 	routeHandles: Record<string, QuickJSHandle>
 	sourceHandles: Record<string, Record<string, QuickJSHandle>>

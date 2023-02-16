@@ -3,14 +3,12 @@
 This package includes React hooks for using Canvas in your frontend
 application.
 
-
 ## Table of Contents
 
 - [`<Canvas />`](#canvas)
 - [`useCanvas`](#usecanvas)
 - [`useRoute`](#useroute)
 - [`useSession`](#usesession)
-
 
 ## `<Canvas />`
 
@@ -35,7 +33,6 @@ Then, in any component inside your app, you can use the three hooks:
   injected signer from other networks, and returns a client for
   dispatching actions.
 
-
 ## `useCanvas`
 
 You can then access metadata about the host and the application the host is serving using the `useCanvas` hook anywhere inside the parent `Canvas` element.
@@ -57,7 +54,6 @@ interface ApplicationData {
 	cid: string
 	uri: string
 	appName: string
-	component: string | null
 	actions: string[]
 	routes: string[]
 	peerId: string | null

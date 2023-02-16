@@ -22,7 +22,6 @@ export function validateCanvasSpec(
 		routes: routesHandle,
 		actions: actionsHandle,
 		contracts: contractsHandle,
-		component: componentHandle,
 		sources: sourcesHandle,
 		...rest
 	} = moduleHandle.consume((handle) => unwrapObject(context, handle))
@@ -45,7 +44,6 @@ export function validateCanvasSpec(
 		name: null,
 		models: {},
 		contractMetadata: {},
-		component: null,
 		routeHandles: {},
 		actionHandles: {},
 		sourceHandles: {},
@@ -165,13 +163,6 @@ export function validateCanvasSpec(
 		} else {
 			contractsHandle.dispose()
 		}
-	}
-
-	if (componentHandle !== undefined) {
-		if (assertLogError(context.typeof(componentHandle) === "function", "`component` export must be a function")) {
-			exports.component = call(context, "Function.prototype.toString", componentHandle).consume(context.getString)
-		}
-		componentHandle.dispose()
 	}
 
 	if (sourcesHandle !== undefined) {

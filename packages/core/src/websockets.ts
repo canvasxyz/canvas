@@ -57,7 +57,7 @@ export function setupWebsockets(server: Server, core: Core): Server {
 			console.log(chalk.green(`[canvas-core] ws-${ws.id}: sent application status`))
 		}
 
-		const { component, routes, actions } = core.vm
+		const { routes, actions } = core.vm
 		const message = JSON.stringify({
 			action: "application",
 			data: {
@@ -65,7 +65,6 @@ export function setupWebsockets(server: Server, core: Core): Server {
 				appName: core.appName,
 				cid: core.cid.toString(),
 				peerId: core.libp2p && core.libp2p.peerId.toString(),
-				component,
 				actions,
 				routes: Object.keys(routes),
 				merkleRoots: core.mst && core.mst.roots,

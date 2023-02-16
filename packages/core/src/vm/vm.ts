@@ -3,7 +3,6 @@ import assert from "node:assert"
 import chalk from "chalk"
 import { fetch } from "undici"
 import { getQuickJS, isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime } from "quickjs-emscripten"
-import { transform } from "sucrase"
 import { ethers } from "ethers"
 import Hash from "ipfs-only-hash"
 import PQueue from "p-queue"
@@ -59,15 +58,7 @@ export class VM {
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
-		const { code: transpiledSpec } = transform(spec, {
-			transforms: ["jsx"],
-			jsxPragma: "React.createElement",
-			jsxFragmentPragma: "React.Fragment",
-			disableESTransforms: true,
-			production: true,
-		})
-
-		const moduleHandle = await loadModule(context, app, transpiledSpec)
+		const moduleHandle = await loadModule(context, app, spec)
 
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
@@ -84,30 +75,20 @@ export class VM {
 	}
 
 	public static async validate(spec: string): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
-		let transpiledSpec: string
-		try {
-			transpiledSpec = transform(spec, {
-				transforms: ["jsx"],
-				jsxPragma: "React.createElement",
-				jsxFragmentPragma: "React.Fragment",
-				disableESTransforms: true,
-				production: true,
-			}).code
-		} catch (e: any) {
-			return {
-				valid: false,
-				errors: [`Syntax error: ${e.message}`],
-				warnings: [],
-			}
-		}
-
 		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
 		const cid = await Hash.of(spec)
-		const moduleHandle = await loadModule(context, `ipfs://${cid}`, transpiledSpec)
+
+		let moduleHandle: QuickJSHandle
+		try {
+			moduleHandle = await loadModule(context, `ipfs://${cid}`, spec)
+		} catch (err: any) {
+			return { valid: false, errors: [err.toString()], warnings: [] }
+		}
+
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
 		let result: { valid: boolean; errors: string[]; warnings: string[] }
@@ -129,7 +110,6 @@ export class VM {
 	public readonly appName: string
 	public readonly models: Record<string, Model>
 	public readonly actions: string[]
-	public readonly component: string | null
 	public readonly routes: Record<string, string[]>
 	public readonly contracts: Record<string, ethers.Contract>
 	public readonly contractMetadata: Record<string, ContractMetadata>
@@ -160,7 +140,6 @@ export class VM {
 		this.sourceHandles = exports.sourceHandles
 
 		this.appName = exports.name || "Canvas"
-		this.component = exports.component
 
 		// Generate public fields that are derived from the passed in arguments
 		this.sources = new Set(Object.keys(this.sourceHandles))
@@ -323,7 +302,6 @@ export class VM {
 		disposeExports({
 			name: this.appName,
 			actionHandles: this.actionHandles,
-			component: this.component,
 			contractMetadata: this.contractMetadata,
 			models: this.models,
 			routeHandles: this.routeHandles,
