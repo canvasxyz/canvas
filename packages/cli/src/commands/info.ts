@@ -51,8 +51,12 @@ export async function handler(args: Args) {
 			abi.forEach((line) => console.log(`- ${line}`))
 		})
 		console.log("")
-	} catch (e: any) {
-		console.log(chalk.red(e.message))
+	} catch (err) {
+		if (err instanceof Error) {
+			console.log(chalk.red(err.message))
+		} else {
+			throw err
+		}
 	}
 
 	process.exit(0)

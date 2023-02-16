@@ -3,6 +3,8 @@ import assert from "node:assert"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats"
 
+import { configure } from "safe-stable-stringify"
+
 import type {
 	ActionArgument,
 	Chain,
@@ -14,7 +16,7 @@ import type {
 	Query,
 } from "@canvas-js/interfaces"
 
-import { configure } from "safe-stable-stringify"
+import type { ContractFunctionArgument, ContractFunctionResult } from "./vm/index.js"
 
 export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
 
@@ -79,7 +81,7 @@ type Context<Models extends Record<string, Model>> = {
 			delete: (id: string) => void
 		}
 	}
-	contracts: Record<string, Record<string, (...args: any[]) => Promise<any[]>>>
+	contracts: Record<string, Record<string, (...args: ContractFunctionArgument[]) => Promise<ContractFunctionResult[]>>>
 }
 
 type ActionHandler<Models extends Record<string, Model>> = (
@@ -190,20 +192,23 @@ async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, 
 export async function retry<T>(
 	f: () => Promise<T>,
 	handleError: (err: Error, n: number) => void,
-	options: { interval: number; signal: AbortSignal }
+	options: { interval: number; signal: AbortSignal; maxRetries?: number }
 ): Promise<T> {
-	let n = 0
-	while (true) {
+	const maxRetries = options.maxRetries ?? Infinity
+
+	for (let n = 0; n < maxRetries; n++) {
 		const result = await getResult(f)
 		if (result.done) {
 			return result.value
 		} else if (options.signal.aborted) {
 			throw result.value
 		} else {
-			handleError(result.value, n++)
+			handleError(result.value, n)
 			await wait(options)
 		}
 	}
+
+	throw new Error("exceeded max retries")
 }
 
 export const toBuffer = (array: Uint8Array) => Buffer.from(array.buffer, array.byteOffset, array.byteLength)

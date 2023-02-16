@@ -132,11 +132,14 @@ export class ModelStore {
 				} else {
 					return prepared.all(query.args)
 				}
-			} catch (err: any) {
-				// Show a little more debugging information for queries
-				const params = typeof query === "string" ? "none" : JSON.stringify(query.args)
-				const formatted = (typeof query === "string" ? query : query.query).replace(/\n/g, " ")
-				err.message = `${err.message} (query: ${formatted}, parameters: ${params})`
+			} catch (err) {
+				if (err instanceof Error) {
+					// Show a little more debugging information for queries
+					const params = typeof query === "string" ? "none" : JSON.stringify(query.args)
+					const formatted = (typeof query === "string" ? query : query.query).replace(/\n/g, " ")
+					err.message = `${err.message} (query: ${formatted}, parameters: ${params})`
+				}
+
 				throw err
 			}
 		})

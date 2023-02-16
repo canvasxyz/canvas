@@ -36,10 +36,14 @@ export function setupWebsockets(server: Server, core: Core): Server {
 			let newValues: Record<string, ModelValue>[]
 			try {
 				newValues = await core.getRoute(route, params)
-			} catch (err: any) {
+			} catch (err) {
 				// closed = true
-				console.log(chalk.red("[canvas-core] error evaluating route"), err)
-				return ws.send(JSON.stringify({ route, params, error: err.toString() }))
+				if (err instanceof Error) {
+					console.log(chalk.red(`[canvas-core] error evaluating route (${err.message})`))
+					return ws.send(JSON.stringify({ route, params, error: err.message }))
+				} else {
+					throw err
+				}
 			}
 			if (oldValues === null || !compareResults(oldValues, newValues)) {
 				return ws.send(JSON.stringify({ route, params, data: newValues }))

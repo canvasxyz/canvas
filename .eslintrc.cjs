@@ -35,15 +35,12 @@ module.exports = {
     "@typescript-eslint/no-unused-vars": "off",
     "@typescript-eslint/no-non-null-assertion": "off",
     "@typescript-eslint/no-empty-interface": "off",
-    "no-constant-condition": "off",
     "no-empty-pattern": "off",
     "@typescript-eslint/ban-types": [
       "error",
       {
         "extendDefaults": true,
-        "types": {
-          "{}": false,
-        },
+        "types": { "{}": false },
       },
     ],
   },

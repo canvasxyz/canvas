@@ -326,7 +326,7 @@ export class Source {
 		let stream: Stream
 		try {
 			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal: queryController.signal })
-		} catch (err: any) {
+		} catch (err) {
 			if (err instanceof Error) {
 				console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to dial peer ${peer.toString()} (${err.message})`))
 				return

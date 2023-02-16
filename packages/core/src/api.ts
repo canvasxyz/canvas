@@ -48,9 +48,13 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		try {
 			const { hash } = await core.applyAction(req.body)
 			res.json({ hash })
-		} catch (err: any) {
-			console.log(chalk.red(`[canvas-core] Failed to apply action:`), err)
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
+		} catch (err) {
+			if (err instanceof Error) {
+				console.log(chalk.red(`[canvas-core] Failed to apply action (${err.message})`))
+				return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+			} else {
+				throw err
+			}
 		}
 	})
 
@@ -71,9 +75,14 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		try {
 			const { hash } = await core.applySession(req.body)
 			res.json({ hash })
-		} catch (err: any) {
-			console.log(chalk.red(`[canvas-core] Failed to create session:`), err)
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
+		} catch (err) {
+			if (err instanceof Error) {
+				console.log(chalk.red(`[canvas-core] Failed to create session (${err.message})`))
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+			} else {
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+				throw err
+			}
 		}
 	})
 

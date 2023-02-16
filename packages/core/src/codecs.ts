@@ -87,7 +87,7 @@ function decodeToIs<T>(decodeFunc: (input: unknown, context: t.Context) => t.Val
 	return is
 }
 
-function getErrors(validation: t.Validation<any>): t.Errors {
+function getErrors<T>(validation: t.Validation<T>): t.Errors {
 	return isLeft(validation) ? validation.left : []
 }
 

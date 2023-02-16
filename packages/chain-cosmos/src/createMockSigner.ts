@@ -21,10 +21,10 @@ export async function createMockTerraSigner(): Promise<FixedExtension> {
 	const address: string = wallet.accAddress("terra")
 
 	return {
-		post: (data: any) => {
+		post: (data) => {
 			throw Error("Not implemented!")
 		},
-		sign: (data: any) => {
+		sign: (data) => {
 			throw Error("Not implemented!")
 		},
 		signBytes: async (bytes: Buffer) => {

@@ -85,8 +85,12 @@ export class VM {
 		let moduleHandle: QuickJSHandle
 		try {
 			moduleHandle = await loadModule(context, `ipfs://${cid}`, spec)
-		} catch (err: any) {
-			return { valid: false, errors: [err.toString()], warnings: [] }
+		} catch (err) {
+			if (err instanceof Error) {
+				return { valid: false, errors: [err.toString()], warnings: [] }
+			} else {
+				throw err
+			}
 		}
 
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
@@ -218,12 +222,11 @@ export class VM {
 								"action called a contract function but did not include a blockhash or block identifier"
 							)
 
-							const args: ContractFunctionResult[] = argHandles.map(context.dump)
+							const args = this.unwrapContractFunctionArguments(argHandles)
+
 							if (options.verbose) {
-								const call = chalk.green(
-									`${contractName}.${functionName}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`
-								)
-								console.log(`[canvas-vm] contract: ${call} at block (${block})`)
+								const call = `${contractName}.${functionName}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`
+								console.log(`[canvas-vm] contract: ${chalk.green(call)} at block (${block})`)
 							}
 
 							const deferred = context.newPromise()
@@ -251,7 +254,7 @@ export class VM {
 		wrapObject(context, {
 			// console.log:
 			console: wrapObject(context, {
-				log: context.newFunction("log", (...args: any[]) => console.log("[canvas-vm]", ...args.map(context.dump))),
+				log: context.newFunction("log", (...args) => console.log("[canvas-vm]", ...args.map(context.dump))),
 			}),
 
 			assert: context.newFunction("assert", (condition: QuickJSHandle, message?: QuickJSHandle) => {
@@ -484,6 +487,27 @@ export class VM {
 		return values
 	}
 
+	private unwrapContractFunctionArguments = (argHandles: QuickJSHandle[]): ContractFunctionArgument[] => {
+		const args = argHandles.map(this.context.dump)
+
+		for (const arg of args) {
+			switch (typeof arg) {
+				case "string":
+					continue
+				case "boolean":
+					continue
+				case "number":
+					continue
+				case "bigint":
+					continue
+				default:
+					throw new Error("invalid contract function argument")
+			}
+		}
+
+		return args
+	}
+
 	private wrapContractFunctionResult = (value: ContractFunctionResult): QuickJSHandle => {
 		if (value === true) {
 			return this.context.true
@@ -506,4 +530,5 @@ export class VM {
 	}
 }
 
-type ContractFunctionResult = string | boolean | number | bigint | ethers.BigNumber
+export type ContractFunctionArgument = string | boolean | number | bigint
+export type ContractFunctionResult = string | boolean | number | bigint | ethers.BigNumber

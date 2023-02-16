@@ -177,7 +177,7 @@ export async function handler(args: Args) {
 	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen: peeringPort, announce } = args
 
 	const peerId = await getPeerId()
-	console.log(`[canvas-cli] Using PeerId ${peerId.toString()}`)
+	console.log(`[canvas-cli] Using PeerId ${peerId}`)
 
 	let libp2p: Libp2p | null = null
 	if (!offline) {
@@ -190,11 +190,11 @@ export async function handler(args: Args) {
 
 		if (verbose) {
 			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
-				console.log(`[canvas-cli] Connected to ${remotePeer.toString()} (${id})`)
+				console.log(`[canvas-cli] Connected to ${remotePeer} (${id})`)
 			)
 
 			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
-				console.log(`[canvas-cli] Disconnected from ${remotePeer.toString()} (${id})`)
+				console.log(`[canvas-cli] Disconnected from ${remotePeer} (${id})`)
 			)
 		}
 	}
