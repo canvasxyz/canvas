@@ -77,6 +77,7 @@ function isTerraFixedExtension(signer: unknown): signer is TerraFixedExtension {
 
 	const functions = ["post", "sign", "signBytes", "info", "connect", "inTransactionProgress", "disconnect"]
 	for (const funcName of functions) {
+		// const fn = signer[funcName]
 		if (!(funcName in signer && typeof (signer as any)[funcName] === "function")) {
 			return false
 		}
@@ -225,20 +226,6 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 	getDelegatedSignerAddress = async (privkey: Secp256k1WalletPrivateKey) => {
 		const wallet = await Secp256k1Wallet.fromKey(privkey)
 		return (await wallet.getAccounts())[0].address
-	}
-
-	isSigner(signer: unknown): signer is OfflineAminoSigner {
-		return (
-			typeof signer === "object" &&
-			(isEvmMetaMaskSigner(signer) ||
-				isKeplrEthereumSigner(signer) ||
-				isTerraFixedExtension(signer) ||
-				isOfflineAminoSigner(signer))
-		)
-	}
-
-	isDelegatedSigner(delegatedSigner: unknown): delegatedSigner is Secp256k1WalletPrivateKey {
-		return delegatedSigner instanceof Uint8Array
 	}
 
 	async signSession(signer: CosmosSigner, payload: SessionPayload): Promise<Session> {

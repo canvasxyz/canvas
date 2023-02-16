@@ -82,14 +82,6 @@ export class EthereumChainImplementation
 
 	getDelegatedSignerAddress = async (wallet: ethers.Wallet) => wallet.address
 
-	isSigner(signer: unknown): signer is ethers.Signer & TypedDataSigner {
-		return signer instanceof ethers.Wallet || signer instanceof ethers.providers.JsonRpcSigner
-	}
-
-	isDelegatedSigner(delegatedSigner: unknown): delegatedSigner is ethers.Wallet {
-		return delegatedSigner instanceof ethers.Wallet
-	}
-
 	signAction = (signer: ethers.Signer & TypedDataSigner, payload: ActionPayload) => signAction(signer, payload, null)
 
 	signDelegatedAction = (wallet: ethers.Wallet, payload: ActionPayload) => signAction(wallet, payload, wallet.address)

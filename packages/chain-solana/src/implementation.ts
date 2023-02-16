@@ -67,14 +67,6 @@ export class SolanaChainImplementation implements ChainImplementation<SolanaWind
 	}
 	getDelegatedSignerAddress = async (wallet: solw3.Keypair) => bs58.encode(wallet.publicKey.toBytes())
 
-	isSigner(signer: unknown): signer is SolanaWindowSigner {
-		return !(signer instanceof solw3.Keypair)
-	}
-
-	isDelegatedSigner(delegatedSigner: unknown): delegatedSigner is solw3.Keypair {
-		return delegatedSigner instanceof solw3.Keypair
-	}
-
 	async signSession(signer: SolanaWindowSigner, payload: SessionPayload): Promise<Session> {
 		if (signer.publicKey === null || signer.publicKey === undefined) throw new Error("Wallet not connected")
 		const address = bs58.encode(signer.publicKey.toBytes())
