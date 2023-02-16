@@ -408,6 +408,36 @@ const VALIDATION_TEST_FIXTURES: {
 			`Source 'ipfs://abcdefhijklmnop' is invalid: sources["ipfs://abcdefhijklmnop"].doSourceThing is not a function`,
 		]),
 	},
+	{
+		name: "accept a basic custom action",
+		app: `
+      export const models = {};
+      export const actions = {
+        doThing: customAction({}, () => {})
+      };
+    `,
+		expectedResult: success,
+	},
+	{
+		name: "reject a basic custom action with an invalid function type",
+		app: `
+      export const models = {};
+      export const actions = {
+        doThing: customAction({}, null)
+      };
+    `,
+		expectedResult: errors(["Custom action function is invalid: it should be a function"]),
+	},
+	{
+		name: "reject a basic custom action with no schema/function definition",
+		app: `
+      export const models = {};
+      export const actions = {
+        doThing: customAction()
+      };
+    `,
+		expectedResult: errors(["Custom action schema is invalid: it should be an object"]),
+	},
 ]
 
 for (const { name, app, expectedResult } of VALIDATION_TEST_FIXTURES) {

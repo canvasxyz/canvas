@@ -129,6 +129,7 @@ export class VM {
 	public readonly appName: string
 	public readonly models: Record<string, Model>
 	public readonly actions: string[]
+	public readonly customAction: CustomActionDefinition | null
 	public readonly component: string | null
 	public readonly routes: Record<string, string[]>
 	public readonly contracts: Record<string, ethers.Contract>
@@ -157,6 +158,7 @@ export class VM {
 		this.contractMetadata = exports.contractMetadata
 		this.routeHandles = exports.routeHandles
 		this.actionHandles = exports.actionHandles
+		this.customAction = exports.customAction
 		this.sourceHandles = exports.sourceHandles
 
 		this.appName = exports.name || "Canvas"
@@ -325,7 +327,7 @@ export class VM {
 			actionHandles: this.actionHandles,
 			component: this.component,
 			contractMetadata: this.contractMetadata,
-			customAction: null,
+			customAction: this.customAction,
 			models: this.models,
 			routeHandles: this.routeHandles,
 			sourceHandles: this.sourceHandles,

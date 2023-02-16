@@ -12,6 +12,12 @@ import { unwrapObject, call } from "./utils.js"
 
 import { Exports, disposeExports } from "./exports.js"
 
+function disposeObject(obj: Record<string, QuickJSHandle>) {
+	for (const value of Object.values(obj)) {
+		value.dispose()
+	}
+}
+
 export function validateCanvasSpec(
 	context: QuickJSContext,
 	moduleHandle: QuickJSHandle
@@ -114,13 +120,24 @@ export function validateCanvasSpec(
 					// evaluate object
 					const customAction = handle.consume((customActionHandle) => unwrapObject(context, customActionHandle))
 					// check if it has the right fields/types
-					// should be an object
+					if (
+						!assertLogError(
+							Object.keys(customAction).length == 2 && "schema" in customAction && "fn" in customAction,
+							`Custom action definition must contain a schema and a function definition`
+						)
+					) {
+						disposeObject(customAction)
+						continue
+					}
+
 					if (
 						!assertLogError(
 							context.typeof(customAction["schema"]) === "object",
 							`Custom action schema is invalid: it should be an object`
 						)
 					) {
+						// should be an object
+						disposeObject(customAction)
 						continue
 					}
 
@@ -130,6 +147,7 @@ export function validateCanvasSpec(
 							`Custom action function is invalid: it should be a function`
 						)
 					) {
+						disposeObject(customAction)
 						continue
 					}
 
@@ -141,7 +159,7 @@ export function validateCanvasSpec(
 
 					exports.customAction = {
 						name,
-						schema: customAction["schema"],
+						schema: customAction["schema"].consume(context.dump),
 						fn: customAction["fn"],
 					}
 				} else if (
