@@ -1,6 +1,7 @@
 import assert from "node:assert"
 
 import { isFail, QuickJSContext, QuickJSHandle, VmCallResult } from "quickjs-emscripten"
+import { signalInvalidType } from "../utils.js"
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
 export interface JSONArray extends Array<JSONValue> {}
@@ -75,6 +76,33 @@ export function call(
 // export function newBigInt(context: QuickJSContext, value: bigint): QuickJSHandle {
 // 	return context.newString(value.toString()).consume((handle) => call(context, "BigInt", null, handle))
 // }
+
+export function marshalJSONObject(context: QuickJSContext, object: any): QuickJSHandle {
+	const i = typeof object
+	if (i == "string") {
+		return context.newString(object)
+	} else if (i == "number") {
+		return context.newNumber(object)
+	} else if (i == "boolean") {
+		return object ? context.true : context.false
+	} else if (i == "object") {
+		if (object == null) {
+			return context.null
+		} else {
+			const o = context.newObject()
+			Object.keys(object).map((key) => {
+				context.setProp(o, key, marshalJSONObject(context, object[key]))
+			})
+			return o
+		}
+	} else if (i == "undefined") {
+		return context.undefined
+	} else if (i == "function" || i == "bigint" || i == "symbol") {
+		throw Error(`Cannot marshal JSON object to QuickJS: type ${i} is unsupported`)
+	} else {
+		signalInvalidType(i)
+	}
+}
 
 /**
  * Wrap an object outside a QuickJS VM by one level,
@@ -171,6 +199,16 @@ export async function loadModule(
 			throw new Error("module imports are not allowed")
 		}
 	})
+
+	wrapObject(context, {
+		customAction: context.newFunction("customAction", (schema, fn) => {
+			// Create a new object within the vm that stores the schema and action function
+			const actionObject = context.newObject()
+			context.setProp(actionObject, "fn", fn || context.undefined)
+			context.setProp(actionObject, "schema", schema || context.undefined)
+			return actionObject
+		}),
+	}).consume((globalsHandle) => call(context, "Object.assign", null, context.global, globalsHandle).dispose())
 
 	const moduleResult = context.evalCode(`import("${moduleName}")`)
 	const modulePromise = context.unwrapResult(moduleResult)

@@ -3,6 +3,7 @@ import assert from "node:assert"
 import chalk from "chalk"
 import { fetch } from "undici"
 import { getQuickJS, isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime } from "quickjs-emscripten"
+import { addSchema } from "@hyperjump/json-schema/draft-2020-12"
 import { transform } from "sucrase"
 import { ethers } from "ethers"
 import Hash from "ipfs-only-hash"
@@ -33,6 +34,7 @@ import {
 	wrapJSON,
 	resolvePromise,
 	wrapArray,
+	marshalJSONObject,
 	// newBigInt,
 } from "./utils.js"
 import { validateCanvasSpec } from "./validate.js"
@@ -129,6 +131,7 @@ export class VM {
 	public readonly appName: string
 	public readonly models: Record<string, Model>
 	public readonly actions: string[]
+	public readonly customActionSchemaName: string | null
 	public readonly customAction: CustomActionDefinition | null
 	public readonly component: string | null
 	public readonly routes: Record<string, string[]>
@@ -145,6 +148,7 @@ export class VM {
 	private readonly queue = new PQueue({ concurrency: 1 })
 	private effects: Effect[] | null = null
 	private actionContext: ActionContext | null = null
+	private customActionContext: { timestamp: number } | null = null
 
 	constructor(
 		public readonly app: string,
@@ -169,6 +173,15 @@ export class VM {
 		this.actions = Object.keys(this.actionHandles)
 
 		this.contracts = {}
+
+		// should this just be done inside validate?
+		let schemaName: string | null = null
+		// compile the custom action schema
+		if (this.customAction) {
+			schemaName = `customActionSchema:${this.app}:${this.customAction.name}`
+			addSchema(this.customAction.schema, schemaName)
+		}
+		this.customActionSchemaName = schemaName
 
 		// add this back for ethers@v6
 		// const functionNames: Record<string, string[]> = {}
@@ -414,7 +427,17 @@ export class VM {
 		this.effects = effects
 		this.actionContext = context
 		try {
-			await this.queue.add(() => this.executeInternal(typeof hash === "string" ? hash : toHex(hash), call, callArgs))
+			await this.queue.add(() => {
+				assert(this.effects !== null && this.actionContext !== null)
+				const actionHandle = this.getActionHandle(this.actionContext.app!, call)
+
+				const argHandles = wrapObject(
+					this.context,
+					mapEntries(callArgs, (_, arg) => this.wrapActionArgument(arg))
+				)
+
+				return this.executeInternal(typeof hash === "string" ? hash : toHex(hash), actionHandle, argHandles)
+			})
 		} finally {
 			this.effects = null
 			this.actionContext = null
@@ -424,18 +447,40 @@ export class VM {
 	}
 
 	/**
+	 * Given a call, get a list of effects to pass to `modelStore.applyEffects`, to be applied to the models.
+	 * Used by `.applyAction()` and when replaying actions.
+	 */
+	public async executeCustomAction(
+		hash: string | Buffer,
+		payload: any,
+		actionContext: { timestamp: number }
+	): Promise<Effect[]> {
+		const effects: Effect[] = []
+
+		// after setting this.effects here, always make sure to reset it to null before
+		// returning or throwing an error - or the core won't be able to process more actions
+		this.effects = effects
+		this.customActionContext = { timestamp: actionContext.timestamp }
+		try {
+			await this.queue.add(() => {
+				assert(this.effects !== null && this.customActionContext !== null)
+				assert(!!this.customAction)
+				const payloadHandle = marshalJSONObject(this.context, payload)
+				return this.executeInternal(typeof hash === "string" ? hash : toHex(hash), this.customAction.fn, payloadHandle)
+			})
+		} finally {
+			this.effects = null
+			this.customActionContext = null
+		}
+
+		return effects
+	}
+
+	/**
 	 * Assumes this.effects and this.actionContext are already set
 	 */
-	private async executeInternal(hash: string, call: string, callArgs: Record<string, ActionArgument>) {
-		assert(this.effects !== null && this.actionContext !== null)
-		const actionHandle = this.getActionHandle(this.actionContext.app, call)
-
-		const argHandles = wrapObject(
-			this.context,
-			mapEntries(callArgs, (_, arg) => this.wrapActionArgument(arg))
-		)
-
-		const ctx = wrapJSON(this.context, { hash, ...this.actionContext })
+	private async executeInternal(hash: string, actionHandle: QuickJSHandle, argHandles: QuickJSHandle) {
+		const ctx = wrapJSON(this.context, { hash, ...(this.actionContext || {}), ...(this.customActionContext || {}) })
 		this.context.setProp(ctx, "db", this.dbHandle)
 		this.context.setProp(ctx, "contracts", this.contractsHandle)
 

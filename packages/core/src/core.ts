@@ -19,6 +19,7 @@ import {
 	CustomAction,
 } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+import { validate } from "@hyperjump/json-schema/draft-2020-12"
 
 import { actionType, customActionType, sessionType } from "./codecs.js"
 import { toHex, signalInvalidType, CacheMap, parseIPFSURI, stringify, mapEntries } from "./utils.js"
@@ -208,6 +209,27 @@ export class Core extends EventEmitter<CoreEvents> {
 		return { hash: toHex(hash) }
 	}
 
+	public async applyCustomAction(customAction: CustomAction): Promise<{ hash: string }> {
+		assert(customActionType.is(customAction), "invalid custom action object")
+
+		const data = Buffer.from(stringify(customAction))
+		const hash = createHash("sha256").update(data).digest()
+
+		await this.applyMessage(hash, customAction)
+
+		if (this.mst !== null) {
+			await this.mst.write(this.app, (txn) => {
+				txn.set(getMessageKey(hash, customAction), hash)
+			})
+		}
+
+		if (this.sources !== null) {
+			await this.sources[this.app].publishMessage(hash, data)
+		}
+
+		return { hash: toHex(hash) }
+	}
+
 	/**
 	 * Apply a message.
 	 * For actions: validate, execute, apply effects, insert into message store.
@@ -255,8 +277,28 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			this.dispatchEvent(new CustomEvent("session", { detail: message.payload }))
 			metrics.canvas_messages.inc({ type: "session", uri: message.payload.app }, 1)
-		} else if (message.type === "customAction") {
-			throw Error("applyMessage is not yet implemented for customAction!")
+		} else if (message.type == "customAction") {
+			const existingRecord = this.messageStore.getCustomActionByHash(hash)
+			if (existingRecord !== null) {
+				return
+			}
+
+			if (this.options.verbose) {
+				console.log(`[canvas-core] Applying custom action ${id}`, message)
+			}
+
+			await this.validateCustomAction(message)
+
+			const effects = await this.vm.executeCustomAction(id, message.payload, { timestamp: 0 })
+
+			// TODO: can we give the user a way to set the timestamp if it comes from a trusted source?
+			const timestamp = 0
+			this.modelStore.applyEffects({ timestamp }, effects)
+
+			this.messageStore.insertCustomAction(hash, message)
+
+			this.dispatchEvent(new CustomEvent("customAction", { detail: message.payload }))
+			metrics.canvas_messages.inc({ type: "customAction", uri: message.payload.app }, 1)
 		} else {
 			signalInvalidType(message)
 		}
@@ -337,6 +379,20 @@ export class Core extends EventEmitter<CoreEvents> {
 		// 	assert(block, "session is missing block data")
 		// 	await this.validateBlock({ blockhash: block, chain, chainId })
 		// }
+	}
+
+	private async validateCustomAction(customAction: CustomAction) {
+		const customActionDefinition = this.vm.customAction
+		assert(!!customActionDefinition, `custom action called but no custom action definition exists`)
+		assert(
+			customActionDefinition.name == customAction.name,
+			`the custom action name in the message (${customAction.name}) does not match the action name in the contract ${customActionDefinition.name}`
+		)
+		const schemaValidationResult = await validate(this.vm.customActionSchemaName!, customAction.payload)
+		assert(
+			schemaValidationResult.valid,
+			`custom action payload does not match the provided schema! ${schemaValidationResult.errors}`
+		)
 	}
 
 	private getChainImplementation(chain: Chain, chainId: ChainId): ChainImplementation<unknown, unknown> {
