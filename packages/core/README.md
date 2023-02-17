@@ -1,39 +1,41 @@
 # @canvas-js/core
 
-The Canvas core is an internal component that verifies, executes, and
-stores the effects of signed messages. Most developers should not use
-the core directly, but instead should use the Canvas CLI or  Hub,
+> ⚠️ In most cases, you want to use the [CLI](../cli/) or the [hub](https://canvas-hub.fly.dev/) to run apps. `@canvas-js/core` is an internal component for embedded or advance use cases.
+
+The Canvas core verifies, executes, and stores the effects of signed messages.
+Most developers should not use the core directly, but instead should use the Canvas CLI or Hub,
 which will automatically set up and manage cores and their dependencies.
 
 ### Initializing a core
 
-To initialize a Canvas core, import `@canvas-js/core` and call
-`Core.initialize()` with the appropriate arguments.
+To initialize an Canvas core, import `@canvas-js/core` and call `Core.initialize({})` with the appropriate arguments.
 
 ```typescript
-import { Core } from '@canvas-js/core';
+import { Core, getLibp2pInit } from "@canvas-js/core"
+import { createLibp2p } from "libp2p"
+import { createEd25519PeerId } from "@libp2p/peer-id-factory"
+
+const spec = `
+	const models = { }
+  const routes = { }
+	const actions = { }
+`
+
+// persist and re-use peer IDs whever possible
+const peerId = await createEd25519PeerId()
+const libp2p = await createLibp2p(getLibp2pInit({ peerId }))
 
 const core = await Core.initialize({
-  uri,
-  spec,
-  directory: null,
-  quickJS,
-  unchecked: true
-});
+	spec,
+	directory: "/path/to/app/directory", // or `null` to run entirely in-memory
+	libp2p,
+	unchecked: true,
+})
+
+console.log(core.app) // ipfs://...
 ```
 
-The core should always be identified by a URI, which can be a IPFS URI
-pointing to a Canvas spec, or a file:// URI for local
-development. Messages are expected to be signed with the core's URI.
-
-The core also takes the compiled text of the spec. Note that this may be
-different from what's stored in IPFS, if it has been processed by JSX
-or another preprocessor.
-
-You must also provide a QuickJS instance, e.g. a `QuickJSWASMModule`
-imported from quickjs-emscripten, which will be used to execute
-actions.
-
+Applications are identified by the `core.app` IPFS URI. Sessions and actions must be signed for the core's app URI.
 
 ## Development
 
@@ -41,13 +43,11 @@ Regenerate the RPC protobuf message types with `npm run generate-rpc`.
 
 The package should be built with typescript in composite build mode from the repo root, not from the package directory here.
 
-
 ## Testing
 
 ```
 npm run test
 ```
-
 
 ## API
 
@@ -57,42 +57,36 @@ import { Libp2p } from "libp2p"
 
 import { Action, Session, ModelValue, Model, Chain, ChainId } from "@canvas-js/interfaces"
 
-interface CoreConfig {
-	// pass `null` to run in memory
-	directory: string | null
-	// defaults to ipfs:// hash of app
-	uri?: string
-	app: string
-	libp2p?: Libp2p
-	providers?: Record<string, ethers.providers.JsonRpcProvider>
-	// defaults to fetching each block from the provider with no caching
-	blockResolver?: BlockResolver
+interface CoreOptions {
 	unchecked?: boolean
 	verbose?: boolean
-	offline?: boolean
 }
 
-type BlockResolver = (chain: Chain, chainId: ChainId, block: string) => Promise<ethers.providers.Block>
+interface CoreConfig extends CoreOptions {
+	// pass `null` to run in memory
+	directory: string | null
+	spec: string
+
+	// defaults to ipfs:// hash of application
+	uri?: string
+	libp2p: Libp2p | null // pass null to run offline
+	chains?: ChainImplementation<unknown, unknown>[]
+}
 
 declare class Core {
 	static initialize(config: CoreConfig): Promise<Core>
 
-	readonly uri: string
-	readonly cid: CID
+	readonly app: string
 	readonly directory: string | null
-	readonly models: Record<string, Model>
-	readonly actions: string[]
-	readonly routeParameters: Record<string, string[]>
 
 	close(): Promise<void>
-	getRoute(route: string, params: Record<string, ModelValue>): Record<string, ModelValue>[]
+	getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]>
 	applyAction(action: Action): Promise<{ hash: string }>
 	applySession(session: Session): Promise<{ hash: string }>
 }
 ```
 
 `CoreConfig.uri` must be the `ipfs://` CIDv0 URI of the app (dag-pb using the default chunking settings), or a local `file:///` URI.
-
 
 ## Metrics
 

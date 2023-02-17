@@ -35,10 +35,10 @@ import { getMessageKey } from "./rpc/utils.js"
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
 	directory: string | null
+	spec: string
 
 	// defaults to ipfs:// hash of application
 	uri?: string
-	spec: string
 	libp2p: Libp2p | null // pass null to run offline
 	chains?: ChainImplementation<unknown, unknown>[]
 }
