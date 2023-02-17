@@ -14,8 +14,12 @@ export async function getMetrics(req: express.Request, res: express.Response): P
 		res.write(libp2pMetrics + "\n")
 		res.write(canvasMetrics + "\n")
 		res.end(defaultMetrics)
-	} catch (err: any) {
-		res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+	} catch (err) {
+		if (err instanceof Error) {
+			res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+		} else {
+			throw err
+		}
 	}
 }
 

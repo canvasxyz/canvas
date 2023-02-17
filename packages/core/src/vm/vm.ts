@@ -4,7 +4,6 @@ import chalk from "chalk"
 import { fetch } from "undici"
 import { getQuickJS, isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime } from "quickjs-emscripten"
 import { addSchema } from "@hyperjump/json-schema/draft-2020-12"
-import { transform } from "sucrase"
 import { ethers } from "ethers"
 import Hash from "ipfs-only-hash"
 import PQueue from "p-queue"
@@ -61,15 +60,7 @@ export class VM {
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
-		const { code: transpiledSpec } = transform(spec, {
-			transforms: ["jsx"],
-			jsxPragma: "React.createElement",
-			jsxFragmentPragma: "React.Fragment",
-			disableESTransforms: true,
-			production: true,
-		})
-
-		const moduleHandle = await loadModule(context, app, transpiledSpec)
+		const moduleHandle = await loadModule(context, app, spec)
 
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
@@ -86,30 +77,24 @@ export class VM {
 	}
 
 	public static async validate(spec: string): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
-		let transpiledSpec: string
-		try {
-			transpiledSpec = transform(spec, {
-				transforms: ["jsx"],
-				jsxPragma: "React.createElement",
-				jsxFragmentPragma: "React.Fragment",
-				disableESTransforms: true,
-				production: true,
-			}).code
-		} catch (e: any) {
-			return {
-				valid: false,
-				errors: [`Syntax error: ${e.message}`],
-				warnings: [],
-			}
-		}
-
 		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
 		const cid = await Hash.of(spec)
-		const moduleHandle = await loadModule(context, `ipfs://${cid}`, transpiledSpec)
+
+		let moduleHandle: QuickJSHandle
+		try {
+			moduleHandle = await loadModule(context, `ipfs://${cid}`, spec)
+		} catch (err) {
+			if (err instanceof Error) {
+				return { valid: false, errors: [err.toString()], warnings: [] }
+			} else {
+				throw err
+			}
+		}
+
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
 		let result: { valid: boolean; errors: string[]; warnings: string[] }
@@ -133,7 +118,6 @@ export class VM {
 	public readonly actions: string[]
 	public readonly customActionSchemaName: string | null
 	public readonly customAction: CustomActionDefinition | null
-	public readonly component: string | null
 	public readonly routes: Record<string, string[]>
 	public readonly contracts: Record<string, ethers.Contract>
 	public readonly contractMetadata: Record<string, ContractMetadata>
@@ -166,7 +150,6 @@ export class VM {
 		this.sourceHandles = exports.sourceHandles
 
 		this.appName = exports.name || "Canvas"
-		this.component = exports.component
 
 		// Generate public fields that are derived from the passed in arguments
 		this.sources = new Set(Object.keys(this.sourceHandles))
@@ -254,12 +237,11 @@ export class VM {
 								"action called a contract function but did not include a blockhash or block identifier"
 							)
 
-							const args: ContractFunctionResult[] = argHandles.map(context.dump)
+							const args = this.unwrapContractFunctionArguments(argHandles)
+
 							if (options.verbose) {
-								const call = chalk.green(
-									`${contractName}.${functionName}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`
-								)
-								console.log(`[canvas-vm] contract: ${call} at block (${block})`)
+								const call = `${contractName}.${functionName}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`
+								console.log(`[canvas-vm] contract: ${chalk.green(call)} at block (${block})`)
 							}
 
 							const deferred = context.newPromise()
@@ -287,7 +269,7 @@ export class VM {
 		wrapObject(context, {
 			// console.log:
 			console: wrapObject(context, {
-				log: context.newFunction("log", (...args: any[]) => console.log("[canvas-vm]", ...args.map(context.dump))),
+				log: context.newFunction("log", (...args) => console.log("[canvas-vm]", ...args.map(context.dump))),
 			}),
 
 			assert: context.newFunction("assert", (condition: QuickJSHandle, message?: QuickJSHandle) => {
@@ -338,7 +320,6 @@ export class VM {
 		disposeExports({
 			name: this.appName,
 			actionHandles: this.actionHandles,
-			component: this.component,
 			contractMetadata: this.contractMetadata,
 			customAction: this.customAction,
 			models: this.models,
@@ -554,6 +535,27 @@ export class VM {
 		return values
 	}
 
+	private unwrapContractFunctionArguments = (argHandles: QuickJSHandle[]): ContractFunctionArgument[] => {
+		const args = argHandles.map(this.context.dump)
+
+		for (const arg of args) {
+			switch (typeof arg) {
+				case "string":
+					continue
+				case "boolean":
+					continue
+				case "number":
+					continue
+				case "bigint":
+					continue
+				default:
+					throw new Error("invalid contract function argument")
+			}
+		}
+
+		return args
+	}
+
 	private wrapContractFunctionResult = (value: ContractFunctionResult): QuickJSHandle => {
 		if (value === true) {
 			return this.context.true
@@ -576,4 +578,5 @@ export class VM {
 	}
 }
 
-type ContractFunctionResult = string | boolean | number | bigint | ethers.BigNumber
+export type ContractFunctionArgument = string | boolean | number | bigint
+export type ContractFunctionResult = string | boolean | number | bigint | ethers.BigNumber

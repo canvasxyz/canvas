@@ -116,7 +116,7 @@ export class ModelStore {
 		this.database.close()
 	}
 
-	public getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]> {
+	public getRoute(route: string, params: Record<string, string> = {}): Promise<Record<string, ModelValue>[]> {
 		assert(route in this.vm.routes, "invalid route name")
 		const filteredParams = mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value))
 		return this.vm.executeRoute(route, filteredParams, (query: string | Query) => {
@@ -132,11 +132,14 @@ export class ModelStore {
 				} else {
 					return prepared.all(query.args)
 				}
-			} catch (err: any) {
-				// Show a little more debugging information for queries
-				const params = typeof query === "string" ? "none" : JSON.stringify(query.args)
-				const formatted = (typeof query === "string" ? query : query.query).replace(/\n/g, " ")
-				err.message = `${err.message} (query: ${formatted}, parameters: ${params})`
+			} catch (err) {
+				if (err instanceof Error) {
+					// Show a little more debugging information for queries
+					const params = typeof query === "string" ? "none" : JSON.stringify(query.args)
+					const formatted = (typeof query === "string" ? query : query.query).replace(/\n/g, " ")
+					err.message = `${err.message} (query: ${formatted}, parameters: ${params})`
+				}
+
 				throw err
 			}
 		})

@@ -1,21 +1,18 @@
 // tests for checking whether specs are valid
 
 import test from "ava"
+
 import { VM } from "@canvas-js/core"
 
-const success = {
-	valid: true,
-	errors: [],
-	warnings: [],
-}
+const success = { valid: true, errors: [], warnings: [] }
 
-const errors = (e: any) => ({
+const errors = (e: string[]) => ({
 	valid: false,
 	errors: e,
 	warnings: [],
 })
 
-const warnings = (w: any) => ({
+const warnings = (w: string[]) => ({
 	valid: true,
 	errors: [],
 	warnings: w,
@@ -34,7 +31,7 @@ const VALIDATION_TEST_FIXTURES: {
 	{
 		name: "reject a syntactically invalid spec",
 		app: "SAD!@$£WTEGJSWO£W$",
-		expectedResult: errors(['Syntax error: Unexpected token, expected ";" (1:4)']),
+		expectedResult: errors(["SyntaxError: expecting ';'"]),
 	},
 	{
 		name: "accept a minimal spec",
@@ -348,26 +345,6 @@ const VALIDATION_TEST_FIXTURES: {
       };
     `,
 		expectedResult: errors(["Route '/valid_route' is invalid: the route must be a function"]),
-	},
-	{
-		name: "accept component",
-		app: `
-      export const models = {};
-      export const actions = {};
-      export const component = ({ react: { useRef, useState }, useRoute, dispatch }) => {
-        return <div></div>
-      };
-    `,
-		expectedResult: success,
-	},
-	{
-		name: "reject component if it is not a function",
-		app: `
-      export const models = {};
-      export const actions = {};
-      export const component = {};
-    `,
-		expectedResult: errors(["`component` export must be a function"]),
 	},
 	{
 		name: "accept a valid source",

@@ -91,7 +91,7 @@ export async function handler(args: Args) {
 	let libp2p: Libp2p | null = null
 	if (!args.offline) {
 		const peerId = await getPeerId()
-		console.log("[canvas-cli] Using PeerId", peerId.toString())
+		console.log(`[canvas-cli] Using PeerId ${peerId}`)
 
 		if (args.announce) {
 			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: args.listen, announce: [args.announce] }))
@@ -103,11 +103,11 @@ export async function handler(args: Args) {
 
 		if (args.verbose) {
 			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
-				console.log(`[canvas-cli] Connected to ${remotePeer.toString()} (${id})`)
+				console.log(`[canvas-cli] Connected to ${remotePeer} (${id})`)
 			)
 
 			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
-				console.log(`[canvas-cli] Disconnected from ${remotePeer.toString()} (${id})`)
+				console.log(`[canvas-cli] Disconnected from ${remotePeer} (${id})`)
 			)
 		}
 	}
@@ -294,14 +294,7 @@ class Daemon {
 				}
 
 				const spec = fs.readFileSync(specPath, "utf-8")
-				let hash
-				try {
-					hash = await Hash.of(spec)
-				} catch (err) {
-					const message = err instanceof Error ? err.message : (err as any).toString()
-					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
-				}
-
+				const hash = await Hash.of(spec)
 				const uri = `ipfs://${hash}`
 
 				try {
@@ -318,8 +311,12 @@ class Daemon {
 					console.log(`[canvas-cli] Started ${core.app}`)
 					res.status(StatusCodes.OK).end()
 				} catch (err) {
-					const message = err instanceof Error ? err.message : (err as any).toString()
-					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
+					if (err instanceof Error) {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+					} else {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+						throw err
+					}
 				}
 			})
 		})
@@ -338,8 +335,12 @@ class Daemon {
 					console.log(`[canvas-cli] Stopped ${name} (${app.core.app})`)
 					res.status(StatusCodes.OK).end()
 				} catch (err) {
-					const message = err instanceof Error ? err.message : (err as any).toString()
-					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
+					if (err instanceof Error) {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+					} else {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+						throw err
+					}
 				} finally {
 					this.apps.delete(name)
 				}
@@ -370,11 +371,14 @@ class Daemon {
 				try {
 					const result = await VM.validate(app)
 					res.status(StatusCodes.OK).json(result)
-				} catch (e) {
-					res.status(StatusCodes.OK).json({
-						valid: false,
-						errors: [(e as any).message],
-					})
+				} catch (err) {
+					// we return INTERNAL_SERVER_ERROR since validation errors shouldn't throw
+					if (err instanceof Error) {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+					} else {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+						throw err
+					}
 				}
 			})
 		})
@@ -385,8 +389,13 @@ class Daemon {
 					const result = await client.register.metrics()
 					res.header("Content-Type", client.register.contentType)
 					return res.end(result)
-				} catch (err: any) {
-					return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+				} catch (err) {
+					if (err instanceof Error) {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+					} else {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+						throw err
+					}
 				}
 			})
 		}

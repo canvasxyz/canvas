@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/core",
-  "version": "0.0.52",
+  "version": "0.0.53",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "types": "./lib/index.d.ts",
@@ -20,8 +20,8 @@
     "test": "ava"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.0.52",
-    "@canvas-js/interfaces": "0.0.52",
+    "@canvas-js/chain-ethereum": "0.0.53",
+    "@canvas-js/interfaces": "0.0.53",
     "@chainsafe/libp2p-gossipsub": "^6.0.0",
     "@chainsafe/libp2p-noise": "^11.0.0",
     "@hyperjump/json-schema": "^1.2.4",
@@ -53,10 +53,9 @@
     "node-okra": "^0.3.0",
     "p-queue": "^7.3.0",
     "prom-client": "^14.1.1",
-    "protobufjs": "~7.1.2",
+    "protobufjs": "~7.2.2",
     "quickjs-emscripten": "^0.21.1",
     "safe-stable-stringify": "^2.4.2",
-    "sucrase": "^3.29.0",
     "timeout-abort-controller": "^3.0.0",
     "uint8arraylist": "^2.4.3",
     "undici": "^5.14.0",
@@ -71,7 +70,7 @@
     "ava": "^5.1.0",
     "dotenv": "^16.0.3",
     "nanoid": "^4.0.0",
-    "protobufjs-cli": "^1.1.1",
+    "protobufjs-cli": "~1.1.1",
     "stream-to-it": "^0.2.4",
     "typescript": "^4.9.4"
   }

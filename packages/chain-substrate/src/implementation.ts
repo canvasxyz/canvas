@@ -60,14 +60,6 @@ export class SubstrateChainImplementation implements ChainImplementation<Extensi
 		return pair.address
 	}
 
-	isSigner(signer: unknown): signer is ExtensionAndAddress {
-		return typeof signer !== "string"
-	}
-
-	isDelegatedSigner(signer: unknown): signer is SubstrateMnemonic {
-		return typeof signer === "string"
-	}
-
 	async signSession({ extension, address }: ExtensionAndAddress, payload: SessionPayload): Promise<Session> {
 		if (extension.signer.signRaw === undefined) throw new Error("Invalid signer")
 		const message = stringToHex(getSessionSignatureData(payload))

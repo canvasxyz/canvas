@@ -5,7 +5,6 @@ export interface ApplicationData {
 	uri: string
 	appName: string
 	peerId: string | null
-	component: string | null
 	actions: string[]
 	routes: string[]
 	merkleRoots: Record<string, string>

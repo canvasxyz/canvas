@@ -1,6 +1,12 @@
-# @canvas-js/hooks
+# Canvas React Hooks
 
-React hooks for using Canvas in your frontend application.
+Canvas provides React hooks for using Canvas in your frontend
+application.
+
+The React hooks are currently tested with Ethereum-compatible chains
+only, with [Ethers v5](https://docs.ethers.org/v5/) and
+[wagmi](https://wagmi.sh/).
+
 
 ## Table of Contents
 
@@ -18,6 +24,19 @@ To use the Canvas hooks, you must first wrap your application in a parent `Canva
 	<MyApp />
 </Canvas>
 ```
+
+Then, in any component inside your app, you can use the three hooks:
+`useCanvas`, `useRoute`, and `useSession`.
+
+- `useCanvas` returns an object with configuration data about the
+  connected Canvas app and the currently-authenticated user.
+- `useRoute` takes a string route and an object of params, and works
+  like the `useSWR` hook, returning an error or an array of
+  results. Internally, it uses the [EventSource
+  API](https://developer.mozilla.org/en-US/docs/Web/API/EventSource).
+- `useSession` accepts a signer from wagmi (for Ethereum), or an
+  injected signer from other networks, and returns a client for
+  dispatching actions.
 
 ## `useCanvas`
 
@@ -40,7 +59,6 @@ interface ApplicationData {
 	cid: string
 	uri: string
 	appName: string
-	component: string | null
 	actions: string[]
 	routes: string[]
 	peerId: string | null
@@ -58,7 +76,7 @@ declare function useCanvas(): {
 }
 ```
 
-### `useRoute`
+## `useRoute`
 
 `useRoute` is the primary way to fetch data from your application.
 

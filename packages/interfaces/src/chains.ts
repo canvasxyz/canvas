@@ -18,9 +18,6 @@ export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown
 	verifyAction(action: Action): Promise<void>
 	verifySession(session: Session): Promise<void>
 
-	isSigner(signer: unknown): signer is Signer
-	isDelegatedSigner(delegatedSigner: unknown): delegatedSigner is DelegatedSigner
-
 	getSignerAddress(signer: Signer): Promise<string>
 	getDelegatedSignerAddress(delegatedSigner: DelegatedSigner): Promise<string>
 

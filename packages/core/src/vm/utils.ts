@@ -212,11 +212,41 @@ export async function loadModule(
 
 	const moduleResult = context.evalCode(`import("${moduleName}")`)
 	const modulePromise = context.unwrapResult(moduleResult)
-	const moduleExports = await resolvePromise(context, modulePromise).then(context.unwrapResult)
+	const importResult = await resolvePromise(context, modulePromise)
 	modulePromise.dispose()
 	context.runtime.removeModuleLoader()
-	return moduleExports
+
+	if (importResult.error === undefined) {
+		return importResult.value
+	} else {
+		throw unwrapError(context, importResult.error)
+	}
 }
+
+export function unwrapError(context: QuickJSContext, errorHandle: QuickJSHandle): Error {
+	const errorValue = errorHandle.consume(context.dump)
+	if (typeof errorValue === "object" && typeof errorValue.message === "string") {
+		let error: Error
+		if (errorValue.name === "SyntaxError") {
+			error = new SyntaxError(errorValue.message)
+		} else if (errorValue.name === "TypeError") {
+			error = new TypeError(errorValue.message)
+		} else if (errorValue.name === "RangeError") {
+			error = new RangeError(errorValue.message)
+		} else {
+			error = new Error(errorValue.message)
+		}
+
+		if (typeof errorValue.stack === "string") {
+			error.stack = errorValue.stack
+		}
+
+		return error
+	} else {
+		throw errorValue
+	}
+}
+
 /**
  * composes external JSON.stringify with internal JSON.parse
  * @param jsonValue any JSON value
