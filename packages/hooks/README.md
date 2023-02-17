@@ -59,9 +59,11 @@ interface ApplicationData {
 	cid: string
 	uri: string
 	appName: string
+	peerId: string | null
 	actions: string[]
 	routes: string[]
-	peerId: string | null
+	merkleRoots: Record<string, string>
+	chainImplementations: Record<string, string[]>
 	peers: {
 		gossip: Record<string, { lastSeen: number }>
 		sync: Record<string, { lastSeen: number }>

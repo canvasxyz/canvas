@@ -41,6 +41,10 @@ export class SolanaChainImplementation implements ChainImplementation<SolanaWind
 
 	constructor(public readonly chainId: ChainId = "mainnet") {}
 
+	hasProvider() {
+		return false
+	}
+
 	async verifyAction(action: Action): Promise<void> {
 		const expectedAddress = action.session ?? action.payload.from
 		const message = getActionSignatureData(action.payload)

@@ -93,6 +93,10 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 
 	constructor(public readonly chainId: ChainId, public readonly bech32Prefix: string) {}
 
+	hasProvider() {
+		return false
+	}
+
 	private async verifyDelegatedAction(action: Action, session: string): Promise<boolean> {
 		const signDocPayload = await getActionSignatureData(action.payload, session)
 		const signDocDigest = new Sha256(serializeSignDoc(signDocPayload)).digest()

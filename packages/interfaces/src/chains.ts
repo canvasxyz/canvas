@@ -15,6 +15,8 @@ export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown
 	chain: Chain
 	chainId: ChainId
 
+	hasProvider(): boolean
+
 	verifyAction(action: Action): Promise<void>
 	verifySession(session: Session): Promise<void>
 

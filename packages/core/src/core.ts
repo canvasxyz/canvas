@@ -145,6 +145,16 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.dispatchEvent(new Event("close"))
 	}
 
+	public getChainImplementations() {
+		let result = {} as Record<Chain, Record<ChainId, { rpc: boolean }>>
+
+		this.chains.forEach((ci) => {
+			if (result[ci.chain] === undefined) result[ci.chain] = {}
+			result[ci.chain][ci.chainId] = { rpc: ci.hasProvider() }
+		})
+		return result
+	}
+
 	public async getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]> {
 		if (this.options.verbose) {
 			console.log("[canvas-core] getRoute:", route, params)

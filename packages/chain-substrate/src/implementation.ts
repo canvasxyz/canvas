@@ -32,6 +32,10 @@ export class SubstrateChainImplementation implements ChainImplementation<Extensi
 
 	constructor(public readonly chainId: ChainId = "mainnet") {}
 
+	hasProvider() {
+		return false
+	}
+
 	async verifyAction(action: Action): Promise<void> {
 		const signerAddress = action.session ?? action.payload.from
 		const message = getActionSignatureData(action.payload)

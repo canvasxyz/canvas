@@ -8,6 +8,7 @@ export interface ApplicationData {
 	actions: string[]
 	routes: string[]
 	merkleRoots: Record<string, string>
+	chainImplementations: Record<string, string[]>
 	peers: {
 		gossip: Record<string, { lastSeen: number }>
 		sync: Record<string, { lastSeen: number }>

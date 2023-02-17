@@ -72,6 +72,7 @@ export function setupWebsockets(server: Server, core: Core): Server {
 				actions,
 				routes: Object.keys(routes),
 				merkleRoots: core.mst && core.mst.roots,
+				chainImplementations: core.getChainImplementations(),
 				peers: core.libp2p && {
 					gossip: Object.fromEntries(core.recentGossipPeers),
 					sync: Object.fromEntries(core.recentSyncPeers),

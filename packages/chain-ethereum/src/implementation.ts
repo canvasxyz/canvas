@@ -50,6 +50,10 @@ export class EthereumChainImplementation
 
 	constructor(public readonly chainId: ChainId = "1", public readonly provider?: ethers.providers.JsonRpcProvider) {}
 
+	hasProvider() {
+		return this.provider !== undefined
+	}
+
 	async verifyAction(action: Action): Promise<void> {
 		const expectedAddress = action.session ?? action.payload.from
 		const [domain, types, value] = getActionSignatureData(action.payload)
