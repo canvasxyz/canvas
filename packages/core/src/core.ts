@@ -16,10 +16,11 @@ import {
 	ChainId,
 	Message,
 	ChainImplementation,
+	CustomAction,
 } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
-import { actionType, sessionType } from "./codecs.js"
+import { actionType, customActionType, sessionType } from "./codecs.js"
 import { toHex, signalInvalidType, CacheMap, parseIPFSURI, stringify, mapEntries } from "./utils.js"
 
 import { VM } from "./vm/index.js"
@@ -253,6 +254,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			this.dispatchEvent(new CustomEvent("session", { detail: message.payload }))
 			metrics.canvas_messages.inc({ type: "session", uri: message.payload.app }, 1)
+		} else if (message.type === "customAction") {
+			throw Error("applyMessage is not yet implemented for customAction!")
 		} else {
 			signalInvalidType(message)
 		}
