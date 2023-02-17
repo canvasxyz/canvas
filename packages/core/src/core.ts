@@ -63,7 +63,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly sources: Record<string, Source> | null = null
 
 	public static async initialize(config: CoreConfig) {
-		const { directory, uri, spec, libp2p, chains = [new EthereumChainImplementation()], ...options } = config
+		const chainImplementations = [new EthereumChainImplementation()] as ChainImplementation<any, any>[]
+		const { directory, uri, spec, libp2p, chains = chainImplementations, ...options } = config
 
 		const cid = await Hash.of(spec).then(CID.parse)
 		const app = uri ?? `ipfs://${cid}`
