@@ -16,9 +16,9 @@ import { createLibp2p } from "libp2p"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 const spec = `
-	const models = { }
+  const models = { }
   const routes = { }
-	const actions = { }
+  const actions = { }
 `
 
 // persist and re-use peer IDs whever possible
@@ -67,9 +67,10 @@ interface CoreConfig extends CoreOptions {
 	directory: string | null
 	spec: string
 
-	// defaults to ipfs:// hash of application
-	uri?: string
+	uri?: string // defaults to the ipfs:// hash of the spec
 	libp2p: Libp2p | null // pass null to run offline
+
+	// defaults to an EthereumChainImplementation with no provider
 	chains?: ChainImplementation<unknown, unknown>[]
 }
 
