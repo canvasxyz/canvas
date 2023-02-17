@@ -146,7 +146,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	public getChainImplementations() {
-		let result = {} as Record<Chain, Record<ChainId, { rpc: boolean }>>
+		const result = {} as Record<Chain, Record<ChainId, { rpc: boolean }>>
 
 		this.chains.forEach((ci) => {
 			if (result[ci.chain] === undefined) result[ci.chain] = {}
