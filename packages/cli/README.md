@@ -10,7 +10,7 @@ To install the CLI, run:
 npm install -g @canvas-js/cli
 ```
 
-The CLI includes a built-in IPFS node, SQLite, the QuickJS VM for
+The CLI will run a Libp2p node, SQLite database, QuickJS VM for
 processing actions, and an API server. Use the `--help` flag to learn more.
 
 ```
