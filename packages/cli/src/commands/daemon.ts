@@ -49,7 +49,7 @@ export const builder = (yargs: yargs.Argv) =>
 		})
 		.option("chain-rpc", {
 			type: "array",
-			desc: "Provide an RPC endpoint for reading on-chain data",
+			desc: "Provide an RPC endpoint for reading on-chain data (format: chain, chainId, URL)",
 		})
 		.option("metrics", {
 			type: "boolean",
