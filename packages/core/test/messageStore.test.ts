@@ -18,7 +18,7 @@ test("MessageStore can insert and retrieve a custom action", async (t) => {
 	})
 
 	const retrievedCustomAction = ms.getCustomActionByHash(hash)
-	if (!!retrievedCustomAction) {
+	if (retrievedCustomAction) {
 		t.assert(retrievedCustomAction.app == app)
 		t.assert(retrievedCustomAction.name == name)
 		t.deepEqual(retrievedCustomAction.payload, payload)
