@@ -39,6 +39,7 @@ import {
 import { validateCanvasSpec } from "./validate.js"
 import { CustomActionDefinition, Exports, disposeExports } from "./exports.js"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+import { verifyTypedData } from "ethers/lib/utils.js"
 
 interface VMOptions {
 	verbose?: boolean
@@ -306,6 +307,17 @@ export class VM {
 				deferred.settled.then(context.runtime.executePendingJobs)
 				return deferred.handle
 			}),
+
+			verifyTypedData: context.newFunction(
+				"verifyTypedData",
+				(domainHandle, typesHandle, valueHandle, signatureHandle) => {
+					const domain = domainHandle.consume(context.dump)
+					const types = typesHandle.consume(context.dump)
+					const value = valueHandle.consume(context.dump)
+					const signature = signatureHandle.consume(context.dump)
+					return context.newString(verifyTypedData(domain, types, value, signature))
+				}
+			),
 		}).consume((globalsHandle) => call(context, "Object.assign", null, context.global, globalsHandle).dispose())
 	}
 

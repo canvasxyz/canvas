@@ -228,3 +228,88 @@ test("Apply a custom action with a valid payload", async (t) => {
 	t.deepEqual(createdThing.beta, "one")
 	t.pass()
 })
+
+test("Apply a custom action with signed data", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			message: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doSignedThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"signature": { "type": "string" },
+				"signingAddress": { "type": "string" },
+				"message": { "type": "string" }
+			}
+		}, ({ signature, signingAddress, message }, {db, hash}) => {
+			const domain = {
+				name: "TestApp"
+			};
+			const fields = {
+				Message: [
+					{ name: "message", type: "string" },
+					{ name: "signingAddress", type: "string" }
+				]
+			};
+			const value = { signingAddress, message };
+			const recoveredAddress = verifyTypedData(domain, fields, value, signature)
+			if(recoveredAddress == signingAddress) {
+				// signature is valid, perform action
+				db.things.set(hash, { message });
+			} else {
+				// signature is invalid
+				return false;
+			}
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};`
+
+	const getSignatureData = (data: any) => {
+		const domain = {
+			name: "TestApp",
+		}
+		const fields = {
+			Message: [
+				{ name: "message", type: "string" },
+				{ name: "signingAddress", type: "string" },
+			],
+		}
+		return [domain, fields, data]
+	}
+
+	const wallet = ethers.Wallet.createRandom()
+	const message = "hello world"
+	const signingAddress = wallet.address
+	const [domain, types, value] = getSignatureData({ message, signingAddress })
+	const signature = await wallet._signTypedData(domain, types, value)
+
+	const cid = "12345678"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doSignedThing",
+		payload: {
+			message,
+			signature,
+			signingAddress,
+		},
+	}
+	await core.applyCustomAction(newCustomAction)
+
+	const items = await core.getRoute("/things", {})
+	const createdThing = items[0]
+	t.deepEqual(createdThing.updated_at, 0)
+	t.deepEqual(createdThing.message, "hello world")
+	t.pass()
+})
