@@ -313,3 +313,91 @@ test("Apply a custom action with signed data", async (t) => {
 	t.deepEqual(createdThing.message, "hello world")
 	t.pass()
 })
+
+test("Reject a custom action that does not set the id to the hash", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			alpha: "string",
+			beta: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"alpha": { "type": "string" },
+				"beta": { "type": "string" }
+			}
+		}, ({alpha, beta}, {db, hash}) => {
+			db.things.set("invalid_hash", { alpha, beta });
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};
+	`
+	const cid = "1234567"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doThing",
+		payload: {
+			alpha: "zero",
+			beta: "one",
+		},
+	}
+	await t.throwsAsync(async () => {
+		await core.applyCustomAction(newCustomAction)
+	})
+})
+
+test("Reject a custom action that calls the del function", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			alpha: "string",
+			beta: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"alpha": { "type": "string" },
+				"beta": { "type": "string" }
+			}
+		}, ({alpha, beta}, {db, hash}) => {
+			db.things.del(hash);
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};
+	`
+	const cid = "1234567"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doThing",
+		payload: {
+			alpha: "zero",
+			beta: "one",
+		},
+	}
+	await t.throwsAsync(async () => {
+		await core.applyCustomAction(newCustomAction)
+	})
+})

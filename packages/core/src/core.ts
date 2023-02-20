@@ -291,6 +291,18 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			const effects = await this.vm.executeCustomAction(id, message.payload, { timestamp: 0 })
 
+			for (const effect of effects) {
+				if (!effect.id.startsWith(id)) {
+					// "entries that are updated by custom actions must ..."
+					throw Error(
+						`Applying custom action failed: it must set entries that have a hash that begins with the action id`
+					)
+				}
+				if (effect.type == "del") {
+					throw Error(`Applying custom action failed: the 'del' function cannot be called from within custom actions`)
+				}
+			}
+
 			// TODO: can we give the user a way to set the timestamp if it comes from a trusted source?
 			const timestamp = 0
 			this.modelStore.applyEffects({ timestamp }, effects)
