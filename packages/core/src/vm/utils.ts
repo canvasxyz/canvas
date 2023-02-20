@@ -77,7 +77,7 @@ export function call(
 // 	return context.newString(value.toString()).consume((handle) => call(context, "BigInt", null, handle))
 // }
 
-export function marshalJSONObject(context: QuickJSContext, object: any): QuickJSHandle {
+export function recursiveWrapJSONObject(context: QuickJSContext, object: any): QuickJSHandle {
 	const i = typeof object
 	if (i == "string") {
 		return context.newString(object)
@@ -91,14 +91,14 @@ export function marshalJSONObject(context: QuickJSContext, object: any): QuickJS
 		} else {
 			const o = context.newObject()
 			Object.keys(object).map((key) => {
-				context.setProp(o, key, marshalJSONObject(context, object[key]))
+				context.setProp(o, key, recursiveWrapJSONObject(context, object[key]))
 			})
 			return o
 		}
 	} else if (i == "undefined") {
 		return context.undefined
 	} else if (i == "function" || i == "bigint" || i == "symbol") {
-		throw Error(`Cannot marshal JSON object to QuickJS: type ${i} is unsupported`)
+		throw Error(`Cannot wrap JSON object to QuickJS: type ${i} is unsupported`)
 	} else {
 		signalInvalidType(i)
 	}

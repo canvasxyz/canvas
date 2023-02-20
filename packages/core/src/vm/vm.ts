@@ -33,7 +33,7 @@ import {
 	wrapJSON,
 	resolvePromise,
 	wrapArray,
-	marshalJSONObject,
+	recursiveWrapJSONObject,
 	// newBigInt,
 } from "./utils.js"
 import { validateCanvasSpec } from "./validate.js"
@@ -446,7 +446,7 @@ export class VM {
 			await this.queue.add(() => {
 				assert(this.effects !== null && this.customActionContext !== null)
 				assert(!!this.customAction)
-				const payloadHandle = marshalJSONObject(this.context, payload)
+				const payloadHandle = recursiveWrapJSONObject(this.context, payload)
 				return this.executeInternal(typeof hash === "string" ? hash : toHex(hash), this.customAction.fn, payloadHandle)
 			})
 		} finally {
