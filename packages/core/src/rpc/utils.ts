@@ -1,4 +1,4 @@
-import type { Node } from "node-okra"
+import type { Node } from "@canvas-js/okra-node"
 
 import type { Action, Message, Session } from "@canvas-js/interfaces"
 

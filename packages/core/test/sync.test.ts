@@ -8,7 +8,7 @@ import test from "ava"
 
 import { nanoid } from "nanoid"
 import toIterable from "stream-to-it"
-import * as okra from "node-okra"
+import * as okra from "@canvas-js/okra-node"
 
 import type { Duplex } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
@@ -40,20 +40,15 @@ function connect(): [
 	]
 }
 
-function initialize(messageStore: MessageStore, mst: okra.Tree, messages: Iterable<Message>) {
-	const txn = new okra.Transaction(mst, { readOnly: false })
-	try {
+async function initialize(messageStore: MessageStore, mst: okra.Tree, messages: Iterable<Message>) {
+	await mst.write(async (txn) => {
 		for (const message of messages) {
 			const data = Buffer.from(stringify(message))
 			const hash = createHash("sha256").update(data).digest()
 			txn.set(getMessageKey(hash, message), hash)
 			messageStore.insert(hash, message)
 		}
-		txn.commit()
-	} catch (err) {
-		txn.abort()
-		throw err
-	}
+	})
 }
 
 async function testSync(sourceMessages: Iterable<Message>, targetMessages: Iterable<Message>): Promise<Message[]> {
@@ -65,27 +60,23 @@ async function testSync(sourceMessages: Iterable<Message>, targetMessages: Itera
 	const sourceMessageStore = new MessageStore(app, sourceDirectory)
 	const targetMessageStore = new MessageStore(app, targetDirectory)
 	const [sourceMSTPath, targetMSTPath] = [path.resolve(sourceDirectory, "mst"), path.resolve(targetDirectory, "mst")]
-	fs.mkdirSync(sourceMSTPath)
-	fs.mkdirSync(targetMSTPath)
-	const sourceMST = new okra.Tree(sourceMSTPath)
-	const targetMST = new okra.Tree(targetMSTPath)
+	const sourceMST = new okra.Tree(sourceMSTPath, {})
+	const targetMST = new okra.Tree(targetMSTPath, {})
 
-	initialize(sourceMessageStore, sourceMST, sourceMessages)
-	initialize(targetMessageStore, targetMST, targetMessages)
+	await initialize(sourceMessageStore, sourceMST, sourceMessages)
+	await initialize(targetMessageStore, targetMST, targetMessages)
 
 	const delta: Message[] = []
 	try {
 		const [source, target] = connect()
-		const sourceTxn = new okra.Transaction(sourceMST, { readOnly: true })
-		const targetTxn = new okra.Transaction(targetMST, { readOnly: false })
-
-		await Promise.all([
-			handleIncomingStream(source, sourceMessageStore, sourceTxn),
-			sync(targetMessageStore, targetTxn, target, async (hash, data, message) => void delta.push(message)),
-		])
-
-		sourceTxn.abort()
-		targetTxn.commit()
+		await targetMST.write(async (targetTxn) => {
+			await sourceMST.read(async (sourceTxn) => {
+				await Promise.all([
+					handleIncomingStream(source, sourceMessageStore, sourceTxn),
+					sync(targetMessageStore, targetTxn, target, async (hash, data, message) => void delta.push(message)),
+				])
+			})
+		})
 
 		return delta
 	} finally {

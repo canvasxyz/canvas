@@ -4,7 +4,7 @@ import assert from "node:assert"
 import type { Duplex } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
 
-import * as okra from "node-okra"
+import * as okra from "@canvas-js/okra-node"
 
 import { Message } from "@canvas-js/interfaces"
 
@@ -34,7 +34,6 @@ export async function sync(
 
 class Driver {
 	private readonly client: Client
-	private readonly cursor: okra.Cursor
 	constructor(
 		private readonly messageStore: MessageStore,
 		private readonly txn: okra.Transaction,
@@ -42,11 +41,9 @@ class Driver {
 		stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>
 	) {
 		this.client = new Client(stream)
-		this.cursor = new okra.Cursor(txn)
 	}
 
 	public close() {
-		this.cursor.close()
 		this.client.end()
 	}
 
@@ -73,7 +70,7 @@ class Driver {
 	}
 
 	private async scan(sourceNode: okra.Node) {
-		const targetNode = this.cursor.seek(sourceNode.level, sourceNode.key)
+		const targetNode = this.txn.seek(sourceNode.level, sourceNode.key)
 		// assert(targetNode !== null, "expected targetNode to not be null")
 		if (targetNode !== null && equalNodes(sourceNode, targetNode)) {
 			return

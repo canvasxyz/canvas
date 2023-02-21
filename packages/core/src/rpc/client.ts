@@ -6,7 +6,7 @@ import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
 
-import type { Node } from "node-okra"
+import type { Node } from "@canvas-js/okra-node"
 
 import RPC from "../../rpc/sync/index.cjs"
 

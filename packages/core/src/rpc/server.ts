@@ -5,7 +5,7 @@ import type { Duplex, Source } from "it-stream-types"
 import { pipe } from "it-pipe"
 import * as lp from "it-length-prefixed"
 
-import type * as okra from "node-okra"
+import type * as okra from "@canvas-js/okra-node"
 
 import RPC from "../../rpc/sync/index.cjs"
 

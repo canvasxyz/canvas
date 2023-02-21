@@ -2,7 +2,7 @@ import path from "node:path"
 import fs from "node:fs"
 
 import PQueue from "p-queue"
-import { Tree, Transaction } from "node-okra"
+import { Tree, Transaction } from "@canvas-js/okra-node"
 
 import { Message } from "@canvas-js/interfaces"
 
@@ -49,7 +49,7 @@ export class MST {
 	}
 
 	public async read<T = void>(dbi: string, callback: (txn: Transaction) => T | Promise<T>): Promise<T> {
-		const txn = new Transaction(this.tree, { readOnly: true, dbi })
+		const txn = new Transaction(this.tree, true, { dbi })
 		try {
 			return await callback(txn)
 		} finally {
@@ -59,7 +59,7 @@ export class MST {
 
 	public async write(dbi: string, callback: (txn: Transaction) => void | Promise<void>) {
 		await this.queue.add(async () => {
-			const txn = new Transaction(this.tree, { readOnly: false, dbi })
+			const txn = new Transaction(this.tree, false, { dbi })
 
 			try {
 				await callback(txn)
