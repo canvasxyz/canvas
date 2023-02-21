@@ -2,7 +2,7 @@ import assert from "node:assert"
 import path from "node:path"
 import Database, * as sqlite from "better-sqlite3"
 
-import type { Action, Session, ActionArgument, Chain, ChainId, Message } from "@canvas-js/interfaces"
+import type { Action, Session, ActionArgument, Chain, ChainId, Message, CustomAction } from "@canvas-js/interfaces"
 
 import { mapEntries, fromHex, toHex, signalInvalidType, stringify } from "./utils.js"
 import { MESSAGE_DATABASE_FILENAME } from "./constants.js"
@@ -40,6 +40,13 @@ type SessionRecord = {
 	app_name: string
 }
 
+type CustomActionRecord = {
+	hash: Buffer
+	app: string
+	name: string
+	payload: string
+}
+
 /**
  * The message log archives messages in its own separate SQLite database.
  */
@@ -71,6 +78,7 @@ export class MessageStore {
 
 		this.database.exec(MessageStore.createSessionsTable)
 		this.database.exec(MessageStore.createActionsTable)
+		this.database.exec(MessageStore.createCustomActionsTable)
 
 		this.statements = mapEntries(MessageStore.statements, (_, sql) => this.database.prepare(sql))
 	}
@@ -79,11 +87,13 @@ export class MessageStore {
 		this.database.close()
 	}
 
-	public insert(hash: string | Buffer, message: Message) {
+	public insert(hash: string | Buffer, message: Message | CustomAction) {
 		if (message.type === "action") {
 			this.insertAction(hash, message)
 		} else if (message.type === "session") {
 			this.insertSession(hash, message)
+		} else if (message.type === "customAction") {
+			this.insertCustomAction(hash, message)
 		} else {
 			signalInvalidType(message)
 		}
@@ -134,6 +144,22 @@ export class MessageStore {
 		}
 
 		this.statements.insertSession.run(record)
+	}
+
+	public insertCustomAction(hash: string | Buffer, customAction: CustomAction) {
+		assert(
+			customAction.app === this.app || this.sources.has(customAction.app),
+			"insertAction: action.payload.app not found in MessageStore.sources"
+		)
+
+		const record: CustomActionRecord = {
+			hash: typeof hash === "string" ? fromHex(hash) : hash,
+			app: customAction.app,
+			payload: JSON.stringify(customAction.payload),
+			name: customAction.name,
+		}
+
+		this.statements.insertCustomAction.run(record)
 	}
 
 	public getActionByHash(hash: Buffer): Action | null {
@@ -202,6 +228,20 @@ export class MessageStore {
 		}
 	}
 
+	public getCustomActionByHash(hash: Buffer): CustomAction | null {
+		const record: undefined | CustomActionRecord = this.statements.getCustomActionByHash.get({ hash })
+		return record === undefined ? null : MessageStore.parseCustomActionRecord(record)
+	}
+
+	private static parseCustomActionRecord(record: CustomActionRecord): CustomAction {
+		return {
+			type: "customAction",
+			app: record.app,
+			name: record.name,
+			payload: JSON.parse(record.payload),
+		}
+	}
+
 	// we can use statement.iterate() instead of paging manually
 	// https://github.com/WiseLibs/better-sqlite3/issues/406
 	public *getActionStream({ app }: { app?: string } = {}): Iterable<[Buffer, Action]> {
@@ -224,6 +264,18 @@ export class MessageStore {
 		} else {
 			for (const record of this.statements.getSessionsByApp.iterate({ app }) as Iterable<SessionRecord>) {
 				yield [record.hash, MessageStore.parseSessionRecord(record)]
+			}
+		}
+	}
+
+	public *getCustomActionStream({ app }: { app?: string } = {}): Iterable<[Buffer, CustomAction]> {
+		if (app === undefined) {
+			for (const record of this.statements.getCustomActions.iterate({}) as Iterable<CustomActionRecord>) {
+				yield [record.hash, MessageStore.parseCustomActionRecord(record)]
+			}
+		} else {
+			for (const record of this.statements.getCustomActionsByApp.iterate({ app }) as Iterable<CustomActionRecord>) {
+				yield [record.hash, MessageStore.parseCustomActionRecord(record)]
 			}
 		}
 	}
@@ -258,6 +310,13 @@ export class MessageStore {
     app_name         TEXT    NOT NULL
   );`
 
+	private static createCustomActionsTable = `CREATE TABLE IF NOT EXISTS custom_actions (
+		hash             BLOB    PRIMARY KEY,
+		name             TEXT    NOT NULL,
+		payload          TEXT    NOT NULL,
+		app              TEXT    NOT NULL
+	);`
+
 	private static statements = {
 		insertAction: `INSERT INTO actions (
       hash, signature, session_address, from_address, timestamp, call, call_args, chain, chain_id, block, app, app_name
@@ -269,12 +328,20 @@ export class MessageStore {
     ) VALUES (
       :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :chain_id, :block, :app, :app_name
     )`,
+		insertCustomAction: `INSERT INTO custom_actions (
+			hash, name, payload, app
+		) VALUES (
+			:hash, :name, :payload, :app
+		)`,
 		getActionByHash: `SELECT * FROM actions WHERE hash = :hash`,
 		getSessionByHash: `SELECT * FROM sessions WHERE hash = :hash`,
+		getCustomActionByHash: `SELECT * FROM custom_actions WHERE hash = :hash`,
 		getSessionByAddress: `SELECT * FROM sessions WHERE session_address = :session_address`,
 		getSessions: `SELECT * FROM sessions`,
 		getActions: `SELECT * FROM actions`,
+		getCustomActions: `SELECT * from custom_actions`,
 		getSessionsByApp: `SELECT * FROM sessions WHERE app = :app`,
 		getActionsByApp: `SELECT * FROM actions WHERE app = :app`,
+		getCustomActionsByApp: `SELECT * FROM custom_actions WHERE app = :app`,
 	}
 }

@@ -1,10 +1,10 @@
 import test from "ava"
 
 import { ethers } from "ethers"
-
 import { Core, ApplicationError, compileSpec } from "@canvas-js/core"
 
 import { TestSessionSigner, TestSigner } from "./utils.js"
+import { CustomAction } from "@canvas-js/interfaces"
 
 const { spec, app, appName } = await compileSpec({
 	name: "Test App",
@@ -178,4 +178,298 @@ test("Create an in-memory Core with a file:// URI", async (t) => {
 	])
 
 	await core.close()
+})
+
+test("Apply a custom action with a valid payload", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			alpha: "string",
+			beta: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"alpha": { "type": "string" },
+				"beta": { "type": "string" }
+			}
+		}, ({alpha, beta}, {db, hash}) => {
+			db.things.set(hash, {alpha, beta });
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};
+	`
+	const cid = "1234567"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doThing",
+		payload: {
+			alpha: "zero",
+			beta: "one",
+		},
+	}
+	await core.applyCustomAction(newCustomAction)
+
+	const items = await core.getRoute("/things", {})
+	const createdThing = items[0]
+	t.deepEqual(createdThing.updated_at, 0)
+	t.deepEqual(createdThing.alpha, "zero")
+	t.deepEqual(createdThing.beta, "one")
+	t.pass()
+})
+
+test("Apply a custom action with signed data", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			message: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doSignedThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"signature": { "type": "string" },
+				"signingAddress": { "type": "string" },
+				"message": { "type": "string" }
+			}
+		}, ({ signature, signingAddress, message }, {db, hash}) => {
+			const domain = {
+				name: "TestApp"
+			};
+			const fields = {
+				Message: [
+					{ name: "message", type: "string" },
+					{ name: "signingAddress", type: "string" }
+				]
+			};
+			const value = { signingAddress, message };
+			const recoveredAddress = verifyTypedData(domain, fields, value, signature)
+			if(recoveredAddress == signingAddress) {
+				// signature is valid, perform action
+				db.things.set(hash, { message });
+			} else {
+				// signature is invalid
+				return false;
+			}
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};`
+
+	const getSignatureData = (data: any) => {
+		const domain = {
+			name: "TestApp",
+		}
+		const fields = {
+			Message: [
+				{ name: "message", type: "string" },
+				{ name: "signingAddress", type: "string" },
+			],
+		}
+		return [domain, fields, data]
+	}
+
+	const wallet = ethers.Wallet.createRandom()
+	const message = "hello world"
+	const signingAddress = wallet.address
+	const [domain, types, value] = getSignatureData({ message, signingAddress })
+	const signature = await wallet._signTypedData(domain, types, value)
+
+	const cid = "12345678"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doSignedThing",
+		payload: {
+			message,
+			signature,
+			signingAddress,
+		},
+	}
+	await core.applyCustomAction(newCustomAction)
+
+	const items = await core.getRoute("/things", {})
+	const createdThing = items[0]
+	t.deepEqual(createdThing.updated_at, 0)
+	t.deepEqual(createdThing.message, "hello world")
+	t.pass()
+})
+
+test("Reject a custom action with signed data if signature is incorrect", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			message: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doSignedThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"signature": { "type": "string" },
+				"signingAddress": { "type": "string" },
+				"message": { "type": "string" }
+			}
+		}, ({ signature, signingAddress, message }, {db, hash}) => {
+			const domain = {
+				name: "TestApp"
+			};
+			const fields = {
+				Message: [
+					{ name: "message", type: "string" },
+					{ name: "signingAddress", type: "string" }
+				]
+			};
+			const value = { signingAddress, message };
+			let recoveredAddress;
+			try {
+				recoveredAddress = verifyTypedData(domain, fields, value, signature)
+			} catch (e) {
+				return false;
+			}
+			if(recoveredAddress == signingAddress) {
+				// signature is valid, perform action
+				db.things.set(hash, { message });
+			} else {
+				// signature is invalid
+				return false;
+			}
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};`
+
+	const wallet = ethers.Wallet.createRandom()
+	const message = "hello world"
+	const signingAddress = wallet.address
+	const signature = "incorrectSignature"
+
+	const cid = "12345678"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doSignedThing",
+		payload: {
+			message,
+			signature,
+			signingAddress,
+		},
+	}
+	await t.throwsAsync(async () => {
+		await core.applyCustomAction(newCustomAction)
+	})
+})
+
+test("Reject a custom action that does not set the id to the hash", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			alpha: "string",
+			beta: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"alpha": { "type": "string" },
+				"beta": { "type": "string" }
+			}
+		}, ({alpha, beta}, {db, hash}) => {
+			db.things.set("invalid_hash", { alpha, beta });
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};
+	`
+	const cid = "1234567"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doThing",
+		payload: {
+			alpha: "zero",
+			beta: "one",
+		},
+	}
+	await t.throwsAsync(async () => {
+		await core.applyCustomAction(newCustomAction)
+	})
+})
+
+test("Reject a custom action that calls the del function", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			alpha: "string",
+			beta: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"alpha": { "type": "string" },
+				"beta": { "type": "string" }
+			}
+		}, ({alpha, beta}, {db, hash}) => {
+			db.things.del(hash);
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};
+	`
+	const cid = "1234567"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doThing",
+		payload: {
+			alpha: "zero",
+			beta: "one",
+		},
+	}
+	await t.throwsAsync(async () => {
+		await core.applyCustomAction(newCustomAction)
+	})
 })

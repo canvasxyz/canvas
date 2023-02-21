@@ -22,6 +22,9 @@ export const getMessageKey = (hash: Buffer | string, message: Message) => {
 		key.writeUintBE(message.payload.timestamp * 2 + 1, 0, 6)
 	} else if (message.type === "session") {
 		key.writeUintBE(message.payload.sessionIssued * 2, 0, 6)
+	} else if (message.type === "customAction") {
+		// custom actions don't have a timestamp
+		key.writeUintBE(0, 0, 6)
 	} else {
 		signalInvalidType(message)
 	}

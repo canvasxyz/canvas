@@ -15,7 +15,7 @@ export type Effect =
 export class ModelStore {
 	public readonly database: sqlite.Database
 
-	private readonly transaction: (context: ActionContext, effects: Effect[]) => void
+	private readonly transaction: (context: { timestamp: number }, effects: Effect[]) => void
 	private readonly vm: VM
 	private readonly modelStatements: Record<
 		string,
@@ -49,7 +49,7 @@ export class ModelStore {
 			)
 		}
 
-		this.transaction = this.database.transaction((context: ActionContext, effects: Effect[]): void => {
+		this.transaction = this.database.transaction((context: { timestamp: number }, effects: Effect[]): void => {
 			for (const effect of effects) {
 				this.applyEffect(context, effect)
 			}
@@ -68,11 +68,11 @@ export class ModelStore {
 		return result && result.deleted_at
 	}
 
-	public applyEffects(context: ActionContext, effects: Effect[]) {
+	public applyEffects(context: { timestamp: number }, effects: Effect[]) {
 		this.transaction(context, effects)
 	}
 
-	private applyEffect(context: ActionContext, effect: Effect) {
+	private applyEffect(context: { timestamp: number }, effect: Effect) {
 		const updatedAt = this.getUpdatedAt(effect.model, effect.id)
 		if (updatedAt !== undefined && updatedAt > context.timestamp) {
 			return

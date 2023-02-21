@@ -239,7 +239,7 @@ const VALIDATION_TEST_FIXTURES: {
         doThing: 1234
       }
     `,
-		expectedResult: errors(["Action 'doThing' is invalid: 'actions.doThing' is not a function"]),
+		expectedResult: errors(["Action 'doThing' is invalid: 'actions.doThing' is not a function or valid custom action"]),
 	},
 	{
 		name: "reject contracts not defined as an object",
@@ -384,6 +384,47 @@ const VALIDATION_TEST_FIXTURES: {
 		expectedResult: errors([
 			`Source 'ipfs://abcdefhijklmnop' is invalid: sources["ipfs://abcdefhijklmnop"].doSourceThing is not a function`,
 		]),
+	},
+	{
+		name: "accept a basic custom action",
+		app: `
+      export const models = {};
+      export const actions = {
+        doThing: customAction({}, () => {})
+      };
+    `,
+		expectedResult: success,
+	},
+	{
+		name: "reject a basic custom action with an invalid function type",
+		app: `
+      export const models = {};
+      export const actions = {
+        doThing: customAction({}, null)
+      };
+    `,
+		expectedResult: errors(["Custom action function is invalid: it should be a function"]),
+	},
+	{
+		name: "reject a basic custom action with no schema/function definition",
+		app: `
+      export const models = {};
+      export const actions = {
+        doThing: customAction()
+      };
+    `,
+		expectedResult: errors(["Custom action schema is invalid: it should be an object"]),
+	},
+	{
+		name: "reject if more than one custom action is defined",
+		app: `
+      export const models = {};
+      export const actions = {
+        doThing: customAction({}, () => {}),
+        doOtherThing: customAction({}, () => {})
+      };
+    `,
+		expectedResult: errors(["Contract is invalid: more than one custom action is defined"]),
 	},
 ]
 
