@@ -1,6 +1,6 @@
 # @canvas-js/core
 
-> ⚠️ In most cases, you want to use the [CLI](../cli/) or the [hub](https://canvas-hub.fly.dev/) to run apps. `@canvas-js/core` is an internal component for embedded use cases.
+> ⚠️ In most cases, you want to use the Canvas CLI or the [hub](https://canvas-hub.fly.dev/) to run apps. `@canvas-js/core` is an internal component for embedded use cases.
 
 The Canvas core verifies, executes, and stores the effects of signed messages.
 Most developers should not use the core directly, but instead should use the Canvas CLI or Hub,

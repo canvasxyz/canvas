@@ -3,14 +3,14 @@
 Canvas provides React hooks for using Canvas in your frontend
 application.
 
-The React hooks are currently tested with Ethereum-compatible chains
-only, with [Ethers v5](https://docs.ethers.org/v5/) and
+The React hooks are currently developed for Ethereum-compatible
+chains, with [Ethers v5](https://docs.ethers.org/v5/) and
 [wagmi](https://wagmi.sh/).
 
 
 ## Table of Contents
 
-- [`<Canvas />`](#canvas): configures a connection to Canvas
+- [`<Canvas />`](#canvas): configures the connection to Canvas
 - [`useCanvas()`](#usecanvas): returns the current app and user
 - [`useRoute(route, options)`](#useroute): fetches or subscribes to a route
 - [`useSession(chainImplementation, signer)`](#usesession): wraps an Ethereum signer, and exposes login(), logout(), and client.action() methods for taking actions
@@ -27,7 +27,7 @@ To use the Canvas hooks, you must first wrap your application in a parent `Canva
 
 ## `useCanvas`
 
-You can then access metadata about the host and the application the host is serving using the `useCanvas` hook anywhere inside the parent `Canvas` element.
+You can access metadata about the host, and the application the host is serving, using the `useCanvas` hook anywhere inside the parent `Canvas` element.
 
 ```tsx
 import { useCanvas } from "@canvas-js/hooks"
@@ -67,11 +67,11 @@ declare function useCanvas(): {
 
 ## `useRoute`
 
-`useRoute` fetches and subscribes to data from your application's routes.
+You can use `useRoute` to fetch or subscribe to data from your application's routes.
 
-The `Canvas` element internally establishes a websocket connection to the host, and, by default, the `useRoute` hook will use that websocket connection to subscribe to a given route with given params.
+The `Canvas` element internally establishes a WebSocket connection to the host. By default, the `useRoute` hook will use that websocket connection to subscribe to a given route, with any provided params.
 
-**Subscribing to routes**
+**Fetching routes with a subscription**
 
 For example, to subscribe to posts from a specific user:
 
@@ -88,11 +88,13 @@ function MyApp({}) {
 }
 ```
 
-The hook will re-render every time the resulting `data` changes (compared deep equality). Use this pattern when you want the host to push data to the client. **Don't** use this pattern if the parameter values (`{ user: "joel" }` in the example) change often. For subscriptions, routes are bound to concrete parameter values, so changing the parameters forces the hook to unsubscribe and re-subscribe.
+The hook will re-render every time the resulting `data` changes (compared deep equality).
+
+Use this pattern when you want the host to push data to the client. **Don't** use this pattern if the parameter values (`{ user: "joel" }` in the example) change often. For subscriptions, routes are bound to concrete parameter values, so changing the parameters forces the hook to unsubscribe and re-subscribe.
 
 **Fetching routes without a subscription**
 
-The `useRoute` hook can also fetch routes without subscribing to them. Pass a `{ subscribe: false }` options object as the third argument and the hook will use regulular HTTP GET requests, re-fetching the route data every time any of the parameter values change (and only then).
+The `useRoute` hook can also fetch routes without subscribing to them. Pass a `{ subscribe: false }` options object as the third argument and the hook will use regulular HTTP GET requests, re-fetching the route data every time any of the parameter values passed to the hook change (and only then).
 
 ```tsx
 import { useRoute } from "@canvas-js/hooks"
