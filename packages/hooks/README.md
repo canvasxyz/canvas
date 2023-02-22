@@ -10,10 +10,10 @@ only, with [Ethers v5](https://docs.ethers.org/v5/) and
 
 ## Table of Contents
 
-- [`<Canvas />`](#canvas)
-- [`useCanvas`](#usecanvas)
-- [`useRoute`](#useroute)
-- [`useSession`](#usesession)
+- [`<Canvas />`](#canvas): configures a connection to Canvas
+- [`useCanvas()`](#usecanvas): returns the current app and user
+- [`useRoute(route, options)`](#useroute): fetches or subscribes to a route
+- [`useSession(chainImplementation, signer)`](#usesession): wraps an Ethereum signer, and exposes login(), logout(), and client.action() methods for taking actions
 
 ## `<Canvas />`
 
@@ -24,19 +24,6 @@ To use the Canvas hooks, you must first wrap your application in a parent `Canva
 	<MyApp />
 </Canvas>
 ```
-
-Then, in any component inside your app, you can use the three hooks:
-`useCanvas`, `useRoute`, and `useSession`.
-
-- `useCanvas` returns an object with configuration data about the
-  connected Canvas app and the currently-authenticated user.
-- `useRoute` takes a string route and an object of params, and works
-  like the `useSWR` hook, returning an error or an array of
-  results. Internally, it uses the [EventSource
-  API](https://developer.mozilla.org/en-US/docs/Web/API/EventSource).
-- `useSession` accepts a signer from wagmi (for Ethereum), or an
-  injected signer from other networks, and returns a client for
-  dispatching actions.
 
 ## `useCanvas`
 
@@ -80,11 +67,13 @@ declare function useCanvas(): {
 
 ## `useRoute`
 
-`useRoute` is the primary way to fetch data from your application.
+`useRoute` fetches and subscribes to data from your application's routes.
 
-There are two ways to use the `useRoute` hook to fetch data. The `Canvas` element internally establishes a websocket connection to the host, and, by default, the `useRoute` hook will use that websocket connection to subscribe to a given route with given params.
+The `Canvas` element internally establishes a websocket connection to the host, and, by default, the `useRoute` hook will use that websocket connection to subscribe to a given route with given params.
 
-For example, subscribing to the posts for a specific user might look like this:
+**Subscribing to routes**
+
+For example, to subscribe to posts from a specific user:
 
 ```tsx
 import { useRoute } from "@canvas-js/hooks"
@@ -100,6 +89,8 @@ function MyApp({}) {
 ```
 
 The hook will re-render every time the resulting `data` changes (compared deep equality). Use this pattern when you want the host to push data to the client. **Don't** use this pattern if the parameter values (`{ user: "joel" }` in the example) change often. For subscriptions, routes are bound to concrete parameter values, so changing the parameters forces the hook to unsubscribe and re-subscribe.
+
+**Fetching routes without a subscription**
 
 The `useRoute` hook can also fetch routes without subscribing to them. Pass a `{ subscribe: false }` options object as the third argument and the hook will use regulular HTTP GET requests, re-fetching the route data every time any of the parameter values change (and only then).
 
@@ -132,15 +123,14 @@ function useRoute<T extends Record<string, ModelValue> = Record<string, ModelVal
 
 ## `useSession`
 
-In an example Ethereum app with a `createPost(args: { content: string })` action, using `useSession` with `wagmi` might look like this:
+`useSession` accepts an Ethereum signer, and returns login() and
+logout() methods, and a client for dispatching actions.
+
+For example:
 
 ```tsx
 import { useProvider, useSigner, useNetwork } from "wagmi"
 import { EthereumChainImplementation } from "@canvas-js/ethereum"
-
-// class EthereumChainImplementation implements ChainImplementation<ethers.providers.JsonRpcSigner, ethers.Wallet> {
-//   constructor(chainId: string, provider?: ethers.providers.JsonRpcProvider)
-// }
 
 function MyApp({}) {
 	const provider = useProvider<ethers.providers.JsonRpcProvider>()
