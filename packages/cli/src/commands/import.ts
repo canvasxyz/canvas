@@ -53,15 +53,14 @@ export async function handler(args: Args) {
 		terminal: false,
 	})
 
-	let actionCount = 0
-	let sessionCount = 0
+	let messageCount = 0
 
 	rl.on("line", (line) => {
 		const { type, ...message } = JSON.parse(line)
 		assert(messageType.is(message), "invalid message")
 		core
 			.apply(message)
-			.then(() => actionCount++)
+			.then(() => messageCount++)
 			.catch((err) => {
 				if (err instanceof Error) {
 					console.error(chalk.red(`[canvas-cli] Failed to apply message (${err.message})`))
@@ -72,6 +71,6 @@ export async function handler(args: Args) {
 	})
 
 	rl.on("close", async () => {
-		console.log(`[canvas-cli] Imported ${actionCount} actions, ${sessionCount} sessions`)
+		console.log(`[canvas-cli] Imported ${messageCount} messages`)
 	})
 }
