@@ -7,13 +7,14 @@ import test from "ava"
 
 import { nanoid } from "nanoid"
 
-import { Core, compileSpec } from "@canvas-js/core"
-
-import { TestSigner } from "./utils.js"
-import { fromHex, stringify, toHex } from "@canvas-js/core/lib/utils.js"
-import { getMessageKey } from "@canvas-js/core/lib/rpc/utils.js"
-import * as constants from "@canvas-js/core/lib/constants.js"
 import { Message } from "@canvas-js/interfaces"
+import { Core } from "@canvas-js/core"
+import * as constants from "@canvas-js/core/constants"
+
+import { fromHex, stringify, toHex } from "@canvas-js/core/utils"
+import { getMessageKey } from "@canvas-js/core/sync"
+
+import { TestSigner, compileSpec } from "./utils.js"
 
 const MessageBoard = await compileSpec({
 	name: "Test App",
@@ -73,13 +74,13 @@ test("Apply source actions", async (t) => {
 	})
 
 	const sourceAction = await sourceSigner.sign("createPost", { content: "hello world" })
-	const { hash: sourceActionHash } = await core.applyAction(sourceAction)
+	const { hash: sourceActionHash } = await core.apply(sourceAction)
 	const createAction = await signer.sign("create", { content: "lorem ipsum" })
-	const { hash: createActionHash } = await core.applyAction(createAction)
+	const { hash: createActionHash } = await core.apply(createAction)
 	const voteAction = await signer.sign("vote", { post_id: createActionHash, value: 1 })
-	const { hash: voteActionHash } = await core.applyAction(voteAction)
+	const { hash: voteActionHash } = await core.apply(voteAction)
 	const voteSourceAction = await signer.sign("vote", { post_id: sourceActionHash, value: -1 })
-	const { hash: voteSourceActionHash } = await core.applyAction(voteSourceAction)
+	const { hash: voteSourceActionHash } = await core.apply(voteSourceAction)
 
 	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM posts").all(), [
 		{
@@ -114,7 +115,7 @@ test("Apply source actions", async (t) => {
 	t.deepEqual(core.messageStore.database.prepare("SELECT * FROM actions").all(), [
 		{
 			id: 1,
-			hash: fromHex(sourceActionHash),
+			hash: Buffer.from(fromHex(sourceActionHash)),
 			signature: sourceAction.signature,
 			from_address: sourceSigner.wallet.address,
 			session_address: null,
@@ -130,7 +131,7 @@ test("Apply source actions", async (t) => {
 		},
 		{
 			id: 2,
-			hash: fromHex(createActionHash),
+			hash: Buffer.from(fromHex(createActionHash)),
 			signature: createAction.signature,
 			from_address: signer.wallet.address,
 			session_address: null,
@@ -145,7 +146,7 @@ test("Apply source actions", async (t) => {
 		},
 		{
 			id: 3,
-			hash: fromHex(voteActionHash),
+			hash: Buffer.from(fromHex(voteActionHash)),
 			signature: voteAction.signature,
 			from_address: signer.wallet.address,
 			session_address: null,
@@ -160,7 +161,7 @@ test("Apply source actions", async (t) => {
 		},
 		{
 			id: 4,
-			hash: fromHex(voteSourceActionHash),
+			hash: Buffer.from(fromHex(voteSourceActionHash)),
 			signature: voteSourceAction.signature,
 			from_address: signer.wallet.address,
 			session_address: null,
@@ -182,7 +183,7 @@ test("Build missing MST index on core startup", async (t) => {
 	const directory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(directory)
 
-	type Entry = { key: Buffer; value: Buffer }
+	type Entry = { key: Uint8Array; value: Uint8Array }
 	const getEntry = (hash: string, message: Message): Entry => {
 		const hashBuffer = fromHex(hash)
 		return { key: getMessageKey(hashBuffer, message), value: hashBuffer }
@@ -202,13 +203,13 @@ test("Build missing MST index on core startup", async (t) => {
 			})
 
 			const sourceAction = await sourceSigner.sign("createPost", { content: "hello world" })
-			const { hash: sourceActionHash } = await core.applyAction(sourceAction)
+			const { hash: sourceActionHash } = await core.apply(sourceAction)
 			const createAction = await signer.sign("create", { content: "lorem ipsum" })
-			const { hash: createActionHash } = await core.applyAction(createAction)
+			const { hash: createActionHash } = await core.apply(createAction)
 			const voteAction = await signer.sign("vote", { post_id: createActionHash, value: 1 })
-			const { hash: voteActionHash } = await core.applyAction(voteAction)
+			const { hash: voteActionHash } = await core.apply(voteAction)
 			const voteSourceAction = await signer.sign("vote", { post_id: sourceActionHash, value: -1 })
-			const { hash: voteSourceActionHash } = await core.applyAction(voteSourceAction)
+			const { hash: voteSourceActionHash } = await core.apply(voteSourceAction)
 
 			await core.close()
 
@@ -241,11 +242,15 @@ test("Build missing MST index on core startup", async (t) => {
 
 		try {
 			for (const [dbi, entries] of Object.entries(mstEntries)) {
-				await core.mst!.read(dbi, (txn) => {
-					for (const { key, value } of entries) {
-						t.deepEqual(value, txn.get(key), `key ${toHex(key)}`)
-					}
-				})
+				await core.messageStore.read(
+					async (txn) => {
+						for (const { key, value } of entries) {
+							const { id } = await txn.getNode(0, key)
+							t.deepEqual(id, value)
+						}
+					},
+					{ dbi }
+				)
 			}
 		} finally {
 			await core.close()

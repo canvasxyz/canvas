@@ -8,11 +8,13 @@ import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp
 import Hash from "ipfs-only-hash"
 import chalk from "chalk"
 import prompts from "prompts"
-
-import { chainType, constants } from "@canvas-js/core"
-import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
-import { ChainImplementation } from "@canvas-js/interfaces"
 import { ethers } from "ethers"
+
+import type { ChainImplementation } from "@canvas-js/interfaces"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+
+import * as constants from "@canvas-js/core/constants"
+import { chainType } from "@canvas-js/core/codecs"
 
 export const CANVAS_HOME = process.env.CANVAS_HOME ?? path.resolve(os.homedir(), ".canvas")
 export const SOCKET_FILENAME = "daemon.sock"

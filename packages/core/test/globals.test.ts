@@ -1,9 +1,9 @@
 import test from "ava"
 import assert from "node:assert"
 
-import { compileSpec, Core } from "@canvas-js/core"
+import { Core } from "@canvas-js/core"
 
-import { TestSigner } from "./utils.js"
+import { TestSigner, compileSpec } from "./utils.js"
 
 const { spec, app, appName } = await compileSpec({
 	name: "Test App",
@@ -27,7 +27,7 @@ test("test fetch() and log IP address", async (t) => {
 	const core = await Core.initialize({ uri: app, spec, directory: null, libp2p: null, unchecked: true })
 
 	const action = await signer.sign("logIP", {})
-	await t.notThrowsAsync(() => core.applyAction(action))
+	await t.notThrowsAsync(() => core.apply(action))
 
 	await core.close()
 })
@@ -36,10 +36,10 @@ test("test assert()", async (t) => {
 	const core = await Core.initialize({ uri: app, spec, directory: null, libp2p: null, unchecked: true })
 
 	const successAction = await signer.sign("echo", { text: "hello world" })
-	await t.notThrowsAsync(() => core.applyAction(successAction))
+	await t.notThrowsAsync(() => core.apply(successAction))
 
 	const failureAction = await signer.sign("echo", { text: 5 })
-	await t.throwsAsync(() => core.applyAction(failureAction), { message: "false == true" })
+	await t.throwsAsync(() => core.apply(failureAction), { message: "false == true" })
 
 	await core.close()
 })

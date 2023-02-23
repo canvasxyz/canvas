@@ -1,7 +1,7 @@
 import assert from "node:assert"
 
 import { isFail, QuickJSContext, QuickJSHandle, VmCallResult } from "quickjs-emscripten"
-import { signalInvalidType } from "../utils.js"
+import { signalInvalidType } from "@canvas-js/core/utils"
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
 export interface JSONArray extends Array<JSONValue> {}

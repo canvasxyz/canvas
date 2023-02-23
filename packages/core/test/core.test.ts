@@ -1,10 +1,10 @@
 import test from "ava"
 
 import { ethers } from "ethers"
-import { Core, ApplicationError, compileSpec } from "@canvas-js/core"
-
-import { TestSessionSigner, TestSigner } from "./utils.js"
 import { CustomAction } from "@canvas-js/interfaces"
+import { Core, ApplicationError } from "@canvas-js/core"
+
+import { TestSessionSigner, TestSigner, compileSpec } from "./utils.js"
 
 const { spec, app, appName } = await compileSpec({
 	name: "Test App",
@@ -43,7 +43,7 @@ test("Apply signed action", async (t) => {
 	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 
 	const action = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
-	const { hash } = await core.applyAction(action)
+	const { hash } = await core.apply(action)
 
 	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
 		{
@@ -62,10 +62,10 @@ test("Apply two signed actions", async (t) => {
 	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
-	const { hash: newThreadHash } = await core.applyAction(newThreadAction)
+	const { hash: newThreadHash } = await core.apply(newThreadAction)
 
 	const voteThreadAction = await signer.sign("voteThread", { threadId: newThreadHash, value: 1 })
-	await core.applyAction(voteThreadAction)
+	await core.apply(voteThreadAction)
 
 	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
 		{
@@ -83,10 +83,10 @@ test("Apply two signed actions", async (t) => {
 test("Apply action signed with session key", async (t) => {
 	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 	const session = await sessionSigner.session()
-	await core.applySession(session)
+	await core.apply(session)
 
 	const action = await sessionSigner.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
-	const { hash } = await core.applyAction(action)
+	const { hash } = await core.apply(action)
 
 	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
 		{
@@ -105,15 +105,15 @@ test("Apply two actions signed with session keys", async (t) => {
 	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 
 	const session = await sessionSigner.session()
-	await core.applySession(session)
+	await core.apply(session)
 
 	const newThreadAction = await sessionSigner.sign("newThread", {
 		title: "Hacker News",
 		link: "https://news.ycombinator.com",
 	})
-	const { hash: threadId } = await core.applyAction(newThreadAction)
+	const { hash: threadId } = await core.apply(newThreadAction)
 	const voteThreadAction = await sessionSigner.sign("voteThread", { threadId, value: 1 })
-	await core.applyAction(voteThreadAction)
+	await core.apply(voteThreadAction)
 
 	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
 		{
@@ -132,7 +132,7 @@ test("Apply an action with a missing signature", async (t) => {
 	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 	const action = await signer.sign("newThread", { title: "Example Website", link: "http://example.com" })
 	action.signature = "0x00"
-	await t.throwsAsync(core.applyAction(action), { instanceOf: Error, code: "INVALID_ARGUMENT" })
+	await t.throwsAsync(core.apply(action), { instanceOf: Error, code: "INVALID_ARGUMENT" })
 	await core.close()
 })
 
@@ -141,7 +141,7 @@ test("Apply an action signed by wrong address", async (t) => {
 	const action = await signer.sign("newThread", { title: "Example Website", link: "http://example.com" })
 	const { address } = ethers.Wallet.createRandom()
 	action.payload.from = address
-	await t.throwsAsync(core.applyAction(action), { instanceOf: Error, message: /^Invalid action signature/ })
+	await t.throwsAsync(core.apply(action), { instanceOf: Error, message: /^Invalid action signature/ })
 	await core.close()
 })
 
@@ -149,10 +149,10 @@ test("Apply an action that throws an error", async (t) => {
 	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
-	const { hash: threadId } = await core.applyAction(newThreadAction)
+	const { hash: threadId } = await core.apply(newThreadAction)
 	const voteThreadAction = await signer.sign("voteThread", { threadId, value: 100000 })
 
-	await t.throwsAsync(core.applyAction(voteThreadAction), {
+	await t.throwsAsync(core.apply(voteThreadAction), {
 		instanceOf: ApplicationError,
 		message: "invalid vote value",
 	})
@@ -165,7 +165,7 @@ test("Create an in-memory Core with a file:// URI", async (t) => {
 	const signer = new TestSigner(uri, appName)
 	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
-	const { hash: threadId } = await core.applyAction(newThreadAction)
+	const { hash: threadId } = await core.apply(newThreadAction)
 
 	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
 		{
@@ -219,7 +219,8 @@ test("Apply a custom action with a valid payload", async (t) => {
 			beta: "one",
 		},
 	}
-	await core.applyCustomAction(newCustomAction)
+
+	await core.apply(newCustomAction)
 
 	const items = await core.getRoute("/things", {})
 	const createdThing = items[0]
@@ -305,7 +306,8 @@ test("Apply a custom action with signed data", async (t) => {
 			signingAddress,
 		},
 	}
-	await core.applyCustomAction(newCustomAction)
+
+	await core.apply(newCustomAction)
 
 	const items = await core.getRoute("/things", {})
 	const createdThing = items[0]
@@ -381,9 +383,8 @@ test("Reject a custom action with signed data if signature is incorrect", async 
 			signingAddress,
 		},
 	}
-	await t.throwsAsync(async () => {
-		await core.applyCustomAction(newCustomAction)
-	})
+
+	await t.throwsAsync(() => core.apply(newCustomAction))
 })
 
 test("Reject a custom action that does not set the id to the hash", async (t) => {
@@ -425,9 +426,7 @@ test("Reject a custom action that does not set the id to the hash", async (t) =>
 			beta: "one",
 		},
 	}
-	await t.throwsAsync(async () => {
-		await core.applyCustomAction(newCustomAction)
-	})
+	await t.throwsAsync(() => core.apply(newCustomAction))
 })
 
 test("Reject a custom action that calls the del function", async (t) => {
@@ -469,7 +468,5 @@ test("Reject a custom action that calls the del function", async (t) => {
 			beta: "one",
 		},
 	}
-	await t.throwsAsync(async () => {
-		await core.applyCustomAction(newCustomAction)
-	})
+	await t.throwsAsync(() => core.apply(newCustomAction))
 })

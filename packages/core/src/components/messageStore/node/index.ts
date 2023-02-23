@@ -1,11 +1,19 @@
 import assert from "node:assert"
 import path from "node:path"
+import fs from "node:fs"
+
 import Database, * as sqlite from "better-sqlite3"
+import * as okra from "@canvas-js/okra-node"
 
-import type { Action, Session, ActionArgument, Chain, ChainId, Message, CustomAction } from "@canvas-js/interfaces"
+import type { Action, Session, ActionArgument, Chain, ChainId, CustomAction, Message } from "@canvas-js/interfaces"
 
-import { mapEntries, fromHex, toHex, signalInvalidType, stringify } from "./utils.js"
-import { MESSAGE_DATABASE_FILENAME } from "./constants.js"
+import { mapEntries, toHex, stringify, signalInvalidType } from "@canvas-js/core/utils"
+import { MESSAGE_DATABASE_FILENAME, MST_DIRECTORY_NAME } from "@canvas-js/core/constants"
+
+import { getMessageKey } from "@canvas-js/core/sync"
+
+import type { MessageStore as IMessageStore, ReadOnlyTransaction, ReadWriteTransaction, Node } from "../index.js"
+export type { ReadOnlyTransaction, ReadWriteTransaction, Node }
 
 type ActionRecord = {
 	hash: Buffer
@@ -47,25 +55,24 @@ type CustomActionRecord = {
 	payload: string
 }
 
-/**
- * The message log archives messages in its own separate SQLite database.
- */
-export class MessageStore {
-	public readonly database: sqlite.Database
+const toBuffer = (array: Uint8Array) => Buffer.from(array.buffer, array.byteOffset, array.byteLength)
+
+export class MessageStore implements IMessageStore {
 	private readonly statements: Record<keyof typeof MessageStore.statements, sqlite.Statement>
 
-	constructor(
-		private readonly app: string,
-		private readonly directory: string | null,
-		private readonly sources: Set<string> = new Set([]),
-		private readonly options: { verbose?: boolean } = {}
-	) {
+	public static async initialize(
+		app: string,
+		directory: string | null,
+		sources: Set<string> = new Set([]),
+		options: { verbose?: boolean } = {}
+	): Promise<MessageStore> {
 		if (directory === null) {
 			if (options.verbose) {
 				console.log("[canvas-core] Initializing in-memory message store")
 			}
 
-			this.database = new Database(":memory:")
+			const database = new Database(":memory:")
+			return new MessageStore(app, database, null, sources)
 		} else {
 			const databasePath = path.resolve(directory, MESSAGE_DATABASE_FILENAME)
 
@@ -73,40 +80,64 @@ export class MessageStore {
 				console.log(`[canvas-core] Initializing message store at ${databasePath}`)
 			}
 
-			this.database = new Database(databasePath)
-		}
+			const database = new Database(databasePath)
 
+			const treePath = path.resolve(directory, MST_DIRECTORY_NAME)
+			if (options.verbose) {
+				console.log(`[canvas-core] Initializing MST index at ${treePath}`)
+			}
+
+			const treeExists = fs.existsSync(treePath)
+			if (treeExists) {
+				const tree = new okra.Tree(treePath, { dbs: [app, ...sources] })
+				return new MessageStore(app, database, tree, sources)
+			} else {
+				fs.mkdirSync(treePath)
+				const tree = new okra.Tree(treePath, { dbs: [app, ...sources] })
+				const messageStore = new MessageStore(app, database, tree, sources)
+				for (const dbi of [app, ...sources]) {
+					await tree.write(
+						async (txn) => {
+							for await (const [hash, message] of messageStore.getMessageStream({ app: dbi })) {
+								txn.set(getMessageKey(hash, message), hash)
+							}
+						},
+						{ dbi }
+					)
+				}
+
+				return messageStore
+			}
+		}
+	}
+
+	private constructor(
+		public readonly app: string,
+		public readonly database: sqlite.Database,
+		public readonly tree: okra.Tree | null,
+		private readonly sources: Set<string> = new Set([])
+	) {
 		this.database.exec(MessageStore.createSessionsTable)
 		this.database.exec(MessageStore.createActionsTable)
 		this.database.exec(MessageStore.createCustomActionsTable)
-
 		this.statements = mapEntries(MessageStore.statements, (_, sql) => this.database.prepare(sql))
 	}
 
-	public close() {
+	public async close() {
 		this.database.close()
-	}
-
-	public insert(hash: string | Buffer, message: Message | CustomAction) {
-		if (message.type === "action") {
-			this.insertAction(hash, message)
-		} else if (message.type === "session") {
-			this.insertSession(hash, message)
-		} else if (message.type === "customAction") {
-			this.insertCustomAction(hash, message)
-		} else {
-			signalInvalidType(message)
+		if (this.tree !== null) {
+			this.tree.close()
 		}
 	}
 
-	public insertAction(hash: string | Buffer, action: Action) {
+	private insertAction(hash: Uint8Array, action: Action): void {
 		assert(
 			action.payload.app === this.app || this.sources.has(action.payload.app),
 			"insertAction: action.payload.app not found in MessageStore.sources"
 		)
 
 		const record: ActionRecord = {
-			hash: typeof hash === "string" ? fromHex(hash) : hash,
+			hash: toBuffer(hash),
 			signature: action.signature,
 			app: action.payload.app,
 			app_name: action.payload.appName,
@@ -123,14 +154,14 @@ export class MessageStore {
 		this.statements.insertAction.run(record)
 	}
 
-	public insertSession(hash: string | Buffer, session: Session) {
+	private insertSession(hash: Uint8Array, session: Session): void {
 		assert(
 			session.payload.app === this.app || this.sources.has(session.payload.app),
 			"insertSession: session.payload.app not found in MessageStore.sources"
 		)
 
 		const record: SessionRecord = {
-			hash: typeof hash === "string" ? fromHex(hash) : hash,
+			hash: toBuffer(hash),
 			signature: session.signature,
 			app: session.payload.app,
 			app_name: session.payload.appName,
@@ -146,14 +177,14 @@ export class MessageStore {
 		this.statements.insertSession.run(record)
 	}
 
-	public insertCustomAction(hash: string | Buffer, customAction: CustomAction) {
+	private insertCustomAction(hash: Uint8Array, customAction: CustomAction): void {
 		assert(
 			customAction.app === this.app || this.sources.has(customAction.app),
 			"insertAction: action.payload.app not found in MessageStore.sources"
 		)
 
 		const record: CustomActionRecord = {
-			hash: typeof hash === "string" ? fromHex(hash) : hash,
+			hash: toBuffer(hash),
 			app: customAction.app,
 			payload: JSON.stringify(customAction.payload),
 			name: customAction.name,
@@ -162,8 +193,11 @@ export class MessageStore {
 		this.statements.insertCustomAction.run(record)
 	}
 
-	public getActionByHash(hash: Buffer): Action | null {
-		const record: undefined | ActionRecord = this.statements.getActionByHash.get({ hash })
+	private getActionByHash(hash: Uint8Array): Action | null {
+		const record: undefined | ActionRecord = this.statements.getActionByHash.get({
+			hash: toBuffer(hash),
+		})
+
 		return record === undefined ? null : MessageStore.parseActionRecord(record)
 	}
 
@@ -188,25 +222,27 @@ export class MessageStore {
 		return action
 	}
 
-	public getSessionByHash(hash: Buffer | string): Session | null {
+	private getSessionByHash(hash: Uint8Array): Session | null {
 		const record: undefined | SessionRecord = this.statements.getSessionByHash.get({
-			hash: typeof hash === "string" ? fromHex(hash) : hash,
+			hash: toBuffer(hash),
 		})
 
 		return record === undefined ? null : MessageStore.parseSessionRecord(record)
 	}
 
-	public getSessionByAddress(
+	public async getSessionByAddress(
 		chain: Chain,
 		chainId: ChainId,
 		address: string
-	): { hash: null; session: null } | { hash: string; session: Session } {
-		const record: undefined | SessionRecord = this.statements.getSessionByAddress.get({ session_address: address })
+	): Promise<[hash: string | null, session: Session | null]> {
+		const record: undefined | SessionRecord = this.statements.getSessionByAddress.get({
+			session_address: address,
+		})
 
 		if (record === undefined) {
-			return { hash: null, session: null }
+			return [null, null]
 		} else {
-			return { hash: toHex(record.hash), session: MessageStore.parseSessionRecord(record) }
+			return [toHex(record.hash), MessageStore.parseSessionRecord(record)]
 		}
 	}
 
@@ -228,8 +264,30 @@ export class MessageStore {
 		}
 	}
 
-	public getCustomActionByHash(hash: Buffer): CustomAction | null {
-		const record: undefined | CustomActionRecord = this.statements.getCustomActionByHash.get({ hash })
+	public async getMessageByHash(hash: Uint8Array): Promise<Message | null> {
+		const session = this.getSessionByHash(hash)
+		if (session !== null) {
+			return session
+		}
+
+		const action = this.getActionByHash(hash)
+		if (action !== null) {
+			return action
+		}
+
+		const customAction = this.getCustomActionByHash(hash)
+		if (customAction !== null) {
+			return customAction
+		}
+
+		return null
+	}
+
+	async getCustomActionByHash(hash: Uint8Array): Promise<CustomAction | null> {
+		const record: undefined | CustomActionRecord = this.statements.getCustomActionByHash.get({
+			hash: toBuffer(hash),
+		})
+
 		return record === undefined ? null : MessageStore.parseCustomActionRecord(record)
 	}
 
@@ -244,39 +302,88 @@ export class MessageStore {
 
 	// we can use statement.iterate() instead of paging manually
 	// https://github.com/WiseLibs/better-sqlite3/issues/406
-	public *getActionStream({ app }: { app?: string } = {}): Iterable<[Buffer, Action]> {
-		if (app === undefined) {
-			for (const record of this.statements.getActions.iterate({}) as Iterable<ActionRecord>) {
-				yield [record.hash, MessageStore.parseActionRecord(record)]
-			}
-		} else {
-			for (const record of this.statements.getActionsByApp.iterate({ app }) as Iterable<ActionRecord>) {
-				yield [record.hash, MessageStore.parseActionRecord(record)]
-			}
-		}
-	}
-
-	public *getSessionStream({ app }: { app?: string } = {}): Iterable<[Buffer, Session]> {
-		if (app === undefined) {
-			for (const record of this.statements.getSessions.iterate({}) as Iterable<SessionRecord>) {
+	public async *getMessageStream(
+		filter: { type?: Message["type"]; app?: string } = {}
+	): AsyncIterable<[Uint8Array, Message]> {
+		const { type, app } = filter
+		const params = app === undefined ? {} : { app }
+		if (type === undefined) {
+			for (const record of this.statements.getSessions.iterate(params) as Iterable<SessionRecord>) {
 				yield [record.hash, MessageStore.parseSessionRecord(record)]
 			}
-		} else {
-			for (const record of this.statements.getSessionsByApp.iterate({ app }) as Iterable<SessionRecord>) {
+
+			for (const record of this.statements.getActions.iterate(params) as Iterable<ActionRecord>) {
+				yield [record.hash, MessageStore.parseActionRecord(record)]
+			}
+
+			for (const record of this.statements.getCustomActions.iterate(params) as Iterable<CustomActionRecord>) {
+				yield [record.hash, MessageStore.parseCustomActionRecord(record)]
+			}
+		} else if (type === "session") {
+			for (const record of this.statements.getSessions.iterate(params) as Iterable<SessionRecord>) {
 				yield [record.hash, MessageStore.parseSessionRecord(record)]
 			}
-		}
-	}
-
-	public *getCustomActionStream({ app }: { app?: string } = {}): Iterable<[Buffer, CustomAction]> {
-		if (app === undefined) {
-			for (const record of this.statements.getCustomActions.iterate({}) as Iterable<CustomActionRecord>) {
+		} else if (type === "action") {
+			for (const record of this.statements.getActions.iterate(params) as Iterable<ActionRecord>) {
+				yield [record.hash, MessageStore.parseActionRecord(record)]
+			}
+		} else if (type === "customAction") {
+			for (const record of this.statements.getCustomActions.iterate(params) as Iterable<CustomActionRecord>) {
 				yield [record.hash, MessageStore.parseCustomActionRecord(record)]
 			}
 		} else {
-			for (const record of this.statements.getCustomActionsByApp.iterate({ app }) as Iterable<CustomActionRecord>) {
-				yield [record.hash, MessageStore.parseCustomActionRecord(record)]
+			signalInvalidType(type)
+		}
+	}
+
+	private getReadOnlyTransaction = (txn: okra.Transaction | null): ReadOnlyTransaction => ({
+		getMessage: (id) => this.getMessageByHash(id),
+		getNode: async (level, key) => parseNode(assertTxn(txn).getNode(level, key)),
+		getRoot: async () => parseNode(assertTxn(txn).getRoot()),
+		getChildren: async (level, key) => assertTxn(txn).getChildren(level, key).map(parseNode),
+		seek: async (level, key) => {
+			const node = assertTxn(txn).seek(level, key)
+			return node && parseNode(node)
+		},
+	})
+
+	public async read<T>(callback: (txn: ReadOnlyTransaction) => T | Promise<T>, options: { dbi?: string } = {}) {
+		const dbi = options.dbi ?? this.app
+		assert(dbi === this.app || this.sources.has(dbi))
+		if (this.tree === null) {
+			return await callback(this.getReadOnlyTransaction(null))
+		} else {
+			return await this.tree.read((txn) => callback(this.getReadOnlyTransaction(txn)), { dbi })
+		}
+	}
+
+	private getReadWriteTransaction = (txn: okra.Transaction | null): ReadWriteTransaction => ({
+		...this.getReadOnlyTransaction(txn),
+		insertMessage: async (id, message) => {
+			if (message.type === "session") {
+				this.insertSession(id, message)
+			} else if (message.type === "action") {
+				this.insertAction(id, message)
+			} else if (message.type === "customAction") {
+				this.insertCustomAction(id, message)
+			} else {
+				signalInvalidType(message)
 			}
+
+			if (txn !== null) {
+				const key = getMessageKey(id, message)
+				txn.set(key, id)
+			}
+		},
+	})
+
+	public async write<T>(callback: (txn: ReadWriteTransaction) => T | Promise<T>, options: { dbi?: string } = {}) {
+		const dbi = options.dbi ?? this.app
+		assert(dbi === this.app || this.sources.has(dbi))
+		if (this.tree === null) {
+			return await callback(this.getReadWriteTransaction(null))
+		} else {
+			return await this.tree.write((txn) => callback(this.getReadWriteTransaction(txn)), { dbi })
 		}
 	}
 
@@ -343,5 +450,16 @@ export class MessageStore {
 		getSessionsByApp: `SELECT * FROM sessions WHERE app = :app`,
 		getActionsByApp: `SELECT * FROM actions WHERE app = :app`,
 		getCustomActionsByApp: `SELECT * FROM custom_actions WHERE app = :app`,
+	}
+}
+
+const parseNode = ({ level, key, hash, value }: okra.Node): Node =>
+	value ? { level, key, hash, id: value } : { level, key, hash }
+
+function assertTxn(txn: okra.Transaction | null): okra.Transaction {
+	if (txn === null) {
+		throw new Error("cannot access MST on an in-memory message store")
+	} else {
+		return txn
 	}
 }

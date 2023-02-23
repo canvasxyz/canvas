@@ -3,16 +3,16 @@ import assert from "node:assert"
 import Database, * as sqlite from "better-sqlite3"
 import chalk from "chalk"
 
-import type { ActionContext, Model, ModelType, ModelValue, Query } from "@canvas-js/interfaces"
-import { mapEntries, signalInvalidType } from "./utils.js"
-import type { VM } from "./vm/index.js"
-import { MODEL_DATABASE_FILENAME } from "./constants.js"
+import type { Model, ModelType, ModelValue, Query } from "@canvas-js/interfaces"
 
-export type Effect =
-	| { type: "set"; model: string; id: string; values: Record<string, ModelValue> }
-	| { type: "del"; model: string; id: string }
+import type { VM } from "@canvas-js/core/components/vm"
+import { mapEntries, signalInvalidType } from "@canvas-js/core/utils"
+import { MODEL_DATABASE_FILENAME } from "@canvas-js/core/constants"
 
-export class ModelStore {
+import type { Effect, ModelStore as IModelStore } from "../index.js"
+export type { Effect } from "../index.js"
+
+export class ModelStore implements IModelStore {
 	public readonly database: sqlite.Database
 
 	private readonly transaction: (context: { timestamp: number }, effects: Effect[]) => void
@@ -68,7 +68,7 @@ export class ModelStore {
 		return result && result.deleted_at
 	}
 
-	public applyEffects(context: { timestamp: number }, effects: Effect[]) {
+	public async applyEffects(context: { timestamp: number }, effects: Effect[]) {
 		this.transaction(context, effects)
 	}
 
@@ -112,11 +112,11 @@ export class ModelStore {
 		}
 	}
 
-	public close() {
+	public async close() {
 		this.database.close()
 	}
 
-	public getRoute(route: string, params: Record<string, string> = {}): Promise<Record<string, ModelValue>[]> {
+	public async getRoute(route: string, params: Record<string, string> = {}): Promise<Record<string, ModelValue>[]> {
 		assert(route in this.vm.routes, "invalid route name")
 		const filteredParams = mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value))
 		return this.vm.executeRoute(route, filteredParams, (query: string | Query) => {

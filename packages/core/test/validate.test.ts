@@ -2,7 +2,7 @@
 
 import test from "ava"
 
-import { VM } from "@canvas-js/core"
+import { VM } from "@canvas-js/core/components/vm"
 
 const success = { valid: true, errors: [], warnings: [] }
 

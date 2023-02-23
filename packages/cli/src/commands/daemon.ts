@@ -2,7 +2,7 @@ import http from "node:http"
 import fs from "node:fs"
 import path from "node:path"
 
-import yargs from "yargs"
+import type { Argv } from "yargs"
 import prompts from "prompts"
 import chalk from "chalk"
 import { createLibp2p, Libp2p } from "libp2p"
@@ -16,15 +16,18 @@ import Hash from "ipfs-only-hash"
 import PQueue from "p-queue"
 import client from "prom-client"
 
-import { Core, getLibp2pInit, constants, getAPI, CoreOptions, startPingService, VM } from "@canvas-js/core"
 import { ChainImplementation, Model } from "@canvas-js/interfaces"
+import { Core, CoreOptions, getAPI } from "@canvas-js/core"
+import * as constants from "@canvas-js/core/constants"
+import { VM } from "@canvas-js/core/components/vm"
+import { startPingService, getLibp2pInit } from "@canvas-js/core/components/libp2p"
 
 import { CANVAS_HOME, SOCKET_FILENAME, SOCKET_PATH, getPeerId, getChainImplementations, installSpec } from "../utils.js"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 export const command = "daemon"
 export const desc = "Start the canvas daemon"
-export const builder = (yargs: yargs.Argv) =>
+export const builder = (yargs: Argv) =>
 	yargs
 		.option("port", {
 			type: "number",
@@ -62,7 +65,7 @@ export const builder = (yargs: yargs.Argv) =>
 			default: false,
 		})
 
-type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
+type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
 	// read rpcs from --chain-rpc arguments or environment variables

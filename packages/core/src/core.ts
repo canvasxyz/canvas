@@ -1,10 +1,10 @@
 import assert from "node:assert"
-import { createHash } from "node:crypto"
 
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { Libp2p } from "libp2p"
+import { sha256 } from "@noble/hashes/sha256"
 
 import {
 	Action,
@@ -21,25 +21,25 @@ import {
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { validate } from "@hyperjump/json-schema/draft-2020-12"
 
-import { actionType, customActionType, sessionType } from "./codecs.js"
+import { actionType, customActionType, messageType, sessionType } from "./codecs.js"
 import { toHex, signalInvalidType, CacheMap, parseIPFSURI, stringify, mapEntries } from "./utils.js"
 
-import { VM } from "./vm/index.js"
-import { MessageStore } from "./messageStore.js"
-import { ModelStore } from "./modelStore.js"
+import { VM } from "@canvas-js/core/components/vm"
+import { ModelStore } from "@canvas-js/core/components/modelStore"
+import { MessageStore } from "@canvas-js/core/components/messageStore"
 
 import * as constants from "./constants.js"
 import { Source } from "./source.js"
 import { metrics } from "./metrics.js"
 import { MST } from "./mst.js"
-import { getMessageKey } from "./rpc/utils.js"
+import { getMessageKey } from "./sync/utils.js"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
 	directory: string | null
 	spec: string
 
-	// defaults to ipfs:// hash of application
+	// defaults to ipfs:// hash of spec
 	uri?: string
 	libp2p: Libp2p | null // pass null to run offline
 	chains?: ChainImplementation<unknown, unknown>[]
@@ -73,25 +73,9 @@ export class Core extends EventEmitter<CoreEvents> {
 		const appName = vm.appName
 
 		const modelStore = new ModelStore(directory, vm, options)
-		const messageStore = new MessageStore(app, directory, vm.sources, options)
+		const messageStore = await MessageStore.initialize(app, directory, vm.sources, options)
 
-		let mst: MST | null = null
-		if (directory !== null) {
-			// only called if the MST directory does not exist
-			// eslint-disable-next-line
-			async function* importMessages(dbi: string): AsyncIterable<[Buffer, Message]> {
-				if (options.verbose) {
-					console.log(`[canvas-core] Rebuilding MST index ${dbi} from model store`)
-				}
-
-				yield* messageStore.getSessionStream({ app: dbi })
-				yield* messageStore.getActionStream({ app: dbi })
-			}
-
-			mst = await MST.initialize(directory, [app, ...vm.sources], importMessages, options)
-		}
-
-		return new Core(directory, cid, app, appName, vm, modelStore, messageStore, mst, libp2p, chains, options)
+		return new Core(directory, cid, app, appName, vm, modelStore, messageStore, libp2p, chains, options)
 	}
 
 	private constructor(
@@ -102,7 +86,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly vm: VM,
 		public readonly modelStore: ModelStore,
 		public readonly messageStore: MessageStore,
-		public readonly mst: MST | null,
+		// public readonly mst: MST | null,
 		public readonly libp2p: Libp2p | null,
 		private readonly chains: ChainImplementation<unknown, unknown>[],
 		public readonly options: CoreOptions
@@ -111,25 +95,25 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		this.options = options
 
-		if (mst !== null) {
-			const sourceCIDs: Record<string, CID> = { [this.app]: this.cid }
-			for (const uri of vm.sources) {
-				sourceCIDs[uri] = parseIPFSURI(uri)
-			}
+		// if (mst !== null) {
+		// 	const sourceCIDs: Record<string, CID> = { [this.app]: this.cid }
+		// 	for (const uri of vm.sources) {
+		// 		sourceCIDs[uri] = parseIPFSURI(uri)
+		// 	}
 
-			this.sources = mapEntries(sourceCIDs, (_, cid) =>
-				Source.initialize({
-					cid,
-					mst,
-					applyMessage: this.applyMessage,
-					messageStore: this.messageStore,
-					libp2p,
-					recentGossipPeers: this.recentGossipPeers,
-					recentSyncPeers: this.recentSyncPeers,
-					...options,
-				})
-			)
-		}
+		// 	this.sources = mapEntries(sourceCIDs, (_, cid) =>
+		// 		Source.initialize({
+		// 			cid,
+		// 			// mst,
+		// 			applyMessage: this.applyMessage,
+		// 			messageStore: this.messageStore,
+		// 			libp2p,
+		// 			recentGossipPeers: this.recentGossipPeers,
+		// 			recentSyncPeers: this.recentSyncPeers,
+		// 			...options,
+		// 		})
+		// 	)
+		// }
 	}
 
 	public async close() {
@@ -137,24 +121,25 @@ export class Core extends EventEmitter<CoreEvents> {
 			await Promise.all(Object.values(this.sources).map((source) => source.close()))
 		}
 
-		if (this.mst !== null) {
-			await this.mst.close()
-		}
-
 		await this.vm.close()
-		this.messageStore.close()
-		this.modelStore.close()
+		await this.messageStore.close()
+		await this.modelStore.close()
 
 		this.dispatchEvent(new Event("close"))
 	}
 
 	public getChainImplementations() {
-		const result = {} as Record<Chain, Record<ChainId, { rpc: boolean }>>
+		const result: Partial<Record<Chain, Record<ChainId, { rpc: boolean }>>> = {}
 
-		this.chains.forEach((ci) => {
-			if (result[ci.chain] === undefined) result[ci.chain] = {}
-			result[ci.chain][ci.chainId] = { rpc: ci.hasProvider() }
-		})
+		for (const ci of this.chains) {
+			const chainIds = result[ci.chain]
+			if (chainIds !== undefined) {
+				chainIds[ci.chainId] = { rpc: ci.hasProvider() }
+			} else {
+				result[ci.chain] = { [ci.chainId]: { rpc: ci.hasProvider() } }
+			}
+		}
+
 		return result
 	}
 
@@ -167,71 +152,29 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	/**
-	 * Apply an action. This is the "local" entrypoint called by the HTTP API.
-	 * It executes the action, applies the effects to the model store,
-	 * inserts the action into the message store, updates the MST index,
+	 * Apply a message. This is the "local" entrypoint called by the HTTP API.
+	 * It inserts the message into the message store, updates the MST index,
 	 * and publishes to GossipSub.
 	 */
-	public async applyAction(action: Action): Promise<{ hash: string }> {
-		assert(actionType.is(action), "invalid action object")
+	public async apply(message: Message): Promise<{ hash: string }> {
+		assert(messageType.is(message), "invalid session object")
 
-		const data = Buffer.from(stringify(action))
-		const hash = createHash("sha256").update(data).digest()
+		const dbi = message.type === "customAction" ? message.app : message.payload.app
 
-		await this.applyMessage(hash, action)
+		const data = new TextEncoder().encode(stringify(message))
+		const hash = sha256(data)
+		await this.messageStore.write(
+			async (txn) => {
+				const existingRecord = await txn.getMessage(hash)
+				if (existingRecord !== null) {
+					return
+				}
 
-		if (this.mst !== null) {
-			await this.mst.write(this.app, (txn) => {
-				txn.set(getMessageKey(hash, action), hash)
-			})
-		}
-
-		if (this.sources !== null) {
-			await this.sources[this.app].publishMessage(hash, data)
-		}
-
-		return { hash: toHex(hash) }
-	}
-
-	/**
-	 * Apply a session. This is the "local" entrypoint called by the HTTP API.
-	 * It inserts the session into the message store, updates the MST index,
-	 * and publishes to GossipSub.
-	 */
-	public async applySession(session: Session): Promise<{ hash: string }> {
-		assert(sessionType.is(session), "invalid session object")
-
-		const data = Buffer.from(stringify(session))
-		const hash = createHash("sha256").update(data).digest()
-
-		await this.applyMessage(hash, session)
-
-		if (this.mst !== null) {
-			await this.mst.write(this.app, (txn) => {
-				txn.set(getMessageKey(hash, session), hash)
-			})
-		}
-
-		if (this.sources !== null) {
-			await this.sources[this.app].publishMessage(hash, data)
-		}
-
-		return { hash: toHex(hash) }
-	}
-
-	public async applyCustomAction(customAction: CustomAction): Promise<{ hash: string }> {
-		assert(customActionType.is(customAction), "invalid custom action object")
-
-		const data = Buffer.from(stringify(customAction))
-		const hash = createHash("sha256").update(data).digest()
-
-		await this.applyMessage(hash, customAction)
-
-		if (this.mst !== null) {
-			await this.mst.write(this.app, (txn) => {
-				txn.set(getMessageKey(hash, customAction), hash)
-			})
-		}
+				await this.applyMessageInternal(hash, message)
+				await txn.insertMessage(hash, message)
+			},
+			{ dbi }
+		)
 
 		if (this.sources !== null) {
 			await this.sources[this.app].publishMessage(hash, data)
@@ -242,82 +185,57 @@ export class Core extends EventEmitter<CoreEvents> {
 
 	/**
 	 * Apply a message.
-	 * For actions: validate, execute, apply effects, insert into message store.
-	 * For sessions: validate, insert into message store.
-	 * This method is called directly from Core.applySession and Core.applyAction and is
+	 * For actions: validate, execute, apply effects.
+	 * For sessions: validate.
+	 * This method is called directly from Core.apply and is
 	 * also passed to Source as the callback for GossipSub and MST sync messages.
 	 * Note the this does NOT update the MST index or publish to GossipSub -
 	 * that's the responsibility of the caller.
 	 */
-	private applyMessage = async (hash: Buffer, message: Message) => {
+	private applyMessageInternal = async (hash: Uint8Array, message: Message) => {
 		const id = toHex(hash)
+
 		if (message.type === "action") {
-			const existingRecord = this.messageStore.getActionByHash(hash)
-			if (existingRecord !== null) {
-				return
-			}
-
-			if (this.options.verbose) {
-				console.log(`[canvas-core] Applying action ${id}`, message)
-			}
-
 			await this.validateAction(message)
 
-			const effects = await this.vm.execute(id, message.payload)
+			const effects = await this.vm.execute(hash, message.payload)
 
 			this.modelStore.applyEffects(message.payload, effects)
-
-			this.messageStore.insertAction(hash, message)
 
 			this.dispatchEvent(new CustomEvent("action", { detail: message.payload }))
 			metrics.canvas_messages.inc({ type: "action", uri: message.payload.app }, 1)
 		} else if (message.type === "session") {
-			const existingRecord = this.messageStore.getSessionByHash(hash)
-			if (existingRecord !== null) {
-				return
-			}
-
 			if (this.options.verbose) {
 				console.log(`[canvas-core] Applying session ${id}`, message)
 			}
 
 			await this.validateSession(message)
 
-			this.messageStore.insertSession(hash, message)
-
 			this.dispatchEvent(new CustomEvent("session", { detail: message.payload }))
 			metrics.canvas_messages.inc({ type: "session", uri: message.payload.app }, 1)
 		} else if (message.type == "customAction") {
-			const existingRecord = this.messageStore.getCustomActionByHash(hash)
-			if (existingRecord !== null) {
-				return
-			}
-
 			if (this.options.verbose) {
 				console.log(`[canvas-core] Applying custom action ${id}`, message)
 			}
 
 			await this.validateCustomAction(message)
 
-			const effects = await this.vm.executeCustomAction(id, message.payload, { timestamp: 0 })
+			const effects = await this.vm.executeCustomAction(hash, message.payload, { timestamp: 0 })
 
 			for (const effect of effects) {
 				if (!effect.id.startsWith(id)) {
-					// "entries that are updated by custom actions must ..."
 					throw Error(
-						`Applying custom action failed: it must set entries that have a hash that begins with the action id`
+						`Applying custom action failed: custom actions can only set entries with an id that begins with the action hash`
 					)
 				}
 				if (effect.type == "del") {
-					throw Error(`Applying custom action failed: the 'del' function cannot be called from within custom actions`)
+					throw Error(`Applying custom action failed: the 'del' method cannot be called from within custom actions`)
 				}
 			}
 
 			// TODO: can we give the user a way to set the timestamp if it comes from a trusted source?
 			const timestamp = 0
 			this.modelStore.applyEffects({ timestamp }, effects)
-
-			this.messageStore.insertCustomAction(hash, message)
 
 			this.dispatchEvent(new CustomEvent("customAction", { detail: message.payload }))
 			metrics.canvas_messages.inc({ type: "customAction", uri: message.payload.app }, 1)
@@ -346,15 +264,9 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
 		assert(timestamp < constants.BOUNDS_CHECK_UPPER_LIMIT, "action timestamp too far in the future")
 
-		// if (!this.options.unchecked) {
-		// 	// check the action was signed with a valid, recent block
-		// 	assert(block, "action is missing block data")
-		// 	await this.validateBlock({ blockhash: block, chain, chainId })
-		// }
-
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
-			const { session } = this.messageStore.getSessionByAddress(chain, chainId, action.session)
+			const [_, session] = await this.messageStore.getSessionByAddress(chain, chainId, action.session)
 			assert(session !== null, "session not found")
 			assert(
 				action.payload.app === session.payload.app,
@@ -395,12 +307,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		// check the timestamp bounds
 		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
 		assert(sessionIssued < constants.BOUNDS_CHECK_UPPER_LIMIT, "session issued too far in the future")
-
-		// if (!this.options.unchecked) {
-		// 	// check the session was signed with a valid, recent block
-		// 	assert(block, "session is missing block data")
-		// 	await this.validateBlock({ blockhash: block, chain, chainId })
-		// }
 	}
 
 	private async validateCustomAction(customAction: CustomAction) {
@@ -426,13 +332,4 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		throw new Error(`Could not find matching chain implementation for ${chain}:${chainId}`)
 	}
-
-	// /**
-	//  * Helper for verifying the blockhash for an action or session.
-	//  */
-	// private async validateBlock({ chain, chainId, blockhash }: { chain: Chain; chainId: ChainId; blockhash: string }) {
-	// 	assert(this.blockResolver !== null, "missing blockResolver")
-	// 	const block = await this.blockResolver(chain, chainId, blockhash)
-	// 	// TODO: add blocknums to messages, verify blocknum and blockhash match
-	// }
 }

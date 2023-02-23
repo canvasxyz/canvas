@@ -1,8 +1,8 @@
 import test from "ava"
 
-import { Core, compileSpec } from "@canvas-js/core"
+import { Core } from "@canvas-js/core"
 
-import { TestSigner } from "./utils.js"
+import { TestSigner, compileSpec } from "./utils.js"
 
 const { spec, app, appName } = await compileSpec({
 	name: "Test App",
@@ -28,7 +28,7 @@ test("Test setting and then deleting a record", async (t) => {
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 
-	const { hash: threadId } = await core.applyAction(newThreadAction)
+	const { hash: threadId } = await core.apply(newThreadAction)
 
 	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
 		{
@@ -40,7 +40,7 @@ test("Test setting and then deleting a record", async (t) => {
 		},
 	])
 
-	await signer.sign("deleteThread", { threadId }).then((action) => core.applyAction(action))
+	await signer.sign("deleteThread", { threadId }).then((action) => core.apply(action))
 
 	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [])
 

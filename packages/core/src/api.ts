@@ -32,7 +32,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			peerId: core.libp2p && core.libp2p.peerId.toString(),
 			actions,
 			routes: Object.keys(routes),
-			merkleRoots: core.mst && core.mst.roots,
+			// merkleRoots: core.mst && core.mst.roots,
 			chainImplementations: core.getChainImplementations(),
 			peers: core.libp2p && {
 				gossip: Object.fromEntries(core.recentGossipPeers),
@@ -47,7 +47,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		}
 
 		try {
-			const { hash } = await core.applyAction(req.body)
+			const { hash } = await core.apply(req.body)
 			res.json({ hash })
 		} catch (err) {
 			if (err instanceof Error) {
@@ -66,7 +66,8 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 
 		if (req.body.hasSession) {
 			try {
-				const { session } = core.messageStore.getSessionByAddress(req.body.chain, req.body.chainId, req.body.hasSession)
+				const { chain, chainId, hasSession: address } = req.body
+				const [_, session] = await core.messageStore.getSessionByAddress(chain, chainId, address)
 				return res.json({ hasSession: session !== null })
 			} catch (err) {
 				return res.json({ hasSession: false })
@@ -74,7 +75,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		}
 
 		try {
-			const { hash } = await core.applySession(req.body)
+			const { hash } = await core.apply(req.body)
 			res.json({ hash })
 		} catch (err) {
 			if (err instanceof Error) {
@@ -108,29 +109,29 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		})
 	}
 
-	if (options.exposeActions) {
-		// TODO: pagination
-		api.get("/actions", (req, res) => {
-			const actions = []
-			for (const [hash, action] of core.messageStore.getActionStream()) {
-				actions.push([toHex(hash), action])
-			}
+	// if (options.exposeActions) {
+	// 	// TODO: pagination
+	// 	api.get("/actions", async (req, res) => {
+	// 		const actions = []
+	// 		for await (const [hash, action] of core.messageStore.getActionStream()) {
+	// 			actions.push([toHex(hash), action])
+	// 		}
 
-			return res.status(StatusCodes.OK).json(actions)
-		})
-	}
+	// 		return res.status(StatusCodes.OK).json(actions)
+	// 	})
+	// }
 
-	if (options.exposeSessions) {
-		// TODO: pagination
-		api.get("/sessions", (req, res) => {
-			const sessions = []
-			for (const [hash, session] of core.messageStore.getSessionStream()) {
-				sessions.push([toHex(hash), session])
-			}
+	// if (options.exposeSessions) {
+	// 	// TODO: pagination
+	// 	api.get("/sessions", async (req, res) => {
+	// 		const sessions = []
+	// 		for await (const [hash, session] of core.messageStore.getSessionStream()) {
+	// 			sessions.push([toHex(hash), session])
+	// 		}
 
-			return res.status(StatusCodes.OK).json(sessions)
-		})
-	}
+	// 		return res.status(StatusCodes.OK).json(sessions)
+	// 	})
+	// }
 
 	return api
 }

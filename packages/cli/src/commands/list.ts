@@ -1,17 +1,17 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import yargs from "yargs"
+import type { Argv } from "yargs"
 import chalk from "chalk"
 import Database from "better-sqlite3"
 
-import { constants } from "@canvas-js/core"
+import * as constants from "@canvas-js/core/constants"
 import { CANVAS_HOME, cidPattern, SOCKET_FILENAME } from "../utils.js"
 
 export const command = "list"
 export const desc = "List all apps in the data directory"
 
-export const builder = (yargs: yargs.Argv) => yargs
+export const builder = (yargs: Argv) => yargs
 
 export async function handler() {
 	console.log(`Showing local apps in ${CANVAS_HOME}\n`)

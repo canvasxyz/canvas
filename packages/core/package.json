@@ -3,8 +3,6 @@
   "version": "0.1.1",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
-  "types": "./lib/index.d.ts",
-  "main": "./lib/index.js",
   "engines": {
     "node": ">=18.0.0"
   },
@@ -13,6 +11,53 @@
     "rpc",
     "types"
   ],
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js"
+    },
+    "./rpc/sync": {
+      "types": "./rpc/sync/index.d.cts",
+      "default": "./rpc/sync/index.cjs"
+    },
+    "./sync": {
+      "types": "./lib/sync/index.d.ts",
+      "import": "./lib/sync/index.js"
+    },
+    "./utils": {
+      "types": "./lib/utils.d.ts",
+      "import": "./lib/utils.js"
+    },
+    "./constants": {
+      "types": "./lib/constants.d.ts",
+      "import": "./lib/constants.js"
+    },
+    "./codecs": {
+      "types": "./lib/codecs.d.ts",
+      "import": "./lib/codecs.js"
+    },
+    "./components/messageStore": {
+      "types": "./lib/components/messageStore/index.d.ts",
+      "browser": "./lib/components/messageStore/browser/index.js",
+      "import": "./lib/components/messageStore/node/index.js"
+    },
+    "./components/modelStore": {
+      "types": "./lib/components/modelStore/index.d.ts",
+      "browser": "./lib/components/modelStore/browser/index.js",
+      "import": "./lib/components/modelStore/node/index.js"
+    },
+    "./components/libp2p": {
+      "types": "./lib/components/libp2p/index.d.ts",
+      "browser": "./lib/components/libp2p/browser/index.js",
+      "import": "./lib/components/libp2p/index.js"
+    },
+    "./components/vm": {
+      "types": "./lib/components/vm/index.d.ts",
+      "import": "./lib/components/vm/index.js"
+    }
+  },
   "scripts": {
     "generate-rpc": "npm run generate-rpc-js && npm run generate-rpc-ts",
     "generate-rpc-js": "pbjs ./rpc/sync/index.proto -t static-module -w commonjs -o ./rpc/sync/index.cjs",
@@ -22,7 +67,7 @@
   "dependencies": {
     "@canvas-js/chain-ethereum": "0.1.1",
     "@canvas-js/interfaces": "0.1.1",
-    "@canvas-js/okra-node": "^0.1.1",
+    "@canvas-js/okra-node": "^0.1.4",
     "@chainsafe/libp2p-gossipsub": "^6.0.0",
     "@chainsafe/libp2p-noise": "^11.0.0",
     "@hyperjump/json-schema": "^1.2.4",
@@ -38,7 +83,9 @@
     "@libp2p/prometheus-metrics": "^1.1.3",
     "@libp2p/websockets": "^5.0.2",
     "@multiformats/multiaddr": "^11.1.5",
+    "@noble/hashes": "^1.2.0",
     "@types/better-sqlite3": "^7.6.3",
+    "@types/k-bucket": "^5.0.1",
     "better-sqlite3": "^8.0.1",
     "chalk": "^5.2.0",
     "ethers": "^5.7.1 <6",
@@ -49,6 +96,7 @@
     "ipfs-only-hash": "^4.0.0",
     "it-pushable": "^3.1.2",
     "it-stream-types": "^1.0.5",
+    "k-bucket": "^5.1.0",
     "libp2p": "^0.42.0",
     "multiformats": "^11.0.0",
     "p-queue": "^7.3.0",

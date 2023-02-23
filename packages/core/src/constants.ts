@@ -26,3 +26,4 @@ export const SYNC_INTERVAL = 1 * minute
 export const SYNC_RETRY_INTERVAL = 5 * second
 export const FIND_PEERS_TIMEOUT = 30 * second
 export const DIAL_PEER_TIMEOUT = 10 * second
+export const PING_PEER_TIMEOUT = 10 * second

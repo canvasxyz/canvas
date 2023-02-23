@@ -1,21 +1,21 @@
 import assert from "node:assert"
-import { createHash } from "node:crypto"
 
 import chalk from "chalk"
 import { CID } from "multiformats/cid"
 import { TimeoutController } from "timeout-abort-controller"
+import { sha256 } from "@noble/hashes/sha256"
 
-import { Libp2p } from "libp2p"
+import type { Libp2p } from "libp2p"
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
 
 import { Message } from "@canvas-js/interfaces"
-import type { MessageStore } from "./messageStore.js"
+import type { MessageStore } from "@canvas-js/core/components/messageStore"
 
 import { wait, retry, AbortError, toHex, CacheMap } from "./utils.js"
-import { sync, handleIncomingStream, getMessageKey } from "./rpc/index.js"
+import { sync, handleIncomingStream, getMessageKey } from "./sync/index.js"
 import * as constants from "./constants.js"
 import { metrics } from "./metrics.js"
 import { messageType } from "./codecs.js"
@@ -32,7 +32,7 @@ export interface SourceConfig extends SourceOptions {
 	messageStore: MessageStore
 	mst: MST
 	libp2p: Libp2p | null
-	applyMessage: (hash: Buffer, message: Message) => Promise<void>
+	applyMessage: (hash: Uint8Array, message: Message) => Promise<void>
 }
 
 export class Source {
@@ -50,7 +50,7 @@ export class Source {
 		private readonly messageStore: MessageStore,
 		private readonly mst: MST,
 		private readonly libp2p: Libp2p | null,
-		private readonly applyMessage: (hash: Buffer, message: Message) => Promise<void>,
+		private readonly applyMessage: (hash: Uint8Array, message: Message) => Promise<void>,
 		private readonly options: SourceOptions
 	) {
 		this.uri = `ipfs://${cid.toString()}`
@@ -86,7 +86,7 @@ export class Source {
 	/**
 	 * Publish a message to the GossipSub topic.
 	 */
-	public async publishMessage(hash: Buffer, data: Uint8Array) {
+	public async publishMessage(hash: Uint8Array, data: Uint8Array) {
 		if (this.libp2p === null) {
 			return
 		}
@@ -125,7 +125,7 @@ export class Source {
 		try {
 			const message = JSON.parse(new TextDecoder().decode(data))
 			assert(messageType.is(message), "invalid message")
-			const hash = createHash("sha256").update(data).digest()
+			const hash = sha256(data)
 			await this.applyMessage(hash, message)
 			await this.mst.write(this.uri, async (txn) => {
 				txn.set(getMessageKey(hash, message), hash)
@@ -152,9 +152,10 @@ export class Source {
 		}
 
 		try {
-			await this.mst.read(this.uri, async (txn) => {
-				await handleIncomingStream(stream, this.messageStore, txn)
-			})
+			await this.messageStore.read(async (txn) => handleIncomingStream(stream, txn), { dbi: this.uri })
+			// await this.mst.read(this.uri, async (txn) => {
+			// 	await handleIncomingStream(stream, this.messageStore, txn)
+			// })
 		} catch (err) {
 			if (err instanceof Error) {
 				console.log(chalk.red(`[canvas-core] Error handling incoming sync (${err.message})`))
@@ -352,7 +353,7 @@ export class Source {
 
 		// this is the callback passed to `sync`, invoked with each missing message identified during MST sync.
 		// if handleSyncMessage succeeds, then sync() will automatically insert the message into the MST.
-		const handleSyncMessage = async (hash: Buffer, data: Uint8Array, message: Message) => {
+		const handleSyncMessage = async (hash: Uint8Array, data: Uint8Array, message: Message) => {
 			const id = toHex(hash)
 			if (this.options.verbose) {
 				console.log(chalk.green(`[canvas-core] [${this.cid}] Received missing ${message.type} ${id}`))
@@ -388,16 +389,16 @@ export class Source {
 		// unclear if it's better to have the timer inside the txn or outside it
 		const timer = metrics.canvas_sync_time.startTimer()
 		try {
-			await this.mst.write(this.uri, async (txn) => {
+			await this.messageStore.write(async (txn) => {
 				if (this.options.verbose) {
-					const { hash: oldRoot } = txn.getRoot()
+					const { hash: oldRoot } = await txn.getRoot()
 					console.log(`[canvas-core] [${this.cid}] The old merkle root is ${toHex(oldRoot)}`)
 				}
 
-				await sync(this.messageStore, txn, stream, handleSyncMessage)
+				await sync(stream, txn, handleSyncMessage)
 
 				if (this.options.verbose) {
-					const { hash: newRoot } = txn.getRoot()
+					const { hash: newRoot } = await txn.getRoot()
 					console.log(`[canvas-core] [${this.cid}] The new merkle root is ${toHex(newRoot)}`)
 				}
 
@@ -409,6 +410,27 @@ export class Source {
 
 				timer({ uri: this.uri, status: "success" })
 			})
+			// await this.mst.write(this.uri, async (txn) => {
+			// 	if (this.options.verbose) {
+			// 		const { hash: oldRoot } = txn.getRoot()
+			// 		console.log(`[canvas-core] [${this.cid}] The old merkle root is ${toHex(oldRoot)}`)
+			// 	}
+
+			// 	await sync(this.messageStore, txn, stream, handleSyncMessage)
+
+			// 	if (this.options.verbose) {
+			// 		const { hash: newRoot } = txn.getRoot()
+			// 		console.log(`[canvas-core] [${this.cid}] The new merkle root is ${toHex(newRoot)}`)
+			// 	}
+
+			// 	console.log(
+			// 		chalk.green(
+			// 			`[canvas-core] [${this.cid}] Sync with ${peer} completed. Applied ${successCount} new messages with ${failureCount} failures.`
+			// 		)
+			// 	)
+
+			// 	timer({ uri: this.uri, status: "success" })
+			// })
 		} catch (err) {
 			timer({ uri: this.uri, status: "failure" })
 			if (err instanceof Error) {

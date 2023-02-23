@@ -5,14 +5,24 @@ import fs from "node:fs"
 import { ethers } from "ethers"
 import stoppable from "stoppable"
 import chalk from "chalk"
+
 import next from "next"
 import express from "express"
 import { Libp2p, createLibp2p } from "libp2p"
 import { createFromProtobuf, createEd25519PeerId, exportToProtobuf } from "@libp2p/peer-id-factory"
 
-import { constants, Core, getLibp2pInit, getAPI, setupWebsockets, startPingService } from "@canvas-js/core"
-import { ChainImplementation } from "@canvas-js/interfaces"
+import type { ChainImplementation } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+import { Core, getAPI, setupWebsockets } from "@canvas-js/core"
+import * as constants from "@canvas-js/core/constants"
+import { startPingService, getLibp2pInit } from "@canvas-js/core/components/libp2p"
+
+import type { NextServer, NextServerOptions } from "next/dist/server/next.js"
+
+// declare module "next" {
+// 	import type { NextServer } from "next/dist/server/next.js"
+// 	export default function createServer(): NextServer
+// }
 
 const { CANVAS_PATH, CANVAS_SPEC, ANNOUNCE, LISTEN, PEER_ID, ETH_CHAIN_ID, ETH_CHAIN_RPC, NODE_ENV, VERBOSE, PORT } =
 	process.env
@@ -74,7 +84,9 @@ if (NODE_ENV === "production") {
 
 const port = Number(PORT) || 3000
 const hostname = "localhost"
-const nextApp = next({ dev: NODE_ENV !== "production", hostname, port })
+
+const createServer = next as unknown as (options: NextServerOptions) => NextServer
+const nextApp = createServer({ dev: NODE_ENV !== "production", hostname, port })
 await nextApp.prepare()
 
 const nextAppHandler = nextApp.getRequestHandler()

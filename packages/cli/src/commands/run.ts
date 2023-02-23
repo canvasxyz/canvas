@@ -1,10 +1,10 @@
 import process from "node:process"
 import path from "node:path"
 import fs from "node:fs"
-
+import assert from "node:assert"
 import http from "node:http"
 
-import yargs from "yargs"
+import type { Argv } from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
 import stoppable from "stoppable"
@@ -12,7 +12,10 @@ import express from "express"
 import cors from "cors"
 import { createLibp2p, Libp2p } from "libp2p"
 
-import { Core, constants, actionType, getLibp2pInit, getAPI, setupWebsockets, startPingService } from "@canvas-js/core"
+import { Core, getAPI, setupWebsockets } from "@canvas-js/core"
+import * as constants from "@canvas-js/core/constants"
+import { actionType } from "@canvas-js/core/codecs"
+import { startPingService, getLibp2pInit } from "@canvas-js/core/components/libp2p"
 
 import {
 	getChainImplementations,
@@ -27,7 +30,7 @@ import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 export const command = "run <app>"
 export const desc = "Run an app, by path or IPFS hash"
 
-export const builder = (yargs: yargs.Argv) =>
+export const builder = (yargs: Argv) =>
 	yargs
 		.positional("app", {
 			describe: "Path to app file, or IPFS hash of app",
@@ -91,7 +94,7 @@ export const builder = (yargs: yargs.Argv) =>
 			desc: "Serve a static directory from /, and API routes from /api",
 		})
 
-type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
+type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
 	// validate options
@@ -212,15 +215,14 @@ export async function handler(args: Args) {
 		console.log(chalk.green(`[canvas-cli] Replaying action log...`))
 		const { vm, messageStore, modelStore } = core
 		let i = 0
-		for await (const [id, action] of messageStore.getActionStream()) {
-			if (!actionType.is(action)) {
-				console.log(chalk.red("[canvas-cli]"), action)
-				throw new Error("Invalid action value in action log")
+		for await (const [id, message] of messageStore.getMessageStream()) {
+			if (message.type === "action") {
+				console.error(id, message)
+				assert(actionType.is(message), "Invalid action object in message store")
+				const effects = await vm.execute(id, message.payload)
+				modelStore.applyEffects(message.payload, effects)
+				i++
 			}
-
-			const effects = await vm.execute(id, action.payload)
-			modelStore.applyEffects(action.payload, effects)
-			i++
 		}
 
 		console.log(chalk.green(`[canvas-cli] Successfully replayed all ${i} entries from the action log.`))

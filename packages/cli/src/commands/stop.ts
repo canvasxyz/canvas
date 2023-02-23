@@ -1,21 +1,21 @@
-import yargs from "yargs"
+import type { Argv } from "yargs"
 import chalk from "chalk"
 import { Agent, fetch } from "undici"
+import { StatusCodes } from "http-status-codes"
 
 import { SOCKET_PATH, cidPattern } from "../utils.js"
-import { StatusCodes } from "http-status-codes"
 
 export const command = "stop <app>"
 export const desc = "Stop an app on the daemon"
 
-export const builder = (yargs: yargs.Argv) =>
+export const builder = (yargs: Argv) =>
 	yargs.positional("app", {
 		describe: "app CID",
 		type: "string",
 		demandOption: true,
 	})
 
-type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
+type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
 	if (!cidPattern.test(args.app)) {

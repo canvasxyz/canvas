@@ -6,11 +6,8 @@ import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
 
-import type { Node } from "@canvas-js/okra-node"
-
-import RPC from "../../rpc/sync/index.cjs"
-
-import { toBuffer } from "../utils.js"
+import RPC from "@canvas-js/core/rpc/sync"
+import type { Node } from "@canvas-js/core/components/messageStore"
 import { toNode } from "./utils.js"
 
 export class Client {
@@ -27,11 +24,10 @@ export class Client {
 		this.requests.end()
 	}
 
-	public async getRoot(): Promise<{ level: number; hash: Buffer }> {
+	public async getRoot(): Promise<Node> {
 		const { getRoot } = await this.get({ getRoot: {} })
-		assert(getRoot, "Invalid RPC response")
-		const { level, hash } = RPC.Response.GetRootResponse.create(getRoot)
-		return { level, hash: toBuffer(hash) }
+		assert(getRoot && getRoot.root, "Invalid RPC response")
+		return toNode(RPC.Node.create(getRoot.root))
 	}
 
 	public async getChildren(level: number, key: Uint8Array | null): Promise<Node[]> {
@@ -41,15 +37,15 @@ export class Client {
 		return nodes.map(RPC.Node.create).map(toNode)
 	}
 
-	public async getMessages(requests: { type: RPC.MessageRequest.MessageType; id: Buffer }[]): Promise<Buffer[]> {
-		const { getMessages } = await this.get({ getMessages: { messages: requests } })
+	public async getMessages(ids: Uint8Array[]): Promise<Uint8Array[]> {
+		const { getMessages } = await this.get({ getMessages: { ids } })
 		assert(getMessages, "Invalid RPC response")
 		const { messages: responses } = RPC.Response.GetMessagesResponse.create(getMessages)
-		assert(responses.length === requests.length, "expected responses.length to match requests.length")
-		return responses.map(toBuffer)
+		assert(responses.length === ids.length, "expected responses.length to match requests.length")
+		return responses
 	}
 
-	private async get(req: RPC.IRequest) {
+	private async get(req: RPC.IRequest): Promise<RPC.Response> {
 		const seq = this.seq++
 		this.requests.push(RPC.Request.create({ ...req, seq }))
 		const { done, value: res } = await this.responses.next()
