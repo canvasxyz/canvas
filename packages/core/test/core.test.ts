@@ -1,12 +1,13 @@
 import test from "ava"
 
 import { ethers } from "ethers"
-
 import { Core, ApplicationError, compileSpec } from "@canvas-js/core"
 
 import { TestSessionSigner, TestSigner } from "./utils.js"
+import { CustomAction } from "@canvas-js/interfaces"
 
-const { spec, uri } = await compileSpec({
+const { spec, app, appName } = await compileSpec({
+	name: "Test App",
 	models: {
 		threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" },
 		thread_votes: {
@@ -35,11 +36,11 @@ const { spec, uri } = await compileSpec({
 	},
 })
 
-const signer = new TestSigner(uri)
+const signer = new TestSigner(app, appName)
 const sessionSigner = new TestSessionSigner(signer)
 
 test("Apply signed action", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true, offline: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 
 	const action = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash } = await core.applyAction(action)
@@ -58,7 +59,7 @@ test("Apply signed action", async (t) => {
 })
 
 test("Apply two signed actions", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: newThreadHash } = await core.applyAction(newThreadAction)
@@ -80,7 +81,7 @@ test("Apply two signed actions", async (t) => {
 })
 
 test("Apply action signed with session key", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 	const session = await sessionSigner.session()
 	await core.applySession(session)
 
@@ -101,7 +102,7 @@ test("Apply action signed with session key", async (t) => {
 })
 
 test("Apply two actions signed with session keys", async (t) => {
-	const core = await Core.initialize({ directory: null, uri, spec, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 
 	const session = await sessionSigner.session()
 	await core.applySession(session)
@@ -128,7 +129,7 @@ test("Apply two actions signed with session keys", async (t) => {
 })
 
 test("Apply an action with a missing signature", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 	const action = await signer.sign("newThread", { title: "Example Website", link: "http://example.com" })
 	action.signature = "0x00"
 	await t.throwsAsync(core.applyAction(action), { instanceOf: Error, code: "INVALID_ARGUMENT" })
@@ -136,16 +137,16 @@ test("Apply an action with a missing signature", async (t) => {
 })
 
 test("Apply an action signed by wrong address", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 	const action = await signer.sign("newThread", { title: "Example Website", link: "http://example.com" })
 	const { address } = ethers.Wallet.createRandom()
 	action.payload.from = address
-	await t.throwsAsync(core.applyAction(action), { instanceOf: Error, message: "action signed by wrong address" })
+	await t.throwsAsync(core.applyAction(action), { instanceOf: Error, message: /^Invalid action signature/ })
 	await core.close()
 })
 
 test("Apply an action that throws an error", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: threadId } = await core.applyAction(newThreadAction)
@@ -161,8 +162,8 @@ test("Apply an action that throws an error", async (t) => {
 
 test("Create an in-memory Core with a file:// URI", async (t) => {
 	const uri = "file:///dev/null"
-	const signer = new TestSigner(uri)
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
+	const signer = new TestSigner(uri, appName)
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: threadId } = await core.applyAction(newThreadAction)
 
@@ -177,4 +178,298 @@ test("Create an in-memory Core with a file:// URI", async (t) => {
 	])
 
 	await core.close()
+})
+
+test("Apply a custom action with a valid payload", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			alpha: "string",
+			beta: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"alpha": { "type": "string" },
+				"beta": { "type": "string" }
+			}
+		}, ({alpha, beta}, {db, hash}) => {
+			db.things.set(hash, {alpha, beta });
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};
+	`
+	const cid = "1234567"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doThing",
+		payload: {
+			alpha: "zero",
+			beta: "one",
+		},
+	}
+	await core.applyCustomAction(newCustomAction)
+
+	const items = await core.getRoute("/things", {})
+	const createdThing = items[0]
+	t.deepEqual(createdThing.updated_at, 0)
+	t.deepEqual(createdThing.alpha, "zero")
+	t.deepEqual(createdThing.beta, "one")
+	t.pass()
+})
+
+test("Apply a custom action with signed data", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			message: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doSignedThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"signature": { "type": "string" },
+				"signingAddress": { "type": "string" },
+				"message": { "type": "string" }
+			}
+		}, ({ signature, signingAddress, message }, {db, hash}) => {
+			const domain = {
+				name: "TestApp"
+			};
+			const fields = {
+				Message: [
+					{ name: "message", type: "string" },
+					{ name: "signingAddress", type: "string" }
+				]
+			};
+			const value = { signingAddress, message };
+			const recoveredAddress = verifyTypedData(domain, fields, value, signature)
+			if(recoveredAddress == signingAddress) {
+				// signature is valid, perform action
+				db.things.set(hash, { message });
+			} else {
+				// signature is invalid
+				return false;
+			}
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};`
+
+	const getSignatureData = (data: any) => {
+		const domain = {
+			name: "TestApp",
+		}
+		const fields = {
+			Message: [
+				{ name: "message", type: "string" },
+				{ name: "signingAddress", type: "string" },
+			],
+		}
+		return [domain, fields, data]
+	}
+
+	const wallet = ethers.Wallet.createRandom()
+	const message = "hello world"
+	const signingAddress = wallet.address
+	const [domain, types, value] = getSignatureData({ message, signingAddress })
+	const signature = await wallet._signTypedData(domain, types, value)
+
+	const cid = "12345678"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doSignedThing",
+		payload: {
+			message,
+			signature,
+			signingAddress,
+		},
+	}
+	await core.applyCustomAction(newCustomAction)
+
+	const items = await core.getRoute("/things", {})
+	const createdThing = items[0]
+	t.deepEqual(createdThing.updated_at, 0)
+	t.deepEqual(createdThing.message, "hello world")
+	t.pass()
+})
+
+test("Reject a custom action with signed data if signature is incorrect", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			message: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doSignedThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"signature": { "type": "string" },
+				"signingAddress": { "type": "string" },
+				"message": { "type": "string" }
+			}
+		}, ({ signature, signingAddress, message }, {db, hash}) => {
+			const domain = {
+				name: "TestApp"
+			};
+			const fields = {
+				Message: [
+					{ name: "message", type: "string" },
+					{ name: "signingAddress", type: "string" }
+				]
+			};
+			const value = { signingAddress, message };
+			let recoveredAddress;
+			try {
+				recoveredAddress = verifyTypedData(domain, fields, value, signature)
+			} catch (e) {
+				return false;
+			}
+			if(recoveredAddress == signingAddress) {
+				// signature is valid, perform action
+				db.things.set(hash, { message });
+			} else {
+				// signature is invalid
+				return false;
+			}
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};`
+
+	const wallet = ethers.Wallet.createRandom()
+	const message = "hello world"
+	const signingAddress = wallet.address
+	const signature = "incorrectSignature"
+
+	const cid = "12345678"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doSignedThing",
+		payload: {
+			message,
+			signature,
+			signingAddress,
+		},
+	}
+	await t.throwsAsync(async () => {
+		await core.applyCustomAction(newCustomAction)
+	})
+})
+
+test("Reject a custom action that does not set the id to the hash", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			alpha: "string",
+			beta: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"alpha": { "type": "string" },
+				"beta": { "type": "string" }
+			}
+		}, ({alpha, beta}, {db, hash}) => {
+			db.things.set("invalid_hash", { alpha, beta });
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};
+	`
+	const cid = "1234567"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doThing",
+		payload: {
+			alpha: "zero",
+			beta: "one",
+		},
+	}
+	await t.throwsAsync(async () => {
+		await core.applyCustomAction(newCustomAction)
+	})
+})
+
+test("Reject a custom action that calls the del function", async (t) => {
+	const spec = `
+	export const models = {
+		things: {
+			id: "string",
+			alpha: "string",
+			beta: "string",
+			updated_at: "datetime"
+		},
+	};
+	export const actions = {
+		doThing: customAction({
+			"$id": "https://example.com/string",
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "object",
+			"properties": {
+				"alpha": { "type": "string" },
+				"beta": { "type": "string" }
+			}
+		}, ({alpha, beta}, {db, hash}) => {
+			db.things.del(hash);
+		})
+	};
+	export const routes = {
+		"/things": () => "select * from things"
+	};
+	`
+	const cid = "1234567"
+	const uri = `ipfs://${cid}`
+	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const newCustomAction: CustomAction = {
+		type: "customAction",
+		app: uri,
+		name: "doThing",
+		payload: {
+			alpha: "zero",
+			beta: "one",
+		},
+	}
+	await t.throwsAsync(async () => {
+		await core.applyCustomAction(newCustomAction)
+	})
 })

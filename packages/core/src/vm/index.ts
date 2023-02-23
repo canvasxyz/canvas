@@ -1,1 +1,1 @@
-export { VM } from "./vm.js"
+export { VM, ContractFunctionArgument, ContractFunctionResult } from "./vm.js"

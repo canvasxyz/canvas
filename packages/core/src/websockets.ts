@@ -21,7 +21,7 @@ export function setupWebsockets(server: Server, core: Core): Server {
 	const wss = new WebSocketServer({ noServer: true })
 
 	let oldValues: Record<string, ModelValue>[] | null = null
-	let listeners: Record<string, Record<string, Record<string, () => void>>> = {}
+	const listeners: Record<string, Record<string, Record<string, () => void>>> = {}
 
 	const getListener = (ws: WebSocket & WebSocketID, route: string, params: Record<string, string>) => {
 		if (listeners[ws.id] && listeners[ws.id][route] && listeners[ws.id][route][JSON.stringify(params)]) {
@@ -36,10 +36,14 @@ export function setupWebsockets(server: Server, core: Core): Server {
 			let newValues: Record<string, ModelValue>[]
 			try {
 				newValues = await core.getRoute(route, params)
-			} catch (err: any) {
+			} catch (err) {
 				// closed = true
-				console.log(chalk.red("[canvas-core] error evaluating route"), err)
-				return ws.send(JSON.stringify({ route, params, error: err.toString() }))
+				if (err instanceof Error) {
+					console.log(chalk.red(`[canvas-core] error evaluating route (${err.message})`))
+					return ws.send(JSON.stringify({ route, params, error: err.message }))
+				} else {
+					throw err
+				}
 			}
 			if (oldValues === null || !compareResults(oldValues, newValues)) {
 				return ws.send(JSON.stringify({ route, params, data: newValues }))
@@ -53,17 +57,22 @@ export function setupWebsockets(server: Server, core: Core): Server {
 	}
 
 	const sendApplicationData = (ws: WebSocket & WebSocketID) => {
-		console.log(chalk.green(`[canvas-core] ws-${ws.id}: sent application status`))
-		const { component, routes, actions } = core.vm
+		if (core.options.verbose) {
+			console.log(chalk.green(`[canvas-core] ws-${ws.id}: sent application status`))
+		}
+
+		const { routes, actions } = core.vm
 		const message = JSON.stringify({
 			action: "application",
 			data: {
-				uri: core.uri,
+				uri: core.app,
+				appName: core.appName,
 				cid: core.cid.toString(),
-				peerId: core.libp2p?.peerId.toString(),
-				component,
+				peerId: core.libp2p && core.libp2p.peerId.toString(),
 				actions,
 				routes: Object.keys(routes),
+				merkleRoots: core.mst && core.mst.roots,
+				chainImplementations: core.getChainImplementations(),
 				peers: core.libp2p && {
 					gossip: Object.fromEntries(core.recentGossipPeers),
 					sync: Object.fromEntries(core.recentSyncPeers),
@@ -75,8 +84,10 @@ export function setupWebsockets(server: Server, core: Core): Server {
 
 	wss.on("connect", (ws, request) => {
 		ws.id = uuidv4()
-		ws.lastMessage = +new Date()
-		console.log(chalk.green(`[canvas-core] ws-${ws.id}: opened connection`))
+		ws.lastMessage = Date.now()
+		if (core.options.verbose) {
+			console.log(chalk.green(`[canvas-core] ws-${ws.id}: opened connection`))
+		}
 		sendApplicationData(ws)
 
 		ws.timer = setInterval(() => {
@@ -99,7 +110,10 @@ export function setupWebsockets(server: Server, core: Core): Server {
 			}
 
 			// Allow clients to subscribe to routes
-			console.log(chalk.green(`[canvas-core] ws-${ws.id}: received message`))
+			if (core.options.verbose) {
+				console.log(chalk.green(`[canvas-core] ws-${ws.id}: received message`))
+			}
+
 			try {
 				const message = JSON.parse(data.toString())
 				if (message.action === "subscribe") {
@@ -121,7 +135,10 @@ export function setupWebsockets(server: Server, core: Core): Server {
 
 		// Clean up subscriptions when connection closes
 		ws.on("close", (data: Message) => {
-			console.log(chalk.red(`[canvas-core] ws-${ws.id}: closed connection`))
+			if (core.options.verbose) {
+				console.log(`[canvas-core] ws-${ws.id}: closed connection`)
+			}
+
 			if (listeners[ws.id]) {
 				Object.entries(listeners[ws.id]).map(([route, listenersByParams]) => {
 					Object.entries(listenersByParams).map(([params, listener]) => {

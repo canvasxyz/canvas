@@ -67,7 +67,7 @@ main {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
-	width: 380px;
+	flex-grow: 0;
 }
 
 span.address {
@@ -78,4 +78,13 @@ span.address {
 span.address-ens {
 	color: #777;
 	margin-right: 3px;
+}
+
+#gossip-peers li,
+#sync-peers li {
+	display: block;
+}
+
+.last-seen {
+	color: gray;
 }

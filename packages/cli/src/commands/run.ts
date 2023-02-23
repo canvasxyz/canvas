@@ -12,26 +12,25 @@ import express from "express"
 import cors from "cors"
 import { createLibp2p, Libp2p } from "libp2p"
 
+import { Core, constants, actionType, getLibp2pInit, getAPI, setupWebsockets, startPingService } from "@canvas-js/core"
+
 import {
-	Core,
-	constants,
-	actionType,
-	getLibp2pInit,
-	BlockCache,
-	getAPI,
-	setupWebsockets,
-	startPingService,
-} from "@canvas-js/core"
+	getChainImplementations,
+	confirmOrExit,
+	parseSpecArgument,
+	getPeerId,
+	installSpec,
+	CANVAS_HOME,
+} from "../utils.js"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
-import { getProviders, confirmOrExit, parseSpecArgument, getPeerId, installSpec, CANVAS_HOME } from "../utils.js"
-
-export const command = "run <spec>"
+export const command = "run <app>"
 export const desc = "Run an app, by path or IPFS hash"
 
 export const builder = (yargs: yargs.Argv) =>
 	yargs
-		.positional("spec", {
-			describe: "Path to spec file, or IPFS hash of spec",
+		.positional("app", {
+			describe: "Path to app file, or IPFS hash of app",
 			type: "string",
 			demandOption: true,
 		})
@@ -47,7 +46,7 @@ export const builder = (yargs: yargs.Argv) =>
 		})
 		.option("install", {
 			type: "boolean",
-			desc: "Install a local spec and run it in production mode",
+			desc: "Install a local app and run it in production mode",
 			default: false,
 		})
 		.option("listen", {
@@ -85,7 +84,7 @@ export const builder = (yargs: yargs.Argv) =>
 		})
 		.option("chain-rpc", {
 			type: "array",
-			desc: "Provide an RPC endpoint for reading on-chain data",
+			desc: "Provide an RPC endpoint for reading on-chain data (format: chain, chainId, URL)",
 		})
 		.option("static", {
 			type: "string",
@@ -101,7 +100,8 @@ export async function handler(args: Args) {
 		process.exit(1)
 	}
 
-	let { directory, uri, spec } = parseSpecArgument(args.spec)
+	// eslint-disable-next-line
+	let { directory, uri, spec } = parseSpecArgument(args.app)
 	if (directory === null && args.install) {
 		const cid = await installSpec(spec)
 		directory = path.resolve(CANVAS_HOME, cid)
@@ -130,19 +130,10 @@ export async function handler(args: Args) {
 			console.log(`[canvas-cli] Deleted ${modelsPath}`)
 		}
 
-		const mstPath = path.resolve(directory, constants.MST_FILENAME)
+		const mstPath = path.resolve(directory, constants.MST_DIRECTORY_NAME)
 		if (fs.existsSync(mstPath)) {
-			fs.rmSync(mstPath)
+			fs.rmSync(mstPath, { recursive: true })
 			console.log(`[canvas-cli] Deleted ${mstPath}`)
-		}
-
-		const sourceMSTPattern = /^[a-zA-Z0-9]+\.okra$/
-		for (const name of fs.readdirSync(directory)) {
-			if (sourceMSTPattern.test(name)) {
-				const sourceMSTPath = path.resolve(directory, name)
-				fs.rmSync(sourceMSTPath)
-				console.log(`[canvas-cli] Deleted ${sourceMSTPath}`)
-			}
 		}
 	} else if (args.replay) {
 		await confirmOrExit(`Are you sure you want to ${chalk.bold("regenerate all model tables")} in ${directory}?`)
@@ -155,9 +146,8 @@ export async function handler(args: Args) {
 
 	// read rpcs from --chain-rpc arguments or environment variables
 	// prompt to run in unchecked mode, if no rpcs were provided
-	const providers = getProviders(args["chain-rpc"])
-
-	if (Object.keys(providers).length === 0 && !args.unchecked) {
+	const chains = getChainImplementations(args["chain-rpc"])
+	if (chains.length === 0 && !args.unchecked) {
 		const { confirm } = await prompts({
 			type: "confirm",
 			name: "confirm",
@@ -168,6 +158,7 @@ export async function handler(args: Args) {
 		if (confirm) {
 			args.unchecked = true
 			args.offline = true
+			chains.push(new EthereumChainImplementation())
 			console.log(chalk.yellow(`✦ ${chalk.bold("Using unchecked mode.")} Actions will not require a valid block hash.`))
 		} else {
 			console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
@@ -176,47 +167,44 @@ export async function handler(args: Args) {
 
 	if (directory === null) {
 		console.log(
-			chalk.yellow(`✦ ${chalk.bold("Using development mode.")} Actions will be signed with the spec filename.`)
+			chalk.yellow(`✦ ${chalk.bold("Using development mode.")} Actions will be signed with the app filename.`)
 		)
 		console.log(chalk.yellow(`✦ ${chalk.bold("Using in-memory database.")} Data will be lost on restart.`))
-		console.log(chalk.yellow(`✦ ${chalk.bold("To persist data, install the spec:")} canvas install ${args.spec}`))
+		console.log(chalk.yellow(`✦ ${chalk.bold("To persist data, install the app:")} canvas install ${args.app}`))
 		console.log("")
 	}
 
 	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen: peeringPort, announce } = args
 
 	const peerId = await getPeerId()
-	console.log(`[canvas-cli] Using PeerId ${peerId.toString()}`)
+	console.log(`[canvas-cli] Using PeerId ${peerId}`)
 
-	let libp2p: Libp2p
-	if (announce !== undefined) {
-		console.log(`[canvas-cli] Announcing on ${announce}`)
-		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort, [announce]))
-	} else {
-		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+	let libp2p: Libp2p | null = null
+	if (!offline) {
+		if (announce !== undefined) {
+			console.log(`[canvas-cli] Announcing on ${announce}`)
+			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort, announce: [announce] }))
+		} else {
+			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort }))
+		}
+
+		if (verbose) {
+			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
+				console.log(`[canvas-cli] Connected to ${remotePeer} (${id})`)
+			)
+
+			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
+				console.log(`[canvas-cli] Disconnected from ${remotePeer} (${id})`)
+			)
+		}
 	}
-
-	if (verbose) {
-		libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
-			console.log(`[canvas-cli] Connected to ${remotePeer.toString()} (${id})`)
-		)
-
-		libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
-			console.log(`[canvas-cli] Disconnected from ${remotePeer.toString()} (${id})`)
-		)
-	}
-
-	const blockCache = new BlockCache(providers)
 
 	const core = await Core.initialize({
 		directory,
 		uri,
-		spec,
-		providers,
+		spec: spec,
 		libp2p,
-		blockResolver: blockCache.getBlock,
 		unchecked,
-		offline,
 		verbose,
 	})
 
@@ -262,10 +250,10 @@ export async function handler(args: Args) {
 			const apiPrefix = args.static ? `api/` : ""
 			if (args.static) {
 				console.log(`Serving static bundle: http://localhost:${args.port}/`)
-				console.log(`Serving API for ${core.uri}:`)
+				console.log(`Serving API for ${core.app}:`)
 				console.log(`└ GET http://localhost:${args.port}/api`)
 			} else {
-				console.log(`Serving API for ${core.uri}:`)
+				console.log(`Serving API for ${core.app}:`)
 				console.log(`└ GET http://localhost:${args.port}`)
 			}
 			for (const name of Object.keys(core.vm.routes)) {
@@ -279,7 +267,9 @@ export async function handler(args: Args) {
 
 	const controller = new AbortController()
 
-	startPingService(libp2p, controller, { verbose })
+	if (libp2p !== null) {
+		startPingService(libp2p, controller, { verbose })
+	}
 
 	controller.signal.addEventListener("abort", async () => {
 		console.log("[canvas-cli] Stopping API server...")
@@ -288,9 +278,10 @@ export async function handler(args: Args) {
 
 		console.log("[canvas-cli] Closing core...")
 		await core.close()
-		console.log("[canvas-cli] Core closed.")
-		await libp2p.stop()
-		blockCache.close()
+		console.log("[canvas-cli] Core closed, press Ctrl+C to terminate immediately.")
+		if (libp2p !== null) {
+			await libp2p.stop()
+		}
 	})
 
 	let stopping = false

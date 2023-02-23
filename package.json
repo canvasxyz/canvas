@@ -1,14 +1,16 @@
 {
   "name": "canvas",
   "private": true,
-  "version": "0.0.47",
+  "version": "0.1.1",
   "type": "module",
   "scripts": {
     "dev": "tsc --build --watch",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "publish": "npm publish --workspace=packages --access public",
-    "test": "npm run test --workspace=@canvas-js/core --workspace=@canvas-js/signers"
+    "lint": "eslint .",
+    "publish": "npm run build && npm publish --workspace=packages --access public",
+    "test": "npm run test --workspace=@canvas-js/core --workspace=@canvas-js/interfaces",
+    "chain-test": "npm run test --workspace=@canvas-js/interfaces"
   },
   "workspaces": [
     "packages/interfaces",
@@ -16,11 +18,18 @@
     "packages/cli",
     "packages/next",
     "packages/hooks",
-    "packages/signers",
-    "packages/verifiers",
-    "examples/app-store",
+    "packages/chain-ethereum",
+    "packages/chain-cosmos",
+    "packages/chain-solana",
+    "packages/chain-substrate",
     "examples/chat-webpack",
     "examples/chat-next",
     "examples/notes"
-  ]
+  ],
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.51.0",
+    "@typescript-eslint/parser": "^5.51.0",
+    "eslint": "^8.33.0",
+    "typescript": "^4.9.5"
+  }
 }

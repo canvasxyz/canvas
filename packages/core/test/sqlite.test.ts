@@ -4,7 +4,8 @@ import { Core, compileSpec } from "@canvas-js/core"
 
 import { TestSigner } from "./utils.js"
 
-const { spec, uri } = await compileSpec({
+const { spec, app, appName } = await compileSpec({
+	name: "Test App",
 	models: {
 		threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" },
 		thread_votes: {
@@ -55,10 +56,10 @@ const { spec, uri } = await compileSpec({
 	},
 })
 
-const signer = new TestSigner(uri)
+const signer = new TestSigner(app, appName)
 
 test("get /all", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true, offline: true })
+	const core = await Core.initialize({ uri: app, spec, directory: null, libp2p: null, unchecked: true })
 
 	const action = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: threadId } = await core.applyAction(action)
@@ -83,7 +84,7 @@ test("get /all", async (t) => {
 })
 
 test("get /votes/:thread_id", async (t) => {
-	const core = await Core.initialize({ uri, spec, directory: null, unchecked: true })
+	const core = await Core.initialize({ uri: app, spec, directory: null, libp2p: null, unchecked: true })
 
 	const action = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: threadId } = await core.applyAction(action)

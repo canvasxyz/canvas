@@ -14,12 +14,13 @@ const { chains, provider, webSocketProvider } = configureChains([mainnet], [publ
 export const client = createClient({
 	autoConnect: true,
 	connectors: [
-		new MetaMaskConnector({ chains }),
+		new MetaMaskConnector({
+			chains,
+			options: { UNSTABLE_shimOnConnectSelectAccount: true },
+		}),
 		new WalletConnectConnector({
 			chains,
-			options: {
-				qrcode: true,
-			},
+			options: { qrcode: true },
 		}),
 	],
 	provider,

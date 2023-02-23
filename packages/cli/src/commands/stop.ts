@@ -5,12 +5,12 @@ import { Agent, fetch } from "undici"
 import { SOCKET_PATH, cidPattern } from "../utils.js"
 import { StatusCodes } from "http-status-codes"
 
-export const command = "stop <spec>"
+export const command = "stop <app>"
 export const desc = "Stop an app on the daemon"
 
 export const builder = (yargs: yargs.Argv) =>
-	yargs.positional("spec", {
-		describe: "spec CID",
+	yargs.positional("app", {
+		describe: "app CID",
 		type: "string",
 		demandOption: true,
 	})
@@ -18,22 +18,22 @@ export const builder = (yargs: yargs.Argv) =>
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	if (!cidPattern.test(args.spec)) {
-		console.log(chalk.red(`[canvas-cli] spec must be a CID`))
+	if (!cidPattern.test(args.app)) {
+		console.log(chalk.red(`[canvas-cli] app must be a CID`))
 		process.exit(1)
 	}
 
-	const res = await fetch(`http://localhost/app/${args.spec}/stop`, {
+	const res = await fetch(`http://localhost/app/${args.app}/stop`, {
 		method: "POST",
 		dispatcher: new Agent({ connect: { socketPath: SOCKET_PATH } }),
 	})
 
 	if (res.status === StatusCodes.OK) {
-		console.log(chalk.green(`[canvas-cli] ipfs://${args.spec} stopped successfully.`))
+		console.log(chalk.green(`[canvas-cli] ipfs://${args.app} stopped successfully.`))
 	} else if (res.status === StatusCodes.CONFLICT) {
-		console.log(chalk.red(`[canvas-cli] ipfs://${args.spec} was not running.`))
+		console.log(chalk.red(`[canvas-cli] ipfs://${args.app} was not running.`))
 	} else {
 		const err = await res.text()
-		console.log(chalk.red(`[canvas-cli] Failed to stop spec:`), err)
+		console.log(chalk.red(`[canvas-cli] Failed to stop app:`), err)
 	}
 }

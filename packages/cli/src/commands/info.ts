@@ -5,17 +5,16 @@ import yargs from "yargs"
 import chalk from "chalk"
 import * as t from "io-ts"
 
-import { actionType, constants, sessionType, VM } from "@canvas-js/core"
+import { actionType, sessionType, VM } from "@canvas-js/core"
 
 import { parseSpecArgument } from "../utils.js"
-import { isRight } from "fp-ts/lib/Either.js"
 
-export const command = "info <spec>"
-export const desc = "Show the models, views, and actions for a spec"
+export const command = "info <app>"
+export const desc = "Show the models, views, and actions for a app"
 
 export const builder = (yargs: yargs.Argv) =>
-	yargs.positional("spec", {
-		describe: "spec filename or CID",
+	yargs.positional("app", {
+		describe: "app filename or CID",
 		type: "string",
 		demandOption: true,
 	})
@@ -23,27 +22,12 @@ export const builder = (yargs: yargs.Argv) =>
 type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { uri, directory } = parseSpecArgument(args.spec)
-
-	let spec: string
-	if (directory !== null) {
-		const specPath = path.resolve(directory, constants.SPEC_FILENAME)
-		if (fs.existsSync(specPath)) {
-			spec = fs.readFileSync(specPath, "utf-8")
-		} else {
-			console.log(chalk.yellow(`[canvas-cli] The spec ${args.spec} is not installed locally.`))
-			console.log(chalk.yellow(`[canvas-cli] Try runing "canvas install ${args.spec}"`))
-			process.exit(1)
-		}
-	} else {
-		spec = fs.readFileSync(args.spec, "utf-8")
-	}
+	const { uri, spec } = parseSpecArgument(args.app)
 
 	try {
-		const vm = await VM.initialize({ uri, spec, unchecked: true })
-
+		const vm = await VM.initialize({ app: uri, spec, chains: [], unchecked: true })
 		const { models, routes, actions, contractMetadata } = vm
-		vm.dispose()
+		await vm.close()
 
 		console.log(`name: ${uri}\n`)
 
@@ -67,8 +51,12 @@ export async function handler(args: Args) {
 			abi.forEach((line) => console.log(`- ${line}`))
 		})
 		console.log("")
-	} catch (e: any) {
-		console.log(chalk.red(e.message))
+	} catch (err) {
+		if (err instanceof Error) {
+			console.log(chalk.red(err.message))
+		} else {
+			throw err
+		}
 	}
 
 	process.exit(0)

@@ -1,20 +1,19 @@
-import React from "react"
+import React, { useState } from "react"
 import dynamic from "next/dynamic"
-import { GetServerSideProps } from "next"
 import Head from "next/head"
 
-import { useCanvas } from "@canvas-js/hooks"
+import { Client } from "@canvas-js/hooks"
 
-import { ErrorMessage } from "../components/ErrorMessage"
+const Application = dynamic(() => import("components/Application").then(({ Application }) => Application), {
+	ssr: false,
+})
 
-const Connect = dynamic(() => import("../components/Connect").then(({ Connect }) => Connect), { ssr: false })
-const Messages = dynamic(() => import("../components/Messages").then(({ Messages }) => Messages), { ssr: false })
+const Connect = dynamic(() => import("components/Connect").then(({ Connect }) => Connect), { ssr: false })
 
-export default function Index({}) {
-	const { isLoading, error, data } = useCanvas()
+const Messages = dynamic(() => import("components/Messages").then(({ Messages }) => Messages), { ssr: false })
 
-	const gossipPeers = data?.peers ? Object.entries(data.peers.gossip) : []
-	const syncPeers = data?.peers ? Object.entries(data.peers.sync) : []
+export default function Index() {
+	const [client, setClient] = useState<Client | null>(null)
 
 	return (
 		<main>
@@ -22,58 +21,10 @@ export default function Index({}) {
 				<title>Canvas Example App</title>
 				<meta name="viewport" content="initial-scale=1.0, width=device-width" />
 			</Head>
-			<Messages />
+			<Messages client={client} />
 			<div id="sidebar">
-				<div className="window">
-					<div className="title-bar">
-						<div className="title-bar-text">Application</div>
-					</div>
-					<div className="window-body">
-						{isLoading ? (
-							<p>Loading...</p>
-						) : data ? (
-							<>
-								<p>{data.uri}</p>
-								<p data-id={data.peerId}>
-									Peer ID: {data.peerId?.slice(0, 10)}...{data.peerId?.slice(data.peerId?.length - 3)}
-								</p>
-								{data.peers && (
-									<ul className="tree-view">
-										<li>{gossipPeers.length} gossip peers</li>
-										<li>
-											<ul>
-												{gossipPeers.map(([peerId, { lastSeen }]) => (
-													<li key={peerId} data-id={peerId} style={{ display: "flex" }}>
-														<div style={{ flex: 1 }}>
-															{peerId.slice(0, 10) + "..." + peerId.slice(peerId.length - 3)}
-														</div>
-														<div>{Math.round((Date.now() - lastSeen) / 1000 / 60)}min ago</div>
-													</li>
-												))}
-											</ul>
-										</li>
-										<li>{syncPeers.length} sync peers</li>
-										<li>
-											<ul>
-												{syncPeers.map(([peerId, { lastSeen }]) => (
-													<li key={peerId} data-id={peerId} style={{ display: "flex" }}>
-														<div style={{ flex: 1 }}>
-															{peerId.slice(0, 10) + "..." + peerId.slice(peerId.length - 3)}
-														</div>
-														<div>{Math.round((Date.now() - lastSeen) / 1000 / 60)}min ago</div>
-													</li>
-												))}
-											</ul>
-										</li>
-									</ul>
-								)}
-							</>
-						) : (
-							<ErrorMessage error={error} />
-						)}
-					</div>
-				</div>
-				<Connect />
+				<Application />
+				<Connect setClient={setClient} />
 			</div>
 		</main>
 	)

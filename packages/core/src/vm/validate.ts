@@ -12,16 +12,22 @@ import { unwrapObject, call } from "./utils.js"
 
 import { Exports, disposeExports } from "./exports.js"
 
+function disposeObject(obj: Record<string, QuickJSHandle>) {
+	for (const value of Object.values(obj)) {
+		value.dispose()
+	}
+}
+
 export function validateCanvasSpec(
 	context: QuickJSContext,
 	moduleHandle: QuickJSHandle
 ): { exports: Exports | null; errors: string[]; warnings: string[] } {
 	const {
+		name: nameHandle,
 		models: modelsHandle,
 		routes: routesHandle,
 		actions: actionsHandle,
 		contracts: contractsHandle,
-		component: componentHandle,
 		sources: sourcesHandle,
 		...rest
 	} = moduleHandle.consume((handle) => unwrapObject(context, handle))
@@ -41,17 +47,26 @@ export function validateCanvasSpec(
 	}
 
 	const exports: Exports = {
+		name: null,
 		models: {},
 		contractMetadata: {},
-		component: null,
 		routeHandles: {},
 		actionHandles: {},
+		customAction: null,
 		sourceHandles: {},
 	}
 
 	for (const [name, handle] of Object.entries(rest)) {
 		warnings.push(`extraneous export \`${name}\``)
 		handle.dispose()
+	}
+
+	// validate name
+	if (nameHandle) {
+		assertLogError(context.typeof(nameHandle) === "string", "`name` export must be a string if provided")
+		exports.name = nameHandle.consume(context.dump)
+	} else {
+		exports.name = null
 	}
 
 	// validate models
@@ -90,18 +105,72 @@ export function validateCanvasSpec(
 			const actionNamePattern = /^[a-zA-Z]+$/
 			for (const [name, handle] of Object.entries(actionsHandle.consume((handle) => unwrapObject(context, handle)))) {
 				if (
-					assertLogError(
+					!assertLogError(
 						actionNamePattern.test(name),
 						`Action '${name}' is invalid: action names must match ${actionNamePattern}`
-					) &&
+					)
+				) {
+					handle.dispose()
+					continue
+				}
+
+				if (context.typeof(handle) === "object") {
+					// evaluate object
+					const customAction = handle.consume((customActionHandle) => unwrapObject(context, customActionHandle))
+					// check if it has the right fields/types
+					if (
+						!assertLogError(
+							Object.keys(customAction).length == 2 && "schema" in customAction && "fn" in customAction,
+							`Custom action definition must contain a schema and a function definition`
+						)
+					) {
+						disposeObject(customAction)
+						continue
+					}
+
+					if (
+						!assertLogError(
+							context.typeof(customAction["schema"]) === "object",
+							`Custom action schema is invalid: it should be an object`
+						)
+					) {
+						// should be an object
+						disposeObject(customAction)
+						continue
+					}
+
+					if (
+						!assertLogError(
+							context.typeof(customAction["fn"]) === "function",
+							`Custom action function is invalid: it should be a function`
+						)
+					) {
+						disposeObject(customAction)
+						continue
+					}
+
+					if (
+						!assertLogError(exports.customAction == null, `Contract is invalid: more than one custom action is defined`)
+					) {
+						disposeObject(customAction)
+						continue
+					}
+
+					exports.customAction = {
+						name,
+						schema: customAction["schema"].consume(context.dump),
+						fn: customAction["fn"],
+					}
+				} else if (
 					assertLogError(
 						context.typeof(handle) === "function",
-						`Action '${name}' is invalid: 'actions.${name}' is not a function`
+						`Action '${name}' is invalid: 'actions.${name}' is not a function or valid custom action`
 					)
 				) {
 					exports.actionHandles[name] = handle
 				} else {
 					handle.dispose()
+					continue
 				}
 			}
 		} else {
@@ -155,13 +224,6 @@ export function validateCanvasSpec(
 		} else {
 			contractsHandle.dispose()
 		}
-	}
-
-	if (componentHandle !== undefined) {
-		if (assertLogError(context.typeof(componentHandle) === "function", "`component` export must be a function")) {
-			exports.component = call(context, "Function.prototype.toString", componentHandle).consume(context.getString)
-		}
-		componentHandle.dispose()
 	}
 
 	if (sourcesHandle !== undefined) {

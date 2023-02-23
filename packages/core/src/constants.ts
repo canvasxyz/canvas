@@ -1,6 +1,6 @@
 export const PEER_ID_FILENAME = "peer.id"
 export const SPEC_FILENAME = "spec.canvas.js"
-export const MST_FILENAME = "mst.okra"
+export const MST_DIRECTORY_NAME = "mst"
 export const MODEL_DATABASE_FILENAME = "models.sqlite"
 export const MESSAGE_DATABASE_FILENAME = "messages.sqlite"
 
@@ -25,4 +25,4 @@ export const SYNC_DELAY = 5 * second
 export const SYNC_INTERVAL = 1 * minute
 export const SYNC_RETRY_INTERVAL = 5 * second
 export const FIND_PEERS_TIMEOUT = 30 * second
-export const DIAL_PEER_TIMEOUT = 30 * second
+export const DIAL_PEER_TIMEOUT = 10 * second

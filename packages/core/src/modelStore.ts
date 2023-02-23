@@ -1,3 +1,4 @@
+import path from "node:path"
 import assert from "node:assert"
 import Database, * as sqlite from "better-sqlite3"
 import chalk from "chalk"
@@ -5,6 +6,7 @@ import chalk from "chalk"
 import type { ActionContext, Model, ModelType, ModelValue, Query } from "@canvas-js/interfaces"
 import { mapEntries, signalInvalidType } from "./utils.js"
 import type { VM } from "./vm/index.js"
+import { MODEL_DATABASE_FILENAME } from "./constants.js"
 
 export type Effect =
 	| { type: "set"; model: string; id: string; values: Record<string, ModelValue> }
@@ -13,15 +15,15 @@ export type Effect =
 export class ModelStore {
 	public readonly database: sqlite.Database
 
-	private readonly transaction: (context: ActionContext, effects: Effect[]) => void
+	private readonly transaction: (context: { timestamp: number }, effects: Effect[]) => void
 	private readonly vm: VM
 	private readonly modelStatements: Record<
 		string,
 		Record<keyof ReturnType<typeof ModelStore.getModelStatements>, sqlite.Statement>
 	> = {}
 
-	constructor(path: string | null, vm: VM, options: { verbose?: boolean } = {}) {
-		if (path === null) {
+	constructor(directory: string | null, vm: VM, options: { verbose?: boolean } = {}) {
+		if (directory === null) {
 			if (options.verbose) {
 				console.log("[canvas-core] Initializing new in-memory database")
 				console.warn(chalk.yellow("[canvas-core] All data will be lost on close!"))
@@ -29,11 +31,13 @@ export class ModelStore {
 
 			this.database = new Database(":memory:")
 		} else {
+			const databasePath = path.resolve(directory, MODEL_DATABASE_FILENAME)
+
 			if (options.verbose) {
-				console.log(`[canvas-core] Initializing database at ${path}`)
+				console.log(`[canvas-core] Initializing model store at ${databasePath}`)
 			}
 
-			this.database = new Database(path)
+			this.database = new Database(databasePath)
 		}
 
 		this.vm = vm
@@ -45,7 +49,7 @@ export class ModelStore {
 			)
 		}
 
-		this.transaction = this.database.transaction((context: ActionContext, effects: Effect[]): void => {
+		this.transaction = this.database.transaction((context: { timestamp: number }, effects: Effect[]): void => {
 			for (const effect of effects) {
 				this.applyEffect(context, effect)
 			}
@@ -64,11 +68,11 @@ export class ModelStore {
 		return result && result.deleted_at
 	}
 
-	public applyEffects(context: ActionContext, effects: Effect[]) {
+	public applyEffects(context: { timestamp: number }, effects: Effect[]) {
 		this.transaction(context, effects)
 	}
 
-	private applyEffect(context: ActionContext, effect: Effect) {
+	private applyEffect(context: { timestamp: number }, effect: Effect) {
 		const updatedAt = this.getUpdatedAt(effect.model, effect.id)
 		if (updatedAt !== undefined && updatedAt > context.timestamp) {
 			return
@@ -112,7 +116,7 @@ export class ModelStore {
 		this.database.close()
 	}
 
-	public getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]> {
+	public getRoute(route: string, params: Record<string, string> = {}): Promise<Record<string, ModelValue>[]> {
 		assert(route in this.vm.routes, "invalid route name")
 		const filteredParams = mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value))
 		return this.vm.executeRoute(route, filteredParams, (query: string | Query) => {
@@ -128,11 +132,14 @@ export class ModelStore {
 				} else {
 					return prepared.all(query.args)
 				}
-			} catch (err: any) {
-				// Show a little more debugging information for queries
-				const params = typeof query === "string" ? "none" : JSON.stringify(query.args)
-				const formatted = (typeof query === "string" ? query : query.query).replace(/\n/g, " ")
-				err.message = `${err.message} (query: ${formatted}, parameters: ${params})`
+			} catch (err) {
+				if (err instanceof Error) {
+					// Show a little more debugging information for queries
+					const params = typeof query === "string" ? "none" : JSON.stringify(query.args)
+					const formatted = (typeof query === "string" ? query : query.query).replace(/\n/g, " ")
+					err.message = `${err.message} (query: ${formatted}, parameters: ${params})`
+				}
+
 				throw err
 			}
 		})

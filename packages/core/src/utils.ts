@@ -3,6 +3,8 @@ import assert from "node:assert"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats"
 
+import { configure } from "safe-stable-stringify"
+
 import type {
 	ActionArgument,
 	Chain,
@@ -12,18 +14,21 @@ import type {
 	ModelValue,
 	RouteContext,
 	Query,
-	Block,
 } from "@canvas-js/interfaces"
+
+import type { ContractFunctionArgument, ContractFunctionResult } from "./vm/index.js"
+
+export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
 
 export const ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
 
-export function parseIPFSURI(uri: string): CID | null {
+export function parseIPFSURI(uri: string): CID {
 	const match = ipfsURIPattern.exec(uri)
 	if (match) {
 		const [_, cid] = match
 		return CID.parse(cid)
 	} else {
-		return null
+		throw new Error("invalid ipfs:// URI")
 	}
 }
 
@@ -66,8 +71,7 @@ type ValueTypes = {
 }
 
 type Values<M extends Model> = { [K in Exclude<keyof M, "indexes" | "id" | "updated_at">]: ValueTypes[M[K]] }
-
-export type Context<Models extends Record<string, Model>> = {
+type Context<Models extends Record<string, Model>> = {
 	timestamp: number
 	hash: string
 	from: string
@@ -77,7 +81,7 @@ export type Context<Models extends Record<string, Model>> = {
 			delete: (id: string) => void
 		}
 	}
-	contracts: Record<string, Record<string, (...args: any[]) => Promise<any[]>>>
+	contracts: Record<string, Record<string, (...args: ContractFunctionArgument[]) => Promise<ContractFunctionResult[]>>>
 }
 
 type ActionHandler<Models extends Record<string, Model>> = (
@@ -101,13 +105,16 @@ function compileActionHandlers<Models extends Record<string, Model>>(actions: Re
 }
 
 export async function compileSpec<Models extends Record<string, Model>>(exports: {
+	name: string
 	models: Models
 	actions: Record<string, ActionHandler<Models>>
 	routes?: Record<string, (params: Record<string, string>, db: RouteContext) => Query>
 	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
 	sources?: Record<string, Record<string, ActionHandler<Models>>>
-}): Promise<{ uri: string; spec: string }> {
-	const { models, actions, routes, contracts, sources } = exports
+}): Promise<{ app: string; spec: string; appName: string }> {
+	const { name, models, actions, routes, contracts, sources } = exports
+
+	const appName = name || "Canvas App"
 
 	const actionEntries = compileActionHandlers(actions)
 
@@ -119,6 +126,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	})
 
 	const lines = [
+		`export const name = ${JSON.stringify(appName)};`,
 		`export const models = ${JSON.stringify(models, null, "\t")};`,
 		`export const actions = {\n${actionEntries.join(",\n")}};`,
 	]
@@ -142,7 +150,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 
 	const spec = lines.join("\n")
 	const cid = await Hash.of(spec)
-	return { uri: `ipfs://${cid}`, spec }
+	return { app: `ipfs://${cid}`, spec, appName }
 }
 
 export class AbortError extends Error {
@@ -184,20 +192,23 @@ async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, 
 export async function retry<T>(
 	f: () => Promise<T>,
 	handleError: (err: Error, n: number) => void,
-	options: { interval: number; signal: AbortSignal }
+	options: { interval: number; signal: AbortSignal; maxRetries?: number }
 ): Promise<T> {
-	let n = 0
-	while (true) {
+	const maxRetries = options.maxRetries ?? Infinity
+
+	for (let n = 0; n < maxRetries; n++) {
 		const result = await getResult(f)
 		if (result.done) {
 			return result.value
 		} else if (options.signal.aborted) {
 			throw result.value
 		} else {
-			handleError(result.value, n++)
+			handleError(result.value, n)
 			await wait(options)
 		}
 	}
+
+	throw new Error("exceeded max retries")
 }
 
 export const toBuffer = (array: Uint8Array) => Buffer.from(array.buffer, array.byteOffset, array.byteLength)
@@ -233,5 +244,3 @@ export class CacheMap<K, V> extends Map<K, V> {
 		}
 	}
 }
-
-export type BlockResolver = (chain: Chain, chainId: ChainId, blockhash: string) => Promise<Block>

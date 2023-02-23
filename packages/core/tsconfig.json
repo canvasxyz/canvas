@@ -7,6 +7,6 @@
   },
   "references": [
     { "path": "../interfaces" },
-    { "path": "../verifiers" }
+    { "path": "../chain-ethereum" }
   ]
 }

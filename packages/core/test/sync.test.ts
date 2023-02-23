@@ -2,26 +2,27 @@ import os from "node:os"
 import fs from "node:fs"
 import path from "node:path"
 import stream from "node:stream"
+import { createHash } from "node:crypto"
 
 import test from "ava"
 
 import { nanoid } from "nanoid"
 import toIterable from "stream-to-it"
-import * as okra from "node-okra"
+import * as okra from "@canvas-js/okra-node"
 
 import type { Duplex } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
 
 import type { Message } from "@canvas-js/interfaces"
 
-import { BinaryMessage, fromBinaryAction, fromBinarySession, normalizeMessage } from "@canvas-js/core/lib/encoding.js"
 import { MessageStore } from "@canvas-js/core/lib/messageStore.js"
-import { compileSpec } from "@canvas-js/core/lib/utils.js"
-import { handleIncomingStream, sync } from "@canvas-js/core/lib/rpc/index.js"
+import { compileSpec, stringify } from "@canvas-js/core/lib/utils.js"
+import { getMessageKey, handleIncomingStream, sync } from "@canvas-js/core/lib/rpc/index.js"
 
 import { TestSigner } from "./utils.js"
 
-const { uri, spec } = await compileSpec({
+const { app, appName } = await compileSpec({
+	name: "Test App",
 	models: {},
 	actions: { log: ({ message }, {}) => console.log(message) },
 })
@@ -39,62 +40,58 @@ function connect(): [
 	]
 }
 
-async function insert(mst: okra.Tree, hash: Buffer, binaryMessage: BinaryMessage) {
-	const leaf = Buffer.alloc(14)
-	const offset = binaryMessage.type === "action" ? 1 : 0
-	leaf.writeUintBE(binaryMessage.payload.timestamp * 2 + offset, 0, 6)
-	hash.copy(leaf, 6, 0, 8)
-	mst.insert(leaf, hash)
+async function initialize(messageStore: MessageStore, mst: okra.Tree, messages: Iterable<Message>) {
+	await mst.write(async (txn) => {
+		for (const message of messages) {
+			const data = Buffer.from(stringify(message))
+			const hash = createHash("sha256").update(data).digest()
+			txn.set(getMessageKey(hash, message), hash)
+			messageStore.insert(hash, message)
+		}
+	})
 }
 
-async function testSync(sourceMessages: Message[], targetMessages: Message[]): Promise<Message[]> {
-	const directory = path.resolve(os.tmpdir(), nanoid())
-	fs.mkdirSync(directory)
-	const sourceMessageStore = new MessageStore(uri, path.resolve(directory, "source.sqlite"))
-	const sourceMST = new okra.Tree(path.resolve(directory, "source.okra"))
-	const targetMST = new okra.Tree(path.resolve(directory, "target.okra"))
+async function testSync(sourceMessages: Iterable<Message>, targetMessages: Iterable<Message>): Promise<Message[]> {
+	const sourceDirectory = path.resolve(os.tmpdir(), nanoid())
+	const targetDirectory = path.resolve(os.tmpdir(), nanoid())
+	fs.mkdirSync(sourceDirectory)
+	fs.mkdirSync(targetDirectory)
 
-	for (const message of sourceMessages) {
-		const [hash, binaryMessage] = normalizeMessage(message)
-		insert(sourceMST, hash, binaryMessage)
-		sourceMessageStore.insert(hash, binaryMessage)
-	}
+	const sourceMessageStore = new MessageStore(app, sourceDirectory)
+	const targetMessageStore = new MessageStore(app, targetDirectory)
+	const [sourceMSTPath, targetMSTPath] = [path.resolve(sourceDirectory, "mst"), path.resolve(targetDirectory, "mst")]
+	const sourceMST = new okra.Tree(sourceMSTPath, {})
+	const targetMST = new okra.Tree(targetMSTPath, {})
 
-	for (const message of targetMessages) {
-		const [hash, binaryMessage] = normalizeMessage(message)
-		insert(targetMST, hash, binaryMessage)
-	}
+	await initialize(sourceMessageStore, sourceMST, sourceMessages)
+	await initialize(targetMessageStore, targetMST, targetMessages)
 
-	const messages: Message[] = []
-	async function handleMessage(hash: Buffer, data: Uint8Array, message: BinaryMessage) {
-		if (message.type === "action") {
-			messages.push(fromBinaryAction(message))
-		} else {
-			messages.push(fromBinarySession(message))
-		}
-	}
-
+	const delta: Message[] = []
 	try {
 		const [source, target] = connect()
-		await Promise.all([
-			handleIncomingStream(source, sourceMessageStore, sourceMST),
-			sync(targetMST, target, handleMessage),
-		])
+		await targetMST.write(async (targetTxn) => {
+			await sourceMST.read(async (sourceTxn) => {
+				await Promise.all([
+					handleIncomingStream(source, sourceMessageStore, sourceTxn),
+					sync(targetMessageStore, targetTxn, target, async (hash, data, message) => void delta.push(message)),
+				])
+			})
+		})
 
-		return messages
-	} catch (err) {
-		throw err
+		return delta
 	} finally {
 		targetMST.close()
 		sourceMST.close()
 		sourceMessageStore.close()
-		fs.rmSync(directory, { recursive: true })
+		targetMessageStore.close()
+		fs.rmSync(sourceDirectory, { recursive: true })
+		fs.rmSync(targetDirectory, { recursive: true })
 	}
 }
 
-const signer = new TestSigner(uri)
+const signer = new TestSigner(app, appName)
 
-test("sync two MSTs", async (t) => {
+test("sync two tiny MSTs", async (t) => {
 	const a = await signer.sign("log", { message: "a" })
 	const b = await signer.sign("log", { message: "b" })
 	const c = await signer.sign("log", { message: "c" })
@@ -104,4 +101,31 @@ test("sync two MSTs", async (t) => {
 
 	const delta = await testSync([a, b, c, d, f], [a, d, e, f])
 	t.deepEqual(delta, [b, c])
+})
+
+test("sync two big MSTs", async (t) => {
+	const count = 1000
+	const index = Math.floor(Math.random() * count)
+
+	const messages: Message[] = []
+	for (let i = 0; i < count; i++) {
+		messages.push(await signer.sign("log", { message: nanoid() }))
+	}
+
+	function* sourceMessages(): Generator<Message> {
+		for (const message of messages) yield message
+	}
+
+	function* targetMessages(): Generator<Message> {
+		for (const [i, message] of messages.entries()) {
+			if (i === index) {
+				continue
+			} else {
+				yield message
+			}
+		}
+	}
+
+	const delta = await testSync(sourceMessages(), targetMessages())
+	t.deepEqual(delta, [messages[index]])
 })

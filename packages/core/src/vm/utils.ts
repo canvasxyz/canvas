@@ -1,6 +1,7 @@
 import assert from "node:assert"
 
 import { isFail, QuickJSContext, QuickJSHandle, VmCallResult } from "quickjs-emscripten"
+import { signalInvalidType } from "../utils.js"
 
 export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
 export interface JSONArray extends Array<JSONValue> {}
@@ -71,10 +72,37 @@ export function call(
 	return result.value
 }
 
-// TODO: figure out why quickjs-emscripten doesn't support BigInts
+// // TODO: figure out why quickjs-emscripten doesn't support BigInts
 // export function newBigInt(context: QuickJSContext, value: bigint): QuickJSHandle {
 // 	return context.newString(value.toString()).consume((handle) => call(context, "BigInt", null, handle))
 // }
+
+export function recursiveWrapJSONObject(context: QuickJSContext, object: any): QuickJSHandle {
+	const i = typeof object
+	if (i == "string") {
+		return context.newString(object)
+	} else if (i == "number") {
+		return context.newNumber(object)
+	} else if (i == "boolean") {
+		return object ? context.true : context.false
+	} else if (i == "object") {
+		if (object == null) {
+			return context.null
+		} else {
+			const o = context.newObject()
+			Object.keys(object).map((key) => {
+				context.setProp(o, key, recursiveWrapJSONObject(context, object[key]))
+			})
+			return o
+		}
+	} else if (i == "undefined") {
+		return context.undefined
+	} else if (i == "function" || i == "bigint" || i == "symbol") {
+		throw Error(`Cannot wrap JSON object to QuickJS: type ${i} is unsupported`)
+	} else {
+		signalInvalidType(i)
+	}
+}
 
 /**
  * Wrap an object outside a QuickJS VM by one level,
@@ -172,13 +200,53 @@ export async function loadModule(
 		}
 	})
 
+	wrapObject(context, {
+		customAction: context.newFunction("customAction", (schema, fn) => {
+			// Create a new object within the vm that stores the schema and action function
+			const actionObject = context.newObject()
+			context.setProp(actionObject, "fn", fn || context.undefined)
+			context.setProp(actionObject, "schema", schema || context.undefined)
+			return actionObject
+		}),
+	}).consume((globalsHandle) => call(context, "Object.assign", null, context.global, globalsHandle).dispose())
+
 	const moduleResult = context.evalCode(`import("${moduleName}")`)
 	const modulePromise = context.unwrapResult(moduleResult)
-	const moduleExports = await resolvePromise(context, modulePromise).then(context.unwrapResult)
+	const importResult = await resolvePromise(context, modulePromise)
 	modulePromise.dispose()
 	context.runtime.removeModuleLoader()
-	return moduleExports
+
+	if (importResult.error === undefined) {
+		return importResult.value
+	} else {
+		throw unwrapError(context, importResult.error)
+	}
 }
+
+export function unwrapError(context: QuickJSContext, errorHandle: QuickJSHandle): Error {
+	const errorValue = errorHandle.consume(context.dump)
+	if (typeof errorValue === "object" && typeof errorValue.message === "string") {
+		let error: Error
+		if (errorValue.name === "SyntaxError") {
+			error = new SyntaxError(errorValue.message)
+		} else if (errorValue.name === "TypeError") {
+			error = new TypeError(errorValue.message)
+		} else if (errorValue.name === "RangeError") {
+			error = new RangeError(errorValue.message)
+		} else {
+			error = new Error(errorValue.message)
+		}
+
+		if (typeof errorValue.stack === "string") {
+			error.stack = errorValue.stack
+		}
+
+		return error
+	} else {
+		throw errorValue
+	}
+}
+
 /**
  * composes external JSON.stringify with internal JSON.parse
  * @param jsonValue any JSON value

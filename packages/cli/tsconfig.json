@@ -6,6 +6,7 @@
     "outDir": "dist"
   },
   "references": [
+    { "path": "../chain-ethereum" },
     { "path": "../core" },
     { "path": "../interfaces" }
   ]

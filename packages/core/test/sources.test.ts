@@ -1,13 +1,22 @@
-import test from "ava"
+import os from "node:os"
+import fs from "node:fs"
+import path from "node:path"
 import assert from "node:assert"
-import * as cbor from "microcbor"
+
+import test from "ava"
+
+import { nanoid } from "nanoid"
 
 import { Core, compileSpec } from "@canvas-js/core"
 
 import { TestSigner } from "./utils.js"
-import { fromHex, parseIPFSURI, toBuffer } from "@canvas-js/core/lib/utils.js"
+import { fromHex, stringify, toHex } from "@canvas-js/core/lib/utils.js"
+import { getMessageKey } from "@canvas-js/core/lib/rpc/utils.js"
+import * as constants from "@canvas-js/core/lib/constants.js"
+import { Message } from "@canvas-js/interfaces"
 
 const MessageBoard = await compileSpec({
+	name: "Test App",
 	models: {
 		posts: { id: "string", content: "string", from: "string", updated_at: "datetime" },
 	},
@@ -20,6 +29,7 @@ const MessageBoard = await compileSpec({
 })
 
 const MessageBoardWithVotes = await compileSpec({
+	name: "Test App 2",
 	models: {
 		posts: { id: "string", content: "string", from: "string", updated_at: "datetime" },
 		votes: {
@@ -41,7 +51,7 @@ const MessageBoardWithVotes = await compileSpec({
 		},
 	},
 	sources: {
-		[MessageBoard.uri]: {
+		[MessageBoard.app]: {
 			createPost({ content }, { db, hash, from }) {
 				assert(typeof content === "string")
 				db.posts.set(hash, { content, from })
@@ -50,16 +60,16 @@ const MessageBoardWithVotes = await compileSpec({
 	},
 })
 
-const signer = new TestSigner(MessageBoardWithVotes.uri)
-const sourceSigner = new TestSigner(MessageBoard.uri)
+const signer = new TestSigner(MessageBoardWithVotes.app, MessageBoardWithVotes.appName)
+const sourceSigner = new TestSigner(MessageBoard.app, MessageBoard.appName)
 
 test("Apply source actions", async (t) => {
 	const core = await Core.initialize({
-		uri: MessageBoardWithVotes.uri,
+		uri: MessageBoardWithVotes.app,
 		spec: MessageBoardWithVotes.spec,
 		directory: null,
+		libp2p: null,
 		unchecked: true,
-		offline: true,
 	})
 
 	const sourceAction = await sourceSigner.sign("createPost", { content: "hello world" })
@@ -101,67 +111,146 @@ test("Apply source actions", async (t) => {
 		},
 	])
 
-	const sourceCID = parseIPFSURI(MessageBoard.uri)
-	assert(sourceCID !== null)
-
 	t.deepEqual(core.messageStore.database.prepare("SELECT * FROM actions").all(), [
 		{
 			id: 1,
 			hash: fromHex(sourceActionHash),
-			signature: fromHex(sourceAction.signature),
-			from_address: fromHex(sourceSigner.wallet.address),
+			signature: sourceAction.signature,
+			from_address: sourceSigner.wallet.address,
 			session_address: null,
 			timestamp: sourceAction.payload.timestamp,
 			call: sourceAction.payload.call,
-			args: toBuffer(cbor.encode(sourceAction.payload.args)),
-			chain: "eth",
+			call_args: stringify(sourceAction.payload.callArgs),
+			chain: "ethereum",
 			chain_id: "1",
-			blockhash: null,
-			source: toBuffer(sourceCID.bytes),
+			block: null,
+			app: MessageBoard.app,
+
+			app_name: "Test App",
 		},
 		{
 			id: 2,
 			hash: fromHex(createActionHash),
-			signature: fromHex(createAction.signature),
-			from_address: fromHex(signer.wallet.address),
+			signature: createAction.signature,
+			from_address: signer.wallet.address,
 			session_address: null,
 			timestamp: createAction.payload.timestamp,
 			call: createAction.payload.call,
-			args: toBuffer(cbor.encode(createAction.payload.args)),
-			chain: "eth",
+			call_args: stringify(createAction.payload.callArgs),
+			chain: "ethereum",
 			chain_id: "1",
-			blockhash: null,
-			source: null,
+			block: null,
+			app: MessageBoardWithVotes.app,
+			app_name: "Test App 2",
 		},
 		{
 			id: 3,
 			hash: fromHex(voteActionHash),
-			signature: fromHex(voteAction.signature),
-			from_address: fromHex(signer.wallet.address),
+			signature: voteAction.signature,
+			from_address: signer.wallet.address,
 			session_address: null,
 			timestamp: voteAction.payload.timestamp,
 			call: voteAction.payload.call,
-			args: toBuffer(cbor.encode(voteAction.payload.args)),
-			chain: "eth",
+			call_args: stringify(voteAction.payload.callArgs),
+			chain: "ethereum",
 			chain_id: "1",
-			blockhash: null,
-			source: null,
+			block: null,
+			app: MessageBoardWithVotes.app,
+			app_name: "Test App 2",
 		},
 		{
 			id: 4,
 			hash: fromHex(voteSourceActionHash),
-			signature: fromHex(voteSourceAction.signature),
-			from_address: fromHex(signer.wallet.address),
+			signature: voteSourceAction.signature,
+			from_address: signer.wallet.address,
 			session_address: null,
 			timestamp: voteSourceAction.payload.timestamp,
 			call: voteSourceAction.payload.call,
-			args: toBuffer(cbor.encode(voteSourceAction.payload.args)),
-			chain: "eth",
+			call_args: stringify(voteSourceAction.payload.callArgs),
+			chain: "ethereum",
 			chain_id: "1",
-			blockhash: null,
-			source: null,
+			block: null,
+			app: MessageBoardWithVotes.app,
+			app_name: "Test App 2",
 		},
 	])
 
 	await core.close()
+})
+
+test("Build missing MST index on core startup", async (t) => {
+	const directory = path.resolve(os.tmpdir(), nanoid())
+	fs.mkdirSync(directory)
+
+	type Entry = { key: Buffer; value: Buffer }
+	const getEntry = (hash: string, message: Message): Entry => {
+		const hashBuffer = fromHex(hash)
+		return { key: getMessageKey(hashBuffer, message), value: hashBuffer }
+	}
+
+	const mstEntries: Record<string, Entry[]> = {}
+
+	try {
+		// apply a mix of source and direct actions
+		await t.notThrowsAsync(async () => {
+			const core = await Core.initialize({
+				directory,
+				uri: MessageBoardWithVotes.app,
+				spec: MessageBoardWithVotes.spec,
+				libp2p: null,
+				unchecked: true,
+			})
+
+			const sourceAction = await sourceSigner.sign("createPost", { content: "hello world" })
+			const { hash: sourceActionHash } = await core.applyAction(sourceAction)
+			const createAction = await signer.sign("create", { content: "lorem ipsum" })
+			const { hash: createActionHash } = await core.applyAction(createAction)
+			const voteAction = await signer.sign("vote", { post_id: createActionHash, value: 1 })
+			const { hash: voteActionHash } = await core.applyAction(voteAction)
+			const voteSourceAction = await signer.sign("vote", { post_id: sourceActionHash, value: -1 })
+			const { hash: voteSourceActionHash } = await core.applyAction(voteSourceAction)
+
+			await core.close()
+
+			mstEntries[MessageBoard.app] = [getEntry(sourceActionHash, sourceAction)]
+			mstEntries[MessageBoardWithVotes.app] = [
+				getEntry(createActionHash, createAction),
+				getEntry(voteActionHash, voteAction),
+				getEntry(voteSourceActionHash, voteSourceAction),
+			]
+		})
+
+		const mstPath = path.resolve(directory, constants.MST_DIRECTORY_NAME)
+		t.true(fs.existsSync(mstPath))
+		t.true(fs.statSync(mstPath).isDirectory())
+
+		// delete the MST directory
+		fs.rmSync(mstPath, { recursive: true })
+
+		// open the core again
+		const core = await Core.initialize({
+			directory,
+			uri: MessageBoardWithVotes.app,
+			spec: MessageBoardWithVotes.spec,
+			libp2p: null,
+			unchecked: true,
+		})
+
+		t.true(fs.existsSync(mstPath))
+		t.true(fs.statSync(mstPath).isDirectory())
+
+		try {
+			for (const [dbi, entries] of Object.entries(mstEntries)) {
+				await core.mst!.read(dbi, (txn) => {
+					for (const { key, value } of entries) {
+						t.deepEqual(value, txn.get(key), `key ${toHex(key)}`)
+					}
+				})
+			}
+		} finally {
+			await core.close()
+		}
+	} finally {
+		fs.rmSync(directory, { recursive: true })
+	}
 })

@@ -18,11 +18,13 @@ import type {
 	SessionPayload,
 	Chain,
 	ChainId,
+	Message,
+	CustomAction,
 } from "@canvas-js/interfaces"
 import { isLeft, isRight, left } from "fp-ts/lib/Either.js"
 
 export const chainType: t.Type<Chain> = t.union([
-	t.literal("eth"),
+	t.literal("ethereum"),
 	t.literal("cosmos"),
 	t.literal("near"),
 	t.literal("solana"),
@@ -35,13 +37,14 @@ export const actionArgumentType: t.Type<ActionArgument> = t.union([t.null, t.boo
 
 export const actionPayloadType: t.Type<ActionPayload> = t.type({
 	from: t.string,
-	spec: t.string,
+	app: t.string,
+	appName: t.string,
 	timestamp: t.number,
 	call: t.string,
-	args: t.record(t.string, actionArgumentType),
+	callArgs: t.record(t.string, actionArgumentType),
 	chain: chainType,
 	chainId: chainIdType,
-	blockhash: t.union([t.string, t.null]),
+	block: t.union([t.string, t.null]),
 })
 
 export const actionType: t.Type<Action> = t.type({
@@ -53,13 +56,14 @@ export const actionType: t.Type<Action> = t.type({
 
 export const sessionPayloadType: t.Type<SessionPayload> = t.type({
 	from: t.string,
-	spec: t.string,
-	timestamp: t.number,
-	address: t.string,
-	duration: t.number,
+	app: t.string,
+	appName: t.string,
+	sessionAddress: t.string,
+	sessionDuration: t.number,
+	sessionIssued: t.number,
 	chain: chainType,
 	chainId: chainIdType,
-	blockhash: t.union([t.string, t.null]),
+	block: t.union([t.string, t.null]),
 })
 
 export const sessionType: t.Type<Session> = t.type({
@@ -67,6 +71,15 @@ export const sessionType: t.Type<Session> = t.type({
 	payload: sessionPayloadType,
 	signature: t.string,
 })
+
+export const customActionType: t.Type<CustomAction> = t.type({
+	type: t.literal("customAction"),
+	payload: t.any,
+	name: t.string,
+	app: t.string,
+})
+
+export const messageType: t.Type<Message> = t.union([actionType, sessionType, customActionType])
 
 /**
  * This function converts a decode function into an is function (for defining io-ts types)
@@ -82,7 +95,7 @@ function decodeToIs<T>(decodeFunc: (input: unknown, context: t.Context) => t.Val
 	return is
 }
 
-function getErrors(validation: t.Validation<any>): t.Errors {
+function getErrors<T>(validation: t.Validation<T>): t.Errors {
 	return isLeft(validation) ? validation.left : []
 }
 
@@ -129,7 +142,7 @@ function decodeSingleIndex(i: unknown, context: t.Context): t.Validation<string 
 		return t.failure(i, context, `Index is invalid: ${i} is not a string or a list of strings`)
 	}
 
-	let errors: t.ValidationError[] = []
+	const errors: t.ValidationError[] = []
 	// check is not id
 	for (const index of indices) {
 		if (index == "id") {

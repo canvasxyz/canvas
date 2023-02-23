@@ -1,12 +1,10 @@
 import assert from "node:assert"
-import path from "node:path"
+import { createHash } from "node:crypto"
 
-import PQueue from "p-queue"
 import Hash from "ipfs-only-hash"
 import { CID } from "multiformats/cid"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
-import { createLibp2p, Libp2p } from "libp2p"
+import { Libp2p } from "libp2p"
 
 import {
 	Action,
@@ -14,42 +12,42 @@ import {
 	Session,
 	SessionPayload,
 	ModelValue,
-	BlockProvider,
 	Chain,
 	ChainId,
-	Block,
+	Message,
+	ChainImplementation,
+	CustomAction,
 } from "@canvas-js/interfaces"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+import { validate } from "@hyperjump/json-schema/draft-2020-12"
 
-import { verifyActionSignature, verifySessionSignature } from "@canvas-js/verifiers"
+import { actionType, customActionType, sessionType } from "./codecs.js"
+import { toHex, signalInvalidType, CacheMap, parseIPFSURI, stringify, mapEntries } from "./utils.js"
 
-import { actionType, sessionType } from "./codecs.js"
-import { toHex, BlockResolver, signalInvalidType, CacheMap, parseIPFSURI } from "./utils.js"
-import { normalizeAction, fromBinaryAction, fromBinarySession, normalizeSession, BinaryMessage } from "./encoding.js"
 import { VM } from "./vm/index.js"
 import { MessageStore } from "./messageStore.js"
 import { ModelStore } from "./modelStore.js"
 
 import * as constants from "./constants.js"
-import { getLibp2pInit } from "./libp2p.js"
 import { Source } from "./source.js"
 import { metrics } from "./metrics.js"
+import { MST } from "./mst.js"
+import { getMessageKey } from "./rpc/utils.js"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory
 	directory: string | null
-	// defaults to ipfs:// hash of spec
-	uri?: string
 	spec: string
-	libp2p?: Libp2p
-	providers?: Record<string, BlockProvider>
-	// defaults to fetching each block from the provider with no caching
-	blockResolver?: BlockResolver
+
+	// defaults to ipfs:// hash of application
+	uri?: string
+	libp2p: Libp2p | null // pass null to run offline
+	chains?: ChainImplementation<unknown, unknown>[]
 }
 
 export interface CoreOptions {
 	unchecked?: boolean
 	verbose?: boolean
-	offline?: boolean
 }
 
 interface CoreEvents {
@@ -60,107 +58,104 @@ interface CoreEvents {
 }
 
 export class Core extends EventEmitter<CoreEvents> {
-	public readonly modelStore: ModelStore
-	public readonly messageStore: MessageStore
-
 	public readonly recentGossipPeers = new CacheMap<string, { lastSeen: number }>(1000)
 	public readonly recentSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
 
-	// private readonly source: Source | null = null
 	private readonly sources: Record<string, Source> | null = null
-	private readonly queue: PQueue = new PQueue({ concurrency: 1 })
 
-	public static async initialize({ directory, uri, spec, libp2p, providers, blockResolver, ...options }: CoreConfig) {
+	public static async initialize(config: CoreConfig) {
+		const chainImplementations = [new EthereumChainImplementation()] as ChainImplementation<any, any>[]
+		const { directory, uri, spec, libp2p, chains = chainImplementations, ...options } = config
+
 		const cid = await Hash.of(spec).then(CID.parse)
-		if (uri === undefined) {
-			uri = `ipfs://${cid.toString()}`
-		}
-		const vm = await VM.initialize({ uri, spec, providers: providers ?? {}, ...options })
+		const app = uri ?? `ipfs://${cid}`
+		const vm = await VM.initialize({ app, spec, chains, ...options })
+		const appName = vm.appName
 
-		if (blockResolver === undefined) {
-			blockResolver = async (chain, chainId, blockhash) => {
-				const key = `${chain}:${chainId}`
-				assert(providers !== undefined && key in providers, `no provider for ${chain}:${chainId}`)
-				return await providers[key].getBlock(blockhash)
+		const modelStore = new ModelStore(directory, vm, options)
+		const messageStore = new MessageStore(app, directory, vm.sources, options)
+
+		let mst: MST | null = null
+		if (directory !== null) {
+			// only called if the MST directory does not exist
+			// eslint-disable-next-line
+			async function* importMessages(dbi: string): AsyncIterable<[Buffer, Message]> {
+				if (options.verbose) {
+					console.log(`[canvas-core] Rebuilding MST index ${dbi} from model store`)
+				}
+
+				yield* messageStore.getSessionStream({ app: dbi })
+				yield* messageStore.getActionStream({ app: dbi })
 			}
+
+			mst = await MST.initialize(directory, [app, ...vm.sources], importMessages, options)
 		}
 
-		if (options.offline) {
-			return new Core(directory, uri, cid, spec, vm, null, blockResolver, options)
-		} else if (libp2p === undefined) {
-			const peerId = await createEd25519PeerId()
-			const libp2p = await createLibp2p(getLibp2pInit(peerId))
-			await libp2p.start()
-			const core = new Core(directory, uri, cid, spec, vm, libp2p, blockResolver, options)
-			core.addEventListener("close", () => libp2p.stop())
-			return core
-		} else {
-			return new Core(directory, uri, cid, spec, vm, libp2p, blockResolver, options)
-		}
+		return new Core(directory, cid, app, appName, vm, modelStore, messageStore, mst, libp2p, chains, options)
 	}
 
 	private constructor(
 		public readonly directory: string | null,
-		public readonly uri: string,
 		public readonly cid: CID,
-		public readonly spec: string,
+		public readonly app: string,
+		public readonly appName: string,
 		public readonly vm: VM,
+		public readonly modelStore: ModelStore,
+		public readonly messageStore: MessageStore,
+		public readonly mst: MST | null,
 		public readonly libp2p: Libp2p | null,
-		private readonly blockResolver: BlockResolver,
-		private readonly options: CoreOptions
+		private readonly chains: ChainImplementation<unknown, unknown>[],
+		public readonly options: CoreOptions
 	) {
 		super()
 
 		this.options = options
 
-		const modelDatabasePath = directory && path.resolve(directory, constants.MODEL_DATABASE_FILENAME)
-		this.modelStore = new ModelStore(modelDatabasePath, vm, options)
+		if (mst !== null) {
+			const sourceCIDs: Record<string, CID> = { [this.app]: this.cid }
+			for (const uri of vm.sources) {
+				sourceCIDs[uri] = parseIPFSURI(uri)
+			}
 
-		const messageDatabasePath = directory && path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
-		this.messageStore = new MessageStore(uri, messageDatabasePath, vm.sources, options)
-
-		if (directory !== null) {
-			this.sources = {}
-			this.sources[this.uri] = Source.initialize({
-				path: path.resolve(directory, constants.MST_FILENAME),
-				cid,
-				applyMessage: this.applyMessage,
-				messageStore: this.messageStore,
-				libp2p,
-				recentGossipPeers: this.recentGossipPeers,
-				recentSyncPeers: this.recentSyncPeers,
-				...options,
-			})
-
-			for (const source of vm.sources) {
-				const cid = parseIPFSURI(source)
-				assert(cid !== null)
-				this.sources[source] = Source.initialize({
-					path: path.resolve(directory, `${cid.toString()}.okra`),
+			this.sources = mapEntries(sourceCIDs, (_, cid) =>
+				Source.initialize({
 					cid,
+					mst,
 					applyMessage: this.applyMessage,
 					messageStore: this.messageStore,
 					libp2p,
+					recentGossipPeers: this.recentGossipPeers,
+					recentSyncPeers: this.recentSyncPeers,
 					...options,
 				})
-			}
+			)
 		}
 	}
 
 	public async close() {
-		await this.queue.onIdle()
+		if (this.sources !== null) {
+			await Promise.all(Object.values(this.sources).map((source) => source.close()))
+		}
 
-		this.vm.dispose()
+		if (this.mst !== null) {
+			await this.mst.close()
+		}
+
+		await this.vm.close()
 		this.messageStore.close()
 		this.modelStore.close()
 
-		if (this.sources !== null) {
-			for (const source of Object.values(this.sources)) {
-				await source.close()
-			}
-		}
-
 		this.dispatchEvent(new Event("close"))
+	}
+
+	public getChainImplementations() {
+		const result = {} as Record<Chain, Record<ChainId, { rpc: boolean }>>
+
+		this.chains.forEach((ci) => {
+			if (result[ci.chain] === undefined) result[ci.chain] = {}
+			result[ci.chain][ci.chainId] = { rpc: ci.hasProvider() }
+		})
+		return result
 	}
 
 	public async getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]> {
@@ -172,46 +167,74 @@ export class Core extends EventEmitter<CoreEvents> {
 	}
 
 	/**
-	 * Executes an action.
+	 * Apply an action. This is the "local" entrypoint called by the HTTP API.
+	 * It executes the action, applies the effects to the model store,
+	 * inserts the action into the message store, updates the MST index,
+	 * and publishes to GossipSub.
 	 */
 	public async applyAction(action: Action): Promise<{ hash: string }> {
-		assert(actionType.is(action), "Invalid action value")
+		assert(actionType.is(action), "invalid action object")
 
-		const [hash, message, data] = normalizeAction(action)
+		const data = Buffer.from(stringify(action))
+		const hash = createHash("sha256").update(data).digest()
 
-		const existingRecord = this.messageStore.getActionByHash(hash)
-		if (existingRecord !== null) {
-			return { hash: toHex(hash) }
+		await this.applyMessage(hash, action)
+
+		if (this.mst !== null) {
+			await this.mst.write(this.app, (txn) => {
+				txn.set(getMessageKey(hash, action), hash)
+			})
 		}
 
-		await this.applyMessage(hash, message)
-
 		if (this.sources !== null) {
-			this.sources[this.uri].insertMessage(hash, message)
-			await this.sources[this.uri].publishMessage(hash, data)
+			await this.sources[this.app].publishMessage(hash, data)
 		}
 
 		return { hash: toHex(hash) }
 	}
 
 	/**
-	 * Create a new session.
+	 * Apply a session. This is the "local" entrypoint called by the HTTP API.
+	 * It inserts the session into the message store, updates the MST index,
+	 * and publishes to GossipSub.
 	 */
 	public async applySession(session: Session): Promise<{ hash: string }> {
-		assert(sessionType.is(session), "invalid session")
+		assert(sessionType.is(session), "invalid session object")
 
-		const [hash, message, data] = normalizeSession(session)
+		const data = Buffer.from(stringify(session))
+		const hash = createHash("sha256").update(data).digest()
 
-		const existingRecord = this.messageStore.getSessionByHash(hash)
-		if (existingRecord !== null) {
-			return { hash: toHex(hash) }
+		await this.applyMessage(hash, session)
+
+		if (this.mst !== null) {
+			await this.mst.write(this.app, (txn) => {
+				txn.set(getMessageKey(hash, session), hash)
+			})
 		}
 
-		await this.applyMessage(hash, message)
+		if (this.sources !== null) {
+			await this.sources[this.app].publishMessage(hash, data)
+		}
+
+		return { hash: toHex(hash) }
+	}
+
+	public async applyCustomAction(customAction: CustomAction): Promise<{ hash: string }> {
+		assert(customActionType.is(customAction), "invalid custom action object")
+
+		const data = Buffer.from(stringify(customAction))
+		const hash = createHash("sha256").update(data).digest()
+
+		await this.applyMessage(hash, customAction)
+
+		if (this.mst !== null) {
+			await this.mst.write(this.app, (txn) => {
+				txn.set(getMessageKey(hash, customAction), hash)
+			})
+		}
 
 		if (this.sources !== null) {
-			this.sources[this.uri].insertMessage(hash, message)
-			await this.sources[this.uri].publishMessage(hash, data)
+			await this.sources[this.app].publishMessage(hash, data)
 		}
 
 		return { hash: toHex(hash) }
@@ -223,122 +246,193 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * For sessions: validate, insert into message store.
 	 * This method is called directly from Core.applySession and Core.applyAction and is
 	 * also passed to Source as the callback for GossipSub and MST sync messages.
-	 * Note the this does NOT call sources[uri].insertMessage OR sources[uri].publishMessage -
+	 * Note the this does NOT update the MST index or publish to GossipSub -
 	 * that's the responsibility of the caller.
 	 */
-	private applyMessage = async (hash: Buffer, message: BinaryMessage) => {
+	private applyMessage = async (hash: Buffer, message: Message) => {
 		const id = toHex(hash)
 		if (message.type === "action") {
-			const action = fromBinaryAction(message)
-
-			if (this.options.verbose) {
-				console.log(`[canvas-core] Applying action ${id}`, action)
+			const existingRecord = this.messageStore.getActionByHash(hash)
+			if (existingRecord !== null) {
+				return
 			}
 
-			await this.validateAction(action)
+			if (this.options.verbose) {
+				console.log(`[canvas-core] Applying action ${id}`, message)
+			}
 
-			// only execute one action at a time.
-			await this.queue.add(async () => {
-				const effects = await this.vm.execute(id, action.payload)
-				this.modelStore.applyEffects(action.payload, effects)
-			})
+			await this.validateAction(message)
+
+			const effects = await this.vm.execute(id, message.payload)
+
+			this.modelStore.applyEffects(message.payload, effects)
 
 			this.messageStore.insertAction(hash, message)
-			this.dispatchEvent(new CustomEvent("action", { detail: action.payload }))
 
-			metrics.canvas_messages.inc({ type: "action", uri: action.payload.spec }, 1)
+			this.dispatchEvent(new CustomEvent("action", { detail: message.payload }))
+			metrics.canvas_messages.inc({ type: "action", uri: message.payload.app }, 1)
 		} else if (message.type === "session") {
-			const session = fromBinarySession(message)
-
-			if (this.options.verbose) {
-				console.log(`[canvas-core] Applying session ${id}`, session)
+			const existingRecord = this.messageStore.getSessionByHash(hash)
+			if (existingRecord !== null) {
+				return
 			}
 
-			await this.validateSession(session)
+			if (this.options.verbose) {
+				console.log(`[canvas-core] Applying session ${id}`, message)
+			}
+
+			await this.validateSession(message)
+
 			this.messageStore.insertSession(hash, message)
-			this.dispatchEvent(new CustomEvent("session", { detail: session.payload }))
-			metrics.canvas_messages.inc({ type: "session", uri: session.payload.spec }, 1)
+
+			this.dispatchEvent(new CustomEvent("session", { detail: message.payload }))
+			metrics.canvas_messages.inc({ type: "session", uri: message.payload.app }, 1)
+		} else if (message.type == "customAction") {
+			const existingRecord = this.messageStore.getCustomActionByHash(hash)
+			if (existingRecord !== null) {
+				return
+			}
+
+			if (this.options.verbose) {
+				console.log(`[canvas-core] Applying custom action ${id}`, message)
+			}
+
+			await this.validateCustomAction(message)
+
+			const effects = await this.vm.executeCustomAction(id, message.payload, { timestamp: 0 })
+
+			for (const effect of effects) {
+				if (!effect.id.startsWith(id)) {
+					// "entries that are updated by custom actions must ..."
+					throw Error(
+						`Applying custom action failed: it must set entries that have a hash that begins with the action id`
+					)
+				}
+				if (effect.type == "del") {
+					throw Error(`Applying custom action failed: the 'del' function cannot be called from within custom actions`)
+				}
+			}
+
+			// TODO: can we give the user a way to set the timestamp if it comes from a trusted source?
+			const timestamp = 0
+			this.modelStore.applyEffects({ timestamp }, effects)
+
+			this.messageStore.insertCustomAction(hash, message)
+
+			this.dispatchEvent(new CustomEvent("customAction", { detail: message.payload }))
+			metrics.canvas_messages.inc({ type: "customAction", uri: message.payload.app }, 1)
 		} else {
 			signalInvalidType(message)
 		}
 	}
 
 	private async validateAction(action: Action) {
-		const { timestamp, spec, blockhash, chain, chainId } = action.payload
+		const { timestamp, app, appName, block, chain, chainId } = action.payload
 		const fromAddress = action.payload.from
 
-		assert(spec === this.uri || this.vm.sources.has(spec), "action signed for wrong spec")
+		assert(
+			app === this.app || this.vm.sources.has(app),
+			`action signed for wrong application (invalid app: expected ${this.app}, found ${app})`
+		)
+
+		assert(
+			appName === this.appName || this.vm.sources.has(app),
+			"action signed for wrong application (invalid appName)"
+		)
+
+		// TODO: verify that actions signed for a previous app were valid within that app
 
 		// check the timestamp bounds
 		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
 		assert(timestamp < constants.BOUNDS_CHECK_UPPER_LIMIT, "action timestamp too far in the future")
 
-		if (!this.options.unchecked) {
-			// check the action was signed with a valid, recent block
-			assert(blockhash, "action is missing block data")
-			await this.validateBlock({ blockhash, chain, chainId })
-		}
+		// if (!this.options.unchecked) {
+		// 	// check the action was signed with a valid, recent block
+		// 	assert(block, "action is missing block data")
+		// 	await this.validateBlock({ blockhash: block, chain, chainId })
+		// }
 
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
-			const { session: binarySession } = this.messageStore.getSessionByAddress(chain, chainId, action.session)
-			assert(binarySession !== null, "session not found")
-			const session = fromBinarySession(binarySession)
+			const { session } = this.messageStore.getSessionByAddress(chain, chainId, action.session)
+			assert(session !== null, "session not found")
+			assert(
+				action.payload.app === session.payload.app,
+				"invalid session (action.payload.app and session.payload.app do not match)"
+			)
 			assert(session.payload.chain === action.payload.chain, "session and action chains must match")
 			assert(session.payload.chainId === action.payload.chainId, `session and action chain IDs must match`)
-			assert(session.payload.timestamp + session.payload.duration > timestamp, "session expired")
-			assert(session.payload.timestamp <= timestamp, "session timestamp must precede action timestamp")
+			assert(session.payload.sessionIssued + session.payload.sessionDuration > timestamp, "session expired")
+			assert(session.payload.sessionIssued <= timestamp, "session issued timestamp must precede action timestamp")
 
-			assert(session.payload.spec === spec, "action referenced a session for the wrong spec")
+			assert(session.payload.app === app, "action referenced a session for the wrong application")
 			assert(
 				session.payload.from === fromAddress,
 				"invalid session (action.payload.from and session.payload.from do not match)"
 			)
-
-			const verifiedAddress = await verifyActionSignature(action)
-			assert(
-				verifiedAddress === action.session,
-				"invalid action signature (recovered session address does not match action.session)"
-			)
-			assert(verifiedAddress === session.payload.address, "invalid action signature (action, session do not match)")
-			assert(
-				action.payload.spec === session.payload.spec,
-				"invalid session (action.payload.spec and session.payload.spec do not match)"
-			)
-		} else {
-			const verifiedAddress = await verifyActionSignature(action)
-			assert(verifiedAddress === fromAddress, "action signed by wrong address")
 		}
+
+		const { verifyAction } = this.getChainImplementation(chain, chainId)
+		await verifyAction(action)
 	}
 
 	private async validateSession(session: Session) {
-		const { from, spec, timestamp, blockhash, chain, chainId } = session.payload
-		assert(spec === this.uri || this.vm.sources.has(spec), "session signed for wrong spec")
+		const { app, appName, sessionIssued, block, chain, chainId } = session.payload
 
-		const verifiedAddress = await verifySessionSignature(session)
-		assert(verifiedAddress === from, "session signed by wrong address")
+		assert(app === this.app || this.vm.sources.has(app), "session signed for wrong application (app invalid)")
+
+		assert(
+			appName === this.appName || this.vm.sources.has(app),
+			"session signed for wrong application (appName invalid)"
+		)
+
+		// TODO: verify that sessions signed for a previous app were valid within that app,
+		// e.g. that their appName matches
+
+		const { verifySession } = this.getChainImplementation(chain, chainId)
+		await verifySession(session)
 
 		// check the timestamp bounds
-		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "session timestamp too far in the past")
-		assert(timestamp < constants.BOUNDS_CHECK_UPPER_LIMIT, "session timestamp too far in the future")
+		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
+		assert(sessionIssued < constants.BOUNDS_CHECK_UPPER_LIMIT, "session issued too far in the future")
 
-		if (!this.options.unchecked) {
-			// check the session was signed with a valid, recent block
-			assert(blockhash, "session is missing block data")
-			await this.validateBlock({ blockhash, chain, chainId })
+		// if (!this.options.unchecked) {
+		// 	// check the session was signed with a valid, recent block
+		// 	assert(block, "session is missing block data")
+		// 	await this.validateBlock({ blockhash: block, chain, chainId })
+		// }
+	}
+
+	private async validateCustomAction(customAction: CustomAction) {
+		const customActionDefinition = this.vm.customAction
+		assert(!!customActionDefinition, `custom action called but no custom action definition exists`)
+		assert(
+			customActionDefinition.name == customAction.name,
+			`the custom action name in the message (${customAction.name}) does not match the action name in the contract ${customActionDefinition.name}`
+		)
+		const schemaValidationResult = await validate(this.vm.customActionSchemaName!, customAction.payload)
+		assert(
+			schemaValidationResult.valid,
+			`custom action payload does not match the provided schema! ${schemaValidationResult.errors}`
+		)
+	}
+
+	private getChainImplementation(chain: Chain, chainId: ChainId): ChainImplementation<unknown, unknown> {
+		for (const implementation of this.chains) {
+			if (implementation.chain === chain && implementation.chainId === chainId) {
+				return implementation
+			}
 		}
+
+		throw new Error(`Could not find matching chain implementation for ${chain}:${chainId}`)
 	}
 
-	/**
-	 * Helper for verifying the blockhash for an action or session.
-	 */
-	private async validateBlock({ chain, chainId, blockhash }: { chain: Chain; chainId: ChainId; blockhash: string }) {
-		assert(this.blockResolver !== null, "missing blockResolver")
-		const block = await this.blockResolver(chain, chainId, blockhash)
-		// TODO: add blocknums to messages, verify blocknum and blockhash match
-	}
-
-	public async getLatestBlock({ chain, chainId }: { chain: Chain; chainId: ChainId }): Promise<Block> {
-		return this.blockResolver(chain, chainId, "latest")
-	}
+	// /**
+	//  * Helper for verifying the blockhash for an action or session.
+	//  */
+	// private async validateBlock({ chain, chainId, blockhash }: { chain: Chain; chainId: ChainId; blockhash: string }) {
+	// 	assert(this.blockResolver !== null, "missing blockResolver")
+	// 	const block = await this.blockResolver(chain, chainId, blockhash)
+	// 	// TODO: add blocknums to messages, verify blocknum and blockhash match
+	// }
 }

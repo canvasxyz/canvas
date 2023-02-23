@@ -3,9 +3,10 @@ import assert from "node:assert"
 import chalk from "chalk"
 import { fetch } from "undici"
 import { getQuickJS, isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime } from "quickjs-emscripten"
-import { transform } from "sucrase"
+import { addSchema } from "@hyperjump/json-schema/draft-2020-12"
 import { ethers } from "ethers"
 import Hash from "ipfs-only-hash"
+import PQueue from "p-queue"
 
 import {
 	ActionArgument,
@@ -15,14 +16,13 @@ import {
 	Model,
 	ModelValue,
 	Query,
-	BlockProvider,
+	ChainImplementation,
 } from "@canvas-js/interfaces"
-import { EthereumBlockProvider } from "@canvas-js/verifiers"
 
 import * as constants from "../constants.js"
 import type { Effect } from "../modelStore.js"
 import { ApplicationError } from "../errors.js"
-import { mapEntries, signalInvalidType } from "../utils.js"
+import { mapEntries, signalInvalidType, toHex } from "../utils.js"
 
 import {
 	loadModule,
@@ -33,9 +33,13 @@ import {
 	wrapJSON,
 	resolvePromise,
 	wrapArray,
+	recursiveWrapJSONObject,
+	// newBigInt,
 } from "./utils.js"
 import { validateCanvasSpec } from "./validate.js"
-import { Exports, disposeExports } from "./exports.js"
+import { CustomActionDefinition, Exports, disposeExports } from "./exports.js"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+import { verifyTypedData } from "ethers/lib/utils.js"
 
 interface VMOptions {
 	verbose?: boolean
@@ -43,27 +47,21 @@ interface VMOptions {
 }
 
 interface VMConfig extends VMOptions {
-	uri: string
+	app: string
 	spec: string
-	providers?: Record<string, BlockProvider>
+	chains: ChainImplementation[]
 }
 
 export class VM {
-	public static async initialize({ uri, spec, providers, ...options }: VMConfig): Promise<VM> {
+	public static async initialize(config: VMConfig): Promise<VM> {
+		const { app, spec, chains = [new EthereumChainImplementation()], ...options } = config
+
 		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
-		const { code: transpiledSpec } = transform(spec, {
-			transforms: ["jsx"],
-			jsxPragma: "React.createElement",
-			jsxFragmentPragma: "React.Fragment",
-			disableESTransforms: true,
-			production: true,
-		})
-
-		const moduleHandle = await loadModule(context, uri, transpiledSpec)
+		const moduleHandle = await loadModule(context, app, spec)
 
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
@@ -75,35 +73,29 @@ export class VM {
 				console.log(chalk.yellow(`[canvas-vm] Warning: ${warning}`))
 			}
 
-			return new VM(uri, runtime, context, options, exports, providers)
+			return new VM(app, runtime, context, chains, options, exports)
 		}
 	}
 
 	public static async validate(spec: string): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> {
-		let transpiledSpec: string
-		try {
-			transpiledSpec = transform(spec, {
-				transforms: ["jsx"],
-				jsxPragma: "React.createElement",
-				jsxFragmentPragma: "React.Fragment",
-				disableESTransforms: true,
-				production: true,
-			}).code
-		} catch (e: any) {
-			return {
-				valid: false,
-				errors: [`Syntax error: ${e.message}`],
-				warnings: [],
-			}
-		}
-
 		const quickJS = await getQuickJS()
 		const runtime = quickJS.newRuntime()
 		const context = runtime.newContext()
 		runtime.setMemoryLimit(constants.RUNTIME_MEMORY_LIMIT)
 
 		const cid = await Hash.of(spec)
-		const moduleHandle = await loadModule(context, `ipfs://${cid}`, transpiledSpec)
+
+		let moduleHandle: QuickJSHandle
+		try {
+			moduleHandle = await loadModule(context, `ipfs://${cid}`, spec)
+		} catch (err) {
+			if (err instanceof Error) {
+				return { valid: false, errors: [err.toString()], warnings: [] }
+			} else {
+				throw err
+			}
+		}
+
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
 		let result: { valid: boolean; errors: string[]; warnings: string[] }
@@ -122,9 +114,11 @@ export class VM {
 		return result
 	}
 
+	public readonly appName: string
 	public readonly models: Record<string, Model>
 	public readonly actions: string[]
-	public readonly component: string | null
+	public readonly customActionSchemaName: string | null
+	public readonly customAction: CustomActionDefinition | null
 	public readonly routes: Record<string, string[]>
 	public readonly contracts: Record<string, ethers.Contract>
 	public readonly contractMetadata: Record<string, ContractMetadata>
@@ -136,23 +130,27 @@ export class VM {
 	private readonly contractsHandle: QuickJSHandle
 	private readonly dbHandle: QuickJSHandle
 
+	private readonly queue = new PQueue({ concurrency: 1 })
 	private effects: Effect[] | null = null
 	private actionContext: ActionContext | null = null
+	private customActionContext: { timestamp: number } | null = null
 
 	constructor(
-		public readonly uri: string,
+		public readonly app: string,
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
+		chains: ChainImplementation[],
 		options: VMOptions,
-		exports: Exports,
-		providers: Record<string, BlockProvider> = {}
+		exports: Exports
 	) {
 		this.models = exports.models
 		this.contractMetadata = exports.contractMetadata
 		this.routeHandles = exports.routeHandles
 		this.actionHandles = exports.actionHandles
+		this.customAction = exports.customAction
 		this.sourceHandles = exports.sourceHandles
-		this.component = exports.component
+
+		this.appName = exports.name || "Canvas"
 
 		// Generate public fields that are derived from the passed in arguments
 		this.sources = new Set(Object.keys(this.sourceHandles))
@@ -160,19 +158,36 @@ export class VM {
 
 		this.contracts = {}
 
+		// should this just be done inside validate?
+		let schemaName: string | null = null
+		// compile the custom action schema
+		if (this.customAction) {
+			schemaName = `customActionSchema:${this.app}:${this.customAction.name}`
+			addSchema(this.customAction.schema, schemaName)
+		}
+		this.customActionSchemaName = schemaName
+
+		// add this back for ethers@v6
+		// const functionNames: Record<string, string[]> = {}
+
 		if (options.unchecked) {
 			if (options.verbose) {
 				console.log(`[canvas-vm] Skipping contract setup`)
 			}
 		} else {
-			Object.entries(this.contractMetadata).map(([name, { chain, chainId, address, abi }]) => {
-				const provider = providers[`${chain}:${chainId}`]
-				if (provider instanceof EthereumBlockProvider) {
-					this.contracts[name] = new ethers.Contract(address, abi, provider.provider)
-				} else {
-					throw Error(`Cannot initialise VM, no provider exists for ${chain}:${chainId}`)
-				}
-			})
+			for (const [name, { chain, chainId, address, abi }] of Object.entries(this.contractMetadata)) {
+				const implementation = chains.find(
+					(implementation) => implementation.chain === chain && implementation.chainId === chainId
+				)
+
+				assert(implementation !== undefined, `no chain implmentation for ${chain}:${chainId}`)
+				assert(implementation instanceof EthereumChainImplementation)
+				assert(implementation.provider !== undefined, `no ethers provider for ${chain}:${chainId}`)
+				const contract = new ethers.Contract(address, abi, implementation.provider)
+
+				// functionNames[name] = abi.map((abi) => contract.interface.getFunctionName(abi))
+				this.contracts[name] = contract
+			}
 		}
 
 		this.routes = {}
@@ -208,22 +223,33 @@ export class VM {
 
 		this.contractsHandle = wrapObject(
 			context,
-			mapEntries(this.contracts, (name, contract) =>
-				wrapObject(
-					context,
-					mapEntries(contract.functions, (key, fn) =>
-						context.newFunction(`${name}.${key}`, (...argHandles: QuickJSHandle[]) => {
+			mapEntries(this.contracts, (contractName, contract) => {
+				const functionHandles: Record<string, QuickJSHandle> = {}
+
+				for (const functionName of Object.keys(contract.functions)) {
+					// for (const functionName of functionNames[contractName]) {
+					functionHandles[functionName] = context.newFunction(
+						`${contractName}.${functionName}`,
+						(...argHandles: QuickJSHandle[]) => {
 							assert(this.actionContext !== null, "internal error: this.actionContext is null")
-							const { blockhash } = this.actionContext
-							assert(blockhash !== undefined, "action called a contract function but did not include a blockhash")
-							const args = argHandles.map(context.dump)
+							const { block } = this.actionContext
+							assert(
+								block !== undefined,
+								"action called a contract function but did not include a blockhash or block identifier"
+							)
+
+							const args = this.unwrapContractFunctionArguments(argHandles)
+
 							if (options.verbose) {
-								const call = chalk.green(`${name}.${key}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`)
-								console.log(`[canvas-vm] contract: ${call} at block (${blockhash})`)
+								const call = `${contractName}.${functionName}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`
+								console.log(`[canvas-vm] contract: ${chalk.green(call)} at block (${block})`)
 							}
 
 							const deferred = context.newPromise()
-							fn.apply(contract, args)
+
+							// const result = contract.getFunction(functionName).staticCallResult(...args)
+							const result = contract.functions[functionName](...args)
+							result
 								.then((result: ContractFunctionResult[]) =>
 									wrapArray(context, result.map(this.wrapContractFunctionResult)).consume(deferred.resolve)
 								)
@@ -231,17 +257,20 @@ export class VM {
 								.finally(() => runtime.executePendingJobs())
 
 							return deferred.handle
-						})
+						}
 					)
-				)
-			)
+					// }
+				}
+
+				return wrapObject(context, functionHandles)
+			})
 		)
 
 		// install globals
 		wrapObject(context, {
 			// console.log:
 			console: wrapObject(context, {
-				log: context.newFunction("log", (...args: any[]) => console.log("[canvas-vm]", ...args.map(context.dump))),
+				log: context.newFunction("log", (...args) => console.log("[canvas-vm]", ...args.map(context.dump))),
 			}),
 
 			assert: context.newFunction("assert", (condition: QuickJSHandle, message?: QuickJSHandle) => {
@@ -278,20 +307,33 @@ export class VM {
 				deferred.settled.then(context.runtime.executePendingJobs)
 				return deferred.handle
 			}),
+
+			verifyTypedData: context.newFunction(
+				"verifyTypedData",
+				(domainHandle, typesHandle, valueHandle, signatureHandle) => {
+					const domain = domainHandle.consume(context.dump)
+					const types = typesHandle.consume(context.dump)
+					const value = valueHandle.consume(context.dump)
+					const signature = signatureHandle.consume(context.dump)
+					return context.newString(verifyTypedData(domain, types, value, signature))
+				}
+			),
 		}).consume((globalsHandle) => call(context, "Object.assign", null, context.global, globalsHandle).dispose())
 	}
 
 	/**
 	 * Cleans up this VM instance.
 	 */
-	public dispose() {
+	public async close() {
+		await this.queue.onIdle()
 		this.dbHandle.dispose()
 		this.contractsHandle.dispose()
 
 		disposeExports({
+			name: this.appName,
 			actionHandles: this.actionHandles,
-			component: this.component,
 			contractMetadata: this.contractMetadata,
+			customAction: this.customAction,
 			models: this.models,
 			routeHandles: this.routeHandles,
 			sourceHandles: this.sourceHandles,
@@ -353,14 +395,14 @@ export class VM {
 		return results
 	}
 
-	private getActionHandle(spec: string, call: string): QuickJSHandle {
-		if (spec === this.uri) {
+	private getActionHandle(app: string, call: string): QuickJSHandle {
+		if (app === this.app) {
 			const handle = this.actionHandles[call]
 			assert(handle !== undefined, "invalid action call")
 			return handle
 		} else {
-			const source = this.sourceHandles[spec]
-			assert(source !== undefined, `no source with URI ${spec}`)
+			const source = this.sourceHandles[app]
+			assert(source !== undefined, `no source with URI ${app}`)
 			assert(source[call] !== undefined, "invalid source call")
 			return source[call]
 		}
@@ -368,33 +410,73 @@ export class VM {
 
 	/**
 	 * Given a call, get a list of effects to pass to `modelStore.applyEffects`, to be applied to the models.
-	 * Used by `.apply()` and when replaying actions.
+	 * Used by `.applyAction()` and when replaying actions.
 	 */
-	public async execute(hash: string, { call, args, ...context }: ActionPayload): Promise<Effect[]> {
-		assert(this.effects === null && this.actionContext === null, "cannot apply more than one action at once")
-
-		const actionHandle = this.getActionHandle(context.spec, call)
-
-		const argHandles = wrapObject(
-			this.context,
-			mapEntries(args, (_, arg) => this.wrapActionArgument(arg))
-		)
-
-		const ctx = wrapJSON(this.context, {
-			spec: context.spec,
-			hash: hash,
-			from: context.from,
-			blockhash: context.blockhash,
-			timestamp: context.timestamp,
-		})
-
-		this.context.setProp(ctx, "db", this.dbHandle)
-		this.context.setProp(ctx, "contracts", this.contractsHandle)
+	public async execute(hash: string | Buffer, { call, callArgs, ...context }: ActionPayload): Promise<Effect[]> {
+		const effects: Effect[] = []
 
 		// after setting this.effects here, always make sure to reset it to null before
 		// returning or throwing an error - or the core won't be able to process more actions
-		this.effects = []
+		this.effects = effects
 		this.actionContext = context
+		try {
+			await this.queue.add(() => {
+				assert(this.effects !== null && this.actionContext !== null)
+				const actionHandle = this.getActionHandle(this.actionContext.app!, call)
+
+				const argHandles = wrapObject(
+					this.context,
+					mapEntries(callArgs, (_, arg) => this.wrapActionArgument(arg))
+				)
+
+				return this.executeInternal(typeof hash === "string" ? hash : toHex(hash), actionHandle, argHandles)
+			})
+		} finally {
+			this.effects = null
+			this.actionContext = null
+		}
+
+		return effects
+	}
+
+	/**
+	 * Given a call, get a list of effects to pass to `modelStore.applyEffects`, to be applied to the models.
+	 * Used by `.applyAction()` and when replaying actions.
+	 */
+	public async executeCustomAction(
+		hash: string | Buffer,
+		payload: any,
+		actionContext: { timestamp: number }
+	): Promise<Effect[]> {
+		const effects: Effect[] = []
+
+		// after setting this.effects here, always make sure to reset it to null before
+		// returning or throwing an error - or the core won't be able to process more actions
+		this.effects = effects
+		this.customActionContext = { timestamp: actionContext.timestamp }
+		try {
+			await this.queue.add(() => {
+				assert(this.effects !== null && this.customActionContext !== null)
+				assert(!!this.customAction)
+				const payloadHandle = recursiveWrapJSONObject(this.context, payload)
+				return this.executeInternal(typeof hash === "string" ? hash : toHex(hash), this.customAction.fn, payloadHandle)
+			})
+		} finally {
+			this.effects = null
+			this.customActionContext = null
+		}
+
+		return effects
+	}
+
+	/**
+	 * Assumes this.effects and this.actionContext are already set
+	 */
+	private async executeInternal(hash: string, actionHandle: QuickJSHandle, argHandles: QuickJSHandle) {
+		const ctx = wrapJSON(this.context, { hash, ...(this.actionContext || {}), ...(this.customActionContext || {}) })
+		this.context.setProp(ctx, "db", this.dbHandle)
+		this.context.setProp(ctx, "contracts", this.contractsHandle)
+
 		const promiseResult = this.context.callFunction(actionHandle, this.context.undefined, argHandles, ctx)
 
 		ctx.dispose()
@@ -423,11 +505,6 @@ export class VM {
 			this.effects = null
 			throw new Error("action rejected: unexpected return value")
 		}
-
-		const effects = this.effects
-		this.effects = null
-		this.actionContext = null
-		return effects
 	}
 
 	public wrapActionArgument = (arg: ActionArgument): QuickJSHandle => {
@@ -470,6 +547,27 @@ export class VM {
 		return values
 	}
 
+	private unwrapContractFunctionArguments = (argHandles: QuickJSHandle[]): ContractFunctionArgument[] => {
+		const args = argHandles.map(this.context.dump)
+
+		for (const arg of args) {
+			switch (typeof arg) {
+				case "string":
+					continue
+				case "boolean":
+					continue
+				case "number":
+					continue
+				case "bigint":
+					continue
+				default:
+					throw new Error("invalid contract function argument")
+			}
+		}
+
+		return args
+	}
+
 	private wrapContractFunctionResult = (value: ContractFunctionResult): QuickJSHandle => {
 		if (value === true) {
 			return this.context.true
@@ -479,9 +577,11 @@ export class VM {
 			return this.context.newString(value)
 		} else if (typeof value === "number") {
 			return this.context.newNumber(value)
-		} else if (ethers.BigNumber.isBigNumber(value)) {
+		} else if (typeof value === "bigint") {
 			// TODO: support real bigints
-			// return newBigInt(this.context, value.toBigInt())
+			// return newBigInt(this.context, value)
+			return this.context.newNumber(Number(value))
+		} else if (ethers.BigNumber.isBigNumber(value)) {
 			return this.context.newNumber(value.toNumber())
 		} else {
 			console.error(value)
@@ -490,4 +590,5 @@ export class VM {
 	}
 }
 
-type ContractFunctionResult = string | boolean | number | bigint
+export type ContractFunctionArgument = string | boolean | number | bigint
+export type ContractFunctionResult = string | boolean | number | bigint | ethers.BigNumber

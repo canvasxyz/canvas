@@ -3,11 +3,17 @@ import Long = require("long");
 /** Properties of a Node. */
 export interface INode {
 
-    /** Node leaf */
-    leaf?: (Uint8Array|null);
+    /** Node level */
+    level?: (number|null);
+
+    /** Node key */
+    key?: (Uint8Array|null);
 
     /** Node hash */
     hash?: (Uint8Array|null);
+
+    /** Node value */
+    value?: (Uint8Array|null);
 }
 
 /** Represents a Node. */
@@ -19,11 +25,20 @@ export class Node implements INode {
      */
     constructor(properties?: INode);
 
-    /** Node leaf. */
-    public leaf: Uint8Array;
+    /** Node level. */
+    public level: number;
+
+    /** Node key. */
+    public key: Uint8Array;
 
     /** Node hash. */
     public hash: Uint8Array;
+
+    /** Node value. */
+    public value?: (Uint8Array|null);
+
+    /** Node _value. */
+    public _value?: "value";
 
     /**
      * Creates a new Node instance using the specified properties.
@@ -103,6 +118,118 @@ export class Node implements INode {
     public static getTypeUrl(typeUrlPrefix?: string): string;
 }
 
+/** Properties of a MessageRequest. */
+export interface IMessageRequest {
+
+    /** MessageRequest type */
+    type?: (MessageRequest.MessageType|null);
+
+    /** MessageRequest id */
+    id?: (Uint8Array|null);
+}
+
+/** Represents a MessageRequest. */
+export class MessageRequest implements IMessageRequest {
+
+    /**
+     * Constructs a new MessageRequest.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: IMessageRequest);
+
+    /** MessageRequest type. */
+    public type: MessageRequest.MessageType;
+
+    /** MessageRequest id. */
+    public id: Uint8Array;
+
+    /**
+     * Creates a new MessageRequest instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns MessageRequest instance
+     */
+    public static create(properties?: IMessageRequest): MessageRequest;
+
+    /**
+     * Encodes the specified MessageRequest message. Does not implicitly {@link MessageRequest.verify|verify} messages.
+     * @param message MessageRequest message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: IMessageRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified MessageRequest message, length delimited. Does not implicitly {@link MessageRequest.verify|verify} messages.
+     * @param message MessageRequest message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: IMessageRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes a MessageRequest message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns MessageRequest
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): MessageRequest;
+
+    /**
+     * Decodes a MessageRequest message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns MessageRequest
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): MessageRequest;
+
+    /**
+     * Verifies a MessageRequest message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates a MessageRequest message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns MessageRequest
+     */
+    public static fromObject(object: { [k: string]: any }): MessageRequest;
+
+    /**
+     * Creates a plain object from a MessageRequest message. Also converts values to other types if specified.
+     * @param message MessageRequest
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: MessageRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this MessageRequest to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for MessageRequest
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
+
+export namespace MessageRequest {
+
+    /** MessageType enum. */
+    enum MessageType {
+        CANVAS_SESSION = 0,
+        CANVAS_ACTION = 1
+    }
+}
+
 /** Properties of a Request. */
 export interface IRequest {
 
@@ -115,8 +242,8 @@ export interface IRequest {
     /** Request getChildren */
     getChildren?: (Request.IGetChildrenRequest|null);
 
-    /** Request getValues */
-    getValues?: (Request.IGetValuesRequest|null);
+    /** Request getMessages */
+    getMessages?: (Request.IGetMessagesRequest|null);
 }
 
 /** Represents a Request. */
@@ -137,11 +264,11 @@ export class Request implements IRequest {
     /** Request getChildren. */
     public getChildren?: (Request.IGetChildrenRequest|null);
 
-    /** Request getValues. */
-    public getValues?: (Request.IGetValuesRequest|null);
+    /** Request getMessages. */
+    public getMessages?: (Request.IGetMessagesRequest|null);
 
     /** Request request. */
-    public request?: ("getRoot"|"getChildren"|"getValues");
+    public request?: ("getRoot"|"getChildren"|"getMessages");
 
     /**
      * Creates a new Request instance using the specified properties.
@@ -320,8 +447,8 @@ export namespace Request {
         /** GetChildrenRequest level */
         level?: (number|null);
 
-        /** GetChildrenRequest leaf */
-        leaf?: (Uint8Array|null);
+        /** GetChildrenRequest key */
+        key?: (Uint8Array|null);
     }
 
     /** Represents a GetChildrenRequest. */
@@ -336,8 +463,8 @@ export namespace Request {
         /** GetChildrenRequest level. */
         public level: number;
 
-        /** GetChildrenRequest leaf. */
-        public leaf: Uint8Array;
+        /** GetChildrenRequest key. */
+        public key: Uint8Array;
 
         /**
          * Creates a new GetChildrenRequest instance using the specified properties.
@@ -417,97 +544,97 @@ export namespace Request {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
-    /** Properties of a GetValuesRequest. */
-    interface IGetValuesRequest {
+    /** Properties of a GetMessagesRequest. */
+    interface IGetMessagesRequest {
 
-        /** GetValuesRequest nodes */
-        nodes?: (INode[]|null);
+        /** GetMessagesRequest messages */
+        messages?: (IMessageRequest[]|null);
     }
 
-    /** Represents a GetValuesRequest. */
-    class GetValuesRequest implements IGetValuesRequest {
+    /** Represents a GetMessagesRequest. */
+    class GetMessagesRequest implements IGetMessagesRequest {
 
         /**
-         * Constructs a new GetValuesRequest.
+         * Constructs a new GetMessagesRequest.
          * @param [properties] Properties to set
          */
-        constructor(properties?: Request.IGetValuesRequest);
+        constructor(properties?: Request.IGetMessagesRequest);
 
-        /** GetValuesRequest nodes. */
-        public nodes: INode[];
+        /** GetMessagesRequest messages. */
+        public messages: IMessageRequest[];
 
         /**
-         * Creates a new GetValuesRequest instance using the specified properties.
+         * Creates a new GetMessagesRequest instance using the specified properties.
          * @param [properties] Properties to set
-         * @returns GetValuesRequest instance
+         * @returns GetMessagesRequest instance
          */
-        public static create(properties?: Request.IGetValuesRequest): Request.GetValuesRequest;
+        public static create(properties?: Request.IGetMessagesRequest): Request.GetMessagesRequest;
 
         /**
-         * Encodes the specified GetValuesRequest message. Does not implicitly {@link Request.GetValuesRequest.verify|verify} messages.
-         * @param message GetValuesRequest message or plain object to encode
+         * Encodes the specified GetMessagesRequest message. Does not implicitly {@link Request.GetMessagesRequest.verify|verify} messages.
+         * @param message GetMessagesRequest message or plain object to encode
          * @param [writer] Writer to encode to
          * @returns Writer
          */
-        public static encode(message: Request.IGetValuesRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+        public static encode(message: Request.IGetMessagesRequest, writer?: $protobuf.Writer): $protobuf.Writer;
 
         /**
-         * Encodes the specified GetValuesRequest message, length delimited. Does not implicitly {@link Request.GetValuesRequest.verify|verify} messages.
-         * @param message GetValuesRequest message or plain object to encode
+         * Encodes the specified GetMessagesRequest message, length delimited. Does not implicitly {@link Request.GetMessagesRequest.verify|verify} messages.
+         * @param message GetMessagesRequest message or plain object to encode
          * @param [writer] Writer to encode to
          * @returns Writer
          */
-        public static encodeDelimited(message: Request.IGetValuesRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+        public static encodeDelimited(message: Request.IGetMessagesRequest, writer?: $protobuf.Writer): $protobuf.Writer;
 
         /**
-         * Decodes a GetValuesRequest message from the specified reader or buffer.
+         * Decodes a GetMessagesRequest message from the specified reader or buffer.
          * @param reader Reader or buffer to decode from
          * @param [length] Message length if known beforehand
-         * @returns GetValuesRequest
+         * @returns GetMessagesRequest
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): Request.GetValuesRequest;
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): Request.GetMessagesRequest;
 
         /**
-         * Decodes a GetValuesRequest message from the specified reader or buffer, length delimited.
+         * Decodes a GetMessagesRequest message from the specified reader or buffer, length delimited.
          * @param reader Reader or buffer to decode from
-         * @returns GetValuesRequest
+         * @returns GetMessagesRequest
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): Request.GetValuesRequest;
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): Request.GetMessagesRequest;
 
         /**
-         * Verifies a GetValuesRequest message.
+         * Verifies a GetMessagesRequest message.
          * @param message Plain object to verify
          * @returns `null` if valid, otherwise the reason why it is not
          */
         public static verify(message: { [k: string]: any }): (string|null);
 
         /**
-         * Creates a GetValuesRequest message from a plain object. Also converts values to their respective internal types.
+         * Creates a GetMessagesRequest message from a plain object. Also converts values to their respective internal types.
          * @param object Plain object
-         * @returns GetValuesRequest
+         * @returns GetMessagesRequest
          */
-        public static fromObject(object: { [k: string]: any }): Request.GetValuesRequest;
+        public static fromObject(object: { [k: string]: any }): Request.GetMessagesRequest;
 
         /**
-         * Creates a plain object from a GetValuesRequest message. Also converts values to other types if specified.
-         * @param message GetValuesRequest
+         * Creates a plain object from a GetMessagesRequest message. Also converts values to other types if specified.
+         * @param message GetMessagesRequest
          * @param [options] Conversion options
          * @returns Plain object
          */
-        public static toObject(message: Request.GetValuesRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+        public static toObject(message: Request.GetMessagesRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
 
         /**
-         * Converts this GetValuesRequest to JSON.
+         * Converts this GetMessagesRequest to JSON.
          * @returns JSON object
          */
         public toJSON(): { [k: string]: any };
 
         /**
-         * Gets the default type url for GetValuesRequest
+         * Gets the default type url for GetMessagesRequest
          * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
          * @returns The default type url
          */
@@ -527,8 +654,8 @@ export interface IResponse {
     /** Response getChildren */
     getChildren?: (Response.IGetChildrenResponse|null);
 
-    /** Response getValues */
-    getValues?: (Response.IGetValuesResponse|null);
+    /** Response getMessages */
+    getMessages?: (Response.IGetMessagesResponse|null);
 }
 
 /** Represents a Response. */
@@ -549,11 +676,11 @@ export class Response implements IResponse {
     /** Response getChildren. */
     public getChildren?: (Response.IGetChildrenResponse|null);
 
-    /** Response getValues. */
-    public getValues?: (Response.IGetValuesResponse|null);
+    /** Response getMessages. */
+    public getMessages?: (Response.IGetMessagesResponse|null);
 
     /** Response response. */
-    public response?: ("getRoot"|"getChildren"|"getValues");
+    public response?: ("getRoot"|"getChildren"|"getMessages");
 
     /**
      * Creates a new Response instance using the specified properties.
@@ -835,97 +962,97 @@ export namespace Response {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
-    /** Properties of a GetValuesResponse. */
-    interface IGetValuesResponse {
+    /** Properties of a GetMessagesResponse. */
+    interface IGetMessagesResponse {
 
-        /** GetValuesResponse values */
-        values?: (Uint8Array[]|null);
+        /** GetMessagesResponse messages */
+        messages?: (Uint8Array[]|null);
     }
 
-    /** Represents a GetValuesResponse. */
-    class GetValuesResponse implements IGetValuesResponse {
+    /** Represents a GetMessagesResponse. */
+    class GetMessagesResponse implements IGetMessagesResponse {
 
         /**
-         * Constructs a new GetValuesResponse.
+         * Constructs a new GetMessagesResponse.
          * @param [properties] Properties to set
          */
-        constructor(properties?: Response.IGetValuesResponse);
+        constructor(properties?: Response.IGetMessagesResponse);
 
-        /** GetValuesResponse values. */
-        public values: Uint8Array[];
+        /** GetMessagesResponse messages. */
+        public messages: Uint8Array[];
 
         /**
-         * Creates a new GetValuesResponse instance using the specified properties.
+         * Creates a new GetMessagesResponse instance using the specified properties.
          * @param [properties] Properties to set
-         * @returns GetValuesResponse instance
+         * @returns GetMessagesResponse instance
          */
-        public static create(properties?: Response.IGetValuesResponse): Response.GetValuesResponse;
+        public static create(properties?: Response.IGetMessagesResponse): Response.GetMessagesResponse;
 
         /**
-         * Encodes the specified GetValuesResponse message. Does not implicitly {@link Response.GetValuesResponse.verify|verify} messages.
-         * @param message GetValuesResponse message or plain object to encode
+         * Encodes the specified GetMessagesResponse message. Does not implicitly {@link Response.GetMessagesResponse.verify|verify} messages.
+         * @param message GetMessagesResponse message or plain object to encode
          * @param [writer] Writer to encode to
          * @returns Writer
          */
-        public static encode(message: Response.IGetValuesResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+        public static encode(message: Response.IGetMessagesResponse, writer?: $protobuf.Writer): $protobuf.Writer;
 
         /**
-         * Encodes the specified GetValuesResponse message, length delimited. Does not implicitly {@link Response.GetValuesResponse.verify|verify} messages.
-         * @param message GetValuesResponse message or plain object to encode
+         * Encodes the specified GetMessagesResponse message, length delimited. Does not implicitly {@link Response.GetMessagesResponse.verify|verify} messages.
+         * @param message GetMessagesResponse message or plain object to encode
          * @param [writer] Writer to encode to
          * @returns Writer
          */
-        public static encodeDelimited(message: Response.IGetValuesResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+        public static encodeDelimited(message: Response.IGetMessagesResponse, writer?: $protobuf.Writer): $protobuf.Writer;
 
         /**
-         * Decodes a GetValuesResponse message from the specified reader or buffer.
+         * Decodes a GetMessagesResponse message from the specified reader or buffer.
          * @param reader Reader or buffer to decode from
          * @param [length] Message length if known beforehand
-         * @returns GetValuesResponse
+         * @returns GetMessagesResponse
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): Response.GetValuesResponse;
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): Response.GetMessagesResponse;
 
         /**
-         * Decodes a GetValuesResponse message from the specified reader or buffer, length delimited.
+         * Decodes a GetMessagesResponse message from the specified reader or buffer, length delimited.
          * @param reader Reader or buffer to decode from
-         * @returns GetValuesResponse
+         * @returns GetMessagesResponse
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): Response.GetValuesResponse;
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): Response.GetMessagesResponse;
 
         /**
-         * Verifies a GetValuesResponse message.
+         * Verifies a GetMessagesResponse message.
          * @param message Plain object to verify
          * @returns `null` if valid, otherwise the reason why it is not
          */
         public static verify(message: { [k: string]: any }): (string|null);
 
         /**
-         * Creates a GetValuesResponse message from a plain object. Also converts values to their respective internal types.
+         * Creates a GetMessagesResponse message from a plain object. Also converts values to their respective internal types.
          * @param object Plain object
-         * @returns GetValuesResponse
+         * @returns GetMessagesResponse
          */
-        public static fromObject(object: { [k: string]: any }): Response.GetValuesResponse;
+        public static fromObject(object: { [k: string]: any }): Response.GetMessagesResponse;
 
         /**
-         * Creates a plain object from a GetValuesResponse message. Also converts values to other types if specified.
-         * @param message GetValuesResponse
+         * Creates a plain object from a GetMessagesResponse message. Also converts values to other types if specified.
+         * @param message GetMessagesResponse
          * @param [options] Conversion options
          * @returns Plain object
          */
-        public static toObject(message: Response.GetValuesResponse, options?: $protobuf.IConversionOptions): { [k: string]: any };
+        public static toObject(message: Response.GetMessagesResponse, options?: $protobuf.IConversionOptions): { [k: string]: any };
 
         /**
-         * Converts this GetValuesResponse to JSON.
+         * Converts this GetMessagesResponse to JSON.
          * @returns JSON object
          */
         public toJSON(): { [k: string]: any };
 
         /**
-         * Gets the default type url for GetValuesResponse
+         * Gets the default type url for GetMessagesResponse
          * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
          * @returns The default type url
          */

@@ -1,4 +1,3 @@
-import type { SessionSigner, ActionSigner } from "@canvas-js/signers"
 import React, { useState } from "react"
 
 import { CanvasContext, ApplicationData } from "./CanvasContext.js"
@@ -14,30 +13,8 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const [data, setData] = useState<ApplicationData | null>(null)
 	const [error, setError] = useState<Error | null>(null)
 
-	const [signer, setSigner] = useState<SessionSigner | null>(null)
-	const [actionSigner, setActionSigner] = useState<ActionSigner | null>(null)
-	const [sessionExpiration, setSessionExpiration] = useState<number | null>(null)
-
 	const host = props.host
-	const ws = useWebsocket({ setIsLoading, setData, setError, host })
+	const ws = useWebsocket({ host, setIsLoading, setData, setError })
 
-	return (
-		<CanvasContext.Provider
-			value={{
-				isLoading,
-				error,
-				host,
-				data,
-				ws,
-				signer,
-				setSigner,
-				actionSigner,
-				setActionSigner,
-				sessionExpiration,
-				setSessionExpiration,
-			}}
-		>
-			{props.children}
-		</CanvasContext.Provider>
-	)
+	return <CanvasContext.Provider value={{ isLoading, error, host, data, ws }}>{props.children}</CanvasContext.Provider>
 }

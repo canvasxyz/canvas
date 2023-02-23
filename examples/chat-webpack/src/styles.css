@@ -1,7 +1,7 @@
 html {
 	background-color: #dfdfdf;
-  background-image: url('../public/background.jpeg');
-  background-size: 100vw;
+	background-image: url("../public/background.jpeg");
+	background-size: 100vw;
 	height: 80%;
 	width: 80%;
 }
@@ -54,7 +54,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
-	width: 380px;
+	width: 420px;
 }
 
 span.address {
@@ -63,6 +63,15 @@ span.address {
 }
 
 span.address-ens {
-  color: #777;
-  margin-right: 3px;
+	color: #777;
+	margin-right: 3px;
+}
+
+#gossip-peers li,
+#sync-peers li {
+	display: block;
+}
+
+.last-seen {
+	color: gray;
 }

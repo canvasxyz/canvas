@@ -2,6 +2,7 @@ import http from "node:http"
 import path from "node:path"
 import fs from "node:fs"
 
+import { ethers } from "ethers"
 import stoppable from "stoppable"
 import chalk from "chalk"
 import next from "next"
@@ -10,8 +11,8 @@ import { Libp2p, createLibp2p } from "libp2p"
 import { createFromProtobuf, createEd25519PeerId, exportToProtobuf } from "@libp2p/peer-id-factory"
 
 import { constants, Core, getLibp2pInit, getAPI, setupWebsockets, startPingService } from "@canvas-js/core"
-import { BlockProvider } from "@canvas-js/interfaces"
-import { EthereumBlockProvider } from "@canvas-js/verifiers"
+import { ChainImplementation } from "@canvas-js/interfaces"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 const { CANVAS_PATH, CANVAS_SPEC, ANNOUNCE, LISTEN, PEER_ID, ETH_CHAIN_ID, ETH_CHAIN_RPC, NODE_ENV, VERBOSE, PORT } =
 	process.env
@@ -22,12 +23,13 @@ const spec = fs.readFileSync(specPath, "utf-8")
 
 const verbose = NODE_ENV !== "production" || VERBOSE === "true"
 
-const providers: Record<string, BlockProvider> = {}
+const chains: ChainImplementation[] = []
 let unchecked = true
 if (typeof ETH_CHAIN_ID === "string" && typeof ETH_CHAIN_RPC === "string") {
 	unchecked = false
-	const key = `eth:${ETH_CHAIN_ID}`
-	providers[key] = new EthereumBlockProvider(ETH_CHAIN_ID, ETH_CHAIN_RPC)
+	chains.push(new EthereumChainImplementation(ETH_CHAIN_ID, new ethers.providers.JsonRpcProvider(ETH_CHAIN_RPC)))
+} else {
+	chains.push(new EthereumChainImplementation())
 }
 
 async function getPeerID() {
@@ -55,9 +57,9 @@ if (NODE_ENV === "production") {
 
 	let libp2p: Libp2p
 	if (typeof ANNOUNCE === "string") {
-		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort, [ANNOUNCE]))
+		libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort, announce: [ANNOUNCE] }))
 	} else {
-		libp2p = await createLibp2p(getLibp2pInit(peerId, peeringPort))
+		libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort }))
 	}
 
 	console.log("[canvas-next] Started libp2p")
@@ -65,9 +67,9 @@ if (NODE_ENV === "production") {
 	startPingService(libp2p, controller, { verbose })
 	controller.signal.addEventListener("abort", () => libp2p.stop())
 
-	global.core = await Core.initialize({ directory, spec, providers, unchecked, libp2p, verbose })
+	global.core = await Core.initialize({ directory, spec, chains, unchecked, libp2p, verbose })
 } else {
-	global.core = await Core.initialize({ directory, spec, providers, unchecked, offline: true, verbose })
+	global.core = await Core.initialize({ directory, spec, chains, unchecked, libp2p: null, verbose })
 }
 
 const port = Number(PORT) || 3000
@@ -87,7 +89,7 @@ const server = stoppable(httpServer, 0)
 
 server.listen(port, () => console.log(`> Ready on http://${hostname}:${port}`))
 
-let stopping: boolean = false
+let stopping = false
 process.on("SIGINT", () => {
 	if (stopping) {
 		process.exit(1)

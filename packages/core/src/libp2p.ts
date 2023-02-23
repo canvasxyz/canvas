@@ -35,23 +35,28 @@ const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoop
 const second = 1000
 const minute = 60 * second
 
-export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]): Libp2pOptions {
+export function getLibp2pInit(config: {
+	peerId: PeerId
+	port?: number
+	announce?: string[]
+	bootstrap?: string[]
+}): Libp2pOptions {
 	const announceAddresses =
-		announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId.toString()}`)
+		config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId.toString()}`)
 
 	const listenAddresses: string[] = []
-	if (port !== undefined) {
-		listenAddresses.push(`/ip4/0.0.0.0/tcp/${port}/ws`)
+	if (config.port !== undefined) {
+		listenAddresses.push(`/ip4/0.0.0.0/tcp/${config.port}/ws`)
 	}
 
 	return {
 		connectionGater: { denyDialMultiaddr },
-		peerId: peerId,
+		peerId: config.peerId,
 		addresses: { listen: listenAddresses, announce: announceAddresses, announceFilter },
 		transports: [webSockets()],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
-		peerDiscovery: [bootstrap({ list: bootstrapList })],
+		peerDiscovery: [bootstrap({ list: config.bootstrap ?? bootstrapList })],
 		dht: kadDHT({
 			protocolPrefix: "/canvas",
 			clientMode: false,
@@ -59,6 +64,7 @@ export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]
 		}),
 		metrics: prometheusMetrics({ registry: libp2pRegister }),
 		pubsub: gossipsub({
+			emitSelf: false,
 			doPX: true,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
@@ -67,7 +73,7 @@ export function getLibp2pInit(peerId: PeerId, port?: number, announce?: string[]
 			msgIdToStrFn: (id) => toHex(id),
 			fastMsgIdFn: (msg) => {
 				const hash = createHash("sha256")
-				hash.update(msg.data || new Uint8Array([]))
+				hash.update(msg.data || "")
 				return "0x" + hash.digest("hex")
 			},
 		}),
@@ -88,9 +94,9 @@ export async function startPingService(
 ) {
 	async function ping(routingTable: RoutingTable, peer: PeerId) {
 		// These are declared as private in RoutingTable :/
-		// @ts-expect-error
+		// @ts-expect-error accesses private fields
 		const pingTimeout: number = routingTable.pingTimeout
-		// @ts-expect-error
+		// @ts-expect-error accesses private fields
 		const protocol: string = routingTable.protocol
 
 		const timeoutController = new TimeoutController(pingTimeout)
@@ -132,13 +138,18 @@ export async function startPingService(
 
 				successCount += 1
 			} catch (err) {
-				if (verbose) {
-					console.log(`[canvas-core] Ping ${peer.toString()} failed`)
-					console.error(err)
-				}
+				if (err instanceof Error) {
+					if (routingTable.isStarted()) {
+						if (verbose) {
+							console.log(`[canvas-core] Ping ${peer.toString()} failed (${err.message})`)
+						}
 
-				failureCount += 1
-				await routingTable.remove(peer)
+						failureCount += 1
+						await routingTable.remove(peer)
+					}
+				} else {
+					throw err
+				}
 			}
 		}
 
@@ -164,11 +175,17 @@ export async function startPingService(
 					console.log(`[canvas-core] Ping ${peer.toString()} succeeded`)
 				}
 			} catch (err) {
-				if (verbose) {
-					console.log(`[canvas-core] Ping ${peer.toString()} failed`)
-					console.error(err)
+				if (err instanceof Error) {
+					if (wanRoutingTable.isStarted()) {
+						if (verbose) {
+							console.log(`[canvas-core] Ping ${peer.toString()} failed (${err.message})`)
+						}
+
+						await wanRoutingTable.remove(peer)
+					}
+				} else {
+					throw err
 				}
-				await wanRoutingTable.remove(peer)
 			}
 		})
 	})
@@ -189,11 +206,17 @@ export async function startPingService(
 					console.log(`[canvas-core] Ping ${peer.toString()} succeeded`)
 				}
 			} catch (err) {
-				if (verbose) {
-					console.log(`[canvas-core] Ping ${peer.toString()} failed`)
-					console.error(err)
+				if (err instanceof Error) {
+					if (lanRoutingTable.isStarted()) {
+						if (verbose) {
+							console.log(`[canvas-core] Ping ${peer.toString()} failed (${err.message})`)
+						}
+
+						await lanRoutingTable.remove(peer)
+					}
+				} else {
+					throw err
 				}
-				await lanRoutingTable.remove(peer)
 			}
 		})
 	})
@@ -223,8 +246,10 @@ export async function startPingService(
 	} catch (err) {
 		if (err instanceof AbortError) {
 			console.log("[canvas-core] Aborting ping service")
+		} else if (err instanceof Error) {
+			console.error(`[canvas-core] Ping service crashed (${err.message})`)
 		} else {
-			console.error("[canvas-core] Ping service crashed", err)
+			throw err
 		}
 	}
 }

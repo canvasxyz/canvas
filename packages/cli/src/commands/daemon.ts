@@ -16,20 +16,11 @@ import Hash from "ipfs-only-hash"
 import PQueue from "p-queue"
 import client from "prom-client"
 
-import {
-	BlockCache,
-	Core,
-	getLibp2pInit,
-	constants,
-	BlockResolver,
-	getAPI,
-	CoreOptions,
-	startPingService,
-	VM,
-} from "@canvas-js/core"
-import { BlockProvider, Model } from "@canvas-js/interfaces"
+import { Core, getLibp2pInit, constants, getAPI, CoreOptions, startPingService, VM } from "@canvas-js/core"
+import { ChainImplementation, Model } from "@canvas-js/interfaces"
 
-import { CANVAS_HOME, SOCKET_FILENAME, SOCKET_PATH, getPeerId, getProviders, installSpec } from "../utils.js"
+import { CANVAS_HOME, SOCKET_FILENAME, SOCKET_PATH, getPeerId, getChainImplementations, installSpec } from "../utils.js"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 export const command = "daemon"
 export const desc = "Start the canvas daemon"
@@ -58,7 +49,7 @@ export const builder = (yargs: yargs.Argv) =>
 		})
 		.option("chain-rpc", {
 			type: "array",
-			desc: "Provide an RPC endpoint for reading on-chain data",
+			desc: "Provide an RPC endpoint for reading on-chain data (format: chain, chainId, URL)",
 		})
 		.option("metrics", {
 			type: "boolean",
@@ -76,8 +67,8 @@ type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	// read rpcs from --chain-rpc arguments or environment variables
 	// prompt to run in unchecked mode, if no rpcs were provided
-	const providers = getProviders(args["chain-rpc"])
-	if (Object.keys(providers).length === 0 && !args.unchecked) {
+	const chains = getChainImplementations(args["chain-rpc"])
+	if (chains.length === 0 && !args.unchecked) {
 		const { confirm } = await prompts({
 			type: "confirm",
 			name: "confirm",
@@ -88,6 +79,7 @@ export async function handler(args: Args) {
 		if (confirm) {
 			args.unchecked = true
 			args.offline = true
+			chains.push(new EthereumChainImplementation())
 			console.log(chalk.yellow(`✦ ${chalk.bold("Using unchecked mode.")} Actions will not require a valid block hash.`))
 		} else {
 			console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
@@ -96,33 +88,31 @@ export async function handler(args: Args) {
 
 	const controller = new AbortController()
 
-	let libp2p: Libp2p | undefined = undefined
+	let libp2p: Libp2p | null = null
 	if (!args.offline) {
 		const peerId = await getPeerId()
-		console.log("[canvas-cli] Using PeerId", peerId.toString())
+		console.log(`[canvas-cli] Using PeerId ${peerId}`)
 
 		if (args.announce) {
-			libp2p = await createLibp2p(getLibp2pInit(peerId, args.listen, [args.announce]))
+			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: args.listen, announce: [args.announce] }))
 		} else {
-			libp2p = await createLibp2p(getLibp2pInit(peerId, args.listen))
+			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: args.listen }))
 		}
 
 		startPingService(libp2p, controller, { verbose: args.verbose })
 
 		if (args.verbose) {
 			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
-				console.log(`[canvas-cli] Connected to ${remotePeer.toString()} (${id})`)
+				console.log(`[canvas-cli] Connected to ${remotePeer} (${id})`)
 			)
 
 			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
-				console.log(`[canvas-cli] Disconnected from ${remotePeer.toString()} (${id})`)
+				console.log(`[canvas-cli] Disconnected from ${remotePeer} (${id})`)
 			)
 		}
 	}
 
-	const blockCache = new BlockCache(providers)
-
-	const daemon = new Daemon(libp2p, providers, blockCache.getBlock, {
+	const daemon = new Daemon(libp2p, [new EthereumChainImplementation()], {
 		offline: args.offline,
 		unchecked: args.unchecked,
 		verbose: args.verbose,
@@ -131,10 +121,9 @@ export async function handler(args: Args) {
 
 	controller.signal.addEventListener("abort", async () => {
 		await daemon.close()
-		if (libp2p !== undefined) {
+		if (libp2p !== null) {
 			await libp2p.stop()
 		}
-		blockCache.close()
 	})
 
 	if (fs.existsSync(SOCKET_PATH)) {
@@ -149,7 +138,7 @@ export async function handler(args: Args) {
 		console.log(`[canvas-cli] Daemon API listening on http://127.0.0.1:${args.port}`)
 	}
 
-	let stopping: boolean = false
+	let stopping = false
 	process.on("SIGINT", () => {
 		if (stopping) {
 			process.exit(1)
@@ -170,6 +159,7 @@ type AppData = {
 	uri: string
 	cid: string
 	status: Status
+	appName?: string
 	models?: Record<string, Model>
 	actions?: string[]
 }
@@ -181,10 +171,9 @@ class Daemon {
 	private readonly apps = new Map<string, { core: Core; api: express.Express }>()
 
 	constructor(
-		libp2p: Libp2p | undefined,
-		providers: Record<string, BlockProvider>,
-		blockResolver: BlockResolver,
-		private readonly options: CoreOptions & { exposeMetrics?: boolean }
+		private readonly libp2p: Libp2p | null,
+		private readonly chains: ChainImplementation[],
+		private readonly options: CoreOptions & { exposeMetrics?: boolean; offline?: boolean }
 	) {
 		this.app.use(express.json())
 		this.app.use(express.text())
@@ -224,6 +213,7 @@ class Daemon {
 							uri: `ipfs://${cid}`,
 							cid,
 							status: app ? "running" : "stopped",
+							appName: app && app.core.vm.appName,
 							models: app && app.core.vm.models,
 							actions: app && app.core.vm.actions,
 						}
@@ -304,27 +294,11 @@ class Daemon {
 				}
 
 				const spec = fs.readFileSync(specPath, "utf-8")
-				let hash
-				try {
-					hash = await Hash.of(spec)
-				} catch (err) {
-					console.log(spec)
-					const message = err instanceof Error ? err.message : (err as any).toString()
-					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
-				}
-
+				const hash = await Hash.of(spec)
 				const uri = `ipfs://${hash}`
 
 				try {
-					const core = await Core.initialize({
-						directory,
-						uri,
-						spec,
-						libp2p,
-						providers,
-						blockResolver,
-						...this.options,
-					})
+					const core = await Core.initialize({ directory, uri, spec, libp2p, chains, ...this.options })
 
 					const api = getAPI(core, {
 						exposeModels: true,
@@ -334,11 +308,15 @@ class Daemon {
 					})
 
 					this.apps.set(name, { core, api })
-					console.log(`[canvas-cli] Started ${core.uri}`)
+					console.log(`[canvas-cli] Started ${core.app}`)
 					res.status(StatusCodes.OK).end()
 				} catch (err) {
-					const message = err instanceof Error ? err.message : (err as any).toString()
-					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
+					if (err instanceof Error) {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+					} else {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+						throw err
+					}
 				}
 			})
 		})
@@ -354,11 +332,15 @@ class Daemon {
 
 				try {
 					await app.core.close()
-					console.log(`[canvas-cli] Stopped ${name} (${app.core.uri})`)
+					console.log(`[canvas-cli] Stopped ${name} (${app.core.app})`)
 					res.status(StatusCodes.OK).end()
 				} catch (err) {
-					const message = err instanceof Error ? err.message : (err as any).toString()
-					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(message)
+					if (err instanceof Error) {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+					} else {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+						throw err
+					}
 				} finally {
 					this.apps.delete(name)
 				}
@@ -379,21 +361,24 @@ class Daemon {
 		})
 
 		this.app.post("/check", (req, res) => {
-			if (typeof req.body.spec !== "string") {
+			if (typeof req.body.app !== "string") {
 				return res.status(StatusCodes.BAD_REQUEST).end()
 			}
 
-			const spec = req.body.spec
+			const app = req.body.app
 
 			this.queue.add(async () => {
 				try {
-					const result = await VM.validate(spec)
+					const result = await VM.validate(app)
 					res.status(StatusCodes.OK).json(result)
-				} catch (e) {
-					res.status(StatusCodes.OK).json({
-						valid: false,
-						errors: [(e as any).message],
-					})
+				} catch (err) {
+					// we return INTERNAL_SERVER_ERROR since validation errors shouldn't throw
+					if (err instanceof Error) {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+					} else {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+						throw err
+					}
 				}
 			})
 		})
@@ -404,8 +389,13 @@ class Daemon {
 					const result = await client.register.metrics()
 					res.header("Content-Type", client.register.contentType)
 					return res.end(result)
-				} catch (err: any) {
-					return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+				} catch (err) {
+					if (err instanceof Error) {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+					} else {
+						res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+						throw err
+					}
 				}
 			})
 		}

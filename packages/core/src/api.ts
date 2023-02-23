@@ -4,9 +4,10 @@ import chalk from "chalk"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
 
-import type { Chain, ModelValue } from "@canvas-js/interfaces"
+import type { ModelValue } from "@canvas-js/interfaces"
 import { Core } from "./core.js"
 import { getMetrics } from "./metrics.js"
+import { toHex } from "./utils.js"
 
 interface Options {
 	exposeMetrics: boolean
@@ -21,21 +22,22 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	api.set("query parser", "simple")
 	api.use(express.json())
 
-	api.get("/", (req, res) => {
-		const { component, routes, actions } = core.vm
+	api.get("/", async (req, res) => {
+		const { routes, actions } = core.vm
+
 		return res.json({
-			uri: core.uri,
+			uri: core.app,
+			appName: core.appName,
 			cid: core.cid.toString(),
-			peerId: core.libp2p?.peerId.toString(),
-			component,
+			peerId: core.libp2p && core.libp2p.peerId.toString(),
 			actions,
 			routes: Object.keys(routes),
-			peers: core.libp2p
-				? {
-						gossip: Object.fromEntries(core.recentGossipPeers),
-						sync: Object.fromEntries(core.recentSyncPeers),
-				  }
-				: null,
+			merkleRoots: core.mst && core.mst.roots,
+			chainImplementations: core.getChainImplementations(),
+			peers: core.libp2p && {
+				gossip: Object.fromEntries(core.recentGossipPeers),
+				sync: Object.fromEntries(core.recentSyncPeers),
+			},
 		})
 	})
 
@@ -47,9 +49,13 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		try {
 			const { hash } = await core.applyAction(req.body)
 			res.json({ hash })
-		} catch (err: any) {
-			console.log(chalk.red(`[canvas-core] Failed to apply action:`), err)
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
+		} catch (err) {
+			if (err instanceof Error) {
+				console.log(chalk.red(`[canvas-core] Failed to apply action (${err.message})`))
+				return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+			} else {
+				throw err
+			}
 		}
 	})
 
@@ -58,22 +64,26 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
 		}
 
+		if (req.body.hasSession) {
+			try {
+				const { session } = core.messageStore.getSessionByAddress(req.body.chain, req.body.chainId, req.body.hasSession)
+				return res.json({ hasSession: session !== null })
+			} catch (err) {
+				return res.json({ hasSession: false })
+			}
+		}
+
 		try {
 			const { hash } = await core.applySession(req.body)
 			res.json({ hash })
-		} catch (err: any) {
-			console.log(chalk.red(`[canvas-core] Failed to create session:`), err)
-			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
-		}
-	})
-
-	api.get("/latest_block/:chain/:chainId", async (req, res) => {
-		const { chain, chainId } = req.params
-		try {
-			const block = await core.getLatestBlock({ chain: chain as Chain, chainId })
-			return res.status(StatusCodes.OK).json(block)
-		} catch (e) {
-			return res.status(StatusCodes.NOT_FOUND).end()
+		} catch (err) {
+			if (err instanceof Error) {
+				console.log(chalk.red(`[canvas-core] Failed to create session (${err.message})`))
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+			} else {
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+				throw err
+			}
 		}
 	})
 
@@ -102,8 +112,8 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		// TODO: pagination
 		api.get("/actions", (req, res) => {
 			const actions = []
-			for (const entry of core.messageStore.getActionStream()) {
-				actions.push(entry)
+			for (const [hash, action] of core.messageStore.getActionStream()) {
+				actions.push([toHex(hash), action])
 			}
 
 			return res.status(StatusCodes.OK).json(actions)
@@ -114,8 +124,8 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		// TODO: pagination
 		api.get("/sessions", (req, res) => {
 			const sessions = []
-			for (const entry of core.messageStore.getSessionStream()) {
-				sessions.push(entry)
+			for (const [hash, session] of core.messageStore.getSessionStream()) {
+				sessions.push([toHex(hash), session])
 			}
 
 			return res.status(StatusCodes.OK).json(sessions)
@@ -167,8 +177,12 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 				newValues = await core.getRoute(route, params)
 			} catch (err) {
 				closed = true
-				console.log(chalk.red("[canvas-core] error evaluating route"), err)
-				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${(err as Error).stack}`)
+				if (err instanceof Error) {
+					console.log(chalk.red(`[canvas-core] error evaluating route (${err.message})`))
+					return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err.stack}`)
+				} else {
+					throw err
+				}
 			}
 
 			if (oldValues === null || !compareResults(oldValues, newValues)) {
@@ -186,7 +200,11 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 		try {
 			data = await core.getRoute(route, params)
 		} catch (err) {
-			return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${(err as Error).stack}`)
+			if (err instanceof Error) {
+				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err.stack}`)
+			} else {
+				throw err
+			}
 		}
 
 		return res.json(data)
