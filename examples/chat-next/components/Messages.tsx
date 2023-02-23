@@ -10,6 +10,29 @@ type Post = {
 	updated_at: number
 }
 
+export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
+	const { data, error } = useRoute<Post>("/posts", {})
+
+	const scrollContainer = useRef<HTMLDivElement>(null)
+	useLayoutEffect(() => {
+		if (scrollContainer.current !== null) {
+			scrollContainer.current.scrollTop = scrollContainer.current.scrollHeight
+		}
+	}, [data])
+
+	return (
+		<div id="scroll-container" ref={scrollContainer}>
+			<ul className="tree-view">
+				{data &&
+					data.map((_, i, posts) => {
+						const post = posts[posts.length - i - 1]
+						return <Post key={post.id} {...post} />
+					})}
+			</ul>
+		</div>
+	)
+}
+
 export const Messages: React.FC<{ client: Client | null }> = ({ client }) => {
 	const inputRef = useRef<HTMLInputElement>(null)
 
@@ -40,30 +63,13 @@ export const Messages: React.FC<{ client: Client | null }> = ({ client }) => {
 		}
 	}, [isReady])
 
-	const { data, error } = useRoute<Post>("/posts", {})
-
-	const scrollContainer = useRef<HTMLDivElement>(null)
-	useLayoutEffect(() => {
-		if (scrollContainer.current !== null) {
-			scrollContainer.current.scrollTop = scrollContainer.current.scrollHeight
-		}
-	}, [data])
-
 	return (
 		<div id="messages" className="window">
 			<div className="title-bar">
 				<div className="title-bar-text">Messages</div>
 			</div>
 			<div className="window-body">
-				<div id="scroll-container" ref={scrollContainer}>
-					<ul className="tree-view">
-						{data &&
-							data.map((_, i, posts) => {
-								const post = posts[posts.length - i - 1]
-								return <Post key={post.id} {...post} />
-							})}
-					</ul>
-				</div>
+				<MessagesInfiniteScroller />
 				<input
 					type="text"
 					disabled={!isReady}
