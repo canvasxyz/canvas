@@ -60,6 +60,8 @@ export const useConnectOneStep = ({
 					connectionState == "disconnected"
 				) {
 					setConnectionState("connected")
+				} else if (connectionState == "connected") {
+					// already connected
 				} else {
 					// wagmi and canvas are logged in, but we are in an invalid state
 					logoutEverything()
@@ -84,6 +86,7 @@ export const useConnectOneStep = ({
 	useEffect(() => {
 		// log out if wagmi is disconnected while logged in
 		if (wagmiAccountStatus == "disconnected" && !isLoading && !isPending && connectionState == "connected") {
+			console.log("wagmi disconnected...")
 			logoutEverything()
 		}
 	}, [wagmiAccountStatus])

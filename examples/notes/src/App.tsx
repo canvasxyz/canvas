@@ -8,23 +8,39 @@ import { useRoute } from "@canvas-js/hooks"
 
 import ComposeIcon from "./icons/compose.svg"
 import WastebasketIcon from "./icons/wastebasket.svg"
+import { metamaskDecryptData, metamaskEncryptData, metamaskGetPublicKey } from "./crypto"
+import nacl from "tweetnacl"
 
-type Note = {
+type EncryptedNote = {
 	id: string
-	local_key: string
-	title: string
-	body: string
-	from_id: string
 	updated_at: number
+
+	local_id: string
+	key_id: string
+	encrypted_body: string
+	creator_id: string
+	nonce: string
+}
+
+type EncryptedKey = {
+	id: string
+	updated_at: number
+
+	key_id: string
+	encrypted_key: string
+	owner_id: string
 }
 
 type LocalNote = {
 	id?: string
-	local_key: string
+	updated_at: number
+
+	local_id: string
+	key_id: string
+	creator_id: string
+
 	title: string
 	body: string
-	from_id?: string
-	updated_at: number
 	dirty: boolean
 }
 
@@ -68,6 +84,20 @@ const IconButton = ({ icon, onClick, disabled }: { onClick: () => void; icon: an
 	)
 }
 
+const lookupEncryptedKey = (keys: EncryptedKey[], owner_id: string, key_id: string): EncryptedKey | undefined => {
+	for (const key of keys) {
+		if (key.key_id == key_id && key.owner_id == owner_id) {
+			return key
+		}
+	}
+}
+
+const decryptEncryptedKey = async (key: EncryptedKey, account: string): Promise<Buffer> => {
+	// decrypt key using metamask (?)
+	const c = key?.encrypted_key!
+	return await metamaskDecryptData(account, Buffer.from(c, "base64"))
+}
+
 export const App: React.FC<{}> = ({}) => {
 	const { connectors } = useConnect()
 	const connector = connectors[0]
@@ -75,38 +105,112 @@ export const App: React.FC<{}> = ({}) => {
 
 	const [selectedNote, setSelectedNote] = useState<string | null>(null)
 
-	const { data, error } = useRoute<Note>("/notes", {})
+	const { data: encryptedNoteData } = useRoute<EncryptedNote>("/encrypted_notes", {})
+	const { data: encryptedKeyData } = useRoute<EncryptedKey>("/encrypted_keys", {})
 
 	const [localNotes, setLocalNotes] = useState<Record<string, LocalNote>>({})
 	const currentNote: LocalNote | null = selectedNote ? localNotes[selectedNote] : null
 
 	useEffect(() => {
-		const localNoteChanges: Record<string, LocalNote> = {}
-
-		for (const note of data || []) {
-			const localNote = localNotes[note.local_key]
-			// does localNote exist?
-			// if no, create note
-			if (!localNote) {
-				localNoteChanges[note.local_key] = { ...note, dirty: false }
-				continue
+		async function generateChanges() {
+			if (address == null || encryptedKeyData == null) {
+				console.log(`address=${address} encryptedKeyData=${encryptedKeyData}`)
+				return {}
 			}
 
-			// is the note on daemon newer?
-			if (note.updated_at > localNote.updated_at) {
-				// is corresponding local note dirty?
-				// if yes, don't copy
-				// otherwise overwrite note
-				if (!localNote.dirty) {
-					localNoteChanges[note.local_key] = { ...note, dirty: false }
+			// find the notes that need to be updated
+			const notesToUpdate = []
+			for (const note of encryptedNoteData || []) {
+				const localNote = localNotes[note.local_id]
+				// does localNote exist?
+				// if no, create note
+				if (!localNote || (note.updated_at > localNote.updated_at && !localNote.dirty)) {
+					notesToUpdate.push(note)
 				}
 			}
+
+			const localNoteChanges: Record<string, LocalNote> = {}
+			for (const note of notesToUpdate) {
+				// look up key
+				// look up the note's encryption key
+				const encryptedKey = lookupEncryptedKey(encryptedKeyData || [], address, note.key_id)
+				if (!encryptedKey) {
+					console.log(`can't decrypt note - no key exists for address=${address} key_id=${note.key_id}`)
+					continue
+				}
+				// decrypt it
+				const key = await decryptEncryptedKey(encryptedKey, address)
+				const nonceB = Buffer.from(note.nonce, "base64")
+				const data = nacl.secretbox.open(Buffer.from(note.encrypted_body, "base64"), nonceB, key)
+
+				if (!data) {
+					console.log(`No encrypted data was receovered from ${note.id}`)
+					continue
+				}
+
+				// use the note's key to decrypt the note data
+				const decryptedContent = Buffer.from(data).toString("utf8")
+				const { body, title } = JSON.parse(decryptedContent)
+				localNoteChanges[note.local_id] = {
+					body,
+					title,
+					local_id: note.local_id,
+					creator_id: note.creator_id,
+					updated_at: note.updated_at,
+					key_id: note.key_id,
+					id: note.id,
+					dirty: false,
+				}
+			}
+			return localNoteChanges
 		}
 
-		if (Object.entries(localNoteChanges).length > 0) {
-			setLocalNotes({ ...localNotes, ...localNoteChanges })
+		generateChanges().then((localNoteChanges) => {
+			if (Object.entries(localNoteChanges).length > 0) {
+				setLocalNotes({ ...localNotes, ...localNoteChanges })
+			}
+		})
+	}, [address, encryptedKeyData, encryptedNoteData])
+
+	const updateNote = async (note: LocalNote) => {
+		if (!client || !address) {
+			return
 		}
-	}, [data])
+
+		// if the note doesn't have a key yet...
+		let noteKey: Uint8Array
+
+		let key_id = note.key_id
+		if (key_id) {
+			const encryptedKey = lookupEncryptedKey(encryptedKeyData || [], address, key_id)
+			if (!encryptedKey) {
+				console.log(`can't update note - no key exists for address=${address} key_id=${key_id}`)
+				return
+			}
+			noteKey = await decryptEncryptedKey(encryptedKey, address)
+		} else {
+			// generate a key
+			const pubKey = await metamaskGetPublicKey(address)
+			noteKey = nacl.randomBytes(32)
+			// save it
+			key_id = uuidv4()
+			client.uploadKey({
+				key_id,
+				encrypted_key: metamaskEncryptData(pubKey, Buffer.from(noteKey)).toString("base64"),
+				owner_id: address,
+			})
+		}
+
+		const serializedNoteBody = Buffer.from(JSON.stringify({ body: note.body, title: note.title }), "utf8")
+		const nonce = nacl.randomBytes(24)
+		await client.updateNote({
+			id: note.id || "",
+			local_id: note.local_id,
+			encrypted_body: Buffer.from(nacl.secretbox(serializedNoteBody, nonce, noteKey)).toString("base64"),
+			nonce: Buffer.from(nonce).toString("base64"),
+			key_id: key_id,
+		})
+	}
 
 	const updateLocalNote = (localKey: string, changedFields: Record<string, any>) => {
 		const newLocalNotes = {
@@ -173,13 +277,13 @@ export const App: React.FC<{}> = ({}) => {
 							})
 							.map(([key, note]) => (
 								<div
-									key={`node-${note.local_key}`}
+									key={`node-${note.local_id}`}
 									className={`pt-2 pb-2 pl-4 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer ${
-										selectedNote == note.local_key ? "bg-gray-200" : "bg-gray-50"
+										selectedNote == note.local_id ? "bg-gray-200" : "bg-gray-50"
 									}`}
 									onClick={(e) => {
 										e.stopPropagation()
-										setSelectedNote(note.local_key)
+										setSelectedNote(note.local_id)
 									}}
 								>
 									<div className="text-sm font-bold">
@@ -206,14 +310,14 @@ export const App: React.FC<{}> = ({}) => {
 							onClick={() => {
 								const newLocalNotes = { ...localNotes }
 								const newLocalNote = {
-									local_key: uuidv4(),
+									local_id: uuidv4(),
 									title: "",
 									body: "",
 									updated_at: Math.floor(new Date().getTime()),
 									dirty: true,
 								} as LocalNote
-								newLocalNotes[newLocalNote.local_key] = newLocalNote
-								setSelectedNote(newLocalNote.local_key)
+								newLocalNotes[newLocalNote.local_id] = newLocalNote
+								setSelectedNote(newLocalNote.local_id)
 								setLocalNotes(newLocalNotes)
 							}}
 							icon={ComposeIcon}
@@ -305,13 +409,12 @@ export const App: React.FC<{}> = ({}) => {
 										if (!client) {
 											return
 										}
+										if (!address) {
+											return
+										}
+
 										try {
-											await client.createUpdateNote({
-												id: currentNote.id || "",
-												local_key: currentNote.local_key,
-												body: currentNote.body,
-												title: currentNote.title,
-											})
+											await updateNote(currentNote)
 											// set the note to clean
 											const newLocalNotes = {
 												...localNotes,

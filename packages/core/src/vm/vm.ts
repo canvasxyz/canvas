@@ -318,6 +318,12 @@ export class VM {
 					return context.newString(verifyTypedData(domain, types, value, signature))
 				}
 			),
+
+			ethersComputeAddress: context.newFunction("ethersComputeAddress", (publicOrPrivateKeyHandle) => {
+				const publicOrPrivateKey = publicOrPrivateKeyHandle.consume((handle) => handle.toString())
+				const address = ethers.utils.computeAddress(publicOrPrivateKey)
+				return context.newString(address)
+			}),
 		}).consume((globalsHandle) => call(context, "Object.assign", null, context.global, globalsHandle).dispose())
 	}
 
