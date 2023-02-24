@@ -61,7 +61,6 @@ const Login: React.FC<{ setClient: (client: Client | null) => void }> = ({ setCl
 	const provider = useProvider<ethers.providers.JsonRpcProvider>()
 
 	const chainImplementation = useMemo(() => {
-		console.log("chain", chain)
 		return new EthereumChainImplementation(chain?.id.toString() ?? "1", provider)
 	}, [chain?.id, provider])
 

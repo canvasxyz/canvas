@@ -199,8 +199,6 @@ export function useSession<Signer, DelegatedSigner>(
 				block: options.unchecked ? null : await chainImplementation.getLatestBlock(),
 			})
 
-			console.log(action)
-
 			const res = await fetch(`${host}/actions`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
