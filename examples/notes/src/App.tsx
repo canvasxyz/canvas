@@ -4,7 +4,7 @@ import Toastify from "toastify-js"
 
 import { useConnectOneStep } from "./useConnectOneStep"
 import { useConnect } from "wagmi"
-import { useRoute } from "@canvas-js/hooks"
+import { Client, useRoute } from "@canvas-js/hooks"
 
 import ComposeIcon from "./icons/compose.svg"
 import WastebasketIcon from "./icons/wastebasket.svg"
@@ -12,8 +12,11 @@ import { metamaskDecryptData, metamaskEncryptData, metamaskGetPublicKey } from "
 import nacl from "tweetnacl"
 
 type EncryptedNote = {
-	id: string
 	updated_at: number
+} & EncryptedNoteFields
+
+type EncryptedNoteFields = {
+	id: string
 
 	local_id: string
 	key_id: string
@@ -98,6 +101,81 @@ const decryptEncryptedKey = async (key: EncryptedKey, account: string): Promise<
 	return await metamaskDecryptData(account, Buffer.from(c, "base64"))
 }
 
+const decryptNote = async (
+	encryptedNote: EncryptedNote,
+	address: string,
+	encryptedKeyData: EncryptedKey[]
+): Promise<LocalNote> => {
+	// look up key
+	// look up the note's encryption key
+	const encryptedKey = lookupEncryptedKey(encryptedKeyData || [], address, encryptedNote.key_id)
+	if (!encryptedKey) {
+		throw Error(`can't decrypt note - no key exists for address=${address} key_id=${encryptedNote.key_id}`)
+	}
+	// decrypt it
+	const key = await decryptEncryptedKey(encryptedKey, address)
+	const nonceB = Buffer.from(encryptedNote.nonce, "base64")
+	const data = nacl.secretbox.open(Buffer.from(encryptedNote.encrypted_body, "base64"), nonceB, key)
+
+	if (!data) {
+		throw Error(`No encrypted data was recovered from ${encryptedNote.id}`)
+	}
+
+	// use the note's key to decrypt the note data
+	const decryptedContent = Buffer.from(data).toString("utf8")
+	const { body, title } = JSON.parse(decryptedContent)
+	return {
+		body,
+		title,
+		local_id: encryptedNote.local_id,
+		creator_id: encryptedNote.creator_id,
+		updated_at: encryptedNote.updated_at,
+		key_id: encryptedNote.key_id,
+		id: encryptedNote.id,
+		dirty: false,
+	}
+}
+
+const encryptNote = async (
+	localNote: LocalNote,
+	address: string,
+	encryptedKeyData: EncryptedKey[],
+	client: Client
+): Promise<EncryptedNoteFields> => {
+	// if the note doesn't have a key yet...
+	let noteKey: Uint8Array
+	let key_id = localNote.key_id
+	if (key_id) {
+		const encryptedKey = lookupEncryptedKey(encryptedKeyData || [], address, key_id)
+		if (!encryptedKey) {
+			throw Error(`can't update note - no key exists for address=${address} key_id=${key_id}`)
+		}
+		noteKey = await decryptEncryptedKey(encryptedKey, address)
+	} else {
+		// generate a key
+		const pubKey = await metamaskGetPublicKey(address)
+		noteKey = nacl.randomBytes(32)
+		// save it
+		key_id = uuidv4()
+		client.uploadKey({
+			key_id,
+			encrypted_key: metamaskEncryptData(pubKey, Buffer.from(noteKey)).toString("base64"),
+			owner_id: address,
+		})
+	}
+
+	const serializedNoteBody = Buffer.from(JSON.stringify({ body: localNote.body, title: localNote.title }), "utf8")
+	const nonce = nacl.randomBytes(24)
+	return {
+		id: localNote.id || "",
+		local_id: localNote.local_id,
+		encrypted_body: Buffer.from(nacl.secretbox(serializedNoteBody, nonce, noteKey)).toString("base64"),
+		nonce: Buffer.from(nonce).toString("base64"),
+		key_id: key_id,
+		creator_id: address,
+	}
+}
+
 export const App: React.FC<{}> = ({}) => {
 	const { connectors } = useConnect()
 	const connector = connectors[0]
@@ -130,36 +208,12 @@ export const App: React.FC<{}> = ({}) => {
 			}
 
 			const localNoteChanges: Record<string, LocalNote> = {}
-			for (const note of notesToUpdate) {
-				// look up key
-				// look up the note's encryption key
-				const encryptedKey = lookupEncryptedKey(encryptedKeyData || [], address, note.key_id)
-				if (!encryptedKey) {
-					console.log(`can't decrypt note - no key exists for address=${address} key_id=${note.key_id}`)
+			for (const encryptedNote of notesToUpdate) {
+				try {
+					localNoteChanges[encryptedNote.local_id] = await decryptNote(encryptedNote, address, encryptedKeyData)
+				} catch (e) {
+					console.log(e)
 					continue
-				}
-				// decrypt it
-				const key = await decryptEncryptedKey(encryptedKey, address)
-				const nonceB = Buffer.from(note.nonce, "base64")
-				const data = nacl.secretbox.open(Buffer.from(note.encrypted_body, "base64"), nonceB, key)
-
-				if (!data) {
-					console.log(`No encrypted data was receovered from ${note.id}`)
-					continue
-				}
-
-				// use the note's key to decrypt the note data
-				const decryptedContent = Buffer.from(data).toString("utf8")
-				const { body, title } = JSON.parse(decryptedContent)
-				localNoteChanges[note.local_id] = {
-					body,
-					title,
-					local_id: note.local_id,
-					creator_id: note.creator_id,
-					updated_at: note.updated_at,
-					key_id: note.key_id,
-					id: note.id,
-					dirty: false,
 				}
 			}
 			return localNoteChanges
@@ -177,39 +231,13 @@ export const App: React.FC<{}> = ({}) => {
 			return
 		}
 
-		// if the note doesn't have a key yet...
-		let noteKey: Uint8Array
-
-		let key_id = note.key_id
-		if (key_id) {
-			const encryptedKey = lookupEncryptedKey(encryptedKeyData || [], address, key_id)
-			if (!encryptedKey) {
-				console.log(`can't update note - no key exists for address=${address} key_id=${key_id}`)
-				return
-			}
-			noteKey = await decryptEncryptedKey(encryptedKey, address)
-		} else {
-			// generate a key
-			const pubKey = await metamaskGetPublicKey(address)
-			noteKey = nacl.randomBytes(32)
-			// save it
-			key_id = uuidv4()
-			client.uploadKey({
-				key_id,
-				encrypted_key: metamaskEncryptData(pubKey, Buffer.from(noteKey)).toString("base64"),
-				owner_id: address,
-			})
+		try {
+			const encryptedNote = await encryptNote(note, address, encryptedKeyData || [], client)
+			await client.updateNote(encryptedNote)
+		} catch (e) {
+			console.log(e)
+			return
 		}
-
-		const serializedNoteBody = Buffer.from(JSON.stringify({ body: note.body, title: note.title }), "utf8")
-		const nonce = nacl.randomBytes(24)
-		await client.updateNote({
-			id: note.id || "",
-			local_id: note.local_id,
-			encrypted_body: Buffer.from(nacl.secretbox(serializedNoteBody, nonce, noteKey)).toString("base64"),
-			nonce: Buffer.from(nonce).toString("base64"),
-			key_id: key_id,
-		})
 	}
 
 	const updateLocalNote = (localKey: string, changedFields: Record<string, any>) => {
