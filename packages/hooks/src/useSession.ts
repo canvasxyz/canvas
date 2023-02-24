@@ -81,7 +81,6 @@ export function useSession<Signer, DelegatedSigner>(
 		setIsLoading(false)
 	}, [])
 
-	// Try to log in by loading data from localStorage
 	useEffect(() => {
 		if (host === null || data === null || signer === null || signer === undefined) {
 			return
@@ -90,9 +89,7 @@ export function useSession<Signer, DelegatedSigner>(
 		loadSavedSession(data, signer)
 	}, [host, data, signer])
 
-	// Log in by clicking the log in button
 	const login = useCallback(async () => {
-		console.log("login function called...")
 		if (host === null) {
 			throw new Error("no host configured")
 		} else if (data === null) {
