@@ -4,7 +4,7 @@ import Toastify from "toastify-js"
 
 import { useConnectOneStep } from "./useConnectOneStep"
 import { useConnect } from "wagmi"
-import { useCanvas, useRoute } from "@canvas-js/hooks"
+import { useRoute } from "@canvas-js/hooks"
 
 import ComposeIcon from "./icons/compose.svg"
 import WastebasketIcon from "./icons/wastebasket.svg"
@@ -71,10 +71,10 @@ const IconButton = ({ icon, onClick, disabled }: { onClick: () => void; icon: an
 export const App: React.FC<{}> = ({}) => {
 	const { connectors } = useConnect()
 	const connector = connectors[0]
-	const { connectionState, connect, disconnect, errors, address } = useConnectOneStep({ connector })
+	const { connectionState, connect, disconnect, errors, address, client } = useConnectOneStep({ connector })
 
 	const [selectedNote, setSelectedNote] = useState<string | null>(null)
-	const { dispatch } = useCanvas()
+
 	const { data, error } = useRoute<Note>("/notes", {})
 
 	const [localNotes, setLocalNotes] = useState<Record<string, LocalNote>>({})
@@ -147,7 +147,7 @@ export const App: React.FC<{}> = ({}) => {
 						<div className="flex-grow"></div>
 						<IconButton
 							onClick={async () => {
-								if (selectedNote && currentNote) {
+								if (selectedNote && currentNote && client) {
 									// delete from local copy
 									const { [selectedNote]: deletedLocalNote, ...otherLocalNotes } = localNotes
 									setLocalNotes(otherLocalNotes)
@@ -155,7 +155,7 @@ export const App: React.FC<{}> = ({}) => {
 									// delete on canvas
 									if (currentNote.id) {
 										try {
-											await dispatch("deleteNote", { id: currentNote.id })
+											await client.deleteNote({ id: currentNote.id })
 										} catch (e: any) {
 											showError(`Could not delete note: ${e.message}`)
 										}
@@ -302,8 +302,11 @@ export const App: React.FC<{}> = ({}) => {
 									className="absolute right-10 bottom-10 border border-gray-400 p-3 rounded-lg bg-gray-200 hover:bg-gray-300 hover:cursor-pointer"
 									onClick={async () => {
 										// update canvas
+										if (!client) {
+											return
+										}
 										try {
-											await dispatch("createUpdateNote", {
+											await client.createUpdateNote({
 												id: currentNote.id || "",
 												local_key: currentNote.local_key,
 												body: currentNote.body,

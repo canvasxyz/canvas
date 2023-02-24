@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
 import { ethers } from "ethers"
-import { useAccount, useConnect, useDisconnect, useSigner, useNetwork, Connector } from "wagmi"
-import { useSession, useCanvasSigner } from "@canvas-js/hooks"
+import { useAccount, useConnect, useDisconnect, useSigner, useNetwork, Connector, useProvider } from "wagmi"
+import { Client, useSession } from "@canvas-js/hooks"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 type ConnectionState = "disconnected" | "awaiting_connection" | "awaiting_session" | "connected"
 
@@ -15,6 +16,7 @@ export const useConnectOneStep = ({
 	disconnect: () => void
 	errors: string[]
 	address: string | null
+	client: Client | null
 } => {
 	const [connectionState, setConnectionState] = useState<ConnectionState>("disconnected")
 	const [errors, setErrors] = useState<string[]>([])
@@ -23,12 +25,14 @@ export const useConnectOneStep = ({
 	const { connect: wagmiConnect } = useConnect()
 	const { disconnect: wagmiDisconnect } = useDisconnect()
 	const { isConnected: wagmiIsConnected, status: wagmiAccountStatus, address: wagmiAccountAddress } = useAccount()
-	const { error: signerError, data: ethersSigner } = useSigner<ethers.providers.JsonRpcSigner>()
+	const { error: signerError, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
 	const { chain } = useNetwork()
+	const provider = useProvider<ethers.providers.JsonRpcProvider>()
 
 	// canvas login state
-	const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
-	const { error: sessionError, login, logout, state: canvasState } = useSession(signer!)
+	const chainImplementation = new EthereumChainImplementation(chain?.id.toString(), provider)
+	// const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
+	const { login, logout, isLoading, isPending, client } = useSession(chainImplementation, signer)
 
 	const logoutEverything = () => {
 		logout()
@@ -38,45 +42,48 @@ export const useConnectOneStep = ({
 
 	useEffect(() => {
 		console.log(
-			`wagmiAccountStatus: ${wagmiAccountStatus}, canvasState: ${canvasState}, connectionState: ${connectionState}`
+			`wagmiAccountStatus: ${wagmiAccountStatus}, canvasIsLoading: ${isLoading}, canvasIsPending: ${isPending}, connectionState: ${connectionState}`
 		)
-	}, [wagmiAccountStatus, canvasState, connectionState])
+	}, [wagmiAccountStatus, isLoading, isPending, connectionState])
 
 	// watch the state of wagmi and the canvas login hook
 	// make state changes if necessary
 
 	useEffect(() => {
-		if (signer && canvasState == "logged_out") {
-			if (connectionState == "awaiting_connection") {
-				setConnectionState("awaiting_session")
-				login()
-			} else {
-				if (connectionState == "awaiting_session") {
-					// log in must have failed, reset
-					console.log("canvas login aborted")
+		// isLoading == false && isPending == false
+		// if the
+		if (!isLoading && !isPending) {
+			if (client) {
+				if (
+					connectionState == "awaiting_session" ||
+					connectionState == "awaiting_connection" ||
+					connectionState == "disconnected"
+				) {
+					setConnectionState("connected")
+				} else {
+					// wagmi and canvas are logged in, but we are in an invalid state
 					logoutEverything()
+				}
+			} else if (signer) {
+				if (connectionState == "awaiting_connection") {
+					setConnectionState("awaiting_session")
+					login()
+				} else {
+					if (connectionState == "awaiting_session") {
+						// log in must have failed/been rejected by user, reset
+						console.log("canvas login aborted")
+						logoutEverything()
+					}
 				}
 			}
 		}
-	}, [signer, canvasState])
+	}, [client, signer, isLoading, isPending])
 
-	useEffect(() => {
-		if (canvasState == "logged_in") {
-			if (
-				connectionState == "awaiting_session" ||
-				connectionState == "awaiting_connection" ||
-				connectionState == "disconnected"
-			) {
-				setConnectionState("connected")
-			} else {
-				logoutEverything()
-			}
-		}
-	}, [canvasState])
+	useEffect(() => {}, [isLoading, isPending])
 
 	useEffect(() => {
 		// log out if wagmi is disconnected while logged in
-		if (wagmiAccountStatus == "disconnected" && canvasState == "logged_in" && connectionState == "connected") {
+		if (wagmiAccountStatus == "disconnected" && !isLoading && !isPending && connectionState == "connected") {
 			logoutEverything()
 		}
 	}, [wagmiAccountStatus])
@@ -117,11 +124,11 @@ export const useConnectOneStep = ({
 		}
 	}, [signerError])
 
-	useEffect(() => {
-		if (sessionError) {
-			setErrors([sessionError.message])
-		}
-	}, [sessionError])
+	// useEffect(() => {
+	// 	if (sessionError) {
+	// 		setErrors([sessionError.message])
+	// 	}
+	// }, [sessionError])
 
-	return { connectionState, connect, disconnect, errors, address: wagmiAccountAddress || null }
+	return { connectionState, connect, disconnect, errors, address: wagmiAccountAddress || null, client }
 }
