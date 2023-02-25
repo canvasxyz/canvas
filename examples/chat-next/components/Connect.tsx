@@ -49,7 +49,7 @@ export const Connect: React.FC<{ client: Client | null; setClient: (client: Clie
 				<ErrorMessage error={connectionError} />
 
 				<Login setClient={setClient} />
-				<GenerateData client={client} baseNumberOfMessages={50} />
+				{client && <GenerateData client={client} baseNumberOfMessages={50} />}
 			</div>
 		</div>
 	)
