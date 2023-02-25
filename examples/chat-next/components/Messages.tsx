@@ -24,34 +24,54 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 	const virtuoso = useRef(null)
 	const [firstItemIndex, setFirstItemIndex] = useState<number>(MAX_VALUE)
 
-	// Posts are fetched declaratively, by updating `cursor`.
-	const { data: fetched, error } = useRoute<Post>("/posts", { before: cursor })
+	// Past posts are fetched declaratively, by updating `cursor`.
+	// Because of pagination, the route returns a window of posts ordered
+	// monotonically the same as displayed posts, but potentially overlapping
+	// or interleaved with them, so we use a Map to filter out duplicates.
+	const { data: pastPosts } = useRoute<Post>("/posts", { before: cursor }, { subscribe: false })
 
-	// Because of pagination, /posts returns a window of posts ordered
-	// the same as displayed posts, but potentially overlapping or
-	// interleaved, so we use a set comparision to filter out duplicates.
-	//
-	// New posts may enter *anywhere* in the window, but we only maintain
-	// a subscription to the latest (before = "") or (before = cursor)
+	// Maintain a subscription to the most recent page of posts.
+	// We assume that posts are received in-order, an assumption which
+	// may be violated when generating data.
+	const { data: newPosts } = useRoute<Post>("/posts", { before: "" })
+
 	useEffect(() => {
-		if (!fetched) return
+		if (!pastPosts || !newPosts) return
 
 		if (posts.length === 0) {
-			const filtered = [...fetched]
-			filtered.reverse()
-			setPosts(filtered)
+			const filteredNewPosts = [...newPosts]
+			filteredNewPosts.reverse()
+			setPosts(filteredNewPosts)
 		} else {
 			const postsM = new Map(posts.map((f) => [f.id, f]))
-			const filtered = fetched.filter((item) => !postsM.has(item.id))
-			if (filtered.length === 0) return
-			setFirstItemIndex(firstItemIndex - filtered.length)
-			filtered.reverse()
+			const filteredPastPosts = pastPosts.filter((item) => !postsM.has(item.id))
+			const filteredNewPosts = newPosts.filter((item) => !postsM.has(item.id))
+			if (filteredPastPosts.length === 0 && filteredNewPosts.length === 0) return
+			setFirstItemIndex(firstItemIndex - filteredPastPosts.length)
+			filteredPastPosts.reverse()
+			filteredNewPosts.reverse()
+
 			// TODO: Interleave new posts according to updated_at, so if we
-			// receive new posts out-of-order (happens frequenty on first insert)
-			// then they won't persist out-of-order
-			setPosts([...filtered, ...posts])
+			// receive new posts out-of-order (happens frequently on first insert)
+			// they won't persist out-of-order
+			setPosts([...filteredPastPosts, ...posts, ...filteredNewPosts])
+
+			// Scroll-to-bottom doesn't seem to work correctly, Virtuoso incorrectly
+			// caps the maximum scroll to `scroller.offsetHeight - scroller.scrollHeight`
+			// when there might be additional not-yet-rendered content at the bottom.
+			if (filteredPastPosts.length === 0) {
+				const scroller = document.querySelector("[data-virtuoso-scroller=true]")
+				// Only scroll-to-bottom if we're already near the bottom
+				if (scroller.scrollTop + scroller.offsetHeight < scroller.scrollHeight - 40) return
+				setTimeout(() => {
+					scroller.scrollTop = 99999999
+					setTimeout(() => {
+						scroller.scrollTop = 99999999
+					}, 10)
+				}, 10)
+			}
 		}
-	}, [fetched, posts])
+	}, [newPosts, pastPosts, posts])
 
 	const startReached = useCallback(
 		(event: React.UIEvent<HTMLElement>) => {
@@ -70,21 +90,22 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 	)
 
 	const itemContent = useCallback((index, post) => <Post key={post.id} {...post} />, [])
-	const followOutput = useCallback((isAtBottom) => (isAtBottom ? "smooth" : false), [])
+	// const followOutput = useCallback((isAtBottom) => (isAtBottom ? "auto" : false), [])
 
 	return (
 		<ul className="tree-view">
 			{posts.length > 0 && (
 				<Virtuoso
+					atBottomThreshold={40}
 					ref={virtuoso}
 					firstItemIndex={firstItemIndex}
 					initialTopMostItemIndex={posts.length}
 					itemContent={itemContent}
 					data={posts}
 					startReached={startReached}
-					followOutput={followOutput}
+					// followOutput={followOutput}
 					style={{ flex: "1 1 auto", overscrollBehavior: "contain" }}
-					increaseViewportBy={{ bottom: 0, top: 40 }}
+					increaseViewportBy={{ bottom: 40, top: 40 }}
 				/>
 			)}
 		</ul>
