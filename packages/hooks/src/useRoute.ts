@@ -81,7 +81,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 				console.log("ws: failed to parse message", evt.data)
 			}
 		},
-		[callback]
+		[callback, params]
 	)
 
 	useEffect(() => {
