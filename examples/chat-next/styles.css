@@ -49,17 +49,19 @@ main {
 	gap: 4px;
 }
 
-#scroll-container {
-	overflow-y: scroll;
+#messages ul.tree-view {
 	flex-grow: 1;
 	height: 0px;
+  padding: 2px;
 
 	display: flex;
 	flex-direction: column;
 }
 
-#scroll-container ul.tree-view {
-	flex-grow: 1;
+#messages ul.tree-view li {
+  margin: 0;
+  padding-top: 3px;
+  padding-left: 6px;
 }
 
 #sidebar {
