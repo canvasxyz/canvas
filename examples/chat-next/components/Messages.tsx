@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react"
+import _ from "lodash"
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { Virtuoso } from "react-virtuoso"
 
 import { useEnsName } from "wagmi"
 import { Client, useRoute } from "@canvas-js/hooks"
@@ -10,6 +12,106 @@ type Post = {
 	updated_at: number
 }
 
+export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
+	const [posts, setPosts] = useState<Post[]>([])
+	const [cursor, setCursor] = useState<string | number>("")
+
+	// Virtuoso uses firstItemIndex to maintain scroll position when
+	// items are added. It should always be set *relative to its
+	// original value* and cannot be negative, so we initialize it
+	// with a very large MAX_VALUE.
+	const MAX_VALUE = 999999999
+	const virtuoso = useRef(null)
+	const [firstItemIndex, setFirstItemIndex] = useState<number>(MAX_VALUE)
+
+	// Past posts are fetched declaratively, by updating `cursor`.
+	// Because of pagination, the route returns a window of posts ordered
+	// monotonically the same as displayed posts, but potentially overlapping
+	// or interleaved with them, so we use a Map to filter out duplicates.
+	const { data: pastPosts } = useRoute<Post>("/posts", { before: cursor }, { subscribe: false })
+
+	// Maintain a subscription to the most recent page of posts.
+	// We assume that posts are received in-order, an assumption which
+	// may be violated when generating data.
+	const { data: newPosts } = useRoute<Post>("/posts", { before: "" })
+
+	useEffect(() => {
+		if (!pastPosts || !newPosts) return
+
+		if (posts.length === 0) {
+			const filteredNewPosts = [...newPosts]
+			filteredNewPosts.reverse()
+			setPosts(filteredNewPosts)
+		} else {
+			const postsM = new Map(posts.map((f) => [f.id, f]))
+			const filteredPastPosts = pastPosts.filter((item) => !postsM.has(item.id))
+			const filteredNewPosts = newPosts.filter((item) => !postsM.has(item.id))
+			if (filteredPastPosts.length === 0 && filteredNewPosts.length === 0) return
+			setFirstItemIndex(firstItemIndex - filteredPastPosts.length)
+			filteredPastPosts.reverse()
+			filteredNewPosts.reverse()
+
+			// TODO: Interleave new posts according to updated_at, so if we
+			// receive new posts out-of-order (happens frequently on first insert)
+			// they won't persist out-of-order
+			setPosts([...filteredPastPosts, ...posts, ...filteredNewPosts])
+
+			// Scroll-to-bottom doesn't seem to work correctly, Virtuoso incorrectly
+			// caps the maximum scroll to `scroller.offsetHeight - scroller.scrollHeight`
+			// when there might be additional not-yet-rendered content at the bottom.
+			if (filteredPastPosts.length === 0) {
+				const scroller = document.querySelector("[data-virtuoso-scroller=true]") as HTMLElement
+				if (scroller === null) return
+				// Only scroll-to-bottom if we're already near the bottom
+				if (scroller.scrollTop + scroller.offsetHeight < scroller.scrollHeight - 40) return
+				setTimeout(() => {
+					scroller.scrollTop = 99999999
+					setTimeout(() => {
+						scroller.scrollTop = 99999999
+					}, 10)
+				}, 10)
+			}
+		}
+	}, [newPosts, pastPosts, posts])
+
+	const startReached = useCallback(
+		(index: number) => {
+			if (posts.length === 0) return
+
+			setTimeout(() => {
+				const earliestPost = posts[0]
+				const newCursor = earliestPost?.updated_at?.toString()
+				if (!earliestPost || cursor === earliestPost.updated_at) return // Nothing more
+				setCursor(earliestPost.updated_at)
+				console.log("cursor changed:", earliestPost.updated_at)
+			}, 500)
+		},
+		[posts, cursor]
+	)
+
+	const itemContent = useCallback((index: number, post: Post) => <Post key={post.id} {...post} />, [])
+	// const followOutput = useCallback((isAtBottom) => (isAtBottom ? "auto" : false), [])
+
+	return (
+		<ul className="tree-view">
+			{posts.length > 0 && (
+				<Virtuoso
+					atBottomThreshold={40}
+					ref={virtuoso}
+					firstItemIndex={firstItemIndex}
+					initialTopMostItemIndex={posts.length}
+					itemContent={itemContent}
+					data={posts}
+					startReached={startReached}
+					// followOutput={followOutput}
+					style={{ flex: "1 1 auto", overscrollBehavior: "contain" }}
+					increaseViewportBy={{ bottom: 40, top: 40 }}
+				/>
+			)}
+		</ul>
+	)
+}
+
 export const Messages: React.FC<{ client: Client | null }> = ({ client }) => {
 	const inputRef = useRef<HTMLInputElement>(null)
 
@@ -19,7 +121,6 @@ export const Messages: React.FC<{ client: Client | null }> = ({ client }) => {
 			if (event.key === "Enter" && input !== null && client !== null) {
 				try {
 					const { hash } = await client.createPost({ content: input.value })
-					console.log("created post", hash)
 					input.value = ""
 					setTimeout(() => input.focus(), 0)
 				} catch (err) {
@@ -40,30 +141,13 @@ export const Messages: React.FC<{ client: Client | null }> = ({ client }) => {
 		}
 	}, [isReady])
 
-	const { data, error } = useRoute<Post>("/posts", {})
-
-	const scrollContainer = useRef<HTMLDivElement>(null)
-	useLayoutEffect(() => {
-		if (scrollContainer.current !== null) {
-			scrollContainer.current.scrollTop = scrollContainer.current.scrollHeight
-		}
-	}, [data])
-
 	return (
 		<div id="messages" className="window">
 			<div className="title-bar">
 				<div className="title-bar-text">Messages</div>
 			</div>
 			<div className="window-body">
-				<div id="scroll-container" ref={scrollContainer}>
-					<ul className="tree-view">
-						{data &&
-							data.map((_, i, posts) => {
-								const post = posts[posts.length - i - 1]
-								return <Post key={post.id} {...post} />
-							})}
-					</ul>
-				</div>
+				<MessagesInfiniteScroller />
 				<input
 					type="text"
 					disabled={!isReady}
