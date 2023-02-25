@@ -88,6 +88,8 @@ The hook will re-render every time the resulting `data` changes (compared deep e
 
 Use this pattern when you want the host to push data to the client. **Don't** use this pattern if the parameter values (`{ user: "joel" }` in the example) change often. For subscriptions, routes are bound to concrete parameter values, so changing the parameters forces the hook to unsubscribe and re-subscribe.
 
+You can also provide a callback to the hook, which will be triggered whenever new data is returned from the hook. **If you do this, make sure to memoize your callback (i.e. wrap it in useCallback())!**
+
 **Fetching routes without a subscription**
 
 The `useRoute` hook can also fetch routes without subscribing to them. Pass a `{ subscribe: false }` options object as the third argument and the hook will use regulular HTTP GET requests, re-fetching the route data every time any of the parameter values passed to the hook change (and only then).
