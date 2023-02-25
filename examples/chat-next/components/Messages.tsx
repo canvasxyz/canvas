@@ -14,7 +14,7 @@ type Post = {
 
 export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 	const [posts, setPosts] = useState<Post[]>([])
-	const [cursor, setCursor] = useState<string>("")
+	const [cursor, setCursor] = useState<string | number>("")
 
 	// Virtuoso uses firstItemIndex to maintain scroll position when
 	// items are added. It should always be set *relative to its
@@ -60,7 +60,8 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 			// caps the maximum scroll to `scroller.offsetHeight - scroller.scrollHeight`
 			// when there might be additional not-yet-rendered content at the bottom.
 			if (filteredPastPosts.length === 0) {
-				const scroller = document.querySelector("[data-virtuoso-scroller=true]")
+				const scroller = document.querySelector("[data-virtuoso-scroller=true]") as HTMLElement
+				if (scroller === null) return
 				// Only scroll-to-bottom if we're already near the bottom
 				if (scroller.scrollTop + scroller.offsetHeight < scroller.scrollHeight - 40) return
 				setTimeout(() => {
@@ -74,8 +75,7 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 	}, [newPosts, pastPosts, posts])
 
 	const startReached = useCallback(
-		(event: React.UIEvent<HTMLElement>) => {
-			console.log("startReached")
+		(index: number) => {
 			if (posts.length === 0) return
 
 			setTimeout(() => {
@@ -89,7 +89,7 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 		[posts, cursor]
 	)
 
-	const itemContent = useCallback((index, post) => <Post key={post.id} {...post} />, [])
+	const itemContent = useCallback((index: number, post: Post) => <Post key={post.id} {...post} />, [])
 	// const followOutput = useCallback((isAtBottom) => (isAtBottom ? "auto" : false), [])
 
 	return (
