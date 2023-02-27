@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react"
+import React, { useCallback, useState, useContext, useEffect, useMemo } from "react"
 
 import { ethers } from "ethers"
 import { useAccount, useConnect, useDisconnect, useSigner, useNetwork, useProvider } from "wagmi"
@@ -8,7 +8,10 @@ import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import { ErrorMessage } from "./ErrorMessage"
 
-export const Connect: React.FC<{ setClient: (client: Client | null) => void }> = ({ setClient }) => {
+export const Connect: React.FC<{ client: Client | null; setClient: (client: Client | null) => void }> = ({
+	client,
+	setClient,
+}) => {
 	const { connect, connectors, error: connectionError, isLoading: isConnectionLoading, pendingConnector } = useConnect()
 	const { disconnect } = useDisconnect()
 	const { address, isConnected } = useAccount()
@@ -43,10 +46,10 @@ export const Connect: React.FC<{ setClient: (client: Client | null) => void }> =
 						))}
 					</>
 				)}
-
 				<ErrorMessage error={connectionError} />
 
 				<Login setClient={setClient} />
+				{client && <GenerateData client={client} baseNumberOfMessages={50} />}
 			</div>
 		</div>
 	)
@@ -58,7 +61,6 @@ const Login: React.FC<{ setClient: (client: Client | null) => void }> = ({ setCl
 	const provider = useProvider<ethers.providers.JsonRpcProvider>()
 
 	const chainImplementation = useMemo(() => {
-		console.log("chain", chain)
 		return new EthereumChainImplementation(chain?.id.toString() ?? "1", provider)
 	}, [chain?.id, provider])
 
@@ -104,5 +106,35 @@ const Login: React.FC<{ setClient: (client: Client | null) => void }> = ({ setCl
 
 			<ErrorMessage error={error} />
 		</>
+	)
+}
+
+const GenerateData: React.FC<{ client: Client; baseNumberOfMessages: number }> = ({ client, baseNumberOfMessages }) => {
+	const [count, setCount] = useState(0)
+
+	const generateData = useCallback(
+		(n: number) => {
+			if (!client) return
+			const timestamp = +Date.now()
+			for (let i = 0; i < n; i++) {
+				const content = `#${count + i + 1}`
+				client.createPost({ content }, { timestamp: timestamp + i })
+			}
+			setCount(count + baseNumberOfMessages)
+		},
+		[client]
+	)
+
+	if (!client) return <></>
+
+	return (
+		<p>
+			<button disabled={!client} onClick={generateData.bind(this, baseNumberOfMessages)}>
+				Create {baseNumberOfMessages} messages
+			</button>{" "}
+			<button disabled={!client} onClick={generateData.bind(this, baseNumberOfMessages * 10)}>
+				Create {baseNumberOfMessages * 10} messages
+			</button>
+		</p>
 	)
 }

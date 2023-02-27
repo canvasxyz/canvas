@@ -24,7 +24,7 @@ export default function Index() {
 			<Messages client={client} />
 			<div id="sidebar">
 				<Application />
-				<Connect setClient={setClient} />
+				<Connect client={client} setClient={setClient} />
 			</div>
 		</main>
 	)

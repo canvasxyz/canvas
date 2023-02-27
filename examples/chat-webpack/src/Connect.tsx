@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo } from "react"
+import React, { useCallback, useState, useContext, useEffect, useMemo } from "react"
 
 import { ethers } from "ethers"
 import { useAccount, useConnect, useDisconnect, useSigner, useNetwork, useProvider } from "wagmi"
@@ -47,6 +47,7 @@ export const Connect: React.FC = ({}) => {
 				<ErrorMessage error={connectionError} />
 
 				<Login />
+				<GenerateData baseNumberOfMessages={50} />
 			</div>
 		</div>
 	)
@@ -105,5 +106,36 @@ const Login: React.FC = ({}) => {
 
 			<ErrorMessage error={error} />
 		</>
+	)
+}
+
+const GenerateData: React.FC<{ baseNumberOfMessages: number }> = ({ baseNumberOfMessages }) => {
+	const { client } = useContext(AppContext)
+	const [count, setCount] = useState(0)
+
+	const generateData = useCallback(
+		(n: number) => {
+			if (!client) return
+			const timestamp = +Date.now()
+			for (let i = 0; i < n; i++) {
+				const content = `#${count + i + 1}`
+				client.createPost({ content }, { timestamp: timestamp + i })
+			}
+			setCount(count + baseNumberOfMessages)
+		},
+		[client]
+	)
+
+	if (!client) return <></>
+
+	return (
+		<p>
+			<button disabled={!client} onClick={generateData.bind(this, baseNumberOfMessages)}>
+				Create {baseNumberOfMessages} messages
+			</button>{" "}
+			<button disabled={!client} onClick={generateData.bind(this, baseNumberOfMessages * 10)}>
+				Create {baseNumberOfMessages * 10} messages
+			</button>
+		</p>
 	)
 }

@@ -67,13 +67,9 @@ declare function useCanvas(): {
 
 ## `useRoute`
 
-You can use `useRoute` to fetch or subscribe to data from your application's routes.
+You can use `useRoute` to fetch/subscribe to data from your application's routes.
 
-The `Canvas` element internally establishes a WebSocket connection to the host. By default, the `useRoute` hook will use that websocket connection to subscribe to a given route, with any provided params.
-
-**Fetching routes with a subscription**
-
-For example, to subscribe to posts from a specific user:
+For example, to subscribe to the /posts route:
 
 ```tsx
 import { useRoute } from "@canvas-js/hooks"
@@ -91,6 +87,8 @@ function MyApp({}) {
 The hook will re-render every time the resulting `data` changes (compared deep equality).
 
 Use this pattern when you want the host to push data to the client. **Don't** use this pattern if the parameter values (`{ user: "joel" }` in the example) change often. For subscriptions, routes are bound to concrete parameter values, so changing the parameters forces the hook to unsubscribe and re-subscribe.
+
+You can also provide a callback to the hook, which will be triggered whenever new data is returned from the hook. **If you do this, make sure to memoize your callback (i.e. wrap it in useCallback())!**
 
 **Fetching routes without a subscription**
 
