@@ -8,4 +8,7 @@ export interface ModelStore {
 	close(): Promise<void>
 	applyEffects(context: { timestamp: number }, effects: Effect[]): Promise<void>
 	getRoute(route: string, params?: Record<string, string>): Promise<Record<string, ModelValue>[]>
+
+	getModelNames(): string[]
+	exportModel(modelName: string, options?: { limit?: number }): AsyncIterable<Record<string, ModelValue>>
 }

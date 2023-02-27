@@ -1,10 +1,10 @@
 import test from "ava"
 
 import { ethers } from "ethers"
-import { CustomAction } from "@canvas-js/interfaces"
+import { CustomAction, ModelValue } from "@canvas-js/interfaces"
 import { Core, ApplicationError } from "@canvas-js/core"
 
-import { TestSessionSigner, TestSigner, compileSpec } from "./utils.js"
+import { TestSessionSigner, TestSigner, compileSpec, collect } from "./utils.js"
 
 const { spec, app, appName } = await compileSpec({
 	name: "Test App",
@@ -45,7 +45,7 @@ test("Apply signed action", async (t) => {
 	const action = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash } = await core.apply(action)
 
-	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
+	t.deepEqual(await collect(core.modelStore.exportModel("threads")), [
 		{
 			id: hash,
 			title: "Hacker News",
@@ -67,7 +67,7 @@ test("Apply two signed actions", async (t) => {
 	const voteThreadAction = await signer.sign("voteThread", { threadId: newThreadHash, value: 1 })
 	await core.apply(voteThreadAction)
 
-	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
+	t.deepEqual(await collect(core.modelStore.exportModel("threads")), [
 		{
 			id: newThreadHash,
 			title: "Hacker News",
@@ -88,7 +88,7 @@ test("Apply action signed with session key", async (t) => {
 	const action = await sessionSigner.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash } = await core.apply(action)
 
-	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
+	t.deepEqual(await collect(core.modelStore.exportModel("threads")), [
 		{
 			id: hash,
 			title: "Hacker News",
@@ -115,7 +115,7 @@ test("Apply two actions signed with session keys", async (t) => {
 	const voteThreadAction = await sessionSigner.sign("voteThread", { threadId, value: 1 })
 	await core.apply(voteThreadAction)
 
-	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
+	t.deepEqual(await collect(core.modelStore.exportModel("threads")), [
 		{
 			id: threadId,
 			title: "Hacker News",
@@ -167,7 +167,7 @@ test("Create an in-memory Core with a file:// URI", async (t) => {
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: threadId } = await core.apply(newThreadAction)
 
-	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
+	t.deepEqual(await collect(core.modelStore.exportModel("threads")), [
 		{
 			id: threadId,
 			title: "Hacker News",

@@ -14,7 +14,7 @@ import * as constants from "@canvas-js/core/constants"
 import { fromHex, stringify, toHex } from "@canvas-js/core/utils"
 import { getMessageKey } from "@canvas-js/core/sync"
 
-import { TestSigner, compileSpec } from "./utils.js"
+import { TestSigner, compileSpec, collect } from "./utils.js"
 
 const MessageBoard = await compileSpec({
 	name: "Test App",
@@ -82,7 +82,7 @@ test("Apply source actions", async (t) => {
 	const voteSourceAction = await signer.sign("vote", { post_id: sourceActionHash, value: -1 })
 	const { hash: voteSourceActionHash } = await core.apply(voteSourceAction)
 
-	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM posts").all(), [
+	t.deepEqual(await collect(core.modelStore.exportModel("posts")), [
 		{
 			id: sourceActionHash,
 			content: "hello world",
@@ -97,7 +97,7 @@ test("Apply source actions", async (t) => {
 		},
 	])
 
-	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM votes").all(), [
+	t.deepEqual(await collect(core.modelStore.exportModel("votes")), [
 		{
 			id: `${createActionHash}/${signer.wallet.address}`,
 			post_id: createActionHash,

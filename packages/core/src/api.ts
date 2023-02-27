@@ -96,11 +96,16 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	}
 
 	if (options.exposeModels) {
-		api.get("/models/:model", (req, res) => {
-			const { model } = req.params
-			if (model in core.vm.models) {
-				const query = `SELECT * FROM ${model} ORDER BY updated_at DESC LIMIT 10`
-				const rows = core.modelStore.database.prepare(query).all()
+		api.get("/models/:model", async (req, res) => {
+			const { model: modelName } = req.params
+			const modelNames = core.modelStore.getModelNames()
+			if (modelNames.includes(modelName)) {
+				const rows: Record<string, ModelValue>[] = []
+				const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : -1
+				for await (const row of core.modelStore.exportModel(modelName, { limit })) {
+					rows.push(row)
+				}
+
 				return res.status(StatusCodes.OK).json(rows)
 			} else {
 				return res.status(StatusCodes.NOT_FOUND).end()

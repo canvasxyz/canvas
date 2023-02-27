@@ -196,3 +196,12 @@ export class TestSessionSigner {
 		return await this.signer.chainImplementation.signDelegatedAction(this.wallet, actionPayload)
 	}
 }
+
+export async function collect<T>(iter: AsyncIterable<T>): Promise<T[]> {
+	const array: T[] = []
+	for await (const value of iter) {
+		array.push(value)
+	}
+
+	return array
+}
