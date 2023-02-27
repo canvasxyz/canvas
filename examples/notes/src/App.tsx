@@ -8,7 +8,7 @@ import { Client, useRoute } from "@canvas-js/hooks"
 
 import ComposeIcon from "./icons/compose.svg"
 import WastebasketIcon from "./icons/wastebasket.svg"
-import { metamaskDecryptData, metamaskEncryptData, metamaskGetPublicKey } from "./crypto"
+import { metamaskDecryptData, metamaskEncryptData, metamaskGetPublicKey } from "./metamaskCrypto"
 import nacl from "tweetnacl"
 
 type EncryptedNote = {
