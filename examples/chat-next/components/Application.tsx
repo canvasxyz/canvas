@@ -14,6 +14,7 @@ export function Application() {
 	const syncPeers = data?.peers ? Object.entries(data.peers.sync) : []
 
 	const now = Date.now()
+	const root = data && data.merkleRoots && data.merkleRoots[data.uri]
 
 	return (
 		<div className="window">
@@ -27,6 +28,7 @@ export function Application() {
 					<>
 						<p>App: {data.uri}</p>
 						{data.peerId && <p data-id={data.peerId}>Host: {data.peerId}</p>}
+						{root && <p>Merkle root: {root}</p>}
 						{data.peers && (
 							<ul className="tree-view">
 								<li>{gossipPeers.length} gossip peers</li>
