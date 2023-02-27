@@ -55,8 +55,26 @@ export const routes = {
 }
 
 export const actions = {
+	deleteNote({ id }, { db, from }) {
+		const recoveredFrom = id.split("/")[0]
+		if (recoveredFrom !== from) {
+			// user is trying to delete a note created by a different user
+			return false
+		}
+		db.encrypted_notes.delete(id)
+	},
 	updateNote({ id, encrypted_body, nonce, key_id, local_id }, { db, from, hash }) {
-		const key = id || `hash:${hash}:from:${from}`
+		let key
+		if (id) {
+			const recoveredFrom = id.split("/")[0]
+			if (recoveredFrom !== from) {
+				// user is trying to update a note created by a different user
+				return false
+			}
+			key = id
+		} else {
+			key = `${from}/${hash}`
+		}
 		db.encrypted_notes.set(key, { local_id, encrypted_body, nonce, key_id, creator_id: from })
 	},
 	uploadKey({ key_id, encrypted_key, owner_id }, { db, hash }) {

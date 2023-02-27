@@ -1,14 +1,13 @@
-import React, { useEffect, useState } from "react"
-import { v4 as uuidv4 } from "uuid"
+import React, { useState } from "react"
 import Toastify from "toastify-js"
 
 import { useConnectOneStep } from "./useConnectOneStep"
 import { useConnect } from "wagmi"
-import { useRoute } from "@canvas-js/hooks"
 
 import ComposeIcon from "./icons/compose.svg"
 import WastebasketIcon from "./icons/wastebasket.svg"
-import { decryptNote, EncryptedKey, EncryptedNote, encryptNote, LocalNote } from "./EncryptedNote"
+import { LocalNote } from "./EncryptedNote"
+import { useNotes } from "./useNotes"
 
 function formatUpdatedAt(updatedAtTs: number) {
 	const now = new Date()
@@ -56,76 +55,9 @@ export const App: React.FC<{}> = ({}) => {
 	const { connectionState, connect, disconnect, errors, address, client } = useConnectOneStep({ connector })
 
 	const [selectedNote, setSelectedNote] = useState<string | null>(null)
+	const { localNotes, deleteNote, createNewLocalNote, updateNote, updateLocalNote } = useNotes(address, client)
 
-	const { data: encryptedNoteData } = useRoute<EncryptedNote>("/encrypted_notes", {})
-	const { data: encryptedKeyData } = useRoute<EncryptedKey>("/encrypted_keys", {})
-
-	const [localNotes, setLocalNotes] = useState<Record<string, LocalNote>>({})
 	const currentNote: LocalNote | null = selectedNote ? localNotes[selectedNote] : null
-
-	useEffect(() => {
-		async function generateChanges() {
-			if (address == null || encryptedKeyData == null) {
-				console.log(`address=${address} encryptedKeyData=${encryptedKeyData}`)
-				return {}
-			}
-
-			// find the notes that need to be updated
-			const notesToUpdate = []
-			for (const note of encryptedNoteData || []) {
-				const localNote = localNotes[note.local_id]
-				// does localNote exist?
-				// if no, create note
-				if (!localNote || (note.updated_at > localNote.updated_at && !localNote.dirty)) {
-					notesToUpdate.push(note)
-				}
-			}
-
-			const localNoteChanges: Record<string, LocalNote> = {}
-			for (const encryptedNote of notesToUpdate) {
-				try {
-					localNoteChanges[encryptedNote.local_id] = await decryptNote(encryptedNote, address, encryptedKeyData)
-				} catch (e) {
-					console.log(e)
-					continue
-				}
-			}
-			return localNoteChanges
-		}
-
-		generateChanges().then((localNoteChanges) => {
-			if (Object.entries(localNoteChanges).length > 0) {
-				setLocalNotes({ ...localNotes, ...localNoteChanges })
-			}
-		})
-	}, [address, encryptedKeyData, encryptedNoteData])
-
-	const updateNote = async (note: LocalNote) => {
-		if (!client || !address) {
-			return
-		}
-
-		try {
-			const encryptedNote = await encryptNote(note, address, encryptedKeyData || [], client)
-			await client.updateNote(encryptedNote)
-		} catch (e) {
-			console.log(e)
-			return
-		}
-	}
-
-	const updateLocalNote = (localKey: string, changedFields: Record<string, any>) => {
-		const newLocalNotes = {
-			...localNotes,
-		}
-		const localNote = localNotes[localKey]
-		newLocalNotes[localKey] = {
-			...localNote,
-			...changedFields,
-			dirty: true,
-		}
-		setLocalNotes(newLocalNotes)
-	}
 
 	const showError = (errorMessage: string) => {
 		Toastify({
@@ -153,19 +85,8 @@ export const App: React.FC<{}> = ({}) => {
 						<div className="flex-grow"></div>
 						<IconButton
 							onClick={async () => {
-								if (selectedNote && currentNote && client) {
-									// delete from local copy
-									const { [selectedNote]: deletedLocalNote, ...otherLocalNotes } = localNotes
-									setLocalNotes(otherLocalNotes)
-
-									// delete on canvas
-									if (currentNote.id) {
-										try {
-											await client.deleteNote({ id: currentNote.id })
-										} catch (e: any) {
-											showError(`Could not delete note: ${e.message}`)
-										}
-									}
+								if (selectedNote) {
+									await deleteNote(selectedNote)
 								}
 							}}
 							icon={WastebasketIcon}
@@ -210,17 +131,8 @@ export const App: React.FC<{}> = ({}) => {
 					<div className="h-16 border-b border-black p-3 flex">
 						<IconButton
 							onClick={() => {
-								const newLocalNotes = { ...localNotes }
-								const newLocalNote = {
-									local_id: uuidv4(),
-									title: "",
-									body: "",
-									updated_at: Math.floor(new Date().getTime()),
-									dirty: true,
-								} as LocalNote
-								newLocalNotes[newLocalNote.local_id] = newLocalNote
+								const newLocalNote = createNewLocalNote()
 								setSelectedNote(newLocalNote.local_id)
-								setLocalNotes(newLocalNotes)
 							}}
 							icon={ComposeIcon}
 							disabled={connectionState !== "connected"}
@@ -307,25 +219,8 @@ export const App: React.FC<{}> = ({}) => {
 								<div
 									className="absolute right-10 bottom-10 border border-gray-400 p-3 rounded-lg bg-gray-200 hover:bg-gray-300 hover:cursor-pointer"
 									onClick={async () => {
-										// update canvas
-										if (!client) {
-											return
-										}
-										if (!address) {
-											return
-										}
-
 										try {
 											await updateNote(currentNote)
-											// set the note to clean
-											const newLocalNotes = {
-												...localNotes,
-											}
-											newLocalNotes[selectedNote] = {
-												...currentNote,
-												dirty: false,
-											}
-											setLocalNotes(newLocalNotes)
 										} catch (e: any) {
 											if (e.message) {
 												showError(`Could not save note: ${e.message}`)
