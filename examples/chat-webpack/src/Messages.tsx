@@ -40,6 +40,8 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 		if (!pastPosts || !newPosts) return
 
 		if (posts.length === 0) {
+			if (newPosts.length === 0) return
+
 			const filteredNewPosts = [...newPosts]
 			filteredNewPosts.reverse()
 			setPosts(filteredNewPosts)
