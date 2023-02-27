@@ -1,7 +1,7 @@
 import type { ModelValue } from "@canvas-js/interfaces"
 
-import type { Effect, ModelStore as IModelStore } from "../index.js"
-export type { Effect } from "../index.js"
+import type { Effect, ModelStore as IModelStore } from "../types.js"
+export * from "../types.js"
 
 export class ModelStore implements IModelStore {
 	constructor() {

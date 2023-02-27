@@ -12,8 +12,8 @@ import { MESSAGE_DATABASE_FILENAME, MST_DIRECTORY_NAME } from "@canvas-js/core/c
 
 import { getMessageKey } from "@canvas-js/core/sync"
 
-import type { MessageStore as IMessageStore, ReadOnlyTransaction, ReadWriteTransaction, Node } from "../index.js"
-export type { ReadOnlyTransaction, ReadWriteTransaction, Node }
+import type { MessageStore, ReadOnlyTransaction, ReadWriteTransaction, Node } from "../types.js"
+export * from "../types.js"
 
 type ActionRecord = {
 	hash: Buffer
@@ -57,22 +57,22 @@ type CustomActionRecord = {
 
 const toBuffer = (array: Uint8Array) => Buffer.from(array.buffer, array.byteOffset, array.byteLength)
 
-export class MessageStore implements IMessageStore {
-	private readonly statements: Record<keyof typeof MessageStore.statements, sqlite.Statement>
+class SqliteMessageStore implements MessageStore {
+	private readonly statements: Record<keyof typeof SqliteMessageStore.statements, sqlite.Statement>
 
 	public static async initialize(
 		app: string,
 		directory: string | null,
 		sources: Set<string> = new Set([]),
 		options: { verbose?: boolean } = {}
-	): Promise<MessageStore> {
+	): Promise<SqliteMessageStore> {
 		if (directory === null) {
 			if (options.verbose) {
 				console.log("[canvas-core] Initializing in-memory message store")
 			}
 
 			const database = new Database(":memory:")
-			return new MessageStore(app, database, null, sources)
+			return new SqliteMessageStore(app, database, null, sources)
 		} else {
 			const databasePath = path.resolve(directory, MESSAGE_DATABASE_FILENAME)
 
@@ -90,11 +90,11 @@ export class MessageStore implements IMessageStore {
 			const treeExists = fs.existsSync(treePath)
 			if (treeExists) {
 				const tree = new okra.Tree(treePath, { dbs: [app, ...sources] })
-				return new MessageStore(app, database, tree, sources)
+				return new SqliteMessageStore(app, database, tree, sources)
 			} else {
 				fs.mkdirSync(treePath)
 				const tree = new okra.Tree(treePath, { dbs: [app, ...sources] })
-				const messageStore = new MessageStore(app, database, tree, sources)
+				const messageStore = new SqliteMessageStore(app, database, tree, sources)
 				for (const dbi of [app, ...sources]) {
 					await tree.write(
 						async (txn) => {
@@ -117,10 +117,10 @@ export class MessageStore implements IMessageStore {
 		public readonly tree: okra.Tree | null,
 		private readonly sources: Set<string> = new Set([])
 	) {
-		this.database.exec(MessageStore.createSessionsTable)
-		this.database.exec(MessageStore.createActionsTable)
-		this.database.exec(MessageStore.createCustomActionsTable)
-		this.statements = mapEntries(MessageStore.statements, (_, sql) => this.database.prepare(sql))
+		this.database.exec(SqliteMessageStore.createSessionsTable)
+		this.database.exec(SqliteMessageStore.createActionsTable)
+		this.database.exec(SqliteMessageStore.createCustomActionsTable)
+		this.statements = mapEntries(SqliteMessageStore.statements, (_, sql) => this.database.prepare(sql))
 	}
 
 	public async close() {
@@ -198,7 +198,7 @@ export class MessageStore implements IMessageStore {
 			hash: toBuffer(hash),
 		})
 
-		return record === undefined ? null : MessageStore.parseActionRecord(record)
+		return record === undefined ? null : SqliteMessageStore.parseActionRecord(record)
 	}
 
 	private static parseActionRecord(record: ActionRecord): Action {
@@ -227,7 +227,7 @@ export class MessageStore implements IMessageStore {
 			hash: toBuffer(hash),
 		})
 
-		return record === undefined ? null : MessageStore.parseSessionRecord(record)
+		return record === undefined ? null : SqliteMessageStore.parseSessionRecord(record)
 	}
 
 	public async getSessionByAddress(
@@ -242,7 +242,7 @@ export class MessageStore implements IMessageStore {
 		if (record === undefined) {
 			return [null, null]
 		} else {
-			return [toHex(record.hash), MessageStore.parseSessionRecord(record)]
+			return [toHex(record.hash), SqliteMessageStore.parseSessionRecord(record)]
 		}
 	}
 
@@ -288,7 +288,7 @@ export class MessageStore implements IMessageStore {
 			hash: toBuffer(hash),
 		})
 
-		return record === undefined ? null : MessageStore.parseCustomActionRecord(record)
+		return record === undefined ? null : SqliteMessageStore.parseCustomActionRecord(record)
 	}
 
 	private static parseCustomActionRecord(record: CustomActionRecord): CustomAction {
@@ -309,27 +309,27 @@ export class MessageStore implements IMessageStore {
 		const params = app === undefined ? {} : { app }
 		if (type === undefined) {
 			for (const record of this.statements.getSessions.iterate(params) as Iterable<SessionRecord>) {
-				yield [record.hash, MessageStore.parseSessionRecord(record)]
+				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
 			}
 
 			for (const record of this.statements.getActions.iterate(params) as Iterable<ActionRecord>) {
-				yield [record.hash, MessageStore.parseActionRecord(record)]
+				yield [record.hash, SqliteMessageStore.parseActionRecord(record)]
 			}
 
 			for (const record of this.statements.getCustomActions.iterate(params) as Iterable<CustomActionRecord>) {
-				yield [record.hash, MessageStore.parseCustomActionRecord(record)]
+				yield [record.hash, SqliteMessageStore.parseCustomActionRecord(record)]
 			}
 		} else if (type === "session") {
 			for (const record of this.statements.getSessions.iterate(params) as Iterable<SessionRecord>) {
-				yield [record.hash, MessageStore.parseSessionRecord(record)]
+				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
 			}
 		} else if (type === "action") {
 			for (const record of this.statements.getActions.iterate(params) as Iterable<ActionRecord>) {
-				yield [record.hash, MessageStore.parseActionRecord(record)]
+				yield [record.hash, SqliteMessageStore.parseActionRecord(record)]
 			}
 		} else if (type === "customAction") {
 			for (const record of this.statements.getCustomActions.iterate(params) as Iterable<CustomActionRecord>) {
-				yield [record.hash, MessageStore.parseCustomActionRecord(record)]
+				yield [record.hash, SqliteMessageStore.parseCustomActionRecord(record)]
 			}
 		} else {
 			signalInvalidType(type)
@@ -463,3 +463,10 @@ function assertTxn(txn: okra.Transaction | null): okra.Transaction {
 		return txn
 	}
 }
+
+export const openMessageStore = (
+	app: string,
+	directory: string | null,
+	sources: Set<string> = new Set([]),
+	options: { verbose?: boolean } = {}
+): Promise<MessageStore> => SqliteMessageStore.initialize(app, directory, sources, options)

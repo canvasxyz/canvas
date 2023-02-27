@@ -9,14 +9,13 @@ import test from "ava"
 
 import { nanoid } from "nanoid"
 import toIterable from "stream-to-it"
-// import * as okra from "@canvas-js/okra-node"
 
 import type { Duplex } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
 
 import type { Message } from "@canvas-js/interfaces"
 
-import { MessageStore } from "@canvas-js/core/components/messageStore"
+import { openMessageStore } from "@canvas-js/core/components/messageStore"
 import { stringify } from "@canvas-js/core/utils"
 import { getMessageKey, handleIncomingStream, sync } from "@canvas-js/core/sync"
 
@@ -47,8 +46,8 @@ async function testSync(sourceMessages: Iterable<Message>, targetMessages: Itera
 	fs.mkdirSync(sourceDirectory)
 	fs.mkdirSync(targetDirectory)
 
-	const sourceMessageStore = await MessageStore.initialize(app, sourceDirectory)
-	const targetMessageStore = await MessageStore.initialize(app, targetDirectory)
+	const sourceMessageStore = await openMessageStore(app, sourceDirectory)
+	const targetMessageStore = await openMessageStore(app, targetDirectory)
 	await sourceMessageStore.write(async (txn) => {
 		for (const message of sourceMessages) {
 			await txn.insertMessage(sha256(stringify(message)), message)

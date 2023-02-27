@@ -1,12 +1,10 @@
 import assert from "node:assert"
-import path from "node:path"
 
 import type { Argv } from "yargs"
 import chalk from "chalk"
 
-import * as constants from "@canvas-js/core/constants"
 import { stringify } from "@canvas-js/core/utils"
-import { MessageStore } from "@canvas-js/core/components/messageStore"
+import { openMessageStore } from "@canvas-js/core/components/messageStore"
 
 import { parseSpecArgument } from "../utils.js"
 
@@ -24,7 +22,7 @@ type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	const { directory, uri } = parseSpecArgument(args.spec)
 	assert(directory !== null, "Cannot export from local specs because they do not persist any data")
-	const messageStore = await MessageStore.initialize(uri, directory)
+	const messageStore = await openMessageStore(uri, directory)
 
 	let i = 0
 	for await (const [_, message] of messageStore.getMessageStream()) {

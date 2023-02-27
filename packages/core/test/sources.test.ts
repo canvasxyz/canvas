@@ -112,68 +112,16 @@ test("Apply source actions", async (t) => {
 		},
 	])
 
-	t.deepEqual(core.messageStore.database.prepare("SELECT * FROM actions").all(), [
-		{
-			id: 1,
-			hash: Buffer.from(fromHex(sourceActionHash)),
-			signature: sourceAction.signature,
-			from_address: sourceSigner.wallet.address,
-			session_address: null,
-			timestamp: sourceAction.payload.timestamp,
-			call: sourceAction.payload.call,
-			call_args: stringify(sourceAction.payload.callArgs),
-			chain: "ethereum",
-			chain_id: "1",
-			block: null,
-			app: MessageBoard.app,
+	const entries: [Uint8Array, Message][] = []
+	for await (const entry of core.messageStore.getMessageStream()) {
+		entries.push(entry)
+	}
 
-			app_name: "Test App",
-		},
-		{
-			id: 2,
-			hash: Buffer.from(fromHex(createActionHash)),
-			signature: createAction.signature,
-			from_address: signer.wallet.address,
-			session_address: null,
-			timestamp: createAction.payload.timestamp,
-			call: createAction.payload.call,
-			call_args: stringify(createAction.payload.callArgs),
-			chain: "ethereum",
-			chain_id: "1",
-			block: null,
-			app: MessageBoardWithVotes.app,
-			app_name: "Test App 2",
-		},
-		{
-			id: 3,
-			hash: Buffer.from(fromHex(voteActionHash)),
-			signature: voteAction.signature,
-			from_address: signer.wallet.address,
-			session_address: null,
-			timestamp: voteAction.payload.timestamp,
-			call: voteAction.payload.call,
-			call_args: stringify(voteAction.payload.callArgs),
-			chain: "ethereum",
-			chain_id: "1",
-			block: null,
-			app: MessageBoardWithVotes.app,
-			app_name: "Test App 2",
-		},
-		{
-			id: 4,
-			hash: Buffer.from(fromHex(voteSourceActionHash)),
-			signature: voteSourceAction.signature,
-			from_address: signer.wallet.address,
-			session_address: null,
-			timestamp: voteSourceAction.payload.timestamp,
-			call: voteSourceAction.payload.call,
-			call_args: stringify(voteSourceAction.payload.callArgs),
-			chain: "ethereum",
-			chain_id: "1",
-			block: null,
-			app: MessageBoardWithVotes.app,
-			app_name: "Test App 2",
-		},
+	t.deepEqual(entries, [
+		[Buffer.from(fromHex(sourceActionHash)), sourceAction],
+		[Buffer.from(fromHex(createActionHash)), createAction],
+		[Buffer.from(fromHex(voteActionHash)), voteAction],
+		[Buffer.from(fromHex(voteSourceActionHash)), voteSourceAction],
 	])
 
 	await core.close()

@@ -24,7 +24,7 @@ import { toHex, signalInvalidType, CacheMap, stringify } from "./utils.js"
 
 import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore } from "@canvas-js/core/components/modelStore"
-import { MessageStore } from "@canvas-js/core/components/messageStore"
+import { MessageStore, openMessageStore } from "@canvas-js/core/components/messageStore"
 
 import * as constants from "./constants.js"
 import { Source } from "./source.js"
@@ -69,7 +69,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		const appName = vm.appName
 
 		const modelStore = new ModelStore(directory, vm, options)
-		const messageStore = await MessageStore.initialize(app, directory, vm.sources, options)
+		const messageStore = await openMessageStore(app, directory, vm.sources, options)
 
 		return new Core(directory, cid, app, appName, vm, modelStore, messageStore, libp2p, chains, options)
 	}

@@ -9,8 +9,8 @@ import type { VM } from "@canvas-js/core/components/vm"
 import { mapEntries, signalInvalidType } from "@canvas-js/core/utils"
 import { MODEL_DATABASE_FILENAME } from "@canvas-js/core/constants"
 
-import type { Effect, ModelStore as IModelStore } from "../index.js"
-export type { Effect } from "../index.js"
+import type { Effect, ModelStore as IModelStore } from "../types.js"
+export * from "../types.js"
 
 export class ModelStore implements IModelStore {
 	public readonly database: sqlite.Database

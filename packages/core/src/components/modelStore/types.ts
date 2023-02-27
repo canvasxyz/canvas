@@ -7,5 +7,5 @@ export type Effect =
 export interface ModelStore {
 	close(): Promise<void>
 	applyEffects(context: { timestamp: number }, effects: Effect[]): Promise<void>
-	getRoute(route: string, params: Record<string, string> = {}): Promise<Record<string, ModelValue>[]>
+	getRoute(route: string, params?: Record<string, string>): Promise<Record<string, ModelValue>[]>
 }

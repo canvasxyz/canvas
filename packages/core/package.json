@@ -40,18 +40,24 @@
     },
     "./components/messageStore": {
       "types": "./lib/components/messageStore/index.d.ts",
-      "browser": "./lib/components/messageStore/browser/index.js",
-      "import": "./lib/components/messageStore/node/index.js"
+      "import": {
+        "browser": "./lib/components/messageStore/browser/index.js",
+        "node": "./lib/components/messageStore/node/index.js"
+      }
     },
     "./components/modelStore": {
       "types": "./lib/components/modelStore/index.d.ts",
-      "browser": "./lib/components/modelStore/browser/index.js",
-      "import": "./lib/components/modelStore/node/index.js"
+      "import": {
+        "browser": "./lib/components/modelStore/browser/index.js",
+        "node": "./lib/components/modelStore/node/index.js"
+      }
     },
     "./components/libp2p": {
       "types": "./lib/components/libp2p/index.d.ts",
-      "browser": "./lib/components/libp2p/browser/index.js",
-      "import": "./lib/components/libp2p/index.js"
+      "import": {
+        "browser": "./lib/components/libp2p/browser/index.js",
+        "node": "./lib/components/libp2p/index.js"
+      }
     },
     "./components/vm": {
       "types": "./lib/components/vm/index.d.ts",
