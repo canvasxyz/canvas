@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "types": "./lib/index.d.ts",
@@ -20,9 +20,9 @@
     "test": "ava"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.1.1",
-    "@canvas-js/interfaces": "0.1.1",
-    "@canvas-js/okra-node": "^0.1.1",
+    "@canvas-js/chain-ethereum": "0.1.2",
+    "@canvas-js/interfaces": "0.1.2",
+    "@canvas-js/okra-node": "0.1.2",
     "@chainsafe/libp2p-gossipsub": "^6.0.0",
     "@chainsafe/libp2p-noise": "^11.0.0",
     "@hyperjump/json-schema": "^1.2.4",
