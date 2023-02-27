@@ -1,6 +1,6 @@
-import _ from "lodash"
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { Virtuoso } from "react-virtuoso"
+import _ from "lodash"
 
 import { useEnsName } from "wagmi"
 import { Client, useRoute } from "@canvas-js/hooks"
