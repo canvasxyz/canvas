@@ -19,7 +19,6 @@ import { sync, handleIncomingStream } from "./sync/index.js"
 import * as constants from "./constants.js"
 import { metrics } from "./metrics.js"
 import { messageType } from "./codecs.js"
-import { MST } from "./mst.js"
 
 interface SourceOptions {
 	recentGossipPeers?: CacheMap<string, { lastSeen: number }>
