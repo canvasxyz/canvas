@@ -11,7 +11,7 @@ import { Message } from "@canvas-js/interfaces"
 import { Core } from "@canvas-js/core"
 import * as constants from "@canvas-js/core/constants"
 
-import { fromHex, stringify, toHex } from "@canvas-js/core/utils"
+import { fromHex } from "@canvas-js/core/utils"
 import { getMessageKey } from "@canvas-js/core/sync"
 
 import { TestSigner, compileSpec, collect } from "./utils.js"
