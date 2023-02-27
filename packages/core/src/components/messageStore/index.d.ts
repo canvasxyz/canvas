@@ -1,4 +1,4 @@
-import type { Action, CustomAction, Message, Session } from "@canvas-js/interfaces"
+import type { Action, Chain, ChainId, CustomAction, Message, Session } from "@canvas-js/interfaces"
 
 declare type Node = { level: number; key: Uint8Array | null; hash: Uint8Array; id?: Uint8Array }
 
@@ -29,4 +29,4 @@ declare interface MessageStore {
 	write<T = void>(callback: (txn: ReadOnlyTransaction) => T | Promise<T>): Promise<T>
 }
 
-declare async function openMessageStore(path: string): Promise<MessageStore>
+declare function openMessageStore(path: string): Promise<MessageStore>
