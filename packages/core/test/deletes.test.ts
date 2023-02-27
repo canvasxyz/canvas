@@ -3,7 +3,6 @@ import test from "ava"
 import { Core } from "@canvas-js/core"
 
 import { TestSigner, compileSpec, collect } from "./utils.js"
-import { ModelValue } from "@canvas-js/interfaces"
 
 const { spec, app, appName } = await compileSpec({
 	name: "Test App",

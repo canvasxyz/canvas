@@ -8,7 +8,7 @@ import type { Argv } from "yargs"
 import chalk from "chalk"
 
 import { Core } from "@canvas-js/core"
-import { actionType, messageType, sessionType } from "@canvas-js/core/codecs"
+import { messageType } from "@canvas-js/core/codecs"
 import * as constants from "@canvas-js/core/constants"
 
 import { getChainImplementations, parseSpecArgument } from "../utils.js"
