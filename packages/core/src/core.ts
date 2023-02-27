@@ -8,9 +8,7 @@ import { sha256 } from "@noble/hashes/sha256"
 
 import {
 	Action,
-	ActionPayload,
 	Session,
-	SessionPayload,
 	ModelValue,
 	Chain,
 	ChainId,
@@ -21,8 +19,8 @@ import {
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { validate } from "@hyperjump/json-schema/draft-2020-12"
 
-import { actionType, customActionType, messageType, sessionType } from "./codecs.js"
-import { toHex, signalInvalidType, CacheMap, parseIPFSURI, stringify, mapEntries } from "./utils.js"
+import { messageType } from "./codecs.js"
+import { toHex, signalInvalidType, CacheMap, stringify } from "./utils.js"
 
 import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore } from "@canvas-js/core/components/modelStore"
@@ -31,17 +29,16 @@ import { MessageStore } from "@canvas-js/core/components/messageStore"
 import * as constants from "./constants.js"
 import { Source } from "./source.js"
 import { metrics } from "./metrics.js"
-import { MST } from "./mst.js"
-import { getMessageKey } from "./sync/utils.js"
 
 export interface CoreConfig extends CoreOptions {
-	// pass `null` to run in memory
+	// pass `null` to run in memory (NodeJS only)
 	directory: string | null
 	spec: string
 
-	// defaults to ipfs:// hash of spec
+	// pass `null` to run offline
+	libp2p: Libp2p | null
+
 	uri?: string
-	libp2p: Libp2p | null // pass null to run offline
 	chains?: ChainImplementation<unknown, unknown>[]
 }
 
@@ -53,8 +50,7 @@ export interface CoreOptions {
 interface CoreEvents {
 	close: Event
 	error: Event
-	action: CustomEvent<ActionPayload>
-	session: CustomEvent<SessionPayload>
+	message: CustomEvent<Message>
 }
 
 export class Core extends EventEmitter<CoreEvents> {
@@ -86,7 +82,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly vm: VM,
 		public readonly modelStore: ModelStore,
 		public readonly messageStore: MessageStore,
-		// public readonly mst: MST | null,
 		public readonly libp2p: Libp2p | null,
 		private readonly chains: ChainImplementation<unknown, unknown>[],
 		public readonly options: CoreOptions
@@ -202,7 +197,6 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			this.modelStore.applyEffects(message.payload, effects)
 
-			this.dispatchEvent(new CustomEvent("action", { detail: message.payload }))
 			metrics.canvas_messages.inc({ type: "action", uri: message.payload.app }, 1)
 		} else if (message.type === "session") {
 			if (this.options.verbose) {
@@ -211,7 +205,6 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			await this.validateSession(message)
 
-			this.dispatchEvent(new CustomEvent("session", { detail: message.payload }))
 			metrics.canvas_messages.inc({ type: "session", uri: message.payload.app }, 1)
 		} else if (message.type == "customAction") {
 			if (this.options.verbose) {
@@ -234,14 +227,14 @@ export class Core extends EventEmitter<CoreEvents> {
 			}
 
 			// TODO: can we give the user a way to set the timestamp if it comes from a trusted source?
-			const timestamp = 0
-			this.modelStore.applyEffects({ timestamp }, effects)
+			this.modelStore.applyEffects({ timestamp: 0 }, effects)
 
-			this.dispatchEvent(new CustomEvent("customAction", { detail: message.payload }))
-			metrics.canvas_messages.inc({ type: "customAction", uri: message.payload.app }, 1)
+			metrics.canvas_messages.inc({ type: "customAction", uri: message.app }, 1)
 		} else {
 			signalInvalidType(message)
 		}
+
+		this.dispatchEvent(new CustomEvent("message", { detail: message }))
 	}
 
 	private async validateAction(action: Action) {

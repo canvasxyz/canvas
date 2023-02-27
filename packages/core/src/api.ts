@@ -7,7 +7,6 @@ import { StatusCodes } from "http-status-codes"
 import type { ModelValue } from "@canvas-js/interfaces"
 import { Core } from "./core.js"
 import { getMetrics } from "./metrics.js"
-import { toHex } from "./utils.js"
 
 interface Options {
 	exposeMetrics: boolean
@@ -193,8 +192,8 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 		}
 
 		listener()
-		core.addEventListener("action", listener)
-		res.on("close", () => core.removeEventListener("action", listener))
+		core.addEventListener("message", listener)
+		res.on("close", () => core.removeEventListener("message", listener))
 	} else {
 		// normal JSON response
 		let data
