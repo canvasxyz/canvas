@@ -20,7 +20,7 @@ import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { validate } from "@hyperjump/json-schema/draft-2020-12"
 
 import { messageType } from "./codecs.js"
-import { toHex, signalInvalidType, CacheMap, stringify } from "./utils.js"
+import { toHex, signalInvalidType, CacheMap, stringify, parseIPFSURI, mapEntries } from "./utils.js"
 
 import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
@@ -60,8 +60,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	private readonly sources: Record<string, Source> | null = null
 
 	public static async initialize(config: CoreConfig) {
-		const chainImplementations = [new EthereumChainImplementation()] as ChainImplementation<any, any>[]
-		const { directory, uri, spec, libp2p, chains = chainImplementations, ...options } = config
+		const { directory, uri, spec, libp2p, chains = [new EthereumChainImplementation()], ...options } = config
 
 		const cid = await Hash.of(spec).then(CID.parse)
 		const app = uri ?? `ipfs://${cid}`
@@ -83,32 +82,31 @@ export class Core extends EventEmitter<CoreEvents> {
 		public readonly modelStore: ModelStore,
 		public readonly messageStore: MessageStore,
 		public readonly libp2p: Libp2p | null,
-		private readonly chains: ChainImplementation<unknown, unknown>[],
+		public readonly chains: ChainImplementation<unknown, unknown>[],
 		public readonly options: CoreOptions
 	) {
 		super()
 
 		this.options = options
 
-		// if (mst !== null) {
-		// 	const sourceCIDs: Record<string, CID> = { [this.app]: this.cid }
-		// 	for (const uri of vm.sources) {
-		// 		sourceCIDs[uri] = parseIPFSURI(uri)
-		// 	}
+		if (libp2p !== null) {
+			const sourceCIDs: Record<string, CID> = { [this.app]: this.cid }
+			for (const uri of vm.sources) {
+				sourceCIDs[uri] = parseIPFSURI(uri)
+			}
 
-		// 	this.sources = mapEntries(sourceCIDs, (_, cid) =>
-		// 		Source.initialize({
-		// 			cid,
-		// 			// mst,
-		// 			applyMessage: this.applyMessage,
-		// 			messageStore: this.messageStore,
-		// 			libp2p,
-		// 			recentGossipPeers: this.recentGossipPeers,
-		// 			recentSyncPeers: this.recentSyncPeers,
-		// 			...options,
-		// 		})
-		// 	)
-		// }
+			this.sources = mapEntries(sourceCIDs, (_, cid) =>
+				Source.initialize({
+					cid,
+					applyMessage: this.applyMessageInternal,
+					messageStore: this.messageStore,
+					libp2p,
+					recentGossipPeers: this.recentGossipPeers,
+					recentSyncPeers: this.recentSyncPeers,
+					...options,
+				})
+			)
+		}
 	}
 
 	public async close() {
@@ -123,7 +121,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.dispatchEvent(new Event("close"))
 	}
 
-	public getChainImplementations() {
+	public getChainImplementations(): Partial<Record<Chain, Record<string, { rpc: boolean }>>> {
 		const result: Partial<Record<Chain, Record<ChainId, { rpc: boolean }>>> = {}
 
 		for (const ci of this.chains) {
@@ -143,7 +141,7 @@ export class Core extends EventEmitter<CoreEvents> {
 			console.log("[canvas-core] getRoute:", route, params)
 		}
 
-		return this.modelStore.getRoute(route, params)
+		return await this.modelStore.getRoute(route, params)
 	}
 
 	/**
@@ -154,7 +152,8 @@ export class Core extends EventEmitter<CoreEvents> {
 	public async apply(message: Message): Promise<{ hash: string }> {
 		assert(messageType.is(message), "invalid session object")
 
-		const dbi = message.type === "customAction" ? message.app : message.payload.app
+		const app = message.type === "customAction" ? message.app : message.payload.app
+		assert(app === this.app || this.vm.sources.has(app))
 
 		const data = new TextEncoder().encode(stringify(message))
 		const hash = sha256(data)
@@ -168,7 +167,7 @@ export class Core extends EventEmitter<CoreEvents> {
 				await this.applyMessageInternal(hash, message)
 				await txn.insertMessage(hash, message)
 			},
-			{ dbi }
+			{ dbi: app }
 		)
 
 		if (this.sources !== null) {
@@ -184,7 +183,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * For sessions: validate.
 	 * This method is called directly from Core.apply and is
 	 * also passed to Source as the callback for GossipSub and MST sync messages.
-	 * Note the this does NOT update the MST index or publish to GossipSub -
+	 * Note the this does NOT insert into the message store or publish to GossipSub -
 	 * that's the responsibility of the caller.
 	 */
 	private applyMessageInternal = async (hash: Uint8Array, message: Message) => {
@@ -290,16 +289,15 @@ export class Core extends EventEmitter<CoreEvents> {
 			appName === this.appName || this.vm.sources.has(app),
 			"session signed for wrong application (appName invalid)"
 		)
+		// check the timestamp bounds
+		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
+		assert(sessionIssued < constants.BOUNDS_CHECK_UPPER_LIMIT, "session issued too far in the future")
 
 		// TODO: verify that sessions signed for a previous app were valid within that app,
 		// e.g. that their appName matches
 
 		const { verifySession } = this.getChainImplementation(chain, chainId)
 		await verifySession(session)
-
-		// check the timestamp bounds
-		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
-		assert(sessionIssued < constants.BOUNDS_CHECK_UPPER_LIMIT, "session issued too far in the future")
 	}
 
 	private async validateCustomAction(customAction: CustomAction) {

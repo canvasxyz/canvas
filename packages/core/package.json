@@ -15,52 +15,42 @@
   "types": "./lib/index.d.ts",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./rpc/sync": {
-      "types": "./rpc/sync/index.d.cts",
       "default": "./rpc/sync/index.cjs"
     },
     "./sync": {
-      "types": "./lib/sync/index.d.ts",
       "import": "./lib/sync/index.js"
     },
     "./utils": {
-      "types": "./lib/utils.d.ts",
       "import": "./lib/utils.js"
     },
     "./constants": {
-      "types": "./lib/constants.d.ts",
       "import": "./lib/constants.js"
     },
     "./codecs": {
-      "types": "./lib/codecs.d.ts",
       "import": "./lib/codecs.js"
     },
     "./components/messageStore": {
-      "types": "./lib/components/messageStore/index.d.ts",
       "import": {
         "browser": "./lib/components/messageStore/browser/index.js",
         "node": "./lib/components/messageStore/node/index.js"
       }
     },
     "./components/modelStore": {
-      "types": "./lib/components/modelStore/index.d.ts",
       "import": {
         "browser": "./lib/components/modelStore/browser/index.js",
         "node": "./lib/components/modelStore/node/index.js"
       }
     },
     "./components/libp2p": {
-      "types": "./lib/components/libp2p/index.d.ts",
       "import": {
         "browser": "./lib/components/libp2p/browser/index.js",
         "node": "./lib/components/libp2p/index.js"
       }
     },
     "./components/vm": {
-      "types": "./lib/components/vm/index.d.ts",
       "import": "./lib/components/vm/index.js"
     }
   },
