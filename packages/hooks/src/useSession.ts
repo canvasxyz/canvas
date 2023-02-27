@@ -9,7 +9,14 @@ const second = 1000
 const minute = 60 * second
 const hour = 60 * minute
 
-export type Client = Record<string, (callArgs: Record<string, ActionArgument>) => Promise<{ hash: string }>>
+export type CallOptions = {
+	timestamp?: number
+}
+
+export type Client = Record<
+	string,
+	(callArgs: Record<string, ActionArgument>, callOptions?: CallOptions) => Promise<{ hash: string }>
+>
 
 /**
  * isLoading === true: waiting for application data from host, & checking localStorage for sessionObject
@@ -163,7 +170,11 @@ export function useSession<Signer, DelegatedSigner>(
 	}, [signer])
 
 	const dispatch = useCallback(
-		async (call: string, callArgs: Record<string, ActionArgument>): Promise<{ hash: string }> => {
+		async (
+			call: string,
+			callArgs: Record<string, ActionArgument>,
+			callOptions?: CallOptions
+		): Promise<{ hash: string }> => {
 			if (host === null) {
 				throw new Error("no host configured")
 			} else if (data === null) {
@@ -184,11 +195,9 @@ export function useSession<Signer, DelegatedSigner>(
 				callArgs,
 				chain,
 				chainId,
-				timestamp: Date.now(),
+				timestamp: callOptions?.timestamp ?? Date.now(),
 				block: options.unchecked ? null : await chainImplementation.getLatestBlock(),
 			})
-
-			console.log(action)
 
 			const res = await fetch(`${host}/actions`, {
 				method: "POST",
@@ -217,7 +226,11 @@ export function useSession<Signer, DelegatedSigner>(
 	)
 
 	const client = useMemo<Client | null>(
-		() => data && Object.fromEntries(data.actions.map((action) => [action, (args) => dispatch(action, args)])),
+		() =>
+			data &&
+			Object.fromEntries(
+				data.actions.map((action) => [action, (args, callOptions?: CallOptions) => dispatch(action, args, callOptions)])
+			),
 		[data, dispatch]
 	)
 
