@@ -51,10 +51,39 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 			filteredPastPosts.reverse()
 			filteredNewPosts.reverse()
 
-			// TODO: Interleave new posts according to updated_at, so if we
-			// receive new posts out-of-order (happens frequently on first insert)
+			// Interleave new posts according to updated_at, so if we
+			// receive new posts out-of-order (happens frequently on batch insert)
 			// they won't persist out-of-order
-			setPosts([...filteredPastPosts, ...posts, ...filteredNewPosts])
+			let result
+			if (
+				// check if all posts are ordered
+				(filteredPastPosts.length === 0 && posts.length === 0) ||
+				(posts.length === 0 && filteredNewPosts.length === 0)
+			) {
+				result = [...filteredPastPosts, ...posts, ...filteredNewPosts]
+			} else {
+				// check if past + present posts are ordered
+				if (
+					filteredPastPosts.length === 0 ||
+					posts.length === 0 ||
+					filteredPastPosts[filteredPastPosts.length - 1].updated_at < posts[0].updated_at
+				) {
+					result = [...filteredPastPosts, ...posts]
+				} else {
+					result = _.sortedUniqBy(_.sortBy([...filteredPastPosts, ...posts], "updated_at"), "updated_at")
+				}
+				// check if present + new posts are ordered
+				if (
+					result.length === 0 ||
+					filteredNewPosts.length === 0 ||
+					result[result.length - 1].updated_at < filteredNewPosts[0].updated_at
+				) {
+					result = [...result, ...filteredNewPosts]
+				} else {
+					result = _.sortedUniqBy(_.sortBy([...result, ...filteredNewPosts], "updated_at"), "updated_at")
+				}
+			}
+			setPosts(result)
 
 			// Scroll-to-bottom doesn't seem to work correctly, Virtuoso incorrectly
 			// caps the maximum scroll to `scroller.offsetHeight - scroller.scrollHeight`
