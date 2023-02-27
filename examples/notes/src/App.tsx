@@ -97,8 +97,7 @@ const lookupEncryptedKey = (keys: EncryptedKey[], owner_id: string, key_id: stri
 
 const decryptEncryptedKey = async (key: EncryptedKey, account: string): Promise<Buffer> => {
 	// decrypt key using metamask (?)
-	const c = key?.encrypted_key!
-	return await metamaskDecryptData(account, Buffer.from(c, "base64"))
+	return await metamaskDecryptData(account, Buffer.from(key.encrypted_key, "base64"))
 }
 
 const decryptNote = async (
