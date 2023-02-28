@@ -9,20 +9,16 @@ import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
-import { prometheusMetrics } from "@libp2p/prometheus-metrics"
+
+import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 import { Multiaddr } from "@multiformats/multiaddr"
 
 import { toHex } from "@canvas-js/core/utils"
-import { libp2pRegister } from "../../metrics.js"
 
-const bootstrapList = [
-	"/dns4/canvas-bootstrap-p0.fly.dev/tcp/4002/ws/p2p/12D3KooWP4DLJuVUKoThfzYugv8c326MuM2Tx38ybvEyDjLQkE2o",
-	"/dns4/canvas-bootstrap-p1.fly.dev/tcp/4002/ws/p2p/12D3KooWRftkCBMtYou4pM3VKdqkKVDAsWXnc8NabUNzx7gp7cPT",
-	"/dns4/canvas-bootstrap-p2.fly.dev/tcp/4002/ws/p2p/12D3KooWPopNdRnzswSd8oVxrUBKGhgKzkYALETK7EHkToy7DKk3",
-]
+import { defaultBootstrapList } from "../bootstrap.js"
 
 const announceFilter = (multiaddrs: Multiaddr[]) =>
 	multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr))
@@ -32,34 +28,38 @@ const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoop
 const second = 1000
 const minute = 60 * second
 
-export function getLibp2pInit(config: {
-	peerId: PeerId
+export async function getLibp2pOptions(config: {
+	peerId?: PeerId
 	port?: number
 	announce?: string[]
-	bootstrap?: string[]
-}): Libp2pOptions {
-	const announceAddresses =
-		config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId.toString()}`)
+	bootstrapList?: string[]
+}): Promise<Libp2pOptions> {
+	const peerId = config.peerId ? config.peerId : await createEd25519PeerId()
 
-	const listenAddresses: string[] = []
 	if (config.port !== undefined) {
-		listenAddresses.push(`/ip4/0.0.0.0/tcp/${config.port}/ws`)
+		throw new Error("browser libp2p nodes cannot listen on ports")
 	}
+
+	if (config.announce !== undefined) {
+		throw new Error("browser libp2p nodes cannot announce because they are not publicly dialable")
+	}
+
+	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
+	const announce = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId}`)
 
 	return {
 		connectionGater: { denyDialMultiaddr },
-		peerId: config.peerId,
-		addresses: { listen: listenAddresses, announce: announceAddresses, announceFilter },
+		peerId: peerId,
+		addresses: { listen: [], announce, announceFilter },
 		transports: [webSockets()],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
-		peerDiscovery: [bootstrap({ list: config.bootstrap ?? bootstrapList })],
+		peerDiscovery: [bootstrap({ list: bootstrapList })],
 		dht: kadDHT({
 			protocolPrefix: "/canvas",
-			clientMode: false,
+			clientMode: true,
 			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
 		}),
-		metrics: prometheusMetrics({ registry: libp2pRegister }),
 		pubsub: gossipsub({
 			emitSelf: false,
 			doPX: true,
@@ -68,7 +68,6 @@ export function getLibp2pInit(config: {
 			globalSignaturePolicy: "StrictSign",
 			msgIdFn: (msg) => sha256(msg.data),
 			msgIdToStrFn: (id) => toHex(id),
-			fastMsgIdFn: (msg) => "0x" + sha256(msg.data ?? ""),
 		}),
 	}
 }

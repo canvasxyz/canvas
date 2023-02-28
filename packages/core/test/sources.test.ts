@@ -69,7 +69,7 @@ test("Apply source actions", async (t) => {
 		uri: MessageBoardWithVotes.app,
 		spec: MessageBoardWithVotes.spec,
 		directory: null,
-		libp2p: null,
+		offline: true,
 		unchecked: true,
 	})
 
@@ -146,7 +146,7 @@ test("Build missing MST index on core startup", async (t) => {
 				directory,
 				uri: MessageBoardWithVotes.app,
 				spec: MessageBoardWithVotes.spec,
-				libp2p: null,
+				offline: true,
 				unchecked: true,
 			})
 
@@ -181,7 +181,7 @@ test("Build missing MST index on core startup", async (t) => {
 			directory,
 			uri: MessageBoardWithVotes.app,
 			spec: MessageBoardWithVotes.spec,
-			libp2p: null,
+			offline: true,
 			unchecked: true,
 		})
 

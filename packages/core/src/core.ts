@@ -1,10 +1,11 @@
 import assert from "node:assert"
 
 import Hash from "ipfs-only-hash"
+import { sha256 } from "@noble/hashes/sha256"
 import { CID } from "multiformats/cid"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
-import { Libp2p } from "libp2p"
-import { sha256 } from "@noble/hashes/sha256"
+import { createLibp2p, Libp2p } from "libp2p"
+import type { PeerId } from "@libp2p/interface-peer-id"
 
 import {
 	Action,
@@ -19,65 +20,97 @@ import {
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { validate } from "@hyperjump/json-schema/draft-2020-12"
 
-import { messageType } from "./codecs.js"
-import { toHex, signalInvalidType, CacheMap, stringify, parseIPFSURI, mapEntries } from "./utils.js"
+import { actionType, messageType } from "./codecs.js"
+import { toHex, signalInvalidType, CacheMap, stringify, parseIPFSURI } from "./utils.js"
 
 import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
 import { MessageStore, openMessageStore } from "@canvas-js/core/components/messageStore"
 
+import { getLibp2pOptions, startPingService } from "@canvas-js/core/components/libp2p"
 import * as constants from "./constants.js"
 import { Source } from "./source.js"
 import { metrics } from "./metrics.js"
+import chalk from "chalk"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory (NodeJS only)
 	directory: string | null
 	spec: string
 
-	// pass `null` to run offline
-	libp2p: Libp2p | null
-
 	uri?: string
 	chains?: ChainImplementation<unknown, unknown>[]
+	peerId?: PeerId
+	port?: number
+	announce?: string[]
+	bootstrapList?: string[]
 }
 
 export interface CoreOptions {
 	unchecked?: boolean
 	verbose?: boolean
+	offline?: boolean
+	replay?: boolean
 }
 
 interface CoreEvents {
 	close: Event
-	error: Event
 	message: CustomEvent<Message>
 }
 
 export class Core extends EventEmitter<CoreEvents> {
+	public static async initialize(config: CoreConfig) {
+		const { directory, spec, offline, verbose, unchecked } = config
+
+		const chains = config.chains ?? [new EthereumChainImplementation()]
+		const cid = await Hash.of(spec).then(CID.parse)
+		const app = config.uri ?? `ipfs://${cid}`
+		const vm = await VM.initialize({ app, spec, chains, unchecked, verbose })
+
+		const modelStore = await openModelStore(directory, vm, { verbose })
+		const messageStore = await openMessageStore(app, directory, vm.sources, { verbose })
+
+		let libp2p: Libp2p | null = null
+		if (!offline) {
+			const { peerId, port, announce, bootstrapList } = config
+			libp2p = await getLibp2pOptions({ peerId, port, announce, bootstrapList }).then(createLibp2p)
+		}
+
+		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, { verbose, unchecked })
+
+		if (config.replay) {
+			console.log(chalk.green(`[canvas-cli] Replaying action log...`))
+			let i = 0
+			for await (const [id, message] of messageStore.getMessageStream()) {
+				if (message.type === "action") {
+					assert(actionType.is(message), "Invalid action object in message store")
+					const effects = await vm.execute(id, message.payload)
+					await modelStore.applyEffects(message.payload, effects)
+					i++
+				}
+			}
+
+			console.log(chalk.green(`[canvas-core] Successfully replayed all ${i} actions from the message store.`))
+		}
+
+		if (libp2p !== null && core.sources !== null) {
+			await Promise.all(Object.values(core.sources).map((source) => source.start()))
+			startPingService(libp2p, core.controller)
+		}
+
+		return core
+	}
+
 	public readonly recentGossipPeers = new CacheMap<string, { lastSeen: number }>(1000)
 	public readonly recentSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
+	public readonly sources: Record<string, Source> | null = null
 
-	private readonly sources: Record<string, Source> | null = null
-
-	public static async initialize(config: CoreConfig) {
-		const { directory, uri, spec, libp2p, chains = [new EthereumChainImplementation()], ...options } = config
-
-		const cid = await Hash.of(spec).then(CID.parse)
-		const app = uri ?? `ipfs://${cid}`
-		const vm = await VM.initialize({ app, spec, chains, ...options })
-		const appName = vm.appName
-
-		const modelStore = await openModelStore(directory, vm, options)
-		const messageStore = await openMessageStore(app, directory, vm.sources, options)
-
-		return new Core(directory, cid, app, appName, vm, modelStore, messageStore, libp2p, chains, options)
-	}
+	private readonly controller = new AbortController()
 
 	private constructor(
 		public readonly directory: string | null,
 		public readonly cid: CID,
 		public readonly app: string,
-		public readonly appName: string,
 		public readonly vm: VM,
 		public readonly modelStore: ModelStore,
 		public readonly messageStore: MessageStore,
@@ -87,17 +120,11 @@ export class Core extends EventEmitter<CoreEvents> {
 	) {
 		super()
 
-		this.options = options
-
 		if (libp2p !== null) {
-			const sourceCIDs: Record<string, CID> = { [this.app]: this.cid }
-			for (const uri of vm.sources) {
-				sourceCIDs[uri] = parseIPFSURI(uri)
-			}
-
-			this.sources = mapEntries(sourceCIDs, (_, cid) =>
-				Source.initialize({
-					cid,
+			this.sources = {}
+			for (const uri of [this.app, ...vm.sources]) {
+				this.sources[uri] = new Source({
+					cid: parseIPFSURI(uri),
 					applyMessage: this.applyMessageInternal,
 					messageStore: this.messageStore,
 					libp2p,
@@ -105,18 +132,38 @@ export class Core extends EventEmitter<CoreEvents> {
 					recentSyncPeers: this.recentSyncPeers,
 					...options,
 				})
-			)
+			}
+
+			if (this.options.verbose) {
+				libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
+					console.log(`[canvas-core] Connected to ${remotePeer} (${id})`)
+				)
+
+				libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
+					console.log(`[canvas-core] Disconnected from ${remotePeer} (${id})`)
+				)
+			}
 		}
 	}
 
+	public get appName() {
+		return this.vm.appName
+	}
+
 	public async close() {
+		this.controller.abort()
+
 		if (this.sources !== null) {
-			await Promise.all(Object.values(this.sources).map((source) => source.close()))
+			await Promise.all(Object.values(this.sources).map((source) => source.stop()))
+		}
+
+		if (this.libp2p !== null) {
+			await this.libp2p.stop()
 		}
 
 		await this.vm.close()
-		await this.messageStore.close()
 		await this.modelStore.close()
+		await this.messageStore.close()
 
 		this.dispatchEvent(new Event("close"))
 	}
@@ -246,7 +293,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		)
 
 		assert(
-			appName === this.appName || this.vm.sources.has(app),
+			appName === this.vm.appName || this.vm.sources.has(app),
 			"action signed for wrong application (invalid appName)"
 		)
 
@@ -286,7 +333,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		assert(app === this.app || this.vm.sources.has(app), "session signed for wrong application (app invalid)")
 
 		assert(
-			appName === this.appName || this.vm.sources.has(app),
+			appName === this.vm.appName || this.vm.sources.has(app),
 			"session signed for wrong application (appName invalid)"
 		)
 		// check the timestamp bounds

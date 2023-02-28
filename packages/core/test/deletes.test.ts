@@ -24,7 +24,7 @@ const { spec, app, appName } = await compileSpec({
 const signer = new TestSigner(app, appName)
 
 test("Test setting and then deleting a record", async (t) => {
-	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, offline: true, unchecked: true })
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 

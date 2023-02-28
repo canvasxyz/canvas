@@ -17,7 +17,7 @@ import type { Message } from "@canvas-js/interfaces"
 
 import { openMessageStore } from "@canvas-js/core/components/messageStore"
 import { stringify } from "@canvas-js/core/utils"
-import { getMessageKey, handleIncomingStream, sync } from "@canvas-js/core/sync"
+import { handleIncomingStream, sync } from "@canvas-js/core/sync"
 
 import { TestSigner, compileSpec } from "./utils.js"
 

@@ -47,7 +47,7 @@
     "./components/libp2p": {
       "import": {
         "browser": "./lib/components/libp2p/browser/index.js",
-        "node": "./lib/components/libp2p/index.js"
+        "node": "./lib/components/libp2p/node/index.js"
       }
     },
     "./components/vm": {

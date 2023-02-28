@@ -45,8 +45,8 @@ test("contracts (milady balanceOf)", async (t) => {
 	const core = await Core.initialize({
 		spec,
 		directory: null,
-		libp2p: null,
 		chains: [chainImplementation],
+		offline: true,
 	})
 
 	const signer = new TestSigner(app, appName, chainImplementation)

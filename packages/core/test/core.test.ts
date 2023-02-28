@@ -40,7 +40,7 @@ const signer = new TestSigner(app, appName)
 const sessionSigner = new TestSessionSigner(signer)
 
 test("Apply signed action", async (t) => {
-	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, offline: true, unchecked: true })
 
 	const action = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash } = await core.apply(action)
@@ -59,7 +59,7 @@ test("Apply signed action", async (t) => {
 })
 
 test("Apply two signed actions", async (t) => {
-	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, offline: true, unchecked: true })
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: newThreadHash } = await core.apply(newThreadAction)
@@ -81,7 +81,7 @@ test("Apply two signed actions", async (t) => {
 })
 
 test("Apply action signed with session key", async (t) => {
-	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, offline: true, unchecked: true })
 	const session = await sessionSigner.session()
 	await core.apply(session)
 
@@ -102,7 +102,7 @@ test("Apply action signed with session key", async (t) => {
 })
 
 test("Apply two actions signed with session keys", async (t) => {
-	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, offline: true, unchecked: true })
 
 	const session = await sessionSigner.session()
 	await core.apply(session)
@@ -129,7 +129,7 @@ test("Apply two actions signed with session keys", async (t) => {
 })
 
 test("Apply an action with a missing signature", async (t) => {
-	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, offline: true, unchecked: true })
 	const action = await signer.sign("newThread", { title: "Example Website", link: "http://example.com" })
 	action.signature = "0x00"
 	await t.throwsAsync(core.apply(action), { instanceOf: Error, code: "INVALID_ARGUMENT" })
@@ -137,7 +137,7 @@ test("Apply an action with a missing signature", async (t) => {
 })
 
 test("Apply an action signed by wrong address", async (t) => {
-	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, offline: true, unchecked: true })
 	const action = await signer.sign("newThread", { title: "Example Website", link: "http://example.com" })
 	const { address } = ethers.Wallet.createRandom()
 	action.payload.from = address
@@ -146,7 +146,7 @@ test("Apply an action signed by wrong address", async (t) => {
 })
 
 test("Apply an action that throws an error", async (t) => {
-	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, offline: true, unchecked: true })
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: threadId } = await core.apply(newThreadAction)
@@ -163,7 +163,7 @@ test("Apply an action that throws an error", async (t) => {
 test("Create an in-memory Core with a file:// URI", async (t) => {
 	const uri = "file:///dev/null"
 	const signer = new TestSigner(uri, appName)
-	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, offline: true, unchecked: true })
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 	const { hash: threadId } = await core.apply(newThreadAction)
 
@@ -209,7 +209,7 @@ test("Apply a custom action with a valid payload", async (t) => {
 	`
 	const cid = "1234567"
 	const uri = `ipfs://${cid}`
-	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, offline: true, unchecked: true })
 	const newCustomAction: CustomAction = {
 		type: "customAction",
 		app: uri,
@@ -295,7 +295,7 @@ test("Apply a custom action with signed data", async (t) => {
 
 	const cid = "12345678"
 	const uri = `ipfs://${cid}`
-	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, offline: true, unchecked: true })
 	const newCustomAction: CustomAction = {
 		type: "customAction",
 		app: uri,
@@ -372,7 +372,7 @@ test("Reject a custom action with signed data if signature is incorrect", async 
 
 	const cid = "12345678"
 	const uri = `ipfs://${cid}`
-	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, offline: true, unchecked: true })
 	const newCustomAction: CustomAction = {
 		type: "customAction",
 		app: uri,
@@ -416,7 +416,7 @@ test("Reject a custom action that does not set the id to the hash", async (t) =>
 	`
 	const cid = "1234567"
 	const uri = `ipfs://${cid}`
-	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, offline: true, unchecked: true })
 	const newCustomAction: CustomAction = {
 		type: "customAction",
 		app: uri,
@@ -458,7 +458,7 @@ test("Reject a custom action that calls the del function", async (t) => {
 	`
 	const cid = "1234567"
 	const uri = `ipfs://${cid}`
-	const core = await Core.initialize({ uri, spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ uri, spec, directory: null, offline: true, unchecked: true })
 	const newCustomAction: CustomAction = {
 		type: "customAction",
 		app: uri,

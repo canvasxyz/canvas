@@ -15,7 +15,6 @@ import type { ChainImplementation } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { Core, getAPI, setupWebsockets } from "@canvas-js/core"
 import * as constants from "@canvas-js/core/constants"
-import { startPingService, getLibp2pInit } from "@canvas-js/core/components/libp2p"
 
 import type { NextServer, NextServerOptions } from "next/dist/server/next.js"
 
@@ -57,29 +56,20 @@ async function getPeerID() {
 	}
 }
 
-const controller = new AbortController()
-
 if (NODE_ENV === "production") {
 	const peeringPort = Number(LISTEN) || 4044
 	const peerId = await getPeerID()
 
 	console.log("[canvas-next] Using PeerId", peerId.toString())
 
-	let libp2p: Libp2p
+	let announce: undefined | string[] = undefined
 	if (typeof ANNOUNCE === "string") {
-		libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort, announce: [ANNOUNCE] }))
-	} else {
-		libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort }))
+		announce = [ANNOUNCE]
 	}
 
-	console.log("[canvas-next] Started libp2p")
-
-	startPingService(libp2p, controller, { verbose })
-	controller.signal.addEventListener("abort", () => libp2p.stop())
-
-	global.core = await Core.initialize({ directory, spec, chains, unchecked, libp2p, verbose })
+	global.core = await Core.initialize({ directory, spec, chains, port: peeringPort, announce, unchecked, verbose })
 } else {
-	global.core = await Core.initialize({ directory, spec, chains, unchecked, libp2p: null, verbose })
+	global.core = await Core.initialize({ directory, spec, chains, unchecked, offline: true, verbose })
 }
 
 const port = Number(PORT) || 3000
@@ -113,7 +103,6 @@ process.on("SIGINT", () => {
 
 		nextApp.close().then(() => {
 			server.stop()
-			controller.abort()
 			global.core.close()
 		})
 	}

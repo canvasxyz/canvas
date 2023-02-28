@@ -11,7 +11,7 @@ import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
 
-import { Message } from "@canvas-js/interfaces"
+import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore } from "@canvas-js/core/components/messageStore"
 
 import { wait, retry, AbortError, toHex, CacheMap } from "./utils.js"
@@ -34,46 +34,54 @@ export interface SourceConfig extends SourceOptions {
 }
 
 export class Source {
-	private readonly uri: string
-	private readonly syncProtocol: string
 	private readonly controller = new AbortController()
 
-	public static initialize(config: SourceConfig) {
+	private readonly cid: CID
+	private readonly messageStore: MessageStore
+	private readonly libp2p: Libp2p
+	private readonly applyMessage: (hash: Uint8Array, message: Message) => Promise<void>
+	private readonly options: SourceOptions
+
+	public constructor(config: SourceConfig) {
 		const { cid, libp2p, messageStore, applyMessage, ...options } = config
-		return new Source(cid, messageStore, libp2p, applyMessage, options)
+		this.cid = cid
+		this.libp2p = libp2p
+		this.messageStore = messageStore
+		this.applyMessage = applyMessage
+		this.options = options
 	}
 
-	private constructor(
-		private readonly cid: CID,
-		private readonly messageStore: MessageStore,
-		private readonly libp2p: Libp2p,
-		private readonly applyMessage: (hash: Uint8Array, message: Message) => Promise<void>,
-		private readonly options: SourceOptions
-	) {
-		this.uri = `ipfs://${cid}`
-		this.syncProtocol = `/x/canvas/sync/v1/${cid}`
-
-		libp2p.pubsub.subscribe(this.uri)
-		libp2p.pubsub.addEventListener("message", this.handleGossipMessage)
+	public async start() {
+		this.libp2p.pubsub.subscribe(this.uri)
+		this.libp2p.pubsub.addEventListener("message", this.handleGossipMessage)
 		if (this.options.verbose) {
-			console.log(`[canvas-core] [${cid}] Subscribed to pubsub topic ${this.uri}`)
+			console.log(`[canvas-core] [${this.cid}] Subscribed to pubsub topic ${this.uri}`)
 		}
 
-		libp2p.handle(this.syncProtocol, this.streamHandler)
+		await this.libp2p.handle(this.protocol, this.streamHandler)
 		if (this.options.verbose) {
-			console.log(`[canvas-core] [${cid}] Attached stream handler for protocol ${this.syncProtocol}`)
+			console.log(`[canvas-core] [${this.cid}] Attached stream handler for protocol ${this.protocol}`)
 		}
 
 		this.startSyncService()
 		this.startAnnounceService()
 	}
 
-	public async close() {
+	public async stop() {
 		this.controller.abort()
 
-		this.libp2p.unhandle(this.syncProtocol)
 		this.libp2p.pubsub.unsubscribe(this.uri)
 		this.libp2p.pubsub.removeEventListener("message", this.handleGossipMessage)
+
+		await this.libp2p.unhandle(this.protocol)
+	}
+
+	public get uri() {
+		return `ipfs://${this.cid}`
+	}
+
+	public get protocol() {
+		return `/x/canvas/sync/v1/${this.cid}`
 	}
 
 	/**
@@ -309,7 +317,7 @@ export class Source {
 
 		let stream: Stream
 		try {
-			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal: queryController.signal })
+			stream = await this.libp2p.dialProtocol(peer, this.protocol, { signal: queryController.signal })
 		} catch (err) {
 			if (err instanceof Error) {
 				console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to dial peer ${peer} (${err.message})`))
