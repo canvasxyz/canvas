@@ -86,10 +86,14 @@ export const useNotes = (address: string | null, client: Client | null) => {
 		if (address == null || encryptedNoteData == null || encryptedKeyData == null) {
 			return
 		}
-		syncNotes(address, encryptedNoteData, encryptedKeyData, localNotes).then((newLocalNotes) => {
-			setLocalNotes(newLocalNotes)
-		})
-	}, [address, encryptedKeyData, encryptedNoteData])
+		if (!client) {
+			setLocalNotes({})
+		} else {
+			syncNotes(address, encryptedNoteData, encryptedKeyData, localNotes).then((newLocalNotes) => {
+				setLocalNotes(newLocalNotes)
+			})
+		}
+	}, [client, address, encryptedKeyData, encryptedNoteData])
 
 	const createNote = async () => {
 		if (!address || !client) {
