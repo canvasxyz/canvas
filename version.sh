@@ -1,13 +1,27 @@
-SET_VERSION=".version |= \"$1\""
-MAP_DEPENDENCIES="(to_entries | map({ key: .key, value: (if (.key | startswith(\"@canvas-js/\")) then \"$1\" else .value end) }) | from_entries)"
-SET_DEPENDENCIES=".dependencies |= ${MAP_DEPENDENCIES}"
-SET_DEV_DEPENDENCIES=".devDependencies |= ${MAP_DEPENDENCIES}"
+VERSION="\"$1\""
+SET_VERSION=".version |= ${VERSION}"
 
-cat package.json | jq "$SET_VERSION" > package.json-v$1
-mv package.json-v$1 package.json
+echo "$( jq "${SET_VERSION}" package.json )" > package.json
 
-for f in ./packages/*/package.json; do cat $f | jq "$SET_VERSION | $SET_DEPENDENCIES | $SET_DEV_DEPENDENCIES" > $f-v$1; mv $f-v$1 $f; done
-for f in ./examples/*/package.json; do cat $f | jq "$SET_VERSION | $SET_DEPENDENCIES | $SET_DEV_DEPENDENCIES" > $f-v$1; mv $f-v$1 $f; done
+PACKAGES="$(ls packages/)"
 
-rm package-lock.json
-npm install
+for f in ./packages/*/package.json; do
+  echo "$( jq "${SET_VERSION}" $f )" > $f;
+  for PACKAGE in ${PACKAGES}; do
+    P="\"@canvas-js/${PACKAGE}\"";
+    SET_DEPENDENCIES="if .dependencies.${P}? then .dependencies.${P} = ${VERSION} else . end";
+    SET_DEV_DEPENDENCIES="if .devDependencies.${P}? then .devDependencies.${P} = ${VERSION} else . end";
+    echo "$( jq "${SET_DEPENDENCIES} | ${SET_DEV_DEPENDENCIES}" $f)" > $f;
+  done;
+done
+
+for f in ./examples/*/package.json; do
+  echo "$( jq "${SET_VERSION}" $f )" > $f;
+  for PACKAGE in ${PACKAGES}; do
+    P="\"@canvas-js/${PACKAGE}\"";
+    SET_DEPENDENCIES="if .dependencies.${P}? then .dependencies.${P} = ${VERSION} else . end";
+    SET_DEV_DEPENDENCIES="if .devDependencies.${P}? then .devDependencies.${P} = ${VERSION} else . end";
+    echo "$( jq "${SET_DEPENDENCIES} | ${SET_DEV_DEPENDENCIES}" $f)" > $f;
+  done;
+done
+
