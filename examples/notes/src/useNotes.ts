@@ -24,6 +24,58 @@ const encryptNoteContent = (key: Uint8Array, content: { body: string; title: str
 	}
 }
 
+async function syncNotes(
+	address: string,
+	encryptedNoteData: EncryptedNote[],
+	encryptedKeyData: EncryptedKey[],
+	localNotes: Record<string, LocalNote>
+): Promise<Record<string, LocalNote>> {
+	if (address == null || encryptedKeyData == null) {
+		console.log(`address=${address} encryptedKeyData=${encryptedKeyData}`)
+		return {}
+	}
+	// find the notes that need to be updated
+	const newLocalNotes: Record<string, LocalNote> = {}
+	for (const encryptedNote of encryptedNoteData || []) {
+		const existingLocalNote = localNotes[encryptedNote.local_id]
+		if (existingLocalNote && existingLocalNote.dirty) {
+			// use existing note
+			newLocalNotes[encryptedNote.local_id] = existingLocalNote
+		} else {
+			// otherwise use downloaded note
+			// look up key
+			// look up the note's encryption key
+			const encryptedKey = lookupEncryptedKey(encryptedKeyData || [], address, encryptedNote.id)
+			if (!encryptedKey) {
+				continue
+			}
+			// decrypt it
+			const key = await metamaskDecryptData(address, Buffer.from(encryptedKey.encrypted_key, "base64"))
+			const nonceB = Buffer.from(encryptedNote.nonce, "base64")
+			const data = nacl.secretbox.open(Buffer.from(encryptedNote.encrypted_content, "base64"), nonceB, key)
+
+			if (!data) {
+				continue
+			}
+
+			// use the note's key to decrypt the note data
+			const decryptedContent = Buffer.from(data).toString("utf8")
+			const { body, title } = JSON.parse(decryptedContent)
+			newLocalNotes[encryptedNote.local_id] = {
+				body,
+				title,
+				local_id: encryptedNote.local_id,
+				creator_id: encryptedNote.creator_id,
+				updated_at: encryptedNote.updated_at,
+				encrypted_key: encryptedKey.encrypted_key,
+				id: encryptedNote.id,
+				dirty: false,
+			}
+		}
+	}
+	return newLocalNotes
+}
+
 export const useNotes = (address: string | null, client: Client | null) => {
 	const { data: encryptedNoteData } = useRoute<EncryptedNote>("/encrypted_notes", {})
 	const { data: encryptedKeyData } = useRoute<EncryptedKey>("/encrypted_keys", {})
@@ -31,53 +83,10 @@ export const useNotes = (address: string | null, client: Client | null) => {
 	const [localNotes, setLocalNotes] = useState<Record<string, LocalNote>>({})
 
 	useEffect(() => {
-		async function generateChanges() {
-			if (address == null || encryptedKeyData == null) {
-				console.log(`address=${address} encryptedKeyData=${encryptedKeyData}`)
-				return {}
-			}
-			// find the notes that need to be updated
-			const newLocalNotes: Record<string, LocalNote> = {}
-			for (const encryptedNote of encryptedNoteData || []) {
-				const existingLocalNote = localNotes[encryptedNote.local_id]
-				if (existingLocalNote && existingLocalNote.dirty) {
-					// use existing note
-					newLocalNotes[encryptedNote.local_id] = existingLocalNote
-				} else {
-					// otherwise use downloaded note
-					// look up key
-					// look up the note's encryption key
-					const encryptedKey = lookupEncryptedKey(encryptedKeyData || [], address, encryptedNote.id)
-					if (!encryptedKey) {
-						continue
-					}
-					// decrypt it
-					const key = await metamaskDecryptData(address, Buffer.from(encryptedKey.encrypted_key, "base64"))
-					const nonceB = Buffer.from(encryptedNote.nonce, "base64")
-					const data = nacl.secretbox.open(Buffer.from(encryptedNote.encrypted_content, "base64"), nonceB, key)
-
-					if (!data) {
-						continue
-					}
-
-					// use the note's key to decrypt the note data
-					const decryptedContent = Buffer.from(data).toString("utf8")
-					const { body, title } = JSON.parse(decryptedContent)
-					newLocalNotes[encryptedNote.local_id] = {
-						body,
-						title,
-						local_id: encryptedNote.local_id,
-						creator_id: encryptedNote.creator_id,
-						updated_at: encryptedNote.updated_at,
-						encrypted_key: encryptedKey.encrypted_key,
-						id: encryptedNote.id,
-						dirty: false,
-					}
-				}
-			}
-			return newLocalNotes
+		if (address == null || encryptedNoteData == null || encryptedKeyData == null) {
+			return
 		}
-		generateChanges().then((newLocalNotes) => {
+		syncNotes(address, encryptedNoteData, encryptedKeyData, localNotes).then((newLocalNotes) => {
 			setLocalNotes(newLocalNotes)
 		})
 	}, [address, encryptedKeyData, encryptedNoteData])
