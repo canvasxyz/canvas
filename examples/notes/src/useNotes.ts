@@ -38,7 +38,7 @@ async function syncNotes(
 	const newLocalNotes: Record<string, LocalNote> = {}
 	for (const encryptedNote of encryptedNoteData || []) {
 		const existingLocalNote = localNotes[encryptedNote.local_id]
-		if (existingLocalNote && existingLocalNote.dirty) {
+		if (existingLocalNote && !existingLocalNote.dirty) {
 			// use existing note
 			newLocalNotes[encryptedNote.local_id] = existingLocalNote
 		} else {
