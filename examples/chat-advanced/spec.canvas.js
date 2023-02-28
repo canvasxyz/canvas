@@ -17,7 +17,7 @@ export const routes = {
 			before,
 		})
 	},
-	"/totalCount": ({}, { db }) => {
+	"/count": ({}, { db }) => {
 		return db.queryRaw(`SELECT COUNT(*) FROM posts`)
 	},
 }
