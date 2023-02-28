@@ -18,6 +18,20 @@ export type Client = Record<
 	(callArgs: Record<string, ActionArgument>, callOptions?: CallOptions) => Promise<{ hash: string }>
 >
 
+const BLOCK_CACHE_TIME = 1.5 * second
+
+let cachedBlock: [string, number] | null = null
+
+const getLatestBlockWithCache = async (chainImplementation: ChainImplementation): Promise<string> => {
+	if (cachedBlock !== null && cachedBlock[1] > +new Date() - BLOCK_CACHE_TIME) {
+		return cachedBlock[0]
+	} else {
+		const block: string = await chainImplementation.getLatestBlock()
+		cachedBlock = [block, +new Date()]
+		return block
+	}
+}
+
 /**
  * isLoading === true: waiting for application data from host, & checking localStorage for sessionObject
  * isLoading === false && sessionAddress === null: logged out, need to call login()
@@ -187,6 +201,8 @@ export function useSession<Signer, DelegatedSigner>(
 				throw new Error("session expired, please log in again")
 			}
 
+			const block = options.unchecked ? null : await getLatestBlockWithCache(chainImplementation)
+
 			const action = await chainImplementation.signDelegatedAction(sessionSigner, {
 				app: data.uri,
 				appName: data.appName,
@@ -196,7 +212,7 @@ export function useSession<Signer, DelegatedSigner>(
 				chain,
 				chainId,
 				timestamp: callOptions?.timestamp ?? Date.now(),
-				block: options.unchecked ? null : await chainImplementation.getLatestBlock(),
+				block: options.unchecked ? null : block,
 			})
 
 			const res = await fetch(`${host}/actions`, {

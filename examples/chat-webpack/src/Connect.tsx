@@ -117,11 +117,15 @@ const GenerateData: React.FC<{ baseNumberOfMessages: number }> = ({ baseNumberOf
 		(n: number) => {
 			if (!client) return
 			const timestamp = +Date.now()
-			for (let i = 0; i < n; i++) {
-				const content = `#${count + i + 1}`
-				client.createPost({ content }, { timestamp: timestamp + i })
-			}
-			setCount(count + baseNumberOfMessages)
+
+			// make one post first, so we have a cached block and don't thrash the rpc
+			client.createPost({ content: "generated #1" }, { timestamp }).then(() => {
+				for (let i = 1; i < n; i++) {
+					const content = `generated #${count + i + 1}`
+					client.createPost({ content }, { timestamp: timestamp + i })
+				}
+				setCount(count + baseNumberOfMessages)
+			})
 		},
 		[client]
 	)
