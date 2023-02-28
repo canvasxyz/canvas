@@ -333,7 +333,7 @@ const VALIDATION_TEST_FIXTURES: {
         _Invalid: () => {}
       };
     `,
-		expectedResult: errors(["Route '_Invalid' is invalid: the name must match the regex /^(\\/:?[a-z_]+)+$/"]),
+		expectedResult: errors(["Route '_Invalid' is invalid: the name must match the regex /^(\\/:?[a-zA-Z_]+)+$/"]),
 	},
 	{
 		name: "reject routes that are not functions",
