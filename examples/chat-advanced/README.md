@@ -1,6 +1,8 @@
-# Canvas - Chat App, NextJS version
+# Canvas - Chat App, Advanced
 
-This is an example web app using NextJS with an embedded Canvas core.
+This is an example web app using Canvas for more advanced functionality.
+
+Currently, all this app does is import data from the previous chat apps.
 
 ### Setting up
 
@@ -15,7 +17,7 @@ npm run dev
 ```
 
 Open the app at http://localhost:3000/. The API will run at
-http://localhost:3000/app.
+http://localhost:8000.
 
 ### Run in online production mode
 
@@ -26,7 +28,7 @@ npm run start
 
 This will enable peering.
 
-### Deploying
+### Deploying to Fly.io
 
 First, install [flyctl](https://fly.io/docs/speedrun/) and make sure
 you are logged in.
@@ -51,10 +53,4 @@ Build and deploy the application:
 ```
 npm run build
 fly deploy
-```
-
-```
-flyctl launch  # Don't deploy immediately
-flyctl volumes create canvas_chat_data_2
-flyctl deploy
 ```
