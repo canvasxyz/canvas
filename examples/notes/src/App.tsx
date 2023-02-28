@@ -54,10 +54,10 @@ export const App: React.FC<{}> = ({}) => {
 	const connector = connectors[0]
 	const { connectionState, connect, disconnect, errors, address, client } = useConnectOneStep({ connector })
 
-	const [selectedNote, setSelectedNote] = useState<string | null>(null)
-	const { localNotes, deleteNote, createNewLocalNote, updateNote, updateLocalNote } = useNotes(address, client)
+	const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
+	const { localNotes, deleteNote, createNote, updateNote, updateLocalNote } = useNotes(address, client)
 
-	const currentNote: LocalNote | null = selectedNote ? localNotes[selectedNote] : null
+	const currentNote: LocalNote | null = selectedNoteId ? localNotes[selectedNoteId] : null
 
 	const showError = (errorMessage: string) => {
 		Toastify({
@@ -85,15 +85,15 @@ export const App: React.FC<{}> = ({}) => {
 						<div className="flex-grow"></div>
 						<IconButton
 							onClick={async () => {
-								if (selectedNote) {
-									await deleteNote(selectedNote)
+								if (selectedNoteId && currentNote) {
+									await deleteNote(currentNote.id)
 								}
 							}}
 							icon={WastebasketIcon}
 							disabled={connectionState !== "connected"}
 						/>
 					</div>
-					<div className="overflow-auto" onClick={() => setSelectedNote(null)}>
+					<div className="overflow-auto" onClick={() => setSelectedNoteId(null)}>
 						{Object.entries(localNotes)
 							.sort(([key_1, note_1], [key_2, note_2]) => {
 								return note_2.updated_at - note_1.updated_at
@@ -102,11 +102,11 @@ export const App: React.FC<{}> = ({}) => {
 								<div
 									key={`node-${note.local_id}`}
 									className={`pt-2 pb-2 pl-4 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer ${
-										selectedNote == note.local_id ? "bg-gray-200" : "bg-gray-50"
+										selectedNoteId == note.local_id ? "bg-gray-200" : "bg-gray-50"
 									}`}
 									onClick={(e) => {
 										e.stopPropagation()
-										setSelectedNote(note.local_id)
+										setSelectedNoteId(note.local_id)
 									}}
 								>
 									<div className="text-sm font-bold">
@@ -130,9 +130,11 @@ export const App: React.FC<{}> = ({}) => {
 					{/* top bar? */}
 					<div className="h-16 border-b border-black p-3 flex">
 						<IconButton
-							onClick={() => {
-								const newLocalNote = createNewLocalNote()
-								setSelectedNote(newLocalNote.local_id)
+							onClick={async () => {
+								const newNoteLocalId = await createNote()
+								if (newNoteLocalId) {
+									setSelectedNoteId(newNoteLocalId)
+								}
 							}}
 							icon={ComposeIcon}
 							disabled={connectionState !== "connected"}
@@ -194,7 +196,7 @@ export const App: React.FC<{}> = ({}) => {
 						)}
 					</div>
 					{/* note content area */}
-					{currentNote && selectedNote ? (
+					{currentNote && selectedNoteId ? (
 						<div className="pl-5 pr-5 pt-3 pb-3 grow">
 							<div className="flex flex-col">
 								<input
@@ -203,7 +205,7 @@ export const App: React.FC<{}> = ({}) => {
 									className="text-xl font-bold border border-black p-1 rounded-md"
 									value={currentNote.title}
 									onChange={(e) => {
-										updateLocalNote(selectedNote, { title: e.target.value })
+										updateLocalNote(selectedNoteId, { title: e.target.value })
 									}}
 								/>
 								<textarea
@@ -211,7 +213,7 @@ export const App: React.FC<{}> = ({}) => {
 									className="border border-black p-1 mt-2 rounded-md h-200"
 									value={currentNote.body}
 									onChange={(e) => {
-										updateLocalNote(selectedNote, { body: e.target.value })
+										updateLocalNote(selectedNoteId, { body: e.target.value })
 									}}
 								/>
 							</div>

@@ -5,13 +5,10 @@ export const models = {
 		indexes: ["updated_at"],
 		// used by the UI when creating new notes
 		local_id: "string",
-		// see keys(id)
-		// the id of the key used to encrypt this note
-		key_id: "string",
 		// this stores the actual content of the note
 		// this should be a base64-encoded string
-		encrypted_body: "string",
-		// nonsense value used when encrypting the encrypted_body
+		encrypted_content: "string",
+		// nonsense value used when encrypting the encrypted_content
 		nonce: "string",
 		// the id of the user that created it
 		// users(id)
@@ -21,10 +18,8 @@ export const models = {
 		id: "string",
 		updated_at: "datetime",
 		indexes: ["updated_at", "owner_id"],
-		// the id of the underlying decrypted key
-		// there may be multiple encrypted_keys entries if a note
-		// is shared with more than one user
-		key_id: "string",
+		// the id of the note that this key is for
+		note_id: "string",
 		// the actual encrypted key
 		// this is encrypted using the owner's public key
 		// once decrypted, this can be used to encrypt notes
@@ -55,6 +50,14 @@ export const routes = {
 }
 
 export const actions = {
+	createNote({ encrypted_content, encrypted_key, nonce, local_id }, { db, from, hash }) {
+		// add note entry
+		const key = `${from}/${hash}`
+		db.encrypted_notes.set(key, { local_id, nonce, encrypted_content, creator_id: from })
+		// add key entry
+		db.encrypted_keys.set(key, { note_id: key, encrypted_key, owner_id: from })
+	},
+
 	deleteNote({ id }, { db, from }) {
 		const recoveredFrom = id.split("/")[0]
 		if (recoveredFrom !== from) {
@@ -63,35 +66,36 @@ export const actions = {
 		}
 		db.encrypted_notes.delete(id)
 	},
-	updateNote({ id, encrypted_body, nonce, key_id, local_id }, { db, from, hash }) {
-		let key
-		if (id) {
-			const recoveredFrom = id.split("/")[0]
-			if (recoveredFrom !== from) {
-				// user is trying to update a note created by a different user
-				return false
-			}
-			key = id
-		} else {
-			key = `${from}/${hash}`
+	updateNote({ id, encrypted_content, nonce, local_id }, { db, from }) {
+		const recoveredFrom = id.split("/")[0]
+		if (recoveredFrom !== from) {
+			// user is trying to update a note created by a different user
+			return false
 		}
-		db.encrypted_notes.set(key, { local_id, encrypted_body, nonce, key_id, creator_id: from })
+
+		db.encrypted_notes.set(id, { local_id, encrypted_content, nonce, creator_id: from })
 	},
-	uploadKey({ key_id, encrypted_key, owner_id }, { db, hash }) {
-		db.encrypted_keys.set(hash, { key_id, encrypted_key, owner_id })
+	shareNote({ note_id, encrypted_key, other_user_id }, { db, hash, from }) {
+		const recoveredFrom = note_id.split("/")[0]
+		if (recoveredFrom !== from) {
+			// user is trying to share a note created by a different user
+			return false
+		}
+		const key = `${note_id}:${other_user_id}`
+		db.encrypted_keys.set(key, { note_id, encrypted_key, owner_id })
 	},
 	register({ pub_key }, { db, from }) {
 		// check that the public key matches their eth address
 		const derivedAddress = ethersComputeAddress(pub_key)
-		if (derivedAddress !== pub_key) {
+		if (derivedAddress !== from) {
 			return false
 		}
-		db.users.set(`from:${from}`, { address: from, pub_key })
+		db.users.set(from, { address: from, pub_key })
 	},
 	unregister({}, { db, from }) {
 		// user removes their public key
 		// this removes them from the list of users that notes can be shared with
-		db.users.del(`from:${from}`)
+		db.users.del(from)
 	},
 }
 
