@@ -79,8 +79,51 @@ async function syncNotes(
 export const useNotes = (address: string | null, client: Client | null) => {
 	const { data: encryptedNoteData } = useRoute<EncryptedNote>("/encrypted_notes", {})
 	const { data: encryptedKeyData } = useRoute<EncryptedKey>("/encrypted_keys", {})
+	const { data: usersData } = useRoute<User>("/users", {})
 
 	const [localNotes, setLocalNotes] = useState<Record<string, LocalNote>>({})
+
+	const [pubKey, setPubKey] = useState<Buffer | null>(null)
+	const [pendingPubKey, setPendingPubKey] = useState(false)
+	const [noteKeys, setNoteKeys] = useState<Record<string, string>>({})
+	// const [noteKeys, setNoteKeys] = useState<{ note_id: string; encrypted_key: string; decrypted_key: string }[]>([])
+
+	const getPubKey = async () => {
+		if (!address) {
+			setPubKey(null)
+			return
+		}
+		if (pubKey) {
+			return pubKey
+		}
+		const retrievedPubKey = await metamaskGetPublicKey(address)
+		setPubKey(retrievedPubKey)
+		return retrievedPubKey
+	}
+
+	useEffect(() => {
+		if (client !== null && usersData !== null && address !== null) {
+			let existingUser: User | null = null
+			for (const user of usersData) {
+				if (user.address == address) {
+					existingUser = user
+				}
+			}
+			if (existingUser == null && !pendingPubKey) {
+				// prompt for public key
+				setPendingPubKey(true)
+				try {
+					getPubKey().then((pubKey) => {
+						if (pubKey) {
+							client.register({ pub_key: pubKey.toString("base64") })
+						}
+					})
+				} finally {
+					setPendingPubKey(false)
+				}
+			}
+		}
+	}, [client, usersData])
 
 	useEffect(() => {
 		if (address == null || encryptedNoteData == null || encryptedKeyData == null) {
@@ -101,7 +144,11 @@ export const useNotes = (address: string | null, client: Client | null) => {
 		}
 
 		// generate a new key
-		const pubKey = await metamaskGetPublicKey(address)
+		const pubKey = await getPubKey()
+		if (!pubKey) {
+			throw Error("Cannot create note - user did not grant access to public key")
+		}
+
 		const noteKey = nacl.randomBytes(32)
 
 		const localId = uuidv4()
@@ -161,5 +208,5 @@ export const useNotes = (address: string | null, client: Client | null) => {
 		await client.deleteNote({ id: noteId })
 	}
 
-	return { localNotes, createNote, deleteNote, updateNote, updateLocalNote }
+	return { localNotes, createNote, deleteNote, updateNote, updateLocalNote, users: usersData || {} }
 }

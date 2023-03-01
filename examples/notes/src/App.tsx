@@ -6,8 +6,11 @@ import { useConnect } from "wagmi"
 
 import ComposeIcon from "./icons/compose.svg"
 import WastebasketIcon from "./icons/wastebasket.svg"
+import ShareIcon from "./icons/share.svg"
+
 import { LocalNote } from "./models"
 import { useNotes } from "./useNotes"
+import { ShareNoteModal } from "./ShareNoteModal"
 
 function formatUpdatedAt(updatedAtTs: number) {
 	const now = new Date()
@@ -55,9 +58,11 @@ export const App: React.FC<{}> = ({}) => {
 	const { connectionState, connect, disconnect, errors, address, client } = useConnectOneStep({ connector })
 
 	const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
-	const { localNotes, deleteNote, createNote, updateNote, updateLocalNote } = useNotes(address, client)
+	const { localNotes, deleteNote, createNote, updateNote, updateLocalNote, users } = useNotes(address, client)
 
 	const currentNote: LocalNote | null = selectedNoteId ? localNotes[selectedNoteId] : null
+
+	const [showShareModal, setShowShareModal] = useState(false)
 
 	const showError = (errorMessage: string) => {
 		Toastify({
@@ -146,6 +151,16 @@ export const App: React.FC<{}> = ({}) => {
 						{errors.map((error, idx) => (
 							<div key={`error-${idx}`}>{error.substring(0, 40)}</div>
 						))}
+						{currentNote && (
+							<IconButton
+								onClick={async () => {
+									console.log("share note...")
+									setShowShareModal(true)
+								}}
+								icon={ShareIcon}
+								disabled={!client}
+							/>
+						)}
 
 						{connectionState == "disconnected" ? (
 							<div className="shrink pl-3">
@@ -239,6 +254,10 @@ export const App: React.FC<{}> = ({}) => {
 					)}
 				</div>
 			</div>
+
+			{showShareModal && currentNote && (
+				<ShareNoteModal currentNote={currentNote} users={users} closeModal={() => setShowShareModal(false)} />
+			)}
 		</>
 	)
 }
