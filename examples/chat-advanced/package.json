@@ -19,6 +19,7 @@
     "@wagmi/chains": "^0.2.8",
     "98.css": "^0.1.18",
     "lodash": "^4.17.21",
+    "luxon": "^3.2.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-virtuoso": "^4.1.0",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@types/lodash": "^4.14.191",
+    "@types/luxon": "^3.2.0",
     "concurrently": "^7.6.0",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.7.3",
