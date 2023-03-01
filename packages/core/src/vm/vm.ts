@@ -320,7 +320,7 @@ export class VM {
 			),
 
 			ethersComputeAddress: context.newFunction("ethersComputeAddress", (publicOrPrivateKeyHandle) => {
-				const publicOrPrivateKey = publicOrPrivateKeyHandle.consume((handle) => handle.toString())
+				const publicOrPrivateKey = publicOrPrivateKeyHandle.consume(context.getString)
 				const address = ethers.utils.computeAddress(publicOrPrivateKey)
 				return context.newString(address)
 			}),

@@ -2,15 +2,16 @@ import React, { useState } from "react"
 import Toastify from "toastify-js"
 
 import { useConnectOneStep } from "./useConnectOneStep"
-import { useConnect } from "wagmi"
+import { Connector, useConnect } from "wagmi"
 
 import ComposeIcon from "./icons/compose.svg"
 import WastebasketIcon from "./icons/wastebasket.svg"
 import ShareIcon from "./icons/share.svg"
 
 import { LocalNote } from "./models"
-import { useNotes } from "./useNotes"
+import { useNoteKeys, useNotes } from "./useNotes"
 import { ShareNoteModal } from "./ShareNoteModal"
+import { Client } from "@canvas-js/hooks"
 
 function formatUpdatedAt(updatedAtTs: number) {
 	const now = new Date()
@@ -56,10 +57,36 @@ export const App: React.FC<{}> = ({}) => {
 	const { connectors } = useConnect()
 	const connector = connectors[0]
 	const { connectionState, connect, disconnect, errors, address, client } = useConnectOneStep({ connector })
+	return (
+		<InnerApp
+			address={address}
+			client={client}
+			connectionState={connectionState}
+			errors={errors}
+			connect={connect}
+			disconnect={disconnect}
+			connector={connector}
+		/>
+	)
+}
+
+const InnerApp: React.FC<{
+	address: string | null
+	client: Client | null
+	connectionState: any
+	errors: string[]
+	connector: Connector
+	connect: () => void
+	disconnect: () => void
+}> = ({ address, client, connectionState, errors, connector, connect, disconnect }) => {
+	const { noteKeys } = useNoteKeys(address)
+	const { localNotes, deleteNote, createNote, shareNote, updateNote, updateLocalNote, users } = useNotes(
+		address,
+		client,
+		noteKeys
+	)
 
 	const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
-	const { localNotes, deleteNote, createNote, updateNote, updateLocalNote, users } = useNotes(address, client)
-
 	const currentNote: LocalNote | null = selectedNoteId ? localNotes[selectedNoteId] : null
 
 	const [showShareModal, setShowShareModal] = useState(false)
@@ -167,7 +194,7 @@ export const App: React.FC<{}> = ({}) => {
 								<div
 									className="border border-green-400 bg-green-50 rounded h-10 p-2 drop-shadow-md hover:drop-shadow active:drop-shadow-sm font-semibold hover:cursor-pointer hover:bg-green-100 select-none"
 									onClick={() => {
-										if (connectors && connectors.length > 0) {
+										if (connector) {
 											connect()
 										}
 									}}
@@ -199,7 +226,7 @@ export const App: React.FC<{}> = ({}) => {
 									<div
 										className="border border-red-400 bg-red-50 rounded h-10 p-2 drop-shadow-md hover:drop-shadow active:drop-shadow-sm font-semibold hover:cursor-pointer hover:bg-red-100 select-none"
 										onClick={() => {
-											if (connectors && connectors.length > 0) {
+											if (connector) {
 												disconnect()
 											}
 										}}
@@ -256,7 +283,12 @@ export const App: React.FC<{}> = ({}) => {
 			</div>
 
 			{showShareModal && currentNote && (
-				<ShareNoteModal currentNote={currentNote} users={users} closeModal={() => setShowShareModal(false)} />
+				<ShareNoteModal
+					shareNote={shareNote}
+					currentNote={currentNote}
+					users={users}
+					closeModal={() => setShowShareModal(false)}
+				/>
 			)}
 		</>
 	)
