@@ -16,7 +16,6 @@
     "packages/interfaces",
     "packages/core",
     "packages/cli",
-    "packages/next",
     "packages/hooks",
     "packages/chain-ethereum",
     "packages/chain-cosmos",
