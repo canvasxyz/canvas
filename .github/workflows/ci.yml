@@ -53,4 +53,4 @@ jobs:
         run: ./install.sh
 
       - name: Ensure Next.js example starts
-        run: npm run start --workspace=@canvas-js/example-chat-next & sleep 10 ; kill $!
+        run: npm run start --workspace=@canvas-js/example-chat-next & sleep 10 ; if [[ $( curl -s -o /dev/null -w "%{http_code}" http://localhost:8000 ) != "200" ]]; then exit 1; else kill $!; fi
