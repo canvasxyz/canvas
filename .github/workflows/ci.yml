@@ -49,5 +49,11 @@ jobs:
       - name: Build Webpack example
         run: npm run build --workspace=@canvas-js/example-chat-webpack
 
+      - name: Install canvas CLI
+        run: ./install.sh
+
+      - name: Ensure Webpack example starts
+        run: npm run start --workspace=@canvas-js/example-chat-webpack & sleep 10 ; kill $!
+
       - name: Ensure Next.js example starts
         run: npm run start --workspace=@canvas-js/example-chat-next & sleep 10 ; kill $!
