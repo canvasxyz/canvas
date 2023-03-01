@@ -2,9 +2,13 @@
 .next/
 node_modules/
 
+
 packages/**/tsconfig.tsbuildinfo
 packages/**/lib/
 packages/**/dist/
+
+examples/**/out/
+examples/**/dist/
 
 *.canvas
 .vscode
