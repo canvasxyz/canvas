@@ -39,7 +39,9 @@ module.exports = {
 	plugins: [
 		new CopyWebpackPlugin({ patterns: [{ from: "public" }] }),
 		new webpack.ProvidePlugin({ Buffer: ["buffer", "Buffer"] }),
-		new webpack.DefinePlugin({ "process.env.HOST": JSON.stringify(process.env.HOST ?? "http://localhost:8000") }),
+		new webpack.DefinePlugin({
+			"process.env.HOST": JSON.stringify(process.env.HOST ?? "http://localhost:8000"),
+		}),
 	],
 	devServer: {
 		static: [path.join(__dirname, "public")],
