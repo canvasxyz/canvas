@@ -24,7 +24,7 @@ test("contracts (milady balanceOf)", async (t) => {
 		actions: {
 			async verify({}, { contracts, from }) {
 				const [balance] = await contracts.milady.balanceOf(from)
-				if (balance === 0) {
+				if (balance === 0n) {
 					throw new Error("balance is zero!")
 				}
 			},
