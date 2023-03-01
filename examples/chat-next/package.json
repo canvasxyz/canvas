@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "NEXT_PUBLIC_HOST=/api next build && next export",
-    "start": "canvas run spec.canvas.js --install --unchecked --static dist --announce /dns4/canvas-chat-2.fly.dev/tcp/4044/ws",
+    "start": "canvas run spec.canvas.js --install --unchecked --static out --announce /dns4/canvas-chat-2.fly.dev/tcp/4044/ws",
     "dev:backend": "canvas run spec.canvas.js --unchecked --offline",
     "dev:frontend": "NEXT_PUBLIC_HOST='http://localhost:8000' next dev",
     "dev": "concurrently --kill-others -n backend,frontend 'npm run dev:backend' 'npm run dev:frontend'",
