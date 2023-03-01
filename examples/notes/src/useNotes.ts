@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid"
 import { useEffect, useState } from "react"
 import nacl from "tweetnacl"
 import { Client, useRoute } from "@canvas-js/hooks"
-import { EncryptedKey, EncryptedNote, LocalNote, User } from "./types"
+import { EncryptedKey, EncryptedNote, LocalNote, User } from "./models"
 import { metamaskDecryptData, metamaskEncryptData, metamaskGetPublicKey } from "./metamaskCrypto"
 
 const lookupEncryptedKey = (keys: EncryptedKey[], owner_id: string, note_id: string): EncryptedKey | undefined => {
