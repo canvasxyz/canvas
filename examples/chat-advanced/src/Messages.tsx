@@ -12,6 +12,7 @@ type Post = {
 	from_id: `0x${string}`
 	content: string
 	updated_at: number
+	imported: boolean
 }
 
 export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
@@ -195,7 +196,7 @@ export const Messages: React.FC = ({}) => {
 	)
 }
 
-const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
+const Post: React.FC<Post> = ({ from_id, content, updated_at, imported }) => {
 	const address = `${from_id.slice(0, 5)}…${from_id.slice(-4)}`
 	// use wagmi's internal cache for ens names
 	const { data, isError, isLoading } = useEnsName({ address: from_id })
@@ -211,22 +212,29 @@ const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
 		}
 		const mins = now.diff(past, "minutes").minutes
 		if (mins < 60) {
-			setDisplayTime(`${Math.floor(mins)}min ago`)
+			setDisplayTime(`${Math.floor(mins)}min`)
 			return
 		}
 		const hrs = now.diff(past, "hours").hours
-		if (hrs < 10) {
-			setDisplayTime(`${Math.floor(hrs)}h ago`)
+		if (hrs < 24) {
+			setDisplayTime(`${Math.floor(hrs)}h`)
 			return
 		}
-		setDisplayTime(past.toString())
+		const days = now.diff(past, "days").days
+		if (days < 7) {
+			setDisplayTime(`${Math.floor(days)}d`)
+			return
+		}
+		setDisplayTime(past.toSQLDate())
 	}, [updated_at])
 
 	return (
 		<li>
 			{data && <span className="address address-ens">[{data}]</span>}
 			<span className="address">{address} &gt;</span> {content}
-			<span className="time-ago">{displayTime}</span>
+			<span className="time-ago">
+				{imported ? "[imported]" : ""} {displayTime}
+			</span>
 		</li>
 	)
 }
