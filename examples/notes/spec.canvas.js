@@ -82,14 +82,10 @@ export const actions = {
 			return false
 		}
 		const key = `${note_id}:${other_user_id}`
-		db.encrypted_keys.set(key, { note_id, encrypted_key, owner_id })
+		db.encrypted_keys.set(key, { note_id, encrypted_key, owner_id: other_user_id })
 	},
 	register({ pub_key }, { db, from }) {
 		// check that the public key matches their eth address
-		const derivedAddress = ethersComputeAddress(pub_key)
-		if (derivedAddress !== from) {
-			return false
-		}
 		db.users.set(from, { address: from, pub_key })
 	},
 	unregister({}, { db, from }) {
