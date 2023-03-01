@@ -6,7 +6,7 @@ import { useConnect } from "wagmi"
 
 import ComposeIcon from "./icons/compose.svg"
 import WastebasketIcon from "./icons/wastebasket.svg"
-import { LocalNote } from "./EncryptedNote"
+import { LocalNote } from "./types"
 import { useNotes } from "./useNotes"
 
 function formatUpdatedAt(updatedAtTs: number) {

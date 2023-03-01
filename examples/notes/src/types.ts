@@ -38,3 +38,10 @@ export type LocalNote = {
 	body: string
 	dirty: boolean
 }
+
+export type User = {
+	id: string
+	updated_at: number
+	address: string
+	pub_key: string
+}
