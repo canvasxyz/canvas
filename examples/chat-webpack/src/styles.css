@@ -51,6 +51,12 @@ body {
   padding-left: 6px;
 }
 
+#messages ul.tree-view li .time-ago {
+  float: right;
+  color: #999;
+  padding-right: 4px;
+}
+
 #sidebar {
 	margin: 12px 0px;
 	display: flex;

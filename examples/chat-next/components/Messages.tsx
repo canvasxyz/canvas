@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { Virtuoso } from "react-virtuoso"
 import _ from "lodash"
+import { DateTime } from "luxon"
 
 import { useEnsName } from "wagmi"
 import { Client, useRoute } from "@canvas-js/hooks"
@@ -195,11 +196,40 @@ const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
 	const address = `${from_id.slice(0, 5)}…${from_id.slice(-4)}`
 	// use wagmi's internal cache for ens names
 	const { data, isError, isLoading } = useEnsName({ address: from_id })
+	const [displayTime, setDisplayTime] = useState<string>()
+	const currentMinute = Math.floor(new Date().getTime() / 1000 / 60)
+
+	useEffect(() => {
+		const now = DateTime.local()
+		const past = DateTime.fromMillis(updated_at)
+		const secs = now.diff(past, "seconds").seconds
+		if (secs < 60) {
+			setDisplayTime("just now")
+			return
+		}
+		const mins = now.diff(past, "minutes").minutes
+		if (mins < 60) {
+			setDisplayTime(`${Math.floor(mins)}min`)
+			return
+		}
+		const hrs = now.diff(past, "hours").hours
+		if (hrs < 24) {
+			setDisplayTime(`${Math.floor(hrs)}h`)
+			return
+		}
+		const days = now.diff(past, "days").days
+		if (days < 7) {
+			setDisplayTime(`${Math.floor(days)}d`)
+			return
+		}
+		setDisplayTime(past.toSQLDate())
+	}, [updated_at, currentMinute])
 
 	return (
 		<li>
 			{data && <span className="address address-ens">[{data}]</span>}
 			<span className="address">{address} &gt;</span> {content}
+			<span className="time-ago">{displayTime}</span>
 		</li>
 	)
 }

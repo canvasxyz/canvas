@@ -201,6 +201,7 @@ const Post: React.FC<Post> = ({ from_id, content, updated_at, imported }) => {
 	// use wagmi's internal cache for ens names
 	const { data, isError, isLoading } = useEnsName({ address: from_id })
 	const [displayTime, setDisplayTime] = useState<string>()
+	const currentMinute = Math.floor(new Date().getTime() / 1000 / 60)
 
 	useEffect(() => {
 		const now = DateTime.local()
@@ -226,7 +227,7 @@ const Post: React.FC<Post> = ({ from_id, content, updated_at, imported }) => {
 			return
 		}
 		setDisplayTime(past.toSQLDate())
-	}, [updated_at])
+	}, [updated_at, currentMinute])
 
 	return (
 		<li>
