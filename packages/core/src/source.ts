@@ -36,6 +36,7 @@ export interface SourceConfig extends SourceOptions {
 }
 
 export class Source {
+	private readonly bootTime: Date
 	private readonly uri: string
 	private readonly syncProtocol: string
 	private readonly controller = new AbortController()
@@ -53,6 +54,7 @@ export class Source {
 		private readonly applyMessage: (hash: Buffer, message: Message) => Promise<void>,
 		private readonly options: SourceOptions
 	) {
+		this.bootTime = new Date()
 		this.uri = `ipfs://${cid.toString()}`
 		this.syncProtocol = `/x/canvas/sync/v1/${cid.toString()}`
 
@@ -175,7 +177,7 @@ export class Source {
 	 * every constants.ANNOUNCE_INTERVAL milliseconds
 	 */
 	private async startAnnounceService() {
-		console.log(`[canvas-core] [${this.cid}] Staring announce service`)
+		console.log(`[canvas-core] [${this.cid}] Starting announce service`)
 
 		try {
 			await this.wait(constants.ANNOUNCE_DELAY)
@@ -228,7 +230,7 @@ export class Source {
 	private async startSyncService() {
 		assert(this.libp2p !== null)
 
-		console.log(`[canvas-core] [${this.cid}] Staring sync service`)
+		console.log(`[canvas-core] [${this.cid}] Starting sync service`)
 
 		try {
 			await this.wait(constants.SYNC_DELAY)
@@ -245,8 +247,10 @@ export class Source {
 
 				const peers = await retry(
 					() => this.findSyncPeers(),
-					(err) =>
-						console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to locate application peers (${err.message})`)),
+					(err) => {
+						if (+new Date() - +this.bootTime < 15000) return // suppress errors for first 15 seconds
+						console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to locate application peers (${err.message})`))
+					},
 					{ signal: this.controller.signal, interval: constants.SYNC_RETRY_INTERVAL }
 				)
 
@@ -287,7 +291,7 @@ export class Source {
 	private async findSyncPeers(): Promise<PeerId[]> {
 		assert(this.libp2p !== null)
 
-		console.log(`[canvas-core] [${this.cid}] Querying DHT for application peers...`)
+		console.log(`[canvas-core] [${this.cid}] Looking for application peers...`)
 
 		const queryController = new TimeoutController(constants.FIND_PEERS_TIMEOUT)
 		const abort = () => queryController.abort()
@@ -326,7 +330,13 @@ export class Source {
 		let stream: Stream
 		try {
 			stream = await this.libp2p.dialProtocol(peer, this.syncProtocol, { signal: queryController.signal })
-		} catch (err) {
+		} catch (err: any) {
+			if (err["errors"]) {
+				console.log(
+					chalk.red(`[canvas-core] [${this.cid}] Failed to dial peer ${peer.toString()} (${err["errors"][0].message})`)
+				)
+				return
+			}
 			if (err instanceof Error) {
 				console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to dial peer ${peer.toString()} (${err.message})`))
 				return
