@@ -1,17 +1,21 @@
 import React from "react"
 
-import type { AppProps } from "next/app"
+import { AppProps } from "next/app"
+
 import { WagmiConfig } from "wagmi"
 import { Canvas } from "@canvas-js/hooks"
 
-import { client } from "../utils/client"
+import { client } from "utils/client"
 
 import "98.css"
 import "styles.css"
 
-const host = "/app"
+export default function App({ Component, pageProps }: AppProps<{}>) {
+	const host = process.env.NEXT_PUBLIC_HOST
+	if (host === undefined) {
+		throw new Error("no host configured")
+	}
 
-export default function App({ Component, pageProps }: AppProps) {
 	return (
 		<React.StrictMode>
 			<WagmiConfig client={client}>

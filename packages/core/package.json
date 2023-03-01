@@ -98,7 +98,7 @@
     "p-queue": "^7.3.0",
     "prom-client": "^14.1.1",
     "protobufjs": "~7.2.2",
-    "quickjs-emscripten": "^0.21.1",
+    "quickjs-emscripten": "^0.22.0",
     "safe-stable-stringify": "^2.4.2",
     "timeout-abort-controller": "^3.0.0",
     "uint8arraylist": "^2.4.3",

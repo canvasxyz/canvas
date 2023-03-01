@@ -13,6 +13,7 @@ module.exports = {
     "*.cts",
     "**/dist/**/*.js",
     "**/lib/**/*.js",
+    "**/out/**/*.js",
   ],
   settings: {
     "import/parsers": {

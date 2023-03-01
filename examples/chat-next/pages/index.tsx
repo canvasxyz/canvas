@@ -1,16 +1,11 @@
 import React, { useState } from "react"
-import dynamic from "next/dynamic"
 import Head from "next/head"
 
+import { Connect } from "components/Connect"
+import { Messages } from "components/Messages"
+import { Application } from "components/Application"
+
 import { Client } from "@canvas-js/hooks"
-
-const Application = dynamic(() => import("components/Application").then(({ Application }) => Application), {
-	ssr: false,
-})
-
-const Connect = dynamic(() => import("components/Connect").then(({ Connect }) => Connect), { ssr: false })
-
-const Messages = dynamic(() => import("components/Messages").then(({ Messages }) => Messages), { ssr: false })
 
 export default function Index() {
 	const [client, setClient] = useState<Client | null>(null)

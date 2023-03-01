@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useContext, useEffect, useMemo } from "react"
+import React, { useCallback, useState, useEffect, useMemo } from "react"
 
 import { ethers } from "ethers"
 import { useAccount, useConnect, useDisconnect, useSigner, useNetwork, useProvider } from "wagmi"
@@ -16,6 +16,9 @@ export const Connect: React.FC<{ client: Client | null; setClient: (client: Clie
 	const { disconnect } = useDisconnect()
 	const { address, isConnected } = useAccount()
 
+	const [isLoading, setIsLoading] = useState(true)
+	useEffect(() => setIsLoading(false), [])
+
 	return (
 		<div className="window">
 			<div className="title-bar">
@@ -32,18 +35,19 @@ export const Connect: React.FC<{ client: Client | null; setClient: (client: Clie
 				) : (
 					<>
 						<p>Connect to a provider:</p>
-						{connectors.map((connector) => (
-							<button
-								disabled={!connector.ready || isConnected}
-								key={connector.id}
-								onClick={() => connect({ connector })}
-								style={{ marginRight: 5 }}
-							>
-								{connector.name}
-								{!connector.ready && " (unavailable)"}
-								{isConnectionLoading && connector.id === pendingConnector?.id && " (connecting)"}
-							</button>
-						))}
+						{isLoading ||
+							connectors.map((connector) => (
+								<button
+									disabled={!connector.ready || isConnected}
+									key={connector.id}
+									onClick={() => connect({ connector })}
+									style={{ marginRight: 5 }}
+								>
+									{connector.name}
+									{!connector.ready && " (unavailable)"}
+									{isConnectionLoading && connector.id === pendingConnector?.id && " (connecting)"}
+								</button>
+							))}
 					</>
 				)}
 				<ErrorMessage error={connectionError} />
