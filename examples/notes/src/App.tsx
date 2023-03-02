@@ -241,6 +241,7 @@ const InnerApp: React.FC<{
 					{currentNote && selectedNoteId ? (
 						<div className="pl-5 pr-5 pt-3 pb-3 grow">
 							<div className="flex flex-col">
+								<div className="m-auto pb-2 text-gray-400 text-sm">created by {currentNote.creator_id}</div>
 								<input
 									placeholder="Title"
 									type="text"
