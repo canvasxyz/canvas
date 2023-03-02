@@ -584,11 +584,9 @@ export class VM {
 		} else if (typeof value === "number") {
 			return this.context.newNumber(value)
 		} else if (typeof value === "bigint") {
-			// TODO: support real bigints
-			// return newBigInt(this.context, value)
-			return this.context.newNumber(Number(value))
+			return this.context.newBigInt(value)
 		} else if (ethers.BigNumber.isBigNumber(value)) {
-			return this.context.newNumber(value.toNumber())
+			return this.context.newBigInt(value.toBigInt())
 		} else {
 			console.error(value)
 			throw new Error("Unsupported value type in contract function result")

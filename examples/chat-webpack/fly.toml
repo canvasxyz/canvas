@@ -3,19 +3,9 @@ kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
 
-[env]
-
-[experimental]
-  allowed_public_ports = []
-  auto_rollback = true
-
 [mounts]
   source = "data"
   destination = "/data"
-
-[[statics]]
-  guest_path = "/app/dist"
-  url_prefix = "/"
 
 [[services]]
   http_checks = []

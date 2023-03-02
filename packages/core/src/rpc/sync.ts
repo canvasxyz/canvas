@@ -89,14 +89,14 @@ class Driver {
 				}
 
 				assert(value !== undefined, "expected leaf nodes to have a Buffer .value")
-				const type = getMessageType(key)
+				const type = getMessageType(Buffer.from(key))
 				if (type === CANVAS_SESSION) {
-					if (this.messageStore.getSessionByHash(value) === null) {
-						requests.push({ type, id: value })
+					if (this.messageStore.getSessionByHash(Buffer.from(value)) === null) {
+						requests.push({ type, id: Buffer.from(value) })
 					}
 				} else if (type === CANVAS_ACTION) {
-					if (this.messageStore.getActionByHash(value) === null) {
-						requests.push({ type, id: value })
+					if (this.messageStore.getActionByHash(Buffer.from(value)) === null) {
+						requests.push({ type, id: Buffer.from(value) })
 					}
 				} else {
 					signalInvalidType(type)

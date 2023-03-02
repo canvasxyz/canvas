@@ -5,17 +5,13 @@ RUN apk add --no-cache bash git openssh libc6-compat
 WORKDIR /app
 COPY ./package.json .
 
-# We should use `npm ci` but need to double-check that it's available on Fly
+# We can't use `npm ci` because it requires a package-lock.json file,
+# which we don't have because we're hoisting everything via workspaces
 RUN npm install
 
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED 1
-
-# Add `ARG` instructions below if you need `NEXT_PUBLIC_` variables
-# then put the value on your fly.toml
-# Example:
-# ARG NEXT_PUBLIC_EXAMPLE="value here"
 
 RUN npm run build
 
@@ -25,7 +21,7 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
-ENV CANVAS_PATH /data
+ENV CANVAS_HOME /data
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -34,4 +30,4 @@ RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app ./
 
-CMD ["npm", "run", "start"]
+CMD [ "npm", "run", "start", "--", "--announce", "/dns4/canvas-chat-2.fly.dev/tcp/4044/ws" ]

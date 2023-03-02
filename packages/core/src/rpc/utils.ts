@@ -48,7 +48,11 @@ export const toNode = ({ level, key, hash, value }: RPC.Node): Node => {
 	}
 }
 
-export const equalKeys = (a: Buffer | null, b: Buffer | null) =>
-	(a === null && b === null) || (a !== null && b !== null && a.equals(b))
+export const equalArrays = (a: Uint8Array, b: Uint8Array) =>
+	a.length === b.length && a.every((byte, i) => byte === b[i])
 
-export const equalNodes = (a: Node, b: Node) => a.level === b.level && equalKeys(a.key, b.key) && a.hash.equals(b.hash)
+export const equalKeys = (a: Uint8Array | null, b: Uint8Array | null) =>
+	(a === null && b === null) || (a !== null && b !== null && equalArrays(a, b))
+
+export const equalNodes = (a: Node, b: Node) =>
+	a.level === b.level && equalKeys(a.key, b.key) && equalArrays(a.hash, b.hash)

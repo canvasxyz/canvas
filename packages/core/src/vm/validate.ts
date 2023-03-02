@@ -181,7 +181,7 @@ export function validateCanvasSpec(
 	if (routesHandle !== undefined) {
 		if (assertLogError(context.typeof(routesHandle) === "object", "`routes` export must be an object")) {
 			exports.routeHandles = routesHandle.consume((handle) => unwrapObject(context, handle))
-			const routeNamePattern = /^(\/:?[a-z_]+)+$/
+			const routeNamePattern = /^(\/:?[a-zA-Z_]+)+$/
 			for (const [name, handle] of Object.entries(exports.routeHandles)) {
 				assertLogError(
 					routeNamePattern.test(name),

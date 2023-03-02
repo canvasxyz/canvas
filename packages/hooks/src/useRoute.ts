@@ -62,11 +62,13 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 	const [error, setError] = useState<Error | null>(null)
 	const [data, setData] = useState<T[] | null>(null)
 
-	const url = useMemo(() => getRouteURL(host, route, params), [host, route, params])
+	// Assumes JSON.stringify is stable across multiple runs in the same environment
+	const url = useMemo(() => getRouteURL(host, route, params), [host, route, JSON.stringify(params)])
 
 	const readyState = ws?.readyState
 	const subscribe = options.subscribe ?? true
 
+	// As above, assumes JSON.stringify is stable across multiple runs in the same environment
 	const listener = useMemo(
 		() => (evt: MessageEvent) => {
 			if (evt.data.toString() === "pong") return
@@ -81,7 +83,7 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 				console.log("ws: failed to parse message", evt.data)
 			}
 		},
-		[callback, params]
+		[callback, JSON.stringify(params)]
 	)
 
 	useEffect(() => {

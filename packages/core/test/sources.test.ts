@@ -243,7 +243,7 @@ test("Build missing MST index on core startup", async (t) => {
 			for (const [dbi, entries] of Object.entries(mstEntries)) {
 				await core.mst!.read(dbi, (txn) => {
 					for (const { key, value } of entries) {
-						t.deepEqual(value, txn.get(key), `key ${toHex(key)}`)
+						t.deepEqual(new Uint8Array(value), txn.get(key), `key ${toHex(key)}`)
 					}
 				})
 			}
