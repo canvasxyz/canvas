@@ -81,7 +81,7 @@ export class Source {
 	}
 
 	public get protocol() {
-		return `/x/canvas/sync/v1/${this.cid}`
+		return `/x/canvas/sync/v2/${this.cid}`
 	}
 
 	/**
