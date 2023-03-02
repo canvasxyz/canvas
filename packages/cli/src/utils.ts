@@ -17,8 +17,6 @@ import * as constants from "@canvas-js/core/constants"
 import { chainType } from "@canvas-js/core/codecs"
 
 export const CANVAS_HOME = process.env.CANVAS_HOME ?? path.resolve(os.homedir(), ".canvas")
-export const SOCKET_FILENAME = "daemon.sock"
-export const SOCKET_PATH = path.resolve(CANVAS_HOME, SOCKET_FILENAME)
 
 if (!fs.existsSync(CANVAS_HOME)) {
 	console.log(`[canvas-cli] Creating directory ${path.resolve(CANVAS_HOME)}`)
