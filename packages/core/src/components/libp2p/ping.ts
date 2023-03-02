@@ -16,10 +16,9 @@ function* forContacts(routingTable: RoutingTable): Iterable<PeerId> {
 		return
 	}
 
-	for (const bucket of routingTable.kb.toIterable()) {
-		for (const { peer } of bucket.contacts) {
-			yield peer
-		}
+	for (const contact of routingTable.kb.toIterable()) {
+		const { peer } = contact as unknown as { id: Uint8Array; peer: PeerId }
+		yield peer
 	}
 }
 
