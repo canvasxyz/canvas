@@ -91,6 +91,15 @@ export const useNoteKeys = (address: string | null) => {
 	const [noteKeys, setNoteKeys] = useState<Record<string, { decrypted_key: Buffer; encrypted_key: string }>>({})
 	const { data: encryptedKeyData } = useRoute<EncryptedKey>("/encrypted_keys", {})
 
+	const noteOwners: Record<string, string[]> = {}
+	for (const encryptedKey of encryptedKeyData || []) {
+		if (!(encryptedKey.note_id in noteOwners)) {
+			noteOwners[encryptedKey.note_id] = []
+		}
+
+		noteOwners[encryptedKey.note_id].push(encryptedKey.owner_id)
+	}
+
 	useEffect(() => {
 		if (address == null || encryptedKeyData == null) {
 			console.log("setting noteKeys to {}")
@@ -124,7 +133,7 @@ export const useNoteKeys = (address: string | null) => {
 		})
 	}, [address, encryptedKeyData])
 
-	return { noteKeys }
+	return { noteKeys, noteOwners }
 }
 
 const usePubKey = (address: string | null) => {

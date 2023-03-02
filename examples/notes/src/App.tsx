@@ -79,7 +79,7 @@ const InnerApp: React.FC<{
 	connect: () => void
 	disconnect: () => void
 }> = ({ address, client, connectionState, errors, connector, connect, disconnect }) => {
-	const { noteKeys } = useNoteKeys(address)
+	const { noteKeys, noteOwners } = useNoteKeys(address)
 	const { localNotes, deleteNote, createNote, shareNote, updateNote, updateLocalNote, users } = useNotes(
 		address,
 		client,
@@ -90,6 +90,8 @@ const InnerApp: React.FC<{
 	const currentNote: LocalNote | null = selectedNoteId ? localNotes[selectedNoteId] : null
 
 	const [showShareModal, setShowShareModal] = useState(false)
+
+	const isOwnedByCurrentUser = currentNote?.creator_id == address
 
 	const showError = (errorMessage: string) => {
 		Toastify({
@@ -245,22 +247,28 @@ const InnerApp: React.FC<{
 								<input
 									placeholder="Title"
 									type="text"
-									className="text-xl font-bold border border-black p-1 rounded-md"
+									className={`border ${
+										isOwnedByCurrentUser ? "border-black" : "border-gray-300 bg-gray-100"
+									} p-1 mt-2 rounded-md h-200`}
 									value={currentNote.title}
+									disabled={!isOwnedByCurrentUser}
 									onChange={(e) => {
 										updateLocalNote(selectedNoteId, { title: e.target.value })
 									}}
 								/>
 								<textarea
 									placeholder="..."
-									className="border border-black p-1 mt-2 rounded-md h-200"
+									className={`border ${
+										isOwnedByCurrentUser ? "border-black" : "border-gray-300 bg-gray-100"
+									} p-1 mt-2 rounded-md h-200`}
 									value={currentNote.body}
+									disabled={!isOwnedByCurrentUser}
 									onChange={(e) => {
 										updateLocalNote(selectedNoteId, { body: e.target.value })
 									}}
 								/>
 							</div>
-							{currentNote.dirty && (
+							{currentNote.dirty && isOwnedByCurrentUser && (
 								<div
 									className="absolute right-10 bottom-10 border border-gray-400 p-3 rounded-lg bg-gray-200 hover:bg-gray-300 hover:cursor-pointer"
 									onClick={async () => {
@@ -283,12 +291,14 @@ const InnerApp: React.FC<{
 				</div>
 			</div>
 
-			{showShareModal && currentNote && (
+			{showShareModal && currentNote && address && (
 				<ShareNoteModal
+					address={address}
 					shareNote={shareNote}
 					currentNote={currentNote}
 					users={users}
 					closeModal={() => setShowShareModal(false)}
+					owners={noteOwners[currentNote.id] || []}
 				/>
 			)}
 		</>
