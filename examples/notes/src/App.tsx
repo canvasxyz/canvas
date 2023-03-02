@@ -296,6 +296,7 @@ const InnerApp: React.FC<{
 					address={address}
 					shareNote={shareNote}
 					currentNote={currentNote}
+					isOwnedByCurrentUser={isOwnedByCurrentUser}
 					users={users}
 					closeModal={() => setShowShareModal(false)}
 					owners={noteOwners[currentNote.id] || []}

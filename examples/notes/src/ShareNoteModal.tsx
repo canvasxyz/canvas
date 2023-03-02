@@ -5,6 +5,7 @@ export const ShareNoteModal = ({
 	address,
 	currentNote,
 	users,
+	isOwnedByCurrentUser,
 	closeModal,
 	shareNote,
 	owners,
@@ -12,6 +13,7 @@ export const ShareNoteModal = ({
 	address: string
 	currentNote: LocalNote
 	users: Record<string, User>
+	isOwnedByCurrentUser: boolean
 	closeModal: () => void
 	shareNote: (otherUser: User, note: LocalNote) => void
 	// users who already have access to the note
@@ -33,7 +35,13 @@ export const ShareNoteModal = ({
 								<h3 className="text-base font-semibold leading-6 text-gray-900" id="modal-title">
 									Share note "{currentNote.id.split("/")[1].slice(0, 10)}..."
 								</h3>
+
 								<div className="mt-2 flex flex-col gap-2">
+									{!isOwnedByCurrentUser && (
+										<div className="text-sm text-red-500 justify-center italic">
+											Notes can only be shared by their creator
+										</div>
+									)}
 									{otherUsers.map(([id, user]) => (
 										<div key={`user-${user.address}`} className="grid grid-cols-6 gap-2">
 											<div className="grid col-span-5 py-2 truncate">{user.address.slice(0, 20)}...</div>
@@ -45,7 +53,7 @@ export const ShareNoteModal = ({
 												>
 													Shared
 												</button>
-											) : (
+											) : isOwnedByCurrentUser ? (
 												<button
 													key={user.id}
 													onClick={async () => {
@@ -55,6 +63,8 @@ export const ShareNoteModal = ({
 												>
 													Share
 												</button>
+											) : (
+												<></>
 											)}
 										</div>
 									))}
