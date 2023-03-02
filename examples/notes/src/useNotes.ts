@@ -127,6 +127,29 @@ export const useNoteKeys = (address: string | null) => {
 	return { noteKeys }
 }
 
+const usePubKey = (address: string | null) => {
+	const [pubKey, setPubKey] = useState<Buffer | null>(null)
+
+	useEffect(() => {
+		// if address changes, invalidate pubkey cache
+		setPubKey(null)
+	}, [address])
+
+	const getPubKey = async () => {
+		if (address == null) {
+			throw Error("public key requested but user is not logged in!")
+		}
+		if (pubKey) {
+			return pubKey
+		}
+		const retrievedPubKey = await metamaskGetPublicKey(address)
+		setPubKey(retrievedPubKey)
+		return retrievedPubKey
+	}
+
+	return { getPubKey }
+}
+
 export const useNotes = (
 	address: string | null,
 	client: Client | null,
@@ -137,21 +160,8 @@ export const useNotes = (
 
 	const [localNotes, setLocalNotes] = useState<Record<string, LocalNote>>({})
 
-	const [pubKey, setPubKey] = useState<Buffer | null>(null)
+	const { getPubKey } = usePubKey(address)
 	const [pendingPubKey, setPendingPubKey] = useState(false)
-
-	const getPubKey = async () => {
-		if (!address) {
-			setPubKey(null)
-			return
-		}
-		if (pubKey) {
-			return pubKey
-		}
-		const retrievedPubKey = await metamaskGetPublicKey(address)
-		setPubKey(retrievedPubKey)
-		return retrievedPubKey
-	}
 
 	useEffect(() => {
 		if (client !== null && usersData !== null && address !== null) {
