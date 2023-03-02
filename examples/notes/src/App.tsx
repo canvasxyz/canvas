@@ -91,7 +91,7 @@ const InnerApp: React.FC<{
 
 	const [showShareModal, setShowShareModal] = useState(false)
 
-	const isOwnedByCurrentUser = currentNote?.creator_id == address
+	const createdByCurrentUser = currentNote?.creator_id == address
 
 	const showError = (errorMessage: string) => {
 		Toastify({
@@ -248,10 +248,10 @@ const InnerApp: React.FC<{
 									placeholder="Title"
 									type="text"
 									className={`border ${
-										isOwnedByCurrentUser ? "border-black" : "border-gray-300 bg-gray-100"
+										createdByCurrentUser ? "border-black" : "border-gray-300 bg-gray-100"
 									} p-1 mt-2 rounded-md h-200`}
 									value={currentNote.title}
-									disabled={!isOwnedByCurrentUser}
+									disabled={!createdByCurrentUser}
 									onChange={(e) => {
 										updateLocalNote(selectedNoteId, { title: e.target.value })
 									}}
@@ -259,16 +259,16 @@ const InnerApp: React.FC<{
 								<textarea
 									placeholder="..."
 									className={`border ${
-										isOwnedByCurrentUser ? "border-black" : "border-gray-300 bg-gray-100"
+										createdByCurrentUser ? "border-black" : "border-gray-300 bg-gray-100"
 									} p-1 mt-2 rounded-md h-200`}
 									value={currentNote.body}
-									disabled={!isOwnedByCurrentUser}
+									disabled={!createdByCurrentUser}
 									onChange={(e) => {
 										updateLocalNote(selectedNoteId, { body: e.target.value })
 									}}
 								/>
 							</div>
-							{currentNote.dirty && isOwnedByCurrentUser && (
+							{currentNote.dirty && createdByCurrentUser && (
 								<div
 									className="absolute right-10 bottom-10 border border-gray-400 p-3 rounded-lg bg-gray-200 hover:bg-gray-300 hover:cursor-pointer"
 									onClick={async () => {
@@ -296,7 +296,7 @@ const InnerApp: React.FC<{
 					address={address}
 					shareNote={shareNote}
 					currentNote={currentNote}
-					isOwnedByCurrentUser={isOwnedByCurrentUser}
+					createdByCurrentUser={createdByCurrentUser}
 					users={users}
 					closeModal={() => setShowShareModal(false)}
 					owners={noteOwners[currentNote.id] || []}

@@ -5,7 +5,7 @@ export const ShareNoteModal = ({
 	address,
 	currentNote,
 	users,
-	isOwnedByCurrentUser,
+	createdByCurrentUser,
 	closeModal,
 	shareNote,
 	owners,
@@ -13,7 +13,7 @@ export const ShareNoteModal = ({
 	address: string
 	currentNote: LocalNote
 	users: Record<string, User>
-	isOwnedByCurrentUser: boolean
+	createdByCurrentUser: boolean
 	closeModal: () => void
 	shareNote: (otherUser: User, note: LocalNote) => void
 	// users who already have access to the note
@@ -37,7 +37,7 @@ export const ShareNoteModal = ({
 								</h3>
 
 								<div className="mt-2 flex flex-col gap-2">
-									{!isOwnedByCurrentUser && (
+									{!createdByCurrentUser && (
 										<div className="text-sm text-red-500 justify-center italic">
 											Notes can only be shared by their creator
 										</div>
@@ -53,7 +53,7 @@ export const ShareNoteModal = ({
 												>
 													Shared
 												</button>
-											) : isOwnedByCurrentUser ? (
+											) : createdByCurrentUser ? (
 												<button
 													key={user.id}
 													onClick={async () => {
