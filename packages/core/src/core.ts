@@ -236,6 +236,10 @@ export class Core extends EventEmitter<CoreEvents> {
 	private applyMessageInternal = async (hash: Uint8Array, message: Message) => {
 		const id = toHex(hash)
 
+		if (this.options.verbose) {
+			console.log(`[canvas-core] Applying ${message.type} ${id}`, message)
+		}
+
 		if (message.type === "action") {
 			await this.validateAction(message)
 
@@ -245,18 +249,10 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			metrics.canvas_messages.inc({ type: "action", uri: message.payload.app }, 1)
 		} else if (message.type === "session") {
-			if (this.options.verbose) {
-				console.log(`[canvas-core] Applying session ${id}`, message)
-			}
-
 			await this.validateSession(message)
 
 			metrics.canvas_messages.inc({ type: "session", uri: message.payload.app }, 1)
 		} else if (message.type == "customAction") {
-			if (this.options.verbose) {
-				console.log(`[canvas-core] Applying custom action ${id}`, message)
-			}
-
 			await this.validateCustomAction(message)
 
 			const effects = await this.vm.executeCustomAction(hash, message.payload, { timestamp: 0 })
