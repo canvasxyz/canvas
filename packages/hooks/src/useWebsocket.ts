@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 import { ApplicationData } from "./CanvasContext.js"
 
@@ -83,17 +83,21 @@ const setupWebsocket = (
 }
 
 export function useWebsocket(config: WebSocketConfig): WebSocket | null {
-	const [ws, setWS] = useState<WebSocket | null>(null)
+	const wsRef = useRef<WebSocket | null>(null)
 
 	useEffect(() => {
 		// Set up a websocket, and re-connect whenever connection fails
 		const reconnect = (delay: number) => {
 			const newDelay = delay < 10000 ? delay + 1000 : delay
-			setTimeout(() => setWS(setupWebsocket(config, reconnect, newDelay)), delay)
+			setTimeout(() => {
+				wsRef.current = setupWebsocket(config, reconnect, newDelay)
+			}, delay)
 		}
 
-		setWS(setupWebsocket(config, reconnect, 0))
+		if (wsRef.current == null) {
+			wsRef.current = setupWebsocket(config, () => {}, 0)
+		}
 	}, [])
 
-	return ws
+	return wsRef.current
 }
