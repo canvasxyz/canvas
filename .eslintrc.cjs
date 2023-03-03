@@ -37,6 +37,7 @@ module.exports = {
     "@typescript-eslint/no-non-null-assertion": "off",
     "@typescript-eslint/no-empty-interface": "off",
     "no-empty-pattern": "off",
+    "require-yield": "off",
     "@typescript-eslint/ban-types": [
       "error",
       {
