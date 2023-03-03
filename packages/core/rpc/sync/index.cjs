@@ -322,275 +322,6 @@ $root.Node = (function() {
     return Node;
 })();
 
-$root.MessageRequest = (function() {
-
-    /**
-     * Properties of a MessageRequest.
-     * @exports IMessageRequest
-     * @interface IMessageRequest
-     * @property {MessageRequest.MessageType|null} [type] MessageRequest type
-     * @property {Uint8Array|null} [id] MessageRequest id
-     */
-
-    /**
-     * Constructs a new MessageRequest.
-     * @exports MessageRequest
-     * @classdesc Represents a MessageRequest.
-     * @implements IMessageRequest
-     * @constructor
-     * @param {IMessageRequest=} [properties] Properties to set
-     */
-    function MessageRequest(properties) {
-        if (properties)
-            for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
-                if (properties[keys[i]] != null)
-                    this[keys[i]] = properties[keys[i]];
-    }
-
-    /**
-     * MessageRequest type.
-     * @member {MessageRequest.MessageType} type
-     * @memberof MessageRequest
-     * @instance
-     */
-    MessageRequest.prototype.type = 0;
-
-    /**
-     * MessageRequest id.
-     * @member {Uint8Array} id
-     * @memberof MessageRequest
-     * @instance
-     */
-    MessageRequest.prototype.id = $util.newBuffer([]);
-
-    /**
-     * Creates a new MessageRequest instance using the specified properties.
-     * @function create
-     * @memberof MessageRequest
-     * @static
-     * @param {IMessageRequest=} [properties] Properties to set
-     * @returns {MessageRequest} MessageRequest instance
-     */
-    MessageRequest.create = function create(properties) {
-        return new MessageRequest(properties);
-    };
-
-    /**
-     * Encodes the specified MessageRequest message. Does not implicitly {@link MessageRequest.verify|verify} messages.
-     * @function encode
-     * @memberof MessageRequest
-     * @static
-     * @param {IMessageRequest} message MessageRequest message or plain object to encode
-     * @param {$protobuf.Writer} [writer] Writer to encode to
-     * @returns {$protobuf.Writer} Writer
-     */
-    MessageRequest.encode = function encode(message, writer) {
-        if (!writer)
-            writer = $Writer.create();
-        if (message.type != null && Object.hasOwnProperty.call(message, "type"))
-            writer.uint32(/* id 1, wireType 0 =*/8).int32(message.type);
-        if (message.id != null && Object.hasOwnProperty.call(message, "id"))
-            writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.id);
-        return writer;
-    };
-
-    /**
-     * Encodes the specified MessageRequest message, length delimited. Does not implicitly {@link MessageRequest.verify|verify} messages.
-     * @function encodeDelimited
-     * @memberof MessageRequest
-     * @static
-     * @param {IMessageRequest} message MessageRequest message or plain object to encode
-     * @param {$protobuf.Writer} [writer] Writer to encode to
-     * @returns {$protobuf.Writer} Writer
-     */
-    MessageRequest.encodeDelimited = function encodeDelimited(message, writer) {
-        return this.encode(message, writer).ldelim();
-    };
-
-    /**
-     * Decodes a MessageRequest message from the specified reader or buffer.
-     * @function decode
-     * @memberof MessageRequest
-     * @static
-     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-     * @param {number} [length] Message length if known beforehand
-     * @returns {MessageRequest} MessageRequest
-     * @throws {Error} If the payload is not a reader or valid buffer
-     * @throws {$protobuf.util.ProtocolError} If required fields are missing
-     */
-    MessageRequest.decode = function decode(reader, length) {
-        if (!(reader instanceof $Reader))
-            reader = $Reader.create(reader);
-        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.MessageRequest();
-        while (reader.pos < end) {
-            var tag = reader.uint32();
-            switch (tag >>> 3) {
-            case 1: {
-                    message.type = reader.int32();
-                    break;
-                }
-            case 2: {
-                    message.id = reader.bytes();
-                    break;
-                }
-            default:
-                reader.skipType(tag & 7);
-                break;
-            }
-        }
-        return message;
-    };
-
-    /**
-     * Decodes a MessageRequest message from the specified reader or buffer, length delimited.
-     * @function decodeDelimited
-     * @memberof MessageRequest
-     * @static
-     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-     * @returns {MessageRequest} MessageRequest
-     * @throws {Error} If the payload is not a reader or valid buffer
-     * @throws {$protobuf.util.ProtocolError} If required fields are missing
-     */
-    MessageRequest.decodeDelimited = function decodeDelimited(reader) {
-        if (!(reader instanceof $Reader))
-            reader = new $Reader(reader);
-        return this.decode(reader, reader.uint32());
-    };
-
-    /**
-     * Verifies a MessageRequest message.
-     * @function verify
-     * @memberof MessageRequest
-     * @static
-     * @param {Object.<string,*>} message Plain object to verify
-     * @returns {string|null} `null` if valid, otherwise the reason why it is not
-     */
-    MessageRequest.verify = function verify(message) {
-        if (typeof message !== "object" || message === null)
-            return "object expected";
-        if (message.type != null && message.hasOwnProperty("type"))
-            switch (message.type) {
-            default:
-                return "type: enum value expected";
-            case 0:
-            case 1:
-                break;
-            }
-        if (message.id != null && message.hasOwnProperty("id"))
-            if (!(message.id && typeof message.id.length === "number" || $util.isString(message.id)))
-                return "id: buffer expected";
-        return null;
-    };
-
-    /**
-     * Creates a MessageRequest message from a plain object. Also converts values to their respective internal types.
-     * @function fromObject
-     * @memberof MessageRequest
-     * @static
-     * @param {Object.<string,*>} object Plain object
-     * @returns {MessageRequest} MessageRequest
-     */
-    MessageRequest.fromObject = function fromObject(object) {
-        if (object instanceof $root.MessageRequest)
-            return object;
-        var message = new $root.MessageRequest();
-        switch (object.type) {
-        default:
-            if (typeof object.type === "number") {
-                message.type = object.type;
-                break;
-            }
-            break;
-        case "CANVAS_SESSION":
-        case 0:
-            message.type = 0;
-            break;
-        case "CANVAS_ACTION":
-        case 1:
-            message.type = 1;
-            break;
-        }
-        if (object.id != null)
-            if (typeof object.id === "string")
-                $util.base64.decode(object.id, message.id = $util.newBuffer($util.base64.length(object.id)), 0);
-            else if (object.id.length >= 0)
-                message.id = object.id;
-        return message;
-    };
-
-    /**
-     * Creates a plain object from a MessageRequest message. Also converts values to other types if specified.
-     * @function toObject
-     * @memberof MessageRequest
-     * @static
-     * @param {MessageRequest} message MessageRequest
-     * @param {$protobuf.IConversionOptions} [options] Conversion options
-     * @returns {Object.<string,*>} Plain object
-     */
-    MessageRequest.toObject = function toObject(message, options) {
-        if (!options)
-            options = {};
-        var object = {};
-        if (options.defaults) {
-            object.type = options.enums === String ? "CANVAS_SESSION" : 0;
-            if (options.bytes === String)
-                object.id = "";
-            else {
-                object.id = [];
-                if (options.bytes !== Array)
-                    object.id = $util.newBuffer(object.id);
-            }
-        }
-        if (message.type != null && message.hasOwnProperty("type"))
-            object.type = options.enums === String ? $root.MessageRequest.MessageType[message.type] === undefined ? message.type : $root.MessageRequest.MessageType[message.type] : message.type;
-        if (message.id != null && message.hasOwnProperty("id"))
-            object.id = options.bytes === String ? $util.base64.encode(message.id, 0, message.id.length) : options.bytes === Array ? Array.prototype.slice.call(message.id) : message.id;
-        return object;
-    };
-
-    /**
-     * Converts this MessageRequest to JSON.
-     * @function toJSON
-     * @memberof MessageRequest
-     * @instance
-     * @returns {Object.<string,*>} JSON object
-     */
-    MessageRequest.prototype.toJSON = function toJSON() {
-        return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
-    };
-
-    /**
-     * Gets the default type url for MessageRequest
-     * @function getTypeUrl
-     * @memberof MessageRequest
-     * @static
-     * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-     * @returns {string} The default type url
-     */
-    MessageRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
-        if (typeUrlPrefix === undefined) {
-            typeUrlPrefix = "type.googleapis.com";
-        }
-        return typeUrlPrefix + "/MessageRequest";
-    };
-
-    /**
-     * MessageType enum.
-     * @name MessageRequest.MessageType
-     * @enum {number}
-     * @property {number} CANVAS_SESSION=0 CANVAS_SESSION value
-     * @property {number} CANVAS_ACTION=1 CANVAS_ACTION value
-     */
-    MessageRequest.MessageType = (function() {
-        var valuesById = {}, values = Object.create(valuesById);
-        values[valuesById[0] = "CANVAS_SESSION"] = 0;
-        values[valuesById[1] = "CANVAS_ACTION"] = 1;
-        return values;
-    })();
-
-    return MessageRequest;
-})();
-
 $root.Request = (function() {
 
     /**
@@ -1326,7 +1057,7 @@ $root.Request = (function() {
          * Properties of a GetMessagesRequest.
          * @memberof Request
          * @interface IGetMessagesRequest
-         * @property {Array.<IMessageRequest>|null} [messages] GetMessagesRequest messages
+         * @property {Array.<Uint8Array>|null} [ids] GetMessagesRequest ids
          */
 
         /**
@@ -1338,7 +1069,7 @@ $root.Request = (function() {
          * @param {Request.IGetMessagesRequest=} [properties] Properties to set
          */
         function GetMessagesRequest(properties) {
-            this.messages = [];
+            this.ids = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
@@ -1346,12 +1077,12 @@ $root.Request = (function() {
         }
 
         /**
-         * GetMessagesRequest messages.
-         * @member {Array.<IMessageRequest>} messages
+         * GetMessagesRequest ids.
+         * @member {Array.<Uint8Array>} ids
          * @memberof Request.GetMessagesRequest
          * @instance
          */
-        GetMessagesRequest.prototype.messages = $util.emptyArray;
+        GetMessagesRequest.prototype.ids = $util.emptyArray;
 
         /**
          * Creates a new GetMessagesRequest instance using the specified properties.
@@ -1377,9 +1108,9 @@ $root.Request = (function() {
         GetMessagesRequest.encode = function encode(message, writer) {
             if (!writer)
                 writer = $Writer.create();
-            if (message.messages != null && message.messages.length)
-                for (var i = 0; i < message.messages.length; ++i)
-                    $root.MessageRequest.encode(message.messages[i], writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
+            if (message.ids != null && message.ids.length)
+                for (var i = 0; i < message.ids.length; ++i)
+                    writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.ids[i]);
             return writer;
         };
 
@@ -1415,9 +1146,9 @@ $root.Request = (function() {
                 var tag = reader.uint32();
                 switch (tag >>> 3) {
                 case 2: {
-                        if (!(message.messages && message.messages.length))
-                            message.messages = [];
-                        message.messages.push($root.MessageRequest.decode(reader, reader.uint32()));
+                        if (!(message.ids && message.ids.length))
+                            message.ids = [];
+                        message.ids.push(reader.bytes());
                         break;
                     }
                 default:
@@ -1455,14 +1186,12 @@ $root.Request = (function() {
         GetMessagesRequest.verify = function verify(message) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
-            if (message.messages != null && message.hasOwnProperty("messages")) {
-                if (!Array.isArray(message.messages))
-                    return "messages: array expected";
-                for (var i = 0; i < message.messages.length; ++i) {
-                    var error = $root.MessageRequest.verify(message.messages[i]);
-                    if (error)
-                        return "messages." + error;
-                }
+            if (message.ids != null && message.hasOwnProperty("ids")) {
+                if (!Array.isArray(message.ids))
+                    return "ids: array expected";
+                for (var i = 0; i < message.ids.length; ++i)
+                    if (!(message.ids[i] && typeof message.ids[i].length === "number" || $util.isString(message.ids[i])))
+                        return "ids: buffer[] expected";
             }
             return null;
         };
@@ -1479,15 +1208,15 @@ $root.Request = (function() {
             if (object instanceof $root.Request.GetMessagesRequest)
                 return object;
             var message = new $root.Request.GetMessagesRequest();
-            if (object.messages) {
-                if (!Array.isArray(object.messages))
-                    throw TypeError(".Request.GetMessagesRequest.messages: array expected");
-                message.messages = [];
-                for (var i = 0; i < object.messages.length; ++i) {
-                    if (typeof object.messages[i] !== "object")
-                        throw TypeError(".Request.GetMessagesRequest.messages: object expected");
-                    message.messages[i] = $root.MessageRequest.fromObject(object.messages[i]);
-                }
+            if (object.ids) {
+                if (!Array.isArray(object.ids))
+                    throw TypeError(".Request.GetMessagesRequest.ids: array expected");
+                message.ids = [];
+                for (var i = 0; i < object.ids.length; ++i)
+                    if (typeof object.ids[i] === "string")
+                        $util.base64.decode(object.ids[i], message.ids[i] = $util.newBuffer($util.base64.length(object.ids[i])), 0);
+                    else if (object.ids[i].length >= 0)
+                        message.ids[i] = object.ids[i];
             }
             return message;
         };
@@ -1506,11 +1235,11 @@ $root.Request = (function() {
                 options = {};
             var object = {};
             if (options.arrays || options.defaults)
-                object.messages = [];
-            if (message.messages && message.messages.length) {
-                object.messages = [];
-                for (var j = 0; j < message.messages.length; ++j)
-                    object.messages[j] = $root.MessageRequest.toObject(message.messages[j], options);
+                object.ids = [];
+            if (message.ids && message.ids.length) {
+                object.ids = [];
+                for (var j = 0; j < message.ids.length; ++j)
+                    object.ids[j] = options.bytes === String ? $util.base64.encode(message.ids[j], 0, message.ids[j].length) : options.bytes === Array ? Array.prototype.slice.call(message.ids[j]) : message.ids[j];
             }
             return object;
         };
@@ -1871,8 +1600,7 @@ $root.Response = (function() {
          * Properties of a GetRootResponse.
          * @memberof Response
          * @interface IGetRootResponse
-         * @property {number|null} [level] GetRootResponse level
-         * @property {Uint8Array|null} [hash] GetRootResponse hash
+         * @property {INode|null} [root] GetRootResponse root
          */
 
         /**
@@ -1891,20 +1619,12 @@ $root.Response = (function() {
         }
 
         /**
-         * GetRootResponse level.
-         * @member {number} level
+         * GetRootResponse root.
+         * @member {INode|null|undefined} root
          * @memberof Response.GetRootResponse
          * @instance
          */
-        GetRootResponse.prototype.level = 0;
-
-        /**
-         * GetRootResponse hash.
-         * @member {Uint8Array} hash
-         * @memberof Response.GetRootResponse
-         * @instance
-         */
-        GetRootResponse.prototype.hash = $util.newBuffer([]);
+        GetRootResponse.prototype.root = null;
 
         /**
          * Creates a new GetRootResponse instance using the specified properties.
@@ -1930,10 +1650,8 @@ $root.Response = (function() {
         GetRootResponse.encode = function encode(message, writer) {
             if (!writer)
                 writer = $Writer.create();
-            if (message.level != null && Object.hasOwnProperty.call(message, "level"))
-                writer.uint32(/* id 2, wireType 0 =*/16).uint32(message.level);
-            if (message.hash != null && Object.hasOwnProperty.call(message, "hash"))
-                writer.uint32(/* id 3, wireType 2 =*/26).bytes(message.hash);
+            if (message.root != null && Object.hasOwnProperty.call(message, "root"))
+                $root.Node.encode(message.root, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
             return writer;
         };
 
@@ -1969,11 +1687,7 @@ $root.Response = (function() {
                 var tag = reader.uint32();
                 switch (tag >>> 3) {
                 case 2: {
-                        message.level = reader.uint32();
-                        break;
-                    }
-                case 3: {
-                        message.hash = reader.bytes();
+                        message.root = $root.Node.decode(reader, reader.uint32());
                         break;
                     }
                 default:
@@ -2011,12 +1725,11 @@ $root.Response = (function() {
         GetRootResponse.verify = function verify(message) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
-            if (message.level != null && message.hasOwnProperty("level"))
-                if (!$util.isInteger(message.level))
-                    return "level: integer expected";
-            if (message.hash != null && message.hasOwnProperty("hash"))
-                if (!(message.hash && typeof message.hash.length === "number" || $util.isString(message.hash)))
-                    return "hash: buffer expected";
+            if (message.root != null && message.hasOwnProperty("root")) {
+                var error = $root.Node.verify(message.root);
+                if (error)
+                    return "root." + error;
+            }
             return null;
         };
 
@@ -2032,13 +1745,11 @@ $root.Response = (function() {
             if (object instanceof $root.Response.GetRootResponse)
                 return object;
             var message = new $root.Response.GetRootResponse();
-            if (object.level != null)
-                message.level = object.level >>> 0;
-            if (object.hash != null)
-                if (typeof object.hash === "string")
-                    $util.base64.decode(object.hash, message.hash = $util.newBuffer($util.base64.length(object.hash)), 0);
-                else if (object.hash.length >= 0)
-                    message.hash = object.hash;
+            if (object.root != null) {
+                if (typeof object.root !== "object")
+                    throw TypeError(".Response.GetRootResponse.root: object expected");
+                message.root = $root.Node.fromObject(object.root);
+            }
             return message;
         };
 
@@ -2055,20 +1766,10 @@ $root.Response = (function() {
             if (!options)
                 options = {};
             var object = {};
-            if (options.defaults) {
-                object.level = 0;
-                if (options.bytes === String)
-                    object.hash = "";
-                else {
-                    object.hash = [];
-                    if (options.bytes !== Array)
-                        object.hash = $util.newBuffer(object.hash);
-                }
-            }
-            if (message.level != null && message.hasOwnProperty("level"))
-                object.level = message.level;
-            if (message.hash != null && message.hasOwnProperty("hash"))
-                object.hash = options.bytes === String ? $util.base64.encode(message.hash, 0, message.hash.length) : options.bytes === Array ? Array.prototype.slice.call(message.hash) : message.hash;
+            if (options.defaults)
+                object.root = null;
+            if (message.root != null && message.hasOwnProperty("root"))
+                object.root = $root.Node.toObject(message.root, options);
             return object;
         };
 

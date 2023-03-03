@@ -6,7 +6,7 @@ import { Tree, Transaction } from "@canvas-js/okra-node"
 
 import { Message } from "@canvas-js/interfaces"
 
-import { getMessageKey } from "./rpc/index.js"
+import { getMessageKey } from "./sync/index.js"
 import { MST_DIRECTORY_NAME } from "./constants.js"
 import { toHex } from "./utils.js"
 
@@ -19,7 +19,7 @@ export class MST {
 	public static async initialize(
 		directory: string,
 		dbs: string[],
-		importMessages: (dbi: string) => AsyncIterable<[Buffer, Message]>,
+		importMessages: (dbi: string) => AsyncIterable<[Uint8Array, Message]>,
 		options: { verbose?: boolean } = {}
 	) {
 		const treePath = path.resolve(directory, MST_DIRECTORY_NAME)

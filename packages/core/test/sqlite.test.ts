@@ -1,8 +1,8 @@
 import test from "ava"
 
-import { Core, compileSpec } from "@canvas-js/core"
+import { Core } from "@canvas-js/core"
 
-import { TestSigner } from "./utils.js"
+import { TestSigner, compileSpec } from "./utils.js"
 
 const { spec, app, appName } = await compileSpec({
 	name: "Test App",
@@ -59,10 +59,10 @@ const { spec, app, appName } = await compileSpec({
 const signer = new TestSigner(app, appName)
 
 test("get /all", async (t) => {
-	const core = await Core.initialize({ uri: app, spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ uri: app, spec, directory: null, offline: true, unchecked: true })
 
 	const action = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
-	const { hash: threadId } = await core.applyAction(action)
+	const { hash: threadId } = await core.apply(action)
 
 	const expected = {
 		id: threadId,
@@ -74,27 +74,27 @@ test("get /all", async (t) => {
 
 	t.deepEqual(await core.getRoute("/all", {}), [{ ...expected, score: null }])
 
-	await signer.sign("voteThread", { threadId, value: 1 }).then((action) => core.applyAction(action))
+	await signer.sign("voteThread", { threadId, value: 1 }).then((action) => core.apply(action))
 	t.deepEqual(await core.getRoute("/all", {}), [{ ...expected, score: 1 }])
 
-	await signer.sign("voteThread", { threadId, value: -1 }).then((action) => core.applyAction(action))
+	await signer.sign("voteThread", { threadId, value: -1 }).then((action) => core.apply(action))
 	t.deepEqual(await core.getRoute("/all", {}), [{ ...expected, score: -1 }])
 
 	await core.close()
 })
 
 test("get /votes/:thread_id", async (t) => {
-	const core = await Core.initialize({ uri: app, spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ uri: app, spec, directory: null, offline: true, unchecked: true })
 
 	const action = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
-	const { hash: threadId } = await core.applyAction(action)
+	const { hash: threadId } = await core.apply(action)
 
-	await signer.sign("voteThread", { threadId, value: 1 }).then((action) => core.applyAction(action))
+	await signer.sign("voteThread", { threadId, value: 1 }).then((action) => core.apply(action))
 	t.deepEqual(await core.getRoute("/votes/:thread_id", { thread_id: threadId }), [
 		{ creator: signer.wallet.address, value: 1 },
 	])
 
-	await signer.sign("voteThread", { threadId, value: -1 }).then((action) => core.applyAction(action))
+	await signer.sign("voteThread", { threadId, value: -1 }).then((action) => core.apply(action))
 	t.deepEqual(await core.getRoute("/votes/:thread_id", { thread_id: threadId }), [
 		{ creator: signer.wallet.address, value: -1 },
 	])

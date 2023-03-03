@@ -1,25 +1,26 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import yargs from "yargs"
+import type { Argv } from "yargs"
 import chalk from "chalk"
 import * as t from "io-ts"
 
-import { actionType, sessionType, VM } from "@canvas-js/core"
+import { actionType, sessionType } from "@canvas-js/core/codecs"
+import { VM } from "@canvas-js/core/components/vm"
 
 import { parseSpecArgument } from "../utils.js"
 
 export const command = "info <app>"
 export const desc = "Show the models, views, and actions for a app"
 
-export const builder = (yargs: yargs.Argv) =>
+export const builder = (yargs: Argv) =>
 	yargs.positional("app", {
 		describe: "app filename or CID",
 		type: "string",
 		demandOption: true,
 	})
 
-type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
+type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
 	const { uri, spec } = parseSpecArgument(args.app)

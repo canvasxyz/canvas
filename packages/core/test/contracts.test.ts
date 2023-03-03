@@ -1,11 +1,12 @@
 import test from "ava"
 
 import * as dotenv from "dotenv"
-
-import { compileSpec, Core } from "@canvas-js/core"
-import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
-import { TestSigner } from "./utils.js"
 import { ethers } from "ethers"
+
+import { Core } from "@canvas-js/core"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+
+import { compileSpec, TestSigner } from "./utils.js"
 
 dotenv.config({ path: "../../.env" })
 
@@ -44,13 +45,13 @@ test("contracts (milady balanceOf)", async (t) => {
 	const core = await Core.initialize({
 		spec,
 		directory: null,
-		libp2p: null,
 		chains: [chainImplementation],
+		offline: true,
 	})
 
 	const signer = new TestSigner(app, appName, chainImplementation)
 
 	const action = await signer.sign("verify", {})
-	await t.throwsAsync(core.applyAction(action), { message: "balance is zero!" })
+	await t.throwsAsync(core.apply(action), { message: "balance is zero!" })
 	await core.close()
 })

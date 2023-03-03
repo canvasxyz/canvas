@@ -1,18 +1,19 @@
 import process from "node:process"
 import path from "node:path"
 import fs from "node:fs"
-
+import assert from "node:assert"
 import http from "node:http"
 
-import yargs from "yargs"
+import type { Argv } from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
 import stoppable from "stoppable"
 import express from "express"
 import cors from "cors"
-import { createLibp2p, Libp2p } from "libp2p"
 
-import { Core, constants, actionType, getLibp2pInit, getAPI, setupWebsockets, startPingService } from "@canvas-js/core"
+import { Core, getAPI, setupWebsockets } from "@canvas-js/core"
+import * as constants from "@canvas-js/core/constants"
+import { actionType } from "@canvas-js/core/codecs"
 
 import {
 	getChainImplementations,
@@ -27,7 +28,7 @@ import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 export const command = "run <app>"
 export const desc = "Run an app, by path or IPFS hash"
 
-export const builder = (yargs: yargs.Argv) =>
+export const builder = (yargs: Argv) =>
 	yargs
 		.positional("app", {
 			describe: "Path to app file, or IPFS hash of app",
@@ -55,8 +56,8 @@ export const builder = (yargs: yargs.Argv) =>
 			default: 4044,
 		})
 		.option("announce", {
-			type: "string",
-			desc: "Accept incoming libp2p connections on a public multiaddr",
+			type: "array",
+			desc: "Advertise a publicly dialable multiaddr",
 		})
 		.option("reset", {
 			type: "boolean",
@@ -91,7 +92,7 @@ export const builder = (yargs: yargs.Argv) =>
 			desc: "Serve a static directory from /, and API routes from /api",
 		})
 
-type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
+type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
 	// validate options
@@ -169,6 +170,7 @@ export async function handler(args: Args) {
 		console.log(
 			chalk.yellow(`✦ ${chalk.bold("Using development mode.")} Actions will be signed with the app filename.`)
 		)
+
 		console.log(chalk.yellow(`✦ ${chalk.bold("Using in-memory database.")} Data will be lost on restart.`))
 		console.log(chalk.yellow(`✦ ${chalk.bold("To persist data, install the app:")} canvas install ${args.app}`))
 		console.log("")
@@ -179,52 +181,28 @@ export async function handler(args: Args) {
 	const peerId = await getPeerId()
 	console.log(`[canvas-cli] Using PeerId ${peerId}`)
 
-	let libp2p: Libp2p | null = null
-	if (!offline) {
-		if (announce !== undefined) {
-			console.log(`[canvas-cli] Announcing on ${announce}`)
-			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort, announce: [announce] }))
-		} else {
-			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort }))
-		}
+	const validateAnnounce = (announce: (string | number)[]): announce is string[] =>
+		announce.every((address) => typeof address === "string")
+	if (announce) {
+		assert(validateAnnounce(announce))
+	}
 
-		if (verbose) {
-			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
-				console.log(`[canvas-cli] Connected to ${remotePeer} (${id})`)
-			)
-
-			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
-				console.log(`[canvas-cli] Disconnected from ${remotePeer} (${id})`)
-			)
-		}
+	if (announce !== undefined) {
+		console.log(`[canvas-cli] Announcing on ${announce}`)
 	}
 
 	const core = await Core.initialize({
 		directory,
 		uri,
-		spec: spec,
-		libp2p,
+		spec,
+		peerId,
+		port: peeringPort,
+		announce,
+		replay,
+		offline,
 		unchecked,
 		verbose,
 	})
-
-	if (directory !== null && replay) {
-		console.log(chalk.green(`[canvas-cli] Replaying action log...`))
-		const { vm, messageStore, modelStore } = core
-		let i = 0
-		for await (const [id, action] of messageStore.getActionStream()) {
-			if (!actionType.is(action)) {
-				console.log(chalk.red("[canvas-cli]"), action)
-				throw new Error("Invalid action value in action log")
-			}
-
-			const effects = await vm.execute(id, action.payload)
-			modelStore.applyEffects(action.payload, effects)
-			i++
-		}
-
-		console.log(chalk.green(`[canvas-cli] Successfully replayed all ${i} entries from the action log.`))
-	}
 
 	const app = express()
 	app.use(cors())
@@ -265,27 +243,8 @@ export async function handler(args: Args) {
 		0
 	)
 
-	const controller = new AbortController()
-
-	if (libp2p !== null) {
-		startPingService(libp2p, controller, { verbose })
-	}
-
-	controller.signal.addEventListener("abort", async () => {
-		console.log("[canvas-cli] Stopping API server...")
-		await new Promise<void>((resolve, reject) => server.stop((err) => (err ? reject(err) : resolve())))
-		console.log("[canvas-cli] API server stopped.")
-
-		console.log("[canvas-cli] Closing core...")
-		await core.close()
-		console.log("[canvas-cli] Core closed, press Ctrl+C to terminate immediately.")
-		if (libp2p !== null) {
-			await libp2p.stop()
-		}
-	})
-
 	let stopping = false
-	process.on("SIGINT", () => {
+	process.on("SIGINT", async () => {
 		if (stopping) {
 			process.exit(1)
 		} else {
@@ -294,7 +253,13 @@ export async function handler(args: Args) {
 				`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`
 			)
 
-			controller.abort()
+			console.log("[canvas-cli] Stopping API server...")
+			await new Promise<void>((resolve, reject) => server.stop((err) => (err ? reject(err) : resolve())))
+			console.log("[canvas-cli] API server stopped.")
+
+			console.log("[canvas-cli] Closing core...")
+			await core.close()
+			console.log("[canvas-cli] Core closed, press Ctrl+C to terminate immediately.")
 		}
 	})
 }

@@ -3,8 +3,6 @@
   "version": "0.1.3",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
-  "types": "./lib/index.d.ts",
-  "main": "./lib/index.js",
   "engines": {
     "node": ">=18.0.0"
   },
@@ -13,6 +11,49 @@
     "rpc",
     "types"
   ],
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./lib/index.js"
+    },
+    "./rpc/sync": {
+      "default": "./rpc/sync/index.cjs"
+    },
+    "./sync": {
+      "import": "./lib/sync/index.js"
+    },
+    "./utils": {
+      "import": "./lib/utils.js"
+    },
+    "./constants": {
+      "import": "./lib/constants.js"
+    },
+    "./codecs": {
+      "import": "./lib/codecs.js"
+    },
+    "./components/messageStore": {
+      "import": {
+        "browser": "./lib/components/messageStore/browser/index.js",
+        "node": "./lib/components/messageStore/node/index.js"
+      }
+    },
+    "./components/modelStore": {
+      "import": {
+        "browser": "./lib/components/modelStore/browser/index.js",
+        "node": "./lib/components/modelStore/node/index.js"
+      }
+    },
+    "./components/libp2p": {
+      "import": {
+        "browser": "./lib/components/libp2p/browser/index.js",
+        "node": "./lib/components/libp2p/node/index.js"
+      }
+    },
+    "./components/vm": {
+      "import": "./lib/components/vm/index.js"
+    }
+  },
   "scripts": {
     "generate-rpc": "npm run generate-rpc-js && npm run generate-rpc-ts",
     "generate-rpc-js": "pbjs ./rpc/sync/index.proto -t static-module -w commonjs -o ./rpc/sync/index.cjs",
@@ -38,7 +79,9 @@
     "@libp2p/prometheus-metrics": "^1.1.3",
     "@libp2p/websockets": "^5.0.2",
     "@multiformats/multiaddr": "^11.1.5",
+    "@noble/hashes": "^1.2.0",
     "@types/better-sqlite3": "^7.6.3",
+    "@types/k-bucket": "^5.0.1",
     "better-sqlite3": "^8.0.1",
     "chalk": "^5.2.0",
     "ethers": "^5.7.1 <6",
@@ -49,6 +92,7 @@
     "ipfs-only-hash": "^4.0.0",
     "it-pushable": "^3.1.2",
     "it-stream-types": "^1.0.5",
+    "k-bucket": "^5.1.0",
     "libp2p": "^0.42.0",
     "multiformats": "^11.0.0",
     "p-queue": "^7.3.0",

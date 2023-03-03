@@ -4,9 +4,11 @@ import chalk from "chalk"
 import { fetch } from "undici"
 import { getQuickJS, isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime } from "quickjs-emscripten"
 import { addSchema } from "@hyperjump/json-schema/draft-2020-12"
-import { ethers } from "ethers"
 import Hash from "ipfs-only-hash"
 import PQueue from "p-queue"
+
+import { ethers } from "ethers"
+import { verifyTypedData } from "ethers/lib/utils.js"
 
 import {
 	ActionArgument,
@@ -18,11 +20,12 @@ import {
 	Query,
 	ChainImplementation,
 } from "@canvas-js/interfaces"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
-import * as constants from "../constants.js"
-import type { Effect } from "../modelStore.js"
-import { ApplicationError } from "../errors.js"
-import { mapEntries, signalInvalidType, toHex } from "../utils.js"
+import { ApplicationError } from "@canvas-js/core"
+import { mapEntries, signalInvalidType, toHex } from "@canvas-js/core/utils"
+import * as constants from "@canvas-js/core/constants"
+import type { Effect } from "@canvas-js/core/components/modelStore"
 
 import {
 	loadModule,
@@ -38,8 +41,6 @@ import {
 } from "./utils.js"
 import { validateCanvasSpec } from "./validate.js"
 import { CustomActionDefinition, Exports, disposeExports } from "./exports.js"
-import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
-import { verifyTypedData } from "ethers/lib/utils.js"
 
 interface VMOptions {
 	verbose?: boolean
@@ -410,9 +411,9 @@ export class VM {
 
 	/**
 	 * Given a call, get a list of effects to pass to `modelStore.applyEffects`, to be applied to the models.
-	 * Used by `.applyAction()` and when replaying actions.
+	 * Also used when replaying actions.
 	 */
-	public async execute(hash: string | Buffer, { call, callArgs, ...context }: ActionPayload): Promise<Effect[]> {
+	public async execute(hash: string | Uint8Array, { call, callArgs, ...context }: ActionPayload): Promise<Effect[]> {
 		const effects: Effect[] = []
 
 		// after setting this.effects here, always make sure to reset it to null before
@@ -441,10 +442,10 @@ export class VM {
 
 	/**
 	 * Given a call, get a list of effects to pass to `modelStore.applyEffects`, to be applied to the models.
-	 * Used by `.applyAction()` and when replaying actions.
+	 * Also used when replaying actions.
 	 */
 	public async executeCustomAction(
-		hash: string | Buffer,
+		hash: Uint8Array,
 		payload: any,
 		actionContext: { timestamp: number }
 	): Promise<Effect[]> {

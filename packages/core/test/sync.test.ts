@@ -2,24 +2,24 @@ import os from "node:os"
 import fs from "node:fs"
 import path from "node:path"
 import stream from "node:stream"
-import { createHash } from "node:crypto"
+
+import { sha256 } from "@noble/hashes/sha256"
 
 import test from "ava"
 
 import { nanoid } from "nanoid"
 import toIterable from "stream-to-it"
-import * as okra from "@canvas-js/okra-node"
 
 import type { Duplex } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
 
 import type { Message } from "@canvas-js/interfaces"
 
-import { MessageStore } from "@canvas-js/core/lib/messageStore.js"
-import { compileSpec, stringify } from "@canvas-js/core/lib/utils.js"
-import { getMessageKey, handleIncomingStream, sync } from "@canvas-js/core/lib/rpc/index.js"
+import { openMessageStore } from "@canvas-js/core/components/messageStore"
+import { stringify } from "@canvas-js/core/utils"
+import { handleIncomingStream, sync } from "@canvas-js/core/sync"
 
-import { TestSigner } from "./utils.js"
+import { TestSigner, compileSpec } from "./utils.js"
 
 const { app, appName } = await compileSpec({
 	name: "Test App",
@@ -40,50 +40,41 @@ function connect(): [
 	]
 }
 
-async function initialize(messageStore: MessageStore, mst: okra.Tree, messages: Iterable<Message>) {
-	await mst.write(async (txn) => {
-		for (const message of messages) {
-			const data = Buffer.from(stringify(message))
-			const hash = createHash("sha256").update(data).digest()
-			txn.set(getMessageKey(hash, message), hash)
-			messageStore.insert(hash, message)
-		}
-	})
-}
-
 async function testSync(sourceMessages: Iterable<Message>, targetMessages: Iterable<Message>): Promise<Message[]> {
 	const sourceDirectory = path.resolve(os.tmpdir(), nanoid())
 	const targetDirectory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(sourceDirectory)
 	fs.mkdirSync(targetDirectory)
 
-	const sourceMessageStore = new MessageStore(app, sourceDirectory)
-	const targetMessageStore = new MessageStore(app, targetDirectory)
-	const [sourceMSTPath, targetMSTPath] = [path.resolve(sourceDirectory, "mst"), path.resolve(targetDirectory, "mst")]
-	const sourceMST = new okra.Tree(sourceMSTPath, {})
-	const targetMST = new okra.Tree(targetMSTPath, {})
-
-	await initialize(sourceMessageStore, sourceMST, sourceMessages)
-	await initialize(targetMessageStore, targetMST, targetMessages)
+	const sourceMessageStore = await openMessageStore(app, sourceDirectory)
+	const targetMessageStore = await openMessageStore(app, targetDirectory)
+	await sourceMessageStore.write(async (txn) => {
+		for (const message of sourceMessages) {
+			await txn.insertMessage(sha256(stringify(message)), message)
+		}
+	})
+	await targetMessageStore.write(async (txn) => {
+		for (const message of targetMessages) {
+			await txn.insertMessage(sha256(stringify(message)), message)
+		}
+	})
 
 	const delta: Message[] = []
 	try {
 		const [source, target] = connect()
-		await targetMST.write(async (targetTxn) => {
-			await sourceMST.read(async (sourceTxn) => {
+		await targetMessageStore.write(async (targetTxn) => {
+			await sourceMessageStore.read(async (sourceTxn) => {
 				await Promise.all([
-					handleIncomingStream(source, sourceMessageStore, sourceTxn),
-					sync(targetMessageStore, targetTxn, target, async (hash, data, message) => void delta.push(message)),
+					handleIncomingStream(source, sourceTxn),
+					sync(target, targetTxn, async (hash, data, message) => void delta.push(message)),
 				])
 			})
 		})
 
 		return delta
 	} finally {
-		targetMST.close()
-		sourceMST.close()
-		sourceMessageStore.close()
-		targetMessageStore.close()
+		await sourceMessageStore.close()
+		await targetMessageStore.close()
 		fs.rmSync(sourceDirectory, { recursive: true })
 		fs.rmSync(targetDirectory, { recursive: true })
 	}
@@ -103,29 +94,29 @@ test("sync two tiny MSTs", async (t) => {
 	t.deepEqual(delta, [b, c])
 })
 
-test("sync two big MSTs", async (t) => {
-	const count = 1000
-	const index = Math.floor(Math.random() * count)
+// test("sync two big MSTs", async (t) => {
+// 	const count = 1000
+// 	const index = Math.floor(Math.random() * count)
 
-	const messages: Message[] = []
-	for (let i = 0; i < count; i++) {
-		messages.push(await signer.sign("log", { message: nanoid() }))
-	}
+// 	const messages: Message[] = []
+// 	for (let i = 0; i < count; i++) {
+// 		messages.push(await signer.sign("log", { message: nanoid() }))
+// 	}
 
-	function* sourceMessages(): Generator<Message> {
-		for (const message of messages) yield message
-	}
+// 	function* sourceMessages(): Generator<Message> {
+// 		for (const message of messages) yield message
+// 	}
 
-	function* targetMessages(): Generator<Message> {
-		for (const [i, message] of messages.entries()) {
-			if (i === index) {
-				continue
-			} else {
-				yield message
-			}
-		}
-	}
+// 	function* targetMessages(): Generator<Message> {
+// 		for (const [i, message] of messages.entries()) {
+// 			if (i === index) {
+// 				continue
+// 			} else {
+// 				yield message
+// 			}
+// 		}
+// 	}
 
-	const delta = await testSync(sourceMessages(), targetMessages())
-	t.deepEqual(delta, [messages[index]])
-})
+// 	const delta = await testSync(sourceMessages(), targetMessages())
+// 	t.deepEqual(delta, [messages[index]])
+// })

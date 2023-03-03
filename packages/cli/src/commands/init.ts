@@ -1,18 +1,18 @@
 import fs from "node:fs"
 
-import yargs from "yargs"
+import type { Argv } from "yargs"
 
 export const command = "init <filename>"
 export const desc = "Create a sample spec for demonstration purposes"
 
-export const builder = (yargs: yargs.Argv) =>
+export const builder = (yargs: Argv) =>
 	yargs.positional("filename", {
 		describe: "Path to spec file to create",
 		type: "string",
 		demandOption: true,
 	})
 
-type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
+type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
 	if (fs.existsSync(args.filename)) {

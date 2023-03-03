@@ -71,7 +71,7 @@ export function setupWebsockets(server: Server, core: Core): Server {
 				peerId: core.libp2p && core.libp2p.peerId.toString(),
 				actions,
 				routes: Object.keys(routes),
-				merkleRoots: core.mst && core.mst.roots,
+				// merkleRoots: core.mst && core.mst.roots,
 				chainImplementations: core.getChainImplementations(),
 				peers: core.libp2p && {
 					gossip: Object.fromEntries(core.recentGossipPeers),
@@ -119,12 +119,12 @@ export function setupWebsockets(server: Server, core: Core): Server {
 				if (message.action === "subscribe") {
 					const { route, params } = message.data
 					const listener = getListener(ws, route, params)
-					core.addEventListener("action", listener)
+					core.addEventListener("message", listener)
 					listener()
 				} else if (message.action === "unsubscribe") {
 					const { route, params } = message.data
 					const listener = getListener(ws, route, params)
-					core.removeEventListener("action", listener)
+					core.removeEventListener("message", listener)
 				} else {
 					console.log(chalk.red(`[canvas-core] ws-${ws.id}: unrecognized message ${data}`))
 				}
@@ -142,7 +142,7 @@ export function setupWebsockets(server: Server, core: Core): Server {
 			if (listeners[ws.id]) {
 				Object.entries(listeners[ws.id]).map(([route, listenersByParams]) => {
 					Object.entries(listenersByParams).map(([params, listener]) => {
-						core.removeEventListener("action", listener)
+						core.removeEventListener("message", listener)
 						delete listeners[ws.id][route][params]
 					})
 				})

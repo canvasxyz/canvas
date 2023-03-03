@@ -5,8 +5,8 @@ import { isLeft } from "fp-ts/lib/Either.js"
 
 import { Chain } from "@canvas-js/interfaces"
 
-import { ipfsURIPattern } from "../utils.js"
-import { chainType, chainIdType, modelsType } from "../codecs.js"
+import { ipfsURIPattern } from "@canvas-js/core/utils"
+import { chainType, chainIdType, modelsType } from "@canvas-js/core/codecs"
 
 import { unwrapObject, call } from "./utils.js"
 
