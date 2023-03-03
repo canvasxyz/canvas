@@ -13,7 +13,6 @@ import cors from "cors"
 
 import { Core, getAPI, setupWebsockets } from "@canvas-js/core"
 import * as constants from "@canvas-js/core/constants"
-import { actionType } from "@canvas-js/core/codecs"
 
 import {
 	getChainImplementations,
