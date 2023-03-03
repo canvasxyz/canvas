@@ -94,8 +94,3 @@ export const actions = {
 		db.users.del(from)
 	},
 }
-
-// TODO: implement encryption
-// TODO: could we make encrypted_notes, encrypted_keys and users separate contracts?
-// encrypted_notes -> encrypted_keys, users
-// encrypted_keys -> users
