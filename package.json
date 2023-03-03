@@ -22,7 +22,8 @@
     "packages/chain-solana",
     "packages/chain-substrate",
     "examples/chat-webpack",
-    "examples/chat-next"
+    "examples/chat-next",
+    "examples/notes"
   ],
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.51.0",

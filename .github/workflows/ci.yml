@@ -49,6 +49,9 @@ jobs:
       - name: Build Webpack example
         run: npm run build --workspace=@canvas-js/example-chat-webpack
 
+      - name: Build Notes example
+        run: npm run build --workspace=@canvas-js/example-notes
+
       - name: Install canvas CLI
         run: ./install.sh
 
