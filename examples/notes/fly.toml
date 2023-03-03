@@ -1,3 +1,5 @@
+# fly.toml file generated for canvas-notes on 2023-03-02T17:05:29Z
+
 app = "canvas-notes"
 kill_signal = "SIGINT"
 kill_timeout = 5
@@ -10,20 +12,15 @@ processes = []
   auto_rollback = true
 
 [mounts]
-  source = "data"
   destination = "/data"
-
-[[statics]]
-  guest_path = "/app/dist"
-  url_prefix = "/"
+  source = "canvas_notes_data"
 
 [[services]]
   http_checks = []
-  tcp_checks = []
-
   internal_port = 4044
   processes = ["app"]
   protocol = "tcp"
+  tcp_checks = []
   [services.concurrency]
     hard_limit = 100
     soft_limit = 100
@@ -43,6 +40,16 @@ processes = []
     soft_limit = 20
     type = "connections"
 
+  [[services.http_checks]]
+    grace_period = "5s"
+    interval = 10000
+    method = "get"
+    path = "/"
+    protocol = "http"
+    restart_limit = 0
+    timeout = 2000
+    tls_skip_verify = false
+
   [[services.ports]]
     force_https = true
     handlers = ["http"]
@@ -52,18 +59,12 @@ processes = []
     handlers = ["tls", "http"]
     port = 443
 
-  [[services.http_checks]]
-    interval = 10000
-    grace_period = "5s"
-    method = "get"
-    path = "/"
-    protocol = "http"
-    restart_limit = 0
-    timeout = 2000
-    tls_skip_verify = false
-
   [[services.tcp_checks]]
     grace_period = "1s"
     interval = "15s"
     restart_limit = 0
     timeout = "2s"
+
+[[statics]]
+  guest_path = "/app/dist"
+  url_prefix = "/"
