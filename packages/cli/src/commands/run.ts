@@ -14,14 +14,7 @@ import cors from "cors"
 import { Core, getAPI, setupWebsockets } from "@canvas-js/core"
 import * as constants from "@canvas-js/core/constants"
 
-import {
-	getChainImplementations,
-	confirmOrExit,
-	parseSpecArgument,
-	getPeerId,
-	installSpec,
-	CANVAS_HOME,
-} from "../utils.js"
+import { getChainImplementations, confirmOrExit, parseSpecArgument, installSpec, CANVAS_HOME } from "../utils.js"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 export const command = "run <app>"
@@ -177,9 +170,6 @@ export async function handler(args: Args) {
 
 	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen: peeringPort, announce } = args
 
-	const peerId = await getPeerId()
-	console.log(`[canvas-cli] Using PeerId ${peerId}`)
-
 	const validateAnnounce = (announce: (string | number)[]): announce is string[] =>
 		announce.every((address) => typeof address === "string")
 	if (announce) {
@@ -194,7 +184,6 @@ export async function handler(args: Args) {
 		directory,
 		uri,
 		spec,
-		peerId,
 		port: peeringPort,
 		announce,
 		replay,

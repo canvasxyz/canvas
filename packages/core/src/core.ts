@@ -40,7 +40,7 @@ export interface CoreConfig extends CoreOptions {
 
 	uri?: string
 	chains?: ChainImplementation<unknown, unknown>[]
-	peerId?: PeerId
+	// peerId?: PeerId
 	port?: number
 	announce?: string[]
 	bootstrapList?: string[]
@@ -72,8 +72,8 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		let libp2p: Libp2p | null = null
 		if (!offline) {
-			const { peerId, port, announce, bootstrapList } = config
-			libp2p = await getLibp2pOptions({ peerId, port, announce, bootstrapList }).then(createLibp2p)
+			const { port, announce, bootstrapList } = config
+			libp2p = await getLibp2pOptions({ directory, port, announce, bootstrapList }).then(createLibp2p)
 		}
 
 		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, { verbose, unchecked })

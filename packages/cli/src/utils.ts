@@ -3,8 +3,6 @@ import path from "node:path"
 import os from "node:os"
 import process from "node:process"
 
-import type { PeerId } from "@libp2p/interface-peer-id"
-import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 import Hash from "ipfs-only-hash"
 import chalk from "chalk"
 import prompts from "prompts"
@@ -22,22 +20,6 @@ if (!fs.existsSync(CANVAS_HOME)) {
 	console.log(`[canvas-cli] Creating directory ${path.resolve(CANVAS_HOME)}`)
 	console.log("[canvas-cli] Override this path by setting a CANVAS_HOME environment variable.")
 	fs.mkdirSync(CANVAS_HOME)
-}
-
-export async function getPeerId(): Promise<PeerId> {
-	if (process.env.PEER_ID !== undefined) {
-		return createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
-	}
-
-	const peerIdPath = path.resolve(CANVAS_HOME, constants.PEER_ID_FILENAME)
-	if (fs.existsSync(peerIdPath)) {
-		return createFromProtobuf(fs.readFileSync(peerIdPath))
-	} else {
-		console.log(`[canvas-cli] Creating new PeerID at ${peerIdPath}`)
-		const peerId = await createEd25519PeerId()
-		fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
-		return peerId
-	}
 }
 
 export async function confirmOrExit(message: string) {
