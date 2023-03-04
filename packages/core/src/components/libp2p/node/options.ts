@@ -1,4 +1,5 @@
 import path from "node:path"
+import net from "node:net"
 import fs from "node:fs"
 
 import { sha256 } from "@noble/hashes/sha256"
@@ -35,7 +36,7 @@ const minute = 60 * second
 
 export async function getLibp2pOptions(config: {
 	directory: string | null
-	port?: number
+	listen?: number
 	announce?: string[]
 	bootstrapList?: string[]
 }): Promise<Libp2pOptions> {
@@ -43,13 +44,16 @@ export async function getLibp2pOptions(config: {
 
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
+	const port = config.listen ? config.listen : await getRandomPort()
+
+	const listenAddresses = [`/ip4/0.0.0.0/tcp/${port}/ws`]
+
+	console.log(`[canvas-core] Listening on`, listenAddresses)
+
 	const announceAddresses =
 		config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId}`)
 
-	const listenAddresses: string[] = []
-	if (config.port !== undefined) {
-		listenAddresses.push(`/ip4/0.0.0.0/tcp/${config.port}/ws`)
-	}
+	console.log(`[canvas-core] Announcing on`, announceAddresses)
 
 	return {
 		connectionGater: { denyDialMultiaddr },
@@ -100,4 +104,31 @@ async function getPeerId(directory: string | null): Promise<PeerId> {
 		console.log(`[canvas-core] Using PeerId ${peerId}`)
 		return peerId
 	}
+}
+
+async function getRandomPort() {
+	const server = net.createServer()
+
+	const port = await new Promise((resolve, reject) =>
+		server.listen(0, () => {
+			const address = server.address()
+			if (address === null || typeof address == "string") {
+				reject(new Error("unexpected net.server address"))
+			} else {
+				resolve(address.port)
+			}
+		})
+	)
+
+	await new Promise<void>((resolve, reject) =>
+		server.close((err) => {
+			if (err) {
+				reject(err)
+			} else {
+				resolve()
+			}
+		})
+	)
+
+	return port
 }

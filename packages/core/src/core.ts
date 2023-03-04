@@ -40,8 +40,7 @@ export interface CoreConfig extends CoreOptions {
 
 	uri?: string
 	chains?: ChainImplementation<unknown, unknown>[]
-	// peerId?: PeerId
-	port?: number
+	listen?: number
 	announce?: string[]
 	bootstrapList?: string[]
 }
@@ -72,8 +71,19 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		let libp2p: Libp2p | null = null
 		if (!offline) {
-			const { port, announce, bootstrapList } = config
-			libp2p = await getLibp2pOptions({ directory, port, announce, bootstrapList }).then(createLibp2p)
+			const { listen, announce, bootstrapList } = config
+			const options = await getLibp2pOptions({ directory, listen, announce, bootstrapList })
+			libp2p = await createLibp2p(options)
+
+			if (verbose) {
+				libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
+					console.log(`[canvas-core] Connected to ${remotePeer} (${id})`)
+				)
+
+				libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
+					console.log(`[canvas-core] Disconnected from ${remotePeer} (${id})`)
+				)
+			}
 		}
 
 		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, { verbose, unchecked })
@@ -132,16 +142,6 @@ export class Core extends EventEmitter<CoreEvents> {
 					recentSyncPeers: this.recentSyncPeers,
 					...options,
 				})
-			}
-
-			if (this.options.verbose) {
-				libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
-					console.log(`[canvas-core] Connected to ${remotePeer} (${id})`)
-				)
-
-				libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
-					console.log(`[canvas-core] Disconnected from ${remotePeer} (${id})`)
-				)
 			}
 		}
 	}

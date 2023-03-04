@@ -45,7 +45,6 @@ export const builder = (yargs: Argv) =>
 		.option("listen", {
 			type: "number",
 			desc: "libp2p WebSocket transport port",
-			default: 4044,
 		})
 		.option("announce", {
 			type: "array",
@@ -168,24 +167,29 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen: peeringPort, announce } = args
+	const {
+		verbose,
+		replay,
+		unchecked,
+		offline,
+		metrics: exposeMetrics,
+		listen: listenPort,
+		announce: announceAddresses,
+	} = args
 
-	const validateAnnounce = (announce: (string | number)[]): announce is string[] =>
+	const validateAnnounceAddresses = (announce: (string | number)[]): announce is string[] =>
 		announce.every((address) => typeof address === "string")
-	if (announce) {
-		assert(validateAnnounce(announce))
-	}
 
-	if (announce !== undefined) {
-		console.log(`[canvas-cli] Announcing on ${announce}`)
+	if (announceAddresses) {
+		assert(validateAnnounceAddresses(announceAddresses))
 	}
 
 	const core = await Core.initialize({
 		directory,
 		uri,
 		spec,
-		port: peeringPort,
-		announce,
+		listen: listenPort,
+		announce: announceAddresses,
 		replay,
 		offline,
 		unchecked,
