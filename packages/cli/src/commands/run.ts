@@ -44,7 +44,7 @@ export const builder = (yargs: Argv) =>
 		})
 		.option("listen", {
 			type: "number",
-			desc: "libp2p WebSocket transport port",
+			desc: "libp2p WebSocket transport port (defaults to a random port)",
 		})
 		.option("announce", {
 			type: "array",
