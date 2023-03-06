@@ -319,36 +319,62 @@ class SqliteMessageStore implements MessageStore {
 	// we can use statement.iterate() instead of paging manually
 	// https://github.com/WiseLibs/better-sqlite3/issues/406
 	public async *getMessageStream(
-		filter: { type?: Message["type"]; app?: string } = {}
+		filter: { type?: Message["type"]; limit?: number; app?: string } = {}
 	): AsyncIterable<[Uint8Array, Message]> {
-		const { type, app } = filter
-		const params = app === undefined ? {} : { app }
+		const { type, limit, app } = filter
 		if (type === undefined) {
-			for (const record of this.statements.getSessions.iterate(params) as Iterable<SessionRecord>) {
-				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
-			}
-
-			for (const record of this.statements.getActions.iterate(params) as Iterable<ActionRecord>) {
-				yield [record.hash, SqliteMessageStore.parseActionRecord(record)]
-			}
-
-			for (const record of this.statements.getCustomActions.iterate(params) as Iterable<CustomActionRecord>) {
-				yield [record.hash, SqliteMessageStore.parseCustomActionRecord(record)]
-			}
+			yield* this.getSessionStream({ limit, app })
+			yield* this.getActionStream({ limit, app })
+			yield* this.getCustomActionStream({ limit, app })
 		} else if (type === "session") {
-			for (const record of this.statements.getSessions.iterate(params) as Iterable<SessionRecord>) {
-				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
-			}
+			yield* this.getSessionStream({ limit, app })
 		} else if (type === "action") {
-			for (const record of this.statements.getActions.iterate(params) as Iterable<ActionRecord>) {
-				yield [record.hash, SqliteMessageStore.parseActionRecord(record)]
-			}
+			yield* this.getActionStream({ limit, app })
 		} else if (type === "customAction") {
-			for (const record of this.statements.getCustomActions.iterate(params) as Iterable<CustomActionRecord>) {
-				yield [record.hash, SqliteMessageStore.parseCustomActionRecord(record)]
-			}
+			yield* this.getCustomActionStream({ limit, app })
 		} else {
 			signalInvalidType(type)
+		}
+	}
+
+	private async *getSessionStream(filter: { limit?: number; app?: string } = {}): AsyncIterable<[Uint8Array, Message]> {
+		const limit = filter.limit ?? -1
+		if (filter.app) {
+			for (const record of this.statements.getSessionsByApp.iterate({ app: filter.app, limit })) {
+				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
+			}
+		} else {
+			for (const record of this.statements.getSessions.iterate({ limit })) {
+				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
+			}
+		}
+	}
+
+	private async *getActionStream(filter: { limit?: number; app?: string } = {}): AsyncIterable<[Uint8Array, Message]> {
+		const limit = filter.limit ?? -1
+		if (filter.app) {
+			for (const record of this.statements.getActionsByApp.iterate({ app: filter.app, limit })) {
+				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
+			}
+		} else {
+			for (const record of this.statements.getActions.iterate({ limit })) {
+				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
+			}
+		}
+	}
+
+	private async *getCustomActionStream(
+		filter: { limit?: number; app?: string } = {}
+	): AsyncIterable<[Uint8Array, Message]> {
+		const limit = filter.limit ?? -1
+		if (filter.app) {
+			for (const record of this.statements.getCustomActionsByApp.iterate({ app: filter.app, limit })) {
+				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
+			}
+		} else {
+			for (const record of this.statements.getCustomActions.iterate({ limit })) {
+				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
+			}
 		}
 	}
 
@@ -468,9 +494,9 @@ class SqliteMessageStore implements MessageStore {
 		getSessionByHash: `SELECT * FROM sessions WHERE hash = :hash`,
 		getCustomActionByHash: `SELECT * FROM custom_actions WHERE hash = :hash`,
 		getSessionByAddress: `SELECT * FROM sessions WHERE session_address = :session_address`,
-		getSessions: `SELECT * FROM sessions`,
-		getActions: `SELECT * FROM actions`,
-		getCustomActions: `SELECT * from custom_actions`,
+		getSessions: `SELECT * FROM sessions LIMIT :limit`,
+		getActions: `SELECT * FROM actions LIMIT :limit`,
+		getCustomActions: `SELECT * from custom_actions LIMIT :limit`,
 		getSessionsByApp: `SELECT * FROM sessions WHERE app = :app`,
 		getActionsByApp: `SELECT * FROM actions WHERE app = :app`,
 		getCustomActionsByApp: `SELECT * FROM custom_actions WHERE app = :app`,

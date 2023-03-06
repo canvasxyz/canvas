@@ -21,7 +21,11 @@ export interface MessageStore {
 		chainId: ChainId,
 		address: string
 	): Promise<[hash: string | null, session: Session | null]>
-	getMessageStream(filter?: { type?: Message["type"]; app?: string }): AsyncIterable<[Uint8Array, Message]>
+	getMessageStream(filter?: {
+		type?: Message["type"]
+		limit?: number
+		app?: string
+	}): AsyncIterable<[Uint8Array, Message]>
 
 	close(): Promise<void>
 
