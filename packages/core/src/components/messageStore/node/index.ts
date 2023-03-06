@@ -354,11 +354,11 @@ class SqliteMessageStore implements MessageStore {
 		const limit = filter.limit ?? -1
 		if (filter.app) {
 			for (const record of this.statements.getActionsByApp.iterate({ app: filter.app, limit })) {
-				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
+				yield [record.hash, SqliteMessageStore.parseActionRecord(record)]
 			}
 		} else {
 			for (const record of this.statements.getActions.iterate({ limit })) {
-				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
+				yield [record.hash, SqliteMessageStore.parseActionRecord(record)]
 			}
 		}
 	}
@@ -369,11 +369,11 @@ class SqliteMessageStore implements MessageStore {
 		const limit = filter.limit ?? -1
 		if (filter.app) {
 			for (const record of this.statements.getCustomActionsByApp.iterate({ app: filter.app, limit })) {
-				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
+				yield [record.hash, SqliteMessageStore.parseCustomActionRecord(record)]
 			}
 		} else {
 			for (const record of this.statements.getCustomActions.iterate({ limit })) {
-				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
+				yield [record.hash, SqliteMessageStore.parseCustomActionRecord(record)]
 			}
 		}
 	}
