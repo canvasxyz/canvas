@@ -110,7 +110,7 @@ class SqliteMessageStore implements MessageStore {
 	}
 
 	private readonly statements: Record<keyof typeof SqliteMessageStore.statements, sqlite.Statement>
-	private readonly merkleRoots: Record<string, Uint8Array> = {}
+	private readonly merkleRoots: Record<string, string> = {}
 
 	private constructor(
 		public readonly app: string,
@@ -127,7 +127,7 @@ class SqliteMessageStore implements MessageStore {
 				const txn = new okra.Transaction(tree, true, { dbi })
 				try {
 					const root = txn.getRoot()
-					this.merkleRoots[dbi] = root.hash
+					this.merkleRoots[dbi] = toHex(root.hash)
 				} finally {
 					txn.abort()
 				}
@@ -276,7 +276,7 @@ class SqliteMessageStore implements MessageStore {
 		}
 	}
 
-	public getMerkleRoots(): Record<string, Uint8Array> {
+	public getMerkleRoots(): Record<string, string> {
 		return this.merkleRoots
 	}
 
@@ -403,7 +403,7 @@ class SqliteMessageStore implements MessageStore {
 				async (txn) => {
 					const result = await callback(this.getReadWriteTransaction(txn))
 					const root = txn.getRoot()
-					this.merkleRoots[dbi] = root.hash
+					this.merkleRoots[dbi] = toHex(root.hash)
 					return result
 				},
 				{ dbi }
