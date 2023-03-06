@@ -59,7 +59,7 @@ interface CoreConfig extends CoreOptions {
 	directory: string | null
 	spec: string
 
-	uri?: string
+	uri?: string // override the default app URI (defaults to ipfs:// hash of spec)
 	chains?: ChainImplementation<unknown, unknown>[]
 	listen?: number
 	announce?: string[]
@@ -77,8 +77,6 @@ declare class Core {
 	apply(message: Message): Promise<{ hash: string }>
 }
 ```
-
-`CoreConfig.uri` must be the `ipfs://` CIDv0 URI of the app (dag-pb using the default chunking settings), or a local `file:///` URI.
 
 ## Metrics
 
