@@ -11,9 +11,7 @@ which will automatically set up and manage cores and their dependencies.
 To initialize an Canvas core, import `@canvas-js/core` and call `Core.initialize({})` with the appropriate arguments.
 
 ```typescript
-import { Core, getLibp2pInit } from "@canvas-js/core"
-import { createLibp2p } from "libp2p"
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { Core } from "@canvas-js/core"
 
 const spec = `
   const models = { }
@@ -21,18 +19,13 @@ const spec = `
   const actions = { }
 `
 
-// persist and re-use peer IDs whever possible
-const peerId = await createEd25519PeerId()
-const libp2p = await createLibp2p(getLibp2pInit({ peerId }))
-
 const core = await Core.initialize({
 	spec,
 	directory: "/path/to/app/directory", // or `null` to run entirely in-memory
-	libp2p,
 	unchecked: true,
 })
 
-console.log(core.app) // ipfs://...
+console.log(core.app) // ipfs://Qm...
 ```
 
 Applications are identified by the `core.app` IPFS URI. Sessions and actions must be signed for the core's app URI.
@@ -55,11 +48,13 @@ npm run test
 import { ethers } from "ethers"
 import { Libp2p } from "libp2p"
 
-import { Action, Session, ModelValue, Model, Chain, ChainId } from "@canvas-js/interfaces"
+import { Message, ModelValue, Model, Chain, ChainId } from "@canvas-js/interfaces"
 
 interface CoreOptions {
 	unchecked?: boolean
 	verbose?: boolean
+	offline?: boolean
+	replay?: boolean
 }
 
 interface CoreConfig extends CoreOptions {
@@ -67,11 +62,11 @@ interface CoreConfig extends CoreOptions {
 	directory: string | null
 	spec: string
 
-	uri?: string // defaults to the ipfs:// hash of the spec
-	libp2p: Libp2p | null // pass null to run offline
-
-	// defaults to an EthereumChainImplementation with no provider
+	uri?: string
 	chains?: ChainImplementation<unknown, unknown>[]
+	listen?: number
+	announce?: string[]
+	bootstrapList?: string[]
 }
 
 declare class Core {
@@ -82,8 +77,7 @@ declare class Core {
 
 	close(): Promise<void>
 	getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]>
-	applyAction(action: Action): Promise<{ hash: string }>
-	applySession(session: Session): Promise<{ hash: string }>
+	apply(message: Message): Promise<{ hash: string }>
 }
 ```
 
