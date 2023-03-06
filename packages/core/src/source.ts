@@ -156,15 +156,22 @@ export class Source {
 		}
 
 		try {
-			await this.messageStore.read((txn) => handleIncomingStream(stream, txn), { dbi: this.uri })
+			await this.messageStore.read((txn) => handleIncomingStream(this.cid, stream, txn), { dbi: this.uri })
 		} catch (err) {
 			if (err instanceof Error) {
 				console.log(chalk.red(`[canvas-core] Error handling incoming sync (${err.message})`))
+				if (this.options.verbose) {
+					console.log(`[canvas-core] [${this.cid}] Aborting incoming stream ${stream.id}`)
+				}
 				stream.abort(err)
 				return
 			} else {
 				throw err
 			}
+		}
+
+		if (this.options.verbose) {
+			console.log(`[canvas-core] [${this.cid}] Closed incoming stream ${stream.id}`)
 		}
 	}
 
@@ -394,16 +401,21 @@ export class Source {
 			if (err instanceof Error) {
 				console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to sync with peer ${peer} (${err.message})`))
 				stream.abort(err)
+
+				if (this.options.verbose) {
+					console.log(`[canvas-core] [${this.cid}] Aborted outgoing stream ${stream.id}`)
+				}
+
 				return
 			} else {
 				throw err
 			}
 		}
 
-		if (this.options.verbose) {
-			console.log(`[canvas-core] [${this.cid}] Closing outgoing stream ${stream.id}`)
-		}
-
 		stream.close()
+
+		if (this.options.verbose) {
+			console.log(`[canvas-core] [${this.cid}] Closed outgoing stream ${stream.id}`)
+		}
 	}
 }
