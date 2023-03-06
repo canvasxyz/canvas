@@ -4,15 +4,15 @@ import chalk from "chalk"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
 
-import type { ModelValue } from "@canvas-js/interfaces"
+import type { Message, ModelValue } from "@canvas-js/interfaces"
 import { Core } from "./core.js"
 import { getMetrics } from "./metrics.js"
+import { ipfsURIPattern } from "./utils.js"
 
 interface Options {
 	exposeMetrics: boolean
 	exposeModels: boolean
-	exposeSessions: boolean
-	exposeActions: boolean
+	exposeMessages: boolean
 }
 
 export function getAPI(core: Core, options: Partial<Options> = {}): express.Express {
@@ -26,9 +26,10 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 
 		return res.json({
 			uri: core.app,
-			appName: core.appName,
 			cid: core.cid.toString(),
+			appName: core.appName,
 			peerId: core.libp2p && core.libp2p.peerId.toString(),
+			models: core.vm.models,
 			actions,
 			routes: Object.keys(routes),
 			merkleRoots: core.messageStore.getMerkleRoots(),
@@ -113,29 +114,46 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		})
 	}
 
-	// if (options.exposeActions) {
-	// 	// TODO: pagination
-	// 	api.get("/actions", async (req, res) => {
-	// 		const actions = []
-	// 		for await (const [hash, action] of core.messageStore.getActionStream()) {
-	// 			actions.push([toHex(hash), action])
-	// 		}
+	if (options.exposeMessages) {
+		api.get("/messages", async (req, res) => {
+			const { limit, type, app } = req.query
 
-	// 		return res.status(StatusCodes.OK).json(actions)
-	// 	})
-	// }
+			const filter: { type?: Message["type"]; limit?: number; app?: string } = {}
 
-	// if (options.exposeSessions) {
-	// 	// TODO: pagination
-	// 	api.get("/sessions", async (req, res) => {
-	// 		const sessions = []
-	// 		for await (const [hash, session] of core.messageStore.getSessionStream()) {
-	// 			sessions.push([toHex(hash), session])
-	// 		}
+			if (typeof type === "string") {
+				if (type === "action" || type === "session" || type === "customAction") {
+					filter.type = type
+				} else {
+					res.status(StatusCodes.BAD_REQUEST).end("Invalid type parameter")
+					return
+				}
+			}
 
-	// 		return res.status(StatusCodes.OK).json(sessions)
-	// 	})
-	// }
+			if (typeof limit === "string") {
+				filter.limit = parseInt(limit)
+				if (isNaN(filter.limit)) {
+					res.status(StatusCodes.BAD_REQUEST).end("Invalid limit parameter")
+					return
+				}
+			}
+
+			if (typeof app === "string") {
+				if (ipfsURIPattern.test(app)) {
+					filter.app = app
+				} else {
+					res.status(StatusCodes.BAD_REQUEST).end("Invalid app parameter")
+					return
+				}
+			}
+
+			const messages: Message[] = []
+			for await (const [_, message] of core.messageStore.getMessageStream(filter)) {
+				messages.push(message)
+			}
+
+			return res.status(StatusCodes.OK).json(messages)
+		})
+	}
 
 	return api
 }
