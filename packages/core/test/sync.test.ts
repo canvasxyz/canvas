@@ -94,6 +94,24 @@ test("sync two tiny MSTs", async (t) => {
 	t.deepEqual(delta, [b, c])
 })
 
+test("sync from empty source", async (t) => {
+	const a = await signer.sign("log", { message: "a" })
+	const b = await signer.sign("log", { message: "b" })
+	const c = await signer.sign("log", { message: "c" })
+
+	const delta = await testSync([], [a, b, c])
+	t.deepEqual(delta, [])
+})
+
+test("sync into empty target", async (t) => {
+	const a = await signer.sign("log", { message: "a" })
+	const b = await signer.sign("log", { message: "b" })
+	const c = await signer.sign("log", { message: "c" })
+
+	const delta = await testSync([a, b, c], [])
+	t.deepEqual(delta, [a, b, c])
+})
+
 // test("sync two big MSTs", async (t) => {
 // 	const count = 1000
 // 	const index = Math.floor(Math.random() * count)

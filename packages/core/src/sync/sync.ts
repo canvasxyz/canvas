@@ -55,8 +55,24 @@ class Driver {
 	private async enter(targetLevel: number, sourceNode: Node) {
 		if (sourceNode.level > targetLevel) {
 			const children = await this.client.getChildren(sourceNode.level, sourceNode.key)
-			for (const sourceChild of children) {
-				await this.enter(targetLevel, sourceChild)
+			if (targetLevel === 0 && sourceNode.level === 1) {
+				const ids: Uint8Array[] = []
+
+				for (const { level, key, id } of children) {
+					if (key === null) {
+						continue
+					}
+
+					assert(level === 0, "unexpected child level")
+					assert(id !== undefined, "expected leaf nodes to have a value")
+					ids.push(id)
+				}
+
+				await this.fetch(ids)
+			} else {
+				for (const sourceChild of children) {
+					await this.enter(targetLevel, sourceChild)
+				}
 			}
 		} else {
 			await this.scan(sourceNode)
@@ -76,30 +92,35 @@ class Driver {
 			}
 		} else if (sourceNode.level === 1) {
 			const ids: Uint8Array[] = []
-			for (const { key, id } of children) {
+			for (const { level, key, id } of children) {
 				if (key === null) {
 					continue
 				}
 
-				assert(id, "expected leaf nodes to have a value")
+				assert(level === 0, "unexpected child level")
+				assert(id !== undefined, "expected leaf nodes to have a value")
 				const existingRecord = await this.txn.getMessage(id)
 				if (existingRecord === null) {
 					ids.push(id)
 				}
 			}
 
-			const decoder = new TextDecoder()
+			await this.fetch(ids)
+		}
+	}
 
-			const messages = await this.client.getMessages(ids)
+	private async fetch(ids: Uint8Array[]) {
+		const decoder = new TextDecoder()
 
-			for (const [i, data] of messages.entries()) {
-				const id = ids[i]
-				assert(equalArrays(sha256(data), id), "message response did not match the request hash")
-				const message = JSON.parse(decoder.decode(data))
-				assert(messageType.is(message), "invalid message")
-				await this.handleMessage(id, data, message)
-				await this.txn.insertMessage(id, message)
-			}
+		const messages = await this.client.getMessages(ids)
+
+		for (const [i, data] of messages.entries()) {
+			const id = ids[i]
+			assert(equalArrays(sha256(data), id), "message response did not match the request hash")
+			const message = JSON.parse(decoder.decode(data))
+			assert(messageType.is(message), "invalid message")
+			await this.handleMessage(id, data, message)
+			await this.txn.insertMessage(id, message)
 		}
 	}
 }
