@@ -323,9 +323,25 @@ class SqliteMessageStore implements MessageStore {
 	): AsyncIterable<[Uint8Array, Message]> {
 		const { type, limit, app } = filter
 		if (type === undefined) {
-			yield* this.getSessionStream({ limit, app })
-			yield* this.getActionStream({ limit, app })
-			yield* this.getCustomActionStream({ limit, app })
+			const countMax = limit ?? Infinity
+			let count = 0
+			for await (const session of this.getSessionStream({ limit, app })) {
+				if (count++ < countMax) {
+					yield session
+				}
+			}
+
+			for await (const session of this.getActionStream({ limit, app })) {
+				if (count++ < countMax) {
+					yield session
+				}
+			}
+
+			for await (const session of this.getCustomActionStream({ limit, app })) {
+				if (count++ < countMax) {
+					yield session
+				}
+			}
 		} else if (type === "session") {
 			yield* this.getSessionStream({ limit, app })
 		} else if (type === "action") {
