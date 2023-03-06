@@ -43,7 +43,9 @@ class Driver {
 	public async sync() {
 		const sourceRoot = await this.client.getRoot()
 		const targetRoot = await this.txn.getRoot()
-		if (sourceRoot.level === targetRoot.level && equalArrays(sourceRoot.hash, targetRoot.hash)) {
+		if (sourceRoot.level === 0) {
+			return
+		} else if (sourceRoot.level === targetRoot.level && equalArrays(sourceRoot.hash, targetRoot.hash)) {
 			return
 		} else {
 			await this.enter(targetRoot.level, sourceRoot)
@@ -72,7 +74,7 @@ class Driver {
 			for (const sourceChild of children) {
 				await this.scan(sourceChild)
 			}
-		} else {
+		} else if (sourceNode.level === 1) {
 			const ids: Uint8Array[] = []
 			for (const { key, id } of children) {
 				if (key === null) {
