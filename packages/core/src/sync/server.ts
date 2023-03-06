@@ -4,24 +4,34 @@ import type { Uint8ArrayList } from "uint8arraylist"
 import type { Duplex, Source } from "it-stream-types"
 import { pipe } from "it-pipe"
 import * as lp from "it-length-prefixed"
+import { CID } from "multiformats"
+import { sha256 } from "@noble/hashes/sha256"
 
 import RPC from "@canvas-js/core/rpc/sync"
 
-import { stringify } from "../utils.js"
-
 import type { ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
+
+import { stringify } from "../utils.js"
 import { equalArrays, fromNode, toKey } from "./utils.js"
-import { sha256 } from "@noble/hashes/sha256"
 
 export async function handleIncomingStream(
+	cid: CID,
 	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
 	txn: ReadOnlyTransaction
 ) {
 	async function* handle(source: Source<Uint8ArrayList>): AsyncIterable<Uint8Array> {
 		for await (const msg of source) {
 			const req = RPC.Request.decode(msg.subarray())
-			const res = await handleRequest(req, txn)
-			yield RPC.Response.encode(res).finish()
+			try {
+				const res = await handleRequest(req, txn)
+				yield RPC.Response.encode(res).finish()
+			} catch (err) {
+				if (err instanceof Error) {
+					console.log(`[canvas-core] [${cid}] Error handling incoming RPC request: ${err.message}`, req.toJSON())
+				}
+
+				throw err
+			}
 		}
 	}
 
