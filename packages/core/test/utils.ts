@@ -18,6 +18,7 @@ import type {
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import type { ContractFunctionArgument, ContractFunctionResult } from "@canvas-js/core/components/vm"
+import { CID } from "multiformats"
 
 type ValueTypes = {
 	boolean: boolean
@@ -68,7 +69,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	routes?: Record<string, (params: Record<string, string>, db: RouteContext) => Query>
 	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
 	sources?: Record<string, Record<string, ActionHandler<Models>>>
-}): Promise<{ app: string; spec: string; appName: string }> {
+}): Promise<{ app: string; cid: CID; spec: string; appName: string }> {
 	const { name, models, actions, routes, contracts, sources } = exports
 
 	const appName = name || "Canvas App"
@@ -107,7 +108,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 
 	const spec = lines.join("\n")
 	const cid = await Hash.of(spec)
-	return { app: `ipfs://${cid}`, spec, appName }
+	return { app: `ipfs://${cid}`, cid: CID.parse(cid), spec, appName }
 }
 
 export class TestSigner {

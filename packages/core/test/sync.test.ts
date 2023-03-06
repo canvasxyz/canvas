@@ -21,7 +21,7 @@ import { handleIncomingStream, sync } from "@canvas-js/core/sync"
 
 import { TestSigner, compileSpec } from "./utils.js"
 
-const { app, appName } = await compileSpec({
+const { app, cid, appName } = await compileSpec({
 	name: "Test App",
 	models: {},
 	actions: { log: ({ message }, {}) => console.log(message) },
@@ -65,7 +65,7 @@ async function testSync(sourceMessages: Iterable<Message>, targetMessages: Itera
 		await targetMessageStore.write(async (targetTxn) => {
 			await sourceMessageStore.read(async (sourceTxn) => {
 				await Promise.all([
-					handleIncomingStream(source, sourceTxn),
+					handleIncomingStream(cid, source, sourceTxn),
 					sync(target, targetTxn, async (hash, data, message) => void delta.push(message)),
 				])
 			})
