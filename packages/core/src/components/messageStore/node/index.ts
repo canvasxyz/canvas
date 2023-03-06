@@ -58,8 +58,6 @@ type CustomActionRecord = {
 const toBuffer = (array: Uint8Array) => Buffer.from(array.buffer, array.byteOffset, array.byteLength)
 
 class SqliteMessageStore implements MessageStore {
-	private readonly statements: Record<keyof typeof SqliteMessageStore.statements, sqlite.Statement>
-
 	public static async initialize(
 		app: string,
 		directory: string | null,
@@ -111,6 +109,9 @@ class SqliteMessageStore implements MessageStore {
 		}
 	}
 
+	private readonly statements: Record<keyof typeof SqliteMessageStore.statements, sqlite.Statement>
+	private readonly merkleRoots: Record<string, Uint8Array> = {}
+
 	private constructor(
 		public readonly app: string,
 		public readonly database: sqlite.Database,
@@ -121,6 +122,17 @@ class SqliteMessageStore implements MessageStore {
 		this.database.exec(SqliteMessageStore.createActionsTable)
 		this.database.exec(SqliteMessageStore.createCustomActionsTable)
 		this.statements = mapEntries(SqliteMessageStore.statements, (_, sql) => this.database.prepare(sql))
+		if (tree !== null) {
+			for (const dbi of [app, ...sources]) {
+				const txn = new okra.Transaction(tree, true, { dbi })
+				try {
+					const root = txn.getRoot()
+					this.merkleRoots[dbi] = root.hash
+				} finally {
+					txn.abort()
+				}
+			}
+		}
 	}
 
 	public async close() {
@@ -264,6 +276,10 @@ class SqliteMessageStore implements MessageStore {
 		}
 	}
 
+	public getMerkleRoots(): Record<string, Uint8Array> {
+		return this.merkleRoots
+	}
+
 	public async getMessageByHash(hash: Uint8Array): Promise<Message | null> {
 		const session = this.getSessionByHash(hash)
 		if (session !== null) {
@@ -383,7 +399,15 @@ class SqliteMessageStore implements MessageStore {
 		if (this.tree === null) {
 			return await callback(this.getReadWriteTransaction(null))
 		} else {
-			return await this.tree.write((txn) => callback(this.getReadWriteTransaction(txn)), { dbi })
+			return await this.tree.write(
+				async (txn) => {
+					const result = await callback(this.getReadWriteTransaction(txn))
+					const root = txn.getRoot()
+					this.merkleRoots[dbi] = root.hash
+					return result
+				},
+				{ dbi }
+			)
 		}
 	}
 

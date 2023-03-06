@@ -27,4 +27,6 @@ export interface MessageStore {
 
 	read<T = void>(callback: (txn: ReadOnlyTransaction) => T | Promise<T>, options?: { dbi?: string }): Promise<T>
 	write<T = void>(callback: (txn: ReadWriteTransaction) => T | Promise<T>, options?: { dbi?: string }): Promise<T>
+
+	getMerkleRoots(): Record<string, Uint8Array>
 }

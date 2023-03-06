@@ -31,7 +31,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			peerId: core.libp2p && core.libp2p.peerId.toString(),
 			actions,
 			routes: Object.keys(routes),
-			// merkleRoots: core.mst && core.mst.roots,
+			merkleRoots: core.messageStore.getMerkleRoots(),
 			chainImplementations: core.getChainImplementations(),
 			peers: core.libp2p && {
 				gossip: Object.fromEntries(core.recentGossipPeers),
