@@ -9,6 +9,7 @@
 - [ ] CI tests pass
 - [ ] Tested with chat-next (including login, all signers, and exchanging messages)
 - [ ] Tested with chat-webpack (including login, all signers, and exchanging messages)
+- [ ] Tested with notes (including login, create note, share note)
 - [ ] Other:
 
 <!--- Please describe in detail how you tested your changes. -->
