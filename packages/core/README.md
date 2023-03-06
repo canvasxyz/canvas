@@ -45,9 +45,6 @@ npm run test
 ## API
 
 ```typescript
-import { ethers } from "ethers"
-import { Libp2p } from "libp2p"
-
 import { Message, ModelValue, Model, Chain, ChainId } from "@canvas-js/interfaces"
 
 interface CoreOptions {
