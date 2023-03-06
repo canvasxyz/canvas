@@ -96,7 +96,7 @@
     "libp2p": "^0.42.0",
     "multiformats": "^11.0.0",
     "p-queue": "^7.3.0",
-    "prom-client": "^14.1.1",
+    "prom-client": "^14.2.0",
     "protobufjs": "~7.2.2",
     "quickjs-emscripten": "^0.22.0",
     "safe-stable-stringify": "^2.4.2",
