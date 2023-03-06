@@ -27,3 +27,5 @@ for f in ./examples/*/package.json; do
   echo $p | jq > $f;
 done
 
+rm package-lock.json
+npm i
