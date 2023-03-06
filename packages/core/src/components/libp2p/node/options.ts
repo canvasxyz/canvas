@@ -46,19 +46,23 @@ export async function getLibp2pOptions(config: {
 
 	const port = config.listen ? config.listen : await getRandomPort()
 
-	const listenAddresses = [`/ip4/0.0.0.0/tcp/${port}/ws`]
+	const listenAddress = `/ip4/0.0.0.0/tcp/${port}/ws`
 
-	console.log(`[canvas-core] Listening on`, listenAddresses)
+	console.log(`[canvas-core] Listening on ${listenAddress}`)
 
 	const announceAddresses =
 		config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId}`)
 
-	console.log(`[canvas-core] Announcing on`, announceAddresses)
+	if (config.announce !== undefined) {
+		console.log(`[canvas-core] Announcing on public address ${config.announce}`)
+	} else {
+		console.log(`[canvas-core] No --announce address provided. Using bootstrap servers as public relays.`)
+	}
 
 	return {
 		connectionGater: { denyDialMultiaddr },
 		peerId: peerId,
-		addresses: { listen: listenAddresses, announce: announceAddresses, announceFilter },
+		addresses: { listen: [listenAddress], announce: announceAddresses, announceFilter },
 		transports: [webSockets()],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
