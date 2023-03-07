@@ -8,7 +8,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "HOST=/api webpack build",
     "start": "canvas run spec.canvas.js --install --unchecked --static dist",
-    "dev": "HOST='http://localhost:8000' concurrently --kill-others -n backend,frontend 'canvas run spec.canvas.js --unchecked' 'webpack server --port 3000'"
+    "dev:backend": "canvas run spec.canvas.js --unchecked --offline",
+    "dev:frontend": "HOST='http://localhost:8000' webpack server --port 3000",
+    "dev": "concurrently --kill-others -n backend,frontend 'npm run dev:backend' 'npm run dev:frontend'"
   },
   "dependencies": {
     "@canvas-js/chain-ethereum": "0.2.2",
