@@ -1,12 +1,11 @@
 import path from "node:path"
-import assert from "node:assert"
 import Database, * as sqlite from "better-sqlite3"
 import chalk from "chalk"
 
 import type { Model, ModelType, ModelValue, Query } from "@canvas-js/interfaces"
 
 import type { VM } from "@canvas-js/core/components/vm"
-import { mapEntries, signalInvalidType } from "@canvas-js/core/utils"
+import { mapEntries, signalInvalidType, assert } from "@canvas-js/core/utils"
 import { MODEL_DATABASE_FILENAME } from "@canvas-js/core/constants"
 
 import type { Effect, ModelStore } from "../types.js"

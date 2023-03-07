@@ -1,5 +1,3 @@
-import assert from "node:assert"
-
 import type { Uint8ArrayList } from "uint8arraylist"
 import type { Duplex, Source } from "it-stream-types"
 import { pipe } from "it-pipe"
@@ -11,7 +9,7 @@ import RPC from "@canvas-js/core/rpc/sync"
 
 import type { ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
 
-import { stringify } from "../utils.js"
+import { stringify, assert } from "@canvas-js/core/utils"
 import { equalArrays, fromNode, toKey } from "./utils.js"
 
 export async function handleIncomingStream(

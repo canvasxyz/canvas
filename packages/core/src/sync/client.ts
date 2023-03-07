@@ -1,5 +1,3 @@
-import assert from "node:assert"
-
 import type { Duplex, Source } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
 import * as lp from "it-length-prefixed"
@@ -7,7 +5,9 @@ import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
 
 import RPC from "@canvas-js/core/rpc/sync"
+import { assert } from "@canvas-js/core/utils"
 import type { Node } from "@canvas-js/core/components/messageStore"
+
 import { toNode } from "./utils.js"
 
 export class Client {

@@ -1,5 +1,3 @@
-import assert from "node:assert"
-
 import chalk from "chalk"
 import { CID } from "multiformats/cid"
 import { TimeoutController } from "timeout-abort-controller"
@@ -14,7 +12,7 @@ import type { StreamHandler } from "@libp2p/interface-registrar"
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore } from "@canvas-js/core/components/messageStore"
 
-import { wait, retry, AbortError, toHex, CacheMap } from "./utils.js"
+import { wait, retry, AbortError, toHex, CacheMap, assert } from "./utils.js"
 import { sync, handleIncomingStream } from "./sync/index.js"
 import * as constants from "./constants.js"
 import { metrics } from "./metrics.js"

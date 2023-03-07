@@ -1,5 +1,3 @@
-import assert from "node:assert"
-
 import chalk from "chalk"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
@@ -7,7 +5,7 @@ import { StatusCodes } from "http-status-codes"
 import type { Message, ModelValue } from "@canvas-js/interfaces"
 import { Core } from "./core.js"
 import { getMetrics } from "./metrics.js"
-import { ipfsURIPattern } from "./utils.js"
+import { ipfsURIPattern, assert } from "./utils.js"
 
 interface Options {
 	exposeMetrics: boolean

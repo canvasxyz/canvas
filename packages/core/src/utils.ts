@@ -1,5 +1,3 @@
-import assert from "node:assert"
-
 import { CID } from "multiformats"
 
 import { ethers } from "ethers"
@@ -10,6 +8,12 @@ import type { ModelType, ModelValue } from "@canvas-js/interfaces"
 const { hexlify, arrayify } = ethers.utils
 
 export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
+
+export function assert(condition: unknown, message?: string): asserts condition {
+	if (!condition) {
+		throw new Error(message ?? "assertion failed")
+	}
+}
 
 export const ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
 

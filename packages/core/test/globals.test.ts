@@ -39,7 +39,7 @@ test("test assert()", async (t) => {
 	await t.notThrowsAsync(() => core.apply(successAction))
 
 	const failureAction = await signer.sign("echo", { text: 5 })
-	await t.throwsAsync(() => core.apply(failureAction), { message: "false == true" })
+	await t.throwsAsync(() => core.apply(failureAction), { message: "assertion failed" })
 
 	await core.close()
 })

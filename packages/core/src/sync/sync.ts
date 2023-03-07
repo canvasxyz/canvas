@@ -1,5 +1,3 @@
-import assert from "node:assert"
-
 import { sha256 } from "@noble/hashes/sha256"
 
 import type { Duplex } from "it-stream-types"
@@ -8,6 +6,7 @@ import type { Uint8ArrayList } from "uint8arraylist"
 import { Message } from "@canvas-js/interfaces"
 
 import { messageType } from "@canvas-js/core/codecs"
+import { assert } from "@canvas-js/core/utils"
 import type { ReadWriteTransaction, Node } from "@canvas-js/core/components/messageStore"
 
 import { Client } from "./client.js"

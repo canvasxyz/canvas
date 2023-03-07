@@ -1,4 +1,3 @@
-import assert from "node:assert"
 import path from "node:path"
 import fs from "node:fs"
 
@@ -7,7 +6,7 @@ import * as okra from "@canvas-js/okra-node"
 
 import type { Action, Session, ActionArgument, Chain, ChainId, CustomAction, Message } from "@canvas-js/interfaces"
 
-import { mapEntries, toHex, stringify, signalInvalidType } from "@canvas-js/core/utils"
+import { mapEntries, toHex, stringify, signalInvalidType, assert } from "@canvas-js/core/utils"
 import { MESSAGE_DATABASE_FILENAME, MST_DIRECTORY_NAME } from "@canvas-js/core/constants"
 
 import { getMessageKey } from "@canvas-js/core/sync"

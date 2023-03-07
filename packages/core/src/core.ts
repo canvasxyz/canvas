@@ -1,11 +1,9 @@
-import assert from "node:assert"
-
 import Hash from "ipfs-only-hash"
 import { sha256 } from "@noble/hashes/sha256"
 import { CID } from "multiformats/cid"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { createLibp2p, Libp2p } from "libp2p"
-import type { PeerId } from "@libp2p/interface-peer-id"
+import chalk from "chalk"
 
 import {
 	Action,
@@ -20,18 +18,18 @@ import {
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { validate } from "@hyperjump/json-schema/draft-2020-12"
 
-import { actionType, messageType } from "./codecs.js"
-import { toHex, signalInvalidType, CacheMap, stringify, parseIPFSURI } from "./utils.js"
-
 import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
 import { MessageStore, openMessageStore } from "@canvas-js/core/components/messageStore"
 
 import { getLibp2pOptions, startPingService } from "@canvas-js/core/components/libp2p"
+
+import { actionType, messageType } from "./codecs.js"
+import { toHex, signalInvalidType, CacheMap, stringify, parseIPFSURI, assert } from "./utils.js"
+
 import * as constants from "./constants.js"
 import { Source } from "./source.js"
 import { metrics } from "./metrics.js"
-import chalk from "chalk"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory (NodeJS only)

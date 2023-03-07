@@ -1,5 +1,3 @@
-import assert from "node:assert"
-
 import chalk from "chalk"
 import { fetch } from "undici"
 import { getQuickJS, isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime } from "quickjs-emscripten"
@@ -23,7 +21,7 @@ import {
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import { ApplicationError } from "@canvas-js/core"
-import { mapEntries, signalInvalidType, toHex } from "@canvas-js/core/utils"
+import { mapEntries, signalInvalidType, toHex, assert } from "@canvas-js/core/utils"
 import * as constants from "@canvas-js/core/constants"
 import type { Effect } from "@canvas-js/core/components/modelStore"
 

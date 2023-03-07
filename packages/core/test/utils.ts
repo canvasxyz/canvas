@@ -1,4 +1,3 @@
-import assert from "node:assert"
 import { ethers } from "ethers"
 
 import Hash from "ipfs-only-hash"
@@ -18,6 +17,7 @@ import type {
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import type { ContractFunctionArgument, ContractFunctionResult } from "@canvas-js/core/components/vm"
+import { assert } from "@canvas-js/core/utils"
 import { CID } from "multiformats"
 
 type ValueTypes = {
