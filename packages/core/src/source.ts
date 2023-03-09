@@ -8,15 +8,15 @@ import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
+import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
 import type { Message } from "@canvas-js/interfaces"
-import type { MessageStore } from "@canvas-js/core/components/messageStore"
+import type { MessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
 
-import { wait, retry, AbortError, toHex, CacheMap, assert } from "./utils.js"
 import { sync, handleIncomingStream } from "./sync/index.js"
-import * as constants from "./constants.js"
-import { metrics } from "./metrics.js"
-import { messageType } from "./codecs.js"
+import { wait, retry, AbortError, toHex, CacheMap, assert } from "@canvas-js/core/utils"
+import * as constants from "@canvas-js/core/constants"
+import { messageType } from "@canvas-js/core/codecs"
 
 interface SourceOptions {
 	recentGossipPeers?: CacheMap<string, { lastSeen: number }>
@@ -28,19 +28,25 @@ export interface SourceConfig extends SourceOptions {
 	cid: CID
 	messageStore: MessageStore
 	libp2p: Libp2p
-	applyMessage: (hash: Uint8Array, message: Message) => Promise<void>
+	applyMessage: (txn: ReadOnlyTransaction, hash: Uint8Array, message: Message) => Promise<void>
 }
 
-export class Source {
+interface SourceEvents {
+	sync: CustomEvent<{ peer: string; time: number; status: "success" | "failure" }>
+}
+
+export class Source extends EventEmitter<SourceEvents> {
 	private readonly controller = new AbortController()
 
 	private readonly cid: CID
 	private readonly messageStore: MessageStore
 	private readonly libp2p: Libp2p
-	private readonly applyMessage: (hash: Uint8Array, message: Message) => Promise<void>
+	private readonly applyMessage: (txn: ReadOnlyTransaction, hash: Uint8Array, message: Message) => Promise<void>
 	private readonly options: SourceOptions
+	private applicationPeers: PeerId[] = []
 
 	public constructor(config: SourceConfig) {
+		super()
 		const { cid, libp2p, messageStore, applyMessage, ...options } = config
 		this.cid = cid
 		this.libp2p = libp2p
@@ -128,7 +134,7 @@ export class Source {
 						return
 					}
 
-					await this.applyMessage(hash, message)
+					await this.applyMessage(txn, hash, message)
 					await txn.insertMessage(hash, message)
 				},
 				{ dbi: this.uri }
@@ -237,31 +243,18 @@ export class Source {
 			await this.wait(constants.SYNC_DELAY)
 
 			while (!this.controller.signal.aborted) {
-				const subscribers = this.libp2p.pubsub.getSubscribers(this.uri)
-
-				metrics.canvas_gossipsub_subscribers.set({ uri: this.uri }, subscribers.length)
-				if (this.options.recentGossipPeers) {
-					for (const peer of subscribers) {
-						this.options.recentGossipPeers.set(peer.toString(), { lastSeen: Date.now() })
-					}
-				}
-
-				const peers = await retry(
-					() => this.findSyncPeers(),
+				this.applicationPeers = await retry(
+					() => this.findApplicationPeers(),
 					(err) =>
 						console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to locate application peers (${err.message})`)),
 					{ signal: this.controller.signal, interval: constants.SYNC_RETRY_INTERVAL }
 				)
 
-				metrics.canvas_sync_peers.set({ uri: this.uri }, peers.length)
+				const peerCount = this.applicationPeers.length
+				console.log(chalk.green(`[canvas-core] [${this.cid}] Found ${peerCount} application peers.`))
 
-				console.log(chalk.green(`[canvas-core] [${this.cid}] Found ${peers.length} application peers.`))
-
-				for (const [i, peer] of peers.entries()) {
-					console.log(
-						chalk.green(`[canvas-core] [${this.cid}] Initiating sync with ${peer} (${i + 1}/${peers.length})`)
-					)
-
+				for (const [i, peer] of this.applicationPeers.entries()) {
+					console.log(chalk.green(`[canvas-core] [${this.cid}] Initiating sync with ${peer} (${i + 1}/${peerCount})`))
 					await this.sync(peer)
 				}
 
@@ -285,7 +278,7 @@ export class Source {
 	 * method, which has the added benefit of exposing the GossipSub component to additional
 	 * peers it might not have seen yet.
 	 */
-	private async findSyncPeers(): Promise<PeerId[]> {
+	private async findApplicationPeers(): Promise<PeerId[]> {
 		console.log(`[canvas-core] [${this.cid}] Querying DHT for application peers...`)
 
 		const queryController = new TimeoutController(constants.FIND_PEERS_TIMEOUT)
@@ -349,14 +342,19 @@ export class Source {
 
 		// this is the callback passed to `sync`, invoked with each missing message identified during MST sync.
 		// if handleSyncMessage succeeds, then sync() will automatically insert the message into the MST.
-		const handleSyncMessage = async (hash: Uint8Array, data: Uint8Array, message: Message) => {
+		const handleSyncMessage = async (
+			txn: ReadOnlyTransaction,
+			hash: Uint8Array,
+			data: Uint8Array,
+			message: Message
+		) => {
 			const id = toHex(hash)
 			if (this.options.verbose) {
 				console.log(chalk.green(`[canvas-core] [${this.cid}] Received missing ${message.type} ${id}`))
 			}
 
 			try {
-				await this.applyMessage(hash, message)
+				await this.applyMessage(txn, hash, message)
 				successCount += 1
 			} catch (err) {
 				if (err instanceof Error) {
@@ -370,8 +368,7 @@ export class Source {
 			await this.publishMessage(hash, data)
 		}
 
-		// unclear if it's better to have the timer inside the txn or outside it
-		const timer = metrics.canvas_sync_time.startTimer()
+		const start = performance.now()
 		try {
 			await this.messageStore.write(async (txn) => {
 				if (this.options.verbose) {
@@ -392,11 +389,14 @@ export class Source {
 					)
 				)
 
-				timer({ uri: this.uri, status: "success" })
+				const time = performance.now() - start
+				this.dispatchEvent(new CustomEvent("sync", { detail: { peer: peer.toString(), time, status: "success" } }))
 			})
 		} catch (err) {
-			timer({ uri: this.uri, status: "failure" })
 			if (err instanceof Error) {
+				const time = performance.now() - start
+				this.dispatchEvent(new CustomEvent("sync", { detail: { peer: peer.toString(), time, status: "failure" } }))
+
 				console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to sync with peer ${peer} (${err.message})`))
 				stream.abort(err)
 

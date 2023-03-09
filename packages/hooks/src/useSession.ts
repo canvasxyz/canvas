@@ -75,24 +75,24 @@ export function useSession<Signer, DelegatedSigner>(
 				const delegatedSigner = chainImplementation.importDelegatedSigner(sessionObject.sessionPrivateKey)
 				const sessionAddress = await chainImplementation.getDelegatedSignerAddress(delegatedSigner)
 
-				const res = await fetch(`${host}/sessions`, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						hasSession: sessionAddress,
-						chain: chain,
-						chainId: chainId,
-					}),
-				})
-				const { hasSession } = await res.json()
+				// const res = await fetch(`${host}/sessions`, {
+				// 	method: "POST",
+				// 	headers: { "Content-Type": "application/json" },
+				// 	body: JSON.stringify({
+				// 		hasSession: sessionAddress,
+				// 		chain: chain,
+				// 		chainId: chainId,
+				// 	}),
+				// })
+				// const { hasSession } = await res.json()
 
-				if (hasSession) {
-					setSessionAddress(sessionAddress)
-					setSessionSigner(delegatedSigner)
-					setSessionExpiration(sessionObject.expiration)
-					setIsLoading(false)
-					return
-				}
+				// if (hasSession) {
+				setSessionAddress(sessionAddress)
+				setSessionSigner(delegatedSigner)
+				setSessionExpiration(sessionObject.expiration)
+				setIsLoading(false)
+				return
+				// }
 			}
 		}
 

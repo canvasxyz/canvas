@@ -20,16 +20,13 @@ import { validate } from "@hyperjump/json-schema/draft-2020-12"
 
 import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
-import { MessageStore, openMessageStore } from "@canvas-js/core/components/messageStore"
-
+import { MessageStore, openMessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
 import { getLibp2pOptions, startPingService } from "@canvas-js/core/components/libp2p"
 
+import { Source } from "./source.js"
 import { actionType, messageType } from "./codecs.js"
 import { toHex, signalInvalidType, CacheMap, stringify, parseIPFSURI, assert } from "./utils.js"
-
 import * as constants from "./constants.js"
-import { Source } from "./source.js"
-import { metrics } from "./metrics.js"
 
 export interface CoreConfig extends CoreOptions {
 	// pass `null` to run in memory (NodeJS only)
@@ -52,6 +49,7 @@ export interface CoreOptions {
 
 interface CoreEvents {
 	close: Event
+	sync: CustomEvent<{ uri: string; peer: string; time: number; status: "success" | "failure" }>
 	message: CustomEvent<Message>
 }
 
@@ -209,7 +207,7 @@ export class Core extends EventEmitter<CoreEvents> {
 					return
 				}
 
-				await this.applyMessageInternal(hash, message)
+				await this.applyMessageInternal(txn, hash, message)
 				await txn.insertMessage(hash, message)
 			},
 			{ dbi: app }
@@ -231,7 +229,7 @@ export class Core extends EventEmitter<CoreEvents> {
 	 * Note the this does NOT insert into the message store or publish to GossipSub -
 	 * that's the responsibility of the caller.
 	 */
-	private applyMessageInternal = async (hash: Uint8Array, message: Message) => {
+	private applyMessageInternal = async (txn: ReadOnlyTransaction, hash: Uint8Array, message: Message) => {
 		const id = toHex(hash)
 
 		if (this.options.verbose) {
@@ -239,19 +237,15 @@ export class Core extends EventEmitter<CoreEvents> {
 		}
 
 		if (message.type === "action") {
-			await this.validateAction(message)
+			await this.validateAction(txn, message)
 
 			const effects = await this.vm.execute(hash, message.payload)
 
 			this.modelStore.applyEffects(message.payload, effects)
-
-			metrics.canvas_messages.inc({ type: "action", uri: message.payload.app }, 1)
 		} else if (message.type === "session") {
-			await this.validateSession(message)
-
-			metrics.canvas_messages.inc({ type: "session", uri: message.payload.app }, 1)
+			await this.validateSession(txn, message)
 		} else if (message.type == "customAction") {
-			await this.validateCustomAction(message)
+			await this.validateCustomAction(txn, message)
 
 			const effects = await this.vm.executeCustomAction(hash, message.payload, { timestamp: 0 })
 
@@ -268,8 +262,6 @@ export class Core extends EventEmitter<CoreEvents> {
 
 			// TODO: can we give the user a way to set the timestamp if it comes from a trusted source?
 			this.modelStore.applyEffects({ timestamp: 0 }, effects)
-
-			metrics.canvas_messages.inc({ type: "customAction", uri: message.app }, 1)
 		} else {
 			signalInvalidType(message)
 		}
@@ -277,7 +269,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.dispatchEvent(new CustomEvent("message", { detail: message }))
 	}
 
-	private async validateAction(action: Action) {
+	private async validateAction(txn: ReadOnlyTransaction, action: Action) {
 		const { timestamp, app, appName, block, chain, chainId } = action.payload
 		const fromAddress = action.payload.from
 
@@ -299,7 +291,7 @@ export class Core extends EventEmitter<CoreEvents> {
 
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
-			const [_, session] = await this.messageStore.getSessionByAddress(chain, chainId, action.session)
+			const [_, session] = await txn.getSessionByAddress(chain, chainId, action.session)
 			assert(session !== null, "session not found")
 			assert(
 				action.payload.app === session.payload.app,
@@ -321,7 +313,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		await verifyAction(action)
 	}
 
-	private async validateSession(session: Session) {
+	private async validateSession(txn: ReadOnlyTransaction, session: Session) {
 		const { app, appName, sessionIssued, block, chain, chainId } = session.payload
 
 		assert(app === this.app || this.vm.sources.has(app), "session signed for wrong application (app invalid)")
@@ -341,7 +333,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		await verifySession(session)
 	}
 
-	private async validateCustomAction(customAction: CustomAction) {
+	private async validateCustomAction(txn: ReadOnlyTransaction, customAction: CustomAction) {
 		const customActionDefinition = this.vm.customAction
 		assert(!!customActionDefinition, `custom action called but no custom action definition exists`)
 		assert(

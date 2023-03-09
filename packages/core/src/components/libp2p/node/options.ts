@@ -20,10 +20,12 @@ import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 import { Multiaddr } from "@multiformats/multiaddr"
 
+import { register } from "prom-client"
+
 import { PEER_ID_FILENAME } from "@canvas-js/core/constants"
 import { toHex } from "@canvas-js/core/utils"
 
-import { libp2pRegister } from "../../../metrics.js"
+// import { libp2pRegister } from "../../metrics/node/index.js"
 import { defaultBootstrapList } from "../bootstrap.js"
 
 const announceFilter = (multiaddrs: Multiaddr[]) =>
@@ -72,7 +74,7 @@ export async function getLibp2pOptions(config: {
 			clientMode: false,
 			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
 		}),
-		metrics: prometheusMetrics({ registry: libp2pRegister }),
+		metrics: prometheusMetrics({ registry: register }),
 		pubsub: gossipsub({
 			emitSelf: false,
 			doPX: true,
@@ -110,29 +112,17 @@ async function getPeerId(directory: string | null): Promise<PeerId> {
 	}
 }
 
-async function getRandomPort() {
+function getRandomPort(): Promise<number> {
 	const server = net.createServer()
-
-	const port = await new Promise((resolve, reject) =>
+	return new Promise((resolve, reject) =>
 		server.listen(0, () => {
 			const address = server.address()
 			if (address === null || typeof address == "string") {
+				server.close()
 				reject(new Error("unexpected net.server address"))
 			} else {
-				resolve(address.port)
+				server.close((err) => (err ? reject(err) : resolve(address.port)))
 			}
 		})
 	)
-
-	await new Promise<void>((resolve, reject) =>
-		server.close((err) => {
-			if (err) {
-				reject(err)
-			} else {
-				resolve()
-			}
-		})
-	)
-
-	return port
 }
