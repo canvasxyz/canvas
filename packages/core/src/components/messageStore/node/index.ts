@@ -204,48 +204,15 @@ class SqliteMessageStore implements MessageStore {
 		this.statements.insertCustomAction.run(record)
 	}
 
-	private getActionByHash(hash: Uint8Array): Action | null {
-		const record: undefined | ActionRecord = this.statements.getActionByHash.get({
-			hash: toBuffer(hash),
-		})
-
-		return record === undefined ? null : SqliteMessageStore.parseActionRecord(record)
+	public getMerkleRoots(): Record<string, string> {
+		return this.merkleRoots
 	}
 
-	private static parseActionRecord(record: ActionRecord): Action {
-		const action: Action = {
-			type: "action",
-			signature: record.signature,
-			session: record.session_address,
-			payload: {
-				app: record.app,
-				appName: record.app_name,
-				from: record.from_address,
-				call: record.call,
-				callArgs: JSON.parse(record.call_args) as Record<string, ActionArgument>,
-				timestamp: record.timestamp,
-				chain: record.chain,
-				chainId: record.chain_id,
-				block: record.block,
-			},
-		}
-
-		return action
-	}
-
-	private getSessionByHash(hash: Uint8Array): Session | null {
-		const record: undefined | SessionRecord = this.statements.getSessionByHash.get({
-			hash: toBuffer(hash),
-		})
-
-		return record === undefined ? null : SqliteMessageStore.parseSessionRecord(record)
-	}
-
-	public async getSessionByAddress(
+	private getSessionByAddress(
 		chain: Chain,
 		chainId: ChainId,
 		address: string
-	): Promise<[hash: string | null, session: Session | null]> {
+	): [hash: string | null, session: Session | null] {
 		const record: undefined | SessionRecord = this.statements.getSessionByAddress.get({
 			session_address: address,
 		})
@@ -257,29 +224,7 @@ class SqliteMessageStore implements MessageStore {
 		}
 	}
 
-	private static parseSessionRecord(record: SessionRecord): Session {
-		return {
-			type: "session",
-			signature: record.signature,
-			payload: {
-				app: record.app,
-				appName: record.app_name,
-				from: record.from_address,
-				sessionAddress: record.session_address,
-				sessionDuration: record.session_duration,
-				sessionIssued: record.session_issued,
-				chain: record.chain,
-				chainId: record.chain_id,
-				block: record.block,
-			},
-		}
-	}
-
-	public getMerkleRoots(): Record<string, string> {
-		return this.merkleRoots
-	}
-
-	public async getMessageByHash(hash: Uint8Array): Promise<Message | null> {
+	private getMessageByHash(hash: Uint8Array): Message | null {
 		const session = this.getSessionByHash(hash)
 		if (session !== null) {
 			return session
@@ -298,21 +243,28 @@ class SqliteMessageStore implements MessageStore {
 		return null
 	}
 
-	async getCustomActionByHash(hash: Uint8Array): Promise<CustomAction | null> {
+	private getSessionByHash(hash: Uint8Array): Session | null {
+		const record: undefined | SessionRecord = this.statements.getSessionByHash.get({
+			hash: toBuffer(hash),
+		})
+
+		return record === undefined ? null : SqliteMessageStore.parseSessionRecord(record)
+	}
+
+	private getActionByHash(hash: Uint8Array): Action | null {
+		const record: undefined | ActionRecord = this.statements.getActionByHash.get({
+			hash: toBuffer(hash),
+		})
+
+		return record === undefined ? null : SqliteMessageStore.parseActionRecord(record)
+	}
+
+	private getCustomActionByHash(hash: Uint8Array): CustomAction | null {
 		const record: undefined | CustomActionRecord = this.statements.getCustomActionByHash.get({
 			hash: toBuffer(hash),
 		})
 
 		return record === undefined ? null : SqliteMessageStore.parseCustomActionRecord(record)
-	}
-
-	private static parseCustomActionRecord(record: CustomActionRecord): CustomAction {
-		return {
-			type: "customAction",
-			app: record.app,
-			name: record.name,
-			payload: JSON.parse(record.payload),
-		}
 	}
 
 	// we can use statement.iterate() instead of paging manually
@@ -394,7 +346,8 @@ class SqliteMessageStore implements MessageStore {
 	}
 
 	private getReadOnlyTransaction = (txn: okra.Transaction | null): ReadOnlyTransaction => ({
-		getMessage: (id) => this.getMessageByHash(id),
+		getSessionByAddress: async (chain, chainId, address) => this.getSessionByAddress(chain, chainId, address),
+		getMessage: async (id) => this.getMessageByHash(id),
 		getNode: async (level, key) => parseNode(assertTxn(txn).getNode(level, key)),
 		getRoot: async () => parseNode(assertTxn(txn).getRoot()),
 		getChildren: async (level, key) => assertTxn(txn).getChildren(level, key).map(parseNode),
@@ -404,7 +357,10 @@ class SqliteMessageStore implements MessageStore {
 		},
 	})
 
-	public async read<T>(callback: (txn: ReadOnlyTransaction) => T | Promise<T>, options: { dbi?: string } = {}) {
+	public async read<T>(
+		callback: (txn: ReadOnlyTransaction) => T | Promise<T>,
+		options: { dbi?: string } = {}
+	): Promise<T> {
 		const dbi = options.dbi ?? this.app
 		assert(dbi === this.app || this.sources.has(dbi))
 		if (this.tree === null) {
@@ -434,7 +390,10 @@ class SqliteMessageStore implements MessageStore {
 		},
 	})
 
-	public async write<T>(callback: (txn: ReadWriteTransaction) => T | Promise<T>, options: { dbi?: string } = {}) {
+	public async write<T>(
+		callback: (txn: ReadWriteTransaction) => T | Promise<T>,
+		options: { dbi?: string } = {}
+	): Promise<T> {
 		const dbi = options.dbi ?? this.app
 		assert(dbi === this.app || this.sources.has(dbi))
 		if (this.tree === null) {
@@ -449,6 +408,54 @@ class SqliteMessageStore implements MessageStore {
 				},
 				{ dbi }
 			)
+		}
+	}
+
+	private static parseSessionRecord(record: SessionRecord): Session {
+		return {
+			type: "session",
+			signature: record.signature,
+			payload: {
+				app: record.app,
+				appName: record.app_name,
+				from: record.from_address,
+				sessionAddress: record.session_address,
+				sessionDuration: record.session_duration,
+				sessionIssued: record.session_issued,
+				chain: record.chain,
+				chainId: record.chain_id,
+				block: record.block,
+			},
+		}
+	}
+
+	private static parseActionRecord(record: ActionRecord): Action {
+		const action: Action = {
+			type: "action",
+			signature: record.signature,
+			session: record.session_address,
+			payload: {
+				app: record.app,
+				appName: record.app_name,
+				from: record.from_address,
+				call: record.call,
+				callArgs: JSON.parse(record.call_args) as Record<string, ActionArgument>,
+				timestamp: record.timestamp,
+				chain: record.chain,
+				chainId: record.chain_id,
+				block: record.block,
+			},
+		}
+
+		return action
+	}
+
+	private static parseCustomActionRecord(record: CustomActionRecord): CustomAction {
+		return {
+			type: "customAction",
+			app: record.app,
+			name: record.name,
+			payload: JSON.parse(record.payload),
 		}
 	}
 

@@ -14,7 +14,7 @@ test("MessageStore can insert and retrieve a custom action", async (t) => {
 	const customAction: CustomAction = { type: "customAction", app, name, payload }
 	await ms.write((txn) => txn.insertMessage(hash, customAction))
 
-	t.deepEqual(await ms.getMessageByHash(hash), customAction)
+	t.deepEqual(await ms.read((txn) => txn.getMessage(hash)), customAction)
 
 	let numCustomActions = 0
 	for await (const [id, message] of ms.getMessageStream({ type: "customAction" })) {

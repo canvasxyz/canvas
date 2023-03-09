@@ -4,6 +4,12 @@ export type Node = { level: number; key: Uint8Array | null; hash: Uint8Array; id
 
 export interface ReadOnlyTransaction {
 	getMessage(id: Uint8Array): Promise<Message | null>
+	getSessionByAddress(
+		chain: Chain,
+		chainId: ChainId,
+		address: string
+	): Promise<[hash: string | null, session: Session | null]>
+
 	getRoot(): Promise<Node>
 	getNode(level: number, key: Uint8Array | null): Promise<Node>
 	getChildren(level: number, key: Uint8Array | null): Promise<Node[]>
@@ -15,12 +21,6 @@ export interface ReadWriteTransaction extends ReadOnlyTransaction {
 }
 
 export interface MessageStore {
-	getMessageByHash(hash: Uint8Array): Promise<Message | null>
-	getSessionByAddress(
-		chain: Chain,
-		chainId: ChainId,
-		address: string
-	): Promise<[hash: string | null, session: Session | null]>
 	getMessageStream(filter?: {
 		type?: Message["type"]
 		limit?: number
