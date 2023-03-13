@@ -70,11 +70,6 @@ export function call(
 	return result.value
 }
 
-// // TODO: figure out why quickjs-emscripten doesn't support BigInts
-// export function newBigInt(context: QuickJSContext, value: bigint): QuickJSHandle {
-// 	return context.newString(value.toString()).consume((handle) => call(context, "BigInt", null, handle))
-// }
-
 export function recursiveWrapJSONObject(context: QuickJSContext, object: any): QuickJSHandle {
 	const i = typeof object
 	if (i == "string") {

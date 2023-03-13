@@ -35,7 +35,6 @@ import {
 	resolvePromise,
 	wrapArray,
 	recursiveWrapJSONObject,
-	// newBigInt,
 } from "./utils.js"
 import { validateCanvasSpec } from "./validate.js"
 import { CustomActionDefinition, Exports, disposeExports } from "./exports.js"
