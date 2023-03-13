@@ -32,6 +32,15 @@
     "./codecs": {
       "import": "./lib/codecs.js"
     },
+    "./errors": {
+      "import": "./lib/errors.js"
+    },
+    "./api": {
+      "import": "./lib/api.js"
+    },
+    "./websockets": {
+      "import": "./lib/websockets.js"
+    },
     "./components/messageStore": {
       "import": {
         "browser": "./lib/components/messageStore/browser/index.js",
@@ -54,6 +63,7 @@
       "import": "./lib/components/vm/index.js"
     }
   },
+  "sideEffects": false,
   "scripts": {
     "generate-rpc": "npm run generate-rpc-js && npm run generate-rpc-ts",
     "generate-rpc-js": "pbjs ./rpc/sync/index.proto -t static-module -w commonjs -o ./rpc/sync/index.cjs",

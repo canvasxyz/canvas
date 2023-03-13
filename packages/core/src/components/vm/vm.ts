@@ -20,7 +20,7 @@ import {
 } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
-import { ApplicationError } from "@canvas-js/core"
+import { ApplicationError } from "@canvas-js/core/errors"
 import { mapEntries, signalInvalidType, toHex, assert } from "@canvas-js/core/utils"
 import * as constants from "@canvas-js/core/constants"
 import type { Effect } from "@canvas-js/core/components/modelStore"

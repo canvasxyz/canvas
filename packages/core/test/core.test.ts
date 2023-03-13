@@ -1,8 +1,9 @@
 import test from "ava"
 
 import { ethers } from "ethers"
-import { CustomAction, ModelValue } from "@canvas-js/interfaces"
-import { Core, ApplicationError } from "@canvas-js/core"
+import { CustomAction } from "@canvas-js/interfaces"
+import { Core } from "@canvas-js/core"
+import { ApplicationError } from "@canvas-js/core/errors"
 
 import { TestSessionSigner, TestSigner, compileSpec, collect } from "./utils.js"
 

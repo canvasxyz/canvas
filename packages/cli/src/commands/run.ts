@@ -11,7 +11,10 @@ import stoppable from "stoppable"
 import express from "express"
 import cors from "cors"
 
-import { Core, getAPI, setupWebsockets } from "@canvas-js/core"
+import { Core } from "@canvas-js/core"
+import { getAPI } from "@canvas-js/core/api"
+import { setupWebsockets } from "@canvas-js/core/websockets"
+
 import * as constants from "@canvas-js/core/constants"
 
 import { getChainImplementations, confirmOrExit, parseSpecArgument, installSpec, CANVAS_HOME } from "../utils.js"
