@@ -103,7 +103,6 @@
     "safe-stable-stringify": "^2.4.2",
     "timeout-abort-controller": "^3.0.0",
     "uint8arraylist": "^2.4.3",
-    "undici": "^5.20.0",
     "uuid": "^9.0.0",
     "ws": "^8.11.0"
   },

@@ -1,5 +1,5 @@
 import chalk from "chalk"
-import { fetch } from "undici"
+
 import { getQuickJS, isFail, QuickJSContext, QuickJSHandle, QuickJSRuntime } from "quickjs-emscripten"
 import { addSchema } from "@hyperjump/json-schema/draft-2020-12"
 import Hash from "ipfs-only-hash"
@@ -26,6 +26,8 @@ import * as constants from "@canvas-js/core/constants"
 import type { Effect } from "@canvas-js/core/components/modelStore"
 
 import {
+	ContractFunctionArgument,
+	ContractFunctionResult,
 	loadModule,
 	wrapObject,
 	unwrapObject,
@@ -585,6 +587,3 @@ export class VM {
 		}
 	}
 }
-
-export type ContractFunctionArgument = string | boolean | number | bigint
-export type ContractFunctionResult = string | boolean | number | bigint | ethers.BigNumber
