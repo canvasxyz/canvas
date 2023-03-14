@@ -2,12 +2,13 @@ import path from "node:path"
 import Database, * as sqlite from "better-sqlite3"
 import chalk from "chalk"
 
-import type { Model, ModelType, ModelValue, Query } from "@canvas-js/interfaces"
+import type { ModelValue, Query } from "@canvas-js/interfaces"
 
 import type { VM } from "@canvas-js/core/components/vm"
 import { mapEntries, signalInvalidType, assert } from "@canvas-js/core/utils"
 import { MODEL_DATABASE_FILENAME } from "@canvas-js/core/constants"
 
+import { getModelStatements, initializeModelTables, ModelStatements } from "../schema.js"
 import type { Effect, ModelStore } from "../types.js"
 export * from "../types.js"
 
@@ -15,14 +16,9 @@ class SqliteModelStore implements ModelStore {
 	public readonly database: sqlite.Database
 
 	private readonly transaction: (context: { timestamp: number }, effects: Effect[]) => void
-	private readonly vm: VM
-	private readonly modelNames: string[]
-	private readonly modelStatements: Record<
-		string,
-		Record<keyof ReturnType<typeof SqliteModelStore.getModelStatements>, sqlite.Statement>
-	> = {}
+	private readonly modelStatements: Record<string, Record<ModelStatements, sqlite.Statement>> = {}
 
-	constructor(directory: string | null, vm: VM, options: { verbose?: boolean } = {}) {
+	constructor(directory: string | null, private readonly vm: VM, options: { verbose?: boolean } = {}) {
 		if (directory === null) {
 			if (options.verbose) {
 				console.log("[canvas-core] Initializing new in-memory database")
@@ -40,14 +36,9 @@ class SqliteModelStore implements ModelStore {
 			this.database = new Database(databasePath)
 		}
 
-		this.vm = vm
-		this.modelNames = Object.keys(vm.models)
-
-		this.initializeModelTables(vm.models)
+		initializeModelTables(vm.models, (sql) => this.database.exec(sql))
 		for (const [name, model] of Object.entries(vm.models)) {
-			this.modelStatements[name] = mapEntries(SqliteModelStore.getModelStatements(name, model), (_, sql) =>
-				this.database.prepare(sql)
-			)
+			this.modelStatements[name] = mapEntries(getModelStatements(name, model), (_, sql) => this.database.prepare(sql))
 		}
 
 		this.transaction = this.database.transaction((context: { timestamp: number }, effects: Effect[]): void => {
@@ -55,10 +46,6 @@ class SqliteModelStore implements ModelStore {
 				this.applyEffect(context, effect)
 			}
 		})
-	}
-
-	public getModelNames(): string[] {
-		return this.modelNames
 	}
 
 	public async *exportModel(modelName: string, options: { limit?: number } = {}) {
@@ -155,84 +142,6 @@ class SqliteModelStore implements ModelStore {
 				throw err
 			}
 		})
-	}
-
-	// We have to be sure to quote these because, even though we validate that they're all [a-z_]+ elsewhere,
-	// because they might be reserved SQL keywords.
-	private static modelTableName = (modelName: string) => `'${modelName}'`
-	private static deletedTableName = (modelName: string) => `'_${modelName}_deleted'`
-	private static propertyName = (propertyName: string) => `'${propertyName}'`
-	private static indexName = (modelName: string, i: number) => `'_${modelName}_index_${i}'`
-
-	private static getColumnType(type: ModelType): string {
-		switch (type) {
-			case "boolean":
-				return "INTEGER"
-			case "string":
-				return "TEXT"
-			case "integer":
-				return "INTEGER"
-			case "float":
-				return "FLOAT"
-			case "datetime":
-				return "INTEGER"
-			default:
-				signalInvalidType(type)
-		}
-	}
-
-	// Wrap this in a local method for easier logging
-	private exec(sql: string) {
-		this.database.exec(sql)
-	}
-
-	private initializeModelTables(models: Record<string, Model>) {
-		for (const [name, { indexes, id, updated_at, ...properties }] of Object.entries(models)) {
-			assert(id === "string", "id property must be 'string'")
-			assert(updated_at === "datetime", "updated_at property must be 'datetime'")
-
-			const deletedTableName = SqliteModelStore.deletedTableName(name)
-			const createDeletedTable = `CREATE TABLE IF NOT EXISTS ${deletedTableName} (id TEXT PRIMARY KEY NOT NULL, deleted_at INTEGER NOT NULL);`
-			this.exec(createDeletedTable)
-
-			const columns = ["id TEXT PRIMARY KEY NOT NULL", "updated_at INTEGER NOT NULL"]
-			for (const [property, type] of Object.entries(properties)) {
-				columns.push(`'${property}' ${SqliteModelStore.getColumnType(type)}`)
-			}
-
-			const tableName = SqliteModelStore.modelTableName(name)
-
-			const createTable = `CREATE TABLE IF NOT EXISTS ${tableName} (${columns.join(", ")});`
-			this.exec(createTable)
-
-			if (indexes !== undefined) {
-				for (const [i, index] of indexes.entries()) {
-					const properties = Array.isArray(index) ? index : [index]
-					const indexName = SqliteModelStore.indexName(name, i)
-					const propertyNames = properties.map(SqliteModelStore.propertyName)
-					this.exec(`CREATE INDEX IF NOT EXISTS ${indexName} ON ${tableName} (${propertyNames.join(", ")});`)
-				}
-			}
-		}
-	}
-
-	private static getModelStatements(name: string, { id, updated_at, indexes, ...properties }: Model) {
-		const keys = ["updated_at", ...Object.keys(properties)]
-		const values = keys.map((key) => `:${key}`).join(", ")
-		const updates = keys.map((key) => `${SqliteModelStore.propertyName(key)} = :${key}`).join(", ")
-
-		const tableName = SqliteModelStore.modelTableName(name)
-		const deletedTableName = SqliteModelStore.deletedTableName(name)
-		return {
-			insert: `INSERT INTO ${tableName} VALUES (:id, ${values})`,
-			update: `UPDATE ${tableName} SET ${updates} WHERE id = :id`,
-			delete: `DELETE FROM ${tableName} WHERE id = :id`,
-			insertDeleted: `INSERT INTO ${deletedTableName} VALUES (:id, :deleted_at)`,
-			updateDeleted: `UPDATE ${deletedTableName} SET deleted_at = :deleted_at WHERE id = :id`,
-			getUpdatedAt: `SELECT updated_at FROM ${tableName} WHERE id = ?`,
-			getDeletedAt: `SELECT deleted_at FROM ${deletedTableName} WHERE id = ?`,
-			export: `SELECT * FROM ${tableName} LIMIT :limit`,
-		}
 	}
 }
 

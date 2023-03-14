@@ -183,8 +183,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	if (options.exposeModels) {
 		api.get("/models/:model", async (req, res) => {
 			const { model: modelName } = req.params
-			const modelNames = core.modelStore.getModelNames()
-			if (modelNames.includes(modelName)) {
+			if (modelName in core.vm.models) {
 				const rows: Record<string, ModelValue>[] = []
 				const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : -1
 				for await (const row of core.modelStore.exportModel(modelName, { limit })) {
