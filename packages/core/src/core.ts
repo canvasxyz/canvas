@@ -85,7 +85,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, { verbose, unchecked })
 
 		if (config.replay) {
-			console.log(chalk.green(`[canvas-cli] Replaying action log...`))
+			console.log(chalk.green(`[canvas-core] Replaying action log...`))
 			let i = 0
 			for await (const [id, message] of messageStore.getMessageStream()) {
 				if (message.type === "action") {
