@@ -49,6 +49,7 @@ body {
   margin: 0;
   padding-top: 3px;
   padding-left: 6px;
+  overflow-wrap: break-word;
 }
 
 #sidebar {
