@@ -36,3 +36,10 @@ export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown
 
 	getLatestBlock(): Promise<string>
 }
+
+/**
+ * Thrown by Canvas hooks and React libraries when wallet/user supplies
+ * an invalid chain or chain id.
+ */
+export class InvalidChainError extends Error {}
+export class InvalidChainIdError extends Error {}

@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react"
 
-import { ActionArgument, ChainImplementation } from "@canvas-js/interfaces"
+import { ActionArgument, ChainImplementation, InvalidChainError, InvalidChainIdError } from "@canvas-js/interfaces"
 
 import { ApplicationData, CanvasContext } from "./CanvasContext.js"
 import { getSessionObject, setSessionObject, removeSessionObject, SessionObject } from "./sessionKeyStorage.js"
@@ -138,6 +138,14 @@ export function useSession<Signer, DelegatedSigner>(
 			}
 
 			const block = options.unchecked ? null : await chainImplementation.getLatestBlock()
+
+			const metadata = await fetch(`${host}`).then((res) => res.json())
+			if (!(chain in metadata.chainImplementations)) {
+				throw new InvalidChainError(`No chain implementation found for ${chain}:${chainId}`)
+			}
+			if (!(chainId in metadata.chainImplementations[chain])) {
+				throw new InvalidChainIdError(`No chain implementation found for ${chain}:${chainId}`)
+			}
 
 			const session = await chainImplementation.signSession(signer, {
 				from: signerAddress,
