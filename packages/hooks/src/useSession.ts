@@ -49,8 +49,8 @@ export function useSession<Signer, DelegatedSigner>(
 	isPending: boolean
 	sessionAddress: string | null
 	sessionExpiration: number | null
-	login: () => void
-	logout: () => void
+	login: () => Promise<void>
+	logout: () => Promise<void>
 	client: Client | null
 } {
 	const { chain, chainId } = chainImplementation
@@ -141,10 +141,10 @@ export function useSession<Signer, DelegatedSigner>(
 
 			const metadata = await fetch(`${host}`).then((res) => res.json())
 			if (!(chain in metadata.chainImplementations)) {
-				throw new InvalidChainError(`No chain implementation found for ${chain}:${chainId}`)
+				throw new InvalidChainError(`Invalid chain: ${chain}:${chainId}`)
 			}
 			if (!(chainId in metadata.chainImplementations[chain])) {
-				throw new InvalidChainIdError(`No chain implementation found for ${chain}:${chainId}`)
+				throw new InvalidChainIdError(`Invalid chain ID: ${chain}:${chainId}`)
 			}
 
 			const session = await chainImplementation.signSession(signer, {

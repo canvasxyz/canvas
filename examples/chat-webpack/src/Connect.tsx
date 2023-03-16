@@ -55,6 +55,7 @@ export const Connect: React.FC = ({}) => {
 
 const Login: React.FC = ({}) => {
 	const { error, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
+	const [loginError, setLoginError] = useState<Error>()
 	const { chain } = useNetwork()
 	const provider = useProvider<ethers.providers.JsonRpcProvider>()
 
@@ -89,7 +90,14 @@ const Login: React.FC = ({}) => {
 			{sessionAddress === null ? (
 				<>
 					{isLoading ? <p>Loading...</p> : <p>Click Login to begin a new session.</p>}
-					<button disabled={isLoading || isPending} onClick={login}>
+					<button
+						disabled={isLoading || isPending}
+						onClick={() =>
+							login().catch((err: Error) => {
+								setLoginError(err)
+							})
+						}
+					>
 						{isPending ? "Waiting for login" : "Login"}
 					</button>
 				</>
@@ -104,7 +112,7 @@ const Login: React.FC = ({}) => {
 				</>
 			)}
 
-			<ErrorMessage error={error} />
+			<ErrorMessage error={error ?? loginError ?? null} />
 		</>
 	)
 }
