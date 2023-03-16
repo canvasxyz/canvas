@@ -53,3 +53,9 @@ Build and deploy the application:
 npm run build
 fly deploy
 ```
+
+In case of issues, you may have to restart the app manually:
+
+```
+fly apps restart canvas-chat
+```
