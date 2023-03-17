@@ -92,11 +92,17 @@ const Login: React.FC = ({}) => {
 					{isLoading ? <p>Loading...</p> : <p>Click Login to begin a new session.</p>}
 					<button
 						disabled={isLoading || isPending}
-						onClick={() =>
-							login().catch((err: Error) => {
-								setLoginError(err)
-							})
-						}
+						onClick={async () => {
+							try {
+								await login()
+							} catch (err) {
+								if (err instanceof Error) {
+									setLoginError(err)
+								} else {
+									throw err
+								}
+							}
+						}}
 					>
 						{isPending ? "Waiting for login" : "Login"}
 					</button>
