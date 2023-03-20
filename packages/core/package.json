@@ -13,6 +13,12 @@
   ],
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
+  "imports": {
+    "#sqlite3": {
+      "types": "./sqlite/sqlite3-bundler-friendly.mts",
+      "default": "./sqlite/sqlite3-bundler-friendly.mjs"
+    }
+  },
   "exports": {
     ".": {
       "import": "./lib/index.js"

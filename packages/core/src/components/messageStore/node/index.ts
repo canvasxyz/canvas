@@ -87,23 +87,34 @@ class SqliteMessageStore implements MessageStore {
 			const treeExists = fs.existsSync(treePath)
 			if (treeExists) {
 				const tree = new okra.Tree(treePath, { dbs: [app, ...sources] })
-				return new SqliteMessageStore(app, database, tree, sources)
+
+				const store = new SqliteMessageStore(app, database, tree, sources)
+
+				for (const dbi of [app, ...sources]) {
+					const { hash } = await tree.read((txn) => txn.getRoot(), { dbi })
+					store.merkleRoots[dbi] = toHex(hash)
+				}
+
+				return store
 			} else {
 				fs.mkdirSync(treePath)
 				const tree = new okra.Tree(treePath, { dbs: [app, ...sources] })
-				const messageStore = new SqliteMessageStore(app, database, tree, sources)
+				const store = new SqliteMessageStore(app, database, tree, sources)
 				for (const dbi of [app, ...sources]) {
-					await tree.write(
+					const { hash } = await tree.write(
 						async (txn) => {
-							for await (const [hash, message] of messageStore.getMessageStream({ app: dbi })) {
+							for await (const [hash, message] of store.getMessageStream({ app: dbi })) {
 								txn.set(getMessageKey(hash, message), hash)
 							}
+							return txn.getRoot()
 						},
 						{ dbi }
 					)
+
+					store.merkleRoots[dbi] = toHex(hash)
 				}
 
-				return messageStore
+				return store
 			}
 		}
 	}
