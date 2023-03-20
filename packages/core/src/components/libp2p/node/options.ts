@@ -28,10 +28,10 @@ import { toHex } from "@canvas-js/core/utils"
 // import { libp2pRegister } from "../../metrics/node/index.js"
 import { defaultBootstrapList } from "../bootstrap.js"
 
-const announceFilter = (multiaddrs: Multiaddr[]) =>
-	multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr))
+// const announceFilter = (multiaddrs: Multiaddr[]) =>
+// 	multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr))
 
-const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
+// const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
 
 const second = 1000
 const minute = 60 * second
@@ -62,9 +62,9 @@ export async function getLibp2pOptions(config: {
 	}
 
 	return {
-		connectionGater: { denyDialMultiaddr },
+		// connectionGater: { denyDialMultiaddr },
 		peerId: peerId,
-		addresses: { listen: [listenAddress], announce: announceAddresses, announceFilter },
+		addresses: { listen: [listenAddress], announce: announceAddresses },
 		transports: [webSockets()],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
