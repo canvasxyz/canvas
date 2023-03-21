@@ -106,6 +106,7 @@ class SqliteMessageStore implements MessageStore {
 							for await (const [hash, message] of store.getMessageStream({ app: dbi })) {
 								txn.set(getMessageKey(hash, message), hash)
 							}
+
 							return txn.getRoot()
 						},
 						{ dbi }
@@ -132,17 +133,6 @@ class SqliteMessageStore implements MessageStore {
 		this.database.exec(SqliteMessageStore.createActionsTable)
 		this.database.exec(SqliteMessageStore.createCustomActionsTable)
 		this.statements = mapEntries(SqliteMessageStore.statements, (_, sql) => this.database.prepare(sql))
-		if (tree !== null) {
-			for (const dbi of [app, ...sources]) {
-				const txn = new okra.Transaction(tree, true, { dbi })
-				try {
-					const root = txn.getRoot()
-					this.merkleRoots[dbi] = toHex(root.hash)
-				} finally {
-					txn.abort()
-				}
-			}
-		}
 	}
 
 	public async close() {
@@ -356,7 +346,7 @@ class SqliteMessageStore implements MessageStore {
 		}
 	}
 
-	private getReadOnlyTransaction = (txn: okra.Transaction | null): ReadOnlyTransaction => ({
+	private getReadOnlyTransaction = (txn: okra.ReadOnlyTransaction | null): ReadOnlyTransaction => ({
 		getSessionByAddress: async (chain, chainId, address) => this.getSessionByAddress(chain, chainId, address),
 		getMessage: async (id) => this.getMessageByHash(id),
 		getNode: async (level, key) => parseNode(assertTxn(txn).getNode(level, key)),
@@ -381,7 +371,7 @@ class SqliteMessageStore implements MessageStore {
 		}
 	}
 
-	private getReadWriteTransaction = (txn: okra.Transaction | null): ReadWriteTransaction => ({
+	private getReadWriteTransaction = (txn: okra.ReadWriteTransaction | null): ReadWriteTransaction => ({
 		...this.getReadOnlyTransaction(txn),
 		insertMessage: async (id, message) => {
 			if (message.type === "session") {
@@ -539,7 +529,7 @@ class SqliteMessageStore implements MessageStore {
 const parseNode = ({ level, key, hash, value }: okra.Node): Node =>
 	value ? { level, key, hash, id: value } : { level, key, hash }
 
-function assertTxn(txn: okra.Transaction | null): okra.Transaction {
+function assertTxn(txn: okra.ReadOnlyTransaction | null): okra.ReadOnlyTransaction {
 	if (txn === null) {
 		throw new Error("cannot access MST on an in-memory message store")
 	} else {
