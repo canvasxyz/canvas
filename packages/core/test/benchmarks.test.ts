@@ -67,7 +67,7 @@ const testLog = (message: string) => {
 	console.log(chalk.blueBright(`[test] ${message}`))
 }
 
-test("hi", async (t) => {
+test("time sending two messages both ways", async (t) => {
 	t.timeout(50000)
 
 	const sourceDirectory = path.resolve(os.tmpdir(), nanoid())
@@ -107,26 +107,42 @@ test("hi", async (t) => {
 			}),
 		])
 
-		const actionTimer1 = new Timer()
+		const actionTimer = new Timer()
 		const a = await signer.sign("log", { message: "a" })
 		const { hash: sourceHash } = await source.apply(a)
-		testLog(`target is waiting for message with sourceHash: ${sourceHash}...`)
-		await waitForMessageWithHash(target, sourceHash)
-		actionTimer1.done()
+		testLog(`sourceHash: ${sourceHash}`)
 
-		testLog(`action (source -> target) performed and synced in ${actionTimer1.seconds()}s`)
+		const b = await signer.sign("log", { message: "b" })
+		const { hash: targetHash } = await target.apply(b)
+		testLog(`targetHash: ${targetHash}`)
 
-		// const actionTimer2 = new Timer()
-		// const a2 = await signer.sign("log", { message: "b" })
+		await Promise.all([waitForMessageWithHash(target, sourceHash), waitForMessageWithHash(source, targetHash)])
+		actionTimer.done()
+		testLog(`initial sync and message send took ${actionTimer.seconds()} seconds`)
 
-		// the test hangs here:
-		// const { hash: targetHash } = await target.apply(a2)
-		// console.log(`targetHash: ${targetHash}`)
-		// await waitForMessageWithHash(source, targetHash)
-		// actionTimer2.done()
+		const timings: number[] = []
 
-		// console.log(`action (target -> source) performed and synced in ${actionTimer2.seconds()}s`)
+		for (let i = 0; i < 20; i++) {
+			testLog(`test run: ${i}`)
+			const actionTimer2 = new Timer()
+			const a2 = await signer.sign("log", { message: "a2" })
+			const { hash: sourceHash2 } = await source.apply(a2)
+			testLog(`sourceHash: ${sourceHash2}`)
 
+			const b2 = await signer.sign("log", { message: "b2" })
+			const { hash: targetHash2 } = await target.apply(b2)
+			testLog(`targetHash: ${targetHash2}`)
+
+			await Promise.all([waitForMessageWithHash(target, sourceHash2), waitForMessageWithHash(source, targetHash2)])
+			actionTimer2.done()
+			testLog(`sync and message send took ${actionTimer2.seconds()} seconds`)
+			timings.push(actionTimer2.seconds())
+		}
+
+		testLog("timings for sending messages both ways:")
+		testLog(`${timings}`)
+		const mean = timings.reduce((x, y) => x + y, 0) / timings.length
+		testLog(`average: ${mean.toFixed(3)}`)
 		t.pass()
 
 		await source.close()
