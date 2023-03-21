@@ -36,26 +36,6 @@ const waitForMessageWithHash = (core: Core, expectedHash: string) => {
 	})
 }
 
-class Timer {
-	startTime: Date
-	endTime: Date | null
-
-	constructor() {
-		this.startTime = new Date()
-		this.endTime = null
-	}
-
-	done() {
-		this.endTime = new Date()
-	}
-
-	seconds() {
-		// @ts-ignore
-		const timeDiffMs = this.endTime - this.startTime
-		return timeDiffMs / 1000
-	}
-}
-
 const { app, appName, spec } = await compileSpec({
 	name: "Test App",
 	models: {},
@@ -119,28 +99,30 @@ test("time sending an action", async (t) => {
 	try {
 		const [source, target] = await initializeTestCores(configs)
 
-		const actionTimer = new Timer()
+		const initialSyncStart = performance.now()
+
 		const a = await signer.sign("log", { message: "a" })
 		const { hash: sourceHash } = await source.apply(a)
 		testLog(`sourceHash: ${sourceHash}`)
 
 		await waitForMessageWithHash(target, sourceHash)
-		actionTimer.done()
-		testLog(`initial sync and message send took ${actionTimer.seconds()} seconds`)
+		const initialSyncTimeSeconds = (performance.now() - initialSyncStart) / 1000
+
+		testLog(`initial sync and message send took ${initialSyncTimeSeconds} seconds`)
 
 		const timings: number[] = []
 
 		for (let i = 0; i < 100; i++) {
 			testLog(`test run: ${i}`)
-			const actionTimer2 = new Timer()
+			const actionStart = performance.now()
 			const a2 = await signer.sign("log", { message: "a2" })
 			const { hash: sourceHash2 } = await source.apply(a2)
 			testLog(`sourceHash: ${sourceHash2}`)
 
 			await waitForMessageWithHash(target, sourceHash2)
-			actionTimer2.done()
-			testLog(`sync and message send took ${actionTimer2.seconds()} seconds`)
-			timings.push(actionTimer2.seconds())
+			const actionTimeSeconds = (performance.now() - actionStart) / 1000
+			testLog(`sync and message send took ${actionTimeSeconds} seconds`)
+			timings.push(actionTimeSeconds)
 		}
 
 		testLog("timings for sending messages both ways:")
