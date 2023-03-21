@@ -110,7 +110,7 @@ const initializeTestCores = async (
 	return Promise.all(promises)
 }
 
-test("time sending two messages both ways", async (t) => {
+test("time sending an action", async (t) => {
 	t.timeout(50000)
 
 	const host = "127.0.0.1"
@@ -124,28 +124,20 @@ test("time sending two messages both ways", async (t) => {
 		const { hash: sourceHash } = await source.apply(a)
 		testLog(`sourceHash: ${sourceHash}`)
 
-		const b = await signer.sign("log", { message: "b" })
-		const { hash: targetHash } = await target.apply(b)
-		testLog(`targetHash: ${targetHash}`)
-
-		await Promise.all([waitForMessageWithHash(target, sourceHash), waitForMessageWithHash(source, targetHash)])
+		await waitForMessageWithHash(target, sourceHash)
 		actionTimer.done()
 		testLog(`initial sync and message send took ${actionTimer.seconds()} seconds`)
 
 		const timings: number[] = []
 
-		for (let i = 0; i < 20; i++) {
+		for (let i = 0; i < 100; i++) {
 			testLog(`test run: ${i}`)
 			const actionTimer2 = new Timer()
 			const a2 = await signer.sign("log", { message: "a2" })
 			const { hash: sourceHash2 } = await source.apply(a2)
 			testLog(`sourceHash: ${sourceHash2}`)
 
-			const b2 = await signer.sign("log", { message: "b2" })
-			const { hash: targetHash2 } = await target.apply(b2)
-			testLog(`targetHash: ${targetHash2}`)
-
-			await Promise.all([waitForMessageWithHash(target, sourceHash2), waitForMessageWithHash(source, targetHash2)])
+			await waitForMessageWithHash(target, sourceHash2)
 			actionTimer2.done()
 			testLog(`sync and message send took ${actionTimer2.seconds()} seconds`)
 			timings.push(actionTimer2.seconds())
