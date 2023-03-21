@@ -17,6 +17,7 @@ import { toHex } from "@canvas-js/core/utils"
 import { compileSpec, TestSigner } from "./utils.js"
 import { Message, serializeAction } from "@canvas-js/interfaces"
 import chalk from "chalk"
+import { Ed25519PeerId } from "@libp2p/interface-peer-id"
 
 const waitForMessageWithHash = (core: Core, expectedHash: string) => {
 	return new Promise<void>((resolve, reject) => {
@@ -67,45 +68,56 @@ const testLog = (message: string) => {
 	console.log(chalk.blueBright(`[test] ${message}`))
 }
 
+const setupTestPeer = async (host: string, port: number) => {
+	const directory = path.resolve(os.tmpdir(), nanoid())
+	fs.mkdirSync(directory)
+	const peerId = await createEd25519PeerId()
+	fs.writeFileSync(path.resolve(directory, PEER_ID_FILENAME), exportToProtobuf(peerId))
+
+	return {
+		peerId,
+		port,
+		directory,
+		multiaddr: `/ip4/${host}/tcp/${port}/ws/p2p/${peerId}`,
+		destroy: () => {
+			fs.rmSync(directory, { recursive: true })
+		},
+	}
+}
+
+const initializeTestCores = async (
+	configs: { peerId: Ed25519PeerId; port: number; directory: string; multiaddr: string }[]
+) => {
+	const configsByMultiaddr = Object.fromEntries(configs.map((config) => [config.multiaddr, config]))
+
+	const promises = []
+
+	for (const multiaddr of Object.keys(configsByMultiaddr)) {
+		const config = configsByMultiaddr[multiaddr]
+		const bootstrapList = Object.keys(configsByMultiaddr).filter((otherMultiaddr) => otherMultiaddr !== multiaddr)
+		promises.push(
+			Core.initialize({
+				directory: config.directory,
+				spec,
+				listen: config.port,
+				bootstrapList,
+				announce: [multiaddr],
+				// verbose: true,
+			})
+		)
+	}
+
+	return Promise.all(promises)
+}
+
 test("time sending two messages both ways", async (t) => {
 	t.timeout(50000)
 
-	const sourceDirectory = path.resolve(os.tmpdir(), nanoid())
-	const targetDirectory = path.resolve(os.tmpdir(), nanoid())
-	testLog(sourceDirectory)
-	testLog(targetDirectory)
-
-	fs.mkdirSync(sourceDirectory)
-	fs.mkdirSync(targetDirectory)
-
-	const sourcePeerId = await createEd25519PeerId()
-	const targetPeerId = await createEd25519PeerId()
-
-	testLog(`sourcePeerId: ${sourcePeerId}`)
-	testLog(`targetPeerId: ${targetPeerId}`)
-
-	fs.writeFileSync(path.resolve(sourceDirectory, PEER_ID_FILENAME), exportToProtobuf(sourcePeerId))
-	fs.writeFileSync(path.resolve(targetDirectory, PEER_ID_FILENAME), exportToProtobuf(targetPeerId))
+	const host = "127.0.0.1"
+	const configs = await Promise.all([setupTestPeer(host, 8001), setupTestPeer(host, 8002)])
 
 	try {
-		const [source, target] = await Promise.all([
-			Core.initialize({
-				directory: sourceDirectory,
-				spec,
-				listen: 8001,
-				bootstrapList: [`/ip4/127.0.0.1/tcp/8002/ws/p2p/${targetPeerId}`],
-				announce: [`/ip4/127.0.0.1/tcp/8001/ws/p2p/${sourcePeerId}`],
-				// verbose: true,
-			}),
-			Core.initialize({
-				directory: targetDirectory,
-				spec,
-				listen: 8002,
-				bootstrapList: [`/ip4/127.0.0.1/tcp/8001/ws/p2p/${sourcePeerId}`],
-				announce: [`/ip4/127.0.0.1/tcp/8002/ws/p2p/${targetPeerId}`],
-				// verbose: true,
-			}),
-		])
+		const [source, target] = await initializeTestCores(configs)
 
 		const actionTimer = new Timer()
 		const a = await signer.sign("log", { message: "a" })
@@ -148,7 +160,8 @@ test("time sending two messages both ways", async (t) => {
 		await source.close()
 		await target.close()
 	} finally {
-		fs.rmSync(sourceDirectory, { recursive: true })
-		fs.rmSync(targetDirectory, { recursive: true })
+		for (const config of configs) {
+			config.destroy()
+		}
 	}
 })
