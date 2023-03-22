@@ -12,9 +12,6 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 
-import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
-
-import { Multiaddr } from "@multiformats/multiaddr"
 import { ethers } from "ethers"
 
 import { PEER_ID_FILENAME, minute } from "@canvas-js/core/constants"

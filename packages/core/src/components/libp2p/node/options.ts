@@ -22,7 +22,7 @@ import { Multiaddr } from "@multiformats/multiaddr"
 
 import { register } from "prom-client"
 
-import { PEER_ID_FILENAME } from "@canvas-js/core/constants"
+import { minute, PEER_ID_FILENAME } from "@canvas-js/core/constants"
 import { toHex } from "@canvas-js/core/utils"
 
 // import { libp2pRegister } from "../../metrics/node/index.js"
