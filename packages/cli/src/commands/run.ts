@@ -214,28 +214,25 @@ export async function handler(args: Args) {
 		app.use(getAPI(core, { exposeMetrics }))
 	}
 
-	const apiPrefix = args.static ? `api/` : ""
+	const apiURL = args.static ? `http://localhost:${args.port}/api` : `http://localhost:${args.port}`
 
 	const server = stoppable(
 		http.createServer(app).listen(args.port, () => {
 			if (args.static) {
 				console.log(`Serving static bundle: http://localhost:${args.port}/`)
-				console.log(`Serving API for ${core.app}:`)
-				console.log(`└ GET http://localhost:${args.port}/api`)
-			} else {
-				console.log(`Serving API for ${core.app}:`)
-				console.log(`└ GET http://localhost:${args.port}`)
 			}
+			console.log(`Serving API for ${core.app}:`)
+			console.log(`└ GET  ${apiURL}`)
 			for (const name of Object.keys(core.vm.routes)) {
-				console.log(`└ GET http://localhost:${args.port}/${apiPrefix}${name.slice(1)}`)
+				console.log(`└ GET  ${apiURL}/${name.slice(1)}`)
 			}
-			console.log(`└ POST /${apiPrefix}actions`)
-			console.log(`└ POST /${apiPrefix}sessions`)
+			console.log(`└ POST ${apiURL}/actions`)
+			console.log(`└ POST ${apiURL}/sessions`)
 		}),
 		0
 	)
 
-	setupWebsocketServer(server, `http://localhost:${args.port}`, "/" + apiPrefix, core)
+	setupWebsocketServer(server, apiURL, core)
 
 	let stopping = false
 	process.on("SIGINT", async () => {

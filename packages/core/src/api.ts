@@ -304,8 +304,10 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket) {
 	}, WS_KEEPALIVE)
 }
 
-export function setupWebsocketServer(server: http.Server, base: string, path: string, core: Core) {
+export function setupWebsocketServer(server: http.Server, apiURL: string, core: Core) {
 	const wss = new WebSocketServer({ noServer: true })
+
+	const { origin, pathname } = new URL(apiURL)
 
 	server.on("upgrade", (request: http.IncomingMessage, socket: stream.Duplex, head: Buffer) => {
 		if (request.url === undefined) {
@@ -313,13 +315,11 @@ export function setupWebsocketServer(server: http.Server, base: string, path: st
 		}
 
 		console.log("handling upgrade request at URL", request.url)
-		const url = new URL(request.url, base)
-		if (url.pathname === path) {
+		const url = new URL(request.url, origin)
+		if (url.pathname === pathname) {
 			wss.handleUpgrade(request, socket, head, (socket) => handleWebsocketConnection(core, socket))
 		} else {
 			console.log(chalk.red("[canvas-core] rejecting incoming WS connection at unexpected path"), url.pathname)
 		}
 	})
-
-	return server
 }
