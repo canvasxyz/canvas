@@ -33,9 +33,6 @@ const announceFilter = (multiaddrs: Multiaddr[]) =>
 
 const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
 
-const second = 1000
-const minute = 60 * second
-
 export async function getLibp2pOptions(config: {
 	directory: string | null
 	listen?: number
