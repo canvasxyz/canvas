@@ -19,8 +19,6 @@ import * as constants from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 
 interface SourceOptions {
-	recentGossipPeers?: CacheMap<string, { lastSeen: number }>
-	recentSyncPeers?: CacheMap<string, { lastSeen: number }>
 	verbose?: boolean
 }
 
@@ -333,9 +331,6 @@ export class Source extends EventEmitter<SourceEvents> {
 		if (this.options.verbose) {
 			console.log(`[canvas-core] [${this.cid}] Opened outgoing stream ${stream.id} to ${peer}`)
 		}
-
-		// wait until we've successfully dialed the peer before update its lastSeen
-		this.options.recentSyncPeers?.set(peer.toString(), { lastSeen: Date.now() })
 
 		let successCount = 0
 		let failureCount = 0
