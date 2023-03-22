@@ -104,8 +104,6 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		return core
 	}
 
-	public readonly recentGossipPeers = new CacheMap<string, { lastSeen: number }>(1000)
-	public readonly recentSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
 	public readonly sources: Record<string, Source> | null = null
 
 	private readonly controller = new AbortController()
@@ -123,6 +121,11 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	) {
 		super()
 
+		// forward "update" events from the message store
+		messageStore.addEventListener("update", (event) => {
+			this.dispatchEvent(new Event(event.type))
+		})
+
 		if (libp2p !== null) {
 			this.sources = {}
 			for (const uri of [this.app, ...vm.sources]) {
@@ -131,12 +134,11 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 					applyMessage: this.applyMessageInternal,
 					messageStore: this.messageStore,
 					libp2p,
-					recentGossipPeers: this.recentGossipPeers,
-					recentSyncPeers: this.recentSyncPeers,
 					...options,
 				})
 
-				source.addEventListener("sync", (event) => this.dispatchEvent(event))
+				// forward "sync" events from each source store
+				source.addEventListener("sync", ({ detail }) => this.dispatchEvent(new CustomEvent("sync", { detail })))
 
 				this.sources[uri] = source
 			}

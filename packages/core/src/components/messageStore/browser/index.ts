@@ -1,3 +1,5 @@
+import { EventEmitter } from "@libp2p/interfaces/events"
+
 import * as okra from "@canvas-js/okra-browser"
 
 import type { Message } from "@canvas-js/interfaces"
@@ -6,10 +8,11 @@ import { getMessageKey } from "@canvas-js/core/sync"
 
 import { openDB, IDBPDatabase } from "idb"
 
-import type { MessageStore, ReadOnlyTransaction, ReadWriteTransaction, Node } from "../types.js"
+import type { MessageStore, ReadOnlyTransaction, ReadWriteTransaction, Node, MessageStoreEvents } from "../types.js"
+
 export * from "../types.js"
 
-class IndexedDBMessageStore {
+class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements MessageStore {
 	public static version = 1
 	public static async initialize(
 		app: string,
@@ -46,7 +49,9 @@ class IndexedDBMessageStore {
 		private readonly sources: Set<string>,
 		private readonly db: IDBPDatabase,
 		private readonly mst: okra.Tree
-	) {}
+	) {
+		super()
+	}
 
 	public async close() {
 		this.db.close()
@@ -114,7 +119,9 @@ class IndexedDBMessageStore {
 	): Promise<T> {
 		const dbi = options.dbi ?? this.app
 		assert(dbi === this.app || this.sources.has(dbi))
-		return await this.mst.write(async (txn) => callback(this.getReadWriteTransaction(txn)), { dbi })
+		const result = await this.mst.write(async (txn) => callback(this.getReadWriteTransaction(txn)), { dbi })
+		this.dispatchEvent(new Event("update"))
+		return result
 	}
 
 	private getReadWriteTransaction = (txn: okra.ReadWriteTransaction<Uint8Array>): ReadWriteTransaction => ({
