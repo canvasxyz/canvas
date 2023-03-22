@@ -10,9 +10,9 @@ export const RUNTIME_MEMORY_LIMIT = 1024 * 640 // 640kb
 export const BOUNDS_CHECK_LOWER_LIMIT = new Date("2020").valueOf()
 export const BOUNDS_CHECK_UPPER_LIMIT = new Date("2070").valueOf()
 
-const second = 1000
-const minute = second * 60
-const hour = minute * 60
+export const second = 1000
+export const minute = second * 60
+export const hour = minute * 60
 
 export const DHT_PING_INTERVAL = 5 * minute
 
