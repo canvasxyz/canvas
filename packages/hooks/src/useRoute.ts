@@ -21,7 +21,6 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 
 	const refetch = useDebouncedCallback(
 		(api: CoreAPI, route: string, params: Record<string, ModelValue>) => {
-			console.log("refetching")
 			setIsLoading(true)
 			api
 				.getRoute<T>(route, params)
@@ -49,11 +48,9 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 		paramsRef.current = params
 
 		if (subscribe) {
-			const listener = () => refetch(api, route, params)
+			const listener = ({}: Event) => refetch(api, route, params)
 			api.addEventListener("update", listener)
-			return () => {
-				api.removeEventListener("update", listener)
-			}
+			return () => api.removeEventListener("update", listener)
 		}
 	}, [api, route, params])
 

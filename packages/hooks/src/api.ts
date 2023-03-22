@@ -7,15 +7,24 @@ const routePattern = /^(\/:?[a-zA-Z0-9_]+)+$/
 const WS_KEEPALIVE = 3000
 
 export class RemoteCoreAPI extends EventEmitter<CoreEvents> implements CoreAPI {
+	closed = false
 	ws: WebSocket | null = null
 	timer: number | null = null
 	waitingForHeartbeat: boolean = false
 
-	constructor(private readonly host: string) {
+	constructor(public readonly host: string) {
 		super()
-		console.log("creating new RemoteCoreAPI")
-		if (this.ws == null) {
+		if (this.ws === null) {
 			this.ws = this.setupWebsocket(0)
+		}
+	}
+
+	public close() {
+		this.closed = true
+		this.clearInterval()
+		if (this.ws !== null) {
+			this.ws.close()
+			this.ws = null
 		}
 	}
 
@@ -123,20 +132,19 @@ export class RemoteCoreAPI extends EventEmitter<CoreEvents> implements CoreAPI {
 		// Set up application data and keep-alive
 		ws.addEventListener("message", (event) => {
 			if (event.data === "pong") {
+				console.log("ws: received pong")
 				this.waitingForHeartbeat = false
 				return
 			}
 
 			try {
-				const { type, detail } = JSON.parse(event.data) as { type: string; detail?: any }
-				console.log("ws: received event", type, detail)
+				const data = JSON.parse(event.data) as { type: string; detail?: any }
+				console.log("ws: received event", data)
 
-				if (detail === undefined) {
-					console.log("dispatching event", type)
-					this.dispatchEvent(new Event(type))
+				if (data.detail) {
+					this.dispatchEvent(new CustomEvent(data.type, { detail: data.detail }))
 				} else {
-					console.log("dispatching event", type, detail)
-					this.dispatchEvent(new CustomEvent(type, { detail }))
+					this.dispatchEvent(new Event(data.type))
 				}
 			} catch (err) {
 				console.log(err)
@@ -159,7 +167,9 @@ export class RemoteCoreAPI extends EventEmitter<CoreEvents> implements CoreAPI {
 		ws.addEventListener("close", () => {
 			console.log("ws: connection closed")
 			this.clearInterval()
-			this.reconnect(delay)
+			if (!this.closed) {
+				this.reconnect(delay)
+			}
 		})
 
 		ws.addEventListener("error", (event) => console.error(`ws: error`, event))
