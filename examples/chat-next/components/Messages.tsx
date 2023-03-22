@@ -33,7 +33,7 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 	// Maintain a subscription to the most recent page of posts.
 	// We assume that posts are received in-order, an assumption which
 	// may be violated when generating data.
-	const { data: newPosts } = useRoute<Post>("/posts", { before: "" })
+	const { data: newPosts } = useRoute<Post>("/posts", {})
 
 	// Virtuoso's automatic scroll-to-bottom doesn't work consistently because
 	// it caps maximum scroll to `scroller.offsetHeight - scroller.scrollHeight`

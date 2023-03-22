@@ -10,12 +10,6 @@ const minute = 60 * second
 export const ApplicationStatus: React.FC<{}> = ({}) => {
 	const { isLoading, error, data } = useCanvas()
 
-	const gossipPeers = data?.peers ? Object.entries(data.peers.gossip) : []
-	const syncPeers = data?.peers ? Object.entries(data.peers.sync) : []
-
-	const now = Date.now()
-	const root = data && data.merkleRoots && data.merkleRoots[data.uri]
-
 	return (
 		<div className="window">
 			<div className="title-bar">
@@ -30,7 +24,7 @@ export const ApplicationStatus: React.FC<{}> = ({}) => {
 					<div>
 						<p>App: {data.uri}</p>
 						{data.peerId && <p data-id={data.peerId}>Host: {data.peerId}</p>}
-						{root && <p>Merkle root: {root}</p>}
+						{/* {root && <p>Merkle root: {root}</p>}
 						{data.peers && (
 							<ul className="tree-view">
 								<li>{gossipPeers.length} gossip peers</li>
@@ -56,7 +50,7 @@ export const ApplicationStatus: React.FC<{}> = ({}) => {
 									</ul>
 								</li>
 							</ul>
-						)}
+						)} */}
 					</div>
 				) : null}
 			</div>
