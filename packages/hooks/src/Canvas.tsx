@@ -1,10 +1,12 @@
-import React, { useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 
-import { CanvasContext, ApplicationData } from "./CanvasContext.js"
-import { useWebsocket } from "./useWebsocket.js"
+import type { ApplicationData, CoreAPI } from "@canvas-js/interfaces"
+
+import { CanvasContext } from "./CanvasContext.js"
+import { RemoteCoreAPI } from "./api.js"
 
 export interface CanvasProps {
-	host: string
+	host: null | string | CoreAPI
 	children: React.ReactNode
 }
 
@@ -13,8 +15,27 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 	const [data, setData] = useState<ApplicationData | null>(null)
 	const [error, setError] = useState<Error | null>(null)
 
-	const host = props.host
-	const ws = useWebsocket({ host, setIsLoading, setData, setError })
+	const api = useMemo(() => {
+		if (props.host === null) {
+			return null
+		} else if (typeof props.host === "string") {
+			return new RemoteCoreAPI(props.host)
+		} else {
+			return props.host
+		}
+	}, [props.host])
 
-	return <CanvasContext.Provider value={{ isLoading, error, host, data, ws }}>{props.children}</CanvasContext.Provider>
+	useEffect(() => {
+		if (api === null) {
+			return
+		}
+
+		api
+			.getApplicationData()
+			.then((data) => setData(data))
+			.catch((err) => setError(err))
+			.finally(() => setIsLoading(false))
+	}, [api])
+
+	return <CanvasContext.Provider value={{ isLoading, error, api, data }}>{props.children}</CanvasContext.Provider>
 }

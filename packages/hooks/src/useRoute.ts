@@ -1,158 +1,61 @@
-import { useState, useEffect, useMemo, useContext } from "react"
+import { useState, useEffect, useContext, useRef } from "react"
 
-import { ModelValue } from "@canvas-js/interfaces"
+import { useDebouncedCallback } from "use-debounce"
+import { CoreAPI, ModelValue } from "@canvas-js/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
 import { compareObjects } from "./utils.js"
 
-const routePattern = /^(\/:?[a-zA-Z0-9_]+)+$/
-
-function getRouteURL(host: string, route: string, params: Record<string, ModelValue>): string {
-	if (!routePattern.test(route)) {
-		throw new Error("Invalid route")
-	}
-
-	const queryParams = { ...params }
-
-	const path = route.slice(1).split("/")
-	const pathComponents = path.map((component) => {
-		if (component.startsWith(":")) {
-			const value = params[component.slice(1)]
-			if (value === undefined) {
-				throw new Error(`missing parameter ${component}`)
-			} else if (typeof value !== "string") {
-				throw new Error(`URL parameter ${component} must be a string`)
-			}
-
-			delete queryParams[component.slice(1)]
-			return encodeURIComponent(value)
-		} else {
-			return component
-		}
-	})
-
-	if (host.endsWith("/")) {
-		host = host.slice(0, -1)
-	}
-
-	// add the remainder of the params object to as URI-encoded JSON query params
-	const queryComponents = Object.entries(queryParams).map(
-		([key, value]) => `${key}=${encodeURIComponent(JSON.stringify(value))}`
-	)
-
-	if (queryComponents.length > 0) {
-		return `${host}/${pathComponents.join("/")}?${queryComponents.join("&")}`
-	} else {
-		return `${host}/${pathComponents.join("/")}`
-	}
-}
-
 export function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
 	route: string,
 	params: Record<string, ModelValue>,
-	options: { subscribe?: boolean } = { subscribe: true },
-	callback?: (data: T[] | null, error: Error | null) => void
+	options: { subscribe?: boolean } = { subscribe: true }
 ): { error: Error | null; isLoading: boolean; data: T[] | null } {
-	const { host, ws, data: applicationData } = useContext(CanvasContext)
-	if (host === null) {
-		throw new Error("No API endpoint provided! you must provide an API endpoint in a parent Canvas element.")
-	}
+	const { api } = useContext(CanvasContext)
 
 	const [isLoading, setIsLoading] = useState(true)
 	const [error, setError] = useState<Error | null>(null)
 	const [data, setData] = useState<T[] | null>(null)
 
-	// Assumes JSON.stringify is stable across multiple runs in the same environment
-	const url = useMemo(() => getRouteURL(host, route, params), [host, route, JSON.stringify(params)])
-
-	const readyState = ws?.readyState
 	const subscribe = options.subscribe ?? true
 
-	// As above, assumes JSON.stringify is stable across multiple runs in the same environment
-	const listener = useMemo(
-		() => (evt: MessageEvent) => {
-			if (evt.data.toString() === "pong") return
-			try {
-				const message = JSON.parse(evt.data.toString())
-				if (message.route === route && compareObjects(message.params, params)) {
-					setData(message.data)
-					setIsLoading(false)
-					if (callback) setTimeout(() => callback(message.data, null))
-				}
-			} catch (err) {
-				console.log("ws: failed to parse message", evt.data)
-			}
+	const refetch = useDebouncedCallback(
+		(api: CoreAPI, route: string, params: Record<string, ModelValue>) => {
+			console.log("refetching")
+			setIsLoading(true)
+			api
+				.getRoute<T>(route, params)
+				.then((results) => setData(results))
+				.catch((err) => setError(err))
+				.finally(() => setIsLoading(false))
 		},
-		[callback, JSON.stringify(params)]
+		500,
+		{ leading: true, trailing: true }
 	)
 
+	const routeRef = useRef<string | null>(null)
+	const paramsRef = useRef<Record<string, ModelValue>>({})
+
 	useEffect(() => {
-		if (applicationData === null || ws === null) {
-			return
-		} else if (!applicationData.routes.includes(route)) {
-			setError(new Error(`${applicationData.uri} has no route ${JSON.stringify(route)}`))
-			setData(null)
-			setIsLoading(false)
-			if (callback) setTimeout(() => callback(null, error))
+		if (api === null) {
 			return
 		}
 
-		setIsLoading(true)
+		if (route !== routeRef.current || !compareObjects(params, paramsRef.current)) {
+			refetch(api, route, params)
+		}
+
+		routeRef.current = route
+		paramsRef.current = params
 
 		if (subscribe) {
-			if (ws.readyState === ws.OPEN) {
-				// console.log("ws: subscribing", url)
-				ws.addEventListener("message", listener)
-				ws.send(JSON.stringify({ action: "subscribe", data: { route, params } }))
-
-				return () => {
-					// console.log("ws: unsubscribing", url)
-					ws.removeEventListener("message", listener)
-					if (ws.readyState === ws.OPEN) {
-						ws.send(JSON.stringify({ action: "unsubscribe", data: { route, params } }))
-					}
-				}
+			const listener = () => refetch(api, route, params)
+			api.addEventListener("update", listener)
+			return () => {
+				api.removeEventListener("update", listener)
 			}
-
-			// const source = new EventSource(url)
-			// source.onmessage = (message: MessageEvent<string>) => {
-			// 	const data = JSON.parse(message.data)
-			// 	setData(data)
-			// 	setIsLoading(false)
-			//  if (callback) callback(message.data, null)
-			// }
-
-			// source.onerror = (event) => {
-			// 	console.warn("Connection error in EventSource subscription")
-			// 	console.warn(event)
-			// 	setIsLoading(true)
-			//  if (callback) callback(null, new Error("Connection error in EventSource subscription"))
-			// }
-
-			// const handleBeforeUnload = () => source.close()
-			// window.addEventListener("beforeunload", handleBeforeUnload)
-
-			// return () => {
-			// 	window.removeEventListener("beforeunload", handleBeforeUnload)
-			// 	source.close()
-			// }
-		} else {
-			fetch(url)
-				.then((res) => res.json())
-				.then((data) => {
-					setError(null)
-					setData(data)
-					setIsLoading(false)
-					if (callback) setTimeout(() => callback(data, null))
-				})
-				.catch((err) => {
-					setError(err)
-					setData(null)
-					setIsLoading(false)
-					if (callback) setTimeout(() => callback(null, err))
-				})
 		}
-	}, [route, url, !!applicationData, subscribe, ws, readyState, callback])
+	}, [api, route, params])
 
 	return { error, data, isLoading }
 }
