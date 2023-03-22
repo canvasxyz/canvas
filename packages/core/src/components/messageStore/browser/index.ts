@@ -80,7 +80,7 @@ class IndexedDBMessageStore {
 	}
 
 	private getReadOnlyTransaction = (
-		txn: okra.ReadOnlyTransaction | okra.ReadWriteTransaction
+		txn: okra.ReadOnlyTransaction<Uint8Array> | okra.ReadWriteTransaction
 	): ReadOnlyTransaction => ({
 		getSessionByAddress: async (chain, chainId, address) => {
 			const id: Uint8Array | undefined = await this.db.get(`${txn.dbi}/sessions`, address)
@@ -117,7 +117,7 @@ class IndexedDBMessageStore {
 		return await this.mst.write(async (txn) => callback(this.getReadWriteTransaction(txn)), { dbi })
 	}
 
-	private getReadWriteTransaction = (txn: okra.ReadWriteTransaction): ReadWriteTransaction => ({
+	private getReadWriteTransaction = (txn: okra.ReadWriteTransaction<Uint8Array>): ReadWriteTransaction => ({
 		...this.getReadOnlyTransaction(txn),
 		insertMessage: async (id, message) => {
 			const key = getMessageKey(id, message)
