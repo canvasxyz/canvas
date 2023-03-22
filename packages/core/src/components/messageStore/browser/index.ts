@@ -10,7 +10,7 @@ import type { MessageStore, ReadOnlyTransaction, ReadWriteTransaction, Node } fr
 export * from "../types.js"
 
 class IndexedDBMessageStore {
-	public static version = 0
+	public static version = 1
 	public static async initialize(
 		app: string,
 		directory: string | null,
