@@ -44,9 +44,6 @@
     "./api": {
       "import": "./lib/api.js"
     },
-    "./websockets": {
-      "import": "./lib/websockets.js"
-    },
     "./components/messageStore": {
       "import": {
         "browser": "./lib/components/messageStore/browser/index.js",

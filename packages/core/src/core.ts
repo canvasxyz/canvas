@@ -14,6 +14,9 @@ import {
 	Message,
 	ChainImplementation,
 	CustomAction,
+	CoreAPI,
+	CoreEvents,
+	ApplicationData,
 } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { validate } from "@hyperjump/json-schema/draft-2020-12"
@@ -47,13 +50,7 @@ export interface CoreOptions {
 	replay?: boolean
 }
 
-interface CoreEvents {
-	close: Event
-	sync: CustomEvent<{ uri: string; peer: string; time: number; status: "success" | "failure" }>
-	message: CustomEvent<Message>
-}
-
-export class Core extends EventEmitter<CoreEvents> {
+export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	public static async initialize(config: CoreConfig) {
 		const { directory, spec, offline, verbose, unchecked } = config
 
@@ -129,7 +126,7 @@ export class Core extends EventEmitter<CoreEvents> {
 		if (libp2p !== null) {
 			this.sources = {}
 			for (const uri of [this.app, ...vm.sources]) {
-				this.sources[uri] = new Source({
+				const source = new Source({
 					cid: parseIPFSURI(uri),
 					applyMessage: this.applyMessageInternal,
 					messageStore: this.messageStore,
@@ -138,12 +135,35 @@ export class Core extends EventEmitter<CoreEvents> {
 					recentSyncPeers: this.recentSyncPeers,
 					...options,
 				})
+
+				source.addEventListener("sync", (event) => this.dispatchEvent(event))
+
+				this.sources[uri] = source
 			}
 		}
 	}
 
-	public get appName() {
-		return this.vm.appName
+	public async getApplicationData(): Promise<ApplicationData> {
+		const chainImplementations: Partial<Record<Chain, ChainId[]>> = {}
+
+		for (const { chain, chainId } of this.chains) {
+			const chainIds = chainImplementations[chain]
+			if (chainIds === undefined) {
+				chainImplementations[chain] = [chainId]
+			} else if (!chainIds.includes(chainId)) {
+				chainIds.push(chainId)
+			}
+		}
+
+		return {
+			cid: this.cid.toString(),
+			uri: this.app,
+			appName: this.vm.appName,
+			peerId: this.libp2p?.peerId.toString() ?? null,
+			actions: this.vm.actions,
+			routes: Object.keys(this.vm.routes),
+			chainImplementations,
+		}
 	}
 
 	public async close() {
@@ -179,12 +199,16 @@ export class Core extends EventEmitter<CoreEvents> {
 		return result
 	}
 
-	public async getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]> {
+	public async getRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
+		route: string,
+		params: Record<string, string>
+	): Promise<T[]> {
 		if (this.options.verbose) {
 			console.log("[canvas-core] getRoute:", route, params)
 		}
 
-		return await this.modelStore.getRoute(route, params)
+		const results = await this.modelStore.getRoute(route, params)
+		return results as T[]
 	}
 
 	/**

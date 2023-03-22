@@ -12,8 +12,7 @@ import express from "express"
 import cors from "cors"
 
 import { Core } from "@canvas-js/core"
-import { getAPI } from "@canvas-js/core/api"
-import { setupWebsockets } from "@canvas-js/core/websockets"
+import { getAPI, setupWebsocketServer } from "@canvas-js/core/api"
 
 import * as constants from "@canvas-js/core/constants"
 
@@ -215,12 +214,10 @@ export async function handler(args: Args) {
 		app.use(getAPI(core, { exposeMetrics }))
 	}
 
-	const httpServer = http.createServer(app)
-	setupWebsockets(httpServer, core)
+	const apiPrefix = args.static ? `api/` : ""
 
 	const server = stoppable(
-		httpServer.listen(args.port, () => {
-			const apiPrefix = args.static ? `api/` : ""
+		http.createServer(app).listen(args.port, () => {
 			if (args.static) {
 				console.log(`Serving static bundle: http://localhost:${args.port}/`)
 				console.log(`Serving API for ${core.app}:`)
@@ -237,6 +234,8 @@ export async function handler(args: Args) {
 		}),
 		0
 	)
+
+	setupWebsocketServer(server, `http://localhost:${args.port}`, "/" + apiPrefix, core)
 
 	let stopping = false
 	process.on("SIGINT", async () => {

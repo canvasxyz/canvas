@@ -1,12 +1,19 @@
+import http from "node:http"
+import stream from "node:stream"
+
+import { CustomEvent } from "@libp2p/interfaces/events"
 import chalk from "chalk"
-import express from "express"
+import express, { Request, Response } from "express"
 import { StatusCodes } from "http-status-codes"
+import { WebSocket, WebSocketServer } from "ws"
+import { nanoid } from "nanoid"
 
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 
 import type { Message, ModelValue } from "@canvas-js/interfaces"
+
 import { Core } from "./core.js"
-import { ipfsURIPattern, assert } from "./utils.js"
+import { ipfsURIPattern, assert, fromHex } from "./utils.js"
 
 interface Options {
 	exposeMetrics: boolean
@@ -50,22 +57,6 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 				}
 			},
 		}),
-
-		// canvas_sync_peers: new Gauge({
-		// 	registers: [coreRegister],
-		// 	name: "canvas_sync_peers",
-		// 	help: "DHT application peers",
-		// 	labelNames: ["uri"],
-		// 	async collect() {
-		// 		if (core.sources === null) {
-		// 			return
-		// 		}
-
-		// 		for (const [uri, source] of Object.entries(core.sources)) {
-		// 			this.set({ uri })
-		// 		}
-		// 	},
-		// }),
 	}
 
 	const api = express()
@@ -74,26 +65,11 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	api.use(express.json())
 
 	api.get("/", async (req, res) => {
-		const { routes, actions } = core.vm
-
-		return res.json({
-			uri: core.app,
-			cid: core.cid.toString(),
-			appName: core.appName,
-			peerId: core.libp2p && core.libp2p.peerId.toString(),
-			models: core.vm.models,
-			actions,
-			routes: Object.keys(routes),
-			merkleRoots: core.messageStore.getMerkleRoots(),
-			chainImplementations: core.getChainImplementations(),
-			peers: core.libp2p && {
-				gossip: Object.fromEntries(core.recentGossipPeers),
-				sync: Object.fromEntries(core.recentSyncPeers),
-			},
-		})
+		const data = await core.getApplicationData()
+		return res.json(data)
 	})
 
-	api.post("/actions", async (req, res) => {
+	async function applyMessage(req: Request, res: Response) {
 		if (req.headers["content-type"] !== "application/json") {
 			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
 		}
@@ -103,42 +79,17 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			res.json({ hash })
 		} catch (err) {
 			if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-core] Failed to apply action (${err.message})`))
+				console.log(chalk.red(`[canvas-core] Failed to apply message (${err.message})`))
 				return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
 			} else {
 				throw err
 			}
 		}
-	})
+	}
 
-	api.post("/sessions", async (req, res) => {
-		if (req.headers["content-type"] !== "application/json") {
-			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
-		}
-
-		// if (req.body.hasSession) {
-		// 	try {
-		// 		const { chain, chainId, hasSession: address } = req.body
-		// 		const [_, session] = await core.messageStore.getSessionByAddress(chain, chainId, address)
-		// 		return res.json({ hasSession: session !== null })
-		// 	} catch (err) {
-		// 		return res.json({ hasSession: false })
-		// 	}
-		// }
-
-		try {
-			const { hash } = await core.apply(req.body)
-			res.json({ hash })
-		} catch (err) {
-			if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-core] Failed to create session (${err.message})`))
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
-			} else {
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
-				throw err
-			}
-		}
-	})
+	api.post("/", applyMessage)
+	api.post("/actions", applyMessage)
+	api.post("/sessions", applyMessage)
 
 	for (const route of Object.keys(core.vm.routes)) {
 		api.get(route, (req, res) => handleRoute(core, route, req, res))
@@ -160,13 +111,9 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 
 		api.get("/metrics", async (req, res) => {
 			try {
-				// const libp2pMetrics = await libp2pRegister.metrics()
-				// const canvasMetrics = await canvasRegister.metrics()
 				const coreMetrics = await coreRegister.metrics()
 				const defaultMetrics = await register.metrics()
 				res.header("Content-Type", register.contentType)
-				// res.write(libp2pMetrics + "\n")
-				// res.write(canvasMetrics + "\n")
 				res.write(coreMetrics + "\n")
 				res.write(defaultMetrics + "\n")
 				res.end()
@@ -236,6 +183,34 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 
 			return res.status(StatusCodes.OK).json(messages)
 		})
+
+		api.get("/messages/:id", async (req, res) => {
+			let id: Uint8Array
+			try {
+				id = fromHex(req.params.id)
+			} catch (err) {
+				res.status(StatusCodes.BAD_REQUEST).end("Invalid id parameter")
+				return
+			}
+
+			let message: Message | null
+			try {
+				message = await core.messageStore.read((txn) => txn.getMessage(id))
+			} catch (err) {
+				if (err instanceof Error) {
+					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+				} else {
+					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+				}
+				return
+			}
+
+			if (message === null) {
+				res.status(StatusCodes.NOT_FOUND).end()
+			} else {
+				res.json(message)
+			}
+		})
 	}
 
 	return api
@@ -253,86 +228,98 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 	}
 
 	for (const [param, value] of Object.entries(req.query)) {
-		if (param in params) {
+		if (param in params || typeof value !== "string") {
 			continue
-		} else if (typeof value === "string") {
-			try {
-				params[param] = JSON.parse(value)
-			} catch (err) {
-				return res.status(StatusCodes.BAD_REQUEST).end(`Invalid query param value ${param}=${value}`)
-			}
+		}
+
+		try {
+			params[param] = JSON.parse(value)
+		} catch (err) {
+			return res.status(StatusCodes.BAD_REQUEST).end(`Invalid query param value ${param}=${value}`)
 		}
 	}
 
-	if (req.headers.accept === "text/event-stream") {
-		// subscription response
-		res.setHeader("Cache-Control", "no-cache")
-		res.setHeader("Content-Type", "text/event-stream")
-		res.setHeader("Connection", "keep-alive")
-		res.flushHeaders()
-
-		let oldValues: Record<string, ModelValue>[] | null = null
-		let closed = false
-		const listener = async () => {
-			if (closed) {
-				return
-			}
-
-			let newValues: Record<string, ModelValue>[]
-			try {
-				newValues = await core.getRoute(route, params)
-			} catch (err) {
-				closed = true
-				if (err instanceof Error) {
-					console.log(chalk.red(`[canvas-core] error evaluating route (${err.message})`))
-					return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err.stack}`)
-				} else {
-					throw err
-				}
-			}
-
-			if (oldValues === null || !compareResults(oldValues, newValues)) {
-				res.write(`data: ${JSON.stringify(newValues)}\n\n`)
-				oldValues = newValues
-			}
+	try {
+		const data = await core.getRoute(route, params)
+		res.json(data)
+	} catch (err) {
+		if (err instanceof Error) {
+			return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err.message} ${err.stack}`)
+		} else {
+			return res.status(StatusCodes.BAD_REQUEST).end()
 		}
-
-		listener()
-		core.addEventListener("message", listener)
-		res.on("close", () => core.removeEventListener("message", listener))
-	} else {
-		// normal JSON response
-		let data
-		try {
-			data = await core.getRoute(route, params)
-		} catch (err) {
-			if (err instanceof Error) {
-				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err.stack}`)
-			} else {
-				throw err
-			}
-		}
-
-		return res.json(data)
 	}
 }
 
-export function compareResults(a: Record<string, ModelValue>[], b: Record<string, ModelValue>[]) {
-	if (a.length !== b.length) {
-		return false
+const WS_KEEPALIVE = 30000
+const WS_KEEPALIVE_LATENCY = 3000
+
+export function handleWebsocketConnection(core: Core, socket: WebSocket) {
+	const id = nanoid()
+	if (core.options.verbose) {
+		console.log(chalk.green(`[canvas-core] ws-${id}: opened connection`))
 	}
 
-	for (let i = 0; i < a.length; i++) {
-		for (const key in a[i]) {
-			if (a[i][key] !== b[i][key]) {
-				return false
-			}
-		}
+	let lastPing = Date.now()
 
-		for (const key in b[i]) {
-			if (b[i][key] !== a[i][key]) {
-				return false
-			}
+	const eventListener = <T>(event: CustomEvent<T> | Event) => {
+		console.log(chalk.green(`[canvas-core] ws-${id}: sent ${event.type} event`))
+		if (event instanceof CustomEvent) {
+			socket.send(JSON.stringify({ type: event.type, detail: event.detail }))
+		} else {
+			socket.send(JSON.stringify({ type: event.type }))
 		}
 	}
+
+	core.addEventListener("update", eventListener)
+	core.addEventListener("sync", eventListener)
+	const unsubscribe = () => {
+		core.removeEventListener("update", eventListener)
+		core.removeEventListener("sync", eventListener)
+	}
+
+	socket.on("message", (data) => {
+		if (Buffer.isBuffer(data) && data.toString() === "ping") {
+			lastPing = Date.now()
+			socket.send("pong")
+		} else {
+			console.log(chalk.red(`[canvas-core] ws-${id}: unrecognized message ${data}`))
+		}
+	})
+
+	socket.on("close", () => {
+		if (core.options.verbose) {
+			console.log(`[canvas-core] ws-${id}: closed connection`)
+		}
+
+		unsubscribe()
+	})
+
+	let timer = setInterval(() => {
+		if (lastPing < Date.now() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) {
+			console.log(chalk.red(`[canvas-core] ws-${id}: closed connection on timeout`))
+			socket.close()
+			clearInterval(timer)
+		}
+	}, WS_KEEPALIVE)
+}
+
+export function setupWebsocketServer(server: http.Server, base: string, path: string, core: Core) {
+	const wss = new WebSocketServer({ noServer: true })
+
+	server.on("upgrade", (request: http.IncomingMessage, socket: stream.Duplex, head: Buffer) => {
+		if (request.url === undefined) {
+			return
+		}
+
+		console.log("handling upgrade request at URL", request.url)
+		const url = new URL(request.url, base)
+		if (url.pathname === path) {
+			wss.handleUpgrade(request, socket, head, (socket) => handleWebsocketConnection(core, socket))
+		} else {
+			console.log(chalk.red("[canvas-core] rejecting incoming WS connection at unexpected path"), url.pathname)
+		}
+	})
+
+	return server
 }
