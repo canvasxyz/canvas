@@ -21,6 +21,7 @@
     "packages/chain-cosmos",
     "packages/chain-solana",
     "packages/chain-substrate",
+    "examples/chat-browser",
     "examples/chat-webpack",
     "examples/chat-next",
     "examples/notes"
