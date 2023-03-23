@@ -14,7 +14,7 @@ export const Connect: React.FC = ({}) => {
 	const { address, isConnected } = useAccount()
 
 	return (
-		<div className="window">
+		<div className="window" style={{ width: 420 }}>
 			<div className="title-bar">
 				<div className="title-bar-text">Connect</div>
 			</div>
