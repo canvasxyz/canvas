@@ -206,21 +206,6 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		this.dispatchEvent(new Event("close"))
 	}
 
-	public getChainImplementations(): Partial<Record<Chain, Record<string, { rpc: boolean }>>> {
-		const result: Partial<Record<Chain, Record<ChainId, { rpc: boolean }>>> = {}
-
-		for (const ci of this.chains) {
-			const chainIds = result[ci.chain]
-			if (chainIds !== undefined) {
-				chainIds[ci.chainId] = { rpc: ci.hasProvider() }
-			} else {
-				result[ci.chain] = { [ci.chainId]: { rpc: ci.hasProvider() } }
-			}
-		}
-
-		return result
-	}
-
 	public async getRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
 		route: string,
 		params: Record<string, string>
