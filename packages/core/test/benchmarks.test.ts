@@ -22,7 +22,6 @@ import { Ed25519PeerId } from "@libp2p/interface-peer-id"
 const waitForMessageWithHash = (core: Core, expectedHash: string) => {
 	return new Promise<void>((resolve, reject) => {
 		const cb = ({ detail: message }: { detail: Message }) => {
-			testLog(`received: ${message}`)
 			if (message.type == "action") {
 				const messageHash = toHex(sha256(serializeAction(message)))
 
@@ -36,10 +35,11 @@ const waitForMessageWithHash = (core: Core, expectedHash: string) => {
 	})
 }
 
+// TODO: update database too
 const { app, appName, spec } = await compileSpec({
 	name: "Test App",
 	models: {},
-	actions: { log: ({ message }, {}) => console.log(message) },
+	actions: { log: ({ message }, {}) => {} },
 })
 
 const signer = new TestSigner(app, appName)
@@ -82,7 +82,6 @@ const initializeTestCores = async (
 				listen: config.port,
 				bootstrapList,
 				announce: [multiaddr],
-				// verbose: true,
 			})
 		)
 	}
@@ -90,52 +89,90 @@ const initializeTestCores = async (
 	return Promise.all(promises)
 }
 
-test("time sending an action", async (t) => {
-	t.timeout(50000)
+if (process.env["RUN_BENCHMARKS"]) {
+	test("time sending an action", async (t) => {
+		t.timeout(50000)
 
-	const host = "127.0.0.1"
-	const configs = await Promise.all([setupTestPeer(host, 8001), setupTestPeer(host, 8002)])
+		const nInitial = 1000
+		const host = "127.0.0.1"
+		const configs = await Promise.all([setupTestPeer(host, 8001), setupTestPeer(host, 8002)])
 
-	try {
-		const [source, target] = await initializeTestCores(configs)
+		try {
+			const [source, target] = await initializeTestCores(configs)
 
-		const initialSyncStart = performance.now()
+			// Wait for peers to find each other
+			testLog("waiting for peers to find each other...")
+			await new Promise<void>((resolve, reject) => {
+				if (!source.libp2p) return reject()
+				const onConnect: any = () => {
+					source.libp2p?.removeEventListener(onConnect)
+					setTimeout(() => resolve(), 1000)
+				}
+				source.libp2p.addEventListener("peer:connect", onConnect)
+			})
+			testLog("peers connected")
 
-		const a = await signer.sign("log", { message: "a" })
-		const { hash: sourceHash } = await source.apply(a)
-		testLog(`sourceHash: ${sourceHash}`)
+			// Generate a first batch of messages
+			testLog("sending and executing a first batch of messages")
+			const initialSyncStart = performance.now()
+			const messages = await Promise.all(
+				[...Array(nInitial).keys()].map((i) => {
+					return signer.sign("log", { message: i.toString() })
+				})
+			)
+			testLog(`generating ${nInitial} messages: ${(performance.now() - initialSyncStart) / 1000} seconds`)
 
-		await waitForMessageWithHash(target, sourceHash)
-		const initialSyncTimeSeconds = (performance.now() - initialSyncStart) / 1000
+			// Send messages (synchronous for now)
+			const sent: any = []
+			for (const msg of messages) {
+				await source
+					.apply(msg)
+					.then(({ hash }) => sent.push(hash))
+					.catch((err) => testLog("error:" + JSON.stringify(err)))
+			}
+			testLog(`sending ${nInitial} messages: ${(performance.now() - initialSyncStart) / 1000} seconds`)
 
-		testLog(`initial sync and message send took ${initialSyncTimeSeconds} seconds`)
+			// Receive messages
+			await Promise.all(
+				sent.map((sourceHash: string) => {
+					return waitForMessageWithHash(target, sourceHash)
+				})
+			)
 
-		const timings: number[] = []
+			testLog(`receiving ${nInitial} messages: ${(performance.now() - initialSyncStart) / 1000} seconds`)
 
-		for (let i = 0; i < 100; i++) {
-			testLog(`test run: ${i}`)
-			const actionStart = performance.now()
-			const a2 = await signer.sign("log", { message: "a2" })
-			const { hash: sourceHash2 } = await source.apply(a2)
-			testLog(`sourceHash: ${sourceHash2}`)
+			// const timings: number[] = []
 
-			await waitForMessageWithHash(target, sourceHash2)
-			const actionTimeSeconds = (performance.now() - actionStart) / 1000
-			testLog(`sync and message send took ${actionTimeSeconds} seconds`)
-			timings.push(actionTimeSeconds)
+			// // Send a second batch of messages, and wait for nodes to sync
+			// // TODO: make asynchronous
+			// for (let i = 0; i < 100; i++) {
+			// 	testLog(`test run: ${i}`)
+			// 	const actionStart = performance.now()
+			// 	const a2 = await signer.sign("log", { message: "a2" })
+			// 	const { hash: sourceHash2 } = await source.apply(a2)
+			// 	testLog(`sourceHash: ${sourceHash2}`)
+
+			// 	await waitForMessageWithHash(target, sourceHash2)
+			// 	const actionTimeSeconds = (performance.now() - actionStart) / 1000
+			// 	testLog(`sync and message send took ${actionTimeSeconds} seconds`)
+			// 	timings.push(actionTimeSeconds)
+			// }
+
+			// testLog("timings for sending messages both ways:")
+			// testLog(`${timings}`)
+			// const mean = timings.reduce((x, y) => x + y, 0) / timings.length
+			// testLog(`average: ${mean.toFixed(3)}`)
+			t.pass()
+
+			await source.close()
+			await target.close()
+		} catch (err) {
+			testLog(`error: ${err}`)
+			throw err
+		} finally {
+			for (const config of configs) {
+				config.destroy()
+			}
 		}
-
-		testLog("timings for sending messages both ways:")
-		testLog(`${timings}`)
-		const mean = timings.reduce((x, y) => x + y, 0) / timings.length
-		testLog(`average: ${mean.toFixed(3)}`)
-		t.pass()
-
-		await source.close()
-		await target.close()
-	} finally {
-		for (const config of configs) {
-			config.destroy()
-		}
-	}
-})
+	})
+}

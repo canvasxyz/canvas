@@ -188,7 +188,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	 * every constants.ANNOUNCE_INTERVAL milliseconds
 	 */
 	private async startAnnounceService() {
-		console.log(`[canvas-core] [${this.cid}] Staring announce service`)
+		console.log(`[canvas-core] [${this.cid}] Starting announce service`)
 
 		try {
 			await this.wait(constants.ANNOUNCE_DELAY)
@@ -237,7 +237,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	 * and calls this.sync(peerId) for each of them every constants.SYNC_INTERVAL milliseconds
 	 */
 	private async startSyncService() {
-		console.log(`[canvas-core] [${this.cid}] Staring sync service`)
+		console.log(`[canvas-core] [${this.cid}] Starting sync service`)
 
 		try {
 			await this.wait(constants.SYNC_DELAY)
