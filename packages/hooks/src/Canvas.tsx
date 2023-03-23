@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import type { ApplicationData, CoreAPI } from "@canvas-js/interfaces"
 
@@ -17,6 +17,14 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 
 	const [api, setAPI] = useState<CoreAPI | null>(null)
 
+	const getApplicationData = useCallback(async (api: CoreAPI) => {
+		api
+			.getApplicationData()
+			.then((data) => setData(data))
+			.catch((err) => setError(err))
+			.finally(() => setIsLoading(false))
+	}, [])
+
 	// this handles transitions in all six possible directions
 	// between the three possible types of props.host
 	useEffect(() => {
@@ -34,18 +42,28 @@ export const Canvas: React.FC<CanvasProps> = (props) => {
 				}
 			}
 
-			const a = new RemoteCoreAPI(props.host)
-			setAPI(a)
-			a.getApplicationData()
-				.then((data) => setData(data))
-				.catch((err) => setError(err))
-				.finally(() => setIsLoading(false))
-
-			return () => a.close()
+			const remoteCoreAPI = new RemoteCoreAPI(props.host)
+			setAPI(remoteCoreAPI)
+			return () => remoteCoreAPI.close()
 		} else {
 			setAPI(props.host)
 		}
 	}, [props.host])
+
+	useEffect(() => {
+		if (api !== null) {
+			getApplicationData(api)
+			const listener = () => getApplicationData(api)
+			api.addEventListener("update", listener)
+			api.addEventListener("connect", listener)
+			api.addEventListener("disconnect", listener)
+			return () => {
+				api.removeEventListener("update", listener)
+				api.removeEventListener("connect", listener)
+				api.removeEventListener("disconnect", listener)
+			}
+		}
+	}, [api])
 
 	return <CanvasContext.Provider value={{ isLoading, error, api, data }}>{props.children}</CanvasContext.Provider>
 }

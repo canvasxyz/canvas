@@ -119,9 +119,18 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 	): Promise<T> {
 		const dbi = options.dbi ?? this.app
 		assert(dbi === this.app || this.sources.has(dbi))
-		const result = await this.mst.write(async (txn) => callback(this.getReadWriteTransaction(txn)), { dbi })
+		let result: T
+		const root = await this.mst.write(
+			async (txn) => {
+				result = await callback(this.getReadWriteTransaction(txn))
+				return await txn.getRoot()
+			},
+			{ dbi }
+		)
+
+		this.merkleRoots[dbi] = toHex(root.hash)
 		this.dispatchEvent(new Event("update"))
-		return result
+		return result!
 	}
 
 	private getReadWriteTransaction = (txn: okra.ReadWriteTransaction<Uint8Array>): ReadWriteTransaction => ({

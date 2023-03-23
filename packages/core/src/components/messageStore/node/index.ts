@@ -405,14 +405,15 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		if (this.tree === null) {
 			result = await callback(this.getReadWriteTransaction(null))
 		} else {
-			await this.tree.write(
+			const root = await this.tree.write(
 				async (txn) => {
 					result = await callback(this.getReadWriteTransaction(txn))
-					const root = txn.getRoot()
-					this.merkleRoots[dbi] = toHex(root.hash)
+					return txn.getRoot()
 				},
 				{ dbi }
 			)
+
+			this.merkleRoots[dbi] = toHex(root.hash)
 		}
 
 		this.dispatchEvent(new Event("update"))

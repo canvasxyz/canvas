@@ -10,7 +10,7 @@ import { nanoid } from "nanoid"
 
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 
-import type { Message, ModelValue } from "@canvas-js/interfaces"
+import type { CoreEvents, Message, ModelValue } from "@canvas-js/interfaces"
 
 import { Core } from "./core.js"
 import { ipfsURIPattern, assert, fromHex } from "./utils.js"
@@ -271,11 +271,16 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket) {
 		}
 	}
 
-	core.addEventListener("update", eventListener)
-	core.addEventListener("sync", eventListener)
+	const eventTypes: (keyof CoreEvents)[] = ["update", "sync", "connect", "disconnect"]
+
+	for (const type of eventTypes) {
+		core.addEventListener(type, eventListener)
+	}
+
 	const unsubscribe = () => {
-		core.removeEventListener("update", eventListener)
-		core.removeEventListener("sync", eventListener)
+		for (const type of eventTypes) {
+			core.removeEventListener(type, eventListener)
+		}
 	}
 
 	socket.on("message", (data) => {

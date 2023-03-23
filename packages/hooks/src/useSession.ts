@@ -145,7 +145,7 @@ export function useSession<Signer, DelegatedSigner>(
 
 			const block = options.unchecked ? null : await chainImplementation.getLatestBlock()
 
-			const supportedChainIds = data.chainImplementations[chain]
+			const supportedChainIds = data.chains[chain]
 			if (supportedChainIds === undefined) {
 				throw new InvalidChainError(`Invalid chain: ${chain}:${chainId}`)
 			}

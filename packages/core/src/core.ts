@@ -28,7 +28,7 @@ import { getLibp2pOptions, startPingService } from "@canvas-js/core/components/l
 
 import { Source } from "./source.js"
 import { actionType, messageType } from "./codecs.js"
-import { toHex, signalInvalidType, CacheMap, stringify, parseIPFSURI, assert } from "./utils.js"
+import { toHex, signalInvalidType, stringify, parseIPFSURI, assert } from "./utils.js"
 import * as constants from "./constants.js"
 
 export interface CoreConfig extends CoreOptions {
@@ -67,16 +67,6 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			const { listen, announce, bootstrapList } = config
 			const options = await getLibp2pOptions({ directory, listen, announce, bootstrapList })
 			libp2p = await createLibp2p(options)
-
-			if (verbose) {
-				libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
-					console.log(`[canvas-core] Connected to ${remotePeer} (${id})`)
-				)
-
-				libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
-					console.log(`[canvas-core] Disconnected from ${remotePeer} (${id})`)
-				)
-			}
 		}
 
 		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, { verbose, unchecked })
@@ -127,6 +117,22 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		})
 
 		if (libp2p !== null) {
+			libp2p.addEventListener("peer:connect", ({ detail: connection }) => {
+				this.dispatchEvent(new CustomEvent("connect", { detail: { peer: connection.remotePeer.toString() } }))
+
+				if (options.verbose) {
+					console.log(`[canvas-core] Connected to ${connection.remotePeer} (${connection.id})`)
+				}
+			})
+
+			libp2p.addEventListener("peer:disconnect", ({ detail: connection }) => {
+				this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: connection.remotePeer.toString() } }))
+
+				if (options.verbose) {
+					console.log(`[canvas-core] Disconnected from ${connection.remotePeer} (${connection.id})`)
+				}
+			})
+
 			this.sources = {}
 			for (const uri of [this.app, ...vm.sources]) {
 				const source = new Source({
@@ -138,7 +144,9 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 				})
 
 				// forward "sync" events from each source store
-				source.addEventListener("sync", ({ detail }) => this.dispatchEvent(new CustomEvent("sync", { detail })))
+				source.addEventListener("sync", ({ detail }) =>
+					this.dispatchEvent(new CustomEvent("sync", { detail: { uri, ...detail } }))
+				)
 
 				this.sources[uri] = source
 			}
@@ -146,25 +154,37 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	}
 
 	public async getApplicationData(): Promise<ApplicationData> {
-		const chainImplementations: Partial<Record<Chain, ChainId[]>> = {}
-
+		const chains: ApplicationData["chains"] = {}
 		for (const { chain, chainId } of this.chains) {
-			const chainIds = chainImplementations[chain]
+			const chainIds = chains[chain]
 			if (chainIds === undefined) {
-				chainImplementations[chain] = [chainId]
+				chains[chain] = [chainId]
 			} else if (!chainIds.includes(chainId)) {
 				chainIds.push(chainId)
 			}
 		}
 
+		const peerId = this.libp2p?.peerId.toString() ?? null
+
+		const peers: ApplicationData["peers"] = []
+		if (this.libp2p !== null) {
+			for (const id of this.libp2p.getPeers()) {
+				const peer = await this.libp2p.peerStore.get(id)
+				const addresses = peer.addresses.map(({ multiaddr }) => multiaddr.toString())
+				peers.push({ id: id.toString(), addresses })
+			}
+		}
+
 		return {
-			cid: this.cid.toString(),
+			peerId,
 			uri: this.app,
+			cid: this.cid.toString(),
 			appName: this.vm.appName,
-			peerId: this.libp2p?.peerId.toString() ?? null,
 			actions: this.vm.actions,
 			routes: Object.keys(this.vm.routes),
-			chainImplementations,
+			chains,
+			peers,
+			merkleRoots: this.messageStore.getMerkleRoots(),
 		}
 	}
 
