@@ -11,7 +11,7 @@ processes = []
   http_checks = []
   tcp_checks = []
 
-  internal_port = 4044
+  internal_port = 8080
   processes = ["app"]
   protocol = "tcp"
 

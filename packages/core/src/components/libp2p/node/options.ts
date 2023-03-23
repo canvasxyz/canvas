@@ -22,7 +22,7 @@ import { Multiaddr } from "@multiformats/multiaddr"
 
 import { register } from "prom-client"
 
-import { PEER_ID_FILENAME } from "@canvas-js/core/constants"
+import { minute, PEER_ID_FILENAME } from "@canvas-js/core/constants"
 import { toHex } from "@canvas-js/core/utils"
 
 // import { libp2pRegister } from "../../metrics/node/index.js"
@@ -32,9 +32,6 @@ import { defaultBootstrapList } from "../bootstrap.js"
 // 	multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr))
 
 // const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
-
-const second = 1000
-const minute = 60 * second
 
 export async function getLibp2pOptions(config: {
 	directory: string | null
