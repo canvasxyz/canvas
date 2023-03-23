@@ -48,24 +48,20 @@ export const Stats: React.FC<{}> = ({}) => {
 				<p>Active connections:</p>
 				<ul className="tree-view" style={{ maxHeight: 100, overflowY: "auto" }}>
 					{data.peers.length > 0 ? (
-						data.peers.map(({ id, addresses }) => {
-							if (addresses === undefined || addresses.length === 0) {
-								return <li key={id}>{id}</li>
-							} else {
-								return (
-									<li key={id}>
-										<details>
-											<summary>{id}</summary>
-											<ul>
-												{addresses.map((address) => (
-													<li key={address}>{address}</li>
-												))}
-											</ul>
-										</details>
-									</li>
-								)
-							}
-						})
+						data.peers.map(({ id, addresses }) => (
+							<li key={id}>
+								<details open={false}>
+									<summary>{id}</summary>
+									{addresses && addresses.length > 0 && (
+										<ul>
+											{addresses.map((address) => (
+												<li key={address}>{address}</li>
+											))}
+										</ul>
+									)}
+								</details>
+							</li>
+						))
 					) : (
 						<div style={{ color: "grey" }}>
 							<em>No peer connections</em>
