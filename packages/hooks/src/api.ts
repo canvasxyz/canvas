@@ -10,7 +10,7 @@ export class RemoteCoreAPI extends EventEmitter<CoreEvents> implements CoreAPI {
 	closed = false
 	ws: WebSocket | null = null
 	timer: number | null = null
-	waitingForHeartbeat: boolean = false
+	waitingForHeartbeat = false
 
 	constructor(public readonly host: string) {
 		super()

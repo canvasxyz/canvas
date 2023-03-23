@@ -300,7 +300,7 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket) {
 		unsubscribe()
 	})
 
-	let timer = setInterval(() => {
+	const timer = setInterval(() => {
 		if (lastPing < Date.now() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) {
 			console.log(chalk.red(`[canvas-core] ws-${id}: closed connection on timeout`))
 			socket.close()
