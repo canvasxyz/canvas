@@ -94,7 +94,6 @@ export ETH_CHAIN_RPC=https://mainnet.infura.io/v3/MY_API_KEY
 To run a specific test:
 
 ```
-npm run test test/sync.test.ts
+npm run build
+npm run test --workspace=@canvas-js/core test/sync.test.ts
 ```
-
-This will try to run `test/sync.test.ts` in each workspace that is configured with tests.
