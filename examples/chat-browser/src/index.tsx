@@ -3,11 +3,13 @@ import ReactDOM from "react-dom/client"
 import { WagmiConfig } from "wagmi"
 
 import { Core } from "@canvas-js/core"
+import { Canvas, Client } from "@canvas-js/hooks"
 
 import { AppContext } from "./AppContext"
 import { ApplicationStatus } from "./Application"
 import { Connect } from "./Connect"
 import { Messages } from "./Messages"
+import { Stats } from "./Stats"
 
 // @ts-expect-error webpack rule imports this as a string
 import spec from "../spec.canvas.js"
@@ -16,8 +18,6 @@ import { client } from "./client"
 
 import "98.css"
 import "./styles.css"
-import { Canvas, Client } from "@canvas-js/hooks"
-import { Stats } from "./Stats"
 
 const root = ReactDOM.createRoot(document.getElementById("root")!)
 
