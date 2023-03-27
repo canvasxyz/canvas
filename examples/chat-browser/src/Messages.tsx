@@ -127,7 +127,7 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 				const earliestPost = posts[0]
 				const newCursor = earliestPost?.updated_at?.toString()
 				if (!earliestPost || cursor === earliestPost.updated_at) return // Nothing more
-				// setCursor(earliestPost.updated_at)
+				setCursor(earliestPost.updated_at)
 				console.log("cursor changed:", earliestPost.updated_at)
 			}, 500)
 		},
