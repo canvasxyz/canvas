@@ -4,7 +4,7 @@ import { useCanvas } from "@canvas-js/hooks"
 
 import { ErrorMessage } from "./ErrorMessage"
 
-export const Application: React.FC<{}> = ({}) => {
+export const ApplicationStatus: React.FC<{}> = ({}) => {
 	const { isLoading, error, data } = useCanvas()
 
 	return (
@@ -19,10 +19,8 @@ export const Application: React.FC<{}> = ({}) => {
 					<p>Loading...</p>
 				) : data ? (
 					<div>
-						<p>
-							{data.appName} ({data.uri})
-						</p>
-						{data.peerId && <p data-id={data.peerId}>Host: {data.peerId}</p>}
+						<p>App: {data.uri}</p>
+						{data.peerId && <p data-id={data.peerId}>PeerID: {data.peerId}</p>}
 					</div>
 				) : null}
 			</div>

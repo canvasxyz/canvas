@@ -1,3 +1,4 @@
+import { EventEmitter } from "@libp2p/interfaces/events"
 import type { Chain, ChainId, Message, Session } from "@canvas-js/interfaces"
 
 export type Node = { level: number; key: Uint8Array | null; hash: Uint8Array; id?: Uint8Array }
@@ -20,7 +21,11 @@ export interface ReadWriteTransaction extends ReadOnlyTransaction {
 	insertMessage(id: Uint8Array, message: Message): Promise<void>
 }
 
-export interface MessageStore {
+export interface MessageStoreEvents {
+	update: Event
+}
+
+export interface MessageStore extends EventEmitter<MessageStoreEvents> {
 	getMessageStream(filter?: {
 		type?: Message["type"]
 		limit?: number

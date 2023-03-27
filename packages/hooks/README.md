@@ -7,7 +7,6 @@ The React hooks are currently developed for Ethereum-compatible
 chains, with [Ethers v5](https://docs.ethers.org/v5/) and
 [wagmi](https://wagmi.sh/).
 
-
 ## Table of Contents
 
 - [`<Canvas />`](#canvas): configures the connection to Canvas
@@ -33,7 +32,7 @@ You can access metadata about the host, and the application the host is serving,
 import { useCanvas } from "@canvas-js/hooks"
 
 function MyApp({}) {
-	const { host, isLoading, data, error } = useCanvas()
+	const { api, isLoading, data, error } = useCanvas()
 
 	return <div>{/* ...*/}</div>
 }
@@ -49,19 +48,15 @@ interface ApplicationData {
 	peerId: string | null
 	actions: string[]
 	routes: string[]
+	chains: Partial<Record<Chain, ChainId[]>>
+	peers: { id: string; protocols?: string[]; addresses?: string[] }[]
 	merkleRoots: Record<string, string>
-	chainImplementations: Record<string, string[]>
-	peers: {
-		gossip: Record<string, { lastSeen: number }>
-		sync: Record<string, { lastSeen: number }>
-	} | null
 }
 
-declare function useCanvas(): {
-	host: string | null
-	data: ApplicationData | null
-	error: Error | null
+export function useCanvas(): {
 	isLoading: boolean
+	error: Error | null
+	data: ApplicationData | null
 }
 ```
 
@@ -114,7 +109,7 @@ function MyApp({}) {
 ```ts
 import { ModelValue } from "@canvas-js/interfaces"
 
-function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
+export function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
 	route: string,
 	params: Record<string, ModelValue>,
 	options: { subscribe?: boolean } = { subscribe: true }
@@ -184,8 +179,8 @@ export function useSession<Signer, DelegatedSigner>(
 	isPending: boolean
 	sessionAddress: string | null
 	sessionExpiration: number | null
-	login: () => void
-	logout: () => void
+	login: () => Promise<void>
+	logout: () => Promise<void>
 	client: Client | null
 }
 ```

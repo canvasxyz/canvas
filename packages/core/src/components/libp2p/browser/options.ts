@@ -52,7 +52,6 @@ export async function getLibp2pOptions(config: {
 		}),
 		pubsub: gossipsub({
 			emitSelf: false,
-			doPX: true,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictSign",

@@ -20,7 +20,7 @@ export const Connect: React.FC<{ client: Client | null; setClient: (client: Clie
 	useEffect(() => setIsLoading(false), [])
 
 	return (
-		<div className="window">
+		<div className="window" style={{ width: 420 }}>
 			<div className="title-bar">
 				<div className="title-bar-text">Connect</div>
 			</div>

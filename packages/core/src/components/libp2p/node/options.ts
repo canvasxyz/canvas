@@ -22,10 +22,9 @@ import { Multiaddr } from "@multiformats/multiaddr"
 
 import { register } from "prom-client"
 
-import { minute, PEER_ID_FILENAME } from "@canvas-js/core/constants"
+import { PEER_ID_FILENAME, minute } from "@canvas-js/core/constants"
 import { toHex } from "@canvas-js/core/utils"
 
-// import { libp2pRegister } from "../../metrics/node/index.js"
 import { defaultBootstrapList } from "../bootstrap.js"
 
 const announceFilter = (multiaddrs: Multiaddr[]) =>
@@ -75,6 +74,7 @@ export async function getLibp2pOptions(config: {
 		pubsub: gossipsub({
 			emitSelf: false,
 			doPX: true,
+			canRelayMessage: true,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictSign",

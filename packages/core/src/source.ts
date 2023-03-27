@@ -14,13 +14,11 @@ import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
 
 import { sync, handleIncomingStream } from "./sync/index.js"
-import { wait, retry, AbortError, toHex, CacheMap, assert } from "@canvas-js/core/utils"
+import { wait, retry, AbortError, toHex, assert } from "@canvas-js/core/utils"
 import * as constants from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 
 interface SourceOptions {
-	recentGossipPeers?: CacheMap<string, { lastSeen: number }>
-	recentSyncPeers?: CacheMap<string, { lastSeen: number }>
 	verbose?: boolean
 }
 
@@ -334,9 +332,6 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(`[canvas-core] [${this.cid}] Opened outgoing stream ${stream.id} to ${peer}`)
 		}
 
-		// wait until we've successfully dialed the peer before update its lastSeen
-		this.options.recentSyncPeers?.set(peer.toString(), { lastSeen: Date.now() })
-
 		let successCount = 0
 		let failureCount = 0
 
@@ -389,13 +384,17 @@ export class Source extends EventEmitter<SourceEvents> {
 					)
 				)
 
-				const time = performance.now() - start
-				this.dispatchEvent(new CustomEvent("sync", { detail: { peer: peer.toString(), time, status: "success" } }))
+				const duration = performance.now() - start
+				this.dispatchEvent(
+					new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "success" } })
+				)
 			})
 		} catch (err) {
 			if (err instanceof Error) {
-				const time = performance.now() - start
-				this.dispatchEvent(new CustomEvent("sync", { detail: { peer: peer.toString(), time, status: "failure" } }))
+				const duration = performance.now() - start
+				this.dispatchEvent(
+					new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "failure" } })
+				)
 
 				console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to sync with peer ${peer} (${err.message})`))
 				stream.abort(err)

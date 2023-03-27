@@ -2,6 +2,7 @@ import path from "node:path"
 import fs from "node:fs"
 
 import Database, * as sqlite from "better-sqlite3"
+import { EventEmitter } from "@libp2p/interfaces/events"
 import * as okra from "@canvas-js/okra-node"
 
 import type { Action, Session, ActionArgument, Chain, ChainId, CustomAction, Message } from "@canvas-js/interfaces"
@@ -11,7 +12,8 @@ import { MESSAGE_DATABASE_FILENAME, MST_DIRECTORY_NAME } from "@canvas-js/core/c
 
 import { getMessageKey } from "@canvas-js/core/sync"
 
-import type { MessageStore, ReadOnlyTransaction, ReadWriteTransaction, Node } from "../types.js"
+import type { MessageStore, ReadOnlyTransaction, ReadWriteTransaction, Node, MessageStoreEvents } from "../types.js"
+
 export * from "../types.js"
 
 type ActionRecord = {
@@ -56,7 +58,7 @@ type CustomActionRecord = {
 
 const toBuffer = (array: Uint8Array) => Buffer.from(array.buffer, array.byteOffset, array.byteLength)
 
-class SqliteMessageStore implements MessageStore {
+class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements MessageStore {
 	public static async initialize(
 		app: string,
 		directory: string | null,
@@ -129,6 +131,7 @@ class SqliteMessageStore implements MessageStore {
 		public readonly tree: okra.Tree | null,
 		private readonly sources: Set<string> = new Set([])
 	) {
+		super()
 		this.database.exec(SqliteMessageStore.createSessionsTable)
 		this.database.exec(SqliteMessageStore.createActionsTable)
 		this.database.exec(SqliteMessageStore.createCustomActionsTable)
@@ -397,19 +400,24 @@ class SqliteMessageStore implements MessageStore {
 	): Promise<T> {
 		const dbi = options.dbi ?? this.app
 		assert(dbi === this.app || this.sources.has(dbi))
+
+		let result: T
 		if (this.tree === null) {
-			return await callback(this.getReadWriteTransaction(null))
+			result = await callback(this.getReadWriteTransaction(null))
 		} else {
-			return await this.tree.write(
+			const root = await this.tree.write(
 				async (txn) => {
-					const result = await callback(this.getReadWriteTransaction(txn))
-					const root = txn.getRoot()
-					this.merkleRoots[dbi] = toHex(root.hash)
-					return result
+					result = await callback(this.getReadWriteTransaction(txn))
+					return txn.getRoot()
 				},
 				{ dbi }
 			)
+
+			this.merkleRoots[dbi] = toHex(root.hash)
 		}
+
+		this.dispatchEvent(new Event("update"))
+		return result!
 	}
 
 	private static parseSessionRecord(record: SessionRecord): Session {

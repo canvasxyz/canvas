@@ -45,36 +45,42 @@ npm run test
 ## API
 
 ```typescript
-import { Message, ModelValue, Model, Chain, ChainId } from "@canvas-js/interfaces"
+import { CID } from "multiformats/cid"
+import { Libp2p } from "libp2p"
 
-interface CoreOptions {
+import { Message, ModelValue, Model, Chain, ChainId, ApplicationData } from "@canvas-js/interfaces"
+
+declare interface CoreOptions {
 	unchecked?: boolean
 	verbose?: boolean
 	offline?: boolean
 	replay?: boolean
 }
 
-interface CoreConfig extends CoreOptions {
-	// pass `null` to run in memory
+declare interface CoreConfig extends CoreOptions {
+	// pass `null` to run in memory (NodeJS only)
 	directory: string | null
 	spec: string
 
-	uri?: string // override the default app URI (defaults to ipfs:// hash of spec)
+	uri?: string // set a custom app URI (defaults to ipfs:// of spec)
 	chains?: ChainImplementation<unknown, unknown>[]
 	listen?: number
 	announce?: string[]
 	bootstrapList?: string[]
 }
 
-declare class Core {
-	static initialize(config: CoreConfig): Promise<Core>
+declare class Core extends EventEmitter<CoreEvents> implements CoreAPI {
+	public static initialize(config: CoreConfig): Promise<Core>
 
-	readonly app: string
-	readonly directory: string | null
+	public readonly app: string
+	public readonly cid: CID
+	public readonly directory: string | null
+	public readonly libp2p: Libp2p | null // null if config.offline = true
 
-	close(): Promise<void>
-	getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]>
-	apply(message: Message): Promise<{ hash: string }>
+	public close(): Promise<void>
+	public apply(message: Message): Promise<{ hash: string }>
+	public getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]>
+	public getApplicationData(): Promise<ApplicationData> // general app metadata and network/peering status
 }
 ```
 

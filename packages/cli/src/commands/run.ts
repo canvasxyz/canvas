@@ -12,8 +12,7 @@ import express from "express"
 import cors from "cors"
 
 import { Core } from "@canvas-js/core"
-import { getAPI } from "@canvas-js/core/api"
-import { setupWebsockets } from "@canvas-js/core/websockets"
+import { getAPI, setupWebsocketServer } from "@canvas-js/core/api"
 
 import * as constants from "@canvas-js/core/constants"
 
@@ -215,28 +214,25 @@ export async function handler(args: Args) {
 		app.use(getAPI(core, { exposeMetrics }))
 	}
 
-	const httpServer = http.createServer(app)
-	setupWebsockets(httpServer, core)
+	const apiURL = args.static ? `http://localhost:${args.port}/api` : `http://localhost:${args.port}`
 
 	const server = stoppable(
-		httpServer.listen(args.port, () => {
-			const apiPrefix = args.static ? `api/` : ""
+		http.createServer(app).listen(args.port, () => {
 			if (args.static) {
 				console.log(`Serving static bundle: http://localhost:${args.port}/`)
-				console.log(`Serving API for ${core.app}:`)
-				console.log(`└ GET http://localhost:${args.port}/api`)
-			} else {
-				console.log(`Serving API for ${core.app}:`)
-				console.log(`└ GET http://localhost:${args.port}`)
 			}
+			console.log(`Serving API for ${core.app}:`)
+			console.log(`└ GET  ${apiURL}`)
 			for (const name of Object.keys(core.vm.routes)) {
-				console.log(`└ GET http://localhost:${args.port}/${apiPrefix}${name.slice(1)}`)
+				console.log(`└ GET  ${apiURL}/${name.slice(1)}`)
 			}
-			console.log(`└ POST /${apiPrefix}actions`)
-			console.log(`└ POST /${apiPrefix}sessions`)
+			console.log(`└ POST ${apiURL}/actions`)
+			console.log(`└ POST ${apiURL}/sessions`)
 		}),
 		0
 	)
+
+	setupWebsocketServer(server, apiURL, core)
 
 	let stopping = false
 	process.on("SIGINT", async () => {

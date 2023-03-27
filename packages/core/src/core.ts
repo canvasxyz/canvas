@@ -14,6 +14,9 @@ import {
 	Message,
 	ChainImplementation,
 	CustomAction,
+	CoreAPI,
+	CoreEvents,
+	ApplicationData,
 } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { validate } from "@hyperjump/json-schema/draft-2020-12"
@@ -25,7 +28,7 @@ import { getLibp2pOptions, startPingService } from "@canvas-js/core/components/l
 
 import { Source } from "./source.js"
 import { actionType, messageType } from "./codecs.js"
-import { toHex, signalInvalidType, CacheMap, stringify, parseIPFSURI, assert } from "./utils.js"
+import { toHex, signalInvalidType, stringify, parseIPFSURI, assert } from "./utils.js"
 import * as constants from "./constants.js"
 
 export interface CoreConfig extends CoreOptions {
@@ -47,13 +50,7 @@ export interface CoreOptions {
 	replay?: boolean
 }
 
-interface CoreEvents {
-	close: Event
-	sync: CustomEvent<{ uri: string; peer: string; time: number; status: "success" | "failure" }>
-	message: CustomEvent<Message>
-}
-
-export class Core extends EventEmitter<CoreEvents> {
+export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	public static async initialize(config: CoreConfig) {
 		const { directory, spec, offline, verbose, unchecked } = config
 
@@ -70,16 +67,6 @@ export class Core extends EventEmitter<CoreEvents> {
 			const { listen, announce, bootstrapList } = config
 			const options = await getLibp2pOptions({ directory, listen, announce, bootstrapList })
 			libp2p = await createLibp2p(options)
-
-			if (verbose) {
-				libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
-					console.log(`[canvas-core] Connected to ${remotePeer} (${id})`)
-				)
-
-				libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
-					console.log(`[canvas-core] Disconnected from ${remotePeer} (${id})`)
-				)
-			}
 		}
 
 		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, { verbose, unchecked })
@@ -107,8 +94,6 @@ export class Core extends EventEmitter<CoreEvents> {
 		return core
 	}
 
-	public readonly recentGossipPeers = new CacheMap<string, { lastSeen: number }>(1000)
-	public readonly recentSyncPeers = new CacheMap<string, { lastSeen: number }>(1000)
 	public readonly sources: Record<string, Source> | null = null
 
 	private readonly controller = new AbortController()
@@ -126,24 +111,81 @@ export class Core extends EventEmitter<CoreEvents> {
 	) {
 		super()
 
+		// forward "update" events from the message store
+		messageStore.addEventListener("update", (event) => {
+			this.dispatchEvent(new Event(event.type))
+		})
+
 		if (libp2p !== null) {
+			libp2p.addEventListener("peer:connect", ({ detail: connection }) => {
+				this.dispatchEvent(new CustomEvent("connect", { detail: { peer: connection.remotePeer.toString() } }))
+
+				if (options.verbose) {
+					console.log(`[canvas-core] Connected to ${connection.remotePeer} (${connection.id})`)
+				}
+			})
+
+			libp2p.addEventListener("peer:disconnect", ({ detail: connection }) => {
+				this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: connection.remotePeer.toString() } }))
+
+				if (options.verbose) {
+					console.log(`[canvas-core] Disconnected from ${connection.remotePeer} (${connection.id})`)
+				}
+			})
+
 			this.sources = {}
 			for (const uri of [this.app, ...vm.sources]) {
-				this.sources[uri] = new Source({
+				const source = new Source({
 					cid: parseIPFSURI(uri),
 					applyMessage: this.applyMessageInternal,
 					messageStore: this.messageStore,
 					libp2p,
-					recentGossipPeers: this.recentGossipPeers,
-					recentSyncPeers: this.recentSyncPeers,
 					...options,
 				})
+
+				// forward "sync" events from each source store
+				source.addEventListener("sync", ({ detail }) =>
+					this.dispatchEvent(new CustomEvent("sync", { detail: { uri, ...detail } }))
+				)
+
+				this.sources[uri] = source
 			}
 		}
 	}
 
-	public get appName() {
-		return this.vm.appName
+	public async getApplicationData(): Promise<ApplicationData> {
+		const chains: ApplicationData["chains"] = {}
+		for (const { chain, chainId } of this.chains) {
+			const chainIds = chains[chain]
+			if (chainIds === undefined) {
+				chains[chain] = [chainId]
+			} else if (!chainIds.includes(chainId)) {
+				chainIds.push(chainId)
+			}
+		}
+
+		const peerId = this.libp2p?.peerId.toString() ?? null
+
+		const peers: ApplicationData["peers"] = []
+		if (this.libp2p !== null) {
+			for (const id of this.libp2p.getPeers()) {
+				const peer = await this.libp2p.peerStore.get(id)
+				const addresses = peer.addresses.map(({ multiaddr }) => multiaddr.toString())
+				peers.push({ id: id.toString(), addresses })
+			}
+		}
+
+		return {
+			peerId,
+			uri: this.app,
+			cid: this.cid.toString(),
+			appName: this.vm.appName,
+			actions: this.vm.actions,
+			routes: Object.keys(this.vm.routes),
+			chains,
+			peers,
+			merkleRoots: this.messageStore.getMerkleRoots(),
+		}
 	}
 
 	public async close() {
@@ -164,27 +206,16 @@ export class Core extends EventEmitter<CoreEvents> {
 		this.dispatchEvent(new Event("close"))
 	}
 
-	public getChainImplementations(): Partial<Record<Chain, Record<string, { rpc: boolean }>>> {
-		const result: Partial<Record<Chain, Record<ChainId, { rpc: boolean }>>> = {}
-
-		for (const ci of this.chains) {
-			const chainIds = result[ci.chain]
-			if (chainIds !== undefined) {
-				chainIds[ci.chainId] = { rpc: ci.hasProvider() }
-			} else {
-				result[ci.chain] = { [ci.chainId]: { rpc: ci.hasProvider() } }
-			}
-		}
-
-		return result
-	}
-
-	public async getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]> {
+	public async getRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
+		route: string,
+		params: Record<string, string>
+	): Promise<T[]> {
 		if (this.options.verbose) {
 			console.log("[canvas-core] getRoute:", route, params)
 		}
 
-		return await this.modelStore.getRoute(route, params)
+		const results = await this.modelStore.getRoute(route, params)
+		return results as T[]
 	}
 
 	/**

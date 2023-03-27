@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo, useContext } from "react"
 import { Virtuoso } from "react-virtuoso"
 import _ from "lodash"
 
 import { useEnsName } from "wagmi"
 import { Client, useRoute } from "@canvas-js/hooks"
+import { AppContext } from "./AppContext"
 
 type Post = {
 	id: string
@@ -34,6 +35,8 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 	// We assume that posts are received in-order, an assumption which
 	// may be violated when generating data.
 	const { data: newPosts } = useRoute<Post>("/posts", {})
+
+	console.log("posts", newPosts, pastPosts)
 
 	// Virtuoso's automatic scroll-to-bottom doesn't work consistently because
 	// it caps maximum scroll to `scroller.offsetHeight - scroller.scrollHeight`
@@ -141,7 +144,7 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 					atBottomThreshold={40}
 					ref={virtuoso}
 					firstItemIndex={firstItemIndex}
-					initialTopMostItemIndex={posts.length}
+					initialTopMostItemIndex={{ index: 50, align: "start", offset: 99999999 }}
 					itemContent={itemContent}
 					data={posts}
 					startReached={startReached}
@@ -154,8 +157,9 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 	)
 }
 
-export const Messages: React.FC<{ client: Client | null }> = ({ client }) => {
+export const Messages: React.FC = ({}) => {
 	const inputRef = useRef<HTMLInputElement>(null)
+	const { client } = useContext(AppContext)
 
 	const handleKeyDown = useCallback(
 		async (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -163,6 +167,7 @@ export const Messages: React.FC<{ client: Client | null }> = ({ client }) => {
 			if (event.key === "Enter" && input !== null && client !== null) {
 				try {
 					const { hash } = await client.createPost({ content: input.value })
+					console.log("created post", hash)
 					input.value = ""
 					setTimeout(() => input.focus(), 0)
 				} catch (err) {

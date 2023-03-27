@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo, useContext } from "react"
+import React, { useCallback, useEffect, useRef, useState, useContext } from "react"
 import { Virtuoso } from "react-virtuoso"
 import _ from "lodash"
 
 import { useEnsName } from "wagmi"
-import { Client, useRoute } from "@canvas-js/hooks"
+import { useRoute } from "@canvas-js/hooks"
 import { AppContext } from "./AppContext"
 
 type Post = {
