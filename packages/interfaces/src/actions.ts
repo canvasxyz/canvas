@@ -1,4 +1,5 @@
-import shajs from "sha.js"
+import { sha256 } from "@noble/hashes/sha256"
+import { bytesToHex } from "@noble/hashes/utils"
 
 import type { Chain } from "./contracts.js"
 import { stringify } from "./stringify.js"
@@ -62,6 +63,6 @@ export function serializeAction(action: Action): string {
  * Unique identifier for signed actions.
  */
 export function getActionHash(action: Action): string {
-	const hash = shajs("sha256").update(stringify(action)).digest("hex")
-	return "0x" + hash
+	const hash = sha256(stringify(action))
+	return "0x" + bytesToHex(hash)
 }
