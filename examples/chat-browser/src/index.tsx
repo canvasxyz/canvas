@@ -9,7 +9,7 @@ import { ApplicationStatus } from "./Application"
 import { Connect } from "./Connect"
 import { Messages } from "./Messages"
 
-// @ts-ignore
+// @ts-expect-error webpack rule imports this as a string
 import spec from "../spec.canvas.js"
 
 import { client } from "./client"
