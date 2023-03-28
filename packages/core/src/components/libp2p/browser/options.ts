@@ -22,25 +22,25 @@ import { defaultBootstrapList } from "../bootstrap.js"
 const { base64 } = ethers.utils
 
 export async function getLibp2pOptions(config: {
-	directory: string | null
-	listen?: number
+	peerId: PeerId
+	listen?: string[]
 	announce?: string[]
 	bootstrapList?: string[]
 }): Promise<Libp2pOptions> {
-	assert(config.directory !== null)
-	const peerId = await getPeerId(config.directory)
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
 	if (config.announce !== undefined && config.announce.length > 0) {
 		throw new Error("Cannot announce in the browser")
+	} else if (config.listen !== undefined && config.listen.length > 0) {
+		throw new Error("Cannot listen in the browser")
 	}
 
-	const announceAddresses = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId}`)
+	const announce = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
 	console.log(`[canvas-core] Using bootstrap servers as public relays`)
 
 	return {
-		peerId: peerId,
-		addresses: { listen: [], announce: announceAddresses },
+		peerId: config.peerId,
+		addresses: { listen: [], announce },
 		transports: [webSockets()],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
@@ -61,7 +61,9 @@ export async function getLibp2pOptions(config: {
 	}
 }
 
-async function getPeerId(directory: string): Promise<PeerId> {
+export async function getPeerId(directory: string | null): Promise<PeerId> {
+	assert(directory !== null)
+
 	const localStorageKey = `canvas:${directory}/${PEER_ID_FILENAME}`
 	const item = localStorage.getItem(localStorageKey)
 	if (item === null) {

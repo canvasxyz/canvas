@@ -24,7 +24,7 @@ import { validate } from "@hyperjump/json-schema/draft-2020-12"
 import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
 import { MessageStore, openMessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
-import { getLibp2pOptions, startPingService } from "@canvas-js/core/components/libp2p"
+import { getPeerId, getLibp2pOptions, startPingService } from "@canvas-js/core/components/libp2p"
 
 import { Source } from "./source.js"
 import { actionType, messageType } from "./codecs.js"
@@ -32,15 +32,16 @@ import { toHex, signalInvalidType, stringify, parseIPFSURI, assert } from "./uti
 import * as constants from "./constants.js"
 
 export interface CoreConfig extends CoreOptions {
-	// pass `null` to run in memory (NodeJS only)
+	/** pass `null` to run in memory (NodeJS only) */
 	directory: string | null
 	spec: string
 
 	uri?: string
 	chains?: ChainImplementation<unknown, unknown>[]
-	listen?: number
+	listen?: string[]
 	announce?: string[]
 	bootstrapList?: string[]
+	libp2p?: Libp2p
 }
 
 export interface CoreOptions {
@@ -62,10 +63,12 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		const modelStore = await openModelStore(directory, vm, { verbose })
 		const messageStore = await openMessageStore(app, directory, vm.sources, { verbose })
 
-		let libp2p: Libp2p | null = null
-		if (!offline) {
+		let libp2p = config.libp2p ?? null
+		if (!offline && libp2p === null) {
 			const { listen, announce, bootstrapList } = config
-			const options = await getLibp2pOptions({ directory, listen, announce, bootstrapList })
+			const peerId = await getPeerId(directory)
+			const options = await getLibp2pOptions({ peerId, listen, announce, bootstrapList })
+
 			libp2p = await createLibp2p(options)
 		}
 

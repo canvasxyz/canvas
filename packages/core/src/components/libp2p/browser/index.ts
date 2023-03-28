@@ -1,2 +1,2 @@
 export { startPingService } from "../ping.js"
-export { getLibp2pOptions } from "./options.js"
+export { getPeerId, getLibp2pOptions } from "./options.js"

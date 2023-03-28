@@ -16,10 +16,6 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
-import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
-import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
-import { Multiaddr } from "@multiformats/multiaddr"
-
 import { register } from "prom-client"
 
 import { PEER_ID_FILENAME, minute } from "@canvas-js/core/constants"
@@ -27,40 +23,31 @@ import { toHex } from "@canvas-js/core/utils"
 
 import { defaultBootstrapList } from "../bootstrap.js"
 
-const announceFilter = (multiaddrs: Multiaddr[]) =>
-	multiaddrs.filter((multiaddr) => !isLoopback(multiaddr) && !isPrivate(multiaddr))
-
-const denyDialMultiaddr = async (peerId: PeerId, multiaddr: Multiaddr) => isLoopback(multiaddr)
-
 export async function getLibp2pOptions(config: {
-	directory: string | null
-	listen?: number
+	peerId: PeerId
+	listen?: string[]
 	announce?: string[]
 	bootstrapList?: string[]
 }): Promise<Libp2pOptions> {
-	const peerId = await getPeerId(config.directory)
-
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
-	const port = config.listen ? config.listen : await getRandomPort()
+	const listen = config.listen ?? [`/ip4/0.0.0.0/tcp/${await getRandomPort()}/ws`]
 
-	const listenAddress = `/ip4/0.0.0.0/tcp/${port}/ws`
+	console.log(`[canvas-core] Listening on [ ${listen.join(", ")} ]`)
 
-	console.log(`[canvas-core] Listening on ${listenAddress}`)
-
-	const announceAddresses =
-		config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${peerId}`)
+	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
 
 	if (config.announce !== undefined) {
-		console.log(`[canvas-core] Announcing on public address ${config.announce}`)
+		if (config.announce.length > 0) {
+			console.log(`[canvas-core] Announcing on public addresses [ ${config.announce.join(", ")} ]`)
+		}
 	} else {
 		console.log(`[canvas-core] No --announce address provided. Using bootstrap servers as public relays.`)
 	}
 
 	return {
-		connectionGater: { denyDialMultiaddr },
-		peerId: peerId,
-		addresses: { listen: [listenAddress], announce: announceAddresses, announceFilter },
+		peerId: config.peerId,
+		addresses: { listen, announce },
 		transports: [webSockets()],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
@@ -84,7 +71,7 @@ export async function getLibp2pOptions(config: {
 	}
 }
 
-async function getPeerId(directory: string | null): Promise<PeerId> {
+export async function getPeerId(directory: string | null): Promise<PeerId> {
 	if (process.env.PEER_ID !== undefined) {
 		return createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
 	}

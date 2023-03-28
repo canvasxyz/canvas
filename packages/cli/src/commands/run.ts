@@ -45,8 +45,8 @@ export const builder = (yargs: Argv) =>
 			default: false,
 		})
 		.option("listen", {
-			type: "number",
-			desc: "libp2p WebSocket transport port (defaults to a random port)",
+			type: "array",
+			desc: "libp2p WebSocket transport multiaddr (defaults to a random port on 0.0.0.0)",
 		})
 		.option("announce", {
 			type: "array",
@@ -169,34 +169,20 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const {
-		verbose,
-		replay,
-		unchecked,
-		offline,
-		metrics: exposeMetrics,
-		listen: listenPort,
-		announce: announceAddresses,
-	} = args
+	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen, announce } = args
 
-	const validateAnnounceAddresses = (announce: (string | number)[]): announce is string[] =>
-		announce.every((address) => typeof address === "string")
+	const validateAddresses = (addresses: (string | number)[]): addresses is string[] =>
+		addresses.every((address) => typeof address === "string")
 
-	if (announceAddresses) {
-		assert(validateAnnounceAddresses(announceAddresses))
+	if (announce) {
+		assert(validateAddresses(announce))
 	}
 
-	const core = await Core.initialize({
-		directory,
-		uri,
-		spec,
-		listen: listenPort,
-		announce: announceAddresses,
-		replay,
-		offline,
-		unchecked,
-		verbose,
-	})
+	if (listen) {
+		assert(validateAddresses(listen))
+	}
+
+	const core = await Core.initialize({ directory, uri, spec, listen, announce, replay, offline, unchecked, verbose })
 
 	const app = express()
 	app.use(cors())
