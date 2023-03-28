@@ -54,14 +54,12 @@ export async function getLibp2pOptions(config: {
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 		dht: kadDHT({
 			protocolPrefix: "/canvas",
-			clientMode: false,
+			clientMode: config.announce === undefined || config.announce.length === 0,
 			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
 		}),
 		metrics: prometheusMetrics({ registry: register }),
 		pubsub: gossipsub({
 			emitSelf: false,
-			doPX: true,
-			canRelayMessage: true,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictSign",
