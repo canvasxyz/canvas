@@ -11,14 +11,14 @@
   "dependencies": {
     "@canvas-js/interfaces": "0.2.2",
     "@polkadot/api": "^9.13.2",
-    "@polkadot/extension-dapp": "^0.44.8",
-    "@polkadot/extension-inject": "^0.44.8",
+    "@polkadot/extension-dapp": "^0.44.9",
+    "@polkadot/extension-inject": "^0.44.9",
     "@polkadot/util": "^10.3.1",
     "@polkadot/util-crypto": "^10.3.1",
-    "safe-stable-stringify": "^2.4.2"
+    "safe-stable-stringify": "^2.4.3"
   },
   "devDependencies": {
     "@polkadot/types": "^9.13.2",
-    "typescript": "^4.9.4"
+    "typescript": "^5.0.2"
   }
 }

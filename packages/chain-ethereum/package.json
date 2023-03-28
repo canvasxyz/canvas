@@ -11,10 +11,10 @@
   "dependencies": {
     "@canvas-js/interfaces": "0.2.2",
     "@ethersproject/wallet": "^5.7.0",
-    "ethers": "^5.7.1 <6",
-    "safe-stable-stringify": "^2.4.2"
+    "ethers": "^5.7.2",
+    "safe-stable-stringify": "^2.4.3"
   },
   "devDependencies": {
-    "typescript": "^4.9.4"
+    "typescript": "^5.0.2"
   }
 }
