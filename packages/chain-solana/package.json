@@ -2,7 +2,7 @@
   "name": "@canvas-js/chain-solana",
   "version": "0.2.2",
   "type": "module",
-  "author": "Canvas Technology Corporation (https://canvas.xyz)",
+  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
