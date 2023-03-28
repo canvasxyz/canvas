@@ -56,10 +56,10 @@ Options:
   --offline    Disable libp2p                         [boolean] [default: false]
   --install    Install a local app and run it in production mode
                                                       [boolean] [default: false]
-  --listen     Internal libp2p /ws multiaddr, e.g. /ip4/0.0.0.0/tcp/4444/ws (def
-               aults to a random port)                                   [array]
-  --announce   Advertise a publicly dialable multiaddr, e.g. /dns4/myapp.com/tcp
-               /4444/ws                                                  [array]
+  --listen     Internal libp2p /ws multiaddr, e.g. /ip4/0.0.0.0/tcp/4444/ws
+                                                                         [array]
+  --announce   Public libp2p /ws multiaddr, e.g. /dns4/myapp.com/tcp/4444/ws
+                                                                         [array]
   --reset      Reset the message log and model databases
                                                       [boolean] [default: false]
   --replay     Reconstruct the model database by replying the message log

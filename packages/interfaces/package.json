@@ -17,7 +17,7 @@
     "safe-stable-stringify": "^2.4.3"
   },
   "devDependencies": {
-    "@ava/typescript": "^3.0.1",
+    "@ava/typescript": "^4.0.0",
     "@canvas-js/chain-cosmos": "0.2.2",
     "@canvas-js/chain-ethereum": "0.2.2",
     "@canvas-js/chain-solana": "0.2.2",

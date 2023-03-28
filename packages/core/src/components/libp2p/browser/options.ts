@@ -5,6 +5,7 @@ import { sha256 } from "@noble/hashes/sha256"
 
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 
+import { circuitRelayTransport } from "libp2p/circuit-relay"
 import { webSockets } from "@libp2p/websockets"
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
@@ -29,19 +30,16 @@ export async function getLibp2pOptions(config: {
 }): Promise<Libp2pOptions> {
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
-	if (config.announce !== undefined && config.announce.length > 0) {
-		throw new Error("Cannot announce in the browser")
-	} else if (config.listen !== undefined && config.listen.length > 0) {
-		throw new Error("Cannot listen in the browser")
-	}
+	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
+	console.log(`[canvas-core] Announcing on [ ${announce.join(", ")} ]`)
 
-	const announce = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
-	console.log(`[canvas-core] Using bootstrap servers as public relays`)
+	const listen = config.listen ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
+	console.log(`[canvas-core] Listening on [ ${listen.join(", ")} ]`)
 
 	return {
 		peerId: config.peerId,
 		addresses: { listen: [], announce },
-		transports: [webSockets()],
+		transports: [webSockets(), circuitRelayTransport({})],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],

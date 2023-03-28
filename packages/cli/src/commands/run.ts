@@ -46,11 +46,11 @@ export const builder = (yargs: Argv) =>
 		})
 		.option("listen", {
 			type: "array",
-			desc: "Internal libp2p /ws multiaddr, e.g. /ip4/0.0.0.0/tcp/4444/ws (defaults to a random port)",
+			desc: "Internal libp2p /ws multiaddr, e.g. /ip4/0.0.0.0/tcp/4444/ws",
 		})
 		.option("announce", {
 			type: "array",
-			desc: "Advertise a publicly dialable multiaddr, e.g. /dns4/myapp.com/tcp/4444/ws",
+			desc: "Public libp2p /ws multiaddr, e.g. /dns4/myapp.com/tcp/4444/ws",
 		})
 		.option("reset", {
 			type: "boolean",

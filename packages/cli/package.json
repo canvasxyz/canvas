@@ -26,7 +26,6 @@
     "http-status-codes": "^2.2.0",
     "io-ts": "^2.2.20",
     "ipfs-only-hash": "^4.0.0",
-    "libp2p": "^0.42.2",
     "multiformats": "^11.0.2",
     "p-queue": "^7.3.4",
     "prom-client": "^14.2.0",

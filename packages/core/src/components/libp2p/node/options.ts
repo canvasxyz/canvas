@@ -15,6 +15,7 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
+import { circuitRelayTransport } from "libp2p/circuit-relay"
 
 import { register } from "prom-client"
 
@@ -31,24 +32,20 @@ export async function getLibp2pOptions(config: {
 }): Promise<Libp2pOptions> {
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
-	const listen = config.listen ?? [`/ip4/0.0.0.0/tcp/${await getRandomPort()}/ws`]
-
-	console.log(`[canvas-core] Listening on [ ${listen.join(", ")} ]`)
-
-	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
-
-	if (config.announce !== undefined) {
-		if (config.announce.length > 0) {
-			console.log(`[canvas-core] Announcing on public addresses [ ${config.announce.join(", ")} ]`)
-		}
-	} else {
+	if (config.announce === undefined) {
 		console.log(`[canvas-core] No --announce address provided. Using bootstrap servers as public relays.`)
 	}
+
+	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
+	console.log(`[canvas-core] Announcing on`, announce)
+
+	const listen = config.listen ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit`)
+	console.log(`[canvas-core] Listening on`, listen)
 
 	return {
 		peerId: config.peerId,
 		addresses: { listen, announce },
-		transports: [webSockets()],
+		transports: [webSockets(), circuitRelayTransport({})],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
