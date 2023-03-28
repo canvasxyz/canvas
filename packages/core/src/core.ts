@@ -114,8 +114,8 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		super()
 
 		// forward "update" events from the message store
-		messageStore.addEventListener("update", (event) => {
-			this.dispatchEvent(new Event(event.type))
+		messageStore.addEventListener("update", ({ detail }) => {
+			this.dispatchEvent(new CustomEvent("update", { detail }))
 		})
 
 		if (libp2p !== null) {

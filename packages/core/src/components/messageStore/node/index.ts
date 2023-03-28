@@ -2,7 +2,7 @@ import path from "node:path"
 import fs from "node:fs"
 
 import Database, * as sqlite from "better-sqlite3"
-import { EventEmitter } from "@libp2p/interfaces/events"
+import { CustomEvent, EventEmitter } from "@libp2p/interfaces/events"
 import * as okra from "@canvas-js/okra-node"
 
 import type { Action, Session, ActionArgument, Chain, ChainId, CustomAction, Message } from "@canvas-js/interfaces"
@@ -416,7 +416,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 			this.merkleRoots[dbi] = toHex(root.hash)
 		}
 
-		this.dispatchEvent(new Event("update"))
+		this.dispatchEvent(new CustomEvent("update", { detail: { uri: dbi, root: this.merkleRoots[dbi] ?? null } }))
 		return result!
 	}
 

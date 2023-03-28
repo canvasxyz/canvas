@@ -1,5 +1,5 @@
 import { EventEmitter } from "@libp2p/interfaces/events"
-import type { Chain, ChainId, Message, Session } from "@canvas-js/interfaces"
+import type { Chain, ChainId, Message, Session, UpdateEventDetail } from "@canvas-js/interfaces"
 
 export type Node = { level: number; key: Uint8Array | null; hash: Uint8Array; id?: Uint8Array }
 
@@ -22,7 +22,7 @@ export interface ReadWriteTransaction extends ReadOnlyTransaction {
 }
 
 export interface MessageStoreEvents {
-	update: Event
+	update: CustomEvent<UpdateEventDetail>
 }
 
 export interface MessageStore extends EventEmitter<MessageStoreEvents> {

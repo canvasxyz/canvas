@@ -1,4 +1,4 @@
-import { EventEmitter } from "@libp2p/interfaces/events"
+import { CustomEvent, EventEmitter } from "@libp2p/interfaces/events"
 
 import * as okra from "@canvas-js/okra-browser"
 
@@ -129,7 +129,7 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 		)
 
 		this.merkleRoots[dbi] = toHex(root.hash)
-		this.dispatchEvent(new Event("update"))
+		this.dispatchEvent(new CustomEvent("update", { detail: { uri: dbi, root: null } }))
 		return result!
 	}
 

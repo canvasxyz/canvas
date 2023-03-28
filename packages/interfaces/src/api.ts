@@ -5,11 +5,12 @@ import type { ModelValue } from "./models.js"
 import type { Chain, ChainId } from "./contracts.js"
 
 export type SyncEventDetail = { uri: string; peer: string; time: number; status: "success" | "failure" }
+export type UpdateEventDetail = { uri: string; root: string | null }
 
 export interface CoreEvents {
 	close: Event
-	update: Event
 	message: CustomEvent<Message>
+	update: CustomEvent<UpdateEventDetail>
 	sync: CustomEvent<SyncEventDetail>
 	connect: CustomEvent<{ peer: string }>
 	disconnect: CustomEvent<{ peer: string }>
