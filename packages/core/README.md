@@ -86,8 +86,6 @@ declare class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 ## Metrics
 
-These are registered with a custom registry exported as `canvasRegister` from [src/metrics.ts](./src/metrics.ts).
-
 ### `canvas_sync_time`
 
 A histogram of MST sync times.
