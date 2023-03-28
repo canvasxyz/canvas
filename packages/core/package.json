@@ -71,7 +71,8 @@
     "generate-rpc": "npm run generate-rpc-js && npm run generate-rpc-ts",
     "generate-rpc-js": "pbjs ./rpc/sync/index.proto -t static-module -w commonjs -o ./rpc/sync/index.cjs",
     "generate-rpc-ts": "pbjs -t static-module ./rpc/sync/index.proto | pbts -o ./rpc/sync/index.d.cts -",
-    "test": "ava"
+    "test": "ava",
+    "benchmark": "RUN_BENCHMARKS=1 ava test/benchmarks.test.ts"
   },
   "dependencies": {
     "@canvas-js/chain-ethereum": "0.2.2",

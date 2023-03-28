@@ -1,6 +1,6 @@
-import { ethers } from "ethers"
-
 import Hash from "ipfs-only-hash"
+import { ethers } from "ethers"
+import { CID } from "multiformats"
 
 import type {
 	Action,
@@ -18,7 +18,6 @@ import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import type { ContractFunctionArgument, ContractFunctionResult } from "@canvas-js/core/components/vm"
 import { assert } from "@canvas-js/core/utils"
-import { CID } from "multiformats"
 
 type ValueTypes = {
 	boolean: boolean
