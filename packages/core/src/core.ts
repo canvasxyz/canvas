@@ -41,7 +41,6 @@ export interface CoreConfig extends CoreOptions {
 	listen?: string[]
 	announce?: string[]
 	bootstrapList?: string[]
-	libp2p?: Libp2p
 }
 
 export interface CoreOptions {
@@ -63,8 +62,8 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		const modelStore = await openModelStore(directory, vm, { verbose })
 		const messageStore = await openMessageStore(app, directory, vm.sources, { verbose })
 
-		let libp2p = config.libp2p ?? null
-		if (!offline && libp2p === null) {
+		let libp2p: Libp2p | null = null
+		if (!offline) {
 			const { listen, announce, bootstrapList } = config
 			const peerId = await getPeerId(directory)
 			const options = await getLibp2pOptions({ peerId, listen, announce, bootstrapList })
