@@ -81,6 +81,9 @@ async function waitForMerkleRoot(core: Core, uri: string, merkleRoot: string) {
 	})
 }
 
+// AVA requires that all test files have at least one test
+test("no-op", (t) => t.pass())
+
 if (process.env["RUN_BENCHMARKS"]) {
 	test("time sending an action", async (t) => {
 		t.timeout(50000)
