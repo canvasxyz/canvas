@@ -64,7 +64,7 @@ declare interface CoreConfig extends CoreOptions {
 
 	uri?: string // set a custom app URI (defaults to ipfs:// of spec)
 	chains?: ChainImplementation<unknown, unknown>[]
-	listen?: number
+	listen?: string[]
 	announce?: string[]
 	bootstrapList?: string[]
 }
