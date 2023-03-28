@@ -9,6 +9,7 @@
   "files": [
     "lib",
     "rpc",
+    "sqlite",
     "types"
   ],
   "main": "./lib/index.js",
