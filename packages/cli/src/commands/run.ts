@@ -46,7 +46,7 @@ export const builder = (yargs: Argv) =>
 		})
 		.option("listen", {
 			type: "array",
-			desc: "libp2p WebSocket transport multiaddr (defaults to a random port on 0.0.0.0)",
+			desc: "libp2p WebSocket transport multiaddr (defaults to a random port)",
 		})
 		.option("announce", {
 			type: "array",

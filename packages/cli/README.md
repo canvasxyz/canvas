@@ -56,7 +56,8 @@ Options:
   --offline    Disable libp2p                         [boolean] [default: false]
   --install    Install a local app and run it in production mode
                                                       [boolean] [default: false]
-  --listen     libp2p WebSocket transport port          [number] [default: 4044]
+  --listen     libp2p WebSocket transport multiaddr (defaults to a random port)
+                                                                         [array]
   --announce   Accept incoming libp2p connections on a public multiaddr [string]
   --reset      Reset the message log and model databases
                                                       [boolean] [default: false]

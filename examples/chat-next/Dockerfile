@@ -30,4 +30,4 @@ RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app ./
 
-CMD [ "npm", "run", "start", "--", "--listen", "8080", "--announce", "/dns4/canvas-chat-2.fly.dev/tcp/4044/ws", "--announce", "/dns4/canvas-chat-2.fly.dev/tcp/4045/wss" ]
+CMD [ "npm", "run", "start", "--", "--listen", "/ip4/0.0.0.0/tcp/8080/ws", "--announce", "/dns4/canvas-chat-2.fly.dev/tcp/4044/ws", "--announce", "/dns4/canvas-chat-2.fly.dev/tcp/4045/wss" ]
