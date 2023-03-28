@@ -4,7 +4,7 @@ import stream from "node:stream"
 import { CustomEvent } from "@libp2p/interfaces/events"
 import chalk from "chalk"
 import express, { Request, Response } from "express"
-import { StatusCodes } from "http-status-codes"
+import { getReasonPhrase, StatusCodes } from "http-status-codes"
 import { WebSocket, WebSocketServer } from "ws"
 import { nanoid } from "nanoid"
 
@@ -319,12 +319,20 @@ export function setupWebsocketServer(server: http.Server, apiURL: string, core: 
 			return
 		}
 
-		console.log("handling upgrade request at URL", request.url)
 		const url = new URL(request.url, origin)
 		if (url.pathname === pathname) {
 			wss.handleUpgrade(request, socket, head, (socket) => handleWebsocketConnection(core, socket))
 		} else {
 			console.log(chalk.red("[canvas-core] rejecting incoming WS connection at unexpected path"), url.pathname)
+			rejectRequest(socket, StatusCodes.NOT_FOUND)
 		}
 	})
+}
+
+function rejectRequest(reqSocket: stream.Duplex, code: number) {
+	const date = new Date()
+	reqSocket.write(`HTTP/1.1 ${code} ${getReasonPhrase(code)}\r\n`)
+	reqSocket.write(`Date: ${date.toUTCString()}\r\n`)
+	reqSocket.write(`\r\n`)
+	reqSocket.end()
 }
