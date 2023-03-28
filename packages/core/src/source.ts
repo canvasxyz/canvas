@@ -66,7 +66,11 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		this.startSyncService()
-		this.startAnnounceService()
+
+		const mode = await this.libp2p.dht.getMode()
+		if (mode === "server") {
+			this.startAnnounceService()
+		}
 	}
 
 	public async stop() {
