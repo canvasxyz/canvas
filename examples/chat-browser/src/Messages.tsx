@@ -36,8 +36,6 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 	// may be violated when generating data.
 	const { data: newPosts } = useRoute<Post>("/posts", {})
 
-	console.log("posts", newPosts, pastPosts)
-
 	// Virtuoso's automatic scroll-to-bottom doesn't work consistently because
 	// it caps maximum scroll to `scroller.offsetHeight - scroller.scrollHeight`
 	// when there might be additional not-yet-rendered content at the bottom.

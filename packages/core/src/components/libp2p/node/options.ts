@@ -1,5 +1,4 @@
 import path from "node:path"
-import net from "node:net"
 import fs from "node:fs"
 
 import { sha256 } from "@noble/hashes/sha256"
@@ -89,19 +88,4 @@ export async function getPeerId(directory: string | null): Promise<PeerId> {
 		console.log(`[canvas-core] Using PeerId ${peerId}`)
 		return peerId
 	}
-}
-
-function getRandomPort(): Promise<number> {
-	const server = net.createServer()
-	return new Promise((resolve, reject) =>
-		server.listen(0, () => {
-			const address = server.address()
-			if (address === null || typeof address == "string") {
-				server.close()
-				reject(new Error("unexpected net.server address"))
-			} else {
-				server.close((err) => (err ? reject(err) : resolve(address.port)))
-			}
-		})
-	)
 }
