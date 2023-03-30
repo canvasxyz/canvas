@@ -21,18 +21,15 @@ processes = []
     type = "connections"
 
   [[services.ports]]
-    handlers = ["http"]
-    port = 4044
-
-  [[services.ports]]
+    port = 4001
     handlers = ["tls", "http"]
-    port = 4045
 
 [[services]]
   internal_port = 8000
   processes = ["app"]
   protocol = "tcp"
   script_checks = []
+
   [services.concurrency]
     hard_limit = 25
     soft_limit = 20
