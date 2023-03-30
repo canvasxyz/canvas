@@ -66,7 +66,7 @@ async function testSync(sourceMessages: Iterable<Message>, targetMessages: Itera
 			await sourceMessageStore.read(async (sourceTxn) => {
 				await Promise.all([
 					handleIncomingStream(cid, source, sourceTxn),
-					sync(target, targetTxn, async (txn, hash, data, message) => void delta.push(message)),
+					sync(target, targetTxn, async (txn, hash, message) => void delta.push(message)),
 				])
 			})
 		})

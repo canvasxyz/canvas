@@ -15,7 +15,7 @@ import { equalNodes, equalArrays } from "./utils.js"
 export async function sync(
 	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
 	txn: ReadWriteTransaction,
-	handleMessage: (txn: ReadOnlyTransaction, hash: Uint8Array, data: Uint8Array, message: Message) => Promise<void>
+	handleMessage: (txn: ReadOnlyTransaction, hash: Uint8Array, message: Message) => Promise<void>
 ): Promise<void> {
 	const driver = new Driver(txn, handleMessage, stream)
 	try {
@@ -29,12 +29,7 @@ class Driver {
 	private readonly client: Client
 	constructor(
 		private readonly txn: ReadWriteTransaction,
-		private readonly handleMessage: (
-			txn: ReadOnlyTransaction,
-			hash: Uint8Array,
-			data: Uint8Array,
-			message: Message
-		) => Promise<void>,
+		private readonly handleMessage: (txn: ReadOnlyTransaction, hash: Uint8Array, message: Message) => Promise<void>,
 		stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>
 	) {
 		this.client = new Client(stream)
@@ -123,7 +118,7 @@ class Driver {
 			assert(equalArrays(sha256(data), id), "message response did not match the request hash")
 			const message = JSON.parse(decoder.decode(data))
 			assert(messageType.is(message), "invalid message")
-			await this.handleMessage(this.txn, id, data, message)
+			await this.handleMessage(this.txn, id, message)
 			await this.txn.insertMessage(id, message)
 		}
 	}

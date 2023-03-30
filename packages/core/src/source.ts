@@ -341,12 +341,7 @@ export class Source extends EventEmitter<SourceEvents> {
 
 		// this is the callback passed to `sync`, invoked with each missing message identified during MST sync.
 		// if handleSyncMessage succeeds, then sync() will automatically insert the message into the MST.
-		const handleSyncMessage = async (
-			txn: ReadOnlyTransaction,
-			hash: Uint8Array,
-			data: Uint8Array,
-			message: Message
-		) => {
+		const handleSyncMessage = async (txn: ReadOnlyTransaction, hash: Uint8Array, message: Message) => {
 			const id = toHex(hash)
 			if (this.options.verbose) {
 				console.log(chalk.green(`[canvas-core] [${this.cid}] Received missing ${message.type} ${id}`))
@@ -363,8 +358,6 @@ export class Source extends EventEmitter<SourceEvents> {
 					throw err
 				}
 			}
-
-			await this.publishMessage(hash, data)
 		}
 
 		const start = performance.now()

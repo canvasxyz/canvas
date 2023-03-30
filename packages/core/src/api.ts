@@ -255,7 +255,7 @@ const WS_KEEPALIVE = 30000
 const WS_KEEPALIVE_LATENCY = 3000
 
 export function handleWebsocketConnection(core: Core, socket: WebSocket) {
-	const id = nanoid()
+	const id = nanoid(8)
 	if (core.options.verbose) {
 		console.log(chalk.green(`[canvas-core] ws-${id}: opened connection`))
 	}
