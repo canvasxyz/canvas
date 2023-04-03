@@ -262,6 +262,16 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket) {
 
 	let lastPing = Date.now()
 
+	const timer = setInterval(() => {
+		if (lastPing < Date.now() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) {
+			console.log(chalk.red(`[canvas-core] ws-${id}: closed connection on timeout`))
+			socket.close()
+		}
+	}, WS_KEEPALIVE)
+
+	const closeListener = () => socket.close()
+	core.addEventListener("close", closeListener)
+
 	const eventListener = <T>(event: CustomEvent<T> | Event) => {
 		console.log(chalk.green(`[canvas-core] ws-${id}: sent ${event.type} event`))
 		if (event instanceof CustomEvent) {
@@ -272,16 +282,25 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket) {
 	}
 
 	const eventTypes: (keyof CoreEvents)[] = ["update", "sync", "connect", "disconnect"]
-
 	for (const type of eventTypes) {
 		core.addEventListener(type, eventListener)
 	}
 
 	const unsubscribe = () => {
+		core.removeEventListener("close", closeListener)
 		for (const type of eventTypes) {
 			core.removeEventListener(type, eventListener)
 		}
 	}
+
+	socket.on("close", () => {
+		if (core.options.verbose) {
+			console.log(`[canvas-core] ws-${id}: closed connection`)
+		}
+
+		clearInterval(timer)
+		unsubscribe()
+	})
 
 	socket.on("message", (data) => {
 		if (Buffer.isBuffer(data) && data.toString() === "ping") {
@@ -291,22 +310,6 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket) {
 			console.log(chalk.red(`[canvas-core] ws-${id}: unrecognized message ${data}`))
 		}
 	})
-
-	socket.on("close", () => {
-		if (core.options.verbose) {
-			console.log(`[canvas-core] ws-${id}: closed connection`)
-		}
-
-		unsubscribe()
-	})
-
-	const timer = setInterval(() => {
-		if (lastPing < Date.now() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) {
-			console.log(chalk.red(`[canvas-core] ws-${id}: closed connection on timeout`))
-			socket.close()
-			clearInterval(timer)
-		}
-	}, WS_KEEPALIVE)
 }
 
 export function setupWebsocketServer(server: http.Server, apiURL: string, core: Core) {
