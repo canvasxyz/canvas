@@ -65,7 +65,8 @@ const Login: React.FC = ({}) => {
 
 	const { sessionAddress, sessionExpiration, login, logout, isLoading, isPending, client } = useSession(
 		chainImplementation,
-		signer
+		signer,
+		{ unchecked: true }
 	)
 
 	const { setClient } = useContext(AppContext)

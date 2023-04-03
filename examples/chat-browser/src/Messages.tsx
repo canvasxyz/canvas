@@ -81,7 +81,7 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 			// Interleave new posts according to updated_at, so if we
 			// receive new posts out-of-order (happens frequently on batch insert)
 			// they won't persist out-of-order
-			let result
+			let result: Post[]
 			if (
 				// check if all posts are ordered
 				(filteredPastPosts.length === 0 && posts.length === 0) ||
