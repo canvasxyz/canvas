@@ -13,7 +13,7 @@
     "@cosmjs/amino": "^0.29.5",
     "@cosmjs/crypto": "^0.29.5",
     "@cosmjs/encoding": "^0.29.5",
-    "@keplr-wallet/types": "^0.11.51",
+    "@keplr-wallet/types": "^0.11.52",
     "@terra-money/feather.js": "^1.0.0-beta.11",
     "@terra-money/wallet-controller": "^3.11.2",
     "ethers": "^5.7.2",
