@@ -16,13 +16,12 @@ import { PEER_ID_FILENAME } from "@canvas-js/core/constants"
 
 import { compileSpec, TestSigner } from "./utils.js"
 
-const { app, appName, spec } = await compileSpec({
-	name: "Test App",
+const { app, spec } = await compileSpec({
 	models: {},
 	actions: { log: ({ message }, {}) => {} },
 })
 
-const signer = new TestSigner(app, appName)
+const signer = new TestSigner(app)
 
 const log = (message: string) => console.log(chalk.blueBright(`[benchmark] ${message}`))
 

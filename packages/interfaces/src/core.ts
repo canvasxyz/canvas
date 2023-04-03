@@ -29,7 +29,6 @@ export interface CoreAPI extends EventEmitter<CoreEvents> {
 export type ApplicationData = {
 	cid: string
 	uri: string
-	appName: string
 	peerId: string | null
 	actions: string[]
 	routes: string[]

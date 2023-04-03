@@ -17,7 +17,6 @@ import { getMessageKey } from "@canvas-js/core/sync"
 import { TestSigner, compileSpec, collect } from "./utils.js"
 
 const MessageBoard = await compileSpec({
-	name: "Test App",
 	models: {
 		posts: { id: "string", content: "string", from: "string", updated_at: "datetime" },
 	},
@@ -30,7 +29,6 @@ const MessageBoard = await compileSpec({
 })
 
 const MessageBoardWithVotes = await compileSpec({
-	name: "Test App 2",
 	models: {
 		posts: { id: "string", content: "string", from: "string", updated_at: "datetime" },
 		votes: {
@@ -61,8 +59,8 @@ const MessageBoardWithVotes = await compileSpec({
 	},
 })
 
-const signer = new TestSigner(MessageBoardWithVotes.app, MessageBoardWithVotes.appName)
-const sourceSigner = new TestSigner(MessageBoard.app, MessageBoard.appName)
+const signer = new TestSigner(MessageBoardWithVotes.app)
+const sourceSigner = new TestSigner(MessageBoard.app)
 
 test("Apply source actions", async (t) => {
 	const core = await Core.initialize({

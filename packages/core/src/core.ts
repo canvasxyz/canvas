@@ -181,7 +181,6 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			peerId,
 			uri: this.app,
 			cid: this.cid.toString(),
-			appName: this.vm.appName,
 			actions: this.vm.actions,
 			routes: Object.keys(this.vm.routes),
 			chains,
@@ -303,17 +302,12 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	}
 
 	private async validateAction(txn: ReadOnlyTransaction, action: Action) {
-		const { timestamp, app, appName, block, chain, chainId } = action.payload
+		const { timestamp, app, block, chain, chainId } = action.payload
 		const fromAddress = action.payload.from
 
 		assert(
 			app === this.app || this.vm.sources.has(app),
 			`action signed for wrong application (invalid app: expected ${this.app}, found ${app})`
-		)
-
-		assert(
-			appName === this.vm.appName || this.vm.sources.has(app),
-			"action signed for wrong application (invalid appName)"
 		)
 
 		// TODO: verify that actions signed for a previous app were valid within that app
@@ -347,20 +341,13 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	}
 
 	private async validateSession(txn: ReadOnlyTransaction, session: Session) {
-		const { app, appName, sessionIssued, block, chain, chainId } = session.payload
+		const { app, sessionIssued, block, chain, chainId } = session.payload
 
 		assert(app === this.app || this.vm.sources.has(app), "session signed for wrong application (app invalid)")
 
-		assert(
-			appName === this.vm.appName || this.vm.sources.has(app),
-			"session signed for wrong application (appName invalid)"
-		)
 		// check the timestamp bounds
 		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
 		assert(sessionIssued < constants.BOUNDS_CHECK_UPPER_LIMIT, "session issued too far in the future")
-
-		// TODO: verify that sessions signed for a previous app were valid within that app,
-		// e.g. that their appName matches
 
 		const { verifySession } = this.getChainImplementation(chain, chainId)
 		await verifySession(session)

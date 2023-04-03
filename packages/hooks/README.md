@@ -44,7 +44,6 @@ function MyApp({}) {
 interface ApplicationData {
 	cid: string
 	uri: string
-	appName: string
 	peerId: string | null
 	actions: string[]
 	routes: string[]

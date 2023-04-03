@@ -27,12 +27,6 @@ export function parseIPFSURI(uri: string): CID {
 	}
 }
 
-export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
-export interface JSONArray extends Array<JSONValue> {}
-export interface JSONObject {
-	[key: string]: JSONValue
-}
-
 export const mapEntries = <K extends string, S, T>(object: Record<K, S>, map: (key: K, value: S) => T) =>
 	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(key as K, value)])) as Record<K, T>
 

@@ -30,7 +30,6 @@ type ActionRecord = {
 	chain: Chain
 	chain_id: ChainId
 	block: string | null
-	app_name: string
 }
 
 type SessionRecord = {
@@ -46,7 +45,6 @@ type SessionRecord = {
 	chain: Chain
 	chain_id: ChainId
 	block: string | null
-	app_name: string
 }
 
 type CustomActionRecord = {
@@ -155,7 +153,6 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 			hash: toBuffer(hash),
 			signature: action.signature,
 			app: action.payload.app,
-			app_name: action.payload.appName,
 			session_address: action.session,
 			from_address: action.payload.from,
 			timestamp: action.payload.timestamp,
@@ -179,7 +176,6 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 			hash: toBuffer(hash),
 			signature: session.signature,
 			app: session.payload.app,
-			app_name: session.payload.appName,
 			from_address: session.payload.from,
 			session_address: session.payload.sessionAddress,
 			session_duration: session.payload.sessionDuration,
@@ -427,7 +423,6 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 			signature: record.signature,
 			payload: {
 				app: record.app,
-				appName: record.app_name,
 				from: record.from_address,
 				sessionAddress: record.session_address,
 				sessionDuration: record.session_duration,
@@ -446,7 +441,6 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 			session: record.session_address,
 			payload: {
 				app: record.app,
-				appName: record.app_name,
 				from: record.from_address,
 				call: record.call,
 				callArgs: JSON.parse(record.call_args) as Record<string, ActionArgument>,
@@ -481,8 +475,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		chain           TEXT    NOT NULL,
     chain_id        TEXT    NOT NULL,
     block           BLOB,
-    app             TEXT    NOT NULL,
-    app_name        TEXT    NOT NULL
+    app             TEXT    NOT NULL
   );`
 
 	private static createSessionsTable = `CREATE TABLE IF NOT EXISTS sessions (
@@ -495,8 +488,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		chain            TEXT    NOT NULL,
     chain_id         TEXT    NOT NULL,
     block            TEXT,
-		app              TEXT    NOT NULL,
-    app_name         TEXT    NOT NULL
+		app              TEXT    NOT NULL
   );`
 
 	private static createCustomActionsTable = `CREATE TABLE IF NOT EXISTS custom_actions (
@@ -508,14 +500,14 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 
 	private static statements = {
 		insertAction: `INSERT INTO actions (
-      hash, signature, session_address, from_address, timestamp, call, call_args, chain, chain_id, block, app, app_name
+      hash, signature, session_address, from_address, timestamp, call, call_args, chain, chain_id, block, app
     ) VALUES (
-      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :chain_id, :block, :app, :app_name
+      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :chain_id, :block, :app
     )`,
 		insertSession: `INSERT INTO sessions (
-      hash, signature, from_address, session_address, session_duration, session_issued, chain, chain_id, block, app, app_name
+      hash, signature, from_address, session_address, session_duration, session_issued, chain, chain_id, block, app
     ) VALUES (
-      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :chain_id, :block, :app, :app_name
+      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :chain_id, :block, :app
     )`,
 		insertCustomAction: `INSERT INTO custom_actions (
 			hash, name, payload, app

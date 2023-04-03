@@ -157,7 +157,6 @@ export function useSession<Signer, DelegatedSigner>(
 			const session = await chainImplementation.signSession(signer, {
 				from: signerAddress,
 				app: data.uri,
-				appName: data.appName,
 				sessionAddress,
 				sessionDuration,
 				sessionIssued,
@@ -210,7 +209,6 @@ export function useSession<Signer, DelegatedSigner>(
 
 			const action = await chainImplementation.signDelegatedAction(sessionSigner, {
 				app: data.uri,
-				appName: data.appName,
 				from: await chainImplementation.getSignerAddress(signer),
 				call,
 				callArgs,
