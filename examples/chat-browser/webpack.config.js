@@ -1,14 +1,14 @@
-const path = require("path");
-const CopyWebpackPlugin = require("copy-webpack-plugin");
+import path from "node:path";
+import CopyWebpackPlugin from "copy-webpack-plugin";
 
-module.exports = {
+export default {
   mode: "development",
   stats: "minimal",
   target: "web",
   devtool: "inline-source-map",
   entry: "./src/index.tsx",
   output: {
-    path: path.resolve(__dirname, "dist"),
+    path: path.resolve("dist"),
     filename: "index.js",
     module: true,
   },
@@ -49,7 +49,7 @@ module.exports = {
     new CopyWebpackPlugin({ patterns: [{ from: "public" }] }),
   ],
   devServer: {
-    static: [path.join(__dirname, "public")],
+    static: [path.resolve("public")],
     hot: true,
   },
 };

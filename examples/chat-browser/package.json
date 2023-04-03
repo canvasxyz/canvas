@@ -2,6 +2,7 @@
   "private": true,
   "name": "@canvas-js/example-chat-browser",
   "version": "0.3.2",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
