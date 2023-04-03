@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { ApplicationData, CoreAPI } from "@canvas-js/interfaces"
 
 import { CanvasContext } from "./CanvasContext.js"
-import { RemoteCoreAPI } from "./api.js"
+import { RemoteCoreAPI } from "./RemoteCoreAPI.js"
 
 export interface CanvasProps {
 	host: null | string | CoreAPI
