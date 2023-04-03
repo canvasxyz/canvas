@@ -21,6 +21,7 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 		options: { verbose?: boolean } = {}
 	): Promise<IndexedDBMessageStore> {
 		assert(directory !== null)
+
 		const db = await openDB(directory, IndexedDBMessageStore.version, {
 			upgrade(database, oldVersion, newVersion, transaction, event) {
 				for (const dbi of [app, ...sources]) {
@@ -32,7 +33,7 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 
 		const mst = await okra.Tree.open(`${directory}/mst`, { dbs: [app, ...sources] })
 
-		const store = new IndexedDBMessageStore(app, sources, db, mst)
+		const store = new IndexedDBMessageStore(app, sources, db, mst, options)
 
 		for (const dbi of [app, ...sources]) {
 			const { hash } = await mst.read((txn) => txn.getRoot(), { dbi })
@@ -48,7 +49,8 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 		private readonly app: string,
 		private readonly sources: Set<string>,
 		private readonly db: IDBPDatabase,
-		private readonly mst: okra.Tree
+		private readonly mst: okra.Tree,
+		private readonly options: { verbose?: boolean }
 	) {
 		super()
 	}
