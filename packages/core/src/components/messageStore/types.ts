@@ -4,6 +4,8 @@ import type { Chain, ChainId, Message, Session, UpdateEventDetail } from "@canva
 export type Node = { level: number; key: Uint8Array | null; hash: Uint8Array; id?: Uint8Array }
 
 export interface ReadOnlyTransaction {
+	readonly uri: string
+
 	getMessage(id: Uint8Array): Promise<Message | null>
 	getSessionByAddress(
 		chain: Chain,
@@ -34,8 +36,8 @@ export interface MessageStore extends EventEmitter<MessageStoreEvents> {
 
 	close(): Promise<void>
 
-	read<T = void>(callback: (txn: ReadOnlyTransaction) => T | Promise<T>, options?: { dbi?: string }): Promise<T>
-	write<T = void>(callback: (txn: ReadWriteTransaction) => T | Promise<T>, options?: { dbi?: string }): Promise<T>
+	read<T = void>(callback: (txn: ReadOnlyTransaction) => T | Promise<T>, options?: { uri?: string }): Promise<T>
+	write<T = void>(callback: (txn: ReadWriteTransaction) => T | Promise<T>, options?: { uri?: string }): Promise<T>
 
 	getMerkleRoots(): Record<string, string>
 }

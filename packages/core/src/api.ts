@@ -1,12 +1,9 @@
-import http from "node:http"
-import stream from "node:stream"
-
-import { CustomEvent } from "@libp2p/interfaces/events"
 import chalk from "chalk"
 import express, { Request, Response } from "express"
-import { getReasonPhrase, StatusCodes } from "http-status-codes"
-import { WebSocket, WebSocketServer } from "ws"
+import { StatusCodes } from "http-status-codes"
+import { WebSocket } from "ws"
 import { nanoid } from "nanoid"
+import { CustomEvent } from "@libp2p/interfaces/events"
 
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 
@@ -104,8 +101,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			}
 		}
 
-		core.addEventListener("message", ({ detail: message }) => {
-			const uri = message.type === "customAction" ? message.app : message.payload.app
+		core.addEventListener("message", ({ detail: { uri, message } }) => {
 			coreMetrics.canvas_messages.inc({ uri, type: message.type })
 		})
 
@@ -310,32 +306,4 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket) {
 			console.log(chalk.red(`[canvas-core] ws-${id}: unrecognized message ${data}`))
 		}
 	})
-}
-
-export function setupWebsocketServer(server: http.Server, apiURL: string, core: Core) {
-	const wss = new WebSocketServer({ noServer: true })
-
-	const { origin, pathname } = new URL(apiURL)
-
-	server.on("upgrade", (request: http.IncomingMessage, socket: stream.Duplex, head: Buffer) => {
-		if (request.url === undefined) {
-			return
-		}
-
-		const url = new URL(request.url, origin)
-		if (url.pathname === pathname) {
-			wss.handleUpgrade(request, socket, head, (socket) => handleWebsocketConnection(core, socket))
-		} else {
-			console.log(chalk.red("[canvas-core] rejecting incoming WS connection at unexpected path"), url.pathname)
-			rejectRequest(socket, StatusCodes.NOT_FOUND)
-		}
-	})
-}
-
-function rejectRequest(reqSocket: stream.Duplex, code: number) {
-	const date = new Date()
-	reqSocket.write(`HTTP/1.1 ${code} ${getReasonPhrase(code)}\r\n`)
-	reqSocket.write(`Date: ${date.toUTCString()}\r\n`)
-	reqSocket.write(`\r\n`)
-	reqSocket.end()
 }

@@ -6,10 +6,11 @@ import type { Chain, ChainId } from "./contracts.js"
 
 export type SyncEventDetail = { uri: string; peer: string; time: number; status: "success" | "failure" }
 export type UpdateEventDetail = { uri: string; root: string | null }
+export type MessageEventDetail = { uri: string; hash: string; message: Message }
 
 export interface CoreEvents {
 	close: Event
-	message: CustomEvent<Message>
+	message: CustomEvent<MessageEventDetail>
 	update: CustomEvent<UpdateEventDetail>
 	sync: CustomEvent<SyncEventDetail>
 	connect: CustomEvent<{ peer: string }>

@@ -243,7 +243,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 				await this.applyMessageInternal(txn, hash, message)
 				await txn.insertMessage(hash, message)
 			},
-			{ dbi: app }
+			{ uri: app }
 		)
 
 		if (this.sources !== null) {

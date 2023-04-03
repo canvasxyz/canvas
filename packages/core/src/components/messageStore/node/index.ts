@@ -349,7 +349,8 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		}
 	}
 
-	private getReadOnlyTransaction = (txn: okra.ReadOnlyTransaction | null): ReadOnlyTransaction => ({
+	private getReadOnlyTransaction = (uri: string, txn: okra.ReadOnlyTransaction | null): ReadOnlyTransaction => ({
+		uri,
 		getSessionByAddress: async (chain, chainId, address) => this.getSessionByAddress(chain, chainId, address),
 		getMessage: async (id) => this.getMessageByHash(id),
 		getNode: async (level, key) => parseNode(assertTxn(txn).getNode(level, key)),
@@ -363,19 +364,19 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 
 	public async read<T>(
 		callback: (txn: ReadOnlyTransaction) => T | Promise<T>,
-		options: { dbi?: string } = {}
+		options: { uri?: string } = {}
 	): Promise<T> {
-		const dbi = options.dbi ?? this.app
-		assert(dbi === this.app || this.sources.has(dbi))
+		const uri = options.uri ?? this.app
+		assert(uri === this.app || this.sources.has(uri))
 		if (this.tree === null) {
-			return await callback(this.getReadOnlyTransaction(null))
+			return await callback(this.getReadOnlyTransaction(uri, null))
 		} else {
-			return await this.tree.read((txn) => callback(this.getReadOnlyTransaction(txn)), { dbi })
+			return await this.tree.read((txn) => callback(this.getReadOnlyTransaction(uri, txn)), { dbi: uri })
 		}
 	}
 
-	private getReadWriteTransaction = (txn: okra.ReadWriteTransaction | null): ReadWriteTransaction => ({
-		...this.getReadOnlyTransaction(txn),
+	private getReadWriteTransaction = (uri: string, txn: okra.ReadWriteTransaction | null): ReadWriteTransaction => ({
+		...this.getReadOnlyTransaction(uri, txn),
 		insertMessage: async (id, message) => {
 			if (message.type === "session") {
 				this.insertSession(id, message)
@@ -396,27 +397,27 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 
 	public async write<T>(
 		callback: (txn: ReadWriteTransaction) => T | Promise<T>,
-		options: { dbi?: string } = {}
+		options: { uri?: string } = {}
 	): Promise<T> {
-		const dbi = options.dbi ?? this.app
-		assert(dbi === this.app || this.sources.has(dbi))
+		const uri = options.uri ?? this.app
+		assert(uri === this.app || this.sources.has(uri))
 
 		let result: T
 		if (this.tree === null) {
-			result = await callback(this.getReadWriteTransaction(null))
+			result = await callback(this.getReadWriteTransaction(uri, null))
 		} else {
 			const root = await this.tree.write(
 				async (txn) => {
-					result = await callback(this.getReadWriteTransaction(txn))
+					result = await callback(this.getReadWriteTransaction(uri, txn))
 					return txn.getRoot()
 				},
-				{ dbi }
+				{ dbi: uri }
 			)
 
-			this.merkleRoots[dbi] = toHex(root.hash)
+			this.merkleRoots[uri] = toHex(root.hash)
 		}
 
-		this.dispatchEvent(new CustomEvent("update", { detail: { uri: dbi, root: this.merkleRoots[dbi] ?? null } }))
+		this.dispatchEvent(new CustomEvent("update", { detail: { uri, root: this.merkleRoots[uri] ?? null } }))
 		return result!
 	}
 

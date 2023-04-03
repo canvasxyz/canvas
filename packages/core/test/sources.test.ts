@@ -189,7 +189,7 @@ test("Build missing MST index on core startup", async (t) => {
 		t.true(fs.statSync(mstPath).isDirectory())
 
 		try {
-			for (const [dbi, entries] of Object.entries(mstEntries)) {
+			for (const [uri, entries] of Object.entries(mstEntries)) {
 				await core.messageStore.read(
 					async (txn) => {
 						for (const { key, value } of entries) {
@@ -197,7 +197,7 @@ test("Build missing MST index on core startup", async (t) => {
 							t.deepEqual(id, value)
 						}
 					},
-					{ dbi }
+					{ uri }
 				)
 			}
 		} finally {

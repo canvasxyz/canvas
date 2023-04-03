@@ -10,7 +10,7 @@ import { nanoid } from "nanoid"
 import { PeerId } from "@libp2p/interface-peer-id"
 import { createEd25519PeerId, exportToProtobuf } from "@libp2p/peer-id-factory"
 
-import { getMessageHash, Message, UpdateEventDetail } from "@canvas-js/interfaces"
+import { UpdateEventDetail } from "@canvas-js/interfaces"
 import { Core } from "@canvas-js/core"
 import { PEER_ID_FILENAME } from "@canvas-js/core/constants"
 

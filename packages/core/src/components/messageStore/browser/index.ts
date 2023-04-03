@@ -79,16 +79,18 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 
 	public async read<T>(
 		callback: (txn: ReadOnlyTransaction) => T | Promise<T>,
-		options: { dbi?: string } = {}
+		options: { uri?: string } = {}
 	): Promise<T> {
-		const dbi = options.dbi ?? this.app
-		assert(dbi === this.app || this.sources.has(dbi))
-		return this.mst.read((txn) => callback(this.getReadOnlyTransaction(txn)), { dbi })
+		const uri = options.uri ?? this.app
+		assert(uri === this.app || this.sources.has(uri))
+		return this.mst.read((txn) => callback(this.getReadOnlyTransaction(uri, txn)), { dbi: uri })
 	}
 
 	private getReadOnlyTransaction = (
+		uri: string,
 		txn: okra.ReadOnlyTransaction<Uint8Array> | okra.ReadWriteTransaction
 	): ReadOnlyTransaction => ({
+		uri,
 		getSessionByAddress: async (chain, chainId, address) => {
 			const id: Uint8Array | undefined = await this.db.get(`${txn.dbi}/sessions`, address)
 			if (id === undefined) {
@@ -117,26 +119,29 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 
 	public async write<T>(
 		callback: (txn: ReadWriteTransaction) => T | Promise<T>,
-		options: { dbi?: string } = {}
+		options: { uri?: string } = {}
 	): Promise<T> {
-		const dbi = options.dbi ?? this.app
-		assert(dbi === this.app || this.sources.has(dbi))
+		const uri = options.uri ?? this.app
+		assert(uri === this.app || this.sources.has(uri))
 		let result: T
 		const root = await this.mst.write(
 			async (txn) => {
-				result = await callback(this.getReadWriteTransaction(txn))
+				result = await callback(this.getReadWriteTransaction(uri, txn))
 				return await txn.getRoot()
 			},
-			{ dbi }
+			{ dbi: uri }
 		)
 
-		this.merkleRoots[dbi] = toHex(root.hash)
-		this.dispatchEvent(new CustomEvent("update", { detail: { uri: dbi, root: null } }))
+		this.merkleRoots[uri] = toHex(root.hash)
+		this.dispatchEvent(new CustomEvent("update", { detail: { uri: uri, root: null } }))
 		return result!
 	}
 
-	private getReadWriteTransaction = (txn: okra.ReadWriteTransaction<Uint8Array>): ReadWriteTransaction => ({
-		...this.getReadOnlyTransaction(txn),
+	private getReadWriteTransaction = (
+		uri: string,
+		txn: okra.ReadWriteTransaction<Uint8Array>
+	): ReadWriteTransaction => ({
+		...this.getReadOnlyTransaction(uri, txn),
 		insertMessage: async (id, message) => {
 			const key = getMessageKey(id, message)
 			await txn.set(key, id)

@@ -145,7 +145,7 @@ export class Source extends EventEmitter<SourceEvents> {
 					await this.applyMessage(txn, hash, message)
 					await txn.insertMessage(hash, message)
 				},
-				{ dbi: this.uri }
+				{ uri: this.uri }
 			)
 		} catch (err) {
 			if (err instanceof Error) {
@@ -168,7 +168,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		try {
-			await this.messageStore.read((txn) => handleIncomingStream(this.cid, txn, stream), { dbi: this.uri })
+			await this.messageStore.read((txn) => handleIncomingStream(this.cid, txn, stream), { uri: this.uri })
 		} catch (err) {
 			if (err instanceof Error) {
 				console.log(chalk.red(this.prefix, `Error handling incoming sync (${err.message})`))
