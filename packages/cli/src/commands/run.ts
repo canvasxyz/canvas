@@ -1,8 +1,9 @@
-import process from "node:process"
-import path from "node:path"
 import fs from "node:fs"
-import assert from "node:assert"
+import path from "node:path"
 import http from "node:http"
+import assert from "node:assert"
+import stream from "node:stream"
+import process from "node:process"
 
 import type { Argv } from "yargs"
 import chalk from "chalk"
@@ -10,14 +11,16 @@ import prompts from "prompts"
 import stoppable from "stoppable"
 import express from "express"
 import cors from "cors"
+import { WebSocketServer } from "ws"
 
 import { Core } from "@canvas-js/core"
-import { getAPI, setupWebsocketServer } from "@canvas-js/core/api"
+import { getAPI, handleWebsocketConnection } from "@canvas-js/core/api"
 
 import * as constants from "@canvas-js/core/constants"
 
 import { getChainImplementations, confirmOrExit, parseSpecArgument, installSpec, CANVAS_HOME } from "../utils.js"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+import { getReasonPhrase, StatusCodes } from "http-status-codes"
 
 export const command = "run <app>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -200,7 +203,8 @@ export async function handler(args: Args) {
 		app.use(getAPI(core, { exposeMetrics }))
 	}
 
-	const apiURL = args.static ? `http://localhost:${args.port}/api` : `http://localhost:${args.port}`
+	const origin = `http://localhost:${args.port}`
+	const apiURL = args.static ? `${origin}/api` : origin
 
 	const server = stoppable(
 		http.createServer(app).listen(args.port, () => {
@@ -218,7 +222,22 @@ export async function handler(args: Args) {
 		0
 	)
 
-	setupWebsocketServer(server, apiURL, core)
+	const wss = new WebSocketServer({ noServer: true })
+
+	const { pathname } = new URL(apiURL)
+	server.on("upgrade", (req: http.IncomingMessage, socket: stream.Duplex, head: Buffer) => {
+		if (req.url === undefined) {
+			return
+		}
+
+		const url = new URL(req.url, origin)
+		if (url.pathname === pathname) {
+			wss.handleUpgrade(req, socket, head, (socket) => handleWebsocketConnection(core, socket))
+		} else {
+			console.log(chalk.red("[canvas-cli] rejecting incoming WS connection at unexpected path"), url.pathname)
+			rejectRequest(socket, StatusCodes.NOT_FOUND)
+		}
+	})
 
 	let stopping = false
 	process.on("SIGINT", async () => {
@@ -239,4 +258,12 @@ export async function handler(args: Args) {
 			console.log("[canvas-cli] Core closed, press Ctrl+C to terminate immediately.")
 		}
 	})
+}
+
+function rejectRequest(reqSocket: stream.Duplex, code: number) {
+	const date = new Date()
+	reqSocket.write(`HTTP/1.1 ${code} ${getReasonPhrase(code)}\r\n`)
+	reqSocket.write(`Date: ${date.toUTCString()}\r\n`)
+	reqSocket.write(`\r\n`)
+	reqSocket.end()
 }
