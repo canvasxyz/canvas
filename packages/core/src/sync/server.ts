@@ -1,5 +1,6 @@
-import type { Uint8ArrayList } from "uint8arraylist"
 import type { Duplex, Source } from "it-stream-types"
+import type { Uint8ArrayList } from "uint8arraylist"
+import { equals } from "uint8arrays/equals"
 import { pipe } from "it-pipe"
 import * as lp from "it-length-prefixed"
 import { CID } from "multiformats"
@@ -10,12 +11,12 @@ import RPC from "@canvas-js/core/rpc/sync"
 import type { ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
 
 import { stringify, assert } from "@canvas-js/core/utils"
-import { equalArrays, fromNode, toKey } from "./utils.js"
+import { fromNode, toKey } from "./utils.js"
 
 export async function handleIncomingStream(
 	cid: CID,
-	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
-	txn: ReadOnlyTransaction
+	txn: ReadOnlyTransaction,
+	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>
 ) {
 	async function* handle(source: Source<Uint8ArrayList>): AsyncIterable<Uint8Array> {
 		for await (const msg of source) {
@@ -54,7 +55,7 @@ async function handleRequest(req: RPC.Request, txn: ReadOnlyTransaction): Promis
 		for (const id of ids) {
 			const message = await txn.getMessage(id)
 			const encodedMessage = encoder.encode(stringify(message))
-			assert(equalArrays(sha256(encodedMessage), id), "internal error - inconsistent message hash")
+			assert(equals(sha256(encodedMessage), id), "internal error - inconsistent message hash")
 			messages.push(encodedMessage)
 		}
 

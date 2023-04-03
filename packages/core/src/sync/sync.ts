@@ -1,96 +1,63 @@
 import { sha256 } from "@noble/hashes/sha256"
 
+import type { CID } from "multiformats"
 import type { Duplex } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
+import { equals } from "uint8arrays/equals"
 
 import { Message } from "@canvas-js/interfaces"
 
 import { messageType } from "@canvas-js/core/codecs"
-import { assert } from "@canvas-js/core/utils"
-import type { ReadWriteTransaction, Node, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
+import { assert, toHex } from "@canvas-js/core/utils"
+import type { Node, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
 
 import { Client } from "./client.js"
-import { equalNodes, equalArrays } from "./utils.js"
+import { equalNodes } from "./utils.js"
 
-export async function sync(
-	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
+type Context = { cid: CID; txn: ReadWriteTransaction; client: Client }
+
+export async function* sync(
+	cid: CID,
 	txn: ReadWriteTransaction,
-	handleMessage: (txn: ReadOnlyTransaction, hash: Uint8Array, message: Message) => Promise<void>
-): Promise<void> {
-	const driver = new Driver(txn, handleMessage, stream)
+	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
+	options: { verbose?: boolean } = {}
+): AsyncGenerator<[hash: Uint8Array, message: Message]> {
+	const client = new Client(stream)
 	try {
-		await driver.sync()
+		const sourceRoot = await client.getRoot()
+		const targetRoot = await txn.getRoot()
+
+		if (sourceRoot.level === 0) {
+			return
+		} else if (sourceRoot.level === targetRoot.level && equals(sourceRoot.hash, targetRoot.hash)) {
+			return
+		} else {
+			if (options.verbose) {
+				console.log(`[canvas-core] [${cid}] [sync] The old merkle root is ${toHex(targetRoot.hash)}`)
+			}
+
+			yield* enter({ cid, txn, client }, targetRoot.level, sourceRoot)
+
+			if (options.verbose) {
+				const { hash: newRoot } = await txn.getRoot()
+				console.log(`[canvas-core] [${cid}] [sync] The new merkle root is ${toHex(newRoot)}`)
+			}
+		}
 	} finally {
-		driver.close()
+		client.end()
 	}
 }
 
-class Driver {
-	private readonly client: Client
-	constructor(
-		private readonly txn: ReadWriteTransaction,
-		private readonly handleMessage: (txn: ReadOnlyTransaction, hash: Uint8Array, message: Message) => Promise<void>,
-		stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>
-	) {
-		this.client = new Client(stream)
-	}
-
-	public close() {
-		this.client.end()
-	}
-
-	public async sync() {
-		const sourceRoot = await this.client.getRoot()
-		const targetRoot = await this.txn.getRoot()
-		if (sourceRoot.level === 0) {
-			return
-		} else if (sourceRoot.level === targetRoot.level && equalArrays(sourceRoot.hash, targetRoot.hash)) {
-			return
-		} else {
-			await this.enter(targetRoot.level, sourceRoot)
-		}
-	}
-
-	private async enter(targetLevel: number, sourceNode: Node) {
-		if (sourceNode.level > targetLevel) {
-			const children = await this.client.getChildren(sourceNode.level, sourceNode.key)
-			if (targetLevel === 0 && sourceNode.level === 1) {
-				const ids: Uint8Array[] = []
-
-				for (const { level, key, id } of children) {
-					if (key === null) {
-						continue
-					}
-
-					assert(level === 0, "unexpected child level")
-					assert(id !== undefined, "expected leaf nodes to have a value")
-					ids.push(id)
-				}
-
-				await this.fetch(ids)
-			} else {
-				for (const sourceChild of children) {
-					await this.enter(targetLevel, sourceChild)
-				}
-			}
-		} else {
-			await this.scan(sourceNode)
-		}
-	}
-
-	private async scan(sourceNode: Node) {
-		const targetNode = await this.txn.seek(sourceNode.level, sourceNode.key)
-		if (targetNode !== null && equalNodes(sourceNode, targetNode)) {
-			return
-		}
-
-		const children = await this.client.getChildren(sourceNode.level, sourceNode.key)
-		if (sourceNode.level > 1) {
-			for (const sourceChild of children) {
-				await this.scan(sourceChild)
-			}
-		} else if (sourceNode.level === 1) {
+async function* enter(
+	{ cid, txn, client }: Context,
+	targetLevel: number,
+	sourceNode: Node
+): AsyncGenerator<[hash: Uint8Array, message: Message]> {
+	if (sourceNode.level > targetLevel) {
+		const children = await client.getChildren(sourceNode.level, sourceNode.key)
+		if (targetLevel === 0 && sourceNode.level === 1) {
 			const ids: Uint8Array[] = []
+
 			for (const { level, key, id } of children) {
 				if (key === null) {
 					continue
@@ -98,28 +65,75 @@ class Driver {
 
 				assert(level === 0, "unexpected child level")
 				assert(id !== undefined, "expected leaf nodes to have a value")
-				const existingRecord = await this.txn.getMessage(id)
-				if (existingRecord === null) {
-					ids.push(id)
-				}
+				ids.push(id)
 			}
 
-			await this.fetch(ids)
+			yield* getMessages({ cid, txn, client }, ids)
+		} else {
+			for (const sourceChild of children) {
+				yield* enter({ cid, txn, client }, targetLevel, sourceChild)
+			}
 		}
+	} else {
+		yield* scan({ cid, txn, client }, sourceNode)
+	}
+}
+
+async function* scan(
+	{ cid, txn, client }: Context,
+	sourceNode: Node
+): AsyncGenerator<[hash: Uint8Array, message: Message]> {
+	const targetNode = await txn.seek(sourceNode.level, sourceNode.key)
+	if (targetNode !== null && equalNodes(sourceNode, targetNode)) {
+		return
 	}
 
-	private async fetch(ids: Uint8Array[]) {
-		const decoder = new TextDecoder()
-
-		const messages = await this.client.getMessages(ids)
-
-		for (const [i, data] of messages.entries()) {
-			const id = ids[i]
-			assert(equalArrays(sha256(data), id), "message response did not match the request hash")
-			const message = JSON.parse(decoder.decode(data))
-			assert(messageType.is(message), "invalid message")
-			await this.handleMessage(this.txn, id, message)
-			await this.txn.insertMessage(id, message)
+	const children = await client.getChildren(sourceNode.level, sourceNode.key)
+	if (sourceNode.level > 1) {
+		for (const sourceChild of children) {
+			yield* scan({ cid, txn, client }, sourceChild)
 		}
+	} else if (sourceNode.level === 1) {
+		const ids: Uint8Array[] = []
+		for (const { level, key, id } of children) {
+			if (key === null) {
+				continue
+			}
+
+			assert(level === 0, "unexpected child level")
+			assert(id !== undefined, "expected leaf nodes to have a value")
+			const existingRecord = await txn.getMessage(id)
+			if (existingRecord === null) {
+				ids.push(id)
+			}
+		}
+
+		yield* getMessages({ cid, txn, client }, ids)
+	}
+}
+
+async function* getMessages(
+	{ txn, client }: Context,
+	ids: Uint8Array[]
+): AsyncGenerator<[hash: Uint8Array, message: Message]> {
+	const decoder = new TextDecoder()
+
+	const messages = await client.getMessages(ids)
+
+	for (const [i, data] of messages.entries()) {
+		const hash = ids[i]
+		assert(equals(sha256(data), hash), "message response did not match the request hash")
+
+		const message = JSON.parse(decoder.decode(data))
+		assert(messageType.is(message), "invalid message")
+
+		// if application fails, we don't insert, but do continue syncing the rest of the messages.
+		try {
+			yield [hash, message]
+		} catch (err) {
+			continue
+		}
+
+		await txn.insertMessage(hash, message)
 	}
 }

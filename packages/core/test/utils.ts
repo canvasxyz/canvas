@@ -205,3 +205,9 @@ export async function collect<T>(iter: AsyncIterable<T>): Promise<T[]> {
 
 	return array
 }
+
+export async function* map<I, O>(iter: AsyncIterable<I>, f: (value: I) => O): AsyncIterable<O> {
+	for await (const value of iter) {
+		yield f(value)
+	}
+}

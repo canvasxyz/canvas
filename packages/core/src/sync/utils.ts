@@ -1,6 +1,8 @@
+import { equals } from "uint8arrays/equals"
+
 import type { Message } from "@canvas-js/interfaces"
-import RPC from "@canvas-js/core/rpc/sync"
 import type { Node } from "@canvas-js/core/components/messageStore"
+import RPC from "@canvas-js/core/rpc/sync"
 
 const timestampBuffer = new ArrayBuffer(8)
 const timestampBufferView = new DataView(timestampBuffer)
@@ -24,14 +26,10 @@ export const getMessageKey = (hash: Uint8Array, message: Message) => {
 	return key
 }
 
-export const equalArrays = (a: Uint8Array, b: Uint8Array) =>
-	a.length === b.length && a.every((byte, i) => byte === b[i])
-
 export const equalKeys = (a: Uint8Array | null, b: Uint8Array | null) =>
-	(a === null && b === null) || (a !== null && b !== null && equalArrays(a, b))
+	(a === null && b === null) || (a !== null && b !== null && equals(a, b))
 
-export const equalNodes = (a: Node, b: Node) =>
-	a.level === b.level && equalKeys(a.key, b.key) && equalArrays(a.hash, b.hash)
+export const equalNodes = (a: Node, b: Node) => a.level === b.level && equalKeys(a.key, b.key) && equals(a.hash, b.hash)
 
 export const toKey = (array: Uint8Array) => (array.length === 0 ? null : array)
 

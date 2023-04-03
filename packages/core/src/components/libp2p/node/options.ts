@@ -31,15 +31,15 @@ export async function getLibp2pOptions(config: {
 }): Promise<Libp2pOptions> {
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
-	if (config.announce === undefined) {
-		console.log(`[canvas-core] No --announce address provided. Using bootstrap servers as public relays.`)
+	if (config.listen === undefined) {
+		console.log(`[canvas-core] No --listen address provided. Using bootstrap servers as public relays.`)
 	}
 
 	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
-	console.log(`[canvas-core] Announcing on`, announce)
+	console.log(`[canvas-core] Announcing on [ ${announce.join(", ")} ]`)
 
 	const listen = config.listen ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit`)
-	console.log(`[canvas-core] Listening on`, listen)
+	console.log(`[canvas-core] Listening on [ ${listen.join(", ")} ]`)
 
 	return {
 		peerId: config.peerId,

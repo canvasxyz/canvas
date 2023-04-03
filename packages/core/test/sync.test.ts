@@ -19,7 +19,7 @@ import { openMessageStore } from "@canvas-js/core/components/messageStore"
 import { stringify } from "@canvas-js/core/utils"
 import { handleIncomingStream, sync } from "@canvas-js/core/sync"
 
-import { TestSigner, compileSpec } from "./utils.js"
+import { TestSigner, compileSpec, collect, map } from "./utils.js"
 
 const { app, cid, appName } = await compileSpec({
 	name: "Test App",
@@ -59,19 +59,18 @@ async function testSync(sourceMessages: Iterable<Message>, targetMessages: Itera
 		}
 	})
 
-	const delta: Message[] = []
 	try {
 		const [source, target] = connect()
-		await targetMessageStore.write(async (targetTxn) => {
-			await sourceMessageStore.read(async (sourceTxn) => {
-				await Promise.all([
-					handleIncomingStream(cid, source, sourceTxn),
-					sync(target, targetTxn, async (txn, hash, message) => void delta.push(message)),
+		return await targetMessageStore.write(async (targetTxn) => {
+			return await sourceMessageStore.read(async (sourceTxn) => {
+				const [_, delta] = await Promise.all([
+					handleIncomingStream(cid, sourceTxn, source),
+					collect(map(sync(cid, targetTxn, target), ([_, message]) => message)),
 				])
+
+				return delta
 			})
 		})
-
-		return delta
 	} finally {
 		await sourceMessageStore.close()
 		await targetMessageStore.close()

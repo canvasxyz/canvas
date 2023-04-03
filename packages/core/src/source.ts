@@ -11,14 +11,14 @@ import type { StreamHandler } from "@libp2p/interface-registrar"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 
 import type { Message } from "@canvas-js/interfaces"
-import type { MessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
+import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
 
-import { sync, handleIncomingStream } from "./sync/index.js"
 import { wait, retry, AbortError, toHex, assert } from "@canvas-js/core/utils"
 import * as constants from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
+import { sync, handleIncomingStream } from "./sync/index.js"
 
-interface SourceOptions {
+export interface SourceOptions {
 	verbose?: boolean
 }
 
@@ -26,7 +26,7 @@ export interface SourceConfig extends SourceOptions {
 	cid: CID
 	messageStore: MessageStore
 	libp2p: Libp2p
-	applyMessage: (txn: ReadOnlyTransaction, hash: Uint8Array, message: Message) => Promise<void>
+	applyMessage: (txn: ReadWriteTransaction, hash: Uint8Array, message: Message) => Promise<void>
 }
 
 interface SourceEvents {
@@ -39,9 +39,11 @@ export class Source extends EventEmitter<SourceEvents> {
 	private readonly cid: CID
 	private readonly messageStore: MessageStore
 	private readonly libp2p: Libp2p
-	private readonly applyMessage: (txn: ReadOnlyTransaction, hash: Uint8Array, message: Message) => Promise<void>
+	private readonly applyMessage: (txn: ReadWriteTransaction, hash: Uint8Array, message: Message) => Promise<void>
 	private readonly options: SourceOptions
-	private applicationPeers: PeerId[] = []
+	private readonly prefix: string
+
+	public applicationPeers: PeerId[] = []
 
 	public constructor(config: SourceConfig) {
 		super()
@@ -51,21 +53,23 @@ export class Source extends EventEmitter<SourceEvents> {
 		this.messageStore = messageStore
 		this.applyMessage = applyMessage
 		this.options = options
+		this.prefix = `[canvas-core] [${this.cid}]`
 	}
 
 	public async start() {
 		this.libp2p.pubsub.subscribe(this.uri)
 		this.libp2p.pubsub.addEventListener("message", this.handleGossipMessage)
 		if (this.options.verbose) {
-			console.log(`[canvas-core] [${this.cid}] Subscribed to pubsub topic ${this.uri}`)
+			console.log(this.prefix, `Subscribed to pubsub topic ${this.uri}`)
 		}
 
 		await this.libp2p.handle(this.protocol, this.streamHandler)
 		if (this.options.verbose) {
-			console.log(`[canvas-core] [${this.cid}] Attached stream handler for protocol ${this.protocol}`)
+			console.log(this.prefix, `Attached stream handler for protocol ${this.protocol}`)
 		}
 
 		this.startSyncService()
+		this.startDiscoveryService()
 
 		const mode = await this.libp2p.dht.getMode()
 		if (mode === "server") {
@@ -78,8 +82,12 @@ export class Source extends EventEmitter<SourceEvents> {
 
 		this.libp2p.pubsub.unsubscribe(this.uri)
 		this.libp2p.pubsub.removeEventListener("message", this.handleGossipMessage)
-
 		await this.libp2p.unhandle(this.protocol)
+
+		if (this.options.verbose) {
+			console.log(this.prefix, `Removed stream handler for protocol ${this.protocol}`)
+			console.log(this.prefix, `Unsubscribed from pubsub topic ${this.uri}`)
+		}
 	}
 
 	public get uri() {
@@ -95,19 +103,17 @@ export class Source extends EventEmitter<SourceEvents> {
 	 */
 	public async publishMessage(hash: Uint8Array, data: Uint8Array) {
 		if (this.options.verbose) {
-			console.log(`[canvas-core] [${this.cid}] Publishing message ${toHex(hash)} to GossipSub...`)
+			console.log(this.prefix, `Publishing message ${toHex(hash)} to GossipSub...`)
 		}
 
 		try {
 			const { recipients } = await this.libp2p.pubsub.publish(this.uri, data)
 			if (this.options.verbose) {
-				console.log(`[canvas-core] [${this.cid}] Published ${toHex(hash)} to ${recipients.length} peers.`)
+				console.log(this.prefix, `Published ${toHex(hash)} to ${recipients.length} peers.`)
 			}
 		} catch (err) {
 			if (err instanceof Error) {
-				console.log(
-					chalk.red(`[canvas-core] [${this.cid}] Failed to publish ${toHex(hash)} to GossipSub (${err.message})`)
-				)
+				console.log(chalk.red(this.prefix, `Failed to publish ${toHex(hash)} to GossipSub (${err.message})`))
 			} else {
 				throw err
 			}
@@ -143,7 +149,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			)
 		} catch (err) {
 			if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-core] [${this.cid}] Error applying GossipSub message (${err.message})`))
+				console.log(chalk.red(this.prefix, `Error applying GossipSub message (${err.message})`))
 			} else {
 				throw err
 			}
@@ -151,24 +157,25 @@ export class Source extends EventEmitter<SourceEvents> {
 	}
 
 	/**
-	 * Handle incoming libp2p streams on the /x/canvas/sync/v1/${cid} protocol.
+	 * Handle incoming libp2p streams on the /x/canvas/sync/v2/${cid} protocol.
 	 * Incoming streams are simple; we essentially just open a read-only
-	 * MST transaction and respond to as many getRoot/getChildren/getMessages
+	 * message store transaction and respond to as many getRoot/getChildren/getMessages
 	 * requests as the client needs to make.
 	 */
 	private streamHandler: StreamHandler = async ({ connection, stream }) => {
 		if (this.options.verbose) {
-			console.log(`[canvas-core] [${this.cid}] Opened incoming stream ${stream.id} from peer ${connection.remotePeer}`)
+			console.log(this.prefix, `Opened incoming stream ${stream.id} from peer ${connection.remotePeer}`)
 		}
 
 		try {
-			await this.messageStore.read((txn) => handleIncomingStream(this.cid, stream, txn), { dbi: this.uri })
+			await this.messageStore.read((txn) => handleIncomingStream(this.cid, txn, stream), { dbi: this.uri })
 		} catch (err) {
 			if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-core] Error handling incoming sync (${err.message})`))
+				console.log(chalk.red(this.prefix, `Error handling incoming sync (${err.message})`))
 				if (this.options.verbose) {
-					console.log(`[canvas-core] [${this.cid}] Aborting incoming stream ${stream.id}`)
+					console.log(this.prefix, `Aborting incoming stream ${stream.id}`)
 				}
+
 				stream.abort(err)
 				return
 			} else {
@@ -177,7 +184,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		if (this.options.verbose) {
-			console.log(`[canvas-core] [${this.cid}] Closed incoming stream ${stream.id}`)
+			console.log(this.prefix, `Closed incoming stream ${stream.id}`)
 		}
 	}
 
@@ -186,21 +193,77 @@ export class Source extends EventEmitter<SourceEvents> {
 	}
 
 	/**
+	 * This starts the "discovery service", an async while loop that calls this.discover()
+	 * every constants.ANNOUNCE_INTERVAL milliseconds
+	 */
+	private async startDiscoveryService() {
+		const prefix = `${this.prefix} [discovery]`
+		console.log(prefix, `Staring discovery service`)
+
+		try {
+			await this.wait(constants.DISCOVERY_DELAY)
+			while (!this.controller.signal.aborted) {
+				await retry(
+					() => this.discover(),
+					(err) => console.log(chalk.yellow(prefix, `Failed to query DHT for provider records (${err.message})`)),
+					{ signal: this.controller.signal, interval: constants.DISCOVERY_RETRY_INTERVAL }
+				)
+
+				await this.wait(constants.DISCOVERY_INTERVAL)
+			}
+		} catch (err) {
+			if (err instanceof AbortError || this.controller.signal.aborted) {
+				console.log(prefix, `Aborting service`)
+			} else if (err instanceof Error) {
+				console.log(chalk.red(prefix, `Service crashed (${err.message})`))
+			} else {
+				throw err
+			}
+		}
+	}
+
+	private async discover(): Promise<void> {
+		const prefix = `${this.prefix} [discovery]`
+		console.log(prefix, `Querying DHT for provider records...`)
+
+		const queryController = new TimeoutController(constants.DISCOVERY_TIMEOUT)
+		const abort = () => queryController.abort()
+		this.controller.signal.addEventListener("abort", abort)
+
+		const queryOptions = { signal: queryController.signal }
+
+		try {
+			const peers: PeerId[] = []
+			for await (const { id } of this.libp2p.contentRouting.findProviders(this.cid, queryOptions)) {
+				if (this.options.verbose) {
+					console.log(prefix, `Found application peer ${id}`)
+				}
+
+				peers.push(id)
+			}
+
+			// TODO: is there anything we should actually do with these?
+			this.applicationPeers = peers
+		} finally {
+			queryController.clear()
+			this.controller.signal.removeEventListener("abort", abort)
+		}
+	}
+
+	/**
 	 * This starts the "announce service", an async while loop that calls this.announce()
 	 * every constants.ANNOUNCE_INTERVAL milliseconds
 	 */
 	private async startAnnounceService() {
-		console.log(`[canvas-core] [${this.cid}] Staring announce service`)
+		const prefix = `${this.prefix} [announce]`
+		console.log(prefix, `Staring service`)
 
 		try {
 			await this.wait(constants.ANNOUNCE_DELAY)
 			while (!this.controller.signal.aborted) {
 				await retry(
 					() => this.announce(),
-					(err) =>
-						console.log(
-							chalk.red(`[canvas-core] [${this.cid}] Failed to publish DHT provider record (${err.message})`)
-						),
+					(err) => console.log(chalk.yellow(prefix, `Failed to publish DHT provider record (${err.message})`)),
 					{ signal: this.controller.signal, interval: constants.ANNOUNCE_RETRY_INTERVAL }
 				)
 
@@ -208,9 +271,9 @@ export class Source extends EventEmitter<SourceEvents> {
 			}
 		} catch (err) {
 			if (err instanceof AbortError) {
-				console.log(`[canvas-core] [${this.cid}] Aborting announce service`)
+				console.log(prefix, `Aborting service`)
 			} else if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-core] [${this.cid}] Announce service crashed (${err.message})`))
+				console.log(chalk.red(prefix, `Service crashed (${err.message})`))
 			} else {
 				throw err
 			}
@@ -221,15 +284,17 @@ export class Source extends EventEmitter<SourceEvents> {
 	 * Publish a provider record to the DHT announcing us as an application peer.
 	 */
 	private async announce(): Promise<void> {
-		console.log(chalk.green(`[canvas-core] [${this.cid}] Publishing DHT provider record...`))
+		const prefix = `${this.prefix} [announce]`
+		console.log(chalk.green(prefix, `Publishing DHT provider record...`))
 
 		const queryController = new TimeoutController(constants.ANNOUNCE_TIMEOUT)
 		const abort = () => queryController.abort()
 		this.controller.signal.addEventListener("abort", abort)
 		try {
 			await this.libp2p.contentRouting.provide(this.cid, { signal: queryController.signal })
-			console.log(chalk.green(`[canvas-core] [${this.cid}] Successfully published DHT provider record.`))
+			console.log(chalk.green(prefix, `Successfully published DHT provider record.`))
 		} finally {
+			queryController.clear()
 			this.controller.signal.removeEventListener("abort", abort)
 		}
 	}
@@ -239,24 +304,18 @@ export class Source extends EventEmitter<SourceEvents> {
 	 * and calls this.sync(peerId) for each of them every constants.SYNC_INTERVAL milliseconds
 	 */
 	private async startSyncService() {
-		console.log(`[canvas-core] [${this.cid}] Staring sync service`)
+		const prefix = `${this.prefix} [sync]`
+		console.log(prefix, `Staring service`)
 
 		try {
 			await this.wait(constants.SYNC_DELAY)
 
 			while (!this.controller.signal.aborted) {
-				this.applicationPeers = await retry(
-					() => this.findApplicationPeers(),
-					(err) =>
-						console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to locate application peers (${err.message})`)),
-					{ signal: this.controller.signal, interval: constants.SYNC_RETRY_INTERVAL }
-				)
+				const peers = this.libp2p.pubsub.getSubscribers(this.uri)
 
-				const peerCount = this.applicationPeers.length
-				console.log(chalk.green(`[canvas-core] [${this.cid}] Found ${peerCount} application peers.`))
+				for (const [i, peer] of peers.entries()) {
+					console.log(chalk.green(prefix, `Initiating sync with ${peer} (${i + 1}/${peers.length})`))
 
-				for (const [i, peer] of this.applicationPeers.entries()) {
-					console.log(chalk.green(`[canvas-core] [${this.cid}] Initiating sync with ${peer} (${i + 1}/${peerCount})`))
 					await this.sync(peer)
 				}
 
@@ -264,43 +323,24 @@ export class Source extends EventEmitter<SourceEvents> {
 			}
 		} catch (err) {
 			if (err instanceof AbortError) {
-				console.log(`[canvas-core] [${this.cid}] Aborting sync service`)
+				console.log(prefix, `Aborting service`)
 			} else if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-core] [${this.cid}] Sync service crashed (${err.message})`))
+				console.log(chalk.red(prefix, `Service crashed (${err.message})`))
 			} else {
 				throw err
 			}
 		}
 	}
 
-	/**
-	 * Locates application peers to sync with.
-	 * There are two ways we could do this: using the DHT with a findProviders query,
-	 * or using the current set of direct GossipSub peers. Right now we use the DHT
-	 * method, which has the added benefit of exposing the GossipSub component to additional
-	 * peers it might not have seen yet.
-	 */
-	private async findApplicationPeers(): Promise<PeerId[]> {
-		console.log(`[canvas-core] [${this.cid}] Querying DHT for application peers...`)
-
-		const queryController = new TimeoutController(constants.FIND_PEERS_TIMEOUT)
+	private async dial(peer: PeerId): Promise<Stream> {
+		const queryController = new TimeoutController(constants.DIAL_PEER_TIMEOUT)
 		const abort = () => queryController.abort()
 		this.controller.signal.addEventListener("abort", abort)
 
 		try {
-			const peers: PeerId[] = []
-			for await (const { id } of this.libp2p.contentRouting.findProviders(this.cid, {
-				signal: queryController.signal,
-			})) {
-				if (id.equals(this.libp2p.peerId)) {
-					continue
-				} else {
-					peers.push(id)
-				}
-			}
-
-			return peers
+			return await this.libp2p.dialProtocol(peer, this.protocol, { signal: queryController.signal })
 		} finally {
+			queryController.clear()
 			this.controller.signal.removeEventListener("abort", abort)
 		}
 	}
@@ -311,105 +351,83 @@ export class Source extends EventEmitter<SourceEvents> {
 	 * They have to independently dial us back to access our MST.
 	 */
 	private async sync(peer: PeerId) {
-		const queryController = new TimeoutController(constants.DIAL_PEER_TIMEOUT)
-		const abort = () => queryController.abort()
-		this.controller.signal.addEventListener("abort", abort)
+		const prefix = `${this.prefix} [sync]`
 
 		let stream: Stream
 		try {
-			stream = await this.libp2p.dialProtocol(peer, this.protocol, { signal: queryController.signal })
+			stream = await this.dial(peer)
 		} catch (err) {
 			if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to dial peer ${peer} (${err.message})`))
+				console.log(chalk.red(prefix, `Failed to dial peer ${peer} (${err.message})`))
 				return
 			} else {
 				throw err
 			}
-		} finally {
-			this.controller.signal.removeEventListener("abort", abort)
+		}
+
+		if (this.options.verbose) {
+			console.log(prefix, `Opened outgoing stream ${stream.id} to ${peer}`)
 		}
 
 		const closeStream = () => stream.close()
 		this.controller.signal.addEventListener("abort", closeStream)
 
-		if (this.options.verbose) {
-			console.log(`[canvas-core] [${this.cid}] Opened outgoing stream ${stream.id} to ${peer}`)
-		}
-
 		let successCount = 0
 		let failureCount = 0
 
-		// this is the callback passed to `sync`, invoked with each missing message identified during MST sync.
-		// if handleSyncMessage succeeds, then sync() will automatically insert the message into the MST.
-		const handleSyncMessage = async (txn: ReadOnlyTransaction, hash: Uint8Array, message: Message) => {
-			const id = toHex(hash)
-			if (this.options.verbose) {
-				console.log(chalk.green(`[canvas-core] [${this.cid}] Received missing ${message.type} ${id}`))
-			}
-
-			try {
-				await this.applyMessage(txn, hash, message)
-				successCount += 1
-			} catch (err) {
-				if (err instanceof Error) {
-					console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to apply ${message.type} ${id} (${err.message})`))
-					failureCount += 1
-				} else {
-					throw err
-				}
-			}
-		}
-
-		const start = performance.now()
 		try {
 			await this.messageStore.write(async (txn) => {
-				if (this.options.verbose) {
-					const { hash: oldRoot } = await txn.getRoot()
-					console.log(`[canvas-core] [${this.cid}] The old merkle root is ${toHex(oldRoot)}`)
+				const generator = sync(this.cid, txn, stream, { verbose: this.options.verbose })
+				for await (const [hash, message] of generator) {
+					try {
+						await this.applyMessage(txn, hash, message)
+						successCount += 1
+					} catch (err) {
+						if (err instanceof Error) {
+							generator.throw(err) // this throws an exeption at the `yield` statement
+							failureCount += 1
+							console.log(chalk.red(prefix, `Failed to apply ${message.type} ${toHex(hash)} (${err.message})`))
+						} else {
+							throw err
+						}
+					}
 				}
-
-				await sync(stream, txn, handleSyncMessage)
-
-				if (this.options.verbose) {
-					const { hash: newRoot } = await txn.getRoot()
-					console.log(`[canvas-core] [${this.cid}] The new merkle root is ${toHex(newRoot)}`)
-				}
-
-				console.log(
-					chalk.green(
-						`[canvas-core] [${this.cid}] Sync with ${peer} completed. Applied ${successCount} new messages with ${failureCount} failures.`
-					)
-				)
-
-				const duration = performance.now() - start
-				this.dispatchEvent(
-					new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "success" } })
-				)
 			})
+
+			console.log(
+				chalk.green(
+					prefix,
+					`Sync with ${peer} completed. Applied ${successCount} new messages with ${failureCount} failures.`
+				)
+			)
+
+			this.dispatchEvent(
+				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "success" } })
+			)
 		} catch (err) {
 			if (err instanceof Error) {
-				const duration = performance.now() - start
 				this.dispatchEvent(
 					new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "failure" } })
 				)
 
-				console.log(chalk.red(`[canvas-core] [${this.cid}] Failed to sync with peer ${peer} (${err.message})`))
+				console.log(chalk.red(prefix, `Failed to sync with peer ${peer} (${err.message})`))
 				stream.abort(err)
-
 				if (this.options.verbose) {
-					console.log(`[canvas-core] [${this.cid}] Aborted outgoing stream ${stream.id}`)
+					console.log(prefix, `Aborted outgoing stream ${stream.id}`)
 				}
 
 				return
 			} else {
 				throw err
 			}
+		} finally {
+			this.controller.signal.removeEventListener("abort", closeStream)
 		}
 
 		stream.close()
 
 		if (this.options.verbose) {
-			console.log(`[canvas-core] [${this.cid}] Closed outgoing stream ${stream.id}`)
+			console.log(prefix, `Closed outgoing stream ${stream.id}`)
 		}
 	}
 }

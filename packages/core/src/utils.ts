@@ -80,9 +80,12 @@ export async function wait(options: { interval: number; signal: AbortSignal }) {
 	})
 }
 
-async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, T>> {
+async function getResult<T>(
+	f: (signal: AbortSignal) => Promise<T>,
+	signal: AbortSignal
+): Promise<IteratorResult<Error, T>> {
 	try {
-		const value = await f()
+		const value = await f(signal)
 		return { done: true, value }
 	} catch (err) {
 		if (err instanceof Error) {
@@ -94,14 +97,14 @@ async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, 
 }
 
 export async function retry<T>(
-	f: () => Promise<T>,
+	f: (signal: AbortSignal) => Promise<T>,
 	handleError: (err: Error, n: number) => void,
 	options: { interval: number; signal: AbortSignal; maxRetries?: number }
 ): Promise<T> {
 	const maxRetries = options.maxRetries ?? Infinity
 
 	for (let n = 0; n < maxRetries; n++) {
-		const result = await getResult(f)
+		const result = await getResult(f, options.signal)
 		if (result.done) {
 			return result.value
 		} else if (options.signal.aborted) {
