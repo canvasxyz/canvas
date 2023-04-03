@@ -299,7 +299,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			signalInvalidType(message)
 		}
 
-		this.dispatchEvent(new CustomEvent("message", { detail: message }))
+		this.dispatchEvent(new CustomEvent("message", { detail: { uri: txn.uri, hash: id, message } }))
 	}
 
 	private async validateAction(txn: ReadOnlyTransaction, action: Action) {
