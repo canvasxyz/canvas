@@ -42,7 +42,7 @@ async function initializeTestCores(parentDirectory: string, ports: number[]): Pr
 				directory,
 				spec,
 				listen: [`/ip4/127.0.0.1/tcp/${port}/ws`],
-				announce: [`/ip4/127.0.0.1/tcp/${port}/ws/${peerId}`],
+				announce: [`/ip4/127.0.0.1/tcp/${port}/ws/p2p/${peerId}`],
 				bootstrapList,
 			})
 		})
