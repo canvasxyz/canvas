@@ -124,12 +124,12 @@
   },
   "devDependencies": {
     "@ava/typescript": "^4.0.0",
-    "@types/node": "^18.15.10",
+    "@types/node": "^18.15.11",
     "ava": "^5.2.0",
     "dotenv": "^16.0.3",
     "nanoid": "^4.0.2",
     "protobufjs-cli": "~1.1.1",
     "stream-to-it": "^0.2.4",
-    "typescript": "^5.0.2"
+    "typescript": "^5.0.3"
   }
 }

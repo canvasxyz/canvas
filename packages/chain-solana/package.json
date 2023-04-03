@@ -17,6 +17,6 @@
   },
   "devDependencies": {
     "@types/bs58": "^4.0.1",
-    "typescript": "^5.0.2"
+    "typescript": "^5.0.3"
   }
 }

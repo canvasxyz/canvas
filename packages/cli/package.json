@@ -37,9 +37,9 @@
   "devDependencies": {
     "@types/cors": "^2.8.13",
     "@types/express": "^4.17.17",
-    "@types/prompts": "^2.4.3",
+    "@types/prompts": "^2.4.4",
     "@types/stoppable": "^1.1.1",
     "@types/yargs": "^17.0.24",
-    "typescript": "^5.0.2"
+    "typescript": "^5.0.3"
   }
 }
