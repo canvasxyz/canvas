@@ -19,9 +19,7 @@ export const Application: React.FC<{}> = ({}) => {
 					<p>Loading...</p>
 				) : data ? (
 					<div>
-						<p>
-							{data.appName} ({data.uri})
-						</p>
+						<p>{data.uri}</p>
 						{data.peerId && <p data-id={data.peerId}>Host: {data.peerId}</p>}
 					</div>
 				) : null}

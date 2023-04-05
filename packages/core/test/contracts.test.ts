@@ -19,8 +19,7 @@ test("contracts (milady balanceOf)", async (t) => {
 		return
 	}
 
-	const { app, spec, appName } = await compileSpec({
-		name: "Test App",
+	const { app, spec } = await compileSpec({
 		models: {},
 		actions: {
 			async verify({}, { contracts, from }) {
@@ -49,7 +48,7 @@ test("contracts (milady balanceOf)", async (t) => {
 		offline: true,
 	})
 
-	const signer = new TestSigner(app, appName, chainImplementation)
+	const signer = new TestSigner(app, chainImplementation)
 
 	const action = await signer.sign("verify", {})
 	await t.throwsAsync(core.apply(action), { message: "balance is zero!" })

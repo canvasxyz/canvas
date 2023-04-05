@@ -10,7 +10,6 @@ import { verifyTypedData } from "ethers/lib/utils.js"
 
 import {
 	ActionArgument,
-	ActionContext,
 	ActionPayload,
 	ContractMetadata,
 	Model,
@@ -40,6 +39,8 @@ import {
 } from "./utils.js"
 import { validateCanvasSpec } from "./validate.js"
 import { CustomActionDefinition, Exports, disposeExports } from "./exports.js"
+
+type ActionContext = Omit<ActionPayload, "call" | "callArgs">
 
 interface VMOptions {
 	verbose?: boolean
@@ -114,7 +115,6 @@ export class VM {
 		return result
 	}
 
-	public readonly appName: string
 	public readonly models: Record<string, Model>
 	public readonly actions: string[]
 	public readonly customActionSchemaName: string | null
@@ -149,8 +149,6 @@ export class VM {
 		this.actionHandles = exports.actionHandles
 		this.customAction = exports.customAction
 		this.sourceHandles = exports.sourceHandles
-
-		this.appName = exports.name || "Canvas"
 
 		// Generate public fields that are derived from the passed in arguments
 		this.sources = new Set(Object.keys(this.sourceHandles))
@@ -311,10 +309,10 @@ export class VM {
 			verifyTypedData: context.newFunction(
 				"verifyTypedData",
 				(domainHandle, typesHandle, valueHandle, signatureHandle) => {
-					const domain = domainHandle.consume(context.dump)
-					const types = typesHandle.consume(context.dump)
-					const value = valueHandle.consume(context.dump)
-					const signature = signatureHandle.consume(context.dump)
+					const domain = context.dump(domainHandle)
+					const types = context.dump(typesHandle)
+					const value = context.dump(valueHandle)
+					const signature = context.dump(signatureHandle)
 					return context.newString(verifyTypedData(domain, types, value, signature))
 				}
 			),
@@ -330,7 +328,6 @@ export class VM {
 		this.contractsHandle.dispose()
 
 		disposeExports({
-			name: this.appName,
 			actionHandles: this.actionHandles,
 			contractMetadata: this.contractMetadata,
 			customAction: this.customAction,

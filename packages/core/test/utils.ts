@@ -62,16 +62,13 @@ function compileActionHandlers<Models extends Record<string, Model>>(actions: Re
 }
 
 export async function compileSpec<Models extends Record<string, Model>>(exports: {
-	name: string
 	models: Models
 	actions: Record<string, ActionHandler<Models>>
 	routes?: Record<string, (params: Record<string, string>, db: RouteContext) => Query>
 	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
 	sources?: Record<string, Record<string, ActionHandler<Models>>>
-}): Promise<{ app: string; cid: CID; spec: string; appName: string }> {
-	const { name, models, actions, routes, contracts, sources } = exports
-
-	const appName = name || "Canvas App"
+}): Promise<{ app: string; cid: CID; spec: string }> {
+	const { models, actions, routes, contracts, sources } = exports
 
 	const actionEntries = compileActionHandlers(actions)
 
@@ -83,7 +80,6 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	})
 
 	const lines = [
-		`export const name = ${JSON.stringify(appName)};`,
 		`export const models = ${JSON.stringify(models, null, "\t")};`,
 		`export const actions = {\n${actionEntries.join(",\n")}};`,
 	]
@@ -107,7 +103,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 
 	const spec = lines.join("\n")
 	const cid = await Hash.of(spec)
-	return { app: `ipfs://${cid}`, cid: CID.parse(cid), spec, appName }
+	return { app: `ipfs://${cid}`, cid: CID.parse(cid), spec }
 }
 
 export class TestSigner {
@@ -116,7 +112,6 @@ export class TestSigner {
 
 	constructor(
 		readonly uri: string,
-		readonly appName: string,
 		readonly chainImplementation: EthereumChainImplementation = new EthereumChainImplementation()
 	) {}
 
@@ -124,7 +119,6 @@ export class TestSigner {
 		const actionPayload: ActionPayload = {
 			from: this.wallet.address,
 			app: this.uri,
-			appName: this.appName,
 			call,
 			callArgs,
 			timestamp: this.timestamp++,
@@ -157,7 +151,6 @@ export class TestSessionSigner {
 			sessionIssued: this.timestamp++,
 			from: this.signer.wallet.address,
 			app: this.signer.uri,
-			appName: this.signer.appName,
 			chain: "ethereum",
 			chainId: "1",
 			block: null,
@@ -177,7 +170,6 @@ export class TestSessionSigner {
 		const actionPayload: ActionPayload = {
 			from: this.signer.wallet.address,
 			app: this.signer.uri,
-			appName: this.signer.appName,
 			call,
 			callArgs,
 			timestamp: this.timestamp++,

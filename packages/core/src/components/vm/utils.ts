@@ -1,16 +1,11 @@
 import type { ethers } from "ethers"
 
 import { isFail, QuickJSContext, QuickJSHandle, VmCallResult } from "quickjs-emscripten"
+import { JSONValue } from "@canvas-js/interfaces"
 import { signalInvalidType, assert } from "@canvas-js/core/utils"
 
 export type ContractFunctionArgument = string | boolean | number | bigint
 export type ContractFunctionResult = string | boolean | number | bigint | ethers.BigNumber
-
-export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
-export interface JSONArray extends Array<JSONValue> {}
-export interface JSONObject {
-	[key: string]: JSONValue
-}
 
 const contextCacheMap = new WeakMap<QuickJSContext, Record<string, QuickJSHandle>>()
 

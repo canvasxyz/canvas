@@ -14,7 +14,6 @@ const jsonStableStringify = configure({ circularValue: Error, bigint: false, det
 export const actionDataFields = {
 	Message: [
 		{ name: "app", type: "string" },
-		{ name: "appName", type: "string" },
 		{ name: "block", type: "string" },
 		{ name: "call", type: "string" },
 		{ name: "callArgs", type: "string" },
@@ -32,7 +31,7 @@ type ActionPayloadSignable = Omit<ActionPayload, "callArgs"> & { callArgs: strin
  */
 export function getActionSignatureData(payload: ActionPayload): SignatureData<ActionPayloadSignable> {
 	const domain = {
-		name: payload.appName,
+		name: payload.app,
 	}
 
 	// Rewrite fields with custom serializations. EIP-712 does not
@@ -56,7 +55,6 @@ export function getActionSignatureData(payload: ActionPayload): SignatureData<Ac
 export const sessionDataFields = {
 	Message: [
 		{ name: "app", type: "string" },
-		{ name: "appName", type: "string" },
 		{ name: "block", type: "string" },
 		{ name: "chain", type: "string" },
 		{ name: "chainId", type: "string" },
@@ -74,7 +72,7 @@ type SignatureData<PayloadType> = [TypedDataDomain, Record<string, TypedDataFiel
  */
 export function getSessionSignatureData(payload: SessionPayload): SignatureData<SessionPayload> {
 	const domain = {
-		name: payload.appName,
+		name: payload.app,
 	}
 
 	// Rewrite fields with custom serializations. EIP-712 does not

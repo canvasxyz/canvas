@@ -21,8 +21,7 @@ import { handleIncomingStream, sync } from "@canvas-js/core/sync"
 
 import { TestSigner, compileSpec, collect, map } from "./utils.js"
 
-const { app, cid, appName } = await compileSpec({
-	name: "Test App",
+const { app, cid } = await compileSpec({
 	models: {},
 	actions: { log: ({ message }, {}) => console.log(message) },
 })
@@ -46,13 +45,17 @@ async function testSync(sourceMessages: Iterable<Message>, targetMessages: Itera
 	fs.mkdirSync(sourceDirectory)
 	fs.mkdirSync(targetDirectory)
 
-	const sourceMessageStore = await openMessageStore(app, sourceDirectory)
-	const targetMessageStore = await openMessageStore(app, targetDirectory)
+	const [sourceMessageStore, targetMessageStore] = await Promise.all([
+		openMessageStore(app, sourceDirectory),
+		openMessageStore(app, targetDirectory),
+	])
+
 	await sourceMessageStore.write(async (txn) => {
 		for (const message of sourceMessages) {
 			await txn.insertMessage(sha256(stringify(message)), message)
 		}
 	})
+
 	await targetMessageStore.write(async (txn) => {
 		for (const message of targetMessages) {
 			await txn.insertMessage(sha256(stringify(message)), message)
@@ -79,7 +82,7 @@ async function testSync(sourceMessages: Iterable<Message>, targetMessages: Itera
 	}
 }
 
-const signer = new TestSigner(app, appName)
+const signer = new TestSigner(app)
 
 test("sync two tiny MSTs", async (t) => {
 	const a = await signer.sign("log", { message: "a" })

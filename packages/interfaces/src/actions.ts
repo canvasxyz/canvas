@@ -23,7 +23,6 @@ export type Action = {
 	type: "action"
 	payload: {
 		app: string
-		appName: string
 		from: string
 		call: string
 		callArgs: Record<string, ActionArgument>
