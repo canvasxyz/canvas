@@ -46,7 +46,7 @@ export async function signSessionPayload(
 	return `${domain}:${nonce}:${signature}`
 }
 
-const signaturePattern = /^([A-Za-z0-9\-._~!$&'()*+,;=]+):([A-Za-z0-9]+):(0x[A-Fa-f0-9]+)$/
+const signaturePattern = /^(.+):([A-Za-z0-9]+):(0x[A-Fa-f0-9]+)$/
 
 export async function verifySessionSignature(payload: SessionPayload, signature: string): Promise<void> {
 	const signaturePatternMatch = signaturePattern.exec(signature)
