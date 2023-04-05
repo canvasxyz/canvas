@@ -7,6 +7,7 @@ import { Client, useSession } from "@canvas-js/hooks"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import { ErrorMessage } from "./ErrorMessage"
+import { ChainImplementation } from "@canvas-js/interfaces"
 
 export const Connect: React.FC<{ client: Client | null; setClient: (client: Client | null) => void }> = ({
 	client,
@@ -65,9 +66,10 @@ const Login: React.FC<{ setClient: (client: Client | null) => void }> = ({ setCl
 	const { chain } = useNetwork()
 	const provider = useProvider<ethers.providers.JsonRpcProvider>()
 
-	const chainImplementation = useMemo(() => {
-		return new EthereumChainImplementation(chain?.id.toString() ?? "1", provider)
-	}, [chain?.id, provider])
+	const [chainImplementation, setChainImplementation] = useState<ChainImplementation | null>(null)
+	useEffect(() => {
+		setChainImplementation(new EthereumChainImplementation(chain?.id ?? 1, window.location.host, provider))
+	}, [])
 
 	const { sessionAddress, sessionExpiration, login, logout, isLoading, isPending, client } = useSession(
 		chainImplementation,
