@@ -30,7 +30,7 @@ export const useConnectOneStep = ({
 	const provider = useProvider<ethers.providers.JsonRpcProvider>()
 
 	// canvas login state
-	const chainImplementation = new EthereumChainImplementation(chain?.id.toString(), provider)
+	const chainImplementation = new EthereumChainImplementation(chain?.id ?? 1, window.location.host, provider)
 	// const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
 	const { login, logout, isLoading, isPending, client } = useSession(chainImplementation, signer)
 
