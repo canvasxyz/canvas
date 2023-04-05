@@ -75,7 +75,6 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 			app: "ipfs://QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
 			block: null,
 			chain: chainImplementation.chain,
-			chainId: chainImplementation.chainId,
 			from,
 			sessionAddress,
 			sessionDuration: 1,
@@ -98,7 +97,6 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 			app: "ipfs://QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
 			block: null,
 			chain: chainImplementation.chain,
-			chainId: chainImplementation.chainId,
 			from,
 			sessionAddress,
 			sessionDuration: 1,
@@ -127,9 +125,9 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 			callArgs: {},
 			block: null,
 			chain: chainImplementation.chain,
-			chainId: chainImplementation.chainId,
 			timestamp: 10000000,
 		}
+
 		const out = await chainImplementation.signAction(signer, actionPayload)
 		await chainImplementation.verifyAction(out)
 		t.pass()
@@ -147,9 +145,9 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 			callArgs: {},
 			block: null,
 			chain: chainImplementation.chain,
-			chainId: chainImplementation.chainId,
 			timestamp: 10000000,
 		}
+
 		const out = await chainImplementation.signAction(signer, actionPayload)
 		out.payload.from = "something else "
 		await t.throwsAsync(async () => {
@@ -170,7 +168,6 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 			callArgs: {},
 			block: null,
 			chain: chainImplementation.chain,
-			chainId: chainImplementation.chainId,
 			timestamp: 10000000,
 		}
 		const out = await chainImplementation.signDelegatedAction(delegatedSigner, actionPayload)

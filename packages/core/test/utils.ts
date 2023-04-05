@@ -6,8 +6,6 @@ import type {
 	Action,
 	ActionArgument,
 	ActionPayload,
-	Chain,
-	ChainId,
 	Model,
 	Query,
 	RouteContext,
@@ -65,7 +63,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	models: Models
 	actions: Record<string, ActionHandler<Models>>
 	routes?: Record<string, (params: Record<string, string>, db: RouteContext) => Query>
-	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
+	contracts?: Record<string, { chain: string; address: string; abi: string[] }>
 	sources?: Record<string, Record<string, ActionHandler<Models>>>
 }): Promise<{ app: string; cid: CID; spec: string }> {
 	const { models, actions, routes, contracts, sources } = exports
@@ -122,8 +120,7 @@ export class TestSigner {
 			call,
 			callArgs,
 			timestamp: this.timestamp++,
-			chain: "ethereum",
-			chainId: "1",
+			chain: this.chainImplementation.chain,
 			block: null,
 		}
 
@@ -151,8 +148,7 @@ export class TestSessionSigner {
 			sessionIssued: this.timestamp++,
 			from: this.signer.wallet.address,
 			app: this.signer.uri,
-			chain: "ethereum",
-			chainId: "1",
+			chain: this.signer.chainImplementation.chain,
 			block: null,
 		}
 
@@ -173,8 +169,7 @@ export class TestSessionSigner {
 			call,
 			callArgs,
 			timestamp: this.timestamp++,
-			chain: "ethereum",
-			chainId: "1",
+			chain: this.signer.chainImplementation.chain,
 			block: null,
 		}
 

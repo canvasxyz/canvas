@@ -1,5 +1,3 @@
-import type { Chain, ChainId } from "@canvas-js/interfaces"
-
 import { getCanvasSessionKey } from "./utils.js"
 
 export type SessionObject = { app: string; sessionPrivateKey: string; expiration: number }
@@ -13,8 +11,8 @@ function isSessionObject(obj: any): obj is SessionObject {
 	)
 }
 
-export function getSessionObject(chain: Chain, chainId: ChainId, signerAddress: string): SessionObject | null {
-	const sessionKey = getCanvasSessionKey(chain, chainId, signerAddress)
+export function getSessionObject(chain: string, signerAddress: string): SessionObject | null {
+	const sessionKey = getCanvasSessionKey(chain, signerAddress)
 	const item = localStorage.getItem(sessionKey)
 	if (item === null) {
 		return null
@@ -36,12 +34,12 @@ export function getSessionObject(chain: Chain, chainId: ChainId, signerAddress: 
 	return sessionObject
 }
 
-export function setSessionObject(chain: Chain, chainId: ChainId, signerAddress: string, sessionObject: SessionObject) {
-	const sessionKey = getCanvasSessionKey(chain, chainId, signerAddress)
+export function setSessionObject(chain: string, signerAddress: string, sessionObject: SessionObject) {
+	const sessionKey = getCanvasSessionKey(chain, signerAddress)
 	localStorage.setItem(sessionKey, JSON.stringify(sessionObject))
 }
 
-export function removeSessionObject(chain: Chain, chainId: ChainId, signerAddress: string) {
-	const sessionKey = getCanvasSessionKey(chain, chainId, signerAddress)
+export function removeSessionObject(chain: string, signerAddress: string) {
+	const sessionKey = getCanvasSessionKey(chain, signerAddress)
 	localStorage.removeItem(sessionKey)
 }

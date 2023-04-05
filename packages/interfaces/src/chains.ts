@@ -1,4 +1,3 @@
-import type { Chain, ChainId } from "./contracts.js"
 import type { Action, ActionPayload } from "./actions.js"
 import type { Session, SessionPayload } from "./sessions.js"
 
@@ -15,8 +14,7 @@ import type { Session, SessionPayload } from "./sessions.js"
  * like those using the Cosmos SDK, returns a block number.
  */
 export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown> {
-	chain: Chain
-	chainId: ChainId
+	chain: string
 
 	hasProvider(): boolean
 

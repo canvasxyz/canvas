@@ -173,14 +173,12 @@ export class VM {
 				console.log(`[canvas-vm] Skipping contract setup`)
 			}
 		} else {
-			for (const [name, { chain, chainId, address, abi }] of Object.entries(this.contractMetadata)) {
-				const implementation = chains.find(
-					(implementation) => implementation.chain === chain && implementation.chainId === chainId
-				)
+			for (const [name, { chain, address, abi }] of Object.entries(this.contractMetadata)) {
+				const implementation = chains.find((implementation) => implementation.chain === chain)
 
-				assert(implementation !== undefined, `no chain implmentation for ${chain}:${chainId}`)
-				assert(implementation instanceof EthereumChainImplementation)
-				assert(implementation.provider !== undefined, `no ethers provider for ${chain}:${chainId}`)
+				assert(implementation !== undefined, `no chain implmentation for ${chain}`)
+				assert(implementation instanceof EthereumChainImplementation, "only ethereum contracts are currently supported")
+				assert(implementation.provider !== undefined, `no provider for ${chain}`)
 				const contract = new ethers.Contract(address, abi, implementation.provider)
 
 				// functionNames[name] = abi.map((abi) => contract.interface.getFunctionName(abi))

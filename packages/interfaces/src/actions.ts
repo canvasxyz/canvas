@@ -1,7 +1,6 @@
 import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import type { Chain } from "./contracts.js"
 import { stringify } from "./stringify.js"
 
 /**
@@ -21,18 +20,17 @@ export type ActionArgument = null | boolean | number | string
  */
 export type Action = {
 	type: "action"
+	signature: string
+	session: string | null
 	payload: {
 		app: string
+		chain: string
 		from: string
 		call: string
 		callArgs: Record<string, ActionArgument>
-		chain: Chain
-		chainId: string
-		block: string | null
 		timestamp: number
+		block: string | null
 	}
-	session: string | null
-	signature: string
 }
 
 export type ActionPayload = Action["payload"]

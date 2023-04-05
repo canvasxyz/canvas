@@ -1,5 +1,5 @@
 import { EventEmitter } from "@libp2p/interfaces/events"
-import type { Chain, ChainId, Message, Session, UpdateEventDetail } from "@canvas-js/interfaces"
+import type { Message, Session, UpdateEventDetail } from "@canvas-js/interfaces"
 
 export type Node = { level: number; key: Uint8Array | null; hash: Uint8Array; id?: Uint8Array }
 
@@ -7,11 +7,7 @@ export interface ReadOnlyTransaction {
 	readonly uri: string
 
 	getMessage(id: Uint8Array): Promise<Message | null>
-	getSessionByAddress(
-		chain: Chain,
-		chainId: ChainId,
-		address: string
-	): Promise<[hash: string | null, session: Session | null]>
+	getSessionByAddress(chain: string, address: string): Promise<[hash: string | null, session: Session | null]>
 
 	getRoot(): Promise<Node>
 	getNode(level: number, key: Uint8Array | null): Promise<Node>

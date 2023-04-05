@@ -31,8 +31,7 @@ test("contracts (milady balanceOf)", async (t) => {
 		},
 		contracts: {
 			milady: {
-				chain: "ethereum",
-				chainId: "1",
+				chain: "eip155:1",
 				address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
 				abi: ["function balanceOf(address owner) view returns (uint balance)"],
 			},
@@ -40,7 +39,7 @@ test("contracts (milady balanceOf)", async (t) => {
 	})
 
 	const provider = new ethers.providers.JsonRpcProvider(ETH_CHAIN_RPC)
-	const chainImplementation = new EthereumChainImplementation(ETH_CHAIN_ID, provider)
+	const chainImplementation = new EthereumChainImplementation(parseInt(ETH_CHAIN_ID), "localhost", provider)
 	const core = await Core.initialize({
 		spec,
 		directory: null,

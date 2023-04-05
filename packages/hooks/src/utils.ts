@@ -1,7 +1,6 @@
-import { Chain, ChainId, ModelValue } from "@canvas-js/interfaces"
+import { ModelValue } from "@canvas-js/interfaces"
 
-export const getCanvasSessionKey = (chain: Chain, chainId: ChainId, address: string) =>
-	`CANVAS_SESSION:${chain}:${chainId}:${address}`
+export const getCanvasSessionKey = (chain: string, address: string) => `CANVAS_SESSION:${chain}:${address}`
 
 export function compareObjects(a: Record<string, ModelValue>, b: Record<string, ModelValue>) {
 	for (const key in a) {

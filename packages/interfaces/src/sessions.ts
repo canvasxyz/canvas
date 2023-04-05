@@ -1,7 +1,6 @@
 import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import { Chain } from "./contracts.js"
 import { stringify } from "./stringify.js"
 
 /**
@@ -12,17 +11,16 @@ import { stringify } from "./stringify.js"
  */
 export type Session = {
 	type: "session"
+	signature: string
 	payload: {
 		app: string
-		block: string | null
-		chain: Chain
-		chainId: string
+		chain: string
 		from: string
 		sessionAddress: string
 		sessionDuration: number
 		sessionIssued: number
+		block: string | null
 	}
-	signature: string
 }
 
 export type SessionPayload = Session["payload"]
