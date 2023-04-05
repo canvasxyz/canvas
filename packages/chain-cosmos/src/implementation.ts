@@ -121,7 +121,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 	}
 
 	private async verifyDirectAction(payload: ActionPayload, signature: string): Promise<boolean> {
-		let isValid: boolean = false
+		let isValid = false
 		if (signature.slice(0, 2) === "0x") {
 			// eth
 			const message = Buffer.from(sortedStringify(payload))
@@ -169,13 +169,11 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 		const address = ethers.utils.computeAddress(publicKey)
 		const lowercaseAddress = address.toLowerCase()
 
-		let isValid: boolean = false
 		try {
-			isValid = from === encodeEthAddress(this.bech32Prefix, lowercaseAddress)
+			return from === encodeEthAddress(this.bech32Prefix, lowercaseAddress)
 		} catch (e) {
-			isValid = false
+			return false
 		}
-		return isValid
 	}
 
 	private async verifyCosmosSession(session: Session): Promise<boolean> {
@@ -195,7 +193,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 
 		// compare the signature against the directly signed and signdoc digests
 		const secpSignature = Secp256k1Signature.fromFixedLength(decodedSignature)
-		let isValid: boolean = false
+		let isValid = false
 		isValid ||= await Secp256k1.verifySignature(secpSignature, signDocDigest, pubkey)
 		isValid ||= await Secp256k1.verifySignature(secpSignature, digest, pubkey)
 		return isValid
@@ -204,7 +202,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 	async verifySession(session: Session): Promise<void> {
 		const { signature } = session
 
-		let isValid: boolean = false
+		let isValid = false
 		if (signature.slice(0, 2) === "0x") {
 			const message = Buffer.from(sortedStringify(session.payload))
 			isValid = await this.verifyEthSign(message, session.signature, session.payload.from)
@@ -275,7 +273,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 			throw new Error("Direct signAction called with address that doesn't match action.payload.from")
 		}
 
-		let signature: string = ""
+		let signature: string | undefined = undefined
 		if (isEvmMetaMaskSigner(signer)) {
 			const dataToSign = serializeActionPayload(payload)
 			signature = await signer.eth.personal.sign(dataToSign, address, "")
