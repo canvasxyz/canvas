@@ -77,13 +77,16 @@ export function getChainImplementations(args?: (string | number)[]): ChainImplem
 	const chains: ChainImplementation[] = []
 
 	if (args !== undefined) {
-		for (let i = 0; i < args.length; i += 3) {
-			const [chain, url] = args.slice(i, i + 3)
+		for (let i = 0; i < args.length; i += 2) {
+			const [chain, url] = args.slice(i, i + 2)
 			assert(typeof chain === "string" && typeof url === "string")
 
-			if (chain.startsWith("eip155:")) {
+			const namespaceIndex = chain.indexOf(":")
+			assert(namespaceIndex > 0, "invalid CAIP-2 chain reference")
+			const namespace = chain.slice(0, namespaceIndex)
+			if (namespace === "eip155") {
 				const provider = new ethers.providers.JsonRpcProvider(url)
-				const chainId = parseInt(chain.slice(chain.indexOf(":")))
+				const chainId = parseInt(chain.slice(namespaceIndex + 1))
 				assert(!isNaN(chainId), "invalid chainId")
 				chains.push(new EthereumChainImplementation(chainId, "localhost", provider))
 			} else {
