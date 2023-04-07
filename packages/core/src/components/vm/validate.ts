@@ -6,9 +6,9 @@ import { isLeft } from "fp-ts/lib/Either.js"
 import { ipfsURIPattern } from "@canvas-js/core/utils"
 import { modelsType } from "@canvas-js/core/codecs"
 
-import { unwrapObject } from "./utils.js"
+import { unwrapArray, unwrapObject } from "./utils.js"
 
-import { Exports, disposeExports } from "./exports.js"
+import { Exports } from "./exports.js"
 
 function disposeObject(obj: Record<string, QuickJSHandle>) {
 	for (const value of Object.values(obj)) {
@@ -19,8 +19,9 @@ function disposeObject(obj: Record<string, QuickJSHandle>) {
 export function validateCanvasSpec(
 	context: QuickJSContext,
 	moduleHandle: QuickJSHandle
-): { exports: Exports | null; errors: string[]; warnings: string[] } {
+): { exports: Exports; errors: string[]; warnings: string[] } {
 	const {
+		chains: chainsHandle,
 		models: modelsHandle,
 		routes: routesHandle,
 		actions: actionsHandle,
@@ -44,6 +45,7 @@ export function validateCanvasSpec(
 	}
 
 	const exports: Exports = {
+		chains: [],
 		models: {},
 		contractMetadata: {},
 		routeHandles: {},
@@ -55,6 +57,15 @@ export function validateCanvasSpec(
 	for (const [name, handle] of Object.entries(rest)) {
 		warnings.push(`extraneous export \`${name}\``)
 		handle.dispose()
+	}
+
+	// validate chains
+	if (chainsHandle === undefined) {
+		exports.chains.push("eip155:1") // ethereum mainnet
+	} else {
+		for (const chainHandle of chainsHandle.consume((handle) => unwrapArray(context, handle))) {
+			exports.chains.push(chainHandle.consume(context.getString))
+		}
 	}
 
 	// validate models
@@ -224,14 +235,9 @@ export function validateCanvasSpec(
 		}
 	}
 
-	if (errors.length > 0) {
-		disposeExports(exports)
-		return {
-			exports: null,
-			errors: errors.flatMap((err) => (err.message ? [err.message] : [])),
-			warnings,
-		}
-	} else {
-		return { exports, errors: [], warnings }
+	return {
+		exports,
+		errors: errors.flatMap((err) => (err.message ? [err.message] : [])),
+		warnings,
 	}
 }

@@ -11,16 +11,16 @@ import { verifyTypedData } from "ethers/lib/utils.js"
 import {
 	ActionArgument,
 	ActionPayload,
-	ContractMetadata,
 	Model,
 	ModelValue,
 	Query,
 	ChainImplementation,
+	ContractMetadata,
 } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import { ApplicationError } from "@canvas-js/core/errors"
-import { mapEntries, signalInvalidType, toHex, assert } from "@canvas-js/core/utils"
+import { mapEntries, signalInvalidType, toHex, assert, getCustomActionSchemaName } from "@canvas-js/core/utils"
 import * as constants from "@canvas-js/core/constants"
 import type { Effect } from "@canvas-js/core/components/modelStore"
 
@@ -38,7 +38,7 @@ import {
 	recursiveWrapJSONObject,
 } from "./utils.js"
 import { validateCanvasSpec } from "./validate.js"
-import { CustomActionDefinition, Exports, disposeExports } from "./exports.js"
+import { Exports, disposeExports } from "./exports.js"
 
 type ActionContext = Omit<ActionPayload, "call" | "callArgs">
 
@@ -66,15 +66,31 @@ export class VM {
 
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
 
-		if (exports === null) {
-			// return errors
-			throw Error(errors.join("\n"))
-		} else {
+		try {
+			if (errors.length > 0) {
+				throw Error(errors.join("\n"))
+			}
+
+			// validate the presence of the declared chains
+			for (const chain of exports.chains) {
+				if (chains.find((impl) => impl.chain === chain)) {
+					continue
+				} else {
+					throw new Error(`${app} requires a chain implementation for ${chain}`)
+				}
+			}
+
 			for (const warning of warnings) {
 				console.log(chalk.yellow(`[canvas-vm] Warning: ${warning}`))
 			}
 
-			return new VM(app, runtime, context, chains, options, exports)
+			return new VM(app, runtime, context, exports, chains, options)
+		} catch (err) {
+			disposeExports(exports)
+			disposeCachedHandles(context)
+			context.dispose()
+			runtime.dispose()
+			throw err
 		}
 	}
 
@@ -86,7 +102,7 @@ export class VM {
 
 		const cid = await Hash.of(spec)
 
-		let moduleHandle: QuickJSHandle
+		let moduleHandle: QuickJSHandle | undefined = undefined
 		try {
 			moduleHandle = await loadModule(context, `ipfs://${cid}`, spec)
 		} catch (err) {
@@ -98,35 +114,18 @@ export class VM {
 		}
 
 		const { exports, errors, warnings } = validateCanvasSpec(context, moduleHandle)
-
-		let result: { valid: boolean; errors: string[]; warnings: string[] }
-		if (exports === null) {
-			result = { valid: false, errors, warnings }
-		} else {
-			// dispose handles in the validation object
-			disposeExports(exports)
-			result = { valid: true, errors: [], warnings }
-		}
-
+		disposeExports(exports)
 		disposeCachedHandles(context)
 		context.dispose()
 		runtime.dispose()
-
-		return result
+		return { valid: errors.length === 0, errors, warnings }
 	}
 
-	public readonly models: Record<string, Model>
-	public readonly actions: string[]
 	public readonly customActionSchemaName: string | null
-	public readonly customAction: CustomActionDefinition | null
-	public readonly routes: Record<string, string[]>
-	public readonly contracts: Record<string, ethers.Contract>
-	public readonly contractMetadata: Record<string, ContractMetadata>
 	public readonly sources: Set<string>
 
-	private readonly routeHandles: Record<string, QuickJSHandle>
-	private readonly actionHandles: Record<string, QuickJSHandle>
-	private readonly sourceHandles: Record<string, Record<string, QuickJSHandle>>
+	private readonly routeParameters: Record<string, string[]>
+	private readonly contracts: Record<string, ethers.Contract>
 	private readonly contractsHandle: QuickJSHandle
 	private readonly dbHandle: QuickJSHandle
 
@@ -139,42 +138,33 @@ export class VM {
 		public readonly app: string,
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
-		chains: ChainImplementation[],
-		options: VMOptions,
-		exports: Exports
+		private readonly exports: Exports,
+		private readonly chains: ChainImplementation[],
+		private readonly options: VMOptions
 	) {
-		this.models = exports.models
-		this.contractMetadata = exports.contractMetadata
-		this.routeHandles = exports.routeHandles
-		this.actionHandles = exports.actionHandles
-		this.customAction = exports.customAction
-		this.sourceHandles = exports.sourceHandles
-
 		// Generate public fields that are derived from the passed in arguments
-		this.sources = new Set(Object.keys(this.sourceHandles))
-		this.actions = Object.keys(this.actionHandles)
+		this.sources = new Set(Object.keys(this.exports.sourceHandles))
 
 		this.contracts = {}
 
-		// should this just be done inside validate?
-		let schemaName: string | null = null
 		// compile the custom action schema
-		if (this.customAction) {
-			schemaName = `customActionSchema:${this.app}:${this.customAction.name}`
-			addSchema(this.customAction.schema, schemaName)
+		this.customActionSchemaName = null
+		if (this.exports.customAction !== null) {
+			const { name, schema } = this.exports.customAction
+			this.customActionSchemaName = getCustomActionSchemaName(this.app, name)
+			addSchema(schema, this.customActionSchemaName)
 		}
-		this.customActionSchemaName = schemaName
 
 		// add this back for ethers@v6
 		// const functionNames: Record<string, string[]> = {}
 
-		if (options.unchecked) {
-			if (options.verbose) {
+		if (this.options.unchecked) {
+			if (this.options.verbose) {
 				console.log(`[canvas-vm] Skipping contract setup`)
 			}
 		} else {
-			for (const [name, { chain, address, abi }] of Object.entries(this.contractMetadata)) {
-				const implementation = chains.find((implementation) => implementation.chain === chain)
+			for (const [name, { chain, address, abi }] of Object.entries(this.exports.contractMetadata)) {
+				const implementation = this.chains.find((implementation) => implementation.chain === chain)
 
 				assert(implementation !== undefined, `no chain implmentation for ${chain}`)
 				assert(implementation instanceof EthereumChainImplementation, "only ethereum contracts are currently supported")
@@ -186,18 +176,18 @@ export class VM {
 			}
 		}
 
-		this.routes = {}
+		this.routeParameters = {}
 		const routeParameterPattern = /:([a-zA-Z0-9_]+)/g
-		for (const name of Object.keys(this.routeHandles)) {
-			this.routes[name] = []
+		for (const name of Object.keys(this.exports.routeHandles)) {
+			this.routeParameters[name] = []
 			for (const [_, param] of name.matchAll(routeParameterPattern)) {
-				this.routes[name].push(param)
+				this.routeParameters[name].push(param)
 			}
 		}
 
 		this.dbHandle = wrapObject(
 			context,
-			mapEntries(this.models, (name, model) =>
+			mapEntries(this.exports.models, (name, model) =>
 				wrapObject(context, {
 					set: context.newFunction("set", (idHandle, valuesHandle) => {
 						assert(this.effects !== null, "internal error: this.effects is null")
@@ -236,7 +226,7 @@ export class VM {
 
 							const args = this.unwrapContractFunctionArguments(argHandles)
 
-							if (options.verbose) {
+							if (this.options.verbose) {
 								const call = `${contractName}.${functionName}(${args.map((arg) => JSON.stringify(arg)).join(", ")})`
 								console.log(`[canvas-vm] contract: ${chalk.green(call)} at block (${block})`)
 							}
@@ -282,14 +272,14 @@ export class VM {
 				assert(context.typeof(urlHandle) === "string", "url must be a string")
 				const url = context.getString(urlHandle)
 				const deferred = context.newPromise()
-				if (options.verbose) {
+				if (this.options.verbose) {
 					console.log("[canvas-vm] fetch:", url)
 				}
 
 				fetch(url)
 					.then((res) => res.text())
 					.then((data) => {
-						if (options.verbose) {
+						if (this.options.verbose) {
 							console.log(`[canvas-vm] fetch OK: ${url} (${data.length} bytes)`)
 						}
 
@@ -325,18 +315,39 @@ export class VM {
 		this.dbHandle.dispose()
 		this.contractsHandle.dispose()
 
-		disposeExports({
-			actionHandles: this.actionHandles,
-			contractMetadata: this.contractMetadata,
-			customAction: this.customAction,
-			models: this.models,
-			routeHandles: this.routeHandles,
-			sourceHandles: this.sourceHandles,
-		})
-
+		disposeExports(this.exports)
 		disposeCachedHandles(this.context)
 		this.context.dispose()
 		this.runtime.dispose()
+	}
+
+	public getChains(): string[] {
+		return this.exports.chains
+	}
+
+	public getModels(): Record<string, Model> {
+		return this.exports.models
+	}
+
+	public getRoutes(): string[] {
+		return Object.keys(this.exports.routeHandles)
+	}
+
+	public getRouteParameters(route: string): string[] {
+		const parameters = this.routeParameters[route]
+		if (parameters === undefined) {
+			throw new Error("Route not found")
+		} else {
+			return parameters
+		}
+	}
+
+	public getActions(): string[] {
+		return Object.keys(this.exports.actionHandles)
+	}
+
+	public getContracts(): Record<string, ContractMetadata> {
+		return this.exports.contractMetadata
 	}
 
 	/**
@@ -347,7 +358,7 @@ export class VM {
 		params: Record<string, string | number>,
 		execute: (sql: string | Query) => Record<string, ModelValue>[]
 	): Promise<Record<string, ModelValue>[]> {
-		const routeHandle = this.routeHandles[route]
+		const routeHandle = this.exports.routeHandles[route]
 		assert(routeHandle !== undefined, "invalid route")
 
 		const argHandles = wrapObject(
@@ -392,11 +403,11 @@ export class VM {
 
 	private getActionHandle(app: string, call: string): QuickJSHandle {
 		if (app === this.app) {
-			const handle = this.actionHandles[call]
+			const handle = this.exports.actionHandles[call]
 			assert(handle !== undefined, "invalid action call")
 			return handle
 		} else {
-			const source = this.sourceHandles[app]
+			const source = this.exports.sourceHandles[app]
 			assert(source !== undefined, `no source with URI ${app}`)
 			assert(source[call] !== undefined, "invalid source call")
 			return source[call]
@@ -452,9 +463,13 @@ export class VM {
 		try {
 			await this.queue.add(() => {
 				assert(this.effects !== null && this.customActionContext !== null)
-				assert(!!this.customAction)
+				assert(this.exports.customAction !== null)
 				const payloadHandle = recursiveWrapJSONObject(this.context, payload)
-				return this.executeInternal(typeof hash === "string" ? hash : toHex(hash), this.customAction.fn, payloadHandle)
+				return this.executeInternal(
+					typeof hash === "string" ? hash : toHex(hash),
+					this.exports.customAction.fn,
+					payloadHandle
+				)
 			})
 		} finally {
 			this.effects = null

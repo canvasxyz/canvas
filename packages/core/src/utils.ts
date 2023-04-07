@@ -27,6 +27,8 @@ export function parseIPFSURI(uri: string): CID {
 	}
 }
 
+export const getCustomActionSchemaName = (app: string, name: string) => `${app}?name=${name}`
+
 export const mapEntries = <K extends string, S, T>(object: Record<K, S>, map: (key: K, value: S) => T) =>
 	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(key as K, value)])) as Record<K, T>
 
