@@ -43,10 +43,10 @@ export async function signSessionPayload(
 	const message = createSiweMessage(payload, domain, nonce)
 
 	const signature = await signer.signMessage(message)
-	return `${domain}:${nonce}:${signature}`
+	return `${domain}/${nonce}/${signature}`
 }
 
-const signaturePattern = /^(.+):([A-Za-z0-9]+):(0x[A-Fa-f0-9]+)$/
+const signaturePattern = /^(.+)\/([A-Za-z0-9]+)\/(0x[A-Fa-f0-9]+)$/
 
 export async function verifySessionSignature(payload: SessionPayload, signature: string): Promise<void> {
 	const signaturePatternMatch = signaturePattern.exec(signature)
