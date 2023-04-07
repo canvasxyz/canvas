@@ -5,7 +5,7 @@ import Database, * as sqlite from "better-sqlite3"
 import { CustomEvent, EventEmitter } from "@libp2p/interfaces/events"
 import * as okra from "@canvas-js/okra-node"
 
-import type { Action, Session, ActionArgument, Chain, ChainId, CustomAction, Message } from "@canvas-js/interfaces"
+import type { Action, Session, ActionArgument, CustomAction, Message } from "@canvas-js/interfaces"
 
 import { mapEntries, toHex, stringify, signalInvalidType, assert } from "@canvas-js/core/utils"
 import { MESSAGE_DATABASE_FILENAME, MST_DIRECTORY_NAME } from "@canvas-js/core/constants"
@@ -27,8 +27,7 @@ type ActionRecord = {
 	timestamp: number
 	call: string
 	call_args: string
-	chain: Chain
-	chain_id: ChainId
+	chain: string
 	block: string | null
 }
 
@@ -42,8 +41,7 @@ type SessionRecord = {
 	session_address: string
 	session_duration: number
 	session_issued: number
-	chain: Chain
-	chain_id: ChainId
+	chain: string
 	block: string | null
 }
 
@@ -159,7 +157,6 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 			call: action.payload.call,
 			call_args: stringify(action.payload.callArgs),
 			chain: action.payload.chain,
-			chain_id: action.payload.chainId,
 			block: action.payload.block,
 		}
 
@@ -182,7 +179,6 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 			session_issued: session.payload.sessionIssued,
 			block: session.payload.block,
 			chain: session.payload.chain,
-			chain_id: session.payload.chainId,
 		}
 
 		this.statements.insertSession.run(record)
@@ -208,11 +204,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		return this.merkleRoots
 	}
 
-	private getSessionByAddress(
-		chain: Chain,
-		chainId: ChainId,
-		address: string
-	): [hash: string | null, session: Session | null] {
+	private getSessionByAddress(chain: string, address: string): [hash: string | null, session: Session | null] {
 		const record: undefined | SessionRecord = this.statements.getSessionByAddress.get({
 			session_address: address,
 		})
@@ -347,7 +339,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 
 	private getReadOnlyTransaction = (uri: string, txn: okra.ReadOnlyTransaction | null): ReadOnlyTransaction => ({
 		uri,
-		getSessionByAddress: async (chain, chainId, address) => this.getSessionByAddress(chain, chainId, address),
+		getSessionByAddress: async (chain, address) => this.getSessionByAddress(chain, address),
 		getMessage: async (id) => this.getMessageByHash(id),
 		getNode: async (level, key) => parseNode(assertTxn(txn).getNode(level, key)),
 		getRoot: async () => parseNode(assertTxn(txn).getRoot()),
@@ -398,7 +390,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		const uri = options.uri ?? this.app
 		assert(uri === this.app || this.sources.has(uri))
 
-		let result: T
+		let result: T | undefined = undefined
 		if (this.tree === null) {
 			result = await callback(this.getReadWriteTransaction(uri, null))
 		} else {
@@ -428,7 +420,6 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 				sessionDuration: record.session_duration,
 				sessionIssued: record.session_issued,
 				chain: record.chain,
-				chainId: record.chain_id,
 				block: record.block,
 			},
 		}
@@ -446,7 +437,6 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 				callArgs: JSON.parse(record.call_args) as Record<string, ActionArgument>,
 				timestamp: record.timestamp,
 				chain: record.chain,
-				chainId: record.chain_id,
 				block: record.block,
 			},
 		}
@@ -473,7 +463,6 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
     call            TEXT    NOT NULL,
     call_args       BLOB    NOT NULL,
 		chain           TEXT    NOT NULL,
-    chain_id        TEXT    NOT NULL,
     block           BLOB,
     app             TEXT    NOT NULL
   );`
@@ -486,7 +475,6 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
     session_duration INTEGER NOT NULL,
     session_issued   INTEGER NOT NULL,
 		chain            TEXT    NOT NULL,
-    chain_id         TEXT    NOT NULL,
     block            TEXT,
 		app              TEXT    NOT NULL
   );`
@@ -500,14 +488,14 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 
 	private static statements = {
 		insertAction: `INSERT INTO actions (
-      hash, signature, session_address, from_address, timestamp, call, call_args, chain, chain_id, block, app
+      hash, signature, session_address, from_address, timestamp, call, call_args, chain, block, app
     ) VALUES (
-      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :chain_id, :block, :app
+      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :block, :app
     )`,
 		insertSession: `INSERT INTO sessions (
-      hash, signature, from_address, session_address, session_duration, session_issued, chain, chain_id, block, app
+      hash, signature, from_address, session_address, session_duration, session_issued, chain, block, app
     ) VALUES (
-      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :chain_id, :block, :app
+      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :block, :app
     )`,
 		insertCustomAction: `INSERT INTO custom_actions (
 			hash, name, payload, app

@@ -2,7 +2,6 @@ import type { EventEmitter } from "@libp2p/interfaces/events"
 
 import type { Message } from "./messages.js"
 import type { ModelValue } from "./models.js"
-import type { Chain, ChainId } from "./contracts.js"
 
 export type SyncEventDetail = { uri: string; peer: string; time: number; status: "success" | "failure" }
 export type UpdateEventDetail = { uri: string; root: string | null }
@@ -32,7 +31,7 @@ export type ApplicationData = {
 	peerId: string | null
 	actions: string[]
 	routes: string[]
-	chains: Partial<Record<Chain, ChainId[]>>
+	chains: string[]
 	peers: { id: string; protocols?: string[]; addresses?: string[] }[]
 	merkleRoots: Record<string, string>
 }

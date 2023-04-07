@@ -1,7 +1,5 @@
-import fs from "node:fs"
-import path from "node:path"
-
 import type { Argv } from "yargs"
+
 import chalk from "chalk"
 import * as t from "io-ts"
 
@@ -47,8 +45,8 @@ export async function handler(args: Args) {
 		console.log(actions.map((name) => `${name}({ ...args })\n`).join(""))
 
 		console.log(chalk.green("===== contracts ====="))
-		Object.entries(contractMetadata).forEach(([name, { chain, chainId, address, abi }]) => {
-			console.log(`${name}: ${address} on ${chain} ${chainId}`)
+		Object.entries(contractMetadata).forEach(([name, { chain, address, abi }]) => {
+			console.log(`${name}: ${address} on ${chain}`)
 			abi.forEach((line) => console.log(`- ${line}`))
 		})
 		console.log("")

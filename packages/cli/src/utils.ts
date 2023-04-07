@@ -12,7 +12,7 @@ import type { ChainImplementation } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import * as constants from "@canvas-js/core/constants"
-import { chainType } from "@canvas-js/core/codecs"
+import { assert } from "@canvas-js/core/utils"
 
 export const CANVAS_HOME = process.env.CANVAS_HOME ?? path.resolve(os.homedir(), ".canvas")
 
@@ -77,29 +77,27 @@ export function getChainImplementations(args?: (string | number)[]): ChainImplem
 	const chains: ChainImplementation[] = []
 
 	if (args !== undefined) {
-		for (let i = 0; i < args.length; i += 3) {
-			const [chain, chainId, url] = args.slice(i, i + 3)
-			if (!chainType.is(chain)) {
-				console.log(chalk.red(`[canvas-cli] Invalid chain "${chain}", should be a ${chainType.name}`))
-				process.exit(1)
-			} else if (typeof chainId !== "number") {
-				console.log(chalk.red(`Invalid chain id "${chainId}", should be e.g. 1`))
-				process.exit(1)
-			} else if (typeof url !== "string") {
-				console.log(chalk.red(`Invalid chain rpc "${url}", should be a url`))
-				process.exit(1)
-			}
+		for (let i = 0; i < args.length; i += 2) {
+			const [chain, url] = args.slice(i, i + 2)
+			assert(typeof chain === "string" && typeof url === "string")
 
-			if (chain == "ethereum") {
+			const namespaceIndex = chain.indexOf(":")
+			assert(namespaceIndex > 0, "invalid CAIP-2 chain reference")
+			const namespace = chain.slice(0, namespaceIndex)
+			if (namespace === "eip155") {
 				const provider = new ethers.providers.JsonRpcProvider(url)
-				chains.push(new EthereumChainImplementation(chainId.toString(), provider))
+				const chainId = parseInt(chain.slice(namespaceIndex + 1))
+				assert(!isNaN(chainId), "invalid chainId")
+				chains.push(new EthereumChainImplementation(chainId, "localhost", provider))
 			} else {
-				console.log(`'chain' value (${chain}) was not 'eth', all other RPCs are currently unsupported`)
+				console.log(`'chain' value (${chain}) was not 'eip155', all other RPCs are currently unsupported`)
 			}
 		}
 	} else if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
+		const chainId = parseInt(process.env.ETH_CHAIN_ID)
+		assert(!isNaN(chainId), "invalid chainId")
 		const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_CHAIN_RPC)
-		chains.push(new EthereumChainImplementation(process.env.ETH_CHAIN_ID, provider))
+		chains.push(new EthereumChainImplementation(chainId, "localhost", provider))
 		console.log(
 			`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
 		)

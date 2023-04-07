@@ -2,15 +2,7 @@ import solw3 from "@solana/web3.js"
 import nacl from "tweetnacl"
 import bs58 from "bs58"
 
-import type {
-	Action,
-	ActionPayload,
-	Chain,
-	ChainId,
-	ChainImplementation,
-	Session,
-	SessionPayload,
-} from "@canvas-js/interfaces"
+import type { Action, ActionPayload, ChainImplementation, Session, SessionPayload } from "@canvas-js/interfaces"
 import { serializeActionPayload, serializeSessionPayload } from "@canvas-js/interfaces"
 
 const getActionSignatureData = (payload: ActionPayload): Uint8Array => {
@@ -24,22 +16,22 @@ const getSessionSignatureData = (payload: SessionPayload): Uint8Array => {
 // most wallets expose a Phantom-like API and use their injected `window.solana` objects directly:
 // https://github.com/solana-labs/wallet-adapter/commit/5a274e0a32c55d4376d63a802f0d512947b087af
 interface SolanaWindowSigner {
-	isPhantom?: boolean
-	publicKey?: { toBytes(): Uint8Array }
-	isConnected: boolean
+	publicKey?: solw3.PublicKey
 	signMessage(message: Uint8Array): Promise<{ signature: Uint8Array }>
-	connect(): Promise<void>
-	disconnect(): Promise<void>
-	_handleDisconnect(...args: unknown[]): unknown
 }
 
 /**
  * Solana chain export.
  */
 export class SolanaChainImplementation implements ChainImplementation<SolanaWindowSigner, solw3.Keypair> {
-	public readonly chain: Chain = "solana"
-
-	constructor(public readonly chainId: ChainId = "mainnet") {}
+	public readonly chain: string
+	constructor(public readonly genesisHash: string = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d") {
+		// https://github.com/ChainAgnostic/namespaces/blob/main/solana/caip2.md
+		// > Blockchains in the "solana" namespace are validated by their genesis hash...
+		// > These genesis hashes require no transformations to be used as conformant CAIP-2
+		// > references aside from concatenating their first 32 characters.
+		this.chain = `solana:${genesisHash.slice(0, 32)}`
+	}
 
 	hasProvider() {
 		return false
@@ -66,18 +58,28 @@ export class SolanaChainImplementation implements ChainImplementation<SolanaWind
 	}
 
 	getSignerAddress = async (signer: SolanaWindowSigner) => {
-		if (signer.publicKey === null || signer.publicKey === undefined) throw new Error("Wallet not connected")
+		if (signer.publicKey === undefined) {
+			throw new Error("Wallet not connected")
+		}
+
 		return bs58.encode(signer.publicKey.toBytes())
 	}
+
 	getDelegatedSignerAddress = async (wallet: solw3.Keypair) => bs58.encode(wallet.publicKey.toBytes())
 
 	async signSession(signer: SolanaWindowSigner, payload: SessionPayload): Promise<Session> {
-		if (signer.publicKey === null || signer.publicKey === undefined) throw new Error("Wallet not connected")
-		const address = bs58.encode(signer.publicKey.toBytes())
-		const message = getSessionSignatureData(payload)
-		const { signature: signatureBytes } = await signer.signMessage(message)
+		if (signer.publicKey === null || signer.publicKey === undefined) {
+			throw new Error("Wallet not connected")
+		}
 
-		return { type: "session", payload, signature: bs58.encode(signatureBytes) }
+		const address = bs58.encode(signer.publicKey.toBytes())
+		if (address !== payload.from) {
+			throw new Error("Signer address did not match payload.from")
+		}
+
+		const message = getSessionSignatureData(payload)
+		const { signature } = await signer.signMessage(message)
+		return { type: "session", payload, signature: bs58.encode(signature) }
 	}
 
 	async signAction(signer: SolanaWindowSigner, payload: ActionPayload): Promise<Action> {
@@ -86,23 +88,21 @@ export class SolanaChainImplementation implements ChainImplementation<SolanaWind
 		if (address !== payload.from) {
 			throw new Error("Signer address did not match payload.from")
 		}
-		const message = getActionSignatureData(payload)
-		const { signature: signatureBytes } = await signer.signMessage(message)
 
-		return { type: "action", payload: payload, session: null, signature: bs58.encode(signatureBytes) }
+		const message = getActionSignatureData(payload)
+		const { signature } = await signer.signMessage(message)
+		return { type: "action", payload, signature: bs58.encode(signature), session: null }
 	}
 
-	async signDelegatedAction(wallet: solw3.Keypair, payload: ActionPayload) {
+	async signDelegatedAction(wallet: solw3.Keypair, payload: ActionPayload): Promise<Action> {
 		const message = getActionSignatureData(payload)
-		const signatureBytes = nacl.sign.detached(message, wallet.secretKey)
-		const signature = bs58.encode(signatureBytes)
-		const action: Action = {
+		const signature = nacl.sign.detached(message, wallet.secretKey)
+		return {
 			type: "action",
-			payload: payload,
+			payload,
+			signature: bs58.encode(signature),
 			session: bs58.encode(wallet.publicKey.toBytes()),
-			signature,
 		}
-		return action
 	}
 
 	importDelegatedSigner = (secretKey: string) => solw3.Keypair.fromSecretKey(bs58.decode(secretKey))

@@ -61,7 +61,7 @@ const Login: React.FC = ({}) => {
 
 	const chainImplementation = useMemo(() => {
 		console.log("chain", chain)
-		return new EthereumChainImplementation(chain?.id.toString() ?? "1", provider)
+		return new EthereumChainImplementation(chain?.id ?? 1, window.location.host, provider)
 	}, [chain?.id, provider])
 
 	const { sessionAddress, sessionExpiration, login, logout, isLoading, isPending, client } = useSession(

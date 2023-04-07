@@ -91,7 +91,7 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 		txn: okra.ReadOnlyTransaction<Uint8Array> | okra.ReadWriteTransaction
 	): ReadOnlyTransaction => ({
 		uri,
-		getSessionByAddress: async (chain, chainId, address) => {
+		getSessionByAddress: async (chain, address) => {
 			const id: Uint8Array | undefined = await this.db.get(`${txn.dbi}/sessions`, address)
 			if (id === undefined) {
 				return [null, null]
@@ -123,7 +123,7 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 	): Promise<T> {
 		const uri = options.uri ?? this.app
 		assert(uri === this.app || this.sources.has(uri))
-		let result: T
+		let result: T | undefined = undefined
 		const root = await this.mst.write(
 			async (txn) => {
 				result = await callback(this.getReadWriteTransaction(uri, txn))

@@ -3,12 +3,10 @@ import { QuickJSContext, QuickJSHandle } from "quickjs-emscripten"
 import * as t from "io-ts"
 import { isLeft } from "fp-ts/lib/Either.js"
 
-import { Chain } from "@canvas-js/interfaces"
-
 import { ipfsURIPattern } from "@canvas-js/core/utils"
-import { chainType, chainIdType, modelsType } from "@canvas-js/core/codecs"
+import { modelsType } from "@canvas-js/core/codecs"
 
-import { unwrapObject, call } from "./utils.js"
+import { unwrapObject } from "./utils.js"
 
 import { Exports, disposeExports } from "./exports.js"
 
@@ -196,20 +194,10 @@ export function validateCanvasSpec(
 			for (const [name, contractHandle] of Object.entries(contractHandles)) {
 				assertLogError(contractNamePattern.test(name), "invalid contract name")
 				const contract = contractHandle.consume(context.dump)
-				const { chain, chainId, address, abi, ...rest } = contract
-
-				if (
-					assertLogError(
-						chainType.is(chain),
-						`Contract '${name}' is invalid: chain ${JSON.stringify(chain)} is invalid`
-					) &&
-					assertLogError(
-						chainIdType.is(chainId),
-						`Contract '${name}' is invalid: chain id ${JSON.stringify(chainId)} is invalid`
-					)
-				) {
-					exports.contractMetadata[name] = { chain: chain as Chain, chainId, address, abi }
-				}
+				const { chain, address, abi, ...rest } = contract
+				assertLogError(typeof chain === "string", "contract.chain must be a string")
+				assertLogError(typeof address === "string", "contract.address must be a string")
+				exports.contractMetadata[name] = { chain, address, abi }
 			}
 		} else {
 			contractsHandle.dispose()

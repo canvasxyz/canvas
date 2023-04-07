@@ -9,8 +9,6 @@ import {
 	Action,
 	Session,
 	ModelValue,
-	Chain,
-	ChainId,
 	Message,
 	ChainImplementation,
 	CustomAction,
@@ -156,16 +154,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	}
 
 	public async getApplicationData(): Promise<ApplicationData> {
-		const chains: ApplicationData["chains"] = {}
-		for (const { chain, chainId } of this.chains) {
-			const chainIds = chains[chain]
-			if (chainIds === undefined) {
-				chains[chain] = [chainId]
-			} else if (!chainIds.includes(chainId)) {
-				chainIds.push(chainId)
-			}
-		}
-
+		const chains = this.chains.map(({ chain }) => chain)
 		const peerId = this.libp2p?.peerId.toString() ?? null
 
 		const peers: ApplicationData["peers"] = []
@@ -225,7 +214,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	 * and publishes to GossipSub.
 	 */
 	public async apply(message: Message): Promise<{ hash: string }> {
-		assert(messageType.is(message), "invalid session object")
+		assert(messageType.is(message), "invalid message")
 
 		const app = message.type === "customAction" ? message.app : message.payload.app
 		assert(app === this.app || this.vm.sources.has(app))
@@ -302,7 +291,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	}
 
 	private async validateAction(txn: ReadOnlyTransaction, action: Action) {
-		const { timestamp, app, block, chain, chainId } = action.payload
+		const { timestamp, app, block, chain } = action.payload
 		const fromAddress = action.payload.from
 
 		assert(
@@ -318,17 +307,15 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
-			const [_, session] = await txn.getSessionByAddress(chain, chainId, action.session)
+			const [_, session] = await txn.getSessionByAddress(chain, action.session)
 			assert(session !== null, "session not found")
 			assert(
 				action.payload.app === session.payload.app,
 				"invalid session (action.payload.app and session.payload.app do not match)"
 			)
 			assert(session.payload.chain === action.payload.chain, "session and action chains must match")
-			assert(session.payload.chainId === action.payload.chainId, `session and action chain IDs must match`)
 			assert(session.payload.sessionIssued + session.payload.sessionDuration > timestamp, "session expired")
 			assert(session.payload.sessionIssued <= timestamp, "session issued timestamp must precede action timestamp")
-
 			assert(session.payload.app === app, "action referenced a session for the wrong application")
 			assert(
 				session.payload.from === fromAddress,
@@ -336,12 +323,11 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			)
 		}
 
-		const { verifyAction } = this.getChainImplementation(chain, chainId)
-		await verifyAction(action)
+		await this.getChainImplementation(chain).verifyAction(action)
 	}
 
 	private async validateSession(txn: ReadOnlyTransaction, session: Session) {
-		const { app, sessionIssued, block, chain, chainId } = session.payload
+		const { app, sessionIssued, block, chain } = session.payload
 
 		assert(app === this.app || this.vm.sources.has(app), "session signed for wrong application (app invalid)")
 
@@ -349,8 +335,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
 		assert(sessionIssued < constants.BOUNDS_CHECK_UPPER_LIMIT, "session issued too far in the future")
 
-		const { verifySession } = this.getChainImplementation(chain, chainId)
-		await verifySession(session)
+		await this.getChainImplementation(chain).verifySession(session)
 	}
 
 	private async validateCustomAction(txn: ReadOnlyTransaction, customAction: CustomAction) {
@@ -367,13 +352,12 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		)
 	}
 
-	private getChainImplementation(chain: Chain, chainId: ChainId): ChainImplementation<unknown, unknown> {
-		for (const implementation of this.chains) {
-			if (implementation.chain === chain && implementation.chainId === chainId) {
-				return implementation
-			}
+	private getChainImplementation(chain: string): ChainImplementation<unknown, unknown> {
+		const implementation = this.chains.find((implementation) => implementation.chain === chain)
+		if (implementation === undefined) {
+			throw new Error(`Could not find matching chain implementation for ${chain}`)
+		} else {
+			return implementation
 		}
-
-		throw new Error(`Could not find matching chain implementation for ${chain}:${chainId}`)
 	}
 }
