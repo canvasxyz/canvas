@@ -13,7 +13,7 @@ import express from "express"
 import cors from "cors"
 import { WebSocketServer } from "ws"
 
-import { Core } from "@canvas-js/core"
+import { Core, CoreOptions } from "@canvas-js/core"
 import { getAPI, handleWebsocketConnection } from "@canvas-js/core/api"
 
 import * as constants from "@canvas-js/core/constants"
@@ -79,9 +79,9 @@ export const builder = (yargs: Argv) =>
 			desc: "Enable verbose logging",
 			default: false,
 		})
-		.option("chain-rpc", {
+		.option("chain", {
 			type: "array",
-			desc: "Provide an RPC endpoint for reading on-chain data (format: chain, URL)",
+			desc: "Declare chain implementations and provide RPC endpoints for reading on-chain data (format: {chain} or {chain}={URL})",
 		})
 		.option("static", {
 			type: "string",
@@ -141,9 +141,9 @@ export async function handler(args: Args) {
 		}
 	}
 
-	// read rpcs from --chain-rpc arguments or environment variables
+	// read rpcs from --chain arguments or environment variables
 	// prompt to run in unchecked mode, if no rpcs were provided
-	const chains = getChainImplementations(args["chain-rpc"])
+	const chains = getChainImplementations(args["chain"])
 	if (chains.length === 0 && !args.unchecked) {
 		const { confirm } = await prompts({
 			type: "confirm",
@@ -185,7 +185,8 @@ export async function handler(args: Args) {
 		assert(validateAddresses(listen))
 	}
 
-	const core = await Core.initialize({ directory, uri, spec, listen, announce, replay, offline, unchecked, verbose })
+	const options: CoreOptions = { replay, offline, unchecked, verbose }
+	const core = await Core.initialize({ chains, directory, uri, spec, listen, announce, ...options })
 
 	const app = express()
 	app.use(cors())

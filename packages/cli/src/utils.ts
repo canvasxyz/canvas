@@ -73,31 +73,47 @@ export async function installSpec(app: string): Promise<string> {
 	return cid
 }
 
+function parseChainId(chain: string): [namespace: string, chainId: string] {
+	const namespaceIndex = chain.indexOf(":")
+	assert(namespaceIndex > 0, "invalid CAIP-2 chain reference")
+	const namespace = chain.slice(0, namespaceIndex)
+	return [namespace, chain.slice(namespaceIndex + 1)]
+}
+
 export function getChainImplementations(args?: (string | number)[]): ChainImplementation[] {
+	const domain = "localhost"
 	const chains: ChainImplementation[] = []
 
 	if (args !== undefined) {
-		for (let i = 0; i < args.length; i += 2) {
-			const [chain, url] = args.slice(i, i + 2)
-			assert(typeof chain === "string" && typeof url === "string")
+		for (const arg of args) {
+			if (typeof arg === "number") {
+				throw new Error(`invalid --chain argument "${arg}"`)
+			}
 
-			const namespaceIndex = chain.indexOf(":")
-			assert(namespaceIndex > 0, "invalid CAIP-2 chain reference")
-			const namespace = chain.slice(0, namespaceIndex)
-			if (namespace === "eip155") {
-				const provider = new ethers.providers.JsonRpcProvider(url)
-				const chainId = parseInt(chain.slice(namespaceIndex + 1))
-				assert(!isNaN(chainId), "invalid chainId")
-				chains.push(new EthereumChainImplementation(chainId, "localhost", provider))
+			const delimiterIndex = arg.indexOf("=")
+			if (delimiterIndex === -1) {
+				const [namespace, chainId] = parseChainId(arg)
+				if (namespace === "eip155") {
+					chains.push(new EthereumChainImplementation(parseInt(chainId), domain))
+				} else {
+					throw new Error(`Unsupported chain ${arg}: only eip155 chains can be passed in the CLI`)
+				}
 			} else {
-				console.log(`'chain' value (${chain}) was not 'eip155', all other RPCs are currently unsupported`)
+				const chain = arg.slice(0, delimiterIndex)
+				const url = arg.slice(delimiterIndex + 1)
+				const [namespace, chainId] = parseChainId(chain)
+				if (namespace === "eip155") {
+					const provider = new ethers.providers.JsonRpcProvider(url)
+					chains.push(new EthereumChainImplementation(parseInt(chainId), domain, provider))
+				} else {
+					throw new Error(`Unsupported chain ${arg}: only eip155 chains can be passed in the CLI`)
+				}
 			}
 		}
 	} else if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
 		const chainId = parseInt(process.env.ETH_CHAIN_ID)
-		assert(!isNaN(chainId), "invalid chainId")
 		const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_CHAIN_RPC)
-		chains.push(new EthereumChainImplementation(chainId, "localhost", provider))
+		chains.push(new EthereumChainImplementation(chainId, domain, provider))
 		console.log(
 			`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
 		)
