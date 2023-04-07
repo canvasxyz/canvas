@@ -19,6 +19,10 @@ export class EthereumChainImplementation
 		public readonly domain: string = "localhost",
 		public readonly provider?: ethers.providers.JsonRpcProvider
 	) {
+		if (!Number.isSafeInteger(chainId)) {
+			throw new Error(`Invalid eip155 chainId: ${chainId}`)
+		}
+
 		// https://github.com/ChainAgnostic/namespaces/blob/main/eip155/caip2.md
 		this.chain = `eip155:${chainId}`
 	}
