@@ -36,8 +36,9 @@ class SqliteModelStore implements ModelStore {
 			this.database = new Database(databasePath)
 		}
 
-		initializeModelTables(vm.models, (sql) => this.database.exec(sql))
-		for (const [name, model] of Object.entries(vm.models)) {
+		const models = vm.getModels()
+		initializeModelTables(models, (sql) => this.database.exec(sql))
+		for (const [name, model] of Object.entries(models)) {
 			this.modelStatements[name] = mapEntries(getModelStatements(name, model), (_, sql) => this.database.prepare(sql))
 		}
 
@@ -116,7 +117,6 @@ class SqliteModelStore implements ModelStore {
 	}
 
 	public async getRoute(route: string, params: Record<string, string> = {}): Promise<Record<string, ModelValue>[]> {
-		assert(route in this.vm.routes, "invalid route name")
 		const filteredParams = mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value))
 		return this.vm.executeRoute(route, filteredParams, (query: string | Query) => {
 			// TODO: Cache the prepared sql

@@ -25,7 +25,10 @@ export async function handler(args: Args) {
 
 	try {
 		const vm = await VM.initialize({ app: uri, spec, chains: [], unchecked: true })
-		const { models, routes, actions, contractMetadata } = vm
+		const models = vm.getModels()
+		const routes = vm.getRoutes()
+		const actions = vm.getActions()
+		const contracts = vm.getContracts()
 		await vm.close()
 
 		console.log(`name: ${uri}\n`)
@@ -45,7 +48,7 @@ export async function handler(args: Args) {
 		console.log(actions.map((name) => `${name}({ ...args })\n`).join(""))
 
 		console.log(chalk.green("===== contracts ====="))
-		Object.entries(contractMetadata).forEach(([name, { chain, address, abi }]) => {
+		Object.entries(contracts).forEach(([name, { chain, address, abi }]) => {
 			console.log(`${name}: ${address} on ${chain}`)
 			abi.forEach((line) => console.log(`- ${line}`))
 		})

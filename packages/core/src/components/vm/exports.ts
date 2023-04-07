@@ -9,6 +9,7 @@ export type CustomActionDefinition = {
 }
 
 export type Exports = {
+	chains: string[]
 	actionHandles: Record<string, QuickJSHandle>
 	customAction: CustomActionDefinition | null
 	contractMetadata: Record<string, ContractMetadata>

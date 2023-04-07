@@ -88,7 +88,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	api.post("/actions", applyMessage)
 	api.post("/sessions", applyMessage)
 
-	for (const route of Object.keys(core.vm.routes)) {
+	for (const route of core.vm.getRoutes()) {
 		api.get(route, (req, res) => handleRoute(core, route, req, res))
 	}
 
@@ -126,7 +126,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	if (options.exposeModels) {
 		api.get("/models/:model", async (req, res) => {
 			const { model: modelName } = req.params
-			if (modelName in core.vm.models) {
+			if (modelName in core.vm.getModels()) {
 				const rows: Record<string, ModelValue>[] = []
 				const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : -1
 				for await (const row of core.modelStore.exportModel(modelName, { limit })) {
@@ -213,11 +213,8 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 }
 
 async function handleRoute(core: Core, route: string, req: express.Request, res: express.Response) {
-	const routeParameters = core.vm.routes[route]
-	assert(routeParameters !== undefined)
-
 	const params: Record<string, string> = {}
-	for (const param of routeParameters) {
+	for (const param of core.vm.getRouteParameters(route)) {
 		const value = req.params[param]
 		assert(value !== undefined, `missing route param ${param}`)
 		params[param] = value

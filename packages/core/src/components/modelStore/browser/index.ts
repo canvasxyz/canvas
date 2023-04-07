@@ -1,13 +1,13 @@
 import type { ModelValue, Query } from "@canvas-js/interfaces"
 
 import type { VM } from "@canvas-js/core/components/vm"
-import { assert, mapEntries, signalInvalidType } from "@canvas-js/core/utils"
-
-import type { Effect, ModelStore } from "../types.js"
-export * from "../types.js"
+import { mapEntries, signalInvalidType } from "@canvas-js/core/utils"
 
 import getSQL, { oo1 } from "#sqlite3"
+
 import { initializeModelTables, getModelStatements, ModelStatements } from "../schema.js"
+import type { Effect, ModelStore } from "../types.js"
+export * from "../types.js"
 
 const SQL = await getSQL()
 
@@ -16,8 +16,9 @@ class MemoryModelStore implements ModelStore {
 	private readonly modelStatements: Record<string, Record<ModelStatements, oo1.Statement>> = {}
 
 	constructor(directory: string | null, readonly vm: VM, readonly options: { verbose?: boolean }) {
-		initializeModelTables(vm.models, (sql) => this.db.exec(sql))
-		for (const [name, model] of Object.entries(vm.models)) {
+		const models = vm.getModels()
+		initializeModelTables(models, (sql) => this.db.exec(sql))
+		for (const [name, model] of Object.entries(models)) {
 			this.modelStatements[name] = mapEntries(getModelStatements(name, model), (_, sql) => this.db.prepare(sql))
 		}
 	}
@@ -123,7 +124,6 @@ class MemoryModelStore implements ModelStore {
 	}
 
 	async getRoute(route: string, params: Record<string, string> = {}): Promise<Record<string, ModelValue>[]> {
-		assert(route in this.vm.routes, "invalid route name")
 		const filteredParams = mapEntries(params, (_, value) => (typeof value === "boolean" ? Number(value) : value))
 		return this.vm.executeRoute(route, filteredParams, (query: string | Query) => {
 			const statement = this.db.prepare(typeof query === "string" ? query : query.query)

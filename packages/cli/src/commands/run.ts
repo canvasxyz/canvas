@@ -81,7 +81,7 @@ export const builder = (yargs: Argv) =>
 		})
 		.option("chain-rpc", {
 			type: "array",
-			desc: "Provide an RPC endpoint for reading on-chain data (format: chain, chainId, URL)",
+			desc: "Provide an RPC endpoint for reading on-chain data (format: chain, URL)",
 		})
 		.option("static", {
 			type: "string",
@@ -213,7 +213,7 @@ export async function handler(args: Args) {
 			}
 			console.log(`Serving API for ${core.app}:`)
 			console.log(`└ GET  ${apiURL}`)
-			for (const name of Object.keys(core.vm.routes)) {
+			for (const name of core.vm.getRoutes()) {
 				console.log(`└ GET  ${apiURL}/${name.slice(1)}`)
 			}
 			console.log(`└ POST ${apiURL}/actions`)

@@ -60,13 +60,14 @@ function compileActionHandlers<Models extends Record<string, Model>>(actions: Re
 }
 
 export async function compileSpec<Models extends Record<string, Model>>(exports: {
+	chains?: string[]
 	models: Models
 	actions: Record<string, ActionHandler<Models>>
 	routes?: Record<string, (params: Record<string, string>, db: RouteContext) => Query>
 	contracts?: Record<string, { chain: string; address: string; abi: string[] }>
 	sources?: Record<string, Record<string, ActionHandler<Models>>>
 }): Promise<{ app: string; cid: CID; spec: string }> {
-	const { models, actions, routes, contracts, sources } = exports
+	const { chains, models, actions, routes, contracts, sources } = exports
 
 	const actionEntries = compileActionHandlers(actions)
 
@@ -78,6 +79,7 @@ export async function compileSpec<Models extends Record<string, Model>>(exports:
 	})
 
 	const lines = [
+		`export const chains = ${JSON.stringify(chains ?? ["eip155:1"])};`,
 		`export const models = ${JSON.stringify(models, null, "\t")};`,
 		`export const actions = {\n${actionEntries.join(",\n")}};`,
 	]

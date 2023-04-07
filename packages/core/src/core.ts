@@ -26,7 +26,7 @@ import { getPeerId, getLibp2pOptions, startPingService } from "@canvas-js/core/c
 
 import { Source } from "./source.js"
 import { actionType, messageType } from "./codecs.js"
-import { toHex, signalInvalidType, stringify, parseIPFSURI, assert } from "./utils.js"
+import { toHex, signalInvalidType, stringify, parseIPFSURI, assert, getCustomActionSchemaName } from "./utils.js"
 import * as constants from "./constants.js"
 
 export interface CoreConfig extends CoreOptions {
@@ -154,7 +154,6 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	}
 
 	public async getApplicationData(): Promise<ApplicationData> {
-		const chains = this.chains.map(({ chain }) => chain)
 		const peerId = this.libp2p?.peerId.toString() ?? null
 
 		const peers: ApplicationData["peers"] = []
@@ -170,9 +169,9 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			peerId,
 			uri: this.app,
 			cid: this.cid.toString(),
-			actions: this.vm.actions,
-			routes: Object.keys(this.vm.routes),
-			chains,
+			actions: this.vm.getActions(),
+			routes: this.vm.getRoutes(),
+			chains: this.vm.getChains(),
 			peers,
 			merkleRoots: this.messageStore.getMerkleRoots(),
 		}
@@ -294,10 +293,8 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		const { timestamp, app, block, chain } = action.payload
 		const fromAddress = action.payload.from
 
-		assert(
-			app === this.app || this.vm.sources.has(app),
-			`action signed for wrong application (invalid app: expected ${this.app}, found ${app})`
-		)
+		assert(app === this.app || this.vm.sources.has(app), `action signed for wrong application (${app})`)
+		assert(this.vm.getChains().includes(chain), `unsupported chain (${chain})`)
 
 		// TODO: verify that actions signed for a previous app were valid within that app
 
@@ -329,7 +326,8 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	private async validateSession(txn: ReadOnlyTransaction, session: Session) {
 		const { app, sessionIssued, block, chain } = session.payload
 
-		assert(app === this.app || this.vm.sources.has(app), "session signed for wrong application (app invalid)")
+		assert(app === this.app || this.vm.sources.has(app), `session signed for wrong application (${app})`)
+		assert(this.vm.getChains().includes(chain), `unsupported chain (${chain})`)
 
 		// check the timestamp bounds
 		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
@@ -339,17 +337,15 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	}
 
 	private async validateCustomAction(txn: ReadOnlyTransaction, customAction: CustomAction) {
-		const customActionDefinition = this.vm.customAction
-		assert(!!customActionDefinition, `custom action called but no custom action definition exists`)
+		assert(this.vm.customActionSchemaName !== null, `custom action called but no custom action definition exists`)
+		const schemaName = getCustomActionSchemaName(this.app, customAction.name)
 		assert(
-			customActionDefinition.name == customAction.name,
-			`the custom action name in the message (${customAction.name}) does not match the action name in the contract ${customActionDefinition.name}`
+			this.vm.customActionSchemaName === schemaName,
+			`the custom action name in the message does not match the action name in the contract`
 		)
-		const schemaValidationResult = await validate(this.vm.customActionSchemaName!, customAction.payload)
-		assert(
-			schemaValidationResult.valid,
-			`custom action payload does not match the provided schema! ${schemaValidationResult.errors}`
-		)
+
+		const { valid, errors } = await validate(schemaName, customAction.payload)
+		assert(valid, `custom action payload does not match the provided schema! ${errors}`)
 	}
 
 	private getChainImplementation(chain: string): ChainImplementation<unknown, unknown> {
