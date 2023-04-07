@@ -25,7 +25,7 @@ export const builder = (yargs: Argv) =>
 		})
 		.option("chain-rpc", {
 			type: "array",
-			desc: "Provide an RPC endpoint for reading on-chain data (format: chain, chainId, URL)",
+			desc: "Provide an RPC endpoint for reading on-chain data (format: chain, URL)",
 		})
 		.option("unchecked", {
 			type: "boolean",
