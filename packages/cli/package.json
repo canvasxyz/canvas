@@ -16,7 +16,7 @@
     "@canvas-js/interfaces": "0.3.3",
     "@libp2p/interface-peer-id": "^2.0.1",
     "@types/websocket": "^1.0.5",
-    "better-sqlite3": "^8.2.0",
+    "better-sqlite3": "^8.3.0",
     "chalk": "^5.2.0",
     "cors": "^2.8.5",
     "ethers": "^5.7.2",
@@ -41,6 +41,6 @@
     "@types/prompts": "^2.4.4",
     "@types/stoppable": "^1.1.1",
     "@types/yargs": "^17.0.24",
-    "typescript": "^5.0.3"
+    "typescript": "^5.0.4"
   }
 }

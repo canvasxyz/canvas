@@ -24,6 +24,6 @@
     "@canvas-js/chain-substrate": "0.3.3",
     "@canvas-js/interfaces": "0.3.3",
     "ava": "^5.2.0",
-    "typescript": "^5.0.3"
+    "typescript": "^5.0.4"
   }
 }
