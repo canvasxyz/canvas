@@ -49,22 +49,25 @@ class SqliteModelStore implements ModelStore {
 		})
 	}
 
-	public async *exportModel(modelName: string, options: { limit?: number } = {}) {
+	public async *exportModel(
+		modelName: string,
+		options: { limit?: number } = {}
+	): AsyncIterable<Record<string, ModelValue>> {
 		const limit = Number.isSafeInteger(options.limit) ? options.limit : -1
 		for (const row of this.modelStatements[modelName].export.all({ limit })) {
-			yield row
+			yield row as Record<string, ModelValue>
 		}
 	}
 
 	private getUpdatedAt(name: string, id: string): number | undefined {
 		const { getUpdatedAt } = this.modelStatements[name]
-		const result: { updated_at: number } | undefined = getUpdatedAt.get(id)
+		const result = getUpdatedAt.get(id) as { updated_at: number } | undefined
 		return result && result.updated_at
 	}
 
 	private getDeletedAt(name: string, id: string): number | undefined {
 		const { getDeletedAt } = this.modelStatements[name]
-		const result: { deleted_at: number } | undefined = getDeletedAt.get(id)
+		const result = getDeletedAt.get(id) as { deleted_at: number } | undefined
 		return result && result.deleted_at
 	}
 
@@ -127,9 +130,9 @@ class SqliteModelStore implements ModelStore {
 			assert(prepared.reader === true, "invalid route, queries must return data")
 			try {
 				if (typeof query === "string" || query.args === undefined) {
-					return prepared.all()
+					return prepared.all() as Record<string, ModelValue>[]
 				} else {
-					return prepared.all(query.args)
+					return prepared.all(query.args) as Record<string, ModelValue>[]
 				}
 			} catch (err) {
 				if (err instanceof Error) {

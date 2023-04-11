@@ -205,9 +205,9 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 	}
 
 	private getSessionByAddress(chain: string, address: string): [hash: string | null, session: Session | null] {
-		const record: undefined | SessionRecord = this.statements.getSessionByAddress.get({
+		const record = this.statements.getSessionByAddress.get({
 			session_address: address,
-		})
+		}) as undefined | SessionRecord
 
 		if (record === undefined) {
 			return [null, null]
@@ -236,25 +236,25 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 	}
 
 	private getSessionByHash(hash: Uint8Array): Session | null {
-		const record: undefined | SessionRecord = this.statements.getSessionByHash.get({
+		const record = this.statements.getSessionByHash.get({
 			hash: toBuffer(hash),
-		})
+		}) as undefined | SessionRecord
 
 		return record === undefined ? null : SqliteMessageStore.parseSessionRecord(record)
 	}
 
 	private getActionByHash(hash: Uint8Array): Action | null {
-		const record: undefined | ActionRecord = this.statements.getActionByHash.get({
+		const record = this.statements.getActionByHash.get({
 			hash: toBuffer(hash),
-		})
+		}) as undefined | ActionRecord
 
 		return record === undefined ? null : SqliteMessageStore.parseActionRecord(record)
 	}
 
 	private getCustomActionByHash(hash: Uint8Array): CustomAction | null {
-		const record: undefined | CustomActionRecord = this.statements.getCustomActionByHash.get({
+		const record = this.statements.getCustomActionByHash.get({
 			hash: toBuffer(hash),
-		})
+		}) as undefined | CustomActionRecord
 
 		return record === undefined ? null : SqliteMessageStore.parseCustomActionRecord(record)
 	}
@@ -299,11 +299,13 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 	private async *getSessionStream(filter: { limit?: number; app?: string } = {}): AsyncIterable<[Uint8Array, Message]> {
 		const limit = filter.limit ?? -1
 		if (filter.app) {
-			for (const record of this.statements.getSessionsByApp.iterate({ app: filter.app, limit })) {
+			const iter = this.statements.getSessionsByApp.iterate({ app: filter.app, limit })
+			for (const record of iter as Iterable<SessionRecord>) {
 				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
 			}
 		} else {
-			for (const record of this.statements.getSessions.iterate({ limit })) {
+			const iter = this.statements.getSessions.iterate({ limit })
+			for (const record of iter as Iterable<SessionRecord>) {
 				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
 			}
 		}
@@ -312,11 +314,13 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 	private async *getActionStream(filter: { limit?: number; app?: string } = {}): AsyncIterable<[Uint8Array, Message]> {
 		const limit = filter.limit ?? -1
 		if (filter.app) {
-			for (const record of this.statements.getActionsByApp.iterate({ app: filter.app, limit })) {
+			const iter = this.statements.getActionsByApp.iterate({ app: filter.app, limit })
+			for (const record of iter as Iterable<ActionRecord>) {
 				yield [record.hash, SqliteMessageStore.parseActionRecord(record)]
 			}
 		} else {
-			for (const record of this.statements.getActions.iterate({ limit })) {
+			const iter = this.statements.getActions.iterate({ limit })
+			for (const record of iter as Iterable<ActionRecord>) {
 				yield [record.hash, SqliteMessageStore.parseActionRecord(record)]
 			}
 		}
@@ -327,11 +331,13 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 	): AsyncIterable<[Uint8Array, Message]> {
 		const limit = filter.limit ?? -1
 		if (filter.app) {
-			for (const record of this.statements.getCustomActionsByApp.iterate({ app: filter.app, limit })) {
+			const iter = this.statements.getCustomActionsByApp.iterate({ app: filter.app, limit })
+			for (const record of iter as Iterable<CustomActionRecord>) {
 				yield [record.hash, SqliteMessageStore.parseCustomActionRecord(record)]
 			}
 		} else {
-			for (const record of this.statements.getCustomActions.iterate({ limit })) {
+			const iter = this.statements.getCustomActions.iterate({ limit }) as Iterable<CustomActionRecord>
+			for (const record of iter) {
 				yield [record.hash, SqliteMessageStore.parseCustomActionRecord(record)]
 			}
 		}

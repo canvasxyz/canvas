@@ -34,9 +34,11 @@ export async function handler() {
 		const messagesPath = path.resolve(CANVAS_HOME, name, constants.MESSAGE_DATABASE_FILENAME)
 		if (fs.existsSync(messagesPath)) {
 			const messagesStat = fs.statSync(messagesPath)
-			const messagesDB = new Database(messagesPath)
-			const { count: actionCount } = messagesDB.prepare("SELECT COUNT(*) AS count FROM actions").get()
-			const { count: sessionCount } = messagesDB.prepare("SELECT COUNT(*) AS count FROM sessions").get()
+			const db = new Database(messagesPath)
+
+			const { count: actionCount } = db.prepare(`SELECT COUNT(*) AS count FROM actions`).get() as { count: number }
+			const { count: sessionCount } = db.prepare(`SELECT COUNT(*) AS count FROM sessions`).get() as { count: number }
+
 			console.log(`Messages: ${messagesStat.size} bytes (${actionCount} actions, ${sessionCount} sessions)`)
 		}
 
