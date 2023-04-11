@@ -10,7 +10,7 @@ import test from "ava"
 import { nanoid } from "nanoid"
 import toIterable from "stream-to-it"
 
-import type { Duplex } from "it-stream-types"
+import type { Duplex, Source } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
 
 import type { Message } from "@canvas-js/interfaces"
@@ -28,11 +28,16 @@ const { app, cid } = await compileSpec({
 
 // creates an in-memory bi-directional connection
 function connect(): [
-	source: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
-	target: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>
+	source: Duplex<Source<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>>,
+	target: Duplex<Source<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>>
 ] {
-	const source = toIterable.duplex(new stream.PassThrough())
-	const target = toIterable.duplex(new stream.PassThrough())
+	const source = toIterable.duplex<Source<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>>(
+		new stream.PassThrough()
+	)
+	const target = toIterable.duplex<Source<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>>(
+		new stream.PassThrough()
+	)
+
 	return [
 		{ source: source.source, sink: target.sink },
 		{ source: target.source, sink: source.sink },

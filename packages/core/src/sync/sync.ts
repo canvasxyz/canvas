@@ -1,7 +1,7 @@
 import { sha256 } from "@noble/hashes/sha256"
 
 import type { CID } from "multiformats"
-import type { Duplex } from "it-stream-types"
+import type { Duplex, Source } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
 import { equals } from "uint8arrays/equals"
 
@@ -19,7 +19,7 @@ type Context = { cid: CID; txn: ReadWriteTransaction; client: Client }
 export async function* sync(
 	cid: CID,
 	txn: ReadWriteTransaction,
-	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>,
+	stream: Duplex<Source<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>>,
 	options: { verbose?: boolean } = {}
 ): AsyncGenerator<[hash: Uint8Array, message: Message]> {
 	const client = new Client(stream)

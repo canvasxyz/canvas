@@ -1,4 +1,4 @@
-import type { Duplex, Source } from "it-stream-types"
+import type { Duplex, Sink, Source } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
@@ -14,7 +14,7 @@ export class Client {
 	private seq = 0
 	private readonly responses: AsyncIterator<RPC.Response>
 	private readonly requests: Pushable<RPC.Request>
-	constructor({ source, sink }: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>) {
+	constructor({ source, sink }: Duplex<Source<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>>) {
 		this.responses = pipe(source, lp.decode(), Client.decodeResponses)
 		this.requests = pushable({ objectMode: true })
 		pipe(this.requests, Client.encodeRequests, lp.encode(), sink)

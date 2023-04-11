@@ -16,7 +16,7 @@ import { fromNode, toKey } from "./utils.js"
 export async function handleIncomingStream(
 	cid: CID,
 	txn: ReadOnlyTransaction,
-	stream: Duplex<Uint8ArrayList, Uint8ArrayList | Uint8Array>
+	stream: Duplex<Source<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>>
 ) {
 	async function* handle(source: Source<Uint8ArrayList>): AsyncIterable<Uint8Array> {
 		for await (const msg of source) {

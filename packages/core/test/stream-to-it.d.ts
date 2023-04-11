@@ -4,5 +4,7 @@ declare module "stream-to-it" {
 	declare function source(stream: stream.Readable): Source
 	declare function sink(stream: stream.Writable): Sink
 	declare function transform(stream: stream.Transform): Transform
-	declare function duplex(stream: stream.Duplex): Duplex
+	declare function duplex<TSource = unknown, TSink = TSource, RSink = unknown>(
+		stream: stream.Duplex
+	): Duplex<TSource, TSink, RSink>
 }
