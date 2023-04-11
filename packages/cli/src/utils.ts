@@ -117,6 +117,8 @@ export function getChainImplementations(args?: (string | number)[]): ChainImplem
 		console.log(
 			`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
 		)
+	} else {
+		chains.push(new EthereumChainImplementation(1, domain))
 	}
 
 	return chains
