@@ -36,10 +36,14 @@ export async function getLibp2pOptions(config: {
 	}
 
 	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
-	console.log(`[canvas-core] Announcing on [ ${announce.join(", ")} ]`)
+	for (const address of announce) {
+		console.log(`[canvas-core] Announcing on ${address}`)
+	}
 
 	const listen = config.listen ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit`)
-	console.log(`[canvas-core] Listening on [ ${listen.join(", ")} ]`)
+	for (const address of listen) {
+		console.log(`[canvas-core] Listening on ${address}`)
+	}
 
 	return {
 		peerId: config.peerId,

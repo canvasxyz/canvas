@@ -117,20 +117,20 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		})
 
 		if (libp2p !== null) {
-			libp2p.addEventListener("peer:connect", ({ detail: connection }) => {
-				this.dispatchEvent(new CustomEvent("connect", { detail: { peer: connection.remotePeer.toString() } }))
-
+			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer, remoteAddr } }) => {
 				if (options.verbose) {
-					console.log(`[canvas-core] Connected to ${connection.remotePeer} (${connection.id})`)
+					console.log(`[canvas-core] Opened connection ${id} to ${remotePeer} on ${remoteAddr}`)
 				}
+
+				this.dispatchEvent(new CustomEvent("connect", { detail: { peer: remotePeer.toString() } }))
 			})
 
-			libp2p.addEventListener("peer:disconnect", ({ detail: connection }) => {
-				this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: connection.remotePeer.toString() } }))
-
+			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) => {
 				if (options.verbose) {
-					console.log(`[canvas-core] Disconnected from ${connection.remotePeer} (${connection.id})`)
+					console.log(`[canvas-core] Closed connection ${id} to ${remotePeer}`)
 				}
+
+				this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: remotePeer.toString() } }))
 			})
 
 			this.sources = {}
