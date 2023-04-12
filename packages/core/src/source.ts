@@ -14,7 +14,7 @@ import { CID } from "multiformats/cid"
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
 
-import { toHex, assert, getErrorMessage } from "@canvas-js/core/utils"
+import { toHex, assert, logErrorMessage } from "@canvas-js/core/utils"
 import * as constants from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 import { sync, handleIncomingStream } from "./sync/index.js"
@@ -78,17 +78,14 @@ export class Source extends EventEmitter<SourceEvents> {
 				return
 			}
 
-			const applications = protocols
-				.filter((protocol) => protocol.startsWith(Source.protocolPrefix))
-				.map((protocol) => protocol.slice(Source.protocolPrefix.length))
+			const oldProtocolSet = new Set(oldProtocols)
+			const newProtocolSet = new Set(protocols.filter((protocol) => !oldProtocolSet.has(protocol)))
 
-			if (applications.length > 0) {
+			if (newProtocolSet.has(this.protocol)) {
 				if (this.options.verbose) {
-					console.log(this.prefix, `Peer ${peerId} supports applications [ ${applications.join(", ")} ]`)
+					console.log(this.prefix, `Peer ${peerId} supports Canvas protocol ${this.protocol}`)
 				}
-			}
 
-			if (protocols.includes(this.protocol)) {
 				const id = peerId.toString()
 				if (this.pendingSyncPeers.has(id)) {
 					return
@@ -167,8 +164,7 @@ export class Source extends EventEmitter<SourceEvents> {
 				console.log(this.prefix, `Published ${toHex(hash)} to ${recipients.length} peers.`)
 			}
 		} catch (err) {
-			const msg = getErrorMessage(err)
-			console.log(this.prefix, chalk.red(`Failed to publish ${toHex(hash)} to GossipSub (${msg})`))
+			logErrorMessage(this.prefix, chalk.red(`Failed to publish ${toHex(hash)} to GossipSub`), err)
 		}
 	}
 
@@ -200,8 +196,7 @@ export class Source extends EventEmitter<SourceEvents> {
 				{ uri: this.uri }
 			)
 		} catch (err) {
-			const msg = getErrorMessage(err)
-			console.log(this.prefix, chalk.red(`Error applying GossipSub message (${msg})`))
+			logErrorMessage(this.prefix, chalk.red(`Error applying GossipSub message`), err)
 		}
 	}
 
@@ -219,8 +214,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		try {
 			await this.messageStore.read((txn) => handleIncomingStream(this.cid, txn, stream), { uri: this.uri })
 		} catch (err) {
-			const msg = getErrorMessage(err)
-			console.log(this.prefix, chalk.red(`Error handling incoming sync (${msg})`))
+			logErrorMessage(this.prefix, chalk.red(`Error handling incoming sync`), err)
 			if (this.options.verbose) {
 				console.log(this.prefix, `Aborting incoming stream ${stream.id}`)
 			}
@@ -316,8 +310,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		try {
 			stream = await this.dial(peer)
 		} catch (err) {
-			const msg = getErrorMessage(err)
-			console.log(prefix, chalk.red(`Failed to dial peer ${peer} (${msg})`))
+			logErrorMessage(prefix, chalk.red(`Failed to dial peer ${peer}`), err)
 			return
 		}
 
@@ -340,8 +333,8 @@ export class Source extends EventEmitter<SourceEvents> {
 						successCount += 1
 					} catch (err) {
 						generator.throw(err) // this throws an exeption at the `yield` statement
-						console.log(prefix, chalk.red(`Failed to apply ${message.type} ${toHex(hash)} (${getErrorMessage(err)})`))
 						failureCount += 1
+						logErrorMessage(prefix, chalk.red(`Failed to apply ${message.type} ${toHex(hash)}`), err)
 					}
 				}
 			})
@@ -353,8 +346,7 @@ export class Source extends EventEmitter<SourceEvents> {
 				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "success" } })
 			)
 		} catch (err) {
-			const msg = getErrorMessage(err)
-			console.log(prefix, chalk.red(`Failed to sync with peer ${peer} (${msg})`))
+			logErrorMessage(prefix, chalk.red(`Failed to sync with peer ${peer}`), err)
 
 			stream.abort(err as Error)
 			if (this.options.verbose) {

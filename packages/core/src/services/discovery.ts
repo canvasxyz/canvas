@@ -4,7 +4,7 @@ import { Libp2p } from "libp2p"
 import { TimeoutController } from "timeout-abort-controller"
 import { PeerId } from "@libp2p/interface-peer-id"
 
-import { wait, retry, AbortError, getErrorMessage } from "@canvas-js/core/utils"
+import { wait, retry, AbortError, logErrorMessage } from "@canvas-js/core/utils"
 import {
 	DISCOVERY_DELAY,
 	DISCOVERY_INTERVAL,
@@ -30,8 +30,7 @@ export async function startDiscoveryService(
 		while (!signal.aborted) {
 			const peers = await retry(
 				async () => await discover(libp2p, cid, signal),
-				(err) =>
-					console.log(prefix, chalk.yellow(`Failed to query DHT for provider records (${getErrorMessage(err)})`)),
+				(err) => logErrorMessage(prefix, chalk.yellow(`Failed to query DHT for provider records`), err),
 				{ signal, interval: DISCOVERY_RETRY_INTERVAL }
 			)
 
@@ -45,8 +44,7 @@ export async function startDiscoveryService(
 		if (err instanceof AbortError || signal.aborted) {
 			console.log(prefix, `Service aborted`)
 		} else {
-			const msg = getErrorMessage(err)
-			console.log(prefix, chalk.red(`Service crashed (${msg})`))
+			logErrorMessage(prefix, chalk.red(`Service crashed`), err)
 		}
 	}
 }

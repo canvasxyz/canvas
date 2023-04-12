@@ -6,6 +6,7 @@ import { configure } from "safe-stable-stringify"
 import { CodeError } from "@libp2p/interfaces/errors"
 
 import type { ModelType, ModelValue } from "@canvas-js/interfaces"
+import chalk from "chalk"
 
 const { hexlify, arrayify } = ethers.utils
 
@@ -143,14 +144,31 @@ export class CacheMap<K, V> extends Map<K, V> {
 	}
 }
 
-export function getErrorMessage(err: unknown): string {
+export function logErrorMessage(prefix: string, context: string, err: unknown) {
+	if (err instanceof Error && err.name === "AggregateError") {
+		const { errors } = err as AggregateError
+		if (errors.length === 1) {
+			const [err] = errors
+			console.log(prefix, context, chalk.yellow(`(${getErrorMessage(err)})`))
+		} else {
+			console.log(prefix, context, chalk.yellow(`(${errors.length} errors)`))
+			for (const err of errors) {
+				console.log(prefix, chalk.yellow(`- ${getErrorMessage(err)}`))
+			}
+		}
+	} else {
+		console.log(prefix, context, chalk.yellow(`(${getErrorMessage(err)})`))
+	}
+}
+
+function getErrorMessage(err: unknown): string {
 	if (err instanceof Error && err.name === "AggregateError") {
 		const { errors } = err as AggregateError
 		return errors.map(getErrorMessage).join("; ")
 	} else if (err instanceof CodeError) {
 		return `${err.code}: ${err.message}`
 	} else if (err instanceof Error) {
-		return err.message
+		return `${err.name}: ${err.message}`
 	} else {
 		throw err
 	}
