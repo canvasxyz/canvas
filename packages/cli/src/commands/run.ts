@@ -210,15 +210,15 @@ export async function handler(args: Args) {
 	const server = stoppable(
 		http.createServer(app).listen(args.port, () => {
 			if (args.static) {
-				console.log(`Serving static bundle: http://localhost:${args.port}/`)
+				console.log(`Serving static bundle: ${chalk.bold(origin)}`)
 			}
-			console.log(`Serving API for ${core.app}:`)
+
+			console.log(`Serving HTTP API for ${core.app}:`)
+			console.log(`└ POST ${apiURL}/`)
 			console.log(`└ GET  ${apiURL}`)
 			for (const name of core.vm.getRoutes()) {
 				console.log(`└ GET  ${apiURL}/${name.slice(1)}`)
 			}
-			console.log(`└ POST ${apiURL}/actions`)
-			console.log(`└ POST ${apiURL}/sessions`)
 		}),
 		0
 	)

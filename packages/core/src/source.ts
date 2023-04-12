@@ -363,7 +363,6 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		stream.close()
-
 		if (this.options.verbose) {
 			console.log(prefix, `Closed outgoing stream ${stream.id}`)
 		}
