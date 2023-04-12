@@ -210,10 +210,18 @@ export class Source extends EventEmitter<SourceEvents> {
 			while (!this.controller.signal.aborted) {
 				const peers = new Set<string>()
 				for (const peer of this.libp2p.pubsub.getSubscribers(this.uri)) {
+					if (peer.equals(this.libp2p.peerId)) {
+						continue
+					}
+
 					peers.add(peer.toString())
 				}
 
 				for await (const peer of getApplicationPeers(this.libp2p, this.cid, this.controller.signal)) {
+					if (peer.equals(this.libp2p.peerId)) {
+						continue
+					}
+
 					peers.add(peer.toString())
 				}
 
