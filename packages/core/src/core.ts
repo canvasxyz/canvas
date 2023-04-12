@@ -119,7 +119,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		if (libp2p !== null) {
 			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer, remoteAddr } }) => {
 				if (options.verbose) {
-					console.log(`[canvas-core] Opened connection ${id} to ${remotePeer} on ${remoteAddr}`)
+					console.log(`[canvas-core] Opened connection ${id} to ${remotePeer} at ${remoteAddr}`)
 				}
 
 				this.dispatchEvent(new CustomEvent("connect", { detail: { peer: remotePeer.toString() } }))
