@@ -41,7 +41,7 @@ export async function getLibp2pOptions(config: {
 	return {
 		peerId: config.peerId,
 		addresses: { listen: [], announce },
-		transports: [webSockets(), circuitRelayTransport({ discoverRelays: 3 })],
+		transports: [webSockets(), circuitRelayTransport({})],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
