@@ -99,6 +99,7 @@
     "@types/better-sqlite3": "^7.6.4",
     "@types/k-bucket": "^5.0.1",
     "@types/ws": "^8.5.4",
+    "aggregate-error": "^4.0.1",
     "better-sqlite3": "^8.3.0",
     "chalk": "^5.2.0",
     "ethers": "^5.7.2",

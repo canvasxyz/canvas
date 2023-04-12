@@ -9,13 +9,12 @@ import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
-import { peerIdFromString } from "@libp2p/peer-id"
 import { CID } from "multiformats/cid"
 
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
 
-import { wait, AbortError, toHex, assert } from "@canvas-js/core/utils"
+import { toHex, assert, getErrorMessage } from "@canvas-js/core/utils"
 import * as constants from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 import { sync, handleIncomingStream } from "./sync/index.js"
@@ -163,11 +162,8 @@ export class Source extends EventEmitter<SourceEvents> {
 				console.log(this.prefix, `Published ${toHex(hash)} to ${recipients.length} peers.`)
 			}
 		} catch (err) {
-			if (err instanceof Error) {
-				console.log(this.prefix, chalk.red(`Failed to publish ${toHex(hash)} to GossipSub (${err.message})`))
-			} else {
-				throw err
-			}
+			const msg = getErrorMessage(err)
+			console.log(this.prefix, chalk.red(`Failed to publish ${toHex(hash)} to GossipSub (${msg})`))
 		}
 	}
 
@@ -199,11 +195,8 @@ export class Source extends EventEmitter<SourceEvents> {
 				{ uri: this.uri }
 			)
 		} catch (err) {
-			if (err instanceof Error) {
-				console.log(this.prefix, chalk.red(`Error applying GossipSub message (${err.message})`))
-			} else {
-				throw err
-			}
+			const msg = getErrorMessage(err)
+			console.log(this.prefix, chalk.red(`Error applying GossipSub message (${msg})`))
 		}
 	}
 
@@ -221,17 +214,14 @@ export class Source extends EventEmitter<SourceEvents> {
 		try {
 			await this.messageStore.read((txn) => handleIncomingStream(this.cid, txn, stream), { uri: this.uri })
 		} catch (err) {
-			if (err instanceof Error) {
-				console.log(this.prefix, chalk.red(`Error handling incoming sync (${err.message})`))
-				if (this.options.verbose) {
-					console.log(this.prefix, `Aborting incoming stream ${stream.id}`)
-				}
-
-				stream.abort(err)
-				return
-			} else {
-				throw err
+			const msg = getErrorMessage(err)
+			console.log(this.prefix, chalk.red(`Error handling incoming sync (${msg})`))
+			if (this.options.verbose) {
+				console.log(this.prefix, `Aborting incoming stream ${stream.id}`)
 			}
+
+			stream.abort(err as Error)
+			return
 		}
 
 		if (this.options.verbose) {
@@ -321,12 +311,9 @@ export class Source extends EventEmitter<SourceEvents> {
 		try {
 			stream = await this.dial(peer)
 		} catch (err) {
-			if (err instanceof Error) {
-				console.log(prefix, chalk.red(`Failed to dial peer ${peer} (${err.message})`))
-				return
-			} else {
-				throw err
-			}
+			const msg = getErrorMessage(err)
+			console.log(prefix, chalk.red(`Failed to dial peer ${peer} (${msg})`))
+			return
 		}
 
 		if (this.options.verbose) {
@@ -347,13 +334,9 @@ export class Source extends EventEmitter<SourceEvents> {
 						await this.applyMessage(txn, hash, message)
 						successCount += 1
 					} catch (err) {
-						if (err instanceof Error) {
-							generator.throw(err) // this throws an exeption at the `yield` statement
-							failureCount += 1
-							console.log(prefix, chalk.red(`Failed to apply ${message.type} ${toHex(hash)} (${err.message})`))
-						} else {
-							throw err
-						}
+						generator.throw(err) // this throws an exeption at the `yield` statement
+						console.log(prefix, chalk.red(`Failed to apply ${message.type} ${toHex(hash)} (${getErrorMessage(err)})`))
+						failureCount += 1
 					}
 				}
 			})
@@ -367,21 +350,19 @@ export class Source extends EventEmitter<SourceEvents> {
 				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "success" } })
 			)
 		} catch (err) {
-			if (err instanceof Error) {
-				this.dispatchEvent(
-					new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "failure" } })
-				)
+			const msg = getErrorMessage(err)
+			console.log(prefix, chalk.red(`Failed to sync with peer ${peer} (${msg})`))
 
-				console.log(prefix, chalk.red(`Failed to sync with peer ${peer} (${err.message})`))
-				stream.abort(err)
-				if (this.options.verbose) {
-					console.log(prefix, `Aborted outgoing stream ${stream.id}`)
-				}
-
-				return
-			} else {
-				throw err
+			stream.abort(err as Error)
+			if (this.options.verbose) {
+				console.log(prefix, `Aborted outgoing stream ${stream.id}`)
 			}
+
+			this.dispatchEvent(
+				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "failure" } })
+			)
+
+			return
 		} finally {
 			this.controller.signal.removeEventListener("abort", closeStream)
 		}

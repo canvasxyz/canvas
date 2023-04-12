@@ -1,7 +1,9 @@
 import { CID } from "multiformats"
 
+import AggregateError from "aggregate-error"
 import { ethers } from "ethers"
 import { configure } from "safe-stable-stringify"
+import { CodeError } from "@libp2p/interfaces/errors"
 
 import type { ModelType, ModelValue } from "@canvas-js/interfaces"
 
@@ -138,5 +140,17 @@ export class CacheMap<K, V> extends Map<K, V> {
 				break
 			}
 		}
+	}
+}
+
+export function getErrorMessage(err: unknown): string {
+	if (err instanceof AggregateError) {
+		return err.errors.map(getErrorMessage).join("; ")
+	} else if (err instanceof CodeError) {
+		return `${err.code}: ${err.message}`
+	} else if (err instanceof Error) {
+		return `${err.name}: ${err.message}`
+	} else {
+		throw err
 	}
 }

@@ -10,7 +10,7 @@ type RoutingTable = KadDHT["routingTable"]
 
 import { TimeoutController } from "timeout-abort-controller"
 
-import { AbortError, wait } from "@canvas-js/core/utils"
+import { AbortError, getErrorMessage, wait } from "@canvas-js/core/utils"
 import { PING_INTERVAL, PING_TIMEOUT } from "@canvas-js/core/constants"
 
 function* forContacts(routingTable: RoutingTable): Iterable<PeerId> {
@@ -66,17 +66,14 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 
 				successCount += 1
 			} catch (err) {
-				if (err instanceof Error) {
-					if (routingTable.isStarted()) {
-						if (verbose) {
-							console.log(prefix, chalk.yellow(`Ping ${peer.toString()} failed (${err.message})`))
-						}
-
-						failureCount += 1
-						await routingTable.remove(peer)
+				const msg = getErrorMessage(err)
+				if (routingTable.isStarted()) {
+					if (verbose) {
+						console.log(prefix, chalk.yellow(`Ping ${peer.toString()} failed (${msg})`))
 					}
-				} else {
-					throw err
+
+					failureCount += 1
+					await routingTable.remove(peer)
 				}
 			}
 		}
@@ -103,16 +100,13 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 					console.log(prefix, `Ping ${peer.toString()} succeeded`)
 				}
 			} catch (err) {
-				if (err instanceof Error) {
-					if (wanRoutingTable.isStarted()) {
-						if (verbose) {
-							console.log(prefix, chalk.yellow(`Ping ${peer.toString()} failed (${err.message})`))
-						}
-
-						await wanRoutingTable.remove(peer)
+				const msg = getErrorMessage(err)
+				if (wanRoutingTable.isStarted()) {
+					if (verbose) {
+						console.log(prefix, chalk.yellow(`Ping ${peer.toString()} failed (${msg})`))
 					}
-				} else {
-					throw err
+
+					await wanRoutingTable.remove(peer)
 				}
 			}
 		})
@@ -134,16 +128,13 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 					console.log(prefix, `Ping ${peer.toString()} succeeded`)
 				}
 			} catch (err) {
-				if (err instanceof Error) {
-					if (lanRoutingTable.isStarted()) {
-						if (verbose) {
-							console.log(prefix, chalk.yellow(`Ping ${peer.toString()} failed (${err.message})`))
-						}
-
-						await lanRoutingTable.remove(peer)
+				const msg = getErrorMessage(err)
+				if (lanRoutingTable.isStarted()) {
+					if (verbose) {
+						console.log(prefix, chalk.yellow(`Ping ${peer.toString()} failed (${msg})`))
 					}
-				} else {
-					throw err
+
+					await lanRoutingTable.remove(peer)
 				}
 			}
 		})
@@ -168,12 +159,11 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 			})
 		}
 	} catch (err) {
-		if (err instanceof AbortError) {
-			console.log(prefix, "Aborting ping service")
-		} else if (err instanceof Error) {
-			console.error(prefix, chalk.red(`Ping service crashed (${err.message})`))
+		if (err instanceof AbortError || signal.aborted) {
+			console.log(prefix, `Service aborted`)
 		} else {
-			throw err
+			const msg = getErrorMessage(err)
+			console.error(prefix, chalk.red(`Ping service crashed (${msg})`))
 		}
 	}
 }

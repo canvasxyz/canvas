@@ -3,7 +3,7 @@ import { CID } from "multiformats"
 import { Libp2p } from "libp2p"
 import { TimeoutController } from "timeout-abort-controller"
 
-import { wait, retry, AbortError } from "@canvas-js/core/utils"
+import { wait, retry, AbortError, getErrorMessage } from "@canvas-js/core/utils"
 import { ANNOUNCE_DELAY, ANNOUNCE_INTERVAL, ANNOUNCE_RETRY_INTERVAL, ANNOUNCE_TIMEOUT } from "@canvas-js/core/constants"
 
 /**
@@ -19,19 +19,18 @@ export async function startAnnounceService(libp2p: Libp2p, cid: CID, signal: Abo
 		while (!signal.aborted) {
 			await retry(
 				() => announce(libp2p, cid, signal),
-				(err) => console.log(prefix, chalk.yellow(`Failed to publish DHT provider record (${err.message})`)),
+				(err) => console.log(prefix, chalk.yellow(`Failed to publish DHT provider record (${getErrorMessage(err)})`)),
 				{ signal, interval: ANNOUNCE_RETRY_INTERVAL }
 			)
 
 			await wait({ interval: ANNOUNCE_INTERVAL, signal })
 		}
 	} catch (err) {
-		if (err instanceof AbortError) {
-			console.log(prefix, `Aborting service`)
-		} else if (err instanceof Error) {
-			console.log(prefix, chalk.red(`Service crashed (${err.message})`))
+		if (err instanceof AbortError || signal.aborted) {
+			console.log(prefix, `Service aborted`)
 		} else {
-			throw err
+			const msg = getErrorMessage(err)
+			console.log(prefix, chalk.red(`Service crashed (${msg})`))
 		}
 	}
 }
