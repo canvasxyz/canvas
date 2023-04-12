@@ -25,9 +25,13 @@ function* forContacts(routingTable: RoutingTable): Iterable<PeerId> {
 }
 
 export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { verbose }: { verbose?: boolean } = {}) {
-	const prefix = chalk.hex("#b285cc")(`[canvas-core] [ping]`)
+	const prefix = `[canvas-core] [ping]`
 
 	async function ping(peer: PeerId, protocol: string) {
+		if (peer.equals(libp2p.peerId)) {
+			return
+		}
+
 		const timeoutController = new TimeoutController(PING_TIMEOUT)
 		const abort = () => timeoutController.abort()
 		signal.addEventListener("abort", abort)
@@ -52,14 +56,6 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 		for (const peer of forContacts(routingTable)) {
 			if (verbose) {
 				console.log(prefix, `Ping ${peer.toString()} (${++peerIndex}/${routingTable.size})`)
-			}
-
-			if (peer.equals(libp2p.peerId)) {
-				if (verbose) {
-					console.log(prefix, `Ping ${peer.toString()} skipped (is self)`)
-				}
-				successCount += 1
-				continue
 			}
 
 			try {
@@ -92,11 +88,11 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 	const { routingTable: lanRoutingTable, protocol: lanProtocol } = libp2p.dht.lan as KadDHT
 
 	wanRoutingTable.kb?.on("added", ({ peer }) => {
-		wanRoutingTable.pingQueue.add(async () => {
-			if (peer.equals(libp2p.peerId)) {
-				return
-			}
+		if (peer.equals(libp2p.peerId)) {
+			return
+		}
 
+		wanRoutingTable.pingQueue.add(async () => {
 			if (verbose) {
 				console.log(prefix, `Ping ${peer.toString()}`)
 			}
@@ -123,11 +119,11 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 	})
 
 	lanRoutingTable.kb?.on("added", ({ peer }) => {
-		lanRoutingTable.pingQueue.add(async () => {
-			if (peer.equals(libp2p.peerId)) {
-				return
-			}
+		if (peer.equals(libp2p.peerId)) {
+			return
+		}
 
+		lanRoutingTable.pingQueue.add(async () => {
 			if (verbose) {
 				console.log(prefix, `Ping ${peer.toString()}`)
 			}

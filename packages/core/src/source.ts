@@ -216,7 +216,7 @@ export class Source extends EventEmitter<SourceEvents> {
 					console.log(prefix, "No active peer connections")
 				} else {
 					for (const [i, peer] of subscribers.entries()) {
-						console.log(prefix, chalk.green(`Initiating sync with ${peer} (${i + 1}/${subscribers.length})`))
+						console.log(prefix, `Initiating sync with ${peer} (${i + 1}/${subscribers.length})`)
 						await this.sync(peer)
 					}
 				}
@@ -298,7 +298,7 @@ export class Source extends EventEmitter<SourceEvents> {
 
 			console.log(
 				prefix,
-				chalk.green(`Sync with ${peer} completed. Applied ${successCount} new messages with ${failureCount} failures.`)
+				`Sync with ${peer} completed. Applied ${successCount} new messages with ${failureCount} failures.`
 			)
 
 			this.dispatchEvent(
