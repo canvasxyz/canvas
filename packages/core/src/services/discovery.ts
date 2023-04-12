@@ -20,7 +20,7 @@ export async function startDiscoveryService(
 	libp2p: Libp2p,
 	cid: CID,
 	signal: AbortSignal,
-	callback?: (peers: PeerId[]) => void
+	callback?: (peerId: PeerId) => void
 ) {
 	const prefix = chalk.cyan(`[canvas-core] [${cid}] [discovery]`)
 	console.log(prefix, `Staring discovery service`)
@@ -28,15 +28,11 @@ export async function startDiscoveryService(
 	try {
 		await wait({ interval: DISCOVERY_DELAY, signal })
 		while (!signal.aborted) {
-			const peers = await retry(
-				async () => await discover(libp2p, cid, signal),
+			await retry(
+				async () => await discover(libp2p, cid, signal, callback),
 				(err) => logErrorMessage(prefix, chalk.yellow(`Failed to query DHT for provider records`), err),
 				{ signal, interval: DISCOVERY_RETRY_INTERVAL }
 			)
-
-			if (callback !== undefined) {
-				callback(peers)
-			}
 
 			await wait({ interval: DISCOVERY_INTERVAL, signal })
 		}
@@ -49,7 +45,12 @@ export async function startDiscoveryService(
 	}
 }
 
-async function discover(libp2p: Libp2p, cid: CID, signal: AbortSignal): Promise<PeerId[]> {
+async function discover(
+	libp2p: Libp2p,
+	cid: CID,
+	signal: AbortSignal,
+	callback?: (peerId: PeerId) => void
+): Promise<void> {
 	const prefix = chalk.cyan(`[canvas-core] [${cid}] [discovery]`)
 	console.log(prefix, `Querying DHT for provider records...`)
 
@@ -63,10 +64,10 @@ async function discover(libp2p: Libp2p, cid: CID, signal: AbortSignal): Promise<
 		const peers: PeerId[] = []
 		for await (const { id } of libp2p.contentRouting.findProviders(cid, queryOptions)) {
 			console.log(prefix, `Found application peer ${id}`)
-			peers.push(id)
+			if (callback !== undefined) {
+				callback(id)
+			}
 		}
-
-		return peers
 	} finally {
 		queryController.clear()
 		signal.removeEventListener("abort", abort)

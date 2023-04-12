@@ -101,20 +101,18 @@ export class Source extends EventEmitter<SourceEvents> {
 			startAnnounceService(this.libp2p, this.cid, this.controller.signal)
 		}
 
-		startDiscoveryService(this.libp2p, this.cid, this.controller.signal, (peers: PeerId[]) => {
-			for (const peerId of peers) {
-				if (this.libp2p.peerId.equals(peerId)) {
-					continue
-				}
-
-				const id = peerId.toString()
-				if (this.pendingSyncPeers.has(id)) {
-					return
-				}
-
-				this.pendingSyncPeers.add(id)
-				this.syncQueue.add(() => this.sync(peerId)).finally(() => this.pendingSyncPeers.delete(id))
+		startDiscoveryService(this.libp2p, this.cid, this.controller.signal, (peerId: PeerId) => {
+			if (this.libp2p.peerId.equals(peerId)) {
+				return
 			}
+
+			const id = peerId.toString()
+			if (this.pendingSyncPeers.has(id)) {
+				return
+			}
+
+			this.pendingSyncPeers.add(id)
+			this.syncQueue.add(() => this.sync(peerId)).finally(() => this.pendingSyncPeers.delete(id))
 		})
 	}
 
