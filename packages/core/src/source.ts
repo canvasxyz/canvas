@@ -9,16 +9,17 @@ import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
+import { peerIdFromString } from "@libp2p/peer-id"
 
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
 
-import { wait, retry, AbortError, toHex, assert } from "@canvas-js/core/utils"
+import { wait, AbortError, toHex, assert } from "@canvas-js/core/utils"
 import * as constants from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 import { sync, handleIncomingStream } from "./sync/index.js"
 import { startAnnounceService } from "./services/announce.js"
-import { startDiscoveryService } from "./services/discovery.js"
+import { getApplicationPeers } from "./services/discovery.js"
 
 export interface SourceOptions {
 	verbose?: boolean
@@ -71,7 +72,8 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		this.startSyncService()
-		startDiscoveryService(this.libp2p, this.cid, this.controller.signal)
+
+		// startDiscoveryService(this.libp2p, this.cid, this.controller.signal)
 
 		const mode = await this.libp2p.dht.getMode()
 		if (mode === "server") {
@@ -206,18 +208,22 @@ export class Source extends EventEmitter<SourceEvents> {
 			await this.wait(constants.SYNC_DELAY)
 
 			while (!this.controller.signal.aborted) {
-				const subscribers = this.libp2p.pubsub.getSubscribers(this.uri)
-				const peers = this.libp2p.pubsub.getPeers()
+				const peers = new Set<string>()
+				for (const peer of this.libp2p.pubsub.getSubscribers(this.uri)) {
+					peers.add(peer.toString())
+				}
 
-				console.log(prefix, `libp2p.pubsub.getSubscribers: [ ${subscribers.join(", ")} ]`)
-				console.log(prefix, `libp2p.pubsub.getPeers: [ ${peers.join(", ")} ]`)
+				for await (const peer of getApplicationPeers(this.libp2p, this.cid, this.controller.signal)) {
+					peers.add(peer.toString())
+				}
 
-				if (subscribers.length === 0) {
-					console.log(prefix, "No active peer connections")
+				if (peers.size === 0) {
+					console.log(prefix, "No application peers found")
 				} else {
-					for (const [i, peer] of subscribers.entries()) {
-						console.log(prefix, `Initiating sync with ${peer} (${i + 1}/${subscribers.length})`)
-						await this.sync(peer)
+					let i = 0
+					for (const peer of peers) {
+						console.log(prefix, `Initiating sync with ${peer} (${++i}/${peers.size})`)
+						await this.sync(peerIdFromString(peer))
 					}
 				}
 
