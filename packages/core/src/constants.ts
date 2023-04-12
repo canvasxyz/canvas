@@ -16,8 +16,8 @@ export const hour = minute * 60
 
 export const DHT_PING_INTERVAL = 5 * minute
 
-export const ANNOUNCE_DELAY = 20 * second
-export const ANNOUNCE_INTERVAL = 1 * hour
+export const ANNOUNCE_DELAY = 5 * second
+export const ANNOUNCE_INTERVAL = 15 * minute
 export const ANNOUNCE_TIMEOUT = 30 * second
 export const ANNOUNCE_RETRY_INTERVAL = 5 * second
 
