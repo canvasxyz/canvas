@@ -91,10 +91,7 @@ export class Source extends EventEmitter<SourceEvents> {
 					return
 				} else {
 					this.pendingSyncPeers.add(id)
-					this.syncQueue.add(async () => {
-						this.pendingSyncPeers.delete(id)
-						await this.sync(peerId)
-					})
+					this.syncQueue.add(() => this.sync(peerId)).finally(() => this.pendingSyncPeers.delete(id))
 				}
 			}
 		})
@@ -105,21 +102,18 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		startDiscoveryService(this.libp2p, this.cid, this.controller.signal, (peers: PeerId[]) => {
-			for (const peer of peers) {
-				if (this.libp2p.peerId.equals(peer)) {
+			for (const peerId of peers) {
+				if (this.libp2p.peerId.equals(peerId)) {
 					continue
 				}
 
-				const id = peer.toString()
+				const id = peerId.toString()
 				if (this.pendingSyncPeers.has(id)) {
 					return
 				}
 
 				this.pendingSyncPeers.add(id)
-				this.syncQueue.add(async () => {
-					this.pendingSyncPeers.delete(id)
-					await this.sync(peer)
-				})
+				this.syncQueue.add(() => this.sync(peerId)).finally(() => this.pendingSyncPeers.delete(id))
 			}
 		})
 	}
@@ -285,6 +279,10 @@ export class Source extends EventEmitter<SourceEvents> {
 	// }
 
 	private async dial(peer: PeerId): Promise<Stream> {
+		if (this.options.verbose) {
+			console.log(this.prefix, `Dialing ${peer}`)
+		}
+
 		const queryController = new TimeoutController(constants.DIAL_TIMEOUT)
 		const abort = () => queryController.abort()
 		this.controller.signal.addEventListener("abort", abort)

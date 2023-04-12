@@ -38,12 +38,13 @@ export async function getLibp2pOptions(config: {
 		console.log(`[canvas-core] No --listen address provided. Using bootstrap servers as public relays.`)
 	}
 
-	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
+	const relayAddresses = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
+	const announce = config.announce ?? relayAddresses
 	for (const address of announce) {
 		console.log(`[canvas-core] Announcing on ${address}`)
 	}
 
-	const listen = config.listen ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit`)
+	const listen = config.listen ?? relayAddresses
 	for (const address of listen) {
 		console.log(`[canvas-core] Listening on ${address}`)
 	}
