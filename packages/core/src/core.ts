@@ -22,7 +22,8 @@ import { validate } from "@hyperjump/json-schema/draft-2020-12"
 import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
 import { MessageStore, openMessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
-import { getPeerId, getLibp2pOptions, startPingService } from "@canvas-js/core/components/libp2p"
+import { getPeerId, getLibp2pOptions } from "@canvas-js/core/components/libp2p"
+import { startPingService } from "./services/ping.js"
 
 import { Source } from "./source.js"
 import { actionType, messageType } from "./codecs.js"
@@ -88,7 +89,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 		if (libp2p !== null && core.sources !== null) {
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
-			startPingService(libp2p, core.controller.signal)
+			startPingService(libp2p, core.controller.signal, { verbose })
 		}
 
 		return core
