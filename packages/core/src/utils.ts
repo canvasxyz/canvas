@@ -144,12 +144,13 @@ export class CacheMap<K, V> extends Map<K, V> {
 }
 
 export function getErrorMessage(err: unknown): string {
-	if (err instanceof AggregateError) {
-		return err.errors.map(getErrorMessage).join("; ")
+	if (err instanceof Error && err.name === "AggregateError") {
+		const { errors } = err as AggregateError
+		return errors.map(getErrorMessage).join("; ")
 	} else if (err instanceof CodeError) {
 		return `${err.code}: ${err.message}`
 	} else if (err instanceof Error) {
-		return `${err.name}: ${err.message}`
+		return err.message
 	} else {
 		throw err
 	}

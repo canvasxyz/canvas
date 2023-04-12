@@ -47,7 +47,7 @@ async function announce(libp2p: Libp2p, cid: CID, signal: AbortSignal): Promise<
 	signal.addEventListener("abort", abort)
 	try {
 		await libp2p.contentRouting.provide(cid, { signal: queryController.signal })
-		console.log(prefix, `Successfully published DHT provider record.`)
+		console.log(prefix, chalk.green(`Successfully published DHT provider record.`))
 	} finally {
 		queryController.clear()
 		signal.removeEventListener("abort", abort)

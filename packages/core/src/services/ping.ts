@@ -55,13 +55,13 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 
 		for (const peer of forContacts(routingTable)) {
 			if (verbose) {
-				console.log(prefix, `Ping ${peer.toString()} (${++peerIndex}/${routingTable.size})`)
+				console.log(prefix, `Ping ${peer} (${++peerIndex}/${routingTable.size})`)
 			}
 
 			try {
 				await ping(peer, protocol)
 				if (verbose) {
-					console.log(prefix, `Ping ${peer.toString()} succeeded`)
+					console.log(prefix, `Ping ${peer} succeeded`)
 				}
 
 				successCount += 1
@@ -69,7 +69,8 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 				const msg = getErrorMessage(err)
 				if (routingTable.isStarted()) {
 					if (verbose) {
-						console.log(prefix, chalk.yellow(`Ping ${peer.toString()} failed (${msg})`))
+						console.log(prefix, chalk.yellow(`Ping failed (${msg})`))
+						console.log(prefix, `Evicting peer ${peer}`)
 					}
 
 					failureCount += 1
@@ -103,7 +104,8 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 				const msg = getErrorMessage(err)
 				if (wanRoutingTable.isStarted()) {
 					if (verbose) {
-						console.log(prefix, chalk.yellow(`Ping ${peer.toString()} failed (${msg})`))
+						console.log(prefix, chalk.yellow(`Ping failed (${msg})`))
+						console.log(prefix, `Evicting peer ${peer}`)
 					}
 
 					await wanRoutingTable.remove(peer)
@@ -131,7 +133,8 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 				const msg = getErrorMessage(err)
 				if (lanRoutingTable.isStarted()) {
 					if (verbose) {
-						console.log(prefix, chalk.yellow(`Ping ${peer.toString()} failed (${msg})`))
+						console.log(prefix, chalk.yellow(`Ping failed (${msg})`))
+						console.log(prefix, `Evicting peer ${peer}`)
 					}
 
 					await lanRoutingTable.remove(peer)

@@ -78,10 +78,13 @@ export class Source extends EventEmitter<SourceEvents> {
 				return
 			}
 
-			const newProtocols = protocols.filter((protocol) => !oldProtocols.includes(protocol))
-			if (newProtocols.length > 0) {
+			const applications = protocols
+				.filter((protocol) => protocol.startsWith(Source.protocolPrefix))
+				.map((protocol) => protocol.slice(Source.protocolPrefix.length))
+
+			if (applications.length > 0) {
 				if (this.options.verbose) {
-					console.log(this.prefix, `Peer ${peerId} supports protocols [ ${newProtocols.join(", ")} ]`)
+					console.log(this.prefix, `Peer ${peerId} supports applications [ ${applications.join(", ")} ]`)
 				}
 			}
 
@@ -144,8 +147,10 @@ export class Source extends EventEmitter<SourceEvents> {
 		return `ipfs://${this.cid}`
 	}
 
+	private static protocolPrefix = `/x/canvas/sync/v2/`
+
 	public get protocol() {
-		return `/x/canvas/sync/v2/${this.cid}`
+		return Source.protocolPrefix + this.cid.toString()
 	}
 
 	/**
@@ -341,10 +346,8 @@ export class Source extends EventEmitter<SourceEvents> {
 				}
 			})
 
-			console.log(
-				prefix,
-				`Sync with ${peer} completed. Applied ${successCount} new messages with ${failureCount} failures.`
-			)
+			console.log(prefix, chalk.green(`Sync with ${peer} completed.`))
+			console.log(prefix, `Applied ${successCount} new messages with ${failureCount} failures.`)
 
 			this.dispatchEvent(
 				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "success" } })
