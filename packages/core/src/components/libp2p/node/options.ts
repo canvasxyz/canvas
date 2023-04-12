@@ -2,6 +2,7 @@ import path from "node:path"
 import fs from "node:fs"
 
 import { sha256 } from "@noble/hashes/sha256"
+import { bytesToHex as hex } from "@noble/hashes/utils"
 
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
@@ -22,7 +23,6 @@ import { circuitRelayTransport } from "libp2p/circuit-relay"
 import { register } from "prom-client"
 
 import { PEER_ID_FILENAME, minute } from "@canvas-js/core/constants"
-import { toHex } from "@canvas-js/core/utils"
 
 import { defaultBootstrapList } from "../bootstrap.js"
 
@@ -38,6 +38,7 @@ export async function getLibp2pOptions(config: {
 		console.log(`[canvas-core] No --listen address provided. Using bootstrap servers as public relays.`)
 	}
 
+	const discoverRelays = config.announce ? 0 : 3
 	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
 	for (const address of announce) {
 		console.log(`[canvas-core] Announcing on ${address}`)
@@ -51,7 +52,7 @@ export async function getLibp2pOptions(config: {
 	return {
 		peerId: config.peerId,
 		addresses: { listen, announce },
-		transports: [webSockets(), circuitRelayTransport({})],
+		transports: [webSockets(), circuitRelayTransport({ discoverRelays })],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
@@ -67,7 +68,7 @@ export async function getLibp2pOptions(config: {
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictSign",
 			msgIdFn: (msg) => sha256(msg.data),
-			msgIdToStrFn: (id) => toHex(id),
+			msgIdToStrFn: (id) => hex(id),
 			directPeers: bootstrapList.map((address) => {
 				const ma = multiaddr(address)
 				const peerId = ma.getPeerId()

@@ -2,6 +2,7 @@ import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
 
 import { sha256 } from "@noble/hashes/sha256"
+import { bytesToHex as hex } from "@noble/hashes/utils"
 import { ethers } from "ethers"
 
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
@@ -40,7 +41,7 @@ export async function getLibp2pOptions(config: {
 	return {
 		peerId: config.peerId,
 		addresses: { listen: [], announce },
-		transports: [webSockets(), circuitRelayTransport({})],
+		transports: [webSockets(), circuitRelayTransport({ discoverRelays: 3 })],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
@@ -55,7 +56,7 @@ export async function getLibp2pOptions(config: {
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictSign",
 			msgIdFn: (msg) => sha256(msg.data),
-			msgIdToStrFn: (id) => toHex(id),
+			msgIdToStrFn: (id) => hex(id),
 			directPeers: bootstrapList.map((address) => {
 				const ma = multiaddr(address)
 				const peerId = ma.getPeerId()
