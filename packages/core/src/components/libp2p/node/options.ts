@@ -22,6 +22,7 @@ import { PEER_ID_FILENAME, minute } from "@canvas-js/core/constants"
 import { toHex } from "@canvas-js/core/utils"
 
 import { defaultBootstrapList } from "../bootstrap.js"
+import chalk from "chalk"
 
 export async function getLibp2pOptions(config: {
 	peerId: PeerId
@@ -83,13 +84,11 @@ export async function getPeerId(directory: string | null): Promise<PeerId> {
 	const peerIdPath = path.resolve(directory, PEER_ID_FILENAME)
 	if (fs.existsSync(peerIdPath)) {
 		const peerId = await createFromProtobuf(fs.readFileSync(peerIdPath))
-		console.log(`[canvas-core] Using PeerId ${peerId}`)
 		return peerId
 	} else {
 		console.log(`[canvas-core] Creating new PeerID at ${peerIdPath}`)
 		const peerId = await createEd25519PeerId()
 		fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
-		console.log(`[canvas-core] Using PeerId ${peerId}`)
 		return peerId
 	}
 }

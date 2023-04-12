@@ -1,5 +1,5 @@
 import chalk from "chalk"
-import { CID } from "multiformats/cid"
+import PQueue from "p-queue"
 import { TimeoutController } from "timeout-abort-controller"
 import { sha256 } from "@noble/hashes/sha256"
 
@@ -10,6 +10,7 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { peerIdFromString } from "@libp2p/peer-id"
+import { CID } from "multiformats/cid"
 
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
@@ -19,7 +20,7 @@ import * as constants from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 import { sync, handleIncomingStream } from "./sync/index.js"
 import { startAnnounceService } from "./services/announce.js"
-import { getApplicationPeers } from "./services/discovery.js"
+import { startDiscoveryService } from "./services/discovery.js"
 
 export interface SourceOptions {
 	verbose?: boolean
@@ -38,6 +39,8 @@ interface SourceEvents {
 
 export class Source extends EventEmitter<SourceEvents> {
 	private readonly controller = new AbortController()
+	private readonly syncQueue = new PQueue({ concurrency: 1 })
+	private readonly pendingSyncPeers = new Set<string>()
 
 	private readonly cid: CID
 	private readonly messageStore: MessageStore
@@ -71,17 +74,61 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(this.prefix, `Attached stream handler for protocol ${this.protocol}`)
 		}
 
-		this.startSyncService()
+		this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
+			if (this.libp2p.peerId.equals(peerId)) {
+				return
+			}
 
-		// startDiscoveryService(this.libp2p, this.cid, this.controller.signal)
+			const newProtocols = protocols.filter((protocol) => !oldProtocols.includes(protocol))
+			if (newProtocols.length > 0) {
+				if (this.options.verbose) {
+					console.log(this.prefix, `Peer ${peerId} supports protocols [ ${newProtocols.join(", ")} ]`)
+				}
+			}
+
+			if (protocols.includes(this.protocol)) {
+				const id = peerId.toString()
+				if (this.pendingSyncPeers.has(id)) {
+					return
+				} else {
+					this.pendingSyncPeers.add(id)
+					this.syncQueue.add(async () => {
+						this.pendingSyncPeers.delete(id)
+						await this.sync(peerId)
+					})
+				}
+			}
+		})
 
 		const mode = await this.libp2p.dht.getMode()
 		if (mode === "server") {
 			startAnnounceService(this.libp2p, this.cid, this.controller.signal)
 		}
+
+		startDiscoveryService(this.libp2p, this.cid, this.controller.signal, (peers: PeerId[]) => {
+			for (const peer of peers) {
+				if (this.libp2p.peerId.equals(peer)) {
+					continue
+				}
+
+				const id = peer.toString()
+				if (this.pendingSyncPeers.has(id)) {
+					return
+				}
+
+				this.pendingSyncPeers.add(id)
+				this.syncQueue.add(async () => {
+					this.pendingSyncPeers.delete(id)
+					await this.sync(peer)
+				})
+			}
+		})
 	}
 
 	public async stop() {
+		this.syncQueue.pause()
+		this.syncQueue.clear()
+
 		this.controller.abort()
 
 		this.libp2p.pubsub.unsubscribe(this.uri)
@@ -192,61 +239,61 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 	}
 
-	private async wait(interval: number) {
-		await wait({ signal: this.controller.signal, interval })
-	}
+	// private async wait(interval: number) {
+	// 	await wait({ signal: this.controller.signal, interval })
+	// }
 
-	/**
-	 * This starts the "sync service", an async while loop that looks up application peers
-	 * and calls this.sync(peerId) for each of them every constants.SYNC_INTERVAL milliseconds
-	 */
-	private async startSyncService() {
-		const prefix = chalk.magenta(`${this.prefix} [sync]`)
-		console.log(prefix, `Staring service`)
+	// /**
+	//  * This starts the "sync service", an async while loop that looks up application peers
+	//  * and calls this.sync(peerId) for each of them every constants.SYNC_INTERVAL milliseconds
+	//  */
+	// private async startSyncService() {
+	// 	const prefix = chalk.magenta(`${this.prefix} [sync]`)
+	// 	console.log(prefix, `Staring service`)
 
-		try {
-			await this.wait(constants.SYNC_DELAY)
+	// 	try {
+	// 		await this.wait(constants.SYNC_DELAY)
 
-			while (!this.controller.signal.aborted) {
-				const peers = new Set<string>()
-				for (const peer of this.libp2p.pubsub.getSubscribers(this.uri)) {
-					if (peer.equals(this.libp2p.peerId)) {
-						continue
-					}
+	// 		while (!this.controller.signal.aborted) {
+	// 			const peers = new Set<string>()
+	// 			for (const peer of this.libp2p.pubsub.getSubscribers(this.uri)) {
+	// 				if (peer.equals(this.libp2p.peerId)) {
+	// 					continue
+	// 				}
 
-					peers.add(peer.toString())
-				}
+	// 				peers.add(peer.toString())
+	// 			}
 
-				for await (const peer of getApplicationPeers(this.libp2p, this.cid, this.controller.signal)) {
-					if (peer.equals(this.libp2p.peerId)) {
-						continue
-					}
+	// 			for await (const peer of getApplicationPeers(this.libp2p, this.cid, this.controller.signal)) {
+	// 				if (peer.equals(this.libp2p.peerId)) {
+	// 					continue
+	// 				}
 
-					peers.add(peer.toString())
-				}
+	// 				peers.add(peer.toString())
+	// 			}
 
-				if (peers.size === 0) {
-					console.log(prefix, "No application peers found")
-				} else {
-					let i = 0
-					for (const peer of peers) {
-						console.log(prefix, `Initiating sync with ${peer} (${++i}/${peers.size})`)
-						await this.sync(peerIdFromString(peer))
-					}
-				}
+	// 			if (peers.size === 0) {
+	// 				console.log(prefix, "No application peers found")
+	// 			} else {
+	// 				let i = 0
+	// 				for (const peer of peers) {
+	// 					console.log(prefix, `Initiating sync with ${peer} (${++i}/${peers.size})`)
+	// 					await this.sync(peerIdFromString(peer))
+	// 				}
+	// 			}
 
-				await this.wait(constants.SYNC_INTERVAL)
-			}
-		} catch (err) {
-			if (err instanceof AbortError) {
-				console.log(prefix, `Aborting service`)
-			} else if (err instanceof Error) {
-				console.log(prefix, chalk.red(`Service crashed (${err.message})`))
-			} else {
-				throw err
-			}
-		}
-	}
+	// 			await this.wait(constants.SYNC_INTERVAL)
+	// 		}
+	// 	} catch (err) {
+	// 		if (err instanceof AbortError) {
+	// 			console.log(prefix, `Aborting service`)
+	// 		} else if (err instanceof Error) {
+	// 			console.log(prefix, chalk.red(`Service crashed (${err.message})`))
+	// 		} else {
+	// 			throw err
+	// 		}
+	// 	}
+	// }
 
 	private async dial(peer: PeerId): Promise<Stream> {
 		const queryController = new TimeoutController(constants.DIAL_TIMEOUT)
@@ -268,6 +315,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	 */
 	private async sync(peer: PeerId) {
 		const prefix = chalk.magenta(`${this.prefix} [sync]`)
+		console.log(prefix, `Initiating sync with ${peer}`)
 
 		let stream: Stream
 		try {

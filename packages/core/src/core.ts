@@ -63,17 +63,18 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 		let libp2p: Libp2p | null = null
 		if (!offline) {
-			const { listen, announce, bootstrapList } = config
 			const peerId = await getPeerId(directory)
-			const options = await getLibp2pOptions({ peerId, listen, announce, bootstrapList })
+			console.log("[canvas-core]", chalk.bold(`Using PeerId ${peerId}`))
 
+			const { listen, announce, bootstrapList } = config
+			const options = await getLibp2pOptions({ peerId, listen, announce, bootstrapList })
 			libp2p = await createLibp2p(options)
 		}
 
 		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, { verbose, unchecked })
 
 		if (config.replay) {
-			console.log(chalk.green(`[canvas-core] Replaying action log...`))
+			console.log(`[canvas-core] Replaying action log...`)
 			let i = 0
 			for await (const [id, message] of messageStore.getMessageStream()) {
 				if (message.type === "action") {
@@ -84,7 +85,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 				}
 			}
 
-			console.log(chalk.green(`[canvas-core] Successfully replayed all ${i} actions from the message store.`))
+			console.log("[canvas-core]", chalk.green(`Successfully replayed all ${i} actions from the message store.`))
 		}
 
 		if (libp2p !== null && core.sources !== null) {
