@@ -115,6 +115,12 @@ export async function handler(args: Args) {
 		fs.mkdirSync(directory)
 	} else if (args.reset) {
 		await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${directory}?`)
+		const peerIdPath = path.resolve(directory, constants.PEER_ID_FILENAME)
+		if (fs.existsSync(peerIdPath)) {
+			fs.rmSync(peerIdPath)
+			console.log(`[canvas-cli] Deleted ${peerIdPath}`)
+		}
+
 		const messagesPath = path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
 		if (fs.existsSync(messagesPath)) {
 			fs.rmSync(messagesPath)
