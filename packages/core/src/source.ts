@@ -17,6 +17,8 @@ import { wait, retry, AbortError, toHex, assert } from "@canvas-js/core/utils"
 import * as constants from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 import { sync, handleIncomingStream } from "./sync/index.js"
+import { startAnnounceService } from "./services/announce.js"
+import { startDiscoveryService } from "./services/discovery.js"
 
 export interface SourceOptions {
 	verbose?: boolean
@@ -69,11 +71,11 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		this.startSyncService()
-		this.startDiscoveryService()
+		startDiscoveryService(this.libp2p, this.cid, this.controller.signal)
 
 		const mode = await this.libp2p.dht.getMode()
 		if (mode === "server") {
-			this.startAnnounceService()
+			startAnnounceService(this.libp2p, this.cid, this.controller.signal)
 		}
 	}
 
@@ -113,7 +115,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			}
 		} catch (err) {
 			if (err instanceof Error) {
-				console.log(chalk.red(this.prefix, `Failed to publish ${toHex(hash)} to GossipSub (${err.message})`))
+				console.log(this.prefix, chalk.red(`Failed to publish ${toHex(hash)} to GossipSub (${err.message})`))
 			} else {
 				throw err
 			}
@@ -149,7 +151,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			)
 		} catch (err) {
 			if (err instanceof Error) {
-				console.log(chalk.red(this.prefix, `Error applying GossipSub message (${err.message})`))
+				console.log(this.prefix, chalk.red(`Error applying GossipSub message (${err.message})`))
 			} else {
 				throw err
 			}
@@ -171,7 +173,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			await this.messageStore.read((txn) => handleIncomingStream(this.cid, txn, stream), { uri: this.uri })
 		} catch (err) {
 			if (err instanceof Error) {
-				console.log(chalk.red(this.prefix, `Error handling incoming sync (${err.message})`))
+				console.log(this.prefix, chalk.red(`Error handling incoming sync (${err.message})`))
 				if (this.options.verbose) {
 					console.log(this.prefix, `Aborting incoming stream ${stream.id}`)
 				}
@@ -193,130 +195,30 @@ export class Source extends EventEmitter<SourceEvents> {
 	}
 
 	/**
-	 * This starts the "discovery service", an async while loop that calls this.discover()
-	 * every constants.ANNOUNCE_INTERVAL milliseconds
-	 */
-	private async startDiscoveryService() {
-		const prefix = `${this.prefix} [discovery]`
-		console.log(prefix, `Staring discovery service`)
-
-		try {
-			await this.wait(constants.DISCOVERY_DELAY)
-			while (!this.controller.signal.aborted) {
-				await retry(
-					() => this.discover(),
-					(err) => console.log(chalk.yellow(prefix, `Failed to query DHT for provider records (${err.message})`)),
-					{ signal: this.controller.signal, interval: constants.DISCOVERY_RETRY_INTERVAL }
-				)
-
-				await this.wait(constants.DISCOVERY_INTERVAL)
-			}
-		} catch (err) {
-			if (err instanceof AbortError || this.controller.signal.aborted) {
-				console.log(prefix, `Aborting service`)
-			} else if (err instanceof Error) {
-				console.log(chalk.red(prefix, `Service crashed (${err.message})`))
-			} else {
-				throw err
-			}
-		}
-	}
-
-	private async discover(): Promise<void> {
-		const prefix = `${this.prefix} [discovery]`
-		console.log(prefix, `Querying DHT for provider records...`)
-
-		const queryController = new TimeoutController(constants.DISCOVERY_TIMEOUT)
-		const abort = () => queryController.abort()
-		this.controller.signal.addEventListener("abort", abort)
-
-		const queryOptions = { signal: queryController.signal }
-
-		try {
-			const peers: PeerId[] = []
-			for await (const { id } of this.libp2p.contentRouting.findProviders(this.cid, queryOptions)) {
-				if (this.options.verbose) {
-					console.log(prefix, `Found application peer ${id}`)
-				}
-
-				peers.push(id)
-			}
-
-			// TODO: is there anything we should actually do with these?
-			this.applicationPeers = peers
-		} finally {
-			queryController.clear()
-			this.controller.signal.removeEventListener("abort", abort)
-		}
-	}
-
-	/**
-	 * This starts the "announce service", an async while loop that calls this.announce()
-	 * every constants.ANNOUNCE_INTERVAL milliseconds
-	 */
-	private async startAnnounceService() {
-		const prefix = `${this.prefix} [announce]`
-		console.log(prefix, `Staring service`)
-
-		try {
-			await this.wait(constants.ANNOUNCE_DELAY)
-			while (!this.controller.signal.aborted) {
-				await retry(
-					() => this.announce(),
-					(err) => console.log(chalk.yellow(prefix, `Failed to publish DHT provider record (${err.message})`)),
-					{ signal: this.controller.signal, interval: constants.ANNOUNCE_RETRY_INTERVAL }
-				)
-
-				await this.wait(constants.ANNOUNCE_INTERVAL)
-			}
-		} catch (err) {
-			if (err instanceof AbortError) {
-				console.log(prefix, `Aborting service`)
-			} else if (err instanceof Error) {
-				console.log(chalk.red(prefix, `Service crashed (${err.message})`))
-			} else {
-				throw err
-			}
-		}
-	}
-
-	/**
-	 * Publish a provider record to the DHT announcing us as an application peer.
-	 */
-	private async announce(): Promise<void> {
-		const prefix = `${this.prefix} [announce]`
-		console.log(chalk.green(prefix, `Publishing DHT provider record...`))
-
-		const queryController = new TimeoutController(constants.ANNOUNCE_TIMEOUT)
-		const abort = () => queryController.abort()
-		this.controller.signal.addEventListener("abort", abort)
-		try {
-			await this.libp2p.contentRouting.provide(this.cid, { signal: queryController.signal })
-			console.log(chalk.green(prefix, `Successfully published DHT provider record.`))
-		} finally {
-			queryController.clear()
-			this.controller.signal.removeEventListener("abort", abort)
-		}
-	}
-
-	/**
 	 * This starts the "sync service", an async while loop that looks up application peers
 	 * and calls this.sync(peerId) for each of them every constants.SYNC_INTERVAL milliseconds
 	 */
 	private async startSyncService() {
-		const prefix = `${this.prefix} [sync]`
+		const prefix = chalk.magenta(`${this.prefix} [sync]`)
 		console.log(prefix, `Staring service`)
 
 		try {
 			await this.wait(constants.SYNC_DELAY)
 
 			while (!this.controller.signal.aborted) {
-				const peers = this.libp2p.pubsub.getSubscribers(this.uri)
+				const subscribers = this.libp2p.pubsub.getSubscribers(this.uri)
+				const peers = this.libp2p.pubsub.getPeers()
 
-				for (const [i, peer] of peers.entries()) {
-					console.log(chalk.green(prefix, `Initiating sync with ${peer} (${i + 1}/${peers.length})`))
+				console.log(prefix, `libp2p.pubsub.getSubscribers: [ ${subscribers.join(", ")} ]`)
+				console.log(prefix, `libp2p.pubsub.getPeers: [ ${peers.join(", ")} ]`)
 
-					await this.sync(peer)
+				if (subscribers.length === 0) {
+					console.log(prefix, "No active peer connections")
+				} else {
+					for (const [i, peer] of subscribers.entries()) {
+						console.log(prefix, chalk.green(`Initiating sync with ${peer} (${i + 1}/${subscribers.length})`))
+						await this.sync(peer)
+					}
 				}
 
 				await this.wait(constants.SYNC_INTERVAL)
@@ -325,7 +227,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			if (err instanceof AbortError) {
 				console.log(prefix, `Aborting service`)
 			} else if (err instanceof Error) {
-				console.log(chalk.red(prefix, `Service crashed (${err.message})`))
+				console.log(prefix, chalk.red(`Service crashed (${err.message})`))
 			} else {
 				throw err
 			}
@@ -333,7 +235,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	}
 
 	private async dial(peer: PeerId): Promise<Stream> {
-		const queryController = new TimeoutController(constants.DIAL_PEER_TIMEOUT)
+		const queryController = new TimeoutController(constants.DIAL_TIMEOUT)
 		const abort = () => queryController.abort()
 		this.controller.signal.addEventListener("abort", abort)
 
@@ -351,14 +253,14 @@ export class Source extends EventEmitter<SourceEvents> {
 	 * They have to independently dial us back to access our MST.
 	 */
 	private async sync(peer: PeerId) {
-		const prefix = `${this.prefix} [sync]`
+		const prefix = chalk.magenta(`${this.prefix} [sync]`)
 
 		let stream: Stream
 		try {
 			stream = await this.dial(peer)
 		} catch (err) {
 			if (err instanceof Error) {
-				console.log(chalk.red(prefix, `Failed to dial peer ${peer} (${err.message})`))
+				console.log(prefix, chalk.red(`Failed to dial peer ${peer} (${err.message})`))
 				return
 			} else {
 				throw err
@@ -386,7 +288,7 @@ export class Source extends EventEmitter<SourceEvents> {
 						if (err instanceof Error) {
 							generator.throw(err) // this throws an exeption at the `yield` statement
 							failureCount += 1
-							console.log(chalk.red(prefix, `Failed to apply ${message.type} ${toHex(hash)} (${err.message})`))
+							console.log(prefix, chalk.red(`Failed to apply ${message.type} ${toHex(hash)} (${err.message})`))
 						} else {
 							throw err
 						}
@@ -395,10 +297,8 @@ export class Source extends EventEmitter<SourceEvents> {
 			})
 
 			console.log(
-				chalk.green(
-					prefix,
-					`Sync with ${peer} completed. Applied ${successCount} new messages with ${failureCount} failures.`
-				)
+				prefix,
+				chalk.green(`Sync with ${peer} completed. Applied ${successCount} new messages with ${failureCount} failures.`)
 			)
 
 			this.dispatchEvent(
@@ -410,7 +310,7 @@ export class Source extends EventEmitter<SourceEvents> {
 					new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "failure" } })
 				)
 
-				console.log(chalk.red(prefix, `Failed to sync with peer ${peer} (${err.message})`))
+				console.log(prefix, chalk.red(`Failed to sync with peer ${peer} (${err.message})`))
 				stream.abort(err)
 				if (this.options.verbose) {
 					console.log(prefix, `Aborted outgoing stream ${stream.id}`)
