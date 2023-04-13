@@ -30,4 +30,4 @@ export const DISCOVERY_RETRY_INTERVAL = 5 * second
 
 export const PING_INTERVAL = 5 * minute
 export const DIAL_TIMEOUT = 10 * second
-export const PING_TIMEOUT = 10 * second
+export const PING_TIMEOUT = 5 * second
