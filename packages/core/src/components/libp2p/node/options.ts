@@ -22,7 +22,7 @@ import { circuitRelayTransport } from "libp2p/circuit-relay"
 
 import { register } from "prom-client"
 
-import { PEER_ID_FILENAME, minute } from "@canvas-js/core/constants"
+import { PEER_ID_FILENAME, minute, second } from "@canvas-js/core/constants"
 
 import { defaultBootstrapList } from "../bootstrap.js"
 
@@ -38,13 +38,12 @@ export async function getLibp2pOptions(config: {
 		console.log(`[canvas-core] No --listen address provided. Using bootstrap servers as public relays.`)
 	}
 
-	const relayAddresses = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
-	const announce = config.announce ?? relayAddresses
+	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
 	for (const address of announce) {
 		console.log(`[canvas-core] Announcing on ${address}`)
 	}
 
-	const listen = config.listen ?? relayAddresses
+	const listen = config.listen ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit`)
 	for (const address of listen) {
 		console.log(`[canvas-core] Listening on ${address}`)
 	}
@@ -80,6 +79,12 @@ export async function getLibp2pOptions(config: {
 				return { id: peerIdFromString(peerId), addrs: [ma] }
 			}),
 		}),
+		ping: {
+			protocolPrefix: "/canvas",
+			maxInboundStreams: 32,
+			maxOutboundStreams: 32,
+			timeout: 20 * second,
+		},
 	}
 }
 

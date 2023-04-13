@@ -91,7 +91,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		if (libp2p !== null && core.sources !== null) {
 			await libp2p.start()
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
-			startPingService(libp2p, core.controller.signal, { verbose })
+			startPingService(libp2p, { verbose, signal: core.controller.signal })
 		}
 
 		return core

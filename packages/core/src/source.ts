@@ -2,6 +2,7 @@ import chalk from "chalk"
 import PQueue from "p-queue"
 import { TimeoutController } from "timeout-abort-controller"
 import { sha256 } from "@noble/hashes/sha256"
+import { anySignal } from "any-signal"
 
 import type { Libp2p } from "libp2p"
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
@@ -86,29 +87,18 @@ export class Source extends EventEmitter<SourceEvents> {
 					console.log(this.prefix, `Peer ${peerId} supports Canvas protocol ${this.protocol}`)
 				}
 
-				const id = peerId.toString()
-				if (this.pendingSyncPeers.has(id)) {
-					return
-				} else {
-					this.pendingSyncPeers.add(id)
-					this.syncQueue.add(() => this.sync(peerId)).finally(() => this.pendingSyncPeers.delete(id))
-				}
+				this.handlePeerDiscovery(peerId)
 			}
 		})
 
 		const mode = await this.libp2p.dht.getMode()
 		if (mode === "server") {
-			startAnnounceService(this.libp2p, this.cid, this.controller.signal)
+			startAnnounceService(this.libp2p, this.cid, { signal: this.controller.signal })
 		}
 
-		startDiscoveryService(this.libp2p, this.cid, this.controller.signal, (peerId: PeerId) => {
-			const id = peerId.toString()
-			if (this.pendingSyncPeers.has(id)) {
-				return
-			}
-
-			this.pendingSyncPeers.add(id)
-			this.syncQueue.add(() => this.sync(peerId)).finally(() => this.pendingSyncPeers.delete(id))
+		startDiscoveryService(this.libp2p, this.cid, {
+			signal: this.controller.signal,
+			callback: (peerId) => this.handlePeerDiscovery(peerId),
 		})
 	}
 
@@ -218,36 +208,48 @@ export class Source extends EventEmitter<SourceEvents> {
 
 	private async dial(peerId: PeerId): Promise<Stream> {
 		if (this.options.verbose) {
-			console.log(this.prefix, `Dialing ${peerId}`)
+			console.log(chalk.gray(this.prefix, `Dialing ${peerId}`))
 		}
 
-		const queryController = new TimeoutController(constants.DIAL_TIMEOUT)
-		const abort = () => queryController.abort()
-		this.controller.signal.addEventListener("abort", abort)
+		const timeoutController = new TimeoutController(constants.DIAL_TIMEOUT)
+		const signal = anySignal([this.controller.signal, timeoutController.signal])
+
+		if (this.options.verbose) {
+			timeoutController.signal.addEventListener("abort", () =>
+				console.log(chalk.gray(this.prefix), chalk.yellow(`Dial to ${peerId} timed out`))
+			)
+		}
 
 		try {
-			const connection = await this.libp2p.dial(peerId, { signal: queryController.signal })
+			const connection = await this.libp2p.dial(peerId, { signal })
 			try {
-				const stream = await connection.newStream(this.protocol, { signal: queryController.signal })
+				const stream = await connection.newStream(this.protocol, { signal })
 				return stream
 			} catch (err) {
-				if (err instanceof Error && !queryController.signal.aborted) {
+				if (err instanceof Error && !signal.aborted) {
 					console.log(this.prefix, chalk.yellow("Failed to open new stream, possibly due to stale relay connection."))
 					console.log(this.prefix, chalk.yellow("Closing connection and attempting to re-dial..."))
 					await connection.close()
 					await this.libp2p.hangUp(peerId)
-					return await this.libp2p.dialProtocol(peerId, this.protocol, { signal: queryController.signal })
+					return await this.libp2p.dialProtocol(peerId, this.protocol, { signal })
 				} else {
 					throw err
 				}
 			}
-		} catch (err) {
-			console.trace(err)
-			throw err
 		} finally {
-			queryController.clear()
-			this.controller.signal.removeEventListener("abort", abort)
+			signal.clear()
+			timeoutController.clear()
 		}
+	}
+
+	private handlePeerDiscovery(peerId: PeerId) {
+		const id = peerId.toString()
+		if (this.pendingSyncPeers.has(id)) {
+			return
+		}
+
+		this.pendingSyncPeers.add(id)
+		this.syncQueue.add(() => this.sync(peerId)).finally(() => this.pendingSyncPeers.delete(id))
 	}
 
 	/**

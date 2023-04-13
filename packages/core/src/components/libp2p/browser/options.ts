@@ -17,7 +17,7 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 
-import { PEER_ID_FILENAME, minute } from "@canvas-js/core/constants"
+import { PEER_ID_FILENAME, minute, second } from "@canvas-js/core/constants"
 import { toHex, assert } from "@canvas-js/core/utils"
 
 import { defaultBootstrapList } from "../bootstrap.js"
@@ -68,6 +68,12 @@ export async function getLibp2pOptions(config: {
 				return { id: peerIdFromString(peerId), addrs: [ma] }
 			}),
 		}),
+		ping: {
+			protocolPrefix: "/canvas",
+			maxInboundStreams: 32,
+			maxOutboundStreams: 32,
+			timeout: 20 * second,
+		},
 	}
 }
 
