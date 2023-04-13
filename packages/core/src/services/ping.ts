@@ -4,14 +4,17 @@ import type { Libp2p } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { kadDHT } from "@libp2p/kad-dht"
 
+import { anySignal } from "any-signal"
+
 type DualKadDHT = ReturnType<ReturnType<typeof kadDHT>>
 type KadDHT = DualKadDHT["wan"]
 type RoutingTable = KadDHT["routingTable"]
 
 import { TimeoutController } from "timeout-abort-controller"
 
-import { AbortError, wait } from "@canvas-js/core/utils"
+import { logErrorMessage, wait } from "@canvas-js/core/utils"
 import { PING_INTERVAL, PING_TIMEOUT } from "@canvas-js/core/constants"
+import PQueue from "p-queue"
 
 function* forContacts(routingTable: RoutingTable): Iterable<PeerId> {
 	if (routingTable.kb === undefined) {
@@ -19,25 +22,60 @@ function* forContacts(routingTable: RoutingTable): Iterable<PeerId> {
 	}
 
 	for (const contact of routingTable.kb.toIterable()) {
-		const { peer } = contact as unknown as { id: Uint8Array; peer: PeerId }
-		yield peer
+		yield contact.peer
 	}
 }
 
-export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { verbose }: { verbose?: boolean } = {}) {
-	const prefix = chalk.hex("#b285cc")(`[canvas-core] [ping]`)
+export async function startPingService(
+	libp2p: Libp2p,
+	{ verbose, ...options }: { signal?: AbortSignal; verbose?: boolean } = {}
+) {
+	const prefix = chalk.hex("#dabaf7")(`[canvas-core] [ping]`)
 
-	async function ping(peer: PeerId, protocol: string) {
+	const pingQueuePeerIds = new Set<string>()
+	const pingQueue = new PQueue({ concurrency: 1 })
+
+	options.signal?.addEventListener("abort", () => {
+		pingQueue.pause()
+		pingQueue.clear()
+	})
+
+	async function ping(peer: PeerId, protocol: string, routingTable: RoutingTable): Promise<boolean> {
+		if (peer.equals(libp2p.peerId)) {
+			return true
+		}
+
+		if (verbose) {
+			const { addresses } = await libp2p.peerStore.get(peer)
+			console.log(prefix, `Ping ${peer} [ ${addresses.map(({ multiaddr }) => multiaddr).join(", ")} ]`)
+		}
+
 		const timeoutController = new TimeoutController(PING_TIMEOUT)
-		const abort = () => timeoutController.abort()
-		signal.addEventListener("abort", abort)
+		const signal = anySignal([timeoutController.signal, options.signal])
 
 		try {
-			const connection = await libp2p.dial(peer, { signal: timeoutController.signal })
-			const stream = await connection.newStream(protocol, { signal: timeoutController.signal })
+			const stream = await libp2p.dialProtocol(peer, protocol, { signal: timeoutController.signal })
 			stream.close()
+
+			if (verbose) {
+				console.log(prefix, `Ping ${peer} succeeded`)
+			}
+
+			return true
+		} catch (err) {
+			if (verbose) {
+				logErrorMessage(prefix, `Ping ${peer} failed`, err)
+			}
+
+			if (routingTable.isStarted()) {
+				await libp2p.hangUp(peer)
+				await routingTable.remove(peer)
+			}
+
+			return false
 		} finally {
-			signal.removeEventListener("abort", abort)
+			timeoutController.clear()
+			signal.clear()
 		}
 	}
 
@@ -45,42 +83,30 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 		protocol: string,
 		routingTable: RoutingTable
 	): Promise<[successCount: number, failureCount: number]> {
+		const contacts = [...forContacts(routingTable)]
+
 		let successCount = 0
 		let failureCount = 0
-		let peerIndex = 0
 
-		for (const peer of forContacts(routingTable)) {
-			if (verbose) {
-				console.log(prefix, `Ping ${peer.toString()} (${++peerIndex}/${routingTable.size})`)
-			}
-
-			if (peer.equals(libp2p.peerId)) {
-				if (verbose) {
-					console.log(prefix, `Ping ${peer.toString()} skipped (is self)`)
-				}
-				successCount += 1
+		for (const peer of contacts) {
+			const id = peer.toString()
+			if (pingQueuePeerIds.has(id)) {
 				continue
-			}
-
-			try {
-				await ping(peer, protocol)
+			} else {
 				if (verbose) {
-					console.log(prefix, `Ping ${peer.toString()} succeeded`)
+					console.log(prefix, `Adding ${peer} to ping queue #${pingQueue.size}`)
 				}
 
-				successCount += 1
-			} catch (err) {
-				if (err instanceof Error) {
-					if (routingTable.isStarted()) {
-						if (verbose) {
-							console.log(prefix, chalk.yellow(`Ping ${peer.toString()} failed (${err.message})`))
-						}
+				pingQueuePeerIds.add(id)
 
-						failureCount += 1
-						await routingTable.remove(peer)
-					}
+				const active = await pingQueue
+					.add(() => ping(peer, protocol, routingTable))
+					.finally(() => pingQueuePeerIds.delete(id))
+
+				if (active) {
+					successCount++
 				} else {
-					throw err
+					failureCount++
 				}
 			}
 		}
@@ -92,72 +118,51 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 	const { routingTable: lanRoutingTable, protocol: lanProtocol } = libp2p.dht.lan as KadDHT
 
 	wanRoutingTable.kb?.on("added", ({ peer }) => {
-		wanRoutingTable.pingQueue.add(async () => {
-			if (peer.equals(libp2p.peerId)) {
-				return
-			}
+		if (peer.equals(libp2p.peerId)) {
+			return
+		}
 
+		const id = peer.toString()
+		if (id === "12D3KooWDtVCu8PJPfZEx8EhfqZ7c48AxZX5BtMr7dU8VV297mTc") {
+			console.log(prefix, chalk.red("FKDFJKDLSFJKSLDJFKLDSJFDKLJFKSJFLKSDJFKLS"))
+			console.trace()
+		}
+
+		if (pingQueuePeerIds.has(id)) {
+			return
+		} else {
 			if (verbose) {
-				console.log(prefix, `Ping ${peer.toString()}`)
+				console.log(prefix, `Adding ${peer} to ping queue #${pingQueue.size}`)
 			}
 
-			try {
-				await ping(peer, wanProtocol)
-				if (verbose) {
-					console.log(prefix, `Ping ${peer.toString()} succeeded`)
-				}
-			} catch (err) {
-				if (err instanceof Error) {
-					if (wanRoutingTable.isStarted()) {
-						if (verbose) {
-							console.log(prefix, chalk.yellow(`Ping ${peer.toString()} failed (${err.message})`))
-						}
-
-						await wanRoutingTable.remove(peer)
-					}
-				} else {
-					throw err
-				}
-			}
-		})
+			pingQueuePeerIds.add(id)
+			pingQueue.add(() => ping(peer, wanProtocol, wanRoutingTable)).finally(() => pingQueuePeerIds.delete(id))
+		}
 	})
 
 	lanRoutingTable.kb?.on("added", ({ peer }) => {
-		lanRoutingTable.pingQueue.add(async () => {
-			if (peer.equals(libp2p.peerId)) {
-				return
-			}
+		if (peer.equals(libp2p.peerId)) {
+			return
+		}
 
+		const id = peer.toString()
+		if (pingQueuePeerIds.has(id)) {
+			return
+		} else {
 			if (verbose) {
-				console.log(prefix, `Ping ${peer.toString()}`)
+				console.log(prefix, `Adding ${peer} to ping queue #${pingQueue.size}`)
 			}
 
-			try {
-				await ping(peer, lanProtocol)
-				if (verbose) {
-					console.log(prefix, `Ping ${peer.toString()} succeeded`)
-				}
-			} catch (err) {
-				if (err instanceof Error) {
-					if (lanRoutingTable.isStarted()) {
-						if (verbose) {
-							console.log(prefix, chalk.yellow(`Ping ${peer.toString()} failed (${err.message})`))
-						}
-
-						await lanRoutingTable.remove(peer)
-					}
-				} else {
-					throw err
-				}
-			}
-		})
+			pingQueuePeerIds.add(id)
+			pingQueue.add(() => ping(peer, wanProtocol, lanRoutingTable)).finally(() => pingQueuePeerIds.delete(id))
+		}
 	})
 
 	try {
 		console.log(prefix, "Starting ping service")
 
-		while (!signal.aborted) {
-			await wait({ signal, interval: PING_INTERVAL })
+		while (!options.signal?.aborted) {
+			await wait(PING_INTERVAL, options)
 
 			await lanRoutingTable.pingQueue.add(async () => {
 				console.log(prefix, `Starting LAN routing table ping (${lanRoutingTable.size} entries)`)
@@ -172,12 +177,10 @@ export async function startPingService(libp2p: Libp2p, signal: AbortSignal, { ve
 			})
 		}
 	} catch (err) {
-		if (err instanceof AbortError) {
-			console.log(prefix, "Aborting ping service")
-		} else if (err instanceof Error) {
-			console.error(prefix, chalk.red(`Ping service crashed (${err.message})`))
+		if (options.signal?.aborted) {
+			console.log(prefix, `Service aborted`)
 		} else {
-			throw err
+			logErrorMessage(prefix, chalk.red(`Service crashed`), err)
 		}
 	}
 }

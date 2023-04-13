@@ -2,36 +2,35 @@ import chalk from "chalk"
 import { CID } from "multiformats"
 import { Libp2p } from "libp2p"
 import { TimeoutController } from "timeout-abort-controller"
+import { anySignal } from "any-signal"
 
-import { wait, retry, AbortError } from "@canvas-js/core/utils"
+import { wait, retry, logErrorMessage } from "@canvas-js/core/utils"
 import { ANNOUNCE_DELAY, ANNOUNCE_INTERVAL, ANNOUNCE_RETRY_INTERVAL, ANNOUNCE_TIMEOUT } from "@canvas-js/core/constants"
 
 /**
  * This starts the "announce service", an async while loop that calls this.announce()
  * every constants.ANNOUNCE_INTERVAL milliseconds
  */
-export async function startAnnounceService(libp2p: Libp2p, cid: CID, signal: AbortSignal) {
+export async function startAnnounceService(libp2p: Libp2p, cid: CID, options: { signal?: AbortSignal } = {}) {
 	const prefix = chalk.hex("#FF8800")(`[canvas-core] [${cid}] [announce]`)
 	console.log(prefix, `Staring service`)
 
 	try {
-		await wait({ interval: ANNOUNCE_DELAY, signal })
-		while (!signal.aborted) {
+		await wait(ANNOUNCE_DELAY, options)
+		while (!options.signal?.aborted) {
 			await retry(
-				() => announce(libp2p, cid, signal),
-				(err) => console.log(prefix, chalk.yellow(`Failed to publish DHT provider record (${err.message})`)),
-				{ signal, interval: ANNOUNCE_RETRY_INTERVAL }
+				() => announce(libp2p, cid, options),
+				(err) => logErrorMessage(prefix, chalk.yellow(`Failed to publish DHT provider record`), err),
+				{ ...options, interval: ANNOUNCE_RETRY_INTERVAL }
 			)
 
-			await wait({ interval: ANNOUNCE_INTERVAL, signal })
+			await wait(ANNOUNCE_INTERVAL, options)
 		}
 	} catch (err) {
-		if (err instanceof AbortError) {
-			console.log(prefix, `Aborting service`)
-		} else if (err instanceof Error) {
-			console.log(prefix, chalk.red(`Service crashed (${err.message})`))
+		if (options.signal?.aborted) {
+			console.log(prefix, `Service aborted`)
 		} else {
-			throw err
+			logErrorMessage(prefix, chalk.red(`Service crashed`), err)
 		}
 	}
 }
@@ -39,18 +38,18 @@ export async function startAnnounceService(libp2p: Libp2p, cid: CID, signal: Abo
 /**
  * Publish a provider record to the DHT announcing us as an application peer.
  */
-async function announce(libp2p: Libp2p, cid: CID, signal: AbortSignal): Promise<void> {
+async function announce(libp2p: Libp2p, cid: CID, options: { signal?: AbortSignal } = {}): Promise<void> {
 	const prefix = chalk.hex("#FF8800")(`[canvas-core] [${cid}] [announce]`)
 	console.log(prefix, `Publishing DHT provider record...`)
 
-	const queryController = new TimeoutController(ANNOUNCE_TIMEOUT)
-	const abort = () => queryController.abort()
-	signal.addEventListener("abort", abort)
+	const timeoutController = new TimeoutController(ANNOUNCE_TIMEOUT)
+	const signal = anySignal([timeoutController.signal, options.signal])
+
 	try {
-		await libp2p.contentRouting.provide(cid, { signal: queryController.signal })
+		await libp2p.contentRouting.provide(cid, { signal: signal })
 		console.log(prefix, chalk.green(`Successfully published DHT provider record.`))
 	} finally {
-		queryController.clear()
-		signal.removeEventListener("abort", abort)
+		signal.clear()
+		timeoutController.clear()
 	}
 }

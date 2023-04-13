@@ -1,7 +1,8 @@
 import chalk from "chalk"
-import { CID } from "multiformats/cid"
+import PQueue from "p-queue"
 import { TimeoutController } from "timeout-abort-controller"
 import { sha256 } from "@noble/hashes/sha256"
+import { anySignal } from "any-signal"
 
 import type { Libp2p } from "libp2p"
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
@@ -9,11 +10,12 @@ import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
+import { CID } from "multiformats/cid"
 
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
 
-import { wait, retry, AbortError, toHex, assert } from "@canvas-js/core/utils"
+import { toHex, assert, logErrorMessage } from "@canvas-js/core/utils"
 import * as constants from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 import { sync, handleIncomingStream } from "./sync/index.js"
@@ -37,6 +39,8 @@ interface SourceEvents {
 
 export class Source extends EventEmitter<SourceEvents> {
 	private readonly controller = new AbortController()
+	private readonly syncQueue = new PQueue({ concurrency: 1 })
+	private readonly pendingSyncPeers = new Set<string>()
 
 	private readonly cid: CID
 	private readonly messageStore: MessageStore
@@ -70,16 +74,38 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(this.prefix, `Attached stream handler for protocol ${this.protocol}`)
 		}
 
-		this.startSyncService()
-		startDiscoveryService(this.libp2p, this.cid, this.controller.signal)
+		this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
+			if (this.libp2p.peerId.equals(peerId)) {
+				return
+			}
+
+			const oldProtocolSet = new Set(oldProtocols)
+			const newProtocolSet = new Set(protocols.filter((protocol) => !oldProtocolSet.has(protocol)))
+
+			if (newProtocolSet.has(this.protocol)) {
+				if (this.options.verbose) {
+					console.log(this.prefix, `Peer ${peerId} supports Canvas protocol ${this.protocol}`)
+				}
+
+				this.handlePeerDiscovery(peerId)
+			}
+		})
 
 		const mode = await this.libp2p.dht.getMode()
 		if (mode === "server") {
-			startAnnounceService(this.libp2p, this.cid, this.controller.signal)
+			startAnnounceService(this.libp2p, this.cid, { signal: this.controller.signal })
 		}
+
+		startDiscoveryService(this.libp2p, this.cid, {
+			signal: this.controller.signal,
+			callback: (peerId) => this.handlePeerDiscovery(peerId),
+		})
 	}
 
 	public async stop() {
+		this.syncQueue.pause()
+		this.syncQueue.clear()
+
 		this.controller.abort()
 
 		this.libp2p.pubsub.unsubscribe(this.uri)
@@ -96,8 +122,10 @@ export class Source extends EventEmitter<SourceEvents> {
 		return `ipfs://${this.cid}`
 	}
 
+	private static protocolPrefix = `/x/canvas/sync/v2/`
+
 	public get protocol() {
-		return `/x/canvas/sync/v2/${this.cid}`
+		return Source.protocolPrefix + this.cid.toString()
 	}
 
 	/**
@@ -114,11 +142,7 @@ export class Source extends EventEmitter<SourceEvents> {
 				console.log(this.prefix, `Published ${toHex(hash)} to ${recipients.length} peers.`)
 			}
 		} catch (err) {
-			if (err instanceof Error) {
-				console.log(this.prefix, chalk.red(`Failed to publish ${toHex(hash)} to GossipSub (${err.message})`))
-			} else {
-				throw err
-			}
+			logErrorMessage(this.prefix, chalk.red(`Failed to publish ${toHex(hash)} to GossipSub`), err)
 		}
 	}
 
@@ -150,11 +174,7 @@ export class Source extends EventEmitter<SourceEvents> {
 				{ uri: this.uri }
 			)
 		} catch (err) {
-			if (err instanceof Error) {
-				console.log(this.prefix, chalk.red(`Error applying GossipSub message (${err.message})`))
-			} else {
-				throw err
-			}
+			logErrorMessage(this.prefix, chalk.red(`Error applying GossipSub message`), err)
 		}
 	}
 
@@ -166,85 +186,70 @@ export class Source extends EventEmitter<SourceEvents> {
 	 */
 	private streamHandler: StreamHandler = async ({ connection, stream }) => {
 		if (this.options.verbose) {
-			console.log(this.prefix, `Opened incoming stream ${stream.id} from peer ${connection.remotePeer}`)
+			console.log(chalk.gray(this.prefix, `Opened incoming stream ${stream.id} from peer ${connection.remotePeer}`))
 		}
 
 		try {
 			await this.messageStore.read((txn) => handleIncomingStream(this.cid, txn, stream), { uri: this.uri })
 		} catch (err) {
-			if (err instanceof Error) {
-				console.log(this.prefix, chalk.red(`Error handling incoming sync (${err.message})`))
-				if (this.options.verbose) {
-					console.log(this.prefix, `Aborting incoming stream ${stream.id}`)
-				}
-
-				stream.abort(err)
-				return
-			} else {
-				throw err
+			logErrorMessage(this.prefix, chalk.red(`Error handling incoming sync`), err)
+			if (this.options.verbose) {
+				console.log(this.prefix, `Aborting incoming stream ${stream.id}`)
 			}
+
+			stream.abort(err as Error)
+			return
 		}
 
 		if (this.options.verbose) {
-			console.log(this.prefix, `Closed incoming stream ${stream.id}`)
+			console.log(chalk.gray(this.prefix, `Closed incoming stream ${stream.id}`))
 		}
 	}
 
-	private async wait(interval: number) {
-		await wait({ signal: this.controller.signal, interval })
-	}
+	private async dial(peerId: PeerId): Promise<Stream> {
+		if (this.options.verbose) {
+			console.log(chalk.gray(this.prefix, `Dialing ${peerId}`))
+		}
 
-	/**
-	 * This starts the "sync service", an async while loop that looks up application peers
-	 * and calls this.sync(peerId) for each of them every constants.SYNC_INTERVAL milliseconds
-	 */
-	private async startSyncService() {
-		const prefix = chalk.magenta(`${this.prefix} [sync]`)
-		console.log(prefix, `Staring service`)
+		const timeoutController = new TimeoutController(constants.DIAL_TIMEOUT)
+		const signal = anySignal([this.controller.signal, timeoutController.signal])
+
+		if (this.options.verbose) {
+			timeoutController.signal.addEventListener("abort", () =>
+				console.log(chalk.gray(this.prefix), chalk.yellow(`Dial to ${peerId} timed out`))
+			)
+		}
 
 		try {
-			await this.wait(constants.SYNC_DELAY)
-
-			while (!this.controller.signal.aborted) {
-				const subscribers = this.libp2p.pubsub.getSubscribers(this.uri)
-				const peers = this.libp2p.pubsub.getPeers()
-
-				console.log(prefix, `libp2p.pubsub.getSubscribers: [ ${subscribers.join(", ")} ]`)
-				console.log(prefix, `libp2p.pubsub.getPeers: [ ${peers.join(", ")} ]`)
-
-				if (subscribers.length === 0) {
-					console.log(prefix, "No active peer connections")
+			const connection = await this.libp2p.dial(peerId, { signal })
+			try {
+				const stream = await connection.newStream(this.protocol, { signal })
+				return stream
+			} catch (err) {
+				if (err instanceof Error && !signal.aborted) {
+					console.log(this.prefix, chalk.yellow("Failed to open new stream, possibly due to stale relay connection."))
+					console.log(this.prefix, chalk.yellow("Closing connection and attempting to re-dial..."))
+					await connection.close()
+					await this.libp2p.hangUp(peerId)
+					return await this.libp2p.dialProtocol(peerId, this.protocol, { signal })
 				} else {
-					for (const [i, peer] of subscribers.entries()) {
-						console.log(prefix, chalk.green(`Initiating sync with ${peer} (${i + 1}/${subscribers.length})`))
-						await this.sync(peer)
-					}
+					throw err
 				}
-
-				await this.wait(constants.SYNC_INTERVAL)
 			}
-		} catch (err) {
-			if (err instanceof AbortError) {
-				console.log(prefix, `Aborting service`)
-			} else if (err instanceof Error) {
-				console.log(prefix, chalk.red(`Service crashed (${err.message})`))
-			} else {
-				throw err
-			}
+		} finally {
+			signal.clear()
+			timeoutController.clear()
 		}
 	}
 
-	private async dial(peer: PeerId): Promise<Stream> {
-		const queryController = new TimeoutController(constants.DIAL_TIMEOUT)
-		const abort = () => queryController.abort()
-		this.controller.signal.addEventListener("abort", abort)
-
-		try {
-			return await this.libp2p.dialProtocol(peer, this.protocol, { signal: queryController.signal })
-		} finally {
-			queryController.clear()
-			this.controller.signal.removeEventListener("abort", abort)
+	private handlePeerDiscovery(peerId: PeerId) {
+		const id = peerId.toString()
+		if (this.pendingSyncPeers.has(id)) {
+			return
 		}
+
+		this.pendingSyncPeers.add(id)
+		this.syncQueue.add(() => this.sync(peerId)).finally(() => this.pendingSyncPeers.delete(id))
 	}
 
 	/**
@@ -254,21 +259,18 @@ export class Source extends EventEmitter<SourceEvents> {
 	 */
 	private async sync(peer: PeerId) {
 		const prefix = chalk.magenta(`${this.prefix} [sync]`)
+		console.log(prefix, `Initiating sync with ${peer}`)
 
 		let stream: Stream
 		try {
 			stream = await this.dial(peer)
 		} catch (err) {
-			if (err instanceof Error) {
-				console.log(prefix, chalk.red(`Failed to dial peer ${peer} (${err.message})`))
-				return
-			} else {
-				throw err
-			}
+			logErrorMessage(prefix, chalk.red(`Failed to dial peer ${peer}`), err)
+			return
 		}
 
 		if (this.options.verbose) {
-			console.log(prefix, `Opened outgoing stream ${stream.id} to ${peer}`)
+			console.log(chalk.gray(this.prefix, `Opened outgoing stream ${stream.id} to ${peer}`))
 		}
 
 		const closeStream = () => stream.close()
@@ -285,49 +287,39 @@ export class Source extends EventEmitter<SourceEvents> {
 						await this.applyMessage(txn, hash, message)
 						successCount += 1
 					} catch (err) {
-						if (err instanceof Error) {
-							generator.throw(err) // this throws an exeption at the `yield` statement
-							failureCount += 1
-							console.log(prefix, chalk.red(`Failed to apply ${message.type} ${toHex(hash)} (${err.message})`))
-						} else {
-							throw err
-						}
+						generator.throw(err) // this throws an exeption at the `yield` statement
+						failureCount += 1
+						logErrorMessage(prefix, chalk.red(`Failed to apply ${message.type} ${toHex(hash)}`), err)
 					}
 				}
 			})
 
-			console.log(
-				prefix,
-				chalk.green(`Sync with ${peer} completed. Applied ${successCount} new messages with ${failureCount} failures.`)
-			)
+			console.log(prefix, chalk.green(`Sync with ${peer} completed.`))
+			console.log(prefix, `Applied ${successCount} new messages with ${failureCount} failures.`)
 
 			this.dispatchEvent(
 				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "success" } })
 			)
 		} catch (err) {
-			if (err instanceof Error) {
-				this.dispatchEvent(
-					new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "failure" } })
-				)
+			logErrorMessage(prefix, chalk.red(`Failed to sync with peer ${peer}`), err)
 
-				console.log(prefix, chalk.red(`Failed to sync with peer ${peer} (${err.message})`))
-				stream.abort(err)
-				if (this.options.verbose) {
-					console.log(prefix, `Aborted outgoing stream ${stream.id}`)
-				}
-
-				return
-			} else {
-				throw err
+			stream.abort(err as Error)
+			if (this.options.verbose) {
+				console.log(prefix, `Aborted outgoing stream ${stream.id}`)
 			}
+
+			this.dispatchEvent(
+				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "failure" } })
+			)
+
+			return
 		} finally {
 			this.controller.signal.removeEventListener("abort", closeStream)
 		}
 
 		stream.close()
-
 		if (this.options.verbose) {
-			console.log(prefix, `Closed outgoing stream ${stream.id}`)
+			console.log(chalk.gray(this.prefix, `Closed outgoing stream ${stream.id}`))
 		}
 	}
 }
