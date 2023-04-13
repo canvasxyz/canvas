@@ -196,7 +196,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	 */
 	private streamHandler: StreamHandler = async ({ connection, stream }) => {
 		if (this.options.verbose) {
-			console.log(this.prefix, `Opened incoming stream ${stream.id} from peer ${connection.remotePeer}`)
+			console.log(chalk.gray(this.prefix, `Opened incoming stream ${stream.id} from peer ${connection.remotePeer}`))
 		}
 
 		try {
@@ -231,16 +231,19 @@ export class Source extends EventEmitter<SourceEvents> {
 				const stream = await connection.newStream(this.protocol, { signal: queryController.signal })
 				return stream
 			} catch (err) {
-				if (err instanceof Error) {
+				if (err instanceof Error && !queryController.signal.aborted) {
 					console.log(this.prefix, chalk.yellow("Failed to open new stream, possibly due to stale relay connection."))
 					console.log(this.prefix, chalk.yellow("Closing connection and attempting to re-dial..."))
-					// await connection.close()
+					await connection.close()
 					await this.libp2p.hangUp(peerId)
 					return await this.libp2p.dialProtocol(peerId, this.protocol, { signal: queryController.signal })
 				} else {
 					throw err
 				}
 			}
+		} catch (err) {
+			console.trace(err)
+			throw err
 		} finally {
 			queryController.clear()
 			this.controller.signal.removeEventListener("abort", abort)
@@ -265,7 +268,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		if (this.options.verbose) {
-			console.log(prefix, `Opened outgoing stream ${stream.id} to ${peer}`)
+			console.log(chalk.gray(this.prefix, `Opened outgoing stream ${stream.id} to ${peer}`))
 		}
 
 		const closeStream = () => stream.close()
@@ -314,7 +317,7 @@ export class Source extends EventEmitter<SourceEvents> {
 
 		stream.close()
 		if (this.options.verbose) {
-			console.log(chalk.gray(prefix, `Closed outgoing stream ${stream.id}`))
+			console.log(chalk.gray(this.prefix, `Closed outgoing stream ${stream.id}`))
 		}
 	}
 }
