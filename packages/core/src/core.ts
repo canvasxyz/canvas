@@ -68,7 +68,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 			const { listen, announce, bootstrapList } = config
 			const options = await getLibp2pOptions({ peerId, listen, announce, bootstrapList })
-			libp2p = await createLibp2p(options)
+			libp2p = await createLibp2p({ ...options, start: false })
 		}
 
 		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, { verbose, unchecked })
@@ -89,6 +89,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		}
 
 		if (libp2p !== null && core.sources !== null) {
+			await libp2p.start()
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
 			startPingService(libp2p, core.controller.signal, { verbose })
 		}
