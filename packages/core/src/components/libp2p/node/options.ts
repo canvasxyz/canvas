@@ -25,6 +25,7 @@ import { register } from "prom-client"
 import { PEER_ID_FILENAME, minute, second } from "@canvas-js/core/constants"
 
 import { defaultBootstrapList } from "../bootstrap.js"
+import chalk from "chalk"
 
 export async function getLibp2pOptions(config: {
 	peerId: PeerId
@@ -39,15 +40,16 @@ export async function getLibp2pOptions(config: {
 	}
 
 	const discoverRelays = config.announce ? 0 : bootstrapList.length
+	const relayAddresses = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
 
-	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
+	const announce = config.announce ?? relayAddresses
 	for (const address of announce) {
-		console.log(`[canvas-core] Announcing on ${address}`)
+		console.log(chalk.gray(`[canvas-core] Announcing on ${address}`))
 	}
 
-	const listen = config.listen ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit`)
+	const listen = config.listen ?? relayAddresses
 	for (const address of listen) {
-		console.log(`[canvas-core] Listening on ${address}`)
+		console.log(chalk.gray(`[canvas-core] Listening on ${address}`))
 	}
 
 	return {

@@ -18,7 +18,7 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 
 import { PEER_ID_FILENAME, minute, second } from "@canvas-js/core/constants"
-import { toHex, assert } from "@canvas-js/core/utils"
+import { assert } from "@canvas-js/core/utils"
 
 import { defaultBootstrapList } from "../bootstrap.js"
 
@@ -32,10 +32,12 @@ export async function getLibp2pOptions(config: {
 }): Promise<Libp2pOptions> {
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
-	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
+	const relayAddresses = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
+
+	const announce = relayAddresses
 	console.log(`[canvas-core] Announcing on [ ${announce.join(", ")} ]`)
 
-	const listen = config.listen ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
+	const listen = relayAddresses
 	console.log(`[canvas-core] Listening on [ ${listen.join(", ")} ]`)
 
 	return {
