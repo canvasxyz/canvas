@@ -40,14 +40,13 @@ export async function getLibp2pOptions(config: {
 	}
 
 	const discoverRelays = config.announce ? 0 : bootstrapList.length
-	const relayAddresses = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
 
-	const announce = config.announce ?? relayAddresses
+	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
 	for (const address of announce) {
 		console.log(chalk.gray(`[canvas-core] Announcing on ${address}`))
 	}
 
-	const listen = config.listen ?? relayAddresses
+	const listen = config.listen ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit`)
 	for (const address of listen) {
 		console.log(chalk.gray(`[canvas-core] Listening on ${address}`))
 	}

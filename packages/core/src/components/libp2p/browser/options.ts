@@ -21,6 +21,7 @@ import { PEER_ID_FILENAME, minute, second } from "@canvas-js/core/constants"
 import { assert } from "@canvas-js/core/utils"
 
 import { defaultBootstrapList } from "../bootstrap.js"
+import chalk from "chalk"
 
 const { base64 } = ethers.utils
 
@@ -32,13 +33,15 @@ export async function getLibp2pOptions(config: {
 }): Promise<Libp2pOptions> {
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
-	const relayAddresses = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
+	const announce = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
+	for (const address of announce) {
+		console.log(chalk.gray(`[canvas-core] Announcing on ${address}`))
+	}
 
-	const announce = relayAddresses
-	console.log(`[canvas-core] Announcing on [ ${announce.join(", ")} ]`)
-
-	const listen = relayAddresses
-	console.log(`[canvas-core] Listening on [ ${listen.join(", ")} ]`)
+	const listen = bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit`)
+	for (const address of listen) {
+		console.log(chalk.gray(`[canvas-core] Listening on ${address}`))
+	}
 
 	return {
 		peerId: config.peerId,
