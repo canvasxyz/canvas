@@ -250,14 +250,14 @@ const WS_KEEPALIVE_LATENCY = 3000
 export function handleWebsocketConnection(core: Core, socket: WebSocket) {
 	const id = nanoid(8)
 	if (core.options.verbose) {
-		console.log(chalk.green(`[canvas-core] ws-${id}: opened connection`))
+		console.log(chalk.gray(`[canvas-core] [ws-${id}] Opened socket`))
 	}
 
 	let lastPing = Date.now()
 
 	const timer = setInterval(() => {
 		if (lastPing < Date.now() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) {
-			console.log(chalk.red(`[canvas-core] ws-${id}: closed connection on timeout`))
+			console.log(chalk.red(`[canvas-core] [ws-${id}] Closed socket on timeout`))
 			socket.close()
 		}
 	}, WS_KEEPALIVE)
@@ -266,7 +266,7 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket) {
 	core.addEventListener("close", closeListener)
 
 	const eventListener = <T>(event: CustomEvent<T> | Event) => {
-		console.log(chalk.green(`[canvas-core] ws-${id}: sent ${event.type} event`))
+		console.log(chalk.gray(`[canvas-core] [ws-${id}] Sent ${event.type} event`))
 		if (event instanceof CustomEvent) {
 			socket.send(JSON.stringify({ type: event.type, detail: event.detail }))
 		} else {
@@ -288,7 +288,7 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket) {
 
 	socket.on("close", () => {
 		if (core.options.verbose) {
-			console.log(`[canvas-core] ws-${id}: closed connection`)
+			console.log(chalk.gray(`[canvas-core] [ws-${id}] Closed socket`))
 		}
 
 		clearInterval(timer)
@@ -300,7 +300,7 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket) {
 			lastPing = Date.now()
 			socket.send("pong")
 		} else {
-			console.log(chalk.red(`[canvas-core] ws-${id}: unrecognized message ${data}`))
+			console.log(chalk.red(`[canvas-core] [ws-${id}] Received invalid message ${data}`))
 		}
 	})
 }

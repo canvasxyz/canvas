@@ -2,8 +2,12 @@ import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
 
 import { sha256 } from "@noble/hashes/sha256"
+import { bytesToHex as hex } from "@noble/hashes/utils"
+import { ethers } from "ethers"
 
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { peerIdFromString } from "@libp2p/peer-id"
+import { multiaddr } from "@multiformats/multiaddr"
 
 import { circuitRelayTransport } from "libp2p/circuit-relay"
 import { webSockets } from "@libp2p/websockets"
@@ -13,9 +17,7 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 
-import { ethers } from "ethers"
-
-import { PEER_ID_FILENAME, minute } from "@canvas-js/core/constants"
+import { PEER_ID_FILENAME, minute, second } from "@canvas-js/core/constants"
 import { toHex, assert } from "@canvas-js/core/utils"
 
 import { defaultBootstrapList } from "../bootstrap.js"
@@ -39,7 +41,7 @@ export async function getLibp2pOptions(config: {
 	return {
 		peerId: config.peerId,
 		addresses: { listen: [], announce },
-		transports: [webSockets(), circuitRelayTransport({})],
+		transports: [webSockets(), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
@@ -54,8 +56,24 @@ export async function getLibp2pOptions(config: {
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictSign",
 			msgIdFn: (msg) => sha256(msg.data),
-			msgIdToStrFn: (id) => toHex(id),
+			msgIdToStrFn: (id) => hex(id),
+			directPeers: bootstrapList.map((address) => {
+				const ma = multiaddr(address)
+				const peerId = ma.getPeerId()
+
+				if (peerId === null) {
+					throw new Error("Invalid bootstrap peer address: must identify peer id using /p2p")
+				}
+
+				return { id: peerIdFromString(peerId), addrs: [ma] }
+			}),
 		}),
+		ping: {
+			protocolPrefix: "/canvas",
+			maxInboundStreams: 32,
+			maxOutboundStreams: 32,
+			timeout: 20 * second,
+		},
 	}
 }
 

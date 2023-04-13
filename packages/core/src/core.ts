@@ -22,7 +22,8 @@ import { validate } from "@hyperjump/json-schema/draft-2020-12"
 import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
 import { MessageStore, openMessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
-import { getPeerId, getLibp2pOptions, startPingService } from "@canvas-js/core/components/libp2p"
+import { getPeerId, getLibp2pOptions } from "@canvas-js/core/components/libp2p"
+import { startPingService } from "./services/ping.js"
 
 import { Source } from "./source.js"
 import { actionType, messageType } from "./codecs.js"
@@ -62,17 +63,18 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 		let libp2p: Libp2p | null = null
 		if (!offline) {
-			const { listen, announce, bootstrapList } = config
 			const peerId = await getPeerId(directory)
-			const options = await getLibp2pOptions({ peerId, listen, announce, bootstrapList })
+			console.log("[canvas-core]", chalk.bold(`Using PeerId ${peerId}`))
 
-			libp2p = await createLibp2p(options)
+			const { listen, announce, bootstrapList } = config
+			const options = await getLibp2pOptions({ peerId, listen, announce, bootstrapList })
+			libp2p = await createLibp2p({ ...options, start: false })
 		}
 
 		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, { verbose, unchecked })
 
 		if (config.replay) {
-			console.log(chalk.green(`[canvas-core] Replaying action log...`))
+			console.log(`[canvas-core] Replaying action log...`)
 			let i = 0
 			for await (const [id, message] of messageStore.getMessageStream()) {
 				if (message.type === "action") {
@@ -83,12 +85,13 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 				}
 			}
 
-			console.log(chalk.green(`[canvas-core] Successfully replayed all ${i} actions from the message store.`))
+			console.log("[canvas-core]", chalk.green(`Successfully replayed all ${i} actions from the message store.`))
 		}
 
 		if (libp2p !== null && core.sources !== null) {
+			await libp2p.start()
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
-			startPingService(libp2p, core.controller)
+			startPingService(libp2p, { verbose, signal: core.controller.signal })
 		}
 
 		return core
@@ -119,7 +122,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		if (libp2p !== null) {
 			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer, remoteAddr } }) => {
 				if (options.verbose) {
-					console.log(`[canvas-core] Opened connection ${id} to ${remotePeer} on ${remoteAddr}`)
+					console.log(chalk.gray(`[canvas-core] [p2p] Opened connection ${id} to ${remotePeer} at ${remoteAddr}`))
 				}
 
 				this.dispatchEvent(new CustomEvent("connect", { detail: { peer: remotePeer.toString() } }))
@@ -127,7 +130,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) => {
 				if (options.verbose) {
-					console.log(`[canvas-core] Closed connection ${id} to ${remotePeer}`)
+					console.log(chalk.gray(`[canvas-core] [p2p] Closed connection ${id} to ${remotePeer}`))
 				}
 
 				this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: remotePeer.toString() } }))

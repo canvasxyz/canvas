@@ -1,7 +1,14 @@
 import { CID } from "multiformats"
 
+import AggregateError from "aggregate-error"
+import { anySignal } from "any-signal"
+
 import { ethers } from "ethers"
 import { configure } from "safe-stable-stringify"
+import { CodeError } from "@libp2p/interfaces/errors"
+
+import chalk from "chalk"
+import { TimeoutController } from "timeout-abort-controller"
 
 import type { ModelType, ModelValue } from "@canvas-js/interfaces"
 
@@ -53,35 +60,24 @@ export function validateType(type: ModelType, value: ModelValue) {
 	}
 }
 
-export class AbortError extends Error {
-	constructor(readonly event: Event) {
-		super("Received abort signal")
+export async function wait(interval: number, options: { signal?: AbortSignal }) {
+	if (options.signal?.aborted) {
+		return
+	}
+
+	const timeoutController = new TimeoutController(interval)
+	const signal = anySignal([timeoutController.signal, options.signal])
+	try {
+		await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve()))
+	} finally {
+		timeoutController.clear()
+		signal.clear()
 	}
 }
 
-export async function wait(options: { interval: number; signal: AbortSignal }) {
-	await new Promise<void>((resolve, reject) => {
-		let timeout: NodeJS.Timeout | undefined = undefined
-
-		const abort = (event: Event) => {
-			clearTimeout(timeout)
-			reject(new AbortError(event))
-		}
-
-		options.signal.addEventListener("abort", abort)
-		timeout = setTimeout(() => {
-			options.signal.removeEventListener("abort", abort)
-			resolve()
-		}, options.interval)
-	})
-}
-
-async function getResult<T>(
-	f: (signal: AbortSignal) => Promise<T>,
-	signal: AbortSignal
-): Promise<IteratorResult<Error, T>> {
+async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, T>> {
 	try {
-		const value = await f(signal)
+		const value = await f()
 		return { done: true, value }
 	} catch (err) {
 		if (err instanceof Error) {
@@ -93,21 +89,21 @@ async function getResult<T>(
 }
 
 export async function retry<T>(
-	f: (signal: AbortSignal) => Promise<T>,
+	f: () => Promise<T>,
 	handleError: (err: Error, n: number) => void,
-	options: { interval: number; signal: AbortSignal; maxRetries?: number }
+	{ interval, ...options }: { interval: number; signal?: AbortSignal; maxRetries?: number }
 ): Promise<T> {
 	const maxRetries = options.maxRetries ?? Infinity
 
 	for (let n = 0; n < maxRetries; n++) {
-		const result = await getResult(f, options.signal)
+		const result = await getResult(f)
 		if (result.done) {
 			return result.value
-		} else if (options.signal.aborted) {
+		} else if (options.signal?.aborted) {
 			throw result.value
 		} else {
 			handleError(result.value, n)
-			await wait(options)
+			await wait(interval, options)
 		}
 	}
 
@@ -138,5 +134,35 @@ export class CacheMap<K, V> extends Map<K, V> {
 				break
 			}
 		}
+	}
+}
+
+export function logErrorMessage(prefix: string, context: string, err: unknown) {
+	if (err instanceof Error && err.name === "AggregateError") {
+		const { errors } = err as AggregateError
+		if (errors.length === 1) {
+			const [err] = errors
+			console.log(prefix, context, chalk.yellow(`(${getErrorMessage(err)})`))
+		} else {
+			console.log(prefix, context, chalk.yellow(`(${errors.length} errors)`))
+			for (const err of errors) {
+				console.log(prefix, chalk.yellow(`- ${getErrorMessage(err)}`))
+			}
+		}
+	} else {
+		console.log(prefix, context, chalk.yellow(`(${getErrorMessage(err)})`))
+	}
+}
+
+function getErrorMessage(err: unknown): string {
+	if (err instanceof Error && err.name === "AggregateError") {
+		const { errors } = err as AggregateError
+		return errors.map(getErrorMessage).join("; ")
+	} else if (err instanceof CodeError) {
+		return `${err.code}: ${err.message}`
+	} else if (err instanceof Error) {
+		return `${err.name}: ${err.message}`
+	} else {
+		throw err
 	}
 }
