@@ -15,10 +15,10 @@ import { CID } from "multiformats/cid"
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
 
-import { toHex, assert, logErrorMessage } from "@canvas-js/core/utils"
-import * as constants from "@canvas-js/core/constants"
+import { DIAL_TIMEOUT, SYNC_COOLDOWN_PERIOD, second } from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
-import { sync, handleIncomingStream } from "./sync/index.js"
+import { toHex, assert, logErrorMessage, CacheMap } from "@canvas-js/core/utils"
+import { sync, handleIncomingStream } from "@canvas-js/core/sync"
 import { startAnnounceService } from "./services/announce.js"
 import { startDiscoveryService } from "./services/discovery.js"
 
@@ -41,6 +41,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	private readonly controller = new AbortController()
 	private readonly syncQueue = new PQueue({ concurrency: 1 })
 	private readonly pendingSyncPeers = new Set<string>()
+	private readonly syncHistroy = new CacheMap<string, number>(20)
 
 	private readonly cid: CID
 	private readonly messageStore: MessageStore
@@ -68,6 +69,16 @@ export class Source extends EventEmitter<SourceEvents> {
 		if (this.options.verbose) {
 			console.log(this.prefix, `Subscribed to pubsub topic ${this.uri}`)
 		}
+
+		this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
+			if (subscriptions.some(({ subscribe, topic }) => subscribe && topic === this.uri)) {
+				if (this.options.verbose) {
+					console.log(this.prefix, `Peer ${peerId} joined the GossipSub mesh`)
+				}
+
+				this.handlePeerDiscovery(peerId)
+			}
+		})
 
 		await this.libp2p.handle(this.protocol, this.streamHandler)
 		if (this.options.verbose) {
@@ -211,7 +222,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Dialing ${peerId}`))
 		}
 
-		const timeoutController = new TimeoutController(constants.DIAL_TIMEOUT)
+		const timeoutController = new TimeoutController(DIAL_TIMEOUT)
 		const signal = anySignal([this.controller.signal, timeoutController.signal])
 
 		if (this.options.verbose) {
@@ -248,8 +259,19 @@ export class Source extends EventEmitter<SourceEvents> {
 			return
 		}
 
+		const lastSyncMark = this.syncHistroy.get(id)
+		const now = performance.now()
+		if (lastSyncMark !== undefined && now - lastSyncMark < SYNC_COOLDOWN_PERIOD) {
+			return
+		}
+
 		this.pendingSyncPeers.add(id)
-		this.syncQueue.add(() => this.sync(peerId)).finally(() => this.pendingSyncPeers.delete(id))
+		this.syncQueue
+			.add(() => this.sync(peerId))
+			.finally(() => {
+				this.pendingSyncPeers.delete(id)
+				this.syncHistroy.set(id, performance.now())
+			})
 	}
 
 	/**

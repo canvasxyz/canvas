@@ -28,6 +28,9 @@ export const DISCOVERY_RETRY_INTERVAL = 5 * second
 // export const SYNC_INTERVAL = 2 * minute
 // export const SYNC_RETRY_INTERVAL = 5 * second
 
+// don't sync with any one peer more often than this
+export const SYNC_COOLDOWN_PERIOD = 10 * second
+
 export const PING_INTERVAL = 5 * minute
 export const DIAL_TIMEOUT = 20 * second
 export const PING_TIMEOUT = 10 * second
