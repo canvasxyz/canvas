@@ -41,12 +41,12 @@ export async function getLibp2pOptions(config: {
 
 	const discoverRelays = config.announce ? 0 : bootstrapList.length
 
-	const announce = config.announce ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit/p2p/${config.peerId}`)
+	const announce = config.announce ?? []
 	for (const address of announce) {
 		console.log(chalk.gray(`[canvas-core] Announcing on ${address}`))
 	}
 
-	const listen = config.listen ?? bootstrapList.map((multiaddr) => `${multiaddr}/p2p-circuit`)
+	const listen = config.listen ?? []
 	for (const address of listen) {
 		console.log(chalk.gray(`[canvas-core] Listening on ${address}`))
 	}
@@ -83,7 +83,7 @@ export async function getLibp2pOptions(config: {
 			}),
 		}),
 		ping: {
-			protocolPrefix: "/canvas",
+			protocolPrefix: "canvas",
 			maxInboundStreams: 32,
 			maxOutboundStreams: 32,
 			timeout: 20 * second,
