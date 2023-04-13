@@ -102,10 +102,6 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		startDiscoveryService(this.libp2p, this.cid, this.controller.signal, (peerId: PeerId) => {
-			if (this.libp2p.peerId.equals(peerId)) {
-				return
-			}
-
 			const id = peerId.toString()
 			if (this.pendingSyncPeers.has(id)) {
 				return
@@ -216,69 +212,13 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		if (this.options.verbose) {
-			console.log(this.prefix, `Closed incoming stream ${stream.id}`)
+			console.log(chalk.gray(this.prefix, `Closed incoming stream ${stream.id}`))
 		}
 	}
 
-	// private async wait(interval: number) {
-	// 	await wait({ signal: this.controller.signal, interval })
-	// }
-
-	// /**
-	//  * This starts the "sync service", an async while loop that looks up application peers
-	//  * and calls this.sync(peerId) for each of them every constants.SYNC_INTERVAL milliseconds
-	//  */
-	// private async startSyncService() {
-	// 	const prefix = chalk.magenta(`${this.prefix} [sync]`)
-	// 	console.log(prefix, `Staring service`)
-
-	// 	try {
-	// 		await this.wait(constants.SYNC_DELAY)
-
-	// 		while (!this.controller.signal.aborted) {
-	// 			const peers = new Set<string>()
-	// 			for (const peer of this.libp2p.pubsub.getSubscribers(this.uri)) {
-	// 				if (peer.equals(this.libp2p.peerId)) {
-	// 					continue
-	// 				}
-
-	// 				peers.add(peer.toString())
-	// 			}
-
-	// 			for await (const peer of getApplicationPeers(this.libp2p, this.cid, this.controller.signal)) {
-	// 				if (peer.equals(this.libp2p.peerId)) {
-	// 					continue
-	// 				}
-
-	// 				peers.add(peer.toString())
-	// 			}
-
-	// 			if (peers.size === 0) {
-	// 				console.log(prefix, "No application peers found")
-	// 			} else {
-	// 				let i = 0
-	// 				for (const peer of peers) {
-	// 					console.log(prefix, `Initiating sync with ${peer} (${++i}/${peers.size})`)
-	// 					await this.sync(peerIdFromString(peer))
-	// 				}
-	// 			}
-
-	// 			await this.wait(constants.SYNC_INTERVAL)
-	// 		}
-	// 	} catch (err) {
-	// 		if (err instanceof AbortError) {
-	// 			console.log(prefix, `Aborting service`)
-	// 		} else if (err instanceof Error) {
-	// 			console.log(prefix, chalk.red(`Service crashed (${err.message})`))
-	// 		} else {
-	// 			throw err
-	// 		}
-	// 	}
-	// }
-
-	private async dial(peer: PeerId): Promise<Stream> {
+	private async dial(peerId: PeerId): Promise<Stream> {
 		if (this.options.verbose) {
-			console.log(this.prefix, `Dialing ${peer}`)
+			console.log(this.prefix, `Dialing ${peerId}`)
 		}
 
 		const queryController = new TimeoutController(constants.DIAL_TIMEOUT)
@@ -286,7 +226,20 @@ export class Source extends EventEmitter<SourceEvents> {
 		this.controller.signal.addEventListener("abort", abort)
 
 		try {
-			return await this.libp2p.dialProtocol(peer, this.protocol, { signal: queryController.signal })
+			const connection = await this.libp2p.dial(peerId, { signal: queryController.signal })
+			try {
+				const stream = await connection.newStream(this.protocol, { signal: queryController.signal })
+				return stream
+			} catch (err) {
+				if (err instanceof Error) {
+					console.log(this.prefix, chalk.yellow("Failed to open new stream, possibly due to stale relay connection."))
+					console.log(this.prefix, chalk.yellow("Closing connection and attempting to re-dial..."))
+					await connection.close()
+					return await this.libp2p.dialProtocol(peerId, this.protocol, { signal: queryController.signal })
+				} else {
+					throw err
+				}
+			}
 		} finally {
 			queryController.clear()
 			this.controller.signal.removeEventListener("abort", abort)
@@ -360,7 +313,7 @@ export class Source extends EventEmitter<SourceEvents> {
 
 		stream.close()
 		if (this.options.verbose) {
-			console.log(prefix, `Closed outgoing stream ${stream.id}`)
+			console.log(chalk.gray(prefix, `Closed outgoing stream ${stream.id}`))
 		}
 	}
 }

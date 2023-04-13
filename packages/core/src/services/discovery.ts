@@ -61,11 +61,14 @@ async function discover(
 	const queryOptions = { signal: queryController.signal }
 
 	try {
-		const peers: PeerId[] = []
 		for await (const { id } of libp2p.contentRouting.findProviders(cid, queryOptions)) {
-			console.log(prefix, `Found application peer ${id}`)
-			if (callback !== undefined) {
-				callback(id)
+			if (libp2p.peerId.equals(id)) {
+				continue
+			} else {
+				console.log(prefix, `Found application peer ${id}`)
+				if (callback !== undefined) {
+					callback(id)
+				}
 			}
 		}
 	} finally {
