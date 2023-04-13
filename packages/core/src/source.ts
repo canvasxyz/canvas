@@ -234,7 +234,7 @@ export class Source extends EventEmitter<SourceEvents> {
 				if (err instanceof Error) {
 					console.log(this.prefix, chalk.yellow("Failed to open new stream, possibly due to stale relay connection."))
 					console.log(this.prefix, chalk.yellow("Closing connection and attempting to re-dial..."))
-					await connection.close()
+					// await connection.close()
 					await this.libp2p.hangUp(peerId)
 					return await this.libp2p.dialProtocol(peerId, this.protocol, { signal: queryController.signal })
 				} else {
