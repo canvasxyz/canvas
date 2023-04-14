@@ -70,37 +70,33 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(this.prefix, `Subscribed to pubsub topic ${this.uri}`)
 		}
 
-		this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
-			if (subscriptions.some(({ subscribe, topic }) => subscribe && topic === this.uri)) {
-				if (this.options.verbose) {
-					console.log(this.prefix, `Peer ${peerId} joined the GossipSub mesh`)
-				}
-
-				this.handlePeerDiscovery(peerId)
-			}
-		})
+		// this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
+		// 	if (subscriptions.some(({ subscribe, topic }) => subscribe && topic === this.uri)) {
+		// 		if (this.options.verbose) {
+		// 			console.log(this.prefix, `Peer ${peerId} joined the GossipSub mesh`)
+		// 		}
+		// 		this.handlePeerDiscovery(peerId)
+		// 	}
+		// })
 
 		await this.libp2p.handle(this.protocol, this.streamHandler)
 		if (this.options.verbose) {
 			console.log(this.prefix, `Attached stream handler for protocol ${this.protocol}`)
 		}
 
-		this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
-			if (this.libp2p.peerId.equals(peerId)) {
-				return
-			}
-
-			const oldProtocolSet = new Set(oldProtocols)
-			const newProtocolSet = new Set(protocols.filter((protocol) => !oldProtocolSet.has(protocol)))
-
-			if (newProtocolSet.has(this.protocol)) {
-				if (this.options.verbose) {
-					console.log(this.prefix, `Peer ${peerId} supports Canvas protocol ${this.protocol}`)
-				}
-
-				this.handlePeerDiscovery(peerId)
-			}
-		})
+		// this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
+		// 	if (this.libp2p.peerId.equals(peerId)) {
+		// 		return
+		// 	}
+		// 	const oldProtocolSet = new Set(oldProtocols)
+		// 	const newProtocolSet = new Set(protocols.filter((protocol) => !oldProtocolSet.has(protocol)))
+		// 	if (newProtocolSet.has(this.protocol)) {
+		// 		if (this.options.verbose) {
+		// 			console.log(this.prefix, `Peer ${peerId} supports Canvas protocol ${this.protocol}`)
+		// 		}
+		// 		this.handlePeerDiscovery(peerId)
+		// 	}
+		// })
 
 		const mode = await this.libp2p.dht.getMode()
 		if (mode === "server") {
@@ -217,42 +213,6 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 	}
 
-	private async dial(peerId: PeerId): Promise<Stream> {
-		if (this.options.verbose) {
-			console.log(chalk.gray(this.prefix, `Dialing ${peerId}`))
-		}
-
-		const timeoutController = new TimeoutController(DIAL_TIMEOUT)
-		const signal = anySignal([this.controller.signal, timeoutController.signal])
-
-		if (this.options.verbose) {
-			timeoutController.signal.addEventListener("abort", () =>
-				console.log(chalk.gray(this.prefix), chalk.yellow(`Dial to ${peerId} timed out`))
-			)
-		}
-
-		try {
-			const connection = await this.libp2p.dial(peerId, { signal })
-			try {
-				const stream = await connection.newStream(this.protocol, { signal })
-				return stream
-			} catch (err) {
-				if (err instanceof Error && !signal.aborted) {
-					console.log(this.prefix, chalk.yellow("Failed to open new stream, possibly due to stale relay connection."))
-					console.log(this.prefix, chalk.yellow("Closing connection and attempting to re-dial..."))
-					await connection.close()
-					await this.libp2p.hangUp(peerId)
-					return await this.libp2p.dialProtocol(peerId, this.protocol, { signal })
-				} else {
-					throw err
-				}
-			}
-		} finally {
-			signal.clear()
-			timeoutController.clear()
-		}
-	}
-
 	private handlePeerDiscovery(peerId: PeerId) {
 		const id = peerId.toString()
 		if (this.pendingSyncPeers.has(id)) {
@@ -295,13 +255,10 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Opened outgoing stream ${stream.id} to ${peer}`))
 		}
 
-		const closeStream = () => stream.close()
-		this.controller.signal.addEventListener("abort", closeStream)
-
-		let successCount = 0
-		let failureCount = 0
-
 		try {
+			let successCount = 0
+			let failureCount = 0
+
 			await this.messageStore.write(async (txn) => {
 				const generator = sync(this.cid, txn, stream, { verbose: this.options.verbose })
 				for await (const [hash, message] of generator) {
@@ -319,6 +276,11 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(prefix, chalk.green(`Sync with ${peer} completed.`))
 			console.log(prefix, `Applied ${successCount} new messages with ${failureCount} failures.`)
 
+			stream.close()
+			if (this.options.verbose) {
+				console.log(chalk.gray(this.prefix, `Closed outgoing stream ${stream.id}`))
+			}
+
 			this.dispatchEvent(
 				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "success" } })
 			)
@@ -333,15 +295,42 @@ export class Source extends EventEmitter<SourceEvents> {
 			this.dispatchEvent(
 				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "failure" } })
 			)
+		}
+	}
 
-			return
-		} finally {
-			this.controller.signal.removeEventListener("abort", closeStream)
+	private async dial(peerId: PeerId): Promise<Stream> {
+		if (this.options.verbose) {
+			console.log(chalk.gray(this.prefix, `Dialing ${peerId}`))
 		}
 
-		stream.close()
+		const timeoutController = new TimeoutController(DIAL_TIMEOUT)
+		const signal = anySignal([this.controller.signal, timeoutController.signal])
+
 		if (this.options.verbose) {
-			console.log(chalk.gray(this.prefix, `Closed outgoing stream ${stream.id}`))
+			timeoutController.signal.addEventListener("abort", () =>
+				console.log(chalk.gray(this.prefix), chalk.yellow(`Dial to ${peerId} timed out`))
+			)
+		}
+
+		try {
+			const connection = await this.libp2p.dial(peerId, { signal })
+			try {
+				const stream = await connection.newStream(this.protocol, { signal })
+				return stream
+			} catch (err) {
+				if (err instanceof Error && !signal.aborted) {
+					console.log(this.prefix, chalk.yellow("Failed to open new stream, possibly due to stale relay connection."))
+					console.log(this.prefix, chalk.yellow("Closing connection and attempting to re-dial..."))
+					await connection.close()
+					await this.libp2p.hangUp(peerId)
+					return await this.libp2p.dialProtocol(peerId, this.protocol, { signal })
+				} else {
+					throw err
+				}
+			}
+		} finally {
+			signal.clear()
+			timeoutController.clear()
 		}
 	}
 }

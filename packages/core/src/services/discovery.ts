@@ -60,11 +60,11 @@ async function discover(
 		for await (const { id } of libp2p.contentRouting.findProviders(cid, { signal })) {
 			if (libp2p.peerId.equals(id)) {
 				continue
-			} else {
-				console.log(prefix, `Found application peer ${id}`)
-				if (options.callback !== undefined) {
-					options.callback(id)
-				}
+			}
+
+			console.log(prefix, `Found application peer ${id}`)
+			if (options.callback !== undefined) {
+				options.callback(id)
 			}
 		}
 	} finally {
