@@ -11,7 +11,6 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { CID } from "multiformats/cid"
-import { peerIdFromString } from "@libp2p/peer-id"
 
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
@@ -118,15 +117,15 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
 		}
 
-		// const mode = await this.libp2p.dht.getMode()
-		// if (mode === "server") {
-		// 	startAnnounceService(this.libp2p, this.cid, { signal: this.controller.signal })
-		// }
+		const mode = await this.libp2p.dht.getMode()
+		if (mode === "server") {
+			startAnnounceService(this.libp2p, this.cid, { signal: this.controller.signal })
+		}
 
-		// startDiscoveryService(this.libp2p, this.cid, {
-		// 	signal: this.controller.signal,
-		// 	callback: (peerId) => this.handlePeerDiscovery(peerId),
-		// })
+		startDiscoveryService(this.libp2p, this.cid, {
+			signal: this.controller.signal,
+			callback: (peerId) => this.handlePeerDiscovery(peerId),
+		})
 	}
 
 	public async stop() {
