@@ -11,6 +11,7 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 import type { StreamHandler } from "@libp2p/interface-registrar"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { CID } from "multiformats/cid"
+import { peerIdFromString } from "@libp2p/peer-id"
 
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
@@ -40,7 +41,7 @@ interface SourceEvents {
 export class Source extends EventEmitter<SourceEvents> {
 	private readonly controller = new AbortController()
 	private readonly syncQueue = new PQueue({ concurrency: 1 })
-	private readonly pendingSyncPeers = new Set<string>()
+	private readonly pendingSyncPeers = new Map<string, {}>()
 	private readonly syncHistroy = new CacheMap<string, number>(20)
 
 	private readonly cid: CID
@@ -70,43 +71,62 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(this.prefix, `Subscribed to pubsub topic ${this.uri}`)
 		}
 
-		// this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
-		// 	if (subscriptions.some(({ subscribe, topic }) => subscribe && topic === this.uri)) {
-		// 		if (this.options.verbose) {
-		// 			console.log(this.prefix, `Peer ${peerId} joined the GossipSub mesh`)
-		// 		}
-		// 		this.handlePeerDiscovery(peerId)
-		// 	}
-		// })
+		this.libp2p.addEventListener("peer:discovery", async ({ detail: { id } }) => {
+			const protocols = await this.libp2p.peerStore.protoBook.get(id)
+			if (protocols.includes(this.protocol)) {
+				if (this.options.verbose) {
+					console.log(chalk.cyanBright(this.prefix, `Discovered peer ${id}`))
+				}
+
+				this.handlePeerDiscovery(id)
+			}
+		})
+
+		this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
+			const oldProtocolSet = new Set(oldProtocols)
+			const newProtocolSet = new Set(protocols.filter((protocol) => !oldProtocolSet.has(protocol)))
+			if (newProtocolSet.has(this.protocol)) {
+				if (this.options.verbose) {
+					console.log(chalk.magentaBright(this.prefix, `Peer ${peerId} supports the ${this.protocol} protocol`))
+				}
+
+				this.handlePeerDiscovery(peerId)
+			}
+		})
+
+		this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
+			const subscription = subscriptions.find(({ topic }) => topic === this.uri)
+			if (subscription === undefined) {
+				return
+			}
+
+			if (subscription.subscribe) {
+				if (this.options.verbose) {
+					console.log(chalk.blueBright(this.prefix, `Peer ${peerId} joined the GossipSub mesh`))
+				}
+
+				this.handlePeerDiscovery(peerId)
+			} else {
+				if (this.options.verbose) {
+					console.log(chalk.blueBright(this.prefix, `Peer ${peerId} left the GossipSub mesh`))
+				}
+			}
+		})
 
 		await this.libp2p.handle(this.protocol, this.streamHandler)
 		if (this.options.verbose) {
-			console.log(this.prefix, `Attached stream handler for protocol ${this.protocol}`)
+			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
 		}
 
-		// this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
-		// 	if (this.libp2p.peerId.equals(peerId)) {
-		// 		return
-		// 	}
-		// 	const oldProtocolSet = new Set(oldProtocols)
-		// 	const newProtocolSet = new Set(protocols.filter((protocol) => !oldProtocolSet.has(protocol)))
-		// 	if (newProtocolSet.has(this.protocol)) {
-		// 		if (this.options.verbose) {
-		// 			console.log(this.prefix, `Peer ${peerId} supports Canvas protocol ${this.protocol}`)
-		// 		}
-		// 		this.handlePeerDiscovery(peerId)
-		// 	}
+		// const mode = await this.libp2p.dht.getMode()
+		// if (mode === "server") {
+		// 	startAnnounceService(this.libp2p, this.cid, { signal: this.controller.signal })
+		// }
+
+		// startDiscoveryService(this.libp2p, this.cid, {
+		// 	signal: this.controller.signal,
+		// 	callback: (peerId) => this.handlePeerDiscovery(peerId),
 		// })
-
-		const mode = await this.libp2p.dht.getMode()
-		if (mode === "server") {
-			startAnnounceService(this.libp2p, this.cid, { signal: this.controller.signal })
-		}
-
-		startDiscoveryService(this.libp2p, this.cid, {
-			signal: this.controller.signal,
-			callback: (peerId) => this.handlePeerDiscovery(peerId),
-		})
 	}
 
 	public async stop() {
@@ -225,7 +245,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			return
 		}
 
-		this.pendingSyncPeers.add(id)
+		this.pendingSyncPeers.set(id, {})
 		this.syncQueue
 			.add(() => this.sync(peerId))
 			.finally(() => {
