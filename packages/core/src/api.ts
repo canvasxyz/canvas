@@ -5,6 +5,8 @@ import { WebSocket } from "ws"
 import { nanoid } from "nanoid"
 import { CustomEvent } from "@libp2p/interfaces/events"
 
+import { peerIdFromString } from "@libp2p/peer-id"
+
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 
 import type { CoreEvents, Message, ModelValue } from "@canvas-js/interfaces"
@@ -16,6 +18,7 @@ interface Options {
 	exposeMetrics: boolean
 	exposeModels: boolean
 	exposeMessages: boolean
+	exposeP2P: boolean
 }
 
 export function getAPI(core: Core, options: Partial<Options> = {}): express.Express {
@@ -205,6 +208,44 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 				res.status(StatusCodes.NOT_FOUND).end()
 			} else {
 				res.json(message)
+			}
+		})
+	}
+
+	if (options.exposeP2P) {
+		console.log(
+			chalk.yellow("[canvas-cli] Exposing internal libp2p API endpoints. These can be abused if made public.")
+		)
+
+		api.get("/p2p/connections", (req, res) => {
+			if (core.libp2p === null) {
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
+				return
+			}
+
+			const connections = core.libp2p.getConnections()
+			const response = Object.fromEntries(
+				connections.map(({ id, remotePeer, remoteAddr }) => [
+					id,
+					{ peerId: remotePeer.toString(), address: remoteAddr.toString() },
+				])
+			)
+
+			res.status(StatusCodes.OK).json(response)
+		})
+
+		api.post("/p2p/ping/:peerId", async (req, res) => {
+			if (core.libp2p === null) {
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
+				return
+			}
+
+			try {
+				const peerId = peerIdFromString(req.params.peerId)
+				const latency = await core.libp2p.ping(peerId)
+				res.status(StatusCodes.OK).end(`${latency}\n`)
+			} catch (err: any) {
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
 			}
 		})
 	}

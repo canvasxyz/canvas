@@ -74,6 +74,11 @@ export const builder = (yargs: Argv) =>
 			desc: "Expose Prometheus endpoint at /metrics",
 			default: false,
 		})
+		.option("p2p", {
+			type: "boolean",
+			desc: "Expose internal libp2p debugging endpoints",
+			default: false,
+		})
 		.option("verbose", {
 			type: "boolean",
 			desc: "Enable verbose logging",
@@ -178,7 +183,7 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen, announce } = args
+	const { verbose, replay, unchecked, offline, listen, announce } = args
 
 	const validateAddresses = (addresses: (string | number)[]): addresses is string[] =>
 		addresses.every((address) => typeof address === "string")
@@ -204,10 +209,10 @@ export async function handler(args: Args) {
 			throw new Error("Invalid directory for static files (path not found)")
 		}
 
-		app.use("/api", getAPI(core, { exposeMetrics }))
+		app.use("/api", getAPI(core, { exposeMetrics: args.metrics, exposeP2P: args.p2p }))
 		app.use(express.static(args.static))
 	} else {
-		app.use(getAPI(core, { exposeMetrics }))
+		app.use(getAPI(core, { exposeMetrics: args.metrics, exposeP2P: args.p2p }))
 	}
 
 	const origin = `http://localhost:${args.port}`
