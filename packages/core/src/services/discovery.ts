@@ -31,7 +31,7 @@ export async function startDiscoveryService(
 			await retry(
 				async () => await discover(libp2p, cid, { signal, callback }),
 				(err) => logErrorMessage(prefix, chalk.yellow(`Failed to query DHT for provider records`), err),
-				{ signal, interval: DISCOVERY_RETRY_INTERVAL }
+				{ signal, interval: DISCOVERY_RETRY_INTERVAL, maxRetries: 3 }
 			)
 
 			await wait(DISCOVERY_INTERVAL, { signal })
