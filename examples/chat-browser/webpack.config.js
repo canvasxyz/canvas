@@ -1,5 +1,6 @@
 import path from "node:path";
 import CopyWebpackPlugin from "copy-webpack-plugin";
+import webpack from "webpack";
 
 export default {
   mode: "development",
@@ -47,6 +48,7 @@ export default {
   },
   plugins: [
     new CopyWebpackPlugin({ patterns: [{ from: "public" }] }),
+    new webpack.ProvidePlugin({ Buffer: ["buffer", "Buffer"] }),
   ],
   devServer: {
     static: [path.resolve("public")],
