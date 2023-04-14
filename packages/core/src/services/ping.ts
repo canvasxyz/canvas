@@ -45,26 +45,19 @@ export async function startPingService(
 			return true
 		}
 
-		if (verbose) {
-			const { addresses } = await libp2p.peerStore.get(peer)
-			console.log(prefix, `Ping ${peer} [ ${addresses.map(({ multiaddr }) => multiaddr).join(", ")} ]`)
-		}
-
 		const timeoutController = new TimeoutController(PING_TIMEOUT)
 		const signal = anySignal([timeoutController.signal, options.signal])
 
 		try {
-			const stream = await libp2p.dialProtocol(peer, protocol, { signal: timeoutController.signal })
-			stream.close()
-
+			const latency = await libp2p.ping(peer, { signal })
 			if (verbose) {
-				console.log(prefix, `Ping ${peer} succeeded`)
+				console.log(prefix, `${peer} responded in ${latency}ms`)
 			}
 
 			return true
 		} catch (err) {
 			if (verbose) {
-				logErrorMessage(prefix, `Ping ${peer} failed`, err)
+				logErrorMessage(prefix, `${peer} did not response to ping`, err)
 			}
 
 			if (routingTable.isStarted()) {
@@ -123,21 +116,16 @@ export async function startPingService(
 		}
 
 		const id = peer.toString()
-		if (id === "12D3KooWDtVCu8PJPfZEx8EhfqZ7c48AxZX5BtMr7dU8VV297mTc") {
-			console.log(prefix, chalk.red("FKDFJKDLSFJKSLDJFKLDSJFDKLJFKSJFLKSDJFKLS"))
-			console.trace()
-		}
-
 		if (pingQueuePeerIds.has(id)) {
 			return
-		} else {
-			if (verbose) {
-				console.log(prefix, `Adding ${peer} to ping queue #${pingQueue.size}`)
-			}
-
-			pingQueuePeerIds.add(id)
-			pingQueue.add(() => ping(peer, wanProtocol, wanRoutingTable)).finally(() => pingQueuePeerIds.delete(id))
 		}
+
+		if (verbose) {
+			console.log(prefix, `Adding ${peer} to ping queue #${pingQueue.size}`)
+		}
+
+		pingQueuePeerIds.add(id)
+		pingQueue.add(() => ping(peer, wanProtocol, wanRoutingTable)).finally(() => pingQueuePeerIds.delete(id))
 	})
 
 	lanRoutingTable.kb?.on("added", ({ peer }) => {
@@ -148,14 +136,14 @@ export async function startPingService(
 		const id = peer.toString()
 		if (pingQueuePeerIds.has(id)) {
 			return
-		} else {
-			if (verbose) {
-				console.log(prefix, `Adding ${peer} to ping queue #${pingQueue.size}`)
-			}
-
-			pingQueuePeerIds.add(id)
-			pingQueue.add(() => ping(peer, wanProtocol, lanRoutingTable)).finally(() => pingQueuePeerIds.delete(id))
 		}
+
+		if (verbose) {
+			console.log(prefix, `Adding ${peer} to ping queue #${pingQueue.size}`)
+		}
+
+		pingQueuePeerIds.add(id)
+		pingQueue.add(() => ping(peer, wanProtocol, lanRoutingTable)).finally(() => pingQueuePeerIds.delete(id))
 	})
 
 	try {

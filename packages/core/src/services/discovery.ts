@@ -31,7 +31,7 @@ export async function startDiscoveryService(
 			await retry(
 				async () => await discover(libp2p, cid, { signal, callback }),
 				(err) => logErrorMessage(prefix, chalk.yellow(`Failed to query DHT for provider records`), err),
-				{ signal, interval: DISCOVERY_RETRY_INTERVAL }
+				{ signal, interval: DISCOVERY_RETRY_INTERVAL, maxRetries: 3 }
 			)
 
 			await wait(DISCOVERY_INTERVAL, { signal })
@@ -60,11 +60,11 @@ async function discover(
 		for await (const { id } of libp2p.contentRouting.findProviders(cid, { signal })) {
 			if (libp2p.peerId.equals(id)) {
 				continue
-			} else {
-				console.log(prefix, `Found application peer ${id}`)
-				if (options.callback !== undefined) {
-					options.callback(id)
-				}
+			}
+
+			console.log(prefix, `Found application peer ${id}`)
+			if (options.callback !== undefined) {
+				options.callback(id)
 			}
 		}
 	} finally {

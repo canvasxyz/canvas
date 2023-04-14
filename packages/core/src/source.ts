@@ -40,7 +40,7 @@ interface SourceEvents {
 export class Source extends EventEmitter<SourceEvents> {
 	private readonly controller = new AbortController()
 	private readonly syncQueue = new PQueue({ concurrency: 1 })
-	private readonly pendingSyncPeers = new Set<string>()
+	private readonly pendingSyncPeers = new Map<string, {}>()
 	private readonly syncHistroy = new CacheMap<string, number>(20)
 
 	private readonly cid: CID
@@ -49,8 +49,6 @@ export class Source extends EventEmitter<SourceEvents> {
 	private readonly applyMessage: (txn: ReadWriteTransaction, hash: Uint8Array, message: Message) => Promise<void>
 	private readonly options: SourceOptions
 	private readonly prefix: string
-
-	public applicationPeers: PeerId[] = []
 
 	public constructor(config: SourceConfig) {
 		super()
@@ -67,23 +65,23 @@ export class Source extends EventEmitter<SourceEvents> {
 		this.libp2p.pubsub.subscribe(this.uri)
 		this.libp2p.pubsub.addEventListener("message", this.handleGossipMessage)
 		if (this.options.verbose) {
-			console.log(this.prefix, `Subscribed to pubsub topic ${this.uri}`)
+			console.log(chalk.gray(this.prefix, `Subscribed to GossipSub topic`))
 		}
 
-		this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
-			if (subscriptions.some(({ subscribe, topic }) => subscribe && topic === this.uri)) {
+		this.libp2p.addEventListener("peer:discovery", async ({ detail: { id } }) => {
+			if (this.libp2p.peerId.equals(id)) {
+				return
+			}
+
+			const protocols = await this.libp2p.peerStore.protoBook.get(id)
+			if (protocols.includes(this.protocol)) {
 				if (this.options.verbose) {
-					console.log(this.prefix, `Peer ${peerId} joined the GossipSub mesh`)
+					console.log(chalk.gray(this.prefix, `Discovered peer ${id}`))
 				}
 
-				this.handlePeerDiscovery(peerId)
+				this.handlePeerDiscovery(id)
 			}
 		})
-
-		await this.libp2p.handle(this.protocol, this.streamHandler)
-		if (this.options.verbose) {
-			console.log(this.prefix, `Attached stream handler for protocol ${this.protocol}`)
-		}
 
 		this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
 			if (this.libp2p.peerId.equals(peerId)) {
@@ -92,15 +90,42 @@ export class Source extends EventEmitter<SourceEvents> {
 
 			const oldProtocolSet = new Set(oldProtocols)
 			const newProtocolSet = new Set(protocols.filter((protocol) => !oldProtocolSet.has(protocol)))
-
 			if (newProtocolSet.has(this.protocol)) {
 				if (this.options.verbose) {
-					console.log(this.prefix, `Peer ${peerId} supports Canvas protocol ${this.protocol}`)
+					console.log(chalk.gray(this.prefix, `Peer ${peerId} supports the ${this.protocol} protocol`))
 				}
 
 				this.handlePeerDiscovery(peerId)
 			}
 		})
+
+		this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
+			if (this.libp2p.peerId.equals(peerId)) {
+				return
+			}
+
+			const subscription = subscriptions.find(({ topic }) => topic === this.uri)
+			if (subscription === undefined) {
+				return
+			}
+
+			if (subscription.subscribe) {
+				if (this.options.verbose) {
+					console.log(chalk.gray(this.prefix, `Peer ${peerId} joined the GossipSub topic`))
+				}
+
+				this.handlePeerDiscovery(peerId)
+			} else {
+				if (this.options.verbose) {
+					console.log(chalk.gray(this.prefix, `Peer ${peerId} left the GossipSub topic`))
+				}
+			}
+		})
+
+		await this.libp2p.handle(this.protocol, this.streamHandler)
+		if (this.options.verbose) {
+			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
+		}
 
 		const mode = await this.libp2p.dht.getMode()
 		if (mode === "server") {
@@ -124,8 +149,8 @@ export class Source extends EventEmitter<SourceEvents> {
 		await this.libp2p.unhandle(this.protocol)
 
 		if (this.options.verbose) {
-			console.log(this.prefix, `Removed stream handler for protocol ${this.protocol}`)
-			console.log(this.prefix, `Unsubscribed from pubsub topic ${this.uri}`)
+			console.log(chalk.gray(this.prefix, `Removed stream handler for protocol ${this.protocol}`))
+			console.log(chalk.gray(this.prefix, `Unsubscribed from GossipSub topic`))
 		}
 	}
 
@@ -217,6 +242,91 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 	}
 
+	private handlePeerDiscovery(peerId: PeerId) {
+		const id = peerId.toString()
+		if (this.pendingSyncPeers.has(id)) {
+			return
+		}
+
+		const lastSyncMark = this.syncHistroy.get(id)
+		const now = performance.now()
+		if (lastSyncMark !== undefined && now - lastSyncMark < SYNC_COOLDOWN_PERIOD) {
+			return
+		}
+
+		this.pendingSyncPeers.set(id, {})
+		this.syncQueue
+			.add(() => this.sync(peerId))
+			.then(() => this.syncHistroy.set(id, performance.now()))
+			.finally(() => this.pendingSyncPeers.delete(id))
+	}
+
+	/**
+	 * Initiate an MST sync with the target peer. Syncs are one-directional; we dial a
+	 * peer and treat them as a server, scanning a read-only snapshot of their MST.
+	 * They have to independently dial us back to access our MST.
+	 */
+	private async sync(peer: PeerId) {
+		const prefix = chalk.magenta(`${this.prefix} [sync]`)
+		console.log(prefix, `Initiating sync with ${peer}`)
+
+		let stream: Stream
+		try {
+			stream = await this.dial(peer)
+		} catch (err) {
+			logErrorMessage(prefix, chalk.red(`Failed to dial peer ${peer}`), err)
+			return
+		}
+
+		if (this.options.verbose) {
+			console.log(chalk.gray(this.prefix, `Opened outgoing stream ${stream.id} to ${peer}`))
+		}
+
+		try {
+			let successCount = 0
+			let failureCount = 0
+
+			await this.messageStore.write(async (txn) => {
+				const generator = sync(this.cid, txn, stream, { verbose: this.options.verbose })
+				for await (const [hash, message] of generator) {
+					try {
+						await this.applyMessage(txn, hash, message)
+						successCount += 1
+					} catch (err) {
+						generator.throw(err) // this throws an exeption at the `yield` statement
+						failureCount += 1
+						logErrorMessage(prefix, chalk.red(`Failed to apply ${message.type} ${toHex(hash)}`), err)
+					}
+				}
+			})
+
+			console.log(prefix, chalk.green(`Sync with ${peer} completed.`))
+			console.log(prefix, `Applied ${successCount} new messages with ${failureCount} failures.`)
+
+			stream.close()
+			if (this.options.verbose) {
+				console.log(chalk.gray(this.prefix, `Closed outgoing stream ${stream.id}`))
+			}
+
+			this.dispatchEvent(
+				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "success" } })
+			)
+		} catch (err) {
+			logErrorMessage(prefix, chalk.red(`Failed to sync with peer ${peer}`), err)
+
+			stream.abort(err as Error)
+			if (this.options.verbose) {
+				console.log(prefix, `Aborted outgoing stream ${stream.id}`)
+			}
+
+			this.dispatchEvent(
+				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "failure" } })
+			)
+
+			throw err
+		}
+	}
+
 	private async dial(peerId: PeerId): Promise<Stream> {
 		if (this.options.verbose) {
 			console.log(chalk.gray(this.prefix, `Dialing ${peerId}`))
@@ -250,98 +360,6 @@ export class Source extends EventEmitter<SourceEvents> {
 		} finally {
 			signal.clear()
 			timeoutController.clear()
-		}
-	}
-
-	private handlePeerDiscovery(peerId: PeerId) {
-		const id = peerId.toString()
-		if (this.pendingSyncPeers.has(id)) {
-			return
-		}
-
-		const lastSyncMark = this.syncHistroy.get(id)
-		const now = performance.now()
-		if (lastSyncMark !== undefined && now - lastSyncMark < SYNC_COOLDOWN_PERIOD) {
-			return
-		}
-
-		this.pendingSyncPeers.add(id)
-		this.syncQueue
-			.add(() => this.sync(peerId))
-			.finally(() => {
-				this.pendingSyncPeers.delete(id)
-				this.syncHistroy.set(id, performance.now())
-			})
-	}
-
-	/**
-	 * Initiate an MST sync with the target peer. Syncs are one-directional; we dial a
-	 * peer and treat them as a server, scanning a read-only snapshot of their MST.
-	 * They have to independently dial us back to access our MST.
-	 */
-	private async sync(peer: PeerId) {
-		const prefix = chalk.magenta(`${this.prefix} [sync]`)
-		console.log(prefix, `Initiating sync with ${peer}`)
-
-		let stream: Stream
-		try {
-			stream = await this.dial(peer)
-		} catch (err) {
-			logErrorMessage(prefix, chalk.red(`Failed to dial peer ${peer}`), err)
-			return
-		}
-
-		if (this.options.verbose) {
-			console.log(chalk.gray(this.prefix, `Opened outgoing stream ${stream.id} to ${peer}`))
-		}
-
-		const closeStream = () => stream.close()
-		this.controller.signal.addEventListener("abort", closeStream)
-
-		let successCount = 0
-		let failureCount = 0
-
-		try {
-			await this.messageStore.write(async (txn) => {
-				const generator = sync(this.cid, txn, stream, { verbose: this.options.verbose })
-				for await (const [hash, message] of generator) {
-					try {
-						await this.applyMessage(txn, hash, message)
-						successCount += 1
-					} catch (err) {
-						generator.throw(err) // this throws an exeption at the `yield` statement
-						failureCount += 1
-						logErrorMessage(prefix, chalk.red(`Failed to apply ${message.type} ${toHex(hash)}`), err)
-					}
-				}
-			})
-
-			console.log(prefix, chalk.green(`Sync with ${peer} completed.`))
-			console.log(prefix, `Applied ${successCount} new messages with ${failureCount} failures.`)
-
-			this.dispatchEvent(
-				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "success" } })
-			)
-		} catch (err) {
-			logErrorMessage(prefix, chalk.red(`Failed to sync with peer ${peer}`), err)
-
-			stream.abort(err as Error)
-			if (this.options.verbose) {
-				console.log(prefix, `Aborted outgoing stream ${stream.id}`)
-			}
-
-			this.dispatchEvent(
-				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "failure" } })
-			)
-
-			return
-		} finally {
-			this.controller.signal.removeEventListener("abort", closeStream)
-		}
-
-		stream.close()
-		if (this.options.verbose) {
-			console.log(chalk.gray(this.prefix, `Closed outgoing stream ${stream.id}`))
 		}
 	}
 }
