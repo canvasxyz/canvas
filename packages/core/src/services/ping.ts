@@ -123,21 +123,16 @@ export async function startPingService(
 		}
 
 		const id = peer.toString()
-		if (id === "12D3KooWDtVCu8PJPfZEx8EhfqZ7c48AxZX5BtMr7dU8VV297mTc") {
-			console.log(prefix, chalk.red("FKDFJKDLSFJKSLDJFKLDSJFDKLJFKSJFLKSDJFKLS"))
-			console.trace()
-		}
-
 		if (pingQueuePeerIds.has(id)) {
 			return
-		} else {
-			if (verbose) {
-				console.log(prefix, `Adding ${peer} to ping queue #${pingQueue.size}`)
-			}
-
-			pingQueuePeerIds.add(id)
-			pingQueue.add(() => ping(peer, wanProtocol, wanRoutingTable)).finally(() => pingQueuePeerIds.delete(id))
 		}
+
+		if (verbose) {
+			console.log(prefix, `Adding ${peer} to ping queue #${pingQueue.size}`)
+		}
+
+		pingQueuePeerIds.add(id)
+		pingQueue.add(() => ping(peer, wanProtocol, wanRoutingTable)).finally(() => pingQueuePeerIds.delete(id))
 	})
 
 	lanRoutingTable.kb?.on("added", ({ peer }) => {
@@ -148,14 +143,14 @@ export async function startPingService(
 		const id = peer.toString()
 		if (pingQueuePeerIds.has(id)) {
 			return
-		} else {
-			if (verbose) {
-				console.log(prefix, `Adding ${peer} to ping queue #${pingQueue.size}`)
-			}
-
-			pingQueuePeerIds.add(id)
-			pingQueue.add(() => ping(peer, wanProtocol, lanRoutingTable)).finally(() => pingQueuePeerIds.delete(id))
 		}
+
+		if (verbose) {
+			console.log(prefix, `Adding ${peer} to ping queue #${pingQueue.size}`)
+		}
+
+		pingQueuePeerIds.add(id)
+		pingQueue.add(() => ping(peer, wanProtocol, lanRoutingTable)).finally(() => pingQueuePeerIds.delete(id))
 	})
 
 	try {

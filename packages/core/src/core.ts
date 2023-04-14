@@ -23,7 +23,7 @@ import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
 import { MessageStore, openMessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
 import { getPeerId, getLibp2pOptions } from "@canvas-js/core/components/libp2p"
-import { startPingService } from "./services/ping.js"
+// import { startPingService } from "./services/ping.js"
 
 import { Source } from "./source.js"
 import { actionType, messageType } from "./codecs.js"
@@ -91,7 +91,8 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		if (libp2p !== null && core.sources !== null) {
 			await libp2p.start()
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
-			startPingService(libp2p, { verbose, signal: core.controller.signal })
+
+			// startPingService(libp2p, { verbose, signal: core.controller.signal })
 		}
 
 		return core
