@@ -12,7 +12,7 @@ import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 import type { CoreEvents, Message, ModelValue } from "@canvas-js/interfaces"
 
 import { Core } from "./core.js"
-import { ipfsURIPattern, assert, fromHex } from "./utils.js"
+import { ipfsURIPattern, assert, fromHex, getErrorMessage } from "./utils.js"
 
 interface Options {
 	exposeMetrics: boolean
@@ -244,8 +244,9 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 				const peerId = peerIdFromString(req.params.peerId)
 				const latency = await core.libp2p.ping(peerId)
 				res.status(StatusCodes.OK).end(`${latency}\n`)
-			} catch (err: any) {
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.toString())
+			} catch (err) {
+				const msg = getErrorMessage(err)
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(`${msg}\n`)
 			}
 		})
 	}

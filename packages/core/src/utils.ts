@@ -152,7 +152,7 @@ export function logErrorMessage(prefix: string, context: string, err: unknown) {
 	}
 }
 
-function getErrorMessage(err: unknown): string {
+export function getErrorMessage(err: unknown): string {
 	if (err instanceof Error && err.name === "AggregateError") {
 		const { errors } = err as AggregateError
 		return errors.map(getErrorMessage).join("; ")
