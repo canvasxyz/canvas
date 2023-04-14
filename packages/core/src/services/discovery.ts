@@ -1,7 +1,6 @@
 import chalk from "chalk"
 import { CID } from "multiformats"
 import { Libp2p } from "libp2p"
-import { TimeoutController } from "timeout-abort-controller"
 import { PeerId } from "@libp2p/interface-peer-id"
 import { anySignal } from "any-signal"
 
@@ -53,8 +52,7 @@ async function discover(
 	const prefix = chalk.cyan(`[canvas-core] [${cid}] [discovery]`)
 	console.log(prefix, `Querying DHT for provider records...`)
 
-	const timeoutController = new TimeoutController(DISCOVERY_TIMEOUT)
-	const signal = anySignal([timeoutController.signal, options.signal])
+	const signal = anySignal([AbortSignal.timeout(DISCOVERY_TIMEOUT), options.signal])
 
 	try {
 		for await (const { id } of libp2p.contentRouting.findProviders(cid, { signal })) {
@@ -68,7 +66,6 @@ async function discover(
 			}
 		}
 	} finally {
-		timeoutController.clear()
 		signal.clear()
 	}
 }

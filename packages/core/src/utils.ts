@@ -8,7 +8,6 @@ import { configure } from "safe-stable-stringify"
 import { CodeError } from "@libp2p/interfaces/errors"
 
 import chalk from "chalk"
-import { TimeoutController } from "timeout-abort-controller"
 
 import type { ModelType, ModelValue } from "@canvas-js/interfaces"
 
@@ -65,12 +64,10 @@ export async function wait(interval: number, options: { signal?: AbortSignal }) 
 		return
 	}
 
-	const timeoutController = new TimeoutController(interval)
-	const signal = anySignal([timeoutController.signal, options.signal])
+	const signal = anySignal([AbortSignal.timeout(interval), options.signal])
 	try {
 		await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve()))
 	} finally {
-		timeoutController.clear()
 		signal.clear()
 	}
 }

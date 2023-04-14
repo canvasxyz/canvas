@@ -1,7 +1,6 @@
 import chalk from "chalk"
 import { CID } from "multiformats"
 import { Libp2p } from "libp2p"
-import { TimeoutController } from "timeout-abort-controller"
 import { anySignal } from "any-signal"
 
 import { wait, retry, logErrorMessage } from "@canvas-js/core/utils"
@@ -42,14 +41,12 @@ async function announce(libp2p: Libp2p, cid: CID, options: { signal?: AbortSigna
 	const prefix = chalk.hex("#FF8800")(`[canvas-core] [${cid}] [announce]`)
 	console.log(prefix, `Publishing DHT provider record...`)
 
-	const timeoutController = new TimeoutController(ANNOUNCE_TIMEOUT)
-	const signal = anySignal([timeoutController.signal, options.signal])
+	const signal = anySignal([AbortSignal.timeout(ANNOUNCE_TIMEOUT), options.signal])
 
 	try {
-		await libp2p.contentRouting.provide(cid, { signal: signal })
+		await libp2p.contentRouting.provide(cid, { signal })
 		console.log(prefix, chalk.green(`Successfully published DHT provider record.`))
 	} finally {
 		signal.clear()
-		timeoutController.clear()
 	}
 }

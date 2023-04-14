@@ -1,6 +1,5 @@
 import chalk from "chalk"
 import PQueue from "p-queue"
-import { TimeoutController } from "timeout-abort-controller"
 import { sha256 } from "@noble/hashes/sha256"
 import { anySignal } from "any-signal"
 
@@ -332,14 +331,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Dialing ${peerId}`))
 		}
 
-		const timeoutController = new TimeoutController(DIAL_TIMEOUT)
-		const signal = anySignal([this.controller.signal, timeoutController.signal])
-
-		if (this.options.verbose) {
-			timeoutController.signal.addEventListener("abort", () =>
-				console.log(chalk.gray(this.prefix), chalk.yellow(`Dial to ${peerId} timed out`))
-			)
-		}
+		const signal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
 
 		try {
 			const connection = await this.libp2p.dial(peerId, { signal })
@@ -359,7 +351,6 @@ export class Source extends EventEmitter<SourceEvents> {
 			}
 		} finally {
 			signal.clear()
-			timeoutController.clear()
 		}
 	}
 }

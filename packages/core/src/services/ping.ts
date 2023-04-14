@@ -11,8 +11,6 @@ type DualKadDHT = ReturnType<ReturnType<typeof kadDHT>>
 type KadDHT = DualKadDHT["wan"]
 type RoutingTable = KadDHT["routingTable"]
 
-import { TimeoutController } from "timeout-abort-controller"
-
 import { logErrorMessage, wait } from "@canvas-js/core/utils"
 import { PING_INTERVAL, PING_TIMEOUT } from "@canvas-js/core/constants"
 
@@ -35,8 +33,7 @@ export async function startPingService(
 			return true
 		}
 
-		const timeoutController = new TimeoutController(PING_TIMEOUT)
-		const signal = anySignal([timeoutController.signal, options.signal])
+		const signal = anySignal([AbortSignal.timeout(PING_TIMEOUT), options.signal])
 
 		try {
 			const latency = await libp2p.ping(peer, { signal })
@@ -57,7 +54,6 @@ export async function startPingService(
 
 			return false
 		} finally {
-			timeoutController.clear()
 			signal.clear()
 		}
 	}
