@@ -214,7 +214,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 
 	if (options.exposeP2P) {
 		console.log(
-			chalk.yellow("[canvas-cli] Exposing internal libp2p API endpoints. These can be abused if made public.")
+			chalk.yellowBright("[canvas-cli] Exposing internal p2p API. This can be abused if made publicly accessible.")
 		)
 
 		api.get("/p2p/connections", (req, res) => {
