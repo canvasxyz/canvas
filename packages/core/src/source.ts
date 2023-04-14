@@ -79,8 +79,6 @@ export class Source extends EventEmitter<SourceEvents> {
 					console.log(chalk.gray(this.prefix, `Discovered peer ${id}`))
 				}
 
-				console.trace()
-
 				this.handlePeerDiscovery(id)
 			}
 		})
@@ -129,15 +127,15 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
 		}
 
-		// const mode = await this.libp2p.dht.getMode()
-		// if (mode === "server") {
-		// 	startAnnounceService(this.libp2p, this.cid, { signal: this.controller.signal })
-		// }
+		const mode = await this.libp2p.dht.getMode()
+		if (mode === "server") {
+			startAnnounceService(this.libp2p, this.cid, { signal: this.controller.signal })
+		}
 
-		// startDiscoveryService(this.libp2p, this.cid, {
-		// 	signal: this.controller.signal,
-		// 	callback: (peerId) => this.handlePeerDiscovery(peerId),
-		// })
+		startDiscoveryService(this.libp2p, this.cid, {
+			signal: this.controller.signal,
+			callback: (peerId) => this.handlePeerDiscovery(peerId),
+		})
 	}
 
 	public async stop() {
