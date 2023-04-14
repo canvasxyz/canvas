@@ -257,10 +257,8 @@ export class Source extends EventEmitter<SourceEvents> {
 		this.pendingSyncPeers.set(id, {})
 		this.syncQueue
 			.add(() => this.sync(peerId))
-			.finally(() => {
-				this.pendingSyncPeers.delete(id)
-				this.syncHistroy.set(id, performance.now())
-			})
+			.then(() => this.syncHistroy.set(id, performance.now()))
+			.finally(() => this.pendingSyncPeers.delete(id))
 	}
 
 	/**
@@ -324,6 +322,8 @@ export class Source extends EventEmitter<SourceEvents> {
 			this.dispatchEvent(
 				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "failure" } })
 			)
+
+			throw err
 		}
 	}
 
