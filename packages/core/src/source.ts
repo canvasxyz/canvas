@@ -50,8 +50,6 @@ export class Source extends EventEmitter<SourceEvents> {
 	private readonly options: SourceOptions
 	private readonly prefix: string
 
-	public applicationPeers: PeerId[] = []
-
 	public constructor(config: SourceConfig) {
 		super()
 		const { cid, libp2p, messageStore, applyMessage, ...options } = config
@@ -67,26 +65,36 @@ export class Source extends EventEmitter<SourceEvents> {
 		this.libp2p.pubsub.subscribe(this.uri)
 		this.libp2p.pubsub.addEventListener("message", this.handleGossipMessage)
 		if (this.options.verbose) {
-			console.log(this.prefix, `Subscribed to pubsub topic ${this.uri}`)
+			console.log(chalk.gray(this.prefix, `Subscribed to GossipSub topic`))
 		}
 
 		this.libp2p.addEventListener("peer:discovery", async ({ detail: { id } }) => {
+			if (this.libp2p.peerId.equals(id)) {
+				return
+			}
+
 			const protocols = await this.libp2p.peerStore.protoBook.get(id)
 			if (protocols.includes(this.protocol)) {
 				if (this.options.verbose) {
-					console.log(chalk.cyanBright(this.prefix, `Discovered peer ${id}`))
+					console.log(chalk.gray(this.prefix, `Discovered peer ${id}`))
 				}
+
+				console.trace()
 
 				this.handlePeerDiscovery(id)
 			}
 		})
 
 		this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
+			if (this.libp2p.peerId.equals(peerId)) {
+				return
+			}
+
 			const oldProtocolSet = new Set(oldProtocols)
 			const newProtocolSet = new Set(protocols.filter((protocol) => !oldProtocolSet.has(protocol)))
 			if (newProtocolSet.has(this.protocol)) {
 				if (this.options.verbose) {
-					console.log(chalk.magentaBright(this.prefix, `Peer ${peerId} supports the ${this.protocol} protocol`))
+					console.log(chalk.gray(this.prefix, `Peer ${peerId} supports the ${this.protocol} protocol`))
 				}
 
 				this.handlePeerDiscovery(peerId)
@@ -94,6 +102,10 @@ export class Source extends EventEmitter<SourceEvents> {
 		})
 
 		this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
+			if (this.libp2p.peerId.equals(peerId)) {
+				return
+			}
+
 			const subscription = subscriptions.find(({ topic }) => topic === this.uri)
 			if (subscription === undefined) {
 				return
@@ -101,13 +113,13 @@ export class Source extends EventEmitter<SourceEvents> {
 
 			if (subscription.subscribe) {
 				if (this.options.verbose) {
-					console.log(chalk.blueBright(this.prefix, `Peer ${peerId} joined the GossipSub mesh`))
+					console.log(chalk.gray(this.prefix, `Peer ${peerId} joined the GossipSub topic`))
 				}
 
 				this.handlePeerDiscovery(peerId)
 			} else {
 				if (this.options.verbose) {
-					console.log(chalk.blueBright(this.prefix, `Peer ${peerId} left the GossipSub mesh`))
+					console.log(chalk.gray(this.prefix, `Peer ${peerId} left the GossipSub topic`))
 				}
 			}
 		})
@@ -117,15 +129,15 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
 		}
 
-		const mode = await this.libp2p.dht.getMode()
-		if (mode === "server") {
-			startAnnounceService(this.libp2p, this.cid, { signal: this.controller.signal })
-		}
+		// const mode = await this.libp2p.dht.getMode()
+		// if (mode === "server") {
+		// 	startAnnounceService(this.libp2p, this.cid, { signal: this.controller.signal })
+		// }
 
-		startDiscoveryService(this.libp2p, this.cid, {
-			signal: this.controller.signal,
-			callback: (peerId) => this.handlePeerDiscovery(peerId),
-		})
+		// startDiscoveryService(this.libp2p, this.cid, {
+		// 	signal: this.controller.signal,
+		// 	callback: (peerId) => this.handlePeerDiscovery(peerId),
+		// })
 	}
 
 	public async stop() {
@@ -139,8 +151,8 @@ export class Source extends EventEmitter<SourceEvents> {
 		await this.libp2p.unhandle(this.protocol)
 
 		if (this.options.verbose) {
-			console.log(this.prefix, `Removed stream handler for protocol ${this.protocol}`)
-			console.log(this.prefix, `Unsubscribed from pubsub topic ${this.uri}`)
+			console.log(chalk.gray(this.prefix, `Removed stream handler for protocol ${this.protocol}`))
+			console.log(chalk.gray(this.prefix, `Unsubscribed from GossipSub topic`))
 		}
 	}
 
