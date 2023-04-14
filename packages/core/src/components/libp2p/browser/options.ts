@@ -52,16 +52,6 @@ export async function getLibp2pOptions(config: {
 			globalSignaturePolicy: "StrictSign",
 			msgIdFn: (msg) => sha256(msg.data),
 			msgIdToStrFn: (id) => hex(id),
-			directPeers: bootstrapList.map((address) => {
-				const ma = multiaddr(address)
-				const peerId = ma.getPeerId()
-
-				if (peerId === null) {
-					throw new Error("Invalid bootstrap peer address: must identify peer id using /p2p")
-				}
-
-				return { id: peerIdFromString(peerId), addrs: [ma] }
-			}),
 		}),
 		ping: {
 			protocolPrefix: "canvas",
