@@ -45,26 +45,19 @@ export async function startPingService(
 			return true
 		}
 
-		if (verbose) {
-			const { addresses } = await libp2p.peerStore.get(peer)
-			console.log(prefix, `Ping ${peer} [ ${addresses.map(({ multiaddr }) => multiaddr).join(", ")} ]`)
-		}
-
 		const timeoutController = new TimeoutController(PING_TIMEOUT)
 		const signal = anySignal([timeoutController.signal, options.signal])
 
 		try {
-			const stream = await libp2p.dialProtocol(peer, protocol, { signal: timeoutController.signal })
-			stream.close()
-
+			const latency = await libp2p.ping(peer, { signal })
 			if (verbose) {
-				console.log(prefix, `Ping ${peer} succeeded`)
+				console.log(prefix, `${peer} responded in ${latency}ms`)
 			}
 
 			return true
 		} catch (err) {
 			if (verbose) {
-				logErrorMessage(prefix, `Ping ${peer} failed`, err)
+				logErrorMessage(prefix, `${peer} did not response to ping`, err)
 			}
 
 			if (routingTable.isStarted()) {
