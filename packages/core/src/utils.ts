@@ -92,7 +92,7 @@ export async function retry<T>(
 	f: () => Promise<T>,
 	handleError: (err: Error, n: number) => void,
 	{ interval, ...options }: { interval: number; signal?: AbortSignal; maxRetries?: number }
-): Promise<T> {
+): Promise<T | void> {
 	const maxRetries = options.maxRetries ?? Infinity
 
 	for (let n = 0; n < maxRetries; n++) {
@@ -106,8 +106,6 @@ export async function retry<T>(
 			await wait(interval, options)
 		}
 	}
-
-	throw new Error("exceeded max retries")
 }
 
 export function toHex(hash: Uint8Array) {
