@@ -21,4 +21,4 @@ ENV CANVAS_HOME /data
 
 COPY --from=builder /app ./
 
-CMD [ "npm", "run", "start", "--", "--announce", "/dns4/canvas-notes.fly.dev/tcp/4044/ws" ]
+CMD [ "npm", "run", "start", "--", "--listen", "/ip4/0.0.0.0/tcp/4044/ws", "--announce", "/dns4/canvas-notes.fly.dev/tcp/4044/ws" ]
