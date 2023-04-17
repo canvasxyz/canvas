@@ -241,7 +241,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 	}
 
-	private handlePeerDiscovery(peerId: PeerId) {
+	private async handlePeerDiscovery(peerId: PeerId) {
 		const id = peerId.toString()
 		if (this.pendingSyncPeers.has(id)) {
 			return
@@ -254,10 +254,13 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		this.pendingSyncPeers.set(id, {})
-		this.syncQueue
-			.add(() => this.sync(peerId))
-			.then(() => this.syncHistroy.set(id, performance.now()))
-			.finally(() => this.pendingSyncPeers.delete(id))
+		try {
+			await this.syncQueue.add(() => this.sync(peerId))
+			this.syncHistroy.set(id, performance.now())
+		} catch (err) {
+		} finally {
+			this.pendingSyncPeers.delete(id)
+		}
 	}
 
 	/**
@@ -321,8 +324,6 @@ export class Source extends EventEmitter<SourceEvents> {
 			this.dispatchEvent(
 				new CustomEvent("sync", { detail: { peer: peer.toString(), time: Date.now(), status: "failure" } })
 			)
-
-			throw err
 		}
 	}
 

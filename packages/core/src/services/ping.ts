@@ -44,7 +44,7 @@ export async function startPingService(
 			return true
 		} catch (err) {
 			if (verbose) {
-				logErrorMessage(prefix, `${peer} did not response to ping`, err)
+				logErrorMessage(prefix, `${peer} did not respond to ping`, err)
 			}
 
 			if (routingTable.isStarted()) {
