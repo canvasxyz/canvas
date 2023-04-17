@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/interfaces",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -18,11 +18,11 @@
   },
   "devDependencies": {
     "@ava/typescript": "^4.0.0",
-    "@canvas-js/chain-cosmos": "0.4.0",
-    "@canvas-js/chain-ethereum": "0.4.0",
-    "@canvas-js/chain-solana": "0.4.0",
-    "@canvas-js/chain-substrate": "0.4.0",
-    "@canvas-js/interfaces": "0.4.0",
+    "@canvas-js/chain-cosmos": "0.4.1",
+    "@canvas-js/chain-ethereum": "0.4.1",
+    "@canvas-js/chain-solana": "0.4.1",
+    "@canvas-js/chain-substrate": "0.4.1",
+    "@canvas-js/interfaces": "0.4.1",
     "ava": "^5.2.0",
     "typescript": "^5.0.4"
   }
