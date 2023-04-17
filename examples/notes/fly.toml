@@ -13,7 +13,7 @@ processes = []
 
 [mounts]
   destination = "/data"
-  source = "canvas_notes_data"
+  source = "data"
 
 [[services]]
   http_checks = []
