@@ -9,7 +9,8 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { peerIdFromString } from "@libp2p/peer-id"
-import { multiaddr } from "@multiformats/multiaddr"
+import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { webSockets } from "@libp2p/websockets"
 import { noise } from "@chainsafe/libp2p-noise"
@@ -54,6 +55,16 @@ export async function getLibp2pOptions(config: {
 	return {
 		peerId: config.peerId,
 		addresses: { listen, announce },
+		connectionGater: {
+			denyDialMultiaddr: async (multiaddr: Multiaddr) => {
+				const transportRoot = multiaddr.decapsulate("/ws")
+				if (transportRoot.isThinWaistAddress() && isLoopback(transportRoot)) {
+					return true
+				}
+
+				return false
+			},
+		},
 		transports: [webSockets(), circuitRelayTransport({ discoverRelays })],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
