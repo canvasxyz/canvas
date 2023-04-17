@@ -47,6 +47,7 @@ export interface CoreOptions {
 	verbose?: boolean
 	offline?: boolean
 	replay?: boolean
+	disablePingService?: boolean
 }
 
 export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
@@ -92,7 +93,9 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			await libp2p.start()
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
 
-			startPingService(libp2p, { verbose, signal: core.controller.signal })
+			if (!core.options.disablePingService) {
+				startPingService(libp2p, { verbose, signal: core.controller.signal })
+			}
 		}
 
 		return core
