@@ -13,7 +13,7 @@ import type { MessageStore, ReadOnlyTransaction, ReadWriteTransaction, Node, Mes
 export * from "../types.js"
 
 class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements MessageStore {
-	public static version = 1
+	public static version = 2
 	public static async initialize(
 		app: string,
 		directory: string | null,
@@ -24,20 +24,41 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 
 		const db = await openDB(directory, IndexedDBMessageStore.version, {
 			upgrade(database, oldVersion, newVersion, transaction, event) {
-				for (const dbi of [app, ...sources]) {
-					database.createObjectStore(dbi)
-					database.createObjectStore(`${dbi}/sessions`)
+				for (const uri of [app, ...sources]) {
+					if (!database.objectStoreNames.contains(uri)) {
+						database.createObjectStore(uri)
+					} else {
+						database.deleteObjectStore(uri)
+						database.createObjectStore(uri)
+					}
+
+					if (!database.objectStoreNames.contains(`${uri}/sessions`)) {
+						database.createObjectStore(`${uri}/sessions`)
+					} else {
+						database.deleteObjectStore(`${uri}/sessions`)
+						database.createObjectStore(`${uri}/sessions`)
+					}
+
+					if (!database.objectStoreNames.contains(`${uri}/mst`)) {
+						database.createObjectStore(`${uri}/mst`)
+					} else {
+						database.deleteObjectStore(`${uri}/mst`)
+						database.createObjectStore(`${uri}/mst`)
+					}
 				}
 			},
 		})
 
-		const mst = await okra.Tree.open(`${directory}/mst`, { dbs: [app, ...sources] })
+		const trees: Record<string, okra.Tree> = {}
+		for (const uri of [app, ...sources]) {
+			trees[uri] = await okra.Tree.open(db, `${uri}/mst`)
+		}
 
-		const store = new IndexedDBMessageStore(app, sources, db, mst, options)
+		const store = new IndexedDBMessageStore(app, sources, db, trees, options)
 
-		for (const dbi of [app, ...sources]) {
-			const { hash } = await mst.read((txn) => txn.getRoot(), { dbi })
-			store.merkleRoots[dbi] = toHex(hash)
+		for (const uri of [app, ...sources]) {
+			const { hash } = await trees[uri].read((txn) => txn.getRoot())
+			store.merkleRoots[uri] = toHex(hash)
 		}
 
 		return store
@@ -49,7 +70,7 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 		private readonly app: string,
 		private readonly sources: Set<string>,
 		private readonly db: IDBPDatabase,
-		private readonly mst: okra.Tree,
+		private readonly trees: Record<string, okra.Tree>,
 		private readonly options: { verbose?: boolean }
 	) {
 		super()
@@ -57,7 +78,6 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 
 	public async close() {
 		this.db.close()
-		this.mst.close()
 	}
 
 	public async *getMessageStream(
@@ -83,21 +103,21 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 	): Promise<T> {
 		const uri = options.uri ?? this.app
 		assert(uri === this.app || this.sources.has(uri))
-		return this.mst.read((txn) => callback(this.getReadOnlyTransaction(uri, txn)), { dbi: uri })
+		return this.trees[uri].read((txn) => callback(this.getReadOnlyTransaction(uri, txn)))
 	}
 
 	private getReadOnlyTransaction = (
 		uri: string,
-		txn: okra.ReadOnlyTransaction<Uint8Array> | okra.ReadWriteTransaction
+		txn: okra.ReadOnlyTransaction | okra.ReadWriteTransaction
 	): ReadOnlyTransaction => ({
 		uri,
 		getSessionByAddress: async (chain, address) => {
-			const id: Uint8Array | undefined = await this.db.get(`${txn.dbi}/sessions`, address)
+			const id: Uint8Array | undefined = await this.db.get(`${uri}/sessions`, address)
 			if (id === undefined) {
 				return [null, null]
 			}
 
-			const message: Message | undefined = await this.db.get(txn.dbi, id)
+			const message: Message | undefined = await this.db.get(uri, id)
 			if (message === undefined || message.type !== "session") {
 				throw new Error("internal error: inconsistent session address index")
 			}
@@ -105,7 +125,7 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 			return [toHex(id), message]
 		},
 		getMessage: async (id) => {
-			const message: Message | undefined = await this.db.get(txn.dbi, id)
+			const message: Message | undefined = await this.db.get(uri, id)
 			return message ?? null
 		},
 		getNode: (level, key) => txn.getNode(level, key).then(parseNode),
@@ -124,30 +144,24 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 		const uri = options.uri ?? this.app
 		assert(uri === this.app || this.sources.has(uri))
 		let result: T | undefined = undefined
-		const root = await this.mst.write(
-			async (txn) => {
-				result = await callback(this.getReadWriteTransaction(uri, txn))
-				return await txn.getRoot()
-			},
-			{ dbi: uri }
-		)
+		const root = await this.trees[uri].write(async (txn) => {
+			result = await callback(this.getReadWriteTransaction(uri, txn))
+			return await txn.getRoot()
+		})
 
 		this.merkleRoots[uri] = toHex(root.hash)
 		this.dispatchEvent(new CustomEvent("update", { detail: { uri: uri, root: null } }))
 		return result!
 	}
 
-	private getReadWriteTransaction = (
-		uri: string,
-		txn: okra.ReadWriteTransaction<Uint8Array>
-	): ReadWriteTransaction => ({
+	private getReadWriteTransaction = (uri: string, txn: okra.ReadWriteTransaction): ReadWriteTransaction => ({
 		...this.getReadOnlyTransaction(uri, txn),
 		insertMessage: async (id, message) => {
 			const key = getMessageKey(id, message)
 			await txn.set(key, id)
-			await this.db.put(txn.dbi, message, id)
+			await this.db.put(uri, message, id)
 			if (message.type === "session") {
-				await this.db.put(`${txn.dbi}/sessions`, id, message.payload.sessionAddress)
+				await this.db.put(`${uri}/sessions`, id, message.payload.sessionAddress)
 			}
 		},
 	})
