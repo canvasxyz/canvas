@@ -42,6 +42,11 @@ export const builder = (yargs: Argv) =>
 			desc: "Disable libp2p",
 			default: false,
 		})
+		.option("disable-ping", {
+			type: "boolean",
+			desc: "Disable peer health check pings",
+			default: false,
+		})
 		.option("install", {
 			type: "boolean",
 			desc: "Install a local app and run it in production mode",
@@ -183,7 +188,7 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const { verbose, replay, unchecked, offline, listen, announce } = args
+	const { verbose, replay, unchecked, offline, listen, announce, "disable-ping": disablePingService } = args
 
 	const validateAddresses = (addresses: (string | number)[]): addresses is string[] =>
 		addresses.every((address) => typeof address === "string")
@@ -196,7 +201,7 @@ export async function handler(args: Args) {
 		assert(validateAddresses(listen))
 	}
 
-	const options: CoreOptions = { replay, offline, unchecked, verbose }
+	const options: CoreOptions = { replay, offline, unchecked, verbose, disablePingService }
 	const core = await Core.initialize({ chains, directory, uri, spec, listen, announce, ...options })
 
 	const app = express()
