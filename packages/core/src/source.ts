@@ -14,7 +14,7 @@ import { CID } from "multiformats/cid"
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
 
-import { DIAL_TIMEOUT, SYNC_COOLDOWN_PERIOD, second } from "@canvas-js/core/constants"
+import { DIAL_TIMEOUT, SYNC_COOLDOWN_PERIOD } from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 import { toHex, assert, logErrorMessage, CacheMap } from "@canvas-js/core/utils"
 import { sync, handleIncomingStream } from "@canvas-js/core/sync"

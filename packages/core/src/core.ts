@@ -52,7 +52,7 @@ export interface CoreOptions {
 
 export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	public static async initialize(config: CoreConfig) {
-		const { directory, spec, offline, verbose, unchecked } = config
+		const { directory, spec, offline, verbose, unchecked, disablePingService } = config
 
 		const chains = config.chains ?? [new EthereumChainImplementation()]
 		const cid = await Hash.of(spec).then(CID.parse)
@@ -72,7 +72,8 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			libp2p = await createLibp2p({ ...options, start: false })
 		}
 
-		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, { verbose, unchecked })
+		const options = { verbose, unchecked, disablePingService }
+		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, options)
 
 		if (config.replay) {
 			console.log(`[canvas-core] Replaying action log...`)
@@ -93,6 +94,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			await libp2p.start()
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
 
+			console.log(core.options.disablePingService)
 			if (!core.options.disablePingService) {
 				startPingService(libp2p, { verbose, signal: core.controller.signal })
 			}
