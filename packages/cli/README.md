@@ -45,13 +45,13 @@ The `app` positional argument can either be a filename or the bare IPFS CIDv0 of
 
 Canvas applications declare which chains they support using the `export const chains: string[]` contract export, which is an array of [CAIP-2 chain identifiers](https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-2.md). For now, the CLI **only supports Ethereum chains** whose CAIP-2 identifiers are of the form `eip155:${chainId}`. `eip155:1` is mainnet, `eip155:100` is Gnosis, and so on.
 
-When you run an app from the CLI, you have to provide an RPC URL for each of these chains declared by the contract so that the runtime can validate the blockhashes in messages and call the view functions of any external contracts. This is done with the `--chain=${url}` option.
+When you run an app from the CLI, you have to provide an RPC URL for each of these chains declared by the contract so that the runtime can validate the blockhashes in messages and call the view functions of any external on-chain contracts. This is done with the `--chain=${url}` option.
 
 ```
 $ canvas run example.canvas.js --install --chain eip155:1=https://mainnet.infura.io/v3/...
 ```
 
-If your app doesn't have external contracts and you don't want to require blockhashes in messages, you can use the `--unchecked` flag to disable these checks and omit the RPC URL. However, you still have to pass the CAIP-2 identifiers for all of the chains in the contract.
+If your app doesn't use on-chain contracts and you don't want to require blockhashes in messages, you can use the `--unchecked` flag to disable these checks and omit the RPC URL. However, you still have to pass the CAIP-2 identifiers for all of the chains in the contract.
 
 ```
 $ canvas run example.canvas.js --install --chain eip155:1 --unchecked
