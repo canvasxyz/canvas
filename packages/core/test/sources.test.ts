@@ -82,32 +82,33 @@ test("Apply source actions", async (t) => {
 
 	t.deepEqual(await collect(core.modelStore.exportModel("posts")), [
 		{
-			id: sourceActionHash,
-			content: "hello world",
-			from: sourceSigner.wallet.address,
-			updated_at: sourceAction.payload.timestamp,
-		},
-		{
 			id: createActionHash,
 			content: "lorem ipsum",
 			from: signer.wallet.address,
 			updated_at: createAction.payload.timestamp,
 		},
+		{
+			id: sourceActionHash,
+			content: "hello world",
+			from: sourceSigner.wallet.address,
+			updated_at: sourceAction.payload.timestamp,
+		},
 	])
 
 	t.deepEqual(await collect(core.modelStore.exportModel("votes")), [
-		{
-			id: `${createActionHash}/${signer.wallet.address}`,
-			post_id: createActionHash,
-			value: 1,
-			updated_at: voteAction.payload.timestamp,
-		},
 		{
 			id: `${sourceActionHash}/${signer.wallet.address}`,
 			post_id: sourceActionHash,
 			value: -1,
 			updated_at: voteSourceAction.payload.timestamp,
 		},
+		{
+			id: `${createActionHash}/${signer.wallet.address}`,
+			post_id: createActionHash,
+			value: 1,
+			updated_at: voteAction.payload.timestamp,
+		},
+		,
 	])
 
 	const entries: [Uint8Array, Message][] = []
