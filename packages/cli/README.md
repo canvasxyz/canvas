@@ -154,6 +154,43 @@ Some optional API endpoints are disabled by default, since they should't be expo
   - `GET /p2p/connections` - returns a `{ peerId: string, address: string }[]` JSON array of the current peer connections.
   - `POST /p2p/ping/:peerId` - attempt to ping a peer by PeerId, and respond with the latency in milliseconds if successful.
 
+The metrics reported to Prometheus include default NodeJS metric, internal libp2p metrics, and some additional metrics specific to Canvas `Core`.
+
+#### `canvas_sync_time`
+
+A histogram of MST sync times.
+
+| label name | type     | description                       |
+| ---------- | -------- | --------------------------------- |
+| `uri`      | `string` | the source `ipfs://` URI          |
+| `status`   | `string` | either `"success"` or `"failure"` |
+
+#### `canvas_messages`
+
+A counter of messages applied
+
+| label name | type     | description                      |
+| ---------- | -------- | -------------------------------- |
+| `type`     | `string` | either `"action"` or `"session"` |
+| `uri`      | `string` | the source `ipfs://` URI         |
+
+#### `canvas_gossipsub_subscribers`
+
+A gauge counting GossipSub topic subscribers.
+
+| label name | type     | description              |
+| ---------- | -------- | ------------------------ |
+| `uri`      | `string` | the source `ipfs://` URI |
+
+#### `canvas_sync_peers`
+
+A gauge counting the observed active DHT application peers.
+
+| label name | type     | description              |
+| ---------- | -------- | ------------------------ |
+| `uri`      | `string` | the source `ipfs://` URI |
+
+
 ### Subscribing to events over a WebSocket connection
 
 The HTTP API also accepts WebSocket connections at the root path `/`. The WebSocket server will respond to messages with `message.data === "ping"` with `socket.send("pong")`. Otherwise, it is used to push application _events_ to clients in real-time. Events are all of the form `{ type: string, detail: { ... } }`.
