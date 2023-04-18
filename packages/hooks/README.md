@@ -8,10 +8,10 @@ The React hooks are currently developed for Ethereum-compatible chains, using [E
 
 - [Installation](#installation)
 - [Usage](#usage)
-	- [`<Canvas />`](#canvas)
-	- [`useCanvas()`](#usecanvas)
-	- [`useRoute(route, options)`](#useroute)
-	- [`useSession(chainImplementation, signer)`](#usesession)
+  - [`<Canvas />`](#canvas)
+  - [`useCanvas()`](#usecanvas)
+  - [`useRoute(route, options)`](#useroute)
+  - [`useSession(chainImplementation, signer)`](#usesession)
 - [API](#api)
 
 ## Installation
@@ -28,7 +28,7 @@ To use the Canvas hooks, you must first wrap your application in a parent `Canva
 
 ```tsx
 <Canvas host="http://localhost:8000">
-	<MyApp />
+  <MyApp />
 </Canvas>
 ```
 
@@ -40,9 +40,9 @@ You can access metadata about the host, and the application the host is serving,
 import { useCanvas } from "@canvas-js/hooks"
 
 function MyApp({}) {
-	const { isLoading, error, data } = useCanvas()
+  const { isLoading, error, data } = useCanvas()
 
-	return <div>{/* ...*/}</div>
+  return <div>{/* ...*/}</div>
 }
 ```
 
@@ -50,20 +50,20 @@ function MyApp({}) {
 
 ```ts
 type ApplicationData = {
-	cid: string
-	uri: string
-	peerId: string | null
-	actions: string[]
-	routes: string[]
-	chains: string[]
-	peers: { id: string; protocols?: string[]; addresses?: string[] }[]
-	merkleRoots: Record<string, string>
+  cid: string
+  uri: string
+  peerId: string | null
+  actions: string[]
+  routes: string[]
+  chains: string[]
+  peers: { id: string; protocols?: string[]; addresses?: string[] }[]
+  merkleRoots: Record<string, string>
 }
 
 export function useCanvas(): {
-	isLoading: boolean
-	error: Error | null
-	data: ApplicationData | null
+  isLoading: boolean
+  error: Error | null
+  data: ApplicationData | null
 }
 ```
 
@@ -77,12 +77,12 @@ For example, this subscribes to the `/posts/:user` route with the `:user` parame
 import { useRoute } from "@canvas-js/hooks"
 
 function MyApp({}) {
-	const { data, error, isLoading } = useRoute<{ content: string }>("/posts/:user", { user: "joel" })
-	// data: { content: string }[] | null
-	// error: Error | null
-	// isLoading: boolean
+  const { data, error, isLoading } = useRoute<{ content: string }>("/posts/:user", { user: "joel" })
+  // data: { content: string }[] | null
+  // error: Error | null
+  // isLoading: boolean
 
-	return <div>{/* ...*/}</div>
+  return <div>{/* ...*/}</div>
 }
 ```
 
@@ -96,16 +96,16 @@ The `useRoute` hook can also fetch routes without subscribing to them. Pass a `{
 import { useRoute } from "@canvas-js/hooks"
 
 function MyApp({}) {
-	const { data, error, isLoading } = useRoute<{ content: string }>(
-		"/posts/:user",
-		{ user: "joel" },
-		{ subscribe: false }
-	)
-	// data: { content: string }[] | null
-	// error: Error | null
-	// isLoading: boolean
+  const { data, error, isLoading } = useRoute<{ content: string }>(
+    "/posts/:user",
+    { user: "joel" },
+    { subscribe: false }
+  )
+  // data: { content: string }[] | null
+  // error: Error | null
+  // isLoading: boolean
 
-	return <div>{/* ...*/}</div>
+  return <div>{/* ...*/}</div>
 }
 ```
 
@@ -120,32 +120,32 @@ import { useProvider, useSigner, useNetwork } from "wagmi"
 import { EthereumChainImplementation } from "@canvas-js/ethereum"
 
 function MyApp({}) {
-	const provider = useProvider<ethers.providers.JsonRpcProvider>()
-	const { error, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
-	const { chain } = useNetwork()
+  const provider = useProvider<ethers.providers.JsonRpcProvider>()
+  const { error, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
+  const { chain } = useNetwork()
 
-	const chainImplementation = useMemo(
-		() => chain?.id && new EthereumChainImplementation(chain.id, provider),
-		[provider, chain?.id]
-	)
+  const chainImplementation = useMemo(
+    () => chain?.id && new EthereumChainImplementation(chain.id, provider),
+    [provider, chain?.id]
+  )
 
-	const { login, logout, sessionAddress, sessionExpiration, client } = useSession(chainImplementation, signer)
+  const { login, logout, sessionAddress, sessionExpiration, client } = useSession(chainImplementation, signer)
 
-	const handleSubmit = useCallback(
-		async (content: string) => {
-			if (client !== null) {
-				try {
-					const { hash } = await client.createPost({ content })
-					console.log("successfully posted action", hash)
-				} catch (err) {
-					console.error(err)
-				}
-			}
-		},
-		[client]
-	)
+  const handleSubmit = useCallback(
+    async (content: string) => {
+      if (client !== null) {
+        try {
+          const { hash } = await client.createPost({ content })
+          console.log("successfully posted action", hash)
+        } catch (err) {
+          console.error(err)
+        }
+      }
+    },
+    [client]
+  )
 
-	return <div>{/* ...*/}</div>
+  return <div>{/* ...*/}</div>
 }
 ```
 
@@ -164,26 +164,26 @@ import { ChainImplementation, ActionArgument } from "@canvas-js/interfaces"
 import { ModelValue } from "@canvas-js/interfaces"
 
 export function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
-	route: string,
-	params: Record<string, ModelValue>,
-	options: { subscribe?: boolean } = { subscribe: true }
+  route: string,
+  params: Record<string, ModelValue>,
+  options: { subscribe?: boolean } = { subscribe: true }
 ): { error: Error | null; isLoading: boolean; data: T[] | null }
 
 
 export type Client = Record<string, (callArgs: Record<string, ActionArgument>) => Promise<{ hash: string }>>
 
 export function useSession<Signer, DelegatedSigner>(
-	chainImplementation: ChainImplementation<Signer, DelegatedSigner>,
-	signer: Signer | null | undefined,
-	options: { sessionDuration?: number; unchecked?: boolean } = {}
+  chainImplementation: ChainImplementation<Signer, DelegatedSigner>,
+  signer: Signer | null | undefined,
+  options: { sessionDuration?: number; unchecked?: boolean } = {}
 ): {
-	isLoading: boolean
-	isPending: boolean
-	sessionAddress: string | null
-	sessionExpiration: number | null
-	login: () => Promise<void>
-	logout: () => Promise<void>
-	client: Client | null
+  isLoading: boolean
+  isPending: boolean
+  sessionAddress: string | null
+  sessionExpiration: number | null
+  login: () => Promise<void>
+  logout: () => Promise<void>
+  client: Client | null
 }
 
 ```
