@@ -29,26 +29,26 @@ export type Message = Action | Session | CustomAction
  * The signature, address, and blockhash formats vary by chain.
  */
 export type Session = {
-	type: "session"
-	signature: string
-	payload: {
+  type: "session"
+  signature: string
+  payload: {
     // The ipfs://... URI of the app contract
-		app: string
+    app: string
 
     // CAIP-2 identifier for a chain supported by the app contract
-		chain: string
+    chain: string
 
     // address of the user authorizing the session
-		from: string
+    from: string
 
-		sessionAddress: string  // public address of the delegate key
-		sessionDuration: number // duration in milliseconds
-		sessionIssued: number   // issue time in milliseconds since 1 January 1970 00:00:00 UTC
+    sessionAddress: string  // public address of the delegate key
+    sessionDuration: number // duration in milliseconds
+    sessionIssued: number   // issue time in milliseconds since 1 January 1970 00:00:00 UTC
 
     // Blockhash of `chain` at issue time; required by peers except in --unchecked mode.
     // Used to validate `sessionIssued`.
-		block: string | null
-	}
+    block: string | null
+  }
 }
 
 export type SessionPayload = Session["payload"]
@@ -65,31 +65,31 @@ export type SessionPayload = Session["payload"]
  * The signature, address, and blockhash formats vary by chain.
  */
 export type Action = {
-	type: "action"
-	signature: string
-	session: string | null
-	payload: {
+  type: "action"
+  signature: string
+  session: string | null
+  payload: {
     // The ipfs://... URI of the app contract
-		app: string
+    app: string
 
     // CAIP-2 identifier for a chain supported by the app contract
-		chain: string
+    chain: string
 
     // address of the user signing the action
-		from: string
+    from: string
 
     // name and arguments of the contract function to invoke.
     // action arguments are the JSON primitives `null | boolean | number | string`
-		call: string
-		callArgs: Record<string, ActionArgument>
+    call: string
+    callArgs: Record<string, ActionArgument>
 
     // Blockhash of `chain` at `timestamp`; required by peers except in --unchecked mode.
     // Used to validate `timestamp` and call external on-chain contracts.
-		block: string | null
+    block: string | null
 
     // milliseconds since 1 January 1970 00:00:00 UTC
-		timestamp: number
-	}
+    timestamp: number
+  }
 }
 
 export type ActionPayload = Action["payload"]
@@ -105,10 +105,10 @@ Contracts can also optionally export a handler for "custom actions", which are u
 
 ```ts
 export type CustomAction = {
-	type: "customAction"
-	name: string
-	payload: any
-	app: string
+  type: "customAction"
+  name: string
+  payload: any
+  app: string
 }
 ```
 
@@ -157,7 +157,7 @@ Canvas is designed to be chain-agnostic, but it needs to know something about th
 ```ts
 export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown> {
   /* CAIP-2 chain identifier */
-	chain: string
+  chain: string
 
   /**
    * Signature verification methods 
@@ -166,10 +166,10 @@ export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown
    */
 
   // verify an action signature
-	verifyAction(action: Action): Promise<void>
+  verifyAction(action: Action): Promise<void>
 
   // verify a session signature
-	verifySession(session: Session): Promise<void>
+  verifySession(session: Session): Promise<void>
 
   /**
    * Signature generation / delegate signer lifecycle methods 
@@ -179,28 +179,28 @@ export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown
    */
 
   // use the signer to sign a session payload
-	signSession(signer: Signer, payload: SessionPayload): Promise<Session>
+  signSession(signer: Signer, payload: SessionPayload): Promise<Session>
 
   // use the signer to directly sign an action payload
-	signAction(signer: Signer, payload: ActionPayload): Promise<Action>
+  signAction(signer: Signer, payload: ActionPayload): Promise<Action>
 
   // use the delegated signer to sign an action payload
-	signDelegatedAction(delegatedSigner: DelegatedSigner, payload: ActionPayload): Promise<Action>
+  signDelegatedAction(delegatedSigner: DelegatedSigner, payload: ActionPayload): Promise<Action>
 
   // get the address of a signer
-	getSignerAddress(signer: Signer): Promise<string>
+  getSignerAddress(signer: Signer): Promise<string>
 
   // get the address of a delegated signer
-	getDelegatedSignerAddress(delegatedSigner: DelegatedSigner): Promise<string>
+  getDelegatedSignerAddress(delegatedSigner: DelegatedSigner): Promise<string>
 
   // create a new delegate signer instance
-	generateDelegatedSigner(): Promise<DelegatedSigner>
+  generateDelegatedSigner(): Promise<DelegatedSigner>
 
   // export a delegate signer's private key to a string
-	exportDelegatedSigner(delegatedSigner: DelegatedSigner): string
+  exportDelegatedSigner(delegatedSigner: DelegatedSigner): string
 
   // import a delegate signer from an exported private key
-	importDelegatedSigner(privateKey: string): DelegatedSigner
+  importDelegatedSigner(privateKey: string): DelegatedSigner
 
 
   /**
@@ -208,7 +208,7 @@ export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown
    */
 
   // does the chain implementation support fetching blocks?
-	hasProvider(): boolean
+  hasProvider(): boolean
 
   // get the blockhash of the latest block
   getLatestBlock(): Promise<string>
