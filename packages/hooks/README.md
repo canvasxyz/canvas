@@ -1,20 +1,28 @@
 # Canvas React Hooks
 
-Canvas provides React hooks for using Canvas in your frontend
-application.
+Canvas provides React hooks for using Canvas in your frontend application.
 
-The React hooks are currently developed for Ethereum-compatible
-chains, with [Ethers v5](https://docs.ethers.org/v5/) and
-[wagmi](https://wagmi.sh/).
+The React hooks are currently developed for Ethereum-compatible chains, using [Ethers v5](https://docs.ethers.org/v5/) and [wagmi](https://wagmi.sh/).
 
 ## Table of Contents
 
-- [`<Canvas />`](#canvas): configures the connection to Canvas
-- [`useCanvas()`](#usecanvas): returns the current app and user
-- [`useRoute(route, options)`](#useroute): fetches or subscribes to a route
-- [`useSession(chainImplementation, signer)`](#usesession): wraps an Ethereum signer, and exposes login(), logout(), and client.action() methods for taking actions
+- [Installation](#installation)
+- [Usage](#usage)
+	- [`<Canvas />`](#canvas): configures the connection to a Canvas backend
+	- [`useCanvas()`](#usecanvas): returns metadata about the connected Canvas app
+	- [`useRoute(route, options)`](#useroute): fetches or subscribes to a route
+	- [`useSession(chainImplementation, signer)`](#usesession)
+- [API](#api)
 
-## `<Canvas />`
+## Installation
+
+```
+$ npm i @canvas-js/hooks
+```
+
+## Usage
+
+### `<Canvas />`
 
 To use the Canvas hooks, you must first wrap your application in a parent `Canvas` element, which initializes state and sets an internal React context for the hooks to use. The only thing you have to pass the `Canvas` element is a `host: string` URL of a canvas app's HTTP API server.
 
@@ -24,7 +32,7 @@ To use the Canvas hooks, you must first wrap your application in a parent `Canva
 </Canvas>
 ```
 
-## `useCanvas`
+### `useCanvas`
 
 You can access metadata about the host, and the application the host is serving, using the `useCanvas` hook anywhere inside the parent `Canvas` element.
 
@@ -32,7 +40,7 @@ You can access metadata about the host, and the application the host is serving,
 import { useCanvas } from "@canvas-js/hooks"
 
 function MyApp({}) {
-	const { api, isLoading, data, error } = useCanvas()
+	const { isLoading, error, data } = useCanvas()
 
 	return <div>{/* ...*/}</div>
 }
@@ -41,13 +49,13 @@ function MyApp({}) {
 `isLoading` is initially `true` while the hook makes an initial HTTP request for application metadata, and then sets to `false` when either `data` or `error` is non-null.
 
 ```ts
-interface ApplicationData {
+type ApplicationData = {
 	cid: string
 	uri: string
 	peerId: string | null
 	actions: string[]
 	routes: string[]
-	chains: Partial<Record<Chain, ChainId[]>>
+	chains: string[]
 	peers: { id: string; protocols?: string[]; addresses?: string[] }[]
 	merkleRoots: Record<string, string>
 }
@@ -59,11 +67,11 @@ export function useCanvas(): {
 }
 ```
 
-## `useRoute`
+### `useRoute`
 
-You can use `useRoute` to fetch/subscribe to data from your application's routes.
+You can use `useRoute` to subscribe to data from your application's routes. Subscriptions are real-time by default.
 
-For example, to subscribe to the /posts route:
+For example, this subscribes to the `/posts/:user` route with the `:user` parameter set to `"joel"`.
 
 ```tsx
 import { useRoute } from "@canvas-js/hooks"
@@ -78,15 +86,11 @@ function MyApp({}) {
 }
 ```
 
-The hook will re-render every time the resulting `data` changes (compared deep equality).
+The hook will re-render every time server processes a new batch of actions and pushes an `update` event to the client. The hook will also re-render any time the parameter values change. Use this pattern when you want the host to push data to the client.
+ 
+You can also provide a callback to the hook, which will be triggered whenever new data is returned from the hook. **If you do this, make sure to memoize your callback (i.e. wrap it in `useCallback()`)!**
 
-Use this pattern when you want the host to push data to the client. **Don't** use this pattern if the parameter values (`{ user: "joel" }` in the example) change often. For subscriptions, routes are bound to concrete parameter values, so changing the parameters forces the hook to unsubscribe and re-subscribe.
-
-You can also provide a callback to the hook, which will be triggered whenever new data is returned from the hook. **If you do this, make sure to memoize your callback (i.e. wrap it in useCallback())!**
-
-**Fetching routes without a subscription**
-
-The `useRoute` hook can also fetch routes without subscribing to them. Pass a `{ subscribe: false }` options object as the third argument and the hook will use regulular HTTP GET requests, re-fetching the route data every time any of the parameter values passed to the hook change (and only then).
+The `useRoute` hook can also fetch routes without subscribing to them. Pass a `{ subscribe: false }` options object as the third argument and the hook will only re-fetch the route when the parameter values change.
 
 ```tsx
 import { useRoute } from "@canvas-js/hooks"
@@ -105,20 +109,9 @@ function MyApp({}) {
 }
 ```
 
-```ts
-import { ModelValue } from "@canvas-js/interfaces"
+### `useSession`
 
-export function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
-	route: string,
-	params: Record<string, ModelValue>,
-	options: { subscribe?: boolean } = { subscribe: true }
-): { error: Error | null; isLoading: boolean; data: T[] | null }
-```
-
-## `useSession`
-
-`useSession` accepts an Ethereum signer, and returns login() and
-logout() methods, and a client for dispatching actions.
+`useSession` takes , and exposes `login()`, `logout()`, and `client[action]()` convenience methods for creating and dispatching actions
 
 For example:
 
@@ -132,11 +125,11 @@ function MyApp({}) {
 	const { chain } = useNetwork()
 
 	const chainImplementation = useMemo(
-		() => new EthereumChainImplementation(chain?.id?.toString(), provider),
+		() => chain?.id && new EthereumChainImplementation(chain.id, provider),
 		[provider, chain?.id]
 	)
 
-	const { login, logout, client } = useSession(chainImplementation, signer)
+	const { login, logout, sessionAddress, sessionExpiration, client } = useSession(chainImplementation, signer)
 
 	const handleSubmit = useCallback(
 		async (content: string) => {
@@ -156,16 +149,26 @@ function MyApp({}) {
 }
 ```
 
-The `useSession` hook is in one of the following three states:
+The `useSession` hook is always in one of the following three states:
 
 - `isLoading === true`: waiting for application data from host, & checking localStorage for sessionObject
-- `isLoading === false && sessionAddress === null`: logged out, need to call login()
+- `isLoading === false && sessionAddress === null`: logged out, need to call `login()`
 - `isLoading === false && sessionAddress !== null`: we have a session and `client` will be non-null
 
 `client`, `sessionAddress`, and `sessionExpiration` are either all null or all non-null.
 
+## API
+
 ```ts
-import { ChainImplementation, Argument } from "@canvas-js/hooks"
+import { ChainImplementation, ActionArgument } from "@canvas-js/interfaces"
+import { ModelValue } from "@canvas-js/interfaces"
+
+export function useRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
+	route: string,
+	params: Record<string, ModelValue>,
+	options: { subscribe?: boolean } = { subscribe: true }
+): { error: Error | null; isLoading: boolean; data: T[] | null }
+
 
 export type Client = Record<string, (callArgs: Record<string, ActionArgument>) => Promise<{ hash: string }>>
 
@@ -182,4 +185,5 @@ export function useSession<Signer, DelegatedSigner>(
 	logout: () => Promise<void>
 	client: Client | null
 }
+
 ```
