@@ -10,7 +10,7 @@ import { stringify } from "./stringify.js"
 
 export type Message = Action | Session | CustomAction
 
-export function serializeMessage(message: Message) {
+export function serializeMessage(message: Message): string {
 	return stringify(message)
 }
 
