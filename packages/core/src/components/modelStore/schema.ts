@@ -71,7 +71,7 @@ export function getModelStatements(name: string, { id, updated_at, indexes, ...p
 		updateDeleted: `UPDATE ${deletedTableName} SET deleted_at = :deleted_at WHERE id = :id`,
 		getUpdatedAt: `SELECT updated_at FROM ${tableName} WHERE id = ?`,
 		getDeletedAt: `SELECT deleted_at FROM ${deletedTableName} WHERE id = ?`,
-		export: `SELECT * FROM ${tableName} LIMIT :limit`,
+		export: `SELECT * FROM ${tableName} WHERE ORDER BY updated_at DESC OFFSET :offset LIMIT :limit`,
 	}
 }
 

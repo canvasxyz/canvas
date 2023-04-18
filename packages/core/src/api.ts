@@ -131,8 +131,9 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			const { model: modelName } = req.params
 			if (modelName in core.vm.getModels()) {
 				const rows: Record<string, ModelValue>[] = []
+				const offset = typeof req.query.offset === "string" ? parseInt(req.query.offset) : 0
 				const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : -1
-				for await (const row of core.modelStore.exportModel(modelName, { limit })) {
+				for await (const row of core.modelStore.exportModel(modelName, { offset, limit })) {
 					rows.push(row)
 				}
 

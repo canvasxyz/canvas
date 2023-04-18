@@ -23,10 +23,11 @@ class MemoryModelStore implements ModelStore {
 		}
 	}
 
-	public async *exportModel(modelName: string, options: { limit?: number } = {}) {
+	public async *exportModel(modelName: string, options: { offset?: number; limit?: number } = {}) {
 		const s = this.modelStatements[modelName].export
 		s.reset()
 		s.bind({ ":limit": options.limit ?? -1 })
+		s.bind({ ":offset": options.offset ?? 0 })
 		while (s.step()) {
 			yield s.get({}) as Record<string, ModelValue>
 		}
