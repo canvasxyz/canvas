@@ -127,13 +127,35 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	}
 
 	if (options.exposeModels) {
-		api.get("/models/:model", async (req, res) => {
+		api.get("/paginated_models/:model", async (req, res) => {
 			const { model: modelName } = req.params
 			if (modelName in core.vm.getModels()) {
 				const rows: Record<string, ModelValue>[] = []
 				const offset = typeof req.query.offset === "string" ? parseInt(req.query.offset) : 0
 				const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : -1
 				for await (const row of core.modelStore.exportModel(modelName, { offset, limit })) {
+					rows.push(row)
+				}
+
+				const total = await core.modelStore.count(modelName)
+
+				return res.status(StatusCodes.OK).json({
+					offset,
+					limit,
+					total,
+					data: rows,
+				})
+			} else {
+				return res.status(StatusCodes.NOT_FOUND).end()
+			}
+		})
+
+		api.get("/models/:model", async (req, res) => {
+			const { model: modelName } = req.params
+			if (modelName in core.vm.getModels()) {
+				const rows: Record<string, ModelValue>[] = []
+				const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : -1
+				for await (const row of core.modelStore.exportModel(modelName, { offset: 0, limit })) {
 					rows.push(row)
 				}
 

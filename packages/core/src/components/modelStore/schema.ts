@@ -72,6 +72,7 @@ export function getModelStatements(name: string, { id, updated_at, indexes, ...p
 		getUpdatedAt: `SELECT updated_at FROM ${tableName} WHERE id = ?`,
 		getDeletedAt: `SELECT deleted_at FROM ${deletedTableName} WHERE id = ?`,
 		export: `SELECT * FROM ${tableName} ORDER BY updated_at DESC LIMIT :limit OFFSET :offset`,
+		count: `SELECT COUNT(*) FROM ${tableName}`,
 	}
 }
 
