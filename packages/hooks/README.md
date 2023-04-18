@@ -8,9 +8,9 @@ The React hooks are currently developed for Ethereum-compatible chains, using [E
 
 - [Installation](#installation)
 - [Usage](#usage)
-	- [`<Canvas />`](#canvas): configures the connection to a Canvas backend
-	- [`useCanvas()`](#usecanvas): returns metadata about the connected Canvas app
-	- [`useRoute(route, options)`](#useroute): fetches or subscribes to a route
+	- [`<Canvas />`](#canvas)
+	- [`useCanvas()`](#usecanvas)
+	- [`useRoute(route, options)`](#useroute)
 	- [`useSession(chainImplementation, signer)`](#usesession)
 - [API](#api)
 
