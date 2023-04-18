@@ -99,9 +99,9 @@ export type ActionArgument = null | boolean | number | string
 
 ### Custom actions
 
-Contracts can also optionally export a handler for "custom actions", which are unsigned payloads validating an application-defined JSON Schema document.
-
 > ⚠️ This is an advanced use case that is likely to evolve. Use with caution.
+
+Contracts can also optionally export a handler for "custom actions", which are unsigned payloads validating an application-defined JSON Schema document.
 
 ```ts
 export type CustomAction = {
