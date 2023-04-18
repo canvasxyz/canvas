@@ -8,7 +8,6 @@ A `Core` verifies, executes, and applies the effects of signed messages.
 
 - [Installation](#installation)
 - [Usage](#usage)
-  - [Initialize](#initialize)
   - [Configuration options](#configuration-options)
   - [Applying messages](#applying-messages)
   - [Evaluating routes](#evaluating-routes)
@@ -24,8 +23,6 @@ $ npm i @canvas-js/core
 ```
 
 ## Usage
-
-### Initialize
 
 To initialize a core, import `@canvas-js/core` and call `Core.initialize({ ... })` with the contract and path to application data directory.
 
