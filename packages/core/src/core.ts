@@ -31,7 +31,7 @@ import { toHex, signalInvalidType, stringify, parseIPFSURI, assert, getCustomAct
 import * as constants from "./constants.js"
 
 export interface CoreConfig extends CoreOptions {
-	/** pass `null` to run in memory (NodeJS only) */
+	// pass `null` to run in memory (NodeJS only)
 	directory: string | null
 	spec: string
 
