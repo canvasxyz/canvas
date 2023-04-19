@@ -5,7 +5,8 @@ RUN apk add --no-cache bash git openssh libc6-compat
 WORKDIR /app
 COPY ./package.json .
 
-# We should use `npm ci` but need to double-check that it's available on Fly
+# We can't use `npm ci` because it requires a package-lock.json file,
+# which we don't have because we're hoisting everything via workspaces
 RUN npm install
 
 COPY . .
@@ -21,4 +22,4 @@ ENV CANVAS_HOME /data
 
 COPY --from=builder /app ./
 
-CMD npm run start
+CMD [ "npm", "run", "start", "--", "--disable-ping", "--verbose", "--listen", "/ip4/0.0.0.0/tcp/8080/ws", "--announce", "/dns4/canvas-chat-3.fly.dev/tcp/4001/wss" ]

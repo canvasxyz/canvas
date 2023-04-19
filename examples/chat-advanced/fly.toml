@@ -3,41 +3,33 @@ kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
 
-[env]
-
-[experimental]
-  allowed_public_ports = []
-  auto_rollback = true
-
 [mounts]
-  destination = "/data"
   source = "data"
-
-[[statics]]
-  guest_path = "/app/dist"
-  url_prefix = "/"
+  destination = "/data"
 
 [[services]]
   http_checks = []
   tcp_checks = []
 
-  internal_port = 4044
+  internal_port = 8080
   processes = ["app"]
   protocol = "tcp"
+
   [services.concurrency]
     hard_limit = 100
     soft_limit = 100
     type = "connections"
 
   [[services.ports]]
-    handlers = ["http"]
-    port = 4044
+    port = 4001
+    handlers = ["tls", "http"]
 
 [[services]]
   internal_port = 8000
   processes = ["app"]
   protocol = "tcp"
   script_checks = []
+
   [services.concurrency]
     hard_limit = 25
     soft_limit = 20
@@ -53,8 +45,8 @@ processes = []
     port = 443
 
   [[services.http_checks]]
-    grace_period = "5s"
     interval = 10000
+    grace_period = "5s"
     method = "get"
     path = "/"
     protocol = "http"
