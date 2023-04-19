@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo, useContext } from "react"
+import React, { useCallback, useEffect, useRef, useState, useContext } from "react"
 import { Virtuoso } from "react-virtuoso"
 import _ from "lodash"
 import { DateTime } from "luxon"
 
 import { useEnsName } from "wagmi"
-import { Client, useRoute } from "@canvas-js/hooks"
+import { useRoute } from "@canvas-js/hooks"
 import { AppContext } from "./AppContext"
 
 type Post = {
@@ -37,20 +37,44 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 	// may be violated when generating data.
 	const { data: newPosts } = useRoute<Post>("/posts", { before: "" })
 
+	// Virtuoso's automatic scroll-to-bottom doesn't work consistently because
+	// it caps maximum scroll to `scroller.offsetHeight - scroller.scrollHeight`
+	// when there might be additional not-yet-rendered content at the bottom.
+	// Also, sometimes the scroll height grows slightly as ENS names resolve,
+	// and there are other yet undefined interactions because scrollHeight
+	// often increases by a few pixels after each repaint.
+	const scrollToEnd = () => {
+		const scroller = document.querySelector("[data-virtuoso-scroller=true]") as HTMLElement
+		if (scroller === null) return
+		setTimeout(() => {
+			scroller.scrollTop = scroller.scrollHeight
+			setTimeout(() => {
+				scroller.scrollTop = scroller.scrollHeight
+				setTimeout(() => {
+					scroller.scrollTop = scroller.scrollHeight
+				}, 20)
+			}, 20)
+		}, 20)
+	}
+
 	useEffect(() => {
 		if (!pastPosts || !newPosts) return
 
 		if (posts.length === 0) {
 			if (newPosts.length === 0) return
 
+			// First load for new posts
 			const filteredNewPosts = [...newPosts]
 			filteredNewPosts.reverse()
 			setPosts(filteredNewPosts)
+			setTimeout(scrollToEnd, 20)
 		} else {
 			const postsM = new Map(posts.map((f) => [f.id, f]))
 			const filteredPastPosts = pastPosts.filter((item) => !postsM.has(item.id))
 			const filteredNewPosts = newPosts.filter((item) => !postsM.has(item.id))
 			if (filteredPastPosts.length === 0 && filteredNewPosts.length === 0) return
+
+			// Later loads for new posts
 			setFirstItemIndex(firstItemIndex - filteredPastPosts.length)
 			filteredPastPosts.reverse()
 			filteredNewPosts.reverse()
@@ -58,7 +82,7 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 			// Interleave new posts according to updated_at, so if we
 			// receive new posts out-of-order (happens frequently on batch insert)
 			// they won't persist out-of-order
-			let result
+			let result: Post[]
 			if (
 				// check if all posts are ordered
 				(filteredPastPosts.length === 0 && posts.length === 0) ||
@@ -88,21 +112,8 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 				}
 			}
 			setPosts(result)
-
-			// Scroll-to-bottom doesn't seem to work correctly, Virtuoso incorrectly
-			// caps the maximum scroll to `scroller.offsetHeight - scroller.scrollHeight`
-			// when there might be additional not-yet-rendered content at the bottom.
 			if (filteredPastPosts.length === 0) {
-				const scroller = document.querySelector("[data-virtuoso-scroller=true]") as HTMLElement
-				if (scroller === null) return
-				// Only scroll-to-bottom if we're already near the bottom
-				if (scroller.scrollTop + scroller.offsetHeight < scroller.scrollHeight - 40) return
-				setTimeout(() => {
-					scroller.scrollTop = 99999999
-					setTimeout(() => {
-						scroller.scrollTop = 99999999
-					}, 10)
-				}, 10)
+				setTimeout(scrollToEnd)
 			}
 		}
 	}, [newPosts, pastPosts, posts])
@@ -132,7 +143,7 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 					atBottomThreshold={40}
 					ref={virtuoso}
 					firstItemIndex={firstItemIndex}
-					initialTopMostItemIndex={posts.length}
+					initialTopMostItemIndex={{ index: 50, align: "start", offset: 99999999 }}
 					itemContent={itemContent}
 					data={posts}
 					startReached={startReached}

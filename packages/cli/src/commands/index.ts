@@ -7,8 +7,5 @@ import * as exportData from "./export.js"
 import * as importData from "./import.js"
 import * as list from "./list.js"
 import * as install from "./install.js"
-import * as daemon from "./daemon.js"
-import * as start from "./start.js"
-import * as stop from "./stop.js"
 
-export const commands = [init, info, run, exportData, importData, list, install, daemon, start, stop] as CommandModule[]
+export const commands = [init, info, run, exportData, importData, list, install] as CommandModule[]

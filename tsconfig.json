@@ -4,7 +4,6 @@
     { "path": "./packages/cli" },
     { "path": "./packages/core" },
     { "path": "./packages/core/test" },
-    { "path": "./packages/next" },
     { "path": "./packages/interfaces" },
     { "path": "./packages/interfaces/test" },
     { "path": "./packages/hooks" },

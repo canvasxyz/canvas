@@ -5,8 +5,6 @@ export * from "./models.js"
 export * from "./routes.js"
 export * from "./contracts.js"
 export * from "./chains.js"
-
-import type { Session } from "./sessions.js"
-import type { Action } from "./actions.js"
-import type { CustomAction } from "./customActions.js"
-export type Message = Action | Session | CustomAction
+export * from "./messages.js"
+export * from "./core.js"
+export * from "./values.js"

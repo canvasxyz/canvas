@@ -39,16 +39,17 @@ body {
 #messages ul.tree-view {
 	flex-grow: 1;
 	height: 0px;
-  padding: 2px;
+	padding: 2px;
 
 	display: flex;
 	flex-direction: column;
 }
 
 #messages ul.tree-view li {
-  margin: 0;
-  padding-top: 3px;
-  padding-left: 6px;
+	margin: 0;
+	padding-top: 3px;
+	padding-left: 6px;
+	overflow-wrap: break-word;
 }
 
 #messages ul.tree-view li .time-ago {
@@ -75,11 +76,11 @@ span.address-ens {
 	margin-right: 3px;
 }
 
-#gossip-peers li,
+/* #gossip-peers li,
 #sync-peers li {
 	display: block;
-}
+} */
 
-.last-seen {
+/* .last-seen {
 	color: gray;
-}
+} */

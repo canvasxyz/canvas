@@ -1,106 +1,141 @@
-import assert from "node:assert"
-
 import chalk from "chalk"
-import express from "express"
+import express, { Request, Response } from "express"
 import { StatusCodes } from "http-status-codes"
+import { WebSocket } from "ws"
+import { nanoid } from "nanoid"
+import { CustomEvent } from "@libp2p/interfaces/events"
 
-import type { ModelValue } from "@canvas-js/interfaces"
+import { peerIdFromString } from "@libp2p/peer-id"
+
+import { register, Counter, Gauge, Summary, Registry } from "prom-client"
+
+import type { CoreEvents, Message, ModelValue } from "@canvas-js/interfaces"
+
 import { Core } from "./core.js"
-import { getMetrics } from "./metrics.js"
-import { toHex } from "./utils.js"
+import { ipfsURIPattern, assert, fromHex, getErrorMessage } from "./utils.js"
 
 interface Options {
 	exposeMetrics: boolean
 	exposeModels: boolean
-	exposeSessions: boolean
-	exposeActions: boolean
+	exposeMessages: boolean
+	exposeP2P: boolean
 }
 
 export function getAPI(core: Core, options: Partial<Options> = {}): express.Express {
+	const coreRegister = new Registry()
+
+	const coreMetrics = {
+		canvas_messages: new Counter({
+			registers: [coreRegister],
+			name: "canvas_messages",
+			help: "number of messages applied",
+			labelNames: ["type", "uri"],
+		}),
+
+		canvas_sync_time: new Summary({
+			registers: [coreRegister],
+			name: "canvas_sync_time",
+			help: "p2p MST sync times",
+			labelNames: ["uri", "status", "peer"],
+			maxAgeSeconds: 60 * 60,
+			ageBuckets: 24,
+		}),
+
+		canvas_gossipsub_subscribers: new Gauge({
+			registers: [coreRegister],
+			name: "canvas_gossipsub_subscribers",
+			help: "GossipSub topic subscribers",
+			labelNames: ["uri"],
+			async collect() {
+				if (core.libp2p === null || core.sources === null) {
+					return
+				}
+
+				for (const uri of Object.keys(core.sources)) {
+					const subscribers = core.libp2p.pubsub.getSubscribers(uri)
+					this.set({ uri }, subscribers.length)
+				}
+			},
+		}),
+	}
+
 	const api = express()
 
 	api.set("query parser", "simple")
 	api.use(express.json())
 
 	api.get("/", async (req, res) => {
-		const { routes, actions } = core.vm
-
-		return res.json({
-			uri: core.app,
-			appName: core.appName,
-			cid: core.cid.toString(),
-			peerId: core.libp2p && core.libp2p.peerId.toString(),
-			actions,
-			routes: Object.keys(routes),
-			merkleRoots: core.mst && core.mst.roots,
-			chainImplementations: core.getChainImplementations(),
-			peers: core.libp2p && {
-				gossip: Object.fromEntries(core.recentGossipPeers),
-				sync: Object.fromEntries(core.recentSyncPeers),
-			},
-		})
+		const data = await core.getApplicationData()
+		return res.json(data)
 	})
 
-	api.post("/actions", async (req, res) => {
+	async function applyMessage(req: Request, res: Response) {
 		if (req.headers["content-type"] !== "application/json") {
 			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
 		}
 
 		try {
-			const { hash } = await core.applyAction(req.body)
+			const { hash } = await core.apply(req.body)
 			res.json({ hash })
 		} catch (err) {
 			if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-core] Failed to apply action (${err.message})`))
+				console.log(chalk.red(`[canvas-core] Failed to apply message (${err.message})`))
 				return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
 			} else {
 				throw err
 			}
 		}
-	})
+	}
 
-	api.post("/sessions", async (req, res) => {
-		if (req.headers["content-type"] !== "application/json") {
-			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
-		}
+	api.post("/", applyMessage)
+	api.post("/actions", applyMessage)
+	api.post("/sessions", applyMessage)
 
-		if (req.body.hasSession) {
-			try {
-				const { session } = core.messageStore.getSessionByAddress(req.body.chain, req.body.chainId, req.body.hasSession)
-				return res.json({ hasSession: session !== null })
-			} catch (err) {
-				return res.json({ hasSession: false })
-			}
-		}
-
-		try {
-			const { hash } = await core.applySession(req.body)
-			res.json({ hash })
-		} catch (err) {
-			if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-core] Failed to create session (${err.message})`))
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
-			} else {
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
-				throw err
-			}
-		}
-	})
-
-	for (const route of Object.keys(core.vm.routes)) {
+	for (const route of core.vm.getRoutes()) {
 		api.get(route, (req, res) => handleRoute(core, route, req, res))
 	}
 
 	if (options.exposeMetrics) {
-		api.get("/metrics", getMetrics)
+		if (core.sources !== null) {
+			for (const [uri, source] of Object.entries(core.sources)) {
+				source.addEventListener("sync", ({ detail: { peer, status, time } }) => {
+					coreMetrics.canvas_sync_time.observe({ uri, peer, status }, time)
+				})
+			}
+		}
+
+		core.addEventListener("message", ({ detail: { uri, message } }) => {
+			coreMetrics.canvas_messages.inc({ uri, type: message.type })
+		})
+
+		api.get("/metrics", async (req, res) => {
+			try {
+				const coreMetrics = await coreRegister.metrics()
+				const defaultMetrics = await register.metrics()
+				res.header("Content-Type", register.contentType)
+				res.write(coreMetrics + "\n")
+				res.write(defaultMetrics + "\n")
+				res.end()
+			} catch (err) {
+				if (err instanceof Error) {
+					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+				} else {
+					throw err
+				}
+			}
+		})
 	}
 
 	if (options.exposeModels) {
-		api.get("/models/:model", (req, res) => {
-			const { model } = req.params
-			if (model in core.vm.models) {
-				const query = `SELECT * FROM ${model} ORDER BY updated_at DESC LIMIT 10`
-				const rows = core.modelStore.database.prepare(query).all()
+		api.get("/models/:model", async (req, res) => {
+			const { model: modelName } = req.params
+			if (modelName in core.vm.getModels()) {
+				const rows: Record<string, ModelValue>[] = []
+				const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : -1
+				for await (const row of core.modelStore.exportModel(modelName, { limit })) {
+					rows.push(row)
+				}
+
 				return res.status(StatusCodes.OK).json(rows)
 			} else {
 				return res.status(StatusCodes.NOT_FOUND).end()
@@ -108,27 +143,111 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		})
 	}
 
-	if (options.exposeActions) {
-		// TODO: pagination
-		api.get("/actions", (req, res) => {
-			const actions = []
-			for (const [hash, action] of core.messageStore.getActionStream()) {
-				actions.push([toHex(hash), action])
+	if (options.exposeMessages) {
+		api.get("/messages", async (req, res) => {
+			const { limit, type, app } = req.query
+
+			const filter: { type?: Message["type"]; limit?: number; app?: string } = {}
+
+			if (typeof type === "string") {
+				if (type === "action" || type === "session" || type === "customAction") {
+					filter.type = type
+				} else {
+					res.status(StatusCodes.BAD_REQUEST).end("Invalid type parameter")
+					return
+				}
 			}
 
-			return res.status(StatusCodes.OK).json(actions)
+			if (typeof limit === "string") {
+				filter.limit = parseInt(limit)
+				if (isNaN(filter.limit)) {
+					res.status(StatusCodes.BAD_REQUEST).end("Invalid limit parameter")
+					return
+				}
+			}
+
+			if (typeof app === "string") {
+				if (ipfsURIPattern.test(app)) {
+					filter.app = app
+				} else {
+					res.status(StatusCodes.BAD_REQUEST).end("Invalid app parameter")
+					return
+				}
+			}
+
+			const messages: Message[] = []
+			for await (const [_, message] of core.messageStore.getMessageStream(filter)) {
+				messages.push(message)
+			}
+
+			return res.status(StatusCodes.OK).json(messages)
+		})
+
+		api.get("/messages/:id", async (req, res) => {
+			let id: Uint8Array
+			try {
+				id = fromHex(req.params.id)
+			} catch (err) {
+				res.status(StatusCodes.BAD_REQUEST).end("Invalid id parameter")
+				return
+			}
+
+			let message: Message | null
+			try {
+				message = await core.messageStore.read((txn) => txn.getMessage(id))
+			} catch (err) {
+				if (err instanceof Error) {
+					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
+				} else {
+					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+				}
+				return
+			}
+
+			if (message === null) {
+				res.status(StatusCodes.NOT_FOUND).end()
+			} else {
+				res.json(message)
+			}
 		})
 	}
 
-	if (options.exposeSessions) {
-		// TODO: pagination
-		api.get("/sessions", (req, res) => {
-			const sessions = []
-			for (const [hash, session] of core.messageStore.getSessionStream()) {
-				sessions.push([toHex(hash), session])
+	if (options.exposeP2P) {
+		console.log(
+			chalk.yellowBright("[canvas-cli] Exposing internal p2p API. This can be abused if made publicly accessible.")
+		)
+
+		api.get("/p2p/connections", (req, res) => {
+			if (core.libp2p === null) {
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
+				return
 			}
 
-			return res.status(StatusCodes.OK).json(sessions)
+			const connections = core.libp2p.getConnections()
+			const response = Object.fromEntries(
+				connections.map(({ id, remotePeer, remoteAddr }) => [
+					id,
+					{ peerId: remotePeer.toString(), address: remoteAddr.toString() },
+				])
+			)
+
+			res.status(StatusCodes.OK).json(response)
+		})
+
+		api.post("/p2p/ping/:peerId", async (req, res) => {
+			if (core.libp2p === null) {
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
+				return
+			}
+
+			try {
+				const peerId = peerIdFromString(req.params.peerId)
+				const latency = await core.libp2p.ping(peerId)
+				res.status(StatusCodes.OK).end(`${latency}\n`)
+			} catch (err) {
+				const msg = getErrorMessage(err)
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(`${msg}\n`)
+			}
 		})
 	}
 
@@ -136,97 +255,94 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 }
 
 async function handleRoute(core: Core, route: string, req: express.Request, res: express.Response) {
-	const routeParameters = core.vm.routes[route]
-	assert(routeParameters !== undefined)
-
 	const params: Record<string, string> = {}
-	for (const param of routeParameters) {
+	for (const param of core.vm.getRouteParameters(route)) {
 		const value = req.params[param]
 		assert(value !== undefined, `missing route param ${param}`)
 		params[param] = value
 	}
 
 	for (const [param, value] of Object.entries(req.query)) {
-		if (param in params) {
+		if (param in params || typeof value !== "string") {
 			continue
-		} else if (typeof value === "string") {
-			try {
-				params[param] = JSON.parse(value)
-			} catch (err) {
-				return res.status(StatusCodes.BAD_REQUEST).end(`Invalid query param value ${param}=${value}`)
-			}
+		}
+
+		try {
+			params[param] = JSON.parse(value)
+		} catch (err) {
+			return res.status(StatusCodes.BAD_REQUEST).end(`Invalid query param value ${param}=${value}`)
 		}
 	}
 
-	if (req.headers.accept === "text/event-stream") {
-		// subscription response
-		res.setHeader("Cache-Control", "no-cache")
-		res.setHeader("Content-Type", "text/event-stream")
-		res.setHeader("Connection", "keep-alive")
-		res.flushHeaders()
-
-		let oldValues: Record<string, ModelValue>[] | null = null
-		let closed = false
-		const listener = async () => {
-			if (closed) {
-				return
-			}
-
-			let newValues: Record<string, ModelValue>[]
-			try {
-				newValues = await core.getRoute(route, params)
-			} catch (err) {
-				closed = true
-				if (err instanceof Error) {
-					console.log(chalk.red(`[canvas-core] error evaluating route (${err.message})`))
-					return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err.stack}`)
-				} else {
-					throw err
-				}
-			}
-
-			if (oldValues === null || !compareResults(oldValues, newValues)) {
-				res.write(`data: ${JSON.stringify(newValues)}\n\n`)
-				oldValues = newValues
-			}
+	try {
+		const data = await core.getRoute(route, params)
+		res.json(data)
+	} catch (err) {
+		if (err instanceof Error) {
+			return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err.message} ${err.stack}`)
+		} else {
+			return res.status(StatusCodes.BAD_REQUEST).end()
 		}
-
-		listener()
-		core.addEventListener("action", listener)
-		res.on("close", () => core.removeEventListener("action", listener))
-	} else {
-		// normal JSON response
-		let data
-		try {
-			data = await core.getRoute(route, params)
-		} catch (err) {
-			if (err instanceof Error) {
-				return res.status(StatusCodes.BAD_REQUEST).end(`Route error: ${err.stack}`)
-			} else {
-				throw err
-			}
-		}
-
-		return res.json(data)
 	}
 }
 
-export function compareResults(a: Record<string, ModelValue>[], b: Record<string, ModelValue>[]) {
-	if (a.length !== b.length) {
-		return false
+const WS_KEEPALIVE = 30000
+const WS_KEEPALIVE_LATENCY = 3000
+
+export function handleWebsocketConnection(core: Core, socket: WebSocket) {
+	const id = nanoid(8)
+	if (core.options.verbose) {
+		console.log(chalk.gray(`[canvas-core] [ws-${id}] Opened socket`))
 	}
 
-	for (let i = 0; i < a.length; i++) {
-		for (const key in a[i]) {
-			if (a[i][key] !== b[i][key]) {
-				return false
-			}
-		}
+	let lastPing = Date.now()
 
-		for (const key in b[i]) {
-			if (b[i][key] !== a[i][key]) {
-				return false
-			}
+	const timer = setInterval(() => {
+		if (lastPing < Date.now() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) {
+			console.log(chalk.red(`[canvas-core] [ws-${id}] Closed socket on timeout`))
+			socket.close()
+		}
+	}, WS_KEEPALIVE)
+
+	const closeListener = () => socket.close()
+	core.addEventListener("close", closeListener)
+
+	const eventListener = <T>(event: CustomEvent<T> | Event) => {
+		console.log(chalk.gray(`[canvas-core] [ws-${id}] Sent ${event.type} event`))
+		if (event instanceof CustomEvent) {
+			socket.send(JSON.stringify({ type: event.type, detail: event.detail }))
+		} else {
+			socket.send(JSON.stringify({ type: event.type }))
 		}
 	}
+
+	const eventTypes: (keyof CoreEvents)[] = ["update", "sync", "connect", "disconnect"]
+	for (const type of eventTypes) {
+		core.addEventListener(type, eventListener)
+	}
+
+	const unsubscribe = () => {
+		core.removeEventListener("close", closeListener)
+		for (const type of eventTypes) {
+			core.removeEventListener(type, eventListener)
+		}
+	}
+
+	socket.on("close", () => {
+		if (core.options.verbose) {
+			console.log(chalk.gray(`[canvas-core] [ws-${id}] Closed socket`))
+		}
+
+		clearInterval(timer)
+		unsubscribe()
+	})
+
+	socket.on("message", (data) => {
+		if (Buffer.isBuffer(data) && data.toString() === "ping") {
+			lastPing = Date.now()
+			socket.send("pong")
+		} else {
+			console.log(chalk.red(`[canvas-core] [ws-${id}] Received invalid message ${data}`))
+		}
+	})
 }

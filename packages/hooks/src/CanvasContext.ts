@@ -1,35 +1,16 @@
 import { createContext } from "react"
-
-export interface ApplicationData {
-	cid: string
-	uri: string
-	appName: string
-	peerId: string | null
-	actions: string[]
-	routes: string[]
-	merkleRoots: Record<string, string>
-	chainImplementations: Record<string, string[]>
-	peers: {
-		gossip: Record<string, { lastSeen: number }>
-		sync: Record<string, { lastSeen: number }>
-	} | null
-}
+import { ApplicationData, CoreAPI } from "@canvas-js/interfaces"
 
 export interface CanvasContextValue {
-	// public (returned from useCanvas hook)
 	isLoading: boolean
 	error: Error | null
-	host: string | null
+	api: CoreAPI | null
 	data: ApplicationData | null
-
-	// private (not returned from useCanvas hook)
-	ws: WebSocket | null
 }
 
 export const CanvasContext = createContext<CanvasContextValue>({
 	isLoading: true,
-	host: null,
+	api: null,
 	error: null,
 	data: null,
-	ws: null,
 })

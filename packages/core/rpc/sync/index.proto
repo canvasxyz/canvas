@@ -7,16 +7,6 @@ message Node {
   optional bytes value = 4;
 }
 
-message MessageRequest {
-  enum MessageType {
-    CANVAS_SESSION = 0;
-    CANVAS_ACTION = 1;
-  }
-
-  MessageType type = 1;
-  bytes id = 2;
-}
-
 message Request {
   message GetRootRequest {}
 
@@ -26,7 +16,7 @@ message Request {
   }
 
   message GetMessagesRequest {
-    repeated MessageRequest messages = 2;
+    repeated bytes ids = 2;
   }
 
   uint32 seq = 1;
@@ -39,8 +29,7 @@ message Request {
 
 message Response {
   message GetRootResponse {
-    uint32 level = 2;
-    bytes hash = 3;
+    Node root = 2;
   }
 
   message GetChildrenResponse {

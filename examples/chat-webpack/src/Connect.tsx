@@ -14,7 +14,7 @@ export const Connect: React.FC = ({}) => {
 	const { address, isConnected } = useAccount()
 
 	return (
-		<div className="window">
+		<div className="window" style={{ width: 420 }}>
 			<div className="title-bar">
 				<div className="title-bar-text">Connect</div>
 			</div>
@@ -55,12 +55,13 @@ export const Connect: React.FC = ({}) => {
 
 const Login: React.FC = ({}) => {
 	const { error, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
+	const [loginError, setLoginError] = useState<Error>()
 	const { chain } = useNetwork()
 	const provider = useProvider<ethers.providers.JsonRpcProvider>()
 
 	const chainImplementation = useMemo(() => {
 		console.log("chain", chain)
-		return new EthereumChainImplementation(chain?.id.toString() ?? "1", provider)
+		return new EthereumChainImplementation(chain?.id ?? 1, window.location.host, provider)
 	}, [chain?.id, provider])
 
 	const { sessionAddress, sessionExpiration, login, logout, isLoading, isPending, client } = useSession(
@@ -89,7 +90,20 @@ const Login: React.FC = ({}) => {
 			{sessionAddress === null ? (
 				<>
 					{isLoading ? <p>Loading...</p> : <p>Click Login to begin a new session.</p>}
-					<button disabled={isLoading || isPending} onClick={login}>
+					<button
+						disabled={isLoading || isPending}
+						onClick={async () => {
+							try {
+								await login()
+							} catch (err) {
+								if (err instanceof Error) {
+									setLoginError(err)
+								} else {
+									throw err
+								}
+							}
+						}}
+					>
 						{isPending ? "Waiting for login" : "Login"}
 					</button>
 				</>
@@ -104,7 +118,7 @@ const Login: React.FC = ({}) => {
 				</>
 			)}
 
-			<ErrorMessage error={error} />
+			<ErrorMessage error={error ?? loginError ?? null} />
 		</>
 	)
 }

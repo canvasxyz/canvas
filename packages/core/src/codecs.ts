@@ -16,34 +16,20 @@ import type {
 	Model,
 	Session,
 	SessionPayload,
-	Chain,
-	ChainId,
 	Message,
 	CustomAction,
 } from "@canvas-js/interfaces"
 import { isLeft, isRight, left } from "fp-ts/lib/Either.js"
-
-export const chainType: t.Type<Chain> = t.union([
-	t.literal("ethereum"),
-	t.literal("cosmos"),
-	t.literal("near"),
-	t.literal("solana"),
-	t.literal("substrate"),
-])
-
-export const chainIdType: t.Type<ChainId> = t.string
 
 export const actionArgumentType: t.Type<ActionArgument> = t.union([t.null, t.boolean, t.number, t.string])
 
 export const actionPayloadType: t.Type<ActionPayload> = t.type({
 	from: t.string,
 	app: t.string,
-	appName: t.string,
 	timestamp: t.number,
 	call: t.string,
 	callArgs: t.record(t.string, actionArgumentType),
-	chain: chainType,
-	chainId: chainIdType,
+	chain: t.string,
 	block: t.union([t.string, t.null]),
 })
 
@@ -57,12 +43,10 @@ export const actionType: t.Type<Action> = t.type({
 export const sessionPayloadType: t.Type<SessionPayload> = t.type({
 	from: t.string,
 	app: t.string,
-	appName: t.string,
 	sessionAddress: t.string,
 	sessionDuration: t.number,
 	sessionIssued: t.number,
-	chain: chainType,
-	chainId: chainIdType,
+	chain: t.string,
 	block: t.union([t.string, t.null]),
 })
 

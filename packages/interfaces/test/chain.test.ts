@@ -72,11 +72,9 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 		const sessionAddress = await chainImplementation.getDelegatedSignerAddress(delegatedSigner)
 
 		const sessionPayload = {
-			app: "ipfs://...",
-			appName: "Canvas",
-			block: "any block value",
+			app: "ipfs://QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
+			block: null,
 			chain: chainImplementation.chain,
-			chainId: chainImplementation.chainId,
 			from,
 			sessionAddress,
 			sessionDuration: 1,
@@ -96,11 +94,9 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 		const sessionAddress = await chainImplementation.getDelegatedSignerAddress(delegatedSigner)
 
 		const sessionPayload = {
-			app: "ipfs://...",
-			appName: "Canvas",
-			block: "any block value",
+			app: "ipfs://QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
+			block: null,
 			chain: chainImplementation.chain,
-			chainId: chainImplementation.chainId,
 			from,
 			sessionAddress,
 			sessionDuration: 1,
@@ -123,16 +119,15 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 		const from = await chainImplementation.getSignerAddress(signer)
 
 		const actionPayload: ActionPayload = {
-			app: "ipfs://...",
-			appName: "Canvas",
+			app: "ipfs://QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
 			from,
 			call: "doSomething",
 			callArgs: {},
-			block: "any block value",
+			block: null,
 			chain: chainImplementation.chain,
-			chainId: chainImplementation.chainId,
 			timestamp: 10000000,
 		}
+
 		const out = await chainImplementation.signAction(signer, actionPayload)
 		await chainImplementation.verifyAction(out)
 		t.pass()
@@ -144,16 +139,15 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 		const from = await chainImplementation.getSignerAddress(signer)
 
 		const actionPayload: ActionPayload = {
-			app: "ipfs://...",
-			appName: "Canvas",
+			app: "ipfs://QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
 			from,
 			call: "doSomething",
 			callArgs: {},
-			block: "any block value",
+			block: null,
 			chain: chainImplementation.chain,
-			chainId: chainImplementation.chainId,
 			timestamp: 10000000,
 		}
+
 		const out = await chainImplementation.signAction(signer, actionPayload)
 		out.payload.from = "something else "
 		await t.throwsAsync(async () => {
@@ -168,14 +162,12 @@ function runTestSuite<T extends ChainImplementation<S, any>, S>({
 		const from = await chainImplementation.getSignerAddress(signer)
 
 		const actionPayload: ActionPayload = {
-			app: "ipfs://...",
-			appName: "Canvas",
+			app: "ipfs://QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH",
 			from,
-			call: "doSomething",
+			call: "doSomethingf",
 			callArgs: {},
-			block: "any block value",
+			block: null,
 			chain: chainImplementation.chain,
-			chainId: chainImplementation.chainId,
 			timestamp: 10000000,
 		}
 		const out = await chainImplementation.signDelegatedAction(delegatedSigner, actionPayload)

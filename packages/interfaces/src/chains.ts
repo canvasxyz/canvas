@@ -1,4 +1,3 @@
-import type { Chain, ChainId } from "./contracts.js"
 import type { Action, ActionPayload } from "./actions.js"
 import type { Session, SessionPayload } from "./sessions.js"
 
@@ -15,8 +14,7 @@ import type { Session, SessionPayload } from "./sessions.js"
  * like those using the Cosmos SDK, returns a block number.
  */
 export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown> {
-	chain: Chain
-	chainId: ChainId
+	chain: string
 
 	hasProvider(): boolean
 
@@ -36,3 +34,10 @@ export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown
 
 	getLatestBlock(): Promise<string>
 }
+
+/**
+ * Thrown by Canvas hooks and React libraries when wallet/user supplies
+ * an invalid chain or chain id.
+ */
+export class InvalidChainError extends Error {}
+export class InvalidChainIdError extends Error {}

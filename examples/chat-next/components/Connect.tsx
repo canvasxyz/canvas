@@ -7,6 +7,7 @@ import { Client, useSession } from "@canvas-js/hooks"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import { ErrorMessage } from "./ErrorMessage"
+import { ChainImplementation } from "@canvas-js/interfaces"
 
 export const Connect: React.FC<{ client: Client | null; setClient: (client: Client | null) => void }> = ({
 	client,
@@ -20,7 +21,7 @@ export const Connect: React.FC<{ client: Client | null; setClient: (client: Clie
 	useEffect(() => setIsLoading(false), [])
 
 	return (
-		<div className="window">
+		<div className="window" style={{ width: 420 }}>
 			<div className="title-bar">
 				<div className="title-bar-text">Connect</div>
 			</div>
@@ -61,12 +62,14 @@ export const Connect: React.FC<{ client: Client | null; setClient: (client: Clie
 
 const Login: React.FC<{ setClient: (client: Client | null) => void }> = ({ setClient }) => {
 	const { error, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
+	const [loginError, setLoginError] = useState<Error>()
 	const { chain } = useNetwork()
 	const provider = useProvider<ethers.providers.JsonRpcProvider>()
 
-	const chainImplementation = useMemo(() => {
-		return new EthereumChainImplementation(chain?.id.toString() ?? "1", provider)
-	}, [chain?.id, provider])
+	const [chainImplementation, setChainImplementation] = useState<ChainImplementation | null>(null)
+	useEffect(() => {
+		setChainImplementation(new EthereumChainImplementation(chain?.id ?? 1, window.location.host, provider))
+	}, [])
 
 	const { sessionAddress, sessionExpiration, login, logout, isLoading, isPending, client } = useSession(
 		chainImplementation,
@@ -93,7 +96,14 @@ const Login: React.FC<{ setClient: (client: Client | null) => void }> = ({ setCl
 			{sessionAddress === null ? (
 				<>
 					{isLoading ? <p>Loading...</p> : <p>Click Login to begin a new session.</p>}
-					<button disabled={isLoading || isPending} onClick={login}>
+					<button
+						disabled={isLoading || isPending}
+						onClick={() =>
+							login().catch((err: Error) => {
+								setLoginError(err)
+							})
+						}
+					>
 						Login
 					</button>
 				</>
@@ -108,7 +118,7 @@ const Login: React.FC<{ setClient: (client: Client | null) => void }> = ({ setCl
 				</>
 			)}
 
-			<ErrorMessage error={error} />
+			<ErrorMessage error={error ?? loginError ?? null} />
 		</>
 	)
 }

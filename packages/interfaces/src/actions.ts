@@ -1,6 +1,6 @@
-import shajs from "sha.js"
+import { sha256 } from "@noble/hashes/sha256"
+import { bytesToHex } from "@noble/hashes/utils"
 
-import type { Chain } from "./contracts.js"
 import { stringify } from "./stringify.js"
 
 /**
@@ -20,19 +20,17 @@ export type ActionArgument = null | boolean | number | string
  */
 export type Action = {
 	type: "action"
+	signature: string
+	session: string | null
 	payload: {
 		app: string
-		appName: string
+		chain: string
 		from: string
 		call: string
 		callArgs: Record<string, ActionArgument>
-		chain: Chain
-		chainId: string
-		block: string | null
 		timestamp: number
+		block: string | null
 	}
-	session: string | null
-	signature: string
 }
 
 export type ActionPayload = Action["payload"]
@@ -62,6 +60,6 @@ export function serializeAction(action: Action): string {
  * Unique identifier for signed actions.
  */
 export function getActionHash(action: Action): string {
-	const hash = shajs("sha256").update(stringify(action)).digest("hex")
-	return "0x" + hash
+	const hash = sha256(stringify(action))
+	return "0x" + bytesToHex(hash)
 }

@@ -1,8 +1,8 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react"
 
-import { ActionArgument, ChainImplementation } from "@canvas-js/interfaces"
+import { ActionArgument, ChainImplementation, ApplicationData, InvalidChainError } from "@canvas-js/interfaces"
 
-import { ApplicationData, CanvasContext } from "./CanvasContext.js"
+import { CanvasContext } from "./CanvasContext.js"
 import { getSessionObject, setSessionObject, removeSessionObject, SessionObject } from "./sessionKeyStorage.js"
 
 const second = 1000
@@ -27,7 +27,7 @@ const getLatestBlockWithCache = async (chainImplementation: ChainImplementation)
 		return cachedBlock[0]
 	} else {
 		const block: string = await chainImplementation.getLatestBlock()
-		cachedBlock = [block, +new Date()]
+		cachedBlock = [block, Date.now()]
 		return block
 	}
 }
@@ -41,7 +41,7 @@ const getLatestBlockWithCache = async (chainImplementation: ChainImplementation)
  */
 
 export function useSession<Signer, DelegatedSigner>(
-	chainImplementation: ChainImplementation<Signer, DelegatedSigner>,
+	chainImplementation: ChainImplementation<Signer, DelegatedSigner> | null,
 	signer: Signer | null | undefined,
 	options: { sessionDuration?: number; unchecked?: boolean } = {}
 ): {
@@ -49,13 +49,11 @@ export function useSession<Signer, DelegatedSigner>(
 	isPending: boolean
 	sessionAddress: string | null
 	sessionExpiration: number | null
-	login: () => void
-	logout: () => void
+	login: () => Promise<void>
+	logout: () => Promise<void>
 	client: Client | null
 } {
-	const { chain, chainId } = chainImplementation
-
-	const { host, data } = useContext(CanvasContext)
+	const { api, data } = useContext(CanvasContext)
 
 	const [isLoading, setIsLoading] = useState(true)
 	const [isPending, setIsPending] = useState(false)
@@ -64,29 +62,22 @@ export function useSession<Signer, DelegatedSigner>(
 	const [sessionAddress, setSessionAddress] = useState<string | null>(null)
 	const [sessionExpiration, setSessionExpiration] = useState<number | null>(null)
 
-	const loadSavedSession = useCallback(async (data: ApplicationData, signer: Signer) => {
-		const signerAddress = await chainImplementation.getSignerAddress(signer)
-		const sessionObject = getSessionObject(chain, chainId, signerAddress)
+	const loadSavedSession = useCallback(
+		async (
+			chainImplementation: ChainImplementation<Signer, DelegatedSigner>,
+			data: ApplicationData,
+			signer: Signer
+		) => {
+			const signerAddress = await chainImplementation.getSignerAddress(signer)
+			const sessionObject = getSessionObject(chainImplementation.chain, signerAddress)
 
-		if (sessionObject !== null) {
-			if (sessionObject.app !== data.uri || sessionObject.expiration < Date.now()) {
-				removeSessionObject(chain, chainId, signerAddress)
-			} else {
-				const delegatedSigner = chainImplementation.importDelegatedSigner(sessionObject.sessionPrivateKey)
-				const sessionAddress = await chainImplementation.getDelegatedSignerAddress(delegatedSigner)
+			if (sessionObject !== null) {
+				if (sessionObject.app !== data.uri || sessionObject.expiration < Date.now()) {
+					removeSessionObject(chainImplementation.chain, signerAddress)
+				} else {
+					const delegatedSigner = chainImplementation.importDelegatedSigner(sessionObject.sessionPrivateKey)
+					const sessionAddress = await chainImplementation.getDelegatedSignerAddress(delegatedSigner)
 
-				const res = await fetch(`${host}/sessions`, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						hasSession: sessionAddress,
-						chain: chain,
-						chainId: chainId,
-					}),
-				})
-				const { hasSession } = await res.json()
-
-				if (hasSession) {
 					setSessionAddress(sessionAddress)
 					setSessionSigner(delegatedSigner)
 					setSessionExpiration(sessionObject.expiration)
@@ -94,25 +85,26 @@ export function useSession<Signer, DelegatedSigner>(
 					return
 				}
 			}
-		}
 
-		setSessionAddress(null)
-		setSessionSigner(null)
-		setSessionExpiration(null)
-		setIsLoading(false)
-	}, [])
+			setSessionAddress(null)
+			setSessionSigner(null)
+			setSessionExpiration(null)
+			setIsLoading(false)
+		},
+		[chainImplementation]
+	)
 
 	useEffect(() => {
-		if (host === null || data === null || signer === null || signer === undefined) {
-			return
+		if (chainImplementation && data && signer) {
+			loadSavedSession(chainImplementation, data, signer)
 		}
-
-		loadSavedSession(data, signer)
-	}, [host, data, signer])
+	}, [chainImplementation, data, signer])
 
 	const login = useCallback(async () => {
-		if (host === null) {
-			throw new Error("no host configured")
+		if (chainImplementation === null) {
+			throw new Error("no ChainImplementation provided")
+		} else if (api === null) {
+			throw new Error("no Core API provider configured")
 		} else if (data === null) {
 			throw new Error("login() called before a connection to the Canvas node was established")
 		} else if (signer === null || signer === undefined) {
@@ -137,51 +129,51 @@ export function useSession<Signer, DelegatedSigner>(
 				expiration: sessionIssued + sessionDuration,
 			}
 
-			const block = options.unchecked ? null : await chainImplementation.getLatestBlock()
+			const { chain } = chainImplementation
+			if (!data.chains.includes(chain)) {
+				throw new InvalidChainError(`Invalid chain: ${chain}`)
+			}
+
+			let block: string | null = null
+			if (!options.unchecked) {
+				block = await chainImplementation.getLatestBlock()
+			}
 
 			const session = await chainImplementation.signSession(signer, {
 				from: signerAddress,
 				app: data.uri,
-				appName: data.appName,
 				sessionAddress,
 				sessionDuration,
 				sessionIssued,
 				block,
 				chain,
-				chainId,
 			})
 
-			const res = await fetch(`${host}/sessions`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(session),
-			})
+			await api.apply(session)
 
-			if (!res.ok) {
-				const message = await res.text()
-				throw new Error(message)
-			}
-
-			setSessionObject(chain, chainId, signerAddress, sessionObject)
-
+			setSessionObject(chain, signerAddress, sessionObject)
 			setSessionSigner(delegatedSigner)
 			setSessionAddress(sessionAddress)
 			setSessionExpiration(sessionObject.expiration)
 		} finally {
 			setIsPending(false)
 		}
-	}, [signer, host, data, isPending])
+	}, [chainImplementation, signer, api, data, isPending])
 
 	const logout = useCallback(async () => {
+		if (chainImplementation === null) {
+			throw new Error("No ChainImplementation provided")
+		}
+
 		if (signer) {
 			const signerAddress = await chainImplementation.getSignerAddress(signer)
-			removeSessionObject(chain, chainId, signerAddress)
+			removeSessionObject(chainImplementation.chain, signerAddress)
 		}
 
 		setSessionSigner(null)
 		setSessionAddress(null)
 		setSessionExpiration(null)
-	}, [signer])
+	}, [chainImplementation, signer])
 
 	const dispatch = useCallback(
 		async (
@@ -189,8 +181,10 @@ export function useSession<Signer, DelegatedSigner>(
 			callArgs: Record<string, ActionArgument>,
 			callOptions?: CallOptions
 		): Promise<{ hash: string }> => {
-			if (host === null) {
-				throw new Error("no host configured")
+			if (chainImplementation === null) {
+				throw new Error("no ChainImplementation provided")
+			} else if (api === null) {
+				throw new Error("no Core API connection configured")
 			} else if (data === null) {
 				throw new Error("dispatch() called before the application connection was established")
 			} else if (signer === null || signer === undefined) {
@@ -201,44 +195,42 @@ export function useSession<Signer, DelegatedSigner>(
 				throw new Error("session expired, please log in again")
 			}
 
-			const block = options.unchecked ? null : await getLatestBlockWithCache(chainImplementation)
+			let block: string | null = null
+			if (!options.unchecked) {
+				block = await getLatestBlockWithCache(chainImplementation)
+			}
 
+			const { chain } = chainImplementation
+
+			const signerAddress = await chainImplementation.getSignerAddress(signer)
 			const action = await chainImplementation.signDelegatedAction(sessionSigner, {
 				app: data.uri,
-				appName: data.appName,
-				from: await chainImplementation.getSignerAddress(signer),
+				from: signerAddress,
 				call,
 				callArgs,
 				chain,
-				chainId,
 				timestamp: callOptions?.timestamp ?? Date.now(),
-				block: options.unchecked ? null : block,
+				block,
 			})
 
-			const res = await fetch(`${host}/actions`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(action),
-			})
-
-			if (res.ok) {
-				return await res.json()
-			} else {
-				const message = await res.text()
-
-				if (message === "session not found" || message === "session expired") {
-					const signerAddress = await chainImplementation.getSignerAddress(signer)
-					removeSessionObject(chain, chainId, signerAddress)
-					setSessionSigner(null)
-					setSessionAddress(null)
-					setSessionExpiration(null)
+			try {
+				return api.apply(action)
+			} catch (err) {
+				if (err instanceof Error) {
+					if (err.message === "session not found" || err.message === "session expired") {
+						const signerAddress = await chainImplementation.getSignerAddress(signer)
+						removeSessionObject(chain, signerAddress)
+						setSessionSigner(null)
+						setSessionAddress(null)
+						setSessionExpiration(null)
+					}
 				}
 
-				throw new Error(message)
+				throw err
 			}
 		},
 
-		[host, data, signer, sessionSigner, sessionExpiration]
+		[chainImplementation, api, data, signer, sessionSigner, sessionExpiration]
 	)
 
 	const client = useMemo<Client | null>(

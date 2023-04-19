@@ -1,11 +1,4 @@
-export * from "./core.js"
-export * from "./vm/index.js"
-export * from "./modelStore.js"
-export * from "./messageStore.js"
-export * from "./codecs.js"
-export * from "./errors.js"
-export { getLibp2pInit, startPingService } from "./libp2p.js"
-export { compileSpec } from "./utils.js"
-export * as constants from "./constants.js"
-export * from "./api.js"
-export * from "./websockets.js"
+export { Core, CoreConfig, CoreOptions } from "./core.js"
+
+import { VM } from "@canvas-js/core/components/vm"
+export const validateSpec = (spec: string) => VM.validate(spec)

@@ -1,0 +1,39 @@
+{
+  "private": true,
+  "name": "@canvas-js/example-chat-browser",
+  "version": "0.4.2",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack build",
+    "dev": "webpack server --port 3000"
+  },
+  "dependencies": {
+    "@canvas-js/chain-ethereum": "0.4.2",
+    "@canvas-js/core": "0.4.2",
+    "@canvas-js/hooks": "0.4.2",
+    "@canvas-js/interfaces": "0.4.2",
+    "@types/react": "^18.0.35",
+    "@types/react-dom": "^18.0.11",
+    "@wagmi/chains": "^0.2.18",
+    "98.css": "^0.1.20",
+    "buffer": "^6.0.3",
+    "lodash": "^4.17.21",
+    "nanoid": "^4.0.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-virtuoso": "^4.2.1",
+    "wagmi": "^0.12.10"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.194",
+    "copy-webpack-plugin": "^11.0.0",
+    "css-loader": "^6.7.3",
+    "style-loader": "^3.3.2",
+    "ts-loader": "^9.4.2",
+    "webpack": "^5.79.0",
+    "webpack-cli": "^5.0.1",
+    "webpack-dev-server": "^4.13.3"
+  }
+}

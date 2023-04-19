@@ -3,41 +3,23 @@ import path from "node:path"
 import os from "node:os"
 import process from "node:process"
 
-import type { PeerId } from "@libp2p/interface-peer-id"
-import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 import Hash from "ipfs-only-hash"
 import chalk from "chalk"
 import prompts from "prompts"
-
-import { chainType, constants } from "@canvas-js/core"
-import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
-import { ChainImplementation } from "@canvas-js/interfaces"
 import { ethers } from "ethers"
 
+import type { ChainImplementation } from "@canvas-js/interfaces"
+import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+
+import * as constants from "@canvas-js/core/constants"
+import { assert } from "@canvas-js/core/utils"
+
 export const CANVAS_HOME = process.env.CANVAS_HOME ?? path.resolve(os.homedir(), ".canvas")
-export const SOCKET_FILENAME = "daemon.sock"
-export const SOCKET_PATH = path.resolve(CANVAS_HOME, SOCKET_FILENAME)
 
 if (!fs.existsSync(CANVAS_HOME)) {
 	console.log(`[canvas-cli] Creating directory ${path.resolve(CANVAS_HOME)}`)
 	console.log("[canvas-cli] Override this path by setting a CANVAS_HOME environment variable.")
 	fs.mkdirSync(CANVAS_HOME)
-}
-
-export async function getPeerId(): Promise<PeerId> {
-	if (process.env.PEER_ID !== undefined) {
-		return createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
-	}
-
-	const peerIdPath = path.resolve(CANVAS_HOME, constants.PEER_ID_FILENAME)
-	if (fs.existsSync(peerIdPath)) {
-		return createFromProtobuf(fs.readFileSync(peerIdPath))
-	} else {
-		console.log(`[canvas-cli] Creating new PeerID at ${peerIdPath}`)
-		const peerId = await createEd25519PeerId()
-		fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
-		return peerId
-	}
 }
 
 export async function confirmOrExit(message: string) {
@@ -91,36 +73,52 @@ export async function installSpec(app: string): Promise<string> {
 	return cid
 }
 
+function parseChainId(chain: string): [namespace: string, chainId: string] {
+	const namespaceIndex = chain.indexOf(":")
+	assert(namespaceIndex > 0, "invalid CAIP-2 chain reference")
+	const namespace = chain.slice(0, namespaceIndex)
+	return [namespace, chain.slice(namespaceIndex + 1)]
+}
+
 export function getChainImplementations(args?: (string | number)[]): ChainImplementation[] {
+	const domain = "localhost"
 	const chains: ChainImplementation[] = []
 
 	if (args !== undefined) {
-		for (let i = 0; i < args.length; i += 3) {
-			const [chain, chainId, url] = args.slice(i, i + 3)
-			if (!chainType.is(chain)) {
-				console.log(chalk.red(`[canvas-cli] Invalid chain "${chain}", should be a ${chainType.name}`))
-				process.exit(1)
-			} else if (typeof chainId !== "number") {
-				console.log(chalk.red(`Invalid chain id "${chainId}", should be e.g. 1`))
-				process.exit(1)
-			} else if (typeof url !== "string") {
-				console.log(chalk.red(`Invalid chain rpc "${url}", should be a url`))
-				process.exit(1)
+		for (const arg of args) {
+			if (typeof arg === "number") {
+				throw new Error(`invalid --chain argument "${arg}"`)
 			}
 
-			if (chain == "ethereum") {
-				const provider = new ethers.providers.JsonRpcProvider(url)
-				chains.push(new EthereumChainImplementation(chainId.toString(), provider))
+			const delimiterIndex = arg.indexOf("=")
+			if (delimiterIndex === -1) {
+				const [namespace, chainId] = parseChainId(arg)
+				if (namespace === "eip155") {
+					chains.push(new EthereumChainImplementation(parseInt(chainId), domain))
+				} else {
+					throw new Error(`Unsupported chain ${arg}: only eip155 chains can be passed in the CLI`)
+				}
 			} else {
-				console.log(`'chain' value (${chain}) was not 'eth', all other RPCs are currently unsupported`)
+				const chain = arg.slice(0, delimiterIndex)
+				const url = arg.slice(delimiterIndex + 1)
+				const [namespace, chainId] = parseChainId(chain)
+				if (namespace === "eip155") {
+					const provider = new ethers.providers.JsonRpcProvider(url)
+					chains.push(new EthereumChainImplementation(parseInt(chainId), domain, provider))
+				} else {
+					throw new Error(`Unsupported chain ${arg}: only eip155 chains can be passed in the CLI`)
+				}
 			}
 		}
 	} else if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
+		const chainId = parseInt(process.env.ETH_CHAIN_ID)
 		const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_CHAIN_RPC)
-		chains.push(new EthereumChainImplementation(process.env.ETH_CHAIN_ID, provider))
+		chains.push(new EthereumChainImplementation(chainId, domain, provider))
 		console.log(
 			`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
 		)
+	} else {
+		chains.push(new EthereumChainImplementation(1, domain))
 	}
 
 	return chains

@@ -58,3 +58,9 @@ flyctl launch  # Don't deploy immediately
 flyctl volumes create canvas_chat_data_2
 flyctl deploy
 ```
+
+In case of issues, you may have to restart the app manually:
+
+```
+fly apps restart canvas-chat-2
+```

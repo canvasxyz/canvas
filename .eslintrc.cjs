@@ -14,6 +14,7 @@ module.exports = {
     "**/dist/**/*.js",
     "**/lib/**/*.js",
     "**/out/**/*.js",
+    "packages/core/sqlite/*",
   ],
   settings: {
     "import/parsers": {
@@ -37,12 +38,23 @@ module.exports = {
     "@typescript-eslint/no-non-null-assertion": "off",
     "@typescript-eslint/no-empty-interface": "off",
     "no-empty-pattern": "off",
+    "require-yield": "off",
     "@typescript-eslint/ban-types": [
       "error",
       {
-        "extendDefaults": true,
-        "types": { "{}": false },
+        extendDefaults: true,
+        types: { "{}": false },
       },
     ],
   },
+  overrides: [
+    {
+      files: ["*.canvas.js"],
+      rules: {
+        // this rule is disabled because canvas contract have global values
+        // injected into the vm, such as `ethersComputeAddress`
+        "no-undef": "off",
+      },
+    },
+  ],
 };

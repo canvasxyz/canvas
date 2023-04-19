@@ -2,6 +2,7 @@
   "include": ["src", "types"],
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "moduleResolution": "node16",
     "rootDir": "src",
     "outDir": "lib"
   },

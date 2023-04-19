@@ -1,24 +1,25 @@
-import assert from "node:assert"
-
-import Hash from "ipfs-only-hash"
 import { CID } from "multiformats"
 
+import AggregateError from "aggregate-error"
+import { anySignal } from "any-signal"
+
+import { ethers } from "ethers"
 import { configure } from "safe-stable-stringify"
+import { CodeError } from "@libp2p/interfaces/errors"
 
-import type {
-	ActionArgument,
-	Chain,
-	ChainId,
-	Model,
-	ModelType,
-	ModelValue,
-	RouteContext,
-	Query,
-} from "@canvas-js/interfaces"
+import chalk from "chalk"
 
-import type { ContractFunctionArgument, ContractFunctionResult } from "./vm/index.js"
+import type { ModelType, ModelValue } from "@canvas-js/interfaces"
+
+const { hexlify, arrayify } = ethers.utils
 
 export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
+
+export function assert(condition: unknown, message?: string): asserts condition {
+	if (!condition) {
+		throw new Error(message ?? "assertion failed")
+	}
+}
 
 export const ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
 
@@ -32,11 +33,7 @@ export function parseIPFSURI(uri: string): CID {
 	}
 }
 
-export type JSONValue = null | string | number | boolean | JSONArray | JSONObject
-export interface JSONArray extends Array<JSONValue> {}
-export interface JSONObject {
-	[key: string]: JSONValue
-}
+export const getCustomActionSchemaName = (app: string, name: string) => `${app}?name=${name}`
 
 export const mapEntries = <K extends string, S, T>(object: Record<K, S>, map: (key: K, value: S) => T) =>
 	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(key as K, value)])) as Record<K, T>
@@ -62,118 +59,17 @@ export function validateType(type: ModelType, value: ModelValue) {
 	}
 }
 
-type ValueTypes = {
-	boolean: boolean
-	string: string
-	float: number
-	integer: number
-	datetime: number
-}
-
-type Values<M extends Model> = { [K in Exclude<keyof M, "indexes" | "id" | "updated_at">]: ValueTypes[M[K]] }
-type Context<Models extends Record<string, Model>> = {
-	timestamp: number
-	hash: string
-	from: string
-	db: {
-		[K in keyof Models]: {
-			set: (id: string, values: Values<Models[K]>) => void
-			delete: (id: string) => void
-		}
-	}
-	contracts: Record<string, Record<string, (...args: ContractFunctionArgument[]) => Promise<ContractFunctionResult[]>>>
-}
-
-type ActionHandler<Models extends Record<string, Model>> = (
-	args: Record<string, ActionArgument>,
-	ctx: Context<Models>
-) => void
-
-// this is used for both `actions` and `sources`
-function compileActionHandlers<Models extends Record<string, Model>>(actions: Record<string, ActionHandler<Models>>) {
-	const entries = Object.entries(actions).map(([name, action]) => {
-		assert(typeof action === "function")
-		const source = action.toString()
-		if (source.startsWith(`${name}(`) || source.startsWith(`async ${name}(`)) {
-			return source
-		} else {
-			return `${name}: ${source}`
-		}
-	})
-
-	return entries
-}
-
-export async function compileSpec<Models extends Record<string, Model>>(exports: {
-	name: string
-	models: Models
-	actions: Record<string, ActionHandler<Models>>
-	routes?: Record<string, (params: Record<string, string>, db: RouteContext) => Query>
-	contracts?: Record<string, { chain: Chain; chainId: ChainId; address: string; abi: string[] }>
-	sources?: Record<string, Record<string, ActionHandler<Models>>>
-}): Promise<{ app: string; spec: string; appName: string }> {
-	const { name, models, actions, routes, contracts, sources } = exports
-
-	const appName = name || "Canvas App"
-
-	const actionEntries = compileActionHandlers(actions)
-
-	const routeEntries = Object.entries(routes || {}).map(([name, route]) => {
-		assert(typeof route === "function")
-		const source = route.toString()
-		if (source.startsWith(`${name}(`) || source.startsWith(`async ${name}(`)) return source
-		return `\t"${name}": ${source}`
-	})
-
-	const lines = [
-		`export const name = ${JSON.stringify(appName)};`,
-		`export const models = ${JSON.stringify(models, null, "\t")};`,
-		`export const actions = {\n${actionEntries.join(",\n")}};`,
-	]
-
-	if (routes !== undefined) {
-		lines.push(`export const routes = {\n${routeEntries.join(",\n")}};`)
+export async function wait(interval: number, options: { signal?: AbortSignal }) {
+	if (options.signal?.aborted) {
+		return
 	}
 
-	if (contracts !== undefined) {
-		lines.push(`export const contracts = ${JSON.stringify(contracts, null, "\t")};`)
+	const signal = anySignal([AbortSignal.timeout(interval), options.signal])
+	try {
+		await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve()))
+	} finally {
+		signal.clear()
 	}
-
-	if (sources !== undefined) {
-		lines.push(`export const sources = {`)
-		for (const [uri, actions] of Object.entries(sources)) {
-			const entries = compileActionHandlers(actions)
-			lines.push(`\t["${uri}"]: {\n${entries.map((line) => `\t\t${line}`).join(",\n")}\n\t},`)
-		}
-		lines.push(`};`)
-	}
-
-	const spec = lines.join("\n")
-	const cid = await Hash.of(spec)
-	return { app: `ipfs://${cid}`, spec, appName }
-}
-
-export class AbortError extends Error {
-	constructor(readonly event: Event) {
-		super("Received abort signal")
-	}
-}
-
-export async function wait(options: { interval: number; signal: AbortSignal }) {
-	await new Promise<void>((resolve, reject) => {
-		let timeout: NodeJS.Timeout | undefined = undefined
-
-		const abort = (event: Event) => {
-			clearTimeout(timeout)
-			reject(new AbortError(event))
-		}
-
-		options.signal.addEventListener("abort", abort)
-		timeout = setTimeout(() => {
-			options.signal.removeEventListener("abort", abort)
-			resolve()
-		}, options.interval)
-	})
 }
 
 async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, T>> {
@@ -192,38 +88,29 @@ async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, 
 export async function retry<T>(
 	f: () => Promise<T>,
 	handleError: (err: Error, n: number) => void,
-	options: { interval: number; signal: AbortSignal; maxRetries?: number }
-): Promise<T> {
+	{ interval, ...options }: { interval: number; signal?: AbortSignal; maxRetries?: number }
+): Promise<T | void> {
 	const maxRetries = options.maxRetries ?? Infinity
 
 	for (let n = 0; n < maxRetries; n++) {
 		const result = await getResult(f)
 		if (result.done) {
 			return result.value
-		} else if (options.signal.aborted) {
+		} else if (options.signal?.aborted) {
 			throw result.value
 		} else {
 			handleError(result.value, n)
-			await wait(options)
+			await wait(interval, options)
 		}
 	}
-
-	throw new Error("exceeded max retries")
 }
 
-export const toBuffer = (array: Uint8Array) => Buffer.from(array.buffer, array.byteOffset, array.byteLength)
-
-export function toHex(hash: Uint8Array | Buffer) {
-	if (!Buffer.isBuffer(hash)) {
-		hash = toBuffer(hash)
-	}
-
-	return `0x${hash.toString("hex")}`
+export function toHex(hash: Uint8Array) {
+	return hexlify(hash)
 }
 
 export function fromHex(input: string) {
-	assert(input.startsWith("0x"), 'input did not start with "0x"')
-	return Buffer.from(input.slice(2), "hex")
+	return arrayify(input)
 }
 
 // add elements with CacheMap.add(key, value) and they'll
@@ -242,5 +129,35 @@ export class CacheMap<K, V> extends Map<K, V> {
 				break
 			}
 		}
+	}
+}
+
+export function logErrorMessage(prefix: string, context: string, err: unknown) {
+	if (err instanceof Error && err.name === "AggregateError") {
+		const { errors } = err as AggregateError
+		if (errors.length === 1) {
+			const [err] = errors
+			console.log(prefix, context, chalk.yellow(`(${getErrorMessage(err)})`))
+		} else {
+			console.log(prefix, context, chalk.yellow(`(${errors.length} errors)`))
+			for (const err of errors) {
+				console.log(prefix, chalk.yellow(`- ${getErrorMessage(err)}`))
+			}
+		}
+	} else {
+		console.log(prefix, context, chalk.yellow(`(${getErrorMessage(err)})`))
+	}
+}
+
+export function getErrorMessage(err: unknown): string {
+	if (err instanceof Error && err.name === "AggregateError") {
+		const { errors } = err as AggregateError
+		return errors.map(getErrorMessage).join("; ")
+	} else if (err instanceof CodeError) {
+		return `${err.code}: ${err.message}`
+	} else if (err instanceof Error) {
+		return `${err.name}: ${err.message}`
+	} else {
+		throw err
 	}
 }

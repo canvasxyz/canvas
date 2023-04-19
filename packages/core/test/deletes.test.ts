@@ -1,11 +1,10 @@
 import test from "ava"
 
-import { Core, compileSpec } from "@canvas-js/core"
+import { Core } from "@canvas-js/core"
 
-import { TestSigner } from "./utils.js"
+import { TestSigner, compileSpec, collect } from "./utils.js"
 
-const { spec, app, appName } = await compileSpec({
-	name: "Test App",
+const { spec, app } = await compileSpec({
 	models: { threads: { id: "string", title: "string", link: "string", creator: "string", updated_at: "datetime" } },
 	actions: {
 		newThread({ title, link }, { db, hash, from }) {
@@ -21,16 +20,16 @@ const { spec, app, appName } = await compileSpec({
 	},
 })
 
-const signer = new TestSigner(app, appName)
+const signer = new TestSigner(app)
 
 test("Test setting and then deleting a record", async (t) => {
-	const core = await Core.initialize({ spec, directory: null, libp2p: null, unchecked: true })
+	const core = await Core.initialize({ spec, directory: null, offline: true, unchecked: true })
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 
-	const { hash: threadId } = await core.applyAction(newThreadAction)
+	const { hash: threadId } = await core.apply(newThreadAction)
 
-	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [
+	t.deepEqual(await collect(core.modelStore.exportModel("threads")), [
 		{
 			id: threadId,
 			title: "Hacker News",
@@ -40,9 +39,9 @@ test("Test setting and then deleting a record", async (t) => {
 		},
 	])
 
-	await signer.sign("deleteThread", { threadId }).then((action) => core.applyAction(action))
+	await signer.sign("deleteThread", { threadId }).then((action) => core.apply(action))
 
-	t.deepEqual(core.modelStore.database.prepare("SELECT * FROM threads").all(), [])
+	t.deepEqual(await collect(core.modelStore.exportModel("threads")), [])
 
 	await core.close()
 })

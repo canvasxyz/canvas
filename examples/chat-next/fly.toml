@@ -1,14 +1,7 @@
 app = "canvas-chat-2"
 kill_signal = "SIGINT"
-kill_timeout = 30
+kill_timeout = 5
 processes = []
-
-[env]
-  CANVAS_PATH = "/data"
-  CANVAS_SPEC = "spec.canvas.js"
-  LISTEN = "4002"
-  PORT = "8000"
-  ANNOUNCE = "/dns4/canvas-chat-2.fly.dev/tcp/4002/ws"
 
 [mounts]
   source = "data"
@@ -18,17 +11,18 @@ processes = []
   http_checks = []
   tcp_checks = []
 
-  internal_port = 4002
+  internal_port = 8080
   processes = ["app"]
   protocol = "tcp"
+
   [services.concurrency]
     hard_limit = 100
     soft_limit = 100
     type = "connections"
 
   [[services.ports]]
-    handlers = ["http"]
-    port = 4002
+    port = 4001
+    handlers = ["tls", "http"]
 
 [[services]]
   internal_port = 8000

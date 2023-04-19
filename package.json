@@ -1,7 +1,7 @@
 {
   "name": "canvas",
   "private": true,
-  "version": "0.1.3",
+  "version": "0.4.2",
   "type": "module",
   "scripts": {
     "dev": "tsc --build --watch",
@@ -16,23 +16,21 @@
     "packages/interfaces",
     "packages/core",
     "packages/cli",
-    "packages/next",
     "packages/hooks",
     "packages/chain-ethereum",
     "packages/chain-cosmos",
     "packages/chain-solana",
     "packages/chain-substrate",
     "examples/chat-advanced",
+    "examples/chat-browser",
     "examples/chat-webpack",
-    "examples/chat-next"
+    "examples/chat-next",
+    "examples/notes"
   ],
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^5.51.0",
-    "@typescript-eslint/parser": "^5.51.0",
-    "eslint": "^8.33.0",
-    "typescript": "^4.9.5"
-  },
-  "dependencies": {
-    "lodash": "^4.17.21"
+    "@typescript-eslint/eslint-plugin": "^5.58.0",
+    "@typescript-eslint/parser": "^5.58.0",
+    "eslint": "^8.38.0",
+    "typescript": "^5.0.4"
   }
 }

@@ -2,7 +2,7 @@
 
 import test from "ava"
 
-import { VM } from "@canvas-js/core"
+import { VM } from "@canvas-js/core/components/vm"
 
 const success = { valid: true, errors: [], warnings: [] }
 
@@ -257,46 +257,13 @@ const VALIDATION_TEST_FIXTURES: {
       export const actions = {};
       export const contracts = {
         milady: {
-          chain: "ethereum",
-          chainId: "1",
+          chain: "eip155:1",
           address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
           abi: ["function balanceOf(address owner) view returns (uint balance)"],
         },
       };
     `,
 		expectedResult: success,
-	},
-	{
-		name: "reject contract with invalid chain",
-		app: `
-      export const models = {};
-      export const actions = {};
-      export const contracts = {
-        milady: {
-          chain: "bitcoin",
-          chainId: "1",
-          address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
-          abi: ["function balanceOf(address owner) view returns (uint balance)"],
-        },
-      };
-    `,
-		expectedResult: errors(["Contract 'milady' is invalid: chain \"bitcoin\" is invalid"]),
-	},
-	{
-		name: "reject contract with invalid chainId",
-		app: `
-      export const models = {};
-      export const actions = {};
-      export const contracts = {
-        milady: {
-          chain: "ethereum",
-          chainId: [],
-          address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
-          abi: ["function balanceOf(address owner) view returns (uint balance)"],
-        },
-      };
-    `,
-		expectedResult: errors(["Contract 'milady' is invalid: chain id [] is invalid"]),
 	},
 	{
 		name: "reject contract with extra fields",
@@ -306,8 +273,7 @@ const VALIDATION_TEST_FIXTURES: {
       export const contracts = {
         milady: {
 					somethingElse: "hello",
-          chain: "ethereum",
-          chainId: "1",
+          chain: "eip155:1",
           address: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
           abi: ["function balanceOf(address owner) view returns (uint balance)"],
         },

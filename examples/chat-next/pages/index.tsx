@@ -4,6 +4,7 @@ import Head from "next/head"
 import { Connect } from "components/Connect"
 import { Messages } from "components/Messages"
 import { Application } from "components/Application"
+import { Stats } from "components/Stats"
 
 import { Client } from "@canvas-js/hooks"
 
@@ -20,6 +21,7 @@ export default function Index() {
 			<div id="sidebar">
 				<Application />
 				<Connect client={client} setClient={setClient} />
+				<Stats />
 			</div>
 		</main>
 	)

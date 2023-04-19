@@ -5,9 +5,10 @@ import { WagmiConfig } from "wagmi"
 import { Canvas, Client } from "@canvas-js/hooks"
 
 import { AppContext } from "./AppContext"
-import { ApplicationStatus } from "./ApplicationStatus"
 import { Connect } from "./Connect"
 import { Messages } from "./Messages"
+import { Application } from "./Application"
+import { Stats } from "./Stats"
 
 import { client } from "./client"
 
@@ -26,8 +27,9 @@ function Index({}: {}) {
 		<AppContext.Provider value={{ client: canvasClient, setClient: setCanvasClient }}>
 			<Messages />
 			<div id="sidebar">
-				<ApplicationStatus />
+				<Application />
 				<Connect />
+				<Stats />
 			</div>
 		</AppContext.Provider>
 	)

@@ -1,33 +1,31 @@
-import process from "node:process"
-import path from "node:path"
 import fs from "node:fs"
-
+import path from "node:path"
 import http from "node:http"
+import assert from "node:assert"
+import stream from "node:stream"
+import process from "node:process"
 
-import yargs from "yargs"
+import type { Argv } from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
 import stoppable from "stoppable"
 import express from "express"
 import cors from "cors"
-import { createLibp2p, Libp2p } from "libp2p"
+import { WebSocketServer } from "ws"
 
-import { Core, constants, actionType, getLibp2pInit, getAPI, setupWebsockets, startPingService } from "@canvas-js/core"
+import { Core, CoreOptions } from "@canvas-js/core"
+import { getAPI, handleWebsocketConnection } from "@canvas-js/core/api"
 
-import {
-	getChainImplementations,
-	confirmOrExit,
-	parseSpecArgument,
-	getPeerId,
-	installSpec,
-	CANVAS_HOME,
-} from "../utils.js"
+import * as constants from "@canvas-js/core/constants"
+
+import { getChainImplementations, confirmOrExit, parseSpecArgument, installSpec, CANVAS_HOME } from "../utils.js"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+import { getReasonPhrase, StatusCodes } from "http-status-codes"
 
 export const command = "run <app>"
 export const desc = "Run an app, by path or IPFS hash"
 
-export const builder = (yargs: yargs.Argv) =>
+export const builder = (yargs: Argv) =>
 	yargs
 		.positional("app", {
 			describe: "Path to app file, or IPFS hash of app",
@@ -44,19 +42,23 @@ export const builder = (yargs: yargs.Argv) =>
 			desc: "Disable libp2p",
 			default: false,
 		})
+		.option("disable-ping", {
+			type: "boolean",
+			desc: "Disable peer health check pings",
+			default: false,
+		})
 		.option("install", {
 			type: "boolean",
 			desc: "Install a local app and run it in production mode",
 			default: false,
 		})
 		.option("listen", {
-			type: "number",
-			desc: "libp2p WebSocket transport port",
-			default: 4044,
+			type: "array",
+			desc: "Internal libp2p /ws multiaddr, e.g. /ip4/0.0.0.0/tcp/4444/ws",
 		})
 		.option("announce", {
-			type: "string",
-			desc: "Accept incoming libp2p connections on a public multiaddr",
+			type: "array",
+			desc: "Public libp2p /ws multiaddr, e.g. /dns4/myapp.com/tcp/4444/ws",
 		})
 		.option("reset", {
 			type: "boolean",
@@ -77,21 +79,26 @@ export const builder = (yargs: yargs.Argv) =>
 			desc: "Expose Prometheus endpoint at /metrics",
 			default: false,
 		})
+		.option("p2p", {
+			type: "boolean",
+			desc: "Expose internal libp2p debugging endpoints",
+			default: false,
+		})
 		.option("verbose", {
 			type: "boolean",
 			desc: "Enable verbose logging",
 			default: false,
 		})
-		.option("chain-rpc", {
+		.option("chain", {
 			type: "array",
-			desc: "Provide an RPC endpoint for reading on-chain data (format: chain, chainId, URL)",
+			desc: "Declare chain implementations and provide RPC endpoints for reading on-chain data (format: {chain} or {chain}={URL})",
 		})
 		.option("static", {
 			type: "string",
 			desc: "Serve a static directory from /, and API routes from /api",
 		})
 
-type Args = ReturnType<typeof builder> extends yargs.Argv<infer T> ? T : never
+type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
 	// validate options
@@ -118,6 +125,12 @@ export async function handler(args: Args) {
 		fs.mkdirSync(directory)
 	} else if (args.reset) {
 		await confirmOrExit(`Are you sure you want to ${chalk.bold("erase all data")} in ${directory}?`)
+		const peerIdPath = path.resolve(directory, constants.PEER_ID_FILENAME)
+		if (fs.existsSync(peerIdPath)) {
+			fs.rmSync(peerIdPath)
+			console.log(`[canvas-cli] Deleted ${peerIdPath}`)
+		}
+
 		const messagesPath = path.resolve(directory, constants.MESSAGE_DATABASE_FILENAME)
 		if (fs.existsSync(messagesPath)) {
 			fs.rmSync(messagesPath)
@@ -144,9 +157,9 @@ export async function handler(args: Args) {
 		}
 	}
 
-	// read rpcs from --chain-rpc arguments or environment variables
+	// read rpcs from --chain arguments or environment variables
 	// prompt to run in unchecked mode, if no rpcs were provided
-	const chains = getChainImplementations(args["chain-rpc"])
+	const chains = getChainImplementations(args["chain"])
 	if (chains.length === 0 && !args.unchecked) {
 		const { confirm } = await prompts({
 			type: "confirm",
@@ -169,62 +182,34 @@ export async function handler(args: Args) {
 		console.log(
 			chalk.yellow(`✦ ${chalk.bold("Using development mode.")} Actions will be signed with the app filename.`)
 		)
+
 		console.log(chalk.yellow(`✦ ${chalk.bold("Using in-memory database.")} Data will be lost on restart.`))
 		console.log(chalk.yellow(`✦ ${chalk.bold("To persist data, install the app:")} canvas install ${args.app}`))
 		console.log("")
 	}
 
-	const { verbose, replay, unchecked, offline, metrics: exposeMetrics, listen: peeringPort, announce } = args
+	const { listen, announce } = args
 
-	const peerId = await getPeerId()
-	console.log(`[canvas-cli] Using PeerId ${peerId}`)
+	const validateAddresses = (addresses: (string | number)[]): addresses is string[] =>
+		addresses.every((address) => typeof address === "string")
 
-	let libp2p: Libp2p | null = null
-	if (!offline) {
-		if (announce !== undefined) {
-			console.log(`[canvas-cli] Announcing on ${announce}`)
-			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort, announce: [announce] }))
-		} else {
-			libp2p = await createLibp2p(getLibp2pInit({ peerId, port: peeringPort }))
-		}
-
-		if (verbose) {
-			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) =>
-				console.log(`[canvas-cli] Connected to ${remotePeer} (${id})`)
-			)
-
-			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) =>
-				console.log(`[canvas-cli] Disconnected from ${remotePeer} (${id})`)
-			)
-		}
+	if (announce) {
+		assert(validateAddresses(announce))
 	}
 
-	const core = await Core.initialize({
-		directory,
-		uri,
-		spec: spec,
-		libp2p,
-		unchecked,
-		verbose,
-	})
-
-	if (directory !== null && replay) {
-		console.log(chalk.green(`[canvas-cli] Replaying action log...`))
-		const { vm, messageStore, modelStore } = core
-		let i = 0
-		for await (const [id, action] of messageStore.getActionStream()) {
-			if (!actionType.is(action)) {
-				console.log(chalk.red("[canvas-cli]"), action)
-				throw new Error("Invalid action value in action log")
-			}
-
-			const effects = await vm.execute(id, action.payload)
-			modelStore.applyEffects(action.payload, effects)
-			i++
-		}
-
-		console.log(chalk.green(`[canvas-cli] Successfully replayed all ${i} entries from the action log.`))
+	if (listen) {
+		assert(validateAddresses(listen))
 	}
+
+	const options: CoreOptions = {
+		replay: args.replay,
+		offline: directory === null || args.offline,
+		unchecked: args.unchecked,
+		verbose: args.verbose,
+		disablePingService: args["disable-ping"],
+	}
+
+	const core = await Core.initialize({ chains, directory, uri, spec, listen, announce, ...options })
 
 	const app = express()
 	app.use(cors())
@@ -236,56 +221,50 @@ export async function handler(args: Args) {
 			throw new Error("Invalid directory for static files (path not found)")
 		}
 
-		app.use("/api", getAPI(core, { exposeMetrics }))
+		app.use("/api", getAPI(core, { exposeMetrics: args.metrics, exposeP2P: args.p2p }))
 		app.use(express.static(args.static))
 	} else {
-		app.use(getAPI(core, { exposeMetrics }))
+		app.use(getAPI(core, { exposeMetrics: args.metrics, exposeP2P: args.p2p }))
 	}
 
-	const httpServer = http.createServer(app)
-	setupWebsockets(httpServer, core)
+	const origin = `http://localhost:${args.port}`
+	const apiURL = args.static ? `${origin}/api` : origin
 
 	const server = stoppable(
-		httpServer.listen(args.port, () => {
-			const apiPrefix = args.static ? `api/` : ""
+		http.createServer(app).listen(args.port, () => {
 			if (args.static) {
-				console.log(`Serving static bundle: http://localhost:${args.port}/`)
-				console.log(`Serving API for ${core.app}:`)
-				console.log(`└ GET http://localhost:${args.port}/api`)
-			} else {
-				console.log(`Serving API for ${core.app}:`)
-				console.log(`└ GET http://localhost:${args.port}`)
+				console.log(`Serving static bundle: ${chalk.bold(origin)}`)
 			}
-			for (const name of Object.keys(core.vm.routes)) {
-				console.log(`└ GET http://localhost:${args.port}/${apiPrefix}${name.slice(1)}`)
+
+			console.log(`Serving HTTP API for ${core.app}:`)
+			console.log(`└ POST ${apiURL}/`)
+			console.log(`└ GET  ${apiURL}`)
+			for (const name of core.vm.getRoutes()) {
+				console.log(`└ GET  ${apiURL}/${name.slice(1)}`)
 			}
-			console.log(`└ POST /${apiPrefix}actions`)
-			console.log(`└ POST /${apiPrefix}sessions`)
 		}),
 		0
 	)
 
-	const controller = new AbortController()
+	const wss = new WebSocketServer({ noServer: true })
 
-	if (libp2p !== null) {
-		startPingService(libp2p, controller, { verbose })
-	}
+	const { pathname } = new URL(apiURL)
+	server.on("upgrade", (req: http.IncomingMessage, socket: stream.Duplex, head: Buffer) => {
+		if (req.url === undefined) {
+			return
+		}
 
-	controller.signal.addEventListener("abort", async () => {
-		console.log("[canvas-cli] Stopping API server...")
-		await new Promise<void>((resolve, reject) => server.stop((err) => (err ? reject(err) : resolve())))
-		console.log("[canvas-cli] API server stopped.")
-
-		console.log("[canvas-cli] Closing core...")
-		await core.close()
-		console.log("[canvas-cli] Core closed, press Ctrl+C to terminate immediately.")
-		if (libp2p !== null) {
-			await libp2p.stop()
+		const url = new URL(req.url, origin)
+		if (url.pathname === pathname) {
+			wss.handleUpgrade(req, socket, head, (socket) => handleWebsocketConnection(core, socket))
+		} else {
+			console.log(chalk.red("[canvas-cli] rejecting incoming WS connection at unexpected path"), url.pathname)
+			rejectRequest(socket, StatusCodes.NOT_FOUND)
 		}
 	})
 
 	let stopping = false
-	process.on("SIGINT", () => {
+	process.on("SIGINT", async () => {
 		if (stopping) {
 			process.exit(1)
 		} else {
@@ -294,7 +273,21 @@ export async function handler(args: Args) {
 				`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`
 			)
 
-			controller.abort()
+			console.log("[canvas-cli] Stopping API server...")
+			await new Promise<void>((resolve, reject) => server.stop((err) => (err ? reject(err) : resolve())))
+			console.log("[canvas-cli] API server stopped.")
+
+			console.log("[canvas-cli] Closing core...")
+			await core.close()
+			console.log("[canvas-cli] Core closed, press Ctrl+C to terminate immediately.")
 		}
 	})
+}
+
+function rejectRequest(reqSocket: stream.Duplex, code: number) {
+	const date = new Date()
+	reqSocket.write(`HTTP/1.1 ${code} ${getReasonPhrase(code)}\r\n`)
+	reqSocket.write(`Date: ${date.toUTCString()}\r\n`)
+	reqSocket.write(`\r\n`)
+	reqSocket.end()
 }
