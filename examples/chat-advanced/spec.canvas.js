@@ -1,3 +1,5 @@
+const CanvasChat = "ipfs://QmYAV9u6a3aHyhbPExMQauivZmrfyDdPH19yPZAZL6iF2e";
+
 export const chains = ["eip155:1"];
 
 export const models = {
@@ -22,5 +24,13 @@ export const routes = {
 export const actions = {
   createPost({ content }, { db, hash, from }) {
     db.posts.set(hash, { content, from_id: from });
+  },
+};
+
+export const sources = {
+  [CanvasChat]: {
+    createPost({ content }, { db, hash, from }) {
+      db.posts.set(hash, { content, from_id: from, imported: true })
+    },
   },
 };
