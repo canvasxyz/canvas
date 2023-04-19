@@ -62,7 +62,7 @@ class SqliteModelStore implements ModelStore {
 
 	public async count(modelName: string): Promise<number> {
 		const res = await this.modelStatements[modelName].count.all()
-		return res[0] as number
+		return (res[0] as any)["COUNT(*)"] as number
 	}
 
 	private getUpdatedAt(name: string, id: string): number | undefined {
