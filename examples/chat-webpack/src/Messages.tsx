@@ -236,7 +236,7 @@ const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
 			setDisplayTime(`${Math.floor(days)}d`)
 			return
 		}
-		setDisplayTime(past.toSQLDate())
+		setDisplayTime(past.toSQLDate() ?? "--")
 	}, [updated_at, currentMinute])
 
 	return (
