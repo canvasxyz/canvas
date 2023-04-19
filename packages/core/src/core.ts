@@ -181,6 +181,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			actions: this.vm.getActions(),
 			routes: this.vm.getRoutes(),
 			chains: this.vm.getChains(),
+			models: this.vm.getModels(),
 			peers,
 			merkleRoots: this.messageStore.getMerkleRoots(),
 		}
