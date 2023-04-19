@@ -8,6 +8,7 @@ import { AppContext } from "./AppContext"
 import { Application } from "./Application"
 import { Connect } from "./Connect"
 import { Messages } from "./Messages"
+import { Stats } from "./Stats"
 
 import { client } from "./client"
 
@@ -28,6 +29,7 @@ function Index({}: {}) {
 			<div id="sidebar">
 				<Application />
 				<Connect />
+				<Stats />
 			</div>
 		</AppContext.Provider>
 	)
