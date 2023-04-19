@@ -4,7 +4,7 @@ import { mainnet } from "@wagmi/chains"
 import { publicProvider } from "wagmi/providers/public"
 
 import { MetaMaskConnector } from "wagmi/connectors/metaMask"
-import { WalletConnectConnector } from "wagmi/connectors/walletConnect"
+import { WalletConnectLegacyConnector } from "wagmi/connectors/walletConnectLegacy"
 
 // Configure chains & providers with the Alchemy provider.
 // Two popular providers are Alchemy (alchemy.com) and Infura (infura.io)
@@ -18,7 +18,7 @@ export const client = createClient({
 			chains,
 			options: { UNSTABLE_shimOnConnectSelectAccount: true },
 		}),
-		new WalletConnectConnector({
+		new WalletConnectLegacyConnector({
 			chains,
 			options: { qrcode: true },
 		}),
