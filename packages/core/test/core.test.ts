@@ -55,6 +55,8 @@ test("Apply signed action", async (t) => {
 		},
 	])
 
+	t.deepEqual(await core.modelStore.count("threads"), 1)
+
 	await core.close()
 })
 

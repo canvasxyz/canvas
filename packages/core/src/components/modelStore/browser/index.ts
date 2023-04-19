@@ -32,6 +32,12 @@ class MemoryModelStore implements ModelStore {
 			yield s.get({}) as Record<string, ModelValue>
 		}
 	}
+	public async count(modelName: string): Promise<number> {
+		const s = await this.modelStatements[modelName].count
+		s.reset()
+		s.step()
+		return s.get({})["count"] as number
+	}
 
 	async close() {
 		this.db.close()

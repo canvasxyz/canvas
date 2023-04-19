@@ -60,6 +60,11 @@ class SqliteModelStore implements ModelStore {
 		}
 	}
 
+	public async count(modelName: string): Promise<number> {
+		const res = await this.modelStatements[modelName].count.all()
+		return res[0] as number
+	}
+
 	private getUpdatedAt(name: string, id: string): number | undefined {
 		const { getUpdatedAt } = this.modelStatements[name]
 		const result = getUpdatedAt.get(id) as { updated_at: number } | undefined
