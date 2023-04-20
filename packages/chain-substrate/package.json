@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/chain-substrate",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -9,7 +9,7 @@
     "lib"
   ],
   "dependencies": {
-    "@canvas-js/interfaces": "0.4.2",
+    "@canvas-js/interfaces": "0.4.3",
     "@polkadot/api": "^10.3.2",
     "@polkadot/extension-dapp": "^0.45.5",
     "@polkadot/extension-inject": "^0.45.5",

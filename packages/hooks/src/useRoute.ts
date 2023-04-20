@@ -32,27 +32,23 @@ export function useRoute<T extends Record<string, ModelValue> = Record<string, M
 		{ leading: true, trailing: true }
 	)
 
-	const routeRef = useRef<string | null>(null)
-	const paramsRef = useRef<Record<string, ModelValue>>({})
+	// Get useEffect to perform a deep comparision of params:
+	const routeParamToken = JSON.stringify(params)
 
 	useEffect(() => {
 		if (api === null) {
 			return
 		}
-
-		if (route !== routeRef.current || !compareObjects(params, paramsRef.current)) {
-			refetch(api, route, params)
-		}
-
-		routeRef.current = route
-		paramsRef.current = params
+		refetch(api, route, params)
 
 		if (subscribe) {
 			const listener = ({}: Event) => refetch(api, route, params)
 			api.addEventListener("update", listener)
-			return () => api.removeEventListener("update", listener)
+			return () => {
+				api.removeEventListener("update", listener)
+			}
 		}
-	}, [api, route, params])
+	}, [api, route, routeParamToken])
 
 	return { error, data, isLoading }
 }
