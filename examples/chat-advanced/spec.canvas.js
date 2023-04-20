@@ -14,7 +14,9 @@ export const models = {
 
 export const routes = {
 	"/posts": ({ before = "" }, { db }) => {
-		return db.queryRaw(`SELECT * FROM posts WHERE updated_at < :before ORDER BY updated_at DESC LIMIT 50`, { before })
+		return db.queryRaw(`SELECT * FROM posts WHERE updated_at < :before ORDER BY updated_at DESC, id ASC LIMIT 50`, {
+			before,
+		})
 	},
 }
 
