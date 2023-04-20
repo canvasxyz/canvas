@@ -12,6 +12,7 @@ type Post = {
 	from_id: `0x${string}`
 	content: string
 	updated_at: number
+	imported: boolean
 }
 
 export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
@@ -73,7 +74,6 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 			const filteredPastPosts = pastPosts.filter((item) => !postsM.has(item.id))
 			const filteredNewPosts = newPosts.filter((item) => !postsM.has(item.id))
 			if (filteredPastPosts.length === 0 && filteredNewPosts.length === 0) return
-
 			// Later loads for new posts
 			setFirstItemIndex(firstItemIndex - filteredPastPosts.length)
 			filteredPastPosts.reverse()
@@ -112,6 +112,7 @@ export const MessagesInfiniteScroller: React.FC<{}> = ({}) => {
 				}
 			}
 			setPosts(result)
+
 			if (filteredPastPosts.length === 0) {
 				setTimeout(scrollToEnd)
 			}
@@ -207,7 +208,7 @@ export const Messages: React.FC = ({}) => {
 	)
 }
 
-const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
+const Post: React.FC<Post> = ({ from_id, content, updated_at, imported }) => {
 	const address = `${from_id.slice(0, 5)}…${from_id.slice(-4)}`
 	// use wagmi's internal cache for ens names
 	const { data, isError, isLoading } = useEnsName({ address: from_id })
@@ -244,7 +245,9 @@ const Post: React.FC<Post> = ({ from_id, content, updated_at }) => {
 		<li>
 			{data && <span className="address address-ens">[{data}]</span>}
 			<span className="address">{address} &gt;</span> {content}
-			<span className="time-ago">{displayTime}</span>
+			<span className="time-ago">
+				{imported ? "[imported]" : ""} {displayTime}
+			</span>
 		</li>
 	)
 }

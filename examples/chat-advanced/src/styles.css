@@ -1,33 +1,20 @@
 html {
-	background-image: url("./background.jpeg");
-	background-size: 100vw;
 	background-color: #dfdfdf;
-	height: 100%;
-	width: 100%;
+	background-image: url("../public/background.jpeg");
+	background-size: 100vw;
+	height: 80%;
+	width: 80%;
 }
 
 body {
+	height: 100%;
 	margin: 0;
-	height: 100%;
-	width: 100%;
 }
 
-.window {
-	background: #8dddb9;
-}
-
-#__next {
-	height: 100%;
-	width: 100%;
-}
-
-main {
-	height: 80%;
-	width: 80%;
-
+#root {
 	transform: scale(1.25);
 	transform-origin: 0 0;
-
+	height: 100%;
 	display: flex;
 	max-width: 1024px;
 	margin: 0 12px;
@@ -62,7 +49,6 @@ main {
   margin: 0;
   padding-top: 3px;
   padding-left: 6px;
-  overflow-wrap: break-word;
 }
 
 #messages ul.tree-view li .time-ago {
