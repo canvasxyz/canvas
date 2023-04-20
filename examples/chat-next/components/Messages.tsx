@@ -162,6 +162,7 @@ export const Messages: React.FC<{ client: Client | null }> = ({ client }) => {
 		async (event: React.KeyboardEvent<HTMLInputElement>) => {
 			const input = inputRef.current
 			if (event.key === "Enter" && input !== null && client !== null) {
+				if (input.value === "" || input.value.trim() === "") return
 				try {
 					const { hash } = await client.createPost({ content: input.value })
 					input.value = ""
