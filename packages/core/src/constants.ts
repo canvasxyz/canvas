@@ -19,13 +19,13 @@ export const ANNOUNCE_INTERVAL = 10 * minute
 export const ANNOUNCE_TIMEOUT = 30 * second
 export const ANNOUNCE_RETRY_INTERVAL = 10 * second
 
-export const DISCOVERY_DELAY = 2 * second
+export const DISCOVERY_DELAY = 5 * second
 export const DISCOVERY_INTERVAL = 2 * minute
 export const DISCOVERY_TIMEOUT = 30 * second
 export const DISCOVERY_RETRY_INTERVAL = 5 * second
 
 // don't sync with any one peer more often than this
-export const SYNC_COOLDOWN_PERIOD = 5 * second
+export const SYNC_COOLDOWN_PERIOD = 30 * second
 
 export const PING_INTERVAL = 5 * minute
 export const DIAL_TIMEOUT = 20 * second
