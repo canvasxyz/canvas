@@ -10,11 +10,10 @@ import { register } from "prom-client"
 
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
+import type { Multiaddr } from "@multiformats/multiaddr"
 
-import { peerIdFromString } from "@libp2p/peer-id"
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
-import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { circuitRelayTransport } from "libp2p/circuit-relay"
 import { webSockets } from "@libp2p/websockets"
@@ -46,7 +45,9 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
 	if (config.listen === undefined) {
-		console.log(`[canvas-core] [p2p] No --listen address provided. Using bootstrap servers as public relays.`)
+		console.log(
+			chalk.yellowBright(`[canvas-core] [p2p] No --listen address provided. Using bootstrap servers as relays.`)
+		)
 	}
 
 	const discoverRelays = config.announce ? 0 : bootstrapList.length
