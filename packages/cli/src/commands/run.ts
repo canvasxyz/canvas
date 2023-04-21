@@ -13,10 +13,12 @@ import express from "express"
 import cors from "cors"
 import { WebSocketServer } from "ws"
 
+import { multiaddr } from "@multiformats/multiaddr"
+
 import { Core, CoreOptions } from "@canvas-js/core"
 import { getAPI, handleWebsocketConnection } from "@canvas-js/core/api"
 
-import { testnetBootstrapList } from "@canvas-js/core/bootstrap"
+import { defaultBootstrapList, testnetBootstrapList } from "@canvas-js/core/bootstrap"
 import * as constants from "@canvas-js/core/constants"
 
 import { getChainImplementations, confirmOrExit, parseSpecArgument, installSpec, CANVAS_HOME } from "../utils.js"
@@ -42,21 +44,6 @@ export const builder = (yargs: Argv) =>
 		.option("offline", {
 			type: "boolean",
 			desc: "Disable libp2p",
-			default: false,
-		})
-		.option("disable-dht", {
-			type: "boolean",
-			desc: "Disable joining the libp2p DHT",
-			default: false,
-		})
-		.option("disable-ping", {
-			type: "boolean",
-			desc: "Disable the libp2p ping service",
-			default: false,
-		})
-		.option("disable-pubsub", {
-			type: "boolean",
-			desc: "Disable the libp2p PubSub mesh",
 			default: false,
 		})
 		.option("install", {
@@ -211,31 +198,29 @@ export async function handler(args: Args) {
 		verbose: args.verbose,
 	}
 
-	const p2pConfig: P2PConfig = {
-		disableDHT: args["disable-dht"],
-		disablePing: args["disable-ping"],
-		disablePubSub: args["disable-pubsub"],
+	const announce: string[] = []
+	for (const address of args.announce ?? []) {
+		assert(typeof address === "string", "--announce address must be a string")
+		const addr = multiaddr(address)
+		assert(addr.protoNames().pop() === "ws", "--announce address must be a /ws multiaddr")
+		announce.push(address)
 	}
 
-	const validateAddresses = (addresses: (string | number)[]): addresses is string[] =>
-		addresses.every((address) => typeof address === "string")
-
-	if (args.announce) {
-		assert(validateAddresses(args.announce))
-		p2pConfig.announce = args.announce
+	const listen: string[] = []
+	for (const address of args.listen ?? []) {
+		assert(typeof address === "string", "--listen address must be a string")
+		const addr = multiaddr(address)
+		assert(addr.protoNames().pop() === "ws", "--listen address must be a /ws multiaddr")
+		listen.push(address)
 	}
 
-	if (args.listen) {
-		assert(validateAddresses(args.listen))
-		p2pConfig.listen = args.listen
-	}
-
+	let bootstrapList = defaultBootstrapList
 	if (args.testnet) {
 		console.log(chalk.yellowBright("[canvas-cli] Using testnet bootstrap servers"), testnetBootstrapList)
-		p2pConfig.bootstrapList = testnetBootstrapList
+		bootstrapList = testnetBootstrapList
 	}
 
-	const core = await Core.initialize({ chains, directory, uri, spec, ...p2pConfig, ...options })
+	const core = await Core.initialize({ chains, directory, uri, spec, bootstrapList, listen, announce, ...options })
 
 	const app = express()
 	app.use(cors())
