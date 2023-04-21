@@ -32,5 +32,5 @@ export const DIAL_TIMEOUT = 20 * second
 export const PING_TIMEOUT = 10 * second
 
 export const MIN_CONNECTIONS = 5
-export const DIAL_CONCURRENCY = 1
-export const DIAL_CONCURRENCY_PER_PEER = 1
+export const DIAL_CONCURRENCY = 10
+export const DIAL_CONCURRENCY_PER_PEER = 3
