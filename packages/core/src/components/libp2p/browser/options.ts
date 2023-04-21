@@ -6,8 +6,6 @@ import { bytesToHex as hex } from "@noble/hashes/utils"
 import { ethers } from "ethers"
 
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
-import { peerIdFromString } from "@libp2p/peer-id"
-import { multiaddr } from "@multiformats/multiaddr"
 
 import { circuitRelayTransport } from "libp2p/circuit-relay"
 import { webSockets } from "@libp2p/websockets"
@@ -17,11 +15,16 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 
-import { PEER_ID_FILENAME, minute, second } from "@canvas-js/core/constants"
+import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import { assert } from "@canvas-js/core/utils"
-
-import { defaultBootstrapList } from "../bootstrap.js"
-import chalk from "chalk"
+import {
+	DIAL_CONCURRENCY,
+	DIAL_CONCURRENCY_PER_PEER,
+	MIN_CONNECTIONS,
+	PEER_ID_FILENAME,
+	minute,
+	second,
+} from "@canvas-js/core/constants"
 
 const { base64 } = ethers.utils
 
@@ -36,15 +39,24 @@ export async function getLibp2pOptions(config: {
 	return {
 		peerId: config.peerId,
 		addresses: { listen: [], announce: [] },
+
+		connectionManager: {
+			minConnections: MIN_CONNECTIONS,
+			autoDialConcurrency: DIAL_CONCURRENCY,
+			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
+		},
+
 		transports: [webSockets(), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
+
 		dht: kadDHT({
 			protocolPrefix: "/canvas",
 			clientMode: true,
 			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
 		}),
+
 		pubsub: gossipsub({
 			emitSelf: false,
 			fallbackToFloodsub: false,
@@ -53,6 +65,7 @@ export async function getLibp2pOptions(config: {
 			msgIdFn: (msg) => sha256(msg.data),
 			msgIdToStrFn: (id) => hex(id),
 		}),
+
 		ping: {
 			protocolPrefix: "canvas",
 			maxInboundStreams: 32,

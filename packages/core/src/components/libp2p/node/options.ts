@@ -4,14 +4,18 @@ import fs from "node:fs"
 import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex as hex } from "@noble/hashes/utils"
 
+import chalk from "chalk"
+
+import { register } from "prom-client"
+
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
 
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
-import { peerIdFromString } from "@libp2p/peer-id"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
-import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+import { Multiaddr } from "@multiformats/multiaddr"
 
+import { circuitRelayTransport } from "libp2p/circuit-relay"
 import { webSockets } from "@libp2p/websockets"
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
@@ -19,14 +23,21 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
-import { circuitRelayTransport } from "libp2p/circuit-relay"
 
-import { register } from "prom-client"
+import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
+import {
+	DIAL_CONCURRENCY,
+	DIAL_CONCURRENCY_PER_PEER,
+	MIN_CONNECTIONS,
+	PEER_ID_FILENAME,
+	minute,
+	second,
+} from "@canvas-js/core/constants"
 
-import { PEER_ID_FILENAME, minute, second } from "@canvas-js/core/constants"
-
-import { defaultBootstrapList } from "../bootstrap.js"
-import chalk from "chalk"
+async function denyDialMultiaddr(multiaddr: Multiaddr) {
+	const transportRoot = multiaddr.decapsulate("/ws")
+	return transportRoot.isThinWaistAddress() && isLoopback(transportRoot)
+}
 
 export async function getLibp2pOptions(config: {
 	peerId: PeerId
@@ -55,26 +66,27 @@ export async function getLibp2pOptions(config: {
 	return {
 		peerId: config.peerId,
 		addresses: { listen, announce },
-		connectionGater: {
-			denyDialMultiaddr: async (multiaddr: Multiaddr) => {
-				const transportRoot = multiaddr.decapsulate("/ws")
-				if (transportRoot.isThinWaistAddress() && isLoopback(transportRoot)) {
-					return true
-				}
 
-				return false
-			},
+		connectionGater: { denyDialMultiaddr },
+		connectionManager: {
+			minConnections: MIN_CONNECTIONS,
+			autoDialConcurrency: DIAL_CONCURRENCY,
+			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
 		},
+
 		transports: [webSockets(), circuitRelayTransport({ discoverRelays })],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
+
 		dht: kadDHT({
 			protocolPrefix: "/canvas",
 			clientMode: announce.length === 0,
 			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
 		}),
+
 		metrics: prometheusMetrics({ registry: register }),
+
 		pubsub: gossipsub({
 			emitSelf: false,
 			fallbackToFloodsub: false,
@@ -83,6 +95,7 @@ export async function getLibp2pOptions(config: {
 			msgIdFn: (msg) => sha256(msg.data),
 			msgIdToStrFn: (id) => hex(id),
 		}),
+
 		ping: {
 			protocolPrefix: "canvas",
 			maxInboundStreams: 32,

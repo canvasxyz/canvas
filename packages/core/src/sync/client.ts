@@ -15,9 +15,9 @@ export class Client {
 	private readonly responses: AsyncIterator<RPC.Response>
 	private readonly requests: Pushable<RPC.Request>
 	constructor({ source, sink }: Duplex<Source<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>>) {
-		this.responses = pipe(source, lp.decode(), Client.decodeResponses)
+		this.responses = pipe(lp.decode(source), Client.decodeResponses)
 		this.requests = pushable({ objectMode: true })
-		pipe(this.requests, Client.encodeRequests, lp.encode(), sink)
+		pipe(lp.encode(pipe(this.requests, Client.encodeRequests)), sink)
 	}
 
 	public end() {

@@ -30,3 +30,7 @@ export const SYNC_COOLDOWN_PERIOD = 30 * second
 export const PING_INTERVAL = 5 * minute
 export const DIAL_TIMEOUT = 20 * second
 export const PING_TIMEOUT = 10 * second
+
+export const MIN_CONNECTIONS = 5
+export const DIAL_CONCURRENCY = 1
+export const DIAL_CONCURRENCY_PER_PEER = 1

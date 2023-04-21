@@ -16,6 +16,7 @@ import { WebSocketServer } from "ws"
 import { Core, CoreOptions } from "@canvas-js/core"
 import { getAPI, handleWebsocketConnection } from "@canvas-js/core/api"
 
+import { defaultBootstrapList, testnetBootstrapList } from "@canvas-js/core/bootstrap"
 import * as constants from "@canvas-js/core/constants"
 
 import { getChainImplementations, confirmOrExit, parseSpecArgument, installSpec, CANVAS_HOME } from "../utils.js"
@@ -96,6 +97,10 @@ export const builder = (yargs: Argv) =>
 		.option("static", {
 			type: "string",
 			desc: "Serve a static directory from /, and API routes from /api",
+		})
+		.option("testnet", {
+			type: "boolean",
+			desc: "Bootstrap to the private testnet (requires VPN)",
 		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
@@ -209,7 +214,13 @@ export async function handler(args: Args) {
 		disablePingService: args["disable-ping"],
 	}
 
-	const core = await Core.initialize({ chains, directory, uri, spec, listen, announce, ...options })
+	let bootstrapList = defaultBootstrapList
+	if (args.testnet) {
+		console.log(chalk.yellowBright("[canvas-cli] Using testnet bootstrap servers"), testnetBootstrapList)
+		bootstrapList = testnetBootstrapList
+	}
+
+	const core = await Core.initialize({ chains, directory, uri, spec, listen, announce, bootstrapList, ...options })
 
 	const app = express()
 	app.use(cors())
