@@ -14,15 +14,18 @@ export const second = 1000
 export const minute = second * 60
 export const hour = minute * 60
 
-export const ANNOUNCE_DELAY = 15 * second
-export const ANNOUNCE_INTERVAL = 10 * minute
-export const ANNOUNCE_TIMEOUT = 30 * second
-export const ANNOUNCE_RETRY_INTERVAL = 10 * second
+// export const ANNOUNCE_DELAY = 15 * second
+// export const ANNOUNCE_INTERVAL = 10 * minute
+// export const ANNOUNCE_TIMEOUT = 30 * second
+// export const ANNOUNCE_RETRY_INTERVAL = 10 * second
 
-export const DISCOVERY_DELAY = 5 * second
-export const DISCOVERY_INTERVAL = 2 * minute
-export const DISCOVERY_TIMEOUT = 30 * second
-export const DISCOVERY_RETRY_INTERVAL = 5 * second
+// export const DISCOVERY_DELAY = 5 * second
+// export const DISCOVERY_INTERVAL = 2 * minute
+// export const DISCOVERY_TIMEOUT = 30 * second
+// export const DISCOVERY_RETRY_INTERVAL = 5 * second
+
+export const PEER_DISCOVERY_TOPIC = "/canvas/discovery"
+export const PEER_DISCOVERY_INTERVAL = 5 * second
 
 // don't sync with any one peer more often than this
 export const SYNC_COOLDOWN_PERIOD = 30 * second

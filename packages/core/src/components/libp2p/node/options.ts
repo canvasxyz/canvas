@@ -21,17 +21,18 @@ import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
-import { kadDHT } from "@libp2p/kad-dht"
+import { pubsubPeerDiscovery } from "@libp2p/pubsub-peer-discovery"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import {
 	DIAL_CONCURRENCY,
 	DIAL_CONCURRENCY_PER_PEER,
+	PEER_DISCOVERY_TOPIC,
 	MIN_CONNECTIONS,
 	PEER_ID_FILENAME,
-	minute,
 	second,
+	PEER_DISCOVERY_INTERVAL,
 } from "@canvas-js/core/constants"
 
 import type { P2PConfig } from "../types.js"
@@ -74,7 +75,10 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 		transports: [webSockets(), circuitRelayTransport({ discoverRelays: announce.length === 0 ? 1 : 0 })],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
-		peerDiscovery: [bootstrap({ list: bootstrapList })],
+		peerDiscovery: [
+			bootstrap({ list: bootstrapList }),
+			pubsubPeerDiscovery({ interval: PEER_DISCOVERY_INTERVAL, topics: [PEER_DISCOVERY_TOPIC] }),
+		],
 
 		metrics: prometheusMetrics({ registry: register }),
 
@@ -82,12 +86,6 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 		// identify: {
 		// 	protocolPrefix: "canvas",
 		// },
-
-		dht: kadDHT({
-			protocolPrefix: "/canvas",
-			clientMode: announce.length === 0,
-			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
-		}),
 
 		pubsub: gossipsub({
 			emitSelf: false,

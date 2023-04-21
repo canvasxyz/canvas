@@ -18,8 +18,8 @@ import { DIAL_TIMEOUT, SYNC_COOLDOWN_PERIOD } from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 import { toHex, assert, logErrorMessage, CacheMap } from "@canvas-js/core/utils"
 import { sync, handleIncomingStream } from "@canvas-js/core/sync"
-import { startAnnounceService } from "./services/announce.js"
-import { startDiscoveryService } from "./services/discovery.js"
+// import { startAnnounceService } from "./services/announce.js"
+// import { startDiscoveryService } from "./services/discovery.js"
 
 export interface SourceOptions {
 	verbose?: boolean
@@ -111,18 +111,18 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
 		}
 
-		const mode = await this.libp2p.dht.getMode()
-		if (mode === "server") {
-			startAnnounceService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
-		}
+		// const mode = await this.libp2p.dht.getMode()
+		// if (mode === "server") {
+		// 	startAnnounceService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
+		// }
 
-		startDiscoveryService({
-			libp2p: this.libp2p,
-			cid: this.cid,
-			topic: this.uri,
-			signal: this.controller.signal,
-			callback: (peerId) => this.handlePeerDiscovery(peerId),
-		})
+		// startDiscoveryService({
+		// 	libp2p: this.libp2p,
+		// 	cid: this.cid,
+		// 	topic: this.uri,
+		// 	signal: this.controller.signal,
+		// 	callback: (peerId) => this.handlePeerDiscovery(peerId),
+		// })
 	}
 
 	public async stop() {
