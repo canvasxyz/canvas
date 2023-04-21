@@ -33,6 +33,7 @@ import {
 	PEER_ID_FILENAME,
 	second,
 	PEER_DISCOVERY_INTERVAL,
+	PING_TIMEOUT,
 } from "@canvas-js/core/constants"
 
 import type { P2PConfig } from "../types.js"
@@ -82,10 +83,9 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 
 		metrics: prometheusMetrics({ registry: register }),
 
-		// switch to the canvas protocol prefix in the next minor version
-		// identify: {
-		// 	protocolPrefix: "canvas",
-		// },
+		identify: {
+			protocolPrefix: "canvas",
+		},
 
 		pubsub: gossipsub({
 			emitSelf: false,
@@ -100,7 +100,7 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 			protocolPrefix: "canvas",
 			maxInboundStreams: 32,
 			maxOutboundStreams: 32,
-			timeout: 20 * second,
+			timeout: PING_TIMEOUT,
 		},
 	}
 
