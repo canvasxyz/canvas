@@ -51,19 +51,19 @@
     "./components/messageStore": {
       "import": {
         "browser": "./lib/components/messageStore/browser/index.js",
-        "node": "./lib/components/messageStore/node/index.js"
+        "default": "./lib/components/messageStore/node/index.js"
       }
     },
     "./components/modelStore": {
       "import": {
         "browser": "./lib/components/modelStore/browser/index.js",
-        "node": "./lib/components/modelStore/node/index.js"
+        "default": "./lib/components/modelStore/node/index.js"
       }
     },
     "./components/libp2p": {
       "import": {
         "browser": "./lib/components/libp2p/browser/index.js",
-        "node": "./lib/components/libp2p/node/index.js"
+        "default": "./lib/components/libp2p/node/index.js"
       }
     },
     "./components/vm": {
