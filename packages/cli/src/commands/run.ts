@@ -16,11 +16,13 @@ import { WebSocketServer } from "ws"
 import { Core, CoreOptions } from "@canvas-js/core"
 import { getAPI, handleWebsocketConnection } from "@canvas-js/core/api"
 
+import { testnetBootstrapList } from "@canvas-js/core/bootstrap"
 import * as constants from "@canvas-js/core/constants"
 
 import { getChainImplementations, confirmOrExit, parseSpecArgument, installSpec, CANVAS_HOME } from "../utils.js"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { getReasonPhrase, StatusCodes } from "http-status-codes"
+import { P2PConfig } from "@canvas-js/core/components/libp2p"
 
 export const command = "run <app>"
 export const desc = "Run an app, by path or IPFS hash"
@@ -42,9 +44,19 @@ export const builder = (yargs: Argv) =>
 			desc: "Disable libp2p",
 			default: false,
 		})
+		.option("disable-dht", {
+			type: "boolean",
+			desc: "Disable joining the libp2p DHT",
+			default: false,
+		})
 		.option("disable-ping", {
 			type: "boolean",
-			desc: "Disable peer health check pings",
+			desc: "Disable the libp2p ping service",
+			default: false,
+		})
+		.option("disable-pubsub", {
+			type: "boolean",
+			desc: "Disable the libp2p PubSub mesh",
 			default: false,
 		})
 		.option("install", {
@@ -96,6 +108,10 @@ export const builder = (yargs: Argv) =>
 		.option("static", {
 			type: "string",
 			desc: "Serve a static directory from /, and API routes from /api",
+		})
+		.option("testnet", {
+			type: "boolean",
+			desc: "Bootstrap to the private testnet (requires VPN)",
 		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
@@ -188,21 +204,38 @@ export async function handler(args: Args) {
 		console.log("")
 	}
 
-	const { verbose, replay, unchecked, offline, listen, announce, "disable-ping": disablePingService } = args
+	const options: CoreOptions = {
+		replay: args.replay,
+		offline: directory === null || args.offline,
+		unchecked: args.unchecked,
+		verbose: args.verbose,
+	}
+
+	const p2pConfig: P2PConfig = {
+		disableDHT: args["disable-dht"],
+		disablePing: args["disable-ping"],
+		disablePubSub: args["disable-pubsub"],
+	}
 
 	const validateAddresses = (addresses: (string | number)[]): addresses is string[] =>
 		addresses.every((address) => typeof address === "string")
 
-	if (announce) {
-		assert(validateAddresses(announce))
+	if (args.announce) {
+		assert(validateAddresses(args.announce))
+		p2pConfig.announce = args.announce
 	}
 
-	if (listen) {
-		assert(validateAddresses(listen))
+	if (args.listen) {
+		assert(validateAddresses(args.listen))
+		p2pConfig.listen = args.listen
 	}
 
-	const options: CoreOptions = { replay, offline, unchecked, verbose, disablePingService }
-	const core = await Core.initialize({ chains, directory, uri, spec, listen, announce, ...options })
+	if (args.testnet) {
+		console.log(chalk.yellowBright("[canvas-cli] Using testnet bootstrap servers"), testnetBootstrapList)
+		p2pConfig.bootstrapList = testnetBootstrapList
+	}
+
+	const core = await Core.initialize({ chains, directory, uri, spec, ...p2pConfig, ...options })
 
 	const app = express()
 	app.use(cors())

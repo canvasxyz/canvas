@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/chain-solana",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -9,7 +9,7 @@
     "lib"
   ],
   "dependencies": {
-    "@canvas-js/interfaces": "0.4.2",
+    "@canvas-js/interfaces": "0.4.3",
     "@solana/web3.js": "^1.75.0",
     "bs58": "^5.0.0",
     "safe-stable-stringify": "^2.4.3",

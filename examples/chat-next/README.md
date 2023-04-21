@@ -43,7 +43,7 @@ Create a volume to persist the data in the application. When prompted,
 select a region near your application server:
 
 ```
-fly volumes create canvas_chat_data
+fly volumes create data
 ```
 
 Build and deploy the application:

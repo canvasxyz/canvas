@@ -1,7 +1,7 @@
 {
   "name": "canvas",
   "private": true,
-  "version": "0.4.2",
+  "version": "0.4.3",
   "type": "module",
   "scripts": {
     "dev": "tsc --build --watch",
@@ -21,6 +21,7 @@
     "packages/chain-cosmos",
     "packages/chain-solana",
     "packages/chain-substrate",
+    "examples/chat-advanced",
     "examples/chat-browser",
     "examples/chat-webpack",
     "examples/chat-next",

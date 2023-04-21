@@ -1,23 +1,26 @@
 /**
- * A `ModelType` is a runtime representation of an abstract model field type,
- * ie string values that we use to set the sqlite schema and coerce
- * action arguments.
+ * A `ModelType` is a value-level representation of a model field type.
+ * used as the TypeScript type for model field *types*.
  */
 export type ModelType = "boolean" | "string" | "integer" | "float" | "datetime"
 
 /**
- * An `IndexType` defines a list of indexes to be generated and maintained for a model.
- */
-export type IndexType = (string | string[])[]
-
-/**
- * A `ModelValue` is a type-level representation of concrete model field types, ie
- * a TypeScript type that describes the possible JavaScript values that instantiate
- * the various ModelType options.
+ * A `ModelValue` is a type-level representation of a model field types,
+ * used as the TypeScript type for model field *values*.
  */
 export type ModelValue = null | boolean | number | string
 
 /**
- * A `Model` is a map of property names to `ModelType` types
+ * An `Index` defines a list of database indexes to be generated and maintained for a model.
  */
-export type Model = { id: "string"; updated_at: "datetime"; indexes?: IndexType } & Record<string, ModelType>
+export type Index = string | string[]
+
+/**
+ * A `Model` is a map of property names to `ModelType` types.
+ * All models must have `id: "string"` and `updated_at: "datetime"` properties.
+ */
+export type Model = {
+	id: "string"
+	updated_at: "datetime"
+	indexes?: Index[]
+} & Record<string, ModelType>

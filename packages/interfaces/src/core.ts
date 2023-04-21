@@ -30,6 +30,7 @@ export type ApplicationData = {
 	uri: string
 	peerId: string | null
 	actions: string[]
+	models: Record<string, Record<string, string>>
 	routes: string[]
 	chains: string[]
 	peers: { id: string; protocols?: string[]; addresses?: string[] }[]

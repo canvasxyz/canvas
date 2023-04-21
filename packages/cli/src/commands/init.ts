@@ -3,7 +3,7 @@ import fs from "node:fs"
 import type { Argv } from "yargs"
 
 export const command = "init <filename>"
-export const desc = "Create a sample spec for demonstration purposes"
+export const desc = "Create an example contract"
 
 export const builder = (yargs: Argv) =>
 	yargs.positional("filename", {
