@@ -24,6 +24,7 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
+import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import {
 	DIAL_CONCURRENCY,
 	DIAL_CONCURRENCY_PER_PEER,
@@ -32,8 +33,6 @@ import {
 	minute,
 	second,
 } from "@canvas-js/core/constants"
-
-import { defaultBootstrapList } from "../bootstrap.js"
 
 async function denyDialMultiaddr(multiaddr: Multiaddr) {
 	const transportRoot = multiaddr.decapsulate("/ws")

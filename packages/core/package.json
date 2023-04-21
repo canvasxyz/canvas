@@ -42,6 +42,9 @@
     "./errors": {
       "import": "./lib/errors.js"
     },
+    "./bootstrap": {
+      "import": "./lib/bootstrap.js"
+    },
     "./api": {
       "import": "./lib/api.js"
     },

@@ -15,6 +15,7 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 
+import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import { assert } from "@canvas-js/core/utils"
 import {
 	DIAL_CONCURRENCY,
@@ -24,8 +25,6 @@ import {
 	minute,
 	second,
 } from "@canvas-js/core/constants"
-
-import { defaultBootstrapList } from "../bootstrap.js"
 
 const { base64 } = ethers.utils
 
