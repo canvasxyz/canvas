@@ -48,6 +48,10 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 
+		// identify: {
+		// 	protocolPrefix: "canvas",
+		// },
+
 		dht: kadDHT({
 			protocolPrefix: "/canvas",
 			clientMode: true,

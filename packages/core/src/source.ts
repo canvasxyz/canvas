@@ -66,6 +66,15 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Subscribed to GossipSub topic`))
 		}
 
+		this.libp2p.addEventListener("peer:discovery", async ({ detail: { id } }) => {
+			const protocols = await this.libp2p.peerStore.protoBook.get(id)
+			if (protocols.includes(this.uri)) {
+				console.log(chalk.gray(this.prefix, `Discovered application peer ${id}`))
+
+				this.handlePeerDiscovery(id)
+			}
+		})
+
 		this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
 			if (this.libp2p.peerId.equals(peerId)) {
 				return
@@ -244,11 +253,11 @@ export class Source extends EventEmitter<SourceEvents> {
 		this.pendingSyncPeers.set(id, {})
 		try {
 			await this.syncQueue.add(() => this.sync(peerId))
-			this.syncHistroy.set(id, performance.now())
 		} catch (err) {
 			logErrorMessage(this.prefix, "Sync failed", err)
 		} finally {
 			this.pendingSyncPeers.delete(id)
+			this.syncHistroy.set(id, performance.now())
 		}
 	}
 

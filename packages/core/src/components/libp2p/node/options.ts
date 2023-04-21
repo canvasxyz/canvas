@@ -80,6 +80,16 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 
 		metrics: prometheusMetrics({ registry: register }),
 
+		// identify: {
+		// 	protocolPrefix: "canvas",
+		// },
+
+		dht: kadDHT({
+			protocolPrefix: "/canvas",
+			clientMode: announce.length === 0,
+			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
+		}),
+
 		pubsub: gossipsub({
 			emitSelf: false,
 			fallbackToFloodsub: false,
@@ -87,12 +97,6 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 			globalSignaturePolicy: "StrictSign",
 			msgIdFn: (msg) => sha256(msg.data),
 			msgIdToStrFn: (id) => hex(id),
-		}),
-
-		dht: kadDHT({
-			protocolPrefix: "/canvas",
-			clientMode: announce.length === 0,
-			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
 		}),
 
 		ping: {
