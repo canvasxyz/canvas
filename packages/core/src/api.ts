@@ -127,7 +127,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	}
 
 	if (options.exposeModels) {
-		api.get("/paginated_models/:model", async (req, res) => {
+		api.get("/models/:model", async (req, res) => {
 			const { model: modelName } = req.params
 			if (modelName in core.vm.getModels()) {
 				const rows: Record<string, ModelValue>[] = []
@@ -145,21 +145,6 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 					total,
 					data: rows,
 				})
-			} else {
-				return res.status(StatusCodes.NOT_FOUND).end()
-			}
-		})
-
-		api.get("/models/:model", async (req, res) => {
-			const { model: modelName } = req.params
-			if (modelName in core.vm.getModels()) {
-				const rows: Record<string, ModelValue>[] = []
-				const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : -1
-				for await (const row of core.modelStore.exportModel(modelName, { offset: 0, limit })) {
-					rows.push(row)
-				}
-
-				return res.status(StatusCodes.OK).json(rows)
 			} else {
 				return res.status(StatusCodes.NOT_FOUND).end()
 			}
