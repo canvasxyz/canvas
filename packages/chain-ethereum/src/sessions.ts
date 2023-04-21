@@ -1,6 +1,6 @@
 import { SessionPayload } from "@canvas-js/interfaces"
 import { ethers } from "ethers"
-import siwe from "siwe"
+import * as siwe from "siwe"
 
 export const SiweMessageVersion = "1"
 
