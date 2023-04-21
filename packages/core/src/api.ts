@@ -217,6 +217,19 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			chalk.yellowBright("[canvas-cli] Exposing internal p2p API. This can be abused if made publicly accessible.")
 		)
 
+		api.get("/p2p/mesh", (req, res) => {
+			if (core.libp2p === null) {
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
+				return
+			}
+
+			const { pubsub } = core.libp2p
+			res.json({
+				peers: pubsub.getPeers(),
+				subscribers: Object.fromEntries(pubsub.getTopics().map((topic) => [topic, pubsub.getSubscribers(topic)])),
+			})
+		})
+
 		api.get("/p2p/connections", (req, res) => {
 			if (core.libp2p === null) {
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
