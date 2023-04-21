@@ -28,7 +28,6 @@ import { Source } from "./source.js"
 import { actionType, messageType } from "./codecs.js"
 import { toHex, signalInvalidType, stringify, parseIPFSURI, assert, getCustomActionSchemaName } from "./utils.js"
 import * as constants from "./constants.js"
-import { startPingService } from "./services/ping.js"
 
 export interface CoreConfig extends CoreOptions, P2PConfig {
 	// pass `null` to run in memory (NodeJS only)
@@ -91,8 +90,6 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		if (libp2p !== null && core.sources !== null) {
 			await libp2p.start()
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
-
-			// startPingService({ libp2p, signal: core.controller.signal, verbose })
 		}
 
 		return core
