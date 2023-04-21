@@ -54,8 +54,7 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 
 		dht: kadDHT({
 			protocolPrefix: "/canvas",
-			// clientMode: true,
-			clientMode: false,
+			clientMode: true,
 			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
 		}),
 
