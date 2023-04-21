@@ -22,27 +22,23 @@ import { validate } from "@hyperjump/json-schema/draft-2020-12"
 import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
 import { MessageStore, openMessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
-import { getPeerId, getLibp2pOptions } from "@canvas-js/core/components/libp2p"
+import { getPeerId, getLibp2pOptions, P2PConfig } from "@canvas-js/core/components/libp2p"
 
 import { Source } from "./source.js"
 import { actionType, messageType } from "./codecs.js"
 import { toHex, signalInvalidType, stringify, parseIPFSURI, assert, getCustomActionSchemaName } from "./utils.js"
 import * as constants from "./constants.js"
 
-export interface CoreConfig extends CoreOptions {
+export interface CoreConfig extends CoreOptions, P2PConfig {
 	// pass `null` to run in memory (NodeJS only)
 	directory: string | null
 	spec: string
 
 	uri?: string
 	chains?: ChainImplementation<unknown, unknown>[]
-	listen?: string[]
-	announce?: string[]
-	bootstrapList?: string[]
 }
 
 export interface CoreOptions {
-	disableDHT?: boolean
 	unchecked?: boolean
 	verbose?: boolean
 	offline?: boolean
@@ -66,8 +62,17 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			const peerId = await getPeerId(directory)
 			console.log("[canvas-core]", chalk.bold(`Using PeerId ${peerId}`))
 
-			const { listen, announce, bootstrapList, disableDHT } = config
-			const options = await getLibp2pOptions({ peerId, listen, announce, bootstrapList, disableDHT })
+			// get p2p config
+			const { listen, announce, bootstrapList, disableDHT, disablePing, disablePubSub } = config
+			const options = await getLibp2pOptions(peerId, {
+				listen,
+				announce,
+				bootstrapList,
+				disableDHT,
+				disablePing,
+				disablePubSub,
+			})
+
 			libp2p = await createLibp2p({ ...options, start: false })
 		}
 

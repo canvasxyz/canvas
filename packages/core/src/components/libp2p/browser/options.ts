@@ -30,11 +30,11 @@ import type { P2PConfig } from "../types.js"
 
 const { base64 } = ethers.utils
 
-export async function getLibp2pOptions(config: P2PConfig): Promise<Libp2pOptions> {
+export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promise<Libp2pOptions> {
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
-	return {
-		peerId: config.peerId,
+	const options: Libp2pOptions = {
+		peerId: peerId,
 		addresses: { listen: [], announce: [] },
 
 		connectionManager: {
@@ -47,29 +47,43 @@ export async function getLibp2pOptions(config: P2PConfig): Promise<Libp2pOptions
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
+	}
 
-		dht: kadDHT({
-			protocolPrefix: "/canvas",
-			clientMode: true,
-			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
-		}),
-
-		pubsub: gossipsub({
+	if (config.disablePubSub) {
+		console.log(`[canvas-core] [p2p] Disabling PubSub`)
+	} else {
+		options.pubsub = gossipsub({
 			emitSelf: false,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictSign",
 			msgIdFn: (msg) => sha256(msg.data),
 			msgIdToStrFn: (id) => hex(id),
-		}),
+		})
+	}
 
-		ping: {
+	if (config.disablePing) {
+		console.log(`[canvas-core] [p2p] Disabling ping`)
+	} else {
+		options.ping = {
 			protocolPrefix: "canvas",
 			maxInboundStreams: 32,
 			maxOutboundStreams: 32,
 			timeout: 20 * second,
-		},
+		}
 	}
+
+	if (config.disableDHT) {
+		console.log(`[canvas-core] [p2p] Disabling DHT`)
+	} else {
+		options.dht = kadDHT({
+			protocolPrefix: "/canvas",
+			clientMode: true,
+			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
+		})
+	}
+
+	return options
 }
 
 export async function getPeerId(directory: string | null): Promise<PeerId> {

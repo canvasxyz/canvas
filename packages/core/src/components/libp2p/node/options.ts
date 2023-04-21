@@ -42,7 +42,7 @@ async function denyDialMultiaddr(multiaddr: Multiaddr) {
 	return transportRoot.isThinWaistAddress() && isLoopback(transportRoot)
 }
 
-export async function getLibp2pOptions(config: P2PConfig): Promise<Libp2pOptions> {
+export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promise<Libp2pOptions> {
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
 	const directPeers: { id: PeerId; addrs: Multiaddr[] }[] = []
@@ -73,7 +73,7 @@ export async function getLibp2pOptions(config: P2PConfig): Promise<Libp2pOptions
 	}
 
 	const options: Libp2pOptions = {
-		peerId: config.peerId,
+		peerId: peerId,
 		addresses: { listen, announce },
 
 		connectionGater: { denyDialMultiaddr },
@@ -89,8 +89,12 @@ export async function getLibp2pOptions(config: P2PConfig): Promise<Libp2pOptions
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 
 		metrics: prometheusMetrics({ registry: register }),
+	}
 
-		pubsub: gossipsub({
+	if (config.disablePubSub) {
+		console.log(chalk.yellowBright(`[canvas-core] [p2p] Disabling PubSub`))
+	} else {
+		options.pubsub = gossipsub({
 			directPeers,
 			emitSelf: false,
 			fallbackToFloodsub: false,
@@ -98,18 +102,22 @@ export async function getLibp2pOptions(config: P2PConfig): Promise<Libp2pOptions
 			globalSignaturePolicy: "StrictSign",
 			msgIdFn: (msg) => sha256(msg.data),
 			msgIdToStrFn: (id) => hex(id),
-		}),
+		})
+	}
 
-		ping: {
+	if (config.disablePing) {
+		console.log(chalk.yellowBright(`[canvas-core] [p2p] Disabling ping`))
+	} else {
+		options.ping = {
 			protocolPrefix: "canvas",
 			maxInboundStreams: 32,
 			maxOutboundStreams: 32,
 			timeout: 20 * second,
-		},
+		}
 	}
 
 	if (config.disableDHT) {
-		console.log(`[canvas-core] Disabling DHT`)
+		console.log(chalk.yellowBright(`[canvas-core] Disabling DHT`))
 	} else {
 		options.dht = kadDHT({
 			protocolPrefix: "/canvas",
