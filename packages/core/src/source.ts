@@ -8,7 +8,6 @@ import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { StreamHandler } from "@libp2p/interface-registrar"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
-import { CodeError } from "@libp2p/interfaces/errors"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { CID } from "multiformats/cid"
 
@@ -63,25 +62,9 @@ export class Source extends EventEmitter<SourceEvents> {
 
 	public async start() {
 		this.libp2p.pubsub.subscribe(this.uri)
-		this.libp2p.pubsub.addEventListener("message", this.handleGossipMessage)
 		if (this.options.verbose) {
 			console.log(chalk.gray(this.prefix, `Subscribed to GossipSub topic`))
 		}
-
-		this.libp2p.addEventListener("peer:discovery", async ({ detail: { id } }) => {
-			if (this.libp2p.peerId.equals(id)) {
-				return
-			}
-
-			const protocols = await this.libp2p.peerStore.protoBook.get(id)
-			if (protocols.includes(this.protocol)) {
-				if (this.options.verbose) {
-					console.log(chalk.gray(this.prefix, `Discovered application peer ${id}`))
-				}
-
-				this.handlePeerDiscovery(id)
-			}
-		})
 
 		this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
 			if (this.libp2p.peerId.equals(peerId)) {
@@ -99,6 +82,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			}
 		})
 
+		this.libp2p.pubsub.addEventListener("message", this.handleGossipMessage)
 		this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
 			if (this.libp2p.peerId.equals(peerId)) {
 				return
@@ -127,26 +111,15 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
 		}
 
-		await this.startServices()
-	}
-
-	private async startServices() {
-		let mode: string | null = null
-		try {
-			mode = await this.libp2p.dht.getMode()
-		} catch (err) {
-			if (err instanceof CodeError && err.code === "ERR_DHT_DISABLED") {
-				return
-			} else {
-				throw err
-			}
-		}
-
+		const mode = await this.libp2p.dht.getMode()
 		if (mode === "server") {
-			startAnnounceService(this.libp2p, this.cid, { signal: this.controller.signal })
+			startAnnounceService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
 		}
 
-		startDiscoveryService(this.libp2p, this.cid, {
+		startDiscoveryService({
+			libp2p: this.libp2p,
+			cid: this.cid,
+			topic: this.uri,
 			signal: this.controller.signal,
 			callback: (peerId) => this.handlePeerDiscovery(peerId),
 		})
