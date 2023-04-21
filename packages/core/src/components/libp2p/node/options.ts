@@ -45,17 +45,6 @@ async function denyDialMultiaddr(multiaddr: Multiaddr) {
 export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promise<Libp2pOptions> {
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
-	const directPeers: { id: PeerId; addrs: Multiaddr[] }[] = []
-	for (const address of bootstrapList) {
-		const addr = multiaddr(address)
-		const bootstrapPeerId = addr.getPeerId()
-		if (bootstrapPeerId === null) {
-			throw new Error("bootstrap address must include peer id")
-		}
-
-		directPeers.push({ id: peerIdFromString(bootstrapPeerId), addrs: [addr] })
-	}
-
 	if (config.listen === undefined) {
 		console.log(`[canvas-core] [p2p] No --listen address provided. Using bootstrap servers as public relays.`)
 	}
@@ -95,7 +84,6 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 		console.log(chalk.yellowBright(`[canvas-core] [p2p] Disabling PubSub`))
 	} else {
 		options.pubsub = gossipsub({
-			directPeers,
 			emitSelf: false,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
