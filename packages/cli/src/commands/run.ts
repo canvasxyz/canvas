@@ -214,7 +214,12 @@ export async function handler(args: Args) {
 		disablePingService: args["disable-ping"],
 	}
 
-	const bootstrapList = args.testnet ? testnetBootstrapList : defaultBootstrapList
+	let bootstrapList = defaultBootstrapList
+	if (args.testnet) {
+		console.log(chalk.yellowBright("[canvas-cli] Using testnet bootstrap servers"), testnetBootstrapList)
+		bootstrapList = testnetBootstrapList
+	}
+
 	const core = await Core.initialize({ chains, directory, uri, spec, listen, announce, bootstrapList, ...options })
 
 	const app = express()
