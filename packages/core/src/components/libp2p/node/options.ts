@@ -78,6 +78,7 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 
 		metrics: prometheusMetrics({ registry: register }),
 
+		// switch to the canvas protocol prefix in the next minor version
 		// identify: {
 		// 	protocolPrefix: "canvas",
 		// },
