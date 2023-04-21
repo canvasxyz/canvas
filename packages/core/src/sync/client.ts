@@ -4,7 +4,7 @@ import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
 
-import RPC from "@canvas-js/core/rpc/sync"
+import RPC from "#rpc/sync"
 import { assert } from "@canvas-js/core/utils"
 import type { Node } from "@canvas-js/core/components/messageStore"
 

@@ -15,59 +15,30 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "imports": {
-    "#sqlite3": {
-      "types": "./sqlite/sqlite3-bundler-friendly.mts",
-      "default": "./sqlite/sqlite3-bundler-friendly.mjs"
-    }
+    "#sqlite3": "./sqlite/sqlite3-bundler-friendly.mjs",
+    "#rpc/sync": "./rpc/sync/index.cjs"
   },
   "exports": {
-    ".": {
-      "import": "./lib/index.js"
-    },
-    "./rpc/sync": {
-      "default": "./rpc/sync/index.cjs"
-    },
-    "./sync": {
-      "import": "./lib/sync/index.js"
-    },
-    "./utils": {
-      "import": "./lib/utils.js"
-    },
-    "./constants": {
-      "import": "./lib/constants.js"
-    },
-    "./codecs": {
-      "import": "./lib/codecs.js"
-    },
-    "./errors": {
-      "import": "./lib/errors.js"
-    },
-    "./bootstrap": {
-      "import": "./lib/bootstrap.js"
-    },
-    "./api": {
-      "import": "./lib/api.js"
-    },
+    ".": "./lib/index.js",
+    "./sync": "./lib/sync/index.js",
+    "./utils": "./lib/utils.js",
+    "./constants": "./lib/constants.js",
+    "./codecs": "./lib/codecs.js",
+    "./errors": "./lib/errors.js",
+    "./bootstrap": "./lib/bootstrap.js",
+    "./api": "./lib/api.js",
+    "./components/vm": "./lib/components/vm/index.js",
     "./components/messageStore": {
-      "import": {
         "browser": "./lib/components/messageStore/browser/index.js",
         "default": "./lib/components/messageStore/node/index.js"
-      }
     },
     "./components/modelStore": {
-      "import": {
-        "browser": "./lib/components/modelStore/browser/index.js",
-        "default": "./lib/components/modelStore/node/index.js"
-      }
+      "browser": "./lib/components/modelStore/browser/index.js",
+      "default": "./lib/components/modelStore/node/index.js"
     },
     "./components/libp2p": {
-      "import": {
-        "browser": "./lib/components/libp2p/browser/index.js",
-        "default": "./lib/components/libp2p/node/index.js"
-      }
-    },
-    "./components/vm": {
-      "import": "./lib/components/vm/index.js"
+      "browser": "./lib/components/libp2p/browser/index.js",
+      "default": "./lib/components/libp2p/node/index.js"
     }
   },
   "sideEffects": false,

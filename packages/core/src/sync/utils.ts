@@ -2,7 +2,7 @@ import { equals } from "uint8arrays/equals"
 
 import type { Message } from "@canvas-js/interfaces"
 import type { Node } from "@canvas-js/core/components/messageStore"
-import RPC from "@canvas-js/core/rpc/sync"
+import RPC from "#rpc/sync"
 
 const timestampBuffer = new ArrayBuffer(8)
 const timestampBufferView = new DataView(timestampBuffer)
