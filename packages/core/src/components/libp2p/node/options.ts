@@ -57,19 +57,19 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 	}
 
 	if (config.listen === undefined) {
-		console.log(`[canvas-core] No --listen address provided. Using bootstrap servers as public relays.`)
+		console.log(`[canvas-core] [p2p] No --listen address provided. Using bootstrap servers as public relays.`)
 	}
 
 	const discoverRelays = config.announce ? 0 : bootstrapList.length
 
 	const announce = config.announce ?? []
 	for (const address of announce) {
-		console.log(chalk.gray(`[canvas-core] Announcing on ${address}`))
+		console.log(chalk.gray(`[canvas-core] [p2p] Announcing on ${address}`))
 	}
 
 	const listen = config.listen ?? []
 	for (const address of listen) {
-		console.log(chalk.gray(`[canvas-core] Listening on ${address}`))
+		console.log(chalk.gray(`[canvas-core] [p2p] Listening on ${address}`))
 	}
 
 	const options: Libp2pOptions = {
@@ -117,7 +117,7 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 	}
 
 	if (config.disableDHT) {
-		console.log(chalk.yellowBright(`[canvas-core] Disabling DHT`))
+		console.log(chalk.yellowBright(`[canvas-core] [p2p] Disabling DHT`))
 	} else {
 		options.dht = kadDHT({
 			protocolPrefix: "/canvas",
@@ -136,7 +136,7 @@ export async function getPeerId(directory: string | null): Promise<PeerId> {
 
 	if (directory === null) {
 		const peerId = await createEd25519PeerId()
-		console.log(`[canvas-core] Using temporary PeerId ${peerId}`)
+		console.log(`[canvas-core] [p2p] Using temporary PeerId ${peerId}`)
 		return peerId
 	}
 
@@ -145,7 +145,7 @@ export async function getPeerId(directory: string | null): Promise<PeerId> {
 		const peerId = await createFromProtobuf(fs.readFileSync(peerIdPath))
 		return peerId
 	} else {
-		console.log(`[canvas-core] Creating new PeerID at ${peerIdPath}`)
+		console.log(`[canvas-core] [p2p] Creating new PeerID at ${peerIdPath}`)
 		const peerId = await createEd25519PeerId()
 		fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
 		return peerId

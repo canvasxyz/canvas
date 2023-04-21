@@ -95,11 +95,11 @@ export async function getPeerId(directory: string | null): Promise<PeerId> {
 		const peerId = await createEd25519PeerId()
 		const privateKey = exportToProtobuf(peerId)
 		localStorage.setItem(localStorageKey, base64.encode(privateKey))
-		console.log(`[canvas-core] Created new peer id ${peerId}`)
+		console.log(`[canvas-core] [p2p] Created new peer id ${peerId}`)
 		return peerId
 	} else {
 		const peerId = await createFromProtobuf(base64.decode(item))
-		console.log(`[canvas-core] Found existing peer id ${peerId}`)
+		console.log(`[canvas-core] [p2p] Found existing peer id ${peerId}`)
 		return peerId
 	}
 }
