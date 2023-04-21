@@ -43,9 +43,9 @@ export const builder = (yargs: Argv) =>
 			desc: "Disable libp2p",
 			default: false,
 		})
-		.option("disable-ping", {
+		.option("disable-dht", {
 			type: "boolean",
-			desc: "Disable peer health check pings",
+			desc: "Disable joining the DHT",
 			default: false,
 		})
 		.option("install", {
@@ -211,7 +211,7 @@ export async function handler(args: Args) {
 		offline: directory === null || args.offline,
 		unchecked: args.unchecked,
 		verbose: args.verbose,
-		disablePingService: args["disable-ping"],
+		disableDHT: args["disable-dht"],
 	}
 
 	let bootstrapList = defaultBootstrapList

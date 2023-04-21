@@ -11,9 +11,10 @@ import { register } from "prom-client"
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
 
+import { peerIdFromString } from "@libp2p/peer-id"
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
-import { Multiaddr } from "@multiformats/multiaddr"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { circuitRelayTransport } from "libp2p/circuit-relay"
 import { webSockets } from "@libp2p/websockets"
@@ -34,18 +35,26 @@ import {
 	second,
 } from "@canvas-js/core/constants"
 
+import type { P2PConfig } from "../types.js"
+
 async function denyDialMultiaddr(multiaddr: Multiaddr) {
 	const transportRoot = multiaddr.decapsulate("/ws")
 	return transportRoot.isThinWaistAddress() && isLoopback(transportRoot)
 }
 
-export async function getLibp2pOptions(config: {
-	peerId: PeerId
-	listen?: string[]
-	announce?: string[]
-	bootstrapList?: string[]
-}): Promise<Libp2pOptions> {
+export async function getLibp2pOptions(config: P2PConfig): Promise<Libp2pOptions> {
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
+
+	const directPeers: { id: PeerId; addrs: Multiaddr[] }[] = []
+	for (const address of bootstrapList) {
+		const addr = multiaddr(address)
+		const bootstrapPeerId = addr.getPeerId()
+		if (bootstrapPeerId === null) {
+			throw new Error("bootstrap address must include peer id")
+		}
+
+		directPeers.push({ id: peerIdFromString(bootstrapPeerId), addrs: [addr] })
+	}
 
 	if (config.listen === undefined) {
 		console.log(`[canvas-core] No --listen address provided. Using bootstrap servers as public relays.`)
@@ -63,7 +72,7 @@ export async function getLibp2pOptions(config: {
 		console.log(chalk.gray(`[canvas-core] Listening on ${address}`))
 	}
 
-	return {
+	const options: Libp2pOptions = {
 		peerId: config.peerId,
 		addresses: { listen, announce },
 
@@ -79,15 +88,10 @@ export async function getLibp2pOptions(config: {
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 
-		dht: kadDHT({
-			protocolPrefix: "/canvas",
-			clientMode: announce.length === 0,
-			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
-		}),
-
 		metrics: prometheusMetrics({ registry: register }),
 
 		pubsub: gossipsub({
+			directPeers,
 			emitSelf: false,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
@@ -103,6 +107,18 @@ export async function getLibp2pOptions(config: {
 			timeout: 20 * second,
 		},
 	}
+
+	if (config.disableDHT) {
+		console.log(`[canvas-core] Disabling DHT`)
+	} else {
+		options.dht = kadDHT({
+			protocolPrefix: "/canvas",
+			clientMode: announce.length === 0,
+			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
+		})
+	}
+
+	return options
 }
 
 export async function getPeerId(directory: string | null): Promise<PeerId> {

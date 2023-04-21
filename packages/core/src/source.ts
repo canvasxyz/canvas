@@ -5,9 +5,10 @@ import { anySignal } from "any-signal"
 
 import type { Libp2p } from "libp2p"
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
+import type { StreamHandler } from "@libp2p/interface-registrar"
 import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
-import type { StreamHandler } from "@libp2p/interface-registrar"
+import { CodeError } from "@libp2p/interfaces/errors"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { CID } from "multiformats/cid"
 
@@ -75,7 +76,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			const protocols = await this.libp2p.peerStore.protoBook.get(id)
 			if (protocols.includes(this.protocol)) {
 				if (this.options.verbose) {
-					console.log(chalk.gray(this.prefix, `Discovered peer ${id}`))
+					console.log(chalk.gray(this.prefix, `Discovered application peer ${id}`))
 				}
 
 				this.handlePeerDiscovery(id)
@@ -110,13 +111,13 @@ export class Source extends EventEmitter<SourceEvents> {
 
 			if (subscription.subscribe) {
 				if (this.options.verbose) {
-					console.log(chalk.gray(this.prefix, `Peer ${peerId} joined the GossipSub topic`))
+					console.log(chalk.blueBright(this.prefix, `Peer ${peerId} joined the GossipSub topic`))
 				}
 
 				this.handlePeerDiscovery(peerId)
 			} else {
 				if (this.options.verbose) {
-					console.log(chalk.gray(this.prefix, `Peer ${peerId} left the GossipSub topic`))
+					console.log(chalk.blueBright(this.prefix, `Peer ${peerId} left the GossipSub topic`))
 				}
 			}
 		})
@@ -126,7 +127,21 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
 		}
 
-		const mode = await this.libp2p.dht.getMode()
+		await this.startServices()
+	}
+
+	private async startServices() {
+		let mode: string | null = null
+		try {
+			mode = await this.libp2p.dht.getMode()
+		} catch (err) {
+			if (err instanceof CodeError && err.code === "ERR_DHT_DISABLED") {
+				return
+			} else {
+				throw err
+			}
+		}
+
 		if (mode === "server") {
 			startAnnounceService(this.libp2p, this.cid, { signal: this.controller.signal })
 		}

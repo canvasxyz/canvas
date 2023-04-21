@@ -26,14 +26,11 @@ import {
 	second,
 } from "@canvas-js/core/constants"
 
+import type { P2PConfig } from "../types.js"
+
 const { base64 } = ethers.utils
 
-export async function getLibp2pOptions(config: {
-	peerId: PeerId
-	listen?: string[]
-	announce?: string[]
-	bootstrapList?: string[]
-}): Promise<Libp2pOptions> {
+export async function getLibp2pOptions(config: P2PConfig): Promise<Libp2pOptions> {
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
 	return {

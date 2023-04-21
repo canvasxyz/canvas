@@ -23,7 +23,6 @@ import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
 import { MessageStore, openMessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
 import { getPeerId, getLibp2pOptions } from "@canvas-js/core/components/libp2p"
-import { startPingService } from "./services/ping.js"
 
 import { Source } from "./source.js"
 import { actionType, messageType } from "./codecs.js"
@@ -43,16 +42,16 @@ export interface CoreConfig extends CoreOptions {
 }
 
 export interface CoreOptions {
+	disableDHT?: boolean
 	unchecked?: boolean
 	verbose?: boolean
 	offline?: boolean
 	replay?: boolean
-	disablePingService?: boolean
 }
 
 export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	public static async initialize(config: CoreConfig) {
-		const { directory, spec, offline, verbose, unchecked, disablePingService } = config
+		const { directory, spec, offline, verbose, unchecked } = config
 
 		const chains = config.chains ?? [new EthereumChainImplementation()]
 		const cid = await Hash.of(spec).then(CID.parse)
@@ -67,12 +66,12 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			const peerId = await getPeerId(directory)
 			console.log("[canvas-core]", chalk.bold(`Using PeerId ${peerId}`))
 
-			const { listen, announce, bootstrapList } = config
-			const options = await getLibp2pOptions({ peerId, listen, announce, bootstrapList })
+			const { listen, announce, bootstrapList, disableDHT } = config
+			const options = await getLibp2pOptions({ peerId, listen, announce, bootstrapList, disableDHT })
 			libp2p = await createLibp2p({ ...options, start: false })
 		}
 
-		const options = { verbose, unchecked, disablePingService }
+		const options = { verbose, unchecked }
 		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, options)
 
 		if (config.replay) {
@@ -93,11 +92,6 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		if (libp2p !== null && core.sources !== null) {
 			await libp2p.start()
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
-
-			console.log(core.options.disablePingService)
-			if (!core.options.disablePingService) {
-				startPingService(libp2p, { verbose, signal: core.controller.signal })
-			}
 		}
 
 		return core
