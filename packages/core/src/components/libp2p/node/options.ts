@@ -50,8 +50,6 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 		)
 	}
 
-	const discoverRelays = config.announce ? 0 : bootstrapList.length
-
 	const announce = config.announce ?? []
 	for (const address of announce) {
 		console.log(chalk.gray(`[canvas-core] [p2p] Announcing on ${address}`))
@@ -73,12 +71,23 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
 		},
 
-		transports: [webSockets(), circuitRelayTransport({ discoverRelays })],
+		transports: [webSockets(), circuitRelayTransport({ discoverRelays: announce.length === 0 ? 1 : 0 })],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 
 		metrics: prometheusMetrics({ registry: register }),
+
+		// switch to the canvas protocol prefix in the next minor version
+		// identify: {
+		// 	protocolPrefix: "canvas",
+		// },
+
+		dht: kadDHT({
+			protocolPrefix: "/canvas",
+			clientMode: announce.length === 0,
+			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
+		}),
 
 		pubsub: gossipsub({
 			emitSelf: false,
@@ -87,12 +96,6 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 			globalSignaturePolicy: "StrictSign",
 			msgIdFn: (msg) => sha256(msg.data),
 			msgIdToStrFn: (id) => hex(id),
-		}),
-
-		dht: kadDHT({
-			protocolPrefix: "/canvas",
-			clientMode: announce.length === 0,
-			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
 		}),
 
 		ping: {

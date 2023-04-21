@@ -244,11 +244,11 @@ export class Source extends EventEmitter<SourceEvents> {
 		this.pendingSyncPeers.set(id, {})
 		try {
 			await this.syncQueue.add(() => this.sync(peerId))
-			this.syncHistroy.set(id, performance.now())
 		} catch (err) {
 			logErrorMessage(this.prefix, "Sync failed", err)
 		} finally {
 			this.pendingSyncPeers.delete(id)
+			this.syncHistroy.set(id, performance.now())
 		}
 	}
 
