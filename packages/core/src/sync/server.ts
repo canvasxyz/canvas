@@ -34,7 +34,7 @@ export async function handleIncomingStream(
 		}
 	}
 
-	await pipe(stream, lp.decode(), handle, lp.encode(), stream)
+	await pipe(lp.encode(pipe(lp.decode(stream.source), handle)), stream)
 }
 
 async function handleRequest(req: RPC.Request, txn: ReadOnlyTransaction): Promise<RPC.Response> {
