@@ -51,16 +51,20 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 			pubsubPeerDiscovery({ interval: PEER_DISCOVERY_REFRESH_INTERVAL, topics: [PEER_DISCOVERY_TOPIC] }),
 		],
 
-		identify: {
-			protocolPrefix: "canvas",
-		},
-
 		pubsub: gossipsub({
 			emitSelf: false,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictSign",
 		}),
+
+		identify: {
+			protocolPrefix: "canvas",
+		},
+
+		fetch: {
+			protocolPrefix: "canvas",
+		},
 
 		ping: {
 			protocolPrefix: "canvas",

@@ -21,7 +21,7 @@ import {
 	SYNC_COOLDOWN_PERIOD,
 } from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
-import { toHex, assert, logErrorMessage, CacheMap, wait } from "@canvas-js/core/utils"
+import { toHex, assert, logErrorMessage, CacheMap, wait, retry } from "@canvas-js/core/utils"
 import { sync, handleIncomingStream } from "@canvas-js/core/sync"
 // import { startAnnounceService } from "./services/announce.js"
 // import { startDiscoveryService } from "./services/discovery.js"
@@ -349,6 +349,7 @@ export class Source extends EventEmitter<SourceEvents> {
 
 		try {
 			const connection = await this.libp2p.dial(peerId, { signal })
+
 			try {
 				const stream = await connection.newStream(this.protocol, { signal })
 				return stream

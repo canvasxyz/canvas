@@ -75,16 +75,20 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 
 		metrics: prometheusMetrics({ registry: register }),
 
-		identify: {
-			protocolPrefix: "canvas",
-		},
-
 		pubsub: gossipsub({
 			emitSelf: false,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictSign",
 		}),
+
+		identify: {
+			protocolPrefix: "canvas",
+		},
+
+		fetch: {
+			protocolPrefix: "canvas",
+		},
 
 		ping: {
 			protocolPrefix: "canvas",
