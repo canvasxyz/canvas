@@ -22,7 +22,6 @@ export const PEER_DISCOVERY_REFRESH_DELAY = 5 * second
 // don't sync with any one peer more often than this
 export const SYNC_COOLDOWN_PERIOD = 10 * second
 
-export const PING_INTERVAL = 5 * minute
 export const DIAL_TIMEOUT = 20 * second
 export const PING_TIMEOUT = 10 * second
 
@@ -30,4 +29,4 @@ export const MIN_CONNECTIONS = 5
 export const MAX_CONNECTIONS = 300
 
 export const DIAL_CONCURRENCY = 10
-export const DIAL_CONCURRENCY_PER_PEER = 3
+export const DIAL_CONCURRENCY_PER_PEER = 1
