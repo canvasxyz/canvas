@@ -1,8 +1,6 @@
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
 
-import { sha256 } from "@noble/hashes/sha256"
-import { bytesToHex as hex } from "@noble/hashes/utils"
 import { ethers } from "ethers"
 
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
@@ -13,7 +11,7 @@ import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
-import { kadDHT } from "@libp2p/kad-dht"
+import { pubsubPeerDiscovery } from "@libp2p/pubsub-peer-discovery"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import { assert } from "@canvas-js/core/utils"
@@ -21,24 +19,26 @@ import {
 	DIAL_CONCURRENCY,
 	DIAL_CONCURRENCY_PER_PEER,
 	MIN_CONNECTIONS,
+	MAX_CONNECTIONS,
 	PEER_ID_FILENAME,
-	minute,
-	second,
+	PEER_DISCOVERY_INTERVAL,
+	PEER_DISCOVERY_TOPIC,
+	PING_TIMEOUT,
 } from "@canvas-js/core/constants"
 
 import type { P2PConfig } from "../types.js"
 
-const { base64 } = ethers.utils
-
 export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promise<Libp2pOptions> {
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
+	assert(bootstrapList.length > 0, "bootstrap list cannot be empty")
 
 	const options: Libp2pOptions = {
 		peerId: peerId,
 		addresses: { listen: [], announce: [] },
 
 		connectionManager: {
-			minConnections: MIN_CONNECTIONS,
+			minConnections: config.minConnections ?? MIN_CONNECTIONS,
+			maxConnections: config.maxConnections ?? MAX_CONNECTIONS,
 			autoDialConcurrency: DIAL_CONCURRENCY,
 			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
 		},
@@ -46,33 +46,27 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 		transports: [webSockets(), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
-		peerDiscovery: [bootstrap({ list: bootstrapList })],
+		peerDiscovery: [
+			bootstrap({ list: bootstrapList }),
+			pubsubPeerDiscovery({ interval: PEER_DISCOVERY_INTERVAL, topics: [PEER_DISCOVERY_TOPIC] }),
+		],
 
-		// switch to the canvas protocol prefix in the next minor version
-		// identify: {
-		// 	protocolPrefix: "canvas",
-		// },
-
-		dht: kadDHT({
-			protocolPrefix: "/canvas",
-			clientMode: true,
-			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
-		}),
+		identify: {
+			protocolPrefix: "canvas",
+		},
 
 		pubsub: gossipsub({
 			emitSelf: false,
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictSign",
-			msgIdFn: (msg) => sha256(msg.data),
-			msgIdToStrFn: (id) => hex(id),
 		}),
 
 		ping: {
 			protocolPrefix: "canvas",
 			maxInboundStreams: 32,
 			maxOutboundStreams: 32,
-			timeout: 20 * second,
+			timeout: PING_TIMEOUT,
 		},
 	}
 
@@ -87,11 +81,11 @@ export async function getPeerId(directory: string | null): Promise<PeerId> {
 	if (item === null) {
 		const peerId = await createEd25519PeerId()
 		const privateKey = exportToProtobuf(peerId)
-		localStorage.setItem(localStorageKey, base64.encode(privateKey))
+		localStorage.setItem(localStorageKey, ethers.utils.base64.encode(privateKey))
 		console.log(`[canvas-core] [p2p] Created new peer id ${peerId}`)
 		return peerId
 	} else {
-		const peerId = await createFromProtobuf(base64.decode(item))
+		const peerId = await createFromProtobuf(ethers.utils.base64.decode(item))
 		console.log(`[canvas-core] [p2p] Found existing peer id ${peerId}`)
 		return peerId
 	}

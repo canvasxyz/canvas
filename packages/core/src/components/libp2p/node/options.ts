@@ -1,19 +1,14 @@
 import path from "node:path"
 import fs from "node:fs"
 
-import { sha256 } from "@noble/hashes/sha256"
-import { bytesToHex as hex } from "@noble/hashes/utils"
-
 import chalk from "chalk"
 
 import { register } from "prom-client"
 
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
-import type { Multiaddr } from "@multiformats/multiaddr"
 
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
-import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 
 import { circuitRelayTransport } from "libp2p/circuit-relay"
 import { webSockets } from "@libp2p/websockets"
@@ -25,26 +20,23 @@ import { pubsubPeerDiscovery } from "@libp2p/pubsub-peer-discovery"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
+import { assert } from "@canvas-js/core/utils"
 import {
+	MAX_CONNECTIONS,
+	MIN_CONNECTIONS,
 	DIAL_CONCURRENCY,
 	DIAL_CONCURRENCY_PER_PEER,
 	PEER_DISCOVERY_TOPIC,
-	MIN_CONNECTIONS,
 	PEER_ID_FILENAME,
-	second,
 	PEER_DISCOVERY_INTERVAL,
 	PING_TIMEOUT,
 } from "@canvas-js/core/constants"
 
 import type { P2PConfig } from "../types.js"
 
-async function denyDialMultiaddr(multiaddr: Multiaddr) {
-	const transportRoot = multiaddr.decapsulate("/ws")
-	return transportRoot.isThinWaistAddress() && isLoopback(transportRoot)
-}
-
 export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promise<Libp2pOptions> {
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
+	assert(bootstrapList.length > 0, "bootstrap list cannot be empty")
 
 	if (config.listen === undefined) {
 		console.log(
@@ -66,9 +58,9 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 		peerId: peerId,
 		addresses: { listen, announce },
 
-		connectionGater: { denyDialMultiaddr },
 		connectionManager: {
-			minConnections: MIN_CONNECTIONS,
+			minConnections: config.minConnections ?? MIN_CONNECTIONS,
+			maxConnections: config.maxConnections ?? MAX_CONNECTIONS,
 			autoDialConcurrency: DIAL_CONCURRENCY,
 			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
 		},
@@ -92,8 +84,6 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictSign",
-			msgIdFn: (msg) => sha256(msg.data),
-			msgIdToStrFn: (id) => hex(id),
 		}),
 
 		ping: {
