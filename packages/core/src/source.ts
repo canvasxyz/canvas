@@ -126,15 +126,8 @@ export class Source extends EventEmitter<SourceEvents> {
 		try {
 			await wait(PEER_DISCOVERY_REFRESH_DELAY, { signal: this.controller.signal })
 			while (!this.controller.signal.aborted) {
-				console.log(
-					prefix,
-					`Getting GossipSub peers...`,
-					this.libp2p.pubsub.getSubscribers(this.uri),
-					this.libp2p.pubsub.getPeers()
-				)
-
 				for (const peerId of this.libp2p.pubsub.getSubscribers(this.uri)) {
-					console.log(prefix, `Found peer ${peerId} via GossipSub subscription`)
+					console.log(prefix, `Found peer ${peerId} in GossipSub mesh`)
 					this.handlePeerDiscovery(peerId)
 				}
 
