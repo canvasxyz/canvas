@@ -15,10 +15,12 @@ export const minute = second * 60
 export const hour = minute * 60
 
 export const PEER_DISCOVERY_TOPIC = "/canvas/discovery"
-export const PEER_DISCOVERY_INTERVAL = 5 * second
+export const PEER_DISCOVERY_REFRESH_INTERVAL = 10 * second
+export const PEER_DISCOVERY_PUBLISH_INTERVAL = 30 * second
+export const PEER_DISCOVERY_REFRESH_DELAY = 5 * second
 
 // don't sync with any one peer more often than this
-export const SYNC_COOLDOWN_PERIOD = 30 * second
+export const SYNC_COOLDOWN_PERIOD = 10 * second
 
 export const PING_INTERVAL = 5 * minute
 export const DIAL_TIMEOUT = 20 * second

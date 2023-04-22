@@ -14,9 +14,14 @@ import { CID } from "multiformats/cid"
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
 
-import { DIAL_TIMEOUT, SYNC_COOLDOWN_PERIOD } from "@canvas-js/core/constants"
+import {
+	DIAL_TIMEOUT,
+	PEER_DISCOVERY_REFRESH_DELAY,
+	PEER_DISCOVERY_REFRESH_INTERVAL,
+	SYNC_COOLDOWN_PERIOD,
+} from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
-import { toHex, assert, logErrorMessage, CacheMap } from "@canvas-js/core/utils"
+import { toHex, assert, logErrorMessage, CacheMap, wait } from "@canvas-js/core/utils"
 import { sync, handleIncomingStream } from "@canvas-js/core/sync"
 // import { startAnnounceService } from "./services/announce.js"
 // import { startDiscoveryService } from "./services/discovery.js"
@@ -111,18 +116,37 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
 		}
 
-		// const mode = await this.libp2p.dht.getMode()
-		// if (mode === "server") {
-		// 	startAnnounceService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
-		// }
+		this.startDiscoveryService()
+	}
 
-		// startDiscoveryService({
-		// 	libp2p: this.libp2p,
-		// 	cid: this.cid,
-		// 	topic: this.uri,
-		// 	signal: this.controller.signal,
-		// 	callback: (peerId) => this.handlePeerDiscovery(peerId),
-		// })
+	private async startDiscoveryService() {
+		const prefix = chalk.redBright(`[canvas-core] [${this.cid}] [discovery]`)
+		console.log(prefix, `Staring discovery service`)
+
+		try {
+			await wait(PEER_DISCOVERY_REFRESH_DELAY, { signal: this.controller.signal })
+			while (!this.controller.signal.aborted) {
+				console.log(
+					prefix,
+					`Getting GossipSub peers...`,
+					this.libp2p.pubsub.getSubscribers(this.uri),
+					this.libp2p.pubsub.getPeers()
+				)
+
+				for (const peerId of this.libp2p.pubsub.getSubscribers(this.uri)) {
+					console.log(prefix, `Found peer ${peerId} via GossipSub subscription`)
+					this.handlePeerDiscovery(peerId)
+				}
+
+				await wait(PEER_DISCOVERY_REFRESH_INTERVAL, { signal: this.controller.signal })
+			}
+		} catch (err) {
+			if (this.controller.signal.aborted) {
+				console.log(prefix, `Service aborted`)
+			} else {
+				logErrorMessage(prefix, chalk.red(`Service crashed`), err)
+			}
+		}
 	}
 
 	public async stop() {

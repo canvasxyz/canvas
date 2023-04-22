@@ -28,7 +28,7 @@ import {
 	DIAL_CONCURRENCY_PER_PEER,
 	PEER_DISCOVERY_TOPIC,
 	PEER_ID_FILENAME,
-	PEER_DISCOVERY_INTERVAL,
+	PEER_DISCOVERY_REFRESH_INTERVAL,
 	PING_TIMEOUT,
 } from "@canvas-js/core/constants"
 
@@ -70,7 +70,7 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 		streamMuxers: [mplex()],
 		peerDiscovery: [
 			bootstrap({ list: bootstrapList }),
-			pubsubPeerDiscovery({ interval: PEER_DISCOVERY_INTERVAL, topics: [PEER_DISCOVERY_TOPIC] }),
+			pubsubPeerDiscovery({ interval: PEER_DISCOVERY_REFRESH_INTERVAL, topics: [PEER_DISCOVERY_TOPIC] }),
 		],
 
 		metrics: prometheusMetrics({ registry: register }),
