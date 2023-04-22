@@ -6,7 +6,7 @@ import { anySignal } from "any-signal"
 import type { Libp2p } from "libp2p"
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { StreamHandler } from "@libp2p/interface-registrar"
-import type { Stream } from "@libp2p/interface-connection"
+import type { Connection, Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { CID } from "multiformats/cid"
@@ -120,7 +120,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	}
 
 	private async startDiscoveryService() {
-		const prefix = chalk.redBright(`[canvas-core] [${this.cid}] [discovery]`)
+		const prefix = chalk.cyan(`[canvas-core] [${this.cid}] [discovery]`)
 		console.log(prefix, `Staring discovery service`)
 
 		try {
@@ -256,13 +256,24 @@ export class Source extends EventEmitter<SourceEvents> {
 	private async handlePeerDiscovery(peerId: PeerId) {
 		const id = peerId.toString()
 		if (this.pendingSyncPeers.has(id)) {
+			if (this.options.verbose) {
+				console.log(chalk.gray(this.prefix, `Already queued sync for ${id}`))
+			}
+
 			return
 		}
 
 		const lastSyncMark = this.syncHistroy.get(id)
-		const now = performance.now()
-		if (lastSyncMark !== undefined && now - lastSyncMark < SYNC_COOLDOWN_PERIOD) {
-			return
+		if (lastSyncMark !== undefined) {
+			const timeSinceLastSync = performance.now() - lastSyncMark
+
+			if (this.options.verbose) {
+				console.log(chalk.gray(this.prefix, `Last sync with ${id} was ${Math.floor(timeSinceLastSync)}ms ago`))
+			}
+
+			if (timeSinceLastSync < SYNC_COOLDOWN_PERIOD) {
+				return
+			}
 		}
 
 		this.pendingSyncPeers.set(id, {})
@@ -342,30 +353,39 @@ export class Source extends EventEmitter<SourceEvents> {
 
 	private async dial(peerId: PeerId): Promise<Stream> {
 		if (this.options.verbose) {
-			console.log(chalk.gray(this.prefix, `Dialing ${peerId}`))
+			console.log(chalk.redBright(this.prefix, `Dialing ${peerId}`))
+			console.log(
+				chalk.redBright(
+					this.prefix,
+					this.libp2p.getConnections(peerId).map(({ id }) => id)
+				)
+			)
 		}
 
-		const signal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
+		let connection: Connection
 
+		const connectionSignal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
 		try {
-			const connection = await this.libp2p.dial(peerId, { signal })
-
-			try {
-				const stream = await connection.newStream(this.protocol, { signal })
-				return stream
-			} catch (err) {
-				if (err instanceof Error && !signal.aborted) {
-					console.log(this.prefix, chalk.yellow("Failed to open new stream, possibly due to stale relay connection."))
-					console.log(this.prefix, chalk.yellow("Closing connection and attempting to re-dial..."))
-					await connection.close()
-					await this.libp2p.hangUp(peerId)
-					return await this.libp2p.dialProtocol(peerId, this.protocol, { signal })
-				} else {
-					throw err
-				}
-			}
+			connection = await this.libp2p.dial(peerId, { signal: connectionSignal })
 		} finally {
-			signal.clear()
+			connectionSignal.clear()
+		}
+
+		if (this.options.verbose) {
+			console.log(chalk.redBright(this.prefix, `Got connection ${connection.id}`))
+		}
+
+		const streamSignal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
+		try {
+			return await connection.newStream(this.protocol, { signal: streamSignal })
+		} catch (err) {
+			console.log(this.prefix, chalk.yellow("Failed to open new stream, possibly due to stale relay connection."))
+			console.log(this.prefix, chalk.yellow("Closing connection..."))
+			await connection.close()
+			await this.libp2p.hangUp(peerId)
+			throw err
+		} finally {
+			streamSignal.clear()
 		}
 	}
 }
