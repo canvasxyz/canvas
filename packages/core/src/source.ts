@@ -16,15 +16,15 @@ import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/compone
 
 import {
 	DIAL_TIMEOUT,
-	PEER_DISCOVERY_REFRESH_DELAY,
-	PEER_DISCOVERY_REFRESH_INTERVAL,
+	PUBSUB_DISCOVERY_REFRESH_DELAY,
+	PUBSUB_DISCOVERY_REFRESH_INTERVAL,
 	SYNC_COOLDOWN_PERIOD,
 } from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 import { toHex, assert, logErrorMessage, CacheMap, wait, retry } from "@canvas-js/core/utils"
 import { sync, handleIncomingStream } from "@canvas-js/core/sync"
-// import { startAnnounceService } from "./services/announce.js"
-// import { startDiscoveryService } from "./services/discovery.js"
+import { startAnnounceService } from "./services/announce.js"
+import { startDiscoveryService } from "./services/discovery.js"
 
 export interface SourceOptions {
 	verbose?: boolean
@@ -116,22 +116,32 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
 		}
 
-		this.startDiscoveryService()
+		this.startMeshService()
+
+		startDiscoveryService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
+
+		const mode = await this.libp2p.dht.getMode()
+		if (mode === "server") {
+			startAnnounceService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
+		}
 	}
 
-	private async startDiscoveryService() {
-		const prefix = chalk.cyan(`[canvas-core] [${this.cid}] [discovery]`)
-		console.log(prefix, `Staring discovery service`)
+	private async startMeshService() {
+		const prefix = chalk.cyan(`[canvas-core] [${this.cid}] [mesh]`)
+		console.log(prefix, `Staring mesh discovery service`)
 
 		try {
-			await wait(PEER_DISCOVERY_REFRESH_DELAY, { signal: this.controller.signal })
+			await wait(PUBSUB_DISCOVERY_REFRESH_DELAY, { signal: this.controller.signal })
 			while (!this.controller.signal.aborted) {
 				for (const peerId of this.libp2p.pubsub.getSubscribers(this.uri)) {
-					console.log(prefix, `Found peer ${peerId} in GossipSub mesh`)
+					if (this.options.verbose) {
+						console.log(prefix, `Found peer ${peerId} in GossipSub mesh`)
+					}
+
 					this.handlePeerDiscovery(peerId)
 				}
 
-				await wait(PEER_DISCOVERY_REFRESH_INTERVAL, { signal: this.controller.signal })
+				await wait(PUBSUB_DISCOVERY_REFRESH_INTERVAL, { signal: this.controller.signal })
 			}
 		} catch (err) {
 			if (this.controller.signal.aborted) {

@@ -18,6 +18,7 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { pubsubPeerDiscovery } from "@libp2p/pubsub-peer-discovery"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
+import { kadDHT } from "@libp2p/kad-dht"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import { assert } from "@canvas-js/core/utils"
@@ -26,10 +27,11 @@ import {
 	MIN_CONNECTIONS,
 	DIAL_CONCURRENCY,
 	DIAL_CONCURRENCY_PER_PEER,
-	PEER_DISCOVERY_TOPIC,
+	PUBSUB_DISCOVERY_TOPIC,
 	PEER_ID_FILENAME,
-	PEER_DISCOVERY_REFRESH_INTERVAL,
+	PUBSUB_DISCOVERY_REFRESH_INTERVAL,
 	PING_TIMEOUT,
+	minute,
 } from "@canvas-js/core/constants"
 
 import type { P2PConfig } from "../types.js"
@@ -70,10 +72,16 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 		streamMuxers: [mplex()],
 		peerDiscovery: [
 			bootstrap({ list: bootstrapList }),
-			pubsubPeerDiscovery({ interval: PEER_DISCOVERY_REFRESH_INTERVAL, topics: [PEER_DISCOVERY_TOPIC] }),
+			pubsubPeerDiscovery({ interval: PUBSUB_DISCOVERY_REFRESH_INTERVAL, topics: [PUBSUB_DISCOVERY_TOPIC] }),
 		],
 
 		metrics: prometheusMetrics({ registry: register }),
+
+		dht: kadDHT({
+			protocolPrefix: "/canvas",
+			clientMode: announce.length === 0,
+			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
+		}),
 
 		pubsub: gossipsub({
 			emitSelf: false,

@@ -21,8 +21,8 @@ import {
 	MIN_CONNECTIONS,
 	MAX_CONNECTIONS,
 	PEER_ID_FILENAME,
-	PEER_DISCOVERY_REFRESH_INTERVAL,
-	PEER_DISCOVERY_TOPIC,
+	PUBSUB_DISCOVERY_REFRESH_INTERVAL,
+	PUBSUB_DISCOVERY_TOPIC,
 	PING_TIMEOUT,
 } from "@canvas-js/core/constants"
 
@@ -48,7 +48,7 @@ export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promi
 		streamMuxers: [mplex()],
 		peerDiscovery: [
 			bootstrap({ list: bootstrapList }),
-			pubsubPeerDiscovery({ interval: PEER_DISCOVERY_REFRESH_INTERVAL, topics: [PEER_DISCOVERY_TOPIC] }),
+			pubsubPeerDiscovery({ interval: PUBSUB_DISCOVERY_REFRESH_INTERVAL, topics: [PUBSUB_DISCOVERY_TOPIC] }),
 		],
 
 		pubsub: gossipsub({
