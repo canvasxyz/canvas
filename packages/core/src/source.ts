@@ -265,11 +265,9 @@ export class Source extends EventEmitter<SourceEvents> {
 		this.pendingSyncPeers.add(id)
 		this.syncQueue
 			.add(() => this.sync(peerId))
+			.then(() => this.syncHistory.set(id, performance.now()))
 			.catch((err) => logErrorMessage(this.prefix, "Sync failed", err))
-			.finally(() => {
-				this.pendingSyncPeers.delete(id)
-				this.syncHistory.set(id, performance.now())
-			})
+			.finally(() => this.pendingSyncPeers.delete(id))
 	}
 
 	/**
@@ -384,6 +382,10 @@ export class Source extends EventEmitter<SourceEvents> {
 				} catch (err) {
 					logErrorMessage(chalk.gray(this.prefix), `Failed to dial peer ${peerId}`, err)
 				}
+			}
+		} else {
+			if (this.options.verbose) {
+				console.log(chalk.gray(this.prefix, "Have enough GossipSub peers"))
 			}
 		}
 	}
