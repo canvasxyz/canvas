@@ -1,3 +1,5 @@
+import chalk from "chalk"
+
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
 
@@ -9,8 +11,6 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { pubsubPeerDiscovery } from "@libp2p/pubsub-peer-discovery"
 import { kadDHT } from "@libp2p/kad-dht"
-
-import type { P2PConfig } from "./types.js"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import { assert } from "@canvas-js/core/utils"
@@ -24,7 +24,8 @@ import {
 	PUBSUB_DISCOVERY_TOPIC,
 	minute,
 } from "@canvas-js/core/constants"
-import chalk from "chalk"
+
+import type { P2PConfig } from "./types.js"
 
 export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pOptions {
 	const announce = config.announce ?? []
@@ -65,7 +66,7 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 		streamMuxers: [mplex()],
 		peerDiscovery: [
 			bootstrap({ list: bootstrapList }),
-			pubsubPeerDiscovery({ interval: PUBSUB_DISCOVERY_REFRESH_INTERVAL, topics: [PUBSUB_DISCOVERY_TOPIC] }),
+			// pubsubPeerDiscovery({ interval: PUBSUB_DISCOVERY_REFRESH_INTERVAL, topics: [PUBSUB_DISCOVERY_TOPIC] }),
 		],
 
 		dht: kadDHT({

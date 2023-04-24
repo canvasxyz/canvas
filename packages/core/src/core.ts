@@ -23,11 +23,18 @@ import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
 import { MessageStore, openMessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
 import { getPeerId, getLibp2pOptions, P2PConfig } from "@canvas-js/core/components/libp2p"
+import { actionType, messageType } from "@canvas-js/core/codecs"
+import {
+	toHex,
+	signalInvalidType,
+	stringify,
+	parseIPFSURI,
+	assert,
+	getCustomActionSchemaName,
+} from "@canvas-js/core/utils"
+import { BOUNDS_CHECK_LOWER_LIMIT, BOUNDS_CHECK_UPPER_LIMIT, PUBSUB_DISCOVERY_TOPIC } from "@canvas-js/core/constants"
 
 import { Source } from "./source.js"
-import { actionType, messageType } from "./codecs.js"
-import { toHex, signalInvalidType, stringify, parseIPFSURI, assert, getCustomActionSchemaName } from "./utils.js"
-import * as constants from "./constants.js"
 
 export interface CoreConfig extends CoreOptions, P2PConfig {
 	// pass `null` to run in memory (NodeJS only)
@@ -95,6 +102,9 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 		if (libp2p !== null && core.sources !== null) {
 			await libp2p.start()
+
+			libp2p.pubsub.subscribe(PUBSUB_DISCOVERY_TOPIC)
+
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
 		}
 
@@ -147,6 +157,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 					applyMessage: this.applyMessageInternal,
 					messageStore: this.messageStore,
 					libp2p,
+					signal: this.controller.signal,
 					...options,
 				})
 
@@ -186,15 +197,12 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	}
 
 	public async close() {
-		if (this.sources !== null) {
-			await Promise.all(Object.values(this.sources).map((source) => source.stop()))
-		}
 		this.controller.abort()
 
 		if (this.libp2p !== null) {
-			for (const connection of this.libp2p.getConnections()) {
-				await connection.close()
-			}
+			// for (const connection of this.libp2p.getConnections()) {
+			// 	await connection.close()
+			// }
 
 			await this.libp2p.stop()
 		}
@@ -310,8 +318,8 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		// TODO: verify that actions signed for a previous app were valid within that app
 
 		// check the timestamp bounds
-		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
-		assert(timestamp < constants.BOUNDS_CHECK_UPPER_LIMIT, "action timestamp too far in the future")
+		assert(timestamp > BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
+		assert(timestamp < BOUNDS_CHECK_UPPER_LIMIT, "action timestamp too far in the future")
 
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
@@ -341,8 +349,8 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		assert(this.vm.getChains().includes(chain), `unsupported chain (${chain})`)
 
 		// check the timestamp bounds
-		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
-		assert(sessionIssued < constants.BOUNDS_CHECK_UPPER_LIMIT, "session issued too far in the future")
+		assert(sessionIssued > BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
+		assert(sessionIssued < BOUNDS_CHECK_UPPER_LIMIT, "session issued too far in the future")
 
 		await this.getChainImplementation(chain).verifySession(session)
 	}

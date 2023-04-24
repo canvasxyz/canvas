@@ -24,6 +24,8 @@ import {
 import { messageType } from "@canvas-js/core/codecs"
 import { toHex, assert, logErrorMessage, CacheMap, wait } from "@canvas-js/core/utils"
 import { sync, handleIncomingStream } from "@canvas-js/core/sync"
+import { PUBSUB_DISCOVERY_TOPIC } from "@canvas-js/core/constants"
+
 import { startAnnounceService } from "./services/announce.js"
 import { startDiscoveryService } from "./services/discovery.js"
 
@@ -36,6 +38,7 @@ export interface SourceConfig extends SourceOptions {
 	messageStore: MessageStore
 	libp2p: Libp2p
 	applyMessage: (txn: ReadWriteTransaction, hash: Uint8Array, message: Message) => Promise<void>
+	signal: AbortSignal
 }
 
 interface SourceEvents {
@@ -57,20 +60,19 @@ export class Source extends EventEmitter<SourceEvents> {
 
 	public constructor(config: SourceConfig) {
 		super()
-		const { cid, libp2p, messageStore, applyMessage, ...options } = config
+		const { cid, libp2p, messageStore, applyMessage, signal, ...options } = config
 		this.cid = cid
 		this.libp2p = libp2p
 		this.messageStore = messageStore
 		this.applyMessage = applyMessage
 		this.options = options
 		this.prefix = `[canvas-core] [${this.cid}]`
-	}
 
-	public async start() {
-		this.libp2p.pubsub.subscribe(this.uri)
-		if (this.options.verbose) {
-			console.log(chalk.gray(this.prefix, `Subscribed to GossipSub topic ${this.uri}`))
-		}
+		signal.addEventListener("abort", () => {
+			this.controller.abort()
+			this.syncQueue.pause()
+			this.syncQueue.clear()
+		})
 
 		this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
 			if (this.libp2p.peerId.equals(peerId)) {
@@ -111,6 +113,13 @@ export class Source extends EventEmitter<SourceEvents> {
 				}
 			}
 		})
+	}
+
+	public async start() {
+		this.libp2p.pubsub.subscribe(this.uri)
+		if (this.options.verbose) {
+			console.log(chalk.gray(this.prefix, `Subscribed to GossipSub topic ${this.uri}`))
+		}
 
 		await this.libp2p.handle(this.protocol, this.streamHandler)
 		if (this.options.verbose) {
@@ -119,12 +128,12 @@ export class Source extends EventEmitter<SourceEvents> {
 
 		this.startPubSubDiscoveryService()
 
-		startDiscoveryService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
+		// startDiscoveryService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
 
-		const mode = await this.libp2p.dht.getMode()
-		if (mode === "server") {
-			startAnnounceService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
-		}
+		// const mode = await this.libp2p.dht.getMode()
+		// if (mode === "server") {
+		// 	startAnnounceService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
+		// }
 	}
 
 	private async startPubSubDiscoveryService() {
@@ -154,21 +163,11 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 	}
 
-	public async stop() {
-		this.syncQueue.pause()
-		this.syncQueue.clear()
-
-		this.controller.abort()
-
-		this.libp2p.pubsub.unsubscribe(this.uri)
-		this.libp2p.pubsub.removeEventListener("message", this.handleGossipMessage)
-		await this.libp2p.unhandle(this.protocol)
-
-		if (this.options.verbose) {
-			console.log(chalk.gray(this.prefix, `Removed stream handler for protocol ${this.protocol}`))
-			console.log(chalk.gray(this.prefix, `Unsubscribed from GossipSub topic ${this.uri}`))
-		}
-	}
+	// public async stop() {
+	// 	this.syncQueue.pause()
+	// 	this.syncQueue.clear()
+	// 	this.controller.abort()
+	// }
 
 	public get uri() {
 		return `ipfs://${this.cid}`
