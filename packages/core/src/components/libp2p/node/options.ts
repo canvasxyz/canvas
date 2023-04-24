@@ -1,112 +1,25 @@
 import path from "node:path"
 import fs from "node:fs"
 
-import { sha256 } from "@noble/hashes/sha256"
-import { bytesToHex as hex } from "@noble/hashes/utils"
-
-import chalk from "chalk"
-
 import { register } from "prom-client"
 
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
-import type { Multiaddr } from "@multiformats/multiaddr"
 
 import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
-import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 
-import { circuitRelayTransport } from "libp2p/circuit-relay"
-import { webSockets } from "@libp2p/websockets"
-import { noise } from "@chainsafe/libp2p-noise"
-import { mplex } from "@libp2p/mplex"
-import { bootstrap } from "@libp2p/bootstrap"
-import { gossipsub } from "@chainsafe/libp2p-gossipsub"
-import { kadDHT } from "@libp2p/kad-dht"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
-import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
-import {
-	DIAL_CONCURRENCY,
-	DIAL_CONCURRENCY_PER_PEER,
-	MIN_CONNECTIONS,
-	PEER_ID_FILENAME,
-	minute,
-	second,
-} from "@canvas-js/core/constants"
+import { PEER_ID_FILENAME } from "@canvas-js/core/constants"
 
 import type { P2PConfig } from "../types.js"
-
-async function denyDialMultiaddr(multiaddr: Multiaddr) {
-	const transportRoot = multiaddr.decapsulate("/ws")
-	return transportRoot.isThinWaistAddress() && isLoopback(transportRoot)
-}
+import { getBaseLibp2pOptions } from "../options.js"
 
 export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promise<Libp2pOptions> {
-	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
-
-	if (config.listen === undefined) {
-		console.log(
-			chalk.yellowBright(`[canvas-core] [p2p] No --listen address provided. Using bootstrap servers as relays.`)
-		)
-	}
-
-	const announce = config.announce ?? []
-	for (const address of announce) {
-		console.log(chalk.gray(`[canvas-core] [p2p] Announcing on ${address}`))
-	}
-
-	const listen = config.listen ?? []
-	for (const address of listen) {
-		console.log(chalk.gray(`[canvas-core] [p2p] Listening on ${address}`))
-	}
-
-	const options: Libp2pOptions = {
-		peerId: peerId,
-		addresses: { listen, announce },
-
-		connectionGater: { denyDialMultiaddr },
-		connectionManager: {
-			minConnections: MIN_CONNECTIONS,
-			autoDialConcurrency: DIAL_CONCURRENCY,
-			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
-		},
-
-		transports: [webSockets(), circuitRelayTransport({ discoverRelays: announce.length === 0 ? 1 : 0 })],
-		connectionEncryption: [noise()],
-		streamMuxers: [mplex()],
-		peerDiscovery: [bootstrap({ list: bootstrapList })],
-
+	return {
+		...getBaseLibp2pOptions(peerId, config),
 		metrics: prometheusMetrics({ registry: register }),
-
-		// switch to the canvas protocol prefix in the next minor version
-		// identify: {
-		// 	protocolPrefix: "canvas",
-		// },
-
-		dht: kadDHT({
-			protocolPrefix: "/canvas",
-			clientMode: announce.length === 0,
-			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
-		}),
-
-		pubsub: gossipsub({
-			emitSelf: false,
-			fallbackToFloodsub: false,
-			allowPublishToZeroPeers: true,
-			globalSignaturePolicy: "StrictSign",
-			msgIdFn: (msg) => sha256(msg.data),
-			msgIdToStrFn: (id) => hex(id),
-		}),
-
-		ping: {
-			protocolPrefix: "canvas",
-			maxInboundStreams: 32,
-			maxOutboundStreams: 32,
-			timeout: 20 * second,
-		},
 	}
-
-	return options
 }
 
 export async function getPeerId(directory: string | null): Promise<PeerId> {
@@ -116,7 +29,7 @@ export async function getPeerId(directory: string | null): Promise<PeerId> {
 
 	if (directory === null) {
 		const peerId = await createEd25519PeerId()
-		console.log(`[canvas-core] [p2p] Using temporary PeerId ${peerId}`)
+		console.log(`[canvas-core] Using temporary PeerId ${peerId}`)
 		return peerId
 	}
 
@@ -125,7 +38,7 @@ export async function getPeerId(directory: string | null): Promise<PeerId> {
 		const peerId = await createFromProtobuf(fs.readFileSync(peerIdPath))
 		return peerId
 	} else {
-		console.log(`[canvas-core] [p2p] Creating new PeerID at ${peerIdPath}`)
+		console.log(`[canvas-core] Creating new PeerID at ${peerIdPath}`)
 		const peerId = await createEd25519PeerId()
 		fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
 		return peerId

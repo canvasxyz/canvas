@@ -23,11 +23,31 @@ import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
 import { MessageStore, openMessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
 import { getPeerId, getLibp2pOptions, P2PConfig } from "@canvas-js/core/components/libp2p"
+import { DiscoveryRecord, actionType, discoveryRecord, messageType } from "@canvas-js/core/codecs"
+import {
+	toHex,
+	signalInvalidType,
+	stringify,
+	parseIPFSURI,
+	assert,
+	getCustomActionSchemaName,
+	wait,
+	logErrorMessage,
+	retry,
+} from "@canvas-js/core/utils"
+import {
+	PUBSUB_ANNOUNCE_DELAY,
+	PUBSUB_ANNOUNCE_INTERVAL,
+	BOUNDS_CHECK_LOWER_LIMIT,
+	BOUNDS_CHECK_UPPER_LIMIT,
+	PUBSUB_DISCOVERY_TOPIC,
+	PUBSUB_ANNOUNCE_RETRY_INTERVAL,
+	MIN_MESH_PEERS,
+} from "@canvas-js/core/constants"
 
 import { Source } from "./source.js"
-import { actionType, messageType } from "./codecs.js"
-import { toHex, signalInvalidType, stringify, parseIPFSURI, assert, getCustomActionSchemaName } from "./utils.js"
-import * as constants from "./constants.js"
+import { PeerId } from "@libp2p/interface-peer-id"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 export interface CoreConfig extends CoreOptions, P2PConfig {
 	// pass `null` to run in memory (NodeJS only)
@@ -63,8 +83,14 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			console.log("[canvas-core]", chalk.bold(`Using PeerId ${peerId}`))
 
 			// get p2p config
-			const { listen, announce, bootstrapList } = config
-			const options = await getLibp2pOptions(peerId, { listen, announce, bootstrapList })
+			const { listen, announce, bootstrapList, minConnections, maxConnections } = config
+			const options = await getLibp2pOptions(peerId, {
+				listen,
+				announce,
+				bootstrapList,
+				minConnections,
+				maxConnections,
+			})
 
 			libp2p = await createLibp2p({ ...options, start: false })
 		}
@@ -89,6 +115,9 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 		if (libp2p !== null && core.sources !== null) {
 			await libp2p.start()
+
+			libp2p.pubsub.subscribe(PUBSUB_DISCOVERY_TOPIC)
+
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
 		}
 
@@ -120,7 +149,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		if (libp2p !== null) {
 			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer, remoteAddr } }) => {
 				if (options.verbose) {
-					console.log(chalk.gray(`[canvas-core] [p2p] Opened connection ${id} to ${remotePeer} at ${remoteAddr}`))
+					console.log(chalk.gray(`[canvas-core] Opened connection ${id} to ${remotePeer} at ${remoteAddr}`))
 				}
 
 				this.dispatchEvent(new CustomEvent("connect", { detail: { peer: remotePeer.toString() } }))
@@ -128,7 +157,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) => {
 				if (options.verbose) {
-					console.log(chalk.gray(`[canvas-core] [p2p] Closed connection ${id} to ${remotePeer}`))
+					console.log(chalk.gray(`[canvas-core] Closed connection ${id} to ${remotePeer}`))
 				}
 
 				this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: remotePeer.toString() } }))
@@ -141,6 +170,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 					applyMessage: this.applyMessageInternal,
 					messageStore: this.messageStore,
 					libp2p,
+					signal: this.controller.signal,
 					...options,
 				})
 
@@ -151,6 +181,29 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 				this.sources[uri] = source
 			}
+
+			libp2p.pubsub.addEventListener("message", ({ detail: msg }) => {
+				if (msg.type !== "signed") {
+					return
+				}
+
+				if (msg.topic === PUBSUB_DISCOVERY_TOPIC) {
+					const decoder = new TextDecoder()
+					let record: DiscoveryRecord
+					try {
+						const data = JSON.parse(decoder.decode(msg.data))
+						assert(discoveryRecord.is(data))
+						record = data
+					} catch (err) {
+						console.log(chalk.yellow("[canvas-core] Received invalid discovery record"), msg)
+						return
+					}
+
+					this.handleDiscovery(msg.from, record)
+				}
+			})
+
+			this.startAnnounceService()
 		}
 	}
 
@@ -182,11 +235,11 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	public async close() {
 		this.controller.abort()
 
-		if (this.sources !== null) {
-			await Promise.all(Object.values(this.sources).map((source) => source.stop()))
-		}
-
 		if (this.libp2p !== null) {
+			// for (const connection of this.libp2p.getConnections()) {
+			// 	await connection.close()
+			// }
+
 			await this.libp2p.stop()
 		}
 
@@ -301,8 +354,8 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		// TODO: verify that actions signed for a previous app were valid within that app
 
 		// check the timestamp bounds
-		assert(timestamp > constants.BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
-		assert(timestamp < constants.BOUNDS_CHECK_UPPER_LIMIT, "action timestamp too far in the future")
+		assert(timestamp > BOUNDS_CHECK_LOWER_LIMIT, "action timestamp too far in the past")
+		assert(timestamp < BOUNDS_CHECK_UPPER_LIMIT, "action timestamp too far in the future")
 
 		// verify the signature, either using a session signature or action signature
 		if (action.session !== null) {
@@ -332,8 +385,8 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		assert(this.vm.getChains().includes(chain), `unsupported chain (${chain})`)
 
 		// check the timestamp bounds
-		assert(sessionIssued > constants.BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
-		assert(sessionIssued < constants.BOUNDS_CHECK_UPPER_LIMIT, "session issued too far in the future")
+		assert(sessionIssued > BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
+		assert(sessionIssued < BOUNDS_CHECK_UPPER_LIMIT, "session issued too far in the future")
 
 		await this.getChainImplementation(chain).verifySession(session)
 	}
@@ -356,6 +409,85 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			throw new Error(`Could not find matching chain implementation for ${chain}`)
 		} else {
 			return implementation
+		}
+	}
+
+	private async handleDiscovery(from: PeerId, record: DiscoveryRecord) {
+		if (this.sources === null || this.libp2p === null) {
+			return
+		}
+
+		if (this.options.verbose) {
+			console.log(
+				chalk.gray(`[canvas-core] Received discovery record from ${from} with ${record.topics.length} topics`)
+			)
+		}
+
+		const addrs: Multiaddr[] = []
+		for (const address of record.addresses) {
+			const addr = multiaddr(address)
+			if (addr.getPeerId() === from.toString()) {
+				addrs.push(addr)
+			}
+		}
+
+		for (const uri of record.topics) {
+			const source = this.sources[uri]
+			if (source !== undefined) {
+				source.handlePeerDiscovery(from, addrs)
+			}
+		}
+	}
+
+	private async startAnnounceService() {
+		if (this.libp2p === null) {
+			return
+		}
+
+		const prefix = chalk.magentaBright(`[canvas-core] [pubsub:announce]`)
+		if (this.options.verbose) {
+			console.log(prefix, "Started GossipSub announce service")
+		}
+
+		const { signal } = this.controller
+		const libp2p = this.libp2p
+
+		try {
+			await wait(PUBSUB_ANNOUNCE_DELAY, { signal })
+			while (!signal.aborted) {
+				await retry(
+					async () => {
+						const addrs = libp2p.getMultiaddrs()
+						if (addrs.length === 0) {
+							throw new Error("no multiaddrs to announce")
+						}
+
+						const record: DiscoveryRecord = {
+							addresses: addrs.map((addr) => addr.toString()),
+							topics: [this.app, ...this.vm.sources],
+						}
+
+						const data = new TextEncoder().encode(JSON.stringify(record))
+
+						const { recipients } = await libp2p.pubsub.publish(PUBSUB_DISCOVERY_TOPIC, data)
+						if (recipients.length === 0) {
+							throw new Error("no GossipSub peers")
+						}
+
+						console.log(prefix, `Published discovery record to ${recipients.length} peers`)
+					},
+					(err) => logErrorMessage(prefix, "Failed to publish discovery record", err),
+					{ signal, maxRetries: 3, interval: PUBSUB_ANNOUNCE_RETRY_INTERVAL }
+				)
+
+				await wait(PUBSUB_ANNOUNCE_INTERVAL, { signal })
+			}
+		} catch (err) {
+			if (signal.aborted) {
+				chalk.gray(prefix, `Service aborted`)
+			} else {
+				logErrorMessage(prefix, chalk.red(`Service crashed`), err)
+			}
 		}
 	}
 }

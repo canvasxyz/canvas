@@ -9,7 +9,7 @@ import type { Argv } from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
 import stoppable from "stoppable"
-import express from "express"
+import express, { text } from "express"
 import cors from "cors"
 import { WebSocketServer } from "ws"
 
@@ -18,7 +18,7 @@ import { multiaddr } from "@multiformats/multiaddr"
 import { Core, CoreOptions } from "@canvas-js/core"
 import { getAPI, handleWebsocketConnection } from "@canvas-js/core/api"
 
-import { defaultBootstrapList, testnetBootstrapList } from "@canvas-js/core/bootstrap"
+import { testnetBootstrapList } from "@canvas-js/core/bootstrap"
 import * as constants from "@canvas-js/core/constants"
 
 import { getChainImplementations, confirmOrExit, parseSpecArgument, installSpec, CANVAS_HOME } from "../utils.js"
@@ -99,6 +99,16 @@ export const builder = (yargs: Argv) =>
 		.option("testnet", {
 			type: "boolean",
 			desc: "Bootstrap to the private testnet (requires VPN)",
+		})
+		.option("min-connections", {
+			type: "number",
+			desc: "Auto-dial peers while below a threshold",
+			default: constants.MIN_CONNECTIONS,
+		})
+		.option("max-connections", {
+			type: "number",
+			desc: "Stop accepting connections above a limit",
+			default: constants.MAX_CONNECTIONS,
 		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
@@ -214,13 +224,19 @@ export async function handler(args: Args) {
 		listen.push(address)
 	}
 
-	let bootstrapList = defaultBootstrapList
-	if (args.testnet) {
-		console.log(chalk.yellowBright("[canvas-cli] Using testnet bootstrap servers"), testnetBootstrapList)
-		bootstrapList = testnetBootstrapList
+	const p2pConfig: P2PConfig = {
+		listen,
+		announce,
+		minConnections: args["min-connections"],
+		maxConnections: args["max-connections"],
 	}
 
-	const core = await Core.initialize({ chains, directory, uri, spec, bootstrapList, listen, announce, ...options })
+	if (args.testnet) {
+		console.log(chalk.yellowBright("[canvas-cli] Using testnet bootstrap servers"), testnetBootstrapList)
+		p2pConfig.bootstrapList = testnetBootstrapList
+	}
+
+	const core = await Core.initialize({ chains, directory, uri, spec, ...p2pConfig, ...options })
 
 	const app = express()
 	app.use(cors())
@@ -267,7 +283,9 @@ export async function handler(args: Args) {
 
 		const url = new URL(req.url, origin)
 		if (url.pathname === pathname) {
-			wss.handleUpgrade(req, socket, head, (socket) => handleWebsocketConnection(core, socket))
+			wss.handleUpgrade(req, socket, head, (socket) =>
+				handleWebsocketConnection(core, socket, { verbose: options.verbose })
+			)
 		} else {
 			console.log(chalk.red("[canvas-cli] rejecting incoming WS connection at unexpected path"), url.pathname)
 			rejectRequest(socket, StatusCodes.NOT_FOUND)
