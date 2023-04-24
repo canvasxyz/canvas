@@ -14,6 +14,8 @@ import { kadDHT } from "@libp2p/kad-dht"
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import { assert } from "@canvas-js/core/utils"
 import {
+	DHT_CLEANUP_INTERVAL,
+	DHT_PROVIDE_VALIDITY,
 	DIAL_CONCURRENCY,
 	DIAL_CONCURRENCY_PER_PEER,
 	MAX_CONNECTIONS,
@@ -87,7 +89,7 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 		dht: kadDHT({
 			protocolPrefix: "/canvas",
 			clientMode: announce.length === 0,
-			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
+			providers: { provideValidity: DHT_PROVIDE_VALIDITY, cleanupInterval: DHT_CLEANUP_INTERVAL },
 		}),
 
 		pubsub: gossipsub({
