@@ -35,6 +35,8 @@ export const SYNC_COOLDOWN_PERIOD = 30 * second
 export const DIAL_TIMEOUT = 10 * second
 export const PING_TIMEOUT = 10 * second
 
+export const MAX_PING_QUEUE_SIZE = 30
+
 export const MIN_CONNECTIONS = 5
 export const MAX_CONNECTIONS = 300
 

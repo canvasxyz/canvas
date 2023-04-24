@@ -16,6 +16,7 @@ import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/compone
 
 import {
 	DIAL_TIMEOUT,
+	MAX_PING_QUEUE_SIZE,
 	PUBSUB_DISCOVERY_REFRESH_DELAY,
 	PUBSUB_DISCOVERY_REFRESH_INTERVAL,
 	SYNC_COOLDOWN_PERIOD,
@@ -45,7 +46,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	private readonly controller = new AbortController()
 	private readonly syncQueue = new PQueue({ concurrency: 1 })
 	private readonly pendingSyncPeers = new Set<string>()
-	private readonly syncHistroy = new CacheMap<string, number>(20)
+	private readonly syncHistory = new CacheMap<string, number>(MAX_PING_QUEUE_SIZE)
 
 	private readonly cid: CID
 	private readonly messageStore: MessageStore
@@ -261,18 +262,26 @@ export class Source extends EventEmitter<SourceEvents> {
 		const id = peerId.toString()
 		if (this.pendingSyncPeers.has(id)) {
 			if (this.options.verbose) {
-				console.log(chalk.gray(this.prefix, `Already queued sync for ${id}`))
+				console.log(chalk.gray(this.prefix, `[sync] Already queued sync for ${id}`))
 			}
 
 			return
 		}
 
-		const lastSyncMark = this.syncHistroy.get(id)
+		if (this.syncQueue.size >= MAX_PING_QUEUE_SIZE) {
+			if (this.options.verbose) {
+				console.log(chalk.gray(this.prefix, `[sync] Ping queue full`))
+			}
+
+			return
+		}
+
+		const lastSyncMark = this.syncHistory.get(id)
 		if (lastSyncMark !== undefined) {
 			const timeSinceLastSync = performance.now() - lastSyncMark
 
 			if (this.options.verbose) {
-				console.log(chalk.gray(this.prefix, `Last sync with ${id} was ${Math.floor(timeSinceLastSync)}ms ago`))
+				console.log(chalk.gray(this.prefix, `[sync] Last sync with ${id} was ${Math.floor(timeSinceLastSync)}ms ago`))
 			}
 
 			if (timeSinceLastSync < SYNC_COOLDOWN_PERIOD) {
@@ -287,7 +296,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			logErrorMessage(this.prefix, "Sync failed", err)
 		} finally {
 			this.pendingSyncPeers.delete(id)
-			this.syncHistroy.set(id, performance.now())
+			this.syncHistory.set(id, performance.now())
 		}
 	}
 
