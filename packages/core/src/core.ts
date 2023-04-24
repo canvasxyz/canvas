@@ -447,21 +447,26 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		}
 
 		const { signal } = this.controller
-		const { pubsub } = this.libp2p
+		const libp2p = this.libp2p
 
 		try {
 			await wait(PUBSUB_ANNOUNCE_DELAY, { signal })
 			while (!signal.aborted) {
-				const record: DiscoveryRecord = {
-					addresses: this.libp2p.getMultiaddrs().map((addr) => addr.toString()),
-					topics: [this.app, ...this.vm.sources],
-				}
-
-				const data = new TextEncoder().encode(JSON.stringify(record))
-
 				await retry(
 					async () => {
-						const { recipients } = await pubsub.publish(PUBSUB_DISCOVERY_TOPIC, data)
+						const addrs = libp2p.getMultiaddrs()
+						if (addrs.length === 0) {
+							throw new Error("no multiaddrs to announce")
+						}
+
+						const record: DiscoveryRecord = {
+							addresses: addrs.map((addr) => addr.toString()),
+							topics: [this.app, ...this.vm.sources],
+						}
+
+						const data = new TextEncoder().encode(JSON.stringify(record))
+
+						const { recipients } = await libp2p.pubsub.publish(PUBSUB_DISCOVERY_TOPIC, data)
 						if (recipients.length === 0) {
 							throw new Error("no GossipSub peers")
 						}
