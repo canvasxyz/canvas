@@ -283,7 +283,9 @@ export async function handler(args: Args) {
 
 		const url = new URL(req.url, origin)
 		if (url.pathname === pathname) {
-			wss.handleUpgrade(req, socket, head, (socket) => handleWebsocketConnection(core, socket))
+			wss.handleUpgrade(req, socket, head, (socket) =>
+				handleWebsocketConnection(core, socket, { verbose: options.verbose })
+			)
 		} else {
 			console.log(chalk.red("[canvas-cli] rejecting incoming WS connection at unexpected path"), url.pathname)
 			rejectRequest(socket, StatusCodes.NOT_FOUND)
