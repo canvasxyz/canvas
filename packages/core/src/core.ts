@@ -23,7 +23,7 @@ import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
 import { MessageStore, openMessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
 import { getPeerId, getLibp2pOptions, P2PConfig } from "@canvas-js/core/components/libp2p"
-import { actionType, discoveryRecord, messageType } from "@canvas-js/core/codecs"
+import { DiscoveryRecord, actionType, discoveryRecord, messageType } from "@canvas-js/core/codecs"
 import {
 	toHex,
 	signalInvalidType,
@@ -44,6 +44,7 @@ import {
 
 import { Source } from "./source.js"
 import { PeerId } from "@libp2p/interface-peer-id"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 export interface CoreConfig extends CoreOptions, P2PConfig {
 	// pass `null` to run in memory (NodeJS only)
@@ -400,18 +401,26 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		}
 	}
 
-	private async handleDiscovery(from: PeerId, topics: string[]) {
+	private async handleDiscovery(from: PeerId, record: DiscoveryRecord) {
 		if (this.sources === null) {
 			return
 		}
 
 		const prefix = chalk.cyan(`[canvas-core] [discovery]`)
-		console.log(prefix, `Received discovery record from ${from} for ${topics.length} topics`)
+		console.log(prefix, `Received discovery record from ${from} for ${record.topics.length} topics`)
 
-		for (const topic of topics) {
+		const addrs: Multiaddr[] = []
+		for (const address of record.addresses) {
+			const addr = multiaddr(address)
+			if (addr.getPeerId() === from.toString()) {
+				addrs.push(addr)
+			}
+		}
+
+		for (const topic of record.topics) {
 			const source = this.sources[topic]
 			if (source !== undefined) {
-				source.handlePeerDiscovery(from)
+				source.handlePeerDiscovery(from, addrs)
 			}
 		}
 	}

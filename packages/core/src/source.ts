@@ -25,6 +25,7 @@ import {
 import { messageType } from "@canvas-js/core/codecs"
 import { toHex, assert, logErrorMessage, CacheMap, wait } from "@canvas-js/core/utils"
 import { sync, handleIncomingStream } from "@canvas-js/core/sync"
+import { Multiaddr } from "@multiformats/multiaddr"
 
 // import { startAnnounceService } from "./services/announce.js"
 // import { startDiscoveryService } from "./services/discovery.js"
@@ -257,7 +258,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 	}
 
-	public handlePeerDiscovery(peerId: PeerId) {
+	public handlePeerDiscovery(peerId: PeerId, addrs?: Multiaddr[]) {
 		const id = peerId.toString()
 		if (this.pendingSyncPeers.has(id)) {
 			if (this.options.verbose) {
@@ -290,7 +291,7 @@ export class Source extends EventEmitter<SourceEvents> {
 
 		this.pendingSyncPeers.add(id)
 		this.syncQueue
-			.add(() => this.sync(peerId))
+			.add(() => this.sync(peerId, addrs))
 			.catch((err) => logErrorMessage(this.prefix, "Sync failed", err))
 			.finally(() => {
 				this.pendingSyncPeers.delete(id)
@@ -303,13 +304,13 @@ export class Source extends EventEmitter<SourceEvents> {
 	 * peer and treat them as a server, scanning a read-only snapshot of their MST.
 	 * They have to independently dial us back to access our MST.
 	 */
-	private async sync(peer: PeerId) {
+	private async sync(peer: PeerId, addrs?: Multiaddr[]) {
 		const prefix = chalk.magenta(`${this.prefix} [sync]`)
 		console.log(prefix, `Initiating sync with ${peer}`)
 
 		let stream: Stream
 		try {
-			stream = await this.getStream(peer)
+			stream = await this.dial(peer, addrs)
 		} catch (err) {
 			logErrorMessage(prefix, chalk.red(`Failed to dial peer ${peer}`), err)
 			return
@@ -362,26 +363,26 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 	}
 
-	private async getStream(peerId: PeerId): Promise<Stream> {
+	private async dial(peerId: PeerId, addrs?: Multiaddr[]): Promise<Stream> {
 		const prefix = `${this.prefix} [dial]`
+
+		const existingConnections = this.libp2p.getConnections(peerId)
 		if (this.options.verbose) {
 			console.log(chalk.gray(prefix, `Dialing ${peerId}`))
-			const connections = this.libp2p.getConnections(peerId)
 			console.log(
-				chalk.gray(prefix, `Found ${connections.length} existing connections`),
-				new Map(connections.map(({ id, remoteAddr }) => [id, remoteAddr]))
+				chalk.gray(prefix, `Found ${existingConnections.length} existing connections`),
+				new Map(existingConnections.map(({ id, remoteAddr }) => [id, remoteAddr]))
 			)
 		}
 
-		const connection = await this.getConnection(peerId)
+		const connectionSignal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
+		const connection = await this.libp2p
+			.dial(addrs && existingConnections.length === 0 ? addrs : peerId, { signal: connectionSignal })
+			.finally(() => connectionSignal.clear())
 
-		if (this.options.verbose) {
-			console.log(chalk.gray(prefix, `Got connection ${connection.id} to ${peerId} at ${connection.remoteAddr}`))
-		}
-
-		const signal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
 		try {
-			return await connection.newStream(this.protocol, { signal: signal })
+			const signal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
+			return await connection.newStream(this.protocol, { signal }).finally(() => signal.clear())
 		} catch (err) {
 			console.log(
 				chalk.gray(prefix),
@@ -391,17 +392,6 @@ export class Source extends EventEmitter<SourceEvents> {
 			await connection.close()
 			await this.libp2p.hangUp(peerId)
 			throw err
-		} finally {
-			signal.clear()
-		}
-	}
-
-	private async getConnection(peerId: PeerId) {
-		const signal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
-		try {
-			return await this.libp2p.dial(peerId, { signal: signal })
-		} finally {
-			signal.clear()
 		}
 	}
 }

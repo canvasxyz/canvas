@@ -21,7 +21,11 @@ import type {
 } from "@canvas-js/interfaces"
 import { isLeft, isRight, left } from "fp-ts/lib/Either.js"
 
-export const discoveryRecord = t.array(t.string)
+export type DiscoveryRecord = { addresses: string[]; topics: string[] }
+export const discoveryRecord: t.Type<DiscoveryRecord> = t.type({
+	addresses: t.array(t.string),
+	topics: t.array(t.string),
+})
 
 export const actionArgumentType: t.Type<ActionArgument> = t.union([t.null, t.boolean, t.number, t.string])
 
