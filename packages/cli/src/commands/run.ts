@@ -212,7 +212,8 @@ export async function handler(args: Args) {
 	for (const address of args.announce ?? []) {
 		assert(typeof address === "string", "--announce address must be a string")
 		const addr = multiaddr(address)
-		assert(addr.protoNames().pop() === "ws", "--announce address must be a /ws multiaddr")
+		const lastProtoName = addr.protoNames().pop()
+		assert(lastProtoName === "ws" || lastProtoName === "wss", "--announce address must be a /ws or /wss multiaddr")
 		announce.push(address)
 	}
 
@@ -220,7 +221,8 @@ export async function handler(args: Args) {
 	for (const address of args.listen ?? []) {
 		assert(typeof address === "string", "--listen address must be a string")
 		const addr = multiaddr(address)
-		assert(addr.protoNames().pop() === "ws", "--listen address must be a /ws multiaddr")
+		const lastProtoName = addr.protoNames().pop()
+		assert(lastProtoName === "ws" || lastProtoName === "wss", "--listen address must be a /ws or /wss multiaddr")
 		listen.push(address)
 	}
 
