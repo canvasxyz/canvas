@@ -15,6 +15,9 @@ import { Multiaddr } from "@multiformats/multiaddr"
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
 
+import { messageType } from "@canvas-js/core/codecs"
+import { sync, handleIncomingStream } from "@canvas-js/core/sync"
+import { toHex, assert, logErrorMessage, CacheMap, wait, retry } from "@canvas-js/core/utils"
 import {
 	DIAL_TIMEOUT,
 	MAX_PING_QUEUE_SIZE,
@@ -30,9 +33,6 @@ import {
 	MIN_MESH_PEERS,
 	second,
 } from "@canvas-js/core/constants"
-import { messageType } from "@canvas-js/core/codecs"
-import { toHex, assert, logErrorMessage, CacheMap, wait, retry } from "@canvas-js/core/utils"
-import { sync, handleIncomingStream } from "@canvas-js/core/sync"
 
 export interface SourceOptions {
 	verbose?: boolean

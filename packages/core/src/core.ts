@@ -1,9 +1,13 @@
+import chalk from "chalk"
 import Hash from "ipfs-only-hash"
 import { sha256 } from "@noble/hashes/sha256"
-import { CID } from "multiformats/cid"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { createLibp2p, Libp2p } from "libp2p"
-import chalk from "chalk"
+
+import { PeerId } from "@libp2p/interface-peer-id"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+import { CID } from "multiformats/cid"
+import { validate } from "@hyperjump/json-schema/draft-2020-12"
 
 import {
 	Action,
@@ -17,7 +21,6 @@ import {
 	ApplicationData,
 } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
-import { validate } from "@hyperjump/json-schema/draft-2020-12"
 
 import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
@@ -42,12 +45,9 @@ import {
 	BOUNDS_CHECK_UPPER_LIMIT,
 	PUBSUB_DISCOVERY_TOPIC,
 	PUBSUB_ANNOUNCE_RETRY_INTERVAL,
-	MIN_MESH_PEERS,
 } from "@canvas-js/core/constants"
 
 import { Source } from "./source.js"
-import { PeerId } from "@libp2p/interface-peer-id"
-import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 export interface CoreConfig extends CoreOptions, P2PConfig {
 	// pass `null` to run in memory (NodeJS only)
