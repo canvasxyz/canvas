@@ -63,8 +63,14 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			console.log("[canvas-core]", chalk.bold(`Using PeerId ${peerId}`))
 
 			// get p2p config
-			const { listen, announce, bootstrapList } = config
-			const options = await getLibp2pOptions(peerId, { listen, announce, bootstrapList })
+			const { listen, announce, bootstrapList, minConnections, maxConnections } = config
+			const options = await getLibp2pOptions(peerId, {
+				listen,
+				announce,
+				bootstrapList,
+				minConnections,
+				maxConnections,
+			})
 
 			libp2p = await createLibp2p({ ...options, start: false })
 		}
@@ -180,13 +186,16 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	}
 
 	public async close() {
-		this.controller.abort()
-
 		if (this.sources !== null) {
 			await Promise.all(Object.values(this.sources).map((source) => source.stop()))
 		}
+		this.controller.abort()
 
 		if (this.libp2p !== null) {
+			for (const connection of this.libp2p.getConnections()) {
+				await connection.close()
+			}
+
 			await this.libp2p.stop()
 		}
 

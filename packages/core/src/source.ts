@@ -88,6 +88,26 @@ export class Source extends EventEmitter<SourceEvents> {
 		})
 
 		this.libp2p.pubsub.addEventListener("message", this.handleGossipMessage)
+
+		await this.libp2p.handle(this.protocol, this.streamHandler)
+		if (this.options.verbose) {
+			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
+		}
+
+		this.startPubSubDiscoveryService()
+
+		startDiscoveryService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
+
+		const mode = await this.libp2p.dht.getMode()
+		if (mode === "server") {
+			startAnnounceService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
+		}
+	}
+
+	private async startPubSubDiscoveryService() {
+		const prefix = chalk.blueBright(`[canvas-core] [${this.cid}] [mesh]`)
+		console.log(prefix, `Staring PubSub discovery service`)
+
 		this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
 			if (this.libp2p.peerId.equals(peerId)) {
 				return
@@ -100,42 +120,23 @@ export class Source extends EventEmitter<SourceEvents> {
 
 			if (subscription.subscribe) {
 				if (this.options.verbose) {
-					console.log(chalk.blueBright(this.prefix, `Peer ${peerId} joined the GossipSub topic`))
+					console.log(prefix, `Peer ${peerId} joined the GossipSub topic`)
 				}
 
 				this.handlePeerDiscovery(peerId)
 			} else {
 				if (this.options.verbose) {
-					console.log(chalk.blueBright(this.prefix, `Peer ${peerId} left the GossipSub topic`))
+					console.log(prefix, `Peer ${peerId} left the GossipSub topic`)
 				}
 			}
 		})
-
-		await this.libp2p.handle(this.protocol, this.streamHandler)
-		if (this.options.verbose) {
-			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
-		}
-
-		this.startMeshService()
-
-		startDiscoveryService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
-
-		const mode = await this.libp2p.dht.getMode()
-		if (mode === "server") {
-			startAnnounceService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
-		}
-	}
-
-	private async startMeshService() {
-		const prefix = chalk.cyan(`[canvas-core] [${this.cid}] [mesh]`)
-		console.log(prefix, `Staring mesh discovery service`)
 
 		try {
 			await wait(PUBSUB_DISCOVERY_REFRESH_DELAY, { signal: this.controller.signal })
 			while (!this.controller.signal.aborted) {
 				for (const peerId of this.libp2p.pubsub.getSubscribers(this.uri)) {
 					if (this.options.verbose) {
-						console.log(prefix, `Found peer ${peerId} in GossipSub mesh`)
+						console.log(this.prefix, `Found peer ${peerId} in GossipSub mesh`)
 					}
 
 					this.handlePeerDiscovery(peerId)
@@ -382,8 +383,11 @@ export class Source extends EventEmitter<SourceEvents> {
 		try {
 			return await connection.newStream(this.protocol, { signal: streamSignal })
 		} catch (err) {
-			console.log(this.prefix, chalk.yellow("Failed to open new stream, possibly due to stale relay connection."))
-			console.log(this.prefix, chalk.yellow("Closing connection..."))
+			console.log(
+				chalk.gray(this.prefix),
+				chalk.yellow("Failed to open new stream, possibly due to stale relay connection.")
+			)
+			console.log(chalk.gray(this.prefix), chalk.yellow("Closing connection..."))
 			await connection.close()
 			await this.libp2p.hangUp(peerId)
 			throw err

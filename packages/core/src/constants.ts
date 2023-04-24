@@ -19,7 +19,7 @@ export const DHT_ANNOUNCE_INTERVAL = 10 * minute
 export const DHT_ANNOUNCE_TIMEOUT = 30 * second
 export const DHT_ANNOUNCE_RETRY_INTERVAL = 10 * second
 
-export const DHT_DISCOVERY_DELAY = 5 * second
+export const DHT_DISCOVERY_DELAY = 10 * second
 export const DHT_DISCOVERY_INTERVAL = 2 * minute
 export const DHT_DISCOVERY_TIMEOUT = 30 * second
 export const DHT_DISCOVERY_RETRY_INTERVAL = 5 * second
