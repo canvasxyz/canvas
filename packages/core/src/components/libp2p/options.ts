@@ -84,11 +84,11 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 
-		// dht: kadDHT({
-		// 	protocolPrefix: "/canvas",
-		// 	clientMode: announce.length === 0,
-		// 	providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
-		// }),
+		dht: kadDHT({
+			protocolPrefix: "/canvas",
+			clientMode: announce.length === 0,
+			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
+		}),
 
 		pubsub: gossipsub({
 			emitSelf: false,

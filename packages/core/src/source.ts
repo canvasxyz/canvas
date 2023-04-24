@@ -132,12 +132,12 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		this.startSyncService()
-		// this.startDiscoveryService()
+		this.startDiscoveryService()
 
-		// const mode = await this.libp2p.dht.getMode()
-		// if (mode === "server") {
-		// 	this.startAnnounceService()
-		// }
+		const mode = await this.libp2p.dht.getMode()
+		if (mode === "server") {
+			this.startAnnounceService()
+		}
 	}
 
 	public get uri() {
@@ -236,7 +236,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		const id = peerId.toString()
 		if (this.pendingSyncPeers.has(id)) {
 			if (this.options.verbose) {
-				console.log(chalk.gray(this.prefix, `[sync] Already queued sync for ${id}`))
+				console.log(chalk.gray(this.prefix, `Already queued sync for ${id}`))
 			}
 
 			return
@@ -244,7 +244,7 @@ export class Source extends EventEmitter<SourceEvents> {
 
 		if (this.syncQueue.size >= MAX_PING_QUEUE_SIZE) {
 			if (this.options.verbose) {
-				console.log(chalk.gray(this.prefix, `[sync] Ping queue full`))
+				console.log(chalk.gray(this.prefix, `Sync queue is full`))
 			}
 
 			return
@@ -255,9 +255,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			const timeSinceLastSync = performance.now() - lastSyncMark
 
 			if (this.options.verbose) {
-				console.log(
-					chalk.gray(this.prefix, `[sync] Last sync with ${id} was ${Math.floor(timeSinceLastSync / 1000)}s ago`)
-				)
+				console.log(chalk.gray(this.prefix, `Last sync with ${id} was ${Math.floor(timeSinceLastSync / 1000)}s ago`))
 			}
 
 			if (timeSinceLastSync < SYNC_COOLDOWN_PERIOD) {
@@ -363,8 +361,6 @@ export class Source extends EventEmitter<SourceEvents> {
 				chalk.yellow("Failed to open new stream, possibly due to stale relay connection.")
 			)
 			console.log(chalk.gray(prefix), chalk.yellow("Closing connection..."))
-			// await connection.close()
-			// await Promise.all(existingConnections.map((connection) => connection.close()))
 			await this.libp2p.hangUp(peerId)
 			throw err
 		}
@@ -389,7 +385,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		if (this.options.verbose) {
-			console.log(chalk.gray(this.prefix, `Dialing peer ${peerId} at [ ${addrs.join(", ")} ]`))
+			console.log(chalk.gray(this.prefix, `Connecting to peer ${peerId} at [ ${addrs.join(", ")} ]`))
 		}
 
 		try {
@@ -397,7 +393,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			const signal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
 			await this.libp2p.dial(addrs).finally(() => signal.clear())
 		} catch (err) {
-			logErrorMessage(chalk.gray(this.prefix), `Failed to dial peer ${peerId}`, err)
+			logErrorMessage(chalk.gray(this.prefix), `Failed to connect to peer ${peerId}`, err)
 		}
 	}
 

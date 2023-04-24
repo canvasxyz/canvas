@@ -417,8 +417,11 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			return
 		}
 
-		const prefix = chalk.cyan(`[canvas-core] [pubsub:discovery]`)
-		console.log(prefix, `Received discovery record from ${from} for ${record.topics.length} topics`)
+		if (this.options.verbose) {
+			console.log(
+				chalk.gray(`[canvas-core] Received discovery record from ${from} with ${record.topics.length} topics`)
+			)
+		}
 
 		const addrs: Multiaddr[] = []
 		for (const address of record.addresses) {
