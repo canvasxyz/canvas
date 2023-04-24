@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client"
 import { WagmiConfig } from "wagmi"
 
 import { Core } from "@canvas-js/core"
+import { testnetBootstrapList } from "@canvas-js/core/bootstrap"
 import { Canvas, Client } from "@canvas-js/hooks"
 
 import { AppContext } from "./AppContext"
@@ -21,6 +22,8 @@ import "./styles.css"
 
 const root = ReactDOM.createRoot(document.getElementById("root")!)
 
+console.log({ testnetBootstrapList })
+
 function Index({}: {}) {
 	const [client, setClient] = useState<Client | null>(null)
 	const [core, setCore] = useState<Core | null>(null)
@@ -29,11 +32,23 @@ function Index({}: {}) {
 		console.log("initializing core", spec)
 		fetch(spec)
 			.then((res) => res.text())
-			.then((spec) => Core.initialize({ directory: "canvas-chat", spec, replay: true, unchecked: true, verbose: true }))
+			.then((spec) =>
+				Core.initialize({
+					directory: "canvas-chat",
+					spec,
+					replay: true,
+					unchecked: true,
+					verbose: true,
+					bootstrapList: testnetBootstrapList,
+				})
+			)
 			.then((core) => setCore(core))
 	}, [])
 
-	useEffect(() => console.log("got core", core), [core])
+	useEffect(() => {
+		console.log("got core", core)
+		;(window as any).core = core
+	}, [core])
 
 	return (
 		<Canvas host={core}>
