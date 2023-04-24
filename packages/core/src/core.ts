@@ -186,9 +186,17 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 				if (msg.topic === DISCOVERY_TOPIC) {
 					const decoder = new TextDecoder()
-					const data = JSON.parse(decoder.decode(msg.data))
-					assert(discoveryRecord.is(data), "Invalid discovery record")
-					this.handleDiscovery(msg.from, data)
+					let record: DiscoveryRecord
+					try {
+						const data = JSON.parse(decoder.decode(msg.data))
+						assert(discoveryRecord.is(data))
+						record = data
+					} catch (err) {
+						console.log(chalk.yellow("[canvas-core] Received invalid discovery record"), msg)
+						return
+					}
+
+					this.handleDiscovery(msg.from, record)
 				}
 			})
 
@@ -438,10 +446,15 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		try {
 			await wait(ANNOUNCE_DELAY, { signal: this.controller.signal })
 			while (!this.controller.signal.aborted) {
-				const topics = [this.app, ...this.vm.sources]
-				const data = new TextEncoder().encode(JSON.stringify(topics))
+				const record: DiscoveryRecord = {
+					addresses: this.libp2p.getMultiaddrs().map((addr) => addr.toString()),
+					topics: [this.app, ...this.vm.sources],
+				}
+
+				const data = new TextEncoder().encode(JSON.stringify(record))
 				const { recipients } = await this.libp2p.pubsub.publish(DISCOVERY_TOPIC, data)
 				console.log(prefix, `Published discovery record to ${recipients.length} peers`)
+
 				await wait(ANNOUNCE_INTERVAL, { signal: this.controller.signal })
 			}
 		} catch (err) {
