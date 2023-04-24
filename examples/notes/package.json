@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-notes",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -13,9 +13,9 @@
     "dev": "concurrently --kill-others -n backend,frontend 'npm run dev:backend' 'npm run dev:frontend'"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.4.5",
-    "@canvas-js/cli": "0.4.5",
-    "@canvas-js/hooks": "0.4.5",
+    "@canvas-js/chain-ethereum": "0.4.6",
+    "@canvas-js/cli": "0.4.6",
+    "@canvas-js/hooks": "0.4.6",
     "@metamask/eth-sig-util": "^5.0.2",
     "@types/react": "^18.0.35",
     "@types/react-dom": "^18.0.11",
