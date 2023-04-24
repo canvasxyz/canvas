@@ -30,9 +30,9 @@ export const PUBSUB_DISCOVERY_PUBLISH_INTERVAL = 30 * second
 export const PUBSUB_DISCOVERY_REFRESH_DELAY = 5 * second
 
 // don't sync with any one peer more often than this
-export const SYNC_COOLDOWN_PERIOD = 10 * second
+export const SYNC_COOLDOWN_PERIOD = 30 * second
 
-export const DIAL_TIMEOUT = 20 * second
+export const DIAL_TIMEOUT = 10 * second
 export const PING_TIMEOUT = 10 * second
 
 export const MIN_CONNECTIONS = 5

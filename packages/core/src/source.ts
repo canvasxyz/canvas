@@ -136,7 +136,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			while (!this.controller.signal.aborted) {
 				for (const peerId of this.libp2p.pubsub.getSubscribers(this.uri)) {
 					if (this.options.verbose) {
-						console.log(this.prefix, `Found peer ${peerId} in GossipSub mesh`)
+						console.log(chalk.gray(this.prefix, `Found peer ${peerId} in GossipSub mesh`))
 					}
 
 					this.handlePeerDiscovery(peerId)
