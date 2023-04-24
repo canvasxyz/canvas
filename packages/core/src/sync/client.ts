@@ -1,4 +1,4 @@
-import type { Duplex, Sink, Source } from "it-stream-types"
+import type { Duplex, Source } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"

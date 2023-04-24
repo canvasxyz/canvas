@@ -28,6 +28,7 @@ import {
 	DHT_ANNOUNCE_RETRY_INTERVAL,
 	DHT_ANNOUNCE_TIMEOUT,
 	MIN_MESH_PEERS,
+	second,
 } from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 import { toHex, assert, logErrorMessage, CacheMap, wait, retry } from "@canvas-js/core/utils"
@@ -361,6 +362,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			)
 			console.log(chalk.gray(prefix), chalk.yellow("Closing connection..."))
 			await connection.close()
+			// await Promise.all(existingConnections.map((connection) => connection.close()))
 			await this.libp2p.hangUp(peerId)
 			throw err
 		}
@@ -398,22 +400,24 @@ export class Source extends EventEmitter<SourceEvents> {
 	}
 
 	private async startSyncService() {
-		const prefix = chalk.magenta(`[canvas-core] [${this.cid}] [sync]`)
-		console.log(prefix, `Staring sync service`)
+		const prefix = `[canvas-core] [${this.cid}] [sync]`
+		if (this.options.verbose) {
+			console.log(chalk.gray(prefix, `Staring sync service`))
+		}
 
 		const { signal } = this.controller
 		try {
 			while (!signal.aborted) {
-				await wait(SYNC_COOLDOWN_PERIOD, { signal })
+				await wait(30 * second, { signal })
 				for (const peer of this.libp2p.pubsub.getSubscribers(this.uri)) {
 					this.schedulePeerSync(peer)
 				}
 			}
 		} catch (err) {
 			if (signal.aborted) {
-				console.log(prefix, `Service aborted`)
+				console.log(chalk.gray(prefix, `Service aborted`))
 			} else {
-				logErrorMessage(prefix, chalk.red(`Service crashed`), err)
+				logErrorMessage(chalk.gray(prefix), chalk.red(`Service crashed`), err)
 			}
 		}
 	}
