@@ -255,7 +255,9 @@ export class Source extends EventEmitter<SourceEvents> {
 			const timeSinceLastSync = performance.now() - lastSyncMark
 
 			if (this.options.verbose) {
-				console.log(chalk.gray(this.prefix, `[sync] Last sync with ${id} was ${Math.floor(timeSinceLastSync)}ms ago`))
+				console.log(
+					chalk.gray(this.prefix, `[sync] Last sync with ${id} was ${Math.floor(timeSinceLastSync / 1000)}s ago`)
+				)
 			}
 
 			if (timeSinceLastSync < SYNC_COOLDOWN_PERIOD) {
@@ -361,7 +363,7 @@ export class Source extends EventEmitter<SourceEvents> {
 				chalk.yellow("Failed to open new stream, possibly due to stale relay connection.")
 			)
 			console.log(chalk.gray(prefix), chalk.yellow("Closing connection..."))
-			await connection.close()
+			// await connection.close()
 			// await Promise.all(existingConnections.map((connection) => connection.close()))
 			await this.libp2p.hangUp(peerId)
 			throw err

@@ -46,7 +46,6 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 	const bootstrapPeerIds = new Set()
 	for (const bootstrapPeer of bootstrapList) {
 		const id = multiaddr(bootstrapPeer).getPeerId()
-		console.log("got boostrap peer id", bootstrapPeer, id)
 		if (id !== null) {
 			bootstrapPeerIds.add(id)
 		}
