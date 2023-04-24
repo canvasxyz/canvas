@@ -22,14 +22,18 @@ export interface AnnounceServiceInit {
  * every DHT_ANNOUNCE_INTERVAL milliseconds.
  */
 export async function startAnnounceService({ libp2p, cid, signal }: AnnounceServiceInit) {
-	const prefix = chalk.hex("#FF8800")(`[canvas-core] [${cid}] [announce]`)
+	const prefix = chalk.magentaBright(`[canvas-core] [${cid}] [announce]`)
 	console.log(prefix, `Staring DHT announce service`)
 
 	try {
 		await wait(DHT_ANNOUNCE_DELAY, { signal })
 		while (!signal.aborted) {
 			await retry(
-				() => announce({ libp2p, cid, signal }),
+				async () => {
+					console.log(prefix, `Publishing DHT provider record...`)
+					await announce({ libp2p, cid, signal })
+					console.log(prefix, chalk.green(`Successfully published DHT provider record.`))
+				},
 				(err) => logErrorMessage(prefix, chalk.yellow(`Failed to publish DHT provider record`), err),
 				{ signal, interval: DHT_ANNOUNCE_RETRY_INTERVAL }
 			)
@@ -48,16 +52,11 @@ export async function startAnnounceService({ libp2p, cid, signal }: AnnounceServ
 /**
  * Publish a provider record to the DHT announcing us as an application peer.
  */
-async function announce({ libp2p, cid, signal }: AnnounceServiceInit): Promise<void> {
-	const prefix = chalk.hex("#FF8800")(`[canvas-core] [${cid}] [announce]`)
-	console.log(prefix, `Publishing DHT provider record...`)
-
-	const timeoutSignal = anySignal([AbortSignal.timeout(DHT_ANNOUNCE_TIMEOUT), signal])
-
+async function announce(init: AnnounceServiceInit): Promise<void> {
+	const signal = anySignal([AbortSignal.timeout(DHT_ANNOUNCE_TIMEOUT), init.signal])
 	try {
-		await libp2p.contentRouting.provide(cid, { signal: timeoutSignal })
-		console.log(prefix, chalk.green(`Successfully published DHT provider record.`))
+		await init.libp2p.contentRouting.provide(init.cid, { signal: signal })
 	} finally {
-		timeoutSignal.clear()
+		signal.clear()
 	}
 }
