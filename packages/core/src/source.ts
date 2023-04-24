@@ -68,7 +68,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	public async start() {
 		this.libp2p.pubsub.subscribe(this.uri)
 		if (this.options.verbose) {
-			console.log(chalk.gray(this.prefix, `Subscribed to GossipSub topic`))
+			console.log(chalk.gray(this.prefix, `Subscribed to GossipSub topic ${this.uri}`))
 		}
 
 		this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
@@ -165,7 +165,7 @@ export class Source extends EventEmitter<SourceEvents> {
 
 		if (this.options.verbose) {
 			console.log(chalk.gray(this.prefix, `Removed stream handler for protocol ${this.protocol}`))
-			console.log(chalk.gray(this.prefix, `Unsubscribed from GossipSub topic`))
+			console.log(chalk.gray(this.prefix, `Unsubscribed from GossipSub topic ${this.uri}`))
 		}
 	}
 
@@ -302,14 +302,14 @@ export class Source extends EventEmitter<SourceEvents> {
 
 		let stream: Stream
 		try {
-			stream = await this.dial(peer)
+			stream = await this.getStream(peer)
 		} catch (err) {
 			logErrorMessage(prefix, chalk.red(`Failed to dial peer ${peer}`), err)
 			return
 		}
 
 		if (this.options.verbose) {
-			console.log(chalk.gray(this.prefix, `Opened outgoing stream ${stream.id} to ${peer}`))
+			console.log(prefix, chalk.gray(`Opened outgoing stream ${stream.id} to ${peer}`))
 		}
 
 		try {
@@ -335,7 +335,7 @@ export class Source extends EventEmitter<SourceEvents> {
 
 			stream.close()
 			if (this.options.verbose) {
-				console.log(chalk.gray(this.prefix, `Closed outgoing stream ${stream.id}`))
+				console.log(prefix, chalk.gray(`Closed outgoing stream ${stream.id}`))
 			}
 
 			this.dispatchEvent(
@@ -355,43 +355,46 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 	}
 
-	private async dial(peerId: PeerId): Promise<Stream> {
+	private async getStream(peerId: PeerId): Promise<Stream> {
+		const prefix = `${this.prefix} [dial]`
 		if (this.options.verbose) {
-			console.log(chalk.gray(this.prefix, `Dialing ${peerId}`))
+			console.log(chalk.gray(prefix, `Dialing ${peerId}`))
 			const connections = this.libp2p.getConnections(peerId)
 			console.log(
-				chalk.gray(this.prefix, `Found ${connections.length} existing connections`),
+				chalk.gray(prefix, `Found ${connections.length} existing connections`),
 				Object.fromEntries(connections.map(({ id, remoteAddr }) => [id, remoteAddr]))
 			)
 		}
 
-		let connection: Connection
-
-		const connectionSignal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
-		try {
-			connection = await this.libp2p.dial(peerId, { signal: connectionSignal })
-		} finally {
-			connectionSignal.clear()
-		}
+		const connection = await this.getConnection(peerId)
 
 		if (this.options.verbose) {
-			console.log(chalk.redBright(this.prefix, `Got connection ${connection.id}`))
+			console.log(chalk.gray(prefix, `Got connection ${connection.id} to ${peerId} at ${connection.remoteAddr}`))
 		}
 
-		const streamSignal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
+		const signal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
 		try {
-			return await connection.newStream(this.protocol, { signal: streamSignal })
+			return await connection.newStream(this.protocol, { signal: signal })
 		} catch (err) {
 			console.log(
-				chalk.gray(this.prefix),
+				chalk.gray(prefix),
 				chalk.yellow("Failed to open new stream, possibly due to stale relay connection.")
 			)
-			console.log(chalk.gray(this.prefix), chalk.yellow("Closing connection..."))
+			console.log(chalk.gray(prefix), chalk.yellow("Closing connection..."))
 			await connection.close()
 			await this.libp2p.hangUp(peerId)
 			throw err
 		} finally {
-			streamSignal.clear()
+			signal.clear()
+		}
+	}
+
+	private async getConnection(peerId: PeerId) {
+		const signal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
+		try {
+			return await this.libp2p.dial(peerId, { signal: signal })
+		} finally {
+			signal.clear()
 		}
 	}
 }

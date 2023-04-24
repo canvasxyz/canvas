@@ -13,6 +13,7 @@ import type { Node, ReadWriteTransaction } from "@canvas-js/core/components/mess
 
 import { Client } from "./client.js"
 import { equalNodes } from "./utils.js"
+import chalk from "chalk"
 
 type Context = { cid: CID; txn: ReadWriteTransaction; client: Client }
 
@@ -33,14 +34,14 @@ export async function* sync(
 			return
 		} else {
 			if (options.verbose) {
-				console.log(`[canvas-core] [${cid}] [sync] The old merkle root is ${toHex(targetRoot.hash)}`)
+				console.log(chalk.gray(`[canvas-core] [${cid}] [sync] The old merkle root is ${toHex(targetRoot.hash)}`))
 			}
 
 			yield* enter({ cid, txn, client }, targetRoot.level, sourceRoot)
 
 			if (options.verbose) {
 				const { hash: newRoot } = await txn.getRoot()
-				console.log(`[canvas-core] [${cid}] [sync] The new merkle root is ${toHex(newRoot)}`)
+				console.log(chalk.gray(`[canvas-core] [${cid}] [sync] The new merkle root is ${toHex(newRoot)}`))
 			}
 		}
 	} finally {
