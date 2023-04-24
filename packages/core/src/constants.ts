@@ -28,7 +28,7 @@ export const DISCOVERY_TOPIC = "/canvas/discovery"
 // export const PUBSUB_DISCOVERY_REFRESH_INTERVAL = 10 * second
 export const ANNOUNCE_INTERVAL = 30 * second
 // export const PUBSUB_DISCOVERY_REFRESH_DELAY = 5 * second
-export const ANNOUNCE_DELAY = 5 * second
+export const ANNOUNCE_DELAY = 15 * second
 
 // don't sync with any one peer more often than this
 export const SYNC_COOLDOWN_PERIOD = 30 * second

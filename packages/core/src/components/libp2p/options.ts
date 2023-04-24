@@ -63,7 +63,8 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 
 		const relayRoot = addr.decapsulateCode(290) // /p2p-circuit
 		const relayRootId = relayRoot.getPeerId()
-		return bootstrapPeerIds.has(relayRootId)
+
+		return relayRootId !== id && bootstrapPeerIds.has(relayRootId)
 	}
 
 	return {
