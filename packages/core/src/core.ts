@@ -23,7 +23,7 @@ import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
 import { MessageStore, openMessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
 import { getPeerId, getLibp2pOptions, P2PConfig } from "@canvas-js/core/components/libp2p"
-import { actionType, messageType } from "@canvas-js/core/codecs"
+import { actionType, discoveryRecord, messageType } from "@canvas-js/core/codecs"
 import {
 	toHex,
 	signalInvalidType,
@@ -31,10 +31,19 @@ import {
 	parseIPFSURI,
 	assert,
 	getCustomActionSchemaName,
+	wait,
+	logErrorMessage,
 } from "@canvas-js/core/utils"
-import { BOUNDS_CHECK_LOWER_LIMIT, BOUNDS_CHECK_UPPER_LIMIT, PUBSUB_DISCOVERY_TOPIC } from "@canvas-js/core/constants"
+import {
+	ANNOUNCE_DELAY,
+	ANNOUNCE_INTERVAL,
+	BOUNDS_CHECK_LOWER_LIMIT,
+	BOUNDS_CHECK_UPPER_LIMIT,
+	DISCOVERY_TOPIC,
+} from "@canvas-js/core/constants"
 
 import { Source } from "./source.js"
+import { PeerId } from "@libp2p/interface-peer-id"
 
 export interface CoreConfig extends CoreOptions, P2PConfig {
 	// pass `null` to run in memory (NodeJS only)
@@ -103,7 +112,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		if (libp2p !== null && core.sources !== null) {
 			await libp2p.start()
 
-			libp2p.pubsub.subscribe(PUBSUB_DISCOVERY_TOPIC)
+			libp2p.pubsub.subscribe(DISCOVERY_TOPIC)
 
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
 		}
@@ -168,6 +177,21 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 				this.sources[uri] = source
 			}
+
+			libp2p.pubsub.addEventListener("message", ({ detail: msg }) => {
+				if (msg.type !== "signed") {
+					return
+				}
+
+				if (msg.topic === DISCOVERY_TOPIC) {
+					const decoder = new TextDecoder()
+					const data = JSON.parse(decoder.decode(msg.data))
+					assert(discoveryRecord.is(data), "Invalid discovery record")
+					this.handleDiscovery(msg.from, data)
+				}
+			})
+
+			this.startAnnounceService()
 		}
 	}
 
@@ -373,6 +397,49 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			throw new Error(`Could not find matching chain implementation for ${chain}`)
 		} else {
 			return implementation
+		}
+	}
+
+	private async handleDiscovery(from: PeerId, topics: string[]) {
+		if (this.sources === null) {
+			return
+		}
+
+		const prefix = chalk.cyan(`[canvas-core] [discovery]`)
+		console.log(prefix, `Received discovery record from ${from} for ${topics.length} topics`)
+
+		for (const topic of topics) {
+			const source = this.sources[topic]
+			if (source !== undefined) {
+				source.handlePeerDiscovery(from)
+			}
+		}
+	}
+
+	private async startAnnounceService() {
+		if (this.libp2p === null) {
+			return
+		}
+
+		const prefix = chalk.magentaBright(`[canvas-core] [announce]`)
+		if (this.options.verbose) {
+			console.log(prefix, "Started announce service")
+		}
+
+		try {
+			await wait(ANNOUNCE_DELAY, { signal: this.controller.signal })
+			while (!this.controller.signal.aborted) {
+				const topics = [this.app, ...this.vm.sources]
+				const data = new TextEncoder().encode(JSON.stringify(topics))
+				const { recipients } = await this.libp2p.pubsub.publish(DISCOVERY_TOPIC, data)
+				console.log(prefix, `Published discovery record to ${recipients.length} peers`)
+				await wait(ANNOUNCE_INTERVAL, { signal: this.controller.signal })
+			}
+		} catch (err) {
+			if (this.controller.signal.aborted) {
+			} else {
+				logErrorMessage(prefix, chalk.red(`Service crashed`), err)
+			}
 		}
 	}
 }

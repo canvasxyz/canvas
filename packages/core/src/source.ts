@@ -17,17 +17,17 @@ import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/compone
 import {
 	DIAL_TIMEOUT,
 	MAX_PING_QUEUE_SIZE,
-	PUBSUB_DISCOVERY_REFRESH_DELAY,
-	PUBSUB_DISCOVERY_REFRESH_INTERVAL,
+	ANNOUNCE_INTERVAL,
+	ANNOUNCE_DELAY,
 	SYNC_COOLDOWN_PERIOD,
+	DISCOVERY_TOPIC,
 } from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 import { toHex, assert, logErrorMessage, CacheMap, wait } from "@canvas-js/core/utils"
 import { sync, handleIncomingStream } from "@canvas-js/core/sync"
-import { PUBSUB_DISCOVERY_TOPIC } from "@canvas-js/core/constants"
 
-import { startAnnounceService } from "./services/announce.js"
-import { startDiscoveryService } from "./services/discovery.js"
+// import { startAnnounceService } from "./services/announce.js"
+// import { startDiscoveryService } from "./services/discovery.js"
 
 export interface SourceOptions {
 	verbose?: boolean
@@ -126,7 +126,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
 		}
 
-		this.startPubSubDiscoveryService()
+		// this.startDiscoveryService()
 
 		// startDiscoveryService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
 
@@ -136,32 +136,32 @@ export class Source extends EventEmitter<SourceEvents> {
 		// }
 	}
 
-	private async startPubSubDiscoveryService() {
-		const prefix = `${this.prefix} [mesh]`
-		if (this.options.verbose) {
-			console.log(chalk.gray(prefix, "Started PubSub discovery service"))
-		}
+	// private async startDiscoveryService() {
+	// 	const prefix = `${this.prefix} [mesh]`
+	// 	if (this.options.verbose) {
+	// 		console.log(chalk.gray(prefix, "Started PubSub discovery service"))
+	// 	}
 
-		try {
-			await wait(PUBSUB_DISCOVERY_REFRESH_DELAY, { signal: this.controller.signal })
-			while (!this.controller.signal.aborted) {
-				for (const peerId of this.libp2p.pubsub.getSubscribers(this.uri)) {
-					if (this.options.verbose) {
-						console.log(chalk.gray(prefix, `Found peer ${peerId} in GossipSub mesh`))
-					}
+	// 	try {
+	// 		await wait(PUBSUB_DISCOVERY_REFRESH_DELAY, { signal: this.controller.signal })
+	// 		while (!this.controller.signal.aborted) {
+	// 			for (const peerId of this.libp2p.pubsub.getSubscribers(this.uri)) {
+	// 				if (this.options.verbose) {
+	// 					console.log(chalk.gray(prefix, `Found peer ${peerId} in GossipSub mesh`))
+	// 				}
 
-					this.handlePeerDiscovery(peerId)
-				}
+	// 				this.handlePeerDiscovery(peerId)
+	// 			}
 
-				await wait(PUBSUB_DISCOVERY_REFRESH_INTERVAL, { signal: this.controller.signal })
-			}
-		} catch (err) {
-			if (this.controller.signal.aborted) {
-			} else {
-				logErrorMessage(prefix, chalk.red(`Service crashed`), err)
-			}
-		}
-	}
+	// 			await wait(PUBSUB_DISCOVERY_REFRESH_INTERVAL, { signal: this.controller.signal })
+	// 		}
+	// 	} catch (err) {
+	// 		if (this.controller.signal.aborted) {
+	// 		} else {
+	// 			logErrorMessage(prefix, chalk.red(`Service crashed`), err)
+	// 		}
+	// 	}
+	// }
 
 	// public async stop() {
 	// 	this.syncQueue.pause()
@@ -257,7 +257,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 	}
 
-	private async handlePeerDiscovery(peerId: PeerId) {
+	public handlePeerDiscovery(peerId: PeerId) {
 		const id = peerId.toString()
 		if (this.pendingSyncPeers.has(id)) {
 			if (this.options.verbose) {
@@ -289,14 +289,13 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		this.pendingSyncPeers.add(id)
-		try {
-			await this.syncQueue.add(() => this.sync(peerId))
-		} catch (err) {
-			logErrorMessage(this.prefix, "Sync failed", err)
-		} finally {
-			this.pendingSyncPeers.delete(id)
-			this.syncHistory.set(id, performance.now())
-		}
+		this.syncQueue
+			.add(() => this.sync(peerId))
+			.catch((err) => logErrorMessage(this.prefix, "Sync failed", err))
+			.finally(() => {
+				this.pendingSyncPeers.delete(id)
+				this.syncHistory.set(id, performance.now())
+			})
 	}
 
 	/**

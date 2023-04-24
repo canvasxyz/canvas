@@ -9,8 +9,8 @@ import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
-import { pubsubPeerDiscovery } from "@libp2p/pubsub-peer-discovery"
-import { kadDHT } from "@libp2p/kad-dht"
+// import { pubsubPeerDiscovery } from "@libp2p/pubsub-peer-discovery"
+// import { kadDHT } from "@libp2p/kad-dht"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import { assert } from "@canvas-js/core/utils"
@@ -20,12 +20,13 @@ import {
 	MAX_CONNECTIONS,
 	MIN_CONNECTIONS,
 	PING_TIMEOUT,
-	PUBSUB_DISCOVERY_REFRESH_INTERVAL,
-	PUBSUB_DISCOVERY_TOPIC,
-	minute,
+	// PUBSUB_DISCOVERY_REFRESH_INTERVAL,
+	// PUBSUB_DISCOVERY_TOPIC,
+	// minute,
 } from "@canvas-js/core/constants"
 
 import type { P2PConfig } from "./types.js"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pOptions {
 	const announce = config.announce ?? []
@@ -45,11 +46,31 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 		console.log(chalk.gray(`[canvas-core] Listening on ${address}`))
 	}
 
+	const bootstrapPeerIds = new Set()
+	for (const bootstrapPeer of bootstrapList) {
+		const id = multiaddr(bootstrapPeer).getPeerId()
+		console.log("got boostrap peer id", bootstrapPeer, id)
+		if (id !== null) {
+			bootstrapPeerIds.add(id)
+		}
+	}
+
+	function denyDialMultiaddr(addr: Multiaddr): boolean {
+		const id = addr.getPeerId()
+		if (!bootstrapPeerIds.has(id)) {
+			return false
+		}
+
+		const relayRoot = addr.decapsulateCode(290) // /p2p-circuit
+		const relayRootId = relayRoot.getPeerId()
+		return bootstrapPeerIds.has(relayRootId)
+	}
+
 	return {
 		peerId: peerId,
 		addresses: { listen, announce },
 
-		connectionGater: {},
+		connectionGater: { denyDialMultiaddr },
 		connectionManager: {
 			minConnections: config.minConnections ?? MIN_CONNECTIONS,
 			maxConnections: config.maxConnections ?? MAX_CONNECTIONS,
@@ -69,11 +90,11 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 			// pubsubPeerDiscovery({ interval: PUBSUB_DISCOVERY_REFRESH_INTERVAL, topics: [PUBSUB_DISCOVERY_TOPIC] }),
 		],
 
-		dht: kadDHT({
-			protocolPrefix: "/canvas",
-			clientMode: announce.length === 0,
-			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
-		}),
+		// dht: kadDHT({
+		// 	protocolPrefix: "/canvas",
+		// 	clientMode: announce.length === 0,
+		// 	providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
+		// }),
 
 		pubsub: gossipsub({
 			emitSelf: false,
