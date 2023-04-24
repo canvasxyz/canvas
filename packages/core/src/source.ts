@@ -357,12 +357,11 @@ export class Source extends EventEmitter<SourceEvents> {
 
 	private async dial(peerId: PeerId): Promise<Stream> {
 		if (this.options.verbose) {
-			console.log(chalk.redBright(this.prefix, `Dialing ${peerId}`))
+			console.log(chalk.gray(this.prefix, `Dialing ${peerId}`))
+			const connections = this.libp2p.getConnections(peerId)
 			console.log(
-				chalk.redBright(
-					this.prefix,
-					this.libp2p.getConnections(peerId).map(({ id }) => id)
-				)
+				chalk.gray(this.prefix, `Found ${connections.length} existing connections`),
+				Object.fromEntries(connections.map(({ id, remoteAddr }) => [id, remoteAddr]))
 			)
 		}
 
