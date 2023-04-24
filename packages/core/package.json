@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/core",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
@@ -50,8 +50,8 @@
     "benchmark": "RUN_BENCHMARKS=1 ava test/benchmarks.test.ts"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.4.6",
-    "@canvas-js/interfaces": "0.4.6",
+    "@canvas-js/chain-ethereum": "0.4.7",
+    "@canvas-js/interfaces": "0.4.7",
     "@canvas-js/okra-browser": "^0.2.0",
     "@canvas-js/okra-node": "^0.2.1",
     "@chainsafe/libp2p-gossipsub": "^7.0.0",
