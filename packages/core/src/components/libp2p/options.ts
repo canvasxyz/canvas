@@ -33,15 +33,15 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 	assert(bootstrapList.length > 0, "bootstrap list cannot be empty")
 
 	if (listen.length === 0) {
-		console.log(chalk.yellowBright(`[canvas-core] [p2p] Using Canvas bootstrap servers as relays.`))
+		console.log(chalk.yellowBright(`[canvas-core] Using Canvas bootstrap servers as relays.`))
 	}
 
 	for (const address of announce) {
-		console.log(chalk.gray(`[canvas-core] [p2p] Announcing on ${address}`))
+		console.log(chalk.gray(`[canvas-core] Announcing on ${address}`))
 	}
 
 	for (const address of listen) {
-		console.log(chalk.gray(`[canvas-core] [p2p] Listening on ${address}`))
+		console.log(chalk.gray(`[canvas-core] Listening on ${address}`))
 	}
 
 	return {

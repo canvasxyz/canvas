@@ -21,7 +21,7 @@ import {
 	SYNC_COOLDOWN_PERIOD,
 } from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
-import { toHex, assert, logErrorMessage, CacheMap, wait, retry } from "@canvas-js/core/utils"
+import { toHex, assert, logErrorMessage, CacheMap, wait } from "@canvas-js/core/utils"
 import { sync, handleIncomingStream } from "@canvas-js/core/sync"
 import { startAnnounceService } from "./services/announce.js"
 import { startDiscoveryService } from "./services/discovery.js"
@@ -44,7 +44,7 @@ interface SourceEvents {
 export class Source extends EventEmitter<SourceEvents> {
 	private readonly controller = new AbortController()
 	private readonly syncQueue = new PQueue({ concurrency: 1 })
-	private readonly pendingSyncPeers = new Map<string, {}>()
+	private readonly pendingSyncPeers = new Set<string>()
 	private readonly syncHistroy = new CacheMap<string, number>(20)
 
 	private readonly cid: CID
@@ -88,6 +88,28 @@ export class Source extends EventEmitter<SourceEvents> {
 		})
 
 		this.libp2p.pubsub.addEventListener("message", this.handleGossipMessage)
+		this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
+			if (this.libp2p.peerId.equals(peerId)) {
+				return
+			}
+
+			const subscription = subscriptions.find(({ topic }) => topic === this.uri)
+			if (subscription === undefined) {
+				return
+			}
+
+			if (subscription.subscribe) {
+				if (this.options.verbose) {
+					console.log(chalk.gray(this.prefix, `Peer ${peerId} joined the GossipSub topic`))
+				}
+
+				this.handlePeerDiscovery(peerId)
+			} else {
+				if (this.options.verbose) {
+					console.log(chalk.gray(this.prefix, `Peer ${peerId} left the GossipSub topic`))
+				}
+			}
+		})
 
 		await this.libp2p.handle(this.protocol, this.streamHandler)
 		if (this.options.verbose) {
@@ -105,38 +127,17 @@ export class Source extends EventEmitter<SourceEvents> {
 	}
 
 	private async startPubSubDiscoveryService() {
-		const prefix = chalk.blueBright(`[canvas-core] [${this.cid}] [mesh]`)
-		console.log(prefix, `Staring PubSub discovery service`)
-
-		this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
-			if (this.libp2p.peerId.equals(peerId)) {
-				return
-			}
-
-			const subscription = subscriptions.find(({ topic }) => topic === this.uri)
-			if (subscription === undefined) {
-				return
-			}
-
-			if (subscription.subscribe) {
-				if (this.options.verbose) {
-					console.log(prefix, `Peer ${peerId} joined the GossipSub topic`)
-				}
-
-				this.handlePeerDiscovery(peerId)
-			} else {
-				if (this.options.verbose) {
-					console.log(prefix, `Peer ${peerId} left the GossipSub topic`)
-				}
-			}
-		})
+		const prefix = `${this.prefix} [mesh]`
+		if (this.options.verbose) {
+			console.log(chalk.gray(prefix, "Started PubSub discovery service"))
+		}
 
 		try {
 			await wait(PUBSUB_DISCOVERY_REFRESH_DELAY, { signal: this.controller.signal })
 			while (!this.controller.signal.aborted) {
 				for (const peerId of this.libp2p.pubsub.getSubscribers(this.uri)) {
 					if (this.options.verbose) {
-						console.log(chalk.gray(this.prefix, `Found peer ${peerId} in GossipSub mesh`))
+						console.log(chalk.gray(prefix, `Found peer ${peerId} in GossipSub mesh`))
 					}
 
 					this.handlePeerDiscovery(peerId)
@@ -146,7 +147,6 @@ export class Source extends EventEmitter<SourceEvents> {
 			}
 		} catch (err) {
 			if (this.controller.signal.aborted) {
-				console.log(prefix, `Service aborted`)
 			} else {
 				logErrorMessage(prefix, chalk.red(`Service crashed`), err)
 			}
@@ -280,7 +280,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			}
 		}
 
-		this.pendingSyncPeers.set(id, {})
+		this.pendingSyncPeers.add(id)
 		try {
 			await this.syncQueue.add(() => this.sync(peerId))
 		} catch (err) {
@@ -362,7 +362,7 @@ export class Source extends EventEmitter<SourceEvents> {
 			const connections = this.libp2p.getConnections(peerId)
 			console.log(
 				chalk.gray(prefix, `Found ${connections.length} existing connections`),
-				Object.fromEntries(connections.map(({ id, remoteAddr }) => [id, remoteAddr]))
+				new Map(connections.map(({ id, remoteAddr }) => [id, remoteAddr]))
 			)
 		}
 

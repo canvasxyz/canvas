@@ -29,7 +29,7 @@ export async function getPeerId(directory: string | null): Promise<PeerId> {
 
 	if (directory === null) {
 		const peerId = await createEd25519PeerId()
-		console.log(`[canvas-core] [p2p] Using temporary PeerId ${peerId}`)
+		console.log(`[canvas-core] Using temporary PeerId ${peerId}`)
 		return peerId
 	}
 
@@ -38,7 +38,7 @@ export async function getPeerId(directory: string | null): Promise<PeerId> {
 		const peerId = await createFromProtobuf(fs.readFileSync(peerIdPath))
 		return peerId
 	} else {
-		console.log(`[canvas-core] [p2p] Creating new PeerID at ${peerIdPath}`)
+		console.log(`[canvas-core] Creating new PeerID at ${peerIdPath}`)
 		const peerId = await createEd25519PeerId()
 		fs.writeFileSync(peerIdPath, exportToProtobuf(peerId))
 		return peerId
