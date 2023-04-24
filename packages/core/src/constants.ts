@@ -20,24 +20,24 @@ export const DHT_ANNOUNCE_TIMEOUT = 30 * second
 export const DHT_ANNOUNCE_RETRY_INTERVAL = 10 * second
 
 export const DHT_DISCOVERY_DELAY = 10 * second
-export const DHT_DISCOVERY_INTERVAL = 2 * minute
+export const DHT_DISCOVERY_INTERVAL = 5 * minute
 export const DHT_DISCOVERY_TIMEOUT = 30 * second
 export const DHT_DISCOVERY_RETRY_INTERVAL = 5 * second
 
 export const PUBSUB_DISCOVERY_TOPIC = "/canvas/discovery"
 // export const PUBSUB_DISCOVERY_REFRESH_INTERVAL = 10 * second
-export const PUSUB_ANNOUNCE_INTERVAL = 30 * second
+export const PUSUB_ANNOUNCE_INTERVAL = 1 * minute
 // export const PUBSUB_DISCOVERY_REFRESH_DELAY = 5 * second
-export const PUBSUB_ANNOUNCE_DELAY = 10 * second
+export const PUBSUB_ANNOUNCE_DELAY = 5 * second
 export const PUBSUB_ANNOUNCE_RETRY_INTERVAL = 5 * second
 
 // don't sync with any one peer more often than this
-export const SYNC_COOLDOWN_PERIOD = 20 * second
+export const SYNC_COOLDOWN_PERIOD = 2 * minute
 
 export const DIAL_TIMEOUT = 10 * second
 export const PING_TIMEOUT = 10 * second
 
-export const MAX_PING_QUEUE_SIZE = 30
+export const MAX_PING_QUEUE_SIZE = 32
 
 export const MIN_CONNECTIONS = 5
 export const MAX_CONNECTIONS = 300
