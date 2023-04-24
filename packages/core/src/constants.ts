@@ -25,9 +25,7 @@ export const DHT_DISCOVERY_TIMEOUT = 30 * second
 export const DHT_DISCOVERY_RETRY_INTERVAL = 5 * second
 
 export const PUBSUB_DISCOVERY_TOPIC = "/canvas/discovery"
-// export const PUBSUB_DISCOVERY_REFRESH_INTERVAL = 10 * second
-export const PUSUB_ANNOUNCE_INTERVAL = 1 * minute
-// export const PUBSUB_DISCOVERY_REFRESH_DELAY = 5 * second
+export const PUBSUB_ANNOUNCE_INTERVAL = 1 * minute
 export const PUBSUB_ANNOUNCE_DELAY = 5 * second
 export const PUBSUB_ANNOUNCE_RETRY_INTERVAL = 5 * second
 
@@ -41,6 +39,8 @@ export const MAX_PING_QUEUE_SIZE = 32
 
 export const MIN_CONNECTIONS = 5
 export const MAX_CONNECTIONS = 300
+
+export const MIN_MESH_PEERS = 5
 
 export const DIAL_CONCURRENCY = 10
 export const DIAL_CONCURRENCY_PER_PEER = 1

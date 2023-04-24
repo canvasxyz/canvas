@@ -27,6 +27,7 @@ import {
 	DHT_ANNOUNCE_INTERVAL,
 	DHT_ANNOUNCE_RETRY_INTERVAL,
 	DHT_ANNOUNCE_TIMEOUT,
+	MIN_MESH_PEERS,
 } from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
 import { toHex, assert, logErrorMessage, CacheMap, wait, retry } from "@canvas-js/core/utils"
@@ -89,7 +90,7 @@ export class Source extends EventEmitter<SourceEvents> {
 					console.log(chalk.gray(this.prefix, `Peer ${peerId} supports the ${this.protocol} protocol`))
 				}
 
-				this.handlePeerDiscovery(peerId)
+				this.schedulePeerSync(peerId)
 			}
 		})
 
@@ -109,7 +110,7 @@ export class Source extends EventEmitter<SourceEvents> {
 					console.log(chalk.gray(this.prefix, `Peer ${peerId} joined the GossipSub topic`))
 				}
 
-				this.handlePeerDiscovery(peerId)
+				this.schedulePeerSync(peerId)
 			} else {
 				if (this.options.verbose) {
 					console.log(chalk.gray(this.prefix, `Peer ${peerId} left the GossipSub topic`))
@@ -129,12 +130,13 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
 		}
 
-		this.startDiscoveryService()
+		this.startSyncService()
+		// this.startDiscoveryService()
 
-		const mode = await this.libp2p.dht.getMode()
-		if (mode === "server") {
-			this.startAnnounceService()
-		}
+		// const mode = await this.libp2p.dht.getMode()
+		// if (mode === "server") {
+		// 	this.startAnnounceService()
+		// }
 	}
 
 	public get uri() {
@@ -225,7 +227,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 	}
 
-	public handlePeerDiscovery(peerId: PeerId, addrs?: Multiaddr[]) {
+	public schedulePeerSync(peerId: PeerId) {
 		if (this.libp2p.peerId.equals(peerId)) {
 			return
 		}
@@ -262,7 +264,7 @@ export class Source extends EventEmitter<SourceEvents> {
 
 		this.pendingSyncPeers.add(id)
 		this.syncQueue
-			.add(() => this.sync(peerId, addrs))
+			.add(() => this.sync(peerId))
 			.catch((err) => logErrorMessage(this.prefix, "Sync failed", err))
 			.finally(() => {
 				this.pendingSyncPeers.delete(id)
@@ -275,13 +277,13 @@ export class Source extends EventEmitter<SourceEvents> {
 	 * peer and treat them as a server, scanning a read-only snapshot of their MST.
 	 * They have to independently dial us back to access our MST.
 	 */
-	private async sync(peer: PeerId, addrs?: Multiaddr[]) {
+	private async sync(peer: PeerId) {
 		const prefix = chalk.magenta(`${this.prefix} [sync]`)
 		console.log(prefix, `Initiating sync with ${peer}`)
 
 		let stream: Stream
 		try {
-			stream = await this.dial(peer, addrs)
+			stream = await this.dial(peer)
 		} catch (err) {
 			logErrorMessage(prefix, chalk.red(`Failed to dial peer ${peer}`), err)
 			return
@@ -334,7 +336,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 	}
 
-	private async dial(peerId: PeerId, addrs?: Multiaddr[]): Promise<Stream> {
+	private async dial(peerId: PeerId): Promise<Stream> {
 		const prefix = `${this.prefix} [dial]`
 
 		const existingConnections = this.libp2p.getConnections(peerId)
@@ -348,7 +350,7 @@ export class Source extends EventEmitter<SourceEvents> {
 
 		const connectionSignal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
 		const connection = await this.libp2p
-			.dial(addrs && existingConnections.length === 0 ? addrs : peerId, { signal: connectionSignal })
+			.dial(peerId, { signal: connectionSignal })
 			.finally(() => connectionSignal.clear())
 
 		try {
@@ -363,6 +365,47 @@ export class Source extends EventEmitter<SourceEvents> {
 			await connection.close()
 			await this.libp2p.hangUp(peerId)
 			throw err
+		}
+	}
+
+	public async handlePeerDiscovery(peerId: PeerId, addrs: Multiaddr[]) {
+		const subscribers = this.libp2p.pubsub.getSubscribers(this.uri)
+		if (subscribers.length < MIN_MESH_PEERS) {
+			const subscriber = subscribers.find((peer) => peer.equals(peerId))
+			if (subscriber === undefined) {
+				if (this.options.verbose) {
+					console.log(chalk.gray(this.prefix, `Dialing peer ${peerId}`))
+				}
+
+				try {
+					await this.libp2p.hangUp(peerId)
+					const signal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
+					await this.libp2p.dial(addrs).finally(() => signal.clear())
+				} catch (err) {
+					logErrorMessage(chalk.gray(this.prefix), `Failed to dial peer ${peerId}`, err)
+				}
+			}
+		}
+	}
+
+	private async startSyncService() {
+		const prefix = chalk.magenta(`[canvas-core] [${this.cid}] [sync]`)
+		console.log(prefix, `Staring sync service`)
+
+		const { signal } = this.controller
+		try {
+			while (!signal.aborted) {
+				await wait(SYNC_COOLDOWN_PERIOD, { signal })
+				for (const peer of this.libp2p.pubsub.getSubscribers(this.uri)) {
+					this.schedulePeerSync(peer)
+				}
+			}
+		} catch (err) {
+			if (signal.aborted) {
+				console.log(prefix, `Service aborted`)
+			} else {
+				logErrorMessage(prefix, chalk.red(`Service crashed`), err)
+			}
 		}
 	}
 
@@ -411,9 +454,9 @@ export class Source extends EventEmitter<SourceEvents> {
 						const timeout = anySignal([AbortSignal.timeout(DHT_DISCOVERY_TIMEOUT), signal])
 						try {
 							const providers = this.libp2p.contentRouting.findProviders(this.cid, { signal: timeout })
-							for await (const { id } of providers) {
+							for await (const { id, multiaddrs } of providers) {
 								console.log(prefix, `Found peer ${id} via DHT provider record`)
-								this.handlePeerDiscovery(id)
+								await this.handlePeerDiscovery(id, multiaddrs)
 							}
 						} finally {
 							timeout.clear()

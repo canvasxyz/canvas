@@ -37,11 +37,12 @@ import {
 } from "@canvas-js/core/utils"
 import {
 	PUBSUB_ANNOUNCE_DELAY,
-	PUSUB_ANNOUNCE_INTERVAL,
+	PUBSUB_ANNOUNCE_INTERVAL,
 	BOUNDS_CHECK_LOWER_LIMIT,
 	BOUNDS_CHECK_UPPER_LIMIT,
 	PUBSUB_DISCOVERY_TOPIC,
 	PUBSUB_ANNOUNCE_RETRY_INTERVAL,
+	MIN_MESH_PEERS,
 } from "@canvas-js/core/constants"
 
 import { Source } from "./source.js"
@@ -412,7 +413,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	}
 
 	private async handleDiscovery(from: PeerId, record: DiscoveryRecord) {
-		if (this.sources === null) {
+		if (this.sources === null || this.libp2p === null) {
 			return
 		}
 
@@ -427,8 +428,8 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			}
 		}
 
-		for (const topic of record.topics) {
-			const source = this.sources[topic]
+		for (const uri of record.topics) {
+			const source = this.sources[uri]
 			if (source !== undefined) {
 				source.handlePeerDiscovery(from, addrs)
 			}
@@ -471,7 +472,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 					{ signal, maxRetries: 3, interval: PUBSUB_ANNOUNCE_RETRY_INTERVAL }
 				)
 
-				await wait(PUSUB_ANNOUNCE_INTERVAL, { signal })
+				await wait(PUBSUB_ANNOUNCE_INTERVAL, { signal })
 			}
 		} catch (err) {
 			if (signal.aborted) {
