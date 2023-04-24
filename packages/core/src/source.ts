@@ -368,25 +368,32 @@ export class Source extends EventEmitter<SourceEvents> {
 
 	public async handlePeerDiscovery(peerId: PeerId, addrs: Multiaddr[]) {
 		const subscribers = this.libp2p.pubsub.getSubscribers(this.uri)
-		if (subscribers.length < MIN_MESH_PEERS) {
-			const subscriber = subscribers.find((peer) => peer.equals(peerId))
-			if (subscriber === undefined) {
-				if (this.options.verbose) {
-					console.log(chalk.gray(this.prefix, `Dialing peer ${peerId}`))
-				}
-
-				try {
-					await this.libp2p.hangUp(peerId)
-					const signal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
-					await this.libp2p.dial(addrs).finally(() => signal.clear())
-				} catch (err) {
-					logErrorMessage(chalk.gray(this.prefix), `Failed to dial peer ${peerId}`, err)
-				}
-			}
-		} else {
+		if (subscribers.length >= MIN_MESH_PEERS) {
 			if (this.options.verbose) {
 				console.log(chalk.gray(this.prefix, "Have enough GossipSub peers"))
 			}
+
+			return
+		}
+
+		if (subscribers.some((peer) => peer.equals(peerId))) {
+			if (this.options.verbose) {
+				console.log(chalk.gray(this.prefix, `Already have mesh connection to peer ${peerId}`))
+			}
+
+			return
+		}
+
+		if (this.options.verbose) {
+			console.log(chalk.gray(this.prefix, `Dialing peer ${peerId} at [ ${addrs.join(", ")} ]`))
+		}
+
+		try {
+			await this.libp2p.hangUp(peerId)
+			const signal = anySignal([AbortSignal.timeout(DIAL_TIMEOUT), this.controller.signal])
+			await this.libp2p.dial(addrs).finally(() => signal.clear())
+		} catch (err) {
+			logErrorMessage(chalk.gray(this.prefix), `Failed to dial peer ${peerId}`, err)
 		}
 	}
 
