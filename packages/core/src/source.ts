@@ -367,7 +367,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	}
 
 	private async startAnnounceService() {
-		const prefix = chalk.magentaBright(`[canvas-core] [${this.cid}] [announce]`)
+		const prefix = chalk.blueBright(`[canvas-core] [${this.cid}] [dht:announce]`)
 		console.log(prefix, `Staring DHT announce service`)
 
 		const { signal } = this.controller
@@ -398,7 +398,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	}
 
 	private async startDiscoveryService() {
-		const prefix = chalk.cyan(`[canvas-core] [${this.cid}] [discovery]`)
+		const prefix = chalk.cyanBright(`[canvas-core] [${this.cid}] [dht:discovery]`)
 		console.log(prefix, `Staring DHT discovery service`)
 
 		const { signal } = this.controller

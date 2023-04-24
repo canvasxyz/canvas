@@ -416,7 +416,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			return
 		}
 
-		const prefix = chalk.cyan(`[canvas-core] [discovery]`)
+		const prefix = chalk.cyan(`[canvas-core] [pubsub:discovery]`)
 		console.log(prefix, `Received discovery record from ${from} for ${record.topics.length} topics`)
 
 		const addrs: Multiaddr[] = []
@@ -440,9 +440,9 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			return
 		}
 
-		const prefix = chalk.magentaBright(`[canvas-core] [announce]`)
+		const prefix = chalk.magentaBright(`[canvas-core] [pubsub:announce]`)
 		if (this.options.verbose) {
-			console.log(prefix, "Started announce service")
+			console.log(prefix, "Started GossipSub announce service")
 		}
 
 		const { signal } = this.controller
