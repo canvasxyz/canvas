@@ -23,6 +23,7 @@ export async function* sync(
 	stream: Duplex<Source<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>>,
 	options: { verbose?: boolean } = {}
 ): AsyncGenerator<[hash: Uint8Array, message: Message]> {
+	const prefix = chalk.magenta(`[canvas-core] [${cid}] [sync]`)
 	const client = new Client(stream)
 	try {
 		const sourceRoot = await client.getRoot()
@@ -34,14 +35,14 @@ export async function* sync(
 			return
 		} else {
 			if (options.verbose) {
-				console.log(chalk.gray(`[canvas-core] [${cid}] [sync] The old merkle root is ${toHex(targetRoot.hash)}`))
+				console.log(prefix, chalk.gray(`The old merkle root is ${toHex(targetRoot.hash)}`))
 			}
 
 			yield* enter({ cid, txn, client }, targetRoot.level, sourceRoot)
 
 			if (options.verbose) {
 				const { hash: newRoot } = await txn.getRoot()
-				console.log(chalk.gray(`[canvas-core] [${cid}] [sync] The new merkle root is ${toHex(newRoot)}`))
+				console.log(prefix, chalk.gray(`The new merkle root is ${toHex(newRoot)}`))
 			}
 		}
 	} finally {
