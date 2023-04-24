@@ -9,8 +9,7 @@ import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
-// import { pubsubPeerDiscovery } from "@libp2p/pubsub-peer-discovery"
-// import { kadDHT } from "@libp2p/kad-dht"
+import { kadDHT } from "@libp2p/kad-dht"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import { assert } from "@canvas-js/core/utils"
@@ -20,9 +19,7 @@ import {
 	MAX_CONNECTIONS,
 	MIN_CONNECTIONS,
 	PING_TIMEOUT,
-	// PUBSUB_DISCOVERY_REFRESH_INTERVAL,
-	// PUBSUB_DISCOVERY_TOPIC,
-	// minute,
+	minute,
 } from "@canvas-js/core/constants"
 
 import type { P2PConfig } from "./types.js"
@@ -86,16 +83,13 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
-		peerDiscovery: [
-			bootstrap({ list: bootstrapList }),
-			// pubsubPeerDiscovery({ interval: PUBSUB_DISCOVERY_REFRESH_INTERVAL, topics: [PUBSUB_DISCOVERY_TOPIC] }),
-		],
+		peerDiscovery: [bootstrap({ list: bootstrapList })],
 
-		// dht: kadDHT({
-		// 	protocolPrefix: "/canvas",
-		// 	clientMode: announce.length === 0,
-		// 	providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
-		// }),
+		dht: kadDHT({
+			protocolPrefix: "/canvas",
+			clientMode: announce.length === 0,
+			providers: { provideValidity: 20 * minute, cleanupInterval: 5 * minute },
+		}),
 
 		pubsub: gossipsub({
 			emitSelf: false,

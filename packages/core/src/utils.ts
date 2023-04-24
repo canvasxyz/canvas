@@ -65,11 +65,9 @@ export async function wait(interval: number, options: { signal?: AbortSignal }) 
 	}
 
 	const signal = anySignal([AbortSignal.timeout(interval), options.signal])
-	try {
-		await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve()))
-	} finally {
-		signal.clear()
-	}
+	await new Promise<void>((resolve) => {
+		signal.addEventListener("abort", () => resolve())
+	}).finally(() => signal.clear())
 }
 
 async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, T>> {

@@ -33,13 +33,15 @@ import {
 	getCustomActionSchemaName,
 	wait,
 	logErrorMessage,
+	retry,
 } from "@canvas-js/core/utils"
 import {
-	ANNOUNCE_DELAY,
-	ANNOUNCE_INTERVAL,
+	PUBSUB_ANNOUNCE_DELAY,
+	PUSUB_ANNOUNCE_INTERVAL,
 	BOUNDS_CHECK_LOWER_LIMIT,
 	BOUNDS_CHECK_UPPER_LIMIT,
-	DISCOVERY_TOPIC,
+	PUBSUB_DISCOVERY_TOPIC,
+	PUBSUB_ANNOUNCE_RETRY_INTERVAL,
 } from "@canvas-js/core/constants"
 
 import { Source } from "./source.js"
@@ -113,7 +115,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		if (libp2p !== null && core.sources !== null) {
 			await libp2p.start()
 
-			libp2p.pubsub.subscribe(DISCOVERY_TOPIC)
+			libp2p.pubsub.subscribe(PUBSUB_DISCOVERY_TOPIC)
 
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
 		}
@@ -184,7 +186,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 					return
 				}
 
-				if (msg.topic === DISCOVERY_TOPIC) {
+				if (msg.topic === PUBSUB_DISCOVERY_TOPIC) {
 					const decoder = new TextDecoder()
 					let record: DiscoveryRecord
 					try {
@@ -443,22 +445,36 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			console.log(prefix, "Started announce service")
 		}
 
+		const { signal } = this.controller
+		const { pubsub } = this.libp2p
+
 		try {
-			await wait(ANNOUNCE_DELAY, { signal: this.controller.signal })
-			while (!this.controller.signal.aborted) {
+			await wait(PUBSUB_ANNOUNCE_DELAY, { signal })
+			while (!signal.aborted) {
 				const record: DiscoveryRecord = {
 					addresses: this.libp2p.getMultiaddrs().map((addr) => addr.toString()),
 					topics: [this.app, ...this.vm.sources],
 				}
 
 				const data = new TextEncoder().encode(JSON.stringify(record))
-				const { recipients } = await this.libp2p.pubsub.publish(DISCOVERY_TOPIC, data)
-				console.log(prefix, `Published discovery record to ${recipients.length} peers`)
 
-				await wait(ANNOUNCE_INTERVAL, { signal: this.controller.signal })
+				await retry(
+					async () => {
+						const { recipients } = await pubsub.publish(PUBSUB_DISCOVERY_TOPIC, data)
+						if (recipients.length === 0) {
+							throw new Error("no GossipSub peers")
+						} else {
+							console.log(prefix, `Published discovery record to ${recipients.length} peers`)
+						}
+					},
+					(err) => logErrorMessage(prefix, "Failed to publish discovery record", err),
+					{ signal, maxRetries: 3, interval: PUBSUB_ANNOUNCE_RETRY_INTERVAL }
+				)
+
+				await wait(PUSUB_ANNOUNCE_INTERVAL, { signal })
 			}
 		} catch (err) {
-			if (this.controller.signal.aborted) {
+			if (signal.aborted) {
 			} else {
 				logErrorMessage(prefix, chalk.red(`Service crashed`), err)
 			}

@@ -6,10 +6,11 @@ import { anySignal } from "any-signal"
 import type { Libp2p } from "libp2p"
 import type { SignedMessage, UnsignedMessage } from "@libp2p/interface-pubsub"
 import type { StreamHandler } from "@libp2p/interface-registrar"
-import type { Connection, Stream } from "@libp2p/interface-connection"
+import type { Stream } from "@libp2p/interface-connection"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { CID } from "multiformats/cid"
+import { Multiaddr } from "@multiformats/multiaddr"
 
 import type { Message } from "@canvas-js/interfaces"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
@@ -17,18 +18,19 @@ import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/compone
 import {
 	DIAL_TIMEOUT,
 	MAX_PING_QUEUE_SIZE,
-	ANNOUNCE_INTERVAL,
-	ANNOUNCE_DELAY,
 	SYNC_COOLDOWN_PERIOD,
-	DISCOVERY_TOPIC,
+	DHT_DISCOVERY_DELAY,
+	DHT_DISCOVERY_RETRY_INTERVAL,
+	DHT_DISCOVERY_INTERVAL,
+	DHT_DISCOVERY_TIMEOUT,
+	DHT_ANNOUNCE_DELAY,
+	DHT_ANNOUNCE_INTERVAL,
+	DHT_ANNOUNCE_RETRY_INTERVAL,
+	DHT_ANNOUNCE_TIMEOUT,
 } from "@canvas-js/core/constants"
 import { messageType } from "@canvas-js/core/codecs"
-import { toHex, assert, logErrorMessage, CacheMap, wait } from "@canvas-js/core/utils"
+import { toHex, assert, logErrorMessage, CacheMap, wait, retry } from "@canvas-js/core/utils"
 import { sync, handleIncomingStream } from "@canvas-js/core/sync"
-import { Multiaddr } from "@multiformats/multiaddr"
-
-// import { startAnnounceService } from "./services/announce.js"
-// import { startDiscoveryService } from "./services/discovery.js"
 
 export interface SourceOptions {
 	verbose?: boolean
@@ -127,48 +129,13 @@ export class Source extends EventEmitter<SourceEvents> {
 			console.log(chalk.gray(this.prefix, `Attached stream handler for protocol ${this.protocol}`))
 		}
 
-		// this.startDiscoveryService()
+		this.startDiscoveryService()
 
-		// startDiscoveryService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
-
-		// const mode = await this.libp2p.dht.getMode()
-		// if (mode === "server") {
-		// 	startAnnounceService({ libp2p: this.libp2p, cid: this.cid, signal: this.controller.signal })
-		// }
+		const mode = await this.libp2p.dht.getMode()
+		if (mode === "server") {
+			this.startAnnounceService()
+		}
 	}
-
-	// private async startDiscoveryService() {
-	// 	const prefix = `${this.prefix} [mesh]`
-	// 	if (this.options.verbose) {
-	// 		console.log(chalk.gray(prefix, "Started PubSub discovery service"))
-	// 	}
-
-	// 	try {
-	// 		await wait(PUBSUB_DISCOVERY_REFRESH_DELAY, { signal: this.controller.signal })
-	// 		while (!this.controller.signal.aborted) {
-	// 			for (const peerId of this.libp2p.pubsub.getSubscribers(this.uri)) {
-	// 				if (this.options.verbose) {
-	// 					console.log(chalk.gray(prefix, `Found peer ${peerId} in GossipSub mesh`))
-	// 				}
-
-	// 				this.handlePeerDiscovery(peerId)
-	// 			}
-
-	// 			await wait(PUBSUB_DISCOVERY_REFRESH_INTERVAL, { signal: this.controller.signal })
-	// 		}
-	// 	} catch (err) {
-	// 		if (this.controller.signal.aborted) {
-	// 		} else {
-	// 			logErrorMessage(prefix, chalk.red(`Service crashed`), err)
-	// 		}
-	// 	}
-	// }
-
-	// public async stop() {
-	// 	this.syncQueue.pause()
-	// 	this.syncQueue.clear()
-	// 	this.controller.abort()
-	// }
 
 	public get uri() {
 		return `ipfs://${this.cid}`
@@ -259,6 +226,10 @@ export class Source extends EventEmitter<SourceEvents> {
 	}
 
 	public handlePeerDiscovery(peerId: PeerId, addrs?: Multiaddr[]) {
+		if (this.libp2p.peerId.equals(peerId)) {
+			return
+		}
+
 		const id = peerId.toString()
 		if (this.pendingSyncPeers.has(id)) {
 			if (this.options.verbose) {
@@ -392,6 +363,74 @@ export class Source extends EventEmitter<SourceEvents> {
 			await connection.close()
 			await this.libp2p.hangUp(peerId)
 			throw err
+		}
+	}
+
+	private async startAnnounceService() {
+		const prefix = chalk.magentaBright(`[canvas-core] [${this.cid}] [announce]`)
+		console.log(prefix, `Staring DHT announce service`)
+
+		const { signal } = this.controller
+
+		try {
+			await wait(DHT_ANNOUNCE_DELAY, { signal })
+			while (!signal.aborted) {
+				await retry(
+					async () => {
+						console.log(prefix, `Publishing DHT provider record...`)
+						const timeout = anySignal([AbortSignal.timeout(DHT_ANNOUNCE_TIMEOUT), signal])
+						await this.libp2p.contentRouting.provide(this.cid, { signal: timeout }).finally(() => timeout.clear())
+						console.log(prefix, chalk.green(`Successfully published DHT provider record.`))
+					},
+					(err) => logErrorMessage(prefix, chalk.yellow(`Failed to publish DHT provider record`), err),
+					{ signal, interval: DHT_ANNOUNCE_RETRY_INTERVAL }
+				)
+
+				await wait(DHT_ANNOUNCE_INTERVAL, { signal })
+			}
+		} catch (err) {
+			if (signal.aborted) {
+				console.log(prefix, `Service aborted`)
+			} else {
+				logErrorMessage(prefix, chalk.red(`Service crashed`), err)
+			}
+		}
+	}
+
+	private async startDiscoveryService() {
+		const prefix = chalk.cyan(`[canvas-core] [${this.cid}] [discovery]`)
+		console.log(prefix, `Staring DHT discovery service`)
+
+		const { signal } = this.controller
+
+		try {
+			await wait(DHT_DISCOVERY_DELAY, { signal })
+			while (!signal.aborted) {
+				await retry(
+					async () => {
+						const timeout = anySignal([AbortSignal.timeout(DHT_DISCOVERY_TIMEOUT), signal])
+						try {
+							const providers = this.libp2p.contentRouting.findProviders(this.cid, { signal: timeout })
+							for await (const { id } of providers) {
+								console.log(prefix, `Found peer ${id} via DHT provider record`)
+								this.handlePeerDiscovery(id)
+							}
+						} finally {
+							timeout.clear()
+						}
+					},
+					(err) => logErrorMessage(prefix, chalk.yellow(`Failed to query DHT for provider records`), err),
+					{ signal, interval: DHT_DISCOVERY_RETRY_INTERVAL, maxRetries: 3 }
+				)
+
+				await wait(DHT_DISCOVERY_INTERVAL, { signal })
+			}
+		} catch (err) {
+			if (signal.aborted) {
+				console.log(prefix, `Service aborted`)
+			} else {
+				logErrorMessage(prefix, chalk.red(`Service crashed`), err)
+			}
 		}
 	}
 }
