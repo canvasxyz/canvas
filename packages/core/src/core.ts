@@ -463,9 +463,9 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 						const { recipients } = await pubsub.publish(PUBSUB_DISCOVERY_TOPIC, data)
 						if (recipients.length === 0) {
 							throw new Error("no GossipSub peers")
-						} else {
-							console.log(prefix, `Published discovery record to ${recipients.length} peers`)
 						}
+
+						console.log(prefix, `Published discovery record to ${recipients.length} peers`)
 					},
 					(err) => logErrorMessage(prefix, "Failed to publish discovery record", err),
 					{ signal, maxRetries: 3, interval: PUBSUB_ANNOUNCE_RETRY_INTERVAL }
@@ -475,6 +475,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			}
 		} catch (err) {
 			if (signal.aborted) {
+				chalk.gray(prefix, `Service aborted`)
 			} else {
 				logErrorMessage(prefix, chalk.red(`Service crashed`), err)
 			}
