@@ -56,7 +56,11 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
 		},
 
-		transports: [webSockets(), circuitRelayTransport({ discoverRelays: announce.length === 0 ? 1 : 0 })],
+		transports: [
+			webSockets(),
+			circuitRelayTransport({ discoverRelays: announce.length === 0 ? bootstrapList.length : 0 }),
+		],
+
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [
