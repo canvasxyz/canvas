@@ -51,12 +51,18 @@ class SqliteModelStore implements ModelStore {
 
 	public async *exportModel(
 		modelName: string,
-		options: { limit?: number } = {}
+		options: { offset?: number; limit?: number } = {}
 	): AsyncIterable<Record<string, ModelValue>> {
+		const offset = Number.isSafeInteger(options.offset) ? options.offset : 0
 		const limit = Number.isSafeInteger(options.limit) ? options.limit : -1
-		for (const row of this.modelStatements[modelName].export.all({ limit })) {
+		for (const row of this.modelStatements[modelName].export.all({ offset, limit })) {
 			yield row as Record<string, ModelValue>
 		}
+	}
+
+	public async count(modelName: string): Promise<number> {
+		const res = await this.modelStatements[modelName].count.all()
+		return (res[0] as any)["COUNT(*)"] as number
 	}
 
 	private getUpdatedAt(name: string, id: string): number | undefined {

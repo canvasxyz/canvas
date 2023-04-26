@@ -97,16 +97,16 @@ test("Apply source actions", async (t) => {
 
 	t.deepEqual(await collect(core.modelStore.exportModel("votes")), [
 		{
-			id: `${createActionHash}/${signer.wallet.address}`,
-			post_id: createActionHash,
-			value: 1,
-			updated_at: voteAction.payload.timestamp,
-		},
-		{
 			id: `${sourceActionHash}/${signer.wallet.address}`,
 			post_id: sourceActionHash,
 			value: -1,
 			updated_at: voteSourceAction.payload.timestamp,
+		},
+		{
+			id: `${createActionHash}/${signer.wallet.address}`,
+			post_id: createActionHash,
+			value: 1,
+			updated_at: voteAction.payload.timestamp,
 		},
 	])
 
