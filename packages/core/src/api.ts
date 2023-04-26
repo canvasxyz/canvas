@@ -63,6 +63,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 
 	api.set("query parser", "simple")
 	api.use(express.json())
+	api.use(express.text())
 
 	api.get("/", async (req, res) => {
 		const data = await core.getApplicationData()
@@ -310,7 +311,7 @@ async function handleRoute(core: Core, route: string, req: express.Request, res:
 const WS_KEEPALIVE = 30000
 const WS_KEEPALIVE_LATENCY = 3000
 
-export function handleWebsocketConnection(core: Core, socket: WebSocket) {
+export function handleWebsocketConnection(core: Core, socket: WebSocket, options: { verbose?: boolean } = {}) {
 	const id = nanoid(8)
 	if (core.options.verbose) {
 		console.log(chalk.gray(`[canvas-core] [ws-${id}] Opened socket`))

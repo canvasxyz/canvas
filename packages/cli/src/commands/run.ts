@@ -9,9 +9,11 @@ import type { Argv } from "yargs"
 import chalk from "chalk"
 import prompts from "prompts"
 import stoppable from "stoppable"
-import express from "express"
+import express, { text } from "express"
 import cors from "cors"
 import { WebSocketServer } from "ws"
+
+import { multiaddr } from "@multiformats/multiaddr"
 
 import { Core, CoreOptions } from "@canvas-js/core"
 import { getAPI, handleWebsocketConnection } from "@canvas-js/core/api"
@@ -42,21 +44,6 @@ export const builder = (yargs: Argv) =>
 		.option("offline", {
 			type: "boolean",
 			desc: "Disable libp2p",
-			default: false,
-		})
-		.option("disable-dht", {
-			type: "boolean",
-			desc: "Disable joining the libp2p DHT",
-			default: false,
-		})
-		.option("disable-ping", {
-			type: "boolean",
-			desc: "Disable the libp2p ping service",
-			default: false,
-		})
-		.option("disable-pubsub", {
-			type: "boolean",
-			desc: "Disable the libp2p PubSub mesh",
 			default: false,
 		})
 		.option("install", {
@@ -112,6 +99,16 @@ export const builder = (yargs: Argv) =>
 		.option("testnet", {
 			type: "boolean",
 			desc: "Bootstrap to the private testnet (requires VPN)",
+		})
+		.option("min-connections", {
+			type: "number",
+			desc: "Auto-dial peers while below a threshold",
+			default: constants.MIN_CONNECTIONS,
+		})
+		.option("max-connections", {
+			type: "number",
+			desc: "Stop accepting connections above a limit",
+			default: constants.MAX_CONNECTIONS,
 		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
@@ -211,23 +208,29 @@ export async function handler(args: Args) {
 		verbose: args.verbose,
 	}
 
+	const announce: string[] = []
+	for (const address of args.announce ?? []) {
+		assert(typeof address === "string", "--announce address must be a string")
+		const addr = multiaddr(address)
+		const lastProtoName = addr.protoNames().pop()
+		assert(lastProtoName === "ws" || lastProtoName === "wss", "--announce address must be a /ws or /wss multiaddr")
+		announce.push(address)
+	}
+
+	const listen: string[] = []
+	for (const address of args.listen ?? []) {
+		assert(typeof address === "string", "--listen address must be a string")
+		const addr = multiaddr(address)
+		const lastProtoName = addr.protoNames().pop()
+		assert(lastProtoName === "ws" || lastProtoName === "wss", "--listen address must be a /ws or /wss multiaddr")
+		listen.push(address)
+	}
+
 	const p2pConfig: P2PConfig = {
-		disableDHT: args["disable-dht"],
-		disablePing: args["disable-ping"],
-		disablePubSub: args["disable-pubsub"],
-	}
-
-	const validateAddresses = (addresses: (string | number)[]): addresses is string[] =>
-		addresses.every((address) => typeof address === "string")
-
-	if (args.announce) {
-		assert(validateAddresses(args.announce))
-		p2pConfig.announce = args.announce
-	}
-
-	if (args.listen) {
-		assert(validateAddresses(args.listen))
-		p2pConfig.listen = args.listen
+		listen,
+		announce,
+		minConnections: args["min-connections"],
+		maxConnections: args["max-connections"],
 	}
 
 	if (args.testnet) {
@@ -282,7 +285,9 @@ export async function handler(args: Args) {
 
 		const url = new URL(req.url, origin)
 		if (url.pathname === pathname) {
-			wss.handleUpgrade(req, socket, head, (socket) => handleWebsocketConnection(core, socket))
+			wss.handleUpgrade(req, socket, head, (socket) =>
+				handleWebsocketConnection(core, socket, { verbose: options.verbose })
+			)
 		} else {
 			console.log(chalk.red("[canvas-cli] rejecting incoming WS connection at unexpected path"), url.pathname)
 			rejectRequest(socket, StatusCodes.NOT_FOUND)

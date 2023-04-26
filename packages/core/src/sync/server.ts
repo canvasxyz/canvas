@@ -6,10 +6,9 @@ import * as lp from "it-length-prefixed"
 import { CID } from "multiformats"
 import { sha256 } from "@noble/hashes/sha256"
 
-import RPC from "@canvas-js/core/rpc/sync"
+import RPC from "#rpc/sync"
 
 import type { ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
-
 import { stringify, assert } from "@canvas-js/core/utils"
 import { fromNode, toKey } from "./utils.js"
 

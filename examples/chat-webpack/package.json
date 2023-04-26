@@ -1,20 +1,20 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat-webpack",
-  "version": "0.4.3",
+  "version": "0.4.7",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "HOST=/api webpack build",
-    "start": "canvas run spec.canvas.js --install --unchecked --static dist",
+    "start": "canvas run spec.canvas.js --install --unchecked --p2p --static dist",
     "dev:backend": "canvas run spec.canvas.js --unchecked --offline",
     "dev:frontend": "HOST='http://localhost:8000' webpack server --port 3000",
     "dev": "concurrently --kill-others -n backend,frontend 'npm run dev:backend' 'npm run dev:frontend'"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.4.3",
-    "@canvas-js/cli": "0.4.3",
-    "@canvas-js/hooks": "0.4.3",
+    "@canvas-js/chain-ethereum": "0.4.7",
+    "@canvas-js/cli": "0.4.7",
+    "@canvas-js/hooks": "0.4.7",
     "@types/react": "^18.0.35",
     "@types/react-dom": "^18.0.11",
     "@wagmi/chains": "^0.2.18",

@@ -29,11 +29,22 @@ function Index({}: {}) {
 		console.log("initializing core", spec)
 		fetch(spec)
 			.then((res) => res.text())
-			.then((spec) => Core.initialize({ directory: "canvas-chat", spec, replay: true, unchecked: true, verbose: true }))
+			.then((spec) =>
+				Core.initialize({
+					directory: "canvas-chat",
+					spec,
+					replay: true,
+					unchecked: true,
+					verbose: true,
+				})
+			)
 			.then((core) => setCore(core))
 	}, [])
 
-	useEffect(() => console.log("got core", core), [core])
+	useEffect(() => {
+		console.log("got core", core)
+		;(window as any).core = core
+	}, [core])
 
 	return (
 		<Canvas host={core}>
