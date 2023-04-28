@@ -19,7 +19,7 @@ export * from "../types.js"
 type MessageRecord = {
 	hash: Buffer
 	type: string
-	payload: string
+	message: string
 }
 
 type SessionHashRecord = {
@@ -136,7 +136,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		if (record === undefined || record.type !== "session") {
 			return [null, null]
 		} else {
-			return [toHex(record.hash), JSON.parse(record.payload) as Session]
+			return [toHex(record.hash), JSON.parse(record.message) as Session]
 		}
 	}
 
@@ -147,7 +147,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		if (record === undefined) {
 			return null
 		} else {
-			return JSON.parse(record.payload) as Message
+			return JSON.parse(record.message) as Message
 		}
 	}
 
@@ -184,7 +184,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		}
 
 		for (const record of iter as Iterable<MessageRecord>) {
-			yield [record.hash, JSON.parse(record.payload) as Message]
+			yield [record.hash, JSON.parse(record.message) as Message]
 		}
 	}
 
@@ -220,7 +220,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 			this.statements.insertMessage.run({
 				hash: id,
 				type: message.type,
-				payload: JSON.stringify(message),
+				message: JSON.stringify(message),
 			})
 
 			if (message.type === "session") {
@@ -261,11 +261,11 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 	}
 
 	// This table stores messages (actions, sessions, customActions)
-	// The `payload` field is a JSON blob
+	// The `message` field is a JSON blob
 	private static createMessagesTable = `CREATE TABLE IF NOT EXISTS messages (
 		hash      BLOB PRIMARY KEY,
 		type      TEXT NOT NULL,
-		payload   BLOB NOT NULL
+		message   BLOB NOT NULL
 	)`
 
 	private static createSessionHashTable = `CREATE TABLE IF NOT EXISTS session_hash (
@@ -276,7 +276,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 	private static statements = {
 		insertSessionHash: `INSERT INTO session_hash (session_address, hash) VALUES (:session_address, :hash)`,
 		getSessionHashBySessionAddress: `SELECT * FROM session_hash WHERE session_address = :session_address`,
-		insertMessage: `INSERT INTO messages (hash, type, payload) VALUES (:hash, :type, :payload)`,
+		insertMessage: `INSERT INTO messages (hash, type, message) VALUES (:hash, :type, :message)`,
 		getMessageByHash: `SELECT * FROM messages WHERE hash = :hash`,
 		getMessages: `SELECT * FROM messages`,
 		getMessagesByType: `SELECT * FROM messages WHERE type = :type`,
