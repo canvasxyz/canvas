@@ -16,40 +16,15 @@ import type { MessageStore, ReadOnlyTransaction, ReadWriteTransaction, Node, Mes
 
 export * from "../types.js"
 
-type ActionRecord = {
+type MessageRecord = {
 	hash: Buffer
-	signature: string
-
-	// action payload
-	app: string
-	from_address: string
-	session_address: string | null
-	timestamp: number
-	call: string
-	call_args: string
-	chain: string
-	block: string | null
-}
-
-type SessionRecord = {
-	hash: Buffer
-	signature: string
-
-	// session payload
-	app: string
-	from_address: string
-	session_address: string
-	session_duration: number
-	session_issued: number
-	chain: string
-	block: string | null
-}
-
-type CustomActionRecord = {
-	hash: Buffer
-	app: string
-	name: string
+	type: string
 	payload: string
+}
+
+type SessionHashRecord = {
+	hash: Buffer
+	session_address: string
 }
 
 const toBuffer = (array: Uint8Array) => Buffer.from(array.buffer, array.byteOffset, array.byteLength)
@@ -128,10 +103,12 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		private readonly sources: Set<string> = new Set([])
 	) {
 		super()
-		this.database.exec(SqliteMessageStore.createSessionsTable)
-		this.database.exec(SqliteMessageStore.createActionsTable)
-		this.database.exec(SqliteMessageStore.createCustomActionsTable)
-		this.statements = mapEntries(SqliteMessageStore.statements, (_, sql) => this.database.prepare(sql))
+		this.database.exec(SqliteMessageStore.createMessagesTable)
+		this.database.exec(SqliteMessageStore.createSessionHashTable)
+		this.statements = mapEntries(SqliteMessageStore.statements, (_, sql) => {
+			console.log(sql)
+			return this.database.prepare(sql)
+		})
 	}
 
 	public async close() {
@@ -141,122 +118,40 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		}
 	}
 
-	private insertAction(hash: Uint8Array, action: Action): void {
-		assert(
-			action.payload.app === this.app || this.sources.has(action.payload.app),
-			"insertAction: action.payload.app not found in MessageStore.sources"
-		)
-
-		const record: ActionRecord = {
-			hash: toBuffer(hash),
-			signature: action.signature,
-			app: action.payload.app,
-			session_address: action.session,
-			from_address: action.payload.from,
-			timestamp: action.payload.timestamp,
-			call: action.payload.call,
-			call_args: stringify(action.payload.callArgs),
-			chain: action.payload.chain,
-			block: action.payload.block,
-		}
-
-		this.statements.insertAction.run(record)
-	}
-
-	private insertSession(hash: Uint8Array, session: Session): void {
-		assert(
-			session.payload.app === this.app || this.sources.has(session.payload.app),
-			"insertSession: session.payload.app not found in MessageStore.sources"
-		)
-
-		const record: SessionRecord = {
-			hash: toBuffer(hash),
-			signature: session.signature,
-			app: session.payload.app,
-			from_address: session.payload.from,
-			session_address: session.payload.sessionAddress,
-			session_duration: session.payload.sessionDuration,
-			session_issued: session.payload.sessionIssued,
-			block: session.payload.block,
-			chain: session.payload.chain,
-		}
-
-		this.statements.insertSession.run(record)
-	}
-
-	private insertCustomAction(hash: Uint8Array, customAction: CustomAction): void {
-		assert(
-			customAction.app === this.app || this.sources.has(customAction.app),
-			"insertAction: action.payload.app not found in MessageStore.sources"
-		)
-
-		const record: CustomActionRecord = {
-			hash: toBuffer(hash),
-			app: customAction.app,
-			payload: JSON.stringify(customAction.payload),
-			name: customAction.name,
-		}
-
-		this.statements.insertCustomAction.run(record)
-	}
-
 	public getMerkleRoots(): Record<string, string> {
 		return this.merkleRoots
 	}
 
 	private getSessionByAddress(chain: string, address: string): [hash: string | null, session: Session | null] {
-		const record = this.statements.getSessionByAddress.get({
-			session_address: address,
-		}) as undefined | SessionRecord
+		const sessionHashRecord = this.statements.getSessionHashBySessionAddress.get({ session_address: address }) as
+			| undefined
+			| SessionHashRecord
 
-		if (record === undefined) {
+		if (sessionHashRecord === undefined) {
+			return [null, null]
+		}
+
+		const hash = sessionHashRecord.hash
+		const record = this.statements.getMessageByHash.get({
+			hash,
+		}) as undefined | MessageRecord
+
+		if (record === undefined || record.type !== "session") {
 			return [null, null]
 		} else {
-			return [toHex(record.hash), SqliteMessageStore.parseSessionRecord(record)]
+			return [toHex(record.hash), JSON.parse(record.payload) as Session]
 		}
 	}
 
 	private getMessageByHash(hash: Uint8Array): Message | null {
-		const session = this.getSessionByHash(hash)
-		if (session !== null) {
-			return session
-		}
-
-		const action = this.getActionByHash(hash)
-		if (action !== null) {
-			return action
-		}
-
-		const customAction = this.getCustomActionByHash(hash)
-		if (customAction !== null) {
-			return customAction
-		}
-
-		return null
-	}
-
-	private getSessionByHash(hash: Uint8Array): Session | null {
-		const record = this.statements.getSessionByHash.get({
+		const record = this.statements.getMessageByHash.get({
 			hash: toBuffer(hash),
-		}) as undefined | SessionRecord
-
-		return record === undefined ? null : SqliteMessageStore.parseSessionRecord(record)
-	}
-
-	private getActionByHash(hash: Uint8Array): Action | null {
-		const record = this.statements.getActionByHash.get({
-			hash: toBuffer(hash),
-		}) as undefined | ActionRecord
-
-		return record === undefined ? null : SqliteMessageStore.parseActionRecord(record)
-	}
-
-	private getCustomActionByHash(hash: Uint8Array): CustomAction | null {
-		const record = this.statements.getCustomActionByHash.get({
-			hash: toBuffer(hash),
-		}) as undefined | CustomActionRecord
-
-		return record === undefined ? null : SqliteMessageStore.parseCustomActionRecord(record)
+		}) as undefined | MessageRecord
+		if (record === undefined) {
+			return null
+		} else {
+			return JSON.parse(record.payload) as Message
+		}
 	}
 
 	// we can use statement.iterate() instead of paging manually
@@ -265,81 +160,61 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		filter: { type?: Message["type"]; limit?: number; app?: string } = {}
 	): AsyncIterable<[Uint8Array, Message]> {
 		const { type, limit, app } = filter
-		if (type === undefined) {
-			const countMax = limit ?? Infinity
-			let count = 0
-			for await (const session of this.getSessionStream({ limit, app })) {
-				if (count++ < countMax) {
-					yield session
+
+		const offset = 0
+
+		let iter: Iterable<MessageRecord>
+
+		// i wish we had a query builder
+		// whatever, this is fine
+		if (app === undefined) {
+			if (limit === undefined) {
+				// unpaginated
+				if (type === undefined) {
+					iter = this.statements.getMessages.iterate() as Iterable<MessageRecord>
+				} else {
+					iter = this.statements.getMessagesByType.iterate({ type }) as Iterable<MessageRecord>
+				}
+			} else {
+				if (type === undefined) {
+					iter = this.statements.getMessagesWithLimitOffset.iterate({ limit, offset }) as Iterable<MessageRecord>
+				} else {
+					iter = this.statements.getMessagesByTypeWithLimitOffset.iterate({
+						type,
+						limit,
+						offset,
+					}) as Iterable<MessageRecord>
 				}
 			}
-
-			for await (const session of this.getActionStream({ limit, app })) {
-				if (count++ < countMax) {
-					yield session
+		} else {
+			if (limit === undefined) {
+				// unpaginated
+				if (type === undefined) {
+					iter = this.statements.getMessagesByApp.iterate({ app }) as Iterable<MessageRecord>
+				} else {
+					iter = this.statements.getMessagesByAppAndType.iterate({ type, app }) as Iterable<MessageRecord>
+				}
+			} else {
+				// paginated
+				const offset = 0
+				if (type === undefined) {
+					iter = this.statements.getMessagesByAppWithLimitOffset.iterate({
+						app,
+						limit,
+						offset,
+					}) as Iterable<MessageRecord>
+				} else {
+					iter = this.statements.getMessagesByAppAndTypeWithLimitOffset.iterate({
+						app,
+						type,
+						limit,
+						offset,
+					}) as Iterable<MessageRecord>
 				}
 			}
-
-			for await (const session of this.getCustomActionStream({ limit, app })) {
-				if (count++ < countMax) {
-					yield session
-				}
-			}
-		} else if (type === "session") {
-			yield* this.getSessionStream({ limit, app })
-		} else if (type === "action") {
-			yield* this.getActionStream({ limit, app })
-		} else if (type === "customAction") {
-			yield* this.getCustomActionStream({ limit, app })
-		} else {
-			signalInvalidType(type)
 		}
-	}
-
-	private async *getSessionStream(filter: { limit?: number; app?: string } = {}): AsyncIterable<[Uint8Array, Message]> {
-		const limit = filter.limit ?? -1
-		if (filter.app) {
-			const iter = this.statements.getSessionsByApp.iterate({ app: filter.app, limit })
-			for (const record of iter as Iterable<SessionRecord>) {
-				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
-			}
-		} else {
-			const iter = this.statements.getSessions.iterate({ limit })
-			for (const record of iter as Iterable<SessionRecord>) {
-				yield [record.hash, SqliteMessageStore.parseSessionRecord(record)]
-			}
-		}
-	}
-
-	private async *getActionStream(filter: { limit?: number; app?: string } = {}): AsyncIterable<[Uint8Array, Message]> {
-		const limit = filter.limit ?? -1
-		if (filter.app) {
-			const iter = this.statements.getActionsByApp.iterate({ app: filter.app, limit })
-			for (const record of iter as Iterable<ActionRecord>) {
-				yield [record.hash, SqliteMessageStore.parseActionRecord(record)]
-			}
-		} else {
-			const iter = this.statements.getActions.iterate({ limit })
-			for (const record of iter as Iterable<ActionRecord>) {
-				yield [record.hash, SqliteMessageStore.parseActionRecord(record)]
-			}
-		}
-	}
-
-	private async *getCustomActionStream(
-		filter: { limit?: number; app?: string } = {}
-	): AsyncIterable<[Uint8Array, Message]> {
-		const limit = filter.limit ?? -1
-		if (filter.app) {
-			const iter = this.statements.getCustomActionsByApp.iterate({ app: filter.app, limit })
-			for (const record of iter as Iterable<CustomActionRecord>) {
-				yield [record.hash, SqliteMessageStore.parseCustomActionRecord(record)]
-			}
-		} else {
-			const iter = this.statements.getCustomActions.iterate({ limit }) as Iterable<CustomActionRecord>
-			for (const record of iter) {
-				yield [record.hash, SqliteMessageStore.parseCustomActionRecord(record)]
-			}
+		for (const record of iter as Iterable<MessageRecord>) {
+			yield [record.hash, JSON.parse(record.payload) as Message]
 		}
 	}
 
@@ -372,14 +247,15 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 	private getReadWriteTransaction = (uri: string, txn: okra.ReadWriteTransaction | null): ReadWriteTransaction => ({
 		...this.getReadOnlyTransaction(uri, txn),
 		insertMessage: async (id, message) => {
+			this.statements.insertMessage.run({
+				hash: id,
+				app: message.payload.app,
+				type: message.type,
+				payload: JSON.stringify(message),
+			})
+
 			if (message.type === "session") {
-				this.insertSession(id, message)
-			} else if (message.type === "action") {
-				this.insertAction(id, message)
-			} else if (message.type === "customAction") {
-				this.insertCustomAction(id, message)
-			} else {
-				signalInvalidType(message)
+				this.statements.insertSessionHash.run({ hash: id, session_address: message.payload.sessionAddress })
 			}
 
 			if (txn !== null) {
@@ -415,109 +291,33 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		return result!
 	}
 
-	private static parseSessionRecord(record: SessionRecord): Session {
-		return {
-			type: "session",
-			signature: record.signature,
-			payload: {
-				app: record.app,
-				from: record.from_address,
-				sessionAddress: record.session_address,
-				sessionDuration: record.session_duration,
-				sessionIssued: record.session_issued,
-				chain: record.chain,
-				block: record.block,
-			},
-		}
-	}
+	// This table stores messages (actions, sessions, customActions)
+	// The `payload` field is a JSON blob
+	private static createMessagesTable = `CREATE TABLE IF NOT EXISTS messages (
+		hash      BLOB PRIMARY KEY,
+		app       TEXT NOT NULL,
+		type      TEXT NOT NULL,
+		payload   BLOB NOT NULL
+	)`
 
-	private static parseActionRecord(record: ActionRecord): Action {
-		const action: Action = {
-			type: "action",
-			signature: record.signature,
-			session: record.session_address,
-			payload: {
-				app: record.app,
-				from: record.from_address,
-				call: record.call,
-				callArgs: JSON.parse(record.call_args) as Record<string, ActionArgument>,
-				timestamp: record.timestamp,
-				chain: record.chain,
-				block: record.block,
-			},
-		}
-
-		return action
-	}
-
-	private static parseCustomActionRecord(record: CustomActionRecord): CustomAction {
-		return {
-			type: "customAction",
-			app: record.app,
-			name: record.name,
-			payload: JSON.parse(record.payload),
-		}
-	}
-
-	private static createActionsTable = `CREATE TABLE IF NOT EXISTS actions (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    hash            BLOB    NOT NULL UNIQUE,
-    signature       BLOB    NOT NULL,
-    session_address BLOB    REFERENCES sessions(session_address),
-    from_address    BLOB    NOT NULL,
-    timestamp       INTEGER NOT NULL,
-    call            TEXT    NOT NULL,
-    call_args       BLOB    NOT NULL,
-		chain           TEXT    NOT NULL,
-    block           BLOB,
-    app             TEXT    NOT NULL
-  );`
-
-	private static createSessionsTable = `CREATE TABLE IF NOT EXISTS sessions (
-    hash             BLOB    PRIMARY KEY,
-    signature        TEXT    NOT NULL,
-    from_address     TEXT    NOT NULL,
-    session_address  TEXT    NOT NULL UNIQUE,
-    session_duration INTEGER NOT NULL,
-    session_issued   INTEGER NOT NULL,
-		chain            TEXT    NOT NULL,
-    block            TEXT,
-		app              TEXT    NOT NULL
-  );`
-
-	private static createCustomActionsTable = `CREATE TABLE IF NOT EXISTS custom_actions (
-		hash             BLOB    PRIMARY KEY,
-		name             TEXT    NOT NULL,
-		payload          TEXT    NOT NULL,
-		app              TEXT    NOT NULL
-	);`
+	private static createSessionHashTable = `CREATE TABLE IF NOT EXISTS session_hash (
+		session_address   TEXT PRIMARY KEY,
+		hash              BLOB NOT NULL
+	)`
 
 	private static statements = {
-		insertAction: `INSERT INTO actions (
-      hash, signature, session_address, from_address, timestamp, call, call_args, chain, block, app
-    ) VALUES (
-      :hash, :signature, :session_address, :from_address, :timestamp, :call, :call_args, :chain, :block, :app
-    )`,
-		insertSession: `INSERT INTO sessions (
-      hash, signature, from_address, session_address, session_duration, session_issued, chain, block, app
-    ) VALUES (
-      :hash, :signature, :from_address, :session_address, :session_duration, :session_issued, :chain, :block, :app
-    )`,
-		insertCustomAction: `INSERT INTO custom_actions (
-			hash, name, payload, app
-		) VALUES (
-			:hash, :name, :payload, :app
-		)`,
-		getActionByHash: `SELECT * FROM actions WHERE hash = :hash`,
-		getSessionByHash: `SELECT * FROM sessions WHERE hash = :hash`,
-		getCustomActionByHash: `SELECT * FROM custom_actions WHERE hash = :hash`,
-		getSessionByAddress: `SELECT * FROM sessions WHERE session_address = :session_address`,
-		getSessions: `SELECT * FROM sessions LIMIT :limit`,
-		getActions: `SELECT * FROM actions LIMIT :limit`,
-		getCustomActions: `SELECT * from custom_actions LIMIT :limit`,
-		getSessionsByApp: `SELECT * FROM sessions WHERE app = :app`,
-		getActionsByApp: `SELECT * FROM actions WHERE app = :app`,
-		getCustomActionsByApp: `SELECT * FROM custom_actions WHERE app = :app`,
+		insertSessionHash: `INSERT INTO session_hash (session_address, hash) VALUES (:session_address, :hash)`,
+		getSessionHashBySessionAddress: `SELECT * FROM session_hash WHERE session_address = :session_address`,
+		insertMessage: `INSERT INTO messages (hash, app, type, payload) VALUES (:hash, :app, :type, :payload)`,
+		getMessageByHash: `SELECT * FROM messages WHERE hash = :hash`,
+		getMessages: `SELECT * FROM messages`,
+		getMessagesByApp: `SELECT * FROM messages WHERE app = :app`,
+		getMessagesByType: `SELECT * FROM messages WHERE type = :type`,
+		getMessagesWithLimitOffset: `SELECT * FROM messages LIMIT :limit OFFSET :offset`,
+		getMessagesByAppAndType: `SELECT * FROM messages WHERE type = :type`,
+		getMessagesByAppWithLimitOffset: `SELECT * FROM messages WHERE app = :app LIMIT :limit OFFSET :offset`,
+		getMessagesByTypeWithLimitOffset: `SELECT * FROM messages WHERE type = :type LIMIT :limit OFFSET :offset`,
+		getMessagesByAppAndTypeWithLimitOffset: `SELECT * FROM messages WHERE type = :type LIMIT :limit OFFSET :offset`,
 	}
 }
 
