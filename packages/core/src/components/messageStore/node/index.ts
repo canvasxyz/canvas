@@ -105,10 +105,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		super()
 		this.database.exec(SqliteMessageStore.createMessagesTable)
 		this.database.exec(SqliteMessageStore.createSessionHashTable)
-		this.statements = mapEntries(SqliteMessageStore.statements, (_, sql) => {
-			console.log(sql)
-			return this.database.prepare(sql)
-		})
+		this.statements = mapEntries(SqliteMessageStore.statements, (_, sql) => this.database.prepare(sql))
 	}
 
 	public async close() {
@@ -159,7 +156,7 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 	public async *getMessageStream(
 		filter: { type?: Message["type"]; limit?: number; app?: string } = {}
 	): AsyncIterable<[Uint8Array, Message]> {
-		const { type, limit, app } = filter
+		const { type, limit } = filter
 
 		const offset = 0
 
@@ -167,52 +164,25 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 
 		// i wish we had a query builder
 		// whatever, this is fine
-		if (app === undefined) {
-			if (limit === undefined) {
-				// unpaginated
-				if (type === undefined) {
-					iter = this.statements.getMessages.iterate() as Iterable<MessageRecord>
-				} else {
-					iter = this.statements.getMessagesByType.iterate({ type }) as Iterable<MessageRecord>
-				}
+		if (limit === undefined) {
+			// unpaginated
+			if (type === undefined) {
+				iter = this.statements.getMessages.iterate() as Iterable<MessageRecord>
 			} else {
-				if (type === undefined) {
-					iter = this.statements.getMessagesWithLimitOffset.iterate({ limit, offset }) as Iterable<MessageRecord>
-				} else {
-					iter = this.statements.getMessagesByTypeWithLimitOffset.iterate({
-						type,
-						limit,
-						offset,
-					}) as Iterable<MessageRecord>
-				}
+				iter = this.statements.getMessagesByType.iterate({ type }) as Iterable<MessageRecord>
 			}
 		} else {
-			if (limit === undefined) {
-				// unpaginated
-				if (type === undefined) {
-					iter = this.statements.getMessagesByApp.iterate({ app }) as Iterable<MessageRecord>
-				} else {
-					iter = this.statements.getMessagesByAppAndType.iterate({ type, app }) as Iterable<MessageRecord>
-				}
+			if (type === undefined) {
+				iter = this.statements.getMessagesWithLimitOffset.iterate({ limit, offset }) as Iterable<MessageRecord>
 			} else {
-				// paginated
-				const offset = 0
-				if (type === undefined) {
-					iter = this.statements.getMessagesByAppWithLimitOffset.iterate({
-						app,
-						limit,
-						offset,
-					}) as Iterable<MessageRecord>
-				} else {
-					iter = this.statements.getMessagesByAppAndTypeWithLimitOffset.iterate({
-						app,
-						type,
-						limit,
-						offset,
-					}) as Iterable<MessageRecord>
-				}
+				iter = this.statements.getMessagesByTypeWithLimitOffset.iterate({
+					type,
+					limit,
+					offset,
+				}) as Iterable<MessageRecord>
 			}
 		}
+
 		for (const record of iter as Iterable<MessageRecord>) {
 			yield [record.hash, JSON.parse(record.payload) as Message]
 		}
@@ -249,7 +219,6 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		insertMessage: async (id, message) => {
 			this.statements.insertMessage.run({
 				hash: id,
-				app: message.payload.app,
 				type: message.type,
 				payload: JSON.stringify(message),
 			})
@@ -295,7 +264,6 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 	// The `payload` field is a JSON blob
 	private static createMessagesTable = `CREATE TABLE IF NOT EXISTS messages (
 		hash      BLOB PRIMARY KEY,
-		app       TEXT NOT NULL,
 		type      TEXT NOT NULL,
 		payload   BLOB NOT NULL
 	)`
@@ -308,16 +276,12 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 	private static statements = {
 		insertSessionHash: `INSERT INTO session_hash (session_address, hash) VALUES (:session_address, :hash)`,
 		getSessionHashBySessionAddress: `SELECT * FROM session_hash WHERE session_address = :session_address`,
-		insertMessage: `INSERT INTO messages (hash, app, type, payload) VALUES (:hash, :app, :type, :payload)`,
+		insertMessage: `INSERT INTO messages (hash, type, payload) VALUES (:hash, :type, :payload)`,
 		getMessageByHash: `SELECT * FROM messages WHERE hash = :hash`,
 		getMessages: `SELECT * FROM messages`,
-		getMessagesByApp: `SELECT * FROM messages WHERE app = :app`,
 		getMessagesByType: `SELECT * FROM messages WHERE type = :type`,
 		getMessagesWithLimitOffset: `SELECT * FROM messages LIMIT :limit OFFSET :offset`,
-		getMessagesByAppAndType: `SELECT * FROM messages WHERE type = :type`,
-		getMessagesByAppWithLimitOffset: `SELECT * FROM messages WHERE app = :app LIMIT :limit OFFSET :offset`,
 		getMessagesByTypeWithLimitOffset: `SELECT * FROM messages WHERE type = :type LIMIT :limit OFFSET :offset`,
-		getMessagesByAppAndTypeWithLimitOffset: `SELECT * FROM messages WHERE type = :type LIMIT :limit OFFSET :offset`,
 	}
 }
 
