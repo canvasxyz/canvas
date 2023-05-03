@@ -19,6 +19,7 @@
     "packages/hooks",
     "packages/chain-ethereum",
     "packages/chain-cosmos",
+    "packages/chain-near",
     "packages/chain-solana",
     "packages/chain-substrate",
     "examples/chat-advanced",
