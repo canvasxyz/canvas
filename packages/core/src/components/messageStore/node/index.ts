@@ -154,11 +154,9 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 	// we can use statement.iterate() instead of paging manually
 	// https://github.com/WiseLibs/better-sqlite3/issues/406
 	public async *getMessageStream(
-		filter: { type?: Message["type"]; limit?: number; app?: string } = {}
+		filter: { type?: Message["type"]; limit?: number; offset?: number; app?: string } = {}
 	): AsyncIterable<[Uint8Array, Message]> {
-		const { type, limit } = filter
-
-		const offset = 0
+		const { type, limit, offset } = filter
 
 		let iter: Iterable<MessageRecord>
 
@@ -172,19 +170,31 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 				iter = this.statements.getMessagesByType.iterate({ type }) as Iterable<MessageRecord>
 			}
 		} else {
+			// paginated
 			if (type === undefined) {
-				iter = this.statements.getMessagesWithLimitOffset.iterate({ limit, offset }) as Iterable<MessageRecord>
+				iter = this.statements.getMessagesWithLimitOffset.iterate({
+					limit,
+					offset: offset || 0,
+				}) as Iterable<MessageRecord>
 			} else {
 				iter = this.statements.getMessagesByTypeWithLimitOffset.iterate({
 					type,
 					limit,
-					offset,
+					offset: offset || 0,
 				}) as Iterable<MessageRecord>
 			}
 		}
 
 		for (const record of iter as Iterable<MessageRecord>) {
 			yield [record.hash, JSON.parse(record.message) as Message]
+		}
+	}
+
+	public async countMessages(type?: "action" | "session" | "customAction" | undefined): Promise<number> {
+		if (type === undefined) {
+			return (this.statements.countMessages.get() as any)["COUNT(*)"] as number
+		} else {
+			return (this.statements.countMessagesByType.get({ type }) as any)["COUNT(*)"] as number
 		}
 	}
 
@@ -282,6 +292,8 @@ class SqliteMessageStore extends EventEmitter<MessageStoreEvents> implements Mes
 		getMessagesByType: `SELECT * FROM messages WHERE type = :type`,
 		getMessagesWithLimitOffset: `SELECT * FROM messages LIMIT :limit OFFSET :offset`,
 		getMessagesByTypeWithLimitOffset: `SELECT * FROM messages WHERE type = :type LIMIT :limit OFFSET :offset`,
+		countMessages: `SELECT COUNT(*) FROM messages`,
+		countMessagesByType: `SELECT COUNT(*) FROM messages WHERE type = :type`,
 	}
 }
 

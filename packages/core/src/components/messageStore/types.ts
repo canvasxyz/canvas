@@ -25,10 +25,12 @@ export interface MessageStoreEvents {
 
 export interface MessageStore extends EventEmitter<MessageStoreEvents> {
 	getMessageStream(filter?: {
-		type?: Message["type"]
+		type?: Message["type"] | undefined
 		limit?: number
+		offset?: number
 		app?: string
 	}): AsyncIterable<[Uint8Array, Message]>
+	countMessages(type?: Message["type"]): Promise<number>
 
 	close(): Promise<void>
 
