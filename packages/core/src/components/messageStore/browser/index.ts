@@ -97,6 +97,10 @@ class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> implements 
 		}
 	}
 
+	public async countMessages(type?: "action" | "session" | "customAction" | undefined): Promise<number> {
+		throw Error("countMessages is not implemented in the browser")
+	}
+
 	public async read<T>(
 		callback: (txn: ReadOnlyTransaction) => T | Promise<T>,
 		options: { uri?: string } = {}
