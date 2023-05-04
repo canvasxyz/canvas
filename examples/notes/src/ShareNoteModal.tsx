@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React from "react"
 import { LocalNote, User } from "./models"
 
 export const ShareNoteModal = ({
