@@ -1,6 +1,6 @@
 import { encrypt } from "@metamask/eth-sig-util"
 
-export async function metamaskGetPublicKey(account: string) {
+export async function metamaskGetPublicKey(account: string): Promise<Buffer> {
 	const keyB64 = (await (window as any).ethereum.request({
 		method: "eth_getEncryptionPublicKey",
 		params: [account],
