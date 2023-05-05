@@ -154,9 +154,9 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 
 	if (options.exposeMessages) {
 		api.get("/messages", async (req, res) => {
-			const { limit, type, app } = req.query
+			const { limit, offset, type, app } = req.query
 
-			const filter: { type?: Message["type"]; limit?: number; app?: string } = {}
+			const filter: { type?: Message["type"]; limit?: number; offset?: number; app?: string } = {}
 
 			if (typeof type === "string") {
 				if (type === "action" || type === "session" || type === "customAction") {
@@ -175,6 +175,14 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 				}
 			}
 
+			if (typeof offset === "string") {
+				filter.offset = parseInt(offset)
+				if (isNaN(filter.offset)) {
+					res.status(StatusCodes.BAD_REQUEST).end("Invalid offset parameter")
+					return
+				}
+			}
+
 			if (typeof app === "string") {
 				if (ipfsURIPattern.test(app)) {
 					filter.app = app
@@ -184,12 +192,19 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 				}
 			}
 
-			const messages: Message[] = []
+			const data: Message[] = []
 			for await (const [_, message] of core.messageStore.getMessageStream(filter)) {
-				messages.push(message)
+				data.push(message)
 			}
 
-			return res.status(StatusCodes.OK).json(messages)
+			const total = await core.messageStore.countMessages(filter.type)
+
+			return res.status(StatusCodes.OK).json({
+				data,
+				offset: filter.offset,
+				limit: filter.limit,
+				total,
+			})
 		})
 
 		api.get("/messages/:id", async (req, res) => {

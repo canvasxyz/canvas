@@ -28,10 +28,9 @@ export const useConnectOneStep = ({
 	const { error: signerError, data: signer } = useSigner<ethers.providers.JsonRpcSigner>()
 	const { chain } = useNetwork()
 	const provider = useProvider<ethers.providers.JsonRpcProvider>()
+	const [chainImplementation, setChainImplementation] = useState<EthereumChainImplementation | null>(null)
 
 	// canvas login state
-	const chainImplementation = new EthereumChainImplementation(chain?.id ?? 1, window.location.host, provider)
-	// const signer = useCanvasSigner(ethersSigner!, ethers.providers.getNetwork(chain?.id!))
 	const { login, logout, isLoading, isPending, client } = useSession(chainImplementation, signer)
 
 	const logoutEverything = () => {
@@ -39,6 +38,12 @@ export const useConnectOneStep = ({
 		wagmiDisconnect()
 		setConnectionState("disconnected")
 	}
+
+	useEffect(() => {
+		if (chain) {
+			setChainImplementation(new EthereumChainImplementation(chain.id, window.location.host, provider))
+		}
+	}, [chain, window.location.host, provider])
 
 	useEffect(() => {
 		console.log(
@@ -80,8 +85,6 @@ export const useConnectOneStep = ({
 			}
 		}
 	}, [client, signer, isLoading, isPending])
-
-	useEffect(() => {}, [isLoading, isPending])
 
 	useEffect(() => {
 		// log out if wagmi is disconnected while logged in

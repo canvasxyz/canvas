@@ -1,7 +1,7 @@
 {
   "name": "canvas",
   "private": true,
-  "version": "0.4.9",
+  "version": "0.4.11",
   "type": "module",
   "scripts": {
     "dev": "tsc --build --watch",
@@ -19,6 +19,7 @@
     "packages/hooks",
     "packages/chain-ethereum",
     "packages/chain-cosmos",
+    "packages/chain-near",
     "packages/chain-solana",
     "packages/chain-substrate",
     "examples/chat-advanced",
