@@ -24,6 +24,7 @@ const signer = new TestSigner(app)
 
 test("Test setting and then deleting a record", async (t) => {
 	const core = await Core.initialize({ spec, directory: null, offline: true, unchecked: true })
+	t.teardown(() => core.close())
 
 	const newThreadAction = await signer.sign("newThread", { title: "Hacker News", link: "https://news.ycombinator.com" })
 
@@ -39,9 +40,7 @@ test("Test setting and then deleting a record", async (t) => {
 		},
 	])
 
-	await signer.sign("deleteThread", { threadId }).then((action) => core.apply(action))
-
+	const deleteThreadAction = await signer.sign("deleteThread", { threadId })
+	await core.apply(deleteThreadAction)
 	t.deepEqual(await collect(core.modelStore.exportModel("threads")), [])
-
-	await core.close()
 })

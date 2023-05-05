@@ -39,12 +39,12 @@ export async function handleIncomingStream(
 async function handleRequest(req: RPC.Request, txn: ReadOnlyTransaction): Promise<RPC.Response> {
 	if (req.request === "getRoot") {
 		assert(req.getRoot)
-		const root = await txn.getRoot()
+		const root = await txn.source.getRoot()
 		return RPC.Response.create({ seq: req.seq, getRoot: { root: fromNode(root) } })
 	} else if (req.request === "getChildren") {
 		assert(req.getChildren)
 		const { level, key } = RPC.Request.GetChildrenRequest.create(req.getChildren)
-		const children = await txn.getChildren(level, toKey(key))
+		const children = await txn.source.getChildren(level, toKey(key))
 		return RPC.Response.create({ seq: req.seq, getChildren: { nodes: children.map(fromNode) } })
 	} else if (req.request === "getMessages") {
 		assert(req.getMessages)

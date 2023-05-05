@@ -35,7 +35,7 @@ export const toKey = (array: Uint8Array) => (array.length === 0 ? null : array)
 
 export function toNode({ level, key, hash, value }: RPC.Node): Node {
 	if (value instanceof Uint8Array) {
-		return { level, key: toKey(key), hash, id: value }
+		return { level, key: toKey(key), hash, value }
 	} else {
 		return { level, key: toKey(key), hash }
 	}
@@ -43,9 +43,9 @@ export function toNode({ level, key, hash, value }: RPC.Node): Node {
 
 export const fromKey = (key: Uint8Array | null) => key ?? new Uint8Array([])
 
-export function fromNode({ level, key, hash, id }: Node): RPC.Node {
-	if (id instanceof Uint8Array) {
-		return RPC.Node.create({ level, key: fromKey(key), hash, value: id })
+export function fromNode({ level, key, hash, value }: Node): RPC.Node {
+	if (value instanceof Uint8Array) {
+		return RPC.Node.create({ level, key: fromKey(key), hash, value })
 	} else {
 		return RPC.Node.create({ level, key: fromKey(key), hash })
 	}

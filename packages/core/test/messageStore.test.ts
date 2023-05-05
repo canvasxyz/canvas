@@ -1,5 +1,7 @@
 import test from "ava"
 
+import { sha256 } from "@noble/hashes/sha256"
+
 import { openMessageStore } from "@canvas-js/core/components/messageStore"
 import { CustomAction } from "@canvas-js/interfaces"
 
@@ -7,7 +9,7 @@ test("MessageStore can insert and retrieve a custom action", async (t) => {
 	const app = "foobar"
 
 	const ms = await openMessageStore(app, null)
-	const hash = Buffer.from("something")
+	const hash = sha256("something")
 	const name = "doThing"
 	const payload = {}
 
