@@ -32,6 +32,10 @@ export class MemoryMessageStore extends EventEmitter<MessageStoreEvents> impleme
 		super()
 	}
 
+	public async countMessages(type?: "action" | "session" | "customAction"): Promise<number> {
+		throw new Error("countMessages not supported")
+	}
+
 	public async *getMessageStream(
 		filter: { type?: Message["type"]; limit?: number; app?: string } = {}
 	): AsyncIterable<[Uint8Array, Message]> {

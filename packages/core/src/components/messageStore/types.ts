@@ -25,13 +25,13 @@ export interface ReadWriteTransaction {
 }
 
 export interface MessageStore extends EventEmitter<MessageStoreEvents> {
+	countMessages(type?: Message["type"]): Promise<number>
 	getMessageStream(filter?: {
 		type?: Message["type"] | undefined
 		limit?: number
 		offset?: number
 		app?: string
 	}): AsyncIterable<[Uint8Array, Message]>
-	countMessages(type?: Message["type"]): Promise<number>
 
 	close(): Promise<void>
 	read<T = void>(callback: (txn: ReadOnlyTransaction) => T | Promise<T>, options?: { uri?: string }): Promise<T>

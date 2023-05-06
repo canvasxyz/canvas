@@ -132,6 +132,16 @@ export class SqliteMessageStore extends EventEmitter<MessageStoreEvents> impleme
 		}
 	}
 
+	public async countMessages(type?: "action" | "session" | "customAction"): Promise<number> {
+		if (type === undefined) {
+			const result = this.statements.countMessages.get() as { count: number }
+			return result.count
+		} else {
+			const result = this.statements.countMessagesByType.get({ type }) as { count: number }
+			return result.count
+		}
+	}
+
 	// we can use statement.iterate() instead of paging manually
 	// https://github.com/WiseLibs/better-sqlite3/issues/406
 	public async *getMessageStream(
@@ -251,5 +261,7 @@ export class SqliteMessageStore extends EventEmitter<MessageStoreEvents> impleme
 		getMessagesByType: `SELECT * FROM messages WHERE type = :type`,
 		getMessagesWithLimitOffset: `SELECT * FROM messages LIMIT :limit OFFSET :offset`,
 		getMessagesByTypeWithLimitOffset: `SELECT * FROM messages WHERE type = :type LIMIT :limit OFFSET :offset`,
+		countMessages: `SELECT COUNT(*) as count FROM messages`,
+		countMessagesByType: `SELECT COUNT(*) as count FROM messages WHERE type = :type`,
 	}
 }
