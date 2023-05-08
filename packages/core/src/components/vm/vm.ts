@@ -88,7 +88,7 @@ export class VM {
 			}
 
 			// ensure we don't have extra chain implementations
-			for (const chainImplementation of chains) {
+			for (const impl of chains) {
 				if (
 					exports.signers.find((signerCaip) => {
 						const signerCaipSubstring = signerCaip.slice(0, signerCaip.length - 1)
@@ -97,7 +97,7 @@ export class VM {
 				) {
 					continue
 				} else {
-					throw new Error(`${app} contract didn't declare a signer for ${chainImplementation.chain}`)
+					throw new Error(`${app} contract didn't declare a signer for ${impl.chain}`)
 				}
 			}
 
