@@ -71,12 +71,33 @@ export class VM {
 				throw Error(errors.join("\n"))
 			}
 
-			// validate the presence of the declared chains
-			for (const chain of exports.chains) {
-				if (chains.find((impl) => impl.chain === chain)) {
+			// ensure we have chain implementations for the spec's caip-2s
+			for (const signerCaip of exports.signers) {
+				if (
+					chains.find((impl) => {
+						// Accept exact matches, or fuzzy matches where the contract requests "chain:*".
+						// e.g.: if a spec has requested eip155:*, any ethereum chain implementation is sufficient.
+						const signerCaipSubstring = signerCaip.slice(0, signerCaip.length - 1)
+						return impl.chain === signerCaip || (signerCaip.endsWith("*") && impl.chain.startsWith(signerCaipSubstring))
+					})
+				) {
 					continue
 				} else {
-					throw new Error(`${app} requires a chain implementation for ${chain}`)
+					throw new Error(`${app} requires a chain implementation for ${signerCaip}`)
+				}
+			}
+
+			// ensure we don't have extra chain implementations
+			for (const impl of chains) {
+				if (
+					exports.signers.find((signerCaip) => {
+						const signerCaipSubstring = signerCaip.slice(0, signerCaip.length - 1)
+						return impl.chain === signerCaip || (signerCaip.endsWith("*") && impl.chain.startsWith(signerCaipSubstring))
+					})
+				) {
+					continue
+				} else {
+					throw new Error(`${app} contract didn't declare a signer for ${impl.chain}`)
 				}
 			}
 
@@ -321,8 +342,16 @@ export class VM {
 		this.runtime.dispose()
 	}
 
-	public getChains(): string[] {
-		return this.exports.chains
+	public hasSigner(signerCaip: string): boolean {
+		const matchingSigner = this.exports.signers.find(
+			(signer) =>
+				signerCaip === signer || (signer.endsWith("*") && signerCaip.startsWith(signer.slice(0, signer.length - 1)))
+		)
+		return matchingSigner !== undefined
+	}
+
+	public getSigners(): string[] {
+		return this.exports.signers
 	}
 
 	public getModels(): Record<string, Model> {

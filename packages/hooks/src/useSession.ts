@@ -130,7 +130,7 @@ export function useSession<Signer, DelegatedSigner>(
 			}
 
 			const { chain } = chainImplementation
-			if (!data.chains.includes(chain)) {
+			if (!data.signers.includes(chain)) {
 				throw new InvalidChainError(`Invalid chain: ${chain}`)
 			}
 

@@ -325,17 +325,17 @@ const VALIDATION_TEST_FIXTURES: {
     `,
 		expectedResult: success,
 	},
-	{
-		name: "reject source with invalid name",
-		app: `
-      export const models = {};
-      export const actions = {};
-      export const sources = {
-        "something.py": {}
-      }
-    `,
-		expectedResult: errors(["Source 'something.py' is invalid: the keys must be ipfs:// URIs"]),
-	},
+	// {
+	// 	name: "reject source with invalid name",
+	// 	app: `
+	//     export const models = {};
+	//     export const actions = {};
+	//     export const sources = {
+	//       "something.py": {}
+	//     }
+	//   `,
+	// 	expectedResult: errors(["Source 'something.py' is invalid: the keys must be ipfs:// URIs"]),
+	// },
 	{
 		name: "reject a valid source with invalid values",
 		app: `

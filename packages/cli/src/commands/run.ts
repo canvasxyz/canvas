@@ -15,8 +15,10 @@ import { WebSocketServer } from "ws"
 
 import { multiaddr } from "@multiformats/multiaddr"
 
+import type { Action, Session } from "@canvas-js/interfaces"
 import { Core, CoreOptions } from "@canvas-js/core"
 import { getAPI, handleWebsocketConnection } from "@canvas-js/core/api"
+import { SessionExists, ActionExists } from "@canvas-js/core/utils"
 
 import { testnetBootstrapList } from "@canvas-js/core/bootstrap"
 import * as constants from "@canvas-js/core/constants"
@@ -95,6 +97,10 @@ export const builder = (yargs: Argv) =>
 		.option("static", {
 			type: "string",
 			desc: "Serve a static directory from /, and API routes from /api",
+		})
+		.option("syncModule", {
+			type: "string",
+			desc: "Provide an ESM module to sync actions by push/poll with an external api",
 		})
 		.option("testnet", {
 			type: "boolean",
@@ -256,6 +262,75 @@ export async function handler(args: Args) {
 		app.use(getAPI(core, { exposeMetrics: args.metrics, exposeP2P: args.p2p }))
 	}
 
+	let syncModuleTimer: ReturnType<typeof setTimeout>
+	if (args.syncModule) {
+		const { onPeerRecv, api } = await import(args.syncModule)
+
+		if (!onPeerRecv) {
+			throw new Error("sync module must declare onPeerRecv to handle incoming actions")
+		}
+		if (!api || !api.onPoll) {
+			throw new Error("sync module must declare api.onPoll to handle incoming actions")
+		}
+		if (!api.endpoint) {
+			throw new Error("sync module must declare api.endpoint as url or function")
+		}
+		if (!api.frequency) {
+			throw new Error("sync module must declare api.frequency as msec")
+		}
+
+		const getEndpoint = (cursor?: object) => {
+			return typeof api.endpoint === "string" ? api.endpoint : api.endpoint(cursor)
+		}
+
+		// loop:
+		console.log(chalk.green("[canvas-cli] syncModule polling:", getEndpoint()))
+		const apply = async (hash: string, action: Action, session: Session) => {
+			await core.apply(session).catch((err) => {
+				if (err instanceof SessionExists) {
+					console.log("Success: Already exists")
+				} else {
+					console.log(chalk.red(err.stack))
+				}
+			})
+			await core.apply(action).catch((err) => {
+				if (err instanceof ActionExists) {
+					console.log("Success: Already exists")
+				} else {
+					console.log(chalk.red(err.stack))
+				}
+			})
+		}
+		const sync = async () => {
+			const res = fetch(getEndpoint())
+				.then((res) => {
+					if (res.ok) {
+						const data = res
+							.json()
+							.then(async (data) => {
+								const result = await api.onPoll(data, apply)
+								if (result === false || result === null || result === undefined) {
+									console.log(chalk.green("[canvas-cli] syncModule: no new actions" + ` (${data.result?.length})`))
+								} else {
+									console.log(chalk.green("[canvas-cli] syncModule: synced new actions"))
+									// TODO: continue fetching data with cursor
+								}
+							})
+							.catch((err) => {
+								console.log(chalk.red("[canvas-cli] syncModule error:", err))
+							})
+					} else {
+						console.log(chalk.red("[canvas-cli] syncModule poll got error response"))
+					}
+				})
+				.catch((err) => {
+					console.log(chalk.red("[canvas-cli] fetch failed:", getEndpoint()))
+				})
+		}
+		sync()
+		syncModuleTimer = setInterval(sync, api.frequency)
+	}
+
 	const origin = `http://localhost:${args.port}`
 	const apiURL = args.static ? `${origin}/api` : origin
 
@@ -303,6 +378,8 @@ export async function handler(args: Args) {
 			process.stdout.write(
 				`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`
 			)
+
+			clearInterval(syncModuleTimer)
 
 			console.log("[canvas-cli] Stopping API server...")
 			await new Promise<void>((resolve, reject) => server.stop((err) => (err ? reject(err) : resolve())))

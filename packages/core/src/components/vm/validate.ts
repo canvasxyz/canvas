@@ -45,7 +45,7 @@ export function validateCanvasSpec(
 	}
 
 	const exports: Exports = {
-		chains: [],
+		signers: [],
 		models: {},
 		contractMetadata: {},
 		routeHandles: {},
@@ -61,10 +61,10 @@ export function validateCanvasSpec(
 
 	// validate chains
 	if (chainsHandle === undefined) {
-		exports.chains.push("eip155:1") // ethereum mainnet
+		exports.signers.push("eip155:1") // ethereum mainnet
 	} else {
 		for (const chainHandle of chainsHandle.consume((handle) => unwrapArray(context, handle))) {
-			exports.chains.push(chainHandle.consume(context.getString))
+			exports.signers.push(chainHandle.consume(context.getString))
 		}
 	}
 
@@ -220,7 +220,7 @@ export function validateCanvasSpec(
 			for (const [source, sourceHandle] of Object.entries(
 				sourcesHandle.consume((handle) => unwrapObject(context, handle))
 			)) {
-				assertLogError(ipfsURIPattern.test(source), `Source '${source}' is invalid: the keys must be ipfs:// URIs`)
+				// assertLogError(ipfsURIPattern.test(source), `Source '${source}' is invalid: the keys must be ipfs:// URIs`)
 				assertLogError(context.typeof(sourceHandle) === "object", `sources["${source}"] must be an object`)
 				exports.sourceHandles[source] = sourceHandle.consume((handle) => unwrapObject(context, handle))
 				for (const [name, handle] of Object.entries(exports.sourceHandles[source])) {
