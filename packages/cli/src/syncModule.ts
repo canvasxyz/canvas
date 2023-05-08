@@ -9,12 +9,12 @@ interface JsonMap {  [key: string]: AnyJson; }
 interface JsonArray extends Array<AnyJson> {}
 
 // Types for defining sync module structure
-export type SyncModuleCursor = { next?: "string" }
+export type SyncModuleCursor = { next?: "string", applied?: number }
 export type SyncModuleApply = (hash: string, action: Action, session: Session) => void
 export type SyncModuleExports = {
   api: string,
   apiToPeerHandler: (response: AnyJson, apply: SyncModuleApply) => Promise<SyncModuleCursor>
-  peerToApiHandler: (action: Action, session: Session) => Promise<void>
+  peerToApiHandler: ({ action, session }: { action: Action, session: Session }) => Promise<void>
 }
 
 let wrapper: { timer?: ReturnType<typeof setTimeout> } = {}
@@ -39,7 +39,7 @@ export const setupSyncModule = (core: Core, { api, apiToPeerHandler, peerToApiHa
 		})
 	}
 
-	const sync = () => fetch(api)
+	const sync = (apiUrl = api) => fetch(apiUrl)
 		.then((res) => {
 			if (!res.ok) {
 				console.log(chalk.red("[canvas-cli] api-sync poll got error response"))
@@ -50,12 +50,12 @@ export const setupSyncModule = (core: Core, { api, apiToPeerHandler, peerToApiHa
 				.then(async (data) => {
 					const result = await apiToPeerHandler(data, apply)
 					if (!result?.next) {
-						console.log(chalk.green("[canvas-cli] api-sync: no new actions" + ` (${data.result?.length})`))
+						console.log(chalk.green("[canvas-cli] api-sync success: no new actions"))
+		        setTimeout(sync, API_SYNC_DELAY)
 					} else {
-						console.log(chalk.green("[canvas-cli] api-sync: synced new actions"))
-						// TODO: continue fetching data with cursor
+						console.log(chalk.green(`[canvas-cli] api-sync success: ${result.applied} new actions`))
+            sync(result.next)
 					}
-		      setTimeout(sync, API_SYNC_DELAY)
 				})
 				.catch((err) => {
 					console.log(chalk.red("[canvas-cli] api-sync error:", err))
@@ -63,11 +63,11 @@ export const setupSyncModule = (core: Core, { api, apiToPeerHandler, peerToApiHa
 				})
 		})
 		.catch((err) => {
-      console.log(chalk.red("[canvas-cli] fetch failed:", api))
+      console.log(chalk.red("[canvas-cli] api-sync fetch failed:", api))
 		  setTimeout(sync, API_SYNC_DELAY)
     })
 
-	console.log(chalk.green("[canvas-cli] api-sync polling:", api))
+	console.log(chalk.green("[canvas-cli] api-sync starting:", api))
 	sync()
 
   return wrapper
