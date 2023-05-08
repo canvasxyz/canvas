@@ -36,7 +36,7 @@ test("multiple chains export", async (t) => {
 	})
 })
 
-test("missing chain declaration", async (t) => {
+test("missing signer declaration for provided chain implementation", async (t) => {
 	const { spec } = await compileSpec({
 		chains: ["eip155:1"],
 		models: {},
@@ -66,7 +66,7 @@ test("missing chain declaration", async (t) => {
 			const action = await gnosisSigner.sign("foo", {})
 			await core.apply(action)
 		},
-		{ message: "unsupported chain (eip155:100)" }
+		{ message: "unsupported action signer (eip155:100)" }
 	)
 })
 
