@@ -72,7 +72,7 @@ export class VM {
 			}
 
 			// validate the presence of the declared chains
-			for (const chain of exports.chains) {
+			for (const chain of exports.signers) {
 				if (
 					chains.find(
 						(impl) =>
@@ -327,8 +327,8 @@ export class VM {
 		this.runtime.dispose()
 	}
 
-	public getChains(): string[] {
-		return this.chains.map((c) => c.chain)
+	public getSigners(): string[] {
+		return this.exports.signers
 	}
 
 	public getModels(): Record<string, Model> {

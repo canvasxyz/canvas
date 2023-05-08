@@ -230,7 +230,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			cid: this.cid.toString(),
 			actions: this.vm.getActions(),
 			routes: this.vm.getRoutes(),
-			chains: this.vm.getChains(),
+			signers: this.vm.getSigners(),
 			models: this.vm.getModels(),
 			peers,
 			merkleRoots: this.messageStore.getMerkleRoots(),
@@ -354,7 +354,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		const fromAddress = action.payload.from
 
 		assert(app === this.app || this.vm.sources.has(app), `action signed for wrong application (${app})`)
-		assert(this.vm.getChains().includes(chain), `unsupported chain (${chain})`)
+		assert(this.vm.getSigners().includes(chain), `unsupported action signer (${chain})`)
 
 		// TODO: verify that actions signed for a previous app were valid within that app
 
@@ -387,7 +387,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		const { app, sessionIssued, block, chain } = session.payload
 
 		assert(app === this.app || this.vm.sources.has(app), `session signed for wrong application (${app})`)
-		assert(this.vm.getChains().includes(chain), `unsupported chain (${chain})`)
+		assert(this.vm.getSigners().includes(chain), `unsupported session signer (${chain})`)
 
 		// check the timestamp bounds
 		assert(sessionIssued > BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")
