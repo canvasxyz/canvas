@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/core",
-  "version": "0.4.11",
+  "version": "0.5.0-alpha",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
@@ -50,8 +50,8 @@
     "benchmark": "RUN_BENCHMARKS=1 ava test/benchmarks.test.ts"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.4.11",
-    "@canvas-js/interfaces": "0.4.11",
+    "@canvas-js/chain-ethereum": "0.5.0-alpha",
+    "@canvas-js/interfaces": "0.5.0-alpha",
     "@canvas-js/okra-idb": "^0.0.2",
     "@canvas-js/okra-memory": "^0.0.1",
     "@canvas-js/okra-node": "^0.3.2",
