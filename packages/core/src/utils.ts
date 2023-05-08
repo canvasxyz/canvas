@@ -159,3 +159,6 @@ export function getErrorMessage(err: unknown): string {
 		throw err
 	}
 }
+
+export class ActionExists extends Error {}
+export class SessionExists extends Error {}
