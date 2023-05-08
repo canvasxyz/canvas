@@ -262,7 +262,7 @@ export async function handler(args: Args) {
 		app.use(getAPI(core, { exposeMetrics: args.metrics, exposeP2P: args.p2p }))
 	}
 
-  let apiSyncTimer: { timer?: ReturnType<typeof setTimeout> }
+	let apiSyncTimer: { timer?: ReturnType<typeof setTimeout> }
 	if (args.syncModule) {
 		const { api, apiToPeerHandler, peerToApiHandler } = await import(args.syncModule)
 
@@ -270,7 +270,7 @@ export async function handler(args: Args) {
 		if (!peerToApiHandler) throw new Error("sync module must declare peerToApiHandler")
 		if (!api) throw new Error("sync module must declare api url")
 
-    apiSyncTimer = setupSyncModule(core, { api, apiToPeerHandler, peerToApiHandler })
+		apiSyncTimer = setupSyncModule(core, { api, apiToPeerHandler, peerToApiHandler })
 	}
 
 	const origin = `http://localhost:${args.port}`
@@ -321,7 +321,7 @@ export async function handler(args: Args) {
 				`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`
 			)
 
-			if (apiSyncTimer) clearInterval(apiSyncTimer.timer)
+			if (apiSyncTimer) clearTimeout(apiSyncTimer.timer)
 
 			console.log("[canvas-cli] Stopping API server...")
 			await new Promise<void>((resolve, reject) => server.stop((err) => (err ? reject(err) : resolve())))
