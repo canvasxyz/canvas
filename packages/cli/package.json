@@ -12,6 +12,10 @@
   },
   "dependencies": {
     "@canvas-js/chain-ethereum": "0.4.11",
+    "@canvas-js/chain-cosmos": "0.4.11",
+    "@canvas-js/chain-near": "0.4.11",
+    "@canvas-js/chain-solana": "0.4.11",
+    "@canvas-js/chain-substrate": "0.4.11",
     "@canvas-js/core": "0.4.11",
     "@canvas-js/interfaces": "0.4.11",
     "@libp2p/interface-peer-id": "^2.0.1",

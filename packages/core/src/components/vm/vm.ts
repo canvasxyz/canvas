@@ -73,7 +73,13 @@ export class VM {
 
 			// validate the presence of the declared chains
 			for (const chain of exports.chains) {
-				if (chains.find((impl) => impl.chain === chain)) {
+				if (
+					chains.find(
+						(impl) =>
+							// accept exact matches, or fuzzy matches where the contract requests "chain:*"
+							impl.chain === chain || (chain.endsWith("*") && impl.chain.startsWith(chain.slice(0, chain.length - 1)))
+					)
+				) {
 					continue
 				} else {
 					throw new Error(`${app} requires a chain implementation for ${chain}`)
@@ -322,7 +328,7 @@ export class VM {
 	}
 
 	public getChains(): string[] {
-		return this.exports.chains
+		return this.chains.map((c) => c.chain)
 	}
 
 	public getModels(): Record<string, Model> {

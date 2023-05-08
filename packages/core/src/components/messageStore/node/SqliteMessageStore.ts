@@ -10,7 +10,7 @@ import type { Message, Session } from "@canvas-js/interfaces"
 
 import { getMessageKey } from "@canvas-js/core/sync"
 import { MESSAGE_DATABASE_FILENAME, MST_DIRECTORY_NAME } from "@canvas-js/core/constants"
-import { mapEntries, toHex, assert } from "@canvas-js/core/utils"
+import { mapEntries, toHex, assert, ActionExists, SessionExists } from "@canvas-js/core/utils"
 
 import type { MessageStore, MessageStoreEvents, ReadOnlyTransaction, ReadWriteTransaction } from "../types.js"
 
@@ -212,18 +212,24 @@ export class SqliteMessageStore extends EventEmitter<MessageStoreEvents> impleme
 					getMessage: async (id) => this.getMessageByHash(id),
 					getSessionByAddress: async (chain, address) => this.getSessionByAddress(chain, address),
 					insertMessage: async (id, message) => {
-						this.statements.insertMessage.run({
-							hash: id,
-							type: message.type,
-							message: JSON.stringify(message),
-						})
+						try {
+							this.statements.insertMessage.run({
+								hash: id,
+								type: message.type,
+								message: JSON.stringify(message),
+							})
 
-						if (message.type === "session") {
-							this.statements.insertSessionHash.run({ hash: id, session_address: message.payload.sessionAddress })
+							if (message.type === "session") {
+								this.statements.insertSessionHash.run({ hash: id, session_address: message.payload.sessionAddress })
+							}
+
+							const key = getMessageKey(id, message)
+							txn.set(key, id)
+						} catch (error: any) {
+							if (error.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
+								throw message.type === "session" ? new SessionExists() : new ActionExists()
+							}
 						}
-
-						const key = getMessageKey(id, message)
-						txn.set(key, id)
 					},
 				})
 

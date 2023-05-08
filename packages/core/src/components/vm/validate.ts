@@ -220,7 +220,7 @@ export function validateCanvasSpec(
 			for (const [source, sourceHandle] of Object.entries(
 				sourcesHandle.consume((handle) => unwrapObject(context, handle))
 			)) {
-				assertLogError(ipfsURIPattern.test(source), `Source '${source}' is invalid: the keys must be ipfs:// URIs`)
+				// assertLogError(ipfsURIPattern.test(source), `Source '${source}' is invalid: the keys must be ipfs:// URIs`)
 				assertLogError(context.typeof(sourceHandle) === "object", `sources["${source}"] must be an object`)
 				exports.sourceHandles[source] = sourceHandle.consume((handle) => unwrapObject(context, handle))
 				for (const [name, handle] of Object.entries(exports.sourceHandles[source])) {
