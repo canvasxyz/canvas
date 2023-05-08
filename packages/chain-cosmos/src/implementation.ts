@@ -1,6 +1,6 @@
 import type { OfflineAminoSigner } from "@keplr-wallet/types"
 import { Secp256k1Wallet, serializeSignDoc, decodeSignature, rawSecp256k1PubkeyToRawAddress } from "@cosmjs/amino"
-import { Secp256k1, Secp256k1Signature, Random, Sha256 } from "@cosmjs/crypto"
+import { Secp256k1, Secp256k1Signature, ExtendedSecp256k1Signature, Random, Sha256 } from "@cosmjs/crypto"
 import { fromBech32, toBech32 } from "@cosmjs/encoding"
 import { ethers } from "ethers"
 import { FixedExtension as TerraFixedExtension } from "@terra-money/wallet-controller/modules/legacy-extension"
@@ -109,15 +109,10 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 		const signDocDigest = new Sha256(serializeSignDoc(signDocPayload)).digest()
 
 		const prefix = "cosmos" // not: fromBech32(payload.from).prefix;
-		const { pubkey, signature: decodedSignature } = decodeSignature(JSON.parse(signature))
+		const extendedSignature = ExtendedSecp256k1Signature.fromFixedLength(Buffer.from(signature, "hex"))
+		const pubkey = Secp256k1.compressPubkey(Secp256k1.recoverPubkey(extendedSignature, signDocDigest))
 
-		if (session !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
-			// Delegated signatures: If session exists, pubkey should be the public key for `action.session`
-			throw new Error("Action signed with a pubkey that doesn't match the session address")
-		}
-
-		const secpSignature = Secp256k1Signature.fromFixedLength(decodedSignature)
-		return await Secp256k1.verifySignature(secpSignature, signDocDigest, pubkey)
+		return session === toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))
 	}
 
 	private async verifyDirectAction(payload: ActionPayload, signature: string): Promise<boolean> {
@@ -156,7 +151,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 			: await this.verifyDirectAction(action.payload, action.signature)
 
 		if (!isValid) {
-			throw new Error("Invalid session signature")
+			throw new Error("Invalid action signature")
 		}
 	}
 
@@ -170,7 +165,8 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 		const lowercaseAddress = address.toLowerCase()
 
 		try {
-			return from === encodeEthAddress(this.bech32Prefix, lowercaseAddress)
+			const { prefix } = fromBech32(from)
+			return from === encodeEthAddress(prefix, lowercaseAddress)
 		} catch (e) {
 			return false
 		}
@@ -186,7 +182,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 		}
 
 		// the payload can either be signed directly, or encapsulated in a SignDoc
-		const signDocPayload = await getSessionSignatureData(session.payload, session.payload.from) // TODO
+		const signDocPayload = await getSessionSignatureData(session.payload, session.payload.from)
 		const signDocDigest = new Sha256(serializeSignDoc(signDocPayload)).digest()
 		const serializedPayload = Buffer.from(serializeSessionPayload(session.payload))
 		const digest = new Sha256(serializedPayload).digest()
@@ -305,14 +301,15 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 		const accountData = (await signer.getAccounts())[0]
 		const signDoc = await getActionSignatureData(payload, accountData.address)
 
-		const {
-			signature: { pub_key, signature },
-		} = await signer.signAmino(accountData.address, signDoc)
+		const signDocDigest = new Sha256(serializeSignDoc(signDoc)).digest()
+		const extendedSignature = await Secp256k1.createSignature(signDocDigest, privkey)
+		const signature = Buffer.from(extendedSignature.toFixedLength()).toString("hex")
+
 		const action: Action = {
 			type: "action",
 			payload,
 			session: accountData.address,
-			signature: JSON.stringify({ pub_key, signature }),
+			signature,
 		}
 		return action
 	}
