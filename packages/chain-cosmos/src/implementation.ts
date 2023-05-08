@@ -90,7 +90,7 @@ const chainIdPattern = /^[-a-zA-Z0-9_]{1,32}$/
  */
 export class CosmosChainImplementation implements ChainImplementation<CosmosSigner, Secp256k1WalletPrivateKey> {
 	public readonly chain: string
-	constructor(public readonly chainId: string, public readonly bech32Prefix: string) {
+	constructor(public readonly chainId = "cosmoshub-1", public readonly bech32Prefix = "cosmos") {
 		// https://github.com/ChainAgnostic/namespaces/blob/main/cosmos/caip-2.md
 		if (chainIdPattern.test(chainId)) {
 			this.chain = `cosmos:${chainId}`
