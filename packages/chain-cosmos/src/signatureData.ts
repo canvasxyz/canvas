@@ -2,6 +2,7 @@ import { configure } from "safe-stable-stringify"
 import type { AminoMsg, StdSignDoc, StdFee } from "@cosmjs/amino"
 import { makeSignDoc } from "@cosmjs/amino"
 import type { ActionPayload, SessionPayload } from "@canvas-js/interfaces"
+import { toBase64 } from "@cosmjs/encoding"
 
 const jsonStableStringify = configure({ circularValue: Error, bigint: false, deterministic: true, strict: true })
 
@@ -40,7 +41,7 @@ export const getSessionSignatureData = async (sessionPayload: SessionPayload, ad
 		type: "sign/MsgSignData",
 		value: {
 			signer: address,
-			data: jsonStableStringify(sessionPayload),
+			data: toBase64(Buffer.from(jsonStableStringify(sessionPayload))),
 		},
 	}
 	const signDoc = makeSignDoc([jsonTx], fee, chainId, memo, accountNumber, sequence)
