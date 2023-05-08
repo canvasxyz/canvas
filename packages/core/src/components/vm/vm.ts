@@ -342,6 +342,14 @@ export class VM {
 		this.runtime.dispose()
 	}
 
+	public hasSigner(signerCaip: string): boolean {
+		const matchingSigner = this.exports.signers.find(
+			(signer) =>
+				signerCaip === signer || (signer.endsWith("*") && signerCaip.startsWith(signer.slice(0, signer.length - 1)))
+		)
+		return matchingSigner !== undefined
+	}
+
 	public getSigners(): string[] {
 		return this.exports.signers
 	}
