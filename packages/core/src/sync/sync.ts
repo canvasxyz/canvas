@@ -1,5 +1,7 @@
 import { sha256 } from "@noble/hashes/sha256"
 
+import chalk from "chalk"
+
 import type { CID } from "multiformats"
 import type { Duplex, Source } from "it-stream-types"
 import type { Uint8ArrayList } from "uint8arraylist"
@@ -13,7 +15,6 @@ import type { Node, ReadWriteTransaction } from "@canvas-js/core/components/mess
 
 import { Client } from "./client.js"
 import { equalNodes } from "./utils.js"
-import chalk from "chalk"
 
 type Context = { cid: CID; txn: ReadWriteTransaction; client: Client }
 
@@ -27,7 +28,7 @@ export async function* sync(
 	const client = new Client(stream)
 	try {
 		const sourceRoot = await client.getRoot()
-		const targetRoot = await txn.getRoot()
+		const targetRoot = await txn.target.getRoot()
 
 		if (sourceRoot.level === 0) {
 			return
@@ -41,7 +42,7 @@ export async function* sync(
 			yield* enter({ cid, txn, client }, targetRoot.level, sourceRoot)
 
 			if (options.verbose) {
-				const { hash: newRoot } = await txn.getRoot()
+				const { hash: newRoot } = await txn.target.getRoot()
 				console.log(prefix, chalk.gray(`The new merkle root is ${toHex(newRoot)}`))
 			}
 		}
@@ -60,14 +61,14 @@ async function* enter(
 		if (targetLevel === 0 && sourceNode.level === 1) {
 			const ids: Uint8Array[] = []
 
-			for (const { level, key, id } of children) {
+			for (const { level, key, value } of children) {
 				if (key === null) {
 					continue
 				}
 
 				assert(level === 0, "unexpected child level")
-				assert(id !== undefined, "expected leaf nodes to have a value")
-				ids.push(id)
+				assert(value !== undefined, "expected leaf nodes to have a value")
+				ids.push(value)
 			}
 
 			yield* getMessages({ cid, txn, client }, ids)
@@ -85,7 +86,7 @@ async function* scan(
 	{ cid, txn, client }: Context,
 	sourceNode: Node
 ): AsyncGenerator<[hash: Uint8Array, message: Message]> {
-	const targetNode = await txn.seek(sourceNode.level, sourceNode.key)
+	const targetNode = await txn.target.getNode(sourceNode.level, sourceNode.key)
 	if (targetNode !== null && equalNodes(sourceNode, targetNode)) {
 		return
 	}
@@ -97,16 +98,16 @@ async function* scan(
 		}
 	} else if (sourceNode.level === 1) {
 		const ids: Uint8Array[] = []
-		for (const { level, key, id } of children) {
+		for (const { level, key, value } of children) {
 			if (key === null) {
 				continue
 			}
 
 			assert(level === 0, "unexpected child level")
-			assert(id !== undefined, "expected leaf nodes to have a value")
-			const existingRecord = await txn.getMessage(id)
-			if (existingRecord === null) {
-				ids.push(id)
+			assert(value !== undefined, "expected leaf nodes to have a value")
+			const leaf = await txn.target.getNode(0, key)
+			if (leaf === null) {
+				ids.push(value)
 			}
 		}
 

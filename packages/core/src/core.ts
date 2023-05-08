@@ -24,7 +24,12 @@ import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 
 import { VM } from "@canvas-js/core/components/vm"
 import { ModelStore, openModelStore } from "@canvas-js/core/components/modelStore"
-import { MessageStore, openMessageStore, ReadOnlyTransaction } from "@canvas-js/core/components/messageStore"
+import {
+	MessageStore,
+	openMessageStore,
+	ReadOnlyTransaction,
+	ReadWriteTransaction,
+} from "@canvas-js/core/components/messageStore"
 import { getPeerId, getLibp2pOptions, P2PConfig } from "@canvas-js/core/components/libp2p"
 import { DiscoveryRecord, actionType, discoveryRecord, messageType } from "@canvas-js/core/codecs"
 import {
@@ -304,7 +309,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	 * Note the this does NOT insert into the message store or publish to GossipSub -
 	 * that's the responsibility of the caller.
 	 */
-	private applyMessageInternal = async (txn: ReadOnlyTransaction, hash: Uint8Array, message: Message) => {
+	private applyMessageInternal = async (txn: ReadWriteTransaction, hash: Uint8Array, message: Message) => {
 		const id = toHex(hash)
 
 		if (this.options.verbose) {
@@ -344,7 +349,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		this.dispatchEvent(new CustomEvent("message", { detail: { uri: txn.uri, hash: id, message } }))
 	}
 
-	private async validateAction(txn: ReadOnlyTransaction, action: Action) {
+	private async validateAction(txn: ReadWriteTransaction, action: Action) {
 		const { timestamp, app, block, chain } = action.payload
 		const fromAddress = action.payload.from
 
@@ -378,7 +383,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		await this.getChainImplementation(chain).verifyAction(action)
 	}
 
-	private async validateSession(txn: ReadOnlyTransaction, session: Session) {
+	private async validateSession(txn: ReadWriteTransaction, session: Session) {
 		const { app, sessionIssued, block, chain } = session.payload
 
 		assert(app === this.app || this.vm.sources.has(app), `session signed for wrong application (${app})`)
@@ -391,7 +396,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		await this.getChainImplementation(chain).verifySession(session)
 	}
 
-	private async validateCustomAction(txn: ReadOnlyTransaction, customAction: CustomAction) {
+	private async validateCustomAction(txn: ReadWriteTransaction, customAction: CustomAction) {
 		assert(this.vm.customActionSchemaName !== null, `custom action called but no custom action definition exists`)
 		const schemaName = getCustomActionSchemaName(this.app, customAction.name)
 		assert(

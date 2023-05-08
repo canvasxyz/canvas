@@ -116,16 +116,16 @@ test("Apply source actions", async (t) => {
 	}
 
 	t.deepEqual(entries, [
-		[Buffer.from(fromHex(sourceActionHash)), sourceAction],
-		[Buffer.from(fromHex(createActionHash)), createAction],
-		[Buffer.from(fromHex(voteActionHash)), voteAction],
-		[Buffer.from(fromHex(voteSourceActionHash)), voteSourceAction],
+		[fromHex(sourceActionHash), sourceAction],
+		[fromHex(createActionHash), createAction],
+		[fromHex(voteActionHash), voteAction],
+		[fromHex(voteSourceActionHash), voteSourceAction],
 	])
 
 	await core.close()
 })
 
-test("Build missing MST index on core startup", async (t) => {
+test("Build missing message index on core startup", async (t) => {
 	const directory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(directory)
 
@@ -191,8 +191,8 @@ test("Build missing MST index on core startup", async (t) => {
 				await core.messageStore.read(
 					async (txn) => {
 						for (const { key, value } of entries) {
-							const { id } = await txn.getNode(0, key)
-							t.deepEqual(id, value)
+							const node = await txn.source.getNode(0, key)
+							t.deepEqual(node?.value, value)
 						}
 					},
 					{ uri }
