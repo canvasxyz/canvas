@@ -4,7 +4,7 @@ import { openDB, IDBPDatabase } from "idb"
 
 import { IDBTree } from "@canvas-js/okra-idb"
 
-import type { Message } from "@canvas-js/interfaces"
+import type { Message, Session } from "@canvas-js/interfaces"
 
 import { toHex, assert } from "@canvas-js/core/utils"
 import { getMessageKey } from "@canvas-js/core/sync"
@@ -63,6 +63,8 @@ export class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> impl
 		return store
 	}
 
+	private static getLockName = (uri: string) => `canvas:[${uri}]`
+
 	private merkleRoots: Record<string, string> = {}
 
 	private constructor(
@@ -77,6 +79,10 @@ export class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> impl
 
 	public async close() {
 		this.db.close()
+	}
+
+	public getMerkleRoots(): Record<string, string> {
+		return { ...this.merkleRoots }
 	}
 
 	public async *getMessageStream(
@@ -100,30 +106,41 @@ export class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> impl
 		throw Error("countMessages is not implemented in the browser")
 	}
 
+	private async getSessionByAddress(
+		uri: string,
+		chain: string,
+		address: string
+	): Promise<[hash: string | null, session: Session | null]> {
+		const id: Uint8Array | undefined = await this.db.get(`${uri}/sessions`, address)
+		if (id !== undefined) {
+			const message: Message | undefined = await this.db.get(uri, id)
+			if (message !== undefined && message.type === "session") {
+				return [toHex(id), message]
+			}
+		}
+
+		return [null, null]
+	}
+
 	public async read<T>(
 		callback: (txn: ReadOnlyTransaction) => T | Promise<T>,
 		options: { uri?: string } = {}
 	): Promise<T> {
 		const uri = options.uri ?? this.app
 		assert(uri === this.app || this.sources.has(uri))
-		const tree = this.trees[uri]
 
-		return await callback({
-			uri,
-			source: tree,
-			getMessage: async (id) => this.db.get(uri, id) ?? null,
-			getSessionByAddress: async (chain, address) => {
-				const id: Uint8Array | undefined = await this.db.get(`${uri}/sessions`, address)
-				if (id !== undefined) {
-					const message: Message | undefined = await this.db.get(uri, id)
-					if (message !== undefined && message.type === "session") {
-						return [toHex(id), message]
-					}
-				}
+		let result: T | undefined = undefined
 
-				return [null, null]
-			},
+		const lockName = IndexedDBMessageStore.getLockName(uri)
+		await navigator.locks.request(lockName, { mode: "shared" }, async (lock) => {
+			if (lock === null) {
+				throw new Error("failed to acquire shared lock")
+			} else {
+				result = await callback(this.getReadOnlyTransaction(uri))
+			}
 		})
+
+		return result!
 	}
 
 	public async write<T>(
@@ -134,40 +151,47 @@ export class IndexedDBMessageStore extends EventEmitter<MessageStoreEvents> impl
 		assert(uri === this.app || this.sources.has(uri))
 		const tree = this.trees[uri]
 
-		const result = await callback({
-			uri,
-			target: tree,
-			getMessage: async (id) => this.db.get(uri, id) ?? null,
-			getSessionByAddress: async (chain, address) => {
-				const id: Uint8Array | undefined = await this.db.get(`${uri}/sessions`, address)
-				if (id !== undefined) {
-					const message: Message | undefined = await this.db.get(uri, id)
-					if (message !== undefined && message.type === "session") {
-						return [toHex(id), message]
-					}
-				}
+		let result: T | undefined = undefined
 
-				return [null, null]
-			},
-			insertMessage: async (id, message) => {
-				const key = getMessageKey(id, message)
-				await tree.set(key, id)
-				await this.db.put(uri, message, id)
-				if (message.type === "session") {
-					await this.db.put(`${uri}/sessions`, id, message.payload.sessionAddress)
-				}
-			},
+		const lockName = IndexedDBMessageStore.getLockName(uri)
+		await navigator.locks.request(lockName, { mode: "exclusive" }, async (lock) => {
+			if (lock === null) {
+				throw new Error("failed to acquire exclusive lock")
+			}
+
+			result = await callback(this.getReadWriteTransaction(uri))
+			const root = await tree.getRoot()
+			const hash = toHex(root.hash)
+			if (this.merkleRoots[uri] !== hash) {
+				this.merkleRoots[uri] = hash
+				this.dispatchEvent(new CustomEvent("update", { detail: { uri: uri, root: hash } }))
+			}
 		})
 
-		const root = await tree.getRoot()
-		this.merkleRoots[uri] = toHex(root.hash)
-
-		this.dispatchEvent(new CustomEvent("update", { detail: { uri: uri, root: null } }))
-
-		return result
+		return result!
 	}
 
-	public getMerkleRoots(): Record<string, string> {
-		return this.merkleRoots
+	private async insertMessage(uri: string, id: Uint8Array, message: Message) {
+		const key = getMessageKey(id, message)
+		await this.trees[uri].set(key, id)
+		await this.db.put(uri, message, id)
+		if (message.type === "session") {
+			await this.db.put(`${uri}/sessions`, id, message.payload.sessionAddress)
+		}
 	}
+
+	private getReadOnlyTransaction = (uri: string): ReadOnlyTransaction => ({
+		uri,
+		source: this.trees[uri],
+		getMessage: async (id) => this.db.get(uri, id) ?? null,
+		getSessionByAddress: (chain, address) => this.getSessionByAddress(uri, chain, address),
+	})
+
+	private getReadWriteTransaction = (uri: string): ReadWriteTransaction => ({
+		uri,
+		target: this.trees[uri],
+		getMessage: async (id) => this.db.get(uri, id) ?? null,
+		getSessionByAddress: (chain, address) => this.getSessionByAddress(uri, chain, address),
+		insertMessage: (id, message) => this.insertMessage(uri, id, message),
+	})
 }

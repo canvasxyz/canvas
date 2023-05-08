@@ -52,7 +52,7 @@
   "dependencies": {
     "@canvas-js/chain-ethereum": "0.4.11",
     "@canvas-js/interfaces": "0.4.11",
-    "@canvas-js/okra-idb": "^0.0.1",
+    "@canvas-js/okra-idb": "^0.0.2",
     "@canvas-js/okra-memory": "^0.0.1",
     "@canvas-js/okra-node": "^0.3.1",
     "@chainsafe/libp2p-gossipsub": "^7.0.0",
