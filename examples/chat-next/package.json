@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat-next",
-  "version": "0.5.0-alpha",
+  "version": "0.5.0-alpha2",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -13,10 +13,10 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.5.0-alpha",
-    "@canvas-js/cli": "0.5.0-alpha",
-    "@canvas-js/hooks": "0.5.0-alpha",
-    "@canvas-js/interfaces": "0.5.0-alpha",
+    "@canvas-js/chain-ethereum": "0.5.0-alpha2",
+    "@canvas-js/cli": "0.5.0-alpha2",
+    "@canvas-js/hooks": "0.5.0-alpha2",
+    "@canvas-js/interfaces": "0.5.0-alpha2",
     "@types/react": "^18.0.35",
     "@types/react-dom": "^18.0.11",
     "98.css": "^0.1.20",
