@@ -39,7 +39,7 @@ test("contracts (milady balanceOf)", async (t) => {
 	})
 
 	const provider = new ethers.providers.JsonRpcProvider(ETH_CHAIN_RPC)
-	const chainImplementation = new EthereumChainImplementation(parseInt(ETH_CHAIN_ID), "localhost", provider)
+	const chainImplementation = new EthereumChainImplementation(parseInt(ETH_CHAIN_ID), "http://localhost", provider)
 	const core = await Core.initialize({
 		spec,
 		directory: null,

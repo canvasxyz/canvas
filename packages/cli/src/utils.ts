@@ -86,7 +86,7 @@ function parseChainId(chain: string): [namespace: string, chainId: string] {
 }
 
 export function getChainImplementations(args?: (string | number)[]): ChainImplementation[] {
-	const domain = "localhost"
+	const domain = "http://localhost"
 	const chains: ChainImplementation[] = []
 
 	if (args !== undefined) {
