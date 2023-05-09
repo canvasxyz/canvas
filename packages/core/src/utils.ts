@@ -160,5 +160,4 @@ export function getErrorMessage(err: unknown): string {
 	}
 }
 
-export class ActionExists extends Error {}
-export class SessionExists extends Error {}
+export class AlreadyExists extends Error {}

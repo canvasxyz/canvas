@@ -1,6 +1,6 @@
 import chalk from "chalk"
 import type { Core } from "@canvas-js/core"
-import { SessionExists, ActionExists } from "@canvas-js/core/utils"
+import { AlreadyExists } from "@canvas-js/core/utils"
 import type { Action, Session } from "@canvas-js/interfaces"
 
 // Types for returned JSON from the API
@@ -11,8 +11,8 @@ interface JsonMap {
 interface JsonArray extends Array<AnyJson> {}
 
 // Types for defining sync module structure
-export type SyncModuleCursor = { next?: "string"; applied?: number }
-export type SyncModuleApply = (hash: string, action: Action, session: Session) => void
+export type SyncModuleCursor = { next?: "string"; applied?: number; count?: number }
+export type SyncModuleApply = (hash: string, action: Action, session: Session) => Promise<boolean>
 export type SyncModuleExports = {
 	api: string
 	apiToPeerHandler: (response: AnyJson, apply: SyncModuleApply) => Promise<SyncModuleCursor>
@@ -29,24 +29,32 @@ const getTimestamp = () => {
 export const setupSyncModule = (core: Core, { api, apiToPeerHandler, peerToApiHandler }: SyncModuleExports) => {
 	const API_SYNC_DELAY = 5000
 
-	const apply = async (hash: string, action: Action, session: Session) => {
-		await core.apply(session).catch((err: any) => {
-			if (err instanceof SessionExists) {
-				console.log("Success: Already exists")
-			} else {
-				console.log(chalk.red(err.stack))
-			}
-		})
-		await core.apply(action).catch((err: any) => {
-			if (err instanceof ActionExists) {
-				console.log("Success: Already exists")
-			} else {
-				console.log(chalk.red(err.stack))
-			}
+	const apply = (hash: string, action: Action, session: Session): Promise<boolean> => {
+		return new Promise(async (resolve, reject) => {
+			// apply session, don't resolve the promise (to wait for action application)
+			await core.apply(session, true).catch((err: any) => {
+				if (!(err instanceof AlreadyExists)) {
+					console.log(chalk.red(`[canvas-cli] [${getTimestamp()}] error executing session: ${err.message}`))
+				}
+			})
+			// apply action, always resolve promise at the end
+			await core
+				.apply(action, true)
+				.then(() => resolve(true))
+				.catch((err: any) => {
+					if (!(err instanceof AlreadyExists)) {
+						console.log(chalk.red(`[canvas-cli] [${getTimestamp()}] error executing action: ${err.message}`))
+						resolve(false)
+						// don't throw - nodes may have accepted invalid actions due to various stateful reasons,
+						// e.g. lack of session expiration checks
+					}
+					resolve(false)
+				})
 		})
 	}
 
-	const sync = (apiUrl = api) =>
+	const sync = (apiUrl = api) => {
+		console.log(apiUrl)
 		fetch(apiUrl)
 			.then((res) => {
 				if (!res.ok) {
@@ -57,18 +65,24 @@ export const setupSyncModule = (core: Core, { api, apiToPeerHandler, peerToApiHa
 					.json()
 					.then(async (data) => {
 						const result = await apiToPeerHandler(data, apply)
-						if (!result?.next) {
-							console.log(chalk.green(`[canvas-cli] [${getTimestamp()}] api-sync success: no new actions`))
+						if (!result?.applied) {
+							const len = result?.count
+							console.log(chalk.green(`[canvas-cli] [${getTimestamp()}] api-sync: no new actions (of ${len})`))
 							wrapper.timer = setTimeout(sync, API_SYNC_DELAY)
 						} else {
+							const len = result?.count
 							console.log(
-								chalk.green(`[canvas-cli] [${getTimestamp()}] api-sync success: ${result.applied} new actions`)
+								chalk.green(`[canvas-cli] [${getTimestamp()}] api-sync: ${result.applied} new actions (of ${len})`)
 							)
-							sync(result.next)
+							if (result?.next) {
+								wrapper.timer = setTimeout(() => sync(result.next), 500)
+							} else {
+								wrapper.timer = setTimeout(sync, API_SYNC_DELAY)
+							}
 						}
 					})
 					.catch((err) => {
-						console.log(chalk.red("[canvas-cli] api-sync error:", err))
+						console.log(chalk.red("[canvas-cli] api-sync error:", err.message))
 						wrapper.timer = setTimeout(sync, API_SYNC_DELAY)
 					})
 			})
@@ -76,6 +90,7 @@ export const setupSyncModule = (core: Core, { api, apiToPeerHandler, peerToApiHa
 				console.log(chalk.red("[canvas-cli] api-sync fetch failed:", api, err))
 				wrapper.timer = setTimeout(sync, API_SYNC_DELAY)
 			})
+	}
 
 	console.log(chalk.green("[canvas-cli] api-sync starting:", api))
 	sync()
