@@ -19,7 +19,7 @@ export type SyncModuleExports = {
 	peerToApiHandler: ({ action, session }: { action: Action; session: Session }) => Promise<void>
 }
 
-let wrapper: { timer?: ReturnType<typeof setTimeout> } = {}
+const wrapper: { timer?: ReturnType<typeof setTimeout> } = {}
 
 const getTimestamp = () => {
 	const d = new Date()
@@ -29,22 +29,21 @@ const getTimestamp = () => {
 export const setupSyncModule = (core: Core, { api, apiToPeerHandler, peerToApiHandler }: SyncModuleExports) => {
 	const API_SYNC_DELAY = 5000
 
-	const apply = (hash: string, action: Action, session: Session): Promise<boolean> => {
-		return new Promise(async (resolve, reject) => {
-			// apply session, don't resolve the promise (to wait for action application)
-			await core.apply(session, true).catch((err: any) => {
-				if (!(err instanceof AlreadyExists)) {
-					console.log(chalk.red(`[canvas-cli] [${getTimestamp()}] error executing session: ${err.message}`))
-				}
-			})
-			// apply action, always resolve promise at the end
-			await core
+	const apply = async (hash: string, action: Action, session: Session): Promise<boolean> => {
+		// apply session, don't throw errors or return (to wait for action application)
+		await core.apply(session, true).catch((err: any) => {
+			if (!(err instanceof AlreadyExists)) {
+				console.log(chalk.red(`[canvas-cli] [${getTimestamp()}] error executing session: ${err.message}`))
+			}
+		})
+		// apply action, always resolve promise at the end
+		return new Promise((resolve, reject) => {
+			core
 				.apply(action, true)
 				.then(() => resolve(true))
 				.catch((err: any) => {
 					if (!(err instanceof AlreadyExists)) {
 						console.log(chalk.red(`[canvas-cli] [${getTimestamp()}] error executing action: ${err.message}`))
-						resolve(false)
 						// don't throw - nodes may have accepted invalid actions due to various stateful reasons,
 						// e.g. lack of session expiration checks
 					}
