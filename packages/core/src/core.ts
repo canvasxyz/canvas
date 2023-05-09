@@ -42,6 +42,7 @@ import {
 	wait,
 	logErrorMessage,
 	retry,
+	AlreadyExists,
 } from "@canvas-js/core/utils"
 import {
 	PUBSUB_ANNOUNCE_DELAY,
@@ -272,7 +273,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	 * It inserts the message into the message store, updates the MST index,
 	 * and publishes to GossipSub.
 	 */
-	public async apply(message: Message): Promise<{ hash: string }> {
+	public async apply(message: Message, noDuplicates?: boolean): Promise<{ hash: string }> {
 		assert(messageType.is(message), "invalid message")
 
 		const app = message.type === "customAction" ? message.app : message.payload.app
@@ -284,6 +285,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			async (txn) => {
 				const existingRecord = await txn.getMessage(hash)
 				if (existingRecord !== null) {
+					if (noDuplicates) throw new AlreadyExists()
 					return
 				}
 

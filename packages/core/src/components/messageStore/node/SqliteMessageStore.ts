@@ -10,7 +10,7 @@ import type { Message, Session } from "@canvas-js/interfaces"
 
 import { getMessageKey } from "@canvas-js/core/sync"
 import { MESSAGE_DATABASE_FILENAME, MST_DIRECTORY_NAME } from "@canvas-js/core/constants"
-import { mapEntries, toHex, assert, ActionExists, SessionExists } from "@canvas-js/core/utils"
+import { mapEntries, toHex, assert, AlreadyExists } from "@canvas-js/core/utils"
 
 import type { MessageStore, MessageStoreEvents, ReadOnlyTransaction, ReadWriteTransaction } from "../types.js"
 
@@ -227,7 +227,7 @@ export class SqliteMessageStore extends EventEmitter<MessageStoreEvents> impleme
 							txn.set(key, id)
 						} catch (error: any) {
 							if (error.code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
-								throw message.type === "session" ? new SessionExists() : new ActionExists()
+								throw new AlreadyExists()
 							}
 						}
 					},
