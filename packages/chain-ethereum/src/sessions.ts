@@ -16,14 +16,14 @@ export function createSiweMessage(payload: SessionPayload, domain: string, nonce
 
 	const message = new siwe.SiweMessage({
 		version: SiweMessageVersion,
-		domain: domain,
+		domain: new URL(domain).host,
 		nonce: nonce,
 		address: payload.from,
-		uri: `ethereum:${payload.sessionAddress}`, // switch to CAIP once they have a URI spec
+		uri: domain,
 		chainId: parseInt(chainId),
 		issuedAt: new Date(payload.sessionIssued).toISOString(),
 		expirationTime: new Date(payload.sessionIssued + payload.sessionDuration).toISOString(),
-		resources: [payload.app],
+		resources: [`ethereum:${payload.sessionAddress}:${payload.app}`],
 	})
 
 	return message.prepareMessage()
