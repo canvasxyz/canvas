@@ -21,6 +21,11 @@ export type SyncModuleExports = {
 
 let wrapper: { timer?: ReturnType<typeof setTimeout> } = {}
 
+const getTimestamp = () => {
+	const d = new Date()
+	return `${d.getHours()}:${d.getMinutes().toString().padStart(2, "0")}:${d.getSeconds().toString().padStart(2, "0")}`
+}
+
 export const setupSyncModule = (core: Core, { api, apiToPeerHandler, peerToApiHandler }: SyncModuleExports) => {
 	const API_SYNC_DELAY = 5000
 
@@ -53,10 +58,12 @@ export const setupSyncModule = (core: Core, { api, apiToPeerHandler, peerToApiHa
 					.then(async (data) => {
 						const result = await apiToPeerHandler(data, apply)
 						if (!result?.next) {
-							console.log(chalk.green("[canvas-cli] api-sync success: no new actions"))
+							console.log(chalk.green(`[canvas-cli] [${getTimestamp()}] api-sync success: no new actions`))
 							wrapper.timer = setTimeout(sync, API_SYNC_DELAY)
 						} else {
-							console.log(chalk.green(`[canvas-cli] api-sync success: ${result.applied} new actions`))
+							console.log(
+								chalk.green(`[canvas-cli] [${getTimestamp()}] api-sync success: ${result.applied} new actions`)
+							)
 							sync(result.next)
 						}
 					})
@@ -66,7 +73,7 @@ export const setupSyncModule = (core: Core, { api, apiToPeerHandler, peerToApiHa
 					})
 			})
 			.catch((err) => {
-				console.log(chalk.red("[canvas-cli] api-sync fetch failed:", api))
+				console.log(chalk.red("[canvas-cli] api-sync fetch failed:", api, err))
 				wrapper.timer = setTimeout(sync, API_SYNC_DELAY)
 			})
 
