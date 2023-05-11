@@ -1,6 +1,6 @@
 import React from "react"
-import ComposeIcon from "./icons/compose.svg"
-import { IconButton } from "./IconButton"
+import ComposeIcon from "../icons/compose.svg"
+import { IconButton } from "../IconButton"
 
 export const ChatView: React.FC<{}> = ({}) => {
 	const now = new Date()
