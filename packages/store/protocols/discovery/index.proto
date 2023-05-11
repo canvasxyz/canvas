@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+message DiscoveryRecord {
+  repeated bytes addrs = 2;
+  repeated string topics = 3;
+}
+
+message SignedDiscoveryRecord {
+  bytes from = 1;
+  bytes data = 2;
+  bytes seqno = 3;
+  string topic = 4;
+  bytes signature = 5;
+  bytes key = 6;
+}
+
+message FetchDiscoveryRecordsResponse {
+  repeated SignedDiscoveryRecord records = 1;
+}
+
+// message Request {
+//   uint32 seq = 1;
+
+//   message QueryRecordsRequest {
+//     repeated string topics = 1;
+//   }
+
+//   oneof request {
+//     QueryRecordsRequest query_records = 2;
+//   }
+// }
+
+// message Response {
+//   uint32 seq = 1;
+
+//   message QueryRecordsResponse {
+//     repeated DiscoveryRecord records = 1;
+//   }
+
+//   oneof request {
+//     QueryRecordsResponse query_records = 2;
+//   }
+// }
