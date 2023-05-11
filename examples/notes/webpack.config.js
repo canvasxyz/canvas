@@ -35,6 +35,11 @@ module.exports = {
 			stream: false,
 			process: false,
 			buffer: require.resolve("buffer"),
+			http: require.resolve("stream-http"),
+			https: require.resolve("https-browserify"),
+			zlib: require.resolve("browserify-zlib"),
+			url: require.resolve("url/"),
+			assert: require.resolve("assert/"),
 		}, // TODO: remove this when dependencies have been cleaned up
 	},
 	experiments: {
