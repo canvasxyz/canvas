@@ -55,7 +55,7 @@ export class SubstrateChainImplementation implements ChainImplementation<Extensi
 		const signatureBytes = Buffer.from(session.signature.slice(2), "hex")
 		const valid = signatureVerify(message, signatureBytes, session.payload.from).isValid
 		if (!valid) {
-			throw new Error("Invalid action signature")
+			throw new Error("Invalid session signature")
 		}
 	}
 

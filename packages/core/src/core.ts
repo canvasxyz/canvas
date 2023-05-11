@@ -42,6 +42,7 @@ import {
 	wait,
 	logErrorMessage,
 	retry,
+	AlreadyExists,
 } from "@canvas-js/core/utils"
 import {
 	PUBSUB_ANNOUNCE_DELAY,
@@ -230,7 +231,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			cid: this.cid.toString(),
 			actions: this.vm.getActions(),
 			routes: this.vm.getRoutes(),
-			chains: this.vm.getChains(),
+			signers: this.vm.getSigners(),
 			models: this.vm.getModels(),
 			peers,
 			merkleRoots: this.messageStore.getMerkleRoots(),
@@ -272,7 +273,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	 * It inserts the message into the message store, updates the MST index,
 	 * and publishes to GossipSub.
 	 */
-	public async apply(message: Message): Promise<{ hash: string }> {
+	public async apply(message: Message, noDuplicates?: boolean): Promise<{ hash: string }> {
 		assert(messageType.is(message), "invalid message")
 
 		const app = message.type === "customAction" ? message.app : message.payload.app
@@ -284,6 +285,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			async (txn) => {
 				const existingRecord = await txn.getMessage(hash)
 				if (existingRecord !== null) {
+					if (noDuplicates) throw new AlreadyExists()
 					return
 				}
 
@@ -354,7 +356,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		const fromAddress = action.payload.from
 
 		assert(app === this.app || this.vm.sources.has(app), `action signed for wrong application (${app})`)
-		assert(this.vm.getChains().includes(chain), `unsupported chain (${chain})`)
+		assert(this.vm.hasSigner(chain), `unsupported action signer (${chain})`)
 
 		// TODO: verify that actions signed for a previous app were valid within that app
 
@@ -387,7 +389,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		const { app, sessionIssued, block, chain } = session.payload
 
 		assert(app === this.app || this.vm.sources.has(app), `session signed for wrong application (${app})`)
-		assert(this.vm.getChains().includes(chain), `unsupported chain (${chain})`)
+		assert(this.vm.hasSigner(chain), `unsupported session signer (${chain})`)
 
 		// check the timestamp bounds
 		assert(sessionIssued > BOUNDS_CHECK_LOWER_LIMIT, "session issued too far in the past")

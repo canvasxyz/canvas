@@ -7,6 +7,9 @@
     "outDir": "dist"
   },
   "references": [
+    { "path": "../chain-cosmos" },
+    { "path": "../chain-solana" },
+    { "path": "../chain-substrate" },
     { "path": "../chain-ethereum" },
     { "path": "../core" },
     { "path": "../interfaces" }

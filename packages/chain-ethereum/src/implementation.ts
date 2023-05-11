@@ -16,7 +16,7 @@ export class EthereumChainImplementation
 	public readonly chain: string
 	constructor(
 		public readonly chainId: number = 1,
-		public readonly domain: string = "localhost",
+		public readonly domain: string = "http://localhost",
 		public readonly provider?: ethers.providers.JsonRpcProvider
 	) {
 		if (!Number.isSafeInteger(chainId)) {

@@ -15,6 +15,7 @@ import { WebSocketServer } from "ws"
 
 import { multiaddr } from "@multiformats/multiaddr"
 
+import type { Action, Session } from "@canvas-js/interfaces"
 import { Core, CoreOptions } from "@canvas-js/core"
 import { getAPI, handleWebsocketConnection } from "@canvas-js/core/api"
 
@@ -22,6 +23,7 @@ import { testnetBootstrapList } from "@canvas-js/core/bootstrap"
 import * as constants from "@canvas-js/core/constants"
 
 import { getChainImplementations, confirmOrExit, parseSpecArgument, installSpec, CANVAS_HOME } from "../utils.js"
+import { setupSyncModule } from "../syncModule.js"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
 import { getReasonPhrase, StatusCodes } from "http-status-codes"
 import { P2PConfig } from "@canvas-js/core/components/libp2p"
@@ -95,6 +97,10 @@ export const builder = (yargs: Argv) =>
 		.option("static", {
 			type: "string",
 			desc: "Serve a static directory from /, and API routes from /api",
+		})
+		.option("syncModule", {
+			type: "string",
+			desc: "Provide an ESM module to sync actions by push/poll with an external api",
 		})
 		.option("testnet", {
 			type: "boolean",
@@ -256,6 +262,17 @@ export async function handler(args: Args) {
 		app.use(getAPI(core, { exposeMetrics: args.metrics, exposeP2P: args.p2p }))
 	}
 
+	let apiSyncTimer: { timer?: ReturnType<typeof setTimeout> }
+	if (args.syncModule) {
+		const { api, apiToPeerHandler, peerToApiHandler } = await import(args.syncModule)
+
+		if (!apiToPeerHandler) throw new Error("sync module must declare apiToPeerHandler")
+		if (!peerToApiHandler) throw new Error("sync module must declare peerToApiHandler")
+		if (!api) throw new Error("sync module must declare api url")
+
+		apiSyncTimer = setupSyncModule(core, { api, apiToPeerHandler, peerToApiHandler })
+	}
+
 	const origin = `http://localhost:${args.port}`
 	const apiURL = args.static ? `${origin}/api` : origin
 
@@ -303,6 +320,8 @@ export async function handler(args: Args) {
 			process.stdout.write(
 				`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`
 			)
+
+			if (apiSyncTimer) clearTimeout(apiSyncTimer.timer)
 
 			console.log("[canvas-cli] Stopping API server...")
 			await new Promise<void>((resolve, reject) => server.stop((err) => (err ? reject(err) : resolve())))

@@ -20,12 +20,19 @@ interface SolanaWindowSigner {
 	signMessage(message: Uint8Array): Promise<{ signature: Uint8Array }>
 }
 
+// Solana's first block is 4sGjMW1sUnHzSxGspuhpqLDx6wiyjNtZAMdL4VZHirAn
+// - https://forum.thegraph.com/t/chain-identification-aliasing-for-the-graph-protocol/3514
+// - https://solscan.io/block/0
+//
+// This conflicts with the example in the CAIP-2 standard:
+// https://github.com/ChainAgnostic/namespaces/blob/main/solana/caip2.md
+
 /**
  * Solana chain export.
  */
 export class SolanaChainImplementation implements ChainImplementation<SolanaWindowSigner, solw3.Keypair> {
 	public readonly chain: string
-	constructor(public readonly genesisHash: string = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d") {
+	constructor(public readonly genesisHash: string = "mainnet") {
 		// https://github.com/ChainAgnostic/namespaces/blob/main/solana/caip2.md
 		// > Blockchains in the "solana" namespace are validated by their genesis hash...
 		// > These genesis hashes require no transformations to be used as conformant CAIP-2
@@ -43,7 +50,7 @@ export class SolanaChainImplementation implements ChainImplementation<SolanaWind
 		const signatureBytes = bs58.decode(action.signature)
 		const valid = nacl.sign.detached.verify(message, signatureBytes, bs58.decode(expectedAddress))
 		if (!valid) {
-			throw new Error("Invalid action signature")
+			throw new Error("Invalid session signature")
 		}
 	}
 

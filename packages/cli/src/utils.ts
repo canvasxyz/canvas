@@ -10,6 +10,11 @@ import { ethers } from "ethers"
 
 import type { ChainImplementation } from "@canvas-js/interfaces"
 import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
+import { CosmosChainImplementation } from "@canvas-js/chain-cosmos"
+import { SolanaChainImplementation } from "@canvas-js/chain-solana"
+import { SubstrateChainImplementation } from "@canvas-js/chain-substrate"
+// @ts-ignore
+import { NearChainImplementation } from "@canvas-js/chain-near"
 
 import * as constants from "@canvas-js/core/constants"
 import { assert } from "@canvas-js/core/utils"
@@ -81,7 +86,7 @@ function parseChainId(chain: string): [namespace: string, chainId: string] {
 }
 
 export function getChainImplementations(args?: (string | number)[]): ChainImplementation[] {
-	const domain = "localhost"
+	const domain = "http://localhost"
 	const chains: ChainImplementation[] = []
 
 	if (args !== undefined) {
@@ -92,13 +97,29 @@ export function getChainImplementations(args?: (string | number)[]): ChainImplem
 
 			const delimiterIndex = arg.indexOf("=")
 			if (delimiterIndex === -1) {
+				// chain provided without url
 				const [namespace, chainId] = parseChainId(arg)
 				if (namespace === "eip155") {
-					chains.push(new EthereumChainImplementation(parseInt(chainId), domain))
+					chains.push(new EthereumChainImplementation(chainId === "*" ? undefined : parseInt(chainId), domain))
+				} else if (namespace === "cosmos") {
+					const [namespace, chainId, bech32Prefix] = arg.split(":")
+					chains.push(
+						new CosmosChainImplementation(
+							chainId === "*" ? "cosmoshub-1" : chainId,
+							chainId === "*" ? "cosmos" : bech32Prefix
+						)
+					)
+				} else if (namespace === "solana") {
+					chains.push(new SolanaChainImplementation())
+				} else if (namespace === "substrate") {
+					chains.push(new SubstrateChainImplementation())
+				} else if (namespace === "near") {
+					chains.push(new NearChainImplementation())
 				} else {
-					throw new Error(`Unsupported chain ${arg}: only eip155 chains can be passed in the CLI`)
+					throw new Error(`Unsupported chain ${arg}`)
 				}
 			} else {
+				// chain provided with url
 				const chain = arg.slice(0, delimiterIndex)
 				const url = arg.slice(delimiterIndex + 1)
 				const [namespace, chainId] = parseChainId(chain)
@@ -106,7 +127,7 @@ export function getChainImplementations(args?: (string | number)[]): ChainImplem
 					const provider = new ethers.providers.JsonRpcProvider(url)
 					chains.push(new EthereumChainImplementation(parseInt(chainId), domain, provider))
 				} else {
-					throw new Error(`Unsupported chain ${arg}: only eip155 chains can be passed in the CLI`)
+					throw new Error(`Unsupported chain ${arg}: only eip155 chains can be passed in the CLI with RPCs`)
 				}
 			}
 		}

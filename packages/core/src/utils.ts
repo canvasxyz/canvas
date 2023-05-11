@@ -159,3 +159,5 @@ export function getErrorMessage(err: unknown): string {
 		throw err
 	}
 }
+
+export class AlreadyExists extends Error {}

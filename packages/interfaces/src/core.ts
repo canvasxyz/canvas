@@ -32,7 +32,7 @@ export type ApplicationData = {
 	actions: string[]
 	models: Record<string, Record<string, string>>
 	routes: string[]
-	chains: string[]
+	signers: string[]
 	peers: { id: string; protocols?: string[]; addresses?: string[] }[]
 	merkleRoots: Record<string, string>
 }
