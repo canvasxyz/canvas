@@ -31,8 +31,6 @@ export interface NetworkConfig {
 }
 
 export function getLibp2pOptions(peerId: PeerId, config: NetworkConfig): Libp2pOptions {
-	// const peerId = await getPeerId(config)
-
 	const announce = config.announce ?? []
 	const listen = config.listen ?? []
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList

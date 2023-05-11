@@ -61,7 +61,7 @@ export class Daemon {
 
 	private constructor(public readonly libp2p: Libp2p, private readonly cache: DiscoveryRecordCache) {
 		const keyPrefix = "/canvas/v0/store/"
-		const keyPattern = /^\/canvas\/v0\/store\/([a-zA-Z0-9:\.\-]+)\/peers$/
+		const keyPattern = /^\/canvas\/v0\/store\/([a-zA-Z0-9:-.]+)\/peers$/
 		libp2p.fetchService.registerLookupFunction(keyPrefix, async (key) => {
 			const result = keyPattern.exec(key)
 			if (result === null) {
