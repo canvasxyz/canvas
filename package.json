@@ -26,6 +26,7 @@
     "examples/chat-browser",
     "examples/chat-webpack",
     "examples/chat-next",
+    "examples/interwallet",
     "examples/notes"
   ],
   "devDependencies": {
