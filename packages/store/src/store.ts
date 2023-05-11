@@ -49,8 +49,8 @@ export class Store {
 	public constructor(private readonly libp2p: Libp2p, private readonly config: StoreConfig) {
 		this.tree = new okra.Tree(config.path, {})
 
-		this.topic = `/canvas/v0/${config.name}`
-		this.protocol = `/canvas/v0/${config.name}/sync`
+		this.topic = `/canvas/v0/store/${config.name}`
+		this.protocol = `/canvas/v0/store/${config.name}/sync`
 
 		this.libp2p.pubsub.addEventListener("message", this.handleMessage)
 		this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
@@ -65,7 +65,7 @@ export class Store {
 
 			if (subscription.subscribe) {
 				this.log("peer %p joined the GossipSub topic %s", peerId, this.topic)
-				// this.schedulePeerSync(peerId)
+				this.schedulePeerSync(peerId)
 			} else {
 				this.log("peer %p left the GossipSub topic %s", peerId, this.topic)
 			}

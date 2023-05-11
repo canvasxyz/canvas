@@ -1,7 +1,6 @@
 import { Libp2p, createLibp2p } from "libp2p"
 
 import { SignedMessage } from "@libp2p/interface-pubsub"
-import { Stream } from "@libp2p/interface-connection"
 import { PeerId } from "@libp2p/interface-peer-id"
 
 import * as varint from "big-varint"
@@ -9,8 +8,6 @@ import * as varint from "big-varint"
 import { logger } from "@libp2p/logger"
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 import { base64 } from "multiformats/bases/base64"
-import { pipe } from "it-pipe"
-import * as lp from "it-length-prefixed"
 
 import { DiscoveryRecordCache } from "./discovery/index.js"
 
@@ -23,11 +20,13 @@ import {
 	DISCOVERY_ANNOUNCE_INTERVAL,
 	DISCOVERY_ANNOUNCE_RETRY_INTERVAL,
 	DISCOVERY_TOPIC,
+	FETCH_TIMEOUT,
+	MIN_TOPIC_PEERS,
 	PING_DELAY,
 	PING_INTERVAL,
 	PING_TIMEOUT,
 } from "./constants.js"
-import { assert, retry, wait } from "./utils.js"
+import { retry, wait } from "./utils.js"
 import { anySignal } from "any-signal"
 
 export interface DaemonConfig extends NetworkConfig {
@@ -43,12 +42,7 @@ export class Daemon {
 	public static async open(config: DaemonConfig): Promise<Daemon> {
 		const peerId = await Daemon.getPeerId(config)
 		const libp2p = await createLibp2p(getLibp2pOptions(peerId, config))
-
-		const daemon = new Daemon(libp2p, config.cache)
-
-		// await libp2p.handle(DISCOVERY_TOPIC, ({ stream }) => daemon.handleDiscoveryStream(stream))
-
-		return daemon
+		return new Daemon(libp2p, config.cache)
 	}
 
 	private static async getPeerId(config: DaemonConfig): Promise<PeerId> {
@@ -66,9 +60,10 @@ export class Daemon {
 	}
 
 	private constructor(public readonly libp2p: Libp2p, private readonly cache: DiscoveryRecordCache) {
-		const discoveryKeyPattern = /^\/canvas\/v0\/discovery\/([a-zA-Z0-9:\.\-]+)$/
-		libp2p.fetchService.registerLookupFunction("/canvas/v0/discovery/", async (key) => {
-			const result = discoveryKeyPattern.exec(key)
+		const keyPrefix = "/canvas/v0/store/"
+		const keyPattern = /^\/canvas\/v0\/store\/([a-zA-Z0-9:\.\-]+)\/peers$/
+		libp2p.fetchService.registerLookupFunction(keyPrefix, async (key) => {
+			const result = keyPattern.exec(key)
 			if (result === null) {
 				return null
 			}
@@ -78,9 +73,32 @@ export class Daemon {
 			return FetchDiscoveryRecordsResponse.encode({ records }).finish()
 		})
 
-		libp2p.addEventListener("peer:connect", ({ detail: connection }) => {
-			//
-			libp2p.fetch(connection.remotePeer, `/canvas/v0/discovery/`)
+		libp2p.addEventListener("peer:connect", async ({ detail: connection }) => {
+			for (const topic of this.libp2p.pubsub.getTopics()) {
+				if (topic.startsWith(keyPrefix)) {
+					const subscribers = this.libp2p.pubsub.getSubscribers(topic)
+					if (subscribers.length < MIN_TOPIC_PEERS) {
+						const signal = anySignal([AbortSignal.timeout(FETCH_TIMEOUT), this.controller.signal])
+						await libp2p
+							.fetch(connection.remotePeer, `${topic}/peers`, { signal })
+							.then((value) => {})
+							.catch((err) =>
+								this.log("failed to fetch peers for topic %s from %p: %O", topic, connection.remotePeer, err)
+							)
+							.finally(() => signal.clear())
+
+						let value: Uint8Array | null = null
+						try {
+							value = await libp2p.fetch(connection.remotePeer, `${topic}/peers`, { signal })
+						} catch (err) {
+							this.log("failed to fetch peers for topic %s from %p", topic, connection.remotePeer)
+							return
+						} finally {
+							signal.clear()
+						}
+					}
+				}
+			}
 		})
 
 		this.startDiscoveryService()

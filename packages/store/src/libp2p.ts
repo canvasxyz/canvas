@@ -91,28 +91,26 @@ export function getLibp2pOptions(peerId: PeerId, config: NetworkConfig): Libp2pO
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 
-		services: {
-			pubsub: gossipsub({
-				emitSelf: false,
-				fallbackToFloodsub: false,
-				allowPublishToZeroPeers: true,
-				globalSignaturePolicy: "StrictSign",
-			}),
+		pubsub: gossipsub({
+			emitSelf: false,
+			fallbackToFloodsub: false,
+			allowPublishToZeroPeers: true,
+			globalSignaturePolicy: "StrictSign",
+		}),
 
-			identify: {
-				protocolPrefix: "canvas",
-			},
+		identify: {
+			protocolPrefix: "canvas",
+		},
 
-			fetch: {
-				protocolPrefix: "canvas",
-			},
+		fetch: {
+			protocolPrefix: "canvas",
+		},
 
-			ping: {
-				protocolPrefix: "canvas",
-				maxInboundStreams: 32,
-				maxOutboundStreams: 32,
-				timeout: PING_TIMEOUT,
-			},
+		ping: {
+			protocolPrefix: "canvas",
+			maxInboundStreams: 32,
+			maxOutboundStreams: 32,
+			timeout: PING_TIMEOUT,
 		},
 	}
 }

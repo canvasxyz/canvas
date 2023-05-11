@@ -7,6 +7,7 @@ export const MAX_CONNECTIONS = 300
 
 export const DIAL_TIMEOUT = 10 * second
 export const PING_TIMEOUT = 10 * second
+export const FETCH_TIMEOUT = 10 * second
 
 export const DISCOVERY_TOPIC = "/canvas/v0/discovery"
 export const DISCOVERY_ANNOUNCE_DELAY = 5 * second
