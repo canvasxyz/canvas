@@ -1,6 +1,6 @@
 import React from "react"
 
-export const LoginView = () => {
+export const SelectWalletView = () => {
 	return (
 		<div className="flex flex-row items-center justify-center h-screen overflow-hidden bg-white">
 			<div className="container max-w-lg m-auto p-4 bg-gray-100 flex flex-col gap-4">
