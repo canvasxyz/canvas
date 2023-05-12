@@ -56,7 +56,7 @@ export const ChatView: React.FC<{}> = ({}) => {
 				{/* main content */}
 				<div className="overflow-y-auto overflow-x-hidden relative flex flex-col grow">
 					{/* top bar? */}
-					<div className="h-16 p-3 flex items-center">{currentUser.ens}</div>
+					<div className="h-16 p-3 font-bold text-lg flex items-center">{currentUser.ens}</div>
 					{true ? (
 						<>
 							<div className="flex flex-col grow m-3 gap-3">
