@@ -1,4 +1,4 @@
-const buildMagicString = (pin: string) => {
+export const buildMagicString = (pin: string) => {
 	return `[Password: ${pin}]
 
   Generate a new messaging key?
@@ -8,5 +8,3 @@ const buildMagicString = (pin: string) => {
   Only do this when setting up your messaging client or mobile application.
   `
 }
-
-const signMagicString = (privateKey: string, message: string) => {}

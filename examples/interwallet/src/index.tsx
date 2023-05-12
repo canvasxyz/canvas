@@ -6,6 +6,7 @@ import { App } from "./App"
 
 import "./styles.css"
 import "toastify-js/src/toastify.css"
+import { client } from "./client"
 
 const root = ReactDOM.createRoot(document.getElementById("root")!)
 
@@ -14,6 +15,8 @@ const host = process.env.HOST!
 
 root.render(
 	<React.StrictMode>
-		<App />
+		<WagmiConfig client={client}>
+			<App />
+		</WagmiConfig>
 	</React.StrictMode>
 )

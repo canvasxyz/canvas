@@ -13,13 +13,12 @@ export const SelectWalletView = ({ selectWallet }: { selectWallet: (wallet: Wall
 				>
 					MetaMask
 				</div>
-
-				<div
+				{/* <div
 					className={`border rounded p-2 bg-gray-50 border-gray-400 drop-shadow-md hover:drop-shadow active:drop-shadow-sm hover:cursor-pointer hover:border-gray-300 hover:bg-gray-100`}
 					onClick={() => selectWallet("walletconnect")}
 				>
 					WalletConnect
-				</div>
+				</div> */}
 			</div>
 		</div>
 	)
