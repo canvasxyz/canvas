@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react"
 import { ChatView } from "./views/ChatView"
 import { EnterPinView } from "./views/EnterPinView"
 import { SelectWalletView } from "./views/SelectWalletView"
-import { buildMagicString } from "./login"
+import { buildMagicString } from "./cryptography"
 import { useAccount, useConnect } from "wagmi"
-import { metamaskEncryptData, metamaskGetPublicKey } from "./metamaskCrypto"
+import { metamaskEncryptData, metamaskGetPublicKey } from "./cryptography"
 import { extractPublicKey, getEncryptionPublicKey, personalSign } from "@metamask/eth-sig-util"
+import { sha256 } from "@noble/hashes/sha256"
 
 const getPublicKeyFromPrivateKey = (privateKey: Buffer) => {
 	const data = "arbitrary data"
@@ -16,18 +17,18 @@ const getPublicKeyFromPrivateKey = (privateKey: Buffer) => {
 export const App: React.FC<{}> = ({}) => {
 	const { connect, connectors } = useConnect()
 	const { address, isConnected } = useAccount()
-	const [secretSignature, setSecretSignature] = useState<Buffer | null>(null)
+	const [privateKey, setPrivateKey] = useState<Buffer | null>(null)
 
 	useEffect(() => {
-		if (secretSignature !== null) {
-			const signingPublicKey = getPublicKeyFromPrivateKey(secretSignature)
-			const encryptionPublicKey = getEncryptionPublicKey(secretSignature.toString("hex"))
+		if (privateKey !== null) {
+			const signingPublicKey = getPublicKeyFromPrivateKey(privateKey)
+			const encryptionPublicKey = getEncryptionPublicKey(privateKey.toString("hex"))
 			const keyBundle = { signingPublicKey, encryptionPublicKey }
 			// TODO: broadcast this so that other users can send us encrypted messages and identify
 			// our signed messages
 			console.log(keyBundle)
 		}
-	}, [secretSignature])
+	}, [[privateKey]])
 
 	// if not connected to wallet, then show the select wallet view
 	if (!isConnected) {
@@ -40,7 +41,7 @@ export const App: React.FC<{}> = ({}) => {
 		)
 	}
 
-	if (secretSignature === null) {
+	if (privateKey === null) {
 		return (
 			<EnterPinView
 				submitPin={async (pin) => {
@@ -48,11 +49,11 @@ export const App: React.FC<{}> = ({}) => {
 
 					const metamaskPubKey = await metamaskGetPublicKey(address!)
 					const secretSignature = metamaskEncryptData(metamaskPubKey, Buffer.from(magicString))
-					setSecretSignature(secretSignature)
+					setPrivateKey(Buffer.from(sha256(secretSignature)))
 				}}
 			/>
 		)
 	}
 
-	return <ChatView secretSignature={secretSignature} />
+	return <ChatView privateKey={privateKey} />
 }

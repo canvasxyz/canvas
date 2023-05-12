@@ -2,7 +2,7 @@ import React from "react"
 import ComposeIcon from "../icons/compose.svg"
 import { IconButton } from "../IconButton"
 
-export const ChatView: React.FC<{ secretSignature: Buffer }> = ({ secretSignature }) => {
+export const ChatView: React.FC<{ privateKey: Buffer }> = ({ privateKey }) => {
 	const now = new Date()
 
 	const currentUser = {
