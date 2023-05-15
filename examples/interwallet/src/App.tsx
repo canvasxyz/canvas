@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react"
 import { ChatView } from "./views/ChatView"
 import { EnterPinView } from "./views/EnterPinView"
 import { SelectWalletView } from "./views/SelectWalletView"
-import { buildMagicString, constructTypedKeyBundle, signKeyBundle } from "./cryptography"
+import { buildMagicString, signKeyBundle } from "./cryptography"
 import { useAccount, useConnect } from "wagmi"
 import { metamaskEncryptData, metamaskGetPublicKey } from "./cryptography"
 import { extractPublicKey, getEncryptionPublicKey, personalSign } from "@metamask/eth-sig-util"
@@ -84,5 +84,5 @@ export const App: React.FC<{}> = ({}) => {
 		)
 	}
 
-	return <ChatView privateKey={privateKey} />
+	return <ChatView privateKey={privateKey} userRegistrations={userRegistrations} />
 }

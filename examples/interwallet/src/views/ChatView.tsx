@@ -1,8 +1,11 @@
 import React from "react"
 import ComposeIcon from "../icons/compose.svg"
 import { IconButton } from "../IconButton"
+import { UserRegistration } from "../models"
 
-export const ChatView: React.FC<{ privateKey: Buffer }> = ({ privateKey }) => {
+export const ChatView: React.FC<{ privateKey: Buffer; userRegistrations: { [key: string]: UserRegistration } }> = ({
+	privateKey,
+}) => {
 	const now = new Date()
 
 	const currentUser = {
