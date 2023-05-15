@@ -5,3 +5,8 @@ export type KeyBundle = {
 	encryptionPublicKey: string
 }
 export type UserRegistration = Signed<KeyBundle>
+
+export interface AbstractStore {
+	insert(key: Uint8Array, value: Uint8Array): Promise<void>
+	close(): Promise<void>
+}
