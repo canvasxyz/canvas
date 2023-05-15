@@ -1,23 +1,20 @@
 import React, { useEffect, useState } from "react"
+import { sha256 } from "@noble/hashes/sha256"
+
 import { ChatView } from "./views/ChatView"
 import { EnterPinView } from "./views/EnterPinView"
 import { SelectWalletView } from "./views/SelectWalletView"
-import { buildMagicString, signKeyBundle } from "./cryptography"
+import {
+	buildMagicString,
+	makeKeyBundle,
+	metamaskEncryptData,
+	metamaskGetPublicKey,
+	signKeyBundle,
+} from "./cryptography"
 import { useAccount, useConnect } from "wagmi"
-import { metamaskEncryptData, metamaskGetPublicKey } from "./cryptography"
-import { extractPublicKey, getEncryptionPublicKey, personalSign } from "@metamask/eth-sig-util"
-import { sha256 } from "@noble/hashes/sha256"
-import { keccak256 } from "@ethersproject/keccak256"
+
 import { UserRegistration } from "./models"
 import { useStore } from "./useStore"
-
-const getPublicKeyFromPrivateKey = (privateKey: Buffer) => {
-	const data = "arbitrary data"
-	const signature = personalSign({ data, privateKey })
-	const publicKey = extractPublicKey({ data, signature })
-	const hash = keccak256(publicKey)
-	return `0x${hash.slice(-40)}`
-}
 
 const deserializeUserRegistration = (key: Uint8Array, value: Uint8Array) => {
 	const address = Buffer.from(key).toString("utf-8")
@@ -45,10 +42,7 @@ export const App: React.FC<{}> = ({}) => {
 
 	useEffect(() => {
 		if (privateKey !== null && address && userStore) {
-			const signingAddress = getPublicKeyFromPrivateKey(privateKey)
-			const encryptionPublicKey = getEncryptionPublicKey(privateKey.toString("hex"))
-			const keyBundle = { signingAddress, encryptionPublicKey }
-
+			const keyBundle = makeKeyBundle(privateKey)
 			signKeyBundle(address, keyBundle).then((signature: string) => {
 				const userRegistration: UserRegistration = { signature, payload: keyBundle }
 				const { key, value } = serializeUserRegistration(address, userRegistration)

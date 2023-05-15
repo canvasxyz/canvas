@@ -1,5 +1,7 @@
-import { MessageTypes, TypedMessage, encrypt } from "@metamask/eth-sig-util"
+import { MessageTypes, TypedMessage, encrypt, getEncryptionPublicKey } from "@metamask/eth-sig-util"
 import { KeyBundle } from "./models"
+import { extractPublicKey, personalSign } from "@metamask/eth-sig-util"
+import { keccak256 } from "@ethersproject/keccak256"
 
 export const buildMagicString = (pin: string) => {
 	return `[Password: ${pin}]
@@ -82,4 +84,18 @@ export async function metamaskDecryptData(account: string, data: Buffer): Promis
 	})
 	// Decode the base85 to final bytes
 	return Buffer.from(decrypt, "base64")
+}
+
+const getPublicKeyFromPrivateKey = (privateKey: Buffer) => {
+	const data = "arbitrary data"
+	const signature = personalSign({ data, privateKey })
+	const publicKey = extractPublicKey({ data, signature })
+	const hash = keccak256(publicKey)
+	return `0x${hash.slice(-40)}`
+}
+
+export const makeKeyBundle = (privateKey: Buffer): KeyBundle => {
+	const signingAddress = getPublicKeyFromPrivateKey(privateKey)
+	const encryptionPublicKey = getEncryptionPublicKey(privateKey.toString("hex"))
+	return { signingAddress, encryptionPublicKey }
 }
