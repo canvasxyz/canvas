@@ -7,11 +7,15 @@ import { useAccount, useConnect } from "wagmi"
 import { metamaskEncryptData, metamaskGetPublicKey } from "./cryptography"
 import { extractPublicKey, getEncryptionPublicKey, personalSign } from "@metamask/eth-sig-util"
 import { sha256 } from "@noble/hashes/sha256"
+import { keccak256 } from "@ethersproject/keccak256"
+import { UserRegistration } from "./models"
 
 const getPublicKeyFromPrivateKey = (privateKey: Buffer) => {
 	const data = "arbitrary data"
 	const signature = personalSign({ data, privateKey })
-	return extractPublicKey({ data, signature })
+	const publicKey = extractPublicKey({ data, signature })
+	const hash = keccak256(publicKey)
+	return `0x${hash.slice(-20)}`
 }
 
 export const App: React.FC<{}> = ({}) => {
@@ -21,17 +25,17 @@ export const App: React.FC<{}> = ({}) => {
 
 	useEffect(() => {
 		if (privateKey !== null && address) {
-			const signingPublicKey = getPublicKeyFromPrivateKey(privateKey)
+			const signingAddress = getPublicKeyFromPrivateKey(privateKey)
 			const encryptionPublicKey = getEncryptionPublicKey(privateKey.toString("hex"))
-			const keyBundle = { signingPublicKey, encryptionPublicKey }
-			// TODO: broadcast this so that other users can send us encrypted messages and identify
-			// our signed messages
+			const keyBundle = { signingAddress, encryptionPublicKey }
 
-			signKeyBundle(address, keyBundle).then((keyBundleSignature: string) => {
-				console.log(keyBundleSignature)
+			signKeyBundle(address, keyBundle).then((signature: string) => {
+				const userRegistration: UserRegistration = { signature, payload: keyBundle }
+				// TODO: broadcast this so that other users can send us encrypted messages and identify
+				// our signed messages
 			})
 		}
-	}, [[privateKey]])
+	}, [privateKey])
 
 	// if not connected to wallet, then show the select wallet view
 	if (!isConnected) {

@@ -1,4 +1,5 @@
-import { MessageTypes, TypedMessage, encrypt, signTypedData } from "@metamask/eth-sig-util"
+import { MessageTypes, TypedMessage, encrypt } from "@metamask/eth-sig-util"
+import { KeyBundle } from "./models"
 
 export const buildMagicString = (pin: string) => {
 	return `[Password: ${pin}]
@@ -11,16 +12,13 @@ export const buildMagicString = (pin: string) => {
   `
 }
 
-export const constructTypedKeyBundle = (keyBundle: {
-	signingPublicKey: string
-	encryptionPublicKey: string
-}): TypedMessage<MessageTypes> => {
+export const constructTypedKeyBundle = (keyBundle: KeyBundle): TypedMessage<MessageTypes> => {
 	const domain = { name: "InterwalletChat" }
 
 	const types = {
 		EIP712Domain: [{ name: "name", type: "string" }],
 		KeyBundle: [
-			{ name: "signingPublicKey", type: "string" },
+			{ name: "signingAddress", type: "string" },
 			{ name: "encryptionPublicKey", type: "string" },
 		],
 	}
@@ -29,10 +27,7 @@ export const constructTypedKeyBundle = (keyBundle: {
 	return { types, primaryType: "KeyBundle", domain, message: keyBundle }
 }
 
-export const signKeyBundle = async (
-	address: string,
-	keyBundle: { signingPublicKey: string; encryptionPublicKey: string }
-) => {
+export const signKeyBundle = async (address: string, keyBundle: KeyBundle) => {
 	const typedKeyBundle = constructTypedKeyBundle(keyBundle)
 	console.log(typedKeyBundle)
 
