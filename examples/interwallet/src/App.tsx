@@ -37,7 +37,7 @@ export const App: React.FC<{}> = ({}) => {
 	const [userRegistrations, setUserRegistrations] = useState<{ [key: string]: UserRegistration }>({})
 	const { store: userStore } = useStore("ws://localhost:8765", async (key, value) => {
 		const { address, userRegistration } = deserializeUserRegistration(key, value)
-		setUserRegistrations({ ...userRegistrations, [address]: userRegistration })
+		setUserRegistrations((existingUserRegistrations) => ({ ...existingUserRegistrations, [address]: userRegistration }))
 	})
 
 	useEffect(() => {
