@@ -1,4 +1,4 @@
-import { encrypt } from "@metamask/eth-sig-util"
+import { MessageTypes, TypedMessage, encrypt, signTypedData } from "@metamask/eth-sig-util"
 
 export const buildMagicString = (pin: string) => {
 	return `[Password: ${pin}]
@@ -9,6 +9,37 @@ export const buildMagicString = (pin: string) => {
 
   Only do this when setting up your messaging client or mobile application.
   `
+}
+
+export const constructTypedKeyBundle = (keyBundle: {
+	signingPublicKey: string
+	encryptionPublicKey: string
+}): TypedMessage<MessageTypes> => {
+	const domain = { name: "InterwalletChat" }
+
+	const types = {
+		EIP712Domain: [{ name: "name", type: "string" }],
+		KeyBundle: [
+			{ name: "signingPublicKey", type: "string" },
+			{ name: "encryptionPublicKey", type: "string" },
+		],
+	}
+
+	// these return types match what's expected by `eth-sig-util`
+	return { types, primaryType: "KeyBundle", domain, message: keyBundle }
+}
+
+export const signKeyBundle = async (
+	address: string,
+	keyBundle: { signingPublicKey: string; encryptionPublicKey: string }
+) => {
+	const typedKeyBundle = constructTypedKeyBundle(keyBundle)
+	console.log(typedKeyBundle)
+
+	return (window as any).ethereum.request({
+		method: "eth_signTypedData_v4",
+		params: [address, JSON.stringify(typedKeyBundle)],
+	})
 }
 
 export async function metamaskGetPublicKey(account: string): Promise<Buffer> {

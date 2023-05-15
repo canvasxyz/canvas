@@ -63,7 +63,7 @@ export const ChatView: React.FC<{ privateKey: Buffer }> = ({ privateKey }) => {
 								{messages.map((message, index) => {
 									const is_sent = message.creator_id == "1"
 									return (
-										<>
+										<div key={index}>
 											<div className="flex justify-center text-gray-300">{message.created_at.toLocaleTimeString()}</div>
 											<div className={`flex ${is_sent ? "flex-row" : "flex-row-reverse"}`}>
 												<div
@@ -72,12 +72,11 @@ export const ChatView: React.FC<{ privateKey: Buffer }> = ({ privateKey }) => {
 															? "p-3 rounded-r-lg rounded-tl-lg bg-blue-500 text-white"
 															: "p-3 rounded-l-lg rounded-tr-lg bg-gray-200 text-black"
 													}
-													key={index}
 												>
 													{message.content}
 												</div>
 											</div>
-										</>
+										</div>
 									)
 								})}
 							</div>

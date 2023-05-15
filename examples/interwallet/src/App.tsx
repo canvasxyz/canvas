@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react"
 import { ChatView } from "./views/ChatView"
 import { EnterPinView } from "./views/EnterPinView"
 import { SelectWalletView } from "./views/SelectWalletView"
-import { buildMagicString } from "./cryptography"
+import { buildMagicString, constructTypedKeyBundle, signKeyBundle } from "./cryptography"
 import { useAccount, useConnect } from "wagmi"
 import { metamaskEncryptData, metamaskGetPublicKey } from "./cryptography"
 import { extractPublicKey, getEncryptionPublicKey, personalSign } from "@metamask/eth-sig-util"
@@ -20,13 +20,16 @@ export const App: React.FC<{}> = ({}) => {
 	const [privateKey, setPrivateKey] = useState<Buffer | null>(null)
 
 	useEffect(() => {
-		if (privateKey !== null) {
+		if (privateKey !== null && address) {
 			const signingPublicKey = getPublicKeyFromPrivateKey(privateKey)
 			const encryptionPublicKey = getEncryptionPublicKey(privateKey.toString("hex"))
 			const keyBundle = { signingPublicKey, encryptionPublicKey }
 			// TODO: broadcast this so that other users can send us encrypted messages and identify
 			// our signed messages
-			console.log(keyBundle)
+
+			signKeyBundle(address, keyBundle).then((keyBundleSignature: string) => {
+				console.log(keyBundleSignature)
+			})
 		}
 	}, [[privateKey]])
 
