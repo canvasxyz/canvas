@@ -1,14 +1,8 @@
 import React from "react"
-import { UserRegistration } from "../models"
+import { UserRegistration } from "../interfaces"
 
-export const NewChatModal = ({
-	userRegistrations,
-	closeModal,
-}: {
-	userRegistrations: { [key: string]: UserRegistration }
-	closeModal: () => void
-}) => {
-	const userRegistrationsList = Object.entries(userRegistrations)
+export const NewChatModal = ({ user, closeModal }: { user: UserRegistration; closeModal: () => void }) => {
+	// const userRegistrationsList = Object.entries(userRegistrations)
 
 	return (
 		<div className="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -25,7 +19,7 @@ export const NewChatModal = ({
 								</h3>
 
 								<div className="mt-2 flex flex-col gap-2">
-									{userRegistrationsList.map(([address, userRegistration]) => (
+									{/* {userRegistrationsList.map(([address, userRegistration]) => (
 										<button
 											key={address}
 											onClick={async () => {
@@ -35,7 +29,7 @@ export const NewChatModal = ({
 										>
 											{address}
 										</button>
-									))}
+									))} */}
 								</div>
 							</div>
 						</div>

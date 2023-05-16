@@ -1,82 +1,71 @@
-import React, { useEffect, useState } from "react"
-import { sha256 } from "@noble/hashes/sha256"
+import React, { useEffect, useLayoutEffect, useState, useCallback } from "react"
+
+import { getEncryptionPublicKey } from "@metamask/eth-sig-util"
+import { useAccount, useConnect } from "wagmi"
+import { keccak256, toHex } from "viem/utils"
 
 import { ChatView } from "./views/ChatView"
 import { EnterPinView } from "./views/EnterPinView"
 import { SelectWalletView } from "./views/SelectWalletView"
-import {
-	buildMagicString,
-	makeKeyBundle,
-	metamaskEncryptData,
-	metamaskGetPublicKey,
-	signKeyBundle,
-} from "./cryptography"
-import { useAccount, useConnect } from "wagmi"
 
-import { UserRegistration } from "./models"
-import { useStore } from "./useStore"
+import { makeKeyBundle, signKeyBundle, signMagicString } from "./cryptography"
+import { KeyBundle, UserRegistration } from "./interfaces"
 
-const deserializeUserRegistration = (key: Uint8Array, value: Uint8Array) => {
-	const address = Buffer.from(key).toString("utf-8")
-	const userRegistration: UserRegistration = JSON.parse(Buffer.from(value).toString("utf-8"))
-	return { address, userRegistration }
-}
-
-const serializeUserRegistration = (address: string, userRegistration: UserRegistration) => {
-	// serialize and store the user registration
-	const key = Buffer.from(address, "utf-8")
-	const value = Buffer.from(JSON.stringify(userRegistration), "utf-8")
-	return { key, value }
-}
+const getRegistrationKey = (address: string) => `interwallet:registration:${address}`
 
 export const App: React.FC<{}> = ({}) => {
 	const { connect, connectors } = useConnect()
 	const { address, isConnected } = useAccount()
-	const [privateKey, setPrivateKey] = useState<Buffer | null>(null)
 
-	const [userRegistrations, setUserRegistrations] = useState<{ [key: string]: UserRegistration }>({})
-	const { store: userStore } = useStore("ws://localhost:8765", async (key, value) => {
-		const { address, userRegistration } = deserializeUserRegistration(key, value)
-		setUserRegistrations((existingUserRegistrations) => ({ ...existingUserRegistrations, [address]: userRegistration }))
-	})
+	const [registration, setRegistration] = useState<UserRegistration | null>(null)
 
-	useEffect(() => {
-		if (privateKey !== null && address && userStore) {
-			const keyBundle = makeKeyBundle(privateKey)
-			signKeyBundle(address, keyBundle).then((signature: string) => {
-				const userRegistration: UserRegistration = { signature, payload: keyBundle }
-				const { key, value } = serializeUserRegistration(address, userRegistration)
-				userStore.insert(key, value)
-			})
+	useLayoutEffect(() => {
+		if (isConnected && address !== undefined && registration === null) {
+			const key = getRegistrationKey(address)
+			const value = window.localStorage.getItem(key)
+			if (value !== null) {
+				const registration = JSON.parse(value)
+				console.log("got existing registration", registration)
+				setRegistration(registration)
+			}
 		}
-	}, [privateKey, userStore])
+	}, [address, isConnected, registration])
 
-	console.log(userRegistrations)
+	const handleSubmitPin = useCallback(
+		async (pin: string) => {
+			if (address === undefined) {
+				return
+			}
 
-	// if not connected to wallet, then show the select wallet view
-	if (!isConnected) {
-		return (
-			<SelectWalletView
-				selectWallet={(wallet) => {
-					connect({ connector: connectors[0] })
-				}}
-			/>
-		)
+			try {
+				const signature = await signMagicString(address, pin)
+				const privateKey = keccak256(signature)
+				const publicKeyBundle = makeKeyBundle(privateKey)
+				const publicKeyBundleSignature = await signKeyBundle(address, publicKeyBundle)
+
+				const registration: UserRegistration = {
+					privateKey: toHex(privateKey),
+					publicKeyBundle,
+					publicKeyBundleSignature,
+				}
+
+				console.log("setting new registration", registration)
+				const key = getRegistrationKey(address)
+				window.localStorage.setItem(key, JSON.stringify(registration))
+
+				setRegistration(registration)
+			} catch (err) {
+				console.error("failed to get signature", err)
+			}
+		},
+		[address]
+	)
+
+	if (!isConnected || address === undefined) {
+		return <SelectWalletView selectWallet={(wallet) => connect({ connector: connectors[0] })} />
+	} else if (registration === null) {
+		return <EnterPinView submitPin={handleSubmitPin} />
+	} else {
+		return <ChatView user={registration} />
 	}
-
-	if (privateKey === null) {
-		return (
-			<EnterPinView
-				submitPin={async (pin) => {
-					const magicString = buildMagicString(pin)
-
-					const metamaskPubKey = await metamaskGetPublicKey(address!)
-					const secretSignature = metamaskEncryptData(metamaskPubKey, Buffer.from(magicString))
-					setPrivateKey(Buffer.from(sha256(secretSignature)))
-				}}
-			/>
-		)
-	}
-
-	return <ChatView privateKey={privateKey} userRegistrations={userRegistrations} />
 }

@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react"
 import { AbstractStore } from "./models"
-import { CentralizedStore } from "./centralizedStore"
+// import { CentralizedStore } from "./centralizedStore"
 
 // centralised approach
 // the "Store" object just connects to a centralised server that stores the data
@@ -47,7 +47,7 @@ export const useStore = (url: string, apply: (key: Uint8Array, value: Uint8Array
 		if (!isConnected) return
 		if (!websocket) return
 
-		setStore(new CentralizedStore(websocket, apply))
+		// setStore(new CentralizedStore(websocket, apply))
 	}, [isConnected])
 
 	return { store }

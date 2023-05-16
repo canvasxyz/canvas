@@ -1,14 +1,15 @@
 import React from "react"
+
 import ContactsIcon from "../icons/contacts.svg"
 import { IconButton } from "../IconButton"
-import { UserRegistration } from "../models"
 import { NewChatModal } from "./NewChatModal"
 
-export const ChatView: React.FC<{ privateKey: Buffer; userRegistrations: { [key: string]: UserRegistration } }> = ({
-	privateKey,
-	userRegistrations,
-}) => {
-	const [showUserList, setShowUserList] = React.useState<boolean>(false)
+import { UserRegistration } from "../interfaces"
+
+export const ChatView: React.FC<{
+	user: UserRegistration
+}> = ({ user }) => {
+	// const [showUserList, setShowUserList] = React.useState<boolean>(false)
 
 	const now = new Date()
 
@@ -45,7 +46,7 @@ export const ChatView: React.FC<{ privateKey: Buffer; userRegistrations: { [key:
 						<div className="flex-grow">Conversations</div>
 						<IconButton
 							onClick={async () => {
-								setShowUserList(true)
+								// setShowUserList(true)
 							}}
 							icon={ContactsIcon}
 							disabled={false}
@@ -103,14 +104,14 @@ export const ChatView: React.FC<{ privateKey: Buffer; userRegistrations: { [key:
 					)}
 				</div>
 			</div>
-			{showUserList && (
+			{/* {showUserList && (
 				<NewChatModal
 					closeModal={() => {
 						setShowUserList(false)
 					}}
 					userRegistrations={userRegistrations}
 				/>
-			)}
+			)} */}
 		</>
 	)
 }
