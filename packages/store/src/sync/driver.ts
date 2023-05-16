@@ -6,13 +6,16 @@ import { Node, Source, Target, equalArrays, equalNodes } from "@canvas-js/okra"
 import { assert } from "../utils.js"
 
 export class Driver {
-	private readonly log = logger("canvas:sync")
+	private readonly log = logger("canvas:sync:driver")
 	constructor(private readonly source: Source, private readonly target: Target) {}
 
 	public async *sync() {
 		const [sourceRoot, targetRoot] = await Promise.all([this.source.getRoot(), this.target.getRoot()])
 		assert(sourceRoot.key === null, "invalid source root")
 		assert(targetRoot.key === null, "invalid target root")
+
+		this.log("source root: level %d, hash %s", sourceRoot.level, hex(sourceRoot.hash))
+		this.log("target root: level %d, hash %s", targetRoot.level, hex(targetRoot.hash))
 
 		if (sourceRoot.level === 0) {
 			return

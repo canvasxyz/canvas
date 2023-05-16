@@ -2,66 +2,47 @@ import { Libp2p, createLibp2p } from "libp2p"
 
 import { SignedMessage } from "@libp2p/interface-pubsub"
 import { PeerId } from "@libp2p/interface-peer-id"
-
-import * as varint from "big-varint"
-
 import { logger } from "@libp2p/logger"
-import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
-import { base64 } from "multiformats/bases/base64"
+import * as varint from "big-varint"
+import { anySignal } from "any-signal"
+
+import Discovery from "#protocols/discovery"
 
 import { DiscoveryRecordCache } from "./discovery/index.js"
 
-import { DiscoveryRecord, FetchDiscoveryRecordsResponse, SignedDiscoveryRecord } from "#protocols/discovery"
-
-import { NetworkConfig, getLibp2pOptions } from "./libp2p.js"
+import { getLibp2pOptions } from "./libp2p.js"
 
 import {
 	DISCOVERY_ANNOUNCE_DELAY,
 	DISCOVERY_ANNOUNCE_INTERVAL,
 	DISCOVERY_ANNOUNCE_RETRY_INTERVAL,
 	DISCOVERY_TOPIC,
-	FETCH_TIMEOUT,
-	MIN_TOPIC_PEERS,
 	PING_DELAY,
 	PING_INTERVAL,
 	PING_TIMEOUT,
 } from "./constants.js"
-import { retry, wait } from "./utils.js"
-import { anySignal } from "any-signal"
+import { keyPattern, keyPrefix, retry, wait } from "./utils.js"
+import { MemoryCache } from "./index.js"
 
-export interface DaemonConfig extends NetworkConfig {
-	cache: DiscoveryRecordCache
-	getPrivateKey: () => Promise<string | null>
-	setPrivateKey: (privateKey: string) => Promise<void>
+export interface NetworkConfig {
+	listen?: string[]
+	announce?: string[]
+	bootstrapList?: string[]
+	minConnections?: number
+	maxConnections?: number
 }
 
-export class Daemon {
+export class Network {
+	private readonly log = logger("canvas:network")
 	private readonly controller = new AbortController()
-	private readonly log = logger("canvas:daemon")
+	private readonly cache = new MemoryCache(this.controller.signal)
 
-	public static async open(config: DaemonConfig): Promise<Daemon> {
-		const peerId = await Daemon.getPeerId(config)
+	public static async open(peerId: PeerId, config: NetworkConfig): Promise<Network> {
 		const libp2p = await createLibp2p(getLibp2pOptions(peerId, config))
-		return new Daemon(libp2p, config.cache)
+		return new Network(libp2p)
 	}
 
-	private static async getPeerId(config: DaemonConfig): Promise<PeerId> {
-		const privateKey = await config.getPrivateKey()
-		if (privateKey === null) {
-			const peerId = await createEd25519PeerId()
-			const privateKeyBytes = exportToProtobuf(peerId)
-			const privateKey = base64.baseEncode(privateKeyBytes)
-			await config.setPrivateKey(privateKey)
-			return peerId
-		} else {
-			const privateKeyBytes = base64.baseDecode(privateKey)
-			return await createFromProtobuf(privateKeyBytes)
-		}
-	}
-
-	private constructor(public readonly libp2p: Libp2p, private readonly cache: DiscoveryRecordCache) {
-		const keyPrefix = "/canvas/v0/store/"
-		const keyPattern = /^\/canvas\/v0\/store\/([a-zA-Z0-9:-.]+)\/peers$/
+	private constructor(public readonly libp2p: Libp2p) {
 		libp2p.fetchService.registerLookupFunction(keyPrefix, async (key) => {
 			const result = keyPattern.exec(key)
 			if (result === null) {
@@ -70,35 +51,15 @@ export class Daemon {
 
 			const [_, topic] = result
 			const records = this.cache.query(topic)
-			return FetchDiscoveryRecordsResponse.encode({ records }).finish()
+			return Discovery.FetchPeersResponse.encode({ records }).finish()
 		})
 
-		libp2p.addEventListener("peer:connect", async ({ detail: connection }) => {
-			for (const topic of this.libp2p.pubsub.getTopics()) {
-				if (topic.startsWith(keyPrefix)) {
-					const subscribers = this.libp2p.pubsub.getSubscribers(topic)
-					if (subscribers.length < MIN_TOPIC_PEERS) {
-						const signal = anySignal([AbortSignal.timeout(FETCH_TIMEOUT), this.controller.signal])
-						await libp2p
-							.fetch(connection.remotePeer, `${topic}/peers`, { signal })
-							.then((value) => {})
-							.catch((err) =>
-								this.log("failed to fetch peers for topic %s from %p: %O", topic, connection.remotePeer, err)
-							)
-							.finally(() => signal.clear())
+		libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer } }) => {
+			this.log("opened connection %s to peer %p", id, remotePeer)
+		})
 
-						let value: Uint8Array | null = null
-						try {
-							value = await libp2p.fetch(connection.remotePeer, `${topic}/peers`, { signal })
-						} catch (err) {
-							this.log("failed to fetch peers for topic %s from %p", topic, connection.remotePeer)
-							return
-						} finally {
-							signal.clear()
-						}
-					}
-				}
-			}
+		libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) => {
+			this.log("closed connection %s to peer %p", id, remotePeer)
 		})
 
 		this.startDiscoveryService()
@@ -107,11 +68,12 @@ export class Daemon {
 
 	public async stop(): Promise<void> {
 		this.controller.abort()
+		await Promise.all(this.libp2p.getConnections().map((connection) => connection.close()))
 		await this.libp2p.stop()
 	}
 
 	private async startPingService() {
-		const log = logger("canvas:daemon:ping")
+		const log = logger("canvas:network:ping")
 		log("started ping service")
 
 		const { signal } = this.controller
@@ -146,7 +108,7 @@ export class Daemon {
 	}
 
 	private async startDiscoveryService() {
-		const log = logger("canvas:daemon:discovery")
+		const log = logger("canvas:network:discovery")
 		log("started discovery service")
 
 		this.libp2p.pubsub.addEventListener("message", ({ detail: msg }) => {
@@ -166,7 +128,7 @@ export class Daemon {
 							throw new Error("no multiaddrs to announce")
 						}
 
-						const record = DiscoveryRecord.encode({
+						const record = Discovery.DiscoveryRecord.encode({
 							addrs: addrs.map((addr) => addr.bytes),
 							topics: this.libp2p.pubsub.getTopics(),
 						}).finish()
@@ -178,7 +140,7 @@ export class Daemon {
 
 						log(`published discovery record to %d peers`, recipients.length)
 					},
-					(err, i) => log.error("failed to publish discovery record: %o", err),
+					(err, i) => log.error("failed to publish discovery record: %O", err),
 					{ signal, maxRetries: 3, interval: DISCOVERY_ANNOUNCE_RETRY_INTERVAL }
 				)
 
@@ -195,12 +157,12 @@ export class Daemon {
 
 	private handleDiscoveryRecord(msg: SignedMessage) {
 		try {
-			const record = DiscoveryRecord.decode(msg.data)
+			const record = Discovery.DiscoveryRecord.decode(msg.data)
 			this.log("received discovery record from %p for topics %o", msg.from, record.topics)
 
 			this.cache.insert(
 				record.topics,
-				SignedDiscoveryRecord.create({
+				Discovery.SignedDiscoveryRecord.create({
 					from: msg.from.toBytes(),
 					data: msg.data,
 					seqno: varint.unsigned.encode(msg.sequenceNumber),

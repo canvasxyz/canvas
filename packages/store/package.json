@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/store",
-  "version": "0.4.11",
+  "version": "v0.5.0-alpha3",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
@@ -18,6 +18,10 @@
   "imports": {
     "#protocols/sync": "./protocols/sync/index.cjs",
     "#protocols/discovery": "./protocols/discovery/index.cjs"
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./constants": "./lib/constants.js"
   },
   "scripts": {
     "generate": "npm run generate-sync && npm run generate-discovery",

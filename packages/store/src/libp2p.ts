@@ -12,6 +12,7 @@ import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 
+import { NetworkConfig } from "./network.js"
 import { defaultBootstrapList } from "./bootstrap.js"
 import {
 	DIAL_CONCURRENCY,
@@ -22,14 +23,6 @@ import {
 } from "./constants.js"
 import { assert } from "./utils.js"
 
-export interface NetworkConfig {
-	listen?: string[]
-	announce?: string[]
-	bootstrapList?: string[]
-	minConnections?: number
-	maxConnections?: number
-}
-
 export function getLibp2pOptions(peerId: PeerId, config: NetworkConfig): Libp2pOptions {
 	const announce = config.announce ?? []
 	const listen = config.listen ?? []
@@ -37,7 +30,7 @@ export function getLibp2pOptions(peerId: PeerId, config: NetworkConfig): Libp2pO
 	assert(bootstrapList.length > 0, "bootstrap list cannot be empty")
 
 	if (listen.length === 0) {
-		console.log(chalk.yellowBright(`[canvas] Using Canvas bootstrap servers as relays.`))
+		console.log(chalk.yellowBright(`[canvas] Using bootstrap servers as relays.`))
 	}
 
 	for (const address of announce) {

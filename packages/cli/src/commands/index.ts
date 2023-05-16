@@ -7,5 +7,6 @@ import * as exportData from "./export.js"
 import * as importData from "./import.js"
 import * as list from "./list.js"
 import * as install from "./install.js"
+import * as store from "./store.js"
 
-export const commands = [init, info, run, exportData, importData, list, install] as CommandModule[]
+export const commands = [init, info, run, exportData, importData, list, install, store] as CommandModule[]

@@ -635,24 +635,24 @@ $root.SignedDiscoveryRecord = (function() {
     return SignedDiscoveryRecord;
 })();
 
-$root.FetchDiscoveryRecordsResponse = (function() {
+$root.FetchPeersResponse = (function() {
 
     /**
-     * Properties of a FetchDiscoveryRecordsResponse.
-     * @exports IFetchDiscoveryRecordsResponse
-     * @interface IFetchDiscoveryRecordsResponse
-     * @property {Array.<ISignedDiscoveryRecord>|null} [records] FetchDiscoveryRecordsResponse records
+     * Properties of a FetchPeersResponse.
+     * @exports IFetchPeersResponse
+     * @interface IFetchPeersResponse
+     * @property {Array.<ISignedDiscoveryRecord>|null} [records] FetchPeersResponse records
      */
 
     /**
-     * Constructs a new FetchDiscoveryRecordsResponse.
-     * @exports FetchDiscoveryRecordsResponse
-     * @classdesc Represents a FetchDiscoveryRecordsResponse.
-     * @implements IFetchDiscoveryRecordsResponse
+     * Constructs a new FetchPeersResponse.
+     * @exports FetchPeersResponse
+     * @classdesc Represents a FetchPeersResponse.
+     * @implements IFetchPeersResponse
      * @constructor
-     * @param {IFetchDiscoveryRecordsResponse=} [properties] Properties to set
+     * @param {IFetchPeersResponse=} [properties] Properties to set
      */
-    function FetchDiscoveryRecordsResponse(properties) {
+    function FetchPeersResponse(properties) {
         this.records = [];
         if (properties)
             for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
@@ -661,35 +661,35 @@ $root.FetchDiscoveryRecordsResponse = (function() {
     }
 
     /**
-     * FetchDiscoveryRecordsResponse records.
+     * FetchPeersResponse records.
      * @member {Array.<ISignedDiscoveryRecord>} records
-     * @memberof FetchDiscoveryRecordsResponse
+     * @memberof FetchPeersResponse
      * @instance
      */
-    FetchDiscoveryRecordsResponse.prototype.records = $util.emptyArray;
+    FetchPeersResponse.prototype.records = $util.emptyArray;
 
     /**
-     * Creates a new FetchDiscoveryRecordsResponse instance using the specified properties.
+     * Creates a new FetchPeersResponse instance using the specified properties.
      * @function create
-     * @memberof FetchDiscoveryRecordsResponse
+     * @memberof FetchPeersResponse
      * @static
-     * @param {IFetchDiscoveryRecordsResponse=} [properties] Properties to set
-     * @returns {FetchDiscoveryRecordsResponse} FetchDiscoveryRecordsResponse instance
+     * @param {IFetchPeersResponse=} [properties] Properties to set
+     * @returns {FetchPeersResponse} FetchPeersResponse instance
      */
-    FetchDiscoveryRecordsResponse.create = function create(properties) {
-        return new FetchDiscoveryRecordsResponse(properties);
+    FetchPeersResponse.create = function create(properties) {
+        return new FetchPeersResponse(properties);
     };
 
     /**
-     * Encodes the specified FetchDiscoveryRecordsResponse message. Does not implicitly {@link FetchDiscoveryRecordsResponse.verify|verify} messages.
+     * Encodes the specified FetchPeersResponse message. Does not implicitly {@link FetchPeersResponse.verify|verify} messages.
      * @function encode
-     * @memberof FetchDiscoveryRecordsResponse
+     * @memberof FetchPeersResponse
      * @static
-     * @param {IFetchDiscoveryRecordsResponse} message FetchDiscoveryRecordsResponse message or plain object to encode
+     * @param {IFetchPeersResponse} message FetchPeersResponse message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
-    FetchDiscoveryRecordsResponse.encode = function encode(message, writer) {
+    FetchPeersResponse.encode = function encode(message, writer) {
         if (!writer)
             writer = $Writer.create();
         if (message.records != null && message.records.length)
@@ -699,33 +699,33 @@ $root.FetchDiscoveryRecordsResponse = (function() {
     };
 
     /**
-     * Encodes the specified FetchDiscoveryRecordsResponse message, length delimited. Does not implicitly {@link FetchDiscoveryRecordsResponse.verify|verify} messages.
+     * Encodes the specified FetchPeersResponse message, length delimited. Does not implicitly {@link FetchPeersResponse.verify|verify} messages.
      * @function encodeDelimited
-     * @memberof FetchDiscoveryRecordsResponse
+     * @memberof FetchPeersResponse
      * @static
-     * @param {IFetchDiscoveryRecordsResponse} message FetchDiscoveryRecordsResponse message or plain object to encode
+     * @param {IFetchPeersResponse} message FetchPeersResponse message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
-    FetchDiscoveryRecordsResponse.encodeDelimited = function encodeDelimited(message, writer) {
+    FetchPeersResponse.encodeDelimited = function encodeDelimited(message, writer) {
         return this.encode(message, writer).ldelim();
     };
 
     /**
-     * Decodes a FetchDiscoveryRecordsResponse message from the specified reader or buffer.
+     * Decodes a FetchPeersResponse message from the specified reader or buffer.
      * @function decode
-     * @memberof FetchDiscoveryRecordsResponse
+     * @memberof FetchPeersResponse
      * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
      * @param {number} [length] Message length if known beforehand
-     * @returns {FetchDiscoveryRecordsResponse} FetchDiscoveryRecordsResponse
+     * @returns {FetchPeersResponse} FetchPeersResponse
      * @throws {Error} If the payload is not a reader or valid buffer
      * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
-    FetchDiscoveryRecordsResponse.decode = function decode(reader, length) {
+    FetchPeersResponse.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
             reader = $Reader.create(reader);
-        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.FetchDiscoveryRecordsResponse();
+        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.FetchPeersResponse();
         while (reader.pos < end) {
             var tag = reader.uint32();
             switch (tag >>> 3) {
@@ -744,30 +744,30 @@ $root.FetchDiscoveryRecordsResponse = (function() {
     };
 
     /**
-     * Decodes a FetchDiscoveryRecordsResponse message from the specified reader or buffer, length delimited.
+     * Decodes a FetchPeersResponse message from the specified reader or buffer, length delimited.
      * @function decodeDelimited
-     * @memberof FetchDiscoveryRecordsResponse
+     * @memberof FetchPeersResponse
      * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-     * @returns {FetchDiscoveryRecordsResponse} FetchDiscoveryRecordsResponse
+     * @returns {FetchPeersResponse} FetchPeersResponse
      * @throws {Error} If the payload is not a reader or valid buffer
      * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
-    FetchDiscoveryRecordsResponse.decodeDelimited = function decodeDelimited(reader) {
+    FetchPeersResponse.decodeDelimited = function decodeDelimited(reader) {
         if (!(reader instanceof $Reader))
             reader = new $Reader(reader);
         return this.decode(reader, reader.uint32());
     };
 
     /**
-     * Verifies a FetchDiscoveryRecordsResponse message.
+     * Verifies a FetchPeersResponse message.
      * @function verify
-     * @memberof FetchDiscoveryRecordsResponse
+     * @memberof FetchPeersResponse
      * @static
      * @param {Object.<string,*>} message Plain object to verify
      * @returns {string|null} `null` if valid, otherwise the reason why it is not
      */
-    FetchDiscoveryRecordsResponse.verify = function verify(message) {
+    FetchPeersResponse.verify = function verify(message) {
         if (typeof message !== "object" || message === null)
             return "object expected";
         if (message.records != null && message.hasOwnProperty("records")) {
@@ -783,24 +783,24 @@ $root.FetchDiscoveryRecordsResponse = (function() {
     };
 
     /**
-     * Creates a FetchDiscoveryRecordsResponse message from a plain object. Also converts values to their respective internal types.
+     * Creates a FetchPeersResponse message from a plain object. Also converts values to their respective internal types.
      * @function fromObject
-     * @memberof FetchDiscoveryRecordsResponse
+     * @memberof FetchPeersResponse
      * @static
      * @param {Object.<string,*>} object Plain object
-     * @returns {FetchDiscoveryRecordsResponse} FetchDiscoveryRecordsResponse
+     * @returns {FetchPeersResponse} FetchPeersResponse
      */
-    FetchDiscoveryRecordsResponse.fromObject = function fromObject(object) {
-        if (object instanceof $root.FetchDiscoveryRecordsResponse)
+    FetchPeersResponse.fromObject = function fromObject(object) {
+        if (object instanceof $root.FetchPeersResponse)
             return object;
-        var message = new $root.FetchDiscoveryRecordsResponse();
+        var message = new $root.FetchPeersResponse();
         if (object.records) {
             if (!Array.isArray(object.records))
-                throw TypeError(".FetchDiscoveryRecordsResponse.records: array expected");
+                throw TypeError(".FetchPeersResponse.records: array expected");
             message.records = [];
             for (var i = 0; i < object.records.length; ++i) {
                 if (typeof object.records[i] !== "object")
-                    throw TypeError(".FetchDiscoveryRecordsResponse.records: object expected");
+                    throw TypeError(".FetchPeersResponse.records: object expected");
                 message.records[i] = $root.SignedDiscoveryRecord.fromObject(object.records[i]);
             }
         }
@@ -808,15 +808,15 @@ $root.FetchDiscoveryRecordsResponse = (function() {
     };
 
     /**
-     * Creates a plain object from a FetchDiscoveryRecordsResponse message. Also converts values to other types if specified.
+     * Creates a plain object from a FetchPeersResponse message. Also converts values to other types if specified.
      * @function toObject
-     * @memberof FetchDiscoveryRecordsResponse
+     * @memberof FetchPeersResponse
      * @static
-     * @param {FetchDiscoveryRecordsResponse} message FetchDiscoveryRecordsResponse
+     * @param {FetchPeersResponse} message FetchPeersResponse
      * @param {$protobuf.IConversionOptions} [options] Conversion options
      * @returns {Object.<string,*>} Plain object
      */
-    FetchDiscoveryRecordsResponse.toObject = function toObject(message, options) {
+    FetchPeersResponse.toObject = function toObject(message, options) {
         if (!options)
             options = {};
         var object = {};
@@ -831,32 +831,32 @@ $root.FetchDiscoveryRecordsResponse = (function() {
     };
 
     /**
-     * Converts this FetchDiscoveryRecordsResponse to JSON.
+     * Converts this FetchPeersResponse to JSON.
      * @function toJSON
-     * @memberof FetchDiscoveryRecordsResponse
+     * @memberof FetchPeersResponse
      * @instance
      * @returns {Object.<string,*>} JSON object
      */
-    FetchDiscoveryRecordsResponse.prototype.toJSON = function toJSON() {
+    FetchPeersResponse.prototype.toJSON = function toJSON() {
         return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
     };
 
     /**
-     * Gets the default type url for FetchDiscoveryRecordsResponse
+     * Gets the default type url for FetchPeersResponse
      * @function getTypeUrl
-     * @memberof FetchDiscoveryRecordsResponse
+     * @memberof FetchPeersResponse
      * @static
      * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
      * @returns {string} The default type url
      */
-    FetchDiscoveryRecordsResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+    FetchPeersResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
         if (typeUrlPrefix === undefined) {
             typeUrlPrefix = "type.googleapis.com";
         }
-        return typeUrlPrefix + "/FetchDiscoveryRecordsResponse";
+        return typeUrlPrefix + "/FetchPeersResponse";
     };
 
-    return FetchDiscoveryRecordsResponse;
+    return FetchPeersResponse;
 })();
 
 module.exports = $root;

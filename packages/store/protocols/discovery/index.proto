@@ -14,7 +14,7 @@ message SignedDiscoveryRecord {
   bytes key = 6;
 }
 
-message FetchDiscoveryRecordsResponse {
+message FetchPeersResponse {
   repeated SignedDiscoveryRecord records = 1;
 }
 

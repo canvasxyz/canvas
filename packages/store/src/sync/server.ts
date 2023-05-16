@@ -4,18 +4,22 @@ import { logger } from "@libp2p/logger"
 
 import type { Source } from "@canvas-js/okra"
 
-import { Request, Response, IResponse } from "#protocols/sync"
+import Sync from "#protocols/sync"
+
 import { assert } from "../utils.js"
 
-export async function* encodeResponses(responses: AsyncIterable<IResponse>): AsyncIterable<Uint8Array> {
+const log = logger("canvas:sync:server")
+export async function* encodeResponses(responses: AsyncIterable<Sync.IResponse>): AsyncIterable<Uint8Array> {
 	for await (const res of responses) {
-		yield Response.encode(res).finish()
+		yield Sync.Response.encode(res).finish()
 	}
 }
 
-export async function* decodeRequests(requests: AsyncIterable<Uint8ArrayList | Uint8Array>): AsyncIterable<Request> {
-	for await (const req of requests) {
-		yield Request.decode(req.subarray())
+export async function* decodeRequests(
+	requests: AsyncIterable<Uint8ArrayList | Uint8Array>
+): AsyncIterable<Sync.Request> {
+	for await (const msg of requests) {
+		yield Sync.Request.decode(msg.subarray())
 	}
 }
 
@@ -24,8 +28,9 @@ export class Server {
 
 	constructor(readonly source: Source) {}
 
-	public async *handle(reqs: AsyncIterable<Request>): AsyncIterable<IResponse> {
+	public async *handle(reqs: AsyncIterable<Sync.Request>): AsyncIterable<Sync.IResponse> {
 		for await (const req of reqs) {
+			this.log("handling %s request", req.request)
 			if (req.request === "getRoot") {
 				assert(req.getRoot, "missing request body")
 				const root = await this.source.getRoot()

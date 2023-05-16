@@ -1,4 +1,11 @@
+import { PeerId } from "@libp2p/interface-peer-id"
+import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
+import { base64 } from "multiformats/bases/base64"
+
 import { anySignal } from "any-signal"
+
+export const keyPrefix = "/canvas/v0/store/"
+export const keyPattern = /^(\/canvas\/v0\/store\/[a-zA-Z0-9:.-]+)\/peers$/
 
 export function assert(condition: unknown, message?: string): asserts condition {
 	if (!condition) {
@@ -6,8 +13,8 @@ export function assert(condition: unknown, message?: string): asserts condition 
 	}
 }
 
-export async function wait(interval: number, options: { signal?: AbortSignal }) {
-	if (options.signal?.aborted) {
+export async function wait(interval: number, options: { signal: AbortSignal }) {
+	if (options.signal.aborted) {
 		return
 	}
 
@@ -20,7 +27,7 @@ export async function wait(interval: number, options: { signal?: AbortSignal }) 
 export async function retry<T>(
 	f: () => Promise<T>,
 	handleError: (err: Error, n: number) => void,
-	{ interval, ...options }: { interval: number; signal?: AbortSignal; maxRetries?: number }
+	{ interval, ...options }: { interval: number; signal: AbortSignal; maxRetries?: number }
 ): Promise<T | void> {
 	const maxRetries = options.maxRetries ?? Infinity
 
@@ -51,7 +58,7 @@ async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, 
 }
 
 export class CacheMap<K, V> extends Map<K, V> {
-	constructor(public readonly capacity: number) {
+	constructor(public readonly capacity: number, entries?: Iterable<[K, V]>) {
 		super()
 	}
 
@@ -64,5 +71,22 @@ export class CacheMap<K, V> extends Map<K, V> {
 				break
 			}
 		}
+	}
+}
+
+export async function getPeerId(config: {
+	getPrivateKey: () => Promise<string | null>
+	setPrivateKey: (privateKey: string) => Promise<void>
+}): Promise<PeerId> {
+	const privateKey = await config.getPrivateKey()
+	if (privateKey === null) {
+		const peerId = await createEd25519PeerId()
+		const privateKeyBytes = exportToProtobuf(peerId)
+		const privateKey = base64.baseEncode(privateKeyBytes)
+		await config.setPrivateKey(privateKey)
+		return peerId
+	} else {
+		const privateKeyBytes = base64.baseDecode(privateKey)
+		return await createFromProtobuf(privateKeyBytes)
 	}
 }
