@@ -8,11 +8,11 @@ import { exportToProtobuf, createFromProtobuf, createEd25519PeerId } from "@libp
 import { assert } from "@canvas-js/core/utils"
 import { PEER_ID_FILENAME } from "@canvas-js/core/constants"
 
-import type { P2PConfig } from "../types.js"
+import type { P2PConfig, ServiceMap } from "../types.js"
 
 import { getBaseLibp2pOptions } from "../options.js"
 
-export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promise<Libp2pOptions> {
+export async function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Promise<Libp2pOptions<ServiceMap>> {
 	assert((config.listen?.length ?? 0) === 0, "listen addresses not supported in the browser")
 	assert((config.announce?.length ?? 0) === 0, "announce addresses not supported in the browser")
 	return getBaseLibp2pOptions(peerId, config)

@@ -13,21 +13,8 @@
     "chain-test": "npm run test --workspace=@canvas-js/interfaces"
   },
   "workspaces": [
-    "packages/interfaces",
-    "packages/core",
-    "packages/cli",
-    "packages/hooks",
-    "packages/chain-ethereum",
-    "packages/chain-cosmos",
-    "packages/chain-near",
-    "packages/chain-solana",
-    "packages/chain-substrate",
-    "examples/chat-advanced",
-    "examples/chat-browser",
-    "examples/chat-webpack",
-    "examples/chat-next",
-    "examples/interwallet",
-    "examples/notes"
+    "packages/*",
+    "examples/*"
   ],
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.58.0",

@@ -1,17 +1,14 @@
 import React from "react"
-import { Room, UserRegistration } from "../models"
-import { NewChatModal } from "./NewChatModal"
+
+import { UserRegistration } from "../interfaces"
+// import { NewChatModal } from "./NewChatModal"
 import { ChatSidebar } from "./ChatSidebar"
 import { Messages } from "./Messages"
 
 export const ChatView: React.FC<{
-	myAddress: string
-	privateKey: Buffer
-	userRegistrations: { [key: string]: UserRegistration }
-	rooms: { [key: string]: Room }
-	startChat: (address: string) => void
-}> = ({ startChat, myAddress, privateKey, rooms, userRegistrations }) => {
-	const [showUserList, setShowUserList] = React.useState<boolean>(false)
+	user: UserRegistration
+}> = ({ user }) => {
+	// const [showUserList, setShowUserList] = React.useState<boolean>(false)
 
 	const now = new Date()
 
@@ -42,7 +39,7 @@ export const ChatView: React.FC<{
 		<>
 			<div className="flex flex-row h-screen overflow-hidden bg-white">
 				{/* sidebar */}
-				<ChatSidebar currentUser={currentUser} rooms={rooms} setShowUserList={setShowUserList} />
+				<ChatSidebar currentUser={currentUser} />
 				{/* main content */}
 				<div className="overflow-y-auto overflow-x-hidden relative flex flex-col grow">
 					{/* top bar? */}
@@ -59,7 +56,7 @@ export const ChatView: React.FC<{
 					)}
 				</div>
 			</div>
-			{showUserList && (
+			{/* {showUserList && (
 				<NewChatModal
 					closeModal={() => {
 						setShowUserList(false)
@@ -67,7 +64,7 @@ export const ChatView: React.FC<{
 					selectUser={startChat}
 					userRegistrations={userRegistrations}
 				/>
-			)}
+			)} */}
 		</>
 	)
 }

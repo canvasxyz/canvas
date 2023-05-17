@@ -1,0 +1,60 @@
+{
+  "name": "@canvas-js/pubsub-service-discovery",
+  "version": "v0.5.0-alpha3",
+  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "lib",
+    "protocols"
+  ],
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "sideEffects": false,
+  "imports": {
+    "#protocols/discovery": "./protocols/discovery/index.cjs"
+  },
+  "scripts": {
+    "generate": "npm run generate-discovery",
+    "generate-discovery": "npm run generate-discovery-js && npm run generate-discovery-ts",
+    "generate-discovery-js": "pbjs ./protocols/discovery/index.proto -t static-module -w commonjs -o ./protocols/discovery/index.cjs",
+    "generate-discovery-ts": "pbjs -t static-module ./protocols/discovery/index.proto | pbts -o ./protocols/discovery/index.d.cts -"
+  },
+  "dependencies": {
+    "@libp2p/interface-address-manager": "^3.0.1",
+    "@libp2p/interface-connection": "^5.1.0",
+    "@libp2p/interface-connection-manager": "^3.0.1",
+    "@libp2p/interface-peer-discovery": "^2.0.0",
+    "@libp2p/interface-peer-id": "^2.0.2",
+    "@libp2p/interface-peer-info": "^1.0.10",
+    "@libp2p/interface-pubsub": "^4.0.1",
+    "@libp2p/interface-registrar": "^2.0.12",
+    "@libp2p/interfaces": "^3.3.2",
+    "@libp2p/logger": "^2.0.7",
+    "@libp2p/peer-id": "^2.0.3",
+    "@libp2p/topology": "^4.0.1",
+    "@multiformats/multiaddr": "^12.1.3",
+    "@noble/hashes": "^1.3.0",
+    "@types/node": "^20.1.5",
+    "any-signal": "^4.1.1",
+    "big-varint": "^0.1.3",
+    "it-length-prefixed": "^9.0.1",
+    "it-pipe": "^3.0.1",
+    "it-stream-types": "^2.0.1",
+    "libp2p": "^0.45.0",
+    "p-queue": "^7.3.4",
+    "protobufjs": "^7.2.3",
+    "uint8arraylist": "^2.4.3",
+    "uint8arrays": "^4.0.3"
+  },
+  "peerDependencies": {
+    "@chainsafe/libp2p-gossipsub": "^8.0.0"
+  },
+  "devDependencies": {
+    "nanoid": "^4.0.2",
+    "protobufjs-cli": "^1.1.1",
+    "typescript": "^5.0.4"
+  }
+}

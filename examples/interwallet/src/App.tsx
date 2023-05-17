@@ -1,128 +1,69 @@
-import React, { useEffect, useMemo, useState } from "react"
-import { sha256 } from "@noble/hashes/sha256"
+import React, { useLayoutEffect, useState, useCallback } from "react"
+
+import { useAccount, useConnect } from "wagmi"
+import { keccak256, toHex } from "viem/utils"
 
 import { ChatView } from "./views/ChatView"
 import { EnterPinView } from "./views/EnterPinView"
 import { SelectWalletView } from "./views/SelectWalletView"
-import {
-	buildMagicString,
-	makeKeyBundle,
-	metamaskEncryptData,
-	metamaskGetPublicKey,
-	signKeyBundle,
-} from "./cryptography"
-import { useAccount, useConnect } from "wagmi"
+import { makeKeyBundle, signKeyBundle, signMagicString } from "./cryptography"
+import { UserRegistration } from "./interfaces"
 
-import { Room, UserRegistration } from "./models"
-import { useStore } from "./useStore"
-
-const useUtf8Store = <T,>(url: string, apply: (key: string, value: T) => void) => {
-	const { store } = useStore(url, async (key, value) => {
-		const keyUtf8 = Buffer.from(key).toString("utf8")
-		const valueUtf8 = JSON.parse(Buffer.from(value).toString("utf8"))
-		return apply(keyUtf8, valueUtf8)
-	})
-
-	if (store === null) {
-		return null
-	} else {
-		const insert = (key: string, value: T) => {
-			const keyUint8array = Buffer.from(key, "utf8")
-			const valueUint8array = Buffer.from(JSON.stringify(value), "utf8")
-			store.insert(keyUint8array, valueUint8array)
-		}
-
-		return { insert }
-	}
-}
-
-const toRoomKey = (address1: string, address2: string) => {
-	const addresses = [address1, address2].sort()
-	return addresses.join("-")
-}
+const getRegistrationKey = (address: string) => `interwallet:registration:${address}`
 
 export const App: React.FC<{}> = ({}) => {
 	const { connect, connectors } = useConnect()
 	const { address, isConnected } = useAccount()
-	const [privateKey, setPrivateKey] = useState<Buffer | null>(null)
 
-	const [userRegistrations, setUserRegistrations] = useState<{ [key: string]: UserRegistration }>({})
+	const [registration, setRegistration] = useState<UserRegistration | null>(null)
 
-	const userStore = useUtf8Store<UserRegistration>(
-		"ws://localhost:8765/userRegistrations",
-		async (address, userRegistration) => {
-			setUserRegistrations((existingUserRegistrations) => ({
-				...existingUserRegistrations,
-				[address]: userRegistration,
-			}))
+	useLayoutEffect(() => {
+		if (isConnected && address !== undefined && registration === null) {
+			const key = getRegistrationKey(address)
+			const value = window.localStorage.getItem(key)
+			if (value !== null) {
+				const registration = JSON.parse(value)
+				console.log("got existing registration", registration)
+				setRegistration(registration)
+			}
 		}
-	)
+	}, [address, isConnected, registration])
 
-	const [rooms, setRooms] = useState<{ [key: string]: Room }>({})
-	const roomsStore = useUtf8Store<Room>("ws://localhost:8765/rooms", async (roomKey, room) => {
-		setRooms((existingRooms) => ({ ...existingRooms, [roomKey]: room }))
-	})
+	const handleSubmitPin = useCallback(
+		async (pin: string) => {
+			if (address === undefined) {
+				return
+			}
 
-	useEffect(() => {
-		if (privateKey !== null && address && userStore) {
-			const keyBundle = makeKeyBundle(privateKey)
-			signKeyBundle(address, keyBundle).then((signature: string) => {
-				userStore.insert(address, { signature, payload: keyBundle })
-			})
-		}
-	}, [privateKey, userStore])
+			try {
+				const signature = await signMagicString(address, pin)
+				const privateKey = keccak256(signature)
+				const publicKeyBundle = makeKeyBundle(privateKey)
+				const publicKeyBundleSignature = await signKeyBundle(address, publicKeyBundle)
 
-	const startChat = useMemo(
-		() => (otherAddress: string) => {
-			if (!roomsStore) return
-			if (!address) return
+				const registration: UserRegistration = {
+					privateKey: toHex(privateKey),
+					publicKeyBundle,
+					publicKeyBundleSignature,
+				}
 
-			const key = toRoomKey(address, otherAddress)
-			if (!Object.keys(rooms).includes(key)) {
-				roomsStore.insert(key, {
-					members: [address, otherAddress],
-					sharedKey: [],
-					sharedKeyHash: "",
-				})
+				console.log("setting new registration", registration)
+				const key = getRegistrationKey(address)
+				window.localStorage.setItem(key, JSON.stringify(registration))
+
+				setRegistration(registration)
+			} catch (err) {
+				console.error("failed to get signature", err)
 			}
 		},
 		[address]
 	)
 
-	console.log(userRegistrations)
-
-	// if not connected to wallet, then show the select wallet view
-	if (!isConnected) {
-		return (
-			<SelectWalletView
-				selectWallet={(wallet) => {
-					connect({ connector: connectors[0] })
-				}}
-			/>
-		)
+	if (!isConnected || address === undefined) {
+		return <SelectWalletView selectWallet={(wallet) => connect({ connector: connectors[0] })} />
+	} else if (registration === null) {
+		return <EnterPinView submitPin={handleSubmitPin} />
+	} else {
+		return <ChatView user={registration} />
 	}
-
-	if (privateKey === null) {
-		return (
-			<EnterPinView
-				submitPin={async (pin) => {
-					const magicString = buildMagicString(pin)
-
-					const metamaskPubKey = await metamaskGetPublicKey(address!)
-					const secretSignature = metamaskEncryptData(metamaskPubKey, Buffer.from(magicString))
-					setPrivateKey(Buffer.from(sha256(secretSignature)))
-				}}
-			/>
-		)
-	}
-
-	return (
-		<ChatView
-			myAddress={address!}
-			privateKey={privateKey}
-			rooms={rooms}
-			startChat={startChat}
-			userRegistrations={userRegistrations}
-		/>
-	)
 }
