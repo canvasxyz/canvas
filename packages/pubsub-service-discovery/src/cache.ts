@@ -80,6 +80,7 @@ export class MemoryCache implements ServiceRecordCache {
 	}
 
 	public query(protocol: string, limit: number): SignedMessage[] {
+		this.log("querying %s (limit %d)", protocol, limit)
 		const records: SignedMessage[] = []
 
 		const peerMap = this.protocolMap.get(protocol)
@@ -90,6 +91,13 @@ export class MemoryCache implements ServiceRecordCache {
 		}
 
 		shuffle(records)
+
+		this.log(
+			"got %d records: %o",
+			records.length,
+			records.map((record) => record.from)
+		)
+
 		return records.slice(0, limit)
 	}
 }

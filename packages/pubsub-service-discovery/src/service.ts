@@ -13,9 +13,9 @@ import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { createTopology } from "@libp2p/topology"
 import { logger } from "@libp2p/logger"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
-import { anySignal } from "any-signal"
 
 import { pipe } from "it-pipe"
+import { pushable, Pushable } from "it-pushable"
 import * as lp from "it-length-prefixed"
 
 import Discovery from "#protocols/discovery"
@@ -30,7 +30,6 @@ import {
 	fromSignedMessage,
 	minute,
 	second,
-	shuffle,
 	toSignedMessage,
 } from "./utils.js"
 
@@ -46,6 +45,7 @@ export interface ServiceDiscoveryInit {
 	topic?: string
 	protocol?: string
 	interval?: number
+	delay?: number
 
 	filterProtocols?: (protocol: string) => boolean
 
@@ -65,6 +65,8 @@ export class PubsubServiceDiscovery
 	public static DISCOVERY_PROTOCOL = "/canvas/v0/discovery/query"
 	public static DISCOVERY_TOPIC = "/canvas/v0/discovery"
 	public static DISCOVERY_INTERVAL = 5 * minute
+	public static DISCOVERY_DELAY = 10 * second
+
 	public static MIN_CONNECTIONS_PER_PROTOCOL = 5
 	public static NEW_CONNECTION_TIMEOUT = 20 * second
 	public static NEW_STREAM_TIMEOUT = 10 * second
@@ -72,13 +74,19 @@ export class PubsubServiceDiscovery
 
 	private static extractGossipSub(components: ServiceDiscoveryComponents): GossipSub {
 		const { pubsub } = components as ServiceDiscoveryComponents & { pubsub?: GossipSub }
-		if (pubsub instanceof GossipSub) {
-			return pubsub
-		} else if (pubsub !== undefined) {
-			throw new Error("pubsub service is not a GossipSub instance")
-		} else {
+		if (pubsub === undefined) {
 			throw new Error("missing pubsub service")
+		} else {
+			return pubsub
 		}
+
+		// if (pubsub instanceof GossipSub) {
+		// 	return pubsub
+		// } else if (pubsub !== undefined) {
+		// 	throw new Error("pubsub service is not a GossipSub instance")
+		// } else {
+		// 	throw new Error("missing pubsub service")
+		// }
 	}
 
 	private readonly log = logger("canvas:pubsub-service-discovery")
@@ -86,9 +94,7 @@ export class PubsubServiceDiscovery
 	private readonly cache: ServiceRecordCache
 	private readonly topic: string
 	private readonly protocol: string
-	private readonly interval: number
 	private readonly topology: Topology
-	private readonly autoDialPriority: number
 
 	private timer: NodeJS.Timer | null = null
 	private registrarId: string | null = null
@@ -99,9 +105,6 @@ export class PubsubServiceDiscovery
 		this.cache = init.cache ?? new MemoryCache()
 		this.topic = init.topic ?? PubsubServiceDiscovery.DISCOVERY_TOPIC
 		this.protocol = init.protocol ?? PubsubServiceDiscovery.DISCOVERY_PROTOCOL
-		this.interval = init.interval ?? PubsubServiceDiscovery.DISCOVERY_INTERVAL
-		this.autoDialPriority = init.autoDialPriority ?? PubsubServiceDiscovery.AUTO_DIAL_PRIORITY
-
 		this.topology = createTopology({
 			onConnect: (peerId, connection) => {
 				this.topology.peers.add(peerId.toString())
@@ -139,11 +142,15 @@ export class PubsubServiceDiscovery
 	}
 
 	public afterStart() {
+		this.pubsub.subscribe(this.topic)
+
 		this.timer = globalThis.setInterval(() => {
 			this.publish()
-		}, this.interval)
+		}, this.init.interval ?? PubsubServiceDiscovery.DISCOVERY_INTERVAL)
 
-		this.publish()
+		setTimeout(() => {
+			this.publish()
+		}, this.init.delay ?? PubsubServiceDiscovery.DISCOVERY_DELAY)
 	}
 
 	public beforeStop(): void {
@@ -185,6 +192,10 @@ export class PubsubServiceDiscovery
 
 	private handleMessage = ({ detail: msg }: CustomEvent<Message>) => {
 		if (msg.type === "signed" && msg.topic === this.topic) {
+			if (msg.from.equals(this.components.peerId)) {
+				return
+			}
+
 			let record: Discovery.Record | null = null
 			try {
 				record = Discovery.Record.decode(msg.data)
@@ -193,10 +204,12 @@ export class PubsubServiceDiscovery
 				return
 			}
 
-			this.log("received discovery record from peer %p for %d protocols", msg.from, record.protocols.length)
+			this.log("received discovery record from peer %p for protocols %o", msg.from, record.protocols)
 
 			// TODO: verify signature and that addrs end with `/p2p/${msg.from}`
 			const addrs = record.addrs.map(multiaddr)
+
+			this.cache.insert(record.protocols, msg)
 
 			const peerInfo: PeerInfo = { id: msg.from, multiaddrs: addrs, protocols: record.protocols }
 			this.dispatchEvent(new CustomEvent("peer", { detail: peerInfo }))
@@ -209,24 +222,21 @@ export class PubsubServiceDiscovery
 	}
 
 	private async connect(peerId: PeerId, addrs: Multiaddr[]) {
-		if (peerId.equals(this.components.peerId)) {
-			return
-		}
-
 		const existingConnections = this.components.connectionManager.getConnections(peerId)
 		if (existingConnections.length > 0) {
+			this.log("already have %d connections to peer %p", existingConnections.length, peerId)
 			return
 		}
 
 		try {
 			this.log("connecting to peer %p", peerId)
 
-			const connection = await this.components.connectionManager.openConnection(addrs, {
+			await this.components.connectionManager.openConnection(addrs, {
 				// @ts-expect-error needs adding to the ConnectionManager interface
-				priority: this.autoDialPriority,
+				priority: this.init.autoDialPriority ?? PubsubServiceDiscovery.AUTO_DIAL_PRIORITY,
 			})
 
-			this.log("opened new connection %s to peer %p", connection.id, peerId)
+			this.log("connection opened successfully")
 		} catch (err) {
 			this.log.error("failed to open new connection to peer %p: %O", peerId, err)
 		}
@@ -257,7 +267,7 @@ export class PubsubServiceDiscovery
 	}
 
 	private handleConnect = async (connection: Connection): Promise<void> => {
-		this.log("new connection %s to peer %p", connection.id, connection.remotePeer)
+		this.log("new connection peer %p", connection.remotePeer)
 
 		const requests = this.getRequests()
 		if (requests.size === 0) {
@@ -266,7 +276,7 @@ export class PubsubServiceDiscovery
 
 		this.log("have %d outstanding protocol requests", requests.size)
 
-		let stream: Stream | null = null
+		let stream: Stream
 		try {
 			stream = await connection.newStream(this.protocol)
 			this.log("opened outgoing stream %s to peer %p", stream.id, connection.remotePeer)
@@ -276,16 +286,27 @@ export class PubsubServiceDiscovery
 			return
 		}
 
-		async function* requestSource(): AsyncIterable<Discovery.IQueryRequest> {
-			for (const [protocol, { limit }] of requests) {
-				yield { protocol, limit }
-			}
-		}
-
 		const responses = new Map<string, { msg: SignedMessage; record: Discovery.Record }>()
 
-		async function* responseSink(source: AsyncIterable<Discovery.QueryResponse>) {
-			for await (const res of source) {
+		try {
+			const responseSink = pipe(stream.source, lp.decode, decodeResponses)
+			const requestSource: Pushable<Discovery.IQueryRequest> = pushable({ objectMode: true })
+			pipe(requestSource, encodeRequests, lp.encode, stream.sink).catch((err) => {
+				if (err instanceof Error) {
+					stream.abort(err)
+				} else {
+					stream.abort(new Error("internal error"))
+				}
+			})
+
+			const iter = responseSink[Symbol.asyncIterator]()
+			for (const [protocol, { limit }] of requests) {
+				requestSource.push({ protocol, limit })
+				const { done, value: res } = await iter.next()
+				if (done) {
+					throw new Error("response stream ended prematurely")
+				}
+
 				for (const msg of res.records.map(toSignedMessage)) {
 					const id = msg.from.toString()
 					const existingResponse = responses.get(id)
@@ -295,13 +316,8 @@ export class PubsubServiceDiscovery
 					}
 				}
 			}
-		}
 
-		try {
-			await Promise.all([
-				pipe(requestSource, encodeRequests, lp.encode, stream.sink),
-				pipe(stream.source, lp.decode, decodeResponses, responseSink),
-			])
+			requestSource.end()
 		} catch (err) {
 			this.log.error("failed to query peer %p: %O", connection.remotePeer, err)
 		} finally {
@@ -311,6 +327,10 @@ export class PubsubServiceDiscovery
 		this.log("got %d responses from peer %p", responses.size, connection.remotePeer)
 
 		for (const { msg, record } of responses.values()) {
+			if (msg.from.equals(this.components.peerId)) {
+				continue
+			}
+
 			this.cache.insert(record.protocols, msg)
 
 			const addrs = record.addrs.map(multiaddr)
