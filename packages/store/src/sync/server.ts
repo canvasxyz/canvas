@@ -8,7 +8,6 @@ import Sync from "#protocols/sync"
 
 import { assert } from "../utils.js"
 
-const log = logger("canvas:sync:server")
 export async function* encodeResponses(responses: AsyncIterable<Sync.IResponse>): AsyncIterable<Uint8Array> {
 	for await (const res of responses) {
 		yield Sync.Response.encode(res).finish()

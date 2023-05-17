@@ -15,10 +15,12 @@
   "sideEffects": false,
   "imports": {
     "#protocols/sync": "./protocols/sync/index.cjs",
-    "#protocols/discovery": "./protocols/discovery/index.cjs"
+    "#protocols/discovery": "./protocols/discovery/index.cjs",
+    "#sync": "./lib/sync/index.js"
   },
   "exports": {
     ".": "./lib/index.js",
+    "./service": "./lib/service/node/index.js",
     "./constants": "./lib/constants.js"
   },
   "scripts": {

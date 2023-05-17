@@ -15,7 +15,7 @@ import { peerIdFromString } from "@libp2p/peer-id"
 
 import { multiaddr } from "@multiformats/multiaddr"
 
-import { getPeerId, Network, NetworkConfig, Store, testnetBootstrapList } from "@canvas-js/store"
+import { getPeerId, Network, NetworkConfig, testnetBootstrapList } from "@canvas-js/store"
 import { MIN_CONNECTIONS, MAX_CONNECTIONS, PING_TIMEOUT } from "@canvas-js/store/constants"
 
 export const command = "store <path>"
@@ -27,7 +27,7 @@ export const builder = (yargs: Argv) =>
 			type: "string",
 			demandOption: true,
 		})
-		.option("name", {
+		.option("topic", {
 			type: "string",
 			demandOption: true,
 		})
@@ -89,6 +89,17 @@ export async function handler(args: Args) {
 		announce,
 		minConnections: args["min-connections"],
 		maxConnections: args["max-connections"],
+
+		storeInit: {
+			location: args.path,
+			topic: args.topic,
+			apply: async (key, value) => {
+				console.log("applying...", {
+					key: Buffer.from(key).toString("hex"),
+					value: Buffer.from(value).toString("hex"),
+				})
+			},
+		},
 	}
 
 	if (args.testnet) {
@@ -119,16 +130,16 @@ export async function handler(args: Args) {
 
 	const controller = new AbortController()
 	const network = await Network.open(peerId, networkConfig)
-	const store = await Store.open(network.libp2p, {
-		path: args.path,
-		name: args.name,
-		apply: async (key, value) => {
-			console.log("applying...", {
-				key: Buffer.from(key).toString("hex"),
-				value: Buffer.from(value).toString("hex"),
-			})
-		},
-	})
+	// const store = await Store.open(network.libp2p, {
+	// 	path: args.path,
+	// 	name: args.name,
+	// 	apply: async (key, value) => {
+	// 		console.log("applying...", {
+	// 			key: Buffer.from(key).toString("hex"),
+	// 			value: Buffer.from(value).toString("hex"),
+	// 		})
+	// 	},
+	// })
 
 	console.log(chalk.bold(`[canvas] Using PeerId ${peerId}`))
 
@@ -143,7 +154,7 @@ export async function handler(args: Args) {
 		}
 
 		try {
-			const value = await store.get(Buffer.from(key, "hex"))
+			const value = await network.libp2p.services.store.get(Buffer.from(key, "hex"))
 			if (value === null) {
 				return res.status(StatusCodes.NOT_FOUND).end()
 			} else {
@@ -164,7 +175,7 @@ export async function handler(args: Args) {
 		}
 
 		try {
-			await store.insert(Buffer.from(key, "hex"), Buffer.from(value, "hex"))
+			await network.libp2p.services.store.insert(Buffer.from(key, "hex"), Buffer.from(value, "hex"))
 			return res.status(StatusCodes.OK).end()
 		} catch (err) {
 			return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
@@ -225,7 +236,6 @@ export async function handler(args: Args) {
 
 	controller.signal.addEventListener("abort", async () => {
 		server.stop()
-		await store.close()
 		await network.stop()
 	})
 

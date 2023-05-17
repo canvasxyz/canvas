@@ -17,6 +17,8 @@ import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { ServiceDiscovery, pubsubServiceDiscovery } from "@canvas-js/pubsub-service-discovery"
 
+import { storeService, StoreService } from "@canvas-js/store/service"
+
 import { NetworkConfig } from "./network.js"
 import { defaultBootstrapList } from "./bootstrap.js"
 import {
@@ -33,6 +35,7 @@ export type ServiceMap = {
 	identify: {}
 	ping: PingService
 	serviceDiscovery: ServiceDiscovery
+	store: StoreService
 }
 
 export function getLibp2pOptions(peerId: PeerId, config: NetworkConfig): Libp2pOptions<ServiceMap> {
@@ -113,7 +116,11 @@ export function getLibp2pOptions(peerId: PeerId, config: NetworkConfig): Libp2pO
 				timeout: PING_TIMEOUT,
 			}),
 
-			serviceDiscovery: pubsubServiceDiscovery({}),
+			serviceDiscovery: pubsubServiceDiscovery({
+				filterProtocols: (protocol) => protocol.startsWith("/canvas/v0/store/"),
+			}),
+
+			store: storeService(config.storeInit),
 		},
 	}
 }

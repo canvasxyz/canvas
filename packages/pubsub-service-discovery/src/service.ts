@@ -224,7 +224,7 @@ export class PubsubServiceDiscovery
 	private async connect(peerId: PeerId, addrs: Multiaddr[]) {
 		const existingConnections = this.components.connectionManager.getConnections(peerId)
 		if (existingConnections.length > 0) {
-			this.log("already have %d connections to peer %p", existingConnections.length, peerId)
+			this.log("already have connection to peer %p", peerId)
 			return
 		}
 

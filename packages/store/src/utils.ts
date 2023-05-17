@@ -62,8 +62,8 @@ export class CacheMap<K, V> extends Map<K, V> {
 		super()
 	}
 
-	add(key: K, value: V) {
-		this.set(key, value)
+	set(key: K, value: V) {
+		super.set(key, value)
 		for (const key of this.keys()) {
 			if (this.size > this.capacity) {
 				this.delete(key)
@@ -71,6 +71,8 @@ export class CacheMap<K, V> extends Map<K, V> {
 				break
 			}
 		}
+
+		return this
 	}
 }
 
@@ -95,7 +97,7 @@ export type Entry = { key: Uint8Array; value: Uint8Array }
 
 export function encodeEntry({ key, value }: Entry): Uint8Array {
 	const buffer = new ArrayBuffer(4 + key.length + 4 + value.length)
-	const array = new Uint8Array()
+	const array = new Uint8Array(buffer, 0, buffer.byteLength)
 	const view = new DataView(buffer)
 	view.setUint32(0, key.length)
 	array.set(key, 4)

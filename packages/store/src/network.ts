@@ -4,6 +4,7 @@ import { PeerId } from "@libp2p/interface-peer-id"
 import { logger } from "@libp2p/logger"
 import { anySignal } from "any-signal"
 
+import { StoreInit } from "@canvas-js/store/service"
 import { ServiceMap, getLibp2pOptions } from "./libp2p.js"
 
 import { PING_DELAY, PING_INTERVAL, PING_TIMEOUT } from "./constants.js"
@@ -15,6 +16,8 @@ export interface NetworkConfig {
 	bootstrapList?: string[]
 	minConnections?: number
 	maxConnections?: number
+
+	storeInit: StoreInit
 }
 
 export class Network {
