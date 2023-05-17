@@ -98,7 +98,7 @@
     "p-queue": "^7.3.4",
     "prom-client": "^14.2.0",
     "protobufjs": "~7.2.2",
-    "quickjs-emscripten": "^0.22.0",
+    "quickjs-emscripten": "^0.23.0",
     "safe-stable-stringify": "^2.4.3",
     "uint8arraylist": "^2.4.3",
     "uuid": "^9.0.0",
@@ -106,7 +106,7 @@
   },
   "devDependencies": {
     "@ava/typescript": "^4.0.0",
-    "@types/node": "^18.16.10",
+    "@types/node": "^20.1.7",
     "ava": "^5.2.0",
     "dotenv": "^16.0.3",
     "nanoid": "^4.0.2",
