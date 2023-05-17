@@ -1,5 +1,10 @@
+if [[ $1 == v* ]]; then
+  echo "invalid version number" && exit 1
+fi
+
 VERSION="\"$1\""
 SET_VERSION=".version |= ${VERSION}"
+
 
 echo "$( jq "${SET_VERSION}" package.json )" > package.json
 
