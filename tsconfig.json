@@ -7,7 +7,6 @@
     { "path": "./packages/interfaces" },
     { "path": "./packages/interfaces/test" },
     { "path": "./packages/hooks" },
-    { "path": "./packages/pubsub-service-discovery" },
     { "path": "./packages/store" },
     { "path": "./packages/store/test" },
     { "path": "./packages/chain-ethereum" },

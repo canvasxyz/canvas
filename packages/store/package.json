@@ -38,7 +38,7 @@
     "@canvas-js/okra-idb": "^0.0.2",
     "@canvas-js/okra-memory": "^0.0.1",
     "@canvas-js/okra-node": "^0.3.1",
-    "@canvas-js/pubsub-service-discovery": "v0.5.0-alpha3",
+    "@canvas-js/pubsub-service-discovery": "^0.0.4",
     "@chainsafe/libp2p-gossipsub": "^8.0.0",
     "@chainsafe/libp2p-noise": "^12.0.0",
     "@libp2p/bootstrap": "^8.0.0",

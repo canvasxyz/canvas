@@ -5,6 +5,5 @@
     "moduleResolution": "node16",
     "rootDir": "src",
     "outDir": "lib"
-  },
-  "references": [{"path": "../pubsub-service-discovery"}]
+  }
 }
