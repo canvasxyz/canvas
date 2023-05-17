@@ -8,7 +8,7 @@ type Message = {
 
 export const Messages: React.FC<{ messages: Message[] }> = ({ messages }) => {
 	return (
-		<div className="flex flex-col grow m-3 gap-3">
+		<div className="flex flex-col grow ml-3 mr-3 gap-3 overflow-y-auto">
 			{messages.map((message, index) => {
 				const is_sent = message.creator_id == "1"
 				return (

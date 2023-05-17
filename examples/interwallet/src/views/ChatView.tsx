@@ -33,6 +33,111 @@ export const ChatView: React.FC<{
 			creator_id: "1",
 			created_at: new Date((now as any) - 80000),
 		},
+		{
+			content: "hello",
+			creator_id: "1",
+			created_at: new Date((now as any) - 100000),
+		},
+		{
+			content: "bye",
+			creator_id: "2",
+			created_at: new Date((now as any) - 90000),
+		},
+		{
+			content: "ok",
+			creator_id: "1",
+			created_at: new Date((now as any) - 80000),
+		},
+		{
+			content: "hello",
+			creator_id: "1",
+			created_at: new Date((now as any) - 100000),
+		},
+		{
+			content: "bye",
+			creator_id: "2",
+			created_at: new Date((now as any) - 90000),
+		},
+		{
+			content: "ok",
+			creator_id: "1",
+			created_at: new Date((now as any) - 80000),
+		},
+		{
+			content: "hello",
+			creator_id: "1",
+			created_at: new Date((now as any) - 100000),
+		},
+		{
+			content: "bye",
+			creator_id: "2",
+			created_at: new Date((now as any) - 90000),
+		},
+		{
+			content: "ok",
+			creator_id: "1",
+			created_at: new Date((now as any) - 80000),
+		},
+		{
+			content: "hello",
+			creator_id: "1",
+			created_at: new Date((now as any) - 100000),
+		},
+		{
+			content: "bye",
+			creator_id: "2",
+			created_at: new Date((now as any) - 90000),
+		},
+		{
+			content: "ok",
+			creator_id: "1",
+			created_at: new Date((now as any) - 80000),
+		},
+		{
+			content: "hello",
+			creator_id: "1",
+			created_at: new Date((now as any) - 100000),
+		},
+		{
+			content: "bye",
+			creator_id: "2",
+			created_at: new Date((now as any) - 90000),
+		},
+		{
+			content: "ok",
+			creator_id: "1",
+			created_at: new Date((now as any) - 80000),
+		},
+		{
+			content: "hello",
+			creator_id: "1",
+			created_at: new Date((now as any) - 100000),
+		},
+		{
+			content: "bye",
+			creator_id: "2",
+			created_at: new Date((now as any) - 90000),
+		},
+		{
+			content: "ok",
+			creator_id: "1",
+			created_at: new Date((now as any) - 80000),
+		},
+		{
+			content: "hello",
+			creator_id: "1",
+			created_at: new Date((now as any) - 100000),
+		},
+		{
+			content: "bye",
+			creator_id: "2",
+			created_at: new Date((now as any) - 90000),
+		},
+		{
+			content: "ok",
+			creator_id: "1",
+			created_at: new Date((now as any) - 80000),
+		},
 	]
 
 	return (
