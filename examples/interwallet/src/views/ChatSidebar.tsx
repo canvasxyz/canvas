@@ -1,13 +1,10 @@
 import React from "react"
 import ContactsIcon from "../icons/contacts.svg"
 import { IconButton } from "../IconButton"
-import { Room } from "../models"
 
 export const ChatSidebar: React.FC<{
 	currentUser: { ens: string }
-	rooms: { [key: string]: Room }
-	setShowUserList: (show: boolean) => void
-}> = ({ currentUser, setShowUserList }) => {
+}> = ({ currentUser }) => {
 	return (
 		<div className="w-64 h-full border-solid border-gray-200 border-r flex-col flex shrink">
 			<div className="h-16 flex shrink p-3 items-center">Encrypted Chat</div>
@@ -15,7 +12,7 @@ export const ChatSidebar: React.FC<{
 				<div className="flex-grow">Conversations</div>
 				<IconButton
 					onClick={async () => {
-						setShowUserList(true)
+						// setShowUserList(true)
 					}}
 					icon={ContactsIcon}
 					disabled={false}

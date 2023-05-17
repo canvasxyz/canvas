@@ -8,3 +8,9 @@ export interface UserRegistration {
 	publicKeyBundle: KeyBundle
 	publicKeyBundleSignature: `0x${string}`
 }
+
+export type Room = {
+	members: string[]
+	sharedKey: string[]
+	sharedKeyHash: string
+}
