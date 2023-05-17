@@ -1,16 +1,21 @@
 import chalk from "chalk"
 
-import type { Libp2pOptions } from "libp2p"
-import type { PeerId } from "@libp2p/interface-peer-id"
-
-import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
-
+import { Libp2pOptions } from "libp2p"
 import { circuitRelayTransport } from "libp2p/circuit-relay"
+import { identifyService } from "libp2p/identify"
+import { pingService, PingService } from "libp2p/ping"
+
 import { webSockets } from "@libp2p/websockets"
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
-import { gossipsub } from "@chainsafe/libp2p-gossipsub"
+import { gossipsub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
+
+import type { PubSub } from "@libp2p/interface-pubsub"
+import type { PeerId } from "@libp2p/interface-peer-id"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+
+import { ServiceDiscovery, pubsubServiceDiscovery } from "@canvas-js/pubsub-service-discovery"
 
 import { NetworkConfig } from "./network.js"
 import { defaultBootstrapList } from "./bootstrap.js"
@@ -23,7 +28,14 @@ import {
 } from "./constants.js"
 import { assert } from "./utils.js"
 
-export function getLibp2pOptions(peerId: PeerId, config: NetworkConfig): Libp2pOptions {
+export type ServiceMap = {
+	pubsub: PubSub<GossipsubEvents>
+	identify: {}
+	ping: PingService
+	serviceDiscovery: ServiceDiscovery
+}
+
+export function getLibp2pOptions(peerId: PeerId, config: NetworkConfig): Libp2pOptions<ServiceMap> {
 	const announce = config.announce ?? []
 	const listen = config.listen ?? []
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
@@ -82,26 +94,26 @@ export function getLibp2pOptions(peerId: PeerId, config: NetworkConfig): Libp2pO
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 
-		pubsub: gossipsub({
-			emitSelf: false,
-			fallbackToFloodsub: false,
-			allowPublishToZeroPeers: true,
-			globalSignaturePolicy: "StrictSign",
-		}),
+		services: {
+			pubsub: gossipsub({
+				emitSelf: false,
+				fallbackToFloodsub: false,
+				allowPublishToZeroPeers: true,
+				globalSignaturePolicy: "StrictSign",
+			}),
 
-		identify: {
-			protocolPrefix: "canvas",
-		},
+			identify: identifyService({
+				protocolPrefix: "canvas",
+			}),
 
-		fetch: {
-			protocolPrefix: "canvas",
-		},
+			ping: pingService({
+				protocolPrefix: "canvas",
+				maxInboundStreams: 32,
+				maxOutboundStreams: 32,
+				timeout: PING_TIMEOUT,
+			}),
 
-		ping: {
-			protocolPrefix: "canvas",
-			maxInboundStreams: 32,
-			maxOutboundStreams: 32,
-			timeout: PING_TIMEOUT,
+			serviceDiscovery: pubsubServiceDiscovery({}),
 		},
 	}
 }

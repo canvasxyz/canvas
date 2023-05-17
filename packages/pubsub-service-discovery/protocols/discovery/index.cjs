@@ -9,27 +9,27 @@ var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.ut
 // Exported root namespace
 var $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});
 
-$root.DiscoveryRecord = (function() {
+$root.Record = (function() {
 
     /**
-     * Properties of a DiscoveryRecord.
-     * @exports IDiscoveryRecord
-     * @interface IDiscoveryRecord
-     * @property {Array.<Uint8Array>|null} [addrs] DiscoveryRecord addrs
-     * @property {Array.<string>|null} [topics] DiscoveryRecord topics
+     * Properties of a Record.
+     * @exports IRecord
+     * @interface IRecord
+     * @property {Array.<Uint8Array>|null} [addrs] Record addrs
+     * @property {Array.<string>|null} [protocols] Record protocols
      */
 
     /**
-     * Constructs a new DiscoveryRecord.
-     * @exports DiscoveryRecord
-     * @classdesc Represents a DiscoveryRecord.
-     * @implements IDiscoveryRecord
+     * Constructs a new Record.
+     * @exports Record
+     * @classdesc Represents a Record.
+     * @implements IRecord
      * @constructor
-     * @param {IDiscoveryRecord=} [properties] Properties to set
+     * @param {IRecord=} [properties] Properties to set
      */
-    function DiscoveryRecord(properties) {
+    function Record(properties) {
         this.addrs = [];
-        this.topics = [];
+        this.protocols = [];
         if (properties)
             for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
@@ -37,82 +37,82 @@ $root.DiscoveryRecord = (function() {
     }
 
     /**
-     * DiscoveryRecord addrs.
+     * Record addrs.
      * @member {Array.<Uint8Array>} addrs
-     * @memberof DiscoveryRecord
+     * @memberof Record
      * @instance
      */
-    DiscoveryRecord.prototype.addrs = $util.emptyArray;
+    Record.prototype.addrs = $util.emptyArray;
 
     /**
-     * DiscoveryRecord topics.
-     * @member {Array.<string>} topics
-     * @memberof DiscoveryRecord
+     * Record protocols.
+     * @member {Array.<string>} protocols
+     * @memberof Record
      * @instance
      */
-    DiscoveryRecord.prototype.topics = $util.emptyArray;
+    Record.prototype.protocols = $util.emptyArray;
 
     /**
-     * Creates a new DiscoveryRecord instance using the specified properties.
+     * Creates a new Record instance using the specified properties.
      * @function create
-     * @memberof DiscoveryRecord
+     * @memberof Record
      * @static
-     * @param {IDiscoveryRecord=} [properties] Properties to set
-     * @returns {DiscoveryRecord} DiscoveryRecord instance
+     * @param {IRecord=} [properties] Properties to set
+     * @returns {Record} Record instance
      */
-    DiscoveryRecord.create = function create(properties) {
-        return new DiscoveryRecord(properties);
+    Record.create = function create(properties) {
+        return new Record(properties);
     };
 
     /**
-     * Encodes the specified DiscoveryRecord message. Does not implicitly {@link DiscoveryRecord.verify|verify} messages.
+     * Encodes the specified Record message. Does not implicitly {@link Record.verify|verify} messages.
      * @function encode
-     * @memberof DiscoveryRecord
+     * @memberof Record
      * @static
-     * @param {IDiscoveryRecord} message DiscoveryRecord message or plain object to encode
+     * @param {IRecord} message Record message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
-    DiscoveryRecord.encode = function encode(message, writer) {
+    Record.encode = function encode(message, writer) {
         if (!writer)
             writer = $Writer.create();
         if (message.addrs != null && message.addrs.length)
             for (var i = 0; i < message.addrs.length; ++i)
                 writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.addrs[i]);
-        if (message.topics != null && message.topics.length)
-            for (var i = 0; i < message.topics.length; ++i)
-                writer.uint32(/* id 3, wireType 2 =*/26).string(message.topics[i]);
+        if (message.protocols != null && message.protocols.length)
+            for (var i = 0; i < message.protocols.length; ++i)
+                writer.uint32(/* id 3, wireType 2 =*/26).string(message.protocols[i]);
         return writer;
     };
 
     /**
-     * Encodes the specified DiscoveryRecord message, length delimited. Does not implicitly {@link DiscoveryRecord.verify|verify} messages.
+     * Encodes the specified Record message, length delimited. Does not implicitly {@link Record.verify|verify} messages.
      * @function encodeDelimited
-     * @memberof DiscoveryRecord
+     * @memberof Record
      * @static
-     * @param {IDiscoveryRecord} message DiscoveryRecord message or plain object to encode
+     * @param {IRecord} message Record message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
-    DiscoveryRecord.encodeDelimited = function encodeDelimited(message, writer) {
+    Record.encodeDelimited = function encodeDelimited(message, writer) {
         return this.encode(message, writer).ldelim();
     };
 
     /**
-     * Decodes a DiscoveryRecord message from the specified reader or buffer.
+     * Decodes a Record message from the specified reader or buffer.
      * @function decode
-     * @memberof DiscoveryRecord
+     * @memberof Record
      * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
      * @param {number} [length] Message length if known beforehand
-     * @returns {DiscoveryRecord} DiscoveryRecord
+     * @returns {Record} Record
      * @throws {Error} If the payload is not a reader or valid buffer
      * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
-    DiscoveryRecord.decode = function decode(reader, length) {
+    Record.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
             reader = $Reader.create(reader);
-        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.DiscoveryRecord();
+        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.Record();
         while (reader.pos < end) {
             var tag = reader.uint32();
             switch (tag >>> 3) {
@@ -123,9 +123,9 @@ $root.DiscoveryRecord = (function() {
                     break;
                 }
             case 3: {
-                    if (!(message.topics && message.topics.length))
-                        message.topics = [];
-                    message.topics.push(reader.string());
+                    if (!(message.protocols && message.protocols.length))
+                        message.protocols = [];
+                    message.protocols.push(reader.string());
                     break;
                 }
             default:
@@ -137,30 +137,30 @@ $root.DiscoveryRecord = (function() {
     };
 
     /**
-     * Decodes a DiscoveryRecord message from the specified reader or buffer, length delimited.
+     * Decodes a Record message from the specified reader or buffer, length delimited.
      * @function decodeDelimited
-     * @memberof DiscoveryRecord
+     * @memberof Record
      * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-     * @returns {DiscoveryRecord} DiscoveryRecord
+     * @returns {Record} Record
      * @throws {Error} If the payload is not a reader or valid buffer
      * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
-    DiscoveryRecord.decodeDelimited = function decodeDelimited(reader) {
+    Record.decodeDelimited = function decodeDelimited(reader) {
         if (!(reader instanceof $Reader))
             reader = new $Reader(reader);
         return this.decode(reader, reader.uint32());
     };
 
     /**
-     * Verifies a DiscoveryRecord message.
+     * Verifies a Record message.
      * @function verify
-     * @memberof DiscoveryRecord
+     * @memberof Record
      * @static
      * @param {Object.<string,*>} message Plain object to verify
      * @returns {string|null} `null` if valid, otherwise the reason why it is not
      */
-    DiscoveryRecord.verify = function verify(message) {
+    Record.verify = function verify(message) {
         if (typeof message !== "object" || message === null)
             return "object expected";
         if (message.addrs != null && message.hasOwnProperty("addrs")) {
@@ -170,31 +170,31 @@ $root.DiscoveryRecord = (function() {
                 if (!(message.addrs[i] && typeof message.addrs[i].length === "number" || $util.isString(message.addrs[i])))
                     return "addrs: buffer[] expected";
         }
-        if (message.topics != null && message.hasOwnProperty("topics")) {
-            if (!Array.isArray(message.topics))
-                return "topics: array expected";
-            for (var i = 0; i < message.topics.length; ++i)
-                if (!$util.isString(message.topics[i]))
-                    return "topics: string[] expected";
+        if (message.protocols != null && message.hasOwnProperty("protocols")) {
+            if (!Array.isArray(message.protocols))
+                return "protocols: array expected";
+            for (var i = 0; i < message.protocols.length; ++i)
+                if (!$util.isString(message.protocols[i]))
+                    return "protocols: string[] expected";
         }
         return null;
     };
 
     /**
-     * Creates a DiscoveryRecord message from a plain object. Also converts values to their respective internal types.
+     * Creates a Record message from a plain object. Also converts values to their respective internal types.
      * @function fromObject
-     * @memberof DiscoveryRecord
+     * @memberof Record
      * @static
      * @param {Object.<string,*>} object Plain object
-     * @returns {DiscoveryRecord} DiscoveryRecord
+     * @returns {Record} Record
      */
-    DiscoveryRecord.fromObject = function fromObject(object) {
-        if (object instanceof $root.DiscoveryRecord)
+    Record.fromObject = function fromObject(object) {
+        if (object instanceof $root.Record)
             return object;
-        var message = new $root.DiscoveryRecord();
+        var message = new $root.Record();
         if (object.addrs) {
             if (!Array.isArray(object.addrs))
-                throw TypeError(".DiscoveryRecord.addrs: array expected");
+                throw TypeError(".Record.addrs: array expected");
             message.addrs = [];
             for (var i = 0; i < object.addrs.length; ++i)
                 if (typeof object.addrs[i] === "string")
@@ -202,98 +202,98 @@ $root.DiscoveryRecord = (function() {
                 else if (object.addrs[i].length >= 0)
                     message.addrs[i] = object.addrs[i];
         }
-        if (object.topics) {
-            if (!Array.isArray(object.topics))
-                throw TypeError(".DiscoveryRecord.topics: array expected");
-            message.topics = [];
-            for (var i = 0; i < object.topics.length; ++i)
-                message.topics[i] = String(object.topics[i]);
+        if (object.protocols) {
+            if (!Array.isArray(object.protocols))
+                throw TypeError(".Record.protocols: array expected");
+            message.protocols = [];
+            for (var i = 0; i < object.protocols.length; ++i)
+                message.protocols[i] = String(object.protocols[i]);
         }
         return message;
     };
 
     /**
-     * Creates a plain object from a DiscoveryRecord message. Also converts values to other types if specified.
+     * Creates a plain object from a Record message. Also converts values to other types if specified.
      * @function toObject
-     * @memberof DiscoveryRecord
+     * @memberof Record
      * @static
-     * @param {DiscoveryRecord} message DiscoveryRecord
+     * @param {Record} message Record
      * @param {$protobuf.IConversionOptions} [options] Conversion options
      * @returns {Object.<string,*>} Plain object
      */
-    DiscoveryRecord.toObject = function toObject(message, options) {
+    Record.toObject = function toObject(message, options) {
         if (!options)
             options = {};
         var object = {};
         if (options.arrays || options.defaults) {
             object.addrs = [];
-            object.topics = [];
+            object.protocols = [];
         }
         if (message.addrs && message.addrs.length) {
             object.addrs = [];
             for (var j = 0; j < message.addrs.length; ++j)
                 object.addrs[j] = options.bytes === String ? $util.base64.encode(message.addrs[j], 0, message.addrs[j].length) : options.bytes === Array ? Array.prototype.slice.call(message.addrs[j]) : message.addrs[j];
         }
-        if (message.topics && message.topics.length) {
-            object.topics = [];
-            for (var j = 0; j < message.topics.length; ++j)
-                object.topics[j] = message.topics[j];
+        if (message.protocols && message.protocols.length) {
+            object.protocols = [];
+            for (var j = 0; j < message.protocols.length; ++j)
+                object.protocols[j] = message.protocols[j];
         }
         return object;
     };
 
     /**
-     * Converts this DiscoveryRecord to JSON.
+     * Converts this Record to JSON.
      * @function toJSON
-     * @memberof DiscoveryRecord
+     * @memberof Record
      * @instance
      * @returns {Object.<string,*>} JSON object
      */
-    DiscoveryRecord.prototype.toJSON = function toJSON() {
+    Record.prototype.toJSON = function toJSON() {
         return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
     };
 
     /**
-     * Gets the default type url for DiscoveryRecord
+     * Gets the default type url for Record
      * @function getTypeUrl
-     * @memberof DiscoveryRecord
+     * @memberof Record
      * @static
      * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
      * @returns {string} The default type url
      */
-    DiscoveryRecord.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+    Record.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
         if (typeUrlPrefix === undefined) {
             typeUrlPrefix = "type.googleapis.com";
         }
-        return typeUrlPrefix + "/DiscoveryRecord";
+        return typeUrlPrefix + "/Record";
     };
 
-    return DiscoveryRecord;
+    return Record;
 })();
 
-$root.SignedDiscoveryRecord = (function() {
+$root.SignedRecord = (function() {
 
     /**
-     * Properties of a SignedDiscoveryRecord.
-     * @exports ISignedDiscoveryRecord
-     * @interface ISignedDiscoveryRecord
-     * @property {Uint8Array|null} [from] SignedDiscoveryRecord from
-     * @property {Uint8Array|null} [data] SignedDiscoveryRecord data
-     * @property {Uint8Array|null} [seqno] SignedDiscoveryRecord seqno
-     * @property {string|null} [topic] SignedDiscoveryRecord topic
-     * @property {Uint8Array|null} [signature] SignedDiscoveryRecord signature
-     * @property {Uint8Array|null} [key] SignedDiscoveryRecord key
+     * Properties of a SignedRecord.
+     * @exports ISignedRecord
+     * @interface ISignedRecord
+     * @property {Uint8Array|null} [from] SignedRecord from
+     * @property {Uint8Array|null} [data] SignedRecord data
+     * @property {Uint8Array|null} [seqno] SignedRecord seqno
+     * @property {string|null} [topic] SignedRecord topic
+     * @property {Uint8Array|null} [signature] SignedRecord signature
+     * @property {Uint8Array|null} [key] SignedRecord key
      */
 
     /**
-     * Constructs a new SignedDiscoveryRecord.
-     * @exports SignedDiscoveryRecord
-     * @classdesc Represents a SignedDiscoveryRecord.
-     * @implements ISignedDiscoveryRecord
+     * Constructs a new SignedRecord.
+     * @exports SignedRecord
+     * @classdesc Represents a SignedRecord.
+     * @implements ISignedRecord
      * @constructor
-     * @param {ISignedDiscoveryRecord=} [properties] Properties to set
+     * @param {ISignedRecord=} [properties] Properties to set
      */
-    function SignedDiscoveryRecord(properties) {
+    function SignedRecord(properties) {
         if (properties)
             for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
@@ -301,75 +301,75 @@ $root.SignedDiscoveryRecord = (function() {
     }
 
     /**
-     * SignedDiscoveryRecord from.
+     * SignedRecord from.
      * @member {Uint8Array} from
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @instance
      */
-    SignedDiscoveryRecord.prototype.from = $util.newBuffer([]);
+    SignedRecord.prototype.from = $util.newBuffer([]);
 
     /**
-     * SignedDiscoveryRecord data.
+     * SignedRecord data.
      * @member {Uint8Array} data
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @instance
      */
-    SignedDiscoveryRecord.prototype.data = $util.newBuffer([]);
+    SignedRecord.prototype.data = $util.newBuffer([]);
 
     /**
-     * SignedDiscoveryRecord seqno.
+     * SignedRecord seqno.
      * @member {Uint8Array} seqno
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @instance
      */
-    SignedDiscoveryRecord.prototype.seqno = $util.newBuffer([]);
+    SignedRecord.prototype.seqno = $util.newBuffer([]);
 
     /**
-     * SignedDiscoveryRecord topic.
+     * SignedRecord topic.
      * @member {string} topic
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @instance
      */
-    SignedDiscoveryRecord.prototype.topic = "";
+    SignedRecord.prototype.topic = "";
 
     /**
-     * SignedDiscoveryRecord signature.
+     * SignedRecord signature.
      * @member {Uint8Array} signature
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @instance
      */
-    SignedDiscoveryRecord.prototype.signature = $util.newBuffer([]);
+    SignedRecord.prototype.signature = $util.newBuffer([]);
 
     /**
-     * SignedDiscoveryRecord key.
+     * SignedRecord key.
      * @member {Uint8Array} key
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @instance
      */
-    SignedDiscoveryRecord.prototype.key = $util.newBuffer([]);
+    SignedRecord.prototype.key = $util.newBuffer([]);
 
     /**
-     * Creates a new SignedDiscoveryRecord instance using the specified properties.
+     * Creates a new SignedRecord instance using the specified properties.
      * @function create
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @static
-     * @param {ISignedDiscoveryRecord=} [properties] Properties to set
-     * @returns {SignedDiscoveryRecord} SignedDiscoveryRecord instance
+     * @param {ISignedRecord=} [properties] Properties to set
+     * @returns {SignedRecord} SignedRecord instance
      */
-    SignedDiscoveryRecord.create = function create(properties) {
-        return new SignedDiscoveryRecord(properties);
+    SignedRecord.create = function create(properties) {
+        return new SignedRecord(properties);
     };
 
     /**
-     * Encodes the specified SignedDiscoveryRecord message. Does not implicitly {@link SignedDiscoveryRecord.verify|verify} messages.
+     * Encodes the specified SignedRecord message. Does not implicitly {@link SignedRecord.verify|verify} messages.
      * @function encode
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @static
-     * @param {ISignedDiscoveryRecord} message SignedDiscoveryRecord message or plain object to encode
+     * @param {ISignedRecord} message SignedRecord message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
-    SignedDiscoveryRecord.encode = function encode(message, writer) {
+    SignedRecord.encode = function encode(message, writer) {
         if (!writer)
             writer = $Writer.create();
         if (message.from != null && Object.hasOwnProperty.call(message, "from"))
@@ -388,33 +388,33 @@ $root.SignedDiscoveryRecord = (function() {
     };
 
     /**
-     * Encodes the specified SignedDiscoveryRecord message, length delimited. Does not implicitly {@link SignedDiscoveryRecord.verify|verify} messages.
+     * Encodes the specified SignedRecord message, length delimited. Does not implicitly {@link SignedRecord.verify|verify} messages.
      * @function encodeDelimited
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @static
-     * @param {ISignedDiscoveryRecord} message SignedDiscoveryRecord message or plain object to encode
+     * @param {ISignedRecord} message SignedRecord message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
-    SignedDiscoveryRecord.encodeDelimited = function encodeDelimited(message, writer) {
+    SignedRecord.encodeDelimited = function encodeDelimited(message, writer) {
         return this.encode(message, writer).ldelim();
     };
 
     /**
-     * Decodes a SignedDiscoveryRecord message from the specified reader or buffer.
+     * Decodes a SignedRecord message from the specified reader or buffer.
      * @function decode
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
      * @param {number} [length] Message length if known beforehand
-     * @returns {SignedDiscoveryRecord} SignedDiscoveryRecord
+     * @returns {SignedRecord} SignedRecord
      * @throws {Error} If the payload is not a reader or valid buffer
      * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
-    SignedDiscoveryRecord.decode = function decode(reader, length) {
+    SignedRecord.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
             reader = $Reader.create(reader);
-        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.SignedDiscoveryRecord();
+        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.SignedRecord();
         while (reader.pos < end) {
             var tag = reader.uint32();
             switch (tag >>> 3) {
@@ -451,30 +451,30 @@ $root.SignedDiscoveryRecord = (function() {
     };
 
     /**
-     * Decodes a SignedDiscoveryRecord message from the specified reader or buffer, length delimited.
+     * Decodes a SignedRecord message from the specified reader or buffer, length delimited.
      * @function decodeDelimited
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-     * @returns {SignedDiscoveryRecord} SignedDiscoveryRecord
+     * @returns {SignedRecord} SignedRecord
      * @throws {Error} If the payload is not a reader or valid buffer
      * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
-    SignedDiscoveryRecord.decodeDelimited = function decodeDelimited(reader) {
+    SignedRecord.decodeDelimited = function decodeDelimited(reader) {
         if (!(reader instanceof $Reader))
             reader = new $Reader(reader);
         return this.decode(reader, reader.uint32());
     };
 
     /**
-     * Verifies a SignedDiscoveryRecord message.
+     * Verifies a SignedRecord message.
      * @function verify
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @static
      * @param {Object.<string,*>} message Plain object to verify
      * @returns {string|null} `null` if valid, otherwise the reason why it is not
      */
-    SignedDiscoveryRecord.verify = function verify(message) {
+    SignedRecord.verify = function verify(message) {
         if (typeof message !== "object" || message === null)
             return "object expected";
         if (message.from != null && message.hasOwnProperty("from"))
@@ -499,17 +499,17 @@ $root.SignedDiscoveryRecord = (function() {
     };
 
     /**
-     * Creates a SignedDiscoveryRecord message from a plain object. Also converts values to their respective internal types.
+     * Creates a SignedRecord message from a plain object. Also converts values to their respective internal types.
      * @function fromObject
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @static
      * @param {Object.<string,*>} object Plain object
-     * @returns {SignedDiscoveryRecord} SignedDiscoveryRecord
+     * @returns {SignedRecord} SignedRecord
      */
-    SignedDiscoveryRecord.fromObject = function fromObject(object) {
-        if (object instanceof $root.SignedDiscoveryRecord)
+    SignedRecord.fromObject = function fromObject(object) {
+        if (object instanceof $root.SignedRecord)
             return object;
-        var message = new $root.SignedDiscoveryRecord();
+        var message = new $root.SignedRecord();
         if (object.from != null)
             if (typeof object.from === "string")
                 $util.base64.decode(object.from, message.from = $util.newBuffer($util.base64.length(object.from)), 0);
@@ -541,15 +541,15 @@ $root.SignedDiscoveryRecord = (function() {
     };
 
     /**
-     * Creates a plain object from a SignedDiscoveryRecord message. Also converts values to other types if specified.
+     * Creates a plain object from a SignedRecord message. Also converts values to other types if specified.
      * @function toObject
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @static
-     * @param {SignedDiscoveryRecord} message SignedDiscoveryRecord
+     * @param {SignedRecord} message SignedRecord
      * @param {$protobuf.IConversionOptions} [options] Conversion options
      * @returns {Object.<string,*>} Plain object
      */
-    SignedDiscoveryRecord.toObject = function toObject(message, options) {
+    SignedRecord.toObject = function toObject(message, options) {
         if (!options)
             options = {};
         var object = {};
@@ -607,53 +607,53 @@ $root.SignedDiscoveryRecord = (function() {
     };
 
     /**
-     * Converts this SignedDiscoveryRecord to JSON.
+     * Converts this SignedRecord to JSON.
      * @function toJSON
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @instance
      * @returns {Object.<string,*>} JSON object
      */
-    SignedDiscoveryRecord.prototype.toJSON = function toJSON() {
+    SignedRecord.prototype.toJSON = function toJSON() {
         return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
     };
 
     /**
-     * Gets the default type url for SignedDiscoveryRecord
+     * Gets the default type url for SignedRecord
      * @function getTypeUrl
-     * @memberof SignedDiscoveryRecord
+     * @memberof SignedRecord
      * @static
      * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
      * @returns {string} The default type url
      */
-    SignedDiscoveryRecord.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+    SignedRecord.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
         if (typeUrlPrefix === undefined) {
             typeUrlPrefix = "type.googleapis.com";
         }
-        return typeUrlPrefix + "/SignedDiscoveryRecord";
+        return typeUrlPrefix + "/SignedRecord";
     };
 
-    return SignedDiscoveryRecord;
+    return SignedRecord;
 })();
 
-$root.FetchPeersResponse = (function() {
+$root.QueryRequest = (function() {
 
     /**
-     * Properties of a FetchPeersResponse.
-     * @exports IFetchPeersResponse
-     * @interface IFetchPeersResponse
-     * @property {Array.<ISignedDiscoveryRecord>|null} [records] FetchPeersResponse records
+     * Properties of a QueryRequest.
+     * @exports IQueryRequest
+     * @interface IQueryRequest
+     * @property {string|null} [protocol] QueryRequest protocol
+     * @property {number|null} [limit] QueryRequest limit
      */
 
     /**
-     * Constructs a new FetchPeersResponse.
-     * @exports FetchPeersResponse
-     * @classdesc Represents a FetchPeersResponse.
-     * @implements IFetchPeersResponse
+     * Constructs a new QueryRequest.
+     * @exports QueryRequest
+     * @classdesc Represents a QueryRequest.
+     * @implements IQueryRequest
      * @constructor
-     * @param {IFetchPeersResponse=} [properties] Properties to set
+     * @param {IQueryRequest=} [properties] Properties to set
      */
-    function FetchPeersResponse(properties) {
-        this.records = [];
+    function QueryRequest(properties) {
         if (properties)
             for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
@@ -661,78 +661,89 @@ $root.FetchPeersResponse = (function() {
     }
 
     /**
-     * FetchPeersResponse records.
-     * @member {Array.<ISignedDiscoveryRecord>} records
-     * @memberof FetchPeersResponse
+     * QueryRequest protocol.
+     * @member {string} protocol
+     * @memberof QueryRequest
      * @instance
      */
-    FetchPeersResponse.prototype.records = $util.emptyArray;
+    QueryRequest.prototype.protocol = "";
 
     /**
-     * Creates a new FetchPeersResponse instance using the specified properties.
-     * @function create
-     * @memberof FetchPeersResponse
-     * @static
-     * @param {IFetchPeersResponse=} [properties] Properties to set
-     * @returns {FetchPeersResponse} FetchPeersResponse instance
+     * QueryRequest limit.
+     * @member {number} limit
+     * @memberof QueryRequest
+     * @instance
      */
-    FetchPeersResponse.create = function create(properties) {
-        return new FetchPeersResponse(properties);
+    QueryRequest.prototype.limit = 0;
+
+    /**
+     * Creates a new QueryRequest instance using the specified properties.
+     * @function create
+     * @memberof QueryRequest
+     * @static
+     * @param {IQueryRequest=} [properties] Properties to set
+     * @returns {QueryRequest} QueryRequest instance
+     */
+    QueryRequest.create = function create(properties) {
+        return new QueryRequest(properties);
     };
 
     /**
-     * Encodes the specified FetchPeersResponse message. Does not implicitly {@link FetchPeersResponse.verify|verify} messages.
+     * Encodes the specified QueryRequest message. Does not implicitly {@link QueryRequest.verify|verify} messages.
      * @function encode
-     * @memberof FetchPeersResponse
+     * @memberof QueryRequest
      * @static
-     * @param {IFetchPeersResponse} message FetchPeersResponse message or plain object to encode
+     * @param {IQueryRequest} message QueryRequest message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
-    FetchPeersResponse.encode = function encode(message, writer) {
+    QueryRequest.encode = function encode(message, writer) {
         if (!writer)
             writer = $Writer.create();
-        if (message.records != null && message.records.length)
-            for (var i = 0; i < message.records.length; ++i)
-                $root.SignedDiscoveryRecord.encode(message.records[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+        if (message.protocol != null && Object.hasOwnProperty.call(message, "protocol"))
+            writer.uint32(/* id 1, wireType 2 =*/10).string(message.protocol);
+        if (message.limit != null && Object.hasOwnProperty.call(message, "limit"))
+            writer.uint32(/* id 2, wireType 0 =*/16).uint32(message.limit);
         return writer;
     };
 
     /**
-     * Encodes the specified FetchPeersResponse message, length delimited. Does not implicitly {@link FetchPeersResponse.verify|verify} messages.
+     * Encodes the specified QueryRequest message, length delimited. Does not implicitly {@link QueryRequest.verify|verify} messages.
      * @function encodeDelimited
-     * @memberof FetchPeersResponse
+     * @memberof QueryRequest
      * @static
-     * @param {IFetchPeersResponse} message FetchPeersResponse message or plain object to encode
+     * @param {IQueryRequest} message QueryRequest message or plain object to encode
      * @param {$protobuf.Writer} [writer] Writer to encode to
      * @returns {$protobuf.Writer} Writer
      */
-    FetchPeersResponse.encodeDelimited = function encodeDelimited(message, writer) {
+    QueryRequest.encodeDelimited = function encodeDelimited(message, writer) {
         return this.encode(message, writer).ldelim();
     };
 
     /**
-     * Decodes a FetchPeersResponse message from the specified reader or buffer.
+     * Decodes a QueryRequest message from the specified reader or buffer.
      * @function decode
-     * @memberof FetchPeersResponse
+     * @memberof QueryRequest
      * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
      * @param {number} [length] Message length if known beforehand
-     * @returns {FetchPeersResponse} FetchPeersResponse
+     * @returns {QueryRequest} QueryRequest
      * @throws {Error} If the payload is not a reader or valid buffer
      * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
-    FetchPeersResponse.decode = function decode(reader, length) {
+    QueryRequest.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
             reader = $Reader.create(reader);
-        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.FetchPeersResponse();
+        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.QueryRequest();
         while (reader.pos < end) {
             var tag = reader.uint32();
             switch (tag >>> 3) {
             case 1: {
-                    if (!(message.records && message.records.length))
-                        message.records = [];
-                    message.records.push($root.SignedDiscoveryRecord.decode(reader, reader.uint32()));
+                    message.protocol = reader.string();
+                    break;
+                }
+            case 2: {
+                    message.limit = reader.uint32();
                     break;
                 }
             default:
@@ -744,37 +755,253 @@ $root.FetchPeersResponse = (function() {
     };
 
     /**
-     * Decodes a FetchPeersResponse message from the specified reader or buffer, length delimited.
+     * Decodes a QueryRequest message from the specified reader or buffer, length delimited.
      * @function decodeDelimited
-     * @memberof FetchPeersResponse
+     * @memberof QueryRequest
      * @static
      * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-     * @returns {FetchPeersResponse} FetchPeersResponse
+     * @returns {QueryRequest} QueryRequest
      * @throws {Error} If the payload is not a reader or valid buffer
      * @throws {$protobuf.util.ProtocolError} If required fields are missing
      */
-    FetchPeersResponse.decodeDelimited = function decodeDelimited(reader) {
+    QueryRequest.decodeDelimited = function decodeDelimited(reader) {
         if (!(reader instanceof $Reader))
             reader = new $Reader(reader);
         return this.decode(reader, reader.uint32());
     };
 
     /**
-     * Verifies a FetchPeersResponse message.
+     * Verifies a QueryRequest message.
      * @function verify
-     * @memberof FetchPeersResponse
+     * @memberof QueryRequest
      * @static
      * @param {Object.<string,*>} message Plain object to verify
      * @returns {string|null} `null` if valid, otherwise the reason why it is not
      */
-    FetchPeersResponse.verify = function verify(message) {
+    QueryRequest.verify = function verify(message) {
+        if (typeof message !== "object" || message === null)
+            return "object expected";
+        if (message.protocol != null && message.hasOwnProperty("protocol"))
+            if (!$util.isString(message.protocol))
+                return "protocol: string expected";
+        if (message.limit != null && message.hasOwnProperty("limit"))
+            if (!$util.isInteger(message.limit))
+                return "limit: integer expected";
+        return null;
+    };
+
+    /**
+     * Creates a QueryRequest message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof QueryRequest
+     * @static
+     * @param {Object.<string,*>} object Plain object
+     * @returns {QueryRequest} QueryRequest
+     */
+    QueryRequest.fromObject = function fromObject(object) {
+        if (object instanceof $root.QueryRequest)
+            return object;
+        var message = new $root.QueryRequest();
+        if (object.protocol != null)
+            message.protocol = String(object.protocol);
+        if (object.limit != null)
+            message.limit = object.limit >>> 0;
+        return message;
+    };
+
+    /**
+     * Creates a plain object from a QueryRequest message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof QueryRequest
+     * @static
+     * @param {QueryRequest} message QueryRequest
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
+     * @returns {Object.<string,*>} Plain object
+     */
+    QueryRequest.toObject = function toObject(message, options) {
+        if (!options)
+            options = {};
+        var object = {};
+        if (options.defaults) {
+            object.protocol = "";
+            object.limit = 0;
+        }
+        if (message.protocol != null && message.hasOwnProperty("protocol"))
+            object.protocol = message.protocol;
+        if (message.limit != null && message.hasOwnProperty("limit"))
+            object.limit = message.limit;
+        return object;
+    };
+
+    /**
+     * Converts this QueryRequest to JSON.
+     * @function toJSON
+     * @memberof QueryRequest
+     * @instance
+     * @returns {Object.<string,*>} JSON object
+     */
+    QueryRequest.prototype.toJSON = function toJSON() {
+        return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+    };
+
+    /**
+     * Gets the default type url for QueryRequest
+     * @function getTypeUrl
+     * @memberof QueryRequest
+     * @static
+     * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns {string} The default type url
+     */
+    QueryRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+        if (typeUrlPrefix === undefined) {
+            typeUrlPrefix = "type.googleapis.com";
+        }
+        return typeUrlPrefix + "/QueryRequest";
+    };
+
+    return QueryRequest;
+})();
+
+$root.QueryResponse = (function() {
+
+    /**
+     * Properties of a QueryResponse.
+     * @exports IQueryResponse
+     * @interface IQueryResponse
+     * @property {Array.<ISignedRecord>|null} [records] QueryResponse records
+     */
+
+    /**
+     * Constructs a new QueryResponse.
+     * @exports QueryResponse
+     * @classdesc Represents a QueryResponse.
+     * @implements IQueryResponse
+     * @constructor
+     * @param {IQueryResponse=} [properties] Properties to set
+     */
+    function QueryResponse(properties) {
+        this.records = [];
+        if (properties)
+            for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                if (properties[keys[i]] != null)
+                    this[keys[i]] = properties[keys[i]];
+    }
+
+    /**
+     * QueryResponse records.
+     * @member {Array.<ISignedRecord>} records
+     * @memberof QueryResponse
+     * @instance
+     */
+    QueryResponse.prototype.records = $util.emptyArray;
+
+    /**
+     * Creates a new QueryResponse instance using the specified properties.
+     * @function create
+     * @memberof QueryResponse
+     * @static
+     * @param {IQueryResponse=} [properties] Properties to set
+     * @returns {QueryResponse} QueryResponse instance
+     */
+    QueryResponse.create = function create(properties) {
+        return new QueryResponse(properties);
+    };
+
+    /**
+     * Encodes the specified QueryResponse message. Does not implicitly {@link QueryResponse.verify|verify} messages.
+     * @function encode
+     * @memberof QueryResponse
+     * @static
+     * @param {IQueryResponse} message QueryResponse message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    QueryResponse.encode = function encode(message, writer) {
+        if (!writer)
+            writer = $Writer.create();
+        if (message.records != null && message.records.length)
+            for (var i = 0; i < message.records.length; ++i)
+                $root.SignedRecord.encode(message.records[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+        return writer;
+    };
+
+    /**
+     * Encodes the specified QueryResponse message, length delimited. Does not implicitly {@link QueryResponse.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof QueryResponse
+     * @static
+     * @param {IQueryResponse} message QueryResponse message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    QueryResponse.encodeDelimited = function encodeDelimited(message, writer) {
+        return this.encode(message, writer).ldelim();
+    };
+
+    /**
+     * Decodes a QueryResponse message from the specified reader or buffer.
+     * @function decode
+     * @memberof QueryResponse
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @param {number} [length] Message length if known beforehand
+     * @returns {QueryResponse} QueryResponse
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    QueryResponse.decode = function decode(reader, length) {
+        if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.QueryResponse();
+        while (reader.pos < end) {
+            var tag = reader.uint32();
+            switch (tag >>> 3) {
+            case 1: {
+                    if (!(message.records && message.records.length))
+                        message.records = [];
+                    message.records.push($root.SignedRecord.decode(reader, reader.uint32()));
+                    break;
+                }
+            default:
+                reader.skipType(tag & 7);
+                break;
+            }
+        }
+        return message;
+    };
+
+    /**
+     * Decodes a QueryResponse message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof QueryResponse
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @returns {QueryResponse} QueryResponse
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    QueryResponse.decodeDelimited = function decodeDelimited(reader) {
+        if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+        return this.decode(reader, reader.uint32());
+    };
+
+    /**
+     * Verifies a QueryResponse message.
+     * @function verify
+     * @memberof QueryResponse
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
+     */
+    QueryResponse.verify = function verify(message) {
         if (typeof message !== "object" || message === null)
             return "object expected";
         if (message.records != null && message.hasOwnProperty("records")) {
             if (!Array.isArray(message.records))
                 return "records: array expected";
             for (var i = 0; i < message.records.length; ++i) {
-                var error = $root.SignedDiscoveryRecord.verify(message.records[i]);
+                var error = $root.SignedRecord.verify(message.records[i]);
                 if (error)
                     return "records." + error;
             }
@@ -783,40 +1010,40 @@ $root.FetchPeersResponse = (function() {
     };
 
     /**
-     * Creates a FetchPeersResponse message from a plain object. Also converts values to their respective internal types.
+     * Creates a QueryResponse message from a plain object. Also converts values to their respective internal types.
      * @function fromObject
-     * @memberof FetchPeersResponse
+     * @memberof QueryResponse
      * @static
      * @param {Object.<string,*>} object Plain object
-     * @returns {FetchPeersResponse} FetchPeersResponse
+     * @returns {QueryResponse} QueryResponse
      */
-    FetchPeersResponse.fromObject = function fromObject(object) {
-        if (object instanceof $root.FetchPeersResponse)
+    QueryResponse.fromObject = function fromObject(object) {
+        if (object instanceof $root.QueryResponse)
             return object;
-        var message = new $root.FetchPeersResponse();
+        var message = new $root.QueryResponse();
         if (object.records) {
             if (!Array.isArray(object.records))
-                throw TypeError(".FetchPeersResponse.records: array expected");
+                throw TypeError(".QueryResponse.records: array expected");
             message.records = [];
             for (var i = 0; i < object.records.length; ++i) {
                 if (typeof object.records[i] !== "object")
-                    throw TypeError(".FetchPeersResponse.records: object expected");
-                message.records[i] = $root.SignedDiscoveryRecord.fromObject(object.records[i]);
+                    throw TypeError(".QueryResponse.records: object expected");
+                message.records[i] = $root.SignedRecord.fromObject(object.records[i]);
             }
         }
         return message;
     };
 
     /**
-     * Creates a plain object from a FetchPeersResponse message. Also converts values to other types if specified.
+     * Creates a plain object from a QueryResponse message. Also converts values to other types if specified.
      * @function toObject
-     * @memberof FetchPeersResponse
+     * @memberof QueryResponse
      * @static
-     * @param {FetchPeersResponse} message FetchPeersResponse
+     * @param {QueryResponse} message QueryResponse
      * @param {$protobuf.IConversionOptions} [options] Conversion options
      * @returns {Object.<string,*>} Plain object
      */
-    FetchPeersResponse.toObject = function toObject(message, options) {
+    QueryResponse.toObject = function toObject(message, options) {
         if (!options)
             options = {};
         var object = {};
@@ -825,38 +1052,38 @@ $root.FetchPeersResponse = (function() {
         if (message.records && message.records.length) {
             object.records = [];
             for (var j = 0; j < message.records.length; ++j)
-                object.records[j] = $root.SignedDiscoveryRecord.toObject(message.records[j], options);
+                object.records[j] = $root.SignedRecord.toObject(message.records[j], options);
         }
         return object;
     };
 
     /**
-     * Converts this FetchPeersResponse to JSON.
+     * Converts this QueryResponse to JSON.
      * @function toJSON
-     * @memberof FetchPeersResponse
+     * @memberof QueryResponse
      * @instance
      * @returns {Object.<string,*>} JSON object
      */
-    FetchPeersResponse.prototype.toJSON = function toJSON() {
+    QueryResponse.prototype.toJSON = function toJSON() {
         return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
     };
 
     /**
-     * Gets the default type url for FetchPeersResponse
+     * Gets the default type url for QueryResponse
      * @function getTypeUrl
-     * @memberof FetchPeersResponse
+     * @memberof QueryResponse
      * @static
      * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
      * @returns {string} The default type url
      */
-    FetchPeersResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+    QueryResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
         if (typeUrlPrefix === undefined) {
             typeUrlPrefix = "type.googleapis.com";
         }
-        return typeUrlPrefix + "/FetchPeersResponse";
+        return typeUrlPrefix + "/QueryResponse";
     };
 
-    return FetchPeersResponse;
+    return QueryResponse;
 })();
 
 module.exports = $root;

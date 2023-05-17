@@ -90,3 +90,29 @@ export async function getPeerId(config: {
 		return await createFromProtobuf(privateKeyBytes)
 	}
 }
+
+export type Entry = { key: Uint8Array; value: Uint8Array }
+
+export function encodeEntry({ key, value }: Entry): Uint8Array {
+	const buffer = new ArrayBuffer(4 + key.length + 4 + value.length)
+	const array = new Uint8Array()
+	const view = new DataView(buffer)
+	view.setUint32(0, key.length)
+	array.set(key, 4)
+	view.setUint32(4 + key.length, value.length)
+	array.set(value, 4 + key.length + 4)
+	return array
+}
+
+export function decodeEntry(entry: Uint8Array): Entry {
+	const view = new DataView(entry.buffer, entry.byteOffset, entry.byteLength)
+	assert(entry.length >= 4, "invalid key/value entry")
+	const keyLength = view.getUint32(0)
+	assert(entry.length >= 4 + keyLength, "invalid key/value entry")
+	const key = entry.subarray(4, 4 + keyLength)
+	assert(entry.length >= 4 + keyLength + 4, "invalid key/value entry")
+	const valueLength = view.getUint32(4 + keyLength)
+	assert(entry.length === 4 + keyLength + 4 + valueLength, "invalid key/value entry")
+	const value = entry.subarray(4 + keyLength + 4, 4 + keyLength + 4 + valueLength)
+	return { key, value }
+}

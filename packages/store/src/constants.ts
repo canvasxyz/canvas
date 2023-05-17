@@ -5,13 +5,6 @@ export const hour = minute * 60
 export const MIN_CONNECTIONS = 5
 export const MAX_CONNECTIONS = 300
 
-export const FETCH_TIMEOUT = 10 * second
-
-export const DISCOVERY_TOPIC = "/canvas/v0/discovery"
-export const DISCOVERY_ANNOUNCE_DELAY = 10 * second
-export const DISCOVERY_ANNOUNCE_INTERVAL = 2 * minute
-export const DISCOVERY_ANNOUNCE_RETRY_INTERVAL = 5 * second
-
 export const DIAL_TIMEOUT = 10 * second
 export const SYNC_DELAY = 10 * second
 export const SYNC_INTERVAL = 5 * minute
@@ -26,5 +19,3 @@ export const PING_TIMEOUT = 10 * second
 
 export const DIAL_CONCURRENCY = 10
 export const DIAL_CONCURRENCY_PER_PEER = 1
-
-export const MIN_TOPIC_PEERS = 5
