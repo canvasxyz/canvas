@@ -15,7 +15,7 @@ import { peerIdFromString } from "@libp2p/peer-id"
 
 import { multiaddr } from "@multiformats/multiaddr"
 
-import { getPeerId, MemoryCache, Network, NetworkConfig, Store, testnetBootstrapList } from "@canvas-js/store"
+import { getPeerId, Network, NetworkConfig, Store, testnetBootstrapList } from "@canvas-js/store"
 import { MIN_CONNECTIONS, MAX_CONNECTIONS, PING_TIMEOUT } from "@canvas-js/store/constants"
 
 export const command = "store <path>"
@@ -187,15 +187,16 @@ export async function handler(args: Args) {
 		)
 	})
 
+	const { pubsub, ping: pingService } = network.libp2p.services
 	app.get("/p2p/peers", (req, res) => {
-		const peers = network.libp2p.pubsub.getPeers().map((peer) => peer.toString())
+		const peers = pubsub.getPeers().map((peer) => peer.toString())
 		return res.status(StatusCodes.OK).json(peers)
 	})
 
 	app.get("/p2p/subscribers", (req, res) => {
-		const topics = network.libp2p.pubsub.getTopics()
+		const topics = pubsub.getTopics()
 		const subscribers = Object.fromEntries(
-			topics.map((topic) => [topic, network.libp2p.pubsub.getSubscribers(topic).map((peer) => peer.toString())])
+			topics.map((topic) => [topic, pubsub.getSubscribers(topic).map((peer) => peer.toString())])
 		)
 		return res.status(StatusCodes.OK).json(subscribers)
 	})
@@ -208,7 +209,7 @@ export async function handler(args: Args) {
 
 		try {
 			const peerId = peerIdFromString(req.params.peerId)
-			const latency = await network.libp2p.ping(peerId, { signal })
+			const latency = await pingService.ping(peerId, { signal })
 			res.status(StatusCodes.OK).end(`Got response from ${peerId} in ${latency}ms\n`)
 		} catch (err) {
 			res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()

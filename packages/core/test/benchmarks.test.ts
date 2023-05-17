@@ -50,7 +50,7 @@ async function initializeTestCores(parentDirectory: string, ports: number[]): Pr
 
 function connect(core: Core, id: PeerId | undefined, app: string): Promise<void> {
 	return new Promise((resolve, reject) => {
-		core.libp2p?.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
+		core.libp2p?.services.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
 			if (id?.equals(peerId)) {
 				for (const { subscribe, topic } of subscriptions) {
 					if (subscribe && topic === app) {

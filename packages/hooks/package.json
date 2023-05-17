@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@canvas-js/interfaces": "v0.5.0-alpha3",
-    "@libp2p/interfaces": "^3.3.1",
+    "@libp2p/interfaces": "^3.3.2",
     "use-debounce": "^9.0.4"
   }
 }
