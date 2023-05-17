@@ -14,3 +14,7 @@ export type Room = {
 	sharedKey: string[]
 	sharedKeyHash: string
 }
+
+export type User = {
+	address: string
+}

@@ -4,18 +4,24 @@ import { UserRegistration } from "../interfaces"
 // import { NewChatModal } from "./NewChatModal"
 import { ChatSidebar } from "./ChatSidebar"
 import { Messages } from "./Messages"
+import { useEnsName } from "wagmi"
 
 export const ChatView: React.FC<{
 	user: UserRegistration
 }> = ({ user }) => {
 	// const [showUserList, setShowUserList] = React.useState<boolean>(false)
-
 	const now = new Date()
 
-	const currentUser = {
-		ens: "syntacrobat.eth",
-		address: "0x2AdC396D8092D79Db0fA8a18fa7e3451Dc1dFB37",
-	}
+	const [currentUserAddress, setCurrentUserAddress] = React.useState<string | null>(null)
+
+	const users = [
+		{
+			address: "0x2AdC396D8092D79Db0fA8a18fa7e3451Dc1dFB37",
+		},
+		{
+			address: "0xBAfb51e8b95ad343Bfe79b2F7d32FCa27a74db0c",
+		},
+	]
 
 	const messages = [
 		{
@@ -139,16 +145,18 @@ export const ChatView: React.FC<{
 			created_at: new Date((now as any) - 80000),
 		},
 	]
+	const { data } = useEnsName({ address: currentUserAddress as `0x${string}` })
+	console.log(data)
 
 	return (
 		<>
 			<div className="flex flex-row h-screen overflow-hidden bg-white">
 				{/* sidebar */}
-				<ChatSidebar currentUser={currentUser} />
+				<ChatSidebar currentUserAddress={currentUserAddress} selectUser={setCurrentUserAddress} users={users} />
 				{/* main content */}
 				<div className="overflow-y-auto overflow-x-hidden relative flex flex-col grow">
 					{/* top bar? */}
-					<div className="h-16 p-3 font-bold text-lg flex items-center">{currentUser.ens}</div>
+					<div className="h-16 p-3 font-bold text-lg flex items-center">{data}</div>
 					{true ? (
 						<>
 							<Messages messages={messages} />
