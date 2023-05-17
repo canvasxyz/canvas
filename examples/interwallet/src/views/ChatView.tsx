@@ -1,13 +1,16 @@
 import React from "react"
-import ContactsIcon from "../icons/contacts.svg"
-import { IconButton } from "../IconButton"
-import { UserRegistration } from "../models"
+import { Room, UserRegistration } from "../models"
 import { NewChatModal } from "./NewChatModal"
+import { ChatSidebar } from "./ChatSidebar"
+import { Messages } from "./Messages"
 
-export const ChatView: React.FC<{ privateKey: Buffer; userRegistrations: { [key: string]: UserRegistration } }> = ({
-	privateKey,
-	userRegistrations,
-}) => {
+export const ChatView: React.FC<{
+	myAddress: string
+	privateKey: Buffer
+	userRegistrations: { [key: string]: UserRegistration }
+	rooms: { [key: string]: Room }
+	startChat: (address: string) => void
+}> = ({ startChat, myAddress, privateKey, rooms, userRegistrations }) => {
 	const [showUserList, setShowUserList] = React.useState<boolean>(false)
 
 	const now = new Date()
@@ -39,61 +42,14 @@ export const ChatView: React.FC<{ privateKey: Buffer; userRegistrations: { [key:
 		<>
 			<div className="flex flex-row h-screen overflow-hidden bg-white">
 				{/* sidebar */}
-				<div className="w-64 h-full border-solid border-gray-200 border-r flex-col flex shrink">
-					<div className="h-16 flex shrink p-3 items-center">Encrypted Chat</div>
-					<div className="h-16 flex shrink p-3 items-center">
-						<div className="flex-grow">Conversations</div>
-						<IconButton
-							onClick={async () => {
-								setShowUserList(true)
-							}}
-							icon={ContactsIcon}
-							disabled={false}
-						/>
-					</div>
-					<div className="overflow-auto">
-						<div
-							// key={`node-${note.local_id}`}
-							className={`pt-2 pb-2 pl-4 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer ${
-								true ? "bg-gray-200" : "bg-gray-50"
-							}`}
-							onClick={(e) => {
-								e.stopPropagation()
-								// select item
-							}}
-						>
-							<div className="text-sm font-bold">{currentUser.ens}</div>
-						</div>
-					</div>
-				</div>
+				<ChatSidebar currentUser={currentUser} rooms={rooms} setShowUserList={setShowUserList} />
 				{/* main content */}
 				<div className="overflow-y-auto overflow-x-hidden relative flex flex-col grow">
 					{/* top bar? */}
 					<div className="h-16 p-3 font-bold text-lg flex items-center">{currentUser.ens}</div>
 					{true ? (
 						<>
-							<div className="flex flex-col grow m-3 gap-3">
-								{messages.map((message, index) => {
-									const is_sent = message.creator_id == "1"
-									return (
-										<div key={index}>
-											<div className="flex justify-center text-gray-300">{message.created_at.toLocaleTimeString()}</div>
-											<div className={`flex ${is_sent ? "flex-row" : "flex-row-reverse"}`}>
-												<div
-													className={
-														is_sent
-															? "p-3 rounded-r-lg rounded-tl-lg bg-blue-500 text-white"
-															: "p-3 rounded-l-lg rounded-tr-lg bg-gray-200 text-black"
-													}
-												>
-													{message.content}
-												</div>
-											</div>
-										</div>
-									)
-								})}
-							</div>
-
+							<Messages messages={messages} />
 							<div className="m-3 flex flex-row">
 								<input className="h-10 w-full rounded-xl bg-gray-100 focus:outline-none pl-2"></input>
 							</div>
@@ -108,6 +64,7 @@ export const ChatView: React.FC<{ privateKey: Buffer; userRegistrations: { [key:
 					closeModal={() => {
 						setShowUserList(false)
 					}}
+					selectUser={startChat}
 					userRegistrations={userRegistrations}
 				/>
 			)}

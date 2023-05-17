@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { sha256 } from "@noble/hashes/sha256"
 
 import { ChatView } from "./views/ChatView"
@@ -13,20 +13,32 @@ import {
 } from "./cryptography"
 import { useAccount, useConnect } from "wagmi"
 
-import { UserRegistration } from "./models"
+import { Room, UserRegistration } from "./models"
 import { useStore } from "./useStore"
 
-const deserializeUserRegistration = (key: Uint8Array, value: Uint8Array) => {
-	const address = Buffer.from(key).toString("utf-8")
-	const userRegistration: UserRegistration = JSON.parse(Buffer.from(value).toString("utf-8"))
-	return { address, userRegistration }
+const useUtf8Store = <T,>(url: string, apply: (key: string, value: T) => void) => {
+	const { store } = useStore(url, async (key, value) => {
+		const keyUtf8 = Buffer.from(key).toString("utf8")
+		const valueUtf8 = JSON.parse(Buffer.from(value).toString("utf8"))
+		return apply(keyUtf8, valueUtf8)
+	})
+
+	if (store === null) {
+		return null
+	} else {
+		const insert = (key: string, value: T) => {
+			const keyUint8array = Buffer.from(key, "utf8")
+			const valueUint8array = Buffer.from(JSON.stringify(value), "utf8")
+			store.insert(keyUint8array, valueUint8array)
+		}
+
+		return { insert }
+	}
 }
 
-const serializeUserRegistration = (address: string, userRegistration: UserRegistration) => {
-	// serialize and store the user registration
-	const key = Buffer.from(address, "utf-8")
-	const value = Buffer.from(JSON.stringify(userRegistration), "utf-8")
-	return { key, value }
+const toRoomKey = (address1: string, address2: string) => {
+	const addresses = [address1, address2].sort()
+	return addresses.join("-")
 }
 
 export const App: React.FC<{}> = ({}) => {
@@ -35,21 +47,47 @@ export const App: React.FC<{}> = ({}) => {
 	const [privateKey, setPrivateKey] = useState<Buffer | null>(null)
 
 	const [userRegistrations, setUserRegistrations] = useState<{ [key: string]: UserRegistration }>({})
-	const { store: userStore } = useStore("ws://localhost:8765", async (key, value) => {
-		const { address, userRegistration } = deserializeUserRegistration(key, value)
-		setUserRegistrations((existingUserRegistrations) => ({ ...existingUserRegistrations, [address]: userRegistration }))
+
+	const userStore = useUtf8Store<UserRegistration>(
+		"ws://localhost:8765/userRegistrations",
+		async (address, userRegistration) => {
+			setUserRegistrations((existingUserRegistrations) => ({
+				...existingUserRegistrations,
+				[address]: userRegistration,
+			}))
+		}
+	)
+
+	const [rooms, setRooms] = useState<{ [key: string]: Room }>({})
+	const roomsStore = useUtf8Store<Room>("ws://localhost:8765/rooms", async (roomKey, room) => {
+		setRooms((existingRooms) => ({ ...existingRooms, [roomKey]: room }))
 	})
 
 	useEffect(() => {
 		if (privateKey !== null && address && userStore) {
 			const keyBundle = makeKeyBundle(privateKey)
 			signKeyBundle(address, keyBundle).then((signature: string) => {
-				const userRegistration: UserRegistration = { signature, payload: keyBundle }
-				const { key, value } = serializeUserRegistration(address, userRegistration)
-				userStore.insert(key, value)
+				userStore.insert(address, { signature, payload: keyBundle })
 			})
 		}
 	}, [privateKey, userStore])
+
+	const startChat = useMemo(
+		() => (otherAddress: string) => {
+			if (!roomsStore) return
+			if (!address) return
+
+			const key = toRoomKey(address, otherAddress)
+			if (!Object.keys(rooms).includes(key)) {
+				roomsStore.insert(key, {
+					members: [address, otherAddress],
+					sharedKey: [],
+					sharedKeyHash: "",
+				})
+			}
+		},
+		[address]
+	)
 
 	console.log(userRegistrations)
 
@@ -78,5 +116,13 @@ export const App: React.FC<{}> = ({}) => {
 		)
 	}
 
-	return <ChatView privateKey={privateKey} userRegistrations={userRegistrations} />
+	return (
+		<ChatView
+			myAddress={address!}
+			privateKey={privateKey}
+			rooms={rooms}
+			startChat={startChat}
+			userRegistrations={userRegistrations}
+		/>
+	)
 }
