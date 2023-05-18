@@ -1,15 +1,13 @@
-import React, { useEffect, useLayoutEffect, useState, useCallback } from "react"
+import React, { useLayoutEffect, useState, useCallback } from "react"
 
-import { getEncryptionPublicKey } from "@metamask/eth-sig-util"
 import { useAccount, useConnect } from "wagmi"
 import { keccak256, toHex } from "viem/utils"
 
 import { ChatView } from "./views/ChatView"
 import { EnterPinView } from "./views/EnterPinView"
 import { SelectWalletView } from "./views/SelectWalletView"
-
 import { makeKeyBundle, signKeyBundle, signMagicString } from "./cryptography"
-import { KeyBundle, UserRegistration } from "./interfaces"
+import { UserRegistration } from "./interfaces"
 
 const getRegistrationKey = (address: string) => `interwallet:registration:${address}`
 
@@ -66,6 +64,6 @@ export const App: React.FC<{}> = ({}) => {
 	} else if (registration === null) {
 		return <EnterPinView submitPin={handleSubmitPin} />
 	} else {
-		return <ChatView user={registration} />
+		return <ChatView address={address} user={registration} />
 	}
 }
