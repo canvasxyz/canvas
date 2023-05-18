@@ -64,6 +64,6 @@ export const App: React.FC<{}> = ({}) => {
 	} else if (registration === null) {
 		return <EnterPinView submitPin={handleSubmitPin} />
 	} else {
-		return <ChatView user={registration} />
+		return <ChatView address={address} user={registration} />
 	}
 }
