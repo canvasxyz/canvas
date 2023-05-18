@@ -14,6 +14,7 @@ export const MessagesPanel = ({ address, currentUserAddress }: { address: string
 		useLiveQuery(async () => await db.messageEvents.where({ room_id: roomKey }).sortBy("timestamp"), [roomKey]) || []
 
 	const messagesEndRef = React.useRef<HTMLDivElement>(null)
+	const messageInputRef = React.useRef<HTMLInputElement>(null)
 
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "auto" })
@@ -21,7 +22,12 @@ export const MessagesPanel = ({ address, currentUserAddress }: { address: string
 
 	return (
 		<>
-			<div className="flex flex-col grow ml-3 mr-3 gap-3 overflow-y-auto">
+			<div
+				className="flex flex-col grow ml-3 mr-3 gap-3 overflow-y-auto"
+				onClick={() => {
+					messageInputRef.current?.focus()
+				}}
+			>
 				{messageEvents.map((message, index) => {
 					const is_sent = message.sender == "1"
 
@@ -60,6 +66,7 @@ export const MessagesPanel = ({ address, currentUserAddress }: { address: string
 				}}
 			>
 				<input
+					ref={messageInputRef}
 					onChange={(e) => {
 						setMessage(e.target.value)
 					}}
