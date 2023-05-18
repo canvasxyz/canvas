@@ -1,7 +1,7 @@
 import React from "react"
 import { MessageEvent } from "../models/MessageEvent"
 
-export const Messages: React.FC<{ messages: MessageEvent[] }> = ({ messages }) => {
+export const MessageList: React.FC<{ messages: MessageEvent[] }> = ({ messages }) => {
 	return (
 		<div className="flex flex-col grow ml-3 mr-3 gap-3 overflow-y-auto">
 			{messages.map((message, index) => {

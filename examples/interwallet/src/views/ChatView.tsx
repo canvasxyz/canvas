@@ -3,7 +3,7 @@ import React, { useEffect } from "react"
 import { UserRegistration } from "../interfaces"
 // import { NewChatModal } from "./NewChatModal"
 import { ChatSidebar } from "./ChatSidebar"
-import { Messages } from "./Messages"
+import { MessageList } from "./MessageList"
 import { useEnsName } from "wagmi"
 import { db } from "../models/db"
 import { useLiveQuery } from "dexie-react-hooks"
@@ -52,7 +52,7 @@ export const ChatView: React.FC<{
 					<div className="h-16 p-3 font-bold text-lg flex items-center">{ensName}</div>
 					{currentUserAddress !== null ? (
 						<>
-							<Messages messages={messageEvents} />
+							<MessageList messages={messageEvents} />
 							{/* <div > */}
 							<form
 								className="m-3 flex flex-row"
