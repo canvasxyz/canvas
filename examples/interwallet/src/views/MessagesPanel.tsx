@@ -24,9 +24,11 @@ export const MessagesPanel = ({ address, currentUserAddress }: { address: string
 			<div className="flex flex-col grow ml-3 mr-3 gap-3 overflow-y-auto">
 				{messageEvents.map((message, index) => {
 					const is_sent = message.sender == "1"
+
+					const localeString = new Date(message.timestamp).toLocaleString()
 					return (
 						<div key={index}>
-							<div className="flex justify-center text-gray-300">{message.timestamp}</div>
+							<div className="flex justify-center text-gray-300">{localeString}</div>
 							<div className={`flex ${is_sent ? "flex-row" : "flex-row-reverse"}`}>
 								<div
 									className={
@@ -43,7 +45,6 @@ export const MessagesPanel = ({ address, currentUserAddress }: { address: string
 				})}
 				<div ref={messagesEndRef} />
 			</div>
-			{/* <div > */}
 			<form
 				className="m-3 flex flex-row"
 				onSubmit={(e) => {
