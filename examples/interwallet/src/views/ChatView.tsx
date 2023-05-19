@@ -1,39 +1,38 @@
-import React, { useEffect } from "react"
+import React, { useEffect, useMemo } from "react"
 
 import { UserRegistration } from "../interfaces"
 // import { NewChatModal } from "./NewChatModal"
-import { ChatSidebar } from "./ChatSidebar"
 import { useEnsName } from "wagmi"
+
+import { ChatSidebar } from "./ChatSidebar"
 import { MessagesPanel } from "./MessagesPanel"
 
-export const ChatView: React.FC<{
+import { rooms } from "../fixtures"
+
+export interface ChatViewProps {
 	address: string
-	user: UserRegistration
-}> = ({ address, user }) => {
-	const [currentUserAddress, setCurrentUserAddress] = React.useState<string | null>(null)
+}
 
-	const users = [
-		{
-			address: "0x2AdC396D8092D79Db0fA8a18fa7e3451Dc1dFB37",
-		},
-		{
-			address: "0xBAfb51e8b95ad343Bfe79b2F7d32FCa27a74db0c",
-		},
-	]
+export const ChatView: React.FC<{
+	userAddress: string
+	userRegistration: UserRegistration
+}> = ({ userAddress, userRegistration }) => {
+	const [roomId, setRoomId] = React.useState<`interwallet:room:${string}` | null>(null)
+	const room = useMemo(() => rooms.find(({ topic }) => topic === roomId) ?? null, [roomId])
 
-	const { data: ensName } = useEnsName({ address: currentUserAddress as `0x${string}` })
+	const { data: ensName } = useEnsName({ address: roomId as `0x${string}` })
 
 	return (
 		<>
 			<div className="flex flex-row h-screen overflow-hidden bg-white">
 				{/* sidebar */}
-				<ChatSidebar currentUserAddress={currentUserAddress} selectUser={setCurrentUserAddress} users={users} />
+				<ChatSidebar userAddress={userAddress} roomId={roomId} setRoomId={setRoomId} />
 				{/* main content */}
 				<div className="overflow-x-hidden relative flex flex-col grow">
 					{/* top bar? */}
 					<div className="h-16 p-3 font-bold text-lg flex items-center">{ensName}</div>
-					{currentUserAddress !== null ? (
-						<MessagesPanel address={address} currentUserAddress={currentUserAddress} />
+					{roomId !== null ? (
+						<MessagesPanel userAddress={roomId} roomId={roomId} />
 					) : (
 						<div className="m-auto text-3xl font-semibold text-gray-500">No chat is selected</div>
 					)}

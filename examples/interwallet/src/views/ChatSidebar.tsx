@@ -1,46 +1,64 @@
-import React from "react"
-import ContactsIcon from "../icons/contacts.svg"
-import { IconButton } from "../IconButton"
-import { User } from "../interfaces"
+import React, { useCallback } from "react"
 import { useEnsName } from "wagmi"
 
-export const ChatSidebar: React.FC<{
-	currentUserAddress: string | null
-	users: User[]
-	selectUser: (address: string) => void
-}> = ({ currentUserAddress, users, selectUser }) => {
+import { rooms } from "../fixtures"
+import type { RoomId } from "../interfaces"
+import { isAddress } from "viem"
+
+export interface ChatSizebarProps {
+	userAddress: string
+	roomId: string | null
+	setRoomId: (roomId: RoomId) => void
+}
+
+export const ChatSidebar: React.FC<ChatSizebarProps> = (props) => {
+	const handleClick = useCallback(
+		(roomId: RoomId) => {
+			if (roomId === props.roomId) {
+				return
+			} else {
+				props.setRoomId(roomId)
+			}
+		},
+		[props.roomId, props.setRoomId]
+	)
+
 	return (
 		<div className="w-64 h-full border-solid border-gray-200 border-r flex-col flex shrink">
 			<div className="h-16 flex shrink p-3 items-center">Encrypted Chat</div>
 			<div className="h-16 flex shrink p-3 items-center">
 				<div className="flex-grow">Conversations</div>
-				<IconButton
-					onClick={async () => {
-						// setShowUserList(true)
-					}}
-					icon={ContactsIcon}
-					disabled={false}
-				/>
 			</div>
 			<div className="overflow-auto">
-				{users.map((user) => {
-					const { data } = useEnsName({ address: user.address as `0x${string}` })
-					const isCurrentUser = user.address == currentUserAddress
-					return (
-						<div
-							key={user.address}
-							className={`pt-2 pb-2 pl-2 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer ${
-								isCurrentUser ? "bg-gray-200" : "bg-gray-50"
-							}`}
-							onClick={(e) => {
-								e.stopPropagation()
-								if (isCurrentUser) return
-								selectUser(user.address)
-							}}
-						>
-							<div className={`text-sm ${isCurrentUser ? "font-bold" : ""}`}>{data}</div>
-						</div>
-					)
+				{rooms.map(({ topic: roomId, members }) => {
+					const [address1, address2] = members
+					const { data: name1 } = useEnsName({ address: address1 })
+					const { data: name2 } = useEnsName({ address: address2 })
+
+					if (roomId === props.roomId) {
+						return (
+							<div
+								key={roomId}
+								className={`pt-2 pb-2 pl-2 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer bg-gray-200`}
+							>
+								<span className={`text-sm font-bold`}>{name1 ?? address1}</span>
+								<span> ~ </span>
+								<span className={`text-sm font-bold`}>{name2 ?? address2}</span>
+							</div>
+						)
+					} else {
+						return (
+							<div
+								key={roomId}
+								className={`pt-2 pb-2 pl-2 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer bg-gray-50`}
+								onClick={(e) => handleClick(roomId)}
+							>
+								<span className={`text-sm`}>{name1 ?? address1}</span>
+								<span> ~ </span>
+								<span className={`text-sm`}>{name2 ?? address2}</span>
+							</div>
+						)
+					}
 				})}
 			</div>
 		</div>

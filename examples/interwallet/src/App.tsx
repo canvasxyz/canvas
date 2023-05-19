@@ -13,33 +13,33 @@ const getRegistrationKey = (address: string) => `interwallet:registration:${addr
 
 export const App: React.FC<{}> = ({}) => {
 	const { connect, connectors } = useConnect()
-	const { address, isConnected } = useAccount()
+	const { address: userAddress, isConnected } = useAccount()
 
-	const [registration, setRegistration] = useState<UserRegistration | null>(null)
+	const [userRegistration, setUserRegistration] = useState<UserRegistration | null>(null)
 
 	useLayoutEffect(() => {
-		if (isConnected && address !== undefined && registration === null) {
-			const key = getRegistrationKey(address)
+		if (isConnected && userAddress !== undefined && userRegistration === null) {
+			const key = getRegistrationKey(userAddress)
 			const value = window.localStorage.getItem(key)
 			if (value !== null) {
 				const registration = JSON.parse(value)
 				console.log("got existing registration", registration)
-				setRegistration(registration)
+				setUserRegistration(registration)
 			}
 		}
-	}, [address, isConnected, registration])
+	}, [userAddress, isConnected, userRegistration])
 
 	const handleSubmitPin = useCallback(
 		async (pin: string) => {
-			if (address === undefined) {
+			if (userAddress === undefined) {
 				return
 			}
 
 			try {
-				const signature = await signMagicString(address, pin)
+				const signature = await signMagicString(userAddress, pin)
 				const privateKey = keccak256(signature)
 				const publicKeyBundle = makeKeyBundle(privateKey)
-				const publicKeyBundleSignature = await signKeyBundle(address, publicKeyBundle)
+				const publicKeyBundleSignature = await signKeyBundle(userAddress, publicKeyBundle)
 
 				const registration: UserRegistration = {
 					privateKey: toHex(privateKey),
@@ -48,22 +48,22 @@ export const App: React.FC<{}> = ({}) => {
 				}
 
 				console.log("setting new registration", registration)
-				const key = getRegistrationKey(address)
+				const key = getRegistrationKey(userAddress)
 				window.localStorage.setItem(key, JSON.stringify(registration))
 
-				setRegistration(registration)
+				setUserRegistration(registration)
 			} catch (err) {
 				console.error("failed to get signature", err)
 			}
 		},
-		[address]
+		[userAddress]
 	)
 
-	if (!isConnected || address === undefined) {
+	if (!isConnected || userAddress === undefined) {
 		return <SelectWalletView selectWallet={(wallet) => connect({ connector: connectors[0] })} />
-	} else if (registration === null) {
+	} else if (userRegistration === null) {
 		return <EnterPinView submitPin={handleSubmitPin} />
 	} else {
-		return <ChatView address={address} user={registration} />
+		return <ChatView userAddress={userAddress} userRegistration={userRegistration} />
 	}
 }

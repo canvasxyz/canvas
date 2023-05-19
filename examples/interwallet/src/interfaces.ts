@@ -9,6 +9,13 @@ export interface UserRegistration {
 	publicKeyBundleSignature: `0x${string}`
 }
 
+export type RoomId = `interwallet:room:${string}`
+
+export type Room = {
+	topic: RoomId
+	members: [`0x${string}`, `0x${string}`]
+}
+
 export type User = {
 	address: string
 }

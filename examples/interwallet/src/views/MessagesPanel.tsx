@@ -1,17 +1,20 @@
-import React, { useEffect, useState } from "react"
-import { db } from "../models/db"
+import React, { useCallback, useEffect, useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 
-const toRoomKey = (address1: string, address2: string) => {
-	const [a1, a2] = [address1, address2].sort()
-	return `interwallet:room:${a1}:${a2}`
+import { db } from "../models/db"
+
+export interface MessagesPanelProps {
+	userAddress: string
+	roomId: string
 }
 
-export const MessagesPanel = ({ address, currentUserAddress }: { address: string; currentUserAddress: string }) => {
-	const roomKey = toRoomKey(address, currentUserAddress as string)
+export const MessagesPanel: React.FC<MessagesPanelProps> = ({
+	roomId,
+	userAddress: currentUserAddress,
+}: MessagesPanelProps) => {
 	const [message, setMessage] = useState<string>("")
 	const messageEvents =
-		useLiveQuery(async () => await db.messageEvents.where({ room_id: roomKey }).sortBy("timestamp"), [roomKey]) || []
+		useLiveQuery(async () => await db.messageEvents.where({ room_id: roomId }).sortBy("timestamp"), [roomId]) || []
 
 	const messagesEndRef = React.useRef<HTMLDivElement>(null)
 	const messageInputRef = React.useRef<HTMLInputElement>(null)
@@ -19,6 +22,22 @@ export const MessagesPanel = ({ address, currentUserAddress }: { address: string
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "auto" })
 	}, [messageEvents])
+
+	const handleSubmit = useCallback(
+		(e: React.FormEvent<HTMLFormElement>) => {
+			e.preventDefault()
+
+			db.messageEvents.add({
+				room_id: roomId,
+				sender: currentUserAddress,
+				message: message,
+				timestamp: Date.now(),
+			})
+
+			setMessage("")
+		},
+		[roomId, currentUserAddress, message]
+	)
 
 	return (
 		<>
@@ -51,27 +70,12 @@ export const MessagesPanel = ({ address, currentUserAddress }: { address: string
 				})}
 				<div ref={messagesEndRef} />
 			</div>
-			<form
-				className="m-3 flex flex-row"
-				onSubmit={(e) => {
-					e.preventDefault()
-
-					db.messageEvents.add({
-						room_id: roomKey,
-						sender: address,
-						message: message,
-						timestamp: Date.now(),
-					})
-					setMessage("")
-				}}
-			>
+			<form className="m-3 flex flex-row" onSubmit={handleSubmit}>
 				<input
 					ref={messageInputRef}
-					onChange={(e) => {
-						setMessage(e.target.value)
-					}}
-					value={message}
 					className="h-10 w-full rounded-xl bg-gray-100 focus:outline-none pl-2"
+					value={message}
+					onChange={({ target }) => setMessage(target.value)}
 				></input>
 			</form>
 		</>
