@@ -22,12 +22,8 @@ export const ChatSidebar: React.FC<ChatSizebarProps> = (props) => {
 	)
 
 	return (
-		<div className="w-64 h-full border-solid border-gray-200 border-r flex-col flex shrink">
-			<div className="h-16 flex shrink p-3 items-center">Encrypted Chat</div>
-			<div className="h-16 flex shrink p-3 items-center">
-				<div className="flex-grow">Conversations</div>
-			</div>
-			<div className="overflow-auto">
+		<div className="h-full">
+			<div className="overflow-auto flex flex-col items-stretch">
 				{rooms.map(({ topic: roomId, members }) => {
 					const [address1, address2] = members
 					const { data: name1 } = useEnsName({ address: address1 })
@@ -35,26 +31,26 @@ export const ChatSidebar: React.FC<ChatSizebarProps> = (props) => {
 
 					if (roomId === props.roomId) {
 						return (
-							<div
+							<button
 								key={roomId}
-								className={`pt-2 pb-2 pl-2 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer bg-gray-200`}
+								className="pt-2 pb-2 pl-2 pr-4 m-2 text-left rounded hover:bg-gray-300 hover:cursor-pointer bg-gray-200"
 							>
-								<span className={`text-sm font-bold`}>{name1 ?? address1}</span>
-								<span> ~ </span>
-								<span className={`text-sm font-bold`}>{name2 ?? address2}</span>
-							</div>
+								<span className="text-sm font-bold">{name1 ?? address1}</span>
+								<span className="text-sm"> ~ </span>
+								<span className="text-sm font-bold">{name2 ?? address2}</span>
+							</button>
 						)
 					} else {
 						return (
-							<div
+							<button
 								key={roomId}
-								className={`pt-2 pb-2 pl-2 pr-4 m-2 rounded hover:bg-gray-400 hover:cursor-pointer bg-gray-50`}
+								className="pt-2 pb-2 pl-2 pr-4 m-2 text-left rounded hover:bg-gray-300 hover:cursor-pointer bg-gray-50"
 								onClick={(e) => handleClick(roomId)}
 							>
-								<span className={`text-sm`}>{name1 ?? address1}</span>
-								<span> ~ </span>
-								<span className={`text-sm`}>{name2 ?? address2}</span>
-							</div>
+								<span className="text-sm">{name1 ?? address1}</span>
+								<span className="text-sm"> ~ </span>
+								<span className="text-sm">{name2 ?? address2}</span>
+							</button>
 						)
 					}
 				})}

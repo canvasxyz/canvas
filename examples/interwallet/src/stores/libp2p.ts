@@ -54,6 +54,7 @@ async function getLibp2p(): Promise<Libp2p<ServiceMap>> {
 	const roomStoreServices = await getRoomStoreServices()
 
 	return await createLibp2p({
+		start: false,
 		peerId: peerId,
 		addresses: { listen: [], announce: [] },
 		transports: [webSockets(), circuitRelayTransport({ discoverRelays: bootstrapList.length })],

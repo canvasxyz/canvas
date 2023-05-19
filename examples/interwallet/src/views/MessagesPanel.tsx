@@ -61,16 +61,16 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 				}}
 			>
 				{messageEvents.map((message, index) => {
-					const is_sent = message.sender == "1"
+					const isSent = message.sender == userAddress
 
 					const localeString = new Date(message.timestamp).toLocaleString()
 					return (
 						<div key={index}>
 							<div className="flex justify-center text-gray-300">{localeString}</div>
-							<div className={`flex ${is_sent ? "flex-row" : "flex-row-reverse"}`}>
+							<div className={`flex ${isSent ? "flex-row" : "flex-row-reverse"}`}>
 								<div
 									className={
-										is_sent
+										isSent
 											? "p-3 rounded-r-lg rounded-tl-lg bg-blue-500 text-white"
 											: "p-3 rounded-l-lg rounded-tr-lg bg-gray-200 text-black"
 									}
