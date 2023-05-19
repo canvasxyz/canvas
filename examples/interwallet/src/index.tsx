@@ -9,6 +9,14 @@ import { config } from "./config"
 
 import { App } from "./App"
 
+import { libp2p } from "./libp2p"
+
+console.log("got libp2p!??", libp2p)
+
+{
+	;(window as any).libp2p = libp2p
+}
+
 const root = ReactDOM.createRoot(document.getElementById("root")!)
 
 root.render(
