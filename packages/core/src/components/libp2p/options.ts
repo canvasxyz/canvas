@@ -2,6 +2,9 @@ import chalk from "chalk"
 
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
+import { pingService } from "libp2p/ping"
+import { fetchService } from "libp2p/fetch"
+import { identifyService } from "libp2p/identify"
 
 import { circuitRelayTransport } from "libp2p/circuit-relay"
 import { webSockets } from "@libp2p/websockets"
@@ -21,13 +24,12 @@ import {
 	MAX_CONNECTIONS,
 	MIN_CONNECTIONS,
 	PING_TIMEOUT,
-	minute,
 } from "@canvas-js/core/constants"
 
-import type { P2PConfig } from "./types.js"
+import type { P2PConfig, ServiceMap } from "./types.js"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
-export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pOptions {
+export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pOptions<ServiceMap> {
 	const announce = config.announce ?? []
 	const listen = config.listen ?? []
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
@@ -86,32 +88,34 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 
-		dht: kadDHT({
-			protocolPrefix: "/canvas",
-			clientMode: announce.length === 0,
-			providers: { provideValidity: DHT_PROVIDE_VALIDITY, cleanupInterval: DHT_CLEANUP_INTERVAL },
-		}),
+		services: {
+			dht: kadDHT({
+				protocolPrefix: "/canvas",
+				clientMode: announce.length === 0,
+				providers: { provideValidity: DHT_PROVIDE_VALIDITY, cleanupInterval: DHT_CLEANUP_INTERVAL },
+			}),
 
-		pubsub: gossipsub({
-			emitSelf: false,
-			fallbackToFloodsub: false,
-			allowPublishToZeroPeers: true,
-			globalSignaturePolicy: "StrictSign",
-		}),
+			pubsub: gossipsub({
+				emitSelf: false,
+				fallbackToFloodsub: false,
+				allowPublishToZeroPeers: true,
+				globalSignaturePolicy: "StrictSign",
+			}),
 
-		identify: {
-			protocolPrefix: "canvas",
-		},
+			identifyService: identifyService({
+				protocolPrefix: "canvas",
+			}),
 
-		fetch: {
-			protocolPrefix: "canvas",
-		},
+			fetchService: fetchService({
+				protocolPrefix: "canvas",
+			}),
 
-		ping: {
-			protocolPrefix: "canvas",
-			maxInboundStreams: 32,
-			maxOutboundStreams: 32,
-			timeout: PING_TIMEOUT,
+			pingService: pingService({
+				protocolPrefix: "canvas",
+				maxInboundStreams: 32,
+				maxOutboundStreams: 32,
+				timeout: PING_TIMEOUT,
+			}),
 		},
 	}
 }

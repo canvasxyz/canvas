@@ -30,7 +30,7 @@ import {
 	ReadOnlyTransaction,
 	ReadWriteTransaction,
 } from "@canvas-js/core/components/messageStore"
-import { getPeerId, getLibp2pOptions, P2PConfig } from "@canvas-js/core/components/libp2p"
+import { getPeerId, getLibp2pOptions, P2PConfig, ServiceMap } from "@canvas-js/core/components/libp2p"
 import { DiscoveryRecord, actionType, discoveryRecord, messageType } from "@canvas-js/core/codecs"
 import {
 	toHex,
@@ -83,7 +83,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		const modelStore = await openModelStore(directory, vm, { verbose })
 		const messageStore = await openMessageStore(app, directory, vm.sources, { verbose })
 
-		let libp2p: Libp2p | null = null
+		let libp2p: Libp2p<ServiceMap> | null = null
 		if (!offline) {
 			const peerId = await getPeerId(directory)
 			console.log("[canvas-core]", chalk.bold(`Using PeerId ${peerId}`))
@@ -122,7 +122,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		if (libp2p !== null && core.sources !== null) {
 			await libp2p.start()
 
-			libp2p.pubsub.subscribe(PUBSUB_DISCOVERY_TOPIC)
+			libp2p.services.pubsub.subscribe(PUBSUB_DISCOVERY_TOPIC)
 
 			await Promise.all(Object.values(core.sources).map((source) => source.start()))
 		}
@@ -141,7 +141,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		public readonly vm: VM,
 		public readonly modelStore: ModelStore,
 		public readonly messageStore: MessageStore,
-		public readonly libp2p: Libp2p | null,
+		public readonly libp2p: Libp2p<ServiceMap> | null,
 		public readonly chains: ChainImplementation<unknown, unknown>[],
 		public readonly options: CoreOptions
 	) {
@@ -153,20 +153,20 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 		})
 
 		if (libp2p !== null) {
-			libp2p.addEventListener("peer:connect", ({ detail: { id, remotePeer, remoteAddr } }) => {
+			libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
 				if (options.verbose) {
-					console.log(chalk.gray(`[canvas-core] Opened connection ${id} to ${remotePeer} at ${remoteAddr}`))
+					console.log(chalk.gray(`[canvas-core] Opened connection to ${peerId}`))
 				}
 
-				this.dispatchEvent(new CustomEvent("connect", { detail: { peer: remotePeer.toString() } }))
+				this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
 			})
 
-			libp2p.addEventListener("peer:disconnect", ({ detail: { id, remotePeer } }) => {
+			libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
 				if (options.verbose) {
-					console.log(chalk.gray(`[canvas-core] Closed connection ${id} to ${remotePeer}`))
+					console.log(chalk.gray(`[canvas-core] Closed connection to ${peerId}`))
 				}
 
-				this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: remotePeer.toString() } }))
+				this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 			})
 
 			this.sources = {}
@@ -188,7 +188,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 				this.sources[uri] = source
 			}
 
-			libp2p.pubsub.addEventListener("message", ({ detail: msg }) => {
+			libp2p.services.pubsub.addEventListener("message", ({ detail: msg }) => {
 				if (msg.type !== "signed") {
 					return
 				}
@@ -476,7 +476,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 
 						const data = new TextEncoder().encode(JSON.stringify(record))
 
-						const { recipients } = await libp2p.pubsub.publish(PUBSUB_DISCOVERY_TOPIC, data)
+						const { recipients } = await libp2p.services.pubsub.publish(PUBSUB_DISCOVERY_TOPIC, data)
 						if (recipients.length === 0) {
 							throw new Error("no GossipSub peers")
 						}

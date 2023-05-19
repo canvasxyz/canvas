@@ -52,7 +52,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 				}
 
 				for (const uri of Object.keys(core.sources)) {
-					const subscribers = core.libp2p.pubsub.getSubscribers(uri)
+					const subscribers = core.libp2p.services.pubsub.getSubscribers(uri)
 					this.set({ uri }, subscribers.length)
 				}
 			},
@@ -247,7 +247,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 				return
 			}
 
-			const { pubsub } = core.libp2p
+			const { pubsub } = core.libp2p.services
 			res.json({
 				peers: pubsub.getPeers(),
 				subscribers: Object.fromEntries(pubsub.getTopics().map((topic) => [topic, pubsub.getSubscribers(topic)])),
@@ -277,9 +277,10 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 				return
 			}
 
+			const { pingService } = core.libp2p.services
 			try {
 				const peerId = peerIdFromString(req.params.peerId)
-				const latency = await core.libp2p.ping(peerId)
+				const latency = await pingService.ping(peerId)
 				res.status(StatusCodes.OK).end(`${latency}\n`)
 			} catch (err) {
 				const msg = getErrorMessage(err)

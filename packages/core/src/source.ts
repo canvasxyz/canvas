@@ -13,6 +13,7 @@ import { CID } from "multiformats/cid"
 import { Multiaddr } from "@multiformats/multiaddr"
 
 import type { Message } from "@canvas-js/interfaces"
+import type { ServiceMap } from "@canvas-js/core/components/libp2p"
 import type { MessageStore, ReadWriteTransaction } from "@canvas-js/core/components/messageStore"
 
 import { messageType } from "@canvas-js/core/codecs"
@@ -41,7 +42,7 @@ export interface SourceOptions {
 export interface SourceConfig extends SourceOptions {
 	cid: CID
 	messageStore: MessageStore
-	libp2p: Libp2p
+	libp2p: Libp2p<ServiceMap>
 	applyMessage: (txn: ReadWriteTransaction, hash: Uint8Array, message: Message) => Promise<void>
 	signal: AbortSignal
 }
@@ -58,7 +59,7 @@ export class Source extends EventEmitter<SourceEvents> {
 
 	private readonly cid: CID
 	private readonly messageStore: MessageStore
-	private readonly libp2p: Libp2p
+	private readonly libp2p: Libp2p<ServiceMap>
 	private readonly applyMessage: (txn: ReadWriteTransaction, hash: Uint8Array, message: Message) => Promise<void>
 	private readonly options: SourceOptions
 	private readonly prefix: string
@@ -79,24 +80,25 @@ export class Source extends EventEmitter<SourceEvents> {
 			this.syncQueue.clear()
 		})
 
-		this.libp2p.peerStore.addEventListener("change:protocols", ({ detail: { peerId, oldProtocols, protocols } }) => {
-			if (this.libp2p.peerId.equals(peerId)) {
-				return
+		this.libp2p.addEventListener("peer:update", ({ detail: { peer, previous } }) => {
+			const newProtocolSet = new Set(peer.protocols)
+			if (previous !== undefined) {
+				for (const protocol of previous.protocols) {
+					newProtocolSet.delete(protocol)
+				}
 			}
 
-			const oldProtocolSet = new Set(oldProtocols)
-			const newProtocolSet = new Set(protocols.filter((protocol) => !oldProtocolSet.has(protocol)))
 			if (newProtocolSet.has(this.protocol)) {
 				if (this.options.verbose) {
-					console.log(chalk.gray(this.prefix, `Peer ${peerId} supports the ${this.protocol} protocol`))
+					console.log(chalk.gray(this.prefix, `Peer ${peer.id} supports the ${this.protocol} protocol`))
 				}
 
-				this.schedulePeerSync(peerId)
+				this.schedulePeerSync(peer.id)
 			}
 		})
 
-		this.libp2p.pubsub.addEventListener("message", this.handleGossipMessage)
-		this.libp2p.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
+		this.libp2p.services.pubsub.addEventListener("message", this.handleGossipMessage)
+		this.libp2p.services.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
 			if (this.libp2p.peerId.equals(peerId)) {
 				return
 			}
@@ -121,7 +123,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	}
 
 	public async start() {
-		this.libp2p.pubsub.subscribe(this.uri)
+		this.libp2p.services.pubsub.subscribe(this.uri)
 		if (this.options.verbose) {
 			console.log(chalk.gray(this.prefix, `Subscribed to GossipSub topic ${this.uri}`))
 		}
@@ -134,7 +136,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		this.startSyncService()
 		this.startDiscoveryService()
 
-		const mode = await this.libp2p.dht.getMode()
+		const mode = await this.libp2p.services.dht.getMode()
 		if (mode === "server") {
 			this.startAnnounceService()
 		}
@@ -159,7 +161,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		}
 
 		try {
-			const { recipients } = await this.libp2p.pubsub.publish(this.uri, data)
+			const { recipients } = await this.libp2p.services.pubsub.publish(this.uri, data)
 			if (this.options.verbose) {
 				console.log(this.prefix, `Published ${toHex(hash)} to ${recipients.length} peers.`)
 			}
@@ -367,7 +369,7 @@ export class Source extends EventEmitter<SourceEvents> {
 	}
 
 	public async handlePeerDiscovery(peerId: PeerId, addrs: Multiaddr[]) {
-		const subscribers = this.libp2p.pubsub.getSubscribers(this.uri)
+		const subscribers = this.libp2p.services.pubsub.getSubscribers(this.uri)
 		if (subscribers.length >= MIN_MESH_PEERS) {
 			if (this.options.verbose) {
 				console.log(chalk.gray(this.prefix, "Have enough GossipSub peers"))
@@ -407,7 +409,7 @@ export class Source extends EventEmitter<SourceEvents> {
 		try {
 			while (!signal.aborted) {
 				await wait(30 * second, { signal })
-				for (const peer of this.libp2p.pubsub.getSubscribers(this.uri)) {
+				for (const peer of this.libp2p.services.pubsub.getSubscribers(this.uri)) {
 					this.schedulePeerSync(peer)
 				}
 			}
