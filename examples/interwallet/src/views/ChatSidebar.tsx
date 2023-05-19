@@ -1,12 +1,10 @@
 import React, { useCallback } from "react"
-import { useEnsName } from "wagmi"
+import { useAccount, useEnsName } from "wagmi"
 
 import { rooms } from "../fixtures"
 import type { RoomId } from "../interfaces"
-import { isAddress } from "viem"
 
 export interface ChatSizebarProps {
-	userAddress: string
 	roomId: string | null
 	setRoomId: (roomId: RoomId) => void
 }

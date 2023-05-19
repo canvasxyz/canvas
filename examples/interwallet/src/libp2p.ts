@@ -63,10 +63,10 @@ async function getLibp2p(): Promise<Libp2p<ServiceMap>> {
 	const userRegistryTree = await IDBTree.open(db, USER_REGISTRY_TOPIC)
 	const roomRegistryTree = await IDBTree.open(db, ROOM_REGISTRY_TOPIC)
 
-	const roomStoreServices: Record<`interwallet:room:${string}`, (components: StoreComponents) => StoreService> = {}
+	const roomStoreServices: Record<string, (components: StoreComponents) => StoreService> = {}
 	for (const { topic } of rooms) {
 		const tree = await IDBTree.open(db, topic)
-		roomStoreServices[topic as `interwallet:room:${string}`] = storeService(tree, {
+		roomStoreServices[topic] = storeService(tree, {
 			topic,
 			apply: async (key, value) => {
 				console.log({ key: bytesToHex(key), value: bytesToHex(value) })

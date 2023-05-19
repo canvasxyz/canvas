@@ -1,17 +1,16 @@
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
+import { useAccount } from "wagmi"
 import { useLiveQuery } from "dexie-react-hooks"
 
 import { db } from "../models/db"
 
 export interface MessagesPanelProps {
-	userAddress: string
 	roomId: string
 }
 
-export const MessagesPanel: React.FC<MessagesPanelProps> = ({
-	roomId,
-	userAddress: currentUserAddress,
-}: MessagesPanelProps) => {
+export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: MessagesPanelProps) => {
+	const { address: userAddress, isConnected } = useAccount()
+
 	const [message, setMessage] = useState<string>("")
 	const messageEvents =
 		useLiveQuery(async () => await db.messageEvents.where({ room_id: roomId }).sortBy("timestamp"), [roomId]) || []
@@ -27,16 +26,18 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({
 		(e: React.FormEvent<HTMLFormElement>) => {
 			e.preventDefault()
 
-			db.messageEvents.add({
-				room_id: roomId,
-				sender: currentUserAddress,
-				message: message,
-				timestamp: Date.now(),
-			})
+			if (userAddress) {
+				db.messageEvents.add({
+					room_id: roomId,
+					sender: userAddress,
+					message: message,
+					timestamp: Date.now(),
+				})
+			}
 
 			setMessage("")
 		},
-		[roomId, currentUserAddress, message]
+		[roomId, userAddress, message]
 	)
 
 	return (
