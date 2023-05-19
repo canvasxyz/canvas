@@ -4,9 +4,9 @@
     "jsx": "react",
     "strict": true,
     "declaration": false,
-    "module": "es2020",
-    "target": "es2020",
-    "moduleResolution": "node",
+    "module": "es2022",
+    "target": "es2022",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true

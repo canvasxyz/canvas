@@ -46,6 +46,7 @@ module.exports = {
   },
   experiments: {
     outputModule: true,
+    topLevelAwait: true,
   },
   plugins: [
     new CopyWebpackPlugin({ patterns: [{ from: "public" }] }),
