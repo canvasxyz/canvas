@@ -16,7 +16,6 @@ import { base64 } from "multiformats/bases/base64"
 
 import { bytesToHex } from "viem"
 
-import { openDB } from "idb"
 import { IDBTree } from "@canvas-js/okra-idb"
 import { PubsubServiceDiscovery, pubsubServiceDiscovery } from "@canvas-js/pubsub-service-discovery"
 
@@ -30,8 +29,10 @@ import {
 	ROOM_REGISTRY_TOPIC,
 	USER_REGISTRY_TOPIC,
 	PEER_ID_KEY,
-} from "./constants"
-import { rooms } from "./fixtures"
+} from "../constants"
+
+import { storeDB } from "./storeDB"
+import { getRoomStoreServices } from "./services"
 
 export type ServiceMap = {
 	identify: {}
@@ -42,39 +43,15 @@ export type ServiceMap = {
 	[USER_REGISTRY_TOPIC]: StoreService
 } & Record<`interwallet:room:${string}`, StoreService>
 
-const db = await openDB("interwallet", 1, {
-	upgrade(database, oldVersion, newVersion, transaction, event) {
-		console.log(`upgrading IndexedDB database from ${oldVersion} to ${newVersion}`)
-
-		for (const topic of [USER_REGISTRY_TOPIC, ROOM_REGISTRY_TOPIC, ...rooms.map(({ topic }) => topic)]) {
-			if (database.objectStoreNames.contains(topic)) {
-				continue
-			} else {
-				database.createObjectStore(topic)
-				console.log(`created object store ${topic}`)
-			}
-		}
-	},
-})
-
 async function getLibp2p(): Promise<Libp2p<ServiceMap>> {
 	const peerId = await getPeerId()
 
-	const userRegistryTree = await IDBTree.open(db, USER_REGISTRY_TOPIC)
-	const roomRegistryTree = await IDBTree.open(db, ROOM_REGISTRY_TOPIC)
-
-	const roomStoreServices: Record<string, (components: StoreComponents) => StoreService> = {}
-	for (const { topic } of rooms) {
-		const tree = await IDBTree.open(db, topic)
-		roomStoreServices[topic] = storeService(tree, {
-			topic,
-			apply: async (key, value) => {
-				console.log({ key: bytesToHex(key), value: bytesToHex(value) })
-			},
-		})
-	}
-
 	const bootstrapList = testnetBootstrapList
+
+	const userRegistryTree = await IDBTree.open(storeDB, USER_REGISTRY_TOPIC)
+	const roomRegistryTree = await IDBTree.open(storeDB, ROOM_REGISTRY_TOPIC)
+
+	const roomStoreServices = await getRoomStoreServices()
 
 	return await createLibp2p({
 		peerId: peerId,

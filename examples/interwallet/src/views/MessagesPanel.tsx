@@ -1,19 +1,24 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import { useAccount } from "wagmi"
 import { useLiveQuery } from "dexie-react-hooks"
 
-import { db } from "../models/db"
+import { blake3 } from "@noble/hashes/blake3"
+
+import { modelDB } from "../models/modelDB"
+import { libp2p } from "../stores/libp2p"
+import { RoomId } from "../interfaces"
+import { encodeEvent } from "../stores/services"
 
 export interface MessagesPanelProps {
-	roomId: string
+	roomId: RoomId
 }
 
 export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: MessagesPanelProps) => {
-	const { address: userAddress, isConnected } = useAccount()
+	const { address: userAddress } = useAccount()
 
 	const [message, setMessage] = useState<string>("")
 	const messageEvents =
-		useLiveQuery(async () => await db.messageEvents.where({ room_id: roomId }).sortBy("timestamp"), [roomId]) || []
+		useLiveQuery(async () => await modelDB.messageEvents.where({ room_id: roomId }).sortBy("timestamp"), [roomId]) || []
 
 	const messagesEndRef = React.useRef<HTMLDivElement>(null)
 	const messageInputRef = React.useRef<HTMLInputElement>(null)
@@ -26,16 +31,23 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 		(e: React.FormEvent<HTMLFormElement>) => {
 			e.preventDefault()
 
-			if (userAddress) {
-				db.messageEvents.add({
-					room_id: roomId,
-					sender: userAddress,
-					message: message,
-					timestamp: Date.now(),
-				})
+			if (userAddress === undefined) {
+				return
 			}
 
-			setMessage("")
+			const value = encodeEvent("message", {
+				room_id: roomId,
+				sender: userAddress,
+				message: message,
+				timestamp: Date.now(),
+			})
+
+			const key = blake3(value, { dkLen: 16 })
+
+			libp2p.services[roomId]
+				.insert(key, value)
+				.then(() => setMessage(""))
+				.catch((err) => console.error(err))
 		},
 		[roomId, userAddress, message]
 	)

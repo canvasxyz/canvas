@@ -9,7 +9,7 @@ import { config } from "./config"
 
 import { App } from "./App"
 
-import { libp2p } from "./libp2p"
+import { libp2p } from "./stores/libp2p"
 
 console.log("got libp2p!??", libp2p)
 

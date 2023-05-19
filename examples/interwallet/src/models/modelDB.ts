@@ -15,10 +15,10 @@ export class InterwalletChatDB extends Dexie {
 	}
 }
 
-export const db = new InterwalletChatDB()
+export const modelDB = new InterwalletChatDB()
 
 export function resetDatabase() {
-	return db.transaction("rw", db.rooms, db.messageEvents, async () => {
-		await Promise.all(db.tables.map((table) => table.clear()))
+	return modelDB.transaction("rw", modelDB.rooms, modelDB.messageEvents, async () => {
+		await Promise.all(modelDB.tables.map((table) => table.clear()))
 	})
 }
