@@ -91,7 +91,6 @@ export async function handler(args: Args) {
 		maxConnections: args["max-connections"],
 
 		storeInit: {
-			location: args.path,
 			topic: args.topic,
 			apply: async (key, value) => {
 				console.log("applying...", {
@@ -112,6 +111,8 @@ export async function handler(args: Args) {
 		}
 	}
 
+	console.log("using bootstrap list", networkConfig.bootstrapList)
+
 	if (!fs.existsSync(args.path)) {
 		fs.mkdirSync(args.path)
 	}
@@ -129,7 +130,7 @@ export async function handler(args: Args) {
 	})
 
 	const controller = new AbortController()
-	const network = await Network.open(peerId, networkConfig)
+	const network = await Network.open(args.path, peerId, networkConfig)
 	// const store = await Store.open(network.libp2p, {
 	// 	path: args.path,
 	// 	name: args.name,

@@ -9,6 +9,7 @@ import { Message } from "@libp2p/interface-pubsub"
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 
+import PQueue from "p-queue"
 import { bytesToHex as hex } from "@noble/hashes/utils"
 
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
@@ -19,17 +20,19 @@ import type { Source, Target, KeyValueStore } from "@canvas-js/okra"
 
 import { Driver, Client, Server, decodeRequests, encodeResponses } from "#sync"
 
-import { minute } from "@canvas-js/store/constants"
-import { Entry, decodeEntry, encodeEntry } from "../utils.js"
+import { second, minute } from "@canvas-js/store/constants"
+import { CacheMap, Entry, decodeEntry, encodeEntry, getResult, retry, shuffle, sortPair, wait } from "../utils.js"
 
 export interface AbstractTree {
 	close(): Promise<void>
-	read(callback: (txn: Source) => Promise<void>): Promise<void>
-	write(callback: (txn: Target & Pick<KeyValueStore, "get" | "set" | "delete">) => Promise<void>): Promise<void>
+	read(targetPeerId: PeerId | null, callback: (txn: Source) => Promise<void>): Promise<void>
+	write(
+		sourcePeerId: PeerId | null,
+		callback: (txn: Target & Pick<KeyValueStore, "get" | "set" | "delete">) => Promise<void>
+	): Promise<void>
 }
 
 export interface StoreInit {
-	location: string
 	topic: string
 	apply: (key: Uint8Array, value: Uint8Array) => Promise<void>
 
@@ -56,7 +59,9 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 	public static MAX_INBOUND_STREAMS = 64
 	public static MAX_OUTBOUND_STREAMS = 64
 	public static MAX_SYNC_QUEUE_SIZE = 8
-	public static SYNC_COOLDOWN_PERIOD = 2 * minute
+	public static SYNC_COOLDOWN_PERIOD = 20 * second
+	public static SYNC_RETRY_INTERVAL = 3 * second
+	public static SYNC_RETRY_LIMIT = 5
 
 	private static extractGossipSub(components: StoreComponents): GossipSub {
 		const { pubsub } = components as StoreComponents & { pubsub?: GossipSub }
@@ -80,7 +85,12 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 	private readonly maxInboundStreams: number
 	private readonly maxOutboundStreams: number
 
+	private readonly syncQueue = new PQueue({ concurrency: 1 })
+	private readonly syncQueuePeers = new Set<string>()
+	private readonly syncHistory = new CacheMap<string, number>(StoreService.MAX_SYNC_QUEUE_SIZE)
+
 	private readonly log = logger("canvas:store:service")
+	private readonly controller = new AbortController()
 	private readonly pubsub: GossipSub
 	private readonly topic: string
 	private readonly protocol: string
@@ -146,6 +156,7 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 	public beforeStop(): void {
 		// I'm pretty sure this is not necessary at all but w/e
 		this.pubsub.unsubscribe(this.topic)
+		this.controller.abort()
 	}
 
 	public stop(): void {
@@ -158,7 +169,7 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 
 	public async insert(key: Uint8Array, value: Uint8Array) {
 		await this.init.apply(key, value)
-		await this.tree.write(async (txn) => txn.set(key, value))
+		await this.tree.write(null, async (txn) => txn.set(key, value))
 		try {
 			const data = encodeEntry({ key, value })
 			const { recipients } = await this.pubsub.publish(this.topic, data)
@@ -191,7 +202,7 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 		}
 
 		try {
-			await this.tree.write(async (txn) => txn.set(key, value))
+			await this.tree.write(null, async (txn) => txn.set(key, value))
 			this.log("successfully committed entry")
 		} catch (err) {
 			this.log.error("failed to commit entry: %O", err)
@@ -199,9 +210,12 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 	}
 
 	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {
-		this.log("opened incoming stream %s from peer %p", stream.id, connection.remotePeer)
+		const peerId = connection.remotePeer
+		const { protocol } = stream.stat
+		this.log("opened incoming stream %s from peer %p with protocol %s", stream.id, peerId, protocol)
+
 		try {
-			await this.tree.read(async (txn) => {
+			await this.tree.read(peerId, async (txn) => {
 				const server = new Server(txn)
 				await pipe(
 					stream.source,
@@ -214,9 +228,9 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 				)
 			})
 
-			this.log("closed incoming stream %s from peer %p", stream.id, connection.remotePeer)
+			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
 		} catch (err) {
-			this.log.error("aborting incoming stream %s from peer %p: %O", stream.id, connection.remotePeer, err)
+			this.log.error("aborting incoming stream %s from peer %p: %O", stream.id, peerId, err)
 			if (err instanceof Error) {
 				stream.abort(err)
 			} else {
@@ -226,28 +240,81 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 	}
 
 	private handleConnect = async (connection: Connection) => {
-		this.log("new connection to peer %p", connection.remotePeer)
-		this.sync(connection)
+		const peerId = connection.remotePeer
+		this.log("new connection %s to peer %p", connection.id, peerId)
+
+		const id = peerId.toString()
+		if (this.syncQueuePeers.has(id)) {
+			this.log("already queued sync with %p", peerId)
+			return
+		}
+
+		if (this.syncQueue.size >= StoreService.MAX_SYNC_QUEUE_SIZE) {
+			this.log("sync queue is full")
+			return
+		}
+
+		const lastSyncMark = this.syncHistory.get(id)
+		if (lastSyncMark !== undefined) {
+			const timeSinceLastSync = performance.now() - lastSyncMark
+			this.log("last sync with %p was %ds ago", peerId, Math.floor(timeSinceLastSync / 1000))
+			if (timeSinceLastSync < StoreService.SYNC_COOLDOWN_PERIOD) {
+				return
+			}
+		}
+
+		this.syncQueuePeers.add(id)
+		this.syncQueue
+			.add(async () => {
+				const { signal } = this.controller
+				let interval = Math.random() * StoreService.SYNC_RETRY_INTERVAL
+
+				const [x, y] = sortPair(this.components.peerId, peerId)
+				if (x.equals(this.components.peerId)) {
+					this.log("waiting an initial %dms", interval)
+					await wait(interval, { signal: this.controller.signal })
+				}
+
+				for (let n = 0; n < StoreService.SYNC_RETRY_LIMIT; n++) {
+					try {
+						this.log("starting sync using connection %s", connection.id)
+						await this.sync(peerId)
+						break
+					} catch (err) {
+						this.log.error("failed to sync with peer: %O", err)
+
+						if (signal.aborted) {
+							break
+						} else {
+							this.log("waiting %dms before trying again (%d/%d)", interval, n + 1, StoreService.SYNC_RETRY_LIMIT)
+							await wait(interval, { signal: this.controller.signal })
+							interval += Math.random() * StoreService.SYNC_RETRY_INTERVAL
+							continue
+						}
+					}
+				}
+			})
+			.then(() => this.syncHistory.set(id, performance.now()))
+			.catch((err: any) => this.log.error("sync failed: %O", err))
+			.finally(() => this.syncQueuePeers.delete(id))
 	}
 
-	private async sync(connection: Connection) {
-		this.log("initiating sync with peer %p", connection.id, connection.remotePeer)
+	private async sync(peerId: PeerId) {
+		this.log("initiating sync with peer %p", peerId)
 
-		let stream: Stream | null = null
-		try {
-			stream = await connection.newStream(this.protocol)
-			this.log("opened outgoing stream %s to peer %p", stream.id, connection.remotePeer)
-		} catch (err) {
-			const { id, remotePeer } = connection
-			this.log.error("failed to open outgoing stream: %O", id, remotePeer, err)
+		const stream = await this.dial(peerId)
+		if (stream === null) {
+			this.log("failed to dial %p", peerId)
 			return
 		}
 
 		const client = new Client(stream)
 
 		try {
-			await this.tree.write(async (txn) => {
+			let [successCount, failureCount] = [0, 0]
+			await this.tree.write(peerId, async (txn) => {
 				this.log("opened read-write transaction")
+
 				const driver = new Driver(client, txn)
 				for await (const [key, value] of driver.sync()) {
 					this.log("got entry %s: %s", hex(key), hex(value))
@@ -255,20 +322,51 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 						await this.init.apply(key, value)
 					} catch (err) {
 						this.log.error("failed to apply entry: %O", err)
+						failureCount++
 						continue
 					}
 
+					successCount++
 					await txn.set(key, value)
 				}
 
 				this.log("committing transaction")
 			})
-		} catch (err) {
-			this.log.error("sync failed: %O", err)
+
+			this.log("finished sync: applied %d new entries with %d failures", successCount, failureCount)
 		} finally {
 			client.end()
-			stream.close()
-			this.log("closed outgoing stream %s to peer %p", stream.id, connection.remotePeer)
+			this.log("closed outgoing stream %s to peer %p", stream.id, peerId)
 		}
+	}
+
+	private async dial(peerId: PeerId): Promise<Stream | null> {
+		const connections = [...this.components.connectionManager.getConnections(peerId)]
+		if (connections.length === 0) {
+			this.log("no longer connected to peer %p", peerId)
+			return null
+		}
+
+		// randomize selected connection
+		shuffle(connections)
+		for (const [i, connection] of connections.entries()) {
+			this.log("opening outgoing stream on connection %s (%d/%d)", connection.id, i + 1, connections.length)
+			try {
+				const stream = await connection.newStream(this.protocol)
+				this.log("opened outgoing stream %s to peer %p with protocol %s", stream.id, peerId, this.protocol)
+				return stream
+			} catch (err) {
+				this.log.error("failed to open outgoing stream: %O", err)
+				continue
+			}
+		}
+
+		return null
+	}
+}
+
+export class DeadlockError extends Error {
+	constructor(readonly peerId: PeerId) {
+		super(`deadlock with peer ${peerId}`)
 	}
 }

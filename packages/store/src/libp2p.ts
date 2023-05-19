@@ -17,7 +17,7 @@ import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { ServiceDiscovery, pubsubServiceDiscovery } from "@canvas-js/pubsub-service-discovery"
 
-import { storeService, StoreService } from "@canvas-js/store/service"
+import { storeService, StoreService } from "@canvas-js/store/service/node"
 
 import { NetworkConfig } from "./network.js"
 import { defaultBootstrapList } from "./bootstrap.js"
@@ -38,7 +38,11 @@ export type ServiceMap = {
 	store: StoreService
 }
 
-export function getLibp2pOptions(peerId: PeerId, config: NetworkConfig): Libp2pOptions<ServiceMap> {
+export async function getLibp2pOptions(
+	path: string,
+	peerId: PeerId,
+	config: NetworkConfig
+): Promise<Libp2pOptions<ServiceMap>> {
 	const announce = config.announce ?? []
 	const listen = config.listen ?? []
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
@@ -120,7 +124,7 @@ export function getLibp2pOptions(peerId: PeerId, config: NetworkConfig): Libp2pO
 				filterProtocols: (protocol) => protocol.startsWith("/canvas/v0/store/"),
 			}),
 
-			store: storeService(config.storeInit),
+			store: await storeService(path, config.storeInit),
 		},
 	}
 }

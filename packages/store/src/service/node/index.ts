@@ -4,6 +4,12 @@ import { StoreService, StoreInit, StoreComponents } from "../service.js"
 
 export type { StoreService, StoreInit, StoreComponents } from "../service.js"
 
-export function storeService(init: StoreInit): (components: StoreComponents) => StoreService {
-	return (components) => new StoreService(components, init, new okra.Tree(init.location))
+export function storeService(path: string, init: StoreInit): (components: StoreComponents) => StoreService {
+	const tree = new okra.Tree(path)
+	return (components) =>
+		new StoreService(components, init, {
+			read: async (targetPeerId, callback) => tree.read(callback),
+			write: async (sourcePeerId, callback) => tree.write(callback),
+			close: () => tree.close(),
+		})
 }

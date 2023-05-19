@@ -118,9 +118,6 @@ export class Node implements INode {
 /** Properties of a Request. */
 export interface IRequest {
 
-    /** Request seq */
-    seq?: (number|null);
-
     /** Request getRoot */
     getRoot?: (Request.IGetRootRequest|null);
 
@@ -139,9 +136,6 @@ export class Request implements IRequest {
      * @param [properties] Properties to set
      */
     constructor(properties?: IRequest);
-
-    /** Request seq. */
-    public seq: number;
 
     /** Request getRoot. */
     public getRoot?: (Request.IGetRootRequest|null);
@@ -536,9 +530,6 @@ export namespace Request {
 /** Properties of a Response. */
 export interface IResponse {
 
-    /** Response seq */
-    seq?: (number|null);
-
     /** Response getRoot */
     getRoot?: (Response.IGetRootResponse|null);
 
@@ -557,9 +548,6 @@ export class Response implements IResponse {
      * @param [properties] Properties to set
      */
     constructor(properties?: IResponse);
-
-    /** Response seq. */
-    public seq: number;
 
     /** Response getRoot. */
     public getRoot?: (Response.IGetRootResponse|null);

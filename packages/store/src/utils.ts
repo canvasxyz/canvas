@@ -1,11 +1,30 @@
+import { blake3 } from "@noble/hashes/blake3"
 import { PeerId } from "@libp2p/interface-peer-id"
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 import { base64 } from "multiformats/bases/base64"
+
+import { lessThan } from "@canvas-js/okra"
 
 import { anySignal } from "any-signal"
 
 export const keyPrefix = "/canvas/v0/store/"
 export const keyPattern = /^(\/canvas\/v0\/store\/[a-zA-Z0-9:.-]+)\/peers$/
+
+export function sortPair(a: PeerId, b: PeerId): [x: PeerId, y: PeerId] {
+	const ab = blake3.create({ dkLen: 16 })
+	ab.update(a.toBytes())
+	ab.update(b.toBytes())
+
+	const ba = blake3.create({ dkLen: 16 })
+	ba.update(b.toBytes())
+	ba.update(a.toBytes())
+
+	if (lessThan(ab.digest(), ba.digest())) {
+		return [a, b]
+	} else {
+		return [b, a]
+	}
+}
 
 export function assert(condition: unknown, message?: string): asserts condition {
 	if (!condition) {
@@ -44,7 +63,7 @@ export async function retry<T>(
 	}
 }
 
-async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, T>> {
+export async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, T>> {
 	try {
 		const value = await f()
 		return { done: true, value }
@@ -117,4 +136,11 @@ export function decodeEntry(entry: Uint8Array): Entry {
 	assert(entry.length === 4 + keyLength + 4 + valueLength, "invalid key/value entry")
 	const value = entry.subarray(4 + keyLength + 4, 4 + keyLength + 4 + valueLength)
 	return { key, value }
+}
+
+export function shuffle<T>(array: T[]) {
+	for (let i = array.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1))
+		;[array[i], array[j]] = [array[j], array[i]]
+	}
 }

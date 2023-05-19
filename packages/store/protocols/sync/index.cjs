@@ -315,7 +315,6 @@ $root.Request = (function() {
      * Properties of a Request.
      * @exports IRequest
      * @interface IRequest
-     * @property {number|null} [seq] Request seq
      * @property {Request.IGetRootRequest|null} [getRoot] Request getRoot
      * @property {Request.IGetNodeRequest|null} [getNode] Request getNode
      * @property {Request.IGetChildrenRequest|null} [getChildren] Request getChildren
@@ -335,14 +334,6 @@ $root.Request = (function() {
                 if (properties[keys[i]] != null)
                     this[keys[i]] = properties[keys[i]];
     }
-
-    /**
-     * Request seq.
-     * @member {number} seq
-     * @memberof Request
-     * @instance
-     */
-    Request.prototype.seq = 0;
 
     /**
      * Request getRoot.
@@ -406,14 +397,12 @@ $root.Request = (function() {
     Request.encode = function encode(message, writer) {
         if (!writer)
             writer = $Writer.create();
-        if (message.seq != null && Object.hasOwnProperty.call(message, "seq"))
-            writer.uint32(/* id 1, wireType 0 =*/8).uint32(message.seq);
         if (message.getRoot != null && Object.hasOwnProperty.call(message, "getRoot"))
-            $root.Request.GetRootRequest.encode(message.getRoot, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
+            $root.Request.GetRootRequest.encode(message.getRoot, writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
         if (message.getNode != null && Object.hasOwnProperty.call(message, "getNode"))
-            $root.Request.GetNodeRequest.encode(message.getNode, writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
+            $root.Request.GetNodeRequest.encode(message.getNode, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
         if (message.getChildren != null && Object.hasOwnProperty.call(message, "getChildren"))
-            $root.Request.GetChildrenRequest.encode(message.getChildren, writer.uint32(/* id 4, wireType 2 =*/34).fork()).ldelim();
+            $root.Request.GetChildrenRequest.encode(message.getChildren, writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
         return writer;
     };
 
@@ -449,18 +438,14 @@ $root.Request = (function() {
             var tag = reader.uint32();
             switch (tag >>> 3) {
             case 1: {
-                    message.seq = reader.uint32();
-                    break;
-                }
-            case 2: {
                     message.getRoot = $root.Request.GetRootRequest.decode(reader, reader.uint32());
                     break;
                 }
-            case 3: {
+            case 2: {
                     message.getNode = $root.Request.GetNodeRequest.decode(reader, reader.uint32());
                     break;
                 }
-            case 4: {
+            case 3: {
                     message.getChildren = $root.Request.GetChildrenRequest.decode(reader, reader.uint32());
                     break;
                 }
@@ -500,9 +485,6 @@ $root.Request = (function() {
         if (typeof message !== "object" || message === null)
             return "object expected";
         var properties = {};
-        if (message.seq != null && message.hasOwnProperty("seq"))
-            if (!$util.isInteger(message.seq))
-                return "seq: integer expected";
         if (message.getRoot != null && message.hasOwnProperty("getRoot")) {
             properties.request = 1;
             {
@@ -546,8 +528,6 @@ $root.Request = (function() {
         if (object instanceof $root.Request)
             return object;
         var message = new $root.Request();
-        if (object.seq != null)
-            message.seq = object.seq >>> 0;
         if (object.getRoot != null) {
             if (typeof object.getRoot !== "object")
                 throw TypeError(".Request.getRoot: object expected");
@@ -579,10 +559,6 @@ $root.Request = (function() {
         if (!options)
             options = {};
         var object = {};
-        if (options.defaults)
-            object.seq = 0;
-        if (message.seq != null && message.hasOwnProperty("seq"))
-            object.seq = message.seq;
         if (message.getRoot != null && message.hasOwnProperty("getRoot")) {
             object.getRoot = $root.Request.GetRootRequest.toObject(message.getRoot, options);
             if (options.oneofs)
@@ -868,9 +844,9 @@ $root.Request = (function() {
             if (!writer)
                 writer = $Writer.create();
             if (message.level != null && Object.hasOwnProperty.call(message, "level"))
-                writer.uint32(/* id 2, wireType 0 =*/16).uint32(message.level);
+                writer.uint32(/* id 1, wireType 0 =*/8).uint32(message.level);
             if (message.key != null && Object.hasOwnProperty.call(message, "key"))
-                writer.uint32(/* id 3, wireType 2 =*/26).bytes(message.key);
+                writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.key);
             return writer;
         };
 
@@ -905,11 +881,11 @@ $root.Request = (function() {
             while (reader.pos < end) {
                 var tag = reader.uint32();
                 switch (tag >>> 3) {
-                case 2: {
+                case 1: {
                         message.level = reader.uint32();
                         break;
                     }
-                case 3: {
+                case 2: {
                         message.key = reader.bytes();
                         break;
                     }
@@ -1104,9 +1080,9 @@ $root.Request = (function() {
             if (!writer)
                 writer = $Writer.create();
             if (message.level != null && Object.hasOwnProperty.call(message, "level"))
-                writer.uint32(/* id 2, wireType 0 =*/16).uint32(message.level);
+                writer.uint32(/* id 1, wireType 0 =*/8).uint32(message.level);
             if (message.key != null && Object.hasOwnProperty.call(message, "key"))
-                writer.uint32(/* id 3, wireType 2 =*/26).bytes(message.key);
+                writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.key);
             return writer;
         };
 
@@ -1141,11 +1117,11 @@ $root.Request = (function() {
             while (reader.pos < end) {
                 var tag = reader.uint32();
                 switch (tag >>> 3) {
-                case 2: {
+                case 1: {
                         message.level = reader.uint32();
                         break;
                     }
-                case 3: {
+                case 2: {
                         message.key = reader.bytes();
                         break;
                     }
@@ -1283,7 +1259,6 @@ $root.Response = (function() {
      * Properties of a Response.
      * @exports IResponse
      * @interface IResponse
-     * @property {number|null} [seq] Response seq
      * @property {Response.IGetRootResponse|null} [getRoot] Response getRoot
      * @property {Response.IGetNodeResponse|null} [getNode] Response getNode
      * @property {Response.IGetChildrenResponse|null} [getChildren] Response getChildren
@@ -1303,14 +1278,6 @@ $root.Response = (function() {
                 if (properties[keys[i]] != null)
                     this[keys[i]] = properties[keys[i]];
     }
-
-    /**
-     * Response seq.
-     * @member {number} seq
-     * @memberof Response
-     * @instance
-     */
-    Response.prototype.seq = 0;
 
     /**
      * Response getRoot.
@@ -1374,14 +1341,12 @@ $root.Response = (function() {
     Response.encode = function encode(message, writer) {
         if (!writer)
             writer = $Writer.create();
-        if (message.seq != null && Object.hasOwnProperty.call(message, "seq"))
-            writer.uint32(/* id 1, wireType 0 =*/8).uint32(message.seq);
         if (message.getRoot != null && Object.hasOwnProperty.call(message, "getRoot"))
-            $root.Response.GetRootResponse.encode(message.getRoot, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
+            $root.Response.GetRootResponse.encode(message.getRoot, writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
         if (message.getNode != null && Object.hasOwnProperty.call(message, "getNode"))
-            $root.Response.GetNodeResponse.encode(message.getNode, writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
+            $root.Response.GetNodeResponse.encode(message.getNode, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
         if (message.getChildren != null && Object.hasOwnProperty.call(message, "getChildren"))
-            $root.Response.GetChildrenResponse.encode(message.getChildren, writer.uint32(/* id 4, wireType 2 =*/34).fork()).ldelim();
+            $root.Response.GetChildrenResponse.encode(message.getChildren, writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
         return writer;
     };
 
@@ -1417,18 +1382,14 @@ $root.Response = (function() {
             var tag = reader.uint32();
             switch (tag >>> 3) {
             case 1: {
-                    message.seq = reader.uint32();
-                    break;
-                }
-            case 2: {
                     message.getRoot = $root.Response.GetRootResponse.decode(reader, reader.uint32());
                     break;
                 }
-            case 3: {
+            case 2: {
                     message.getNode = $root.Response.GetNodeResponse.decode(reader, reader.uint32());
                     break;
                 }
-            case 4: {
+            case 3: {
                     message.getChildren = $root.Response.GetChildrenResponse.decode(reader, reader.uint32());
                     break;
                 }
@@ -1468,9 +1429,6 @@ $root.Response = (function() {
         if (typeof message !== "object" || message === null)
             return "object expected";
         var properties = {};
-        if (message.seq != null && message.hasOwnProperty("seq"))
-            if (!$util.isInteger(message.seq))
-                return "seq: integer expected";
         if (message.getRoot != null && message.hasOwnProperty("getRoot")) {
             properties.response = 1;
             {
@@ -1514,8 +1472,6 @@ $root.Response = (function() {
         if (object instanceof $root.Response)
             return object;
         var message = new $root.Response();
-        if (object.seq != null)
-            message.seq = object.seq >>> 0;
         if (object.getRoot != null) {
             if (typeof object.getRoot !== "object")
                 throw TypeError(".Response.getRoot: object expected");
@@ -1547,10 +1503,6 @@ $root.Response = (function() {
         if (!options)
             options = {};
         var object = {};
-        if (options.defaults)
-            object.seq = 0;
-        if (message.seq != null && message.hasOwnProperty("seq"))
-            object.seq = message.seq;
         if (message.getRoot != null && message.hasOwnProperty("getRoot")) {
             object.getRoot = $root.Response.GetRootResponse.toObject(message.getRoot, options);
             if (options.oneofs)
@@ -1652,7 +1604,7 @@ $root.Response = (function() {
             if (!writer)
                 writer = $Writer.create();
             if (message.root != null && Object.hasOwnProperty.call(message, "root"))
-                $root.Node.encode(message.root, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
+                $root.Node.encode(message.root, writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
             return writer;
         };
 
@@ -1687,7 +1639,7 @@ $root.Response = (function() {
             while (reader.pos < end) {
                 var tag = reader.uint32();
                 switch (tag >>> 3) {
-                case 2: {
+                case 1: {
                         message.root = $root.Node.decode(reader, reader.uint32());
                         break;
                     }
@@ -1860,7 +1812,7 @@ $root.Response = (function() {
             if (!writer)
                 writer = $Writer.create();
             if (message.node != null && Object.hasOwnProperty.call(message, "node"))
-                $root.Node.encode(message.node, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
+                $root.Node.encode(message.node, writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
             return writer;
         };
 
@@ -1895,7 +1847,7 @@ $root.Response = (function() {
             while (reader.pos < end) {
                 var tag = reader.uint32();
                 switch (tag >>> 3) {
-                case 2: {
+                case 1: {
                         message.node = $root.Node.decode(reader, reader.uint32());
                         break;
                     }
@@ -2070,7 +2022,7 @@ $root.Response = (function() {
                 writer = $Writer.create();
             if (message.children != null && message.children.length)
                 for (var i = 0; i < message.children.length; ++i)
-                    $root.Node.encode(message.children[i], writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
+                    $root.Node.encode(message.children[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
             return writer;
         };
 
@@ -2105,7 +2057,7 @@ $root.Response = (function() {
             while (reader.pos < end) {
                 var tag = reader.uint32();
                 switch (tag >>> 3) {
-                case 2: {
+                case 1: {
                         if (!(message.children && message.children.length))
                             message.children = [];
                         message.children.push($root.Node.decode(reader, reader.uint32()));

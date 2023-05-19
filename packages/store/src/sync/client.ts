@@ -14,24 +14,24 @@ import { assert } from "../utils.js"
 export async function* decodeResponses(source: AsyncIterable<Uint8ArrayList>) {
 	for await (const msg of source) {
 		const res = Sync.Response.decode(msg.subarray())
-
+		console.log("DECODED RESPONSE", res)
 		yield res
 	}
 }
 
 export async function* encodeRequests(source: AsyncIterable<Sync.IRequest>) {
 	for await (const req of source) {
+		console.log("ENCODING REQUEST", req)
 		yield Sync.Request.encode(req).finish()
 	}
 }
 
 export class Client implements Source {
-	private seq = 0
 	private readonly responses: AsyncIterator<Sync.Response, void, undefined>
 	private readonly requests: Pushable<Sync.IRequest>
 	private readonly log = logger("canvas:sync:client")
 
-	constructor(stream: Stream) {
+	constructor(readonly stream: Stream) {
 		this.requests = pushable({ objectMode: true })
 		this.responses = pipe(stream, lp.decode, decodeResponses)
 		pipe(this.requests, encodeRequests, lp.encode, stream).catch((err) => {
@@ -50,7 +50,7 @@ export class Client implements Source {
 	public async getRoot(): Promise<Node> {
 		const { getRoot } = await this.get({ getRoot: {} })
 		assert(getRoot, "invalid RPC response type")
-		assert(getRoot.root, "missing root in getRoot RPC response")
+		assert(getRoot.root, "missing `root` in getRoot RPC response")
 		return parseNode(getRoot.root)
 	}
 
@@ -67,20 +67,17 @@ export class Client implements Source {
 	public async getChildren(level: number, key: Key): Promise<Node[]> {
 		const { getChildren } = await this.get({ getChildren: { level, key } })
 		assert(getChildren, "invalid RPC response type")
-		assert(getChildren.children, "missing children in getChildren RPC response")
+		assert(getChildren.children, "missing `children` in getChildren RPC response")
 		const children = getChildren.children.map(parseNode)
 		return children
 	}
 
 	private async get(req: Sync.IRequest): Promise<Sync.Response> {
-		const seq = this.seq++
-		this.requests.push({ seq, ...req })
+		this.requests.push(req)
 		const { done, value: res } = await this.responses.next()
 		if (done) {
-			this.log.error("stream ended prematurely: %O", res)
+			this.log.error("stream %s ended prematurely: %O", this.stream.id, res)
 			throw new Error("stream ended prematurely")
-		} else if (res.seq !== seq) {
-			throw new Error("invalid sequence number in RPC response")
 		} else {
 			return res
 		}

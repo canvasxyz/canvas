@@ -4,7 +4,7 @@ import { PeerId } from "@libp2p/interface-peer-id"
 import { logger } from "@libp2p/logger"
 import { anySignal } from "any-signal"
 
-import { StoreInit } from "@canvas-js/store/service"
+import { StoreInit } from "@canvas-js/store/service/node"
 import { ServiceMap, getLibp2pOptions } from "./libp2p.js"
 
 import { PING_DELAY, PING_INTERVAL, PING_TIMEOUT } from "./constants.js"
@@ -24,8 +24,8 @@ export class Network {
 	private readonly log = logger("canvas:network")
 	private readonly controller = new AbortController()
 
-	public static async open(peerId: PeerId, config: NetworkConfig): Promise<Network> {
-		const libp2p = await createLibp2p(getLibp2pOptions(peerId, config))
+	public static async open(path: string, peerId: PeerId, config: NetworkConfig): Promise<Network> {
+		const libp2p = await createLibp2p(await getLibp2pOptions(path, peerId, config))
 		return new Network(libp2p)
 	}
 

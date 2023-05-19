@@ -8,45 +8,41 @@ message Node {
 }
 
 message Request {
-  uint32 seq = 1;
-
   message GetRootRequest {}
 
   message GetNodeRequest {
-    uint32 level = 2;
-    bytes key = 3;
+    uint32 level = 1;
+    bytes key = 2;
   }
 
   message GetChildrenRequest {
-    uint32 level = 2;
-    bytes key = 3;
+    uint32 level = 1;
+    bytes key = 2;
   }
 
   oneof request {
-    GetRootRequest get_root = 2;
-    GetNodeRequest get_node = 3;
-    GetChildrenRequest get_children = 4;
+    GetRootRequest get_root = 1;
+    GetNodeRequest get_node = 2;
+    GetChildrenRequest get_children = 3;
   }
 }
 
 message Response {
-  uint32 seq = 1;
-
   message GetRootResponse {
-    Node root = 2;
+    Node root = 1;
   }
 
   message GetNodeResponse {
-    Node node = 2;
+    Node node = 1;
   }
 
   message GetChildrenResponse {
-    repeated Node children = 2;
+    repeated Node children = 1;
   }
 
   oneof response {
-    GetRootResponse get_root = 2;
-    GetNodeResponse get_node = 3;
-    GetChildrenResponse get_children = 4;
+    GetRootResponse get_root = 1;
+    GetNodeResponse get_node = 2;
+    GetChildrenResponse get_children = 3;
   }
 }
