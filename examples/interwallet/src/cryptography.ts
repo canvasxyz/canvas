@@ -1,10 +1,7 @@
 import { MessageTypes, TypedMessage, getEncryptionPublicKey } from "@metamask/eth-sig-util"
 import { privateKeyToAccount } from "viem/accounts"
-import { keccak256, toHex, fromHex } from "viem/utils"
-import { bytesToHex } from "@noble/hashes/utils"
-import { base64 } from "multiformats/bases/base64"
 
-import { KeyBundle, UserRegistration } from "./interfaces"
+import { KeyBundle } from "./interfaces"
 
 const buildMagicString = (pin: string) => `[Password: ${pin}]
 

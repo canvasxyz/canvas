@@ -7,6 +7,8 @@
     { "path": "./packages/interfaces" },
     { "path": "./packages/interfaces/test" },
     { "path": "./packages/hooks" },
+    { "path": "./packages/store" },
+    { "path": "./packages/store/test" },
     { "path": "./packages/chain-ethereum" },
     { "path": "./packages/chain-cosmos" },
     { "path": "./packages/chain-near" },
