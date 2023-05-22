@@ -53,13 +53,8 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 	)
 
 	return (
-		<>
-			<div
-				className="flex flex-col grow ml-3 mr-3 gap-3 overflow-y-auto"
-				onClick={() => {
-					messageInputRef.current?.focus()
-				}}
-			>
+		<div className="flex flex-col grow overflow-x-hidden">
+			<div className="flex flex-col grow m-3 gap-3 overflow-y-scroll" onClick={() => messageInputRef.current?.focus()}>
 				{messageEvents.map((message, index) => {
 					const isSent = message.sender == userAddress
 
@@ -86,11 +81,11 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 			<form className="m-3 flex flex-row" onSubmit={handleSubmit}>
 				<input
 					ref={messageInputRef}
-					className="h-10 w-full rounded-xl bg-gray-100 focus:outline-none pl-2"
+					className="h-10 w-full rounded-xl bg-gray-100 px-3"
 					value={message}
 					onChange={({ target }) => setMessage(target.value)}
 				></input>
 			</form>
-		</>
+		</div>
 	)
 }

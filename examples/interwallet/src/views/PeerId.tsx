@@ -6,14 +6,18 @@ import copyIcon from "../icons/copy.svg"
 
 export interface PeerIdTokenProps {
 	peerId: PeerId
+	compact?: boolean
 	className?: string
 	children?: React.ReactNode
 }
 
 export const PeerIdToken: React.FC<PeerIdTokenProps> = (props) => {
 	const id = props.peerId.toString()
+	const text = props.compact ? `…${id.slice(-6)}` : id
 
-	const classNames = ["inline-flex items-center bg-gray-100 hover:cursor-pointer hover:bg-gray-200 active:bg-gray-300"]
+	const classNames = [
+		"p-1 inline-flex items-center gap-1 bg-gray-100 hover:cursor-pointer hover:bg-gray-200 active:bg-gray-300",
+	]
 	if (props.className) {
 		classNames.push(props.className)
 	}
@@ -25,7 +29,7 @@ export const PeerIdToken: React.FC<PeerIdTokenProps> = (props) => {
 	return (
 		<button className={classNames.join(" ")} onClick={handleClick}>
 			{props.children}
-			<span className="whitespace-pre">…{id.slice(-6)}</span>
+			<span className="whitespace-pre">{text}</span>
 			{copyIcon({ width: 24, height: 24 })}
 		</button>
 	)
