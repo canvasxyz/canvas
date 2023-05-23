@@ -8,18 +8,37 @@ import { IDBTree } from "@canvas-js/okra-idb"
 
 import { storeService, StoreService, StoreComponents } from "@canvas-js/store/service/browser"
 
+import Events from "#protocols/events"
+
+import { EventMap } from "../interfaces"
 import { rooms } from "../fixtures"
 import { storeDB } from "./storeDB"
-import { MessageEvent } from "../models/MessageEvent"
 import { modelDB } from "../models/modelDB"
+import { ROOM_REGISTRY_TOPIC, USER_REGISTRY_TOPIC } from "../constants"
 
-type RoomEventMap = {
-	message: MessageEvent
+export async function getRoomRegistryService(): Promise<(components: StoreComponents) => StoreService> {
+	const tree = await IDBTree.open(storeDB, ROOM_REGISTRY_TOPIC)
+	return storeService(tree, {
+		topic: ROOM_REGISTRY_TOPIC,
+		apply: async (key, value) => {
+			console.log(`${ROOM_REGISTRY_TOPIC}: got entry`, { key: bytesToHex(key), value: bytesToHex(value) })
+		},
+	})
 }
 
-type RoomEvent = { [Type in keyof RoomEventMap]: { type: Type; detail: RoomEventMap[Type] } }[keyof RoomEventMap]
+export async function getUserRegistryService(): Promise<(components: StoreComponents) => StoreService> {
+	const tree = await IDBTree.open(storeDB, USER_REGISTRY_TOPIC)
+	return storeService(tree, {
+		topic: USER_REGISTRY_TOPIC,
+		apply: async (key, value) => {
+			console.log(`${USER_REGISTRY_TOPIC}: got entry`, { key: bytesToHex(key), value: bytesToHex(value) })
+		},
+	})
+}
 
-export function encodeEvent<Type extends keyof RoomEventMap>(type: Type, detail: RoomEventMap[Type]): Uint8Array {
+export type RoomEvent = { [Type in keyof EventMap]: { type: Type; detail: EventMap[Type] } }[keyof EventMap]
+
+export function encodeRoomEvent<Type extends keyof EventMap>(type: Type, detail: EventMap[Type]): Uint8Array {
 	return encode({ type, detail })
 }
 
@@ -38,7 +57,7 @@ export async function getRoomStoreServices(): Promise<Record<string, (components
 
 				const event = decode(value) as RoomEvent
 				if (event.type === "message") {
-					const id = await modelDB.messageEvents.add(event.detail)
+					const id = await modelDB.messages.add(event.detail)
 					console.log("added message with id", id)
 				} else {
 					throw new Error("invalid event: invalid event type")

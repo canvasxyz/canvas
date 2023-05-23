@@ -1,24 +1,20 @@
 import Dexie, { Table } from "dexie"
-import { MessageEvent } from "./MessageEvent"
-import { Room } from "./Room"
+
+import { Message, Room, PublicUserRegistration } from "../interfaces"
 
 export class InterwalletChatDB extends Dexie {
-	rooms!: Table<Room, number>
-	messageEvents!: Table<MessageEvent, number>
+	users!: Table<PublicUserRegistration, string>
+	rooms!: Table<Room, string>
+	messages!: Table<Message, number>
 
 	constructor() {
 		super("InterwalletChatDB")
 		this.version(1).stores({
-			rooms: "++id",
-			messageEvents: "++id,room_id,timestamp",
+			users: "address",
+			rooms: "topic, *members",
+			messages: "++id, room, timestamp",
 		})
 	}
 }
 
 export const modelDB = new InterwalletChatDB()
-
-export function resetDatabase() {
-	return modelDB.transaction("rw", modelDB.rooms, modelDB.messageEvents, async () => {
-		await Promise.all(modelDB.tables.map((table) => table.clear()))
-	})
-}

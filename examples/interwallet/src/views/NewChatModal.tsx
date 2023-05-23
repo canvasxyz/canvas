@@ -1,7 +1,7 @@
 import React from "react"
-import { UserRegistration } from "../interfaces"
+import { PrivateUserRegistration } from "../interfaces"
 
-export const NewChatModal = ({ user, closeModal }: { user: UserRegistration; closeModal: () => void }) => {
+export const NewChatModal = ({ user, closeModal }: { user: PrivateUserRegistration; closeModal: () => void }) => {
 	// const userRegistrationsList = Object.entries(userRegistrations)
 
 	return (

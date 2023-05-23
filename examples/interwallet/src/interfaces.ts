@@ -1,12 +1,17 @@
 export type KeyBundle = {
 	signingAddress: `0x${string}`
-	encryptionPublicKey: string
+	encryptionPublicKey: `0x${string}`
 }
 
-export interface UserRegistration {
+export interface PublicUserRegistration {
+	address: `0x${string}`
+	keyBundle: KeyBundle
+}
+
+export interface PrivateUserRegistration {
 	privateKey: `0x${string}`
-	publicKeyBundle: KeyBundle
-	publicKeyBundleSignature: `0x${string}`
+	keyBundle: KeyBundle
+	keyBundleSignature: `0x${string}`
 }
 
 export type RoomId = `interwallet:room:${string}`
@@ -16,6 +21,18 @@ export type Room = {
 	members: [`0x${string}`, `0x${string}`]
 }
 
-export type Signed = { signature: string; signingAddress: string; payload: Uint8Array }
+export type Message = {
+	room: string
+	sender: string
+	message: string
+	timestamp: number
+}
 
-export type Encrypted = { toEncryptionKey: string; data: Uint8Array }
+export type EventMap = {
+	message: Message
+}
+
+type MessageEvent = {
+	type: "message"
+	detail: Message
+}

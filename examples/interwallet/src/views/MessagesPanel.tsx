@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useContext, useEffect, useState } from "react"
 import { useAccount } from "wagmi"
 import { useLiveQuery } from "dexie-react-hooks"
 
@@ -7,7 +7,9 @@ import { blake3 } from "@noble/hashes/blake3"
 import { modelDB } from "../models/modelDB"
 import { libp2p } from "../stores/libp2p"
 import { RoomId } from "../interfaces"
-import { encodeEvent } from "../stores/services"
+import { encodeRoomEvent, RoomEvent } from "../stores/services"
+import { AppContext } from "../context"
+import { decryptAndVerifyEvent, signAndEncryptEvent } from "../cryptography"
 
 export interface MessagesPanelProps {
 	roomId: RoomId
@@ -18,7 +20,7 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 
 	const [message, setMessage] = useState<string>("")
 	const messageEvents =
-		useLiveQuery(async () => await modelDB.messageEvents.where({ room_id: roomId }).sortBy("timestamp"), [roomId]) || []
+		useLiveQuery(async () => await modelDB.messages.where({ room: roomId }).sortBy("timestamp"), [roomId]) || []
 
 	const messagesEndRef = React.useRef<HTMLDivElement>(null)
 	const messageInputRef = React.useRef<HTMLInputElement>(null)
@@ -26,6 +28,8 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "auto" })
 	}, [messageEvents])
+
+	const { user } = useContext(AppContext)
 
 	const handleSubmit = useCallback(
 		(e: React.FormEvent<HTMLFormElement>) => {
@@ -35,8 +39,25 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 				return
 			}
 
-			const value = encodeEvent("message", {
-				room_id: roomId,
+			const payload: RoomEvent = {
+				type: "message",
+				detail: {
+					room: roomId,
+					sender: userAddress,
+					message: message,
+					timestamp: Date.now(),
+				},
+			}
+
+			if (user !== null) {
+				const encryptedDevent = signAndEncryptEvent(user, user.keyBundle, payload)
+				console.log("encrypted event", encryptedDevent)
+				const decryptedEvent = decryptAndVerifyEvent(user, encryptedDevent)
+				console.log("decrypted event", decryptedEvent)
+			}
+
+			const value = encodeRoomEvent("message", {
+				room: roomId,
 				sender: userAddress,
 				message: message,
 				timestamp: Date.now(),
@@ -49,11 +70,11 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 				.then(() => setMessage(""))
 				.catch((err) => console.error(err))
 		},
-		[roomId, userAddress, message]
+		[roomId, userAddress, message, user]
 	)
 
 	return (
-		<div className="flex flex-col grow overflow-x-hidden">
+		<div className="flex flex-col basis-96 grow overflow-x-hidden">
 			<div className="flex flex-col grow m-3 gap-3 overflow-y-scroll" onClick={() => messageInputRef.current?.focus()}>
 				{messageEvents.map((message, index) => {
 					const isSent = message.sender == userAddress

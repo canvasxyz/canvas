@@ -4,23 +4,22 @@ import { identifyService } from "libp2p/identify"
 import { pingService, PingService } from "libp2p/ping"
 
 import { webSockets } from "@libp2p/websockets"
+import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
-import { PubSub } from "@libp2p/interface-pubsub"
+import { webRTC } from "@libp2p/webrtc"
 
-import { PeerId } from "@libp2p/interface-peer-id"
+import type { PubSub } from "@libp2p/interface-pubsub"
+import type { PeerId } from "@libp2p/interface-peer-id"
+
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 import { base64 } from "multiformats/bases/base64"
-
-import { bytesToHex } from "viem"
-
-import { IDBTree } from "@canvas-js/okra-idb"
 import { PubsubServiceDiscovery, pubsubServiceDiscovery } from "@canvas-js/pubsub-service-discovery"
 
 import { testnetBootstrapList } from "@canvas-js/store/bootstrap"
-import { storeService, StoreService, StoreComponents } from "@canvas-js/store/service/browser"
+import { StoreService } from "@canvas-js/store/service/browser"
 
 import {
 	MAX_CONNECTIONS,
@@ -31,8 +30,7 @@ import {
 	PEER_ID_KEY,
 } from "../constants"
 
-import { storeDB } from "./storeDB"
-import { getRoomStoreServices } from "./services"
+import { getRoomRegistryService, getRoomStoreServices, getUserRegistryService } from "./services"
 
 export type ServiceMap = {
 	identify: {}
@@ -48,16 +46,24 @@ async function getLibp2p(): Promise<Libp2p<ServiceMap>> {
 
 	const bootstrapList = testnetBootstrapList
 
-	const userRegistryTree = await IDBTree.open(storeDB, USER_REGISTRY_TOPIC)
-	const roomRegistryTree = await IDBTree.open(storeDB, ROOM_REGISTRY_TOPIC)
-
 	const roomStoreServices = await getRoomStoreServices()
+	const roomRegistryService = await getRoomRegistryService()
+	const userRegistryService = await getUserRegistryService()
 
 	return await createLibp2p({
 		start: false,
 		peerId: peerId,
-		addresses: { listen: [], announce: [] },
-		transports: [webSockets(), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
+
+		addresses: { listen: ["/webrtc"], announce: [] },
+		transports: [
+			webRTC(),
+			webSockets({ filter: all }),
+			circuitRelayTransport({ discoverRelays: bootstrapList.length }),
+		],
+
+		// addresses: { listen: [], announce: [] },
+		// transports: [webSockets(), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
+
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
@@ -65,6 +71,12 @@ async function getLibp2p(): Promise<Libp2p<ServiceMap>> {
 		connectionManager: {
 			minConnections: MIN_CONNECTIONS,
 			maxConnections: MAX_CONNECTIONS,
+		},
+
+		connectionGater: {
+			denyDialMultiaddr: () => {
+				return false
+			},
 		},
 
 		services: {
@@ -91,19 +103,8 @@ async function getLibp2p(): Promise<Libp2p<ServiceMap>> {
 					protocol === PubsubServiceDiscovery.DISCOVERY_TOPIC || protocol.startsWith("/canvas/v0/store/"),
 			}),
 
-			[USER_REGISTRY_TOPIC]: storeService(userRegistryTree, {
-				topic: USER_REGISTRY_TOPIC,
-				apply: async (key, value) => {
-					console.log(`${USER_REGISTRY_TOPIC}: got entry`, { key: bytesToHex(key), value: bytesToHex(value) })
-				},
-			}),
-
-			[ROOM_REGISTRY_TOPIC]: storeService(roomRegistryTree, {
-				topic: ROOM_REGISTRY_TOPIC,
-				apply: async (key, value) => {
-					console.log(`${ROOM_REGISTRY_TOPIC}: got entry`, { key: bytesToHex(key), value: bytesToHex(value) })
-				},
-			}),
+			[USER_REGISTRY_TOPIC]: userRegistryService,
+			[ROOM_REGISTRY_TOPIC]: roomRegistryService,
 
 			...roomStoreServices,
 		},
@@ -127,3 +128,4 @@ async function getPeerId(): Promise<PeerId> {
 }
 
 export const libp2p = await getLibp2p()
+;(window as any).libp2p = libp2p

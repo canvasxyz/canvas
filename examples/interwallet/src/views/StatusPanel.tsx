@@ -1,7 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import { SubscriptionChangeData } from "@libp2p/interface-pubsub"
 import { Connection } from "@libp2p/interface-connection"
 import { protocols } from "@multiformats/multiaddr"
+import { PeerId } from "@libp2p/interface-peer-id"
+
+// import { createTopology } from "@libp2p/topology"
+// import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 
 import { libp2p } from "../stores/libp2p"
 import { PeerIdToken } from "./PeerId"
@@ -40,7 +45,7 @@ export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
 	}, [started, starting, stopping])
 
 	return (
-		<div className="basis-96 grow-0 shrink-0 flex flex-col self-stretch items-stretch border-gray-300 border-l">
+		<div className="basis-auto shrink-0 flex flex-col self-stretch items-stretch overflow-y-scroll border-gray-300 border-l">
 			<button
 				className="py-1 px-2 text-left border-b border-gray-300 bg-gray-100 hover:cursor-pointer hover:bg-gray-200 active:bg-gray-300"
 				disabled={starting || stopping}
@@ -49,10 +54,10 @@ export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
 				{started ? "stop libp2p" : "start libp2p"}
 			</button>
 			<div className="flex flex-row border-b border-gray-300 items-center">
-				<h4 className="py-1 px-2 grow border-r border-gray-300">Peer Id</h4>
-				<PeerIdToken compact peerId={libp2p.peerId} />
+				<PeerIdToken peerId={libp2p.peerId} />
 			</div>
 			{started && <ConnectionsList />}
+			{/* {started && <MeshPeerList />} */}
 		</div>
 	)
 }
@@ -90,38 +95,125 @@ const ConnectionsList: React.FC<ConnectionsListProps> = (props) => {
 	}, [])
 
 	return (
-		<div className="pl-2">
-			<h4 className="py-1 border-b border-gray-300">Connections</h4>
+		<div>
+			<h4 className="p-1 border-b border-gray-300 font-bold">Connections</h4>
 			{connections.length > 0 ? (
 				connections.map((connection) => <ConnectionStatus key={connection.id} connection={connection} />)
 			) : (
-				<div className="my-1 italic">No connections</div>
+				<div className="p-1 italic">No connections</div>
 			)}
 		</div>
 	)
 }
 
 const circuitRelayProtocol = protocols("p2p-circuit")
+const webRTCProtocol = protocols("webrtc")
 
 interface ConnectionStatusProps {
 	connection: Connection
 }
 
 const ConnectionStatus: React.FC<ConnectionStatusProps> = (props) => {
-	const [origin, isRelayConnection] = useMemo(() => {
+	const [origin, type] = useMemo(() => {
 		const [[code, origin], ...rest] = props.connection.remoteAddr.stringTuples()
 		const { name } = protocols(code)
-		return [`/${name}/${origin}`, rest.some(([code]) => code === circuitRelayProtocol.code)]
+
+		const isCircuitRelay = rest.some(([code]) => code === circuitRelayProtocol.code)
+		const isWebRTC = rest.some(([code]) => code === webRTCProtocol.code)
+
+		return [`/${name}/${origin}`, isWebRTC ? "WebRTC" : isCircuitRelay ? "relayed" : "direct"]
 	}, [props.connection])
 
 	return (
-		<div className="my-1 flex flex-col items-end border-b border-gray-300">
-			<div className="my-1 mx-2">{origin}</div>
-			<div className="flex flex-row">
-				<div className="py-1 mx-2 whitespace-pre">
-					<span>{props.connection.stat.direction}</span>, <span>{isRelayConnection ? "relayed" : "direct"}</span>
+		<div className="flex flex-col items-end border-b border-gray-300">
+			<PeerIdToken peerId={props.connection.remotePeer} />
+			<div className="p-1">
+				{type} {props.connection.stat.direction} {props.connection.remoteAddr.decapsulateCode(421).toString()}
+			</div>
+			{/* <div className="flex flex-row">
+				<div className="p-1">
+					<span>
+						{type} {props.connection.stat.direction}
+					</span>
 				</div>
-				<PeerIdToken compact peerId={props.connection.remotePeer} />
+			</div> */}
+		</div>
+	)
+}
+
+// interface MeshPeerListProps {}
+
+// const MeshPeerList: React.FC<MeshPeerListProps> = (props) => {
+// 	const peerSubscriptionMap = useMemo(() => new Map<string, Set<string>>(), [])
+
+// 	// const [topicPeers, setTopicPeers] = useState<{ topic: string; peers: PeerId[] }[]>([])
+
+// 	useEffect(() => {
+// 		const { pubsub } = libp2p.services
+
+// 		// const topicPrefix = "/canvas/v0/store/"
+
+// 		const handleSubscriptionChange = ({ detail: { peerId, subscriptions } }: CustomEvent<SubscriptionChangeData>) => {
+// 			const subscriptionSet = peerSubscriptionMap.get(peerId.toString())
+// 			if (subscriptionSet === undefined) {
+// 				const subscriptionSet = new Set<string>()
+// 				for (const { subscribe, topic } of subscriptions) {
+// 					if (subscribe) {
+// 						subscriptionSet.add(topic)
+// 					}
+// 				}
+
+// 				if (subscriptionSet.size > 0) {
+// 					peerSubscriptionMap.set(peerId.toString(), subscriptionSet)
+// 				}
+// 			} else {
+// 				for (const { subscribe, topic } of subscriptions) {
+// 					if (subscribe) {
+// 						subscriptionSet.add(topic)
+// 					} else {
+// 						subscriptionSet.delete(topic)
+// 					}
+// 				}
+
+// 				if (subscriptionSet.size === 0) {
+// 					peerSubscriptionMap.delete(peerId.toString())
+// 				}
+// 			}
+// 		}
+
+// 		pubsub.addEventListener("subscription-change", handleSubscriptionChange)
+// 		return () => {
+// 			pubsub.removeEventListener("subscription-change", handleSubscriptionChange)
+// 		}
+// 	}, [])
+
+// 	return (
+// 		<div>
+// 			<h4 className="p-1 border-b border-gray-300 font-bold">GossipSub mesh peers</h4>
+// 			{topicPeers.length > 0 ? (
+// 				topicPeers.map(({ topic, peers }) => <TopicPeersList key={topic} topic={topic} peers={peers} />)
+// 			) : (
+// 				<div className="p-1 italic">No topics</div>
+// 			)}
+// 		</div>
+// 	)
+// }
+
+interface TopicPeersListProps {
+	topic: string
+	peers: PeerId[]
+}
+
+const TopicPeersList: React.FC<TopicPeersListProps> = (props) => {
+	return (
+		<div className="flex flex-col border-b border-gray-300">
+			<div className="p-1">{props.topic}</div>
+			<div className="flex flex-col">
+				{props.peers.map((peer) => (
+					<code className="m-1 text-sm font-mono" key={peer.toString()}>
+						- {peer.toString()}
+					</code>
+				))}
 			</div>
 		</div>
 	)

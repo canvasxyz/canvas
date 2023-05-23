@@ -29,7 +29,7 @@ export const PeerIdToken: React.FC<PeerIdTokenProps> = (props) => {
 	return (
 		<button className={classNames.join(" ")} onClick={handleClick}>
 			{props.children}
-			<span className="whitespace-pre">{text}</span>
+			<span className="whitespace-pre text-sm font-mono">{text}</span>
 			{copyIcon({ width: 24, height: 24 })}
 		</button>
 	)
