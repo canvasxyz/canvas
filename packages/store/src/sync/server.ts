@@ -30,7 +30,6 @@ export class Server {
 
 	public async *handle(reqs: AsyncIterable<Sync.Request>): AsyncIterable<Sync.IResponse> {
 		for await (const req of reqs) {
-			this.log("handling %s request", req.request)
 			if (req.request === "getRoot") {
 				assert(req.getRoot, "missing request body")
 				const root = await this.source.getRoot()

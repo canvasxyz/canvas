@@ -8,6 +8,8 @@ import { PeerId } from "@libp2p/interface-peer-id"
 // import { createTopology } from "@libp2p/topology"
 // import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 
+import closeIcon from "../icons/close.svg"
+
 import { libp2p } from "../stores/libp2p"
 import { PeerIdToken } from "./PeerId"
 
@@ -45,7 +47,7 @@ export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
 	}, [started, starting, stopping])
 
 	return (
-		<div className="basis-auto shrink-0 flex flex-col self-stretch items-stretch overflow-y-scroll border-gray-300 border-l">
+		<div className="basis-auto shrink-0 grow-0 flex flex-col self-stretch items-stretch overflow-y-scroll border-gray-300 border-l">
 			<button
 				className="py-1 px-2 text-left border-b border-gray-300 bg-gray-100 hover:cursor-pointer hover:bg-gray-200 active:bg-gray-300"
 				disabled={starting || stopping}
@@ -57,7 +59,7 @@ export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
 				<PeerIdToken peerId={libp2p.peerId} />
 			</div>
 			{started && <ConnectionsList />}
-			{/* {started && <MeshPeerList />} */}
+			{started && <MeshPeerList />}
 		</div>
 	)
 }
@@ -107,28 +109,41 @@ const ConnectionsList: React.FC<ConnectionsListProps> = (props) => {
 }
 
 const circuitRelayProtocol = protocols("p2p-circuit")
-const webRTCProtocol = protocols("webrtc")
+// const webRTCProtocol = protocols("webrtc")
 
 interface ConnectionStatusProps {
 	connection: Connection
 }
 
 const ConnectionStatus: React.FC<ConnectionStatusProps> = (props) => {
-	const [origin, type] = useMemo(() => {
+	const type = useMemo(() => {
 		const [[code, origin], ...rest] = props.connection.remoteAddr.stringTuples()
 		const { name } = protocols(code)
 
 		const isCircuitRelay = rest.some(([code]) => code === circuitRelayProtocol.code)
-		const isWebRTC = rest.some(([code]) => code === webRTCProtocol.code)
+		// const isWebRTC = rest.some(([code]) => code === webRTCProtocol.code)
 
-		return [`/${name}/${origin}`, isWebRTC ? "WebRTC" : isCircuitRelay ? "relayed" : "direct"]
+		const { direction } = props.connection.stat
+		if (isCircuitRelay) {
+			return `relayed ${direction} via /${name}/${origin}`
+		} else if (direction === "inbound") {
+			return `direct inbound from ${origin}`
+		} else if (direction === "outbound") {
+			return `direct outbound to /${name}/${origin}`
+		}
 	}, [props.connection])
 
 	return (
 		<div className="flex flex-col items-end border-b border-gray-300">
 			<PeerIdToken peerId={props.connection.remotePeer} />
-			<div className="p-1">
-				{type} {props.connection.stat.direction} {props.connection.remoteAddr.decapsulateCode(421).toString()}
+			<div className="flex flex-row items-center">
+				<div className="p-1">{type}</div>
+				<button
+					className="p-1 bg-gray-100 hover:cursor-pointer hover:bg-gray-200 active:bg-gray-300"
+					onClick={() => props.connection.close()}
+				>
+					{closeIcon({ width: 24, height: 24 })}
+				</button>
 			</div>
 			{/* <div className="flex flex-row">
 				<div className="p-1">
@@ -141,67 +156,81 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = (props) => {
 	)
 }
 
-// interface MeshPeerListProps {}
+interface MeshPeerListProps {}
 
-// const MeshPeerList: React.FC<MeshPeerListProps> = (props) => {
-// 	const peerSubscriptionMap = useMemo(() => new Map<string, Set<string>>(), [])
+const MeshPeerList: React.FC<MeshPeerListProps> = (props) => {
+	const topicSubscriptionMap = useMemo(() => new Map<string, Set<string>>(), [])
+	const [topicPeers, setTopicPeers] = useState<{ topic: string; peers: string[] }[]>([])
 
-// 	// const [topicPeers, setTopicPeers] = useState<{ topic: string; peers: PeerId[] }[]>([])
+	useEffect(() => {
+		const { pubsub } = libp2p.services
 
-// 	useEffect(() => {
-// 		const { pubsub } = libp2p.services
+		const topicPrefix = "/canvas/v0/store/"
+		const topicPeers: { topic: string; peers: string[] }[] = []
+		for (const topic of pubsub.getTopics()) {
+			const peers = pubsub.getSubscribers(topic).map((peerId) => peerId.toString())
+			topicSubscriptionMap.set(topic, new Set(peers))
+			if (topic.startsWith(topicPrefix)) {
+				topicPeers.push({ topic: topic.slice(topicPrefix.length), peers })
+			}
+		}
 
-// 		// const topicPrefix = "/canvas/v0/store/"
+		setTopicPeers(topicPeers)
 
-// 		const handleSubscriptionChange = ({ detail: { peerId, subscriptions } }: CustomEvent<SubscriptionChangeData>) => {
-// 			const subscriptionSet = peerSubscriptionMap.get(peerId.toString())
-// 			if (subscriptionSet === undefined) {
-// 				const subscriptionSet = new Set<string>()
-// 				for (const { subscribe, topic } of subscriptions) {
-// 					if (subscribe) {
-// 						subscriptionSet.add(topic)
-// 					}
-// 				}
+		const handleSubscriptionChange = ({ detail: { peerId, subscriptions } }: CustomEvent<SubscriptionChangeData>) => {
+			if (libp2p.peerId.equals(peerId)) {
+				for (const { subscribe, topic } of subscriptions) {
+					if (subscribe) {
+						const peers = pubsub.getSubscribers(topic).map((peerId) => peerId.toString())
+						topicSubscriptionMap.set(topic, new Set(peers))
+					} else {
+						topicSubscriptionMap.delete(topic)
+					}
+				}
+			} else {
+				for (const { subscribe, topic } of subscriptions) {
+					const peers = topicSubscriptionMap.get(topic)
+					if (peers === undefined) {
+						continue
+					} else if (subscribe) {
+						peers.add(peerId.toString())
+					} else {
+						peers.delete(peerId.toString())
+					}
+				}
+			}
 
-// 				if (subscriptionSet.size > 0) {
-// 					peerSubscriptionMap.set(peerId.toString(), subscriptionSet)
-// 				}
-// 			} else {
-// 				for (const { subscribe, topic } of subscriptions) {
-// 					if (subscribe) {
-// 						subscriptionSet.add(topic)
-// 					} else {
-// 						subscriptionSet.delete(topic)
-// 					}
-// 				}
+			const topicPeers: { topic: string; peers: string[] }[] = []
+			for (const [topic, peers] of topicSubscriptionMap) {
+				if (topic.startsWith(topicPrefix)) {
+					topicPeers.push({ topic: topic.slice(topicPrefix.length), peers: [...peers] })
+				}
+			}
 
-// 				if (subscriptionSet.size === 0) {
-// 					peerSubscriptionMap.delete(peerId.toString())
-// 				}
-// 			}
-// 		}
+			setTopicPeers(topicPeers)
+		}
 
-// 		pubsub.addEventListener("subscription-change", handleSubscriptionChange)
-// 		return () => {
-// 			pubsub.removeEventListener("subscription-change", handleSubscriptionChange)
-// 		}
-// 	}, [])
+		pubsub.addEventListener("subscription-change", handleSubscriptionChange)
+		return () => {
+			pubsub.removeEventListener("subscription-change", handleSubscriptionChange)
+		}
+	}, [])
 
-// 	return (
-// 		<div>
-// 			<h4 className="p-1 border-b border-gray-300 font-bold">GossipSub mesh peers</h4>
-// 			{topicPeers.length > 0 ? (
-// 				topicPeers.map(({ topic, peers }) => <TopicPeersList key={topic} topic={topic} peers={peers} />)
-// 			) : (
-// 				<div className="p-1 italic">No topics</div>
-// 			)}
-// 		</div>
-// 	)
-// }
+	return (
+		<div>
+			<h4 className="p-1 border-b border-gray-300 font-bold">GossipSub mesh peers</h4>
+			{topicPeers.length > 0 ? (
+				topicPeers.map(({ topic, peers }) => <TopicPeersList key={topic} topic={topic} peers={peers} />)
+			) : (
+				<div className="p-1 italic">No topics</div>
+			)}
+		</div>
+	)
+}
 
 interface TopicPeersListProps {
 	topic: string
-	peers: PeerId[]
+	peers: string[]
 }
 
 const TopicPeersList: React.FC<TopicPeersListProps> = (props) => {
@@ -209,9 +238,9 @@ const TopicPeersList: React.FC<TopicPeersListProps> = (props) => {
 		<div className="flex flex-col border-b border-gray-300">
 			<div className="p-1">{props.topic}</div>
 			<div className="flex flex-col">
-				{props.peers.map((peer) => (
-					<code className="m-1 text-sm font-mono" key={peer.toString()}>
-						- {peer.toString()}
+				{props.peers.map((peerId) => (
+					<code className="m-1 text-sm font-mono" key={peerId}>
+						- {peerId}
 					</code>
 				))}
 			</div>
