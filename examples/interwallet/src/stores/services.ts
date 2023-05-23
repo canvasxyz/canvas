@@ -24,8 +24,9 @@ export async function getRoomRegistryService(): Promise<(components: StoreCompon
 			console.log(`${ROOM_REGISTRY_TOPIC}: got entry`, { key: bytesToHex(key), value: bytesToHex(value) })
 			const room = Events.Room.decode(value)
 			const roomModel: Room = {
+				creator: room.creator as `0x${string}`,
 				topic: room.topic as `interwallet:room:${string}`,
-				members: room.members.map((member) => bytesToHex(member)) as [`0x${string}`, `0x${string}`],
+				members: room.members as [`0x${string}`, `0x${string}`],
 			}
 			await modelDB.rooms.put(roomModel)
 		},

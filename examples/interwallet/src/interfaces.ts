@@ -17,6 +17,7 @@ export interface PrivateUserRegistration {
 export type RoomId = `interwallet:room:${string}`
 
 export type Room = {
+	creator: `0x${string}`
 	topic: RoomId
 	members: [`0x${string}`, `0x${string}`]
 }

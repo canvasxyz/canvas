@@ -1,5 +1,6 @@
 import React, { useCallback, useContext, useEffect } from "react"
 import { useAccount, useEnsName } from "wagmi"
+import Events from "#protocols/events"
 
 // import { rooms } from "../fixtures"
 import type { RoomId, Room } from "../interfaces"
@@ -7,6 +8,10 @@ import { AppContext } from "../context"
 import { NewChatModal } from "./NewChatModal"
 import { modelDB } from "../models/modelDB"
 import { useLiveQuery } from "dexie-react-hooks"
+import { libp2p } from "../stores/libp2p"
+import { ROOM_REGISTRY_TOPIC } from "../constants"
+import { personalSign } from "@metamask/eth-sig-util"
+import { hexToBytes } from "viem"
 
 export interface ChatSizebarProps {
 	roomId: string | null
@@ -16,19 +21,32 @@ export interface ChatSizebarProps {
 export const ChatSidebar: React.FC<ChatSizebarProps> = ({ roomId, setRoomId }) => {
 	const [showNewChatModal, setShowNewChatModal] = React.useState(false)
 	const { address: myAddress } = useAccount()
+	const { user } = useContext(AppContext)
 
 	const rooms = useLiveQuery(async () => await modelDB.rooms.toArray(), [])
 
 	const startNewChat = useCallback(
-		(address: `0x${string}`) => {
+		async (address: `0x${string}`) => {
 			if (!myAddress) return
-			const room: Room = {
-				topic: `interwallet:room:${[myAddress, address].sort().join(":")}`,
-				members: [address, myAddress],
-			}
+			if (!user) return
 
-			modelDB.rooms.put(room)
-			setRoomId(room.topic)
+			const topic: RoomId = `interwallet:room:${[myAddress, address].sort().join(":")}`
+
+			const members = [address, myAddress]
+
+			const value = Events.Room.encode({
+				creator: myAddress,
+				topic: topic,
+				members: members,
+			}).finish()
+
+			// sign the room creation message
+			const privateKey = Buffer.from(hexToBytes(user.privateKey))
+			const signature = personalSign({ privateKey, data: value }) as `0x${string}`
+
+			await libp2p.services[ROOM_REGISTRY_TOPIC].insert(hexToBytes(signature), value)
+
+			setRoomId(topic)
 		},
 		[myAddress, setRoomId]
 	)
