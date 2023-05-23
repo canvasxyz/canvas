@@ -4,6 +4,7 @@ import { useAccount, useEnsName } from "wagmi"
 import { rooms } from "../fixtures"
 import type { RoomId, Room } from "../interfaces"
 import { AppContext } from "../context"
+import { NewChatModal } from "./NewChatModal"
 
 export interface ChatSizebarProps {
 	roomId: string | null
@@ -11,6 +12,8 @@ export interface ChatSizebarProps {
 }
 
 export const ChatSidebar: React.FC<ChatSizebarProps> = ({ roomId, setRoomId }) => {
+	const [showNewChatModal, setShowNewChatModal] = React.useState(false)
+
 	const handleClick = useCallback(
 		(room: Room) => {
 			if (room.topic === roomId) {
@@ -24,11 +27,28 @@ export const ChatSidebar: React.FC<ChatSizebarProps> = ({ roomId, setRoomId }) =
 
 	return (
 		<div className="basis-64 grow-0 shrink-0 border-r border-gray-300">
+			<div className="flex flex-col items-stretch">
+				<button
+					onClick={() => {
+						setShowNewChatModal(true)
+					}}
+					className="p-2 m-2 text-left text-white font-bold text-center rounded hover:bg-blue-800 hover:cursor-pointer bg-blue-600"
+				>
+					New conversation
+				</button>
+			</div>
 			<div className="overflow-scroll flex flex-col items-stretch">
 				{rooms.map((room) => (
 					<ChatSidebarRoom key={room.topic} room={room} selected={room.topic === roomId} handleSelect={handleClick} />
 				))}
 			</div>
+			{showNewChatModal && (
+				<NewChatModal
+					closeModal={() => {
+						setShowNewChatModal(false)
+					}}
+				/>
+			)}
 		</div>
 	)
 }

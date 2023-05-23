@@ -1,8 +1,20 @@
 import React from "react"
-import { PrivateUserRegistration } from "../interfaces"
+import { useLiveQuery } from "dexie-react-hooks"
+import { modelDB } from "../models/modelDB"
+import { useEnsName } from "wagmi"
 
-export const NewChatModal = ({ user, closeModal }: { user: PrivateUserRegistration; closeModal: () => void }) => {
+const UserEntry = ({ user }: { user: { address: string } }) => {
+	const { data: ensName } = useEnsName({ address: user.address as `0x${string}` })
+	return (
+		<div>
+			{ensName} ({user.address.slice(0, 8)}...)
+		</div>
+	)
+}
+
+export const NewChatModal = ({ closeModal }: { closeModal: () => void }) => {
 	// const userRegistrationsList = Object.entries(userRegistrations)
+	const users = useLiveQuery(async () => await modelDB.users.toArray(), [])
 
 	return (
 		<div className="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -19,6 +31,9 @@ export const NewChatModal = ({ user, closeModal }: { user: PrivateUserRegistrati
 								</h3>
 
 								<div className="mt-2 flex flex-col gap-2">
+									{users?.map((user, index) => (
+										<UserEntry key={`${user.address}-${index}`} user={user} />
+									))}
 									{/* {userRegistrationsList.map(([address, userRegistration]) => (
 										<button
 											key={address}
