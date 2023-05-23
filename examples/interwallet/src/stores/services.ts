@@ -10,7 +10,7 @@ import { storeService, StoreService, StoreComponents } from "@canvas-js/store/se
 
 import Events from "#protocols/events"
 
-import { EventMap, PublicUserRegistration } from "../interfaces"
+import { EventMap, PublicUserRegistration, Room } from "../interfaces"
 import { rooms } from "../fixtures"
 import { storeDB } from "./storeDB"
 import { modelDB } from "../models/modelDB"
@@ -22,6 +22,12 @@ export async function getRoomRegistryService(): Promise<(components: StoreCompon
 		topic: ROOM_REGISTRY_TOPIC,
 		apply: async (key, value) => {
 			console.log(`${ROOM_REGISTRY_TOPIC}: got entry`, { key: bytesToHex(key), value: bytesToHex(value) })
+			const room = Events.Room.decode(value)
+			const roomModel: Room = {
+				topic: room.topic as `interwallet:room:${string}`,
+				members: room.members.map((member) => bytesToHex(member)) as [`0x${string}`, `0x${string}`],
+			}
+			modelDB.rooms.add(roomModel)
 		},
 	})
 }
