@@ -340,7 +340,7 @@ export interface IRoom {
     topic?: (string|null);
 
     /** Room members */
-    members?: (Uint8Array[]|null);
+    members?: (string[]|null);
 }
 
 /** Represents a Room. */
@@ -356,7 +356,7 @@ export class Room implements IRoom {
     public topic: string;
 
     /** Room members. */
-    public members: Uint8Array[];
+    public members: string[];
 
     /**
      * Creates a new Room instance using the specified properties.

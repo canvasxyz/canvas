@@ -870,7 +870,7 @@ $root.Room = (function() {
      * @exports IRoom
      * @interface IRoom
      * @property {string|null} [topic] Room topic
-     * @property {Array.<Uint8Array>|null} [members] Room members
+     * @property {Array.<string>|null} [members] Room members
      */
 
     /**
@@ -899,7 +899,7 @@ $root.Room = (function() {
 
     /**
      * Room members.
-     * @member {Array.<Uint8Array>} members
+     * @member {Array.<string>} members
      * @memberof Room
      * @instance
      */
@@ -933,7 +933,7 @@ $root.Room = (function() {
             writer.uint32(/* id 1, wireType 2 =*/10).string(message.topic);
         if (message.members != null && message.members.length)
             for (var i = 0; i < message.members.length; ++i)
-                writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.members[i]);
+                writer.uint32(/* id 2, wireType 2 =*/18).string(message.members[i]);
         return writer;
     };
 
@@ -975,7 +975,7 @@ $root.Room = (function() {
             case 2: {
                     if (!(message.members && message.members.length))
                         message.members = [];
-                    message.members.push(reader.bytes());
+                    message.members.push(reader.string());
                     break;
                 }
             default:
@@ -1020,8 +1020,8 @@ $root.Room = (function() {
             if (!Array.isArray(message.members))
                 return "members: array expected";
             for (var i = 0; i < message.members.length; ++i)
-                if (!(message.members[i] && typeof message.members[i].length === "number" || $util.isString(message.members[i])))
-                    return "members: buffer[] expected";
+                if (!$util.isString(message.members[i]))
+                    return "members: string[] expected";
         }
         return null;
     };
@@ -1045,10 +1045,7 @@ $root.Room = (function() {
                 throw TypeError(".Room.members: array expected");
             message.members = [];
             for (var i = 0; i < object.members.length; ++i)
-                if (typeof object.members[i] === "string")
-                    $util.base64.decode(object.members[i], message.members[i] = $util.newBuffer($util.base64.length(object.members[i])), 0);
-                else if (object.members[i].length >= 0)
-                    message.members[i] = object.members[i];
+                message.members[i] = String(object.members[i]);
         }
         return message;
     };
@@ -1075,7 +1072,7 @@ $root.Room = (function() {
         if (message.members && message.members.length) {
             object.members = [];
             for (var j = 0; j < message.members.length; ++j)
-                object.members[j] = options.bytes === String ? $util.base64.encode(message.members[j], 0, message.members[j].length) : options.bytes === Array ? Array.prototype.slice.call(message.members[j]) : message.members[j];
+                object.members[j] = message.members[j];
         }
         return object;
     };
