@@ -18,3 +18,8 @@ message SignedKeyBundle {
   bytes signing_address = 2;
   bytes encryption_public_key = 3;
 }
+
+message Room {
+  string topic = 1;
+  repeated bytes members = 2;
+}

@@ -863,4 +863,250 @@ $root.SignedKeyBundle = (function() {
     return SignedKeyBundle;
 })();
 
+$root.Room = (function() {
+
+    /**
+     * Properties of a Room.
+     * @exports IRoom
+     * @interface IRoom
+     * @property {string|null} [topic] Room topic
+     * @property {Array.<Uint8Array>|null} [members] Room members
+     */
+
+    /**
+     * Constructs a new Room.
+     * @exports Room
+     * @classdesc Represents a Room.
+     * @implements IRoom
+     * @constructor
+     * @param {IRoom=} [properties] Properties to set
+     */
+    function Room(properties) {
+        this.members = [];
+        if (properties)
+            for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                if (properties[keys[i]] != null)
+                    this[keys[i]] = properties[keys[i]];
+    }
+
+    /**
+     * Room topic.
+     * @member {string} topic
+     * @memberof Room
+     * @instance
+     */
+    Room.prototype.topic = "";
+
+    /**
+     * Room members.
+     * @member {Array.<Uint8Array>} members
+     * @memberof Room
+     * @instance
+     */
+    Room.prototype.members = $util.emptyArray;
+
+    /**
+     * Creates a new Room instance using the specified properties.
+     * @function create
+     * @memberof Room
+     * @static
+     * @param {IRoom=} [properties] Properties to set
+     * @returns {Room} Room instance
+     */
+    Room.create = function create(properties) {
+        return new Room(properties);
+    };
+
+    /**
+     * Encodes the specified Room message. Does not implicitly {@link Room.verify|verify} messages.
+     * @function encode
+     * @memberof Room
+     * @static
+     * @param {IRoom} message Room message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    Room.encode = function encode(message, writer) {
+        if (!writer)
+            writer = $Writer.create();
+        if (message.topic != null && Object.hasOwnProperty.call(message, "topic"))
+            writer.uint32(/* id 1, wireType 2 =*/10).string(message.topic);
+        if (message.members != null && message.members.length)
+            for (var i = 0; i < message.members.length; ++i)
+                writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.members[i]);
+        return writer;
+    };
+
+    /**
+     * Encodes the specified Room message, length delimited. Does not implicitly {@link Room.verify|verify} messages.
+     * @function encodeDelimited
+     * @memberof Room
+     * @static
+     * @param {IRoom} message Room message or plain object to encode
+     * @param {$protobuf.Writer} [writer] Writer to encode to
+     * @returns {$protobuf.Writer} Writer
+     */
+    Room.encodeDelimited = function encodeDelimited(message, writer) {
+        return this.encode(message, writer).ldelim();
+    };
+
+    /**
+     * Decodes a Room message from the specified reader or buffer.
+     * @function decode
+     * @memberof Room
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @param {number} [length] Message length if known beforehand
+     * @returns {Room} Room
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    Room.decode = function decode(reader, length) {
+        if (!(reader instanceof $Reader))
+            reader = $Reader.create(reader);
+        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.Room();
+        while (reader.pos < end) {
+            var tag = reader.uint32();
+            switch (tag >>> 3) {
+            case 1: {
+                    message.topic = reader.string();
+                    break;
+                }
+            case 2: {
+                    if (!(message.members && message.members.length))
+                        message.members = [];
+                    message.members.push(reader.bytes());
+                    break;
+                }
+            default:
+                reader.skipType(tag & 7);
+                break;
+            }
+        }
+        return message;
+    };
+
+    /**
+     * Decodes a Room message from the specified reader or buffer, length delimited.
+     * @function decodeDelimited
+     * @memberof Room
+     * @static
+     * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+     * @returns {Room} Room
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    Room.decodeDelimited = function decodeDelimited(reader) {
+        if (!(reader instanceof $Reader))
+            reader = new $Reader(reader);
+        return this.decode(reader, reader.uint32());
+    };
+
+    /**
+     * Verifies a Room message.
+     * @function verify
+     * @memberof Room
+     * @static
+     * @param {Object.<string,*>} message Plain object to verify
+     * @returns {string|null} `null` if valid, otherwise the reason why it is not
+     */
+    Room.verify = function verify(message) {
+        if (typeof message !== "object" || message === null)
+            return "object expected";
+        if (message.topic != null && message.hasOwnProperty("topic"))
+            if (!$util.isString(message.topic))
+                return "topic: string expected";
+        if (message.members != null && message.hasOwnProperty("members")) {
+            if (!Array.isArray(message.members))
+                return "members: array expected";
+            for (var i = 0; i < message.members.length; ++i)
+                if (!(message.members[i] && typeof message.members[i].length === "number" || $util.isString(message.members[i])))
+                    return "members: buffer[] expected";
+        }
+        return null;
+    };
+
+    /**
+     * Creates a Room message from a plain object. Also converts values to their respective internal types.
+     * @function fromObject
+     * @memberof Room
+     * @static
+     * @param {Object.<string,*>} object Plain object
+     * @returns {Room} Room
+     */
+    Room.fromObject = function fromObject(object) {
+        if (object instanceof $root.Room)
+            return object;
+        var message = new $root.Room();
+        if (object.topic != null)
+            message.topic = String(object.topic);
+        if (object.members) {
+            if (!Array.isArray(object.members))
+                throw TypeError(".Room.members: array expected");
+            message.members = [];
+            for (var i = 0; i < object.members.length; ++i)
+                if (typeof object.members[i] === "string")
+                    $util.base64.decode(object.members[i], message.members[i] = $util.newBuffer($util.base64.length(object.members[i])), 0);
+                else if (object.members[i].length >= 0)
+                    message.members[i] = object.members[i];
+        }
+        return message;
+    };
+
+    /**
+     * Creates a plain object from a Room message. Also converts values to other types if specified.
+     * @function toObject
+     * @memberof Room
+     * @static
+     * @param {Room} message Room
+     * @param {$protobuf.IConversionOptions} [options] Conversion options
+     * @returns {Object.<string,*>} Plain object
+     */
+    Room.toObject = function toObject(message, options) {
+        if (!options)
+            options = {};
+        var object = {};
+        if (options.arrays || options.defaults)
+            object.members = [];
+        if (options.defaults)
+            object.topic = "";
+        if (message.topic != null && message.hasOwnProperty("topic"))
+            object.topic = message.topic;
+        if (message.members && message.members.length) {
+            object.members = [];
+            for (var j = 0; j < message.members.length; ++j)
+                object.members[j] = options.bytes === String ? $util.base64.encode(message.members[j], 0, message.members[j].length) : options.bytes === Array ? Array.prototype.slice.call(message.members[j]) : message.members[j];
+        }
+        return object;
+    };
+
+    /**
+     * Converts this Room to JSON.
+     * @function toJSON
+     * @memberof Room
+     * @instance
+     * @returns {Object.<string,*>} JSON object
+     */
+    Room.prototype.toJSON = function toJSON() {
+        return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+    };
+
+    /**
+     * Gets the default type url for Room
+     * @function getTypeUrl
+     * @memberof Room
+     * @static
+     * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns {string} The default type url
+     */
+    Room.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+        if (typeUrlPrefix === undefined) {
+            typeUrlPrefix = "type.googleapis.com";
+        }
+        return typeUrlPrefix + "/Room";
+    };
+
+    return Room;
+})();
+
 module.exports = $root;

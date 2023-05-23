@@ -332,3 +332,106 @@ export class SignedKeyBundle implements ISignedKeyBundle {
      */
     public static getTypeUrl(typeUrlPrefix?: string): string;
 }
+
+/** Properties of a Room. */
+export interface IRoom {
+
+    /** Room topic */
+    topic?: (string|null);
+
+    /** Room members */
+    members?: (Uint8Array[]|null);
+}
+
+/** Represents a Room. */
+export class Room implements IRoom {
+
+    /**
+     * Constructs a new Room.
+     * @param [properties] Properties to set
+     */
+    constructor(properties?: IRoom);
+
+    /** Room topic. */
+    public topic: string;
+
+    /** Room members. */
+    public members: Uint8Array[];
+
+    /**
+     * Creates a new Room instance using the specified properties.
+     * @param [properties] Properties to set
+     * @returns Room instance
+     */
+    public static create(properties?: IRoom): Room;
+
+    /**
+     * Encodes the specified Room message. Does not implicitly {@link Room.verify|verify} messages.
+     * @param message Room message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encode(message: IRoom, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Encodes the specified Room message, length delimited. Does not implicitly {@link Room.verify|verify} messages.
+     * @param message Room message or plain object to encode
+     * @param [writer] Writer to encode to
+     * @returns Writer
+     */
+    public static encodeDelimited(message: IRoom, writer?: $protobuf.Writer): $protobuf.Writer;
+
+    /**
+     * Decodes a Room message from the specified reader or buffer.
+     * @param reader Reader or buffer to decode from
+     * @param [length] Message length if known beforehand
+     * @returns Room
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): Room;
+
+    /**
+     * Decodes a Room message from the specified reader or buffer, length delimited.
+     * @param reader Reader or buffer to decode from
+     * @returns Room
+     * @throws {Error} If the payload is not a reader or valid buffer
+     * @throws {$protobuf.util.ProtocolError} If required fields are missing
+     */
+    public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): Room;
+
+    /**
+     * Verifies a Room message.
+     * @param message Plain object to verify
+     * @returns `null` if valid, otherwise the reason why it is not
+     */
+    public static verify(message: { [k: string]: any }): (string|null);
+
+    /**
+     * Creates a Room message from a plain object. Also converts values to their respective internal types.
+     * @param object Plain object
+     * @returns Room
+     */
+    public static fromObject(object: { [k: string]: any }): Room;
+
+    /**
+     * Creates a plain object from a Room message. Also converts values to other types if specified.
+     * @param message Room
+     * @param [options] Conversion options
+     * @returns Plain object
+     */
+    public static toObject(message: Room, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+    /**
+     * Converts this Room to JSON.
+     * @returns JSON object
+     */
+    public toJSON(): { [k: string]: any };
+
+    /**
+     * Gets the default type url for Room
+     * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+     * @returns The default type url
+     */
+    public static getTypeUrl(typeUrlPrefix?: string): string;
+}
