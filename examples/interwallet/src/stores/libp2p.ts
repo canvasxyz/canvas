@@ -4,12 +4,13 @@ import { identifyService } from "libp2p/identify"
 import { pingService, PingService } from "libp2p/ping"
 
 import { webSockets } from "@libp2p/websockets"
-import { all } from "@libp2p/websockets/filters"
+// import { all } from "@libp2p/websockets/filters"
+// import { webRTC } from "@libp2p/webrtc"
+
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
-import { webRTC } from "@libp2p/webrtc"
 
 import type { PubSub } from "@libp2p/interface-pubsub"
 import type { PeerId } from "@libp2p/interface-peer-id"
@@ -54,15 +55,15 @@ async function getLibp2p(): Promise<Libp2p<ServiceMap>> {
 		start: false,
 		peerId: peerId,
 
-		addresses: { listen: ["/webrtc"], announce: [] },
-		transports: [
-			webRTC(),
-			webSockets({ filter: all }),
-			circuitRelayTransport({ discoverRelays: bootstrapList.length }),
-		],
+		// addresses: { listen: ["/webrtc"], announce: [] },
+		// transports: [
+		// 	webRTC(),
+		// 	webSockets({ filter: all }),
+		// 	circuitRelayTransport({ discoverRelays: bootstrapList.length }),
+		// ],
 
-		// addresses: { listen: [], announce: [] },
-		// transports: [webSockets(), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
+		addresses: { listen: [], announce: [] },
+		transports: [webSockets(), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
 
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
