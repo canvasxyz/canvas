@@ -46,6 +46,7 @@ export const App: React.FC<AppProps> = (props) => {
 			window.localStorage.removeItem(getRegistrationKey(userAddress))
 		}
 
+		setPageTitle(null)
 		setUser(null)
 		disconnect()
 	}, [userAddress, disconnect])
