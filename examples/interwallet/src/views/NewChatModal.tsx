@@ -3,16 +3,25 @@ import { useLiveQuery } from "dexie-react-hooks"
 import { modelDB } from "../models/modelDB"
 import { useEnsName } from "wagmi"
 
-const UserEntry = ({ user }: { user: { address: string } }) => {
+const UserEntry = ({ user, onClick }: { user: { address: string }; onClick: () => void }) => {
 	const { data: ensName } = useEnsName({ address: user.address as `0x${string}` })
 	return (
-		<button className="grid mt-3 col-span-1 w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm">
+		<button
+			onClick={onClick}
+			className="grid mt-3 col-span-1 w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm"
+		>
 			{ensName} ({user.address.slice(0, 8)}...)
 		</button>
 	)
 }
 
-export const NewChatModal = ({ closeModal }: { closeModal: () => void }) => {
+export const NewChatModal = ({
+	closeModal,
+	startNewChat,
+}: {
+	closeModal: () => void
+	startNewChat: (address: `0x${string}`) => void
+}) => {
 	const users = useLiveQuery(async () => await modelDB.users.toArray(), [])
 
 	return (
@@ -30,7 +39,14 @@ export const NewChatModal = ({ closeModal }: { closeModal: () => void }) => {
 
 								<div className="mt-2 flex flex-col gap-2">
 									{users?.map((user, index) => (
-										<UserEntry key={`${user.address}-${index}`} user={user} />
+										<UserEntry
+											key={`${user.address}-${index}`}
+											user={user}
+											onClick={() => {
+												closeModal()
+												startNewChat(user.address)
+											}}
+										/>
 									))}
 								</div>
 							</div>
