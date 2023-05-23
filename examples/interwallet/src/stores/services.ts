@@ -31,7 +31,18 @@ export async function getUserRegistryService(): Promise<(components: StoreCompon
 	return storeService(tree, {
 		topic: USER_REGISTRY_TOPIC,
 		apply: async (key, value) => {
-			console.log(`${USER_REGISTRY_TOPIC}: got entry`, { key: bytesToHex(key), value: bytesToHex(value) })
+			console.log(`${USER_REGISTRY_TOPIC}: applying entry`, { key: bytesToHex(key), value: bytesToHex(value) })
+			// deserialize signed key bundle
+			const signedKeyBundle = Events.SignedKeyBundle.decode(value)
+			// this could be its own function
+			const publicUserRegistration: PublicUserRegistration = {
+				address: bytesToHex(key),
+				keyBundle: {
+					encryptionPublicKey: bytesToHex(signedKeyBundle.encryptionPublicKey),
+					signingAddress: bytesToHex(signedKeyBundle.signingAddress),
+				},
+			}
+			modelDB.users.add(publicUserRegistration)
 		},
 	})
 }
