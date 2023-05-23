@@ -27,7 +27,7 @@ export async function getRoomRegistryService(): Promise<(components: StoreCompon
 				topic: room.topic as `interwallet:room:${string}`,
 				members: room.members.map((member) => bytesToHex(member)) as [`0x${string}`, `0x${string}`],
 			}
-			modelDB.rooms.add(roomModel)
+			await modelDB.rooms.put(roomModel)
 		},
 	})
 }
@@ -48,7 +48,7 @@ export async function getUserRegistryService(): Promise<(components: StoreCompon
 					signingAddress: bytesToHex(signedKeyBundle.signingAddress),
 				},
 			}
-			modelDB.users.add(publicUserRegistration)
+			await modelDB.users.put(publicUserRegistration)
 		},
 	})
 }
@@ -74,7 +74,7 @@ export async function getRoomStoreServices(): Promise<Record<string, (components
 
 				const event = decode(value) as RoomEvent
 				if (event.type === "message") {
-					const id = await modelDB.messages.add(event.detail)
+					const id = await modelDB.messages.put(event.detail)
 					console.log("added message with id", id)
 				} else {
 					throw new Error("invalid event: invalid event type")
