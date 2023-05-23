@@ -339,6 +339,9 @@ export interface IRoom {
     /** Room topic */
     topic?: (string|null);
 
+    /** Room creator */
+    creator?: (string|null);
+
     /** Room members */
     members?: (string[]|null);
 }
@@ -354,6 +357,9 @@ export class Room implements IRoom {
 
     /** Room topic. */
     public topic: string;
+
+    /** Room creator. */
+    public creator: string;
 
     /** Room members. */
     public members: string[];

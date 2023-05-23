@@ -870,6 +870,7 @@ $root.Room = (function() {
      * @exports IRoom
      * @interface IRoom
      * @property {string|null} [topic] Room topic
+     * @property {string|null} [creator] Room creator
      * @property {Array.<string>|null} [members] Room members
      */
 
@@ -896,6 +897,14 @@ $root.Room = (function() {
      * @instance
      */
     Room.prototype.topic = "";
+
+    /**
+     * Room creator.
+     * @member {string} creator
+     * @memberof Room
+     * @instance
+     */
+    Room.prototype.creator = "";
 
     /**
      * Room members.
@@ -931,9 +940,11 @@ $root.Room = (function() {
             writer = $Writer.create();
         if (message.topic != null && Object.hasOwnProperty.call(message, "topic"))
             writer.uint32(/* id 1, wireType 2 =*/10).string(message.topic);
+        if (message.creator != null && Object.hasOwnProperty.call(message, "creator"))
+            writer.uint32(/* id 2, wireType 2 =*/18).string(message.creator);
         if (message.members != null && message.members.length)
             for (var i = 0; i < message.members.length; ++i)
-                writer.uint32(/* id 2, wireType 2 =*/18).string(message.members[i]);
+                writer.uint32(/* id 3, wireType 2 =*/26).string(message.members[i]);
         return writer;
     };
 
@@ -973,6 +984,10 @@ $root.Room = (function() {
                     break;
                 }
             case 2: {
+                    message.creator = reader.string();
+                    break;
+                }
+            case 3: {
                     if (!(message.members && message.members.length))
                         message.members = [];
                     message.members.push(reader.string());
@@ -1016,6 +1031,9 @@ $root.Room = (function() {
         if (message.topic != null && message.hasOwnProperty("topic"))
             if (!$util.isString(message.topic))
                 return "topic: string expected";
+        if (message.creator != null && message.hasOwnProperty("creator"))
+            if (!$util.isString(message.creator))
+                return "creator: string expected";
         if (message.members != null && message.hasOwnProperty("members")) {
             if (!Array.isArray(message.members))
                 return "members: array expected";
@@ -1040,6 +1058,8 @@ $root.Room = (function() {
         var message = new $root.Room();
         if (object.topic != null)
             message.topic = String(object.topic);
+        if (object.creator != null)
+            message.creator = String(object.creator);
         if (object.members) {
             if (!Array.isArray(object.members))
                 throw TypeError(".Room.members: array expected");
@@ -1065,10 +1085,14 @@ $root.Room = (function() {
         var object = {};
         if (options.arrays || options.defaults)
             object.members = [];
-        if (options.defaults)
+        if (options.defaults) {
             object.topic = "";
+            object.creator = "";
+        }
         if (message.topic != null && message.hasOwnProperty("topic"))
             object.topic = message.topic;
+        if (message.creator != null && message.hasOwnProperty("creator"))
+            object.creator = message.creator;
         if (message.members && message.members.length) {
             object.members = [];
             for (var j = 0; j < message.members.length; ++j)

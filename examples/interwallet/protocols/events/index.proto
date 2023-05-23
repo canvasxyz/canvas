@@ -21,5 +21,6 @@ message SignedKeyBundle {
 
 message Room {
   string topic = 1;
-  repeated string members = 2;
+  string creator = 2;
+  repeated string members = 3;
 }
