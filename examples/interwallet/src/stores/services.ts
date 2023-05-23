@@ -10,7 +10,7 @@ import { storeService, StoreService, StoreComponents } from "@canvas-js/store/se
 
 import Events from "#protocols/events"
 
-import { EventMap } from "../interfaces"
+import { EventMap, PublicUserRegistration } from "../interfaces"
 import { rooms } from "../fixtures"
 import { storeDB } from "./storeDB"
 import { modelDB } from "../models/modelDB"
