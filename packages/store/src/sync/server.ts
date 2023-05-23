@@ -10,7 +10,6 @@ import { assert } from "../utils.js"
 
 export async function* encodeResponses(responses: AsyncIterable<Sync.IResponse>): AsyncIterable<Uint8Array> {
 	for await (const res of responses) {
-		console.log("ENCODING RESPONSE", res)
 		yield Sync.Response.encode(res).finish()
 	}
 }
@@ -20,7 +19,6 @@ export async function* decodeRequests(
 ): AsyncIterable<Sync.Request> {
 	for await (const msg of requests) {
 		const res = Sync.Request.decode(msg.subarray())
-		console.log("DECODED REQUEST", res)
 		yield res
 	}
 }

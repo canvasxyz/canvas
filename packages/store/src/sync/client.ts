@@ -14,14 +14,12 @@ import { assert } from "../utils.js"
 export async function* decodeResponses(source: AsyncIterable<Uint8ArrayList>) {
 	for await (const msg of source) {
 		const res = Sync.Response.decode(msg.subarray())
-		console.log("DECODED RESPONSE", res)
 		yield res
 	}
 }
 
 export async function* encodeRequests(source: AsyncIterable<Sync.IRequest>) {
 	for await (const req of source) {
-		console.log("ENCODING REQUEST", req)
 		yield Sync.Request.encode(req).finish()
 	}
 }
