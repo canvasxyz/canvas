@@ -91,13 +91,13 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 						<div key={index}>
 							{!isContinuation && <div className="flex justify-center text-gray-300">{localeString}</div>}
 
-							<div className={`flex ${isSent ? "flex-row" : "flex-row-reverse"}`}>
+							<div className={`flex ${isSent ? "flex-row-reverse" : "flex-row"}`}>
 								<div
 									title={`Sent at ${localeString}`}
 									className={
 										isSent
-											? "p-3 rounded-r-lg rounded-tl-lg bg-blue-500 text-white"
-											: "p-3 rounded-l-lg rounded-tr-lg bg-gray-200 text-black"
+											? "p-3 rounded-l-lg rounded-tr-lg bg-blue-500 text-white"
+											: "p-3 rounded-r-lg rounded-tl-lg bg-gray-200 text-black"
 									}
 								>
 									{message.message}
