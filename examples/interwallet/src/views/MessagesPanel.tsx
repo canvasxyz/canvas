@@ -75,14 +75,22 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 
 	return (
 		<div className="flex flex-col basis-96 grow overflow-x-hidden">
-			<div className="flex flex-col grow m-3 gap-3 overflow-y-scroll" onClick={() => messageInputRef.current?.focus()}>
+			<div className="flex flex-col grow m-3 gap-1 overflow-y-scroll" onClick={() => messageInputRef.current?.focus()}>
 				{messageEvents.map((message, index) => {
+					const previousMessageEvent = messageEvents[index - 1]
+
+					const isContinuation =
+						previousMessageEvent &&
+						previousMessageEvent.sender == message.sender &&
+						message.timestamp - previousMessageEvent.timestamp < 60000
+
 					const isSent = message.sender == userAddress
 
 					const localeString = new Date(message.timestamp).toLocaleString()
 					return (
 						<div key={index}>
-							<div className="flex justify-center text-gray-300">{localeString}</div>
+							{!isContinuation && <div className="flex justify-center text-gray-300">{localeString}</div>}
+
 							<div className={`flex ${isSent ? "flex-row" : "flex-row-reverse"}`}>
 								<div
 									className={
