@@ -110,7 +110,7 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 				})}
 				<div ref={messagesEndRef} />
 			</div>
-			<form className="m-3 flex flex-row" onSubmit={handleSubmit}>
+			<form className="mb-3 ml-3 mr-3 flex flex-row" onSubmit={handleSubmit}>
 				<input
 					ref={messageInputRef}
 					className="h-10 w-full rounded-xl bg-gray-100 px-3"
