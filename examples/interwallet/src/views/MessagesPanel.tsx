@@ -38,15 +38,23 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 			if (userAddress === undefined) {
 				return
 			}
+			let trimmedMessage = message.trim()
+
+			if (trimmedMessage === "") {
+				setMessage("")
+				return
+			}
+
+			const messageDetail = {
+				room: roomId,
+				sender: userAddress,
+				message: trimmedMessage,
+				timestamp: Date.now(),
+			}
 
 			const payload: RoomEvent = {
 				type: "message",
-				detail: {
-					room: roomId,
-					sender: userAddress,
-					message: message,
-					timestamp: Date.now(),
-				},
+				detail: messageDetail,
 			}
 
 			if (user !== null) {
@@ -56,12 +64,7 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 				console.log("decrypted event", decryptedEvent)
 			}
 
-			const value = encodeRoomEvent("message", {
-				room: roomId,
-				sender: userAddress,
-				message: message,
-				timestamp: Date.now(),
-			})
+			const value = encodeRoomEvent("message", messageDetail)
 
 			const key = blake3(value, { dkLen: 16 })
 
