@@ -52,12 +52,11 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 				timestamp: Date.now(),
 			}
 
-			const payload: RoomEvent = {
-				type: "message",
-				detail: messageDetail,
-			}
-
 			if (user !== null) {
+				const payload: RoomEvent = {
+					type: "message",
+					detail: messageDetail,
+				}
 				const encryptedEvent = signAndEncryptEvent(user, user.keyBundle, payload)
 				console.log("encrypted event", encryptedEvent)
 				const decryptedEvent = decryptAndVerifyEvent(user, encryptedEvent)
