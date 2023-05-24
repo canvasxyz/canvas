@@ -58,9 +58,9 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 			}
 
 			if (user !== null) {
-				const encryptedDevent = signAndEncryptEvent(user, user.keyBundle, payload)
-				console.log("encrypted event", encryptedDevent)
-				const decryptedEvent = decryptAndVerifyEvent(user, encryptedDevent)
+				const encryptedEvent = signAndEncryptEvent(user, user.keyBundle, payload)
+				console.log("encrypted event", encryptedEvent)
+				const decryptedEvent = decryptAndVerifyEvent(user, encryptedEvent)
 				console.log("decrypted event", decryptedEvent)
 			}
 
