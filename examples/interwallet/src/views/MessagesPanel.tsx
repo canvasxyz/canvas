@@ -93,6 +93,7 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 
 							<div className={`flex ${isSent ? "flex-row" : "flex-row-reverse"}`}>
 								<div
+									title={`Sent at ${localeString}`}
 									className={
 										isSent
 											? "p-3 rounded-r-lg rounded-tl-lg bg-blue-500 text-white"
