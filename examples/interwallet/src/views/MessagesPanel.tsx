@@ -2,13 +2,13 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from "rea
 
 import { useLiveQuery } from "dexie-react-hooks"
 
-import { db } from "../db"
+import { Room, db } from "../db"
 import { AppContext } from "../context"
 
 import { getAddress } from "viem"
 
 export interface MessagesPanelProps {
-	roomId: string
+	room: Room
 }
 
 // const MessageDisplay: React.FC<{
@@ -37,10 +37,10 @@ export interface MessagesPanelProps {
 // 	)
 // }
 
-export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: MessagesPanelProps) => {
+export const MessagesPanel: React.FC<MessagesPanelProps> = ({ room }: MessagesPanelProps) => {
 	const [message, setMessage] = useState<string>("")
 	const messageEvents =
-		useLiveQuery(async () => await db.messages.where({ room: roomId }).sortBy("timestamp"), [roomId]) || []
+		useLiveQuery(async () => await db.messages.where({ room: room.id }).sortBy("timestamp"), [room.id]) || []
 
 	const messagesEndRef = useRef<HTMLDivElement>(null)
 	const messageInputRef = useRef<HTMLInputElement>(null)
@@ -65,7 +65,7 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 			if (manager !== null) {
 				try {
 					await manager.dispatchEvent({
-						room: roomId,
+						room: room.id,
 						type: "message",
 						detail: { content: trimmedMessage, timestamp: Date.now() },
 					})
@@ -76,7 +76,7 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 				}
 			}
 		},
-		[roomId, message, user, manager]
+		[room.id, message, user, manager]
 	)
 
 	return (

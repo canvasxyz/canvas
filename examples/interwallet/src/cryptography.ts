@@ -76,11 +76,13 @@ export function verifyKeyBundle(signedUserRegistration: Messages.SignedUserRegis
 	const typedKeyBundle = constructTypedKeyBundle(keyBundle)
 
 	const keyBundleSignature = bytesToHex(signedUserRegistration.signature)
-	const address = recoverTypedSignature({
-		version: SignTypedDataVersion.V4,
-		data: typedKeyBundle,
-		signature: keyBundleSignature,
-	}) as `0x${string}`
+	const address = getAddress(
+		recoverTypedSignature({
+			version: SignTypedDataVersion.V4,
+			data: typedKeyBundle,
+			signature: keyBundleSignature,
+		})
+	) as `0x${string}`
 
 	assert(equals(hexToBytes(address), signedUserRegistration.address), "invalid signature")
 

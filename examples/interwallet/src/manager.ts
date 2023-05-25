@@ -15,7 +15,7 @@ import Messages from "#protocols/messages"
 import { PrivateUserRegistration, PublicUserRegistration } from "./interfaces"
 import { ROOM_REGISTRY_TOPIC, USER_REGISTRY_TOPIC } from "./constants"
 import { encryptData, decryptData, signData, verifyData, assert, verifyKeyBundle } from "./cryptography"
-import { db } from "./db"
+import { Room, db } from "./db"
 import { getLibp2p } from "./libp2p"
 import { PeerId } from "@libp2p/interface-peer-id"
 
@@ -102,7 +102,7 @@ export class RoomManager {
 		await this.libp2p.stop()
 	}
 
-	public async createRoom(members: PublicUserRegistration[]): Promise<{ roomId: string }> {
+	public async createRoom(members: PublicUserRegistration[]): Promise<Room> {
 		this.log("creating new room")
 		assert(this.roomRegistry !== null, "manager is still initializing")
 		assert(
@@ -135,7 +135,7 @@ export class RoomManager {
 		await this.roomRegistry.insert(key, value)
 
 		const roomId = base58btc.baseEncode(key)
-		return { roomId }
+		return { id: roomId, creator: this.user.address, members }
 	}
 
 	public async dispatchEvent(event: RoomEvent): Promise<void> {

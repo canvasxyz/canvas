@@ -7,16 +7,16 @@ import { AppContext } from "../context"
 export interface ChatViewProps {}
 
 export const ChatView: React.FC<ChatViewProps> = ({}) => {
-	const { roomId } = useContext(AppContext)
+	const { room } = useContext(AppContext)
 
 	return (
 		<div className="flex flex-row grow items-stretch overflow-y-hidden">
 			<ChatSidebar />
 
-			{roomId === null ? (
+			{room === null ? (
 				<div className="m-auto text-3xl font-semibold text-gray-500">No chat is selected</div>
 			) : (
-				<MessagesPanel roomId={roomId} />
+				<MessagesPanel room={room} />
 			)}
 		</div>
 	)

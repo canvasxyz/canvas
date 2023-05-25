@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useLayoutEffect } from "react"
 import { useAccount } from "wagmi"
-import { keccak256 } from "viem/utils"
+import { getAddress, keccak256 } from "viem/utils"
 
 import { AppContext } from "../context"
 import { PrivateUserRegistration } from "../interfaces"
@@ -20,10 +20,10 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({}) => {
 			const key = getRegistrationKey(userAddress)
 			const value = window.localStorage.getItem(key)
 			if (value !== null) {
-				const registration = JSON.parse(value)
-				if (typeof registration.address === "string") {
-					console.log("got existing registration", registration)
-					setUser(registration)
+				const user = JSON.parse(value)
+				if (typeof user.address === "string") {
+					console.log("got existing registration", user)
+					setUser(user)
 				}
 			}
 		}
@@ -42,7 +42,7 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({}) => {
 				const keyBundleSignature = await signKeyBundle(userAddress, keyBundle)
 
 				const user: PrivateUserRegistration = {
-					address: userAddress,
+					address: getAddress(userAddress),
 					privateKey,
 					keyBundle,
 					keyBundleSignature,

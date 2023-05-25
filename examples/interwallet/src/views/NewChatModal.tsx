@@ -31,7 +31,7 @@ export interface NewChatModalProps {
 export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
 	const users = useLiveQuery(async () => await db.users.toArray(), [])
 
-	const { user, manager, setRoomId } = useContext(AppContext)
+	const { user, manager, setRoom } = useContext(AppContext)
 
 	const startNewChat = useCallback(
 		async (recipient: PublicUserRegistration) => {
@@ -42,13 +42,13 @@ export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
 			console.log("starting new chat with", recipient)
 			try {
 				const members = [getPublicUserRegistration(user), recipient]
-				const { roomId } = await manager.createRoom(members)
-				setRoomId(roomId)
+				const room = await manager.createRoom(members)
+				setRoom(room)
 			} catch (err) {
 				console.error("failed to create room", err)
 			}
 		},
-		[user, manager, setRoomId]
+		[user, manager, setRoom]
 	)
 
 	return (

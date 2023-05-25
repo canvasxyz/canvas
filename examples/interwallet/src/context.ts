@@ -4,19 +4,20 @@ import { PeerId } from "@libp2p/interface-peer-id"
 
 import { PrivateUserRegistration } from "./interfaces"
 import { RoomManager } from "./manager"
+import { Room } from "./db"
 
 export interface AppContext {
 	peerId: PeerId | null
 	manager: RoomManager | null
 
 	user: PrivateUserRegistration | null
-	setUser: (user: PrivateUserRegistration) => void
+	setUser: (user: PrivateUserRegistration | null) => void
 
 	pageTitle: string | null
-	setPageTitle: (title: string) => void
+	setPageTitle: (title: string | null) => void
 
-	roomId: string | null
-	setRoomId: (roomId: string) => void
+	room: Room | null
+	setRoom: (room: Room | null) => void
 }
 
 export const AppContext = createContext<AppContext>({
@@ -28,8 +29,8 @@ export const AppContext = createContext<AppContext>({
 		throw new Error("Missing AppContext provider")
 	},
 
-	roomId: null,
-	setRoomId() {
+	room: null,
+	setRoom() {
 		throw new Error("Missing AppContext provider")
 	},
 
