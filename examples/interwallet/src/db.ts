@@ -1,6 +1,19 @@
 import Dexie, { Table } from "dexie"
 
-import { Message, Room, PublicUserRegistration } from "../interfaces"
+import { PublicUserRegistration } from "./interfaces"
+
+export type Message = {
+	room: string
+	sender: string
+	content: string
+	timestamp: number
+}
+
+export type Room = {
+	id: string
+	creator: string
+	members: PublicUserRegistration[]
+}
 
 export class InterwalletChatDB extends Dexie {
 	users!: Table<PublicUserRegistration, string>
@@ -11,10 +24,10 @@ export class InterwalletChatDB extends Dexie {
 		super("InterwalletChatDB")
 		this.version(1).stores({
 			users: "address",
-			rooms: "topic, *members",
+			rooms: "id, *members.address",
 			messages: "++id, room, timestamp",
 		})
 	}
 }
 
-export const modelDB = new InterwalletChatDB()
+export const db = new InterwalletChatDB()

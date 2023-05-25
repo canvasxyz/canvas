@@ -1,10 +1,9 @@
 import { EventEmitter } from "@libp2p/interfaces/events"
-import { Startable } from "@libp2p/interfaces/startable"
-import { PeerId } from "@libp2p/interface-peer-id"
-import { Connection, Stream } from "@libp2p/interface-connection"
-import { StreamHandler, Topology, Registrar } from "@libp2p/interface-registrar"
-import { ConnectionManager } from "@libp2p/interface-connection-manager"
-import { Message } from "@libp2p/interface-pubsub"
+import type { Libp2p } from "@libp2p/interface-libp2p"
+import type { PeerId } from "@libp2p/interface-peer-id"
+import type { Connection, Stream } from "@libp2p/interface-connection"
+import type { StreamHandler, Topology } from "@libp2p/interface-registrar"
+import type { PubSub, Message } from "@libp2p/interface-pubsub"
 
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
@@ -12,25 +11,14 @@ import { pipe } from "it-pipe"
 import PQueue from "p-queue"
 import { bytesToHex as hex } from "@noble/hashes/utils"
 
-import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
 import { createTopology } from "@libp2p/topology"
 
 import type { Source, Target, KeyValueStore } from "@canvas-js/okra"
 
-import { Driver, Client, Server, decodeRequests, encodeResponses } from "#sync"
-
-import { second, minute } from "@canvas-js/store/constants"
-import { CacheMap, Entry, decodeEntry, encodeEntry, getResult, retry, shuffle, sortPair, wait } from "../utils.js"
-
-export interface AbstractTree {
-	close(): Promise<void>
-	read(targetPeerId: PeerId | null, callback: (txn: Source) => Promise<void>): Promise<void>
-	write(
-		sourcePeerId: PeerId | null,
-		callback: (txn: Target & Pick<KeyValueStore, "get" | "set" | "delete">) => Promise<void>
-	): Promise<void>
-}
+import { Driver, Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
+import { second } from "./constants.js"
+import { CacheMap, Entry, assert, decodeEntry, encodeEntry, shuffle, sortPair, wait } from "./utils.js"
 
 export interface StoreInit {
 	topic: string
@@ -42,18 +30,9 @@ export interface StoreInit {
 	maxOutboundStreams?: number
 }
 
-export interface StoreService {
-	insert(key: Uint8Array, value: Uint8Array): Promise<void>
-	get(key: Uint8Array): Promise<Uint8Array | null>
-}
+export abstract class AbstractStore extends EventEmitter<{}> {
+	public static prefix = "/canvas/v0/store/"
 
-export interface StoreComponents {
-	peerId: PeerId
-	registrar: Registrar
-	connectionManager: ConnectionManager
-}
-
-export class StoreService extends EventEmitter<{}> implements StoreService, Startable {
 	public static MIN_CONNECTIONS = 2
 	public static MAX_CONNECTIONS = 10
 	public static MAX_INBOUND_STREAMS = 64
@@ -63,23 +42,6 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 	public static SYNC_RETRY_INTERVAL = 3 * second
 	public static SYNC_RETRY_LIMIT = 5
 
-	private static extractGossipSub(components: StoreComponents): GossipSub {
-		const { pubsub } = components as StoreComponents & { pubsub?: GossipSub }
-		if (pubsub === undefined) {
-			throw new Error("missing pubsub service")
-		} else {
-			return pubsub
-		}
-
-		// if (pubsub instanceof GossipSub) {
-		// 	return pubsub
-		// } else if (pubsub !== undefined) {
-		// 	throw new Error("pubsub service is not a GossipSub instance")
-		// } else {
-		// 	throw new Error("missing pubsub service")
-		// }
-	}
-
 	private readonly minConnections: number
 	private readonly maxConnections: number
 	private readonly maxInboundStreams: number
@@ -87,32 +49,35 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 
 	private readonly syncQueue = new PQueue({ concurrency: 1 })
 	private readonly syncQueuePeers = new Set<string>()
-	private readonly syncHistory = new CacheMap<string, number>(StoreService.MAX_SYNC_QUEUE_SIZE)
+	private readonly syncHistory = new CacheMap<string, number>(AbstractStore.MAX_SYNC_QUEUE_SIZE)
 
-	private readonly log = logger("canvas:store:service")
-	private readonly controller = new AbortController()
-	private readonly pubsub: GossipSub
-	private readonly topic: string
-	private readonly protocol: string
-	private readonly topology: Topology
-	private registrarId: string | null = null
+	protected readonly log = logger("canvas:store:service")
+	protected readonly controller = new AbortController()
+	protected readonly topic: string
+	protected readonly protocol: string
+	protected readonly topology: Topology
 
-	constructor(
-		private readonly components: StoreComponents,
-		private readonly init: StoreInit,
-		private readonly tree: AbstractTree
-	) {
+	#registrarId: string | null = null
+
+	protected abstract read(targetPeerId: PeerId | null, callback: (txn: Source) => Promise<void>): Promise<void>
+	protected abstract write(
+		sourcePeerId: PeerId | null,
+		callback: (txn: Target & Pick<KeyValueStore, "get" | "set" | "delete">) => Promise<void>
+	): Promise<void>
+
+	constructor(private readonly libp2p: Libp2p<{ pubsub: PubSub }>, private readonly init: StoreInit) {
 		super()
 
 		this.topic = `/canvas/v0/store/${init.topic}`
 		this.protocol = `/canvas/v0/store/${init.topic}/sync`
+		assert(this.topic.startsWith(AbstractStore.prefix))
+		assert(this.protocol.startsWith(AbstractStore.prefix))
 
-		this.minConnections = init.minConnections ?? StoreService.MIN_CONNECTIONS
-		this.maxConnections = init.maxConnections ?? StoreService.MAX_CONNECTIONS
-		this.maxInboundStreams = init.maxInboundStreams ?? StoreService.MAX_INBOUND_STREAMS
-		this.maxOutboundStreams = init.maxOutboundStreams ?? StoreService.MAX_OUTBOUND_STREAMS
+		this.minConnections = init.minConnections ?? AbstractStore.MIN_CONNECTIONS
+		this.maxConnections = init.maxConnections ?? AbstractStore.MAX_CONNECTIONS
+		this.maxInboundStreams = init.maxInboundStreams ?? AbstractStore.MAX_INBOUND_STREAMS
+		this.maxOutboundStreams = init.maxOutboundStreams ?? AbstractStore.MAX_OUTBOUND_STREAMS
 
-		this.pubsub = StoreService.extractGossipSub(components)
 		this.topology = createTopology({
 			min: this.minConnections,
 			max: this.maxConnections,
@@ -128,55 +93,53 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 		})
 	}
 
-	get [Symbol.toStringTag](): "@canvas-js/store/service" {
-		return "@canvas-js/store/service"
-	}
+	public async start(): Promise<void> {
+		this.libp2p.services.pubsub.addEventListener("message", this.handleMessage)
+		this.libp2p.services.pubsub.subscribe(this.topic)
 
-	public isStarted(): boolean {
-		return this.registrarId !== null
-	}
-
-	public start() {
-		this.pubsub.addEventListener("message", this.handleMessage)
-
-		this.components.registrar.handle(this.protocol, this.handleIncomingStream, {
+		await this.libp2p.handle(this.protocol, this.handleIncomingStream, {
 			maxInboundStreams: this.maxInboundStreams,
 			maxOutboundStreams: this.maxOutboundStreams,
 		})
 
-		this.components.registrar.register(this.protocol, this.topology).then((registrarId) => {
-			this.registrarId = registrarId
-		})
+		this.#registrarId = await this.libp2p.register(this.protocol, this.topology)
 	}
 
-	public afterStart() {
-		this.pubsub.subscribe(this.topic)
-	}
-
-	public beforeStop(): void {
-		// I'm pretty sure this is not necessary at all but w/e
-		this.pubsub.unsubscribe(this.topic)
+	public async stop(): Promise<void> {
 		this.controller.abort()
-	}
+		this.libp2p.services.pubsub.removeEventListener("message", this.handleMessage)
+		this.libp2p.services.pubsub.unsubscribe(this.topic)
 
-	public stop(): void {
-		if (this.registrarId !== null) {
-			this.components.registrar.unregister(this.registrarId)
+		this.libp2p.unhandle(this.protocol)
+		if (this.#registrarId !== null) {
+			this.libp2p.unregister(this.#registrarId)
+			this.#registrarId = null
 		}
-
-		this.tree.close()
 	}
 
 	public async insert(key: Uint8Array, value: Uint8Array) {
 		await this.init.apply(key, value)
-		await this.tree.write(null, async (txn) => txn.set(key, value))
+		await this.write(null, async (txn) => txn.set(key, value))
 		try {
 			const data = encodeEntry({ key, value })
-			const { recipients } = await this.pubsub.publish(this.topic, data)
+			const { recipients } = await this.libp2p.services.pubsub.publish(this.topic, data)
 			this.log("published entry to %d recipients", recipients.length)
 		} catch (err) {
 			this.log.error("failed to publish entry: %O", err)
 		}
+	}
+
+	public async get(key: Uint8Array): Promise<Uint8Array | null> {
+		let value: Uint8Array | null = null
+
+		await this.read(null, async (txn) => {
+			const node = await txn.getNode(0, key)
+			if (node !== null && node.value !== undefined) {
+				value = node.value
+			}
+		})
+
+		return value
 	}
 
 	private handleMessage = async ({ detail: msg }: CustomEvent<Message>) => {
@@ -202,7 +165,7 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 		}
 
 		try {
-			await this.tree.write(null, async (txn) => txn.set(key, value))
+			await this.write(null, async (txn) => txn.set(key, value))
 			this.log("successfully committed entry")
 		} catch (err) {
 			this.log.error("failed to commit entry: %O", err)
@@ -215,7 +178,7 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 		this.log("opened incoming stream %s from peer %p with protocol %s", stream.id, peerId, protocol)
 
 		try {
-			await this.tree.read(peerId, async (txn) => {
+			await this.read(peerId, async (txn) => {
 				const server = new Server(txn)
 				await pipe(
 					stream.source,
@@ -249,7 +212,7 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 			return
 		}
 
-		if (this.syncQueue.size >= StoreService.MAX_SYNC_QUEUE_SIZE) {
+		if (this.syncQueue.size >= AbstractStore.MAX_SYNC_QUEUE_SIZE) {
 			this.log("sync queue is full")
 			return
 		}
@@ -258,7 +221,7 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 		if (lastSyncMark !== undefined) {
 			const timeSinceLastSync = performance.now() - lastSyncMark
 			this.log("last sync with %p was %ds ago", peerId, Math.floor(timeSinceLastSync / 1000))
-			if (timeSinceLastSync < StoreService.SYNC_COOLDOWN_PERIOD) {
+			if (timeSinceLastSync < AbstractStore.SYNC_COOLDOWN_PERIOD) {
 				return
 			}
 		}
@@ -267,15 +230,15 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 		this.syncQueue
 			.add(async () => {
 				const { signal } = this.controller
-				let interval = Math.random() * StoreService.SYNC_RETRY_INTERVAL
+				let interval = Math.random() * AbstractStore.SYNC_RETRY_INTERVAL
 
-				const [x, y] = sortPair(this.components.peerId, peerId)
-				if (x.equals(this.components.peerId)) {
+				const [x, y] = sortPair(this.libp2p.peerId, peerId)
+				if (x.equals(this.libp2p.peerId)) {
 					this.log("waiting an initial %dms", interval)
 					await wait(interval, { signal: this.controller.signal })
 				}
 
-				for (let n = 0; n < StoreService.SYNC_RETRY_LIMIT; n++) {
+				for (let n = 0; n < AbstractStore.SYNC_RETRY_LIMIT; n++) {
 					try {
 						this.log("starting sync using connection %s", connection.id)
 						await this.sync(peerId)
@@ -286,9 +249,9 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 						if (signal.aborted) {
 							break
 						} else {
-							this.log("waiting %dms before trying again (%d/%d)", interval, n + 1, StoreService.SYNC_RETRY_LIMIT)
+							this.log("waiting %dms before trying again (%d/%d)", interval, n + 1, AbstractStore.SYNC_RETRY_LIMIT)
 							await wait(interval, { signal: this.controller.signal })
-							interval += Math.random() * StoreService.SYNC_RETRY_INTERVAL
+							interval += Math.random() * AbstractStore.SYNC_RETRY_INTERVAL
 							continue
 						}
 					}
@@ -312,7 +275,7 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 
 		try {
 			let [successCount, failureCount] = [0, 0]
-			await this.tree.write(peerId, async (txn) => {
+			await this.write(peerId, async (txn) => {
 				this.log("opened read-write transaction")
 
 				const driver = new Driver(client, txn)
@@ -341,7 +304,7 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 	}
 
 	private async dial(peerId: PeerId): Promise<Stream | null> {
-		const connections = [...this.components.connectionManager.getConnections(peerId)]
+		const connections = [...this.libp2p.getConnections(peerId)]
 		if (connections.length === 0) {
 			this.log("no longer connected to peer %p", peerId)
 			return null
@@ -362,11 +325,5 @@ export class StoreService extends EventEmitter<{}> implements StoreService, Star
 		}
 
 		return null
-	}
-}
-
-export class DeadlockError extends Error {
-	constructor(readonly peerId: PeerId) {
-		super(`deadlock with peer ${peerId}`)
 	}
 }

@@ -7,7 +7,6 @@ import { lessThan } from "@canvas-js/okra"
 
 import { anySignal } from "any-signal"
 
-export const keyPrefix = "/canvas/v0/store/"
 export const keyPattern = /^(\/canvas\/v0\/store\/[a-zA-Z0-9:.-]+)\/peers$/
 
 export function sortPair(a: PeerId, b: PeerId): [x: PeerId, y: PeerId] {
@@ -41,39 +40,6 @@ export async function wait(interval: number, options: { signal: AbortSignal }) {
 	await new Promise<void>((resolve) => {
 		signal.addEventListener("abort", () => resolve())
 	}).finally(() => signal.clear())
-}
-
-export async function retry<T>(
-	f: () => Promise<T>,
-	handleError: (err: Error, n: number) => void,
-	{ interval, ...options }: { interval: number; signal: AbortSignal; maxRetries?: number }
-): Promise<T | void> {
-	const maxRetries = options.maxRetries ?? Infinity
-
-	for (let n = 0; n < maxRetries; n++) {
-		const result = await getResult(f)
-		if (result.done) {
-			return result.value
-		} else if (options.signal?.aborted) {
-			throw result.value
-		} else {
-			handleError(result.value, n)
-			await wait(interval, options)
-		}
-	}
-}
-
-export async function getResult<T>(f: () => Promise<T>): Promise<IteratorResult<Error, T>> {
-	try {
-		const value = await f()
-		return { done: true, value }
-	} catch (err) {
-		if (err instanceof Error) {
-			return { done: false, value: err }
-		} else {
-			throw err
-		}
-	}
 }
 
 export class CacheMap<K, V> extends Map<K, V> {

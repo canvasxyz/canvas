@@ -1,63 +1,33 @@
 import React, { useCallback, useContext, useEffect } from "react"
 import { useAccount, useEnsName } from "wagmi"
-import Events from "#protocols/events"
+import Events from "#protocols/messages"
 
-// import { rooms } from "../fixtures"
-import type { RoomId, Room } from "../interfaces"
 import { AppContext } from "../context"
 import { NewChatModal } from "./NewChatModal"
-import { modelDB } from "../models/modelDB"
+import { Room, db } from "../db"
 import { useLiveQuery } from "dexie-react-hooks"
-import { libp2p } from "../stores/libp2p"
+import { libp2p } from "../libp2p"
 import { ROOM_REGISTRY_TOPIC } from "../constants"
 import { personalSign } from "@metamask/eth-sig-util"
 import { hexToBytes } from "viem"
+import { PublicUserRegistration } from "../interfaces"
+import { getPublicUserRegistration } from "../cryptography"
 
-export interface ChatSizebarProps {
-	roomId: string | null
-	setRoomId: (roomId: RoomId) => void
-}
+export interface ChatSidebarProps {}
 
-export const ChatSidebar: React.FC<ChatSizebarProps> = ({ roomId, setRoomId }) => {
+export const ChatSidebar: React.FC<ChatSidebarProps> = ({}) => {
 	const [showNewChatModal, setShowNewChatModal] = React.useState(false)
-	const { address: myAddress } = useAccount()
-	const { user } = useContext(AppContext)
+	const { user, manager, roomId, setRoomId } = useContext(AppContext)
 
-	const rooms = useLiveQuery(async () => await modelDB.rooms.toArray(), [])
-
-	const startNewChat = useCallback(
-		async (address: `0x${string}`) => {
-			if (!myAddress) return
-			if (!user) return
-
-			const topic: RoomId = `interwallet:room:${[myAddress, address].sort().join(":")}`
-
-			const members = [address, myAddress]
-
-			const value = Events.Room.encode({
-				creator: myAddress,
-				topic: topic,
-				members: members,
-			}).finish()
-
-			// sign the room creation message
-			const privateKey = Buffer.from(hexToBytes(user.privateKey))
-			const signature = personalSign({ privateKey, data: value }) as `0x${string}`
-
-			await libp2p.services[ROOM_REGISTRY_TOPIC].insert(hexToBytes(signature), value)
-
-			setRoomId(topic)
-		},
-		[myAddress, setRoomId]
-	)
+	const rooms = useLiveQuery(() => db.rooms.toArray(), [])
 
 	const handleClick = useCallback(
 		(room: Room) => {
-			if (room.topic === roomId) {
+			if (room.id === roomId) {
 				return
 			}
 
-			setRoomId(room.topic)
+			setRoomId(room.id)
 		},
 		[roomId, setRoomId]
 	)
@@ -77,12 +47,11 @@ export const ChatSidebar: React.FC<ChatSizebarProps> = ({ roomId, setRoomId }) =
 			<div className="overflow-scroll flex flex-col items-stretch">
 				{rooms &&
 					rooms.map((room) => (
-						<ChatSidebarRoom key={room.topic} room={room} selected={room.topic === roomId} handleSelect={handleClick} />
+						<ChatSidebarRoom key={room.id} room={room} selected={room.id === roomId} handleSelect={handleClick} />
 					))}
 			</div>
 			{showNewChatModal && (
 				<NewChatModal
-					startNewChat={startNewChat}
 					closeModal={() => {
 						setShowNewChatModal(false)
 					}}
@@ -99,7 +68,7 @@ interface ChatSidebarRoomProps {
 }
 
 const ChatSidebarRoom: React.FC<ChatSidebarRoomProps> = ({ selected, room, handleSelect }) => {
-	const [address1, address2] = room.members
+	const [{ address: address1 }, { address: address2 }] = room.members
 	const { data: name1 } = useEnsName({ address: address1 })
 	const { data: name2 } = useEnsName({ address: address2 })
 
@@ -113,7 +82,7 @@ const ChatSidebarRoom: React.FC<ChatSidebarRoomProps> = ({ selected, room, handl
 	if (selected) {
 		return (
 			<button
-				key={room.topic}
+				key={room.id}
 				className="pt-2 pb-2 pl-2 pr-4 m-2 text-left rounded hover:bg-gray-300 hover:cursor-pointer bg-gray-200"
 				disabled={selected}
 			>
@@ -125,7 +94,7 @@ const ChatSidebarRoom: React.FC<ChatSidebarRoomProps> = ({ selected, room, handl
 	} else {
 		return (
 			<button
-				key={room.topic}
+				key={room.id}
 				className="pt-2 pb-2 pl-2 pr-4 m-2 text-left rounded hover:bg-gray-300 hover:cursor-pointer bg-gray-50"
 				disabled={selected}
 				onClick={(e) => handleSelect(room)}

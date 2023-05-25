@@ -1,18 +1,14 @@
 import React, { useCallback, useContext, useLayoutEffect } from "react"
 import { useAccount } from "wagmi"
-import { hexToBytes, keccak256 } from "viem/utils"
-
-import Events from "#protocols/events"
+import { keccak256 } from "viem/utils"
 
 import { AppContext } from "../context"
 import { PrivateUserRegistration } from "../interfaces"
 import { getRegistrationKey, makeKeyBundle, signKeyBundle, signMagicString } from "../cryptography"
-import { libp2p } from "../stores/libp2p"
-import { ROOM_REGISTRY_TOPIC, USER_REGISTRY_TOPIC } from "../constants"
 
 export interface RegistrationViewProps {}
 
-export const RegistrationView: React.FC<RegistrationViewProps> = (props) => {
+export const RegistrationView: React.FC<RegistrationViewProps> = ({}) => {
 	const { address: userAddress, isConnected } = useAccount()
 
 	const { user, setUser } = useContext(AppContext)
@@ -25,8 +21,10 @@ export const RegistrationView: React.FC<RegistrationViewProps> = (props) => {
 			const value = window.localStorage.getItem(key)
 			if (value !== null) {
 				const registration = JSON.parse(value)
-				console.log("got existing registration", registration)
-				setUser(registration)
+				if (typeof registration.address === "string") {
+					console.log("got existing registration", registration)
+					setUser(registration)
+				}
 			}
 		}
 	}, [userAddress, isConnected, user])
@@ -43,25 +41,17 @@ export const RegistrationView: React.FC<RegistrationViewProps> = (props) => {
 				const keyBundle = makeKeyBundle(privateKey)
 				const keyBundleSignature = await signKeyBundle(userAddress, keyBundle)
 
-				const value = Events.SignedKeyBundle.encode({
-					signature: hexToBytes(signature),
-					signingAddress: hexToBytes(keyBundle.signingAddress),
-					encryptionPublicKey: hexToBytes(keyBundle.encryptionPublicKey),
-				}).finish()
-
-				await libp2p.services[USER_REGISTRY_TOPIC].insert(hexToBytes(userAddress), value)
-
-				const registration: PrivateUserRegistration = {
+				const user: PrivateUserRegistration = {
+					address: userAddress,
 					privateKey,
 					keyBundle,
 					keyBundleSignature,
 				}
 
-				console.log("setting new registration", registration)
+				console.log("setting new registration", user)
 				const key = getRegistrationKey(userAddress)
-				window.localStorage.setItem(key, JSON.stringify(registration))
-
-				setUser(registration)
+				window.localStorage.setItem(key, JSON.stringify(user))
+				setUser(user)
 			} catch (err) {
 				console.error("failed to get signature", err)
 			}

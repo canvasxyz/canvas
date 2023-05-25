@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 
 import { SubscriptionChangeData } from "@libp2p/interface-pubsub"
 import { Connection } from "@libp2p/interface-connection"
@@ -10,12 +10,15 @@ import { PeerId } from "@libp2p/interface-peer-id"
 
 import closeIcon from "../icons/close.svg"
 
-import { libp2p } from "../stores/libp2p"
+import { libp2p } from "../libp2p"
 import { PeerIdToken } from "./PeerId"
+import { AppContext } from "../context"
 
 export interface StatusPanelProps {}
 
 export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
+	const { manager } = useContext(AppContext)
+
 	const [started, setStarted] = useState(libp2p.isStarted())
 	const [starting, setStarting] = useState(false)
 	const [stopping, setStopping] = useState(false)
@@ -37,6 +40,11 @@ export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
 			setStarting(true)
 			try {
 				await libp2p.start()
+
+				if (manager !== null) {
+					await manager.start()
+				}
+
 				setStarted(true)
 			} catch (err) {
 				console.error(err)

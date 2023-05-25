@@ -1,10 +1,18 @@
-import React from "react"
+import React, { useCallback, useContext } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
-import { modelDB } from "../models/modelDB"
+import { db } from "../db"
 import { useEnsName } from "wagmi"
+import { PublicUserRegistration } from "../interfaces"
+import { AppContext } from "../context"
+import { getPublicUserRegistration } from "../cryptography"
 
-const UserEntry = ({ user, onClick }: { user: { address: string }; onClick: () => void }) => {
-	const { data: ensName } = useEnsName({ address: user.address as `0x${string}` })
+interface UserEntryProps {
+	user: PublicUserRegistration
+	onClick: () => void
+}
+
+const UserEntry = ({ user, onClick }: UserEntryProps) => {
+	const { data: ensName } = useEnsName({ address: user.address })
 	return (
 		<button
 			onClick={onClick}
@@ -15,14 +23,32 @@ const UserEntry = ({ user, onClick }: { user: { address: string }; onClick: () =
 	)
 }
 
-export const NewChatModal = ({
-	closeModal,
-	startNewChat,
-}: {
+export interface NewChatModalProps {
 	closeModal: () => void
-	startNewChat: (address: `0x${string}`) => void
-}) => {
-	const users = useLiveQuery(async () => await modelDB.users.toArray(), [])
+}
+
+export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
+	const users = useLiveQuery(async () => await db.users.toArray(), [])
+
+	const { user, manager, setRoomId } = useContext(AppContext)
+
+	const startNewChat = useCallback(
+		async (recipient: PublicUserRegistration) => {
+			if (user === null || manager === null) {
+				return
+			}
+
+			console.log("starting new chat with", recipient)
+			try {
+				const members = [getPublicUserRegistration(user), recipient]
+				const { roomId } = await manager.createRoom(members)
+				setRoomId(roomId)
+			} catch (err) {
+				console.error("failed to create room", err)
+			}
+		},
+		[user, manager, setRoomId]
+	)
 
 	return (
 		<div className="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -38,13 +64,13 @@ export const NewChatModal = ({
 								</h3>
 
 								<div className="mt-2 flex flex-col gap-2">
-									{users?.map((user, index) => (
+									{users?.map((user) => (
 										<UserEntry
-											key={`${user.address}-${index}`}
+											key={user.address}
 											user={user}
 											onClick={() => {
 												closeModal()
-												startNewChat(user.address)
+												startNewChat(user)
 											}}
 										/>
 									))}

@@ -1,52 +1,44 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
-import { useAccount } from "wagmi"
+
 import { useLiveQuery } from "dexie-react-hooks"
 
-import { blake3 } from "@noble/hashes/blake3"
-
-import { modelDB } from "../models/modelDB"
-import { libp2p } from "../stores/libp2p"
-import { Message, RoomId } from "../interfaces"
-import { encodeRoomEvent, RoomEvent } from "../stores/services"
+import { db } from "../db"
 import { AppContext } from "../context"
-import { decryptAndVerifyEvent, signAndEncryptEvent } from "../cryptography"
 
 export interface MessagesPanelProps {
-	roomId: RoomId
+	roomId: string
 }
 
-const MessageDisplay: React.FC<{
-	message: Message
-	isContinuation: boolean
-	isSent: boolean
-}> = ({ message, isContinuation, isSent }) => {
-	const localeString = new Date(message.timestamp).toLocaleString()
-	return (
-		<div>
-			{!isContinuation && <div className="flex justify-center text-gray-300">{localeString}</div>}
+// const MessageDisplay: React.FC<{
+// 	message: Message
+// 	isContinuation: boolean
+// 	isSent: boolean
+// }> = ({ message, isContinuation, isSent }) => {
+// 	const localeString = new Date(message.timestamp).toLocaleString()
+// 	return (
+// 		<div>
+// 			{!isContinuation && <div className="flex justify-center text-gray-300">{localeString}</div>}
 
-			<div className={`flex ${isSent ? "flex-row-reverse" : "flex-row"}`}>
-				<div
-					title={`Sent at ${localeString}`}
-					className={
-						isSent
-							? "p-3 rounded-l-lg rounded-tr-lg bg-blue-500 text-white"
-							: "p-3 rounded-r-lg rounded-tl-lg bg-gray-200 text-black"
-					}
-				>
-					{message.message}
-				</div>
-			</div>
-		</div>
-	)
-}
+// 			<div className={`flex ${isSent ? "flex-row-reverse" : "flex-row"}`}>
+// 				<div
+// 					title={`Sent at ${localeString}`}
+// 					className={
+// 						isSent
+// 							? "p-3 rounded-l-lg rounded-tr-lg bg-blue-500 text-white"
+// 							: "p-3 rounded-r-lg rounded-tl-lg bg-gray-200 text-black"
+// 					}
+// 				>
+// 					{message.message}
+// 				</div>
+// 			</div>
+// 		</div>
+// 	)
+// }
 
 export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: MessagesPanelProps) => {
-	const { address: userAddress } = useAccount()
-
 	const [message, setMessage] = useState<string>("")
 	const messageEvents =
-		useLiveQuery(async () => await modelDB.messages.where({ room: roomId }).sortBy("timestamp"), [roomId]) || []
+		useLiveQuery(async () => await db.messages.where({ room: roomId }).sortBy("timestamp"), [roomId]) || []
 
 	const messagesEndRef = useRef<HTMLDivElement>(null)
 	const messageInputRef = useRef<HTMLInputElement>(null)
@@ -55,50 +47,31 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 		messagesEndRef.current?.scrollIntoView({ behavior: "auto" })
 	}, [messageEvents])
 
-	const { user } = useContext(AppContext)
+	const { user, manager } = useContext(AppContext)
 
 	const handleSubmit = useCallback(
 		(e: React.FormEvent<HTMLFormElement>) => {
 			e.preventDefault()
 
-			if (userAddress === undefined) {
-				return
-			}
-			let trimmedMessage = message.trim()
+			const trimmedMessage = message.trim()
 
 			if (trimmedMessage === "") {
 				setMessage("")
 				return
 			}
 
-			const messageDetail = {
-				room: roomId,
-				sender: userAddress,
-				message: trimmedMessage,
-				timestamp: Date.now(),
+			if (manager !== null) {
+				manager
+					.dispatchEvent({
+						room: roomId,
+						type: "message",
+						detail: { content: trimmedMessage, timestamp: Date.now() },
+					})
+					.then(() => console.log("dispatched message event"))
+					.catch((err) => console.error("event dispatch error", err))
 			}
-
-			if (user !== null) {
-				const payload: RoomEvent = {
-					type: "message",
-					detail: messageDetail,
-				}
-				const encryptedEvent = signAndEncryptEvent(user, user.keyBundle, payload)
-				console.log("encrypted event", encryptedEvent)
-				const decryptedEvent = decryptAndVerifyEvent(user, encryptedEvent)
-				console.log("decrypted event", decryptedEvent)
-			}
-
-			const value = encodeRoomEvent("message", messageDetail)
-
-			const key = blake3(value, { dkLen: 16 })
-
-			libp2p.services[roomId]
-				.insert(key, value)
-				.then(() => setMessage(""))
-				.catch((err) => console.error(err))
 		},
-		[roomId, userAddress, message, user]
+		[roomId, message, user, manager]
 	)
 
 	return (
@@ -113,9 +86,27 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 						previousMessageEvent.sender == message.sender &&
 						message.timestamp - previousMessageEvent.timestamp < 60000
 
-					const isSent = message.sender == userAddress
+					const isSent = message.sender == user?.address
 
-					return <MessageDisplay key={index} message={message} isContinuation={isContinuation} isSent={isSent} />
+					const localeString = new Date(message.timestamp).toLocaleString()
+					return (
+						<div key={index}>
+							{!isContinuation && <div className="flex justify-center text-gray-300">{localeString}</div>}
+
+							<div className={`flex ${isSent ? "flex-row-reverse" : "flex-row"}`}>
+								<div
+									title={`Sent at ${localeString}`}
+									className={
+										isSent
+											? "p-3 rounded-l-lg rounded-tr-lg bg-blue-500 text-white"
+											: "p-3 rounded-r-lg rounded-tl-lg bg-gray-200 text-black"
+									}
+								>
+									{message.content}
+								</div>
+							</div>
+						</div>
+					)
 				})}
 				<div ref={messagesEndRef} />
 			</div>

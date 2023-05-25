@@ -17,39 +17,23 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 import { base64 } from "multiformats/bases/base64"
+
 import { PubsubServiceDiscovery, pubsubServiceDiscovery } from "@canvas-js/pubsub-service-discovery"
 
 import { testnetBootstrapList } from "@canvas-js/store/bootstrap"
-import { StoreService } from "@canvas-js/store/service/browser"
 
-import {
-	MAX_CONNECTIONS,
-	MIN_CONNECTIONS,
-	PING_TIMEOUT,
-	ROOM_REGISTRY_TOPIC,
-	USER_REGISTRY_TOPIC,
-	PEER_ID_KEY,
-} from "../constants"
-
-import { getRoomRegistryService, getRoomStoreServices, getUserRegistryService } from "./services"
+import { MAX_CONNECTIONS, MIN_CONNECTIONS, PING_TIMEOUT, PEER_ID_KEY } from "./constants"
 
 export type ServiceMap = {
 	identify: {}
 	pubsub: PubSub<GossipsubEvents>
 	ping: PingService
-
-	[ROOM_REGISTRY_TOPIC]: StoreService
-	[USER_REGISTRY_TOPIC]: StoreService
-} & Record<`interwallet:room:${string}`, StoreService>
+}
 
 async function getLibp2p(): Promise<Libp2p<ServiceMap>> {
 	const peerId = await getPeerId()
 
 	const bootstrapList = testnetBootstrapList
-
-	const roomStoreServices = await getRoomStoreServices()
-	const roomRegistryService = await getRoomRegistryService()
-	const userRegistryService = await getUserRegistryService()
 
 	return await createLibp2p({
 		start: false,
@@ -103,11 +87,6 @@ async function getLibp2p(): Promise<Libp2p<ServiceMap>> {
 				filterProtocols: (protocol) =>
 					protocol === PubsubServiceDiscovery.DISCOVERY_TOPIC || protocol.startsWith("/canvas/v0/store/"),
 			}),
-
-			[USER_REGISTRY_TOPIC]: userRegistryService,
-			[ROOM_REGISTRY_TOPIC]: roomRegistryService,
-
-			...roomStoreServices,
 		},
 	})
 }
