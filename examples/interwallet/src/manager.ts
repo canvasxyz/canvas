@@ -16,6 +16,8 @@ import { PrivateUserRegistration, PublicUserRegistration } from "./interfaces"
 import { ROOM_REGISTRY_TOPIC, USER_REGISTRY_TOPIC } from "./constants"
 import { encryptData, decryptData, signData, verifyData, assert, verifyKeyBundle } from "./cryptography"
 import { db } from "./db"
+import { getLibp2p } from "./libp2p"
+import { PeerId } from "@libp2p/interface-peer-id"
 
 type EventMap = {
 	message: { content: string; timestamp: number }
@@ -24,10 +26,9 @@ type EventMap = {
 type RoomEvent = { [Type in keyof EventMap]: { room: string; type: Type; detail: EventMap[Type] } }[keyof EventMap]
 
 export class RoomManager {
-	public static async initialize(
-		libp2p: Libp2p<{ pubsub: PubSub }>,
-		user: PrivateUserRegistration
-	): Promise<RoomManager> {
+	public static async initialize(peerId: PeerId, user: PrivateUserRegistration): Promise<RoomManager> {
+		const libp2p = await getLibp2p(peerId)
+
 		const manager = new RoomManager(libp2p, user)
 
 		manager.roomRegistry = await Store.open(libp2p, {
@@ -50,16 +51,24 @@ export class RoomManager {
 	private readonly log = logger("canvas:interwallet:manager")
 
 	private constructor(
-		private readonly libp2p: Libp2p<{ pubsub: PubSub }>,
-		private readonly user: PrivateUserRegistration
+		public readonly libp2p: Libp2p<{ pubsub: PubSub }>,
+		public readonly user: PrivateUserRegistration
 	) {}
+
+	public isStarted() {
+		return this.libp2p.isStarted()
+	}
 
 	public async start() {
 		if (this.userRegistry === null || this.roomRegistry === null) {
 			throw new Error("tried to start uninitialized manager")
+		} else if (this.libp2p.isStarted()) {
+			return
 		}
 
 		this.log("starting manager")
+
+		await this.libp2p.start()
 
 		await this.roomRegistry.start()
 		await this.userRegistry.start()
@@ -89,7 +98,8 @@ export class RoomManager {
 		await this.userRegistry?.stop()
 		await this.roomRegistry?.stop()
 		await Promise.all([...this.rooms.values()].map(({ store }) => store.stop()))
-		this.rooms.clear()
+
+		await this.libp2p.stop()
 	}
 
 	public async createRoom(members: PublicUserRegistration[]): Promise<{ roomId: string }> {

@@ -3,12 +3,11 @@ import { Libp2p } from "@libp2p/interface-libp2p"
 import { createContext } from "react"
 import { PrivateUserRegistration } from "./interfaces"
 import { RoomManager } from "./manager"
-import { ServiceMap } from "./libp2p"
+import { PeerId } from "@libp2p/interface-peer-id"
 
 export interface AppContext {
+	peerId: PeerId | null
 	manager: RoomManager | null
-
-	libp2p: Libp2p<ServiceMap> | null
 
 	user: PrivateUserRegistration | null
 	setUser: (user: PrivateUserRegistration) => void
@@ -21,9 +20,8 @@ export interface AppContext {
 }
 
 export const AppContext = createContext<AppContext>({
+	peerId: null,
 	manager: null,
-
-	libp2p: null,
 
 	user: null,
 	setUser() {

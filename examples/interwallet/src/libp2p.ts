@@ -30,9 +30,7 @@ export type ServiceMap = {
 	ping: PingService
 }
 
-async function getLibp2p(): Promise<Libp2p<ServiceMap>> {
-	const peerId = await getPeerId()
-
+export async function getLibp2p(peerId: PeerId): Promise<Libp2p<ServiceMap>> {
 	const bootstrapList = testnetBootstrapList
 
 	return await createLibp2p({
@@ -91,7 +89,7 @@ async function getLibp2p(): Promise<Libp2p<ServiceMap>> {
 	})
 }
 
-async function getPeerId(): Promise<PeerId> {
+export async function getPeerId(): Promise<PeerId> {
 	const entry = window.localStorage.getItem(PEER_ID_KEY)
 	if (entry === null) {
 		const peerId = await createEd25519PeerId()
@@ -106,6 +104,3 @@ async function getPeerId(): Promise<PeerId> {
 		return peerId
 	}
 }
-
-export const libp2p = await getLibp2p()
-;(window as any).libp2p = libp2p

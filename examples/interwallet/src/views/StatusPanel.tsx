@@ -10,26 +10,25 @@ import { PeerId } from "@libp2p/interface-peer-id"
 
 import closeIcon from "../icons/close.svg"
 
-import { libp2p } from "../libp2p"
 import { PeerIdToken } from "./PeerId"
 import { AppContext } from "../context"
 
 export interface StatusPanelProps {}
 
 export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
-	const { manager } = useContext(AppContext)
+	const { manager, peerId } = useContext(AppContext)
 
-	const [started, setStarted] = useState(libp2p.isStarted())
+	const [started, setStarted] = useState(manager !== null && manager.libp2p.isStarted())
 	const [starting, setStarting] = useState(false)
 	const [stopping, setStopping] = useState(false)
 
 	const handleClick = useCallback(async () => {
-		if (starting || stopping) {
+		if (manager === null || starting || stopping) {
 			return
 		} else if (started) {
 			setStopping(true)
 			try {
-				await libp2p.stop()
+				await manager.stop()
 				setStarted(false)
 			} catch (err) {
 				console.error(err)
@@ -39,12 +38,7 @@ export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
 		} else {
 			setStarting(true)
 			try {
-				await libp2p.start()
-
-				if (manager !== null) {
-					await manager.start()
-				}
-
+				await manager.start()
 				setStarted(true)
 			} catch (err) {
 				console.error(err)
@@ -64,7 +58,7 @@ export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
 				{started ? "stop libp2p" : "start libp2p"}
 			</button>
 			<div className="flex flex-row border-b border-gray-300 items-center">
-				<PeerIdToken peerId={libp2p.peerId} />
+				{peerId && <PeerIdToken peerId={peerId} />}
 			</div>
 			{started && <ConnectionsList />}
 			{started && <MeshPeerList />}
@@ -78,7 +72,14 @@ const ConnectionsList: React.FC<ConnectionsListProps> = (props) => {
 	const connectionMap = useMemo(() => new Map<string, Connection>(), [])
 	const [connections, setConnections] = useState<Connection[]>([])
 
+	const { manager } = useContext(AppContext)
+
 	useEffect(() => {
+		if (manager === null) {
+			return
+		}
+
+		const { libp2p } = manager
 		for (const connection of libp2p.getConnections()) {
 			connectionMap.set(connection.id, connection)
 		}
@@ -102,7 +103,7 @@ const ConnectionsList: React.FC<ConnectionsListProps> = (props) => {
 			libp2p.removeEventListener("connection:open", handleCloseConnection)
 			libp2p.removeEventListener("connection:close", handleCloseConnection)
 		}
-	}, [])
+	}, [manager])
 
 	return (
 		<div>
@@ -170,8 +171,14 @@ const MeshPeerList: React.FC<MeshPeerListProps> = (props) => {
 	const topicSubscriptionMap = useMemo(() => new Map<string, Set<string>>(), [])
 	const [topicPeers, setTopicPeers] = useState<{ topic: string; peers: string[] }[]>([])
 
+	const { peerId, manager } = useContext(AppContext)
+
 	useEffect(() => {
-		const { pubsub } = libp2p.services
+		if (peerId === null || manager === null) {
+			return
+		}
+
+		const { pubsub } = manager.libp2p.services
 
 		const topicPrefix = "/canvas/v0/store/"
 		const topicPeers: { topic: string; peers: string[] }[] = []
@@ -186,7 +193,7 @@ const MeshPeerList: React.FC<MeshPeerListProps> = (props) => {
 		setTopicPeers(topicPeers)
 
 		const handleSubscriptionChange = ({ detail: { peerId, subscriptions } }: CustomEvent<SubscriptionChangeData>) => {
-			if (libp2p.peerId.equals(peerId)) {
+			if (peerId.equals(peerId)) {
 				for (const { subscribe, topic } of subscriptions) {
 					if (subscribe) {
 						const peers = pubsub.getSubscribers(topic).map((peerId) => peerId.toString())
@@ -222,7 +229,7 @@ const MeshPeerList: React.FC<MeshPeerListProps> = (props) => {
 		return () => {
 			pubsub.removeEventListener("subscription-change", handleSubscriptionChange)
 		}
-	}, [])
+	}, [peerId, manager])
 
 	return (
 		<div>
