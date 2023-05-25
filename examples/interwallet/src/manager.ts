@@ -138,9 +138,12 @@ export class RoomManager {
 		assert(recipient !== undefined, "room has no other members")
 
 		const signedData = Messages.SignedData.encode(signData(encode(event), this.user)).finish()
-		const encryptedData = Messages.EncryptedData.encode(encryptData(signedData, recipient)).finish()
-		const key = blake3(encryptedData, { dkLen: 16 })
-		await room.store.insert(key, encryptedData)
+		// const encryptedData = Messages.EncryptedData.encode(encryptData(signedData, recipient)).finish()
+		// const key = blake3(encryptedData, { dkLen: 16 })
+		// await room.store.insert(key, encryptedData)
+
+		const key = blake3(signedData, { dkLen: 16 })
+		await room.store.insert(key, signedData)
 	}
 
 	private applyEventEntry =
@@ -149,9 +152,12 @@ export class RoomManager {
 
 			assert(equals(key, blake3(value, { dkLen: 16 })), "invalid event: key is not hash of value")
 
-			const encryptedData = Messages.EncryptedData.decode(value)
-			const decryptedData = decryptData(encryptedData, this.user)
-			const signedData = Messages.SignedData.decode(decryptedData)
+			// const encryptedData = Messages.EncryptedData.decode(value)
+			// const decryptedData = decryptData(encryptedData, this.user)
+			// const signedData = Messages.SignedData.decode(decryptedData)
+			// const senderSigningAddress = hexToBytes(verifyData(signedData))
+
+			const signedData = Messages.SignedData.decode(value)
 			const senderSigningAddress = hexToBytes(verifyData(signedData))
 
 			const sender = members.find(({ keyBundle: { signingAddress } }) =>
@@ -206,16 +212,7 @@ export class RoomManager {
 
 			await db.rooms.add({ id: roomId, creator: creator.address, members })
 
-			const store = await Store.open(this.libp2p, {
-				topic: `interwallet:room:${roomId}`,
-				apply: this.applyEventEntry(roomId, members),
-			})
-
-			if (this.libp2p.isStarted()) {
-				await store.start()
-			}
-
-			this.rooms.set(roomId, { store, members })
+			await this.addRoom(roomId, members)
 		}
 	}
 
@@ -228,7 +225,16 @@ export class RoomManager {
 	}
 
 	private async addRoom(roomId: string, members: PublicUserRegistration[]): Promise<void> {
-		assert(members.length === 2, "rooms must have exactly two members")
+		const store = await Store.open(this.libp2p, {
+			topic: `interwallet:room:${roomId}`,
+			apply: this.applyEventEntry(roomId, members),
+		})
+
+		if (this.libp2p.isStarted()) {
+			await store.start()
+		}
+
+		this.rooms.set(roomId, { store, members })
 	}
 
 	// private async removeRoom(roomId: string): Promise<void> {
