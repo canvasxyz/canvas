@@ -50,7 +50,7 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 	const { user, manager } = useContext(AppContext)
 
 	const handleSubmit = useCallback(
-		(e: React.FormEvent<HTMLFormElement>) => {
+		async (e: React.FormEvent<HTMLFormElement>) => {
 			e.preventDefault()
 
 			const trimmedMessage = message.trim()
@@ -61,14 +61,17 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 			}
 
 			if (manager !== null) {
-				manager
-					.dispatchEvent({
+				try {
+					await manager.dispatchEvent({
 						room: roomId,
 						type: "message",
 						detail: { content: trimmedMessage, timestamp: Date.now() },
 					})
-					.then(() => console.log("dispatched message event"))
-					.catch((err) => console.error("event dispatch error", err))
+					console.log("dispatched message event")
+					setMessage("")
+				} catch (err) {
+					console.error("event dispatch error", err)
+				}
 			}
 		},
 		[roomId, message, user, manager]
