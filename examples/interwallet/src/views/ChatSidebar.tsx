@@ -1,17 +1,10 @@
 import React, { useCallback, useContext, useEffect } from "react"
-import { useAccount, useEnsName } from "wagmi"
-import Events from "#protocols/messages"
+import { useEnsName } from "wagmi"
 
 import { AppContext } from "../context"
 import { NewChatModal } from "./NewChatModal"
 import { Room, db } from "../db"
 import { useLiveQuery } from "dexie-react-hooks"
-import { libp2p } from "../libp2p"
-import { ROOM_REGISTRY_TOPIC } from "../constants"
-import { personalSign } from "@metamask/eth-sig-util"
-import { hexToBytes } from "viem"
-import { PublicUserRegistration } from "../interfaces"
-import { getPublicUserRegistration } from "../cryptography"
 
 export interface ChatSidebarProps {}
 
