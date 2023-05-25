@@ -1,7 +1,7 @@
 import { Libp2p } from "@libp2p/interface-libp2p"
 import { PubSub } from "@libp2p/interface-pubsub"
 
-import { IDBPDatabase, openDB } from "idb"
+import { openDB } from "idb"
 import { IDBTree } from "@canvas-js/okra-idb"
 
 import { AbstractStore, StoreInit } from "../store.js"

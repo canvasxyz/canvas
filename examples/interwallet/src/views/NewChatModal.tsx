@@ -1,9 +1,10 @@
 import React, { useCallback, useContext } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
-import { db } from "../db"
 import { useEnsName } from "wagmi"
-import { PublicUserRegistration } from "../interfaces"
+
 import { AppContext } from "../context"
+import { db } from "../db"
+import { PublicUserRegistration } from "../interfaces"
 import { getPublicUserRegistration } from "../cryptography"
 
 interface UserEntryProps {

@@ -1,7 +1,7 @@
 import React, { useState, useContext, useCallback, useEffect, useRef } from "react"
 
 import { useAccount, useConnect, useDisconnect } from "wagmi"
-import { Libp2p } from "@libp2p/interface-libp2p"
+import { PeerId } from "@libp2p/interface-peer-id"
 
 import { ChatView } from "./views/ChatView"
 import { RegistrationView } from "./views/RegistrationView"
@@ -15,7 +15,7 @@ import chevronRight from "./icons/chevron-right.svg"
 import chevronLeft from "./icons/chevron-left.svg"
 import { StatusPanel } from "./views/StatusPanel"
 import { RoomManager } from "./manager"
-import { PeerId } from "@libp2p/interface-peer-id"
+
 import { getPeerId } from "./libp2p"
 
 const AppContent: React.FC<{}> = ({}) => {

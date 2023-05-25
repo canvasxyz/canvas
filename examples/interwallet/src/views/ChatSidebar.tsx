@@ -1,10 +1,10 @@
 import React, { useCallback, useContext, useEffect } from "react"
 import { useEnsName } from "wagmi"
+import { useLiveQuery } from "dexie-react-hooks"
 
 import { AppContext } from "../context"
 import { NewChatModal } from "./NewChatModal"
 import { Room, db } from "../db"
-import { useLiveQuery } from "dexie-react-hooks"
 
 export interface ChatSidebarProps {}
 
