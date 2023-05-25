@@ -3,7 +3,6 @@ import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } 
 import { SubscriptionChangeData } from "@libp2p/interface-pubsub"
 import { Connection } from "@libp2p/interface-connection"
 import { protocols } from "@multiformats/multiaddr"
-import { PeerId } from "@libp2p/interface-peer-id"
 
 // import { createTopology } from "@libp2p/topology"
 // import { GossipSub } from "@chainsafe/libp2p-gossipsub"

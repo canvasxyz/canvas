@@ -1,9 +1,9 @@
-import { Libp2p } from "@libp2p/interface-libp2p"
-
 import { createContext } from "react"
+
+import { PeerId } from "@libp2p/interface-peer-id"
+
 import { PrivateUserRegistration } from "./interfaces"
 import { RoomManager } from "./manager"
-import { PeerId } from "@libp2p/interface-peer-id"
 
 export interface AppContext {
 	peerId: PeerId | null
