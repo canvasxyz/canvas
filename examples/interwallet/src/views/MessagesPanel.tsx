@@ -5,6 +5,8 @@ import { useLiveQuery } from "dexie-react-hooks"
 import { db } from "../db"
 import { AppContext } from "../context"
 
+import { getAddress } from "viem"
+
 export interface MessagesPanelProps {
 	roomId: string
 }
@@ -89,7 +91,7 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ roomId }: Messages
 						previousMessageEvent.sender == message.sender &&
 						message.timestamp - previousMessageEvent.timestamp < 60000
 
-					const isSent = message.sender == user?.address
+					const isSent = getAddress(message.sender) == user?.address
 
 					const localeString = new Date(message.timestamp).toLocaleString()
 					return (
