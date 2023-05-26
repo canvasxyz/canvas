@@ -1,15 +1,13 @@
 /*eslint-disable block-scoped-var, id-length, no-control-regex, no-magic-numbers, no-prototype-builtins, no-redeclare, no-shadow, no-var, sort-vars*/
-"use strict";
-
-var $protobuf = require("protobufjs/minimal");
+import * as $protobuf from "protobufjs/minimal";
 
 // Common aliases
-var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
+const $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
 
 // Exported root namespace
-var $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});
+const $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});
 
-$root.Node = (function() {
+export const Node = $root.Node = (() => {
 
     /**
      * Properties of a Node.
@@ -31,7 +29,7 @@ $root.Node = (function() {
      */
     function Node(properties) {
         if (properties)
-            for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
                     this[keys[i]] = properties[keys[i]];
     }
@@ -130,9 +128,9 @@ $root.Node = (function() {
     Node.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
             reader = $Reader.create(reader);
-        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.Node();
+        let end = length === undefined ? reader.len : reader.pos + length, message = new $root.Node();
         while (reader.pos < end) {
-            var tag = reader.uint32();
+            let tag = reader.uint32();
             switch (tag >>> 3) {
             case 1: {
                     message.level = reader.uint32();
@@ -211,7 +209,7 @@ $root.Node = (function() {
     Node.fromObject = function fromObject(object) {
         if (object instanceof $root.Node)
             return object;
-        var message = new $root.Node();
+        let message = new $root.Node();
         if (object.level != null)
             message.level = object.level >>> 0;
         if (object.key != null)
@@ -244,7 +242,7 @@ $root.Node = (function() {
     Node.toObject = function toObject(message, options) {
         if (!options)
             options = {};
-        var object = {};
+        let object = {};
         if (options.defaults) {
             object.level = 0;
             if (options.bytes === String)
@@ -309,7 +307,7 @@ $root.Node = (function() {
     return Node;
 })();
 
-$root.Request = (function() {
+export const Request = $root.Request = (() => {
 
     /**
      * Properties of a Request.
@@ -330,7 +328,7 @@ $root.Request = (function() {
      */
     function Request(properties) {
         if (properties)
-            for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
                     this[keys[i]] = properties[keys[i]];
     }
@@ -360,7 +358,7 @@ $root.Request = (function() {
     Request.prototype.getChildren = null;
 
     // OneOf field names bound to virtual getters and setters
-    var $oneOfFields;
+    let $oneOfFields;
 
     /**
      * Request request.
@@ -433,9 +431,9 @@ $root.Request = (function() {
     Request.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
             reader = $Reader.create(reader);
-        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.Request();
+        let end = length === undefined ? reader.len : reader.pos + length, message = new $root.Request();
         while (reader.pos < end) {
-            var tag = reader.uint32();
+            let tag = reader.uint32();
             switch (tag >>> 3) {
             case 1: {
                     message.getRoot = $root.Request.GetRootRequest.decode(reader, reader.uint32());
@@ -484,11 +482,11 @@ $root.Request = (function() {
     Request.verify = function verify(message) {
         if (typeof message !== "object" || message === null)
             return "object expected";
-        var properties = {};
+        let properties = {};
         if (message.getRoot != null && message.hasOwnProperty("getRoot")) {
             properties.request = 1;
             {
-                var error = $root.Request.GetRootRequest.verify(message.getRoot);
+                let error = $root.Request.GetRootRequest.verify(message.getRoot);
                 if (error)
                     return "getRoot." + error;
             }
@@ -498,7 +496,7 @@ $root.Request = (function() {
                 return "request: multiple values";
             properties.request = 1;
             {
-                var error = $root.Request.GetNodeRequest.verify(message.getNode);
+                let error = $root.Request.GetNodeRequest.verify(message.getNode);
                 if (error)
                     return "getNode." + error;
             }
@@ -508,7 +506,7 @@ $root.Request = (function() {
                 return "request: multiple values";
             properties.request = 1;
             {
-                var error = $root.Request.GetChildrenRequest.verify(message.getChildren);
+                let error = $root.Request.GetChildrenRequest.verify(message.getChildren);
                 if (error)
                     return "getChildren." + error;
             }
@@ -527,7 +525,7 @@ $root.Request = (function() {
     Request.fromObject = function fromObject(object) {
         if (object instanceof $root.Request)
             return object;
-        var message = new $root.Request();
+        let message = new $root.Request();
         if (object.getRoot != null) {
             if (typeof object.getRoot !== "object")
                 throw TypeError(".Request.getRoot: object expected");
@@ -558,7 +556,7 @@ $root.Request = (function() {
     Request.toObject = function toObject(message, options) {
         if (!options)
             options = {};
-        var object = {};
+        let object = {};
         if (message.getRoot != null && message.hasOwnProperty("getRoot")) {
             object.getRoot = $root.Request.GetRootRequest.toObject(message.getRoot, options);
             if (options.oneofs)
@@ -621,7 +619,7 @@ $root.Request = (function() {
          */
         function GetRootRequest(properties) {
             if (properties)
-                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -680,9 +678,9 @@ $root.Request = (function() {
         GetRootRequest.decode = function decode(reader, length) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.Request.GetRootRequest();
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.Request.GetRootRequest();
             while (reader.pos < end) {
-                var tag = reader.uint32();
+                let tag = reader.uint32();
                 switch (tag >>> 3) {
                 default:
                     reader.skipType(tag & 7);
@@ -798,7 +796,7 @@ $root.Request = (function() {
          */
         function GetNodeRequest(properties) {
             if (properties)
-                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -877,9 +875,9 @@ $root.Request = (function() {
         GetNodeRequest.decode = function decode(reader, length) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.Request.GetNodeRequest();
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.Request.GetNodeRequest();
             while (reader.pos < end) {
-                var tag = reader.uint32();
+                let tag = reader.uint32();
                 switch (tag >>> 3) {
                 case 1: {
                         message.level = reader.uint32();
@@ -944,7 +942,7 @@ $root.Request = (function() {
         GetNodeRequest.fromObject = function fromObject(object) {
             if (object instanceof $root.Request.GetNodeRequest)
                 return object;
-            var message = new $root.Request.GetNodeRequest();
+            let message = new $root.Request.GetNodeRequest();
             if (object.level != null)
                 message.level = object.level >>> 0;
             if (object.key != null)
@@ -967,7 +965,7 @@ $root.Request = (function() {
         GetNodeRequest.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            var object = {};
+            let object = {};
             if (options.defaults) {
                 object.level = 0;
                 if (options.bytes === String)
@@ -1034,7 +1032,7 @@ $root.Request = (function() {
          */
         function GetChildrenRequest(properties) {
             if (properties)
-                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -1113,9 +1111,9 @@ $root.Request = (function() {
         GetChildrenRequest.decode = function decode(reader, length) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.Request.GetChildrenRequest();
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.Request.GetChildrenRequest();
             while (reader.pos < end) {
-                var tag = reader.uint32();
+                let tag = reader.uint32();
                 switch (tag >>> 3) {
                 case 1: {
                         message.level = reader.uint32();
@@ -1180,7 +1178,7 @@ $root.Request = (function() {
         GetChildrenRequest.fromObject = function fromObject(object) {
             if (object instanceof $root.Request.GetChildrenRequest)
                 return object;
-            var message = new $root.Request.GetChildrenRequest();
+            let message = new $root.Request.GetChildrenRequest();
             if (object.level != null)
                 message.level = object.level >>> 0;
             if (object.key != null)
@@ -1203,7 +1201,7 @@ $root.Request = (function() {
         GetChildrenRequest.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            var object = {};
+            let object = {};
             if (options.defaults) {
                 object.level = 0;
                 if (options.bytes === String)
@@ -1253,7 +1251,7 @@ $root.Request = (function() {
     return Request;
 })();
 
-$root.Response = (function() {
+export const Response = $root.Response = (() => {
 
     /**
      * Properties of a Response.
@@ -1274,7 +1272,7 @@ $root.Response = (function() {
      */
     function Response(properties) {
         if (properties)
-            for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
                     this[keys[i]] = properties[keys[i]];
     }
@@ -1304,7 +1302,7 @@ $root.Response = (function() {
     Response.prototype.getChildren = null;
 
     // OneOf field names bound to virtual getters and setters
-    var $oneOfFields;
+    let $oneOfFields;
 
     /**
      * Response response.
@@ -1377,9 +1375,9 @@ $root.Response = (function() {
     Response.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
             reader = $Reader.create(reader);
-        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.Response();
+        let end = length === undefined ? reader.len : reader.pos + length, message = new $root.Response();
         while (reader.pos < end) {
-            var tag = reader.uint32();
+            let tag = reader.uint32();
             switch (tag >>> 3) {
             case 1: {
                     message.getRoot = $root.Response.GetRootResponse.decode(reader, reader.uint32());
@@ -1428,11 +1426,11 @@ $root.Response = (function() {
     Response.verify = function verify(message) {
         if (typeof message !== "object" || message === null)
             return "object expected";
-        var properties = {};
+        let properties = {};
         if (message.getRoot != null && message.hasOwnProperty("getRoot")) {
             properties.response = 1;
             {
-                var error = $root.Response.GetRootResponse.verify(message.getRoot);
+                let error = $root.Response.GetRootResponse.verify(message.getRoot);
                 if (error)
                     return "getRoot." + error;
             }
@@ -1442,7 +1440,7 @@ $root.Response = (function() {
                 return "response: multiple values";
             properties.response = 1;
             {
-                var error = $root.Response.GetNodeResponse.verify(message.getNode);
+                let error = $root.Response.GetNodeResponse.verify(message.getNode);
                 if (error)
                     return "getNode." + error;
             }
@@ -1452,7 +1450,7 @@ $root.Response = (function() {
                 return "response: multiple values";
             properties.response = 1;
             {
-                var error = $root.Response.GetChildrenResponse.verify(message.getChildren);
+                let error = $root.Response.GetChildrenResponse.verify(message.getChildren);
                 if (error)
                     return "getChildren." + error;
             }
@@ -1471,7 +1469,7 @@ $root.Response = (function() {
     Response.fromObject = function fromObject(object) {
         if (object instanceof $root.Response)
             return object;
-        var message = new $root.Response();
+        let message = new $root.Response();
         if (object.getRoot != null) {
             if (typeof object.getRoot !== "object")
                 throw TypeError(".Response.getRoot: object expected");
@@ -1502,7 +1500,7 @@ $root.Response = (function() {
     Response.toObject = function toObject(message, options) {
         if (!options)
             options = {};
-        var object = {};
+        let object = {};
         if (message.getRoot != null && message.hasOwnProperty("getRoot")) {
             object.getRoot = $root.Response.GetRootResponse.toObject(message.getRoot, options);
             if (options.oneofs)
@@ -1566,7 +1564,7 @@ $root.Response = (function() {
          */
         function GetRootResponse(properties) {
             if (properties)
-                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -1635,9 +1633,9 @@ $root.Response = (function() {
         GetRootResponse.decode = function decode(reader, length) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.Response.GetRootResponse();
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.Response.GetRootResponse();
             while (reader.pos < end) {
-                var tag = reader.uint32();
+                let tag = reader.uint32();
                 switch (tag >>> 3) {
                 case 1: {
                         message.root = $root.Node.decode(reader, reader.uint32());
@@ -1679,7 +1677,7 @@ $root.Response = (function() {
             if (typeof message !== "object" || message === null)
                 return "object expected";
             if (message.root != null && message.hasOwnProperty("root")) {
-                var error = $root.Node.verify(message.root);
+                let error = $root.Node.verify(message.root);
                 if (error)
                     return "root." + error;
             }
@@ -1697,7 +1695,7 @@ $root.Response = (function() {
         GetRootResponse.fromObject = function fromObject(object) {
             if (object instanceof $root.Response.GetRootResponse)
                 return object;
-            var message = new $root.Response.GetRootResponse();
+            let message = new $root.Response.GetRootResponse();
             if (object.root != null) {
                 if (typeof object.root !== "object")
                     throw TypeError(".Response.GetRootResponse.root: object expected");
@@ -1718,7 +1716,7 @@ $root.Response = (function() {
         GetRootResponse.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            var object = {};
+            let object = {};
             if (options.defaults)
                 object.root = null;
             if (message.root != null && message.hasOwnProperty("root"))
@@ -1774,7 +1772,7 @@ $root.Response = (function() {
          */
         function GetNodeResponse(properties) {
             if (properties)
-                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -1843,9 +1841,9 @@ $root.Response = (function() {
         GetNodeResponse.decode = function decode(reader, length) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.Response.GetNodeResponse();
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.Response.GetNodeResponse();
             while (reader.pos < end) {
-                var tag = reader.uint32();
+                let tag = reader.uint32();
                 switch (tag >>> 3) {
                 case 1: {
                         message.node = $root.Node.decode(reader, reader.uint32());
@@ -1887,7 +1885,7 @@ $root.Response = (function() {
             if (typeof message !== "object" || message === null)
                 return "object expected";
             if (message.node != null && message.hasOwnProperty("node")) {
-                var error = $root.Node.verify(message.node);
+                let error = $root.Node.verify(message.node);
                 if (error)
                     return "node." + error;
             }
@@ -1905,7 +1903,7 @@ $root.Response = (function() {
         GetNodeResponse.fromObject = function fromObject(object) {
             if (object instanceof $root.Response.GetNodeResponse)
                 return object;
-            var message = new $root.Response.GetNodeResponse();
+            let message = new $root.Response.GetNodeResponse();
             if (object.node != null) {
                 if (typeof object.node !== "object")
                     throw TypeError(".Response.GetNodeResponse.node: object expected");
@@ -1926,7 +1924,7 @@ $root.Response = (function() {
         GetNodeResponse.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            var object = {};
+            let object = {};
             if (options.defaults)
                 object.node = null;
             if (message.node != null && message.hasOwnProperty("node"))
@@ -1983,7 +1981,7 @@ $root.Response = (function() {
         function GetChildrenResponse(properties) {
             this.children = [];
             if (properties)
-                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -2021,7 +2019,7 @@ $root.Response = (function() {
             if (!writer)
                 writer = $Writer.create();
             if (message.children != null && message.children.length)
-                for (var i = 0; i < message.children.length; ++i)
+                for (let i = 0; i < message.children.length; ++i)
                     $root.Node.encode(message.children[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
             return writer;
         };
@@ -2053,9 +2051,9 @@ $root.Response = (function() {
         GetChildrenResponse.decode = function decode(reader, length) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.Response.GetChildrenResponse();
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.Response.GetChildrenResponse();
             while (reader.pos < end) {
-                var tag = reader.uint32();
+                let tag = reader.uint32();
                 switch (tag >>> 3) {
                 case 1: {
                         if (!(message.children && message.children.length))
@@ -2101,8 +2099,8 @@ $root.Response = (function() {
             if (message.children != null && message.hasOwnProperty("children")) {
                 if (!Array.isArray(message.children))
                     return "children: array expected";
-                for (var i = 0; i < message.children.length; ++i) {
-                    var error = $root.Node.verify(message.children[i]);
+                for (let i = 0; i < message.children.length; ++i) {
+                    let error = $root.Node.verify(message.children[i]);
                     if (error)
                         return "children." + error;
                 }
@@ -2121,12 +2119,12 @@ $root.Response = (function() {
         GetChildrenResponse.fromObject = function fromObject(object) {
             if (object instanceof $root.Response.GetChildrenResponse)
                 return object;
-            var message = new $root.Response.GetChildrenResponse();
+            let message = new $root.Response.GetChildrenResponse();
             if (object.children) {
                 if (!Array.isArray(object.children))
                     throw TypeError(".Response.GetChildrenResponse.children: array expected");
                 message.children = [];
-                for (var i = 0; i < object.children.length; ++i) {
+                for (let i = 0; i < object.children.length; ++i) {
                     if (typeof object.children[i] !== "object")
                         throw TypeError(".Response.GetChildrenResponse.children: object expected");
                     message.children[i] = $root.Node.fromObject(object.children[i]);
@@ -2147,12 +2145,12 @@ $root.Response = (function() {
         GetChildrenResponse.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            var object = {};
+            let object = {};
             if (options.arrays || options.defaults)
                 object.children = [];
             if (message.children && message.children.length) {
                 object.children = [];
-                for (var j = 0; j < message.children.length; ++j)
+                for (let j = 0; j < message.children.length; ++j)
                     object.children[j] = $root.Node.toObject(message.children[j], options);
             }
             return object;
@@ -2190,4 +2188,4 @@ $root.Response = (function() {
     return Response;
 })();
 
-module.exports = $root;
+export { $root as default };

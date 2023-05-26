@@ -4,7 +4,7 @@ import { logger } from "@libp2p/logger"
 
 import type { Source } from "@canvas-js/okra"
 
-import Sync from "#protocols/sync"
+import * as Sync from "#protocols/sync"
 
 import { assert } from "../utils.js"
 

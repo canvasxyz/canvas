@@ -14,7 +14,7 @@
   "types": "./lib/index.d.ts",
   "sideEffects": false,
   "imports": {
-    "#protocols/sync": "./protocols/sync/index.cjs"
+    "#protocols/sync": "./protocols/sync/index.js"
   },
   "exports": {
     ".": "./lib/index.js",
@@ -26,8 +26,8 @@
   },
   "scripts": {
     "generate": "npm run generate-sync-js && npm run generate-sync-ts",
-    "generate-sync-js": "pbjs ./protocols/sync/index.proto -t static-module -w commonjs -o ./protocols/sync/index.cjs",
-    "generate-sync-ts": "pbjs -t static-module ./protocols/sync/index.proto | pbts -o ./protocols/sync/index.d.cts -",
+    "generate-sync-js": "pbjs ./protocols/sync/index.proto -t static-module -w es6 -o ./protocols/sync/index.js",
+    "generate-sync-ts": "pbjs -t static-module ./protocols/sync/index.proto | pbts -o ./protocols/sync/index.d.ts -",
     "test": "ava"
   },
   "dependencies": {

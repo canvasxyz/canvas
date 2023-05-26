@@ -7,7 +7,7 @@ import type { Stream } from "@libp2p/interface-connection"
 
 import type { Key, Node, Source } from "@canvas-js/okra"
 
-import Sync from "#protocols/sync"
+import * as Sync from "#protocols/sync"
 
 import { assert } from "../utils.js"
 
