@@ -11,7 +11,7 @@ import { pipe } from "it-pipe"
 import PQueue from "p-queue"
 import { bytesToHex as hex } from "@noble/hashes/utils"
 
-import { logger } from "@libp2p/logger"
+import { Logger, logger } from "@libp2p/logger"
 import { createTopology } from "@libp2p/topology"
 
 import type { Source, Target, KeyValueStore } from "@canvas-js/okra"
@@ -31,7 +31,7 @@ export interface StoreInit {
 }
 
 export abstract class AbstractStore extends EventEmitter<{}> {
-	public static prefix = "/canvas/v0/store/"
+	public static protocolPrefix = "/canvas/v0/store/"
 
 	public static MIN_CONNECTIONS = 2
 	public static MAX_CONNECTIONS = 10
@@ -51,7 +51,7 @@ export abstract class AbstractStore extends EventEmitter<{}> {
 	private readonly syncQueuePeers = new Set<string>()
 	private readonly syncHistory = new CacheMap<string, number>(AbstractStore.MAX_SYNC_QUEUE_SIZE)
 
-	protected readonly log = logger("canvas:store")
+	protected readonly log: Logger
 	protected readonly controller = new AbortController()
 	protected readonly topic: string
 	protected readonly protocol: string
@@ -68,10 +68,12 @@ export abstract class AbstractStore extends EventEmitter<{}> {
 	constructor(private readonly libp2p: Libp2p<{ pubsub: PubSub }>, private readonly init: StoreInit) {
 		super()
 
-		this.topic = `/canvas/v0/store/${init.topic}`
-		this.protocol = `/canvas/v0/store/${init.topic}/sync`
-		assert(this.topic.startsWith(AbstractStore.prefix))
-		assert(this.protocol.startsWith(AbstractStore.prefix))
+		this.topic = AbstractStore.protocolPrefix + init.topic
+		this.protocol = AbstractStore.protocolPrefix + init.topic + "/sync"
+
+		assert(this.topic.startsWith(AbstractStore.protocolPrefix))
+		assert(this.protocol.startsWith(AbstractStore.protocolPrefix))
+		this.log = logger(`canvas:store:[${init.topic}]`)
 
 		this.minConnections = init.minConnections ?? AbstractStore.MIN_CONNECTIONS
 		this.maxConnections = init.maxConnections ?? AbstractStore.MAX_CONNECTIONS
@@ -94,6 +96,7 @@ export abstract class AbstractStore extends EventEmitter<{}> {
 	}
 
 	public async start(): Promise<void> {
+		this.log("starting")
 		this.libp2p.services.pubsub.addEventListener("message", this.handleMessage)
 		this.libp2p.services.pubsub.subscribe(this.topic)
 
@@ -106,6 +109,7 @@ export abstract class AbstractStore extends EventEmitter<{}> {
 	}
 
 	public async stop(): Promise<void> {
+		this.log("stopping")
 		this.controller.abort()
 		this.libp2p.services.pubsub.removeEventListener("message", this.handleMessage)
 		this.libp2p.services.pubsub.unsubscribe(this.topic)

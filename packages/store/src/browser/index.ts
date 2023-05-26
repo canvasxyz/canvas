@@ -1,12 +1,12 @@
 import { Libp2p } from "@libp2p/interface-libp2p"
 import { PubSub } from "@libp2p/interface-pubsub"
+import { PeerId } from "@libp2p/interface-peer-id"
 
 import { openDB } from "idb"
 import { IDBTree } from "@canvas-js/okra-idb"
+import { KeyValueStore, Source, Target } from "@canvas-js/okra"
 
 import { AbstractStore, StoreInit } from "../store.js"
-import { PeerId } from "@libp2p/interface-peer-id"
-import { KeyValueStore, Source, Target } from "@canvas-js/okra"
 
 export class Store extends AbstractStore {
 	public static async open(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit): Promise<Store> {
@@ -29,14 +29,13 @@ export class Store extends AbstractStore {
 		return store
 	}
 
-	private readonly lockName
-
 	private readonly incomingSyncPeers = new Set<string>()
 	private readonly outgoingSyncPeers = new Set<string>()
+	private readonly lockName: string
 
 	public constructor(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit, private readonly tree: IDBTree) {
 		super(libp2p, init)
-		this.lockName = `/canvas/v0/store/${init.topic}/lock`
+		this.lockName = `${this.topic}/lock`
 	}
 
 	protected async read(targetPeerId: PeerId, callback: (txn: Source) => Promise<void>) {
@@ -44,14 +43,14 @@ export class Store extends AbstractStore {
 			throw new Error(`deadlock with peer ${targetPeerId}`)
 		}
 
-		this.log("requesting shared lock %s", this.lockName)
+		this.log("requesting shared lock")
 		await navigator.locks.request(this.lockName, { mode: "shared", signal: this.controller.signal }, async (lock) => {
 			if (lock === null) {
-				this.log.error("failed to acquire shared lock %s", this.lockName)
+				this.log.error("failed to acquire shared lock")
 				throw new Error(`failed to acquire shared lock ${this.lockName}`)
 			}
 
-			this.log("acquired shared lock %s", this.lockName)
+			this.log("acquired shared lock")
 
 			if (targetPeerId !== null) {
 				this.incomingSyncPeers.add(targetPeerId.toString())
@@ -62,7 +61,7 @@ export class Store extends AbstractStore {
 			} catch (err) {
 				this.log.error("error in read-only transaction: %O", err)
 			} finally {
-				this.log("releasing shared lock %s", this.lockName)
+				this.log("releasing shared lock")
 				if (targetPeerId !== null) {
 					this.incomingSyncPeers.delete(targetPeerId.toString())
 				}
@@ -78,15 +77,16 @@ export class Store extends AbstractStore {
 			throw new Error(`deadlock with peer ${sourcePeerId}`)
 		}
 
-		this.log("requesting exclusive lock for %s", this.lockName)
+		this.log("requesting exclusive lock")
 		await navigator.locks.request(
 			this.lockName,
 			{ mode: "exclusive", signal: this.controller.signal },
 			async (lock) => {
 				if (lock === null) {
-					this.log.error("failed to exclusive lock %s", this.lockName)
+					this.log.error("failed to exclusive lock")
+					throw new Error(`failed to acquire exclusive lock ${this.lockName}`)
 				} else {
-					this.log("acquired exclusive lock %s", this.lockName)
+					this.log("acquired exclusive lock")
 
 					if (sourcePeerId !== null) {
 						this.outgoingSyncPeers.add(sourcePeerId.toString())
@@ -97,7 +97,7 @@ export class Store extends AbstractStore {
 					} catch (err) {
 						this.log.error("error in read-write transaction: %O", err)
 					} finally {
-						this.log("releasing exclusive lock %s", this.lockName)
+						this.log("releasing exclusive lock")
 						if (sourcePeerId !== null) {
 							this.outgoingSyncPeers.delete(sourcePeerId.toString())
 						}
