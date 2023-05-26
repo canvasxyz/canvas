@@ -4,7 +4,7 @@ import { identifyService } from "libp2p/identify"
 import { pingService, PingService } from "libp2p/ping"
 
 import { webSockets } from "@libp2p/websockets"
-// import { all } from "@libp2p/websockets/filters"
+import { all } from "@libp2p/websockets/filters"
 // import { webRTC } from "@libp2p/webrtc"
 
 import { noise } from "@chainsafe/libp2p-noise"
@@ -31,7 +31,8 @@ export type ServiceMap = {
 }
 
 export async function getLibp2p(peerId: PeerId): Promise<Libp2p<ServiceMap>> {
-	const bootstrapList = testnetBootstrapList
+	const bootstrapList = process.env.BOOTSTRAP_LIST?.split(" ") ?? testnetBootstrapList
+	console.log("using bootstrap list", bootstrapList)
 
 	return await createLibp2p({
 		start: false,
@@ -45,7 +46,7 @@ export async function getLibp2p(peerId: PeerId): Promise<Libp2p<ServiceMap>> {
 		// ],
 
 		addresses: { listen: [], announce: [] },
-		transports: [webSockets(), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
+		transports: [webSockets({ filter: all }), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
 
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],

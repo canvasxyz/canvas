@@ -1,6 +1,7 @@
 const path = require("path");
 const webpack = require("webpack");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
+const Dotenv = require("dotenv-webpack");
 
 module.exports = {
   mode: "development",
@@ -49,6 +50,7 @@ module.exports = {
     topLevelAwait: true,
   },
   plugins: [
+    new Dotenv(),
     new CopyWebpackPlugin({ patterns: [{ from: "public" }] }),
     new webpack.ProvidePlugin({ Buffer: ["buffer", "Buffer"] }),
     new webpack.DefinePlugin({
