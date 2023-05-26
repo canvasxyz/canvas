@@ -191,9 +191,9 @@ const MeshPeerList: React.FC<MeshPeerListProps> = (props) => {
 
 		setTopicPeers(topicPeers)
 
-		const handleSubscriptionChange = ({ detail: { peerId, subscriptions } }: CustomEvent<SubscriptionChangeData>) => {
-			if (peerId.equals(peerId)) {
-				for (const { subscribe, topic } of subscriptions) {
+		const handleSubscriptionChange = ({ detail: update }: CustomEvent<SubscriptionChangeData>) => {
+			if (update.peerId.equals(peerId)) {
+				for (const { subscribe, topic } of update.subscriptions) {
 					if (subscribe) {
 						const peers = pubsub.getSubscribers(topic).map((peerId) => peerId.toString())
 						topicSubscriptionMap.set(topic, new Set(peers))
@@ -202,7 +202,7 @@ const MeshPeerList: React.FC<MeshPeerListProps> = (props) => {
 					}
 				}
 			} else {
-				for (const { subscribe, topic } of subscriptions) {
+				for (const { subscribe, topic } of update.subscriptions) {
 					const peers = topicSubscriptionMap.get(topic)
 					if (peers === undefined) {
 						continue

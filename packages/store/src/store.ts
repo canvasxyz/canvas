@@ -51,7 +51,7 @@ export abstract class AbstractStore extends EventEmitter<{}> {
 	private readonly syncQueuePeers = new Set<string>()
 	private readonly syncHistory = new CacheMap<string, number>(AbstractStore.MAX_SYNC_QUEUE_SIZE)
 
-	protected readonly log = logger("canvas:store:service")
+	protected readonly log = logger("canvas:store")
 	protected readonly controller = new AbortController()
 	protected readonly topic: string
 	protected readonly protocol: string
