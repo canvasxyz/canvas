@@ -2,18 +2,17 @@
   "private": true,
   "name": "@canvas-js/example-interwallet",
   "version": "v0.5.0-alpha3",
-  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack build",
     "dev": "webpack server --port 3000",
     "generate": "npm run generate-messages-js && npm run generate-messages-ts",
-    "generate-messages-js": "pbjs ./protocols/messages/index.proto -t static-module -w commonjs -o ./protocols/messages/index.cjs",
-    "generate-messages-ts": "pbjs -t static-module ./protocols/messages/index.proto | pbts -o ./protocols/messages/index.d.cts -"
+    "generate-messages-js": "pbjs ./protocols/messages/index.proto -t static-module -w es6 -o ./protocols/messages/index.js",
+    "generate-messages-ts": "pbjs ./protocols/messages/index.proto -t static-module | pbts -o ./protocols/messages/index.d.ts -"
   },
   "imports": {
-    "#protocols/messages": "./protocols/messages/index.cjs"
+    "#protocols/messages": "./protocols/messages/index.js"
   },
   "dependencies": {
     "@canvas-js/okra-idb": "^0.0.2",

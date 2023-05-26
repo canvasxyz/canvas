@@ -1,15 +1,13 @@
 /*eslint-disable block-scoped-var, id-length, no-control-regex, no-magic-numbers, no-prototype-builtins, no-redeclare, no-shadow, no-var, sort-vars*/
-"use strict";
-
-var $protobuf = require("protobufjs/minimal");
+import * as $protobuf from "protobufjs/minimal";
 
 // Common aliases
-var $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
+const $Reader = $protobuf.Reader, $Writer = $protobuf.Writer, $util = $protobuf.util;
 
 // Exported root namespace
-var $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});
+const $root = $protobuf.roots["default"] || ($protobuf.roots["default"] = {});
 
-$root.SignedData = (function() {
+export const SignedData = $root.SignedData = (() => {
 
     /**
      * Properties of a SignedData.
@@ -29,7 +27,7 @@ $root.SignedData = (function() {
      */
     function SignedData(properties) {
         if (properties)
-            for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
                     this[keys[i]] = properties[keys[i]];
     }
@@ -108,9 +106,9 @@ $root.SignedData = (function() {
     SignedData.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
             reader = $Reader.create(reader);
-        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.SignedData();
+        let end = length === undefined ? reader.len : reader.pos + length, message = new $root.SignedData();
         while (reader.pos < end) {
-            var tag = reader.uint32();
+            let tag = reader.uint32();
             switch (tag >>> 3) {
             case 1: {
                     message.signature = reader.bytes();
@@ -175,7 +173,7 @@ $root.SignedData = (function() {
     SignedData.fromObject = function fromObject(object) {
         if (object instanceof $root.SignedData)
             return object;
-        var message = new $root.SignedData();
+        let message = new $root.SignedData();
         if (object.signature != null)
             if (typeof object.signature === "string")
                 $util.base64.decode(object.signature, message.signature = $util.newBuffer($util.base64.length(object.signature)), 0);
@@ -201,7 +199,7 @@ $root.SignedData = (function() {
     SignedData.toObject = function toObject(message, options) {
         if (!options)
             options = {};
-        var object = {};
+        let object = {};
         if (options.defaults) {
             if (options.bytes === String)
                 object.signature = "";
@@ -254,7 +252,7 @@ $root.SignedData = (function() {
     return SignedData;
 })();
 
-$root.EncryptedData = (function() {
+export const EncryptedData = $root.EncryptedData = (() => {
 
     /**
      * Properties of an EncryptedData.
@@ -277,7 +275,7 @@ $root.EncryptedData = (function() {
      */
     function EncryptedData(properties) {
         if (properties)
-            for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
                     this[keys[i]] = properties[keys[i]];
     }
@@ -386,9 +384,9 @@ $root.EncryptedData = (function() {
     EncryptedData.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
             reader = $Reader.create(reader);
-        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.EncryptedData();
+        let end = length === undefined ? reader.len : reader.pos + length, message = new $root.EncryptedData();
         while (reader.pos < end) {
-            var tag = reader.uint32();
+            let tag = reader.uint32();
             switch (tag >>> 3) {
             case 1: {
                     message.publicKey = reader.bytes();
@@ -474,7 +472,7 @@ $root.EncryptedData = (function() {
     EncryptedData.fromObject = function fromObject(object) {
         if (object instanceof $root.EncryptedData)
             return object;
-        var message = new $root.EncryptedData();
+        let message = new $root.EncryptedData();
         if (object.publicKey != null)
             if (typeof object.publicKey === "string")
                 $util.base64.decode(object.publicKey, message.publicKey = $util.newBuffer($util.base64.length(object.publicKey)), 0);
@@ -512,7 +510,7 @@ $root.EncryptedData = (function() {
     EncryptedData.toObject = function toObject(message, options) {
         if (!options)
             options = {};
-        var object = {};
+        let object = {};
         if (options.defaults) {
             if (options.bytes === String)
                 object.publicKey = "";
@@ -586,7 +584,7 @@ $root.EncryptedData = (function() {
     return EncryptedData;
 })();
 
-$root.SignedUserRegistration = (function() {
+export const SignedUserRegistration = $root.SignedUserRegistration = (() => {
 
     /**
      * Properties of a SignedUserRegistration.
@@ -607,7 +605,7 @@ $root.SignedUserRegistration = (function() {
      */
     function SignedUserRegistration(properties) {
         if (properties)
-            for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
                     this[keys[i]] = properties[keys[i]];
     }
@@ -696,9 +694,9 @@ $root.SignedUserRegistration = (function() {
     SignedUserRegistration.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
             reader = $Reader.create(reader);
-        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.SignedUserRegistration();
+        let end = length === undefined ? reader.len : reader.pos + length, message = new $root.SignedUserRegistration();
         while (reader.pos < end) {
-            var tag = reader.uint32();
+            let tag = reader.uint32();
             switch (tag >>> 3) {
             case 1: {
                     message.signature = reader.bytes();
@@ -754,7 +752,7 @@ $root.SignedUserRegistration = (function() {
             if (!(message.address && typeof message.address.length === "number" || $util.isString(message.address)))
                 return "address: buffer expected";
         if (message.keyBundle != null && message.hasOwnProperty("keyBundle")) {
-            var error = $root.SignedUserRegistration.KeyBundle.verify(message.keyBundle);
+            let error = $root.SignedUserRegistration.KeyBundle.verify(message.keyBundle);
             if (error)
                 return "keyBundle." + error;
         }
@@ -772,7 +770,7 @@ $root.SignedUserRegistration = (function() {
     SignedUserRegistration.fromObject = function fromObject(object) {
         if (object instanceof $root.SignedUserRegistration)
             return object;
-        var message = new $root.SignedUserRegistration();
+        let message = new $root.SignedUserRegistration();
         if (object.signature != null)
             if (typeof object.signature === "string")
                 $util.base64.decode(object.signature, message.signature = $util.newBuffer($util.base64.length(object.signature)), 0);
@@ -803,7 +801,7 @@ $root.SignedUserRegistration = (function() {
     SignedUserRegistration.toObject = function toObject(message, options) {
         if (!options)
             options = {};
-        var object = {};
+        let object = {};
         if (options.defaults) {
             if (options.bytes === String)
                 object.signature = "";
@@ -876,7 +874,7 @@ $root.SignedUserRegistration = (function() {
          */
         function KeyBundle(properties) {
             if (properties)
-                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
@@ -955,9 +953,9 @@ $root.SignedUserRegistration = (function() {
         KeyBundle.decode = function decode(reader, length) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.SignedUserRegistration.KeyBundle();
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.SignedUserRegistration.KeyBundle();
             while (reader.pos < end) {
-                var tag = reader.uint32();
+                let tag = reader.uint32();
                 switch (tag >>> 3) {
                 case 1: {
                         message.signingAddress = reader.bytes();
@@ -1022,7 +1020,7 @@ $root.SignedUserRegistration = (function() {
         KeyBundle.fromObject = function fromObject(object) {
             if (object instanceof $root.SignedUserRegistration.KeyBundle)
                 return object;
-            var message = new $root.SignedUserRegistration.KeyBundle();
+            let message = new $root.SignedUserRegistration.KeyBundle();
             if (object.signingAddress != null)
                 if (typeof object.signingAddress === "string")
                     $util.base64.decode(object.signingAddress, message.signingAddress = $util.newBuffer($util.base64.length(object.signingAddress)), 0);
@@ -1048,7 +1046,7 @@ $root.SignedUserRegistration = (function() {
         KeyBundle.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
-            var object = {};
+            let object = {};
             if (options.defaults) {
                 if (options.bytes === String)
                     object.signingAddress = "";
@@ -1104,7 +1102,7 @@ $root.SignedUserRegistration = (function() {
     return SignedUserRegistration;
 })();
 
-$root.RoomRegistration = (function() {
+export const RoomRegistration = $root.RoomRegistration = (() => {
 
     /**
      * Properties of a RoomRegistration.
@@ -1125,7 +1123,7 @@ $root.RoomRegistration = (function() {
     function RoomRegistration(properties) {
         this.members = [];
         if (properties)
-            for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+            for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                 if (properties[keys[i]] != null)
                     this[keys[i]] = properties[keys[i]];
     }
@@ -1173,7 +1171,7 @@ $root.RoomRegistration = (function() {
         if (message.creator != null && Object.hasOwnProperty.call(message, "creator"))
             writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.creator);
         if (message.members != null && message.members.length)
-            for (var i = 0; i < message.members.length; ++i)
+            for (let i = 0; i < message.members.length; ++i)
                 $root.SignedUserRegistration.encode(message.members[i], writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
         return writer;
     };
@@ -1205,9 +1203,9 @@ $root.RoomRegistration = (function() {
     RoomRegistration.decode = function decode(reader, length) {
         if (!(reader instanceof $Reader))
             reader = $Reader.create(reader);
-        var end = length === undefined ? reader.len : reader.pos + length, message = new $root.RoomRegistration();
+        let end = length === undefined ? reader.len : reader.pos + length, message = new $root.RoomRegistration();
         while (reader.pos < end) {
-            var tag = reader.uint32();
+            let tag = reader.uint32();
             switch (tag >>> 3) {
             case 1: {
                     message.creator = reader.bytes();
@@ -1260,8 +1258,8 @@ $root.RoomRegistration = (function() {
         if (message.members != null && message.hasOwnProperty("members")) {
             if (!Array.isArray(message.members))
                 return "members: array expected";
-            for (var i = 0; i < message.members.length; ++i) {
-                var error = $root.SignedUserRegistration.verify(message.members[i]);
+            for (let i = 0; i < message.members.length; ++i) {
+                let error = $root.SignedUserRegistration.verify(message.members[i]);
                 if (error)
                     return "members." + error;
             }
@@ -1280,7 +1278,7 @@ $root.RoomRegistration = (function() {
     RoomRegistration.fromObject = function fromObject(object) {
         if (object instanceof $root.RoomRegistration)
             return object;
-        var message = new $root.RoomRegistration();
+        let message = new $root.RoomRegistration();
         if (object.creator != null)
             if (typeof object.creator === "string")
                 $util.base64.decode(object.creator, message.creator = $util.newBuffer($util.base64.length(object.creator)), 0);
@@ -1290,7 +1288,7 @@ $root.RoomRegistration = (function() {
             if (!Array.isArray(object.members))
                 throw TypeError(".RoomRegistration.members: array expected");
             message.members = [];
-            for (var i = 0; i < object.members.length; ++i) {
+            for (let i = 0; i < object.members.length; ++i) {
                 if (typeof object.members[i] !== "object")
                     throw TypeError(".RoomRegistration.members: object expected");
                 message.members[i] = $root.SignedUserRegistration.fromObject(object.members[i]);
@@ -1311,7 +1309,7 @@ $root.RoomRegistration = (function() {
     RoomRegistration.toObject = function toObject(message, options) {
         if (!options)
             options = {};
-        var object = {};
+        let object = {};
         if (options.arrays || options.defaults)
             object.members = [];
         if (options.defaults)
@@ -1326,7 +1324,7 @@ $root.RoomRegistration = (function() {
             object.creator = options.bytes === String ? $util.base64.encode(message.creator, 0, message.creator.length) : options.bytes === Array ? Array.prototype.slice.call(message.creator) : message.creator;
         if (message.members && message.members.length) {
             object.members = [];
-            for (var j = 0; j < message.members.length; ++j)
+            for (let j = 0; j < message.members.length; ++j)
                 object.members[j] = $root.SignedUserRegistration.toObject(message.members[j], options);
         }
         return object;
@@ -1361,4 +1359,4 @@ $root.RoomRegistration = (function() {
     return RoomRegistration;
 })();
 
-module.exports = $root;
+export { $root as default };

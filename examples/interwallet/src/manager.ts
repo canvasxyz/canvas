@@ -10,7 +10,7 @@ import { base58btc } from "multiformats/bases/base58"
 
 import { Store } from "@canvas-js/store/browser"
 
-import Messages from "#protocols/messages"
+import * as Messages from "#protocols/messages"
 
 import { PrivateUserRegistration, PublicUserRegistration } from "./interfaces"
 import { ROOM_REGISTRY_TOPIC, USER_REGISTRY_TOPIC } from "./constants"

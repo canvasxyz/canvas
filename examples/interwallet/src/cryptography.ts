@@ -16,7 +16,7 @@ import { bytesToHex, getAddress, hexToBytes } from "viem/utils"
 
 import { base64pad } from "multiformats/bases/base64"
 
-import Messages from "#protocols/messages"
+import * as Messages from "#protocols/messages"
 
 import { KeyBundle, PrivateUserRegistration, PublicUserRegistration } from "./interfaces"
 
