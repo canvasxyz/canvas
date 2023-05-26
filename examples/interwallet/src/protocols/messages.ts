@@ -77,9 +77,7 @@ export namespace SignedData {
 }
 
 export interface EncryptedData {
-  publicKey: Uint8Array
   ciphertext: Uint8Array
-  ephemPublicKey: Uint8Array
   nonce: Uint8Array
   version: string
 }
@@ -94,28 +92,18 @@ export namespace EncryptedData {
           w.fork()
         }
 
-        if ((obj.publicKey != null && obj.publicKey.byteLength > 0)) {
-          w.uint32(10)
-          w.bytes(obj.publicKey)
-        }
-
         if ((obj.ciphertext != null && obj.ciphertext.byteLength > 0)) {
-          w.uint32(18)
+          w.uint32(10)
           w.bytes(obj.ciphertext)
         }
 
-        if ((obj.ephemPublicKey != null && obj.ephemPublicKey.byteLength > 0)) {
-          w.uint32(26)
-          w.bytes(obj.ephemPublicKey)
-        }
-
         if ((obj.nonce != null && obj.nonce.byteLength > 0)) {
-          w.uint32(34)
+          w.uint32(18)
           w.bytes(obj.nonce)
         }
 
         if ((obj.version != null && obj.version !== '')) {
-          w.uint32(42)
+          w.uint32(26)
           w.string(obj.version)
         }
 
@@ -124,9 +112,7 @@ export namespace EncryptedData {
         }
       }, (reader, length) => {
         const obj: any = {
-          publicKey: new Uint8Array(0),
           ciphertext: new Uint8Array(0),
-          ephemPublicKey: new Uint8Array(0),
           nonce: new Uint8Array(0),
           version: ''
         }
@@ -138,18 +124,12 @@ export namespace EncryptedData {
 
           switch (tag >>> 3) {
             case 1:
-              obj.publicKey = reader.bytes()
-              break
-            case 2:
               obj.ciphertext = reader.bytes()
               break
-            case 3:
-              obj.ephemPublicKey = reader.bytes()
-              break
-            case 4:
+            case 2:
               obj.nonce = reader.bytes()
               break
-            case 5:
+            case 3:
               obj.version = reader.string()
               break
             default:

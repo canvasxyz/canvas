@@ -62,12 +62,17 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ room }: MessagesPa
 				return
 			}
 
+			if (user === null) {
+				console.error("user is null")
+				return
+			}
+
 			if (manager !== null) {
 				try {
 					await manager.dispatchEvent({
 						room: room.id,
 						type: "message",
-						detail: { content: trimmedMessage, timestamp: Date.now() },
+						detail: { content: trimmedMessage, sender: user.address, timestamp: Date.now() },
 					})
 					console.log("dispatched message event")
 					setMessage("")

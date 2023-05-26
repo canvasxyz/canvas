@@ -6,11 +6,9 @@ message SignedData {
 }
 
 message EncryptedData {
-  bytes public_key = 1;
-  bytes ciphertext = 2;
-  bytes ephem_public_key = 3;
-  bytes nonce = 4;
-  string version = 5;
+  bytes ciphertext = 1;
+  bytes nonce = 2;
+  string version = 3;
 }
 
 message SignedUserRegistration {
@@ -21,7 +19,7 @@ message SignedUserRegistration {
 
   bytes signature = 1;
   bytes address = 2;
-  KeyBundle key_bundle = 3; 
+  KeyBundle key_bundle = 3;
 }
 
 message RoomRegistration {

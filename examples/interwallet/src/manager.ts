@@ -1,4 +1,4 @@
-import { bytesToHex, hexToBytes } from "viem"
+import { bytesToHex, getAddress, hexToBytes } from "viem"
 import { blake3 } from "@noble/hashes/blake3"
 import { logger } from "@libp2p/logger"
 
@@ -19,8 +19,10 @@ import { Room, db } from "./db"
 import { getLibp2p } from "./libp2p"
 import { PeerId } from "@libp2p/interface-peer-id"
 
+import nacl from "tweetnacl"
+
 type EventMap = {
-	message: { content: string; timestamp: number }
+	message: { content: string; timestamp: number; sender: string }
 }
 
 type RoomEvent = { [Type in keyof EventMap]: { room: string; type: Type; detail: EventMap[Type] } }[keyof EventMap]
@@ -147,13 +149,21 @@ export class RoomManager {
 		const recipient = room.members.find(({ address }) => this.user.address !== address)
 		assert(recipient !== undefined, "room has no other members")
 
-		const signedData = Messages.SignedData.encode(signData(encode(event), this.user))
-		// const encryptedData = Messages.EncryptedData.encode(encryptData(signedData, recipient)).finish()
-		// const key = blake3(encryptedData, { dkLen: 16 })
-		// await room.store.insert(key, encryptedData)
+		const nonce = nacl.randomBytes(nacl.box.nonceLength)
+		const ciphertext = nacl.box(
+			encode(event),
+			nonce,
+			hexToBytes(recipient.keyBundle.encryptionPublicKey),
+			hexToBytes(this.user.privateKey)
+		)
 
-		const key = blake3(signedData, { dkLen: 16 })
-		await room.store.insert(key, signedData)
+		const encryptedData = Messages.EncryptedData.encode({
+			ciphertext,
+			nonce,
+		})
+
+		const key = blake3(encryptedData, { dkLen: 16 })
+		await room.store.insert(key, encryptedData)
 	}
 
 	private applyEventEntry =
@@ -162,26 +172,32 @@ export class RoomManager {
 
 			assert(equals(key, blake3(value, { dkLen: 16 })), "invalid event: key is not hash of value")
 
-			// const encryptedData = Messages.EncryptedData.decode(value)
-			// const decryptedData = decryptData(encryptedData, this.user)
-			// const signedData = Messages.SignedData.decode(decryptedData)
-			// const senderSigningAddress = hexToBytes(verifyData(signedData))
+			// details of the other user (if we are the sender, then it is the recipient, vice versa)
+			const otherPublicUserRegistration = members.find(({ address }) => getAddress(address) !== this.user.address)
+			if (otherPublicUserRegistration === undefined) {
+				throw new Error("event is not for this user")
+			}
 
-			const signedData = Messages.SignedData.decode(value)
-			const senderSigningAddress = hexToBytes(verifyData(signedData))
+			const encryptedData = Messages.EncryptedData.decode(value)
 
-			const sender = members.find(({ keyBundle: { signingAddress } }) =>
-				equals(senderSigningAddress, hexToBytes(signingAddress))
+			const decryptedData = nacl.box.open(
+				encryptedData.ciphertext,
+				encryptedData.nonce,
+				hexToBytes(otherPublicUserRegistration.keyBundle.encryptionPublicKey),
+				hexToBytes(this.user.privateKey)
 			)
 
-			assert(sender !== undefined, "event not signed by a room member")
+			if (decryptedData === null) {
+				throw new Error("failed to decrypt event")
+			}
 
-			const event = decode(signedData.payload) as RoomEvent
+			const event = decode(decryptedData) as RoomEvent
+
 			assert(event.room === roomId, "invalid event: wrong topic")
 
 			// TODO: runtime validation of room event types
 			if (event.type === "message") {
-				const id = await db.messages.add({ room: roomId, sender: sender.address, ...event.detail })
+				const id = await db.messages.add({ room: roomId, ...event.detail })
 				console.log("added message with id", id)
 			} else {
 				throw new Error("invalid event type")
