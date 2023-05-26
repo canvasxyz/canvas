@@ -37,10 +37,9 @@ const AppContent: React.FC<{}> = ({}) => {
 
 interface AppProps {}
 
-export const App: React.FC<AppProps> = (props) => {
-	const [showStatusPanel, setShowStatusPanel] = useState(false)
+export const App: React.FC<AppProps> = ({}) => {
+	const [showStatusPanel, setShowStatusPanel] = useState(true)
 
-	const [pageTitle, setPageTitle] = useState<string | null>(null)
 	const [user, setUser] = useState<PrivateUserRegistration | null>(null)
 
 	const [room, setRoom] = useState<Room | null>(null)
@@ -87,7 +86,7 @@ export const App: React.FC<AppProps> = (props) => {
 	}, [user, peerId])
 
 	return (
-		<AppContext.Provider value={{ peerId, manager, user, setUser, pageTitle, setPageTitle, room, setRoom }}>
+		<AppContext.Provider value={{ peerId, manager, user, setUser, room, setRoom }}>
 			<div className="w-screen h-screen flex flex-col items-stretch bg-white">
 				<AppHeader showStatusPanel={showStatusPanel} setShowStatusPanel={setShowStatusPanel} />
 				<div className="flex flex-row grow items-stretch overflow-y-hidden">

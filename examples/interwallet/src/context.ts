@@ -13,9 +13,6 @@ export interface AppContext {
 	user: PrivateUserRegistration | null
 	setUser: (user: PrivateUserRegistration | null) => void
 
-	pageTitle: string | null
-	setPageTitle: (title: string | null) => void
-
 	room: Room | null
 	setRoom: (room: Room | null) => void
 }
@@ -31,11 +28,6 @@ export const AppContext = createContext<AppContext>({
 
 	room: null,
 	setRoom() {
-		throw new Error("Missing AppContext provider")
-	},
-
-	pageTitle: null,
-	setPageTitle() {
 		throw new Error("Missing AppContext provider")
 	},
 })

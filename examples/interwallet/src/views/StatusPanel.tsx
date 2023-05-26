@@ -11,13 +11,14 @@ import closeIcon from "../icons/close.svg"
 
 import { PeerIdToken } from "./PeerId"
 import { AppContext } from "../context"
+import { Store } from "@canvas-js/store/browser"
 
 export interface StatusPanelProps {}
 
 export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
 	const { manager, peerId } = useContext(AppContext)
 
-	const [started, setStarted] = useState(manager !== null && manager.libp2p.isStarted())
+	const [started, setStarted] = useState(manager !== null && manager.isStarted())
 	const [starting, setStarting] = useState(false)
 	const [stopping, setStopping] = useState(false)
 
@@ -117,7 +118,7 @@ const ConnectionsList: React.FC<ConnectionsListProps> = (props) => {
 }
 
 const circuitRelayProtocol = protocols("p2p-circuit")
-// const webRTCProtocol = protocols("webrtc")
+const webRTCProtocol = protocols("webrtc")
 
 interface ConnectionStatusProps {
 	connection: Connection
@@ -129,15 +130,17 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = (props) => {
 		const { name } = protocols(code)
 
 		const isCircuitRelay = rest.some(([code]) => code === circuitRelayProtocol.code)
-		// const isWebRTC = rest.some(([code]) => code === webRTCProtocol.code)
+		const isWebRTC = rest.some(([code]) => code === webRTCProtocol.code)
 
 		const { direction } = props.connection.stat
-		if (isCircuitRelay) {
-			return `relayed ${direction} via /${name}/${origin}`
+		if (isWebRTC) {
+			return `${direction} WebRTC`
+		} else if (isCircuitRelay) {
+			return `${direction} relayed via /${name}/${origin}`
 		} else if (direction === "inbound") {
-			return `direct inbound from ${origin}`
+			return `inbound direct from /${name}/${origin}`
 		} else if (direction === "outbound") {
-			return `direct outbound to /${name}/${origin}`
+			return `outbound direct to /${name}/${origin}`
 		}
 	}, [props.connection])
 
@@ -179,13 +182,12 @@ const MeshPeerList: React.FC<MeshPeerListProps> = (props) => {
 
 		const { pubsub } = manager.libp2p.services
 
-		const topicPrefix = "/canvas/v0/store/"
 		const topicPeers: { topic: string; peers: string[] }[] = []
 		for (const topic of pubsub.getTopics()) {
 			const peers = pubsub.getSubscribers(topic).map((peerId) => peerId.toString())
 			topicSubscriptionMap.set(topic, new Set(peers))
-			if (topic.startsWith(topicPrefix)) {
-				topicPeers.push({ topic: topic.slice(topicPrefix.length), peers })
+			if (topic.startsWith(Store.protocolPrefix)) {
+				topicPeers.push({ topic: topic.slice(Store.protocolPrefix.length), peers })
 			}
 		}
 
@@ -216,8 +218,8 @@ const MeshPeerList: React.FC<MeshPeerListProps> = (props) => {
 
 			const topicPeers: { topic: string; peers: string[] }[] = []
 			for (const [topic, peers] of topicSubscriptionMap) {
-				if (topic.startsWith(topicPrefix)) {
-					topicPeers.push({ topic: topic.slice(topicPrefix.length), peers: [...peers] })
+				if (topic.startsWith(Store.protocolPrefix)) {
+					topicPeers.push({ topic: topic.slice(Store.protocolPrefix.length), peers: [...peers] })
 				}
 			}
 

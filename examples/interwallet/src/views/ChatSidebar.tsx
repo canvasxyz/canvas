@@ -50,17 +50,6 @@ const ChatSidebarRoom: React.FC<ChatSidebarRoomProps> = ({ room }) => {
 	const { room: selectedRoom, setRoom } = useContext(AppContext)
 	const isSelected = selectedRoom !== null && selectedRoom.id === room.id
 
-	const [{ address: address1 }, { address: address2 }] = room.members
-	const { data: name1 } = useEnsName({ address: address1 })
-	const { data: name2 } = useEnsName({ address: address2 })
-
-	const { setPageTitle } = useContext(AppContext)
-	useEffect(() => {
-		if (isSelected) {
-			setPageTitle(`${name1 ?? address1} ~ ${name2 ?? address2}`)
-		}
-	}, [isSelected, address1, name1, address2, name2])
-
 	if (isSelected) {
 		return (
 			<button
@@ -71,9 +60,6 @@ const ChatSidebarRoom: React.FC<ChatSidebarRoomProps> = ({ room }) => {
 				<span className="text-sm font-bold">
 					<RoomName room={room} />
 				</span>
-				{/* <span className="text-sm font-bold">{name1 ?? address1}</span>
-				<span className="text-sm"> ~ </span>
-				<span className="text-sm font-bold">{name2 ?? address2}</span> */}
 			</button>
 		)
 	} else {
@@ -87,9 +73,6 @@ const ChatSidebarRoom: React.FC<ChatSidebarRoomProps> = ({ room }) => {
 				<span className="text-sm">
 					<RoomName room={room} />
 				</span>
-				{/* <span className="text-sm">{name1 ?? address1}</span>
-				<span className="text-sm"> ~ </span>
-				<span className="text-sm">{name2 ?? address2}</span> */}
 			</button>
 		)
 	}
