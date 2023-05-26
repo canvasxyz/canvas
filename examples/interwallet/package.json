@@ -7,12 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack build",
     "dev": "webpack server --port 3000",
-    "generate": "npm run generate-messages-js && npm run generate-messages-ts",
-    "generate-messages-js": "pbjs ./protocols/messages/index.proto -t static-module -w es6 -o ./protocols/messages/index.js",
-    "generate-messages-ts": "pbjs ./protocols/messages/index.proto -t static-module | pbts -o ./protocols/messages/index.d.ts -"
-  },
-  "imports": {
-    "#protocols/messages": "./protocols/messages/index.js"
+    "generate": "npm run generate-messages",
+    "generate-messages": "protons ./src/protocols/messages.proto"
   },
   "dependencies": {
     "@canvas-js/okra-idb": "^0.0.2",
@@ -43,10 +39,11 @@
     "libp2p": "^0.45.3",
     "microcbor": "^0.2.1",
     "multiformats": "^9.9.0",
-    "protobufjs": "^7.2.3",
+    "protons-runtime": "^5.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "toastify-js": "^1.12.0",
+    "uint8arraylist": "^2.4.3",
     "uint8arrays": "^4.0.3",
     "viem": "^0.3.26",
     "wagmi": "^1.0.5"
@@ -60,7 +57,7 @@
     "css-loader": "^6.7.3",
     "postcss": "^8.4.22",
     "postcss-loader": "^7.2.4",
-    "protobufjs-cli": "^1.1.1",
+    "protons": "^7.0.2",
     "style-loader": "^3.3.2",
     "tailwindcss": "^3.3.1",
     "ts-loader": "^9.4.2",

@@ -16,7 +16,7 @@ import { bytesToHex, getAddress, hexToBytes } from "viem/utils"
 
 import { base64pad } from "multiformats/bases/base64"
 
-import * as Messages from "#protocols/messages"
+import * as Messages from "./protocols/messages"
 
 import { KeyBundle, PrivateUserRegistration, PublicUserRegistration } from "./interfaces"
 
@@ -103,10 +103,10 @@ const ENCRYPTION_VERSION = "x25519-xsalsa20-poly1305"
 export function signData(data: Uint8Array, sender: PrivateUserRegistration): Messages.SignedData {
 	const privateKey = Buffer.from(hexToBytes(sender.privateKey))
 	const signature = personalSign({ privateKey, data }) as `0x${string}`
-	return Messages.SignedData.create({
+	return {
 		signature: hexToBytes(signature),
 		payload: data,
-	})
+	}
 }
 
 export function verifyData(signedData: Messages.SignedData): `0x${string}` {
@@ -124,13 +124,13 @@ export function encryptData(data: Uint8Array, recipient: PublicUserRegistration)
 		version: ENCRYPTION_VERSION,
 	})
 
-	return Messages.EncryptedData.create({
+	return {
 		publicKey: encryptionPublicKey,
 		version: encryptedData.version,
 		nonce: base64pad.baseDecode(encryptedData.nonce),
 		ciphertext: base64pad.baseDecode(encryptedData.ciphertext),
 		ephemPublicKey: base64pad.baseDecode(encryptedData.ephemPublicKey),
-	})
+	}
 }
 
 export function decryptData(encryptedData: Messages.EncryptedData, recipient: PrivateUserRegistration): Uint8Array {

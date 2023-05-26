@@ -10,6 +10,7 @@ import type { Key, Node, Source } from "@canvas-js/okra"
 import * as Sync from "#protocols/sync"
 
 import { assert } from "../utils.js"
+import { encodeKey, decodeNode } from "./utils.js"
 
 export async function* decodeResponses(source: AsyncIterable<Uint8ArrayList>) {
 	for await (const msg of source) {
@@ -18,15 +19,15 @@ export async function* decodeResponses(source: AsyncIterable<Uint8ArrayList>) {
 	}
 }
 
-export async function* encodeRequests(source: AsyncIterable<Sync.IRequest>) {
+export async function* encodeRequests(source: AsyncIterable<Sync.Request>) {
 	for await (const req of source) {
-		yield Sync.Request.encode(req).finish()
+		yield Sync.Request.encode(req)
 	}
 }
 
 export class Client implements Source {
 	private readonly responses: AsyncIterator<Sync.Response, void, undefined>
-	private readonly requests: Pushable<Sync.IRequest>
+	private readonly requests: Pushable<Sync.Request>
 	private readonly log = logger("canvas:sync:client")
 
 	constructor(readonly stream: Stream) {
@@ -49,28 +50,28 @@ export class Client implements Source {
 		const { getRoot } = await this.get({ getRoot: {} })
 		assert(getRoot, "invalid RPC response type")
 		assert(getRoot.root, "missing `root` in getRoot RPC response")
-		return parseNode(getRoot.root)
+		return decodeNode(getRoot.root)
 	}
 
 	public async getNode(level: number, key: Key): Promise<Node | null> {
-		const { getNode } = await this.get({ getNode: { level, key } })
+		const { getNode } = await this.get({ getNode: { level, key: encodeKey(key) } })
 		assert(getNode, "invalid RPC response type")
 		if (getNode.node) {
-			return parseNode(getNode.node)
+			return decodeNode(getNode.node)
 		} else {
 			return null
 		}
 	}
 
 	public async getChildren(level: number, key: Key): Promise<Node[]> {
-		const { getChildren } = await this.get({ getChildren: { level, key } })
+		const { getChildren } = await this.get({ getChildren: { level, key: encodeKey(key) } })
 		assert(getChildren, "invalid RPC response type")
 		assert(getChildren.children, "missing `children` in getChildren RPC response")
-		const children = getChildren.children.map(parseNode)
+		const children = getChildren.children.map(decodeNode)
 		return children
 	}
 
-	private async get(req: Sync.IRequest): Promise<Sync.Response> {
+	private async get(req: Sync.Request): Promise<Sync.Response> {
 		this.requests.push(req)
 		const { done, value: res } = await this.responses.next()
 		if (done) {
@@ -79,23 +80,5 @@ export class Client implements Source {
 		} else {
 			return res
 		}
-	}
-}
-
-function parseKey(key: Uint8Array | null | undefined): Key {
-	if (key === null || key === undefined || key.length === 0) {
-		return null
-	} else {
-		return key
-	}
-}
-
-function parseNode({ level, key, hash, value }: Sync.INode): Node {
-	assert(level !== null && level !== undefined)
-	assert(hash !== null && hash !== undefined)
-	if (value === null || value === undefined) {
-		return { level, key: parseKey(key), hash }
-	} else {
-		return { level, key: parseKey(key), hash, value }
 	}
 }

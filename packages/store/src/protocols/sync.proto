@@ -4,7 +4,7 @@ message Node {
   uint32 level = 1;
   bytes key = 2;
   bytes hash = 3;
-  bytes value = 4;
+  optional bytes value = 4;
 }
 
 message Request {
@@ -33,7 +33,7 @@ message Response {
   }
 
   message GetNodeResponse {
-    Node node = 1;
+    optional Node node = 1;
   }
 
   message GetChildrenResponse {

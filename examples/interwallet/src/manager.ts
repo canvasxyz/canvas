@@ -10,7 +10,7 @@ import { base58btc } from "multiformats/bases/base58"
 
 import { Store } from "@canvas-js/store/browser"
 
-import * as Messages from "#protocols/messages"
+import * as Messages from "./protocols/messages"
 
 import { PrivateUserRegistration, PublicUserRegistration } from "./interfaces"
 import { ROOM_REGISTRY_TOPIC, USER_REGISTRY_TOPIC } from "./constants"
@@ -88,7 +88,7 @@ export class RoomManager {
 					signingAddress: hexToBytes(this.user.keyBundle.signingAddress),
 					encryptionPublicKey: hexToBytes(this.user.keyBundle.encryptionPublicKey),
 				},
-			}).finish()
+			})
 
 			await this.userRegistry.insert(key, value)
 		}
@@ -127,10 +127,10 @@ export class RoomManager {
 					encryptionPublicKey: hexToBytes(member.keyBundle.encryptionPublicKey),
 				},
 			})),
-		}).finish()
+		})
 
 		const signedRoomRegistration = signData(roomRegistration, this.user)
-		const value = Messages.SignedData.encode(signedRoomRegistration).finish()
+		const value = Messages.SignedData.encode(signedRoomRegistration)
 
 		await this.roomRegistry.insert(key, value)
 
@@ -147,7 +147,7 @@ export class RoomManager {
 		const recipient = room.members.find(({ address }) => this.user.address !== address)
 		assert(recipient !== undefined, "room has no other members")
 
-		const signedData = Messages.SignedData.encode(signData(encode(event), this.user)).finish()
+		const signedData = Messages.SignedData.encode(signData(encode(event), this.user))
 		// const encryptedData = Messages.EncryptedData.encode(encryptData(signedData, recipient)).finish()
 		// const key = blake3(encryptedData, { dkLen: 16 })
 		// await room.store.insert(key, encryptedData)
@@ -205,7 +205,7 @@ export class RoomManager {
 
 		assert(roomRegistration.members.length === 2, "rooms must have exactly two members")
 
-		const members = roomRegistration.members.map(Messages.SignedUserRegistration.create).map(verifyKeyBundle)
+		const members = roomRegistration.members.map(verifyKeyBundle)
 		const creator = members.find(({ keyBundle }) => equals(creatorSigningAddress, hexToBytes(keyBundle.signingAddress)))
 		assert(creator !== undefined, "invalid room registration signature")
 		assert(equals(hexToBytes(creator.address), roomRegistration.creator), "invalid room registration signature")
