@@ -2,6 +2,7 @@ import React, { useContext, useMemo } from "react"
 import { Room } from "../db"
 import { useEnsName } from "wagmi"
 import { AppContext } from "../context"
+import { getAddress } from "viem"
 
 export interface RoomNameProps {
 	room: Room
@@ -14,7 +15,10 @@ export const RoomName: React.FC<RoomNameProps> = ({ room }) => {
 
 	const { user } = useContext(AppContext)
 
-	const recipient = useMemo(() => user && room.members.find(({ address }) => address !== user.address), [room, user])
+	const recipient = useMemo(
+		() => user && room.members.find(({ address }) => getAddress(address) !== user.address),
+		[room, user]
+	)
 	const { data: name } = useEnsName({ address: recipient?.address ?? undefined })
 
 	if (name) {
