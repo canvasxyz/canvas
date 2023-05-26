@@ -4,9 +4,13 @@ import { logger } from "@libp2p/logger"
 
 import { Libp2p } from "@libp2p/interface-libp2p"
 import { PubSub } from "@libp2p/interface-pubsub"
+import { PeerId } from "@libp2p/interface-peer-id"
+
 import { encode, decode } from "microcbor"
 import { equals } from "uint8arrays"
 import { base58btc } from "multiformats/bases/base58"
+
+import nacl from "tweetnacl"
 
 import { Store } from "@canvas-js/store/browser"
 
@@ -17,9 +21,6 @@ import { ROOM_REGISTRY_TOPIC, USER_REGISTRY_TOPIC } from "./constants"
 import { signData, verifyData, assert, verifyKeyBundle } from "./cryptography"
 import { Room, db } from "./db"
 import { getLibp2p } from "./libp2p"
-import { PeerId } from "@libp2p/interface-peer-id"
-
-import nacl from "tweetnacl"
 
 type EventMap = {
 	message: { content: string; timestamp: number; sender: string }
@@ -157,10 +158,7 @@ export class RoomManager {
 			hexToBytes(this.user.privateKey)
 		)
 
-		const encryptedData = Messages.EncryptedData.encode({
-			ciphertext,
-			nonce,
-		})
+		const encryptedData = Messages.EncryptedData.encode({ ciphertext, nonce })
 
 		const key = blake3(encryptedData, { dkLen: 16 })
 		await room.store.insert(key, encryptedData)

@@ -2,8 +2,6 @@ import { privateKeyToAccount } from "viem/accounts"
 import {
 	MessageTypes,
 	TypedMessage,
-	decryptSafely,
-	encryptSafely,
 	getEncryptionPublicKey,
 	personalSign,
 	recoverPersonalSignature,
@@ -114,43 +112,6 @@ export function verifyData(signedData: Messages.SignedData): `0x${string}` {
 		data: signedData.payload,
 		signature: bytesToHex(signedData.signature),
 	}) as `0x${string}`
-}
-
-export function encryptData(data: Uint8Array, recipient: PublicUserRegistration): Messages.EncryptedData {
-	const encryptionPublicKey = hexToBytes(recipient.keyBundle.encryptionPublicKey)
-	const encryptedData = encryptSafely({
-		publicKey: base64pad.baseEncode(encryptionPublicKey),
-		data: base64pad.baseEncode(data),
-		version: ENCRYPTION_VERSION,
-	})
-
-	return {
-		publicKey: encryptionPublicKey,
-		version: encryptedData.version,
-		nonce: base64pad.baseDecode(encryptedData.nonce),
-		ciphertext: base64pad.baseDecode(encryptedData.ciphertext),
-		ephemPublicKey: base64pad.baseDecode(encryptedData.ephemPublicKey),
-	}
-}
-
-export function decryptData(encryptedData: Messages.EncryptedData, recipient: PrivateUserRegistration): Uint8Array {
-	assert(encryptedData.version === ENCRYPTION_VERSION, "invalid encryption version")
-	assert(
-		equals(hexToBytes(recipient.keyBundle.encryptionPublicKey), encryptedData.publicKey),
-		"wrong encryption public key"
-	)
-
-	const decryptedData = decryptSafely({
-		privateKey: recipient.privateKey.slice(2),
-		encryptedData: {
-			version: encryptedData.version,
-			ciphertext: base64pad.baseEncode(encryptedData.ciphertext),
-			nonce: base64pad.baseEncode(encryptedData.nonce),
-			ephemPublicKey: base64pad.baseEncode(encryptedData.ephemPublicKey),
-		},
-	})
-
-	return base64pad.baseDecode(decryptedData)
 }
 
 export function assert(condition: unknown, message?: string): asserts condition {
