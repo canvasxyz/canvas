@@ -14,7 +14,7 @@ import * as Messages from "./protocols/messages"
 
 import { PrivateUserRegistration, PublicUserRegistration } from "./interfaces"
 import { ROOM_REGISTRY_TOPIC, USER_REGISTRY_TOPIC } from "./constants"
-import { encryptData, decryptData, signData, verifyData, assert, verifyKeyBundle } from "./cryptography"
+import { signData, verifyData, assert, verifyKeyBundle } from "./cryptography"
 import { Room, db } from "./db"
 import { getLibp2p } from "./libp2p"
 import { PeerId } from "@libp2p/interface-peer-id"
