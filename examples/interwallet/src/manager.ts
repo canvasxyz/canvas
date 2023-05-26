@@ -44,6 +44,8 @@ export class RoomManager {
 			apply: manager.applyUserRegistryEntry,
 		})
 
+		await manager.start()
+
 		return manager
 	}
 
@@ -107,7 +109,7 @@ export class RoomManager {
 
 	public async createRoom(members: PublicUserRegistration[]): Promise<Room> {
 		this.log("creating new room")
-		assert(this.roomRegistry !== null, "manager is still initializing")
+		assert(this.roomRegistry !== null, "manager not initialized")
 		assert(
 			members.find(({ address }) => address === this.user.address),
 			"members did not include the current user"
@@ -142,7 +144,7 @@ export class RoomManager {
 	}
 
 	public async dispatchEvent(event: RoomEvent): Promise<void> {
-		this.log("dispatching room event")
+		this.log("dispatching %s room event", event.type)
 
 		const room = this.rooms.get(event.room)
 		assert(room !== undefined, `room with topic ${event.room} not found`)
@@ -166,8 +168,6 @@ export class RoomManager {
 
 	private applyEventEntry =
 		(roomId: string, members: PublicUserRegistration[]) => async (key: Uint8Array, value: Uint8Array) => {
-			console.log({ key: bytesToHex(key), value: bytesToHex(value) })
-
 			assert(equals(key, blake3(value, { dkLen: 16 })), "invalid event: key is not hash of value")
 
 			// details of the other user (if we are the sender, then it is the recipient, vice versa)
@@ -203,8 +203,6 @@ export class RoomManager {
 		}
 
 	private applyRoomRegistryEntry = async (key: Uint8Array, value: Uint8Array) => {
-		console.log(`${ROOM_REGISTRY_TOPIC}: got entry`, { key: bytesToHex(key), value: bytesToHex(value) })
-
 		const signedData = Messages.SignedData.decode(value)
 		const creatorSigningAddress = hexToBytes(verifyData(signedData))
 
@@ -227,28 +225,24 @@ export class RoomManager {
 		// if the current user is a member of the room
 		if (members.find(({ address }) => equals(hexToBytes(address), hexToBytes(this.user.address)))) {
 			const roomId = base58btc.baseEncode(key)
-
-			this.log(
-				"adding room %s with members %o",
-				roomId,
-				members.map(({ address }) => address)
-			)
-
 			await db.rooms.add({ id: roomId, creator: creator.address, members })
-
 			await this.addRoom(roomId, members)
 		}
 	}
 
 	private applyUserRegistryEntry = async (key: Uint8Array, value: Uint8Array) => {
-		console.log(`${USER_REGISTRY_TOPIC}: got entry`, { key: bytesToHex(key), value: bytesToHex(value) })
-
 		const signedUserRegistration = Messages.SignedUserRegistration.decode(value)
 		const userRegistration = verifyKeyBundle(signedUserRegistration)
 		await db.users.add(userRegistration)
 	}
 
 	private async addRoom(roomId: string, members: PublicUserRegistration[]): Promise<void> {
+		this.log(
+			"adding room %s with members %o",
+			roomId,
+			members.map(({ address }) => address)
+		)
+
 		const store = await Store.open(this.libp2p, {
 			topic: `interwallet:room:${roomId}`,
 			apply: this.applyEventEntry(roomId, members),
