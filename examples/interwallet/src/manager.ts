@@ -44,7 +44,7 @@ export class RoomManager {
 			apply: manager.applyUserRegistryEntry,
 		})
 
-		await manager.start()
+		// await manager.start()
 
 		return manager
 	}

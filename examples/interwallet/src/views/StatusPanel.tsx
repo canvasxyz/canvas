@@ -46,10 +46,10 @@ export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
 				setStarting(false)
 			}
 		}
-	}, [started, starting, stopping])
+	}, [started, starting, stopping, manager])
 
 	return (
-		<div className="basis-auto shrink-0 grow-0 flex flex-col self-stretch items-stretch overflow-y-scroll border-gray-300 border-l">
+		<div className="overflow-y-scroll flex flex-col items-stretch bg-gray-100 border-l border-gray-300">
 			<button
 				className="py-1 px-2 text-left border-b border-gray-300 bg-gray-100 hover:cursor-pointer hover:bg-gray-200 active:bg-gray-300"
 				disabled={starting || stopping}

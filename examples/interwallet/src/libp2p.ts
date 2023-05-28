@@ -5,7 +5,7 @@ import { pingService, PingService } from "libp2p/ping"
 
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
-// import { webRTC } from "@libp2p/webrtc"
+import { webRTC } from "@libp2p/webrtc"
 
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
@@ -38,15 +38,19 @@ export async function getLibp2p(peerId: PeerId): Promise<Libp2p<ServiceMap>> {
 		start: false,
 		peerId: peerId,
 
-		// addresses: { listen: ["/webrtc"], announce: [] },
-		// transports: [
-		// 	webRTC(),
-		// 	webSockets({ filter: all }),
-		// 	circuitRelayTransport({ discoverRelays: bootstrapList.length }),
-		// ],
+		addresses: {
+			listen: ["/webrtc"],
+			announce: bootstrapList.map((address) => `${address}/p2p-circuit/webrtc/p2p/${peerId}`),
+		},
 
-		addresses: { listen: [], announce: [] },
-		transports: [webSockets({ filter: all }), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
+		transports: [
+			webRTC(),
+			webSockets({ filter: all }),
+			circuitRelayTransport({ discoverRelays: bootstrapList.length }),
+		],
+
+		// addresses: { listen: [], announce: [] },
+		// transports: [webSockets({ filter: all }), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
 
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],

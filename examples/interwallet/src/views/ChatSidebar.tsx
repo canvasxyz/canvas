@@ -1,5 +1,4 @@
-import React, { useCallback, useContext, useEffect } from "react"
-import { useEnsName } from "wagmi"
+import React, { useContext } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 
 import { AppContext } from "../context"
@@ -15,7 +14,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({}) => {
 	const rooms = useLiveQuery(() => db.rooms.toArray(), [])
 
 	return (
-		<div className="basis-64 grow-0 shrink-0 border-r border-gray-300">
+		<div>
 			<div className="flex flex-col items-stretch">
 				<button
 					onClick={() => {
