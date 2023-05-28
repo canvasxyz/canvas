@@ -173,8 +173,9 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 	}
 
 	private async verifyCosmosSession(session: Session): Promise<boolean> {
-		// decode "{ pub_key, signature }" to an object with { pubkey, signature }
-		const { pubkey, signature: decodedSignature } = decodeSignature(JSON.parse(session.signature))
+		// this decodes our serialization "{ pub_key, signature, chain_id? }" to an object with { pubkey, signature }
+		const { pub_key, signature, chain_id: launchpadChainId } = JSON.parse(session.signature)
+		const { pubkey, signature: decodedSignature } = decodeSignature({ pub_key, signature })
 
 		const { prefix } = fromBech32(session.payload.from)
 		if (session.payload.from !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
@@ -182,7 +183,7 @@ export class CosmosChainImplementation implements ChainImplementation<CosmosSign
 		}
 
 		// the payload can either be signed directly, or encapsulated in a SignDoc
-		const signDocPayload = await getSessionSignatureData(session.payload, session.payload.from)
+		const signDocPayload = await getSessionSignatureData(session.payload, session.payload.from, launchpadChainId)
 		const signDocDigest = new Sha256(serializeSignDoc(signDocPayload)).digest()
 		const serializedPayload = Buffer.from(serializeSessionPayload(session.payload))
 		const digest = new Sha256(serializedPayload).digest()
