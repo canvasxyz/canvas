@@ -1,4 +1,4 @@
-import { bytesToHex, getAddress, hexToBytes } from "viem"
+import { getAddress, hexToBytes } from "viem"
 import { blake3 } from "@noble/hashes/blake3"
 import { logger } from "@libp2p/logger"
 
@@ -18,7 +18,7 @@ import * as Messages from "./protocols/messages"
 
 import { PrivateUserRegistration, PublicUserRegistration } from "./interfaces"
 import { ROOM_REGISTRY_TOPIC, USER_REGISTRY_TOPIC } from "./constants"
-import { signData, verifyData, assert, verifyKeyBundle } from "./cryptography"
+import { signData, assert, verifyKeyBundle } from "./cryptography"
 import { Room, db } from "./db"
 import { getLibp2p } from "./libp2p"
 
@@ -27,6 +27,15 @@ type EventMap = {
 }
 
 type RoomEvent = { [Type in keyof EventMap]: { room: string; type: Type; detail: EventMap[Type] } }[keyof EventMap]
+
+const serializePublicUserRegistration = (user: PublicUserRegistration): Messages.SignedUserRegistration => ({
+	address: hexToBytes(user.address),
+	signature: hexToBytes(user.keyBundleSignature),
+	keyBundle: {
+		signingPublicKey: hexToBytes(user.keyBundle.signingPublicKey),
+		encryptionPublicKey: hexToBytes(user.keyBundle.encryptionPublicKey),
+	},
+})
 
 export class RoomManager {
 	public static async initialize(peerId: PeerId, user: PrivateUserRegistration): Promise<RoomManager> {
@@ -86,14 +95,7 @@ export class RoomManager {
 		if (existingRegistration === null) {
 			this.log("publishing self user registration")
 
-			const value = Messages.SignedUserRegistration.encode({
-				address: hexToBytes(this.user.address),
-				signature: hexToBytes(this.user.keyBundleSignature),
-				keyBundle: {
-					signingAddress: hexToBytes(this.user.keyBundle.signingAddress),
-					encryptionPublicKey: hexToBytes(this.user.keyBundle.encryptionPublicKey),
-				},
-			})
+			const value = Messages.SignedUserRegistration.encode(serializePublicUserRegistration(this.user))
 
 			await this.userRegistry.insert(key, value)
 		}
@@ -124,14 +126,7 @@ export class RoomManager {
 
 		const roomRegistration = Messages.RoomRegistration.encode({
 			creator: hexToBytes(this.user.address),
-			members: members.map((member) => ({
-				address: hexToBytes(member.address),
-				signature: hexToBytes(member.keyBundleSignature),
-				keyBundle: {
-					signingAddress: hexToBytes(member.keyBundle.signingAddress),
-					encryptionPublicKey: hexToBytes(member.keyBundle.encryptionPublicKey),
-				},
-			})),
+			members: members.map(serializePublicUserRegistration),
 		})
 
 		const signedRoomRegistration = signData(roomRegistration, this.user)
@@ -204,9 +199,13 @@ export class RoomManager {
 
 	private applyRoomRegistryEntry = async (key: Uint8Array, value: Uint8Array) => {
 		const signedData = Messages.SignedData.decode(value)
-		const creatorSigningAddress = hexToBytes(verifyData(signedData))
 
-		const roomRegistration = Messages.RoomRegistration.decode(signedData.payload)
+		// try to verify the signature of the signed message
+		const data = nacl.sign.open(signedData.signedMessage, signedData.publicKey)
+		// if the signature is invalid or not signed by the expected user, then throw an error
+		assert(data !== null, "invalid room registration signature")
+
+		const roomRegistration = Messages.RoomRegistration.decode(data)
 		const hash = blake3.create({ dkLen: 16 })
 		for (const member of roomRegistration.members) {
 			assert(member.address, "missing member.address")
@@ -218,12 +217,14 @@ export class RoomManager {
 		assert(roomRegistration.members.length === 2, "rooms must have exactly two members")
 
 		const members = roomRegistration.members.map(verifyKeyBundle)
-		const creator = members.find(({ keyBundle }) => equals(creatorSigningAddress, hexToBytes(keyBundle.signingAddress)))
+		const creator = members.find(({ keyBundle }) =>
+			equals(hexToBytes(keyBundle.signingPublicKey), signedData.publicKey)
+		)
 		assert(creator !== undefined, "invalid room registration signature")
 		assert(equals(hexToBytes(creator.address), roomRegistration.creator), "invalid room registration signature")
 
 		// if the current user is a member of the room
-		if (members.find(({ address }) => equals(hexToBytes(address), hexToBytes(this.user.address)))) {
+		if (members.find(({ address }) => address === this.user.address)) {
 			const roomId = base58btc.baseEncode(key)
 			await db.rooms.add({ id: roomId, creator: creator.address, members })
 			await this.addRoom(roomId, members)

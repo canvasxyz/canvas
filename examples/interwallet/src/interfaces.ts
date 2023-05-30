@@ -1,5 +1,5 @@
 export type KeyBundle = {
-	signingAddress: `0x${string}`
+	signingPublicKey: `0x${string}`
 	encryptionPublicKey: `0x${string}`
 }
 
