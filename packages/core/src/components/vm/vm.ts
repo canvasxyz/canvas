@@ -45,6 +45,7 @@ type ActionContext = Omit<ActionPayload, "call" | "callArgs">
 interface VMOptions {
 	verbose?: boolean
 	unchecked?: boolean
+	noExpiration?: boolean
 }
 
 interface VMConfig extends VMOptions {

@@ -102,6 +102,10 @@ export const builder = (yargs: Argv) =>
 			type: "string",
 			desc: "Provide an ESM module to sync actions by push/poll with an external api",
 		})
+		.option("noExpiration", {
+			type: "boolean",
+			desc: "Disable enforcing session expiration times",
+		})
 		.option("testnet", {
 			type: "boolean",
 			desc: "Bootstrap to the private testnet (requires VPN)",
@@ -212,6 +216,7 @@ export async function handler(args: Args) {
 		offline: directory === null || args.offline,
 		unchecked: args.unchecked,
 		verbose: args.verbose,
+		noExpiration: !!args.noExpiration,
 	}
 
 	const announce: string[] = []

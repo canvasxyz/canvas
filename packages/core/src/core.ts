@@ -69,16 +69,17 @@ export interface CoreOptions {
 	verbose?: boolean
 	offline?: boolean
 	replay?: boolean
+	noExpiration?: boolean
 }
 
 export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 	public static async initialize(config: CoreConfig) {
-		const { directory, spec, offline, verbose, unchecked } = config
+		const { directory, spec, offline, verbose, unchecked, noExpiration } = config
 
 		const chains = config.chains ?? [new EthereumChainImplementation()]
 		const cid = await Hash.of(spec).then(CID.parse)
 		const app = config.uri ?? `ipfs://${cid}`
-		const vm = await VM.initialize({ app, spec, chains, unchecked, verbose })
+		const vm = await VM.initialize({ app, spec, chains, unchecked, verbose, noExpiration })
 
 		const modelStore = await openModelStore(directory, vm, { verbose })
 		const messageStore = await openMessageStore(app, directory, vm.sources, { verbose })
@@ -101,7 +102,7 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 			libp2p = await createLibp2p({ ...options, start: false })
 		}
 
-		const options = { verbose, unchecked }
+		const options = { verbose, unchecked, noExpiration }
 		const core = new Core(directory, cid, app, vm, modelStore, messageStore, libp2p, chains, options)
 
 		if (config.replay) {
@@ -373,7 +374,9 @@ export class Core extends EventEmitter<CoreEvents> implements CoreAPI {
 				"invalid session (action.payload.app and session.payload.app do not match)"
 			)
 			assert(session.payload.chain === action.payload.chain, "session and action chains must match")
-			assert(session.payload.sessionIssued + session.payload.sessionDuration > timestamp, "session expired")
+			if (!this.options.noExpiration) {
+				assert(session.payload.sessionIssued + session.payload.sessionDuration > timestamp, "session expired")
+			}
 			assert(session.payload.sessionIssued <= timestamp, "session issued timestamp must precede action timestamp")
 			assert(session.payload.app === app, "action referenced a session for the wrong application")
 			assert(
