@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef } from "react"
+import React, { useState, useContext, useEffect, useRef, useCallback } from "react"
 
 import { useAccount, useConnect } from "wagmi"
 import { PeerId } from "@libp2p/interface-peer-id"
@@ -11,11 +11,21 @@ import { PrivateUserRegistration } from "./interfaces"
 import { AppContext } from "./context"
 import { RoomManager } from "./manager"
 import { getPeerId } from "./libp2p"
-import { Room } from "./db"
+import { Room, db } from "./db"
 
 export const App: React.FC<{}> = () => {
 	const [user, setUser] = useState<PrivateUserRegistration | null>(null)
 	const [room, setRoom] = useState<Room | null>(null)
+
+	const setCurrentRoom = useCallback((room: Room | null) => {
+		if (room === null) {
+			location.hash = ""
+		} else {
+			location.hash = room.id
+		}
+
+		setRoom(room)
+	}, [])
 
 	const [peerId, setPeerId] = useState<PeerId | null>(null)
 	useEffect(() => {
@@ -46,6 +56,15 @@ export const App: React.FC<{}> = () => {
 					})
 			}
 		} else {
+			const { hash } = window.location
+			if (hash.startsWith("#")) {
+				db.rooms.get(hash.slice(1)).then((room) => {
+					if (room !== undefined) {
+						setRoom(room)
+					}
+				})
+			}
+
 			if (managerRef.current === null && !isManagerStarting.current) {
 				isManagerStarting.current = true
 				RoomManager.initialize(peerId, user)
@@ -58,7 +77,7 @@ export const App: React.FC<{}> = () => {
 	}, [user, peerId])
 
 	return (
-		<AppContext.Provider value={{ user, setUser, room, setRoom, manager, peerId }}>
+		<AppContext.Provider value={{ user, setUser, room, setRoom: setCurrentRoom, manager, peerId }}>
 			<AppContent />
 		</AppContext.Provider>
 	)
