@@ -3,33 +3,28 @@ import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } 
 import { SubscriptionChangeData } from "@libp2p/interface-pubsub"
 import { Connection } from "@libp2p/interface-connection"
 import { protocols } from "@multiformats/multiaddr"
-
-// import { createTopology } from "@libp2p/topology"
-// import { GossipSub } from "@chainsafe/libp2p-gossipsub"
+import { Store } from "@canvas-js/store/browser"
 
 import closeIcon from "../icons/close.svg"
 
 import { PeerIdToken } from "./PeerId"
 import { AppContext } from "../context"
-import { Store } from "@canvas-js/store/browser"
 
 export interface StatusPanelProps {}
 
 export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
 	const { manager, peerId } = useContext(AppContext)
 
-	const [started, setStarted] = useState(manager !== null && manager.isStarted())
 	const [starting, setStarting] = useState(false)
 	const [stopping, setStopping] = useState(false)
 
 	const handleClick = useCallback(async () => {
 		if (manager === null || starting || stopping) {
 			return
-		} else if (started) {
+		} else if (manager.isStarted()) {
 			setStopping(true)
 			try {
 				await manager.stop()
-				setStarted(false)
 			} catch (err) {
 				console.error(err)
 			} finally {
@@ -39,14 +34,15 @@ export const StatusPanel: React.FC<StatusPanelProps> = (props) => {
 			setStarting(true)
 			try {
 				await manager.start()
-				setStarted(true)
 			} catch (err) {
 				console.error(err)
 			} finally {
 				setStarting(false)
 			}
 		}
-	}, [started, starting, stopping, manager])
+	}, [starting, stopping, manager])
+
+	const started = manager !== null && manager.isStarted()
 
 	return (
 		<div className="overflow-y-scroll flex flex-col items-stretch bg-gray-100 border-l border-gray-300">
@@ -156,20 +152,13 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = (props) => {
 					{closeIcon({ width: 24, height: 24 })}
 				</button>
 			</div>
-			{/* <div className="flex flex-row">
-				<div className="p-1">
-					<span>
-						{type} {props.connection.stat.direction}
-					</span>
-				</div>
-			</div> */}
 		</div>
 	)
 }
 
 interface MeshPeerListProps {}
 
-const MeshPeerList: React.FC<MeshPeerListProps> = (props) => {
+const MeshPeerList: React.FC<MeshPeerListProps> = ({}) => {
 	const topicSubscriptionMap = useMemo(() => new Map<string, Set<string>>(), [])
 	const [topicPeers, setTopicPeers] = useState<{ topic: string; peers: string[] }[]>([])
 

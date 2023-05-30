@@ -1,8 +1,8 @@
 syntax = "proto3";
 
 message SignedData {
-  bytes signedMessage = 1;
-  bytes publicKey = 2;
+  bytes signed_message = 1;
+  bytes public_key = 2;
 }
 
 message EncryptedData {
