@@ -9,8 +9,8 @@ import type { Codec } from 'protons-runtime'
 import type { Uint8ArrayList } from 'uint8arraylist'
 
 export interface SignedData {
-  signature: Uint8Array
-  payload: Uint8Array
+  signedMessage: Uint8Array
+  publicKey: Uint8Array
 }
 
 export namespace SignedData {
@@ -23,14 +23,14 @@ export namespace SignedData {
           w.fork()
         }
 
-        if ((obj.signature != null && obj.signature.byteLength > 0)) {
+        if ((obj.signedMessage != null && obj.signedMessage.byteLength > 0)) {
           w.uint32(10)
-          w.bytes(obj.signature)
+          w.bytes(obj.signedMessage)
         }
 
-        if ((obj.payload != null && obj.payload.byteLength > 0)) {
+        if ((obj.publicKey != null && obj.publicKey.byteLength > 0)) {
           w.uint32(18)
-          w.bytes(obj.payload)
+          w.bytes(obj.publicKey)
         }
 
         if (opts.lengthDelimited !== false) {
@@ -38,8 +38,8 @@ export namespace SignedData {
         }
       }, (reader, length) => {
         const obj: any = {
-          signature: new Uint8Array(0),
-          payload: new Uint8Array(0)
+          signedMessage: new Uint8Array(0),
+          publicKey: new Uint8Array(0)
         }
 
         const end = length == null ? reader.len : reader.pos + length
@@ -49,10 +49,10 @@ export namespace SignedData {
 
           switch (tag >>> 3) {
             case 1:
-              obj.signature = reader.bytes()
+              obj.signedMessage = reader.bytes()
               break
             case 2:
-              obj.payload = reader.bytes()
+              obj.publicKey = reader.bytes()
               break
             default:
               reader.skipType(tag & 7)
@@ -162,7 +162,7 @@ export interface SignedUserRegistration {
 
 export namespace SignedUserRegistration {
   export interface KeyBundle {
-    signingAddress: Uint8Array
+    signingPublicKey: Uint8Array
     encryptionPublicKey: Uint8Array
   }
 
@@ -176,9 +176,9 @@ export namespace SignedUserRegistration {
             w.fork()
           }
 
-          if ((obj.signingAddress != null && obj.signingAddress.byteLength > 0)) {
+          if ((obj.signingPublicKey != null && obj.signingPublicKey.byteLength > 0)) {
             w.uint32(10)
-            w.bytes(obj.signingAddress)
+            w.bytes(obj.signingPublicKey)
           }
 
           if ((obj.encryptionPublicKey != null && obj.encryptionPublicKey.byteLength > 0)) {
@@ -191,7 +191,7 @@ export namespace SignedUserRegistration {
           }
         }, (reader, length) => {
           const obj: any = {
-            signingAddress: new Uint8Array(0),
+            signingPublicKey: new Uint8Array(0),
             encryptionPublicKey: new Uint8Array(0)
           }
 
@@ -202,7 +202,7 @@ export namespace SignedUserRegistration {
 
             switch (tag >>> 3) {
               case 1:
-                obj.signingAddress = reader.bytes()
+                obj.signingPublicKey = reader.bytes()
                 break
               case 2:
                 obj.encryptionPublicKey = reader.bytes()

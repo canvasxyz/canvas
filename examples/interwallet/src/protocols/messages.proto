@@ -1,8 +1,8 @@
 syntax = "proto3";
 
 message SignedData {
-  bytes signature = 1;
-  bytes payload = 2;
+  bytes signedMessage = 1;
+  bytes publicKey = 2;
 }
 
 message EncryptedData {
@@ -13,7 +13,7 @@ message EncryptedData {
 
 message SignedUserRegistration {
   message KeyBundle {
-    bytes signing_address = 1;
+    bytes signing_public_key = 1;
     bytes encryption_public_key = 2;
   }
 
