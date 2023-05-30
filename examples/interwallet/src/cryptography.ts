@@ -40,7 +40,7 @@ function constructTypedKeyBundle(keyBundle: KeyBundle) {
 	}
 
 	// these return types match what's expected by `eth-sig-util`
-	return { types, primaryType: "KeyBundle" as "KeyBundle", domain, message: keyBundle }
+	return { types, primaryType: "KeyBundle" as const, domain, message: keyBundle }
 }
 
 export async function signKeyBundle(address: string, keyBundle: KeyBundle): Promise<`0x${string}`> {
