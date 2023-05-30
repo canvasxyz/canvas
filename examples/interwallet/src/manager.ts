@@ -216,7 +216,11 @@ export class RoomManager {
 
 		assert(roomRegistration.members.length === 2, "rooms must have exactly two members")
 
-		const members = roomRegistration.members.map(verifyKeyBundle)
+		let members: PublicUserRegistration[] = []
+		for (const member of roomRegistration.members) {
+			members.push(await verifyKeyBundle(member))
+		}
+
 		const creator = members.find(({ keyBundle }) =>
 			equals(hexToBytes(keyBundle.signingPublicKey), signedData.publicKey)
 		)
@@ -233,7 +237,7 @@ export class RoomManager {
 
 	private applyUserRegistryEntry = async (key: Uint8Array, value: Uint8Array) => {
 		const signedUserRegistration = Messages.SignedUserRegistration.decode(value)
-		const userRegistration = verifyKeyBundle(signedUserRegistration)
+		const userRegistration = await verifyKeyBundle(signedUserRegistration)
 		await db.users.add(userRegistration)
 	}
 

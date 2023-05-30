@@ -1,8 +1,7 @@
-import { recoverTypedSignature, SignTypedDataVersion } from "@metamask/eth-sig-util"
 import nacl from "tweetnacl"
 
 import { equals } from "uint8arrays"
-import { bytesToHex, getAddress, hexToBytes } from "viem/utils"
+import { bytesToHex, hexToBytes, recoverTypedDataAddress } from "viem/utils"
 
 import * as Messages from "./protocols/messages"
 
@@ -29,18 +28,21 @@ export function signMagicString(account: string, pin: string): Promise<`0x${stri
 }
 
 function constructTypedKeyBundle(keyBundle: KeyBundle) {
-	const domain = { name: "InterwalletChat" }
-
 	const types = {
 		EIP712Domain: [{ name: "name", type: "string" }],
 		KeyBundle: [
 			{ name: "signingPublicKey", type: "bytes" },
 			{ name: "encryptionPublicKey", type: "bytes" },
 		],
-	}
+	} as const
 
 	// these return types match what's expected by `eth-sig-util`
-	return { types, primaryType: "KeyBundle" as const, domain, message: keyBundle }
+	return {
+		types,
+		primaryType: "KeyBundle" as const,
+		domain: { name: "InterwalletChat" } as const,
+		message: keyBundle,
+	}
 }
 
 export async function signKeyBundle(address: string, keyBundle: KeyBundle): Promise<`0x${string}`> {
@@ -51,7 +53,9 @@ export async function signKeyBundle(address: string, keyBundle: KeyBundle): Prom
 	})
 }
 
-export function verifyKeyBundle(signedUserRegistration: Messages.SignedUserRegistration): PublicUserRegistration {
+export async function verifyKeyBundle(
+	signedUserRegistration: Messages.SignedUserRegistration
+): Promise<PublicUserRegistration> {
 	assert(signedUserRegistration.keyBundle, "missing keyBundle")
 	assert(signedUserRegistration.keyBundle.signingPublicKey, "missing keyBundle.signingPublicKey")
 	assert(signedUserRegistration.keyBundle.encryptionPublicKey, "missing keyBundle.encryptionPublicKey")
@@ -65,13 +69,10 @@ export function verifyKeyBundle(signedUserRegistration: Messages.SignedUserRegis
 	const typedKeyBundle = constructTypedKeyBundle(keyBundle)
 
 	const keyBundleSignature = bytesToHex(signedUserRegistration.signature)
-	const address = getAddress(
-		recoverTypedSignature({
-			version: SignTypedDataVersion.V4,
-			data: typedKeyBundle,
-			signature: keyBundleSignature,
-		})
-	) as `0x${string}`
+	const address = await recoverTypedDataAddress({
+		...typedKeyBundle,
+		signature: keyBundleSignature,
+	})
 
 	assert(equals(hexToBytes(address), signedUserRegistration.address), "invalid signature")
 
