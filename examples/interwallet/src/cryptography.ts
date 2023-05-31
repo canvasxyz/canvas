@@ -11,7 +11,7 @@ export const getPublicUserRegistration = ({ privateKey: _, ...user }: PrivateUse
 
 export const getRegistrationKey = (address: string) => `/interwallet/v0/registration/${address}`
 
-const buildMagicString = (pin: string) => `[Password: ${pin}]
+export const buildMagicString = (pin: string) => `[Password: ${pin}]
 
 Generate a new messaging key?
 
@@ -19,15 +19,7 @@ Signing this message will allow the application to read & write messages from yo
 
 Only do this when setting up your messaging client or mobile application.`
 
-export function signMagicString(account: string, pin: string): Promise<`0x${string}`> {
-	const magicString = buildMagicString(pin)
-	return (window as any).ethereum.request({
-		method: "personal_sign",
-		params: [account, magicString],
-	})
-}
-
-function constructTypedKeyBundle(keyBundle: KeyBundle) {
+export function constructTypedKeyBundle(keyBundle: KeyBundle) {
 	const types = {
 		EIP712Domain: [{ name: "name", type: "string" }],
 		KeyBundle: [
@@ -43,14 +35,6 @@ function constructTypedKeyBundle(keyBundle: KeyBundle) {
 		domain: { name: "InterwalletChat" } as const,
 		message: keyBundle,
 	}
-}
-
-export async function signKeyBundle(address: string, keyBundle: KeyBundle): Promise<`0x${string}`> {
-	const typedKeyBundle = constructTypedKeyBundle(keyBundle)
-	return (window as any).ethereum.request({
-		method: "eth_signTypedData_v4",
-		params: [address, JSON.stringify(typedKeyBundle)],
-	})
 }
 
 export async function verifyKeyBundle(

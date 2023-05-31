@@ -71,7 +71,14 @@ const AppContent: React.FC<{}> = ({}) => {
 	const { user } = useContext(AppContext)
 
 	if (!isConnected || userAddress === undefined) {
-		return <SelectWalletView selectWallet={(wallet) => connect({ connector: connectors[0] })} />
+		return (
+			<SelectWalletView
+				selectWallet={async (wallet) => {
+					if (wallet == "metamask") connect({ connector: connectors[0] })
+					else if (wallet == "walletconnect") connect({ connector: connectors[1] })
+				}}
+			/>
+		)
 	} else if (user === null) {
 		return <RegistrationView />
 	} else {
