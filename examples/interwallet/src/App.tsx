@@ -59,7 +59,9 @@ export const App: React.FC<{}> = () => {
 			const { hash } = window.location
 			if (hash.startsWith("#")) {
 				db.rooms.get(hash.slice(1)).then((room) => {
-					if (room !== undefined) {
+					if (room === undefined) {
+						window.location.hash = ""
+					} else {
 						setRoom(room)
 					}
 				})
@@ -93,8 +95,11 @@ const AppContent: React.FC<{}> = ({}) => {
 		return (
 			<SelectWalletView
 				selectWallet={async (wallet) => {
-					if (wallet == "metamask") connect({ connector: connectors[0] })
-					else if (wallet == "walletconnect") connect({ connector: connectors[1] })
+					if (wallet == "metamask") {
+						connect({ connector: connectors[0] })
+					} else if (wallet == "walletconnect") {
+						connect({ connector: connectors[1] })
+					}
 				}}
 			/>
 		)

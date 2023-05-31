@@ -38,19 +38,19 @@ export async function getLibp2p(peerId: PeerId): Promise<Libp2p<ServiceMap>> {
 		start: false,
 		peerId: peerId,
 
-		addresses: {
-			listen: ["/webrtc"],
-			announce: bootstrapList.map((address) => `${address}/p2p-circuit/webrtc/p2p/${peerId}`),
-		},
+		// addresses: {
+		// 	listen: ["/webrtc"],
+		// 	announce: bootstrapList.map((address) => `${address}/p2p-circuit/webrtc/p2p/${peerId}`),
+		// },
 
-		transports: [
-			webRTC(),
-			webSockets({ filter: all }),
-			circuitRelayTransport({ discoverRelays: bootstrapList.length }),
-		],
+		// transports: [
+		// 	webRTC(),
+		// 	webSockets({ filter: all }),
+		// 	circuitRelayTransport({ discoverRelays: bootstrapList.length }),
+		// ],
 
-		// addresses: { listen: [], announce: [] },
-		// transports: [webSockets({ filter: all }), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
+		addresses: { listen: [], announce: [] },
+		transports: [webSockets({ filter: all }), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
 
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
