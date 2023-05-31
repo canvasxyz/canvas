@@ -27,10 +27,14 @@ export const getActionSignatureData = async (actionPayload: ActionPayload, addre
 	return signDoc
 }
 
-export const getSessionSignatureData = async (sessionPayload: SessionPayload, address: string): Promise<StdSignDoc> => {
+export const getSessionSignatureData = async (
+	sessionPayload: SessionPayload,
+	address: string,
+	chain_id?: string
+): Promise<StdSignDoc> => {
 	const accountNumber = 0
 	const sequence = 0
-	const chainId = ""
+	const chainId = chain_id ?? ""
 	const fee: StdFee = {
 		gas: "0",
 		amount: [],

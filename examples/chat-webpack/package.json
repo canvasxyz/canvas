@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat-webpack",
-  "version": "v0.5.0-alpha3",
+  "version": "0.5.0-alpha4",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -12,9 +12,9 @@
     "dev": "concurrently --kill-others -n backend,frontend 'npm run dev:backend' 'npm run dev:frontend'"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "v0.5.0-alpha3",
-    "@canvas-js/cli": "v0.5.0-alpha3",
-    "@canvas-js/hooks": "v0.5.0-alpha3",
+    "@canvas-js/chain-ethereum": "0.5.0-alpha4",
+    "@canvas-js/cli": "0.5.0-alpha4",
+    "@canvas-js/hooks": "0.5.0-alpha4",
     "@types/react": "^18.0.35",
     "@types/react-dom": "^18.0.11",
     "@wagmi/chains": "^0.2.18",

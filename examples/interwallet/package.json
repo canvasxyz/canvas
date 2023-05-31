@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-interwallet",
-  "version": "v0.5.0-alpha3",
+  "version": "0.5.0-alpha4",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -13,7 +13,7 @@
   "dependencies": {
     "@canvas-js/okra-idb": "^0.0.2",
     "@canvas-js/pubsub-service-discovery": "^0.0.10",
-    "@canvas-js/store": "v0.5.0-alpha3",
+    "@canvas-js/store": "0.5.0-alpha4",
     "@chainsafe/libp2p-gossipsub": "^8.0.0",
     "@chainsafe/libp2p-noise": "^12.0.1",
     "@libp2p/bootstrap": "^8.0.0",
