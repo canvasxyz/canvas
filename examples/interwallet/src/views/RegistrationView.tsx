@@ -1,10 +1,8 @@
 import React, { useCallback, useContext, useLayoutEffect } from "react"
 import { useAccount, useDisconnect, useWalletClient } from "wagmi"
-import { getAddress, keccak256 } from "viem/utils"
 
 import { AppContext } from "../context"
-import { PrivateUserRegistration } from "../interfaces"
-import { buildMagicString, constructTypedKeyBundle, getRegistrationKey, makeKeyBundle } from "../cryptography"
+import { createPrivateUserRegistration, getRegistrationKey } from "../cryptography"
 
 export interface RegistrationViewProps {}
 
@@ -37,18 +35,7 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({}) => {
 				return
 			}
 			try {
-				const magicString = buildMagicString(pin)
-				const signature = await walletClient.signMessage({ message: magicString })
-				const privateKey = keccak256(signature)
-				const keyBundle = makeKeyBundle(privateKey)
-				const typedKeyBundle = constructTypedKeyBundle(keyBundle)
-				const keyBundleSignature = await walletClient.signTypedData(typedKeyBundle)
-				const user: PrivateUserRegistration = {
-					address: getAddress(userAddress),
-					privateKey,
-					keyBundle,
-					keyBundleSignature,
-				}
+				const user = await createPrivateUserRegistration(walletClient, userAddress, pin)
 				console.log("setting new registration", user)
 				const key = getRegistrationKey(userAddress)
 				window.localStorage.setItem(key, JSON.stringify(user))
