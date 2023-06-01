@@ -156,7 +156,7 @@ export namespace EncryptedData {
 
 export interface SignedUserRegistration {
   signature: Uint8Array
-  address: Uint8Array
+  address: string
   keyBundle?: SignedUserRegistration.KeyBundle
   walletName: string
 }
@@ -244,9 +244,9 @@ export namespace SignedUserRegistration {
           w.bytes(obj.signature)
         }
 
-        if ((obj.address != null && obj.address.byteLength > 0)) {
+        if ((obj.address != null && obj.address !== '')) {
           w.uint32(18)
-          w.bytes(obj.address)
+          w.string(obj.address)
         }
 
         if (obj.keyBundle != null) {
@@ -265,7 +265,7 @@ export namespace SignedUserRegistration {
       }, (reader, length) => {
         const obj: any = {
           signature: new Uint8Array(0),
-          address: new Uint8Array(0),
+          address: '',
           walletName: ''
         }
 
@@ -279,7 +279,7 @@ export namespace SignedUserRegistration {
               obj.signature = reader.bytes()
               break
             case 2:
-              obj.address = reader.bytes()
+              obj.address = reader.string()
               break
             case 3:
               obj.keyBundle = SignedUserRegistration.KeyBundle.codec().decode(reader, reader.uint32())

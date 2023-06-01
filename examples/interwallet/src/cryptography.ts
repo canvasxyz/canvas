@@ -57,15 +57,17 @@ export async function verifyKeyBundle(
 	let address: `0x${string}` | null = null
 	if (signedUserRegistration.walletName == "metamask" || signedUserRegistration.walletName == "walletconnect") {
 		const typedKeyBundle = constructTypedKeyBundle(keyBundle)
-		address = await recoverTypedDataAddress({
-			...typedKeyBundle,
-			signature: keyBundleSignature,
-		})
+		address = getAddress(
+			await recoverTypedDataAddress({
+				...typedKeyBundle,
+				signature: keyBundleSignature,
+			})
+		)
 	} else {
 		throw new Error("Unsupported wallet")
 	}
 
-	assert(equals(hexToBytes(address), signedUserRegistration.address), "invalid signature")
+	assert(address == getAddress(signedUserRegistration.address), "invalid signature")
 
 	return { walletName: signedUserRegistration.walletName, address, keyBundle, keyBundleSignature }
 }
