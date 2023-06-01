@@ -5,7 +5,7 @@ import { bytesToHex, getAddress, hexToBytes, keccak256, recoverTypedDataAddress 
 
 import * as Messages from "./protocols/messages"
 
-import { KeyBundle, PrivateUserRegistration, PublicUserRegistration } from "./interfaces"
+import { KeyBundle, PrivateUserRegistration, PublicUserRegistration, WalletName } from "./interfaces"
 import { WalletClient } from "wagmi"
 
 export const getPublicUserRegistration = ({ privateKey: _, ...user }: PrivateUserRegistration) => user
@@ -41,6 +41,7 @@ function constructTypedKeyBundle(keyBundle: KeyBundle) {
 export async function verifyKeyBundle(
 	signedUserRegistration: Messages.SignedUserRegistration
 ): Promise<PublicUserRegistration> {
+	assert(signedUserRegistration.walletName, "missing walletName")
 	assert(signedUserRegistration.keyBundle, "missing keyBundle")
 	assert(signedUserRegistration.keyBundle.signingPublicKey, "missing keyBundle.signingPublicKey")
 	assert(signedUserRegistration.keyBundle.encryptionPublicKey, "missing keyBundle.encryptionPublicKey")
@@ -50,18 +51,23 @@ export async function verifyKeyBundle(
 		signingPublicKey: bytesToHex(signedUserRegistration.keyBundle.signingPublicKey),
 		encryptionPublicKey: bytesToHex(signedUserRegistration.keyBundle.encryptionPublicKey),
 	}
-
-	const typedKeyBundle = constructTypedKeyBundle(keyBundle)
-
 	const keyBundleSignature = bytesToHex(signedUserRegistration.signature)
-	const address = await recoverTypedDataAddress({
-		...typedKeyBundle,
-		signature: keyBundleSignature,
-	})
+
+	// TODO: choose a verification method, depending on how the keyBundle was signed
+	let address: `0x${string}` | null = null
+	if (signedUserRegistration.walletName == "metamask" || signedUserRegistration.walletName == "walletconnect") {
+		const typedKeyBundle = constructTypedKeyBundle(keyBundle)
+		address = await recoverTypedDataAddress({
+			...typedKeyBundle,
+			signature: keyBundleSignature,
+		})
+	} else {
+		throw new Error("Unsupported wallet")
+	}
 
 	assert(equals(hexToBytes(address), signedUserRegistration.address), "invalid signature")
 
-	return { address, keyBundle, keyBundleSignature }
+	return { walletName: signedUserRegistration.walletName, address, keyBundle, keyBundleSignature }
 }
 
 export function makeKeyBundle(privateKey: `0x${string}`): KeyBundle {
@@ -97,18 +103,34 @@ export function assert(condition: unknown, message?: string): asserts condition 
 export const createPrivateUserRegistration = async (
 	walletClient: WalletClient,
 	userAddress: string,
-	pin: string
+	pin: string,
+	walletName: WalletName
 ): Promise<PrivateUserRegistration> => {
 	const magicString = buildMagicString(pin)
-	const signature = await walletClient.signMessage({ message: magicString })
+
+	let signature: `0x${string}` | null = null
+	if (walletName == "metamask" || walletName == "walletconnect") {
+		signature = await walletClient.signMessage({ message: magicString })
+	} else {
+		throw new Error("Unsupported wallet")
+	}
+
 	const privateKey = keccak256(signature)
 	const keyBundle = makeKeyBundle(privateKey)
 	const typedKeyBundle = constructTypedKeyBundle(keyBundle)
-	const keyBundleSignature = await walletClient.signTypedData(typedKeyBundle)
+
+	let keyBundleSignature: `0x${string}` | null = null
+	if (walletName == "metamask" || walletName == "walletconnect") {
+		keyBundleSignature = await walletClient.signTypedData(typedKeyBundle)
+	} else {
+		throw new Error("Unsupported wallet")
+	}
+
 	return {
 		address: getAddress(userAddress),
 		privateKey,
 		keyBundle,
 		keyBundleSignature,
+		walletName,
 	}
 }

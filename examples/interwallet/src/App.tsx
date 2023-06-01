@@ -7,7 +7,7 @@ import { ChatView } from "./views/ChatView"
 import { RegistrationView } from "./views/RegistrationView"
 import { SelectWalletView } from "./views/SelectWalletView"
 
-import { PrivateUserRegistration } from "./interfaces"
+import { PrivateUserRegistration, WalletName } from "./interfaces"
 import { AppContext } from "./context"
 import { RoomManager } from "./manager"
 import { getPeerId } from "./libp2p"
@@ -88,6 +88,7 @@ export const App: React.FC<{}> = () => {
 const AppContent: React.FC<{}> = ({}) => {
 	const { connect, connectors } = useConnect()
 	const { address: userAddress, isConnected } = useAccount()
+	const [walletName, setWalletName] = useState<WalletName | null>(null)
 
 	const { user } = useContext(AppContext)
 
@@ -97,14 +98,19 @@ const AppContent: React.FC<{}> = ({}) => {
 				selectWallet={async (wallet) => {
 					if (wallet == "metamask") {
 						connect({ connector: connectors[0] })
+						setWalletName("metamask")
 					} else if (wallet == "walletconnect") {
 						connect({ connector: connectors[1] })
+						setWalletName("walletconnect")
 					}
 				}}
 			/>
 		)
 	} else if (user === null) {
-		return <RegistrationView />
+		if (walletName === null) {
+			throw new Error("walletName is null")
+		}
+		return <RegistrationView walletName={walletName} />
 	} else {
 		return <ChatView />
 	}

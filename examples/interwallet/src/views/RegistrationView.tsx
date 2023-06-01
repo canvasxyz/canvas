@@ -3,10 +3,9 @@ import { useAccount, useDisconnect, useWalletClient } from "wagmi"
 
 import { AppContext } from "../context"
 import { createPrivateUserRegistration, getRegistrationKey } from "../cryptography"
+import { WalletName } from "../interfaces"
 
-export interface RegistrationViewProps {}
-
-export const RegistrationView: React.FC<RegistrationViewProps> = ({}) => {
+export const RegistrationView = ({ walletName }: { walletName: WalletName }) => {
 	const { address: userAddress, isConnected } = useAccount()
 	const { data: walletClient } = useWalletClient()
 
@@ -35,7 +34,7 @@ export const RegistrationView: React.FC<RegistrationViewProps> = ({}) => {
 				return
 			}
 			try {
-				const user = await createPrivateUserRegistration(walletClient, userAddress, pin)
+				const user = await createPrivateUserRegistration(walletClient, userAddress, pin, walletName)
 				console.log("setting new registration", user)
 				const key = getRegistrationKey(userAddress)
 				window.localStorage.setItem(key, JSON.stringify(user))

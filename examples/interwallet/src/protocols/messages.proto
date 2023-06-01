@@ -20,6 +20,7 @@ message SignedUserRegistration {
   bytes signature = 1;
   bytes address = 2;
   KeyBundle key_bundle = 3;
+  string walletName = 4;
 }
 
 message RoomRegistration {

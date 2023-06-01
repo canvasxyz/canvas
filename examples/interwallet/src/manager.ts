@@ -29,6 +29,7 @@ type EventMap = {
 type RoomEvent = { [Type in keyof EventMap]: { room: string; type: Type; detail: EventMap[Type] } }[keyof EventMap]
 
 const serializePublicUserRegistration = (user: PublicUserRegistration): Messages.SignedUserRegistration => ({
+	walletName: user.walletName,
 	address: hexToBytes(user.address),
 	signature: hexToBytes(user.keyBundleSignature),
 	keyBundle: {

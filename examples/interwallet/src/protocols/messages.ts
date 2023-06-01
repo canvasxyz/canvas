@@ -158,6 +158,7 @@ export interface SignedUserRegistration {
   signature: Uint8Array
   address: Uint8Array
   keyBundle?: SignedUserRegistration.KeyBundle
+  walletName: string
 }
 
 export namespace SignedUserRegistration {
@@ -253,13 +254,19 @@ export namespace SignedUserRegistration {
           SignedUserRegistration.KeyBundle.codec().encode(obj.keyBundle, w)
         }
 
+        if ((obj.walletName != null && obj.walletName !== '')) {
+          w.uint32(34)
+          w.string(obj.walletName)
+        }
+
         if (opts.lengthDelimited !== false) {
           w.ldelim()
         }
       }, (reader, length) => {
         const obj: any = {
           signature: new Uint8Array(0),
-          address: new Uint8Array(0)
+          address: new Uint8Array(0),
+          walletName: ''
         }
 
         const end = length == null ? reader.len : reader.pos + length
@@ -276,6 +283,9 @@ export namespace SignedUserRegistration {
               break
             case 3:
               obj.keyBundle = SignedUserRegistration.KeyBundle.codec().decode(reader, reader.uint32())
+              break
+            case 4:
+              obj.walletName = reader.string()
               break
             default:
               reader.skipType(tag & 7)

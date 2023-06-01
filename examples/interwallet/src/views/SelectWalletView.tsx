@@ -1,6 +1,5 @@
 import React from "react"
-
-export type WalletName = "metamask" | "walletconnect"
+import { WalletName } from "../interfaces"
 
 export const SelectWalletView = ({ selectWallet }: { selectWallet: (wallet: WalletName) => void }) => {
 	return (
