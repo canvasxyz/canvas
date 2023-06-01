@@ -1,5 +1,4 @@
 import React, { useCallback, useContext, useState } from "react"
-import { useDisconnect } from "wagmi"
 
 import { ChatSidebar } from "./ChatSidebar"
 import { MessagesPanel } from "./MessagesPanel"
@@ -12,10 +11,7 @@ import { getRegistrationKey } from "../cryptography"
 import chevronRight from "../icons/chevron-right.svg"
 import chevronLeft from "../icons/chevron-left.svg"
 
-export interface ChatViewProps {}
-
-export const ChatView: React.FC<ChatViewProps> = ({}) => {
-	const { disconnect } = useDisconnect()
+export const ChatView = ({ disconnect }: { disconnect: () => void }) => {
 	const { user, setUser, room } = useContext(AppContext)
 
 	const [showStatusPanel, setShowStatusPanel] = useState(true)

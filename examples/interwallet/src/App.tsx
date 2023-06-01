@@ -1,6 +1,5 @@
 import React, { useState, useContext, useEffect, useRef, useCallback } from "react"
 
-import { useAccount, useConnect } from "wagmi"
 import { PeerId } from "@libp2p/interface-peer-id"
 
 import { ChatView } from "./views/ChatView"
@@ -12,6 +11,7 @@ import { AppContext } from "./context"
 import { RoomManager } from "./manager"
 import { getPeerId } from "./libp2p"
 import { Room, db } from "./db"
+import { useWallet } from "./wallet"
 
 export const App: React.FC<{}> = () => {
 	const [user, setUser] = useState<PrivateUserRegistration | null>(null)
@@ -86,21 +86,18 @@ export const App: React.FC<{}> = () => {
 }
 
 const AppContent: React.FC<{}> = ({}) => {
-	const { connect, connectors } = useConnect()
-	const { address: userAddress, isConnected } = useAccount()
 	const [walletName, setWalletName] = useState<WalletName | null>(null)
+	const { disconnect, signKeyBundle, signMessage, userAddress } = useWallet({ walletName })
 
 	const { user } = useContext(AppContext)
 
-	if (!isConnected || userAddress === undefined) {
+	if (userAddress === null) {
 		return (
 			<SelectWalletView
 				selectWallet={async (wallet) => {
 					if (wallet == "metamask") {
-						connect({ connector: connectors[0] })
 						setWalletName("metamask")
 					} else if (wallet == "walletconnect") {
-						connect({ connector: connectors[1] })
 						setWalletName("walletconnect")
 					} else {
 						const _exhaustiveCheck: never = wallet
@@ -113,8 +110,16 @@ const AppContent: React.FC<{}> = ({}) => {
 		if (walletName === null) {
 			throw new Error("walletName is null")
 		}
-		return <RegistrationView walletName={walletName} />
+		return (
+			<RegistrationView
+				userAddress={userAddress}
+				disconnect={disconnect}
+				signKeyBundle={signKeyBundle}
+				signMessage={signMessage}
+				walletName={walletName}
+			/>
+		)
 	} else {
-		return <ChatView />
+		return <ChatView disconnect={disconnect} />
 	}
 }

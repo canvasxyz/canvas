@@ -1,18 +1,16 @@
 import nacl from "tweetnacl"
 
-import { equals } from "uint8arrays"
-import { bytesToHex, getAddress, hexToBytes, keccak256, recoverTypedDataAddress } from "viem/utils"
+import { bytesToHex, getAddress, hexToBytes, recoverTypedDataAddress } from "viem/utils"
 
 import * as Messages from "./protocols/messages"
 
 import { KeyBundle, PrivateUserRegistration, PublicUserRegistration, WalletName } from "./interfaces"
-import { WalletClient } from "wagmi"
 
 export const getPublicUserRegistration = ({ privateKey: _, ...user }: PrivateUserRegistration) => user
 
 export const getRegistrationKey = (address: string) => `/interwallet/v0/registration/${address}`
 
-const buildMagicString = (pin: string) => `[Password: ${pin}]
+export const buildMagicString = (pin: string) => `[Password: ${pin}]
 
 Generate a new messaging key?
 
@@ -20,7 +18,7 @@ Signing this message will allow the application to read & write messages from yo
 
 Only do this when setting up your messaging client or mobile application.`
 
-function constructTypedKeyBundle(keyBundle: KeyBundle) {
+export function constructTypedKeyBundle(keyBundle: KeyBundle) {
 	const types = {
 		EIP712Domain: [{ name: "name", type: "string" }],
 		KeyBundle: [
@@ -101,42 +99,5 @@ export function assert(condition: unknown, message?: string): asserts condition 
 		return
 	} else {
 		throw new Error(message ?? "assertion error")
-	}
-}
-
-export const createPrivateUserRegistration = async (
-	walletClient: WalletClient,
-	userAddress: string,
-	pin: string,
-	walletName: WalletName
-): Promise<PrivateUserRegistration> => {
-	const magicString = buildMagicString(pin)
-
-	let signature: `0x${string}` | null = null
-	if (walletName == "metamask" || walletName == "walletconnect") {
-		signature = await walletClient.signMessage({ message: magicString })
-	} else {
-		const _exhaustiveCheck: never = walletName
-		throw new Error(`Unknown wallet: ${walletName}`)
-	}
-
-	const privateKey = keccak256(signature)
-	const keyBundle = makeKeyBundle(privateKey)
-	const typedKeyBundle = constructTypedKeyBundle(keyBundle)
-
-	let keyBundleSignature: `0x${string}` | null = null
-	if (walletName == "metamask" || walletName == "walletconnect") {
-		keyBundleSignature = await walletClient.signTypedData(typedKeyBundle)
-	} else {
-		const _exhaustiveCheck: never = walletName
-		throw new Error(`Unknown wallet: ${walletName}`)
-	}
-
-	return {
-		address: getAddress(userAddress),
-		privateKey,
-		keyBundle,
-		keyBundleSignature,
-		walletName,
 	}
 }

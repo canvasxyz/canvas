@@ -1,21 +1,29 @@
 import React, { useCallback, useContext, useLayoutEffect } from "react"
-import { useAccount, useDisconnect, useWalletClient } from "wagmi"
 
 import { AppContext } from "../context"
-import { createPrivateUserRegistration, getRegistrationKey } from "../cryptography"
-import { WalletName } from "../interfaces"
+import { buildMagicString, getRegistrationKey, makeKeyBundle } from "../cryptography"
+import { KeyBundle, WalletName } from "../interfaces"
+import { getAddress, keccak256 } from "viem"
 
-export const RegistrationView = ({ walletName }: { walletName: WalletName }) => {
-	const { address: userAddress, isConnected } = useAccount()
-	const { data: walletClient } = useWalletClient()
-
+export const RegistrationView = ({
+	userAddress,
+	walletName,
+	disconnect,
+	signMessage,
+	signKeyBundle,
+}: {
+	userAddress: string
+	walletName: WalletName
+	disconnect: () => void
+	signMessage: (message: string) => Promise<`0x${string}`>
+	signKeyBundle: (keyBundle: KeyBundle) => Promise<`0x${string}`>
+}) => {
 	const { user, setUser } = useContext(AppContext)
 
 	const [pin, setPin] = React.useState("")
-	const { disconnect } = useDisconnect()
 
 	useLayoutEffect(() => {
-		if (isConnected && userAddress !== undefined && user === null) {
+		if (user === null) {
 			const key = getRegistrationKey(userAddress)
 			const value = window.localStorage.getItem(key)
 			if (value !== null) {
@@ -26,25 +34,33 @@ export const RegistrationView = ({ walletName }: { walletName: WalletName }) => 
 				}
 			}
 		}
-	}, [userAddress, isConnected, user])
+	}, [user])
 
-	const handleSubmitPin = useCallback(
-		async (pin: string) => {
-			if (userAddress === undefined || !walletClient) {
-				return
+	const handleSubmitPin = async (pin: string) => {
+		try {
+			const magicString = buildMagicString(pin)
+
+			const signature = await signMessage(magicString)
+
+			const privateKey = keccak256(signature)
+			const keyBundle = makeKeyBundle(privateKey)
+			const keyBundleSignature = await signKeyBundle(keyBundle)
+
+			const user = {
+				address: getAddress(userAddress),
+				privateKey,
+				keyBundle,
+				keyBundleSignature,
+				walletName,
 			}
-			try {
-				const user = await createPrivateUserRegistration(walletClient, userAddress, pin, walletName)
-				console.log("setting new registration", user)
-				const key = getRegistrationKey(userAddress)
-				window.localStorage.setItem(key, JSON.stringify(user))
-				setUser(user)
-			} catch (err) {
-				console.error("failed to get signature", err)
-			}
-		},
-		[userAddress, walletClient]
-	)
+			console.log("setting new registration", user)
+			const key = getRegistrationKey(userAddress)
+			window.localStorage.setItem(key, JSON.stringify(user))
+			setUser(user)
+		} catch (err) {
+			console.error("failed to get signature", err)
+		}
+	}
 
 	const goBack = useCallback(() => {
 		if (user !== null) {

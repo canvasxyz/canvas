@@ -1,6 +1,6 @@
-import React, { useCallback, useContext } from "react"
+import React, { useCallback, useContext, useEffect, useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
-import { useEnsName } from "wagmi"
+import { fetchEnsName } from "@wagmi/core"
 
 import { AppContext } from "../context"
 import { db } from "../db"
@@ -13,7 +13,12 @@ interface UserEntryProps {
 }
 
 const UserEntry = ({ user, onClick }: UserEntryProps) => {
-	const { data: ensName } = useEnsName({ address: user.address })
+	const [ensName, setEnsName] = useState<string | null>(null)
+
+	useEffect(() => {
+		fetchEnsName({ address: user.address }).then((name) => setEnsName(name))
+	}, [user])
+
 	return (
 		<button
 			onClick={onClick}

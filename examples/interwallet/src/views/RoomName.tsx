@@ -1,6 +1,7 @@
-import React, { useContext, useMemo } from "react"
+import React, { useContext, useEffect, useMemo, useState } from "react"
 import { Room } from "../db"
-import { useEnsName } from "wagmi"
+import { fetchEnsName } from "@wagmi/core"
+
 import { AppContext } from "../context"
 import { getAddress } from "viem"
 
@@ -9,6 +10,8 @@ export interface RoomNameProps {
 }
 
 export const RoomName: React.FC<RoomNameProps> = ({ room }) => {
+	const [ensName, setEnsName] = useState<string | null>(null)
+
 	if (room.members.length !== 2) {
 		throw new Error("rooms must have exactly two members")
 	}
@@ -19,10 +22,15 @@ export const RoomName: React.FC<RoomNameProps> = ({ room }) => {
 		() => user && room.members.find(({ address }) => getAddress(address) !== user.address),
 		[room, user]
 	)
-	const { data: name } = useEnsName({ address: recipient?.address ?? undefined })
 
-	if (name) {
-		return <span>{name}</span>
+	useEffect(() => {
+		if (recipient) {
+			fetchEnsName({ address: recipient.address }).then((name) => setEnsName(name))
+		}
+	}, [recipient])
+
+	if (ensName) {
+		return <span>{ensName}</span>
 	} else if (recipient) {
 		const head = recipient.address.slice(0, 6)
 		const tail = recipient.address.slice(-4)
