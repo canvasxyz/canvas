@@ -102,6 +102,9 @@ const AppContent: React.FC<{}> = ({}) => {
 					} else if (wallet == "walletconnect") {
 						connect({ connector: connectors[1] })
 						setWalletName("walletconnect")
+					} else {
+						const _exhaustiveCheck: never = wallet
+						throw new Error(`Unknown wallet: ${wallet}`)
 					}
 				}}
 			/>

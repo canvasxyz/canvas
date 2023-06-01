@@ -55,7 +55,8 @@ export async function verifyKeyBundle(
 
 	// TODO: choose a verification method, depending on how the keyBundle was signed
 	let address: `0x${string}` | null = null
-	if (signedUserRegistration.walletName == "metamask" || signedUserRegistration.walletName == "walletconnect") {
+	const walletName = signedUserRegistration.walletName as WalletName
+	if (walletName == "metamask" || walletName == "walletconnect") {
 		const typedKeyBundle = constructTypedKeyBundle(keyBundle)
 		address = getAddress(
 			await recoverTypedDataAddress({
@@ -64,6 +65,7 @@ export async function verifyKeyBundle(
 			})
 		)
 	} else {
+		const _exhaustiveCheck: never = walletName
 		throw new Error("Unsupported wallet")
 	}
 
@@ -114,7 +116,8 @@ export const createPrivateUserRegistration = async (
 	if (walletName == "metamask" || walletName == "walletconnect") {
 		signature = await walletClient.signMessage({ message: magicString })
 	} else {
-		throw new Error("Unsupported wallet")
+		const _exhaustiveCheck: never = walletName
+		throw new Error(`Unknown wallet: ${walletName}`)
 	}
 
 	const privateKey = keccak256(signature)
@@ -125,7 +128,8 @@ export const createPrivateUserRegistration = async (
 	if (walletName == "metamask" || walletName == "walletconnect") {
 		keyBundleSignature = await walletClient.signTypedData(typedKeyBundle)
 	} else {
-		throw new Error("Unsupported wallet")
+		const _exhaustiveCheck: never = walletName
+		throw new Error(`Unknown wallet: ${walletName}`)
 	}
 
 	return {
