@@ -30,9 +30,17 @@ export interface StoreInit {
 	maxOutboundStreams?: number
 }
 
-export abstract class AbstractStore extends EventEmitter<{}> {
-	public static protocolPrefix = "/canvas/v0/store/"
+export interface Store extends EventEmitter<{}> {
+	start(): Promise<void>
+	stop(): Promise<void>
 
+	insert(key: Uint8Array, value: Uint8Array): Promise<void>
+	get(key: Uint8Array): Promise<Uint8Array | null>
+}
+
+export const protocolPrefix = "/canvas/v0/store/"
+
+export abstract class AbstractStore extends EventEmitter<{}> implements Store {
 	public static MIN_CONNECTIONS = 2
 	public static MAX_CONNECTIONS = 10
 	public static MAX_INBOUND_STREAMS = 64
@@ -68,11 +76,11 @@ export abstract class AbstractStore extends EventEmitter<{}> {
 	constructor(private readonly libp2p: Libp2p<{ pubsub: PubSub }>, private readonly init: StoreInit) {
 		super()
 
-		this.topic = AbstractStore.protocolPrefix + init.topic
-		this.protocol = AbstractStore.protocolPrefix + init.topic + "/sync"
+		this.topic = protocolPrefix + init.topic
+		this.protocol = protocolPrefix + init.topic + "/sync"
 
-		assert(this.topic.startsWith(AbstractStore.protocolPrefix))
-		assert(this.protocol.startsWith(AbstractStore.protocolPrefix))
+		assert(this.topic.startsWith(protocolPrefix))
+		assert(this.protocol.startsWith(protocolPrefix))
 		this.log = logger(`canvas:store:[${init.topic}]`)
 
 		this.minConnections = init.minConnections ?? AbstractStore.MIN_CONNECTIONS
@@ -121,7 +129,7 @@ export abstract class AbstractStore extends EventEmitter<{}> {
 		}
 	}
 
-	public async insert(key: Uint8Array, value: Uint8Array) {
+	public async insert(key: Uint8Array, value: Uint8Array): Promise<void> {
 		await this.init.apply(key, value)
 		await this.write(null, async (txn) => txn.set(key, value))
 		try {
@@ -234,7 +242,7 @@ export abstract class AbstractStore extends EventEmitter<{}> {
 		this.syncQueue
 			.add(async () => {
 				const { signal } = this.controller
-				let interval = Math.random() * AbstractStore.SYNC_RETRY_INTERVAL
+				let interval = Math.floor(Math.random() * AbstractStore.SYNC_RETRY_INTERVAL)
 
 				const [x, y] = sortPair(this.libp2p.peerId, peerId)
 				if (x.equals(this.libp2p.peerId)) {

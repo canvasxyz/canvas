@@ -22,8 +22,8 @@
     "./sync": "./lib/sync/index.js",
     "./constants": "./lib/constants.js",
     "./bootstrap": "./lib/bootstrap.js",
-    "./browser": "./lib/browser/index.js",
-    "./node": "./lib/node/index.js"
+    "./node": "./lib/node/index.js",
+    "./browser": "./lib/browser/index.js"
   },
   "scripts": {
     "generate": "npm run generate-sync",

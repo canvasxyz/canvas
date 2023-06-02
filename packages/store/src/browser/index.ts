@@ -1,15 +1,15 @@
-import { Libp2p } from "@libp2p/interface-libp2p"
-import { PubSub } from "@libp2p/interface-pubsub"
-import { PeerId } from "@libp2p/interface-peer-id"
+import type { Libp2p } from "@libp2p/interface-libp2p"
+import type { PubSub } from "@libp2p/interface-pubsub"
+import type { PeerId } from "@libp2p/interface-peer-id"
 
-import { openDB } from "idb"
+import type { KeyValueStore, Source, Target } from "@canvas-js/okra"
 import { IDBTree } from "@canvas-js/okra-idb"
-import { KeyValueStore, Source, Target } from "@canvas-js/okra"
+import { openDB } from "idb"
 
-import { AbstractStore, StoreInit } from "../store.js"
+import { AbstractStore, Store, StoreInit } from "../store.js"
 
-export class Store extends AbstractStore {
-	public static async open(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit): Promise<Store> {
+class IDBStore extends AbstractStore {
+	public static async open(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit): Promise<IDBStore> {
 		const storeNames = [init.topic]
 		const db = await openDB(init.topic, 1, {
 			upgrade: (db, oldVersion, newVersion) => {
@@ -24,7 +24,7 @@ export class Store extends AbstractStore {
 		})
 
 		const tree = await IDBTree.open(db, init.topic)
-		const store = new Store(libp2p, init, tree)
+		const store = new IDBStore(libp2p, init, tree)
 		store.controller.signal.addEventListener("abort", () => db.close())
 		return store
 	}
@@ -33,7 +33,7 @@ export class Store extends AbstractStore {
 	private readonly outgoingSyncPeers = new Set<string>()
 	private readonly lockName: string
 
-	public constructor(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit, private readonly tree: IDBTree) {
+	private constructor(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit, private readonly tree: IDBTree) {
 		super(libp2p, init)
 		this.lockName = `${this.topic}/lock`
 	}
@@ -107,3 +107,6 @@ export class Store extends AbstractStore {
 		)
 	}
 }
+
+export const openStore = (libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit): Promise<Store> =>
+	IDBStore.open(libp2p, init)

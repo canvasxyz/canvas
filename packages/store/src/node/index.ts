@@ -1,27 +1,25 @@
-import { Libp2p } from "@libp2p/interface-libp2p"
-import { PubSub } from "@libp2p/interface-pubsub"
-import { PeerId } from "@libp2p/interface-peer-id"
+import type { Libp2p } from "@libp2p/interface-libp2p"
+import type { PubSub } from "@libp2p/interface-pubsub"
+import type { PeerId } from "@libp2p/interface-peer-id"
 
+import type { KeyValueStore, Source, Target } from "@canvas-js/okra"
 import { Tree } from "@canvas-js/okra-node"
-import { KeyValueStore, Source, Target } from "@canvas-js/okra"
 
-import { AbstractStore, StoreInit } from "../store.js"
+import { AbstractStore, Store, StoreInit } from "../store.js"
 
-export class Store extends AbstractStore {
-	public static async open(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit): Promise<Store> {
-		const tree = new Tree("")
-		const store = new Store(libp2p, init, tree)
+class NodeStore extends AbstractStore {
+	public static async open(
+		libp2p: Libp2p<{ pubsub: PubSub }>,
+		{ path, ...init }: StoreInit & { path: string }
+	): Promise<NodeStore> {
+		const tree = new Tree(path)
+		const store = new NodeStore(libp2p, init, tree)
 		store.controller.signal.addEventListener("abort", () => tree.close())
 		return store
 	}
 
-	private readonly incomingSyncPeers = new Set<string>()
-	private readonly outgoingSyncPeers = new Set<string>()
-	private readonly lockName: string
-
 	public constructor(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit, private readonly tree: Tree) {
 		super(libp2p, init)
-		this.lockName = `${this.topic}/lock`
 	}
 
 	protected async read(targetPeerId: PeerId, callback: (txn: Source) => Promise<void>) {
@@ -35,3 +33,6 @@ export class Store extends AbstractStore {
 		await this.tree.write((txn) => callback(txn))
 	}
 }
+
+export const openStore = (libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit & { path: string }): Promise<Store> =>
+	NodeStore.open(libp2p, init)

@@ -51,39 +51,39 @@
 // 		await this.libp2p.stop()
 // 	}
 
-// 	private async startPingService() {
-// 		const { ping: pingService } = this.libp2p.services
-// 		const log = logger("canvas:network:ping")
-// 		log("started ping service")
+// private async startPingService() {
+// 	const { ping: pingService } = this.libp2p.services
+// 	const log = logger("canvas:network:ping")
+// 	log("started ping service")
 
-// 		const { signal } = this.controller
-// 		try {
-// 			await wait(PING_DELAY, { signal })
-// 			while (!signal.aborted) {
-// 				const peers = this.libp2p.getPeers()
-// 				await Promise.all(
-// 					peers.map(async (peer) => {
-// 						const timeoutSignal = anySignal([AbortSignal.timeout(PING_TIMEOUT), signal])
-// 						try {
-// 							const latency = await pingService.ping(peer, { signal: timeoutSignal })
-// 							log("peer %p responded to ping in %dms", peer, latency)
-// 						} catch (err) {
-// 							log("peer %p failed to respond to ping", peer)
-// 							await this.libp2p.hangUp(peer)
-// 						} finally {
-// 							timeoutSignal.clear()
-// 						}
-// 					})
-// 				)
+// 	const { signal } = this.controller
+// 	try {
+// 		await wait(PING_DELAY, { signal })
+// 		while (!signal.aborted) {
+// 			const peers = this.libp2p.getPeers()
+// 			await Promise.all(
+// 				peers.map(async (peer) => {
+// 					const timeoutSignal = anySignal([AbortSignal.timeout(PING_TIMEOUT), signal])
+// 					try {
+// 						const latency = await pingService.ping(peer, { signal: timeoutSignal })
+// 						log("peer %p responded to ping in %dms", peer, latency)
+// 					} catch (err) {
+// 						log("peer %p failed to respond to ping", peer)
+// 						await this.libp2p.hangUp(peer)
+// 					} finally {
+// 						timeoutSignal.clear()
+// 					}
+// 				})
+// 			)
 
-// 				await wait(PING_INTERVAL, { signal })
-// 			}
-// 		} catch (err) {
-// 			if (signal.aborted) {
-// 				log("service aborted")
-// 			} else {
-// 				log.error("service crashed: %o", err)
-// 			}
+// 			await wait(PING_INTERVAL, { signal })
+// 		}
+// 	} catch (err) {
+// 		if (signal.aborted) {
+// 			log("service aborted")
+// 		} else {
+// 			log.error("service crashed: %o", err)
 // 		}
 // 	}
+// }
 // }
