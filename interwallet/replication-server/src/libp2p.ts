@@ -8,6 +8,7 @@ import { pingService, PingService } from "libp2p/ping"
 
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
+import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
@@ -19,9 +20,8 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 
-import { protocolPrefix } from "@canvas-js/store"
-
 import { PubsubServiceDiscovery, pubsubServiceDiscovery } from "@canvas-js/pubsub-service-discovery"
+import { protocolPrefix } from "@canvas-js/store"
 import { bootstrapList } from "#utils"
 
 import { MAX_CONNECTIONS, MIN_CONNECTIONS, PING_TIMEOUT } from "./constants.js"
@@ -64,11 +64,7 @@ export async function getLibp2p(peerId: PeerId): Promise<Libp2p<ServiceMap>> {
 			maxConnections: MAX_CONNECTIONS,
 		},
 
-		connectionGater: {
-			denyDialMultiaddr: () => {
-				return false
-			},
-		},
+		metrics: prometheusMetrics({}),
 
 		services: {
 			pubsub: gossipsub({

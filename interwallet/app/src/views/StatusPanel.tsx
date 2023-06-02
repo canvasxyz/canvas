@@ -2,7 +2,9 @@ import React, { useCallback, useContext, useState } from "react"
 
 import { protocolPrefix } from "@canvas-js/store"
 
-import { PeerIdToken, ConnectionList, PubsubPeerList } from "@canvas-js/libp2p-status-components"
+import { PeerIdToken } from "./PeerIdToken.js"
+import { ConnectionList } from "./ConnectionList.js"
+import { PubsubPeerList } from "./PubsubPeerList.js"
 
 import { AppContext } from "../context.js"
 

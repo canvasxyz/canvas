@@ -9,5 +9,5 @@
 		"esModuleInterop": true,
 		"jsx": "react"
 	},
-	"references": [{ "path": "../utils" }, { "path": "../libp2p-status-components" }]
+	"references": [{ "path": "../utils" }]
 }

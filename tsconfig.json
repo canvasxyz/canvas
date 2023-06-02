@@ -15,7 +15,6 @@
     { "path": "./packages/chain-solana" },
     { "path": "./packages/chain-substrate" },
     { "path": "./interwallet/app" },
-    { "path": "./interwallet/libp2p-status-components" },
     { "path": "./interwallet/replication-server" },
     { "path": "./interwallet/utils" }
   ]

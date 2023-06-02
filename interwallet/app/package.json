@@ -15,7 +15,6 @@
 	},
 	"dependencies": {
 		"@canvas-js/interwallet-messaging-utils": "0.5.0-alpha4",
-		"@canvas-js/libp2p-status-components": "0.5.0-alpha4",
 		"@canvas-js/okra-idb": "^0.0.2",
 		"@canvas-js/pubsub-service-discovery": "^0.0.10",
 		"@canvas-js/store": "0.5.0-alpha4",

@@ -6,5 +6,5 @@
 		"outDir": "lib",
 		"moduleResolution": "node16"
 	},
-	"references": [{ "path": "../utils" }, { "path": "../libp2p-status-components" }]
+	"references": [{ "path": "../utils" }]
 }
