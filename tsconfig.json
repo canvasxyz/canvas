@@ -13,6 +13,10 @@
     { "path": "./packages/chain-cosmos" },
     { "path": "./packages/chain-near" },
     { "path": "./packages/chain-solana" },
-    { "path": "./packages/chain-substrate" }
+    { "path": "./packages/chain-substrate" },
+    { "path": "./interwallet/app" },
+    { "path": "./interwallet/libp2p-status-components" },
+    { "path": "./interwallet/replication-server" },
+    { "path": "./interwallet/utils" }
   ]
 }

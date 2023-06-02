@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+message SignedData {
+  bytes signature = 1;
+  bytes data = 2;
+}
+
+message EncryptedEvent {
+  bytes public_key = 1;
+  bytes ciphertext = 2;
+  bytes nonce = 3;
+  bytes room_id = 4;
+  bytes user_address = 5;
+}
+
+message SignedUserRegistration {
+  message KeyBundle {
+    bytes signing_public_key = 1;
+    bytes encryption_public_key = 2;
+  }
+
+  bytes signature = 1;
+  bytes address = 2;
+  KeyBundle key_bundle = 3;
+}
+
+message RoomRegistration {
+  bytes creator = 1;
+  repeated SignedUserRegistration members = 2;
+}
