@@ -14,8 +14,6 @@
     { "path": "./packages/chain-near" },
     { "path": "./packages/chain-solana" },
     { "path": "./packages/chain-substrate" },
-    { "path": "./interwallet/app" },
-    { "path": "./interwallet/replication-server" },
-    { "path": "./interwallet/utils" }
+    { "path": "./interwallet" },
   ]
 }
