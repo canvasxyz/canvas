@@ -1,4 +1,7 @@
 .env
+.env.development
+.env.production
+.env.server
 .DS_Store
 .next/
 .vscode/
