@@ -5,9 +5,9 @@
 	"type": "module",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"dev:client": "vite",
-		"build:client": "vite build",
-		"start:server": "node lib/server/index.js"
+		"client:dev": "vite",
+		"client:build": "vite build",
+		"server:start": "node lib/server/index.js"
 	},
 	"imports": {
 		"#icons/*": "./icons/*",
