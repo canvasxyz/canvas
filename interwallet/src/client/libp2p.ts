@@ -28,11 +28,12 @@ export type ServiceMap = {
 	ping: PingService
 }
 
-const { BOOTSTRAP_LIST } = process.env
+// @ts-ignore
+const BOOTSTRAP_LIST = import.meta.env.VITE_BOOTSTRAP_LIST
 const bootstrapList = BOOTSTRAP_LIST?.split(" ") ?? []
 
 export async function getLibp2p(peerId: PeerId): Promise<Libp2p<ServiceMap>> {
-	console.log("using bootstrap list", BOOTSTRAP_LIST)
+	console.log("using bootstrap list", bootstrapList)
 
 	return await createLibp2p({
 		start: false,
