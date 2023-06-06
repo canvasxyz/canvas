@@ -18,3 +18,4 @@ examples/**/dist/
 
 interwallet/lib/
 interwallet/dist/
+interwallet/data/
