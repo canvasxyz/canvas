@@ -157,21 +157,21 @@ export class RoomManager {
 		const room = this.rooms.get(roomId)
 		assert(room !== undefined, `room id ${roomId} not found`)
 
-		const recipient = room.members.find(({ address }) => this.user.address !== address)
-		assert(recipient !== undefined, "room has no other members")
-
-		const publicKey = hexToBytes(recipient.keyBundle.encryptionPublicKey)
-		const nonce = nacl.randomBytes(nacl.box.nonceLength)
-		const ciphertext = nacl.box(encode(event), nonce, publicKey, hexToBytes(this.user.encryptionPrivateKey))
+		const otherRoomMembers = room.members.filter(({ address }) => this.user.address !== address)
+		assert(otherRoomMembers.length > 0, "room has no other members")
 
 		const encryptedData = Messages.EncryptedEvent.encode({
-			recipients: [
-				{
+			recipients: otherRoomMembers.map((otherRoomMember) => {
+				const publicKey = hexToBytes(otherRoomMember.keyBundle.encryptionPublicKey)
+				const nonce = nacl.randomBytes(nacl.box.nonceLength)
+				const ciphertext = nacl.box(encode(event), nonce, publicKey, hexToBytes(this.user.encryptionPrivateKey))
+
+				return {
 					publicKey,
 					ciphertext,
 					nonce,
-				},
-			],
+				}
+			}),
 			roomId: base58btc.baseDecode(roomId),
 			userAddress: hexToBytes(this.user.address),
 		})
