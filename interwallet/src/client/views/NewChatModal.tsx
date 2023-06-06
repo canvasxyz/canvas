@@ -1,7 +1,7 @@
 import React, { useCallback, useContext } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { useEnsName } from "wagmi"
-
+import _ from "lodash"
 import { PublicUserRegistration, getPublicUserRegistration } from "#utils"
 
 import { AppContext } from "../context.js"
@@ -41,7 +41,8 @@ export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
 
 			console.log("starting new chat with", recipient)
 			try {
-				const members = [getPublicUserRegistration(user), recipient]
+				// sort the members so that only one room is created for any two users
+				const members = _.sortBy([getPublicUserRegistration(user), recipient], (member) => member.address)
 				const room = await manager.createRoom(members)
 				setRoom(room)
 			} catch (err) {
