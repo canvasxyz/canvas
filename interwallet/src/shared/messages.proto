@@ -5,12 +5,16 @@ message SignedData {
   bytes data = 2;
 }
 
-message EncryptedEvent {
+message EncryptedPayload {
   bytes public_key = 1;
   bytes ciphertext = 2;
   bytes nonce = 3;
-  bytes room_id = 4;
-  bytes user_address = 5;
+}
+
+message EncryptedEvent {
+  bytes room_id = 1;
+  bytes user_address = 2;
+  repeated EncryptedPayload recipients = 3;
 }
 
 message SignedUserRegistration {

@@ -165,9 +165,13 @@ export class RoomManager {
 		const ciphertext = nacl.box(encode(event), nonce, publicKey, hexToBytes(this.user.encryptionPrivateKey))
 
 		const encryptedData = Messages.EncryptedEvent.encode({
-			publicKey,
-			ciphertext,
-			nonce,
+			recipients: [
+				{
+					publicKey,
+					ciphertext,
+					nonce,
+				},
+			],
 			roomId: base58btc.baseDecode(roomId),
 			userAddress: hexToBytes(this.user.address),
 		})
@@ -180,31 +184,33 @@ export class RoomManager {
 	}
 
 	private applyEventEntry = (room: Room) => async (key: Uint8Array, value: Uint8Array) => {
-		const { encryptedEvent, sender, recipient } = validateEvent(room, key, value)
+		const { encryptedEvent } = validateEvent(room, key, value)
 
 		// details of the other user (if we are the sender, then it is the recipient, vice versa)
 		const otherPublicUserRegistration = room.members.find(({ address }) => getAddress(address) !== this.user.address)
 		assert(otherPublicUserRegistration !== undefined, "failed to find other room member")
 
-		const decryptedEvent = nacl.box.open(
-			encryptedEvent.ciphertext,
-			encryptedEvent.nonce,
+		encryptedEvent.recipients.forEach(async (recipient) => {
+			const decryptedEvent = nacl.box.open(
+				recipient.ciphertext,
+				recipient.nonce,
 
-			hexToBytes(otherPublicUserRegistration.keyBundle.encryptionPublicKey),
-			hexToBytes(this.user.encryptionPrivateKey)
-		)
+				hexToBytes(otherPublicUserRegistration.keyBundle.encryptionPublicKey),
+				hexToBytes(this.user.encryptionPrivateKey)
+			)
 
-		assert(decryptedEvent !== null, "failed to decrypt room event")
+			assert(decryptedEvent !== null, "failed to decrypt room event")
 
-		const event = decode(decryptedEvent) as RoomEvent
+			const event = decode(decryptedEvent) as RoomEvent
 
-		// TODO: runtime validation of room event types
-		if (event.type === "message") {
-			const id = await db.messages.add({ room: room.id, ...event.detail })
-			console.log("added message with id", id)
-		} else {
-			throw new Error("invalid event type")
-		}
+			// TODO: runtime validation of room event types
+			if (event.type === "message") {
+				const id = await db.messages.add({ room: room.id, ...event.detail })
+				console.log("added message with id", id)
+			} else {
+				throw new Error("invalid event type")
+			}
+		})
 	}
 
 	private applyRoomRegistryEntry = async (key: Uint8Array, value: Uint8Array) => {

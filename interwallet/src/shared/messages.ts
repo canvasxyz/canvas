@@ -76,20 +76,18 @@ export namespace SignedData {
   }
 }
 
-export interface EncryptedEvent {
+export interface EncryptedPayload {
   publicKey: Uint8Array
   ciphertext: Uint8Array
   nonce: Uint8Array
-  roomId: Uint8Array
-  userAddress: Uint8Array
 }
 
-export namespace EncryptedEvent {
-  let _codec: Codec<EncryptedEvent>
+export namespace EncryptedPayload {
+  let _codec: Codec<EncryptedPayload>
 
-  export const codec = (): Codec<EncryptedEvent> => {
+  export const codec = (): Codec<EncryptedPayload> => {
     if (_codec == null) {
-      _codec = message<EncryptedEvent>((obj, w, opts = {}) => {
+      _codec = message<EncryptedPayload>((obj, w, opts = {}) => {
         if (opts.lengthDelimited !== false) {
           w.fork()
         }
@@ -109,16 +107,6 @@ export namespace EncryptedEvent {
           w.bytes(obj.nonce)
         }
 
-        if ((obj.roomId != null && obj.roomId.byteLength > 0)) {
-          w.uint32(34)
-          w.bytes(obj.roomId)
-        }
-
-        if ((obj.userAddress != null && obj.userAddress.byteLength > 0)) {
-          w.uint32(42)
-          w.bytes(obj.userAddress)
-        }
-
         if (opts.lengthDelimited !== false) {
           w.ldelim()
         }
@@ -126,9 +114,7 @@ export namespace EncryptedEvent {
         const obj: any = {
           publicKey: new Uint8Array(0),
           ciphertext: new Uint8Array(0),
-          nonce: new Uint8Array(0),
-          roomId: new Uint8Array(0),
-          userAddress: new Uint8Array(0)
+          nonce: new Uint8Array(0)
         }
 
         const end = length == null ? reader.len : reader.pos + length
@@ -146,11 +132,85 @@ export namespace EncryptedEvent {
             case 3:
               obj.nonce = reader.bytes()
               break
-            case 4:
+            default:
+              reader.skipType(tag & 7)
+              break
+          }
+        }
+
+        return obj
+      })
+    }
+
+    return _codec
+  }
+
+  export const encode = (obj: Partial<EncryptedPayload>): Uint8Array => {
+    return encodeMessage(obj, EncryptedPayload.codec())
+  }
+
+  export const decode = (buf: Uint8Array | Uint8ArrayList): EncryptedPayload => {
+    return decodeMessage(buf, EncryptedPayload.codec())
+  }
+}
+
+export interface EncryptedEvent {
+  roomId: Uint8Array
+  userAddress: Uint8Array
+  recipients: EncryptedPayload[]
+}
+
+export namespace EncryptedEvent {
+  let _codec: Codec<EncryptedEvent>
+
+  export const codec = (): Codec<EncryptedEvent> => {
+    if (_codec == null) {
+      _codec = message<EncryptedEvent>((obj, w, opts = {}) => {
+        if (opts.lengthDelimited !== false) {
+          w.fork()
+        }
+
+        if ((obj.roomId != null && obj.roomId.byteLength > 0)) {
+          w.uint32(10)
+          w.bytes(obj.roomId)
+        }
+
+        if ((obj.userAddress != null && obj.userAddress.byteLength > 0)) {
+          w.uint32(18)
+          w.bytes(obj.userAddress)
+        }
+
+        if (obj.recipients != null) {
+          for (const value of obj.recipients) {
+            w.uint32(26)
+            EncryptedPayload.codec().encode(value, w)
+          }
+        }
+
+        if (opts.lengthDelimited !== false) {
+          w.ldelim()
+        }
+      }, (reader, length) => {
+        const obj: any = {
+          roomId: new Uint8Array(0),
+          userAddress: new Uint8Array(0),
+          recipients: []
+        }
+
+        const end = length == null ? reader.len : reader.pos + length
+
+        while (reader.pos < end) {
+          const tag = reader.uint32()
+
+          switch (tag >>> 3) {
+            case 1:
               obj.roomId = reader.bytes()
               break
-            case 5:
+            case 2:
               obj.userAddress = reader.bytes()
+              break
+            case 3:
+              obj.recipients.push(EncryptedPayload.codec().decode(reader, reader.uint32()))
               break
             default:
               reader.skipType(tag & 7)

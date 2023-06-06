@@ -140,7 +140,7 @@ export function validateEvent(
 	room: Room,
 	key: Uint8Array,
 	value: Uint8Array
-): { encryptedEvent: Messages.EncryptedEvent; sender: PublicUserRegistration; recipient: PublicUserRegistration } {
+): { encryptedEvent: Messages.EncryptedEvent; sender: PublicUserRegistration } {
 	assert(equals(key, blake3(value, { dkLen: 16 })), "invalid event: key is not hash of value")
 
 	const { signature, data: signedData } = Messages.SignedData.decode(value)
@@ -157,9 +157,14 @@ export function validateEvent(
 		"invalid event signature"
 	)
 
-	const recipientPublicKey = bytesToHex(encryptedEvent.publicKey)
-	const recipient = room.members.find((member) => member.keyBundle.encryptionPublicKey === recipientPublicKey)
-	assert(recipient !== undefined, "recipient is not a member of the room")
+	for (const eachRecipient of encryptedEvent.recipients) {
+		if (eachRecipient === undefined) {
+			continue
+		}
+		const recipientPublicKey = bytesToHex(eachRecipient.publicKey)
+		const recipient = room.members.find((member) => member.keyBundle.encryptionPublicKey === recipientPublicKey)
+		assert(recipient !== undefined, "recipient is not a member of the room")
+	}
 
-	return { encryptedEvent, sender, recipient }
+	return { encryptedEvent, sender }
 }
