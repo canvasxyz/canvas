@@ -18,7 +18,7 @@ import {
 	validateEvent,
 	validateRoomRegistration,
 	validateUserRegistration,
-} from "#utils"
+} from "../shared/index.js"
 
 import { ServiceMap, getLibp2p } from "./libp2p.js"
 import { applyRoomRegistration, applyUserRegistration, getRooms } from "./db.js"

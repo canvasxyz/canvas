@@ -2,7 +2,7 @@ import path from "node:path"
 
 import Database from "better-sqlite3"
 
-import { Room, PublicUserRegistration } from "#utils"
+import { Room, PublicUserRegistration } from "../shared/index.js"
 
 import { dataDirectory } from "./config.js"
 

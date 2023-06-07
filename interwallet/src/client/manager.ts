@@ -14,7 +14,7 @@ import nacl from "tweetnacl"
 import { Store } from "@canvas-js/store"
 import { openStore } from "@canvas-js/store/browser"
 
-import * as Messages from "#utils/messages"
+import * as Messages from "../shared/messages.js"
 import {
 	PrivateUserRegistration,
 	PublicUserRegistration,
@@ -25,7 +25,7 @@ import {
 	validateRoomRegistration,
 	validateUserRegistration,
 	validateEvent,
-} from "#utils"
+} from "../shared/index.js"
 
 import { db } from "./db.js"
 import { getLibp2p } from "./libp2p.js"

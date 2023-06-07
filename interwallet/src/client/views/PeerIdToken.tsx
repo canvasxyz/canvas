@@ -2,7 +2,7 @@ import React, { useCallback } from "react"
 
 import { PeerId } from "@libp2p/interface-peer-id"
 
-import { ReactComponent as copyIcon } from "#icons/copy.svg"
+import { ReactComponent as copyIcon } from "../../../icons/copy.svg"
 
 export interface PeerIdTokenProps {
 	peerId: PeerId

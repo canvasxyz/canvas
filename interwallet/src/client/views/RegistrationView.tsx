@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useLayoutEffect } from "react"
 import { useAccount, useDisconnect, useWalletClient } from "wagmi"
 
-import { createPrivateUserRegistration } from "#utils"
+import { createPrivateUserRegistration } from "../../shared/index.js"
 
 import { AppContext } from "../context.js"
 import { getRegistrationKey } from "../utils.js"

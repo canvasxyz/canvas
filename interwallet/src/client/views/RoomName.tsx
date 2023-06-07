@@ -2,7 +2,7 @@ import React, { useContext, useMemo } from "react"
 import { useEnsName } from "wagmi"
 import { getAddress } from "viem"
 
-import { Room } from "#utils"
+import { Room } from "../../shared/index.js"
 
 import { AppContext } from "../context.js"
 

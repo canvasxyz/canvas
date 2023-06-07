@@ -9,11 +9,6 @@
 		"client:build": "vite build",
 		"server:start": "node lib/server/index.js"
 	},
-	"imports": {
-		"#icons/*": "./icons/*",
-		"#utils": "./lib/shared/index.js",
-		"#utils/messages": "./lib/shared/messages.js"
-	},
 	"dependencies": {
 		"@canvas-js/okra-idb": "^0.0.2",
 		"@canvas-js/pubsub-service-discovery": "^0.0.10",

@@ -2,7 +2,7 @@ import { createContext } from "react"
 
 import { PeerId } from "@libp2p/interface-peer-id"
 
-import { Room, PrivateUserRegistration } from "#utils"
+import { Room, PrivateUserRegistration } from "../shared/index.js"
 
 import { RoomManager } from "./manager.js"
 

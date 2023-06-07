@@ -3,7 +3,7 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from "rea
 import { useLiveQuery } from "dexie-react-hooks"
 import { getAddress } from "viem"
 
-import { Room } from "#utils"
+import { Room } from "../../shared/index.js"
 
 import { db } from "../db.js"
 import { AppContext } from "../context.js"

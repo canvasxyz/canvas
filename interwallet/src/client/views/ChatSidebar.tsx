@@ -1,7 +1,7 @@
 import React, { useContext } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 
-import { Room } from "#utils"
+import { Room } from "../../shared/index.js"
 
 import { NewChatModal } from "./NewChatModal.js"
 import { RoomName } from "./RoomName.js"

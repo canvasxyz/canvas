@@ -1,6 +1,6 @@
 import Dexie, { Table } from "dexie"
 
-import type { Room, PublicUserRegistration } from "#utils"
+import type { Room, PublicUserRegistration } from "../shared/index.js"
 
 export type Message = {
 	room: string

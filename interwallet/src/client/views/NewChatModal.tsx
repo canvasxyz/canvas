@@ -2,7 +2,7 @@ import React, { useCallback, useContext } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { useEnsName } from "wagmi"
 import _ from "lodash"
-import { PublicUserRegistration, getPublicUserRegistration } from "#utils"
+import { PublicUserRegistration, getPublicUserRegistration } from "../../shared/index.js"
 
 import { AppContext } from "../context.js"
 import { db } from "../db.js"

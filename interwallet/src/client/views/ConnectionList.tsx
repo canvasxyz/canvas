@@ -4,7 +4,7 @@ import { Libp2p } from "@libp2p/interface-libp2p"
 import { Connection } from "@libp2p/interface-connection"
 import { protocols } from "@multiformats/multiaddr"
 
-import { ReactComponent as closeIcon } from "#icons/close.svg"
+import { ReactComponent as closeIcon } from "../../../icons/close.svg"
 
 import { PeerIdToken } from "./PeerIdToken.js"
 

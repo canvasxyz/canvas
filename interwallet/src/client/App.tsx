@@ -3,7 +3,7 @@ import React, { useState, useContext, useEffect, useRef, useCallback } from "rea
 import { useAccount, useConnect } from "wagmi"
 import { PeerId } from "@libp2p/interface-peer-id"
 
-import { Room, PrivateUserRegistration } from "#utils"
+import { Room, PrivateUserRegistration } from "../shared/index.js"
 
 import { ChatView } from "./views/ChatView.js"
 import { RegistrationView } from "./views/RegistrationView.js"

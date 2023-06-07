@@ -9,8 +9,9 @@ import { RoomName } from "./RoomName.js"
 import { AppContext } from "../context.js"
 import { getRegistrationKey } from "../utils.js"
 
-import { ReactComponent as chevronRight } from "#icons/chevron-right.svg"
-import { ReactComponent as chevronLeft } from "#icons/chevron-left.svg"
+import { ReactComponent as chevronRight } from "../../../icons/chevron-right.svg"
+import { ReactComponent as chevronLeft } from "../../../icons/chevron-left.svg"
+import { db } from "../db.js"
 
 export interface ChatViewProps {}
 
