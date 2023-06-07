@@ -1,4 +1,4 @@
-import React, { useCallback, useContext } from "react"
+import React, { useCallback, useContext, useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { useEnsName } from "wagmi"
 import _ from "lodash"
@@ -10,15 +10,17 @@ import { db } from "../db.js"
 interface UserEntryProps {
 	user: PublicUserRegistration
 	onClick: () => void
+	isSelected: boolean
 }
 
-const UserEntry = ({ user, onClick }: UserEntryProps) => {
+const UserEntry = ({ user, onClick, isSelected }: UserEntryProps) => {
 	const { data: ensName } = useEnsName({ address: user.address })
 	return (
 		<button
 			onClick={onClick}
 			className="grid mt-3 col-span-1 w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm"
 		>
+			{isSelected && "✓ "}
 			{ensName} ({user.address.slice(0, 8)}...)
 		</button>
 	)
@@ -30,27 +32,35 @@ export interface NewChatModalProps {
 
 export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
 	const users = useLiveQuery(async () => await db.users.toArray(), [])
+	const [selectedRecipients, setSelectedRecipients] = useState<Record<string, boolean>>({})
 
 	const { user, manager, setRoom } = useContext(AppContext)
 
-	const startNewChat = useCallback(
-		async (recipient: PublicUserRegistration) => {
-			if (user === null || manager === null || user.address === recipient.address) {
-				return
-			}
+	const startNewChat = useCallback(async () => {
+		const selectedRecipientAddresses = Object.keys(selectedRecipients)
+		if (user === null || manager === null || selectedRecipientAddresses.length === 0) {
+			return
+		}
 
-			console.log("starting new chat with", recipient)
-			try {
-				// sort the members so that only one room is created for any two users
-				const members = _.sortBy([getPublicUserRegistration(user), recipient], (member) => member.address)
-				const room = await manager.createRoom(members)
-				setRoom(room)
-			} catch (err) {
-				console.error("failed to create room", err)
-			}
-		},
-		[user, manager, setRoom]
-	)
+		console.log("starting new chat with", selectedRecipientAddresses)
+
+		const selectedRecipientsObjects = users?.filter((user) => selectedRecipientAddresses.includes(user.address)) || []
+		if (selectedRecipientsObjects.length === 0) {
+			return
+		}
+
+		try {
+			// sort the members so that only one room is created for any two users
+			const members = _.sortBy(
+				[getPublicUserRegistration(user), ...selectedRecipientsObjects],
+				(member) => member.address
+			)
+			const room = await manager.createRoom(members)
+			setRoom(room)
+		} catch (err) {
+			console.error("failed to create room", err)
+		}
+	}, [user, manager, setRoom, selectedRecipients])
 
 	return (
 		<div className="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -71,9 +81,13 @@ export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
 											<UserEntry
 												key={recipient.address}
 												user={recipient}
+												isSelected={selectedRecipients[recipient.address] === true}
 												onClick={() => {
-													closeModal()
-													startNewChat(recipient)
+													if (selectedRecipients[recipient.address] === true) {
+														setSelectedRecipients({ ...selectedRecipients, [recipient.address]: false })
+													} else {
+														setSelectedRecipients({ ...selectedRecipients, [recipient.address]: true })
+													}
 												}}
 											/>
 										)
@@ -81,7 +95,14 @@ export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
 								</div>
 							</div>
 						</div>
-						<div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+						<div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row sm:px-6">
+							<button
+								type="button"
+								onClick={() => startNewChat()}
+								className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+							>
+								Start chat
+							</button>
 							<button
 								type="button"
 								onClick={closeModal}

@@ -29,6 +29,7 @@ import {
 
 import { db } from "./db.js"
 import { getLibp2p } from "./libp2p.js"
+import { equals } from "uint8arrays"
 
 type EventMap = {
 	message: { content: string; timestamp: number; sender: string }
@@ -186,31 +187,46 @@ export class RoomManager {
 	private applyEventEntry = (room: Room) => async (key: Uint8Array, value: Uint8Array) => {
 		const { encryptedEvent } = validateEvent(room, key, value)
 
-		// details of the other user (if we are the sender, then it is the recipient, vice versa)
-		const otherPublicUserRegistration = room.members.find(({ address }) => getAddress(address) !== this.user.address)
-		assert(otherPublicUserRegistration !== undefined, "failed to find other room member")
-
-		encryptedEvent.recipients.forEach(async (recipient) => {
-			const decryptedEvent = nacl.box.open(
-				recipient.ciphertext,
-				recipient.nonce,
-
-				hexToBytes(otherPublicUserRegistration.keyBundle.encryptionPublicKey),
+		let decryptedEvent: Uint8Array | null
+		if (equals(encryptedEvent.userAddress, hexToBytes(this.user.address))) {
+			// this user is the sender
+			// decrypt an arbitrary message, so choose the first one
+			const encryptedMessage = encryptedEvent.recipients[0]
+			decryptedEvent = nacl.box.open(
+				encryptedMessage.ciphertext,
+				encryptedMessage.nonce,
+				encryptedMessage.publicKey,
 				hexToBytes(this.user.encryptionPrivateKey)
 			)
+		} else {
+			// otherwise this user is one of the recipients
+			const myEncryptedMessage = encryptedEvent.recipients.find(({ publicKey }) =>
+				equals(publicKey, hexToBytes(this.user.keyBundle.encryptionPublicKey))
+			)
+			assert(myEncryptedMessage !== undefined, "failed to find encrypted message for this user")
 
-			assert(decryptedEvent !== null, "failed to decrypt room event")
+			const sender = await db.users.get({ address: getAddress(bytesToHex(encryptedEvent.userAddress)) })
+			assert(sender !== undefined, "failed to find sender")
 
-			const event = decode(decryptedEvent) as RoomEvent
+			decryptedEvent = nacl.box.open(
+				myEncryptedMessage.ciphertext,
+				myEncryptedMessage.nonce,
+				// sender's public key
+				hexToBytes(sender.keyBundle.encryptionPublicKey),
+				hexToBytes(this.user.encryptionPrivateKey)
+			)
+		}
+		assert(decryptedEvent !== null, "failed to decrypt room event")
 
-			// TODO: runtime validation of room event types
-			if (event.type === "message") {
-				const id = await db.messages.add({ room: room.id, ...event.detail })
-				console.log("added message with id", id)
-			} else {
-				throw new Error("invalid event type")
-			}
-		})
+		const event = decode(decryptedEvent) as RoomEvent
+
+		// TODO: runtime validation of room event types
+		if (event.type === "message") {
+			const id = await db.messages.add({ room: room.id, ...event.detail })
+			console.log("added message with id", id)
+		} else {
+			throw new Error("invalid event type")
+		}
 	}
 
 	private applyRoomRegistryEntry = async (key: Uint8Array, value: Uint8Array) => {

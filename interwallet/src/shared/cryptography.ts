@@ -95,7 +95,6 @@ export async function validateRoomRegistration(key: Uint8Array, value: Uint8Arra
 	const { signature, data: signedData } = Messages.SignedData.decode(value)
 	const roomRegistration = Messages.RoomRegistration.decode(signedData)
 
-	assert(roomRegistration.members.length === 2, "rooms must have exactly two members")
 	const hash = blake3.create({ dkLen: 16 })
 	for (const member of roomRegistration.members) {
 		assert(member.address, "missing member.address")

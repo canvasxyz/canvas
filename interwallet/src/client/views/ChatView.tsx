@@ -11,21 +11,21 @@ import { getRegistrationKey } from "../utils.js"
 
 import { ReactComponent as chevronRight } from "../../../icons/chevron-right.svg"
 import { ReactComponent as chevronLeft } from "../../../icons/chevron-left.svg"
-import { db } from "../db.js"
 
 export interface ChatViewProps {}
 
 export const ChatView: React.FC<ChatViewProps> = ({}) => {
 	const { disconnect } = useDisconnect()
-	const { user, setUser, room } = useContext(AppContext)
+	const { user, setUser, room, setRoom } = useContext(AppContext)
 
 	const [showStatusPanel, setShowStatusPanel] = useState(true)
 
-	const logout = useCallback(() => {
+	const logout = useCallback(async () => {
 		if (user !== null) {
 			window.localStorage.removeItem(getRegistrationKey(user.address))
 		}
 
+		setRoom(null)
 		setUser(null)
 		disconnect()
 	}, [user, disconnect])
