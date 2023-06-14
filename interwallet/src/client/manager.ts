@@ -30,6 +30,7 @@ import {
 import { db } from "./db.js"
 import { getLibp2p } from "./libp2p.js"
 import { equals } from "uint8arrays"
+import Dexie from "dexie"
 
 type EventMap = {
 	message: { content: string; timestamp: number; sender: string }
@@ -120,6 +121,19 @@ export class RoomManager {
 
 		await this.libp2p.stop()
 		this.#started = false
+	}
+
+	public async destroyTables() {
+		await Dexie.delete(USER_REGISTRY_TOPIC)
+		this.userRegistry = null
+
+		await Dexie.delete(ROOM_REGISTRY_TOPIC)
+		this.roomRegistry = null
+
+		for (const roomTopic of this.rooms.keys()) {
+			await Dexie.delete(`interwallet:room:${roomTopic}`)
+			this.rooms.delete(roomTopic)
+		}
 	}
 
 	public async createRoom(members: PublicUserRegistration[]): Promise<Room> {

@@ -48,12 +48,14 @@ export const App: React.FC<{}> = () => {
 		if (user === null) {
 			if (manager !== null && !isManagerStopping.current) {
 				isManagerStopping.current = true
-				manager
-					.stop()
-					.then(() => setManager(null))
-					.finally(() => {
-						isManagerStopping.current = false
-					})
+				;(async () => {
+					await manager.stop()
+					await Promise.all(db.tables.map((table) => table.clear()))
+					await manager.destroyTables()
+					setManager(null)
+				})().finally(() => {
+					isManagerStopping.current = false
+				})
 			}
 		} else {
 			const { hash } = window.location
