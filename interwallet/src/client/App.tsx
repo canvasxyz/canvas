@@ -37,7 +37,6 @@ export const App: React.FC<{}> = () => {
 
 	const [manager, setManager] = useState<RoomManager | null>(null)
 
-	const managerRef = useRef<RoomManager | null>(null)
 	const isManagerStarting = useRef<boolean>(false)
 	const isManagerStopping = useRef<boolean>(false)
 
@@ -47,9 +46,9 @@ export const App: React.FC<{}> = () => {
 		}
 
 		if (user === null) {
-			if (managerRef.current !== null && !isManagerStopping.current) {
+			if (manager !== null && !isManagerStopping.current) {
 				isManagerStopping.current = true
-				managerRef.current
+				manager
 					.stop()
 					.then(() => setManager(null))
 					.finally(() => {
@@ -68,7 +67,7 @@ export const App: React.FC<{}> = () => {
 				})
 			}
 
-			if (managerRef.current === null && !isManagerStarting.current) {
+			if (manager === null && !isManagerStarting.current) {
 				isManagerStarting.current = true
 				RoomManager.initialize(peerId, user)
 					.then((manager) => setManager(manager))
