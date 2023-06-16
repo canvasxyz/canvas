@@ -10,7 +10,7 @@ export const RegistrationView = ({
 	setUser,
 }: {
 	user: PrivateUserRegistration | null
-	setUser: (user: PrivateUserRegistration) => void
+	setUser: (user: PrivateUserRegistration | null) => void
 }) => {
 	const { address: userAddress, isConnected } = useAccount()
 	const { data: walletClient } = useWalletClient()
