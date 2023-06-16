@@ -1,14 +1,8 @@
-import React, { useContext, useMemo } from "react"
+import React, { useMemo } from "react"
 import { useEnsName } from "wagmi"
 import { getAddress } from "viem"
 
-import { Room } from "../../shared/index.js"
-
-import { AppContext } from "../context.js"
-
-export interface RoomNameProps {
-	room: Room
-}
+import { PublicUserRegistration, Room } from "../../shared/index.js"
 
 const EnsName = ({ address }: { address: string }) => {
 	const { data: name } = useEnsName({ address: address as `0x${string}` })
@@ -26,9 +20,7 @@ const EnsName = ({ address }: { address: string }) => {
 	}
 }
 
-export const RoomName: React.FC<RoomNameProps> = ({ room }) => {
-	const { user } = useContext(AppContext)
-
+export const RoomName = ({ room, user }: { room: Room; user: PublicUserRegistration }) => {
 	const otherRoomMembers = useMemo(
 		() => user && room.members.filter(({ address }) => getAddress(address) !== user.address),
 		[room, user]

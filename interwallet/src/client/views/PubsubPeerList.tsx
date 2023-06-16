@@ -10,20 +10,17 @@ export interface PubsubPeerListProps {
 }
 
 export const PubsubPeerList: React.FC<PubsubPeerListProps> = ({ className, protocolPrefix, libp2p }) => {
-	const topicSubscriptionMap = useMemo(() => new Map<string, Set<string>>(), [])
 	const [topicPeers, setTopicPeers] = useState<{ topic: string; peers: string[] }[]>([])
 
-	useEffect(() => {
-		if (libp2p === null) {
-			return
-		}
+	const updateTopicPeers = () => {
+		if (libp2p === null) return
 
 		const { pubsub } = libp2p.services
 
 		const topicPeers: { topic: string; peers: string[] }[] = []
-		for (const topic of pubsub.getTopics()) {
+		const topics = pubsub.getTopics()
+		for (const topic of topics) {
 			const peers = pubsub.getSubscribers(topic).map((peerId) => peerId.toString())
-			topicSubscriptionMap.set(topic, new Set(peers))
 			if (protocolPrefix === undefined) {
 				topicPeers.push({ topic, peers })
 			} else if (topic.startsWith(protocolPrefix)) {
@@ -32,43 +29,23 @@ export const PubsubPeerList: React.FC<PubsubPeerListProps> = ({ className, proto
 		}
 
 		setTopicPeers(topicPeers)
+	}
 
-		const handleSubscriptionChange = ({ detail: update }: CustomEvent<SubscriptionChangeData>) => {
-			if (update.peerId.equals(libp2p.peerId)) {
-				for (const { subscribe, topic } of update.subscriptions) {
-					if (subscribe) {
-						const peers = pubsub.getSubscribers(topic).map((peerId) => peerId.toString())
-						topicSubscriptionMap.set(topic, new Set(peers))
-					} else {
-						topicSubscriptionMap.delete(topic)
-					}
-				}
-			} else {
-				for (const { subscribe, topic } of update.subscriptions) {
-					const peers = topicSubscriptionMap.get(topic)
-					if (peers === undefined) {
-						continue
-					} else if (subscribe) {
-						peers.add(update.peerId.toString())
-					} else {
-						peers.delete(update.peerId.toString())
-					}
-				}
-			}
-
-			const topicPeers: { topic: string; peers: string[] }[] = []
-			for (const [topic, peers] of topicSubscriptionMap) {
-				if (protocolPrefix === undefined) {
-					topicPeers.push({ topic, peers: [...peers] })
-				} else if (topic.startsWith(protocolPrefix)) {
-					topicPeers.push({ topic: topic.slice(protocolPrefix.length), peers: [...peers] })
-				}
-			}
-
-			setTopicPeers(topicPeers)
+	useEffect(() => {
+		if (libp2p === null) {
+			return
 		}
 
+		const handleSubscriptionChange = ({ detail: update }: CustomEvent<SubscriptionChangeData>) => {
+			console.log("subscription change", update)
+			updateTopicPeers()
+		}
+
+		const { pubsub } = libp2p.services
 		pubsub.addEventListener("subscription-change", handleSubscriptionChange)
+
+		updateTopicPeers()
+
 		return () => {
 			pubsub.removeEventListener("subscription-change", handleSubscriptionChange)
 		}

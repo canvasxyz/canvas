@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef, useCallback } from "react"
+import React, { useState, useContext, useEffect, useRef, useCallback, useMemo } from "react"
 
 import { useAccount, useConnect } from "wagmi"
 import { PeerId } from "@libp2p/interface-peer-id"
@@ -9,10 +9,10 @@ import { ChatView } from "./views/ChatView.js"
 import { RegistrationView } from "./views/RegistrationView.js"
 import { SelectWalletView } from "./views/SelectWalletView.js"
 
-import { AppContext } from "./context.js"
 import { RoomManager } from "./manager.js"
 import { getPeerId } from "./libp2p.js"
 import { db } from "./db.js"
+import { useLibp2p } from "./useLibp2p.js"
 
 export const App: React.FC<{}> = () => {
 	const [user, setUser] = useState<PrivateUserRegistration | null>(null)
@@ -81,17 +81,30 @@ export const App: React.FC<{}> = () => {
 	}, [user, peerId])
 
 	return (
-		<AppContext.Provider value={{ user, setUser, room, setRoom: setCurrentRoom, manager, peerId }}>
-			<AppContent />
-		</AppContext.Provider>
+		// <AppContext.Provider value={{ user, setUser, room, setRoom: setCurrentRoom, manager, peerId }}>
+		<AppContent />
+		// </AppContext.Provider>
 	)
+}
+
+const LoggedInView = ({
+	user,
+	setUser,
+}: {
+	user: PrivateUserRegistration
+	setUser: (user: PrivateUserRegistration | null) => void
+}) => {
+	const { libp2p } = useLibp2p()
+	console.log("libp2p:", libp2p)
+
+	return libp2p === null ? "Loading..." : <ChatView libp2p={libp2p} user={user} setUser={setUser} />
 }
 
 const AppContent: React.FC<{}> = ({}) => {
 	const { connect, connectors } = useConnect()
 	const { address: userAddress, isConnected } = useAccount()
 
-	const { user } = useContext(AppContext)
+	const [user, setUser] = useState<PrivateUserRegistration | null>(null)
 
 	if (!isConnected || userAddress === undefined) {
 		return (
@@ -106,8 +119,8 @@ const AppContent: React.FC<{}> = ({}) => {
 			/>
 		)
 	} else if (user === null) {
-		return <RegistrationView />
+		return <RegistrationView user={user} setUser={setUser} />
 	} else {
-		return <ChatView />
+		return <LoggedInView user={user} setUser={setUser} />
 	}
 }

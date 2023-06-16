@@ -1,4 +1,4 @@
-import { hexToBytes } from "@noble/hashes/utils"
+import { hexToBytes } from "viem"
 
 import * as Messages from "./messages.js"
 

@@ -1,10 +1,9 @@
-import React, { useCallback, useContext, useState } from "react"
+import React, { useCallback, useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { useEnsName } from "wagmi"
 import _ from "lodash"
-import { PublicUserRegistration, getPublicUserRegistration } from "../../shared/index.js"
+import { PrivateUserRegistration, PublicUserRegistration, getPublicUserRegistration } from "../../shared/index.js"
 
-import { AppContext } from "../context.js"
 import { db } from "../db.js"
 
 interface UserEntryProps {
@@ -28,17 +27,17 @@ const UserEntry = ({ user, onClick, isSelected }: UserEntryProps) => {
 
 export interface NewChatModalProps {
 	closeModal: () => void
+	user: PrivateUserRegistration
+	createRoom: (members: PublicUserRegistration[]) => Promise<void>
 }
 
-export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
+export const NewChatModal = ({ createRoom, closeModal, user }: NewChatModalProps) => {
 	const users = useLiveQuery(async () => await db.users.toArray(), [])
 	const [selectedRecipients, setSelectedRecipients] = useState<Record<string, boolean>>({})
 
-	const { user, manager, setRoom } = useContext(AppContext)
-
 	const startNewChat = useCallback(async () => {
 		const selectedRecipientAddresses = Object.keys(selectedRecipients)
-		if (user === null || manager === null || selectedRecipientAddresses.length === 0) {
+		if (selectedRecipientAddresses.length === 0) {
 			return
 		}
 
@@ -55,12 +54,11 @@ export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
 				[getPublicUserRegistration(user), ...selectedRecipientsObjects],
 				(member) => member.address
 			)
-			const room = await manager.createRoom(members)
-			setRoom(room)
+			await createRoom(members)
 		} catch (err) {
 			console.error("failed to create room", err)
 		}
-	}, [user, manager, setRoom, selectedRecipients])
+	}, [user, selectedRecipients])
 
 	return (
 		<div className="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">

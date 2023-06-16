@@ -1,18 +1,21 @@
-import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 
 import { useLiveQuery } from "dexie-react-hooks"
 import { getAddress } from "viem"
 
-import { Room } from "../../shared/index.js"
+import { PrivateUserRegistration, Room } from "../../shared/index.js"
 
 import { db } from "../db.js"
-import { AppContext } from "../context.js"
 
-export interface MessagesPanelProps {
+export const MessagesPanel = ({
+	room,
+	user,
+	sendMessage,
+}: {
 	room: Room
-}
-
-export const MessagesPanel: React.FC<MessagesPanelProps> = ({ room }: MessagesPanelProps) => {
+	user: PrivateUserRegistration
+	sendMessage: (roomId: string, content: string) => Promise<void>
+}) => {
 	const [message, setMessage] = useState<string>("")
 	const messageEvents =
 		useLiveQuery(async () => await db.messages.where({ room: room.id }).sortBy("timestamp"), [room.id]) || []
@@ -24,11 +27,10 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ room }: MessagesPa
 		messagesEndRef.current?.scrollIntoView({ behavior: "auto" })
 	}, [messageEvents])
 
-	const { user, manager } = useContext(AppContext)
-
 	const handleSubmit = useCallback(
 		async (e: React.FormEvent<HTMLFormElement>) => {
 			e.preventDefault()
+			console.log(message)
 
 			const trimmedMessage = message.trim()
 
@@ -42,21 +44,14 @@ export const MessagesPanel: React.FC<MessagesPanelProps> = ({ room }: MessagesPa
 				return
 			}
 
-			if (manager !== null) {
-				try {
-					await manager.dispatchEvent(room.id, {
-						type: "message",
-						detail: { content: trimmedMessage, sender: user.address, timestamp: Date.now() },
-					})
-
-					console.log("dispatched message event")
-					setMessage("")
-				} catch (err) {
-					console.error("event dispatch error", err)
-				}
+			try {
+				await sendMessage(room.id, trimmedMessage)
+				setMessage("")
+			} catch (e) {
+				console.error(e)
 			}
 		},
-		[room.id, message, user, manager]
+		[room.id, message, user]
 	)
 
 	return (

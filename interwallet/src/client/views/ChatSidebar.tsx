@@ -1,17 +1,24 @@
-import React, { useContext } from "react"
+import React from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 
-import { Room } from "../../shared/index.js"
+import { PrivateUserRegistration, PublicUserRegistration, Room } from "../../shared/index.js"
 
 import { NewChatModal } from "./NewChatModal.js"
 import { RoomName } from "./RoomName.js"
 
-import { AppContext } from "../context.js"
 import { db } from "../db.js"
 
-export interface ChatSidebarProps {}
-
-export const ChatSidebar: React.FC<ChatSidebarProps> = ({}) => {
+export const ChatSidebar = ({
+	selectedRoom,
+	createRoom,
+	setRoom,
+	user,
+}: {
+	selectedRoom: Room | null
+	createRoom: (members: PublicUserRegistration[]) => Promise<void>
+	setRoom: (room: Room) => void
+	user: PrivateUserRegistration
+}) => {
 	const [showNewChatModal, setShowNewChatModal] = React.useState(false)
 
 	const rooms = useLiveQuery(() => db.rooms.toArray(), [])
@@ -30,28 +37,39 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({}) => {
 			</div>
 			<div className="overflow-scroll flex flex-col items-stretch">
 				{rooms?.map((room) => (
-					<ChatSidebarRoom key={room.id} room={room} />
+					<ChatSidebarRoom
+						key={room.id}
+						isSelected={!!selectedRoom && room.id == selectedRoom.id}
+						room={room}
+						setRoom={setRoom}
+						user={user}
+					/>
 				))}
 			</div>
 			{showNewChatModal && (
 				<NewChatModal
+					user={user}
 					closeModal={() => {
 						setShowNewChatModal(false)
 					}}
+					createRoom={createRoom}
 				/>
 			)}
 		</div>
 	)
 }
 
-interface ChatSidebarRoomProps {
+const ChatSidebarRoom = ({
+	isSelected,
+	room,
+	user,
+	setRoom,
+}: {
+	isSelected: boolean
 	room: Room
-}
-
-const ChatSidebarRoom: React.FC<ChatSidebarRoomProps> = ({ room }) => {
-	const { room: selectedRoom, setRoom } = useContext(AppContext)
-	const isSelected = selectedRoom !== null && selectedRoom.id === room.id
-
+	user: PrivateUserRegistration
+	setRoom: (room: Room) => void
+}) => {
 	if (isSelected) {
 		return (
 			<button
@@ -60,7 +78,7 @@ const ChatSidebarRoom: React.FC<ChatSidebarRoomProps> = ({ room }) => {
 				disabled={isSelected}
 			>
 				<span className="text-sm font-bold">
-					<RoomName room={room} />
+					<RoomName user={user} room={room} />
 				</span>
 			</button>
 		)
@@ -73,7 +91,7 @@ const ChatSidebarRoom: React.FC<ChatSidebarRoomProps> = ({ room }) => {
 				onClick={(e) => setRoom(room)}
 			>
 				<span className="text-sm">
-					<RoomName room={room} />
+					<RoomName user={user} room={room} />
 				</span>
 			</button>
 		)
