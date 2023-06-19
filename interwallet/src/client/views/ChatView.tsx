@@ -52,7 +52,7 @@ export const ChatView = ({
 
 	const [showStatusPanel, setShowStatusPanel] = useState(true)
 
-	const { register, unregister, stores } = useSubscription(libp2p)
+	const { register, unregisterAll, stores } = useSubscription(libp2p)
 	const [db, setDb] = useState<InterwalletChatDB | null>(null)
 
 	useEffect(() => {
@@ -112,16 +112,11 @@ export const ChatView = ({
 		})
 	}, [db, stores[ROOM_REGISTRY_TOPIC]])
 
-	const logout = useCallback(async () => {
+	const logout = async () => {
 		window.localStorage.removeItem(getRegistrationKey(user.address))
 
 		if (!db) return
-		await unregister(USER_REGISTRY_TOPIC)
-		await unregister(ROOM_REGISTRY_TOPIC)
-
-		for (const roomTopic of Object.keys(stores)) {
-			await unregister(roomTopic)
-		}
+		await unregisterAll()
 
 		const databaseNames = await Dexie.getDatabaseNames()
 		for (const name of databaseNames.filter((name) => name.startsWith("interwallet:"))) {
@@ -131,7 +126,7 @@ export const ChatView = ({
 		setRoom(null)
 		setUser(null)
 		disconnect()
-	}, [user, disconnect, stores])
+	}
 
 	const createRoom: (members: PublicUserRegistration[]) => Promise<void> = async (members) => {
 		const roomRegistry = stores[ROOM_REGISTRY_TOPIC]

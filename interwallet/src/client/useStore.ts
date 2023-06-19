@@ -79,6 +79,12 @@ export const useSubscription = (libp2p: Libp2p<ServiceMap>) => {
 		})
 	}
 
+	const unregisterAll = async () => {
+		for (const topic of Object.keys(stores)) {
+			await unregister(topic)
+		}
+	}
+
 	// const insert: (topic: string, key: Uint8Array, value: Uint8Array) => Promise<void> = async (topic, key, value) => {
 	// 	const store = stores[topic]
 	// 	if (!store) return
@@ -88,6 +94,7 @@ export const useSubscription = (libp2p: Libp2p<ServiceMap>) => {
 	return {
 		register,
 		unregister,
+		unregisterAll,
 		stores,
 	}
 }
