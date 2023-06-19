@@ -3,7 +3,7 @@ import { useDisconnect } from "wagmi"
 
 import { ChatSidebar } from "./ChatSidebar.js"
 import { MessagesPanel } from "./MessagesPanel.js"
-// import { StatusPanel } from "./StatusPanel.js"
+import { StatusPanel } from "./StatusPanel.js"
 import { RoomName } from "./RoomName.js"
 
 import { getRegistrationKey } from "../utils.js"
@@ -36,7 +36,7 @@ import { decode, encode } from "microcbor"
 import { InterwalletChatDB } from "../db.js"
 import { base58btc } from "multiformats/bases/base58"
 import { blake3 } from "@noble/hashes/blake3"
-import { StatusPanel } from "./StatusPanel.js"
+import Dexie from "dexie"
 
 export const ChatView = ({
 	user,
@@ -51,14 +51,6 @@ export const ChatView = ({
 	const [room, setRoom] = useState<Room | null>(null)
 
 	const [showStatusPanel, setShowStatusPanel] = useState(true)
-
-	const logout = useCallback(async () => {
-		window.localStorage.removeItem(getRegistrationKey(user.address))
-
-		setRoom(null)
-		setUser(null)
-		disconnect()
-	}, [user, disconnect])
 
 	const { register, unregister, stores } = useSubscription(libp2p)
 	const [db, setDb] = useState<InterwalletChatDB | null>(null)
@@ -84,16 +76,6 @@ export const ChatView = ({
 		})
 
 		setDb(db)
-
-		// return () => {
-		// console.log("unregistering all topics")
-		// console.log(stores)
-		// for (const topic of Object.keys(stores)) {
-		// unregister(topic)
-		// }
-		// unregister(USER_REGISTRY_TOPIC)
-		// unregister(ROOM_REGISTRY_TOPIC)
-		// }
 	}, [])
 
 	useEffect(() => {
@@ -102,7 +84,7 @@ export const ChatView = ({
 
 		const key = hexToBytes(user.address)
 
-		const publishUserRegistration = async () => {
+		;(async () => {
 			const existingRegistration = await userRegistry.get(key)
 			if (existingRegistration === null) {
 				console.log("publishing self user registration for", key)
@@ -115,9 +97,7 @@ export const ChatView = ({
 					console.log(e)
 				}
 			}
-		}
-
-		publishUserRegistration()
+		})()
 
 		// send user registration
 	}, [stores[USER_REGISTRY_TOPIC]])
@@ -131,6 +111,27 @@ export const ChatView = ({
 			}
 		})
 	}, [db, stores[ROOM_REGISTRY_TOPIC]])
+
+	const logout = useCallback(async () => {
+		window.localStorage.removeItem(getRegistrationKey(user.address))
+
+		if (!db) return
+		await unregister(USER_REGISTRY_TOPIC)
+		await unregister(ROOM_REGISTRY_TOPIC)
+
+		for (const roomTopic of Object.keys(stores)) {
+			await unregister(roomTopic)
+		}
+
+		const databaseNames = await Dexie.getDatabaseNames()
+		for (const name of databaseNames.filter((name) => name.startsWith("interwallet:"))) {
+			await Dexie.delete(name)
+		}
+
+		setRoom(null)
+		setUser(null)
+		disconnect()
+	}, [user, disconnect, stores])
 
 	const createRoom: (members: PublicUserRegistration[]) => Promise<void> = async (members) => {
 		const roomRegistry = stores[ROOM_REGISTRY_TOPIC]

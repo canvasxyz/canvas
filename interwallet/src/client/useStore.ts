@@ -1,3 +1,4 @@
+import { IDBStore } from "@canvas-js/okra-idb"
 import { Store } from "@canvas-js/store"
 import { openStore } from "@canvas-js/store/browser"
 import { GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
@@ -37,7 +38,6 @@ export const useStore = (
 export const useSubscription = (libp2p: Libp2p<ServiceMap>) => {
 	const [stores, setStores] = useState<Record<string, Store>>({})
 
-	console.log("stores:", stores)
 	// useEffect(() => {
 	// 	// automatically stop all of the stores when this hook is unmounted
 	// 	return () => {
@@ -59,7 +59,9 @@ export const useSubscription = (libp2p: Libp2p<ServiceMap>) => {
 			await store.start()
 			setStores((stores) => ({ ...stores, [topic]: store }))
 		} catch (e) {
-			// ignore, this means that the store has already been created
+			// undo the store creation if it fails to start
+			// TODO: what happens if this fails?
+			await store.stop()
 		}
 	}
 
@@ -69,6 +71,7 @@ export const useSubscription = (libp2p: Libp2p<ServiceMap>) => {
 		if (!store) return
 
 		await store.stop()
+
 		setStores((stores) => {
 			const newStores = { ...stores }
 			delete newStores[topic]

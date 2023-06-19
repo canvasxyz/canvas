@@ -3,7 +3,7 @@ import React, { useState, useContext, useEffect, useRef, useCallback, useMemo } 
 import { useAccount, useConnect } from "wagmi"
 import { PeerId } from "@libp2p/interface-peer-id"
 
-import { Room, PrivateUserRegistration } from "../shared/index.js"
+import { Room, PrivateUserRegistration, USER_REGISTRY_TOPIC } from "../shared/index.js"
 
 import { ChatView } from "./views/ChatView.js"
 import { RegistrationView } from "./views/RegistrationView.js"
@@ -13,6 +13,7 @@ import { RoomManager } from "./manager.js"
 import { getPeerId } from "./libp2p.js"
 import { db } from "./db.js"
 import { useLibp2p } from "./useLibp2p.js"
+import Dexie from "dexie"
 
 export const App: React.FC<{}> = () => {
 	const [user, setUser] = useState<PrivateUserRegistration | null>(null)
