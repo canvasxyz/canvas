@@ -128,6 +128,12 @@ export const ChatView = ({
 	const { register, unregisterAll, stores } = useSubscription(libp2p)
 
 	useEffect(() => {
+		// using ref here is a hack to get around the fact that useEffect fires twice
+		// when using StrictMode when in development mode
+
+		// a better approach would be to implement register() and the Store so that if we
+		// try to register the same topic twice, it doesn't do anything or it throws an error
+		// that we can then catch and ignore
 		if (alreadyRegistered.current) return
 
 		register(USER_REGISTRY_TOPIC, async (key: Uint8Array, value: Uint8Array) => {
