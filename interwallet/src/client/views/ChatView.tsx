@@ -12,12 +12,10 @@ import { ReactComponent as chevronRight } from "../../../icons/chevron-right.svg
 import { ReactComponent as chevronLeft } from "../../../icons/chevron-left.svg"
 import {
 	PrivateUserRegistration,
-	PublicUserRegistration,
 	Room,
 	RoomEvent,
 	RoomRegistration,
 	serializePublicUserRegistration,
-	serializeRoomRegistration,
 } from "../../shared/types.js"
 import { useSubscription } from "../useStore.js"
 import { Libp2p } from "libp2p"
@@ -26,6 +24,8 @@ import {
 	ROOM_REGISTRY_TOPIC,
 	USER_REGISTRY_TOPIC,
 	assert,
+	encryptAndSignMessageForRoom,
+	signAndEncodeRoomRegistration,
 	validateEvent,
 	validateRoomRegistration,
 	validateUserRegistration,
@@ -34,7 +34,7 @@ import { bytesToHex, getAddress, hexToBytes } from "viem"
 import * as Messages from "../../shared/messages.js"
 import { equals } from "uint8arrays"
 import nacl from "tweetnacl"
-import { decode, encode } from "microcbor"
+import { decode } from "microcbor"
 import { InterwalletChatDB } from "../db.js"
 import { base58btc } from "multiformats/bases/base58"
 import { blake3 } from "@noble/hashes/blake3"
@@ -71,49 +71,6 @@ export const LoggedInView = ({
 	) : (
 		<ChatView libp2p={libp2p} user={user} setUser={setUser} db={db} />
 	)
-}
-
-const encryptAndSignMessageForRoom = (room: Room, message: string, user: PrivateUserRegistration) => {
-	const event = {
-		type: "message",
-		detail: { content: message, sender: user.address, timestamp: Date.now() },
-	}
-
-	const otherRoomMembers = room.members.filter(({ address }) => user.address !== address)
-	assert(otherRoomMembers.length > 0, "room has no other members")
-
-	const encryptedData = Messages.EncryptedEvent.encode({
-		recipients: otherRoomMembers.map((otherRoomMember) => {
-			const publicKey = hexToBytes(otherRoomMember.keyBundle.encryptionPublicKey)
-			const nonce = nacl.randomBytes(nacl.box.nonceLength)
-			const ciphertext = nacl.box(encode(event), nonce, publicKey, hexToBytes(user.encryptionPrivateKey))
-
-			return {
-				publicKey,
-				ciphertext,
-				nonce,
-			}
-		}),
-		roomId: base58btc.baseDecode(room.id),
-		userAddress: hexToBytes(user.address),
-	})
-
-	const signature = nacl.sign.detached(encryptedData, hexToBytes(user.signingPrivateKey))
-
-	return Messages.SignedData.encode({ signature, data: encryptedData })
-}
-
-const signAndEncodeRoomRegistration = (roomRegistration: RoomRegistration, user: PrivateUserRegistration) => {
-	assert(roomRegistration.creator === user.address, "room creator must be the current user")
-	assert(
-		roomRegistration.members.find(({ address }) => address === user.address),
-		"members did not include the current user"
-	)
-
-	const serializedRoomRegistration = Messages.RoomRegistration.encode(serializeRoomRegistration(roomRegistration))
-
-	const signature = nacl.sign.detached(serializedRoomRegistration, hexToBytes(user.signingPrivateKey))
-	return Messages.SignedData.encode({ signature, data: serializedRoomRegistration })
 }
 
 export const ChatView = ({

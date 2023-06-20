@@ -5,10 +5,17 @@ import { getAddress, bytesToHex, hexToBytes, keccak256, recoverTypedDataAddress 
 import { blake3 } from "@noble/hashes/blake3"
 import { equals } from "uint8arrays"
 import { base58btc } from "multiformats/bases/base58"
-
+import { encode } from "microcbor"
 import * as Messages from "./messages.js"
 
-import type { KeyBundle, PrivateUserRegistration, PublicUserRegistration, Room } from "./types.js"
+import {
+	serializeRoomRegistration,
+	type KeyBundle,
+	type PrivateUserRegistration,
+	type PublicUserRegistration,
+	type Room,
+	type RoomRegistration,
+} from "./types.js"
 import { assert } from "./utils.js"
 
 const buildMagicString = (pin: string) => `[Password: ${pin}]
@@ -166,4 +173,47 @@ export function validateEvent(
 	}
 
 	return { encryptedEvent, sender }
+}
+
+export const encryptAndSignMessageForRoom = (room: Room, message: string, user: PrivateUserRegistration) => {
+	const event = {
+		type: "message",
+		detail: { content: message, sender: user.address, timestamp: Date.now() },
+	}
+
+	const otherRoomMembers = room.members.filter(({ address }) => user.address !== address)
+	assert(otherRoomMembers.length > 0, "room has no other members")
+
+	const encryptedData = Messages.EncryptedEvent.encode({
+		recipients: otherRoomMembers.map((otherRoomMember) => {
+			const publicKey = hexToBytes(otherRoomMember.keyBundle.encryptionPublicKey)
+			const nonce = nacl.randomBytes(nacl.box.nonceLength)
+			const ciphertext = nacl.box(encode(event), nonce, publicKey, hexToBytes(user.encryptionPrivateKey))
+
+			return {
+				publicKey,
+				ciphertext,
+				nonce,
+			}
+		}),
+		roomId: base58btc.baseDecode(room.id),
+		userAddress: hexToBytes(user.address),
+	})
+
+	const signature = nacl.sign.detached(encryptedData, hexToBytes(user.signingPrivateKey))
+
+	return Messages.SignedData.encode({ signature, data: encryptedData })
+}
+
+export const signAndEncodeRoomRegistration = (roomRegistration: RoomRegistration, user: PrivateUserRegistration) => {
+	assert(roomRegistration.creator === user.address, "room creator must be the current user")
+	assert(
+		roomRegistration.members.find(({ address }) => address === user.address),
+		"members did not include the current user"
+	)
+
+	const serializedRoomRegistration = Messages.RoomRegistration.encode(serializeRoomRegistration(roomRegistration))
+
+	const signature = nacl.sign.detached(serializedRoomRegistration, hexToBytes(user.signingPrivateKey))
+	return Messages.SignedData.encode({ signature, data: serializedRoomRegistration })
 }
