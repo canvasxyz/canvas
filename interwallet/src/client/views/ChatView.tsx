@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
+import React, { useContext, useEffect, useRef, useState } from "react"
 import { useDisconnect } from "wagmi"
 
 import { ChatSidebar } from "./ChatSidebar.js"
@@ -10,31 +10,22 @@ import { getRegistrationKey } from "../utils.js"
 
 import { ReactComponent as chevronRight } from "../../../icons/chevron-right.svg"
 import { ReactComponent as chevronLeft } from "../../../icons/chevron-left.svg"
-import {
-	PrivateUserRegistration,
-	Room,
-	RoomEvent,
-	RoomRegistration,
-	serializePublicUserRegistration,
-} from "../../shared/types.js"
+import { PrivateUserRegistration, Room, RoomRegistration, serializePublicUserRegistration } from "../../shared/types.js"
 import { useSubscription } from "../useStore.js"
 import { Libp2p } from "libp2p"
 import { ServiceMap } from "../libp2p.js"
 import {
 	ROOM_REGISTRY_TOPIC,
 	USER_REGISTRY_TOPIC,
-	assert,
+	decryptEvent,
 	encryptAndSignMessageForRoom,
 	signAndEncodeRoomRegistration,
 	validateEvent,
 	validateRoomRegistration,
 	validateUserRegistration,
 } from "../../shared/index.js"
-import { bytesToHex, getAddress, hexToBytes } from "viem"
+import { hexToBytes } from "viem"
 import * as Messages from "../../shared/messages.js"
-import { equals } from "uint8arrays"
-import nacl from "tweetnacl"
-import { decode } from "microcbor"
 import { InterwalletChatDB } from "../db.js"
 import { base58btc } from "multiformats/bases/base58"
 import { blake3 } from "@noble/hashes/blake3"
@@ -199,38 +190,7 @@ export const ChatView = ({
 			const { encryptedEvent } = validateEvent(room, key, value)
 			console.log("message event", encryptedEvent)
 
-			let decryptedEvent: Uint8Array | null
-			if (equals(encryptedEvent.userAddress, hexToBytes(user.address))) {
-				// this user is the sender
-				// decrypt an arbitrary message, so choose the first one
-				const encryptedMessage = encryptedEvent.recipients[0]
-				decryptedEvent = nacl.box.open(
-					encryptedMessage.ciphertext,
-					encryptedMessage.nonce,
-					encryptedMessage.publicKey,
-					hexToBytes(user.encryptionPrivateKey)
-				)
-			} else {
-				// otherwise this user is one of the recipients
-				const myEncryptedMessage = encryptedEvent.recipients.find(({ publicKey }) =>
-					equals(publicKey, hexToBytes(user.keyBundle.encryptionPublicKey))
-				)
-				assert(myEncryptedMessage !== undefined, "failed to find encrypted message for this user")
-
-				const sender = await db.users.get({ address: getAddress(bytesToHex(encryptedEvent.userAddress)) })
-				assert(sender !== undefined, "failed to find sender")
-
-				decryptedEvent = nacl.box.open(
-					myEncryptedMessage.ciphertext,
-					myEncryptedMessage.nonce,
-					// sender's public key
-					hexToBytes(sender.keyBundle.encryptionPublicKey),
-					hexToBytes(user.encryptionPrivateKey)
-				)
-			}
-			assert(decryptedEvent !== null, "failed to decrypt room event")
-
-			const event = decode(decryptedEvent) as RoomEvent
+			const event = decryptEvent(encryptedEvent, user)
 
 			// TODO: runtime validation of room event types
 			if (event.type === "message") {

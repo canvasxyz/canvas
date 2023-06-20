@@ -5,7 +5,7 @@ import { getAddress, bytesToHex, hexToBytes, keccak256, recoverTypedDataAddress 
 import { blake3 } from "@noble/hashes/blake3"
 import { equals } from "uint8arrays"
 import { base58btc } from "multiformats/bases/base58"
-import { encode } from "microcbor"
+import { decode, encode } from "microcbor"
 import * as Messages from "./messages.js"
 
 import {
@@ -15,6 +15,7 @@ import {
 	type PublicUserRegistration,
 	type Room,
 	type RoomRegistration,
+	RoomEvent,
 } from "./types.js"
 import { assert } from "./utils.js"
 
@@ -154,7 +155,7 @@ export function validateEvent(
 
 	assert(getRoomId(encryptedEvent.roomId) === room.id, "event is for a different room")
 
-	const senderAddress = getAddress(bytesToHex(encryptedEvent.userAddress))
+	const senderAddress = getAddress(bytesToHex(encryptedEvent.senderAddress))
 	const sender = room.members.find((member) => member.address === senderAddress)
 	assert(sender !== undefined, "sender is not a member of the room")
 
@@ -216,4 +217,34 @@ export const signAndEncodeRoomRegistration = (roomRegistration: RoomRegistration
 
 	const signature = nacl.sign.detached(serializedRoomRegistration, hexToBytes(user.signingPrivateKey))
 	return Messages.SignedData.encode({ signature, data: serializedRoomRegistration })
+}
+
+export const decryptEvent = (encryptedEvent: Messages.EncryptedEvent, user: PrivateUserRegistration) => {
+	let messageToDecrypt: Messages.EncryptedPayload
+	let publicKey: Uint8Array
+
+	if (equals(encryptedEvent.senderAddress, hexToBytes(user.address))) {
+		// this user is the sender
+		// decrypt an arbitrary message, so choose the first one
+		messageToDecrypt = encryptedEvent.recipients[0]
+		publicKey = messageToDecrypt.publicKey
+	} else {
+		// otherwise this user is one of the recipients
+		const retrievedMessageToDecrypt = encryptedEvent.recipients.find(({ publicKey }) =>
+			equals(publicKey, hexToBytes(user.keyBundle.encryptionPublicKey))
+		)
+		assert(retrievedMessageToDecrypt !== undefined, "failed to find encrypted message for this user")
+		messageToDecrypt = retrievedMessageToDecrypt
+		publicKey = encryptedEvent.senderPublicKey
+	}
+
+	const decryptedEvent = nacl.box.open(
+		messageToDecrypt.ciphertext,
+		messageToDecrypt.nonce,
+		publicKey,
+		hexToBytes(user.encryptionPrivateKey)
+	)
+	assert(decryptedEvent !== null, "failed to decrypt room event")
+
+	return decode(decryptedEvent) as RoomEvent
 }

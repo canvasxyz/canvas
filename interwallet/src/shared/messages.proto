@@ -13,8 +13,9 @@ message EncryptedPayload {
 
 message EncryptedEvent {
   bytes room_id = 1;
-  bytes user_address = 2;
-  repeated EncryptedPayload recipients = 3;
+  bytes sender_address = 2;
+  bytes sender_public_key = 3;
+  repeated EncryptedPayload recipients = 4;
 }
 
 message SignedUserRegistration {

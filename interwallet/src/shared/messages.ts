@@ -156,7 +156,8 @@ export namespace EncryptedPayload {
 
 export interface EncryptedEvent {
   roomId: Uint8Array
-  userAddress: Uint8Array
+  senderAddress: Uint8Array
+  senderPublicKey: Uint8Array
   recipients: EncryptedPayload[]
 }
 
@@ -175,14 +176,19 @@ export namespace EncryptedEvent {
           w.bytes(obj.roomId)
         }
 
-        if ((obj.userAddress != null && obj.userAddress.byteLength > 0)) {
+        if ((obj.senderAddress != null && obj.senderAddress.byteLength > 0)) {
           w.uint32(18)
-          w.bytes(obj.userAddress)
+          w.bytes(obj.senderAddress)
+        }
+
+        if ((obj.senderPublicKey != null && obj.senderPublicKey.byteLength > 0)) {
+          w.uint32(26)
+          w.bytes(obj.senderPublicKey)
         }
 
         if (obj.recipients != null) {
           for (const value of obj.recipients) {
-            w.uint32(26)
+            w.uint32(34)
             EncryptedPayload.codec().encode(value, w)
           }
         }
@@ -193,7 +199,8 @@ export namespace EncryptedEvent {
       }, (reader, length) => {
         const obj: any = {
           roomId: new Uint8Array(0),
-          userAddress: new Uint8Array(0),
+          senderAddress: new Uint8Array(0),
+          senderPublicKey: new Uint8Array(0),
           recipients: []
         }
 
@@ -207,9 +214,12 @@ export namespace EncryptedEvent {
               obj.roomId = reader.bytes()
               break
             case 2:
-              obj.userAddress = reader.bytes()
+              obj.senderAddress = reader.bytes()
               break
             case 3:
+              obj.senderPublicKey = reader.bytes()
+              break
+            case 4:
               obj.recipients.push(EncryptedPayload.codec().decode(reader, reader.uint32()))
               break
             default:
