@@ -3,9 +3,10 @@ import { Store } from "@canvas-js/store"
 import { openStore } from "@canvas-js/store/browser"
 import { GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 import { PubSub } from "@libp2p/interface-pubsub"
+import Dexie from "dexie"
 import { Libp2p } from "libp2p"
 import { PingService } from "libp2p/ping"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 type ServiceMap = {
 	identify: {}
@@ -36,6 +37,7 @@ export const useStore = (
 }
 
 export const useSubscription = (libp2p: Libp2p<ServiceMap>) => {
+	;(window as any).libp2p = libp2p
 	const [stores, setStores] = useState<Record<string, Store>>({})
 
 	// useEffect(() => {
@@ -50,6 +52,7 @@ export const useSubscription = (libp2p: Libp2p<ServiceMap>) => {
 		topic: string,
 		apply: (key: Uint8Array, value: Uint8Array) => Promise<void>
 	) => Promise<void> = async (topic, apply) => {
+		console.log("registering store", topic)
 		const store = await openStore(libp2p, {
 			topic,
 			apply,
@@ -59,9 +62,7 @@ export const useSubscription = (libp2p: Libp2p<ServiceMap>) => {
 			await store.start()
 			setStores((stores) => ({ ...stores, [topic]: store }))
 		} catch (e) {
-			// undo the store creation if it fails to start
-			// TODO: what happens if this fails?
-			await store.stop()
+			console.log(e)
 		}
 	}
 
@@ -71,6 +72,8 @@ export const useSubscription = (libp2p: Libp2p<ServiceMap>) => {
 		if (!store) return
 
 		await store.stop()
+
+		await Dexie.delete(topic)
 
 		setStores((stores) => {
 			const newStores = { ...stores }

@@ -23,5 +23,3 @@ export class InterwalletChatDB extends Dexie {
 		})
 	}
 }
-
-export const db = new InterwalletChatDB()

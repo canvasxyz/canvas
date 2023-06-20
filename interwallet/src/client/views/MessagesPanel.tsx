@@ -5,16 +5,18 @@ import { getAddress } from "viem"
 
 import { PrivateUserRegistration, Room } from "../../shared/index.js"
 
-import { db } from "../db.js"
+import { InterwalletChatDB } from "../db.js"
 
 export const MessagesPanel = ({
+	db,
 	room,
 	user,
 	sendMessage,
 }: {
+	db: InterwalletChatDB
 	room: Room
 	user: PrivateUserRegistration
-	sendMessage: (roomId: string, content: string) => Promise<void>
+	sendMessage: (room: Room, content: string) => Promise<void>
 }) => {
 	const [message, setMessage] = useState<string>("")
 	const messageEvents =
@@ -45,7 +47,7 @@ export const MessagesPanel = ({
 			}
 
 			try {
-				await sendMessage(room.id, trimmedMessage)
+				await sendMessage(room, trimmedMessage)
 				setMessage("")
 			} catch (e) {
 				console.error(e)

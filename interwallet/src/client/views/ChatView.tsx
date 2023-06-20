@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useDisconnect } from "wagmi"
 
 import { ChatSidebar } from "./ChatSidebar.js"
@@ -36,27 +36,99 @@ import { decode, encode } from "microcbor"
 import { InterwalletChatDB } from "../db.js"
 import { base58btc } from "multiformats/bases/base58"
 import { blake3 } from "@noble/hashes/blake3"
-import Dexie from "dexie"
+import { useLibp2p } from "../useLibp2p.js"
+
+const useInterwalletChatDB = () => {
+	const [db, setDb] = useState<InterwalletChatDB | null>(null)
+
+	useEffect(() => {
+		const newDb = new InterwalletChatDB()
+		setDb(newDb)
+		return () => {
+			newDb.close()
+		}
+	}, [])
+
+	const deleteDb = useCallback(async () => {
+		if (db === null) {
+			return
+		}
+
+		console.log("deleting db...")
+		await db.delete()
+	}, [db])
+
+	return { db, deleteDb }
+}
+
+export const LoggedInView = ({
+	user,
+	setUser,
+}: {
+	user: PrivateUserRegistration
+	setUser: (user: PrivateUserRegistration | null) => void
+}) => {
+	const { libp2p } = useLibp2p()
+	const { db } = useInterwalletChatDB()
+
+	return libp2p === null || db === null ? (
+		"Loading..."
+	) : (
+		<ChatView libp2p={libp2p} user={user} setUser={setUser} db={db} />
+	)
+}
+
+const encryptAndSignMessageForRoom = (room: Room, message: string, user: PrivateUserRegistration) => {
+	const event = {
+		type: "message",
+		detail: { content: message, sender: user.address, timestamp: Date.now() },
+	}
+
+	const otherRoomMembers = room.members.filter(({ address }) => user.address !== address)
+	assert(otherRoomMembers.length > 0, "room has no other members")
+
+	const encryptedData = Messages.EncryptedEvent.encode({
+		recipients: otherRoomMembers.map((otherRoomMember) => {
+			const publicKey = hexToBytes(otherRoomMember.keyBundle.encryptionPublicKey)
+			const nonce = nacl.randomBytes(nacl.box.nonceLength)
+			const ciphertext = nacl.box(encode(event), nonce, publicKey, hexToBytes(user.encryptionPrivateKey))
+
+			return {
+				publicKey,
+				ciphertext,
+				nonce,
+			}
+		}),
+		roomId: base58btc.baseDecode(room.id),
+		userAddress: hexToBytes(user.address),
+	})
+
+	const signature = nacl.sign.detached(encryptedData, hexToBytes(user.signingPrivateKey))
+
+	return Messages.SignedData.encode({ signature, data: encryptedData })
+}
 
 export const ChatView = ({
 	user,
 	setUser,
 	libp2p,
+	db,
 }: {
 	user: PrivateUserRegistration
 	setUser: (user: PrivateUserRegistration | null) => void
 	libp2p: Libp2p<ServiceMap>
+	db: InterwalletChatDB
 }) => {
 	const { disconnect } = useDisconnect()
 	const [room, setRoom] = useState<Room | null>(null)
 
 	const [showStatusPanel, setShowStatusPanel] = useState(true)
 
+	const alreadyRegistered = useRef(false)
 	const { register, unregisterAll, stores } = useSubscription(libp2p)
-	const [db, setDb] = useState<InterwalletChatDB | null>(null)
 
 	useEffect(() => {
-		const db = new InterwalletChatDB()
+		if (alreadyRegistered.current) return
 
 		register(USER_REGISTRY_TOPIC, async (key: Uint8Array, value: Uint8Array) => {
 			const userRegistration = await validateUserRegistration(key, value)
@@ -71,12 +143,13 @@ export const ChatView = ({
 			// if the current user is a member of the room
 			if (room.members.find(({ address }) => address === user.address)) {
 				await db.rooms.add(room)
-				addRoom(room)
+				console.log("adding room to store")
+				addRoom(db, room)
 			}
 		})
 
-		setDb(db)
-	}, [])
+		alreadyRegistered.current = true
+	}, [db])
 
 	useEffect(() => {
 		const userRegistry = stores[USER_REGISTRY_TOPIC]
@@ -84,6 +157,7 @@ export const ChatView = ({
 
 		const key = hexToBytes(user.address)
 
+		// send user registration
 		;(async () => {
 			const existingRegistration = await userRegistry.get(key)
 			if (existingRegistration === null) {
@@ -98,16 +172,15 @@ export const ChatView = ({
 				}
 			}
 		})()
-
-		// send user registration
 	}, [stores[USER_REGISTRY_TOPIC]])
 
 	useEffect(() => {
-		if (!db || !stores[ROOM_REGISTRY_TOPIC]) return
+		if (!stores[ROOM_REGISTRY_TOPIC]) return
 
+		// Reload rooms from db
 		db.rooms.toArray().then((rooms) => {
 			for (const room of rooms) {
-				addRoom(room)
+				addRoom(db, room)
 			}
 		})
 	}, [db, stores[ROOM_REGISTRY_TOPIC]])
@@ -115,13 +188,8 @@ export const ChatView = ({
 	const logout = async () => {
 		window.localStorage.removeItem(getRegistrationKey(user.address))
 
-		if (!db) return
 		await unregisterAll()
-
-		const databaseNames = await Dexie.getDatabaseNames()
-		for (const name of databaseNames.filter((name) => name.startsWith("interwallet:"))) {
-			await Dexie.delete(name)
-		}
+		await db.delete()
 
 		setRoom(null)
 		setUser(null)
@@ -131,8 +199,6 @@ export const ChatView = ({
 	const createRoom: (members: PublicUserRegistration[]) => Promise<void> = async (members) => {
 		const roomRegistry = stores[ROOM_REGISTRY_TOPIC]
 		if (!roomRegistry) return
-
-		if (!db) return
 
 		assert(
 			members.find(({ address }) => address === user.address),
@@ -164,12 +230,7 @@ export const ChatView = ({
 		db.rooms.add({ id: roomId, creator: user.address, members })
 	}
 
-	const addRoom = async (room: Room) => {
-		if (!db) {
-			console.log("no db, tried to add room", room)
-			return
-		}
-
+	const addRoom = async (db: InterwalletChatDB, room: Room) => {
 		const topic = `interwallet:room:${room.id}`
 		console.log("registering for room topic", topic)
 		await register(topic, async (key: Uint8Array, value: Uint8Array) => {
@@ -223,45 +284,12 @@ export const ChatView = ({
 		})
 	}
 
-	const sendMessage = async (roomId: string, message: string) => {
-		if (!db) {
-			console.log("db not ready")
-			return
-		}
+	const sendMessage = async (room: Room, message: string) => {
+		const signedData = encryptAndSignMessageForRoom(room, message, user)
 
-		const event = {
-			type: "message",
-			detail: { content: message, sender: user.address, timestamp: Date.now() },
-		}
-
-		const room = await db.rooms.get({ id: roomId })
-		assert(room !== undefined, `room id ${roomId} not found`)
-
-		const otherRoomMembers = room.members.filter(({ address }) => user.address !== address)
-		assert(otherRoomMembers.length > 0, "room has no other members")
-
-		const encryptedData = Messages.EncryptedEvent.encode({
-			recipients: otherRoomMembers.map((otherRoomMember) => {
-				const publicKey = hexToBytes(otherRoomMember.keyBundle.encryptionPublicKey)
-				const nonce = nacl.randomBytes(nacl.box.nonceLength)
-				const ciphertext = nacl.box(encode(event), nonce, publicKey, hexToBytes(user.encryptionPrivateKey))
-
-				return {
-					publicKey,
-					ciphertext,
-					nonce,
-				}
-			}),
-			roomId: base58btc.baseDecode(roomId),
-			userAddress: hexToBytes(user.address),
-		})
-
-		const signature = nacl.sign.detached(encryptedData, hexToBytes(user.signingPrivateKey))
-
-		const signedData = Messages.SignedData.encode({ signature, data: encryptedData })
 		const key = blake3(signedData, { dkLen: 16 })
 
-		const topic = `interwallet:room:${roomId}`
+		const topic = `interwallet:room:${room.id}`
 		const store = stores[topic]
 		if (!store) {
 			throw new Error(`store not found for topic ${topic}`)
@@ -290,12 +318,12 @@ export const ChatView = ({
 							{statusPanelIcon({ width: 24, height: 24 })}
 						</button>
 					</div>
-					<ChatSidebar createRoom={createRoom} selectedRoom={room} setRoom={setRoom} user={user} />
+					<ChatSidebar db={db} createRoom={createRoom} selectedRoom={room} setRoom={setRoom} user={user} />
 					<div className="flex flex-row grow items-stretch overflow-y-hidden">
 						{room === null ? (
 							<div className="px-4 m-auto text-3xl font-semibold text-gray-500">No chat is selected</div>
 						) : (
-							<MessagesPanel room={room} user={user} sendMessage={sendMessage} />
+							<MessagesPanel db={db} room={room} user={user} sendMessage={sendMessage} />
 						)}
 					</div>
 				</div>

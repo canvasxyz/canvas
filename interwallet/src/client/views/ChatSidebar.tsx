@@ -5,15 +5,16 @@ import { PrivateUserRegistration, PublicUserRegistration, Room } from "../../sha
 
 import { NewChatModal } from "./NewChatModal.js"
 import { RoomName } from "./RoomName.js"
-
-import { db } from "../db.js"
+import { InterwalletChatDB } from "../db.js"
 
 export const ChatSidebar = ({
+	db,
 	selectedRoom,
 	createRoom,
 	setRoom,
 	user,
 }: {
+	db: InterwalletChatDB
 	selectedRoom: Room | null
 	createRoom: (members: PublicUserRegistration[]) => Promise<void>
 	setRoom: (room: Room) => void
@@ -48,6 +49,7 @@ export const ChatSidebar = ({
 			</div>
 			{showNewChatModal && (
 				<NewChatModal
+					db={db}
 					user={user}
 					closeModal={() => {
 						setShowNewChatModal(false)

@@ -3,8 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks"
 import { useEnsName } from "wagmi"
 import _ from "lodash"
 import { PrivateUserRegistration, PublicUserRegistration, getPublicUserRegistration } from "../../shared/index.js"
-
-import { db } from "../db.js"
+import { InterwalletChatDB } from "../db.js"
 
 interface UserEntryProps {
 	user: PublicUserRegistration
@@ -26,12 +25,13 @@ const UserEntry = ({ user, onClick, isSelected }: UserEntryProps) => {
 }
 
 export interface NewChatModalProps {
+	db: InterwalletChatDB
 	closeModal: () => void
 	user: PrivateUserRegistration
 	createRoom: (members: PublicUserRegistration[]) => Promise<void>
 }
 
-export const NewChatModal = ({ createRoom, closeModal, user }: NewChatModalProps) => {
+export const NewChatModal = ({ db, createRoom, closeModal, user }: NewChatModalProps) => {
 	const users = useLiveQuery(async () => await db.users.toArray(), [])
 	const [selectedRecipients, setSelectedRecipients] = useState<Record<string, boolean>>({})
 
