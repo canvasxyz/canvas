@@ -51,16 +51,7 @@ const useInterwalletChatDB = () => {
 		}
 	}, [])
 
-	const deleteDb = useCallback(async () => {
-		if (db === null) {
-			return
-		}
-
-		console.log("deleting db...")
-		await db.delete()
-	}, [db])
-
-	return { db, deleteDb }
+	return { db }
 }
 
 export const LoggedInView = ({
