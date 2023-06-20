@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useDisconnect } from "wagmi"
 
 import { ChatSidebar } from "./ChatSidebar.js"
@@ -37,6 +37,8 @@ import { InterwalletChatDB } from "../db.js"
 import { base58btc } from "multiformats/bases/base58"
 import { blake3 } from "@noble/hashes/blake3"
 import { useLibp2p } from "../useLibp2p.js"
+import { SelectedRoomIdContext } from "../SelectedRoomIdContext.js"
+import { useLiveQuery } from "dexie-react-hooks"
 
 const useInterwalletChatDB = () => {
 	const [db, setDb] = useState<InterwalletChatDB | null>(null)
@@ -120,7 +122,10 @@ export const ChatView = ({
 	db: InterwalletChatDB
 }) => {
 	const { disconnect } = useDisconnect()
-	const [room, setRoom] = useState<Room | null>(null)
+
+	const { selectedRoomId, setSelectedRoomId } = useContext(SelectedRoomIdContext)
+
+	const room = useLiveQuery(() => db.rooms.get({ id: selectedRoomId || "" }), [selectedRoomId])
 
 	const [showStatusPanel, setShowStatusPanel] = useState(true)
 
@@ -197,7 +202,7 @@ export const ChatView = ({
 		await unregisterAll()
 		await db.delete()
 
-		setRoom(null)
+		setSelectedRoomId(null)
 		setUser(null)
 		disconnect()
 	}
@@ -324,9 +329,15 @@ export const ChatView = ({
 							{statusPanelIcon({ width: 24, height: 24 })}
 						</button>
 					</div>
-					<ChatSidebar db={db} createRoom={createRoom} selectedRoom={room} setRoom={setRoom} user={user} />
+					<ChatSidebar
+						db={db}
+						createRoom={createRoom}
+						selectedRoomId={selectedRoomId}
+						setSelectedRoomId={setSelectedRoomId}
+						user={user}
+					/>
 					<div className="flex flex-row grow items-stretch overflow-y-hidden">
-						{room === null ? (
+						{room === undefined ? (
 							<div className="px-4 m-auto text-3xl font-semibold text-gray-500">No chat is selected</div>
 						) : (
 							<MessagesPanel db={db} room={room} user={user} sendMessage={sendMessage} />

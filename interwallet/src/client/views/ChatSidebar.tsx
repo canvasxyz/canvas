@@ -9,15 +9,15 @@ import { InterwalletChatDB } from "../db.js"
 
 export const ChatSidebar = ({
 	db,
-	selectedRoom,
+	selectedRoomId,
+	setSelectedRoomId,
 	createRoom,
-	setRoom,
 	user,
 }: {
 	db: InterwalletChatDB
-	selectedRoom: Room | null
+	selectedRoomId: string | null
+	setSelectedRoomId: (roomId: string) => void
 	createRoom: (members: PublicUserRegistration[]) => Promise<void>
-	setRoom: (room: Room) => void
 	user: PrivateUserRegistration
 }) => {
 	const [showNewChatModal, setShowNewChatModal] = React.useState(false)
@@ -40,9 +40,9 @@ export const ChatSidebar = ({
 				{rooms?.map((room) => (
 					<ChatSidebarRoom
 						key={room.id}
-						isSelected={!!selectedRoom && room.id == selectedRoom.id}
+						isSelected={!!selectedRoomId && room.id == selectedRoomId}
 						room={room}
-						setRoom={setRoom}
+						selectRoom={() => setSelectedRoomId(room.id)}
 						user={user}
 					/>
 				))}
@@ -65,12 +65,12 @@ const ChatSidebarRoom = ({
 	isSelected,
 	room,
 	user,
-	setRoom,
+	selectRoom,
 }: {
 	isSelected: boolean
 	room: Room
 	user: PrivateUserRegistration
-	setRoom: (room: Room) => void
+	selectRoom: () => void
 }) => {
 	if (isSelected) {
 		return (
@@ -90,7 +90,7 @@ const ChatSidebarRoom = ({
 				key={room.id}
 				className="pt-2 pb-2 pl-2 pr-4 m-2 text-left rounded hover:bg-gray-300 hover:cursor-pointer bg-gray-50"
 				disabled={isSelected}
-				onClick={(e) => setRoom(room)}
+				onClick={(e) => selectRoom()}
 			>
 				<span className="text-sm">
 					<RoomName user={user} room={room} />
