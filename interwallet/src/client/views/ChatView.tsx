@@ -160,7 +160,7 @@ export const ChatView = ({
 		})
 
 		alreadyRegistered.current = true
-	}, [db])
+	}, [])
 
 	useEffect(() => {
 		const userRegistry = stores[USER_REGISTRY_TOPIC]
@@ -194,7 +194,7 @@ export const ChatView = ({
 				addRoom(db, room)
 			}
 		})
-	}, [db, stores[ROOM_REGISTRY_TOPIC]])
+	}, [stores[ROOM_REGISTRY_TOPIC]])
 
 	const logout = async () => {
 		window.localStorage.removeItem(getRegistrationKey(user.address))
