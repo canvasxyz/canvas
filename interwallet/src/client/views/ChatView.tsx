@@ -79,7 +79,7 @@ export const ChatView = ({
 
 	const { selectedRoomId, setSelectedRoomId } = useContext(SelectedRoomIdContext)
 
-	const room = useLiveQuery(() => db.rooms.get({ id: selectedRoomId || "" }), [selectedRoomId])
+	const selectedRoom = useLiveQuery(() => db.rooms.get({ id: selectedRoomId || "" }), [selectedRoomId])
 
 	const [showStatusPanel, setShowStatusPanel] = useState(true)
 
@@ -180,7 +180,9 @@ export const ChatView = ({
 		}
 
 		const roomId = base58btc.baseEncode(key)
-		db.rooms.add({ id: roomId, ...roomRegistration })
+		await db.rooms.add({ id: roomId, ...roomRegistration })
+
+		setSelectedRoomId(roomId)
 	}
 
 	const addRoom = async (db: InterwalletChatDB, room: Room) => {
@@ -229,7 +231,7 @@ export const ChatView = ({
 						<h1 className="">Encrypted Chat</h1>
 					</div>
 					<div className="flex flex-row">
-						<div className="px-4 self-center grow">{room && <RoomName user={user} room={room} />}</div>
+						<div className="px-4 self-center grow">{selectedRoom && <RoomName user={user} room={selectedRoom} />}</div>
 						<button className="px-4 self-stretch hover:bg-gray-100" onClick={logout}>
 							Logout
 						</button>
@@ -248,10 +250,10 @@ export const ChatView = ({
 						user={user}
 					/>
 					<div className="flex flex-row grow items-stretch overflow-y-hidden">
-						{room === undefined ? (
-							<div className="px-4 m-auto text-3xl font-semibold text-gray-500">No chat is selected</div>
+						{selectedRoom ? (
+							<MessagesPanel db={db} room={selectedRoom} user={user} sendMessage={sendMessage} />
 						) : (
-							<MessagesPanel db={db} room={room} user={user} sendMessage={sendMessage} />
+							<div className="px-4 m-auto text-3xl font-semibold text-gray-500">No chat is selected</div>
 						)}
 					</div>
 				</div>
