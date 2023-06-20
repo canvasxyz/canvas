@@ -6,7 +6,7 @@ import { PubSub } from "@libp2p/interface-pubsub"
 import Dexie from "dexie"
 import { Libp2p } from "libp2p"
 import { PingService } from "libp2p/ping"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 type ServiceMap = {
 	identify: {}
@@ -39,14 +39,6 @@ export const useStore = (
 export const useSubscription = (libp2p: Libp2p<ServiceMap>) => {
 	;(window as any).libp2p = libp2p
 	const [stores, setStores] = useState<Record<string, Store>>({})
-
-	// useEffect(() => {
-	// 	// automatically stop all of the stores when this hook is unmounted
-	// 	return () => {
-	// 		console.log("stopping stores")
-	// 		Object.values(stores).forEach((store) => store.stop())
-	// 	}
-	// }, [])
 
 	const register: (
 		topic: string,
