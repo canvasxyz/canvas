@@ -198,7 +198,8 @@ export const encryptAndSignMessageForRoom = (room: Room, message: string, user: 
 			}
 		}),
 		roomId: base58btc.baseDecode(room.id),
-		userAddress: hexToBytes(user.address),
+		senderAddress: hexToBytes(user.address),
+		senderPublicKey: hexToBytes(user.keyBundle.encryptionPublicKey),
 	})
 
 	const signature = nacl.sign.detached(encryptedData, hexToBytes(user.signingPrivateKey))
