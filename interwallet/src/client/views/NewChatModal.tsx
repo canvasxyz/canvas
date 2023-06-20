@@ -63,6 +63,7 @@ export const NewChatModal = ({ db, createRoom, closeModal, user }: NewChatModalP
 		} catch (err) {
 			console.error("failed to create room", err)
 		}
+		closeModal()
 	}, [user, selectedRecipients])
 
 	return (
