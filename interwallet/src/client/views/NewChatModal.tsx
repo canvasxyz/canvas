@@ -2,7 +2,12 @@ import React, { useCallback, useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { useEnsName } from "wagmi"
 import _ from "lodash"
-import { PrivateUserRegistration, PublicUserRegistration, getPublicUserRegistration } from "../../shared/index.js"
+import {
+	PrivateUserRegistration,
+	PublicUserRegistration,
+	RoomRegistration,
+	getPublicUserRegistration,
+} from "../../shared/index.js"
 import { InterwalletChatDB } from "../db.js"
 
 interface UserEntryProps {
@@ -28,7 +33,7 @@ export interface NewChatModalProps {
 	db: InterwalletChatDB
 	closeModal: () => void
 	user: PrivateUserRegistration
-	createRoom: (members: PublicUserRegistration[]) => Promise<void>
+	createRoom: (roomRegistration: RoomRegistration) => Promise<void>
 }
 
 export const NewChatModal = ({ db, createRoom, closeModal, user }: NewChatModalProps) => {
@@ -54,7 +59,7 @@ export const NewChatModal = ({ db, createRoom, closeModal, user }: NewChatModalP
 				[getPublicUserRegistration(user), ...selectedRecipientsObjects],
 				(member) => member.address
 			)
-			await createRoom(members)
+			await createRoom({ members, creator: user.address })
 		} catch (err) {
 			console.error("failed to create room", err)
 		}

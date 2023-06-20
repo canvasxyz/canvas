@@ -15,7 +15,9 @@ import {
 	PublicUserRegistration,
 	Room,
 	RoomEvent,
+	RoomRegistration,
 	serializePublicUserRegistration,
+	serializeRoomRegistration,
 } from "../../shared/types.js"
 import { useSubscription } from "../useStore.js"
 import { Libp2p } from "libp2p"
@@ -101,6 +103,19 @@ const encryptAndSignMessageForRoom = (room: Room, message: string, user: Private
 	return Messages.SignedData.encode({ signature, data: encryptedData })
 }
 
+const signAndEncodeRoomRegistration = (roomRegistration: RoomRegistration, user: PrivateUserRegistration) => {
+	assert(roomRegistration.creator === user.address, "room creator must be the current user")
+	assert(
+		roomRegistration.members.find(({ address }) => address === user.address),
+		"members did not include the current user"
+	)
+
+	const serializedRoomRegistration = Messages.RoomRegistration.encode(serializeRoomRegistration(roomRegistration))
+
+	const signature = nacl.sign.detached(serializedRoomRegistration, hexToBytes(user.signingPrivateKey))
+	return Messages.SignedData.encode({ signature, data: serializedRoomRegistration })
+}
+
 export const ChatView = ({
 	user,
 	setUser,
@@ -116,7 +131,7 @@ export const ChatView = ({
 
 	const { selectedRoomId, setSelectedRoomId } = useContext(SelectedRoomIdContext)
 
-	const room = useLiveQuery(() => db.rooms.get({ id: selectedRoomId || "" }))
+	const room = useLiveQuery(() => db.rooms.get({ id: selectedRoomId || "" }), [selectedRoomId])
 
 	const [showStatusPanel, setShowStatusPanel] = useState(true)
 
@@ -198,38 +213,26 @@ export const ChatView = ({
 		disconnect()
 	}
 
-	const createRoom: (members: PublicUserRegistration[]) => Promise<void> = async (members) => {
+	const createRoom: (roomRegistration: RoomRegistration) => Promise<void> = async (roomRegistration) => {
+		const signedRoomRegistration = signAndEncodeRoomRegistration(roomRegistration, user)
+
+		const hash = blake3.create({ dkLen: 16 })
+		for (const { address } of roomRegistration.members) {
+			hash.update(hexToBytes(address))
+		}
+		const key = hash.digest()
+
 		const roomRegistry = stores[ROOM_REGISTRY_TOPIC]
 		if (!roomRegistry) return
 
-		assert(
-			members.find(({ address }) => address === user.address),
-			"members did not include the current user"
-		)
-
-		const hash = blake3.create({ dkLen: 16 })
-		for (const { address } of members) {
-			hash.update(hexToBytes(address))
-		}
-
-		const key = hash.digest()
-
-		const roomRegistration = Messages.RoomRegistration.encode({
-			creator: hexToBytes(user.address),
-			members: members.map(serializePublicUserRegistration),
-		})
-
-		const signature = nacl.sign.detached(roomRegistration, hexToBytes(user.signingPrivateKey))
-		const value = Messages.SignedData.encode({ signature, data: roomRegistration })
-
 		try {
-			await roomRegistry.insert(key, value)
+			await roomRegistry.insert(key, signedRoomRegistration)
 		} catch (e) {
 			console.log(e)
 		}
 
 		const roomId = base58btc.baseEncode(key)
-		db.rooms.add({ id: roomId, creator: user.address, members })
+		db.rooms.add({ id: roomId, ...roomRegistration })
 	}
 
 	const addRoom = async (db: InterwalletChatDB, room: Room) => {

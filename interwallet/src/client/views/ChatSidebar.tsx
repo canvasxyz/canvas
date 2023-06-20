@@ -1,7 +1,7 @@
 import React from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 
-import { PrivateUserRegistration, PublicUserRegistration, Room } from "../../shared/index.js"
+import { PrivateUserRegistration, Room, RoomRegistration } from "../../shared/index.js"
 
 import { NewChatModal } from "./NewChatModal.js"
 import { RoomName } from "./RoomName.js"
@@ -17,7 +17,7 @@ export const ChatSidebar = ({
 	db: InterwalletChatDB
 	selectedRoomId: string | null
 	setSelectedRoomId: (roomId: string) => void
-	createRoom: (members: PublicUserRegistration[]) => Promise<void>
+	createRoom: (roomRegistration: RoomRegistration) => Promise<void>
 	user: PrivateUserRegistration
 }) => {
 	const [showNewChatModal, setShowNewChatModal] = React.useState(false)
