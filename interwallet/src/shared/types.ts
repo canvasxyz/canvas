@@ -1,4 +1,4 @@
-import { hexToBytes } from "@noble/hashes/utils"
+import { hexToBytes } from "viem"
 
 import * as Messages from "./messages.js"
 
@@ -15,11 +15,14 @@ export type KeyBundle = {
 	encryptionPublicKey: `0x${string}`
 }
 
-export type Room = {
-	id: string
+export type RoomRegistration = {
 	creator: `0x${string}`
 	members: PublicUserRegistration[]
 }
+
+export type Room = {
+	id: string
+} & RoomRegistration
 
 export interface PublicUserRegistration {
 	address: `0x${string}`
@@ -45,4 +48,9 @@ export const serializePublicUserRegistration = (user: PublicUserRegistration): M
 		signingPublicKey: hexToBytes(user.keyBundle.signingPublicKey),
 		encryptionPublicKey: hexToBytes(user.keyBundle.encryptionPublicKey),
 	},
+})
+
+export const serializeRoomRegistration = ({ creator, members }: RoomRegistration): Messages.RoomRegistration => ({
+	creator: hexToBytes(creator),
+	members: members.map(serializePublicUserRegistration),
 })

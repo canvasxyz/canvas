@@ -1,18 +1,19 @@
 import React, { useCallback, useContext, useLayoutEffect } from "react"
 import { useAccount, useDisconnect, useWalletClient } from "wagmi"
 
-import { createPrivateUserRegistration } from "../../shared/index.js"
+import { PrivateUserRegistration, createPrivateUserRegistration } from "../../shared/index.js"
 
-import { AppContext } from "../context.js"
 import { getRegistrationKey } from "../utils.js"
 
-export interface RegistrationViewProps {}
-
-export const RegistrationView: React.FC<RegistrationViewProps> = ({}) => {
+export const RegistrationView = ({
+	user,
+	setUser,
+}: {
+	user: PrivateUserRegistration | null
+	setUser: (user: PrivateUserRegistration | null) => void
+}) => {
 	const { address: userAddress, isConnected } = useAccount()
 	const { data: walletClient } = useWalletClient()
-
-	const { user, setUser } = useContext(AppContext)
 
 	const [pin, setPin] = React.useState("")
 	const { disconnect } = useDisconnect()

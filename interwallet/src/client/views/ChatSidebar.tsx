@@ -1,17 +1,25 @@
-import React, { useContext } from "react"
+import React from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 
-import { Room } from "../../shared/index.js"
+import { PrivateUserRegistration, Room, RoomRegistration } from "../../shared/index.js"
 
 import { NewChatModal } from "./NewChatModal.js"
 import { RoomName } from "./RoomName.js"
+import { InterwalletChatDB } from "../db.js"
 
-import { AppContext } from "../context.js"
-import { db } from "../db.js"
-
-export interface ChatSidebarProps {}
-
-export const ChatSidebar: React.FC<ChatSidebarProps> = ({}) => {
+export const ChatSidebar = ({
+	db,
+	selectedRoomId,
+	setSelectedRoomId,
+	createRoom,
+	user,
+}: {
+	db: InterwalletChatDB
+	selectedRoomId: string | null
+	setSelectedRoomId: (roomId: string) => void
+	createRoom: (roomRegistration: RoomRegistration) => Promise<void>
+	user: PrivateUserRegistration
+}) => {
 	const [showNewChatModal, setShowNewChatModal] = React.useState(false)
 
 	const rooms = useLiveQuery(() => db.rooms.toArray(), [])
@@ -30,28 +38,40 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({}) => {
 			</div>
 			<div className="overflow-scroll flex flex-col items-stretch">
 				{rooms?.map((room) => (
-					<ChatSidebarRoom key={room.id} room={room} />
+					<ChatSidebarRoom
+						key={room.id}
+						isSelected={!!selectedRoomId && room.id == selectedRoomId}
+						room={room}
+						selectRoom={() => setSelectedRoomId(room.id)}
+						user={user}
+					/>
 				))}
 			</div>
 			{showNewChatModal && (
 				<NewChatModal
+					db={db}
+					user={user}
 					closeModal={() => {
 						setShowNewChatModal(false)
 					}}
+					createRoom={createRoom}
 				/>
 			)}
 		</div>
 	)
 }
 
-interface ChatSidebarRoomProps {
+const ChatSidebarRoom = ({
+	isSelected,
+	room,
+	user,
+	selectRoom,
+}: {
+	isSelected: boolean
 	room: Room
-}
-
-const ChatSidebarRoom: React.FC<ChatSidebarRoomProps> = ({ room }) => {
-	const { room: selectedRoom, setRoom } = useContext(AppContext)
-	const isSelected = selectedRoom !== null && selectedRoom.id === room.id
-
+	user: PrivateUserRegistration
+	selectRoom: () => void
+}) => {
 	if (isSelected) {
 		return (
 			<button
@@ -60,7 +80,7 @@ const ChatSidebarRoom: React.FC<ChatSidebarRoomProps> = ({ room }) => {
 				disabled={isSelected}
 			>
 				<span className="text-sm font-bold">
-					<RoomName room={room} />
+					<RoomName user={user} room={room} />
 				</span>
 			</button>
 		)
@@ -70,10 +90,10 @@ const ChatSidebarRoom: React.FC<ChatSidebarRoomProps> = ({ room }) => {
 				key={room.id}
 				className="pt-2 pb-2 pl-2 pr-4 m-2 text-left rounded hover:bg-gray-300 hover:cursor-pointer bg-gray-50"
 				disabled={isSelected}
-				onClick={(e) => setRoom(room)}
+				onClick={(e) => selectRoom()}
 			>
 				<span className="text-sm">
-					<RoomName room={room} />
+					<RoomName user={user} room={room} />
 				</span>
 			</button>
 		)

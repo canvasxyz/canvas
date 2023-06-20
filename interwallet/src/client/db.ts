@@ -15,7 +15,7 @@ export class InterwalletChatDB extends Dexie {
 	messages!: Table<Message, number>
 
 	constructor() {
-		super("InterwalletChatDB")
+		super("interwallet:ui-db")
 		this.version(1).stores({
 			users: "address",
 			rooms: "id, *members.address",
@@ -23,5 +23,3 @@ export class InterwalletChatDB extends Dexie {
 		})
 	}
 }
-
-export const db = new InterwalletChatDB()
