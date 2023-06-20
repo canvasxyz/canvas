@@ -125,7 +125,7 @@ export const ChatView = ({
 
 	const { selectedRoomId, setSelectedRoomId } = useContext(SelectedRoomIdContext)
 
-	const room = useLiveQuery(() => db.rooms.get({ id: selectedRoomId || "" }), [selectedRoomId])
+	const room = useLiveQuery(() => db.rooms.get({ id: selectedRoomId || "" }))
 
 	const [showStatusPanel, setShowStatusPanel] = useState(true)
 
