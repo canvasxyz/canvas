@@ -6,7 +6,8 @@ import { PubSub } from "@libp2p/interface-pubsub"
 import Dexie from "dexie"
 import { Libp2p } from "libp2p"
 import { PingService } from "libp2p/ping"
-import { useEffect, useState } from "react"
+import _ from "lodash"
+import { useEffect, useRef, useState } from "react"
 
 type ServiceMap = {
 	identify: {}
@@ -80,16 +81,82 @@ export const useSubscription = (libp2p: Libp2p<ServiceMap>) => {
 		}
 	}
 
-	// const insert: (topic: string, key: Uint8Array, value: Uint8Array) => Promise<void> = async (topic, key, value) => {
-	// 	const store = stores[topic]
-	// 	if (!store) return
-	// 	store.insert(key, value)
-	// }
-
 	return {
 		register,
 		unregister,
 		unregisterAll,
 		stores,
 	}
+}
+
+export const useSubscription2 = (
+	libp2p: Libp2p<ServiceMap>,
+	configs: Record<
+		string,
+		{
+			// topic: string
+			apply: (key: Uint8Array, value: Uint8Array) => Promise<void>
+			// partition: string[]
+		}
+	>
+) => {
+	const [stores, setStores] = useState<Record<string, Store>>({})
+
+	const registeredStoreKeys = useRef<string>("")
+
+	const syncStores = async (configs: Record<string, any>) => {
+		const newStores: Record<string, Store> = { ...stores }
+
+		// find stores to unregister
+		const storesToUnregister = _.difference(Object.keys(stores), Object.keys(configs))
+		console.log("stores to unregister", storesToUnregister)
+		for (const topic of storesToUnregister) {
+			console.log("unregistering store", topic)
+			const store = stores[topic]
+			if (!store) return
+
+			await store.stop()
+			await Dexie.delete(topic)
+
+			delete newStores[topic]
+		}
+
+		// find stores to register
+		const storesToRegister = _.difference(Object.keys(configs), Object.keys(stores))
+		console.log("stores to register", storesToRegister)
+		for (const topic of storesToRegister) {
+			console.log("registering store", topic)
+			const config = configs[topic]
+			if (!config) return
+
+			const store = await openStore(libp2p, { topic, apply: config.apply })
+			await store.start()
+			newStores[topic] = store
+		}
+
+		setStores(newStores)
+	}
+
+	const configsKey = JSON.stringify(Object.keys(configs))
+
+	useEffect(() => {
+		// only sync stores once for a given set of configs
+		if (registeredStoreKeys.current === configsKey) return
+		registeredStoreKeys.current = configsKey
+
+		syncStores(configs)
+	}, [configsKey])
+
+	const unregisterAll = async () => {
+		console.log("unregistering all stores")
+
+		return Object.keys(stores).map(async (topic) => {
+			const store = stores[topic]
+			if (!store) return
+			await store.stop()
+			await Dexie.delete(topic)
+		})
+	}
+
+	return { stores, unregisterAll }
 }

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react"
+import React, { useContext, useEffect, useState } from "react"
 import { useDisconnect } from "wagmi"
 
 import { ChatSidebar } from "./ChatSidebar.js"
@@ -11,7 +11,7 @@ import { getRegistrationKey } from "../utils.js"
 import { ReactComponent as chevronRight } from "../../../icons/chevron-right.svg"
 import { ReactComponent as chevronLeft } from "../../../icons/chevron-left.svg"
 import { PrivateUserRegistration, Room, RoomRegistration, serializePublicUserRegistration } from "../../shared/types.js"
-import { useSubscription } from "../useStore.js"
+import { useSubscription2 } from "../useStore.js"
 import { Libp2p } from "libp2p"
 import { ServiceMap } from "../libp2p.js"
 import {
@@ -19,6 +19,7 @@ import {
 	USER_REGISTRY_TOPIC,
 	decryptEvent,
 	encryptAndSignMessageForRoom,
+	getRoomId,
 	signAndEncodeRoomRegistration,
 	validateEvent,
 	validateRoomRegistration,
@@ -27,7 +28,6 @@ import {
 import { hexToBytes } from "viem"
 import * as Messages from "../../shared/messages.js"
 import { InterwalletChatDB } from "../db.js"
-import { base58btc } from "multiformats/bases/base58"
 import { blake3 } from "@noble/hashes/blake3"
 import { useLibp2p } from "../useLibp2p.js"
 import { SelectedRoomIdContext } from "../SelectedRoomIdContext.js"
@@ -83,38 +83,37 @@ export const ChatView = ({
 
 	const [showStatusPanel, setShowStatusPanel] = useState(true)
 
-	const alreadyRegistered = useRef(false)
-	const { register, unregisterAll, stores } = useSubscription(libp2p)
-
-	useEffect(() => {
-		// using ref here is a hack to get around the fact that useEffect fires twice
-		// when using StrictMode when in development mode
-
-		// a better approach would be to implement register() and the Store so that if we
-		// try to register the same topic twice, it doesn't do anything or it throws an error
-		// that we can then catch and ignore
-		if (alreadyRegistered.current) return
-
-		register(USER_REGISTRY_TOPIC, async (key: Uint8Array, value: Uint8Array) => {
-			const userRegistration = await validateUserRegistration(key, value)
-			console.log("user registry message", userRegistration)
-			await db.users.add(userRegistration)
-		})
-
-		register(ROOM_REGISTRY_TOPIC, async (key: Uint8Array, value: Uint8Array) => {
-			const room = await validateRoomRegistration(key, value)
-			console.log("room registry messsage", room)
-
-			// if the current user is a member of the room
-			if (room.members.find(({ address }) => address === user.address)) {
-				await db.rooms.add(room)
-				console.log("adding room to store")
-				addRoom(db, room)
+	const [subscriptions, setSubscriptions] = useState<
+		Record<
+			string,
+			{
+				apply: (key: Uint8Array, value: Uint8Array) => Promise<void>
 			}
-		})
+		>
+	>({
+		[USER_REGISTRY_TOPIC]: {
+			apply: async (key: Uint8Array, value: Uint8Array) => {
+				const userRegistration = await validateUserRegistration(key, value)
+				console.log("user registry message", userRegistration)
+				await db.users.add(userRegistration)
+			},
+		},
+		[ROOM_REGISTRY_TOPIC]: {
+			apply: async (key: Uint8Array, value: Uint8Array) => {
+				const room = await validateRoomRegistration(key, value)
+				console.log("room registry messsage", room)
 
-		alreadyRegistered.current = true
-	}, [])
+				// if the current user is a member of the room
+				if (room.members.find(({ address }) => address === user.address)) {
+					await db.rooms.add(room)
+					console.log("adding room to store")
+					addRoom(db, room)
+				}
+			},
+		},
+	})
+
+	const { stores, unregisterAll } = useSubscription2(libp2p, subscriptions)
 
 	useEffect(() => {
 		const userRegistry = stores[USER_REGISTRY_TOPIC]
@@ -153,8 +152,9 @@ export const ChatView = ({
 	const logout = async () => {
 		window.localStorage.removeItem(getRegistrationKey(user.address))
 
-		await unregisterAll()
 		await db.delete()
+
+		await unregisterAll()
 
 		setSelectedRoomId(null)
 		setUser(null)
@@ -179,33 +179,37 @@ export const ChatView = ({
 			console.log(e)
 		}
 
-		const roomId = base58btc.baseEncode(key)
-		await db.rooms.add({ id: roomId, ...roomRegistration })
-
+		const roomId = getRoomId(key)
 		setSelectedRoomId(roomId)
 	}
 
 	const addRoom = async (db: InterwalletChatDB, room: Room) => {
 		const topic = `interwallet:room:${room.id}`
 		console.log("registering for room topic", topic)
-		await register(topic, async (key: Uint8Array, value: Uint8Array) => {
-			const { encryptedEvent } = validateEvent(room, key, value)
-			console.log("message event", encryptedEvent)
 
-			const event = decryptEvent(encryptedEvent, user)
+		setSubscriptions((subscriptions) => ({
+			...subscriptions,
+			[topic]: {
+				apply: async (key: Uint8Array, value: Uint8Array) => {
+					const { encryptedEvent } = validateEvent(room, key, value)
+					console.log("message event", encryptedEvent)
 
-			// TODO: runtime validation of room event types
-			if (event.type === "message") {
-				try {
-					const id = await db.messages.add({ room: room.id, ...event.detail })
-					console.log("added message with id", id)
-				} catch (e) {
-					console.log(e)
-				}
-			} else {
-				throw new Error("invalid event type")
-			}
-		})
+					const event = decryptEvent(encryptedEvent, user)
+
+					// TODO: runtime validation of room event types
+					if (event.type === "message") {
+						try {
+							const id = await db.messages.add({ room: room.id, ...event.detail })
+							console.log("added message with id", id)
+						} catch (e) {
+							console.log(e)
+						}
+					} else {
+						throw new Error("invalid event type")
+					}
+				},
+			},
+		}))
 	}
 
 	const sendMessage = async (room: Room, message: string) => {
