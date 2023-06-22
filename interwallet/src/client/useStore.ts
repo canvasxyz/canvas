@@ -15,6 +15,8 @@ type ServiceMap = {
 	ping: PingService
 }
 
+export const makeShardedTopic = (topic: string, shard: string) => `${topic}:${shard}`
+
 export const useStore = (
 	libp2p: Libp2p<ServiceMap>,
 	{ topic, apply }: { topic: string; apply: (key: Uint8Array, value: Uint8Array) => Promise<void> }
@@ -37,67 +39,17 @@ export const useStore = (
 	return { store }
 }
 
-export const useSubscription = (libp2p: Libp2p<ServiceMap>) => {
-	;(window as any).libp2p = libp2p
-	const [stores, setStores] = useState<Record<string, Store>>({})
-
-	const register: (
-		topic: string,
-		apply: (key: Uint8Array, value: Uint8Array) => Promise<void>
-	) => Promise<void> = async (topic, apply) => {
-		console.log("registering store", topic)
-		const store = await openStore(libp2p, {
-			topic,
-			apply,
-		})
-
-		try {
-			await store.start()
-			setStores((stores) => ({ ...stores, [topic]: store }))
-		} catch (e) {
-			console.log(e)
-		}
-	}
-
-	const unregister: (topic: string) => Promise<void> = async (topic) => {
-		console.log("unregistering store", topic)
-		const store = stores[topic]
-		if (!store) return
-
-		await store.stop()
-
-		await Dexie.delete(topic)
-
-		setStores((stores) => {
-			const newStores = { ...stores }
-			delete newStores[topic]
-			return newStores
-		})
-	}
-
-	const unregisterAll = async () => {
-		for (const topic of Object.keys(stores)) {
-			await unregister(topic)
-		}
-	}
-
-	return {
-		register,
-		unregister,
-		unregisterAll,
-		stores,
-	}
-}
-
-export const useSubscription2 = (
+export const useSubscriptions = (
 	libp2p: Libp2p<ServiceMap>,
 	configs: Record<
 		string,
-		{
-			// topic: string
-			apply: (key: Uint8Array, value: Uint8Array) => Promise<void>
-			// partition: string[]
-		}
+		| {
+				apply: (key: Uint8Array, value: Uint8Array) => Promise<void>
+		  }
+		| {
+				shards: string[]
+				apply: (key: Uint8Array, value: Uint8Array, context: { shard: string }) => Promise<void>
+		  }
 	>
 ) => {
 	const [stores, setStores] = useState<Record<string, Store>>({})
@@ -137,14 +89,31 @@ export const useSubscription2 = (
 		setStores(newStores)
 	}
 
-	const configsKey = JSON.stringify(Object.keys(configs))
+	// for all of the configs that have shards, turn them into multiple configs
+	const reifiedConfigs: Record<string, { apply: (key: Uint8Array, value: Uint8Array) => void }> = {}
+	for (const topic of Object.keys(configs)) {
+		const config = configs[topic]
+		if ("shards" in config) {
+			for (const shard of config.shards) {
+				const resolvedTopic = makeShardedTopic(topic, shard)
+				// pass the shard to the apply function
+				reifiedConfigs[resolvedTopic] = {
+					apply: (key: Uint8Array, value: Uint8Array) => config.apply(key, value, { shard }),
+				}
+			}
+		} else {
+			reifiedConfigs[topic] = config
+		}
+	}
+
+	const configsKey = JSON.stringify(Object.keys(reifiedConfigs))
 
 	useEffect(() => {
 		// only sync stores once for a given set of configs
 		if (registeredStoreKeys.current === configsKey) return
 		registeredStoreKeys.current = configsKey
 
-		syncStores(configs)
+		syncStores(reifiedConfigs)
 	}, [configsKey])
 
 	const unregisterAll = async () => {

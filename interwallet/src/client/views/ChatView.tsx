@@ -11,7 +11,7 @@ import { getRegistrationKey } from "../utils.js"
 import { ReactComponent as chevronRight } from "../../../icons/chevron-right.svg"
 import { ReactComponent as chevronLeft } from "../../../icons/chevron-left.svg"
 import { PrivateUserRegistration, Room, RoomRegistration, serializePublicUserRegistration } from "../../shared/types.js"
-import { useSubscription2 } from "../useStore.js"
+import { makeShardedTopic, useSubscriptions } from "../useStore.js"
 import { Libp2p } from "libp2p"
 import { ServiceMap } from "../libp2p.js"
 import {
@@ -83,14 +83,9 @@ export const ChatView = ({
 
 	const [showStatusPanel, setShowStatusPanel] = useState(true)
 
-	const [subscriptions, setSubscriptions] = useState<
-		Record<
-			string,
-			{
-				apply: (key: Uint8Array, value: Uint8Array) => Promise<void>
-			}
-		>
-	>({
+	const [subscribedRoomIds, setSubscribedRoomIds] = useState<string[]>([])
+
+	const { stores, unregisterAll } = useSubscriptions(libp2p, {
 		[USER_REGISTRY_TOPIC]: {
 			apply: async (key: Uint8Array, value: Uint8Array) => {
 				const userRegistration = await validateUserRegistration(key, value)
@@ -107,13 +102,35 @@ export const ChatView = ({
 				if (room.members.find(({ address }) => address === user.address)) {
 					await db.rooms.add(room)
 					console.log("adding room to store")
-					addRoom(db, room)
+					addRoom(room)
+				}
+			},
+		},
+		"interwallet:room-events": {
+			shards: subscribedRoomIds,
+			apply: async (key: Uint8Array, value: Uint8Array, { shard: roomId }) => {
+				const room = await db.rooms.get({ id: roomId })
+				if (!room) return
+
+				const { encryptedEvent } = validateEvent(room, key, value)
+				console.log("message event", encryptedEvent)
+
+				const event = decryptEvent(encryptedEvent, user)
+
+				// TODO: runtime validation of room event types
+				if (event.type === "message") {
+					try {
+						const id = await db.messages.add({ room: room.id, ...event.detail })
+						console.log("added message with id", id)
+					} catch (e) {
+						console.log(e)
+					}
+				} else {
+					throw new Error("invalid event type")
 				}
 			},
 		},
 	})
-
-	const { stores, unregisterAll } = useSubscription2(libp2p, subscriptions)
 
 	useEffect(() => {
 		const userRegistry = stores[USER_REGISTRY_TOPIC]
@@ -144,7 +161,7 @@ export const ChatView = ({
 		// Reload rooms from db
 		db.rooms.toArray().then((rooms) => {
 			for (const room of rooms) {
-				addRoom(db, room)
+				addRoom(room)
 			}
 		})
 	}, [stores[ROOM_REGISTRY_TOPIC]])
@@ -183,33 +200,8 @@ export const ChatView = ({
 		setSelectedRoomId(roomId)
 	}
 
-	const addRoom = async (db: InterwalletChatDB, room: Room) => {
-		const topic = `interwallet:room:${room.id}`
-		console.log("registering for room topic", topic)
-
-		setSubscriptions((subscriptions) => ({
-			...subscriptions,
-			[topic]: {
-				apply: async (key: Uint8Array, value: Uint8Array) => {
-					const { encryptedEvent } = validateEvent(room, key, value)
-					console.log("message event", encryptedEvent)
-
-					const event = decryptEvent(encryptedEvent, user)
-
-					// TODO: runtime validation of room event types
-					if (event.type === "message") {
-						try {
-							const id = await db.messages.add({ room: room.id, ...event.detail })
-							console.log("added message with id", id)
-						} catch (e) {
-							console.log(e)
-						}
-					} else {
-						throw new Error("invalid event type")
-					}
-				},
-			},
-		}))
+	const addRoom = async (room: Room) => {
+		setSubscribedRoomIds((subscribedRoomIds) => [...subscribedRoomIds, room.id])
 	}
 
 	const sendMessage = async (room: Room, message: string) => {
@@ -217,7 +209,7 @@ export const ChatView = ({
 
 		const key = blake3(signedData, { dkLen: 16 })
 
-		const topic = `interwallet:room:${room.id}`
+		const topic = makeShardedTopic("interwallet:room-events", room.id)
 		const store = stores[topic]
 		if (!store) {
 			throw new Error(`store not found for topic ${topic}`)
