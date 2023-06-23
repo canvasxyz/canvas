@@ -1,4 +1,3 @@
-import { IDBStore } from "@canvas-js/okra-idb"
 import { Store } from "@canvas-js/store"
 import { openStore } from "@canvas-js/store/browser"
 import { GossipsubEvents } from "@chainsafe/libp2p-gossipsub"

@@ -1,37 +1,15 @@
 import React, { useContext, useEffect, useState } from "react"
-import { useDisconnect } from "wagmi"
 
 import { ChatSidebar } from "./ChatSidebar.js"
 import { MessagesPanel } from "./MessagesPanel.js"
 import { StatusPanel } from "./StatusPanel.js"
 import { RoomName } from "./RoomName.js"
 
-import { getRegistrationKey } from "../utils.js"
-
 import { ReactComponent as chevronRight } from "../../../icons/chevron-right.svg"
 import { ReactComponent as chevronLeft } from "../../../icons/chevron-left.svg"
-import { PrivateUserRegistration, Room, RoomRegistration, serializePublicUserRegistration } from "../../shared/types.js"
-import { makeShardedTopic, useSubscriptions } from "../useStore.js"
-import { Libp2p } from "libp2p"
-import { ServiceMap } from "../libp2p.js"
-import {
-	ROOM_REGISTRY_TOPIC,
-	USER_REGISTRY_TOPIC,
-	decryptEvent,
-	encryptAndSignMessageForRoom,
-	getRoomId,
-	signAndEncodeRoomRegistration,
-	validateEvent,
-	validateRoomRegistration,
-	validateUserRegistration,
-} from "../../shared/index.js"
-import { hexToBytes } from "viem"
-import * as Messages from "../../shared/messages.js"
+import { PrivateUserRegistration } from "../../shared/types.js"
 import { InterwalletChatDB } from "../db.js"
-import { blake3 } from "@noble/hashes/blake3"
 import { useLibp2p } from "../useLibp2p.js"
-import { SelectedRoomIdContext } from "../SelectedRoomIdContext.js"
-import { useLiveQuery } from "dexie-react-hooks"
 import { ChatBehaviors, ChatContext } from "./ChatContext.js"
 
 const useInterwalletChatDB = () => {

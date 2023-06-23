@@ -1,15 +1,8 @@
 import React, { useContext, useEffect, useState } from "react"
 import { useDisconnect } from "wagmi"
 
-import { ChatSidebar } from "./ChatSidebar.js"
-import { MessagesPanel } from "./MessagesPanel.js"
-import { StatusPanel } from "./StatusPanel.js"
-import { RoomName } from "./RoomName.js"
-
 import { getRegistrationKey } from "../utils.js"
 
-import { ReactComponent as chevronRight } from "../../../icons/chevron-right.svg"
-import { ReactComponent as chevronLeft } from "../../../icons/chevron-left.svg"
 import { PrivateUserRegistration, Room, RoomRegistration, serializePublicUserRegistration } from "../../shared/types.js"
 import { makeShardedTopic, useSubscriptions } from "../useStore.js"
 import { Libp2p } from "libp2p"
@@ -29,7 +22,6 @@ import { hexToBytes } from "viem"
 import * as Messages from "../../shared/messages.js"
 import { InterwalletChatDB } from "../db.js"
 import { blake3 } from "@noble/hashes/blake3"
-import { useLibp2p } from "../useLibp2p.js"
 import { useLiveQuery } from "dexie-react-hooks"
 import { createContext } from "react"
 import { SelectedRoomIdContext } from "../SelectedRoomIdContext.js"

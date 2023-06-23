@@ -2,7 +2,6 @@ import React, { useContext, useMemo } from "react"
 import { useEnsName } from "wagmi"
 import { getAddress } from "viem"
 
-import { PublicUserRegistration, Room } from "../../shared/index.js"
 import { ChatContext } from "./ChatContext.js"
 
 const EnsName = ({ address }: { address: string }) => {

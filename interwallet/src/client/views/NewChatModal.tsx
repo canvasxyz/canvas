@@ -2,13 +2,7 @@ import React, { useCallback, useContext, useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { useEnsName } from "wagmi"
 import _ from "lodash"
-import {
-	PrivateUserRegistration,
-	PublicUserRegistration,
-	RoomRegistration,
-	getPublicUserRegistration,
-} from "../../shared/index.js"
-import { InterwalletChatDB } from "../db.js"
+import { PublicUserRegistration, getPublicUserRegistration } from "../../shared/index.js"
 import { ChatContext } from "./ChatContext.js"
 
 interface UserEntryProps {

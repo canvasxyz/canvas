@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useLayoutEffect } from "react"
+import React, { useCallback, useLayoutEffect } from "react"
 import { useAccount, useDisconnect, useWalletClient } from "wagmi"
 
 import { PrivateUserRegistration, createPrivateUserRegistration } from "../../shared/index.js"

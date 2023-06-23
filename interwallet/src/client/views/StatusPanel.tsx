@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useState } from "react"
+import React, { useContext } from "react"
 
 import { protocolPrefix } from "@canvas-js/store"
 
