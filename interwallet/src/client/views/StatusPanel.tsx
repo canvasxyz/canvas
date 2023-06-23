@@ -5,40 +5,10 @@ import { protocolPrefix } from "@canvas-js/store"
 import { PeerIdToken } from "./PeerIdToken.js"
 import { ConnectionList } from "./ConnectionList.js"
 import { PubsubPeerList } from "./PubsubPeerList.js"
-import { Libp2p } from "libp2p"
-import { ServiceMap } from "../libp2p.js"
+import { ChatContext } from "./ChatContext.js"
 
-export const StatusPanel = ({ libp2p }: { libp2p: Libp2p<ServiceMap> }) => {
-	// const { manager, peerId } = useContext(AppContext)
-
-	// const [starting, setStarting] = useState(false)
-	// const [stopping, setStopping] = useState(false)
-
-	// const handleClick = useCallback(async () => {
-	// 	if (manager === null || starting || stopping) {
-	// 		return
-	// 	} else if (manager.isStarted()) {
-	// 		setStopping(true)
-	// 		try {
-	// 			await manager.stop()
-	// 		} catch (err) {
-	// 			console.error(err)
-	// 		} finally {
-	// 			setStopping(false)
-	// 		}
-	// 	} else {
-	// 		setStarting(true)
-	// 		try {
-	// 			await manager.start()
-	// 		} catch (err) {
-	// 			console.error(err)
-	// 		} finally {
-	// 			setStarting(false)
-	// 		}
-	// 	}
-	// }, [starting, stopping, manager])
-
-	// const started = manager !== null && manager.isStarted()
+export const StatusPanel = () => {
+	const { libp2p } = useContext(ChatContext)
 
 	return (
 		<div className="overflow-y-scroll flex flex-col items-stretch bg-gray-100 border-l border-gray-300">
@@ -50,7 +20,7 @@ export const StatusPanel = ({ libp2p }: { libp2p: Libp2p<ServiceMap> }) => {
 				{started ? "stop libp2p" : "start libp2p"}
 			</button> */}
 			<div className="flex flex-row border-b border-gray-300 items-center">
-				{libp2p.peerId && <PeerIdToken peerId={libp2p.peerId} />}
+				{libp2p && libp2p.peerId && <PeerIdToken peerId={libp2p.peerId} />}
 			</div>
 			{<ConnectionList libp2p={libp2p} />}
 			{<PubsubPeerList libp2p={libp2p} protocolPrefix={protocolPrefix} />}

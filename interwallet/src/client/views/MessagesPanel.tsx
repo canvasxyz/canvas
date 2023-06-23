@@ -1,26 +1,19 @@
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
 
 import { useLiveQuery } from "dexie-react-hooks"
 import { getAddress } from "viem"
 
-import { PrivateUserRegistration, Room } from "../../shared/index.js"
+import { ChatContext } from "./ChatContext.js"
 
-import { InterwalletChatDB } from "../db.js"
+export const MessagesPanel = () => {
+	const { db, selectedRoom, user, sendMessage } = useContext(ChatContext)
 
-export const MessagesPanel = ({
-	db,
-	room,
-	user,
-	sendMessage,
-}: {
-	db: InterwalletChatDB
-	room: Room
-	user: PrivateUserRegistration
-	sendMessage: (room: Room, content: string) => Promise<void>
-}) => {
 	const [message, setMessage] = useState<string>("")
 	const messageEvents =
-		useLiveQuery(async () => await db.messages.where({ room: room.id }).sortBy("timestamp"), [room.id]) || []
+		useLiveQuery(
+			async () => (db && selectedRoom ? await db.messages.where({ room: selectedRoom.id }).sortBy("timestamp") : []),
+			[selectedRoom, db]
+		) || []
 
 	const messagesEndRef = useRef<HTMLDivElement>(null)
 	const messageInputRef = useRef<HTMLInputElement>(null)
@@ -46,14 +39,19 @@ export const MessagesPanel = ({
 				return
 			}
 
+			if (selectedRoom === null) {
+				console.error("selectedRoom is null")
+				return
+			}
+
 			try {
-				await sendMessage(room, trimmedMessage)
+				await sendMessage(selectedRoom, trimmedMessage)
 				setMessage("")
 			} catch (e) {
 				console.error(e)
 			}
 		},
-		[room.id, message, user]
+		[selectedRoom, message, user]
 	)
 
 	return (

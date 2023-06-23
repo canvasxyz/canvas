@@ -32,6 +32,7 @@ import { blake3 } from "@noble/hashes/blake3"
 import { useLibp2p } from "../useLibp2p.js"
 import { SelectedRoomIdContext } from "../SelectedRoomIdContext.js"
 import { useLiveQuery } from "dexie-react-hooks"
+import { ChatBehaviors, ChatContext } from "./ChatContext.js"
 
 const useInterwalletChatDB = () => {
 	const [db, setDb] = useState<InterwalletChatDB | null>(null)
@@ -60,164 +61,17 @@ export const LoggedInView = ({
 	return libp2p === null || db === null ? (
 		"Loading..."
 	) : (
-		<ChatView libp2p={libp2p} user={user} setUser={setUser} db={db} />
+		<ChatBehaviors libp2p={libp2p} user={user} setUser={setUser} db={db}>
+			<ChatView />
+		</ChatBehaviors>
 	)
 }
 
-export const ChatView = ({
-	user,
-	setUser,
-	libp2p,
-	db,
-}: {
-	user: PrivateUserRegistration
-	setUser: (user: PrivateUserRegistration | null) => void
-	libp2p: Libp2p<ServiceMap>
-	db: InterwalletChatDB
-}) => {
-	const { disconnect } = useDisconnect()
-
-	const { selectedRoomId, setSelectedRoomId } = useContext(SelectedRoomIdContext)
-
-	const selectedRoom = useLiveQuery(() => db.rooms.get({ id: selectedRoomId || "" }), [selectedRoomId])
-
+const ChatView = () => {
 	const [showStatusPanel, setShowStatusPanel] = useState(true)
-
-	const [subscribedRoomIds, setSubscribedRoomIds] = useState<string[]>([])
-
-	const { stores, unregisterAll } = useSubscriptions(libp2p, {
-		[USER_REGISTRY_TOPIC]: {
-			apply: async (key: Uint8Array, value: Uint8Array) => {
-				const userRegistration = await validateUserRegistration(key, value)
-				console.log("user registry message", userRegistration)
-				await db.users.add(userRegistration)
-			},
-		},
-		[ROOM_REGISTRY_TOPIC]: {
-			apply: async (key: Uint8Array, value: Uint8Array) => {
-				const room = await validateRoomRegistration(key, value)
-				console.log("room registry messsage", room)
-
-				// if the current user is a member of the room
-				if (room.members.find(({ address }) => address === user.address)) {
-					await db.rooms.add(room)
-					console.log("adding room to store")
-					addRoom(room)
-				}
-			},
-		},
-		"interwallet:room-events": {
-			shards: subscribedRoomIds,
-			apply: async (key: Uint8Array, value: Uint8Array, { shard: roomId }) => {
-				const room = await db.rooms.get({ id: roomId })
-				if (!room) return
-
-				const { encryptedEvent } = validateEvent(room, key, value)
-				console.log("message event", encryptedEvent)
-
-				const event = decryptEvent(encryptedEvent, user)
-
-				// TODO: runtime validation of room event types
-				if (event.type === "message") {
-					try {
-						const id = await db.messages.add({ room: room.id, ...event.detail })
-						console.log("added message with id", id)
-					} catch (e) {
-						console.log(e)
-					}
-				} else {
-					throw new Error("invalid event type")
-				}
-			},
-		},
-	})
-
-	useEffect(() => {
-		const userRegistry = stores[USER_REGISTRY_TOPIC]
-		if (!userRegistry) return
-
-		const key = hexToBytes(user.address)
-
-		// send user registration
-		;(async () => {
-			const existingRegistration = await userRegistry.get(key)
-			if (existingRegistration === null) {
-				console.log("publishing self user registration for", key)
-
-				const value = Messages.SignedUserRegistration.encode(serializePublicUserRegistration(user))
-
-				try {
-					await userRegistry.insert(key, value)
-				} catch (e) {
-					console.log(e)
-				}
-			}
-		})()
-	}, [stores[USER_REGISTRY_TOPIC]])
-
-	useEffect(() => {
-		if (!stores[ROOM_REGISTRY_TOPIC]) return
-
-		// Reload rooms from db
-		db.rooms.toArray().then((rooms) => {
-			for (const room of rooms) {
-				addRoom(room)
-			}
-		})
-	}, [stores[ROOM_REGISTRY_TOPIC]])
-
-	const logout = async () => {
-		window.localStorage.removeItem(getRegistrationKey(user.address))
-
-		await db.delete()
-
-		await unregisterAll()
-
-		setSelectedRoomId(null)
-		setUser(null)
-		disconnect()
-	}
-
-	const createRoom: (roomRegistration: RoomRegistration) => Promise<void> = async (roomRegistration) => {
-		const signedRoomRegistration = signAndEncodeRoomRegistration(roomRegistration, user)
-
-		const hash = blake3.create({ dkLen: 16 })
-		for (const { address } of roomRegistration.members) {
-			hash.update(hexToBytes(address))
-		}
-		const key = hash.digest()
-
-		const roomRegistry = stores[ROOM_REGISTRY_TOPIC]
-		if (!roomRegistry) return
-
-		try {
-			await roomRegistry.insert(key, signedRoomRegistration)
-		} catch (e) {
-			console.log(e)
-		}
-
-		const roomId = getRoomId(key)
-		setSelectedRoomId(roomId)
-	}
-
-	const addRoom = async (room: Room) => {
-		setSubscribedRoomIds((subscribedRoomIds) => [...subscribedRoomIds, room.id])
-	}
-
-	const sendMessage = async (room: Room, message: string) => {
-		const signedData = encryptAndSignMessageForRoom(room, message, user)
-
-		const key = blake3(signedData, { dkLen: 16 })
-
-		const topic = makeShardedTopic("interwallet:room-events", room.id)
-		const store = stores[topic]
-		if (!store) {
-			throw new Error(`store not found for topic ${topic}`)
-		}
-		await store.insert(key, signedData)
-	}
-
 	const statusPanelIcon = showStatusPanel ? chevronRight : chevronLeft
+
+	const { selectedRoom, logout } = useContext(ChatContext)
 
 	return (
 		<div className="w-screen h-screen bg-white overflow-x-scroll">
@@ -227,7 +81,7 @@ export const ChatView = ({
 						<h1 className="">Encrypted Chat</h1>
 					</div>
 					<div className="flex flex-row">
-						<div className="px-4 self-center grow">{selectedRoom && <RoomName user={user} room={selectedRoom} />}</div>
+						<div className="px-4 self-center grow">{selectedRoom && <RoomName />}</div>
 						<button className="px-4 self-stretch hover:bg-gray-100" onClick={logout}>
 							Logout
 						</button>
@@ -238,22 +92,16 @@ export const ChatView = ({
 							{statusPanelIcon({ width: 24, height: 24 })}
 						</button>
 					</div>
-					<ChatSidebar
-						db={db}
-						createRoom={createRoom}
-						selectedRoomId={selectedRoomId}
-						setSelectedRoomId={setSelectedRoomId}
-						user={user}
-					/>
+					<ChatSidebar />
 					<div className="flex flex-row grow items-stretch overflow-y-hidden">
 						{selectedRoom ? (
-							<MessagesPanel db={db} room={selectedRoom} user={user} sendMessage={sendMessage} />
+							<MessagesPanel />
 						) : (
 							<div className="px-4 m-auto text-3xl font-semibold text-gray-500">No chat is selected</div>
 						)}
 					</div>
 				</div>
-				{showStatusPanel && <StatusPanel libp2p={libp2p} />}
+				{showStatusPanel && <StatusPanel />}
 			</div>
 		</div>
 	)

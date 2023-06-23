@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react"
+import React, { useCallback, useContext, useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { useEnsName } from "wagmi"
 import _ from "lodash"
@@ -9,6 +9,7 @@ import {
 	getPublicUserRegistration,
 } from "../../shared/index.js"
 import { InterwalletChatDB } from "../db.js"
+import { ChatContext } from "./ChatContext.js"
 
 interface UserEntryProps {
 	user: PublicUserRegistration
@@ -30,13 +31,12 @@ const UserEntry = ({ user, onClick, isSelected }: UserEntryProps) => {
 }
 
 export interface NewChatModalProps {
-	db: InterwalletChatDB
 	closeModal: () => void
-	user: PrivateUserRegistration
-	createRoom: (roomRegistration: RoomRegistration) => Promise<void>
 }
 
-export const NewChatModal = ({ db, createRoom, closeModal, user }: NewChatModalProps) => {
+export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
+	const { db, createRoom, user } = useContext(ChatContext)
+
 	const users = useLiveQuery(async () => await db.users.toArray(), [])
 	const [selectedRecipients, setSelectedRecipients] = useState<Record<string, boolean>>({})
 

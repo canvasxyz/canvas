@@ -1,25 +1,15 @@
-import React from "react"
+import React, { useContext } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 
-import { PrivateUserRegistration, Room, RoomRegistration } from "../../shared/index.js"
+import { PrivateUserRegistration, Room } from "../../shared/index.js"
 
 import { NewChatModal } from "./NewChatModal.js"
 import { RoomName } from "./RoomName.js"
-import { InterwalletChatDB } from "../db.js"
+import { ChatContext } from "./ChatContext.js"
 
-export const ChatSidebar = ({
-	db,
-	selectedRoomId,
-	setSelectedRoomId,
-	createRoom,
-	user,
-}: {
-	db: InterwalletChatDB
-	selectedRoomId: string | null
-	setSelectedRoomId: (roomId: string) => void
-	createRoom: (roomRegistration: RoomRegistration) => Promise<void>
-	user: PrivateUserRegistration
-}) => {
+export const ChatSidebar = () => {
+	const { db, selectedRoomId, setSelectedRoomId, user } = useContext(ChatContext)
+
 	const [showNewChatModal, setShowNewChatModal] = React.useState(false)
 
 	const rooms = useLiveQuery(() => db.rooms.toArray(), [])
@@ -49,12 +39,9 @@ export const ChatSidebar = ({
 			</div>
 			{showNewChatModal && (
 				<NewChatModal
-					db={db}
-					user={user}
 					closeModal={() => {
 						setShowNewChatModal(false)
 					}}
-					createRoom={createRoom}
 				/>
 			)}
 		</div>
@@ -64,7 +51,6 @@ export const ChatSidebar = ({
 const ChatSidebarRoom = ({
 	isSelected,
 	room,
-	user,
 	selectRoom,
 }: {
 	isSelected: boolean
@@ -80,7 +66,7 @@ const ChatSidebarRoom = ({
 				disabled={isSelected}
 			>
 				<span className="text-sm font-bold">
-					<RoomName user={user} room={room} />
+					<RoomName />
 				</span>
 			</button>
 		)
@@ -93,7 +79,7 @@ const ChatSidebarRoom = ({
 				onClick={(e) => selectRoom()}
 			>
 				<span className="text-sm">
-					<RoomName user={user} room={room} />
+					<RoomName />
 				</span>
 			</button>
 		)

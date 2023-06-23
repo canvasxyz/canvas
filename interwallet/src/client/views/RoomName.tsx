@@ -1,8 +1,9 @@
-import React, { useMemo } from "react"
+import React, { useContext, useMemo } from "react"
 import { useEnsName } from "wagmi"
 import { getAddress } from "viem"
 
 import { PublicUserRegistration, Room } from "../../shared/index.js"
+import { ChatContext } from "./ChatContext.js"
 
 const EnsName = ({ address }: { address: string }) => {
 	const { data: name } = useEnsName({ address: address as `0x${string}` })
@@ -20,10 +21,12 @@ const EnsName = ({ address }: { address: string }) => {
 	}
 }
 
-export const RoomName = ({ room, user }: { room: Room; user: PublicUserRegistration }) => {
+export const RoomName = () => {
+	const { user, selectedRoom } = useContext(ChatContext)
+
 	const otherRoomMembers = useMemo(
-		() => user && room.members.filter(({ address }) => getAddress(address) !== user.address),
-		[room, user]
+		() => selectedRoom && selectedRoom.members.filter(({ address }) => getAddress(address) !== user.address),
+		[selectedRoom, user]
 	)
 
 	if (otherRoomMembers) {
