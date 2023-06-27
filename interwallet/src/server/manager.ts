@@ -10,13 +10,11 @@ import { Store } from "@canvas-js/store"
 import { openStore } from "@canvas-js/store/node"
 
 import {
-	PublicUserRegistration,
 	ROOM_REGISTRY_TOPIC,
 	Room,
 	USER_REGISTRY_TOPIC,
 	assert,
-	validateEvent,
-	validateUserRegistration,
+	PublicUserRegistration as PublicUserRegistrationType,
 } from "../shared/index.js"
 
 import { ServiceMap, getLibp2p } from "./libp2p.js"
@@ -25,6 +23,8 @@ import { dataDirectory } from "./config.js"
 import { PING_DELAY, PING_INTERVAL, PING_TIMEOUT } from "./constants.js"
 import { anySignal } from "any-signal"
 import { SignedRoomRegistration } from "../shared/SignedRoomRegistration.js"
+import { SignedEncryptedEvent } from "../shared/SignedEncryptedEvent.js"
+import { PublicUserRegistration } from "../shared/PublicUserRegistration.js"
 
 export class RoomManager {
 	public static async initialize(peerId: PeerId): Promise<RoomManager> {
@@ -49,7 +49,7 @@ export class RoomManager {
 		return manager
 	}
 
-	private readonly rooms = new Map<string, { store: Store; members: PublicUserRegistration[] }>()
+	private readonly rooms = new Map<string, { store: Store; members: PublicUserRegistrationType[] }>()
 	private userRegistry: Store | null = null
 	private roomRegistry: Store | null = null
 	private controller: AbortController | null = null
@@ -98,7 +98,9 @@ export class RoomManager {
 	}
 
 	private applyEventEntry = (room: Room) => async (key: Uint8Array, value: Uint8Array) => {
-		const {} = validateEvent(room, key, value)
+		const signedEncryptedEvent = SignedEncryptedEvent.decode(value)
+		await signedEncryptedEvent.validate(key, room)
+
 		this.log("storing event %s in room %s", bytesToHex(key), room.id)
 		// ...
 	}
@@ -121,11 +123,12 @@ export class RoomManager {
 	}
 
 	private applyUserRegistryEntry = async (key: Uint8Array, value: Uint8Array) => {
-		const userRegistration = await validateUserRegistration(key, value)
+		const signedUserRegistration = PublicUserRegistration.decode(value)
+		await signedUserRegistration.validate()
 
-		this.log("registering user %s", userRegistration.address)
+		this.log("registering user %s", signedUserRegistration.address)
 
-		applyUserRegistration(userRegistration)
+		applyUserRegistration(signedUserRegistration)
 	}
 
 	private async addRoom(room: Room) {

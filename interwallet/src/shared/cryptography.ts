@@ -103,48 +103,6 @@ export const createPrivateUserRegistration = async (
 	}
 }
 
-export async function validateUserRegistration(key: Uint8Array, value: Uint8Array): Promise<PublicUserRegistration> {
-	const signedUserRegistration = PublicUserRegistration.decode(value)
-	await signedUserRegistration.validate()
-	return signedUserRegistration
-}
-
-export function validateEvent(
-	room: Room,
-	key: Uint8Array,
-	value: Uint8Array
-): { encryptedEvent: Messages.EncryptedEvent; sender: PublicUserRegistration } {
-	assert(equals(key, blake3(value, { dkLen: 16 })), "invalid event: key is not hash of value")
-
-	const { signature, data: signedData } = Messages.SignedData.decode(value)
-	const encryptedEvent = Messages.EncryptedEvent.decode(signedData)
-
-	assert(getRoomId(encryptedEvent.roomId) === room.id, "event is for a different room")
-
-	const senderAddress = getAddress(bytesToHex(encryptedEvent.senderAddress))
-	const sender = room.members.find((member) => member.address === senderAddress)
-	assert(sender !== undefined, "sender is not a member of the room")
-
-	assert(
-		nacl.sign.detached.verify(signedData, signature, hexToBytes(sender.keyBundle.signingPublicKey)),
-		"invalid event signature"
-	)
-
-	for (const eachRecipient of encryptedEvent.recipients) {
-		if (eachRecipient === undefined) {
-			continue
-		}
-		const recipientPublicKey = bytesToHex(eachRecipient.publicKey)
-		const recipient = room.members.find((member) => member.keyBundle.encryptionPublicKey === recipientPublicKey)
-		assert(recipient !== undefined, "recipient is not a member of the room")
-	}
-
-	return {
-		encryptedEvent,
-		sender: new PublicUserRegistration(sender.address, sender.keyBundle, sender.keyBundleSignature),
-	}
-}
-
 export const encryptAndSignMessageForRoom = (room: Room, message: string, user: PrivateUserRegistration) => {
 	const event = {
 		type: "message",

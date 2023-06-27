@@ -12,8 +12,6 @@ import {
 	USER_REGISTRY_TOPIC,
 	decryptEvent,
 	encryptAndSignMessageForRoom,
-	validateEvent,
-	validateUserRegistration,
 } from "../../shared/index.js"
 import { hexToBytes } from "viem"
 import { InterwalletChatDB } from "../db.js"
@@ -24,6 +22,7 @@ import { SelectedRoomIdContext } from "../SelectedRoomIdContext.js"
 import { RoomRegistration, getRoomId } from "../../shared/RoomRegistration.js"
 import { SignedRoomRegistration } from "../../shared/SignedRoomRegistration.js"
 import { PublicUserRegistration } from "../../shared/PublicUserRegistration.js"
+import { SignedEncryptedEvent } from "interwallet/src/shared/SignedEncryptedEvent.js"
 
 interface ChatContextType {
 	selectedRoom: Room | null
@@ -112,10 +111,12 @@ export const ChatBehaviors = ({
 				const room = await db.rooms.get({ id: roomId })
 				if (!room) return
 
-				const { encryptedEvent } = validateEvent(room, key, value)
-				console.log("message event", encryptedEvent)
+				const signedEncryptedEvent = SignedEncryptedEvent.decode(value)
+				signedEncryptedEvent.validate(key, room)
 
-				const event = decryptEvent(encryptedEvent, user)
+				console.log("message event", signedEncryptedEvent.encryptedEvent)
+
+				const event = decryptEvent(signedEncryptedEvent.encryptedEvent, user)
 
 				// TODO: runtime validation of room event types
 				if (event.type === "message") {
