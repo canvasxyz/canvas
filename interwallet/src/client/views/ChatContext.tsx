@@ -3,7 +3,7 @@ import { useDisconnect } from "wagmi"
 
 import { getRegistrationKey } from "../utils.js"
 
-import { PrivateUserRegistration, type Room, serializePublicUserRegistration } from "../../shared/types.js"
+import { PrivateUserRegistration, type Room } from "../../shared/types.js"
 import { makeShardedTopic, useSubscriptions } from "../useStore.js"
 import { Libp2p } from "libp2p"
 import { ServiceMap } from "../libp2p.js"
@@ -16,7 +16,6 @@ import {
 	validateUserRegistration,
 } from "../../shared/index.js"
 import { hexToBytes } from "viem"
-import * as Messages from "../../shared/messages.js"
 import { InterwalletChatDB } from "../db.js"
 import { blake3 } from "@noble/hashes/blake3"
 import { useLiveQuery } from "dexie-react-hooks"
@@ -24,6 +23,7 @@ import { createContext } from "react"
 import { SelectedRoomIdContext } from "../SelectedRoomIdContext.js"
 import { RoomRegistration, getRoomId } from "../../shared/RoomRegistration.js"
 import { SignedRoomRegistration } from "../../shared/SignedRoomRegistration.js"
+import { PublicUserRegistration } from "../../shared/PublicUserRegistration.js"
 
 interface ChatContextType {
 	selectedRoom: Room | null
@@ -81,7 +81,9 @@ export const ChatBehaviors = ({
 	const { stores, unregisterAll } = useSubscriptions(libp2p, {
 		[USER_REGISTRY_TOPIC]: {
 			apply: async (key: Uint8Array, value: Uint8Array) => {
-				const userRegistration = await validateUserRegistration(key, value)
+				const userRegistration = PublicUserRegistration.decode(value)
+				await userRegistration.validate()
+
 				console.log("user registry message", userRegistration)
 				await db.users.add(userRegistration)
 			},
@@ -142,10 +144,10 @@ export const ChatBehaviors = ({
 			if (existingRegistration === null) {
 				console.log("publishing self user registration for", key)
 
-				const value = Messages.SignedUserRegistration.encode(serializePublicUserRegistration(user))
+				const publicUserRegistration = new PublicUserRegistration(user.address, user.keyBundle, user.keyBundleSignature)
 
 				try {
-					await userRegistry.insert(key, value)
+					await userRegistry.insert(key, PublicUserRegistration.encode(publicUserRegistration))
 				} catch (e) {
 					console.log(e)
 				}

@@ -1,7 +1,3 @@
-import { hexToBytes } from "viem"
-
-import * as Messages from "./messages.js"
-
 export type EventMap = {
 	message: { content: string; timestamp: number; sender: string }
 }
@@ -36,18 +32,3 @@ export interface PrivateUserRegistration extends PublicUserRegistration {
 	encryptionPrivateKey: `0x${string}`
 	signingPrivateKey: `0x${string}`
 }
-
-export const getPublicUserRegistration = ({
-	encryptionPrivateKey,
-	signingPrivateKey,
-	...user
-}: PrivateUserRegistration): PublicUserRegistration => user
-
-export const serializePublicUserRegistration = (user: PublicUserRegistration): Messages.SignedUserRegistration => ({
-	address: hexToBytes(user.address),
-	signature: hexToBytes(user.keyBundleSignature),
-	keyBundle: {
-		signingPublicKey: hexToBytes(user.keyBundle.signingPublicKey),
-		encryptionPublicKey: hexToBytes(user.keyBundle.encryptionPublicKey),
-	},
-})
