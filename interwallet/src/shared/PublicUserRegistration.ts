@@ -4,7 +4,7 @@ import { KeyBundle } from "./types"
 import { assert } from "./utils.js"
 import { equals } from "uint8arrays"
 
-function constructTypedKeyBundle(keyBundle: KeyBundle) {
+export function constructTypedKeyBundle(keyBundle: KeyBundle) {
 	const types = {
 		EIP712Domain: [{ name: "name", type: "string" }],
 		KeyBundle: [

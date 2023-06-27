@@ -3,6 +3,7 @@ import nacl from "tweetnacl"
 import { WalletClient } from "viem"
 import { getAddress, bytesToHex, hexToBytes, keccak256 } from "viem/utils"
 
+import { constructTypedKeyBundle } from "./PublicUserRegistration.js"
 import { type KeyBundle, type PrivateUserRegistration } from "./types.js"
 
 const buildMagicString = (pin: string) => `[Password: ${pin}]
@@ -12,24 +13,6 @@ Generate a new messaging key?
 Signing this message will allow the application to read & write messages from your address.
 
 Only do this when setting up your messaging client or mobile application.`
-
-function constructTypedKeyBundle(keyBundle: KeyBundle) {
-	const types = {
-		EIP712Domain: [{ name: "name", type: "string" }],
-		KeyBundle: [
-			{ name: "signingPublicKey", type: "bytes" },
-			{ name: "encryptionPublicKey", type: "bytes" },
-		],
-	} as const
-
-	// these return types match what's expected by `eth-sig-util`
-	return {
-		types,
-		primaryType: "KeyBundle" as const,
-		domain: { name: "InterwalletChat" } as const,
-		message: keyBundle,
-	}
-}
 
 class DerivedSecrets {
 	readonly encryptionKeyPair: nacl.BoxKeyPair
