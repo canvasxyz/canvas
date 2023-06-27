@@ -16,7 +16,6 @@ import {
 	USER_REGISTRY_TOPIC,
 	assert,
 	validateEvent,
-	validateRoomRegistration,
 	validateUserRegistration,
 } from "../shared/index.js"
 
@@ -25,6 +24,7 @@ import { applyRoomRegistration, applyUserRegistration, getRooms } from "./db.js"
 import { dataDirectory } from "./config.js"
 import { PING_DELAY, PING_INTERVAL, PING_TIMEOUT } from "./constants.js"
 import { anySignal } from "any-signal"
+import { SignedRoomRegistration } from "../shared/SignedRoomRegistration.js"
 
 export class RoomManager {
 	public static async initialize(peerId: PeerId): Promise<RoomManager> {
@@ -104,7 +104,10 @@ export class RoomManager {
 	}
 
 	private applyRoomRegistryEntry = async (key: Uint8Array, value: Uint8Array) => {
-		const room = await validateRoomRegistration(key, value)
+		const signedRoom = SignedRoomRegistration.decode(value)
+		await signedRoom.validate(key)
+
+		const room = signedRoom.getRoomDbEntry()
 
 		this.log(
 			"registering room %s with members %o",

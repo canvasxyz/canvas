@@ -3,7 +3,7 @@ import { useDisconnect } from "wagmi"
 
 import { getRegistrationKey } from "../utils.js"
 
-import { PrivateUserRegistration, Room, RoomRegistration, serializePublicUserRegistration } from "../../shared/types.js"
+import { PrivateUserRegistration, type Room, serializePublicUserRegistration } from "../../shared/types.js"
 import { makeShardedTopic, useSubscriptions } from "../useStore.js"
 import { Libp2p } from "libp2p"
 import { ServiceMap } from "../libp2p.js"
@@ -12,10 +12,7 @@ import {
 	USER_REGISTRY_TOPIC,
 	decryptEvent,
 	encryptAndSignMessageForRoom,
-	getRoomId,
-	signAndEncodeRoomRegistration,
 	validateEvent,
-	validateRoomRegistration,
 	validateUserRegistration,
 } from "../../shared/index.js"
 import { hexToBytes } from "viem"
@@ -25,6 +22,8 @@ import { blake3 } from "@noble/hashes/blake3"
 import { useLiveQuery } from "dexie-react-hooks"
 import { createContext } from "react"
 import { SelectedRoomIdContext } from "../SelectedRoomIdContext.js"
+import { RoomRegistration, getRoomId } from "../../shared/RoomRegistration.js"
+import { SignedRoomRegistration } from "../../shared/SignedRoomRegistration.js"
 
 interface ChatContextType {
 	selectedRoom: Room | null
@@ -89,7 +88,12 @@ export const ChatBehaviors = ({
 		},
 		[ROOM_REGISTRY_TOPIC]: {
 			apply: async (key: Uint8Array, value: Uint8Array) => {
-				const room = await validateRoomRegistration(key, value)
+				const signedRoom = SignedRoomRegistration.decode(value)
+
+				await signedRoom.validate(key)
+
+				const room = signedRoom.getRoomDbEntry()
+
 				console.log("room registry messsage", room)
 
 				// if the current user is a member of the room
@@ -173,7 +177,8 @@ export const ChatBehaviors = ({
 	}
 
 	const createRoom: (roomRegistration: RoomRegistration) => Promise<void> = async (roomRegistration) => {
-		const signedRoomRegistration = signAndEncodeRoomRegistration(roomRegistration, user)
+		const signedRoomRegistration = SignedRoomRegistration.sign(roomRegistration, user)
+		const data = SignedRoomRegistration.encode(signedRoomRegistration)
 
 		const hash = blake3.create({ dkLen: 16 })
 		for (const { address } of roomRegistration.members) {
@@ -185,7 +190,7 @@ export const ChatBehaviors = ({
 		if (!roomRegistry) return
 
 		try {
-			await roomRegistry.insert(key, signedRoomRegistration)
+			await roomRegistry.insert(key, data)
 		} catch (e) {
 			console.log(e)
 		}

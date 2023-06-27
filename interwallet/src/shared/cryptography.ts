@@ -1,22 +1,16 @@
 import nacl from "tweetnacl"
 
 import { WalletClient } from "viem"
-import { getAddress, bytesToHex, hexToBytes, keccak256, recoverTypedDataAddress } from "viem/utils"
+import { getAddress, bytesToHex, hexToBytes, keccak256 } from "viem/utils"
 import { blake3 } from "@noble/hashes/blake3"
 import { equals } from "uint8arrays"
 import { base58btc } from "multiformats/bases/base58"
 import { decode, encode } from "microcbor"
-import * as Messages from "./messages.js"
 
-import {
-	serializeRoomRegistration,
-	type KeyBundle,
-	type PrivateUserRegistration,
-	type PublicUserRegistration,
-	type Room,
-	type RoomRegistration,
-	RoomEvent,
-} from "./types.js"
+import * as Messages from "./messages.js"
+import { PublicUserRegistration } from "./PublicUserRegistration.js"
+import { getRoomId } from "./RoomRegistration.js"
+import { type KeyBundle, type PrivateUserRegistration, type Room, RoomEvent } from "./types.js"
 import { assert } from "./utils.js"
 
 const buildMagicString = (pin: string) => `[Password: ${pin}]
@@ -45,29 +39,45 @@ function constructTypedKeyBundle(keyBundle: KeyBundle) {
 	}
 }
 
-async function verifyKeyBundle(
-	signedUserRegistration: Messages.SignedUserRegistration
-): Promise<PublicUserRegistration> {
-	assert(signedUserRegistration.keyBundle, "missing keyBundle")
-	assert(signedUserRegistration.keyBundle.signingPublicKey, "missing keyBundle.signingPublicKey")
-	assert(signedUserRegistration.keyBundle.encryptionPublicKey, "missing keyBundle.encryptionPublicKey")
+class DerivedSecrets {
+	readonly encryptionKeyPair: nacl.BoxKeyPair
+	readonly signingKeyPair: nacl.SignKeyPair
 
-	const keyBundle: KeyBundle = {
-		signingPublicKey: bytesToHex(signedUserRegistration.keyBundle.signingPublicKey),
-		encryptionPublicKey: bytesToHex(signedUserRegistration.keyBundle.encryptionPublicKey),
+	constructor(encryptionKeyPair: nacl.BoxKeyPair, signingKeyPair: nacl.SignKeyPair) {
+		this.encryptionKeyPair = encryptionKeyPair
+		this.signingKeyPair = signingKeyPair
 	}
 
+	getPublicKeyBundle(): KeyBundle {
+		return {
+			encryptionPublicKey: bytesToHex(this.encryptionKeyPair.publicKey),
+			signingPublicKey: bytesToHex(this.signingKeyPair.publicKey),
+		}
+	}
+
+	static kdfWithoutSalt(privateKey: Uint8Array) {
+		const encryptionKeyPair = nacl.box.keyPair.fromSecretKey(privateKey)
+		const signingKeyPair = nacl.sign.keyPair.fromSeed(privateKey)
+		return new DerivedSecrets(encryptionKeyPair, signingKeyPair)
+	}
+}
+
+const signMagicString = async (
+	walletClient: WalletClient,
+	account: `0x${string}`,
+	pin: string
+): Promise<`0x${string}`> => {
+	const magicString = buildMagicString(pin)
+	return await walletClient.signMessage({ account, message: magicString })
+}
+
+const signKeyBundle = async (
+	walletClient: WalletClient,
+	keyBundle: KeyBundle,
+	account: `0x${string}`
+): Promise<`0x${string}`> => {
 	const typedKeyBundle = constructTypedKeyBundle(keyBundle)
-
-	const keyBundleSignature = bytesToHex(signedUserRegistration.signature)
-	const address = await recoverTypedDataAddress({
-		...typedKeyBundle,
-		signature: keyBundleSignature,
-	})
-
-	assert(equals(hexToBytes(address), signedUserRegistration.address), "invalid signature")
-
-	return { address, keyBundle, keyBundleSignature }
+	return await walletClient.signTypedData({ account, ...typedKeyBundle })
 }
 
 export const createPrivateUserRegistration = async (
@@ -75,72 +85,28 @@ export const createPrivateUserRegistration = async (
 	account: `0x${string}`,
 	pin: string
 ): Promise<PrivateUserRegistration> => {
-	const magicString = buildMagicString(pin)
-	const signature = await walletClient.signMessage({ account, message: magicString })
-	const privateKey = keccak256(signature)
-	const encryptionKeyPair = nacl.box.keyPair.fromSecretKey(hexToBytes(privateKey))
-	const signingKeyPair = nacl.sign.keyPair.fromSeed(hexToBytes(privateKey))
-	const keyBundle: KeyBundle = {
-		encryptionPublicKey: bytesToHex(encryptionKeyPair.publicKey),
-		signingPublicKey: bytesToHex(signingKeyPair.publicKey),
-	}
+	const signature = await signMagicString(walletClient, account, pin)
 
-	const typedKeyBundle = constructTypedKeyBundle(keyBundle)
-	const keyBundleSignature = await walletClient.signTypedData({ account, ...typedKeyBundle })
+	const privateKey = keccak256(signature)
+
+	const derivedSecrets = DerivedSecrets.kdfWithoutSalt(hexToBytes(privateKey))
+	const keyBundle = derivedSecrets.getPublicKeyBundle()
+
+	const keyBundleSignature = await signKeyBundle(walletClient, keyBundle, account)
 
 	return {
 		address: getAddress(account),
 		keyBundleSignature,
 		keyBundle,
 		encryptionPrivateKey: privateKey,
-		signingPrivateKey: bytesToHex(signingKeyPair.secretKey),
+		signingPrivateKey: bytesToHex(derivedSecrets.signingKeyPair.secretKey),
 	}
-}
-
-export const getRoomId = (key: Uint8Array) => base58btc.baseEncode(key)
-
-export async function validateRoomRegistration(key: Uint8Array, value: Uint8Array): Promise<Room> {
-	const { signature, data: signedData } = Messages.SignedData.decode(value)
-	const roomRegistration = Messages.RoomRegistration.decode(signedData)
-
-	const hash = blake3.create({ dkLen: 16 })
-	for (const member of roomRegistration.members) {
-		assert(member.address, "missing member.address")
-		hash.update(member.address)
-	}
-
-	assert(equals(key, hash.digest()), "invalid room registration key")
-
-	let creator: PublicUserRegistration | null = null
-	const members: PublicUserRegistration[] = []
-	for (const member of roomRegistration.members) {
-		const memberRegistration = await verifyKeyBundle(member)
-		members.push(memberRegistration)
-		if (equals(member.address, roomRegistration.creator)) {
-			creator = memberRegistration
-		}
-	}
-
-	assert(creator !== null, "room creator must be a member of the room")
-
-	assert(
-		nacl.sign.detached.verify(signedData, signature, hexToBytes(creator.keyBundle.signingPublicKey)),
-		"invalid room registration signature"
-	)
-
-	const id = getRoomId(key)
-	return { id, creator: creator.address, members }
 }
 
 export async function validateUserRegistration(key: Uint8Array, value: Uint8Array): Promise<PublicUserRegistration> {
-	const signedUserRegistration = Messages.SignedUserRegistration.decode(value)
-	const userRegistration = await verifyKeyBundle(signedUserRegistration)
-	assert(
-		equals(key, hexToBytes(userRegistration.address)),
-		"invalid user registration: key is not the bytes of the address"
-	)
-
-	return userRegistration
+	const signedUserRegistration = PublicUserRegistration.decode(value)
+	await signedUserRegistration.validate()
+	return signedUserRegistration
 }
 
 export function validateEvent(
@@ -173,7 +139,10 @@ export function validateEvent(
 		assert(recipient !== undefined, "recipient is not a member of the room")
 	}
 
-	return { encryptedEvent, sender }
+	return {
+		encryptedEvent,
+		sender: new PublicUserRegistration(sender.address, sender.keyBundle, sender.keyBundleSignature),
+	}
 }
 
 export const encryptAndSignMessageForRoom = (room: Room, message: string, user: PrivateUserRegistration) => {
@@ -205,19 +174,6 @@ export const encryptAndSignMessageForRoom = (room: Room, message: string, user: 
 	const signature = nacl.sign.detached(encryptedData, hexToBytes(user.signingPrivateKey))
 
 	return Messages.SignedData.encode({ signature, data: encryptedData })
-}
-
-export const signAndEncodeRoomRegistration = (roomRegistration: RoomRegistration, user: PrivateUserRegistration) => {
-	assert(roomRegistration.creator === user.address, "room creator must be the current user")
-	assert(
-		roomRegistration.members.find(({ address }) => address === user.address),
-		"members did not include the current user"
-	)
-
-	const serializedRoomRegistration = Messages.RoomRegistration.encode(serializeRoomRegistration(roomRegistration))
-
-	const signature = nacl.sign.detached(serializedRoomRegistration, hexToBytes(user.signingPrivateKey))
-	return Messages.SignedData.encode({ signature, data: serializedRoomRegistration })
 }
 
 export const decryptEvent = (encryptedEvent: Messages.EncryptedEvent, user: PrivateUserRegistration) => {

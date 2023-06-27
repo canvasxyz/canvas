@@ -7,7 +7,7 @@ import { NewChatModal } from "./NewChatModal.js"
 import { RoomName } from "./RoomName.js"
 import { ChatContext } from "./ChatContext.js"
 
-export const ChatSidebar = () => {
+export const ChatSidebar: React.FC<{}> = ({}) => {
 	const { db, selectedRoomId, setSelectedRoomId, user } = useContext(ChatContext)
 
 	const [showNewChatModal, setShowNewChatModal] = React.useState(false)
