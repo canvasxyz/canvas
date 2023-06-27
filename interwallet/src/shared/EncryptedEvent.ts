@@ -38,7 +38,7 @@ export class EncryptedEvent {
 		const sender = room.members.find((member) => member.address === senderAddress)
 		assert(sender !== undefined, "sender is not a member of the room")
 
-		// validate all of the key bundles
+		// TODO: validate all of the key bundles
 
 		for (const eachRecipient of this.recipients) {
 			if (eachRecipient === undefined) {
