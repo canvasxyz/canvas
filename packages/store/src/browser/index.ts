@@ -2,14 +2,17 @@ import type { Libp2p } from "@libp2p/interface-libp2p"
 import type { PubSub } from "@libp2p/interface-pubsub"
 import type { PeerId } from "@libp2p/interface-peer-id"
 
-import type { KeyValueStore, Source, Target } from "@canvas-js/okra"
-import { IDBTree } from "@canvas-js/okra-idb"
 import { openDB } from "idb"
+import { IDBTree } from "@canvas-js/okra-idb"
+import type { KeyValueStore, Source, Target } from "@canvas-js/okra"
 
 import { AbstractStore, Store, StoreInit } from "../store.js"
 
-class IDBStore extends AbstractStore {
-	public static async open(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit): Promise<IDBStore> {
+class IDBStore<T, I = void> extends AbstractStore<T, I> {
+	public static async open<T, I = void>(
+		libp2p: Libp2p<{ pubsub: PubSub }>,
+		init: StoreInit<T, I>
+	): Promise<IDBStore<T, I>> {
 		const storeNames = [init.topic]
 		const db = await openDB(init.topic, 1, {
 			upgrade: (db, oldVersion, newVersion) => {
@@ -24,7 +27,7 @@ class IDBStore extends AbstractStore {
 		})
 
 		const tree = await IDBTree.open(db, init.topic)
-		const store = new IDBStore(libp2p, init, tree)
+		const store = new IDBStore<T, I>(libp2p, init, tree)
 		store.controller.signal.addEventListener("abort", () => db.close())
 		return store
 	}
@@ -33,7 +36,7 @@ class IDBStore extends AbstractStore {
 	private readonly outgoingSyncPeers = new Set<string>()
 	private readonly lockName: string
 
-	private constructor(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit, private readonly tree: IDBTree) {
+	private constructor(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit<T, I>, private readonly tree: IDBTree) {
 		super(libp2p, init)
 		this.lockName = `${this.topic}/lock`
 	}
@@ -108,5 +111,7 @@ class IDBStore extends AbstractStore {
 	}
 }
 
-export const openStore = (libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit): Promise<Store> =>
-	IDBStore.open(libp2p, init)
+export const openStore = <T, C = void>(
+	libp2p: Libp2p<{ pubsub: PubSub }>,
+	init: StoreInit<T, C>
+): Promise<Store<T, C>> => IDBStore.open(libp2p, init)

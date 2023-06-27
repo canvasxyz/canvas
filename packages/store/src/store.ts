@@ -1,4 +1,3 @@
-import { EventEmitter } from "@libp2p/interfaces/events"
 import type { Libp2p } from "@libp2p/interface-libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { Connection, Stream } from "@libp2p/interface-connection"
@@ -9,7 +8,9 @@ import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 
 import PQueue from "p-queue"
-import { bytesToHex as hex } from "@noble/hashes/utils"
+import { blake3 } from "@noble/hashes/blake3"
+import { concat, equals } from "uint8arrays"
+import { base58btc } from "multiformats/bases/base58"
 
 import { Logger, logger } from "@libp2p/logger"
 import { createTopology } from "@libp2p/topology"
@@ -17,12 +18,17 @@ import { createTopology } from "@libp2p/topology"
 import type { Source, Target, KeyValueStore } from "@canvas-js/okra"
 
 import { Driver, Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
+import { CacheMap, assert, encodeTimestamp, shuffle, sortPair, wait } from "./utils.js"
 import { second } from "./constants.js"
-import { CacheMap, Entry, assert, decodeEntry, encodeEntry, shuffle, sortPair, wait } from "./utils.js"
 
-export interface StoreInit {
+type Awaitable<T> = T | Promise<T>
+
+export interface StoreInit<T, I = void> {
 	topic: string
-	apply: (key: Uint8Array, value: Uint8Array) => Promise<void>
+
+	encode: (event: T, context: I) => Awaitable<Uint8Array>
+	decode: (value: Uint8Array) => Awaitable<T>
+	getTimestamp?: (event: T) => number
 
 	minConnections?: number
 	maxConnections?: number
@@ -30,17 +36,20 @@ export interface StoreInit {
 	maxOutboundStreams?: number
 }
 
-export interface Store extends EventEmitter<{}> {
+export interface Store<T, I = void> {
 	start(): Promise<void>
 	stop(): Promise<void>
 
-	insert(key: Uint8Array, value: Uint8Array): Promise<void>
-	get(key: Uint8Array): Promise<Uint8Array | null>
+	addListener(callback: (id: string, event: T) => void, options?: { replay?: boolean }): void
+	removeListener(callback: (id: string, event: T) => void): void
+
+	publish(value: T, context: I): Promise<{ id: string; recipients: number }>
+	get(id: string): Promise<T | null>
 }
 
 export const protocolPrefix = "/canvas/v0/store/"
 
-export abstract class AbstractStore extends EventEmitter<{}> implements Store {
+export abstract class AbstractStore<T, I> implements Store<T, I> {
 	public static MIN_CONNECTIONS = 2
 	public static MAX_CONNECTIONS = 10
 	public static MAX_INBOUND_STREAMS = 64
@@ -58,6 +67,7 @@ export abstract class AbstractStore extends EventEmitter<{}> implements Store {
 	private readonly syncQueue = new PQueue({ concurrency: 1 })
 	private readonly syncQueuePeers = new Set<string>()
 	private readonly syncHistory = new CacheMap<string, number>(AbstractStore.MAX_SYNC_QUEUE_SIZE)
+	private readonly listeners = new Set<(id: string, event: T) => void>()
 
 	protected readonly log: Logger
 	protected readonly controller = new AbortController()
@@ -73,9 +83,7 @@ export abstract class AbstractStore extends EventEmitter<{}> implements Store {
 		callback: (txn: Target & Pick<KeyValueStore, "get" | "set" | "delete">) => Promise<void>
 	): Promise<void>
 
-	constructor(private readonly libp2p: Libp2p<{ pubsub: PubSub }>, private readonly init: StoreInit) {
-		super()
-
+	constructor(private readonly libp2p: Libp2p<{ pubsub: PubSub }>, private readonly init: StoreInit<T, I>) {
 		this.topic = protocolPrefix + init.topic
 		this.protocol = protocolPrefix + init.topic + "/sync"
 
@@ -129,19 +137,66 @@ export abstract class AbstractStore extends EventEmitter<{}> implements Store {
 		}
 	}
 
-	public async insert(key: Uint8Array, value: Uint8Array): Promise<void> {
-		await this.init.apply(key, value)
-		await this.write(null, async (txn) => txn.set(key, value))
-		try {
-			const data = encodeEntry({ key, value })
-			const { recipients } = await this.libp2p.services.pubsub.publish(this.topic, data)
-			this.log("published entry to %d recipients", recipients.length)
-		} catch (err) {
-			this.log.error("failed to publish entry: %O", err)
+	private static HASH_SIZE = 16
+	private getKey(value: Uint8Array, event: T): Uint8Array {
+		const hash = blake3(value, { dkLen: AbstractStore.HASH_SIZE })
+		if (this.init.getTimestamp !== undefined) {
+			const timestamp = this.init.getTimestamp(event)
+			return concat([encodeTimestamp(timestamp), hash])
+		} else {
+			return hash
 		}
 	}
 
-	public async get(key: Uint8Array): Promise<Uint8Array | null> {
+	private async parseEntry(key: Uint8Array, value: Uint8Array): Promise<T> {
+		const event = await this.init.decode(value)
+		assert(equals(key, this.getKey(value, event)), "invalid event: invalid entry key")
+		return event
+	}
+
+	public async publish(event: T, context: I): Promise<{ id: string; recipients: number }> {
+		const value = await this.init.encode(event, context)
+		const key = this.getKey(value, event)
+		const id = base58btc.baseEncode(key)
+
+		await this.write(null, async (txn) => txn.set(key, value))
+
+		this.dispatch(id, event)
+
+		try {
+			const { recipients } = await this.libp2p.services.pubsub.publish(this.topic, value)
+			this.log("published event to %d recipients", recipients.length)
+			return { id, recipients: recipients.length }
+		} catch (err) {
+			this.log.error("failed to publish event: %O", err)
+			return { id, recipients: 0 }
+		}
+	}
+
+	public async addListener(callback: (id: string, event: T) => void, options: { replay?: boolean } = {}) {
+		this.listeners.add(callback)
+
+		if (options.replay ?? false) {
+			// TODO: implement replay
+		}
+	}
+
+	public removeListener(callback: (id: string, event: T) => void) {
+		this.listeners.delete(callback)
+	}
+
+	private dispatch(id: string, event: T) {
+		for (const listener of this.listeners) {
+			try {
+				listener(id, event)
+			} catch (err) {
+				this.log.error("event listener threw an error: %O", err)
+			}
+		}
+	}
+
+	public async get(id: string): Promise<T | null> {
+		const key = base58btc.baseDecode(id)
 		let value: Uint8Array | null = null
 
 		await this.read(null, async (txn) => {
@@ -151,7 +206,7 @@ export abstract class AbstractStore extends EventEmitter<{}> implements Store {
 			}
 		})
 
-		return value
+		return value && this.init.decode(value)
 	}
 
 	private handleMessage = async ({ detail: msg }: CustomEvent<Message>) => {
@@ -159,29 +214,25 @@ export abstract class AbstractStore extends EventEmitter<{}> implements Store {
 			return
 		}
 
-		let entry: Entry | null = null
+		let event: T | null = null
 		try {
-			entry = decodeEntry(msg.data)
+			event = await this.init.decode(msg.data)
 		} catch (err) {
-			this.log.error("received invalid insertion record: %O", err)
+			this.log.error("failed to decode event: %O", err)
 			return
 		}
 
-		const { key, value } = entry
+		const key = this.getKey(msg.data, event)
 
 		try {
-			await this.init.apply(key, value)
+			await this.write(null, async (txn) => txn.set(key, msg.data))
+			this.log("successfully committed event")
 		} catch (err) {
-			this.log.error("failed to apply entry: %O", err)
-			return
+			this.log.error("failed to commit event: %O", err)
 		}
 
-		try {
-			await this.write(null, async (txn) => txn.set(key, value))
-			this.log("successfully committed entry")
-		} catch (err) {
-			this.log.error("failed to commit entry: %O", err)
-		}
+		const id = base58btc.baseEncode(key)
+		this.dispatch(id, event)
 	}
 
 	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {
@@ -292,17 +343,22 @@ export abstract class AbstractStore extends EventEmitter<{}> implements Store {
 
 				const driver = new Driver(client, txn)
 				for await (const [key, value] of driver.sync()) {
-					this.log("got entry %s: %s", hex(key), hex(value))
+					let event: T | null = null
 					try {
-						await this.init.apply(key, value)
+						event = await this.parseEntry(key, value)
 					} catch (err) {
-						this.log.error("failed to apply entry: %O", err)
+						this.log.error("invalid event: %O", err)
 						failureCount++
 						continue
 					}
 
-					successCount++
+					const id = base58btc.baseEncode(key)
+					this.log("got event %s", id)
+
 					await txn.set(key, value)
+
+					this.dispatch(id, event)
+					successCount++
 				}
 
 				this.log("committing transaction")

@@ -78,35 +78,17 @@ export async function getPeerId(config: {
 	}
 }
 
-export type Entry = { key: Uint8Array; value: Uint8Array }
-
-export function encodeEntry({ key, value }: Entry): Uint8Array {
-	const buffer = new ArrayBuffer(4 + key.length + 4 + value.length)
-	const array = new Uint8Array(buffer, 0, buffer.byteLength)
-	const view = new DataView(buffer)
-	view.setUint32(0, key.length)
-	array.set(key, 4)
-	view.setUint32(4 + key.length, value.length)
-	array.set(value, 4 + key.length + 4)
-	return array
-}
-
-export function decodeEntry(entry: Uint8Array): Entry {
-	const view = new DataView(entry.buffer, entry.byteOffset, entry.byteLength)
-	assert(entry.length >= 4, "invalid key/value entry")
-	const keyLength = view.getUint32(0)
-	assert(entry.length >= 4 + keyLength, "invalid key/value entry")
-	const key = entry.subarray(4, 4 + keyLength)
-	assert(entry.length >= 4 + keyLength + 4, "invalid key/value entry")
-	const valueLength = view.getUint32(4 + keyLength)
-	assert(entry.length === 4 + keyLength + 4 + valueLength, "invalid key/value entry")
-	const value = entry.subarray(4 + keyLength + 4, 4 + keyLength + 4 + valueLength)
-	return { key, value }
-}
-
 export function shuffle<T>(array: T[]) {
 	for (let i = array.length - 1; i > 0; i--) {
 		const j = Math.floor(Math.random() * (i + 1))
 		;[array[i], array[j]] = [array[j], array[i]]
 	}
+}
+
+const timestampBuffer = new ArrayBuffer(8)
+const timestampView = new DataView(timestampBuffer)
+
+export function encodeTimestamp(timestamp: number): Uint8Array {
+	timestampView.setBigUint64(0, BigInt(timestamp))
+	return new Uint8Array(timestampBuffer, 2, 6)
 }

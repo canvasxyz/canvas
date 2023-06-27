@@ -7,18 +7,18 @@ import { Tree } from "@canvas-js/okra-node"
 
 import { AbstractStore, Store, StoreInit } from "../store.js"
 
-class NodeStore extends AbstractStore {
-	public static async open(
+class NodeStore<T, I = T> extends AbstractStore<T, I> {
+	public static async open<T, I = T>(
 		libp2p: Libp2p<{ pubsub: PubSub }>,
-		{ path, ...init }: StoreInit & { path: string }
-	): Promise<NodeStore> {
+		{ path, ...init }: StoreInit<T, I> & { path: string }
+	): Promise<NodeStore<T, I>> {
 		const tree = new Tree(path)
-		const store = new NodeStore(libp2p, init, tree)
+		const store = new NodeStore<T, I>(libp2p, init, tree)
 		store.controller.signal.addEventListener("abort", () => tree.close())
 		return store
 	}
 
-	public constructor(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit, private readonly tree: Tree) {
+	public constructor(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit<T, I>, private readonly tree: Tree) {
 		super(libp2p, init)
 	}
 
@@ -34,5 +34,7 @@ class NodeStore extends AbstractStore {
 	}
 }
 
-export const openStore = (libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit & { path: string }): Promise<Store> =>
-	NodeStore.open(libp2p, init)
+export const openStore = <T>(
+	libp2p: Libp2p<{ pubsub: PubSub }>,
+	init: StoreInit<T> & { path: string }
+): Promise<Store<T>> => NodeStore.open(libp2p, init)
