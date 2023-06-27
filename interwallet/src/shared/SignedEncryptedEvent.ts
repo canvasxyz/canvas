@@ -1,9 +1,11 @@
-import { assert } from "."
-import { getRoomId } from "./RoomRegistration.js"
-import * as Messages from "./messages.js"
-import { Room } from "./types"
 import nacl from "tweetnacl"
+import { hexToBytes } from "viem"
+
 import { EncryptedEvent } from "./EncryptedEvent"
+import * as Messages from "./messages.js"
+import { getRoomId } from "./RoomRegistration.js"
+import { PrivateUserRegistration, Room, RoomEvent } from "./types"
+import { assert } from "./utils.js"
 
 export class SignedEncryptedEvent {
 	readonly signature: Uint8Array
@@ -14,7 +16,7 @@ export class SignedEncryptedEvent {
 		this.encryptedEvent = encryptedEvent
 	}
 
-	async validate(key: Uint8Array, room: Room) {
+	async validate(room: Room) {
 		assert(getRoomId(this.encryptedEvent.roomId) === room.id, "event is for a different room")
 
 		const signedData = Messages.EncryptedEvent.encode(this.encryptedEvent)
@@ -38,5 +40,22 @@ export class SignedEncryptedEvent {
 			signature: event.signature,
 			data: Messages.EncryptedEvent.encode(event.encryptedEvent),
 		})
+	}
+
+	static encryptAndSignMessageForRoom(
+		room: Room,
+		message: string,
+		user: PrivateUserRegistration
+	): SignedEncryptedEvent {
+		const encryptedEvent = EncryptedEvent.encryptMessageForRoom(room, message, user)
+
+		const encryptedData = EncryptedEvent.encode(encryptedEvent)
+		const signature = nacl.sign.detached(encryptedData, hexToBytes(user.signingPrivateKey))
+
+		return new SignedEncryptedEvent(signature, encryptedEvent)
+	}
+
+	static decrypt(event: SignedEncryptedEvent, user: PrivateUserRegistration): RoomEvent {
+		return EncryptedEvent.decrypt(event.encryptedEvent, user) as RoomEvent
 	}
 }

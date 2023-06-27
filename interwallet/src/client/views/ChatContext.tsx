@@ -7,12 +7,7 @@ import { PrivateUserRegistration, type Room } from "../../shared/types.js"
 import { makeShardedTopic, useSubscriptions } from "../useStore.js"
 import { Libp2p } from "libp2p"
 import { ServiceMap } from "../libp2p.js"
-import {
-	ROOM_REGISTRY_TOPIC,
-	USER_REGISTRY_TOPIC,
-	decryptEvent,
-	encryptAndSignMessageForRoom,
-} from "../../shared/index.js"
+import { ROOM_REGISTRY_TOPIC, USER_REGISTRY_TOPIC, assert } from "../../shared/index.js"
 import { hexToBytes } from "viem"
 import { InterwalletChatDB } from "../db.js"
 import { blake3 } from "@noble/hashes/blake3"
@@ -23,6 +18,7 @@ import { RoomRegistration, getRoomId } from "../../shared/RoomRegistration.js"
 import { SignedRoomRegistration } from "../../shared/SignedRoomRegistration.js"
 import { PublicUserRegistration } from "../../shared/PublicUserRegistration.js"
 import { SignedEncryptedEvent } from "interwallet/src/shared/SignedEncryptedEvent.js"
+import { equals } from "uint8arrays"
 
 interface ChatContextType {
 	selectedRoom: Room | null
@@ -111,12 +107,14 @@ export const ChatBehaviors = ({
 				const room = await db.rooms.get({ id: roomId })
 				if (!room) return
 
+				assert(equals(key, blake3(value, { dkLen: 16 })), "invalid event: key is not hash of value")
+
 				const signedEncryptedEvent = SignedEncryptedEvent.decode(value)
-				signedEncryptedEvent.validate(key, room)
+				signedEncryptedEvent.validate(room)
 
 				console.log("message event", signedEncryptedEvent.encryptedEvent)
 
-				const event = decryptEvent(signedEncryptedEvent.encryptedEvent, user)
+				const event = SignedEncryptedEvent.decrypt(signedEncryptedEvent, user)
 
 				// TODO: runtime validation of room event types
 				if (event.type === "message") {
@@ -207,7 +205,9 @@ export const ChatBehaviors = ({
 	}
 
 	const sendMessage = async (room: Room, message: string) => {
-		const signedData = encryptAndSignMessageForRoom(room, message, user)
+		const signedData = SignedEncryptedEvent.encode(
+			SignedEncryptedEvent.encryptAndSignMessageForRoom(room, message, user)
+		)
 
 		const key = blake3(signedData, { dkLen: 16 })
 
