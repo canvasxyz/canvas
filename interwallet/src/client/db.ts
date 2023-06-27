@@ -9,7 +9,7 @@ export type Message = {
 	timestamp: number
 }
 
-export class InterwalletChatDB extends Dexie {
+class InterwalletChatDB extends Dexie {
 	users!: Table<PublicUserRegistration, string>
 	rooms!: Table<Room, string>
 	messages!: Table<Message, number>
@@ -23,3 +23,5 @@ export class InterwalletChatDB extends Dexie {
 		})
 	}
 }
+
+export const db = new InterwalletChatDB()

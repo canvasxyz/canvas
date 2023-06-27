@@ -1,27 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react"
 
-import { Libp2p } from "@libp2p/interface-libp2p"
 import { Connection } from "@libp2p/interface-connection"
 import { protocols } from "@multiformats/multiaddr"
 
 import { ReactComponent as closeIcon } from "../../../icons/close.svg"
 
 import { PeerIdToken } from "./PeerIdToken.js"
+import { libp2p } from "../libp2p.js"
 
 export interface ConnectionListProps {
 	className?: string
-	libp2p: Libp2p | null
 }
 
-export const ConnectionList: React.FC<ConnectionListProps> = ({ className, libp2p }) => {
+export const ConnectionList: React.FC<ConnectionListProps> = ({ className }) => {
 	const connectionMap = useMemo(() => new Map<string, Connection>(), [])
 	const [connections, setConnections] = useState<Connection[]>([])
 
 	useEffect(() => {
-		if (libp2p === null) {
-			return
-		}
-
 		for (const connection of libp2p.getConnections()) {
 			connectionMap.set(connection.id, connection)
 		}

@@ -2,13 +2,9 @@ import http from "node:http"
 
 import chalk from "chalk"
 
-import { getPeerId } from "./libp2p.js"
-import { RoomManager } from "./manager.js"
 import { app } from "./server.js"
 
-const peerId = await getPeerId()
-const manager = await RoomManager.initialize(peerId)
-await manager.start()
+import { libp2p } from "./libp2p.js"
 
 const { PORT } = process.env
 const server = http.createServer(app).listen(parseInt(PORT ?? "8088"))
@@ -23,7 +19,7 @@ process.on("SIGINT", () => {
 		)
 
 		stopping = true
-		manager.stop()
+		libp2p.stop()
 		server.close()
 		server.closeAllConnections()
 	}

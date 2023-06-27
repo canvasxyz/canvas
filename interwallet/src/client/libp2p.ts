@@ -22,80 +22,12 @@ import { protocolPrefix } from "@canvas-js/store"
 
 import { MAX_CONNECTIONS, MIN_CONNECTIONS, PING_TIMEOUT, PEER_ID_KEY } from "./constants.js"
 
-export type ServiceMap = {
-	identify: {}
-	pubsub: PubSub<GossipsubEvents>
-	ping: PingService
-}
-
 // @ts-ignore
 const BOOTSTRAP_LIST = import.meta.env.VITE_BOOTSTRAP_LIST
 const bootstrapList = BOOTSTRAP_LIST?.split(" ") ?? []
+console.log("using bootstrap list", bootstrapList)
 
-export async function getLibp2p(peerId: PeerId): Promise<Libp2p<ServiceMap>> {
-	console.log("using bootstrap list", bootstrapList)
-
-	return await createLibp2p({
-		start: false,
-		peerId: peerId,
-
-		// addresses: {
-		// 	listen: ["/webrtc"],
-		// 	announce: bootstrapList.map((address) => `${address}/p2p-circuit/webrtc/p2p/${peerId}`),
-		// },
-
-		// transports: [
-		// 	webRTC(),
-		// 	webSockets({ filter: all }),
-		// 	circuitRelayTransport({ discoverRelays: bootstrapList.length }),
-		// ],
-
-		addresses: { listen: [], announce: [] },
-		transports: [webSockets({ filter: all }), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
-
-		connectionEncryption: [noise()],
-		streamMuxers: [mplex()],
-		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
-
-		connectionManager: {
-			minConnections: MIN_CONNECTIONS,
-			maxConnections: MAX_CONNECTIONS,
-		},
-
-		connectionGater: {
-			denyDialMultiaddr: () => {
-				return false
-			},
-		},
-
-		services: {
-			pubsub: gossipsub({
-				emitSelf: false,
-				fallbackToFloodsub: false,
-				allowPublishToZeroPeers: true,
-				globalSignaturePolicy: "StrictSign",
-			}),
-
-			identify: identifyService({
-				protocolPrefix: "canvas",
-			}),
-
-			ping: pingService({
-				protocolPrefix: "canvas",
-				maxInboundStreams: 32,
-				maxOutboundStreams: 32,
-				timeout: PING_TIMEOUT,
-			}),
-
-			serviceDiscovery: pubsubServiceDiscovery({
-				filterProtocols: (protocol) =>
-					protocol === PubsubServiceDiscovery.DISCOVERY_TOPIC || protocol.startsWith(protocolPrefix),
-			}),
-		},
-	})
-}
-
-export async function getPeerId(): Promise<PeerId> {
+async function getPeerId(): Promise<PeerId> {
 	const entry = window.localStorage.getItem(PEER_ID_KEY)
 	if (entry === null) {
 		const peerId = await createEd25519PeerId()
@@ -110,3 +42,70 @@ export async function getPeerId(): Promise<PeerId> {
 		return peerId
 	}
 }
+
+const peerId = await getPeerId()
+
+export type ServiceMap = {
+	identify: {}
+	pubsub: PubSub<GossipsubEvents>
+	ping: PingService
+}
+
+export const libp2p: Libp2p<ServiceMap> = await createLibp2p({
+	// start: false,
+	peerId: peerId,
+
+	// addresses: {
+	// 	listen: ["/webrtc"],
+	// 	announce: bootstrapList.map((address) => `${address}/p2p-circuit/webrtc/p2p/${peerId}`),
+	// },
+
+	// transports: [
+	// 	webRTC(),
+	// 	webSockets({ filter: all }),
+	// 	circuitRelayTransport({ discoverRelays: bootstrapList.length }),
+	// ],
+
+	addresses: { listen: [], announce: [] },
+	transports: [webSockets({ filter: all }), circuitRelayTransport({ discoverRelays: bootstrapList.length })],
+
+	connectionEncryption: [noise()],
+	streamMuxers: [mplex()],
+	peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
+
+	connectionManager: {
+		minConnections: MIN_CONNECTIONS,
+		maxConnections: MAX_CONNECTIONS,
+	},
+
+	connectionGater: {
+		denyDialMultiaddr: () => {
+			return false
+		},
+	},
+
+	services: {
+		pubsub: gossipsub({
+			emitSelf: false,
+			fallbackToFloodsub: false,
+			allowPublishToZeroPeers: true,
+			globalSignaturePolicy: "StrictSign",
+		}),
+
+		identify: identifyService({
+			protocolPrefix: "canvas",
+		}),
+
+		ping: pingService({
+			protocolPrefix: "canvas",
+			maxInboundStreams: 32,
+			maxOutboundStreams: 32,
+			timeout: PING_TIMEOUT,
+		}),
+
+		serviceDiscovery: pubsubServiceDiscovery({
+			filterProtocols: (protocol) =>
+				protocol === PubsubServiceDiscovery.DISCOVERY_TOPIC || protocol.startsWith(protocolPrefix),
+		}),
+	},
+})

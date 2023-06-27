@@ -11,7 +11,7 @@ export interface PeerIdTokenProps {
 	children?: React.ReactNode
 }
 
-export const PeerIdToken: React.FC<PeerIdTokenProps> = (props) => {
+export const PeerIdToken = (props: PeerIdTokenProps) => {
 	const id = props.peerId.toString()
 	const text = props.compact ? `…${id.slice(-6)}` : id
 

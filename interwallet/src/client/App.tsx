@@ -2,38 +2,57 @@ import React, { useCallback, useEffect, useState } from "react"
 
 import { useAccount, useConnect } from "wagmi"
 
-import { PrivateUserRegistration } from "../shared/index.js"
+import { PrivateUserRegistration, Room, RoomRegistration } from "../shared/index.js"
 
-import { LoggedInView } from "./views/ChatView.js"
+import { ChatView } from "./views/ChatView.js"
 import { RegistrationView } from "./views/RegistrationView.js"
 import { SelectWalletView } from "./views/SelectWalletView.js"
-import { SelectedRoomIdContext } from "./SelectedRoomIdContext.js"
+import { AppContext } from "./AppContext.js"
+import { db } from "./db.js"
+import { addRoomEventStore, roomRegistry } from "./stores.js"
 
 export const App: React.FC<{}> = ({}) => {
 	const { connect, connectors } = useConnect()
 	const { address: userAddress, isConnected } = useAccount()
 
 	const [user, setUser] = useState<PrivateUserRegistration | null>(null)
+	const [room, setRoom] = useState<Room | null>(null)
 
-	const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null)
+	useEffect(() => {
+		if (user !== null) {
+			const handleEvent = (id: string, room: RoomRegistration) => {
+				if (room.members.some((member) => member.address === user.address)) {
+					addRoomEventStore(user, { id, ...room })
+				}
+			}
 
-	const setCurrentRoom = useCallback((roomId: string | null) => {
-		if (roomId === null) {
+			roomRegistry.addListener(handleEvent)
+			return () => roomRegistry.removeListener(handleEvent)
+		}
+	}, [user])
+
+	const setCurrentRoom = useCallback((room: Room | null) => {
+		if (room === null) {
 			location.hash = ""
 		} else {
-			location.hash = roomId
+			location.hash = room.id
 		}
 
-		setSelectedRoomId(roomId)
+		setRoom(room)
 	}, [])
 
 	useEffect(() => {
 		const { hash } = window.location
 		if (hash.startsWith("#")) {
 			const roomId = hash.slice(1)
-			if (roomId) {
-				setSelectedRoomId(roomId)
-			}
+
+			db.rooms.get(roomId).then((room) => {
+				if (room) {
+					setRoom(room)
+				} else {
+					window.location.hash = ""
+				}
+			})
 		}
 	}, [])
 
@@ -50,12 +69,12 @@ export const App: React.FC<{}> = ({}) => {
 			/>
 		)
 	} else if (user === null) {
-		return <RegistrationView user={user} setUser={setUser} />
+		return <RegistrationView setUser={setUser} />
 	} else {
 		return (
-			<SelectedRoomIdContext.Provider value={{ selectedRoomId, setSelectedRoomId: setCurrentRoom }}>
-				<LoggedInView user={user} setUser={setUser} />
-			</SelectedRoomIdContext.Provider>
+			<AppContext.Provider value={{ currentRoom: room, setCurrentRoom, user, setUser }}>
+				<ChatView />
+			</AppContext.Provider>
 		)
 	}
 }

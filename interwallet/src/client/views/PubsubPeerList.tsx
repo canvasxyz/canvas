@@ -1,54 +1,45 @@
 import React, { useEffect, useState } from "react"
 
-import { Libp2p } from "@libp2p/interface-libp2p"
-import { PubSub, SubscriptionChangeData } from "@libp2p/interface-pubsub"
+import { SubscriptionChangeData } from "@libp2p/interface-pubsub"
+
+import { libp2p } from "../libp2p.js"
 
 export interface PubsubPeerListProps {
 	className?: string
 	protocolPrefix?: string
-	libp2p: Libp2p<{ pubsub: PubSub }> | null
 }
 
-export const PubsubPeerList: React.FC<PubsubPeerListProps> = ({ className, protocolPrefix, libp2p }) => {
+export const PubsubPeerList: React.FC<PubsubPeerListProps> = ({ className, protocolPrefix }) => {
 	const [topicPeers, setTopicPeers] = useState<{ topic: string; peers: string[] }[]>([])
 
-	const updateTopicPeers = () => {
-		if (libp2p === null) return
-
-		const { pubsub } = libp2p.services
-
-		const topicPeers: { topic: string; peers: string[] }[] = []
-		const topics = pubsub.getTopics()
-		for (const topic of topics) {
-			const peers = pubsub.getSubscribers(topic).map((peerId) => peerId.toString())
-			if (protocolPrefix === undefined) {
-				topicPeers.push({ topic, peers })
-			} else if (topic.startsWith(protocolPrefix)) {
-				topicPeers.push({ topic: topic.slice(protocolPrefix.length), peers })
-			}
-		}
-
-		setTopicPeers(topicPeers)
-	}
-
 	useEffect(() => {
-		if (libp2p === null) {
-			return
+		const updateTopicPeers = () => {
+			const topicPeers: { topic: string; peers: string[] }[] = []
+			const topics = libp2p.services.pubsub.getTopics()
+			for (const topic of topics) {
+				const peers = libp2p.services.pubsub.getSubscribers(topic).map((peerId) => peerId.toString())
+				if (protocolPrefix === undefined) {
+					topicPeers.push({ topic, peers })
+				} else if (topic.startsWith(protocolPrefix)) {
+					topicPeers.push({ topic: topic.slice(protocolPrefix.length), peers })
+				}
+			}
+
+			setTopicPeers(topicPeers)
 		}
 
 		const handleSubscriptionChange = ({ detail: update }: CustomEvent<SubscriptionChangeData>) => {
 			updateTopicPeers()
 		}
 
-		const { pubsub } = libp2p.services
-		pubsub.addEventListener("subscription-change", handleSubscriptionChange)
+		libp2p.services.pubsub.addEventListener("subscription-change", handleSubscriptionChange)
 
 		updateTopicPeers()
 
 		return () => {
-			pubsub.removeEventListener("subscription-change", handleSubscriptionChange)
+			libp2p.services.pubsub.removeEventListener("subscription-change", handleSubscriptionChange)
 		}
-	}, [libp2p])
+	}, [])
 
 	return (
 		<div className={className}>

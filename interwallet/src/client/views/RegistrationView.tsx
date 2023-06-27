@@ -1,17 +1,15 @@
 import React, { useCallback, useLayoutEffect } from "react"
 import { useAccount, useDisconnect, useWalletClient } from "wagmi"
 
-import { PrivateUserRegistration, createPrivateUserRegistration } from "../../shared/index.js"
+import { getRegistrationKey, createPrivateUserRegistration } from "../utils.js"
+import { PrivateUserRegistration, getPublicUserRegistration } from "../../shared/index.js"
+import { userRegistry } from "../stores.js"
 
-import { getRegistrationKey } from "../utils.js"
+interface RegistrationViewProps {
+	setUser: (user: PrivateUserRegistration) => void
+}
 
-export const RegistrationView = ({
-	user,
-	setUser,
-}: {
-	user: PrivateUserRegistration | null
-	setUser: (user: PrivateUserRegistration | null) => void
-}) => {
+export const RegistrationView = ({ setUser }: RegistrationViewProps) => {
 	const { address: userAddress, isConnected } = useAccount()
 	const { data: walletClient } = useWalletClient()
 
@@ -19,7 +17,7 @@ export const RegistrationView = ({
 	const { disconnect } = useDisconnect()
 
 	useLayoutEffect(() => {
-		if (isConnected && userAddress !== undefined && user === null) {
+		if (isConnected && userAddress !== undefined) {
 			const key = getRegistrationKey(userAddress)
 			const value = window.localStorage.getItem(key)
 			if (value !== null) {
@@ -30,18 +28,20 @@ export const RegistrationView = ({
 				}
 			}
 		}
-	}, [userAddress, isConnected, user])
+	}, [userAddress, isConnected])
 
-	const handleSubmitPin = useCallback(
+	const handleSubmit = useCallback(
 		async (pin: string) => {
 			if (userAddress === undefined || !walletClient) {
 				return
 			}
+
 			try {
 				const user = await createPrivateUserRegistration(walletClient, userAddress, pin)
 				console.log("setting new registration", user)
 				const key = getRegistrationKey(userAddress)
 				window.localStorage.setItem(key, JSON.stringify(user))
+				userRegistry.publish(getPublicUserRegistration(user))
 				setUser(user)
 			} catch (err) {
 				console.error("failed to get signature", err)
@@ -49,15 +49,6 @@ export const RegistrationView = ({
 		},
 		[userAddress, walletClient]
 	)
-
-	const goBack = useCallback(() => {
-		if (user !== null) {
-			window.localStorage.removeItem(getRegistrationKey(user.address))
-		}
-
-		setUser(null)
-		disconnect()
-	}, [user, disconnect])
 
 	return (
 		<div className="flex flex-row grow items-center justify-center h-screen overflow-hidden bg-gray-50">
@@ -67,7 +58,7 @@ export const RegistrationView = ({
 					className="flex flex-row gap-3 items-center"
 					onSubmit={(e) => {
 						e.preventDefault()
-						handleSubmitPin(pin)
+						handleSubmit(pin)
 					}}
 				>
 					<input
@@ -85,7 +76,7 @@ export const RegistrationView = ({
 				</form>
 				<button
 					className="p-2 rounded-md bg-red-500 hover:bg-red-700 hover:cursor-pointer select-none text-white text-center"
-					onClick={goBack}
+					onClick={() => disconnect()}
 				>
 					Back
 				</button>

@@ -32,74 +32,11 @@ export type ServiceMap = {
 	ping: PingService
 }
 
-export async function getLibp2p(peerId: PeerId): Promise<Libp2p<ServiceMap>> {
-	console.log("using peerId", peerId.toString())
-	console.log("using bootstrap list", bootstrapList)
-
-	return await createLibp2p({
-		start: false,
-		peerId: peerId,
-
-		// addresses: {
-		// 	listen: ["/webrtc"],
-		// 	announce: bootstrapList.map((address) => `${address}/p2p-circuit/webrtc/p2p/${peerId}`),
-		// },
-
-		// transports: [
-		// 	webRTC(),
-		// 	webSockets({ filter: all }),
-		// 	circuitRelayTransport({ discoverRelays: bootstrapList.length }),
-		// ],
-
-		addresses: { listen: listenAddresses, announce: announceAddresses },
-		transports: [
-			webSockets({ filter: all }),
-			circuitRelayTransport({ discoverRelays: announceAddresses.length > 0 ? 0 : bootstrapList.length }),
-		],
-
-		connectionEncryption: [noise()],
-		streamMuxers: [mplex()],
-		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
-
-		connectionManager: {
-			minConnections: MIN_CONNECTIONS,
-			maxConnections: MAX_CONNECTIONS,
-		},
-
-		metrics: prometheusMetrics({}),
-
-		services: {
-			pubsub: gossipsub({
-				emitSelf: false,
-				fallbackToFloodsub: false,
-				allowPublishToZeroPeers: true,
-				globalSignaturePolicy: "StrictSign",
-			}),
-
-			identify: identifyService({
-				protocolPrefix: "canvas",
-			}),
-
-			ping: pingService({
-				protocolPrefix: "canvas",
-				maxInboundStreams: 32,
-				maxOutboundStreams: 32,
-				timeout: PING_TIMEOUT,
-			}),
-
-			serviceDiscovery: pubsubServiceDiscovery({
-				filterProtocols: (protocol) =>
-					protocol === PubsubServiceDiscovery.DISCOVERY_TOPIC || protocol.startsWith(protocolPrefix),
-			}),
-		},
-	})
-}
-
 const peerIdPath = path.resolve(dataDirectory, "peer.id")
 
 const { PEER_ID } = process.env
 
-export async function getPeerId(): Promise<PeerId> {
+async function getPeerId(): Promise<PeerId> {
 	if (typeof PEER_ID === "string") {
 		const peerIdBytes = Buffer.from(PEER_ID, "base64")
 		return await createFromProtobuf(peerIdBytes)
@@ -113,3 +50,65 @@ export async function getPeerId(): Promise<PeerId> {
 		return peerId
 	}
 }
+
+export const peerId = await getPeerId()
+
+console.log("using peerId", peerId.toString())
+console.log("using bootstrap list", bootstrapList)
+
+export const libp2p = await createLibp2p({
+	peerId: peerId,
+
+	// addresses: {
+	// 	listen: ["/webrtc"],
+	// 	announce: bootstrapList.map((address) => `${address}/p2p-circuit/webrtc/p2p/${peerId}`),
+	// },
+
+	// transports: [
+	// 	webRTC(),
+	// 	webSockets({ filter: all }),
+	// 	circuitRelayTransport({ discoverRelays: bootstrapList.length }),
+	// ],
+
+	addresses: { listen: listenAddresses, announce: announceAddresses },
+	transports: [
+		webSockets({ filter: all }),
+		circuitRelayTransport({ discoverRelays: announceAddresses.length > 0 ? 0 : bootstrapList.length }),
+	],
+
+	connectionEncryption: [noise()],
+	streamMuxers: [mplex()],
+	peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
+
+	connectionManager: {
+		minConnections: MIN_CONNECTIONS,
+		maxConnections: MAX_CONNECTIONS,
+	},
+
+	metrics: prometheusMetrics({}),
+
+	services: {
+		pubsub: gossipsub({
+			emitSelf: false,
+			fallbackToFloodsub: false,
+			allowPublishToZeroPeers: true,
+			globalSignaturePolicy: "StrictSign",
+		}),
+
+		identify: identifyService({
+			protocolPrefix: "canvas",
+		}),
+
+		ping: pingService({
+			protocolPrefix: "canvas",
+			maxInboundStreams: 32,
+			maxOutboundStreams: 32,
+			timeout: PING_TIMEOUT,
+		}),
+
+		serviceDiscovery: pubsubServiceDiscovery({
+			filterProtocols: (protocol) =>
+				protocol === PubsubServiceDiscovery.DISCOVERY_TOPIC || protocol.startsWith(protocolPrefix),
+		}),
+	},
+})

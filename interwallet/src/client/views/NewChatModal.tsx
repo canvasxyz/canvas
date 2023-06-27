@@ -1,64 +1,79 @@
-import React, { useCallback, useContext, useState } from "react"
+import React, { useCallback, useContext, useMemo, useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { useEnsName } from "wagmi"
 import _ from "lodash"
-import { PublicUserRegistration, getPublicUserRegistration } from "../../shared/index.js"
-import { ChatContext } from "./ChatContext.js"
+
+import { PrivateUserRegistration, PublicUserRegistration, getPublicUserRegistration } from "../../shared/index.js"
+import { db } from "../db.js"
+import { AppContext } from "../AppContext.js"
+import { createRoom } from "../stores.js"
 
 interface UserEntryProps {
 	user: PublicUserRegistration
-	onClick: () => void
+	disabled?: boolean
 	isSelected: boolean
+	onClick: () => void
 }
 
-const UserEntry = ({ user, onClick, isSelected }: UserEntryProps) => {
+const UserEntry = ({ user, onClick, isSelected, disabled }: UserEntryProps) => {
 	const { data: ensName } = useEnsName({ address: user.address })
 	return (
 		<button
 			onClick={onClick}
+			disabled={disabled}
 			className="grid mt-3 col-span-1 w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm"
 		>
 			{isSelected && "✓ "}
-			{ensName} ({user.address.slice(0, 8)}...)
+			{user.address} ({ensName ?? "..."})
 		</button>
 	)
 }
 
 export interface NewChatModalProps {
-	closeModal: () => void
+	creator: PrivateUserRegistration
+	onClose: () => void
 }
 
-export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
-	const { db, createRoom, user } = useContext(ChatContext)
+export const NewChatModal = ({ creator, onClose }: NewChatModalProps) => {
+	const users = useLiveQuery(() => db.users.toArray(), []) ?? []
 
-	const users = useLiveQuery(async () => await db.users.toArray(), [])
-	const [selectedRecipients, setSelectedRecipients] = useState<Record<string, boolean>>({})
+	const [members, setMembers] = useState<PublicUserRegistration[]>([getPublicUserRegistration(creator)])
 
 	const startNewChat = useCallback(async () => {
-		const selectedRecipientAddresses = Object.keys(selectedRecipients)
-		if (selectedRecipientAddresses.length === 0) {
+		if (members.length === 0) {
 			return
 		}
 
-		console.log("starting new chat with", selectedRecipientAddresses)
-
-		const selectedRecipientsObjects = users?.filter((user) => selectedRecipientAddresses.includes(user.address)) || []
-		if (selectedRecipientsObjects.length === 0) {
-			return
-		}
+		console.log("starting new chat with", members)
 
 		try {
-			// sort the members so that only one room is created for any two users
-			const members = _.sortBy(
-				[getPublicUserRegistration(user), ...selectedRecipientsObjects],
-				(member) => member.address
-			)
-			await createRoom({ members, creator: user.address })
+			createRoom(members, creator)
+			onClose()
 		} catch (err) {
-			console.error("failed to create room", err)
+			if (err instanceof Error) {
+				console.error("failed to create room", err)
+				alert(err.toString())
+			} else {
+				throw err
+			}
 		}
-		closeModal()
-	}, [user, selectedRecipients])
+	}, [creator, members])
+
+	const handleClick = useCallback(
+		(user: PublicUserRegistration) => {
+			if (user.address === creator.address) {
+				return
+			}
+
+			const member = members.find(({ address }) => user.address === address)
+			if (member === undefined) {
+				setMembers([...members, user])
+			} else {
+				setMembers(members.filter(({ address }) => address !== user.address))
+			}
+		},
+		[creator, members]
+	)
 
 	return (
 		<div className="relative z-10" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -74,22 +89,16 @@ export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
 								</h3>
 
 								<div className="mt-2 flex flex-col gap-2">
-									{users?.map((recipient) =>
-										recipient.address === user?.address ? null : (
-											<UserEntry
-												key={recipient.address}
-												user={recipient}
-												isSelected={selectedRecipients[recipient.address] === true}
-												onClick={() => {
-													if (selectedRecipients[recipient.address] === true) {
-														setSelectedRecipients({ ...selectedRecipients, [recipient.address]: false })
-													} else {
-														setSelectedRecipients({ ...selectedRecipients, [recipient.address]: true })
-													}
-												}}
-											/>
-										)
-									)}
+									{users.map((user) => (
+										<UserEntry
+											key={user.address}
+											user={user}
+											isSelected={
+												user.address === creator.address || members.some(({ address }) => user.address === address)
+											}
+											onClick={() => handleClick(user)}
+										/>
+									))}
 								</div>
 							</div>
 						</div>
@@ -103,7 +112,7 @@ export const NewChatModal = ({ closeModal }: NewChatModalProps) => {
 							</button>
 							<button
 								type="button"
-								onClick={closeModal}
+								onClick={onClose}
 								className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
 							>
 								Close

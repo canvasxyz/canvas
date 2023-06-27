@@ -9,6 +9,7 @@ import type { Codec } from 'protons-runtime'
 import type { Uint8ArrayList } from 'uint8arraylist'
 
 export interface SignedData {
+  publicKey: Uint8Array
   signature: Uint8Array
   data: Uint8Array
 }
@@ -23,13 +24,18 @@ export namespace SignedData {
           w.fork()
         }
 
-        if ((obj.signature != null && obj.signature.byteLength > 0)) {
+        if ((obj.publicKey != null && obj.publicKey.byteLength > 0)) {
           w.uint32(10)
+          w.bytes(obj.publicKey)
+        }
+
+        if ((obj.signature != null && obj.signature.byteLength > 0)) {
+          w.uint32(18)
           w.bytes(obj.signature)
         }
 
         if ((obj.data != null && obj.data.byteLength > 0)) {
-          w.uint32(18)
+          w.uint32(26)
           w.bytes(obj.data)
         }
 
@@ -38,6 +44,7 @@ export namespace SignedData {
         }
       }, (reader, length) => {
         const obj: any = {
+          publicKey: new Uint8Array(0),
           signature: new Uint8Array(0),
           data: new Uint8Array(0)
         }
@@ -49,9 +56,12 @@ export namespace SignedData {
 
           switch (tag >>> 3) {
             case 1:
-              obj.signature = reader.bytes()
+              obj.publicKey = reader.bytes()
               break
             case 2:
+              obj.signature = reader.bytes()
+              break
+            case 3:
               obj.data = reader.bytes()
               break
             default:
@@ -76,92 +86,84 @@ export namespace SignedData {
   }
 }
 
-export interface EncryptedPayload {
-  publicKey: Uint8Array
-  ciphertext: Uint8Array
-  nonce: Uint8Array
-}
-
-export namespace EncryptedPayload {
-  let _codec: Codec<EncryptedPayload>
-
-  export const codec = (): Codec<EncryptedPayload> => {
-    if (_codec == null) {
-      _codec = message<EncryptedPayload>((obj, w, opts = {}) => {
-        if (opts.lengthDelimited !== false) {
-          w.fork()
-        }
-
-        if ((obj.publicKey != null && obj.publicKey.byteLength > 0)) {
-          w.uint32(10)
-          w.bytes(obj.publicKey)
-        }
-
-        if ((obj.ciphertext != null && obj.ciphertext.byteLength > 0)) {
-          w.uint32(18)
-          w.bytes(obj.ciphertext)
-        }
-
-        if ((obj.nonce != null && obj.nonce.byteLength > 0)) {
-          w.uint32(26)
-          w.bytes(obj.nonce)
-        }
-
-        if (opts.lengthDelimited !== false) {
-          w.ldelim()
-        }
-      }, (reader, length) => {
-        const obj: any = {
-          publicKey: new Uint8Array(0),
-          ciphertext: new Uint8Array(0),
-          nonce: new Uint8Array(0)
-        }
-
-        const end = length == null ? reader.len : reader.pos + length
-
-        while (reader.pos < end) {
-          const tag = reader.uint32()
-
-          switch (tag >>> 3) {
-            case 1:
-              obj.publicKey = reader.bytes()
-              break
-            case 2:
-              obj.ciphertext = reader.bytes()
-              break
-            case 3:
-              obj.nonce = reader.bytes()
-              break
-            default:
-              reader.skipType(tag & 7)
-              break
-          }
-        }
-
-        return obj
-      })
-    }
-
-    return _codec
-  }
-
-  export const encode = (obj: Partial<EncryptedPayload>): Uint8Array => {
-    return encodeMessage(obj, EncryptedPayload.codec())
-  }
-
-  export const decode = (buf: Uint8Array | Uint8ArrayList): EncryptedPayload => {
-    return decodeMessage(buf, EncryptedPayload.codec())
-  }
-}
-
 export interface EncryptedEvent {
-  roomId: Uint8Array
   senderAddress: Uint8Array
-  senderPublicKey: Uint8Array
-  recipients: EncryptedPayload[]
+  roomId: string
+  timestamp: bigint
+  nonce: Uint8Array
+  commitment: Uint8Array
+  recipients: EncryptedEvent.Recipient[]
 }
 
 export namespace EncryptedEvent {
+  export interface Recipient {
+    publicKey: Uint8Array
+    ciphertext: Uint8Array
+  }
+
+  export namespace Recipient {
+    let _codec: Codec<Recipient>
+
+    export const codec = (): Codec<Recipient> => {
+      if (_codec == null) {
+        _codec = message<Recipient>((obj, w, opts = {}) => {
+          if (opts.lengthDelimited !== false) {
+            w.fork()
+          }
+
+          if ((obj.publicKey != null && obj.publicKey.byteLength > 0)) {
+            w.uint32(10)
+            w.bytes(obj.publicKey)
+          }
+
+          if ((obj.ciphertext != null && obj.ciphertext.byteLength > 0)) {
+            w.uint32(18)
+            w.bytes(obj.ciphertext)
+          }
+
+          if (opts.lengthDelimited !== false) {
+            w.ldelim()
+          }
+        }, (reader, length) => {
+          const obj: any = {
+            publicKey: new Uint8Array(0),
+            ciphertext: new Uint8Array(0)
+          }
+
+          const end = length == null ? reader.len : reader.pos + length
+
+          while (reader.pos < end) {
+            const tag = reader.uint32()
+
+            switch (tag >>> 3) {
+              case 1:
+                obj.publicKey = reader.bytes()
+                break
+              case 2:
+                obj.ciphertext = reader.bytes()
+                break
+              default:
+                reader.skipType(tag & 7)
+                break
+            }
+          }
+
+          return obj
+        })
+      }
+
+      return _codec
+    }
+
+    export const encode = (obj: Partial<Recipient>): Uint8Array => {
+      return encodeMessage(obj, Recipient.codec())
+    }
+
+    export const decode = (buf: Uint8Array | Uint8ArrayList): Recipient => {
+      return decodeMessage(buf, Recipient.codec())
+    }
+  }
+
   let _codec: Codec<EncryptedEvent>
 
   export const codec = (): Codec<EncryptedEvent> => {
@@ -171,25 +173,35 @@ export namespace EncryptedEvent {
           w.fork()
         }
 
-        if ((obj.roomId != null && obj.roomId.byteLength > 0)) {
-          w.uint32(10)
-          w.bytes(obj.roomId)
-        }
-
         if ((obj.senderAddress != null && obj.senderAddress.byteLength > 0)) {
-          w.uint32(18)
+          w.uint32(10)
           w.bytes(obj.senderAddress)
         }
 
-        if ((obj.senderPublicKey != null && obj.senderPublicKey.byteLength > 0)) {
-          w.uint32(26)
-          w.bytes(obj.senderPublicKey)
+        if ((obj.roomId != null && obj.roomId !== '')) {
+          w.uint32(18)
+          w.string(obj.roomId)
+        }
+
+        if ((obj.timestamp != null && obj.timestamp !== 0n)) {
+          w.uint32(24)
+          w.uint64(obj.timestamp)
+        }
+
+        if ((obj.nonce != null && obj.nonce.byteLength > 0)) {
+          w.uint32(34)
+          w.bytes(obj.nonce)
+        }
+
+        if ((obj.commitment != null && obj.commitment.byteLength > 0)) {
+          w.uint32(42)
+          w.bytes(obj.commitment)
         }
 
         if (obj.recipients != null) {
           for (const value of obj.recipients) {
-            w.uint32(34)
-            EncryptedPayload.codec().encode(value, w)
+            w.uint32(50)
+            EncryptedEvent.Recipient.codec().encode(value, w)
           }
         }
 
@@ -198,9 +210,11 @@ export namespace EncryptedEvent {
         }
       }, (reader, length) => {
         const obj: any = {
-          roomId: new Uint8Array(0),
           senderAddress: new Uint8Array(0),
-          senderPublicKey: new Uint8Array(0),
+          roomId: '',
+          timestamp: 0n,
+          nonce: new Uint8Array(0),
+          commitment: new Uint8Array(0),
           recipients: []
         }
 
@@ -211,16 +225,22 @@ export namespace EncryptedEvent {
 
           switch (tag >>> 3) {
             case 1:
-              obj.roomId = reader.bytes()
-              break
-            case 2:
               obj.senderAddress = reader.bytes()
               break
+            case 2:
+              obj.roomId = reader.string()
+              break
             case 3:
-              obj.senderPublicKey = reader.bytes()
+              obj.timestamp = reader.uint64()
               break
             case 4:
-              obj.recipients.push(EncryptedPayload.codec().decode(reader, reader.uint32()))
+              obj.nonce = reader.bytes()
+              break
+            case 5:
+              obj.commitment = reader.bytes()
+              break
+            case 6:
+              obj.recipients.push(EncryptedEvent.Recipient.codec().decode(reader, reader.uint32()))
               break
             default:
               reader.skipType(tag & 7)
@@ -390,7 +410,8 @@ export namespace SignedUserRegistration {
 }
 
 export interface RoomRegistration {
-  creator: Uint8Array
+  creatorAddress: Uint8Array
+  timestamp: bigint
   members: SignedUserRegistration[]
 }
 
@@ -404,14 +425,19 @@ export namespace RoomRegistration {
           w.fork()
         }
 
-        if ((obj.creator != null && obj.creator.byteLength > 0)) {
+        if ((obj.creatorAddress != null && obj.creatorAddress.byteLength > 0)) {
           w.uint32(10)
-          w.bytes(obj.creator)
+          w.bytes(obj.creatorAddress)
+        }
+
+        if ((obj.timestamp != null && obj.timestamp !== 0n)) {
+          w.uint32(16)
+          w.uint64(obj.timestamp)
         }
 
         if (obj.members != null) {
           for (const value of obj.members) {
-            w.uint32(18)
+            w.uint32(26)
             SignedUserRegistration.codec().encode(value, w)
           }
         }
@@ -421,7 +447,8 @@ export namespace RoomRegistration {
         }
       }, (reader, length) => {
         const obj: any = {
-          creator: new Uint8Array(0),
+          creatorAddress: new Uint8Array(0),
+          timestamp: 0n,
           members: []
         }
 
@@ -432,9 +459,12 @@ export namespace RoomRegistration {
 
           switch (tag >>> 3) {
             case 1:
-              obj.creator = reader.bytes()
+              obj.creatorAddress = reader.bytes()
               break
             case 2:
+              obj.timestamp = reader.uint64()
+              break
+            case 3:
               obj.members.push(SignedUserRegistration.codec().decode(reader, reader.uint32()))
               break
             default:

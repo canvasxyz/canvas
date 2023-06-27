@@ -7,7 +7,9 @@
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"client:dev": "vite",
 		"client:build": "vite build",
-		"server:start": "node lib/server/index.js"
+		"server:start": "node lib/server/index.js",
+		"generate": "npm run generate-messages",
+    "generate-messages": "protons ./src/shared/messages.proto"
 	},
 	"dependencies": {
 		"@canvas-js/okra-idb": "^0.0.2",

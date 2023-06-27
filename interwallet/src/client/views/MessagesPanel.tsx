@@ -3,62 +3,62 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from "rea
 import { useLiveQuery } from "dexie-react-hooks"
 import { getAddress } from "viem"
 
-import { ChatContext } from "./ChatContext.js"
+import { db } from "../db.js"
+import { AppContext } from "../AppContext.js"
+import { publishEvent } from "../stores.js"
 
 export const MessagesPanel = () => {
-	const { db, selectedRoom, user, sendMessage } = useContext(ChatContext)
+	const { currentRoom, user } = useContext(AppContext)
 
-	const [message, setMessage] = useState<string>("")
-	const messageEvents =
+	const [draftContent, setDraftContent] = useState<string>("")
+	const messages =
 		useLiveQuery(
-			async () => (db && selectedRoom ? await db.messages.where({ room: selectedRoom.id }).sortBy("timestamp") : []),
-			[selectedRoom, db]
-		) || []
+			async () => (currentRoom ? await db.messages.where({ room: currentRoom.id }).sortBy("timestamp") : []),
+			[currentRoom]
+		) ?? []
 
 	const messagesEndRef = useRef<HTMLDivElement>(null)
 	const messageInputRef = useRef<HTMLInputElement>(null)
 
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "auto" })
-	}, [messageEvents])
+	}, [messages])
 
 	const handleSubmit = useCallback(
 		async (e: React.FormEvent<HTMLFormElement>) => {
 			e.preventDefault()
-			console.log(message)
 
-			const trimmedMessage = message.trim()
-
-			if (trimmedMessage === "") {
-				setMessage("")
+			if (currentRoom === null || user === null) {
 				return
 			}
 
-			if (user === null) {
-				console.error("user is null")
-				return
-			}
+			const content = draftContent.trim()
 
-			if (selectedRoom === null) {
-				console.error("selectedRoom is null")
+			if (content === "") {
+				setDraftContent("")
 				return
 			}
 
 			try {
-				await sendMessage(selectedRoom, trimmedMessage)
-				setMessage("")
-			} catch (e) {
-				console.error(e)
+				await publishEvent(currentRoom.id, "message", { content })
+				setDraftContent("")
+			} catch (err) {
+				if (err instanceof Error) {
+					console.error(err)
+					alert(err.toString())
+				} else {
+					throw err
+				}
 			}
 		},
-		[selectedRoom, message, user]
+		[currentRoom, draftContent, user]
 	)
 
 	return (
 		<div className="flex flex-col basis-96 grow overflow-x-hidden">
 			<div className="flex flex-col grow m-3 gap-1 overflow-y-scroll" onClick={() => messageInputRef.current?.focus()}>
-				{messageEvents.map((message, index) => {
-					const previousMessageEvent = messageEvents[index - 1]
+				{messages.map((message, index) => {
+					const previousMessageEvent = messages[index - 1]
 
 					// if the message was sent less than a minute after the previous message, then display them together
 					const isContinuation =
@@ -98,8 +98,8 @@ export const MessagesPanel = () => {
 				<input
 					ref={messageInputRef}
 					className="h-10 w-full rounded-xl bg-gray-100 px-3"
-					value={message}
-					onChange={({ target }) => setMessage(target.value)}
+					value={draftContent}
+					onChange={({ target }) => setDraftContent(target.value)}
 				></input>
 			</form>
 		</div>
