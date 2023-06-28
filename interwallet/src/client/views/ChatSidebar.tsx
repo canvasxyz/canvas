@@ -1,14 +1,14 @@
 import React, { useContext } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 
-import { PrivateUserRegistration, Room } from "../../shared/index.js"
+import { Room } from "../../shared/index.js"
 
 import { NewChatModal } from "./NewChatModal.js"
 import { RoomName } from "./RoomName.js"
 import { ChatContext } from "./ChatContext.js"
 
 export const ChatSidebar: React.FC<{}> = ({}) => {
-	const { db, selectedRoomId, setSelectedRoomId, user } = useContext(ChatContext)
+	const { db, selectedRoomId, setSelectedRoomId } = useContext(ChatContext)
 
 	const [showNewChatModal, setShowNewChatModal] = React.useState(false)
 
@@ -33,7 +33,6 @@ export const ChatSidebar: React.FC<{}> = ({}) => {
 						isSelected={!!selectedRoomId && room.id == selectedRoomId}
 						room={room}
 						selectRoom={() => setSelectedRoomId(room.id)}
-						user={user}
 					/>
 				))}
 			</div>
@@ -55,7 +54,6 @@ const ChatSidebarRoom = ({
 }: {
 	isSelected: boolean
 	room: Room
-	user: PrivateUserRegistration
 	selectRoom: () => void
 }) => {
 	if (isSelected) {

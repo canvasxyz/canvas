@@ -11,24 +11,21 @@ export type KeyBundle = {
 	encryptionPublicKey: `0x${string}`
 }
 
-// export type RoomRegistration = {
-// 	creator: `0x${string}`
-// 	members: PublicUserRegistration[]
-// }
-
-export type Room = {
-	id: string
-	creator: `0x${string}`
-	members: PublicUserRegistration[]
-}
-
-export interface PublicUserRegistration {
+// this corresponds to the fields exposed by the PublicRoomRegistration class,
+// but is only used for defining database schemas
+type PublicRoomRegistration = {
 	address: `0x${string}`
 	keyBundle: KeyBundle
 	keyBundleSignature: `0x${string}`
 }
 
-export interface PrivateUserRegistration extends PublicUserRegistration {
+export type Room = {
+	id: string
+	creator: `0x${string}`
+	members: PublicRoomRegistration[]
+}
+
+export interface PrivateUserRegistration extends PublicRoomRegistration {
 	encryptionPrivateKey: `0x${string}`
 	signingPrivateKey: `0x${string}`
 }
