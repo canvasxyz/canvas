@@ -9,5 +9,5 @@
 		"esModuleInterop": true,
 		"jsx": "react"
 	},
-	"references": [{"path": "../packages/store"}]
+	"references": [{"path": "../../packages/store"}]
 }
