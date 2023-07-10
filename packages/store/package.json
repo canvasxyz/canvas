@@ -51,7 +51,7 @@
     "it-length-prefixed": "^9.0.1",
     "it-pipe": "^3.0.1",
     "it-stream-types": "^2.0.1",
-    "microcbor": "^0.2.1",
+    "microcbor": "^0.3.0",
     "p-queue": "^7.3.4",
     "protons-runtime": "^5.0.1",
     "uint8arraylist": "^2.4.3",
