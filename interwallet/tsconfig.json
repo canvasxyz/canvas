@@ -1,0 +1,13 @@
+{
+	"extends": "../tsconfig.base.json",
+	"include": ["src"],
+	"compilerOptions": {
+		"rootDir": "src",
+		"outDir": "lib",
+		"moduleResolution": "bundler",
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"jsx": "react"
+	},
+	"references": [{"path": "../packages/store"}]
+}

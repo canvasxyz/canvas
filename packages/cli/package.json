@@ -22,6 +22,7 @@
     "@libp2p/peer-id": "^2.0.3",
     "@multiformats/multiaddr": "^12.1.2",
     "@types/websocket": "^1.0.5",
+    "any-signal": "^4.1.1",
     "better-sqlite3": "^8.3.0",
     "chalk": "^5.2.0",
     "cors": "^2.8.5",

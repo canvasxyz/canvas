@@ -93,7 +93,7 @@
     "it-pushable": "^3.1.2",
     "it-stream-types": "^2.0.1",
     "k-bucket": "^5.1.0",
-    "libp2p": "^0.45.3",
+    "libp2p": "^0.45.4",
     "multiformats": "^11.0.2",
     "p-queue": "^7.3.4",
     "prom-client": "^14.2.0",

@@ -1,14 +1,21 @@
 .env
+.env.development
+.env.production
+.env.server
+.DS_Store
 .next/
+.vscode/
+
 node_modules/
 
+tsconfig.tsbuildinfo
 
-packages/**/tsconfig.tsbuildinfo
 packages/**/lib/
 packages/**/dist/
 
 examples/**/out/
 examples/**/dist/
 
-*.canvas
-.vscode
+interwallet/lib/
+interwallet/dist/
+interwallet/data/

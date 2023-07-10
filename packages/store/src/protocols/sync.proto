@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+message Node {
+  uint32 level = 1;
+  bytes key = 2;
+  bytes hash = 3;
+  optional bytes value = 4;
+}
+
+message Request {
+  message GetRootRequest {}
+
+  message GetNodeRequest {
+    uint32 level = 1;
+    bytes key = 2;
+  }
+
+  message GetChildrenRequest {
+    uint32 level = 1;
+    bytes key = 2;
+  }
+
+  oneof request {
+    GetRootRequest get_root = 1;
+    GetNodeRequest get_node = 2;
+    GetChildrenRequest get_children = 3;
+  }
+}
+
+message Response {
+  message GetRootResponse {
+    Node root = 1;
+  }
+
+  message GetNodeResponse {
+    optional Node node = 1;
+  }
+
+  message GetChildrenResponse {
+    repeated Node children = 1;
+  }
+
+  oneof response {
+    GetRootResponse get_root = 1;
+    GetNodeResponse get_node = 2;
+    GetChildrenResponse get_children = 3;
+  }
+}
