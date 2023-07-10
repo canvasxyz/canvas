@@ -3,7 +3,13 @@ export type EventMap = {
 }
 
 export type RoomEvent = {
-	[Type in keyof EventMap]: { type: Type; roomId: string; timestamp: number; detail: EventMap[Type] }
+	[Type in keyof EventMap]: {
+		type: Type
+		roomId: string
+		sender: `0x${string}`
+		timestamp: number
+		detail: EventMap[Type]
+	}
 }[keyof EventMap]
 
 export type KeyBundle = {

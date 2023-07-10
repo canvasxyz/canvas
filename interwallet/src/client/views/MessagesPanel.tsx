@@ -25,7 +25,7 @@ export const MessagesPanel = () => {
 	}, [messages])
 
 	const handleSubmit = useCallback(
-		async (e: React.FormEvent<HTMLFormElement>) => {
+		(e: React.FormEvent<HTMLFormElement>) => {
 			e.preventDefault()
 
 			if (currentRoom === null || user === null) {
@@ -39,17 +39,9 @@ export const MessagesPanel = () => {
 				return
 			}
 
-			try {
-				await publishEvent(currentRoom.id, "message", { content })
-				setDraftContent("")
-			} catch (err) {
-				if (err instanceof Error) {
-					console.error(err)
-					alert(err.toString())
-				} else {
-					throw err
-				}
-			}
+			publishEvent(currentRoom.id, "message", { content })
+				.then(() => setDraftContent(""))
+				.catch((err) => alert(err.toString()))
 		},
 		[currentRoom, draftContent, user]
 	)

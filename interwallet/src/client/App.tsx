@@ -20,8 +20,15 @@ export const App: React.FC<{}> = ({}) => {
 
 	useEffect(() => {
 		if (user !== null) {
+			db.rooms.toArray().then((rooms) => Promise.all(rooms.map((room) => addRoomEventStore(user, room))))
+
 			const handleEvent = (id: string, room: RoomRegistration) => {
 				if (room.members.some((member) => member.address === user.address)) {
+					console.log(`adding room ${id} to Dexie`)
+					db.rooms.add({ id, ...room }).catch((err) => {
+						console.error(err)
+					})
+
 					addRoomEventStore(user, { id, ...room })
 				}
 			}

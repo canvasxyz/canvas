@@ -109,3 +109,9 @@ export const libp2p: Libp2p<ServiceMap> = await createLibp2p({
 		}),
 	},
 })
+
+declare global {
+	var libp2p: undefined | Libp2p<ServiceMap>
+}
+
+window.libp2p = libp2p
