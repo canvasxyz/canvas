@@ -8,8 +8,7 @@ import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 
 import PQueue from "p-queue"
-import { blake3 } from "@noble/hashes/blake3"
-import { concat, equals } from "uint8arrays"
+import { equals } from "uint8arrays"
 import { base58btc } from "multiformats/bases/base58"
 
 import { Logger, logger } from "@libp2p/logger"
@@ -18,7 +17,7 @@ import { createTopology } from "@libp2p/topology"
 import type { Source, Target, KeyValueStore } from "@canvas-js/okra"
 
 import { Driver, Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
-import { CacheMap, assert, encodeTimestamp, shuffle, sortPair, wait } from "./utils.js"
+import { CacheMap, assert, shuffle, sortPair, wait } from "./utils.js"
 import { second } from "./constants.js"
 
 type Awaitable<T> = T | Promise<T>
@@ -26,9 +25,9 @@ type Awaitable<T> = T | Promise<T>
 export interface StoreInit<T, I = void> {
 	topic: string
 
-	encode: (event: T, context: I) => Awaitable<Uint8Array>
-	decode: (value: Uint8Array) => Awaitable<T>
-	getTimestamp?: (event: T) => number
+	getKey: (value: T, bytes: Uint8Array) => Uint8Array
+	encode: (value: T, ctx: I) => Awaitable<Uint8Array>
+	decode: (bytes: Uint8Array) => Awaitable<T>
 
 	minConnections?: number
 	maxConnections?: number
@@ -137,34 +136,23 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 		}
 	}
 
-	private static HASH_SIZE = 16
-	private getKey(value: Uint8Array, event: T): Uint8Array {
-		const hash = blake3(value, { dkLen: AbstractStore.HASH_SIZE })
-		if (this.init.getTimestamp !== undefined) {
-			const timestamp = this.init.getTimestamp(event)
-			return concat([encodeTimestamp(timestamp), hash])
-		} else {
-			return hash
-		}
+	private async parseEntry(key: Uint8Array, bytes: Uint8Array): Promise<T> {
+		const value = await this.init.decode(bytes)
+		assert(equals(key, this.init.getKey(value, bytes)), "invalid event: invalid key")
+		return value
 	}
 
-	private async parseEntry(key: Uint8Array, value: Uint8Array): Promise<T> {
-		const event = await this.init.decode(value)
-		assert(equals(key, this.getKey(value, event)), "invalid event: invalid entry key")
-		return event
-	}
-
-	public async publish(event: T, context: I): Promise<{ id: string; recipients: number }> {
-		const value = await this.init.encode(event, context)
-		const key = this.getKey(value, event)
+	public async publish(value: T, context: I): Promise<{ id: string; recipients: number }> {
+		const bytes = await this.init.encode(value, context)
+		const key = this.init.getKey(value, bytes)
 		const id = base58btc.baseEncode(key)
 
-		await this.write(null, async (txn) => txn.set(key, value))
+		await this.write(null, async (txn) => txn.set(key, bytes))
 
-		this.dispatch(id, event)
+		this.dispatch(id, value)
 
 		try {
-			const { recipients } = await this.libp2p.services.pubsub.publish(this.topic, value)
+			const { recipients } = await this.libp2p.services.pubsub.publish(this.topic, bytes)
 			this.log("published event to %d recipients", recipients.length)
 			return { id, recipients: recipients.length }
 		} catch (err) {
@@ -214,15 +202,15 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 			return
 		}
 
-		let event: T | null = null
+		let value: T | null = null
 		try {
-			event = await this.init.decode(msg.data)
+			value = await this.init.decode(msg.data)
 		} catch (err) {
 			this.log.error("failed to decode event: %O", err)
 			return
 		}
 
-		const key = this.getKey(msg.data, event)
+		const key = this.init.getKey(value, msg.data)
 
 		try {
 			await this.write(null, async (txn) => txn.set(key, msg.data))
@@ -232,7 +220,7 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 		}
 
 		const id = base58btc.baseEncode(key)
-		this.dispatch(id, event)
+		this.dispatch(id, value)
 	}
 
 	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {

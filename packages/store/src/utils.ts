@@ -1,4 +1,3 @@
-import { blake3 } from "@noble/hashes/blake3"
 import { PeerId } from "@libp2p/interface-peer-id"
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 import { base64 } from "multiformats/bases/base64"
@@ -10,15 +9,7 @@ import { anySignal } from "any-signal"
 export const keyPattern = /^(\/canvas\/v0\/store\/[a-zA-Z0-9:.-]+)\/peers$/
 
 export function sortPair(a: PeerId, b: PeerId): [x: PeerId, y: PeerId] {
-	const ab = blake3.create({ dkLen: 16 })
-	ab.update(a.toBytes())
-	ab.update(b.toBytes())
-
-	const ba = blake3.create({ dkLen: 16 })
-	ba.update(b.toBytes())
-	ba.update(a.toBytes())
-
-	if (lessThan(ab.digest(), ba.digest())) {
+	if (lessThan(a.multihash.digest, b.multihash.digest)) {
 		return [a, b]
 	} else {
 		return [b, a]
@@ -85,10 +76,10 @@ export function shuffle<T>(array: T[]) {
 	}
 }
 
-const timestampBuffer = new ArrayBuffer(8)
-const timestampView = new DataView(timestampBuffer)
+// const timestampBuffer = new ArrayBuffer(8)
+// const timestampView = new DataView(timestampBuffer)
 
-export function encodeTimestamp(timestamp: number): Uint8Array {
-	timestampView.setBigUint64(0, BigInt(timestamp))
-	return new Uint8Array(timestampBuffer, 2, 6)
-}
+// export function encodeTimestamp(timestamp: number): Uint8Array {
+// 	timestampView.setBigUint64(0, BigInt(timestamp))
+// 	return new Uint8Array(timestampBuffer, 2, 6)
+// }

@@ -58,7 +58,6 @@
     "uint8arrays": "^4.0.4"
   },
   "devDependencies": {
-    "@types/node": "^20.4.1",
     "nanoid": "^4.0.2",
     "protons": "^7.0.4"
   }
