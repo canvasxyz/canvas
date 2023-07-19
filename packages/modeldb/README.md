@@ -39,6 +39,27 @@ const userId = modelDB.add("user", {
 })
 ```
 
+### `ModelInit`
+
+```ts
+type PrimitiveType = "integer" | "float" | "string" | "bytes"
+type OptionalPrimitiveType = `${PrimitiveType}?`
+type ReferenceType = `@${string}`
+type OptionalReferenceType = `@${string}?`
+type RelationType = `@${string}[]`
+
+type PropertyType = PrimitiveType | OptionalPrimitiveType | ReferenceType | OptionalReferenceType | RelationType
+
+type IndexInit = string | string[]
+
+type ModelsInit = Record<
+	string,
+	{ $type?: "mutable" | "immutable"; $indexes?: IndexInit[] } & Record<string, PropertyType>
+>
+```
+
+### `ModelDB`
+
 ```ts
 declare class ModelDB {
 	public constructor(path: string, models: ModelsInit, options?: Options)
@@ -48,8 +69,11 @@ declare class ModelDB {
 	public iterate(modelName: string): AsyncIterable<ModelValue>
 	public query(modelName: string, query: {}): ModelValue[]
 
+	// Mutable model methods
 	public set(modelName: string, key: string, value: ModelValue, options?: { metadata?: string; version?: string }): void
 	public delete(modelName: string, key: string, options?: { metadata?: string; version?: string }): void
+
+	// Immutable model methods
 	public add(modelName: string, value: ModelValue, options?: { metadata?: string; namespace?: string }): string
 	public remove(modelName: string, key: string): void
 }
