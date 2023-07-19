@@ -8,7 +8,7 @@ import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
 import { parseConfig } from "./config.js"
 import { signalInvalidType } from "./utils.js"
 
-export interface Options {
+export interface ModelDBOptions {
 	dkLen?: number
 	resolve?: (versionA: string, versionB: string) => string
 }
@@ -19,7 +19,7 @@ export class ModelDB {
 
 	private apis: Record<string, MutableModelAPI | ImmutableModelAPI> = {}
 
-	constructor(public readonly path: string, public readonly models: ModelsInit, options: Options = {}) {
+	constructor(public readonly path: string, public readonly models: ModelsInit, options: ModelDBOptions = {}) {
 		this.config = parseConfig(models)
 		this.db = new Database(path)
 

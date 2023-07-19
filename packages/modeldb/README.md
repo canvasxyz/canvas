@@ -61,8 +61,13 @@ type ModelsInit = Record<
 ### `ModelDB`
 
 ```ts
+interface ModelDBOptions {
+	dkLen?: number
+	resolve?: (versionA: string, versionB: string) => string
+}
+
 declare class ModelDB {
-	public constructor(path: string, models: ModelsInit, options?: Options)
+	public constructor(path: string, models: ModelsInit, options?: ModelDBOptions)
 	public close(): void
 
 	public get(modelName: string, key: string): ModelValue | null
