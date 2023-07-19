@@ -42,11 +42,11 @@ export class ModelDB implements IModelDB {
 		}
 	}
 
-	public close() {
+	public async close() {
 		this.db.close()
 	}
 
-	public get(modelName: string, key: string): ModelValue | null {
+	public async get(modelName: string, key: string) {
 		const api = this.apis[modelName]
 		assert(api !== undefined, "model not found")
 		if (api instanceof MutableModelAPI) {
@@ -74,14 +74,19 @@ export class ModelDB implements IModelDB {
 
 	// Mutable model methods
 
-	public set(modelName: string, key: string, value: ModelValue, options: { metadata?: string; version?: string } = {}) {
+	public async set(
+		modelName: string,
+		key: string,
+		value: ModelValue,
+		options: { metadata?: string; version?: string } = {}
+	) {
 		const api = this.apis[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		assert(api instanceof MutableModelAPI, "cannot call .set on an immutable model")
 		api.set(key, value, options)
 	}
 
-	public delete(modelName: string, key: string, options: { metadata?: string; version?: string } = {}) {
+	public async delete(modelName: string, key: string, options: { metadata?: string; version?: string } = {}) {
 		const api = this.apis[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		assert(api instanceof MutableModelAPI, "cannot call .delete on an immutable model")
@@ -90,14 +95,14 @@ export class ModelDB implements IModelDB {
 
 	// Immutable model methods
 
-	public add(modelName: string, value: ModelValue, options: { metadata?: string; namespace?: string } = {}): string {
+	public async add(modelName: string, value: ModelValue, options: { metadata?: string; namespace?: string } = {}) {
 		const api = this.apis[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		assert(api instanceof ImmutableModelAPI, "cannot call .add on a mutable model")
 		return api.add(value, options)
 	}
 
-	public remove(modelName: string, key: string) {
+	public async remove(modelName: string, key: string) {
 		const api = this.apis[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		assert(api instanceof ImmutableModelAPI, "cannot call .remove on a mutable model")
