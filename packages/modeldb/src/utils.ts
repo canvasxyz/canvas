@@ -5,7 +5,7 @@ import { blake3 } from "@noble/hashes/blake3"
 import { encode } from "microcbor"
 import { base58btc } from "multiformats/bases/base58"
 
-import type { ModelValue } from "./types.js"
+import type { ModelValue } from "@canvas-js/modeldb-interface"
 
 export const nsidPattern = /^[a-z](?:-*[a-z0-9])*(?:\.[a-z](?:-*[a-z0-9])*)*$/
 

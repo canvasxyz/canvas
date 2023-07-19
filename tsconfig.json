@@ -10,6 +10,7 @@
     { "path": "./packages/store" },
     { "path": "./packages/store/test" },
     { "path": "./packages/modeldb" },
+    { "path": "./packages/modeldb-interface" },
     { "path": "./packages/modeldb/test" },
     { "path": "./packages/store" },
     { "path": "./packages/store/test" },

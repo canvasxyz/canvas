@@ -1,6 +1,7 @@
 // tests for modeldbs with immutable models
 import test from "ava"
-import { ModelDB, ModelsInit } from "@canvas-js/modeldb"
+import { ModelDB } from "../lib/index.js"
+import { ModelsInit } from "@canvas-js/modeldb-interface"
 
 test("create a modeldb with an immutable model and a valid entry", (t) => {
 	// @ts-ignore

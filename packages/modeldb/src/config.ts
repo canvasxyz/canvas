@@ -1,4 +1,12 @@
-import { Config, Model, ModelsInit, PrimitiveType, Property, PropertyType, Relation } from "./types.js"
+import {
+	Config,
+	Model,
+	ModelsInit,
+	PrimitiveType,
+	Property,
+	PropertyType,
+	Relation,
+} from "@canvas-js/modeldb-interface"
 
 export function parseConfig(init: ModelsInit): Config {
 	const relations: Relation[] = []

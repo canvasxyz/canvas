@@ -1,6 +1,7 @@
 // tests for creating modeldbs
 import test from "ava"
-import { ModelDB, ModelsInit } from "@canvas-js/modeldb"
+import { ModelDB } from "../lib/index.js"
+import { ModelsInit } from "@canvas-js/modeldb-interface"
 
 test("create modeldb with no models", (t) => {
 	new ModelDB(":memory:", {}, { dkLen: 16 })

@@ -2,7 +2,7 @@ import assert from "node:assert"
 
 import * as sqlite from "better-sqlite3"
 
-import { Model, ModelValue, PrimitiveProperty, PropertyValue, ReferenceProperty } from "./types.js"
+import { Model, ModelValue, PrimitiveProperty, PropertyValue, ReferenceProperty } from "@canvas-js/modeldb-interface"
 import { getRecordTableName, getRelationTableName, getTombstoneTableName } from "./initialize.js"
 import { DEFAULT_DIGEST_LENGTH, Method, Query, getRecordHash, signalInvalidType, zip } from "./utils.js"
 

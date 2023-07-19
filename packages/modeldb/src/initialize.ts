@@ -1,4 +1,4 @@
-import { Property, Relation, Model } from "./types.js"
+import { Property, Relation, Model } from "@canvas-js/modeldb-interface"
 import { signalInvalidType } from "./utils.js"
 
 export const getRecordTableName = (modelName: string) => `record/${modelName}`

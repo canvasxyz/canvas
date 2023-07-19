@@ -1,6 +1,7 @@
 // tests for modeldbs with mutable models
 import test from "ava"
-import { ModelDB, ModelsInit } from "@canvas-js/modeldb"
+import { ModelDB } from "../lib/index.js"
+import { ModelsInit } from "@canvas-js/modeldb-interface"
 
 async function toArray(asyncIterator: any) {
 	const arr = []
