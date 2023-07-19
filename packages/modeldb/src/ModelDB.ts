@@ -2,7 +2,7 @@ import assert from "node:assert"
 
 import Database, * as sqlite from "better-sqlite3"
 
-import type { Config, ModelsInit, ModelValue } from "@canvas-js/modeldb-interface"
+import type { Config, IModelDB, ModelsInit, ModelValue } from "@canvas-js/modeldb-interface"
 import { initializeModel, initializeRelation } from "./initialize.js"
 import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
 import { parseConfig } from "./config.js"
@@ -13,7 +13,7 @@ export interface ModelDBOptions {
 	resolve?: (versionA: string, versionB: string) => string
 }
 
-export class ModelDB {
+export class ModelDB implements IModelDB {
 	public readonly db: sqlite.Database
 	public readonly config: Config
 
@@ -68,7 +68,7 @@ export class ModelDB {
 		}
 	}
 
-	public query(modelName: string, query: {}): ModelValue[] {
+	public query(modelName: string, query: {}): AsyncIterable<ModelValue> {
 		throw new Error("not implemented")
 	}
 
