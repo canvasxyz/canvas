@@ -25,7 +25,7 @@ const models: ModelsInit = {
 }
 
 test("create ModelDB", (t) => {
-	const modelDB = new ModelDB("db.sqlite", models, { dkLen: 16 })
+	const modelDB = new ModelDB(":memory:", models, { dkLen: 16 })
 
 	const userA = {
 		address: "a",
