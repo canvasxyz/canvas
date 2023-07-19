@@ -58,13 +58,13 @@ export class ModelDB {
 		}
 	}
 
-	public async *getStream(modelName: string): AsyncIterable<ModelValue> {
+	public async *iterate(modelName: string): AsyncIterable<ModelValue> {
 		const api = this.apis[modelName]
 		assert(api !== undefined, "model not found")
 		if (api instanceof MutableModelAPI) {
-			yield* api.getStream()
+			yield* api.iterate()
 		} else if (api instanceof ImmutableModelAPI) {
-			yield* api.getStream()
+			yield* api.iterate()
 		}
 	}
 

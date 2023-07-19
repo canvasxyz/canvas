@@ -475,7 +475,7 @@ export class MutableModelAPI {
 		}
 	}
 
-	public async *getStream(): AsyncIterable<ModelValue> {
+	public async *iterate(): AsyncIterable<ModelValue> {
 		yield* this.#records.selectAll.iterate({})
 	}
 }
@@ -549,7 +549,7 @@ export class ImmutableModelAPI {
 		return value
 	}
 
-	public async *getStream(): AsyncIterable<ModelValue> {
+	public async *iterate(): AsyncIterable<ModelValue> {
 		yield* this.#records.selectAll.iterate({})
 	}
 }

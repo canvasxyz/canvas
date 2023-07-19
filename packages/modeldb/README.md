@@ -38,3 +38,19 @@ const userId = modelDB.add("user", {
 	signingPublicKey: new Uint8Array([4, 5, 6]),
 })
 ```
+
+```ts
+declare class ModelDB {
+	public constructor(path: string, models: ModelsInit, options?: Options)
+	public close(): void
+
+	public get(modelName: string, key: string): ModelValue | null
+	public iterate(modelName: string): AsyncIterable<ModelValue>
+	public query(modelName: string, query: {}): ModelValue[]
+
+	public set(modelName: string, key: string, value: ModelValue, options?: { metadata?: string; version?: string }): void
+	public delete(modelName: string, key: string, options?: { metadata?: string; version?: string }): void
+	public add(modelName: string, value: ModelValue, options?: { metadata?: string; namespace?: string }): string
+	public remove(modelName: string, key: string): void
+}
+```
