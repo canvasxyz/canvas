@@ -1,15 +1,15 @@
 import assert from "node:assert"
 
 import Database, * as sqlite from "better-sqlite3"
-import { CID } from "multiformats"
 
 import type { Config, ModelsInit, ModelValue } from "./types.js"
 import { initializeModel, initializeRelation } from "./intialize.js"
+import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
 import { parseConfig } from "./config.js"
 import { signalInvalidType } from "./utils.js"
-import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
 
 export interface Options {
+	dkLen?: number
 	resolve?: (versionA: string, versionB: string) => string
 }
 
@@ -19,11 +19,7 @@ export class ModelDB {
 
 	private apis: Record<string, MutableModelAPI | ImmutableModelAPI> = {}
 
-	constructor(
-		public readonly path: string,
-		public readonly models: ModelsInit,
-		private readonly options: Options = {}
-	) {
+	constructor(public readonly path: string, public readonly models: ModelsInit, options: Options = {}) {
 		this.config = parseConfig(models)
 		this.db = new Database(path)
 
@@ -37,9 +33,9 @@ export class ModelDB {
 
 		for (const model of this.config.models) {
 			if (model.kind === "immutable") {
-				this.apis[model.name] = new ImmutableModelAPI(this.db, model)
+				this.apis[model.name] = new ImmutableModelAPI(this.db, model, options)
 			} else if (model.kind === "mutable") {
-				this.apis[model.name] = new MutableModelAPI(this.db, model)
+				this.apis[model.name] = new MutableModelAPI(this.db, model, options)
 			} else {
 				signalInvalidType(model.kind)
 			}
@@ -50,49 +46,61 @@ export class ModelDB {
 		this.db.close()
 	}
 
-	public get(modelName: string, cid: CID): ModelValue | null {
+	public get(modelName: string, key: string): ModelValue | null {
 		const api = this.apis[modelName]
 		assert(api !== undefined, "model not found")
 		if (api instanceof MutableModelAPI) {
 			return null
 		} else if (api instanceof ImmutableModelAPI) {
-			return api.get(cid)
+			return api.get(key)
 		} else {
 			signalInvalidType(api)
 		}
 	}
 
-	public getAll(modelName: string, query: { select: {}; where: {} }): ModelValue[] {
+	public async *getStream(modelName: string): AsyncIterable<ModelValue> {
+		const api = this.apis[modelName]
+		assert(api !== undefined, "model not found")
+		if (api instanceof MutableModelAPI) {
+			yield* api.getStream()
+		} else if (api instanceof ImmutableModelAPI) {
+			yield* api.getStream()
+		}
+	}
+
+	public query(modelName: string, query: {}): ModelValue[] {
 		throw new Error("not implemented")
 	}
 
 	// Mutable model methods
 
-	public set(modelName: string, key: string, value: ModelValue, options: { version?: string; metadata?: string } = {}) {
+	public set(modelName: string, key: string, value: ModelValue, options: { metadata?: string; version?: string } = {}) {
 		const api = this.apis[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		assert(api instanceof MutableModelAPI, "cannot call .set on an immutable model")
+		api.set(key, value, options)
 	}
 
-	public delete(modelName: string, key: string, options: { version?: string; metadata?: string } = {}) {
+	public delete(modelName: string, key: string, options: { metadata?: string; version?: string } = {}) {
 		const api = this.apis[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		assert(api instanceof MutableModelAPI, "cannot call .set on an immutable model")
+		assert(api instanceof MutableModelAPI, "cannot call .delete on an immutable model")
+		api.delete(key, options)
 	}
 
 	// Immutable model methods
 
-	public add(modelName: string, value: ModelValue): CID {
+	public add(modelName: string, value: ModelValue, options: { metadata?: string; namespace?: string } = {}): string {
 		const api = this.apis[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		assert(api instanceof ImmutableModelAPI, "cannot call .add on a mutable model")
-		return api.add(value)
+		return api.add(value, options)
 	}
 
-	public remove(modelName: string, cid: CID) {
+	public remove(modelName: string, key: string) {
 		const api = this.apis[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		assert(api instanceof ImmutableModelAPI, "cannot call .remove on a mutable model")
-		api.remove(cid)
+		api.remove(key)
 	}
 }

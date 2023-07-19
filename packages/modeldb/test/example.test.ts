@@ -25,7 +25,7 @@ const models: ModelsInit = {
 }
 
 test("create ModelDB", (t) => {
-	const modelDB = new ModelDB("db.sqlite", models)
+	const modelDB = new ModelDB("db.sqlite", models, { dkLen: 10 })
 
 	const userA = {
 		address: "a",
@@ -39,10 +39,12 @@ test("create ModelDB", (t) => {
 		signingPublicKey: new Uint8Array([0xa, 0xb, 0xc]),
 	}
 
-	const userAId = modelDB.add("user", userA)
+	const userAId = modelDB.add("user", userA, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
+	t.log("userAId", userAId)
 	t.deepEqual(modelDB.get("user", userAId), userA)
 
-	const userBId = modelDB.add("user", userB)
+	const userBId = modelDB.add("user", userB, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
+	t.log("userBId", userBId)
 	t.deepEqual(modelDB.get("user", userBId), userB)
 
 	const room = {
@@ -50,7 +52,8 @@ test("create ModelDB", (t) => {
 		members: [userAId, userBId],
 	}
 
-	const roomId = modelDB.add("room", room)
+	const roomId = modelDB.add("room", room, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
+	t.log("roomId", roomId)
 	t.deepEqual(modelDB.get("room", roomId), room)
 
 	const message = {

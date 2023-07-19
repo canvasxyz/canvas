@@ -16,7 +16,6 @@
     "test": "ava"
   },
   "dependencies": {
-    "@ipld/dag-cbor": "^9.0.3",
     "@libp2p/logger": "^2.1.1",
     "@noble/hashes": "^1.3.0",
     "better-sqlite3": "^8.4.0",

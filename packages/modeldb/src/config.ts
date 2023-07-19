@@ -1,4 +1,4 @@
-import { Config, Model, ModelsInit, Property, PropertyType, Relation } from "./types.js"
+import { Config, Model, ModelsInit, PrimitiveType, Property, PropertyType, Relation } from "./types.js"
 
 export function parseConfig(init: ModelsInit): Config {
 	const relations: Relation[] = []
@@ -48,7 +48,7 @@ function parseProperty(propertyName: string, propertyType: PropertyType): Proper
 	const primitiveResult = primitivePropertyPattern.exec(propertyType)
 	if (primitiveResult !== null) {
 		const [_, type, optional] = primitiveResult
-		return { name: propertyName, kind: "primitive", type, optional: optional === "?" }
+		return { name: propertyName, kind: "primitive", type: type as PrimitiveType, optional: optional === "?" }
 	}
 
 	const referenceResult = referencePropertyPattern.exec(propertyType)

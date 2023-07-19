@@ -36,16 +36,21 @@ function getPropertyColumnType(property: Property): string {
 const getPropertyColumn = (property: Property) => `'${property.name}' ${getPropertyColumnType(property)}`
 
 export function initializeModel(model: Model, exec: (sql: string) => void) {
-	const modelColumns = model.properties.flatMap((property) =>
-		property.kind === "relation" ? [] : [getPropertyColumn(property)]
-	)
+	const modelColumns = [`_key TEXT PRIMARY KEY NOT NULL`]
+	for (const property of model.properties) {
+		if (property.kind === "primitive" || property.kind === "reference") {
+			modelColumns.push(getPropertyColumn(property))
+		} else if (property.kind === "relation") {
+			continue
+		} else {
+			signalInvalidType(property)
+		}
+	}
 
 	if (model.kind === "mutable") {
-		modelColumns.push(`_key TEXT PRIMARY KEY NOT NULL`)
 		modelColumns.push(`_metadata TEXT`)
 		modelColumns.push(`_version TEXT`)
 	} else if (model.kind === "immutable") {
-		modelColumns.push(`_cid TEXT PRIMARY KEY NOT NULL`)
 		modelColumns.push(`_metadata TEXT`)
 	} else {
 		signalInvalidType(model.kind)
@@ -57,7 +62,6 @@ export function initializeModel(model: Model, exec: (sql: string) => void) {
 	if (model.kind === "mutable") {
 		const tombstoneTableName = getTombstoneTableName(model.name)
 		const tombstoneColumns = [`_key`, `_metadata TEXT`, `_version TEXT NOT NULL`]
-
 		exec(`CREATE TABLE IF NOT EXISTS "${tombstoneTableName}" (${tombstoneColumns.join(", ")})`)
 	}
 

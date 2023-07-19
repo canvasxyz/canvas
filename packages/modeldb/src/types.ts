@@ -1,5 +1,3 @@
-import type { CID } from "multiformats"
-
 // These are "init types" for the `models` value used to initialize the database.
 
 export type PrimitiveType = "integer" | "float" | "string" | "bytes"
@@ -20,7 +18,7 @@ export type ModelsInit = Record<
 // These are more structured representations of the schema defined by ModelsInit that are easier
 // to work with at runtime
 
-export type PrimitiveProperty = { name: string; kind: "primitive"; type: string; optional: boolean }
+export type PrimitiveProperty = { name: string; kind: "primitive"; type: PrimitiveType; optional: boolean }
 export type ReferenceProperty = { name: string; kind: "reference"; target: string; optional: boolean }
 export type RelationProperty = { name: string; kind: "relation"; target: string }
 export type Property = PrimitiveProperty | ReferenceProperty | RelationProperty
@@ -46,8 +44,8 @@ export type Config = {
 // These are types for the runtime model record values
 
 export type PrimitiveValue = boolean | number | string | Uint8Array | null
-export type ReferenceValue = CID | null
-export type RelationValue = CID[]
+export type ReferenceValue = string | null
+export type RelationValue = string[]
 
 export type PropertyValue = PrimitiveValue | ReferenceValue | RelationValue
 

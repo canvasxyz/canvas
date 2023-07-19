@@ -1,11 +1,10 @@
 import assert from "node:assert"
 
 import * as sqlite from "better-sqlite3"
-import { CID } from "multiformats"
 
 import { Model, ModelValue, PrimitiveProperty, PropertyValue, ReferenceProperty } from "./types.js"
 import { getRecordTableName, getRelationTableName, getTombstoneTableName } from "./intialize.js"
-import { Method, Query, getCID, serializeCID, signalInvalidType, zip } from "./utils.js"
+import { DEFAULT_DIGEST_LENGTH, Method, Query, getRecordHash, signalInvalidType, zip } from "./utils.js"
 
 // The code here is designed so the SQL queries have type annotations alongside them.
 // Operations are organized into "APIs", one for each underlying SQLite table.
@@ -39,7 +38,7 @@ function prepareTombstoneAPI(db: sqlite.Database, model: Model) {
 function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
 	const recordTableName = getRecordTableName(model.name)
 
-	const selectRecordVersion = new Query<{ _key: string }, { _version: string | null }>(
+	const selectVersion = new Query<{ _key: string }, { _version: string | null }>(
 		db,
 		`SELECT _version FROM  "${recordTableName}" WHERE _key = :_key`
 	)
@@ -63,7 +62,9 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
 		}
 	}
 
-	const selectRecord = new Query<{ _key: string }, ModelValue | null>(
+	const selectAll = new Query<{}, RecordValue>(db, `SELECT ${columnNames.join(", ")} FROM "${recordTableName}"`)
+
+	const selectRecord = new Query<{ _key: string }, RecordValue>(
 		db,
 		`SELECT ${columnNames.join(", ")} FROM "${recordTableName}" WHERE _key = :_key`
 	)
@@ -86,7 +87,8 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
 
 	return {
 		params,
-		selectVersion: selectRecordVersion,
+		selectVersion,
+		selectAll,
 		select: selectRecord,
 		insert: insertRecord,
 		update: updateRecord,
@@ -113,29 +115,32 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model) {
 		}
 	}
 
-	const selectRecord = new Query<{ _cid: string }, RecordValue | null>(
+	const selectAll = new Query<{}, RecordValue>(db, `SELECT ${columnNames.join(", ")} FROM "${recordTableName}"`)
+
+	const selectRecord = new Query<{ _key: string }, RecordValue | null>(
 		db,
-		`SELECT ${columnNames.join(", ")} FROM "${recordTableName}" WHERE _cid = :_cid`
+		`SELECT ${columnNames.join(", ")} FROM "${recordTableName}" WHERE _key = :_key`
 	)
 
-	const insertRecordParams = `_cid, _metadata, ${columnNames.join(", ")}`
-	const insertRecordValues = `:_cid, :_metadata, ${columnParams.join(", ")}`
-	const insertRecord = new Method<{ _cid: string; _metadata: string | null } & RecordValue>(
+	const insertRecordParams = `_key, _metadata, ${columnNames.join(", ")}`
+	const insertRecordValues = `:_key, :_metadata, ${columnParams.join(", ")}`
+	const insertRecord = new Method<{ _key: string; _metadata: string | null } & RecordValue>(
 		db,
 		`INSERT OR IGNORE INTO "${recordTableName}" (${insertRecordParams}) VALUES (${insertRecordValues})`
 	)
 
 	const updateRecordProperties = zip(columnNames, columnParams).map(([name, param]) => `${name} = ${param}`)
 	const updateRecordEntries = `_metadata = :_metadata, ${updateRecordProperties.join(", ")}`
-	const updateRecord = new Method<{ _cid: string; _version: string | null; _metadata: string | null } & RecordValue>(
+	const updateRecord = new Method<{ _key: string; _version: string | null; _metadata: string | null } & RecordValue>(
 		db,
-		`UPDATE "${recordTableName}" SET ${updateRecordEntries} WHERE _cid = :_cid`
+		`UPDATE "${recordTableName}" SET ${updateRecordEntries} WHERE _key = :_key`
 	)
 
-	const deleteRecord = new Method<{ _cid: string }>(db, `DELETE FROM "${recordTableName}" WHERE _cid = :_cid`)
+	const deleteRecord = new Method<{ _key: string }>(db, `DELETE FROM "${recordTableName}" WHERE _key = :_key`)
 
 	return {
 		params,
+		selectAll,
 		select: selectRecord,
 		insert: insertRecord,
 		update: updateRecord,
@@ -172,9 +177,7 @@ function encodePrimitiveValue(
 		} else {
 			throw new TypeError(`${modelName}/${property.name} cannot be null`)
 		}
-	}
-
-	if (property.type === "integer") {
+	} else if (property.type === "integer") {
 		if (typeof value === "number" && Number.isSafeInteger(value)) {
 			return value
 		} else {
@@ -245,19 +248,6 @@ function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, va
 	}
 }
 
-function encodeCID(value: PropertyValue): string {
-	if (typeof value === "string") {
-		return serializeCID(CID.parse(value))
-	}
-
-	const cid = CID.asCID(value)
-	if (cid === null) {
-		throw new TypeError(`invalid CID value`)
-	}
-
-	return serializeCID(cid)
-}
-
 function encodeReferenceValue(modelName: string, property: ReferenceProperty, value: PropertyValue): string | null {
 	if (value === null) {
 		if (property.optional) {
@@ -265,16 +255,18 @@ function encodeReferenceValue(modelName: string, property: ReferenceProperty, va
 		} else {
 			throw new TypeError(`${modelName}/${property.name} cannot be null`)
 		}
+	} else if (typeof value === "string") {
+		return value
+	} else {
+		throw new TypeError(`${modelName}/${property.name} must be a string`)
 	}
-
-	return encodeCID(value)
 }
 
 function decodeReferenceValue(
 	modelName: string,
 	property: ReferenceProperty,
 	value: string | number | Uint8Array | null
-): CID | null {
+): string | null {
 	if (value === null) {
 		if (property.optional) {
 			return null
@@ -282,9 +274,9 @@ function decodeReferenceValue(
 			throw new TypeError(`internal error - missing ${modelName}/${property.name} value`)
 		}
 	} else if (typeof value === "string") {
-		return CID.parse(value)
+		return value
 	} else {
-		throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected CID)`)
+		throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
 	}
 }
 
@@ -329,6 +321,17 @@ function decodeRecord(model: Model, record: RecordValue): ModelValue {
 	return value
 }
 
+class BaseModelAPI {
+	readonly #relations: Record<string, ReturnType<typeof prepareRelationAPI>> = {}
+	constructor(public readonly db: sqlite.Database, public readonly model: Model) {
+		for (const property of model.properties) {
+			if (property.kind === "relation") {
+				this.#relations[property.name] = prepareRelationAPI(db, model.name, property.name)
+			}
+		}
+	}
+}
+
 export class MutableModelAPI {
 	readonly #tombstones: ReturnType<typeof prepareTombstoneAPI>
 	readonly #relations: Record<string, ReturnType<typeof prepareRelationAPI>> = {}
@@ -336,9 +339,13 @@ export class MutableModelAPI {
 
 	readonly #resolve?: (a: string, b: string) => string
 
-	constructor(db: sqlite.Database, readonly model: Model, resolve?: (a: string, b: string) => string) {
+	constructor(
+		public readonly db: sqlite.Database,
+		public readonly model: Model,
+		options: { resolve?: (a: string, b: string) => string } = {}
+	) {
 		assert(model.kind === "mutable")
-		this.#resolve = resolve
+		this.#resolve = options.resolve
 		this.#tombstones = prepareTombstoneAPI(db, model)
 		this.#records = prepareMutableRecordAPI(db, model)
 		for (const property of model.properties) {
@@ -346,6 +353,21 @@ export class MutableModelAPI {
 				this.#relations[property.name] = prepareRelationAPI(db, model.name, property.name)
 			}
 		}
+	}
+
+	public get(key: string): ModelValue | null {
+		const record = this.#records.select.get({ _key: key })
+		if (record === null) {
+			return null
+		}
+
+		const value = decodeRecord(this.model, record)
+
+		for (const [propertyName, relation] of Object.entries(this.#relations)) {
+			value[propertyName] = relation.selectAll.all({ _source: key }).map(({ _target }) => _target)
+		}
+
+		return value
 	}
 
 	public set(key: string, value: ModelValue, options: { version?: string | null; metadata?: string | null } = {}) {
@@ -396,16 +418,23 @@ export class MutableModelAPI {
 		}
 
 		for (const [propertyName, relation] of Object.entries(this.#relations)) {
-			const targetValues = value[propertyName]
-			assert(Array.isArray(targetValues)) // TODO: validate values...
-			for (const cid of targetValues) {
-				const target = serializeCID(cid)
+			const targets = value[propertyName]
+
+			if (!Array.isArray(targets)) {
+				throw new TypeError(`${this.model.name}/${propertyName} must be string[]`)
+			}
+
+			for (const target of targets) {
+				if (typeof target !== "string") {
+					throw new TypeError(`${this.model.name}/${propertyName} must be string[]`)
+				}
+
 				relation.create.run({ _source: key, _target: target })
 			}
 		}
 	}
 
-	delete(key: string, options: { version?: string | null; metadata?: string | null } = {}) {
+	public delete(key: string, options: { version?: string | null; metadata?: string | null } = {}) {
 		let version: string | null = null
 		let metadata: string | null = null
 
@@ -445,14 +474,20 @@ export class MutableModelAPI {
 			}
 		}
 	}
+
+	public async *getStream(): AsyncIterable<ModelValue> {
+		yield* this.#records.selectAll.iterate({})
+	}
 }
 
 export class ImmutableModelAPI {
 	readonly #relations: Record<string, ReturnType<typeof prepareRelationAPI>> = {}
 	readonly #records: ReturnType<typeof prepareImmutableRecordAPI>
+	readonly #dkLen: number
 
-	constructor(db: sqlite.Database, readonly model: Model) {
+	constructor(public readonly db: sqlite.Database, public readonly model: Model, options: { dkLen?: number } = {}) {
 		assert(model.kind === "immutable")
+		this.#dkLen = options.dkLen ?? DEFAULT_DIGEST_LENGTH
 		this.#records = prepareImmutableRecordAPI(db, model)
 		for (const property of model.properties) {
 			if (property.kind === "relation") {
@@ -461,42 +496,46 @@ export class ImmutableModelAPI {
 		}
 	}
 
-	public add(value: ModelValue, options: { metadata?: string } = {}): CID {
-		const cid = getCID(value)
-		const key = serializeCID(cid)
-		const existingRecord = this.#records.select.get({ _cid: key })
+	public add(value: ModelValue, { namespace, metadata }: { namespace?: string; metadata?: string } = {}): string {
+		const recordHash = getRecordHash(value, this.#dkLen)
+		const key = namespace ? `${namespace}/${recordHash}` : recordHash
+		const existingRecord = this.#records.select.get({ _key: key })
 		if (existingRecord === null) {
 			const params = encodeRecordParams(this.model, value, this.#records.params)
-			this.#records.insert.run({ _cid: key, _metadata: options.metadata ?? null, ...params })
+			this.#records.insert.run({ _key: key, _metadata: metadata ?? null, ...params })
+
 			for (const [propertyName, relation] of Object.entries(this.#relations)) {
 				const targets = value[propertyName]
-				if (Array.isArray(targets)) {
-					for (const target of targets) {
-						relation.create.run({ _source: key, _target: encodeCID(target) })
+
+				if (!Array.isArray(targets)) {
+					throw new TypeError(`${this.model.name}/${propertyName} must be string[]`)
+				}
+
+				for (const target of targets) {
+					if (typeof target !== "string") {
+						throw new TypeError(`${this.model.name}/${propertyName} must be string[]`)
 					}
-				} else {
-					throw new TypeError(``)
+
+					relation.create.run({ _source: key, _target: target })
 				}
 			}
 		}
 
-		return cid
+		return key
 	}
 
-	public remove(cid: CID) {
-		const key = serializeCID(cid)
-		const existingRecord = this.#records.select.get({ _cid: key })
+	public remove(key: string) {
+		const existingRecord = this.#records.select.get({ _key: key })
 		if (existingRecord !== null) {
-			this.#records.delete.run({ _cid: key })
+			this.#records.delete.run({ _key: key })
 			for (const relation of Object.values(this.#relations)) {
 				relation.deleteAll.run({ _source: key })
 			}
 		}
 	}
 
-	public get(cid: CID): ModelValue | null {
-		const key = serializeCID(cid)
-		const record = this.#records.select.get({ _cid: key })
+	public get(key: string): ModelValue | null {
+		const record = this.#records.select.get({ _key: key })
 		if (record === null) {
 			return null
 		}
@@ -504,10 +543,13 @@ export class ImmutableModelAPI {
 		const value = decodeRecord(this.model, record)
 
 		for (const [propertyName, relation] of Object.entries(this.#relations)) {
-			const targets = relation.selectAll.all({ _source: key })
-			value[propertyName] = targets.map(({ _target }) => CID.parse(_target))
+			value[propertyName] = relation.selectAll.all({ _source: key }).map(({ _target }) => _target)
 		}
 
 		return value
+	}
+
+	public async *getStream(): AsyncIterable<ModelValue> {
+		yield* this.#records.selectAll.iterate({})
 	}
 }
