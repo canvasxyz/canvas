@@ -3,7 +3,7 @@ import assert from "node:assert"
 import Database, * as sqlite from "better-sqlite3"
 
 import type { Config, ModelsInit, ModelValue } from "./types.js"
-import { initializeModel, initializeRelation } from "./intialize.js"
+import { initializeModel, initializeRelation } from "./initialize.js"
 import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
 import { parseConfig } from "./config.js"
 import { signalInvalidType } from "./utils.js"

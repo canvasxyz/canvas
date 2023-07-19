@@ -3,7 +3,7 @@ import assert from "node:assert"
 import * as sqlite from "better-sqlite3"
 
 import { Model, ModelValue, PrimitiveProperty, PropertyValue, ReferenceProperty } from "./types.js"
-import { getRecordTableName, getRelationTableName, getTombstoneTableName } from "./intialize.js"
+import { getRecordTableName, getRelationTableName, getTombstoneTableName } from "./initialize.js"
 import { DEFAULT_DIGEST_LENGTH, Method, Query, getRecordHash, signalInvalidType, zip } from "./utils.js"
 
 // The code here is designed so the SQL queries have type annotations alongside them.
