@@ -115,6 +115,10 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model) {
 		}
 	}
 
+	if (columnNames.length === 0) {
+		throw new Error(`Model "${model.name}" has no columns`)
+	}
+
 	const selectAll = new Query<{}, RecordValue>(db, `SELECT ${columnNames.join(", ")} FROM "${recordTableName}"`)
 
 	const selectRecord = new Query<{ _key: string }, RecordValue | null>(
