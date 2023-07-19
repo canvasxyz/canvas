@@ -25,7 +25,7 @@ const models: ModelsInit = {
 }
 
 test("create ModelDB", (t) => {
-	const modelDB = new ModelDB("db.sqlite", models, { dkLen: 10 })
+	const modelDB = new ModelDB("db.sqlite", models, { dkLen: 16 })
 
 	const userA = {
 		address: "a",
@@ -70,16 +70,4 @@ test("create ModelDB", (t) => {
 	t.deepEqual(messageId, messageId2)
 	t.deepEqual(messageId, messageId3)
 	t.deepEqual(modelDB.get("message", messageId), message)
-
-	// modelDB.remove("message", messageId)
-	// t.is(modelDB.get("message", messageId), null)
-
-	// modelDB.remove("room", roomId)
-	// t.is(modelDB.get("room", roomId), null)
-
-	// modelDB.remove("user", userBId)
-	// modelDB.remove("user", userAId)
-
-	// t.is(modelDB.get("user", userBId), null)
-	// t.is(modelDB.get("user", userAId), null)
 })
