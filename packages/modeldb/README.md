@@ -5,81 +5,36 @@ ModelDB
 - Relational
 - Simple JSON schema
 - Dual SQLite and IndexdDB backends
-- **Designed for p2p conlict resolution**
-- "Mutable" vs "immutable" models
+- Designed for p2p conlict resolution
+- "Mutable" and "immutable" models
 
 ```ts
-const db = await ModelDB.init({
-	posts: {
-		$type: "mutable",
-		content: "string",
-		author: "@profile",
-		$indexes: ["author"],
-	},
-	replies: {
-		// ...
-	},
-	profile: {
-		username: "string",
-		avatar: "string?",
-	},
-})
-
-// joelId: `${actionHash}/${recordHash}`
-const joelId = db.profile.add({ username: "joel", avatar: null })
-db.profile.remove(joelId)
-
-db.posts.set("some primary key", { content: "hi", author: joelId })
-db.posts.set("some primary key", { content: "hi (edited)", author: joelId })
-db.posts.delete("some primary key")
-
-
-db.profile.get<T>(key: string): T  | null
-db.posts.get<T>(key: string): T | null
-
-const app = await Canvas.init({ spec: `...` })
-
-app.db.posts.get<T>(key: string): T | null
-app.db.posts.iterate<T>(): AsyncIterable<T>
-app.db.queryRaw(`SELECT * FROM ... WHERE ... fjdkslafjdsklajfkldsajfkldsa jfkdlsaf`): sqlite3.Statement
+import { ModelDB } from "@canvas-js/modeldb"
 
 const db = new ModelDB({
-	users: {
-		signingPublicKey: "bytes",
+	user: {
+		address: "string",
 		encryptionPublicKey: "bytes",
+		signingPublicKey: "bytes",
 	},
-	rooms: {
-    avatar: "string?",
-    creator: "@user",
-		members: "@users[]",
+
+	room: {
+		creator: "@user",
+		members: "@user[]",
 		$indexes: ["members"],
 	},
-	messages: {},
+
+	message: {
+		room: "@room",
+		sender: "@user",
+		content: "string",
+		timestamp: "integer",
+	},
 })
 
-db.rooms.get(key, { users: { signingPublicKey: true, encryptionPublicKey: true } })
-
-const rooms = db.rooms.query({
-  select: {
-    avatar: true,
-    users: {
-      signingPublicKey: true,
-      encryptionPublicKey: true,
-    }
-  },
-  where: {
-    creator: "value",
-  },
-
-  orderBy: { [property]: "asc" | "desc" },
-  limit: 19,
+const userId = modelDB.add("user", {
+	address: "a",
+	encryptionPublicKey: new Uint8Array([1, 2, 3]),
+	signingPublicKey: new Uint8Array([4, 5, 6]),
 })
-
-declare const rooms: {
-  avatar: string | null;
-  users: {
-    signingPublicKey: Uint8Array
-    encryptionPublicKey: Uint8Array
-  }[]
-}[]
 ```
