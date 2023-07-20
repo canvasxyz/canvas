@@ -16,7 +16,8 @@
     "test": "ava"
   },
   "devDependencies": {
+    "@canvas-js/modeldb-idb": "../modeldb-idb",
     "@canvas-js/modeldb-sqlite": "../modeldb-sqlite",
-    "@canvas-js/modeldb-idb": "../modeldb-idb"
+    "ava": "^5.3.1"
   }
 }
