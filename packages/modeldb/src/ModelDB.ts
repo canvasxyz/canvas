@@ -2,10 +2,9 @@ import assert from "node:assert"
 
 import Database, * as sqlite from "better-sqlite3"
 
-import type { Config, IModelDB, ModelsInit, ModelValue } from "@canvas-js/modeldb-interface"
+import { Config, IModelDB, ModelsInit, ModelValue, parseConfig } from "@canvas-js/modeldb-interface"
 import { initializeModel, initializeRelation } from "./initialize.js"
 import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
-import { parseConfig } from "./config.js"
 import { signalInvalidType } from "./utils.js"
 
 export interface ModelDBOptions {
