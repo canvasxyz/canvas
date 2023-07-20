@@ -11,7 +11,7 @@
     { "path": "./packages/store/test" },
     { "path": "./packages/modeldb" },
     { "path": "./packages/modeldb-interface" },
-    { "path": "./packages/modeldb/test" },
+    { "path": "./packages/modeldb-interface/test" },
     { "path": "./packages/store" },
     { "path": "./packages/store/test" },
     { "path": "./packages/chain-ethereum" },

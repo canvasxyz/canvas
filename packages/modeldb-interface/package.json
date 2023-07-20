@@ -13,5 +13,8 @@
   "types": "./lib/index.d.ts",
   "sideEffects": false,
   "dependencies": {
+  },
+  "scripts": {
+    "test": "ava"
   }
 }
