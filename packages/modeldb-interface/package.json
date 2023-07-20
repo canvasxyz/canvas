@@ -12,9 +12,11 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "sideEffects": false,
-  "dependencies": {
-  },
   "scripts": {
     "test": "ava"
+  },
+  "devDependencies": {
+    "@canvas-js/modeldb-sqlite": "../modeldb-sqlite",
+    "@canvas-js/modeldb-idb": "../modeldb-idb"
   }
 }
