@@ -1,7 +1,6 @@
 // tests for modeldbs with mutable models
-import test from "ava"
-import { ModelDB } from "@canvas-js/modeldb-sqlite"
 import { ModelsInit } from "@canvas-js/modeldb-interface"
+import { testOnModelDB } from "./utils.js"
 
 async function toArray(asyncIterator: any) {
 	const arr = []
@@ -9,7 +8,7 @@ async function toArray(asyncIterator: any) {
 	return arr
 }
 
-test("create a modeldb with a mutable model and a valid entry", async (t) => {
+testOnModelDB("create a modeldb with a mutable model and a valid entry", async (t, modelDBConstructor) => {
 	// @ts-ignore
 	const models = {
 		user: {
@@ -17,7 +16,7 @@ test("create a modeldb with a mutable model and a valid entry", async (t) => {
 			$type: "mutable",
 		},
 	} as ModelsInit
-	const db = new ModelDB(":memory:", models)
+	const db = modelDBConstructor(models)
 
 	const key = "modelKey"
 
@@ -44,7 +43,7 @@ test("create a modeldb with a mutable model and a valid entry", async (t) => {
 	t.deepEqual(await toArray(db.iterate("user")), [{ name: "newValue2" }])
 })
 
-test("create a modeldb with a mutable model and a resolve function", async (t) => {
+testOnModelDB("create a modeldb with a mutable model and a resolve function", async (t, modelDBConstructor) => {
 	// @ts-ignore
 	const models = {
 		user: {
@@ -52,7 +51,7 @@ test("create a modeldb with a mutable model and a resolve function", async (t) =
 			$type: "mutable",
 		},
 	} as ModelsInit
-	const db = new ModelDB(":memory:", models, { resolve: (a: any, b: any) => (a > b ? a : b) })
+	const db = modelDBConstructor(models, { resolve: (a: any, b: any) => (a > b ? a : b) })
 
 	const key = "modelKey"
 
@@ -72,7 +71,7 @@ test("create a modeldb with a mutable model and a resolve function", async (t) =
 	t.deepEqual(await toArray(db.iterate("user")), [{ name: "updatedValue" }])
 })
 
-test("create a modeldb with a mutable model and an invalid entry", async (t) => {
+testOnModelDB("create a modeldb with a mutable model and an invalid entry", async (t, modelDBConstructor) => {
 	// @ts-ignore
 	const models = {
 		user: {
@@ -80,7 +79,7 @@ test("create a modeldb with a mutable model and an invalid entry", async (t) => 
 			$type: "mutable",
 		},
 	} as ModelsInit
-	const db = new ModelDB(":memory:", models)
+	const db = modelDBConstructor(models)
 
 	const key = "modelKey2"
 	// add a user

@@ -12,10 +12,10 @@ export interface IModelDB {
 		modelName: string,
 		key: string,
 		value: ModelValue,
-		options: { metadata?: string; version?: string }
+		options?: { metadata?: string; version?: string }
 	): Promise<void>
-	delete(modelName: string, key: string, options: { metadata?: string; version?: string }): Promise<void>
+	delete(modelName: string, key: string, options?: { metadata?: string; version?: string }): Promise<void>
 
-	add(modelName: string, value: ModelValue, options: { metadata?: string; namespace?: string }): Promise<string>
-	remove(modelName: string, id: string, options: { metadata?: string; namespace?: string }): Promise<void>
+	add(modelName: string, value: ModelValue, options?: { metadata?: string; namespace?: string }): Promise<string>
+	remove(modelName: string, id: string, options?: { metadata?: string; namespace?: string }): Promise<void>
 }

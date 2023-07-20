@@ -1,7 +1,5 @@
-import test from "ava"
-
-import { ModelDB } from "@canvas-js/modeldb-sqlite"
 import { ModelsInit } from "@canvas-js/modeldb-interface"
+import { testOnModelDB } from "./utils.js"
 
 const models: ModelsInit = {
 	user: {
@@ -25,8 +23,8 @@ const models: ModelsInit = {
 	},
 }
 
-test("create ModelDB", async (t) => {
-	const modelDB = new ModelDB(":memory:", models, { dkLen: 16 })
+testOnModelDB("create ModelDB", async (t, modelDBConstructor) => {
+	const modelDB = modelDBConstructor(models, { dkLen: 16 })
 
 	const userA = {
 		address: "a",

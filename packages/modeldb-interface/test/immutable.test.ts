@@ -1,9 +1,8 @@
 // tests for modeldbs with immutable models
-import test from "ava"
-import { ModelDB } from "@canvas-js/modeldb-sqlite"
 import { ModelsInit } from "@canvas-js/modeldb-interface"
+import { testOnModelDB } from "./utils.js"
 
-test("create a modeldb with an immutable model and a valid entry", async (t) => {
+testOnModelDB("create a modeldb with an immutable model and a valid entry", async (t, modelDBConstructor) => {
 	// @ts-ignore
 	const models = {
 		user: {
@@ -11,7 +10,7 @@ test("create a modeldb with an immutable model and a valid entry", async (t) => 
 			$type: "immutable",
 		},
 	} as ModelsInit
-	const db = new ModelDB(":memory:", models)
+	const db = modelDBConstructor(models)
 
 	// add a user
 	const userId = await db.add("user", { name: "test" })
@@ -26,7 +25,7 @@ test("create a modeldb with an immutable model and a valid entry", async (t) => 
 	t.deepEqual(await db.get("user", userId), null)
 })
 
-test("create a modeldb with an immutable model and an invalid entry", async (t) => {
+testOnModelDB("create a modeldb with an immutable model and an invalid entry", async (t, modelDBConstructor) => {
 	// @ts-ignore
 	const models = {
 		user: {
@@ -34,7 +33,7 @@ test("create a modeldb with an immutable model and an invalid entry", async (t) 
 			$type: "immutable",
 		},
 	} as ModelsInit
-	const db = new ModelDB(":memory:", models)
+	const db = modelDBConstructor(models)
 
 	// add a user
 	const error = await t.throwsAsync(() => db.add("user", { something: "test" }))

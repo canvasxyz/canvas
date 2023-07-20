@@ -1,27 +1,25 @@
 // tests for creating modeldbs
-import test from "ava"
-import { ModelDB } from "@canvas-js/modeldb-sqlite"
 import { ModelsInit } from "@canvas-js/modeldb-interface"
+import { testOnModelDB } from "./utils.js"
 
-test("create modeldb with no models", (t) => {
-	new ModelDB(":memory:", {}, { dkLen: 16 })
+testOnModelDB("create modeldb with no models", (t, modelDBConstructor) => {
+	modelDBConstructor({}, { dkLen: 16 })
 
 	t.pass()
 })
 
-test("create modeldb with an empty model should fail", (t) => {
+testOnModelDB("create modeldb with an empty model should fail", (t, modelDBConstructor) => {
 	const models: ModelsInit = {
 		room: {},
 	}
-	// this throws a sql error, what should it do? more useful error message?
 	const error = t.throws(() => {
-		new ModelDB(":memory:", models)
+		modelDBConstructor(models)
 	})
 
 	t.is(error!.message, `Model "room" has no columns`)
 })
 
-test("create modeldb with a model with valid fields", (t) => {
+testOnModelDB("create modeldb with a model with valid fields", (t, modelDBConstructor) => {
 	// @ts-ignore
 	const models = {
 		room: {
@@ -31,12 +29,12 @@ test("create modeldb with a model with valid fields", (t) => {
 			$type: "immutable",
 		},
 	} as ModelsInit
-	new ModelDB(":memory:", models)
+	modelDBConstructor(models)
 
 	t.pass()
 })
 
-test("create modeldb with a model with invalid fields should fail", (t) => {
+testOnModelDB("create modeldb with a model with invalid fields should fail", (t, modelDBConstructor) => {
 	// @ts-ignore
 	const models = {
 		room: {
@@ -44,7 +42,7 @@ test("create modeldb with a model with invalid fields should fail", (t) => {
 		},
 	} as ModelsInit
 	const error = t.throws(() => {
-		new ModelDB(":memory:", models)
+		modelDBConstructor(models)
 	})
 
 	t.is(error!.message, `invalid property`)
