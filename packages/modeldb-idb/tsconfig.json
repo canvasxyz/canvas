@@ -1,0 +1,10 @@
+{
+  "include": ["src/"],
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "moduleResolution": "node16",
+    "rootDir": "src",
+    "outDir": "lib"
+  },
+  "references": [{ "path": "../modeldb-interface" }]
+}
