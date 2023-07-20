@@ -1,6 +1,6 @@
 // tests for modeldbs with mutable models
 import test from "ava"
-import { ModelDB } from "@canvas-js/modeldb"
+import { ModelDB } from "@canvas-js/modeldb-sqlite"
 import { ModelsInit } from "@canvas-js/modeldb-interface"
 
 async function toArray(asyncIterator: any) {

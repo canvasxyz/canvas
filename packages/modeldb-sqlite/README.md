@@ -1,4 +1,4 @@
-# @canvas-js/modeldb
+# @canvas-js/modeldb-sqlite
 
 ModelDB
 
@@ -9,7 +9,7 @@ ModelDB
 - "Mutable" and "immutable" models
 
 ```ts
-import { ModelDB } from "@canvas-js/modeldb"
+import { ModelDB } from "@canvas-js/modeldb-sqlite"
 
 const db = new ModelDB({
 	user: {

@@ -1,5 +1,5 @@
 {
-  "name": "@canvas-js/modeldb",
+  "name": "@canvas-js/modeldb-sqlite",
   "version": "0.5.0-alpha4",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",

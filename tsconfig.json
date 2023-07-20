@@ -9,7 +9,7 @@
     { "path": "./packages/hooks" },
     { "path": "./packages/store" },
     { "path": "./packages/store/test" },
-    { "path": "./packages/modeldb" },
+    { "path": "./packages/modeldb-sqlite" },
     { "path": "./packages/modeldb-interface" },
     { "path": "./packages/modeldb-interface/test" },
     { "path": "./packages/store" },

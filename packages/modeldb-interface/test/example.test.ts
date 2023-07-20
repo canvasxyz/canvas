@@ -1,6 +1,6 @@
 import test from "ava"
 
-import { ModelDB } from "@canvas-js/modeldb"
+import { ModelDB } from "@canvas-js/modeldb-sqlite"
 import { ModelsInit } from "@canvas-js/modeldb-interface"
 
 const models: ModelsInit = {
