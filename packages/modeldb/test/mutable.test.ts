@@ -1,6 +1,6 @@
 // tests for modeldbs with mutable models
 import test from "ava"
-import { ModelDB } from "../lib/index.js"
+import { ModelDB } from "@canvas-js/modeldb"
 import { ModelsInit } from "@canvas-js/modeldb-interface"
 
 async function toArray(asyncIterator: any) {
@@ -57,22 +57,22 @@ test("create a modeldb with a mutable model and a resolve function", async (t) =
 	const key = "modelKey"
 
 	// add a user
-	db.set("user", key, { name: "initialValue" }, { version: "A" })
+	await db.set("user", key, { name: "initialValue" }, { version: "A" })
 	// the user should have been created with the initial value
 	t.deepEqual(await toArray(db.iterate("user")), [{ name: "initialValue" }])
 
 	// set a new value with a higher version
-	db.set("user", key, { name: "updatedValue" }, { version: "C" })
+	await db.set("user", key, { name: "updatedValue" }, { version: "C" })
 	// the user's value should be updated
 	t.deepEqual(await toArray(db.iterate("user")), [{ name: "updatedValue" }])
 
 	// try to set a new value with a lower version
-	db.set("user", key, { name: "staleValue" }, { version: "B" })
+	await db.set("user", key, { name: "staleValue" }, { version: "B" })
 	// the user should have the previous value
 	t.deepEqual(await toArray(db.iterate("user")), [{ name: "updatedValue" }])
 })
 
-test("create a modeldb with a mutable model and an invalid entry", (t) => {
+test("create a modeldb with a mutable model and an invalid entry", async (t) => {
 	// @ts-ignore
 	const models = {
 		user: {
@@ -84,9 +84,6 @@ test("create a modeldb with a mutable model and an invalid entry", (t) => {
 
 	const key = "modelKey2"
 	// add a user
-	const error = t.throws(() => {
-		db.set("user", key, { something: "test" })
-	})
-
+	const error = await t.throwsAsync(() => db.set("user", key, { something: "test" }))
 	t.is(error!.message, `missing value for property user/name`)
 })

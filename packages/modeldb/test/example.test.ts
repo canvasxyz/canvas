@@ -1,6 +1,6 @@
 import test from "ava"
 
-import { ModelDB } from "../lib/index.js"
+import { ModelDB } from "@canvas-js/modeldb"
 import { ModelsInit } from "@canvas-js/modeldb-interface"
 
 const models: ModelsInit = {
@@ -25,7 +25,7 @@ const models: ModelsInit = {
 	},
 }
 
-test("create ModelDB", (t) => {
+test("create ModelDB", async (t) => {
 	const modelDB = new ModelDB(":memory:", models, { dkLen: 16 })
 
 	const userA = {
@@ -40,11 +40,11 @@ test("create ModelDB", (t) => {
 		signingPublicKey: new Uint8Array([0xa, 0xb, 0xc]),
 	}
 
-	const userAId = modelDB.add("user", userA, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
+	const userAId = await modelDB.add("user", userA, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
 	t.log("userAId", userAId)
 	t.deepEqual(modelDB.get("user", userAId), userA)
 
-	const userBId = modelDB.add("user", userB, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
+	const userBId = await modelDB.add("user", userB, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
 	t.log("userBId", userBId)
 	t.deepEqual(modelDB.get("user", userBId), userB)
 
@@ -53,7 +53,7 @@ test("create ModelDB", (t) => {
 		members: [userAId, userBId],
 	}
 
-	const roomId = modelDB.add("room", room, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
+	const roomId = await modelDB.add("room", room, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
 	t.log("roomId", roomId)
 	t.deepEqual(modelDB.get("room", roomId), room)
 
@@ -64,9 +64,9 @@ test("create ModelDB", (t) => {
 		timestamp: Date.now(),
 	}
 
-	const messageId = modelDB.add("message", message)
-	const messageId2 = modelDB.add("message", message)
-	const messageId3 = modelDB.add("message", message)
+	const messageId = await modelDB.add("message", message)
+	const messageId2 = await modelDB.add("message", message)
+	const messageId3 = await modelDB.add("message", message)
 
 	t.deepEqual(messageId, messageId2)
 	t.deepEqual(messageId, messageId3)
