@@ -42,11 +42,11 @@ test("create ModelDB", async (t) => {
 
 	const userAId = await modelDB.add("user", userA, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
 	t.log("userAId", userAId)
-	t.deepEqual(modelDB.get("user", userAId), userA)
+	t.deepEqual(await modelDB.get("user", userAId), userA)
 
 	const userBId = await modelDB.add("user", userB, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
 	t.log("userBId", userBId)
-	t.deepEqual(modelDB.get("user", userBId), userB)
+	t.deepEqual(await modelDB.get("user", userBId), userB)
 
 	const room = {
 		creator: userAId,
@@ -55,7 +55,7 @@ test("create ModelDB", async (t) => {
 
 	const roomId = await modelDB.add("room", room, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
 	t.log("roomId", roomId)
-	t.deepEqual(modelDB.get("room", roomId), room)
+	t.deepEqual(await modelDB.get("room", roomId), room)
 
 	const message = {
 		room: roomId,
@@ -70,5 +70,5 @@ test("create ModelDB", async (t) => {
 
 	t.deepEqual(messageId, messageId2)
 	t.deepEqual(messageId, messageId3)
-	t.deepEqual(modelDB.get("message", messageId), message)
+	t.deepEqual(await modelDB.get("message", messageId), message)
 })
