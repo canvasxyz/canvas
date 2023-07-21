@@ -60,9 +60,7 @@ export class ModelDB implements IModelDB {
 	public async *iterate(modelName: string): AsyncIterable<ModelValue> {
 		const api = this.apis[modelName]
 		assert(api !== undefined, "model not found")
-		if (api instanceof MutableModelAPI) {
-			yield* api.iterate()
-		} else if (api instanceof ImmutableModelAPI) {
+		if (api instanceof MutableModelAPI || api instanceof ImmutableModelAPI) {
 			yield* api.iterate()
 		}
 	}

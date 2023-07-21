@@ -10,7 +10,7 @@ testOnModelDB("create a modeldb with an immutable model and a valid entry", asyn
 			$type: "immutable",
 		},
 	} as ModelsInit
-	const db = modelDBConstructor(models)
+	const db = await modelDBConstructor(models)
 
 	// add a user
 	const userId = await db.add("user", { name: "test" })
@@ -33,7 +33,7 @@ testOnModelDB("create a modeldb with an immutable model and an invalid entry", a
 			$type: "immutable",
 		},
 	} as ModelsInit
-	const db = modelDBConstructor(models)
+	const db = await modelDBConstructor(models)
 
 	// add a user
 	const error = await t.throwsAsync(() => db.add("user", { something: "test" }))

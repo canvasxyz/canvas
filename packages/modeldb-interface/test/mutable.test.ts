@@ -16,7 +16,7 @@ testOnModelDB("create a modeldb with a mutable model and a valid entry", async (
 			$type: "mutable",
 		},
 	} as ModelsInit
-	const db = modelDBConstructor(models)
+	const db = await modelDBConstructor(models)
 
 	const key = "modelKey"
 
@@ -51,7 +51,7 @@ testOnModelDB("create a modeldb with a mutable model and a resolve function", as
 			$type: "mutable",
 		},
 	} as ModelsInit
-	const db = modelDBConstructor(models, { resolve: (a: any, b: any) => (a > b ? a : b) })
+	const db = await modelDBConstructor(models, { resolve: (a: any, b: any) => (a > b ? a : b) })
 
 	const key = "modelKey"
 
@@ -79,7 +79,7 @@ testOnModelDB("create a modeldb with a mutable model and an invalid entry", asyn
 			$type: "mutable",
 		},
 	} as ModelsInit
-	const db = modelDBConstructor(models)
+	const db = await modelDBConstructor(models)
 
 	const key = "modelKey2"
 	// add a user

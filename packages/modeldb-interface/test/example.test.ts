@@ -24,7 +24,7 @@ const models: ModelsInit = {
 }
 
 testOnModelDB("create ModelDB", async (t, modelDBConstructor) => {
-	const modelDB = modelDBConstructor(models, { dkLen: 16 })
+	const modelDB = await modelDBConstructor(models, { dkLen: 16 })
 
 	const userA = {
 		address: "a",

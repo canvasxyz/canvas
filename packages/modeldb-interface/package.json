@@ -18,6 +18,7 @@
   "devDependencies": {
     "@canvas-js/modeldb-idb": "../modeldb-idb",
     "@canvas-js/modeldb-sqlite": "../modeldb-sqlite",
-    "ava": "^5.3.1"
+    "ava": "^5.3.1",
+    "fake-indexeddb": "^4.0.2"
   }
 }
