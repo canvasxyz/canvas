@@ -32,7 +32,12 @@ function prepareTombstoneAPI(db: sqlite.Database, model: Model) {
 		`UPDATE "${tombstoneTableName}" SET _metadata = :_metadata, _version = :_version WHERE _key = :_key`
 	)
 
-	return { select: selectTombstone, delete: deleteTombstone, insert: insertTombstone, update: updateTombstone }
+	return {
+		select: selectTombstone.get.bind(selectTombstone),
+		delete: deleteTombstone.run.bind(deleteTombstone),
+		insert: insertTombstone.run.bind(insertTombstone),
+		update: updateTombstone.run.bind(updateTombstone),
+	}
 }
 
 function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
@@ -87,12 +92,12 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
 
 	return {
 		params,
-		selectVersion: selectVersion.get,
-		selectAll: selectAll.iterate,
-		select: selectRecord.get,
-		insert: insertRecord.run,
-		update: updateRecord.run,
-		delete: deleteRecord.run,
+		selectVersion: selectVersion.get.bind(selectVersion),
+		selectAll: selectAll.iterate.bind(selectAll),
+		select: selectRecord.get.bind(selectRecord),
+		insert: insertRecord.run.bind(insertRecord),
+		update: updateRecord.run.bind(updateRecord),
+		delete: deleteRecord.run.bind(deleteRecord),
 	}
 }
 
@@ -144,11 +149,11 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model) {
 
 	return {
 		params,
-		selectAll: selectAll.iterate,
-		select: selectRecord.get,
-		insert: insertRecord.run,
-		update: updateRecord.run,
-		delete: deleteRecord.run,
+		selectAll: selectAll.iterate.bind(selectAll),
+		select: selectRecord.get.bind(selectRecord),
+		insert: insertRecord.run.bind(insertRecord),
+		update: updateRecord.run.bind(updateRecord),
+		delete: deleteRecord.run.bind(deleteRecord),
 	}
 }
 
@@ -167,7 +172,11 @@ function prepareRelationAPI(db: sqlite.Database, modelName: string, propertyName
 		`INSERT INTO "${tableName}" (_source, _target) VALUES (:_source, :_target)`
 	)
 
-	return { selectAll: selectAll.all, deleteAll: deleteAll.run, create: create.run }
+	return {
+		selectAll: selectAll.all.bind(selectAll),
+		deleteAll: deleteAll.run.bind(deleteAll),
+		create: create.run.bind(create),
+	}
 }
 
 function encodePrimitiveValue(
@@ -379,7 +388,7 @@ export class MutableModelAPI {
 		let metadata: string | null = null
 
 		const existingVersion = this.#records.selectVersion({ _key: key })
-		const existingTombstone = this.#tombstones.select.get({ _key: key })
+		const existingTombstone = this.#tombstones.select({ _key: key })
 
 		// if conflict resolution is enable
 		if (this.#resolve !== undefined) {
@@ -407,7 +416,7 @@ export class MutableModelAPI {
 
 		if (existingTombstone !== null) {
 			// delete the tombstone since we're about to set the record
-			this.#tombstones.delete.run({ _key: key })
+			this.#tombstones.delete({ _key: key })
 		}
 
 		const params = encodeRecordParams(this.model, value, this.#records.params)
@@ -443,7 +452,7 @@ export class MutableModelAPI {
 		let metadata: string | null = null
 
 		const previous = this.#records.selectVersion({ _key: key })
-		const tombstone = this.#tombstones.select.get({ _key: key })
+		const tombstone = this.#tombstones.select({ _key: key })
 
 		// if conflict resolution is enable
 		if (this.#resolve !== undefined) {
@@ -472,9 +481,9 @@ export class MutableModelAPI {
 
 		if (this.#resolve !== undefined && version !== null) {
 			if (tombstone === null) {
-				this.#tombstones.insert.run({ _key: key, _metadata: metadata, _version: version })
+				this.#tombstones.insert({ _key: key, _metadata: metadata, _version: version })
 			} else {
-				this.#tombstones.update.run({ _key: key, _metadata: metadata, _version: version })
+				this.#tombstones.update({ _key: key, _metadata: metadata, _version: version })
 			}
 		}
 	}
