@@ -2,7 +2,17 @@ import assert from "node:assert"
 
 import * as sqlite from "better-sqlite3"
 
-import { Model, ModelValue, PrimitiveProperty, PropertyValue, ReferenceProperty } from "@canvas-js/modeldb-interface"
+import {
+	ImmutableRecordAPI,
+	Model,
+	ModelValue,
+	MutableRecordAPI,
+	PrimitiveProperty,
+	PropertyValue,
+	RecordValue,
+	ReferenceProperty,
+	TombstoneAPI,
+} from "@canvas-js/modeldb-interface"
 import { getRecordTableName, getRelationTableName, getTombstoneTableName } from "./initialize.js"
 import { DEFAULT_DIGEST_LENGTH, Method, Query, getRecordHash, signalInvalidType, zip } from "./utils.js"
 
@@ -10,9 +20,7 @@ import { DEFAULT_DIGEST_LENGTH, Method, Query, getRecordHash, signalInvalidType,
 // Operations are organized into "APIs", one for each underlying SQLite table.
 // An "API" is just a plain JavaScript object with `Query` and `Method` values.
 
-type RecordValue = Record<string, string | number | Buffer | null>
-
-function prepareTombstoneAPI(db: sqlite.Database, model: Model) {
+function prepareTombstoneAPI(db: sqlite.Database, model: Model): TombstoneAPI {
 	const tombstoneTableName = getTombstoneTableName(model.name)
 
 	const selectTombstone = new Query<{ _key: string }, { _metadata: string | null; _version: string }>(
@@ -40,7 +48,7 @@ function prepareTombstoneAPI(db: sqlite.Database, model: Model) {
 	}
 }
 
-function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
+function prepareMutableRecordAPI(db: sqlite.Database, model: Model): MutableRecordAPI {
 	const recordTableName = getRecordTableName(model.name)
 
 	const selectVersion = new Query<{ _key: string }, { _version: string | null }>(
@@ -101,7 +109,7 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
 	}
 }
 
-function prepareImmutableRecordAPI(db: sqlite.Database, model: Model) {
+function prepareImmutableRecordAPI(db: sqlite.Database, model: Model): ImmutableRecordAPI {
 	const recordTableName = getRecordTableName(model.name)
 
 	const params: Record<string, string> = {}
