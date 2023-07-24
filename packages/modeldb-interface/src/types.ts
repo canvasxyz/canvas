@@ -62,6 +62,13 @@ export type TombstoneAPI = {
 	update: (params: { _key: string; _metadata: string | null; _version: string }) => void
 }
 
+export type RelationAPI = {
+	// should this be AsyncIterable?
+	selectAll: (params: { _source: string }) => { _target: string }[]
+	deleteAll: (params: { _source: string }) => void
+	create: (params: { _source: string; _target: string }) => void
+}
+
 export type MutableRecordAPI = {
 	params: Record<string, string>
 	selectVersion: (params: { _key: string }) => { _version: string | null } | null

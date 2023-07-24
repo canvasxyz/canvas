@@ -2,10 +2,18 @@ import assert from "node:assert"
 
 import Database, * as sqlite from "better-sqlite3"
 
-import { Config, IModelDB, ModelsInit, ModelValue, parseConfig } from "@canvas-js/modeldb-interface"
+import {
+	Config,
+	ImmutableModelAPI,
+	IModelDB,
+	ModelsInit,
+	ModelValue,
+	MutableModelAPI,
+	parseConfig,
+} from "@canvas-js/modeldb-interface"
 import { initializeModel, initializeRelation } from "./initialize.js"
-import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
 import { signalInvalidType } from "./utils.js"
+import { createSqliteImmutableModelAPI, createSqliteMutableModelAPI } from "./api.js"
 
 export interface ModelDBOptions {
 	dkLen?: number
@@ -32,9 +40,9 @@ export class ModelDB implements IModelDB {
 
 		for (const model of this.config.models) {
 			if (model.kind === "immutable") {
-				this.apis[model.name] = new ImmutableModelAPI(this.db, model, options)
+				this.apis[model.name] = createSqliteImmutableModelAPI(this.db, model, options)
 			} else if (model.kind === "mutable") {
-				this.apis[model.name] = new MutableModelAPI(this.db, model, options)
+				this.apis[model.name] = createSqliteMutableModelAPI(this.db, model, options)
 			} else {
 				signalInvalidType(model.kind)
 			}

@@ -1,21 +1,8 @@
 import assert from "node:assert"
 
 import type * as sqlite from "better-sqlite3"
-import { blake3 } from "@noble/hashes/blake3"
-import { encode } from "microcbor"
-import { base58btc } from "multiformats/bases/base58"
-
-import type { ModelValue } from "@canvas-js/modeldb-interface"
 
 export const nsidPattern = /^[a-z](?:-*[a-z0-9])*(?:\.[a-z](?:-*[a-z0-9])*)*$/
-
-export const DEFAULT_DIGEST_LENGTH = 16
-
-export function getRecordHash(value: ModelValue, dkLen: number = DEFAULT_DIGEST_LENGTH): string {
-	const bytes = encode(value)
-	const hash = blake3(bytes, { dkLen })
-	return base58btc.baseEncode(hash)
-}
 
 export function signalInvalidType(type: never): never {
 	console.error(type)
