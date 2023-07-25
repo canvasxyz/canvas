@@ -207,8 +207,8 @@ export class MutableModelAPI {
 		this.#resolve = options.resolve
 	}
 
-	public get(key: string): ModelValue | null {
-		const record = this.#records.select({ _key: key })
+	public async get(key: string): Promise<ModelValue | null> {
+		const record = await this.#records.select({ _key: key })
 		if (record === null) {
 			return null
 		}
@@ -216,19 +216,22 @@ export class MutableModelAPI {
 		const value = decodeRecord(this.model, record)
 
 		for (const [propertyName, relation] of Object.entries(this.#relations)) {
-			value[propertyName] = relation.selectAll({ _source: key }).map(({ _target }) => _target)
+			value[propertyName] = (await relation.selectAll({ _source: key })).map(({ _target }) => _target)
 		}
 
 		return value
 	}
 
-	public set(key: string, value: ModelValue, options: { version?: string | null; metadata?: string | null } = {}) {
+	public async set(
+		key: string,
+		value: ModelValue,
+		options: { version?: string | null; metadata?: string | null } = {}
+	) {
 		let version: string | null = null
 		let metadata: string | null = null
 
-		const existingVersion = this.#records.selectVersion({ _key: key })
-		const existingTombstone = this.#tombstones.select({ _key: key })
-
+		const existingVersion = await this.#records.selectVersion({ _key: key })
+		const existingTombstone = await this.#tombstones.select({ _key: key })
 		// if conflict resolution is enable
 		if (this.#resolve !== undefined) {
 			version = options.version ?? null
@@ -255,17 +258,17 @@ export class MutableModelAPI {
 
 		if (existingTombstone !== null) {
 			// delete the tombstone since we're about to set the record
-			this.#tombstones.delete({ _key: key })
+			await this.#tombstones.delete({ _key: key })
 		}
 
-		const params = encodeRecordParams(this.model, value, this.#records.params)
+		const params = encodeRecordParams(this.model, value, this.#records.params || {})
 
 		if (existingVersion === null) {
-			this.#records.insert({ _key: key, _version: version, _metadata: metadata, ...params })
+			await this.#records.insert({ _key: key, _version: version, _metadata: metadata, ...params })
 		} else {
-			this.#records.update({ _key: key, _version: version, _metadata: metadata, ...params })
+			await this.#records.update({ _key: key, _version: version, _metadata: metadata, ...params })
 			for (const relation of Object.values(this.#relations)) {
-				relation.deleteAll({ _source: key })
+				await relation.deleteAll({ _source: key })
 			}
 		}
 
@@ -281,17 +284,17 @@ export class MutableModelAPI {
 					throw new TypeError(`${this.model.name}/${propertyName} must be string[]`)
 				}
 
-				relation.create({ _source: key, _target: target })
+				await relation.create({ _source: key, _target: target })
 			}
 		}
 	}
 
-	public delete(key: string, options: { version?: string | null; metadata?: string | null } = {}) {
+	public async delete(key: string, options: { version?: string | null; metadata?: string | null } = {}) {
 		let version: string | null = null
 		let metadata: string | null = null
 
-		const previous = this.#records.selectVersion({ _key: key })
-		const tombstone = this.#tombstones.select({ _key: key })
+		const previous = await this.#records.selectVersion({ _key: key })
+		const tombstone = await this.#tombstones.select({ _key: key })
 
 		// if conflict resolution is enable
 		if (this.#resolve !== undefined) {
@@ -313,22 +316,31 @@ export class MutableModelAPI {
 			}
 		}
 
-		this.#records.delete({ _key: key })
+		await this.#records.delete({ _key: key })
 		for (const relation of Object.values(this.#relations)) {
-			relation.deleteAll({ _source: key })
+			await relation.deleteAll({ _source: key })
 		}
 
 		if (this.#resolve !== undefined && version !== null) {
 			if (tombstone === null) {
-				this.#tombstones.insert({ _key: key, _metadata: metadata, _version: version })
+				await this.#tombstones.insert({ _key: key, _metadata: metadata, _version: version })
 			} else {
-				this.#tombstones.update({ _key: key, _metadata: metadata, _version: version })
+				await this.#tombstones.update({ _key: key, _metadata: metadata, _version: version })
 			}
 		}
 	}
 
-	public async *iterate(): AsyncIterable<ModelValue> {
-		yield* this.#records.selectAll({})
+	public iterate(): AsyncIterable<ModelValue> {
+		return this.#records.iterate({})
+	}
+
+	public iterateSync(): IterableIterator<ModelValue> {
+		console.log("iterateSync")
+		return this.#records.iterateSync({})
+	}
+
+	public async selectAll(): Promise<ModelValue[]> {
+		return this.#records.selectAll({})
 	}
 }
 
@@ -351,13 +363,16 @@ export class ImmutableModelAPI {
 		this.#dkLen = options.dkLen || DEFAULT_DIGEST_LENGTH
 	}
 
-	public add(value: ModelValue, { namespace, metadata }: { namespace?: string; metadata?: string } = {}): string {
+	public async add(
+		value: ModelValue,
+		{ namespace, metadata }: { namespace?: string; metadata?: string } = {}
+	): Promise<string> {
 		const recordHash = getRecordHash(value, this.#dkLen)
 		const key = namespace ? `${namespace}/${recordHash}` : recordHash
-		const existingRecord = this.#records.select({ _key: key })
+		const existingRecord = await this.#records.select({ _key: key })
 		if (existingRecord === null) {
-			const params = encodeRecordParams(this.model, value, this.#records.params)
-			this.#records.insert({ _key: key, _metadata: metadata ?? null, ...params })
+			const params = encodeRecordParams(this.model, value, this.#records.params || {})
+			await this.#records.insert({ _key: key, _metadata: metadata ?? null, ...params })
 
 			for (const [propertyName, relation] of Object.entries(this.#relations)) {
 				const targets = value[propertyName]
@@ -371,7 +386,7 @@ export class ImmutableModelAPI {
 						throw new TypeError(`${this.model.name}/${propertyName} must be string[]`)
 					}
 
-					relation.create({ _source: key, _target: target })
+					await relation.create({ _source: key, _target: target })
 				}
 			}
 		}
@@ -379,18 +394,20 @@ export class ImmutableModelAPI {
 		return key
 	}
 
-	public remove(key: string) {
-		const existingRecord = this.#records.select({ _key: key })
+	public async remove(key: string) {
+		const existingRecord = await this.#records.select({ _key: key })
+		console.log(existingRecord)
+		console.log(this.#relations)
 		if (existingRecord !== null) {
-			this.#records.delete({ _key: key })
+			await this.#records.delete({ _key: key })
 			for (const relation of Object.values(this.#relations)) {
-				relation.deleteAll({ _source: key })
+				await relation.deleteAll({ _source: key })
 			}
 		}
 	}
 
-	public get(key: string): ModelValue | null {
-		const record = this.#records.select({ _key: key })
+	public async get(key: string): Promise<ModelValue | null> {
+		const record = await this.#records.select({ _key: key })
 		if (record === null) {
 			return null
 		}
@@ -398,13 +415,17 @@ export class ImmutableModelAPI {
 		const value = decodeRecord(this.model, record)
 
 		for (const [propertyName, relation] of Object.entries(this.#relations)) {
-			value[propertyName] = relation.selectAll({ _source: key }).map(({ _target }) => _target)
+			value[propertyName] = (await relation.selectAll({ _source: key })).map(({ _target }) => _target)
 		}
 
 		return value
 	}
 
 	public async *iterate(): AsyncIterable<ModelValue> {
-		yield* this.#records.selectAll({})
+		yield* this.#records.iterate({})
+	}
+
+	public async selectAll(): Promise<ModelValue[]> {
+		return this.#records.selectAll({})
 	}
 }

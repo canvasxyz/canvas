@@ -19,7 +19,7 @@ testOnModelDB("create a modeldb with an immutable model and a valid entry", asyn
 	t.deepEqual(await db.get("user", userId), { name: "test" })
 
 	// delete the user
-	db.remove("user", userId)
+	await db.remove("user", userId)
 
 	// assert returned user is null
 	t.deepEqual(await db.get("user", userId), null)

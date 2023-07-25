@@ -12,7 +12,7 @@ import {
 	TombstoneAPI,
 } from "@canvas-js/modeldb-interface"
 import { getRecordTableName, getRelationTableName, getTombstoneTableName } from "./initialize.js"
-import { Method, Query, signalInvalidType, zip } from "./utils.js"
+import { Method, Query, iteratorToAsyncIterableIterator, signalInvalidType, zip } from "./utils.js"
 
 // The code here is designed so the SQL queries have type annotations alongside them.
 // Operations are organized into "APIs", one for each underlying SQLite table.
@@ -39,10 +39,10 @@ function prepareTombstoneAPI(db: sqlite.Database, model: Model): TombstoneAPI {
 	)
 
 	return {
-		select: selectTombstone.get.bind(selectTombstone),
-		delete: deleteTombstone.run.bind(deleteTombstone),
-		insert: insertTombstone.run.bind(insertTombstone),
-		update: updateTombstone.run.bind(updateTombstone),
+		select: async (args) => selectTombstone.get(args),
+		delete: async (args) => deleteTombstone.run(args),
+		insert: async (args) => insertTombstone.run(args),
+		update: async (args) => updateTombstone.run(args),
 	}
 }
 
@@ -96,14 +96,22 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model): MutableReco
 
 	const deleteRecord = new Method<{ _key: string }>(db, `DELETE FROM "${recordTableName}" WHERE _key = :_key`)
 
+	// @ts-ignore
 	return {
 		params,
-		selectVersion: selectVersion.get.bind(selectVersion),
-		selectAll: selectAll.iterate.bind(selectAll),
-		select: selectRecord.get.bind(selectRecord),
-		insert: insertRecord.run.bind(insertRecord),
-		update: updateRecord.run.bind(updateRecord),
-		delete: deleteRecord.run.bind(deleteRecord),
+		selectVersion: async (args) => selectVersion.get(args),
+		iterate: (args) => {
+			const r = [...selectAll.iterate(args)]
+			console.log(r)
+
+			return iteratorToAsyncIterableIterator(selectAll.iterate(args))
+		},
+		iterateSync: (args) => selectAll.iterate(args),
+		selectAll: async (args) => selectAll.all(args),
+		select: async (args) => selectRecord.get(args),
+		insert: async (args) => insertRecord.run(args),
+		update: async (args) => updateRecord.run(args),
+		delete: async (args) => deleteRecord.run(args),
 	}
 }
 
@@ -155,11 +163,12 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model): Immutable
 
 	return {
 		params,
-		selectAll: selectAll.iterate.bind(selectAll),
-		select: selectRecord.get.bind(selectRecord),
-		insert: insertRecord.run.bind(insertRecord),
-		update: updateRecord.run.bind(updateRecord),
-		delete: deleteRecord.run.bind(deleteRecord),
+		iterate: (args) => iteratorToAsyncIterableIterator(selectAll.iterate(args)),
+		selectAll: async (args) => selectAll.all(args),
+		select: async (args) => selectRecord.get(args),
+		insert: async (args) => insertRecord.run(args),
+		update: async (args) => updateRecord.run(args),
+		delete: async (args) => deleteRecord.run(args),
 	}
 }
 
@@ -179,9 +188,9 @@ function prepareRelationAPI(db: sqlite.Database, modelName: string, propertyName
 	)
 
 	return {
-		selectAll: selectAll.all.bind(selectAll),
-		deleteAll: deleteAll.run.bind(deleteAll),
-		create: create.run.bind(create),
+		selectAll: async (args) => selectAll.all(args),
+		deleteAll: async (args) => deleteAll.run(args),
+		create: async (args) => create.run(args),
 	}
 }
 

@@ -35,10 +35,8 @@ export class Query<P, R> {
 		return this.statement.all(params) as R[]
 	}
 
-	public async *iterate(params: P): AsyncIterable<R> {
-		for (const value of this.statement.iterate(params)) {
-			yield value as R
-		}
+	public iterate(params: P): IterableIterator<R> {
+		return this.statement.iterate(params) as IterableIterator<R>
 	}
 }
 
@@ -85,3 +83,26 @@ export class Method<P> {
 // export function getTypeError(modelName: string, property: Property): string {
 // 	return `${modelName}/${property.name} must be ${getTypeScriptType(property)}`
 // }
+
+export const iteratorToAsyncIterableIterator = <T>(iter: IterableIterator<T>): AsyncIterableIterator<T> => {
+	let result: AsyncIterableIterator<T> = {
+		[Symbol.asyncIterator]() {
+			return this
+		},
+		async next() {
+			return iter.next()
+		},
+	}
+
+	const returnFunc = iter.return
+	if (returnFunc) {
+		result.return = async (value) => returnFunc(value)
+	}
+
+	const throwFunc = iter.throw
+	if (throwFunc) {
+		result.throw = async (exception) => throwFunc(exception)
+	}
+
+	return result
+}

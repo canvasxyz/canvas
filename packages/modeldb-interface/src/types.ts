@@ -56,34 +56,37 @@ export type ModelValue = Record<string, PropertyValue>
 export type RecordValue = Record<string, string | number | Buffer | null>
 
 export type TombstoneAPI = {
-	select: (params: { _key: string }) => { _metadata: string | null; _version: string } | null
-	delete: (params: { _key: string }) => void
-	insert: (params: { _key: string; _metadata: string | null; _version: string }) => void
-	update: (params: { _key: string; _metadata: string | null; _version: string }) => void
+	select: (params: { _key: string }) => Promise<{ _metadata: string | null; _version: string } | null>
+	delete: (params: { _key: string }) => Promise<void>
+	insert: (params: { _key: string; _metadata: string | null; _version: string }) => Promise<void>
+	update: (params: { _key: string; _metadata: string | null; _version: string }) => Promise<void>
 }
 
 export type RelationAPI = {
 	// should this be AsyncIterable?
-	selectAll: (params: { _source: string }) => { _target: string }[]
-	deleteAll: (params: { _source: string }) => void
-	create: (params: { _source: string; _target: string }) => void
+	selectAll: (params: { _source: string }) => Promise<{ _target: string }[]>
+	deleteAll: (params: { _source: string }) => Promise<void>
+	create: (params: { _source: string; _target: string }) => Promise<void>
 }
 
 export type MutableRecordAPI = {
-	params: Record<string, string>
-	selectVersion: (params: { _key: string }) => { _version: string | null } | null
-	selectAll: (params: {}) => AsyncIterable<RecordValue>
-	select: (params: { _key: string }) => RecordValue | null
-	insert: (params: { _key: string; _version: string | null; _metadata: string | null }) => void
-	update: (params: { _key: string; _version: string | null; _metadata: string | null }) => void
-	delete: (params: { _key: string }) => void
+	params?: Record<string, string>
+	selectVersion: (params: { _key: string }) => Promise<{ _version: string | null } | null>
+	iterate: (params: {}) => AsyncIterable<RecordValue>
+	iterateSync: (params: {}) => IterableIterator<RecordValue>
+	selectAll: (params: {}) => Promise<RecordValue[]>
+	select: (params: { _key: string }) => Promise<RecordValue | null>
+	insert: (params: { _key: string; _version: string | null; _metadata: string | null }) => Promise<void>
+	update: (params: { _key: string; _version: string | null; _metadata: string | null }) => Promise<void>
+	delete: (params: { _key: string }) => Promise<void>
 }
 
 export type ImmutableRecordAPI = {
-	params: Record<string, string>
-	selectAll: (params: {}) => AsyncIterable<RecordValue>
-	select: (params: { _key: string }) => RecordValue | null
-	insert: (params: { _key: string; _metadata: string | null }) => void
-	update: (params: { _key: string; _metadata: string | null; _version: string | null }) => void
-	delete: (params: { _key: string }) => void
+	params?: Record<string, string>
+	iterate: (params: {}) => AsyncIterable<RecordValue>
+	select: (params: { _key: string }) => Promise<RecordValue | null>
+	selectAll: (params: {}) => Promise<RecordValue[]>
+	insert: (params: { _key: string; _metadata: string | null }) => Promise<void>
+	update: (params: { _key: string; _metadata: string | null; _version: string | null }) => Promise<void>
+	delete: (params: { _key: string }) => Promise<void>
 }

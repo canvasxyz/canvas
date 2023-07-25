@@ -1,107 +1,48 @@
-import assert from "assert"
-import { IModelDB, ModelValue, ModelsInit, parseConfig } from "@canvas-js/modeldb-interface"
-import { openDB } from "idb"
-import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
+import { AbstractModelDB, Config, ModelsInit, parseConfig } from "@canvas-js/modeldb-interface"
+import { IDBPDatabase, openDB } from "idb"
 import { signalInvalidType } from "./utils.js"
+import { createIdbImmutableModelAPI, createIdbMutableModelAPI } from "./api.js"
 
 export interface ModelDBOptions {
 	dkLen?: number
 	resolve?: (versionA: string, versionB: string) => string
 }
 
-export class ModelDB implements IModelDB {
-	private apis: Record<string, MutableModelAPI | ImmutableModelAPI> = {}
-
-	public static async initialize(models: ModelsInit, options?: ModelDBOptions): Promise<ModelDB> {
+export class ModelDB extends AbstractModelDB {
+	public static async initialize(models: ModelsInit, options?: ModelDBOptions) {
 		const config = parseConfig(models)
 
 		const db = await openDB("modeldb", 1, {
 			upgrade(db: any) {
+				// create model stores
 				for (const model of config.models) {
 					db.createObjectStore(model.name)
 				}
+
+				// create relation stores
+
+				// create tombstone stores for mutable models?
 			},
 		})
 
-		const apis: Record<string, MutableModelAPI | ImmutableModelAPI> = {}
+		return new ModelDB(db, config, options)
+	}
+
+	constructor(public readonly db: IDBPDatabase, config: Config, options?: ModelDBOptions) {
+		super()
 
 		for (const model of config.models) {
 			if (model.kind === "immutable") {
-				apis[model.name] = new ImmutableModelAPI(db, model, options)
+				this.apis[model.name] = createIdbImmutableModelAPI(this.db, model, options)
 			} else if (model.kind === "mutable") {
-				apis[model.name] = new MutableModelAPI(db, model, options)
+				this.apis[model.name] = createIdbMutableModelAPI(this.db, model, options)
 			} else {
 				signalInvalidType(model.kind)
 			}
 		}
-
-		return new ModelDB(apis)
 	}
 
-	constructor(apis: Record<string, MutableModelAPI | ImmutableModelAPI>) {
-		this.apis = apis
-	}
-
-	public async close() {}
-
-	public async get(modelName: string, key: string) {
-		const api = this.apis[modelName]
-		assert(api !== undefined, "model not found")
-		if (api instanceof MutableModelAPI) {
-			return null
-		} else if (api instanceof ImmutableModelAPI) {
-			return api.get(key)
-		} else {
-			signalInvalidType(api)
-		}
-	}
-
-	public async *iterate(modelName: string): AsyncIterable<ModelValue> {
-		const api = this.apis[modelName]
-		assert(api !== undefined, "model not found")
-		if (api instanceof MutableModelAPI || api instanceof ImmutableModelAPI) {
-			yield* api.iterate()
-		}
-	}
-
-	public query(modelName: string, query: {}): AsyncIterable<ModelValue> {
-		throw new Error("not implemented")
-	}
-
-	// Mutable model methods
-
-	public async set(
-		modelName: string,
-		key: string,
-		value: ModelValue,
-		options: { metadata?: string; version?: string } = {}
-	) {
-		const api = this.apis[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
-		assert(api instanceof MutableModelAPI, "cannot call .set on an immutable model")
-		api.set(key, value, options)
-	}
-
-	public async delete(modelName: string, key: string, options: { metadata?: string; version?: string } = {}) {
-		const api = this.apis[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
-		assert(api instanceof MutableModelAPI, "cannot call .delete on an immutable model")
-		api.delete(key, options)
-	}
-
-	// Immutable model methods
-
-	public async add(modelName: string, value: ModelValue, options: { metadata?: string; namespace?: string } = {}) {
-		const api = this.apis[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
-		assert(api instanceof ImmutableModelAPI, "cannot call .add on a mutable model")
-		return api.add(value, options)
-	}
-
-	public async remove(modelName: string, key: string) {
-		const api = this.apis[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
-		assert(api instanceof ImmutableModelAPI, "cannot call .remove on a mutable model")
-		api.remove(key)
+	close() {
+		this.db.close()
 	}
 }

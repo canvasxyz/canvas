@@ -2,9 +2,9 @@
 import { ModelsInit } from "@canvas-js/modeldb-interface"
 import { testOnModelDB } from "./utils.js"
 
-async function toArray(asyncIterator: any) {
+async function toArray<T>(asyncIterable: AsyncIterable<T>): Promise<T[]> {
 	const arr = []
-	for await (const i of asyncIterator) arr.push(i)
+	for await (const i of asyncIterable) arr.push(i)
 	return arr
 }
 
@@ -18,27 +18,28 @@ testOnModelDB("create a modeldb with a mutable model and a valid entry", async (
 	} as ModelsInit
 	const db = await modelDBConstructor(models)
 
-	const key = "modelKey"
+	const key = "modelKey2"
 
 	// add a user
-	db.set("user", key, { name: "test" })
+	await db.set("user", key, { name: "test" })
 
-	// get the user
-	t.deepEqual(await toArray(db.iterate("user")), [{ name: "test" }])
+	// get the users
+	const users = await toArray(db.iterate("user"))
+	t.deepEqual(users, [{ name: "test" }])
 
 	// // delete the user
-	db.delete("user", key)
+	await db.delete("user", key)
 
 	// assert user has been deleted
 	t.deepEqual(await toArray(db.iterate("user")), [])
 
 	// set a new value
-	db.set("user", key, { name: "newValue" })
+	await db.set("user", key, { name: "newValue" })
 	// get the user
 	t.deepEqual(await toArray(db.iterate("user")), [{ name: "newValue" }])
 
 	// overwrite the variable
-	db.set("user", key, { name: "newValue2" })
+	await db.set("user", key, { name: "newValue2" })
 	// get the user
 	t.deepEqual(await toArray(db.iterate("user")), [{ name: "newValue2" }])
 })
@@ -83,6 +84,6 @@ testOnModelDB("create a modeldb with a mutable model and an invalid entry", asyn
 
 	const key = "modelKey2"
 	// add a user
-	const error = await t.throwsAsync(() => db.set("user", key, { something: "test" }))
+	const error = await t.throwsAsync(async () => await db.set("user", key, { something: "test" }))
 	t.is(error!.message, `missing value for property user/name`)
 })
