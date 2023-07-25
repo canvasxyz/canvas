@@ -28,10 +28,10 @@ function prepareTombstoneAPI(db: IDBPDatabase, model: Model): TombstoneAPI {
 		select: ({ _key }) => db.get(tombstoneTableName, _key),
 		delete: ({ _key }) => db.delete(tombstoneTableName, _key),
 		insert: async ({ _key, _metadata, _version }) => {
-			await db.put(tombstoneTableName, { _key, _metadata, _version })
+			await db.put(tombstoneTableName, { _key, _metadata, _version }, _key)
 		},
 		update: async ({ _key, _metadata, _version }) => {
-			await db.put(tombstoneTableName, { _key, _metadata, _version })
+			await db.put(tombstoneTableName, { _key, _metadata, _version }, _key)
 		},
 	}
 }
@@ -72,10 +72,10 @@ function prepareMutableRecordAPI(db: IDBPDatabase, model: Model): MutableRecordA
 		},
 		selectAll: async () => db.getAll(recordTableName),
 		insert: async ({ _key, _metadata, _version }) => {
-			db.put(recordTableName, { _key, _metadata, _version })
+			db.put(recordTableName, { _key, _metadata, _version }, _key)
 		},
 		update: async ({ _key, _metadata, _version }) => {
-			db.put(recordTableName, { _key, _metadata, _version })
+			db.put(recordTableName, { _key, _metadata, _version }, _key)
 		},
 		delete: async ({ _key }) => db.delete(recordTableName, _key),
 		selectVersion: async ({ _key }) => {

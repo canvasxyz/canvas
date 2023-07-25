@@ -8,12 +8,12 @@ testOnModelDB("create modeldb with no models", (t, modelDBConstructor) => {
 	t.pass()
 })
 
-testOnModelDB("create modeldb with an empty model should fail", (t, modelDBConstructor) => {
+testOnModelDB("create modeldb with an empty model should fail", async (t, modelDBConstructor) => {
 	const models: ModelsInit = {
 		room: {},
 	}
-	const error = t.throws(() => {
-		modelDBConstructor(models)
+	const error = await t.throwsAsync(async () => {
+		await modelDBConstructor(models)
 	})
 
 	t.is(error!.message, `Model "room" has no columns`)

@@ -18,6 +18,24 @@ export class ModelDB extends AbstractModelDB {
 	public static async initialize(models: ModelsInit, options?: ModelDBOptions) {
 		const config = parseConfig(models)
 
+		console.log(config)
+
+		for (const model of config.models) {
+			const columnNames: string[] = []
+			for (const [i, property] of model.properties.entries()) {
+				if (property.kind === "primitive" || property.kind === "reference") {
+					columnNames.push(`"${property.name}"`)
+				} else if (property.kind === "relation") {
+					continue
+				} else {
+					signalInvalidType(property)
+				}
+			}
+			if (columnNames.length == 0) {
+				throw new Error(`Model "${model.name}" has no columns`)
+			}
+		}
+
 		const db = await openDB("modeldb", 1, {
 			upgrade(db: any) {
 				// create model stores
