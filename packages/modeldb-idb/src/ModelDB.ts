@@ -31,10 +31,6 @@ export class ModelDB extends AbstractModelDB {
 				for (const relation of config.relations) {
 					db.createObjectStore(getRelationTableName(relation.source, relation.property))
 				}
-
-				// create relation stores
-
-				// create tombstone stores for mutable models?
 			},
 		})
 
