@@ -87,3 +87,32 @@ testOnModelDB("create a modeldb with a mutable model and an invalid entry", asyn
 	const error = await t.throwsAsync(async () => await db.set("user", key, { something: "test" }))
 	t.is(error!.message, `missing value for property user/name`)
 })
+
+testOnModelDB("create a modeldb with a mutable model, test deleting entries", async (t, modelDBConstructor) => {
+	// @ts-ignore
+	const models = {
+		user: {
+			name: "string",
+			$type: "mutable",
+		},
+	} as ModelsInit
+	const db = await modelDBConstructor(models, { resolve: (a: any, b: any) => (a > b ? a : b) })
+
+	const key = "modelKey"
+
+	// add a user
+	await db.set("user", key, { name: "initialValue" }, { version: "A" })
+	// the user should have been created with the initial value
+	t.deepEqual(await toArray(db.iterate("user")), [{ name: "initialValue" }])
+
+	// delete the user entry
+	await db.delete("user", key, { version: "C" })
+
+	// the user should have been deleted
+	t.deepEqual(await toArray(db.iterate("user")), [])
+
+	// try to set a new value with a lower version
+	await db.set("user", key, { name: "staleValue" }, { version: "B" })
+	// the set operation should not have been applied, because the version was lower
+	t.deepEqual(await toArray(db.iterate("user")), [])
+})
