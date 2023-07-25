@@ -1,7 +1,13 @@
 import { AbstractModelDB, Config, ModelsInit, parseConfig } from "@canvas-js/modeldb-interface"
 import { IDBPDatabase, openDB } from "idb"
 import { signalInvalidType } from "./utils.js"
-import { createIdbImmutableModelAPI, createIdbMutableModelAPI } from "./api.js"
+import {
+	createIdbImmutableModelAPI,
+	createIdbMutableModelAPI,
+	getRecordTableName,
+	getRelationTableName,
+	getTombstoneTableName,
+} from "./api.js"
 
 export interface ModelDBOptions {
 	dkLen?: number
@@ -16,7 +22,14 @@ export class ModelDB extends AbstractModelDB {
 			upgrade(db: any) {
 				// create model stores
 				for (const model of config.models) {
-					db.createObjectStore(model.name)
+					db.createObjectStore(getRecordTableName(model.name))
+					if (model.kind == "mutable") {
+						db.createObjectStore(getTombstoneTableName(model.name))
+					}
+				}
+
+				for (const relation of config.relations) {
+					db.createObjectStore(getRelationTableName(relation.source, relation.property))
 				}
 
 				// create relation stores
