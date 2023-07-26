@@ -34,15 +34,15 @@ testOnModelDB("create modeldb with a model with valid fields", (t, modelDBConstr
 	t.pass()
 })
 
-testOnModelDB("create modeldb with a model with invalid fields should fail", (t, modelDBConstructor) => {
+testOnModelDB("create modeldb with a model with invalid fields should fail", async (t, modelDBConstructor) => {
 	// @ts-ignore
 	const models = {
 		room: {
 			name: "unsupported",
 		},
 	} as ModelsInit
-	const error = t.throws(() => {
-		modelDBConstructor(models)
+	const error = await t.throwsAsync(async () => {
+		await modelDBConstructor(models)
 	})
 
 	t.is(error!.message, `invalid property`)
