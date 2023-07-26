@@ -1,9 +1,8 @@
 import "fake-indexeddb/auto"
 import test from "ava"
 import { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb-interface"
-import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
+import { ModelDB as ModelDBSqlite, ModelDBOptions } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
-import { ModelDBOptions } from "packages/modeldb-sqlite/lib/ModelDB.js"
 
 export const testOnModelDB = (
 	name: string,
