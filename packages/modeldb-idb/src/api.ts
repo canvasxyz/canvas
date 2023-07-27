@@ -27,8 +27,8 @@ function prepareTombstoneAPI(db: IDBPDatabase, model: Model): TombstoneAPI {
 	const tombstoneTableName = getTombstoneTableName(model.name)
 
 	return {
-		select: ({ _key }) => db.get(tombstoneTableName, _key),
-		delete: ({ _key }) => db.delete(tombstoneTableName, _key),
+		select: async ({ _key }) => (await db.get(tombstoneTableName, _key)) || null,
+		delete: async ({ _key }) => db.delete(tombstoneTableName, _key),
 		insert: async ({ _key, _metadata, _version }) => {
 			await db.put(tombstoneTableName, { _key, _metadata, _version }, _key)
 		},
@@ -100,7 +100,8 @@ function prepareMutableRecordAPI(db: IDBPDatabase, model: Model): MutableRecordA
 		delete: async ({ _key }) => db.delete(recordTableName, _key),
 		selectVersion: async ({ _key }) => {
 			const record = await db.get(recordTableName, _key)
-			return record ? { _version: record._version } : null
+			const _version = record ? record._version : null
+			return { _version }
 		},
 	}
 }

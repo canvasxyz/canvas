@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from "uuid"
 import "fake-indexeddb/auto"
 import test from "ava"
 import { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb-interface"
@@ -14,5 +15,8 @@ export const testOnModelDB = (
 	const macro = test.macro(testFn)
 
 	test(`Sqlite - ${name}`, macro, (models, options) => new ModelDBSqlite(":memory:", models, options))
-	test(`IDB - ${name}`, macro, (models, options) => ModelDBIdb.initialize(models, options))
+	test(`IDB - ${name}`, macro, async (models, options) => {
+		const databaseName = uuidv4()
+		return ModelDBIdb.initialize(models, { databaseName, ...options })
+	})
 }

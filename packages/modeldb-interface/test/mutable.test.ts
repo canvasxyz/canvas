@@ -18,7 +18,7 @@ testOnModelDB("create a modeldb with a mutable model and a valid entry", async (
 	} as ModelsInit
 	const db = await modelDBConstructor(models)
 
-	const key = "modelKey2"
+	const key = "modelKey"
 
 	// add a user
 	await db.set("user", key, { name: "test" })
@@ -54,7 +54,7 @@ testOnModelDB("create a modeldb with a mutable model and a resolve function", as
 	} as ModelsInit
 	const db = await modelDBConstructor(models, { resolve: (a: any, b: any) => (a > b ? a : b) })
 
-	const key = "modelKey"
+	const key = "modelKey1"
 
 	// add a user
 	await db.set("user", key, { name: "initialValue" }, { version: "A" })
@@ -82,7 +82,8 @@ testOnModelDB("create a modeldb with a mutable model and an invalid entry", asyn
 	} as ModelsInit
 	const db = await modelDBConstructor(models)
 
-	const key = "modelKey2"
+	const key = "modelKey3"
+
 	// add a user
 	const error = await t.throwsAsync(async () => await db.set("user", key, { something: "test" }))
 	t.is(error!.message, `missing value for property user/name`)
@@ -98,7 +99,7 @@ testOnModelDB("create a modeldb with a mutable model, test deleting entries", as
 	} as ModelsInit
 	const db = await modelDBConstructor(models, { resolve: (a: any, b: any) => (a > b ? a : b) })
 
-	const key = "modelKey"
+	const key = "modelKey4"
 
 	// add a user
 	await db.set("user", key, { name: "initialValue" }, { version: "A" })

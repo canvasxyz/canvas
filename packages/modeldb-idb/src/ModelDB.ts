@@ -12,6 +12,7 @@ import {
 export interface ModelDBOptions {
 	dkLen?: number
 	resolve?: (versionA: string, versionB: string) => string
+	databaseName?: string
 }
 
 export class ModelDB extends AbstractModelDB {
@@ -34,7 +35,7 @@ export class ModelDB extends AbstractModelDB {
 			}
 		}
 
-		const db = await openDB("modeldb", 1, {
+		const db = await openDB(options?.databaseName || "modeldb", 1, {
 			upgrade(db: any) {
 				// create model stores
 				for (const model of config.models) {
