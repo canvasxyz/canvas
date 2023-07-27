@@ -14,14 +14,13 @@ import { CustomEvent, EventEmitter } from "@libp2p/interfaces/events"
 import { Logger, logger } from "@libp2p/logger"
 import { createTopology } from "@libp2p/topology"
 
-import type { Source, Target, KeyValueStore } from "@canvas-js/okra"
+import type { Source, Target, KeyValueStore, Node } from "@canvas-js/okra"
 
 import { Driver, Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
 import { CacheMap, assert, protocolPrefix, shuffle, sortPair, wait } from "./utils.js"
-import { Codec, Consumer, Store, StoreEvents, StoreInit } from "./interface.js"
+import { Encoding, Consumer, Store, StoreEvents, StoreInit } from "./interface.js"
 import { second } from "./constants.js"
-import { getDefaultCodec } from "./codec.js"
-import { Node } from "@canvas-js/okra-node"
+import { createDefaultEncoding } from "./encoding.js"
 
 export abstract class AbstractStore<T> extends EventEmitter<StoreEvents> implements Store<T> {
 	public static MIN_CONNECTIONS = 2
@@ -34,7 +33,7 @@ export abstract class AbstractStore<T> extends EventEmitter<StoreEvents> impleme
 	public static SYNC_RETRY_LIMIT = 5
 
 	public readonly libp2p: Libp2p<{ pubsub: PubSub }>
-	private readonly codec: Codec<T>
+	private readonly codec: Encoding<T>
 
 	private readonly minConnections: number
 	private readonly maxConnections: number
@@ -66,7 +65,7 @@ export abstract class AbstractStore<T> extends EventEmitter<StoreEvents> impleme
 		this.libp2p = init.libp2p
 		this.topic = protocolPrefix + init.topic
 		this.protocol = protocolPrefix + init.topic + "/sync"
-		this.codec = init.codec ?? getDefaultCodec<T>()
+		this.codec = init.encoding ?? createDefaultEncoding<T>()
 
 		assert(this.topic.startsWith(protocolPrefix))
 		assert(this.protocol.startsWith(protocolPrefix))

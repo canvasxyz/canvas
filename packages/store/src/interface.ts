@@ -25,10 +25,11 @@ export interface Store<T = unknown> extends EventEmitter<StoreEvents> {
 	get(key: Uint8Array): Promise<T | null>
 }
 
-export interface Codec<T> {
-	keyToString: (key: Uint8Array) => string
-	encode: (event: T) => [key: Uint8Array, value: Uint8Array]
-	decode: (value: Uint8Array) => [key: Uint8Array, event: T]
+export interface StoreInit<T> extends StoreOptions {
+	libp2p: Libp2p<{ pubsub: PubSub }>
+	topic: string
+	encoding?: Encoding<T>
+	validate?: (event: T) => void | Promise<void>
 }
 
 export interface StoreOptions {
@@ -38,8 +39,8 @@ export interface StoreOptions {
 	maxOutboundStreams?: number
 }
 
-export interface StoreInit<T> extends StoreOptions {
-	libp2p: Libp2p<{ pubsub: PubSub }>
-	topic: string
-	codec?: Codec<T>
+export interface Encoding<T> {
+	keyToString: (key: Uint8Array) => string
+	encode: (event: T) => [key: Uint8Array, value: Uint8Array]
+	decode: (value: Uint8Array) => [key: Uint8Array, event: T]
 }
