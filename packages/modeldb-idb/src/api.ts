@@ -4,10 +4,12 @@ import {
 	Model,
 	MutableModelAPI,
 	MutableRecordAPI,
+	RecordValue,
 	RelationAPI,
 	TombstoneAPI,
 } from "@canvas-js/modeldb-interface"
 import { IDBPDatabase } from "idb"
+import { decodeRecord, encodeRecord } from "./encoding.js"
 
 export const getRecordTableName = (modelName: string) => `record/${modelName}`
 export const getTombstoneTableName = (modelName: string) => `tombstone/${modelName}`
@@ -63,19 +65,27 @@ function prepareMutableRecordAPI(db: IDBPDatabase, model: Model): MutableRecordA
 	const recordTableName = getRecordTableName(model.name)
 
 	return {
-		select: async ({ _key }) => db.get(recordTableName, _key),
-		iterateSync: function* () {},
+		select: async ({ _key }) => {
+			const record = await db.get(recordTableName, _key)
+			return record ? decodeRecord(model, record) : null
+		},
 		iterate: async function* () {
-			for (const x in db.getAll(recordTableName)) {
-				yield x as any
+			for (const value of await db.getAll(recordTableName)) {
+				const decodedRecord = decodeRecord(model, value)
+				if (decodedRecord) yield decodedRecord
 			}
 		},
-		selectAll: async () => db.getAll(recordTableName),
-		insert: async ({ _key, _metadata, _version }) => {
-			db.put(recordTableName, { _key, _metadata, _version }, _key)
+		selectAll: async () => {
+			const records = await db.getAll(recordTableName)
+			return records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
 		},
-		update: async ({ _key, _metadata, _version }) => {
-			db.put(recordTableName, { _key, _metadata, _version }, _key)
+		insert: async ({ _key, _metadata, _version, value }) => {
+			const record = encodeRecord(model, value)
+			db.put(recordTableName, { _key, _metadata, _version, ...record }, _key)
+		},
+		update: async ({ _key, _metadata, _version, value }) => {
+			const record = encodeRecord(model, value)
+			db.put(recordTableName, { _key, _metadata, _version, ...record }, _key)
 		},
 		delete: async ({ _key }) => db.delete(recordTableName, _key),
 		selectVersion: async ({ _key }) => {
@@ -89,18 +99,27 @@ function prepareImmutableRecordAPI(db: IDBPDatabase, model: Model): ImmutableRec
 	const recordTableName = getRecordTableName(model.name)
 
 	return {
-		select: async ({ _key }) => db.get(recordTableName, _key),
+		select: async ({ _key }) => {
+			const record = await db.get(recordTableName, _key)
+			return record ? decodeRecord(model, record) : null
+		},
 		iterate: async function* () {
 			for (const value of await db.getAll(recordTableName)) {
-				yield value
+				const decodedRecord = decodeRecord(model, value)
+				if (decodedRecord) yield decodedRecord
 			}
 		},
-		selectAll: async () => db.getAll(recordTableName),
-		insert: async ({ _key, _metadata }) => {
-			db.put(recordTableName, { _key, _metadata })
+		selectAll: async () => {
+			const records = await db.getAll(recordTableName)
+			return records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
 		},
-		update: async ({ _key, _metadata, _version }) => {
-			db.put(recordTableName, { _key, _metadata, _version })
+		insert: async ({ _key, _metadata, value }) => {
+			const record = encodeRecord(model, value)
+			await db.put(recordTableName, { _key, _metadata, ...record }, _key)
+		},
+		update: async ({ _key, _metadata, _version, value }) => {
+			const record = encodeRecord(model, value)
+			await db.put(recordTableName, { _key, _metadata, _version, ...record })
 		},
 		delete: async ({ _key }) => db.delete(recordTableName, _key),
 	}

@@ -2,8 +2,8 @@
 import { ModelsInit } from "@canvas-js/modeldb-interface"
 import { testOnModelDB } from "./utils.js"
 
-testOnModelDB("create modeldb with no models", (t, modelDBConstructor) => {
-	modelDBConstructor({}, { dkLen: 16 })
+testOnModelDB("create modeldb with no models", async (t, modelDBConstructor) => {
+	await modelDBConstructor({}, { dkLen: 16 })
 
 	t.pass()
 })
@@ -19,7 +19,7 @@ testOnModelDB("create modeldb with an empty model should fail", async (t, modelD
 	t.is(error!.message, `Model "room" has no columns`)
 })
 
-testOnModelDB("create modeldb with a model with valid fields", (t, modelDBConstructor) => {
+testOnModelDB("create modeldb with a model with valid fields", async (t, modelDBConstructor) => {
 	// @ts-ignore
 	const models = {
 		room: {
@@ -29,7 +29,7 @@ testOnModelDB("create modeldb with a model with valid fields", (t, modelDBConstr
 			$type: "immutable",
 		},
 	} as ModelsInit
-	modelDBConstructor(models)
+	await modelDBConstructor(models)
 
 	t.pass()
 })

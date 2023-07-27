@@ -13,6 +13,7 @@ import {
 } from "@canvas-js/modeldb-interface"
 import { getRecordTableName, getRelationTableName, getTombstoneTableName } from "./initialize.js"
 import { Method, Query, iteratorToAsyncIterableIterator, signalInvalidType, zip } from "./utils.js"
+import { decodeRecord, encodeRecordParams } from "./encoding.js"
 
 // The code here is designed so the SQL queries have type annotations alongside them.
 // Operations are organized into "APIs", one for each underlying SQLite table.
@@ -100,17 +101,24 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model): MutableReco
 	return {
 		params,
 		selectVersion: async (args) => selectVersion.get(args),
-		iterate: (args) => {
-			const r = [...selectAll.iterate(args)]
-			console.log(r)
-
-			return iteratorToAsyncIterableIterator(selectAll.iterate(args))
+		iterate: async function* (args) {
+			for (let record of selectAll.iterate(args)) {
+				yield decodeRecord(model, record)
+			}
 		},
-		iterateSync: (args) => selectAll.iterate(args),
-		selectAll: async (args) => selectAll.all(args),
-		select: async (args) => selectRecord.get(args),
-		insert: async (args) => insertRecord.run(args),
-		update: async (args) => updateRecord.run(args),
+		selectAll: async (args) => selectAll.all(args).map((record) => decodeRecord(model, record)),
+		select: async (args) => {
+			const record = selectRecord.get(args)
+			return record === null ? null : decodeRecord(model, record)
+		},
+		insert: async (args) => {
+			const encodedParams = encodeRecordParams(model, args.value, params || {})
+			insertRecord.run({ _key: args._key, _metadata: args._metadata, _version: args._version, ...encodedParams })
+		},
+		update: async (args) => {
+			const encodedParams = encodeRecordParams(model, args.value, params || {})
+			updateRecord.run({ _key: args._key, _metadata: args._metadata, _version: args._version, ...encodedParams })
+		},
 		delete: async (args) => deleteRecord.run(args),
 	}
 }
@@ -163,11 +171,24 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model): Immutable
 
 	return {
 		params,
-		iterate: (args) => iteratorToAsyncIterableIterator(selectAll.iterate(args)),
-		selectAll: async (args) => selectAll.all(args),
-		select: async (args) => selectRecord.get(args),
-		insert: async (args) => insertRecord.run(args),
-		update: async (args) => updateRecord.run(args),
+		iterate: async function* (args) {
+			for (let record of selectAll.iterate(args)) {
+				yield decodeRecord(model, record)
+			}
+		},
+		selectAll: async (args) => selectAll.all(args).map((record) => decodeRecord(model, record)),
+		select: async (args) => {
+			const record = selectRecord.get(args)
+			return record === null ? null : decodeRecord(model, record)
+		},
+		insert: async (args) => {
+			const encodedParams = encodeRecordParams(model, args.value, params || {})
+			insertRecord.run({ _key: args._key, _metadata: args._metadata, ...encodedParams })
+		},
+		update: async (args) => {
+			const encodedParams = encodeRecordParams(model, args.value, params || {})
+			updateRecord.run({ _key: args._key, _metadata: args._metadata, _version: args._version, ...encodedParams })
+		},
 		delete: async (args) => deleteRecord.run(args),
 	}
 }

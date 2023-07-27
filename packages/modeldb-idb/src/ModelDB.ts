@@ -18,8 +18,6 @@ export class ModelDB extends AbstractModelDB {
 	public static async initialize(models: ModelsInit, options?: ModelDBOptions) {
 		const config = parseConfig(models)
 
-		console.log(config)
-
 		for (const model of config.models) {
 			const columnNames: string[] = []
 			for (const [i, property] of model.properties.entries()) {

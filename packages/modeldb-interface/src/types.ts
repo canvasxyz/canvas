@@ -72,21 +72,35 @@ export type RelationAPI = {
 export type MutableRecordAPI = {
 	params?: Record<string, string>
 	selectVersion: (params: { _key: string }) => Promise<{ _version: string | null } | null>
-	iterate: (params: {}) => AsyncIterable<RecordValue>
-	iterateSync: (params: {}) => IterableIterator<RecordValue>
-	selectAll: (params: {}) => Promise<RecordValue[]>
-	select: (params: { _key: string }) => Promise<RecordValue | null>
-	insert: (params: { _key: string; _version: string | null; _metadata: string | null }) => Promise<void>
-	update: (params: { _key: string; _version: string | null; _metadata: string | null }) => Promise<void>
+	iterate: (params: {}) => AsyncIterable<ModelValue>
+	select: (params: { _key: string }) => Promise<ModelValue | null>
+	selectAll: (params: {}) => Promise<ModelValue[]>
+	insert: (params: {
+		_key: string
+		_version: string | null
+		_metadata: string | null
+		value: ModelValue
+	}) => Promise<void>
+	update: (params: {
+		_key: string
+		_version: string | null
+		_metadata: string | null
+		value: ModelValue
+	}) => Promise<void>
 	delete: (params: { _key: string }) => Promise<void>
 }
 
 export type ImmutableRecordAPI = {
 	params?: Record<string, string>
-	iterate: (params: {}) => AsyncIterable<RecordValue>
-	select: (params: { _key: string }) => Promise<RecordValue | null>
-	selectAll: (params: {}) => Promise<RecordValue[]>
-	insert: (params: { _key: string; _metadata: string | null }) => Promise<void>
-	update: (params: { _key: string; _metadata: string | null; _version: string | null }) => Promise<void>
+	iterate: (params: {}) => AsyncIterable<ModelValue>
+	select: (params: { _key: string }) => Promise<ModelValue | null>
+	selectAll: (params: {}) => Promise<ModelValue[]>
+	insert: (params: { _key: string; _metadata: string | null; value: ModelValue }) => Promise<void>
+	update: (params: {
+		_key: string
+		_metadata: string | null
+		_version: string | null
+		value: ModelValue
+	}) => Promise<void>
 	delete: (params: { _key: string }) => Promise<void>
 }
