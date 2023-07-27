@@ -84,16 +84,16 @@ import { createOrderedEncoding } from "@canvas-js/store"
 type MyEvent = { timestamp: number; ... }
 
 const store = await openStore<MyEvent>({
-	libp2p: libp2p,
-	topic: "com.example.app",
-	encoding: createOrderedEncoding({
-		prefixByteLength: 6,
-		getPrefix: (event) => {
-			const key = Buffer.alloc(6)
-			key.writeUintBE(event.timestamp, 0, 6)
-			return key
-		},
-	}),
+  libp2p: libp2p,
+  topic: "com.example.app",
+  encoding: createOrderedEncoding({
+    prefixByteLength: 6,
+    getPrefix: (event) => {
+      const key = Buffer.alloc(6)
+      key.writeUintBE(event.timestamp, 0, 6)
+      return key
+    },
+  }),
 })
 
 // now events are sorted by [timestamp, hash] instead of just [hash]
@@ -126,7 +126,7 @@ import { openStore } from "@canvas-js/store/node"
 const libp2p = await createLibp2p({ ... })
 
 const store = await openStore("./data", {
-	topic: "com.example.app",
+  topic: "com.example.app",
   libp2p: libp2p,
 })
 
@@ -144,7 +144,7 @@ import { openStore } from "@canvas-js/store/browser"
 const libp2p = await createLibp2p({ ... })
 
 const store = await openStore("events", {
-	topic: "com.example.app",
+  topic: "com.example.app",
   libp2p: libp2p
 })
 
@@ -162,7 +162,7 @@ import { openStore } from "@canvas-js/store/memory"
 const libp2p = await createLibp2p({ ... })
 
 const store = await openStore({
-	topic: "com.example.app",
+  topic: "com.example.app",
   libp2p: libp2p
 })
 
