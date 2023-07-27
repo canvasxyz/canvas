@@ -2,6 +2,8 @@
 
 `@canvas-js/store` is a **persistent replicated event log** built on [Okra](https://github.com/canvasxyz/okra-js) and [libp2p](https://github.com/libp2p/js-libp2p). Stores have a strong **reliable delivery** guarantee, although events may be delivered in any order, and in rare cases more than once.
 
+## Overview
+
 ```ts
 import type { Libp2p } from "@libp2p/interface-libp2p"
 import type { PubSub } from "@libp2p/interface-pubsub"
@@ -11,12 +13,6 @@ import type { Node } from "@canvas-js/okra"
 type Consumer<T> = (key: Uint8Array, event: T) => void | Promise<void>
 
 type StoreEvents = { sync: CustomEvent<{ peerId: PeerId; root: Node }> }
-
-interface StoreInit<T> extends StoreOptions {
-	libp2p: Libp2p<{ pubsub: PubSub }>
-	topic: string
-	codec?: Codec<T>
-}
 
 interface Store<T = unknown> extends EventEmitter<StoreEvents> {
 	topic: string
@@ -32,8 +28,6 @@ interface Store<T = unknown> extends EventEmitter<StoreEvents> {
 	get(key: Uint8Array): Promise<T | null>
 }
 ```
-
-## Overview
 
 ### Delivery
 
