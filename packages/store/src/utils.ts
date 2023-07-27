@@ -6,6 +6,8 @@ import { lessThan } from "@canvas-js/okra"
 
 import { anySignal } from "any-signal"
 
+export const protocolPrefix = "/canvas/v0/store/"
+
 export const keyPattern = /^(\/canvas\/v0\/store\/[a-zA-Z0-9:.-]+)\/peers$/
 
 export function sortPair(a: PeerId, b: PeerId): [x: PeerId, y: PeerId] {
@@ -75,11 +77,3 @@ export function shuffle<T>(array: T[]) {
 		;[array[i], array[j]] = [array[j], array[i]]
 	}
 }
-
-// const timestampBuffer = new ArrayBuffer(8)
-// const timestampView = new DataView(timestampBuffer)
-
-// export function encodeTimestamp(timestamp: number): Uint8Array {
-// 	timestampView.setBigUint64(0, BigInt(timestamp))
-// 	return new Uint8Array(timestampBuffer, 2, 6)
-// }

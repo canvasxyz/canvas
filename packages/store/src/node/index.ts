@@ -1,25 +1,21 @@
-import type { Libp2p } from "@libp2p/interface-libp2p"
-import type { PubSub } from "@libp2p/interface-pubsub"
 import type { PeerId } from "@libp2p/interface-peer-id"
 
 import type { KeyValueStore, Source, Target } from "@canvas-js/okra"
-import { Tree } from "@canvas-js/okra-node"
+import { Node, Tree } from "@canvas-js/okra-node"
 
-import { AbstractStore, Store, StoreInit } from "../store.js"
+import { AbstractStore } from "../AbstractStore.js"
+import { Store, StoreInit } from "../interface.js"
 
-class NodeStore<T, I = T> extends AbstractStore<T, I> {
-	public static async open<T, I = T>(
-		libp2p: Libp2p<{ pubsub: PubSub }>,
-		{ path, ...init }: StoreInit<T, I> & { path: string }
-	): Promise<NodeStore<T, I>> {
+export class NodeStore<T> extends AbstractStore<T> {
+	public static async open<T>(path: string, init: StoreInit<T>): Promise<NodeStore<T>> {
 		const tree = new Tree(path)
-		const store = new NodeStore<T, I>(libp2p, init, tree)
+		const store = new NodeStore<T>(tree, init)
 		store.controller.signal.addEventListener("abort", () => tree.close())
 		return store
 	}
 
-	public constructor(libp2p: Libp2p<{ pubsub: PubSub }>, init: StoreInit<T, I>, private readonly tree: Tree) {
-		super(libp2p, init)
+	public constructor(private readonly tree: Tree, init: StoreInit<T>) {
+		super(init)
 	}
 
 	protected async read(targetPeerId: PeerId, callback: (txn: Source) => Promise<void>) {
@@ -29,12 +25,14 @@ class NodeStore<T, I = T> extends AbstractStore<T, I> {
 	protected async write(
 		sourcePeerId: PeerId,
 		callback: (txn: Target & Pick<KeyValueStore, "get" | "set" | "delete">) => Promise<void>
-	) {
-		await this.tree.write((txn) => callback(txn))
+	): Promise<{ root: Node }> {
+		const root = await this.tree.write(async (txn) => {
+			await callback(txn)
+			return txn.getRoot()
+		})
+
+		return { root }
 	}
 }
 
-export const openStore = <T>(
-	libp2p: Libp2p<{ pubsub: PubSub }>,
-	init: StoreInit<T> & { path: string }
-): Promise<Store<T>> => NodeStore.open(libp2p, init)
+export const openStore = <T>(path: string, init: StoreInit<T>): Promise<Store<T>> => NodeStore.open(path, init)
