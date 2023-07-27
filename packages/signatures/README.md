@@ -18,7 +18,7 @@ type Signed<T> = {
 
 The signature signs the CID, which carries metadata about the encoding format and hashing algorithm, plus the hash of the encoded value itself. This allows `Signed` values to be redistributed via different codecs without breaking signature validation.
 
-`ed25519` and `secp256k1` signatures are supported.
+`ed25519` and `secp256k1` signatures are supported, using the audited [`@noble/curves`](https://github.com/paulmillr/noble-curves) library. `secp256k1` public keys are always compressed.
 
 Only the `dag-json` and `dag-cbor` IPLD codecs are included by default, but others can be used by implementing the `Codec` interface. Similarly, only the `sha2-256` multihash digest is included by default, but other can be used by implementing the `Digest` interface.
 
@@ -29,8 +29,8 @@ Only the `dag-json` and `dag-cbor` IPLD codecs are included by default, but othe
 ```ts
 declare function createSignedValue<T extends IPLDMap>(
 	type: "ed25519" | "secp256k1",
-	value: T,
 	privateKey: Uint8Array,
+	value: T,
 	options: { codec?: string | Codec; digest?: string | Digest } = {}
 ): Signed<T>
 ```

@@ -1,7 +1,9 @@
-import { sha256 } from "@noble/hashes/sha256"
-import { hmac } from "@noble/hashes/hmac"
-import * as secp256k1 from "@noble/secp256k1"
-import * as ed25519 from "@noble/ed25519"
+// import { sha256 } from "@noble/hashes/sha256"
+// import { sha512 } from "@noble/hashes/sha512"
+// import { hmac } from "@noble/hashes/hmac"
+
+import { secp256k1 } from "@noble/curves/secp256k1"
+import { ed25519 } from "@noble/curves/ed25519"
 
 import { CID } from "multiformats/cid"
 import { create as createDigest } from "multiformats/hashes/digest"
@@ -10,7 +12,8 @@ import { Codec, codecs, getCodec } from "./codecs.js"
 import { Digest, digests, getDigest } from "./digests.js"
 import { assert, signalInvalidType } from "./utils.js"
 
-secp256k1.etc.hmacSha256Sync = (k, ...m) => hmac(sha256, k, secp256k1.etc.concatBytes(...m))
+// secp256k1.etc.hmacSha256Sync = (k, ...m) => hmac(sha256, k, secp256k1.etc.concatBytes(...m))
+// ed25519.etc.sha512Sync = (...m) => sha512(ed25519.etc.concatBytes(...m))
 
 export type Signed<T> = {
 	type: "ed25519" | "secp256k1"
@@ -46,8 +49,8 @@ export function verifySignedValue<T>(
 
 export function createSignedValue<T>(
 	type: "ed25519" | "secp256k1",
-	value: T,
 	privateKey: Uint8Array,
+	value: T,
 	options: { codec?: string | Codec; digest?: string | Digest } = {}
 ): Signed<T> {
 	const [codec, digest] = [getCodec(options), getDigest(options)]
