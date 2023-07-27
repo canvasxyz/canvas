@@ -42,10 +42,20 @@ function prepareRelationAPI(db: IDBPDatabase, modelName: string, propertyName: s
 	const tableName = getRelationTableName(modelName, propertyName)
 
 	return {
-		selectAll: ({ _source }) => db.getAll(tableName, _source),
-		deleteAll: ({ _source }) => db.delete(tableName, _source),
+		selectAll: async ({ _source }) => {
+			const transaction = db.transaction(tableName, "readonly")
+			const objectStore = transaction.objectStore(tableName)
+			return await objectStore.index("_source").getAll(_source)
+		},
+		deleteAll: async ({ _source }) => {
+			const transaction = db.transaction(tableName, "readwrite")
+			const objectStore = transaction.objectStore(tableName)
+			const relations = await objectStore.index("_source").getAll(_source)
+			await Promise.all(relations.map((relation) => relation.delete()))
+			await transaction.done
+		},
 		create: async ({ _source, _target }) => {
-			db.put(tableName, { _source, _target })
+			await db.put(tableName, { _source, _target }, `${_source}/${_target}`)
 		},
 	}
 }

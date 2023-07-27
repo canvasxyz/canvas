@@ -45,7 +45,8 @@ export class ModelDB extends AbstractModelDB {
 				}
 
 				for (const relation of config.relations) {
-					db.createObjectStore(getRelationTableName(relation.source, relation.property))
+					const relationObjectStore = db.createObjectStore(getRelationTableName(relation.source, relation.property))
+					relationObjectStore.createIndex("_source", "_source")
 				}
 			},
 		})
