@@ -25,16 +25,6 @@ test("sync empty memory stores", async (t) => {
 		})
 	).then((entries) => Object.fromEntries(entries))
 
-	// // connect
-	// await Promise.all([
-	// 	...Object.values(peers).map((peer) => peer.start()),
-	// 	...Object.values(peers).map((peer) => {
-	// 		return new Promise<void>((resolve, reject) => {
-	// 			peer.addEventListener("peer:connect", ({ detail: peerId }) => resolve())
-	// 		})
-	// 	}),
-	// ])
-
 	const syncPromises: Record<string, DeferredPromise<void>> = {}
 
 	for (const store of Object.values(stores)) {
