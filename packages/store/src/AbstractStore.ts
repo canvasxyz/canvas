@@ -9,54 +9,31 @@ import { pipe } from "it-pipe"
 
 import PQueue from "p-queue"
 import { equals } from "uint8arrays"
-import { base58btc } from "multiformats/bases/base58"
+import { CustomEvent, EventEmitter } from "@libp2p/interfaces/events"
 
 import { Logger, logger } from "@libp2p/logger"
 import { createTopology } from "@libp2p/topology"
 
-import type { Source, Target, KeyValueStore } from "@canvas-js/okra"
+import type { Source, Target, KeyValueStore, Node } from "@canvas-js/okra"
 
 import { Driver, Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
-import { CacheMap, assert, shuffle, sortPair, wait } from "./utils.js"
+import { CacheMap, assert, protocolPrefix, shuffle, sortPair, wait } from "./utils.js"
+import { Encoding, Consumer, Store, StoreEvents, StoreInit } from "./interface.js"
 import { second } from "./constants.js"
+import { createDefaultEncoding } from "./encoding.js"
 
-type Awaitable<T> = T | Promise<T>
-
-export interface StoreInit<T, I = void> {
-	topic: string
-
-	getKey: (value: T, bytes: Uint8Array) => Uint8Array
-	encode: (value: T, ctx: I) => Awaitable<Uint8Array>
-	decode: (bytes: Uint8Array) => Awaitable<T>
-
-	minConnections?: number
-	maxConnections?: number
-	maxInboundStreams?: number
-	maxOutboundStreams?: number
-}
-
-export interface Store<T, I = void> {
-	start(): Promise<void>
-	stop(): Promise<void>
-
-	addListener(callback: (id: string, event: T) => void, options?: { replay?: boolean }): void
-	removeListener(callback: (id: string, event: T) => void): void
-
-	publish(value: T, context: I): Promise<{ id: string; recipients: number }>
-	get(id: string): Promise<T | null>
-}
-
-export const protocolPrefix = "/canvas/v0/store/"
-
-export abstract class AbstractStore<T, I> implements Store<T, I> {
+export abstract class AbstractStore<T> extends EventEmitter<StoreEvents> implements Store<T> {
 	public static MIN_CONNECTIONS = 2
 	public static MAX_CONNECTIONS = 10
 	public static MAX_INBOUND_STREAMS = 64
 	public static MAX_OUTBOUND_STREAMS = 64
 	public static MAX_SYNC_QUEUE_SIZE = 8
 	public static SYNC_COOLDOWN_PERIOD = 20 * second
-	public static SYNC_RETRY_INTERVAL = 3 * second
+	public static SYNC_RETRY_INTERVAL = 3 * second // this is multiplied by Math.random()
 	public static SYNC_RETRY_LIMIT = 5
+
+	public readonly libp2p: Libp2p<{ pubsub: PubSub }>
+	private readonly codec: Encoding<T>
 
 	private readonly minConnections: number
 	private readonly maxConnections: number
@@ -66,7 +43,7 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 	private readonly syncQueue = new PQueue({ concurrency: 1 })
 	private readonly syncQueuePeers = new Set<string>()
 	private readonly syncHistory = new CacheMap<string, number>(AbstractStore.MAX_SYNC_QUEUE_SIZE)
-	private readonly listeners = new Set<(id: string, event: T) => void>()
+	private readonly consumers = new Set<Consumer<T>>()
 
 	protected readonly log: Logger
 	protected readonly controller = new AbortController()
@@ -80,11 +57,15 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 	protected abstract write(
 		sourcePeerId: PeerId | null,
 		callback: (txn: Target & Pick<KeyValueStore, "get" | "set" | "delete">) => Promise<void>
-	): Promise<void>
+	): Promise<{ root: Node }>
 
-	constructor(private readonly libp2p: Libp2p<{ pubsub: PubSub }>, private readonly init: StoreInit<T, I>) {
+	constructor(init: StoreInit<T>) {
+		super()
+
+		this.libp2p = init.libp2p
 		this.topic = protocolPrefix + init.topic
 		this.protocol = protocolPrefix + init.topic + "/sync"
+		this.codec = init.encoding ?? createDefaultEncoding<T>()
 
 		assert(this.topic.startsWith(protocolPrefix))
 		assert(this.protocol.startsWith(protocolPrefix))
@@ -112,6 +93,11 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 
 	public async start(): Promise<void> {
 		this.log("starting")
+
+		if (!this.libp2p.isStarted()) {
+			await this.libp2p.start()
+		}
+
 		this.libp2p.services.pubsub.addEventListener("message", this.handleMessage)
 		this.libp2p.services.pubsub.subscribe(this.topic)
 
@@ -136,57 +122,44 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 		}
 	}
 
-	private async parseEntry(key: Uint8Array, bytes: Uint8Array): Promise<T> {
-		const value = await this.init.decode(bytes)
-		assert(equals(key, this.init.getKey(value, bytes)), "invalid event: invalid key")
-		return value
-	}
+	public async publish(event: T): Promise<{ key: Uint8Array; recipients: number }> {
+		const [key, value] = this.codec.encode(event)
 
-	public async publish(value: T, context: I): Promise<{ id: string; recipients: number }> {
-		const bytes = await this.init.encode(value, context)
-		const key = this.init.getKey(value, bytes)
-		const id = base58btc.baseEncode(key)
+		await this.apply(key, event)
 
-		await this.write(null, async (txn) => txn.set(key, bytes))
-
-		this.dispatch(id, value)
+		await this.write(null, async (txn) => txn.set(key, value))
 
 		try {
-			const { recipients } = await this.libp2p.services.pubsub.publish(this.topic, bytes)
+			const { recipients } = await this.libp2p.services.pubsub.publish(this.topic, value)
 			this.log("published event to %d recipients", recipients.length)
-			return { id, recipients: recipients.length }
+			return { key, recipients: recipients.length }
 		} catch (err) {
 			this.log.error("failed to publish event: %O", err)
-			return { id, recipients: 0 }
+			return { key, recipients: 0 }
 		}
 	}
 
-	public async addListener(callback: (id: string, event: T) => void, options: { replay?: boolean } = {}) {
-		this.listeners.add(callback)
+	public async attach(consumer: Consumer<T>, options: { replay?: boolean } = {}) {
+		this.consumers.add(consumer)
 
 		if (options.replay ?? false) {
 			// TODO: implement replay
 		}
 	}
 
-	public removeListener(callback: (id: string, event: T) => void) {
-		this.listeners.delete(callback)
+	public detach(consumer: Consumer<T>) {
+		this.consumers.delete(consumer)
 	}
 
-	private dispatch(id: string, event: T) {
-		for (const listener of this.listeners) {
-			try {
-				listener(id, event)
-			} catch (err) {
-				this.log.error("event listener threw an error: %O", err)
-			}
+	private async apply(key: Uint8Array, event: T) {
+		this.log("applying event %s", this.codec.keyToString(key))
+		for (const consumer of this.consumers) {
+			await consumer(key, event)
 		}
 	}
 
-	public async get(id: string): Promise<T | null> {
-		const key = base58btc.baseDecode(id)
+	public async get(key: Uint8Array): Promise<T | null> {
 		let value: Uint8Array | null = null
-
 		await this.read(null, async (txn) => {
 			const node = await txn.getNode(0, key)
 			if (node !== null && node.value !== undefined) {
@@ -194,7 +167,7 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 			}
 		})
 
-		return value && this.init.decode(value)
+		return value && this.codec.decode(value)
 	}
 
 	private handleMessage = async ({ detail: msg }: CustomEvent<Message>) => {
@@ -202,15 +175,23 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 			return
 		}
 
-		let value: T | null = null
+		let entry: [key: Uint8Array, event: T] | null = null
+
 		try {
-			value = await this.init.decode(msg.data)
+			entry = this.codec.decode(msg.data)
 		} catch (err) {
 			this.log.error("failed to decode event: %O", err)
 			return
 		}
 
-		const key = this.init.getKey(value, msg.data)
+		const [key, event] = entry
+
+		try {
+			await this.apply(key, event)
+		} catch (err) {
+			this.log.error("failed to apply event %s: %O", this.codec.keyToString(key), err)
+			return
+		}
 
 		try {
 			await this.write(null, async (txn) => txn.set(key, msg.data))
@@ -218,9 +199,6 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 		} catch (err) {
 			this.log.error("failed to commit event: %O", err)
 		}
-
-		const id = base58btc.baseEncode(key)
-		this.dispatch(id, value)
 	}
 
 	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {
@@ -253,10 +231,12 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 		}
 	}
 
-	private handleConnect = async (connection: Connection) => {
-		const peerId = connection.remotePeer
-		this.log("new connection %s to peer %p", connection.id, peerId)
+	private handleConnect = async ({ id, remotePeer }: Connection) => {
+		this.log("new connection %s to peer %p", id, remotePeer)
+		this.scheduleSync(remotePeer)
+	}
 
+	private scheduleSync(peerId: PeerId) {
 		const id = peerId.toString()
 		if (this.syncQueuePeers.has(id)) {
 			this.log("already queued sync with %p", peerId)
@@ -281,32 +261,43 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 		this.syncQueue
 			.add(async () => {
 				const { signal } = this.controller
-				let interval = Math.floor(Math.random() * AbstractStore.SYNC_RETRY_INTERVAL)
 
-				const [x, y] = sortPair(this.libp2p.peerId, peerId)
-				if (x.equals(this.libp2p.peerId)) {
-					this.log("waiting an initial %dms", interval)
-					await wait(interval, { signal: this.controller.signal })
+				{
+					// TODO: figure out whether this needs to live in the abstract class
+					// or just in the browser/memory implementations
+
+					// having one peer wait an initial randomized interval
+					// reduces the likelihood of deadlock to near-zero,
+					// but it could still happen.
+
+					// comment out this block to test the deadlock recovery process.
+					const [x, y] = sortPair(this.libp2p.peerId, peerId)
+					if (x.equals(this.libp2p.peerId)) {
+						const interval = Math.floor(Math.random() * AbstractStore.SYNC_RETRY_INTERVAL)
+						this.log("waiting an initial %dms", interval)
+						await wait(interval, { signal: this.controller.signal })
+					}
 				}
 
 				for (let n = 0; n < AbstractStore.SYNC_RETRY_LIMIT; n++) {
 					try {
-						this.log("starting sync using connection %s", connection.id)
 						await this.sync(peerId)
-						break
+						return
 					} catch (err) {
 						this.log.error("failed to sync with peer: %O", err)
 
 						if (signal.aborted) {
 							break
 						} else {
+							const interval = Math.floor(Math.random() * AbstractStore.SYNC_RETRY_INTERVAL)
 							this.log("waiting %dms before trying again (%d/%d)", interval, n + 1, AbstractStore.SYNC_RETRY_LIMIT)
 							await wait(interval, { signal: this.controller.signal })
-							interval += Math.random() * AbstractStore.SYNC_RETRY_INTERVAL
 							continue
 						}
 					}
 				}
+
+				throw new Error("exceeded sync retry limit")
 			})
 			.then(() => this.syncHistory.set(id, performance.now()))
 			.catch((err: any) => this.log.error("sync failed: %O", err))
@@ -326,33 +317,45 @@ export abstract class AbstractStore<T, I> implements Store<T, I> {
 
 		try {
 			let [successCount, failureCount] = [0, 0]
-			await this.write(peerId, async (txn) => {
+			const { root } = await this.write(peerId, async (txn) => {
 				this.log("opened read-write transaction")
 
 				const driver = new Driver(client, txn)
 				for await (const [key, value] of driver.sync()) {
-					let event: T | null = null
+					const eventId = this.codec.keyToString(key)
+					let entry: [Uint8Array, T] | null = null
+
 					try {
-						event = await this.parseEntry(key, value)
+						entry = this.codec.decode(value)
 					} catch (err) {
-						this.log.error("invalid event: %O", err)
+						this.log.error("failed to decode event %s: %O", eventId, err)
 						failureCount++
 						continue
 					}
 
-					const id = base58btc.baseEncode(key)
-					this.log("got event %s", id)
+					const [recoveredKey, event] = entry
+					if (!equals(recoveredKey, key)) {
+						const recoveredEventId = this.codec.keyToString(recoveredKey)
+						this.log.error("key conflict: expected %s, recovered %s", eventId, recoveredEventId)
+						continue
+					}
+
+					try {
+						await this.apply(key, event)
+					} catch (err) {
+						this.log.error("failed to apply event %s: %O", eventId, err)
+						continue
+					}
 
 					await txn.set(key, value)
-
-					this.dispatch(id, event)
 					successCount++
 				}
 
 				this.log("committing transaction")
 			})
 
-			this.log("finished sync: applied %d new entries with %d failures", successCount, failureCount)
+			this.log("finished sync: applied %d events with %d failures", successCount, failureCount)
+			this.dispatchEvent(new CustomEvent("sync", { detail: { peerId, root, successCount, failureCount } }))
 		} finally {
 			client.end()
 			this.log("closed outgoing stream %s to peer %p", stream.id, peerId)
