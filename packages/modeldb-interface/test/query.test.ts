@@ -15,7 +15,7 @@ testOnModelDB("query the database using select", async (t, modelDBConstructor) =
 	await db.add("user", { name: "test", age: 10 })
 
 	t.deepEqual(
-		db.query("user", {
+		await db.query("user", {
 			select: { name: true },
 		}),
 		[

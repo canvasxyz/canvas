@@ -26,7 +26,46 @@ export const getRelationTargetIndexName = (modelName: string, propertyName: stri
 	`relation/${modelName}/${propertyName}/target`
 
 async function query(db: IDBPDatabase, queryParams: QueryParams, model: Model): Promise<ModelValue[]> {
-	return []
+	const recordTableName = getRecordTableName(model.name)
+
+	const transaction = db.transaction(recordTableName, "readonly")
+	const objectStore = transaction.objectStore(recordTableName)
+
+	let records: RecordValue[]
+
+	if (queryParams.where) {
+		const where = queryParams.where
+
+		const whereFields = Object.keys(where).sort()
+		const indexName = getPropertyIndexName(model.name, whereFields)
+		if (!objectStore.indexNames.contains(indexName)) {
+			throw new Error(`Index ${indexName} does not exist`)
+		}
+		// only allow queries over fields that are already indexed
+		const whereValues = whereFields.map((field) => where[field])
+
+		const index = objectStore.index(indexName)
+		const indexKeys = await index.getAll(whereValues)
+
+		records = await Promise.all(indexKeys.map((key) => objectStore.get(key)))
+	} else {
+		records = await objectStore.getAll()
+	}
+
+	const modelRecords = records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
+
+	if (queryParams.select) {
+		const select = queryParams.select
+		for (const record of modelRecords) {
+			for (const field of Object.keys(record)) {
+				if (!select[field]) {
+					delete record[field]
+				}
+			}
+		}
+	}
+
+	return modelRecords
 }
 
 function prepareTombstoneAPI(db: IDBPDatabase, model: Model): TombstoneAPI {

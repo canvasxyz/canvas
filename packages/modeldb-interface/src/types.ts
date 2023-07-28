@@ -51,7 +51,10 @@ export type PropertyValue = PrimitiveValue | ReferenceValue | RelationValue
 
 export type ModelValue = Record<string, PropertyValue>
 
-export type QueryParams = {}
+export type QueryParams = {
+	select?: Record<string, boolean>
+	where?: Record<string, any>
+}
 
 // Types for the ModelDB internal API
 
