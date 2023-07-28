@@ -176,6 +176,10 @@ export class MutableModelAPI {
 	public async selectAll(): Promise<ModelValue[]> {
 		return this.#records.selectAll({})
 	}
+
+	public async query(query: {}): Promise<ModelValue[]> {
+		return this.#records.query(query)
+	}
 }
 
 export class ImmutableModelAPI {
@@ -256,5 +260,9 @@ export class ImmutableModelAPI {
 
 	public async selectAll(): Promise<ModelValue[]> {
 		return this.#records.selectAll({})
+	}
+
+	public async query(query: {}): Promise<ModelValue[]> {
+		return this.#records.query(query)
 	}
 }

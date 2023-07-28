@@ -2,8 +2,10 @@ import {
 	ImmutableModelAPI,
 	ImmutableRecordAPI,
 	Model,
+	ModelValue,
 	MutableModelAPI,
 	MutableRecordAPI,
+	QueryParams,
 	RecordValue,
 	RelationAPI,
 	TombstoneAPI,
@@ -22,6 +24,10 @@ export const getRelationSourceIndexName = (modelName: string, propertyName: stri
 
 export const getRelationTargetIndexName = (modelName: string, propertyName: string) =>
 	`relation/${modelName}/${propertyName}/target`
+
+async function query(db: IDBPDatabase, queryParams: QueryParams, model: Model): Promise<ModelValue[]> {
+	return []
+}
 
 function prepareTombstoneAPI(db: IDBPDatabase, model: Model): TombstoneAPI {
 	const tombstoneTableName = getTombstoneTableName(model.name)
@@ -103,6 +109,7 @@ function prepareMutableRecordAPI(db: IDBPDatabase, model: Model): MutableRecordA
 			const _version = record ? record._version : null
 			return { _version }
 		},
+		query: async (queryParams) => query(db, queryParams, model),
 	}
 }
 
@@ -133,6 +140,7 @@ function prepareImmutableRecordAPI(db: IDBPDatabase, model: Model): ImmutableRec
 			await db.put(recordTableName, { _key, _metadata, _version, ...record })
 		},
 		delete: async ({ _key }) => db.delete(recordTableName, _key),
+		query: async (queryParams) => query(db, queryParams, model),
 	}
 }
 

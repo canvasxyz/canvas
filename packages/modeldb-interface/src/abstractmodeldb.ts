@@ -39,8 +39,14 @@ export abstract class AbstractModelDB {
 		}
 	}
 
-	public query(modelName: string, query: {}): AsyncIterable<ModelValue> {
-		throw new Error("not implemented")
+	public async query(modelName: string, query: {}): Promise<ModelValue[]> {
+		const api = this.apis[modelName]
+		assert(api !== undefined, "model not found")
+		if (api instanceof MutableModelAPI || api instanceof ImmutableModelAPI) {
+			return api.query(query)
+		} else {
+			signalInvalidType(api)
+		}
 	}
 
 	// Mutable model methods

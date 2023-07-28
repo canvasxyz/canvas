@@ -7,6 +7,7 @@ import {
 	ModelValue,
 	MutableModelAPI,
 	MutableRecordAPI,
+	QueryParams,
 	RecordValue,
 	RelationAPI,
 	TombstoneAPI,
@@ -18,6 +19,10 @@ import { decodeRecord, encodeRecordParams } from "./encoding.js"
 // The code here is designed so the SQL queries have type annotations alongside them.
 // Operations are organized into "APIs", one for each underlying SQLite table.
 // An "API" is just a plain JavaScript object with `Query` and `Method` values.
+
+async function query(db: sqlite.Database, queryParams: QueryParams, model: Model): Promise<ModelValue[]> {
+	return []
+}
 
 function prepareTombstoneAPI(db: sqlite.Database, model: Model): TombstoneAPI {
 	const tombstoneTableName = getTombstoneTableName(model.name)
@@ -120,6 +125,7 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model): MutableReco
 			updateRecord.run({ _key: args._key, _metadata: args._metadata, _version: args._version, ...encodedParams })
 		},
 		delete: async (args) => deleteRecord.run(args),
+		query: async (queryParams) => query(db, queryParams, model),
 	}
 }
 
@@ -190,6 +196,7 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model): Immutable
 			updateRecord.run({ _key: args._key, _metadata: args._metadata, _version: args._version, ...encodedParams })
 		},
 		delete: async (args) => deleteRecord.run(args),
+		query: async (queryParams) => query(db, queryParams, model),
 	}
 }
 

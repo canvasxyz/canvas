@@ -51,6 +51,8 @@ export type PropertyValue = PrimitiveValue | ReferenceValue | RelationValue
 
 export type ModelValue = Record<string, PropertyValue>
 
+export type QueryParams = {}
+
 // Types for the ModelDB internal API
 
 export type RecordValue = Record<string, string | number | Buffer | null>
@@ -88,6 +90,7 @@ export type MutableRecordAPI = {
 		value: ModelValue
 	}) => Promise<void>
 	delete: (params: { _key: string }) => Promise<void>
+	query: (params: QueryParams) => Promise<ModelValue[]>
 }
 
 export type ImmutableRecordAPI = {
@@ -103,4 +106,5 @@ export type ImmutableRecordAPI = {
 		value: ModelValue
 	}) => Promise<void>
 	delete: (params: { _key: string }) => Promise<void>
+	query: (params: QueryParams) => Promise<ModelValue[]>
 }
