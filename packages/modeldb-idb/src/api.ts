@@ -56,6 +56,11 @@ async function query(db: IDBPDatabase, queryParams: QueryParams, model: Model): 
 
 	if (queryParams.select) {
 		const select = queryParams.select
+
+		if (Object.keys(select).length === 0) {
+			throw new Error("select must have at least one field")
+		}
+
 		for (const record of modelRecords) {
 			for (const field of Object.keys(record)) {
 				if (!select[field]) {

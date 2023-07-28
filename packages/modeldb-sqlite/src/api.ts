@@ -25,14 +25,18 @@ async function query(db: sqlite.Database, queryParams: QueryParams, model: Model
 
 	let columnNames: string[] = []
 	if (queryParams.select) {
-		columnNames = Object.keys(queryParams.select)
+		if (Object.keys(queryParams.select).length > 0) {
+			columnNames = Object.keys(queryParams.select)
+		} else {
+			throw new Error("select must have at least one field")
+		}
 	}
 
 	const columnNamesSelector = columnNames.length === 0 ? "*" : columnNames.join(", ")
 
 	let records: RecordValue[]
 
-	if (queryParams.where) {
+	if (queryParams.where && Object.keys(queryParams.where).length > 0) {
 		const where = queryParams.where
 		const whereFields = Object.keys(where).sort()
 		const whereValues = whereFields.map((field) => where[field])

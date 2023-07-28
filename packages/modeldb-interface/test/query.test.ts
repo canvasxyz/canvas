@@ -44,3 +44,17 @@ testOnModelDB("query the database using select on multiple fields", async (t, mo
 		]
 	)
 })
+
+testOnModelDB("query the database using select on no fields", async (t, modelDBConstructor) => {
+	const db = await modelDBConstructor(models)
+
+	await db.add("user", { name: "test", age: 10 })
+
+	const error = await t.throwsAsync(
+		db.query("user", {
+			select: {},
+		})
+	)
+
+	t.is(error.message, "select must have at least one field")
+})
