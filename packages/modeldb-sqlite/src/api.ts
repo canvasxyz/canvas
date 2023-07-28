@@ -21,7 +21,42 @@ import { decodeRecord, encodeRecordParams } from "./encoding.js"
 // An "API" is just a plain JavaScript object with `Query` and `Method` values.
 
 async function query(db: sqlite.Database, queryParams: QueryParams, model: Model): Promise<ModelValue[]> {
-	return []
+	const recordTableName = getRecordTableName(model.name)
+
+	let columnNames: string[] = []
+	if (queryParams.select) {
+		columnNames = Object.keys(queryParams.select)
+	}
+
+	const columnNamesSelector = columnNames.length === 0 ? "*" : columnNames.join(", ")
+
+	let records: RecordValue[]
+
+	if (queryParams.where) {
+		const where = queryParams.where
+		const whereFields = Object.keys(where).sort()
+		const whereValues = whereFields.map((field) => where[field])
+
+		const whereClause = whereFields.map((field) => `${field} = ?`).join(" AND ")
+
+		const queryString = `SELECT ${columnNamesSelector} FROM "${recordTableName}" WHERE ${whereClause}`
+
+		const selectAll = new Query<{}, RecordValue>(db, queryString)
+
+		records = selectAll.all(whereValues)
+	} else {
+		const queryString = `SELECT ${columnNamesSelector} FROM "${recordTableName}"`
+		const selectAll = new Query<{}, RecordValue>(db, queryString)
+		records = selectAll.all({})
+	}
+
+	// only call decodeRecord on the selected columns
+	const selectedModel = {
+		...model,
+		properties: model.properties.filter((property) => columnNames.includes(property.name)),
+	}
+
+	return records.map((record) => decodeRecord(selectedModel, record)).filter((x) => x !== null)
 }
 
 function prepareTombstoneAPI(db: sqlite.Database, model: Model): TombstoneAPI {
