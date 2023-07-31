@@ -1,26 +1,6 @@
-import {
-	ImmutableRecordAPI,
-	Model,
-	ModelValue,
-	MutableRecordAPI,
-	PrimitiveProperty,
-	RecordValue,
-	ReferenceProperty,
-	RelationAPI,
-	TombstoneAPI,
-} from "./types.js"
+import { ImmutableRecordAPI, Model, ModelValue, MutableRecordAPI, RelationAPI, TombstoneAPI } from "./types.js"
 
-import { blake3 } from "@noble/hashes/blake3"
-import { encode } from "microcbor"
-import { base58btc } from "multiformats/bases/base58"
-
-export const DEFAULT_DIGEST_LENGTH = 16
-
-export function getRecordHash(value: ModelValue, dkLen: number = DEFAULT_DIGEST_LENGTH): string {
-	const bytes = encode(value)
-	const hash = blake3(bytes, { dkLen })
-	return base58btc.baseEncode(hash)
-}
+import { getImmutableRecordKey } from "./utils.js"
 
 export class MutableModelAPI {
 	readonly #tombstones: TombstoneAPI
@@ -180,7 +160,6 @@ export class MutableModelAPI {
 export class ImmutableModelAPI {
 	readonly #relations: Record<string, RelationAPI> = {}
 	readonly #records: ImmutableRecordAPI
-	readonly #dkLen: number
 
 	public readonly model: Model
 
@@ -193,15 +172,13 @@ export class ImmutableModelAPI {
 		this.#relations = relations
 		this.#records = records
 		this.model = model
-		this.#dkLen = options.dkLen || DEFAULT_DIGEST_LENGTH
 	}
 
 	public async add(
 		value: ModelValue,
 		{ namespace, metadata }: { namespace?: string; metadata?: string } = {}
 	): Promise<string> {
-		const recordHash = getRecordHash(value, this.#dkLen)
-		const key = namespace ? `${namespace}/${recordHash}` : recordHash
+		const key = getImmutableRecordKey(value, { namespace })
 		const existingRecord = await this.#records.select({ _key: key })
 		if (!existingRecord) {
 			await this.#records.insert({ _key: key, _metadata: metadata ?? null, value })

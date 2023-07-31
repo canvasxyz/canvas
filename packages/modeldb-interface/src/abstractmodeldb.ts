@@ -87,4 +87,6 @@ export abstract class AbstractModelDB {
 		assert(api instanceof ImmutableModelAPI, "cannot call .remove on a mutable model")
 		await api.remove(key)
 	}
+
+	// Utility methods
 }
