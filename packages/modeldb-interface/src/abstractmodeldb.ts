@@ -1,6 +1,6 @@
-import assert from "assert"
-import { ImmutableModelAPI, MutableModelAPI, signalInvalidType } from "./api.js"
 import { ModelValue } from "./types.js"
+import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
+import { assert, signalInvalidType } from "./utils.js"
 
 export abstract class AbstractModelDB {
 	apis: Record<string, MutableModelAPI | ImmutableModelAPI> = {}
