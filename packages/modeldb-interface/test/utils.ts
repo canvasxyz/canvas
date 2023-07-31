@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid"
 import "fake-indexeddb/auto"
-import test from "ava"
+import test, { ExecutionContext } from "ava"
 import { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb-interface"
 import { ModelDB as ModelDBSqlite, ModelDBOptions } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
@@ -19,4 +19,12 @@ export const testOnModelDB = (
 		const databaseName = uuidv4()
 		return ModelDBIdb.initialize(models, { databaseName, ...options })
 	})
+}
+
+export const compareUnordered = (t: ExecutionContext, a: any[], b: any[]) => {
+	t.is(a.length, b.length)
+
+	const serializedA = a.map((x) => JSON.stringify(x)).sort()
+	const serializedB = b.map((x) => JSON.stringify(x)).sort()
+	t.deepEqual(serializedA, serializedB)
 }
