@@ -9,7 +9,7 @@ const models = {
 		bio: "string",
 		city: "string",
 		$type: "immutable",
-		$indexes: ["name"],
+		$indexes: ["name", ["age", "name"], ["name", "bio"]],
 	},
 } as ModelsInit
 
@@ -103,3 +103,68 @@ testOnModelDB("query the database filtering on one field with where", async (t, 
 		]
 	)
 })
+
+testOnModelDB(
+	"query the database filtering on one field with where on multiple conditions",
+	async (t, modelDBConstructor) => {
+		const db = await modelDBConstructor(models)
+
+		await db.add("user", {
+			name: "test",
+			age: 56,
+			bio: "opinions belong to me and not my employer",
+			city: "langley va",
+		})
+		await db.add("user", {
+			name: "test",
+			age: 14,
+			bio: "i'm not here to talk to you. i'm here to talk to your dog",
+			city: "melbourne",
+		})
+
+		await db.add("user", {
+			name: "someone",
+			age: 59,
+			bio: "hello world",
+			city: "lexington kentucky",
+		})
+
+		compareUnordered(
+			t,
+			await db.query("user", {
+				where: {
+					name: "test",
+					age: 56,
+				},
+			}),
+			[
+				{
+					name: "test",
+					age: 56,
+					bio: "opinions belong to me and not my employer",
+					city: "langley va",
+				},
+			]
+		)
+
+		compareUnordered(
+			t,
+			await db.query("user", {
+				where: {
+					bio: "i'm not here to talk to you. i'm here to talk to your dog",
+					name: "test",
+				},
+				select: {
+					name: true,
+					bio: true,
+				},
+			}),
+			[
+				{
+					name: "test",
+					bio: "i'm not here to talk to you. i'm here to talk to your dog",
+				},
+			]
+		)
+	}
+)

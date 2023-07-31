@@ -45,7 +45,8 @@ export class ModelDB extends AbstractModelDB {
 						db.createObjectStore(getTombstoneTableName(model.name))
 					}
 					for (const index of model.indexes) {
-						recordObjectStore.createIndex(getPropertyIndexName(model.name, index), index)
+						const sortedIndex = typeof index === "string" ? [index] : index.sort()
+						recordObjectStore.createIndex(getPropertyIndexName(model.name, sortedIndex), sortedIndex)
 					}
 				}
 
