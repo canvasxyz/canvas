@@ -1,6 +1,6 @@
 import Database, * as sqlite from "better-sqlite3"
 
-import { AbstractModelDB, Config, ModelsInit, parseConfig } from "@canvas-js/modeldb-interface"
+import { AbstractModelDB, ModelsInit, parseConfig } from "@canvas-js/modeldb-interface"
 import { initializeModel, initializeRelation } from "./initialize.js"
 import { signalInvalidType } from "./utils.js"
 import { createSqliteImmutableModelAPI, createSqliteMutableModelAPI } from "./api.js"
@@ -12,12 +12,10 @@ export interface ModelDBOptions {
 
 export class ModelDB extends AbstractModelDB {
 	public readonly db: sqlite.Database
-	public readonly config: Config
 
 	constructor(public readonly path: string, public readonly models: ModelsInit, options: ModelDBOptions = {}) {
-		super()
+		super(parseConfig(models))
 
-		this.config = parseConfig(models)
 		this.db = new Database(path)
 
 		for (const model of this.config.models) {
