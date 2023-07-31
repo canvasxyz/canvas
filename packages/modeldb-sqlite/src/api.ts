@@ -46,7 +46,6 @@ async function query(db: sqlite.Database, queryParams: QueryParams, model: Model
 		const queryString = `SELECT ${columnNamesSelector} FROM "${recordTableName}" WHERE ${whereClause}`
 
 		const selectAll = new Query<{}, RecordValue>(db, queryString)
-
 		records = selectAll.all(whereValues)
 	} else {
 		const queryString = `SELECT ${columnNamesSelector} FROM "${recordTableName}"`
@@ -57,7 +56,10 @@ async function query(db: sqlite.Database, queryParams: QueryParams, model: Model
 	// only call decodeRecord on the selected columns
 	const selectedModel = {
 		...model,
-		properties: model.properties.filter((property) => columnNames.includes(property.name)),
+		properties:
+			columnNames.length > 0
+				? model.properties.filter((property) => columnNames.includes(property.name))
+				: model.properties,
 	}
 
 	return records.map((record) => decodeRecord(selectedModel, record)).filter((x) => x !== null)

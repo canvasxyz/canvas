@@ -45,9 +45,7 @@ async function query(db: IDBPDatabase, queryParams: QueryParams, model: Model): 
 		const whereValues = whereFields.map((field) => where[field])
 
 		const index = objectStore.index(indexName)
-		const indexKeys = await index.getAll(whereValues)
-
-		records = await Promise.all(indexKeys.map((key) => objectStore.get(key)))
+		records = await index.getAll(whereValues)
 	} else {
 		records = await objectStore.getAll()
 	}

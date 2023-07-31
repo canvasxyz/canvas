@@ -4,6 +4,7 @@ import { signalInvalidType } from "./utils.js"
 import {
 	createIdbImmutableModelAPI,
 	createIdbMutableModelAPI,
+	getPropertyIndexName,
 	getRecordTableName,
 	getRelationTableName,
 	getTombstoneTableName,
@@ -39,9 +40,12 @@ export class ModelDB extends AbstractModelDB {
 			upgrade(db: any) {
 				// create model stores
 				for (const model of config.models) {
-					db.createObjectStore(getRecordTableName(model.name))
+					const recordObjectStore = db.createObjectStore(getRecordTableName(model.name))
 					if (model.kind == "mutable") {
 						db.createObjectStore(getTombstoneTableName(model.name))
+					}
+					for (const index of model.indexes) {
+						recordObjectStore.createIndex(getPropertyIndexName(model.name, index), index)
 					}
 				}
 

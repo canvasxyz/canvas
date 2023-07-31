@@ -68,7 +68,7 @@ export function initializeModel(model: Model, exec: (sql: string) => void) {
 	for (const index of model.indexes) {
 		const indexName = getPropertyIndexName(model.name, index)
 		const indexColumns = index.map((name) => `'${name}'`)
-		exec(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${model.name}" (${indexColumns.join(", ")})`)
+		exec(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${modelTableName}" (${indexColumns.join(", ")})`)
 	}
 }
 
