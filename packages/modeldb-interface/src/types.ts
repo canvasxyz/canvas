@@ -54,6 +54,7 @@ export type ModelValue = Record<string, PropertyValue>
 export type QueryParams = {
 	select?: Record<string, boolean>
 	where?: Record<string, any>
+	orderBy?: Record<string, "asc" | "desc">
 }
 
 // Types for the ModelDB internal API

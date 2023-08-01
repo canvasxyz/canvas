@@ -52,6 +52,36 @@ async function query(db: IDBPDatabase, queryParams: QueryParams, model: Model): 
 
 	const modelRecords = records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
 
+	const orderBy = queryParams.orderBy
+	if (orderBy) {
+		if (Object.keys(orderBy).length !== 1) {
+			throw new Error("orderBy must have exactly one field")
+		}
+		const orderByKey = Object.keys(orderBy)[0]
+		if (!model.properties.find((property) => property.name === orderByKey)) {
+			throw new Error(`orderBy field ${orderByKey} does not exist`)
+		}
+
+		modelRecords.sort((a, b) => {
+			const aValue = a[orderByKey]
+			const bValue = b[orderByKey]
+
+			let result: number
+
+			if (aValue === null && bValue === null) {
+				result = 0
+			} else if (aValue === null) {
+				result = 1
+			} else if (bValue === null) {
+				result = -1
+			} else {
+				result = aValue < bValue ? -1 : aValue > bValue ? 1 : 0
+			}
+
+			return orderBy[orderByKey] === "asc" ? result : -result
+		})
+	}
+
 	if (queryParams.select) {
 		const select = queryParams.select
 

@@ -23,7 +23,10 @@ import { decodeRecord, encodeRecordParams } from "./encoding.js"
 async function query(db: sqlite.Database, queryParams: QueryParams, model: Model): Promise<ModelValue[]> {
 	const recordTableName = getRecordTableName(model.name)
 
+	// SELECT
+
 	let columnNames: string[] = []
+
 	if (queryParams.select) {
 		if (Object.keys(queryParams.select).length > 0) {
 			columnNames = Object.keys(queryParams.select)
@@ -32,26 +35,40 @@ async function query(db: sqlite.Database, queryParams: QueryParams, model: Model
 		}
 	}
 
-	const columnNamesSelector = columnNames.length === 0 ? "*" : columnNames.join(", ")
+	const columnsToSelect: string[] =
+		columnNames.length === 0 ? model.properties.map((property) => property.name) : columnNames
 
-	let records: RecordValue[]
+	const columnNamesSelector = columnsToSelect.join(", ")
+
+	let queryString = `SELECT ${columnNamesSelector} FROM "${recordTableName}"`
+	const queryParamsList = []
+
+	// WHERE
 
 	if (queryParams.where && Object.keys(queryParams.where).length > 0) {
 		const where = queryParams.where
 		const whereFields = Object.keys(where).sort()
 		const whereValues = whereFields.map((field) => where[field])
-
 		const whereClause = whereFields.map((field) => `${field} = ?`).join(" AND ")
 
-		const queryString = `SELECT ${columnNamesSelector} FROM "${recordTableName}" WHERE ${whereClause}`
-
-		const selectAll = new Query<{}, RecordValue>(db, queryString)
-		records = selectAll.all(whereValues)
-	} else {
-		const queryString = `SELECT ${columnNamesSelector} FROM "${recordTableName}"`
-		const selectAll = new Query<{}, RecordValue>(db, queryString)
-		records = selectAll.all({})
+		queryString += ` WHERE ${whereClause}`
+		queryParamsList.push(...whereValues)
 	}
+
+	// ORDER BY
+	if (queryParams.orderBy) {
+		if (Object.keys(queryParams.orderBy).length !== 1) {
+			throw new Error("orderBy must have exactly one field")
+		}
+		const orderByKey = Object.keys(queryParams.orderBy)[0]
+		const orderByValue = queryParams.orderBy[orderByKey]
+		if (orderByValue !== "asc" && orderByValue !== "desc") {
+			throw new Error("orderBy must be either 'asc' or 'desc'")
+		}
+		queryString += ` ORDER BY ${orderByKey} ${orderByValue.toUpperCase()}`
+	}
+
+	const records = db.prepare(queryString).all(queryParamsList) as RecordValue[]
 
 	// only call decodeRecord on the selected columns
 	const selectedModel = {

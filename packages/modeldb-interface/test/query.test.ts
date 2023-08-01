@@ -65,20 +65,9 @@ testOnModelDB("query the database using select on no fields", async (t, modelDBC
 testOnModelDB("query the database filtering on one field with where", async (t, modelDBConstructor) => {
 	const db = await modelDBConstructor(models)
 
-	await db.add("user", { name: "test", age: 56, bio: "opinions belong to me and not my employer", city: "langley va" })
-	await db.add("user", {
-		name: "test",
-		age: 14,
-		bio: "i'm not here to talk to you. i'm here to talk to your dog",
-		city: "melbourne",
-	})
-
-	await db.add("user", {
-		name: "someone",
-		age: 59,
-		bio: "I don't believe in happy endings, but I do believe in happy travels, because ultimately, you die at a very young age, or you live long enough to watch your friends die. It's a mean thing, life.",
-		city: "lexington kentucky",
-	})
+	await db.add("user", { name: "test", age: 1, bio: "bio1", city: "new york" })
+	await db.add("user", { name: "test", age: 2, bio: "bio2", city: "london" })
+	await db.add("user", { name: "test2", age: 3, bio: "bio3", city: "tokyo" })
 
 	compareUnordered(
 		t,
@@ -94,11 +83,11 @@ testOnModelDB("query the database filtering on one field with where", async (t, 
 		[
 			{
 				name: "test",
-				age: 56,
+				age: 1,
 			},
 			{
 				name: "test",
-				age: 14,
+				age: 2,
 			},
 		]
 	)
@@ -109,40 +98,24 @@ testOnModelDB(
 	async (t, modelDBConstructor) => {
 		const db = await modelDBConstructor(models)
 
-		await db.add("user", {
-			name: "test",
-			age: 56,
-			bio: "opinions belong to me and not my employer",
-			city: "langley va",
-		})
-		await db.add("user", {
-			name: "test",
-			age: 14,
-			bio: "i'm not here to talk to you. i'm here to talk to your dog",
-			city: "melbourne",
-		})
-
-		await db.add("user", {
-			name: "someone",
-			age: 59,
-			bio: "hello world",
-			city: "lexington kentucky",
-		})
+		await db.add("user", { name: "test", age: 1, bio: "bio1", city: "new york" })
+		await db.add("user", { name: "test", age: 2, bio: "bio2", city: "london" })
+		await db.add("user", { name: "test2", age: 3, bio: "bio3", city: "tokyo" })
 
 		compareUnordered(
 			t,
 			await db.query("user", {
 				where: {
 					name: "test",
-					age: 56,
+					age: 2,
 				},
 			}),
 			[
 				{
 					name: "test",
-					age: 56,
-					bio: "opinions belong to me and not my employer",
-					city: "langley va",
+					age: 2,
+					bio: "bio2",
+					city: "london",
 				},
 			]
 		)
@@ -151,7 +124,7 @@ testOnModelDB(
 			t,
 			await db.query("user", {
 				where: {
-					bio: "i'm not here to talk to you. i'm here to talk to your dog",
+					bio: "bio1",
 					name: "test",
 				},
 				select: {
@@ -162,9 +135,59 @@ testOnModelDB(
 			[
 				{
 					name: "test",
-					bio: "i'm not here to talk to you. i'm here to talk to your dog",
+					bio: "bio1",
 				},
 			]
 		)
 	}
 )
+
+testOnModelDB("query the database ordering by one field ascending", async (t, modelDBConstructor) => {
+	const db = await modelDBConstructor(models)
+
+	await db.add("user", { name: "test", age: 1, bio: "bio1", city: "new york" })
+	await db.add("user", { name: "test", age: 2, bio: "bio2", city: "london" })
+	await db.add("user", { name: "test2", age: 3, bio: "bio3", city: "tokyo" })
+
+	t.deepEqual(
+		await db.query("user", {
+			select: {
+				name: true,
+				age: true,
+			},
+			orderBy: {
+				age: "asc",
+			},
+		}),
+		[
+			{ name: "test", age: 1 },
+			{ name: "test", age: 2 },
+			{ name: "test2", age: 3 },
+		]
+	)
+})
+
+testOnModelDB("query the database ordering by one field descending", async (t, modelDBConstructor) => {
+	const db = await modelDBConstructor(models)
+
+	await db.add("user", { name: "test", age: 1, bio: "bio1", city: "new york" })
+	await db.add("user", { name: "test", age: 2, bio: "bio2", city: "london" })
+	await db.add("user", { name: "test2", age: 3, bio: "bio3", city: "tokyo" })
+
+	t.deepEqual(
+		await db.query("user", {
+			select: {
+				name: true,
+				age: true,
+			},
+			orderBy: {
+				age: "desc",
+			},
+		}),
+		[
+			{ name: "test2", age: 3 },
+			{ name: "test", age: 2 },
+			{ name: "test", age: 1 },
+		]
+	)
+})
