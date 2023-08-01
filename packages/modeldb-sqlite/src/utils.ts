@@ -1,8 +1,12 @@
-import assert from "node:assert"
-
 import type * as sqlite from "better-sqlite3"
 
 export const nsidPattern = /^[a-z](?:-*[a-z0-9])*(?:\.[a-z](?:-*[a-z0-9])*)*$/
+
+export function assert(condition: boolean, message?: string): asserts condition {
+	if (!condition) {
+		throw new Error(message ?? "assertion failed")
+	}
+}
 
 export function signalInvalidType(type: never): never {
 	console.error(type)

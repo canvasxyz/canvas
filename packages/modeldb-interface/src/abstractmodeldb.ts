@@ -1,9 +1,11 @@
-import assert from "assert"
-import { ImmutableModelAPI, MutableModelAPI, signalInvalidType } from "./api.js"
-import { ModelValue } from "./types.js"
+import { Config, ModelValue } from "./types.js"
+import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
+import { assert, signalInvalidType } from "./utils.js"
 
 export abstract class AbstractModelDB {
-	apis: Record<string, MutableModelAPI | ImmutableModelAPI> = {}
+	public readonly apis: Record<string, MutableModelAPI | ImmutableModelAPI> = {}
+
+	public constructor(public readonly config: Config) {}
 
 	abstract close(): void
 
@@ -85,4 +87,6 @@ export abstract class AbstractModelDB {
 		assert(api instanceof ImmutableModelAPI, "cannot call .remove on a mutable model")
 		await api.remove(key)
 	}
+
+	// Utility methods
 }

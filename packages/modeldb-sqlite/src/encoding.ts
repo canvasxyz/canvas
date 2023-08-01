@@ -5,9 +5,9 @@ import {
 	PropertyValue,
 	RecordValue,
 	ReferenceProperty,
-	signalInvalidType,
 } from "@canvas-js/modeldb-interface"
-import assert from "assert"
+
+import { assert, signalInvalidType } from "./utils.js"
 
 function encodePrimitiveValue(
 	modelName: string,

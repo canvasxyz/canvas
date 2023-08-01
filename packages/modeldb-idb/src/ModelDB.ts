@@ -61,7 +61,7 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	constructor(public readonly db: IDBPDatabase, config: Config, options?: ModelDBOptions) {
-		super()
+		super(config)
 
 		for (const model of config.models) {
 			if (model.kind === "immutable") {
