@@ -5,9 +5,8 @@ import {
 	PropertyValue,
 	RecordValue,
 	ReferenceProperty,
-	signalInvalidType,
 } from "@canvas-js/modeldb-interface"
-import assert from "assert"
+import { assert, signalInvalidType } from "./utils.js"
 
 function encodePrimitiveValue(
 	modelName: string,
@@ -76,9 +75,12 @@ export function encodeRecord(model: Model, value: ModelValue): RecordValue {
 			record[property.name] = encodePrimitiveValue(model.name, property, value[property.name])
 		} else if (property.kind === "reference") {
 			record[property.name] = encodeReferenceValue(model.name, property, value[property.name])
-		} else {
-			assert(Array.isArray(value[property.name]))
+		} else if (property.kind === "relation") {
+			const relationValues = value[property.name]
+			assert(Array.isArray(relationValues) && relationValues.every((value) => typeof value === "string"))
 			continue
+		} else {
+			signalInvalidType(property)
 		}
 	}
 
@@ -125,7 +127,7 @@ function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, va
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected Uint8Array)`)
 		}
 	} else {
-		throw new Error(`internal error - unknown primitive type ${JSON.stringify(property.type)}`)
+		signalInvalidType(property.type)
 	}
 }
 
