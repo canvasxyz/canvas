@@ -30,6 +30,12 @@ async function query(db: sqlite.Database, queryParams: QueryParams, model: Model
 	if (queryParams.select) {
 		if (Object.keys(queryParams.select).length > 0) {
 			columnNames = Object.keys(queryParams.select)
+
+			for (const column of Object.keys(queryParams.select)) {
+				if (!model.properties.find((property) => property.name === column)) {
+					throw new Error(`select field '${column}' does not exist`)
+				}
+			}
 		} else {
 			throw new Error("select must have at least one field")
 		}

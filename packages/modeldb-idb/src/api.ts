@@ -89,6 +89,12 @@ async function query(db: IDBPDatabase, queryParams: QueryParams, model: Model): 
 			throw new Error("select must have at least one field")
 		}
 
+		for (const column of Object.keys(select)) {
+			if (!model.properties.find((property) => property.name === column)) {
+				throw new Error(`select field '${column}' does not exist`)
+			}
+		}
+
 		for (const record of modelRecords) {
 			for (const field of Object.keys(record)) {
 				if (!select[field]) {

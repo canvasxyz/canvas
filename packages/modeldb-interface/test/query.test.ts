@@ -1,5 +1,6 @@
-import { ModelsInit } from "../src/types.js"
+import { Model, ModelsInit, PrimitiveProperty } from "../src/types.js"
 import { compareUnordered, testOnModelDB } from "./utils.js"
+import * as fc from "fast-check"
 
 // @ts-ignore
 const models = {
@@ -13,45 +14,68 @@ const models = {
 	},
 } as ModelsInit
 
-testOnModelDB("query the database using select", async (t, modelDBConstructor) => {
-	const db = await modelDBConstructor(models)
+const modelDataArbitrary = (modelName: string, modelsInit: ModelsInit) => {
+	const modelInit = modelsInit[modelName]
+	const propertyNames = Object.keys(modelInit).filter((x) => x !== "$type" && x !== "$indexes")
 
-	await db.add("user", { name: "test", age: 10, bio: "i love to read books!", city: "vancouver washington" })
+	return fc.record(
+		Object.fromEntries(
+			propertyNames.map((propertyName) => {
+				const propertyType = modelInit[propertyName]
 
-	t.deepEqual(
-		await db.query("user", {
-			select: { name: true },
-		}),
-		[
-			{
-				name: "test",
-			},
-		]
+				let arbitrary: fc.Arbitrary<any>
+				if (propertyType === "string") {
+					arbitrary = fc.string()
+				} else if (propertyType === "integer") {
+					arbitrary = fc.integer()
+				} else if (propertyType === "float") {
+					arbitrary = fc.float()
+				} else if (propertyType === "bytes") {
+					arbitrary = fc.uint8Array()
+				} else {
+					throw new Error(`cannot generate arbitrary data for ${propertyType}`)
+				}
+
+				return [propertyName, arbitrary]
+			})
+		)
+	)
+}
+
+testOnModelDB("select queries return the selected fields", async (t, modelDBConstructor) => {
+	const selectableFields = Object.keys(models.user).filter((x) => x !== "$type" && x !== "$indexes")
+
+	await fc.assert(
+		fc.asyncProperty(
+			fc.subarray(selectableFields, { minLength: 1 }),
+			fc.array(modelDataArbitrary("user", models)),
+			async (fieldsToSelect, usersFixture) => {
+				const db = await modelDBConstructor(models)
+
+				for (const user of usersFixture) {
+					await db.add("user", user)
+				}
+
+				const select: Record<string, boolean> = {}
+				for (const field of fieldsToSelect) {
+					select[field] = true
+				}
+
+				const result = await db.query("user", {
+					select,
+				})
+
+				// assert that the selected fields are returned
+				for (const row of result) {
+					t.deepEqual(Object.keys(row).sort(), fieldsToSelect.sort())
+				}
+			}
+		)
 	)
 })
 
-testOnModelDB("query the database using select on multiple fields", async (t, modelDBConstructor) => {
+testOnModelDB("select with no fields throws an error", async (t, modelDBConstructor) => {
 	const db = await modelDBConstructor(models)
-
-	await db.add("user", { name: "test", age: 10, bio: "where is my mind", city: "south san francisco" })
-
-	t.deepEqual(
-		await db.query("user", {
-			select: { name: true, age: true },
-		}),
-		[
-			{
-				name: "test",
-				age: 10,
-			},
-		]
-	)
-})
-
-testOnModelDB("query the database using select on no fields", async (t, modelDBConstructor) => {
-	const db = await modelDBConstructor(models)
-
-	await db.add("user", { name: "test", age: 10, bio: "i'm here to make friends", city: "milton keynes" })
 
 	const error = await t.throwsAsync(
 		db.query("user", {
@@ -60,6 +84,20 @@ testOnModelDB("query the database using select on no fields", async (t, modelDBC
 	)
 
 	t.is(error.message, "select must have at least one field")
+})
+
+testOnModelDB("select on a field that does not exist throws an error", async (t, modelDBConstructor) => {
+	const db = await modelDBConstructor(models)
+
+	const error = await t.throwsAsync(
+		db.query("user", {
+			select: {
+				whatever: true,
+			},
+		})
+	)
+
+	t.is(error.message, "select field 'whatever' does not exist")
 })
 
 testOnModelDB("query the database filtering on one field with where", async (t, modelDBConstructor) => {
