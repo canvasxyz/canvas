@@ -1,4 +1,4 @@
-import { Model, ModelsInit, PrimitiveProperty } from "../src/types.js"
+import { parseConfig, Model, ModelsInit, PrimitiveProperty, PropertyValue } from "@canvas-js/modeldb-interface"
 import { compareUnordered, testOnModelDB } from "./utils.js"
 import * as fc from "fast-check"
 
@@ -14,29 +14,26 @@ const models = {
 	},
 } as ModelsInit
 
-const modelDataArbitrary = (modelName: string, modelsInit: ModelsInit) => {
-	const modelInit = modelsInit[modelName]
-	const propertyNames = Object.keys(modelInit).filter((x) => x !== "$type" && x !== "$indexes")
+const modelDataArbitrary = (model: Model) => {
+	const primitiveProperties = model.properties.filter((x) => x.kind === "primitive") as PrimitiveProperty[]
 
 	return fc.record(
 		Object.fromEntries(
-			propertyNames.map((propertyName) => {
-				const propertyType = modelInit[propertyName]
-
+			primitiveProperties.map((property) => {
 				let arbitrary: fc.Arbitrary<any>
-				if (propertyType === "string") {
-					arbitrary = fc.string()
-				} else if (propertyType === "integer") {
+				if (property.type === "string") {
+					arbitrary = fc.string({ minLength: 1 })
+				} else if (property.type === "integer") {
 					arbitrary = fc.integer()
-				} else if (propertyType === "float") {
+				} else if (property.type === "float") {
 					arbitrary = fc.float()
-				} else if (propertyType === "bytes") {
+				} else if (property.type === "bytes") {
 					arbitrary = fc.uint8Array()
 				} else {
-					throw new Error(`cannot generate arbitrary data for ${propertyType}`)
+					throw new Error(`cannot generate arbitrary data for ${property.type}`)
 				}
 
-				return [propertyName, arbitrary]
+				return [property.name, arbitrary]
 			})
 		)
 	)
@@ -44,11 +41,12 @@ const modelDataArbitrary = (modelName: string, modelsInit: ModelsInit) => {
 
 testOnModelDB("select queries return the selected fields", async (t, modelDBConstructor) => {
 	const selectableFields = Object.keys(models.user).filter((x) => x !== "$type" && x !== "$indexes")
+	const model = parseConfig(models).models[0]
 
 	await fc.assert(
 		fc.asyncProperty(
 			fc.subarray(selectableFields, { minLength: 1 }),
-			fc.array(modelDataArbitrary("user", models)),
+			fc.array(modelDataArbitrary(model)),
 			async (fieldsToSelect, usersFixture) => {
 				const db = await modelDBConstructor(models)
 
@@ -100,85 +98,47 @@ testOnModelDB("select on a field that does not exist throws an error", async (t,
 	t.is(error.message, "select field 'whatever' does not exist")
 })
 
-testOnModelDB("query the database filtering on one field with where", async (t, modelDBConstructor) => {
-	const db = await modelDBConstructor(models)
+testOnModelDB("where clause lets us filter on indexed fields", async (t, modelDBConstructor) => {
+	const model = parseConfig(models).models[0]
+	const filterableFields = model.indexes
 
-	await db.add("user", { name: "test", age: 1, bio: "bio1", city: "new york" })
-	await db.add("user", { name: "test", age: 2, bio: "bio2", city: "london" })
-	await db.add("user", { name: "test2", age: 3, bio: "bio3", city: "tokyo" })
+	await fc.assert(
+		fc.asyncProperty(
+			fc.constantFrom(...filterableFields),
+			modelDataArbitrary(model),
+			fc.array(modelDataArbitrary(model)),
+			fc.array(modelDataArbitrary(model)),
+			async (fieldsToWhere, valuesToWhere, includedUsersFixture, excludedUsersFixture) => {
+				const db = await modelDBConstructor(models)
 
-	compareUnordered(
-		t,
-		await db.query("user", {
-			where: {
-				name: "test",
-			},
-			select: {
-				name: true,
-				age: true,
-			},
-		}),
-		[
-			{
-				name: "test",
-				age: 1,
-			},
-			{
-				name: "test",
-				age: 2,
-			},
-		]
+				const where: Record<string, PropertyValue> = {}
+				for (const field of fieldsToWhere) {
+					where[field] = valuesToWhere[field]
+				}
+
+				for (const user of includedUsersFixture) {
+					// for the values we want to include, replace the values we want to filter on
+					await db.add("user", { ...user, ...where })
+				}
+
+				for (const user of excludedUsersFixture) {
+					await db.add("user", user)
+				}
+
+				const result = await db.query("user", {
+					where,
+				})
+
+				// assert that the returned rows satify the where condition
+				for (const row of result) {
+					for (const field of Object.keys(where)) {
+						t.is(row[field], where[field])
+					}
+				}
+			}
+		)
 	)
 })
-
-testOnModelDB(
-	"query the database filtering on one field with where on multiple conditions",
-	async (t, modelDBConstructor) => {
-		const db = await modelDBConstructor(models)
-
-		await db.add("user", { name: "test", age: 1, bio: "bio1", city: "new york" })
-		await db.add("user", { name: "test", age: 2, bio: "bio2", city: "london" })
-		await db.add("user", { name: "test2", age: 3, bio: "bio3", city: "tokyo" })
-
-		compareUnordered(
-			t,
-			await db.query("user", {
-				where: {
-					name: "test",
-					age: 2,
-				},
-			}),
-			[
-				{
-					name: "test",
-					age: 2,
-					bio: "bio2",
-					city: "london",
-				},
-			]
-		)
-
-		compareUnordered(
-			t,
-			await db.query("user", {
-				where: {
-					bio: "bio1",
-					name: "test",
-				},
-				select: {
-					name: true,
-					bio: true,
-				},
-			}),
-			[
-				{
-					name: "test",
-					bio: "bio1",
-				},
-			]
-		)
-	}
-)
 
 testOnModelDB("query the database ordering by one field ascending", async (t, modelDBConstructor) => {
 	const db = await modelDBConstructor(models)
