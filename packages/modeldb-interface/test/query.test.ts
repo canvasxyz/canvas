@@ -140,52 +140,41 @@ testOnModelDB("where clause lets us filter on indexed fields", async (t, modelDB
 	)
 })
 
-testOnModelDB("query the database ordering by one field ascending", async (t, modelDBConstructor) => {
-	const db = await modelDBConstructor(models)
+testOnModelDB("order by on one field", async (t, modelDBConstructor) => {
+	const orderableFields = Object.keys(models.user).filter((x) => x !== "$type" && x !== "$indexes")
+	const model = parseConfig(models).models[0]
 
-	await db.add("user", { name: "test", age: 1, bio: "bio1", city: "new york" })
-	await db.add("user", { name: "test", age: 2, bio: "bio2", city: "london" })
-	await db.add("user", { name: "test2", age: 3, bio: "bio3", city: "tokyo" })
+	await fc.assert(
+		fc.asyncProperty(
+			fc.constantFrom(...orderableFields),
+			fc.array(modelDataArbitrary(model)),
+			fc.constantFrom("asc", "desc"),
+			async (orderByField, usersFixture, direction) => {
+				const db = await modelDBConstructor(models)
 
-	t.deepEqual(
-		await db.query("user", {
-			select: {
-				name: true,
-				age: true,
-			},
-			orderBy: {
-				age: "asc",
-			},
-		}),
-		[
-			{ name: "test", age: 1 },
-			{ name: "test", age: 2 },
-			{ name: "test2", age: 3 },
-		]
-	)
-})
+				for (const user of usersFixture) {
+					await db.add("user", user)
+				}
 
-testOnModelDB("query the database ordering by one field descending", async (t, modelDBConstructor) => {
-	const db = await modelDBConstructor(models)
+				const result = await db.query("user", {
+					orderBy: { [orderByField]: direction },
+				})
 
-	await db.add("user", { name: "test", age: 1, bio: "bio1", city: "new york" })
-	await db.add("user", { name: "test", age: 2, bio: "bio2", city: "london" })
-	await db.add("user", { name: "test2", age: 3, bio: "bio3", city: "tokyo" })
-
-	t.deepEqual(
-		await db.query("user", {
-			select: {
-				name: true,
-				age: true,
-			},
-			orderBy: {
-				age: "desc",
-			},
-		}),
-		[
-			{ name: "test2", age: 3 },
-			{ name: "test", age: 2 },
-			{ name: "test", age: 1 },
-		]
+				// assert that the field is sorted
+				for (let i = 0; i < result.length; i++) {
+					if (i > 0) {
+						const currentValue = result[i][orderByField]
+						const previousValue = result[i - 1][orderByField]
+						if (currentValue !== null && previousValue !== null) {
+							if (direction == "asc") {
+								t.true(currentValue >= previousValue)
+							} else {
+								t.true(currentValue <= previousValue)
+							}
+						}
+					}
+				}
+			}
+		)
 	)
 })
