@@ -5,10 +5,14 @@ import {
 	ModelValue,
 	MutableModelAPI,
 	MutableRecordAPI,
+	PrimitiveValue,
 	QueryParams,
 	RecordValue,
 	RelationAPI,
 	TombstoneAPI,
+	WhereEqualityCondition,
+	WhereInequalityCondition,
+	isWhereInequalityCondition,
 } from "@canvas-js/modeldb-interface"
 import { IDBPDatabase } from "idb"
 import { decodeRecord, encodeRecord } from "./encoding.js"
@@ -36,16 +40,77 @@ async function query(db: IDBPDatabase, queryParams: QueryParams, model: Model): 
 	if (queryParams.where) {
 		const where = queryParams.where
 
-		const whereFields = Object.keys(where).sort()
-		const indexName = getPropertyIndexName(model.name, whereFields)
-		if (!objectStore.indexNames.contains(indexName)) {
-			throw new Error(`Index ${indexName} does not exist`)
-		}
-		// only allow queries over fields that are already indexed
-		const whereValues = whereFields.map((field) => where[field])
+		if (isWhereInequalityCondition(where)) {
+			// inequality
 
-		const index = objectStore.index(indexName)
-		records = await index.getAll(whereValues)
+			const field = Object.keys(where)[0]
+			const predicate = where[field]
+			const indexName = getPropertyIndexName(model.name, [field])
+
+			if (!objectStore.indexNames.contains(indexName)) {
+				throw new Error(`Index ${indexName} does not exist`)
+			}
+			const index = objectStore.index(indexName)
+
+			let lowerOpen = false
+			let upperOpen = false
+			let lowerBound: PrimitiveValue | undefined = undefined
+			let upperBound: PrimitiveValue | undefined = undefined
+
+			if (predicate.neq) {
+				// index.getAll(IDBKeyRange.bound(predicate.neq, predicate.neq, true, true))
+				throw new Error("not implemented in indexeddb")
+			}
+
+			if (predicate.lt !== undefined || predicate.lte !== undefined) {
+				if (predicate.lt !== undefined) {
+					upperBound = predicate.lt
+					upperOpen = true
+				} else {
+					upperBound = predicate.lte
+				}
+			}
+
+			if (predicate.gt !== undefined || predicate.gte !== undefined) {
+				if (predicate.gt !== undefined) {
+					lowerBound = predicate.gt
+					lowerOpen = true
+				} else {
+					lowerBound = predicate.gte
+				}
+			}
+
+			if (lowerBound === undefined && upperBound === undefined) {
+				throw new Error("unreachable")
+			}
+
+			let bound: IDBKeyRange
+			if (upperBound !== undefined && lowerBound == undefined) {
+				bound = IDBKeyRange.upperBound(upperBound, upperOpen)
+			} else if (upperBound == undefined && lowerBound !== undefined) {
+				bound = IDBKeyRange.lowerBound(lowerBound, lowerOpen)
+			} else if (upperBound !== undefined && lowerBound !== undefined) {
+				bound = IDBKeyRange.bound(lowerBound, upperBound, lowerOpen, upperOpen)
+			} else {
+				throw new Error("unreachable")
+			}
+
+			console.log("bound:", bound)
+			records = await index.getAll(bound)
+		} else {
+			const whereFields = Object.keys(where).sort()
+
+			const indexName = getPropertyIndexName(model.name, whereFields)
+			if (!objectStore.indexNames.contains(indexName)) {
+				throw new Error(`Index ${indexName} does not exist`)
+			}
+			// only allow queries over fields that are already indexed
+			const whereValues = whereFields.map((field) => where[field])
+
+			const index = objectStore.index(indexName)
+			// TODO: this doesn't accept null values, do we want to accept that?
+			records = await index.getAll(whereValues as string[])
+		}
 	} else {
 		records = await objectStore.getAll()
 	}
