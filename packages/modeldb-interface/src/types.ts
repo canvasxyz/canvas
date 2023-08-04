@@ -51,30 +51,11 @@ export type PropertyValue = PrimitiveValue | ReferenceValue | RelationValue
 
 export type ModelValue = Record<string, PropertyValue>
 
-export type InequalityOperator = "lt" | "lte" | "gt" | "gte" | "neq"
-
-export type WhereEqualityCondition = Record<string, PrimitiveValue>
-export type WhereInequalityCondition = Record<
-	string,
-	{
-		lt?: PrimitiveValue
-		lte?: PrimitiveValue
-		gt?: PrimitiveValue
-		gte?: PrimitiveValue
-		neq?: PrimitiveValue
-	}
->
-
-export function isWhereInequalityCondition(
-	where: WhereEqualityCondition | WhereInequalityCondition
-): where is WhereInequalityCondition {
-	const keys = Object.keys(where)
-	return keys.length === 1 && typeof where[keys[0]] === "object"
-}
+export type WhereCondition = Record<string, PrimitiveValue>
 
 export type QueryParams = {
 	select?: Record<string, boolean>
-	where?: WhereEqualityCondition | WhereInequalityCondition
+	where?: WhereCondition
 	orderBy?: Record<string, "asc" | "desc">
 }
 
