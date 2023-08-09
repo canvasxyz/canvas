@@ -13,10 +13,10 @@ export interface ModelDBOptions {
 export class ModelDB extends AbstractModelDB {
 	public readonly db: sqlite.Database
 
-	constructor(public readonly path: string, public readonly models: ModelsInit, options: ModelDBOptions = {}) {
+	constructor(public readonly path: string | null, public readonly models: ModelsInit, options: ModelDBOptions = {}) {
 		super(parseConfig(models))
 
-		this.db = new Database(path)
+		this.db = new Database(path ?? ":memory:")
 
 		for (const model of this.config.models) {
 			initializeModel(model, (sql) => this.db.exec(sql))
