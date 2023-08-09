@@ -1,3 +1,3 @@
 export type * from "../types.js"
 
-export { getPeerId, getLibp2pOptions } from "./options.js"
+export { getLibp2pOptions } from "./options.js"

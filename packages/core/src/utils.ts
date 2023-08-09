@@ -1,17 +1,9 @@
-import { CID } from "multiformats"
-
+import chalk from "chalk"
 import AggregateError from "aggregate-error"
 import { anySignal } from "any-signal"
-
-import { ethers } from "ethers"
 import { configure } from "safe-stable-stringify"
 import { CodeError } from "@libp2p/interfaces/errors"
-
-import chalk from "chalk"
-
-import type { ModelType, ModelValue } from "@canvas-js/interfaces"
-
-const { hexlify, arrayify } = ethers.utils
+import { bytesToHex } from "@noble/hashes/utils"
 
 export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
 
@@ -21,42 +13,12 @@ export function assert(condition: unknown, message?: string): asserts condition 
 	}
 }
 
-export const ipfsURIPattern = /^ipfs:\/\/([a-zA-Z0-9]+)$/
-
-export function parseIPFSURI(uri: string): CID {
-	const match = ipfsURIPattern.exec(uri)
-	if (match) {
-		const [_, cid] = match
-		return CID.parse(cid)
-	} else {
-		throw new Error("invalid ipfs:// URI")
-	}
-}
-
-export const getCustomActionSchemaName = (app: string, name: string) => `${app}?name=${name}`
-
 export const mapEntries = <K extends string, S, T>(object: Record<K, S>, map: (key: K, value: S) => T) =>
 	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(key as K, value)])) as Record<K, T>
 
 export function signalInvalidType(type: never): never {
 	console.error(type)
 	throw new TypeError("internal error: invalid type")
-}
-
-export function validateType(type: ModelType, value: ModelValue) {
-	if (type === "boolean") {
-		assert(typeof value === "boolean", "invalid type: expected boolean")
-	} else if (type === "string") {
-		assert(typeof value === "string", "invalid type: expected string")
-	} else if (type === "integer") {
-		assert(Number.isSafeInteger(value), "invalid type: expected integer")
-	} else if (type === "float") {
-		assert(typeof value === "number", "invalid type: expected number")
-	} else if (type === "datetime") {
-		assert(typeof value === "number", "invalid type: expected number")
-	} else {
-		signalInvalidType(type)
-	}
 }
 
 export async function wait(interval: number, options: { signal?: AbortSignal }) {
@@ -101,14 +63,6 @@ export async function retry<T>(
 			await wait(interval, options)
 		}
 	}
-}
-
-export function toHex(hash: Uint8Array) {
-	return hexlify(hash)
-}
-
-export function fromHex(input: string) {
-	return arrayify(input)
 }
 
 // add elements with CacheMap.add(key, value) and they'll
@@ -160,4 +114,14 @@ export function getErrorMessage(err: unknown): string {
 	}
 }
 
-export class AlreadyExists extends Error {}
+const timestampBuffer = new ArrayBuffer(8)
+const timestampView = new DataView(timestampBuffer)
+
+export function encodeTimestampVersion(timestamp: number): string {
+	timestampView.setBigUint64(0, BigInt(timestamp))
+	return bytesToHex(new Uint8Array(timestampBuffer, 2, 6))
+}
+
+export function compareTimestampVersion(versionA: string, versionB: string): -1 | 0 | 1 {
+	return versionA < versionB ? -1 : versionB < versionA ? 1 : 0
+}

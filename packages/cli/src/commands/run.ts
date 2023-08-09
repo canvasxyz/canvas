@@ -249,7 +249,7 @@ export async function handler(args: Args) {
 		p2pConfig.bootstrapList = testnetBootstrapList
 	}
 
-	const core = await Core.initialize({ chains, directory, uri, spec, ...p2pConfig, ...options })
+	const core = await Core.initialize({ chains, directory, uri, contract: spec, ...p2pConfig, ...options })
 
 	const app = express()
 	app.use(cors())
@@ -287,7 +287,7 @@ export async function handler(args: Args) {
 				console.log(`Serving static bundle: ${chalk.bold(origin)}`)
 			}
 
-			console.log(`Serving HTTP API for ${core.app}:`)
+			console.log(`Serving HTTP API for ${core.uri}:`)
 			console.log(`└ POST ${apiURL}/`)
 			console.log(`└ GET  ${apiURL}`)
 			for (const name of core.vm.getRoutes()) {

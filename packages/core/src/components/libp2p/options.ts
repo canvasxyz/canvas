@@ -3,7 +3,6 @@ import chalk from "chalk"
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import { pingService } from "libp2p/ping"
-import { fetchService } from "libp2p/fetch"
 import { identifyService } from "libp2p/identify"
 
 import { circuitRelayTransport } from "libp2p/circuit-relay"
@@ -12,13 +11,10 @@ import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
-import { kadDHT } from "@libp2p/kad-dht"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import { assert } from "@canvas-js/core/utils"
 import {
-	DHT_CLEANUP_INTERVAL,
-	DHT_PROVIDE_VALIDITY,
 	DIAL_CONCURRENCY,
 	DIAL_CONCURRENCY_PER_PEER,
 	MAX_CONNECTIONS,
@@ -89,12 +85,6 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 
 		services: {
-			dht: kadDHT({
-				protocolPrefix: "/canvas",
-				clientMode: announce.length === 0,
-				providers: { provideValidity: DHT_PROVIDE_VALIDITY, cleanupInterval: DHT_CLEANUP_INTERVAL },
-			}),
-
 			pubsub: gossipsub({
 				emitSelf: false,
 				fallbackToFloodsub: false,
@@ -103,10 +93,6 @@ export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pO
 			}),
 
 			identifyService: identifyService({
-				protocolPrefix: "canvas",
-			}),
-
-			fetchService: fetchService({
 				protocolPrefix: "canvas",
 			}),
 

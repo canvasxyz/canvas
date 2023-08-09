@@ -9,8 +9,5 @@
     { "path": "../." },
     { "path": "../../interfaces" },
     { "path": "../../chain-ethereum" },
-    { "path": "../../chain-solana" },
-    { "path": "../../chain-substrate" },
-    { "path": "../../chain-cosmos" }
   ]
 }

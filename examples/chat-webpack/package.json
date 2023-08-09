@@ -15,8 +15,8 @@
     "@canvas-js/chain-ethereum": "0.5.0-alpha4",
     "@canvas-js/cli": "0.5.0-alpha4",
     "@canvas-js/hooks": "0.5.0-alpha4",
-    "@types/react": "^18.2.14",
-    "@types/react-dom": "^18.2.6",
+    "@types/react": "^18.2.17",
+    "@types/react-dom": "^18.2.7",
     "@wagmi/chains": "^0.2.25",
     "98.css": "^0.1.20",
     "lodash": "^4.17.21",
@@ -24,12 +24,12 @@
     "nanoid": "^4.0.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-virtuoso": "^4.3.11",
-    "wagmi": "^0.12.18"
+    "react-virtuoso": "^4.4.2",
+    "wagmi": "^0.12.19"
   },
   "devDependencies": {
-    "@types/lodash": "^4.14.195",
-    "@types/luxon": "^3.3.0",
+    "@types/lodash": "^4.14.196",
+    "@types/luxon": "^3.3.1",
     "concurrently": "^8.2.0",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.8.1",
