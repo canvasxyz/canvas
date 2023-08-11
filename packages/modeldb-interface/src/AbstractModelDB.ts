@@ -1,14 +1,10 @@
-import { Config, ModelValue } from "./types.js"
+import { Config, ModelValue, Effect } from "./types.js"
 import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
 import { assert, signalInvalidType } from "./utils.js"
-
-export type Effect =
-	| { model: string; operation: "add"; value: ModelValue }
-	| { model: string; operation: "remove"; key: string }
-	| { model: string; operation: "set"; key: string; value: ModelValue }
-	| { model: string; operation: "delete"; key: string }
+import { getImmutableRecordKey } from "./utils.js"
 
 export abstract class AbstractModelDB {
+	public static getImmutableRecordKey = getImmutableRecordKey
 	public readonly apis: Record<string, MutableModelAPI | ImmutableModelAPI> = {}
 
 	public constructor(public readonly config: Config) {}
@@ -92,5 +88,24 @@ export abstract class AbstractModelDB {
 		assert(api !== undefined, `model ${modelName} not found`)
 		assert(api instanceof ImmutableModelAPI, "cannot call .remove on a mutable model")
 		await api.remove(key)
+	}
+
+	// Batch effect API
+
+	public async apply(effects: Effect[], options: { namespace?: string; version?: string } = {}): Promise<void> {
+		const { version, namespace } = options
+		for (const effect of effects) {
+			if (effect.operation === "add") {
+				await this.add(effect.model, effect.value, { namespace })
+			} else if (effect.operation === "remove") {
+				await this.remove(effect.model, effect.key)
+			} else if (effect.operation === "set") {
+				await this.set(effect.model, effect.key, effect.value, { version })
+			} else if (effect.operation === "delete") {
+				await this.delete(effect.model, effect.key, { version })
+			} else {
+				signalInvalidType(effect)
+			}
+		}
 	}
 }

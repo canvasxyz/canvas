@@ -59,6 +59,14 @@ export type QueryParams = {
 	orderBy?: Record<string, "asc" | "desc">
 }
 
+// Batch effect API
+
+export type Effect =
+	| { model: string; operation: "add"; value: ModelValue }
+	| { model: string; operation: "remove"; key: string }
+	| { model: string; operation: "set"; key: string; value: ModelValue }
+	| { model: string; operation: "delete"; key: string }
+
 // Types for the ModelDB internal API
 
 export type RecordValue = Record<string, string | number | Buffer | null>
