@@ -2,6 +2,12 @@ import { Config, ModelValue } from "./types.js"
 import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
 import { assert, signalInvalidType } from "./utils.js"
 
+export type Effect =
+	| { model: string; operation: "add"; value: ModelValue }
+	| { model: string; operation: "remove"; key: string }
+	| { model: string; operation: "set"; key: string; value: ModelValue }
+	| { model: string; operation: "delete"; key: string }
+
 export abstract class AbstractModelDB {
 	public readonly apis: Record<string, MutableModelAPI | ImmutableModelAPI> = {}
 
@@ -87,6 +93,4 @@ export abstract class AbstractModelDB {
 		assert(api instanceof ImmutableModelAPI, "cannot call .remove on a mutable model")
 		await api.remove(key)
 	}
-
-	// Utility methods
 }
