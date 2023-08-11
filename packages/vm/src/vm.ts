@@ -1,12 +1,12 @@
 import { QuickJSContext, QuickJSHandle, QuickJSRuntime, VmCallResult, getQuickJS, isFail } from "quickjs-emscripten"
 import { bytesToHex } from "@noble/hashes/utils"
 import { sha256 } from "@noble/hashes/sha256"
-import { CBORValue } from "microcbor"
 
-import { assert, mapEntries, getId } from "./utils.js"
+import { JSValue } from "./values.js"
+import { assert, mapValues } from "./utils.js"
 
 export interface VMOptions {
-	log?: (...args: CBORValue[]) => void
+	log?: (...args: JSValue[]) => void
 	runtimeMemoryLimit?: number
 }
 
@@ -26,17 +26,14 @@ export class VM {
 	private constructor(
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
-		private readonly options: VMOptions
+		options: VMOptions
 	) {
 		this.runtime.setMemoryLimit(options.runtimeMemoryLimit ?? VM.RUNTIME_MEMORY_LIMIT)
-		const log = options.log ?? ((...args) => console.log(...args))
+
+		const log = options.log ?? console.log
+
 		this.setGlobalValues({
-			console: this.wrapObject({
-				log: this.wrapFunction((...args) => {
-					log(...args)
-					return undefined
-				}),
-			}),
+			console: this.wrapObject({ log: this.wrapFunction((...args) => void log(...args)) }),
 		})
 	}
 
@@ -259,7 +256,7 @@ export class VM {
 		return object
 	}
 
-	public wrapValue = (value: CBORValue): QuickJSHandle => {
+	public wrapValue = (value: JSValue): QuickJSHandle => {
 		if (value === undefined) {
 			return this.context.undefined
 		} else if (value === null) {
@@ -273,9 +270,9 @@ export class VM {
 		} else if (value instanceof Uint8Array) {
 			return this.newUint8Array(value)
 		} else if (Array.isArray(value)) {
-			return this.wrapArray(value.map((element) => this.wrapValue(element)))
+			return this.wrapArray(value.map(this.wrapValue))
 		} else {
-			return this.wrapObject(mapEntries(value, (key, value) => this.wrapValue(value)))
+			return this.wrapObject(mapValues(value, this.wrapValue))
 		}
 	}
 
@@ -294,7 +291,7 @@ export class VM {
 
 	public isUint8Array = (handle: QuickJSHandle): boolean => this.isInstanceOf(handle, this.get("Uint8Array"))
 
-	public unwrapValue = (handle: QuickJSHandle): CBORValue => {
+	public unwrapValue = (handle: QuickJSHandle): JSValue => {
 		if (this.context.typeof(handle) === "undefined") {
 			return undefined
 		} else if (this.is(handle, this.context.null)) {
@@ -314,8 +311,8 @@ export class VM {
 		}
 	}
 
-	public wrapFunction = (fn: (...args: CBORValue[]) => void | CBORValue | Promise<void | CBORValue>): QuickJSHandle => {
-		const wrap = (value: void | CBORValue) => (value === undefined ? undefined : this.wrapValue(value))
+	public wrapFunction = (fn: (...args: JSValue[]) => void | JSValue | Promise<void | JSValue>): QuickJSHandle => {
+		const wrap = (value: void | JSValue) => (value === undefined ? undefined : this.wrapValue(value))
 		return this.context.newFunction(fn.name, (...args) => {
 			const result = fn(...args.map(this.unwrapValue))
 			if (result instanceof Promise) {
@@ -344,7 +341,7 @@ export class VM {
 	public unwrapFunction = (
 		handle: QuickJSHandle,
 		thisArg?: QuickJSHandle
-	): ((...args: CBORValue[]) => void | CBORValue) => {
+	): ((...args: JSValue[]) => void | JSValue) => {
 		const copy = handle.dup()
 		this.#localCache.add(copy)
 
@@ -368,7 +365,7 @@ export class VM {
 	public unwrapAsyncFunction = (
 		handle: QuickJSHandle,
 		thisArg?: QuickJSHandle
-	): ((...args: CBORValue[]) => Promise<void | CBORValue>) => {
+	): ((...args: JSValue[]) => Promise<void | JSValue>) => {
 		const copy = handle.dup()
 		this.#localCache.add(copy)
 
@@ -388,38 +385,4 @@ export class VM {
 			}
 		}
 	}
-
-	// /**
-	//  * Unwrapping a function is different than unwrapping a value because
-	//  * it must necessarily retain a handle to the function value for as long
-	//  * as the returned `CBORFunction` is alive.
-	//  *
-	//  * Unfortunately, there's no way to know how long that is,
-	//  * so we clone the handle and keep it in the VM cache forever.
-	//  */
-	// public unwrapFunction = (fn: QuickJSHandle): CBORFunction => {
-	// 	const fnCopy = fn.dup()
-	// 	this.#localCache.add(fnCopy)
-	// 	return (...args) => {
-	// 		const argHandles = args.map(this.wrapValue)
-	// 		try {
-	// 			const result = this.call(fnCopy, fnCopy, argHandles)
-	// 			return result.consume(this.unwrapValue)
-	// 		} finally {
-	// 			argHandles.forEach((handle) => handle.dispose())
-	// 		}
-	// 	}
-	// }
-
-	// public unwrapAsyncFunction = (fn: QuickJSHandle): CBORAsyncFunction => {
-	// 	return async (...args) => {
-	// 		const argHandles = args.map(this.wrapValue)
-	// 		try {
-	// 			const result = await this.callAsync(fn, fn, argHandles)
-	// 			return result.consume(this.unwrapValue)
-	// 		} finally {
-	// 			argHandles.forEach((handle) => handle.dispose())
-	// 		}
-	// 	}
-	// }
 }

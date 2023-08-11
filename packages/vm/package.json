@@ -29,25 +29,14 @@
   "dependencies": {
     "@canvas-js/interfaces": "0.5.0-alpha4",
     "@canvas-js/modeldb-interface": "0.5.0-alpha4",
-    "@canvas-js/signed-value": "0.5.0-alpha4",
-    "@ipld/car": "^5.2.0",
-    "@ipld/dag-cbor": "^9.0.3",
     "@libp2p/logger": "^3.0.1",
     "@noble/hashes": "^1.3.1",
-    "@types/better-sqlite3": "^7.6.4",
-    "@types/tar-stream": "^2.2.2",
-    "aggregate-error": "^4.0.1",
-    "chalk": "^5.3.0",
-    "ethers": "^6.6.6",
-    "microcbor": "^0.3.0",
-    "multiformats": "^12.0.1",
-    "p-queue": "^7.3.4",
-    "quickjs-emscripten": "^0.23.0",
-    "streamx": "^2.15.0",
-    "uint8arrays": "^4.0.4"
+    "quickjs-emscripten": "^0.23.0"
   },
   "devDependencies": {
-    "@types/streamx": "^2.9.1",
-    "@types/tar-fs": "^2.0.1"
+    "@ipld/car": "^5.2.0",
+    "@ipld/dag-cbor": "^9.0.4",
+    "ava": "^5.3.1",
+    "multiformats": "^12.0.1"
   }
 }
