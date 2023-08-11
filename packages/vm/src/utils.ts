@@ -1,4 +1,5 @@
-import { QuickJSContext, QuickJSHandle } from "quickjs-emscripten"
+import { CBORValue } from "microcbor"
+import { QuickJSHandle } from "quickjs-emscripten"
 
 export function assert(condition: unknown, message?: string): asserts condition {
 	if (!condition) {
@@ -14,48 +15,36 @@ export function signalInvalidType(type: never): never {
 	throw new TypeError("internal error: invalid type")
 }
 
-const contextCacheMap = new WeakMap<QuickJSContext, Map<string, QuickJSHandle>>()
-
-export function disposeCachedHandles(context: QuickJSContext) {
-	const cache = contextCacheMap.get(context)
-	if (cache !== undefined) {
-		for (const [path, handle] of cache) {
-			handle.dispose()
-			cache.delete(path)
-		}
-
-		contextCacheMap.delete(context) // not really necessary
+export function typeOf(value: CBORValue) {
+	if (value === undefined) {
+		return "undefined"
+	} else if (value === null) {
+		return "null"
+	} else if (typeof value === "boolean") {
+		return "boolean"
+	} else if (typeof value === "number") {
+		return "number"
+	} else if (typeof value === "string") {
+		return "string"
+	} else if (value instanceof Uint8Array) {
+		return "Uint8Array"
+	} else if (Array.isArray(value)) {
+		return "Array"
+	} else {
+		return "Object"
 	}
 }
 
-/**
- * get is a utility for accessing global variables inside the QuickJS context.
- * Call it with period-separated paths like "Function.prototype.toString" or "Object.hasOwnProperty".
- */
-export function get(context: QuickJSContext, path: string): QuickJSHandle {
-	const cache = getCache(context)
-	const cachedHandle = cache.get(path)
-	if (cachedHandle !== undefined) {
-		return cachedHandle
-	} else {
-		const elements = path.split(".")
-		const prop = elements.pop()
-		assert(prop !== undefined)
+const ids = new WeakMap<QuickJSHandle, number>()
+let nextId = 0
 
-		const object = elements.length > 0 ? get(context, elements.join(".")) : context.global
-		const handle = context.getProp(object, prop)
-		cache.set(path, handle)
-		return handle
-	}
-}
-
-function getCache(context: QuickJSContext): Map<string, QuickJSHandle> {
-	const cache = contextCacheMap.get(context)
-	if (cache !== undefined) {
-		return cache
+export function getId(handle: QuickJSHandle): number {
+	const existingId = ids.get(handle)
+	if (existingId !== undefined) {
+		return existingId
 	} else {
-		const cache = new Map<string, QuickJSHandle>()
-		contextCacheMap.set(context, cache)
-		return cache
+		const id = nextId++
+		ids.set(handle, id)
+		return id
 	}
 }

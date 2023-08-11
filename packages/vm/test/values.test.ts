@@ -1,11 +1,9 @@
 import test from "ava"
 
-import { getQuickJS } from "quickjs-emscripten"
 import { VM } from "@canvas-js/vm"
 
 test("wrap and unwrap primitive values", async (t) => {
-	const quickJS = await getQuickJS()
-	const vm = new VM({ quickJS })
+	const vm = await VM.initialize()
 	t.teardown(() => vm.dispose())
 
 	const values = [null, undefined, true, false, 4, 89.1923, 1392138213321, "hellooo world"]
@@ -15,8 +13,7 @@ test("wrap and unwrap primitive values", async (t) => {
 })
 
 test("wrap and unwrap Uint8Arrays", async (t) => {
-	const quickJS = await getQuickJS()
-	const vm = new VM({ quickJS })
+	const vm = await VM.initialize()
 	t.teardown(() => vm.dispose())
 
 	const values = [
@@ -30,8 +27,7 @@ test("wrap and unwrap Uint8Arrays", async (t) => {
 })
 
 test("wrap and unwrap objects", async (t) => {
-	const quickJS = await getQuickJS()
-	const vm = new VM({ quickJS })
+	const vm = await VM.initialize()
 	t.teardown(() => vm.dispose())
 
 	const values = [
@@ -47,8 +43,7 @@ test("wrap and unwrap objects", async (t) => {
 })
 
 test("wrap and unwrap arrays", async (t) => {
-	const quickJS = await getQuickJS()
-	const vm = new VM({ quickJS })
+	const vm = await VM.initialize()
 	t.teardown(() => vm.dispose())
 
 	const values = [

@@ -1,3 +1,2 @@
 export { VM } from "./vm.js"
-export * from "./utils.js"
-export * from "./values.js"
+export { typeOf } from "./utils.js"
