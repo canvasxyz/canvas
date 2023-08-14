@@ -5,6 +5,8 @@ import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp
 import { PeerId } from "@libp2p/interface-peer-id"
 import { base32 } from "multiformats/bases/base32"
 import { blake3 } from "@noble/hashes/blake3"
+import { prometheusMetrics } from "@libp2p/prometheus-metrics"
+import { register } from "prom-client"
 
 import { ModelDB } from "@canvas-js/modeldb-sqlite"
 
@@ -44,6 +46,10 @@ export default function getTarget(location: string | null): PlatformTarget {
 				const dbPath = path.resolve(location, `models-${hash}.sqlite`)
 				return new ModelDB(dbPath, init)
 			}
+		},
+
+		extendLibp2pOptions(options) {
+			return { ...options, metrics: prometheusMetrics({ registry: register }) }
 		},
 	}
 }

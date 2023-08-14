@@ -22,10 +22,9 @@ import { Store } from "@canvas-js/store"
 
 import getTarget from "#target"
 
-import { getLibp2pOptions, P2PConfig, ServiceMap } from "@canvas-js/core/components/libp2p"
-import { assert, compareTimestampVersion, mapValues, signalInvalidType } from "@canvas-js/core/utils"
-
+import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
 import { ActionHandler, ActionInput, CustomActionHandler, TopicHandler } from "./handlers.js"
+import { assert, compareTimestampVersion, mapValues, signalInvalidType } from "./utils.js"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string

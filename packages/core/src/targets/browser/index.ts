@@ -31,5 +31,9 @@ export default function getBrowserTarget(location: string | null): PlatformTarge
 		async openDB(name, init, options) {
 			return await ModelDB.initialize(init, { ...options, databaseName: name })
 		},
+
+		extendLibp2pOptions(options) {
+			return options
+		},
 	}
 }

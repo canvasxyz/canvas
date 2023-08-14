@@ -2,7 +2,8 @@ import chalk from "chalk"
 
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
-import { pingService } from "libp2p/ping"
+import type { PubSub } from "@libp2p/interface-pubsub"
+import { pingService, PingService } from "libp2p/ping"
 import { identifyService } from "libp2p/identify"
 
 import { circuitRelayTransport } from "libp2p/circuit-relay"
@@ -10,7 +11,7 @@ import { webSockets } from "@libp2p/websockets"
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
-import { gossipsub } from "@chainsafe/libp2p-gossipsub"
+import { gossipsub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import { assert } from "@canvas-js/core/utils"
@@ -22,10 +23,23 @@ import {
 	PING_TIMEOUT,
 } from "@canvas-js/core/constants"
 
-import type { P2PConfig, ServiceMap } from "./types.js"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
-export function getBaseLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pOptions<ServiceMap> {
+export interface P2PConfig {
+	listen?: string[]
+	announce?: string[]
+	bootstrapList?: string[]
+	minConnections?: number
+	maxConnections?: number
+}
+
+export type ServiceMap = {
+	pubsub: PubSub<GossipsubEvents>
+	pingService: PingService
+	identifyService: {}
+}
+
+export function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pOptions<ServiceMap> {
 	const announce = config.announce ?? []
 	const listen = config.listen ?? []
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
