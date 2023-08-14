@@ -1,5 +1,5 @@
 {
-  "include": ["src", "types"],
+  "include": ["src"],
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "moduleResolution": "node16",
@@ -7,7 +7,12 @@
     "outDir": "lib"
   },
   "references": [
+    { "path": "../chain-ethereum" },
+    { "path": "../signed-value" },
     { "path": "../interfaces" },
-    { "path": "../chain-ethereum" }
+    { "path": "../modeldb-sqlite" },
+    { "path": "../modeldb-interface" },
+    { "path": "../store" },
+    { "path": "../vm" },
   ]
 }

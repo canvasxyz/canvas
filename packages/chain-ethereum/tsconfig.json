@@ -3,9 +3,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "lib"
+    "outDir": "lib",
+    "moduleResolution": "node16"
   },
   "references": [
-    {"path": "../interfaces"}
+    {"path": "../interfaces"},
+    {"path": "../signed-value"}
   ]
 }

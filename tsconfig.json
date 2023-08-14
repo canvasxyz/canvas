@@ -1,24 +1,21 @@
 {
   "files": [],
   "references": [
-    { "path": "./packages/cli" },
-    { "path": "./packages/core" },
-    { "path": "./packages/core/test" },
     { "path": "./packages/interfaces" },
     { "path": "./packages/interfaces/test" },
-    { "path": "./packages/hooks" },
+    { "path": "./packages/vm" },
+    { "path": "./packages/vm/test" },
     { "path": "./packages/store" },
     { "path": "./packages/store/test" },
+    { "path": "./packages/core" },
+    { "path": "./packages/core/test" },
+    { "path": "./packages/signed-value" },
+    { "path": "./packages/signed-value/test" },
     { "path": "./packages/modeldb-idb" },
     { "path": "./packages/modeldb-sqlite" },
     { "path": "./packages/modeldb-interface" },
     { "path": "./packages/modeldb-interface/test" },
-    { "path": "./packages/store" },
-    { "path": "./packages/store/test" },
     { "path": "./packages/chain-ethereum" },
-    { "path": "./packages/chain-cosmos" },
-    { "path": "./packages/chain-near" },
-    { "path": "./packages/chain-solana" },
-    { "path": "./packages/chain-substrate" },
+    { "path": "./packages/chain-ethereum/test" }
   ]
 }

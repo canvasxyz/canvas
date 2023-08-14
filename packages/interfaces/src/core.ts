@@ -1,11 +1,11 @@
 import type { EventEmitter } from "@libp2p/interfaces/events"
 
-import type { Message } from "./messages.js"
-import type { ModelValue } from "./models.js"
+import type { ModelValue } from "@canvas-js/modeldb-interface"
+import type { IPLDValue } from "./values.js"
 
 export type SyncEventDetail = { uri: string; peer: string; time: number; status: "success" | "failure" }
 export type UpdateEventDetail = { uri: string; root: string | null }
-export type MessageEventDetail = { uri: string; hash: string; message: Message }
+export type MessageEventDetail = { uri: string; hash: string; message: IPLDValue }
 
 export interface CoreEvents {
 	close: Event
@@ -17,7 +17,7 @@ export interface CoreEvents {
 }
 
 export interface CoreAPI extends EventEmitter<CoreEvents> {
-	apply(message: Message): Promise<{ hash: string }>
+	apply(message: IPLDValue): Promise<{ hash: string }>
 	getRoute<T extends Record<string, ModelValue> = Record<string, ModelValue>>(
 		route: string,
 		params?: Record<string, ModelValue>
@@ -26,12 +26,10 @@ export interface CoreAPI extends EventEmitter<CoreEvents> {
 }
 
 export type ApplicationData = {
-	cid: string
 	uri: string
 	peerId: string | null
 	actions: string[]
 	models: Record<string, Record<string, string>>
-	routes: string[]
 	signers: string[]
 	peers: { id: string; protocols?: string[]; addresses?: string[] }[]
 	merkleRoots: Record<string, string>

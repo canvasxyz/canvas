@@ -1,6 +1,7 @@
-import { AbstractModelDB, Config, ModelsInit, parseConfig } from "@canvas-js/modeldb-interface"
 import { IDBPDatabase, openDB } from "idb"
-import { signalInvalidType } from "./utils.js"
+
+import { AbstractModelDB, Config, ModelsInit, Resolve, parseConfig } from "@canvas-js/modeldb-interface"
+
 import {
 	createIdbImmutableModelAPI,
 	createIdbMutableModelAPI,
@@ -9,11 +10,12 @@ import {
 	getRelationTableName,
 	getTombstoneTableName,
 } from "./api.js"
+import { signalInvalidType } from "./utils.js"
 
 export interface ModelDBOptions {
-	dkLen?: number
-	resolve?: (versionA: string, versionB: string) => string
 	databaseName?: string
+	resolve?: Resolve
+	dkLen?: number
 }
 
 export class ModelDB extends AbstractModelDB {

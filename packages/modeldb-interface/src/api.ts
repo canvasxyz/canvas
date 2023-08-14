@@ -1,4 +1,4 @@
-import { ImmutableRecordAPI, Model, ModelValue, MutableRecordAPI, RelationAPI, TombstoneAPI } from "./types.js"
+import { ImmutableRecordAPI, Model, ModelValue, MutableRecordAPI, RelationAPI, Resolve, TombstoneAPI } from "./types.js"
 
 import { getImmutableRecordKey } from "./utils.js"
 
@@ -7,7 +7,7 @@ export class MutableModelAPI {
 	readonly #relations: Record<string, RelationAPI> = {}
 	readonly #records: MutableRecordAPI
 
-	readonly #resolve?: (a: string, b: string) => string
+	readonly #resolve?: Resolve
 
 	public readonly model: Model
 
@@ -16,7 +16,7 @@ export class MutableModelAPI {
 		relations: Record<string, RelationAPI>,
 		records: MutableRecordAPI,
 		model: Model,
-		options: { resolve?: (a: string, b: string) => string } = {}
+		options: { resolve?: Resolve } = {}
 	) {
 		this.#tombstones = tombstoneAPI
 		this.#relations = relations
@@ -48,7 +48,8 @@ export class MutableModelAPI {
 
 		const existingVersion = await this.#records.selectVersion({ _key: key })
 		const existingTombstone = await this.#tombstones.select({ _key: key })
-		// if conflict resolution is enable
+
+		// if conflict resolution is enabled
 		if (this.#resolve !== undefined) {
 			version = options.version ?? null
 			metadata = options.metadata ?? null
@@ -57,7 +58,7 @@ export class MutableModelAPI {
 			if (existingVersion !== null && existingVersion._version !== null) {
 				if (version === null) {
 					return
-				} else if (this.#resolve(existingVersion._version, version) === existingVersion._version) {
+				} else if (this.#resolve.lessThan({ version }, { version: existingVersion._version })) {
 					return
 				}
 			}
@@ -66,7 +67,7 @@ export class MutableModelAPI {
 			if (existingTombstone !== null && existingTombstone._version !== null) {
 				if (version === null) {
 					return
-				} else if (this.#resolve(existingTombstone._version, version) === existingTombstone._version) {
+				} else if (this.#resolve.lessThan({ version }, { version: existingTombstone._version })) {
 					return
 				}
 			}
@@ -117,14 +118,14 @@ export class MutableModelAPI {
 
 			// no-op if an existing record takes precedence
 			if (previous !== null && previous._version !== null) {
-				if (version === null || this.#resolve(previous._version, version) === previous._version) {
+				if (version === null || this.#resolve.lessThan({ version }, { version: previous._version })) {
 					return
 				}
 			}
 
 			// no-op if an existing tombstone takes precedence
 			if (tombstone !== null && tombstone._version !== null) {
-				if (version === null || this.#resolve(tombstone._version, version) === tombstone._version) {
+				if (version === null || this.#resolve.lessThan({ version }, { version: tombstone._version })) {
 					return
 				}
 			}

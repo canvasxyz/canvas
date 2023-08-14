@@ -45,7 +45,7 @@ export async function handler(args: Args) {
 		chains.push(new EthereumChainImplementation())
 	}
 
-	const core = await Core.initialize({ uri, directory, spec, chains, offline: true })
+	const core = await Core.initialize({ uri, directory, contract: spec, chains, offline: true })
 
 	const rl = readline.createInterface({
 		input: process.stdin,

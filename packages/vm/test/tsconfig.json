@@ -1,0 +1,13 @@
+{
+  "exclude": ["lib"],
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "moduleResolution": "node16",
+    "rootDir": ".",
+    "outDir": "lib"
+  },
+  "references": [
+    { "path": "../." },
+    { "path": "../../interfaces" }
+  ]
+}

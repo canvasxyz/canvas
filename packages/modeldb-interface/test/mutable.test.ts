@@ -16,6 +16,7 @@ testOnModelDB("create a modeldb with a mutable model and a valid entry", async (
 			$type: "mutable",
 		},
 	} as ModelsInit
+
 	const db = await modelDBConstructor(models)
 
 	const key = "modelKey"
@@ -52,7 +53,8 @@ testOnModelDB("create a modeldb with a mutable model and a resolve function", as
 			$type: "mutable",
 		},
 	} as ModelsInit
-	const db = await modelDBConstructor(models, { resolve: (a: any, b: any) => (a > b ? a : b) })
+
+	const db = await modelDBConstructor(models, { resolve: { lessThan: (a, b) => a < b } })
 
 	const key = "modelKey1"
 
@@ -80,6 +82,7 @@ testOnModelDB("create a modeldb with a mutable model and an invalid entry", asyn
 			$type: "mutable",
 		},
 	} as ModelsInit
+
 	const db = await modelDBConstructor(models)
 
 	const key = "modelKey3"
@@ -97,7 +100,8 @@ testOnModelDB("create a modeldb with a mutable model, test deleting entries", as
 			$type: "mutable",
 		},
 	} as ModelsInit
-	const db = await modelDBConstructor(models, { resolve: (a: any, b: any) => (a > b ? a : b) })
+
+	const db = await modelDBConstructor(models, { resolve: { lessThan: (a, b) => a < b } })
 
 	const key = "modelKey4"
 
