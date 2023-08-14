@@ -57,7 +57,7 @@ export class VM {
 
 	public setGlobalValues(values: Record<string, QuickJSHandle>) {
 		for (const [name, handle] of Object.entries(values)) {
-			this.context.setProp(this.context.global, name, handle)
+			handle.consume((handle) => this.context.setProp(this.context.global, name, handle))
 		}
 	}
 
