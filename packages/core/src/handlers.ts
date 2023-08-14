@@ -1,30 +1,26 @@
 import { CBORValue } from "microcbor"
 
-import { AbstractModelDB, ModelValue, getImmutableRecordKey, validateModelValue } from "@canvas-js/modeldb-interface"
 import { Signed, verifySignedValue } from "@canvas-js/signed-value"
 import { Action, ActionArguments, ActionContext, Env, Signer } from "@canvas-js/interfaces"
-import { JSValue } from "@canvas-js/vm"
+import { JSFunctionAsync } from "@canvas-js/vm"
 
-import { assert, signalInvalidType } from "./utils.js"
+import { assert } from "./utils.js"
 
-export interface Subscription<T = unknown, I = T> {
+export interface TopicHandler<T = unknown, I = T> {
 	topic: string
 	// codec: string // "dag-cbor" | "dag-json"
 	validate(event: T): Promise<void>
-	apply(id: string, event: T, env: Env): Promise<void | JSValue>
+	apply(id: string, event: T, env: Env): Promise<void | CBORValue>
 	create(input: I, env: Env): Promise<T>
 }
 
 export type ActionInput = { name: string; args: ActionArguments; chain?: string }
 
-export type ActionFunction = (id: string, event: Signed<Action>, env: Env) => void | JSValue | Promise<void | JSValue>
-export type CustomActionFunction = (id: string, event: CBORValue, env: Env) => void | JSValue | Promise<void | JSValue>
-
-export class ActionHandler implements Subscription<Signed<Action>, ActionInput> {
+export class ActionHandler implements TopicHandler<Signed<Action>, ActionInput> {
 	constructor(
 		public readonly topic: string,
-		private readonly signers: Signer[],
-		private readonly actions: Record<string, ActionFunction>
+		private readonly actions: Record<string, JSFunctionAsync>,
+		private readonly signers: Signer[]
 	) {}
 
 	public async validate(event: Signed<Action>): Promise<void> {
@@ -36,9 +32,9 @@ export class ActionHandler implements Subscription<Signed<Action>, ActionInput> 
 		assert(this.actions[name] !== undefined, `invalid action name: ${name}`)
 	}
 
-	public async apply(id: string, event: Signed<Action>, env: Env): Promise<void | JSValue> {
-		const { name } = event.value
-		return await this.actions[name](id, event, env)
+	public async apply(id: string, event: Signed<Action>, env: Env): Promise<void | CBORValue> {
+		const { chain, address, name, args, context } = event.value
+		return await this.actions[name](args, { ...env, id, chain, address, ...context })
 	}
 
 	public async create({ chain, name, args }: ActionInput, env: Env): Promise<Signed<Action>> {
@@ -57,71 +53,16 @@ export class ActionHandler implements Subscription<Signed<Action>, ActionInput> 
 	}
 }
 
-export class CustomActionHandler implements Subscription<CBORValue> {
-	constructor(public readonly topic: string, private readonly applyFunction: CustomActionFunction) {}
+export class CustomActionHandler implements TopicHandler<CBORValue> {
+	constructor(public readonly topic: string, private readonly applyFunction: JSFunctionAsync) {}
 
 	public async validate(event: CBORValue): Promise<void> {}
 
-	public async apply(id: string, event: CBORValue, env: Env): Promise<void | JSValue> {
+	public async apply(id: string, event: CBORValue, env: Env): Promise<void | CBORValue> {
 		return this.applyFunction(id, event, env)
 	}
 
 	public async create(input: CBORValue, env: Env): Promise<CBORValue> {
 		return input
 	}
-}
-
-export type EffectContext = {
-	namespace: string
-	version?: string
-	effects: Effect[]
-}
-
-export type Effect =
-	| { name: string; model: string; operation: "add"; key: string; value: ModelValue }
-	| { name: string; model: string; operation: "set"; key: string; value: ModelValue }
-	| { name: string; model: string; operation: "delete"; key: string }
-
-export function getModelAPIs(name: string, db: AbstractModelDB, getEffectContext: () => EffectContext): JSValue {
-	return Object.fromEntries(
-		db.config.models.map((model) => {
-			if (model.kind === "immutable") {
-				const api = {
-					add: async (value: JSValue) => {
-						const { namespace, effects } = getEffectContext()
-						const modelValue = value as ModelValue
-						validateModelValue(model, modelValue)
-						const key = getImmutableRecordKey(modelValue, { namespace })
-						effects.push({ name, model: model.name, operation: "add", key, value: modelValue })
-						return key
-					},
-					get: async (key: JSValue): Promise<ModelValue | null> => {
-						assert(typeof key === "string", "key argument must be a string")
-						return await db.get(model.name, key)
-					},
-				}
-
-				return [model.name, api]
-			} else if (model.kind === "mutable") {
-				const api = {
-					set: async (key: JSValue, value: JSValue) => {
-						const { effects } = getEffectContext()
-						assert(typeof key === "string", "key argument must be a string")
-						const modelValue = value as ModelValue
-						validateModelValue(model, modelValue)
-						effects.push({ name, model: model.name, operation: "set", key, value: modelValue })
-					},
-					delete: async (key: JSValue) => {
-						const { effects } = getEffectContext()
-						assert(typeof key === "string", "key argument must be a string")
-						effects.push({ name, model: model.name, operation: "delete", key })
-					},
-				}
-
-				return [model.name, api]
-			} else {
-				signalInvalidType(model.kind)
-			}
-		})
-	)
 }

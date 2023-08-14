@@ -10,11 +10,12 @@ import {
 	QueryParams,
 	RecordValue,
 	RelationAPI,
+	Resolve,
 	TombstoneAPI,
 } from "@canvas-js/modeldb-interface"
 import { getRecordTableName, getRelationTableName, getTombstoneTableName } from "./initialize.js"
-import { Method, Query, iteratorToAsyncIterableIterator, signalInvalidType, zip } from "./utils.js"
 import { decodeRecord, encodeRecordParams } from "./encoding.js"
+import { Method, Query, signalInvalidType, zip } from "./utils.js"
 
 // The code here is designed so the SQL queries have type annotations alongside them.
 // Operations are organized into "APIs", one for each underlying SQLite table.
@@ -297,11 +298,7 @@ function prepareRelationAPIs(db: sqlite.Database, model: Model) {
 	return relations
 }
 
-export function createSqliteMutableModelAPI(
-	db: sqlite.Database,
-	model: Model,
-	options: { resolve?: (a: string, b: string) => string } = {}
-) {
+export function createSqliteMutableModelAPI(db: sqlite.Database, model: Model, options: { resolve?: Resolve } = {}) {
 	const tombstoneAPI = prepareTombstoneAPI(db, model)
 	const relations = prepareRelationAPIs(db, model)
 	const records = prepareMutableRecordAPI(db, model)

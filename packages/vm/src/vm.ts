@@ -2,7 +2,7 @@ import { QuickJSContext, QuickJSHandle, QuickJSRuntime, VmCallResult, getQuickJS
 import { bytesToHex } from "@noble/hashes/utils"
 import { sha256 } from "@noble/hashes/sha256"
 
-import { JSValue } from "./values.js"
+import { JSFunction, JSFunctionAsync, JSValue } from "./values.js"
 import { assert, mapValues } from "./utils.js"
 
 export interface VMOptions {
@@ -56,9 +56,9 @@ export class VM {
 	}
 
 	public setGlobalValues(values: Record<string, QuickJSHandle>) {
-		this.wrapObject(values).consume((handle) =>
-			this.call("Object.assign", this.context.null, [this.context.global, handle]).dispose()
-		)
+		for (const [name, handle] of Object.entries(values)) {
+			this.context.setProp(this.context.global, name, handle)
+		}
 	}
 
 	public execute(contract: string, options: { uri?: string } = {}) {
@@ -311,7 +311,7 @@ export class VM {
 		}
 	}
 
-	public wrapFunction = (fn: (...args: JSValue[]) => void | JSValue | Promise<void | JSValue>): QuickJSHandle => {
+	public wrapFunction = (fn: JSFunction | JSFunctionAsync): QuickJSHandle => {
 		const wrap = (value: void | JSValue) => (value === undefined ? undefined : this.wrapValue(value))
 		return this.context.newFunction(fn.name, (...args) => {
 			const result = fn(...args.map(this.unwrapValue))
@@ -338,10 +338,7 @@ export class VM {
 		})
 	}
 
-	public unwrapFunction = (
-		handle: QuickJSHandle,
-		thisArg?: QuickJSHandle
-	): ((...args: JSValue[]) => void | JSValue) => {
+	public unwrapFunction = (handle: QuickJSHandle, thisArg?: QuickJSHandle): JSFunction => {
 		const copy = handle.dup()
 		this.#localCache.add(copy)
 
@@ -362,10 +359,7 @@ export class VM {
 		}
 	}
 
-	public unwrapAsyncFunction = (
-		handle: QuickJSHandle,
-		thisArg?: QuickJSHandle
-	): ((...args: JSValue[]) => Promise<void | JSValue>) => {
+	public unwrapFunctionAsync = (handle: QuickJSHandle, thisArg?: QuickJSHandle): JSFunctionAsync => {
 		const copy = handle.dup()
 		this.#localCache.add(copy)
 

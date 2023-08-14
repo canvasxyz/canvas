@@ -88,25 +88,25 @@ export class Method<P> {
 // 	return `${modelName}/${property.name} must be ${getTypeScriptType(property)}`
 // }
 
-export const iteratorToAsyncIterableIterator = <T>(iter: IterableIterator<T>): AsyncIterableIterator<T> => {
-	let result: AsyncIterableIterator<T> = {
-		[Symbol.asyncIterator]() {
-			return this
-		},
-		async next() {
-			return iter.next()
-		},
-	}
+// export const iteratorToAsyncIterableIterator = <T>(iter: IterableIterator<T>): AsyncIterableIterator<T> => {
+// 	let result: AsyncIterableIterator<T> = {
+// 		[Symbol.asyncIterator]() {
+// 			return this
+// 		},
+// 		async next() {
+// 			return iter.next()
+// 		},
+// 	}
 
-	const returnFunc = iter.return
-	if (returnFunc) {
-		result.return = async (value) => returnFunc(value)
-	}
+// 	const returnFunc = iter.return
+// 	if (returnFunc) {
+// 		result.return = async (value) => returnFunc(value)
+// 	}
 
-	const throwFunc = iter.throw
-	if (throwFunc) {
-		result.throw = async (exception) => throwFunc(exception)
-	}
+// 	const throwFunc = iter.throw
+// 	if (throwFunc) {
+// 		result.throw = async (exception) => throwFunc(exception)
+// 	}
 
-	return result
-}
+// 	return result
+// }

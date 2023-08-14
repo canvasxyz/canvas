@@ -5,10 +5,10 @@ import {
 	ModelValue,
 	MutableModelAPI,
 	MutableRecordAPI,
-	PrimitiveValue,
 	QueryParams,
 	RecordValue,
 	RelationAPI,
+	Resolve,
 	TombstoneAPI,
 } from "@canvas-js/modeldb-interface"
 import { decodeRecord, encodeRecord } from "./encoding.js"
@@ -224,11 +224,7 @@ function prepareImmutableRecordAPI(db: IDBPDatabase, model: Model): ImmutableRec
 	}
 }
 
-export function createIdbMutableModelAPI(
-	db: IDBPDatabase,
-	model: Model,
-	options: { resolve?: (a: string, b: string) => string } = {}
-) {
+export function createIdbMutableModelAPI(db: IDBPDatabase, model: Model, options: { resolve?: Resolve } = {}) {
 	const tombstoneAPI = prepareTombstoneAPI(db, model)
 	const relations = prepareRelationAPIs(db, model)
 	const records = prepareMutableRecordAPI(db, model)

@@ -67,6 +67,14 @@ export type Effect =
 	| { model: string; operation: "set"; key: string; value: ModelValue }
 	| { model: string; operation: "delete"; key: string }
 
+// Conflict resolver
+
+export type Resolve = {
+	lessThan: (a: { version: string }, b: { version: string }) => boolean
+}
+
+// export type ResolveOrder
+
 // Types for the ModelDB internal API
 
 export type RecordValue = Record<string, string | number | Buffer | null>

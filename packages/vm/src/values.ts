@@ -1,8 +1,17 @@
+// Values
+
 export type JSValue = undefined | null | boolean | number | string | Uint8Array | JSArray | JSObject
 export interface JSArray extends Array<JSValue> {}
 export interface JSObject {
 	[key: string]: JSValue
 }
+
+// Functions
+
+export type JSFunction = (...args: JSValue[]) => void | JSValue
+export type JSFunctionAsync = (...args: JSValue[]) => Promise<void | JSValue>
+
+// Utilities
 
 export function typeOf(value: JSValue) {
 	if (value === undefined) {

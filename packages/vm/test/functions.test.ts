@@ -110,7 +110,7 @@ test("unwrap an async function", async (t) => {
 	const vm = await VM.initialize()
 	t.teardown(() => vm.dispose())
 
-	const f = vm.unwrapAsyncFunction(vm.get("Promise.resolve"), vm.get("Promise"))
+	const f = vm.unwrapFunctionAsync(vm.get("Promise.resolve"), vm.get("Promise"))
 	t.deepEqual(await f({ value: "lol" }), { value: "lol" })
 })
 
@@ -127,7 +127,7 @@ test("wrap and unwrap an async function", async (t) => {
 	t.teardown(() => vm.dispose())
 
 	const handle = vm.wrapFunction(async (...args) => args.join(""))
-	const f = handle.consume(vm.unwrapAsyncFunction)
+	const f = handle.consume(vm.unwrapFunctionAsync)
 	t.deepEqual(await f("a", "b", "c"), "abc")
 })
 
@@ -136,6 +136,6 @@ test("wrap and unwrap an async function that allocations on the heap", async (t)
 	t.teardown(() => vm.dispose())
 
 	const handle = vm.wrapFunction(async (...args) => ({ result: args.join("") }))
-	const f = handle.consume(vm.unwrapAsyncFunction)
+	const f = handle.consume(vm.unwrapFunctionAsync)
 	t.deepEqual(await f("a", "b", "c"), { result: "abc" })
 })
