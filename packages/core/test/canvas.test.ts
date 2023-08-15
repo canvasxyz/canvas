@@ -1,6 +1,7 @@
 import test from "ava"
 
 import { Canvas } from "@canvas-js/core"
+import assert from "assert"
 
 const contract = `
 const db = openDB("data", {
@@ -34,11 +35,10 @@ test("send an ", async (t) => {
 	t.teardown(() => app.close())
 	t.timeout(5000)
 
-	try {
-		await app.applyAction("com.example.app", { name: "createPost", args: { content: "hello world" } })
-	} catch (err) {
-		console.error(err, err instanceof Error)
-		throw err
-	}
-	t.pass()
+	const result = await app.applyAction("com.example.app", { name: "createPost", args: { content: "hello world" } })
+	const db = app.dbs.get("data")
+	assert(db !== undefined)
+	const value = await db.get("posts", result.id)
+	console.log("got value", value)
+	t.is(value?.content, "hello world")
 })

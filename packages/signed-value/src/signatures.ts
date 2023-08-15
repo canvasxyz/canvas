@@ -1,11 +1,11 @@
 import { secp256k1 } from "@noble/curves/secp256k1"
 import { ed25519 } from "@noble/curves/ed25519"
 import { CID } from "multiformats/cid"
-import { create as createDigest } from "multiformats/hashes/digest"
 
 import { Codec, codecs, getCodec } from "./codecs.js"
 import { Digest, digests, getDigest } from "./digests.js"
 import { assert, signalInvalidType } from "./utils.js"
+import { getCID } from "./cid.js"
 
 export type Signed<T> = {
 	type: "ed25519" | "secp256k1"
@@ -24,8 +24,7 @@ export function verifySignedValue<T>(
 
 	const digest = (options.digests ?? digests).find((digest) => digest.code === cid.multihash.code)
 	assert(digest !== undefined, "unsupported digest")
-
-	assert(getCID(codec, digest, value).equals(cid), "signed CID does not match value")
+	assert(getCID(value, { codec, digest }).equals(cid), "signed CID does not match value")
 
 	if (type === "ed25519") {
 		assert(ed25519.verify(signature, cid.bytes, publicKey), "invalid ed25519 signature")
@@ -45,8 +44,7 @@ export function createSignedValue<T>(
 	value: T,
 	options: { codec?: string | Codec; digest?: string | Digest } = {}
 ): Signed<T> {
-	const [codec, digest] = [getCodec(options), getDigest(options)]
-	const cid = getCID(codec, digest, value)
+	const cid = getCID(value, options)
 
 	if (type === "ed25519") {
 		const publicKey = ed25519.getPublicKey(privateKey)
@@ -59,9 +57,4 @@ export function createSignedValue<T>(
 	} else {
 		signalInvalidType(type)
 	}
-}
-
-function getCID(codec: Codec, digest: Digest, value: unknown): CID {
-	const hash = digest.digest(codec.encode(value))
-	return CID.createV1(codec.code, createDigest(digest.code, hash))
 }

@@ -2,9 +2,10 @@ import chalk from "chalk"
 import { PeerId } from "@libp2p/interface-peer-id"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { createLibp2p, Libp2p } from "libp2p"
-import { CBORValue } from "microcbor"
+import { logger } from "@libp2p/logger"
+import { bytesToHex } from "@noble/hashes/utils"
 
-import { Action, ActionArguments, Env, IPLDValue, Signer } from "@canvas-js/interfaces"
+import { Env, IPLDValue, Signer } from "@canvas-js/interfaces"
 import { JSFunctionAsync, JSValue, VM } from "@canvas-js/vm"
 import {
 	AbstractModelDB,
@@ -17,16 +18,14 @@ import {
 	validateModelValue,
 } from "@canvas-js/modeldb-interface"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { createOrderedEncoding, Store } from "@canvas-js/store"
+import { Store } from "@canvas-js/store"
 
 import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
 import { ActionHandler, ActionInput, CustomActionHandler, TopicHandler } from "./handlers.js"
 import { assert, encodeTimestampVersion, mapValues, signalInvalidType, timestampResolver } from "./utils.js"
-import { Signed } from "@canvas-js/signed-value"
-import { logger } from "@libp2p/logger"
-import { bytesToHex } from "@noble/hashes/utils"
+import { getCID } from "@canvas-js/signed-value"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
@@ -224,12 +223,9 @@ export class Canvas extends EventEmitter<{}> {
 				const log = logger(`canvas:modeldb:${name}:${model.name}`)
 				modelAPIs[model.name] = {
 					add: async (value) => {
-						log("adding %o", model.name, value)
 						const modelValue = value as ModelValue
 						validateModelValue(model, modelValue)
-						log("validated model value")
 						this.logEffect(name, { model: model.name, operation: "add", value: modelValue })
-						log("what is even happening")
 						const { namespace } = this.getEffectContext()
 						const key = getImmutableRecordKey(modelValue, { namespace })
 						log("returning derived record key %s", model.name, key)
@@ -326,7 +322,7 @@ export class Canvas extends EventEmitter<{}> {
 		const handler = this.handlers.find((subscription) => subscription.topic === topic)
 		assert(handler instanceof ActionHandler, "no handler found for topic")
 		const action = await handler.create(input, env)
-		const id = "fdjakf"
+		const id = getCID(action, { codec: "dag-cbor" }).toString()
 		const version = encodeTimestampVersion(action.value.context.timestamp)
 		try {
 			this.setEffectContext(id, bytesToHex(version))
@@ -346,7 +342,7 @@ export class Canvas extends EventEmitter<{}> {
 		const handler = this.handlers.find((subscription) => subscription.topic === topic)
 		assert(handler instanceof CustomActionHandler, "no handler found for topic")
 		const action = await handler.create(input, env)
-		const id = ""
+		const id = getCID(action, { codec: "dag-cbor" }).toString()
 		const result = await handler.apply(id, action, env)
 		return { id, result: result ?? undefined }
 	}
