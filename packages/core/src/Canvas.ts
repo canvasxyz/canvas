@@ -25,6 +25,8 @@ import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
 import { ActionHandler, ActionInput, CustomActionHandler, TopicHandler } from "./handlers.js"
 import { assert, encodeTimestampVersion, mapValues, signalInvalidType, timestampResolver } from "./utils.js"
 import { Signed } from "@canvas-js/signed-value"
+import { logger } from "@libp2p/logger"
+import { bytesToHex } from "@noble/hashes/utils"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
@@ -71,7 +73,7 @@ export class Canvas extends EventEmitter<{}> {
 		const databases = new Map<string, ModelsInit>()
 
 		// the type here are an absolute mess, need to rethink it all
-		const handlers: (TopicHandler<Signed<Action>, ActionArguments> | TopicHandler<IPLDValue, JSValue>)[] = []
+		// const handlers: (TopicHandler<Signed<Action>, ActionArguments> | TopicHandler<IPLDValue, JSValue>)[] = []
 
 		const app = new Canvas(peerId, libp2p, signers, vm)
 
@@ -103,7 +105,7 @@ export class Canvas extends EventEmitter<{}> {
 				)
 
 				const handler = new ActionHandler(topic, actions, app.signers)
-				handlers.push(handler)
+				app.handlers.push(handler)
 			}),
 
 			addCustomActionHandler: vm.context.newFunction("addCustomActionHandler", (config) => {
@@ -115,7 +117,7 @@ export class Canvas extends EventEmitter<{}> {
 					const topic = vm.context.getString(topicHandle)
 					const apply = vm.unwrapFunctionAsync(applyHandle)
 					const handler = new CustomActionHandler(topic, apply)
-					handlers.push(handler)
+					app.handlers.push(handler)
 				} finally {
 					topicHandle?.dispose()
 					applyHandle?.dispose()
@@ -180,9 +182,11 @@ export class Canvas extends EventEmitter<{}> {
 	// public setEnvironmentVariable(name: string, value: string) {}
 
 	private readonly handlers: TopicHandler[] = []
-	private readonly stores: Map<string, Store> = new Map()
 	private readonly controller = new AbortController()
-	private readonly dbs = new Map<string, AbstractModelDB>()
+	private readonly log = logger("canvas:core")
+
+	readonly dbs = new Map<string, AbstractModelDB>()
+	readonly stores = new Map<string, Store>()
 
 	private constructor(
 		public readonly peerId: PeerId,
@@ -205,9 +209,11 @@ export class Canvas extends EventEmitter<{}> {
 
 	#effectContext: EffectContext | null = null
 	private logEffect(name: string, effect: Effect) {
+		this.log("[%s] logging effect %o", name, effect)
 		const { effects } = this.getEffectContext()
 		const log = effects.get(name)
 		assert(log !== undefined, "internal error - effect log not found")
+		this.log("log.push(effect)")
 		log.push(effect)
 	}
 
@@ -215,14 +221,19 @@ export class Canvas extends EventEmitter<{}> {
 		const modelAPIs: Record<string, Record<string, JSFunctionAsync>> = {}
 		for (const model of config.models) {
 			if (model.kind === "immutable") {
+				const log = logger(`canvas:modeldb:${name}:${model.name}`)
 				modelAPIs[model.name] = {
 					add: async (value) => {
+						log("adding %o", model.name, value)
 						const modelValue = value as ModelValue
 						validateModelValue(model, modelValue)
+						log("validated model value")
 						this.logEffect(name, { model: model.name, operation: "add", value: modelValue })
-
+						log("what is even happening")
 						const { namespace } = this.getEffectContext()
-						return getImmutableRecordKey(modelValue, { namespace })
+						const key = getImmutableRecordKey(modelValue, { namespace })
+						log("returning derived record key %s", model.name, key)
+						return key
 					},
 					get: async (key) => {
 						const db = this.dbs.get(name)
@@ -269,6 +280,11 @@ export class Canvas extends EventEmitter<{}> {
 		this.#effectContext = { namespace, version, effects }
 	}
 
+	private readonly clearEffectContext = () => {
+		assert(this.#effectContext !== null, "effect context not set")
+		this.#effectContext = null
+	}
+
 	private async applyEffects() {
 		const { namespace, version, effects } = this.getEffectContext()
 		for (const [name, log] of effects) {
@@ -293,9 +309,9 @@ export class Canvas extends EventEmitter<{}> {
 			db.close()
 		}
 
-		// for (const store of this.stores) {
-
-		// }
+		for (const store of this.stores.values()) {
+			await store.stop()
+		}
 
 		this.vm.dispose()
 
@@ -310,9 +326,16 @@ export class Canvas extends EventEmitter<{}> {
 		const handler = this.handlers.find((subscription) => subscription.topic === topic)
 		assert(handler instanceof ActionHandler, "no handler found for topic")
 		const action = await handler.create(input, env)
-		const id = ""
-		const result = await handler.apply(id, action, env)
-		return { id, result }
+		const id = "fdjakf"
+		const version = encodeTimestampVersion(action.value.context.timestamp)
+		try {
+			this.setEffectContext(id, bytesToHex(version))
+			const result = await handler.apply(id, action, env)
+			await this.applyEffects() // TODO: this should probably be inside handler.apply.........
+			return { id, result }
+		} finally {
+			this.clearEffectContext()
+		}
 	}
 
 	public async applyCustomAction(

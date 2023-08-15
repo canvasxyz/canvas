@@ -26,7 +26,7 @@ export default function getTarget(location: string | null): PlatformTarget {
 
 			if (location === null) {
 				const peerId = await createEd25519PeerId()
-				console.log(`[canvas-core] Using temporary PeerId ${peerId}`)
+				// console.log(`[canvas-core] Using temporary PeerId ${peerId}`)
 				return peerId
 			}
 
@@ -35,7 +35,7 @@ export default function getTarget(location: string | null): PlatformTarget {
 				return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
 			}
 
-			console.log(`[canvas-core] Creating new PeerID at ${peerIdPath}`)
+			// console.log(`[canvas-core] Creating new PeerID at ${peerIdPath}`)
 			const peerId = await createEd25519PeerId()
 			fs.writeFileSync(peerIdPath, Buffer.from(exportToProtobuf(peerId)).toString("base64"))
 			return peerId

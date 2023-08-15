@@ -44,9 +44,9 @@ export function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pOptio
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 	assert(bootstrapList.length > 0, "bootstrap list cannot be empty")
 
-	if (listen.length === 0) {
-		console.log(chalk.yellowBright(`[canvas-core] Using Canvas bootstrap servers as relays.`))
-	}
+	// if (listen.length === 0) {
+	// 	console.log(chalk.yellowBright(`[canvas-core] Using Canvas bootstrap servers as relays.`))
+	// }
 
 	for (const address of announce) {
 		console.log(chalk.gray(`[canvas-core] Announcing on ${address}`))
