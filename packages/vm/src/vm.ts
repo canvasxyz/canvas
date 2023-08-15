@@ -4,6 +4,7 @@ import { sha256 } from "@noble/hashes/sha256"
 
 import { JSFunction, JSFunctionAsync, JSValue } from "./values.js"
 import { assert, mapValues } from "./utils.js"
+import { VMError } from "./error.js"
 
 export interface VMOptions {
 	log?: (...args: JSValue[]) => void
@@ -125,21 +126,8 @@ export class VM {
 		}
 	}
 
-	public unwrapError = (handle: QuickJSHandle): Error => {
-		const error = this.context.dump(handle)
-		if (typeof error === "object" && typeof error.message === "string") {
-			if (error.name === "SyntaxError") {
-				return new SyntaxError(error.message)
-			} else if (error.name === "TypeError") {
-				return new TypeError(error.message)
-			} else if (error.name === "RangeError") {
-				return new RangeError(error.message)
-			} else {
-				return new Error(error.message)
-			}
-		} else {
-			throw error
-		}
+	public unwrapError = (handle: QuickJSHandle): VMError => {
+		return new VMError(this.context.dump(handle))
 	}
 
 	public wrapError = (err: any): QuickJSHandle => {
