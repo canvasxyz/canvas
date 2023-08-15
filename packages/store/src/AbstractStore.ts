@@ -18,11 +18,11 @@ import type { Source, Target, KeyValueStore, Node } from "@canvas-js/okra"
 
 import { Driver, Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
 import { CacheMap, assert, protocolPrefix, shuffle, sortPair, wait } from "./utils.js"
-import { Encoding, Consumer, Store, StoreEvents, StoreInit } from "./interface.js"
+import { Encoding, Consumer, Store, StoreEvents, StoreInit, IPLDValue } from "./interface.js"
 import { second } from "./constants.js"
 import { createDefaultEncoding } from "./encoding.js"
 
-export abstract class AbstractStore<T> extends EventEmitter<StoreEvents> implements Store<T> {
+export abstract class AbstractStore<T extends IPLDValue> extends EventEmitter<StoreEvents> implements Store<T> {
 	public static MIN_CONNECTIONS = 2
 	public static MAX_CONNECTIONS = 10
 	public static MAX_INBOUND_STREAMS = 64

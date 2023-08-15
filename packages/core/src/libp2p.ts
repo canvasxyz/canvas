@@ -12,18 +12,17 @@ import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
-import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
-import { assert } from "@canvas-js/core/utils"
+import { defaultBootstrapList } from "./bootstrap.js"
 import {
 	DIAL_CONCURRENCY,
 	DIAL_CONCURRENCY_PER_PEER,
 	MAX_CONNECTIONS,
 	MIN_CONNECTIONS,
 	PING_TIMEOUT,
-} from "@canvas-js/core/constants"
-
-import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+} from "./constants.js"
+import { assert } from "./utils.js"
 
 export interface P2PConfig {
 	listen?: string[]

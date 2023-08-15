@@ -1,40 +1,50 @@
-import { CBORValue } from "microcbor"
-
 import { Signed, verifySignedValue } from "@canvas-js/signed-value"
-import { Action, ActionArguments, ActionContext, Env, Signer } from "@canvas-js/interfaces"
-import { JSFunctionAsync } from "@canvas-js/vm"
+import { Action, ActionArguments, ActionContext, Env, IPLDValue, Signer } from "@canvas-js/interfaces"
+import { JSFunctionAsync, JSValue } from "@canvas-js/vm"
 
-import { assert } from "./utils.js"
+import { assert, encodeTimestampVersion } from "./utils.js"
+import { Encoding, createOrderedEncoding } from "@canvas-js/store"
 
-export interface TopicHandler<T = unknown, I = T> {
+export interface TopicHandler<T extends IPLDValue = IPLDValue, Input = unknown> {
 	topic: string
+	encoding?: Encoding<T>
 	// codec: string // "dag-cbor" | "dag-json"
-	validate(event: T): Promise<void>
-	apply(id: string, event: T, env: Env): Promise<void | CBORValue>
-	create(input: I, env: Env): Promise<T>
+	apply(id: string, event: IPLDValue, env: Env): Promise<undefined | IPLDValue>
+	create(input: Input, env: Env): Promise<IPLDValue>
 }
 
 export type ActionInput = { name: string; args: ActionArguments; chain?: string }
 
 export class ActionHandler implements TopicHandler<Signed<Action>, ActionInput> {
+	private static validateEvent(event: IPLDValue): event is Signed<Action> {
+		// TODO: do the thing
+		// (create packages/typed-value)
+		return true
+	}
+
 	constructor(
 		public readonly topic: string,
 		private readonly actions: Record<string, JSFunctionAsync>,
 		private readonly signers: Signer[]
 	) {}
 
-	public async validate(event: Signed<Action>): Promise<void> {
+	public encoding = createOrderedEncoding<Signed<Action>>({
+		prefixByteLength: 6,
+		getPrefix: (event) => encodeTimestampVersion(event.value.context.timestamp),
+	})
+
+	public async apply(id: string, event: IPLDValue, env: Env): Promise<IPLDValue | undefined> {
+		assert(ActionHandler.validateEvent(event), "invalid event")
+
 		verifySignedValue(event)
-		const { chain, name } = event.value
+		const { chain, address, name, args, context } = event.value
 		const signer = this.signers.find((signer) => signer.match(chain))
 		assert(signer !== undefined, `no signer provided for chain ${chain}`)
 		await signer.verify(event)
 		assert(this.actions[name] !== undefined, `invalid action name: ${name}`)
-	}
 
-	public async apply(id: string, event: Signed<Action>, env: Env): Promise<void | CBORValue> {
-		const { chain, address, name, args, context } = event.value
-		return await this.actions[name](args, { ...env, id, chain, address, ...context })
+		const result = await this.actions[name](args, { ...env, id, chain, address, ...context })
+		return result
 	}
 
 	public async create({ chain, name, args }: ActionInput, env: Env): Promise<Signed<Action>> {
@@ -53,16 +63,31 @@ export class ActionHandler implements TopicHandler<Signed<Action>, ActionInput> 
 	}
 }
 
-export class CustomActionHandler implements TopicHandler<CBORValue> {
-	constructor(public readonly topic: string, private readonly applyFunction: JSFunctionAsync) {}
-
-	public async validate(event: CBORValue): Promise<void> {}
-
-	public async apply(id: string, event: CBORValue, env: Env): Promise<void | CBORValue> {
-		return this.applyFunction(id, event, env)
+export class CustomActionHandler implements TopicHandler<IPLDValue, JSValue> {
+	public static validateEvent(event: IPLDValue): event is JSValue {
+		// TODO: do the thing
+		return true
 	}
 
-	public async create(input: CBORValue, env: Env): Promise<CBORValue> {
-		return input
+	constructor(
+		public readonly topic: string,
+		private readonly applyFunction: JSFunctionAsync,
+		private readonly createFunction?: JSFunctionAsync
+	) {}
+
+	public async apply(id: string, event: IPLDValue, env: Env): Promise<undefined | JSValue> {
+		assert(CustomActionHandler.validateEvent(event), "invalid event")
+		const result = await this.applyFunction(id, event, env)
+		return result
+	}
+
+	public async create(input: JSValue, env: Env): Promise<JSValue> {
+		if (this.createFunction === undefined) {
+			return input
+		}
+
+		const result = await this.createFunction(input, env)
+		assert(result !== undefined, "custom action handler's create method did not return a value")
+		return result
 	}
 }

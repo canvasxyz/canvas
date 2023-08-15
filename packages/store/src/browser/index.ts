@@ -5,11 +5,11 @@ import { IDBTree } from "@canvas-js/okra-idb"
 import type { KeyValueStore, Source, Target, Node } from "@canvas-js/okra"
 
 import { AbstractStore } from "../AbstractStore.js"
-import { Store, StoreInit } from "../interface.js"
+import { IPLDValue, Store, StoreInit } from "../interface.js"
 import { assert } from "../utils.js"
 
-class IDBStore<T> extends AbstractStore<T> {
-	public static async open<T>(name: string, init: StoreInit<T>): Promise<IDBStore<T>> {
+export class BrowserStore<T extends IPLDValue> extends AbstractStore<T> {
+	public static async open<T extends IPLDValue>(name: string, init: StoreInit<T>): Promise<BrowserStore<T>> {
 		const storeNames = [init.topic]
 		const db = await openDB(name, 1, {
 			upgrade: (db, oldVersion, newVersion) => {
@@ -24,7 +24,7 @@ class IDBStore<T> extends AbstractStore<T> {
 		})
 
 		const tree = await IDBTree.open(db, init.topic)
-		const store = new IDBStore<T>(tree, init)
+		const store = new BrowserStore<T>(tree, init)
 		store.controller.signal.addEventListener("abort", () => db.close())
 		return store
 	}
@@ -115,4 +115,5 @@ class IDBStore<T> extends AbstractStore<T> {
 	}
 }
 
-export const openStore = <T>(name: string, init: StoreInit<T>): Promise<Store<T>> => IDBStore.open(name, init)
+export const openStore = <T extends IPLDValue>(name: string, init: StoreInit<T>): Promise<Store<T>> =>
+	BrowserStore.open(name, init)

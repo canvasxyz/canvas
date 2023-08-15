@@ -1,7 +1,7 @@
 import assert from "node:assert"
 import test from "ava"
 
-import { VM } from "@canvas-js/vm"
+import { JSValue, VM } from "@canvas-js/vm"
 
 test("wrap a function", async (t) => {
 	const vm = await VM.initialize()
@@ -30,10 +30,11 @@ test("wrap a function that allocates on the heap", async (t) => {
 
 	t.teardown(() => handle.dispose())
 
-	const args = [{ foo: 3 }, { bar: 4 }].map(vm.wrapValue)
-	t.teardown(() => args.forEach((arg) => arg.dispose()))
+	const args: JSValue[] = [{ foo: 3 }, { bar: 4 }]
+	const argHandles = args.map(vm.wrapValue)
+	t.teardown(() => argHandles.forEach((handle) => handle.dispose()))
 
-	const result = vm.call(handle, handle, args).consume(vm.unwrapValue)
+	const result = vm.call(handle, handle, argHandles).consume(vm.unwrapValue)
 	t.deepEqual(result, { a: { foo: 3 }, b: { bar: 4 } })
 })
 
@@ -92,7 +93,7 @@ test("wrap an async function that allocates on the heap", async (t) => {
 
 	const handle = vm.wrapFunction(async (value) => {
 		assert(Array.isArray(value), "expected array")
-		return value.map((value) => value?.toString())
+		return value.map((value) => String(value))
 	})
 
 	t.teardown(() => handle.dispose())

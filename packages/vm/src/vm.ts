@@ -292,9 +292,7 @@ export class VM {
 	public isUint8Array = (handle: QuickJSHandle): boolean => this.isInstanceOf(handle, this.get("Uint8Array"))
 
 	public unwrapValue = (handle: QuickJSHandle): JSValue => {
-		if (this.context.typeof(handle) === "undefined") {
-			return undefined
-		} else if (this.is(handle, this.context.null)) {
+		if (this.is(handle, this.context.null)) {
 			return null
 		} else if (this.context.typeof(handle) === "boolean") {
 			return this.getBoolean(handle)

@@ -4,6 +4,7 @@ import { anySignal } from "any-signal"
 import { configure } from "safe-stable-stringify"
 import { CodeError } from "@libp2p/interfaces/errors"
 import { bytesToHex } from "@noble/hashes/utils"
+import { Resolve } from "@canvas-js/modeldb-interface"
 
 export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
 
@@ -123,11 +124,10 @@ export function getErrorMessage(err: unknown): string {
 const timestampBuffer = new ArrayBuffer(8)
 const timestampView = new DataView(timestampBuffer)
 
-export function encodeTimestampVersion(timestamp: number): string {
+export function encodeTimestampVersion(timestamp: number): Uint8Array {
 	timestampView.setBigUint64(0, BigInt(timestamp))
-	return bytesToHex(new Uint8Array(timestampBuffer, 2, 6))
+	return new Uint8Array(timestampBuffer, 2, 6)
 }
 
-export function compareTimestampVersion(versionA: string, versionB: string): -1 | 0 | 1 {
-	return versionA < versionB ? -1 : versionB < versionA ? 1 : 0
-}
+// lower-case hex strings sort lexicographically like you'd hope
+export const timestampResolver: Resolve = { lessThan: (a, b) => a.version < b.version }

@@ -22,33 +22,9 @@
       "default": "./lib/targets/index.js"
     }
   },
-  "exports": {
-    ".": "./lib/index.js",
-    "./sync": "./lib/sync/index.js",
-    "./utils": "./lib/utils.js",
-    "./constants": "./lib/constants.js",
-    "./codecs": "./lib/codecs.js",
-    "./errors": "./lib/errors.js",
-    "./bootstrap": "./lib/bootstrap.js",
-    "./api": "./lib/api.js",
-    "./components/vm": "./lib/components/vm/index.js",
-    "./components/messageStore": {
-      "browser": "./lib/components/messageStore/browser/index.js",
-      "default": "./lib/components/messageStore/node/index.js"
-    },
-    "./components/modelStore": {
-      "browser": "./lib/components/modelStore/browser/index.js",
-      "default": "./lib/components/modelStore/node/index.js"
-    },
-    "./components/libp2p": {
-      "browser": "./lib/components/libp2p/browser/index.js",
-      "default": "./lib/components/libp2p/node/index.js"
-    }
-  },
   "sideEffects": false,
   "scripts": {
-    "test": "ava",
-    "benchmark": "RUN_BENCHMARKS=1 ava test/benchmarks.test.ts"
+    "test": "ava"
   },
   "dependencies": {
     "@canvas-js/chain-ethereum": "0.5.0-alpha4",

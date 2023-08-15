@@ -3,6 +3,7 @@ import { PeerId } from "@libp2p/interface-peer-id"
 import { base64 } from "multiformats/bases/base64"
 
 import { ModelDB } from "@canvas-js/modeldb-idb"
+import { BrowserStore } from "@canvas-js/store/browser"
 
 import type { PlatformTarget } from "../interface.js"
 
@@ -29,7 +30,13 @@ export default function getBrowserTarget(location: string | null): PlatformTarge
 		},
 
 		async openDB(name, init, options) {
-			return await ModelDB.initialize(init, { ...options, databaseName: name })
+			const databaseName = location === null ? name : `${location}/${name}`
+			return await ModelDB.initialize(init, { ...options, databaseName })
+		},
+
+		async openStore(init) {
+			const name = location === null ? init.topic : `${location}/${init.topic}`
+			return await BrowserStore.open(name, init)
 		},
 
 		extendLibp2pOptions(options) {

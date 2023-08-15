@@ -4,8 +4,8 @@ import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { createLibp2p, Libp2p } from "libp2p"
 import { CBORValue } from "microcbor"
 
-import { Env, Signer } from "@canvas-js/interfaces"
-import { JSFunctionAsync, VM } from "@canvas-js/vm"
+import { Action, ActionArguments, Env, IPLDValue, Signer } from "@canvas-js/interfaces"
+import { JSFunctionAsync, JSValue, VM } from "@canvas-js/vm"
 import {
 	AbstractModelDB,
 	Config,
@@ -14,17 +14,17 @@ import {
 	ModelsInit,
 	ModelValue,
 	parseConfig,
-	Resolve,
 	validateModelValue,
 } from "@canvas-js/modeldb-interface"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { Store } from "@canvas-js/store"
+import { createOrderedEncoding, Store } from "@canvas-js/store"
 
 import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
 import { ActionHandler, ActionInput, CustomActionHandler, TopicHandler } from "./handlers.js"
-import { assert, compareTimestampVersion, mapValues, signalInvalidType } from "./utils.js"
+import { assert, encodeTimestampVersion, mapValues, signalInvalidType, timestampResolver } from "./utils.js"
+import { Signed } from "@canvas-js/signed-value"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
@@ -45,7 +45,6 @@ export class Canvas extends EventEmitter<{}> {
 		const { location = null, contract, signers = [], replay = false, offline = false } = config
 		const target = getTarget(location)
 		const peerId = await target.getPeerId()
-		console.log("[canvas-core]", chalk.bold(`Using PeerId ${peerId}`))
 
 		const libp2pOptions = await getLibp2pOptions(peerId, config)
 
@@ -70,7 +69,9 @@ export class Canvas extends EventEmitter<{}> {
 		// the app.databases and app.handlers arrays.
 
 		const databases = new Map<string, ModelsInit>()
-		const handlers: TopicHandler[] = []
+
+		// the type here are an absolute mess, need to rethink it all
+		const handlers: (TopicHandler<Signed<Action>, ActionArguments> | TopicHandler<IPLDValue, JSValue>)[] = []
 
 		const app = new Canvas(peerId, libp2p, signers, vm)
 
@@ -108,13 +109,18 @@ export class Canvas extends EventEmitter<{}> {
 			addCustomActionHandler: vm.context.newFunction("addCustomActionHandler", (config) => {
 				assert(topLevelExecution, "addCustomActionHandler can only be called during initial top-level execution")
 				const { topic: topicHandle, apply: applyHandle, ...rest } = vm.unwrapObject(config)
-				Object.values(rest).forEach((handle) => handle.dispose())
-
-				const topic = topicHandle.consume(vm.context.getString)
-				const apply = applyHandle.consume(vm.unwrapFunctionAsync)
-
-				const handler = new CustomActionHandler(topic, apply)
-				handlers.push(handler)
+				try {
+					assert(topicHandle !== undefined, "missing topic in custom action handler")
+					assert(applyHandle !== undefined, "missing apply method in custom action handler")
+					const topic = vm.context.getString(topicHandle)
+					const apply = vm.unwrapFunctionAsync(applyHandle)
+					const handler = new CustomActionHandler(topic, apply)
+					handlers.push(handler)
+				} finally {
+					topicHandle?.dispose()
+					applyHandle?.dispose()
+					Object.values(rest).forEach((handle) => handle.dispose())
+				}
 			}),
 		})
 
@@ -126,16 +132,10 @@ export class Canvas extends EventEmitter<{}> {
 			topLevelExecution = false
 		}
 
-		{
-			// now we actually create the database(s)
-			const resolve: Resolve = {
-				lessThan: (a, b) => compareTimestampVersion(a.version, b.version) === -1,
-			}
-
-			for (const [name, init] of databases) {
-				const db = await target.openDB(name, init, { resolve })
-				app.dbs.set(name, db)
-			}
+		// now we actually create the database(s)
+		for (const [name, init] of databases) {
+			const db = await target.openDB(name, init, { resolve: timestampResolver })
+			app.dbs.set(name, db)
 		}
 
 		// if (config.replay) {
@@ -159,6 +159,17 @@ export class Canvas extends EventEmitter<{}> {
 			// await Promise.all(Object.values(core.sources).map((source) => source.start()))
 		}
 
+		// TODO: this is where we'd add dynamic topic sharding.
+		// right now, every handler just maps 1-to-1 to a Store instance,
+		// but what we want is for each handler to map to an array of store instances.
+
+		if (libp2p !== null) {
+			for (const handler of app.handlers) {
+				const store = await target.openStore({ topic: handler.topic, encoding: handler.encoding, libp2p })
+				app.stores.set(handler.topic, store)
+			}
+		}
+
 		return app
 	}
 
@@ -169,7 +180,7 @@ export class Canvas extends EventEmitter<{}> {
 	// public setEnvironmentVariable(name: string, value: string) {}
 
 	private readonly handlers: TopicHandler[] = []
-	private readonly stores: Map<string, Store<CBORValue>> = new Map()
+	private readonly stores: Map<string, Store> = new Map()
 	private readonly controller = new AbortController()
 	private readonly dbs = new Map<string, AbstractModelDB>()
 
@@ -190,62 +201,6 @@ export class Canvas extends EventEmitter<{}> {
 			console.log(chalk.gray(`[canvas-core] Closed connection to ${peerId}`))
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 		})
-
-		// const globalAPI: API = {
-		// 	addActionHandler: (init) => {
-		// 		assert(topLevelExecution, "addActionHandler can only be called during initial contract execution")
-		// 		assert(isObject(init), "init argument must be an object")
-		// 		assert(typeof init.topic === "string", "init.topic must be a string")
-		// 		assert(isObject(init.actions), "init.actions must be an object")
-
-		// 		const actions = mapEntries(init.actions, (_, action) => {
-		// 			assert(typeof action === "function", "action values must be functions")
-		// 			const handler: ActionFunction = async (id, event, env) => {
-		// 				this.setEffectContext(id, encodeTimestampVersion(event.value.context.timestamp))
-		// 				try {
-		// 					const { chain, address } = event.value
-		// 					const { topic, timestamp } = event.value.context
-		// 					const ctx = { id, topic, timestamp, chain, address, env }
-		// 					const result = await action(event.value.args, ctx)
-		// 					await this.applyEffects()
-		// 					return result
-		// 				} finally {
-		// 					this.#effectContext = null
-		// 				}
-		// 			}
-
-		// 			return handler
-		// 		})
-
-		// 		const subscription = new ActionHandler(init.topic, this.signers, actions)
-		// 		this.subscriptions.push(subscription)
-		// 	},
-
-		// 	addCustomActionHandler: (init) => {
-		// 		assert(topLevelExecution, "addCustomActionHandler can only be called during initial contract execution")
-		// 		assert(isObject(init), "init argument must be an object")
-		// 		assert(typeof init.topic === "string", "init.topic must be a string")
-		// 		assert(typeof init.apply === "function", "init.apply must be a function")
-
-		// const subscription = new CustomActionHandler(init.topic, init.apply)
-		// this.subscriptions.push(subscription)
-		// 	},
-
-		// for (const subscription of this.subscriptions) {
-		// 	const store = await Store .init({
-		// 		topic: subscription.topic,
-		// 		libp2p,
-		// 	})
-
-		// 	store.addConsumer(async (event) => {
-		// 		await subscription.validate(event)
-		// 		await subscription.apply(event)
-		// 	})
-
-		// 	await store.start()
-		// }
-
-		// TODO: create stores for each of the subscriptions
 	}
 
 	#effectContext: EffectContext | null = null
@@ -283,10 +238,12 @@ export class Canvas extends EventEmitter<{}> {
 						const modelValue = value as ModelValue
 						validateModelValue(model, modelValue)
 						this.logEffect(name, { model: model.name, operation: "set", key, value: modelValue })
+						return undefined // make TypeScript happy
 					},
 					delete: async (key) => {
 						assert(typeof key === "string", "key argument must be a string")
 						this.logEffect(name, { model: model.name, operation: "delete", key })
+						return undefined // make TypeScript happy
 					},
 				}
 			} else {
@@ -349,16 +306,25 @@ export class Canvas extends EventEmitter<{}> {
 		topic: string,
 		input: ActionInput,
 		env: Env = {}
-	): Promise<{ id: string; result: CBORValue }> {
+	): Promise<{ id: string; result: IPLDValue | undefined }> {
 		const handler = this.handlers.find((subscription) => subscription.topic === topic)
-		assert(handler !== undefined, "no subscription found for topic")
+		assert(handler instanceof ActionHandler, "no handler found for topic")
 		const action = await handler.create(input, env)
-
-		throw new Error("not implemented")
+		const id = ""
+		const result = await handler.apply(id, action, env)
+		return { id, result }
 	}
 
-	public applyCustomAction(topic: string, value: CBORValue): Promise<{ id: string; result: CBORValue | null }> {
-		// ...
-		throw new Error("not implemented")
+	public async applyCustomAction(
+		topic: string,
+		input: JSValue,
+		env: Env = {}
+	): Promise<{ id: string; result?: IPLDValue }> {
+		const handler = this.handlers.find((subscription) => subscription.topic === topic)
+		assert(handler instanceof CustomActionHandler, "no handler found for topic")
+		const action = await handler.create(input, env)
+		const id = ""
+		const result = await handler.apply(id, action, env)
+		return { id, result: result ?? undefined }
 	}
 }

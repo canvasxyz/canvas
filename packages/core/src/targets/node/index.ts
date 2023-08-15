@@ -9,8 +9,11 @@ import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { register } from "prom-client"
 
 import { ModelDB } from "@canvas-js/modeldb-sqlite"
+import { NodeStore } from "@canvas-js/store/node"
+import { MemoryStore } from "@canvas-js/store/memory"
 
 import type { PlatformTarget } from "../interface.js"
+import { MST_DIRECTORY_NAME } from "../../constants.js"
 
 const PEER_ID_FILENAME = ".peer-id"
 
@@ -45,6 +48,14 @@ export default function getTarget(location: string | null): PlatformTarget {
 				const hash = base32.baseEncode(blake3(name, { dkLen: 10 }))
 				const dbPath = path.resolve(location, `models-${hash}.sqlite`)
 				return new ModelDB(dbPath, init)
+			}
+		},
+
+		async openStore(init) {
+			if (location === null) {
+				return await MemoryStore.open(init)
+			} else {
+				return await NodeStore.open(path.resolve(location, MST_DIRECTORY_NAME), init)
 			}
 		},
 
