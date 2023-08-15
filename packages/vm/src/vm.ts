@@ -5,6 +5,7 @@ import { sha256 } from "@noble/hashes/sha256"
 import { JSFunction, JSFunctionAsync, JSValue } from "./values.js"
 import { assert, mapValues } from "./utils.js"
 import { VMError } from "./error.js"
+import { logger } from "@libp2p/logger"
 
 export interface VMOptions {
 	log?: (...args: JSValue[]) => void
@@ -13,6 +14,8 @@ export interface VMOptions {
 
 export class VM {
 	public static RUNTIME_MEMORY_LIMIT = 1024 * 640 // 640kb
+
+	private readonly log = logger("canvas:vm")
 
 	readonly #globalCache = new Map<string, QuickJSHandle>()
 	readonly #localCache = new Set<QuickJSHandle>()
@@ -144,7 +147,12 @@ export class VM {
 
 		const args = [this.context.newString(error.message)]
 		try {
-			return this.call(constructorName, this.context.null, args)
+			const errorHandle = this.call(constructorName, this.context.null, args)
+			if (error.stack !== undefined) {
+				this.context.setProp(errorHandle, "stack", this.context.newString(error.stack))
+			}
+
+			return errorHandle
 		} finally {
 			args.forEach((arg) => arg.dispose())
 		}
@@ -280,7 +288,9 @@ export class VM {
 	public isUint8Array = (handle: QuickJSHandle): boolean => this.isInstanceOf(handle, this.get("Uint8Array"))
 
 	public unwrapValue = (handle: QuickJSHandle): JSValue => {
-		if (this.is(handle, this.context.null)) {
+		if (this.is(handle, this.context.undefined)) {
+			throw new Error("cannot unwrap `undefined`")
+		} else if (this.is(handle, this.context.null)) {
 			return null
 		} else if (this.context.typeof(handle) === "boolean") {
 			return this.getBoolean(handle)
@@ -298,24 +308,35 @@ export class VM {
 	}
 
 	public wrapFunction = (fn: JSFunction | JSFunctionAsync): QuickJSHandle => {
-		const wrap = (value: void | JSValue) => (value === undefined ? undefined : this.wrapValue(value))
+		const wrap = (value: void | JSValue) => (value === undefined ? this.context.undefined : this.wrapValue(value))
 		return this.context.newFunction(fn.name, (...args) => {
-			const result = fn(...args.map(this.unwrapValue))
+			let result: ReturnType<typeof fn> | undefined = undefined
+			this.log("invoking function")
+			try {
+				result = fn(...args.map(this.unwrapValue))
+			} catch (err) {
+				this.log("caught error in wrapped function: %O", err)
+				return this.wrapError(err)
+			}
+
+			this.log("got result")
 			if (result instanceof Promise) {
 				const deferred = this.context.newPromise()
 				result.then(
 					(value) => {
-						const valueHandle = wrap(value)
-
-						deferred.settled.then(() => {
-							valueHandle?.dispose()
-							this.runtime.executePendingJobs()
-						})
-
-						deferred.resolve(valueHandle)
+						this.log("resolving deferred promise")
+						const handle = wrap(value)
+						deferred.settled.then(() => handle.dispose())
+						deferred.resolve(handle)
+						// wrap(value).consume((handle) => deferred.resolve(handle))
 					},
-					(err) => deferred.reject(this.wrapError(err))
+					(err) => {
+						this.log("rejecting deferred promise")
+						deferred.reject(this.wrapError(err))
+					}
 				)
+
+				deferred.settled.finally(() => this.runtime.executePendingJobs())
 
 				return deferred.handle
 			} else {
@@ -338,7 +359,9 @@ export class VM {
 			const argHandles = args.map(this.wrapValue)
 			try {
 				const result = this.call(copy, thisArgCopy, argHandles)
-				return result.consume(this.unwrapValue)
+				if (this.context.typeof(result) !== "undefined") {
+					return result.consume(this.unwrapValue)
+				}
 			} finally {
 				argHandles.forEach((handle) => handle.dispose())
 			}
@@ -359,7 +382,9 @@ export class VM {
 			const argHandles = args.map(this.wrapValue)
 			try {
 				const result = await this.callAsync(copy, thisArgCopy, argHandles)
-				return result.consume(this.unwrapValue)
+				if (this.context.typeof(result) !== "undefined") {
+					return result.consume(this.unwrapValue)
+				}
 			} finally {
 				argHandles.forEach((handle) => handle.dispose())
 			}
