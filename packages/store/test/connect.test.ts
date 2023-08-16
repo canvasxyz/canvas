@@ -2,11 +2,11 @@ import test from "ava"
 
 import pDefer, { DeferredPromise } from "p-defer"
 
+import type { AbstractStore } from "@canvas-js/store"
 import { openStore } from "@canvas-js/store/memory"
 
 import { NetworkInit, createNetwork } from "./libp2p.js"
 import { printNode } from "./utils.js"
-import { Store } from "../src/interface.js"
 
 test("sync empty memory stores", async (t) => {
 	const network: NetworkInit = {
@@ -18,7 +18,7 @@ test("sync empty memory stores", async (t) => {
 
 	const topic = "test:example"
 
-	const stores: Record<string, Store> = await Promise.all(
+	const stores: Record<string, AbstractStore> = await Promise.all(
 		Object.entries(peers).map(async ([name, peer]) => {
 			const store = await openStore({ libp2p: peer, topic, apply: (key, event) => ({}) })
 			return [name, store]

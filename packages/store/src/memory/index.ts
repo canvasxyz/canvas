@@ -5,7 +5,7 @@ import { MemoryTree } from "@canvas-js/okra-memory"
 import type { KeyValueStore, Source, Target, Node } from "@canvas-js/okra"
 
 import { AbstractStore } from "../AbstractStore.js"
-import { IPLDValue, Store, StoreInit } from "../interface.js"
+import { IPLDValue, StoreInit } from "../interface.js"
 import { assert } from "../utils.js"
 
 export class MemoryStore<T extends IPLDValue> extends AbstractStore<T> {
@@ -83,4 +83,4 @@ export class MemoryStore<T extends IPLDValue> extends AbstractStore<T> {
 	}
 }
 
-export const openStore = <T extends IPLDValue>(init: StoreInit<T>): Promise<Store<T>> => MemoryStore.open(init)
+export const openStore = <T extends IPLDValue>(init: StoreInit<T>): Promise<AbstractStore<T>> => MemoryStore.open(init)

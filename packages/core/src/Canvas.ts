@@ -18,7 +18,7 @@ import {
 	validateModelValue,
 } from "@canvas-js/modeldb-interface"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { Store, IPLDValue, Encoding, createOrderedEncoding, createDefaultEncoding } from "@canvas-js/store"
+import { AbstractStore, IPLDValue, Encoding, createOrderedEncoding, createDefaultEncoding } from "@canvas-js/store"
 
 import getTarget from "#target"
 
@@ -169,7 +169,7 @@ export class Canvas extends EventEmitter<{}> {
 	private readonly log = logger("canvas:core")
 
 	readonly dbs = new Map<string, AbstractModelDB>()
-	readonly stores = new Map<string, Store>()
+	readonly stores = new Map<string, AbstractStore>()
 
 	private constructor(
 		public readonly peerId: PeerId,

@@ -4,7 +4,7 @@ import type { KeyValueStore, Source, Target, Node } from "@canvas-js/okra"
 import { Tree } from "@canvas-js/okra-node"
 
 import { AbstractStore } from "../AbstractStore.js"
-import { IPLDValue, Store, StoreInit } from "../interface.js"
+import { IPLDValue, StoreInit } from "../interface.js"
 
 export class NodeStore<T extends IPLDValue> extends AbstractStore<T> {
 	public static async open<T extends IPLDValue>(path: string, init: StoreInit<T>): Promise<NodeStore<T>> {
@@ -35,5 +35,5 @@ export class NodeStore<T extends IPLDValue> extends AbstractStore<T> {
 	}
 }
 
-export const openStore = <T extends IPLDValue>(path: string, init: StoreInit<T>): Promise<Store<T>> =>
+export const openStore = <T extends IPLDValue>(path: string, init: StoreInit<T>): Promise<AbstractStore<T>> =>
 	NodeStore.open(path, init)

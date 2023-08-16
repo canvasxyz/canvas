@@ -18,16 +18,6 @@ export type StoreEvents = {
 	sync: CustomEvent<{ root: Node; peerId: PeerId; successCount: number; failureCount: number }>
 }
 
-export interface Store<T extends IPLDValue = IPLDValue> extends EventEmitter<StoreEvents> {
-	libp2p: Libp2p<{ pubsub: PubSub }>
-
-	start(): Promise<void>
-	stop(): Promise<void>
-
-	publish(event: T): Promise<{ key: Uint8Array; result?: IPLDValue; recipients: number }>
-	get(key: Uint8Array): Promise<T | null>
-}
-
 export interface StoreInit<T> extends StoreOptions {
 	topic: string
 	libp2p: Libp2p<{ pubsub: PubSub }>

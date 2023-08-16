@@ -5,7 +5,7 @@ import { IDBTree } from "@canvas-js/okra-idb"
 import type { KeyValueStore, Source, Target, Node } from "@canvas-js/okra"
 
 import { AbstractStore } from "../AbstractStore.js"
-import { IPLDValue, Store, StoreInit } from "../interface.js"
+import { IPLDValue, StoreInit } from "../interface.js"
 import { assert } from "../utils.js"
 
 export class BrowserStore<T extends IPLDValue> extends AbstractStore<T> {
@@ -115,5 +115,5 @@ export class BrowserStore<T extends IPLDValue> extends AbstractStore<T> {
 	}
 }
 
-export const openStore = <T extends IPLDValue>(name: string, init: StoreInit<T>): Promise<Store<T>> =>
+export const openStore = <T extends IPLDValue>(name: string, init: StoreInit<T>): Promise<AbstractStore<T>> =>
 	BrowserStore.open(name, init)
