@@ -23,7 +23,7 @@ import {
 	validateModelValue,
 } from "@canvas-js/modeldb-interface"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { AbstractStore, IPLDValue, Encoding, createOrderedEncoding, createDefaultEncoding } from "@canvas-js/store"
+import { AbstractStore, IPLDValue, Encoding } from "@canvas-js/store"
 
 import getTarget from "#target"
 
@@ -272,6 +272,12 @@ export class Canvas extends EventEmitter<{}> {
 
 	private async applyEffects() {
 		const { namespace, version, effects } = this.getEffectContext()
+
+		this.log(
+			"applying %d effects",
+			[...effects.values()].reduce((sum, effects) => sum + effects.length, 0)
+		)
+
 		for (const [name, log] of effects) {
 			const db = this.dbs.get(name)
 			assert(db !== undefined, "unknown database name")

@@ -21,6 +21,10 @@ export interface ModelDBOptions {
 export class ModelDB extends AbstractModelDB {
 	public readonly db: sqlite.Database
 
+	readonly #transaction: sqlite.Transaction<
+		(effects: Effect[], options: { namespace?: string; version?: string; metadata?: string }) => Promise<void>
+	>
+
 	constructor(public readonly path: string | null, public readonly models: ModelsInit, options: ModelDBOptions = {}) {
 		super(parseConfig(models))
 
@@ -43,15 +47,8 @@ export class ModelDB extends AbstractModelDB {
 				signalInvalidType(model.kind)
 			}
 		}
-	}
 
-	public async apply(
-		effects: Effect[],
-		options: { namespace?: string | undefined; version?: string | undefined; metadata?: string | undefined }
-	): Promise<void> {
-		const { version, namespace, metadata } = options
-
-		this.db.transaction(async () => {
+		this.#transaction = this.db.transaction(async (effects, { version, namespace, metadata }) => {
 			for (const effect of effects) {
 				if (effect.operation === "add") {
 					const api = this.apis[effect.model]
@@ -78,6 +75,13 @@ export class ModelDB extends AbstractModelDB {
 				}
 			}
 		})
+	}
+
+	public async apply(
+		effects: Effect[],
+		options: { namespace?: string | undefined; version?: string | undefined; metadata?: string | undefined }
+	): Promise<void> {
+		await this.#transaction(effects, options)
 	}
 
 	public async close() {

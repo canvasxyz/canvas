@@ -1,7 +1,8 @@
+import assert from "node:assert"
 import test from "ava"
 
 import { Canvas } from "@canvas-js/core"
-import assert from "assert"
+import { isObject } from "@canvas-js/vm"
 
 const contract = `
 const db = openDB("data", {
@@ -16,8 +17,8 @@ addActionHandler({
 	actions: {
 		async createPost({ content }, { timestamp }) {
 			console.log("createPost", content, timestamp)
-			const id = await db.posts.add({ content, timestamp })
-			return id
+			const postId = await db.posts.add({ content, timestamp })
+			return postId
 		}
 	}
 })
@@ -26,25 +27,24 @@ addActionHandler({
 test("open and close an app", async (t) => {
 	const app = await Canvas.initialize({ contract, offline: true })
 	t.teardown(() => app.close())
-	t.timeout(5000)
-
 	t.pass()
 })
 
-test("send an ", async (t) => {
+test("apply an action and read a record from the database", async (t) => {
 	const app = await Canvas.initialize({ contract, offline: true })
 	t.teardown(() => app.close())
-	t.timeout(5000)
 
-	const { result } = await app.applyAction("com.example.app", {
+	const { id: actionId, result: postId } = await app.applyAction("com.example.app", {
 		name: "createPost",
 		args: { content: "hello world" },
 	})
 
+	t.log("applied action", actionId, "and got postId", postId)
+
 	const db = app.dbs.get("data")
 	assert(db !== undefined)
 
-	assert(typeof result === "string")
-	const value = await db.get("posts", result)
+	assert(typeof postId === "string")
+	const value = await db.get("posts", postId)
 	t.is(value?.content, "hello world")
 })
