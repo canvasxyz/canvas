@@ -15,7 +15,7 @@ export interface TopicHandler<Input = unknown> {
 	create(input: Input, env: Env): Promise<IPLDValue>
 }
 
-export type ActionInput = { name: string; args: ActionArguments; chain?: string }
+type ActionInput = { name: string; args: ActionArguments; chain?: string }
 
 export class ActionHandler implements TopicHandler<ActionInput> {
 	private static validateEvent(event: IPLDValue): event is Signed<Action> {

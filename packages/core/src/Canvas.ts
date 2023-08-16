@@ -4,8 +4,13 @@ import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { createLibp2p, Libp2p } from "libp2p"
 import { logger } from "@libp2p/logger"
 import { bytesToHex } from "@noble/hashes/utils"
+import { CID } from "multiformats/cid"
+import { base32 } from "multiformats/bases/base32"
+import { base58btc } from "multiformats/bases/base58"
+import * as cbor from "@ipld/dag-cbor"
 
-import { Action, ActionContext, Env, Signer } from "@canvas-js/interfaces"
+import { Signed, verifySignedValue } from "@canvas-js/signed-value"
+import { Action, ActionArguments, ActionContext, Env, Signer } from "@canvas-js/interfaces"
 import { JSFunctionAsync, JSValue, VM } from "@canvas-js/vm"
 import {
 	AbstractModelDB,
@@ -23,11 +28,9 @@ import { AbstractStore, IPLDValue, Encoding, createOrderedEncoding, createDefaul
 import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
-// import { ActionHandler, ActionInput, CustomActionHandler } from "./handlers.js"
 import { assert, encodeTimestampVersion, mapValues, signalInvalidType, timestampResolver } from "./utils.js"
-import { base32 } from "multiformats/bases/base32"
-import { Signed, verifySignedValue } from "@canvas-js/signed-value"
-import { ActionInput } from "./handlers.js"
+import { concat } from "uint8arrays"
+import { blake3 } from "@noble/hashes/blake3"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
@@ -42,6 +45,8 @@ export type EffectContext = {
 	version?: string
 	effects: Map<string, Effect[]>
 }
+
+type ActionInput = { name: string; args: ActionArguments; chain?: string }
 
 type TopicHandler = {
 	encoding: Encoding<IPLDValue>
@@ -324,13 +329,23 @@ export class Canvas extends EventEmitter<{}> {
 		return { id, result }
 	}
 
-	private readonly actionEncoding = createOrderedEncoding<IPLDValue>({
-		prefixByteLength: 6,
-		getPrefix: (event) => {
-			assert(this.validateAction(event), "invalid action")
-			return encodeTimestampVersion(event.value.context.timestamp)
+	private readonly actionEncoding: Encoding<IPLDValue> = {
+		keyToString: (key) => {
+			return base32.baseEncode(key)
 		},
-	})
+		encode: (event) => {
+			assert(this.validateAction(event), "invalid action")
+			const timestamp = encodeTimestampVersion(event.value.context.timestamp)
+			const value = cbor.encode(event)
+			return [concat([timestamp, blake3(value, { dkLen: 14 })]), value]
+		},
+		decode: (value) => {
+			const event = cbor.decode(value) as IPLDValue
+			assert(this.validateAction(event), "invalid action")
+			const timestamp = encodeTimestampVersion(event.value.context.timestamp)
+			return [concat([timestamp, blake3(value, { dkLen: 14 })]), event]
+		},
+	}
 
 	private validateAction(event: IPLDValue): event is Signed<Action> {
 		// TODO: do the thing
@@ -352,13 +367,11 @@ export class Canvas extends EventEmitter<{}> {
 				assert(signer !== undefined, `no signer provided for chain ${chain}`)
 				await signer.verify(event)
 
-				assert(actions[name] !== undefined, `invalid action name: ${name}`)
-
+				const id = this.actionEncoding.keyToString(key)
 				const version = encodeTimestampVersion(context.timestamp)
-
-				const id = base32.baseEncode(key)
 				this.setEffectContext(id, bytesToHex(version))
 				try {
+					assert(actions[name] !== undefined, `invalid action name: ${name}`)
 					const result = await actions[name](args, { id, chain, address, ...context })
 					await this.applyEffects()
 					return { result }
@@ -369,21 +382,29 @@ export class Canvas extends EventEmitter<{}> {
 		}
 	}
 
-	public async applyCustomAction(
-		topic: string,
-		input: JSValue,
-		env: Env = {}
-	): Promise<{ id: string; result?: IPLDValue }> {
+	public async applyCustomAction(topic: string, input: JSValue): Promise<{ id: string; result?: IPLDValue }> {
 		const store = this.stores.get(topic)
 		assert(store !== undefined, "missing store for topic")
-
 		const { key, result, recipients } = await store.publish(input)
-
-		const id = base32.baseEncode(key)
+		const id = this.customActionEncoding.keyToString(key)
 		return { id, result }
 	}
 
-	private readonly customActionEncoding = createDefaultEncoding()
+	private readonly customActionEncoding: Encoding<IPLDValue> = {
+		keyToString: (key) => {
+			return base32.baseEncode(key)
+		},
+		encode: (event) => {
+			assert(this.validateCustomAction(event), "invalid custom action")
+			const value = cbor.encode(event)
+			return [blake3(value, { dkLen: 20 }), value]
+		},
+		decode: (value) => {
+			const event = cbor.decode(value) as IPLDValue
+			assert(this.validateCustomAction(event), "invalid custom action")
+			return [blake3(value, { dkLen: 20 }), event]
+		},
+	}
 
 	private validateCustomAction(event: IPLDValue): event is JSValue {
 		// TODO: do the thing

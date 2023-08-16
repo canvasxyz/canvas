@@ -5,6 +5,7 @@ import { configure } from "safe-stable-stringify"
 import { CodeError } from "@libp2p/interfaces/errors"
 import { bytesToHex } from "@noble/hashes/utils"
 import { Resolve } from "@canvas-js/modeldb-interface"
+import { IPLDValue } from "@canvas-js/store"
 
 export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
 
