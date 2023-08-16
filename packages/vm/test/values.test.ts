@@ -6,7 +6,7 @@ test("wrap and unwrap primitive values", async (t) => {
 	const vm = await VM.initialize()
 	t.teardown(() => vm.dispose())
 
-	const values = [null, true, false, 4, 89.1923, 1392138213321, "hellooo world"]
+	const values = [null, true, false, 4, 89.1923, 1392138213321, -0.0, Infinity, -Infinity, NaN, "hellooo world", ""]
 	for (const value of values) {
 		t.is(vm.wrapValue(value).consume(vm.unwrapValue), value)
 	}

@@ -41,12 +41,11 @@ export default function getTarget(location: string | null): PlatformTarget {
 			return peerId
 		},
 
-		async openDB(name, init, options) {
+		async openDB(key, init, options) {
 			if (location === null) {
 				return new ModelDB(null, init, options)
 			} else {
-				const hash = base32.baseEncode(blake3(name, { dkLen: 10 }))
-				const dbPath = path.resolve(location, `models-${hash}.sqlite`)
+				const dbPath = path.resolve(location, `${key}.sqlite`)
 				return new ModelDB(dbPath, init)
 			}
 		},

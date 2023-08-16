@@ -6,7 +6,6 @@ import { logger } from "@libp2p/logger"
 import { bytesToHex } from "@noble/hashes/utils"
 import { CID } from "multiformats/cid"
 import { base32 } from "multiformats/bases/base32"
-import { base58btc } from "multiformats/bases/base58"
 import * as cbor from "@ipld/dag-cbor"
 
 import { Signed, verifySignedValue } from "@canvas-js/signed-value"
@@ -31,9 +30,11 @@ import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
 import { assert, encodeTimestampVersion, mapValues, signalInvalidType, timestampResolver } from "./utils.js"
 import { concat } from "uint8arrays"
 import { blake3 } from "@noble/hashes/blake3"
+import { QuickJSHandle } from "quickjs-emscripten"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
+	uri?: string
 	location?: string | null
 	signers?: Signer[]
 	offline?: boolean
@@ -54,9 +55,13 @@ type TopicHandler = {
 	apply(key: Uint8Array, event: IPLDValue): Promise<{ result?: IPLDValue }>
 }
 
-export class Canvas extends EventEmitter<{}> {
-	public static async initialize(config: CanvasConfig) {
-		const { location = null, contract, signers = [], replay = false, offline = false } = config
+type ActionAPI = Record<string, () => Promise<void>>
+type CustomActionAPI = Record<string, () => Promise<void>>
+type DefaultExports = { db?: AbstractModelDB; actions?: ActionAPI; customActions?: CustomActionAPI }
+
+export class Canvas<Exports extends {} = DefaultExports> extends EventEmitter<{}> {
+	public static async initialize<Exports extends {} = DefaultExports>(config: CanvasConfig): Promise<Canvas<Exports>> {
+		const { uri, location = null, contract, signers = [], replay = false, offline = false } = config
 		const target = getTarget(location)
 		const peerId = await target.getPeerId()
 
@@ -75,35 +80,47 @@ export class Canvas extends EventEmitter<{}> {
 		// `openDB`, `addActionHandler`, and `addCustomActionHandler`.
 		// Even though these feel (to the contract) like normal functions,
 		// we don't actually do anything when they're called, we just validate
-		// their arguments and collect a reified version of their effects in
-		// the app.databases and app.handlers arrays.
+		// their arguments and collect a reified version of their effects.
 
-		const databases = new Map<string, ModelsInit>()
+		const databases: { id: string; handle: QuickJSHandle; init: ModelsInit }[] = []
+		const actionHandlers: { topic: string; handle: QuickJSHandle; actions: Record<string, JSFunctionAsync> }[] = []
+		const customActionHandlers: { topic: string; handle: QuickJSHandle; apply: JSFunctionAsync }[] = []
 
-		// the type here are an absolute mess, need to rethink it all
-		// const handlers: (TopicHandler<Signed<Action>, ActionArguments> | TopicHandler<IPLDValue, JSValue>)[] = []
-
-		const app = new Canvas(peerId, libp2p, signers, vm)
+		const app = new Canvas<Exports>(peerId, libp2p, signers, {} as Exports, vm)
 
 		let topLevelExecution = false
 		vm.setGlobalValues({
-			openDB: vm.context.newFunction("openDB", (nameHandle, modelsHandle) => {
+			openDB: vm.context.newFunction("openDB", (modelsHandle, optionsHandle) => {
 				assert(topLevelExecution, "openDB can only be called during initial top-level execution")
-				const name = vm.context.getString(nameHandle)
-				if (databases.has(name)) {
-					return vm.wrapError(new Error(`duplicate database name ${JSON.stringify(name)}`))
+
+				let name: string | null = null
+				if (optionsHandle !== undefined) {
+					const nameHandle = vm.context.getProp(optionsHandle, "name")
+					const nameHandleType = vm.context.typeof(nameHandle)
+					if (nameHandleType === "string") {
+						// TODO: validate database name?
+						name = nameHandle.consume(vm.context.getString)
+					} else if (nameHandleType !== "string") {
+						throw new TypeError("expected string in options.name")
+					}
 				}
+
+				// we probably shouldn't use user-provided strings as filenames at all,
+				// so here we map the name to a hashed "database id".
+				const id = name === null ? "models" : `models-${base32.baseEncode(blake3(name, { dkLen: 10 }))}`
 
 				// TODO: validate modelsInit
 				const init = vm.unwrapValue(modelsHandle) as ModelsInit
 				const config = parseConfig(init)
-				const modelAPIs = app.getModelAPIs(name, config)
-				databases.set(name, init)
-				return vm.wrapObject(mapValues(modelAPIs, (api) => vm.wrapObject(mapValues(api, vm.wrapFunction))))
+
+				const modelAPIs = app.getModelAPIs(id, config)
+				const handle = vm.wrapObject(mapValues(modelAPIs, (api) => vm.wrapObject(mapValues(api, vm.wrapFunction))))
+				databases.push({ id, handle: vm.cache(handle), init })
+				return handle
 			}),
 
 			addActionHandler: vm.context.newFunction("addActionHandler", (config) => {
-				assert(topLevelExecution, "addActionHandler can only be called during initial top-level execution")
+				assert(topLevelExecution, "addActionHandler can only be called during initial execution")
 				const { topic: topicHandle, actions: actionsHandle, ...rest } = vm.unwrapObject(config)
 				Object.values(rest).forEach((handle) => handle.dispose())
 
@@ -112,18 +129,22 @@ export class Canvas extends EventEmitter<{}> {
 					handle.consume(vm.unwrapFunctionAsync)
 				)
 
-				app.handlers.push(app.createActionHandler(topic, actions))
+				const result = vm.context.newObject()
+				actionHandlers.push({ topic, actions, handle: vm.cache(result) })
+				return result
 			}),
 
 			addCustomActionHandler: vm.context.newFunction("addCustomActionHandler", (config) => {
-				assert(topLevelExecution, "addCustomActionHandler can only be called during initial top-level execution")
+				assert(topLevelExecution, "addCustomActionHandler can only be called during initial execution")
 				const { topic: topicHandle, apply: applyHandle, ...rest } = vm.unwrapObject(config)
 				try {
 					assert(topicHandle !== undefined, "missing topic in custom action handler")
 					assert(applyHandle !== undefined, "missing apply method in custom action handler")
 					const topic = vm.context.getString(topicHandle)
 					const apply = vm.unwrapFunctionAsync(applyHandle)
-					app.handlers.push(app.createCustomActionHandler(topic, apply))
+					const result = vm.context.newObject()
+					customActionHandlers.push({ topic, apply, handle: vm.cache(result) })
+					return result
 				} finally {
 					topicHandle?.dispose()
 					applyHandle?.dispose()
@@ -133,53 +154,82 @@ export class Canvas extends EventEmitter<{}> {
 		})
 
 		// execute the contract, collecting the handler and database effects
+		let exports: QuickJSHandle | undefined = undefined
 		try {
 			topLevelExecution = true
-			vm.execute(contract)
+			exports = await vm.import(contract, { uri })
 		} finally {
 			topLevelExecution = false
 		}
 
 		// now we actually create the database(s)
-		for (const [name, init] of databases) {
-			const db = await target.openDB(name, init, { resolve: timestampResolver })
-			app.dbs.set(name, db)
-		}
-
-		if (!offline) {
-			await libp2p.start()
+		for (const { id, init } of databases) {
+			const db = await target.openDB(id, init, { resolve: timestampResolver })
+			app.databases.set(id, db)
 		}
 
 		// TODO: this is where we'd add dynamic topic sharding.
 		// right now, every handler just maps 1-to-1 to a Store instance,
 		// but what we want is for each handler to map to an array of store instances.
 
-		for (const { topic, encoding, apply } of app.handlers) {
-			console.log("creating store for topic", topic)
-			const store = await target.openStore({ libp2p, topic, encoding, apply })
+		for (const { topic, actions } of actionHandlers) {
+			const handler = app.createActionHandler(topic, actions)
+			const store = await target.openStore({ libp2p, topic, encoding: handler.encoding, apply: handler.apply })
 			app.stores.set(topic, store)
+		}
+
+		for (const { topic, apply } of customActionHandlers) {
+			const handler = app.createCustomActionHandler(topic, apply)
+			const store = await target.openStore({ libp2p, topic, encoding: handler.encoding, apply: handler.apply })
+			app.stores.set(topic, store)
+		}
+
+		for (const [name, handle] of Object.entries(exports.consume(vm.unwrapObject))) {
+			handle.consume((handle) => {
+				// check if the handle is a database opened with `openDB`
+				const database = databases.find((database) => vm.is(database.handle, handle))
+				if (database !== undefined) {
+					Object.assign(app.exports, { [name]: app.databases.get(database.id) })
+					return
+				}
+
+				// check if the handle is an action handler created with `addActionHandler`
+				const actionHandler = actionHandlers.find((handler) => vm.is(handler.handle, handle))
+				if (actionHandler !== undefined) {
+					Object.assign(app.exports, { [name]: {} })
+					return
+				}
+
+				// check if the handle is a custom action handler created with `addCustomActionHandler`
+				const customActionHandler = customActionHandlers.find((handler) => vm.is(handler.handle, handle))
+				if (customActionHandler !== undefined) {
+					Object.assign(app.exports, { [name]: {} })
+					return
+				}
+
+				// otherwise, just dump the value
+				Object.assign(app.exports, { [name]: vm.context.dump(handle) })
+			})
+		}
+
+		if (!offline) {
+			await libp2p.start()
 		}
 
 		return app
 	}
 
-	// private readonly handlers: TopicHandler[] = []
-	private readonly handlers: {
-		topic: string
-		apply: (key: Uint8Array, event: IPLDValue) => Promise<{ result?: IPLDValue }>
-		encoding: Encoding<IPLDValue>
-	}[] = []
-
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
 
-	readonly dbs = new Map<string, AbstractModelDB>()
-	readonly stores = new Map<string, AbstractStore>()
+	private readonly databases = new Map<string, AbstractModelDB>()
+	private readonly stores = new Map<string, AbstractStore>()
 
 	private constructor(
 		public readonly peerId: PeerId,
 		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly signers: Signer[],
+		public readonly exports: Exports,
 		private readonly vm: VM
 	) {
 		super()
@@ -196,32 +246,31 @@ export class Canvas extends EventEmitter<{}> {
 	}
 
 	#effectContext: EffectContext | null = null
-	private logEffect(name: string, effect: Effect) {
-		this.log("[%s] logging effect %o", name, effect)
+	private logEffect(id: string, effect: Effect) {
+		this.log("[%s] logging effect %o", id, effect)
 		const { effects } = this.getEffectContext()
-		const log = effects.get(name)
+		const log = effects.get(id)
 		assert(log !== undefined, "internal error - effect log not found")
-		this.log("log.push(effect)")
 		log.push(effect)
 	}
 
-	private getModelAPIs(name: string, config: Config): Record<string, Record<string, JSFunctionAsync>> {
+	private getModelAPIs(id: string, config: Config): Record<string, Record<string, JSFunctionAsync>> {
 		const modelAPIs: Record<string, Record<string, JSFunctionAsync>> = {}
 		for (const model of config.models) {
 			if (model.kind === "immutable") {
-				const log = logger(`canvas:modeldb:${name}:${model.name}`)
+				const log = logger(`canvas:modeldb:${id}:${model.name}`)
 				modelAPIs[model.name] = {
 					add: async (value) => {
 						const modelValue = value as ModelValue
 						validateModelValue(model, modelValue)
-						this.logEffect(name, { model: model.name, operation: "add", value: modelValue })
+						this.logEffect(id, { model: model.name, operation: "add", value: modelValue })
 						const { namespace } = this.getEffectContext()
 						const key = getImmutableRecordKey(modelValue, { namespace })
 						log("returning derived record key %s", model.name, key)
 						return key
 					},
 					get: async (key) => {
-						const db = this.dbs.get(name)
+						const db = this.databases.get(id)
 						assert(db !== undefined, "internal error - model database not found")
 						assert(typeof key === "string", "key argument must be a string")
 						return await db.get(model.name, key)
@@ -233,12 +282,12 @@ export class Canvas extends EventEmitter<{}> {
 						assert(typeof key === "string", "key argument must be a string")
 						const modelValue = value as ModelValue
 						validateModelValue(model, modelValue)
-						this.logEffect(name, { model: model.name, operation: "set", key, value: modelValue })
+						this.logEffect(key, { model: model.name, operation: "set", key, value: modelValue })
 						return undefined // make TypeScript happy
 					},
 					delete: async (key) => {
 						assert(typeof key === "string", "key argument must be a string")
-						this.logEffect(name, { model: model.name, operation: "delete", key })
+						this.logEffect(key, { model: model.name, operation: "delete", key })
 						return undefined // make TypeScript happy
 					},
 				}
@@ -258,8 +307,8 @@ export class Canvas extends EventEmitter<{}> {
 	private readonly setEffectContext = (namespace: string, version?: string) => {
 		assert(this.#effectContext === null, "effect context already set")
 		const effects = new Map<string, Effect[]>()
-		for (const name of this.dbs.keys()) {
-			effects.set(name, [])
+		for (const id of this.databases.keys()) {
+			effects.set(id, [])
 		}
 
 		this.#effectContext = { namespace, version, effects }
@@ -278,9 +327,9 @@ export class Canvas extends EventEmitter<{}> {
 			[...effects.values()].reduce((sum, effects) => sum + effects.length, 0)
 		)
 
-		for (const [name, log] of effects) {
-			const db = this.dbs.get(name)
-			assert(db !== undefined, "unknown database name")
+		for (const [id, log] of effects) {
+			const db = this.databases.get(id)
+			assert(db !== undefined, "database not found")
 			await db.apply(log, { namespace, version })
 		}
 	}
@@ -296,7 +345,7 @@ export class Canvas extends EventEmitter<{}> {
 			await this.libp2p.stop()
 		}
 
-		for (const db of this.dbs.values()) {
+		for (const db of this.databases.values()) {
 			db.close()
 		}
 

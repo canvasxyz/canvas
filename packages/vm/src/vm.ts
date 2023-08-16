@@ -1,11 +1,11 @@
 import { QuickJSContext, QuickJSHandle, QuickJSRuntime, VmCallResult, getQuickJS, isFail } from "quickjs-emscripten"
 import { bytesToHex } from "@noble/hashes/utils"
 import { sha256 } from "@noble/hashes/sha256"
+import { logger } from "@libp2p/logger"
 
 import { JSFunction, JSFunctionAsync, JSValue } from "./values.js"
 import { assert, mapValues } from "./utils.js"
 import { VMError } from "./error.js"
-import { logger } from "@libp2p/logger"
 
 export interface VMOptions {
 	log?: (...args: JSValue[]) => void
@@ -67,7 +67,30 @@ export class VM {
 
 	public execute(contract: string, options: { uri?: string } = {}) {
 		const filename = options.uri ?? `canvas:${bytesToHex(sha256(contract))}`
-		this.unwrapResult(this.context.evalCode(contract, filename, { type: "module", strict: true })).dispose()
+		this.unwrapResult(this.context.evalCode(contract, filename, { type: "global", strict: true })).dispose()
+	}
+
+	public async import(contract: string, options: { uri?: string } = {}): Promise<QuickJSHandle> {
+		const filename = options.uri ?? `canvas:${bytesToHex(sha256(contract))}`
+
+		this.runtime.setModuleLoader((moduleName) => {
+			if (moduleName === filename) {
+				return contract
+			} else {
+				return { error: new Error("module not found") }
+			}
+		})
+
+		try {
+			const promiseHandle = this.unwrapResult(
+				this.context.evalCode(`import("${filename}")`, undefined, { type: "global", strict: true })
+			)
+
+			const exportsHandle = await promiseHandle.consume(this.resolvePromise)
+			return exportsHandle
+		} finally {
+			this.runtime.removeModuleLoader()
+		}
 	}
 
 	public get = (path: string): QuickJSHandle => {
@@ -369,15 +392,8 @@ export class VM {
 	}
 
 	public unwrapFunctionAsync = (handle: QuickJSHandle, thisArg?: QuickJSHandle): JSFunctionAsync => {
-		const copy = handle.dup()
-		this.#localCache.add(copy)
-
-		let thisArgCopy = copy
-		if (thisArg !== undefined) {
-			thisArgCopy = thisArg.dup()
-			this.#localCache.add(thisArgCopy)
-		}
-
+		const copy = this.cache(handle)
+		const thisArgCopy = thisArg ? this.cache(thisArg) : copy
 		return async (...args) => {
 			const argHandles = args.map(this.wrapValue)
 			try {
@@ -389,5 +405,11 @@ export class VM {
 				argHandles.forEach((handle) => handle.dispose())
 			}
 		}
+	}
+
+	public cache(handle: QuickJSHandle): QuickJSHandle {
+		const copy = handle.dup()
+		this.#localCache.add(copy)
+		return copy
 	}
 }
