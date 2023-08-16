@@ -18,7 +18,7 @@ import type { Source, Target, KeyValueStore, Node } from "@canvas-js/okra"
 
 import { Driver, Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
 import { CacheMap, assert, protocolPrefix, shuffle, sortPair, wait } from "./utils.js"
-import { Encoding, Consumer, Store, StoreEvents, StoreInit, IPLDValue } from "./interface.js"
+import { Encoding, Store, StoreEvents, StoreInit, IPLDValue, Awaitable } from "./interface.js"
 import { second } from "./constants.js"
 import { createDefaultEncoding } from "./encoding.js"
 
@@ -43,7 +43,8 @@ export abstract class AbstractStore<T extends IPLDValue> extends EventEmitter<St
 	private readonly syncQueue = new PQueue({ concurrency: 1 })
 	private readonly syncQueuePeers = new Set<string>()
 	private readonly syncHistory = new CacheMap<string, number>(AbstractStore.MAX_SYNC_QUEUE_SIZE)
-	private readonly consumers = new Set<Consumer<T>>()
+
+	private readonly apply: (key: Uint8Array, value: T) => Awaitable<{ result?: IPLDValue }>
 
 	protected readonly log: Logger
 	protected readonly controller = new AbortController()
@@ -63,6 +64,7 @@ export abstract class AbstractStore<T extends IPLDValue> extends EventEmitter<St
 		super()
 
 		this.libp2p = init.libp2p
+		this.apply = init.apply
 		this.topic = protocolPrefix + init.topic
 		this.protocol = protocolPrefix + init.topic + "/sync"
 		this.codec = init.encoding ?? createDefaultEncoding<T>()
@@ -122,39 +124,20 @@ export abstract class AbstractStore<T extends IPLDValue> extends EventEmitter<St
 		}
 	}
 
-	public async publish(event: T): Promise<{ key: Uint8Array; recipients: number }> {
+	public async publish(event: T): Promise<{ key: Uint8Array; result?: IPLDValue; recipients: number }> {
 		const [key, value] = this.codec.encode(event)
 
-		await this.apply(key, event)
-
+		this.log("applying event %s", this.codec.keyToString(key))
+		const { result } = await this.apply(key, event)
 		await this.write(null, async (txn) => txn.set(key, value))
 
 		try {
 			const { recipients } = await this.libp2p.services.pubsub.publish(this.topic, value)
 			this.log("published event to %d recipients", recipients.length)
-			return { key, recipients: recipients.length }
+			return { key, result, recipients: recipients.length }
 		} catch (err) {
 			this.log.error("failed to publish event: %O", err)
-			return { key, recipients: 0 }
-		}
-	}
-
-	public async attach(consumer: Consumer<T>, options: { replay?: boolean } = {}) {
-		this.consumers.add(consumer)
-
-		if (options.replay ?? false) {
-			// TODO: implement replay
-		}
-	}
-
-	public detach(consumer: Consumer<T>) {
-		this.consumers.delete(consumer)
-	}
-
-	private async apply(key: Uint8Array, event: T) {
-		this.log("applying event %s", this.codec.keyToString(key))
-		for (const consumer of this.consumers) {
-			await consumer(key, event)
+			return { key, result, recipients: 0 }
 		}
 	}
 
@@ -187,6 +170,7 @@ export abstract class AbstractStore<T extends IPLDValue> extends EventEmitter<St
 		const [key, event] = entry
 
 		try {
+			this.log("applying event %s", this.codec.keyToString(key))
 			await this.apply(key, event)
 		} catch (err) {
 			this.log.error("failed to apply event %s: %O", this.codec.keyToString(key), err)
@@ -341,6 +325,7 @@ export abstract class AbstractStore<T extends IPLDValue> extends EventEmitter<St
 					}
 
 					try {
+						this.log("applying event %s", this.codec.keyToString(key))
 						await this.apply(key, event)
 					} catch (err) {
 						this.log.error("failed to apply event %s: %O", eventId, err)

@@ -5,7 +5,7 @@ import { createLibp2p, Libp2p } from "libp2p"
 import { logger } from "@libp2p/logger"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import { Env, IPLDValue, Signer } from "@canvas-js/interfaces"
+import { Action, ActionContext, Env, Signer } from "@canvas-js/interfaces"
 import { JSFunctionAsync, JSValue, VM } from "@canvas-js/vm"
 import {
 	AbstractModelDB,
@@ -18,14 +18,16 @@ import {
 	validateModelValue,
 } from "@canvas-js/modeldb-interface"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { Store } from "@canvas-js/store"
+import { Store, IPLDValue, Encoding, createOrderedEncoding, createDefaultEncoding } from "@canvas-js/store"
 
 import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
-import { ActionHandler, ActionInput, CustomActionHandler, TopicHandler } from "./handlers.js"
+// import { ActionHandler, ActionInput, CustomActionHandler } from "./handlers.js"
 import { assert, encodeTimestampVersion, mapValues, signalInvalidType, timestampResolver } from "./utils.js"
-import { getCID } from "@canvas-js/signed-value"
+import { base32 } from "multiformats/bases/base32"
+import { Signed, verifySignedValue } from "@canvas-js/signed-value"
+import { ActionInput } from "./handlers.js"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
@@ -39,6 +41,12 @@ export type EffectContext = {
 	namespace: string
 	version?: string
 	effects: Map<string, Effect[]>
+}
+
+type TopicHandler = {
+	encoding: Encoding<IPLDValue>
+	topic: string
+	apply(key: Uint8Array, event: IPLDValue): Promise<{ result?: IPLDValue }>
 }
 
 export class Canvas extends EventEmitter<{}> {
@@ -103,8 +111,7 @@ export class Canvas extends EventEmitter<{}> {
 					handle.consume(vm.unwrapFunctionAsync)
 				)
 
-				const handler = new ActionHandler(topic, actions, app.signers)
-				app.handlers.push(handler)
+				app.handlers.push(app.createActionHandler(topic, actions))
 			}),
 
 			addCustomActionHandler: vm.context.newFunction("addCustomActionHandler", (config) => {
@@ -115,8 +122,7 @@ export class Canvas extends EventEmitter<{}> {
 					assert(applyHandle !== undefined, "missing apply method in custom action handler")
 					const topic = vm.context.getString(topicHandle)
 					const apply = vm.unwrapFunctionAsync(applyHandle)
-					const handler = new CustomActionHandler(topic, apply)
-					app.handlers.push(handler)
+					app.handlers.push(app.createCustomActionHandler(topic, apply))
 				} finally {
 					topicHandle?.dispose()
 					applyHandle?.dispose()
@@ -139,48 +145,30 @@ export class Canvas extends EventEmitter<{}> {
 			app.dbs.set(name, db)
 		}
 
-		// if (config.replay) {
-		// 	console.log(`[canvas-core] Replaying action log...`)
-		// 	let i = 0
-		// 	for await (const [id, message] of messageStore.getMessageStream()) {
-		// 		if (message.type === "action") {
-		// 			assert(actionType.is(message), "Invalid action object in message store")
-		// 			const effects = await vm.execute(id, message.payload)
-		// 			await modelStore.applyEffects(message.payload, effects)
-		// 			i++
-		// 		}
-		// 	}
-
-		// 	console.log("[canvas-core]", chalk.green(`Successfully replayed all ${i} actions from the message store.`))
-		// }
-
 		if (libp2p !== null) {
 			await libp2p.start()
-			// libp2p.services.pubsub.subscribe(PUBSUB_DISCOVERY_TOPIC)
-			// await Promise.all(Object.values(core.sources).map((source) => source.start()))
 		}
 
 		// TODO: this is where we'd add dynamic topic sharding.
 		// right now, every handler just maps 1-to-1 to a Store instance,
 		// but what we want is for each handler to map to an array of store instances.
-
 		if (libp2p !== null) {
-			for (const handler of app.handlers) {
-				const store = await target.openStore({ topic: handler.topic, encoding: handler.encoding, libp2p })
-				app.stores.set(handler.topic, store)
+			for (const { topic, encoding, apply } of app.handlers) {
+				const store = await target.openStore({ libp2p, topic, encoding, apply })
+				app.stores.set(topic, store)
 			}
 		}
 
 		return app
 	}
 
-	// /**
-	//  * const app = await Canvas.init({ ... })
-	//  * app.subscribe("/interwallet/room/12nk1291", )
-	//  */
-	// public setEnvironmentVariable(name: string, value: string) {}
+	// private readonly handlers: TopicHandler[] = []
+	private readonly handlers: {
+		topic: string
+		apply: (key: Uint8Array, event: IPLDValue) => Promise<{ result?: IPLDValue }>
+		encoding: Encoding<IPLDValue>
+	}[] = []
 
-	private readonly handlers: TopicHandler[] = []
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
 
@@ -318,19 +306,70 @@ export class Canvas extends EventEmitter<{}> {
 		topic: string,
 		input: ActionInput,
 		env: Env = {}
-	): Promise<{ id: string; result: IPLDValue | undefined }> {
-		const handler = this.handlers.find((subscription) => subscription.topic === topic)
-		assert(handler instanceof ActionHandler, "no handler found for topic")
-		const action = await handler.create(input, env)
-		const id = getCID(action, { codec: "dag-cbor" }).toString()
-		const version = encodeTimestampVersion(action.value.context.timestamp)
-		try {
-			this.setEffectContext(id, bytesToHex(version))
-			const result = await handler.apply(id, action, env)
-			await this.applyEffects() // TODO: this should probably be inside handler.apply.........
-			return { id, result }
-		} finally {
-			this.clearEffectContext()
+	): Promise<{ id: string; result?: IPLDValue }> {
+		const signer = this.signers.find((signer) => input.chain === undefined || signer.match(input.chain))
+		assert(signer !== undefined, `no signer provided for chain ${input.chain}`)
+
+		const context: ActionContext = {
+			topic: topic,
+			timestamp: Date.now(),
+			blockhash: null,
+			// depth: 0,
+			// dependencies: [],
+		}
+
+		const action = await signer.create(input.name, input.args, context, env)
+
+		const store = this.stores.get(topic)
+		assert(store !== undefined, "missing store for topic")
+		const { key, result } = await store.publish(action)
+
+		const id = base32.baseEncode(key)
+		return { id, result }
+	}
+
+	private readonly actionEncoding = createOrderedEncoding<IPLDValue>({
+		prefixByteLength: 6,
+		getPrefix: (event) => {
+			assert(this.validateAction(event), "invalid action")
+			return encodeTimestampVersion(event.value.context.timestamp)
+		},
+	})
+
+	private validateAction(event: IPLDValue): event is Signed<Action> {
+		// TODO: do the thing
+		return true
+	}
+
+	private createActionHandler(topic: string, actions: Record<string, JSFunctionAsync>): TopicHandler {
+		return {
+			topic: topic,
+			encoding: this.actionEncoding,
+			apply: async (key, event) => {
+				assert(this.validateAction(event), "invalid action")
+
+				verifySignedValue(event)
+
+				const { chain, address, name, args, context } = event.value
+
+				const signer = this.signers.find((signer) => signer.match(chain))
+				assert(signer !== undefined, `no signer provided for chain ${chain}`)
+				await signer.verify(event)
+
+				assert(actions[name] !== undefined, `invalid action name: ${name}`)
+
+				const version = encodeTimestampVersion(context.timestamp)
+
+				const id = base32.baseEncode(key)
+				this.setEffectContext(id, bytesToHex(version))
+				try {
+					const result = await actions[name](args, { id, chain, address, ...context })
+					await this.applyEffects()
+					return { result }
+				} finally {
+					this.clearEffectContext()
+				}
+			},
 		}
 	}
 
@@ -339,11 +378,38 @@ export class Canvas extends EventEmitter<{}> {
 		input: JSValue,
 		env: Env = {}
 	): Promise<{ id: string; result?: IPLDValue }> {
-		const handler = this.handlers.find((subscription) => subscription.topic === topic)
-		assert(handler instanceof CustomActionHandler, "no handler found for topic")
-		const action = await handler.create(input, env)
-		const id = getCID(action, { codec: "dag-cbor" }).toString()
-		const result = await handler.apply(id, action, env)
-		return { id, result: result ?? undefined }
+		const store = this.stores.get(topic)
+		assert(store !== undefined, "missing store for topic")
+
+		const { key, result, recipients } = await store.publish(input)
+
+		const id = base32.baseEncode(key)
+		return { id, result }
+	}
+
+	private readonly customActionEncoding = createDefaultEncoding()
+
+	private validateCustomAction(event: IPLDValue): event is JSValue {
+		// TODO: do the thing
+		return true
+	}
+
+	private createCustomActionHandler(topic: string, apply: JSFunctionAsync): TopicHandler {
+		return {
+			encoding: this.customActionEncoding,
+			topic,
+			apply: async (key, event) => {
+				assert(this.validateCustomAction(event))
+				const id = base32.baseEncode(key)
+				this.setEffectContext(id)
+				try {
+					const result = await apply(event, {})
+					await this.applyEffects()
+					return { result }
+				} finally {
+					this.clearEffectContext()
+				}
+			},
+		}
 	}
 }

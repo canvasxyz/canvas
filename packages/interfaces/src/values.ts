@@ -1,4 +1,4 @@
-import type { CID } from "multiformats/cid"
+// import type { CID } from "multiformats/cid"
 
 export type JSONPrimitive = null | boolean | number | string
 export type JSONValue<Primitive = JSONPrimitive> = Primitive | JSONArray<Primitive> | JSONObject<Primitive>
@@ -7,7 +7,7 @@ export interface JSONObject<Primitive = JSONPrimitive> {
 	[key: string]: JSONValue<Primitive>
 }
 
-export type IPLDValue = JSONValue<null | boolean | number | string | Uint8Array | CID>
+// export type IPLDValue = JSONValue<null | boolean | number | string | Uint8Array | CID>
 
 // export type JSONPrimitive = null | boolean | number | string
 // export type JSONValue = JSONPrimitive | JSONArray | JSONObject

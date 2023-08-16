@@ -5,15 +5,15 @@ import { sha256 } from "multiformats/hashes/sha2"
 import { bytesToHex } from "@noble/hashes/utils"
 import { concat } from "uint8arrays"
 
-import { Encoding } from "./interface.js"
+import { Encoding, IPLDValue } from "./interface.js"
 import { assert } from "./utils.js"
 
-export interface OrderedEncodingOptions<T> {
+export interface OrderedEncodingOptions<T extends IPLDValue = IPLDValue> {
 	prefixByteLength: number
 	getPrefix: (event: T) => Uint8Array
 }
 
-export const createOrderedEncoding = <T>(options: OrderedEncodingOptions<T>): Encoding<T> => ({
+export const createOrderedEncoding = <T extends IPLDValue>(options: OrderedEncodingOptions<T>): Encoding<T> => ({
 	keyToString: (key) => {
 		const cid = CID.decode(key.subarray(options.prefixByteLength))
 		if (options.prefixByteLength === 0) {
@@ -51,5 +51,5 @@ export const createOrderedEncoding = <T>(options: OrderedEncodingOptions<T>): En
 	},
 })
 
-export const createDefaultEncoding = <T>() =>
+export const createDefaultEncoding = <T extends IPLDValue>() =>
 	createOrderedEncoding<T>({ prefixByteLength: 0, getPrefix: () => new Uint8Array([]) })

@@ -14,8 +14,6 @@ export interface IPLDObject {
 
 export type Awaitable<T> = T | Promise<T>
 
-export type Consumer<T> = (key: Uint8Array, event: T) => Awaitable<void>
-
 export type StoreEvents = {
 	sync: CustomEvent<{ root: Node; peerId: PeerId; successCount: number; failureCount: number }>
 }
@@ -26,21 +24,19 @@ export interface Store<T extends IPLDValue = IPLDValue> extends EventEmitter<Sto
 	start(): Promise<void>
 	stop(): Promise<void>
 
-	attach(consumer: Consumer<T>, options?: { replay?: boolean }): void
-	detach(consumer: Consumer<T>): void
-
-	publish(event: T): Promise<{ key: Uint8Array; recipients: number }>
+	publish(event: T): Promise<{ key: Uint8Array; result?: IPLDValue; recipients: number }>
 	get(key: Uint8Array): Promise<T | null>
 }
 
 export interface StoreInit<T> extends StoreOptions {
-	libp2p: Libp2p<{ pubsub: PubSub }>
 	topic: string
+	libp2p: Libp2p<{ pubsub: PubSub }>
 	encoding?: Encoding<T>
-	validate?: (event: T) => void | Promise<void>
+	apply: (key: Uint8Array, event: T) => Awaitable<{ result?: IPLDValue }>
 }
 
 export interface StoreOptions {
+	replay?: boolean
 	minConnections?: number
 	maxConnections?: number
 	maxInboundStreams?: number

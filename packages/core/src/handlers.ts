@@ -1,16 +1,17 @@
+import { logger } from "@libp2p/logger"
+
+import type { Action, ActionArguments, ActionContext, Env, Signer } from "@canvas-js/interfaces"
 import { Signed, verifySignedValue } from "@canvas-js/signed-value"
-import { Action, ActionArguments, ActionContext, Env, IPLDValue, Signer } from "@canvas-js/interfaces"
+import { Encoding, createOrderedEncoding, IPLDValue } from "@canvas-js/store"
 import { JSFunctionAsync, JSValue } from "@canvas-js/vm"
-import { Encoding, createOrderedEncoding } from "@canvas-js/store"
 
 import { assert, encodeTimestampVersion } from "./utils.js"
-import { logger } from "@libp2p/logger"
 
 export interface TopicHandler<Input = unknown> {
 	topic: string
 	encoding?: Encoding<IPLDValue>
 	// codec: string // "dag-cbor" | "dag-json"
-	apply(id: string, event: IPLDValue, env: Env): Promise<undefined | IPLDValue>
+	apply(id: string, event: IPLDValue, env: Env): Promise<{ result?: IPLDValue }>
 	create(input: Input, env: Env): Promise<IPLDValue>
 }
 
@@ -39,7 +40,7 @@ export class ActionHandler implements TopicHandler<ActionInput> {
 		},
 	})
 
-	public async apply(id: string, event: IPLDValue, env: Env): Promise<IPLDValue | undefined> {
+	public async apply(id: string, event: IPLDValue, env: Env): Promise<{ result?: IPLDValue }> {
 		this.log("applying action %s", id)
 		assert(ActionHandler.validateEvent(event), "invalid event")
 
@@ -53,13 +54,8 @@ export class ActionHandler implements TopicHandler<ActionInput> {
 		await signer.verify(event)
 		assert(this.actions[name] !== undefined, `invalid action name: ${name}`)
 
-		return await this.actions[name](args, { ...env, id, chain, address, ...context })
-		// try {
-		// 	this.log("got result", result)
-		// 	return result
-		// } catch (err) {
-		// 	this.log.error("FJKDSLFJKSLDJFKLSDJF: %O", err)
-		// }
+		const result = await this.actions[name](args, { ...env, id, chain, address, ...context })
+		return { result }
 	}
 
 	public async create({ chain, name, args }: ActionInput, env: Env): Promise<Signed<Action>> {
@@ -90,10 +86,10 @@ export class CustomActionHandler implements TopicHandler<JSValue> {
 		private readonly createFunction?: JSFunctionAsync
 	) {}
 
-	public async apply(id: string, event: IPLDValue, env: Env): Promise<undefined | JSValue> {
+	public async apply(id: string, event: IPLDValue, env: Env): Promise<{ result?: JSValue }> {
 		assert(CustomActionHandler.validateEvent(event), "invalid event")
 		const result = await this.applyFunction(id, event, env)
-		return result
+		return { result }
 	}
 
 	public async create(input: JSValue, env: Env): Promise<JSValue> {

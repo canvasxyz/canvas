@@ -20,7 +20,7 @@ test("sync empty memory stores", async (t) => {
 
 	const stores: Record<string, Store> = await Promise.all(
 		Object.entries(peers).map(async ([name, peer]) => {
-			const store = await openStore({ libp2p: peer, topic })
+			const store = await openStore({ libp2p: peer, topic, apply: (key, event) => ({}) })
 			return [name, store]
 		})
 	).then((entries) => Object.fromEntries(entries))
