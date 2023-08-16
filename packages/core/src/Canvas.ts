@@ -56,11 +56,7 @@ export class Canvas extends EventEmitter<{}> {
 		const peerId = await target.getPeerId()
 
 		const libp2pOptions = await getLibp2pOptions(peerId, config)
-
-		let libp2p: Libp2p<ServiceMap> | null = null
-		if (offline === false) {
-			libp2p = await createLibp2p({ ...libp2pOptions, start: false })
-		}
+		const libp2p = await createLibp2p({ ...libp2pOptions, start: false })
 
 		if (signers.length === 0) {
 			const signer = await SIWESigner.init({})
@@ -145,18 +141,18 @@ export class Canvas extends EventEmitter<{}> {
 			app.dbs.set(name, db)
 		}
 
-		if (libp2p !== null) {
+		if (!offline) {
 			await libp2p.start()
 		}
 
 		// TODO: this is where we'd add dynamic topic sharding.
 		// right now, every handler just maps 1-to-1 to a Store instance,
 		// but what we want is for each handler to map to an array of store instances.
-		if (libp2p !== null) {
-			for (const { topic, encoding, apply } of app.handlers) {
-				const store = await target.openStore({ libp2p, topic, encoding, apply })
-				app.stores.set(topic, store)
-			}
+
+		for (const { topic, encoding, apply } of app.handlers) {
+			console.log("creating store for topic", topic)
+			const store = await target.openStore({ libp2p, topic, encoding, apply })
+			app.stores.set(topic, store)
 		}
 
 		return app
@@ -177,18 +173,18 @@ export class Canvas extends EventEmitter<{}> {
 
 	private constructor(
 		public readonly peerId: PeerId,
-		public readonly libp2p: Libp2p<ServiceMap> | null,
+		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly signers: Signer[],
 		private readonly vm: VM
 	) {
 		super()
 
-		libp2p?.addEventListener("peer:connect", ({ detail: peerId }) => {
+		libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
 			console.log(chalk.gray(`[canvas-core] Opened connection to ${peerId}`))
 			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
 		})
 
-		libp2p?.addEventListener("peer:disconnect", ({ detail: peerId }) => {
+		libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
 			console.log(chalk.gray(`[canvas-core] Closed connection to ${peerId}`))
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 		})
@@ -285,7 +281,7 @@ export class Canvas extends EventEmitter<{}> {
 	public async close() {
 		this.controller.abort()
 
-		if (this.libp2p !== null) {
+		if (this.libp2p.isStarted()) {
 			await this.libp2p.stop()
 		}
 

@@ -16,7 +16,8 @@ addActionHandler({
 	actions: {
 		async createPost({ content }, { timestamp }) {
 			console.log("createPost", content, timestamp)
-			await db.posts.add({ content, timestamp })
+			const id = await db.posts.add({ content, timestamp })
+			return id
 		}
 	}
 })
@@ -35,10 +36,15 @@ test("send an ", async (t) => {
 	t.teardown(() => app.close())
 	t.timeout(5000)
 
-	const result = await app.applyAction("com.example.app", { name: "createPost", args: { content: "hello world" } })
+	const { result } = await app.applyAction("com.example.app", {
+		name: "createPost",
+		args: { content: "hello world" },
+	})
+
 	const db = app.dbs.get("data")
 	assert(db !== undefined)
-	const value = await db.get("posts", result.id)
-	console.log("got value", value)
+
+	assert(typeof result === "string")
+	const value = await db.get("posts", result)
 	t.is(value?.content, "hello world")
 })

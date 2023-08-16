@@ -114,13 +114,16 @@ export abstract class AbstractStore<T extends IPLDValue> extends EventEmitter<St
 	public async stop(): Promise<void> {
 		this.log("stopping")
 		this.controller.abort()
-		this.libp2p.services.pubsub.removeEventListener("message", this.handleMessage)
-		this.libp2p.services.pubsub.unsubscribe(this.topic)
 
-		this.libp2p.unhandle(this.protocol)
-		if (this.#registrarId !== null) {
-			this.libp2p.unregister(this.#registrarId)
-			this.#registrarId = null
+		if (this.libp2p.isStarted()) {
+			this.libp2p.services.pubsub.removeEventListener("message", this.handleMessage)
+			this.libp2p.services.pubsub.unsubscribe(this.topic)
+
+			this.libp2p.unhandle(this.protocol)
+			if (this.#registrarId !== null) {
+				this.libp2p.unregister(this.#registrarId)
+				this.#registrarId = null
+			}
 		}
 	}
 
@@ -130,6 +133,10 @@ export abstract class AbstractStore<T extends IPLDValue> extends EventEmitter<St
 		this.log("applying event %s", this.codec.keyToString(key))
 		const { result } = await this.apply(key, event)
 		await this.write(null, async (txn) => txn.set(key, value))
+
+		if (!this.libp2p.isStarted()) {
+			return { key, result, recipients: 0 }
+		}
 
 		try {
 			const { recipients } = await this.libp2p.services.pubsub.publish(this.topic, value)
