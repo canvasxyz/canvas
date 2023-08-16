@@ -1,6 +1,15 @@
 import { IDBPDatabase, openDB } from "idb"
 
-import { AbstractModelDB, Config, ModelsInit, Resolve, parseConfig } from "@canvas-js/modeldb-interface"
+import {
+	AbstractModelDB,
+	Config,
+	Effect,
+	ImmutableModelAPI,
+	ModelsInit,
+	MutableModelAPI,
+	Resolve,
+	parseConfig,
+} from "@canvas-js/modeldb-interface"
 
 import {
 	createIdbImmutableModelAPI,
@@ -10,7 +19,7 @@ import {
 	getRelationTableName,
 	getTombstoneTableName,
 } from "./api.js"
-import { signalInvalidType } from "./utils.js"
+import { assert, signalInvalidType } from "./utils.js"
 
 export interface ModelDBOptions {
 	databaseName?: string
@@ -72,6 +81,38 @@ export class ModelDB extends AbstractModelDB {
 				this.apis[model.name] = createIdbMutableModelAPI(this.db, model, options)
 			} else {
 				signalInvalidType(model.kind)
+			}
+		}
+	}
+
+	public async apply(
+		effects: Effect[],
+		options: { namespace?: string | undefined; version?: string | undefined }
+	): Promise<void> {
+		const { version, namespace } = options
+		for (const effect of effects) {
+			if (effect.operation === "add") {
+				const api = this.apis[effect.model]
+				assert(api !== undefined, `model ${effect.model} not found`)
+				assert(api instanceof ImmutableModelAPI, "cannot call .add on a mutable model")
+				await api.add(effect.value, { namespace })
+			} else if (effect.operation === "remove") {
+				const api = this.apis[effect.model]
+				assert(api !== undefined, `model ${effect.model} not found`)
+				assert(api instanceof ImmutableModelAPI, "cannot call .remove on a mutable model")
+				await api.remove(effect.key)
+			} else if (effect.operation === "set") {
+				const api = this.apis[effect.model]
+				assert(api !== undefined, `model ${effect.model} not found`)
+				assert(api instanceof MutableModelAPI, "cannot call .set on an immutable model")
+				await api.set(effect.key, effect.value, { version })
+			} else if (effect.operation === "delete") {
+				const api = this.apis[effect.model]
+				assert(api !== undefined, `model ${effect.model} not found`)
+				assert(api instanceof MutableModelAPI, "cannot call .delete on an immutable model")
+				await api.delete(effect.key, { version })
+			} else {
+				signalInvalidType(effect)
 			}
 		}
 	}

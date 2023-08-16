@@ -61,51 +61,24 @@ export abstract class AbstractModelDB {
 		value: ModelValue,
 		options: { metadata?: string; version?: string } = {}
 	) {
-		const api = this.apis[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
-		assert(api instanceof MutableModelAPI, "cannot call .set on an immutable model")
-		await api.set(key, value, options)
+		await this.apply([{ operation: "set", model: modelName, key, value }], { version: options.version })
 	}
 
 	public async delete(modelName: string, key: string, options: { metadata?: string; version?: string } = {}) {
-		const api = this.apis[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
-		assert(api instanceof MutableModelAPI, "cannot call .delete on an immutable model")
-		await api.delete(key, options)
+		await this.apply([{ operation: "delete", model: modelName, key }], { version: options.version })
 	}
 
 	// Immutable model methods
 
 	public async add(modelName: string, value: ModelValue, options: { metadata?: string; namespace?: string } = {}) {
-		const api = this.apis[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
-		assert(api instanceof ImmutableModelAPI, "cannot call .add on a mutable model")
-		return await api.add(value, options)
+		await this.apply([{ operation: "add", model: modelName, value }], { namespace: options.namespace })
+		return getImmutableRecordKey(value, { namespace: options.namespace })
 	}
 
 	public async remove(modelName: string, key: string) {
-		const api = this.apis[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
-		assert(api instanceof ImmutableModelAPI, "cannot call .remove on a mutable model")
-		await api.remove(key)
+		await this.apply([{ operation: "remove", model: modelName, key }], {})
 	}
 
 	// Batch effect API
-
-	public async apply(effects: Effect[], options: { namespace?: string; version?: string } = {}): Promise<void> {
-		const { version, namespace } = options
-		for (const effect of effects) {
-			if (effect.operation === "add") {
-				await this.add(effect.model, effect.value, { namespace })
-			} else if (effect.operation === "remove") {
-				await this.remove(effect.model, effect.key)
-			} else if (effect.operation === "set") {
-				await this.set(effect.model, effect.key, effect.value, { version })
-			} else if (effect.operation === "delete") {
-				await this.delete(effect.model, effect.key, { version })
-			} else {
-				signalInvalidType(effect)
-			}
-		}
-	}
+	abstract apply(effects: Effect[], options: { namespace?: string; version?: string; metadata?: string }): Promise<void>
 }
