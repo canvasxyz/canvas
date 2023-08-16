@@ -54,7 +54,7 @@ testOnModelDB("create a modeldb with a mutable model and a resolve function", as
 		},
 	} as ModelsInit
 
-	const db = await modelDBConstructor(models, { resolve: { lessThan: (a, b) => a < b } })
+	const db = await modelDBConstructor(models, { resolve: { lessThan: (a, b) => a.version < b.version } })
 
 	const key = "modelKey1"
 
@@ -101,7 +101,7 @@ testOnModelDB("create a modeldb with a mutable model, test deleting entries", as
 		},
 	} as ModelsInit
 
-	const db = await modelDBConstructor(models, { resolve: { lessThan: (a, b) => a < b } })
+	const db = await modelDBConstructor(models, { resolve: { lessThan: (a, b) => a.version < b.version } })
 
 	const key = "modelKey4"
 
