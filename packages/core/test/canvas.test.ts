@@ -21,9 +21,6 @@ export const actions = addActionHandler({
 		}
 	}
 })
-
-// app.exports.db.get("posts", fjdkls)
-// app.exports.actions.createPost()
 `.trim()
 
 test("open and close an app", async (t) => {
@@ -43,10 +40,7 @@ test("apply an action and read a record from the database", async (t) => {
 
 	t.log("applied action", actionId, "and got postId", postId)
 
-	const db = app.exports.db
-	assert(db !== undefined)
-
 	assert(typeof postId === "string")
-	const value = await db.get("posts", postId)
+	const value = await app.exports.db?.get("posts", postId)
 	t.is(value?.content, "hello world")
 })
