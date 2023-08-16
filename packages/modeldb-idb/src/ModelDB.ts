@@ -24,7 +24,6 @@ import { assert, signalInvalidType } from "./utils.js"
 export interface ModelDBOptions {
 	databaseName?: string
 	resolve?: Resolve
-	dkLen?: number
 }
 
 export class ModelDB extends AbstractModelDB {
@@ -76,7 +75,7 @@ export class ModelDB extends AbstractModelDB {
 
 		for (const model of config.models) {
 			if (model.kind === "immutable") {
-				this.apis[model.name] = createIdbImmutableModelAPI(this.db, model, options)
+				this.apis[model.name] = createIdbImmutableModelAPI(this.db, model)
 			} else if (model.kind === "mutable") {
 				this.apis[model.name] = createIdbMutableModelAPI(this.db, model, options)
 			} else {

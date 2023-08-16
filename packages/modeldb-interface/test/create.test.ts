@@ -3,7 +3,7 @@ import { ModelsInit } from "@canvas-js/modeldb-interface"
 import { testOnModelDB } from "./utils.js"
 
 testOnModelDB("create modeldb with no models", async (t, modelDBConstructor) => {
-	await modelDBConstructor({}, { dkLen: 16 })
+	await modelDBConstructor({})
 
 	t.pass()
 })

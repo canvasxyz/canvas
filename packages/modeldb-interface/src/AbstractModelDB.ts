@@ -55,22 +55,17 @@ export abstract class AbstractModelDB {
 
 	// Mutable model methods
 
-	public async set(
-		modelName: string,
-		key: string,
-		value: ModelValue,
-		options: { metadata?: string; version?: string } = {}
-	) {
+	public async set(modelName: string, key: string, value: ModelValue, options: { version?: string } = {}) {
 		await this.apply([{ operation: "set", model: modelName, key, value }], { version: options.version })
 	}
 
-	public async delete(modelName: string, key: string, options: { metadata?: string; version?: string } = {}) {
+	public async delete(modelName: string, key: string, options: { version?: string } = {}) {
 		await this.apply([{ operation: "delete", model: modelName, key }], { version: options.version })
 	}
 
 	// Immutable model methods
 
-	public async add(modelName: string, value: ModelValue, options: { metadata?: string; namespace?: string } = {}) {
+	public async add(modelName: string, value: ModelValue, options: { namespace?: string } = {}) {
 		await this.apply([{ operation: "add", model: modelName, value }], { namespace: options.namespace })
 		return getImmutableRecordKey(value, { namespace: options.namespace })
 	}
@@ -80,5 +75,5 @@ export abstract class AbstractModelDB {
 	}
 
 	// Batch effect API
-	abstract apply(effects: Effect[], options: { namespace?: string; version?: string; metadata?: string }): Promise<void>
+	abstract apply(effects: Effect[], options: { namespace?: string; version?: string }): Promise<void>
 }

@@ -15,14 +15,13 @@ import { createSqliteImmutableModelAPI, createSqliteMutableModelAPI } from "./ap
 
 export interface ModelDBOptions {
 	resolve?: Resolve
-	dkLen?: number
 }
 
 export class ModelDB extends AbstractModelDB {
 	public readonly db: sqlite.Database
 
 	readonly #transaction: sqlite.Transaction<
-		(effects: Effect[], options: { namespace?: string; version?: string; metadata?: string }) => Promise<void>
+		(effects: Effect[], options: { namespace?: string; version?: string }) => Promise<void>
 	>
 
 	constructor(public readonly path: string | null, public readonly models: ModelsInit, options: ModelDBOptions = {}) {
@@ -40,7 +39,7 @@ export class ModelDB extends AbstractModelDB {
 
 		for (const model of this.config.models) {
 			if (model.kind === "immutable") {
-				this.apis[model.name] = createSqliteImmutableModelAPI(this.db, model, options)
+				this.apis[model.name] = createSqliteImmutableModelAPI(this.db, model)
 			} else if (model.kind === "mutable") {
 				this.apis[model.name] = createSqliteMutableModelAPI(this.db, model, options)
 			} else {
@@ -48,13 +47,13 @@ export class ModelDB extends AbstractModelDB {
 			}
 		}
 
-		this.#transaction = this.db.transaction(async (effects, { version, namespace, metadata }) => {
+		this.#transaction = this.db.transaction(async (effects, { version, namespace }) => {
 			for (const effect of effects) {
 				if (effect.operation === "add") {
 					const api = this.apis[effect.model]
 					assert(api !== undefined, `model ${effect.model} not found`)
 					assert(api instanceof ImmutableModelAPI, "cannot call .add on a mutable model")
-					await api.add(effect.value, { namespace, metadata })
+					await api.add(effect.value, { namespace })
 				} else if (effect.operation === "remove") {
 					const api = this.apis[effect.model]
 					assert(api !== undefined, `model ${effect.model} not found`)
@@ -64,12 +63,12 @@ export class ModelDB extends AbstractModelDB {
 					const api = this.apis[effect.model]
 					assert(api !== undefined, `model ${effect.model} not found`)
 					assert(api instanceof MutableModelAPI, "cannot call .set on an immutable model")
-					await api.set(effect.key, effect.value, { version, metadata })
+					await api.set(effect.key, effect.value, { version })
 				} else if (effect.operation === "delete") {
 					const api = this.apis[effect.model]
 					assert(api !== undefined, `model ${effect.model} not found`)
 					assert(api instanceof MutableModelAPI, "cannot call .delete on an immutable model")
-					await api.delete(effect.key, { version, metadata })
+					await api.delete(effect.key, { version })
 				} else {
 					signalInvalidType(effect)
 				}
@@ -77,10 +76,7 @@ export class ModelDB extends AbstractModelDB {
 		})
 	}
 
-	public async apply(
-		effects: Effect[],
-		options: { namespace?: string | undefined; version?: string | undefined; metadata?: string | undefined }
-	): Promise<void> {
+	public async apply(effects: Effect[], options: { namespace?: string; version?: string }): Promise<void> {
 		await this.#transaction(effects, options)
 	}
 

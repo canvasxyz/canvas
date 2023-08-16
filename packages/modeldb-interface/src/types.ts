@@ -80,10 +80,10 @@ export type Resolve = {
 export type RecordValue = Record<string, string | number | Buffer | null>
 
 export type TombstoneAPI = {
-	select: (params: { _key: string }) => Promise<{ _metadata: string | null; _version: string } | null>
+	select: (params: { _key: string }) => Promise<{ _version: string } | null>
 	delete: (params: { _key: string }) => Promise<void>
-	insert: (params: { _key: string; _metadata: string | null; _version: string }) => Promise<void>
-	update: (params: { _key: string; _metadata: string | null; _version: string }) => Promise<void>
+	insert: (params: { _key: string; _version: string }) => Promise<void>
+	update: (params: { _key: string; _version: string }) => Promise<void>
 }
 
 export type RelationAPI = {
@@ -99,18 +99,8 @@ export type MutableRecordAPI = {
 	iterate: (params: {}) => AsyncIterable<ModelValue>
 	select: (params: { _key: string }) => Promise<ModelValue | null>
 	selectAll: (params: {}) => Promise<ModelValue[]>
-	insert: (params: {
-		_key: string
-		_version: string | null
-		_metadata: string | null
-		value: ModelValue
-	}) => Promise<void>
-	update: (params: {
-		_key: string
-		_version: string | null
-		_metadata: string | null
-		value: ModelValue
-	}) => Promise<void>
+	insert: (params: { _key: string; _version: string | null; value: ModelValue }) => Promise<void>
+	update: (params: { _key: string; _version: string | null; value: ModelValue }) => Promise<void>
 	delete: (params: { _key: string }) => Promise<void>
 	query: (params: QueryParams) => Promise<ModelValue[]>
 }
@@ -120,13 +110,8 @@ export type ImmutableRecordAPI = {
 	iterate: (params: {}) => AsyncIterable<ModelValue>
 	select: (params: { _key: string }) => Promise<ModelValue | null>
 	selectAll: (params: {}) => Promise<ModelValue[]>
-	insert: (params: { _key: string; _metadata: string | null; value: ModelValue }) => Promise<void>
-	update: (params: {
-		_key: string
-		_metadata: string | null
-		_version: string | null
-		value: ModelValue
-	}) => Promise<void>
+	insert: (params: { _key: string; value: ModelValue }) => Promise<void>
+	update: (params: { _key: string; _version: string | null; value: ModelValue }) => Promise<void>
 	delete: (params: { _key: string }) => Promise<void>
 	query: (params: QueryParams) => Promise<ModelValue[]>
 }

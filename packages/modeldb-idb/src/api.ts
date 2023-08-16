@@ -115,11 +115,11 @@ function prepareTombstoneAPI(db: IDBPDatabase, model: Model): TombstoneAPI {
 	return {
 		select: async ({ _key }) => (await db.get(tombstoneTableName, _key)) || null,
 		delete: async ({ _key }) => db.delete(tombstoneTableName, _key),
-		insert: async ({ _key, _metadata, _version }) => {
-			await db.put(tombstoneTableName, { _key, _metadata, _version }, _key)
+		insert: async ({ _key, _version }) => {
+			await db.put(tombstoneTableName, { _key, _version }, _key)
 		},
-		update: async ({ _key, _metadata, _version }) => {
-			await db.put(tombstoneTableName, { _key, _metadata, _version }, _key)
+		update: async ({ _key, _version }) => {
+			await db.put(tombstoneTableName, { _key, _version }, _key)
 		},
 	}
 }
@@ -175,13 +175,13 @@ function prepareMutableRecordAPI(db: IDBPDatabase, model: Model): MutableRecordA
 			const records = await db.getAll(recordTableName)
 			return records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
 		},
-		insert: async ({ _key, _metadata, _version, value }) => {
+		insert: async ({ _key, _version, value }) => {
 			const record = encodeRecord(model, value)
-			db.put(recordTableName, { _key, _metadata, _version, ...record }, _key)
+			db.put(recordTableName, { _key, _version, ...record }, _key)
 		},
-		update: async ({ _key, _metadata, _version, value }) => {
+		update: async ({ _key, _version, value }) => {
 			const record = encodeRecord(model, value)
-			db.put(recordTableName, { _key, _metadata, _version, ...record }, _key)
+			db.put(recordTableName, { _key, _version, ...record }, _key)
 		},
 		delete: async ({ _key }) => db.delete(recordTableName, _key),
 		selectVersion: async ({ _key }) => {
@@ -211,13 +211,13 @@ function prepareImmutableRecordAPI(db: IDBPDatabase, model: Model): ImmutableRec
 			const records = await db.getAll(recordTableName)
 			return records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
 		},
-		insert: async ({ _key, _metadata, value }) => {
+		insert: async ({ _key, value }) => {
 			const record = encodeRecord(model, value)
-			await db.put(recordTableName, { _key, _metadata, ...record }, _key)
+			await db.put(recordTableName, { _key, ...record }, _key)
 		},
-		update: async ({ _key, _metadata, _version, value }) => {
+		update: async ({ _key, _version, value }) => {
 			const record = encodeRecord(model, value)
-			await db.put(recordTableName, { _key, _metadata, _version, ...record })
+			await db.put(recordTableName, { _key, _version, ...record })
 		},
 		delete: async ({ _key }) => db.delete(recordTableName, _key),
 		query: async (queryParams) => query(db, queryParams, model),
@@ -231,9 +231,9 @@ export function createIdbMutableModelAPI(db: IDBPDatabase, model: Model, options
 	return new MutableModelAPI(tombstoneAPI, relations, records, model, options)
 }
 
-export function createIdbImmutableModelAPI(db: IDBPDatabase, model: Model, options: { dkLen?: number } = {}) {
+export function createIdbImmutableModelAPI(db: IDBPDatabase, model: Model) {
 	const relationAPIs = prepareRelationAPIs(db, model)
 	const immutableRecordAPI = prepareImmutableRecordAPI(db, model)
 
-	return new ImmutableModelAPI(relationAPIs, immutableRecordAPI, model, options)
+	return new ImmutableModelAPI(relationAPIs, immutableRecordAPI, model)
 }
