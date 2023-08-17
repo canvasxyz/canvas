@@ -1,4 +1,4 @@
-export * from "./interface.js"
+export * from "./types.js"
 export { protocolPrefix } from "./utils.js"
-export { createOrderedEncoding, createDefaultEncoding } from "./encoding.js"
-export { AbstractStore } from "./AbstractStore.js"
+export * from "./encoding.js"
+export * from "./AbstractStore.js"
