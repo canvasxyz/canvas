@@ -9,7 +9,7 @@ export const db = openDB({
 		content: "string",
 		timestamp: "integer",
 	}
-}, { name: "data" });
+});
 
 export const actions = addActionHandler({
 	topic: "com.example.app",

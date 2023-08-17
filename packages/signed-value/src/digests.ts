@@ -1,4 +1,5 @@
 import { sha256 } from "@noble/hashes/sha256"
+import { blake3 } from "@noble/hashes/blake3"
 
 import { assert } from "./utils.js"
 
@@ -10,6 +11,30 @@ export const digests: Digest[] = [
 		code: 0x12,
 		digest: (iter: Iterable<Uint8Array>) => {
 			const hash = sha256.create()
+			for (const chunk of iter) {
+				hash.update(chunk)
+			}
+
+			return hash.digest()
+		},
+	},
+	{
+		name: "blake3",
+		code: 0x1e,
+		digest: (iter: Iterable<Uint8Array>) => {
+			const hash = blake3.create({ dkLen: 32 })
+			for (const chunk of iter) {
+				hash.update(chunk)
+			}
+
+			return hash.digest()
+		},
+	},
+	{
+		name: "blake3-128",
+		code: 0x1e,
+		digest: (iter: Iterable<Uint8Array>) => {
+			const hash = blake3.create({ dkLen: 16 })
 			for (const chunk of iter) {
 				hash.update(chunk)
 			}

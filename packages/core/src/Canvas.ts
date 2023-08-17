@@ -7,6 +7,9 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { CID } from "multiformats/cid"
 import { base32 } from "multiformats/bases/base32"
 import * as cbor from "@ipld/dag-cbor"
+import { concat } from "uint8arrays"
+import { blake3 } from "@noble/hashes/blake3"
+import { QuickJSHandle } from "quickjs-emscripten"
 
 import { Signed, verifySignedValue } from "@canvas-js/signed-value"
 import { Action, ActionArguments, ActionContext, Env, Signer } from "@canvas-js/interfaces"
@@ -28,9 +31,6 @@ import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
 import { assert, encodeTimestampVersion, mapValues, signalInvalidType, timestampResolver } from "./utils.js"
-import { concat } from "uint8arrays"
-import { blake3 } from "@noble/hashes/blake3"
-import { QuickJSHandle } from "quickjs-emscripten"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
