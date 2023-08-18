@@ -1,11 +1,9 @@
 import * as sqlite from "better-sqlite3"
 
 import {
-	ImmutableModelAPI,
 	ImmutableRecordAPI,
 	Model,
 	ModelValue,
-	MutableModelAPI,
 	MutableRecordAPI,
 	QueryParams,
 	RecordValue,
@@ -298,16 +296,20 @@ function prepareRelationAPIs(db: sqlite.Database, model: Model) {
 	return relations
 }
 
-export function createSqliteMutableModelAPI(db: sqlite.Database, model: Model, options: { resolve?: Resolve } = {}) {
-	const tombstoneAPI = prepareTombstoneAPI(db, model)
-	const relations = prepareRelationAPIs(db, model)
-	const records = prepareMutableRecordAPI(db, model)
-	return new MutableModelAPI(tombstoneAPI, relations, records, model, options)
+export function createIdbMutableModelDBContext(db: sqlite.Database, model: Model, resolve: Resolve | undefined) {
+	return {
+		tombstones: prepareTombstoneAPI(db, model),
+		relations: prepareRelationAPIs(db, model),
+		records: prepareMutableRecordAPI(db, model),
+		resolve: resolve,
+		model,
+	}
 }
 
-export function createSqliteImmutableModelAPI(db: sqlite.Database, model: Model, options: { dkLen?: number } = {}) {
-	const relationAPIs = prepareRelationAPIs(db, model)
-	const immutableRecordAPI = prepareImmutableRecordAPI(db, model)
-
-	return new ImmutableModelAPI(relationAPIs, immutableRecordAPI, model, options)
+export function createIdbImmutableModelDBContext(db: sqlite.Database, model: Model) {
+	return {
+		relations: prepareRelationAPIs(db, model),
+		records: prepareImmutableRecordAPI(db, model),
+		model,
+	}
 }

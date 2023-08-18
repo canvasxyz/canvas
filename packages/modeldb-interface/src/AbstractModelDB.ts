@@ -1,57 +1,26 @@
-import { Config, ModelValue, Effect } from "./types.js"
-import { ImmutableModelAPI, MutableModelAPI } from "./api.js"
-import { assert, signalInvalidType } from "./utils.js"
+import { Config, ModelValue, Effect, Model } from "./types.js"
 import { getImmutableRecordKey } from "./utils.js"
 
 export abstract class AbstractModelDB {
 	public static getImmutableRecordKey = getImmutableRecordKey
-	public readonly apis: Record<string, MutableModelAPI | ImmutableModelAPI> = {}
+	public readonly models: Record<string, Model>
 
-	public constructor(public readonly config: Config) {}
+	public constructor(public readonly config: Config) {
+		this.models = {}
+		for (const model of config.models) {
+			this.models[model.name] = model
+		}
+	}
 
 	abstract close(): void
 
-	public async get(modelName: string, key: string) {
-		const api = this.apis[modelName]
-		assert(api !== undefined, "model not found")
-		if (api instanceof MutableModelAPI) {
-			return null
-		} else if (api instanceof ImmutableModelAPI) {
-			return await api.get(key)
-		} else {
-			signalInvalidType(api)
-		}
-	}
+	abstract get(modelName: string, key: string): Promise<ModelValue | null>
 
-	public async selectAll(modelName: string): Promise<ModelValue[]> {
-		const api = this.apis[modelName]
-		assert(api !== undefined, "model not found")
-		if (api instanceof MutableModelAPI || api instanceof ImmutableModelAPI) {
-			return await api.selectAll()
-		} else {
-			signalInvalidType(api)
-		}
-	}
+	abstract selectAll(modelName: string): Promise<ModelValue[]>
 
-	public iterate(modelName: string): AsyncIterable<ModelValue> {
-		const api = this.apis[modelName]
-		assert(api !== undefined, "model not found")
-		if (api instanceof MutableModelAPI || api instanceof ImmutableModelAPI) {
-			return api.iterate()
-		} else {
-			signalInvalidType(api)
-		}
-	}
+	abstract iterate(modelName: string): AsyncIterable<ModelValue>
 
-	public async query(modelName: string, query: {}): Promise<ModelValue[]> {
-		const api = this.apis[modelName]
-		assert(api !== undefined, "model not found")
-		if (api instanceof MutableModelAPI || api instanceof ImmutableModelAPI) {
-			return api.query(query)
-		} else {
-			signalInvalidType(api)
-		}
-	}
+	abstract query(modelName: string, query: {}): Promise<ModelValue[]>
 
 	// Mutable model methods
 

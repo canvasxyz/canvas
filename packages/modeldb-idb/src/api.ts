@@ -1,9 +1,7 @@
 import {
-	ImmutableModelAPI,
 	ImmutableRecordAPI,
 	Model,
 	ModelValue,
-	MutableModelAPI,
 	MutableRecordAPI,
 	QueryParams,
 	RecordValue,
@@ -12,7 +10,9 @@ import {
 	TombstoneAPI,
 } from "@canvas-js/modeldb-interface"
 import { decodeRecord, encodeRecord } from "./encoding.js"
-import { IDBPDatabase } from "idb"
+import { IDBPTransaction } from "idb"
+
+type IDBPTransactionReadWrite = IDBPTransaction<any, any, "readwrite">
 
 export const getRecordTableName = (modelName: string) => `record/${modelName}`
 export const getTombstoneTableName = (modelName: string) => `tombstone/${modelName}`
@@ -26,10 +26,13 @@ export const getRelationSourceIndexName = (modelName: string, propertyName: stri
 export const getRelationTargetIndexName = (modelName: string, propertyName: string) =>
 	`relation/${modelName}/${propertyName}/target`
 
-async function query(db: IDBPDatabase, queryParams: QueryParams, model: Model): Promise<ModelValue[]> {
+export async function query(
+	transaction: IDBPTransactionReadWrite,
+	queryParams: QueryParams,
+	model: Model
+): Promise<ModelValue[]> {
 	const recordTableName = getRecordTableName(model.name)
 
-	const transaction = db.transaction(recordTableName, "readonly")
 	const objectStore = transaction.objectStore(recordTableName)
 
 	let records: RecordValue[]
@@ -109,131 +112,143 @@ async function query(db: IDBPDatabase, queryParams: QueryParams, model: Model): 
 	return modelRecords
 }
 
-function prepareTombstoneAPI(db: IDBPDatabase, model: Model): TombstoneAPI {
+function prepareTombstoneAPI(transaction: IDBPTransactionReadWrite, model: Model): TombstoneAPI {
 	const tombstoneTableName = getTombstoneTableName(model.name)
+	const store = transaction.objectStore(tombstoneTableName)
 
 	return {
-		select: async ({ _key }) => (await db.get(tombstoneTableName, _key)) || null,
-		delete: async ({ _key }) => db.delete(tombstoneTableName, _key),
+		select: async ({ _key }) => (await store.get(_key)) || null,
+		delete: async ({ _key }) => store.delete(_key),
 		insert: async ({ _key, _metadata, _version }) => {
-			await db.put(tombstoneTableName, { _key, _metadata, _version }, _key)
+			await store.put({ _key, _metadata, _version }, _key)
 		},
 		update: async ({ _key, _metadata, _version }) => {
-			await db.put(tombstoneTableName, { _key, _metadata, _version }, _key)
+			await store.put({ _key, _metadata, _version }, _key)
 		},
 	}
 }
 
-function prepareRelationAPI(db: IDBPDatabase, modelName: string, propertyName: string): RelationAPI {
+function prepareRelationAPI(
+	transaction: IDBPTransactionReadWrite,
+	modelName: string,
+	propertyName: string
+): RelationAPI {
 	const tableName = getRelationTableName(modelName, propertyName)
+	const store = transaction.objectStore(tableName)
 
 	return {
 		selectAll: async ({ _source }) => {
-			const transaction = db.transaction(tableName, "readonly")
-			const objectStore = transaction.objectStore(tableName)
-			return await objectStore.index("_source").getAll(_source)
+			return await store.index("_source").getAll(_source)
 		},
 		deleteAll: async ({ _source }) => {
-			const transaction = db.transaction(tableName, "readwrite")
-			const objectStore = transaction.objectStore(tableName)
-			const relations = await objectStore.index("_source").getAll(_source)
+			const relations = await store.index("_source").getAll(_source)
 			await Promise.all(relations.map((relation) => relation.delete()))
 			await transaction.done
 		},
 		create: async ({ _source, _target }) => {
-			await db.put(tableName, { _source, _target }, `${_source}/${_target}`)
+			await store.put({ _source, _target }, `${_source}/${_target}`)
 		},
 	}
 }
 
-function prepareRelationAPIs(db: IDBPDatabase, model: Model): Record<string, RelationAPI> {
+function prepareRelationAPIs(transaction: IDBPTransactionReadWrite, model: Model): Record<string, RelationAPI> {
 	const relations: Record<string, RelationAPI> = {}
 	for (const property of model.properties) {
 		if (property.kind === "relation") {
-			relations[property.name] = prepareRelationAPI(db, model.name, property.name)
+			relations[property.name] = prepareRelationAPI(transaction, model.name, property.name)
 		}
 	}
 
 	return relations
 }
 
-function prepareMutableRecordAPI(db: IDBPDatabase, model: Model): MutableRecordAPI {
+function prepareMutableRecordAPI(transaction: IDBPTransactionReadWrite, model: Model): MutableRecordAPI {
 	const recordTableName = getRecordTableName(model.name)
+	const store = transaction.objectStore(recordTableName)
 
 	return {
 		select: async ({ _key }) => {
-			const record = await db.get(recordTableName, _key)
+			const record = await store.get(_key)
 			return record ? decodeRecord(model, record) : null
 		},
 		iterate: async function* () {
-			for (const value of await db.getAll(recordTableName)) {
+			for (const value of await store.getAll()) {
 				const decodedRecord = decodeRecord(model, value)
 				if (decodedRecord) yield decodedRecord
 			}
 		},
 		selectAll: async () => {
-			const records = await db.getAll(recordTableName)
+			const records = await store.getAll()
 			return records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
 		},
 		insert: async ({ _key, _metadata, _version, value }) => {
 			const record = encodeRecord(model, value)
-			db.put(recordTableName, { _key, _metadata, _version, ...record }, _key)
+			store.put({ _key, _metadata, _version, ...record }, _key)
 		},
 		update: async ({ _key, _metadata, _version, value }) => {
 			const record = encodeRecord(model, value)
-			db.put(recordTableName, { _key, _metadata, _version, ...record }, _key)
+			store.put({ _key, _metadata, _version, ...record }, _key)
 		},
-		delete: async ({ _key }) => db.delete(recordTableName, _key),
+		delete: async ({ _key }) => store.delete(_key),
 		selectVersion: async ({ _key }) => {
-			const record = await db.get(recordTableName, _key)
+			const record = await store.get(_key)
 			const _version = record ? record._version : null
 			return { _version }
 		},
-		query: async (queryParams) => query(db, queryParams, model),
+		query: async (queryParams) => query(transaction, queryParams, model),
 	}
 }
 
-function prepareImmutableRecordAPI(db: IDBPDatabase, model: Model): ImmutableRecordAPI {
+function prepareImmutableRecordAPI(transaction: IDBPTransactionReadWrite, model: Model): ImmutableRecordAPI {
 	const recordTableName = getRecordTableName(model.name)
+	const store = transaction.objectStore(recordTableName)
 
 	return {
 		select: async ({ _key }) => {
-			const record = await db.get(recordTableName, _key)
+			const record = await store.get(_key)
 			return record ? decodeRecord(model, record) : null
 		},
 		iterate: async function* () {
-			for (const value of await db.getAll(recordTableName)) {
+			for (const value of await store.getAll()) {
 				const decodedRecord = decodeRecord(model, value)
 				if (decodedRecord) yield decodedRecord
 			}
 		},
 		selectAll: async () => {
-			const records = await db.getAll(recordTableName)
+			const records = await store.getAll()
 			return records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
 		},
 		insert: async ({ _key, _metadata, value }) => {
 			const record = encodeRecord(model, value)
-			await db.put(recordTableName, { _key, _metadata, ...record }, _key)
+			await store.put({ _key, _metadata, ...record }, _key)
 		},
 		update: async ({ _key, _metadata, _version, value }) => {
 			const record = encodeRecord(model, value)
-			await db.put(recordTableName, { _key, _metadata, _version, ...record })
+			await store.put({ _key, _metadata, _version, ...record })
 		},
-		delete: async ({ _key }) => db.delete(recordTableName, _key),
-		query: async (queryParams) => query(db, queryParams, model),
+		delete: async ({ _key }) => store.delete(_key),
+		query: async (queryParams) => query(transaction, queryParams, model),
 	}
 }
 
-export function createIdbMutableModelAPI(db: IDBPDatabase, model: Model, options: { resolve?: Resolve } = {}) {
-	const tombstoneAPI = prepareTombstoneAPI(db, model)
-	const relations = prepareRelationAPIs(db, model)
-	const records = prepareMutableRecordAPI(db, model)
-	return new MutableModelAPI(tombstoneAPI, relations, records, model, options)
+export function createIdbMutableModelDBContext(
+	transaction: IDBPTransactionReadWrite,
+	model: Model,
+	resolve: Resolve | undefined
+) {
+	return {
+		tombstones: prepareTombstoneAPI(transaction, model),
+		relations: prepareRelationAPIs(transaction, model),
+		records: prepareMutableRecordAPI(transaction, model),
+		resolve: resolve,
+		model,
+	}
 }
 
-export function createIdbImmutableModelAPI(db: IDBPDatabase, model: Model, options: { dkLen?: number } = {}) {
-	const relationAPIs = prepareRelationAPIs(db, model)
-	const immutableRecordAPI = prepareImmutableRecordAPI(db, model)
-
-	return new ImmutableModelAPI(relationAPIs, immutableRecordAPI, model, options)
+export function createIdbImmutableModelDBContext(transaction: IDBPTransaction<any, any, "readwrite">, model: Model) {
+	return {
+		relations: prepareRelationAPIs(transaction, model),
+		records: prepareImmutableRecordAPI(transaction, model),
+		model,
+	}
 }
