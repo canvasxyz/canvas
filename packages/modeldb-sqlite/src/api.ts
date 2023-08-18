@@ -1,16 +1,6 @@
 import * as sqlite from "better-sqlite3"
 
-import {
-	ImmutableRecordAPI,
-	Model,
-	ModelValue,
-	MutableRecordAPI,
-	QueryParams,
-	RecordValue,
-	RelationAPI,
-	Resolve,
-	TombstoneAPI,
-} from "@canvas-js/modeldb-interface"
+import { Model, ModelValue, QueryParams, RecordValue, Resolve } from "@canvas-js/modeldb-interface"
 import { getRecordTableName, getRelationTableName, getTombstoneTableName } from "./initialize.js"
 import { decodeRecord, encodeRecordParams } from "./encoding.js"
 import { Method, Query, signalInvalidType, zip } from "./utils.js"
@@ -87,7 +77,7 @@ async function query(db: sqlite.Database, queryParams: QueryParams, model: Model
 	return records.map((record) => decodeRecord(selectedModel, record)).filter((x) => x !== null)
 }
 
-function prepareTombstoneAPI(db: sqlite.Database, model: Model): TombstoneAPI {
+function prepareTombstoneAPI(db: sqlite.Database, model: Model) {
 	const tombstoneTableName = getTombstoneTableName(model.name)
 
 	const selectTombstone = new Query<{ _key: string }, { _version: string }>(
@@ -108,14 +98,14 @@ function prepareTombstoneAPI(db: sqlite.Database, model: Model): TombstoneAPI {
 	)
 
 	return {
-		select: async (args) => selectTombstone.get(args),
-		delete: async (args) => deleteTombstone.run(args),
-		insert: async (args) => insertTombstone.run(args),
-		update: async (args) => updateTombstone.run(args),
+		select: async (args: { _key: string }) => selectTombstone.get(args),
+		delete: async (args: { _key: string }) => deleteTombstone.run(args),
+		insert: async (args: { _key: string; _version: string }) => insertTombstone.run(args),
+		update: async (args: { _key: string; _version: string }) => updateTombstone.run(args),
 	}
 }
 
-function prepareMutableRecordAPI(db: sqlite.Database, model: Model): MutableRecordAPI {
+function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
 	const recordTableName = getRecordTableName(model.name)
 
 	const selectVersion = new Query<{ _key: string }, { _version: string | null }>(
@@ -168,31 +158,31 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model): MutableReco
 	// @ts-ignore
 	return {
 		params,
-		selectVersion: async (args) => selectVersion.get(args),
-		iterate: async function* (args) {
+		selectVersion: async (args: { _key: string }) => selectVersion.get(args),
+		iterate: async function* (args: {}) {
 			for (let record of selectAll.iterate(args)) {
 				yield decodeRecord(model, record)
 			}
 		},
-		selectAll: async (args) => selectAll.all(args).map((record) => decodeRecord(model, record)),
-		select: async (args) => {
+		selectAll: async (args: {}) => selectAll.all(args).map((record) => decodeRecord(model, record)),
+		select: async (args: { _key: string }) => {
 			const record = selectRecord.get(args)
 			return record === null ? null : decodeRecord(model, record)
 		},
-		insert: async (args) => {
+		insert: async (args: { _key: string; _version: string | null; value: ModelValue }) => {
 			const encodedParams = encodeRecordParams(model, args.value, params || {})
 			insertRecord.run({ _key: args._key, _version: args._version, ...encodedParams })
 		},
-		update: async (args) => {
+		update: async (args: { _key: string; _version: string | null; value: ModelValue }) => {
 			const encodedParams = encodeRecordParams(model, args.value, params || {})
 			updateRecord.run({ _key: args._key, _version: args._version, ...encodedParams })
 		},
-		delete: async (args) => deleteRecord.run(args),
-		query: async (queryParams) => query(db, queryParams, model),
+		delete: async (args: { _key: string }) => deleteRecord.run(args),
+		query: async (queryParams: QueryParams) => query(db, queryParams, model),
 	}
 }
 
-function prepareImmutableRecordAPI(db: sqlite.Database, model: Model): ImmutableRecordAPI {
+function prepareImmutableRecordAPI(db: sqlite.Database, model: Model) {
 	const recordTableName = getRecordTableName(model.name)
 
 	const params: Record<string, string> = {}
@@ -240,30 +230,30 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model): Immutable
 
 	return {
 		params,
-		iterate: async function* (args) {
+		iterate: async function* (args: {}) {
 			for (let record of selectAll.iterate(args)) {
 				yield decodeRecord(model, record)
 			}
 		},
-		selectAll: async (args) => selectAll.all(args).map((record) => decodeRecord(model, record)),
-		select: async (args) => {
+		selectAll: async (args: {}) => selectAll.all(args).map((record) => decodeRecord(model, record)),
+		select: async (args: { _key: string }) => {
 			const record = selectRecord.get(args)
 			return record === null ? null : decodeRecord(model, record)
 		},
-		insert: async (args) => {
+		insert: async (args: { _key: string; value: ModelValue }) => {
 			const encodedParams = encodeRecordParams(model, args.value, params || {})
 			insertRecord.run({ _key: args._key, ...encodedParams })
 		},
-		update: async (args) => {
+		update: async (args: { _key: string; _version: string | null; value: ModelValue }) => {
 			const encodedParams = encodeRecordParams(model, args.value, params || {})
 			updateRecord.run({ _key: args._key, _version: args._version, ...encodedParams })
 		},
-		delete: async (args) => deleteRecord.run(args),
-		query: async (queryParams) => query(db, queryParams, model),
+		delete: async (args: { _key: string }) => deleteRecord.run(args),
+		query: async (queryParams: QueryParams) => query(db, queryParams, model),
 	}
 }
 
-function prepareRelationAPI(db: sqlite.Database, modelName: string, propertyName: string): RelationAPI {
+function prepareRelationAPI(db: sqlite.Database, modelName: string, propertyName: string) {
 	const tableName = getRelationTableName(modelName, propertyName)
 
 	const selectAll = new Query<{ _source: string }, { _target: string }>(
@@ -279,14 +269,14 @@ function prepareRelationAPI(db: sqlite.Database, modelName: string, propertyName
 	)
 
 	return {
-		selectAll: async (args) => selectAll.all(args),
-		deleteAll: async (args) => deleteAll.run(args),
-		create: async (args) => create.run(args),
+		selectAll: async (args: { _source: string }) => selectAll.all(args),
+		deleteAll: async (args: { _source: string }) => deleteAll.run(args),
+		create: async (args: { _source: string; _target: string }) => create.run(args),
 	}
 }
 
 function prepareRelationAPIs(db: sqlite.Database, model: Model) {
-	const relations: Record<string, RelationAPI> = {}
+	const relations: Record<string, ReturnType<typeof prepareRelationAPI>> = {}
 	for (const property of model.properties) {
 		if (property.kind === "relation") {
 			relations[property.name] = prepareRelationAPI(db, model.name, property.name)

@@ -1,14 +1,4 @@
-import {
-	ImmutableRecordAPI,
-	Model,
-	ModelValue,
-	MutableRecordAPI,
-	QueryParams,
-	RecordValue,
-	RelationAPI,
-	Resolve,
-	TombstoneAPI,
-} from "@canvas-js/modeldb-interface"
+import { Model, ModelValue, QueryParams, RecordValue, Resolve } from "@canvas-js/modeldb-interface"
 import { decodeRecord, encodeRecord } from "./encoding.js"
 import { IDBPTransaction } from "idb"
 
@@ -112,47 +102,43 @@ export async function query(
 	return modelRecords
 }
 
-function prepareTombstoneAPI(transaction: IDBPTransactionReadWrite, model: Model): TombstoneAPI {
+function prepareTombstoneAPI(transaction: IDBPTransactionReadWrite, model: Model) {
 	const tombstoneTableName = getTombstoneTableName(model.name)
 	const store = transaction.objectStore(tombstoneTableName)
 
 	return {
-		select: async ({ _key }) => (await store.get(_key)) || null,
-		delete: async ({ _key }) => store.delete(_key),
-		insert: async ({ _key, _version }) => {
+		select: async ({ _key }: { _key: string }) => (await store.get(_key)) || null,
+		delete: async ({ _key }: { _key: string }) => store.delete(_key),
+		insert: async ({ _key, _version }: { _key: string; _version: string }) => {
 			await store.put({ _key, _version }, _key)
 		},
-		update: async ({ _key, _version }) => {
+		update: async ({ _key, _version }: { _key: string; _version: string }) => {
 			await store.put({ _key, _version }, _key)
 		},
 	}
 }
 
-function prepareRelationAPI(
-	transaction: IDBPTransactionReadWrite,
-	modelName: string,
-	propertyName: string
-): RelationAPI {
+function prepareRelationAPI(transaction: IDBPTransactionReadWrite, modelName: string, propertyName: string) {
 	const tableName = getRelationTableName(modelName, propertyName)
 	const store = transaction.objectStore(tableName)
 
 	return {
-		selectAll: async ({ _source }) => {
+		selectAll: async ({ _source }: { _source: string }) => {
 			return await store.index("_source").getAll(_source)
 		},
-		deleteAll: async ({ _source }) => {
+		deleteAll: async ({ _source }: { _source: string }) => {
 			const relations = await store.index("_source").getAll(_source)
 			await Promise.all(relations.map((relation) => relation.delete()))
 			await transaction.done
 		},
-		create: async ({ _source, _target }) => {
+		create: async ({ _source, _target }: { _source: string; _target: string }) => {
 			await store.put({ _source, _target }, `${_source}/${_target}`)
 		},
 	}
 }
 
-function prepareRelationAPIs(transaction: IDBPTransactionReadWrite, model: Model): Record<string, RelationAPI> {
-	const relations: Record<string, RelationAPI> = {}
+function prepareRelationAPIs(transaction: IDBPTransactionReadWrite, model: Model) {
+	const relations: Record<string, ReturnType<typeof prepareRelationAPI>> = {}
 	for (const property of model.properties) {
 		if (property.kind === "relation") {
 			relations[property.name] = prepareRelationAPI(transaction, model.name, property.name)
@@ -162,12 +148,12 @@ function prepareRelationAPIs(transaction: IDBPTransactionReadWrite, model: Model
 	return relations
 }
 
-function prepareMutableRecordAPI(transaction: IDBPTransactionReadWrite, model: Model): MutableRecordAPI {
+function prepareMutableRecordAPI(transaction: IDBPTransactionReadWrite, model: Model) {
 	const recordTableName = getRecordTableName(model.name)
 	const store = transaction.objectStore(recordTableName)
 
 	return {
-		select: async ({ _key }) => {
+		select: async ({ _key }: { _key: string }) => {
 			const record = await store.get(_key)
 			return record ? decodeRecord(model, record) : null
 		},
@@ -181,32 +167,32 @@ function prepareMutableRecordAPI(transaction: IDBPTransactionReadWrite, model: M
 			const records = await store.getAll()
 			return records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
 		},
-		insert: async ({ _key, _version, value }) => {
+		insert: async ({ _key, _version, value }: { _key: string; _version: string; value: ModelValue }) => {
 			const record = encodeRecord(model, value)
 
 			store.put({ _key, _version, ...record }, _key)
 		},
-		update: async ({ _key, _version, value }) => {
+		update: async ({ _key, _version, value }: { _key: string; _version: string; value: ModelValue }) => {
 			const record = encodeRecord(model, value)
 
 			store.put({ _key, _version, ...record }, _key)
 		},
-		delete: async ({ _key }) => store.delete(_key),
-		selectVersion: async ({ _key }) => {
+		delete: async ({ _key }: { _key: string }) => store.delete(_key),
+		selectVersion: async ({ _key }: { _key: string }) => {
 			const record = await store.get(_key)
 			const _version = record ? record._version : null
 			return { _version }
 		},
-		query: async (queryParams) => query(transaction, queryParams, model),
+		query: async (queryParams: QueryParams) => query(transaction, queryParams, model),
 	}
 }
 
-function prepareImmutableRecordAPI(transaction: IDBPTransactionReadWrite, model: Model): ImmutableRecordAPI {
+function prepareImmutableRecordAPI(transaction: IDBPTransactionReadWrite, model: Model) {
 	const recordTableName = getRecordTableName(model.name)
 	const store = transaction.objectStore(recordTableName)
 
 	return {
-		select: async ({ _key }) => {
+		select: async ({ _key }: { _key: string }) => {
 			const record = await store.get(_key)
 			return record ? decodeRecord(model, record) : null
 		},
@@ -220,16 +206,16 @@ function prepareImmutableRecordAPI(transaction: IDBPTransactionReadWrite, model:
 			const records = await store.getAll()
 			return records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
 		},
-		insert: async ({ _key, value }) => {
+		insert: async ({ _key, value }: { _key: string; value: ModelValue }) => {
 			const record = encodeRecord(model, value)
 			await store.put({ _key, ...record }, _key)
 		},
-		update: async ({ _key, _version, value }) => {
+		update: async ({ _key, _version, value }: { _key: string; _version: string; value: ModelValue }) => {
 			const record = encodeRecord(model, value)
 			await store.put({ _key, _version, ...record })
 		},
-		delete: async ({ _key }) => store.delete(_key),
-		query: async (queryParams) => query(transaction, queryParams, model),
+		delete: async ({ _key }: { _key: string }) => store.delete(_key),
+		query: async (queryParams: QueryParams) => query(transaction, queryParams, model),
 	}
 }
 
