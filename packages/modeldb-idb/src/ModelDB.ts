@@ -90,6 +90,12 @@ export class ModelDB extends AbstractModelDB {
 
 		try {
 			transaction = this.db.transaction(this.db.objectStoreNames, "readwrite")
+			// we have to use Promise.all here, not sure why this works
+			// otherwise we get an unthrowable AbortError
+			// it might be because if a transaction fails, idb doesn't know if there are any
+			// more database operations that would have been performed in the transaction
+			// this is just a post hoc rationalisation though
+			// https://github.com/jakearchibald/idb/issues/256#issuecomment-1048551626
 			const [res, _] = await Promise.all([fn(transaction), transaction.done])
 			return res
 		} catch (e) {
