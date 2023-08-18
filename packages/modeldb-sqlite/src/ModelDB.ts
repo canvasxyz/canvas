@@ -20,15 +20,35 @@ export interface ModelDBOptions {
 	resolve?: Resolve
 }
 
+class TransactionRunner {
+	private readonly begin: sqlite.Statement
+	private readonly commit: sqlite.Statement
+	private readonly rollback: sqlite.Statement
+
+	constructor(public readonly db: sqlite.Database) {
+		this.begin = this.db.prepare("BEGIN")
+		this.commit = this.db.prepare("COMMIT")
+		this.rollback = this.db.prepare("ROLLBACK")
+	}
+
+	public async execute(fn: () => Promise<void>) {
+		this.begin.run()
+		try {
+			await fn()
+			this.commit.run()
+		} finally {
+			if (this.db.inTransaction) this.rollback.run()
+		}
+	}
+}
+
 export class ModelDB extends AbstractModelDB {
 	public readonly db: sqlite.Database
 
+	private readonly transaction: TransactionRunner
+
 	public readonly immutableDbContexts: Record<string, ImmutableModelDBContext> = {}
 	public readonly mutableDbContexts: Record<string, MutableModelDBContext> = {}
-
-	readonly #transaction: sqlite.Transaction<
-		(effects: Effect[], options: { namespace?: string; version?: string }) => Promise<void>
-	>
 
 	constructor(public readonly path: string | null, models: ModelsInit, options: ModelDBOptions = {}) {
 		super(parseConfig(models))
@@ -53,28 +73,7 @@ export class ModelDB extends AbstractModelDB {
 			}
 		}
 
-		this.#transaction = this.db.transaction(async (effects, { version, namespace }) => {
-			for (const effect of effects) {
-				const model = this.models[effect.model]
-				assert(model !== undefined, `model ${effect.model} not found`)
-
-				if (effect.operation === "add") {
-					assert(model.kind == "immutable", "cannot call .add on a mutable model")
-					await ImmutableModelAPI.add(effect.value, { namespace }, this.immutableDbContexts[model.name])
-				} else if (effect.operation === "remove") {
-					assert(model.kind == "immutable", "cannot call .remove on a mutable model")
-					await ImmutableModelAPI.remove(effect.key, this.immutableDbContexts[model.name])
-				} else if (effect.operation === "set") {
-					assert(model.kind == "mutable", "cannot call .set on an immutable model")
-					await MutableModelAPI.set(effect.key, effect.value, { version }, this.mutableDbContexts[model.name])
-				} else if (effect.operation === "delete") {
-					assert(model.kind == "mutable", "cannot call .delete on an immutable model")
-					await MutableModelAPI.delete(effect.key, { version }, this.mutableDbContexts[model.name])
-				} else {
-					signalInvalidType(effect)
-				}
-			}
-		})
+		this.transaction = new TransactionRunner(this.db)
 	}
 
 	public async get(modelName: string, key: string) {
@@ -131,9 +130,30 @@ export class ModelDB extends AbstractModelDB {
 
 	public async apply(
 		effects: Effect[],
-		options: { namespace?: string | undefined; version?: string | undefined }
-	): Promise<void> {
-		await this.#transaction(effects, options)
+		{ namespace, version }: { namespace?: string | undefined; version?: string | undefined }
+	) {
+		return this.transaction.execute(async () => {
+			for (const effect of effects) {
+				const model = this.models[effect.model]
+				assert(model !== undefined, `model ${effect.model} not found`)
+
+				if (effect.operation === "add") {
+					assert(model.kind == "immutable", "cannot call .add on a mutable model")
+					await ImmutableModelAPI.add(effect.value, { namespace }, this.immutableDbContexts[model.name])
+				} else if (effect.operation === "remove") {
+					assert(model.kind == "immutable", "cannot call .remove on a mutable model")
+					await ImmutableModelAPI.remove(effect.key, this.immutableDbContexts[model.name])
+				} else if (effect.operation === "set") {
+					assert(model.kind == "mutable", "cannot call .set on an immutable model")
+					await MutableModelAPI.set(effect.key, effect.value, { version }, this.mutableDbContexts[model.name])
+				} else if (effect.operation === "delete") {
+					assert(model.kind == "mutable", "cannot call .delete on an immutable model")
+					await MutableModelAPI.delete(effect.key, { version }, this.mutableDbContexts[model.name])
+				} else {
+					signalInvalidType(effect)
+				}
+			}
+		})
 	}
 
 	public async close() {
