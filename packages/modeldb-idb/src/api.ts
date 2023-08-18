@@ -167,12 +167,12 @@ function prepareMutableRecordAPI(transaction: IDBPTransactionReadWrite, model: M
 			const records = await store.getAll()
 			return records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
 		},
-		insert: async ({ _key, _version, value }: { _key: string; _version: string; value: ModelValue }) => {
+		insert: async ({ _key, _version, value }: { _key: string; _version: string | null; value: ModelValue }) => {
 			const record = encodeRecord(model, value)
 
 			store.put({ _key, _version, ...record }, _key)
 		},
-		update: async ({ _key, _version, value }: { _key: string; _version: string; value: ModelValue }) => {
+		update: async ({ _key, _version, value }: { _key: string; _version: string | null; value: ModelValue }) => {
 			const record = encodeRecord(model, value)
 
 			store.put({ _key, _version, ...record }, _key)
@@ -210,7 +210,7 @@ function prepareImmutableRecordAPI(transaction: IDBPTransactionReadWrite, model:
 			const record = encodeRecord(model, value)
 			await store.put({ _key, ...record }, _key)
 		},
-		update: async ({ _key, _version, value }: { _key: string; _version: string; value: ModelValue }) => {
+		update: async ({ _key, _version, value }: { _key: string; _version: string | null; value: ModelValue }) => {
 			const record = encodeRecord(model, value)
 			await store.put({ _key, _version, ...record })
 		},
