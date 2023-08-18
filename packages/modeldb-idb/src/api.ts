@@ -119,11 +119,11 @@ function prepareTombstoneAPI(transaction: IDBPTransactionReadWrite, model: Model
 	return {
 		select: async ({ _key }) => (await store.get(_key)) || null,
 		delete: async ({ _key }) => store.delete(_key),
-		insert: async ({ _key, _metadata, _version }) => {
-			await store.put({ _key, _metadata, _version }, _key)
+		insert: async ({ _key, _version }) => {
+			await store.put({ _key, _version }, _key)
 		},
-		update: async ({ _key, _metadata, _version }) => {
-			await store.put({ _key, _metadata, _version }, _key)
+		update: async ({ _key, _version }) => {
+			await store.put({ _key, _version }, _key)
 		},
 	}
 }
@@ -181,13 +181,15 @@ function prepareMutableRecordAPI(transaction: IDBPTransactionReadWrite, model: M
 			const records = await store.getAll()
 			return records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
 		},
-		insert: async ({ _key, _metadata, _version, value }) => {
+		insert: async ({ _key, _version, value }) => {
 			const record = encodeRecord(model, value)
-			store.put({ _key, _metadata, _version, ...record }, _key)
+
+			store.put({ _key, _version, ...record }, _key)
 		},
-		update: async ({ _key, _metadata, _version, value }) => {
+		update: async ({ _key, _version, value }) => {
 			const record = encodeRecord(model, value)
-			store.put({ _key, _metadata, _version, ...record }, _key)
+
+			store.put({ _key, _version, ...record }, _key)
 		},
 		delete: async ({ _key }) => store.delete(_key),
 		selectVersion: async ({ _key }) => {
@@ -218,13 +220,13 @@ function prepareImmutableRecordAPI(transaction: IDBPTransactionReadWrite, model:
 			const records = await store.getAll()
 			return records.map((record) => decodeRecord(model, record)).filter((x) => x !== null) as RecordValue[]
 		},
-		insert: async ({ _key, _metadata, value }) => {
+		insert: async ({ _key, value }) => {
 			const record = encodeRecord(model, value)
-			await store.put({ _key, _metadata, ...record }, _key)
+			await store.put({ _key, ...record }, _key)
 		},
-		update: async ({ _key, _metadata, _version, value }) => {
+		update: async ({ _key, _version, value }) => {
 			const record = encodeRecord(model, value)
-			await store.put({ _key, _metadata, _version, ...record })
+			await store.put({ _key, _version, ...record })
 		},
 		delete: async ({ _key }) => store.delete(_key),
 		query: async (queryParams) => query(transaction, queryParams, model),

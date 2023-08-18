@@ -3,8 +3,8 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 import type { KeyValueStore, Source, Target, Node } from "@canvas-js/okra"
 import { Tree } from "@canvas-js/okra-node"
 
-import { AbstractStore } from "../AbstractStore.js"
-import { IPLDValue, StoreInit } from "../interface.js"
+import { AbstractStore, StoreInit } from "../AbstractStore.js"
+import { IPLDValue } from "../types.js"
 
 export class NodeStore<T extends IPLDValue> extends AbstractStore<T> {
 	public static async open<T extends IPLDValue>(path: string, init: StoreInit<T>): Promise<NodeStore<T>> {

@@ -90,21 +90,21 @@ async function query(db: sqlite.Database, queryParams: QueryParams, model: Model
 function prepareTombstoneAPI(db: sqlite.Database, model: Model): TombstoneAPI {
 	const tombstoneTableName = getTombstoneTableName(model.name)
 
-	const selectTombstone = new Query<{ _key: string }, { _metadata: string | null; _version: string }>(
+	const selectTombstone = new Query<{ _key: string }, { _version: string }>(
 		db,
-		`SELECT _metadata, _version FROM "${tombstoneTableName}" WHERE _key = :_key`
+		`SELECT  _version FROM "${tombstoneTableName}" WHERE _key = :_key`
 	)
 
 	const deleteTombstone = new Method<{ _key: string }>(db, `DELETE FROM "${tombstoneTableName}" WHERE _key = :_key`)
 
-	const insertTombstone = new Method<{ _key: string; _metadata: string | null; _version: string }>(
+	const insertTombstone = new Method<{ _key: string; _version: string }>(
 		db,
-		`INSERT INTO "${tombstoneTableName}" (_key, _metadata, _version) VALUES (:_key, :_metadata, :_version)`
+		`INSERT INTO "${tombstoneTableName}" (_key, _version) VALUES (:_key, :_version)`
 	)
 
-	const updateTombstone = new Method<{ _key: string; _metadata: string | null; _version: string }>(
+	const updateTombstone = new Method<{ _key: string; _version: string }>(
 		db,
-		`UPDATE "${tombstoneTableName}" SET _metadata = :_metadata, _version = :_version WHERE _key = :_key`
+		`UPDATE "${tombstoneTableName}" SET _version = :_version WHERE _key = :_key`
 	)
 
 	return {
@@ -149,16 +149,16 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model): MutableReco
 		`SELECT ${columnNames.join(", ")} FROM "${recordTableName}" WHERE _key = :_key`
 	)
 
-	const insertRecordParams = `_key, _metadata, _version, ${columnNames.join(", ")}`
-	const insertRecordValues = `:_key, :_metadata, :_version, ${columnParams.join(", ")}`
-	const insertRecord = new Method<{ _key: string; _version: string | null; _metadata: string | null } & ModelValue>(
+	const insertRecordParams = `_key, _version, ${columnNames.join(", ")}`
+	const insertRecordValues = `:_key, :_version, ${columnParams.join(", ")}`
+	const insertRecord = new Method<{ _key: string; _version: string | null } & ModelValue>(
 		db,
 		`INSERT INTO "${recordTableName}" (${insertRecordParams}) VALUES (${insertRecordValues})`
 	)
 
 	const updateRecordProperties = zip(columnNames, columnParams).map(([name, param]) => `${name} = ${param}`)
-	const updateRecordEntries = `_metadata = :_metadata, _version = :_version, ${updateRecordProperties.join(", ")}`
-	const updateRecord = new Method<{ _key: string; _version: string | null; _metadata: string | null } & ModelValue>(
+	const updateRecordEntries = `_version = :_version, ${updateRecordProperties.join(", ")}`
+	const updateRecord = new Method<{ _key: string; _version: string | null } & ModelValue>(
 		db,
 		`UPDATE "${recordTableName}" SET ${updateRecordEntries} WHERE _key = :_key`
 	)
@@ -181,11 +181,11 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model): MutableReco
 		},
 		insert: async (args) => {
 			const encodedParams = encodeRecordParams(model, args.value, params || {})
-			insertRecord.run({ _key: args._key, _metadata: args._metadata, _version: args._version, ...encodedParams })
+			insertRecord.run({ _key: args._key, _version: args._version, ...encodedParams })
 		},
 		update: async (args) => {
 			const encodedParams = encodeRecordParams(model, args.value, params || {})
-			updateRecord.run({ _key: args._key, _metadata: args._metadata, _version: args._version, ...encodedParams })
+			updateRecord.run({ _key: args._key, _version: args._version, ...encodedParams })
 		},
 		delete: async (args) => deleteRecord.run(args),
 		query: async (queryParams) => query(db, queryParams, model),
@@ -222,16 +222,16 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model): Immutable
 		`SELECT ${columnNames.join(", ")} FROM "${recordTableName}" WHERE _key = :_key`
 	)
 
-	const insertRecordParams = `_key, _metadata, ${columnNames.join(", ")}`
-	const insertRecordValues = `:_key, :_metadata, ${columnParams.join(", ")}`
-	const insertRecord = new Method<{ _key: string; _metadata: string | null } & RecordValue>(
+	const insertRecordParams = `_key, ${columnNames.join(", ")}`
+	const insertRecordValues = `:_key, ${columnParams.join(", ")}`
+	const insertRecord = new Method<{ _key: string } & RecordValue>(
 		db,
 		`INSERT OR IGNORE INTO "${recordTableName}" (${insertRecordParams}) VALUES (${insertRecordValues})`
 	)
 
 	const updateRecordProperties = zip(columnNames, columnParams).map(([name, param]) => `${name} = ${param}`)
-	const updateRecordEntries = `_metadata = :_metadata, ${updateRecordProperties.join(", ")}`
-	const updateRecord = new Method<{ _key: string; _version: string | null; _metadata: string | null } & RecordValue>(
+	const updateRecordEntries = updateRecordProperties.join(", ")
+	const updateRecord = new Method<{ _key: string } & RecordValue>(
 		db,
 		`UPDATE "${recordTableName}" SET ${updateRecordEntries} WHERE _key = :_key`
 	)
@@ -252,11 +252,11 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model): Immutable
 		},
 		insert: async (args) => {
 			const encodedParams = encodeRecordParams(model, args.value, params || {})
-			insertRecord.run({ _key: args._key, _metadata: args._metadata, ...encodedParams })
+			insertRecord.run({ _key: args._key, ...encodedParams })
 		},
 		update: async (args) => {
 			const encodedParams = encodeRecordParams(model, args.value, params || {})
-			updateRecord.run({ _key: args._key, _metadata: args._metadata, _version: args._version, ...encodedParams })
+			updateRecord.run({ _key: args._key, _version: args._version, ...encodedParams })
 		},
 		delete: async (args) => deleteRecord.run(args),
 		query: async (queryParams) => query(db, queryParams, model),

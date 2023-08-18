@@ -48,10 +48,9 @@ export function initializeModel(model: Model, exec: (sql: string) => void) {
 	}
 
 	if (model.kind === "mutable") {
-		modelColumns.push(`_metadata TEXT`)
 		modelColumns.push(`_version TEXT`)
 	} else if (model.kind === "immutable") {
-		modelColumns.push(`_metadata TEXT`)
+		// nothing to do
 	} else {
 		signalInvalidType(model.kind)
 	}
@@ -61,7 +60,7 @@ export function initializeModel(model: Model, exec: (sql: string) => void) {
 
 	if (model.kind === "mutable") {
 		const tombstoneTableName = getTombstoneTableName(model.name)
-		const tombstoneColumns = [`_key`, `_metadata TEXT`, `_version TEXT NOT NULL`]
+		const tombstoneColumns = [`_key`, `_version TEXT NOT NULL`]
 		exec(`CREATE TABLE IF NOT EXISTS "${tombstoneTableName}" (${tombstoneColumns.join(", ")})`)
 	}
 

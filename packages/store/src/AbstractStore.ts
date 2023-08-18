@@ -18,9 +18,37 @@ import type { Source, Target, KeyValueStore, Node } from "@canvas-js/okra"
 
 import { Driver, Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
 import { CacheMap, assert, protocolPrefix, shuffle, sortPair, wait } from "./utils.js"
-import { Encoding, StoreEvents, StoreInit, IPLDValue, Awaitable } from "./interface.js"
 import { second } from "./constants.js"
+import { IPLDValue } from "./types.js"
 import { createDefaultEncoding } from "./encoding.js"
+
+export type Awaitable<T> = T | Promise<T>
+
+export type StoreEvents = {
+	sync: CustomEvent<{ root: Node; peerId: PeerId; successCount: number; failureCount: number }>
+}
+
+export interface StoreInit<T> extends StoreOptions {
+	topic: string
+	libp2p: Libp2p<{ pubsub: PubSub }>
+
+	encoding?: Encoding<T>
+	apply: (key: Uint8Array, event: T) => Awaitable<{ result?: IPLDValue }>
+}
+
+export interface StoreOptions {
+	replay?: boolean
+	minConnections?: number
+	maxConnections?: number
+	maxInboundStreams?: number
+	maxOutboundStreams?: number
+}
+
+export interface Encoding<T> {
+	keyToString: (key: Uint8Array) => string
+	encode: (event: T) => [key: Uint8Array, value: Uint8Array]
+	decode: (value: Uint8Array) => [key: Uint8Array, event: T]
+}
 
 export abstract class AbstractStore<T extends IPLDValue = IPLDValue> extends EventEmitter<StoreEvents> {
 	public static MIN_CONNECTIONS = 2

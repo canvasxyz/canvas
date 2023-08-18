@@ -5,7 +5,7 @@ import { sha256 } from "multiformats/hashes/sha2"
 import { bytesToHex } from "@noble/hashes/utils"
 import { concat } from "uint8arrays"
 
-import { Encoding, IPLDValue } from "./interface.js"
+import { Encoding, IPLDValue } from "./types.js"
 import { assert } from "./utils.js"
 
 export interface OrderedEncodingOptions<T extends IPLDValue = IPLDValue> {

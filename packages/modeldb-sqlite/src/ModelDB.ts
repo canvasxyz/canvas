@@ -18,7 +18,6 @@ import { createIdbImmutableModelDBContext, createIdbMutableModelDBContext } from
 
 export interface ModelDBOptions {
 	resolve?: Resolve
-	dkLen?: number
 }
 
 export class ModelDB extends AbstractModelDB {
@@ -28,7 +27,7 @@ export class ModelDB extends AbstractModelDB {
 	public readonly mutableDbContexts: Record<string, MutableModelDBContext> = {}
 
 	readonly #transaction: sqlite.Transaction<
-		(effects: Effect[], options: { namespace?: string; version?: string; metadata?: string }) => Promise<void>
+		(effects: Effect[], options: { namespace?: string; version?: string }) => Promise<void>
 	>
 
 	constructor(public readonly path: string | null, models: ModelsInit, options: ModelDBOptions = {}) {
@@ -54,7 +53,7 @@ export class ModelDB extends AbstractModelDB {
 			}
 		}
 
-		this.#transaction = this.db.transaction(async (effects, { version, namespace, metadata }) => {
+		this.#transaction = this.db.transaction(async (effects, { version, namespace }) => {
 			for (const effect of effects) {
 				const model = this.models[effect.model]
 				assert(model !== undefined, `model ${effect.model} not found`)
@@ -132,7 +131,7 @@ export class ModelDB extends AbstractModelDB {
 
 	public async apply(
 		effects: Effect[],
-		options: { namespace?: string | undefined; version?: string | undefined; metadata?: string | undefined }
+		options: { namespace?: string | undefined; version?: string | undefined }
 	): Promise<void> {
 		await this.#transaction(effects, options)
 	}

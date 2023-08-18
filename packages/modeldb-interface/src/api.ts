@@ -33,11 +33,10 @@ export class MutableModelAPI {
 	static async set(
 		key: string,
 		value: ModelValue,
-		options: { version?: string | null; metadata?: string | null } = {},
+		options: { version?: string | null } = {},
 		dbContext: MutableModelDBContext
 	) {
 		let version: string | null = null
-		let metadata: string | null = null
 
 		const existingVersion = await dbContext.records.selectVersion({ _key: key })
 		const existingTombstone = await dbContext.tombstones.select({ _key: key })
@@ -45,7 +44,6 @@ export class MutableModelAPI {
 		// if conflict resolution is enabled
 		if (dbContext.resolve !== undefined) {
 			version = options.version ?? null
-			metadata = options.metadata ?? null
 
 			// no-op if an existing record takes precedence
 			if (existingVersion !== null && existingVersion._version !== null) {
@@ -72,9 +70,9 @@ export class MutableModelAPI {
 		}
 
 		if (existingVersion === null) {
-			await dbContext.records.insert({ _key: key, _version: version, _metadata: metadata, value })
+			await dbContext.records.insert({ _key: key, _version: version, value })
 		} else {
-			await dbContext.records.update({ _key: key, _version: version, _metadata: metadata, value })
+			await dbContext.records.update({ _key: key, _version: version, value })
 			for (const relation of Object.values(dbContext.relations)) {
 				await relation.deleteAll({ _source: key })
 			}
@@ -97,13 +95,8 @@ export class MutableModelAPI {
 		}
 	}
 
-	static async delete(
-		key: string,
-		options: { version?: string | null; metadata?: string | null } = {},
-		dbContext: MutableModelDBContext
-	) {
+	static async delete(key: string, options: { version?: string | null } = {}, dbContext: MutableModelDBContext) {
 		let version: string | null = null
-		let metadata: string | null = null
 
 		const previous = await dbContext.records.selectVersion({ _key: key })
 		const tombstone = await dbContext.tombstones.select({ _key: key })
@@ -111,7 +104,6 @@ export class MutableModelAPI {
 		// if conflict resolution is enable
 		if (dbContext.resolve !== undefined) {
 			version = options.version ?? null
-			metadata = options.metadata ?? null
 
 			// no-op if an existing record takes precedence
 			if (previous !== null && previous._version !== null) {
@@ -135,9 +127,9 @@ export class MutableModelAPI {
 
 		if (dbContext.resolve !== undefined && version !== null) {
 			if (tombstone === null) {
-				await dbContext.tombstones.insert({ _key: key, _metadata: metadata, _version: version })
+				await dbContext.tombstones.insert({ _key: key, _version: version })
 			} else {
-				await dbContext.tombstones.update({ _key: key, _metadata: metadata, _version: version })
+				await dbContext.tombstones.update({ _key: key, _version: version })
 			}
 		}
 	}
@@ -158,13 +150,13 @@ export class MutableModelAPI {
 export class ImmutableModelAPI {
 	static async add(
 		value: ModelValue,
-		{ namespace, metadata }: { namespace?: string; metadata?: string } = {},
+		{ namespace }: { namespace?: string } = {},
 		dbContext: ImmutableModelDBContext
 	): Promise<string> {
 		const key = getImmutableRecordKey(value, { namespace })
 		const existingRecord = await dbContext.records.select({ _key: key })
 		if (!existingRecord) {
-			await dbContext.records.insert({ _key: key, _metadata: metadata ?? null, value })
+			await dbContext.records.insert({ _key: key, value })
 
 			for (const [propertyName, relation] of Object.entries(dbContext.relations)) {
 				const targets = value[propertyName]

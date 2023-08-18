@@ -4,8 +4,8 @@ import { openDB } from "idb"
 import { IDBTree } from "@canvas-js/okra-idb"
 import type { KeyValueStore, Source, Target, Node } from "@canvas-js/okra"
 
-import { AbstractStore } from "../AbstractStore.js"
-import { IPLDValue, StoreInit } from "../interface.js"
+import { AbstractStore, StoreInit } from "../AbstractStore.js"
+import { IPLDValue } from "../types.js"
 import { assert } from "../utils.js"
 
 export class BrowserStore<T extends IPLDValue> extends AbstractStore<T> {

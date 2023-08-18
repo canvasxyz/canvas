@@ -75,11 +75,11 @@ declare class ModelDB {
 	public query(modelName: string, query: {}): ModelValue[]
 
 	// Mutable model methods
-	public set(modelName: string, key: string, value: ModelValue, options?: { metadata?: string; version?: string }): void
-	public delete(modelName: string, key: string, options?: { metadata?: string; version?: string }): void
+	public set(modelName: string, key: string, value: ModelValue, options?: { version?: string }): void
+	public delete(modelName: string, key: string, options?: { version?: string }): void
 
 	// Immutable model methods
-	public add(modelName: string, value: ModelValue, options?: { metadata?: string; namespace?: string }): string
+	public add(modelName: string, value: ModelValue, options?: { namespace?: string }): string
 	public remove(modelName: string, key: string): void
 }
 ```

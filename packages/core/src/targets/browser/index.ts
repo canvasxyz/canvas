@@ -29,8 +29,8 @@ export default function getBrowserTarget(location: string | null): PlatformTarge
 			}
 		},
 
-		async openDB(name, init, options) {
-			const databaseName = location === null ? name : `${location}/${name}`
+		async openDB(key, init, options) {
+			const databaseName = location === null ? key : `${location}/${key}`
 			return await ModelDB.initialize(init, { ...options, databaseName })
 		},
 

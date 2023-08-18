@@ -28,7 +28,6 @@ import { assert, signalInvalidType } from "./utils.js"
 export interface ModelDBOptions {
 	databaseName?: string
 	resolve?: Resolve
-	dkLen?: number
 }
 
 export class ModelDB extends AbstractModelDB {

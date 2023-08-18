@@ -2,17 +2,16 @@ import assert from "node:assert"
 import test from "ava"
 
 import { Canvas } from "@canvas-js/core"
-import { isObject } from "@canvas-js/vm"
 
 const contract = `
-const db = openDB("data", {
+export const db = openDB({
 	posts: {
 		content: "string",
 		timestamp: "integer",
 	}
 });
 
-addActionHandler({
+export const actions = addActionHandler({
 	topic: "com.example.app",
 	actions: {
 		async createPost({ content }, { timestamp }) {
@@ -41,10 +40,7 @@ test("apply an action and read a record from the database", async (t) => {
 
 	t.log("applied action", actionId, "and got postId", postId)
 
-	const db = app.dbs.get("data")
-	assert(db !== undefined)
-
 	assert(typeof postId === "string")
-	const value = await db.get("posts", postId)
+	const value = await app.exports.db?.get("posts", postId)
 	t.is(value?.content, "hello world")
 })

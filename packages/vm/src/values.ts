@@ -30,7 +30,3 @@ export function typeOf(value: JSValue) {
 		return "Object"
 	}
 }
-
-export function isObject(value: JSValue): value is JSObject {
-	return typeOf(value) === "Object"
-}
