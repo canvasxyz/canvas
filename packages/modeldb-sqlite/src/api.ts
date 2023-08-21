@@ -160,7 +160,7 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
 		params,
 		selectVersion: async (args: { _key: string }) => selectVersion.get(args),
 		iterate: async function* (args: {}) {
-			for (let record of selectAll.iterate(args)) {
+			for (const record of selectAll.iterate(args)) {
 				yield decodeRecord(model, record)
 			}
 		},
@@ -231,7 +231,7 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model) {
 	return {
 		params,
 		iterate: async function* (args: {}) {
-			for (let record of selectAll.iterate(args)) {
+			for (const record of selectAll.iterate(args)) {
 				yield decodeRecord(model, record)
 			}
 		},
