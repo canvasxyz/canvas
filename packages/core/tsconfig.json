@@ -10,6 +10,7 @@
     { "path": "../chain-ethereum" },
     { "path": "../signed-value" },
     { "path": "../interfaces" },
+    { "path": "../modeldb-idb" },
     { "path": "../modeldb-sqlite" },
     { "path": "../modeldb-interface" },
     { "path": "../store" },
