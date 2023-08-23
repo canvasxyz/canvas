@@ -30,6 +30,7 @@
     "@canvas-js/chain-ethereum": "0.5.0-alpha4",
     "@canvas-js/interfaces": "0.5.0-alpha4",
     "@canvas-js/libp2p-gossiplog": "0.5.0-alpha4",
+    "@canvas-js/modeldb-idb": "0.5.0-alpha4",
     "@canvas-js/modeldb-interface": "0.5.0-alpha4",
     "@canvas-js/modeldb-sqlite": "0.5.0-alpha4",
     "@canvas-js/okra": "^0.1.1",

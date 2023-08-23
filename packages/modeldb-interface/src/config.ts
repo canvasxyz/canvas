@@ -41,8 +41,8 @@ export function parseConfig(init: ModelsInit): Config {
 }
 
 export const primitivePropertyPattern = /^(integer|float|string|bytes)(\??)$/
-export const referencePropertyPattern = /^@([a-z0-9\.\-]+)(\??)$/
-export const relationPropertyPattern = /^@([a-z0-9\.\-]+)\[\]$/
+export const referencePropertyPattern = /^@([a-z0-9.-]+)(\??)$/
+export const relationPropertyPattern = /^@([a-z0-9.-]+)\[\]$/
 
 export function parseProperty(propertyName: string, propertyType: PropertyType): Property {
 	const primitiveResult = primitivePropertyPattern.exec(propertyType)
