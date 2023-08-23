@@ -1,6 +1,6 @@
 import { IPLDValue } from "@canvas-js/interfaces"
 
-import { GossipLog, GossipLogInit, GossipLogComponents } from "../gossiplog.js"
+import { GossipLog, GossipLogInit, GossipLogComponents } from "../GossipLog.js"
 
 export function gossiplog<Payload extends IPLDValue>({}: GossipLogInit<Payload>): (
 	components: GossipLogComponents

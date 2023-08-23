@@ -1,2 +1,2 @@
 export * from "./types.js"
-export * from "./gossiplog.js"
+export * from "./GossipLog.js"

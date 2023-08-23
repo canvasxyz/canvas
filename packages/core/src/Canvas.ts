@@ -6,9 +6,9 @@ import { logger } from "@libp2p/logger"
 import { base32 } from "multiformats/bases/base32"
 import { blake3 } from "@noble/hashes/blake3"
 import { sha256 } from "@noble/hashes/sha256"
+import { bytesToHex } from "@noble/hashes/utils"
 
 import { QuickJSHandle } from "quickjs-emscripten"
-import { bytesToHex } from "@noble/hashes/utils"
 
 import { Action, ActionArguments, ActionContext, Signer } from "@canvas-js/interfaces"
 import { JSValue, VM } from "@canvas-js/vm"
