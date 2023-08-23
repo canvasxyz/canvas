@@ -1,10 +1,8 @@
-import type { Libp2pEvents } from "@libp2p/interface-libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { Connection, Stream } from "@libp2p/interface-connection"
 import type { Registrar, StreamHandler, Topology } from "@libp2p/interface-registrar"
 import type { Message as PubSubMessage } from "@libp2p/interface-pubsub"
 import type { ConnectionManager } from "@libp2p/interface-connection-manager"
-import type { PeerStore } from "@libp2p/interface-peer-store"
 import type { Startable } from "@libp2p/interfaces/startable"
 
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
@@ -80,10 +78,7 @@ export class GossipLog<Payload extends IPLDValue = IPLDValue, Result extends IPL
 	implements Startable
 {
 	private static extractGossipSub(components: GossipLogComponents): GossipSub {
-		const { pubsub } = components as GossipLogComponents & {
-			pubsub?: GossipSub
-		}
-
+		const { pubsub } = components as GossipLogComponents & { pubsub?: GossipSub }
 		if (pubsub instanceof GossipSub) {
 			return pubsub
 		} else {

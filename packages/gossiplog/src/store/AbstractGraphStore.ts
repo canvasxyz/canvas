@@ -10,11 +10,11 @@ import { equals } from "uint8arrays"
 import type { IPLDValue, Message, SignedMessage } from "@canvas-js/interfaces"
 import { Signature, verifySignedValue } from "@canvas-js/signed-value"
 
+import { Driver } from "../sync/driver.js"
 import { Awaitable } from "../types.js"
 import { ReferenceSet } from "../graph.js"
-import { Driver } from "../sync/driver.js"
-import { decodeSignedMessage, encodeSignedMessage } from "../schema.js"
-import { assert, getClock, getKey } from "../utils.js"
+import { decodeSignedMessage } from "../schema.js"
+import { assert, getKey } from "../utils.js"
 
 export interface ReadOnlyTransaction extends Target {
 	get(key: Uint8Array): Awaitable<Uint8Array | null>
@@ -57,24 +57,6 @@ export abstract class AbstractGraphStore<Payload extends IPLDValue> {
 			return decodeSignedMessage(value, this.validate)
 		}
 	}
-
-	// public async add(
-	// 	callback: (clock: number, parents: Uint8Array[]) => Awaitable<SignedMessage<Payload>>
-	// ): Promise<[key: Uint8Array, signature: Signature, message: Message<Payload>]> {
-	// 	return await this.write(async (txn) => {
-	// 		const userdata = await txn.getUserdata()
-	// 		const references = new ReferenceSet(userdata && cbor.decode<Uint8Array[]>(userdata))
-	// 		const parents = references.getParents()
-	// 		const clock = getClock(parents)
-	// 		const { signature, message } = await callback(clock, parents)
-	// 		const value = encodeSignedMessage({ signature, message })
-	// 		const key = getKey(clock, sha256(value))
-	// 		txn.set(key, value)
-	// 		references.update(key, message)
-	// 		await txn.setUserdata(cbor.encode(references.getParents()))
-	// 		return [key, signature, message]
-	// 	})
-	// }
 
 	public async sync(
 		peerId: PeerId,
