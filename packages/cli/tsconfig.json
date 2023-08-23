@@ -12,7 +12,6 @@
     { "path": "../chain-substrate" },
     { "path": "../chain-ethereum" },
     { "path": "../core" },
-    { "path": "../store" },
     { "path": "../interfaces" }
   ]
 }

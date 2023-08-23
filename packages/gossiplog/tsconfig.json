@@ -1,9 +1,13 @@
 {
-  "include": ["src/"],
+  "include": ["src/", "types/"],
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "moduleResolution": "node16",
     "rootDir": "src",
     "outDir": "lib"
-  }
+  },
+  "references": [
+    {"path": "../interfaces"},
+    {"path": "../signed-value"}
+  ]
 }

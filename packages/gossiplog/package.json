@@ -1,5 +1,5 @@
 {
-  "name": "@canvas-js/store",
+  "name": "@canvas-js/libp2p-gossiplog",
   "version": "0.5.0-alpha4",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
@@ -14,16 +14,15 @@
   "types": "./lib/index.d.ts",
   "sideEffects": false,
   "imports": {
-    "#protocols/sync": "./lib/protocols/sync.js"
-  },
-  "exports": {
-    ".": "./lib/index.js",
-    "./sync": "./lib/sync/index.js",
-    "./constants": "./lib/constants.js",
-    "./bootstrap": "./lib/bootstrap.js",
-    "./node": "./lib/node/index.js",
-    "./browser": "./lib/browser/index.js",
-    "./memory": "./lib/memory/index.js"
+    "#protocols/sync": "./lib/protocols/sync.js",
+    "#store/node": "./lib/store/node/index.js",
+    "#store/browser": "./lib/store/browser/index.js",
+    "#store/memory": "./lib/store/memory/index.js",
+    "#store": {
+      "node": "./lib/store/node/index.js",
+      "browser": "./lib/store/browser/index.js",
+      "default": "./lib/store/index.js"
+    }
   },
   "scripts": {
     "generate": "npm run generate-sync",
@@ -31,11 +30,14 @@
     "test": "ava"
   },
   "dependencies": {
-    "@canvas-js/okra": "^0.0.1",
-    "@canvas-js/okra-idb": "^0.0.2",
-    "@canvas-js/okra-memory": "^0.0.1",
-    "@canvas-js/okra-node": "^0.3.2",
-    "@ipld/dag-cbor": "^9.0.3",
+    "@canvas-js/interfaces": "0.5.0-alpha4",
+    "@canvas-js/okra": "^0.1.1",
+    "@canvas-js/okra-idb": "^0.1.1",
+    "@canvas-js/okra-memory": "^0.1.1",
+    "@canvas-js/okra-node": "^0.4.0",
+    "@ipld/dag-cbor": "^9.0.4",
+    "@ipld/dag-json": "^10.1.3",
+    "@ipld/schema": "^4.1.10",
     "@libp2p/interface-connection": "^5.1.1",
     "@libp2p/interface-libp2p": "^3.2.0",
     "@libp2p/interface-peer-id": "^2.0.2",
@@ -65,7 +67,6 @@
     "@libp2p/peer-id-factory": "^2.0.4",
     "@libp2p/tcp": "^7.0.3",
     "libp2p": "^0.45.9",
-    "nanoid": "^4.0.2",
     "p-defer": "^4.0.0",
     "protons": "^7.0.4"
   }

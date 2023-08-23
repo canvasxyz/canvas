@@ -63,5 +63,5 @@ export function parseProperty(propertyName: string, propertyType: PropertyType):
 		return { name: propertyName, kind: "relation", target: target }
 	}
 
-	throw new Error("invalid property")
+	throw new Error(`invalid property "${propertyType}"`)
 }

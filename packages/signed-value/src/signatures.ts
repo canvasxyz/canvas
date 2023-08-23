@@ -2,21 +2,23 @@ import { secp256k1 } from "@noble/curves/secp256k1"
 import { ed25519 } from "@noble/curves/ed25519"
 import { CID } from "multiformats/cid"
 
-import { Codec, codecs, getCodec } from "./codecs.js"
-import { Digest, digests, getDigest } from "./digests.js"
+import { Codec, codecs } from "./codecs.js"
+import { Digest, digests } from "./digests.js"
 import { assert, signalInvalidType } from "./utils.js"
 import { getCID } from "./cid.js"
 
-export type Signed<T> = {
-	type: "ed25519" | "secp256k1"
+export type SignatureType = "ed25519" | "secp256k1"
+
+export type Signature = {
+	type: SignatureType
 	publicKey: Uint8Array
 	signature: Uint8Array
 	cid: CID
-	value: T
 }
 
 export function verifySignedValue<T>(
-	{ type, publicKey, signature, cid, value }: Signed<T>,
+	value: T,
+	{ type, publicKey, signature, cid }: Signature,
 	options: { codecs?: Codec[]; digests?: Digest[] } = {}
 ) {
 	const codec = (options.codecs ?? codecs).find((codec) => codec.code === cid.code)
@@ -43,17 +45,17 @@ export function createSignedValue<T>(
 	privateKey: Uint8Array,
 	value: T,
 	options: { codec?: string | Codec; digest?: string | Digest } = {}
-): Signed<T> {
+): Signature {
 	const cid = getCID(value, options)
 
 	if (type === "ed25519") {
 		const publicKey = ed25519.getPublicKey(privateKey)
 		const signature = ed25519.sign(cid.bytes, privateKey)
-		return { type, publicKey, signature, cid, value }
+		return { type, publicKey, signature, cid }
 	} else if (type === "secp256k1") {
 		const publicKey = secp256k1.getPublicKey(privateKey, true)
 		const signature = secp256k1.sign(cid.bytes, privateKey).toCompactRawBytes()
-		return { type, publicKey, signature, cid, value }
+		return { type, publicKey, signature, cid }
 	} else {
 		signalInvalidType(type)
 	}

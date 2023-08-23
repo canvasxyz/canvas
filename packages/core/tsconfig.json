@@ -12,7 +12,7 @@
     { "path": "../interfaces" },
     { "path": "../modeldb-sqlite" },
     { "path": "../modeldb-interface" },
-    { "path": "../store" },
+    { "path": "../gossiplog" },
     { "path": "../vm" },
   ]
 }

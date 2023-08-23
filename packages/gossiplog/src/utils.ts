@@ -1,14 +1,35 @@
-import { PeerId } from "@libp2p/interface-peer-id"
-import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
-import { base64 } from "multiformats/bases/base64"
-
-import { lessThan } from "@canvas-js/okra"
+import type { PeerId } from "@libp2p/interface-peer-id"
 
 import { anySignal } from "any-signal"
+import { varint } from "multiformats"
+
+import { lessThan } from "@canvas-js/okra"
 
 export const protocolPrefix = "/canvas/v0/store/"
 
 export const keyPattern = /^(\/canvas\/v0\/store\/[a-zA-Z0-9:.-]+)\/peers$/
+
+export function getClock(parents: Uint8Array[]) {
+	let max = 1
+	for (const parent of parents) {
+		const [clock] = varint.decode(parent)
+		if (clock > max) {
+			max = clock
+		}
+	}
+
+	return max
+}
+
+// keys are made by concatenating an unsigned varint clock with the hash
+// and truncating to 20 bytes to be base32-friendly
+export function getKey(clock: number, hash: Uint8Array): Uint8Array {
+	const encodingLength = varint.encodingLength(clock)
+	const key = new Uint8Array(20)
+	varint.encodeTo(clock, key, 0)
+	key.set(hash.subarray(0, key.byteLength - encodingLength), encodingLength)
+	return key
+}
 
 export function sortPair(a: PeerId, b: PeerId): [x: PeerId, y: PeerId] {
 	if (lessThan(a.multihash.digest, b.multihash.digest)) {
@@ -22,6 +43,11 @@ export function assert(condition: unknown, message?: string): asserts condition 
 	if (!condition) {
 		throw new Error(message ?? "assertion failed")
 	}
+}
+
+export function signalInvalidType(type: never): never {
+	console.error(type)
+	throw new TypeError("internal error: invalid type")
 }
 
 export async function wait(interval: number, options: { signal: AbortSignal }) {
@@ -51,23 +77,6 @@ export class CacheMap<K, V> extends Map<K, V> {
 		}
 
 		return this
-	}
-}
-
-export async function getPeerId(config: {
-	getPrivateKey: () => Promise<string | null>
-	setPrivateKey: (privateKey: string) => Promise<void>
-}): Promise<PeerId> {
-	const privateKey = await config.getPrivateKey()
-	if (privateKey === null) {
-		const peerId = await createEd25519PeerId()
-		const privateKeyBytes = exportToProtobuf(peerId)
-		const privateKey = base64.baseEncode(privateKeyBytes)
-		await config.setPrivateKey(privateKey)
-		return peerId
-	} else {
-		const privateKeyBytes = base64.baseDecode(privateKey)
-		return await createFromProtobuf(privateKeyBytes)
 	}
 }
 

@@ -10,6 +10,5 @@
     { "path": "../signed-value" },
     { "path": "../interfaces" },
     { "path": "../modeldb-interface" },
-    { "path": "../store" },
   ]
 }

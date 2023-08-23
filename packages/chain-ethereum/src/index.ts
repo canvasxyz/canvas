@@ -10,8 +10,9 @@ import type {
 	SessionStore,
 	ActionArguments,
 	SessionPayload,
+	Message,
 } from "@canvas-js/interfaces"
-import { Signed, createSignedValue } from "@canvas-js/signed-value"
+import { Signature, createSignedValue } from "@canvas-js/signed-value"
 
 import { getDomain } from "@canvas-js/chain-ethereum/domain"
 
@@ -100,18 +101,18 @@ export class SIWESigner implements Signer {
 		await this.options.store?.save(this.address, this.chain, JSON.stringify(this.session))
 	}
 
-	public async verify(message: Signed<Action>) {
-		if (message.type !== "secp256k1") {
+	public async verify(signature: Signature, message: Message<Action>) {
+		if (signature.type !== "secp256k1") {
 			throw new Error("SIWE actions must use secp256k1 signatures")
 		}
 
-		const { chain, session, address } = message.value
+		const { chain, session, address } = message.payload
 		const chainId = parseChainId(chain)
 		assert(SIWESigner.validateSessionPayload(session), "invalid session")
 		assert(session.data.version === SIWEMessageVersion, "invalid session version")
 		assert(session.data.address === address, "invalid session address")
 		assert(session.data.chainId === chainId, "invalid session chainId")
-		assert(session.data.uri === getSessionURI(chainId, computeAddress(hexlify(message.publicKey))))
+		assert(session.data.uri === getSessionURI(chainId, computeAddress(hexlify(signature.publicKey))))
 
 		// TODO: validate issuedAt?
 
@@ -122,8 +123,10 @@ export class SIWESigner implements Signer {
 		}
 	}
 
-	public async create(name: string, args: ActionArguments, context: ActionContext, {}: Env): Promise<Signed<Action>> {
-		const action: Action = {
+	public create(name: string, args: ActionArguments, context: ActionContext, {}: Env): Action {
+		// TODO: create a new session if the current session is expired or about to expire
+
+		return {
 			chain: this.chain,
 			address: this.address,
 			session: { data: this.session.data, signature: getBytes(this.session.signature) },
@@ -131,8 +134,10 @@ export class SIWESigner implements Signer {
 			name: name,
 			args: args,
 		}
+	}
 
-		return await createSignedValue("secp256k1", getBytes(this.session.privateKey), action)
+	public sign(message: Message<Action>): Signature {
+		return createSignedValue("secp256k1", getBytes(this.session.privateKey), message)
 	}
 }
 

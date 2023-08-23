@@ -407,7 +407,7 @@ export class VM {
 		}
 	}
 
-	public cache(handle: QuickJSHandle): QuickJSHandle {
+	public cache = (handle: QuickJSHandle): QuickJSHandle => {
 		const copy = handle.dup()
 		this.#localCache.add(copy)
 		return copy

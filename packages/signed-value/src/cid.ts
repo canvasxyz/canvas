@@ -4,6 +4,11 @@ import { CID } from "multiformats/cid"
 import { Codec, getCodec } from "./codecs.js"
 import { Digest, getDigest } from "./digests.js"
 
+export function createCID(hash: Uint8Array, options: { codec?: string | Codec; digest?: string | Digest } = {}): CID {
+	const [codec, digest] = [getCodec(options), getDigest(options)]
+	return CID.createV1(codec.code, createDigest(digest.code, hash))
+}
+
 export function getCID(value: unknown, options: { codec?: string | Codec; digest?: string | Digest } = {}): CID {
 	const [codec, digest] = [getCodec(options), getDigest(options)]
 	const hash = digest.digest(codec.encode(value))

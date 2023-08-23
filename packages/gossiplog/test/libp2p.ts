@@ -1,3 +1,5 @@
+import type { ExecutionContext } from "ava"
+
 import { Libp2p, createLibp2p } from "libp2p"
 import { identifyService } from "libp2p/identify"
 import { plaintext } from "libp2p/insecure"
@@ -10,19 +12,25 @@ import { gossipsub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 
 import type { PubSub } from "@libp2p/interface-pubsub"
 import type { PeerId } from "@libp2p/interface-peer-id"
-
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
-export type ServiceMap = { pubsub: PubSub<GossipsubEvents> }
+import { IPLDValue } from "@canvas-js/interfaces"
+import { GossipLog, GossipLogInit, gossiplog } from "@canvas-js/libp2p-gossiplog"
 
-export type NetworkInit = Record<string, { port: number; peers: string[] }>
+import { mapValues } from "./utils.js"
+
+export type NetworkInit = Record<
+	string,
+	{ port: number; peers: string[]; logs: Record<string, GossipLogInit<IPLDValue>> }
+>
 
 const getAddress = (port: number) => `/ip4/127.0.0.1/tcp/${port}`
 
-export async function createNetwork(
+export async function createNetwork<T extends Record<string, GossipLog<IPLDValue>> = {}>(
+	t: ExecutionContext<unknown>,
 	init: NetworkInit,
-	options: { start?: boolean; initialDegree?: number; minConnections?: number; maxConnections?: number } = {}
-): Promise<Record<string, Libp2p<ServiceMap>>> {
+	options: { start?: boolean; minConnections?: number; maxConnections?: number } = {}
+): Promise<Record<string, Libp2p<{ pubsub: PubSub<GossipsubEvents> } & T>>> {
 	const names = Object.keys(init)
 
 	const peerIds = await Promise.all(
@@ -32,15 +40,15 @@ export async function createNetwork(
 		})
 	).then((entries) => Object.fromEntries(entries))
 
-	return Promise.all(
-		Object.entries(init).map(async ([name, { port, peers }]) => {
+	const peers: Record<string, Libp2p<{ pubsub: PubSub<GossipsubEvents> } & T>> = await Promise.all(
+		Object.entries(init).map(async ([name, { port, peers, logs }]) => {
 			const peerId = peerIds[name]
 			const address = getAddress(port)
 			const bootstrapList = peers.map((peerName) => `${getAddress(init[peerName].port)}/p2p/${peerIds[peerName]}`)
 
 			const libp2p = await createLibp2p({
 				peerId: peerId,
-				start: options.start ?? true,
+				start: false,
 				addresses: { listen: [address] },
 				transports: [tcp()],
 				connectionEncryption: [plaintext()],
@@ -62,6 +70,8 @@ export async function createNetwork(
 					}),
 
 					identify: identifyService({ protocolPrefix: "canvas" }),
+
+					...mapValues(logs, gossiplog),
 				},
 			})
 
@@ -87,4 +97,11 @@ export async function createNetwork(
 			return [name, libp2p]
 		})
 	).then((entries) => Object.fromEntries(entries))
+
+	if (options.start ?? true) {
+		await Promise.all(Object.values(peers).map((peer) => peer.start()))
+		t.teardown(() => Promise.all(Object.values(peers).map((peer) => peer.stop())))
+	}
+
+	return peers
 }
