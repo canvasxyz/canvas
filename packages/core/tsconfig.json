@@ -8,7 +8,7 @@
   },
   "references": [
     { "path": "../chain-ethereum" },
-    { "path": "../signed-value" },
+    { "path": "../signed-cid" },
     { "path": "../interfaces" },
     { "path": "../modeldb-idb" },
     { "path": "../modeldb-sqlite" },

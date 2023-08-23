@@ -3,7 +3,7 @@ import * as json from "@ipld/dag-json"
 
 import { assert } from "./utils.js"
 
-export type Codec = { name: string; code: number; encode: (value: unknown) => Iterable<Uint8Array> }
+export type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint8Array> }
 
 export const codecs: Codec[] = [
 	{

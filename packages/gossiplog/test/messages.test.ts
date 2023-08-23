@@ -2,7 +2,7 @@ import test from "ava"
 
 import { ed25519 } from "@noble/curves/ed25519"
 import { IPLDValue } from "@canvas-js/interfaces"
-import { createSignedValue } from "@canvas-js/signed-value"
+import { createSignature } from "@canvas-js/signed-cid"
 
 import type { GossipLog, GossipLogInit } from "@canvas-js/libp2p-gossiplog"
 
@@ -30,7 +30,7 @@ test("send messages", async (t) => {
 	const peers = await createNetwork<{ example: GossipLog<IPLDValue> }>(t, network)
 
 	const message = await peers.a.services.example.create({ foo: "bar" })
-	const signature = createSignedValue("ed25519", privateKey, message)
+	const signature = createSignature("ed25519", privateKey, message)
 
 	const { key, result } = await peers.a.services.example.publish(signature, message)
 	t.is(result, undefined)

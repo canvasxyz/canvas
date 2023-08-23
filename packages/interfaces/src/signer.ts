@@ -1,4 +1,4 @@
-import type { Signature } from "@canvas-js/signed-value"
+import type { Signature } from "@canvas-js/signed-cid"
 
 import type { Action, ActionArguments, ActionContext } from "./action.js"
 import { Message } from "./message.js"

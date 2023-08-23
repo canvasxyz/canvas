@@ -3,10 +3,7 @@ import * as cbor from "@ipld/dag-cbor"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 import { create } from "@ipld/schema/typed.js"
 
-import { CID, varint } from "multiformats"
-
 import type { IPLDValue, Message, SignedMessage } from "@canvas-js/interfaces"
-import { Signature, createSignedValue, getCID } from "@canvas-js/signed-value"
 
 import { assert, getClock } from "./utils.js"
 

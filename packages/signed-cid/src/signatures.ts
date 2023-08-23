@@ -16,9 +16,9 @@ export type Signature = {
 	cid: CID
 }
 
-export function verifySignedValue<T>(
-	value: T,
+export function verifySignature(
 	{ type, publicKey, signature, cid }: Signature,
+	value: any,
 	options: { codecs?: Codec[]; digests?: Digest[] } = {}
 ) {
 	const codec = (options.codecs ?? codecs).find((codec) => codec.code === cid.code)
@@ -40,10 +40,10 @@ export function verifySignedValue<T>(
 	}
 }
 
-export function createSignedValue<T>(
-	type: "ed25519" | "secp256k1",
+export function createSignature(
+	type: SignatureType,
 	privateKey: Uint8Array,
-	value: T,
+	value: any,
 	options: { codec?: string | Codec; digest?: string | Digest } = {}
 ): Signature {
 	const cid = getCID(value, options)

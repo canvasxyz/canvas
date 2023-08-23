@@ -20,7 +20,7 @@ import { sha256 } from "@noble/hashes/sha256"
 import * as cbor from "@ipld/dag-cbor"
 
 import type { Node } from "@canvas-js/okra"
-import type { Signature } from "@canvas-js/signed-value"
+import type { Signature } from "@canvas-js/signed-cid"
 import type { IPLDValue, Message, SignedMessage } from "@canvas-js/interfaces"
 
 import { openStore, AbstractGraphStore } from "#store"

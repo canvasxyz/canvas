@@ -8,7 +8,7 @@ import { base32 } from "multiformats/bases/base32"
 import { equals } from "uint8arrays"
 
 import type { IPLDValue, Message, SignedMessage } from "@canvas-js/interfaces"
-import { Signature, verifySignedValue } from "@canvas-js/signed-value"
+import { Signature, verifySignature } from "@canvas-js/signed-cid"
 
 import { Driver } from "../sync/driver.js"
 import { Awaitable } from "../types.js"
@@ -86,7 +86,7 @@ export abstract class AbstractGraphStore<Payload extends IPLDValue> {
 				const { signature, message } = signedMessage
 
 				try {
-					verifySignedValue(message, signature)
+					verifySignature(signature, message)
 				} catch (err) {
 					this.log.error("invalid signature for message %s: %O", id, err)
 					continue

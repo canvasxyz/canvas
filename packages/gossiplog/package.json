@@ -35,6 +35,7 @@
     "@canvas-js/okra-idb": "^0.1.1",
     "@canvas-js/okra-memory": "^0.1.1",
     "@canvas-js/okra-node": "^0.4.0",
+    "@canvas-js/signed-cid": "0.5.0-alpha4",
     "@chainsafe/libp2p-gossipsub": "^9.1.0",
     "@ipld/dag-cbor": "^9.0.4",
     "@ipld/dag-json": "^10.1.3",

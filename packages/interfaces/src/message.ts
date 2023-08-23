@@ -1,4 +1,4 @@
-import type { Signature } from "@canvas-js/signed-value"
+import type { Signature } from "@canvas-js/signed-cid"
 
 import type { IPLDValue } from "./values.js"
 

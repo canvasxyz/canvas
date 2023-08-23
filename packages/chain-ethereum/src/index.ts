@@ -12,7 +12,7 @@ import type {
 	SessionPayload,
 	Message,
 } from "@canvas-js/interfaces"
-import { Signature, createSignedValue } from "@canvas-js/signed-value"
+import { Signature, createSignature } from "@canvas-js/signed-cid"
 
 import { getDomain } from "@canvas-js/chain-ethereum/domain"
 
@@ -137,7 +137,7 @@ export class SIWESigner implements Signer {
 	}
 
 	public sign(message: Message<Action>): Signature {
-		return createSignedValue("secp256k1", getBytes(this.session.privateKey), message)
+		return createSignature("secp256k1", getBytes(this.session.privateKey), message)
 	}
 }
 
