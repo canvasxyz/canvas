@@ -8,9 +8,10 @@ import { blake3 } from "@noble/hashes/blake3"
 import { sha256 } from "@noble/hashes/sha256"
 
 import { QuickJSHandle } from "quickjs-emscripten"
+import { bytesToHex } from "@noble/hashes/utils"
 
-import { Action, ActionArguments, ActionContext, Env, IPLDValue, Signer } from "@canvas-js/interfaces"
-import { JSFunctionAsync, JSValue, VM } from "@canvas-js/vm"
+import { Action, ActionArguments, ActionContext, Signer } from "@canvas-js/interfaces"
+import { JSValue, VM } from "@canvas-js/vm"
 import {
 	AbstractModelDB,
 	Effect,
@@ -29,8 +30,11 @@ import { assert, mapEntries, mapValues } from "./utils.js"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
-	uri?: string
+
+	/** NodeJS: data directory path, browser: IndexedDB database namespace */
 	location?: string | null
+	uri?: string
+
 	signers?: Signer[]
 	offline?: boolean
 	replay?: boolean
@@ -48,7 +52,7 @@ export class Canvas extends EventEmitter<{}> {
 	public static async initialize(config: CanvasConfig): Promise<Canvas> {
 		const { contract, signers = [], replay = false, offline = false } = config
 		const location = config.location ?? null
-		const uri = config.uri ?? `canvas:${sha256(contract)}`
+		const uri = config.uri ?? `canvas:${bytesToHex(sha256(contract))}`
 
 		const target = getTarget(location)
 
@@ -65,7 +69,7 @@ export class Canvas extends EventEmitter<{}> {
 			models: modelsHandle,
 			actions: actionsHandle,
 			...rest
-		} = await vm.import(contract).then((handle) => handle.consume(vm.unwrapObject))
+		} = await vm.import(contract, { uri }).then((handle) => handle.consume(vm.unwrapObject))
 
 		for (const [name, handle] of Object.entries(rest)) {
 			console.warn(`Extraneous export ${JSON.stringify(name)}`)
