@@ -76,7 +76,7 @@ export class Canvas extends EventEmitter<{}> {
 		const models = modelsHandle.consume(vm.context.dump) as ModelsInit
 
 		// our version strings always sort lexicographically
-		const resolve: Resolve = { lessThan: (a, b) => a < b }
+		const resolve: Resolve = { lessThan: (a, b) => a.version < b.version }
 		const db = await target.openDB(uri, models, { resolve })
 
 		// { [topic]: { [name]: handler } }
