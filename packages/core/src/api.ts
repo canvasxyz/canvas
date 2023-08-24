@@ -1,4 +1,3 @@
-import chalk from "chalk"
 import express, { Request, Response } from "express"
 import { StatusCodes } from "http-status-codes"
 import { WebSocket } from "ws"
@@ -9,10 +8,10 @@ import { peerIdFromString } from "@libp2p/peer-id"
 
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 
-import type { CoreEvents } from "@canvas-js/interfaces"
+import { Canvas, CoreEvents } from "./Canvas.js"
 
-import { Core } from "./core.js"
 import { getErrorMessage } from "./utils.js"
+import { logger } from "@libp2p/logger"
 
 interface Options {
 	exposeMetrics: boolean
@@ -55,6 +54,8 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 		}),
 	}
 
+	const log = logger("canvas:api")
+
 	const api = express()
 
 	api.set("query parser", "simple")
@@ -76,7 +77,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 			res.json({ hash })
 		} catch (err) {
 			if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-core] Failed to apply message (${err.message})`))
+				log.error(`Failed to apply message (${err.message})`)
 				return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
 			} else {
 				throw err
@@ -143,9 +144,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 	}
 
 	if (options.exposeP2P) {
-		console.log(
-			chalk.yellowBright("[canvas-cli] Exposing internal p2p API. This can be abused if made publicly accessible.")
-		)
+		log("Exposing internal p2p API. This can be abused if made publicly accessible.")
 
 		api.get("/p2p/mesh", (req, res) => {
 			if (core.libp2p === null) {
@@ -203,15 +202,16 @@ const WS_KEEPALIVE_LATENCY = 3000
 
 export function handleWebsocketConnection(core: Core, socket: WebSocket, options: { verbose?: boolean } = {}) {
 	const id = nanoid(8)
-	if (core.options.verbose) {
-		console.log(chalk.gray(`[canvas-core] [ws-${id}] Opened socket`))
-	}
+
+	const log = logger("canvas:api")
+
+	log.trace("[ws-${id}] Opened socket`")
 
 	let lastPing = Date.now()
 
 	const timer = setInterval(() => {
 		if (lastPing < Date.now() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) {
-			console.log(chalk.red(`[canvas-core] [ws-${id}] Closed socket on timeout`))
+			log.error(`[ws-${id}] Closed socket on timeout`)
 			socket.close()
 		}
 	}, WS_KEEPALIVE)
@@ -220,7 +220,7 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket, options
 	core.addEventListener("close", closeListener)
 
 	const eventListener = <T>(event: CustomEvent<T> | Event) => {
-		console.log(chalk.gray(`[canvas-core] [ws-${id}] Sent ${event.type} event`))
+		log.trace(`[ws-${id}] Sent ${event.type} event`)
 		if (event instanceof CustomEvent) {
 			socket.send(JSON.stringify({ type: event.type, detail: event.detail }))
 		} else {
@@ -241,9 +241,7 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket, options
 	}
 
 	socket.on("close", () => {
-		if (core.options.verbose) {
-			console.log(chalk.gray(`[canvas-core] [ws-${id}] Closed socket`))
-		}
+		log.trace(`[ws-${id}] Closed socket`)
 
 		clearInterval(timer)
 		unsubscribe()
@@ -254,7 +252,7 @@ export function handleWebsocketConnection(core: Core, socket: WebSocket, options
 			lastPing = Date.now()
 			socket.send("pong")
 		} else {
-			console.log(chalk.red(`[canvas-core] [ws-${id}] Received invalid message ${data}`))
+			log.error(`[ws-${id}] Received invalid message ${data}`)
 		}
 	})
 }
