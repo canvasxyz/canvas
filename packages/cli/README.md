@@ -134,14 +134,14 @@ The basic routes are:
 
 ```ts
 type ApplicationData = {
-  cid: string
-  uri: string
-  peerId: string | null
-  actions: string[]
-  routes: string[]
-  chains: string[]
-  peers: { id: string; protocols?: string[]; addresses?: string[] }[]
-  merkleRoots: Record<string, string>
+	cid: string
+	uri: string
+	peerId: string | null
+	actions: string[]
+	routes: string[]
+	chains: string[]
+	peers: { id: string; protocols?: string[]; addresses?: string[] }[]
+	merkleRoots: Record<string, string>
 }
 ```
 
@@ -189,7 +189,6 @@ A gauge counting the observed active DHT application peers.
 | label name | type     | description              |
 | ---------- | -------- | ------------------------ |
 | `uri`      | `string` | the source `ipfs://` URI |
-
 
 ### Subscribing to events over a WebSocket connection
 

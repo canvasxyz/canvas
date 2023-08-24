@@ -1,9 +1,9 @@
-import type { JSONValue } from "./values.js"
+import type { IPLDValue, JSONValue } from "./values.js"
 
 type CBORValue = JSONValue<null | boolean | number | string | Uint8Array>
 
 export type ActionArguments = CBORValue
-export type SessionPayload = CBORValue
+export type SessionPayload = IPLDValue
 
 export type Action = {
 	// CAIP-2 prefix, e.g. "eip155:1"
@@ -20,6 +20,4 @@ export type ActionContext = {
 	topic: string
 	timestamp: number
 	blockhash: string | null
-	// depth: number
-	// dependencies: Uint8Array[]
 }

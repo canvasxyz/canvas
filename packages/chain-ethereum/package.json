@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@canvas-js/interfaces": "0.5.0-alpha4",
-    "@canvas-js/signed-value": "0.5.0-alpha4",
+    "@canvas-js/signed-cid": "0.5.0-alpha4",
     "ethers": "^6.6.5",
     "siwe": "^2.1.4"
   }

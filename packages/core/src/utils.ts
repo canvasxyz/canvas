@@ -3,9 +3,6 @@ import AggregateError from "aggregate-error"
 import { anySignal } from "any-signal"
 import { configure } from "safe-stable-stringify"
 import { CodeError } from "@libp2p/interfaces/errors"
-import { bytesToHex } from "@noble/hashes/utils"
-import { Resolve } from "@canvas-js/modeldb-interface"
-import { IPLDValue } from "@canvas-js/store"
 
 export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
 
@@ -121,14 +118,3 @@ export function getErrorMessage(err: unknown): string {
 		throw err
 	}
 }
-
-const timestampBuffer = new ArrayBuffer(8)
-const timestampView = new DataView(timestampBuffer)
-
-export function encodeTimestampVersion(timestamp: number): Uint8Array {
-	timestampView.setBigUint64(0, BigInt(timestamp))
-	return new Uint8Array(timestampBuffer, 2, 6)
-}
-
-// lower-case hex strings sort lexicographically like you'd hope
-export const timestampResolver: Resolve = { lessThan: (a, b) => a.version < b.version }

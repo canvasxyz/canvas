@@ -2,25 +2,24 @@ import assert from "node:assert"
 import test from "ava"
 
 import { Canvas } from "@canvas-js/core"
+import { base32 } from "multiformats/bases/base32"
 
 const contract = `
-export const db = openDB({
-	posts: {
-		content: "string",
-		timestamp: "integer",
-	}
-});
+export const models = {
+  posts: {
+    $type: "immutable",
+    author: "string",
+    content: "string",
+    timestamp: "integer",
+  },
+};
 
-export const actions = addActionHandler({
-	topic: "com.example.app",
-	actions: {
-		async createPost({ content }, { timestamp }) {
-			console.log("createPost", content, timestamp)
-			const postId = await db.posts.add({ content, timestamp })
-			return postId
-		}
-	}
-})
+export const actions = {
+  async createPost(db, { content }, { chain, address, timestamp }) {
+    const postId = await db.posts.add({ author: chain, content, timestamp });
+    return postId;
+  },
+};
 `.trim()
 
 test("open and close an app", async (t) => {
@@ -30,17 +29,13 @@ test("open and close an app", async (t) => {
 })
 
 test("apply an action and read a record from the database", async (t) => {
-	const app = await Canvas.initialize({ contract, offline: true })
+	const app = await Canvas.initialize({ contract, listen: ["/ip4/127.0.0.1/tcp/9000/ws"] })
 	t.teardown(() => app.close())
 
-	const { id: actionId, result: postId } = await app.applyAction("com.example.app", {
-		name: "createPost",
-		args: { content: "hello world" },
-	})
+	const { key, result: postId } = await app.actions.createPost({ content: "hello world" })
 
-	t.log("applied action", actionId, "and got postId", postId)
-
+	t.log("applied action", base32.baseEncode(key), "and got postId", postId)
 	assert(typeof postId === "string")
-	const value = await app.exports.db?.get("posts", postId)
+	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
 })

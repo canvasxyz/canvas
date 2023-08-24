@@ -8,6 +8,6 @@
   },
   "references": [
     {"path": "../interfaces"},
-    {"path": "../signed-value"}
+    {"path": "../signed-cid"}
   ]
 }
