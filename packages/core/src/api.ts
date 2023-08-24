@@ -121,15 +121,24 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 	if (options.exposeModels) {
 		api.get("/models/:model", async (req, res) => {
 			const { model: modelName } = req.params
-			if (modelName in core.vm.getModels()) {
-				const rows: Record<string, ModelValue>[] = []
-				const offset = typeof req.query.offset === "string" ? parseInt(req.query.offset) : 0
-				const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : -1
-				for await (const row of core.db.exportModel(modelName, { offset, limit })) {
-					rows.push(row)
+			const models = core.exports.db?.models || {}
+			if (modelName in models) {
+				const db = core.exports.db
+
+				if (db === undefined) {
+					return res.status(StatusCodes.NOT_FOUND).end()
 				}
 
-				const total = await core.db.count(modelName)
+				const offset = typeof req.query.offset === "string" ? parseInt(req.query.offset) : 0
+				const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : -1
+
+				const rows = await db.query(modelName, {
+					// what is the default ordering? does this matter so long as the result is stable
+					offset,
+					limit,
+				})
+
+				const total = await db.count(modelName)
 
 				return res.status(StatusCodes.OK).json({
 					offset,
