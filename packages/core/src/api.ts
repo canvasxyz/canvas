@@ -73,8 +73,9 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 		}
 
 		try {
-			const { hash } = await core.apply(req.body)
-			res.json({ hash })
+			// TODO: replace with the new core action API
+			// const { hash } = await core.apply(req.body)
+			// res.json({ hash })
 		} catch (err) {
 			if (err instanceof Error) {
 				log.error(`Failed to apply message (${err.message})`)
@@ -88,6 +89,7 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 	api.post("/", applyMessage)
 
 	if (options.exposeMetrics) {
+		// TODO: What is "message" used for?
 		core.addEventListener("message", ({ detail: { uri, message } }) => {
 			coreMetrics.canvas_messages.inc({ uri, type: message.type })
 		})
