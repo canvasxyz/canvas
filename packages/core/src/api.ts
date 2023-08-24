@@ -90,6 +90,7 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 
 	if (options.exposeMetrics) {
 		// TODO: What is "message" used for?
+		// @ts-ignore
 		core.addEventListener("message", ({ detail: { uri, message } }) => {
 			coreMetrics.canvas_messages.inc({ uri, type: message.type })
 		})
