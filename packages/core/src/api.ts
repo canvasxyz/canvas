@@ -20,7 +20,7 @@ interface Options {
 	exposeP2P: boolean
 }
 
-export function getAPI(core: Core, options: Partial<Options> = {}): express.Express {
+export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Express {
 	const coreRegister = new Registry()
 
 	const coreMetrics = {
@@ -200,7 +200,7 @@ export function getAPI(core: Core, options: Partial<Options> = {}): express.Expr
 const WS_KEEPALIVE = 30000
 const WS_KEEPALIVE_LATENCY = 3000
 
-export function handleWebsocketConnection(core: Core, socket: WebSocket, options: { verbose?: boolean } = {}) {
+export function handleWebsocketConnection(core: Canvas, socket: WebSocket, options: { verbose?: boolean } = {}) {
 	const id = nanoid(8)
 
 	const log = logger("canvas:api")
