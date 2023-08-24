@@ -18,6 +18,9 @@ import {
 	getImmutableRecordKey,
 	Model,
 	ModelsInit,
+	ModelValue,
+	Property,
+	PropertyValue,
 	Resolve,
 } from "@canvas-js/modeldb-interface"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
@@ -26,7 +29,7 @@ import { GossipLog, GossipLogConsumer, GossipLogInit } from "@canvas-js/gossiplo
 import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
-import { assert, mapEntries, mapValues } from "./utils.js"
+import { assert, mapEntries, signalInvalidType } from "./utils.js"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
@@ -274,8 +277,7 @@ class DatabaseAPI {
 					throw new Error("cannot .add(...) mutable models - use .set(...)")
 				}
 
-				// TODO: use `model` to unwrap valueHandle by hand
-				const value = this.vm.context.dump(valueHandle)
+				const value = this.unwrapModelValue(model, valueHandle)
 				this.#effects.push({ model: model.name, operation: "add", value })
 
 				return this.vm.context.newString(getImmutableRecordKey(value, {}))
@@ -287,9 +289,8 @@ class DatabaseAPI {
 					throw new Error("cannot .set(...) immutable models - use .add(...)")
 				}
 
-				// TODO: use `model` to unwrap valueHandle by hand
 				const key = this.vm.context.getString(keyHandle)
-				const value = this.vm.context.dump(valueHandle)
+				const value = this.unwrapModelValue(model, valueHandle)
 				this.#effects.push({ model: model.name, operation: "set", key, value })
 			}),
 			delete: this.vm.context.newFunction(`db.${model.name}.delete`, (keyHandle) => {
@@ -303,5 +304,47 @@ class DatabaseAPI {
 				this.#effects.push({ model: model.name, operation: "delete", key })
 			}),
 		})
+	}
+
+	private unwrapModelValue(model: Model, handle: QuickJSHandle): ModelValue {
+		const values = model.properties.map<[string, PropertyValue]>((property) => {
+			const propertyHandle = this.vm.context.getProp(handle, property.name)
+			const propertyValue = propertyHandle.consume((handle) => this.unwrapPropertyValue(property, handle))
+			return [property.name, propertyValue]
+		})
+
+		return Object.fromEntries(values)
+	}
+
+	private unwrapPropertyValue(property: Property, handle: QuickJSHandle): PropertyValue {
+		if (property.kind === "primitive") {
+			if (property.type === "integer") {
+				const value = this.vm.context.getNumber(handle)
+				assert(Number.isSafeInteger(value), "property value must be a safe integer")
+				return value
+			} else if (property.type === "float") {
+				return this.vm.context.getNumber(handle)
+			} else if (property.type === "string") {
+				return this.vm.context.getString(handle)
+			} else if (property.type === "bytes") {
+				return this.vm.getUint8Array(handle)
+			} else {
+				signalInvalidType(property.type)
+			}
+		} else if (property.kind === "reference") {
+			if (this.vm.is(handle, this.vm.context.null)) {
+				return null
+			} else {
+				const value = this.vm.context.getString(handle)
+				// TODO: assert that value matches ID format
+				return value
+			}
+		} else if (property.kind === "relation") {
+			const values = this.vm.unwrapArray(handle, (elementHandle) => this.vm.context.getString(elementHandle))
+			// TODO: assert that values match ID format
+			return values
+		} else {
+			signalInvalidType(property)
+		}
 	}
 }
