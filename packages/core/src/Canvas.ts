@@ -48,7 +48,19 @@ export type ActionAPI = Record<
 	) => Promise<{ key: Uint8Array; result: void | JSValue; recipients: Promise<PeerId[]> }>
 >
 
-export class Canvas extends EventEmitter<{}> {
+export interface CoreEvents {
+	close: Event
+	// TODO: should this be {signature: Signature, Message: Message} ?
+	message: CustomEvent<{}>
+	// TODO: what should this be
+	update: CustomEvent<{}>
+	// TODO: what should this be
+	sync: CustomEvent<{}>
+	connect: CustomEvent<{ peer: string }>
+	disconnect: CustomEvent<{ peer: string }>
+}
+
+export class Canvas extends EventEmitter<CoreEvents> {
 	public static async initialize(config: CanvasConfig): Promise<Canvas> {
 		const { contract, signers = [], replay = false, offline = false } = config
 		const location = config.location ?? null
