@@ -53,7 +53,7 @@ async function connectAndSync(t: ExecutionContext<unknown>, init: GossipLogInit)
 test("sync empty in-memory logs", async (t) => {
 	const init: GossipLogInit = {
 		location: null,
-		topic: "test:example",
+		topic: "com.example.test",
 		apply: (message) => {
 			console.log("applying", message)
 			return { result: undefined }

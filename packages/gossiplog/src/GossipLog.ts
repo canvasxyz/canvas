@@ -36,7 +36,7 @@ import {
 	SYNC_RETRY_INTERVAL,
 	SYNC_RETRY_LIMIT,
 } from "./constants.js"
-import { Awaitable, CacheMap, assert, protocolPrefix, shuffle, sortPair, wait } from "./utils.js"
+import { Awaitable, CacheMap, assert, nsidPattern, protocolPrefix, shuffle, sortPair, wait } from "./utils.js"
 
 export interface GossipLogInit<Payload extends IPLDValue = IPLDValue, Result extends IPLDValue | void = void> {
 	location: string | null
@@ -95,13 +95,15 @@ export class GossipLog<
 		libp2p: Libp2p<{ pubsub: PubSub<GossipsubEvents> }> | null,
 		init: GossipLogInit<Payload, Result>
 	) {
+		assert(nsidPattern.test(init.topic), "invalid topic: must match [\\-\\.a-z0-9]+")
+
 		const store = await openStore({ topic: init.topic, location: init.location })
-		const log = new GossipLog(libp2p, store, init)
+		const gossipLog = new GossipLog(libp2p, store, init)
 		if (init.start ?? true) {
-			await log.start()
+			await gossipLog.start()
 		}
 
-		return log
+		return gossipLog
 	}
 
 	private constructor(
@@ -110,12 +112,13 @@ export class GossipLog<
 		init: GossipLogInit<Payload, Result>
 	) {
 		super()
+
 		this.topic = protocolPrefix + init.topic
 		this.protocol = protocolPrefix + init.topic + "/sync"
 
 		assert(this.topic.startsWith(protocolPrefix))
 		assert(this.protocol.startsWith(protocolPrefix))
-		this.log = logger(`canvas:log:[${init.topic}]`)
+		this.log = logger(`canvas:gossiplog:${init.topic}`)
 
 		this.validate = (message: Message): message is Message<Payload> => {
 			return init.validate === undefined || init.validate(message.payload)

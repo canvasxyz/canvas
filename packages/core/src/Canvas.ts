@@ -3,8 +3,9 @@ import { PeerId } from "@libp2p/interface-peer-id"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { createLibp2p, Libp2p } from "libp2p"
 import { logger } from "@libp2p/logger"
+import { CID } from "multiformats/cid"
 import { base32 } from "multiformats/bases/base32"
-import { blake3 } from "@noble/hashes/blake3"
+
 import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
 
@@ -30,12 +31,14 @@ import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
 import { assert, mapEntries, signalInvalidType } from "./utils.js"
+import { getCID } from "@canvas-js/signed-cid"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
 
 	/** NodeJS: data directory path, browser: IndexedDB database namespace */
 	location?: string | null
+	topic?: string
 	uri?: string
 
 	signers?: Signer[]
@@ -66,10 +69,13 @@ export interface CoreEvents {
 export class Canvas extends EventEmitter<CoreEvents> {
 	public static async initialize(config: CanvasConfig): Promise<Canvas> {
 		const { contract, signers = [], replay = false, offline = false } = config
-		const location = config.location ?? null
-		const uri = config.uri ?? `canvas:${bytesToHex(sha256(contract))}`
 
+		const location = config.location ?? null
 		const target = getTarget(location)
+
+		const cid = getCID(contract, { codec: "raw", digest: "blake3-128" })
+		const uri = config.uri ?? `canvas:${cid.toString()}`
+		const defaultTopic = config.topic ?? cid.toString()
 
 		if (signers.length === 0) {
 			const signer = await SIWESigner.init({})
@@ -108,7 +114,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		for (const [name, handle] of Object.entries(actionsHandle.consume(vm.unwrapObject))) {
 			// We support several action definition formats. The simplest is just a function.
 			if (vm.context.typeof(handle) === "function") {
-				const topic = uri
+				const topic = defaultTopic
 				if (actionHandlers[topic] === undefined) {
 					actionHandlers[topic] = {}
 				}

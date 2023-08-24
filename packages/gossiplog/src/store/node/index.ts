@@ -1,3 +1,5 @@
+import path from "node:path"
+
 import type { PeerId } from "@libp2p/interface-peer-id"
 
 import { Tree } from "@canvas-js/okra-node"
@@ -13,7 +15,7 @@ export async function openStore(init: GraphStoreInit): Promise<AbstractGraphStor
 		return openMemoryStore(init)
 	}
 
-	const tree = new Tree(init.location)
+	const tree = new Tree(path.resolve(init.location, init.topic))
 	return new Store(init, tree)
 }
 

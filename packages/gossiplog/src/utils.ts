@@ -6,6 +6,9 @@ import { lessThan } from "@canvas-js/okra"
 
 export type Awaitable<T> = T | Promise<T>
 
+// Topics are restricted to NSIDs, ie /[:\-\.a-z0-9]/ characters
+export const nsidPattern = /^[a-z](?:-*[a-z0-9])*(?:\.[a-z](?:-*[a-z0-9])*)*$/
+
 export const protocolPrefix = "/canvas/v0/store/"
 
 export const keyPattern = /^(\/canvas\/v0\/store\/[a-zA-Z0-9:.-]+)\/peers$/

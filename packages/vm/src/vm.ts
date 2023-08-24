@@ -67,6 +67,7 @@ export class VM {
 
 	public execute(contract: string, options: { uri?: string } = {}) {
 		const filename = options.uri ?? `canvas:${bytesToHex(sha256(contract))}`
+
 		this.unwrapResult(this.context.evalCode(contract, filename, { type: "global", strict: true })).dispose()
 	}
 

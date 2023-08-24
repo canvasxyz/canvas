@@ -1,7 +1,7 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { Source, Target, Node } from "@canvas-js/okra"
 
-import { logger } from "@libp2p/logger"
+import { Logger, logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
 import { base32 } from "multiformats/bases/base32"
 import { equals } from "uint8arrays"
@@ -39,9 +39,11 @@ export abstract class AbstractGraphStore {
 	abstract read<T>(callback: (txn: ReadOnlyTransaction) => Promise<T>): Promise<T>
 	abstract write<T>(callback: (txn: ReadWriteTransaction) => Promise<T>): Promise<T>
 
-	protected readonly log = logger("canvas:gossiplog:store")
+	protected readonly log: Logger
 
-	protected constructor(init: GraphStoreInit) {}
+	protected constructor(init: GraphStoreInit) {
+		this.log = logger(`canvas:gossiplog:${init.topic}:store`)
+	}
 
 	public async get(key: Uint8Array): Promise<SignedMessage | null> {
 		const value = await this.read(async (txn) => txn.get(key))

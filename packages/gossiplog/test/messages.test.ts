@@ -15,7 +15,7 @@ test("send messages", async (t) => {
 
 	const init: GossipLogInit = {
 		location: null,
-		topic: "test:example",
+		topic: "com.example.test",
 		apply: (key, signature, message) => {
 			messages.push({ key, signature, message })
 			return { result: undefined }
