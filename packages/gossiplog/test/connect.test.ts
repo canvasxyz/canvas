@@ -2,8 +2,7 @@ import test, { ExecutionContext } from "ava"
 
 import pDefer, { DeferredPromise } from "p-defer"
 
-import type { IPLDValue } from "@canvas-js/interfaces"
-import type { GossipLog, GossipLogInit } from "@canvas-js/libp2p-gossiplog"
+import { GossipLog, GossipLogInit } from "@canvas-js/gossiplog"
 
 import { NetworkInit, createNetwork } from "./libp2p.js"
 
@@ -13,11 +12,16 @@ async function connectAndSync(t: ExecutionContext<unknown>, init: GossipLogInit)
 		b: { port: 9991, peers: ["a"], logs: { example: init } },
 	}
 
-	const peers = await createNetwork<{ example: GossipLog<IPLDValue> }>(t, network, { start: false })
+	const peers = await createNetwork(t, network, { start: false })
+	const logs = await Promise.all(
+		Object.entries(peers).map(([name, peer]) =>
+			GossipLog.init(peer, init).then((log) => [name, log] satisfies [string, GossipLog])
+		)
+	).then((entries) => Object.fromEntries(entries))
 
 	const syncPromises: Record<string, DeferredPromise<void>> = {}
 
-	for (const source of Object.values(peers)) {
+	for (const [name, source] of Object.entries(peers)) {
 		const sourceId = source.peerId
 		for (const target of Object.values(peers)) {
 			const targetId = target.peerId
@@ -29,7 +33,7 @@ async function connectAndSync(t: ExecutionContext<unknown>, init: GossipLogInit)
 			syncPromises[`${sourceId}:${targetId}`] = defer
 		}
 
-		source.services.example.addEventListener("sync", ({ detail: { peerId: targetId } }) => {
+		logs[name].addEventListener("sync", ({ detail: { peerId: targetId } }) => {
 			console.log("[%s] sync completed with peer %s", sourceId, targetId)
 			syncPromises[`${sourceId}:${targetId}`].resolve()
 		})
@@ -38,7 +42,10 @@ async function connectAndSync(t: ExecutionContext<unknown>, init: GossipLogInit)
 	t.teardown(() => Object.values(peers).map((peer) => peer.stop()))
 
 	await Promise.all([
-		...Object.values(peers).map((peer) => peer.start()),
+		...Object.values(logs).map(async (log) => {
+			await log.libp2p?.start()
+			await log.start()
+		}),
 		...Object.values(syncPromises).map((defer) => defer.promise),
 	])
 }
@@ -51,6 +58,8 @@ test("sync empty in-memory logs", async (t) => {
 			console.log("applying", message)
 			return { result: undefined }
 		},
+
+		start: false,
 	}
 
 	await connectAndSync(t, init)

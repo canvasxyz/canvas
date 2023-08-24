@@ -1,9 +1,8 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
 
+import { base32 } from "multiformats/bases/base32"
 import { IDBPDatabase, openDB } from "idb"
 import { IDBTree } from "@canvas-js/okra-idb"
-
-import { IPLDValue } from "@canvas-js/interfaces"
 
 import { openStore as openMemoryStore } from "../memory/index.js"
 
@@ -11,7 +10,7 @@ import { AbstractGraphStore, GraphStoreInit, ReadOnlyTransaction, ReadWriteTrans
 
 export type { AbstractGraphStore, GraphStoreInit } from "../AbstractGraphStore.js"
 
-export async function openStore<T extends IPLDValue>(init: GraphStoreInit<T>): Promise<AbstractGraphStore<T>> {
+export async function openStore(init: GraphStoreInit): Promise<AbstractGraphStore> {
 	if (init.location === null) {
 		return openMemoryStore(init)
 	}
@@ -34,15 +33,15 @@ export async function openStore<T extends IPLDValue>(init: GraphStoreInit<T>): P
 	return new Store(init, db, tree)
 }
 
-class Store<I extends IPLDValue> extends AbstractGraphStore<I> {
+class Store extends AbstractGraphStore {
 	private readonly incomingSyncPeers = new Set<string>()
 	private readonly outgoingSyncPeers = new Set<string>()
 	private readonly lockName: string
 	private readonly controller = new AbortController()
 
-	public constructor(init: GraphStoreInit<I>, private readonly db: IDBPDatabase, private readonly tree: IDBTree) {
+	public constructor(init: GraphStoreInit, private readonly db: IDBPDatabase, private readonly tree: IDBTree) {
 		super(init)
-		this.lockName = `${init.topic}/lock`
+		this.lockName = base32.baseEncode(crypto.getRandomValues(new Uint8Array(10)))
 	}
 
 	public async close() {

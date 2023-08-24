@@ -21,7 +21,7 @@ import {
 	Resolve,
 } from "@canvas-js/modeldb-interface"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { GossipLog, gossiplog, GossipLogConsumer, GossipLogInit } from "@canvas-js/libp2p-gossiplog"
+import { GossipLog, GossipLogConsumer, GossipLogInit } from "@canvas-js/gossiplog"
 
 import getTarget from "#target"
 
@@ -104,20 +104,15 @@ export class Canvas extends EventEmitter<{}> {
 			}
 		}
 
-		// actionMap maps action names to *service IDs*,
-		// which is needed to look them up from the libp2p peer.
-		type ServiceId = `log-${string}`
-		const actionMap: Record<string, { topic: string; serviceId: ServiceId }> = {}
+		// actionMap maps action names to topics
+		const actionMap: Record<string, string> = {}
 
-		const initMap: Record<ServiceId, GossipLogInit<Action, JSValue | void>> = {}
+		// initMap maps topics to inits
+		const initMap: Record<string, GossipLogInit<Action, JSValue | void>> = {}
 
 		const databaseAPI = new DatabaseAPI(vm, db)
 
 		for (const [topic, actions] of Object.entries(actionHandlers)) {
-			const hash = blake3(topic, { dkLen: 10 })
-			const serviceId = `log-${base32.baseEncode(hash)}` satisfies ServiceId
-			const serviceLocation = location && `${location}/${serviceId}`
-
 			const apply: GossipLogConsumer<Action, JSValue | void> = async (key, signature, message) => {
 				const id = base32.baseEncode(key)
 				const { chain, address, name, args, context } = message.payload
@@ -146,31 +141,33 @@ export class Canvas extends EventEmitter<{}> {
 			}
 
 			// TODO: add `validate` to log init
-			initMap[serviceId] = { topic, location: serviceLocation, apply }
+			initMap[topic] = { topic, location, apply }
 			for (const name of Object.keys(actions)) {
-				actionMap[name] = { topic, serviceId }
+				actionMap[name] = topic
 			}
 		}
 
 		const peerId = await target.getPeerId()
-		const { services, ...libp2pOptions } = await getLibp2pOptions(peerId, config)
-		const libp2p = await createLibp2p<ServiceMap & Record<ServiceId, GossipLog<Action, JSValue | void>>>({
-			...libp2pOptions,
-			start: false,
-			services: { ...services, ...mapValues(initMap, gossiplog) },
-		})
+		const libp2pOptions = await getLibp2pOptions(peerId, config)
+		const libp2p = await createLibp2p(libp2pOptions)
 
-		const actions: ActionAPI = mapEntries(actionMap, ([actionName, { topic, serviceId }]) => {
-			const service = libp2p.services[serviceId]
-			assert(service instanceof GossipLog, "service not found")
+		const logs = await Promise.all(
+			Object.entries(initMap).map(([topic, init]) =>
+				GossipLog.init(libp2p, init).then((log) => [topic, log] satisfies [string, GossipLog<Action, void | JSValue>])
+			)
+		).then((entries) => Object.fromEntries(entries))
+
+		const actions: ActionAPI = mapEntries(actionMap, ([actionName, topic]) => {
+			const gossipLog = logs[topic]
+			assert(gossipLog instanceof GossipLog, "GossipLog not found")
 			return async (args: ActionArguments, { chain }: { chain?: string } = {}) => {
 				const signer = signers.find((signer) => chain === undefined || signer.match(chain))
 				assert(signer !== undefined, "signer not found")
 				const context: ActionContext = { topic, timestamp: Date.now(), blockhash: null }
 				const action = signer.create(actionName, args, context, {})
-				const message = await service.create(action)
+				const message = await gossipLog.create(action)
 				const signature = await signer.sign(message)
-				const { key, result, recipients } = await service.publish(signature, message)
+				const { key, result, recipients } = await gossipLog.publish(signature, message)
 				return { key, result, recipients }
 			}
 		})

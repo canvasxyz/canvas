@@ -3,18 +3,16 @@ import type { Source, Target, Node } from "@canvas-js/okra"
 
 import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
-import { sha256 } from "@noble/hashes/sha256"
 import { base32 } from "multiformats/bases/base32"
 import { equals } from "uint8arrays"
 
-import type { IPLDValue, Message, SignedMessage } from "@canvas-js/interfaces"
+import type { Message, SignedMessage } from "@canvas-js/interfaces"
 import { Signature, verifySignature } from "@canvas-js/signed-cid"
 
 import { Driver } from "../sync/driver.js"
-import { Awaitable } from "../types.js"
 import { ReferenceSet } from "../graph.js"
-import { decodeSignedMessage } from "../schema.js"
-import { assert, getKey } from "../utils.js"
+import { decodeSignedMessage, encodeSignedMessage } from "../schema.js"
+import { Awaitable, assert } from "../utils.js"
 
 export interface ReadOnlyTransaction extends Target {
 	get(key: Uint8Array): Awaitable<Uint8Array | null>
@@ -27,13 +25,12 @@ export interface ReadWriteTransaction extends ReadOnlyTransaction {
 	setUserdata(userdata: Uint8Array | null): Awaitable<void>
 }
 
-export interface GraphStoreInit<Payload extends IPLDValue> {
+export interface GraphStoreInit {
 	topic: string
 	location: string | null
-	validate: (value: IPLDValue) => value is Payload
 }
 
-export abstract class AbstractGraphStore<Payload extends IPLDValue> {
+export abstract class AbstractGraphStore {
 	abstract close(): Promise<void>
 
 	abstract source(targetPeerId: PeerId, callback: (txn: ReadOnlyTransaction) => Promise<void>): Promise<void>
@@ -43,25 +40,41 @@ export abstract class AbstractGraphStore<Payload extends IPLDValue> {
 	abstract write<T>(callback: (txn: ReadWriteTransaction) => Promise<T>): Promise<T>
 
 	protected readonly log = logger("canvas:gossiplog:store")
-	private readonly validate: (value: IPLDValue) => value is Payload
 
-	protected constructor(init: GraphStoreInit<Payload>) {
-		this.validate = init.validate
-	}
+	protected constructor(init: GraphStoreInit) {}
 
-	public async get(key: Uint8Array): Promise<SignedMessage<Payload> | null> {
+	public async get(key: Uint8Array): Promise<SignedMessage | null> {
 		const value = await this.read(async (txn) => txn.get(key))
 		if (value === null) {
 			return null
-		} else {
-			return decodeSignedMessage(value, this.validate)
 		}
+
+		const [recoveredKey, signature, message] = decodeSignedMessage(value)
+		assert(equals(recoveredKey, key), "invalid message key")
+		return { signature, message }
+	}
+
+	public async add(signature: Signature, message: Message): Promise<{ key: Uint8Array; root: Node }> {
+		const [key, value] = encodeSignedMessage({ signature, message })
+		const { root } = await this.write(async (txn) => {
+			const userdata = await txn.getUserdata()
+			const references = new ReferenceSet(userdata && cbor.decode(userdata))
+
+			await txn.set(key, value)
+			references.update(key, message)
+
+			await txn.setUserdata(cbor.encode(references.getParents()))
+			const root = await txn.getRoot()
+			return { root }
+		})
+
+		return { key, root }
 	}
 
 	public async sync(
 		peerId: PeerId,
 		source: Source,
-		callback: (key: Uint8Array, signature: Signature, message: Message<Payload>) => Promise<void>
+		callback: (key: Uint8Array, signature: Signature, message: Message) => Promise<void>
 	): Promise<{ root: Node }> {
 		let root: Node | null = null
 
@@ -72,12 +85,12 @@ export abstract class AbstractGraphStore<Payload extends IPLDValue> {
 			const driver = new Driver(source, target)
 			for await (const [key, value] of driver.sync()) {
 				const id = base32.baseEncode(key)
-				let signedMessage: SignedMessage<Payload> | null = null
+				let signedMessage: SignedMessage | null = null
 
 				try {
-					signedMessage = decodeSignedMessage(value, this.validate)
-					const expectedKey = getKey(signedMessage.message.clock, sha256(value))
-					assert(equals(key, expectedKey), "invalid message key")
+					const [recoveredKey, signature, message] = decodeSignedMessage(value)
+					assert(equals(key, recoveredKey), "invalid message key")
+					signedMessage = { signature, message }
 				} catch (err) {
 					this.log.error("failed to decode signed message %s: %O", id, err)
 					continue

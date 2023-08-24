@@ -1,5 +1,5 @@
 {
-  "name": "@canvas-js/libp2p-gossiplog",
+  "name": "@canvas-js/gossiplog",
   "version": "0.5.0-alpha4",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
@@ -21,7 +21,7 @@
     "#store": {
       "node": "./lib/store/node/index.js",
       "browser": "./lib/store/browser/index.js",
-      "default": "./lib/store/index.js"
+      "default": "./lib/store/default/index.js"
     }
   },
   "scripts": {

@@ -46,11 +46,11 @@ declare function verifySignature(
 ): void
 ```
 
-### Types
+### Utility types
 
 ```ts
 type Digest = { name: string; code: number; digest: (iter: Iterable<Uint8Array>) => Uint8Array }
 type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint8Array> }
 ```
 
-`Codec` and `Digest` are similar to some existing interfaces in the IPLD ecosystem, but are defined the way they are here to support zero-copy streaming encoders.
+`Codec` and `Digest` are similar to some existing interfaces in the JavaScript IPLD ecosystem, but are defined the way they are here to support synchronous zero-copy streaming encoders.

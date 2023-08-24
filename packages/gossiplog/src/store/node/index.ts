@@ -2,15 +2,13 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 
 import { Tree } from "@canvas-js/okra-node"
 
-import { IPLDValue } from "@canvas-js/interfaces"
-
 import { openStore as openMemoryStore } from "../memory/index.js"
 
 import { AbstractGraphStore, GraphStoreInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGraphStore.js"
 
 export type { AbstractGraphStore, GraphStoreInit } from "../AbstractGraphStore.js"
 
-export async function openStore<I extends IPLDValue>(init: GraphStoreInit<I>): Promise<AbstractGraphStore<I>> {
+export async function openStore(init: GraphStoreInit): Promise<AbstractGraphStore> {
 	if (init.location === null) {
 		return openMemoryStore(init)
 	}
@@ -19,8 +17,8 @@ export async function openStore<I extends IPLDValue>(init: GraphStoreInit<I>): P
 	return new Store(init, tree)
 }
 
-class Store<I extends IPLDValue> extends AbstractGraphStore<I> {
-	public constructor(init: GraphStoreInit<I>, private readonly tree: Tree) {
+class Store extends AbstractGraphStore {
+	public constructor(init: GraphStoreInit, private readonly tree: Tree) {
 		super(init)
 	}
 

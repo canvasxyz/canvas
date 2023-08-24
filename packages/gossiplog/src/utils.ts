@@ -1,36 +1,14 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
 
 import { anySignal } from "any-signal"
-import { varint } from "multiformats"
 
 import { lessThan } from "@canvas-js/okra"
+
+export type Awaitable<T> = T | Promise<T>
 
 export const protocolPrefix = "/canvas/v0/store/"
 
 export const keyPattern = /^(\/canvas\/v0\/store\/[a-zA-Z0-9:.-]+)\/peers$/
-
-export function getClock(parents: Uint8Array[]) {
-	let max = 1
-	for (const parent of parents) {
-		const [clock] = varint.decode(parent)
-		if (clock > max) {
-			max = clock
-		}
-	}
-
-	return max
-}
-
-// keys are made by concatenating an unsigned varint clock with the hash
-// and truncating to 20 bytes to be base32-friendly
-// aguwz6m7lhltx6fqgxnss56gbzzori3d
-export function getKey(clock: number, hash: Uint8Array): Uint8Array {
-	const encodingLength = varint.encodingLength(clock)
-	const key = new Uint8Array(20)
-	varint.encodeTo(clock, key, 0)
-	key.set(hash.subarray(0, key.byteLength - encodingLength), encodingLength)
-	return key
-}
 
 export function sortPair(a: PeerId, b: PeerId): [x: PeerId, y: PeerId] {
 	if (lessThan(a.multihash.digest, b.multihash.digest)) {

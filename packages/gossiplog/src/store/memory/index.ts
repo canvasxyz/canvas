@@ -3,18 +3,21 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 import PQueue from "p-queue"
 import { MemoryTree } from "@canvas-js/okra-memory"
 
-import { IPLDValue } from "@canvas-js/interfaces"
-
 import { AbstractGraphStore, GraphStoreInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGraphStore.js"
 
 export type { AbstractGraphStore, GraphStoreInit } from "../AbstractGraphStore.js"
 
-class Store<I extends IPLDValue> extends AbstractGraphStore<I> {
+export async function openStore(init: GraphStoreInit): Promise<AbstractGraphStore> {
+	const tree = await MemoryTree.open()
+	return new Store(init, tree)
+}
+
+class Store extends AbstractGraphStore {
 	private readonly queue = new PQueue({ concurrency: 1 })
 	private readonly incomingSyncPeers = new Set<string>()
 	private readonly outgoingSyncPeers = new Set<string>()
 
-	constructor(init: GraphStoreInit<I>, private readonly tree: MemoryTree) {
+	constructor(init: GraphStoreInit, private readonly tree: MemoryTree) {
 		super(init)
 	}
 
@@ -65,7 +68,6 @@ class Store<I extends IPLDValue> extends AbstractGraphStore<I> {
 
 	public async read<T>(callback: (txn: ReadOnlyTransaction) => Promise<T>) {
 		this.log("adding read-only transaction to queue")
-
 		const result = await this.queue.add(async () => {
 			this.log("executing read-only transaction")
 			try {
@@ -74,7 +76,7 @@ class Store<I extends IPLDValue> extends AbstractGraphStore<I> {
 				this.log.error("error in read-only transaction: %O", err)
 				throw err
 			} finally {
-				this.log("releasing shared lock")
+				this.log("exiting read-only transaction")
 			}
 		})
 
@@ -90,15 +92,10 @@ class Store<I extends IPLDValue> extends AbstractGraphStore<I> {
 				this.log.error("error in read-write transaction: %O", err)
 				throw err
 			} finally {
-				this.log("releasing exclusive lock")
+				this.log("exiting read-write transaction")
 			}
 		})
 
 		return result as T
 	}
-}
-
-export async function openStore<I extends IPLDValue>(init: GraphStoreInit<I>): Promise<AbstractGraphStore<I>> {
-	const tree = await MemoryTree.open()
-	return new Store(init, tree)
 }

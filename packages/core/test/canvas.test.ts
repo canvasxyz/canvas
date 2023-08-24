@@ -2,7 +2,6 @@ import assert from "node:assert"
 import test from "ava"
 
 import { Canvas } from "@canvas-js/core"
-import { bytesToHex } from "@noble/hashes/utils"
 import { base32 } from "multiformats/bases/base32"
 
 const contract = `

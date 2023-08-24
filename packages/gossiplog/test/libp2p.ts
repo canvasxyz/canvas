@@ -8,16 +8,13 @@ import { tcp } from "@libp2p/tcp"
 
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
-import { gossipsub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
+import { gossipsub, GossipSub } from "@chainsafe/libp2p-gossipsub"
 
-import type { PubSub } from "@libp2p/interface-pubsub"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 import { IPLDValue } from "@canvas-js/interfaces"
-import { GossipLog, GossipLogInit, gossiplog } from "@canvas-js/libp2p-gossiplog"
-
-import { mapValues } from "./utils.js"
+import { GossipLogInit } from "@canvas-js/gossiplog"
 
 export type NetworkInit = Record<
 	string,
@@ -26,11 +23,11 @@ export type NetworkInit = Record<
 
 const getAddress = (port: number) => `/ip4/127.0.0.1/tcp/${port}`
 
-export async function createNetwork<T extends Record<string, GossipLog<IPLDValue>> = {}>(
+export async function createNetwork(
 	t: ExecutionContext<unknown>,
 	init: NetworkInit,
 	options: { start?: boolean; minConnections?: number; maxConnections?: number } = {}
-): Promise<Record<string, Libp2p<{ pubsub: PubSub<GossipsubEvents> } & T>>> {
+): Promise<Record<string, Libp2p<{ pubsub: GossipSub }>>> {
 	const names = Object.keys(init)
 
 	const peerIds = await Promise.all(
@@ -40,7 +37,7 @@ export async function createNetwork<T extends Record<string, GossipLog<IPLDValue
 		})
 	).then((entries) => Object.fromEntries(entries))
 
-	const peers: Record<string, Libp2p<{ pubsub: PubSub<GossipsubEvents> } & T>> = await Promise.all(
+	const peers: Record<string, Libp2p<{ pubsub: GossipSub }>> = await Promise.all(
 		Object.entries(init).map(async ([name, { port, peers, logs }]) => {
 			const peerId = peerIds[name]
 			const address = getAddress(port)
@@ -70,8 +67,6 @@ export async function createNetwork<T extends Record<string, GossipLog<IPLDValue
 					}),
 
 					identify: identifyService({ protocolPrefix: "canvas" }),
-
-					...mapValues(logs, gossiplog),
 				},
 			})
 
