@@ -88,14 +88,6 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 	api.post("/", applyMessage)
 
 	if (options.exposeMetrics) {
-		// if (core.sources !== null) {
-		// 	for (const [uri, source] of Object.entries(core.sources)) {
-		// 		source.addEventListener("sync", ({ detail: { peer, status, time } }) => {
-		// 			coreMetrics.canvas_sync_time.observe({ uri, peer, status }, time)
-		// 		})
-		// 	}
-		// }
-
 		core.addEventListener("message", ({ detail: { uri, message } }) => {
 			coreMetrics.canvas_messages.inc({ uri, type: message.type })
 		})
