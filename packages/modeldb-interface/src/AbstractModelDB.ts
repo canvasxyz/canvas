@@ -22,6 +22,8 @@ export abstract class AbstractModelDB {
 
 	abstract query(modelName: string, query: {}): Promise<ModelValue[]>
 
+	abstract count(modelName: string): Promise<number>
+
 	// Mutable model methods
 
 	public async set(modelName: string, key: string, value: ModelValue, options: { version?: string } = {}) {

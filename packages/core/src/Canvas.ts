@@ -59,7 +59,19 @@ type ActionAPI = Record<string, () => Promise<void>>
 type CustomActionAPI = Record<string, () => Promise<void>>
 type DefaultExports = { db?: AbstractModelDB; actions?: ActionAPI; customActions?: CustomActionAPI }
 
-export class Canvas<Exports extends {} = DefaultExports> extends EventEmitter<{}> {
+export interface CoreEvents {
+	close: Event
+	// TODO: should this be {signature: Signature, Message: Message} ?
+	message: CustomEvent<{}>
+	// TODO: what should this be
+	update: CustomEvent<{}>
+	// TODO: what should this be
+	sync: CustomEvent<{}>
+	connect: CustomEvent<{ peer: string }>
+	disconnect: CustomEvent<{ peer: string }>
+}
+
+export class Canvas<Exports extends {} = DefaultExports> extends EventEmitter<CoreEvents> {
 	public static async initialize<Exports extends {} = DefaultExports>(config: CanvasConfig): Promise<Canvas<Exports>> {
 		const { uri, location = null, contract, signers = [], replay = false, offline = false } = config
 		const target = getTarget(location)

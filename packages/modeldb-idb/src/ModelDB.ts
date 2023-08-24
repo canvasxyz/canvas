@@ -188,6 +188,10 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
+	public async count(): Promise<number> {
+		throw new Error("Not yet implemented!")
+	}
+
 	public async apply(
 		effects: Effect[],
 		options: { namespace?: string | undefined; version?: string | undefined }
