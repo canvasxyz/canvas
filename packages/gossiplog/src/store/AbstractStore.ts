@@ -12,7 +12,6 @@ import { Signature, verifySignature } from "@canvas-js/signed-cid"
 import { Driver } from "../sync/driver.js"
 import { decodeSignedMessage, getClock } from "../schema.js"
 import { Awaitable, assert } from "../utils.js"
-import { hexToBytes } from "@noble/hashes/utils"
 
 export interface ReadOnlyTransaction extends Target {
 	get(key: Uint8Array): Awaitable<Uint8Array | null>

@@ -108,6 +108,13 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 		// { [topic]: { [name]: handler } }
 		const actionHandlers: Record<string, Record<string, QuickJSHandle>> = {}
+		const addActionHandle = (topic: string, name: string, handle: QuickJSHandle) => {
+			if (actionHandlers[topic] === undefined) {
+				actionHandlers[topic] = {}
+			}
+
+			actionHandlers[topic][name] = handle
+		}
 
 		// // { [topic]: handler }
 		// const customActionHandlers: Record<string, JSFunctionAsync> = {}
@@ -116,14 +123,29 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		for (const [name, handle] of Object.entries(actionsHandle.consume(vm.unwrapObject))) {
 			// We support several action definition formats. The simplest is just a function.
 			if (vm.context.typeof(handle) === "function") {
-				const topic = defaultTopic
-				if (actionHandlers[topic] === undefined) {
-					actionHandlers[topic] = {}
-				}
-
-				actionHandlers[topic][name] = handle.consume(vm.cache)
+				addActionHandle(defaultTopic, name, handle.consume(vm.cache))
 			} else {
-				throw new Error("not implemented")
+				const { topic: topicHandle, raw: rawHandle, apply: applyHandle, ...rest } = handle.consume(vm.unwrapObject)
+				Object.values(rest).forEach((handle) => handle.dispose())
+
+				const topic = topicHandle.consume((handle) => {
+					if (vm.context.typeof(handle) === "undefined") {
+						return undefined
+					} else {
+						return vm.context.getString(handle)
+					}
+				})
+
+				const raw = rawHandle.consume((handle) => {
+					if (vm.context.typeof(handle) === "undefined") {
+						return undefined
+					} else {
+						return vm.getBoolean(handle)
+					}
+				})
+
+				assert(vm.context.typeof(applyHandle) === "function", "missing actions[name].apply function")
+				addActionHandle(topic ?? defaultTopic, name, applyHandle.consume(vm.cache))
 			}
 		}
 
@@ -152,14 +174,20 @@ export class Canvas extends EventEmitter<CoreEvents> {
 					const ctxHandle = vm.wrapValue({ id, chain, address, ...context })
 					try {
 						const result = await vm.callAsync(actions[name], actions[name], [databaseAPI.handle, argsHandle, ctxHandle])
-						return vm.unwrapValue(result)
+						return result.consume((handle) => {
+							if (vm.context.typeof(handle) === "undefined") {
+								return undefined
+							} else {
+								return vm.unwrapValue(result)
+							}
+						})
 					} finally {
 						argsHandle.dispose()
 						ctxHandle.dispose()
 					}
 				})
 
-				await db.apply(effects, { version: id })
+				await db.apply(effects, { version: id.slice(0, 10) })
 
 				return { result }
 			}
@@ -248,6 +276,10 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 	public async close() {
 		this.controller.abort()
+
+		for (const gossipLog of this.topics.values()) {
+			await gossipLog.stop()
+		}
 
 		if (this.libp2p !== null && this.libp2p.isStarted()) {
 			await this.libp2p.stop()
