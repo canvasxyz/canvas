@@ -44,6 +44,8 @@ export interface CanvasConfig extends P2PConfig {
 	signers?: Signer[]
 	offline?: boolean
 	replay?: boolean
+
+	runtimeMemoryLimit?: number
 }
 
 export type ActionAPI = Record<
@@ -68,7 +70,7 @@ export interface CoreEvents {
 
 export class Canvas extends EventEmitter<CoreEvents> {
 	public static async initialize(config: CanvasConfig): Promise<Canvas> {
-		const { contract, signers = [], replay = false, offline = false } = config
+		const { contract, signers = [], replay = false, offline = false, runtimeMemoryLimit } = config
 
 		const location = config.location ?? null
 		const target = getTarget(location)
@@ -83,7 +85,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		}
 
 		// Create a QuickJS VM
-		const vm = await VM.initialize({})
+		const vm = await VM.initialize({ runtimeMemoryLimit })
 
 		// We only have two exports: `models` and `actions`.
 		const {
@@ -129,7 +131,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		const actionMap: Record<string, string> = {}
 
 		// initMap maps topics to inits
-		const initMap: Record<string, GossipLogInit<Action, JSValue | void>> = {}
+		const gossipLogInit: GossipLogInit<Action, JSValue | void>[] = []
 
 		const databaseAPI = new DatabaseAPI(vm, db)
 
@@ -162,24 +164,29 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			}
 
 			// TODO: add `validate` to log init
-			initMap[topic] = { topic, location, apply }
+			gossipLogInit.push({ topic, location, apply })
 			for (const name of Object.keys(actions)) {
 				actionMap[name] = topic
 			}
 		}
 
 		const peerId = await target.getPeerId()
-		const libp2pOptions = await getLibp2pOptions(peerId, config)
-		const libp2p = await createLibp2p(libp2pOptions)
 
-		const logs = await Promise.all(
-			Object.entries(initMap).map(([topic, init]) =>
-				GossipLog.init(libp2p, init).then((log) => [topic, log] satisfies [string, GossipLog<Action, void | JSValue>])
+		// TODO: add `start?: boolean` option and forward it to libp2p
+		const libp2p = offline ? null : await createLibp2p(getLibp2pOptions(peerId, config))
+
+		// const gossipLogs = await Promise.all(gossipLogInit.map((init) => GossipLog.init(libp2p, init)))
+
+		const topics = await Promise.all(
+			gossipLogInit.map((init) =>
+				GossipLog.init(libp2p, init).then(
+					(log) => [init.topic, log] satisfies [string, GossipLog<Action, void | JSValue>]
+				)
 			)
-		).then((entries) => Object.fromEntries(entries))
+		).then((entries) => new Map(entries))
 
 		const actions: ActionAPI = mapEntries(actionMap, ([actionName, topic]) => {
-			const gossipLog = logs[topic]
+			const gossipLog = topics.get(topic)
 			assert(gossipLog instanceof GossipLog, "GossipLog not found")
 			return async (args: ActionArguments, { chain }: { chain?: string } = {}) => {
 				const signer = signers.find((signer) => chain === undefined || signer.match(chain))
@@ -193,47 +200,55 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			}
 		})
 
-		const app = new Canvas(signers, peerId, libp2p, vm, db, actions)
-
-		if (!offline) {
-			await libp2p.start()
-		}
-
-		return app
+		return new Canvas(uri, signers, peerId, libp2p, vm, db, actions, topics)
 	}
 
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
 
 	private constructor(
+		public readonly uri: string,
 		public readonly signers: Signer[],
 		public readonly peerId: PeerId,
-		public readonly libp2p: Libp2p<ServiceMap>,
+		public readonly libp2p: Libp2p<ServiceMap> | null,
 		public readonly vm: VM,
 		public readonly db: AbstractModelDB,
-		public readonly actions: ActionAPI
+		public readonly actions: ActionAPI,
+		public readonly topics: Map<string, GossipLog<Action, void | JSValue>>
 	) {
 		super()
 
-		libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
-			console.log(chalk.gray(`[canvas-core] Opened connection to ${peerId}`))
+		libp2p?.addEventListener("peer:connect", ({ detail: peerId }) => {
+			this.log("opened connection to %p", peerId)
 			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
 		})
 
-		libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
-			console.log(chalk.gray(`[canvas-core] Closed connection to ${peerId}`))
+		libp2p?.addEventListener("peer:disconnect", ({ detail: peerId }) => {
+			this.log("closed connection to %p", peerId)
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 		})
 	}
 
-	public async getApplicationData(): Promise<{ peerId: string }> {
-		return { peerId: this.peerId.toString() }
+	public async start() {
+		if (this.libp2p !== null) {
+			if (!this.libp2p.isStarted()) {
+				await this.libp2p.start()
+			}
+
+			for (const gossipLog of this.topics.values()) {
+				await gossipLog.start()
+			}
+		}
+	}
+
+	public async getApplicationData(): Promise<{ uri: string; peerId: string }> {
+		return { uri: this.uri, peerId: this.peerId.toString() }
 	}
 
 	public async close() {
 		this.controller.abort()
 
-		if (this.libp2p.isStarted()) {
+		if (this.libp2p !== null && this.libp2p.isStarted()) {
 			await this.libp2p.stop()
 		}
 

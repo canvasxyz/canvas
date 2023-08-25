@@ -23,8 +23,8 @@ test("send messages", async (t) => {
 	}
 
 	const network: NetworkInit = {
-		a: { port: 9992, peers: ["b"], logs: { example: init } },
-		b: { port: 9993, peers: ["a"], logs: { example: init } },
+		a: { port: 9992, peers: ["b"] },
+		b: { port: 9993, peers: ["a"] },
 	}
 
 	const peers = await createNetwork(t, network)

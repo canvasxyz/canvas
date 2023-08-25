@@ -42,7 +42,7 @@ export abstract class AbstractGraphStore {
 	protected readonly log: Logger
 
 	protected constructor(init: GraphStoreInit) {
-		this.log = logger(`canvas:gossiplog:${init.topic}:store`)
+		this.log = logger(`canvas:gossiplog [${init.topic}] [store]`)
 	}
 
 	public async get(key: Uint8Array): Promise<SignedMessage | null> {
@@ -54,23 +54,6 @@ export abstract class AbstractGraphStore {
 		const [recoveredKey, signature, message] = decodeSignedMessage(value)
 		assert(equals(recoveredKey, key), "invalid message key")
 		return { signature, message }
-	}
-
-	public async add(signature: Signature, message: Message): Promise<{ key: Uint8Array; root: Node }> {
-		const [key, value] = encodeSignedMessage({ signature, message })
-		const { root } = await this.write(async (txn) => {
-			const userdata = await txn.getUserdata()
-			const references = new ReferenceSet(userdata && cbor.decode(userdata))
-
-			await txn.set(key, value)
-			references.update(key, message)
-
-			await txn.setUserdata(cbor.encode(references.getParents()))
-			const root = await txn.getRoot()
-			return { root }
-		})
-
-		return { key, root }
 	}
 
 	public async sync(

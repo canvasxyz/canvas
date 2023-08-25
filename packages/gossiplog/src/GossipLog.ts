@@ -84,11 +84,11 @@ export class GossipLog<
 	private readonly syncHistory = new CacheMap<string, number>(MAX_SYNC_QUEUE_SIZE)
 
 	private readonly log: Logger
-	private readonly controller = new AbortController()
 	private readonly validate: (message: Message) => message is Message<Payload>
 	private readonly apply: GossipLogConsumer<Payload, Result>
 
 	#started = false
+	#controller = new AbortController()
 	#registrarId: string | null = null
 
 	public static async init<Payload extends IPLDValue = IPLDValue, Result extends IPLDValue | void = void>(
@@ -118,7 +118,7 @@ export class GossipLog<
 
 		assert(this.topic.startsWith(protocolPrefix))
 		assert(this.protocol.startsWith(protocolPrefix))
-		this.log = logger(`canvas:gossiplog:${init.topic}`)
+		this.log = logger(`canvas:gossiplog [${init.topic}]`)
 
 		this.validate = (message: Message): message is Message<Payload> => {
 			return init.validate === undefined || init.validate(message.payload)
@@ -154,6 +154,8 @@ export class GossipLog<
 	public async start(): Promise<void> {
 		this.log("starting")
 
+		this.#controller = new AbortController()
+
 		if (this.libp2p !== null) {
 			assert(this.libp2p.isStarted(), "libp2p not started")
 			await this.libp2p.handle(this.protocol, this.handleIncomingStream, {
@@ -173,7 +175,10 @@ export class GossipLog<
 
 	public async stop(): Promise<void> {
 		this.log("stopping")
-		this.controller.abort()
+		this.syncQueue.clear()
+		await this.syncQueue.onIdle()
+
+		this.#controller.abort()
 
 		if (this.libp2p !== null && this.libp2p.isStarted()) {
 			this.libp2p.services.pubsub.removeEventListener("message", this.handleMessage)
@@ -347,8 +352,6 @@ export class GossipLog<
 		this.syncQueuePeers.add(id)
 		this.syncQueue
 			.add(async () => {
-				const { signal } = this.controller
-
 				{
 					// having one peer wait an initial randomized interval
 					// reduces the likelihood of deadlock to near-zero,
@@ -359,7 +362,7 @@ export class GossipLog<
 					if (x.equals(this.libp2p!.peerId)) {
 						const interval = Math.floor(Math.random() * SYNC_RETRY_INTERVAL)
 						this.log("waiting an initial %dms", interval)
-						await wait(interval, { signal: this.controller.signal })
+						await wait(interval, { signal: this.#controller.signal })
 					}
 				}
 
@@ -370,12 +373,12 @@ export class GossipLog<
 					} catch (err) {
 						this.log.error("failed to sync with peer: %O", err)
 
-						if (signal.aborted) {
+						if (this.#controller.signal.aborted) {
 							break
 						} else {
 							const interval = Math.floor(Math.random() * SYNC_RETRY_INTERVAL)
 							this.log("waiting %dms before trying again (%d/%d)", interval, n + 1, SYNC_RETRY_LIMIT)
-							await wait(interval, { signal: this.controller.signal })
+							await wait(interval, { signal: this.#controller.signal })
 							continue
 						}
 					}

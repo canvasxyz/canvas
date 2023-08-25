@@ -34,7 +34,7 @@ export class VM {
 	) {
 		this.runtime.setMemoryLimit(options.runtimeMemoryLimit ?? VM.RUNTIME_MEMORY_LIMIT)
 
-		const log = options.log ?? console.log
+		const log = options.log ?? ((...args) => console.log("[vm]", ...args))
 
 		this.setGlobalValues({
 			console: this.wrapObject({ log: this.wrapFunction((...args) => void log(...args)) }),

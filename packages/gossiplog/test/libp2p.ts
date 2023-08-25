@@ -12,14 +12,9 @@ import { gossipsub, GossipSub } from "@chainsafe/libp2p-gossipsub"
 
 import type { PeerId } from "@libp2p/interface-peer-id"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { logger } from "@libp2p/logger"
 
-import { IPLDValue } from "@canvas-js/interfaces"
-import { GossipLogInit } from "@canvas-js/gossiplog"
-
-export type NetworkInit = Record<
-	string,
-	{ port: number; peers: string[]; logs: Record<string, GossipLogInit<IPLDValue>> }
->
+export type NetworkInit = Record<string, { port: number; peers: string[] }>
 
 const getAddress = (port: number) => `/ip4/127.0.0.1/tcp/${port}`
 
@@ -37,8 +32,10 @@ export async function createNetwork(
 		})
 	).then((entries) => Object.fromEntries(entries))
 
+	const log = logger("canvas:gossiplog:test")
+
 	const peers: Record<string, Libp2p<{ pubsub: GossipSub }>> = await Promise.all(
-		Object.entries(init).map(async ([name, { port, peers, logs }]) => {
+		Object.entries(init).map(async ([name, { port, peers }]) => {
 			const peerId = peerIds[name]
 			const address = getAddress(port)
 			const bootstrapList = peers.map((peerName) => `${getAddress(init[peerName].port)}/p2p/${peerIds[peerName]}`)
@@ -70,23 +67,15 @@ export async function createNetwork(
 				},
 			})
 
-			libp2p.addEventListener("start", () => console.log("[%s] started", peerId))
+			libp2p.addEventListener("start", () => log("[%p] started", peerId))
 
 			libp2p.addEventListener("transport:listening", ({ detail: listener }) => {
 				const addrs = listener.getAddrs().map((addr) => addr.toString())
-				console.log("[%s] listening on", peerId, addrs)
+				log("[%p] listening on", peerId, addrs)
 			})
 
-			libp2p.addEventListener("connection:open", ({ detail: connection }) =>
-				console.log("[%s] opened connection %s with %s", peerId, connection.id, connection.remotePeer)
-			)
-
-			libp2p.addEventListener("connection:close", ({ detail: connection }) =>
-				console.log("[%s] closed connection %s with %s", peerId, connection.id, connection.remotePeer)
-			)
-
 			libp2p.addEventListener("peer:discovery", ({ detail: peerInfo }) =>
-				console.log("[%s] discovered peer %s", peerId, peerInfo.id)
+				log("[%p] discovered peer %p", peerId, peerInfo.id)
 			)
 
 			return [name, libp2p]

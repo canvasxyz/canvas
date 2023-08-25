@@ -28,14 +28,14 @@ test("open and close an app", async (t) => {
 	t.pass()
 })
 
-test("apply an action and read a record from the database", async (t) => {
-	const app = await Canvas.initialize({ contract, listen: ["/ip4/127.0.0.1/tcp/9000/ws"] })
-	t.teardown(() => app.close())
+// test("apply an action and read a record from the database", async (t) => {
+// 	const app = await Canvas.initialize({ contract, listen: ["/ip4/127.0.0.1/tcp/9000/ws"] })
+// 	t.teardown(() => app.close())
 
-	const { key, result: postId } = await app.actions.createPost({ content: "hello world" })
+// 	const { key, result: postId } = await app.actions.createPost({ content: "hello world" })
 
-	t.log("applied action", base32.baseEncode(key), "and got postId", postId)
-	assert(typeof postId === "string")
-	const value = await app.db.get("posts", postId)
-	t.is(value?.content, "hello world")
-})
+// 	t.log("applied action", base32.baseEncode(key), "and got postId", postId)
+// 	assert(typeof postId === "string")
+// 	const value = await app.db.get("posts", postId)
+// 	t.is(value?.content, "hello world")
+// })

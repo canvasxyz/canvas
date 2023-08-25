@@ -46,9 +46,12 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 			help: "GossipSub topic subscribers",
 			labelNames: ["topic"],
 			async collect() {
-				for (const topic of core.libp2p.services.pubsub.getTopics()) {
-					const subscribers = core.libp2p.services.pubsub.getSubscribers(topic)
-					this.set({ topic }, subscribers.length)
+				if (core.libp2p !== null) {
+					const { pubsub } = core.libp2p.services
+					for (const topic of pubsub.getTopics() ?? []) {
+						const subscribers = pubsub.getSubscribers(topic)
+						this.set({ topic }, subscribers.length)
+					}
 				}
 			},
 		}),
