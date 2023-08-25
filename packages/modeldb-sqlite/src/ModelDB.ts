@@ -81,7 +81,7 @@ export class ModelDB extends AbstractModelDB {
 		assert(model !== undefined, `model ${modelName} not found`)
 
 		if (model.kind == "mutable") {
-			return null
+			return MutableModelAPI.get(key, this.mutableDbContexts[modelName])
 		} else if (model.kind == "immutable") {
 			return ImmutableModelAPI.get(key, this.immutableDbContexts[modelName])
 		} else {
