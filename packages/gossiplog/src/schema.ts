@@ -12,7 +12,7 @@ import { assert } from "./utils.js"
 
 const schema = fromDSL(`
 type SignedMessage struct {
-	signature Signature
+	signature nullable Signature
 	message Message
 } representation tuple
 
@@ -27,21 +27,44 @@ type Message struct {
 	clock Int
 	parents [Bytes]
 	payload any
-}`)
+} representation tuple
+`)
 
 const { toTyped: toSignedMessage, toRepresentation: fromSignedMessage } = create(schema, "SignedMessage")
 
-export function decodeSignedMessage(value: Uint8Array): [key: Uint8Array, signature: Signature, message: Message] {
+export function decodeSignedMessage(
+	value: Uint8Array,
+	options: { signatures: boolean; sequencing: boolean }
+): [key: Uint8Array, signature: Signature | null, message: Message] {
 	const signedMessage = toSignedMessage(cbor.decode(value)) as SignedMessage
 	const { signature, message } = signedMessage
+	if (options.signatures) {
+		assert(signature !== null, "missing message signature")
+	}
+
 	assert(message.clock === getClock(message.parents), "invalid message clock")
 	const key = getKey(message.clock, sha256(value))
 	return [key, signature, message]
 }
 
-export function encodeSignedMessage(signedMessage: SignedMessage): [key: Uint8Array, value: Uint8Array] {
-	const value = cbor.encode(fromSignedMessage(signedMessage))
-	const key = getKey(signedMessage.message.clock, sha256(value))
+export function encodeSignedMessage(
+	signature: Signature | null,
+	message: Message,
+	options: { signatures: boolean; sequencing: boolean }
+): [key: Uint8Array, value: Uint8Array] {
+	const { clock } = message
+	if (options.sequencing) {
+		assert(clock > 0, "expected message.clock > 0 if sequencing is enable")
+	} else {
+		assert(clock === 0, "expected message.clock === 0 if sequencing is disabled")
+	}
+
+	if (options.signatures) {
+		assert(signature !== null, "missing message signature")
+	}
+
+	const value = cbor.encode(fromSignedMessage({ signature, message }))
+	const key = getKey(clock, sha256(value))
 	return [key, value]
 }
 
@@ -57,7 +80,7 @@ function getKey(clock: number, hash: Uint8Array): Uint8Array {
 }
 
 export function getClock(parents: Uint8Array[]) {
-	let max = 1
+	let max = 0
 	for (const parent of parents) {
 		assert(parent.byteLength === KEY_LENGTH)
 		const [clock] = varint.decode(parent)
@@ -66,5 +89,5 @@ export function getClock(parents: Uint8Array[]) {
 		}
 	}
 
-	return max
+	return max + 1
 }

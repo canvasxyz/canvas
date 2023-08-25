@@ -53,7 +53,7 @@ export type ActionAPI = Record<
 	(
 		args: ActionArguments,
 		options?: { chain?: string }
-	) => Promise<{ key: Uint8Array; result: void | JSValue; recipients: Promise<PeerId[]> }>
+	) => Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }>
 >
 
 export interface CoreEvents {
@@ -136,8 +136,9 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		const databaseAPI = new DatabaseAPI(vm, db)
 
 		for (const [topic, actions] of Object.entries(actionHandlers)) {
-			const apply: GossipLogConsumer<Action, JSValue | void> = async (key, signature, message) => {
-				const id = base32.baseEncode(key)
+			const apply: GossipLogConsumer<Action, JSValue | void> = async (id, signature, message) => {
+				assert(signature !== null, "missing message signature")
+
 				const { chain, address, name, args, context } = message.payload
 
 				const signer = signers.find((signer) => signer.match(chain))
@@ -195,8 +196,8 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				const action = signer.create(actionName, args, context, {})
 				const message = await gossipLog.create(action)
 				const signature = await signer.sign(message)
-				const { key, result, recipients } = await gossipLog.publish(signature, message)
-				return { key, result, recipients }
+				const { id, result, recipients } = await gossipLog.publish(signature, message)
+				return { id, result, recipients }
 			}
 		})
 

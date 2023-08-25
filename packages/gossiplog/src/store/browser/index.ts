@@ -1,16 +1,16 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
 
-import { base32 } from "multiformats/bases/base32"
+import { bytesToHex } from "@noble/hashes/utils"
 import { IDBPDatabase, openDB } from "idb"
 import { IDBTree } from "@canvas-js/okra-idb"
 
 import { openStore as openMemoryStore } from "../memory/index.js"
 
-import { AbstractGraphStore, GraphStoreInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGraphStore.js"
+import { AbstractStore, StoreInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractStore.js"
 
-export type { AbstractGraphStore, GraphStoreInit } from "../AbstractGraphStore.js"
+export { AbstractStore, StoreInit, Graph } from "../AbstractStore.js"
 
-export async function openStore(init: GraphStoreInit): Promise<AbstractGraphStore> {
+export async function openStore(init: StoreInit): Promise<AbstractStore> {
 	if (init.location === null) {
 		return openMemoryStore(init)
 	}
@@ -33,15 +33,14 @@ export async function openStore(init: GraphStoreInit): Promise<AbstractGraphStor
 	return new Store(init, db, tree)
 }
 
-class Store extends AbstractGraphStore {
+class Store extends AbstractStore {
 	private readonly incomingSyncPeers = new Set<string>()
 	private readonly outgoingSyncPeers = new Set<string>()
-	private readonly lockName: string
 	private readonly controller = new AbortController()
+	private readonly lockName = bytesToHex(crypto.getRandomValues(new Uint8Array(16)))
 
-	public constructor(init: GraphStoreInit, private readonly db: IDBPDatabase, private readonly tree: IDBTree) {
+	public constructor(init: StoreInit, private readonly db: IDBPDatabase, private readonly tree: IDBTree) {
 		super(init)
-		this.lockName = base32.baseEncode(crypto.getRandomValues(new Uint8Array(10)))
 	}
 
 	public async close() {

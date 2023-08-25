@@ -6,7 +6,7 @@ import { Node, Source, Target, equalArrays, equalNodes } from "@canvas-js/okra"
 import { assert } from "../utils.js"
 
 export class Driver {
-	private readonly log = logger("canvas:sync:driver")
+	private readonly log = logger("canvas:gossiplog:sync")
 	constructor(private readonly source: Source, private readonly target: Target) {}
 
 	public async *sync() {

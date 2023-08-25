@@ -1,5 +1,7 @@
-import { AbstractGraphStore, GraphStoreInit } from "../AbstractGraphStore.js"
+import { AbstractStore, StoreInit } from "../AbstractStore.js"
 
-export async function openStore(init: GraphStoreInit): Promise<AbstractGraphStore> {
+export { AbstractStore, StoreInit as GraphStoreInit, Graph } from "../AbstractStore.js"
+
+export async function openStore(init: StoreInit): Promise<AbstractStore> {
 	throw new Error("unsupported platform")
 }

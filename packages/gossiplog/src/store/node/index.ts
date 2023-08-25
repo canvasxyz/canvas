@@ -6,11 +6,11 @@ import { Tree } from "@canvas-js/okra-node"
 
 import { openStore as openMemoryStore } from "../memory/index.js"
 
-import { AbstractGraphStore, GraphStoreInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGraphStore.js"
+import { AbstractStore, StoreInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractStore.js"
 
-export type { AbstractGraphStore, GraphStoreInit } from "../AbstractGraphStore.js"
+export { AbstractStore, StoreInit, Graph } from "../AbstractStore.js"
 
-export async function openStore(init: GraphStoreInit): Promise<AbstractGraphStore> {
+export async function openStore(init: StoreInit): Promise<AbstractStore> {
 	if (init.location === null) {
 		return openMemoryStore(init)
 	}
@@ -19,8 +19,8 @@ export async function openStore(init: GraphStoreInit): Promise<AbstractGraphStor
 	return new Store(init, tree)
 }
 
-class Store extends AbstractGraphStore {
-	public constructor(init: GraphStoreInit, private readonly tree: Tree) {
+class Store extends AbstractStore {
+	public constructor(init: StoreInit, private readonly tree: Tree) {
 		super(init)
 	}
 

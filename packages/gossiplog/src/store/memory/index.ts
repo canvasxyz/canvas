@@ -3,21 +3,21 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 import PQueue from "p-queue"
 import { MemoryTree } from "@canvas-js/okra-memory"
 
-import { AbstractGraphStore, GraphStoreInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGraphStore.js"
+import { AbstractStore, StoreInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractStore.js"
 
-export type { AbstractGraphStore, GraphStoreInit } from "../AbstractGraphStore.js"
+export { AbstractStore, StoreInit, Graph } from "../AbstractStore.js"
 
-export async function openStore(init: GraphStoreInit): Promise<AbstractGraphStore> {
+export async function openStore(init: StoreInit): Promise<AbstractStore> {
 	const tree = await MemoryTree.open()
 	return new Store(init, tree)
 }
 
-class Store extends AbstractGraphStore {
+class Store extends AbstractStore {
 	private readonly queue = new PQueue({ concurrency: 1 })
 	private readonly incomingSyncPeers = new Set<string>()
 	private readonly outgoingSyncPeers = new Set<string>()
 
-	constructor(init: GraphStoreInit, private readonly tree: MemoryTree) {
+	constructor(init: StoreInit, private readonly tree: MemoryTree) {
 		super(init)
 	}
 
