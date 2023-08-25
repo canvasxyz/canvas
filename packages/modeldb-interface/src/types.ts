@@ -57,6 +57,8 @@ export type QueryParams = {
 	select?: Record<string, boolean>
 	where?: WhereCondition
 	orderBy?: Record<string, "asc" | "desc">
+	offset?: number
+	limit?: number
 }
 
 // Batch effect API
