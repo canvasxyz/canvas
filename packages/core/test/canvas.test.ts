@@ -20,14 +20,20 @@ export const actions = {
     return postId
   },
 
-  async deletePost(db, id, { chain, address }) {
+  async deletePost(db, key, { chain, address }) {
     const prefix = [chain, address, ""].join("/")
-    if (!id.startsWith(prefix)) {
+    if (!key.startsWith(prefix)) {
       throw new Error("unauthorized")
     }
 
-    await db.posts.delete(id)
-  }
+    await db.posts.delete(key)
+  },
+
+	hello: {
+		apply: async (db, {}, { chain, address }) => {
+			console.log("hello from", [chain, address].join(":"))
+		}
+	}
 };
 `.trim()
 
@@ -38,7 +44,7 @@ test("open and close an app", async (t) => {
 })
 
 test("apply an action and read a record from the database", async (t) => {
-	const app = await Canvas.initialize({ contract, listen: ["/ip4/127.0.0.1/tcp/9000/ws"] })
+	const app = await Canvas.initialize({ contract, offline: true })
 	t.teardown(() => app.close())
 
 	const { id, result: postId } = await app.actions.createPost({ content: "hello world" })
@@ -50,7 +56,7 @@ test("apply an action and read a record from the database", async (t) => {
 })
 
 test("create and delete a post", async (t) => {
-	const app = await Canvas.initialize({ contract, listen: ["/ip4/127.0.0.1/tcp/9001/ws"] })
+	const app = await Canvas.initialize({ contract, offline: true })
 	t.teardown(() => app.close())
 
 	const { result: postId } = await app.actions.createPost({ content: "hello world" })
@@ -60,4 +66,24 @@ test("create and delete a post", async (t) => {
 
 	await app.actions.deletePost(postId)
 	t.is(await app.db.get("posts", postId), null)
+})
+
+test("log a message", async (t) => {
+	const messages: any[] = []
+	const app = await Canvas.initialize({
+		contract,
+		offline: true,
+		contractLog: (...args) => {
+			t.log("[vm]", ...args)
+			messages.push(args)
+		},
+	})
+
+	t.teardown(() => app.close())
+
+	await app.actions.hello({})
+
+	const { chain, address } = app.signers[0]
+	t.deepEqual(messages, [["hello from", [chain, address].join(":")]])
+	t.pass()
 })

@@ -35,6 +35,7 @@ import { getCID } from "@canvas-js/signed-cid"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
+	contractLog?: (...args: JSValue[]) => void
 
 	/** NodeJS: data directory path, browser: IndexedDB database namespace */
 	location?: string | null
@@ -70,7 +71,7 @@ export interface CoreEvents {
 
 export class Canvas extends EventEmitter<CoreEvents> {
 	public static async initialize(config: CanvasConfig): Promise<Canvas> {
-		const { contract, signers = [], replay = false, offline = false, runtimeMemoryLimit } = config
+		const { contract, signers = [], replay = false, offline = false, contractLog, runtimeMemoryLimit } = config
 
 		const location = config.location ?? null
 		const target = getTarget(location)
@@ -85,7 +86,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		}
 
 		// Create a QuickJS VM
-		const vm = await VM.initialize({ runtimeMemoryLimit })
+		const vm = await VM.initialize({ runtimeMemoryLimit, log: contractLog })
 
 		// We only have two exports: `models` and `actions`.
 		const {
@@ -127,22 +128,8 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			} else {
 				const { topic: topicHandle, raw: rawHandle, apply: applyHandle, ...rest } = handle.consume(vm.unwrapObject)
 				Object.values(rest).forEach((handle) => handle.dispose())
-
-				const topic = topicHandle.consume((handle) => {
-					if (vm.context.typeof(handle) === "undefined") {
-						return undefined
-					} else {
-						return vm.context.getString(handle)
-					}
-				})
-
-				const raw = rawHandle.consume((handle) => {
-					if (vm.context.typeof(handle) === "undefined") {
-						return undefined
-					} else {
-						return vm.getBoolean(handle)
-					}
-				})
+				const topic = topicHandle && topicHandle.consume(vm.context.getString)
+				const raw = rawHandle && rawHandle.consume(vm.getBoolean)
 
 				assert(vm.context.typeof(applyHandle) === "function", "missing actions[name].apply function")
 				addActionHandle(topic ?? defaultTopic, name, applyHandle.consume(vm.cache))

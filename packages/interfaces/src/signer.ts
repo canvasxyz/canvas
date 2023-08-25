@@ -8,6 +8,9 @@ export type Env = Record<string, string>
 type Awaitable<T> = T | Promise<T>
 
 export interface Signer {
+	chain: string
+	address: string
+
 	match: (chain: string) => boolean
 	verify: (signature: Signature, message: Message<Action>) => void
 	create: (name: string, args: ActionArguments, context: ActionContext, env: Env) => Action
