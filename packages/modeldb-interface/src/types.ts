@@ -103,6 +103,7 @@ export type MutableRecordAPI = {
 	update: (params: { _key: string; _version: string | null; value: ModelValue }) => Promise<void>
 	delete: (params: { _key: string }) => Promise<void>
 	query: (params: QueryParams) => Promise<ModelValue[]>
+	count: () => Promise<number>
 }
 
 export type ImmutableRecordAPI = {
@@ -114,4 +115,5 @@ export type ImmutableRecordAPI = {
 	update: (params: { _key: string; _version: string | null; value: ModelValue }) => Promise<void>
 	delete: (params: { _key: string }) => Promise<void>
 	query: (params: QueryParams) => Promise<ModelValue[]>
+	count: () => Promise<number>
 }

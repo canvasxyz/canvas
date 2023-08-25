@@ -188,8 +188,23 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	public async count(): Promise<number> {
-		throw new Error("Not yet implemented!")
+	public async count(modelName: string): Promise<number> {
+		const model = this.models[modelName]
+		assert(model !== undefined, "model not found")
+
+		if (model.kind == "mutable") {
+			return this.withAsyncTransaction(async (transaction) => {
+				const dbContext = createIdbMutableModelDBContext(transaction, model, this.resolve)
+				return MutableModelAPI.count(dbContext)
+			})
+		} else if (model.kind == "immutable") {
+			return this.withAsyncTransaction(async (transaction) => {
+				const dbContext = createIdbImmutableModelDBContext(transaction, model)
+				return await ImmutableModelAPI.count(dbContext)
+			})
+		} else {
+			signalInvalidType(model.kind)
+		}
 	}
 
 	public async apply(

@@ -145,6 +145,10 @@ export class MutableModelAPI {
 	static async query(query: {}, dbContext: MutableModelDBContext): Promise<ModelValue[]> {
 		return dbContext.records.query(query)
 	}
+
+	static async count(dbContext: MutableModelDBContext): Promise<number> {
+		return dbContext.records.count()
+	}
 }
 
 export class ImmutableModelAPI {
@@ -211,5 +215,9 @@ export class ImmutableModelAPI {
 
 	static async query(query: {}, dbContext: ImmutableModelDBContext): Promise<ModelValue[]> {
 		return dbContext.records.query(query)
+	}
+
+	static async count(dbContext: ImmutableModelDBContext): Promise<number> {
+		return dbContext.records.count()
 	}
 }
