@@ -8,12 +8,12 @@
   },
   "references": [
     { "path": "../chain-ethereum" },
-    { "path": "../signed-value" },
+    { "path": "../signed-cid" },
     { "path": "../interfaces" },
     { "path": "../modeldb-idb" },
     { "path": "../modeldb-sqlite" },
     { "path": "../modeldb-interface" },
-    { "path": "../store" },
+    { "path": "../gossiplog" },
     { "path": "../vm" },
   ]
 }

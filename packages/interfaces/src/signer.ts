@@ -1,15 +1,20 @@
-import type { Signed } from "@canvas-js/signed-value"
+import type { Signature } from "@canvas-js/signed-cid"
 
 import type { Action, ActionArguments, ActionContext } from "./action.js"
+import { Message } from "./message.js"
 
 export type Env = Record<string, string>
 
 type Awaitable<T> = T | Promise<T>
 
 export interface Signer {
+	chain: string
+	address: string
+
 	match: (chain: string) => boolean
-	create: (name: string, args: ActionArguments, context: ActionContext, env: Env) => Awaitable<Signed<Action>>
-	verify: (message: Signed<Action>) => Awaitable<void>
+	verify: (signature: Signature, message: Message<Action>) => void
+	create: (name: string, args: ActionArguments, context: ActionContext, env: Env) => Action
+	sign: (message: Message<Action>) => Signature
 }
 
 export interface SessionStore {

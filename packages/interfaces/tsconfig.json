@@ -5,5 +5,8 @@
     "rootDir": "src",
     "outDir": "lib"
   },
-  "references": [{"path": "../modeldb-interface"}, {"path": "../signed-value"}]
+  "references": [
+    {"path": "../modeldb-interface"},
+    {"path": "../signed-cid"}
+  ]
 }

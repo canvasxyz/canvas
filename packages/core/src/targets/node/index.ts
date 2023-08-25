@@ -3,17 +3,13 @@ import fs from "node:fs"
 
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 import { PeerId } from "@libp2p/interface-peer-id"
-import { base32 } from "multiformats/bases/base32"
-import { blake3 } from "@noble/hashes/blake3"
+
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { register } from "prom-client"
 
 import { ModelDB } from "@canvas-js/modeldb-sqlite"
-import { NodeStore } from "@canvas-js/store/node"
-import { MemoryStore } from "@canvas-js/store/memory"
 
 import type { PlatformTarget } from "../interface.js"
-import { MST_DIRECTORY_NAME } from "../../constants.js"
 
 const PEER_ID_FILENAME = ".peer-id"
 
@@ -47,14 +43,6 @@ export default function getTarget(location: string | null): PlatformTarget {
 			} else {
 				const dbPath = path.resolve(location, `${key}.sqlite`)
 				return new ModelDB(dbPath, init)
-			}
-		},
-
-		async openStore(init) {
-			if (location === null) {
-				return await MemoryStore.open(init)
-			} else {
-				return await NodeStore.open(path.resolve(location, MST_DIRECTORY_NAME), init)
 			}
 		},
 

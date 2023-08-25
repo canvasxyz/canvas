@@ -34,7 +34,7 @@ export class VM {
 	) {
 		this.runtime.setMemoryLimit(options.runtimeMemoryLimit ?? VM.RUNTIME_MEMORY_LIMIT)
 
-		const log = options.log ?? console.log
+		const log = options.log ?? ((...args) => console.log("[vm]", ...args))
 
 		this.setGlobalValues({
 			console: this.wrapObject({ log: this.wrapFunction((...args) => void log(...args)) }),
@@ -67,6 +67,7 @@ export class VM {
 
 	public execute(contract: string, options: { uri?: string } = {}) {
 		const filename = options.uri ?? `canvas:${bytesToHex(sha256(contract))}`
+
 		this.unwrapResult(this.context.evalCode(contract, filename, { type: "global", strict: true })).dispose()
 	}
 
@@ -407,7 +408,7 @@ export class VM {
 		}
 	}
 
-	public cache(handle: QuickJSHandle): QuickJSHandle {
+	public cache = (handle: QuickJSHandle): QuickJSHandle => {
 		const copy = handle.dup()
 		this.#localCache.add(copy)
 		return copy
