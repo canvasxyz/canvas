@@ -45,5 +45,5 @@ testOnModelDB("create modeldb with a model with invalid fields should fail", asy
 		await modelDBConstructor(models)
 	})
 
-	t.is(error!.message, `invalid property`)
+	t.is(error!.message, `invalid property "unsupported"`)
 })
