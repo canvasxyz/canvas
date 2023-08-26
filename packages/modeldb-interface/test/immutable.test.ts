@@ -18,8 +18,12 @@ testOnModelDB("create a modeldb with an immutable model and a valid entry", asyn
 	// get the user
 	t.deepEqual(await db.get("user", userId), { name: "test" })
 
+	t.is(await db.count("user"), 1)
+
 	// delete the user
 	await db.remove("user", userId)
+
+	t.is(await db.count("user"), 0)
 
 	// assert returned user is null
 	t.deepEqual(await db.get("user", userId), null)
@@ -37,6 +41,8 @@ testOnModelDB("create a modeldb with an immutable model and an invalid entry", a
 
 	// add a user
 	const error = await t.throwsAsync(() => db.add("user", { something: "test" }))
+
+	t.is(await db.count("user"), 0)
 
 	t.is(error!.message, `missing value for property user/name`)
 })

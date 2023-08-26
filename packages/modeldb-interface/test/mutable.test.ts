@@ -72,6 +72,8 @@ testOnModelDB("create a modeldb with a mutable model and a resolve function", as
 	await db.set("user", key, { name: "staleValue" }, { version: "B" })
 	// the user should have the previous value
 	t.deepEqual(await toArray(db.iterate("user")), [{ name: "updatedValue" }])
+
+	t.is(await db.count("user"), 1)
 })
 
 testOnModelDB("create a modeldb with a mutable model and an invalid entry", async (t, modelDBConstructor) => {
@@ -120,4 +122,6 @@ testOnModelDB("create a modeldb with a mutable model, test deleting entries", as
 	await db.set("user", key, { name: "staleValue" }, { version: "B" })
 	// the set operation should not have been applied, because the version was lower
 	t.deepEqual(await toArray(db.iterate("user")), [])
+
+	t.is(await db.count("user"), 0)
 })

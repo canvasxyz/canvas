@@ -28,4 +28,6 @@ testOnModelDB("apply should roll back partially performed updates if it fails", 
 	// apply should have rolled back after the second operation failed, so the database should be empty
 	const messages = await db.query("message", {})
 	t.deepEqual(messages, [])
+
+	t.is(await db.count("message"), 0)
 })

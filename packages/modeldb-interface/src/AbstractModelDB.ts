@@ -1,4 +1,4 @@
-import { Config, ModelValue, Effect, Model } from "./types.js"
+import { Config, ModelValue, Effect, Model, QueryParams } from "./types.js"
 import { getImmutableRecordKey } from "./utils.js"
 
 export abstract class AbstractModelDB {
@@ -20,7 +20,7 @@ export abstract class AbstractModelDB {
 
 	abstract iterate(modelName: string): AsyncIterable<ModelValue>
 
-	abstract query(modelName: string, query: {}): Promise<ModelValue[]>
+	abstract query(modelName: string, query: QueryParams): Promise<ModelValue[]>
 
 	abstract count(modelName: string): Promise<number>
 

@@ -38,13 +38,17 @@ testOnModelDB("create ModelDB", async (t, modelDBConstructor) => {
 		signingPublicKey: new Uint8Array([0xa, 0xb, 0xc]),
 	}
 
+	t.is(await modelDB.count("user"), 0)
+
 	const userAId = await modelDB.add("user", userA, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
 	t.log("userAId", userAId)
 	t.deepEqual(await modelDB.get("user", userAId), userA)
+	t.is(await modelDB.count("user"), 1)
 
 	const userBId = await modelDB.add("user", userB, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
 	t.log("userBId", userBId)
 	t.deepEqual(await modelDB.get("user", userBId), userB)
+	t.is(await modelDB.count("user"), 2)
 
 	const room = {
 		creator: userAId,
@@ -54,6 +58,7 @@ testOnModelDB("create ModelDB", async (t, modelDBConstructor) => {
 	const roomId = await modelDB.add("room", room, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
 	t.log("roomId", roomId)
 	t.deepEqual(await modelDB.get("room", roomId), room)
+	t.is(await modelDB.count("room"), 1)
 
 	const message = {
 		room: roomId,
@@ -69,4 +74,5 @@ testOnModelDB("create ModelDB", async (t, modelDBConstructor) => {
 	t.deepEqual(messageId, messageId2)
 	t.deepEqual(messageId, messageId3)
 	t.deepEqual(await modelDB.get("message", messageId), message)
+	t.is(await modelDB.count("message"), 1)
 })

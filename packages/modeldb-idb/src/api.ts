@@ -184,6 +184,7 @@ function prepareMutableRecordAPI(transaction: IDBPTransactionReadWrite, model: M
 			return { _version }
 		},
 		query: async (queryParams: QueryParams) => query(transaction, queryParams, model),
+		count: async () => store.count(),
 	}
 }
 
@@ -216,6 +217,7 @@ function prepareImmutableRecordAPI(transaction: IDBPTransactionReadWrite, model:
 		},
 		delete: async ({ _key }: { _key: string }) => store.delete(_key),
 		query: async (queryParams: QueryParams) => query(transaction, queryParams, model),
+		count: async () => store.count(),
 	}
 }
 

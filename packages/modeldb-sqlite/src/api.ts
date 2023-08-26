@@ -154,6 +154,7 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
 	)
 
 	const deleteRecord = new Method<{ _key: string }>(db, `DELETE FROM "${recordTableName}" WHERE _key = :_key`)
+	const countRecords = new Query<{}, { count: number }>(db, `SELECT COUNT(*) AS count FROM "${recordTableName}"`)
 
 	// @ts-ignore
 	return {
@@ -179,6 +180,10 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
 		},
 		delete: async (args: { _key: string }) => deleteRecord.run(args),
 		query: async (queryParams: QueryParams) => query(db, queryParams, model),
+		count: async () => {
+			const result = countRecords.get({})
+			return result ? result.count : 0
+		},
 	}
 }
 
@@ -228,6 +233,8 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model) {
 
 	const deleteRecord = new Method<{ _key: string }>(db, `DELETE FROM "${recordTableName}" WHERE _key = :_key`)
 
+	const countRecords = new Query<{}, { count: number }>(db, `SELECT COUNT(*) AS count FROM "${recordTableName}"`)
+
 	return {
 		params,
 		iterate: async function* (args: {}) {
@@ -250,6 +257,10 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model) {
 		},
 		delete: async (args: { _key: string }) => deleteRecord.run(args),
 		query: async (queryParams: QueryParams) => query(db, queryParams, model),
+		count: async () => {
+			const result = countRecords.get({})
+			return result ? result.count : 0
+		},
 	}
 }
 
@@ -286,7 +297,7 @@ function prepareRelationAPIs(db: sqlite.Database, model: Model) {
 	return relations
 }
 
-export function createIdbMutableModelDBContext(db: sqlite.Database, model: Model, resolve: Resolve | undefined) {
+export function createSqliteMutableModelDBContext(db: sqlite.Database, model: Model, resolve: Resolve | undefined) {
 	return {
 		tombstones: prepareTombstoneAPI(db, model),
 		relations: prepareRelationAPIs(db, model),
@@ -296,7 +307,7 @@ export function createIdbMutableModelDBContext(db: sqlite.Database, model: Model
 	}
 }
 
-export function createIdbImmutableModelDBContext(db: sqlite.Database, model: Model) {
+export function createSqliteImmutableModelDBContext(db: sqlite.Database, model: Model) {
 	return {
 		relations: prepareRelationAPIs(db, model),
 		records: prepareImmutableRecordAPI(db, model),

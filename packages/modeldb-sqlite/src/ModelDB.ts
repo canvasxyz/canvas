@@ -14,7 +14,7 @@ import {
 } from "@canvas-js/modeldb-interface"
 import { initializeModel, initializeRelation } from "./initialize.js"
 import { assert, signalInvalidType } from "./utils.js"
-import { createIdbImmutableModelDBContext, createIdbMutableModelDBContext } from "./api.js"
+import { createSqliteImmutableModelDBContext, createSqliteMutableModelDBContext } from "./api.js"
 
 export interface ModelDBOptions {
 	resolve?: Resolve
@@ -65,9 +65,9 @@ export class ModelDB extends AbstractModelDB {
 
 		for (const model of Object.values(this.models)) {
 			if (model.kind == "immutable") {
-				this.immutableDbContexts[model.name] = createIdbImmutableModelDBContext(this.db, model)
+				this.immutableDbContexts[model.name] = createSqliteImmutableModelDBContext(this.db, model)
 			} else if (model.kind == "mutable") {
-				this.mutableDbContexts[model.name] = createIdbMutableModelDBContext(this.db, model, options.resolve)
+				this.mutableDbContexts[model.name] = createSqliteMutableModelDBContext(this.db, model, options.resolve)
 			} else {
 				signalInvalidType(model.kind)
 			}
@@ -128,8 +128,17 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	public async count(): Promise<number> {
-		throw new Error("Not yet implemented!")
+	public async count(modelName: string): Promise<number> {
+		const model = this.models[modelName]
+		assert(model !== undefined, "model not found")
+
+		if (model.kind == "mutable") {
+			return MutableModelAPI.count(this.mutableDbContexts[modelName])
+		} else if (model.kind == "immutable") {
+			return ImmutableModelAPI.count(this.immutableDbContexts[modelName])
+		} else {
+			signalInvalidType(model.kind)
+		}
 	}
 
 	public async apply(
