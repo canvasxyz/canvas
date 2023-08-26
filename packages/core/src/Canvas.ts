@@ -11,7 +11,7 @@ import { bytesToHex } from "@noble/hashes/utils"
 
 import { QuickJSHandle } from "quickjs-emscripten"
 
-import { Action, ActionArguments, ActionContext, Signer } from "@canvas-js/interfaces"
+import { Action, ActionArguments, ActionContext, IPLDValue, Signer } from "@canvas-js/interfaces"
 import { JSValue, VM } from "@canvas-js/vm"
 import {
 	AbstractModelDB,
@@ -69,6 +69,9 @@ export interface CoreEvents {
 	disconnect: CustomEvent<{ peer: string }>
 }
 
+type ActionLog = { type: "action"; log: GossipLog<Action, void | JSValue> }
+type CustomActionLog = { type: "customAction"; log: GossipLog<JSValue, void | JSValue> }
+
 export class Canvas extends EventEmitter<CoreEvents> {
 	public static async initialize(config: CanvasConfig): Promise<Canvas> {
 		const { contract, signers = [], replay = false, offline = false, contractLog, runtimeMemoryLimit } = config
@@ -96,7 +99,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		} = await vm.import(contract, { uri }).then((handle) => handle.consume(vm.unwrapObject))
 
 		for (const [name, handle] of Object.entries(rest)) {
-			console.warn(`Extraneous export ${JSON.stringify(name)}`)
+			console.warn(`extraneous export ${JSON.stringify(name)}`)
 			handle.dispose()
 		}
 
@@ -107,44 +110,55 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		const resolve: Resolve = { lessThan: (a, b) => a.version < b.version }
 		const db = await target.openDB(uri, models, { resolve })
 
-		// { [topic]: { [name]: handler } }
-		const actionHandlers: Record<string, Record<string, QuickJSHandle>> = {}
+		// { [topic]: { [name]: handle } }
+		const actionHandles: Record<string, Record<string, QuickJSHandle>> = {}
 		const addActionHandle = (topic: string, name: string, handle: QuickJSHandle) => {
-			if (actionHandlers[topic] === undefined) {
-				actionHandlers[topic] = {}
+			if (actionHandles[topic] === undefined) {
+				actionHandles[topic] = {}
 			}
 
-			actionHandlers[topic][name] = handle
+			actionHandles[topic][name] = handle
 		}
 
-		// // { [topic]: handler }
-		// const customActionHandlers: Record<string, JSFunctionAsync> = {}
+		// { [topic]: handle }
+		const customActionHandles: Record<string, QuickJSHandle> = {}
+
+		// actionsToTopics maps action names to topics
+		const actionsToTopics: Record<string, string> = {}
 
 		// unwrap actions
 		for (const [name, handle] of Object.entries(actionsHandle.consume(vm.unwrapObject))) {
-			// We support several action definition formats. The simplest is just a function.
 			if (vm.context.typeof(handle) === "function") {
+				actionsToTopics[name] = defaultTopic
 				addActionHandle(defaultTopic, name, handle.consume(vm.cache))
-			} else {
-				const { topic: topicHandle, raw: rawHandle, apply: applyHandle, ...rest } = handle.consume(vm.unwrapObject)
-				Object.values(rest).forEach((handle) => handle.dispose())
-				const topic = topicHandle && topicHandle.consume(vm.context.getString)
-				const raw = rawHandle && rawHandle.consume(vm.getBoolean)
+				continue
+			}
 
-				assert(vm.context.typeof(applyHandle) === "function", "missing actions[name].apply function")
+			const { topic: topicHandle, raw: rawHandle, apply: applyHandle, ...rest } = handle.consume(vm.unwrapObject)
+			Object.values(rest).forEach((handle) => handle.dispose())
+
+			const topic: string | undefined = topicHandle?.consume(vm.context.getString)
+			const raw: boolean | undefined = rawHandle?.consume(vm.getBoolean)
+
+			assert(vm.context.typeof(applyHandle) === "function", "missing actions[name].apply function")
+
+			if (raw ?? false) {
+				assert(topic !== undefined, "raw actions must have an explicit topic")
+				actionsToTopics[name] = topic
+				customActionHandles[topic] = applyHandle.consume(vm.cache)
+			} else {
+				actionsToTopics[name] = topic ?? defaultTopic
 				addActionHandle(topic ?? defaultTopic, name, applyHandle.consume(vm.cache))
 			}
 		}
 
-		// actionMap maps action names to topics
-		const actionMap: Record<string, string> = {}
-
 		// initMap maps topics to inits
-		const gossipLogInit: GossipLogInit<Action, JSValue | void>[] = []
+		const actionLogInits: GossipLogInit<Action, JSValue | void>[] = []
+		const customActionLogInits: GossipLogInit<JSValue, JSValue | void>[] = []
 
 		const databaseAPI = new DatabaseAPI(vm, db)
 
-		for (const [topic, actions] of Object.entries(actionHandlers)) {
+		for (const [topic, actions] of Object.entries(actionHandles)) {
 			const apply: GossipLogConsumer<Action, JSValue | void> = async (id, signature, message) => {
 				assert(signature !== null, "missing message signature")
 
@@ -174,16 +188,43 @@ export class Canvas extends EventEmitter<CoreEvents> {
 					}
 				})
 
-				await db.apply(effects, { version: id.slice(0, 10) })
+				const version = id.slice(0, 10)
+				await db.apply(effects, { version })
 
 				return { result }
 			}
 
 			// TODO: add `validate` to log init
-			gossipLogInit.push({ topic, location, apply })
-			for (const name of Object.keys(actions)) {
-				actionMap[name] = topic
+			actionLogInits.push({ topic, location, apply })
+		}
+
+		for (const [topic, handle] of Object.entries(customActionHandles)) {
+			const apply: GossipLogConsumer<JSValue, JSValue | void> = async (id, signature, message) => {
+				assert(signature === null, "expected signature === null")
+				assert(message.clock === 0 && message.parents.length === 0, "expected message.clock === 0")
+				assert(message.parents.length === 0, "expected message.parents.length === 0")
+
+				const payloadHandle = vm.wrapValue(message.payload)
+				const contextHandle = vm.wrapObject({ id: vm.context.newString(id) })
+				try {
+					const resultHandle = await vm.callAsync(handle, handle, [databaseAPI.handle, payloadHandle, contextHandle])
+					const result = resultHandle.consume((handle) => {
+						if (vm.context.typeof(handle) === "undefined") {
+							return undefined
+						} else {
+							return vm.unwrapValue(resultHandle)
+						}
+					})
+
+					return { result }
+				} finally {
+					payloadHandle.dispose()
+					contextHandle.dispose()
+				}
 			}
+
+			// TODO: add `validate` to log init
+			customActionLogInits.push({ topic, location, apply, signatures: false, sequencing: false })
 		}
 
 		const peerId = await target.getPeerId()
@@ -191,28 +232,41 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		// TODO: add `start?: boolean` option and forward it to libp2p
 		const libp2p = offline ? null : await createLibp2p(getLibp2pOptions(peerId, config))
 
-		// const gossipLogs = await Promise.all(gossipLogInit.map((init) => GossipLog.init(libp2p, init)))
+		const topics = new Map<string, ActionLog | CustomActionLog>()
 
-		const topics = await Promise.all(
-			gossipLogInit.map((init) =>
-				GossipLog.init(libp2p, init).then(
-					(log) => [init.topic, log] satisfies [string, GossipLog<Action, void | JSValue>]
-				)
-			)
-		).then((entries) => new Map(entries))
+		await Promise.all([
+			...actionLogInits.map(async (init) => {
+				const actionlog = await GossipLog.init(libp2p, init)
+				topics.set(init.topic, { type: "action", log: actionlog })
+			}),
+			...customActionLogInits.map(async (init) => {
+				const customActionLog = await GossipLog.init(libp2p, init)
+				topics.set(init.topic, { type: "customAction", log: customActionLog })
+			}),
+		])
 
-		const actions: ActionAPI = mapEntries(actionMap, ([actionName, topic]) => {
-			const gossipLog = topics.get(topic)
-			assert(gossipLog instanceof GossipLog, "GossipLog not found")
-			return async (args: ActionArguments, { chain }: { chain?: string } = {}) => {
-				const signer = signers.find((signer) => chain === undefined || signer.match(chain))
-				assert(signer !== undefined, "signer not found")
-				const context: ActionContext = { topic, timestamp: Date.now(), blockhash: null }
-				const action = signer.create(actionName, args, context, {})
-				const message = await gossipLog.create(action)
-				const signature = await signer.sign(message)
-				const { id, result, recipients } = await gossipLog.publish(signature, message)
-				return { id, result, recipients }
+		const actions: ActionAPI = mapEntries(actionsToTopics, ([actionName, topic]) => {
+			assert(topics.has(topic), "internal error - topic not found")
+			const { type, log } = topics.get(topic)!
+			if (type === "action") {
+				return async (args: ActionArguments, { chain }: { chain?: string } = {}) => {
+					const signer = signers.find((signer) => chain === undefined || signer.match(chain))
+					assert(signer !== undefined, "signer not found")
+					const context: ActionContext = { topic, timestamp: Date.now(), blockhash: null }
+					const action = signer.create(actionName, args, context, {})
+					const message = await log.create(action)
+					const signature = await signer.sign(message)
+					const { id, result, recipients } = await log.publish(signature, message)
+					return { id, result, recipients }
+				}
+			} else if (type === "customAction") {
+				return async (payload: ActionArguments, {}: { chain?: string } = {}) => {
+					const message = await log.create(payload)
+					const { id, result, recipients } = await log.publish(null, message)
+					return { id, result, recipients }
+				}
+			} else {
+				signalInvalidType(type)
 			}
 		})
 
@@ -230,7 +284,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		public readonly vm: VM,
 		public readonly db: AbstractModelDB,
 		public readonly actions: ActionAPI,
-		public readonly topics: Map<string, GossipLog<Action, void | JSValue>>
+		public readonly topics: Map<string, ActionLog | CustomActionLog>
 	) {
 		super()
 
@@ -251,8 +305,10 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				await this.libp2p.start()
 			}
 
-			for (const gossipLog of this.topics.values()) {
-				await gossipLog.start()
+			for (const { log } of this.topics.values()) {
+				if (!log.isStarted()) {
+					await log.start()
+				}
 			}
 		}
 	}
@@ -264,8 +320,8 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	public async close() {
 		this.controller.abort()
 
-		for (const gossipLog of this.topics.values()) {
-			await gossipLog.stop()
+		for (const { log } of this.topics.values()) {
+			await log.stop()
 		}
 
 		if (this.libp2p !== null && this.libp2p.isStarted()) {
