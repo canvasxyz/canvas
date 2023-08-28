@@ -152,7 +152,7 @@ testOnModelDB("order by on one field", async (t, modelDBConstructor) => {
 		fc.asyncProperty(
 			fc.constantFrom(...orderableFields),
 			fc.array(modelDataArbitrary(model)),
-			fc.constantFrom("asc", "desc"),
+			fc.constantFrom("asc", "desc") as fc.Arbitrary<"asc" | "desc">,
 			async (orderByField, usersFixture, direction) => {
 				const db = await modelDBConstructor(models)
 
