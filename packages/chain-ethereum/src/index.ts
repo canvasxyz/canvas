@@ -12,7 +12,7 @@ import type {
 	SessionPayload,
 	Message,
 } from "@canvas-js/interfaces"
-import { Signature, createSignature } from "@canvas-js/signed-cid"
+import { Signature, createSignature, verifySignature } from "@canvas-js/signed-cid"
 
 import { getDomain } from "@canvas-js/chain-ethereum/domain"
 
