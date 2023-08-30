@@ -1,12 +1,12 @@
 import test from "ava"
+import assert from "assert"
 
 import type { Action, Message } from "@canvas-js/interfaces"
+import { verifySignature } from "@canvas-js/signed-cid"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { getActionContext } from "./utils.js"
-import { verifySignature } from "@canvas-js/signed-cid"
-import assert from "assert"
 
 test("create and verify action", async (t) => {
 	const topic = "example:signer"
