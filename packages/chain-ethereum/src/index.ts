@@ -12,7 +12,7 @@ import type {
 	SessionPayload,
 	Message,
 } from "@canvas-js/interfaces"
-import { Signature, createSignature, verifySignature } from "@canvas-js/signed-cid"
+import { Signature, createSignature } from "@canvas-js/signed-cid"
 
 import { getDomain } from "@canvas-js/chain-ethereum/domain"
 
@@ -54,7 +54,7 @@ export class SIWESigner implements Signer {
 			const privateSessionData = await store.load(address, chain)
 			if (privateSessionData !== null) {
 				const session = JSON.parse(privateSessionData)
-				return new SIWESigner(address, signer, network, session, { sessionDuration, store })
+				return new SIWESigner(address, network, session, { sessionDuration, store })
 			}
 		}
 
@@ -63,7 +63,7 @@ export class SIWESigner implements Signer {
 			await store.save(address, chain, JSON.stringify(session))
 		}
 
-		return new SIWESigner(address, signer, network, session, { sessionDuration, store })
+		return new SIWESigner(address, network, session, { sessionDuration, store })
 	}
 
 	private static validateSessionPayload = (session: SessionPayload): session is SIWESession => {
@@ -84,7 +84,6 @@ export class SIWESigner implements Signer {
 
 	private constructor(
 		public readonly address: string,
-		public readonly signer: AbstractSigner,
 		public readonly network: Network,
 
 		private readonly session: { data: SIWESessionData; signature: string; privateKey: string },
