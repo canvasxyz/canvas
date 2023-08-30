@@ -7,7 +7,7 @@ import { getActionContext } from "./utils.js"
 
 test("create and verify action", async (t) => {
 	const topic = "example:signer"
-	const signer = await SolanaSigner.init({})
+	const signer = await SolanaSigner.initWithKeypair()
 	const action = signer.create("foo", { bar: 7 }, getActionContext(topic), {})
 	const message = { clock: 0, parents: [], payload: action } satisfies Message<Action>
 	const signature = signer.sign(message)

@@ -2,7 +2,7 @@ import solw3 from "@solana/web3.js"
 
 import { Action, ActionArguments, ActionContext, Env, Message, SessionPayload, Signer } from "@canvas-js/interfaces"
 import { encode } from "microcbor"
-import { Signature, createSignature, verifySignature } from "@canvas-js/signed-cid"
+import { Signature, createSignature } from "@canvas-js/signed-cid"
 import bs58 from "bs58"
 import nacl from "tweetnacl"
 
@@ -20,8 +20,12 @@ export type SolanaSessionData = {
 	expirationTime: string | null
 }
 
-type SolanaSignerInit = {
-	signer?: solw3.Keypair
+// Solana doesn't publish TypeScript signatures for injected wallets, but we can assume
+// most wallets expose a Phantom-like API and use their injected `window.solana` objects directly:
+// https://github.com/solana-labs/wallet-adapter/commit/5a274e0a32c55d4376d63a802f0d512947b087af
+interface SolanaWindowSigner {
+	publicKey?: solw3.PublicKey
+	signMessage(message: Uint8Array): Promise<{ signature: Uint8Array }>
 }
 
 function parseChainId(chain: string): string {
@@ -36,21 +40,42 @@ function parseChainId(chain: string): string {
 }
 
 export class SolanaSigner implements Signer {
-	public static async init(init: SolanaSignerInit): Promise<Signer> {
-		const signer = init.signer ?? solw3.Keypair.generate()
+	public static async initWithWindowSigner(signer: SolanaWindowSigner): Promise<Signer> {
+		if (signer.publicKey === undefined) throw new Error("Invalid signer")
+
 		const address = bs58.encode(signer.publicKey.toBytes())
 		const genesisHash = "mainnet"
-		const session = await generateNewSession(signer, genesisHash)
+		const session = await generateNewSession(
+			address,
+			async (msg) => (await signer.signMessage(msg)).signature,
+			genesisHash
+		)
+
 		const chain = `solana:${genesisHash.slice(0, 32)}`
 
-		return new SolanaSigner(address, signer, chain, session)
+		return new SolanaSigner(address, chain, session)
+	}
+
+	public static async initWithKeypair(): Promise<Signer> {
+		const keypair = solw3.Keypair.generate()
+
+		const address = bs58.encode(keypair.publicKey.toBytes())
+		const genesisHash = "mainnet"
+		const session = await generateNewSession(
+			address,
+			async (msg) => nacl.sign.detached(msg, keypair.secretKey),
+			genesisHash
+		)
+
+		const chain = `solana:${genesisHash.slice(0, 32)}`
+
+		return new SolanaSigner(address, chain, session)
 	}
 
 	private constructor(
 		public readonly address: string,
-		public readonly signer: solw3.Keypair,
 		public readonly chain: string,
-		private readonly session: { data: SolanaSessionData; signature: string; privateKey: string }
+		private readonly session: { data: SolanaSessionData; signature: Uint8Array; secretKey: Uint8Array }
 	) {}
 
 	public match(chain: string) {
@@ -100,7 +125,7 @@ export class SolanaSigner implements Signer {
 		return {
 			chain: this.chain,
 			address: this.address,
-			session: { data: this.session.data, signature: bs58.decode(this.session.signature) },
+			session: { data: this.session.data, signature: this.session.signature },
 			context: context,
 			name: name,
 			args: args,
@@ -108,7 +133,8 @@ export class SolanaSigner implements Signer {
 	}
 
 	public sign(message: Message<Action>): Signature {
-		return createSignature("ed25519", bs58.decode(this.session.privateKey), message)
+		const privateKey = this.session.secretKey.slice(0, 32)
+		return createSignature("ed25519", privateKey, message)
 	}
 }
 
@@ -117,18 +143,18 @@ function getSessionURI(chain: string, address: string): string {
 }
 
 async function generateNewSession(
-	signer: solw3.Keypair,
+	address: string,
+	sign: (message: Uint8Array) => Promise<Uint8Array>,
 	chainId: string,
 	sessionDuration?: number
-): Promise<{ data: SolanaSessionData; signature: string; privateKey: string }> {
-	const address = signer.publicKey.toBase58()
+): Promise<{ data: SolanaSessionData; signature: Uint8Array; secretKey: Uint8Array }> {
 	const delegatedKeypair = solw3.Keypair.generate()
 
 	const sessionAddress = delegatedKeypair.publicKey.toBase58()
 	const issuedAt = new Date()
 
 	const data: SolanaSessionData = {
-		address: address,
+		address,
 		chainId,
 		uri: getSessionURI(chainId, sessionAddress),
 		issuedAt: issuedAt.toISOString(),
@@ -141,16 +167,13 @@ async function generateNewSession(
 	}
 
 	const solanaMessage = encode(data)
-	const signature = bs58.encode(nacl.sign.detached(solanaMessage, signer.secretKey))
-	return { data, signature, privateKey: bs58.encode(privateKeyFromSolanaKeypair(delegatedKeypair)) }
+	const signature = await sign(solanaMessage)
+
+	return { data, signature, secretKey: delegatedKeypair.secretKey }
 }
 
 function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
 		throw new Error(message ?? "assertion failed")
 	}
-}
-
-function privateKeyFromSolanaKeypair(keypair: solw3.Keypair): Uint8Array {
-	return keypair.secretKey.slice(0, 32)
 }
