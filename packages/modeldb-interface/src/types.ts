@@ -51,14 +51,15 @@ export type PropertyValue = PrimitiveValue | ReferenceValue | RelationValue
 
 export type ModelValue = Record<string, PropertyValue>
 
-export type WhereCondition = Record<string, PrimitiveValue>
+export type WhereCondition = Record<
+	string,
+	PrimitiveValue | { gt?: PrimitiveValue; gte?: PrimitiveValue; le?: PrimitiveValue; lte?: PrimitiveValue }
+>
 
 export type QueryParams = {
 	select?: Record<string, boolean>
 	where?: WhereCondition
 	orderBy?: Record<string, "asc" | "desc">
-	offset?: number
-	limit?: number
 }
 
 // Batch effect API
@@ -71,7 +72,7 @@ export type Effect =
 
 // Conflict resolver
 
-export type Resolve = {
+export type Resolver = {
 	lessThan: (a: { version: string }, b: { version: string }) => boolean
 }
 
@@ -82,7 +83,8 @@ export type Resolve = {
 export type RecordValue = Record<string, string | number | Buffer | null>
 
 export type TombstoneAPI = {
-	select: (params: { _key: string }) => Promise<{ _version: string } | null>
+	select: (params: { _key: string }) => Promise<{ version: string | null }>
+	query: (paramms: { _key: string }) => Promise<{ _version: string } | null>
 	delete: (params: { _key: string }) => Promise<void>
 	insert: (params: { _key: string; _version: string }) => Promise<void>
 	update: (params: { _key: string; _version: string }) => Promise<void>
@@ -103,8 +105,7 @@ export type MutableRecordAPI = {
 	selectAll: (params: {}) => Promise<ModelValue[]>
 	insert: (params: { _key: string; _version: string | null; value: ModelValue }) => Promise<void>
 	update: (params: { _key: string; _version: string | null; value: ModelValue }) => Promise<void>
-	delete: (params: { _key: string }) => Promise<void>
-	query: (params: QueryParams) => Promise<ModelValue[]>
+	delete: (paras: QueryParams) => Promise<ModelValue[]>
 	count: () => Promise<number>
 }
 

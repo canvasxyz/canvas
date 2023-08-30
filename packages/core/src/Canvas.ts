@@ -22,7 +22,7 @@ import {
 	ModelValue,
 	Property,
 	PropertyValue,
-	Resolve,
+	Resolver,
 } from "@canvas-js/modeldb-interface"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { GossipLog, GossipLogConsumer, GossipLogInit } from "@canvas-js/gossiplog"
@@ -107,8 +107,8 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		const models = modelsHandle.consume(vm.context.dump) as ModelsInit
 
 		// our version strings always sort lexicographically
-		const resolve: Resolve = { lessThan: (a, b) => a.version < b.version }
-		const db = await target.openDB(uri, models, { resolve })
+		const resolver: Resolver = { lessThan: (a, b) => a.version < b.version }
+		const db = await target.openDB(uri, models, { resolver })
 
 		// { [topic]: { [name]: handle } }
 		const actionHandles: Record<string, Record<string, QuickJSHandle>> = {}

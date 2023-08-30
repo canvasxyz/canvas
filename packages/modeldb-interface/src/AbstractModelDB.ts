@@ -1,28 +1,29 @@
-import { Config, ModelValue, Effect, Model, QueryParams } from "./types.js"
+import { Config, ModelValue, Effect, Model, QueryParams, Resolver } from "./types.js"
 import { getImmutableRecordKey } from "./utils.js"
 
 export abstract class AbstractModelDB {
 	public static getImmutableRecordKey = getImmutableRecordKey
 	public readonly models: Record<string, Model>
 
-	public constructor(public readonly config: Config) {
+	public constructor(public readonly config: Config, public readonly resolver?: Resolver) {
 		this.models = {}
 		for (const model of config.models) {
 			this.models[model.name] = model
 		}
 	}
 
-	abstract close(): void
+	abstract close(): Promise<void>
 
 	abstract get(modelName: string, key: string): Promise<ModelValue | null>
-
-	abstract selectAll(modelName: string): Promise<ModelValue[]>
 
 	abstract iterate(modelName: string): AsyncIterable<ModelValue>
 
 	abstract query(modelName: string, query: QueryParams): Promise<ModelValue[]>
 
 	abstract count(modelName: string): Promise<number>
+
+	// Batch effect API
+	public abstract apply(effects: Effect[], options: { version?: string }): Promise<void>
 
 	// Mutable model methods
 
@@ -36,15 +37,12 @@ export abstract class AbstractModelDB {
 
 	// Immutable model methods
 
-	public async add(modelName: string, value: ModelValue, options: { namespace?: string } = {}) {
-		await this.apply([{ operation: "add", model: modelName, value }], { namespace: options.namespace })
-		return getImmutableRecordKey(value, { namespace: options.namespace })
+	public async add(modelName: string, value: ModelValue) {
+		await this.apply([{ operation: "add", model: modelName, value }], {})
+		return getImmutableRecordKey(value)
 	}
 
 	public async remove(modelName: string, key: string) {
 		await this.apply([{ operation: "remove", model: modelName, key }], {})
 	}
-
-	// Batch effect API
-	abstract apply(effects: Effect[], options: { namespace?: string; version?: string }): Promise<void>
 }

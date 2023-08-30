@@ -2,7 +2,11 @@ import { blake3 } from "@noble/hashes/blake3"
 import { encode } from "microcbor"
 import { base58btc } from "multiformats/bases/base58"
 
+import { getCID } from "@canvas-js/signed-cid"
+
 import type { Model, ModelValue, Property, PropertyValue } from "./types.js"
+
+export type Awaitable<T> = T | Promise<T>
 
 export function signalInvalidType(type: never): never {
 	console.error(type)
@@ -17,15 +21,9 @@ export function assert(condition: boolean, message?: string): asserts condition 
 
 export const DEFAULT_DIGEST_LENGTH = 16
 
-export function getImmutableRecordKey(value: ModelValue, options: { namespace?: string }): string {
-	const bytes = encode(value)
-	const hash = blake3(bytes, { dkLen: DEFAULT_DIGEST_LENGTH })
-	const key = base58btc.baseEncode(hash)
-	if (options.namespace === undefined) {
-		return key
-	} else {
-		return `${options.namespace}/${key}`
-	}
+export function getImmutableRecordKey(value: ModelValue): string {
+	const cid = getCID(value, { codec: "dag-cbor", digest: "blake3-128" })
+	return cid.toString(base58btc)
 }
 
 export function validateModelValue(model: Model, value: ModelValue) {

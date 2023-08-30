@@ -6,9 +6,8 @@
 // 	RelationAPI,
 // 	Resolver,
 // 	TombstoneAPI,
-// } from "./types.js"
-
-// import { getImmutableRecordKey } from "./utils.js"
+// 	getImmutableRecordKey,
+// } from "@canvas-js/modeldb-interface"
 
 // export type MutableModelDBContext = {
 // 	tombstones: TombstoneAPI
@@ -160,8 +159,12 @@
 // }
 
 // export class ImmutableModelAPI {
-// 	static async add(value: ModelValue, dbContext: ImmutableModelDBContext): Promise<string> {
-// 		const key = getImmutableRecordKey(value)
+// 	static async add(
+// 		value: ModelValue,
+// 		{ namespace }: { namespace?: string } = {},
+// 		dbContext: ImmutableModelDBContext
+// 	): Promise<string> {
+// 		const key = getImmutableRecordKey(value, { namespace })
 // 		const existingRecord = await dbContext.records.select({ _key: key })
 // 		if (!existingRecord) {
 // 			await dbContext.records.insert({ _key: key, value })

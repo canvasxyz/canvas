@@ -4,35 +4,31 @@ import {
 	AbstractModelDB,
 	Config,
 	Effect,
-	ImmutableModelAPI,
-	ImmutableModelDBContext,
 	ModelValue,
 	ModelsInit,
-	MutableModelAPI,
-	MutableModelDBContext,
 	QueryParams,
-	Resolve,
+	Resolver,
 	parseConfig,
 } from "@canvas-js/modeldb-interface"
 
 import {
-	createIdbImmutableModelDBContext,
-	createIdbMutableModelDBContext,
+	createImmutableModelAPI,
+	createMutableModelAPI,
 	getPropertyIndexName,
-	getRecordTableName,
-	getRelationTableName,
-	getTombstoneTableName,
+	getRecordStoreName,
+	getRelationStoreName,
+	getTombstoneStoreName,
 } from "./api.js"
 import { assert, signalInvalidType } from "./utils.js"
 
 export interface ModelDBOptions {
 	databaseName?: string
-	resolve?: Resolve
+	resolver?: Resolver
 }
 
 export class ModelDB extends AbstractModelDB {
 	public options?: ModelDBOptions
-	public resolve?: Resolve
+	public resolver?: Resolver
 
 	public static async initialize(models: ModelsInit, options?: ModelDBOptions) {
 		const config = parseConfig(models)
@@ -54,22 +50,23 @@ export class ModelDB extends AbstractModelDB {
 		}
 
 		const db = await openDB(options?.databaseName || "modeldb", 1, {
-			upgrade(db: any) {
+			upgrade(db: IDBPDatabase<unknown>) {
 				// create model stores
 				for (const model of config.models) {
-					const recordObjectStore = db.createObjectStore(getRecordTableName(model.name))
+					const recordObjectStore = db.createObjectStore(getRecordStoreName(model.name))
 					if (model.kind == "mutable") {
-						db.createObjectStore(getTombstoneTableName(model.name))
+						db.createObjectStore(getTombstoneStoreName(model.name))
 					}
+
 					for (const index of model.indexes) {
-						const sortedIndex = typeof index === "string" ? [index] : index.sort()
+						const sortedIndex = index.sort()
 						recordObjectStore.createIndex(getPropertyIndexName(model.name, sortedIndex), sortedIndex)
 					}
 				}
 
 				for (const relation of config.relations) {
-					const relationObjectStore = db.createObjectStore(getRelationTableName(relation.source, relation.property))
-					relationObjectStore.createIndex("_source", "_source")
+					const relationObjectStore = db.createObjectStore(getRelationStoreName(relation.source, relation.property))
+					relationObjectStore.createIndex("source", "_source")
 				}
 			},
 		})
@@ -80,7 +77,7 @@ export class ModelDB extends AbstractModelDB {
 	constructor(public readonly db: IDBPDatabase, config: Config, options?: ModelDBOptions) {
 		super(config)
 		this.options = options
-		this.resolve = options?.resolve
+		this.resolver = options?.resolver
 	}
 
 	public async withAsyncTransaction<T>(
@@ -121,12 +118,12 @@ export class ModelDB extends AbstractModelDB {
 
 		if (model.kind == "mutable") {
 			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createIdbMutableModelDBContext(transaction, model, this.resolve)
+				const dbContext = createMutableModelAPI(transaction, model, this.resolver)
 				return await MutableModelAPI.get(key, dbContext)
 			})
 		} else if (model.kind == "immutable") {
 			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createIdbImmutableModelDBContext(transaction, model)
+				const dbContext = createImmutableModelAPI(transaction, model)
 				return await ImmutableModelAPI.get(key, dbContext)
 			})
 		} else {
@@ -140,12 +137,12 @@ export class ModelDB extends AbstractModelDB {
 
 		if (model.kind == "mutable") {
 			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createIdbMutableModelDBContext(transaction, model, this.resolve)
+				const dbContext = createMutableModelAPI(transaction, model, this.resolver)
 				return await MutableModelAPI.selectAll(dbContext)
 			})
 		} else if (model.kind == "immutable") {
 			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createIdbImmutableModelDBContext(transaction, model)
+				const dbContext = createImmutableModelAPI(transaction, model)
 				return await ImmutableModelAPI.selectAll(dbContext)
 			})
 		} else {
@@ -159,12 +156,12 @@ export class ModelDB extends AbstractModelDB {
 
 		if (model.kind == "mutable") {
 			return this.withTransaction((transaction) => {
-				const dbContext = createIdbMutableModelDBContext(transaction, model, this.resolve)
+				const dbContext = createMutableModelAPI(transaction, model, this.resolver)
 				return MutableModelAPI.iterate(dbContext)
 			})
 		} else if (model.kind == "immutable") {
 			return this.withTransaction((transaction) => {
-				const dbContext = createIdbImmutableModelDBContext(transaction, model)
+				const dbContext = createImmutableModelAPI(transaction, model)
 				return ImmutableModelAPI.iterate(dbContext)
 			})
 		} else {
@@ -178,12 +175,12 @@ export class ModelDB extends AbstractModelDB {
 
 		if (model.kind == "mutable") {
 			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createIdbMutableModelDBContext(transaction, model, this.resolve)
+				const dbContext = createMutableModelAPI(transaction, model, this.resolver)
 				return MutableModelAPI.query(query, dbContext)
 			})
 		} else if (model.kind == "immutable") {
 			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createIdbImmutableModelDBContext(transaction, model)
+				const dbContext = createImmutableModelAPI(transaction, model)
 				return await ImmutableModelAPI.query(query, dbContext)
 			})
 		} else {
@@ -197,12 +194,12 @@ export class ModelDB extends AbstractModelDB {
 
 		if (model.kind == "mutable") {
 			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createIdbMutableModelDBContext(transaction, model, this.resolve)
+				const dbContext = createMutableModelAPI(transaction, model, this.resolver)
 				return MutableModelAPI.count(dbContext)
 			})
 		} else if (model.kind == "immutable") {
 			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createIdbImmutableModelDBContext(transaction, model)
+				const dbContext = createImmutableModelAPI(transaction, model)
 				return await ImmutableModelAPI.count(dbContext)
 			})
 		} else {
@@ -222,9 +219,9 @@ export class ModelDB extends AbstractModelDB {
 
 			for (const model of Object.values(this.models)) {
 				if (model.kind == "immutable") {
-					immutableDbContexts[model.name] = createIdbImmutableModelDBContext(transaction, model)
+					immutableDbContexts[model.name] = createImmutableModelAPI(transaction, model)
 				} else if (model.kind == "mutable") {
-					mutableDbContexts[model.name] = createIdbMutableModelDBContext(transaction, model, this.resolve)
+					mutableDbContexts[model.name] = createMutableModelAPI(transaction, model, this.resolver)
 				} else {
 					signalInvalidType(model.kind)
 				}
@@ -253,7 +250,7 @@ export class ModelDB extends AbstractModelDB {
 		})
 	}
 
-	close() {
+	async close() {
 		this.db.close()
 	}
 }

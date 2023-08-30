@@ -1,12 +1,11 @@
-import { Model, ModelValue, QueryParams, RecordValue, Resolve } from "@canvas-js/modeldb-interface"
-import { decodeRecord, encodeRecord } from "./encoding.js"
 import { IDBPTransaction } from "idb"
 
-type IDBPTransactionReadWrite = IDBPTransaction<any, any, "readwrite">
+import type { Config, Model, ModelValue, QueryParams, RecordValue, Resolver } from "@canvas-js/modeldb-interface"
+import { decodeRecord, encodeRecord } from "./encoding.js"
 
-export const getRecordTableName = (modelName: string) => `record/${modelName}`
-export const getTombstoneTableName = (modelName: string) => `tombstone/${modelName}`
-export const getRelationTableName = (modelName: string, propertyName: string) => `relation/${modelName}/${propertyName}`
+export const getRecordStoreName = (modelName: string) => `record/${modelName}`
+export const getTombstoneStoreName = (modelName: string) => `tombstone/${modelName}`
+export const getRelationStoreName = (modelName: string, propertyName: string) => `relation/${modelName}/${propertyName}`
 
 export const getPropertyIndexName = (modelName: string, index: string[]) => `record/${modelName}/${index.join("/")}`
 
@@ -16,12 +15,42 @@ export const getRelationSourceIndexName = (modelName: string, propertyName: stri
 export const getRelationTargetIndexName = (modelName: string, propertyName: string) =>
 	`relation/${modelName}/${propertyName}/target`
 
+export class Transaction {
+	private readonly mutableRecords: Record<string, IDBObjectStore> = {}
+	private readonly immutableRecords: Record<string, IDBObjectStore> = {}
+	private readonly relations: Record<string, IDBObjectStore> = {}
+	private readonly tombstones: Record<string, IDBObjectStore> = {}
+
+	constructor(readonly config: Config, readonly transaction: IDBPTransaction<unknown, string[], "readwrite">) {}
+
+	async get(model: string, key: string) {
+		const record: ModelValue | undefined = await store.get(key)
+		return record ?? null
+	}
+
+	async add(model: string, value: ModelValue) {}
+	async remove() {}
+	async iterate() {}
+	async count() {}
+	async query() {}
+}
+
+function prepareImmutableRecordAPI(transaction: IDBPTransaction<unknown, string[], "readwrite">, model: Model) {
+	const tombstones = prepareTombstoneAPI(transaction, model)
+	const relations = prepareRelationAPIs(transaction, model)
+
+	const recordTableName = getRecordStoreName(model.name)
+	const store = transaction.objectStore(recordTableName)
+
+	return {}
+}
+
 export async function query(
-	transaction: IDBPTransactionReadWrite,
+	transaction: IDBPTransaction<unknown, string[], "readwrite">,
 	queryParams: QueryParams,
 	model: Model
 ): Promise<ModelValue[]> {
-	const recordTableName = getRecordTableName(model.name)
+	const recordTableName = getRecordStoreName(model.name)
 
 	const objectStore = transaction.objectStore(recordTableName)
 
@@ -102,24 +131,25 @@ export async function query(
 	return modelRecords
 }
 
-function prepareTombstoneAPI(transaction: IDBPTransactionReadWrite, model: Model) {
-	const tombstoneTableName = getTombstoneTableName(model.name)
+function prepareTombstoneAPI(transaction: IDBPTransaction<unknown, string[], "readwrite">, model: Model) {
+	const tombstoneTableName = getTombstoneStoreName(model.name)
 	const store = transaction.objectStore(tombstoneTableName)
 
 	return {
-		select: async ({ _key }: { _key: string }) => (await store.get(_key)) || null,
-		delete: async ({ _key }: { _key: string }) => store.delete(_key),
-		insert: async ({ _key, _version }: { _key: string; _version: string }) => {
-			await store.put({ _key, _version }, _key)
+		get: async (key: string): Promise<{ _version: string }> => await store.get(key),
+		put: async (key: string, version: string): Promise<void> => {
+			await store.put({ _version: version }, key)
 		},
-		update: async ({ _key, _version }: { _key: string; _version: string }) => {
-			await store.put({ _key, _version }, _key)
-		},
+		delete: async (key: string): Promise<void> => await store.delete(key),
 	}
 }
 
-function prepareRelationAPI(transaction: IDBPTransactionReadWrite, modelName: string, propertyName: string) {
-	const tableName = getRelationTableName(modelName, propertyName)
+function prepareRelationAPI(
+	transaction: IDBPTransaction<any, any, "readwrite">,
+	modelName: string,
+	propertyName: string
+) {
+	const tableName = getRelationStoreName(modelName, propertyName)
 	const store = transaction.objectStore(tableName)
 
 	return {
@@ -137,7 +167,7 @@ function prepareRelationAPI(transaction: IDBPTransactionReadWrite, modelName: st
 	}
 }
 
-function prepareRelationAPIs(transaction: IDBPTransactionReadWrite, model: Model) {
+function prepareRelationAPIs(transaction: IDBPTransaction<unknown, string[], "readwrite">, model: Model) {
 	const relations: Record<string, ReturnType<typeof prepareRelationAPI>> = {}
 	for (const property of model.properties) {
 		if (property.kind === "relation") {
@@ -148,8 +178,8 @@ function prepareRelationAPIs(transaction: IDBPTransactionReadWrite, model: Model
 	return relations
 }
 
-function prepareMutableRecordAPI(transaction: IDBPTransactionReadWrite, model: Model) {
-	const recordTableName = getRecordTableName(model.name)
+function prepareMutableRecordAPI(transaction: IDBPTransaction<unknown, string[], "readwrite">, model: Model) {
+	const recordTableName = getRecordStoreName(model.name)
 	const store = transaction.objectStore(recordTableName)
 
 	return {
@@ -188,9 +218,24 @@ function prepareMutableRecordAPI(transaction: IDBPTransactionReadWrite, model: M
 	}
 }
 
-function prepareImmutableRecordAPI(transaction: IDBPTransactionReadWrite, model: Model) {
-	const recordTableName = getRecordTableName(model.name)
+function prepareImmutableRecordAPI(transaction: IDBPTransaction<unknown, string[], "readwrite">, model: Model) {
+	const tombstones = prepareTombstoneAPI(transaction, model)
+	const relations = prepareRelationAPIs(transaction, model)
+
+	const recordTableName = getRecordStoreName(model.name)
 	const store = transaction.objectStore(recordTableName)
+
+	return {
+		get: async (key: string) => {
+			const record: ModelValue | undefined = await store.get(key)
+			return record ?? null
+		},
+		add: async () => {},
+		remove: async () => {},
+		iterate: async () => {},
+		count: async () => {},
+		query: async () => {},
+	}
 
 	return {
 		select: async ({ _key }: { _key: string }) => {
@@ -221,21 +266,18 @@ function prepareImmutableRecordAPI(transaction: IDBPTransactionReadWrite, model:
 	}
 }
 
-export function createIdbMutableModelDBContext(
-	transaction: IDBPTransactionReadWrite,
+export function createMutableModelAPI(
+	transaction: IDBPTransaction<unknown, string[], "readwrite">,
 	model: Model,
-	resolve: Resolve | undefined
+	resolve: Resolver | undefined
 ) {
-	return {
-		tombstones: prepareTombstoneAPI(transaction, model),
-		relations: prepareRelationAPIs(transaction, model),
-		records: prepareMutableRecordAPI(transaction, model),
-		resolve: resolve,
-		model,
-	}
+	const tombstones = prepareTombstoneAPI(transaction, model)
+	const relations = prepareRelationAPIs(transaction, model)
+	const records = prepareMutableRecordAPI(transaction, model)
+	return { tombstones, relations, records }
 }
 
-export function createIdbImmutableModelDBContext(transaction: IDBPTransaction<any, any, "readwrite">, model: Model) {
+export function createImmutableModelAPI(transaction: IDBPTransaction<any, any, "readwrite">, model: Model) {
 	return {
 		relations: prepareRelationAPIs(transaction, model),
 		records: prepareImmutableRecordAPI(transaction, model),

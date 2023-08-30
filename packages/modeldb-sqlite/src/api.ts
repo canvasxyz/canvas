@@ -1,15 +1,23 @@
 import * as sqlite from "better-sqlite3"
 
-import { Model, ModelValue, QueryParams, RecordValue, Resolve } from "@canvas-js/modeldb-interface"
+import {
+	Model,
+	ModelValue,
+	QueryParams,
+	RecordValue,
+	Resolver,
+	getImmutableRecordKey,
+} from "@canvas-js/modeldb-interface"
+
 import { getRecordTableName, getRelationTableName, getTombstoneTableName } from "./initialize.js"
 import { decodeRecord, encodeRecordParams } from "./encoding.js"
-import { Method, Query, signalInvalidType, zip } from "./utils.js"
+import { Method, Query, assert, signalInvalidType, zip } from "./utils.js"
 
 // The code here is designed so the SQL queries have type annotations alongside them.
 // Operations are organized into "APIs", one for each underlying SQLite table.
 // An "API" is just a plain JavaScript object with `Query` and `Method` values.
 
-async function query(db: sqlite.Database, queryParams: QueryParams, model: Model): Promise<ModelValue[]> {
+function query(db: sqlite.Database, queryParams: QueryParams, model: Model): ModelValue[] {
 	const recordTableName = getRecordTableName(model.name)
 
 	// SELECT
@@ -98,17 +106,20 @@ function prepareTombstoneAPI(db: sqlite.Database, model: Model) {
 	)
 
 	return {
-		select: async (args: { _key: string }) => selectTombstone.get(args),
-		delete: async (args: { _key: string }) => deleteTombstone.run(args),
-		insert: async (args: { _key: string; _version: string }) => insertTombstone.run(args),
-		update: async (args: { _key: string; _version: string }) => updateTombstone.run(args),
+		select: (key: string) => selectTombstone.get({ _key: key }),
+		delete: (key: string) => deleteTombstone.run({ _key: key }),
+		insert: (key: string, version: string) => insertTombstone.run({ _key: key, _version: version }),
+		update: (key: string, version: string) => updateTombstone.run({ _key: key, _version: version }),
 	}
 }
 
-function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
+export function prepareMutableModelAPI(db: sqlite.Database, model: Model, resolver: Resolver) {
+	const tombstones = prepareTombstoneAPI(db, model)
+	const relations = prepareRelationAPIs(db, model)
+
 	const recordTableName = getRecordTableName(model.name)
 
-	const selectVersion = new Query<{ _key: string }, { _version: string | null }>(
+	const selectVersion = new Query<{ _key: string }, { _version: string }>(
 		db,
 		`SELECT _version FROM  "${recordTableName}" WHERE _key = :_key`
 	)
@@ -116,13 +127,13 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
 	// in SQLite, query params can't have quoted names, so we name them
 	// p0, p1, p2... using the index of the model.properties array.
 
-	const params: Record<string, string> = {} // maps property names to query parameter names
+	const paramsMap: Record<string, string> = {} // maps property names to query parameter names
 	const columnNames: `"${string}"`[] = [] // quoted column names for non-relation properties
 	const columnParams: `:p${string}`[] = [] // query params for non-relation properties
 
 	for (const [i, property] of model.properties.entries()) {
 		if (property.kind === "primitive" || property.kind === "reference") {
-			params[property.name] = `p${i}`
+			paramsMap[property.name] = `p${i}`
 			columnParams.push(`:p${i}`)
 			columnNames.push(`"${property.name}"`)
 		} else if (property.kind === "relation") {
@@ -141,14 +152,14 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
 
 	const insertRecordParams = `_key, _version, ${columnNames.join(", ")}`
 	const insertRecordValues = `:_key, :_version, ${columnParams.join(", ")}`
-	const insertRecord = new Method<{ _key: string; _version: string | null } & ModelValue>(
+	const insertRecord = new Method<{ _key: string; _version: string } & ModelValue>(
 		db,
 		`INSERT INTO "${recordTableName}" (${insertRecordParams}) VALUES (${insertRecordValues})`
 	)
 
 	const updateRecordProperties = zip(columnNames, columnParams).map(([name, param]) => `${name} = ${param}`)
 	const updateRecordEntries = `_version = :_version, ${updateRecordProperties.join(", ")}`
-	const updateRecord = new Method<{ _key: string; _version: string | null } & ModelValue>(
+	const updateRecord = new Method<{ _key: string; _version: string } & ModelValue>(
 		db,
 		`UPDATE "${recordTableName}" SET ${updateRecordEntries} WHERE _key = :_key`
 	)
@@ -156,47 +167,97 @@ function prepareMutableRecordAPI(db: sqlite.Database, model: Model) {
 	const deleteRecord = new Method<{ _key: string }>(db, `DELETE FROM "${recordTableName}" WHERE _key = :_key`)
 	const countRecords = new Query<{}, { count: number }>(db, `SELECT COUNT(*) AS count FROM "${recordTableName}"`)
 
-	// @ts-ignore
 	return {
-		params,
-		selectVersion: async (args: { _key: string }) => selectVersion.get(args),
-		iterate: async function* (args: {}) {
-			for (const record of selectAll.iterate(args)) {
+		get: (key: string) => {
+			const record = selectRecord.get({ _key: key })
+			return record === null ? null : decodeRecord(model, record)
+		},
+
+		set: (key: string, value: ModelValue, version: string) => {
+			// no-op if an existing record takes precedence
+			const { _version: existingVersion = null } = selectVersion.get({ _key: key }) ?? {}
+			if (existingVersion !== null && resolver.lessThan({ version }, { version: existingVersion })) {
+				return
+			}
+
+			// no-op if an existing tombstone takes precedence
+			const { _version: existingTombstone = null } = tombstones.select(key) ?? {}
+			if (existingTombstone !== null && resolver.lessThan({ version }, { version: existingTombstone })) {
+				return
+			}
+
+			// delete the tombstone since we're about to set the record
+			if (existingTombstone !== null) {
+				tombstones.delete(key)
+			}
+
+			const encodedParams = encodeRecordParams(model, value, paramsMap)
+			if (existingVersion === null) {
+				insertRecord.run({ _key: key, _version: version, ...encodedParams })
+			} else {
+				updateRecord.run({ _key: key, _version: version, ...encodedParams })
+				for (const relation of Object.values(relations)) {
+					relation.deleteAll({ _source: key })
+				}
+			}
+
+			for (const [property, relation] of Object.entries(relations)) {
+				const targets = value[property]
+				assert(Array.isArray(targets), "expected string[]")
+				for (const target of targets) {
+					assert(typeof target === "string", "expected string")
+					relation.create({ _source: key, _target: target })
+				}
+			}
+		},
+
+		delete: (key: string, version: string) => {
+			// no-op if an existing record takes precedence
+			const { _version: existingVersion = null } = selectVersion.get({ _key: key }) ?? {}
+			if (existingVersion !== null && resolver.lessThan({ version }, { version: existingVersion })) {
+				return
+			}
+
+			// no-op if an existing tombstone takes precedence
+			const { _version: existingTombstone = null } = tombstones.select(key) ?? {}
+			if (existingTombstone !== null && resolver.lessThan({ version }, { version: existingTombstone })) {
+				return
+			}
+
+			deleteRecord.run({ _key: key })
+			for (const relation of Object.values(relations)) {
+				relation.deleteAll({ _source: key })
+			}
+		},
+
+		version: (key: string) => {
+			const { _version: version } = selectVersion.get({ _key: key }) ?? {}
+			return version ?? null
+		},
+
+		iterate: function* () {
+			for (const record of selectAll.iterate({})) {
 				yield decodeRecord(model, record)
 			}
 		},
-		selectAll: async (args: {}) => selectAll.all(args).map((record) => decodeRecord(model, record)),
-		select: async (args: { _key: string }) => {
-			const record = selectRecord.get(args)
-			return record === null ? null : decodeRecord(model, record)
-		},
-		insert: async (args: { _key: string; _version: string | null; value: ModelValue }) => {
-			const encodedParams = encodeRecordParams(model, args.value, params || {})
-			insertRecord.run({ _key: args._key, _version: args._version, ...encodedParams })
-		},
-		update: async (args: { _key: string; _version: string | null; value: ModelValue }) => {
-			const encodedParams = encodeRecordParams(model, args.value, params || {})
-			updateRecord.run({ _key: args._key, _version: args._version, ...encodedParams })
-		},
-		delete: async (args: { _key: string }) => deleteRecord.run(args),
+
+		count: () => countRecords.get({})?.count ?? 0,
+
 		query: async (queryParams: QueryParams) => query(db, queryParams, model),
-		count: async () => {
-			const result = countRecords.get({})
-			return result ? result.count : 0
-		},
 	}
 }
 
-function prepareImmutableRecordAPI(db: sqlite.Database, model: Model) {
+export function prepareImmutableModelAPI(db: sqlite.Database, model: Model) {
+	const relations = prepareRelationAPIs(db, model)
 	const recordTableName = getRecordTableName(model.name)
 
-	const params: Record<string, string> = {}
+	const paramsMap: Record<string, string> = {}
 	const columnNames: `"${string}"`[] = [] // quoted column names for non-relation properties
 	const columnParams: `:${string}`[] = [] // query params for non-relation properties
 
 	for (const [i, property] of model.properties.entries()) {
 		if (property.kind === "primitive" || property.kind === "reference") {
-			params[property.name] = `p${i}`
+			paramsMap[property.name] = `p${i}`
 			columnParams.push(`:p${i}`)
 			columnNames.push(`"${property.name}"`)
 		} else if (property.kind === "relation") {
@@ -224,45 +285,63 @@ function prepareImmutableRecordAPI(db: sqlite.Database, model: Model) {
 		`INSERT OR IGNORE INTO "${recordTableName}" (${insertRecordParams}) VALUES (${insertRecordValues})`
 	)
 
-	const updateRecordProperties = zip(columnNames, columnParams).map(([name, param]) => `${name} = ${param}`)
-	const updateRecordEntries = updateRecordProperties.join(", ")
-	const updateRecord = new Method<{ _key: string } & RecordValue>(
-		db,
-		`UPDATE "${recordTableName}" SET ${updateRecordEntries} WHERE _key = :_key`
-	)
-
 	const deleteRecord = new Method<{ _key: string }>(db, `DELETE FROM "${recordTableName}" WHERE _key = :_key`)
 
 	const countRecords = new Query<{}, { count: number }>(db, `SELECT COUNT(*) AS count FROM "${recordTableName}"`)
 
 	return {
-		params,
-		iterate: async function* (args: {}) {
-			for (const record of selectAll.iterate(args)) {
+		get: (key: string) => {
+			const record = selectRecord.get({ _key: key })
+			return record === null ? null : decodeRecord(model, record)
+		},
+
+		add: (value: ModelValue): string => {
+			const key = getImmutableRecordKey(value)
+			const record = selectRecord.get({ _key: key })
+			if (record !== null) {
+				return key
+			}
+
+			const encodedParams = encodeRecordParams(model, value, paramsMap)
+			insertRecord.run({ _key: key, ...encodedParams })
+			for (const [property, relation] of Object.entries(relations)) {
+				const targets = value[property]
+				assert(Array.isArray(targets), "expected string[]")
+				for (const target of targets) {
+					assert(typeof target === "string", "expected string")
+					relation.create({ _source: key, _target: target })
+				}
+			}
+
+			return key
+		},
+
+		remove: (key: string) => {
+			const record = selectRecord.get({ _key: key })
+			if (record === null) {
+				return
+			}
+
+			for (const relation of Object.values(relations)) {
+				relation.deleteAll({ _source: key })
+			}
+
+			deleteRecord.run({ _key: key })
+		},
+
+		iterate: function* () {
+			for (const record of selectAll.iterate({})) {
 				yield decodeRecord(model, record)
 			}
 		},
-		selectAll: async (args: {}) => selectAll.all(args).map((record) => decodeRecord(model, record)),
-		select: async (args: { _key: string }) => {
-			const record = selectRecord.get(args)
-			return record === null ? null : decodeRecord(model, record)
-		},
-		insert: async (args: { _key: string; value: ModelValue }) => {
-			const encodedParams = encodeRecordParams(model, args.value, params || {})
-			insertRecord.run({ _key: args._key, ...encodedParams })
-		},
-		update: async (args: { _key: string; _version: string | null; value: ModelValue }) => {
-			const encodedParams = encodeRecordParams(model, args.value, params || {})
-			updateRecord.run({ _key: args._key, _version: args._version, ...encodedParams })
-		},
-		delete: async (args: { _key: string }) => deleteRecord.run(args),
-		query: async (queryParams: QueryParams) => query(db, queryParams, model),
-		count: async () => {
-			const result = countRecords.get({})
-			return result ? result.count : 0
-		},
+
+		query: (queryParams: QueryParams) => query(db, queryParams, model),
+
+		count: () => countRecords.get({})?.count ?? 0,
 	}
 }
+
+// Relation API: { selectAll, deleteAll, creater }
 
 function prepareRelationAPI(db: sqlite.Database, modelName: string, propertyName: string) {
 	const tableName = getRelationTableName(modelName, propertyName)
@@ -295,22 +374,4 @@ function prepareRelationAPIs(db: sqlite.Database, model: Model) {
 	}
 
 	return relations
-}
-
-export function createSqliteMutableModelDBContext(db: sqlite.Database, model: Model, resolve: Resolve | undefined) {
-	return {
-		tombstones: prepareTombstoneAPI(db, model),
-		relations: prepareRelationAPIs(db, model),
-		records: prepareMutableRecordAPI(db, model),
-		resolve: resolve,
-		model,
-	}
-}
-
-export function createSqliteImmutableModelDBContext(db: sqlite.Database, model: Model) {
-	return {
-		relations: prepareRelationAPIs(db, model),
-		records: prepareImmutableRecordAPI(db, model),
-		model,
-	}
 }
