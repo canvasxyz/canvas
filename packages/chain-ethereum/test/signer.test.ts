@@ -27,5 +27,4 @@ test("create and verify action fail?", async (t) => {
 	const error = t.throwsAsync(async () => {
 		await signer.verify(signature, message)
 	})
-	console.log(error)
 })
