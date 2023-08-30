@@ -11,12 +11,10 @@ export type Action = {
 	// CAIP-2 address (without the prefix, e.g. "0xb94d27...")
 	address: string
 	session: SessionPayload
-	context: ActionContext
+
 	name: string
 	args: ActionArguments
-}
 
-export type ActionContext = {
 	topic: string
 	timestamp: number
 	blockhash: string | null

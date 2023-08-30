@@ -1,6 +1,6 @@
 import solw3 from "@solana/web3.js"
 
-import { Action, ActionArguments, ActionContext, Env, Message, SessionPayload, Signer } from "@canvas-js/interfaces"
+import { Action, IPLDValue, Message, SessionPayload, Signer } from "@canvas-js/interfaces"
 import { encode } from "microcbor"
 import { Signature, createSignature } from "@canvas-js/signed-cid"
 import bs58 from "bs58"
@@ -98,13 +98,11 @@ export class SolanaSigner implements Signer {
 		}
 	}
 
-	public verify(signature: Signature, message: Message<Action>): void {
+	public verifySession(signature: Signature, chain: string, address: string, session: IPLDValue): void {
 		// check signature type - what type is it meant to be?
 		if (signature.type !== "ed25519") {
 			throw new Error("Solana actions must use ed25519 signatures")
 		}
-
-		const { chain, session, address } = message.payload
 
 		// validate payload fields?
 		const chainId = parseChainId(chain)
@@ -121,15 +119,8 @@ export class SolanaSigner implements Signer {
 		}
 	}
 
-	public create(name: string, args: ActionArguments, context: ActionContext, env: Env): Action {
-		return {
-			chain: this.chain,
-			address: this.address,
-			session: { data: this.session.data, signature: this.session.signature },
-			context: context,
-			name: name,
-			args: args,
-		}
+	public getSession(): SolanaSession {
+		return { data: this.session.data, signature: this.session.signature }
 	}
 
 	public sign(message: Message<Action>): Signature {

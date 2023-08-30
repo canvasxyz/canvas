@@ -1,29 +1,28 @@
 import test from "ava"
 import assert from "assert"
 
-import type { Action, Message } from "@canvas-js/interfaces"
 import { verifySignature } from "@canvas-js/signed-cid"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
-import { getActionContext } from "./utils.js"
+import { createMessage } from "./utils.js"
 
 test("create and verify action", async (t) => {
 	const topic = "example:signer"
 	const signer = await SIWESigner.init({})
-	const action = signer.create("foo", { bar: 7 }, getActionContext(topic), {})
-	const message = { clock: 0, parents: [], payload: action } satisfies Message<Action>
-	const signature = signer.sign(message)
+	const message = await createMessage(signer, topic, "foo", { bar: 7 })
+	const signature = await signer.sign(message)
 	t.notThrows(() => verifySignature(signature, message))
-	t.notThrows(() => signer.verify(signature, message))
+
+	const { chain, address, session } = message.payload
+	await t.notThrowsAsync(async () => signer.verifySession(signature, chain, address, session))
 })
 
 test("reject corrupt message signature", async (t) => {
 	const topic = "example:signer"
 	const signer = await SIWESigner.init({})
-	const action = signer.create("foo", { bar: 7 }, getActionContext(topic), {})
-	const message = { clock: 0, parents: [], payload: action } satisfies Message<Action>
-	const signature = signer.sign(message)
+	const message = await createMessage(signer, topic, "foo", { bar: 7 })
+	const signature = await signer.sign(message)
 
 	// corrupt the message signature
 	signature.signature[3] = 1
@@ -33,14 +32,13 @@ test("reject corrupt message signature", async (t) => {
 test("reject corrupt session signature", async (t) => {
 	const topic = "example:signer"
 	const signer = await SIWESigner.init({})
-	const action = signer.create("foo", { bar: 7 }, getActionContext(topic), {})
-	const message = { clock: 0, parents: [], payload: action } satisfies Message<Action>
-	const signature = signer.sign(message)
+	const message = await createMessage(signer, topic, "foo", { bar: 7 })
+	const signature = await signer.sign(message)
 	t.notThrows(() => verifySignature(signature, message))
 
 	// corrupt the session signature
-	const session = action.session
+	const { chain, address, session } = message.payload
 	assert(SIWESigner.validateSessionPayload(session))
 	session.signature[3] = 1
-	t.throws(() => signer.verify(signature, message))
+	await t.throwsAsync(async () => signer.verifySession(signature, chain, address, session))
 })

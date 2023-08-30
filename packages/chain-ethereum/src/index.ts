@@ -2,16 +2,7 @@ import { AbstractSigner, Network, Networkish, Wallet, computeAddress, verifyMess
 
 import * as siwe from "siwe"
 
-import type {
-	Env,
-	Signer,
-	Action,
-	ActionContext,
-	SessionStore,
-	ActionArguments,
-	SessionPayload,
-	Message,
-} from "@canvas-js/interfaces"
+import type { Signer, Action, SessionStore, SessionPayload, Message, IPLDValue } from "@canvas-js/interfaces"
 import { Signature, createSignature } from "@canvas-js/signed-cid"
 import { secp256k1 } from "@noble/curves/secp256k1"
 
@@ -119,12 +110,11 @@ export class SIWESigner implements Signer {
 		await this.options.store?.save(this.address, this.chain, JSON.stringify(this.session))
 	}
 
-	public verify(signature: Signature, message: Message<Action>) {
+	public verifySession(signature: Signature, chain: string, address: string, session: IPLDValue) {
 		if (signature.type !== "secp256k1") {
 			throw new Error("SIWE actions must use secp256k1 signatures")
 		}
 
-		const { chain, session, address } = message.payload
 		const chainId = parseChainId(chain)
 		assert(SIWESigner.validateSessionPayload(session), "invalid session")
 		assert(session.data.version === SIWEMessageVersion, "invalid session version")
@@ -141,21 +131,23 @@ export class SIWESigner implements Signer {
 		}
 	}
 
-	public create(name: string, args: ActionArguments, context: ActionContext, {}: Env): Action {
+	public getSession(): SIWESession {
 		// TODO: create a new session if the current session is expired or about to expire
-
-		return {
-			chain: this.chain,
-			address: this.address,
-			session: { data: this.session.data, signature: getBytes(this.session.signature) },
-			context: context,
-			name: name,
-			args: args,
-		}
+		return { data: this.session.data, signature: getBytes(this.session.signature) }
 	}
 
 	public sign(message: Message<Action>): Signature {
-		return createSignature("secp256k1", getBytes(this.session.privateKey), message)
+		const { session } = message.payload
+		assert(SIWESigner.validateSessionPayload(session))
+		assert(session.data.address === this.address, "invalid session address")
+
+		const privateKey = getBytes(this.session.privateKey)
+		const publicKey = secp256k1.getPublicKey(privateKey, true)
+		const sessionAddress = computeAddress(hexlify(publicKey))
+		const sessionURI = getSessionURI(parseChainId(this.chain), sessionAddress)
+		assert(session.data.uri === sessionURI)
+
+		return createSignature("secp256k1", privateKey, message)
 	}
 }
 

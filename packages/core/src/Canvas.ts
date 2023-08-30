@@ -1,17 +1,11 @@
-import chalk from "chalk"
 import { PeerId } from "@libp2p/interface-peer-id"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { createLibp2p, Libp2p } from "libp2p"
 import { logger } from "@libp2p/logger"
-import { CID } from "multiformats/cid"
-import { base32 } from "multiformats/bases/base32"
-
-import { sha256 } from "@noble/hashes/sha256"
-import { bytesToHex } from "@noble/hashes/utils"
 
 import { QuickJSHandle } from "quickjs-emscripten"
 
-import { Action, ActionArguments, ActionContext, IPLDValue, Signer } from "@canvas-js/interfaces"
+import { Action, ActionArguments, Signer } from "@canvas-js/interfaces"
 import { JSValue, VM } from "@canvas-js/vm"
 import {
 	AbstractModelDB,
@@ -26,12 +20,12 @@ import {
 } from "@canvas-js/modeldb-interface"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { GossipLog, GossipLogConsumer, GossipLogInit } from "@canvas-js/gossiplog"
+import { getCID } from "@canvas-js/signed-cid"
 
 import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
 import { assert, mapEntries, signalInvalidType } from "./utils.js"
-import { getCID } from "@canvas-js/signed-cid"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
@@ -162,11 +156,11 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			const apply: GossipLogConsumer<Action, JSValue | void> = async (id, signature, message) => {
 				assert(signature !== null, "missing message signature")
 
-				const { chain, address, name, args, context } = message.payload
+				const { chain, address, session, name, args, ...context } = message.payload
 
 				const signer = signers.find((signer) => signer.match(chain))
 				assert(signer !== undefined, `no signer provided for chain ${chain}`)
-				await signer.verify(signature, message)
+				await signer.verifySession(signature, chain, address, session)
 
 				assert(actions[name] !== undefined, `invalid action name: ${name}`)
 
@@ -188,10 +182,9 @@ export class Canvas extends EventEmitter<CoreEvents> {
 					}
 				})
 
-				const version = id.slice(0, 10)
-				await db.apply(effects, { version })
+				await db.apply(effects, { version: id })
 
-				return { result }
+				return result
 			}
 
 			// TODO: add `validate` to log init
@@ -208,15 +201,13 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				const contextHandle = vm.wrapObject({ id: vm.context.newString(id) })
 				try {
 					const resultHandle = await vm.callAsync(handle, handle, [databaseAPI.handle, payloadHandle, contextHandle])
-					const result = resultHandle.consume((handle) => {
+					return resultHandle.consume((handle) => {
 						if (vm.context.typeof(handle) === "undefined") {
 							return undefined
 						} else {
 							return vm.unwrapValue(resultHandle)
 						}
 					})
-
-					return { result }
 				} finally {
 					payloadHandle.dispose()
 					contextHandle.dispose()
@@ -249,11 +240,21 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			assert(topics.has(topic), "internal error - topic not found")
 			const { type, log } = topics.get(topic)!
 			if (type === "action") {
-				return async (args: ActionArguments, { chain }: { chain?: string } = {}) => {
+				return async (actionArgs: ActionArguments, { chain }: { chain?: string } = {}) => {
 					const signer = signers.find((signer) => chain === undefined || signer.match(chain))
 					assert(signer !== undefined, "signer not found")
-					const context: ActionContext = { topic, timestamp: Date.now(), blockhash: null }
-					const action = signer.create(actionName, args, context, {})
+					const session = await signer.getSession()
+					const action: Action = {
+						chain: signer.chain,
+						address: signer.address,
+						session,
+						name: actionName,
+						args: actionArgs,
+						topic,
+						timestamp: Date.now(),
+						blockhash: null,
+					}
+
 					const message = await log.create(action)
 					const signature = await signer.sign(message)
 					const { id, result, recipients } = await log.publish(signature, message)
