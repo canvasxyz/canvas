@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@canvas-js/chain-ethereum": "0.5.0-alpha4",
-    "@canvas-js/chain-solana": "0.5.0-alpha4"
+    "@canvas-js/chain-solana": "0.5.0-alpha4",
+    "@canvas-js/chain-substrate": "0.5.0-alpha4"
   }
 }
