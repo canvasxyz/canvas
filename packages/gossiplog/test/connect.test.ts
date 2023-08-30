@@ -5,7 +5,7 @@ import { GossipLogInit } from "@canvas-js/gossiplog"
 import { createNetwork, waitForInitialConnections, waitForInitialSync } from "./libp2p.js"
 
 test("wait for initial connections", async (t) => {
-	const init: GossipLogInit = { topic: "com.example.test", apply: () => ({ result: undefined }) }
+	const init: GossipLogInit = { topic: "com.example.test", apply: () => {} }
 
 	const network = await createNetwork(t, {
 		a: { port: 9990, peers: ["b"], init },
@@ -18,7 +18,7 @@ test("wait for initial connections", async (t) => {
 })
 
 test("wait for initial sync", async (t) => {
-	const init: GossipLogInit = { topic: "com.example.test", apply: () => ({ result: undefined }) }
+	const init: GossipLogInit = { topic: "com.example.test", apply: () => {} }
 
 	const network = await createNetwork(t, {
 		a: { port: 9992, peers: ["b"], init },

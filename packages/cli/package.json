@@ -31,7 +31,6 @@
     "express-winston": "^4.2.0",
     "fp-ts": "^2.16.1",
     "http-status-codes": "^2.2.0",
-    "io-ts": "^2.2.20",
     "ipfs-only-hash": "^4.0.0",
     "multiformats": "^11.0.2",
     "p-queue": "^7.3.4",

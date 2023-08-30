@@ -39,9 +39,9 @@ import { Awaitable, CacheMap, assert, nsidPattern, protocolPrefix, shuffle, sort
 import { bytesToHex } from "@noble/hashes/utils"
 
 export interface GossipLogInit<Payload extends IPLDValue = IPLDValue, Result extends IPLDValue | void = void> {
-	location?: string | null
 	topic: string
 	apply: GossipLogConsumer<Payload, Result>
+	location?: string | null
 	validate?: (value: IPLDValue) => value is Payload
 
 	start?: boolean
@@ -59,7 +59,7 @@ export type GossipLogConsumer<Payload extends IPLDValue = IPLDValue, Result exte
 	id: string,
 	signature: Signature | null,
 	message: Message<Payload>
-) => Awaitable<{ result: Result }>
+) => Awaitable<Result>
 
 export type GossipLogEvents<Payload extends IPLDValue = IPLDValue, Result extends IPLDValue | void = void> = {
 	sync: CustomEvent<{ peerId: PeerId; successCount: number; failureCount: number }>
@@ -248,7 +248,7 @@ export class GossipLog<
 		const id = base32.baseEncode(key)
 		this.log("publishing message %s", id)
 
-		const { result } = await this.apply(id, signature, message)
+		const result = await this.apply(id, signature, message)
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
 		this.log("applied message %s and got result %o", id, result)
 
@@ -309,7 +309,7 @@ export class GossipLog<
 
 		// TODO: check if the message's parents exist, and mempool the message if any don't.
 		try {
-			const { result } = await this.apply(id, signature, message)
+			const result = await this.apply(id, signature, message)
 			this.log("applied message %s and got result %o", id, result)
 			this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
 		} catch (err) {
@@ -456,7 +456,7 @@ export class GossipLog<
 				this.log("received message %s via merkle sync", id)
 				try {
 					assert(this.validate(message), "invalid message payload")
-					const { result } = await this.apply(id, signature, message)
+					const result = await this.apply(id, signature, message)
 					this.log("applied message %s and got result %o", id, result)
 					this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
 					successCount++

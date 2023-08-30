@@ -1,7 +1,7 @@
 import type { Signature } from "@canvas-js/signed-cid"
 
-import type { Action, ActionArguments, ActionContext } from "./action.js"
-import { Message } from "./message.js"
+import type { Action, SessionPayload } from "./action.js"
+import type { Message } from "./message.js"
 
 export type Env = Record<string, string>
 
@@ -12,9 +12,13 @@ export interface Signer {
 	address: string
 
 	match: (chain: string) => boolean
-	verify: (signature: Signature, message: Message<Action>) => void
-	create: (name: string, args: ActionArguments, context: ActionContext, env: Env) => Action
-	sign: (message: Message<Action>) => Signature
+
+	/** Verify that `session` authorizes `signature.publicKey` to take actions on behalf of the user */
+	verifySession: (signature: Signature, chain: string, address: string, session: SessionPayload) => Awaitable<void>
+
+	getSession: () => Awaitable<SessionPayload>
+
+	sign: (message: Message<Action>) => Awaitable<Signature>
 }
 
 export interface SessionStore {

@@ -2,8 +2,6 @@ import assert from "node:assert"
 import test from "ava"
 
 import { Canvas } from "@canvas-js/core"
-import { base32 } from "multiformats/bases/base32"
-import { JSValue } from "@canvas-js/vm"
 
 const contract = `
 export const models = {

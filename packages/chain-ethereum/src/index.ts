@@ -2,17 +2,9 @@ import { AbstractSigner, Network, Networkish, Wallet, computeAddress, verifyMess
 
 import * as siwe from "siwe"
 
-import type {
-	Env,
-	Signer,
-	Action,
-	ActionContext,
-	SessionStore,
-	ActionArguments,
-	SessionPayload,
-	Message,
-} from "@canvas-js/interfaces"
+import type { Signer, Action, SessionStore, SessionPayload, Message, IPLDValue } from "@canvas-js/interfaces"
 import { Signature, createSignature } from "@canvas-js/signed-cid"
+import { secp256k1 } from "@noble/curves/secp256k1"
 
 import { getDomain } from "@canvas-js/chain-ethereum/domain"
 
@@ -34,6 +26,24 @@ export type SIWESessionData = {
 	expirationTime: string | null
 }
 
+// const schema = `
+// type SIWESession struct {
+// 	signature Bytes
+// 	data      SIWESessionData
+// }
+
+// type SIWESessionData struct {
+// 	version  String
+// 	address  String
+// 	chainId  Number
+// 	domain   String
+// 	uri      String
+// 	nonce    String
+// 	issuedAt String
+// 	expirationTime nullable String
+// }
+// `
+
 export interface SIWESignerInit {
 	signer?: AbstractSigner
 	network?: Networkish
@@ -42,7 +52,7 @@ export interface SIWESignerInit {
 }
 
 export class SIWESigner implements Signer {
-	public static async init(init: SIWESignerInit): Promise<Signer> {
+	public static async init(init: SIWESignerInit): Promise<SIWESigner> {
 		const signer = init.signer ?? Wallet.createRandom()
 		const address = await signer.getAddress()
 		const network = signer.provider ? await signer.provider.getNetwork() : Network.from(init.network)
@@ -66,7 +76,7 @@ export class SIWESigner implements Signer {
 		return new SIWESigner(address, network, session, { sessionDuration, store })
 	}
 
-	private static validateSessionPayload = (session: SessionPayload): session is SIWESession => {
+	public static validateSessionPayload = (session: SessionPayload): session is SIWESession => {
 		if (session === undefined || session === null) {
 			return false
 		} else if (typeof session === "boolean" || typeof session === "number" || typeof session === "string") {
@@ -100,12 +110,11 @@ export class SIWESigner implements Signer {
 		await this.options.store?.save(this.address, this.chain, JSON.stringify(this.session))
 	}
 
-	public async verify(signature: Signature, message: Message<Action>) {
+	public verifySession(signature: Signature, chain: string, address: string, session: IPLDValue) {
 		if (signature.type !== "secp256k1") {
 			throw new Error("SIWE actions must use secp256k1 signatures")
 		}
 
-		const { chain, session, address } = message.payload
 		const chainId = parseChainId(chain)
 		assert(SIWESigner.validateSessionPayload(session), "invalid session")
 		assert(session.data.version === SIWEMessageVersion, "invalid session version")
@@ -122,21 +131,23 @@ export class SIWESigner implements Signer {
 		}
 	}
 
-	public create(name: string, args: ActionArguments, context: ActionContext, {}: Env): Action {
+	public getSession(): SIWESession {
 		// TODO: create a new session if the current session is expired or about to expire
-
-		return {
-			chain: this.chain,
-			address: this.address,
-			session: { data: this.session.data, signature: getBytes(this.session.signature) },
-			context: context,
-			name: name,
-			args: args,
-		}
+		return { data: this.session.data, signature: getBytes(this.session.signature) }
 	}
 
 	public sign(message: Message<Action>): Signature {
-		return createSignature("secp256k1", getBytes(this.session.privateKey), message)
+		const { session } = message.payload
+		assert(SIWESigner.validateSessionPayload(session))
+		assert(session.data.address === this.address, "invalid session address")
+
+		const privateKey = getBytes(this.session.privateKey)
+		const publicKey = secp256k1.getPublicKey(privateKey, true)
+		const sessionAddress = computeAddress(hexlify(publicKey))
+		const sessionURI = getSessionURI(parseChainId(this.chain), sessionAddress)
+		assert(session.data.uri === sessionURI)
+
+		return createSignature("secp256k1", privateKey, message)
 	}
 }
 
@@ -178,7 +189,9 @@ async function generateNewSession(
 ): Promise<{ data: SIWESessionData; signature: string; privateKey: string }> {
 	const address = await signer.getAddress()
 	const domain = getDomain()
-	const { address: sessionAddress, privateKey } = Wallet.createRandom()
+
+	const privateKey = hexlify(secp256k1.utils.randomPrivateKey())
+	const sessionAddress = computeAddress(privateKey)
 
 	const issuedAt = new Date()
 
