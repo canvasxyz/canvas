@@ -16,12 +16,9 @@ const second = 1000
 test("apply a signed message offline", async (t) => {
 	const messages: IPLDValue[] = []
 	const exampleLog = await GossipLog.init(null, {
-		location: null,
 		topic: "com.example.test",
-		apply: (id, signature, message) => {
-			messages.push({ id, signature, message })
-			return { result: undefined }
-		},
+		apply: (id, signature, message) => void messages.push({ id, signature, message }),
+		location: null,
 	})
 
 	const privateKey = ed25519.utils.randomPrivateKey()
@@ -36,12 +33,9 @@ test("apply a signed message offline", async (t) => {
 test("apply a signed message offline without sequencing", async (t) => {
 	const messages: IPLDValue[] = []
 	const exampleLog = await GossipLog.init(null, {
-		location: null,
 		topic: "com.example.test",
-		apply: (id, signature, message) => {
-			messages.push({ id, signature, message })
-			return { result: undefined }
-		},
+		apply: (id, signature, message) => void messages.push({ id, signature, message }),
+		location: null,
 		sequencing: false,
 	})
 
@@ -57,12 +51,9 @@ test("apply a signed message offline without sequencing", async (t) => {
 test("apply an unsigned message offline", async (t) => {
 	const messages: IPLDValue[] = []
 	const exampleLog = await GossipLog.init(null, {
-		location: null,
 		topic: "com.example.test",
-		apply: (id, signature, message) => {
-			messages.push({ id, signature, message })
-			return { result: undefined }
-		},
+		apply: (id, signature, message) => void messages.push({ id, signature, message }),
+		location: null,
 		signatures: false,
 	})
 
@@ -76,12 +67,9 @@ test("apply an unsigned message offline", async (t) => {
 test("apply an unsigned message offline without sequencing", async (t) => {
 	const messages: IPLDValue[] = []
 	const exampleLog = await GossipLog.init(null, {
-		location: null,
 		topic: "com.example.test",
-		apply: (id, signature, message) => {
-			messages.push({ id, signature, message })
-			return { result: undefined }
-		},
+		apply: (id, signature, message) => void messages.push({ id, signature, message }),
+		location: null,
 		signatures: false,
 		sequencing: false,
 	})
@@ -95,9 +83,9 @@ test("apply an unsigned message offline without sequencing", async (t) => {
 
 test("apply two concurrent messages offline", async (t) => {
 	const exampleLog = await GossipLog.init(null, {
-		location: null,
 		topic: "com.example.test",
-		apply: (id, signature, message) => ({ result: undefined }),
+		apply: () => {},
+		location: null,
 		signatures: false,
 	})
 
@@ -120,9 +108,9 @@ test("apply two concurrent messages offline", async (t) => {
 
 test("apply two serial messages offline", async (t) => {
 	const exampleLog = await GossipLog.init(null, {
-		location: null,
 		topic: "com.example.test",
-		apply: (id, signature, message) => ({ result: undefined }),
+		apply: () => {},
+		location: null,
 		signatures: false,
 	})
 
@@ -143,9 +131,9 @@ test("apply two serial messages offline", async (t) => {
 
 test("send a message from one peer to another via gossipsub", async (t) => {
 	const init: GossipLogInit = {
-		location: null,
 		topic: "com.example.test",
-		apply: (id, signature, message) => ({ result: undefined }),
+		apply: () => {},
+		location: null,
 		signatures: false,
 		merkleSync: false,
 	}
@@ -176,7 +164,7 @@ test("deliver two concurrent messages to two peers via gossipsub", async (t) => 
 	const init: GossipLogInit = {
 		location: null,
 		topic: "com.example.test",
-		apply: (id, signature, message) => ({ result: undefined }),
+		apply: () => {},
 		signatures: false,
 		merkleSync: false,
 	}
@@ -213,7 +201,7 @@ test("exchange serial messages between two peers via gossipsub", async (t) => {
 	const init: GossipLogInit = {
 		location: null,
 		topic: "com.example.test",
-		apply: (id, signature, message) => ({ result: undefined }),
+		apply: () => {},
 		signatures: false,
 		merkleSync: false,
 	}
