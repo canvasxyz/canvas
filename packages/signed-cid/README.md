@@ -1,6 +1,6 @@
 # @canvas-js/signed-cid
 
-This package implements a tiny signed data format for IPLD values. Any CID can be signed, and the resulting `Signature` can be passed around as an independent value.
+This package implements a tiny signed data format for IPLD values. Any CID can be signed, and the resulting `Signature` can be passed around as an independent value on its own.
 
 ```ts
 import type { CID } from "multiformats/cid"
@@ -15,11 +15,32 @@ export type Signature = {
 }
 ```
 
-The signature signs the CID, which carries metadata about the encoding format and hashing algorithm, plus the hash of the encoded value itself. This allows `Signature` values to be redistributed via different codecs without breaking signature validation.
+The signature signs the bytes of the CID, which carries metadata about the encoding format and hashing algorithm, plus the hash of the encoded value itself. This allows `Signature` values to be redistributed via different codecs without breaking signature validation.
 
 `ed25519` and `secp256k1` signatures are supported, using the audited [`@noble/curves`](https://github.com/paulmillr/noble-curves) library. `secp256k1` public keys are always compressed.
 
-Only the `dag-json` and `dag-cbor` IPLD codecs are included by default, but others can be used by implementing the `Codec` interface. Similarly, only the `sha2-256` multihash digest is included by default, but other can be used by implementing the `Digest` interface.
+Only the `dag-json` and `dag-cbor` IPLD codecs are included by default, but others can be used by implementing the `Codec` interface. Similarly, only `sha2-256`, `blake3-256`, and `blake3-128` multihash digests are included by default, but other can be used by implementing the `Digest` interface.
+
+## Usage
+
+```ts
+import { createSignature, verifySignature } from "@canvas-js/signed-cid"
+import { ed25519 } from "@noble/curves"
+
+const privateKey = ed25519.utils.randomPrivateKey()
+
+const value = { foo: "hello world", bar: [1, 2, 3] }
+const signature = createSignature("ed25519", privateKey, value)
+console.log(signature)
+// {
+//   type: 'ed25519',
+//   publicKey: Uint8Array(32) [ ... ],
+//   signature: Uint8Array(64) [ ... ],
+//   cid: CID(bafyreibqke43yd2rqll4nwlrbfjfqferamxp3sdia36a6awqvcae3cmm7a)
+// }
+
+verifySignature(signature, value) // throws an error if the signature is invalid
+```
 
 ## API
 

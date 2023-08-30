@@ -19,7 +19,7 @@ export const digests: Digest[] = [
 		},
 	},
 	{
-		name: "blake3",
+		name: "blake3-256",
 		code: 0x1e,
 		digest: (iter: Iterable<Uint8Array>) => {
 			const hash = blake3.create({ dkLen: 32 })
