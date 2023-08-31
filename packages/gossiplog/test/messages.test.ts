@@ -1,7 +1,6 @@
 import test from "ava"
 
 import { nanoid } from "nanoid"
-import { base32 } from "multiformats/bases/base32"
 import { ed25519 } from "@noble/curves/ed25519"
 
 import { Signature, createSignature } from "@canvas-js/signed-cid"
@@ -100,7 +99,7 @@ test("apply two messages in serial", async (t) => {
 	const { id: idB } = await log.append(b)
 	t.deepEqual(messages, {
 		[a]: [null, { clock: 1, parents: [], payload: a }],
-		[b]: [null, { clock: 2, parents: [base32.baseDecode(idA)], payload: b }],
+		[b]: [null, { clock: 2, parents: [idA], payload: b }],
 	})
 })
 

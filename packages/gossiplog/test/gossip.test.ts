@@ -1,6 +1,5 @@
 import test from "ava"
 
-import { base32 } from "multiformats/bases/base32"
 import { nanoid } from "nanoid"
 
 import { createNetwork, waitForInitialConnections, waitForMessageDelivery } from "./libp2p.js"
@@ -94,5 +93,5 @@ test("exchange serial messages between two peers via gossipsub", async (t) => {
 	])
 
 	t.is(messageB.clock, 2)
-	t.deepEqual(messageB.parents, [base32.baseDecode(idA)])
+	t.deepEqual(messageB.parents, [idA])
 })

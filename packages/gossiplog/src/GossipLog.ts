@@ -8,7 +8,6 @@ import type { Startable } from "@libp2p/interfaces/startable"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { EventEmitter } from "@libp2p/interfaces/events"
 import { logger } from "@libp2p/logger"
-import { base32 } from "multiformats/bases/base32"
 import { bytesToHex } from "@noble/hashes/utils"
 
 import type { Node } from "@canvas-js/okra"
@@ -17,6 +16,7 @@ import type { IPLDValue, Message } from "@canvas-js/interfaces"
 
 import openMessageLog, { AbstractMessageLog, MessageSigner } from "#store"
 
+import { decodeId } from "./schema.js"
 import { SyncService, SyncOptions } from "./SyncService.js"
 import { Awaitable, assert, nsidPattern } from "./utils.js"
 
@@ -205,7 +205,7 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 		}
 
 		const [key, signature, message] = messages.decode(data)
-		const id = base32.baseEncode(key)
+		const id = decodeId(key)
 
 		this.log("received message %s via gossipsub", id)
 

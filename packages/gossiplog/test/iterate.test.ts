@@ -1,6 +1,6 @@
 import test from "ava"
 
-import { base32 } from "multiformats/bases/base32"
+import type { Message } from "@canvas-js/interfaces"
 
 import openMessageLog from "@canvas-js/gossiplog/store"
 
@@ -16,8 +16,33 @@ test("append three messages", async (t) => {
 
 	t.deepEqual(await collect(log.iterate()), [
 		[foo, null, { clock: 1, parents: [], payload: "foo" }],
-		[bar, null, { clock: 2, parents: [base32.baseDecode(foo)], payload: "bar" }],
-		[baz, null, { clock: 3, parents: [base32.baseDecode(bar)], payload: "baz" }],
+		[bar, null, { clock: 2, parents: [foo], payload: "bar" }],
+		[baz, null, { clock: 3, parents: [bar], payload: "baz" }],
+	])
+})
+
+test("insert three concurrent messages and append a fourth", async (t) => {
+	const topic = "com.example.test"
+	const log = await openMessageLog({ location: null, topic, apply: () => {}, validate, signatures: false })
+
+	const { id: foo } = await log.insert(null, { clock: 1, parents: [], payload: "foo" })
+	const { id: bar } = await log.insert(null, { clock: 1, parents: [], payload: "bar" })
+	const { id: baz } = await log.insert(null, { clock: 1, parents: [], payload: "baz" })
+
+	const entries: [string, null, Message<string>][] = [
+		[foo, null, { clock: 1, parents: [], payload: "foo" }],
+		[bar, null, { clock: 1, parents: [], payload: "bar" }],
+		[baz, null, { clock: 1, parents: [], payload: "baz" }],
+	]
+
+	entries.sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
+
+	t.deepEqual(await collect(log.iterate()), entries)
+
+	const { id: qux } = await log.append("qux")
+	t.deepEqual(await collect(log.iterate()), [
+		...entries,
+		[qux, null, { clock: 2, parents: entries.map(([id]) => id), payload: "qux" }],
 	])
 })
 

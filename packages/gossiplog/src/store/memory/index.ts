@@ -6,7 +6,7 @@ import pDefer from "p-defer"
 import { MemoryTree } from "@canvas-js/okra-memory"
 import { Bound, assert } from "@canvas-js/okra"
 
-import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractStore.js"
+import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
 
 export default async function openMessageLog<Payload, Result>(
 	init: MessageLogInit<Payload, Result>

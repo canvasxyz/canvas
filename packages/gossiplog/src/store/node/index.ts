@@ -5,9 +5,9 @@ import { Bound, assert } from "@canvas-js/okra"
 
 import openMemoryMessageLog from "../memory/index.js"
 
-import { AbstractMessageLog, MessageLogInit } from "../AbstractStore.js"
+import { AbstractMessageLog, MessageLogInit } from "../AbstractMessageLog.js"
 
-export * from "../AbstractStore.js"
+export * from "../AbstractMessageLog.js"
 
 export default async function openMessageLog<Payload, Result>(
 	init: MessageLogInit<Payload, Result>
