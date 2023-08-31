@@ -1,7 +1,9 @@
-import { AbstractStore, StoreInit } from "../AbstractStore.js"
+import { AbstractMessageLog, MessageLogInit } from "../AbstractStore.js"
 
-export { AbstractStore, StoreInit as GraphStoreInit, Graph } from "../AbstractStore.js"
+export * from "../AbstractStore.js"
 
-export async function openStore(init: StoreInit): Promise<AbstractStore> {
+export default async function openMessageLog<Payload, Result>(
+	init: MessageLogInit<Payload, Result>
+): Promise<AbstractMessageLog<Payload, Result>> {
 	throw new Error("unsupported platform")
 }

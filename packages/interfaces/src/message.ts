@@ -1,13 +1,11 @@
 import type { Signature } from "@canvas-js/signed-cid"
 
-import type { IPLDValue } from "./values.js"
-
-export type SignedMessage<Payload extends IPLDValue = IPLDValue> = {
+export type SignedMessage<Payload = unknown> = {
 	signature: Signature | null
 	message: Message<Payload>
 }
 
-export type Message<Payload extends IPLDValue = IPLDValue> = {
+export type Message<Payload = unknown> = {
 	clock: number
 	parents: Uint8Array[]
 	payload: Payload

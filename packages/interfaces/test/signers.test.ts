@@ -5,6 +5,7 @@ import { verifySignature } from "@canvas-js/signed-cid"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { SolanaSigner } from "@canvas-js/chain-solana"
+import { SubstrateSigner } from "@canvas-js/chain-substrate"
 
 type SignerImplementation = { createSigner: () => Promise<Signer>; name: string }
 
@@ -16,6 +17,10 @@ const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 	{
 		name: "solana",
 		createSigner: async () => SolanaSigner.initWithKeypair(),
+	},
+	{
+		name: "substrate",
+		createSigner: async () => SubstrateSigner.initWithKeypair(),
 	},
 ]
 

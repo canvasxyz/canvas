@@ -14,6 +14,8 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
+import { GossipLog, gossiplog } from "@canvas-js/gossiplog"
+
 import { defaultBootstrapList } from "./bootstrap.js"
 import {
 	DIAL_CONCURRENCY,
@@ -22,9 +24,9 @@ import {
 	MIN_CONNECTIONS,
 	PING_TIMEOUT,
 } from "./constants.js"
-import { assert } from "./utils.js"
 
 export interface P2PConfig {
+	offline?: boolean
 	listen?: string[]
 	announce?: string[]
 	bootstrapList?: string[]
@@ -33,20 +35,25 @@ export interface P2PConfig {
 }
 
 export type ServiceMap = {
-	pubsub: PubSub<GossipsubEvents>
-	pingService: PingService
 	identifyService: {}
+	pingService: PingService
+	pubsub: PubSub<GossipsubEvents>
+	gossiplog: GossipLog
 }
 
-export function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pOptions<ServiceMap> {
+export function getLibp2pOptions(
+	location: string | null,
+	peerId: PeerId,
+	config: P2PConfig
+): Libp2pOptions<ServiceMap> {
+	const offline = config.offline ?? false
 	const announce = config.announce ?? []
 	const listen = config.listen ?? []
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
-	assert(bootstrapList.length > 0, "bootstrap list cannot be empty")
 
-	// if (listen.length === 0) {
-	// 	console.log(chalk.yellowBright(`[canvas-core] Using Canvas bootstrap servers as relays.`))
-	// }
+	if (listen.length === 0 && !offline) {
+		console.log(chalk.yellowBright(`[canvas-core] Using Canvas bootstrap servers as relays.`))
+	}
 
 	for (const address of announce) {
 		console.log(chalk.gray(`[canvas-core] Announcing on ${address}`))
@@ -77,6 +84,7 @@ export function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pOptio
 	}
 
 	return {
+		start: false,
 		peerId: peerId,
 		addresses: { listen, announce },
 
@@ -98,16 +106,7 @@ export function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pOptio
 		peerDiscovery: [bootstrap({ list: bootstrapList })],
 
 		services: {
-			pubsub: gossipsub({
-				emitSelf: false,
-				fallbackToFloodsub: false,
-				allowPublishToZeroPeers: true,
-				globalSignaturePolicy: "StrictSign",
-			}),
-
-			identifyService: identifyService({
-				protocolPrefix: "canvas",
-			}),
+			identifyService: identifyService({ protocolPrefix: "canvas" }),
 
 			pingService: pingService({
 				protocolPrefix: "canvas",
@@ -115,6 +114,15 @@ export function getLibp2pOptions(peerId: PeerId, config: P2PConfig): Libp2pOptio
 				maxOutboundStreams: 32,
 				timeout: PING_TIMEOUT,
 			}),
+
+			pubsub: gossipsub({
+				emitSelf: false,
+				fallbackToFloodsub: false,
+				allowPublishToZeroPeers: true,
+				globalSignaturePolicy: "StrictNoSign",
+			}),
+
+			gossiplog: gossiplog({ location }),
 		},
 	}
 }

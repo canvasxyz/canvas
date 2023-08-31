@@ -18,6 +18,7 @@
     { "path": "./packages/chain-ethereum" },
     { "path": "./packages/chain-ethereum/test" },
     { "path": "./packages/chain-solana" },
-    { "path": "./packages/chain-solana/test" }
+    { "path": "./packages/chain-solana/test" },
+    { "path": "./packages/chain-substrate" }
   ]
 }
