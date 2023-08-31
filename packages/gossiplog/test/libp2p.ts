@@ -166,19 +166,21 @@ export async function waitForInitialSync(network: Record<string, Libp2p<ServiceM
 	await Promise.all(Object.values(syncPromises).map((defer) => defer.promise))
 }
 
+type Result = { id: string; signature: Signature | null; message: Message }
+
 export async function waitForMessageDelivery(
 	t: ExecutionContext<unknown>,
 	network: Record<string, Libp2p<ServiceMap>>,
 	match: (id: string, signature: Signature | null, message: Message) => boolean
-): Promise<void> {
-	const ids = await Promise.all(
+): Promise<Result> {
+	const results = await Promise.all(
 		Object.entries(network).map(([name, libp2p]) => {
 			const peerId = libp2p.peerId.toString()
-			const deferred = pDefer<string>()
+			const deferred = pDefer<Result>()
 			const handler: EventHandler<GossipLogEvents["message"]> = ({ detail: { id, signature, message } }) => {
 				if (match(id, signature, message)) {
 					t.log(`delivered ${id} to peer ${name} (${peerId})`)
-					deferred.resolve(id)
+					deferred.resolve({ id, signature, message })
 				}
 			}
 
@@ -188,9 +190,11 @@ export async function waitForMessageDelivery(
 	)
 
 	t.true(
-		ids.every((id) => id === ids[0]),
+		results.every(({ id }) => id === results[0].id),
 		"expected all ids to be equal"
 	)
 
-	t.log(`delivered ${ids[0]} to all peers`)
+	t.log(`delivered ${results[0].id} to all peers`)
+
+	return results[0]
 }

@@ -26,8 +26,6 @@ import {
 	SYNC_RETRY_LIMIT,
 } from "./constants.js"
 import { CacheMap, shuffle, sortPair, wait } from "./utils.js"
-import { CustomEvent, EventEmitter } from "@libp2p/interfaces/events"
-import { GossipLogEvents } from "./GossipLog.js"
 
 export interface SyncOptions {
 	minConnections?: number
@@ -48,10 +46,7 @@ export interface SyncServiceComponents {
  * interpolating that topic (`/canvas/sync/v1/${init.topic}`). By default, it schedules
  * a merkle sync for every new connection with a peer supporting the same topic.
  */
-export class SyncService<Payload = unknown, Result = void>
-	extends EventEmitter<{ sync: GossipLogEvents["sync"] }>
-	implements Startable
-{
+export class SyncService<Payload = unknown, Result = void> implements Startable {
 	private readonly protocol: string
 	private readonly topology: Topology
 
@@ -76,7 +71,6 @@ export class SyncService<Payload = unknown, Result = void>
 		private readonly messages: AbstractMessageLog<Payload, Result>,
 		options: SyncOptions
 	) {
-		super()
 		this.log = logger(`canvas:gossiplog:[${this.topic}]:sync`)
 		this.protocol = `/gossiplog/sync/v1/${messages.topic}`
 
@@ -115,7 +109,7 @@ export class SyncService<Payload = unknown, Result = void>
 			return
 		}
 
-		this.log("starting", this.topic)
+		this.log("starting sync service")
 
 		await this.components.registrar.handle(this.protocol, this.handleIncomingStream, {
 			maxInboundStreams: this.maxInboundStreams,
@@ -131,7 +125,7 @@ export class SyncService<Payload = unknown, Result = void>
 			return
 		}
 
-		this.log("stopping", this.topic)
+		this.log("stopping sync service")
 
 		this.#controller.abort()
 
@@ -255,7 +249,6 @@ export class SyncService<Payload = unknown, Result = void>
 		try {
 			const { root } = await this.messages.sync(peerId, client)
 			this.log("finished sync, got root hash %s", hex(root.hash))
-			this.dispatchEvent(new CustomEvent("sync", { detail: { topic: this.topic, peerId, root } }))
 		} finally {
 			client.end()
 			this.log("closed outgoing stream %s to peer %p", stream.id, peerId)

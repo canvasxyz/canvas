@@ -9,11 +9,7 @@ import { IPLDValue, Message } from "@canvas-js/interfaces"
 
 import openMessageLog from "@canvas-js/gossiplog/store"
 
-import { createNetwork, waitForInitialConnections, waitForMessageDelivery } from "./libp2p.js"
-
-const second = 1000
-
-const validateIPLDValue = (payload: unknown): payload is IPLDValue => true
+const validateString = (payload: unknown): payload is string => true
 
 class Ed25519Signer<T = unknown> {
 	private readonly privateKey = ed25519.utils.randomPrivateKey()
@@ -30,7 +26,7 @@ test("apply a signed message", async (t) => {
 		location: null,
 		topic: "com.example.test",
 		apply: (id, signature, message) => void messages.push({ id, publicKey: signature?.publicKey ?? null, message }),
-		validate: validateIPLDValue,
+		validate: validateString,
 	})
 
 	const signer = new Ed25519Signer()
@@ -46,7 +42,7 @@ test("apply a signed message without sequencing", async (t) => {
 		location: null,
 		topic: "com.example.test",
 		apply: (id, signature, message) => void messages.push({ id, publicKey: signature?.publicKey ?? null, message }),
-		validate: validateIPLDValue,
+		validate: validateString,
 		sequencing: false,
 	})
 
@@ -62,7 +58,7 @@ test("apply an unsigned message", async (t) => {
 		location: null,
 		topic: "com.example.test",
 		apply: (id, signature, message) => void messages.push({ id, publicKey: signature?.publicKey ?? null, message }),
-		validate: validateIPLDValue,
+		validate: validateString,
 		signatures: false,
 	})
 
@@ -77,7 +73,7 @@ test("apply an unsigned message without sequencing", async (t) => {
 		location: null,
 		topic: "com.example.test",
 		apply: (id, signature, message) => void messages.push({ id, publicKey: signature?.publicKey ?? null, message }),
-		validate: validateIPLDValue,
+		validate: validateString,
 		signatures: false,
 		sequencing: false,
 	})
@@ -129,110 +125,3 @@ test("apply two concurrent messages", async (t) => {
 		[b]: [null, { clock: 1, parents: [], payload: b }],
 	})
 })
-
-// test("send a message from one peer to another via gossipsub", async (t) => {
-// 	const init: GossipLogInit = {
-// 		topic: "com.example.test",
-// 		apply: () => {},
-// 		location: null,
-// 		signatures: false,
-// 		merkleSync: false,
-// 	}
-
-// 	const network = await createNetwork(t, {
-// 		a: { port: 9992, peers: ["b"], init },
-// 		b: { port: 9993, peers: ["a"], init },
-// 	})
-
-// 	await waitForInitialConnections(network)
-
-// 	const message = await network.a.create(nanoid())
-// 	t.is(message.clock, 1)
-// 	t.deepEqual(message.parents, [])
-
-// 	const [{ id, result }] = await Promise.all([
-// 		network.a.publish(null, message),
-// 		waitForMessageDelivery(t, network, (id, signature, { payload }) => payload === message.payload),
-// 	])
-
-// 	t.log(`delivered ${id} to all peers`)
-// 	t.is(result, undefined)
-// })
-
-// test("deliver two concurrent messages to two peers via gossipsub", async (t) => {
-// 	t.timeout(20 * second)
-
-// 	const init: GossipLogInit = {
-// 		location: null,
-// 		topic: "com.example.test",
-// 		apply: () => {},
-// 		signatures: false,
-// 		merkleSync: false,
-// 	}
-
-// 	const network = await createNetwork(t, {
-// 		a: { port: 9994, peers: ["b"], init },
-// 		b: { port: 9995, peers: ["a"], init },
-// 	})
-
-// 	await waitForInitialConnections(network)
-
-// 	const messageA = await network.a.create(nanoid())
-// 	t.is(messageA.clock, 1)
-// 	t.deepEqual(messageA.parents, [])
-
-// 	const messageB = await network.b.create(nanoid())
-// 	t.is(messageB.clock, 1)
-// 	t.deepEqual(messageB.parents, [])
-
-// 	const [{ result: resultA }, { result: resultB }] = await Promise.all([
-// 		network.a.publish(null, messageA),
-// 		network.b.publish(null, messageB),
-// 		waitForMessageDelivery(t, network, (id, signature, { payload }) => payload === messageA.payload),
-// 		waitForMessageDelivery(t, network, (id, signature, { payload }) => payload === messageB.payload),
-// 	])
-
-// 	t.is(resultA, undefined)
-// 	t.is(resultB, undefined)
-// })
-
-// test("exchange serial messages between two peers via gossipsub", async (t) => {
-// 	t.timeout(20 * second)
-
-// 	const init: GossipLogInit = {
-// 		location: null,
-// 		topic: "com.example.test",
-// 		apply: () => {},
-// 		signatures: false,
-// 		merkleSync: false,
-// 	}
-
-// 	const network = await createNetwork(t, {
-// 		a: { port: 9996, peers: ["b"], init },
-// 		b: { port: 9997, peers: ["a"], init },
-// 	})
-
-// 	await waitForInitialConnections(network)
-
-// 	const messageA = await network.a.create(nanoid())
-// 	t.is(messageA.clock, 1)
-// 	t.deepEqual(messageA.parents, [])
-
-// 	const [{ id: idA, result: resultA }] = await Promise.all([
-// 		network.a.publish(null, messageA),
-// 		waitForMessageDelivery(t, network, (id, signature, { payload }) => payload === messageA.payload),
-// 	])
-
-// 	t.is(resultA, undefined)
-
-// 	const messageB = await network.b.create(nanoid())
-// 	t.is(messageB.clock, 2)
-// 	t.deepEqual(messageB.parents, [base32.baseDecode(idA)])
-
-// 	const [{ id: idB, result: resultB }] = await Promise.all([
-// 		network.b.publish(null, messageB),
-// 		waitForMessageDelivery(t, network, (id, signature, { payload }) => payload === messageB.payload),
-// 	])
-
-// 	t.is(resultB, undefined)
-// })

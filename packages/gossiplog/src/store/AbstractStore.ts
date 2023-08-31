@@ -1,10 +1,11 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { Source, Target, Node } from "@canvas-js/okra"
 
-import * as cbor from "@ipld/dag-cbor"
+import { CustomEvent, EventEmitter } from "@libp2p/interfaces/events"
+import { Logger, logger } from "@libp2p/logger"
 import { base32 } from "multiformats/bases/base32"
 import { equals } from "uint8arrays"
-import { Logger, logger } from "@libp2p/logger"
+import * as cbor from "@ipld/dag-cbor"
 
 import type { Message } from "@canvas-js/interfaces"
 import { Signature, verifySignature } from "@canvas-js/signed-cid"
@@ -39,7 +40,11 @@ export interface MessageSigner<Payload = unknown> {
 	sign: (message: Message<Payload>) => Awaitable<Signature | null>
 }
 
-export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> {
+export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> extends EventEmitter<{
+	message: CustomEvent<{ id: string; signature: Signature | null; message: Message<Payload>; result: Result }>
+	commit: CustomEvent<{ root: Node }>
+	sync: CustomEvent<{ peerId: PeerId }>
+}> {
 	private static defaultSigner: MessageSigner = { sign: ({}) => null }
 
 	public abstract close(): Promise<void>
@@ -65,6 +70,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> {
 	protected readonly log: Logger
 
 	protected constructor(init: MessageLogInit<Payload, Result>) {
+		super()
 		assert(nsidPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-]+)")
 
 		this.location = init.location
@@ -77,13 +83,6 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> {
 
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 	}
-
-	// public async getSequence(): Promise<[clock: number, parents: Uint8Array[]]> {
-	// 	return await this.read(async (txn) => {
-	// 		const graph = await Graph.import(this.topic, txn)
-	// 		return graph.export()
-	// 	})
-	// }
 
 	public encode(signature: Signature | null, message: Message<Payload>): [key: Uint8Array, value: Uint8Array] {
 		if (this.sequencing) {
@@ -136,26 +135,23 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> {
 	 */
 	public async insert(signature: Signature | null, message: Message<Payload>) {
 		return await this.write(async (txn) => {
-			const graph = await Graph.import(this.topic, this.sequencing, txn)
+			const userdata = await txn.getUserdata()
+			const graph = Graph.import(this.topic, this.sequencing, userdata)
 
 			const [key, value] = this.encode(signature, message)
 
 			const id = base32.baseEncode(key)
 			const result = await this.apply(id, signature, message)
+			this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
 
 			await txn.set(key, value)
 			graph.update(key, message)
 
-			await graph.save(txn)
+			await txn.setUserdata(graph.export())
 
 			const root = await txn.getRoot()
 			return { id, key, value, result, root }
 		})
-	}
-
-	private async importGraph(txn: ReadWriteTransaction): Promise<Graph> {
-		const graph = await Graph.import(this.topic, this.sequencing, txn)
-		return graph
 	}
 
 	/**
@@ -165,19 +161,21 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> {
 		const signer = options.signer ?? AbstractMessageLog.defaultSigner
 
 		return await this.write(async (txn) => {
-			const graph = await this.importGraph(txn)
+			const userdata = await txn.getUserdata()
+			const graph = Graph.import(this.topic, this.sequencing, userdata)
 
-			const message = graph.createMessage(payload)
+			const message = graph.create(payload)
 			const signature = await signer.sign(message)
 			const [key, value] = this.encode(signature, message)
 
 			const id = base32.baseEncode(key)
 			const result = await this.apply(id, signature, message)
+			this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
 
 			await txn.set(key, value)
 			graph.update(key, message)
 
-			await graph.save(txn)
+			await txn.setUserdata(graph.export())
 
 			const root = await txn.getRoot()
 			return { id, key, value, result, root }
@@ -188,9 +186,10 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> {
 	 * Sync with a remote source, applying and inserting all missing messages into the local log
 	 */
 	public async sync(sourcePeerId: PeerId, source: Source): Promise<{ root: Node }> {
-		return await this.write(
+		const root = await this.write(
 			async (target) => {
-				const graph = await Graph.import(this.topic, this.sequencing, target)
+				const userdata = await target.getUserdata()
+				const graph = Graph.import(this.topic, this.sequencing, userdata)
 
 				const driver = new Driver(this.topic, source, target)
 				for await (const [key, value] of driver.sync()) {
@@ -205,18 +204,22 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> {
 						verifySignature(signature, message)
 					}
 
-					await this.apply(id, signature, message)
+					const result = await this.apply(id, signature, message)
+					this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
+
 					await target.set(key, value)
 					graph.update(key, message)
 				}
 
-				await graph.save(target)
-
-				const root = await target.getRoot()
-				return { root }
+				await target.setUserdata(graph.export())
+				return await target.getRoot()
 			},
 			{ source: sourcePeerId }
 		)
+
+		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
+		this.dispatchEvent(new CustomEvent("sync", { detail: { peerId: sourcePeerId } }))
+		return { root }
 	}
 
 	/**
@@ -232,12 +235,11 @@ class Graph {
 
 	readonly #parents = new Set<string>()
 
-	public static async import(topic: string, sequencing: boolean, txn: ReadOnlyTransaction): Promise<Graph> {
+	public static import(topic: string, sequencing: boolean, userdata: Uint8Array | null): Graph {
 		if (sequencing === false) {
 			return new Graph(topic, sequencing, [])
 		}
 
-		const userdata = await txn.getUserdata()
 		const parents = userdata === null ? [] : cbor.decode<Uint8Array[]>(userdata)
 		return new Graph(topic, sequencing, parents)
 	}
@@ -245,7 +247,7 @@ class Graph {
 	constructor(topic: string, private readonly sequencing: boolean, parents: Uint8Array[]) {
 		const clock = getClock(parents)
 		this.log = logger(`canvas:gossiplog:[${topic}]:graph`)
-		this.log("created graph at clock %d", clock)
+		this.log("loaded graph at clock %d", clock)
 		for (const key of parents) {
 			const id = base32.baseEncode(key)
 			this.log("added %s", id)
@@ -253,14 +255,16 @@ class Graph {
 		}
 	}
 
-	public async save(txn: ReadWriteTransaction) {
+	public export(): Uint8Array | null {
 		if (this.sequencing === false) {
-			return
+			return null
 		}
 
-		const [clock, parents] = this.export()
+		const parents = this.getParents()
+		const clock = getClock(parents)
+
 		this.log("saving graph at clock %d", clock)
-		await txn.setUserdata(cbor.encode(parents))
+		return cbor.encode(parents)
 	}
 
 	public update<Payload>(key: Uint8Array, message: Message<Payload>) {
@@ -280,18 +284,22 @@ class Graph {
 		this.#parents.add(id)
 	}
 
-	public createMessage<Payload>(payload: Payload): Message<Payload> {
-		const [clock, parents] = this.export()
+	public create<Payload>(payload: Payload): Message<Payload> {
+		if (this.sequencing === false) {
+			return { clock: 0, parents: [], payload }
+		}
+
+		const parents = this.getParents()
+		const clock = getClock(parents)
+
 		return { clock, parents, payload }
 	}
 
-	public export(): [clock: number, parents: Uint8Array[]] {
+	private getParents(): Uint8Array[] {
 		if (this.sequencing === false) {
-			return [0, []]
+			return []
 		}
 
-		const parents = [...this.#parents].map(base32.baseDecode)
-		const clock = getClock(parents)
-		return [clock, parents]
+		return [...this.#parents].map(base32.baseDecode).sort()
 	}
 }

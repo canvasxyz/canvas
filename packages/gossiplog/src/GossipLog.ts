@@ -6,7 +6,7 @@ import type { PubSub } from "@libp2p/interface-pubsub"
 import type { Startable } from "@libp2p/interfaces/startable"
 
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
-import { CustomEvent, EventEmitter } from "@libp2p/interfaces/events"
+import { EventEmitter } from "@libp2p/interfaces/events"
 import { logger } from "@libp2p/logger"
 import { base32 } from "multiformats/bases/base32"
 import { bytesToHex } from "@noble/hashes/utils"
@@ -33,7 +33,7 @@ export interface GossipLogInit {
 }
 
 export type GossipLogEvents = {
-	sync: CustomEvent<{ topic: string; peerId: PeerId; successCount: number; failureCount: number }>
+	sync: CustomEvent<{ topic: string; peerId: PeerId }>
 	commit: CustomEvent<{ topic: string; root: Node }>
 	message: CustomEvent<{
 		topic: string
@@ -45,7 +45,6 @@ export type GossipLogEvents = {
 }
 
 export interface TopicInit<Payload, Result> extends SyncOptions {
-	topic: string
 	apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
 	validate: (payload: unknown) => payload is Payload
 
@@ -118,19 +117,29 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 		this.#started = false
 	}
 
-	public async subscribe<Payload, Result>(init: TopicInit<Payload, Result>): Promise<void> {
-		const { topic, validate, apply, signatures, sequencing, ...syncOptions } = init
+	public async subscribe<Payload, Result>(topic: string, init: TopicInit<Payload, Result>): Promise<void> {
+		const { validate, apply, signatures, sequencing, ...syncOptions } = init
 		assert(nsidPattern.test(topic), "invalid topic (must match [a-zA-Z0-9\\.\\-]+)")
 		this.log("subscribing to %s", topic)
 
 		const messages = await openMessageLog({ location: this.location, topic, apply, validate, signatures, sequencing })
 		this.#messages.set(topic, messages as AbstractMessageLog<unknown, unknown>)
 
+		messages.addEventListener("message", ({ detail: { id, signature, message, result } }) =>
+			this.safeDispatchEvent("message", { detail: { topic, id, signature, message, result } })
+		)
+
+		messages.addEventListener("commit", ({ detail: { root } }) =>
+			this.safeDispatchEvent("commit", { detail: { topic, root } })
+		)
+
+		messages.addEventListener("sync", ({ detail: { peerId } }) =>
+			this.safeDispatchEvent("sync", { detail: { topic, peerId } })
+		)
+
 		if (this.sync) {
 			const service = new SyncService(this.components, messages, syncOptions)
 			this.#services.set(topic, service as SyncService<unknown, unknown>)
-			service.addEventListener("sync", ({ detail }) => this.safeDispatchEvent("sync", { detail }))
-			// service.addEventListener("sync", (event) => this.dispatchEvent(event))
 
 			if (this.#started) {
 				await service.start()

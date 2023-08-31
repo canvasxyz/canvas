@@ -193,7 +193,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			}
 
 			const validate = (payload: unknown): payload is Action => true // TODO
-			await gossiplog.subscribe({ topic, apply, validate, signatures: true, sequencing: true })
+			await gossiplog.subscribe(topic, { apply, validate, signatures: true, sequencing: true })
 		}
 
 		for (const [topic, handle] of Object.entries(customActionHandles)) {
@@ -220,7 +220,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			}
 
 			const validate = (payload: unknown): payload is JSValue => true // TODO
-			await gossiplog.subscribe({ topic, apply, validate, signatures: false, sequencing: false })
+			await gossiplog.subscribe(topic, { apply, validate, signatures: false, sequencing: false })
 		}
 
 		return new Canvas(uri, signers, libp2p, vm, db, actions)
