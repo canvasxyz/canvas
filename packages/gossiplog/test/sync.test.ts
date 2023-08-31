@@ -8,8 +8,8 @@ import { createNetwork, waitForInitialSync } from "./libp2p.js"
 test("wait for initial sync", async (t) => {
 	t.timeout(20 * 1000)
 	const network = await createNetwork(t, {
-		a: { port: 9992, peers: ["b"] },
-		b: { port: 9993, peers: ["a"] },
+		a: { port: 9990, peers: ["b"] },
+		b: { port: 9991, peers: ["a"] },
 	})
 
 	const topic = "com.example.test"

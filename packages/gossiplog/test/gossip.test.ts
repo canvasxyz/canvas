@@ -5,122 +5,96 @@ import { nanoid } from "nanoid"
 import { Message } from "@canvas-js/interfaces"
 
 import { createNetwork, waitForInitialConnections, waitForMessageDelivery } from "./libp2p.js"
+import { base32 } from "multiformats/bases/base32"
 
 const validateString = (payload: unknown): payload is string => true
 
 test("send a message from one peer to another via gossipsub", async (t) => {
 	const network = await createNetwork(t, {
-		a: { port: 9992, peers: ["b"], init: { sync: false } },
-		b: { port: 9993, peers: ["a"], init: { sync: false } },
+		a: { port: 9990, peers: ["b"], init: { sync: false } },
+		b: { port: 9991, peers: ["a"], init: { sync: false } },
 	})
-
-	const messagesA: Record<string, Message<string>> = {}
-	const messagesB: Record<string, Message<string>> = {}
 
 	const topic = "com.example.test"
 
 	await Promise.all([
-		network.a.services.gossiplog.subscribe(topic, {
-			apply: (id, signature, message) => void (messagesA[message.payload] = message),
-			validate: validateString,
-			signatures: false,
-		}),
-		network.b.services.gossiplog.subscribe(topic, {
-			apply: (id, signature, message) => void (messagesB[message.payload] = message),
-			validate: validateString,
-			signatures: false,
-		}),
+		network.a.services.gossiplog.subscribe(topic, { apply: () => {}, validate: validateString, signatures: false }),
+		network.b.services.gossiplog.subscribe(topic, { apply: () => {}, validate: validateString, signatures: false }),
 	])
 
 	await waitForInitialConnections(network)
 
 	const payload = nanoid()
 
-	const [{ message }, { id, result }] = await Promise.all([
+	const [{ message }, { result }] = await Promise.all([
 		waitForMessageDelivery(t, network, (id, signature, message) => message.payload === payload),
 		network.a.services.gossiplog.publish(topic, payload),
 	])
 
-	t.log(`delivered ${id} to all peers`)
 	t.is(result, undefined)
 	t.is(message.clock, 1)
 	t.deepEqual(message.parents, [])
 })
 
-// test("deliver two concurrent messages to two peers via gossipsub", async (t) => {
-// 	t.timeout(20 * second)
+test("deliver two concurrent messages to two peers via gossipsub", async (t) => {
+	const network = await createNetwork(t, {
+		a: { port: 9992, peers: ["b"], init: { sync: false } },
+		b: { port: 9993, peers: ["a"], init: { sync: false } },
+	})
 
-// 	const init: GossipLogInit = {
-// 		location: null,
-// 		topic: "com.example.test",
-// 		apply: () => {},
-// 		signatures: false,
-// 		merkleSync: false,
-// 	}
+	const topic = "com.example.test"
 
-// 	const network = await createNetwork(t, {
-// 		a: { port: 9994, peers: ["b"], init },
-// 		b: { port: 9995, peers: ["a"], init },
-// 	})
+	await Promise.all([
+		network.a.services.gossiplog.subscribe(topic, { apply: () => {}, validate: validateString, signatures: false }),
+		network.b.services.gossiplog.subscribe(topic, { apply: () => {}, validate: validateString, signatures: false }),
+	])
 
-// 	await waitForInitialConnections(network)
+	await waitForInitialConnections(network)
 
-// 	const messageA = await network.a.create(nanoid())
-// 	t.is(messageA.clock, 1)
-// 	t.deepEqual(messageA.parents, [])
+	const [payloadA, payloadB] = [nanoid(), nanoid()]
+	const [{ message: messageA }, { message: messageB }] = await Promise.all([
+		waitForMessageDelivery(t, network, (id, signature, message) => message.payload === payloadA),
+		waitForMessageDelivery(t, network, (id, signature, message) => message.payload === payloadB),
+		network.a.services.gossiplog.publish(topic, payloadA),
+		network.b.services.gossiplog.publish(topic, payloadB),
+	])
 
-// 	const messageB = await network.b.create(nanoid())
-// 	t.is(messageB.clock, 1)
-// 	t.deepEqual(messageB.parents, [])
+	t.is(messageA.clock, 1)
+	t.is(messageB.clock, 1)
+	t.deepEqual(messageA.parents, [])
+	t.deepEqual(messageB.parents, [])
+})
 
-// 	const [{ result: resultA }, { result: resultB }] = await Promise.all([
-// 		network.a.publish(null, messageA),
-// 		network.b.publish(null, messageB),
-// 		waitForMessageDelivery(t, network, (id, signature, { payload }) => payload === messageA.payload),
-// 		waitForMessageDelivery(t, network, (id, signature, { payload }) => payload === messageB.payload),
-// 	])
+test("exchange serial messages between two peers via gossipsub", async (t) => {
+	const network = await createNetwork(t, {
+		a: { port: 9994, peers: ["b"], init: { sync: false } },
+		b: { port: 9995, peers: ["a"], init: { sync: false } },
+	})
 
-// 	t.is(resultA, undefined)
-// 	t.is(resultB, undefined)
-// })
+	const topic = "com.example.test"
 
-// test("exchange serial messages between two peers via gossipsub", async (t) => {
-// 	t.timeout(20 * second)
+	await Promise.all([
+		network.a.services.gossiplog.subscribe(topic, { apply: () => {}, validate: validateString, signatures: false }),
+		network.b.services.gossiplog.subscribe(topic, { apply: () => {}, validate: validateString, signatures: false }),
+	])
 
-// 	const init: GossipLogInit = {
-// 		location: null,
-// 		topic: "com.example.test",
-// 		apply: () => {},
-// 		signatures: false,
-// 		merkleSync: false,
-// 	}
+	await waitForInitialConnections(network)
 
-// 	const network = await createNetwork(t, {
-// 		a: { port: 9996, peers: ["b"], init },
-// 		b: { port: 9997, peers: ["a"], init },
-// 	})
+	const [payloadA, payloadB] = [nanoid(), nanoid()]
 
-// 	await waitForInitialConnections(network)
+	const [{ id: idA, message: messageA }] = await Promise.all([
+		waitForMessageDelivery(t, network, (id, signature, message) => message.payload === payloadA),
+		network.a.services.gossiplog.publish(topic, payloadA),
+	])
 
-// 	const messageA = await network.a.create(nanoid())
-// 	t.is(messageA.clock, 1)
-// 	t.deepEqual(messageA.parents, [])
+	t.is(messageA.clock, 1)
+	t.deepEqual(messageA.parents, [])
 
-// 	const [{ id: idA, result: resultA }] = await Promise.all([
-// 		network.a.publish(null, messageA),
-// 		waitForMessageDelivery(t, network, (id, signature, { payload }) => payload === messageA.payload),
-// 	])
+	const [{ id: idB, message: messageB }] = await Promise.all([
+		waitForMessageDelivery(t, network, (id, signature, message) => message.payload === payloadB),
+		network.b.services.gossiplog.publish(topic, payloadB),
+	])
 
-// 	t.is(resultA, undefined)
-
-// 	const messageB = await network.b.create(nanoid())
-// 	t.is(messageB.clock, 2)
-// 	t.deepEqual(messageB.parents, [base32.baseDecode(idA)])
-
-// 	const [{ id: idB, result: resultB }] = await Promise.all([
-// 		network.b.publish(null, messageB),
-// 		waitForMessageDelivery(t, network, (id, signature, { payload }) => payload === messageB.payload),
-// 	])
-
-// 	t.is(resultB, undefined)
-// })
+	t.is(messageB.clock, 2)
+	t.deepEqual(messageB.parents, [base32.baseDecode(idA)])
+})

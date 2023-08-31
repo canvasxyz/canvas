@@ -35,7 +35,7 @@
   "scripts": {
     "generate": "npm run generate-sync",
     "generate-sync": "protons ./src/protocols/sync.proto",
-    "test": "ava"
+    "test": "ava --concurrency 1"
   },
   "dependencies": {
     "@canvas-js/interfaces": "0.5.0-alpha4",
