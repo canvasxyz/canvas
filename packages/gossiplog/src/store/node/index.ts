@@ -1,10 +1,11 @@
 import path from "node:path"
 
-import { Tree } from "@canvas-js/okra-node"
+import { ReadOnlyTransaction, ReadWriteTransaction, Tree } from "@canvas-js/okra-node"
+import { Bound, assert } from "@canvas-js/okra"
 
 import openMemoryMessageLog from "../memory/index.js"
 
-import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractStore.js"
+import { AbstractMessageLog, MessageLogInit } from "../AbstractStore.js"
 
 export * from "../AbstractStore.js"
 
@@ -26,6 +27,23 @@ class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 
 	public async close() {
 		await this.tree.close()
+	}
+
+	public async *entries(
+		lowerBound: Bound<Uint8Array> | null = null,
+		upperBound: Bound<Uint8Array> | null = null,
+		options: { reverse?: boolean } = {}
+	): AsyncIterable<[key: Uint8Array, value: Uint8Array]> {
+		const txn = new ReadOnlyTransaction(this.tree)
+		try {
+			for await (const node of txn.nodes(0, lowerBound ?? { key: null, inclusive: false }, upperBound, options)) {
+				assert(node.key !== null, "expected node.key !== null")
+				assert(node.value !== undefined, "expected node.value !== undefined")
+				yield [node.key, node.value]
+			}
+		} finally {
+			txn.abort()
+		}
 	}
 
 	public async read<T>(callback: (txn: ReadOnlyTransaction) => Promise<T>): Promise<T> {

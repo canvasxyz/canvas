@@ -1,8 +1,10 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
 
+import pDefer from "p-defer"
 import { bytesToHex } from "@noble/hashes/utils"
 import { IDBPDatabase, openDB } from "idb"
 import { IDBTree } from "@canvas-js/okra-idb"
+import { Bound, assert } from "@canvas-js/okra"
 
 import openMemoryMessageLog from "../memory/index.js"
 
@@ -52,6 +54,36 @@ class Messagelog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 	public async close() {
 		this.controller.abort()
 		this.db.close()
+	}
+
+	public async *entries(
+		lowerBound: Bound<Uint8Array> | null = null,
+		upperBound: Bound<Uint8Array> | null = null,
+		options: { reverse?: boolean } = {}
+	): AsyncIterable<[key: Uint8Array, value: Uint8Array]> {
+		this.log("requesting shared lock")
+		const deferred = pDefer()
+
+		navigator.locks.request(this.lockName, { mode: "shared", signal: this.controller.signal }, (lock) => {
+			if (lock === null) {
+				this.log.error("failed to acquire shared lock")
+				throw new Error(`failed to acquire shared lock ${this.lockName}`)
+			}
+
+			this.log("acquired shared lock")
+			return deferred.promise
+		})
+
+		try {
+			for await (const node of this.tree.nodes(0, lowerBound ?? { key: null, inclusive: false }, upperBound, options)) {
+				assert(node.key !== null, "expected node.key !== null")
+				assert(node.value !== undefined, "expected node.value !== undefined")
+				yield [node.key, node.value]
+			}
+		} finally {
+			this.log("releasing shared lock")
+			deferred.resolve()
+		}
 	}
 
 	public async read<T>(

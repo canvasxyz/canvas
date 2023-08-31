@@ -1,5 +1,5 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
-import type { Source, Target, Node } from "@canvas-js/okra"
+import type { Source, Target, Node, Bound } from "@canvas-js/okra"
 
 import { CustomEvent, EventEmitter } from "@libp2p/interfaces/events"
 import { Logger, logger } from "@libp2p/logger"
@@ -46,8 +46,16 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 	sync: CustomEvent<{ peerId: PeerId }>
 }> {
 	private static defaultSigner: MessageSigner = { sign: ({}) => null }
+	private static decodeBound = (bound: { id: string; inclusive: boolean } | null) =>
+		bound && { key: base32.baseDecode(bound.id), inclusive: bound.inclusive }
 
 	public abstract close(): Promise<void>
+
+	protected abstract entries(
+		lowerBound?: Bound<Uint8Array> | null,
+		upperBound?: Bound<Uint8Array> | null,
+		options?: { reverse?: boolean }
+	): AsyncIterable<[key: Uint8Array, value: Uint8Array]>
 
 	protected abstract read<T>(
 		callback: (txn: ReadOnlyTransaction) => Promise<T>,
@@ -82,6 +90,22 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		this.sequencing = init.sequencing ?? true
 
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
+	}
+
+	public async *iterate(
+		lowerBound: { id: string; inclusive: boolean } | null = null,
+		upperBound: { id: string; inclusive: boolean } | null = null,
+		options: { reverse?: boolean } = {}
+	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]> {
+		for await (const [key, value] of this.entries(
+			AbstractMessageLog.decodeBound(lowerBound),
+			AbstractMessageLog.decodeBound(upperBound),
+			options
+		)) {
+			const [recoveredKey, signature, message] = this.decode(value)
+			assert(equals(recoveredKey, key), "expected equals(recoveredKey, key)")
+			yield [base32.baseEncode(key), signature, message]
+		}
 	}
 
 	public encode(signature: Signature | null, message: Message<Payload>): [key: Uint8Array, value: Uint8Array] {

@@ -1,11 +1,9 @@
 import test from "ava"
 
+import { base32 } from "multiformats/bases/base32"
 import { nanoid } from "nanoid"
 
-import { Message } from "@canvas-js/interfaces"
-
 import { createNetwork, waitForInitialConnections, waitForMessageDelivery } from "./libp2p.js"
-import { base32 } from "multiformats/bases/base32"
 
 const validateString = (payload: unknown): payload is string => true
 
