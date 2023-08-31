@@ -33,15 +33,10 @@ type Message struct {
 const { toTyped: toSignedMessage, toRepresentation: fromSignedMessage } = create(schema, "SignedMessage")
 
 export function decodeSignedMessage(
-	value: Uint8Array,
-	options: { signatures: boolean; sequencing: boolean }
+	value: Uint8Array
 ): [key: Uint8Array, signature: Signature | null, message: Message] {
 	const signedMessage = toSignedMessage(cbor.decode(value)) as SignedMessage
 	const { signature, message } = signedMessage
-	if (options.signatures) {
-		assert(signature !== null, "missing message signature")
-	}
-
 	assert(message.clock === getClock(message.parents), "invalid message clock")
 	const key = getKey(message.clock, sha256(value))
 	return [key, signature, message]
@@ -49,20 +44,9 @@ export function decodeSignedMessage(
 
 export function encodeSignedMessage(
 	signature: Signature | null,
-	message: Message,
-	options: { signatures: boolean; sequencing: boolean }
+	message: Message
 ): [key: Uint8Array, value: Uint8Array] {
 	const { clock } = message
-	if (options.sequencing) {
-		assert(clock > 0, "expected message.clock > 0 if sequencing is enable")
-	} else {
-		assert(clock === 0, "expected message.clock === 0 if sequencing is disabled")
-	}
-
-	if (options.signatures) {
-		assert(signature !== null, "missing message signature")
-	}
-
 	const value = cbor.encode(fromSignedMessage({ signature, message }))
 	const key = getKey(clock, sha256(value))
 	return [key, value]
@@ -70,7 +54,8 @@ export function encodeSignedMessage(
 
 // keys are made by concatenating an unsigned varint clock with the hash
 // and truncating to 20 bytes to be base32-friendly, e.g "ah3rrroxiggl5rhzywo3oaprep5xt6oo"
-const KEY_LENGTH = 20
+export const KEY_LENGTH = 20
+
 function getKey(clock: number, hash: Uint8Array): Uint8Array {
 	const encodingLength = varint.encodingLength(clock)
 	const key = new Uint8Array(KEY_LENGTH)

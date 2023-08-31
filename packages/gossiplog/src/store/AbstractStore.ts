@@ -1,17 +1,17 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { Source, Target, Node } from "@canvas-js/okra"
 
-import { Logger, logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
 import { base32 } from "multiformats/bases/base32"
 import { equals } from "uint8arrays"
+import { Logger, logger } from "@libp2p/logger"
 
-import type { Message, SignedMessage } from "@canvas-js/interfaces"
+import type { Message } from "@canvas-js/interfaces"
 import { Signature, verifySignature } from "@canvas-js/signed-cid"
 
+import { KEY_LENGTH, decodeSignedMessage, encodeSignedMessage, getClock } from "../schema.js"
+import { Awaitable, assert, nsidPattern } from "../utils.js"
 import { Driver } from "../sync/driver.js"
-import { decodeSignedMessage, getClock } from "../schema.js"
-import { Awaitable, assert } from "../utils.js"
 
 export interface ReadOnlyTransaction extends Target {
 	get(key: Uint8Array): Awaitable<Uint8Array | null>
@@ -24,130 +24,250 @@ export interface ReadWriteTransaction extends ReadOnlyTransaction {
 	setUserdata(userdata: Uint8Array | null): Awaitable<void>
 }
 
-export interface StoreInit {
-	topic: string
+export interface MessageLogInit<Payload = unknown, Result = void> {
 	location: string | null
+	topic: string
+	apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
+	validate: (payload: unknown) => payload is Payload
 
-	signatures: boolean
-	sequencing: boolean
+	signatures?: boolean
+	sequencing?: boolean
+	replay?: boolean
 }
 
-export abstract class AbstractStore {
-	abstract close(): Promise<void>
+export interface MessageSigner<Payload = unknown> {
+	sign: (message: Message<Payload>) => Awaitable<Signature | null>
+}
 
-	abstract source(targetPeerId: PeerId, callback: (txn: ReadOnlyTransaction) => Promise<void>): Promise<void>
-	abstract target(sourcePeerId: PeerId, callback: (txn: ReadWriteTransaction) => Promise<void>): Promise<void>
+export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> {
+	private static defaultSigner: MessageSigner = { sign: ({}) => null }
 
-	abstract read<T>(callback: (txn: ReadOnlyTransaction) => Promise<T>): Promise<T>
-	abstract write<T>(callback: (txn: ReadWriteTransaction) => Promise<T>): Promise<T>
+	public abstract close(): Promise<void>
+
+	protected abstract read<T>(
+		callback: (txn: ReadOnlyTransaction) => Promise<T>,
+		options?: { target?: PeerId }
+	): Promise<T>
+
+	protected abstract write<T>(
+		callback: (txn: ReadWriteTransaction) => Promise<T>,
+		options?: { source?: PeerId }
+	): Promise<T>
+
+	public readonly location: string | null
+	public readonly topic: string
+	public readonly apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
+	public readonly validate: (payload: unknown) => payload is Payload
+
+	public readonly signatures: boolean
+	public readonly sequencing: boolean
 
 	protected readonly log: Logger
 
-	protected constructor(private readonly init: StoreInit) {
-		this.log = logger(`canvas:gossiplog:store`)
+	protected constructor(init: MessageLogInit<Payload, Result>) {
+		assert(nsidPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-]+)")
+
+		this.location = init.location
+		this.topic = init.topic
+		this.apply = init.apply
+		this.validate = init.validate
+
+		this.signatures = init.signatures ?? true
+		this.sequencing = init.sequencing ?? true
+
+		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 	}
 
-	public async get(key: Uint8Array): Promise<[signature: Signature | null, message: Message | null]> {
+	// public async getSequence(): Promise<[clock: number, parents: Uint8Array[]]> {
+	// 	return await this.read(async (txn) => {
+	// 		const graph = await Graph.import(this.topic, txn)
+	// 		return graph.export()
+	// 	})
+	// }
+
+	public encode(signature: Signature | null, message: Message<Payload>): [key: Uint8Array, value: Uint8Array] {
+		if (this.sequencing) {
+			assert(message.clock > 0, "expected message.clock > 0 if sequencing is enable")
+		} else {
+			assert(message.clock === 0, "expected message.clock === 0 if sequencing is disabled")
+		}
+
+		if (this.signatures) {
+			assert(signature !== null, "missing message signature")
+		}
+
+		return encodeSignedMessage(signature, message)
+	}
+
+	public decode(value: Uint8Array): [key: Uint8Array, signature: Signature | null, message: Message<Payload>] {
+		const [key, signature, message] = decodeSignedMessage(value)
+		if (this.signatures) {
+			assert(signature !== null, "missing message signature")
+		}
+
+		const { clock, parents, payload } = message
+		if (this.sequencing) {
+			assert(clock > 0, "expected message.clock > 0 if sequencing is enable")
+		} else {
+			assert(clock === 0, "expected message.clock === 0 if sequencing is disabled")
+		}
+
+		assert(this.validate(payload), "invalid message payload")
+
+		return [key, signature, { clock, parents, payload }]
+	}
+
+	public async get(id: string): Promise<[signature: Signature | null, message: Message<Payload> | null]> {
+		const key = base32.baseDecode(id)
+		assert(key.length === KEY_LENGTH, "invalid id")
+
 		const value = await this.read(async (txn) => txn.get(key))
 		if (value === null) {
 			return [null, null]
 		}
 
-		const [recoveredKey, signature, message] = decodeSignedMessage(value, {
-			sequencing: this.init.sequencing,
-			signatures: this.init.signatures,
-		})
-
+		const [recoveredKey, signature, message] = this.decode(value)
 		assert(equals(recoveredKey, key), "invalid message key")
 		return [signature, message]
 	}
 
-	public async sync(
-		peerId: PeerId,
-		source: Source,
-		callback: (key: Uint8Array, signature: Signature | null, message: Message) => Promise<void>
-	): Promise<{ root: Node }> {
-		let root: Node | null = null
+	/**
+	 * Insert an existing signed message into the log (ie received via PubSub)
+	 */
+	public async insert(signature: Signature | null, message: Message<Payload>) {
+		return await this.write(async (txn) => {
+			const graph = await Graph.import(this.topic, this.sequencing, txn)
 
-		await this.target(peerId, async (target) => {
-			const graph = await Graph.import(target)
+			const [key, value] = this.encode(signature, message)
 
-			const driver = new Driver(source, target)
-			for await (const [key, value] of driver.sync()) {
-				const id = base32.baseEncode(key)
-				let signedMessage: SignedMessage | null = null
+			const id = base32.baseEncode(key)
+			const result = await this.apply(id, signature, message)
 
-				try {
-					const [recoveredKey, signature, message] = decodeSignedMessage(value, {
-						sequencing: this.init.sequencing,
-						signatures: this.init.signatures,
-					})
+			await txn.set(key, value)
+			graph.update(key, message)
+
+			await graph.save(txn)
+
+			const root = await txn.getRoot()
+			return { id, key, value, result, root }
+		})
+	}
+
+	private async importGraph(txn: ReadWriteTransaction): Promise<Graph> {
+		const graph = await Graph.import(this.topic, this.sequencing, txn)
+		return graph
+	}
+
+	/**
+	 * Append a new message to the end of the log, using all the latest concurrent messages as parents
+	 */
+	public async append(payload: Payload, options: { signer?: MessageSigner<Payload> } = {}) {
+		const signer = options.signer ?? AbstractMessageLog.defaultSigner
+
+		return await this.write(async (txn) => {
+			const graph = await this.importGraph(txn)
+
+			const message = graph.createMessage(payload)
+			const signature = await signer.sign(message)
+			const [key, value] = this.encode(signature, message)
+
+			const id = base32.baseEncode(key)
+			const result = await this.apply(id, signature, message)
+
+			await txn.set(key, value)
+			graph.update(key, message)
+
+			await graph.save(txn)
+
+			const root = await txn.getRoot()
+			return { id, key, value, result, root }
+		})
+	}
+
+	/**
+	 * Sync with a remote source, applying and inserting all missing messages into the local log
+	 */
+	public async sync(sourcePeerId: PeerId, source: Source): Promise<{ root: Node }> {
+		return await this.write(
+			async (target) => {
+				const graph = await Graph.import(this.topic, this.sequencing, target)
+
+				const driver = new Driver(this.topic, source, target)
+				for await (const [key, value] of driver.sync()) {
+					const id = base32.baseEncode(key)
+
+					const [recoveredKey, signature, message] = this.decode(value)
 
 					assert(equals(key, recoveredKey), "invalid message key")
-					signedMessage = { signature, message }
-				} catch (err) {
-					this.log.error("[%s] failed to decode signed message %s: %O", this.init.topic, id, err)
-					continue
-				}
 
-				const { signature, message } = signedMessage
-
-				if (this.init.signatures) {
-					try {
+					if (this.signatures) {
 						assert(signature !== null, "missing message signature")
 						verifySignature(signature, message)
-					} catch (err) {
-						this.log.error("[%s] invalid signature for message %s: %O", this.init.topic, id, err)
-						continue
 					}
+
+					await this.apply(id, signature, message)
+					await target.set(key, value)
+					graph.update(key, message)
 				}
 
-				try {
-					await callback(key, signature, message)
-				} catch (err) {
-					this.log.error("[%s] failed to apply message %s: %O", this.init.topic, id, err)
-					continue
-				}
+				await graph.save(target)
 
-				await target.set(key, value)
-				graph.update(key, message)
-			}
+				const root = await target.getRoot()
+				return { root }
+			},
+			{ source: sourcePeerId }
+		)
+	}
 
-			await graph.save(target)
-			root = await target.getRoot()
-		})
-
-		assert(root !== null, "internal error - sync exited prematurely")
-		return { root }
+	/**
+	 * Serve a read-only snapshot of the merkle tree
+	 */
+	public async serve(targetPeerId: PeerId, callback: (source: Source) => Promise<void>) {
+		await this.read(callback, { target: targetPeerId })
 	}
 }
 
-export class Graph {
-	private readonly log = logger("canvas:gossiplog:graph")
+class Graph {
+	private readonly log: Logger
 
 	readonly #parents = new Set<string>()
 
-	public static async import(txn: ReadOnlyTransaction): Promise<Graph> {
+	public static async import(topic: string, sequencing: boolean, txn: ReadOnlyTransaction): Promise<Graph> {
+		if (sequencing === false) {
+			return new Graph(topic, sequencing, [])
+		}
+
 		const userdata = await txn.getUserdata()
 		const parents = userdata === null ? [] : cbor.decode<Uint8Array[]>(userdata)
-		return new Graph(parents)
+		return new Graph(topic, sequencing, parents)
 	}
 
-	constructor(parents: Uint8Array[]) {
+	constructor(topic: string, private readonly sequencing: boolean, parents: Uint8Array[]) {
 		const clock = getClock(parents)
-		this.log("created graph at clock %d with parents %o", clock, parents.map(base32.baseEncode))
+		this.log = logger(`canvas:gossiplog:[${topic}]:graph`)
+		this.log("created graph at clock %d", clock)
 		for (const key of parents) {
-			this.#parents.add(base32.baseEncode(key))
+			const id = base32.baseEncode(key)
+			this.log("added %s", id)
+			this.#parents.add(id)
 		}
 	}
 
 	public async save(txn: ReadWriteTransaction) {
+		if (this.sequencing === false) {
+			return
+		}
+
 		const [clock, parents] = this.export()
-		this.log("saving graph at clock %d with parents %o", clock, parents.map(base32.baseEncode))
+		this.log("saving graph at clock %d", clock)
 		await txn.setUserdata(cbor.encode(parents))
 	}
 
-	public update(key: Uint8Array, message: Message) {
+	public update<Payload>(key: Uint8Array, message: Message<Payload>) {
+		if (this.sequencing === false) {
+			return
+		}
+
 		for (const parent of message.parents) {
 			const parentId = base32.baseEncode(parent)
 			if (this.#parents.delete(parentId)) {
@@ -160,7 +280,16 @@ export class Graph {
 		this.#parents.add(id)
 	}
 
+	public createMessage<Payload>(payload: Payload): Message<Payload> {
+		const [clock, parents] = this.export()
+		return { clock, parents, payload }
+	}
+
 	public export(): [clock: number, parents: Uint8Array[]] {
+		if (this.sequencing === false) {
+			return [0, []]
+		}
+
 		const parents = [...this.#parents].map(base32.baseDecode)
 		const clock = getClock(parents)
 		return [clock, parents]

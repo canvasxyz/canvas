@@ -1,4 +1,4 @@
-import { logger } from "@libp2p/logger"
+import { Logger, logger } from "@libp2p/logger"
 import { bytesToHex as hex } from "@noble/hashes/utils"
 
 import { Node, Source, Target, equalArrays, equalNodes } from "@canvas-js/okra"
@@ -6,8 +6,10 @@ import { Node, Source, Target, equalArrays, equalNodes } from "@canvas-js/okra"
 import { assert } from "../utils.js"
 
 export class Driver {
-	private readonly log = logger("canvas:gossiplog:sync")
-	constructor(private readonly source: Source, private readonly target: Target) {}
+	private readonly log: Logger
+	constructor(topic: string, private readonly source: Source, private readonly target: Target) {
+		this.log = logger(`canvas:gossiplog:[${topic}]:driver`)
+	}
 
 	public async *sync() {
 		const [sourceRoot, targetRoot] = await Promise.all([this.source.getRoot(), this.target.getRoot()])
@@ -73,11 +75,15 @@ export class Driver {
 
 				const leaf = await this.target.getNode(0, key)
 				if (leaf === null) {
-					yield [key, value]
+					try {
+						yield [key, value]
+					} catch (err) {}
 				} else if (equalArrays(hash, leaf.hash)) {
 					continue
 				} else {
-					this.log.error("leaf entry conflict: target has %s but source has %s", hex(leaf.hash), hex(hash))
+					this.log.error("conflict at key %s", hex(key))
+					this.log.error("- target hash: %s", hex(leaf.hash))
+					this.log.error("+ source hash: %s", hex(hash))
 				}
 			}
 		}

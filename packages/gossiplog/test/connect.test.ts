@@ -1,15 +1,16 @@
 import test from "ava"
 
-import { GossipLogInit } from "@canvas-js/gossiplog"
+import { Signature } from "@canvas-js/signed-cid"
+import { Message } from "@canvas-js/interfaces"
 
 import { createNetwork, waitForInitialConnections, waitForInitialSync } from "./libp2p.js"
 
 test("wait for initial connections", async (t) => {
-	const init: GossipLogInit = { topic: "com.example.test", apply: () => {} }
+	t.timeout(10 * 1000)
 
 	const network = await createNetwork(t, {
-		a: { port: 9990, peers: ["b"], init },
-		b: { port: 9991, peers: ["a"], init },
+		a: { port: 9990, peers: ["b"] },
+		b: { port: 9991, peers: ["a"] },
 	})
 
 	await waitForInitialConnections(network)
@@ -18,12 +19,20 @@ test("wait for initial connections", async (t) => {
 })
 
 test("wait for initial sync", async (t) => {
-	const init: GossipLogInit = { topic: "com.example.test", apply: () => {} }
-
+	t.timeout(20 * 1000)
 	const network = await createNetwork(t, {
-		a: { port: 9992, peers: ["b"], init },
-		b: { port: 9993, peers: ["a"], init },
+		a: { port: 9992, peers: ["b"] },
+		b: { port: 9993, peers: ["a"] },
 	})
+
+	const topic = "com.example.test"
+	const apply = async (id: string, signature: Signature | null, message: Message<string>) => {}
+	const validate = (payload: unknown): payload is string => typeof payload === "string"
+
+	await Promise.all([
+		network.a.services.gossiplog.subscribe({ topic, apply, validate }),
+		network.b.services.gossiplog.subscribe({ topic, apply, validate }),
+	])
 
 	await waitForInitialSync(network)
 

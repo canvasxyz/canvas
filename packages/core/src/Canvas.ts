@@ -5,7 +5,7 @@ import { logger } from "@libp2p/logger"
 
 import { QuickJSHandle } from "quickjs-emscripten"
 
-import { Action, ActionArguments, Signer } from "@canvas-js/interfaces"
+import { Action, ActionArguments, Message, Signer } from "@canvas-js/interfaces"
 import { JSValue, VM } from "@canvas-js/vm"
 import {
 	AbstractModelDB,
@@ -19,8 +19,7 @@ import {
 	Resolve,
 } from "@canvas-js/modeldb-interface"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { GossipLog, GossipLogConsumer, GossipLogInit } from "@canvas-js/gossiplog"
-import { getCID } from "@canvas-js/signed-cid"
+import { getCID, Signature } from "@canvas-js/signed-cid"
 
 import getTarget from "#target"
 
@@ -43,13 +42,10 @@ export interface CanvasConfig extends P2PConfig {
 	runtimeMemoryLimit?: number
 }
 
-export type ActionAPI = Record<
-	string,
-	(
-		args: ActionArguments,
-		options?: { chain?: string }
-	) => Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }>
->
+export type ActionAPI = (
+	args: ActionArguments,
+	options?: { chain?: string }
+) => Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }>
 
 export interface CoreEvents {
 	close: Event
@@ -63,9 +59,6 @@ export interface CoreEvents {
 	disconnect: CustomEvent<{ peer: string }>
 }
 
-type ActionLog = { type: "action"; log: GossipLog<Action, void | JSValue> }
-type CustomActionLog = { type: "customAction"; log: GossipLog<JSValue, void | JSValue> }
-
 export class Canvas extends EventEmitter<CoreEvents> {
 	public static async initialize(config: CanvasConfig): Promise<Canvas> {
 		const { contract, signers = [], replay = false, offline = false, contractLog, runtimeMemoryLimit } = config
@@ -73,6 +66,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		const location = config.location ?? null
 		const target = getTarget(location)
 
+		// TODO: rethink "default topics" because they're kinda suss
 		const cid = getCID(contract, { codec: "raw", digest: "blake3-128" })
 		const uri = config.uri ?? `canvas:${cid.toString()}`
 		const defaultTopic = config.topic ?? cid.toString()
@@ -81,6 +75,11 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			const signer = await SIWESigner.init({})
 			signers.push(signer)
 		}
+
+		// Create a libp2p node (even in offline mode)
+		const peerId = await target.getPeerId()
+		const libp2p = await createLibp2p(getLibp2pOptions(location, peerId, config))
+		const { gossiplog } = libp2p.services
 
 		// Create a QuickJS VM
 		const vm = await VM.initialize({ runtimeMemoryLimit, log: contractLog })
@@ -104,6 +103,9 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		const resolve: Resolve = { lessThan: (a, b) => a.version < b.version }
 		const db = await target.openDB(uri, models, { resolve })
 
+		// { [name]: ActionAPI }
+		const actions: Record<string, ActionAPI> = {}
+
 		// { [topic]: { [name]: handle } }
 		const actionHandles: Record<string, Record<string, QuickJSHandle>> = {}
 		const addActionHandle = (topic: string, name: string, handle: QuickJSHandle) => {
@@ -112,18 +114,23 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			}
 
 			actionHandles[topic][name] = handle
+			actions[name] = async (args, options = {}) => {
+				const signer = signers.find((signer) => options.chain === undefined || signer.match(options.chain))
+				assert(signer !== undefined, "signer not found")
+				const { chain, address } = signer
+				const session = await signer.getSession()
+				const timestamp = Date.now()
+				const action: Action = { chain, address, session, name, args, topic, timestamp, blockhash: null }
+				const { id, result, recipients } = await gossiplog.publish<Action, void | JSValue>(topic, action, { signer })
+				return { id, result, recipients }
+			}
 		}
 
 		// { [topic]: handle }
 		const customActionHandles: Record<string, QuickJSHandle> = {}
 
-		// actionsToTopics maps action names to topics
-		const actionsToTopics: Record<string, string> = {}
-
-		// unwrap actions
 		for (const [name, handle] of Object.entries(actionsHandle.consume(vm.unwrapObject))) {
 			if (vm.context.typeof(handle) === "function") {
-				actionsToTopics[name] = defaultTopic
 				addActionHandle(defaultTopic, name, handle.consume(vm.cache))
 				continue
 			}
@@ -138,22 +145,20 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 			if (raw ?? false) {
 				assert(topic !== undefined, "raw actions must have an explicit topic")
-				actionsToTopics[name] = topic
 				customActionHandles[topic] = applyHandle.consume(vm.cache)
+				actions[name] = async (args: ActionArguments) => {
+					const { id, result, recipients } = await gossiplog.publish<JSValue, JSValue>(topic, args)
+					return { id, result, recipients }
+				}
 			} else {
-				actionsToTopics[name] = topic ?? defaultTopic
 				addActionHandle(topic ?? defaultTopic, name, applyHandle.consume(vm.cache))
 			}
 		}
 
-		// initMap maps topics to inits
-		const actionLogInits: GossipLogInit<Action, JSValue | void>[] = []
-		const customActionLogInits: GossipLogInit<JSValue, JSValue | void>[] = []
-
 		const databaseAPI = new DatabaseAPI(vm, db)
 
 		for (const [topic, actions] of Object.entries(actionHandles)) {
-			const apply: GossipLogConsumer<Action, JSValue | void> = async (id, signature, message) => {
+			const apply = async (id: string, signature: Signature | null, message: Message<Action>) => {
 				assert(signature !== null, "missing message signature")
 
 				const { chain, address, session, name, args, ...context } = message.payload
@@ -187,12 +192,12 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				return result
 			}
 
-			// TODO: add `validate` to log init
-			actionLogInits.push({ topic, location, apply })
+			const validate = (payload: unknown): payload is Action => true // TODO
+			await gossiplog.subscribe({ topic, apply, validate, signatures: true, sequencing: true })
 		}
 
 		for (const [topic, handle] of Object.entries(customActionHandles)) {
-			const apply: GossipLogConsumer<JSValue, JSValue | void> = async (id, signature, message) => {
+			const apply = async (id: string, signature: Signature | null, message: Message<JSValue>) => {
 				assert(signature === null, "expected signature === null")
 				assert(message.clock === 0 && message.parents.length === 0, "expected message.clock === 0")
 				assert(message.parents.length === 0, "expected message.parents.length === 0")
@@ -214,64 +219,11 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				}
 			}
 
-			// TODO: add `validate` to log init
-			customActionLogInits.push({ topic, location, apply, signatures: false, sequencing: false })
+			const validate = (payload: unknown): payload is JSValue => true // TODO
+			await gossiplog.subscribe({ topic, apply, validate, signatures: false, sequencing: false })
 		}
 
-		const peerId = await target.getPeerId()
-
-		// TODO: add `start?: boolean` option and forward it to libp2p
-		const libp2p = offline ? null : await createLibp2p(getLibp2pOptions(peerId, config))
-
-		const topics = new Map<string, ActionLog | CustomActionLog>()
-
-		await Promise.all([
-			...actionLogInits.map(async (init) => {
-				const actionlog = await GossipLog.init(libp2p, init)
-				topics.set(init.topic, { type: "action", log: actionlog })
-			}),
-			...customActionLogInits.map(async (init) => {
-				const customActionLog = await GossipLog.init(libp2p, init)
-				topics.set(init.topic, { type: "customAction", log: customActionLog })
-			}),
-		])
-
-		const actions: ActionAPI = mapEntries(actionsToTopics, ([actionName, topic]) => {
-			assert(topics.has(topic), "internal error - topic not found")
-			const { type, log } = topics.get(topic)!
-			if (type === "action") {
-				return async (actionArgs: ActionArguments, { chain }: { chain?: string } = {}) => {
-					const signer = signers.find((signer) => chain === undefined || signer.match(chain))
-					assert(signer !== undefined, "signer not found")
-					const session = await signer.getSession()
-					const action: Action = {
-						chain: signer.chain,
-						address: signer.address,
-						session,
-						name: actionName,
-						args: actionArgs,
-						topic,
-						timestamp: Date.now(),
-						blockhash: null,
-					}
-
-					const message = await log.create(action)
-					const signature = await signer.sign(message)
-					const { id, result, recipients } = await log.publish(signature, message)
-					return { id, result, recipients }
-				}
-			} else if (type === "customAction") {
-				return async (payload: ActionArguments, {}: { chain?: string } = {}) => {
-					const message = await log.create(payload)
-					const { id, result, recipients } = await log.publish(null, message)
-					return { id, result, recipients }
-				}
-			} else {
-				signalInvalidType(type)
-			}
-		})
-
-		return new Canvas(uri, signers, peerId, libp2p, vm, db, actions, topics)
+		return new Canvas(uri, signers, libp2p, vm, db, actions)
 	}
 
 	private readonly controller = new AbortController()
@@ -280,12 +232,10 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	private constructor(
 		public readonly uri: string,
 		public readonly signers: Signer[],
-		public readonly peerId: PeerId,
-		public readonly libp2p: Libp2p<ServiceMap> | null,
+		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly vm: VM,
 		public readonly db: AbstractModelDB,
-		public readonly actions: ActionAPI,
-		public readonly topics: Map<string, ActionLog | CustomActionLog>
+		public readonly actions: Record<string, ActionAPI>
 	) {
 		super()
 
@@ -300,18 +250,12 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		})
 	}
 
-	public async start() {
-		if (this.libp2p !== null) {
-			if (!this.libp2p.isStarted()) {
-				await this.libp2p.start()
-			}
+	public get peerId() {
+		return this.libp2p.peerId
+	}
 
-			for (const { log } of this.topics.values()) {
-				if (!log.isStarted()) {
-					await log.start()
-				}
-			}
-		}
+	public async start() {
+		await this.libp2p.start()
 	}
 
 	public async getApplicationData(): Promise<{ uri: string; peerId: string }> {
@@ -320,14 +264,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 	public async close() {
 		this.controller.abort()
-
-		for (const { log } of this.topics.values()) {
-			await log.stop()
-		}
-
-		if (this.libp2p !== null && this.libp2p.isStarted()) {
-			await this.libp2p.stop()
-		}
+		await this.libp2p.stop()
 
 		// TODO: make AbstractModelDB.close async
 		this.db.close()

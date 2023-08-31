@@ -1,26 +1,26 @@
 import path from "node:path"
 
-import type { PeerId } from "@libp2p/interface-peer-id"
-
 import { Tree } from "@canvas-js/okra-node"
 
-import { openStore as openMemoryStore } from "../memory/index.js"
+import openMemoryMessageLog from "../memory/index.js"
 
-import { AbstractStore, StoreInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractStore.js"
+import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractStore.js"
 
-export { AbstractStore, StoreInit, Graph } from "../AbstractStore.js"
+export * from "../AbstractStore.js"
 
-export async function openStore(init: StoreInit): Promise<AbstractStore> {
+export default async function openMessageLog<Payload, Result>(
+	init: MessageLogInit<Payload, Result>
+): Promise<AbstractMessageLog<Payload, Result>> {
 	if (init.location === null) {
-		return openMemoryStore(init)
+		return openMemoryMessageLog(init)
 	}
 
 	const tree = new Tree(path.resolve(init.location, init.topic))
-	return new Store(init, tree)
+	return new MessageLog(init, tree)
 }
 
-class Store extends AbstractStore {
-	public constructor(init: StoreInit, private readonly tree: Tree) {
+class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
+	public constructor(init: MessageLogInit<Payload, Result>, private readonly tree: Tree) {
 		super(init)
 	}
 
@@ -28,15 +28,7 @@ class Store extends AbstractStore {
 		await this.tree.close()
 	}
 
-	public async source(targetPeerId: PeerId, callback: (txn: ReadOnlyTransaction) => Promise<void>) {
-		await this.tree.read((txn) => callback(txn))
-	}
-
-	public async target(sourcePeerId: PeerId, callback: (txn: ReadWriteTransaction) => Promise<void>): Promise<void> {
-		await this.tree.write((txn) => callback(txn))
-	}
-
-	public async read<T>(callback: (txn: ReadOnlyTransaction) => Promise<T>) {
+	public async read<T>(callback: (txn: ReadOnlyTransaction) => Promise<T>): Promise<T> {
 		return await this.tree.read((txn) => callback(txn))
 	}
 
