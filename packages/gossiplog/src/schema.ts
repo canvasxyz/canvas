@@ -25,7 +25,7 @@ type Signature struct {
 } representation tuple
 
 type Message struct {
-	parents [Bytes]
+	parents nullable [Bytes]
 	payload any
 } representation tuple
 `)
@@ -35,7 +35,7 @@ const { toTyped: toSignedMessage, toRepresentation: fromSignedMessage } = create
 type SignedMessage = {
 	signature: Signature | null
 	message: {
-		parents: Uint8Array[]
+		parents: Uint8Array[] | null
 		payload: unknown
 	}
 }
@@ -51,27 +51,25 @@ export function decodeSignedMessage(
 
 	const clock = getClock(parents)
 	const key = getKey(clock, sha256(value))
-	return [key, signature, { clock, parents: parents.map(decodeId), payload }]
+	return [key, signature, { clock, parents: parents?.map(decodeId) ?? [], payload }]
 }
 
 export function encodeSignedMessage(
 	signature: Signature | null,
-	message: Message
+	{ clock, parents, payload }: Message
 ): [key: Uint8Array, value: Uint8Array] {
-	const parents = message.parents.map(encodeId)
-	assert(
-		parents.every((key) => key.byteLength === KEY_LENGTH),
-		"expected key.byteLength === KEY_LENGTH"
-	)
-
-	const signedMessage: SignedMessage = { signature, message: { parents, payload: message.payload } }
+	const parentKeys = clock === 0 ? null : parents.map(encodeId)
+	const signedMessage: SignedMessage = { signature, message: { parents: parentKeys, payload } }
 	const value = cbor.encode(fromSignedMessage(signedMessage))
-	const clock = getClock(parents)
 	const key = getKey(clock, sha256(value))
 	return [key, value]
 }
 
-export function getClock(parents: Uint8Array[] | string[]) {
+export function getClock(parents: Uint8Array[] | null) {
+	if (parents === null) {
+		return 0
+	}
+
 	let max = 0
 	for (const parent of parents) {
 		const key = typeof parent === "string" ? encodeId(parent) : parent

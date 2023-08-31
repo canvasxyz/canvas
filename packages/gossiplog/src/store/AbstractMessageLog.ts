@@ -317,8 +317,7 @@ class Graph {
 		}
 
 		const parents = this.getParents()
-		const clock = getClock(parents)
-
+		const clock = getClock(parents.map(encodeId))
 		return { clock, parents, payload }
 	}
 

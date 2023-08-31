@@ -3,6 +3,7 @@ import test from "ava"
 import type { Message } from "@canvas-js/interfaces"
 
 import openMessageLog from "@canvas-js/gossiplog/store"
+import { collect } from "./utils.js"
 
 const validate = (payload: unknown): payload is string => typeof payload === "string"
 
@@ -45,12 +46,3 @@ test("insert three concurrent messages and append a fourth", async (t) => {
 		[qux, null, { clock: 2, parents: entries.map(([id]) => id), payload: "qux" }],
 	])
 })
-
-async function collect<T>(iter: AsyncIterable<T>): Promise<T[]> {
-	const values: T[] = []
-	for await (const value of iter) {
-		values.push(value)
-	}
-
-	return values
-}
