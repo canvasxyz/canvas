@@ -14,7 +14,7 @@
     "@cosmjs/crypto": "^0.30.1",
     "@cosmjs/encoding": "^0.30.1",
     "@keplr-wallet/types": "^0.11.64",
-    "@terra-money/feather.js": "^1.0.8",
+    "@terra-money/feather.js": "^1.0.11",
     "@terra-money/wallet-controller": "^3.11.2",
     "ethers": "^5.7.2",
     "safe-stable-stringify": "^2.4.3"
