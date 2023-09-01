@@ -20,12 +20,12 @@ export const actions = {
   },
 
   async deletePost(db, key, { chain, address }) {
-    const prefix = [chain, address, ""].join("/")
-    if (!key.startsWith(prefix)) {
-      throw new Error("unauthorized")
-    }
+		const prefix = [chain, address, ""].join("/")
+		if (!key.startsWith(prefix)) {
+			throw new Error("unauthorized")
+		}
 
-    await db.posts.delete(key)
+		await db.posts.delete(key)
   },
 
 	hello: {

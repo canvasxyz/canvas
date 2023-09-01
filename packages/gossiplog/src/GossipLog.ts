@@ -1,12 +1,12 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
-import type { ConnectionManager } from "@libp2p/interface-connection-manager"
-import type { Registrar } from "@libp2p/interface-registrar"
-import type { Message as PubSubMessage } from "@libp2p/interface-pubsub"
-import type { PubSub } from "@libp2p/interface-pubsub"
-import type { Startable } from "@libp2p/interfaces/startable"
+
+import type { ConnectionManager } from "@libp2p/interface-internal/connection-manager"
+import type { Registrar } from "@libp2p/interface-internal/registrar"
+import type { PubSub, Message as PubSubMessage } from "@libp2p/interface/pubsub"
+import type { Startable } from "@libp2p/interface/startable"
+import { EventEmitter } from "@libp2p/interface/events"
 
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
-import { EventEmitter } from "@libp2p/interfaces/events"
 import { logger } from "@libp2p/logger"
 import { bytesToHex } from "@noble/hashes/utils"
 

@@ -1,11 +1,10 @@
-import type { PeerId } from "@libp2p/interface-peer-id"
-import type { Stream } from "@libp2p/interface-connection"
-import type { ConnectionManager } from "@libp2p/interface-connection-manager"
-import type { Registrar, StreamHandler, Topology } from "@libp2p/interface-registrar"
-import type { Startable } from "@libp2p/interfaces/startable"
+import type { PeerId } from "@libp2p/interface/peer-id"
+import type { Connection, Stream } from "@libp2p/interface/connection"
+import type { ConnectionManager } from "@libp2p/interface-internal/connection-manager"
+import type { Registrar, StreamHandler } from "@libp2p/interface-internal/registrar"
+import type { Startable } from "@libp2p/interface/startable"
 
 import { Logger, logger } from "@libp2p/logger"
-import { createTopology } from "@libp2p/topology"
 
 import PQueue from "p-queue"
 import * as lp from "it-length-prefixed"
@@ -14,6 +13,14 @@ import { bytesToHex as hex } from "@noble/hashes/utils"
 
 import { Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
 import { AbstractMessageLog } from "./store/AbstractMessageLog.js"
+
+export interface Topology {
+	min?: number
+	max?: number
+
+	onConnect?: (peerId: PeerId, conn: Connection) => void
+	onDisconnect?: (peerId: PeerId) => void
+}
 
 import {
 	MAX_CONNECTIONS,
@@ -49,6 +56,7 @@ export interface SyncServiceComponents {
 export class SyncService<Payload = unknown, Result = void> implements Startable {
 	private readonly protocol: string
 	private readonly topology: Topology
+	private readonly topologyPeers = new Set<string>()
 
 	private readonly maxInboundStreams: number
 	private readonly maxOutboundStreams: number
@@ -80,20 +88,21 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 		this.minConnections = options.minConnections ?? MIN_CONNECTIONS
 		this.maxConnections = options.maxConnections ?? MAX_CONNECTIONS
 
-		this.topology = createTopology({
+		this.topology = {
 			min: this.minConnections,
 			max: this.maxConnections,
 
 			onConnect: (peerId, connection) => {
-				this.topology.peers.add(peerId.toString())
-				this.log("new connection %s to peer %p", connection.id, connection.remotePeer)
-				this.scheduleSync(connection.remotePeer)
+				this.topologyPeers.add(peerId.toString())
+				this.log("connected to peer %p", peerId)
+				this.scheduleSync(peerId)
 			},
 
 			onDisconnect: (peerId) => {
-				this.topology.peers.delete(peerId.toString())
+				this.log("disconnected from %p", peerId)
+				this.topologyPeers.delete(peerId.toString())
 			},
-		})
+		}
 	}
 
 	public isStarted() {

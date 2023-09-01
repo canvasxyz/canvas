@@ -1,9 +1,9 @@
-import type { Uint8ArrayList } from "uint8arraylist"
+import { Stream } from "@libp2p/interface/connection"
+import { logger } from "@libp2p/logger"
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
-import { logger } from "@libp2p/logger"
-import type { Stream } from "@libp2p/interface-connection"
+import { Uint8ArrayList } from "uint8arraylist"
 
 import type { Key, Node, Source } from "@canvas-js/okra"
 
