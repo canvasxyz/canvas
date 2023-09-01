@@ -1,6 +1,15 @@
-import { parseConfig, Model, ModelsInit, PrimitiveProperty, PrimitiveType } from "@canvas-js/modeldb-interface"
+import { fc } from "@fast-check/ava"
+
+import {
+	parseConfig,
+	Model,
+	ModelsInit,
+	PrimitiveProperty,
+	PrimitiveType,
+	ModelValue,
+	WhereCondition,
+} from "@canvas-js/modeldb-interface"
 import { testOnModelDB } from "./utils.js"
-import * as fc from "fast-check"
 
 // @ts-ignore
 const models = {
@@ -46,7 +55,7 @@ testOnModelDB("select queries return the selected fields", async (t, modelDBCons
 		fc.asyncProperty(
 			fc.subarray(selectableFields, { minLength: 1 }),
 			fc.array(modelDataArbitrary(model)),
-			async (fieldsToSelect, usersFixture) => {
+			async (fieldsToSelect: string[], usersFixture: ModelValue[]) => {
 				const db = await modelDBConstructor(models)
 
 				for (const user of usersFixture) {
@@ -106,7 +115,7 @@ testOnModelDB("where clause lets us filter on indexed fields", async (t, modelDB
 			fc
 				.constantFrom(...filterableFields)
 				.chain(
-					(fields): fc.Arbitrary<any> =>
+					(fields: string[]): fc.Arbitrary<any> =>
 						fc.record(
 							Object.fromEntries(
 								fields
@@ -117,7 +126,7 @@ testOnModelDB("where clause lets us filter on indexed fields", async (t, modelDB
 				),
 			fc.array(modelDataArbitrary(model)),
 			fc.array(modelDataArbitrary(model)),
-			async (where, includedUsersFixture, excludedUsersFixture) => {
+			async (where: WhereCondition, includedUsersFixture: ModelValue[], excludedUsersFixture: ModelValue[]) => {
 				const db = await modelDBConstructor(models)
 
 				for (const user of includedUsersFixture) {
@@ -129,9 +138,7 @@ testOnModelDB("where clause lets us filter on indexed fields", async (t, modelDB
 					await db.add("user", user)
 				}
 
-				const result = await db.query("user", {
-					where,
-				})
+				const result = await db.query("user", { where })
 
 				// assert that the returned rows satisfy the where condition
 				for (const row of result) {
@@ -153,7 +160,7 @@ testOnModelDB("order by on one field", async (t, modelDBConstructor) => {
 			fc.constantFrom(...orderableFields),
 			fc.array(modelDataArbitrary(model)),
 			fc.constantFrom("asc", "desc") as fc.Arbitrary<"asc" | "desc">,
-			async (orderByField, usersFixture, direction) => {
+			async (orderByField: string, usersFixture: ModelValue[], direction: "asc" | "desc") => {
 				const db = await modelDBConstructor(models)
 
 				for (const user of usersFixture) {
