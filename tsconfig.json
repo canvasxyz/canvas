@@ -5,6 +5,7 @@
     { "path": "./packages/interfaces/test" },
     { "path": "./packages/vm" },
     { "path": "./packages/vm/test" },
+    { "path": "./packages/discovery" },
     { "path": "./packages/gossiplog" },
     { "path": "./packages/gossiplog/test" },
     { "path": "./packages/core" },

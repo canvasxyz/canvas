@@ -1,18 +1,17 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
-import type { Source, Target, Node } from "@canvas-js/okra"
+import type { Source, Target, Node, Bound } from "@canvas-js/okra"
 
 import { CustomEvent, EventEmitter } from "@libp2p/interfaces/events"
 import { Logger, logger } from "@libp2p/logger"
-import { base32 } from "multiformats/bases/base32"
 import { equals } from "uint8arrays"
 import * as cbor from "@ipld/dag-cbor"
 
 import type { Message } from "@canvas-js/interfaces"
 import { Signature, verifySignature } from "@canvas-js/signed-cid"
 
-import { KEY_LENGTH, decodeSignedMessage, encodeSignedMessage, getClock } from "../schema.js"
-import { Awaitable, assert, nsidPattern } from "../utils.js"
+import { KEY_LENGTH, decodeId, decodeSignedMessage, encodeId, encodeSignedMessage, getClock } from "../schema.js"
 import { Driver } from "../sync/driver.js"
+import { Awaitable, assert, nsidPattern } from "../utils.js"
 
 export interface ReadOnlyTransaction extends Target {
 	get(key: Uint8Array): Awaitable<Uint8Array | null>
@@ -46,8 +45,16 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 	sync: CustomEvent<{ peerId: PeerId }>
 }> {
 	private static defaultSigner: MessageSigner = { sign: ({}) => null }
+	private static bound = (id: string | null = null, inclusive: boolean = true) =>
+		id === null ? null : { key: encodeId(id), inclusive }
 
 	public abstract close(): Promise<void>
+
+	protected abstract entries(
+		lowerBound?: Bound<Uint8Array> | null,
+		upperBound?: Bound<Uint8Array> | null,
+		options?: { reverse?: boolean }
+	): AsyncIterable<[key: Uint8Array, value: Uint8Array]>
 
 	protected abstract read<T>(
 		callback: (txn: ReadOnlyTransaction) => Promise<T>,
@@ -84,6 +91,22 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 	}
 
+	public async *iterate(
+		lowerBound: { id: string; inclusive: boolean } | null = null,
+		upperBound: { id: string; inclusive: boolean } | null = null,
+		options: { reverse?: boolean } = {}
+	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]> {
+		for await (const [key, value] of this.entries(
+			AbstractMessageLog.bound(lowerBound?.id, lowerBound?.inclusive),
+			AbstractMessageLog.bound(upperBound?.id, upperBound?.inclusive),
+			options
+		)) {
+			const [recoveredKey, signature, message] = this.decode(value)
+			assert(equals(recoveredKey, key), "expected equals(recoveredKey, key)")
+			yield [decodeId(key), signature, message]
+		}
+	}
+
 	public encode(signature: Signature | null, message: Message<Payload>): [key: Uint8Array, value: Uint8Array] {
 		if (this.sequencing) {
 			assert(message.clock > 0, "expected message.clock > 0 if sequencing is enable")
@@ -117,7 +140,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 	}
 
 	public async get(id: string): Promise<[signature: Signature | null, message: Message<Payload> | null]> {
-		const key = base32.baseDecode(id)
+		const key = encodeId(id)
 		assert(key.length === KEY_LENGTH, "invalid id")
 
 		const value = await this.read(async (txn) => txn.get(key))
@@ -140,12 +163,14 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 
 			const [key, value] = this.encode(signature, message)
 
-			const id = base32.baseEncode(key)
+			const id = decodeId(key)
+			this.log("inserting message %s at clock %d with %d parents", id, message.clock, message.parents.length)
+
 			const result = await this.apply(id, signature, message)
 			this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
 
 			await txn.set(key, value)
-			graph.update(key, message)
+			graph.update(id, message)
 
 			await txn.setUserdata(graph.export())
 
@@ -168,12 +193,14 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 			const signature = await signer.sign(message)
 			const [key, value] = this.encode(signature, message)
 
-			const id = base32.baseEncode(key)
+			const id = decodeId(key)
+			this.log("appending message %s at clock %d with %d parents", id, message.clock, message.parents.length)
+
 			const result = await this.apply(id, signature, message)
 			this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
 
 			await txn.set(key, value)
-			graph.update(key, message)
+			graph.update(id, message)
 
 			await txn.setUserdata(graph.export())
 
@@ -193,7 +220,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 
 				const driver = new Driver(this.topic, source, target)
 				for await (const [key, value] of driver.sync()) {
-					const id = base32.baseEncode(key)
+					const id = decodeId(key)
 
 					const [recoveredKey, signature, message] = this.decode(value)
 
@@ -204,11 +231,13 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 						verifySignature(signature, message)
 					}
 
+					this.log("inserting message %s at clock %d with %d parents", id, message.clock, message.parents.length)
+
 					const result = await this.apply(id, signature, message)
 					this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
 
 					await target.set(key, value)
-					graph.update(key, message)
+					graph.update(id, message)
 				}
 
 				await target.setUserdata(graph.export())
@@ -249,7 +278,8 @@ class Graph {
 		this.log = logger(`canvas:gossiplog:[${topic}]:graph`)
 		this.log("loaded graph at clock %d", clock)
 		for (const key of parents) {
-			const id = base32.baseEncode(key)
+			assert(key.byteLength === KEY_LENGTH, "expected key.byteLength === KEY_LENGTH")
+			const id = decodeId(key)
 			this.log("added %s", id)
 			this.#parents.add(id)
 		}
@@ -260,26 +290,23 @@ class Graph {
 			return null
 		}
 
-		const parents = this.getParents()
+		const parents = this.getParents().map(encodeId)
 		const clock = getClock(parents)
-
 		this.log("saving graph at clock %d", clock)
-		return cbor.encode(parents)
+		return cbor.encode<Uint8Array[]>(parents)
 	}
 
-	public update<Payload>(key: Uint8Array, message: Message<Payload>) {
+	public update<Payload>(id: string, message: Message<Payload>) {
 		if (this.sequencing === false) {
 			return
 		}
 
 		for (const parent of message.parents) {
-			const parentId = base32.baseEncode(parent)
-			if (this.#parents.delete(parentId)) {
-				this.log("removed %s", parentId)
+			if (this.#parents.delete(parent)) {
+				this.log("removed %s", parent)
 			}
 		}
 
-		const id = base32.baseEncode(key)
 		this.log("added %s", id)
 		this.#parents.add(id)
 	}
@@ -290,16 +317,15 @@ class Graph {
 		}
 
 		const parents = this.getParents()
-		const clock = getClock(parents)
-
+		const clock = getClock(parents.map(encodeId))
 		return { clock, parents, payload }
 	}
 
-	private getParents(): Uint8Array[] {
+	private getParents(): string[] {
 		if (this.sequencing === false) {
 			return []
 		}
 
-		return [...this.#parents].map(base32.baseDecode).sort()
+		return Array.from(this.#parents).sort()
 	}
 }

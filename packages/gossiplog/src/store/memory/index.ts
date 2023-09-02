@@ -1,9 +1,12 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
 
 import PQueue from "p-queue"
-import { MemoryTree } from "@canvas-js/okra-memory"
+import pDefer from "p-defer"
 
-import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractStore.js"
+import { MemoryTree } from "@canvas-js/okra-memory"
+import { Bound, assert } from "@canvas-js/okra"
+
+import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
 
 export default async function openMessageLog<Payload, Result>(
 	init: MessageLogInit<Payload, Result>
@@ -23,6 +26,31 @@ class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 
 	public async close() {}
 
+	public async *entries(
+		lowerBound: Bound<Uint8Array> | null = null,
+		upperBound: Bound<Uint8Array> | null = null,
+		options: { reverse?: boolean } = {}
+	): AsyncIterable<[key: Uint8Array, value: Uint8Array]> {
+		const deferred = pDefer()
+
+		this.log("adding transaction to queue")
+		this.queue.add(() => {
+			this.log("beginning transaction")
+			return deferred.promise
+		})
+
+		try {
+			for await (const node of this.tree.nodes(0, lowerBound ?? { key: null, inclusive: false }, upperBound, options)) {
+				assert(node.key !== null, "expected node.key !== null")
+				assert(node.value !== undefined, "expected node.value !== undefined")
+				yield [node.key, node.value]
+			}
+		} finally {
+			this.log("transaction completed")
+			deferred.resolve()
+		}
+	}
+
 	public async read<T>(
 		callback: (txn: ReadOnlyTransaction) => Promise<T>,
 		options: { target?: PeerId } = {}
@@ -35,9 +63,10 @@ class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 			}
 		}
 
-		this.log("adding read-only transaction to queue")
+		this.log("adding transaction to queue")
 		const result = await this.queue.add(async () => {
-			this.log("executing read-only transaction")
+			this.log("beginning transaction")
+
 			if (targetPeerId !== null) {
 				this.incomingSyncPeers.add(targetPeerId.toString())
 			}
@@ -45,9 +74,9 @@ class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 			try {
 				return await callback(this.tree)
 			} catch (err) {
-				this.log.error("error in read-only transaction: %O", err)
+				this.log.error("error in transaction: %O", err)
 			} finally {
-				this.log("releasing shared lock")
+				this.log("transaction completed")
 				if (targetPeerId !== null) {
 					this.incomingSyncPeers.delete(targetPeerId.toString())
 				}
@@ -68,8 +97,10 @@ class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 			}
 		}
 
-		this.log("adding read-write transaction to queue")
+		this.log("adding transaction to queue")
 		const result = await this.queue.add(async () => {
+			this.log("beginning transaction")
+
 			if (sourcePeerId !== null) {
 				this.outgoingSyncPeers.add(sourcePeerId.toString())
 			}
@@ -77,10 +108,10 @@ class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 			try {
 				return await callback(this.tree)
 			} catch (err) {
-				this.log.error("error in read-write transaction: %O", err)
+				this.log.error("error in transaction: %O", err)
 				throw err
 			} finally {
-				this.log("releasing exclusive lock")
+				this.log("transaction completed")
 				if (sourcePeerId !== null) {
 					this.outgoingSyncPeers.delete(sourcePeerId.toString())
 				}

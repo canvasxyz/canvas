@@ -1,8 +1,8 @@
 import chalk from "chalk"
 
 import type { Libp2pOptions } from "libp2p"
-import type { PeerId } from "@libp2p/interface-peer-id"
-import type { PubSub } from "@libp2p/interface-pubsub"
+import type { PeerId } from "@libp2p/interface/peer-id"
+import type { PubSub } from "@libp2p/interface/pubsub"
 import { pingService, PingService } from "libp2p/ping"
 import { identifyService } from "libp2p/identify"
 
@@ -15,6 +15,7 @@ import { gossipsub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { GossipLog, gossiplog } from "@canvas-js/gossiplog"
+// import { discovery, DiscoveryService } from "@canvas-js/discovery"
 
 import { defaultBootstrapList } from "./bootstrap.js"
 import {
@@ -39,6 +40,7 @@ export type ServiceMap = {
 	pingService: PingService
 	pubsub: PubSub<GossipsubEvents>
 	gossiplog: GossipLog
+	// discovery: DiscoveryService
 }
 
 export function getLibp2pOptions(
@@ -123,6 +125,8 @@ export function getLibp2pOptions(
 			}),
 
 			gossiplog: gossiplog({ location }),
+
+			// discovery: discovery({}),
 		},
 	}
 }

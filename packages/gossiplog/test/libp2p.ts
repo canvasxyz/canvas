@@ -2,25 +2,24 @@ import type { ExecutionContext } from "ava"
 
 import pDefer, { DeferredPromise } from "p-defer"
 
+import type { PeerId } from "@libp2p/interface/peer-id"
+import type { EventHandler } from "@libp2p/interface/events"
+import type { PubSub } from "@libp2p/interface/pubsub"
+
 import { Libp2p, createLibp2p } from "libp2p"
 import { identifyService } from "libp2p/identify"
 import { plaintext } from "libp2p/insecure"
-
 import { tcp } from "@libp2p/tcp"
-
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 
-import type { PeerId } from "@libp2p/interface-peer-id"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { logger } from "@libp2p/logger"
 
-import { GossipLog, GossipLogEvents, GossipLogInit, gossiplog } from "@canvas-js/gossiplog"
 import { Signature } from "@canvas-js/signed-cid"
 import { Message } from "@canvas-js/interfaces"
-import { EventHandler } from "@libp2p/interfaces/events"
-import { PubSub } from "@libp2p/interface-pubsub"
+import { GossipLog, GossipLogEvents, GossipLogInit, gossiplog } from "@canvas-js/gossiplog"
 
 export type NetworkInit = Record<string, { port: number; peers: string[]; init?: GossipLogInit }>
 

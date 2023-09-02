@@ -1,127 +1,123 @@
 import test from "ava"
 
 import { nanoid } from "nanoid"
-import { base32 } from "multiformats/bases/base32"
-import { ed25519 } from "@noble/curves/ed25519"
 
-import { Signature, createSignature } from "@canvas-js/signed-cid"
-import { IPLDValue, Message } from "@canvas-js/interfaces"
+import { Message } from "@canvas-js/interfaces"
+import { Signature } from "@canvas-js/signed-cid"
 
 import openMessageLog from "@canvas-js/gossiplog/store"
+import { Ed25519Signer, collect } from "./utils.js"
 
-const validateString = (payload: unknown): payload is string => true
+const topic = "com.example.test"
+const apply = (id: string, signature: Signature | null, message: Message<string>) => {}
+const validate = (payload: unknown): payload is string => true
+const getPublicKey = ([id, signature, message]: [string, Signature | null, Message<string>]) =>
+	[id, signature?.publicKey ?? null, message] as const
 
-class Ed25519Signer<T = unknown> {
-	private readonly privateKey = ed25519.utils.randomPrivateKey()
-	public readonly publicKey = ed25519.getPublicKey(this.privateKey)
-
-	sign(message: Message<T>) {
-		return createSignature("ed25519", this.privateKey, message)
-	}
-}
-
-test("apply a signed message", async (t) => {
-	const messages: IPLDValue[] = []
-	const log = await openMessageLog({
-		location: null,
-		topic: "com.example.test",
-		apply: (id, signature, message) => void messages.push({ id, publicKey: signature?.publicKey ?? null, message }),
-		validate: validateString,
-	})
+test("append signed messages", async (t) => {
+	const log = await openMessageLog({ location: null, topic, apply, validate })
 
 	const signer = new Ed25519Signer()
-	const { id, result } = await log.append("foo", { signer })
+	const { id: idA } = await log.append("foo", { signer })
+	const { id: idB } = await log.append("bar", { signer })
+	const { id: idC } = await log.append("baz", { signer })
 
-	t.is(result, undefined)
-	t.deepEqual(messages, [{ id, publicKey: signer.publicKey, message: { clock: 1, parents: [], payload: "foo" } }])
+	t.deepEqual(await collect(log.iterate(), getPublicKey), [
+		[idA, signer.publicKey, { clock: 1, parents: [], payload: "foo" }],
+		[idB, signer.publicKey, { clock: 2, parents: [idA], payload: "bar" }],
+		[idC, signer.publicKey, { clock: 3, parents: [idB], payload: "baz" }],
+	])
 })
 
-test("apply a signed message without sequencing", async (t) => {
-	const messages: IPLDValue[] = []
-	const log = await openMessageLog({
-		location: null,
-		topic: "com.example.test",
-		apply: (id, signature, message) => void messages.push({ id, publicKey: signature?.publicKey ?? null, message }),
-		validate: validateString,
-		sequencing: false,
-	})
+test("append unsigned messages", async (t) => {
+	const log = await openMessageLog({ location: null, topic, apply, validate, signatures: false })
 
+	const { id: idA } = await log.append("foo")
+	const { id: idB } = await log.append("bar")
+	const { id: idC } = await log.append("baz")
+
+	t.deepEqual(await collect(log.iterate(), getPublicKey), [
+		[idA, null, { clock: 1, parents: [], payload: "foo" }],
+		[idB, null, { clock: 2, parents: [idA], payload: "bar" }],
+		[idC, null, { clock: 3, parents: [idB], payload: "baz" }],
+	])
+})
+
+test("append signed messages without sequencing", async (t) => {
+	const log = await openMessageLog({ location: null, topic, apply, validate, sequencing: false })
 	const signer = new Ed25519Signer()
-	const { id, result } = await log.append("foo", { signer })
-	t.is(result, undefined)
-	t.deepEqual(messages, [{ id, publicKey: signer.publicKey, message: { clock: 0, parents: [], payload: "foo" } }])
+	const { id: idA } = await log.append("foo", { signer })
+	const { id: idB } = await log.append("bar", { signer })
+	const { id: idC } = await log.append("baz", { signer })
+
+	const entries: [string, Uint8Array, Message<string>][] = [
+		[idA, signer.publicKey, { clock: 0, parents: [], payload: "foo" }],
+		[idB, signer.publicKey, { clock: 0, parents: [], payload: "bar" }],
+		[idC, signer.publicKey, { clock: 0, parents: [], payload: "baz" }],
+	]
+
+	entries.sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
+
+	t.deepEqual(await collect(log.iterate(), getPublicKey), entries)
 })
 
-test("apply an unsigned message", async (t) => {
-	const messages: IPLDValue[] = []
-	const log = await openMessageLog({
-		location: null,
-		topic: "com.example.test",
-		apply: (id, signature, message) => void messages.push({ id, publicKey: signature?.publicKey ?? null, message }),
-		validate: validateString,
-		signatures: false,
-	})
+test("append unsigned messages without sequencing", async (t) => {
+	const log = await openMessageLog({ location: null, topic, apply, validate, signatures: false, sequencing: false })
 
-	const { id, result } = await log.append("foo")
-	t.is(result, undefined)
-	t.deepEqual(messages, [{ id, publicKey: null, message: { clock: 1, parents: [], payload: "foo" } }])
+	const { id: idA } = await log.append("foo")
+	const { id: idB } = await log.append("bar")
+	const { id: idC } = await log.append("baz")
+
+	const entries: [string, null, Message<string>][] = [
+		[idA, null, { clock: 0, parents: [], payload: "foo" }],
+		[idB, null, { clock: 0, parents: [], payload: "bar" }],
+		[idC, null, { clock: 0, parents: [], payload: "baz" }],
+	]
+
+	entries.sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
+
+	t.deepEqual(await collect(log.iterate(), getPublicKey), entries)
 })
 
-test("apply an unsigned message without sequencing", async (t) => {
-	const messages: IPLDValue[] = []
-	const log = await openMessageLog({
-		location: null,
-		topic: "com.example.test",
-		apply: (id, signature, message) => void messages.push({ id, publicKey: signature?.publicKey ?? null, message }),
-		validate: validateString,
-		signatures: false,
-		sequencing: false,
-	})
+test("insert concurrent messages", async (t) => {
+	const log = await openMessageLog({ location: null, topic, apply, validate, signatures: false })
 
-	const { id, result } = await log.append("foo")
-	t.is(result, undefined)
-	t.deepEqual(messages, [{ id, publicKey: null, message: { clock: 0, parents: [], payload: "foo" } }])
+	const [a, b, c] = [nanoid(), nanoid(), nanoid()]
+	const { id: idA } = await log.insert(null, { clock: 1, parents: [], payload: a })
+	const { id: idB } = await log.insert(null, { clock: 1, parents: [], payload: b })
+	const { id: idC } = await log.insert(null, { clock: 1, parents: [], payload: c })
+
+	const entries: [string, null, Message<string>][] = [
+		[idA, null, { clock: 1, parents: [], payload: a }],
+		[idB, null, { clock: 1, parents: [], payload: b }],
+		[idC, null, { clock: 1, parents: [], payload: c }],
+	]
+
+	entries.sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
+
+	t.deepEqual(await collect(log.iterate()), entries)
 })
 
-test("apply two messages in serial", async (t) => {
-	const messages: Record<string, [Signature | null, Message]> = {}
-	const log = await openMessageLog<string, void>({
-		location: null,
-		topic: "com.example.test",
-		apply: (id, signature, message) => {
-			messages[message.payload] = [signature, message]
-		},
-		validate: (payload): payload is string => typeof payload === "string",
-		signatures: false,
-	})
+test("append to concurrent messages", async (t) => {
+	const log = await openMessageLog({ location: null, topic, apply, validate, signatures: false })
 
-	const [a, b] = [nanoid(), nanoid()]
-	const { id: idA } = await log.append(a)
-	const { id: idB } = await log.append(b)
-	t.deepEqual(messages, {
-		[a]: [null, { clock: 1, parents: [], payload: a }],
-		[b]: [null, { clock: 2, parents: [base32.baseDecode(idA)], payload: b }],
-	})
-})
+	const [a, b, c] = [nanoid(), nanoid(), nanoid()]
+	const { id: idA } = await log.insert(null, { clock: 1, parents: [], payload: a })
+	const { id: idB } = await log.insert(null, { clock: 1, parents: [], payload: b })
+	const { id: idC } = await log.insert(null, { clock: 1, parents: [], payload: c })
 
-test("apply two concurrent messages", async (t) => {
-	const messages: Record<string, [Signature | null, Message]> = {}
-	const log = await openMessageLog<string, void>({
-		location: null,
-		topic: "com.example.test",
-		apply: (id, signature, message) => {
-			messages[message.payload] = [signature, message]
-		},
-		validate: (payload): payload is string => typeof payload === "string",
-		signatures: false,
-	})
+	const entries: [string, null, Message<string>][] = [
+		[idA, null, { clock: 1, parents: [], payload: a }],
+		[idB, null, { clock: 1, parents: [], payload: b }],
+		[idC, null, { clock: 1, parents: [], payload: c }],
+	]
 
-	const [a, b] = [nanoid(), nanoid()]
-	await log.insert(null, { clock: 1, parents: [], payload: a })
-	await log.insert(null, { clock: 1, parents: [], payload: b })
+	entries.sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
 
-	t.deepEqual(messages, {
-		[a]: [null, { clock: 1, parents: [], payload: a }],
-		[b]: [null, { clock: 1, parents: [], payload: b }],
-	})
+	const payload = nanoid()
+	const { id } = await log.append(payload)
+	const [signature, message] = await log.get(id)
+	t.is(signature, null)
+	t.deepEqual(message, { clock: 2, parents: entries.map(([id]) => id), payload })
+	t.deepEqual(await collect(log.iterate()), [...entries, [id, null, message]])
 })

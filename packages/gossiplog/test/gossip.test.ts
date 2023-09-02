@@ -2,10 +2,7 @@ import test from "ava"
 
 import { nanoid } from "nanoid"
 
-import { Message } from "@canvas-js/interfaces"
-
 import { createNetwork, waitForInitialConnections, waitForMessageDelivery } from "./libp2p.js"
-import { base32 } from "multiformats/bases/base32"
 
 const validateString = (payload: unknown): payload is string => true
 
@@ -96,5 +93,5 @@ test("exchange serial messages between two peers via gossipsub", async (t) => {
 	])
 
 	t.is(messageB.clock, 2)
-	t.deepEqual(messageB.parents, [base32.baseDecode(idA)])
+	t.deepEqual(messageB.parents, [idA])
 })
