@@ -1,14 +1,16 @@
 import { Config, Model, ModelsInit, PrimitiveType, Property, PropertyType, Relation } from "./types.js"
+import { assert } from "./utils.js"
 
 export function parseConfig(init: ModelsInit): Config {
 	const relations: Relation[] = []
 	const models: Model[] = []
 
-	for (const [modelName, { $type, $indexes, ...rest }] of Object.entries(init)) {
+	for (const [modelName, { $indexes, ...rest }] of Object.entries(init)) {
 		const indexes: string[][] = []
 		const properties: Property[] = []
 
 		for (const [propertyName, propertyType] of Object.entries(rest)) {
+			assert(!Array.isArray(propertyType), "invalid property type")
 			const property = parseProperty(propertyName, propertyType)
 
 			properties.push(property)
@@ -33,8 +35,7 @@ export function parseConfig(init: ModelsInit): Config {
 			}
 		}
 
-		const kind = $type ?? "immutable"
-		models.push({ name: modelName, kind, properties, indexes })
+		models.push({ name: modelName, properties, indexes })
 	}
 
 	return { relations, models }

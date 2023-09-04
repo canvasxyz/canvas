@@ -22,6 +22,6 @@
     "ava": "^5.3.1",
     "fake-indexeddb": "^4.0.2",
     "fast-check": "^3.12.0",
-    "uuid": "^9.0.0"
+    "nanoid": "^4.0.2"
   }
 }

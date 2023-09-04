@@ -10,7 +10,6 @@ test("parse config", (t) => {
 			signingPublicKey: "bytes",
 		},
 
-		// @ts-ignore
 		room: {
 			creator: "@user",
 			members: "@user[]",
@@ -29,7 +28,6 @@ test("parse config", (t) => {
 		models: [
 			{
 				name: "user",
-				kind: "immutable",
 				indexes: [],
 				properties: [
 					{ name: "address", kind: "primitive", type: "string", optional: false },
@@ -39,7 +37,6 @@ test("parse config", (t) => {
 			},
 			{
 				name: "room",
-				kind: "immutable",
 				indexes: [],
 				properties: [
 					{ name: "creator", kind: "reference", target: "user", optional: false },
@@ -48,7 +45,6 @@ test("parse config", (t) => {
 			},
 			{
 				name: "message",
-				kind: "immutable",
 				indexes: [],
 				properties: [
 					{ name: "room", kind: "reference", target: "room", optional: false },

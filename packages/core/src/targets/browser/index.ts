@@ -7,6 +7,10 @@ import { ModelDB } from "@canvas-js/modeldb-idb"
 import type { PlatformTarget } from "../interface.js"
 
 export default function getBrowserTarget(location: string | null): PlatformTarget {
+	if (location === null) {
+		throw new Error("location value is required in the browser")
+	}
+
 	return {
 		async getPeerId(): Promise<PeerId> {
 			if (location === null) {
@@ -28,9 +32,9 @@ export default function getBrowserTarget(location: string | null): PlatformTarge
 			}
 		},
 
-		async openDB(key, init, options) {
-			const databaseName = location === null ? key : `${location}/${key}`
-			return await ModelDB.initialize(init, { ...options, databaseName })
+		async openDB(init, options) {
+			const databaseName = `${location}/db`
+			return await ModelDB.initialize(databaseName, init, options)
 		},
 
 		extendLibp2pOptions(options) {

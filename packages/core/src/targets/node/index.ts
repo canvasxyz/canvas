@@ -12,6 +12,7 @@ import { ModelDB } from "@canvas-js/modeldb-sqlite"
 import type { PlatformTarget } from "../interface.js"
 
 const PEER_ID_FILENAME = ".peer-id"
+const DB_FILENAME = "db.sqlite"
 
 export default function getTarget(location: string | null): PlatformTarget {
 	return {
@@ -37,12 +38,11 @@ export default function getTarget(location: string | null): PlatformTarget {
 			return peerId
 		},
 
-		async openDB(key, init, options) {
+		async openDB(init, options) {
 			if (location === null) {
 				return new ModelDB(null, init, options)
 			} else {
-				const dbPath = path.resolve(location, `${key}.sqlite`)
-				return new ModelDB(dbPath, init)
+				return new ModelDB(path.resolve(location, DB_FILENAME), init)
 			}
 		},
 

@@ -6,7 +6,6 @@ ModelDB
 - Simple JSON schema
 - Dual SQLite and IndexdDB backends
 - Designed for p2p conlict resolution
-- "Mutable" and "immutable" models
 
 ```ts
 import { ModelDB } from "@canvas-js/modeldb-sqlite"
@@ -52,10 +51,7 @@ type PropertyType = PrimitiveType | OptionalPrimitiveType | ReferenceType | Opti
 
 type IndexInit = string | string[]
 
-type ModelsInit = Record<
-	string,
-	{ $type?: "mutable" | "immutable"; $indexes?: IndexInit[] } & Record<string, PropertyType>
->
+type ModelsInit = Record<string, { $indexes?: IndexInit[] } & Record<string, PropertyType>>
 ```
 
 ### `ModelDB`
@@ -71,15 +67,12 @@ declare class ModelDB {
 	public close(): void
 
 	public get(modelName: string, key: string): ModelValue | null
-	public iterate(modelName: string): AsyncIterable<ModelValue>
-	public query(modelName: string, query: {}): ModelValue[]
+	public iterate(modelName: string): AsyncIterable<[key: string; ModelValue; version; Uint8Array | null]>
+	// public query(modelName: string, query: {}): ModelValue[]
 
-	// Mutable model methods
-	public set(modelName: string, key: string, value: ModelValue, options?: { version?: string }): void
-	public delete(modelName: string, key: string, options?: { version?: string }): void
+	public set(modelName: string, key: string, value: ModelValue, options?: { version?: Uint8Array | null }): void
+	public delete(modelName: string, key: string, options?: { version?: Uint8Array | null }): void
 
-	// Immutable model methods
-	public add(modelName: string, value: ModelValue, options?: { namespace?: string }): string
-	public remove(modelName: string, key: string): void
+	public add(modelName: string, value: ModelValue): string
 }
 ```

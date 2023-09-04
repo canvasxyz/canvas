@@ -10,10 +10,7 @@ export type PropertyType = PrimitiveType | OptionalPrimitiveType | ReferenceType
 
 export type IndexInit = string | string[]
 
-export type ModelsInit = Record<
-	string,
-	{ $type?: "mutable" | "immutable"; $indexes?: IndexInit[] } & Record<string, PropertyType>
->
+export type ModelsInit = Record<string, { $indexes?: IndexInit[] } & Record<string, PropertyType | IndexInit[]>>
 
 // These are more structured representations of the schema defined by ModelsInit that are easier
 // to work with at runtime
@@ -31,7 +28,6 @@ export type Relation = { source: string; property: string; target: string; index
 
 export type Model = {
 	name: string
-	kind: "mutable" | "immutable"
 	properties: Property[]
 	indexes: string[][]
 }
@@ -65,58 +61,13 @@ export type QueryParams = {
 // Batch effect API
 
 export type Effect =
-	| { model: string; operation: "add"; value: ModelValue }
-	| { model: string; operation: "remove"; key: string }
 	| { model: string; operation: "set"; key: string; value: ModelValue }
 	| { model: string; operation: "delete"; key: string }
 
 // Conflict resolver
 
+export type Context = { version: Uint8Array | null }
+
 export type Resolver = {
-	lessThan: (a: { version: string }, b: { version: string }) => boolean
-}
-
-// export type ResolveOrder
-
-// Types for the ModelDB internal API
-
-export type RecordValue = Record<string, string | number | Buffer | null>
-
-export type TombstoneAPI = {
-	select: (params: { _key: string }) => Promise<{ version: string | null }>
-	query: (paramms: { _key: string }) => Promise<{ _version: string } | null>
-	delete: (params: { _key: string }) => Promise<void>
-	insert: (params: { _key: string; _version: string }) => Promise<void>
-	update: (params: { _key: string; _version: string }) => Promise<void>
-}
-
-export type RelationAPI = {
-	// should this be AsyncIterable?
-	selectAll: (params: { _source: string }) => Promise<{ _target: string }[]>
-	deleteAll: (params: { _source: string }) => Promise<void>
-	create: (params: { _source: string; _target: string }) => Promise<void>
-}
-
-export type MutableRecordAPI = {
-	params?: Record<string, string>
-	selectVersion: (params: { _key: string }) => Promise<{ _version: string | null } | null>
-	iterate: (params: {}) => AsyncIterable<ModelValue>
-	select: (params: { _key: string }) => Promise<ModelValue | null>
-	selectAll: (params: {}) => Promise<ModelValue[]>
-	insert: (params: { _key: string; _version: string | null; value: ModelValue }) => Promise<void>
-	update: (params: { _key: string; _version: string | null; value: ModelValue }) => Promise<void>
-	delete: (paras: QueryParams) => Promise<ModelValue[]>
-	count: () => Promise<number>
-}
-
-export type ImmutableRecordAPI = {
-	params?: Record<string, string>
-	iterate: (params: {}) => AsyncIterable<ModelValue>
-	select: (params: { _key: string }) => Promise<ModelValue | null>
-	selectAll: (params: {}) => Promise<ModelValue[]>
-	insert: (params: { _key: string; value: ModelValue }) => Promise<void>
-	update: (params: { _key: string; _version: string | null; value: ModelValue }) => Promise<void>
-	delete: (params: { _key: string }) => Promise<void>
-	query: (params: QueryParams) => Promise<ModelValue[]>
-	count: () => Promise<number>
+	lessThan(a: Context, b: Context): boolean
 }

@@ -1,1 +1,1 @@
-export { ModelDB, ModelDBOptions } from "./ModelDB.js"
+export { ModelDB } from "./ModelDB.js"

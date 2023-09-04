@@ -3,70 +3,46 @@ import { IDBPDatabase, IDBPTransaction, openDB } from "idb"
 import {
 	AbstractModelDB,
 	Config,
+	Context,
 	Effect,
+	Model,
+	ModelDBOptions,
 	ModelValue,
 	ModelsInit,
 	QueryParams,
 	Resolver,
 	parseConfig,
+	validateModelValue,
 } from "@canvas-js/modeldb-interface"
 
-import {
-	createImmutableModelAPI,
-	createMutableModelAPI,
-	getPropertyIndexName,
-	getRecordStoreName,
-	getRelationStoreName,
-	getTombstoneStoreName,
-} from "./api.js"
 import { assert, signalInvalidType } from "./utils.js"
 
-export interface ModelDBOptions {
-	databaseName?: string
-	resolver?: Resolver
+type Transaction = IDBPTransaction<any, any, "readwrite">
+
+const objectStoreNames = {
+	record: (model: string) => `record/${model}`,
+	tombstone: (model: string) => `tombstone/${model}`,
+	index: (model: string, index: string[]) => `record/${model}/${index.join("/")}`,
 }
 
 export class ModelDB extends AbstractModelDB {
-	public options?: ModelDBOptions
-	public resolver?: Resolver
-
-	public static async initialize(models: ModelsInit, options?: ModelDBOptions) {
+	public static async initialize(name: string, models: ModelsInit, options: ModelDBOptions = {}) {
 		const config = parseConfig(models)
-
-		for (const model of config.models) {
-			const columnNames: string[] = []
-			for (const [i, property] of model.properties.entries()) {
-				if (property.kind === "primitive" || property.kind === "reference") {
-					columnNames.push(`"${property.name}"`)
-				} else if (property.kind === "relation") {
-					continue
-				} else {
-					signalInvalidType(property)
-				}
-			}
-			if (columnNames.length == 0) {
-				throw new Error(`Model "${model.name}" has no columns`)
-			}
-		}
-
-		const db = await openDB(options?.databaseName || "modeldb", 1, {
+		const db = await openDB(name, 1, {
 			upgrade(db: IDBPDatabase<unknown>) {
-				// create model stores
+				// create object stores
 				for (const model of config.models) {
-					const recordObjectStore = db.createObjectStore(getRecordStoreName(model.name))
-					if (model.kind == "mutable") {
-						db.createObjectStore(getTombstoneStoreName(model.name))
-					}
+					const recordObjectStore = db.createObjectStore(objectStoreNames.record(model.name))
+					db.createObjectStore(objectStoreNames.tombstone(model.name))
 
 					for (const index of model.indexes) {
-						const sortedIndex = index.sort()
-						recordObjectStore.createIndex(getPropertyIndexName(model.name, sortedIndex), sortedIndex)
-					}
-				}
+						if (index.length > 1) {
+							// TODO: we can support these by adding synthetic values to every object
+							throw new Error("multi-property indexes not supported yet")
+						}
 
-				for (const relation of config.relations) {
-					const relationObjectStore = db.createObjectStore(getRelationStoreName(relation.source, relation.property))
-					relationObjectStore.createIndex("source", "_source")
+						recordObjectStore.createIndex(objectStoreNames.index(model.name, index), index)
+					}
 				}
 			},
 		})
@@ -74,16 +50,18 @@ export class ModelDB extends AbstractModelDB {
 		return new ModelDB(db, config, options)
 	}
 
-	constructor(public readonly db: IDBPDatabase, config: Config, options?: ModelDBOptions) {
-		super(config)
-		this.options = options
-		this.resolver = options?.resolver
+	readonly #models: Record<string, ModelAPI> = {}
+
+	private constructor(public readonly db: IDBPDatabase, config: Config, options: ModelDBOptions) {
+		super(config, options)
+
+		for (const model of config.models) {
+			this.#models[model.name] = new ModelAPI(model, this.resolver)
+		}
 	}
 
-	public async withAsyncTransaction<T>(
-		fn: (transaction: IDBPTransaction<any, any, "readwrite">) => Promise<T>
-	): Promise<T> {
-		let transaction: IDBPTransaction<any, any, "readwrite">
+	private async withAsyncTransaction<T>(fn: (transaction: Transaction) => Promise<T>): Promise<T> {
+		let transaction: Transaction | null = null
 
 		try {
 			transaction = this.db.transaction(this.db.objectStoreNames, "readwrite")
@@ -96,153 +74,66 @@ export class ModelDB extends AbstractModelDB {
 			const [res, _] = await Promise.all([fn(transaction), transaction.done])
 			return res
 		} catch (e) {
-			transaction!.abort()
+			transaction?.abort()
 			throw e
 		}
 	}
 
-	public withTransaction<T>(fn: (transaction: IDBPTransaction<any, any, "readwrite">) => T): T {
-		const transaction = this.db.transaction(this.db.objectStoreNames, "readwrite")
-		try {
-			return fn(transaction)
-		} catch (e) {
-			// rollback transaction if it fails
-			transaction.abort()
-			throw e
-		}
-	}
-
-	public async get(modelName: string, key: string) {
+	public async *iterate(
+		modelName: string
+	): AsyncIterable<[key: string, value: ModelValue, version: Uint8Array | null]> {
 		const model = this.models[modelName]
 		assert(model !== undefined, "model not found")
 
-		if (model.kind == "mutable") {
-			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createMutableModelAPI(transaction, model, this.resolver)
-				return await MutableModelAPI.get(key, dbContext)
-			})
-		} else if (model.kind == "immutable") {
-			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createImmutableModelAPI(transaction, model)
-				return await ImmutableModelAPI.get(key, dbContext)
-			})
-		} else {
-			signalInvalidType(model.kind)
-		}
+		const api = this.#models[modelName]
+		// TODO
 	}
 
-	public async selectAll(modelName: string): Promise<ModelValue[]> {
+	public async get(modelName: string, key: string): Promise<ModelValue | null> {
 		const model = this.models[modelName]
 		assert(model !== undefined, "model not found")
-
-		if (model.kind == "mutable") {
-			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createMutableModelAPI(transaction, model, this.resolver)
-				return await MutableModelAPI.selectAll(dbContext)
-			})
-		} else if (model.kind == "immutable") {
-			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createImmutableModelAPI(transaction, model)
-				return await ImmutableModelAPI.selectAll(dbContext)
-			})
+		const value: ObjectValue | undefined = await this.db.get(objectStoreNames.record(modelName), key)
+		if (value === undefined) {
+			return null
 		} else {
-			signalInvalidType(model.kind)
+			const { _version, ...rest } = value
+			return rest
 		}
 	}
 
-	public iterate(modelName: string): AsyncIterable<ModelValue> {
-		const model = this.models[modelName]
-		assert(model !== undefined, "model not found")
+	// public async query(modelName: string, query: QueryParams): Promise<ModelValue[]> {
+	// 	const model = this.models[modelName]
+	// 	assert(model !== undefined, "model not found")
 
-		if (model.kind == "mutable") {
-			return this.withTransaction((transaction) => {
-				const dbContext = createMutableModelAPI(transaction, model, this.resolver)
-				return MutableModelAPI.iterate(dbContext)
-			})
-		} else if (model.kind == "immutable") {
-			return this.withTransaction((transaction) => {
-				const dbContext = createImmutableModelAPI(transaction, model)
-				return ImmutableModelAPI.iterate(dbContext)
-			})
-		} else {
-			signalInvalidType(model.kind)
-		}
-	}
-
-	public async query(modelName: string, query: QueryParams): Promise<ModelValue[]> {
-		const model = this.models[modelName]
-		assert(model !== undefined, "model not found")
-
-		if (model.kind == "mutable") {
-			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createMutableModelAPI(transaction, model, this.resolver)
-				return MutableModelAPI.query(query, dbContext)
-			})
-		} else if (model.kind == "immutable") {
-			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createImmutableModelAPI(transaction, model)
-				return await ImmutableModelAPI.query(query, dbContext)
-			})
-		} else {
-			signalInvalidType(model.kind)
-		}
-	}
+	// 	if (model.kind == "mutable") {
+	// 		return this.withAsyncTransaction(async (transaction) => {
+	// 			const dbContext = createMutableModelAPI(transaction, model, this.resolver)
+	// 			return MutableModelAPI.query(query, dbContext)
+	// 		})
+	// 	} else if (model.kind == "immutable") {
+	// 		return this.withAsyncTransaction(async (transaction) => {
+	// 			const dbContext = createImmutableModelAPI(transaction, model)
+	// 			return await ImmutableModelAPI.query(query, dbContext)
+	// 		})
+	// 	} else {
+	// 		signalInvalidType(model.kind)
+	// 	}
+	// }
 
 	public async count(modelName: string): Promise<number> {
-		const model = this.models[modelName]
-		assert(model !== undefined, "model not found")
-
-		if (model.kind == "mutable") {
-			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createMutableModelAPI(transaction, model, this.resolver)
-				return MutableModelAPI.count(dbContext)
-			})
-		} else if (model.kind == "immutable") {
-			return this.withAsyncTransaction(async (transaction) => {
-				const dbContext = createImmutableModelAPI(transaction, model)
-				return await ImmutableModelAPI.count(dbContext)
-			})
-		} else {
-			signalInvalidType(model.kind)
-		}
+		assert(this.models[modelName] !== undefined, "model not found")
+		return await this.db.count(objectStoreNames.record(modelName))
 	}
 
-	public async apply(
-		effects: Effect[],
-		options: { namespace?: string | undefined; version?: string | undefined }
-	): Promise<void> {
-		const { version, namespace } = options
-
-		await this.withAsyncTransaction(async (transaction) => {
-			const immutableDbContexts: Record<string, ImmutableModelDBContext> = {}
-			const mutableDbContexts: Record<string, MutableModelDBContext> = {}
-
-			for (const model of Object.values(this.models)) {
-				if (model.kind == "immutable") {
-					immutableDbContexts[model.name] = createImmutableModelAPI(transaction, model)
-				} else if (model.kind == "mutable") {
-					mutableDbContexts[model.name] = createMutableModelAPI(transaction, model, this.resolver)
-				} else {
-					signalInvalidType(model.kind)
-				}
-			}
-
+	public async apply(context: Context, effects: Effect[]): Promise<void> {
+		await this.withAsyncTransaction(async (txn) => {
 			for (const effect of effects) {
-				const model = this.models[effect.model]
-				assert(model !== undefined, `model ${effect.model} not found`)
-
-				if (effect.operation === "add") {
-					assert(model.kind == "immutable", "cannot call .add on a mutable model")
-					await ImmutableModelAPI.add(effect.value, { namespace }, immutableDbContexts[model.name])
-				} else if (effect.operation === "remove") {
-					assert(model.kind == "immutable", "cannot call .remove on a mutable model")
-					await ImmutableModelAPI.remove(effect.key, immutableDbContexts[model.name])
-				} else if (effect.operation === "set") {
-					assert(model.kind == "mutable", "cannot call .set on an immutable model")
-					await MutableModelAPI.set(effect.key, effect.value, { version }, mutableDbContexts[model.name])
+				const api = this.#models[effect.model]
+				assert(api !== undefined, `model ${effect.model} not found`)
+				if (effect.operation === "set") {
+					await api.set(txn, context, effect.key, effect.value)
 				} else if (effect.operation === "delete") {
-					assert(model.kind == "mutable", "cannot call .delete on an immutable model")
-					await MutableModelAPI.delete(effect.key, { version }, mutableDbContexts[model.name])
+					await api.delete(txn, context, effect.key)
 				} else {
 					signalInvalidType(effect)
 				}
@@ -252,5 +143,67 @@ export class ModelDB extends AbstractModelDB {
 
 	async close() {
 		this.db.close()
+	}
+}
+
+type ObjectValue = ModelValue & { _version: Uint8Array | null }
+type Tombstone = { _version: Uint8Array }
+
+class ModelAPI {
+	constructor(readonly model: Model, readonly resolver: Resolver) {}
+
+	private getStore(txn: Transaction) {
+		return txn.objectStore(objectStoreNames.record(this.model.name))
+	}
+
+	private getTombstoneStore(txn: Transaction) {
+		return txn.objectStore(objectStoreNames.tombstone(this.model.name))
+	}
+
+	async set(txn: Transaction, context: { version: Uint8Array | null }, key: string, value: ModelValue): Promise<void> {
+		validateModelValue(this.model, value)
+
+		const [store, tombstoneStore] = [this.getStore(txn), this.getTombstoneStore(txn)]
+
+		// no-op if an existing value takes precedence
+		const existingValue: ObjectValue | undefined = await store.get(key)
+		if (existingValue !== undefined && this.resolver.lessThan(context, { version: existingValue._version })) {
+			return
+		}
+
+		// no-op if an existing tombstone takes precedence
+		const existingTombstone: Tombstone | undefined = await tombstoneStore.get(key)
+		if (existingTombstone !== undefined && this.resolver.lessThan(context, { version: existingTombstone._version })) {
+			return
+		}
+
+		// delete the tombstone since we're about to set the value
+		if (existingTombstone !== undefined) {
+			await tombstoneStore.delete(key)
+		}
+
+		await store.put({ ...value, _version: context.version }, key)
+	}
+
+	async delete(txn: Transaction, context: Context, key: string): Promise<void> {
+		const [store, tombstoneStore] = [this.getStore(txn), this.getTombstoneStore(txn)]
+
+		// no-op if an existing value takes precedence
+		const existingValue: ObjectValue | undefined = await store.get(key)
+		if (existingValue !== undefined && this.resolver.lessThan(context, { version: existingValue._version })) {
+			return
+		}
+
+		// no-op if an existing tombstone takes precedence
+		const existingTombstone: Tombstone | undefined = await tombstoneStore.get(key)
+		if (existingTombstone !== undefined && this.resolver.lessThan(context, { version: existingTombstone._version })) {
+			return
+		}
+
+		if (context.version !== null) {
+			await tombstoneStore.put({ _version: context.version }, key)
+		}
+
+		await store.delete(key)
 	}
 }

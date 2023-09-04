@@ -1,4 +1,5 @@
 import { ModelsInit } from "@canvas-js/modeldb-interface"
+
 import { testOnModelDB } from "./utils.js"
 
 const models: ModelsInit = {
@@ -8,7 +9,6 @@ const models: ModelsInit = {
 		signingPublicKey: "bytes",
 	},
 
-	// @ts-ignore
 	room: {
 		creator: "@user",
 		members: "@user[]",
@@ -23,8 +23,8 @@ const models: ModelsInit = {
 	},
 }
 
-testOnModelDB("create ModelDB", async (t, modelDBConstructor) => {
-	const modelDB = await modelDBConstructor(models)
+testOnModelDB("create ModelDB", async (t, openDB) => {
+	const db = await openDB(models)
 
 	const userA = {
 		address: "a",
@@ -38,27 +38,27 @@ testOnModelDB("create ModelDB", async (t, modelDBConstructor) => {
 		signingPublicKey: new Uint8Array([0xa, 0xb, 0xc]),
 	}
 
-	t.is(await modelDB.count("user"), 0)
+	t.is(await db.count("user"), 0)
 
-	const userAId = await modelDB.add("user", userA, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
+	const userAId = await db.add("user", userA)
 	t.log("userAId", userAId)
-	t.deepEqual(await modelDB.get("user", userAId), userA)
-	t.is(await modelDB.count("user"), 1)
+	t.deepEqual(await db.get("user", userAId), userA)
+	t.is(await db.count("user"), 1)
 
-	const userBId = await modelDB.add("user", userB, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
+	const userBId = await db.add("user", userB)
 	t.log("userBId", userBId)
-	t.deepEqual(await modelDB.get("user", userBId), userB)
-	t.is(await modelDB.count("user"), 2)
+	t.deepEqual(await db.get("user", userBId), userB)
+	t.is(await db.count("user"), 2)
 
 	const room = {
 		creator: userAId,
 		members: [userAId, userBId],
 	}
 
-	const roomId = await modelDB.add("room", room, { namespace: "ETP2CYzLFAqWnTpybcTHJp" })
+	const roomId = await db.add("room", room)
 	t.log("roomId", roomId)
-	t.deepEqual(await modelDB.get("room", roomId), room)
-	t.is(await modelDB.count("room"), 1)
+	t.deepEqual(await db.get("room", roomId), room)
+	t.is(await db.count("room"), 1)
 
 	const message = {
 		room: roomId,
@@ -67,12 +67,12 @@ testOnModelDB("create ModelDB", async (t, modelDBConstructor) => {
 		timestamp: Date.now(),
 	}
 
-	const messageId = await modelDB.add("message", message)
-	const messageId2 = await modelDB.add("message", message)
-	const messageId3 = await modelDB.add("message", message)
+	const messageId = await db.add("message", message)
+	const messageId2 = await db.add("message", message)
+	const messageId3 = await db.add("message", message)
 
-	t.deepEqual(messageId, messageId2)
-	t.deepEqual(messageId, messageId3)
-	t.deepEqual(await modelDB.get("message", messageId), message)
-	t.is(await modelDB.count("message"), 1)
+	t.is(messageId, messageId2)
+	t.is(messageId, messageId3)
+	t.deepEqual(await db.get("message", messageId), message)
+	t.is(await db.count("message"), 1)
 })

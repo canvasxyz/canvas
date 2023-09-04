@@ -1,10 +1,8 @@
-import { blake3 } from "@noble/hashes/blake3"
-import { encode } from "microcbor"
 import { base58btc } from "multiformats/bases/base58"
 
 import { getCID } from "@canvas-js/signed-cid"
 
-import type { Model, ModelValue, Property, PropertyValue } from "./types.js"
+import type { Context, Model, ModelValue, Property, PropertyValue, Resolver } from "./types.js"
 
 export type Awaitable<T> = T | Promise<T>
 
@@ -66,4 +64,26 @@ export function validatePropertyValue(modelName: string, property: Property, val
 	} else {
 		signalInvalidType(property)
 	}
+}
+
+export const defaultResolver: Resolver = { lessThan }
+
+// TODO: make absolutely sure this does what we want
+function lessThan({ version: a }: Context, { version: b }: Context) {
+	if (b === null) {
+		return false
+	} else if (a === null) {
+		return true
+	}
+
+	let x = a.length
+	let y = b.length
+	for (let i = 0, len = Math.min(x, y); i < len; ++i) {
+		if (a[i] !== b[i]) {
+			x = a[i]
+			y = b[i]
+			break
+		}
+	}
+	return x < y
 }

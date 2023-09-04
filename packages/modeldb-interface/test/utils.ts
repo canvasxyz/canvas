@@ -1,24 +1,24 @@
-import { v4 as uuidv4 } from "uuid"
 import "fake-indexeddb/auto"
 import test, { ExecutionContext } from "ava"
-import { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb-interface"
-import { ModelDB as ModelDBSqlite, ModelDBOptions } from "@canvas-js/modeldb-sqlite"
+import { varint } from "multiformats/basics"
+import { nanoid } from "nanoid"
+import { AbstractModelDB, ModelsInit, ModelDBOptions } from "@canvas-js/modeldb-interface"
+import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
+
+// Create simple version values from revision numbers
+export const v = (revision: number) => varint.encodeTo(revision, Buffer.alloc(varint.encodingLength(revision)))
 
 export const testOnModelDB = (
 	name: string,
-	testFn: <M extends AbstractModelDB>(
-		t: any,
-		modelDBConstructor: (models: ModelsInit, options?: ModelDBOptions) => M | Promise<M>
+	run: (
+		t: ExecutionContext<unknown>,
+		openDB: (models: ModelsInit, options?: ModelDBOptions) => Promise<AbstractModelDB>
 	) => void
 ) => {
-	const macro = test.macro(testFn)
-
-	test(`Sqlite - ${name}`, macro, (models, options) => new ModelDBSqlite(":memory:", models, options))
-	test(`IDB - ${name}`, macro, async (models, options) => {
-		const databaseName = uuidv4()
-		return ModelDBIdb.initialize(models, { databaseName, ...options })
-	})
+	const macro = test.macro(run)
+	test(`Sqlite - ${name}`, macro, async (models, options) => new ModelDBSqlite(":memory:", models, options))
+	test(`IDB - ${name}`, macro, (models, options) => ModelDBIdb.initialize(nanoid(), models, options))
 }
 
 export const compareUnordered = (t: ExecutionContext, a: any[], b: any[]) => {
@@ -27,4 +27,12 @@ export const compareUnordered = (t: ExecutionContext, a: any[], b: any[]) => {
 	const serializedA = a.map((x) => JSON.stringify(x)).sort()
 	const serializedB = b.map((x) => JSON.stringify(x)).sort()
 	t.deepEqual(serializedA, serializedB)
+}
+
+export async function collect<T>(iter: AsyncIterable<T>): Promise<T[]> {
+	const values: T[] = []
+	for await (const value of iter) {
+		values.push(value)
+	}
+	return values
 }

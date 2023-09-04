@@ -6,7 +6,6 @@ import { Canvas } from "@canvas-js/core"
 const contract = `
 export const models = {
   posts: {
-    $type: "mutable",
     content: "string",
     timestamp: "integer",
   },

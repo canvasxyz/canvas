@@ -1,11 +1,4 @@
-import {
-	Model,
-	ModelValue,
-	PrimitiveProperty,
-	PropertyValue,
-	RecordValue,
-	ReferenceProperty,
-} from "@canvas-js/modeldb-interface"
+import { Model, ModelValue, PrimitiveProperty, PropertyValue, ReferenceProperty } from "@canvas-js/modeldb-interface"
 
 import { assert, signalInvalidType } from "./utils.js"
 
@@ -63,8 +56,12 @@ function encodeReferenceValue(modelName: string, property: ReferenceProperty, va
 	}
 }
 
-export function encodeRecordParams(model: Model, value: ModelValue, params: Record<string, string>): RecordValue {
-	const record: RecordValue = {}
+export function encodeRecordParams(
+	model: Model,
+	value: ModelValue,
+	params: Record<string, `p${string}`>
+): Record<`p${string}`, string | number | Buffer | null> {
+	const values: Record<`p${string}`, string | number | Buffer | null> = {}
 
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
@@ -74,16 +71,16 @@ export function encodeRecordParams(model: Model, value: ModelValue, params: Reco
 
 		const param = params[property.name]
 		if (property.kind === "primitive") {
-			record[param] = encodePrimitiveValue(model.name, property, value[property.name])
+			values[param] = encodePrimitiveValue(model.name, property, value[property.name])
 		} else if (property.kind === "reference") {
-			record[param] = encodeReferenceValue(model.name, property, value[property.name])
+			values[param] = encodeReferenceValue(model.name, property, value[property.name])
 		} else {
 			assert(Array.isArray(value[property.name]))
 			continue
 		}
 	}
 
-	return record
+	return values
 }
 
 function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: string | number | Buffer | null) {
@@ -146,7 +143,7 @@ function decodeReferenceValue(
 	}
 }
 
-export function decodeRecord(model: Model, record: RecordValue): ModelValue {
+export function decodeRecord(model: Model, record: Record<string, string | number | Buffer | null>): ModelValue {
 	const value: ModelValue = {}
 
 	for (const property of model.properties) {

@@ -7,6 +7,6 @@ import type { ServiceMap } from "../libp2p.js"
 
 export interface PlatformTarget {
 	getPeerId(): Promise<PeerId>
-	openDB(key: string, models: ModelsInit, options: { resolver: Resolver }): Promise<AbstractModelDB>
+	openDB(models: ModelsInit, options: { resolver: Resolver }): Promise<AbstractModelDB>
 	extendLibp2pOptions(options: Libp2pOptions<ServiceMap>): Libp2pOptions<ServiceMap>
 }

@@ -2,7 +2,7 @@ import { PeerId } from "@libp2p/interface-peer-id"
 import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
 import { createLibp2p, Libp2p } from "libp2p"
 import { logger } from "@libp2p/logger"
-
+import { base32hex } from "multiformats/bases/base32"
 import { QuickJSHandle } from "quickjs-emscripten"
 
 import { Action, ActionArguments, Message, Signer } from "@canvas-js/interfaces"
@@ -24,7 +24,8 @@ import { getCID, Signature } from "@canvas-js/signed-cid"
 import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
-import { assert, mapEntries, signalInvalidType } from "./utils.js"
+import { assert, signalInvalidType } from "./utils.js"
+import { lessThan } from "@canvas-js/okra"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
@@ -100,8 +101,8 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		const models = modelsHandle.consume(vm.context.dump) as ModelsInit
 
 		// our version strings always sort lexicographically
-		const resolver: Resolver = { lessThan: (a, b) => a.version < b.version }
-		const db = await target.openDB(uri, models, { resolver })
+		const resolver: Resolver = { lessThan: (a, b) => lessThan(a.version, b.version) }
+		const db = await target.openDB(models, { resolver })
 
 		// { [name]: ActionAPI }
 		const actions: Record<string, ActionAPI> = {}
@@ -187,7 +188,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 					}
 				})
 
-				await db.apply(effects, { version: id })
+				await db.apply({ version: base32hex.baseDecode(id) }, effects)
 
 				return result
 			}
@@ -298,43 +299,23 @@ class DatabaseAPI {
 		return this.vm.wrapObject({
 			get: this.vm.context.newFunction(`db.${model.name}.get`, (keyHandle) => {
 				assert(this.#effects !== null, "internal error")
-
-				if (model.kind === "mutable") {
-					throw new Error("cannot .get mutable model values")
-				}
-
 				throw new Error("not implemented")
 			}),
 			add: this.vm.context.newFunction(`db.${model.name}.add`, (valueHandle) => {
 				assert(this.#effects !== null, "internal error")
-
-				if (model.kind === "mutable") {
-					throw new Error("cannot .add(...) mutable models - use .set(...)")
-				}
-
 				const value = this.unwrapModelValue(model, valueHandle)
-				this.#effects.push({ model: model.name, operation: "add", value })
-
-				return this.vm.context.newString(getImmutableRecordKey(value, {}))
+				const key = getImmutableRecordKey(value)
+				this.#effects.push({ model: model.name, operation: "set", key, value })
+				return this.vm.context.newString(key)
 			}),
 			set: this.vm.context.newFunction(`db.${model.name}.set`, (keyHandle, valueHandle) => {
 				assert(this.#effects !== null, "internal error")
-
-				if (model.kind === "immutable") {
-					throw new Error("cannot .set(...) immutable models - use .add(...)")
-				}
-
 				const key = this.vm.context.getString(keyHandle)
 				const value = this.unwrapModelValue(model, valueHandle)
 				this.#effects.push({ model: model.name, operation: "set", key, value })
 			}),
 			delete: this.vm.context.newFunction(`db.${model.name}.delete`, (keyHandle) => {
 				assert(this.#effects !== null, "internal error")
-
-				if (model.kind === "immutable") {
-					throw new Error("cannot .delete(...) immutable models")
-				}
-
 				const key = this.vm.context.getString(keyHandle)
 				this.#effects.push({ model: model.name, operation: "delete", key })
 			}),
