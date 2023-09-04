@@ -17,13 +17,6 @@ import { Method, Query, assert, mapValues, signalInvalidType, zip } from "./util
 type RecordValue = Record<string, string | number | Buffer | null>
 type Params = Record<`p${string}`, string | number | Buffer | null>
 
-export const getRecordTableName = (model: string) => `record/${model}`
-export const getTombstoneTableName = (model: string) => `tombstone/${model}`
-export const getRelationTableName = (model: string, property: string) => `relation/${model}/${property}`
-export const getPropertyIndexName = (model: string, index: string[]) => `record/${model}/${index.join("/")}`
-export const getRelationSourceIndexName = (model: string, property: string) => `relation/${model}/${property}/source`
-export const getRelationTargetIndexName = (model: string, property: string) => `relation/${model}/${property}/target`
-
 const primitiveColumnTypes = {
 	integer: "INTEGER",
 	float: "FLOAT",
@@ -47,7 +40,7 @@ function getPropertyColumnType(property: Property): string {
 const getPropertyColumn = (property: Property) => `'${property.name}' ${getPropertyColumnType(property)}`
 
 export class ModelAPI {
-	#table = getRecordTableName(this.model.name)
+	#table = `record/${this.model.name}`
 	#params: Record<string, `p${string}`> = {}
 
 	// Methods
@@ -92,7 +85,7 @@ export class ModelAPI {
 
 		// Create indexes
 		for (const index of model.indexes) {
-			const indexName = getPropertyIndexName(model.name, index)
+			const indexName = `record/${model.name}/${index.join("/")}`
 			const indexColumns = index.map((name) => `'${name}'`)
 			db.exec(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${this.#table}" (${indexColumns.join(", ")})`)
 		}
@@ -223,7 +216,7 @@ export class ModelAPI {
 }
 
 export class TombstoneAPI {
-	readonly #table = getTombstoneTableName(this.model.name)
+	readonly #table = `tombstone/${this.model.name}`
 
 	readonly delete: Method<{ _key: string }>
 	readonly insert: Method<{ _key: string; _version: Uint8Array }>
@@ -255,7 +248,9 @@ export class TombstoneAPI {
 }
 
 export class RelationAPI {
-	readonly #table = getRelationTableName(this.relation.source, this.relation.property)
+	readonly #table = `relation/${this.relation.source}/${this.relation.property}`
+	readonly #sourceIndex = `relation/${this.relation.source}/${this.relation.property}/source`
+	readonly #targetIndex = `relation/${this.relation.source}/${this.relation.property}/target`
 
 	readonly #select: Query<{ _source: string }, { _target: string }>
 	readonly #insert: Method<{ _source: string; _target: string }>
@@ -265,12 +260,10 @@ export class RelationAPI {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.#table}" (${columns.join(", ")})`)
 
-		const sourceIndexName = getRelationSourceIndexName(relation.source, relation.property)
-		db.exec(`CREATE INDEX IF NOT EXISTS "${sourceIndexName}" ON "${this.#table}" (_source)`)
+		db.exec(`CREATE INDEX IF NOT EXISTS "${this.#sourceIndex}" ON "${this.#table}" (_source)`)
 
 		if (relation.indexed) {
-			const targetIndexName = getRelationTargetIndexName(relation.source, relation.property)
-			db.exec(`CREATE INDEX IF NOT EXISTS "${targetIndexName}" ON "${this.#table}" (_target)`)
+			db.exec(`CREATE INDEX IF NOT EXISTS "${this.#targetIndex}" ON "${this.#table}" (_target)`)
 		}
 
 		// Prepare methods
