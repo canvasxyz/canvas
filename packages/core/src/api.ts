@@ -12,6 +12,7 @@ import { Canvas, CoreEvents } from "./Canvas.js"
 
 import { getErrorMessage } from "./utils.js"
 import { logger } from "@libp2p/logger"
+import { Message } from "@canvas-js/interfaces"
 
 interface Options {
 	exposeMetrics: boolean
@@ -149,6 +150,23 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 
 		return res.status(StatusCodes.OK).json({
 			data: gossiplog.getTopics().sort(),
+		})
+	})
+
+	// TODO: implement this
+	api.get("/messages/:topic", async (req, res) => {
+		const { gossiplog } = core.libp2p.services
+
+		const messages: Message[] = []
+		for await (const [id, signature, message] of gossiplog.iterate(req.params.topic, null, null, {})) {
+			messages.push(message)
+		}
+
+		return res.status(StatusCodes.OK).json({
+			offset: 0,
+			limit: 0,
+			total: messages.length,
+			data: messages,
 		})
 	})
 

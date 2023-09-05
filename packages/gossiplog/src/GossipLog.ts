@@ -200,6 +200,19 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 		return [...this.#messages.keys()]
 	}
 
+	public async *iterate(
+		topic: string,
+		lowerBound: { id: string; inclusive: boolean } | null = null,
+		upperBound: { id: string; inclusive: boolean } | null = null,
+		options: { reverse?: boolean } = {}
+	): AsyncIterable<[id: string, signature: Signature | null, message: Message<any>]> {
+		const messages = this.#messages.get(topic)
+		if (messages === undefined) {
+			return
+		}
+		return messages.iterate(lowerBound, upperBound, options)
+	}
+
 	private handleMessage = async ({ detail: msg }: CustomEvent<PubSubMessage>) => {
 		const { topic, data } = msg
 
