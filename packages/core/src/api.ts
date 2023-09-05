@@ -144,6 +144,14 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 		})
 	}
 
+	api.get("/topics", async (req, res) => {
+		const { gossiplog } = core.libp2p.services
+
+		return res.status(StatusCodes.OK).json({
+			data: gossiplog.getTopics().sort(),
+		})
+	})
+
 	if (options.exposeP2P) {
 		log("Exposing internal p2p API. This can be abused if made publicly accessible.")
 

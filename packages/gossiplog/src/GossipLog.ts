@@ -196,6 +196,10 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 		}
 	}
 
+	public getTopics() {
+		return [...this.#messages.keys()]
+	}
+
 	private handleMessage = async ({ detail: msg }: CustomEvent<PubSubMessage>) => {
 		const { topic, data } = msg
 
