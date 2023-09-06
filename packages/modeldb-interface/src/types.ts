@@ -37,24 +37,6 @@ export type Config = {
 	models: Model[]
 }
 
-/**
- * /data/[username]/[slug]/v0
- * /data/[username]/[slug]/v1
- * 
- * /data/[username]/[slug]/v2/contract.canvas.js
- * /data/[username]/[slug]/v2/modeldb.sqlite
- * /data/[username]/[slug]/v2/com.example.app/*
- * /data/[username]/[slug]/v2/com.example.fjs/*
- 
- * /data/[username]/[slug]/v3/contract.canvas.js
- * /data/[username]/[slug]/v3/messages/com.example.app/*
- * /data/[username]/[slug]/v3/messages/com.example.fjs/*
- * 
- *
- *
- *
- */
-
 // These are types for the runtime model record values
 
 export type PrimitiveValue = number | string | Uint8Array | null

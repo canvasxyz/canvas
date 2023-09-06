@@ -24,7 +24,7 @@ import { getCID, Signature } from "@canvas-js/signed-cid"
 import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
-import { assert, signalInvalidType } from "./utils.js"
+import { assert, mapEntries, mapKeys, mapValues, signalInvalidType } from "./utils.js"
 import { lessThan } from "@canvas-js/okra"
 
 export interface CanvasConfig extends P2PConfig {
@@ -58,6 +58,12 @@ export interface CoreEvents {
 	sync: CustomEvent<{}>
 	connect: CustomEvent<{ peer: string }>
 	disconnect: CustomEvent<{ peer: string }>
+}
+
+export type ApplicationData = {
+	uri: string
+	peerId: string
+	topics: Record<string, { actions: string[] | null }>
 }
 
 export class Canvas extends EventEmitter<CoreEvents> {
@@ -156,6 +162,15 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			}
 		}
 
+		// { [topic]: { actions: [name][] } }
+		const topics: Record<string, { actions: string[] | null }> = mapValues(actionHandles, (actions) => ({
+			actions: Object.keys(actions),
+		}))
+
+		for (const topic of Object.keys(customActionHandles)) {
+			topics[topic] = { actions: null }
+		}
+
 		const databaseAPI = new DatabaseAPI(vm, db)
 
 		for (const [topic, actions] of Object.entries(actionHandles)) {
@@ -224,7 +239,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			await gossiplog.subscribe(topic, { apply, validate, signatures: false, sequencing: false })
 		}
 
-		return new Canvas(uri, signers, libp2p, vm, db, actions)
+		return new Canvas(uri, signers, libp2p, vm, db, actions, topics)
 	}
 
 	private readonly controller = new AbortController()
@@ -236,7 +251,8 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly vm: VM,
 		public readonly db: AbstractModelDB,
-		public readonly actions: Record<string, ActionAPI>
+		public readonly actions: Record<string, ActionAPI>,
+		public readonly topics: Record<string, { actions: string[] | null }>
 	) {
 		super()
 
@@ -259,8 +275,12 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		await this.libp2p.start()
 	}
 
-	public async getApplicationData(): Promise<{ uri: string; peerId: string }> {
-		return { uri: this.uri, peerId: this.peerId.toString() }
+	public async getApplicationData(): Promise<ApplicationData> {
+		return {
+			uri: this.uri,
+			peerId: this.peerId.toString(),
+			topics: this.topics,
+		}
 	}
 
 	public async close() {
