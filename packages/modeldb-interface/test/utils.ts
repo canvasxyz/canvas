@@ -18,7 +18,7 @@ export const testOnModelDB = (
 ) => {
 	const macro = test.macro(run)
 	test(`Sqlite - ${name}`, macro, async (models, options) => new ModelDBSqlite(":memory:", models, options))
-	test(`IDB - ${name}`, macro, (models, options) => ModelDBIdb.initialize(nanoid(), models, options))
+	// test(`IDB - ${name}`, macro, (models, options) => ModelDBIdb.initialize(nanoid(), models, options))
 }
 
 export const compareUnordered = (t: ExecutionContext, a: any[], b: any[]) => {

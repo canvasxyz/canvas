@@ -37,9 +37,27 @@ export type Config = {
 	models: Model[]
 }
 
+/**
+ * /data/[username]/[slug]/v0
+ * /data/[username]/[slug]/v1
+ * 
+ * /data/[username]/[slug]/v2/contract.canvas.js
+ * /data/[username]/[slug]/v2/modeldb.sqlite
+ * /data/[username]/[slug]/v2/com.example.app/*
+ * /data/[username]/[slug]/v2/com.example.fjs/*
+ 
+ * /data/[username]/[slug]/v3/contract.canvas.js
+ * /data/[username]/[slug]/v3/messages/com.example.app/*
+ * /data/[username]/[slug]/v3/messages/com.example.fjs/*
+ * 
+ *
+ *
+ *
+ */
+
 // These are types for the runtime model record values
 
-export type PrimitiveValue = boolean | number | string | Uint8Array | null
+export type PrimitiveValue = number | string | Uint8Array | null
 export type ReferenceValue = string | null
 export type RelationValue = string[]
 
@@ -47,15 +65,15 @@ export type PropertyValue = PrimitiveValue | ReferenceValue | RelationValue
 
 export type ModelValue = Record<string, PropertyValue>
 
-export type WhereCondition = Record<
-	string,
-	PrimitiveValue | { gt?: PrimitiveValue; gte?: PrimitiveValue; le?: PrimitiveValue; lte?: PrimitiveValue }
->
+export type WhereCondition = Record<string, PrimitiveValue | NotExpression | RangeExpression>
+export type NotExpression = { neq: PrimitiveValue }
+export type RangeExpression = { gt?: PrimitiveValue; gte?: PrimitiveValue; lt?: PrimitiveValue; lte?: PrimitiveValue }
 
 export type QueryParams = {
-	select?: Record<string, boolean>
+	select?: Record<string, boolean> // TODO: add support for joining reference/relation values a la primsa
 	where?: WhereCondition
 	orderBy?: Record<string, "asc" | "desc">
+	limit?: number
 }
 
 // Batch effect API

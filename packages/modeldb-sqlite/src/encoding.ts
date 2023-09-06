@@ -1,4 +1,11 @@
-import { Model, ModelValue, PrimitiveProperty, PropertyValue, ReferenceProperty } from "@canvas-js/modeldb-interface"
+import {
+	Model,
+	ModelValue,
+	PrimitiveProperty,
+	Property,
+	PropertyValue,
+	ReferenceProperty,
+} from "@canvas-js/modeldb-interface"
 
 import { assert, signalInvalidType } from "./utils.js"
 
@@ -83,7 +90,11 @@ export function encodeRecordParams(
 	return values
 }
 
-function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: string | number | Buffer | null) {
+export function decodePrimitiveValue(
+	modelName: string,
+	property: PrimitiveProperty,
+	value: string | number | Buffer | null
+) {
 	if (value === null) {
 		if (property.optional) {
 			return null
@@ -125,7 +136,7 @@ function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, va
 	}
 }
 
-function decodeReferenceValue(
+export function decodeReferenceValue(
 	modelName: string,
 	property: ReferenceProperty,
 	value: string | number | Uint8Array | null

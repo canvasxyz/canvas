@@ -7,6 +7,7 @@ import {
 	ModelDBOptions,
 	ModelValue,
 	ModelsInit,
+	QueryParams,
 	parseConfig,
 } from "@canvas-js/modeldb-interface"
 
@@ -65,11 +66,15 @@ export class ModelDB extends AbstractModelDB {
 		yield* api.entries()
 	}
 
-	// public async query(modelName: string, query: QueryParams): Promise<ModelValue[]> {}
-
 	public async count(modelName: string): Promise<number> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		return api.count()
+	}
+
+	public async query(modelName: string, query: QueryParams): Promise<ModelValue[]> {
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return await api.query(query)
 	}
 }

@@ -22,7 +22,6 @@ type Transaction = IDBPTransaction<any, any, "readwrite">
 const objectStoreNames = {
 	record: (model: string) => `record/${model}`,
 	tombstone: (model: string) => `tombstone/${model}`,
-	index: (model: string, index: string[]) => `record/${model}/${index.join("/")}`,
 }
 
 export class ModelDB extends AbstractModelDB {
@@ -41,7 +40,9 @@ export class ModelDB extends AbstractModelDB {
 							throw new Error("multi-property indexes not supported yet")
 						}
 
-						recordObjectStore.createIndex(objectStoreNames.index(model.name, index), index)
+						const indexName = `record/${model.name}/${index.join("/")}`
+						const [property] = index
+						recordObjectStore.createIndex(indexName, property)
 					}
 				}
 			},
@@ -60,21 +61,21 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	private async withAsyncTransaction<T>(fn: (transaction: Transaction) => Promise<T>): Promise<T> {
-		let transaction: Transaction | null = null
+	private async withAsyncTransaction<T>(fn: (txn: Transaction) => Promise<T>): Promise<T> {
+		let txn: Transaction | null = null
 
 		try {
-			transaction = this.db.transaction(this.db.objectStoreNames, "readwrite")
+			txn = this.db.transaction(this.db.objectStoreNames, "readwrite")
 			// we have to use Promise.all here, not sure why this works
 			// otherwise we get an unthrowable AbortError
 			// it might be because if a transaction fails, idb doesn't know if there are any
 			// more database operations that would have been performed in the transaction
 			// this is just a post hoc rationalisation though
 			// https://github.com/jakearchibald/idb/issues/256#issuecomment-1048551626
-			const [res, _] = await Promise.all([fn(transaction), transaction.done])
+			const [res, _] = await Promise.all([fn(txn), txn.done])
 			return res
 		} catch (e) {
-			transaction?.abort()
+			txn?.abort()
 			throw e
 		}
 	}
@@ -82,16 +83,20 @@ export class ModelDB extends AbstractModelDB {
 	public async *iterate(
 		modelName: string
 	): AsyncIterable<[key: string, value: ModelValue, version: Uint8Array | null]> {
-		const model = this.models[modelName]
-		assert(model !== undefined, "model not found")
+		// TODO:
 
-		const api = this.#models[modelName]
-		// TODO
+		const storeName = objectStoreNames.record(modelName)
+		const txn = this.db.transaction([storeName], "readonly", {})
+		const store = txn.objectStore(storeName)
+		for (let cursor = await store.openCursor(); cursor !== null; cursor = await cursor.continue()) {
+			const key = cursor.key
+			assert(typeof key === "string", "internal error - unexpected cursor key")
+			const { _version: version, ...value } = cursor.value as ObjectValue
+			yield [key, value, version]
+		}
 	}
 
 	public async get(modelName: string, key: string): Promise<ModelValue | null> {
-		const model = this.models[modelName]
-		assert(model !== undefined, "model not found")
 		const value: ObjectValue | undefined = await this.db.get(objectStoreNames.record(modelName), key)
 		if (value === undefined) {
 			return null
@@ -101,24 +106,9 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	// public async query(modelName: string, query: QueryParams): Promise<ModelValue[]> {
-	// 	const model = this.models[modelName]
-	// 	assert(model !== undefined, "model not found")
-
-	// 	if (model.kind == "mutable") {
-	// 		return this.withAsyncTransaction(async (transaction) => {
-	// 			const dbContext = createMutableModelAPI(transaction, model, this.resolver)
-	// 			return MutableModelAPI.query(query, dbContext)
-	// 		})
-	// 	} else if (model.kind == "immutable") {
-	// 		return this.withAsyncTransaction(async (transaction) => {
-	// 			const dbContext = createImmutableModelAPI(transaction, model)
-	// 			return await ImmutableModelAPI.query(query, dbContext)
-	// 		})
-	// 	} else {
-	// 		signalInvalidType(model.kind)
-	// 	}
-	// }
+	public async query(modelName: string, query: QueryParams): Promise<ModelValue[]> {
+		return []
+	}
 
 	public async count(modelName: string): Promise<number> {
 		assert(this.models[modelName] !== undefined, "model not found")

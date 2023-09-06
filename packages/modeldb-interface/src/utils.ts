@@ -2,7 +2,17 @@ import { base58btc } from "multiformats/bases/base58"
 
 import { getCID } from "@canvas-js/signed-cid"
 
-import type { Context, Model, ModelValue, Property, PropertyValue, Resolver } from "./types.js"
+import type {
+	Context,
+	Model,
+	ModelValue,
+	NotExpression,
+	PrimitiveValue,
+	Property,
+	PropertyValue,
+	RangeExpression,
+	Resolver,
+} from "./types.js"
 
 export type Awaitable<T> = T | Promise<T>
 
@@ -86,4 +96,34 @@ function lessThan({ version: a }: Context, { version: b }: Context) {
 		}
 	}
 	return x < y
+}
+
+export function isPrimitiveValue(expr: PrimitiveValue | NotExpression | RangeExpression): expr is PrimitiveValue {
+	if (expr === null) {
+		return true
+	} else if (typeof expr === "boolean" || typeof expr === "number" || typeof expr === "string") {
+		return true
+	} else if (expr instanceof Uint8Array) {
+		return true
+	} else {
+		return false
+	}
+}
+
+export function isNotExpression(expr: PrimitiveValue | NotExpression | RangeExpression): expr is NotExpression {
+	if (isPrimitiveValue(expr)) {
+		return false
+	}
+
+	const { neq } = expr as { neq?: PrimitiveValue }
+	return neq !== undefined
+}
+
+export function isRangeExpression(expr: PrimitiveValue | NotExpression | RangeExpression): expr is RangeExpression {
+	if (isPrimitiveValue(expr)) {
+		return false
+	}
+
+	const { neq } = expr as { neq?: PrimitiveValue }
+	return neq === undefined
 }

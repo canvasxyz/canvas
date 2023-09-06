@@ -9,10 +9,17 @@ import {
 	Resolver,
 	PrimitiveType,
 	Context,
+	QueryParams,
+	WhereCondition,
+	PrimitiveValue,
+	RangeExpression,
+	isNotExpression,
+	isPrimitiveValue,
+	isRangeExpression,
 } from "@canvas-js/modeldb-interface"
 
-import { decodeRecord, encodeRecordParams } from "./encoding.js"
-import { Method, Query, assert, mapValues, signalInvalidType, zip } from "./utils.js"
+import { decodePrimitiveValue, decodeRecord, decodeReferenceValue, encodeRecordParams } from "./encoding.js"
+import { Method, Query, assert, mapEntries, mapValues, signalInvalidType, zip } from "./utils.js"
 
 type RecordValue = Record<string, string | number | Buffer | null>
 type Params = Record<`p${string}`, string | number | Buffer | null>
@@ -42,6 +49,7 @@ const getPropertyColumn = (property: Property) => `'${property.name}' ${getPrope
 export class ModelAPI {
 	#table = `record/${this.model.name}`
 	#params: Record<string, `p${string}`> = {}
+	#properties = Object.fromEntries(this.model.properties.map((property) => [property.name, property]))
 
 	// Methods
 	#insert: Method<{ _key: string; _version: Uint8Array | null } & Params>
@@ -211,6 +219,162 @@ export class ModelAPI {
 			}
 
 			yield [key, value, version]
+		}
+	}
+
+	public async query(query: QueryParams): Promise<ModelValue[]> {
+		// See https://www.sqlite.org/lang_select.html for railroad diagram
+		const sql: string[] = []
+
+		// SELECT
+		const [select, relations] = this.getSelectExpression(query.select)
+		sql.push(`SELECT ${select} FROM "${this.#table}"`)
+
+		// WHERE
+		const [where, params] = this.getWhereExpression(query.where)
+		if (where !== null) {
+			sql.push(`WHERE ${where}`)
+		}
+
+		// ORDER BY
+		if (query.orderBy !== undefined) {
+			const orders = Object.entries(query.orderBy)
+			assert(orders.length === 1, "cannot order by multiple properties at once")
+			const [[name, direction]] = orders
+			const property = this.#properties[name]
+			assert(property !== undefined, "property not found")
+			assert(property.kind === "primitive", "cannot order by reference or relation properties")
+			if (direction === "asc") {
+				sql.push(`ORDER BY "${name}" ASC`)
+			} else if (direction === "desc") {
+				sql.push(`ORDER BY "${name}" DESC`)
+			} else {
+				throw new Error("invalid orderBy direction")
+			}
+		}
+
+		// LIMIT
+		if (typeof query.limit === "number") {
+			sql.push(`LIMIT :limit`)
+			params.limit = query.limit
+		}
+
+		// console.log("querying", sql, params)
+		const results = this.db.prepare(sql.join(" ")).all(params)
+		// console.log("results", results)
+		return results.map((value): ModelValue => {
+			const { _key, ...record } = value as { _key: string } & RecordValue
+			return mapEntries(record, ([name, value]) => {
+				const property = this.#properties[name]
+				if (property.kind === "primitive") {
+					return decodePrimitiveValue(this.model.name, property, value)
+				} else if (property.kind === "reference") {
+					return decodeReferenceValue(this.model.name, property, value)
+				} else {
+					throw new Error("internal error")
+				}
+			})
+		})
+	}
+
+	private getSelectExpression(
+		select: Record<string, boolean> = mapValues(this.#properties, () => true)
+	): [select: string, relations: Relation[]] {
+		const relations: Relation[] = []
+		const columns = ["_key"]
+
+		for (const [name, value] of Object.entries(select)) {
+			if (value === false) {
+				continue
+			}
+
+			const property = this.#properties[name]
+			assert(property !== undefined, "property not found")
+			if (property.kind === "primitive" || property.kind === "reference") {
+				columns.push(`"${name}"`)
+			} else if (property.kind === "relation") {
+				relations.push({
+					source: this.model.name,
+					property: name,
+					target: property.target,
+					indexed: this.model.indexes.some((index) => index.length === 1 && index[0] === name),
+				})
+			} else {
+				signalInvalidType(property)
+			}
+		}
+
+		return [columns.join(", "), relations]
+	}
+
+	private getWhereExpression(
+		where: WhereCondition = {}
+	): [string | null, Record<string, null | number | string | Buffer>] {
+		const params: Record<string, null | number | string | Buffer> = {}
+		const filters = Object.entries(where).flatMap(([name, expr], i) => {
+			const property = this.#properties[name]
+			assert(property !== undefined, "property not found")
+			if (property.kind === "primitive") {
+				if (isPrimitiveValue(expr)) {
+					if (expr === null) {
+						return [`"${name}" ISNULL`]
+					}
+
+					const p = `p${i}`
+					params[p] = expr instanceof Uint8Array ? Buffer.from(expr) : expr
+					return [`"${name}" = :${p}`]
+				} else if (isNotExpression(expr)) {
+					const { neq: value } = expr
+					if (value === null) {
+						return [`"${name}" NOTNULL`]
+					}
+
+					const p = `p${i}`
+					params[p] = value instanceof Uint8Array ? Buffer.from(value) : value
+					if (property.optional) {
+						return [`("${name}" ISNULL OR "${name}" != :${p})`]
+					} else {
+						return [`"${name}" != :${p}`]
+					}
+				} else if (isRangeExpression(expr)) {
+					const keys = Object.keys(expr) as (keyof RangeExpression)[]
+					return keys.map((key, j) => {
+						const value = expr[key] as PrimitiveValue
+						const p = `p${i}q${j}`
+						params[p] = value instanceof Uint8Array ? Buffer.from(value) : value
+						switch (key) {
+							case "gt":
+								return `"${name}" > :${p}`
+							case "gte":
+								return `"${name}" >= :${p}`
+							case "lt":
+								return `"${name}" < :${p}`
+							case "lte":
+								return `"${name}" <= :${p}`
+						}
+					})
+				} else {
+					signalInvalidType(expr)
+				}
+			} else if (property.kind === "reference") {
+				if (typeof expr === "string") {
+					const p = `p${i}`
+					params[p] = expr
+					return [`"${name}" = :${p}`]
+				} else {
+					throw new Error("not implemented")
+				}
+			} else if (property.kind === "relation") {
+				throw new Error("not implemented")
+			} else {
+				signalInvalidType(property)
+			}
+		})
+
+		if (filters.length === 0) {
+			return [null, {}]
+		} else {
+			return [`${filters.join(" AND ")}`, params]
 		}
 	}
 }

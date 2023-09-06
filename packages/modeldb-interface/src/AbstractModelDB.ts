@@ -27,7 +27,7 @@ export abstract class AbstractModelDB {
 
 	abstract iterate(modelName: string): AsyncIterable<[key: string, value: ModelValue, version: Uint8Array | null]>
 
-	// abstract query(modelName: string, query: QueryParams): Promise<ModelValue[]>
+	abstract query(modelName: string, query: QueryParams): Promise<ModelValue[]>
 
 	abstract count(modelName: string): Promise<number>
 

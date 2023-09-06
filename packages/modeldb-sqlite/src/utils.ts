@@ -4,7 +4,7 @@ export const nsidPattern = /^[a-z](?:-*[a-z0-9])*(?:\.[a-z](?:-*[a-z0-9])*)*$/
 
 export function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
-		throw new Error(message ?? "assertion failed")
+		throw new Error(message ?? `assertion failed`)
 	}
 }
 
