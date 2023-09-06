@@ -173,10 +173,37 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 		topic: string,
 		payload: Payload,
 		options: { signer?: MessageSigner<Payload> } = {}
-	) {
+	): Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }> {
 		const messages = this.#messages.get(topic) as AbstractMessageLog<Payload, Result> | undefined
 		assert(messages !== undefined, "no subscription for topic")
 		const { id, value, result } = await messages.append(payload, options)
+
+		if (this.#started) {
+			const recipients = this.#pubsub.publish(topic, value).then(
+				({ recipients }) => {
+					this.log("published message %s to %d recipients %O", id, recipients.length, recipients)
+					return recipients
+				},
+				(err) => {
+					this.log.error("failed to publish event: %O", err)
+					return []
+				}
+			)
+
+			return { id, result, recipients }
+		} else {
+			return { id, result, recipients: Promise.resolve([]) }
+		}
+	}
+
+	public async apply<Payload, Result = unknown>(
+		topic: string,
+		signature: Signature | null,
+		message: Message<Payload>
+	): Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }> {
+		const messages = this.#messages.get(topic) as AbstractMessageLog<Payload, Result> | undefined
+		assert(messages !== undefined, "topic not found")
+		const { id, result, value } = await messages.insert(signature, message)
 
 		if (this.#started) {
 			const recipients = this.#pubsub.publish(topic, value).then(
@@ -211,6 +238,12 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 			return
 		}
 		return messages.iterate(lowerBound, upperBound, options)
+	}
+
+	public async getClock(topic: string): Promise<[clock: number, parents: string[]]> {
+		const messages = this.#messages.get(topic)
+		assert(messages !== undefined, "topic not found")
+		return await messages.getClock()
 	}
 
 	private handleMessage = async ({ detail: msg }: CustomEvent<PubSubMessage>) => {

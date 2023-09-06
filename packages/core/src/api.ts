@@ -10,6 +10,7 @@ import { peerIdFromString } from "@libp2p/peer-id"
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 
 import { Message } from "@canvas-js/interfaces"
+import { Signature } from "@canvas-js/signed-cid"
 
 import { Canvas, CoreEvents } from "./Canvas.js"
 
@@ -71,27 +72,6 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 		const data = await core.getApplicationData()
 		return res.json(data)
 	})
-
-	async function applyMessage(req: Request, res: Response) {
-		if (req.headers["content-type"] !== "application/json") {
-			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
-		}
-
-		try {
-			// TODO: replace with the new core action API
-			// const { hash } = await core.apply(req.body)
-			// res.json({ hash })
-		} catch (err) {
-			if (err instanceof Error) {
-				log.error(`Failed to apply message (${err.message})`)
-				return res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(err.message)
-			} else {
-				throw err
-			}
-		}
-	}
-
-	api.post("/", applyMessage)
 
 	if (options.exposeMetrics) {
 		// TODO: What is "message" used for?
@@ -171,6 +151,22 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 			total: messages.length,
 			data: messages,
 		})
+	})
+
+	api.get("/messages/:topic/clock", async (req, res) => {
+		const { gossiplog } = core.libp2p.services
+		const [clock, parents] = await gossiplog.getClock(req.params.topic)
+		return res.status(StatusCodes.OK).json({ clock, parents })
+	})
+
+	api.post("/messages/:topic", async (req, res) => {
+		if (req.headers["content-type"] !== "application/json") {
+			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
+		}
+
+		const { signature, message } = req.body as { signature: Signature | null; message: Message }
+		const { id, result } = await core.apply(req.params.topic, signature, message)
+		return res.status(StatusCodes.OK).json({ id, result })
 	})
 
 	if (options.exposeP2P) {

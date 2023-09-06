@@ -139,6 +139,15 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		return [key, signature, { clock, parents, payload }]
 	}
 
+	public async getClock(): Promise<[clock: number, parents: string[]]> {
+		return await this.read(async (txn) => {
+			const userdata = await txn.getUserdata()
+			const graph = Graph.import(this.topic, this.sequencing, userdata)
+			const [clock, parents] = graph.getClock()
+			return [clock, parents]
+		})
+	}
+
 	public async get(id: string): Promise<[signature: Signature | null, message: Message<Payload> | null]> {
 		const key = encodeId(id)
 		assert(key.length === KEY_LENGTH, "invalid id")
@@ -290,10 +299,9 @@ class Graph {
 			return null
 		}
 
-		const parents = this.getParents().map(encodeId)
-		const clock = getClock(parents)
+		const [clock, parents, keys] = this.getClock()
 		this.log("saving graph at clock %d", clock)
-		return cbor.encode<Uint8Array[]>(parents)
+		return cbor.encode<Uint8Array[]>(keys)
 	}
 
 	public update<Payload>(id: string, message: Message<Payload>) {
@@ -316,16 +324,18 @@ class Graph {
 			return { clock: 0, parents: [], payload }
 		}
 
-		const parents = this.getParents()
-		const clock = getClock(parents.map(encodeId))
+		const [clock, parents] = this.getClock()
 		return { clock, parents, payload }
 	}
 
-	private getParents(): string[] {
+	public getClock(): [clock: number, ids: string[], keys: Uint8Array[]] {
 		if (this.sequencing === false) {
-			return []
+			return [0, [], []]
 		}
 
-		return Array.from(this.#parents).sort()
+		const ids = Array.from(this.#parents).sort()
+		const keys = ids.map(encodeId)
+		const clock = getClock(keys)
+		return [clock, ids, keys]
 	}
 }
