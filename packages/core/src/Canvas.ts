@@ -291,6 +291,18 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		this.vm.dispose()
 		this.dispatchEvent(new Event("close"))
 	}
+
+	/**
+	 * Low-level apply function for internal/debugging use.
+	 * The normal way to apply actions is to use the Canvas.actions[name](...) functions!
+	 */
+	public async apply(
+		topic: string,
+		signature: Signature | null,
+		message: Message
+	): Promise<{ id: string; result: unknown; recipients: Promise<PeerId[]> }> {
+		return await this.libp2p.services.gossiplog.apply(topic, signature, message)
+	}
 }
 
 class DatabaseAPI {
