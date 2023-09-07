@@ -41,7 +41,7 @@ export default function getTarget(location: string | null): PlatformTarget {
 			if (location === null) {
 				return new ModelDB(null, init, options)
 			} else {
-				const dbPath = path.resolve(location, `${key}.sqlite`)
+				const dbPath = path.resolve(location, `modeldb.sqlite`)
 				return new ModelDB(dbPath, init)
 			}
 		},
