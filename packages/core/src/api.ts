@@ -16,6 +16,9 @@ import { Canvas, CoreEvents } from "./Canvas.js"
 
 import { getErrorMessage } from "./utils.js"
 
+import * as cbor from "@ipld/dag-cbor"
+import { hexToBytes } from "@noble/hashes/utils"
+
 interface Options {
 	exposeMetrics: boolean
 	exposeModels: boolean
@@ -164,8 +167,16 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
 		}
 
-		const { signature, message } = req.body as { signature: Signature | null; message: Message }
-		const { id, result } = await core.apply(req.params.topic, signature, message)
+		let id: string
+		let result: unknown
+		try {
+			const bodyBytes = hexToBytes(req.body.data)
+			const { signature, message } = cbor.decode(bodyBytes) as { signature: Signature | null; message: Message }
+			;({ id, result } = await core.apply(req.params.topic, signature, message))
+		} catch (e) {
+			return res.status(StatusCodes.BAD_REQUEST).end()
+		}
+
 		return res.status(StatusCodes.OK).json({ id, result })
 	})
 

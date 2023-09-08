@@ -1,4 +1,5 @@
 import path from "node:path"
+import fs from "node:fs"
 
 import { ReadOnlyTransaction, ReadWriteTransaction, Tree } from "@canvas-js/okra-node"
 import { Bound, assert } from "@canvas-js/okra"
@@ -16,7 +17,12 @@ export default async function openMessageLog<Payload, Result>(
 		return openMemoryMessageLog(init)
 	}
 
-	const tree = new Tree(path.resolve(init.location, init.topic))
+	const directory = path.resolve(init.location, init.topic)
+	if (!fs.existsSync(directory)) {
+		fs.mkdirSync(directory, { recursive: true })
+	}
+
+	const tree = new Tree(directory)
 	return new MessageLog(init, tree)
 }
 

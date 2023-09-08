@@ -6,6 +6,6 @@
     "outDir": "lib"
   },
   "references": [
-    {"path": "../interfaces"}
+    { "path": "../interfaces" }
   ]
 }
