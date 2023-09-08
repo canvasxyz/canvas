@@ -14,7 +14,7 @@ import {
 	PrimitiveValue,
 	RangeExpression,
 	isNotExpression,
-	isPrimitiveValue,
+	isLiteralExpression,
 	isRangeExpression,
 } from "@canvas-js/modeldb-interface"
 
@@ -47,7 +47,7 @@ function getPropertyColumnType(property: Property): string {
 const getPropertyColumn = (property: Property) => `'${property.name}' ${getPropertyColumnType(property)}`
 
 export class ModelAPI {
-	#table = `record/${this.model.name}`
+	#table = `model/${this.model.name}`
 	#params: Record<string, `p${string}`> = {}
 	#properties = Object.fromEntries(this.model.properties.map((property) => [property.name, property]))
 
@@ -232,6 +232,11 @@ export class ModelAPI {
 
 		// WHERE
 		const [where, params] = this.getWhereExpression(query.where)
+
+		// for (const join of joins) {
+		// 	sql.push(`JOIN "${join}" ON "${this.#table}"._key = "${join}".source`)
+		// }
+
 		if (where !== null) {
 			sql.push(`WHERE ${where}`)
 		}
@@ -243,7 +248,7 @@ export class ModelAPI {
 			const [[name, direction]] = orders
 			const property = this.#properties[name]
 			assert(property !== undefined, "property not found")
-			assert(property.kind === "primitive", "cannot order by reference or relation properties")
+			assert(property.kind === "primitive" || property.kind === "reference", "cannot order by relation properties")
 			if (direction === "asc") {
 				sql.push(`ORDER BY "${name}" ASC`)
 			} else if (direction === "desc") {
@@ -259,21 +264,25 @@ export class ModelAPI {
 			params.limit = query.limit
 		}
 
-		// console.log("querying", sql, params)
-		const results = this.db.prepare(sql.join(" ")).all(params)
-		// console.log("results", results)
-		return results.map((value): ModelValue => {
-			const { _key, ...record } = value as { _key: string } & RecordValue
-			return mapEntries(record, ([name, value]) => {
-				const property = this.#properties[name]
+		const results = this.db.prepare(sql.join(" ")).all(params) as ({ _key: string } & RecordValue)[]
+		return results.map(({ _key, ...record }): ModelValue => {
+			const value: ModelValue = {}
+			for (const [propertyName, propertyValue] of Object.entries(record)) {
+				const property = this.#properties[propertyName]
 				if (property.kind === "primitive") {
-					return decodePrimitiveValue(this.model.name, property, value)
+					value[propertyName] = decodePrimitiveValue(this.model.name, property, propertyValue)
 				} else if (property.kind === "reference") {
-					return decodeReferenceValue(this.model.name, property, value)
+					value[propertyName] = decodeReferenceValue(this.model.name, property, propertyValue)
 				} else {
 					throw new Error("internal error")
 				}
-			})
+			}
+
+			for (const relation of relations) {
+				value[relation.property] = this.#relations[relation.property].get(_key)
+			}
+
+			return value
 		})
 	}
 
@@ -309,63 +318,127 @@ export class ModelAPI {
 
 	private getWhereExpression(
 		where: WhereCondition = {}
-	): [string | null, Record<string, null | number | string | Buffer>] {
+	): [where: string | null, params: Record<string, null | number | string | Buffer>] {
 		const params: Record<string, null | number | string | Buffer> = {}
-		const filters = Object.entries(where).flatMap(([name, expr], i) => {
+		const filters = Object.entries(where).flatMap(([name, expression], i) => {
 			const property = this.#properties[name]
 			assert(property !== undefined, "property not found")
 			if (property.kind === "primitive") {
-				if (isPrimitiveValue(expr)) {
-					if (expr === null) {
+				if (isLiteralExpression(expression)) {
+					if (expression === null) {
 						return [`"${name}" ISNULL`]
+					} else if (Array.isArray(expression)) {
+						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
+					} else {
+						const p = `p${i}`
+						params[p] = expression instanceof Uint8Array ? Buffer.from(expression) : expression
+						return [`"${name}" = :${p}`]
 					}
-
-					const p = `p${i}`
-					params[p] = expr instanceof Uint8Array ? Buffer.from(expr) : expr
-					return [`"${name}" = :${p}`]
-				} else if (isNotExpression(expr)) {
-					const { neq: value } = expr
+				} else if (isNotExpression(expression)) {
+					const { neq: value } = expression
 					if (value === null) {
 						return [`"${name}" NOTNULL`]
-					}
-
-					const p = `p${i}`
-					params[p] = value instanceof Uint8Array ? Buffer.from(value) : value
-					if (property.optional) {
-						return [`("${name}" ISNULL OR "${name}" != :${p})`]
+					} else if (Array.isArray(value)) {
+						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					} else {
-						return [`"${name}" != :${p}`]
+						const p = `p${i}`
+						params[p] = value instanceof Uint8Array ? Buffer.from(value) : value
+						if (property.optional) {
+							return [`("${name}" ISNULL OR "${name}" != :${p})`]
+						} else {
+							return [`"${name}" != :${p}`]
+						}
 					}
-				} else if (isRangeExpression(expr)) {
-					const keys = Object.keys(expr) as (keyof RangeExpression)[]
-					return keys.map((key, j) => {
-						const value = expr[key] as PrimitiveValue
+				} else if (isRangeExpression(expression)) {
+					const keys = Object.keys(expression) as (keyof RangeExpression)[]
+					return keys.flatMap((key, j) => {
+						const value = expression[key] as PrimitiveValue
+						if (value === null) {
+							switch (key) {
+								case "gt":
+									return [`"${name}" NOTNULL`]
+								case "gte":
+									return []
+								case "lt":
+									return ["0 = 1"]
+								case "lte":
+									return []
+							}
+						}
+
 						const p = `p${i}q${j}`
 						params[p] = value instanceof Uint8Array ? Buffer.from(value) : value
 						switch (key) {
 							case "gt":
-								return `"${name}" > :${p}`
+								return [`("${name}" NOTNULL) AND ("${name}" > :${p})`]
 							case "gte":
-								return `"${name}" >= :${p}`
+								return [`("${name}" NOTNULL) AND ("${name}" >= :${p})`]
 							case "lt":
-								return `"${name}" < :${p}`
+								return [`("${name}" ISNULL) OR ("${name}" < :${p})`]
 							case "lte":
-								return `"${name}" <= :${p}`
+								return [`("${name}" ISNULL) OR ("${name}" <= :${p})`]
 						}
 					})
 				} else {
-					signalInvalidType(expr)
+					signalInvalidType(expression)
 				}
 			} else if (property.kind === "reference") {
-				if (typeof expr === "string") {
-					const p = `p${i}`
-					params[p] = expr
-					return [`"${name}" = :${p}`]
+				if (isLiteralExpression(expression)) {
+					const reference = expression
+					if (reference === null) {
+						return [`"${name}" ISNULL`]
+					} else if (typeof reference === "string") {
+						const p = `p${i}`
+						params[p] = reference
+						return [`"${name}" = :${p}`]
+					} else {
+						throw new Error("invalid reference value (expected string | null)")
+					}
+				} else if (isNotExpression(expression)) {
+					const reference = expression.neq
+					if (reference === null) {
+						return [`"${name}" NOTNULL`]
+					} else if (typeof reference === "string") {
+						const p = `p${i}`
+						params[p] = reference
+						return [`"${name}" != :${p}`]
+					} else {
+						throw new Error("invalid reference value (expected string | null)")
+					}
+				} else if (isRangeExpression(expression)) {
+					throw new Error("cannot use range expressions on reference values")
 				} else {
-					throw new Error("not implemented")
+					signalInvalidType(expression)
 				}
 			} else if (property.kind === "relation") {
-				throw new Error("not implemented")
+				const relationTable = this.#relations[property.name].table
+				if (isLiteralExpression(expression)) {
+					const references = expression
+					assert(Array.isArray(references), "invalid relation value (expected string[])")
+					const targets: string[] = []
+					for (const [j, reference] of references.entries()) {
+						assert(typeof reference === "string", "invalid relation value (expected string[])")
+						const p = `p${i}q${j}`
+						params[p] = reference
+						targets.push(`_key IN (SELECT _source FROM "${relationTable}" WHERE (_target = :${p}))`)
+					}
+					return targets.length > 0 ? [targets.join(" AND ")] : []
+				} else if (isNotExpression(expression)) {
+					const references = expression.neq
+					assert(Array.isArray(references), "invalid relation value (expected string[])")
+					const targets: string[] = []
+					for (const [j, reference] of references.entries()) {
+						assert(typeof reference === "string", "invalid relation value (expected string[])")
+						const p = `p${i}q${j}`
+						params[p] = reference
+						targets.push(`_key NOT IN (SELECT _source FROM "${relationTable}" WHERE (_target = :${p}))`)
+					}
+					return targets.length > 0 ? [targets.join(" AND ")] : []
+				} else if (isRangeExpression(expression)) {
+					throw new Error("cannot use range expressions on relation values")
+				} else {
+					signalInvalidType(expression)
+				}
 			} else {
 				signalInvalidType(property)
 			}
@@ -374,13 +447,13 @@ export class ModelAPI {
 		if (filters.length === 0) {
 			return [null, {}]
 		} else {
-			return [`${filters.join(" AND ")}`, params]
+			return [`${filters.map((filter) => `(${filter})`).join(" AND ")}`, params]
 		}
 	}
 }
 
 export class TombstoneAPI {
-	readonly #table = `tombstone/${this.model.name}`
+	public readonly table = `tombstone/${this.model.name}`
 
 	readonly delete: Method<{ _key: string }>
 	readonly insert: Method<{ _key: string; _version: Uint8Array }>
@@ -390,31 +463,31 @@ export class TombstoneAPI {
 	public constructor(readonly db: Database, readonly model: Model) {
 		// Create tombstone table
 		const columns = [`_key TEXT PRIMARY KEY NOT NULL`, `_version BLOB NOT NULL`]
-		db.exec(`CREATE TABLE IF NOT EXISTS "${this.#table}" (${columns.join(", ")})`)
+		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 
 		// Prepare methods
-		this.delete = new Method<{ _key: string }>(this.db, `DELETE FROM "${this.#table}" WHERE _key = :_key`)
+		this.delete = new Method<{ _key: string }>(this.db, `DELETE FROM "${this.table}" WHERE _key = :_key`)
 		this.insert = new Method<{ _key: string; _version: Uint8Array }>(
 			this.db,
-			`INSERT INTO "${this.#table}" (_key, _version) VALUES (:_key, :_version)`
+			`INSERT INTO "${this.table}" (_key, _version) VALUES (:_key, :_version)`
 		)
 		this.update = new Method<{ _key: string; _version: Uint8Array }>(
 			this.db,
-			`UPDATE "${this.#table}" SET _version = :_version WHERE _key = :_key`
+			`UPDATE "${this.table}" SET _version = :_version WHERE _key = :_key`
 		)
 
 		// Prepare queries
 		this.select = new Query<{ _key: string }, { _version: Uint8Array }>(
 			this.db,
-			`SELECT _version FROM "${this.#table}" WHERE _key = :_key`
+			`SELECT _version FROM "${this.table}" WHERE _key = :_key`
 		)
 	}
 }
 
 export class RelationAPI {
-	readonly #table = `relation/${this.relation.source}/${this.relation.property}`
-	readonly #sourceIndex = `relation/${this.relation.source}/${this.relation.property}/source`
-	readonly #targetIndex = `relation/${this.relation.source}/${this.relation.property}/target`
+	public readonly table = `relation/${this.relation.source}/${this.relation.property}`
+	public readonly sourceIndex = `relation/${this.relation.source}/${this.relation.property}/source`
+	public readonly targetIndex = `relation/${this.relation.source}/${this.relation.property}/target`
 
 	readonly #select: Query<{ _source: string }, { _target: string }>
 	readonly #insert: Method<{ _source: string; _target: string }>
@@ -422,26 +495,26 @@ export class RelationAPI {
 
 	public constructor(readonly db: Database, readonly relation: Relation) {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
-		db.exec(`CREATE TABLE IF NOT EXISTS "${this.#table}" (${columns.join(", ")})`)
+		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 
-		db.exec(`CREATE INDEX IF NOT EXISTS "${this.#sourceIndex}" ON "${this.#table}" (_source)`)
+		db.exec(`CREATE INDEX IF NOT EXISTS "${this.sourceIndex}" ON "${this.table}" (_source)`)
 
 		if (relation.indexed) {
-			db.exec(`CREATE INDEX IF NOT EXISTS "${this.#targetIndex}" ON "${this.#table}" (_target)`)
+			db.exec(`CREATE INDEX IF NOT EXISTS "${this.targetIndex}" ON "${this.table}" (_target)`)
 		}
 
 		// Prepare methods
 		this.#insert = new Method<{ _source: string; _target: string }>(
 			this.db,
-			`INSERT INTO "${this.#table}" (_source, _target) VALUES (:_source, :_target)`
+			`INSERT INTO "${this.table}" (_source, _target) VALUES (:_source, :_target)`
 		)
 
-		this.#delete = new Method<{ _source: string }>(this.db, `DELETE FROM "${this.#table}" WHERE _source = :_source`)
+		this.#delete = new Method<{ _source: string }>(this.db, `DELETE FROM "${this.table}" WHERE _source = :_source`)
 
 		// Prepare queries
 		this.#select = new Query<{ _source: string }, { _target: string }>(
 			this.db,
-			`SELECT _target FROM "${this.#table}" WHERE _source = :_source`
+			`SELECT _target FROM "${this.table}" WHERE _source = :_source`
 		)
 	}
 

@@ -47,8 +47,8 @@ export type PropertyValue = PrimitiveValue | ReferenceValue | RelationValue
 
 export type ModelValue = Record<string, PropertyValue>
 
-export type WhereCondition = Record<string, PrimitiveValue | NotExpression | RangeExpression>
-export type NotExpression = { neq: PrimitiveValue }
+export type WhereCondition = Record<string, PropertyValue | NotExpression | RangeExpression>
+export type NotExpression = { neq: PropertyValue }
 export type RangeExpression = { gt?: PrimitiveValue; gte?: PrimitiveValue; lt?: PrimitiveValue; lte?: PrimitiveValue }
 
 export type QueryParams = {

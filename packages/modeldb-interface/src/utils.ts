@@ -7,7 +7,6 @@ import type {
 	Model,
 	ModelValue,
 	NotExpression,
-	PrimitiveValue,
 	Property,
 	PropertyValue,
 	RangeExpression,
@@ -98,32 +97,34 @@ function lessThan({ version: a }: Context, { version: b }: Context) {
 	return x < y
 }
 
-export function isPrimitiveValue(expr: PrimitiveValue | NotExpression | RangeExpression): expr is PrimitiveValue {
+export function isLiteralExpression(expr: PropertyValue | NotExpression | RangeExpression): expr is PropertyValue {
 	if (expr === null) {
 		return true
 	} else if (typeof expr === "boolean" || typeof expr === "number" || typeof expr === "string") {
 		return true
 	} else if (expr instanceof Uint8Array) {
 		return true
+	} else if (Array.isArray(expr) && expr.every((value) => typeof value === "string")) {
+		return true
 	} else {
 		return false
 	}
 }
 
-export function isNotExpression(expr: PrimitiveValue | NotExpression | RangeExpression): expr is NotExpression {
-	if (isPrimitiveValue(expr)) {
+export function isNotExpression(expr: PropertyValue | NotExpression | RangeExpression): expr is NotExpression {
+	if (isLiteralExpression(expr)) {
 		return false
 	}
 
-	const { neq } = expr as { neq?: PrimitiveValue }
+	const { neq } = expr as { neq?: PropertyValue }
 	return neq !== undefined
 }
 
-export function isRangeExpression(expr: PrimitiveValue | NotExpression | RangeExpression): expr is RangeExpression {
-	if (isPrimitiveValue(expr)) {
+export function isRangeExpression(expr: PropertyValue | NotExpression | RangeExpression): expr is RangeExpression {
+	if (isLiteralExpression(expr)) {
 		return false
 	}
 
-	const { neq } = expr as { neq?: PrimitiveValue }
+	const { neq } = expr as { neq?: PropertyValue }
 	return neq === undefined
 }

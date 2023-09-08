@@ -7,6 +7,6 @@ export {
 	validatePropertyValue,
 	getImmutableRecordKey,
 	isNotExpression,
-	isPrimitiveValue,
+	isLiteralExpression,
 	isRangeExpression,
 } from "./utils.js"
