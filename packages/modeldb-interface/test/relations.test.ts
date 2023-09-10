@@ -76,6 +76,9 @@ testOnModelDB("query reference values", async (t, openDB) => {
 
 	t.deepEqual(await db.query("room", { where: { creator: userB } }), [{ creator: userB, members: [userB, userC] }])
 	t.deepEqual(await db.query("room", { where: { creator: userC } }), [])
+	t.deepEqual(await db.query("room", { where: { creator: { neq: userA } } }), [
+		{ creator: userB, members: [userB, userC] },
+	])
 })
 
 testOnModelDB("query filtering on relation values", async (t, openDB) => {

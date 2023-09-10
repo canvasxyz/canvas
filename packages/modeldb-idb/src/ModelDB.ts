@@ -1,4 +1,4 @@
-import { IDBPDatabase, IDBPIndex, IDBPObjectStore, IDBPTransaction, openDB } from "idb"
+import { IDBPDatabase, IDBPIndex, IDBPTransaction, openDB } from "idb"
 
 import { logger } from "@libp2p/logger"
 import { equals } from "multiformats/bytes"
@@ -16,7 +16,6 @@ import {
 	NotExpression,
 	PrimitiveProperty,
 	PrimitiveType,
-	PrimitiveValue,
 	Property,
 	PropertyValue,
 	QueryParams,
