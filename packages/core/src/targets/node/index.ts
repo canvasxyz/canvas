@@ -7,11 +7,12 @@ import { PeerId } from "@libp2p/interface-peer-id"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { register } from "prom-client"
 
-import { ModelDB } from "@canvas-js/modeldb-sqlite"
+import { ModelDB } from "@canvas-js/modeldb/node"
 
 import type { PlatformTarget } from "../interface.js"
 
 const PEER_ID_FILENAME = ".peer-id"
+const DB_FILENAME = "db.sqlite"
 
 export default function getTarget(location: string | null): PlatformTarget {
 	return {
@@ -37,12 +38,11 @@ export default function getTarget(location: string | null): PlatformTarget {
 			return peerId
 		},
 
-		async openDB(key, init, options) {
+		async openDB(init, options) {
 			if (location === null) {
 				return new ModelDB(null, init, options)
 			} else {
-				const dbPath = path.resolve(location, `modeldb.sqlite`)
-				return new ModelDB(dbPath, init)
+				return new ModelDB(path.resolve(location, DB_FILENAME), init)
 			}
 		},
 

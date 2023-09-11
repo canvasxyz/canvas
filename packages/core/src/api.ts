@@ -3,16 +3,18 @@ import { StatusCodes } from "http-status-codes"
 import { WebSocket } from "ws"
 import { nanoid } from "nanoid"
 import { CustomEvent } from "@libp2p/interfaces/events"
+import { logger } from "@libp2p/logger"
 
 import { peerIdFromString } from "@libp2p/peer-id"
 
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 
+import { Message } from "@canvas-js/interfaces"
+import { Signature } from "@canvas-js/signed-cid"
+
 import { Canvas, CoreEvents } from "./Canvas.js"
 
 import { getErrorMessage } from "./utils.js"
-import { logger } from "@libp2p/logger"
-import { Message } from "@canvas-js/interfaces"
 
 import { decodeSignedMessage } from "@canvas-js/gossiplog"
 
@@ -101,29 +103,31 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 
 	if (options.exposeModels) {
 		api.get("/models/:model", async (req, res) => {
-			const { model: modelName } = req.params
-			const models = core.db.models || {}
-			if (modelName in models) {
-				const offset = typeof req.query.offset === "string" ? parseInt(req.query.offset) : 0
-				const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : -1
+			return res.status(StatusCodes.NOT_IMPLEMENTED).end()
 
-				const rows = await core.db.query(modelName, {
-					// what is the default ordering? does this matter so long as the result is stable
-					offset,
-					limit,
-				})
+			// const { model: modelName } = req.params
+			// const models = core.db.models || {}
+			// if (modelName in models) {
+			// 	const offset = typeof req.query.offset === "string" ? parseInt(req.query.offset) : 0
+			// 	const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit) : -1
 
-				const total = await core.db.count(modelName)
+			// 	const rows = await core.db.query(modelName, {
+			// 		// what is the default ordering? does this matter so long as the result is stable
+			// 		offset,
+			// 		limit,
+			// 	})
 
-				return res.status(StatusCodes.OK).json({
-					offset,
-					limit,
-					total,
-					data: rows,
-				})
-			} else {
-				return res.status(StatusCodes.NOT_FOUND).end()
-			}
+			// 	const total = await core.db.count(modelName)
+
+			// 	return res.status(StatusCodes.OK).json({
+			// 		offset,
+			// 		limit,
+			// 		total,
+			// 		data: rows,
+			// 	})
+			// } else {
+			// 	return res.status(StatusCodes.NOT_FOUND).end()
+			// }
 		})
 	}
 
