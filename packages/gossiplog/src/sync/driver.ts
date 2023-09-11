@@ -77,7 +77,9 @@ export class Driver {
 				if (leaf === null) {
 					try {
 						yield [key, value]
-					} catch (err) {}
+					} catch (err) {
+						this.log.error("failed to process entry: %O", err)
+					}
 				} else if (equalArrays(hash, leaf.hash)) {
 					continue
 				} else {

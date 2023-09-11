@@ -45,7 +45,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 	sync: CustomEvent<{ peerId: PeerId }>
 }> {
 	private static defaultSigner: MessageSigner = { sign: ({}) => null }
-	private static bound = (id: string | null = null, inclusive: boolean = true) =>
+	private static bound = (id: string | null = null, inclusive = true) =>
 		id === null ? null : { key: encodeId(id), inclusive }
 
 	public abstract close(): Promise<void>
