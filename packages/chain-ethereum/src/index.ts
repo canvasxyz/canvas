@@ -1,4 +1,4 @@
-import { AbstractSigner, Network, Networkish, Wallet, computeAddress, verifyMessage, hexlify, getBytes } from "ethers"
+import { AbstractSigner, Wallet, computeAddress, verifyMessage, hexlify, getBytes } from "ethers"
 
 import * as siwe from "siwe"
 
@@ -26,27 +26,9 @@ export type SIWESessionData = {
 	expirationTime: string | null
 }
 
-// const schema = `
-// type SIWESession struct {
-// 	signature Bytes
-// 	data      SIWESessionData
-// }
-
-// type SIWESessionData struct {
-// 	version  String
-// 	address  String
-// 	chainId  Number
-// 	domain   String
-// 	uri      String
-// 	nonce    String
-// 	issuedAt String
-// 	expirationTime nullable String
-// }
-// `
-
 export interface SIWESignerInit {
+	chain?: string
 	signer?: AbstractSigner
-	network?: Networkish
 	sessionDuration?: number
 	store?: SessionStore
 }
@@ -55,16 +37,16 @@ export class SIWESigner implements Signer {
 	public static async init(init: SIWESignerInit): Promise<SIWESigner> {
 		const signer = init.signer ?? Wallet.createRandom()
 		const address = await signer.getAddress()
-		const network = signer.provider ? await signer.provider.getNetwork() : Network.from(init.network)
-		const chainId = Number(network.chainId)
-		const chain = `eip155:${chainId}`
+
+		const chain = init.chain || "eip155:1"
+		const chainId = parseChainId(chain)
 
 		const { sessionDuration, store } = init
 		if (store !== undefined) {
 			const privateSessionData = await store.load(address, chain)
 			if (privateSessionData !== null) {
 				const session = JSON.parse(privateSessionData)
-				return new SIWESigner(address, network, session, { sessionDuration, store })
+				return new SIWESigner(address, chain, session, { sessionDuration, store })
 			}
 		}
 
@@ -73,7 +55,7 @@ export class SIWESigner implements Signer {
 			await store.save(address, chain, JSON.stringify(session))
 		}
 
-		return new SIWESigner(address, network, session, { sessionDuration, store })
+		return new SIWESigner(address, chain, session, { sessionDuration, store })
 	}
 
 	public static validateSessionPayload = (session: SessionPayload): session is SIWESession => {
@@ -94,17 +76,13 @@ export class SIWESigner implements Signer {
 
 	private constructor(
 		public readonly address: string,
-		public readonly network: Network,
+		public readonly chain: string,
 
 		private readonly session: { data: SIWESessionData; signature: string; privateKey: string },
 		private readonly options: { sessionDuration?: number; store?: SessionStore }
 	) {}
 
 	public readonly match = (chain: string) => chainPattern.test(chain)
-
-	public get chain() {
-		return `eip155:${this.network.chainId}`
-	}
 
 	private async save() {
 		await this.options.store?.save(this.address, this.chain, JSON.stringify(this.session))

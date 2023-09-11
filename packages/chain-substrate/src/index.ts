@@ -31,8 +31,9 @@ type SubstrateSignerInit = {
 	extension?: InjectedExtension
 }
 
+const chainPattern = /^polkadot:([a-f0-9]+)$/
+
 function parseChainId(chain: string): string {
-	const chainPattern = /^polkadot:([a-f0-9]+)$/
 	const chainPatternMatch = chainPattern.exec(chain)
 	if (chainPatternMatch === null) {
 		throw new Error(`invalid chain: ${chain} did not match ${chainPattern}`)
@@ -84,9 +85,7 @@ export class SubstrateSigner implements Signer {
 		private readonly session: { data: SubstrateSessionData; signature: string; privateKey: Uint8Array }
 	) {}
 
-	public match(chain: string) {
-		return false
-	}
+	public readonly match = (chain: string) => chainPattern.test(chain)
 
 	private static validateSessionPayload = (session: SessionPayload): session is SubstrateSession => {
 		if (session === undefined || session === null) {

@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express"
+import express from "express"
 import { StatusCodes } from "http-status-codes"
 import { WebSocket } from "ws"
 import { nanoid } from "nanoid"
@@ -16,8 +16,7 @@ import { Canvas, CoreEvents } from "./Canvas.js"
 
 import { getErrorMessage } from "./utils.js"
 
-import * as cbor from "@ipld/dag-cbor"
-import { hexToBytes } from "@noble/hashes/utils"
+import { decodeSignedMessage } from "@canvas-js/gossiplog"
 
 interface Options {
 	exposeMetrics: boolean
@@ -70,6 +69,7 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 	api.set("query parser", "simple")
 	api.use(express.json())
 	api.use(express.text())
+	api.use(express.raw({ type: "application/cbor" }))
 
 	api.get("/", async (req, res) => {
 		const data = await core.getApplicationData()
@@ -163,15 +163,15 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 	})
 
 	api.post("/messages/:topic", async (req, res) => {
-		if (req.headers["content-type"] !== "application/json") {
+		if (req.headers["content-type"] !== "application/cbor") {
 			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
 		}
 
 		let id: string
 		let result: unknown
+
 		try {
-			const bodyBytes = hexToBytes(req.body.data)
-			const { signature, message } = cbor.decode(bodyBytes) as { signature: Signature | null; message: Message }
+			const [key, signature, message] = decodeSignedMessage(req.body)
 			;({ id, result } = await core.apply(req.params.topic, signature, message))
 		} catch (e) {
 			return res.status(StatusCodes.BAD_REQUEST).end()

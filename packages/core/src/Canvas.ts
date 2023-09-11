@@ -63,6 +63,7 @@ export interface CoreEvents {
 export type ApplicationData = {
 	uri: string
 	peerId: string
+	models: Record<string, Model>
 	topics: Record<string, { actions: string[] | null }>
 }
 
@@ -279,6 +280,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		return {
 			uri: this.uri,
 			peerId: this.peerId.toString(),
+			models: this.db.models,
 			topics: this.topics,
 		}
 	}
