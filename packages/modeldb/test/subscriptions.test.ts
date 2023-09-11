@@ -14,7 +14,8 @@ testOnModelDB("subscriptions", async (t, openDB) => {
 	const db = await openDB(models)
 
 	const changes: { results: ModelValue[]; context: Context | null }[] = []
-	const id = await db.subscribe("user", {}, (results, context) => void changes.push({ results, context }))
+	const { id, results } = db.subscribe("user", {}, (results, context) => void changes.push({ results, context }))
+	await results
 	t.teardown(() => db.unsubscribe(id))
 
 	await db.add("user", { address: "a" })
@@ -39,11 +40,13 @@ testOnModelDB("subscriptions (filtering on model and query)", async (t, openDB) 
 	const userC = await db.add("user", { address: "c" }, c())
 
 	const changes: { results: ModelValue[]; context: Context | null }[] = []
-	const id = await db.subscribe(
+	const { id, results } = db.subscribe(
 		"room",
 		{ where: { creator: userA } },
 		(results, context) => void changes.push({ results, context })
 	)
+
+	await results
 
 	t.teardown(() => db.unsubscribe(id))
 

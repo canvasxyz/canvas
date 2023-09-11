@@ -70,25 +70,30 @@ export abstract class AbstractModelDB {
 		await this.apply([{ operation: "delete", model: modelName, key }], { version })
 	}
 
-	public async subscribe(
+	public subscribe(
 		modelName: string,
 		query: QueryParams,
 		callback: (results: ModelValue[], context: Context | null) => Awaitable<void>
-	): Promise<number> {
+	): { id: number; results: Promise<ModelValue[]> } {
 		const model = this.models[modelName]
 		assert(model !== undefined, "model not found")
-
-		const results = await this.query(modelName, query)
-		try {
-			await callback(results, null)
-		} catch (err) {
-			this.log.error(err)
-		}
 
 		const filter = this.getEffectFilter(model, query)
 		const id = this.#id++
 		this.subscriptions.set(id, { model: modelName, query, filter, callback })
-		return id
+
+		return {
+			id,
+			results: this.query(modelName, query).then((results) =>
+				Promise.resolve(callback(results, null)).then(
+					() => results,
+					(err) => {
+						this.log.error(err)
+						return results
+					}
+				)
+			),
+		}
 	}
 
 	public unsubscribe(id: number) {
