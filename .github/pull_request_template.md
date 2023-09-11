@@ -7,9 +7,7 @@
 ## How has this been tested?
 
 - [ ] CI tests pass
-- [ ] Tested with chat-next (including login, all signers, and exchanging messages)
-- [ ] Tested with chat-webpack (including login, all signers, and exchanging messages)
-- [ ] Tested with notes (including login, create note, share note)
+- [ ] Tested with example-chat (including login, all signers, and exchanging messages)
 - [ ] Other:
 
 <!--- Please describe in detail how you tested your changes. -->
@@ -21,7 +19,7 @@
 <!--- Please describe in detail, if applicable, what changes this -->
 <!--- PR makes to Canvas external interfaces. -->
 
-- [ ] Hooks
-- [ ] Daemon API
-- [ ] Command line arguments
 - [ ] Contract language
+- [ ] Core interface
+- [ ] CLI arguments
+- [ ] Data storage formats
