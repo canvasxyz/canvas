@@ -1,18 +1,11 @@
 import Database, * as sqlite from "better-sqlite3"
 
-import {
-	AbstractModelDB,
-	Context,
-	Effect,
-	ModelDBOptions,
-	ModelValue,
-	ModelsInit,
-	QueryParams,
-	parseConfig,
-} from "@canvas-js/modeldb-interface"
+import { AbstractModelDB, ModelDBOptions } from "../AbstractModelDB.js"
+import { parseConfig } from "../config.js"
+import { Context, Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
+import { assert, signalInvalidType } from "../utils.js"
 
 import { ModelAPI } from "./api.js"
-import { assert, signalInvalidType } from "./utils.js"
 
 export class ModelDB extends AbstractModelDB {
 	public readonly db: sqlite.Database

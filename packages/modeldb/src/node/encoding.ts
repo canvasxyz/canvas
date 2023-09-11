@@ -1,13 +1,6 @@
-import {
-	Model,
-	ModelValue,
-	PrimitiveProperty,
-	Property,
-	PropertyValue,
-	ReferenceProperty,
-} from "@canvas-js/modeldb-interface"
+import type { Model, ModelValue, PrimitiveProperty, PropertyValue, ReferenceProperty } from "../types.js"
 
-import { assert, signalInvalidType } from "./utils.js"
+import { assert, signalInvalidType } from "../utils.js"
 
 function encodePrimitiveValue(
 	modelName: string,

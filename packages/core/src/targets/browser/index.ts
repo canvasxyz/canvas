@@ -2,7 +2,7 @@ import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp
 import { PeerId } from "@libp2p/interface-peer-id"
 import { base64 } from "multiformats/bases/base64"
 
-import { ModelDB } from "@canvas-js/modeldb-idb"
+import { ModelDB } from "@canvas-js/modeldb/browser"
 
 import type { PlatformTarget } from "../interface.js"
 

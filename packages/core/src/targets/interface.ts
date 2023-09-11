@@ -1,7 +1,7 @@
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface-peer-id"
 
-import type { AbstractModelDB, ModelsInit, Resolver } from "@canvas-js/modeldb-interface"
+import type { AbstractModelDB, ModelsInit, Resolver } from "@canvas-js/modeldb"
 
 import type { ServiceMap } from "../libp2p.js"
 

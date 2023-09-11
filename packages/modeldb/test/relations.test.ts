@@ -1,4 +1,4 @@
-import { ModelsInit } from "@canvas-js/modeldb-interface"
+import type { ModelsInit } from "@canvas-js/modeldb"
 
 import { testOnModelDB } from "./utils.js"
 

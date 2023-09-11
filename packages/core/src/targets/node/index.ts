@@ -7,7 +7,7 @@ import { PeerId } from "@libp2p/interface-peer-id"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { register } from "prom-client"
 
-import { ModelDB } from "@canvas-js/modeldb-sqlite"
+import { ModelDB } from "@canvas-js/modeldb/node"
 
 import type { PlatformTarget } from "../interface.js"
 

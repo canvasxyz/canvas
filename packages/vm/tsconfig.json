@@ -8,7 +8,6 @@
     "outDir": "lib"
   },
   "references": [
-    { "path": "../interfaces" },
-    { "path": "../modeldb-interface" },
+    { "path": "../interfaces" }
   ]
 }

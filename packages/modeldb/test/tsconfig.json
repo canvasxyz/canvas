@@ -8,8 +8,6 @@
     "outDir": "lib"
   },
   "references": [
-    { "path": "../." },
-    { "path": "../../modeldb-sqlite" },
-    { "path": "../../modeldb-idb" },
+    { "path": "../." }
   ]
 }

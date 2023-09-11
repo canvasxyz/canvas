@@ -1,5 +1,3 @@
-// import { CID } from "multiformats/cid"
-
 import { Config, ModelValue, Effect, Model, QueryParams, Resolver, Context } from "./types.js"
 import { defaultResolver, getImmutableRecordKey } from "./utils.js"
 

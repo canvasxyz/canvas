@@ -17,7 +17,7 @@ import {
 	Property,
 	PropertyValue,
 	Resolver,
-} from "@canvas-js/modeldb-interface"
+} from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { getCID, Signature } from "@canvas-js/signed-cid"
 

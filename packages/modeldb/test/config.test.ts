@@ -1,6 +1,6 @@
 import test from "ava"
 
-import { ModelsInit, parseConfig } from "@canvas-js/modeldb-interface"
+import { ModelsInit, parseConfig } from "@canvas-js/modeldb"
 
 test("parse config", (t) => {
 	const models: ModelsInit = {

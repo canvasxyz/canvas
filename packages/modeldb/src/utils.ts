@@ -13,20 +13,40 @@ import type {
 	Resolver,
 } from "./types.js"
 
+// TODO: ????
+// export const nsidPattern = /^[a-z](?:-*[a-z0-9])*(?:\.[a-z](?:-*[a-z0-9])*)*$/
+
 export type Awaitable<T> = T | Promise<T>
+
+export function assert(condition: boolean, message?: string): asserts condition {
+	if (!condition) {
+		throw new Error(message ?? `assertion failed`)
+	}
+}
 
 export function signalInvalidType(type: never): never {
 	console.error(type)
 	throw new TypeError("internal error: invalid type")
 }
 
-export function assert(condition: boolean, message?: string): asserts condition {
-	if (!condition) {
-		throw new Error(message ?? "assertion failed")
-	}
-}
+export const mapEntries = <K extends string, S, T>(object: Record<K, S>, map: (entry: [key: K, value: S]) => T) =>
+	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map([key as K, value])])) as Record<K, T>
 
-export const DEFAULT_DIGEST_LENGTH = 16
+export const mapKeys = <K extends string, S, T>(object: Record<K, S>, map: (key: K) => T) =>
+	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(key as K)])) as Record<K, T>
+
+export const mapValues = <K extends string, S, T>(object: Record<K, S>, map: (value: S) => T) =>
+	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(value)])) as Record<K, T>
+
+export function zip<A, B>(a: A[], b: B[]): [A, B][] {
+	assert(a.length === b.length, "cannot zip arrays of different sizes")
+	const result = new Array(a.length)
+	for (let i = 0; i < a.length; i++) {
+		result[i] = [a[i], b[i]]
+	}
+
+	return result
+}
 
 export function getImmutableRecordKey(value: ModelValue): string {
 	const cid = getCID(value, { codec: "dag-cbor", digest: "blake3-128" })

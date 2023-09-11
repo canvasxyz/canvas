@@ -2,9 +2,10 @@ import "fake-indexeddb/auto"
 import test, { ExecutionContext } from "ava"
 import { varint } from "multiformats/basics"
 import { nanoid } from "nanoid"
-import { AbstractModelDB, ModelsInit, ModelDBOptions } from "@canvas-js/modeldb-interface"
-import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
-import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
+
+import type { AbstractModelDB, ModelsInit, ModelDBOptions } from "@canvas-js/modeldb"
+import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb/node"
+import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb/browser"
 
 // Create simple version values from revision numbers
 export const v = (revision: number) => varint.encodeTo(revision, Buffer.alloc(varint.encodingLength(revision)))

@@ -13,13 +13,19 @@ import {
 	WhereCondition,
 	PrimitiveValue,
 	RangeExpression,
+} from "../types.js"
+
+import { decodePrimitiveValue, decodeRecord, decodeReferenceValue, encodeRecordParams } from "./encoding.js"
+import { Method, Query } from "./utils.js"
+import {
+	assert,
+	mapValues,
+	signalInvalidType,
+	zip,
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
-} from "@canvas-js/modeldb-interface"
-
-import { decodePrimitiveValue, decodeRecord, decodeReferenceValue, encodeRecordParams } from "./encoding.js"
-import { Method, Query, assert, mapEntries, mapValues, signalInvalidType, zip } from "./utils.js"
+} from "../utils.js"
 
 type RecordValue = Record<string, string | number | Buffer | null>
 type Params = Record<`p${string}`, string | number | Buffer | null>

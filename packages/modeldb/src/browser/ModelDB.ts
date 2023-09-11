@@ -4,13 +4,13 @@ import { logger } from "@libp2p/logger"
 import { equals } from "multiformats/bytes"
 import { lessThan } from "@canvas-js/okra"
 
+import { AbstractModelDB, ModelDBOptions } from "../AbstractModelDB.js"
+
 import {
-	AbstractModelDB,
 	Config,
 	Context,
 	Effect,
 	Model,
-	ModelDBOptions,
 	ModelValue,
 	ModelsInit,
 	NotExpression,
@@ -24,15 +24,19 @@ import {
 	RelationProperty,
 	Resolver,
 	WhereCondition,
+} from "../types.js"
+
+import { parseConfig } from "../config.js"
+
+import {
+	assert,
+	signalInvalidType,
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
-	parseConfig,
 	validateModelValue,
 	validatePropertyValue,
-} from "@canvas-js/modeldb-interface"
-
-import { assert, signalInvalidType } from "./utils.js"
+} from "../utils.js"
 
 const getObjectStoreName = (model: string) => `record/${model}`
 const getTombstoneObjectStoreName = (model: string) => `tombstone/${model}`
