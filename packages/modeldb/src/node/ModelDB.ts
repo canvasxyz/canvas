@@ -41,8 +41,20 @@ export class ModelDB extends AbstractModelDB {
 		this.db.close()
 	}
 
-	public async apply(context: Context, effects: Effect[]) {
+	public async apply(effects: Effect[], context: Context = { version: null }) {
 		this.#transaction(context, effects)
+
+		for (const { model, query, filter, callback } of this.subscriptions.values()) {
+			if (effects.some(filter)) {
+				const api = this.#models[model]
+				assert(api !== undefined, `model API not found`)
+				try {
+					callback(api.query(query), context)
+				} catch (err) {
+					this.log.error(err)
+				}
+			}
+		}
 	}
 
 	public async get(modelName: string, key: string) {
@@ -51,9 +63,7 @@ export class ModelDB extends AbstractModelDB {
 		return api.get(key)
 	}
 
-	public async *iterate(
-		modelName: string
-	): AsyncIterable<[key: string, value: ModelValue, version: Uint8Array | null]> {
+	public async *iterate(modelName: string): AsyncIterable<[key: string, value: ModelValue]> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		yield* api.entries()
@@ -68,6 +78,6 @@ export class ModelDB extends AbstractModelDB {
 	public async query(modelName: string, query: QueryParams): Promise<ModelValue[]> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		return await api.query(query)
+		return api.query(query)
 	}
 }

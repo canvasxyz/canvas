@@ -8,7 +8,7 @@ import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb/node"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb/browser"
 
 // Create simple version values from revision numbers
-export const v = (revision: number) => varint.encodeTo(revision, Buffer.alloc(varint.encodingLength(revision)))
+export const v = (revision: number) => varint.encodeTo(revision, new Uint8Array(varint.encodingLength(revision)))
 
 export const testOnModelDB = (
 	name: string,

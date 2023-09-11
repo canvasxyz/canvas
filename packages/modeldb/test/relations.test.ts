@@ -4,17 +4,9 @@ import { testOnModelDB } from "./utils.js"
 
 const models: ModelsInit = {
 	user: { address: "string" },
-
 	room: {
 		creator: "@user",
 		members: "@user[]",
-	},
-
-	message: {
-		room: "@room",
-		sender: "@user",
-		content: "string",
-		timestamp: "integer",
 	},
 }
 

@@ -17,15 +17,8 @@ import {
 
 import { decodePrimitiveValue, decodeRecord, decodeReferenceValue, encodeRecordParams } from "./encoding.js"
 import { Method, Query } from "./utils.js"
-import {
-	assert,
-	mapValues,
-	signalInvalidType,
-	zip,
-	isNotExpression,
-	isLiteralExpression,
-	isRangeExpression,
-} from "../utils.js"
+import { isNotExpression, isLiteralExpression, isRangeExpression } from "../query.js"
+import { assert, mapValues, signalInvalidType, zip } from "../utils.js"
 
 type RecordValue = Record<string, string | number | Buffer | null>
 type Params = Record<`p${string}`, string | number | Buffer | null>
@@ -217,18 +210,18 @@ export class ModelAPI {
 		return count
 	}
 
-	public async *entries(): AsyncIterable<[key: string, value: ModelValue, version: Uint8Array | null]> {
+	public async *entries(): AsyncIterable<[key: string, value: ModelValue]> {
 		for (const { _key: key, _version: version, ...record } of this.#selectAll.iterate({})) {
 			const value = {
 				...decodeRecord(this.model, record),
 				...mapValues(this.#relations, (api) => api.get(key)),
 			}
 
-			yield [key, value, version]
+			yield [key, value]
 		}
 	}
 
-	public async query(query: QueryParams): Promise<ModelValue[]> {
+	public query(query: QueryParams): ModelValue[] {
 		// See https://www.sqlite.org/lang_select.html for railroad diagram
 		const sql: string[] = []
 

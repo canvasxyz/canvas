@@ -203,7 +203,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 					}
 				})
 
-				await db.apply({ version: base32hex.baseDecode(id) }, effects)
+				await db.apply(effects, { version: base32hex.baseDecode(id) })
 
 				return result
 			}

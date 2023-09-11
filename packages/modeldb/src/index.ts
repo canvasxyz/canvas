@@ -1,12 +1,5 @@
 export * from "./types.js"
-export * from "./AbstractModelDB.js"
 export * from "./config.js"
-
-export {
-	validateModelValue,
-	validatePropertyValue,
-	getImmutableRecordKey,
-	isNotExpression,
-	isLiteralExpression,
-	isRangeExpression,
-} from "./utils.js"
+export * from "./query.js"
+export * from "./AbstractModelDB.js"
+export { validateModelValue, validatePropertyValue, getImmutableRecordKey } from "./utils.js"

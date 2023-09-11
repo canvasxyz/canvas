@@ -4,7 +4,7 @@ testOnModelDB("apply should roll back partially performed updates if it fails", 
 	const db = await openDB({ message: { content: "string" } })
 
 	const error = await t.throwsAsync(() =>
-		db.apply({ version: null }, [
+		db.apply([
 			// valid operation
 			{ operation: "set", model: "message", key: "foo", value: { content: "test" } },
 			// invalid operation

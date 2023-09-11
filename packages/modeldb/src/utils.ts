@@ -2,16 +2,7 @@ import { base58btc } from "multiformats/bases/base58"
 
 import { getCID } from "@canvas-js/signed-cid"
 
-import type {
-	Context,
-	Model,
-	ModelValue,
-	NotExpression,
-	Property,
-	PropertyValue,
-	RangeExpression,
-	Resolver,
-} from "./types.js"
+import type { Context, Model, ModelValue, Property, PropertyValue, Resolver } from "./types.js"
 
 // TODO: ????
 // export const nsidPattern = /^[a-z](?:-*[a-z0-9])*(?:\.[a-z](?:-*[a-z0-9])*)*$/
@@ -95,10 +86,10 @@ export function validatePropertyValue(modelName: string, property: Property, val
 	}
 }
 
-export const defaultResolver: Resolver = { lessThan }
+export const defaultResolver: Resolver = { lessThan: lessThanVersion }
 
 // TODO: make absolutely sure this does what we want
-function lessThan({ version: a }: Context, { version: b }: Context) {
+function lessThanVersion({ version: a }: Context, { version: b }: Context) {
 	if (b === null) {
 		return false
 	} else if (a === null) {
@@ -115,36 +106,4 @@ function lessThan({ version: a }: Context, { version: b }: Context) {
 		}
 	}
 	return x < y
-}
-
-export function isLiteralExpression(expr: PropertyValue | NotExpression | RangeExpression): expr is PropertyValue {
-	if (expr === null) {
-		return true
-	} else if (typeof expr === "boolean" || typeof expr === "number" || typeof expr === "string") {
-		return true
-	} else if (expr instanceof Uint8Array) {
-		return true
-	} else if (Array.isArray(expr) && expr.every((value) => typeof value === "string")) {
-		return true
-	} else {
-		return false
-	}
-}
-
-export function isNotExpression(expr: PropertyValue | NotExpression | RangeExpression): expr is NotExpression {
-	if (isLiteralExpression(expr)) {
-		return false
-	}
-
-	const { neq } = expr as { neq?: PropertyValue }
-	return neq !== undefined
-}
-
-export function isRangeExpression(expr: PropertyValue | NotExpression | RangeExpression): expr is RangeExpression {
-	if (isLiteralExpression(expr)) {
-		return false
-	}
-
-	const { neq } = expr as { neq?: PropertyValue }
-	return neq === undefined
 }
