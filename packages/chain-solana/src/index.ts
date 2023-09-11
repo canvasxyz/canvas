@@ -28,8 +28,9 @@ interface SolanaWindowSigner {
 	signMessage(message: Uint8Array): Promise<{ signature: Uint8Array }>
 }
 
+const chainPattern = /^solana:([a-z]+)$/
+
 function parseChainId(chain: string): string {
-	const chainPattern = /^solana:([a-z]+)$/
 	const chainPatternMatch = chainPattern.exec(chain)
 	if (chainPatternMatch === null) {
 		throw new Error(`invalid chain: ${chain} did not match ${chainPattern}`)
@@ -78,9 +79,7 @@ export class SolanaSigner implements Signer {
 		private readonly session: { data: SolanaSessionData; signature: Uint8Array; secretKey: Uint8Array }
 	) {}
 
-	public match(chain: string) {
-		return false
-	}
+	public readonly match = (chain: string) => chainPattern.test(chain)
 
 	private static validateSessionPayload = (session: SessionPayload): session is SolanaSession => {
 		if (session === undefined || session === null) {
