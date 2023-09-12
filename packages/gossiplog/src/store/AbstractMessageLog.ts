@@ -167,8 +167,8 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 	 */
 	public async insert(signature: Signature | null, message: Message<Payload>) {
 		return await this.write(async (txn) => {
-			const userdata = await txn.getUserdata()
-			const graph = Graph.import(this.topic, this.sequencing, userdata)
+			const oldUserdata = await txn.getUserdata()
+			const graph = Graph.import(this.topic, this.sequencing, oldUserdata)
 
 			const [key, value] = this.encode(signature, message)
 
@@ -181,7 +181,10 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 			await txn.set(key, value)
 			graph.update(id, message)
 
-			await txn.setUserdata(graph.export())
+			const newUserdata = graph.export()
+			if (newUserdata !== null) {
+				await txn.setUserdata(newUserdata)
+			}
 
 			const root = await txn.getRoot()
 			return { id, key, value, result, root }
@@ -195,8 +198,8 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		const signer = options.signer ?? AbstractMessageLog.defaultSigner
 
 		return await this.write(async (txn) => {
-			const userdata = await txn.getUserdata()
-			const graph = Graph.import(this.topic, this.sequencing, userdata)
+			const oldUserdata = await txn.getUserdata()
+			const graph = Graph.import(this.topic, this.sequencing, oldUserdata)
 
 			const message = graph.create(payload)
 			const signature = await signer.sign(message)
@@ -211,7 +214,10 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 			await txn.set(key, value)
 			graph.update(id, message)
 
-			await txn.setUserdata(graph.export())
+			const newUserdata = graph.export()
+			if (newUserdata !== null) {
+				await txn.setUserdata(newUserdata)
+			}
 
 			const root = await txn.getRoot()
 			return { id, key, value, result, root }
@@ -224,8 +230,8 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 	public async sync(sourcePeerId: PeerId, source: Source): Promise<{ root: Node }> {
 		const root = await this.write(
 			async (target) => {
-				const userdata = await target.getUserdata()
-				const graph = Graph.import(this.topic, this.sequencing, userdata)
+				const oldUserdata = await target.getUserdata()
+				const graph = Graph.import(this.topic, this.sequencing, oldUserdata)
 
 				const driver = new Driver(this.topic, source, target)
 				for await (const [key, value] of driver.sync()) {
@@ -249,7 +255,11 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 					graph.update(id, message)
 				}
 
-				await target.setUserdata(graph.export())
+				const newUserdata = graph.export()
+				if (newUserdata !== null) {
+					await target.setUserdata(newUserdata)
+				}
+
 				return await target.getRoot()
 			},
 			{ source: sourcePeerId }

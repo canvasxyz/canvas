@@ -234,10 +234,8 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 		options: { reverse?: boolean } = {}
 	): AsyncIterable<[id: string, signature: Signature | null, message: Message<any>]> {
 		const messages = this.#messages.get(topic)
-		if (messages === undefined) {
-			return
-		}
-		return messages.iterate(lowerBound, upperBound, options)
+		assert(messages !== undefined, "topic not found")
+		yield* messages.iterate(lowerBound, upperBound, options)
 	}
 
 	public async getClock(topic: string): Promise<[clock: number, parents: string[]]> {
