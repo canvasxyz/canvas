@@ -31,7 +31,7 @@ export interface CanvasConfig extends P2PConfig {
 	contract: string
 	contractLog?: (...args: JSValue[]) => void
 
-	/** NodeJS: data directory path, browser: IndexedDB database namespace */
+	/** NodeJS: data directory path; browser: IndexedDB database namespace */
 	location?: string | null
 	topic?: string
 	uri?: string
@@ -164,9 +164,9 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		}
 
 		// { [topic]: { actions: [name][] } }
-		const topics: Record<string, { actions: string[] | null }> = mapValues(actionHandles, (actions) => ({
-			actions: Object.keys(actions),
-		}))
+		const topics: Record<string, { actions: string[] | null }> = mapValues(actionHandles, (actions) => {
+			return { actions: Object.keys(actions) }
+		})
 
 		for (const topic of Object.keys(customActionHandles)) {
 			topics[topic] = { actions: null }
@@ -240,7 +240,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			await gossiplog.subscribe(topic, { apply, validate, signatures: false, sequencing: false })
 		}
 
-		return new Canvas(uri, signers, libp2p, vm, db, actions, topics)
+		return new Canvas(uri, signers, libp2p, vm, db, actions, topics, defaultTopic)
 	}
 
 	private readonly controller = new AbortController()
@@ -253,7 +253,8 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		public readonly vm: VM,
 		public readonly db: AbstractModelDB,
 		public readonly actions: Record<string, ActionAPI>,
-		public readonly topics: Record<string, { actions: string[] | null }>
+		public readonly topics: Record<string, { actions: string[] | null }>,
+		public readonly defaultTopic: string
 	) {
 		super()
 
@@ -276,7 +277,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		await this.libp2p.start()
 	}
 
-	public async getApplicationData(): Promise<ApplicationData> {
+	public getApplicationData(): ApplicationData {
 		return {
 			uri: this.uri,
 			peerId: this.peerId.toString(),
@@ -305,6 +306,12 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		message: Message
 	): Promise<{ id: string; result: unknown; recipients: Promise<PeerId[]> }> {
 		return await this.libp2p.services.gossiplog.apply(topic, signature, message)
+	}
+
+	public async *getMessageStream<Payload = Action>(
+		topic: string = this.defaultTopic
+	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]> {
+		yield* this.libp2p.services.gossiplog.iterate(topic)
 	}
 }
 

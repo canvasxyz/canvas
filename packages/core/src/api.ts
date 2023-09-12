@@ -1,22 +1,21 @@
+import assert from "node:assert"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
-import { WebSocket } from "ws"
 import { nanoid } from "nanoid"
-import { CustomEvent } from "@libp2p/interfaces/events"
 import { logger } from "@libp2p/logger"
+import * as json from "@ipld/dag-json"
+import * as cbor from "@ipld/dag-cbor"
 
 import { peerIdFromString } from "@libp2p/peer-id"
 
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 
 import { Message } from "@canvas-js/interfaces"
-import { Signature } from "@canvas-js/signed-cid"
+import { decodeSignedMessage } from "@canvas-js/gossiplog"
 
 import { Canvas, CoreEvents } from "./Canvas.js"
 
 import { getErrorMessage } from "./utils.js"
-
-import { decodeSignedMessage } from "@canvas-js/gossiplog"
 
 interface Options {
 	exposeMetrics: boolean
@@ -71,10 +70,7 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 	api.use(express.text())
 	api.use(express.raw({ type: "application/cbor" }))
 
-	api.get("/", async (req, res) => {
-		const data = await core.getApplicationData()
-		return res.json(data)
-	})
+	api.get("/", async (req, res) => res.json(core.getApplicationData()))
 
 	if (options.exposeMetrics) {
 		// TODO: What is "message" used for?
@@ -163,21 +159,25 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 	})
 
 	api.post("/messages/:topic", async (req, res) => {
-		if (req.headers["content-type"] !== "application/cbor") {
+		let data: Uint8Array | null = null
+		if (req.headers["content-type"] === "application/json") {
+			data = cbor.encode(json.parse(JSON.stringify(req.body)))
+		} else if (req.headers["content-type"] === "application/cbor") {
+			data = req.body
+		} else {
 			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
 		}
 
-		let id: string
-		let result: unknown
+		assert(data !== null)
 
 		try {
-			const [key, signature, message] = decodeSignedMessage(req.body)
-			;({ id, result } = await core.apply(req.params.topic, signature, message))
+			const [key, signature, message] = decodeSignedMessage(data)
+			const { id, result } = await core.apply(req.params.topic, signature, message)
+			return res.status(StatusCodes.OK).json({ id, result })
 		} catch (e) {
+			console.error(e)
 			return res.status(StatusCodes.BAD_REQUEST).end()
 		}
-
-		return res.status(StatusCodes.OK).json({ id, result })
 	})
 
 	if (options.exposeP2P) {
@@ -234,62 +234,62 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 	return api
 }
 
-const WS_KEEPALIVE = 30000
-const WS_KEEPALIVE_LATENCY = 3000
+// const WS_KEEPALIVE = 30000
+// const WS_KEEPALIVE_LATENCY = 3000
 
-export function handleWebsocketConnection(core: Canvas, socket: WebSocket, options: { verbose?: boolean } = {}) {
-	const id = nanoid(8)
+// export function handleWebsocketConnection(core: Canvas, socket: WebSocket, options: { verbose?: boolean } = {}) {
+// 	const id = nanoid(8)
 
-	const log = logger("canvas:api")
+// 	const log = logger("canvas:api")
 
-	log.trace("[ws-${id}] Opened socket`")
+// 	log.trace("[ws-${id}] Opened socket`")
 
-	let lastPing = Date.now()
+// 	let lastPing = Date.now()
 
-	const timer = setInterval(() => {
-		if (lastPing < Date.now() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) {
-			log.error(`[ws-${id}] Closed socket on timeout`)
-			socket.close()
-		}
-	}, WS_KEEPALIVE)
+// 	const timer = setInterval(() => {
+// 		if (lastPing < Date.now() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) {
+// 			log.error(`[ws-${id}] Closed socket on timeout`)
+// 			socket.close()
+// 		}
+// 	}, WS_KEEPALIVE)
 
-	const closeListener = () => socket.close()
-	core.addEventListener("close", closeListener)
+// 	const closeListener = () => socket.close()
+// 	core.addEventListener("close", closeListener)
 
-	const eventListener = <T>(event: CustomEvent<T> | Event) => {
-		log.trace(`[ws-${id}] Sent ${event.type} event`)
-		if (event instanceof CustomEvent) {
-			socket.send(JSON.stringify({ type: event.type, detail: event.detail }))
-		} else {
-			socket.send(JSON.stringify({ type: event.type }))
-		}
-	}
+// 	const eventListener = <T>(event: CustomEvent<T> | Event) => {
+// 		log.trace(`[ws-${id}] Sent ${event.type} event`)
+// 		if (event instanceof CustomEvent) {
+// 			socket.send(JSON.stringify({ type: event.type, detail: event.detail }))
+// 		} else {
+// 			socket.send(JSON.stringify({ type: event.type }))
+// 		}
+// 	}
 
-	const eventTypes: (keyof CoreEvents)[] = ["update", "sync", "connect", "disconnect"]
-	for (const type of eventTypes) {
-		core.addEventListener(type, eventListener)
-	}
+// 	const eventTypes: (keyof CoreEvents)[] = ["update", "sync", "connect", "disconnect"]
+// 	for (const type of eventTypes) {
+// 		core.addEventListener(type, eventListener)
+// 	}
 
-	const unsubscribe = () => {
-		core.removeEventListener("close", closeListener)
-		for (const type of eventTypes) {
-			core.removeEventListener(type, eventListener)
-		}
-	}
+// 	const unsubscribe = () => {
+// 		core.removeEventListener("close", closeListener)
+// 		for (const type of eventTypes) {
+// 			core.removeEventListener(type, eventListener)
+// 		}
+// 	}
 
-	socket.on("close", () => {
-		log.trace(`[ws-${id}] Closed socket`)
+// 	socket.on("close", () => {
+// 		log.trace(`[ws-${id}] Closed socket`)
 
-		clearInterval(timer)
-		unsubscribe()
-	})
+// 		clearInterval(timer)
+// 		unsubscribe()
+// 	})
 
-	socket.on("message", (data) => {
-		if (Buffer.isBuffer(data) && data.toString() === "ping") {
-			lastPing = Date.now()
-			socket.send("pong")
-		} else {
-			log.error(`[ws-${id}] Received invalid message ${data}`)
-		}
-	})
-}
+// 	socket.on("message", (data) => {
+// 		if (Buffer.isBuffer(data) && data.toString() === "ping") {
+// 			lastPing = Date.now()
+// 			socket.send("pong")
+// 		} else {
+// 			log.error(`[ws-${id}] Received invalid message ${data}`)
+// 		}
+// 	})
+// }
