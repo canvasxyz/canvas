@@ -1,16 +1,20 @@
+import path from "node:path"
+import fs from "node:fs"
+
 import type { Argv } from "yargs"
 
 import chalk from "chalk"
 
-import { parseSpecArgument } from "../utils.js"
 import { Canvas } from "@canvas-js/core"
+import { CONTRACT_FILENAME, getContractLocation } from "../utils.js"
+// import { getContractLocation } from "../utils.js"
 
-export const command = "info <app>"
-export const desc = "Show the models, views, and actions for a app"
+export const command = "info <path>"
+export const desc = "Show the model schema and action names in a contract"
 
 export const builder = (yargs: Argv) =>
-	yargs.positional("app", {
-		describe: "app filename or CID",
+	yargs.positional("path", {
+		describe: "Path to application directory or *.canvas.js contract",
 		type: "string",
 		demandOption: true,
 	})
@@ -18,24 +22,16 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { uri, spec } = parseSpecArgument(args.app)
-
+	const { contract, location } = getContractLocation(args)
 	try {
-		const canvas = await Canvas.initialize({ contract: spec, uri, offline: true })
-
-		const actions = canvas.actions
-
-		const models = canvas.db.models
-
-		console.log(`name: ${uri}\n`)
-
+		const app = await Canvas.initialize({ contract, location, offline: true })
+		console.log(`name: ${app.uri}\n`)
 		console.log(chalk.green("===== models ====="))
-		console.log(`${JSON.stringify(models, null, "  ")}\n`)
-
+		console.log(`${JSON.stringify(app.db.models, null, "  ")}\n`)
 		console.log(chalk.green("===== actions ====="))
 		console.log(
-			Object.keys(actions)
-				.map((name) => `${name}({ ...args })\n`)
+			Object.keys(app.actions)
+				.map((name) => `- ${name}({ ...args })\n`)
 				.join("")
 		)
 

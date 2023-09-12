@@ -8,6 +8,7 @@
     { "path": "./packages/discovery" },
     { "path": "./packages/gossiplog" },
     { "path": "./packages/gossiplog/test" },
+    { "path": "./packages/cli" },
     { "path": "./packages/core" },
     { "path": "./packages/core/test" },
     { "path": "./packages/signed-cid" },

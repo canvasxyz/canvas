@@ -1,30 +1,81 @@
 import fs from "node:fs"
 import path from "node:path"
-import os from "node:os"
 import process from "node:process"
+import assert from "node:assert"
 
-import Hash from "ipfs-only-hash"
 import chalk from "chalk"
 import prompts from "prompts"
 import { ethers } from "ethers"
 
-import type { ChainImplementation } from "@canvas-js/interfaces"
-import { EthereumChainImplementation } from "@canvas-js/chain-ethereum"
-import { CosmosChainImplementation } from "@canvas-js/chain-cosmos"
-import { SolanaChainImplementation } from "@canvas-js/chain-solana"
-import { SubstrateChainImplementation } from "@canvas-js/chain-substrate"
-// @ts-ignore
-import { NearChainImplementation } from "@canvas-js/chain-near"
+import { Signer } from "@canvas-js/interfaces"
+import { SIWESigner } from "@canvas-js/chain-ethereum"
 
-import * as constants from "@canvas-js/core/constants"
-import { assert } from "@canvas-js/core/utils"
+export const CONTRACT_FILENAME = "contract.canvas.js"
 
-export const CANVAS_HOME = process.env.CANVAS_HOME ?? path.resolve(os.homedir(), ".canvas")
+export function getContractLocation(args: { path: string; memory?: boolean }): {
+	contract: string
+	location: string | null
+	uri: string
+} {
+	const location = path.resolve(args.path)
 
-if (!fs.existsSync(CANVAS_HOME)) {
-	console.log(`[canvas-cli] Creating directory ${path.resolve(CANVAS_HOME)}`)
-	console.log("[canvas-cli] Override this path by setting a CANVAS_HOME environment variable.")
-	fs.mkdirSync(CANVAS_HOME)
+	if (!fs.existsSync(location)) {
+		console.error(chalk.yellow(`${location} does not exist.`))
+		console.error(chalk.yellow(`Try initializing a new app with \`canvas init ${path.relative(".", location)}\``))
+		process.exit(1)
+	}
+
+	const stat = fs.statSync(location)
+	if (stat.isDirectory()) {
+		const contractPath = path.resolve(location, CONTRACT_FILENAME)
+		if (!fs.existsSync(contractPath)) {
+			console.error(chalk.yellow(`No contract found at ${contractPath}`))
+			console.error(chalk.yellow(`Initialize an example contract with \`canvas init ${path.relative(".", location)}\``))
+			process.exit(1)
+		}
+
+		const contract = fs.readFileSync(contractPath, "utf-8")
+		return { contract, location: args.memory ? null : location, uri: `file://${contractPath}` }
+	} else if (!location.endsWith(".canvas.js")) {
+		console.error(chalk.yellow(`Contract files must match *.canvas.js`))
+		process.exit(1)
+	} else {
+		const contract = fs.readFileSync(location, "utf-8")
+		return { contract, location: null, uri: `file://${location}` }
+	}
+}
+// const contractPattern = /^(.*)\.canvas\.js$/
+
+// export function getContractLocation(args: { contract: string; memory?: boolean }): {
+// 	location: string | null
+// 	contract: string
+// } {
+// 	const contractPath = path.resolve(args.contract)
+// 	const contract = fs.readFileSync(contractPath, "utf-8")
+// 	if (args.memory ?? false) {
+// 		return { contract, location: null }
+// 	}
+
+// 	const result = contractPattern.exec(path.basename(contractPath))
+// 	assert(result !== null, "contract filename must match *.canvas.js")
+// 	const [_, name] = result
+
+// 	const location = path.resolve(path.dirname(contractPath), `${name}-data`)
+// 	return { contract, location }
+// }
+
+export const mapEntries = <K extends string, S, T>(object: Record<K, S>, map: (entry: [key: K, value: S]) => T) =>
+	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map([key as K, value])])) as Record<K, T>
+
+export const mapKeys = <K extends string, S, T>(object: Record<K, S>, map: (key: K) => T) =>
+	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(key as K)])) as Record<K, T>
+
+export const mapValues = <K extends string, S, T>(object: Record<K, S>, map: (value: S) => T) =>
+	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(value)])) as Record<K, T>
+
+export function signalInvalidType(type: never): never {
+	console.error(type)
+	throw new TypeError("internal error: invalid type")
 }
 
 export async function confirmOrExit(message: string) {
@@ -36,48 +87,6 @@ export async function confirmOrExit(message: string) {
 	}
 }
 
-export const cidPattern = /^Qm[a-zA-Z0-9]{44}$/
-
-export function parseSpecArgument(value: string): { directory: string | null; uri: string; spec: string } {
-	if (cidPattern.test(value)) {
-		const directory = path.resolve(CANVAS_HOME, value)
-		const specPath = path.resolve(directory, constants.SPEC_FILENAME)
-		if (fs.existsSync(specPath)) {
-			const spec = fs.readFileSync(specPath, "utf-8")
-			return { directory, uri: `ipfs://${value}`, spec }
-		} else {
-			console.error(chalk.red(`[canvas-cli] App ${value} is not installed.`))
-			process.exit(1)
-		}
-	} else if (value.endsWith(".js") || value.endsWith(".jsx")) {
-		const specPath = path.resolve(value)
-		const spec = fs.readFileSync(specPath, "utf-8")
-		return { directory: null, uri: `file://${specPath}`, spec }
-	} else {
-		console.error(chalk.red("[canvas-cli] Spec argument must be a CIDv0 or a path to a local .js/.jsx file"))
-		process.exit(1)
-	}
-}
-
-export async function installSpec(app: string): Promise<string> {
-	const cid = await Hash.of(app)
-	const directory = path.resolve(CANVAS_HOME, cid)
-	if (!fs.existsSync(directory)) {
-		console.log(`[canvas-cli] Creating app directory at ${directory}`)
-		fs.mkdirSync(directory)
-	}
-
-	const specPath = path.resolve(directory, constants.SPEC_FILENAME)
-	if (fs.existsSync(specPath)) {
-		console.log(`[canvas-cli] ${specPath} already exists`)
-	} else {
-		console.log(`[canvas-cli] Creating ${specPath}`)
-		fs.writeFileSync(specPath, app, "utf-8")
-	}
-
-	return cid
-}
-
 function parseChainId(chain: string): [namespace: string, chainId: string] {
 	const namespaceIndex = chain.indexOf(":")
 	assert(namespaceIndex > 0, "invalid CAIP-2 chain reference")
@@ -85,9 +94,11 @@ function parseChainId(chain: string): [namespace: string, chainId: string] {
 	return [namespace, chain.slice(namespaceIndex + 1)]
 }
 
-export function getChainImplementations(args?: (string | number)[]): ChainImplementation[] {
-	const domain = "http://localhost"
-	const chains: ChainImplementation[] = []
+export async function getSigners(args?: (string | number)[]): Promise<Signer[]> {
+	// const domain = "http://localhost"
+	const signers: Signer[] = []
+
+	// TODO: add a filesystem SessionStore implementation
 
 	if (args !== undefined) {
 		for (const arg of args) {
@@ -100,49 +111,40 @@ export function getChainImplementations(args?: (string | number)[]): ChainImplem
 				// chain provided without url
 				const [namespace, chainId] = parseChainId(arg)
 				if (namespace === "eip155") {
-					chains.push(new EthereumChainImplementation(chainId === "*" ? undefined : parseInt(chainId), domain))
-				} else if (namespace === "cosmos") {
-					const [namespace, chainId, bech32Prefix] = arg.split(":")
-					chains.push(
-						new CosmosChainImplementation(
-							chainId === "*" ? "cosmoshub-1" : chainId,
-							chainId === "*" ? "cosmos" : bech32Prefix
-						)
-					)
-				} else if (namespace === "solana") {
-					chains.push(new SolanaChainImplementation())
-				} else if (namespace === "substrate") {
-					chains.push(new SubstrateChainImplementation())
-				} else if (namespace === "near") {
-					chains.push(new NearChainImplementation())
+					const signer = await SIWESigner.init({ chain: chainId === "*" ? undefined : chainId })
+					signers.push(signer)
 				} else {
 					throw new Error(`Unsupported chain ${arg}`)
 				}
 			} else {
 				// chain provided with url
 				const chain = arg.slice(0, delimiterIndex)
-				const url = arg.slice(delimiterIndex + 1)
+				// const url = arg.slice(delimiterIndex + 1)
 				const [namespace, chainId] = parseChainId(chain)
 				if (namespace === "eip155") {
-					const provider = new ethers.providers.JsonRpcProvider(url)
-					chains.push(new EthereumChainImplementation(parseInt(chainId), domain, provider))
+					// const provider = new ethers.JsonRpcProvider(url)
+					const signer = await SIWESigner.init({ chain: chainId })
+					signers.push(signer)
 				} else {
 					throw new Error(`Unsupported chain ${arg}: only eip155 chains can be passed in the CLI with RPCs`)
 				}
 			}
 		}
 	} else if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
-		const chainId = parseInt(process.env.ETH_CHAIN_ID)
-		const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_CHAIN_RPC)
-		chains.push(new EthereumChainImplementation(chainId, domain, provider))
-		console.log(
-			`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
-		)
+		const chainId = process.env.ETH_CHAIN_ID
+		const signer = await SIWESigner.init({ chain: chainId })
+		signers.push(signer)
+		// const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_CHAIN_RPC)
+		// chains.push(new EthereumChainImplementation(chainId, domain, provider))
+		// console.log(
+		// 	`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
+		// )
 	} else {
-		chains.push(new EthereumChainImplementation(1, domain))
+		const signer = await SIWESigner.init({})
+		signers.push(signer)
 	}
 
-	return chains
+	return signers
 }
 
 export function getDirectorySize(directory: string): number {

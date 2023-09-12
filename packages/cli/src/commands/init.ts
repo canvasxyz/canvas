@@ -1,50 +1,66 @@
 import fs from "node:fs"
+import path from "node:path"
 
+import chalk from "chalk"
 import type { Argv } from "yargs"
 
-export const command = "init <filename>"
-export const desc = "Create an example contract"
+import { CONTRACT_FILENAME } from "../utils.js"
+
+export const command = "init <path>"
+export const desc = "Initialize a new application"
 
 export const builder = (yargs: Argv) =>
-	yargs.positional("filename", {
-		describe: "Path to spec file to create",
+	yargs.positional("path", {
+		describe: "Path to application directory",
 		type: "string",
-		demandOption: true,
+		default: ".",
 	})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	if (fs.existsSync(args.filename)) {
-		console.log("File already exists, refusing to overwrite")
+	const location = path.resolve(args.path)
+	if (!fs.existsSync(location)) {
+		fs.mkdirSync(location, { recursive: true })
+		fs.mkdirSync(path.resolve(location, "messages"))
+		console.log(chalk.gray(`Created application directory at ${location}`))
+	}
+
+	const contractPath = path.resolve(location, CONTRACT_FILENAME)
+	if (fs.existsSync(contractPath)) {
+		console.log(chalk.gray(`Found existing contract at ${contractPath}`))
 		return
 	}
 
-	const content = `// A Canvas backend for a simple chat application.
-// Try running it using \`canvas run --unchecked\` to get started.
+	const contract = `
+// A Canvas backend for a simple chat application.
 
 export const models = {
-  posts: {
-    id: "string",
-    content: "string",
-    from_id: "string",
-    updated_at: "datetime",
-    indexes: ["updated_at"],
-  },
+	messages: {
+		content: "string",
+		address: "string",
+		timestamp: "integer",
+		$indexes: ["timestamp"],
+	},
 };
 
-export const routes = {
-  "/posts": ({ offset = 0 }, { db }) =>
-    db.queryRaw("SELECT * FROM posts ORDER BY posts.updated_at DESC LIMIT 50 OFFSET :offset", { offset })
-}
-
 export const actions = {
-  createPost({ content }, { db, hash, from, timestamp }) {
-    db.posts.set(hash, { content, from_id: from });
-  },
-};`
+	async createMessage(db, { content }, { id, chain, address, timestamp }) {
+		const messageId = [chain, address, id].join(":")
+		await db.messages.set(messageId, { content, address, timestamp });
+	},
+	async deleteMessage(db, { messageId }, { chain, address }) {
+		assert(messageId.startsWith([chain, address].join(":")))
+		await db.messages.delete(messageId);
+	},
+};
+`.trim()
 
-	fs.writeFileSync(args.filename, content)
-	console.log(`Created sample application at ${args.filename}.`)
-	console.log(`Try \`canvas run --unchecked ${args.filename}\` to get started!`)
+	fs.writeFileSync(contractPath, contract)
+	console.log(chalk.gray(`Created example contract at ${contractPath}`))
+
+	const relativeContractPath = chalk.bold(path.relative(".", contractPath))
+	const relativeLocation = path.relative(".", location)
+	const command = chalk.bold(`canvas run ${relativeLocation}`)
+	console.log(`Done! Edit the contract at ${relativeContractPath} or run \`${command}\` to get started.`)
 }
