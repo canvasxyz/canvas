@@ -16,6 +16,7 @@ import { decodeSignedMessage } from "@canvas-js/gossiplog"
 import { Canvas, CoreEvents } from "./Canvas.js"
 
 import { getErrorMessage } from "./utils.js"
+import { Signature } from "@canvas-js/signed-cid"
 
 interface Options {
 	exposeMetrics: boolean
@@ -135,21 +136,33 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 		})
 	})
 
-	// TODO: implement this
 	api.get("/messages/:topic", async (req, res) => {
-		const { gossiplog } = core.libp2p.services
+		const { gt, gte, lt, lte } = req.query
+		const limit = typeof req.query.limit === "string" ? Math.min(100, parseInt(req.query.limit)) : 100
+		assert(Number.isSafeInteger(limit) && limit > 0, "invalid `limit` query parameter")
 
-		const messages: Message[] = []
-		for await (const [id, signature, message] of gossiplog.iterate(req.params.topic, null, null, {})) {
-			messages.push(message)
+		const lowerBound =
+			typeof gt === "string"
+				? { id: gt, inclusive: false }
+				: typeof gte === "string"
+				? { id: gte, inclusive: true }
+				: null
+
+		const upperBound =
+			typeof lt === "string"
+				? { id: lt, inclusive: false }
+				: typeof lte === "string"
+				? { id: lte, inclusive: true }
+				: null
+
+		const results: { id: string; signature: Signature | null; message: Message }[] = []
+		for await (const [id, signature, message] of core.getMessageStream(req.params.topic, lowerBound, upperBound)) {
+			if (results.push({ id, signature, message }) >= limit) {
+				break
+			}
 		}
 
-		return res.status(StatusCodes.OK).json({
-			offset: 0,
-			limit: 0,
-			total: messages.length,
-			data: messages,
-		})
+		return res.status(StatusCodes.OK).json(results)
 	})
 
 	api.get("/messages/:topic/clock", async (req, res) => {
