@@ -309,9 +309,12 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	}
 
 	public async *getMessageStream<Payload = Action>(
-		topic: string = this.defaultTopic
+		topic: string = this.defaultTopic,
+		lowerBound: { id: string; inclusive: boolean } | null = null,
+		upperBound: { id: string; inclusive: boolean } | null = null,
+		options: { reverse?: boolean } = {}
 	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]> {
-		yield* this.libp2p.services.gossiplog.iterate(topic)
+		yield* this.libp2p.services.gossiplog.iterate(topic, lowerBound, upperBound, options)
 	}
 }
 
