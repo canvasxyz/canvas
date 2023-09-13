@@ -1,7 +1,6 @@
 import assert from "node:assert"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
-import { nanoid } from "nanoid"
 import { logger } from "@libp2p/logger"
 import * as json from "@ipld/dag-json"
 import * as cbor from "@ipld/dag-cbor"
@@ -13,7 +12,7 @@ import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 import { Message } from "@canvas-js/interfaces"
 import { decodeSignedMessage } from "@canvas-js/gossiplog"
 
-import { Canvas, CoreEvents } from "./Canvas.js"
+import { Canvas } from "./Canvas.js"
 
 import { getErrorMessage } from "./utils.js"
 import { Signature } from "@canvas-js/signed-cid"
@@ -246,63 +245,3 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 
 	return api
 }
-
-// const WS_KEEPALIVE = 30000
-// const WS_KEEPALIVE_LATENCY = 3000
-
-// export function handleWebsocketConnection(core: Canvas, socket: WebSocket, options: { verbose?: boolean } = {}) {
-// 	const id = nanoid(8)
-
-// 	const log = logger("canvas:api")
-
-// 	log.trace("[ws-${id}] Opened socket`")
-
-// 	let lastPing = Date.now()
-
-// 	const timer = setInterval(() => {
-// 		if (lastPing < Date.now() - (WS_KEEPALIVE + WS_KEEPALIVE_LATENCY)) {
-// 			log.error(`[ws-${id}] Closed socket on timeout`)
-// 			socket.close()
-// 		}
-// 	}, WS_KEEPALIVE)
-
-// 	const closeListener = () => socket.close()
-// 	core.addEventListener("close", closeListener)
-
-// 	const eventListener = <T>(event: CustomEvent<T> | Event) => {
-// 		log.trace(`[ws-${id}] Sent ${event.type} event`)
-// 		if (event instanceof CustomEvent) {
-// 			socket.send(JSON.stringify({ type: event.type, detail: event.detail }))
-// 		} else {
-// 			socket.send(JSON.stringify({ type: event.type }))
-// 		}
-// 	}
-
-// 	const eventTypes: (keyof CoreEvents)[] = ["update", "sync", "connect", "disconnect"]
-// 	for (const type of eventTypes) {
-// 		core.addEventListener(type, eventListener)
-// 	}
-
-// 	const unsubscribe = () => {
-// 		core.removeEventListener("close", closeListener)
-// 		for (const type of eventTypes) {
-// 			core.removeEventListener(type, eventListener)
-// 		}
-// 	}
-
-// 	socket.on("close", () => {
-// 		log.trace(`[ws-${id}] Closed socket`)
-
-// 		clearInterval(timer)
-// 		unsubscribe()
-// 	})
-
-// 	socket.on("message", (data) => {
-// 		if (Buffer.isBuffer(data) && data.toString() === "ping") {
-// 			lastPing = Date.now()
-// 			socket.send("pong")
-// 		} else {
-// 			log.error(`[ws-${id}] Received invalid message ${data}`)
-// 		}
-// 	})
-// }
