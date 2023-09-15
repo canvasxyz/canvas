@@ -34,8 +34,8 @@
   },
   "devDependencies": {
     "@ipld/car": "^5.2.2",
-    "@ipld/dag-cbor": "^9.0.4",
+    "@ipld/dag-cbor": "^9.0.5",
     "ava": "^5.3.1",
-    "multiformats": "^12.1.0"
+    "multiformats": "^12.1.1"
   }
 }
