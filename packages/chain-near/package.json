@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/chain-near",
-  "version": "0.5.0-alpha4",
+  "version": "0.6.0-alpha2",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -9,7 +9,7 @@
     "lib"
   ],
   "dependencies": {
-    "@canvas-js/interfaces": "0.5.0-alpha4",
+    "@canvas-js/interfaces": "0.6.0-alpha2",
     "bs58": "^5.0.0",
     "near-api-js": "^2.1.4",
     "safe-stable-stringify": "^2.4.3",

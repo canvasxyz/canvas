@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/gossiplog",
-  "version": "0.5.0-alpha4",
+  "version": "0.6.0-alpha2",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
@@ -42,12 +42,12 @@
     "libp2p": "^0.46.7"
   },
   "dependencies": {
-    "@canvas-js/interfaces": "0.5.0-alpha4",
+    "@canvas-js/interfaces": "0.6.0-alpha2",
     "@canvas-js/okra": "^0.1.1",
     "@canvas-js/okra-idb": "^0.1.1",
     "@canvas-js/okra-memory": "^0.1.1",
     "@canvas-js/okra-node": "^0.4.0",
-    "@canvas-js/signed-cid": "0.5.0-alpha4",
+    "@canvas-js/signed-cid": "0.6.0-alpha2",
     "@ipld/dag-cbor": "^9.0.5",
     "@ipld/dag-json": "^10.1.4",
     "@ipld/schema": "^4.2.0",

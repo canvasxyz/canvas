@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/core",
-  "version": "0.5.0-alpha4",
+  "version": "0.6.0-alpha2",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
@@ -30,17 +30,17 @@
     "test": "ava"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.5.0-alpha4",
-    "@canvas-js/discovery": "0.5.0-alpha4",
-    "@canvas-js/gossiplog": "0.5.0-alpha4",
-    "@canvas-js/interfaces": "0.5.0-alpha4",
-    "@canvas-js/modeldb": "0.5.0-alpha4",
+    "@canvas-js/chain-ethereum": "0.6.0-alpha2",
+    "@canvas-js/discovery": "0.6.0-alpha2",
+    "@canvas-js/gossiplog": "0.6.0-alpha2",
+    "@canvas-js/interfaces": "0.6.0-alpha2",
+    "@canvas-js/modeldb": "0.6.0-alpha2",
     "@canvas-js/okra": "^0.1.1",
     "@canvas-js/okra-idb": "^0.1.1",
     "@canvas-js/okra-memory": "^0.1.1",
     "@canvas-js/okra-node": "^0.4.0",
-    "@canvas-js/signed-cid": "0.5.0-alpha4",
-    "@canvas-js/vm": "0.5.0-alpha4",
+    "@canvas-js/signed-cid": "0.6.0-alpha2",
+    "@canvas-js/vm": "0.6.0-alpha2",
     "@chainsafe/libp2p-gossipsub": "^10.1.0",
     "@chainsafe/libp2p-noise": "^13.0.0",
     "@ipld/dag-cbor": "^9.0.5",
