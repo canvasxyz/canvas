@@ -184,8 +184,8 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 
 		try {
 			const [key, signature, message] = decodeSignedMessage(data)
-			const { id, result } = await core.apply(req.params.topic, signature, message)
-			return res.status(StatusCodes.OK).json({ id, result })
+			const { id } = await core.apply(req.params.topic, signature, message)
+			return res.status(StatusCodes.OK).json({ id })
 		} catch (e) {
 			console.error(e)
 			return res.status(StatusCodes.BAD_REQUEST).end()

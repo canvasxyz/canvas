@@ -3,16 +3,22 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 import PQueue from "p-queue"
 import pDefer from "p-defer"
 
-import { MemoryTree } from "@canvas-js/okra-memory"
+import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"
 import { Bound, assert } from "@canvas-js/okra"
 
-import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
+import {
+	AbstractMessageLog,
+	MessageLogInit,
+	ReadOnlyTransaction,
+	ReadWriteTransaction,
+} from "../../AbstractMessageLog.js"
 
 export default async function openMessageLog<Payload, Result>(
 	init: MessageLogInit<Payload, Result>
 ): Promise<AbstractMessageLog<Payload, Result>> {
-	const tree = await MemoryTree.open()
-	return new MessageLog(init, tree)
+	const messages = await MemoryTree.open()
+	const parents = new MemoryStore()
+	return new MessageLog(init, messages, parents)
 }
 
 class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
@@ -20,7 +26,11 @@ class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 	private readonly incomingSyncPeers = new Set<string>()
 	private readonly outgoingSyncPeers = new Set<string>()
 
-	constructor(init: MessageLogInit<Payload, Result>, private readonly tree: MemoryTree) {
+	constructor(
+		init: MessageLogInit<Payload, Result>,
+		private readonly messages: MemoryTree,
+		private readonly parents: MemoryStore
+	) {
 		super(init)
 	}
 
@@ -40,7 +50,12 @@ class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 		})
 
 		try {
-			for await (const node of this.tree.nodes(0, lowerBound ?? { key: null, inclusive: false }, upperBound, options)) {
+			for await (const node of this.messages.nodes(
+				0,
+				lowerBound ?? { key: null, inclusive: false },
+				upperBound,
+				options
+			)) {
 				assert(node.key !== null, "expected node.key !== null")
 				assert(node.value !== undefined, "expected node.value !== undefined")
 				yield [node.key, node.value]
@@ -72,7 +87,7 @@ class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 			}
 
 			try {
-				return await callback(this.tree)
+				return await callback({ messages: this.messages, parents: this.parents })
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
 			} finally {
@@ -106,7 +121,7 @@ class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 			}
 
 			try {
-				return await callback(this.tree)
+				return await callback({ messages: this.messages, parents: this.parents })
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
 				throw err

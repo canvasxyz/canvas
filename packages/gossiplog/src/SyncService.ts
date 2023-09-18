@@ -12,7 +12,7 @@ import { pipe } from "it-pipe"
 import { bytesToHex as hex } from "@noble/hashes/utils"
 
 import { Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
-import { AbstractMessageLog } from "./store/AbstractMessageLog.js"
+import { AbstractMessageLog } from "./AbstractMessageLog.js"
 
 export interface Topology {
 	min?: number

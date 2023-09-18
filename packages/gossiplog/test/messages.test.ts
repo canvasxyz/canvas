@@ -5,7 +5,7 @@ import { nanoid } from "nanoid"
 import { Message } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
 
-import openMessageLog from "@canvas-js/gossiplog/store"
+import { openMessageLog } from "@canvas-js/gossiplog"
 import { Ed25519Signer, collect } from "./utils.js"
 
 const topic = "com.example.test"

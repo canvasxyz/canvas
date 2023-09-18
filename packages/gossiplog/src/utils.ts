@@ -1,10 +1,12 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
-
 import { anySignal } from "any-signal"
+import * as cbor from "@ipld/dag-cbor"
 
 import { lessThan } from "@canvas-js/okra"
 
 export type Awaitable<T> = T | Promise<T>
+
+export const cborNull = cbor.encode(null)
 
 // Topics are restricted to NSIDs, ie /[:\-\.a-z0-9]/ characters
 export const nsidPattern = /^[a-z](?:-*[a-z0-9])*(?:\.[a-z](?:-*[a-z0-9])*)*$/
@@ -26,6 +28,18 @@ export function assert(condition: unknown, message?: string): asserts condition 
 export function signalInvalidType(type: never): never {
 	console.error(type)
 	throw new TypeError("internal error: invalid type")
+}
+
+export async function collect<I, O = I>(iter: AsyncIterable<I>, map?: (value: I) => O): Promise<O[]> {
+	const values: O[] = []
+	for await (const value of iter) {
+		if (map === undefined) {
+			values.push(value as O)
+		} else {
+			values.push(map(value))
+		}
+	}
+	return values
 }
 
 export async function wait(interval: number, options: { signal: AbortSignal }) {

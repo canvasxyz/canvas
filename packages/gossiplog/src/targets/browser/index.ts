@@ -3,14 +3,19 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 import pDefer from "p-defer"
 import { bytesToHex } from "@noble/hashes/utils"
 import { IDBPDatabase, openDB } from "idb"
-import { IDBTree } from "@canvas-js/okra-idb"
+import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
 import { Bound, assert } from "@canvas-js/okra"
 
 import openMemoryMessageLog from "../memory/index.js"
 
-import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
+import {
+	AbstractMessageLog,
+	MessageLogInit,
+	ReadOnlyTransaction,
+	ReadWriteTransaction,
+} from "../../AbstractMessageLog.js"
 
-export * from "../AbstractMessageLog.js"
+export * from "../../AbstractMessageLog.js"
 
 export default async function openMessageLog<Payload, Result>(
 	init: MessageLogInit<Payload, Result>
@@ -19,7 +24,7 @@ export default async function openMessageLog<Payload, Result>(
 		return openMemoryMessageLog(init)
 	}
 
-	const storeNames = [init.topic]
+	const storeNames = [`${init.topic}/messages`, `${init.topic}/parents`]
 	const db = await openDB(init.location, 1, {
 		upgrade: (db, oldVersion, newVersion) => {
 			for (const storeName of storeNames) {
@@ -32,9 +37,10 @@ export default async function openMessageLog<Payload, Result>(
 		},
 	})
 
-	const tree = await IDBTree.open(db, init.topic)
+	const messages = await IDBTree.open(db, `${init.topic}/messages`)
+	const parents = new IDBStore(db, `${init.topic}/parents`)
 
-	return new Messagelog(init, db, tree)
+	return new Messagelog(init, db, messages, parents)
 }
 
 class Messagelog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
@@ -46,7 +52,8 @@ class Messagelog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 	public constructor(
 		init: MessageLogInit<Payload, Result>,
 		private readonly db: IDBPDatabase,
-		private readonly tree: IDBTree
+		private readonly messages: IDBTree,
+		private readonly parents: IDBStore
 	) {
 		super(init)
 	}
@@ -75,7 +82,12 @@ class Messagelog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 		})
 
 		try {
-			for await (const node of this.tree.nodes(0, lowerBound ?? { key: null, inclusive: false }, upperBound, options)) {
+			for await (const node of this.messages.nodes(
+				0,
+				lowerBound ?? { key: null, inclusive: false },
+				upperBound,
+				options
+			)) {
 				assert(node.key !== null, "expected node.key !== null")
 				assert(node.value !== undefined, "expected node.value !== undefined")
 				yield [node.key, node.value]
@@ -114,7 +126,7 @@ class Messagelog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 			}
 
 			try {
-				result = await callback(this.tree)
+				result = await callback({ messages: this.messages, parents: this.parents })
 			} catch (err) {
 				this.log.error("error in read-only transaction: %O", err)
 			} finally {
@@ -158,7 +170,7 @@ class Messagelog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 				}
 
 				try {
-					result = await callback(this.tree)
+					result = await callback({ messages: this.messages, parents: this.parents })
 				} catch (err) {
 					this.log.error("error in read-write transaction: %O", err)
 					throw err

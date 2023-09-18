@@ -7,7 +7,7 @@ import { nanoid } from "nanoid"
 
 import { ed25519 } from "@noble/curves/ed25519"
 import { bytesToHex } from "@noble/hashes/utils"
-import { Key, Node } from "@canvas-js/okra-node"
+import { Key, Node } from "@canvas-js/okra"
 
 import { createSignature } from "@canvas-js/signed-cid"
 import { Message } from "@canvas-js/interfaces"

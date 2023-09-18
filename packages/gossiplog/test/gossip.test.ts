@@ -25,7 +25,7 @@ test("send a message from one peer to another via gossipsub", async (t) => {
 
 	const [{ message }, { result }] = await Promise.all([
 		waitForMessageDelivery(t, network, (id, signature, message) => message.payload === payload),
-		network.a.services.gossiplog.publish(topic, payload),
+		network.a.services.gossiplog.append(topic, payload),
 	])
 
 	t.is(result, undefined)
@@ -52,8 +52,8 @@ test("deliver two concurrent messages to two peers via gossipsub", async (t) => 
 	const [{ message: messageA }, { message: messageB }] = await Promise.all([
 		waitForMessageDelivery(t, network, (id, signature, message) => message.payload === payloadA),
 		waitForMessageDelivery(t, network, (id, signature, message) => message.payload === payloadB),
-		network.a.services.gossiplog.publish(topic, payloadA),
-		network.b.services.gossiplog.publish(topic, payloadB),
+		network.a.services.gossiplog.append(topic, payloadA),
+		network.b.services.gossiplog.append(topic, payloadB),
 	])
 
 	t.is(messageA.clock, 1)
@@ -81,7 +81,7 @@ test("exchange serial messages between two peers via gossipsub", async (t) => {
 
 	const [{ id: idA, message: messageA }] = await Promise.all([
 		waitForMessageDelivery(t, network, (id, signature, message) => message.payload === payloadA),
-		network.a.services.gossiplog.publish(topic, payloadA),
+		network.a.services.gossiplog.append(topic, payloadA),
 	])
 
 	t.is(messageA.clock, 1)
@@ -89,7 +89,7 @@ test("exchange serial messages between two peers via gossipsub", async (t) => {
 
 	const [{ id: idB, message: messageB }] = await Promise.all([
 		waitForMessageDelivery(t, network, (id, signature, message) => message.payload === payloadB),
-		network.b.services.gossiplog.publish(topic, payloadB),
+		network.b.services.gossiplog.append(topic, payloadB),
 	])
 
 	t.is(messageB.clock, 2)

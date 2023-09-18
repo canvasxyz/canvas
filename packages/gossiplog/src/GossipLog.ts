@@ -8,13 +8,13 @@ import { EventEmitter } from "@libp2p/interface/events"
 
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
-import { bytesToHex } from "@noble/hashes/utils"
 
 import type { Node } from "@canvas-js/okra"
 import type { Signature } from "@canvas-js/signed-cid"
 import type { IPLDValue, Message } from "@canvas-js/interfaces"
 
-import openMessageLog, { AbstractMessageLog, MessageSigner } from "#store"
+import { AbstractMessageLog, MessageSigner } from "./AbstractMessageLog.js"
+import openMessageLog from "#target"
 
 import { decodeId } from "./schema.js"
 import { SyncService, SyncOptions } from "./SyncService.js"
@@ -169,16 +169,17 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 		}
 	}
 
-	public async publish<Payload, Result>(
+	public async append<Payload, Result>(
 		topic: string,
 		payload: Payload,
 		options: { signer?: MessageSigner<Payload> } = {}
 	): Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }> {
 		const messages = this.#messages.get(topic) as AbstractMessageLog<Payload, Result> | undefined
 		assert(messages !== undefined, "no subscription for topic")
-		const { id, value, result } = await messages.append(payload, options)
+		const { id, signature, message, result } = await messages.append(payload, options)
 
 		if (this.#started) {
+			const [_, value] = messages.encode(signature, message)
 			const recipients = this.#pubsub.publish(topic, value).then(
 				({ recipients }) => {
 					this.log("published message %s to %d recipients %O", id, recipients.length, recipients)
@@ -196,31 +197,29 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 		}
 	}
 
-	public async apply<Payload, Result = unknown>(
+	public async insert<Payload, Result = unknown>(
 		topic: string,
 		signature: Signature | null,
 		message: Message<Payload>
-	): Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }> {
+	): Promise<{ id: string }> {
 		const messages = this.#messages.get(topic) as AbstractMessageLog<Payload, Result> | undefined
 		assert(messages !== undefined, "topic not found")
-		const { id, result, value } = await messages.insert(signature, message)
+		const { id } = await messages.insert(signature, message)
 
 		if (this.#started) {
-			const recipients = this.#pubsub.publish(topic, value).then(
+			const [key, value] = messages.encode(signature, message)
+			const id = decodeId(key)
+			this.#pubsub.publish(topic, value).then(
 				({ recipients }) => {
 					this.log("published message %s to %d recipients %O", id, recipients.length, recipients)
-					return recipients
 				},
 				(err) => {
 					this.log.error("failed to publish event: %O", err)
-					return []
 				}
 			)
-
-			return { id, result, recipients }
-		} else {
-			return { id, result, recipients: Promise.resolve([]) }
 		}
+
+		return { id }
 	}
 
 	public getTopics() {
@@ -255,15 +254,8 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 		const [key, signature, message] = messages.decode(data)
 		const id = decodeId(key)
 
-		this.log("received message %s via gossipsub", id)
-
-		// TODO: check if the message's parents exist, and mempool the message if any don't.
-
-		const { result, root } = await messages.insert(signature, message)
-		this.log("applied message %s and got result %o", id, result)
-		this.log("committed new root %s", bytesToHex(root.hash))
-		// this.dispatchEvent(new CustomEvent("commit", { detail: { topic, root } }))
-		// this.dispatchEvent(new CustomEvent("message", { detail: { topic, id, signature, message, result } }))
+		this.log("received message %s via gossipsub on %s", id, topic)
+		await messages.insert(signature, message)
 	}
 }
 

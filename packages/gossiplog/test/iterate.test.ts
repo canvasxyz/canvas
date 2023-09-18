@@ -2,7 +2,7 @@ import test from "ava"
 
 import type { Message } from "@canvas-js/interfaces"
 
-import openMessageLog from "@canvas-js/gossiplog/store"
+import { openMessageLog } from "@canvas-js/gossiplog"
 import { collect } from "./utils.js"
 
 const validate = (payload: unknown): payload is string => typeof payload === "string"

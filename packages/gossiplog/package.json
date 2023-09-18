@@ -13,23 +13,12 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "sideEffects": false,
-  "exports": {
-    ".": "./lib/index.js",
-    "./store": {
-      "node": "./lib/store/node/index.js",
-      "browser": "./lib/store/browser/index.js",
-      "default": "./lib/store/default/index.js"
-    }
-  },
   "imports": {
     "#protocols/sync": "./lib/protocols/sync.js",
-    "#store/node": "./lib/store/node/index.js",
-    "#store/browser": "./lib/store/browser/index.js",
-    "#store/memory": "./lib/store/memory/index.js",
-    "#store": {
-      "node": "./lib/store/node/index.js",
-      "browser": "./lib/store/browser/index.js",
-      "default": "./lib/store/default/index.js"
+    "#target": {
+      "node": "./lib/targets/node/index.js",
+      "browser": "./lib/targets/browser/index.js",
+      "default": "./lib/targets/default/index.js"
     }
   },
   "scripts": {
@@ -43,10 +32,10 @@
   },
   "dependencies": {
     "@canvas-js/interfaces": "0.5.0-alpha4",
-    "@canvas-js/okra": "^0.1.1",
-    "@canvas-js/okra-idb": "^0.1.1",
-    "@canvas-js/okra-memory": "^0.1.1",
-    "@canvas-js/okra-node": "^0.4.0",
+    "@canvas-js/okra": "^0.2.0",
+    "@canvas-js/okra-idb": "^0.2.0",
+    "@canvas-js/okra-memory": "^0.2.0",
+    "@canvas-js/okra-node": "^0.5.2",
     "@canvas-js/signed-cid": "0.5.0-alpha4",
     "@ipld/dag-cbor": "^9.0.5",
     "@ipld/dag-json": "^10.1.4",
@@ -64,7 +53,7 @@
     "it-pipe": "^3.0.1",
     "it-stream-types": "^2.0.1",
     "multiformats": "^12.1.1",
-    "nanoid": "^4.0.2",
+    "nanoid": "^5.0.1",
     "p-queue": "^7.4.1",
     "protons-runtime": "^5.0.2",
     "uint8arraylist": "^2.4.3",
@@ -75,7 +64,7 @@
     "@libp2p/bootstrap": "^9.0.5",
     "@libp2p/mplex": "^9.0.5",
     "@libp2p/peer-id-factory": "^3.0.3",
-    "@libp2p/tcp": "^8.0.5",
+    "@libp2p/tcp": "^8.0.6",
     "libp2p": "^0.46.7",
     "p-defer": "^4.0.0",
     "protons": "^7.0.5"

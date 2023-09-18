@@ -129,7 +129,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				const session = await signer.getSession()
 				const timestamp = Date.now()
 				const action: Action = { chain, address, session, name, args, topic, timestamp, blockhash: null }
-				const { id, result, recipients } = await gossiplog.publish<Action, void | JSValue>(topic, action, { signer })
+				const { id, result, recipients } = await gossiplog.append<Action, void | JSValue>(topic, action, { signer })
 				return { id, result, recipients }
 			}
 		}
@@ -155,7 +155,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				assert(topic !== undefined, "raw actions must have an explicit topic")
 				customActionHandles[topic] = applyHandle.consume(vm.cache)
 				actions[name] = async (args: ActionArguments) => {
-					const { id, result, recipients } = await gossiplog.publish<JSValue, JSValue>(topic, args)
+					const { id, result, recipients } = await gossiplog.append<JSValue, JSValue>(topic, args)
 					return { id, result, recipients }
 				}
 			} else {
@@ -298,14 +298,10 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 	/**
 	 * Low-level apply function for internal/debugging use.
-	 * The normal way to apply actions is to use the Canvas.actions[name](...) functions!
+	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async apply(
-		topic: string,
-		signature: Signature | null,
-		message: Message
-	): Promise<{ id: string; result: unknown; recipients: Promise<PeerId[]> }> {
-		return await this.libp2p.services.gossiplog.apply(topic, signature, message)
+	public async apply(topic: string, signature: Signature | null, message: Message): Promise<{ id: string }> {
+		return await this.libp2p.services.gossiplog.insert(topic, signature, message)
 	}
 
 	public async *getMessageStream<Payload = Action>(
