@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat-advanced",
-  "version": "0.5.0-alpha4",
+  "version": "0.6.0-alpha2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -13,8 +13,8 @@
     "dev": "concurrently --kill-others -n backend,frontend 'npm run dev:backend' 'npm run dev:frontend'"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.5.0-alpha4",
-    "@canvas-js/cli": "0.5.0-alpha4",
+    "@canvas-js/chain-ethereum": "0.6.0-alpha2",
+    "@canvas-js/cli": "0.6.0-alpha2",
     "@canvas-js/hooks": "0.5.0-alpha4",
     "@types/react": "^18.2.21",
     "@types/react-dom": "^18.2.7",
