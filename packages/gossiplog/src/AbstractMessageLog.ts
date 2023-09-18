@@ -4,6 +4,7 @@ import type { Source, Target, Node, Bound, KeyValueStore, Entry } from "@canvas-
 import { CustomEvent, EventEmitter } from "@libp2p/interfaces/events"
 import { Logger, logger } from "@libp2p/logger"
 import { equals } from "uint8arrays"
+import { bytesToHex as hex } from "@noble/hashes/utils"
 
 import type { Message } from "@canvas-js/interfaces"
 import { Signature, verifySignature } from "@canvas-js/signed-cid"
@@ -11,7 +12,6 @@ import { Signature, verifySignature } from "@canvas-js/signed-cid"
 import { KEY_LENGTH, decodeId, decodeSignedMessage, encodeId, encodeSignedMessage, getClock } from "./schema.js"
 import { Driver } from "./sync/driver.js"
 import { Awaitable, assert, nsidPattern, cborNull } from "./utils.js"
-import { bytesToHex } from "@noble/hashes/utils"
 
 export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
@@ -197,13 +197,14 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 			const [key, value] = this.encode(signature, message)
 
 			const id = decodeId(key)
+			this.log("appending message %s", id)
 			const result = await this.#apply(txn, id, signature, message, [key, value])
 			const root = await txn.messages.getRoot()
 			return { id, signature, message, result, root }
 		})
 
 		this.dispatchEvent(new CustomEvent("commit", { detail: root }))
-		this.log("commited root %s", bytesToHex(root.hash))
+		this.log("commited root %s", hex(root.hash))
 		return { id, signature, message, result }
 	}
 
@@ -216,19 +217,29 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 			const [key, value] = this.encode(signature, message)
 			const id = decodeId(key)
 
+			this.log("inserting message %s", id)
+
 			const dependencies = new Set<string>()
+			this.log("looking up %s parents", message.parents.length)
 			for (const parentId of message.parents) {
 				const parent = await txn.messages.get(encodeId(parentId))
 				if (parent === null) {
+					this.log("missing parent %s", parentId)
 					dependencies.add(parentId)
+				} else {
+					this.log("found parent %s", parentId)
 				}
 			}
 
 			if (dependencies.size > 0) {
-				this.log("missing %d/%d parents for message %s", dependencies.size, message.parents.length, id)
+				this.log("missing %d/%d parents", dependencies.size, message.parents.length)
+				this.log("mempool.messages.set(%s, ...)", id)
 				this.mempool.messages.set(id, { signature, message })
+				this.log("mempool.dependencies.set(%s, %o)", id, dependencies)
 				this.mempool.dependencies.set(id, dependencies)
+
 				for (const parent of dependencies) {
+					this.log("mempool.children[%s].add(%s)", parent, id)
 					const children = this.mempool.children.get(parent)
 					if (children === undefined) {
 						this.mempool.children.set(parent, new Set([id]))
@@ -237,7 +248,6 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 					}
 				}
 
-				this.log("added %s to mempool", id)
 				return { id }
 			}
 
@@ -248,7 +258,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 
 		if (root !== undefined) {
 			this.dispatchEvent(new CustomEvent("commit", { detail: root }))
-			this.log("commited root %s", bytesToHex(root.hash))
+			this.log("commited root %s", hex(root.hash))
 		}
 
 		return { id }
@@ -274,6 +284,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 			}
 
 			const children = this.mempool.children.get(id)
+			this.log("%s has mempool children %o", id, children)
 			if (children !== undefined) {
 				for (const childId of children) {
 					const dependencies = this.mempool.dependencies.get(childId)
@@ -281,7 +292,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 					const signedMessage = this.mempool.messages.get(childId)
 					assert(signedMessage !== undefined, "expected signedMessage !== undefined")
 
-					dependencies.delete(childId)
+					dependencies.delete(id)
 					if (dependencies.size === 0) {
 						this.mempool.dependencies.delete(childId)
 						this.mempool.messages.delete(childId)
@@ -329,7 +340,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 
 		this.dispatchEvent(new CustomEvent("sync", { detail: { peerId: sourcePeerId } }))
 		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
-		this.log("commited root %s", bytesToHex(root.hash))
+		this.log("commited root %s", hex(root.hash))
 		return { root }
 	}
 
