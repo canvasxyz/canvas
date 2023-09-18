@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import equal from "fast-deep-equal/es6"
+import equal from "fast-deep-equal/es6/index.js"
 
 import type { ModelValue, QueryParams } from "../types.js"
 import { AbstractModelDB } from "../AbstractModelDB.js"
