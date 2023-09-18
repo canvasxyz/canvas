@@ -27,20 +27,9 @@ export const actions = {
 		await db.posts.delete(key)
   },
 
-	hello: {
-		topic: "com.example.hello",
-		apply: async (db, {}, { chain, address }) => {
-			console.log("hello from", [chain, address].join(":"))
-		}
-	},
-
-	custom: {
-		raw: true,
-		topic: "com.example.custom",
-		apply: async (db, value, { id }) => {
-			return value + 1
-		}
-	},
+	async hello(db, args, { chain, address }) {
+		console.log("hello from", [chain, address].join(":"))
+	}
 };
 `.trim()
 
@@ -92,14 +81,5 @@ test("log a message", async (t) => {
 
 	const { chain, address } = app.signers[0]
 	t.deepEqual(messages, [["hello from", [chain, address].join(":")]])
-	t.pass()
-})
-
-test("call a custom action", async (t) => {
-	const app = await Canvas.initialize({ contract, offline: true })
-	t.teardown(() => app.close())
-
-	const { result } = await app.actions.custom(5)
-	t.is(result, 6)
 	t.pass()
 })

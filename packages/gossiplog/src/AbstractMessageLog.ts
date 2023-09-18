@@ -16,13 +16,11 @@ import { Awaitable, assert, nsidPattern, cborNull } from "./utils.js"
 export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
 	parents: Omit<KeyValueStore, "set" | "delete">
-	// mempool: Omit<KeyValueStore, "set" | "delete">
 }
 
 export interface ReadWriteTransaction {
 	messages: KeyValueStore & Target
 	parents: KeyValueStore
-	// mempool: KeyValueStore
 }
 
 export interface MessageLogInit<Payload = unknown, Result = void> {

@@ -9,16 +9,11 @@ import { getContractLocation } from "../utils.js"
 export const command = "export <path>"
 export const desc = "Export the messages in a topic as dag-json to stdout"
 export const builder = (yargs: Argv) =>
-	yargs
-		.positional("path", {
-			describe: "Path to application directory",
-			type: "string",
-			demandOption: true,
-		})
-		.option("topic", {
-			type: "string",
-			desc: "Message topic (defaults to root topic)",
-		})
+	yargs.positional("path", {
+		describe: "Path to application directory",
+		type: "string",
+		demandOption: true,
+	})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
@@ -29,8 +24,7 @@ export async function handler(args: Args) {
 	}
 
 	const app = await Canvas.initialize({ contract, location, uri, offline: true })
-	const topic = args.topic ?? app.defaultTopic
-	for await (const [id, signature, message] of app.getMessageStream(topic)) {
+	for await (const [id, signature, message] of app.getMessageStream()) {
 		process.stdout.write(json.format([id, signature, message]))
 		process.stdout.write("\n")
 	}

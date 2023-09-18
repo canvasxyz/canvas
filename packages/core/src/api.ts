@@ -127,15 +127,14 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 		})
 	}
 
+	// TODO: replace this with ApplicationData
 	api.get("/topics", async (req, res) => {
-		const { gossiplog } = core.libp2p.services
-
 		return res.status(StatusCodes.OK).json({
-			data: gossiplog.getTopics().sort(),
+			data: [core.topic],
 		})
 	})
 
-	api.get("/messages/:topic", async (req, res) => {
+	api.get("/messages", async (req, res) => {
 		const { gt, gte, lt, lte } = req.query
 		const limit = typeof req.query.limit === "string" ? Math.min(100, parseInt(req.query.limit)) : 100
 		assert(Number.isSafeInteger(limit) && limit > 0, "invalid `limit` query parameter")
@@ -155,7 +154,7 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 				: null
 
 		const results: { id: string; signature: Signature | null; message: Message }[] = []
-		for await (const [id, signature, message] of core.getMessageStream(req.params.topic, lowerBound, upperBound)) {
+		for await (const [id, signature, message] of core.getMessageStream(lowerBound, upperBound)) {
 			if (results.push({ id, signature, message }) >= limit) {
 				break
 			}
@@ -164,13 +163,13 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 		return res.status(StatusCodes.OK).json(results)
 	})
 
-	api.get("/messages/:topic/clock", async (req, res) => {
+	api.get("/clock", async (req, res) => {
 		const { gossiplog } = core.libp2p.services
-		const [clock, parents] = await gossiplog.getClock(req.params.topic)
+		const [clock, parents] = await gossiplog.getClock(core.topic)
 		return res.status(StatusCodes.OK).json({ clock, parents })
 	})
 
-	api.post("/messages/:topic", async (req, res) => {
+	api.post("/messages", async (req, res) => {
 		let data: Uint8Array | null = null
 		if (req.headers["content-type"] === "application/json") {
 			data = cbor.encode(json.parse(JSON.stringify(req.body)))
@@ -184,7 +183,7 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 
 		try {
 			const [key, signature, message] = decodeSignedMessage(data)
-			const { id } = await core.apply(req.params.topic, signature, message)
+			const { id } = await core.apply(signature, message)
 			return res.status(StatusCodes.OK).json({ id })
 		} catch (e) {
 			console.error(e)

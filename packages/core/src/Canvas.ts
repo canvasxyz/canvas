@@ -24,7 +24,7 @@ import { getCID, Signature } from "@canvas-js/signed-cid"
 import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
-import { assert, mapEntries, mapKeys, mapValues, signalInvalidType } from "./utils.js"
+import { assert, mapEntries, mapValues, signalInvalidType } from "./utils.js"
 import { lessThan } from "@canvas-js/okra"
 
 export interface CanvasConfig extends P2PConfig {
@@ -77,7 +77,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		// TODO: rethink "default topics" because they're kinda suss
 		const cid = getCID(contract, { codec: "raw", digest: "blake3-128" })
 		const uri = config.uri ?? `canvas:${cid.toString()}`
-		const defaultTopic = config.topic ?? cid.toString()
+		const topic = config.topic ?? cid.toString()
 
 		if (signers.length === 0) {
 			const signer = await SIWESigner.init({})
@@ -112,16 +112,11 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		const db = await target.openDB(models, { resolver })
 
 		// { [name]: ActionAPI }
+		const actionHandles: Record<string, QuickJSHandle> = {}
 		const actions: Record<string, ActionAPI> = {}
-
-		// { [topic]: { [name]: handle } }
-		const actionHandles: Record<string, Record<string, QuickJSHandle>> = {}
-		const addActionHandle = (topic: string, name: string, handle: QuickJSHandle) => {
-			if (actionHandles[topic] === undefined) {
-				actionHandles[topic] = {}
-			}
-
-			actionHandles[topic][name] = handle
+		for (const [name, handle] of Object.entries(actionsHandle.consume(vm.unwrapObject))) {
+			assert(vm.context.typeof(handle) === "function", "expected action[name] to be a function")
+			actionHandles[name] = handle.consume(vm.cache)
 			actions[name] = async (args, options = {}) => {
 				const signer = signers.find((signer) => options.chain === undefined || signer.match(options.chain))
 				assert(signer !== undefined, "signer not found")
@@ -134,113 +129,51 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		// { [topic]: handle }
-		const customActionHandles: Record<string, QuickJSHandle> = {}
+		// const actions: Record<string, ActionAPI> = mapEntries(actionHandles, ([name, handle]) => {
 
-		for (const [name, handle] of Object.entries(actionsHandle.consume(vm.unwrapObject))) {
-			if (vm.context.typeof(handle) === "function") {
-				addActionHandle(defaultTopic, name, handle.consume(vm.cache))
-				continue
-			}
-
-			const { topic: topicHandle, raw: rawHandle, apply: applyHandle, ...rest } = handle.consume(vm.unwrapObject)
-			Object.values(rest).forEach((handle) => handle.dispose())
-
-			const topic: string | undefined = topicHandle?.consume(vm.context.getString)
-			const raw: boolean | undefined = rawHandle?.consume(vm.getBoolean)
-
-			assert(vm.context.typeof(applyHandle) === "function", "missing actions[name].apply function")
-
-			if (raw ?? false) {
-				assert(topic !== undefined, "raw actions must have an explicit topic")
-				customActionHandles[topic] = applyHandle.consume(vm.cache)
-				actions[name] = async (args: ActionArguments) => {
-					const { id, result, recipients } = await gossiplog.append<JSValue, JSValue>(topic, args)
-					return { id, result, recipients }
-				}
-			} else {
-				addActionHandle(topic ?? defaultTopic, name, applyHandle.consume(vm.cache))
-			}
-		}
-
-		// { [topic]: { actions: [name][] } }
-		const topics: Record<string, { actions: string[] | null }> = mapValues(actionHandles, (actions) => {
-			return { actions: Object.keys(actions) }
-		})
-
-		for (const topic of Object.keys(customActionHandles)) {
-			topics[topic] = { actions: null }
-		}
+		// })
 
 		const databaseAPI = new DatabaseAPI(vm, db)
 
-		for (const [topic, actions] of Object.entries(actionHandles)) {
-			const apply = async (id: string, signature: Signature | null, message: Message<Action>) => {
-				assert(signature !== null, "missing message signature")
+		const apply = async (id: string, signature: Signature | null, message: Message<Action>) => {
+			assert(signature !== null, "missing message signature")
 
-				const { chain, address, session, name, args, ...context } = message.payload
+			const { chain, address, session, name, args, ...context } = message.payload
 
-				const signer = signers.find((signer) => signer.match(chain))
-				assert(signer !== undefined, `no signer provided for chain ${chain}`)
-				await signer.verifySession(signature, chain, address, session)
+			const signer = signers.find((signer) => signer.match(chain))
+			assert(signer !== undefined, `no signer provided for chain ${chain}`)
+			await signer.verifySession(signature, chain, address, session)
 
-				assert(actions[name] !== undefined, `invalid action name: ${name}`)
+			assert(actions[name] !== undefined, `invalid action name: ${name}`)
 
-				const { result, effects } = await databaseAPI.collect(async () => {
-					const argsHandle = vm.wrapValue(args)
-					const ctxHandle = vm.wrapValue({ id, chain, address, ...context })
-					try {
-						const result = await vm.callAsync(actions[name], actions[name], [databaseAPI.handle, argsHandle, ctxHandle])
-						return result.consume((handle) => {
-							if (vm.context.typeof(handle) === "undefined") {
-								return undefined
-							} else {
-								return vm.unwrapValue(result)
-							}
-						})
-					} finally {
-						argsHandle.dispose()
-						ctxHandle.dispose()
-					}
-				})
-
-				await db.apply(effects, { version: base32hex.baseDecode(id) })
-
-				return result
-			}
-
-			const validate = (payload: unknown): payload is Action => true // TODO
-			await gossiplog.subscribe(topic, { apply, validate, signatures: true, sequencing: true })
-		}
-
-		for (const [topic, handle] of Object.entries(customActionHandles)) {
-			const apply = async (id: string, signature: Signature | null, message: Message<JSValue>) => {
-				assert(signature === null, "expected signature === null")
-				assert(message.clock === 0 && message.parents.length === 0, "expected message.clock === 0")
-				assert(message.parents.length === 0, "expected message.parents.length === 0")
-
-				const payloadHandle = vm.wrapValue(message.payload)
-				const contextHandle = vm.wrapObject({ id: vm.context.newString(id) })
+			const { result, effects } = await databaseAPI.collect(async () => {
+				const argsHandle = vm.wrapValue(args)
+				const ctxHandle = vm.wrapValue({ id, chain, address, ...context })
 				try {
-					const resultHandle = await vm.callAsync(handle, handle, [databaseAPI.handle, payloadHandle, contextHandle])
-					return resultHandle.consume((handle) => {
+					const handle = actionHandles[name]
+					const result = await vm.callAsync(handle, handle, [databaseAPI.handle, argsHandle, ctxHandle])
+					return result.consume((handle) => {
 						if (vm.context.typeof(handle) === "undefined") {
 							return undefined
 						} else {
-							return vm.unwrapValue(resultHandle)
+							return vm.unwrapValue(result)
 						}
 					})
 				} finally {
-					payloadHandle.dispose()
-					contextHandle.dispose()
+					argsHandle.dispose()
+					ctxHandle.dispose()
 				}
-			}
+			})
 
-			const validate = (payload: unknown): payload is JSValue => true // TODO
-			await gossiplog.subscribe(topic, { apply, validate, signatures: false, sequencing: false })
+			await db.apply(effects, { version: base32hex.baseDecode(id) })
+
+			return result
 		}
 
-		return new Canvas(uri, signers, libp2p, vm, db, actions, topics, defaultTopic)
+		const validate = (payload: unknown): payload is Action => true // TODO
+		await gossiplog.subscribe(topic, { apply, validate, signatures: true, sequencing: true })
+
+		return new Canvas(uri, topic, signers, libp2p, vm, db, actions)
 	}
 
 	private readonly controller = new AbortController()
@@ -248,13 +181,12 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 	private constructor(
 		public readonly uri: string,
+		public readonly topic: string,
 		public readonly signers: Signer[],
 		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly vm: VM,
 		public readonly db: AbstractModelDB,
-		public readonly actions: Record<string, ActionAPI>,
-		public readonly topics: Record<string, { actions: string[] | null }>,
-		public readonly defaultTopic: string
+		public readonly actions: Record<string, ActionAPI>
 	) {
 		super()
 
@@ -282,7 +214,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			uri: this.uri,
 			peerId: this.peerId.toString(),
 			models: this.db.models,
-			topics: this.topics,
+			topics: { [this.topic]: { actions: Object.keys(this.actions) } },
 		}
 	}
 
@@ -300,17 +232,16 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	 * Low-level apply function for internal/debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async apply(topic: string, signature: Signature | null, message: Message): Promise<{ id: string }> {
-		return await this.libp2p.services.gossiplog.insert(topic, signature, message)
+	public async apply(signature: Signature | null, message: Message): Promise<{ id: string }> {
+		return await this.libp2p.services.gossiplog.insert(this.topic, signature, message)
 	}
 
 	public async *getMessageStream<Payload = Action>(
-		topic: string = this.defaultTopic,
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {}
 	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]> {
-		yield* this.libp2p.services.gossiplog.iterate(topic, lowerBound, upperBound, options)
+		yield* this.libp2p.services.gossiplog.iterate(this.topic, lowerBound, upperBound, options)
 	}
 }
 

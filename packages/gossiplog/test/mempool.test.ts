@@ -1,12 +1,9 @@
 import test from "ava"
 
-import { nanoid } from "nanoid"
-
 import { Message } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
 
 import { decodeId, openMessageLog } from "@canvas-js/gossiplog"
-import { Ed25519Signer, collect } from "./utils.js"
 
 test("insert messages out-of-order", async (t) => {
 	const results: { id: string; payload: string }[] = []
