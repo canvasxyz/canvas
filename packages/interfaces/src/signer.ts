@@ -16,7 +16,7 @@ export interface Signer {
 	/** Verify that `session` authorizes `signature.publicKey` to take actions on behalf of the user */
 	verifySession: (signature: Signature, chain: string, address: string, session: SessionPayload) => Awaitable<void>
 
-	getSession: () => Awaitable<SessionPayload>
+	getSession: () => SessionPayload
 
 	sign: (message: Message<Action>) => Awaitable<Signature>
 }

@@ -124,7 +124,7 @@ export class SubstrateSigner implements Signer {
 		}
 	}
 
-	public async getSession(): Promise<IPLDValue> {
+	public getSession(): IPLDValue {
 		return { data: this.session.data, signature: hexToU8a(this.session.signature) }
 	}
 
