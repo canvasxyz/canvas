@@ -45,22 +45,23 @@ function parseChainId(chain: string): string {
 
 export class SubstrateSigner implements Signer {
 	public static async initWithExtension({ extension, address }: SubstrateSignerInit): Promise<Signer> {
-		if (extension === undefined) throw new Error("Invalid signer - no extension exists")
+		if (extension === undefined) {
+			throw new Error("Invalid signer - no extension exists")
+		}
 
 		const genesisHash = "0x91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3"
 		const chainId = genesisHash.slice(2, 34)
-		const session = await generateNewSession(
-			address,
-			async (data: Uint8Array) => {
-				if (extension.signer.signRaw === undefined) throw new Error("Invalid signer - no signRaw method exists")
-				const result = await extension.signer.signRaw({ address, data: u8aToHex(data), type: "bytes" })
-				return result.signature
-			},
-			chainId
-		)
+		const session = await generateNewSession(chainId, address, async (data: Uint8Array) => {
+			if (extension.signer.signRaw === undefined) {
+				throw new Error("Invalid signer - no signRaw method exists")
+			}
+
+			const { signature } = await extension.signer.signRaw({ address, data: u8aToHex(data), type: "bytes" })
+			return signature
+		})
 		const chain = `polkadot:${chainId}`
 
-		return new SubstrateSigner(address, chain, session)
+		return new SubstrateSigner(chain, address, session)
 	}
 
 	public static async initWithKeypair(): Promise<Signer> {
@@ -72,16 +73,16 @@ export class SubstrateSigner implements Signer {
 		const genesisHash = "0x91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3"
 		const chainId = genesisHash.slice(2, 34)
 
-		const session = await generateNewSession(address, async (data: Uint8Array) => u8aToHex(keypair.sign(data)), chainId)
+		const session = await generateNewSession(chainId, address, async (data: Uint8Array) => u8aToHex(keypair.sign(data)))
 
 		const chain = `polkadot:${chainId}`
 
-		return new SubstrateSigner(address, chain, session)
+		return new SubstrateSigner(chain, address, session)
 	}
 
 	private constructor(
-		public readonly address: string,
 		public readonly chain: string,
+		public readonly address: string,
 		private readonly session: { data: SubstrateSessionData; signature: string; privateKey: Uint8Array }
 	) {}
 
@@ -138,9 +139,9 @@ function getSessionURI(chain: string, address: string): string {
 }
 
 async function generateNewSession(
+	chainId: string,
 	address: string,
 	sign: (message: Uint8Array) => Promise<string>,
-	chainId: string,
 	sessionDuration?: number
 ): Promise<{ data: SubstrateSessionData; signature: string; privateKey: Uint8Array }> {
 	const privateKey = ed25519.utils.randomPrivateKey()
@@ -149,8 +150,8 @@ async function generateNewSession(
 	const issuedAt = new Date()
 
 	const data: SubstrateSessionData = {
-		address,
 		chainId,
+		address,
 		uri: getSessionURI(chainId, sessionAddress),
 		issuedAt: issuedAt.toISOString(),
 		expirationTime: null,

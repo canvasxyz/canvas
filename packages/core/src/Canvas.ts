@@ -45,7 +45,7 @@ export interface CanvasConfig extends P2PConfig {
 
 export type ActionAPI = (
 	args: ActionArguments,
-	options?: { chain?: string }
+	options?: { chain?: string; signer?: Signer }
 ) => Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }>
 
 export interface CoreEvents {
@@ -107,18 +107,17 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		// TODO: validate that models satisfies ModelsInit
 		const models = modelsHandle.consume(vm.context.dump) as ModelsInit
 
-		// our version strings always sort lexicographically
 		const resolver: Resolver = { lessThan: (a, b) => lessThan(a.version, b.version) }
 		const db = await target.openDB(models, { resolver })
 
-		// { [name]: ActionAPI }
 		const actionHandles: Record<string, QuickJSHandle> = {}
 		const actions: Record<string, ActionAPI> = {}
 		for (const [name, handle] of Object.entries(actionsHandle.consume(vm.unwrapObject))) {
 			assert(vm.context.typeof(handle) === "function", "expected action[name] to be a function")
 			actionHandles[name] = handle.consume(vm.cache)
 			actions[name] = async (args, options = {}) => {
-				const signer = signers.find((signer) => options.chain === undefined || signer.match(options.chain))
+				const signer =
+					options.signer ?? signers.find((signer) => options.chain === undefined || signer.match(options.chain))
 				assert(signer !== undefined, "signer not found")
 				const { chain, address } = signer
 				const session = await signer.getSession()
@@ -128,10 +127,6 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				return { id, result, recipients }
 			}
 		}
-
-		// const actions: Record<string, ActionAPI> = mapEntries(actionHandles, ([name, handle]) => {
-
-		// })
 
 		const databaseAPI = new DatabaseAPI(vm, db)
 

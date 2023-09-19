@@ -43,19 +43,19 @@ export class SIWESigner implements Signer {
 
 		const { sessionDuration, store } = init
 		if (store !== undefined) {
-			const privateSessionData = await store.load(address, chain)
+			const privateSessionData = await store.load(chain, address)
 			if (privateSessionData !== null) {
 				const session = JSON.parse(privateSessionData)
-				return new SIWESigner(address, chain, session, { sessionDuration, store })
+				return new SIWESigner(chain, address, session, { sessionDuration, store })
 			}
 		}
 
 		const session = await generateNewSession(signer, chainId, sessionDuration)
 		if (store !== undefined) {
-			await store.save(address, chain, JSON.stringify(session))
+			await store.save(chain, address, JSON.stringify(session))
 		}
 
-		return new SIWESigner(address, chain, session, { sessionDuration, store })
+		return new SIWESigner(chain, address, session, { sessionDuration, store })
 	}
 
 	public static validateSessionPayload = (session: SessionPayload): session is SIWESession => {
@@ -75,8 +75,8 @@ export class SIWESigner implements Signer {
 	}
 
 	private constructor(
-		public readonly address: string,
 		public readonly chain: string,
+		public readonly address: string,
 
 		private readonly session: { data: SIWESessionData; signature: string; privateKey: string },
 		private readonly options: { sessionDuration?: number; store?: SessionStore }
@@ -85,7 +85,7 @@ export class SIWESigner implements Signer {
 	public readonly match = (chain: string) => chainPattern.test(chain)
 
 	private async save() {
-		await this.options.store?.save(this.address, this.chain, JSON.stringify(this.session))
+		await this.options.store?.save(this.chain, this.address, JSON.stringify(this.session))
 	}
 
 	public verifySession(signature: Signature, chain: string, address: string, session: IPLDValue) {

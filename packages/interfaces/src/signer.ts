@@ -22,6 +22,6 @@ export interface Signer {
 }
 
 export interface SessionStore {
-	save: (address: string, chain: string, privateSessionData: string) => Awaitable<void>
-	load: (address: string, chain: string) => Awaitable<string | null>
+	save: (chain: string, address: string, privateSessionData: string) => Awaitable<void>
+	load: (chain: string, address: string) => Awaitable<string | null>
 }

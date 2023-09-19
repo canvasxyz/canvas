@@ -54,7 +54,7 @@ export class SolanaSigner implements Signer {
 
 		const chain = `solana:${genesisHash.slice(0, 32)}`
 
-		return new SolanaSigner(address, chain, session)
+		return new SolanaSigner(chain, address, session)
 	}
 
 	public static async initWithKeypair(): Promise<Signer> {
@@ -70,12 +70,12 @@ export class SolanaSigner implements Signer {
 
 		const chain = `solana:${genesisHash.slice(0, 32)}`
 
-		return new SolanaSigner(address, chain, session)
+		return new SolanaSigner(chain, address, session)
 	}
 
 	private constructor(
-		public readonly address: string,
 		public readonly chain: string,
+		public readonly address: string,
 		private readonly session: { data: SolanaSessionData; signature: Uint8Array; secretKey: Uint8Array }
 	) {}
 
