@@ -4,17 +4,17 @@ import equal from "fast-deep-equal/es6/index.js"
 import type { ModelValue, QueryParams } from "../types.js"
 import { AbstractModelDB } from "../AbstractModelDB.js"
 
-export function useLiveQuery(
+export function useLiveQuery<T extends ModelValue = ModelValue>(
 	db: AbstractModelDB | null,
 	modelName: string | null,
 	query: QueryParams | null
-): ModelValue[] | null {
+): T[] | null {
 	const dbRef = useRef<AbstractModelDB | null>(db)
 	const modelRef = useRef<string | null>(modelName)
 	const queryRef = useRef<QueryParams | null>(query)
 	const subscriptionRef = useRef<number | null>(null)
 
-	const [results, setResults] = useState<null | ModelValue[]>(null)
+	const [results, setResults] = useState<null | T[]>(null)
 
 	useEffect(() => {
 		// Unsubscribe from the cached database handle, if necessary
@@ -46,7 +46,7 @@ export function useLiveQuery(
 			db.unsubscribe(subscriptionRef.current)
 		}
 
-		const { id } = db.subscribe(modelName, query, (results) => setResults(results))
+		const { id } = db.subscribe(modelName, query, (results) => setResults(results as T[]))
 		dbRef.current = db
 		modelRef.current = modelName
 		queryRef.current = query

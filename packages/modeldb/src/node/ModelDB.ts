@@ -38,6 +38,7 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	public async close() {
+		this.log("closing")
 		this.db.close()
 	}
 

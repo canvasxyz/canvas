@@ -174,7 +174,6 @@ export class ModelAPI {
 					cursor = await cursor.continue()
 				) {
 					const value = this.decodeObject(cursor.value)
-					this.log("got cursor entry [%s, %o]", cursor.key, value)
 					if (filter(value)) {
 						const count = results.push(select(value))
 						if (count >= limit) {
@@ -192,7 +191,6 @@ export class ModelAPI {
 		const results: ModelValue[] = []
 		for (let cursor = await store.openCursor(); cursor !== null; cursor = await cursor.continue()) {
 			const value = this.decodeObject(cursor.value)
-			this.log("got cursor entry [%s, %o]", cursor.key, value)
 			if (filter(value)) {
 				results.push(value)
 			}

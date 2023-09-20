@@ -43,6 +43,28 @@ export class ModelDB extends AbstractModelDB {
 		for (const model of config.models) {
 			this.#models[model.name] = new ModelAPI(model, this.resolver)
 		}
+
+		db.addEventListener("error", (event) => this.log("db: error", event))
+		db.addEventListener("close", (event) => this.log("db: close", event))
+		db.addEventListener("versionchange", (event) => {
+			this.log("db: versionchange", event)
+			if (event.oldVersion === null && event.newVersion !== null) {
+				// create
+				return
+			} else if (event.oldVersion !== null && event.newVersion !== null) {
+				// update
+				return
+			} else if (event.oldVersion !== null && event.newVersion === null) {
+				// delete
+				db.close()
+				return
+			}
+		})
+	}
+
+	public async close() {
+		this.log("closing")
+		this.db.close()
 	}
 
 	private async read<T>(
@@ -128,9 +150,5 @@ export class ModelDB extends AbstractModelDB {
 				})
 			)
 		})
-	}
-
-	async close() {
-		this.db.close()
 	}
 }
