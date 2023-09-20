@@ -1,0 +1,37 @@
+{
+  "private": true,
+  "name": "@canvas-js/example-chat",
+  "version": "0.6.0-alpha2",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@canvas-js/pubsub-service-discovery": "^0.1.0",
+    "@canvas-js/store": "0.5.0-alpha4",
+    "@chainsafe/libp2p-gossipsub": "^9.1.0",
+    "@chainsafe/libp2p-noise": "^12.0.2",
+    "@libp2p/bootstrap": "^8.0.0",
+    "@libp2p/logger": "^2.1.1",
+    "@libp2p/mplex": "^8.0.4",
+    "@libp2p/peer-id": "^2.0.4",
+    "@multiformats/multiaddr": "^12.1.7",
+    "@types/react": "^18.2.21",
+    "@types/react-dom": "^18.2.7",
+    "ethers": "^6.7.1",
+    "libp2p": "^0.45.9",
+    "multiformats": "^12.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "uint8arrays": "^4.0.6"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.15",
+    "postcss": "^8.4.29",
+    "tailwindcss": "^3.3.3",
+    "vite": "^4.4.9",
+    "vite-plugin-svgr": "^3.2.0"
+  }
+}

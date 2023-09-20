@@ -1,0 +1,14 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"include": ["src"],
+	"compilerOptions": {
+		"types": ["vite/client"],
+		"rootDir": "src",
+		"outDir": "lib",
+		"esModuleInterop": true,
+		"jsx": "react",
+		"module": "Node16",
+		"moduleResolution": "Node16"
+	},
+	"references": [{"path": "../../packages/core"}]
+}
