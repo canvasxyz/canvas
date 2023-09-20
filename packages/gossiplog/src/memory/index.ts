@@ -4,29 +4,25 @@ import PQueue from "p-queue"
 import pDefer from "p-defer"
 
 import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"
-import { Bound, assert } from "@canvas-js/okra"
+import { Bound } from "@canvas-js/okra"
 
-import {
-	AbstractMessageLog,
-	MessageLogInit,
-	ReadOnlyTransaction,
-	ReadWriteTransaction,
-} from "../../AbstractMessageLog.js"
+import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
+import { assert } from "../utils.js"
 
-export default async function openMessageLog<Payload, Result>(
-	init: MessageLogInit<Payload, Result>
-): Promise<AbstractMessageLog<Payload, Result>> {
-	const messages = await MemoryTree.open()
-	const parents = new MemoryStore()
-	return new MessageLog(init, messages, parents)
-}
+export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
+	public static async open<Payload, Result>(
+		init: MessageLogInit<Payload, Result>
+	): Promise<MessageLog<Payload, Result>> {
+		const messages = await MemoryTree.open()
+		const parents = new MemoryStore()
+		return new MessageLog(init, messages, parents)
+	}
 
-class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 	private readonly queue = new PQueue({ concurrency: 1 })
 	private readonly incomingSyncPeers = new Set<string>()
 	private readonly outgoingSyncPeers = new Set<string>()
 
-	constructor(
+	private constructor(
 		init: MessageLogInit<Payload, Result>,
 		private readonly messages: MemoryTree,
 		private readonly parents: MemoryStore
@@ -34,7 +30,13 @@ class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 		super(init)
 	}
 
-	public async close() {}
+	public async close() {
+		this.log("closing")
+		this.queue.clear()
+		await this.queue.onIdle()
+		await this.messages.store.close()
+		await this.parents.close()
+	}
 
 	public async *entries(
 		lowerBound: Bound<Uint8Array> | null = null,

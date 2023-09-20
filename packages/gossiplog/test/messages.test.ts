@@ -5,7 +5,7 @@ import { nanoid } from "nanoid"
 import { Message } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
 
-import { openMessageLog } from "@canvas-js/gossiplog"
+import { MessageLog } from "@canvas-js/gossiplog/memory"
 import { Ed25519Signer, collect } from "./utils.js"
 
 const topic = "com.example.test"
@@ -15,7 +15,7 @@ const getPublicKey = ([id, signature, message]: [string, Signature | null, Messa
 	[id, signature?.publicKey ?? null, message] as const
 
 test("append signed messages", async (t) => {
-	const log = await openMessageLog({ location: null, topic, apply, validate })
+	const log = await MessageLog.open({ topic, apply, validate })
 
 	const signer = new Ed25519Signer()
 	const { id: idA } = await log.append("foo", { signer })
@@ -30,7 +30,7 @@ test("append signed messages", async (t) => {
 })
 
 test("append unsigned messages", async (t) => {
-	const log = await openMessageLog({ location: null, topic, apply, validate, signatures: false })
+	const log = await MessageLog.open({ topic, apply, validate, signatures: false })
 
 	const { id: idA } = await log.append("foo")
 	const { id: idB } = await log.append("bar")
@@ -44,7 +44,7 @@ test("append unsigned messages", async (t) => {
 })
 
 test("append signed messages without sequencing", async (t) => {
-	const log = await openMessageLog({ location: null, topic, apply, validate, sequencing: false })
+	const log = await MessageLog.open({ topic, apply, validate, sequencing: false })
 	const signer = new Ed25519Signer()
 	const { id: idA } = await log.append("foo", { signer })
 	const { id: idB } = await log.append("bar", { signer })
@@ -62,7 +62,7 @@ test("append signed messages without sequencing", async (t) => {
 })
 
 test("append unsigned messages without sequencing", async (t) => {
-	const log = await openMessageLog({ location: null, topic, apply, validate, signatures: false, sequencing: false })
+	const log = await MessageLog.open({ topic, apply, validate, signatures: false, sequencing: false })
 
 	const { id: idA } = await log.append("foo")
 	const { id: idB } = await log.append("bar")
@@ -80,7 +80,7 @@ test("append unsigned messages without sequencing", async (t) => {
 })
 
 test("insert concurrent messages", async (t) => {
-	const log = await openMessageLog({ location: null, topic, apply, validate, signatures: false })
+	const log = await MessageLog.open({ topic, apply, validate, signatures: false })
 
 	const [a, b, c] = [nanoid(), nanoid(), nanoid()]
 	const { id: idA } = await log.insert(null, { clock: 1, parents: [], payload: a })
@@ -99,7 +99,7 @@ test("insert concurrent messages", async (t) => {
 })
 
 test("append to concurrent messages", async (t) => {
-	const log = await openMessageLog({ location: null, topic, apply, validate, signatures: false })
+	const log = await MessageLog.open({ topic, apply, validate, signatures: false })
 
 	const [a, b, c] = [nanoid(), nanoid(), nanoid()]
 	const { id: idA } = await log.insert(null, { clock: 1, parents: [], payload: a })

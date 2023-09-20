@@ -164,8 +164,7 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 	})
 
 	api.get("/clock", async (req, res) => {
-		const { gossiplog } = core.libp2p.services
-		const [clock, parents] = await gossiplog.getClock(core.topic)
+		const [clock, parents] = await core.topics[core.topic].getClock()
 		return res.status(StatusCodes.OK).json({ clock, parents })
 	})
 

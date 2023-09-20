@@ -124,7 +124,7 @@ export function getLibp2pOptions(
 				globalSignaturePolicy: "StrictNoSign",
 			}),
 
-			gossiplog: gossiplog({ location: location && `${location}/messages` }),
+			gossiplog: gossiplog({}),
 
 			// discovery: discovery({}),
 		},

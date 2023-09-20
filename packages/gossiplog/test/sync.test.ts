@@ -3,6 +3,8 @@ import test from "ava"
 import { Signature } from "@canvas-js/signed-cid"
 import { Message } from "@canvas-js/interfaces"
 
+import { MessageLog } from "@canvas-js/gossiplog/memory"
+
 import { createNetwork, waitForInitialSync } from "./libp2p.js"
 
 test("wait for initial sync", async (t) => {
@@ -16,9 +18,14 @@ test("wait for initial sync", async (t) => {
 	const apply = async (id: string, signature: Signature | null, message: Message<string>) => {}
 	const validate = (payload: unknown): payload is string => typeof payload === "string"
 
+	const messageLogs = {
+		a: await MessageLog.open({ topic, apply, validate }),
+		b: await MessageLog.open({ topic, apply, validate }),
+	}
+
 	await Promise.all([
-		network.a.services.gossiplog.subscribe(topic, { apply, validate }),
-		network.b.services.gossiplog.subscribe(topic, { apply, validate }),
+		network.a.services.gossiplog.subscribe(messageLogs.a),
+		network.b.services.gossiplog.subscribe(messageLogs.b),
 	])
 
 	await t.notThrowsAsync(() => waitForInitialSync(network))

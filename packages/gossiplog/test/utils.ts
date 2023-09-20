@@ -23,13 +23,8 @@ export class Ed25519Signer<T = unknown> {
 
 export function getDirectory(t: ExecutionContext<unknown>): string {
 	const directory = path.resolve(os.tmpdir(), nanoid())
-	console.log("CREATING", directory)
 	fs.mkdirSync(directory)
-	t.teardown(() => {
-		console.log("REMOVING", directory)
-		fs.rmSync(directory, { recursive: true })
-	})
-
+	t.teardown(() => fs.rmSync(directory, { recursive: true }))
 	return directory
 }
 

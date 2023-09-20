@@ -20,12 +20,13 @@ import {
 } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { getCID, Signature } from "@canvas-js/signed-cid"
+import { AbstractMessageLog } from "@canvas-js/gossiplog"
+import { lessThan } from "@canvas-js/okra"
 
 import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
-import { assert, mapEntries, mapValues, signalInvalidType } from "./utils.js"
-import { lessThan } from "@canvas-js/okra"
+import { assert, signalInvalidType } from "./utils.js"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
@@ -166,13 +167,16 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		}
 
 		const validate = (payload: unknown): payload is Action => true // TODO
-		await gossiplog.subscribe(topic, { apply, validate, signatures: true, sequencing: true })
-
-		return new Canvas(uri, topic, signers, libp2p, vm, db, actions)
+		const messageLog = await target.openMessageLog({ topic, apply, validate, signatures: true, sequencing: true })
+		await gossiplog.subscribe(messageLog, {})
+		const topics = { [topic]: messageLog }
+		return new Canvas(uri, topic, signers, libp2p, vm, db, topics, actions)
 	}
 
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
+
+	#open = true
 
 	private constructor(
 		public readonly uri: string,
@@ -181,6 +185,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly vm: VM,
 		public readonly db: AbstractModelDB,
+		public readonly topics: Record<string, AbstractMessageLog<Action, JSValue | undefined>>,
 		public readonly actions: Record<string, ActionAPI>
 	) {
 		super()
@@ -209,13 +214,20 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	}
 
 	public async close() {
-		this.controller.abort()
-		await this.libp2p.stop()
+		if (this.#open) {
+			this.#open = false
+			this.controller.abort()
+			await this.libp2p.stop()
+			for (const messageLog of Object.values(this.topics)) {
+				await messageLog.close()
+			}
 
-		// TODO: make AbstractModelDB.close async
-		await this.db.close()
-		this.vm.dispose()
-		this.dispatchEvent(new Event("close"))
+			// TODO: make AbstractModelDB.close async
+			await this.db.close()
+			this.vm.dispose()
+			this.dispatchEvent(new Event("close"))
+			this.log("closed")
+		}
 	}
 
 	public getApplicationData(): ApplicationData {
@@ -240,7 +252,10 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {}
 	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]> {
-		yield* this.libp2p.services.gossiplog.iterate(this.topic, lowerBound, upperBound, options)
+		const messageLog = this.topics[this.topic]
+		for await (const [id, signature, message] of messageLog.iterate(lowerBound, upperBound, options)) {
+			yield [id, signature, message as Message<Payload>]
+		}
 	}
 }
 

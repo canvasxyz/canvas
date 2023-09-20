@@ -7,19 +7,19 @@
     "node": ">=18.0.0"
   },
   "files": [
-    "lib",
-    "protocols"
+    "lib"
   ],
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "sideEffects": false,
+  "exports": {
+    ".": "./lib/index.js",
+    "./node": "./lib/node/index.js",
+    "./browser": "./lib/browser/index.js",
+    "./memory": "./lib/memory/index.js"
+  },
   "imports": {
-    "#protocols/sync": "./lib/protocols/sync.js",
-    "#target": {
-      "node": "./lib/targets/node/index.js",
-      "browser": "./lib/targets/browser/index.js",
-      "default": "./lib/targets/default/index.js"
-    }
+    "#protocols/sync": "./lib/protocols/sync.js"
   },
   "scripts": {
     "generate": "npm run generate-sync",

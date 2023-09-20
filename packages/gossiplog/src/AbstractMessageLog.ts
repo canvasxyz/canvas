@@ -24,7 +24,6 @@ export interface ReadWriteTransaction {
 }
 
 export interface MessageLogInit<Payload = unknown, Result = void> {
-	location: string | null
 	topic: string
 	apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
 	validate: (payload: unknown) => payload is Payload
@@ -38,14 +37,20 @@ export interface MessageSigner<Payload = unknown> {
 	sign: (message: Message<Payload>) => Awaitable<Signature | null>
 }
 
-type EventMap<Payload, Result> = {
-	message: CustomEvent<{ id: string; signature: Signature | null; message: Message<Payload>; result: Result }>
-	commit: CustomEvent<{ root: Node }>
-	sync: CustomEvent<{ peerId: PeerId }>
+export type MessageLogEvents<Payload, Result> = {
+	message: CustomEvent<{
+		topic: string
+		id: string
+		signature: Signature | null
+		message: Message<Payload>
+		result: Result
+	}>
+	commit: CustomEvent<{ topic: string; root: Node }>
+	sync: CustomEvent<{ topic: string; peerId: PeerId }>
 }
 
 export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> extends EventEmitter<
-	EventMap<Payload, Result>
+	MessageLogEvents<Payload, Result>
 > {
 	private static defaultSigner: MessageSigner = { sign: ({}) => null }
 	private static bound = (id: string | null = null, inclusive = true) =>
@@ -69,7 +74,6 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		options?: { source?: PeerId }
 	): Promise<T>
 
-	public readonly location: string | null
 	public readonly topic: string
 	public readonly apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
 	public readonly validate: (payload: unknown) => payload is Payload
@@ -84,7 +88,6 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		super()
 		assert(nsidPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-]+)")
 
-		this.location = init.location
 		this.topic = init.topic
 		this.apply = init.apply
 		this.validate = init.validate
@@ -201,7 +204,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 			return { id, signature, message, result, root }
 		})
 
-		this.dispatchEvent(new CustomEvent("commit", { detail: root }))
+		this.dispatchEvent(new CustomEvent("commit", { detail: { topic: this.topic, root } }))
 		this.log("commited root %s", hex(root.hash))
 		return { id, signature, message, result }
 	}
@@ -255,7 +258,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		})
 
 		if (root !== undefined) {
-			this.dispatchEvent(new CustomEvent("commit", { detail: root }))
+			this.dispatchEvent(new CustomEvent("commit", { detail: { topic: this.topic, root } }))
 			this.log("commited root %s", hex(root.hash))
 		}
 
@@ -272,7 +275,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		this.log("applying message %s at clock %d with %d parents", id, message.clock, message.parents.length)
 
 		const result = await this.apply(id, signature, message)
-		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
+		this.dispatchEvent(new CustomEvent("message", { detail: { topic: this.topic, id, signature, message, result } }))
 		await txn.messages.set(key, value)
 
 		if (this.sequencing) {
@@ -336,8 +339,8 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 			{ source: sourcePeerId }
 		)
 
-		this.dispatchEvent(new CustomEvent("sync", { detail: { peerId: sourcePeerId } }))
-		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
+		this.dispatchEvent(new CustomEvent("sync", { detail: { topic: this.topic, peerId: sourcePeerId } }))
+		this.dispatchEvent(new CustomEvent("commit", { detail: { topic: this.topic, root } }))
 		this.log("commited root %s", hex(root.hash))
 		return { root }
 	}

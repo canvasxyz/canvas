@@ -1,7 +1,6 @@
 import type { PeerId } from "@libp2p/interface/peer-id"
 import type { Connection, Stream } from "@libp2p/interface/connection"
-import type { ConnectionManager } from "@libp2p/interface-internal/connection-manager"
-import type { Registrar, StreamHandler } from "@libp2p/interface-internal/registrar"
+import type { StreamHandler, StreamHandlerOptions } from "@libp2p/interface/stream-handler"
 import type { Startable } from "@libp2p/interface/startable"
 
 import { Logger, logger } from "@libp2p/logger"
@@ -43,8 +42,17 @@ export interface SyncOptions {
 
 export interface SyncServiceComponents {
 	peerId: PeerId
-	registrar: Registrar
-	connectionManager: ConnectionManager
+
+	registrar: {
+		handle: (protocol: string, handler: StreamHandler, options?: StreamHandlerOptions | undefined) => Promise<void>
+		register: (protocol: string, topology: Topology) => Promise<string>
+		unhandle: (protocol: string) => Promise<void>
+		unregister: (id: string) => void
+	}
+
+	connectionManager: {
+		getConnections: (peerId?: PeerId | undefined) => Connection[]
+	}
 }
 
 /**

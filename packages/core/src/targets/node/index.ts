@@ -7,6 +7,9 @@ import { PeerId } from "@libp2p/interface-peer-id"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { register } from "prom-client"
 
+import { MessageLogInit } from "@canvas-js/gossiplog"
+import { MessageLog } from "@canvas-js/gossiplog/node"
+import { MessageLog as MemoryMessageLog } from "@canvas-js/gossiplog/memory"
 import { ModelDB } from "@canvas-js/modeldb/node"
 
 import type { PlatformTarget } from "../interface.js"
@@ -49,5 +52,8 @@ export default function getTarget(location: string | null): PlatformTarget {
 		extendLibp2pOptions(options) {
 			return { ...options, metrics: prometheusMetrics({ registry: register }) }
 		},
+
+		openMessageLog: <Payload, Result>(init: MessageLogInit<Payload, Result>) =>
+			location === null ? MemoryMessageLog.open(init) : MessageLog.open(`${location}/topics/${init.topic}`, init),
 	}
 }

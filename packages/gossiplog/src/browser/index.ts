@@ -2,63 +2,72 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 
 import pDefer from "p-defer"
 import { bytesToHex } from "@noble/hashes/utils"
+
 import { IDBPDatabase, openDB } from "idb"
 import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
-import { Bound, assert } from "@canvas-js/okra"
+import { Bound, KeyValueStore } from "@canvas-js/okra"
 
-import openMemoryMessageLog from "../memory/index.js"
+import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
+import { assert } from "../utils.js"
 
-import {
-	AbstractMessageLog,
-	MessageLogInit,
-	ReadOnlyTransaction,
-	ReadWriteTransaction,
-} from "../../AbstractMessageLog.js"
+export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
+	public static async open<Payload, Result>(
+		name: string,
+		init: MessageLogInit<Payload, Result>
+	): Promise<MessageLog<Payload, Result>> {
+		const storeNames = [`${init.topic}/messages`, `${init.topic}/parents`]
+		const db = await openDB(name, 1, {
+			upgrade: (db, oldVersion, newVersion) => {
+				for (const storeName of storeNames) {
+					if (db.objectStoreNames.contains(storeName)) {
+						continue
+					} else {
+						db.createObjectStore(storeName)
+					}
+				}
+			},
+		})
 
-export * from "../../AbstractMessageLog.js"
+		const messages = await IDBTree.open(db, `${init.topic}/messages`)
+		const parents = new IDBStore(db, `${init.topic}/parents`)
 
-export default async function openMessageLog<Payload, Result>(
-	init: MessageLogInit<Payload, Result>
-): Promise<AbstractMessageLog<Payload, Result>> {
-	if (init.location === null) {
-		return openMemoryMessageLog(init)
+		return new MessageLog(init, db, messages, parents, storeNames)
 	}
 
-	const storeNames = [`${init.topic}/messages`, `${init.topic}/parents`]
-	const db = await openDB(init.location, 1, {
-		upgrade: (db, oldVersion, newVersion) => {
-			for (const storeName of storeNames) {
-				if (db.objectStoreNames.contains(storeName)) {
-					continue
-				} else {
-					db.createObjectStore(storeName)
-				}
-			}
-		},
-	})
-
-	const messages = await IDBTree.open(db, `${init.topic}/messages`)
-	const parents = new IDBStore(db, `${init.topic}/parents`)
-
-	return new Messagelog(init, db, messages, parents)
-}
-
-class Messagelog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 	private readonly incomingSyncPeers = new Set<string>()
 	private readonly outgoingSyncPeers = new Set<string>()
 	private readonly controller = new AbortController()
 	private readonly lockName = bytesToHex(crypto.getRandomValues(new Uint8Array(16)))
 
-	public constructor(
+	private constructor(
 		init: MessageLogInit<Payload, Result>,
 		private readonly db: IDBPDatabase,
 		private readonly messages: IDBTree,
-		private readonly parents: IDBStore
+		private readonly parents: IDBStore,
+		private readonly storeNames: string[]
 	) {
 		super(init)
+
+		db.addEventListener("error", (event) => this.log("db: error", event))
+		db.addEventListener("close", (event) => this.log("db: close", event))
+		db.addEventListener("versionchange", (event) => {
+			this.log("db: versionchange", event)
+			if (event.oldVersion === null && event.newVersion !== null) {
+				// create
+				return
+			} else if (event.oldVersion !== null && event.newVersion !== null) {
+				// update
+				return
+			} else if (event.oldVersion !== null && event.newVersion === null) {
+				// delete
+				db.close()
+				return
+			}
+		})
 	}
 
 	public async close() {
+		this.log("closing")
 		this.controller.abort()
 		this.db.close()
 	}
@@ -125,8 +134,16 @@ class Messagelog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 				this.incomingSyncPeers.add(targetPeerId.toString())
 			}
 
+			const parents: Omit<KeyValueStore, "set" | "delete"> = {
+				get: (key) => this.parents.read(() => this.parents.get(key)),
+				entries: (lowerBound = null, upperBound = null, options = {}) => {
+					this.parents.txn = this.db.transaction([`${this.topic}/parents`], "readonly")
+					return this.parents.entries(lowerBound, upperBound, options)
+				},
+			}
+
 			try {
-				result = await callback({ messages: this.messages, parents: this.parents })
+				result = await callback({ messages: this.messages, parents })
 			} catch (err) {
 				this.log.error("error in read-only transaction: %O", err)
 			} finally {
@@ -169,8 +186,18 @@ class Messagelog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
 					this.outgoingSyncPeers.add(sourcePeerId.toString())
 				}
 
+				const parents: KeyValueStore = {
+					get: (key) => this.parents.read(() => this.parents.get(key)),
+					set: (key, value) => this.parents.write(() => this.parents.set(key, value)),
+					delete: (key) => this.parents.write(() => this.parents.delete(key)),
+					entries: (lowerBound = null, upperBound = null, options = {}) => {
+						this.parents.txn = this.db.transaction([`${this.topic}/parents`], "readonly")
+						return this.parents.entries(lowerBound, upperBound, options)
+					},
+				}
+
 				try {
-					result = await callback({ messages: this.messages, parents: this.parents })
+					result = await callback({ messages: this.messages, parents })
 				} catch (err) {
 					this.log.error("error in read-write transaction: %O", err)
 					throw err

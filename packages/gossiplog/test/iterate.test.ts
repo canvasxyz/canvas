@@ -2,14 +2,15 @@ import test from "ava"
 
 import type { Message } from "@canvas-js/interfaces"
 
-import { openMessageLog } from "@canvas-js/gossiplog"
+import { MessageLog } from "@canvas-js/gossiplog/memory"
+
 import { collect } from "./utils.js"
 
 const validate = (payload: unknown): payload is string => typeof payload === "string"
 
 test("append three messages", async (t) => {
 	const topic = "com.example.test"
-	const log = await openMessageLog({ location: null, topic, apply: () => {}, validate, signatures: false })
+	const log = await MessageLog.open({ topic, apply: () => {}, validate, signatures: false })
 
 	const { id: foo } = await log.append("foo")
 	const { id: bar } = await log.append("bar")
@@ -24,7 +25,7 @@ test("append three messages", async (t) => {
 
 test("insert three concurrent messages and append a fourth", async (t) => {
 	const topic = "com.example.test"
-	const log = await openMessageLog({ location: null, topic, apply: () => {}, validate, signatures: false })
+	const log = await MessageLog.open({ topic, apply: () => {}, validate, signatures: false })
 
 	const { id: foo } = await log.insert(null, { clock: 1, parents: [], payload: "foo" })
 	const { id: bar } = await log.insert(null, { clock: 1, parents: [], payload: "bar" })

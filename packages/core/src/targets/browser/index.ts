@@ -2,6 +2,8 @@ import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp
 import { PeerId } from "@libp2p/interface-peer-id"
 import { base64 } from "multiformats/bases/base64"
 
+import { MessageLogInit } from "@canvas-js/gossiplog"
+import { MessageLog } from "@canvas-js/gossiplog/browser"
 import { ModelDB } from "@canvas-js/modeldb/browser"
 
 import type { PlatformTarget } from "../interface.js"
@@ -34,11 +36,16 @@ export default function getBrowserTarget(location: string | null): PlatformTarge
 
 		async openDB(init, options) {
 			const databaseName = `${location}/db`
-			return await ModelDB.initialize(databaseName, init, options)
+			const db = await ModelDB.initialize(databaseName, init, options)
+
+			return db
 		},
 
 		extendLibp2pOptions(options) {
 			return options
 		},
+
+		openMessageLog: <Payload, Result>(init: MessageLogInit<Payload, Result>) =>
+			MessageLog.open(`${location}/topics/${init.topic}`, init),
 	}
 }

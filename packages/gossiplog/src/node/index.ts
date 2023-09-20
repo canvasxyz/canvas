@@ -1,42 +1,30 @@
-import path from "node:path"
 import fs from "node:fs"
 
 import { Environment, Transaction, Tree } from "@canvas-js/okra-node"
-import { Bound, assert } from "@canvas-js/okra"
+import { Bound } from "@canvas-js/okra"
 
-import openMemoryMessageLog from "../memory/index.js"
+import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
+import { assert } from "../utils.js"
 
-import {
-	AbstractMessageLog,
-	MessageLogInit,
-	ReadOnlyTransaction,
-	ReadWriteTransaction,
-} from "../../AbstractMessageLog.js"
+export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
+	public static async open<Payload, Result>(
+		path: string,
+		init: MessageLogInit<Payload, Result>
+	): Promise<MessageLog<Payload, Result>> {
+		if (!fs.existsSync(path)) {
+			fs.mkdirSync(path, { recursive: true })
+		}
 
-export * from "../../AbstractMessageLog.js"
-
-export default async function openMessageLog<Payload, Result>(
-	init: MessageLogInit<Payload, Result>
-): Promise<AbstractMessageLog<Payload, Result>> {
-	if (init.location === null) {
-		return openMemoryMessageLog(init)
+		const env = new Environment(path)
+		return new MessageLog(init, env)
 	}
 
-	const directory = path.resolve(init.location, init.topic)
-	if (!fs.existsSync(directory)) {
-		fs.mkdirSync(directory, { recursive: true })
-	}
-
-	const env = new Environment(directory)
-	return new MessageLog(init, env)
-}
-
-class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
-	public constructor(init: MessageLogInit<Payload, Result>, private readonly env: Environment) {
+	private constructor(init: MessageLogInit<Payload, Result>, private readonly env: Environment) {
 		super(init)
 	}
 
 	public async close() {
+		this.log("closing")
 		await this.env.close()
 	}
 

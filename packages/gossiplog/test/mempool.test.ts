@@ -3,7 +3,8 @@ import test from "ava"
 import { Message } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
 
-import { decodeId, openMessageLog } from "@canvas-js/gossiplog"
+import { decodeId } from "@canvas-js/gossiplog"
+import { MessageLog } from "@canvas-js/gossiplog/memory"
 
 test("insert messages out-of-order", async (t) => {
 	const results: { id: string; payload: string }[] = []
@@ -15,7 +16,7 @@ test("insert messages out-of-order", async (t) => {
 
 	const validate = (payload: unknown): payload is string => typeof payload === "string"
 
-	const log = await openMessageLog({ location: null, topic, apply, validate, signatures: false })
+	const log = await MessageLog.open({ topic, apply, validate, signatures: false })
 
 	const a = { clock: 1, parents: [], payload: "a" }
 	const [keyA] = log.encode(null, a)
