@@ -105,7 +105,7 @@ export function getLibp2pOptions(
 
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
-		peerDiscovery: [bootstrap({ list: bootstrapList })],
+		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
 
 		services: {
 			identifyService: identifyService({ protocolPrefix: "canvas" }),

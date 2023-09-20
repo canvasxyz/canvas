@@ -204,13 +204,8 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		await this.libp2p.start()
 	}
 
-	public getApplicationData(): ApplicationData {
-		return {
-			uri: this.uri,
-			peerId: this.peerId.toString(),
-			models: this.db.models,
-			topics: { [this.topic]: { actions: Object.keys(this.actions) } },
-		}
+	public async stop() {
+		await this.libp2p.stop()
 	}
 
 	public async close() {
@@ -218,9 +213,18 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		await this.libp2p.stop()
 
 		// TODO: make AbstractModelDB.close async
-		this.db.close()
+		await this.db.close()
 		this.vm.dispose()
 		this.dispatchEvent(new Event("close"))
+	}
+
+	public getApplicationData(): ApplicationData {
+		return {
+			uri: this.uri,
+			peerId: this.peerId.toString(),
+			models: this.db.models,
+			topics: { [this.topic]: { actions: Object.keys(this.actions) } },
+		}
 	}
 
 	/**
