@@ -7,7 +7,7 @@ import chalk from "chalk"
 import prompts from "prompts"
 import { ethers } from "ethers"
 
-import { Signer } from "@canvas-js/interfaces"
+import { SessionSigner } from "@canvas-js/interfaces"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 export const CONTRACT_FILENAME = "contract.canvas.js"
@@ -94,9 +94,9 @@ function parseChainId(chain: string): [namespace: string, chainId: string] {
 	return [namespace, chain.slice(namespaceIndex + 1)]
 }
 
-export async function getSigners(args?: (string | number)[]): Promise<Signer[]> {
+export async function getSigners(args?: (string | number)[]): Promise<SessionSigner[]> {
 	// const domain = "http://localhost"
-	const signers: Signer[] = []
+	const signers: SessionSigner[] = []
 
 	// // TODO: add a filesystem SessionStore implementation
 

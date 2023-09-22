@@ -9,17 +9,21 @@ import { AppContext } from "./AppContext.js"
 import { Connect } from "./Connect.js"
 import { Messages } from "./Chat.js"
 import { MessageComposer } from "./MessageComposer.js"
-import { ConnectStatus, ControlPanel } from "./ControlPanel.js"
+import { ControlPanel } from "./ControlPanel.js"
+import { ConnectStatus } from "./SessionList.js"
 import { location } from "./utils.js"
 
 export const App: React.FC<{}> = ({}) => {
-	const [signer, setSigner] = useState<SIWESigner | null>(null)
+	const [sessionSigner, setSessionSigner] = useState<SIWESigner | null>(null)
 	const [address, setAddress] = useState<string | null>(null)
+
 	const [app, setApp] = useState<Canvas | null>(null)
+
 	;(window as any).app = app
+
 	useEffect(() => {
 		Canvas.initialize({
-			signers: [new SIWESigner({ sessionDuration: 5 * 1000 })],
+			signers: [new SIWESigner({})],
 			location,
 			contract,
 			offline: true,
@@ -28,7 +32,7 @@ export const App: React.FC<{}> = ({}) => {
 	}, [])
 
 	return (
-		<AppContext.Provider value={{ address, setAddress, signer, setSigner, app, setApp }}>
+		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app, setApp }}>
 			<main>
 				<div className="flex flex-row gap-4 h-full">
 					<div className="flex-1 flex flex-col justify-stretch gap-2">

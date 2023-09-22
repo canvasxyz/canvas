@@ -1,29 +1,8 @@
-import React, { useCallback, useContext, useEffect, useState } from "react"
+import React, { useCallback, useContext, useState } from "react"
 import { deleteDB } from "idb"
 
 import { AppContext } from "./AppContext.js"
-import { UserAddress } from "./UserAddress.js"
 import { location } from "./utils.js"
-
-export interface ConnectStatusProps {}
-
-export const ConnectStatus: React.FC<ConnectStatusProps> = ({}) => {
-	const { address, signer } = useContext(AppContext)
-	if (signer === null || address === null) {
-		return null
-	}
-
-	return (
-		<div className="p-2 border rounded flex flex-col gap-2">
-			<div>
-				<span className="text-sm">Address</span>
-			</div>
-			<div>
-				<UserAddress address={address} />
-			</div>
-		</div>
-	)
-}
 
 export interface ControlPanelProps {}
 

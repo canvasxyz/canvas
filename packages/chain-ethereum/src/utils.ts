@@ -1,9 +1,12 @@
 import { CID } from "multiformats/cid"
 import * as siwe from "siwe"
+import { computeAddress, hexlify } from "ethers"
 
 import type { IPLDValue, SessionData } from "@canvas-js/interfaces"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
+
+export const getKey = (topic: string, chain: string, address: string) => `canvas:${topic}/${chain}:${address}`
 
 export function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
@@ -60,6 +63,7 @@ export function parseChainId(chain: string): number {
 	return parseInt(chainId)
 }
 
-export function getSessionURI(chainId: number, sessionAddress: string) {
-	return `eip155:${chainId}:${sessionAddress}`
+export function getSessionURI(chain: string, publicKey: Uint8Array) {
+	const sessionAddress = computeAddress(hexlify(publicKey))
+	return `${chain}:${sessionAddress}`
 }

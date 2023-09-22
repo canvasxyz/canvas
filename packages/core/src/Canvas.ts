@@ -5,9 +5,10 @@ import { logger } from "@libp2p/logger"
 import { base32hex } from "multiformats/bases/base32"
 import { QuickJSHandle } from "quickjs-emscripten"
 import { bytesToHex as hex } from "@noble/hashes/utils"
+import { equals } from "uint8arrays"
 
 import { lessThan } from "@canvas-js/okra"
-import { Action, ActionArguments, Session, SessionData, Message, Signer } from "@canvas-js/interfaces"
+import { Action, ActionArguments, Session, Message, SessionSigner } from "@canvas-js/interfaces"
 import { JSValue, VM } from "@canvas-js/vm"
 import {
 	AbstractModelDB,
@@ -27,8 +28,7 @@ import { AbstractMessageLog } from "@canvas-js/gossiplog"
 import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
-import { assert, mapEntries, mapValues, signalInvalidType } from "./utils.js"
-import { equals } from "uint8arrays"
+import { assert, mapValues, signalInvalidType } from "./utils.js"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
@@ -39,7 +39,7 @@ export interface CanvasConfig extends P2PConfig {
 	topic?: string
 	uri?: string
 
-	signers?: Signer[]
+	signers?: SessionSigner[]
 	offline?: boolean
 	replay?: boolean
 
@@ -48,7 +48,7 @@ export interface CanvasConfig extends P2PConfig {
 
 export type ActionAPI = (
 	args: ActionArguments,
-	options?: { chain?: string; signer?: Signer }
+	options?: { chain?: string; signer?: SessionSigner }
 ) => Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }>
 
 export interface CoreEvents {
@@ -210,7 +210,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	private constructor(
 		public readonly uri: string,
 		public readonly topic: string,
-		public readonly signers: Signer[],
+		public readonly signers: SessionSigner[],
 		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly vm: VM,
 		public readonly db: AbstractModelDB,

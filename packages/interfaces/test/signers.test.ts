@@ -1,13 +1,13 @@
 import test from "ava"
 
-import { Action, ActionArguments, Message, Signer } from "@canvas-js/interfaces"
+import { Action, ActionArguments, Message, SessionSigner } from "@canvas-js/interfaces"
 import { verifySignature } from "@canvas-js/signed-cid"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 // import { SolanaSigner } from "@canvas-js/chain-solana"
 // import { SubstrateSigner } from "@canvas-js/chain-substrate"
 
-type SignerImplementation = { createSigner: () => Promise<Signer>; name: string }
+type SignerImplementation = { createSigner: () => Promise<SessionSigner>; name: string }
 
 const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 	{
