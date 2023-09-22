@@ -3,42 +3,53 @@ import assert from "assert"
 
 import { verifySignature } from "@canvas-js/signed-cid"
 
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner, validateSessionData } from "@canvas-js/chain-ethereum"
+import { Action } from "@canvas-js/interfaces"
 
-import { createMessage } from "./utils.js"
-
-test("create and verify action", async (t) => {
+test("create and verify session", async (t) => {
 	const topic = "example:signer"
-	const signer = await SIWESigner.init({})
-	const message = await createMessage(signer, topic, "foo", { bar: 7 })
-	const signature = await signer.sign(message)
-	t.notThrows(() => verifySignature(signature, message))
+	const signer = new SIWESigner()
+	const session = await signer.getSession(topic)
+	t.notThrows(() => signer.verifySession(session))
 
-	const { chain, address, session } = message.payload
-	await t.notThrowsAsync(async () => signer.verifySession(signature, chain, address, session))
+	const sessionMessage = { clock: 1, parents: [], payload: session }
+	const sessionSignature = await signer.sign(sessionMessage)
+	t.notThrows(() => verifySignature(sessionSignature, sessionMessage))
 })
 
-test("reject corrupt message signature", async (t) => {
+test("create and verify session and action", async (t) => {
 	const topic = "example:signer"
-	const signer = await SIWESigner.init({})
-	const message = await createMessage(signer, topic, "foo", { bar: 7 })
-	const signature = await signer.sign(message)
+	const signer = new SIWESigner()
+	const session = await signer.getSession(topic)
+	t.notThrows(() => signer.verifySession(session))
 
-	// corrupt the message signature
-	signature.signature[3] = 1
-	t.throws(() => verifySignature(signature, message))
+	const sessionMessage = { clock: 1, parents: [], payload: session }
+	const sessionSignature = await signer.sign(sessionMessage)
+	t.notThrows(() => verifySignature(sessionSignature, sessionMessage))
+
+	const action: Action = {
+		type: "action",
+		chain: session.chain,
+		address: session.address,
+		topic,
+		name: "foo",
+		args: { bar: 7 },
+		blockhash: null,
+		timestamp: session.timestamp,
+	}
+
+	const actionMessage = { clock: 1, parents: [], payload: action }
+	const actionSignature = await signer.sign(actionMessage)
+	t.notThrows(() => verifySignature(actionSignature, actionMessage))
 })
 
 test("reject corrupt session signature", async (t) => {
 	const topic = "example:signer"
-	const signer = await SIWESigner.init({})
-	const message = await createMessage(signer, topic, "foo", { bar: 7 })
-	const signature = await signer.sign(message)
-	t.notThrows(() => verifySignature(signature, message))
-
+	const signer = new SIWESigner()
+	const session = await signer.getSession(topic, {})
 	// corrupt the session signature
-	const { chain, address, session } = message.payload
-	assert(SIWESigner.validateSessionPayload(session))
-	session.signature[3] = 1
-	await t.throwsAsync(async () => signer.verifySession(signature, chain, address, session))
+	session.data.signature[0] = 1
+	assert(validateSessionData(session.data))
+	session.data.signature[3] = 1
+	await t.throwsAsync(async () => signer.verifySession(session))
 })

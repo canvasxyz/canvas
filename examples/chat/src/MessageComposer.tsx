@@ -5,7 +5,7 @@ import { AppContext } from "./AppContext.js"
 export interface MessageComposerProps {}
 
 export const MessageComposer: React.FC<MessageComposerProps> = ({}) => {
-	const { app, signer } = useContext(AppContext)
+	const { app, sessionSigner: signer } = useContext(AppContext)
 
 	const [value, setValue] = useState("")
 

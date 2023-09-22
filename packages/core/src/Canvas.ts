@@ -4,8 +4,11 @@ import { createLibp2p, Libp2p } from "libp2p"
 import { logger } from "@libp2p/logger"
 import { base32hex } from "multiformats/bases/base32"
 import { QuickJSHandle } from "quickjs-emscripten"
+import { bytesToHex as hex } from "@noble/hashes/utils"
+import { equals } from "uint8arrays"
 
-import { Action, ActionArguments, Message, Signer } from "@canvas-js/interfaces"
+import { lessThan } from "@canvas-js/okra"
+import { Action, ActionArguments, Session, Message, SessionSigner } from "@canvas-js/interfaces"
 import { JSValue, VM } from "@canvas-js/vm"
 import {
 	AbstractModelDB,
@@ -21,12 +24,11 @@ import {
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { getCID, Signature } from "@canvas-js/signed-cid"
 import { AbstractMessageLog } from "@canvas-js/gossiplog"
-import { lessThan } from "@canvas-js/okra"
 
 import getTarget from "#target"
 
 import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
-import { assert, signalInvalidType } from "./utils.js"
+import { assert, mapValues, signalInvalidType } from "./utils.js"
 
 export interface CanvasConfig extends P2PConfig {
 	contract: string
@@ -37,7 +39,7 @@ export interface CanvasConfig extends P2PConfig {
 	topic?: string
 	uri?: string
 
-	signers?: Signer[]
+	signers?: SessionSigner[]
 	offline?: boolean
 	replay?: boolean
 
@@ -46,7 +48,7 @@ export interface CanvasConfig extends P2PConfig {
 
 export type ActionAPI = (
 	args: ActionArguments,
-	options?: { chain?: string; signer?: Signer }
+	options?: { chain?: string; signer?: SessionSigner }
 ) => Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }>
 
 export interface CoreEvents {
@@ -70,7 +72,7 @@ export type ApplicationData = {
 
 export class Canvas extends EventEmitter<CoreEvents> {
 	public static async initialize(config: CanvasConfig): Promise<Canvas> {
-		const { contract, signers = [], replay = false, offline = false, contractLog, runtimeMemoryLimit } = config
+		const { contract, signers = [], replay = false, contractLog, runtimeMemoryLimit } = config
 
 		const location = config.location ?? null
 		const target = getTarget(location)
@@ -81,14 +83,12 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		const topic = config.topic ?? cid.toString()
 
 		if (signers.length === 0) {
-			const signer = await SIWESigner.init({})
-			signers.push(signer)
+			signers.push(new SIWESigner())
 		}
 
 		// Create a libp2p node (even in offline mode)
 		const peerId = await target.getPeerId()
 		const libp2p = await createLibp2p(getLibp2pOptions(location, peerId, config))
-		const { gossiplog } = libp2p.services
 
 		// Create a QuickJS VM
 		const vm = await VM.initialize({ runtimeMemoryLimit, log: contractLog })
@@ -109,69 +109,98 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		const models = modelsHandle.consume(vm.context.dump) as ModelsInit
 
 		const resolver: Resolver = { lessThan: (a, b) => lessThan(a.version, b.version) }
-		const db = await target.openDB(models, { resolver })
-
-		const actionHandles: Record<string, QuickJSHandle> = {}
-		const actions: Record<string, ActionAPI> = {}
-		for (const [name, handle] of Object.entries(actionsHandle.consume(vm.unwrapObject))) {
-			assert(vm.context.typeof(handle) === "function", "expected action[name] to be a function")
-			actionHandles[name] = handle.consume(vm.cache)
-			actions[name] = async (args, options = {}) => {
-				const signer =
-					options.signer ?? signers.find((signer) => options.chain === undefined || signer.match(options.chain))
-				assert(signer !== undefined, "signer not found")
-				const { chain, address } = signer
-				const session = await signer.getSession()
-				const timestamp = Date.now()
-				const action: Action = { chain, address, session, name, args, topic, timestamp, blockhash: null }
-				const { id, result, recipients } = await gossiplog.append<Action, void | JSValue>(topic, action, { signer })
-				return { id, result, recipients }
-			}
-		}
+		const db = await target.openDB("db", models, { resolver })
 
 		const databaseAPI = new DatabaseAPI(vm, db)
 
-		const apply = async (id: string, signature: Signature | null, message: Message<Action>) => {
+		const sessionDB = await target.openDB("sessions", {
+			sessions: {
+				message_id: "string",
+				chain: "string",
+				address: "string",
+				public_key_type: "string",
+				public_key: "bytes",
+				expiration: "integer?",
+				$indexes: [["address"], ["public_key"]],
+			},
+		})
+
+		const actionHandles = mapValues(actionsHandle.consume(vm.unwrapObject), (handle) => {
+			assert(vm.context.typeof(handle) === "function", "expected action[name] to be a function")
+			return handle.consume(vm.cache)
+		})
+
+		const apply = async (id: string, signature: Signature | null, message: Message<Action | Session>) => {
 			assert(signature !== null, "missing message signature")
 
-			const { chain, address, session, name, args, ...context } = message.payload
+			if (message.payload.type === "action") {
+				const { chain, address, name, args, ...context } = message.payload
 
-			const signer = signers.find((signer) => signer.match(chain))
-			assert(signer !== undefined, `no signer provided for chain ${chain}`)
-			await signer.verifySession(signature, chain, address, session)
+				const sessions = await sessionDB.query("sessions", {
+					where: {
+						public_key_type: signature.type,
+						public_key: signature.publicKey,
+						chain: chain,
+						address: address,
+						expiration: { gt: context.timestamp },
+					},
+				})
 
-			assert(actions[name] !== undefined, `invalid action name: ${name}`)
-
-			const { result, effects } = await databaseAPI.collect(async () => {
-				const argsHandle = vm.wrapValue(args)
-				const ctxHandle = vm.wrapValue({ id, chain, address, ...context })
-				try {
-					const handle = actionHandles[name]
-					const result = await vm.callAsync(handle, handle, [databaseAPI.handle, argsHandle, ctxHandle])
-					return result.consume((handle) => {
-						if (vm.context.typeof(handle) === "undefined") {
-							return undefined
-						} else {
-							return vm.unwrapValue(result)
-						}
-					})
-				} finally {
-					argsHandle.dispose()
-					ctxHandle.dispose()
+				if (sessions.length === 0) {
+					throw new Error(`missing session [${signature.type} 0x${hex(signature.publicKey)}] for ${chain}:${address}`)
 				}
-			})
 
-			await db.apply(effects, { version: base32hex.baseDecode(id) })
+				const actionHandle = actionHandles[name]
+				assert(actionHandle !== undefined, `invalid action name: ${name}`)
 
-			return result
+				const { result, effects } = await databaseAPI.collect(async () => {
+					const argsHandle = vm.wrapValue(args)
+					const ctxHandle = vm.wrapValue({ id, chain, address, ...context })
+					try {
+						const result = await vm.callAsync(actionHandle, actionHandle, [databaseAPI.handle, argsHandle, ctxHandle])
+						return result.consume((handle) => {
+							if (vm.context.typeof(handle) === "undefined") {
+								return undefined
+							} else {
+								return vm.unwrapValue(result)
+							}
+						})
+					} finally {
+						argsHandle.dispose()
+						ctxHandle.dispose()
+					}
+				})
+
+				await db.apply(effects, { version: base32hex.baseDecode(id) })
+
+				return result
+			} else if (message.payload.type === "session") {
+				const { publicKeyType, publicKey, chain, address, timestamp, duration } = message.payload
+				const signer = signers.find((signer) => signer.match(chain))
+				assert(signer !== undefined, "no signer found")
+				assert(publicKeyType === signature.type && equals(publicKey, signature.publicKey))
+				await signer.verifySession(message.payload)
+				await sessionDB.add("sessions", {
+					message_id: id,
+					chain: chain,
+					address: address,
+					public_key_type: signature.type,
+					public_key: signature.publicKey,
+					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
+				})
+			} else {
+				signalInvalidType(message.payload)
+			}
 		}
 
-		const validate = (payload: unknown): payload is Action => true // TODO
+		const validate = (payload: unknown): payload is Action | Session => true // TODO
 		const messageLog = await target.openMessageLog({ topic, apply, validate, signatures: true, sequencing: true })
-		await gossiplog.subscribe(messageLog, {})
-		const topics = { [topic]: messageLog }
-		return new Canvas(uri, topic, signers, libp2p, vm, db, topics, actions)
+		await libp2p.services.gossiplog.subscribe(messageLog, {})
+		const actionNames = Object.keys(actionHandles)
+		return new Canvas(uri, topic, signers, libp2p, vm, db, sessionDB, messageLog, actionNames)
 	}
+
+	public readonly actions: Record<string, ActionAPI> = {}
 
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
@@ -181,12 +210,13 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	private constructor(
 		public readonly uri: string,
 		public readonly topic: string,
-		public readonly signers: Signer[],
+		public readonly signers: SessionSigner[],
 		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly vm: VM,
 		public readonly db: AbstractModelDB,
-		public readonly topics: Record<string, AbstractMessageLog<Action, JSValue | undefined>>,
-		public readonly actions: Record<string, ActionAPI>
+		public readonly sessionDB: AbstractModelDB,
+		public readonly messageLog: AbstractMessageLog<Action | Session, JSValue | undefined>,
+		actionNames: string[]
 	) {
 		super()
 
@@ -199,6 +229,44 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			this.log("closed connection to %p", peerId)
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 		})
+
+		const { gossiplog } = libp2p.services
+
+		for (const name of actionNames) {
+			this.actions[name] = async (args, options = {}) => {
+				const signer =
+					options.signer ?? signers.find((signer) => options.chain === undefined || signer.match(options.chain))
+				assert(signer !== undefined, "signer not found")
+
+				const timestamp = Date.now()
+
+				const session = await signer.getSession(topic, { timestamp, chain: options.chain })
+				const { chain, address, publicKeyType: public_key_type, publicKey: public_key } = session
+
+				// Check if the session has already been added to the message log
+				const results = await sessionDB.query("sessions", {
+					where: { chain, address, public_key_type, public_key, expiration: { gt: timestamp } },
+					limit: 1,
+				})
+
+				this.log("got %d matching sessions: %o", results.length, results)
+
+				if (results.length === 0) {
+					const { id: sessionId } = await gossiplog.append<Session, void>(topic, session, { signer })
+					this.log("created session %s", sessionId)
+				}
+
+				const { id, result, recipients } = await gossiplog.append<Action, void | JSValue>(
+					topic,
+					{ type: "action", chain, address, topic, name, args, blockhash: null, timestamp },
+					{ signer }
+				)
+
+				this.log("applied action %s and got result %o", id, result)
+
+				return { id, result, recipients }
+			}
+		}
 	}
 
 	public get peerId() {
@@ -218,9 +286,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			this.#open = false
 			this.controller.abort()
 			await this.libp2p.stop()
-			for (const messageLog of Object.values(this.topics)) {
-				await messageLog.close()
-			}
+			await this.messageLog.close()
 
 			// TODO: make AbstractModelDB.close async
 			await this.db.close()
@@ -252,8 +318,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {}
 	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]> {
-		const messageLog = this.topics[this.topic]
-		for await (const [id, signature, message] of messageLog.iterate(lowerBound, upperBound, options)) {
+		for await (const [id, signature, message] of this.messageLog.iterate(lowerBound, upperBound, options)) {
 			yield [id, signature, message as Message<Payload>]
 		}
 	}

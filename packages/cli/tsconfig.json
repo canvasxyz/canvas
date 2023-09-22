@@ -9,8 +9,6 @@
   },
   "references": [
     { "path": "../chain-ethereum" },
-    { "path": "../chain-solana" },
-    { "path": "../chain-substrate" },
     { "path": "../core" },
     { "path": "../interfaces" }
   ]

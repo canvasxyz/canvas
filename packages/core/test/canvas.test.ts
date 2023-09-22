@@ -27,8 +27,8 @@ export const actions = {
 		await db.posts.delete(key)
   },
 
-	async hello(db, args, { chain, address }) {
-		console.log("hello from", [chain, address].join(":"))
+	async hello() {
+		console.log("hello")
 	}
 };
 `.trim()
@@ -79,7 +79,6 @@ test("log a message", async (t) => {
 
 	await app.actions.hello({})
 
-	const { chain, address } = app.signers[0]
-	t.deepEqual(messages, [["hello from", [chain, address].join(":")]])
+	t.deepEqual(messages, [["hello"]])
 	t.pass()
 })

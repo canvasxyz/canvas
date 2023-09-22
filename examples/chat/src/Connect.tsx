@@ -1,37 +1,38 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
 
-import { SessionStore } from "@canvas-js/interfaces"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { AppContext } from "./AppContext.js"
+import { sessionStore } from "./utils.js"
 
 declare global {
+	// eslint-disable-next-line no-var
 	var ethereum: undefined | null | (Eip1193Provider & EventEmitterable<"accountsChanged" | "chainChanged">)
-}
-
-const sessionStore: SessionStore = {
-	save: (chain, address, privateSessionData) =>
-		window.localStorage.setItem(`canvas:${chain}:${address}`, privateSessionData),
-	load: (chain, address) => window.localStorage.getItem(`canvas:${chain}:${address}`),
 }
 
 export interface ConnectProps {}
 
 export const Connect: React.FC<ConnectProps> = ({}) => {
-	const { signer, setSigner } = useContext(AppContext)
+	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
 
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)
 	const initialRef = useRef(false)
 
-	const connect = useCallback(async (provider: BrowserProvider, address?: string) => {
-		try {
-			const signer = await provider.getSigner(address)
-			await SIWESigner.init({ signer, store: sessionStore }).then(setSigner)
-		} catch (err) {
-			console.error(err)
+	const connect = useCallback(async () => {
+		if (window.ethereum === undefined || window.ethereum === null) {
+			setError(new Error("window.ethereum not found"))
+			return
 		}
+
+		const provider = new BrowserProvider(window.ethereum)
+
+		const signer = await provider.getSigner()
+		const address = await signer.getAddress()
+		setProvider(provider)
+		setAddress(address)
+		setSessionSigner(new SIWESigner({ signer, store: sessionStore }))
 	}, [])
 
 	useEffect(() => {
@@ -41,22 +42,17 @@ export const Connect: React.FC<ConnectProps> = ({}) => {
 
 		initialRef.current = true
 
-		if (window.ethereum !== undefined && window.ethereum !== null) {
-			const provider = new BrowserProvider(window.ethereum)
-			setProvider(provider)
-			connect(provider)
-			window.ethereum.on("chainChanged", (chainId) => window.location.reload())
-			window.ethereum.on("accountsChanged", (...args) => {
-				console.log("accountsChanged", ...args)
-			})
-		} else {
-			setError(new Error("window.ethereum not found"))
-		}
+		// TODO: handle these more gracefully
+		window.ethereum?.on("chainChanged", (chainId) => window.location.reload())
+		window.ethereum?.on("accountsChanged", (accounts) => window.location.reload())
+
+		connect()
 	}, [])
 
 	const disconnect = useCallback(async () => {
-		setSigner(null)
-	}, [provider])
+		setAddress(null)
+		setSessionSigner(null)
+	}, [sessionSigner])
 
 	if (error !== null) {
 		return (
@@ -70,10 +66,10 @@ export const Connect: React.FC<ConnectProps> = ({}) => {
 				<button disabled>Loading...</button>
 			</div>
 		)
-	} else if (signer === null) {
+	} else if (address === null) {
 		return (
 			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => connect(provider)}>Connect</button>
+				<button onClick={() => connect()}>Connect</button>
 			</div>
 		)
 	} else {
