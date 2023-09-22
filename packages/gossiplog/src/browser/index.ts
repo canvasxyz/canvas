@@ -90,6 +90,10 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 			return deferred.promise
 		})
 
+		if (this.messages.store.txn === null) {
+			this.messages.store.txn = this.db.transaction([`${this.topic}/messages`], "readonly")
+		}
+
 		try {
 			for await (const node of this.messages.nodes(
 				0,
@@ -102,6 +106,7 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 				yield [node.key, node.value]
 			}
 		} finally {
+			this.messages.store.txn = null
 			this.log("releasing shared lock")
 			deferred.resolve()
 		}
