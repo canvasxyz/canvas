@@ -1,4 +1,4 @@
-import React, { useContext } from "react"
+import React, { useContext, useMemo } from "react"
 import { computeAddress, hexlify } from "ethers"
 import { useLiveQuery } from "@canvas-js/modeldb/browser"
 
@@ -38,10 +38,12 @@ export interface SessionListProps {
 export const SessionList: React.FC<SessionListProps> = ({ chain, address }) => {
 	const { app } = useContext(AppContext)
 
+	const timestamp = useMemo(() => Date.now(), [])
+
 	const results = useLiveQuery<{ public_key_type: string; public_key: Uint8Array; expiration: number }>(
 		app?.sessionDB ?? null,
 		"sessions",
-		{ where: { chain: "eip155:1", address } }
+		{ where: { chain: "eip155:1", address, expiration: { gt: timestamp } } }
 	)
 
 	if (results === null) {
