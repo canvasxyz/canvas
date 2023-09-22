@@ -142,6 +142,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 						public_key: signature.publicKey,
 						chain: chain,
 						address: address,
+						expiration: { gt: context.timestamp },
 					},
 				})
 
