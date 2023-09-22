@@ -7,6 +7,7 @@ import { AppContext } from "./AppContext.js"
 import { sessionStore } from "./utils.js"
 
 declare global {
+	// eslint-disable-next-line no-var
 	var ethereum: undefined | null | (Eip1193Provider & EventEmitterable<"accountsChanged" | "chainChanged">)
 }
 
