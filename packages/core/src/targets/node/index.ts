@@ -16,7 +16,6 @@ import type { PlatformTarget } from "../interface.js"
 import { assert } from "../../utils.js"
 
 const PEER_ID_FILENAME = ".peer-id"
-const DB_FILENAME = "db.sqlite"
 
 export default function getTarget(location: string | null): PlatformTarget {
 	return {
