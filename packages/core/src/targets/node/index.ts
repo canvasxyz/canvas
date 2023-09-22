@@ -13,6 +13,7 @@ import { MessageLog as MemoryMessageLog } from "@canvas-js/gossiplog/memory"
 import { ModelDB } from "@canvas-js/modeldb/node"
 
 import type { PlatformTarget } from "../interface.js"
+import { assert } from "../../utils.js"
 
 const PEER_ID_FILENAME = ".peer-id"
 const DB_FILENAME = "db.sqlite"
@@ -41,11 +42,12 @@ export default function getTarget(location: string | null): PlatformTarget {
 			return peerId
 		},
 
-		async openDB(init, options) {
+		async openDB(name: string, init, options) {
 			if (location === null) {
 				return new ModelDB(null, init, options)
 			} else {
-				return new ModelDB(path.resolve(location, DB_FILENAME), init)
+				assert(/[a-zA-Z]+/.test(name))
+				return new ModelDB(path.resolve(location, `${name}.sqlite`), init, options)
 			}
 		},
 

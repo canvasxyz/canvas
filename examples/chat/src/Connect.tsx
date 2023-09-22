@@ -1,25 +1,19 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
 
-import { SessionStore } from "@canvas-js/interfaces"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { AppContext } from "./AppContext.js"
+import { sessionStore } from "./utils.js"
 
 declare global {
 	var ethereum: undefined | null | (Eip1193Provider & EventEmitterable<"accountsChanged" | "chainChanged">)
 }
 
-const sessionStore: SessionStore = {
-	save: (chain, address, privateSessionData) =>
-		window.localStorage.setItem(`canvas:${chain}:${address}`, privateSessionData),
-	load: (chain, address) => window.localStorage.getItem(`canvas:${chain}:${address}`),
-}
-
 export interface ConnectProps {}
 
 export const Connect: React.FC<ConnectProps> = ({}) => {
-	const { signer, setSigner } = useContext(AppContext)
+	const { signer, setSigner, setAddress } = useContext(AppContext)
 
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)
@@ -28,7 +22,8 @@ export const Connect: React.FC<ConnectProps> = ({}) => {
 	const connect = useCallback(async (provider: BrowserProvider, address?: string) => {
 		try {
 			const signer = await provider.getSigner(address)
-			await SIWESigner.init({ signer, store: sessionStore }).then(setSigner)
+			setAddress(await signer.getAddress())
+			setSigner(new SIWESigner({ signer, store: sessionStore }))
 		} catch (err) {
 			console.error(err)
 		}

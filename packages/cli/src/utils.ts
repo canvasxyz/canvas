@@ -98,51 +98,51 @@ export async function getSigners(args?: (string | number)[]): Promise<Signer[]> 
 	// const domain = "http://localhost"
 	const signers: Signer[] = []
 
-	// TODO: add a filesystem SessionStore implementation
+	// // TODO: add a filesystem SessionStore implementation
 
-	if (args !== undefined) {
-		for (const arg of args) {
-			if (typeof arg === "number") {
-				throw new Error(`invalid --chain argument "${arg}"`)
-			}
+	// if (args !== undefined) {
+	// 	for (const arg of args) {
+	// 		if (typeof arg === "number") {
+	// 			throw new Error(`invalid --chain argument "${arg}"`)
+	// 		}
 
-			const delimiterIndex = arg.indexOf("=")
-			if (delimiterIndex === -1) {
-				// chain provided without url
-				const [namespace, chainId] = parseChainId(arg)
-				if (namespace === "eip155") {
-					const signer = await SIWESigner.init({ chain: chainId === "*" ? undefined : chainId })
-					signers.push(signer)
-				} else {
-					throw new Error(`Unsupported chain ${arg}`)
-				}
-			} else {
-				// chain provided with url
-				const chain = arg.slice(0, delimiterIndex)
-				// const url = arg.slice(delimiterIndex + 1)
-				const [namespace, chainId] = parseChainId(chain)
-				if (namespace === "eip155") {
-					// const provider = new ethers.JsonRpcProvider(url)
-					const signer = await SIWESigner.init({ chain: chainId })
-					signers.push(signer)
-				} else {
-					throw new Error(`Unsupported chain ${arg}: only eip155 chains can be passed in the CLI with RPCs`)
-				}
-			}
-		}
-	} else if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
-		const chainId = process.env.ETH_CHAIN_ID
-		const signer = await SIWESigner.init({ chain: chainId })
-		signers.push(signer)
-		// const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_CHAIN_RPC)
-		// chains.push(new EthereumChainImplementation(chainId, domain, provider))
-		// console.log(
-		// 	`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
-		// )
-	} else {
-		const signer = await SIWESigner.init({})
-		signers.push(signer)
-	}
+	// 		const delimiterIndex = arg.indexOf("=")
+	// 		if (delimiterIndex === -1) {
+	// 			// chain provided without url
+	// 			const [namespace, chainId] = parseChainId(arg)
+	// 			if (namespace === "eip155") {
+	// 				const signer = new SIWESigner({  })
+	// 				signers.push(signer)
+	// 			} else {
+	// 				throw new Error(`Unsupported chain ${arg}`)
+	// 			}
+	// 		} else {
+	// 			// chain provided with url
+	// 			const chain = arg.slice(0, delimiterIndex)
+	// 			// const url = arg.slice(delimiterIndex + 1)
+	// 			const [namespace, chainId] = parseChainId(chain)
+	// 			if (namespace === "eip155") {
+	// 				// const provider = new ethers.JsonRpcProvider(url)
+	// 				const signer = await SIWESigner.init({ chain: chainId })
+	// 				signers.push(signer)
+	// 			} else {
+	// 				throw new Error(`Unsupported chain ${arg}: only eip155 chains can be passed in the CLI with RPCs`)
+	// 			}
+	// 		}
+	// 	}
+	// } else if (process.env.ETH_CHAIN_ID && process.env.ETH_CHAIN_RPC) {
+	// 	const chainId = process.env.ETH_CHAIN_ID
+	// 	const signer = await SIWESigner.init({ chain: chainId })
+	// 	signers.push(signer)
+	// 	// const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_CHAIN_RPC)
+	// 	// chains.push(new EthereumChainImplementation(chainId, domain, provider))
+	// 	// console.log(
+	// 	// 	`[canvas-cli] Using Ethereum RPC for chain ID ${process.env.ETH_CHAIN_ID}: ${process.env.ETH_CHAIN_RPC}`
+	// 	// )
+	// } else {
+	// 	const signer = await SIWESigner.init({})
+	// 	signers.push(signer)
+	// }
 
 	return signers
 }

@@ -34,16 +34,7 @@ export default function getBrowserTarget(location: string | null): PlatformTarge
 			}
 		},
 
-		async openDB(init, options) {
-			const databaseName = `${location}/db`
-			const db = await ModelDB.initialize(databaseName, init, options)
-
-			return db
-		},
-
-		extendLibp2pOptions(options) {
-			return options
-		},
+		openDB: (name, init, options) => ModelDB.initialize(`${location}/${name}`, init, options),
 
 		openMessageLog: <Payload, Result>(init: MessageLogInit<Payload, Result>) =>
 			MessageLog.open(`${location}/topics/${init.topic}`, init),

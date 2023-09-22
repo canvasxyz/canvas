@@ -8,29 +8,18 @@ import { location } from "./utils.js"
 export interface ConnectStatusProps {}
 
 export const ConnectStatus: React.FC<ConnectStatusProps> = ({}) => {
-	const { signer } = useContext(AppContext)
-	if (signer === null) {
+	const { address, signer } = useContext(AppContext)
+	if (signer === null || address === null) {
 		return null
 	}
 
-	const { address, chain } = signer
 	return (
 		<div className="p-2 border rounded flex flex-col gap-2">
 			<div>
-				<div>
-					<span className="text-sm">Chain</span>
-				</div>
-				<div>
-					<code className="text-sm">{chain}</code>
-				</div>
+				<span className="text-sm">Address</span>
 			</div>
 			<div>
-				<div>
-					<span className="text-sm">Address</span>
-				</div>
-				<div>
-					<UserAddress address={address} />
-				</div>
+				<UserAddress address={address} />
 			</div>
 		</div>
 	)
@@ -72,10 +61,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 			console.log("deleting model database")
 			await deleteDB(`${location}/db`, {})
 
-			for (const topic of Object.keys(app.topics)) {
-				console.log("deleting message log", topic)
-				await deleteDB(`${location}/topics/${topic}`, {})
-			}
+			console.log("deleting session database")
+			await deleteDB(`${location}/sessions`, {})
+
+			console.log("deleting message log", app.topic)
+			await deleteDB(`${location}/topics/${app.topic}`, {})
 
 			console.log("clearing localStorage")
 			window.localStorage.clear()

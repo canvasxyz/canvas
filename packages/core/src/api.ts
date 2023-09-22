@@ -164,7 +164,7 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 	})
 
 	api.get("/clock", async (req, res) => {
-		const [clock, parents] = await core.topics[core.topic].getClock()
+		const [clock, parents] = await core.messageLog.getClock()
 		return res.status(StatusCodes.OK).json({ clock, parents })
 	})
 
