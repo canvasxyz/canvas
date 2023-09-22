@@ -50,11 +50,13 @@ export default function getTarget(location: string | null): PlatformTarget {
 			}
 		},
 
+		openMessageLog: <Payload, Result>(init: MessageLogInit<Payload, Result>) =>
+			location === null
+				? MemoryMessageLog.open(init)
+				: MessageLog.open(path.resolve(location, "topics", init.topic), init),
+
 		extendLibp2pOptions(options) {
 			return { ...options, metrics: prometheusMetrics({ registry: register }) }
 		},
-
-		openMessageLog: <Payload, Result>(init: MessageLogInit<Payload, Result>) =>
-			location === null ? MemoryMessageLog.open(init) : MessageLog.open(`${location}/topics/${init.topic}`, init),
 	}
 }
