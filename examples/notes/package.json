@@ -15,20 +15,15 @@
   "dependencies": {
     "@canvas-js/chain-ethereum": "0.6.0-alpha2",
     "@canvas-js/cli": "0.6.0-alpha2",
-    "@canvas-js/hooks": "0.5.0-alpha4",
-    "@metamask/eth-sig-util": "5.0.2",
     "@types/react": "^18.2.22",
     "@types/react-dom": "^18.2.7",
-    "@wagmi/chains": "^0.2.25",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "toastify-js": "^1.12.0",
     "tweetnacl": "^1.0.3",
-    "uuid": "^9.0.1",
-    "wagmi": "^0.12.19"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@svgr/webpack": "^6.5.1",
     "@types/toastify-js": "^1.12.1",
     "@types/uuid": "^9.0.4",
     "autoprefixer": "^10.4.16",
