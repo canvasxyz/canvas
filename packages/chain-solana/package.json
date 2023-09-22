@@ -13,12 +13,12 @@
   },
   "dependencies": {
     "@canvas-js/interfaces": "0.6.0-alpha2",
-    "@solana/web3.js": "^1.78.4",
+    "@solana/web3.js": "^1.78.5",
     "bs58": "^5.0.0",
     "safe-stable-stringify": "^2.4.3",
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
-    "@types/bs58": "^4.0.1"
+    "@types/bs58": "^4.0.2"
   }
 }
