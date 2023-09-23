@@ -53,18 +53,21 @@ export const SessionList: React.FC<SessionListProps> = ({ chain, address }) => {
 	} else {
 		return (
 			<ul className="list-disc pl-4">
-				{results.map((session) => (
-					<li>
-						<div>
-							<UserAddress address={computeAddress(hexlify(session.public_key))} />
-						</div>
-						{session.expiration < Number.MAX_SAFE_INTEGER && (
+				{results.map((session) => {
+					const address = computeAddress(hexlify(session.public_key))
+					return (
+						<li key={address}>
 							<div>
-								<span className="text-sm">Expires {new Date(session.expiration).toLocaleString()}</span>
+								<UserAddress address={address} />
 							</div>
-						)}
-					</li>
-				))}
+							{session.expiration < Number.MAX_SAFE_INTEGER && (
+								<div>
+									<span className="text-sm">Expires {new Date(session.expiration).toLocaleString()}</span>
+								</div>
+							)}
+						</li>
+					)
+				})}
 			</ul>
 		)
 	}
