@@ -1,5 +1,5 @@
 import { PeerId } from "@libp2p/interface-peer-id"
-import { EventEmitter, CustomEvent } from "@libp2p/interfaces/events"
+import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
 import { createLibp2p, Libp2p } from "libp2p"
 import { logger } from "@libp2p/logger"
 import { base32hex } from "multiformats/bases/base32"
@@ -23,14 +23,14 @@ import {
 } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { getCID, Signature } from "@canvas-js/signed-cid"
-import { AbstractMessageLog } from "@canvas-js/gossiplog"
+import { AbstractMessageLog, MessageSigner } from "@canvas-js/gossiplog"
 
 import getTarget from "#target"
 
-import { getLibp2pOptions, P2PConfig, ServiceMap } from "./libp2p.js"
+import { getLibp2pOptions, ServiceMap } from "./libp2p.js"
 import { assert, mapValues, signalInvalidType } from "./utils.js"
 
-export interface CanvasConfig extends P2PConfig {
+export interface CanvasConfig {
 	contract: string
 	contractLog?: (...args: JSValue[]) => void
 
@@ -40,10 +40,16 @@ export interface CanvasConfig extends P2PConfig {
 	uri?: string
 
 	signers?: SessionSigner[]
-	offline?: boolean
 	replay?: boolean
-
 	runtimeMemoryLimit?: number
+
+	offline?: boolean
+	start?: boolean
+	listen?: string[]
+	announce?: string[]
+	bootstrapList?: string[]
+	minConnections?: number
+	maxConnections?: number
 }
 
 export type ActionAPI = (
@@ -77,7 +83,6 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		const location = config.location ?? null
 		const target = getTarget(location)
 
-		// TODO: rethink "default topics" because they're kinda suss
 		const cid = getCID(contract, { codec: "raw", digest: "blake3-128" })
 		const uri = config.uri ?? `canvas:${cid.toString()}`
 		const topic = config.topic ?? cid.toString()
@@ -86,9 +91,8 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			signers.push(new SIWESigner())
 		}
 
-		// Create a libp2p node (even in offline mode)
 		const peerId = await target.getPeerId()
-		const libp2p = await createLibp2p(getLibp2pOptions(location, peerId, config))
+		const libp2p = await createLibp2p(getLibp2pOptions(peerId, config))
 
 		// Create a QuickJS VM
 		const vm = await VM.initialize({ runtimeMemoryLimit, log: contractLog })
@@ -197,7 +201,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		const messageLog = await target.openMessageLog({ topic, apply, validate, signatures: true, sequencing: true })
 		await libp2p.services.gossiplog.subscribe(messageLog, {})
 		const actionNames = Object.keys(actionHandles)
-		return new Canvas(uri, topic, signers, libp2p, vm, db, sessionDB, messageLog, actionNames)
+		return new Canvas(uri, topic, signers, peerId, libp2p, vm, db, sessionDB, messageLog, actionNames)
 	}
 
 	public readonly actions: Record<string, ActionAPI> = {}
@@ -211,7 +215,8 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		public readonly uri: string,
 		public readonly topic: string,
 		public readonly signers: SessionSigner[],
-		public readonly libp2p: Libp2p<ServiceMap>,
+		public readonly peerId: PeerId,
+		public readonly libp2p: Libp2p<ServiceMap> | null,
 		public readonly vm: VM,
 		public readonly db: AbstractModelDB,
 		public readonly sessionDB: AbstractModelDB,
@@ -220,17 +225,22 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	) {
 		super()
 
+		if (libp2p === null) {
+		}
+
+		libp2p?.addEventListener("peer:discovery", ({ detail: { id, multiaddrs, protocols } }) => {
+			this.log("discovered peer %p with protocols %o", id, protocols)
+		})
+
 		libp2p?.addEventListener("peer:connect", ({ detail: peerId }) => {
-			this.log("opened connection to %p", peerId)
+			this.log("connected to %p", peerId)
 			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
 		})
 
 		libp2p?.addEventListener("peer:disconnect", ({ detail: peerId }) => {
-			this.log("closed connection to %p", peerId)
+			this.log("disconnected %p", peerId)
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 		})
-
-		const { gossiplog } = libp2p.services
 
 		for (const name of actionNames) {
 			this.actions[name] = async (args, options = {}) => {
@@ -252,12 +262,11 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				this.log("got %d matching sessions: %o", results.length, results)
 
 				if (results.length === 0) {
-					const { id: sessionId } = await gossiplog.append<Session, void>(topic, session, { signer })
+					const { id: sessionId } = await this.append(session, { signer })
 					this.log("created session %s", sessionId)
 				}
 
-				const { id, result, recipients } = await gossiplog.append<Action, void | JSValue>(
-					topic,
+				const { id, result, recipients } = await this.append(
 					{ type: "action", chain, address, topic, name, args, blockhash: null, timestamp },
 					{ signer }
 				)
@@ -269,23 +278,19 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		}
 	}
 
-	public get peerId() {
-		return this.libp2p.peerId
-	}
-
 	public async start() {
-		await this.libp2p.start()
+		await this.libp2p?.start()
 	}
 
 	public async stop() {
-		await this.libp2p.stop()
+		await this.libp2p?.stop()
 	}
 
 	public async close() {
 		if (this.#open) {
 			this.#open = false
 			this.controller.abort()
-			await this.libp2p.stop()
+			await this.libp2p?.stop()
 			await this.messageLog.close()
 
 			// TODO: make AbstractModelDB.close async
@@ -306,11 +311,38 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	}
 
 	/**
-	 * Low-level apply function for internal/debugging use.
+	 * Low-level utility method for internal and debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async apply(signature: Signature | null, message: Message): Promise<{ id: string }> {
-		return await this.libp2p.services.gossiplog.insert(this.topic, signature, message)
+	public async insert(signature: Signature | null, message: Message<Session | Action>): Promise<{ id: string }> {
+		if (this.libp2p === null) {
+			return this.messageLog.insert(signature, message)
+		} else {
+			const { id } = await this.libp2p.services.gossiplog.insert(this.topic, signature, message)
+			return { id }
+		}
+	}
+
+	/**
+	 * Low-level utility method for internal and debugging use.
+	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
+	 */
+	public async append(
+		payload: Session | Action,
+		options: { signer?: MessageSigner<Session | Action> }
+	): Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }> {
+		if (this.libp2p === null) {
+			const { id, result } = await this.messageLog.append(payload, options)
+			return { id, result, recipients: Promise.resolve([]) }
+		} else {
+			return this.libp2p.services.gossiplog.append(this.topic, payload, options)
+		}
+	}
+
+	public async getMessage(
+		id: string
+	): Promise<[signature: Signature | null, message: Message<Action | Session> | null]> {
+		return await this.messageLog.get(id)
 	}
 
 	public async *getMessageStream<Payload = Action>(

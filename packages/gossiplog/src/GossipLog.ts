@@ -218,8 +218,7 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 			return
 		}
 
-		const [key, signature, message] = messageLog.decode(data)
-		const id = decodeId(key)
+		const [id, signature, message] = messageLog.decode(data)
 
 		this.log("received message %s via gossipsub on %s", id, topic)
 		await messageLog.insert(signature, message)

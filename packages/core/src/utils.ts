@@ -2,7 +2,7 @@ import chalk from "chalk"
 import AggregateError from "aggregate-error"
 import { anySignal } from "any-signal"
 import { configure } from "safe-stable-stringify"
-import { CodeError } from "@libp2p/interfaces/errors"
+import { CodeError } from "@libp2p/interface/errors"
 
 export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
 

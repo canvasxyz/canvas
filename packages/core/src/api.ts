@@ -9,13 +9,13 @@ import { peerIdFromString } from "@libp2p/peer-id"
 
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 
-import { Message } from "@canvas-js/interfaces"
+import { Action, Message, Session } from "@canvas-js/interfaces"
 import { decodeSignedMessage } from "@canvas-js/gossiplog"
+import { Signature } from "@canvas-js/signed-cid"
 
 import { Canvas } from "./Canvas.js"
 
 import { getErrorMessage } from "./utils.js"
-import { Signature } from "@canvas-js/signed-cid"
 
 interface Options {
 	exposeMetrics: boolean
@@ -182,7 +182,7 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 
 		try {
 			const [key, signature, message] = decodeSignedMessage(data)
-			const { id } = await core.apply(signature, message)
+			const { id } = await core.insert(signature, message as Message<Action | Session>)
 			return res.status(StatusCodes.OK).json({ id })
 		} catch (e) {
 			console.error(e)
@@ -204,6 +204,39 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 				peers: pubsub.getPeers(),
 				subscribers: Object.fromEntries(pubsub.getTopics().map((topic) => [topic, pubsub.getSubscribers(topic)])),
 			})
+		})
+
+		api.get("/p2p/pubsub/topics", (req, res) => {
+			if (core.libp2p === null) {
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
+				return
+			}
+
+			res.status(StatusCodes.OK).json(core.libp2p.services.pubsub.getTopics())
+		})
+
+		api.get("/p2p/pubsub/subscribers", (req, res) => {
+			if (core.libp2p === null) {
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
+				return
+			}
+
+			const { topic } = req.query
+			if (typeof topic !== "string") {
+				res.status(StatusCodes.BAD_REQUEST).end(`missing topic query param`)
+			} else {
+				res.status(StatusCodes.OK).json(core.libp2p.services.pubsub.getSubscribers(topic))
+			}
+		})
+
+		api.get("/p2p/pubsub/peers", (req, res) => {
+			if (core.libp2p === null) {
+				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
+				return
+			}
+
+			const peers = core.libp2p.services.pubsub.getPeers()
+			res.status(StatusCodes.OK).json(peers.map((peerId) => peerId.toString()))
 		})
 
 		api.get("/p2p/connections", (req, res) => {

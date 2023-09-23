@@ -6,8 +6,9 @@ import type { PubSub } from "@libp2p/interface/pubsub"
 import { pingService, PingService } from "libp2p/ping"
 import { identifyService } from "libp2p/identify"
 
-import { circuitRelayTransport } from "libp2p/circuit-relay"
+// import { circuitRelayTransport } from "libp2p/circuit-relay"
 import { webSockets } from "@libp2p/websockets"
+import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
@@ -15,9 +16,7 @@ import { gossipsub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { GossipLog, gossiplog } from "@canvas-js/gossiplog"
-// import { discovery, DiscoveryService } from "@canvas-js/discovery"
 
-import { defaultBootstrapList } from "./bootstrap.js"
 import {
 	DIAL_CONCURRENCY,
 	DIAL_CONCURRENCY_PER_PEER,
@@ -25,15 +24,7 @@ import {
 	MIN_CONNECTIONS,
 	PING_TIMEOUT,
 } from "./constants.js"
-
-export interface P2PConfig {
-	offline?: boolean
-	listen?: string[]
-	announce?: string[]
-	bootstrapList?: string[]
-	minConnections?: number
-	maxConnections?: number
-}
+import { CanvasConfig } from "./Canvas.js"
 
 export type ServiceMap = {
 	identifyService: {}
@@ -43,19 +34,10 @@ export type ServiceMap = {
 	// discovery: DiscoveryService
 }
 
-export function getLibp2pOptions(
-	location: string | null,
-	peerId: PeerId,
-	config: P2PConfig
-): Libp2pOptions<ServiceMap> {
-	const offline = config.offline ?? false
+export function getLibp2pOptions(peerId: PeerId, config: CanvasConfig): Libp2pOptions<ServiceMap> {
 	const announce = config.announce ?? []
 	const listen = config.listen ?? []
-	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
-
-	if (listen.length === 0 && !offline) {
-		console.log(chalk.yellowBright(`[canvas-core] Using Canvas bootstrap servers as relays.`))
-	}
+	const bootstrapList = config.bootstrapList ?? []
 
 	for (const address of announce) {
 		console.log(chalk.gray(`[canvas-core] Announcing on ${address}`))
@@ -99,8 +81,8 @@ export function getLibp2pOptions(
 		},
 
 		transports: [
-			webSockets(),
-			circuitRelayTransport({ discoverRelays: announce.length === 0 ? bootstrapList.length : 0 }),
+			webSockets({ filter: all }),
+			// circuitRelayTransport({ discoverRelays: announce.length === 0 ? bootstrapList.length : 0 }),
 		],
 
 		connectionEncryption: [noise()],

@@ -1,7 +1,7 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { Source, Target, Node, Bound, KeyValueStore, Entry } from "@canvas-js/okra"
 
-import { CustomEvent, EventEmitter } from "@libp2p/interfaces/events"
+import { CustomEvent, EventEmitter } from "@libp2p/interface/events"
 import { Logger, logger } from "@libp2p/logger"
 import { equals } from "uint8arrays"
 import { bytesToHex as hex } from "@noble/hashes/utils"
@@ -9,7 +9,7 @@ import { bytesToHex as hex } from "@noble/hashes/utils"
 import type { Message } from "@canvas-js/interfaces"
 import { Signature, verifySignature } from "@canvas-js/signed-cid"
 
-import { KEY_LENGTH, decodeId, decodeSignedMessage, encodeId, encodeSignedMessage, getClock } from "./schema.js"
+import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getClock } from "./schema.js"
 import { Driver } from "./sync/driver.js"
 import { Awaitable, assert, nsidPattern, cborNull } from "./utils.js"
 
@@ -108,9 +108,9 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 			AbstractMessageLog.bound(upperBound?.id, upperBound?.inclusive),
 			options
 		)) {
-			const [recoveredKey, signature, message] = this.decode(value)
-			assert(equals(recoveredKey, key), "expected equals(recoveredKey, key)")
-			yield [decodeId(key), signature, message]
+			const [id, signature, message] = this.decode(value)
+			assert(id === decodeId(key), "expected id === decodeId(key)")
+			yield [id, signature, message]
 		}
 	}
 
@@ -128,8 +128,8 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		return encodeSignedMessage(signature, message)
 	}
 
-	public decode(value: Uint8Array): [key: Uint8Array, signature: Signature | null, message: Message<Payload>] {
-		const [key, signature, message] = decodeSignedMessage(value)
+	public decode(value: Uint8Array): [id: string, signature: Signature | null, message: Message<Payload>] {
+		const [id, signature, message] = decodeSignedMessage(value)
 		if (this.signatures) {
 			assert(signature !== null, "missing message signature")
 		}
@@ -143,7 +143,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 
 		assert(this.validate(payload), "invalid message payload")
 
-		return [key, signature, { clock, parents, payload }]
+		return [id, signature, { clock, parents, payload }]
 	}
 
 	public async getClock(): Promise<[clock: number, parents: string[]]> {
@@ -157,16 +157,12 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 	}
 
 	public async get(id: string): Promise<[signature: Signature | null, message: Message<Payload> | null]> {
-		const key = encodeId(id)
-		assert(key.length === KEY_LENGTH, "invalid id")
-
-		const value = await this.read(({ messages }) => messages.get(key))
+		const value = await this.read(({ messages }) => messages.get(encodeId(id)))
 		if (value === null) {
 			return [null, null]
 		}
 
-		const [recoveredKey, signature, message] = this.decode(value)
-		assert(equals(recoveredKey, key), "invalid message key")
+		const [_, signature, message] = this.decode(value)
 		return [signature, message]
 	}
 
@@ -317,11 +313,8 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 			async (txn) => {
 				const driver = new Driver(this.topic, source, txn.messages)
 				for await (const [key, value] of driver.sync()) {
-					const id = decodeId(key)
-
-					const [recoveredKey, signature, message] = this.decode(value)
-
-					assert(equals(key, recoveredKey), "invalid message key")
+					const [id, signature, message] = this.decode(value)
+					assert(id === decodeId(key), "expected id === decodeId(key)")
 
 					if (this.signatures) {
 						assert(signature !== null, "missing message signature")

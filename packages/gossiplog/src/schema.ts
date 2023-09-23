@@ -40,9 +40,7 @@ type SignedMessage = {
 	}
 }
 
-export function decodeSignedMessage(
-	value: Uint8Array
-): [key: Uint8Array, signature: Signature | null, message: Message] {
+export function decodeSignedMessage(value: Uint8Array): [id: string, signature: Signature | null, message: Message] {
 	const signedMessage = toSignedMessage(cbor.decode(value)) as SignedMessage
 	const {
 		signature,
@@ -51,7 +49,7 @@ export function decodeSignedMessage(
 
 	const clock = getClock(parents)
 	const key = getKey(clock, sha256(value))
-	return [key, signature, { clock, parents: parents?.map(decodeId) ?? [], payload }]
+	return [decodeId(key), signature, { clock, parents: parents?.map(decodeId) ?? [], payload }]
 }
 
 export function encodeSignedMessage(
@@ -71,8 +69,7 @@ export function getClock(parents: Uint8Array[] | null) {
 	}
 
 	let max = 0
-	for (const parent of parents) {
-		const key = typeof parent === "string" ? encodeId(parent) : parent
+	for (const key of parents) {
 		assert(key.byteLength === KEY_LENGTH, "expected key.byteLength === KEY_LENGTH")
 		const [clock] = varint.decode(key)
 		if (clock > max) {
