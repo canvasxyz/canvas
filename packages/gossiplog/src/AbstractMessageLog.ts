@@ -272,7 +272,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		message: Message<Payload>,
 		[key, value]: Entry = this.encode(signature, message)
 	): Promise<Result> {
-		this.log("applying message %s at clock %d with %d parents", id, message.clock, message.parents.length)
+		this.log("applying %s %O", id, message)
 
 		const result = await this.apply(id, signature, message)
 		this.dispatchEvent(new CustomEvent("message", { detail: { topic: this.topic, id, signature, message, result } }))

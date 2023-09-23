@@ -79,26 +79,21 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 		for (const syncService of this.#syncServices.values()) {
 			await syncService.start()
 		}
+
+		for (const topic of this.#messageLogs.keys()) {
+			this.#pubsub.subscribe(topic)
+		}
 	}
 
 	public async beforeStop() {
 		this.log("beforeStop")
-		await Promise.all(
-			Array.from(this.#syncServices).map(async ([topic, syncService]) => {
-				await syncService.stop()
-				this.#syncServices.delete(topic)
-			})
-		)
+		await Promise.all(Array.from(this.#syncServices.values()).map((syncService) => syncService.stop()))
+		this.#syncServices.clear()
 	}
 
 	public async stop() {
 		this.log("stop")
 		this.#pubsub.removeEventListener("message", this.handleMessage)
-
-		for (const messages of this.#messageLogs.values()) {
-			await messages.close()
-		}
-
 		this.#messageLogs.clear()
 		this.#syncServices.clear()
 		this.#started = false

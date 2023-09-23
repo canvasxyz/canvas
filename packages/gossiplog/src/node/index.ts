@@ -15,7 +15,7 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 			fs.mkdirSync(path, { recursive: true })
 		}
 
-		const env = new Environment(path)
+		const env = new Environment(path, { databases: 3 })
 		return new MessageLog(init, env)
 	}
 
@@ -46,6 +46,7 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 	}
 
 	public async read<T>(callback: (txn: ReadOnlyTransaction) => Promise<T>): Promise<T> {
+		this.log("opening read-only transaction")
 		return await this.env.read(async (txn) => {
 			const parentsDBI = txn.openDatabase("parents")
 			const messagesDBI = txn.openDatabase("messages")
@@ -62,7 +63,8 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 	}
 
 	public async write<T>(callback: (txn: ReadWriteTransaction) => Promise<T>): Promise<T> {
-		return await this.env.read(async (txn) => {
+		this.log("opening read-write transaction")
+		return await this.env.write(async (txn) => {
 			const parentsDBI = txn.openDatabase("parents")
 			const messagesDBI = txn.openDatabase("messages")
 			const messages = new Tree(txn, { dbi: messagesDBI })
