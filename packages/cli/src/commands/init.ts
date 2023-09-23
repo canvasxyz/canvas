@@ -22,7 +22,6 @@ export async function handler(args: Args) {
 	const location = path.resolve(args.path)
 	if (!fs.existsSync(location)) {
 		fs.mkdirSync(location, { recursive: true })
-		fs.mkdirSync(path.resolve(location, "messages"))
 		console.log(chalk.gray(`Created application directory at ${location}`))
 	}
 

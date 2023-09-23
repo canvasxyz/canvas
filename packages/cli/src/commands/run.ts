@@ -176,8 +176,12 @@ export async function handler(args: Args) {
 		announce,
 		minConnections: args["min-connections"],
 		maxConnections: args["max-connections"],
-		offline: args.offline,
+		bootstrapList: [],
 	})
+
+	if (!args.offline) {
+		await app.start()
+	}
 
 	const api = express()
 	api.use(cors())
