@@ -12,7 +12,6 @@
     "generate-messages": "protons ./src/shared/messages.proto"
   },
   "dependencies": {
-    "@canvas-js/pubsub-service-discovery": "^0.1.0",
     "@canvas-js/store": "0.5.0-alpha4",
     "@libp2p/interface-connection": "^5.1.1",
     "@libp2p/interface-peer-id": "^2.0.2",
