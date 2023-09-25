@@ -281,7 +281,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 			}
 
 			const children = this.mempool.children.get(id)
-			this.log("%s has mempool children %o", id, children)
+			this.log("%s has %d mempool children", id, children?.size ?? 0, children)
 			if (children !== undefined) {
 				for (const childId of children) {
 					const dependencies = this.mempool.dependencies.get(childId)
