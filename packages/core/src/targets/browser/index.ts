@@ -1,12 +1,14 @@
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 import { PeerId } from "@libp2p/interface-peer-id"
 import { base64 } from "multiformats/bases/base64"
+import { createLibp2p } from "libp2p"
 
 import { MessageLogInit } from "@canvas-js/gossiplog"
 import { MessageLog } from "@canvas-js/gossiplog/browser"
 import { ModelDB } from "@canvas-js/modeldb/browser"
 
 import type { PlatformTarget } from "../interface.js"
+import { getLibp2pOptions } from "./libp2p.js"
 
 export default function getBrowserTarget(location: string | null): PlatformTarget {
 	if (location === null) {
@@ -16,7 +18,9 @@ export default function getBrowserTarget(location: string | null): PlatformTarge
 	return {
 		async getPeerId(): Promise<PeerId> {
 			if (location === null) {
-				return await createEd25519PeerId()
+				const peerId = await createEd25519PeerId()
+				console.log(`[canvas-core] Using temporary PeerId ${peerId}`)
+				return peerId
 			}
 
 			const localStorageKey = `canvas:${location}/peer-id`
@@ -25,11 +29,11 @@ export default function getBrowserTarget(location: string | null): PlatformTarge
 				const peerId = await createEd25519PeerId()
 				const privateKey = exportToProtobuf(peerId)
 				localStorage.setItem(localStorageKey, base64.baseEncode(privateKey))
-				console.log(`[canvas-core] Created new peer id ${peerId}`)
+				console.log(`[canvas-core] Created new PeerId ${peerId}`)
 				return peerId
 			} else {
 				const peerId = await createFromProtobuf(base64.baseDecode(item))
-				console.log(`[canvas-core] Found existing peer id ${peerId}`)
+				console.log(`[canvas-core] Found existing PeerId ${peerId}`)
 				return peerId
 			}
 		},
@@ -38,5 +42,7 @@ export default function getBrowserTarget(location: string | null): PlatformTarge
 
 		openMessageLog: <Payload, Result>(init: MessageLogInit<Payload, Result>) =>
 			MessageLog.open(`${location}/topics/${init.topic}`, init),
+
+		createLibp2p: (config, peerId) => createLibp2p(getLibp2pOptions(peerId, config)),
 	}
 }

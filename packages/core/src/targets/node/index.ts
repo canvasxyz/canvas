@@ -3,9 +3,7 @@ import fs from "node:fs"
 
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 import { PeerId } from "@libp2p/interface-peer-id"
-
-import { prometheusMetrics } from "@libp2p/prometheus-metrics"
-import { register } from "prom-client"
+import { createLibp2p } from "libp2p"
 
 import { MessageLogInit } from "@canvas-js/gossiplog"
 import { MessageLog } from "@canvas-js/gossiplog/node"
@@ -14,6 +12,7 @@ import { ModelDB } from "@canvas-js/modeldb/node"
 
 import type { PlatformTarget } from "../interface.js"
 import { assert } from "../../utils.js"
+import { getLibp2pOptions } from "./libp2p.js"
 
 const PEER_ID_FILENAME = ".peer-id"
 
@@ -26,16 +25,18 @@ export default function getTarget(location: string | null): PlatformTarget {
 
 			if (location === null) {
 				const peerId = await createEd25519PeerId()
-				// console.log(`[canvas-core] Using temporary PeerId ${peerId}`)
+				console.log(`[canvas-core] Using temporary PeerId ${peerId}`)
 				return peerId
 			}
 
 			const peerIdPath = path.resolve(location, PEER_ID_FILENAME)
 			if (fs.existsSync(peerIdPath)) {
-				return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
+				const peerId = await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
+				console.log(`[canvas-core] Found existing PeerID ${peerId}`)
+				return peerId
 			}
 
-			// console.log(`[canvas-core] Creating new PeerID at ${peerIdPath}`)
+			console.log(`[canvas-core] Creating new PeerID at ${peerIdPath}`)
 			const peerId = await createEd25519PeerId()
 			fs.writeFileSync(peerIdPath, Buffer.from(exportToProtobuf(peerId)).toString("base64"))
 			return peerId
@@ -55,8 +56,8 @@ export default function getTarget(location: string | null): PlatformTarget {
 				? MemoryMessageLog.open(init)
 				: MessageLog.open(path.resolve(location, "topics", init.topic), init),
 
-		extendLibp2pOptions(options) {
-			return { ...options, metrics: prometheusMetrics({ registry: register }) }
+		createLibp2p: (config, peerId) => {
+			return createLibp2p(getLibp2pOptions(peerId, config))
 		},
 	}
 }

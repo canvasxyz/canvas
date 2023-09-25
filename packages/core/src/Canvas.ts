@@ -27,8 +27,8 @@ import { AbstractMessageLog, MessageSigner } from "@canvas-js/gossiplog"
 
 import getTarget from "#target"
 
-import { getLibp2pOptions, ServiceMap } from "./libp2p.js"
 import { assert, mapValues, signalInvalidType } from "./utils.js"
+import { ServiceMap } from "./targets/interface.js"
 
 export interface CanvasConfig {
 	contract: string
@@ -92,7 +92,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		}
 
 		const peerId = await target.getPeerId()
-		const libp2p = await createLibp2p(getLibp2pOptions(peerId, config))
+		const libp2p = await target.createLibp2p(config, peerId)
 
 		// Create a QuickJS VM
 		const vm = await VM.initialize({ runtimeMemoryLimit, log: contractLog })
@@ -225,9 +225,6 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	) {
 		super()
 
-		if (libp2p === null) {
-		}
-
 		libp2p?.addEventListener("peer:discovery", ({ detail: { id, multiaddrs, protocols } }) => {
 			this.log("discovered peer %p with protocols %o", id, protocols)
 		})
@@ -251,6 +248,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				const timestamp = Date.now()
 
 				const session = await signer.getSession(topic, { timestamp, chain: options.chain })
+
 				const { chain, address, publicKeyType: public_key_type, publicKey: public_key } = session
 
 				// Check if the session has already been added to the message log
