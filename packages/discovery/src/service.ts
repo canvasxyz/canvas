@@ -33,6 +33,8 @@ export interface DiscoveryServiceInit {
 }
 
 export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implements PeerDiscovery, Startable {
+	public static FETCH_KEY_PREFIX = "discovery/"
+
 	public static INTERVAL = 5 * minute
 	public static DELAY = 10 * second
 
@@ -86,26 +88,7 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 	}
 
 	public async start() {
-		this.fetch.registerLookupFunction("discover/", async (key) => {
-			const [_, topic] = key.split("/")
-			const records: Uint8Array[] = []
-			for (const peerId of this.pubsub.getSubscribers(topic)) {
-				try {
-					const { peerRecordEnvelope } = await this.components.peerStore.get(peerId)
-					if (peerRecordEnvelope !== undefined) {
-						records.push(peerRecordEnvelope)
-					}
-				} catch (err) {
-					this.log.error("failed to get peer info from peer store: %O", err)
-				}
-			}
-
-			if (records.length === 0) {
-				return null
-			} else {
-				return cbor.encode(records)
-			}
-		})
+		this.fetch.registerLookupFunction(DiscoveryService.FETCH_KEY_PREFIX, this.handleFetch)
 
 		this.#registrarId = await this.components.registrar.register(this.fetch.protocol, {
 			onConnect: (peerId: PeerId, connection: Connection) => {
@@ -123,16 +106,40 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 	}
 
 	public async beforeStop(): Promise<void> {
+		this.fetch.unregisterLookupFunction(DiscoveryService.FETCH_KEY_PREFIX, this.handleFetch)
 		this.#queue.clear()
 		await this.#queue.onIdle()
 	}
 
 	public async stop(): Promise<void> {
-		this.fetch.unregisterLookupFunction("discovery/")
-
 		if (this.#registrarId !== null) {
 			this.components.registrar.unregister(this.#registrarId)
 			this.#registrarId = null
+		}
+	}
+
+	private handleFetch = async (key: string): Promise<Uint8Array | null> => {
+		if (!key.startsWith(DiscoveryService.FETCH_KEY_PREFIX)) {
+			return null
+		}
+
+		const [_, topic] = key.split("/")
+		const records: Uint8Array[] = []
+		for (const peerId of this.pubsub.getSubscribers(topic)) {
+			try {
+				const { peerRecordEnvelope } = await this.components.peerStore.get(peerId)
+				if (peerRecordEnvelope !== undefined) {
+					records.push(peerRecordEnvelope)
+				}
+			} catch (err) {
+				this.log.error("failed to get peer info from peer store: %O", err)
+			}
+		}
+
+		if (records.length === 0) {
+			return null
+		} else {
+			return cbor.encode(records)
 		}
 	}
 
@@ -149,7 +156,7 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 
 					this.log("want more peers for topic %s", topic)
 
-					const key = `discover/${topic}`
+					const key = DiscoveryService.FETCH_KEY_PREFIX + topic
 					this.log("fetching %p %s", connection.remotePeer, key)
 					const result = await this.fetch.fetch(connection.remotePeer, key)
 					if (result === null) {
