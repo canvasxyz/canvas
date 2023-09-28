@@ -3,8 +3,9 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 import PQueue from "p-queue"
 import pDefer from "p-defer"
 
-import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"
 import { Bound } from "@canvas-js/okra"
+import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"
+import { verifySignature } from "@canvas-js/signed-cid"
 
 import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
 import { assert } from "../utils.js"
@@ -15,7 +16,13 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 	): Promise<MessageLog<Payload, Result>> {
 		const messages = await MemoryTree.open()
 		const parents = new MemoryStore()
-		return new MessageLog(init, messages, parents)
+		const messageLog = new MessageLog(messages, parents, init)
+
+		if (init.replay) {
+			await messageLog.replay()
+		}
+
+		return messageLog
 	}
 
 	private readonly queue = new PQueue({ concurrency: 1 })
@@ -23,9 +30,9 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 	private readonly outgoingSyncPeers = new Set<string>()
 
 	private constructor(
-		init: MessageLogInit<Payload, Result>,
 		private readonly messages: MemoryTree,
-		private readonly parents: MemoryStore
+		private readonly parents: MemoryStore,
+		init: MessageLogInit<Payload, Result>
 	) {
 		super(init)
 	}

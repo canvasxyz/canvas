@@ -3,9 +3,10 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 import pDefer from "p-defer"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import { IDBPDatabase, openDB } from "idb"
-import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
+import { verifySignature } from "@canvas-js/signed-cid"
 import { Bound, KeyValueStore } from "@canvas-js/okra"
+import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
+import { IDBPDatabase, openDB } from "idb"
 
 import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
 import { assert } from "../utils.js"
@@ -31,7 +32,13 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 		const messages = await IDBTree.open(db, `${init.topic}/messages`)
 		const parents = new IDBStore(db, `${init.topic}/parents`)
 
-		return new MessageLog(init, db, messages, parents, storeNames)
+		const messageLog = new MessageLog(db, messages, parents, init)
+
+		if (init.replay) {
+			await messageLog.replay()
+		}
+
+		return messageLog
 	}
 
 	private readonly incomingSyncPeers = new Set<string>()
@@ -40,11 +47,10 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 	private readonly lockName = bytesToHex(crypto.getRandomValues(new Uint8Array(16)))
 
 	private constructor(
-		init: MessageLogInit<Payload, Result>,
 		private readonly db: IDBPDatabase,
 		private readonly messages: IDBTree,
 		private readonly parents: IDBStore,
-		private readonly storeNames: string[]
+		init: MessageLogInit<Payload, Result>
 	) {
 		super(init)
 
@@ -91,7 +97,7 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 		})
 
 		if (this.messages.store.txn === null) {
-			this.messages.store.txn = this.db.transaction([`${this.topic}/messages`], "readonly")
+			this.messages.store.txn = this.db.transaction([this.messages.store.storeName], "readonly")
 		}
 
 		try {
@@ -142,7 +148,7 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 			const parents: Omit<KeyValueStore, "set" | "delete"> = {
 				get: (key) => this.parents.read(() => this.parents.get(key)),
 				entries: (lowerBound = null, upperBound = null, options = {}) => {
-					this.parents.txn = this.db.transaction([`${this.topic}/parents`], "readonly")
+					this.parents.txn = this.db.transaction([this.parents.storeName], "readonly")
 					return this.parents.entries(lowerBound, upperBound, options)
 				},
 			}

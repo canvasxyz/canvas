@@ -97,6 +97,18 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 	}
 
+	protected async replay() {
+		for await (const [id, signature, message] of this.iterate()) {
+			if (this.signatures) {
+				assert(signature !== null, "missing message signature")
+				verifySignature(signature, message)
+			}
+			assert(message.topic === this.topic, "invalid message topic")
+			assert(this.validate(message.payload))
+			await this.apply(id, signature, message)
+		}
+	}
+
 	public async *iterate(
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,

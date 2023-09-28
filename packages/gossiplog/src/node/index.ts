@@ -1,7 +1,8 @@
 import fs from "node:fs"
 
-import { Environment, Transaction, Tree } from "@canvas-js/okra-node"
 import { Bound } from "@canvas-js/okra"
+import { Environment, Transaction, Tree } from "@canvas-js/okra-node"
+import { verifySignature } from "@canvas-js/signed-cid"
 
 import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
 import { assert } from "../utils.js"
@@ -16,10 +17,16 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 		}
 
 		const env = new Environment(path, { databases: 3 })
-		return new MessageLog(init, env)
+		const messageLog = new MessageLog(env, init)
+
+		if (init.replay) {
+			await messageLog.replay()
+		}
+
+		return messageLog
 	}
 
-	private constructor(init: MessageLogInit<Payload, Result>, private readonly env: Environment) {
+	private constructor(private readonly env: Environment, init: MessageLogInit<Payload, Result>) {
 		super(init)
 	}
 
