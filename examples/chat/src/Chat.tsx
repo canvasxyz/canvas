@@ -3,7 +3,7 @@ import React, { useContext, useState } from "react"
 import { useLiveQuery } from "@canvas-js/modeldb/browser"
 
 import { AppContext } from "./AppContext.js"
-import { UserAddress } from "./UserAddress.js"
+import { AddressView } from "./components/AddressView.js"
 
 export interface MessagesProps {}
 
@@ -45,7 +45,7 @@ const MessageHeader: React.FC<MessageHeaderProps> = ({ user }) => {
 	const [chain, chainId, address] = user.split(":")
 	return (
 		<div className="mt-2">
-			<UserAddress className="text-sm text-gray-500" address={address} />
+			<AddressView className="text-sm text-gray-500" address={address} />
 		</div>
 	)
 }

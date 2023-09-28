@@ -1,11 +1,11 @@
 import React from "react"
 
-export interface UserAddressProps {
+export interface AddressViewProps {
 	className?: string
 	address: string
 }
 
-export const UserAddress: React.FC<UserAddressProps> = (props) => {
+export const AddressView: React.FC<AddressViewProps> = (props) => {
 	const className = props.className ?? "text-sm"
 	return (
 		<code className={className}>

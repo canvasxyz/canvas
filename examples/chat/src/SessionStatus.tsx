@@ -3,11 +3,11 @@ import { computeAddress, hexlify } from "ethers"
 import { useLiveQuery } from "@canvas-js/modeldb/browser"
 
 import { AppContext } from "./AppContext.js"
-import { UserAddress } from "./UserAddress.js"
+import { AddressView } from "./components/AddressView.js"
 
-export interface ConnectStatusProps {}
+export interface SessionStatusProps {}
 
-export const ConnectStatus: React.FC<ConnectStatusProps> = ({}) => {
+export const SessionStatus: React.FC<SessionStatusProps> = ({}) => {
 	const { address } = useContext(AppContext)
 	if (address === null) {
 		return null
@@ -19,7 +19,7 @@ export const ConnectStatus: React.FC<ConnectStatusProps> = ({}) => {
 				<span className="text-sm">Address</span>
 			</div>
 			<div>
-				<UserAddress address={address} />
+				<AddressView address={address} />
 			</div>
 			<hr />
 			<div>
@@ -30,12 +30,12 @@ export const ConnectStatus: React.FC<ConnectStatusProps> = ({}) => {
 	)
 }
 
-export interface SessionListProps {
+interface SessionListProps {
 	chain: string
 	address: string
 }
 
-export const SessionList: React.FC<SessionListProps> = ({ chain, address }) => {
+const SessionList: React.FC<SessionListProps> = ({ chain, address }) => {
 	const { app } = useContext(AppContext)
 
 	const timestamp = useMemo(() => Date.now(), [])
@@ -58,7 +58,7 @@ export const SessionList: React.FC<SessionListProps> = ({ chain, address }) => {
 					return (
 						<li key={address}>
 							<div>
-								<UserAddress address={address} />
+								<AddressView address={address} />
 							</div>
 							{session.expiration < Number.MAX_SAFE_INTEGER && (
 								<div>
