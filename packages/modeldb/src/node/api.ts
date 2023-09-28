@@ -1,4 +1,5 @@
 import { Database } from "better-sqlite3"
+import { logger } from "@libp2p/logger"
 
 import {
 	Property,
@@ -46,6 +47,8 @@ function getPropertyColumnType(property: Property): string {
 const getPropertyColumn = (property: Property) => `'${property.name}' ${getPropertyColumnType(property)}`
 
 export class ModelAPI {
+	private readonly log = logger(`canvas:modeldb:[${this.model.name}]`)
+
 	#table = `model/${this.model.name}`
 	#params: Record<string, `p${string}`> = {}
 	#properties = Object.fromEntries(this.model.properties.map((property) => [property.name, property]))
