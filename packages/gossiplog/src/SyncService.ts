@@ -63,7 +63,6 @@ export interface SyncServiceComponents {
  */
 export class SyncService<Payload = unknown, Result = void> implements Startable {
 	private readonly protocol: string
-	private readonly topology: Topology
 	private readonly topologyPeers = new Set<string>()
 
 	private readonly maxInboundStreams: number
@@ -76,7 +75,6 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 	private readonly syncQueuePeers = new Set<string>()
 	private readonly syncHistory = new CacheMap<string, number>(MAX_SYNC_QUEUE_SIZE)
 
-	#started = false
 	#controller = new AbortController()
 	#registrarId: string | null = null
 
@@ -95,8 +93,25 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 
 		this.minConnections = options.minConnections ?? MIN_CONNECTIONS
 		this.maxConnections = options.maxConnections ?? MAX_CONNECTIONS
+	}
 
-		this.topology = {
+	public isStarted() {
+		return this.#registrarId !== null
+	}
+
+	public get topic() {
+		return this.messages.topic
+	}
+
+	public async start(): Promise<void> {
+		this.log("starting sync service")
+
+		await this.components.registrar.handle(this.protocol, this.handleIncomingStream, {
+			maxInboundStreams: this.maxInboundStreams,
+			maxOutboundStreams: this.maxOutboundStreams,
+		})
+
+		this.#registrarId = await this.components.registrar.register(this.protocol, {
 			min: this.minConnections,
 			max: this.maxConnections,
 
@@ -110,35 +125,11 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 				this.log("disconnected from %p", peerId)
 				this.topologyPeers.delete(peerId.toString())
 			},
-		}
-	}
-
-	public isStarted() {
-		return this.#started
-	}
-
-	public get topic() {
-		return this.messages.topic
-	}
-
-	public async start(): Promise<void> {
-		if (this.#started === true) {
-			return
-		}
-
-		this.log("starting sync service")
-
-		await this.components.registrar.handle(this.protocol, this.handleIncomingStream, {
-			maxInboundStreams: this.maxInboundStreams,
-			maxOutboundStreams: this.maxOutboundStreams,
 		})
-
-		this.#registrarId = await this.components.registrar.register(this.protocol, this.topology)
-		this.#started = true
 	}
 
 	public async stop(): Promise<void> {
-		if (this.#started === false) {
+		if (this.#registrarId === null) {
 			return
 		}
 
@@ -154,8 +145,6 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 			this.components.registrar.unregister(this.#registrarId)
 			this.#registrarId = null
 		}
-
-		this.#started = false
 	}
 
 	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {
@@ -282,6 +271,10 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 		// randomize selected connection
 		shuffle(connections)
 		for (const connection of connections) {
+			if (connection.transient) {
+				continue
+			}
+
 			this.log("opening outgoing stream on connection %s", connection.id)
 
 			try {
