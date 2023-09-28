@@ -12,18 +12,3 @@ export const MAX_SYNC_QUEUE_SIZE = 8
 export const SYNC_COOLDOWN_PERIOD = 20 * second
 export const SYNC_RETRY_INTERVAL = 3 * second // this is multiplied by Math.random()
 export const SYNC_RETRY_LIMIT = 5
-
-// export const DIAL_TIMEOUT = 10 * second
-// export const SYNC_DELAY = 10 * second
-// export const SYNC_INTERVAL = 5 * minute
-// export const SYNC_RETRY_INTERVAL = 10 * second
-// export const SYNC_COOLDOWN_PERIOD = 2 * minute
-// export const MAX_SYNC_QUEUE_SIZE = 10
-
-// export const PING_DELAY = 1 * minute
-// export const PING_INTERVAL = 2 * minute
-// export const PING_RETRY_INTERVAL = 5 * second
-// export const PING_TIMEOUT = 10 * second
-
-// export const DIAL_CONCURRENCY = 10
-// export const DIAL_CONCURRENCY_PER_PEER = 1

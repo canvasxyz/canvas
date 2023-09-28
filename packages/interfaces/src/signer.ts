@@ -1,8 +1,8 @@
 import type { Signature } from "@canvas-js/signed-cid"
 
 import type { Message } from "./message.js"
-import type { Action } from "./action.js"
 import type { Session } from "./session.js"
+import type { Action } from "./action.js"
 
 export type Env = Record<string, string>
 

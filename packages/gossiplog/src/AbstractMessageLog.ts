@@ -39,7 +39,6 @@ export interface MessageSigner<Payload = unknown> {
 
 export type MessageLogEvents<Payload, Result> = {
 	message: CustomEvent<{
-		topic: string
 		id: string
 		signature: Signature | null
 		message: Message<Payload>
@@ -129,21 +128,21 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 	}
 
 	public decode(value: Uint8Array): [id: string, signature: Signature | null, message: Message<Payload>] {
-		const [id, signature, message] = decodeSignedMessage(value)
+		const [id, signature, message] = decodeSignedMessage(this.topic, value)
 		if (this.signatures) {
 			assert(signature !== null, "missing message signature")
 		}
 
-		const { clock, parents, payload } = message
+		const { topic, clock, parents, payload } = message
 		if (this.sequencing) {
-			assert(clock > 0, "expected message.clock > 0 if sequencing is enable")
+			assert(clock > 0, "expected message.clock > 0 if sequencing is enabled")
 		} else {
 			assert(clock === 0, "expected message.clock === 0 if sequencing is disabled")
 		}
 
 		assert(this.validate(payload), "invalid message payload")
 
-		return [id, signature, { clock, parents, payload }]
+		return [id, signature, { topic, clock, parents, payload }]
 	}
 
 	public async getClock(): Promise<[clock: number, parents: string[]]> {
@@ -189,7 +188,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 			const parents = await this.getParents(txn)
 			const clock = this.sequencing ? getClock(parents) : 0
 
-			const message: Message<Payload> = { clock, parents: parents.map(decodeId), payload }
+			const message: Message<Payload> = { topic: this.topic, clock, parents: parents.map(decodeId), payload }
 			const signature = await signer.sign(message)
 			const [key, value] = this.encode(signature, message)
 
@@ -210,6 +209,11 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 	 * If any of the parents are not present, insert the message into the mempool instead.
 	 */
 	public async insert(signature: Signature | null, message: Message<Payload>): Promise<{ id: string }> {
+		if (this.signatures) {
+			assert(signature !== null, "missing message signature")
+			verifySignature(signature, message)
+		}
+
 		const { id, root } = await this.write(async (txn) => {
 			const [key, value] = this.encode(signature, message)
 			const id = decodeId(key)

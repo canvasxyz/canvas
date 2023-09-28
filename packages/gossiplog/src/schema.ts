@@ -40,7 +40,10 @@ type SignedMessage = {
 	}
 }
 
-export function decodeSignedMessage(value: Uint8Array): [id: string, signature: Signature | null, message: Message] {
+export function decodeSignedMessage(
+	topic: string,
+	value: Uint8Array
+): [id: string, signature: Signature | null, message: Message] {
 	const signedMessage = toSignedMessage(cbor.decode(value)) as SignedMessage
 	const {
 		signature,
@@ -49,7 +52,7 @@ export function decodeSignedMessage(value: Uint8Array): [id: string, signature: 
 
 	const clock = getClock(parents)
 	const key = getKey(clock, sha256(value))
-	return [decodeId(key), signature, { clock, parents: parents?.map(decodeId) ?? [], payload }]
+	return [decodeId(key), signature, { topic, clock, parents: parents?.map(decodeId) ?? [], payload }]
 }
 
 export function encodeSignedMessage(

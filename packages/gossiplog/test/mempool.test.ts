@@ -18,15 +18,15 @@ test("insert messages out-of-order", async (t) => {
 
 	const log = await MessageLog.open({ topic, apply, validate, signatures: false })
 
-	const a = { clock: 1, parents: [], payload: "a" }
+	const a = { topic, clock: 1, parents: [], payload: "a" }
 	const [keyA] = log.encode(null, a)
 	const idA = decodeId(keyA)
 
-	const b = { clock: 2, parents: [idA], payload: "b" }
+	const b = { topic, clock: 2, parents: [idA], payload: "b" }
 	const [keyB] = log.encode(null, b)
 	const idB = decodeId(keyB)
 
-	const c = { clock: 3, parents: [idB], payload: "c" }
+	const c = { topic, clock: 3, parents: [idB], payload: "c" }
 	const [keyC] = log.encode(null, c)
 	const idC = decodeId(keyC)
 

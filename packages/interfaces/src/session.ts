@@ -12,7 +12,6 @@ export type Session<Data = SessionData> = {
 	/** CAIP-2 address (without the prefix, e.g. "0xb94d27...") */
 	address: string
 
-	topic: string
 	publicKeyType: SignatureType
 	publicKey: Uint8Array
 	data: Data

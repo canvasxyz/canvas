@@ -12,7 +12,6 @@ export type Action = {
 	/** CAIP-2 address (without the prefix, e.g. "0xb94d27...") */
 	address: string
 
-	topic: string
 	name: string
 	args: ActionArguments
 

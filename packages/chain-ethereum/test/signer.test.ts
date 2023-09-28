@@ -12,7 +12,7 @@ test("create and verify session", async (t) => {
 	const session = await signer.getSession(topic)
 	t.notThrows(() => signer.verifySession(session))
 
-	const sessionMessage = { clock: 1, parents: [], payload: session }
+	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 	const sessionSignature = await signer.sign(sessionMessage)
 	t.notThrows(() => verifySignature(sessionSignature, sessionMessage))
 })
@@ -23,7 +23,7 @@ test("create and verify session and action", async (t) => {
 	const session = await signer.getSession(topic)
 	t.notThrows(() => signer.verifySession(session))
 
-	const sessionMessage = { clock: 1, parents: [], payload: session }
+	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 	const sessionSignature = await signer.sign(sessionMessage)
 	t.notThrows(() => verifySignature(sessionSignature, sessionMessage))
 
@@ -31,14 +31,13 @@ test("create and verify session and action", async (t) => {
 		type: "action",
 		chain: session.chain,
 		address: session.address,
-		topic,
 		name: "foo",
 		args: { bar: 7 },
 		blockhash: null,
 		timestamp: session.timestamp,
 	}
 
-	const actionMessage = { clock: 1, parents: [], payload: action }
+	const actionMessage = { topic, clock: 1, parents: [], payload: action }
 	const actionSignature = await signer.sign(actionMessage)
 	t.notThrows(() => verifySignature(actionSignature, actionMessage))
 })

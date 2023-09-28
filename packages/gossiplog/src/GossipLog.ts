@@ -9,9 +9,8 @@ import { EventEmitter } from "@libp2p/interface/events"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
 
-import type { Node } from "@canvas-js/okra"
 import type { Signature } from "@canvas-js/signed-cid"
-import type { IPLDValue, Message } from "@canvas-js/interfaces"
+import type { Message } from "@canvas-js/interfaces"
 
 import { AbstractMessageLog, MessageLogEvents, MessageSigner } from "./AbstractMessageLog.js"
 

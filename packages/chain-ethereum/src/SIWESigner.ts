@@ -158,7 +158,6 @@ export class SIWESigner implements SessionSigner {
 			type: "session",
 			chain: chain,
 			address: address,
-			topic: topic,
 			publicKeyType: "secp256k1",
 			publicKey: secp256k1.getPublicKey(privateKey),
 			data: { signature: getBytes(signature), domain, nonce },
@@ -177,20 +176,22 @@ export class SIWESigner implements SessionSigner {
 		return session
 	}
 
-	public sign({ clock, parents, payload }: Message<Action | Session>): Signature {
+	public sign({ topic, clock, parents, payload }: Message<Action | Session>): Signature {
 		if (payload.type === "action") {
-			const key = getKey(payload.topic, payload.chain, payload.address)
+			const { chain, address, timestamp } = payload
+			const key = getKey(topic, chain, address)
 			const session = this.#sessions[key]
 			const privateKey = this.#privateKeys[key]
 			assert(session !== undefined && privateKey !== undefined)
 
-			assert(payload.address === session.address)
-			assert(payload.timestamp >= session.timestamp)
-			assert(payload.timestamp <= session.timestamp + (session.duration ?? Infinity))
+			assert(chain === session.chain && address === session.address)
+			assert(timestamp >= session.timestamp)
+			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
 
-			return createSignature("secp256k1", privateKey, { clock, parents, payload } satisfies Message<Action>)
+			return createSignature("secp256k1", privateKey, { topic, clock, parents, payload } satisfies Message<Action>)
 		} else if (payload.type === "session") {
-			const key = getKey(payload.topic, payload.chain, payload.address)
+			const { chain, address } = payload
+			const key = getKey(topic, chain, address)
 			const session = this.#sessions[key]
 			const privateKey = this.#privateKeys[key]
 			assert(session !== undefined && privateKey !== undefined)
@@ -198,7 +199,7 @@ export class SIWESigner implements SessionSigner {
 			// only sign our own current sessions
 			assert(payload === session)
 
-			return createSignature("secp256k1", privateKey, { clock, parents, payload } satisfies Message<Session>)
+			return createSignature("secp256k1", privateKey, { topic, clock, parents, payload } satisfies Message<Session>)
 		} else {
 			signalInvalidType(payload)
 		}

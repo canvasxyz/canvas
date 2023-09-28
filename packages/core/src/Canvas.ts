@@ -265,7 +265,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				}
 
 				const { id, result, recipients } = await this.append(
-					{ type: "action", chain, address, topic, name, args, blockhash: null, timestamp },
+					{ type: "action", chain, address, name, args, blockhash: null, timestamp },
 					{ signer }
 				)
 
