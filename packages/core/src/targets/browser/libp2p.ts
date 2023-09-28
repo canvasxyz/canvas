@@ -4,9 +4,10 @@ import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface/peer-id"
 import { pingService } from "libp2p/ping"
 import { identifyService } from "libp2p/identify"
+import { fetchService } from "libp2p/fetch"
+
 import { circuitRelayTransport } from "libp2p/circuit-relay"
 import { webRTC } from "@libp2p/webrtc"
-
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
@@ -16,6 +17,7 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { gossiplog } from "@canvas-js/gossiplog"
+import { discovery } from "@canvas-js/discovery"
 
 import {
 	DIAL_CONCURRENCY,
@@ -50,15 +52,16 @@ export function getLibp2pOptions(peerId: PeerId, config: CanvasConfig): Libp2pOp
 	}
 
 	function denyDialMultiaddr(addr: Multiaddr): boolean {
-		const id = addr.getPeerId()
-		if (!bootstrapPeerIds.has(id)) {
-			return false
-		}
+		return false
+		// const id = addr.getPeerId()
+		// if (!bootstrapPeerIds.has(id)) {
+		// 	return false
+		// }
 
-		const relayRoot = addr.decapsulateCode(290) // /p2p-circuit
-		const relayRootId = relayRoot.getPeerId()
+		// const relayRoot = addr.decapsulateCode(290) // /p2p-circuit
+		// const relayRootId = relayRoot.getPeerId()
 
-		return relayRootId !== id && bootstrapPeerIds.has(relayRootId)
+		// return relayRootId !== id && bootstrapPeerIds.has(relayRootId)
 	}
 
 	return {
@@ -82,7 +85,7 @@ export function getLibp2pOptions(peerId: PeerId, config: CanvasConfig): Libp2pOp
 
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
-		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
+		peerDiscovery: bootstrapList.length === 0 ? [] : [bootstrap({ list: bootstrapList })],
 
 		services: {
 			identifyService: identifyService({ protocolPrefix: "canvas" }),
@@ -102,6 +105,8 @@ export function getLibp2pOptions(peerId: PeerId, config: CanvasConfig): Libp2pOp
 			}),
 
 			gossiplog: gossiplog({}),
+			fetch: fetchService({ protocolPrefix: "canvas" }),
+			discovery: discovery({}),
 		},
 	}
 }

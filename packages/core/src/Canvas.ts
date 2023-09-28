@@ -1,6 +1,6 @@
 import { PeerId } from "@libp2p/interface-peer-id"
 import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
-import { createLibp2p, Libp2p } from "libp2p"
+import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import { base32hex } from "multiformats/bases/base32"
 import { QuickJSHandle } from "quickjs-emscripten"

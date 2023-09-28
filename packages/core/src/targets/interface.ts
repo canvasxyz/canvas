@@ -1,10 +1,11 @@
 import type { Libp2p, Libp2pOptions } from "libp2p"
 import type { PingService } from "libp2p/ping"
+import type { FetchService } from "libp2p/fetch"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { PubSub } from "@libp2p/interface/pubsub"
 import type { GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 import type { GossipLog } from "@canvas-js/gossiplog"
-
+import type { DiscoveryService } from "@canvas-js/discovery"
 import type { AbstractModelDB, ModelsInit, Resolver } from "@canvas-js/modeldb"
 import type { AbstractMessageLog, MessageLogInit } from "@canvas-js/gossiplog"
 
@@ -27,4 +28,6 @@ export type ServiceMap = {
 	pingService: PingService
 	pubsub: PubSub<GossipsubEvents>
 	gossiplog: GossipLog
+	fetch: FetchService
+	discovery: DiscoveryService
 }

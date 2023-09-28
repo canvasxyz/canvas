@@ -4,6 +4,7 @@ import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface/peer-id"
 import { pingService } from "libp2p/ping"
 import { identifyService } from "libp2p/identify"
+import { fetchService } from "libp2p/fetch"
 
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
@@ -18,6 +19,7 @@ import { register } from "prom-client"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { gossiplog } from "@canvas-js/gossiplog"
+import { discovery } from "@canvas-js/discovery"
 
 import {
 	DIAL_CONCURRENCY,
@@ -80,7 +82,7 @@ export function getLibp2pOptions(peerId: PeerId, config: CanvasConfig): Libp2pOp
 
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],
-		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
+		peerDiscovery: bootstrapList.length === 0 ? [] : [bootstrap({ list: bootstrapList })],
 
 		metrics: prometheusMetrics({ registry: register }),
 
@@ -102,6 +104,9 @@ export function getLibp2pOptions(peerId: PeerId, config: CanvasConfig): Libp2pOp
 			}),
 
 			gossiplog: gossiplog({ sync: true }),
+
+			fetch: fetchService({ protocolPrefix: "canvas" }),
+			discovery: discovery({}),
 		},
 	}
 }
