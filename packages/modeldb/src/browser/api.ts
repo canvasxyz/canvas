@@ -28,7 +28,7 @@ export class ModelAPI {
 	public readonly storeName = getObjectStoreName(this.model.name)
 	public readonly tombstoneStoreName = getTombstoneObjectStoreName(this.model.name)
 
-	private readonly log = logger(`canvas:modeldb:${this.model.name}`)
+	private readonly log = logger(`canvas:modeldb:[${this.model.name}]`)
 
 	constructor(readonly model: Model, readonly resolver: Resolver) {}
 
