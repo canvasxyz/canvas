@@ -84,7 +84,7 @@ Defaults to `dag-cbor` and `sha2-256` if `options.codec` or `options.digest` are
 
 ```ts
 declare function verifySignature(
-	{ type, publicKey, signature, cid }: Signature,
+	signature: Signature,
 	value: any,
 	options: { codecs?: Codec[]; digests?: Digest[] } = {}
 ): void
