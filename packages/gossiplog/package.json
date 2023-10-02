@@ -28,7 +28,7 @@
   },
   "peerDependencies": {
     "@chainsafe/libp2p-gossipsub": "^10.1.0",
-    "libp2p": "^0.46.7"
+    "libp2p": "^0.46.11"
   },
   "dependencies": {
     "@canvas-js/interfaces": "0.6.0-alpha2",
