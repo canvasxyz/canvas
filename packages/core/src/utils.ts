@@ -4,6 +4,8 @@ import { anySignal } from "any-signal"
 import { configure } from "safe-stable-stringify"
 import { CodeError } from "@libp2p/interface/errors"
 
+export type Awaitable<T> = T | Promise<T>
+
 export const stringify = configure({ bigint: false, circularValue: Error, strict: true, deterministic: true })
 
 export function assert(condition: unknown, message?: string): asserts condition {

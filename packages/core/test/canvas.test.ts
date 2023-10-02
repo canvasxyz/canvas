@@ -64,21 +64,33 @@ test("create and delete a post", async (t) => {
 	t.is(await app.db.get("posts", postId), null)
 })
 
-test("log a message", async (t) => {
-	const messages: any[] = []
+test("create an app with custom functions", async (t) => {
 	const app = await Canvas.initialize({
-		contract,
-		offline: true,
-		contractLog: (...args) => {
-			t.log("[vm]", ...args)
-			messages.push(args)
+		contract: {
+			topic: "com.example.app",
+			models: {
+				posts: {
+					content: "string",
+					timestamp: "integer",
+				},
+			},
+			actions: {
+				async createPost(db, args, { id, chain, address, timestamp }) {
+					const { content } = args as { content: string }
+					const postId = [chain, address, id].join("/")
+					await db.posts.set(postId, { content, timestamp })
+					return postId
+				},
+			},
 		},
+		offline: true,
 	})
-
 	t.teardown(() => app.close())
 
-	await app.actions.hello({})
+	const { id, result: postId } = await app.actions.createPost({ content: "hello world" })
 
-	t.deepEqual(messages, [["hello"]])
-	t.pass()
+	t.log(`applied action ${id} and got result`, postId)
+	assert(typeof postId === "string")
+	const value = await app.db.get("posts", postId)
+	t.is(value?.content, "hello world")
 })

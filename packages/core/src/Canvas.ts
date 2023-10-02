@@ -20,6 +20,7 @@ import {
 	Property,
 	PropertyValue,
 	Resolver,
+	validateModelValue,
 } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { getCID, Signature } from "@canvas-js/signed-cid"
@@ -27,16 +28,35 @@ import { AbstractMessageLog, MessageSigner } from "@canvas-js/gossiplog"
 
 import getTarget from "#target"
 
-import { assert, mapValues, signalInvalidType } from "./utils.js"
 import { ServiceMap } from "./targets/interface.js"
+import { Awaitable, assert, mapEntries, mapValues, signalInvalidType } from "./utils.js"
+
+type ActionImplementation = (
+	db: Record<string, ModelAPI>,
+	args: JSValue,
+	context: ActionContext
+) => Awaitable<void | JSValue>
+
+type ModelAPI = {
+	get: (key: string) => Promise<ModelValue | null>
+	add: (value: ModelValue) => Promise<void>
+	set: (key: string, value: ModelValue) => Promise<void>
+	delete: (key: string) => Promise<void>
+}
+
+type ActionContext = { id: string; chain: string; address: string; blockhash: string | null; timestamp: number }
+
+type ApplyMessage = (
+	id: string,
+	signature: Signature | null,
+	message: Message<Action | Session>
+) => Promise<JSValue | void>
 
 export interface CanvasConfig {
-	contract: string
-	contractLog?: (...args: JSValue[]) => void
+	contract: string | { topic: string; models: ModelsInit; actions: Record<string, ActionImplementation> }
 
 	/** NodeJS: data directory path; browser: IndexedDB database namespace */
 	location?: string | null
-	topic?: string
 	uri?: string
 
 	signers?: SessionSigner[]
@@ -78,57 +98,59 @@ export type ApplicationData = {
 
 export class Canvas extends EventEmitter<CoreEvents> {
 	public static async initialize(config: CanvasConfig): Promise<Canvas> {
-		const { contract, signers = [], replay = false, contractLog, runtimeMemoryLimit } = config
+		if (typeof config.contract === "string") {
+			return await Canvas.initializeContract(config, config.contract)
+		} else {
+			return await Canvas.initializeFunctions(config, config.contract)
+		}
+	}
+
+	private static async initializeContract(config: CanvasConfig, contract: string): Promise<Canvas> {
+		const { signers = [], runtimeMemoryLimit, replay = false, offline = false } = config
 
 		const location = config.location ?? null
 		const target = getTarget(location)
-
-		const cid = getCID(contract, { codec: "raw", digest: "blake3-128" })
-		const uri = config.uri ?? `canvas:${cid.toString()}`
-		const topic = config.topic ?? cid.toString()
 
 		if (signers.length === 0) {
 			signers.push(new SIWESigner())
 		}
 
 		const peerId = await target.getPeerId()
-		const libp2p = await target.createLibp2p(config, peerId)
+		let libp2p: Libp2p<ServiceMap> | null = null
+		if (!offline) {
+			libp2p = await target.createLibp2p(config, peerId)
+		}
+
+		const cid = getCID(contract, { codec: "raw", digest: "blake3-128" })
+		const uri = config.uri ?? `canvas:${cid.toString()}`
+
+		const sessionDB = await target.openDB("sessions", Canvas.sessionSchema)
 
 		// Create a QuickJS VM
-		const vm = await VM.initialize({ runtimeMemoryLimit, log: contractLog })
+		const vm = await VM.initialize({ runtimeMemoryLimit })
 
-		// We only have two exports: `models` and `actions`.
 		const {
+			topic: topicHandle,
 			models: modelsHandle,
 			actions: actionsHandle,
 			...rest
-		} = await vm.import(contract, { uri }).then((handle) => handle.consume(vm.unwrapObject))
+		} = await vm.import(contract, { uri }).then((handle) => handle.consume(vm!.unwrapObject))
 
 		for (const [name, handle] of Object.entries(rest)) {
 			console.warn(`extraneous export ${JSON.stringify(name)}`)
 			handle.dispose()
 		}
 
+		const topic = topicHandle?.consume(vm.context.getString) ?? cid.toString()
+
 		// TODO: validate that models satisfies ModelsInit
+		assert(modelsHandle !== undefined, "missing `models` export")
 		const models = modelsHandle.consume(vm.context.dump) as ModelsInit
 
-		const resolver: Resolver = { lessThan: (a, b) => lessThan(a.version, b.version) }
-		const db = await target.openDB("db", models, { resolver })
-
+		const db = await target.openDB("db", models, { resolver: Canvas.resolver })
 		const databaseAPI = new DatabaseAPI(vm, db)
 
-		const sessionDB = await target.openDB("sessions", {
-			sessions: {
-				message_id: "string",
-				chain: "string",
-				address: "string",
-				public_key_type: "string",
-				public_key: "bytes",
-				expiration: "integer?",
-				$indexes: [["address"], ["public_key"]],
-			},
-		})
-
+		assert(actionsHandle !== undefined, "missing `models` export")
 		const actionHandles = mapValues(actionsHandle.consume(vm.unwrapObject), (handle) => {
 			assert(vm.context.typeof(handle) === "function", "expected action[name] to be a function")
 			return handle.consume(vm.cache)
@@ -138,7 +160,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			assert(signature !== null, "missing message signature")
 
 			if (message.payload.type === "action") {
-				const { chain, address, name, args, ...context } = message.payload
+				const { chain, address, name, args, blockhash, timestamp } = message.payload
 
 				const sessions = await sessionDB.query("sessions", {
 					where: {
@@ -146,7 +168,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 						public_key: signature.publicKey,
 						chain: chain,
 						address: address,
-						expiration: { gt: context.timestamp },
+						expiration: { gt: timestamp },
 					},
 				})
 
@@ -159,7 +181,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 				const { result, effects } = await databaseAPI.collect(async () => {
 					const argsHandle = vm.wrapValue(args)
-					const ctxHandle = vm.wrapValue({ id, chain, address, ...context })
+					const ctxHandle = vm.wrapValue({ id, chain, address, blockhash, timestamp })
 					try {
 						const result = await vm.callAsync(actionHandle, actionHandle, [databaseAPI.handle, argsHandle, ctxHandle])
 						return result.consume((handle) => {
@@ -197,12 +219,145 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		const validate = (payload: unknown): payload is Action | Session => true // TODO
-		const messageLog = await target.openMessageLog({ topic, apply, validate, signatures: true, sequencing: true })
-		await libp2p.services.gossiplog.subscribe(messageLog, {})
+		const messageLog = await target.openMessageLog({
+			topic,
+			apply,
+			replay,
+			validate: Canvas.validate,
+			signatures: true,
+			sequencing: true,
+		})
+
+		await libp2p?.services.gossiplog.subscribe(messageLog, {})
+
 		const actionNames = Object.keys(actionHandles)
-		return new Canvas(uri, topic, signers, peerId, libp2p, vm, db, sessionDB, messageLog, actionNames)
+		const app = new Canvas(uri, signers, peerId, libp2p, db, sessionDB, messageLog, actionNames)
+		app.controller.signal.addEventListener("abort", () => vm.dispose())
+		return app
 	}
+
+	private static async initializeFunctions(
+		config: CanvasConfig,
+		contract: { topic: string; models: ModelsInit; actions: Record<string, ActionImplementation> }
+	): Promise<Canvas> {
+		const { signers = [], replay = false, offline = false } = config
+
+		const location = config.location ?? null
+		const target = getTarget(location)
+
+		if (signers.length === 0) {
+			signers.push(new SIWESigner())
+		}
+
+		const peerId = await target.getPeerId()
+		let libp2p: Libp2p<ServiceMap> | null = null
+		if (!offline) {
+			libp2p = await target.createLibp2p(config, peerId)
+		}
+
+		const uri = config.uri ?? `canvas:${contract.topic}`
+
+		const sessionDB = await target.openDB("sessions", Canvas.sessionSchema)
+
+		const db = await target.openDB("db", contract.models, { resolver: Canvas.resolver })
+
+		const apply: ApplyMessage = async (id, signature, message) => {
+			assert(signature !== null, "missing message signature")
+
+			if (message.payload.type === "action") {
+				const { chain, address, name, args, blockhash, timestamp } = message.payload
+
+				const sessions = await sessionDB.query("sessions", {
+					where: {
+						public_key_type: signature.type,
+						public_key: signature.publicKey,
+						chain: chain,
+						address: address,
+						expiration: { gt: timestamp },
+					},
+				})
+
+				if (sessions.length === 0) {
+					throw new Error(`missing session [${signature.type} 0x${hex(signature.publicKey)}] for ${chain}:${address}`)
+				}
+
+				assert(contract.actions[name] !== undefined, `invalid action name: ${name}`)
+
+				const effects: Effect[] = []
+
+				const api = mapEntries(db.models, ([name, model]) => {
+					return {
+						get: async (key: string) => {
+							throw new Error("not implemented")
+						},
+						add: async (value: ModelValue) => {
+							validateModelValue(model, value)
+							const key = getImmutableRecordKey(value)
+							effects.push({ model: model.name, operation: "set", key, value })
+						},
+						set: async (key: string, value: ModelValue) => {
+							validateModelValue(model, value)
+							effects.push({ model: model.name, operation: "set", key, value })
+						},
+						delete: async (key: string) => {
+							effects.push({ model: model.name, operation: "delete", key })
+						},
+					}
+				})
+
+				const result = await contract.actions[name](api, args, { id, chain, address, blockhash, timestamp })
+
+				await db.apply(effects, { version: base32hex.baseDecode(id) })
+
+				return result
+			} else if (message.payload.type === "session") {
+				const { publicKeyType, publicKey, chain, address, timestamp, duration } = message.payload
+				const signer = signers.find((signer) => signer.match(chain))
+				assert(signer !== undefined, "no signer found")
+				assert(publicKeyType === signature.type && equals(publicKey, signature.publicKey))
+				await signer.verifySession(message.payload)
+				await sessionDB.add("sessions", {
+					message_id: id,
+					chain: chain,
+					address: address,
+					public_key_type: signature.type,
+					public_key: signature.publicKey,
+					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
+				})
+			} else {
+				signalInvalidType(message.payload)
+			}
+		}
+
+		const messageLog = await target.openMessageLog({
+			topic: contract.topic,
+			apply,
+			replay,
+			validate: Canvas.validate,
+			signatures: true,
+			sequencing: true,
+		})
+
+		await libp2p?.services.gossiplog.subscribe(messageLog, {})
+
+		const actionNames = Object.keys(contract.actions)
+		return new Canvas(uri, signers, peerId, libp2p, db, sessionDB, messageLog, actionNames)
+	}
+
+	private static validate = (payload: unknown): payload is Action | Session => true // TODO
+	private static resolver: Resolver = { lessThan: (a, b) => lessThan(a.version, b.version) }
+
+	private static sessionSchema = {
+		sessions: {
+			message_id: "string",
+			chain: "string",
+			address: "string",
+			public_key_type: "string",
+			public_key: "bytes",
+			expiration: "integer?",
+			$indexes: [["address"], ["public_key"]],
+		},
+	} satisfies ModelsInit
 
 	public readonly actions: Record<string, ActionAPI> = {}
 
@@ -213,14 +368,12 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 	private constructor(
 		public readonly uri: string,
-		public readonly topic: string,
 		public readonly signers: SessionSigner[],
 		public readonly peerId: PeerId,
 		public readonly libp2p: Libp2p<ServiceMap> | null,
-		public readonly vm: VM,
 		public readonly db: AbstractModelDB,
 		public readonly sessionDB: AbstractModelDB,
-		public readonly messageLog: AbstractMessageLog<Action | Session, JSValue | undefined>,
+		public readonly messageLog: AbstractMessageLog<Action | Session, JSValue | void>,
 		actionNames: string[]
 	) {
 		super()
@@ -247,7 +400,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 				const timestamp = Date.now()
 
-				const session = await signer.getSession(topic, { timestamp, chain: options.chain })
+				const session = await signer.getSession(this.topic, { timestamp, chain: options.chain })
 
 				const { chain, address, publicKeyType: public_key_type, publicKey: public_key } = session
 
@@ -276,6 +429,10 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		}
 	}
 
+	public get topic(): string {
+		return this.messageLog.topic
+	}
+
 	public async start() {
 		await this.libp2p?.start()
 	}
@@ -290,10 +447,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			this.controller.abort()
 			await this.libp2p?.stop()
 			await this.messageLog.close()
-
-			// TODO: make AbstractModelDB.close async
 			await this.db.close()
-			this.vm.dispose()
 			this.dispatchEvent(new Event("close"))
 			this.log("closed")
 		}
