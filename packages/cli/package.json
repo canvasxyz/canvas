@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/cli",
-  "version": "0.6.0-alpha2",
+  "version": "0.6.0-alpha3",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "main": "dist/index.js",
@@ -11,11 +11,11 @@
     "canvas": "dist/index.js"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.6.0-alpha2",
-    "@canvas-js/core": "0.6.0-alpha2",
-    "@canvas-js/gossiplog": "0.6.0-alpha2",
-    "@canvas-js/interfaces": "0.6.0-alpha2",
-    "@canvas-js/modeldb": "0.6.0-alpha2",
+    "@canvas-js/chain-ethereum": "0.6.0-alpha3",
+    "@canvas-js/core": "0.6.0-alpha3",
+    "@canvas-js/gossiplog": "0.6.0-alpha3",
+    "@canvas-js/interfaces": "0.6.0-alpha3",
+    "@canvas-js/modeldb": "0.6.0-alpha3",
     "@libp2p/peer-id": "^3.0.2",
     "@multiformats/multiaddr": "^12.1.7",
     "@types/websocket": "^1.0.6",

@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/interfaces",
-  "version": "0.6.0-alpha2",
+  "version": "0.6.0-alpha3",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -12,11 +12,11 @@
     "test": "ava"
   },
   "dependencies": {
-    "@canvas-js/modeldb": "0.6.0-alpha2",
-    "@canvas-js/signed-cid": "0.6.0-alpha2",
+    "@canvas-js/modeldb": "0.6.0-alpha3",
+    "@canvas-js/signed-cid": "0.6.0-alpha3",
     "multiformats": "^12.1.1"
   },
   "devDependencies": {
-    "@canvas-js/chain-ethereum": "0.6.0-alpha2"
+    "@canvas-js/chain-ethereum": "0.6.0-alpha3"
   }
 }

@@ -6,7 +6,7 @@ import { lessThan } from "@canvas-js/okra"
 
 export type Awaitable<T> = T | Promise<T>
 
-export const cborNull = cbor.encode(null)
+export const cborNull: Uint8Array = cbor.encode(null)
 
 // Topics are restricted to NSIDs, ie /[:\-\.a-z0-9]/ characters
 export const nsidPattern = /^[a-z](?:-*[a-z0-9])*(?:\.[a-z](?:-*[a-z0-9])*)*$/
