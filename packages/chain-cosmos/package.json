@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/chain-cosmos",
-  "version": "0.6.0-alpha3",
+  "version": "0.6.0-alpha4",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -9,7 +9,7 @@
     "lib"
   ],
   "dependencies": {
-    "@canvas-js/interfaces": "0.6.0-alpha3",
+    "@canvas-js/interfaces": "0.6.0-alpha4",
     "@cosmjs/amino": "^0.30.1",
     "@cosmjs/crypto": "^0.30.1",
     "@cosmjs/encoding": "^0.30.1",
