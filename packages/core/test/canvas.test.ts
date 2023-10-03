@@ -1,7 +1,9 @@
 import assert from "node:assert"
 import test from "ava"
+import { ethers } from "ethers"
 
 import { Canvas } from "@canvas-js/core"
+import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 const contract = `
 export const models = {
@@ -65,6 +67,7 @@ test("create and delete a post", async (t) => {
 })
 
 test("create an app with custom functions", async (t) => {
+	const wallet = ethers.Wallet.createRandom();
 	const app = await Canvas.initialize({
 		contract: {
 			topic: "com.example.app",
@@ -72,18 +75,20 @@ test("create an app with custom functions", async (t) => {
 				posts: {
 					content: "string",
 					timestamp: "integer",
+					address: "string",
 				},
 			},
 			actions: {
 				async createPost(db, args, { id, chain, address, timestamp }) {
 					const { content } = args as { content: string }
 					const postId = [chain, address, id].join("/")
-					await db.posts.set(postId, { content, timestamp })
+					await db.posts.set(postId, { content, timestamp, address })
 					return postId
 				},
 			},
 		},
 		offline: true,
+		signers: [new SIWESigner({ signer: wallet })]
 	})
 	t.teardown(() => app.close())
 
@@ -93,4 +98,5 @@ test("create an app with custom functions", async (t) => {
 	assert(typeof postId === "string")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
+	t.is(value?.address, wallet.address)
 })
