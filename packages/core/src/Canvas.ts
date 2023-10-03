@@ -31,22 +31,22 @@ import getTarget from "#target"
 import { ServiceMap } from "./targets/interface.js"
 import { Awaitable, assert, mapEntries, mapValues, signalInvalidType } from "./utils.js"
 
-type ActionImplementation = (
+export type ActionImplementation = (
 	db: Record<string, ModelAPI>,
 	args: JSValue,
 	context: ActionContext
 ) => Awaitable<void | JSValue>
 
-type ModelAPI = {
+export type ModelAPI = {
 	get: (key: string) => Promise<ModelValue | null>
 	add: (value: ModelValue) => Promise<void>
 	set: (key: string, value: ModelValue) => Promise<void>
 	delete: (key: string) => Promise<void>
 }
 
-type ActionContext = { id: string; chain: string; address: string; blockhash: string | null; timestamp: number }
+export type ActionContext = { id: string; chain: string; address: string; blockhash: string | null; timestamp: number }
 
-type ApplyMessage = (
+export type ApplyMessage = (
 	id: string,
 	signature: Signature | null,
 	message: Message<Action | Session>
