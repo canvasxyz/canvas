@@ -5,20 +5,27 @@ import type { ModelValue, QueryParams } from "../types.js"
 import { AbstractModelDB } from "../AbstractModelDB.js"
 
 export function useLiveQuery<T extends ModelValue = ModelValue>(
-	db: AbstractModelDB | null,
-	modelName: string | null,
-	query: QueryParams | null
+	db: AbstractModelDB | null | undefined,
+	modelName: string | null | undefined,
+	query: QueryParams | null | undefined
 ): T[] | null {
-	const dbRef = useRef<AbstractModelDB | null>(db)
-	const modelRef = useRef<string | null>(modelName)
-	const queryRef = useRef<QueryParams | null>(query)
+	const dbRef = useRef<AbstractModelDB | null>(db ?? null)
+	const modelRef = useRef<string | null>(modelName ?? null)
+	const queryRef = useRef<QueryParams | null>(query ?? null)
 	const subscriptionRef = useRef<number | null>(null)
 
 	const [results, setResults] = useState<null | T[]>(null)
 
 	useEffect(() => {
 		// Unsubscribe from the cached database handle, if necessary
-		if (db === null || modelName === null || query === null) {
+		if (
+			db === null ||
+			modelName === null ||
+			query === null ||
+			db === undefined ||
+			modelName === undefined ||
+			query === undefined
+		) {
 			if (dbRef.current !== null) {
 				if (subscriptionRef.current !== null) {
 					dbRef.current.unsubscribe(subscriptionRef.current)
@@ -27,9 +34,9 @@ export function useLiveQuery<T extends ModelValue = ModelValue>(
 				}
 			}
 
-			dbRef.current = db
-			modelRef.current = modelName
-			queryRef.current = query
+			dbRef.current = db ?? null
+			modelRef.current = modelName ?? null
+			queryRef.current = query ?? null
 			return
 		}
 
