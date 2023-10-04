@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/signed-cid",
-  "version": "0.6.0-alpha5",
+  "version": "0.6.0-alpha6",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
