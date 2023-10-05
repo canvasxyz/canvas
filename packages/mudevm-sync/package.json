@@ -6,6 +6,11 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "files": [
+    "lib"
+  ],
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "sideEffects": false,
   "dependencies": {
     "@canvas-js/chain-ethereum": "0.6.0-alpha6",
