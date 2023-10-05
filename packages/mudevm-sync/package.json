@@ -1,0 +1,27 @@
+{
+  "name": "@canvas-js/mudevm-sync",
+  "version": "0.6.0-alpha6",
+  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "@canvas-js/chain-ethereum": "0.6.0-alpha6",
+    "@canvas-js/core": "0.6.0-alpha6",
+    "@canvas-js/modeldb": "0.6.0-alpha6",
+    "@canvas-js/vm": "0.6.0-alpha6",
+    "abitype": "^0.9.8",
+    "ethers": "^5.7.2",
+    "react": ">=18.2.0",
+    "viem": "1.6.0"
+  },
+  "devDependencies": {
+    "@latticexyz/config": "^2.0.0-next.10",
+    "@latticexyz/store": "^2.0.0-next.10",
+    "@latticexyz/world": "^2.0.0-next.10",
+    "@types/react": ">=18.2.0",
+    "vite": "^4.2.1"
+  }
+}

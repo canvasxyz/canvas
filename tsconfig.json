@@ -16,6 +16,7 @@
     { "path": "./packages/modeldb" },
     { "path": "./packages/modeldb/test" },
     { "path": "./packages/chain-ethereum" },
-    { "path": "./packages/chain-ethereum/test" }
+    { "path": "./packages/chain-ethereum/test" },
+    { "path": "./packages/mudevm-sync" },
   ]
 }

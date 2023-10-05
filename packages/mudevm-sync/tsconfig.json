@@ -1,0 +1,15 @@
+{
+  "include": ["src"],
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "declaration": true,
+    "rootDir": "src",
+    "outDir": "lib"
+  },
+  "references": [
+    { "path": "../chain-ethereum" },
+    { "path": "../core" },
+    { "path": "../modeldb" },
+    { "path": "../vm" },
+  ]
+}
