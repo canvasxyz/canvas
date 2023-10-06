@@ -1,4 +1,4 @@
-# @canvas-js/cr-mudevm-sync
+# @canvas-js/mudevm-sync
 
 ⚡️ Offchain applications built on libp2p, MUD, and the EVM.
 
@@ -66,14 +66,14 @@ export const App = () => {
       publicClient: mud.network.publicClient,
       worldContract: mud.network.worldContract,
       getPrivateKey: () => getNetworkConfig().then((n) => n.privateKey),
+      systemAbis,
     },
-    systemAbis,
     offline: true,
   })
 
   const messages = useLiveQuery(app?.db, "MyTable", { where: { ... } })
 
-  return <div>{messages.map(msg => <div>{msg.content}</div>)}</div>
+  return <div>{messages.map(msg => <div>{msg.message}</div>)}</div>
 }
 ```
 
