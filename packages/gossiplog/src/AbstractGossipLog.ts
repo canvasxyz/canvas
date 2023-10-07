@@ -23,7 +23,7 @@ export interface ReadWriteTransaction {
 	parents: KeyValueStore
 }
 
-export interface MessageLogInit<Payload = unknown, Result = void> {
+export interface GossipLogInit<Payload = unknown, Result = void> {
 	topic: string
 	apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
 	validate: (payload: unknown) => payload is Payload
@@ -37,7 +37,7 @@ export interface MessageSigner<Payload = unknown> {
 	sign: (message: Message<Payload>) => Awaitable<Signature | null>
 }
 
-export type MessageLogEvents<Payload, Result> = {
+export type GossipLogEvents<Payload, Result> = {
 	message: CustomEvent<{
 		id: string
 		signature: Signature | null
@@ -48,8 +48,8 @@ export type MessageLogEvents<Payload, Result> = {
 	sync: CustomEvent<{ topic: string; peerId: PeerId }>
 }
 
-export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> extends EventEmitter<
-	MessageLogEvents<Payload, Result>
+export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> extends EventEmitter<
+	GossipLogEvents<Payload, Result>
 > {
 	private static defaultSigner: MessageSigner = { sign: ({}) => null }
 	private static bound = (id: string | null = null, inclusive = true) =>
@@ -83,7 +83,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 	protected readonly log: Logger
 	protected readonly mempool = new Mempool<Payload>()
 
-	protected constructor(init: MessageLogInit<Payload, Result>) {
+	protected constructor(init: GossipLogInit<Payload, Result>) {
 		super()
 		assert(nsidPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-]+)")
 
@@ -115,8 +115,8 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		options: { reverse?: boolean } = {}
 	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]> {
 		for await (const [key, value] of this.entries(
-			AbstractMessageLog.bound(lowerBound?.id, lowerBound?.inclusive),
-			AbstractMessageLog.bound(upperBound?.id, upperBound?.inclusive),
+			AbstractGossipLog.bound(lowerBound?.id, lowerBound?.inclusive),
+			AbstractGossipLog.bound(upperBound?.id, upperBound?.inclusive),
 			options
 		)) {
 			const [id, signature, message] = this.decode(value)
@@ -194,7 +194,7 @@ export abstract class AbstractMessageLog<Payload = unknown, Result = unknown> ex
 		payload: Payload,
 		options: { signer?: MessageSigner<Payload> } = {}
 	): Promise<{ id: string; signature: Signature | null; message: Message<Payload>; result: Result }> {
-		const signer = options.signer ?? AbstractMessageLog.defaultSigner
+		const signer = options.signer ?? AbstractGossipLog.defaultSigner
 
 		const { id, signature, message, result, root } = await this.write(async (txn) => {
 			const parents = await this.getParents(txn)

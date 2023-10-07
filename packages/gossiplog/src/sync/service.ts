@@ -10,8 +10,8 @@ import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 import { bytesToHex as hex } from "@noble/hashes/utils"
 
-import { Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
-import { AbstractMessageLog } from "./AbstractMessageLog.js"
+import { Client, Server, decodeRequests, encodeResponses } from "./index.js"
+import { AbstractGossipLog } from "../AbstractGossipLog.js"
 
 export interface Topology {
 	min?: number
@@ -30,8 +30,8 @@ import {
 	SYNC_COOLDOWN_PERIOD,
 	SYNC_RETRY_INTERVAL,
 	SYNC_RETRY_LIMIT,
-} from "./constants.js"
-import { CacheMap, shuffle, sortPair, wait } from "./utils.js"
+} from "../constants.js"
+import { CacheMap, shuffle, sortPair, wait } from "../utils.js"
 
 export interface SyncOptions {
 	minConnections?: number
@@ -82,7 +82,7 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 
 	constructor(
 		private readonly components: SyncServiceComponents,
-		private readonly messages: AbstractMessageLog<Payload, Result>,
+		private readonly messages: AbstractGossipLog<Payload, Result>,
 		options: SyncOptions
 	) {
 		this.log = logger(`canvas:gossiplog:[${this.topic}]:sync`)

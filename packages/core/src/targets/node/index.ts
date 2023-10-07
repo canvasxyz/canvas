@@ -5,9 +5,9 @@ import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp
 import { PeerId } from "@libp2p/interface-peer-id"
 import { createLibp2p } from "libp2p"
 
-import { MessageLogInit } from "@canvas-js/gossiplog"
-import { MessageLog } from "@canvas-js/gossiplog/node"
-import { MessageLog as MemoryMessageLog } from "@canvas-js/gossiplog/memory"
+import { GossipLogInit } from "@canvas-js/gossiplog"
+import { GossipLog } from "@canvas-js/gossiplog/node"
+import { GossipLog as MemoryGossipLog } from "@canvas-js/gossiplog/memory"
 import { ModelDB } from "@canvas-js/modeldb/node"
 
 import type { PlatformTarget } from "../interface.js"
@@ -51,13 +51,11 @@ export default function getTarget(location: string | null): PlatformTarget {
 			}
 		},
 
-		openMessageLog: <Payload, Result>(init: MessageLogInit<Payload, Result>) =>
+		openGossipLog: <Payload, Result>(init: GossipLogInit<Payload, Result>) =>
 			location === null
-				? MemoryMessageLog.open(init)
-				: MessageLog.open(path.resolve(location, "topics", init.topic), init),
+				? MemoryGossipLog.open(init)
+				: GossipLog.open(path.resolve(location, "topics", init.topic), init),
 
-		createLibp2p: (config, peerId) => {
-			return createLibp2p(getLibp2pOptions(peerId, config))
-		},
+		createLibp2p: (config, peerId) => createLibp2p(getLibp2pOptions(peerId, config)),
 	}
 }

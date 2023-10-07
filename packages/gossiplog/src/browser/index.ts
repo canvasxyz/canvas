@@ -3,19 +3,18 @@ import type { PeerId } from "@libp2p/interface-peer-id"
 import pDefer from "p-defer"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import { verifySignature } from "@canvas-js/signed-cid"
 import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
 import { IDBPDatabase, openDB } from "idb"
 
-import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
+import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { assert } from "../utils.js"
 
-export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
+export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(
 		name: string,
-		init: MessageLogInit<Payload, Result>
-	): Promise<MessageLog<Payload, Result>> {
+		init: GossipLogInit<Payload, Result>
+	): Promise<GossipLog<Payload, Result>> {
 		const storeNames = [`${init.topic}/messages`, `${init.topic}/parents`]
 		const db = await openDB(name, 1, {
 			upgrade: (db, oldVersion, newVersion) => {
@@ -32,13 +31,13 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 		const messages = await IDBTree.open(db, `${init.topic}/messages`)
 		const parents = new IDBStore(db, `${init.topic}/parents`)
 
-		const messageLog = new MessageLog(db, messages, parents, init)
+		const gossipLog = new GossipLog(db, messages, parents, init)
 
 		if (init.replay) {
-			await messageLog.replay()
+			await gossipLog.replay()
 		}
 
-		return messageLog
+		return gossipLog
 	}
 
 	private readonly incomingSyncPeers = new Set<string>()
@@ -50,7 +49,7 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 		private readonly db: IDBPDatabase,
 		private readonly messages: IDBTree,
 		private readonly parents: IDBStore,
-		init: MessageLogInit<Payload, Result>
+		init: GossipLogInit<Payload, Result>
 	) {
 		super(init)
 

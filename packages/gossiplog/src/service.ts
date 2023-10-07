@@ -12,55 +12,44 @@ import { logger } from "@libp2p/logger"
 import type { Signature } from "@canvas-js/signed-cid"
 import type { Message } from "@canvas-js/interfaces"
 
-import { AbstractMessageLog, MessageLogEvents, MessageSigner } from "./AbstractMessageLog.js"
+import { AbstractGossipLog, GossipLogEvents, MessageSigner } from "./AbstractGossipLog.js"
 
-import { decodeId } from "./schema.js"
-import { SyncService, SyncOptions } from "./SyncService.js"
-import { Awaitable, assert } from "./utils.js"
+import { decodeId, encodeId } from "./schema.js"
+import { SyncService, SyncOptions } from "./sync/service.js"
+import { assert } from "./utils.js"
 
-export type GossipLogComponents = {
+export type GossipLogServiceComponents = {
 	peerId: PeerId
 	registrar: Registrar
 	connectionManager: ConnectionManager
 	pubsub?: PubSub
 }
 
-export interface GossipLogInit {
+export interface GossipLogServiceInit {
 	sync?: boolean
 }
 
-export interface TopicInit<Payload, Result> extends SyncOptions {
-	apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
-	validate: (payload: unknown) => payload is Payload
+export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unknown>> implements Startable {
+	private static extractGossipSub(components: GossipLogServiceComponents): GossipSub {
+		const { pubsub } = components
+		assert(pubsub !== undefined, "pubsub service not found")
+		assert(pubsub instanceof GossipSub)
+		return pubsub
+	}
 
-	signatures?: boolean
-	sequencing?: boolean
-	replay?: boolean // TODO
-}
-
-function extractGossipSub(components: GossipLogComponents): GossipSub {
-	const { pubsub } = components
-	assert(pubsub !== undefined, "pubsub service not found")
-	assert(pubsub instanceof GossipSub)
-	return pubsub
-}
-
-export type GossipLogEvents = MessageLogEvents<unknown, unknown>
-
-export class GossipLog extends EventEmitter<GossipLogEvents> implements Startable {
 	private readonly sync: boolean
 	private readonly log = logger(`canvas:gossiplog`)
 
 	#started = false
 
-	#messageLogs = new Map<string, AbstractMessageLog<unknown, unknown>>()
+	#messageLogs = new Map<string, AbstractGossipLog<unknown, unknown>>()
 	#syncServices = new Map<string, SyncService<unknown, unknown>>()
 	#pubsub: GossipSub
 
-	constructor(private readonly components: GossipLogComponents, init: GossipLogInit) {
+	constructor(private readonly components: GossipLogServiceComponents, init: GossipLogServiceInit) {
 		super()
 		this.sync = init.sync ?? true
-		this.#pubsub = extractGossipSub(components)
+		this.#pubsub = GossipLogService.extractGossipSub(components)
 	}
 
 	public isStarted() {
@@ -99,11 +88,11 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 	}
 
 	public async subscribe<Payload, Result>(
-		messageLog: AbstractMessageLog<Payload, Result>,
+		messageLog: AbstractGossipLog<Payload, Result>,
 		options: SyncOptions = {}
 	): Promise<void> {
 		this.log("subscribing to %s", messageLog.topic)
-		this.#messageLogs.set(messageLog.topic, messageLog as AbstractMessageLog<unknown, unknown>)
+		this.#messageLogs.set(messageLog.topic, messageLog as AbstractGossipLog<unknown, unknown>)
 		messageLog.addEventListener("sync", this.forwardEvent)
 		messageLog.addEventListener("commit", this.forwardEvent)
 		messageLog.addEventListener("message", this.forwardEvent)
@@ -144,20 +133,23 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 		}
 	}
 
-	private forwardEvent = (event: CustomEvent) => this.safeDispatchEvent(event.type as keyof GossipLogEvents, event)
+	private forwardEvent = (event: CustomEvent) =>
+		this.safeDispatchEvent(event.type as keyof GossipLogEvents<unknown, unknown>, event)
 
 	public async append<Payload, Result>(
 		topic: string,
 		payload: Payload,
 		options: { signer?: MessageSigner<Payload> } = {}
 	): Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }> {
-		const messageLog = this.#messageLogs.get(topic) as AbstractMessageLog<Payload, Result> | undefined
+		const messageLog = this.#messageLogs.get(topic) as AbstractGossipLog<Payload, Result> | undefined
 		assert(messageLog !== undefined, "no subscription for topic")
 
 		const { id, signature, message, result } = await messageLog.append(payload, options)
 
 		if (this.#started) {
-			const [_, value] = messageLog.encode(signature, message)
+			const [key, value] = messageLog.encode(signature, message)
+			assert(decodeId(key) === id)
+
 			const recipients = this.#pubsub.publish(topic, value).then(
 				({ recipients }) => {
 					this.log("published message %s to %d recipients %O", id, recipients.length, recipients)
@@ -180,7 +172,7 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 		signature: Signature | null,
 		message: Message<Payload>
 	): Promise<{ id: string; recipients: Promise<PeerId[]> }> {
-		const messageLog = this.#messageLogs.get(topic) as AbstractMessageLog<Payload, Result> | undefined
+		const messageLog = this.#messageLogs.get(topic) as AbstractGossipLog<Payload, Result> | undefined
 		assert(messageLog !== undefined, "topic not found")
 
 		const { id } = await messageLog.insert(signature, message)
@@ -224,4 +216,5 @@ export class GossipLog extends EventEmitter<GossipLogEvents> implements Startabl
 	}
 }
 
-export const gossiplog = (init: GossipLogInit) => (components: GossipLogComponents) => new GossipLog(components, init)
+export const gossiplog = (init: GossipLogServiceInit) => (components: GossipLogServiceComponents) =>
+	new GossipLogService(components, init)

@@ -24,7 +24,7 @@ import {
 } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { getCID, Signature } from "@canvas-js/signed-cid"
-import { AbstractMessageLog, MessageSigner } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, MessageSigner } from "@canvas-js/gossiplog"
 
 import getTarget from "#target"
 
@@ -219,7 +219,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		const messageLog = await target.openMessageLog({
+		const gossipLog = await target.openGossipLog({
 			topic,
 			apply,
 			replay,
@@ -228,10 +228,10 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			sequencing: true,
 		})
 
-		await libp2p?.services.gossiplog.subscribe(messageLog, {})
+		await libp2p?.services.gossiplog.subscribe(gossipLog, {})
 
 		const actionNames = Object.keys(actionHandles)
-		const app = new Canvas(uri, signers, peerId, libp2p, db, sessionDB, messageLog, actionNames)
+		const app = new Canvas(uri, signers, peerId, libp2p, db, sessionDB, gossipLog, actionNames)
 		app.controller.signal.addEventListener("abort", () => vm.dispose())
 		return app
 	}
@@ -329,7 +329,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			}
 		}
 
-		const messageLog = await target.openMessageLog({
+		const messageLog = await target.openGossipLog({
 			topic: contract.topic,
 			apply,
 			replay,
@@ -373,7 +373,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		public readonly libp2p: Libp2p<ServiceMap> | null,
 		public readonly db: AbstractModelDB,
 		public readonly sessionDB: AbstractModelDB,
-		public readonly messageLog: AbstractMessageLog<Action | Session, JSValue | void>,
+		public readonly messageLog: AbstractGossipLog<Action | Session, JSValue | void>,
 		actionNames: string[]
 	) {
 		super()

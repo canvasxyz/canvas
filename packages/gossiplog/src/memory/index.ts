@@ -5,24 +5,21 @@ import pDefer from "p-defer"
 
 import { Bound } from "@canvas-js/okra"
 import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"
-import { verifySignature } from "@canvas-js/signed-cid"
 
-import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
+import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { assert } from "../utils.js"
 
-export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
-	public static async open<Payload, Result>(
-		init: MessageLogInit<Payload, Result>
-	): Promise<MessageLog<Payload, Result>> {
+export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
+	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
 		const messages = await MemoryTree.open()
 		const parents = new MemoryStore()
-		const messageLog = new MessageLog(messages, parents, init)
+		const gossipLog = new GossipLog(messages, parents, init)
 
 		if (init.replay) {
-			await messageLog.replay()
+			await gossipLog.replay()
 		}
 
-		return messageLog
+		return gossipLog
 	}
 
 	private readonly queue = new PQueue({ concurrency: 1 })
@@ -32,7 +29,7 @@ export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Res
 	private constructor(
 		private readonly messages: MemoryTree,
 		private readonly parents: MemoryStore,
-		init: MessageLogInit<Payload, Result>
+		init: GossipLogInit<Payload, Result>
 	) {
 		super(init)
 	}

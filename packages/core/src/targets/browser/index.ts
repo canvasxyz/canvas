@@ -3,8 +3,8 @@ import { PeerId } from "@libp2p/interface-peer-id"
 import { base64 } from "multiformats/bases/base64"
 import { createLibp2p } from "libp2p"
 
-import { MessageLogInit } from "@canvas-js/gossiplog"
-import { MessageLog } from "@canvas-js/gossiplog/browser"
+import { GossipLogInit } from "@canvas-js/gossiplog"
+import { GossipLog } from "@canvas-js/gossiplog/browser"
 import { ModelDB } from "@canvas-js/modeldb/browser"
 
 import type { PlatformTarget } from "../interface.js"
@@ -40,8 +40,8 @@ export default function getBrowserTarget(location: string | null): PlatformTarge
 
 		openDB: (name, init, options) => ModelDB.initialize(`${location}/${name}`, init, options),
 
-		openMessageLog: <Payload, Result>(init: MessageLogInit<Payload, Result>) =>
-			MessageLog.open(`${location}/topics/${init.topic}`, init),
+		openGossipLog: <Payload, Result>(init: GossipLogInit<Payload, Result>) =>
+			GossipLog.open(`${location}/topics/${init.topic}`, init),
 
 		createLibp2p: (config, peerId) => createLibp2p(getLibp2pOptions(peerId, config)),
 	}

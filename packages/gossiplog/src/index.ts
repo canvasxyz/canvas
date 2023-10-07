@@ -1,3 +1,3 @@
-export * from "./GossipLog.js"
-export * from "./AbstractMessageLog.js"
+export * from "./service.js"
+export * from "./AbstractGossipLog.js"
 export * from "./schema.js"

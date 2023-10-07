@@ -19,16 +19,16 @@ import { logger } from "@libp2p/logger"
 
 import { Signature } from "@canvas-js/signed-cid"
 import { Message } from "@canvas-js/interfaces"
-import { GossipLog, GossipLogEvents, GossipLogInit, gossiplog } from "@canvas-js/gossiplog"
+import { GossipLogService, GossipLogEvents, GossipLogServiceInit, gossiplog } from "@canvas-js/gossiplog"
 
-export type NetworkInit = Record<string, { port: number; peers: string[]; init?: GossipLogInit }>
+export type NetworkInit = Record<string, { port: number; peers: string[]; init?: GossipLogServiceInit }>
 
 const getAddress = (port: number) => `/ip4/127.0.0.1/tcp/${port}`
 
 export type ServiceMap = {
 	identify: {}
 	pubsub: PubSub
-	gossiplog: GossipLog
+	gossiplog: GossipLogService
 }
 
 export async function createNetwork(

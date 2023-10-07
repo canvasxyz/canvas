@@ -1,7 +1,7 @@
 import test from "ava"
 
 import { nanoid } from "nanoid"
-import { MessageLog } from "@canvas-js/gossiplog/memory"
+import { GossipLog } from "@canvas-js/gossiplog/memory"
 
 import { createNetwork, waitForInitialConnections, waitForMessageDelivery } from "./libp2p.js"
 
@@ -9,9 +9,9 @@ const validateString = (payload: unknown): payload is string => true
 
 test("send a message from one peer to another via gossipsub", async (t) => {
 	const topic = "com.example.test"
-	const messageLogs = {
-		a: await MessageLog.open({ topic, apply: () => {}, validate: validateString, signatures: false }),
-		b: await MessageLog.open({ topic, apply: () => {}, validate: validateString, signatures: false }),
+	const gossipLogs = {
+		a: await GossipLog.open({ topic, apply: () => {}, validate: validateString, signatures: false }),
+		b: await GossipLog.open({ topic, apply: () => {}, validate: validateString, signatures: false }),
 	}
 
 	const network = await createNetwork(t, {
@@ -22,8 +22,8 @@ test("send a message from one peer to another via gossipsub", async (t) => {
 	await waitForInitialConnections(network)
 
 	await Promise.all([
-		network.a.services.gossiplog.subscribe(messageLogs.a),
-		network.b.services.gossiplog.subscribe(messageLogs.b),
+		network.a.services.gossiplog.subscribe(gossipLogs.a),
+		network.b.services.gossiplog.subscribe(gossipLogs.b),
 	])
 
 	const payload = nanoid()

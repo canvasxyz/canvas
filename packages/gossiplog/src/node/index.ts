@@ -2,31 +2,30 @@ import fs from "node:fs"
 
 import { Bound } from "@canvas-js/okra"
 import { Environment, Transaction, Tree } from "@canvas-js/okra-node"
-import { verifySignature } from "@canvas-js/signed-cid"
 
-import { AbstractMessageLog, MessageLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractMessageLog.js"
+import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { assert } from "../utils.js"
 
-export class MessageLog<Payload, Result> extends AbstractMessageLog<Payload, Result> {
+export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(
 		path: string,
-		init: MessageLogInit<Payload, Result>
-	): Promise<MessageLog<Payload, Result>> {
+		init: GossipLogInit<Payload, Result>
+	): Promise<GossipLog<Payload, Result>> {
 		if (!fs.existsSync(path)) {
 			fs.mkdirSync(path, { recursive: true })
 		}
 
 		const env = new Environment(path, { databases: 3 })
-		const messageLog = new MessageLog(env, init)
+		const gossipLog = new GossipLog(env, init)
 
 		if (init.replay) {
-			await messageLog.replay()
+			await gossipLog.replay()
 		}
 
-		return messageLog
+		return gossipLog
 	}
 
-	private constructor(private readonly env: Environment, init: MessageLogInit<Payload, Result>) {
+	private constructor(private readonly env: Environment, init: GossipLogInit<Payload, Result>) {
 		super(init)
 	}
 

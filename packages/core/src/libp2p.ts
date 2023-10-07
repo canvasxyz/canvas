@@ -15,7 +15,7 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
-import { GossipLog, gossiplog } from "@canvas-js/gossiplog"
+import { GossipLogService, gossiplog } from "@canvas-js/gossiplog"
 
 import {
 	DIAL_CONCURRENCY,
@@ -30,7 +30,7 @@ export type ServiceMap = {
 	identifyService: {}
 	pingService: PingService
 	pubsub: PubSub<GossipsubEvents>
-	gossiplog: GossipLog
+	gossiplog: GossipLogService
 	// discovery: DiscoveryService
 }
 
