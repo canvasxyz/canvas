@@ -3,9 +3,9 @@ import { type AbiItem, type Hex, GetContractReturnType, Abi, PublicClient, Walle
 import type { AbiFunction, AbiParameter, AbiType, SolidityTuple, SolidityArrayWithTuple } from "abitype"
 import { ethers } from "ethers"
 
-import { Canvas, ActionImplementation, JSValue } from "@canvas-js/core"
+import { Canvas, ActionImplementation } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { typeOf, JSObject } from "@canvas-js/vm"
+import { typeOf, JSObject, JSValue } from "@canvas-js/vm"
 import { PropertyType } from "@canvas-js/modeldb"
 export { useLiveQuery } from "@canvas-js/modeldb"
 
