@@ -6,8 +6,7 @@ import type { Argv } from "yargs"
 import chalk from "chalk"
 
 import { Canvas } from "@canvas-js/core"
-import { CONTRACT_FILENAME, getContractLocation } from "../utils.js"
-// import { getContractLocation } from "../utils.js"
+import { getContractLocation } from "../utils.js"
 
 export const command = "info <path>"
 export const desc = "Show the model schema and action names in a contract"
@@ -22,10 +21,10 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { contract, location } = getContractLocation(args)
+	const { contract, location, uri } = getContractLocation(args)
 	try {
 		const app = await Canvas.initialize({ contract, location, offline: true })
-		console.log(`name: ${app.uri}\n`)
+		console.log(`name: ${uri}\n`)
 		console.log(chalk.green("===== models ====="))
 		console.log(`${JSON.stringify(app.db.models, null, "  ")}\n`)
 		console.log(chalk.green("===== actions ====="))

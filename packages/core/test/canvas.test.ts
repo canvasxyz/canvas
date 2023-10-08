@@ -66,8 +66,8 @@ test("create and delete a post", async (t) => {
 	t.is(await app.db.get("posts", postId), null)
 })
 
-test("create an app with custom functions", async (t) => {
-	const wallet = ethers.Wallet.createRandom();
+test("create an app with a function runtime", async (t) => {
+	const wallet = ethers.Wallet.createRandom()
 	const app = await Canvas.initialize({
 		contract: {
 			topic: "com.example.app",
@@ -88,7 +88,7 @@ test("create an app with custom functions", async (t) => {
 			},
 		},
 		offline: true,
-		signers: [new SIWESigner({ signer: wallet })]
+		signers: [new SIWESigner({ signer: wallet })],
 	})
 	t.teardown(() => app.close())
 

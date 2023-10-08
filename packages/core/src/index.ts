@@ -1,10 +1,2 @@
-export { JSValue } from "@canvas-js/vm"
-export {
-	ActionImplementation,
-	ActionContext,
-	ApplyMessage,
-	ApplicationData,
-	Canvas,
-	CanvasConfig,
-	ModelAPI,
-} from "./Canvas.js"
+export * from "./Canvas.js"
+export { ActionImplementation, ActionContext, ModelAPI } from "./runtime.js"

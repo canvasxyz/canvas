@@ -176,7 +176,9 @@ export async function waitForMessageDelivery(
 		Object.entries(network).map(([name, libp2p]) => {
 			const peerId = libp2p.peerId.toString()
 			const deferred = pDefer<Result>()
-			const handler: EventHandler<GossipLogEvents["message"]> = ({ detail: { id, signature, message } }) => {
+			const handler: EventHandler<GossipLogEvents<unknown, unknown>["message"]> = ({
+				detail: { id, signature, message, result },
+			}) => {
 				if (match(id, signature, message)) {
 					t.log(`delivered ${id} to peer ${name} (${peerId})`)
 					deferred.resolve({ id, signature, message })

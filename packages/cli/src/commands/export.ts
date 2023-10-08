@@ -18,12 +18,12 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { contract, location, uri } = getContractLocation(args)
+	const { contract, location } = getContractLocation(args)
 	if (location === null) {
 		throw new Error("Expected path to application directory, found path to contract file")
 	}
 
-	const app = await Canvas.initialize({ contract, location, uri, offline: true })
+	const app = await Canvas.initialize({ contract, location, offline: true })
 	for await (const [id, signature, message] of app.getMessageStream()) {
 		process.stdout.write(json.format([id, signature, message]))
 		process.stdout.write("\n")

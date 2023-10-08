@@ -37,7 +37,7 @@ export interface MessageSigner<Payload = unknown> {
 	sign: (message: Message<Payload>) => Awaitable<Signature | null>
 }
 
-export type GossipLogEvents<Payload, Result> = {
+export type GossipLogEvents<Payload = unknown, Result = void> = {
 	message: CustomEvent<{
 		id: string
 		signature: Signature | null

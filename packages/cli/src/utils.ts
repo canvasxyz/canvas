@@ -5,10 +5,8 @@ import assert from "node:assert"
 
 import chalk from "chalk"
 import prompts from "prompts"
-import { ethers } from "ethers"
 
 import { SessionSigner } from "@canvas-js/interfaces"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 export const CONTRACT_FILENAME = "contract.canvas.js"
 

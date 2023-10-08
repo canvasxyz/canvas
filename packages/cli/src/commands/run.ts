@@ -1,30 +1,20 @@
 import fs from "node:fs"
 import http from "node:http"
 import assert from "node:assert"
-import stream from "node:stream"
 import process from "node:process"
 
 import type { Argv } from "yargs"
 import chalk from "chalk"
-import prompts from "prompts"
 import stoppable from "stoppable"
-import express, { text } from "express"
+import express from "express"
 import cors from "cors"
 
 import { multiaddr } from "@multiformats/multiaddr"
 
-import { Canvas, CanvasConfig } from "@canvas-js/core"
+import { Canvas } from "@canvas-js/core"
 import { getAPI } from "@canvas-js/core/api"
 
-// import { getAPI, handleWebsocketConnection } from "@canvas-js/core/api"
-
-// import { testnetBootstrapList } from "@canvas-js/core/bootstrap"
-// import * as constants from "@canvas-js/core/constants"
-
 import { getContractLocation } from "../utils.js"
-// import { setupSyncModule } from "../syncModule.js"
-
-// import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 export const command = "run <path>"
 export const desc = "Run a Canvas application"
@@ -171,7 +161,6 @@ export async function handler(args: Args) {
 	const app = await Canvas.initialize({
 		location,
 		contract,
-		uri,
 		listen,
 		announce,
 		minConnections: args["min-connections"],
@@ -215,7 +204,7 @@ export async function handler(args: Args) {
 				console.log(`Serving static bundle: ${chalk.bold(origin)}`)
 			}
 
-			console.log(`Serving HTTP API for ${app.uri}:`)
+			console.log(`Serving HTTP API for ${uri}:`)
 			console.log(`└ GET  ${origin}/api`)
 
 			const { topics, models } = app.getApplicationData()
