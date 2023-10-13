@@ -1,0 +1,19 @@
+{
+  "name": "@canvas-js/hooks",
+  "version": "0.6.0-alpha7",
+  "type": "module",
+  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "exports": {
+    ".": "./lib/index.js"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "@canvas-js/core": "0.6.0-alpha7",
+    "@canvas-js/modeldb": "0.6.0-alpha7"
+  }
+}

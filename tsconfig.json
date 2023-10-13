@@ -18,5 +18,7 @@
     { "path": "./packages/chain-ethereum" },
     { "path": "./packages/chain-ethereum/test" },
     { "path": "./packages/mudevm-sync" },
+    { "path": "./packages/hooks" },
+    { "path": "./packages/templates" }
   ]
 }

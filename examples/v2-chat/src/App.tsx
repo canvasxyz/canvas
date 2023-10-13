@@ -2,9 +2,9 @@ import { useState, useRef, type FormEvent } from "react"
 import "./App.css"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { PublicChat } from "@canvas-js/templates"
+import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { ethers } from "ethers"
-import { useCanvas, useLiveQuery } from "./hooks.js"
-import { PublicChat } from "./contract.js"
 
 function App() {
 	const wallet = ethers.Wallet.createRandom()
@@ -47,7 +47,7 @@ function App() {
 			<div>
 				{messages?.map((message) => (
 					<div key={message.timestamp as any}>
-						{message.from}: {message.message}
+						{message.address}: {message.message}
 					</div>
 				))}
 				Page: {page + 1}

@@ -1,0 +1,17 @@
+{
+  "name": "@canvas-js/templates",
+  "version": "0.6.0-alpha7",
+  "type": "module",
+  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "exports": {
+    ".": "./lib/index.js"
+  },
+  "devDependencies": {
+    "@canvas-js/core": "0.6.0-alpha7"
+  }
+}
