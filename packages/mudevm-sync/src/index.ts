@@ -156,7 +156,6 @@ export function useCanvas<
 				},
 				offline,
 				signers: [new SIWESigner({ signer: wallet as any })],
-				// TODO: client needs to be upgraded from ethers@5.7.2 to ethers@6.6.6 to match @canvas-js/core
 				location: "sqldb",
 			})
 			setApp(app)
