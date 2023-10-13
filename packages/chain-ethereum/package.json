@@ -22,8 +22,8 @@
   "dependencies": {
     "@canvas-js/interfaces": "0.6.0-alpha6",
     "@canvas-js/signed-cid": "0.6.0-alpha6",
-    "@ipld/dag-json": "^10.1.4",
-    "ethers": "^6.7.1",
+    "@ipld/dag-json": "^10.1.5",
+    "ethers": "^6.8.0",
     "siwe": "^2.1.4"
   }
 }

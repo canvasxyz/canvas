@@ -14,7 +14,7 @@
   "dependencies": {
     "@canvas-js/modeldb": "0.6.0-alpha6",
     "@canvas-js/signed-cid": "0.6.0-alpha6",
-    "multiformats": "^12.1.1"
+    "multiformats": "^12.1.2"
   },
   "devDependencies": {
     "@canvas-js/chain-ethereum": "0.6.0-alpha6"
