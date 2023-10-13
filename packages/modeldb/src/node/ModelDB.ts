@@ -27,7 +27,7 @@ export class ModelDB extends AbstractModelDB {
 				const model = this.models[effect.model]
 				assert(model !== undefined, `model ${effect.model} not found`)
 				if (effect.operation === "set") {
-					this.#models[effect.model].set(context, effect.key, effect.value)
+					this.#models[effect.model].set(context, effect.value)
 				} else if (effect.operation === "delete") {
 					this.#models[effect.model].delete(context, effect.key)
 				} else {

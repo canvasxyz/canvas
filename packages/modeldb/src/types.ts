@@ -1,12 +1,19 @@
 // These are "init types" for the `models` value used to initialize the database.
 
+export type PrimaryKeyType = "primary"
 export type PrimitiveType = "integer" | "float" | "string" | "bytes"
 export type OptionalPrimitiveType = `${PrimitiveType}?`
 export type ReferenceType = `@${string}`
 export type OptionalReferenceType = `@${string}?`
 export type RelationType = `@${string}[]`
 
-export type PropertyType = PrimitiveType | OptionalPrimitiveType | ReferenceType | OptionalReferenceType | RelationType
+export type PropertyType =
+	| PrimaryKeyType
+	| PrimitiveType
+	| OptionalPrimitiveType
+	| ReferenceType
+	| OptionalReferenceType
+	| RelationType
 
 export type IndexInit = string | string[]
 
@@ -15,10 +22,11 @@ export type ModelsInit = Record<string, { $indexes?: IndexInit[] } & Record<stri
 // These are more structured representations of the schema defined by ModelsInit that are easier
 // to work with at runtime
 
+export type PrimaryKeyProperty = { name: string; kind: "primary" }
 export type PrimitiveProperty = { name: string; kind: "primitive"; type: PrimitiveType; optional: boolean }
 export type ReferenceProperty = { name: string; kind: "reference"; target: string; optional: boolean }
 export type RelationProperty = { name: string; kind: "relation"; target: string }
-export type Property = PrimitiveProperty | ReferenceProperty | RelationProperty
+export type Property = PrimaryKeyProperty | PrimitiveProperty | ReferenceProperty | RelationProperty
 
 // one-to-many relations have a source model and a target model.
 // one-to-many relation sources are always indexed, but targets are only indexed
@@ -39,11 +47,12 @@ export type Config = {
 
 // These are types for the runtime model record values
 
+export type PrimaryKeyValue = string
 export type PrimitiveValue = number | string | Uint8Array | null
 export type ReferenceValue = string | null
 export type RelationValue = string[]
 
-export type PropertyValue = PrimitiveValue | ReferenceValue | RelationValue
+export type PropertyValue = PrimaryKeyValue | PrimitiveValue | ReferenceValue | RelationValue
 
 export type ModelValue = Record<string, PropertyValue>
 
@@ -61,7 +70,7 @@ export type QueryParams = {
 // Batch effect API
 
 export type Effect =
-	| { model: string; operation: "set"; key: string; value: ModelValue }
+	| { model: string; operation: "set"; value: ModelValue }
 	| { model: string; operation: "delete"; key: string }
 
 // Conflict resolver

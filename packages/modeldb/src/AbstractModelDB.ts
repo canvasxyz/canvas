@@ -47,9 +47,9 @@ export abstract class AbstractModelDB {
 
 	// Model operations
 
-	public async set(modelName: string, key: string, value: ModelValue, context: { version?: Uint8Array | null } = {}) {
+	public async set(modelName: string, value: ModelValue, context: { version?: Uint8Array | null } = {}) {
 		const { version = null } = context
-		await this.apply([{ operation: "set", model: modelName, key, value }], { version })
+		await this.apply([{ operation: "set", model: modelName, value }], { version })
 	}
 
 	public async delete(modelName: string, key: string, context: { version?: Uint8Array | null } = {}) {

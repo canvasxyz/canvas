@@ -35,40 +35,52 @@ export function zip<A, B>(a: A[], b: B[]): [A, B][] {
 export function validateModelValue(model: Model, value: ModelValue) {
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
-		assert(propertyValue !== undefined, `model value is missing property ${property.name}`)
+		if (propertyValue === undefined) {
+			throw new Error(`missing property ${property.name}`)
+		}
 		validatePropertyValue(model.name, property, propertyValue)
 	}
 }
 
 export function validatePropertyValue(modelName: string, property: Property, value: PropertyValue) {
-	if (property.kind === "primitive") {
+	if (property.kind === "primary") {
+		if (typeof value !== "string") {
+			throw new TypeError(`${modelName}/${property.name} must be a string`)
+		}
+	} else if (property.kind === "primitive") {
 		if (property.optional && value === null) {
 			return
 		} else if (property.type === "integer") {
-			assert(
-				typeof value === "number" && Number.isSafeInteger(value),
-				`${modelName}/${property.name} must be an integer`
-			)
+			if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+				throw new TypeError(`${modelName}/${property.name} must be an integer`)
+			}
 		} else if (property.type === "float") {
-			assert(typeof value === "number", `${modelName}/${property.name} must be a float`)
+			if (typeof value !== "number") {
+				throw new TypeError(`${modelName}/${property.name} must be a number`)
+			}
 		} else if (property.type === "string") {
-			assert(typeof value === "string", `${modelName}/${property.name} must be a string`)
+			if (typeof value !== "string") {
+				throw new TypeError(`${modelName}/${property.name} must be a string`)
+			}
 		} else if (property.type === "bytes") {
-			assert(value instanceof Uint8Array, `${modelName}/${property.name} must be a Uint8Array`)
+			if (value instanceof Uint8Array) {
+				return
+			} else {
+				throw new TypeError(`${modelName}/${property.name} must be a Uint8Array`)
+			}
 		} else {
 			signalInvalidType(property.type)
 		}
 	} else if (property.kind === "reference") {
 		if (property.optional && value === null) {
 			return
-		} else {
-			assert(typeof value === "string", `${modelName}/${property.name} must be a string ID`)
+		} else if (typeof value !== "string") {
+			throw new TypeError(`${modelName}/${property.name} must be a string`)
 		}
 	} else if (property.kind === "relation") {
-		assert(
-			Array.isArray(value) && value.every((value) => typeof value === "string"),
-			`${modelName}/${property.name} must be an array of string IDs`
-		)
+		if (!Array.isArray(value) || value.some((value) => typeof value !== "string")) {
+			throw new TypeError(`${modelName}/${property.name} must be an array of strings`)
+		}
 	} else {
 		signalInvalidType(property)
 	}
