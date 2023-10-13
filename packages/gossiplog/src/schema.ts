@@ -44,23 +44,32 @@ export function decodeSignedMessage(
 	topic: string,
 	value: Uint8Array
 ): [id: string, signature: Signature | null, message: Message] {
-	const signedMessage = toSignedMessage(cbor.decode(value)) as SignedMessage
-	const {
-		signature,
-		message: { parents, payload },
-	} = signedMessage
-
-	const clock = getClock(parents)
+	const { signature, message } = toSignedMessage(cbor.decode(value)) as SignedMessage
+	const clock = getClock(message.parents)
 	const key = getKey(clock, sha256(value))
-	return [decodeId(key), signature, { topic, clock, parents: parents?.map(decodeId) ?? [], payload }]
+	const parents = message.parents?.map(decodeId) ?? []
+	assert(
+		parents.every((id, i) => i === 0 || parents[i - 1] < id),
+		"unsorted parents array"
+	)
+
+	return [decodeId(key), signature, { topic, clock, parents, payload: message.payload }]
 }
 
 export function encodeSignedMessage(
 	signature: Signature | null,
 	{ clock, parents, payload }: Message
 ): [key: Uint8Array, value: Uint8Array] {
-	const parentKeys = clock === 0 ? null : parents.map(encodeId)
-	const signedMessage: SignedMessage = { signature, message: { parents: parentKeys, payload } }
+	parents.sort()
+
+	const signedMessage: SignedMessage = {
+		signature,
+		message: {
+			parents: clock === 0 ? null : parents.map(encodeId),
+			payload,
+		},
+	}
+
 	const value = cbor.encode(fromSignedMessage(signedMessage))
 	const key = getKey(clock, sha256(value))
 	return [key, value]

@@ -13,7 +13,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
 		const messages = await MemoryTree.open()
 		const parents = new MemoryStore()
-		const gossipLog = new GossipLog(messages, parents, init)
+		const ancestors = new MemoryStore()
+		const gossipLog = new GossipLog(messages, parents, ancestors, init)
 
 		if (init.replay) {
 			await gossipLog.replay()
@@ -29,6 +30,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	private constructor(
 		private readonly messages: MemoryTree,
 		private readonly parents: MemoryStore,
+		private readonly ancestors: MemoryStore,
 		init: GossipLogInit<Payload, Result>
 	) {
 		super(init)
@@ -49,9 +51,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	): AsyncIterable<[key: Uint8Array, value: Uint8Array]> {
 		const deferred = pDefer()
 
-		this.log("adding transaction to queue")
 		this.queue.add(() => {
-			this.log("beginning transaction")
 			return deferred.promise
 		})
 
@@ -67,7 +67,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				yield [node.key, node.value]
 			}
 		} finally {
-			this.log("transaction completed")
 			deferred.resolve()
 		}
 	}
@@ -84,20 +83,16 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			}
 		}
 
-		this.log("adding transaction to queue")
 		const result = await this.queue.add(async () => {
-			this.log("beginning transaction")
-
 			if (targetPeerId !== null) {
 				this.incomingSyncPeers.add(targetPeerId.toString())
 			}
 
 			try {
-				return await callback({ messages: this.messages, parents: this.parents })
+				return await callback({ messages: this.messages, parents: this.parents, ancestors: this.ancestors })
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
 			} finally {
-				this.log("transaction completed")
 				if (targetPeerId !== null) {
 					this.incomingSyncPeers.delete(targetPeerId.toString())
 				}
@@ -118,21 +113,17 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			}
 		}
 
-		this.log("adding transaction to queue")
 		const result = await this.queue.add(async () => {
-			this.log("beginning transaction")
-
 			if (sourcePeerId !== null) {
 				this.outgoingSyncPeers.add(sourcePeerId.toString())
 			}
 
 			try {
-				return await callback({ messages: this.messages, parents: this.parents })
+				return await callback({ messages: this.messages, parents: this.parents, ancestors: this.ancestors })
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
 				throw err
 			} finally {
-				this.log("transaction completed")
 				if (sourcePeerId !== null) {
 					this.outgoingSyncPeers.delete(sourcePeerId.toString())
 				}

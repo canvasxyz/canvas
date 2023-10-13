@@ -206,6 +206,52 @@ Given an existing `signature: Signature | null` and `message: Message<Payload>`,
 
 TODO
 
+### Indexing ancestors
+
+```
+   ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+                                                                                              │
+   │                                                   │                         │                         │
+   ▼                                                   ▼                         ▼            ▼
+                                                                                                           │
+                                          ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+                                                                                 │                         │
+                                          │                         │                         │
+                                          ▼                         ▼            ▼                         │
+                                                                                              │
+                                       ┌─────┐      ┌─────┐      ┌─────┐                                   │
+                                   ┌───│     │◀─────│     │◀─────│     │◀──────────────┐      │
+                                   │   └─────┘      └─────┘      └─────┘               │                   │
+┌─────┐      ┌─────┐      ┌─────┐  │                                                   │      │         ┌─────┐
+│     │◀─────│     │◀─────│     │◀─┤                                                   └────────────┬───│     │
+└─────┘      └─────┘      └─────┘  │                                                          │     │   └─────┘
+                                   │   ┌─────┐      ┌─────┐      ┌─────┐      ┌─────┐      ┌─────┐  │
+                                   └───│     │◀─────│     │◀─────│     │◀─────│     │◀─────│     │◀─┘
+                                       └─────┘      └─────┘      └─────┘      └─────┘      └─────┘
+
+
+   1            2            3            4            5            6            7            8            9
+
+                                                       │            │            │
+
+   ▲                         ▲            ▲            │            │            │
+   │                         │
+                                          │            │            │            │
+   └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+                                                                    │            │
+
+                ▲                         ▲            ▲            │            │
+                │                         │
+                                                       │            │            │
+                └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+                                                                                 │
+
+                             ▲                         ▲            ▲            │
+                             │                         │
+                                                                    │            │
+                             └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+```
+
 ## API
 
 ```ts
@@ -213,9 +259,10 @@ interface GossipLogInit<Payload = unknown, Result = void> {
 	topic: string
 	apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
 	validate: (payload: unknown) => payload is Payload
+	replay?: boolean
 	signatures?: boolean
 	sequencing?: boolean
-	replay?: boolean
+	indexAncestors?: boolean
 }
 
 interface MessageSigner<Payload = unknown> {

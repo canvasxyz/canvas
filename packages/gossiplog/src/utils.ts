@@ -11,6 +11,19 @@ export const cborNull: Uint8Array = cbor.encode(null)
 // Topics are restricted to NSIDs, ie /[:\-\.a-z0-9]/ characters
 export const nsidPattern = /^[a-z](?:-*[a-z0-9])*(?:\.[a-z](?:-*[a-z0-9])*)*$/
 
+/** Logarithmic clock decay */
+export function* getAncestorClocks(clock: number): Iterable<number> {
+	let i = 0
+	while (true) {
+		const ancestor = clock - (1 << i++)
+		if (ancestor > 0) {
+			yield ancestor
+		} else {
+			break
+		}
+	}
+}
+
 export function sortPair(a: PeerId, b: PeerId): [x: PeerId, y: PeerId] {
 	if (lessThan(a.multihash.digest, b.multihash.digest)) {
 		return [a, b]

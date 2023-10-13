@@ -1,6 +1,6 @@
 import fs from "node:fs"
 
-import { Bound } from "@canvas-js/okra"
+import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { Environment, Transaction, Tree } from "@canvas-js/okra-node"
 
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
@@ -24,6 +24,20 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		return gossipLog
 	}
+
+	private static getReadOnlyAPI = (txn: Transaction, dbi: number): Omit<KeyValueStore, "set" | "delete"> => ({
+		get: (key) => txn.get(key, { dbi }),
+		entries: (lowerBound = null, upperBound = null, options = {}) =>
+			txn.entries(lowerBound, upperBound, { ...options, dbi }),
+	})
+
+	private static getReadWriteAPI = (txn: Transaction, dbi: number): KeyValueStore => ({
+		get: (key) => txn.get(key, { dbi }),
+		set: (key, value) => txn.set(key, value, { dbi }),
+		delete: (key) => txn.delete(key, { dbi }),
+		entries: (lowerBound = null, upperBound = null, options = {}) =>
+			txn.entries(lowerBound, upperBound, { ...options, dbi }),
+	})
 
 	private constructor(private readonly env: Environment, init: GossipLogInit<Payload, Result>) {
 		super(init)
@@ -58,6 +72,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			const messagesDBI = txn.openDatabase("messages")
 			const messages = new Tree(txn, { dbi: messagesDBI })
 			return await callback({
+				ancestors: this.indexAncestors ? GossipLog.getReadOnlyAPI(txn, txn.openDatabase("ancestors")) : undefined,
 				messages,
 				parents: {
 					get: (key) => txn.get(key, { dbi: parentsDBI }),
@@ -71,18 +86,11 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	public async write<T>(callback: (txn: ReadWriteTransaction) => Promise<T>): Promise<T> {
 		this.log("opening read-write transaction")
 		return await this.env.write(async (txn) => {
-			const parentsDBI = txn.openDatabase("parents")
-			const messagesDBI = txn.openDatabase("messages")
-			const messages = new Tree(txn, { dbi: messagesDBI })
+			const messages = new Tree(txn, { dbi: txn.openDatabase("messages") })
 			return await callback({
 				messages,
-				parents: {
-					get: (key) => txn.get(key, { dbi: parentsDBI }),
-					set: (key, value) => txn.set(key, value, { dbi: parentsDBI }),
-					delete: (key) => txn.delete(key, { dbi: parentsDBI }),
-					entries: (lowerBound = null, upperBound = null, options = {}) =>
-						txn.entries(lowerBound, upperBound, { ...options, dbi: parentsDBI }),
-				},
+				parents: GossipLog.getReadWriteAPI(txn, txn.openDatabase("parents")),
+				ancestors: this.indexAncestors ? GossipLog.getReadWriteAPI(txn, txn.openDatabase("ancestors")) : undefined,
 			})
 		})
 	}

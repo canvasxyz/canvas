@@ -4,23 +4,27 @@ import type { Source, Target, Node, Bound, KeyValueStore, Entry } from "@canvas-
 import { CustomEvent, EventEmitter } from "@libp2p/interface/events"
 import { Logger, logger } from "@libp2p/logger"
 import { equals } from "uint8arrays"
+import { varint } from "multiformats/basics"
 import { bytesToHex as hex } from "@noble/hashes/utils"
+import * as cbor from "@ipld/dag-cbor"
 
 import type { Message } from "@canvas-js/interfaces"
 import { Signature, verifySignature } from "@canvas-js/signed-cid"
 
-import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getClock } from "./schema.js"
 import { Driver } from "./sync/driver.js"
-import { Awaitable, assert, nsidPattern, cborNull } from "./utils.js"
+import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getClock } from "./schema.js"
+import { Awaitable, assert, nsidPattern, cborNull, getAncestorClocks } from "./utils.js"
 
 export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
 	parents: Omit<KeyValueStore, "set" | "delete">
+	ancestors?: Omit<KeyValueStore, "set" | "delete">
 }
 
 export interface ReadWriteTransaction {
 	messages: KeyValueStore & Target
 	parents: KeyValueStore
+	ancestors?: KeyValueStore
 }
 
 export interface GossipLogInit<Payload = unknown, Result = void> {
@@ -31,6 +35,7 @@ export interface GossipLogInit<Payload = unknown, Result = void> {
 	signatures?: boolean
 	sequencing?: boolean
 	replay?: boolean
+	indexAncestors?: boolean
 }
 
 export interface MessageSigner<Payload = unknown> {
@@ -39,6 +44,7 @@ export interface MessageSigner<Payload = unknown> {
 
 export type GossipLogEvents<Payload = unknown, Result = void> = {
 	message: CustomEvent<{
+		topic: string
 		id: string
 		signature: Signature | null
 		message: Message<Payload>
@@ -79,6 +85,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public readonly signatures: boolean
 	public readonly sequencing: boolean
+	public readonly indexAncestors: boolean
 
 	protected readonly log: Logger
 	protected readonly mempool = new Mempool<Payload>()
@@ -93,6 +100,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 		this.signatures = init.signatures ?? true
 		this.sequencing = init.sequencing ?? true
+		this.indexAncestors = init.indexAncestors ?? false
+		if (this.indexAncestors) {
+			assert(this.sequencing, "indexAncestors cannot be set if sequencing is disabled")
+		}
 
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 	}
@@ -205,14 +216,16 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			const [key, value] = this.encode(signature, message)
 
 			const id = decodeId(key)
-			this.log("appending message %s", id)
-			const result = await this.#apply(txn, id, signature, message, [key, value])
+			this.log("appending message %s: %O", id, message)
+
+			const result = await this.#insert(txn, id, signature, message, [key, value])
 			const root = await txn.messages.getRoot()
 			return { id, signature, message, result, root }
 		})
 
 		this.dispatchEvent(new CustomEvent("commit", { detail: { topic: this.topic, root } }))
 		this.log("commited root %s", hex(root.hash))
+
 		return { id, signature, message, result }
 	}
 
@@ -264,8 +277,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 				return { id }
 			}
 
-			await this.#apply(txn, id, signature, message, [key, value])
+			await this.#insert(txn, id, signature, message, [key, value])
 			const root = await txn.messages.getRoot()
+
 			return { id, root }
 		})
 
@@ -277,7 +291,75 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		return { id }
 	}
 
-	async #apply(
+	public async getAncestors(id: string, ancestorClock: number): Promise<string[]> {
+		const results = new Set<string>()
+		await this.write((txn) => this.#getAncestors(txn, encodeId(id), ancestorClock, results))
+		this.log("getAncestors of %s atOrBefore %d: %o", id, ancestorClock, results)
+		return Array.from(results).sort()
+	}
+
+	async #getAncestors(
+		txn: ReadOnlyTransaction,
+		key: Uint8Array,
+		atOrBefore: number,
+		results: Set<string>,
+		visited = new Set<string>()
+	): Promise<void> {
+		this.log("getAncestors of %s atOrBefore %d (visited: %o)", decodeId(key), atOrBefore, visited)
+		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
+		assert(atOrBefore > 0, "expected atOrBefore > 0")
+
+		const [clock] = varint.decode(key)
+		assert(atOrBefore < clock, "expected atOrBefore < clock")
+
+		const index = Math.floor(Math.log2(clock - atOrBefore))
+		const value = await txn.ancestors.get(key)
+		assert(value !== null, "expected value !== null")
+
+		const links = cbor.decode<Uint8Array[][]>(value)
+		for (const ancestorKey of links[index]) {
+			const [ancestorClock] = varint.decode(ancestorKey)
+			const ancestorId = decodeId(ancestorKey)
+
+			if (ancestorClock <= atOrBefore) {
+				results.add(ancestorId)
+			} else if (visited.has(ancestorId)) {
+				throw new Error("I BET THIS NEVER HAPPENS")
+			} else {
+				visited.add(ancestorId)
+				await this.#getAncestors(txn, ancestorKey, atOrBefore, results, visited)
+			}
+		}
+	}
+
+	// async #getAncestors2(txn: ReadOnlyTransaction, key: Uint8Array, atOrBefore: number, results: Set<string>) {
+	// 	assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
+	// 	assert(atOrBefore > 0, "expected atOrBefore > 0")
+
+	// 	const [clock] = varint.decode(key)
+	// 	assert(atOrBefore < clock, "expected atOrBefore < clock")
+
+	// 	const index = Math.floor(Math.log2(clock - atOrBefore))
+	// 	const value = await txn.ancestors.get(key)
+	// 	assert(value !== null, "expected value !== null")
+
+	// 	const links = cbor.decode<Uint8Array[][]>(value)
+	// 	for (const ancestorKey of links[index]) {
+	// 		const [ancestorClock] = varint.decode(ancestorKey)
+	// 		const ancestorId = decodeId(ancestorKey)
+
+	// 		if (ancestorClock <= atOrBefore) {
+	// 			results.add(ancestorId)
+	// 		} else if (visited.has(ancestorId)) {
+	// 			throw new Error("I BET THIS NEVER HAPPENS")
+	// 		} else {
+	// 			visited.add(ancestorId)
+	// 			await this.#getAncestors(txn, ancestorId, atOrBefore, results, visited)
+	// 		}
+	// 	}
+	// }
+
+	async #insert(
 		txn: ReadWriteTransaction,
 		id: string,
 		signature: Signature | null,
@@ -296,6 +378,41 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 				await txn.parents.delete(encodeId(parentId))
 			}
 
+			if (this.indexAncestors) {
+				assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
+
+				const parentClocks = Object.fromEntries(
+					message.parents.map((parent) => {
+						const key = encodeId(parent)
+						const [clock] = varint.decode(key)
+						return [parent, clock]
+					})
+				)
+
+				const ancestorClocks = Array.from(getAncestorClocks(message.clock))
+				const ancestorLinks: Uint8Array[][] = new Array(ancestorClocks.length)
+				for (const [i, ancestorClock] of ancestorClocks.entries()) {
+					if (i === 0) {
+						ancestorLinks[i] = message.parents.map(encodeId)
+					} else {
+						const links = new Set<string>()
+						for (const child of ancestorLinks[i - 1]) {
+							const [childClock] = varint.decode(child)
+							if (childClock <= ancestorClock) {
+								links.add(decodeId(child))
+							} else {
+								assert(childClock <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
+								await this.#getAncestors(txn, child, ancestorClock, links)
+							}
+						}
+
+						ancestorLinks[i] = Array.from(links).map(encodeId)
+					}
+				}
+
+				await txn.ancestors.set(key, cbor.encode(ancestorLinks))
+			}
+
 			const children = this.mempool.children.get(id)
 			this.log("%s has %d mempool children", id, children?.size ?? 0, children)
 			if (children !== undefined) {
@@ -310,7 +427,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 						this.mempool.dependencies.delete(childId)
 						this.mempool.messages.delete(childId)
 						const { signature, message } = signedMessage
-						await this.#apply(txn, childId, signature, message)
+						await this.#insert(txn, childId, signature, message)
 					}
 				}
 
@@ -339,7 +456,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 					const existingMessage = await txn.messages.get(key)
 					if (existingMessage === null) {
-						await this.#apply(txn, id, signature, message, [key, value])
+						await this.#insert(txn, id, signature, message, [key, value])
 					}
 				}
 
