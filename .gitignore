@@ -14,6 +14,7 @@ packages/**/lib/
 packages/**/dist/
 
 examples/**/out/
+examples/**/lib/
 examples/**/dist/
 
 interwallet/lib/

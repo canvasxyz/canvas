@@ -73,7 +73,7 @@ export class ModelAPI {
 	readonly #primaryKeyParam: `p${string}`
 
 	public constructor(readonly db: Database, readonly model: Model, readonly resolver: Resolver) {
-		const columns = [`_version BLOB`]
+		const columns = [`_key TEXT PRIMARY KEY NOT NULL`, `_version BLOB`]
 		const columnNames: `"${string}"`[] = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
 		let primaryKeyIndex: number | null = null
@@ -130,9 +130,7 @@ export class ModelAPI {
 
 		this.#update = new Method<{ _version: Uint8Array | null } & Params>(
 			db,
-			`UPDATE "${this.#table}" SET _version = :_version, ${updateEntries} WHERE ${this.#primaryKeyName} = ${
-				this.#primaryKeyParam
-			}`
+			`UPDATE "${this.#table}" SET _version = :_version, ${updateEntries} WHERE _key = :_key`
 		)
 
 		this.#delete = new Method<Record<`p${string}`, string>>(
@@ -144,7 +142,7 @@ export class ModelAPI {
 		this.#count = new Query<{}, { count: number }>(this.db, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
 		this.#select = new Query<Record<string, `p${string}`>, { _version: Uint8Array | null } & RecordValue>(
 			this.db,
-			`SELECT * FROM "${this.#table}" WHERE ${this.#primaryKeyName} = ${this.#primaryKeyParam}`
+			`SELECT * FROM "${this.#table}" WHERE _key = :_key`
 		)
 		this.#selectAll = new Query<{}, { _key: string; _version: Uint8Array | null } & RecordValue>(
 			this.db,
@@ -285,6 +283,12 @@ export class ModelAPI {
 		if (typeof query.limit === "number") {
 			sql.push(`LIMIT :limit`)
 			params.limit = query.limit
+		}
+
+		// OFFSET
+		if (typeof query.offset === "number") {
+			sql.push(`LIMIT :offset`)
+			params.limit = query.offset
 		}
 
 		const results = this.db.prepare(sql.join(" ")).all(params) as ({ _key: string } & RecordValue)[]

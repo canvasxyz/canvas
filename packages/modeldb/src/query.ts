@@ -1,4 +1,4 @@
-import { equals } from "multiformats/bytes"
+import { equals } from "uint8arrays"
 import {
 	Model,
 	ModelValue,

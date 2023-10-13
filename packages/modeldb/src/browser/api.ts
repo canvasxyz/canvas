@@ -144,9 +144,14 @@ export class ModelAPI {
 				// TODO: we could be smarter about this if `orderBy` & `limit` are both provided.
 				// TODO: grow the array with insertion sort, max capacity of `limit`
 				const results: ModelValue[] = []
+				let seen = 0
 				for await (const value of this.queryIndex(property, storeIndex, expression)) {
 					if (filter(value)) {
-						results.push(value)
+						if (query.offset !== undefined && seen < query.offset) {
+							seen++
+						} else {
+							results.push(value)
+						}
 					}
 				}
 
@@ -168,18 +173,24 @@ export class ModelAPI {
 				this.log("querying index %s with direction %s", storeIndex.name, direction)
 
 				const results: ModelValue[] = []
-				for (
-					let cursor = await storeIndex.openCursor(null, directions[direction]);
-					cursor !== null;
-					cursor = await cursor.continue()
-				) {
-					const value = this.decodeObject(cursor.value)
-					if (filter(value)) {
-						const count = results.push(select(value))
-						if (count >= limit) {
-							break
+				let cursor = await storeIndex.openCursor(null, directions[direction])
+
+				if (cursor !== null && query.offset !== undefined && query.offset !== 0) {
+					cursor.advance(query.offset)
+				}
+
+				try {
+					for (; cursor !== null; cursor = await cursor.continue()) {
+						const value = this.decodeObject(cursor.value)
+						if (filter(value)) {
+							const count = results.push(select(value))
+							if (count >= limit) {
+								break
+							}
 						}
 					}
+				} catch (error) {
+					if (!(error instanceof DOMException) || error.code !== error.INVALID_STATE_ERR) throw error
 				}
 
 				return results
@@ -189,7 +200,13 @@ export class ModelAPI {
 		// Neither `where` no `orderBy` matched existing indexes, so we just iterate over everything
 		this.log("iterating over all objects")
 		const results: ModelValue[] = []
-		for (let cursor = await store.openCursor(); cursor !== null; cursor = await cursor.continue()) {
+		let cursor = await store.openCursor()
+
+		if (cursor !== null && query.offset !== undefined && query.offset !== 0) {
+			cursor.advance(query.offset)
+		}
+
+		for (; cursor !== null; cursor = await cursor.continue()) {
 			const value = this.decodeObject(cursor.value)
 			if (filter(value)) {
 				results.push(value)

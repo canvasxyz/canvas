@@ -30,7 +30,7 @@ export interface Runtime {
 export function getRuntime(
 	target: PlatformTarget,
 	contract: string | { topic: string; models: ModelsInit; actions: Record<string, ActionImplementation> },
-	options: { runtimeMemoryLimit?: number } = {}
+	options: { runtimeMemoryLimit?: number } = {},
 ): Promise<Runtime> {
 	if (typeof contract === "string") {
 		return ContractRuntime.init(target, contract, options)
@@ -42,7 +42,13 @@ export function getRuntime(
 export type ActionImplementation = (
 	db: Record<string, ModelAPI>,
 	args: JSValue,
-	context: ActionContext
+	context: ActionContext,
+) => Awaitable<void | JSValue>
+
+export type GenericActionImplementation = (
+	db: Record<string, ModelAPI>,
+	args: any,
+	context: ActionContext,
 ) => Awaitable<void | JSValue>
 
 export type ModelAPI = {
@@ -98,7 +104,7 @@ class ContractRuntime implements Runtime {
 		public readonly topic: string,
 		public readonly db: AbstractModelDB,
 		private readonly vm: VM,
-		private readonly actionHandles: Record<string, QuickJSHandle>
+		private readonly actionHandles: Record<string, QuickJSHandle>,
 	) {
 		this.databaseAPI = vm
 			.wrapObject(Object.fromEntries(db.config.models.map((model) => [model.name, this.createAPI(model)])))
@@ -206,7 +212,7 @@ class ContractRuntime implements Runtime {
 class FunctionRuntime implements Runtime {
 	public static async init(
 		target: PlatformTarget,
-		contract: { topic: string; models: ModelsInit; actions: Record<string, ActionImplementation> }
+		contract: { topic: string; models: ModelsInit; actions: Record<string, ActionImplementation> },
 	): Promise<Runtime> {
 		const db = await target.openDB("models", contract.models, { resolver })
 		return new FunctionRuntime(contract.topic, db, contract.actions)
@@ -215,7 +221,7 @@ class FunctionRuntime implements Runtime {
 	constructor(
 		public readonly topic: string,
 		public readonly db: AbstractModelDB,
-		public readonly actions: Record<string, ActionImplementation>
+		public readonly actions: Record<string, ActionImplementation>,
 	) {}
 
 	public close() {}
