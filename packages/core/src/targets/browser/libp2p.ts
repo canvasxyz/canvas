@@ -6,8 +6,6 @@ import { pingService } from "libp2p/ping"
 import { identifyService } from "libp2p/identify"
 import { fetchService } from "libp2p/fetch"
 
-import { circuitRelayTransport } from "libp2p/circuit-relay"
-import { webRTC } from "@libp2p/webrtc"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
@@ -53,15 +51,6 @@ export function getLibp2pOptions(peerId: PeerId, config: CanvasConfig): Libp2pOp
 
 	function denyDialMultiaddr(addr: Multiaddr): boolean {
 		return false
-		// const id = addr.getPeerId()
-		// if (!bootstrapPeerIds.has(id)) {
-		// 	return false
-		// }
-
-		// const relayRoot = addr.decapsulateCode(290) // /p2p-circuit
-		// const relayRootId = relayRoot.getPeerId()
-
-		// return relayRootId !== id && bootstrapPeerIds.has(relayRootId)
 	}
 
 	return {
@@ -77,11 +66,7 @@ export function getLibp2pOptions(peerId: PeerId, config: CanvasConfig): Libp2pOp
 			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
 		},
 
-		transports: [
-			webSockets({ filter: all }),
-			webRTC({}),
-			circuitRelayTransport({ discoverRelays: announce.length === 0 ? bootstrapList.length : 0 }),
-		],
+		transports: [webSockets({ filter: all })],
 
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex()],

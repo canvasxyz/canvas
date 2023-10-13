@@ -123,9 +123,9 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 			return null
 		}
 
-		const [_, topic] = key.split("/")
+		const [_, ...topic] = key.split("/")
 		const records: Uint8Array[] = []
-		for (const peerId of this.pubsub.getSubscribers(topic)) {
+		for (const peerId of this.pubsub.getSubscribers(topic.join("/"))) {
 			try {
 				const { peerRecordEnvelope } = await this.components.peerStore.get(peerId)
 				if (peerRecordEnvelope !== undefined) {
