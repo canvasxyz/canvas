@@ -10,7 +10,7 @@ export interface MessagesProps {}
 export const Messages: React.FC<MessagesProps> = ({}) => {
 	const { app } = useContext(AppContext)
 
-	const messages = useLiveQuery<{ user: string; content: string; timestamp: number }>(app?.db ?? null, "message", {
+	const messages = useLiveQuery<{ user: string; content: string; timestamp: number }>(app, "message", {
 		orderBy: { timestamp: "asc" },
 	})
 

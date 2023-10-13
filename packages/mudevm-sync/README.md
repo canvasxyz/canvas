@@ -71,7 +71,7 @@ export const App = () => {
     offline: true,
   })
 
-  const messages = useLiveQuery(app?.db, "MyTable", { where: { ... } })
+  const messages = useLiveQuery(app, "MyTable", { where: { ... } })
 
   return <div>{messages.map(msg => <div>{msg.message}</div>)}</div>
 }

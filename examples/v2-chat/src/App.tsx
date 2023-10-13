@@ -18,7 +18,7 @@ function App() {
 	const [page, setPage] = useState(0)
 	const [sending, setSending] = useState(false)
 
-	const messages = useLiveQuery(app?.db ?? null, "messages", {
+	const messages = useLiveQuery(app, "messages", {
 		limit: 10,
 		offset: page * 10,
 		orderBy: { timestamp: "desc" },
