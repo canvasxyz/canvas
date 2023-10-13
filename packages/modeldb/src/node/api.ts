@@ -68,7 +68,11 @@ export class ModelAPI {
 
 	readonly #relations: Record<string, RelationAPI> = {}
 
-	public constructor(readonly db: Database, readonly model: Model, readonly resolver: Resolver) {
+	public constructor(
+		readonly db: Database,
+		readonly model: Model,
+		readonly resolver: Resolver,
+	) {
 		const columns = [`_key TEXT PRIMARY KEY NOT NULL`, `_version BLOB`]
 		const columnNames: `"${string}"`[] = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
@@ -105,7 +109,7 @@ export class ModelAPI {
 		const insertParams = [":_key", ":_version", ...columnParams].join(", ")
 		this.#insert = new Method<{ _key: string } & Params>(
 			db,
-			`INSERT OR IGNORE INTO "${this.#table}" (${insertNames}) VALUES (${insertParams})`
+			`INSERT OR IGNORE INTO "${this.#table}" (${insertNames}) VALUES (${insertParams})`,
 		)
 
 		const updateEntries = zip(["_version", ...columnNames], [":_version", ...columnParams])
@@ -114,7 +118,7 @@ export class ModelAPI {
 
 		this.#update = new Method<{ _key: string; _version: Uint8Array | null } & Params>(
 			db,
-			`UPDATE "${this.#table}" SET _version = :_version, ${updateEntries} WHERE _key = :_key`
+			`UPDATE "${this.#table}" SET _version = :_version, ${updateEntries} WHERE _key = :_key`,
 		)
 
 		this.#delete = new Method<{ _key: string }>(db, `DELETE FROM "${this.#table}" WHERE _key = :_key`)
@@ -123,11 +127,11 @@ export class ModelAPI {
 		this.#count = new Query<{}, { count: number }>(this.db, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
 		this.#select = new Query<{ _key: string }, { _key: string; _version: Uint8Array | null } & RecordValue>(
 			this.db,
-			`SELECT * FROM "${this.#table}" WHERE _key = :_key`
+			`SELECT * FROM "${this.#table}" WHERE _key = :_key`,
 		)
 		this.#selectAll = new Query<{}, { _key: string; _version: Uint8Array | null } & RecordValue>(
 			this.db,
-			`SELECT * FROM "${this.#table}"`
+			`SELECT * FROM "${this.#table}"`,
 		)
 	}
 
@@ -266,6 +270,12 @@ export class ModelAPI {
 			params.limit = query.limit
 		}
 
+		// OFFSET
+		if (typeof query.offset === "number") {
+			sql.push(`LIMIT :offset`)
+			params.limit = query.offset
+		}
+
 		const results = this.db.prepare(sql.join(" ")).all(params) as ({ _key: string } & RecordValue)[]
 		return results.map(({ _key, ...record }): ModelValue => {
 			const value: ModelValue = {}
@@ -289,7 +299,7 @@ export class ModelAPI {
 	}
 
 	private getSelectExpression(
-		select: Record<string, boolean> = mapValues(this.#properties, () => true)
+		select: Record<string, boolean> = mapValues(this.#properties, () => true),
 	): [select: string, relations: Relation[]] {
 		const relations: Relation[] = []
 		const columns = ["_key"]
@@ -319,7 +329,7 @@ export class ModelAPI {
 	}
 
 	private getWhereExpression(
-		where: WhereCondition = {}
+		where: WhereCondition = {},
 	): [where: string | null, params: Record<string, null | number | string | Buffer>] {
 		const params: Record<string, null | number | string | Buffer> = {}
 		const filters = Object.entries(where).flatMap(([name, expression], i) => {
@@ -462,7 +472,10 @@ export class TombstoneAPI {
 	readonly update: Method<{ _key: string; _version: Uint8Array }>
 	readonly select: Query<{ _key: string }, { _version: Uint8Array }>
 
-	public constructor(readonly db: Database, readonly model: Model) {
+	public constructor(
+		readonly db: Database,
+		readonly model: Model,
+	) {
 		// Create tombstone table
 		const columns = [`_key TEXT PRIMARY KEY NOT NULL`, `_version BLOB NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
@@ -471,17 +484,17 @@ export class TombstoneAPI {
 		this.delete = new Method<{ _key: string }>(this.db, `DELETE FROM "${this.table}" WHERE _key = :_key`)
 		this.insert = new Method<{ _key: string; _version: Uint8Array }>(
 			this.db,
-			`INSERT INTO "${this.table}" (_key, _version) VALUES (:_key, :_version)`
+			`INSERT INTO "${this.table}" (_key, _version) VALUES (:_key, :_version)`,
 		)
 		this.update = new Method<{ _key: string; _version: Uint8Array }>(
 			this.db,
-			`UPDATE "${this.table}" SET _version = :_version WHERE _key = :_key`
+			`UPDATE "${this.table}" SET _version = :_version WHERE _key = :_key`,
 		)
 
 		// Prepare queries
 		this.select = new Query<{ _key: string }, { _version: Uint8Array }>(
 			this.db,
-			`SELECT _version FROM "${this.table}" WHERE _key = :_key`
+			`SELECT _version FROM "${this.table}" WHERE _key = :_key`,
 		)
 	}
 }
@@ -495,7 +508,10 @@ export class RelationAPI {
 	readonly #insert: Method<{ _source: string; _target: string }>
 	readonly #delete: Method<{ _source: string }>
 
-	public constructor(readonly db: Database, readonly relation: Relation) {
+	public constructor(
+		readonly db: Database,
+		readonly relation: Relation,
+	) {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 
@@ -508,7 +524,7 @@ export class RelationAPI {
 		// Prepare methods
 		this.#insert = new Method<{ _source: string; _target: string }>(
 			this.db,
-			`INSERT INTO "${this.table}" (_source, _target) VALUES (:_source, :_target)`
+			`INSERT INTO "${this.table}" (_source, _target) VALUES (:_source, :_target)`,
 		)
 
 		this.#delete = new Method<{ _source: string }>(this.db, `DELETE FROM "${this.table}" WHERE _source = :_source`)
@@ -516,7 +532,7 @@ export class RelationAPI {
 		// Prepare queries
 		this.#select = new Query<{ _source: string }, { _target: string }>(
 			this.db,
-			`SELECT _target FROM "${this.table}" WHERE _source = :_source`
+			`SELECT _target FROM "${this.table}" WHERE _source = :_source`,
 		)
 	}
 
