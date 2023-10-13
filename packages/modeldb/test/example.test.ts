@@ -1,3 +1,5 @@
+import { nanoid } from "nanoid"
+
 import type { ModelsInit } from "@canvas-js/modeldb"
 
 import { testOnModelDB } from "./utils.js"
@@ -40,12 +42,13 @@ testOnModelDB("create ModelDB", async (t, openDB) => {
 
 	t.is(await db.count("user"), 0)
 
-	const userAId = await db.add("user", userA)
+	const [userAId, userBId] = [nanoid(), nanoid()]
+	await db.set("user", userAId, userA)
 	t.log("userAId", userAId)
 	t.deepEqual(await db.get("user", userAId), userA)
 	t.is(await db.count("user"), 1)
 
-	const userBId = await db.add("user", userB)
+	await db.set("user", userBId, userB)
 	t.log("userBId", userBId)
 	t.deepEqual(await db.get("user", userBId), userB)
 	t.is(await db.count("user"), 2)
@@ -55,24 +58,9 @@ testOnModelDB("create ModelDB", async (t, openDB) => {
 		members: [userAId, userBId],
 	}
 
-	const roomId = await db.add("room", room)
+	const [roomId] = [nanoid()]
+	await db.set("room", roomId, room)
 	t.log("roomId", roomId)
 	t.deepEqual(await db.get("room", roomId), room)
 	t.is(await db.count("room"), 1)
-
-	const message = {
-		room: roomId,
-		sender: userAId,
-		content: "hello world",
-		timestamp: Date.now(),
-	}
-
-	const messageId = await db.add("message", message)
-	const messageId2 = await db.add("message", message)
-	const messageId3 = await db.add("message", message)
-
-	t.is(messageId, messageId2)
-	t.is(messageId, messageId3)
-	t.deepEqual(await db.get("message", messageId), message)
-	t.is(await db.count("message"), 1)
 })

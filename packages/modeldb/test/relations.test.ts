@@ -1,3 +1,5 @@
+import { nanoid } from "nanoid"
+
 import type { ModelsInit } from "@canvas-js/modeldb"
 
 import { testOnModelDB } from "./utils.js"
@@ -13,21 +15,24 @@ const models: ModelsInit = {
 testOnModelDB("set and get reference and relation values", async (t, openDB) => {
 	const db = await openDB(models)
 
-	const userA = await db.add("user", { address: "a" })
-	const userB = await db.add("user", { address: "b" })
+	const [userA, userB] = [nanoid(), nanoid()]
+	await db.set("user", userA, { address: "a" })
+	await db.set("user", userB, { address: "b" })
 
 	t.is(await db.count("user"), 2)
 
-	const roomId = await db.add("room", { creator: userA, members: [userA, userB] })
+	const roomId = nanoid()
+	await db.set("room", roomId, { creator: userA, members: [userA, userB] })
 	t.deepEqual(await db.get("room", roomId), { creator: userA, members: [userA, userB] })
 })
 
 testOnModelDB("select reference and relation values", async (t, openDB) => {
 	const db = await openDB(models)
 
-	const userA = await db.add("user", { address: "a" })
-	const userB = await db.add("user", { address: "b" })
-	const userC = await db.add("user", { address: "c" })
+	const [userA, userB, userC] = [nanoid(), nanoid(), nanoid()]
+	await db.set("user", userA, { address: "a" })
+	await db.set("user", userB, { address: "b" })
+	await db.set("user", userC, { address: "c" })
 	await db.set("room", "x", { creator: userA, members: [userA, userB] })
 	await db.set("room", "y", { creator: userB, members: [userB, userC] })
 	await db.set("room", "z", { creator: userA, members: [userA, userC] })
@@ -54,9 +59,10 @@ testOnModelDB("select reference and relation values", async (t, openDB) => {
 testOnModelDB("query reference values", async (t, openDB) => {
 	const db = await openDB(models)
 
-	const userA = await db.add("user", { address: "a" })
-	const userB = await db.add("user", { address: "b" })
-	const userC = await db.add("user", { address: "c" })
+	const [userA, userB, userC] = [nanoid(), nanoid(), nanoid()]
+	await db.set("user", userA, { address: "a" })
+	await db.set("user", userB, { address: "b" })
+	await db.set("user", userC, { address: "c" })
 	await db.set("room", "x", { creator: userA, members: [userA, userB] })
 	await db.set("room", "y", { creator: userB, members: [userB, userC] })
 	await db.set("room", "z", { creator: userA, members: [userA, userC] })
@@ -76,9 +82,10 @@ testOnModelDB("query reference values", async (t, openDB) => {
 testOnModelDB("query filtering on relation values", async (t, openDB) => {
 	const db = await openDB(models)
 
-	const userA = await db.add("user", { address: "a" })
-	const userB = await db.add("user", { address: "b" })
-	const userC = await db.add("user", { address: "c" })
+	const [userA, userB, userC] = [nanoid(), nanoid(), nanoid()]
+	await db.set("user", userA, { address: "a" })
+	await db.set("user", userB, { address: "b" })
+	await db.set("user", userC, { address: "c" })
 	await db.set("room", "x", { creator: userA, members: [userA, userB] })
 	await db.set("room", "y", { creator: userB, members: [userB, userC] })
 	await db.set("room", "z", { creator: userA, members: [userA, userC] })

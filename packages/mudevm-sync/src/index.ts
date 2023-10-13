@@ -7,7 +7,6 @@ import { Canvas, ActionImplementation } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { typeOf, JSObject, JSValue } from "@canvas-js/vm"
 import { PropertyType } from "@canvas-js/modeldb"
-export { useLiveQuery } from "@canvas-js/modeldb"
 
 import type { MUDCoreUserConfig } from "@latticexyz/config"
 import type { ExpandMUDUserConfig } from "@latticexyz/store/ts/register/typeExtensions"

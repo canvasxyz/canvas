@@ -1,3 +1,5 @@
+import { nanoid } from "nanoid"
+
 import type { Context, ModelValue, ModelsInit } from "@canvas-js/modeldb"
 
 import { testOnModelDB, v } from "./utils.js"
@@ -17,9 +19,8 @@ testOnModelDB("subscriptions", async (t, openDB) => {
 	const { id, results } = db.subscribe("user", {}, (results, context) => void changes.push({ results, context }))
 	await results
 	t.teardown(() => db.unsubscribe(id))
-
-	await db.add("user", { address: "a" })
-	await db.add("user", { address: "b" })
+	await db.set("user", "a", { address: "a" })
+	await db.set("user", "b", { address: "b" })
 
 	t.is(await db.count("user"), 2)
 	t.deepEqual(changes, [
@@ -35,9 +36,10 @@ testOnModelDB("subscriptions (filtering on model and query)", async (t, openDB) 
 	let revision = 0
 	const c = () => ({ version: v(revision++) })
 
-	const userA = await db.add("user", { address: "a" }, c())
-	const userB = await db.add("user", { address: "b" }, c())
-	const userC = await db.add("user", { address: "c" }, c())
+	const [userA, userB, userC, userD, userE] = [nanoid(), nanoid(), nanoid(), nanoid(), nanoid()]
+	await db.set("user", userA, { address: "a" }, c())
+	await db.set("user", userB, { address: "b" }, c())
+	await db.set("user", userC, { address: "c" }, c())
 
 	const changes: { results: ModelValue[]; context: Context | null }[] = []
 	const { id, results } = db.subscribe(
@@ -53,8 +55,8 @@ testOnModelDB("subscriptions (filtering on model and query)", async (t, openDB) 
 	await db.set("room", "x", { creator: userA, members: [userA, userB] }, c())
 	await db.set("room", "y", { creator: userB, members: [userB, userC] }, c())
 	await db.set("room", "z", { creator: userA, members: [userA, userC] }, c())
-	await db.add("user", { address: "d" }, c())
-	await db.add("user", { address: "e" }, c())
+	await db.set("user", userD, { address: "d" }, c())
+	await db.set("user", userE, { address: "e" }, c())
 
 	t.deepEqual(changes, [
 		{ results: [], context: null },

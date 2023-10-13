@@ -1,7 +1,7 @@
 import { logger } from "@libp2p/logger"
 
 import { Config, ModelValue, Effect, Model, QueryParams, Resolver, Context } from "./types.js"
-import { Awaitable, assert, defaultResolver, getImmutableRecordKey } from "./utils.js"
+import { Awaitable, assert, defaultResolver } from "./utils.js"
 import { getFilter } from "./query.js"
 
 export interface ModelDBOptions {
@@ -16,8 +16,6 @@ type Subscription = {
 }
 
 export abstract class AbstractModelDB {
-	public static getImmutableRecordKey = getImmutableRecordKey
-
 	public readonly models: Record<string, Model>
 	public readonly resolver: Resolver
 
@@ -48,17 +46,6 @@ export abstract class AbstractModelDB {
 	public abstract apply(effects: Effect[], context?: Context): Promise<void>
 
 	// Model operations
-
-	public async add(
-		modelName: string,
-		value: ModelValue,
-		context: { version?: Uint8Array | null } = {}
-	): Promise<string> {
-		const { version = null } = context
-		const key = getImmutableRecordKey(value)
-		await this.apply([{ operation: "set", model: modelName, key, value }], { version })
-		return key
-	}
 
 	public async set(modelName: string, key: string, value: ModelValue, context: { version?: Uint8Array | null } = {}) {
 		const { version = null } = context

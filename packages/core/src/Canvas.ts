@@ -3,7 +3,7 @@ import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import { base32hex } from "multiformats/bases/base32"
-import { bytesToHex as hex } from "@noble/hashes/utils"
+import { bytesToHex, bytesToHex as hex } from "@noble/hashes/utils"
 import { equals } from "uint8arrays"
 
 import { Action, ActionArguments, Session, Message, SessionSigner } from "@canvas-js/interfaces"
@@ -122,7 +122,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				assert(publicKeyType === signature.type && equals(publicKey, signature.publicKey))
 				await signer.verifySession(message.payload)
 
-				await sessionDB.add("sessions", {
+				await sessionDB.set("sessions", `${signature.type}:${bytesToHex(signature.publicKey)}`, {
 					message_id: id,
 					chain: chain,
 					address: address,

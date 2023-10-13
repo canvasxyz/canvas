@@ -1,11 +1,4 @@
-import { base58btc } from "multiformats/bases/base58"
-
-import { getCID } from "@canvas-js/signed-cid"
-
-import type { Context, Model, ModelValue, Property, PropertyValue, Resolver } from "./types.js"
-
-// TODO: ????
-// export const nsidPattern = /^[a-z](?:-*[a-z0-9])*(?:\.[a-z](?:-*[a-z0-9])*)*$/
+import type { Model, ModelValue, Property, PropertyValue, Resolver } from "./types.js"
 
 export type Awaitable<T> = T | Promise<T>
 
@@ -37,11 +30,6 @@ export function zip<A, B>(a: A[], b: B[]): [A, B][] {
 	}
 
 	return result
-}
-
-export function getImmutableRecordKey(value: ModelValue): string {
-	const cid = getCID(value, { codec: "dag-cbor", digest: "blake3-128" })
-	return cid.toString(base58btc)
 }
 
 export function validateModelValue(model: Model, value: ModelValue) {
@@ -86,24 +74,23 @@ export function validatePropertyValue(modelName: string, property: Property, val
 	}
 }
 
-export const defaultResolver: Resolver = { lessThan: lessThanVersion }
-
-// TODO: make absolutely sure this does what we want
-function lessThanVersion({ version: a }: Context, { version: b }: Context) {
-	if (b === null) {
-		return false
-	} else if (a === null) {
-		return true
-	}
-
-	let x = a.length
-	let y = b.length
-	for (let i = 0, len = Math.min(x, y); i < len; ++i) {
-		if (a[i] !== b[i]) {
-			x = a[i]
-			y = b[i]
-			break
+export const defaultResolver: Resolver = {
+	lessThan({ version: a }, { version: b }) {
+		if (b === null) {
+			return false
+		} else if (a === null) {
+			return true
 		}
-	}
-	return x < y
+
+		let x = a.length
+		let y = b.length
+		for (let i = 0, len = Math.min(x, y); i < len; ++i) {
+			if (a[i] !== b[i]) {
+				x = a[i]
+				y = b[i]
+				break
+			}
+		}
+		return x < y
+	},
 }
