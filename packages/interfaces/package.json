@@ -12,7 +12,6 @@
     "test": "ava"
   },
   "dependencies": {
-    "@canvas-js/modeldb": "0.6.0-alpha7",
     "@canvas-js/signed-cid": "0.6.0-alpha7",
     "multiformats": "^12.1.2"
   },
