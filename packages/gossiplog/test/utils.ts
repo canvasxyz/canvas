@@ -4,10 +4,13 @@ import path from "node:path"
 
 import { ExecutionContext } from "ava"
 import { nanoid } from "nanoid"
-
+import { varint } from "multiformats"
 import { ed25519 } from "@noble/curves/ed25519"
 import { bytesToHex } from "@noble/hashes/utils"
 import { Key, Node } from "@canvas-js/okra"
+
+import { encodeId } from "@canvas-js/gossiplog"
+import { GossipLog } from "@canvas-js/gossiplog/memory"
 
 import { createSignature } from "@canvas-js/signed-cid"
 import { Message } from "@canvas-js/interfaces"
@@ -24,6 +27,7 @@ export class Ed25519Signer<T = unknown> {
 export function getDirectory(t: ExecutionContext<unknown>): string {
 	const directory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(directory)
+	t.log("Opened temporary directory", directory)
 	t.teardown(() => fs.rmSync(directory, { recursive: true }))
 	return directory
 }
@@ -51,4 +55,30 @@ export async function collect<T, O = T>(iter: AsyncIterable<T>, map?: (value: T)
 	}
 
 	return values
+}
+
+export function shuffle<T>(array: T[]) {
+	for (let i = array.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1))
+		;[array[i], array[j]] = [array[j], array[i]]
+	}
+}
+
+export async function appendChain(log: GossipLog<string, void>, rootId: string, n: number): Promise<string[]> {
+	const [clock] = varint.decode(encodeId(rootId))
+
+	const ids: string[] = []
+	for (let i = 0; i < n; i++) {
+		const message: Message<string> = {
+			topic: log.topic,
+			clock: clock + i + 1,
+			parents: i === 0 ? [rootId] : [ids[i - 1]],
+			payload: nanoid(),
+		}
+
+		const { id } = await log.insert(null, message)
+		ids.push(id)
+	}
+
+	return ids
 }
