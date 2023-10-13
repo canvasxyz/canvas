@@ -1,7 +1,7 @@
 {
   "name": "canvas-example-global-chat",
   "private": true,
-  "version": "0.6.0-alpha6",
+  "version": "0.6.0-alpha7",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.6.0-alpha6",
-    "@canvas-js/core": "0.6.0-alpha6",
-    "@canvas-js/modeldb": "0.6.0-alpha6",
+    "@canvas-js/chain-ethereum": "0.6.0-alpha7",
+    "@canvas-js/core": "0.6.0-alpha7",
+    "@canvas-js/modeldb": "0.6.0-alpha7",
     "ethers": "^6.8.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

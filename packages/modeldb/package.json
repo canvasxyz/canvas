@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/modeldb",
-  "version": "0.6.0-alpha6",
+  "version": "0.6.0-alpha7",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
