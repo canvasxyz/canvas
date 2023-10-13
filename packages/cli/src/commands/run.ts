@@ -12,6 +12,7 @@ import cors from "cors"
 import { multiaddr } from "@multiformats/multiaddr"
 
 import { Canvas } from "@canvas-js/core"
+// @ts-ignore
 import { getAPI } from "@canvas-js/core/api"
 
 import { getContractLocation } from "../utils.js"
