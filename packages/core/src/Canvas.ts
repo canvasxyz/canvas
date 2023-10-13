@@ -15,18 +15,35 @@ import { AbstractGossipLog, MessageSigner } from "@canvas-js/gossiplog"
 
 import getTarget from "#target"
 
-import { ActionImplementation, Runtime, getRuntime } from "./runtime.js"
+import { ActionImplementation, GenericActionImplementation, Runtime, getRuntime } from "./runtime.js"
 import { ServiceMap } from "./targets/interface.js"
 import { assert, signalInvalidType } from "./utils.js"
 
 export type ApplyMessage = (
 	id: string,
 	signature: Signature | null,
-	message: Message<Action | Session>
+	message: Message<Action | Session>,
 ) => Promise<JSValue | void>
 
+export interface TemplateInlineContract {
+	models: ModelsInit
+	actions: Record<string, GenericActionImplementation>
+}
+
+export interface GenericInlineContract extends TemplateInlineContract {
+	topic: string
+	models: ModelsInit
+	actions: Record<string, GenericActionImplementation>
+}
+
+export interface InlineContract extends GenericInlineContract {
+	topic: string
+	models: ModelsInit
+	actions: Record<string, ActionImplementation>
+}
+
 export interface CanvasConfig {
-	contract: string | { topic: string; models: ModelsInit; actions: Record<string, ActionImplementation> }
+	contract: string | InlineContract
 
 	/** NodeJS: data directory path; browser: IndexedDB database namespace */
 	location?: string | null
@@ -46,7 +63,7 @@ export interface CanvasConfig {
 
 export type ActionAPI = (
 	args: ActionArguments,
-	options?: { chain?: string; signer?: SessionSigner }
+	options?: { chain?: string; signer?: SessionSigner },
 ) => Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }>
 
 export interface CoreEvents {
@@ -177,7 +194,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		public readonly db: AbstractModelDB,
 		public readonly sessionDB: AbstractModelDB,
 		public readonly messageLog: AbstractGossipLog<Action | Session, JSValue | void>,
-		private readonly runtime: Runtime
+		private readonly runtime: Runtime,
 	) {
 		super()
 
@@ -222,7 +239,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 				const { id, result, recipients } = await this.append(
 					{ type: "action", chain, address, name, args, blockhash: null, timestamp },
-					{ signer }
+					{ signer },
 				)
 
 				this.log("applied action %s and got result %o", id, result)
@@ -285,7 +302,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	 */
 	public async append(
 		payload: Session | Action,
-		options: { signer?: MessageSigner<Session | Action> }
+		options: { signer?: MessageSigner<Session | Action> },
 	): Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }> {
 		if (this.libp2p === null) {
 			const { id, result } = await this.messageLog.append(payload, options)
@@ -296,7 +313,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	}
 
 	public async getMessage(
-		id: string
+		id: string,
 	): Promise<[signature: Signature | null, message: Message<Action | Session> | null]> {
 		return await this.messageLog.get(id)
 	}
@@ -304,7 +321,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	public async *getMessageStream<Payload = Action>(
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
-		options: { reverse?: boolean } = {}
+		options: { reverse?: boolean } = {},
 	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]> {
 		for await (const [id, signature, message] of this.messageLog.iterate(lowerBound, upperBound, options)) {
 			yield [id, signature, message as Message<Payload>]
