@@ -32,6 +32,9 @@
   },
   "dependencies": {
     "@canvas-js/interfaces": "0.6.0-alpha6",
+    "@canvas-js/okra": "^0.2.0",
+    "@canvas-js/okra-idb": "^0.2.1",
+    "@canvas-js/okra-memory": "^0.2.1",
     "@canvas-js/okra-node": "^0.5.5",
     "@canvas-js/signed-cid": "0.6.0-alpha6",
     "@ipld/dag-cbor": "^9.0.5",
