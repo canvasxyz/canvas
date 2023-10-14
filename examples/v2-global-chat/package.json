@@ -1,5 +1,5 @@
 {
-  "name": "canvas-example-global-chat",
+  "name": "@canvas-js/example-global-chat",
   "private": true,
   "version": "0.6.0-alpha7",
   "type": "module",
@@ -15,8 +15,7 @@
     "@canvas-js/templates": "0.6.0-alpha7",
     "ethers": "^6.8.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "vite-plugin-top-level-await": "^1.3.1"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
