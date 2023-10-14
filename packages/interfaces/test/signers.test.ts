@@ -14,19 +14,6 @@ const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 	},
 ]
 
-async function createMessage(
-	signer: Signer,
-	topic: string,
-	name: string,
-	args: ActionArguments
-): Promise<Message<Action>> {
-	const timestamp = Date.now()
-	const session = await signer.getSession(topic, { timestamp })
-	const { chain, address } = session
-	const action: Action = { type: "action", chain, address, name, args, timestamp, blockhash: null }
-	return { topic, clock: 0, parents: [], payload: action }
-}
-
 function runTestSuite({ createSigner, name }: SignerImplementation) {
 	test(`${name} - create and verify session`, async (t) => {
 		const topic = "example:signer"

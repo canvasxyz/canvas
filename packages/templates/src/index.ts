@@ -4,15 +4,15 @@ export const PublicChat: TemplateInlineContract = {
 	models: {
 		messages: {
 			message: "string",
-			from: "string",
+			address: "string",
 			timestamp: "integer",
-			$indexes: [["timestamp"], ["from"]],
+			$indexes: [["timestamp"], ["address"]],
 		},
 	},
 	actions: {
 		sendMessage: (db, { message }, { address, timestamp, id }) => {
 			if (!message || !message.trim()) throw new Error()
-			db.messages.set(id, { message, from: address, timestamp })
+			db.messages.set(id, { message, address, timestamp })
 		},
 	},
 }
