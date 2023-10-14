@@ -74,6 +74,7 @@ test("create an app with a function runtime", async (t) => {
 			topic: "com.example.app",
 			models: {
 				posts: {
+					id: "primary",
 					content: "string",
 					timestamp: "integer",
 					address: "string",
