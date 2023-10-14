@@ -10,7 +10,6 @@ import {
 	ModelsInit,
 	Property,
 	PropertyValue,
-	Resolver,
 	lessThan,
 	validateModelValue,
 } from "@canvas-js/modeldb"
@@ -30,7 +29,7 @@ export interface Runtime {
 export function getRuntime(
 	target: PlatformTarget,
 	contract: string | { topic: string; models: ModelsInit; actions: Record<string, ActionImplementation> },
-	options: { runtimeMemoryLimit?: number } = {},
+	options: { runtimeMemoryLimit?: number } = {}
 ): Promise<Runtime> {
 	if (typeof contract === "string") {
 		return ContractRuntime.init(target, contract, options)
@@ -42,24 +41,22 @@ export function getRuntime(
 export type ActionImplementation = (
 	db: Record<string, ModelAPI>,
 	args: JSValue,
-	context: ActionContext,
+	context: ActionContext
 ) => Awaitable<void | JSValue>
 
 export type GenericActionImplementation = (
 	db: Record<string, ModelAPI>,
 	args: any,
-	context: ActionContext,
+	context: ActionContext
 ) => Awaitable<void | JSValue>
 
 export type ModelAPI = {
 	get: (key: string) => Promise<ModelValue | null>
-	set: (key: string, value: ModelValue) => Promise<void>
+	set: (value: ModelValue) => Promise<void>
 	delete: (key: string) => Promise<void>
 }
 
 export type ActionContext = { id: string; chain: string; address: string; blockhash: string | null; timestamp: number }
-
-const resolver: Resolver = { lessThan: (a, b) => lessThan(a.version, b.version) }
 
 class ContractRuntime implements Runtime {
 	public static async init(target: PlatformTarget, contract: string, options: { runtimeMemoryLimit?: number } = {}) {
@@ -92,7 +89,7 @@ class ContractRuntime implements Runtime {
 		assert(modelsHandle !== undefined, "missing `models` export")
 		const models = modelsHandle.consume(vm.context.dump) as ModelsInit
 
-		const db = await target.openDB("db", models, { resolver })
+		const db = await target.openDB("db", models)
 		return new ContractRuntime(topic, db, vm, actionHandles)
 	}
 
@@ -104,7 +101,7 @@ class ContractRuntime implements Runtime {
 		public readonly topic: string,
 		public readonly db: AbstractModelDB,
 		private readonly vm: VM,
-		private readonly actionHandles: Record<string, QuickJSHandle>,
+		private readonly actionHandles: Record<string, QuickJSHandle>
 	) {
 		this.databaseAPI = vm
 			.wrapObject(Object.fromEntries(db.config.models.map((model) => [model.name, this.createAPI(model)])))
@@ -152,13 +149,13 @@ class ContractRuntime implements Runtime {
 		return this.vm.wrapObject({
 			get: this.vm.context.newFunction(`db.${model.name}.get`, (keyHandle) => {
 				assert(this.#effects !== null, "internal error")
+				const key = this.vm.context.getString(keyHandle)
 				throw new Error("not implemented")
 			}),
-			set: this.vm.context.newFunction(`db.${model.name}.set`, (keyHandle, valueHandle) => {
+			set: this.vm.context.newFunction(`db.${model.name}.set`, (valueHandle) => {
 				assert(this.#effects !== null, "internal error")
-				const key = this.vm.context.getString(keyHandle)
 				const value = this.unwrapModelValue(model, valueHandle)
-				this.#effects.push({ model: model.name, operation: "set", key, value })
+				this.#effects.push({ model: model.name, operation: "set", value })
 			}),
 			delete: this.vm.context.newFunction(`db.${model.name}.delete`, (keyHandle) => {
 				assert(this.#effects !== null, "internal error")
@@ -179,7 +176,9 @@ class ContractRuntime implements Runtime {
 	}
 
 	private unwrapPropertyValue(property: Property, handle: QuickJSHandle): PropertyValue {
-		if (property.kind === "primitive") {
+		if (property.kind === "primary") {
+			return this.vm.context.getString(handle)
+		} else if (property.kind === "primitive") {
 			if (property.type === "integer") {
 				const value = this.vm.context.getNumber(handle)
 				assert(Number.isSafeInteger(value), "property value must be a safe integer")
@@ -200,9 +199,9 @@ class ContractRuntime implements Runtime {
 				return this.vm.context.getString(handle)
 			}
 		} else if (property.kind === "relation") {
-			// TODO: this might need to be consumed...
-			// return this.vm.unwrapArray(handle, (elementHandle) => elementHandle.consume(this.vm.context.getString))
-			return this.vm.unwrapArray(handle, (elementHandle) => this.vm.context.getString(elementHandle))
+			// // TODO: this might need to be consumed...
+			// return this.vm.unwrapArray(handle, (elementHandle) => this.vm.context.getString(elementHandle))
+			return this.vm.unwrapArray(handle, (elementHandle) => elementHandle.consume(this.vm.context.getString))
 		} else {
 			signalInvalidType(property)
 		}
@@ -212,16 +211,16 @@ class ContractRuntime implements Runtime {
 class FunctionRuntime implements Runtime {
 	public static async init(
 		target: PlatformTarget,
-		contract: { topic: string; models: ModelsInit; actions: Record<string, ActionImplementation> },
+		contract: { topic: string; models: ModelsInit; actions: Record<string, ActionImplementation> }
 	): Promise<Runtime> {
-		const db = await target.openDB("models", contract.models, { resolver })
+		const db = await target.openDB("models", contract.models)
 		return new FunctionRuntime(contract.topic, db, contract.actions)
 	}
 
 	constructor(
 		public readonly topic: string,
 		public readonly db: AbstractModelDB,
-		public readonly actions: Record<string, ActionImplementation>,
+		public readonly actions: Record<string, ActionImplementation>
 	) {}
 
 	public close() {}
@@ -240,9 +239,9 @@ class FunctionRuntime implements Runtime {
 			get: async (key: string) => {
 				throw new Error("not implemented")
 			},
-			set: async (key: string, value: ModelValue) => {
+			set: async (value: ModelValue) => {
 				validateModelValue(model, value)
-				effects.push({ model: model.name, operation: "set", key, value })
+				effects.push({ model: model.name, operation: "set", value })
 			},
 			delete: async (key: string) => {
 				effects.push({ model: model.name, operation: "delete", key })

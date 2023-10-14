@@ -22,7 +22,7 @@ import { assert, signalInvalidType } from "./utils.js"
 export type ApplyMessage = (
 	id: string,
 	signature: Signature | null,
-	message: Message<Action | Session>,
+	message: Message<Action | Session>
 ) => Promise<JSValue | void>
 
 export interface TemplateInlineContract {
@@ -63,7 +63,7 @@ export interface CanvasConfig {
 
 export type ActionAPI = (
 	args: ActionArguments,
-	options?: { chain?: string; signer?: SessionSigner },
+	options?: { chain?: string; signer?: SessionSigner }
 ) => Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }>
 
 export interface CoreEvents {
@@ -127,7 +127,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 				const { result, effects } = await runtime.execute(id, message.payload)
 
-				await db.apply(effects, { version: base32hex.baseDecode(id) })
+				await db.apply(effects)
 
 				return result
 			} else if (message.payload.type === "session") {
@@ -139,7 +139,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 				assert(publicKeyType === signature.type && equals(publicKey, signature.publicKey))
 				await signer.verifySession(message.payload)
 
-				await sessionDB.set("sessions", `${signature.type}:${bytesToHex(signature.publicKey)}`, {
+				await sessionDB.set("sessions", {
 					message_id: id,
 					chain: chain,
 					address: address,
@@ -170,7 +170,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 	private static sessionSchema = {
 		sessions: {
-			message_id: "string",
+			message_id: "primary",
 			chain: "string",
 			address: "string",
 			public_key_type: "string",
@@ -194,7 +194,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		public readonly db: AbstractModelDB,
 		public readonly sessionDB: AbstractModelDB,
 		public readonly messageLog: AbstractGossipLog<Action | Session, JSValue | void>,
-		private readonly runtime: Runtime,
+		private readonly runtime: Runtime
 	) {
 		super()
 
@@ -239,7 +239,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 
 				const { id, result, recipients } = await this.append(
 					{ type: "action", chain, address, name, args, blockhash: null, timestamp },
-					{ signer },
+					{ signer }
 				)
 
 				this.log("applied action %s and got result %o", id, result)
@@ -302,7 +302,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	 */
 	public async append(
 		payload: Session | Action,
-		options: { signer?: MessageSigner<Session | Action> },
+		options: { signer?: MessageSigner<Session | Action> }
 	): Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }> {
 		if (this.libp2p === null) {
 			const { id, result } = await this.messageLog.append(payload, options)
@@ -313,7 +313,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	}
 
 	public async getMessage(
-		id: string,
+		id: string
 	): Promise<[signature: Signature | null, message: Message<Action | Session> | null]> {
 		return await this.messageLog.get(id)
 	}
@@ -321,7 +321,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	public async *getMessageStream<Payload = Action>(
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
-		options: { reverse?: boolean } = {},
+		options: { reverse?: boolean } = {}
 	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]> {
 		for await (const [id, signature, message] of this.messageLog.iterate(lowerBound, upperBound, options)) {
 			yield [id, signature, message as Message<Payload>]

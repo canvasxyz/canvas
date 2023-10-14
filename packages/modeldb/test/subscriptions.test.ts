@@ -1,12 +1,11 @@
-import { nanoid } from "nanoid"
+import type { ModelValue, ModelsInit } from "@canvas-js/modeldb"
 
-import type { Context, ModelValue, ModelsInit } from "@canvas-js/modeldb"
-
-import { testOnModelDB, v } from "./utils.js"
+import { testOnModelDB } from "./utils.js"
 
 const models: ModelsInit = {
-	user: { address: "string" },
+	user: { address: "primary" },
 	room: {
+		id: "primary",
 		creator: "@user",
 		members: "@user[]",
 	},
@@ -15,58 +14,54 @@ const models: ModelsInit = {
 testOnModelDB("subscriptions", async (t, openDB) => {
 	const db = await openDB(models)
 
-	const changes: { results: ModelValue[]; context: Context | null }[] = []
-	const { id, results } = db.subscribe("user", {}, (results, context) => void changes.push({ results, context }))
-	await results
+	const changes: { results: ModelValue[] }[] = []
+	const { id, results } = db.subscribe("user", {}, (results) => {
+		changes.push({ results })
+	})
+
 	t.teardown(() => db.unsubscribe(id))
-	await db.set("user", "a", { address: "a" })
-	await db.set("user", "b", { address: "b" })
+	await results
+	await db.set("user", { address: "a" })
+	await db.set("user", { address: "b" })
 
 	t.is(await db.count("user"), 2)
 	t.deepEqual(changes, [
-		{ results: [], context: null },
-		{ results: [{ address: "a" }], context: { version: null } },
-		{ results: [{ address: "a" }, { address: "b" }], context: { version: null } },
+		{ results: [] },
+		{ results: [{ address: "a" }] },
+		{ results: [{ address: "a" }, { address: "b" }] },
 	])
 })
 
 testOnModelDB("subscriptions (filtering on model and query)", async (t, openDB) => {
 	const db = await openDB(models)
 
-	let revision = 0
-	const c = () => ({ version: v(revision++) })
+	await db.set("user", { address: "a" })
+	await db.set("user", { address: "b" })
+	await db.set("user", { address: "c" })
 
-	const [userA, userB, userC, userD, userE] = [nanoid(), nanoid(), nanoid(), nanoid(), nanoid()]
-	await db.set("user", userA, { address: "a" }, c())
-	await db.set("user", userB, { address: "b" }, c())
-	await db.set("user", userC, { address: "c" }, c())
-
-	const changes: { results: ModelValue[]; context: Context | null }[] = []
-	const { id, results } = db.subscribe(
-		"room",
-		{ where: { creator: userA } },
-		(results, context) => void changes.push({ results, context })
-	)
-
-	await results
+	const changes: { results: ModelValue[] }[] = []
+	const { id, results } = db.subscribe("room", { where: { creator: "a" } }, (results) => {
+		changes.push({ results })
+	})
 
 	t.teardown(() => db.unsubscribe(id))
 
-	await db.set("room", "x", { creator: userA, members: [userA, userB] }, c())
-	await db.set("room", "y", { creator: userB, members: [userB, userC] }, c())
-	await db.set("room", "z", { creator: userA, members: [userA, userC] }, c())
-	await db.set("user", userD, { address: "d" }, c())
-	await db.set("user", userE, { address: "e" }, c())
+	await results
+
+	await db.set("room", { id: "x", creator: "a", members: ["a", "b"] })
+	await db.set("room", { id: "y", creator: "b", members: ["b", "c"] })
+	await db.set("room", { id: "z", creator: "a", members: ["a", "c"] })
+	await db.set("user", { address: "d" })
+	await db.set("user", { address: "e" })
 
 	t.deepEqual(changes, [
-		{ results: [], context: null },
-		{ results: [{ creator: userA, members: [userA, userB] }], context: { version: v(3) } },
+		{ results: [] },
+		{ results: [{ id: "x", creator: "a", members: ["a", "b"] }] },
 		{
 			results: [
-				{ creator: userA, members: [userA, userB] },
-				{ creator: userA, members: [userA, userC] },
+				{ id: "x", creator: "a", members: ["a", "b"] },
+				{ id: "z", creator: "a", members: ["a", "c"] },
 			],
-			context: { version: v(5) },
 		},
 	])
 })

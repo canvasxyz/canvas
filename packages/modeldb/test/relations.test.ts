@@ -5,8 +5,9 @@ import type { ModelsInit } from "@canvas-js/modeldb"
 import { testOnModelDB } from "./utils.js"
 
 const models: ModelsInit = {
-	user: { address: "string" },
+	user: { address: "primary" },
 	room: {
+		id: "primary",
 		creator: "@user",
 		members: "@user[]",
 	},
@@ -15,135 +16,131 @@ const models: ModelsInit = {
 testOnModelDB("set and get reference and relation values", async (t, openDB) => {
 	const db = await openDB(models)
 
-	const [userA, userB] = [nanoid(), nanoid()]
-	await db.set("user", userA, { address: "a" })
-	await db.set("user", userB, { address: "b" })
+	await db.set("user", { address: "a" })
+	await db.set("user", { address: "b" })
 
 	t.is(await db.count("user"), 2)
 
 	const roomId = nanoid()
-	await db.set("room", roomId, { creator: userA, members: [userA, userB] })
-	t.deepEqual(await db.get("room", roomId), { creator: userA, members: [userA, userB] })
+	await db.set("room", { id: roomId, creator: "a", members: ["a", "b"] })
+	t.deepEqual(await db.get("room", roomId), { id: roomId, creator: "a", members: ["a", "b"] })
 })
 
 testOnModelDB("select reference and relation values", async (t, openDB) => {
 	const db = await openDB(models)
 
-	const [userA, userB, userC] = [nanoid(), nanoid(), nanoid()]
-	await db.set("user", userA, { address: "a" })
-	await db.set("user", userB, { address: "b" })
-	await db.set("user", userC, { address: "c" })
-	await db.set("room", "x", { creator: userA, members: [userA, userB] })
-	await db.set("room", "y", { creator: userB, members: [userB, userC] })
-	await db.set("room", "z", { creator: userA, members: [userA, userC] })
+	await db.set("user", { address: "a" })
+	await db.set("user", { address: "b" })
+	await db.set("user", { address: "c" })
+	await db.set("room", { id: "x", creator: "a", members: ["a", "b"] })
+	await db.set("room", { id: "y", creator: "b", members: ["b", "c"] })
+	await db.set("room", { id: "z", creator: "a", members: ["a", "c"] })
 
-	t.deepEqual(await db.query("room", { select: { creator: true } }), [
-		{ creator: userA },
-		{ creator: userB },
-		{ creator: userA },
+	t.deepEqual(await db.query("room", { select: { id: true, creator: true } }), [
+		{ id: "x", creator: "a" },
+		{ id: "y", creator: "b" },
+		{ id: "z", creator: "a" },
 	])
 
-	t.deepEqual(await db.query("room", { select: { members: true } }), [
-		{ members: [userA, userB] },
-		{ members: [userB, userC] },
-		{ members: [userA, userC] },
+	t.deepEqual(await db.query("room", { select: { id: true, members: true } }), [
+		{ id: "x", members: ["a", "b"] },
+		{ id: "y", members: ["b", "c"] },
+		{ id: "z", members: ["a", "c"] },
 	])
 
-	t.deepEqual(await db.query("room", { select: { creator: true, members: true } }), [
-		{ creator: userA, members: [userA, userB] },
-		{ creator: userB, members: [userB, userC] },
-		{ creator: userA, members: [userA, userC] },
+	t.deepEqual(await db.query("room", { select: { id: true, creator: true, members: true } }), [
+		{ id: "x", creator: "a", members: ["a", "b"] },
+		{ id: "y", creator: "b", members: ["b", "c"] },
+		{ id: "z", creator: "a", members: ["a", "c"] },
 	])
 })
 
 testOnModelDB("query reference values", async (t, openDB) => {
 	const db = await openDB(models)
 
-	const [userA, userB, userC] = [nanoid(), nanoid(), nanoid()]
-	await db.set("user", userA, { address: "a" })
-	await db.set("user", userB, { address: "b" })
-	await db.set("user", userC, { address: "c" })
-	await db.set("room", "x", { creator: userA, members: [userA, userB] })
-	await db.set("room", "y", { creator: userB, members: [userB, userC] })
-	await db.set("room", "z", { creator: userA, members: [userA, userC] })
+	await db.set("user", { address: "a" })
+	await db.set("user", { address: "b" })
+	await db.set("user", { address: "c" })
+	await db.set("room", { id: "x", creator: "a", members: ["a", "b"] })
+	await db.set("room", { id: "y", creator: "b", members: ["b", "c"] })
+	await db.set("room", { id: "z", creator: "a", members: ["a", "c"] })
 
-	t.deepEqual(await db.query("room", { where: { creator: userA } }), [
-		{ creator: userA, members: [userA, userB] },
-		{ creator: userA, members: [userA, userC] },
+	t.deepEqual(await db.query("room", { where: { creator: "a" } }), [
+		{ id: "x", creator: "a", members: ["a", "b"] },
+		{ id: "z", creator: "a", members: ["a", "c"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { creator: userB } }), [{ creator: userB, members: [userB, userC] }])
-	t.deepEqual(await db.query("room", { where: { creator: userC } }), [])
-	t.deepEqual(await db.query("room", { where: { creator: { neq: userA } } }), [
-		{ creator: userB, members: [userB, userC] },
+	t.deepEqual(await db.query("room", { where: { creator: "b" } }), [{ id: "y", creator: "b", members: ["b", "c"] }])
+	t.deepEqual(await db.query("room", { where: { creator: "c" } }), [])
+	t.deepEqual(await db.query("room", { where: { creator: { neq: "a" } } }), [
+		{ id: "y", creator: "b", members: ["b", "c"] },
 	])
 })
 
 testOnModelDB("query filtering on relation values", async (t, openDB) => {
 	const db = await openDB(models)
 
-	const [userA, userB, userC] = [nanoid(), nanoid(), nanoid()]
-	await db.set("user", userA, { address: "a" })
-	await db.set("user", userB, { address: "b" })
-	await db.set("user", userC, { address: "c" })
-	await db.set("room", "x", { creator: userA, members: [userA, userB] })
-	await db.set("room", "y", { creator: userB, members: [userB, userC] })
-	await db.set("room", "z", { creator: userA, members: [userA, userC] })
+	await db.set("user", { address: "a" })
+	await db.set("user", { address: "b" })
+	await db.set("user", { address: "c" })
+	await db.set("room", { id: "x", creator: "a", members: ["a", "b"] })
+	await db.set("room", { id: "y", creator: "b", members: ["b", "c"] })
+	await db.set("room", { id: "z", creator: "a", members: ["a", "c"] })
 
-	t.deepEqual(await db.query("room", { where: { members: [userA] } }), [
-		{ creator: userA, members: [userA, userB] },
-		{ creator: userA, members: [userA, userC] },
+	t.deepEqual(await db.query("room", { where: { members: ["a"] } }), [
+		{ id: "x", creator: "a", members: ["a", "b"] },
+		{ id: "z", creator: "a", members: ["a", "c"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { members: [userB] } }), [
-		{ creator: userA, members: [userA, userB] },
-		{ creator: userB, members: [userB, userC] },
+	t.deepEqual(await db.query("room", { where: { members: ["b"] } }), [
+		{ id: "x", creator: "a", members: ["a", "b"] },
+		{ id: "y", creator: "b", members: ["b", "c"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { members: [userC] } }), [
-		{ creator: userB, members: [userB, userC] },
-		{ creator: userA, members: [userA, userC] },
+	t.deepEqual(await db.query("room", { where: { members: ["c"] } }), [
+		{ id: "y", creator: "b", members: ["b", "c"] },
+		{ id: "z", creator: "a", members: ["a", "c"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { members: [userA, userB] } }), [
-		{ creator: userA, members: [userA, userB] },
+	t.deepEqual(await db.query("room", { where: { members: ["a", "b"] } }), [
+		{ id: "x", creator: "a", members: ["a", "b"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { members: [userB, userA] } }), [
-		{ creator: userA, members: [userA, userB] },
+	t.deepEqual(await db.query("room", { where: { members: ["b", "a"] } }), [
+		{ id: "x", creator: "a", members: ["a", "b"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { members: [userB, userC] } }), [
-		{ creator: userB, members: [userB, userC] },
+	t.deepEqual(await db.query("room", { where: { members: ["b", "c"] } }), [
+		{ id: "y", creator: "b", members: ["b", "c"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { members: [userC, userB] } }), [
-		{ creator: userB, members: [userB, userC] },
+	t.deepEqual(await db.query("room", { where: { members: ["c", "b"] } }), [
+		{ id: "y", creator: "b", members: ["b", "c"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { members: [userA, userC] } }), [
-		{ creator: userA, members: [userA, userC] },
+	t.deepEqual(await db.query("room", { where: { members: ["a", "c"] } }), [
+		{ id: "z", creator: "a", members: ["a", "c"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { members: [userC, userA] } }), [
-		{ creator: userA, members: [userA, userC] },
+	t.deepEqual(await db.query("room", { where: { members: ["c", "a"] } }), [
+		{ id: "z", creator: "a", members: ["a", "c"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { members: [userA, userB, userC] } }), [])
+	t.deepEqual(await db.query("room", { where: { members: ["a", "b", "c"] } }), [])
 
-	t.deepEqual(await db.query("room", { where: { members: { neq: [userA] } } }), [
-		{ creator: userB, members: [userB, userC] },
+	t.deepEqual(await db.query("room", { where: { members: { neq: ["a"] } } }), [
+		{ id: "y", creator: "b", members: ["b", "c"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { members: { neq: [userB] } } }), [
-		{ creator: userA, members: [userA, userC] },
+	t.deepEqual(await db.query("room", { where: { members: { neq: ["b"] } } }), [
+		{ id: "z", creator: "a", members: ["a", "c"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { members: { neq: [userC] } } }), [
-		{ creator: userA, members: [userA, userB] },
+	t.deepEqual(await db.query("room", { where: { members: { neq: ["c"] } } }), [
+		{ id: "x", creator: "a", members: ["a", "b"] },
 	])
 
-	t.deepEqual(await db.query("room", { where: { members: { neq: [userA, userB] } } }), [])
-	t.deepEqual(await db.query("room", { where: { members: { neq: [userB, userC] } } }), [])
-	t.deepEqual(await db.query("room", { where: { members: { neq: [userA, userC] } } }), [])
+	t.deepEqual(await db.query("room", { where: { members: { neq: ["a", "b"] } } }), [])
+	t.deepEqual(await db.query("room", { where: { members: { neq: ["b", "c"] } } }), [])
+	t.deepEqual(await db.query("room", { where: { members: { neq: ["a", "c"] } } }), [])
 })

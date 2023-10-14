@@ -1,27 +1,28 @@
 import { IDBPDatabase, IDBPTransaction, openDB } from "idb"
 
-import { AbstractModelDB, ModelDBOptions } from "../AbstractModelDB.js"
-
-import { Config, Context, Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
+import { AbstractModelDB } from "../AbstractModelDB.js"
+import { Config, Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
 import { parseConfig } from "../config.js"
 import { Awaitable, assert, signalInvalidType } from "../utils.js"
 
 import { ModelAPI } from "./api.js"
-import { getIndexName, getObjectStoreName, getTombstoneObjectStoreName } from "./utils.js"
+import { getIndexName } from "./utils.js"
 
 export class ModelDB extends AbstractModelDB {
-	public static async initialize(name: string, models: ModelsInit, options: ModelDBOptions = {}) {
+	public static async initialize(name: string, models: ModelsInit) {
 		const config = parseConfig(models)
 		const db = await openDB(name, 1, {
 			upgrade(db: IDBPDatabase<unknown>) {
 				// create object stores
 				for (const model of config.models) {
-					const recordObjectStore = db.createObjectStore(getObjectStoreName(model.name))
-					db.createObjectStore(getTombstoneObjectStoreName(model.name))
+					const primaryKey = model.properties.find((property) => property.kind === "primary")
+					assert(primaryKey !== undefined, "expected primaryKey !== undefined")
+
+					const recordObjectStore = db.createObjectStore(model.name, { keyPath: primaryKey.name })
 
 					for (const index of model.indexes) {
 						if (index.length > 1) {
-							// TODO: we can support these by adding synthetic values to every object
+							// TODO: we can support these by adding synthetic array values to every object
 							throw new Error("multi-property indexes not supported yet")
 						}
 
@@ -32,16 +33,16 @@ export class ModelDB extends AbstractModelDB {
 			},
 		})
 
-		return new ModelDB(db, config, options)
+		return new ModelDB(db, config)
 	}
 
 	readonly #models: Record<string, ModelAPI> = {}
 
-	private constructor(public readonly db: IDBPDatabase, config: Config, options: ModelDBOptions) {
-		super(config, options)
+	private constructor(public readonly db: IDBPDatabase, config: Config) {
+		super(config)
 
 		for (const model of config.models) {
-			this.#models[model.name] = new ModelAPI(model, this.resolver)
+			this.#models[model.name] = new ModelAPI(model)
 		}
 
 		db.addEventListener("error", (event) => this.log("db: error", event))
@@ -94,7 +95,7 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	public async *iterate(modelName: string): AsyncIterable<[key: string, value: ModelValue]> {
+	public async *iterate(modelName: string): AsyncIterable<ModelValue> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, "model not found")
 
@@ -121,15 +122,15 @@ export class ModelDB extends AbstractModelDB {
 		return await this.db.count(api.storeName)
 	}
 
-	public async apply(effects: Effect[], context: Context = { version: null }): Promise<void> {
+	public async apply(effects: Effect[]): Promise<void> {
 		await this.write(async (txn) => {
 			for (const effect of effects) {
 				const api = this.#models[effect.model]
 				assert(api !== undefined, "model API not found")
 				if (effect.operation === "set") {
-					await api.set(txn, context, effect.key, effect.value)
+					await api.set(txn, effect.value)
 				} else if (effect.operation === "delete") {
-					await api.delete(txn, context, effect.key)
+					await api.delete(txn, effect.key)
 				} else {
 					signalInvalidType(effect)
 				}
@@ -142,7 +143,7 @@ export class ModelDB extends AbstractModelDB {
 					if (effects.some((effect) => filter(effect))) {
 						try {
 							const results = await api.query(txn, query)
-							await callback(results, context)
+							await callback(results)
 						} catch (err) {
 							this.log.error(err)
 						}

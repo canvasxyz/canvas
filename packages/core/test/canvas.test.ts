@@ -8,6 +8,7 @@ import { SIWESigner } from "@canvas-js/chain-ethereum"
 const contract = `
 export const models = {
   posts: {
+		id: "primary",
     content: "string",
     timestamp: "integer",
   },
@@ -16,7 +17,7 @@ export const models = {
 export const actions = {
   async createPost(db, { content }, { id, chain, address, timestamp }) {
     const postId = [chain, address, id].join("/")
-    await db.posts.set(postId, { content, timestamp });
+    await db.posts.set({ id: postId, content, timestamp });
     return postId
   },
 
@@ -82,7 +83,7 @@ test("create an app with a function runtime", async (t) => {
 				async createPost(db, args, { id, chain, address, timestamp }) {
 					const { content } = args as { content: string }
 					const postId = [chain, address, id].join("/")
-					await db.posts.set(postId, { content, timestamp, address })
+					await db.posts.set({ id: postId, content, timestamp, address })
 					return postId
 				},
 			},

@@ -6,7 +6,7 @@ import { ethers } from "ethers"
 import { Canvas, ActionImplementation } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { typeOf, JSObject, JSValue } from "@canvas-js/vm"
-import { PropertyType } from "@canvas-js/modeldb"
+import { ModelsInit, PropertyType } from "@canvas-js/modeldb"
 
 import type { MUDCoreUserConfig } from "@latticexyz/config"
 import type { ExpandMUDUserConfig } from "@latticexyz/store/ts/register/typeExtensions"
@@ -52,18 +52,15 @@ export function useCanvas<
 			}
 
 			// build models
-			const modelsSpec = Object.fromEntries(
-				models.map(([name, params]) => [
-					name,
-					{
-						...Object.fromEntries(
-							Object.entries(params.valueSchema).map(([field, type]) => [field, abiTypeToModelType(type)])
-						),
-						_key: "string" as PropertyType,
-						_timestamp: "integer" as PropertyType,
-					},
-				])
-			)
+			const modelsInit: ModelsInit = {}
+			for (const [name, params] of models) {
+				modelsInit[name] = Object.fromEntries(
+					Object.entries(params.valueSchema).map(([field, type]) => [field, abiTypeToModelType(type)])
+				)
+
+				modelsInit[name]._key = "string"
+				modelsInit[name]._timestamp = "integer"
+			}
 
 			// build actions
 			const actionsSpec = {}
@@ -110,7 +107,6 @@ export function useCanvas<
 											components: readonly AbiParameter[]
 										}
 										const values = outputs.components.map((c) => result[c.name!])
-										const key = context.id
 										// TODO: use key = keccak256(encodeAbiParameters(outputs.components, values))
 
 										const modelValue = Object.fromEntries(
@@ -127,7 +123,7 @@ export function useCanvas<
 													["_timestamp", context.timestamp],
 												])
 										)
-										db[tableName].set(key, modelValue)
+										db[tableName].set(modelValue)
 										resolve(modelValue)
 									})
 									.catch((err: Error) => {
@@ -151,7 +147,7 @@ export function useCanvas<
 			const app = await Canvas.initialize({
 				contract: {
 					topic,
-					models: modelsSpec,
+					models: modelsInit,
 					actions: actionsSpec,
 				},
 				offline,

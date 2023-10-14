@@ -1,5 +1,4 @@
 import { Database } from "better-sqlite3"
-import { logger } from "@libp2p/logger"
 
 import {
 	Property,
@@ -7,19 +6,25 @@ import {
 	Model,
 	ModelValue,
 	PropertyValue,
-	Resolver,
 	PrimitiveType,
-	Context,
 	QueryParams,
 	WhereCondition,
 	PrimitiveValue,
 	RangeExpression,
+	PrimaryKeyType,
+	PrimaryKeyProperty,
 } from "../types.js"
 
-import { decodePrimitiveValue, decodeRecord, decodeReferenceValue, encodeRecordParams } from "./encoding.js"
+import {
+	decodePrimaryKeyValue,
+	decodePrimitiveValue,
+	decodeRecord,
+	decodeReferenceValue,
+	encodeRecordParams,
+} from "./encoding.js"
 import { Method, Query } from "./utils.js"
 import { isNotExpression, isLiteralExpression, isRangeExpression } from "../query.js"
-import { assert, mapValues, signalInvalidType, zip } from "../utils.js"
+import { assert, mapValues, signalInvalidType, validateModelValue, zip } from "../utils.js"
 
 type RecordValue = Record<string, string | number | Buffer | null>
 type Params = Record<`p${string}`, string | number | Buffer | null>
@@ -49,34 +54,30 @@ function getPropertyColumnType(property: Property): string {
 const getPropertyColumn = (property: Property) => `'${property.name}' ${getPropertyColumnType(property)}`
 
 export class ModelAPI {
-	private readonly log = logger(`canvas:modeldb:[${this.model.name}]`)
-
-	#table = `model/${this.model.name}`
+	#table = `record/${this.model.name}`
 	#params: Record<string, `p${string}`> = {}
 	#properties = Object.fromEntries(this.model.properties.map((property) => [property.name, property]))
 
 	// Methods
-	#insert: Method<{ _version: Uint8Array | null } & Params>
-	#update: Method<{ _version: Uint8Array | null } & RecordValue>
+	#insert: Method<Params>
+	#update: Method<RecordValue>
 	#delete: Method<Record<`p${string}`, string>>
 
 	// Queries
-	#selectAll: Query<{}, { _version: Uint8Array | null } & RecordValue>
-	#select: Query<Record<`p${string}`, string>, { _version: Uint8Array | null } & RecordValue>
+	#selectAll: Query<{}, RecordValue>
+	#select: Query<Record<`p${string}`, string>, RecordValue>
 	#count: Query<{}, { count: number }>
-
-	// Tombstone API
-	#tombstones = new TombstoneAPI(this.db, this.model)
 
 	readonly #relations: Record<string, RelationAPI> = {}
 	readonly #primaryKeyName: string
 	readonly #primaryKeyParam: `p${string}`
 
-	public constructor(readonly db: Database, readonly model: Model, readonly resolver: Resolver) {
-		const columns = [`_key TEXT PRIMARY KEY NOT NULL`, `_version BLOB`]
+	public constructor(readonly db: Database, readonly model: Model) {
+		const columns: string[] = []
 		const columnNames: `"${string}"`[] = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
 		let primaryKeyIndex: number | null = null
+		let primaryKey: PrimaryKeyProperty | null = null
 		for (const [i, property] of model.properties.entries()) {
 			if (property.kind === "primary" || property.kind === "primitive" || property.kind === "reference") {
 				columns.push(getPropertyColumn(property))
@@ -86,6 +87,7 @@ export class ModelAPI {
 
 				if (property.kind === "primary") {
 					primaryKeyIndex = i
+					primaryKey = property
 				}
 			} else if (property.kind === "relation") {
 				this.#relations[property.name] = new RelationAPI(db, {
@@ -99,8 +101,10 @@ export class ModelAPI {
 			}
 		}
 
+		assert(primaryKey !== null, "expected primaryKey !== null")
 		assert(primaryKeyIndex !== null, "expected primaryKeyIndex !== null")
-		this.#primaryKeyName = columnNames[primaryKeyIndex]
+		// this.#primaryKeyName = columnNames[primaryKeyIndex]
+		this.#primaryKeyName = primaryKey.name
 		this.#primaryKeyParam = `p${primaryKeyIndex}`
 
 		// Create record table
@@ -108,46 +112,34 @@ export class ModelAPI {
 
 		// Create indexes
 		for (const index of model.indexes) {
-			const indexName = `record/${model.name}/${index.join("/")}`
+			const indexName = `${model.name}/${index.join("/")}`
 			const indexColumns = index.map((name) => `'${name}'`)
 			db.exec(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${this.#table}" (${indexColumns.join(", ")})`)
 		}
 
 		// Prepare methods
-		const insertNames = ["_version", ...columnNames].join(", ")
-		const insertParams = [":_version", ...columnParams].join(", ")
-		this.#insert = new Method<{ _version: Uint8Array | null } & Params>(
+		const insertNames = columnNames.join(", ")
+		const insertParams = columnParams.join(", ")
+		this.#insert = new Method<Params>(
 			db,
 			`INSERT OR IGNORE INTO "${this.#table}" (${insertNames}) VALUES (${insertParams})`
 		)
 
-		const updateEntries = zip(
-			["_version", ...columnNames.filter((_, i) => i !== primaryKeyIndex)],
-			[":_version", ...columnParams.filter((_, i) => i !== primaryKeyIndex)]
-		)
-			.map(([name, param]) => `${name} = ${param}`)
-			.join(", ")
+		const where = `WHERE "${this.#primaryKeyName}" = :${this.#primaryKeyParam}`
+		const updateEntries = zip(columnNames, columnParams).map(([name, param]) => `${name} = ${param}`)
 
-		this.#update = new Method<{ _version: Uint8Array | null } & Params>(
-			db,
-			`UPDATE "${this.#table}" SET _version = :_version, ${updateEntries} WHERE _key = :_key`
-		)
+		this.#update = new Method<Params>(db, `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} ${where}`)
 
-		this.#delete = new Method<Record<`p${string}`, string>>(
-			db,
-			`DELETE FROM "${this.#table}" WHERE ${this.#primaryKeyName} = ${this.#primaryKeyParam}`
-		)
+		this.#delete = new Method<Record<`p${string}`, string>>(db, `DELETE FROM "${this.#table}" ${where}`)
 
 		// Prepare queries
 		this.#count = new Query<{}, { count: number }>(this.db, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
-		this.#select = new Query<Record<string, `p${string}`>, { _version: Uint8Array | null } & RecordValue>(
+		this.#select = new Query<Record<string, `p${string}`>, RecordValue>(
 			this.db,
-			`SELECT * FROM "${this.#table}" WHERE _key = :_key`
+			`SELECT ${columnNames.join(", ")} FROM "${this.#table}" ${where}`
 		)
-		this.#selectAll = new Query<{}, { _key: string; _version: Uint8Array | null } & RecordValue>(
-			this.db,
-			`SELECT * FROM "${this.#table}"`
-		)
+
+		this.#selectAll = new Query<{}, RecordValue>(this.db, `SELECT ${columnNames.join(", ")} FROM "${this.#table}"`)
 	}
 
 	public get(key: string): ModelValue | null {
@@ -162,34 +154,21 @@ export class ModelAPI {
 		}
 	}
 
-	public set(context: Context, value: ModelValue) {
-		// no-op if an existing value takes precedence
-		const { _key: existingKey = null, _version: existingVersion = null } = this.#select.get({ _key: key }) ?? {}
-		if (this.resolver.lessThan(context, { version: existingVersion })) {
-			return
-		}
-
-		// no-op if an existing tombstone takes precedence
-		const { _version: existingTombstone = null } = this.#tombstones.select.get({ _key: key }) ?? {}
-		if (this.resolver.lessThan(context, { version: existingTombstone })) {
-			return
-		}
-
-		// delete the tombstone since we're about to set the value
-		if (existingTombstone !== null) {
-			this.#tombstones.delete.run({ _key: key })
-		}
+	public set(value: ModelValue) {
+		validateModelValue(this.model, value)
+		const key = value[this.#primaryKeyName]
+		assert(typeof key === "string", 'expected typeof primaryKey === "string"')
 
 		const encodedParams = encodeRecordParams(this.model, value, this.#params)
-		const version = context.version && Buffer.from(context.version)
-		if (existingKey === null) {
-			this.#insert.run({ _key: key, _version: version, ...encodedParams })
+		const existingRecord = this.#select.get({ [this.#primaryKeyParam]: key })
+		if (existingRecord === null) {
+			this.#insert.run(encodedParams)
 		} else {
-			this.#update.run({ _key: key, _version: version, ...encodedParams })
+			this.#update.run(encodedParams)
 		}
 
 		for (const [name, relation] of Object.entries(this.#relations)) {
-			if (existingKey !== null) {
+			if (existingRecord !== null) {
 				relation.delete(key)
 			}
 
@@ -197,33 +176,15 @@ export class ModelAPI {
 		}
 	}
 
-	public delete(context: Context, key: string) {
-		// no-op if an existing value takes precedence
-		const { _key: existingKey = null, _version: existingVersion = null } = this.#select.get({ _key: key }) ?? {}
-		if (this.resolver.lessThan(context, { version: existingVersion })) {
+	public delete(key: string) {
+		const existingRecord = this.#select.get({ [this.#primaryKeyParam]: key })
+		if (existingRecord === null) {
 			return
 		}
 
-		// no-op if an existing tombstone takes precedence
-		const { _version: existingTombstone = null } = this.#tombstones.select.get({ _key: key }) ?? {}
-		if (this.resolver.lessThan(context, { version: existingTombstone })) {
-			return
-		}
-
-		if (context.version !== null) {
-			const version = Buffer.from(context.version)
-			if (existingTombstone === null) {
-				this.#tombstones.insert.run({ _key: key, _version: version })
-			} else {
-				this.#tombstones.update.run({ _key: key, _version: version })
-			}
-		}
-
-		if (existingKey !== null) {
-			this.#delete.run({ _key: key })
-			for (const relation of Object.values(this.#relations)) {
-				relation.delete(key)
-			}
+		this.#delete.run({ [this.#primaryKeyParam]: key })
+		for (const relation of Object.values(this.#relations)) {
+			relation.delete(key)
 		}
 	}
 
@@ -232,14 +193,16 @@ export class ModelAPI {
 		return count
 	}
 
-	public async *entries(): AsyncIterable<[key: string, value: ModelValue]> {
-		for (const { _key: key, _version: version, ...record } of this.#selectAll.iterate({})) {
+	public async *values(): AsyncIterable<ModelValue> {
+		for (const record of this.#selectAll.iterate({})) {
+			const key = record[this.#primaryKeyName]
+			assert(typeof key === "string", 'expected typeof key === "string"')
 			const value = {
 				...decodeRecord(this.model, record),
 				...mapValues(this.#relations, (api) => api.get(key)),
 			}
 
-			yield [key, value]
+			yield value
 		}
 	}
 
@@ -254,10 +217,6 @@ export class ModelAPI {
 		// WHERE
 		const [where, params] = this.getWhereExpression(query.where)
 
-		// for (const join of joins) {
-		// 	sql.push(`JOIN "${join}" ON "${this.#table}"._key = "${join}".source`)
-		// }
-
 		if (where !== null) {
 			sql.push(`WHERE ${where}`)
 		}
@@ -269,7 +228,11 @@ export class ModelAPI {
 			const [[name, direction]] = orders
 			const property = this.#properties[name]
 			assert(property !== undefined, "property not found")
-			assert(property.kind === "primitive" || property.kind === "reference", "cannot order by relation properties")
+			assert(
+				property.kind === "primary" || property.kind === "primitive" || property.kind === "reference",
+				"cannot order by relation properties"
+			)
+
 			if (direction === "asc") {
 				sql.push(`ORDER BY "${name}" ASC`)
 			} else if (direction === "desc") {
@@ -291,22 +254,29 @@ export class ModelAPI {
 			params.limit = query.offset
 		}
 
-		const results = this.db.prepare(sql.join(" ")).all(params) as ({ _key: string } & RecordValue)[]
-		return results.map(({ _key, ...record }): ModelValue => {
+		const results = this.db.prepare(sql.join(" ")).all(params) as RecordValue[]
+		return results.map((record): ModelValue => {
+			const key = record[this.#primaryKeyName]
+			assert(typeof key === "string", 'expected typeof primaryKey === "string"')
+
 			const value: ModelValue = {}
 			for (const [propertyName, propertyValue] of Object.entries(record)) {
 				const property = this.#properties[propertyName]
-				if (property.kind === "primitive") {
+				if (property.kind === "primary") {
+					value[propertyName] = decodePrimaryKeyValue(this.model.name, property, propertyValue)
+				} else if (property.kind === "primitive") {
 					value[propertyName] = decodePrimitiveValue(this.model.name, property, propertyValue)
 				} else if (property.kind === "reference") {
 					value[propertyName] = decodeReferenceValue(this.model.name, property, propertyValue)
-				} else {
+				} else if (property.kind === "relation") {
 					throw new Error("internal error")
+				} else {
+					signalInvalidType(property)
 				}
 			}
 
 			for (const relation of relations) {
-				value[relation.property] = this.#relations[relation.property].get(_key)
+				value[relation.property] = this.#relations[relation.property].get(key)
 			}
 
 			return value
@@ -317,7 +287,7 @@ export class ModelAPI {
 		select: Record<string, boolean> = mapValues(this.#properties, () => true)
 	): [select: string, relations: Relation[]] {
 		const relations: Relation[] = []
-		const columns = ["_key"]
+		const columns = []
 
 		for (const [name, value] of Object.entries(select)) {
 			if (value === false) {
@@ -340,6 +310,8 @@ export class ModelAPI {
 			}
 		}
 
+		assert(columns.length > 0, "cannot query an empty select expression")
+		assert(columns.includes(`"${this.#primaryKeyName}"`), "select expression must include the primary key")
 		return [columns.join(", "), relations]
 	}
 
@@ -490,7 +462,9 @@ export class ModelAPI {
 						assert(typeof reference === "string", "invalid relation value (expected string[])")
 						const p = `p${i}q${j}`
 						params[p] = reference
-						targets.push(`_key IN (SELECT _source FROM "${relationTable}" WHERE (_target = :${p}))`)
+						targets.push(
+							`"${this.#primaryKeyName}" IN (SELECT _source FROM "${relationTable}" WHERE (_target = :${p}))`
+						)
 					}
 					return targets.length > 0 ? [targets.join(" AND ")] : []
 				} else if (isNotExpression(expression)) {
@@ -501,7 +475,9 @@ export class ModelAPI {
 						assert(typeof reference === "string", "invalid relation value (expected string[])")
 						const p = `p${i}q${j}`
 						params[p] = reference
-						targets.push(`_key NOT IN (SELECT _source FROM "${relationTable}" WHERE (_target = :${p}))`)
+						targets.push(
+							`"${this.#primaryKeyName}" NOT IN (SELECT _source FROM "${relationTable}" WHERE (_target = :${p}))`
+						)
 					}
 					return targets.length > 0 ? [targets.join(" AND ")] : []
 				} else if (isRangeExpression(expression)) {
@@ -519,38 +495,6 @@ export class ModelAPI {
 		} else {
 			return [`${filters.map((filter) => `(${filter})`).join(" AND ")}`, params]
 		}
-	}
-}
-
-export class TombstoneAPI {
-	public readonly table = `tombstone/${this.model.name}`
-
-	readonly delete: Method<{ _key: string }>
-	readonly insert: Method<{ _key: string; _version: Uint8Array }>
-	readonly update: Method<{ _key: string; _version: Uint8Array }>
-	readonly select: Query<{ _key: string }, { _version: Uint8Array }>
-
-	public constructor(readonly db: Database, readonly model: Model) {
-		// Create tombstone table
-		const columns = [`_key TEXT PRIMARY KEY NOT NULL`, `_version BLOB NOT NULL`]
-		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
-
-		// Prepare methods
-		this.delete = new Method<{ _key: string }>(this.db, `DELETE FROM "${this.table}" WHERE _key = :_key`)
-		this.insert = new Method<{ _key: string; _version: Uint8Array }>(
-			this.db,
-			`INSERT INTO "${this.table}" (_key, _version) VALUES (:_key, :_version)`
-		)
-		this.update = new Method<{ _key: string; _version: Uint8Array }>(
-			this.db,
-			`UPDATE "${this.table}" SET _version = :_version WHERE _key = :_key`
-		)
-
-		// Prepare queries
-		this.select = new Query<{ _key: string }, { _version: Uint8Array }>(
-			this.db,
-			`SELECT _version FROM "${this.table}" WHERE _key = :_key`
-		)
 	}
 }
 

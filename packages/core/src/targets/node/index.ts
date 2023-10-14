@@ -42,12 +42,12 @@ export default function getTarget(location: string | null): PlatformTarget {
 			return peerId
 		},
 
-		async openDB(name: string, init, options) {
+		async openDB(name: string, init) {
 			if (location === null) {
-				return new ModelDB(null, init, options)
+				return new ModelDB(null, init)
 			} else {
 				assert(/[a-zA-Z]+/.test(name))
-				return new ModelDB(path.resolve(location, `${name}.sqlite`), init, options)
+				return new ModelDB(path.resolve(location, `${name}.sqlite`), init)
 			}
 		},
 

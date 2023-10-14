@@ -1,4 +1,4 @@
-import type { Model, ModelValue, Property, PropertyValue, Resolver } from "./types.js"
+import type { Model, ModelValue, Property, PropertyValue } from "./types.js"
 
 export type Awaitable<T> = T | Promise<T>
 
@@ -86,23 +86,23 @@ export function validatePropertyValue(modelName: string, property: Property, val
 	}
 }
 
-export const defaultResolver: Resolver = {
-	lessThan({ version: a }, { version: b }) {
-		if (b === null) {
-			return false
-		} else if (a === null) {
-			return true
-		}
+// export const defaultResolver: Resolver = {
+// 	lessThan({ version: a }, { version: b }) {
+// 		if (b === null) {
+// 			return false
+// 		} else if (a === null) {
+// 			return true
+// 		}
 
-		let x = a.length
-		let y = b.length
-		for (let i = 0, len = Math.min(x, y); i < len; ++i) {
-			if (a[i] !== b[i]) {
-				x = a[i]
-				y = b[i]
-				break
-			}
-		}
-		return x < y
-	},
-}
+// 		let x = a.length
+// 		let y = b.length
+// 		for (let i = 0, len = Math.min(x, y); i < len; ++i) {
+// 			if (a[i] !== b[i]) {
+// 				x = a[i]
+// 				y = b[i]
+// 				break
+// 			}
+// 		}
+// 		return x < y
+// 	},
+// }

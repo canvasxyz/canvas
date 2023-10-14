@@ -25,7 +25,7 @@ export function parseConfig(init: ModelsInit): Config {
 			}
 		}
 
-		const primaryProperties = properties.filter((property) => property.kind === "reference")
+		const primaryProperties = properties.filter((property) => property.kind === "primary")
 		assert(primaryProperties.length === 1, "models must have exactly one `primary` property")
 
 		if ($indexes !== undefined) {

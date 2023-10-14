@@ -73,11 +73,3 @@ export type QueryParams = {
 export type Effect =
 	| { model: string; operation: "set"; value: ModelValue }
 	| { model: string; operation: "delete"; key: string }
-
-// Conflict resolver
-
-export type Context = { version: Uint8Array | null }
-
-export type Resolver = {
-	lessThan(a: Context, b: Context): boolean
-}
