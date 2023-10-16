@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react"
 import { Canvas, type CanvasConfig } from "@canvas-js/core"
-export { useLiveQuery } from "@canvas-js/modeldb/browser"
+import { ModelValue, QueryParams } from "@canvas-js/modeldb"
+
+import { useLiveQuery as _useLiveQuery } from "@canvas-js/modeldb/idb"
 
 export const useCanvas = (config: CanvasConfig) => {
 	const [app, setApp] = useState<Canvas>()
@@ -18,4 +20,12 @@ export const useCanvas = (config: CanvasConfig) => {
 	}, [])
 
 	return { app, error }
+}
+
+export function useLiveQuery<T extends ModelValue = ModelValue>(
+	app: Canvas | null | undefined,
+	modelName: string,
+	query: QueryParams = {}
+) {
+	return _useLiveQuery<T>(app?.db, modelName, query)
 }

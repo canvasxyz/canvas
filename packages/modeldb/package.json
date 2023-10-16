@@ -17,8 +17,8 @@
   },
   "exports": {
     ".": "./lib/index.js",
-    "./node": "./lib/node/index.js",
-    "./browser": "./lib/browser/index.js"
+    "./idb": "./lib/idb/index.js",
+    "./sqlite": "./lib/sqlite/index.js"
   },
   "devDependencies": {
     "fake-indexeddb": "^4.0.2",

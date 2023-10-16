@@ -5,7 +5,7 @@ import { createLibp2p } from "libp2p"
 
 import { GossipLogInit } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/browser"
-import { ModelDB } from "@canvas-js/modeldb/browser"
+import { ModelDB } from "@canvas-js/modeldb/idb"
 
 import type { PlatformTarget } from "../interface.js"
 import { getLibp2pOptions } from "./libp2p.js"

@@ -8,7 +8,7 @@ import { createLibp2p } from "libp2p"
 import { GossipLogInit } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/node"
 import { GossipLog as MemoryGossipLog } from "@canvas-js/gossiplog/memory"
-import { ModelDB } from "@canvas-js/modeldb/node"
+import { ModelDB } from "@canvas-js/modeldb/sqlite"
 
 import type { PlatformTarget } from "../interface.js"
 import { assert } from "../../utils.js"

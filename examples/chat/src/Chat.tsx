@@ -1,16 +1,18 @@
-import React, { useContext, useState } from "react"
+import React, { useContext } from "react"
 
-import { useLiveQuery } from "@canvas-js/modeldb/browser"
+import { useLiveQuery } from "@canvas-js/hooks"
 
 import { AppContext } from "./AppContext.js"
 import { AddressView } from "./components/AddressView.js"
 
 export interface MessagesProps {}
 
+type Message = { user: string; content: string; timestamp: number }
+
 export const Messages: React.FC<MessagesProps> = ({}) => {
 	const { app } = useContext(AppContext)
 
-	const messages = useLiveQuery<{ user: string; content: string; timestamp: number }>(app, "message", {
+	const messages = useLiveQuery<Message>(app, "message", {
 		orderBy: { timestamp: "asc" },
 	})
 
@@ -24,8 +26,8 @@ export const Messages: React.FC<MessagesProps> = ({}) => {
 }
 
 interface MessageViewProps {
-	previous: { user: string; content: string; timestamp: number } | null
-	message: { user: string; content: string; timestamp: number }
+	previous: Message | null
+	message: Message
 }
 
 const MessageView: React.FC<MessageViewProps> = ({ message, previous }) => {
