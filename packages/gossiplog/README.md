@@ -212,7 +212,7 @@ TODO
 
 If `init.indexAncestors` is `true`, GossipLog will maintain an additional "ancestor index" that allows users to look up transitive ancestors of any message at an arbitrary clock in the message's past.
 
-In the example below, `await gossiplog.getAncestors(l, 6)` would return `[h, i]`, while `await gossiplog.getAncestors(k, 6)` would only return `[i]`.
+In the example below, `await gossiplog.getAncestors(l, 6)` would return `[h, i]`, while `await gossiplog.getAncestors(k, 6)` would only return `[i]`. The dotted arrows depict the exponential decay links in the ancestor index.
 
 ```
    ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
