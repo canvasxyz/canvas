@@ -83,12 +83,7 @@ export type ApplicationData = {
 
 export class Canvas extends EventEmitter<CoreEvents> {
 	public static async initialize(config: CanvasConfig): Promise<Canvas> {
-		const { contract, signers = [], runtimeMemoryLimit, replay = false, offline = false } = config
-		let { location = null } = config
-
-		if (location === null && typeof contract === "object" && contract.topic) {
-			location = contract.topic
-		}
+		const { location = null, contract, signers = [], runtimeMemoryLimit, replay = false, offline = false } = config
 
 		const target = getTarget(location)
 
