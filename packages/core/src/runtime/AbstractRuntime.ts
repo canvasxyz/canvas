@@ -88,15 +88,13 @@ export abstract class AbstractRuntime {
 	}
 
 	public getConsumer(): GossipLogConsumer<Action | Session, void | JSValue> {
-		const runtime = this
-
-		return async function (this: AbstractGossipLog<Action | Session, void | JSValue>, id, signature, message) {
+		return async (id, signature, message) => {
 			assert(signature !== null, "missing message signature")
 
 			if (message.payload.type === "action") {
 				const { chain, address, timestamp } = message.payload
 
-				const sessions = await runtime.db.query("$sessions", {
+				const sessions = await this.db.query("$sessions", {
 					where: {
 						// 	key: {
 						// 		gte: `${signature.type}:${bytesToHex(signature.publicKey)}:${MIN_MESSAGE_ID}`,
@@ -116,9 +114,9 @@ export abstract class AbstractRuntime {
 					)
 				}
 
-				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(runtime.db.models, () => ({}))
+				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(this.db.models, () => ({}))
 
-				const result = await runtime.execute(modelEntries, id, message.payload)
+				const result = await this.execute(modelEntries, id, message.payload)
 
 				const effects: Effect[] = []
 
@@ -126,9 +124,9 @@ export abstract class AbstractRuntime {
 					for (const [key, value] of Object.entries(entries)) {
 						const keyHash = bytesToHex(blake3(key, { dkLen: 16 }))
 
-						if (runtime.indexHistory) {
+						if (this.indexHistory) {
 							const effectKey = `${model}/${keyHash}/${id}`
-							const results = await runtime.db.query("$effects", {
+							const results = await this.db.query("$effects", {
 								select: { key: true },
 								where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
 								limit: 1,
@@ -145,7 +143,7 @@ export abstract class AbstractRuntime {
 							}
 						} else {
 							const versionKey = `${model}/${keyHash}`
-							const existingVersionRecord = await runtime.db.get("$versions", versionKey)
+							const existingVersionRecord = await this.db.get("$versions", versionKey)
 							const { version: existingVersion } = existingVersionRecord ?? { version: null }
 
 							assert(
@@ -174,20 +172,20 @@ export abstract class AbstractRuntime {
 				}
 
 				if (effects.length > 0) {
-					await runtime.db.apply(effects)
+					await this.db.apply(effects)
 				}
 
 				return result
 			} else if (message.payload.type === "session") {
 				const { publicKeyType, publicKey, chain, address, timestamp, duration } = message.payload
 
-				const signer = runtime.signers.find((signer) => signer.match(chain))
+				const signer = this.signers.find((signer) => signer.match(chain))
 				assert(signer !== undefined, "no signer found")
 
 				assert(publicKeyType === signature.type && equals(publicKey, signature.publicKey))
 				await signer.verifySession(message.payload)
 
-				await runtime.db.set("$sessions", {
+				await this.db.set("$sessions", {
 					// key: `${signature.type}:${bytesToHex(signature.publicKey)}:${id}`,
 					message_id: id,
 					public_key_type: signature.type,

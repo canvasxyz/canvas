@@ -28,7 +28,6 @@ export interface ReadWriteTransaction {
 }
 
 export type GossipLogConsumer<Payload = unknown, Result = void> = (
-	this: AbstractGossipLog<Payload, Result>,
 	id: string,
 	signature: Signature | null,
 	message: Message<Payload>
@@ -102,7 +101,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		assert(nsidPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-]+)")
 
 		this.topic = init.topic
-		this.apply = init.apply.bind(this)
+		this.apply = init.apply
 		this.validate = init.validate
 
 		this.signatures = init.signatures ?? true
