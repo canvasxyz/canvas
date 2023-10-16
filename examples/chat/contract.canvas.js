@@ -1,5 +1,6 @@
 export const models = {
   message: {
+    id: "primary",
     user: "string",
     content: "string",
     timestamp: "integer",
@@ -8,8 +9,8 @@ export const models = {
 };
 
 export const actions = {
-  async createMessage(db, { content }, { chain, address, timestamp }) {
+  async createMessage(db, { content }, { id, chain, address, timestamp }) {
     const user = `${chain}:${address}`;
-    return await db.message.add({ user, content, timestamp });
+    await db.message.set({ id, user, content, timestamp });
   },
 };
