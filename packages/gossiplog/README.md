@@ -42,10 +42,10 @@ Log entries are called _messages_. Messages carry abitrary application-defined p
 
 ```ts
 type Message<Payload = unknown> = {
-	topic: string
-	clock: number
-	parents: string[]
-	payload: Payload
+  topic: string
+  clock: number
+  parents: string[]
+  payload: Payload
 }
 ```
 
@@ -70,10 +70,10 @@ By default, GossipLog requires every message to be signed with a [`@canvas-js/si
 import type { CID } from "multiformats/cid"
 
 type Signature = {
-	type: "ed25519" | "secp256k1"
-	publicKey: Uint8Array
-	signature: Uint8Array
-	cid: CID
+  type: "ed25519" | "secp256k1"
+  publicKey: Uint8Array
+  signature: Uint8Array
+  cid: CID
 }
 ```
 
@@ -115,13 +115,13 @@ All three are configured with the same `init` object:
 
 ```ts
 interface GossipLogInit<Payload = unknown, Result = void> {
-	topic: string
-	apply: (id: string, signature: Signature | null, message: Message<Payload>) => Result | Promise<Result>
-	validate: (payload: unknown) => payload is Payload
+  topic: string
+  apply: (id: string, signature: Signature | null, message: Message<Payload>) => Result | Promise<Result>
+  validate: (payload: unknown) => payload is Payload
 
-	signatures?: boolean
-	sequencing?: boolean
-	replay?: boolean
+  signatures?: boolean
+  sequencing?: boolean
+  replay?: boolean
 }
 ```
 
@@ -160,7 +160,7 @@ Once you have a `GossipLog` instance, you can append a new payload to the log wi
 
 ```ts
 interface MessageSigner<Payload = unknown> {
-	sign: (message: Message<Payload>) => Awaitable<Signature | null>
+  sign: (message: Message<Payload>) => Awaitable<Signature | null>
 }
 ```
 
@@ -170,9 +170,9 @@ Creating a `MessageSigner` is as simple as currying the `type` and `privateKey` 
 import { createSignature } from "@canvas-js/signed-cid"
 
 function createSigner<Payload>(type: "ed25519" | "secp256k1", privateKey: Uint8Array): MessageSigner<Payload> {
-	return {
-		sign: (message) => createSignature(type, privateKey, message),
-	}
+  return {
+    sign: (message) => createSignature(type, privateKey, message),
+  }
 }
 ```
 
@@ -262,52 +262,52 @@ In the example below, `await gossiplog.getAncestors(l, 6)` would return `[h, i]`
 
 ```ts
 interface GossipLogInit<Payload = unknown, Result = void> {
-	topic: string
-	apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
-	validate: (payload: unknown) => payload is Payload
-	replay?: boolean
-	signatures?: boolean
-	sequencing?: boolean
-	indexAncestors?: boolean
+  topic: string
+  apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
+  validate: (payload: unknown) => payload is Payload
+  replay?: boolean
+  signatures?: boolean
+  sequencing?: boolean
+  indexAncestors?: boolean
 }
 
 interface MessageSigner<Payload = unknown> {
-	sign: (message: Message<Payload>) => Awaitable<Signature | null>
+  sign: (message: Message<Payload>) => Awaitable<Signature | null>
 }
 
 type GossipLogEvents<Payload, Result> = {
-	message: CustomEvent<{ id: string; signature: Signature | null; message: Message<Payload>; result: Result }>
-	commit: CustomEvent<{ topic: string; root: Node }>
-	sync: CustomEvent<{ topic: string; peerId: PeerId }>
+  message: CustomEvent<{ id: string; signature: Signature | null; message: Message<Payload>; result: Result }>
+  commit: CustomEvent<{ topic: string; root: Node }>
+  sync: CustomEvent<{ topic: string; peerId: PeerId }>
 }
 
 interface AbstractGossipLog<Payload = unknown, Result = unknown>
-	extends EventEmitter<GossipLogEvents<Payload, Result>> {
-	readonly topic: string
+  extends EventEmitter<GossipLogEvents<Payload, Result>> {
+  readonly topic: string
 
-	public close(): Promise<void>
+  public close(): Promise<void>
 
-	public append(
-		payload: Payload,
-		options?: { signer?: MessageSigner<Payload> }
-	): Promise<{ id: string; signature: Signature | null; message: Message<Payload>; result: Result }>
+  public append(
+    payload: Payload,
+    options?: { signer?: MessageSigner<Payload> }
+  ): Promise<{ id: string; signature: Signature | null; message: Message<Payload>; result: Result }>
 
-	public insert(signature: Signature | null, message: Message<Payload>): Promise<{ id: string }>
+  public insert(signature: Signature | null, message: Message<Payload>): Promise<{ id: string }>
 
-	public sync(sourcePeerId: PeerId, source: Source): Promise<{ root: Node }>
+  public sync(sourcePeerId: PeerId, source: Source): Promise<{ root: Node }>
 
-	public serve(targetPeerId: PeerId, callback: (source: Source) => Promise<void>): Promise<void>
+  public serve(targetPeerId: PeerId, callback: (source: Source) => Promise<void>): Promise<void>
 
-	public get(id: string): Promise<[signature: Signature | null, message: Message<Payload> | null]>
+  public get(id: string): Promise<[signature: Signature | null, message: Message<Payload> | null]>
 
-	public iterate(
-		lowerBound?: { id: string; inclusive: boolean } | null,
-		upperBound?: { id: string; inclusive: boolean } | null,
-		options?: { reverse?: boolean }
-	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]>
+  public iterate(
+    lowerBound?: { id: string; inclusive: boolean } | null,
+    upperBound?: { id: string; inclusive: boolean } | null,
+    options?: { reverse?: boolean }
+  ): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]>
 
-	public getClock(): Promise<[clock: number, parents: string[]]>
+  public getClock(): Promise<[clock: number, parents: string[]]>
 
-	public getAncestors(id: string, ancestorClock: number): Promise<string[]>
+  public getAncestors(id: string, ancestorClock: number): Promise<string[]>
 }
 ```
