@@ -8,8 +8,14 @@ import { Awaitable, assert, signalInvalidType } from "../utils.js"
 import { ModelAPI } from "./api.js"
 import { getIndexName } from "./utils.js"
 
+export interface ModelDBOptions {
+	name: string
+	models: ModelsInit
+	indexHistory?: Record<string, boolean>
+}
+
 export class ModelDB extends AbstractModelDB {
-	public static async initialize(name: string, models: ModelsInit) {
+	public static async initialize({ name, models, indexHistory }: ModelDBOptions) {
 		const config = parseConfig(models)
 		const db = await openDB(name, 1, {
 			upgrade(db: IDBPDatabase<unknown>) {
@@ -33,13 +39,17 @@ export class ModelDB extends AbstractModelDB {
 			},
 		})
 
-		return new ModelDB(db, config)
+		return new ModelDB(db, config, { indexHistory })
 	}
 
 	readonly #models: Record<string, ModelAPI> = {}
 
-	private constructor(public readonly db: IDBPDatabase, config: Config) {
-		super(config)
+	private constructor(
+		public readonly db: IDBPDatabase,
+		config: Config,
+		options: { indexHistory?: Record<string, boolean> }
+	) {
+		super(config, options)
 
 		for (const model of config.models) {
 			this.#models[model.name] = new ModelAPI(model)

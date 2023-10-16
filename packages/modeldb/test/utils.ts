@@ -11,8 +11,8 @@ export const testOnModelDB = (
 	run: (t: ExecutionContext<unknown>, openDB: (models: ModelsInit) => Promise<AbstractModelDB>) => void
 ) => {
 	const macro = test.macro(run)
-	test(`Sqlite - ${name}`, macro, async (models) => new ModelDBSqlite(":memory:", models))
-	test(`IDB - ${name}`, macro, (models) => ModelDBIdb.initialize(nanoid(), models))
+	test(`Sqlite - ${name}`, macro, async (models) => new ModelDBSqlite({ path: null, models }))
+	test(`IDB - ${name}`, macro, (models) => ModelDBIdb.initialize({ name: nanoid(), models }))
 }
 
 export const compareUnordered = (t: ExecutionContext, a: any[], b: any[]) => {

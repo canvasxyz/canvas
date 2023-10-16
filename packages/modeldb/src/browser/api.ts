@@ -72,6 +72,7 @@ export class ModelAPI {
 			// index that matches the most number of properties with `where` clauses.
 
 			// TODO: support multi-property indexes
+			// TODO: use heuristics to select the "best" index
 			for (const [property, expression] of Object.entries(query.where)) {
 				const index = this.model.indexes.find((index) => index[0] === property)
 				if (index === undefined) {
@@ -138,7 +139,7 @@ export class ModelAPI {
 			}
 		}
 
-		// Neither `where` no `orderBy` matched existing indexes, so we just iterate over everything
+		// Neither `where` nor `orderBy` matched existing indexes, so we just iterate over everything
 		this.log("iterating over all objects")
 		const results: ModelValue[] = []
 		let cursor = await store.openCursor()

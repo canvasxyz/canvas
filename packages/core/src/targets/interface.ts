@@ -15,7 +15,11 @@ export interface PlatformTarget {
 	getPeerId: () => Promise<PeerId>
 	extendLibp2pOptions?: (options: Libp2pOptions<ServiceMap>) => Libp2pOptions<ServiceMap>
 
-	openDB: (name: string, models: ModelsInit) => Promise<AbstractModelDB>
+	openDB: (
+		name: string,
+		models: ModelsInit,
+		options?: { indexHistory?: Record<string, boolean> }
+	) => Promise<AbstractModelDB>
 	openGossipLog: <Payload, Result>(init: GossipLogInit<Payload, Result>) => Promise<AbstractGossipLog<Payload, Result>>
 
 	createLibp2p: (config: CanvasConfig, peerId: PeerId) => Promise<Libp2p<ServiceMap>>

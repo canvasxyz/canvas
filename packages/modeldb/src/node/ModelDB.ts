@@ -6,14 +6,20 @@ import { ModelAPI } from "./api.js"
 import { Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
 import { assert, signalInvalidType } from "../utils.js"
 
+export interface ModelDBOptions {
+	path: string | null
+	models: ModelsInit
+	indexHistory?: Record<string, boolean>
+}
+
 export class ModelDB extends AbstractModelDB {
 	public readonly db: sqlite.Database
 
 	#models: Record<string, ModelAPI> = {}
 	#transaction: sqlite.Transaction<(effects: Effect[]) => void>
 
-	constructor(public readonly path: string | null, models: ModelsInit) {
-		super(parseConfig(models))
+	constructor({ path, models, indexHistory }: ModelDBOptions) {
+		super(parseConfig(models), { indexHistory })
 
 		this.db = new Database(path ?? ":memory:")
 

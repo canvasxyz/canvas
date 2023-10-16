@@ -18,7 +18,7 @@ export abstract class AbstractModelDB {
 	protected readonly subscriptions = new Map<number, Subscription>()
 	#subscriptionId = 0
 
-	public constructor(public readonly config: Config) {
+	protected constructor(public readonly config: Config, options: { indexHistory?: Record<string, boolean> } = {}) {
 		this.models = {}
 		for (const model of config.models) {
 			this.models[model.name] = model

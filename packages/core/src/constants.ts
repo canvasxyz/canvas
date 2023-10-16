@@ -23,3 +23,6 @@ export const MIN_MESH_PEERS = 5
 
 export const DIAL_CONCURRENCY = 10
 export const DIAL_CONCURRENCY_PER_PEER = 1
+
+export const MIN_MESSAGE_ID = "00000000000000000000000000000000"
+export const MAX_MESSAGE_ID = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
