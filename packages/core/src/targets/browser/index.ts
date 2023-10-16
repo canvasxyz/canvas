@@ -38,7 +38,8 @@ export default function getBrowserTarget(location: string | null): PlatformTarge
 			}
 		},
 
-		openDB: (name, init, options) => ModelDB.initialize(`${location}/${name}`, init, options),
+		openDB: (name, models, { indexHistory } = {}) =>
+			ModelDB.initialize({ name: `${location}/${name}`, models, indexHistory }),
 
 		openGossipLog: <Payload, Result>(init: GossipLogInit<Payload, Result>) =>
 			GossipLog.open(`${location}/topics/${init.topic}`, init),

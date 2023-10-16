@@ -27,9 +27,15 @@ export interface ReadWriteTransaction {
 	ancestors?: KeyValueStore
 }
 
+export type GossipLogConsumer<Payload = unknown, Result = void> = (
+	id: string,
+	signature: Signature | null,
+	message: Message<Payload>
+) => Awaitable<Result>
+
 export interface GossipLogInit<Payload = unknown, Result = void> {
 	topic: string
-	apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
+	apply: GossipLogConsumer<Payload, Result>
 	validate: (payload: unknown) => payload is Payload
 
 	signatures?: boolean
@@ -80,7 +86,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	): Promise<T>
 
 	public readonly topic: string
-	public readonly apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
+	public readonly apply: GossipLogConsumer<Payload, Result>
 	public readonly validate: (payload: unknown) => payload is Payload
 
 	public readonly signatures: boolean

@@ -2,42 +2,25 @@ import { IDBPIndex, IDBPTransaction } from "idb"
 
 import { logger } from "@libp2p/logger"
 
-import {
-	Context,
-	Model,
-	ModelValue,
-	NotExpression,
-	Property,
-	PropertyValue,
-	QueryParams,
-	RangeExpression,
-	Resolver,
-} from "../types.js"
+import { Model, ModelValue, NotExpression, Property, PropertyValue, QueryParams, RangeExpression } from "../types.js"
 
 import { getCompare, getFilter, isNotExpression, isLiteralExpression, isRangeExpression } from "../query.js"
 import { assert, signalInvalidType, validateModelValue } from "../utils.js"
-import { getIndexName, getObjectStoreName, getTombstoneObjectStoreName } from "./utils.js"
+import { getIndexName } from "./utils.js"
 
 type ObjectPropertyValue = PropertyValue | PropertyValue[]
 
-type ObjectValue = Record<string, ObjectPropertyValue> & { _version: Uint8Array | null }
-
-type Tombstone = { _version: Uint8Array }
+type ObjectValue = Record<string, ObjectPropertyValue>
 
 export class ModelAPI {
-	public readonly storeName = getObjectStoreName(this.model.name)
-	public readonly tombstoneStoreName = getTombstoneObjectStoreName(this.model.name)
+	public readonly storeName = this.model.name
 
 	private readonly log = logger(`canvas:modeldb:[${this.model.name}]`)
 
-	constructor(readonly model: Model, readonly resolver: Resolver) {}
+	constructor(readonly model: Model) {}
 
 	private getStore<Mode extends IDBTransactionMode>(txn: IDBPTransaction<any, any, Mode>) {
 		return txn.objectStore(this.storeName)
-	}
-
-	private getTombstoneStore<Mode extends IDBTransactionMode>(txn: IDBPTransaction<any, any, Mode>) {
-		return txn.objectStore(this.tombstoneStoreName)
 	}
 
 	public async get<Mode extends IDBTransactionMode>(
@@ -52,56 +35,14 @@ export class ModelAPI {
 		}
 	}
 
-	async set(
-		txn: IDBPTransaction<any, any, "readwrite">,
-		context: { version: Uint8Array | null },
-		key: string,
-		value: ModelValue
-	): Promise<void> {
+	async set(txn: IDBPTransaction<any, any, "readwrite">, value: ModelValue): Promise<void> {
 		validateModelValue(this.model, value)
-
-		const [store, tombstoneStore] = [this.getStore(txn), this.getTombstoneStore(txn)]
-
-		// no-op if an existing value takes precedence
-		const existingValue: ObjectValue | undefined = await store.get(key)
-		if (existingValue !== undefined && this.resolver.lessThan(context, { version: existingValue._version })) {
-			return
-		}
-
-		// no-op if an existing tombstone takes precedence
-		const existingTombstone: Tombstone | undefined = await tombstoneStore.get(key)
-		if (existingTombstone !== undefined && this.resolver.lessThan(context, { version: existingTombstone._version })) {
-			return
-		}
-
-		// delete the tombstone since we're about to set the value
-		if (existingTombstone !== undefined) {
-			await tombstoneStore.delete(key)
-		}
-
-		await store.put(this.encodeObject(value, context.version), key)
+		const object = this.encodeObject(value)
+		await this.getStore(txn).put(object)
 	}
 
-	async delete(txn: IDBPTransaction<any, any, "readwrite">, context: Context, key: string): Promise<void> {
-		const [store, tombstoneStore] = [this.getStore(txn), this.getTombstoneStore(txn)]
-
-		// no-op if an existing value takes precedence
-		const existingValue: ObjectValue | undefined = await store.get(key)
-		if (existingValue !== undefined && this.resolver.lessThan(context, { version: existingValue._version })) {
-			return
-		}
-
-		// no-op if an existing tombstone takes precedence
-		const existingTombstone: Tombstone | undefined = await tombstoneStore.get(key)
-		if (existingTombstone !== undefined && this.resolver.lessThan(context, { version: existingTombstone._version })) {
-			return
-		}
-
-		if (context.version !== null) {
-			await tombstoneStore.put({ _version: context.version }, key)
-		}
-
-		await store.delete(key)
+	async delete(txn: IDBPTransaction<any, any, "readwrite">, key: string): Promise<void> {
+		await this.getStore(txn).delete(key)
 	}
 
 	async query(txn: IDBPTransaction<any, any, IDBTransactionMode>, query: QueryParams): Promise<ModelValue[]> {
@@ -131,6 +72,7 @@ export class ModelAPI {
 			// index that matches the most number of properties with `where` clauses.
 
 			// TODO: support multi-property indexes
+			// TODO: use heuristics to select the "best" index
 			for (const [property, expression] of Object.entries(query.where)) {
 				const index = this.model.indexes.find((index) => index[0] === property)
 				if (index === undefined) {
@@ -197,7 +139,7 @@ export class ModelAPI {
 			}
 		}
 
-		// Neither `where` no `orderBy` matched existing indexes, so we just iterate over everything
+		// Neither `where` nor `orderBy` matched existing indexes, so we just iterate over everything
 		this.log("iterating over all objects")
 		const results: ModelValue[] = []
 		let cursor = await store.openCursor()
@@ -272,21 +214,19 @@ export class ModelAPI {
 		return (value) => Object.fromEntries(keys.map((key) => [key, value[key]]))
 	}
 
-	public async *iterate(
-		txn: IDBPTransaction<any, any, IDBTransactionMode>
-	): AsyncIterable<[key: string, value: ModelValue]> {
+	public async *iterate(txn: IDBPTransaction<any, any, IDBTransactionMode>): AsyncIterable<ModelValue> {
 		// TODO: re-open the transaction if the caller awaits on other promises between yields
 
 		const store = this.getStore(txn)
 		for (let cursor = await store.openCursor(); cursor !== null; cursor = await cursor.continue()) {
 			const key = cursor.key
 			assert(typeof key === "string", "internal error - unexpected cursor key")
-			yield [key, this.decodeObject(cursor.value)]
+			yield this.decodeObject(cursor.value)
 		}
 	}
 
-	private encodeObject(value: ModelValue, version: Uint8Array | null): ObjectValue {
-		const object: ObjectValue = { _version: version }
+	private encodeObject(value: ModelValue): ObjectValue {
+		const object: ObjectValue = {}
 		for (const property of this.model.properties) {
 			object[property.name] = encodePropertyValue(property, value[property.name])
 		}
@@ -294,7 +234,7 @@ export class ModelAPI {
 		return object
 	}
 
-	private decodeObject({ _version, ...object }: ObjectValue): ModelValue {
+	private decodeObject(object: ObjectValue): ModelValue {
 		const value: ModelValue = {}
 		for (const property of this.model.properties) {
 			value[property.name] = decodePropertyValue(property, object[property.name])
@@ -305,7 +245,9 @@ export class ModelAPI {
 }
 
 function encodePropertyValue(property: Property, propertyValue: PropertyValue): PropertyValue | PropertyValue[] {
-	if (property.kind === "primitive") {
+	if (property.kind === "primary") {
+		return propertyValue
+	} else if (property.kind === "primitive") {
 		if (property.optional) {
 			return propertyValue === null ? [] : [propertyValue]
 		} else {
@@ -325,7 +267,10 @@ function encodePropertyValue(property: Property, propertyValue: PropertyValue): 
 }
 
 function decodePropertyValue(property: Property, objectPropertyValue: PropertyValue | PropertyValue[]): PropertyValue {
-	if (property.kind === "primitive") {
+	if (property.kind === "primary") {
+		assert(typeof objectPropertyValue === "string", 'expected objectPropertyValue === "string"')
+		return objectPropertyValue
+	} else if (property.kind === "primitive") {
 		if (property.optional) {
 			assert(Array.isArray(objectPropertyValue))
 			return objectPropertyValue.length === 0 ? null : objectPropertyValue[0]

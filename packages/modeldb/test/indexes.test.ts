@@ -4,12 +4,12 @@ import { testOnModelDB } from "./utils.js"
 
 testOnModelDB("query (indexed where)", async (t, openDB) => {
 	const db = await openDB({
-		user: { address: "string", name: "string?", $indexes: ["address", "name"] },
+		user: { address: "primary", name: "string?", $indexes: ["address", "name"] },
 	})
 
-	await db.set("user", "x", { address: "a", name: "John Doe" })
-	await db.set("user", "y", { address: "b", name: null })
-	await db.set("user", "z", { address: "c", name: "Jane Doe" })
+	await db.set("user", { address: "a", name: "John Doe" })
+	await db.set("user", { address: "b", name: null })
+	await db.set("user", { address: "c", name: "Jane Doe" })
 
 	// Equality
 	t.deepEqual(await db.query("user", { where: { address: "a" } }), [{ address: "a", name: "John Doe" }])
@@ -64,13 +64,12 @@ testOnModelDB("query (indexed where)", async (t, openDB) => {
 
 testOnModelDB("query (indexed order by)", async (t, openDB) => {
 	const db = await openDB({
-		user: { address: "string", name: "string?", $indexes: ["address", "name"] },
+		user: { address: "primary", name: "string?", $indexes: ["address", "name"] },
 	})
 
-	const [idA, idB, idC] = [nanoid(), nanoid(), nanoid()]
-	await db.set("user", idA, { address: "a", name: "John Doe" })
-	await db.set("user", idB, { address: "b", name: null })
-	await db.set("user", idC, { address: "c", name: "Jane Doe" })
+	await db.set("user", { address: "a", name: "John Doe" })
+	await db.set("user", { address: "b", name: null })
+	await db.set("user", { address: "c", name: "Jane Doe" })
 
 	// Ascending
 	t.deepEqual(await db.query("user", { orderBy: { address: "asc" } }), [

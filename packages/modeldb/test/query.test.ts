@@ -4,42 +4,38 @@ import { testOnModelDB } from "./utils.js"
 
 testOnModelDB("query (select)", async (t, openDB) => {
 	const db = await openDB({
-		user: { address: "string", name: "string?" },
+		user: { id: "primary", name: "string?" },
 	})
 
-	const [a, b] = [nanoid(), nanoid()]
-	await db.set("user", "a", { address: a, name: "John Doe" })
-	await db.set("user", "b", { address: b, name: null })
+	const [a, b] = ["a", "b"]
+	await db.set("user", { id: a, name: "John Doe" })
+	await db.set("user", { id: b, name: null })
 
 	t.deepEqual(await db.query("user", {}), [
-		{ address: a, name: "John Doe" },
-		{ address: b, name: null },
+		{ id: a, name: "John Doe" },
+		{ id: b, name: null },
 	])
 
-	t.deepEqual(await db.query("user", { select: {} }), [{}, {}])
-	t.deepEqual(await db.query("user", { select: { address: false } }), [{}, {}])
-	t.deepEqual(await db.query("user", { select: { name: false } }), [{}, {}])
-	t.deepEqual(await db.query("user", { select: { address: true } }), [{ address: a }, { address: b }])
-	t.deepEqual(await db.query("user", { select: { address: true, name: false } }), [{ address: a }, { address: b }])
-	t.deepEqual(await db.query("user", { select: { address: true, name: true } }), [
-		{ address: a, name: "John Doe" },
-		{ address: b, name: null },
+	t.deepEqual(await db.query("user", { select: { id: true } }), [{ id: a }, { id: b }])
+	t.deepEqual(await db.query("user", { select: { id: true, name: false } }), [{ id: a }, { id: b }])
+	t.deepEqual(await db.query("user", { select: { id: true, name: true } }), [
+		{ id: a, name: "John Doe" },
+		{ id: b, name: null },
 	])
-	t.deepEqual(await db.query("user", { select: { name: true } }), [{ name: "John Doe" }, { name: null }])
-	t.deepEqual(await db.query("user", { select: { name: true, address: false } }), [
-		{ name: "John Doe" },
-		{ name: null },
+	t.deepEqual(await db.query("user", { select: { id: true, name: true } }), [
+		{ id: a, name: "John Doe" },
+		{ id: b, name: null },
 	])
 })
 
 testOnModelDB("query (where)", async (t, openDB) => {
 	const db = await openDB({
-		user: { address: "string", name: "string?" },
+		user: { address: "primary", name: "string?" },
 	})
 
-	await db.set("user", "x", { address: "a", name: "John Doe" })
-	await db.set("user", "y", { address: "b", name: null })
-	await db.set("user", "z", { address: "c", name: "Jane Doe" })
+	await db.set("user", { address: "a", name: "John Doe" })
+	await db.set("user", { address: "b", name: null })
+	await db.set("user", { address: "c", name: "Jane Doe" })
 
 	// Equality
 	t.deepEqual(await db.query("user", { where: { address: "a" } }), [{ address: "a", name: "John Doe" }])
@@ -92,13 +88,12 @@ testOnModelDB("query (where)", async (t, openDB) => {
 
 testOnModelDB("query (order by)", async (t, openDB) => {
 	const db = await openDB({
-		user: { address: "string", name: "string?" },
+		user: { address: "primary", name: "string?" },
 	})
 
-	const [idA, idB, idC] = [nanoid(), nanoid(), nanoid()]
-	await db.set("user", idA, { address: "a", name: "John Doe" })
-	await db.set("user", idB, { address: "b", name: null })
-	await db.set("user", idC, { address: "c", name: "Jane Doe" })
+	await db.set("user", { address: "a", name: "John Doe" })
+	await db.set("user", { address: "b", name: null })
+	await db.set("user", { address: "c", name: "Jane Doe" })
 
 	// Ascending
 	t.deepEqual(await db.query("user", { orderBy: { address: "asc" } }), [

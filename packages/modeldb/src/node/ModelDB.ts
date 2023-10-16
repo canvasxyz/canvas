@@ -1,35 +1,40 @@
 import Database, * as sqlite from "better-sqlite3"
 
-import { AbstractModelDB, ModelDBOptions } from "../AbstractModelDB.js"
+import { AbstractModelDB } from "../AbstractModelDB.js"
 import { parseConfig } from "../config.js"
-import { Context, Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
+import { ModelAPI } from "./api.js"
+import { Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
 import { assert, signalInvalidType } from "../utils.js"
 
-import { ModelAPI } from "./api.js"
+export interface ModelDBOptions {
+	path: string | null
+	models: ModelsInit
+	indexHistory?: Record<string, boolean>
+}
 
 export class ModelDB extends AbstractModelDB {
 	public readonly db: sqlite.Database
 
 	#models: Record<string, ModelAPI> = {}
-	#transaction: sqlite.Transaction<(context: Context, effects: Effect[]) => void>
+	#transaction: sqlite.Transaction<(effects: Effect[]) => void>
 
-	constructor(public readonly path: string | null, models: ModelsInit, options: ModelDBOptions = {}) {
-		super(parseConfig(models), options)
+	constructor({ path, models, indexHistory }: ModelDBOptions) {
+		super(parseConfig(models), { indexHistory })
 
 		this.db = new Database(path ?? ":memory:")
 
 		for (const model of Object.values(this.models)) {
-			this.#models[model.name] = new ModelAPI(this.db, model, this.resolver)
+			this.#models[model.name] = new ModelAPI(this.db, model)
 		}
 
-		this.#transaction = this.db.transaction((context, effects) => {
+		this.#transaction = this.db.transaction((effects) => {
 			for (const effect of effects) {
 				const model = this.models[effect.model]
 				assert(model !== undefined, `model ${effect.model} not found`)
 				if (effect.operation === "set") {
-					this.#models[effect.model].set(context, effect.key, effect.value)
+					this.#models[effect.model].set(effect.value)
 				} else if (effect.operation === "delete") {
-					this.#models[effect.model].delete(context, effect.key)
+					this.#models[effect.model].delete(effect.key)
 				} else {
 					signalInvalidType(effect)
 				}
@@ -42,15 +47,15 @@ export class ModelDB extends AbstractModelDB {
 		this.db.close()
 	}
 
-	public async apply(effects: Effect[], context: Context = { version: null }) {
-		this.#transaction(context, effects)
+	public async apply(effects: Effect[]) {
+		this.#transaction(effects)
 
 		for (const { model, query, filter, callback } of this.subscriptions.values()) {
 			if (effects.some(filter)) {
 				const api = this.#models[model]
 				assert(api !== undefined, `model API not found`)
 				try {
-					callback(api.query(query), context)
+					callback(api.query(query))
 				} catch (err) {
 					this.log.error(err)
 				}
@@ -64,10 +69,10 @@ export class ModelDB extends AbstractModelDB {
 		return api.get(key)
 	}
 
-	public async *iterate(modelName: string): AsyncIterable<[key: string, value: ModelValue]> {
+	public async *iterate(modelName: string): AsyncIterable<ModelValue> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		yield* api.entries()
+		yield* api.values()
 	}
 
 	public async count(modelName: string): Promise<number> {

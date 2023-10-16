@@ -6,20 +6,19 @@ testOnModelDB("create modeldb with no models", async (t, openDB) => {
 	await t.notThrowsAsync(() => openDB({}))
 })
 
-testOnModelDB("create modeldb with an empty model", async (t, openDB) => {
-	await t.notThrowsAsync(() => openDB({ room: {} }))
-})
-
 testOnModelDB("create modeldb with a model with valid fields", async (t, openDB) => {
-	const models: ModelsInit = {
+	const models = {
 		room: {
+			id: "primary",
 			name: "string",
 			creator: "@user",
 			members: "@user[]",
 		},
-	}
+	} satisfies ModelsInit
 
-	await t.notThrowsAsync(() => openDB(models))
+	await openDB(models)
+	t.pass()
+	// await t.notThrowsAsync(() => openDB(models))
 })
 
 testOnModelDB("create modeldb with a model with invalid fields should fail", async (t, openDB) => {
@@ -30,6 +29,27 @@ testOnModelDB("create modeldb with a model with invalid fields should fail", asy
 		},
 	} as ModelsInit
 
-	const error = await t.throwsAsync(() => openDB(models))
-	t.is(error?.message, `invalid property "unsupported"`)
+	await t.throwsAsync(() => openDB(models), { message: `invalid property "unsupported"` })
+})
+
+testOnModelDB("create a model without a primary key", async (t, openDB) => {
+	const models = {
+		room: {
+			name: "string",
+		},
+	} satisfies ModelsInit
+
+	await t.throwsAsync(() => openDB(models))
+})
+
+testOnModelDB("create a model with two primary keys", async (t, openDB) => {
+	const models = {
+		user: {
+			id: "primary",
+			address: "primary",
+			name: "string?",
+		},
+	} satisfies ModelsInit
+
+	await t.throwsAsync(() => openDB(models))
 })

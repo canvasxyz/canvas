@@ -25,6 +25,9 @@ export function parseConfig(init: ModelsInit): Config {
 			}
 		}
 
+		const primaryProperties = properties.filter((property) => property.kind === "primary")
+		assert(primaryProperties.length === 1, "models must have exactly one `primary` property")
+
 		if ($indexes !== undefined) {
 			for (const index of $indexes) {
 				if (relations.some((relation) => relation.source === modelName && relation.property === index)) {
@@ -46,6 +49,10 @@ export const referencePropertyPattern = /^@([a-z0-9.-]+)(\??)$/
 export const relationPropertyPattern = /^@([a-z0-9.-]+)\[\]$/
 
 export function parseProperty(propertyName: string, propertyType: PropertyType): Property {
+	if (propertyType === "primary") {
+		return { name: propertyName, kind: "primary" }
+	}
+
 	const primitiveResult = primitivePropertyPattern.exec(propertyType)
 	if (primitiveResult !== null) {
 		const [_, type, optional] = primitiveResult

@@ -1,2 +1,2 @@
 export * from "./Canvas.js"
-export { ActionImplementation, ActionContext, ModelAPI } from "./runtime.js"
+export type { ActionImplementation, ActionContext, ModelAPI } from "./runtime/index.js"

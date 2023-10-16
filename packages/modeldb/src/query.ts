@@ -146,7 +146,18 @@ export function getCompare(
 	const [[propertyName, direction]] = entries
 	const property = model.properties.find((property) => property.name === propertyName)
 	assert(property !== undefined, "property not found")
-	if (property.kind === "primitive") {
+
+	if (property.kind === "primary") {
+		if (direction === "asc") {
+			return ({ [propertyName]: a }, { [propertyName]: b }) =>
+				stringOrder.lessThan(a, b) ? -1 : stringOrder.equals(a, b) ? 0 : 1
+		} else if (direction === "desc") {
+			return ({ [propertyName]: a }, { [propertyName]: b }) =>
+				stringOrder.lessThan(a, b) ? 1 : stringOrder.equals(a, b) ? 0 : -1
+		} else {
+			signalInvalidType(direction)
+		}
+	} else if (property.kind === "primitive") {
 		const order = primitiveTypeOrders[property.type]
 		if (direction === "asc") {
 			return ({ [propertyName]: a }, { [propertyName]: b }) => (order.lessThan(a, b) ? -1 : order.equals(a, b) ? 0 : 1)
@@ -190,7 +201,13 @@ function getPropertyFilter(
 	const property = model.properties.find((property) => property.name === propertyName)
 	assert(property !== undefined)
 
-	if (property.kind === "primitive") {
+	if (property.kind === "primary") {
+		return getPrimitiveFilter(
+			model.name,
+			{ name: propertyName, kind: "primitive", type: "string", optional: false },
+			expression
+		)
+	} else if (property.kind === "primitive") {
 		return getPrimitiveFilter(model.name, property, expression)
 	} else if (property.kind === "reference") {
 		return getReferenceFilter(model.name, property, expression)

@@ -1,10 +1,10 @@
 import { useState, useRef, type FormEvent } from "react"
+import { ethers } from "ethers"
 import "./App.css"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { PublicChat } from "@canvas-js/templates"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
-import { ethers } from "ethers"
 
 function App() {
 	const wallet = ethers.Wallet.createRandom()
@@ -18,7 +18,7 @@ function App() {
 	const [page, setPage] = useState(0)
 	const [sending, setSending] = useState(false)
 
-	const messages = useLiveQuery(app, "messages", {
+	const messages = useLiveQuery<{ id: string; address: string; message: string; timestamp: number }>(app, "messages", {
 		limit: 10,
 		offset: page * 10,
 		orderBy: { timestamp: "desc" },
@@ -46,7 +46,7 @@ function App() {
 			</form>
 			<div>
 				{messages?.map((message) => (
-					<div key={message.timestamp as any}>
+					<div key={message.id}>
 						{message.address}: {message.message}
 					</div>
 				))}
