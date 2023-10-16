@@ -16,6 +16,7 @@ GossipLog can run in the browser using IndexedDB for persistence, on NodeJS usin
   - [Appending new messagse](#appending-new-messages)
   - [Inserting existing messages](#inserting-existing-messages)
   - [Syncing with other peers](#syncing-with-other-peers)
+  - [Indexing ancestors](#indexing-ancestors)
 - [API](#api)
 
 ## Overview
@@ -31,13 +32,13 @@ GossipLog makes this all possible at the expense of two major tradeoffs:
 
 The implications of 1) are that GossipLog is best for applications where eventual consistency is acceptable, and where message delivery is commutative in effect. GossipLog messages carry a built-in logical clock that can be easily used to create last-write-wins registers and other CRDT primitives.
 
-The implications of 2) are that the access control logic - who can append what to the log - must be expressed as a pure function of the payload, message signature / public key, and any state accumulated from the message's transitive dependencies. The simplest case would be a whitelist of specific public keys, although bridging these to on-chain identities like DAO memberships is also possible. See the section on [Authentication](#authentication) for more detail.
+The implications of 2) are that the access control logic - who can append what to the log - must be expressed as a pure function of the payload, message signature / public key, and any state accumulated from the message's transitive dependencies. The simplest case would be a whitelist of known "owner" public keys, although bridging these to on-chain identities like DAO memberships via session keys is also possible. See the section on [Authentication](#authentication) for more detail.
 
 ## Design
 
 ### Messages
 
-Log entries are called _messages_. Messages carry abitrary application-defined payloads, which could be state snapshots, diffs, operations, function calls, or anything else. GossipLog uses the [IPLD data model](https://ipld.io/docs/data-model/), a superset of JSON that includes raw bytes and [CIDs](https://github.com/multiformats/cid) as primitive types.
+Log entries are called _messages_. Messages carry abitrary application-defined payloads. GossipLog uses the [IPLD data model](https://ipld.io/docs/data-model/), a superset of JSON that includes raw bytes and [CIDs](https://github.com/multiformats/cid) as primitive types.
 
 ```ts
 type Message<Payload = unknown> = {
@@ -58,11 +59,11 @@ We can derive a logical clock value for each message from its depth in the graph
 
 Message IDs begin with the message clock, encoded as an [unsigned varint](https://github.com/multiformats/unsigned-varint), followed by the sha2-256 hash of the serialized signed message, and truncated to 20 bytes total. These are encoded using the [`base32hex`](https://www.rfc-editor.org/rfc/rfc4648#section-7) alphabet to get 32-character string IDs, like `054ki1oubq8airsc9d8sbg0t7itqbdlf`.
 
-These string IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. This means that implementing a last-write-wins register for message effects is as simple as storing and comparing message IDs as versions.
+These string IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. This means that implementing a last-write-wins register for message effects is as simple as caching and comparing message IDs as versions.
 
 ### Authentication
 
-By default, GossipLog requires every message to be signed using the [`@canvas-js/signed-cid`](https://github.com/canvasxyz/canvas/tree/main/packages/signed-cid) signed data format.
+By default, GossipLog requires every message to be signed with a [`@canvas-js/signed-cid`](https://github.com/canvasxyz/canvas/tree/main/packages/signed-cid) signature.
 
 ```ts
 // @canvas-js/signed-cid
@@ -149,6 +150,7 @@ Payloads may require additional application-specific validation beyond what is c
 - `signatures` (default `true`): require message signatures; if set to `false` all methods will expect `signature` values to be `null`
 - `sequencing` (default `true`): enable the causal graph structure; if set to `false`, all messages will have `clock: 0` and `parents: []`
 - `replay` (default `false`): upon initializing, iterate over all existing messages and invoke the `apply` function for them all
+- `indexAncestors` (default `false`): enable [ancestor indexing](#indexing-ancestors)
 
 \* `apply` is invoked with **at least once** semantics: in rare cases where transactions to the underlying storage layer fail to commit, `apply` might be invoked more than once with the same message. Messages will **never** be persisted without a successful call to `apply`.
 
@@ -208,6 +210,10 @@ TODO
 
 ### Indexing ancestors
 
+If `init.indexAncestors` is `true`, GossipLog will maintain an additional "ancestor index" that allows users to look up transitive ancestors of any message at an arbitrary clock in the message's past.
+
+In the example below, `await gossiplog.getAncestors(l, 6)` would return `[h, i]`, while `await gossiplog.getAncestors(k, 6)` would only return `[i]`.
+
 ```
    ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
                                                                                               │
@@ -220,13 +226,13 @@ TODO
                                           ▼                         ▼            ▼                         │
                                                                                               │
                                        ┌─────┐      ┌─────┐      ┌─────┐                                   │
-                                   ┌───│     │◀─────│     │◀─────│     │◀──────────────┐      │
+                                   ┌───│  d  │◀─────│  f  │◀─────│  h  │◀──────────────┐      │
                                    │   └─────┘      └─────┘      └─────┘               │                   │
 ┌─────┐      ┌─────┐      ┌─────┐  │                                                   │      │         ┌─────┐
-│     │◀─────│     │◀─────│     │◀─┤                                                   └────────────┬───│     │
+│  a  │◀─────│  b  │◀─────│  c  │◀─┤                                                   └────────────┬───│  l  │
 └─────┘      └─────┘      └─────┘  │                                                          │     │   └─────┘
                                    │   ┌─────┐      ┌─────┐      ┌─────┐      ┌─────┐      ┌─────┐  │
-                                   └───│     │◀─────│     │◀─────│     │◀─────│     │◀─────│     │◀─┘
+                                   └───│  e  │◀─────│  g  │◀─────│  i  │◀─────│  j  │◀─────│  k  │◀─┘
                                        └─────┘      └─────┘      └─────┘      └─────┘      └─────┘
 
 
@@ -301,5 +307,7 @@ interface AbstractGossipLog<Payload = unknown, Result = unknown>
 	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]>
 
 	public getClock(): Promise<[clock: number, parents: string[]]>
+
+	public getAncestors(id: string, ancestorClock: number): Promise<string[]>
 }
 ```
