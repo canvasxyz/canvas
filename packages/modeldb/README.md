@@ -147,16 +147,16 @@ By default, queries translate into filters applied to a full table scan. You can
 
 ```ts
 const db = await ModelDB.init({
-	models: {
-		...
-		message: {
-			message_id: "primary",
-			user: "@user",
-			content: "string",
-			timestamp: "integer",
+  models: {
+    ...
+    message: {
+      message_id: "primary",
+      user: "@user",
+      content: "string",
+      timestamp: "integer",
       $indexes: ["timestamp"]
-		},
-	},
+    },
+  },
 })
 
 // this will use the `timestamp` index to avoid a full table scan
