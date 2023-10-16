@@ -13,7 +13,7 @@ export const PublicChat: TemplateInlineContract = {
 	actions: {
 		sendMessage: (db, { message }, { address, timestamp, id }) => {
 			if (!message || !message.trim()) throw new Error()
-			db.messages.set({ message, address, timestamp })
+			db.messages.set({ id, message, address, timestamp })
 		},
 	},
 }
@@ -21,14 +21,16 @@ export const PublicChat: TemplateInlineContract = {
 export const ChannelChat: TemplateInlineContract = {
 	models: {
 		channels: {
-			name: "string",
+			name: "primary",
 		},
 		memberships: {
+			id: "primary",
 			user: "string",
 			channel: "string",
 			timestamp: "integer",
 		},
 		messages: {
+			id: "primary",
 			message: "string",
 			address: "string",
 			timestamp: "integer",
@@ -41,13 +43,19 @@ export const ChannelChat: TemplateInlineContract = {
 			db.memberships.delete(address + channel)
 		},
 		joinChannel: (db, { channel }, { address, timestamp, id }) => {
-			if (!channel || !channel.trim()) throw new Error()
-			db.channels.set(channel, { name: channel })
-			db.memberships.set(address + channel, { user: address, channel, timestamp })
+			if (!channel || !channel.trim()) {
+				throw new Error()
+			}
+
+			db.channels.set({ name: channel })
+			db.memberships.set({ id: `${address}/${channel}`, user: address, channel, timestamp })
 		},
 		sendMessage: (db, { message, channel }, { address, timestamp, id }) => {
-			if (!message || !channel || !message.trim() || !channel.trim()) throw new Error()
-			db.messages.set(id, { message, address, channel, timestamp })
+			if (!message || !channel || !message.trim() || !channel.trim()) {
+				throw new Error()
+			}
+
+			db.messages.set({ id, message, address, channel, timestamp })
 		},
 	},
 }
