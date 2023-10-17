@@ -64,3 +64,67 @@ export const ChannelChat: TemplateInlineContract = {
 		},
 	},
 }
+
+export const Forum: TemplateInlineContract = {
+	models: {
+		channels: {
+			name: "primary",
+		},
+		memberships: {
+			id: "primary",
+			user: "string",
+			channel: "string",
+			timestamp: "integer",
+		},
+		threads: {
+			id: "primary",
+			message: "string",
+			address: "string",
+			timestamp: "integer",
+			channel: "string",
+			replies: "integer",
+			$indexes: [["channel"], ["address"]],
+		},
+		replies: {
+			id: "primary",
+			threadId: "@threads",
+			reply: "string",
+			address: "string",
+			timestamp: "integer",
+			$indexes: [["threadId"]],
+		},
+	},
+	actions: {
+		leaveChannel: (db, { channel }, { address, timestamp, id }) => {
+			db.memberships.delete(address + channel)
+		},
+		joinChannel: (db, { channel }, { address, timestamp, id }) => {
+			if (!channel || !channel.trim()) throw new Error()
+			db.channels.set({ name: channel })
+			db.memberships.set({ id: `${address}/${channel}`, user: address, channel, timestamp })
+		},
+		sendMessage: (db, { message, channel }, { address, timestamp, id }) => {
+			if (!message || !channel || !message.trim() || !channel.trim()) throw new Error()
+			db.threads.set({ id, message, address, channel, timestamp, replies: 0 })
+		},
+		deleteMessage: async (db, { id }, { address, timestamp }) => {
+			// const message = await db.threads.get(id)
+			// if (!message || message.address !== address) throw new Error()
+			db.threads.delete(id)
+		},
+		sendReply: async (db, { threadId, reply }, { address, timestamp, id }) => {
+			// const thread = await db.threads.get(threadId)
+			// if (!thread || !threadId) throw new Error()
+			// db.threads.set({ ...thread, replies: (thread.replies as number) + 1 })
+			db.replies.set({ id, threadId, reply, address, timestamp })
+		},
+		deleteReply: async (db, { replyId }, { address, timestamp, id }) => {
+			// const reply = await db.replies.get(replyId)
+			// if (!reply) throw new Error()
+			// const thread = await db.threads.get(reply.threadId as string)
+			// if (!thread) throw new Error()
+			// db.threads.set({ ...thread, replies: (thread.replies as number) - 1 })
+			db.replies.delete(replyId)
+		},
+	},
+}
