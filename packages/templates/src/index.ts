@@ -57,5 +57,10 @@ export const ChannelChat: TemplateInlineContract = {
 
 			db.messages.set({ id, message, address, channel, timestamp })
 		},
+		deleteMessage: async (db, { id }, { address, timestamp }) => {
+			const message = await db.messages.get(id)
+			if (!message || message.address !== address) throw new Error()
+			db.messages.delete(id)
+		},
 	},
 }
