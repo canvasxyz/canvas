@@ -16,7 +16,6 @@ export class FunctionRuntime extends AbstractRuntime {
 		options: { indexHistory?: boolean } = {}
 	): Promise<FunctionRuntime> {
 		const { indexHistory = true } = options
-
 		if (indexHistory) {
 			const db = await target.openDB("models", {
 				...contract.models,

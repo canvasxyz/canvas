@@ -29,7 +29,8 @@ To initialize a core, import `@canvas-js/core` and call `Core.initialize({ ... }
 ```ts
 import { Core } from "@canvas-js/core"
 
-const contract = `// A sample Canvas application
+const contract = `
+// A sample Canvas application
 export const models = {
   posts: {
     id: "string",
@@ -49,17 +50,13 @@ export const actions = {
     db.posts.delete(postId)
   },
 }
-
-export const routes = { 
-  "/all": ({}) => "SELECT * FROM posts"
-}
 `
 
 const core = await Core.initialize({
-	spec: contract,
-	directory: null, // run in-memory
-	unchecked: true, // don't require blockhashes
-	offline: true, // don't start libp2p
+  spec: contract,
+  directory: null, // run in-memory
+  unchecked: true, // don't require blockhashes
+  offline: true, // don't start libp2p
 })
 
 console.log(core.app) // ipfs://QmTFwv6NF78V64CVdWrabYhQhmV4bWJw63aTRcVhvBAU2u
@@ -73,40 +70,40 @@ Applications are identified by the `ipfs://...` hash of the contract. Sessions a
 
 ```ts
 declare interface CoreOptions {
-	unchecked?: boolean // don't require or validate blockhashes in messages
-	verbose?: boolean // print verbose logging to stdout
-	offline?: boolean // disable libp2p
-	replay?: boolean // replay the entire message log on start-up
+  unchecked?: boolean // don't require or validate blockhashes in messages
+  verbose?: boolean // print verbose logging to stdout
+  offline?: boolean // disable libp2p
+  replay?: boolean // replay the entire message log on start-up
 }
 
 declare interface CoreConfig extends CoreOptions {
-	// Path to application data directory, or `null` to run in-memory (NodeJS only)
-	directory: string | null
+  // Path to application data directory, or `null` to run in-memory (NodeJS only)
+  directory: string | null
 
-	// Full text of the contract to run.
-	spec: string
+  // Full text of the contract to run.
+  spec: string
 
-	// Provide chain implementations for the chains declared by the contract.
-	// Defaults to [new EthereumChainImplementation(1, "localhost")] if not provided.
-	// Core.intialize will throw an error if there are any chains delcared by the
-	// contract that have no implementations provided here.
-	chains?: ChainImplementation<unknown, unknown>[]
+  // Provide chain implementations for the chains declared by the contract.
+  // Defaults to [new EthereumChainImplementation(1, "localhost")] if not provided.
+  // Core.intialize will throw an error if there are any chains delcared by the
+  // contract that have no implementations provided here.
+  chains?: ChainImplementation<unknown, unknown>[]
 
-	// Internal /ws multiaddrs to listen for libp2p connections.
-	// These should be local addresses, most likely `/ip4/0.0.0.0/tcp/${port}/ws`.
-	// If not provided, the core will join the libp2p mesh via the public relay servers.
-	listen?: string[]
+  // Internal /ws multiaddrs to listen for libp2p connections.
+  // These should be local addresses, most likely `/ip4/0.0.0.0/tcp/${port}/ws`.
+  // If not provided, the core will join the libp2p mesh via the public relay servers.
+  listen?: string[]
 
-	// External /ws and /wss multiaddrs to announce to the DHT.
-	// These should be publicly-resolvable, most likely `/dns4/${hostname}/tcp/${port}/wss`.
-	announce?: string[]
+  // External /ws and /wss multiaddrs to announce to the DHT.
+  // These should be publicly-resolvable, most likely `/dns4/${hostname}/tcp/${port}/wss`.
+  announce?: string[]
 
-	// Override the default list of libp2p bootstrap/relay servers.
-	// Must be an array of multiaddrs for libp2p servers supporting circuit-relay v2.
-	bootstrapList?: string[]
+  // Override the default list of libp2p bootstrap/relay servers.
+  // Must be an array of multiaddrs for libp2p servers supporting circuit-relay v2.
+  bootstrapList?: string[]
 
-	// Set a custom app URI. Defaults to ipfs:// of spec. Don't use this!
-	uri?: string
+  // Set a custom app URI. Defaults to ipfs:// of spec. Don't use this!
+  uri?: string
 }
 ```
 
@@ -125,13 +122,13 @@ const wallet = ethers.Wallet.createRandom()
 console.log(wallet.address) // 0x6431584d547d210560Cd170CeF61cF7eE8486013
 
 const action = await chain.signAction(wallet, {
-	from: wallet.address,
-	app: core.app,
-	call: "createPost",
-	callArgs: { content: "hello world" },
-	timestamp: Date.now(),
-	chain: chain.chain,
-	block: null,
+  from: wallet.address,
+  app: core.app,
+  call: "createPost",
+  callArgs: { content: "hello world" },
+  timestamp: Date.now(),
+  chain: chain.chain,
+  block: null,
 })
 
 // {
@@ -206,33 +203,33 @@ import { Libp2p } from "libp2p"
 import { Message, ModelValue, Model, Chain, ChainId, ApplicationData } from "@canvas-js/interfaces"
 
 declare interface CoreOptions {
-	unchecked?: boolean
-	verbose?: boolean
-	offline?: boolean
-	replay?: boolean
+  unchecked?: boolean
+  verbose?: boolean
+  offline?: boolean
+  replay?: boolean
 }
 
 declare interface CoreConfig extends CoreOptions {
-	directory: string | null
-	spec: string
-	chains?: ChainImplementation<unknown, unknown>[]
-	listen?: string[]
-	announce?: string[]
-	bootstrapList?: string[]
-	uri?: string
+  directory: string | null
+  spec: string
+  chains?: ChainImplementation<unknown, unknown>[]
+  listen?: string[]
+  announce?: string[]
+  bootstrapList?: string[]
+  uri?: string
 }
 
 declare class Core extends EventEmitter<CoreEvents> implements CoreAPI {
-	public static initialize(config: CoreConfig): Promise<Core>
+  public static initialize(config: CoreConfig): Promise<Core>
 
-	public readonly app: string
-	public readonly cid: CID
-	public readonly directory: string | null
-	public readonly libp2p: Libp2p | null
+  public readonly app: string
+  public readonly cid: CID
+  public readonly directory: string | null
+  public readonly libp2p: Libp2p | null
 
-	public close(): Promise<void>
-	public apply(message: Message): Promise<{ hash: string }>
-	public getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]>
-	public getApplicationData(): Promise<ApplicationData>
+  public close(): Promise<void>
+  public apply(message: Message): Promise<{ hash: string }>
+  public getRoute(route: string, params: Record<string, string>): Promise<Record<string, ModelValue>[]>
+  public getApplicationData(): Promise<ApplicationData>
 }
 ```

@@ -12,7 +12,7 @@ import { AbstractGossipLog, MessageSigner } from "@canvas-js/gossiplog"
 
 import getTarget from "#target"
 
-import { Runtime, ActionImplementation, GenericActionImplementation } from "./runtime/index.js"
+import { Runtime, ActionImplementation, GenericActionImplementation, initRuntime } from "./runtime/index.js"
 import { ServiceMap } from "./targets/interface.js"
 import { assert } from "./utils.js"
 
@@ -91,7 +91,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 			signers.push(new SIWESigner())
 		}
 
-		const runtime = await Runtime.init(target, signers, contract, { runtimeMemoryLimit })
+		const runtime = await initRuntime(target, signers, contract, { runtimeMemoryLimit })
 
 		const peerId = await target.getPeerId()
 		let libp2p: Libp2p<ServiceMap> | null = null
