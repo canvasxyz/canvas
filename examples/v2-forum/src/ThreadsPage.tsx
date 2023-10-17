@@ -1,11 +1,13 @@
 import { useState } from "react"
 import { ethers } from "ethers"
+import moment from "moment"
 
 import { useLiveQuery } from "@canvas-js/hooks"
 import { Canvas } from "@canvas-js/core"
 import { Composer } from "./Composer"
 
 import type { Thread } from "./App"
+import { Address } from "./Address"
 
 export function ThreadsPage({
 	wallet,
@@ -42,7 +44,9 @@ export function ThreadsPage({
 				{messages?.map((message) => (
 					<div className="pb-6" key={message.id?.toString()}>
 						<div className="mb-1 text-sm text-gray-400">
-							{message.address}
+							<Address address={message.address} />
+							{" - "}
+							<span>{moment(message.timestamp).fromNow()}</span>
 							{" - "}
 							<a
 								href="#"

@@ -9,6 +9,7 @@ import useHashParam from "use-hash-param"
 import { RepliesPage } from "./RepliesPage"
 import { ThreadsPage } from "./ThreadsPage"
 
+export type Tag = { name: string }
 export type Channel = { name: string }
 export type Thread = {
 	id: string
@@ -36,11 +37,15 @@ function App() {
 
 	const [thread, setThread] = useHashParam("thread", "")
 	const [channel, setChannel] = useHashParam("channel", "all")
+	const [tag, setTag] = useHashParam("tag", "")
 	const [page, setPage] = useState(0)
+
+	const tags = useLiveQuery<Tag>(app, "tags", {}) || []
 
 	const channels = useLiveQuery<Channel>(app, "channels", {}) || []
 	const displayedChannels = [{ name: "all" } as Channel].concat(channels)
 	const channelInputRef = useRef<HTMLInputElement>(null)
+	const tagInputRef = useRef<HTMLInputElement>(null)
 
 	const createChannel = (e: FormEvent) => {
 		e.preventDefault()
@@ -52,6 +57,20 @@ function App() {
 			.then(() => {
 				if (!channelInputRef.current) return
 				channelInputRef.current.value = ""
+			})
+			.catch((err) => console.log(err))
+	}
+
+	const createTag = (e: FormEvent) => {
+		e.preventDefault()
+		if (!tagInputRef.current) return
+
+		const tag = tagInputRef.current.value
+		app?.actions
+			.createTag({ address: wallet.address, tag })
+			.then(() => {
+				if (!tagInputRef.current) return
+				tagInputRef.current.value = ""
 			})
 			.catch((err) => console.log(err))
 	}
@@ -79,13 +98,14 @@ function App() {
 							<a
 								href="#"
 								className={`block px-6 py-1.5 hover:bg-gray-100 ${
-									channel === c.name ? "bg-gray-100 font-semibold" : ""
+									channel === c.name && !tag ? "bg-gray-100 font-semibold" : ""
 								}`}
 								key={c.name}
 								onClick={(e) => {
 									e.preventDefault()
 									setThread("")
 									setChannel(encodeURIComponent(c.name))
+									setTag("")
 									setPage(0)
 								}}
 							>
@@ -94,7 +114,27 @@ function App() {
 						</div>
 					))}
 				</div>
-				<form className="px-6" onSubmit={createChannel}>
+				<div className="flex-1 pt-4 border-t border-gray-200">
+					{tags.map((t) => (
+						<div>
+							<a
+								href="#"
+								className={`block px-6 py-1.5 hover:bg-gray-100 ${tag === t?.name ? "bg-gray-100 font-semibold" : ""}`}
+								key={t.name}
+								onClick={(e) => {
+									e.preventDefault()
+									setThread("")
+									setChannel("")
+									setTag(t.name)
+									setPage(0)
+								}}
+							>
+								{t.name}
+							</a>
+						</div>
+					))}
+				</div>
+				<form className="px-6 py-3" onSubmit={createChannel}>
 					<input
 						className="input mr-2 w-full"
 						type="text"
@@ -102,13 +142,38 @@ function App() {
 						ref={channelInputRef}
 					/>
 					<button className="btn btn-blue w-full mt-2" type="submit">
-						Create
+						Create channel
+					</button>
+				</form>
+				<form className="px-6 pb-3" onSubmit={createTag}>
+					<input className="input mr-2 w-full" type="text" placeholder="Create a new tag..." ref={tagInputRef} />
+					<button className="btn btn-blue w-full mt-2" type="submit">
+						Create tag
 					</button>
 				</form>
 				{channel !== "all" && (
-					<div className="px-6 pb-2">
-						<button className="btn btn-red w-full mt-2" type="submit">
+					<div className="px-6 py-3">
+						<button
+							className="btn btn-red w-full mb-2"
+							type="submit"
+							onClick={(e) => {
+								app?.actions.deleteChannel({ channel })
+							}}
+						>
 							Delete this channel
+						</button>
+					</div>
+				)}
+				{tag !== "" && (
+					<div className="px-6 py-3">
+						<button
+							className="btn btn-red w-full mb-2"
+							type="submit"
+							onClick={(e) => {
+								app?.actions.deleteTag({ tag })
+							}}
+						>
+							Delete this tag
 						</button>
 					</div>
 				)}

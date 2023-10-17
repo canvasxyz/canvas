@@ -70,6 +70,9 @@ export const Forum: TemplateInlineContract = {
 		channels: {
 			name: "primary",
 		},
+		tags: {
+			name: "primary",
+		},
 		memberships: {
 			id: "primary",
 			user: "string",
@@ -95,6 +98,9 @@ export const Forum: TemplateInlineContract = {
 		},
 	},
 	actions: {
+		createTag: (db, { tag }, { address, timestamp, id }) => {
+			db.tags.set({ name: tag })
+		},
 		leaveChannel: (db, { channel }, { address, timestamp, id }) => {
 			db.memberships.delete(address + channel)
 		},
