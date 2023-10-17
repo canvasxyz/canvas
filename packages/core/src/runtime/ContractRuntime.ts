@@ -5,14 +5,15 @@ import { JSValue, VM } from "@canvas-js/vm"
 import { AbstractModelDB, Model, ModelValue, ModelsInit, Property, PropertyValue } from "@canvas-js/modeldb"
 import { getCID } from "@canvas-js/signed-cid"
 
-import { PlatformTarget } from "../targets/interface.js"
+import target from "#target"
+
 import { assert, mapValues, signalInvalidType } from "../utils.js"
 
 import { AbstractRuntime } from "./AbstractRuntime.js"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
-		target: PlatformTarget,
+		location: string | null,
 		signers: SessionSigner[],
 		contract: string,
 		options: { runtimeMemoryLimit?: number; indexHistory?: boolean } = {}
@@ -49,7 +50,7 @@ export class ContractRuntime extends AbstractRuntime {
 		const modelsInit = modelsHandle.consume(vm.context.dump) as ModelsInit
 
 		if (indexHistory) {
-			const db = await target.openDB("db", {
+			const db = await target.openDB(location, "db", {
 				...modelsInit,
 				...AbstractRuntime.sessionsModel,
 				...AbstractRuntime.effectsModel,
@@ -57,7 +58,7 @@ export class ContractRuntime extends AbstractRuntime {
 
 			return new ContractRuntime(signers, topic, db, vm, actionHandles, indexHistory)
 		} else {
-			const db = await target.openDB("db", {
+			const db = await target.openDB(location, "db", {
 				...modelsInit,
 				...AbstractRuntime.sessionsModel,
 				...AbstractRuntime.versionsModel,

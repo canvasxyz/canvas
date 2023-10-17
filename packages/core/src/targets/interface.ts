@@ -12,17 +12,21 @@ import type { AbstractGossipLog, GossipLogInit } from "@canvas-js/gossiplog"
 import type { CanvasConfig } from "../Canvas.js"
 
 export interface PlatformTarget {
-	getPeerId: () => Promise<PeerId>
-	extendLibp2pOptions?: (options: Libp2pOptions<ServiceMap>) => Libp2pOptions<ServiceMap>
+	getPeerId: (location: string | null) => Promise<PeerId>
+
+	createLibp2p: (config: CanvasConfig, peerId: PeerId) => Promise<Libp2p<ServiceMap>>
 
 	openDB: (
+		location: string | null,
 		name: string,
 		models: ModelsInit,
 		options?: { indexHistory?: Record<string, boolean> }
 	) => Promise<AbstractModelDB>
-	openGossipLog: <Payload, Result>(init: GossipLogInit<Payload, Result>) => Promise<AbstractGossipLog<Payload, Result>>
 
-	createLibp2p: (config: CanvasConfig, peerId: PeerId) => Promise<Libp2p<ServiceMap>>
+	openGossipLog: <Payload, Result>(
+		location: string | null,
+		init: GossipLogInit<Payload, Result>
+	) => Promise<AbstractGossipLog<Payload, Result>>
 }
 
 export type ServiceMap = {

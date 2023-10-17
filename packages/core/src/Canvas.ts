@@ -10,33 +10,21 @@ import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Signature } from "@canvas-js/signed-cid"
 import { AbstractGossipLog, MessageSigner } from "@canvas-js/gossiplog"
 
-import getTarget from "#target"
+import target from "#target"
 
-import { Runtime, ActionImplementation, GenericActionImplementation, initRuntime } from "./runtime/index.js"
+import { Runtime, GenericActionImplementation, initRuntime, InlineContract } from "./runtime/index.js"
 import { ServiceMap } from "./targets/interface.js"
 import { assert } from "./utils.js"
-
-export type ApplyMessage = (
-	id: string,
-	signature: Signature | null,
-	message: Message<Action | Session>
-) => Promise<JSValue | void>
 
 export interface TemplateInlineContract {
 	models: ModelsInit
 	actions: Record<string, GenericActionImplementation>
 }
 
-export interface GenericInlineContract extends TemplateInlineContract {
+export interface GenericInlineContract {
 	topic: string
 	models: ModelsInit
 	actions: Record<string, GenericActionImplementation>
-}
-
-export interface InlineContract extends GenericInlineContract {
-	topic: string
-	models: ModelsInit
-	actions: Record<string, ActionImplementation>
 }
 
 export interface CanvasConfig {
@@ -85,21 +73,19 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	public static async initialize(config: CanvasConfig): Promise<Canvas> {
 		const { location = null, contract, signers = [], runtimeMemoryLimit, replay = false, offline = false } = config
 
-		const target = getTarget(location)
-
 		if (signers.length === 0) {
 			signers.push(new SIWESigner())
 		}
 
-		const runtime = await initRuntime(target, signers, contract, { runtimeMemoryLimit })
+		const runtime = await initRuntime(location, signers, contract, { runtimeMemoryLimit })
 
-		const peerId = await target.getPeerId()
+		const peerId = await target.getPeerId(location)
 		let libp2p: Libp2p<ServiceMap> | null = null
 		if (!offline) {
 			libp2p = await target.createLibp2p(config, peerId)
 		}
 
-		const gossipLog = await target.openGossipLog({
+		const gossipLog = await target.openGossipLog(location, {
 			topic: runtime.topic,
 			apply: runtime.getConsumer(),
 			replay,

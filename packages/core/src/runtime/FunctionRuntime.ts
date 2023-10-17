@@ -1,30 +1,31 @@
 import type { Action, SessionSigner } from "@canvas-js/interfaces"
 import type { JSValue } from "@canvas-js/vm"
-import { AbstractModelDB, ModelValue, ModelsInit, validateModelValue } from "@canvas-js/modeldb"
+import { AbstractModelDB, ModelValue, validateModelValue } from "@canvas-js/modeldb"
 
-import { PlatformTarget } from "../targets/interface.js"
+import target from "#target"
+
 import { assert, mapValues } from "../utils.js"
 
+import { ActionImplementation, InlineContract, ModelAPI } from "./types.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
-import { ActionImplementation, ModelAPI } from "./types.js"
 
 export class FunctionRuntime extends AbstractRuntime {
 	public static async init(
-		target: PlatformTarget,
+		location: string | null,
 		signers: SessionSigner[],
-		contract: { topic: string; models: ModelsInit; actions: Record<string, ActionImplementation> },
+		contract: InlineContract,
 		options: { indexHistory?: boolean } = {}
 	): Promise<FunctionRuntime> {
 		const { indexHistory = true } = options
 		if (indexHistory) {
-			const db = await target.openDB("models", {
+			const db = await target.openDB(location, "models", {
 				...contract.models,
 				...AbstractRuntime.sessionsModel,
 				...AbstractRuntime.effectsModel,
 			})
 			return new FunctionRuntime(signers, contract.topic, db, contract.actions, indexHistory)
 		} else {
-			const db = await target.openDB("models", {
+			const db = await target.openDB(location, "models", {
 				...contract.models,
 				...AbstractRuntime.sessionsModel,
 				...AbstractRuntime.versionsModel,
@@ -49,7 +50,6 @@ export class FunctionRuntime extends AbstractRuntime {
 	}
 
 	protected async execute(
-		// gossipLog: AbstractGossipLog<Action | Session, void | JSValue>,
 		modelEntries: Record<string, Record<string, ModelValue | null>>,
 		id: string,
 		action: Action

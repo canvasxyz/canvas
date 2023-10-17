@@ -28,7 +28,7 @@ import { CanvasConfig } from "../../Canvas.js"
 
 import type { ServiceMap } from "../interface.js"
 
-export function getLibp2pOptions(peerId: PeerId, config: CanvasConfig): Libp2pOptions<ServiceMap> {
+export function getLibp2pOptions(config: CanvasConfig, peerId: PeerId): Libp2pOptions<ServiceMap> {
 	const announce = config.announce ?? []
 	const listen = config.listen ?? ["/webrtc"]
 	const bootstrapList = config.bootstrapList ?? []

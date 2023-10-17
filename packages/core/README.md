@@ -8,6 +8,7 @@ A `Core` verifies, executes, and applies the effects of signed messages.
 
 - [Installation](#installation)
 - [Usage](#usage)
+  - [Authentication](#authentication)
   - [Configuration options](#configuration-options)
   - [Applying messages](#applying-messages)
   - [Evaluating routes](#evaluating-routes)
@@ -64,16 +65,30 @@ console.log(core.app) // ipfs://QmTFwv6NF78V64CVdWrabYhQhmV4bWJw63aTRcVhvBAU2u
 
 Applications are identified by the `ipfs://...` hash of the contract. Sessions and actions must have contract's `ipfs://...` URI in `payload.app`.
 
+### Authentication
+
 ### Configuration options
 
 `spec` and `directory` are the only values strictly required, but in general running a `Core` involves understanding and configuring several additional properties.
 
 ```ts
-declare interface CoreOptions {
-  unchecked?: boolean // don't require or validate blockhashes in messages
-  verbose?: boolean // print verbose logging to stdout
-  offline?: boolean // disable libp2p
-  replay?: boolean // replay the entire message log on start-up
+declare interface CanvasConfig {
+  contract: string | InlineContract
+
+  /** NodeJS: data directory path; browser: IndexedDB database namespace */
+  location?: string | null
+
+  signers?: SessionSigner[]
+  replay?: boolean
+  runtimeMemoryLimit?: number
+
+  offline?: boolean
+  start?: boolean
+  listen?: string[]
+  announce?: string[]
+  bootstrapList?: string[]
+  minConnections?: number
+  maxConnections?: number
 }
 
 declare interface CoreConfig extends CoreOptions {
