@@ -8,10 +8,10 @@ import type { CID } from "multiformats/cid"
 export type SignatureType = "ed25519" | "secp256k1"
 
 export type Signature = {
-	type: SignatureType
-	publicKey: Uint8Array // redundant for secp256k1 but still always included
-	signature: Uint8Array
-	cid: CID
+  type: SignatureType
+  publicKey: Uint8Array // redundant for secp256k1 but still always included
+  signature: Uint8Array
+  cid: CID
 }
 ```
 
@@ -71,10 +71,10 @@ Again, signatures always sign the raw bytes of the entire CID, not just the hash
 
 ```ts
 declare function createSignature(
-	type: "ed25519" | "secp256k1",
-	privateKey: Uint8Array,
-	value: any,
-	options: { codec?: string | Codec; digest?: string | Digest } = {}
+  type: "ed25519" | "secp256k1",
+  privateKey: Uint8Array,
+  value: any,
+  options: { codec?: string | Codec; digest?: string | Digest } = {}
 ): Signature
 ```
 
@@ -84,9 +84,9 @@ Defaults to `dag-cbor` and `sha2-256` if `options.codec` or `options.digest` are
 
 ```ts
 declare function verifySignature(
-	signature: Signature,
-	value: any,
-	options: { codecs?: Codec[]; digests?: Digest[] } = {}
+  signature: Signature,
+  value: any,
+  options: { codecs?: Codec[]; digests?: Digest[] } = {}
 ): void
 ```
 

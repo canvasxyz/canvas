@@ -41,9 +41,9 @@ export type Session = {
     // address of the user authorizing the session
     from: string
 
-    sessionAddress: string  // public address of the delegate key
+    sessionAddress: string // public address of the delegate key
     sessionDuration: number // duration in milliseconds
-    sessionIssued: number   // issue time in milliseconds since 1 January 1970 00:00:00 UTC
+    sessionIssued: number // issue time in milliseconds since 1 January 1970 00:00:00 UTC
 
     // Blockhash of `chain` at issue time; required by peers except in --unchecked mode.
     // Used to validate `sessionIssued`.
@@ -61,7 +61,7 @@ export type SessionPayload = Session["payload"]
  * An `Action` is either signed directly by a user or indirectly through a session.
  * The address recovered from verifying the signature must match `action.session`
  * if `action.session !== null`, or else must match `action.payload.from`.
- * 
+ *
  * The signature, address, and blockhash formats vary by chain.
  */
 export type Action = {
@@ -116,7 +116,7 @@ export type CustomAction = {
 
 Canvas contracts export a set of model types, which are schemas for the application database that the action handlers in the contract can write to.
 
-The model schemas are very simple, consisting of just 
+The model schemas are very simple, consisting of just
 
 ```ts
 /**
@@ -141,11 +141,10 @@ export type Index = string | string[]
  * All models must have `id: "string"` and `updated_at: "datetime"` properties.
  */
 export type Model = {
-  id: "string"; 
-  updated_at: "datetime";
-  indexes?: Index[];
+  id: "string"
+  updated_at: "datetime"
+  indexes?: Index[]
 } & Record<string, ModelType>
-
 ```
 
 ## Chain Implementations
@@ -160,7 +159,7 @@ export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown
   chain: string
 
   /**
-   * Signature verification methods 
+   * Signature verification methods
    *
    * These are used internally by peers when applying actions and sessions.
    */
@@ -172,10 +171,10 @@ export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown
   verifySession(session: Session): Promise<void>
 
   /**
-   * Signature generation / delegate signer lifecycle methods 
-   * 
+   * Signature generation / delegate signer lifecycle methods
+   *
    * These are used by the front-end client library @canvas-js/hooks
-   * to streamline automated session management and 
+   * to streamline automated session management and
    */
 
   // use the signer to sign a session payload
@@ -201,7 +200,6 @@ export interface ChainImplementation<Signer = unknown, DelegatedSigner = unknown
 
   // import a delegate signer from an exported private key
   importDelegatedSigner(privateKey: string): DelegatedSigner
-
 
   /**
    * Provider and blockhash methods
