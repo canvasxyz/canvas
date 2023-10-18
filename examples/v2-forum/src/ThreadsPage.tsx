@@ -28,7 +28,7 @@ export function ThreadsPage({
 }) {
 	const [replyingTo, setReplyingTo] = useState<string>()
 
-	const messages = useLiveQuery<Thread>(app, "threads", {
+	const threads = useLiveQuery<Thread>(app, "threads", {
 		offset: page * 10,
 		limit: 10,
 		orderBy: { timestamp: "desc" },
@@ -41,9 +41,9 @@ export function ThreadsPage({
 				<Composer app={app} category={category} replyingTo={replyingTo} setReplyingTo={setReplyingTo} />
 			</div>
 			<div className="py-3 pb-4">
-				{messages === null && <Loading />}
-				{messages?.length === 0 && <Placeholder text="No threads found" />}
-				{messages?.map((message) => (
+				{threads === null && <Loading />}
+				{threads?.length === 0 && <Placeholder text="No threads found" />}
+				{threads?.map((message) => (
 					<div className="pb-6" key={message.id?.toString()}>
 						<div className="mb-1 text-sm text-gray-400">
 							<Address address={message.address} />

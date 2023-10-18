@@ -206,7 +206,7 @@ export function Sidebar({
 												<Menu.Button className="absolute invisible group-hover:visible top-0 right-2 bg-gray-200 rounded-lg w-6 mt-1.5 z-9">
 													<ChevronDownIcon className={`inline-block w-5 h-5 -mt-0.5`} />
 												</Menu.Button>
-												<Menu.Items className="absolute right-0 mt-0.5 mr-2 bg-white z-10 shadow">
+												<Menu.Items className="absolute right-0 mt-0.5 mr-2 bg-white rounded-lg z-10 shadow">
 													<Menu.Item>
 														{({ active }) => (
 															<a
