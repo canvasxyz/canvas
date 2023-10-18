@@ -5,12 +5,12 @@ ModelDB is a minimalist cross-platform relational database wrapper. It currently
 ## Table of Contents
 
 - [Usage](#usage)
-- [API](#api)
   - [Initialization](#initialization)
   - [Schemas](#schemas)
   - [Setting and deleting records](#setting-and-deleting-records)
   - [Queries](#queries)
   - [Indexes](#indexes)
+  - [Name restrictions](#name-restrictions)
 - [License](#license)
 
 ## Usage
@@ -165,6 +165,10 @@ const recentMessages = await db.query("message", { orderBy: { timestamp: "desc" 
 ```
 
 Multi-property index support will be added soon.
+
+### Name restrictions
+
+Model names and property names can contain `[a-zA-Z0-9$:_\-\.]`.
 
 ## License
 

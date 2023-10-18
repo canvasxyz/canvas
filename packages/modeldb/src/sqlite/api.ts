@@ -11,7 +11,6 @@ import {
 	WhereCondition,
 	PrimitiveValue,
 	RangeExpression,
-	PrimaryKeyType,
 	PrimaryKeyProperty,
 } from "../types.js"
 
@@ -54,7 +53,7 @@ function getPropertyColumnType(property: Property): string {
 const getPropertyColumn = (property: Property) => `'${property.name}' ${getPropertyColumnType(property)}`
 
 export class ModelAPI {
-	#table = `record/${this.model.name}`
+	#table = this.model.name
 	#params: Record<string, `p${string}`> = {}
 	#properties = Object.fromEntries(this.model.properties.map((property) => [property.name, property]))
 
@@ -499,9 +498,9 @@ export class ModelAPI {
 }
 
 export class RelationAPI {
-	public readonly table = `relation/${this.relation.source}/${this.relation.property}`
-	public readonly sourceIndex = `relation/${this.relation.source}/${this.relation.property}/source`
-	public readonly targetIndex = `relation/${this.relation.source}/${this.relation.property}/target`
+	public readonly table = `${this.relation.source}/${this.relation.property}`
+	public readonly sourceIndex = `${this.relation.source}/${this.relation.property}/source`
+	public readonly targetIndex = `${this.relation.source}/${this.relation.property}/target`
 
 	readonly #select: Query<{ _source: string }, { _target: string }>
 	readonly #insert: Method<{ _source: string; _target: string }>
