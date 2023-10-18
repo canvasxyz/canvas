@@ -10,19 +10,30 @@ import { Sidebar } from "./Sidebar"
 import { RepliesPage } from "./RepliesPage"
 import { ThreadsPage } from "./ThreadsPage"
 
-export type Tag = { name: string }
-export type Category = { name: string }
+export type Tag = {
+	name: string
+}
+export type Category = {
+	name: string
+}
 export type Thread = {
 	id: string
+	title: string
 	message: string
 	address: string
 	timestamp: number
 	category: string
 	replies: number
 }
-export type Reply = { id: string; threadId: string; reply: string; address: string; timestamp: number }
+export type Reply = {
+	id: string
+	threadId: string
+	reply: string
+	address: string
+	timestamp: number
+}
 
-export function Placeholder({ text }) {
+export function Placeholder({ text }: { text: string }) {
 	return <div className="text-gray-400 mb-4">{text}</div>
 }
 
@@ -39,9 +50,10 @@ function App() {
 	const wallet = new ethers.Wallet(privateKey)
 
 	const { app } = useCanvas({
-		contract: { ...Forum, topic: "forum-example" },
+		contract: Forum,
 		signers: [new SIWESigner({ signer: wallet })],
 		location: "-",
+		topic: "forum-example",
 	})
 
 	const [thread, setThread] = useHashParam("thread", "")
@@ -62,7 +74,7 @@ function App() {
 				wallet={wallet}
 			/>
 			{thread ? (
-				<RepliesPage wallet={wallet} app={app} thread={thread} setThread={setThread} />
+				<RepliesPage wallet={wallet} app={app} thread={thread} />
 			) : (
 				<ThreadsPage
 					wallet={wallet}

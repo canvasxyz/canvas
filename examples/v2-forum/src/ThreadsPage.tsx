@@ -1,4 +1,3 @@
-import { useState } from "react"
 import { ethers } from "ethers"
 import moment from "moment"
 
@@ -26,8 +25,6 @@ export function ThreadsPage({
 	setCategory: (arg0: string) => void
 	setThread: (arg0: string) => void
 }) {
-	const [replyingTo, setReplyingTo] = useState<string>()
-
 	const threads = useLiveQuery<Thread>(app, "threads", {
 		offset: page * 10,
 		limit: 10,
@@ -38,7 +35,7 @@ export function ThreadsPage({
 	return (
 		<div className="w-xl ml-64 pl-8">
 			<div className="my-8">
-				<Composer app={app} category={category} replyingTo={replyingTo} setReplyingTo={setReplyingTo} />
+				<Composer app={app} category={category} replyingTo={undefined} />
 			</div>
 			<div className="py-3 pb-4">
 				{threads === null && <Loading />}

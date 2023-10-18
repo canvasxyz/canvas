@@ -9,17 +9,13 @@ import { Disclosure, Dialog, Menu } from "@headlessui/react"
 import { ChevronRightIcon, ChevronDownIcon } from "@heroicons/react/20/solid"
 
 export function CreateCategoryDialog({
-	category,
 	isOpen,
 	setIsOpen,
 	app,
-	wallet,
 }: {
-	category: string
 	isOpen: boolean
 	setIsOpen: (arg0: boolean) => void
 	app?: Canvas
-	wallet: ethers.Wallet
 }) {
 	const categoryInputRef = useRef<HTMLInputElement>(null)
 	const createCategory = (e: FormEvent) => {
@@ -61,13 +57,11 @@ export function CreateCategoryDialog({
 }
 
 export function CreateTagDialog({
-	tag,
 	isOpen,
 	setIsOpen,
 	app,
 	wallet,
 }: {
-	tag: string
 	isOpen: boolean
 	setIsOpen: (arg0: boolean) => void
 	app?: Canvas
@@ -134,14 +128,8 @@ export function Sidebar({
 
 	return (
 		<>
-			<CreateCategoryDialog
-				app={app}
-				wallet={wallet}
-				category={category}
-				isOpen={createCategoryOpen}
-				setIsOpen={setCreateCategoryOpen}
-			/>
-			<CreateTagDialog app={app} wallet={wallet} tag={tag} isOpen={createTagOpen} setIsOpen={setCreateTagOpen} />
+			<CreateCategoryDialog app={app} isOpen={createCategoryOpen} setIsOpen={setCreateCategoryOpen} />
+			<CreateTagDialog app={app} wallet={wallet} isOpen={createTagOpen} setIsOpen={setCreateTagOpen} />
 			<div className="fixed bg-white w-xl w-64 h-screen py-4 mr-8 border-r border-gray-200 flex flex-col">
 				<div className="px-6 pb-3">
 					<a
@@ -283,7 +271,7 @@ export function Sidebar({
 																<a
 																	className={`px-3 py-2 inline-block rounded-lg ${active && "bg-blue-300"}`}
 																	href="#"
-																	onClick={(e) => {
+																	onClick={() => {
 																		if (confirm("Really delete this tag?")) {
 																			app?.actions.deleteTag({ tag: t.name })
 																		}

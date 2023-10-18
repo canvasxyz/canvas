@@ -13,12 +13,10 @@ export function RepliesPage({
 	wallet,
 	app,
 	thread: threadId,
-	setThread,
 }: {
 	wallet: ethers.Wallet
 	app?: Canvas
 	thread: string
-	setThread: (arg0: string) => void
 }) {
 	// const [page, setPage] = useState(0)
 
@@ -76,7 +74,7 @@ export function RepliesPage({
 						<div className="whitespace-pre">{reply.reply}</div>
 					</div>
 				))}
-				<Composer app={app} replyingTo={threadId} setReplyingTo={setThread} />
+				<Composer app={app} replyingTo={threadId} />
 			</div>
 		</div>
 	)

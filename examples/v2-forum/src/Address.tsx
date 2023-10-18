@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react"
 import { useEnsName, useEnsAvatar } from "wagmi"
 import jazzicon from "@metamask/jazzicon"
 
-function MetamaskAvatar({ account, className }: { account; className }) {
-	const avatarRef = useRef()
+function MetamaskAvatar({ account, className }: { account: string; className: string }) {
+	const avatarRef = useRef<HTMLDivElement>(null)
 	useEffect(() => {
 		const element = avatarRef.current
 		if (element && account) {

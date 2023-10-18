@@ -2,17 +2,7 @@ import { FormEvent, useRef } from "react"
 import TextareaAutosize from "react-textarea-autosize"
 import { Canvas } from "@canvas-js/core"
 
-export function Composer({
-	app,
-	category,
-	replyingTo,
-	setReplyingTo,
-}: {
-	app?: Canvas
-	category?: string
-	replyingTo?: string
-	setReplyingTo: (arg0: string) => void
-}) {
+export function Composer({ app, category, replyingTo }: { app?: Canvas; category?: string; replyingTo?: string }) {
 	const titleRef = useRef<HTMLInputElement>(null)
 	const inputRef = useRef<HTMLTextAreaElement>(null)
 
