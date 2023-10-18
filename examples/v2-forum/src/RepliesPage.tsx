@@ -36,42 +36,44 @@ export function RepliesPage({
 	return (
 		<div className="w-xl ml-64 pl-8">
 			<div className="my-8">
+				{thread && (
+					<div className="mb-8">
+						<div className="text-gray-500 text-sm">{thread[0]?.address}</div>
+						<div className="text-gray-500 text-sm">
+							{thread[0]?.timestamp && moment(thread[0]?.timestamp).fromNow()}
+						</div>
+						<div className="mt-2">{thread[0]?.message}</div>
+					</div>
+				)}
+				{replies?.map((reply) => (
+					<div className="mb-4" key={reply.id}>
+						<div className="mb-1 text-sm text-gray-400">
+							<Address address={reply.address} />
+							{" - "}
+							{reply.timestamp}
+							{reply.address === wallet.address && (
+								<>
+									{" - "}
+									<a
+										className="hover:underline hover:text-gray-600"
+										href="#"
+										onClick={(e) => {
+											e.preventDefault()
+
+											if (!confirm("Really delete this post?")) return
+											app?.actions.deleteReply({ replyId: reply.id })
+										}}
+									>
+										Delete
+									</a>
+								</>
+							)}
+						</div>
+						<div className="whitespace-pre">{reply.reply}</div>
+					</div>
+				))}
 				<Composer app={app} replyingTo={threadId} setReplyingTo={setThread} />
 			</div>
-			{thread && (
-				<div>
-					<div className="text-gray-500 text-sm">{thread[0]?.address}</div>
-					<div className="text-gray-500 text-sm">{thread[0]?.timestamp && moment(thread[0]?.timestamp).fromNow()}</div>
-					<div className="mt-2">{thread[0]?.message}</div>
-				</div>
-			)}
-			{replies?.map((reply) => (
-				<div key={reply.id}>
-					<div className="mb-1 text-sm text-gray-400">
-						<Address address={reply.address} />
-						{" - "}
-						{reply.timestamp}
-						{reply.address === wallet.address && (
-							<>
-								{" - "}
-								<a
-									className="hover:underline hover:text-gray-600"
-									href="#"
-									onClick={(e) => {
-										e.preventDefault()
-
-										if (!confirm("Really delete this post?")) return
-										app?.actions.deleteReply({ replyId: reply.id })
-									}}
-								>
-									Delete
-								</a>
-							</>
-						)}
-					</div>
-					<div className="whitespace-pre">{reply.reply}</div>
-				</div>
-			))}
 		</div>
 	)
 }
