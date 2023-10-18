@@ -1,6 +1,6 @@
 import type { InlineContract } from "@canvas-js/core"
 
-export const PublicChat = {
+export const PublicChat: InlineContract = {
 	models: {
 		messages: {
 			id: "primary",
@@ -18,7 +18,7 @@ export const PublicChat = {
 	},
 } satisfies InlineContract
 
-export const ChannelChat = {
+export const ChannelChat: InlineContract = {
 	models: {
 		channels: {
 			name: "primary",
@@ -65,7 +65,7 @@ export const ChannelChat = {
 	},
 }
 
-export const Forum: TemplateInlineContract = {
+export const Forum: InlineContract = {
 	models: {
 		categories: {
 			name: "primary",
