@@ -39,7 +39,7 @@ type SignedMessage = {
 
 export function decodeSignedMessage<Payload = unknown>(
 	value: Uint8Array,
-	toTyped: TypeTransformerFunction
+	{ toTyped }: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 ): [id: string, signature: Signature | null, message: Message<Payload>] {
 	const signedMessage = toSignedMessage(cbor.decode(value)) as SignedMessage | undefined
 	assert(signedMessage !== undefined, "error decoding message (internal error)")
@@ -64,7 +64,7 @@ export function decodeSignedMessage<Payload = unknown>(
 export function encodeSignedMessage(
 	signature: Signature | null,
 	message: Message,
-	toRepresentation: TypeTransformerFunction
+	{ toRepresentation }: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 ): [key: Uint8Array, value: Uint8Array] {
 	const parents = message.clock === 0 ? null : message.parents.sort().map(encodeId)
 	assert(parents === null || getClock(parents) === message.clock, "error encoding message (invalid clock)")

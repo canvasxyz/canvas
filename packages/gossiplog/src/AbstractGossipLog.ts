@@ -89,33 +89,33 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	): Promise<T>
 
 	public readonly topic: string
-	public readonly apply: GossipLogConsumer<Payload, Result>
-
 	public readonly signatures: boolean
 	public readonly sequencing: boolean
 	public readonly indexAncestors: boolean
 
 	protected readonly log: Logger
 	protected readonly mempool = new Mempool<Payload>()
-	protected readonly toTyped: TypeTransformerFunction
-	protected readonly toRepresentation: TypeTransformerFunction
+
+	readonly #codec: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+
+	readonly #apply: GossipLogConsumer<Payload, Result>
 
 	protected constructor(init: GossipLogInit<Payload, Result>) {
 		super()
 		assert(topicPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
 
 		this.topic = init.topic
-		this.apply = init.apply
+		this.#apply = init.apply
 
 		if (typeof init.validate === "function") {
 			const { validate } = init
-			this.toTyped = (obj) => (validate(obj) ? obj : undefined)
-			this.toRepresentation = (obj) => (validate(obj) ? obj : undefined)
+			this.#codec = {
+				toTyped: (obj) => (validate(obj) ? obj : undefined),
+				toRepresentation: (obj) => (validate(obj) ? obj : undefined),
+			}
 		} else {
 			const { schema, name } = init.validate
-			const { toRepresentation, toTyped } = create(typeof schema === "string" ? fromDSL(schema) : schema, name)
-			this.toTyped = toTyped
-			this.toRepresentation = toRepresentation
+			this.#codec = create(typeof schema === "string" ? fromDSL(schema) : schema, name)
 		}
 
 		this.signatures = init.signatures ?? true
@@ -128,15 +128,14 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 	}
 
-	protected async replay() {
-		for await (const [id, signature, message] of this.iterate()) {
-			if (this.signatures) {
-				assert(signature !== null, "missing message signature")
-				verifySignature(signature, message)
+	public async replay() {
+		await this.read(async (txn) => {
+			for await (const [key, value] of txn.messages.entries()) {
+				const [id, signature, message] = this.decode(value)
+				assert(id === decodeId(key), "expected id === decodeId(key)")
+				await this.#apply.apply(txn, [id, signature, message])
 			}
-			assert(message.topic === this.topic, "invalid message topic")
-			await this.apply(id, signature, message)
-		}
+		})
 	}
 
 	public async *iterate(
@@ -168,11 +167,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			assert(signature !== null, "missing message signature")
 		}
 
-		return encodeSignedMessage(signature, message, this.toRepresentation)
+		return encodeSignedMessage(signature, message, this.#codec)
 	}
 
 	public decode(value: Uint8Array): [id: string, signature: Signature | null, message: Message<Payload>] {
-		const [id, signature, message] = decodeSignedMessage<Payload>(value, this.toTyped)
+		const [id, signature, message] = decodeSignedMessage<Payload>(value, this.#codec)
 		if (this.signatures) {
 			assert(signature !== null, "missing message signature")
 		}
@@ -361,7 +360,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	): Promise<Result> {
 		this.log("applying %s %O", id, message)
 
-		const result = await this.apply(id, signature, message)
+		const result = await this.#apply.apply(txn, [id, signature, message])
 		this.dispatchEvent(new CustomEvent("message", { detail: { topic: this.topic, id, signature, message, result } }))
 		await txn.messages.set(key, value)
 

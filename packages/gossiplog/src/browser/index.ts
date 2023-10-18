@@ -15,8 +15,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		name: string,
 		init: GossipLogInit<Payload, Result>
 	): Promise<GossipLog<Payload, Result>> {
-		const storeNames = [`${init.topic}/messages`, `${init.topic}/parents`]
-		const db = await openDB(name, 1, {
+		const storeNames = [`${init.topic}/messages`, `${init.topic}/parents`, `${init.topic}/ancestors`]
+		const db = await openDB(name, 2, {
 			upgrade: (db, oldVersion, newVersion) => {
 				for (const storeName of storeNames) {
 					if (db.objectStoreNames.contains(storeName)) {
@@ -30,8 +30,9 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		const messages = await IDBTree.open(db, `${init.topic}/messages`)
 		const parents = new IDBStore(db, `${init.topic}/parents`)
+		const ancestors = new IDBStore(db, `${init.topic}/parents`)
 
-		const gossipLog = new GossipLog(db, messages, parents, init)
+		const gossipLog = new GossipLog(db, messages, parents, ancestors, init)
 
 		if (init.replay) {
 			await gossipLog.replay()
@@ -49,6 +50,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		private readonly db: IDBPDatabase,
 		private readonly messages: IDBTree,
 		private readonly parents: IDBStore,
+		private readonly ancestors: IDBStore,
 		init: GossipLogInit<Payload, Result>
 	) {
 		super(init)
@@ -152,8 +154,16 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				},
 			}
 
+			const ancestors: Omit<KeyValueStore, "set" | "delete"> = {
+				get: (key) => this.ancestors.read(() => this.ancestors.get(key)),
+				entries: (lowerBound = null, upperBound = null, options = {}) => {
+					this.ancestors.txn = this.db.transaction([this.ancestors.storeName], "readonly")
+					return this.ancestors.entries(lowerBound, upperBound, options)
+				},
+			}
+
 			try {
-				result = await callback({ messages: this.messages, parents })
+				result = await callback({ messages: this.messages, parents, ancestors })
 			} catch (err) {
 				this.log.error("error in read-only transaction: %O", err)
 			} finally {
@@ -201,13 +211,23 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					set: (key, value) => this.parents.write(() => this.parents.set(key, value)),
 					delete: (key) => this.parents.write(() => this.parents.delete(key)),
 					entries: (lowerBound = null, upperBound = null, options = {}) => {
-						this.parents.txn = this.db.transaction([`${this.topic}/parents`], "readonly")
+						this.parents.txn = this.db.transaction(this.parents.storeName, "readonly")
 						return this.parents.entries(lowerBound, upperBound, options)
 					},
 				}
 
+				const ancestors: KeyValueStore = {
+					get: (key) => this.ancestors.read(() => this.ancestors.get(key)),
+					set: (key, value) => this.ancestors.write(() => this.ancestors.set(key, value)),
+					delete: (key) => this.ancestors.write(() => this.ancestors.delete(key)),
+					entries: (lowerBound = null, upperBound = null, options = {}) => {
+						this.ancestors.txn = this.db.transaction(this.ancestors.storeName, "readonly")
+						return this.ancestors.entries(lowerBound, upperBound, options)
+					},
+				}
+
 				try {
-					result = await callback({ messages: this.messages, parents })
+					result = await callback({ messages: this.messages, parents, ancestors })
 				} catch (err) {
 					this.log.error("error in read-write transaction: %O", err)
 					throw err
