@@ -6,6 +6,7 @@ import { useCanvas } from "@canvas-js/hooks"
 import { Forum } from "@canvas-js/templates"
 import useHashParam from "use-hash-param"
 
+import { Persister } from "./Persister"
 import { Sidebar } from "./Sidebar"
 import { RepliesPage } from "./RepliesPage"
 import { ThreadsPage } from "./ThreadsPage"
@@ -63,6 +64,7 @@ function App() {
 
 	return (
 		<div className="w-full flex">
+			<Persister app={app} />
 			<Sidebar
 				category={category}
 				tag={tag}
