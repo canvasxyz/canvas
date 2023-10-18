@@ -13,9 +13,7 @@ import { getLibp2pOptions } from "./libp2p.js"
 export default {
 	async getPeerId(location): Promise<PeerId> {
 		if (location === null) {
-			const peerId = await createEd25519PeerId()
-			console.log(`[canvas-core] Using temporary PeerId ${peerId}`)
-			return peerId
+			return await createEd25519PeerId()
 		}
 
 		const localStorageKey = `canvas:${location}/peer-id`
@@ -24,12 +22,9 @@ export default {
 			const peerId = await createEd25519PeerId()
 			const privateKey = exportToProtobuf(peerId)
 			localStorage.setItem(localStorageKey, base64.baseEncode(privateKey))
-			console.log(`[canvas-core] Created new PeerId ${peerId}`)
 			return peerId
 		} else {
-			const peerId = await createFromProtobuf(base64.baseDecode(item))
-			console.log(`[canvas-core] Found existing PeerId ${peerId}`)
-			return peerId
+			return await createFromProtobuf(base64.baseDecode(item))
 		}
 	},
 

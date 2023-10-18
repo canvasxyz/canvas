@@ -3,9 +3,12 @@ import crypto from "node:crypto"
 import test, { ExecutionContext } from "ava"
 
 import { ethers } from "ethers"
+import { ed25519 } from "@noble/curves/ed25519"
 
 import { Canvas } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { createSignature } from "@canvas-js/signed-cid"
+import { Message } from "@canvas-js/interfaces"
 
 const contract = `
 export const models = {
@@ -38,8 +41,7 @@ export const actions = {
 };
 `.trim()
 
-const init = async (t: ExecutionContext) => {
-	const topic = crypto.randomUUID()
+const init = async (t: ExecutionContext, topic = crypto.randomUUID()) => {
 	const app = await Canvas.initialize({ topic, contract, location: null, offline: true })
 	t.teardown(() => app.close())
 	return app
@@ -52,7 +54,6 @@ test("open and close an app", async (t) => {
 
 test("apply an action and read a record from the database", async (t) => {
 	const app = await init(t)
-	t.teardown(() => app.close())
 
 	const { id, result: postId } = await app.actions.createPost({ content: "hello world" })
 
@@ -64,7 +65,6 @@ test("apply an action and read a record from the database", async (t) => {
 
 test("create and delete a post", async (t) => {
 	const app = await init(t)
-	t.teardown(() => app.close())
 
 	const { result: postId } = await app.actions.createPost({ content: "hello world" })
 	assert(typeof postId === "string")
@@ -75,7 +75,35 @@ test("create and delete a post", async (t) => {
 	t.is(await app.db.get("posts", postId), null)
 })
 
-test("create an app with a function runtime", async (t) => {
+test("insert a message created by another app", async (t) => {
+	const topic = crypto.randomUUID()
+	const [a, b] = await Promise.all([init(t, topic), init(t, topic)])
+
+	const { id } = await a.actions.createPost({ content: "hello world" })
+	const [signature, message] = await a.messageLog.get(id)
+	assert(signature !== null && message !== null)
+
+	await t.notThrowsAsync(() => b.insert(signature, message))
+})
+
+test("reject an invalid message", async (t) => {
+	const app = await init(t)
+
+	const privateKey = ed25519.utils.randomPrivateKey()
+	const invalidMessage: Message<{ type: "fjdskl" }> = {
+		topic: app.topic,
+		clock: 1,
+		parents: [],
+		payload: { type: "fjdskl" },
+	}
+
+	const signature = createSignature("ed25519", privateKey, invalidMessage)
+	await t.throwsAsync(() => app.insert(signature, invalidMessage as any), {
+		message: "error encoding message (invalid payload)",
+	})
+})
+
+test("create an app with an inline contract", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 	const app = await Canvas.initialize({
 		topic: "com.example.app",
@@ -101,6 +129,7 @@ test("create an app with a function runtime", async (t) => {
 		offline: true,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
+
 	t.teardown(() => app.close())
 
 	const { id, result: postId } = await app.actions.createPost({ content: "hello world" })

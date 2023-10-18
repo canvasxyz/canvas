@@ -14,6 +14,7 @@ import target from "#target"
 import { Runtime, createRuntime, InlineContract, ActionImplementation } from "./runtime/index.js"
 import { ServiceMap } from "./targets/interface.js"
 import { assert } from "./utils.js"
+import { validatePayload } from "./schema.js"
 
 export interface CanvasConfig<
 	Actions extends Record<string, ActionImplementation> = Record<string, ActionImplementation>
@@ -99,11 +100,11 @@ export class Canvas<
 			libp2p = await target.createLibp2p(peerId, config)
 		}
 
-		const gossipLog = await target.openGossipLog(location, {
+		const gossipLog = await target.openGossipLog<Action | Session, void | CBORValue>(location, {
 			topic: topic,
 			apply: runtime.getConsumer(),
 			replay: replay,
-			validate: Canvas.validate,
+			validate: validatePayload,
 			signatures: true,
 			sequencing: true,
 			indexAncestors: indexHistory,
@@ -113,11 +114,6 @@ export class Canvas<
 
 		return new Canvas(signers, peerId, libp2p, gossipLog, runtime)
 	}
-
-	private static schema = `
-		
-	`
-	private static validate = (payload: unknown): payload is Action | Session => true // TODO
 
 	public readonly db: AbstractModelDB
 	public readonly actions = {} as {

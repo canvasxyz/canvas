@@ -23,19 +23,14 @@ export default {
 		}
 
 		if (location === null) {
-			const peerId = await createEd25519PeerId()
-			console.log(`[canvas-core] Using temporary PeerId ${peerId}`)
-			return peerId
+			return await createEd25519PeerId()
 		}
 
 		const peerIdPath = path.resolve(location, PEER_ID_FILENAME)
 		if (fs.existsSync(peerIdPath)) {
-			const peerId = await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
-			console.log(`[canvas-core] Found existing PeerID ${peerId}`)
-			return peerId
+			return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
 		}
 
-		console.log(`[canvas-core] Creating new PeerID at ${peerIdPath}`)
 		const peerId = await createEd25519PeerId()
 		fs.writeFileSync(peerIdPath, Buffer.from(exportToProtobuf(peerId)).toString("base64"))
 		return peerId
