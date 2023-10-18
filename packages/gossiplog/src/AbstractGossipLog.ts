@@ -109,16 +109,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 		if (typeof init.validate === "function") {
 			const { validate } = init
-
-			this.toTyped = (obj) => {
-				assert(validate(obj), "invalid message payload")
-				return obj
-			}
-
-			this.toRepresentation = (obj) => {
-				assert(validate(obj), "invalid message payload")
-				return obj
-			}
+			this.toTyped = (obj) => (validate(obj) ? obj : undefined)
+			this.toRepresentation = (obj) => (validate(obj) ? obj : undefined)
 		} else {
 			const { schema, name } = init.validate
 			const { toRepresentation, toTyped } = create(typeof schema === "string" ? fromDSL(schema) : schema, name)
@@ -163,36 +155,37 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		}
 	}
 
-	public encode(
-		signature: Signature | null,
-		{ topic, clock, parents, payload }: Message<Payload>
-	): [key: Uint8Array, value: Uint8Array] {
+	public encode(signature: Signature | null, message: Message<Payload>): [key: Uint8Array, value: Uint8Array] {
 		if (this.sequencing) {
-			assert(clock > 0, "expected message.clock > 0 if sequencing is enabled")
+			assert(message.clock > 0, "expected message.clock > 0 if sequencing is enabled")
 		} else {
-			assert(clock === 0, "expected message.clock === 0 if sequencing is disabled")
+			assert(message.clock === 0, "expected message.clock === 0 if sequencing is disabled")
 		}
+
+		assert(message.topic === this.topic, "invalid message topic")
 
 		if (this.signatures) {
 			assert(signature !== null, "missing message signature")
 		}
 
-		return encodeSignedMessage(signature, { topic, clock, parents, payload: this.toRepresentation(payload) })
+		return encodeSignedMessage(signature, message, this.toRepresentation)
 	}
 
 	public decode(value: Uint8Array): [id: string, signature: Signature | null, message: Message<Payload>] {
-		const [id, signature, { topic, clock, parents, payload }] = decodeSignedMessage(this.topic, value)
+		const [id, signature, message] = decodeSignedMessage<Payload>(value, this.toTyped)
 		if (this.signatures) {
 			assert(signature !== null, "missing message signature")
 		}
 
+		assert(message.topic === this.topic, "invalid message topic")
+
 		if (this.sequencing) {
-			assert(clock > 0, "expected message.clock > 0 if sequencing is enabled")
+			assert(message.clock > 0, "expected message.clock > 0 if sequencing is enabled")
 		} else {
-			assert(clock === 0, "expected message.clock === 0 if sequencing is disabled")
+			assert(message.clock === 0, "expected message.clock === 0 if sequencing is disabled")
 		}
 
-		return [id, signature, { topic, clock, parents, payload: this.toTyped(payload) }]
+		return [id, signature, message]
 	}
 
 	public async getClock(): Promise<[clock: number, parents: string[]]> {
@@ -358,33 +351,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			}
 		}
 	}
-
-	// async #getAncestors2(txn: ReadOnlyTransaction, key: Uint8Array, atOrBefore: number, results: Set<string>) {
-	// 	assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
-	// 	assert(atOrBefore > 0, "expected atOrBefore > 0")
-
-	// 	const [clock] = varint.decode(key)
-	// 	assert(atOrBefore < clock, "expected atOrBefore < clock")
-
-	// 	const index = Math.floor(Math.log2(clock - atOrBefore))
-	// 	const value = await txn.ancestors.get(key)
-	// 	assert(value !== null, "expected value !== null")
-
-	// 	const links = cbor.decode<Uint8Array[][]>(value)
-	// 	for (const ancestorKey of links[index]) {
-	// 		const [ancestorClock] = varint.decode(ancestorKey)
-	// 		const ancestorId = decodeId(ancestorKey)
-
-	// 		if (ancestorClock <= atOrBefore) {
-	// 			results.add(ancestorId)
-	// 		} else if (visited.has(ancestorId)) {
-	// 			throw new Error("I BET THIS NEVER HAPPENS")
-	// 		} else {
-	// 			visited.add(ancestorId)
-	// 			await this.#getAncestors(txn, ancestorId, atOrBefore, results, visited)
-	// 		}
-	// 	}
-	// }
 
 	async #insert(
 		txn: ReadWriteTransaction,
