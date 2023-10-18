@@ -11,13 +11,13 @@ import { RepliesPage } from "./RepliesPage"
 import { ThreadsPage } from "./ThreadsPage"
 
 export type Tag = { name: string }
-export type Channel = { name: string }
+export type Category = { name: string }
 export type Thread = {
 	id: string
 	message: string
 	address: string
 	timestamp: number
-	channel: string
+	category: string
 	replies: number
 }
 export type Reply = { id: string; threadId: string; reply: string; address: string; timestamp: number }
@@ -39,23 +39,23 @@ function App() {
 	const wallet = new ethers.Wallet(privateKey)
 
 	const { app } = useCanvas({
-		contract: { ...Forum, topic: "channel-chat-example" },
+		contract: { ...Forum, topic: "forum-example" },
 		signers: [new SIWESigner({ signer: wallet })],
 		location: "-",
 	})
 
 	const [thread, setThread] = useHashParam("thread", "")
-	const [channel, setChannel] = useHashParam("channel", "all")
+	const [category, setCategory] = useHashParam("category", "all")
 	const [tag, setTag] = useHashParam("tag", "")
 	const [page, setPage] = useState(0)
 
 	return (
 		<div className="w-full flex">
 			<Sidebar
-				channel={channel}
+				category={category}
 				tag={tag}
 				setThread={setThread}
-				setChannel={setChannel}
+				setCategory={setCategory}
 				setTag={setTag}
 				setPage={setPage}
 				app={app}
@@ -69,8 +69,8 @@ function App() {
 					app={app}
 					page={page}
 					setPage={setPage}
-					channel={channel}
-					setChannel={setChannel}
+					category={category}
+					setCategory={setCategory}
 					setThread={setThread}
 				/>
 			)}

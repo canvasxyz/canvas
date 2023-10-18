@@ -4,15 +4,16 @@ import { Canvas } from "@canvas-js/core"
 
 export function Composer({
 	app,
-	channel,
+	category,
 	replyingTo,
 	setReplyingTo,
 }: {
 	app?: Canvas
-	channel?: string
+	category?: string
 	replyingTo?: string
 	setReplyingTo: (arg0: string) => void
 }) {
+	const titleRef = useRef<HTMLInputElement>(null)
 	const inputRef = useRef<HTMLTextAreaElement>(null)
 
 	const send = (e: FormEvent) => {
@@ -22,50 +23,44 @@ export function Composer({
 		if (replyingTo) {
 			const reply = inputRef.current.value
 			app?.actions
-				.sendReply({ threadId: replyingTo, reply })
+				.createReply({ threadId: replyingTo, reply })
 				.then(() => {
 					if (!inputRef.current) return
 					inputRef.current.value = ""
 				})
 				.catch((err) => console.log(err))
-		} else if (channel) {
+		} else if (category) {
+			if (!titleRef.current) return
 			const message = inputRef.current.value
+			const title = titleRef.current.value
 			app?.actions
-				.sendMessage({ message, channel })
+				.createThread({ title, message, category })
 				.then(() => {
-					if (!inputRef.current) return
-					inputRef.current.value = ""
+					if (inputRef.current) {
+						inputRef.current.value = ""
+					}
+					if (titleRef.current) {
+						titleRef.current.value = ""
+					}
 				})
 				.catch((err) => console.log(err))
 		} else {
-			throw new Error("Unexpected: must provide either replyingTo or channel")
+			throw new Error("Unexpected: must provide either replyingTo or category")
 		}
 	}
 
 	return (
 		<form className="my-8" onSubmit={send}>
-			<TextareaAutosize className="input w-full" placeholder="New post" ref={inputRef} minRows={3} />
-			<div className="flex">
-				<div className="flex-1">
-					<button className="btn btn-blue" type="submit">
-						{replyingTo ? "Reply" : "Create Post"}
-					</button>
-				</div>
-				{replyingTo && (
-					<div className="text-gray-600 mt-1.5">
-						Replying to: {replyingTo} -{" "}
-						<a
-							href="#"
-							onClick={(e) => {
-								e.preventDefault()
-								setReplyingTo("")
-							}}
-						>
-							Clear
-						</a>
-					</div>
-				)}
-			</div>
+			{!replyingTo && <input className="input w-full mb-2" placeholder="Title" ref={titleRef} type="text" />}
+			<TextareaAutosize
+				className="input w-full mb-2"
+				placeholder={replyingTo ? "New reply" : "New post"}
+				ref={inputRef}
+				minRows={3}
+			/>
+			<button className="btn btn-blue" type="submit">
+				{replyingTo ? "Reply" : "Create Post"}
+			</button>
 		</form>
 	)
 }

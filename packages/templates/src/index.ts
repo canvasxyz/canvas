@@ -67,7 +67,7 @@ export const ChannelChat: TemplateInlineContract = {
 
 export const Forum: TemplateInlineContract = {
 	models: {
-		channels: {
+		categories: {
 			name: "primary",
 		},
 		tags: {
@@ -76,17 +76,18 @@ export const Forum: TemplateInlineContract = {
 		memberships: {
 			id: "primary",
 			user: "string",
-			channel: "string",
+			category: "string",
 			timestamp: "integer",
 		},
 		threads: {
 			id: "primary",
+			title: "string",
 			message: "string",
 			address: "string",
 			timestamp: "integer",
-			channel: "string",
+			category: "string",
 			replies: "integer",
-			$indexes: [["channel"], ["address"]],
+			$indexes: [["category"], ["address"]],
 		},
 		replies: {
 			id: "primary",
@@ -99,26 +100,29 @@ export const Forum: TemplateInlineContract = {
 	},
 	actions: {
 		createTag: (db, { tag }, { address, timestamp, id }) => {
+			if (!tag || !tag.trim()) throw new Error()
 			db.tags.set({ name: tag })
 		},
-		leaveChannel: (db, { channel }, { address, timestamp, id }) => {
-			db.memberships.delete(address + channel)
+		deleteTag: (db, { tag }, { address, timestamp, id }) => {
+			db.tags.delete(tag)
 		},
-		joinChannel: (db, { channel }, { address, timestamp, id }) => {
-			if (!channel || !channel.trim()) throw new Error()
-			db.channels.set({ name: channel })
-			db.memberships.set({ id: `${address}/${channel}`, user: address, channel, timestamp })
+		createCategory: (db, { category }, { address, timestamp, id }) => {
+			if (!category || !category.trim()) throw new Error()
+			db.categories.set({ name: category })
 		},
-		sendMessage: (db, { message, channel }, { address, timestamp, id }) => {
-			if (!message || !channel || !message.trim() || !channel.trim()) throw new Error()
-			db.threads.set({ id, message, address, channel, timestamp, replies: 0 })
+		deleteCategory: (db, { category }, { address, timestamp, id }) => {
+			db.categories.delete(category)
+		},
+		createThread: (db, { title, message, category }, { address, timestamp, id }) => {
+			if (!message || !category || !title || !message.trim() || !category.trim() || !title.trim()) throw new Error()
+			db.threads.set({ id, title, message, category, address, timestamp, replies: 0 })
 		},
 		deleteMessage: async (db, { id }, { address, timestamp }) => {
 			// const message = await db.threads.get(id)
 			// if (!message || message.address !== address) throw new Error()
 			db.threads.delete(id)
 		},
-		sendReply: async (db, { threadId, reply }, { address, timestamp, id }) => {
+		createReply: async (db, { threadId, reply }, { address, timestamp, id }) => {
 			// const thread = await db.threads.get(threadId)
 			// if (!thread || !threadId) throw new Error()
 			// db.threads.set({ ...thread, replies: (thread.replies as number) + 1 })

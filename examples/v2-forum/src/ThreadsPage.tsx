@@ -14,16 +14,16 @@ export function ThreadsPage({
 	app,
 	page,
 	setPage,
-	channel,
-	setChannel,
+	category,
+	setCategory,
 	setThread,
 }: {
 	wallet: ethers.Wallet
 	app?: Canvas
 	page: number
 	setPage: (arg0: number) => void
-	channel: string
-	setChannel: (arg0: string) => void
+	category: string
+	setCategory: (arg0: string) => void
 	setThread: (arg0: string) => void
 }) {
 	const [replyingTo, setReplyingTo] = useState<string>()
@@ -32,13 +32,13 @@ export function ThreadsPage({
 		offset: page * 10,
 		limit: 10,
 		orderBy: { timestamp: "desc" },
-		where: channel === "all" ? undefined : { channel },
+		where: category === "all" ? undefined : { category },
 	})
 
 	return (
 		<div className="w-xl ml-64 pl-8">
 			<div className="my-8">
-				<Composer app={app} channel={channel} replyingTo={replyingTo} setReplyingTo={setReplyingTo} />
+				<Composer app={app} category={category} replyingTo={replyingTo} setReplyingTo={setReplyingTo} />
 			</div>
 			<div className="py-3 pb-4">
 				{messages === null && <Loading />}
@@ -48,17 +48,16 @@ export function ThreadsPage({
 						<div className="mb-1 text-sm text-gray-400">
 							<Address address={message.address} />
 							{" - "}
-							<span>{moment(message.timestamp).fromNow()}</span>
-							{" - "}
 							<a
 								href="#"
+								className="hover:underline"
 								onClick={(e) => {
 									e.preventDefault()
-									setChannel("")
+									setCategory("")
 									setThread(message.id)
 								}}
 							>
-								Open
+								{moment(message.timestamp).fromNow()}
 							</a>
 							{" - "}
 							{message.replies} replies
@@ -80,7 +79,19 @@ export function ThreadsPage({
 								</>
 							)}
 						</div>
-						<div className="whitespace-pre">{message.message}</div>
+						<div className="whitespace-pre font-bold">
+							<a
+								href="#"
+								className="hover:underline"
+								onClick={(e) => {
+									e.preventDefault()
+									setCategory("")
+									setThread(message.id)
+								}}
+							>
+								{message.title}
+							</a>
+						</div>
 					</div>
 				))}
 			</div>

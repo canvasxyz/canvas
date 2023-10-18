@@ -38,10 +38,12 @@ export function RepliesPage({
 			<div className="my-8">
 				{thread && (
 					<div className="mb-8">
-						<div className="text-gray-500 text-sm">{thread[0]?.address}</div>
 						<div className="text-gray-500 text-sm">
+							<Address address={thread[0]?.address} />
+							{" - "}
 							{thread[0]?.timestamp && moment(thread[0]?.timestamp).fromNow()}
 						</div>
+						<div className="mt-2 font-bold">{thread[0]?.title}</div>
 						<div className="mt-2">{thread[0]?.message}</div>
 					</div>
 				)}
@@ -52,7 +54,7 @@ export function RepliesPage({
 						<div className="mb-1 text-sm text-gray-400">
 							<Address address={reply.address} />
 							{" - "}
-							{reply.timestamp}
+							{moment(reply.timestamp).fromNow()}
 							{reply.address === wallet.address && (
 								<>
 									{" - "}
