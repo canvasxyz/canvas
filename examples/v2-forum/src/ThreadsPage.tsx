@@ -6,7 +6,7 @@ import { useLiveQuery } from "@canvas-js/hooks"
 import { Canvas } from "@canvas-js/core"
 import { Composer } from "./Composer"
 
-import type { Thread } from "./App"
+import { Thread, Placeholder, Loading } from "./App"
 import { Address } from "./Address"
 
 export function ThreadsPage({
@@ -41,6 +41,8 @@ export function ThreadsPage({
 				<Composer app={app} channel={channel} replyingTo={replyingTo} setReplyingTo={setReplyingTo} />
 			</div>
 			<div className="py-3 pb-4">
+				{messages === null && <Loading />}
+				{messages?.length === 0 && <Placeholder text="No threads found" />}
 				{messages?.map((message) => (
 					<div className="pb-6" key={message.id?.toString()}>
 						<div className="mb-1 text-sm text-gray-400">

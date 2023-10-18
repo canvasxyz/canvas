@@ -1,4 +1,5 @@
 import { FormEvent, useRef } from "react"
+import TextareaAutosize from "react-textarea-autosize"
 import { Canvas } from "@canvas-js/core"
 
 export function Composer({
@@ -43,7 +44,7 @@ export function Composer({
 
 	return (
 		<form className="my-8" onSubmit={send}>
-			<textarea className="input w-full" placeholder="New post" ref={inputRef}></textarea>
+			<TextareaAutosize className="input w-full" placeholder="New post" ref={inputRef} minRows={3} />
 			<div className="flex">
 				<div className="flex-1">
 					<button className="btn btn-blue" type="submit">

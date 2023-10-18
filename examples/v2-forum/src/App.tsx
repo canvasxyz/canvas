@@ -22,6 +22,14 @@ export type Thread = {
 }
 export type Reply = { id: string; threadId: string; reply: string; address: string; timestamp: number }
 
+export function Placeholder({ text }) {
+	return <div className="text-gray-400 mb-4">{text}</div>
+}
+
+export function Loading({}) {
+	return <div className="text-gray-400 mb-4">Loading...</div>
+}
+
 function App() {
 	let privateKey = localStorage.getItem("privatekey")
 	if (privateKey === null) {
@@ -41,11 +49,18 @@ function App() {
 	const [tag, setTag] = useHashParam("tag", "")
 	const [page, setPage] = useState(0)
 
-
-
 	return (
 		<div className="w-full flex">
-			<Sidebar channel={channel} tag={tag} setThread={setThread} setChannel={setChannel} setTag={setTag} setPage={setPage} app={app} wallet={wallet} />
+			<Sidebar
+				channel={channel}
+				tag={tag}
+				setThread={setThread}
+				setChannel={setChannel}
+				setTag={setTag}
+				setPage={setPage}
+				app={app}
+				wallet={wallet}
+			/>
 			{thread ? (
 				<RepliesPage wallet={wallet} app={app} thread={thread} setThread={setThread} />
 			) : (

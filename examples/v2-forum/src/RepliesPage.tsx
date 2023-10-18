@@ -5,7 +5,7 @@ import moment from "moment"
 import { useLiveQuery } from "@canvas-js/hooks"
 import { Canvas } from "@canvas-js/core"
 
-import type { Thread, Reply } from "./App"
+import { Thread, Reply, Placeholder, Loading } from "./App"
 import { Composer } from "./Composer"
 import { Address } from "./Address"
 
@@ -45,6 +45,8 @@ export function RepliesPage({
 						<div className="mt-2">{thread[0]?.message}</div>
 					</div>
 				)}
+				{replies === null && <Loading />}
+				{replies?.length === 0 && <Placeholder text="No replies yet" />}
 				{replies?.map((reply) => (
 					<div className="mb-4" key={reply.id}>
 						<div className="mb-1 text-sm text-gray-400">

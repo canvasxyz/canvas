@@ -156,7 +156,6 @@ export function Sidebar({
 }) {
 	const tags = useLiveQuery<Tag>(app, "tags", {}) || []
 	const channels = useLiveQuery<Channel>(app, "channels", {}) || []
-	const displayedChannels = [{ name: "all" } as Channel].concat(channels)
 
 	const [createCategoryOpen, setCreateCategoryOpen] = useState(false)
 	const [createTagOpen, setCreateTagOpen] = useState(false)
@@ -187,15 +186,33 @@ export function Sidebar({
 					</a>
 				</div>
 				<div className="pt-4 border-t border-gray-200">
+					<div className="pb-4">
+						<a
+							href="#"
+							className={`block px-6 py-1.5 hover:bg-gray-100 ${
+								channel === "all" && !tag ? "bg-gray-100 font-semibold" : ""
+							}`}
+							key="all"
+							onClick={(e) => {
+								e.preventDefault()
+								setThread("")
+								setChannel("all")
+								setTag("")
+								setPage(0)
+							}}
+						>
+							All Posts
+						</a>
+					</div>
 					<Disclosure defaultOpen={true}>
 						{({ open }) => (
 							<>
-								<Disclosure.Button className="px-6 py-1.5">
+								<Disclosure.Button className="px-6 py-1.5 w-full text-left">
 									Categories
 									<ChevronRightIcon className={`inline-block w-5 h-5 -mt-0.5 ${open ? "rotate-90 transform" : ""}`} />
 								</Disclosure.Button>
 								<Disclosure.Panel>
-									{displayedChannels.map((c) => (
+									{channels.map((c) => (
 										<div>
 											<a
 												href="#"
@@ -211,7 +228,7 @@ export function Sidebar({
 													setPage(0)
 												}}
 											>
-												{c.name === "all" ? "📚 All Posts" : c.name}
+												{c.name}
 											</a>
 										</div>
 									))}
@@ -237,7 +254,7 @@ export function Sidebar({
 					<Disclosure defaultOpen={true}>
 						{({ open }) => (
 							<>
-								<Disclosure.Button className="px-6 py-1.5">
+								<Disclosure.Button className="px-6 py-1.5 w-full text-left">
 									Tags
 									<ChevronRightIcon className={`inline-block w-5 h-5 -mt-0.5 ${open ? "rotate-90 transform" : ""}`} />
 								</Disclosure.Button>
