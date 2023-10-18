@@ -6,7 +6,7 @@ export function parseConfig(init: ModelsInit): Config {
 	const models: Model[] = []
 
 	for (const [modelName, { $indexes, ...rest }] of Object.entries(init)) {
-		assert(namePattern.test(modelName), "expected model name to match /$[a-zA-Z0-9$:_-.]+/")
+		assert(namePattern.test(modelName), "expected model name to match /^[a-zA-Z0-9$:_\\-\\.]+$/")
 
 		const indexes: string[][] = []
 		const properties: Property[] = []
@@ -51,7 +51,7 @@ export const referencePropertyPattern = /^@([a-z0-9.-]+)(\??)$/
 export const relationPropertyPattern = /^@([a-z0-9.-]+)\[\]$/
 
 export function parseProperty(propertyName: string, propertyType: PropertyType): Property {
-	assert(namePattern.test(propertyName), "expected property name to match /$[a-zA-Z0-9$:_-.]+/")
+	assert(namePattern.test(propertyName), "expected property name to match /^[a-zA-Z0-9$:_\\-\\.]+$/")
 
 	if (propertyType === "primary") {
 		return { name: propertyName, kind: "primary" }
