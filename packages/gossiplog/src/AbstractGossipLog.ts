@@ -310,21 +310,29 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		return { id }
 	}
 
-	public async getAncestors(id: string, ancestorClock: number): Promise<string[]> {
+	public async getAncestors(
+		id: string,
+		atOrBefore: number,
+		options: { txn?: ReadOnlyTransaction } = {}
+	): Promise<string[]> {
 		const results = new Set<string>()
-		await this.write((txn) => this.#getAncestors(txn, encodeId(id), ancestorClock, results))
-		this.log("getAncestors of %s atOrBefore %d: %o", id, ancestorClock, results)
+		if (options.txn) {
+			AbstractGossipLog.getAncestors(options.txn, encodeId(id), atOrBefore, results)
+		} else {
+			await this.read((txn) => AbstractGossipLog.getAncestors(txn, encodeId(id), atOrBefore, results))
+		}
+		this.log("getAncestors of %s atOrBefore %d: %o", id, atOrBefore, results)
 		return Array.from(results).sort()
 	}
 
-	async #getAncestors(
+	static async getAncestors(
 		txn: ReadOnlyTransaction,
 		key: Uint8Array,
 		atOrBefore: number,
 		results: Set<string>,
 		visited = new Set<string>()
 	): Promise<void> {
-		this.log("getAncestors of %s atOrBefore %d (visited: %o)", decodeId(key), atOrBefore, visited)
+		// this.log("getAncestors of %s atOrBefore %d (visited: %o)", decodeId(key), atOrBefore, visited)
 		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
 		assert(atOrBefore > 0, "expected atOrBefore > 0")
 
@@ -346,7 +354,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 				throw new Error("I BET THIS NEVER HAPPENS")
 			} else {
 				visited.add(ancestorId)
-				await this.#getAncestors(txn, ancestorKey, atOrBefore, results, visited)
+				await AbstractGossipLog.getAncestors(txn, ancestorKey, atOrBefore, results, visited)
 			}
 		}
 	}
@@ -394,7 +402,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 								links.add(decodeId(child))
 							} else {
 								assert(childClock <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
-								await this.#getAncestors(txn, child, ancestorClock, links)
+								await AbstractGossipLog.getAncestors(txn, child, ancestorClock, links)
 							}
 						}
 
