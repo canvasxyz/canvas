@@ -39,5 +39,5 @@ export default {
 	openGossipLog: <Payload, Result>(location: string | null, init: GossipLogInit<Payload, Result>) =>
 		GossipLog.open(`${location}/topics/${init.topic}`, init),
 
-	createLibp2p: (config, peerId) => createLibp2p(getLibp2pOptions(config, peerId)),
+	createLibp2p: (peerId, options) => createLibp2p(getLibp2pOptions(peerId, options)),
 } satisfies PlatformTarget

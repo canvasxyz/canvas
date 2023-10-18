@@ -1,6 +1,3 @@
-import path from "node:path"
-import fs from "node:fs"
-
 import type { Argv } from "yargs"
 
 import chalk from "chalk"
@@ -23,7 +20,7 @@ type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	const { contract, location, uri } = getContractLocation(args)
 	try {
-		const app = await Canvas.initialize({ contract, location, offline: true })
+		const app = await Canvas.initialize({ topic: "fdjskal", contract, location, offline: true })
 		console.log(`name: ${uri}\n`)
 		console.log(chalk.green("===== models ====="))
 		console.log(`${JSON.stringify(app.db.models, null, "  ")}\n`)

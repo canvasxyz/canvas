@@ -1,5 +1,7 @@
 import assert from "node:assert"
-import test from "ava"
+import crypto from "node:crypto"
+import test, { ExecutionContext } from "ava"
+
 import { ethers } from "ethers"
 
 import { Canvas } from "@canvas-js/core"
@@ -36,14 +38,20 @@ export const actions = {
 };
 `.trim()
 
-test("open and close an app", async (t) => {
-	const app = await Canvas.initialize({ contract, offline: true })
+const init = async (t: ExecutionContext) => {
+	const topic = crypto.randomUUID()
+	const app = await Canvas.initialize({ topic, contract, location: null, offline: true })
 	t.teardown(() => app.close())
+	return app
+}
+
+test("open and close an app", async (t) => {
+	const app = await init(t)
 	t.pass()
 })
 
 test("apply an action and read a record from the database", async (t) => {
-	const app = await Canvas.initialize({ contract, offline: true })
+	const app = await init(t)
 	t.teardown(() => app.close())
 
 	const { id, result: postId } = await app.actions.createPost({ content: "hello world" })
@@ -55,7 +63,7 @@ test("apply an action and read a record from the database", async (t) => {
 })
 
 test("create and delete a post", async (t) => {
-	const app = await Canvas.initialize({ contract, offline: true })
+	const app = await init(t)
 	t.teardown(() => app.close())
 
 	const { result: postId } = await app.actions.createPost({ content: "hello world" })
@@ -70,8 +78,9 @@ test("create and delete a post", async (t) => {
 test("create an app with a function runtime", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 	const app = await Canvas.initialize({
+		topic: "com.example.app",
+		location: null,
 		contract: {
-			topic: "com.example.app",
 			models: {
 				posts: {
 					id: "primary",

@@ -1,34 +1,15 @@
-import { QuickJSHandle } from "quickjs-emscripten"
-
 import * as cbor from "@ipld/dag-cbor"
 import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
 import { equals } from "uint8arrays"
 
-import type { Action, Session, SessionSigner } from "@canvas-js/interfaces"
-import { JSValue, VM } from "@canvas-js/vm"
-import {
-	AbstractModelDB,
-	Effect,
-	Model,
-	ModelValue,
-	ModelsInit,
-	Property,
-	PropertyValue,
-	lessThan,
-	validateModelValue,
-} from "@canvas-js/modeldb"
-import { GossipLogConsumer, encodeId } from "@canvas-js/gossiplog"
-import { getCID } from "@canvas-js/signed-cid"
+import type { Action, CBORValue, Session, SessionSigner } from "@canvas-js/interfaces"
 
-import { PlatformTarget } from "../targets/interface.js"
+import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
+import { GossipLogConsumer, encodeId } from "@canvas-js/gossiplog"
+
 import { MAX_MESSAGE_ID } from "../constants.js"
 import { assert, mapValues, signalInvalidType } from "../utils.js"
-
-import type { ActionImplementation, ModelAPI } from "./types.js"
-
-// import { ContractRuntime } from "./ContractRuntime.js"
-// import { FunctionRuntime } from "./FunctionRuntime.js"
 
 export abstract class AbstractRuntime {
 	protected static effectsModel: ModelsInit = {
@@ -57,10 +38,9 @@ export abstract class AbstractRuntime {
 		},
 	} satisfies ModelsInit
 
-	public abstract signers: SessionSigner[]
-	public abstract topic: string
-	public abstract db: AbstractModelDB
-	public abstract actionNames: string[]
+	public abstract readonly signers: SessionSigner[]
+	public abstract readonly db: AbstractModelDB
+	public abstract readonly actionNames: string[]
 
 	protected constructor(public readonly indexHistory: boolean) {}
 
@@ -68,13 +48,13 @@ export abstract class AbstractRuntime {
 		modelEntries: Record<string, Record<string, ModelValue | null>>,
 		id: string,
 		action: Action
-	): Promise<void | JSValue>
+	): Promise<void | CBORValue>
 
 	public async close() {
 		await this.db.close()
 	}
 
-	public getConsumer(): GossipLogConsumer<Action | Session, void | JSValue> {
+	public getConsumer(): GossipLogConsumer<Action | Session, void | CBORValue> {
 		return async (id, signature, message) => {
 			assert(signature !== null, "missing message signature")
 

@@ -9,12 +9,21 @@ import type { DiscoveryService } from "@canvas-js/discovery"
 import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
 import type { AbstractGossipLog, GossipLogInit } from "@canvas-js/gossiplog"
 
-import type { CanvasConfig } from "../Canvas.js"
-
 export interface PlatformTarget {
 	getPeerId: (location: string | null) => Promise<PeerId>
 
-	createLibp2p: (config: CanvasConfig, peerId: PeerId) => Promise<Libp2p<ServiceMap>>
+	createLibp2p: (
+		peerId: PeerId,
+		options: {
+			offline?: boolean
+			start?: boolean
+			listen?: string[]
+			announce?: string[]
+			bootstrapList?: string[]
+			minConnections?: number
+			maxConnections?: number
+		}
+	) => Promise<Libp2p<ServiceMap>>
 
 	openDB: (
 		location: string | null,
