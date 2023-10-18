@@ -25,7 +25,7 @@ Only the `dag-json` and `dag-cbor` IPLD codecs are included by default, but othe
 
 ```ts
 import { createSignature, verifySignature } from "@canvas-js/signed-cid"
-import { ed25519 } from "@noble/curves"
+import { ed25519 } from "@noble/curves/ed25519"
 
 const privateKey = ed25519.utils.randomPrivateKey()
 
