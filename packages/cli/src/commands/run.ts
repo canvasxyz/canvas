@@ -160,6 +160,7 @@ export async function handler(args: Args) {
 	// }
 
 	const app = await Canvas.initialize({
+		topic: "jjkljkl",
 		location,
 		contract,
 		listen,

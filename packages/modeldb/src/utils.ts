@@ -2,6 +2,9 @@ import type { Model, ModelValue, Property, PropertyValue } from "./types.js"
 
 export type Awaitable<T> = T | Promise<T>
 
+// eslint-disable-next-line no-useless-escape
+export const namePattern = /^[a-zA-Z0-9$:_\-\.]+$/
+
 export function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
 		throw new Error(message ?? `assertion failed`)

@@ -16,46 +16,42 @@ import { getLibp2pOptions } from "./libp2p.js"
 
 const PEER_ID_FILENAME = ".peer-id"
 
-export default function getTarget(location: string | null): PlatformTarget {
-	return {
-		async getPeerId(): Promise<PeerId> {
-			if (process.env.PEER_ID !== undefined) {
-				return createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
-			}
+export default {
+	async getPeerId(location): Promise<PeerId> {
+		if (process.env.PEER_ID !== undefined) {
+			return createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
+		}
 
-			if (location === null) {
-				const peerId = await createEd25519PeerId()
-				console.log(`[canvas-core] Using temporary PeerId ${peerId}`)
-				return peerId
-			}
+		if (location === null) {
+			return await createEd25519PeerId()
+		}
 
-			const peerIdPath = path.resolve(location, PEER_ID_FILENAME)
-			if (fs.existsSync(peerIdPath)) {
-				const peerId = await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
-				console.log(`[canvas-core] Found existing PeerID ${peerId}`)
-				return peerId
-			}
+		const peerIdPath = path.resolve(location, PEER_ID_FILENAME)
+		if (fs.existsSync(peerIdPath)) {
+			return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
+		}
 
-			console.log(`[canvas-core] Creating new PeerID at ${peerIdPath}`)
-			const peerId = await createEd25519PeerId()
-			fs.writeFileSync(peerIdPath, Buffer.from(exportToProtobuf(peerId)).toString("base64"))
-			return peerId
-		},
+		const peerId = await createEd25519PeerId()
+		fs.writeFileSync(peerIdPath, Buffer.from(exportToProtobuf(peerId)).toString("base64"))
+		return peerId
+	},
 
-		async openDB(name, models, { indexHistory } = {}) {
-			if (location === null) {
-				return new ModelDB({ path: null, models, indexHistory })
-			} else {
-				assert(/[a-zA-Z]+/.test(name))
-				return new ModelDB({ path: path.resolve(location, `${name}.sqlite`), models, indexHistory })
-			}
-		},
+	async openDB(location, name, models, { indexHistory } = {}) {
+		if (location === null) {
+			return new ModelDB({ path: null, models, indexHistory })
+		} else {
+			assert(/[a-zA-Z]+/.test(name))
+			return new ModelDB({ path: path.resolve(location, `${name}.sqlite`), models, indexHistory })
+		}
+	},
 
-		openGossipLog: <Payload, Result>(init: GossipLogInit<Payload, Result>) =>
-			location === null
-				? MemoryGossipLog.open(init)
-				: GossipLog.open(path.resolve(location, "topics", init.topic), init),
+	async openGossipLog<Payload, Result>(location: string | null, init: GossipLogInit<Payload, Result>) {
+		if (location === null) {
+			return await MemoryGossipLog.open(init)
+		} else {
+			return await GossipLog.open(path.resolve(location, "topics", init.topic), init)
+		}
+	},
 
-		createLibp2p: (config, peerId) => createLibp2p(getLibp2pOptions(peerId, config)),
-	}
-}
+	createLibp2p: (peerId, options) => createLibp2p(getLibp2pOptions(peerId, options)),
+} satisfies PlatformTarget

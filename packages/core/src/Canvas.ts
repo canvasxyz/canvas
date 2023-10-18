@@ -3,52 +3,37 @@ import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 
-import { Action, ActionArguments, Session, Message, SessionSigner } from "@canvas-js/interfaces"
-import { JSValue } from "@canvas-js/vm"
-import { AbstractModelDB, Model, ModelsInit } from "@canvas-js/modeldb"
+import { Action, Session, Message, SessionSigner, CBORValue } from "@canvas-js/interfaces"
+import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Signature } from "@canvas-js/signed-cid"
 import { AbstractGossipLog, MessageSigner } from "@canvas-js/gossiplog"
 
-import getTarget from "#target"
+import target from "#target"
 
-import { Runtime, ActionImplementation, GenericActionImplementation } from "./runtime/index.js"
+import { Runtime, createRuntime, InlineContract, ActionImplementation } from "./runtime/index.js"
 import { ServiceMap } from "./targets/interface.js"
 import { assert } from "./utils.js"
+import { validatePayload } from "./schema.js"
 
-export type ApplyMessage = (
-	id: string,
-	signature: Signature | null,
-	message: Message<Action | Session>
-) => Promise<JSValue | void>
-
-export interface TemplateInlineContract {
-	models: ModelsInit
-	actions: Record<string, GenericActionImplementation>
-}
-
-export interface GenericInlineContract extends TemplateInlineContract {
+export interface CanvasConfig<
+	Actions extends Record<string, ActionImplementation> = Record<string, ActionImplementation>
+> {
 	topic: string
-	models: ModelsInit
-	actions: Record<string, GenericActionImplementation>
-}
+	contract: string | InlineContract<Actions>
 
-export interface InlineContract extends GenericInlineContract {
-	topic: string
-	models: ModelsInit
-	actions: Record<string, ActionImplementation>
-}
-
-export interface CanvasConfig {
-	contract: string | InlineContract
-
-	/** NodeJS: data directory path; browser: IndexedDB database namespace */
+	/**
+	 * defaults to the topic.
+	 * - NodeJS: data directory path
+	 * - browser: IndexedDB database namespace
+	 */
 	location?: string | null
 
 	signers?: SessionSigner[]
 	replay?: boolean
 	runtimeMemoryLimit?: number
 
+	// libp2p options
 	offline?: boolean
 	start?: boolean
 	listen?: string[]
@@ -56,12 +41,17 @@ export interface CanvasConfig {
 	bootstrapList?: string[]
 	minConnections?: number
 	maxConnections?: number
+
+	/** set to `false` to disable history indexing and db.get(..) */
+	indexHistory?: boolean
 }
 
-export type ActionAPI = (
-	args: ActionArguments,
-	options?: { chain?: string; signer?: SessionSigner }
-) => Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }>
+export type ActionOptions = { chain?: string; signer?: SessionSigner }
+
+export type ActionAPI<Args = any, Result = any> = (
+	args: Args,
+	options?: ActionOptions
+) => Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }>
 
 export interface CoreEvents {
 	close: Event
@@ -81,31 +71,43 @@ export type ApplicationData = {
 	topics: Record<string, { actions: string[] | null }>
 }
 
-export class Canvas extends EventEmitter<CoreEvents> {
-	public static async initialize(config: CanvasConfig): Promise<Canvas> {
-		const { location = null, contract, signers = [], runtimeMemoryLimit, replay = false, offline = false } = config
-
-		const target = getTarget(location)
+export class Canvas<
+	Actions extends Record<string, ActionImplementation> = Record<string, ActionImplementation>
+> extends EventEmitter<CoreEvents> {
+	public static async initialize<Actions extends Record<string, ActionImplementation>>(
+		config: CanvasConfig<Actions>
+	): Promise<Canvas<Actions>> {
+		const {
+			topic,
+			location = topic,
+			contract,
+			signers = [],
+			runtimeMemoryLimit,
+			replay = false,
+			offline = false,
+			indexHistory = true,
+		} = config
 
 		if (signers.length === 0) {
 			signers.push(new SIWESigner())
 		}
 
-		const runtime = await Runtime.init(target, signers, contract, { runtimeMemoryLimit })
+		const runtime = await createRuntime(location, signers, contract, { runtimeMemoryLimit })
 
-		const peerId = await target.getPeerId()
+		const peerId = await target.getPeerId(location)
 		let libp2p: Libp2p<ServiceMap> | null = null
 		if (!offline) {
-			libp2p = await target.createLibp2p(config, peerId)
+			libp2p = await target.createLibp2p(peerId, config)
 		}
 
-		const gossipLog = await target.openGossipLog({
-			topic: runtime.topic,
+		const gossipLog = await target.openGossipLog<Action | Session, void | CBORValue>(location, {
+			topic: topic,
 			apply: runtime.getConsumer(),
-			replay,
-			validate: Canvas.validate,
+			replay: replay,
+			validate: validatePayload,
 			signatures: true,
 			sequencing: true,
+			indexAncestors: indexHistory,
 		})
 
 		await libp2p?.services.gossiplog.subscribe(gossipLog, {})
@@ -113,10 +115,12 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		return new Canvas(signers, peerId, libp2p, gossipLog, runtime)
 	}
 
-	private static validate = (payload: unknown): payload is Action | Session => true // TODO
-
 	public readonly db: AbstractModelDB
-	public readonly actions: Record<string, ActionAPI> = {}
+	public readonly actions = {} as {
+		[K in keyof Actions]: Actions[K] extends ActionImplementation<infer Args, infer Result>
+			? ActionAPI<Args, Result>
+			: never
+	}
 
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
@@ -127,7 +131,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		public readonly signers: SessionSigner[],
 		public readonly peerId: PeerId,
 		public readonly libp2p: Libp2p<ServiceMap> | null,
-		public readonly messageLog: AbstractGossipLog<Action | Session, JSValue | void>,
+		public readonly messageLog: AbstractGossipLog<Action | Session, CBORValue | void>,
 		private readonly runtime: Runtime
 	) {
 		super()
@@ -148,9 +152,11 @@ export class Canvas extends EventEmitter<CoreEvents> {
 		})
 
 		for (const name of runtime.actionNames) {
-			this.actions[name] = async (args, options = {}) => {
+			// @ts-ignore
+			this.actions[name] = async (args: CBORValue, options: ActionOptions = {}) => {
 				const signer =
 					options.signer ?? signers.find((signer) => options.chain === undefined || signer.match(options.chain))
+
 				assert(signer !== undefined, "signer not found")
 
 				const timestamp = Date.now()
@@ -236,7 +242,7 @@ export class Canvas extends EventEmitter<CoreEvents> {
 	public async append(
 		payload: Session | Action,
 		options: { signer?: MessageSigner<Session | Action> }
-	): Promise<{ id: string; result: void | JSValue; recipients: Promise<PeerId[]> }> {
+	): Promise<{ id: string; result: void | CBORValue; recipients: Promise<PeerId[]> }> {
 		if (this.libp2p === null) {
 			const { id, result } = await this.messageLog.append(payload, options)
 			return { id, result, recipients: Promise.resolve([]) }

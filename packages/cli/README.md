@@ -134,14 +134,9 @@ The basic routes are:
 
 ```ts
 type ApplicationData = {
-	cid: string
-	uri: string
-	peerId: string | null
-	actions: string[]
-	routes: string[]
-	chains: string[]
-	peers: { id: string; protocols?: string[]; addresses?: string[] }[]
-	merkleRoots: Record<string, string>
+  peerId: string
+  models: Record<string, Model>
+  topics: Record<string, { actions: string[] | null }>
 }
 ```
 

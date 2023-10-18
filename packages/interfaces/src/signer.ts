@@ -10,13 +10,15 @@ type Awaitable<T> = T | Promise<T>
 
 export interface SessionSigner {
 	match: (chain: string) => boolean
+
 	sign: (message: Message<Action | Session>) => Awaitable<Signature>
-
-	/** Verify that `session.data` authorizes `session.publicKey` to take actions on behalf of the user */
-	verifySession: (session: Session) => Awaitable<void>
-
 	getSession: (topic: string, options?: { chain?: string; timestamp?: number }) => Awaitable<Session>
-	clear: () => Awaitable<void>
+
+	/**
+	 * Verify that `session.data` authorizes `session.publicKey`
+	 * to take actions on behalf of the user `${sesion.chain}:${session.address}`
+	 */
+	verifySession: (session: Session) => Awaitable<void>
 }
 
 export interface SessionStore {

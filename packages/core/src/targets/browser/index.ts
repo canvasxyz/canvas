@@ -10,40 +10,29 @@ import { ModelDB } from "@canvas-js/modeldb/idb"
 import type { PlatformTarget } from "../interface.js"
 import { getLibp2pOptions } from "./libp2p.js"
 
-export default function getBrowserTarget(location: string | null): PlatformTarget {
-	if (location === null) {
-		throw new Error("location value is required in the browser")
-	}
+export default {
+	async getPeerId(location): Promise<PeerId> {
+		if (location === null) {
+			return await createEd25519PeerId()
+		}
 
-	return {
-		async getPeerId(): Promise<PeerId> {
-			if (location === null) {
-				const peerId = await createEd25519PeerId()
-				console.log(`[canvas-core] Using temporary PeerId ${peerId}`)
-				return peerId
-			}
+		const localStorageKey = `canvas:${location}/peer-id`
+		const item = localStorage.getItem(localStorageKey)
+		if (item === null) {
+			const peerId = await createEd25519PeerId()
+			const privateKey = exportToProtobuf(peerId)
+			localStorage.setItem(localStorageKey, base64.baseEncode(privateKey))
+			return peerId
+		} else {
+			return await createFromProtobuf(base64.baseDecode(item))
+		}
+	},
 
-			const localStorageKey = `canvas:${location}/peer-id`
-			const item = localStorage.getItem(localStorageKey)
-			if (item === null) {
-				const peerId = await createEd25519PeerId()
-				const privateKey = exportToProtobuf(peerId)
-				localStorage.setItem(localStorageKey, base64.baseEncode(privateKey))
-				console.log(`[canvas-core] Created new PeerId ${peerId}`)
-				return peerId
-			} else {
-				const peerId = await createFromProtobuf(base64.baseDecode(item))
-				console.log(`[canvas-core] Found existing PeerId ${peerId}`)
-				return peerId
-			}
-		},
+	openDB: (location, name, models, { indexHistory } = {}) =>
+		ModelDB.initialize({ name: `${location}/${name}`, models, indexHistory }),
 
-		openDB: (name, models, { indexHistory } = {}) =>
-			ModelDB.initialize({ name: `${location}/${name}`, models, indexHistory }),
+	openGossipLog: <Payload, Result>(location: string | null, init: GossipLogInit<Payload, Result>) =>
+		GossipLog.open(`${location}/topics/${init.topic}`, init),
 
-		openGossipLog: <Payload, Result>(init: GossipLogInit<Payload, Result>) =>
-			GossipLog.open(`${location}/topics/${init.topic}`, init),
-
-		createLibp2p: (config, peerId) => createLibp2p(getLibp2pOptions(peerId, config)),
-	}
-}
+	createLibp2p: (peerId, options) => createLibp2p(getLibp2pOptions(peerId, options)),
+} satisfies PlatformTarget

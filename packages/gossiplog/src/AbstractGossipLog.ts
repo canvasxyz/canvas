@@ -7,13 +7,16 @@ import { equals } from "uint8arrays"
 import { varint } from "multiformats/basics"
 import { bytesToHex as hex } from "@noble/hashes/utils"
 import * as cbor from "@ipld/dag-cbor"
+import { Schema } from "@ipld/schema/schema-schema"
+import { fromDSL } from "@ipld/schema/from-dsl.js"
+import { create, TypeTransformerFunction } from "@ipld/schema/typed.js"
 
 import type { Message } from "@canvas-js/interfaces"
 import { Signature, verifySignature } from "@canvas-js/signed-cid"
 
 import { Driver } from "./sync/driver.js"
 import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getClock } from "./schema.js"
-import { Awaitable, assert, nsidPattern, cborNull, getAncestorClocks } from "./utils.js"
+import { Awaitable, assert, topicPattern, cborNull, getAncestorClocks } from "./utils.js"
 
 export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
@@ -36,7 +39,7 @@ export type GossipLogConsumer<Payload = unknown, Result = void> = (
 export interface GossipLogInit<Payload = unknown, Result = void> {
 	topic: string
 	apply: GossipLogConsumer<Payload, Result>
-	validate: (payload: unknown) => payload is Payload
+	validate: ((payload: unknown) => payload is Payload) | { schema: string | Schema; name: string }
 
 	signatures?: boolean
 	sequencing?: boolean
@@ -87,7 +90,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public readonly topic: string
 	public readonly apply: GossipLogConsumer<Payload, Result>
-	public readonly validate: (payload: unknown) => payload is Payload
 
 	public readonly signatures: boolean
 	public readonly sequencing: boolean
@@ -95,14 +97,26 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	protected readonly log: Logger
 	protected readonly mempool = new Mempool<Payload>()
+	protected readonly toTyped: TypeTransformerFunction
+	protected readonly toRepresentation: TypeTransformerFunction
 
 	protected constructor(init: GossipLogInit<Payload, Result>) {
 		super()
-		assert(nsidPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-]+)")
+		assert(topicPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
 
 		this.topic = init.topic
 		this.apply = init.apply
-		this.validate = init.validate
+
+		if (typeof init.validate === "function") {
+			const { validate } = init
+			this.toTyped = (obj) => (validate(obj) ? obj : undefined)
+			this.toRepresentation = (obj) => (validate(obj) ? obj : undefined)
+		} else {
+			const { schema, name } = init.validate
+			const { toRepresentation, toTyped } = create(typeof schema === "string" ? fromDSL(schema) : schema, name)
+			this.toTyped = toTyped
+			this.toRepresentation = toRepresentation
+		}
 
 		this.signatures = init.signatures ?? true
 		this.sequencing = init.sequencing ?? true
@@ -121,7 +135,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 				verifySignature(signature, message)
 			}
 			assert(message.topic === this.topic, "invalid message topic")
-			assert(this.validate(message.payload))
 			await this.apply(id, signature, message)
 		}
 	}
@@ -144,34 +157,35 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public encode(signature: Signature | null, message: Message<Payload>): [key: Uint8Array, value: Uint8Array] {
 		if (this.sequencing) {
-			assert(message.clock > 0, "expected message.clock > 0 if sequencing is enable")
+			assert(message.clock > 0, "expected message.clock > 0 if sequencing is enabled")
 		} else {
 			assert(message.clock === 0, "expected message.clock === 0 if sequencing is disabled")
 		}
 
+		assert(message.topic === this.topic, "invalid message topic")
+
 		if (this.signatures) {
 			assert(signature !== null, "missing message signature")
 		}
 
-		return encodeSignedMessage(signature, message)
+		return encodeSignedMessage(signature, message, this.toRepresentation)
 	}
 
 	public decode(value: Uint8Array): [id: string, signature: Signature | null, message: Message<Payload>] {
-		const [id, signature, message] = decodeSignedMessage(this.topic, value)
+		const [id, signature, message] = decodeSignedMessage<Payload>(value, this.toTyped)
 		if (this.signatures) {
 			assert(signature !== null, "missing message signature")
 		}
 
-		const { topic, clock, parents, payload } = message
+		assert(message.topic === this.topic, "invalid message topic")
+
 		if (this.sequencing) {
-			assert(clock > 0, "expected message.clock > 0 if sequencing is enabled")
+			assert(message.clock > 0, "expected message.clock > 0 if sequencing is enabled")
 		} else {
-			assert(clock === 0, "expected message.clock === 0 if sequencing is disabled")
+			assert(message.clock === 0, "expected message.clock === 0 if sequencing is disabled")
 		}
 
-		assert(this.validate(payload), "invalid message payload")
-
-		return [id, signature, { topic, clock, parents, payload }]
+		return [id, signature, message]
 	}
 
 	public async getClock(): Promise<[clock: number, parents: string[]]> {
@@ -337,33 +351,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			}
 		}
 	}
-
-	// async #getAncestors2(txn: ReadOnlyTransaction, key: Uint8Array, atOrBefore: number, results: Set<string>) {
-	// 	assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
-	// 	assert(atOrBefore > 0, "expected atOrBefore > 0")
-
-	// 	const [clock] = varint.decode(key)
-	// 	assert(atOrBefore < clock, "expected atOrBefore < clock")
-
-	// 	const index = Math.floor(Math.log2(clock - atOrBefore))
-	// 	const value = await txn.ancestors.get(key)
-	// 	assert(value !== null, "expected value !== null")
-
-	// 	const links = cbor.decode<Uint8Array[][]>(value)
-	// 	for (const ancestorKey of links[index]) {
-	// 		const [ancestorClock] = varint.decode(ancestorKey)
-	// 		const ancestorId = decodeId(ancestorKey)
-
-	// 		if (ancestorClock <= atOrBefore) {
-	// 			results.add(ancestorId)
-	// 		} else if (visited.has(ancestorId)) {
-	// 			throw new Error("I BET THIS NEVER HAPPENS")
-	// 		} else {
-	// 			visited.add(ancestorId)
-	// 			await this.#getAncestors(txn, ancestorId, atOrBefore, results, visited)
-	// 		}
-	// 	}
-	// }
 
 	async #insert(
 		txn: ReadWriteTransaction,

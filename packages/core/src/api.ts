@@ -181,7 +181,7 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 		assert(data !== null)
 
 		try {
-			const [id, signature, message] = decodeSignedMessage(core.topic, data)
+			const [id, signature, message] = core.messageLog.decode(data)
 			await core.insert(signature, message as Message<Action | Session>)
 			return res.status(StatusCodes.OK).json({ id })
 		} catch (e) {

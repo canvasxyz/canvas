@@ -5,12 +5,12 @@ ModelDB is a minimalist cross-platform relational database wrapper. It currently
 ## Table of Contents
 
 - [Usage](#usage)
-- [API](#api)
   - [Initialization](#initialization)
   - [Schemas](#schemas)
   - [Setting and deleting records](#setting-and-deleting-records)
   - [Queries](#queries)
   - [Indexes](#indexes)
+  - [Name restrictions](#name-restrictions)
 - [License](#license)
 
 ## Usage
@@ -43,16 +43,16 @@ Databases are configured with a `models` schema, provided as a JSON DSL. The dat
 
 ```ts
 const db = await ModelDB.init({
-	models: {
-		user: {
-			// exactly one "primary" property is required
-			id: "primary",
-			// properties are non-null by default
-			name: "string",
-			// declare nullable properties using `?`
-			birthday: "string?",
-		},
-	},
+  models: {
+    user: {
+      // exactly one "primary" property is required
+      id: "primary",
+      // properties are non-null by default
+      name: "string",
+      // declare nullable properties using `?`
+      birthday: "string?",
+    },
+  },
 })
 
 await db.set("user", { id: "xxx", name: "John", birthday: "1990-01-01" })
@@ -64,22 +64,22 @@ Reference properties (`@user` with `string` values), nullable reference properti
 
 ```ts
 const db = await ModelDB.init({
-	models: {
-		user: {
-			user_id: "primary",
-			name: "string",
-		},
-		room: {
-			room_id: "primary",
-			members: "@user[]",
-		},
-		message: {
-			message_id: "primary",
-			user: "@user",
-			content: "string",
-			timestamp: "integer",
-		},
-	},
+  models: {
+    user: {
+      user_id: "primary",
+      name: "string",
+    },
+    room: {
+      room_id: "primary",
+      members: "@user[]",
+    },
+    message: {
+      message_id: "primary",
+      user: "@user",
+      content: "string",
+      timestamp: "integer",
+    },
+  },
 })
 ```
 
@@ -93,9 +93,9 @@ await db.set("user", { user_id: "yyy", name: "Jane Doe" })
 await db.delete("user", "xxx")
 
 await db.apply([
-	{ model: "user", operation: "set", value: { user_id: "xxx", name: "John Doe" } },
-	{ model: "user", operation: "set", value: { user_id: "yyy", name: "Jane Doe" } },
-	{ model: "user", operation: "delete", key: "xxx" },
+  { model: "user", operation: "set", value: { user_id: "xxx", name: "John Doe" } },
+  { model: "user", operation: "set", value: { user_id: "yyy", name: "Jane Doe" } },
+  { model: "user", operation: "delete", key: "xxx" },
 ])
 ```
 
@@ -122,23 +122,23 @@ Queries support `select`, `where`, `orderBy`, and `limit` expressions. `where` c
 
 ```ts
 export type QueryParams = {
-	select?: Record<string, boolean>
-	where?: WhereCondition
-	orderBy?: Record<string, "asc" | "desc">
-	limit?: number
-	offset?: number
+  select?: Record<string, boolean>
+  where?: WhereCondition
+  orderBy?: Record<string, "asc" | "desc">
+  limit?: number
+  offset?: number
 }
 
 export type WhereCondition = Record<string, PropertyValue | NotExpression | RangeExpression>
 export type NotExpression = {
-	neq: PropertyValue
+  neq: PropertyValue
 }
 
 export type RangeExpression = {
-	gt?: PrimitiveValue
-	gte?: PrimitiveValue
-	lt?: PrimitiveValue
-	lte?: PrimitiveValue
+  gt?: PrimitiveValue
+  gte?: PrimitiveValue
+  lt?: PrimitiveValue
+  lte?: PrimitiveValue
 }
 ```
 
@@ -165,6 +165,10 @@ const recentMessages = await db.query("message", { orderBy: { timestamp: "desc" 
 ```
 
 Multi-property index support will be added soon.
+
+### Name restrictions
+
+Model names and property names can contain `[a-zA-Z0-9$:_\-\.]`.
 
 ## License
 

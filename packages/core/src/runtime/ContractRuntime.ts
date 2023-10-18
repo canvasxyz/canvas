@@ -1,18 +1,19 @@
 import { QuickJSHandle } from "quickjs-emscripten"
 
-import type { Action, SessionSigner } from "@canvas-js/interfaces"
-import { JSValue, VM } from "@canvas-js/vm"
+import type { Action, SessionSigner, CBORValue } from "@canvas-js/interfaces"
+import { VM } from "@canvas-js/vm"
 import { AbstractModelDB, Model, ModelValue, ModelsInit, Property, PropertyValue } from "@canvas-js/modeldb"
 import { getCID } from "@canvas-js/signed-cid"
 
-import { PlatformTarget } from "../targets/interface.js"
+import target from "#target"
+
 import { assert, mapValues, signalInvalidType } from "../utils.js"
 
 import { AbstractRuntime } from "./AbstractRuntime.js"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
-		target: PlatformTarget,
+		location: string | null,
 		signers: SessionSigner[],
 		contract: string,
 		options: { runtimeMemoryLimit?: number; indexHistory?: boolean } = {}
@@ -25,7 +26,6 @@ export class ContractRuntime extends AbstractRuntime {
 		const vm = await VM.initialize({ runtimeMemoryLimit })
 
 		const {
-			topic: topicHandle,
 			models: modelsHandle,
 			actions: actionsHandle,
 			...rest
@@ -35,8 +35,6 @@ export class ContractRuntime extends AbstractRuntime {
 			console.warn(`extraneous export ${JSON.stringify(name)}`)
 			handle.dispose()
 		}
-
-		const topic = topicHandle?.consume(vm.context.getString) ?? cid.toString()
 
 		assert(actionsHandle !== undefined, "missing `actions` export")
 		const actionHandles = mapValues(actionsHandle.consume(vm.unwrapObject), (handle) => {
@@ -49,21 +47,21 @@ export class ContractRuntime extends AbstractRuntime {
 		const modelsInit = modelsHandle.consume(vm.context.dump) as ModelsInit
 
 		if (indexHistory) {
-			const db = await target.openDB("db", {
+			const db = await target.openDB(location, "db", {
 				...modelsInit,
 				...AbstractRuntime.sessionsModel,
 				...AbstractRuntime.effectsModel,
 			})
 
-			return new ContractRuntime(signers, topic, db, vm, actionHandles, indexHistory)
+			return new ContractRuntime(signers, db, vm, actionHandles, indexHistory)
 		} else {
-			const db = await target.openDB("db", {
+			const db = await target.openDB(location, "db", {
 				...modelsInit,
 				...AbstractRuntime.sessionsModel,
 				...AbstractRuntime.versionsModel,
 			})
 
-			return new ContractRuntime(signers, topic, db, vm, actionHandles, indexHistory)
+			return new ContractRuntime(signers, db, vm, actionHandles, indexHistory)
 		}
 	}
 
@@ -73,7 +71,6 @@ export class ContractRuntime extends AbstractRuntime {
 
 	constructor(
 		public readonly signers: SessionSigner[],
-		public readonly topic: string,
 		public readonly db: AbstractModelDB,
 		private readonly vm: VM,
 		private readonly actionHandles: Record<string, QuickJSHandle>,
@@ -101,7 +98,7 @@ export class ContractRuntime extends AbstractRuntime {
 		modelEntries: Record<string, Record<string, ModelValue | null>>,
 		id: string,
 		action: Action
-	): Promise<void | JSValue> {
+	): Promise<void | CBORValue> {
 		const { chain, address, name, args, blockhash, timestamp } = action
 
 		const actionHandle = this.actionHandles[name]
