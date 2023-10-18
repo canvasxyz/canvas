@@ -119,6 +119,11 @@ export class ModelAPI {
 
 				if (cursor !== null && query.offset !== undefined && query.offset !== 0) {
 					cursor.advance(query.offset)
+					try {
+						await cursor.continue()
+					} catch (err) {
+						cursor = null
+					}
 				}
 
 				try {
@@ -146,13 +151,22 @@ export class ModelAPI {
 
 		if (cursor !== null && query.offset !== undefined && query.offset !== 0) {
 			cursor.advance(query.offset)
+			try {
+				await cursor.continue()
+			} catch (err) {
+				cursor = null
+			}
 		}
 
-		for (; cursor !== null; cursor = await cursor.continue()) {
-			const value = this.decodeObject(cursor.value)
-			if (filter(value)) {
-				results.push(value)
+		try {
+			for (; cursor !== null; cursor = await cursor.continue()) {
+				const value = this.decodeObject(cursor.value)
+				if (filter(value)) {
+					results.push(value)
+				}
 			}
+		} catch (error) {
+			if (!(error instanceof DOMException) || error.code !== error.INVALID_STATE_ERR) throw error
 		}
 
 		if (query.orderBy !== undefined) {
