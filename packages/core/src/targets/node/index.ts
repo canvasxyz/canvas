@@ -58,5 +58,5 @@ export default {
 		}
 	},
 
-	createLibp2p: (config, peerId) => createLibp2p(getLibp2pOptions(config, peerId)),
+	createLibp2p: (peerId, options) => createLibp2p(getLibp2pOptions(peerId, options)),
 } satisfies PlatformTarget

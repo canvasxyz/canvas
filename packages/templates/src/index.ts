@@ -1,6 +1,6 @@
-import type { TemplateInlineContract } from "@canvas-js/core"
+import type { InlineContract } from "@canvas-js/core"
 
-export const PublicChat: TemplateInlineContract = {
+export const PublicChat = {
 	models: {
 		messages: {
 			id: "primary",
@@ -11,14 +11,14 @@ export const PublicChat: TemplateInlineContract = {
 		},
 	},
 	actions: {
-		sendMessage: (db, { message }, { address, timestamp, id }) => {
+		sendMessage: (db, { message }: { message: string }, { address, timestamp, id }) => {
 			if (!message || !message.trim()) throw new Error()
 			db.messages.set({ id, message, address, timestamp })
 		},
 	},
-}
+} satisfies InlineContract
 
-export const ChannelChat: TemplateInlineContract = {
+export const ChannelChat = {
 	models: {
 		channels: {
 			name: "primary",
@@ -58,4 +58,4 @@ export const ChannelChat: TemplateInlineContract = {
 			db.messages.set({ id, message, address, channel, timestamp })
 		},
 	},
-}
+} satisfies InlineContract

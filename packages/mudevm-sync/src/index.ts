@@ -6,7 +6,7 @@ import { ethers } from "ethers"
 import { Canvas, ActionImplementation } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { typeOf, JSObject, JSValue } from "@canvas-js/vm"
-import { ModelsInit, PropertyType } from "@canvas-js/modeldb"
+import { ModelsInit } from "@canvas-js/modeldb"
 
 import type { MUDCoreUserConfig } from "@latticexyz/config"
 import type { ExpandMUDUserConfig } from "@latticexyz/store/ts/register/typeExtensions"
@@ -145,8 +145,8 @@ export function useCanvas<
 			// create application
 			const topic = `world.contract-${props.world.worldContract.address.toLowerCase()}`
 			const app = await Canvas.initialize({
+				topic,
 				contract: {
-					topic,
 					models: modelsInit,
 					actions: actionsSpec,
 				},

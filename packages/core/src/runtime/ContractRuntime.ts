@@ -1,7 +1,7 @@
 import { QuickJSHandle } from "quickjs-emscripten"
 
-import type { Action, SessionSigner } from "@canvas-js/interfaces"
-import { JSValue, VM } from "@canvas-js/vm"
+import type { Action, SessionSigner, CBORValue } from "@canvas-js/interfaces"
+import { VM } from "@canvas-js/vm"
 import { AbstractModelDB, Model, ModelValue, ModelsInit, Property, PropertyValue } from "@canvas-js/modeldb"
 import { getCID } from "@canvas-js/signed-cid"
 
@@ -26,7 +26,6 @@ export class ContractRuntime extends AbstractRuntime {
 		const vm = await VM.initialize({ runtimeMemoryLimit })
 
 		const {
-			topic: topicHandle,
 			models: modelsHandle,
 			actions: actionsHandle,
 			...rest
@@ -36,8 +35,6 @@ export class ContractRuntime extends AbstractRuntime {
 			console.warn(`extraneous export ${JSON.stringify(name)}`)
 			handle.dispose()
 		}
-
-		const topic = topicHandle?.consume(vm.context.getString) ?? cid.toString()
 
 		assert(actionsHandle !== undefined, "missing `actions` export")
 		const actionHandles = mapValues(actionsHandle.consume(vm.unwrapObject), (handle) => {
@@ -56,7 +53,7 @@ export class ContractRuntime extends AbstractRuntime {
 				...AbstractRuntime.effectsModel,
 			})
 
-			return new ContractRuntime(signers, topic, db, vm, actionHandles, indexHistory)
+			return new ContractRuntime(signers, db, vm, actionHandles, indexHistory)
 		} else {
 			const db = await target.openDB(location, "db", {
 				...modelsInit,
@@ -64,7 +61,7 @@ export class ContractRuntime extends AbstractRuntime {
 				...AbstractRuntime.versionsModel,
 			})
 
-			return new ContractRuntime(signers, topic, db, vm, actionHandles, indexHistory)
+			return new ContractRuntime(signers, db, vm, actionHandles, indexHistory)
 		}
 	}
 
@@ -74,7 +71,6 @@ export class ContractRuntime extends AbstractRuntime {
 
 	constructor(
 		public readonly signers: SessionSigner[],
-		public readonly topic: string,
 		public readonly db: AbstractModelDB,
 		private readonly vm: VM,
 		private readonly actionHandles: Record<string, QuickJSHandle>,
@@ -102,7 +98,7 @@ export class ContractRuntime extends AbstractRuntime {
 		modelEntries: Record<string, Record<string, ModelValue | null>>,
 		id: string,
 		action: Action
-	): Promise<void | JSValue> {
+	): Promise<void | CBORValue> {
 		const { chain, address, name, args, blockhash, timestamp } = action
 
 		const actionHandle = this.actionHandles[name]

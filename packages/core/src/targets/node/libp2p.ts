@@ -28,14 +28,24 @@ import {
 	MIN_CONNECTIONS,
 	PING_TIMEOUT,
 } from "../../constants.js"
-import type { CanvasConfig } from "../../Canvas.js"
 
 import type { ServiceMap } from "../interface.js"
 
-export function getLibp2pOptions(config: CanvasConfig, peerId: PeerId): Libp2pOptions<ServiceMap> {
-	const announce = config.announce ?? []
-	const listen = config.listen ?? []
-	const bootstrapList = config.bootstrapList ?? []
+export function getLibp2pOptions(
+	peerId: PeerId,
+	options: {
+		offline?: boolean
+		start?: boolean
+		listen?: string[]
+		announce?: string[]
+		bootstrapList?: string[]
+		minConnections?: number
+		maxConnections?: number
+	}
+): Libp2pOptions<ServiceMap> {
+	const announce = options.announce ?? []
+	const listen = options.listen ?? []
+	const bootstrapList = options.bootstrapList ?? []
 
 	for (const address of announce) {
 		console.log(chalk.gray(`[canvas-core] Announcing on ${address}`))
@@ -72,8 +82,8 @@ export function getLibp2pOptions(config: CanvasConfig, peerId: PeerId): Libp2pOp
 
 		connectionGater: { denyDialMultiaddr },
 		connectionManager: {
-			minConnections: config.minConnections ?? MIN_CONNECTIONS,
-			maxConnections: config.maxConnections ?? MAX_CONNECTIONS,
+			minConnections: options.minConnections ?? MIN_CONNECTIONS,
+			maxConnections: options.maxConnections ?? MAX_CONNECTIONS,
 			autoDialConcurrency: DIAL_CONCURRENCY,
 			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
 		},

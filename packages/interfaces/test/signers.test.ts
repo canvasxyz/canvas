@@ -1,6 +1,6 @@
 import test from "ava"
 
-import { Action, ActionArguments, Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
+import { Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
 import { verifySignature } from "@canvas-js/signed-cid"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"

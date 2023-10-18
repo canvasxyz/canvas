@@ -8,7 +8,7 @@ import { FunctionRuntime } from "./FunctionRuntime.js"
 export { AbstractRuntime as Runtime } from "./AbstractRuntime.js"
 export * from "./types.js"
 
-export async function initRuntime(
+export async function createRuntime(
 	location: string | null,
 	signers: SessionSigner[],
 	contract: string | InlineContract,
