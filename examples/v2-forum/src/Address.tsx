@@ -1,7 +1,7 @@
 import { useEnsName } from "wagmi"
 
 export function Address({ address }: { address: string }) {
-	const { data, error, isLoading, refetch } = useEnsName({
+	const { data } = useEnsName({
 		address: address as `0x{string}`,
 		enabled: false,
 	})

@@ -1,4 +1,4 @@
-import { useState } from "react"
+// import { useState } from "react"
 import { ethers } from "ethers"
 import moment from "moment"
 
@@ -18,17 +18,17 @@ export function RepliesPage({
 	wallet: ethers.Wallet
 	app?: Canvas
 	thread: string
-	setThread: Function
+	setThread: (arg0: string) => void
 }) {
-	const [page, setPage] = useState(0)
+	// const [page, setPage] = useState(0)
 
 	const thread = useLiveQuery<Thread>(app, "threads", {
 		where: { id: threadId },
 	})
 
 	const replies = useLiveQuery<Reply>(app, "replies", {
-		offset: page * 10,
-		limit: 10,
+		// offset: page * 10,
+		// limit: 10,
 		orderBy: { timestamp: "desc" },
 		where: { threadId: threadId },
 	})

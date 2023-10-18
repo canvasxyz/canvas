@@ -2,7 +2,7 @@ import { useState } from "react"
 import { ethers } from "ethers"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
+import { useCanvas } from "@canvas-js/hooks"
 import { Forum } from "@canvas-js/templates"
 import useHashParam from "use-hash-param"
 
@@ -45,8 +45,7 @@ function App() {
 
 	return (
 		<div className="w-full flex">
-			<Sidebar thread={thread} channel={channel} tag={tag} page={page} setThread={setThread} setChannel={setChannel} setTag={setTag} setPage={setPage} 
-				app={app} wallet={wallet} />
+			<Sidebar channel={channel} tag={tag} setThread={setThread} setChannel={setChannel} setTag={setTag} setPage={setPage} app={app} wallet={wallet} />
 			{thread ? (
 				<RepliesPage wallet={wallet} app={app} thread={thread} setThread={setThread} />
 			) : (

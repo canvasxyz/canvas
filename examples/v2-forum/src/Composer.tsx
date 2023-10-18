@@ -10,7 +10,7 @@ export function Composer({
 	app?: Canvas
 	channel?: string
 	replyingTo?: string
-	setReplyingTo: Function
+	setReplyingTo: (arg0: string) => void
 }) {
 	const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -57,7 +57,7 @@ export function Composer({
 							href="#"
 							onClick={(e) => {
 								e.preventDefault()
-								setReplyingTo(undefined)
+								setReplyingTo("")
 							}}
 						>
 							Clear

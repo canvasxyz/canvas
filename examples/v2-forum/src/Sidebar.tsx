@@ -17,8 +17,8 @@ export function CreateCategoryDialog({
 }: {
 	channel: string
 	isOpen: boolean
-	setIsOpen: Function
-	app: Canvas
+	setIsOpen: (arg0: boolean) => void
+	app?: Canvas
 	wallet: ethers.Wallet
 }) {
 	const channelInputRef = useRef<HTMLInputElement>(null)
@@ -83,8 +83,8 @@ export function CreateTagDialog({
 }: {
 	tag: string
 	isOpen: boolean
-	setIsOpen: Function
-	app: Canvas
+	setIsOpen: (arg0: boolean) => void
+	app?: Canvas
 	wallet: ethers.Wallet
 }) {
 	const tagInputRef = useRef<HTMLInputElement>(null)
@@ -121,6 +121,7 @@ export function CreateTagDialog({
 								className="btn btn-red w-full mb-2"
 								type="submit"
 								onClick={(e) => {
+									e.preventDefault()
 									app?.actions.deleteTag({ tag })
 								}}
 							>
@@ -135,10 +136,8 @@ export function CreateTagDialog({
 }
 
 export function Sidebar({
-	thread,
 	channel,
 	tag,
-	page,
 	setThread,
 	setChannel,
 	setTag,
@@ -146,14 +145,12 @@ export function Sidebar({
 	app,
 	wallet,
 }: {
-	thread: string
 	channel: string
 	tag: string
-	page: number
-	setThread: Function
-	setChannel: Function
-	setTag: Function
-	setPage: Function
+	setThread: (arg0: string) => void
+	setChannel: (arg0: string) => void
+	setTag: (arg0: string) => void
+	setPage: (arg0: number) => void
 	app?: Canvas
 	wallet: ethers.Wallet
 }) {

@@ -21,10 +21,10 @@ export function ThreadsPage({
 	wallet: ethers.Wallet
 	app?: Canvas
 	page: number
-	setPage: Function
+	setPage: (arg0: number) => void
 	channel: string
-	setChannel: Function
-	setThread: Function
+	setChannel: (arg0: string) => void
+	setThread: (arg0: string) => void
 }) {
 	const [replyingTo, setReplyingTo] = useState<string>()
 
@@ -52,7 +52,7 @@ export function ThreadsPage({
 								href="#"
 								onClick={(e) => {
 									e.preventDefault()
-									setChannel(undefined)
+									setChannel("")
 									setThread(message.id)
 								}}
 							>
