@@ -1,16 +1,12 @@
-import test from "ava"
-
 import type { Message } from "@canvas-js/interfaces"
 
-import { GossipLog } from "@canvas-js/gossiplog/memory"
-
-import { collect } from "./utils.js"
+import { collect, testPlatforms } from "./utils.js"
 
 const validate = (payload: unknown): payload is string => typeof payload === "string"
 
-test("append three messages", async (t) => {
+testPlatforms("append three messages", async (t, openGossipLog) => {
 	const topic = "com.example.test"
-	const log = await GossipLog.open({ topic, apply: () => {}, validate, signatures: false })
+	const log = await openGossipLog(t, { topic, apply: () => {}, validate, signatures: false })
 
 	const { id: foo } = await log.append("foo")
 	const { id: bar } = await log.append("bar")
@@ -23,9 +19,9 @@ test("append three messages", async (t) => {
 	])
 })
 
-test("insert three concurrent messages and append a fourth", async (t) => {
+testPlatforms("insert three concurrent messages and append a fourth", async (t, openGossipLog) => {
 	const topic = "com.example.test"
-	const log = await GossipLog.open({ topic, apply: () => {}, validate, signatures: false })
+	const log = await openGossipLog(t, { topic, apply: () => {}, validate, signatures: false })
 
 	const { id: foo } = await log.insert(null, { topic, clock: 1, parents: [], payload: "foo" })
 	const { id: bar } = await log.insert(null, { topic, clock: 1, parents: [], payload: "bar" })

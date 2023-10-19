@@ -2,18 +2,45 @@ import os from "node:os"
 import fs from "node:fs"
 import path from "node:path"
 
-import { ExecutionContext } from "ava"
+import test, { ExecutionContext } from "ava"
+import "fake-indexeddb/auto"
+import { locks, AbortController } from "web-locks"
+
 import { nanoid } from "nanoid"
 import { varint } from "multiformats"
 import { ed25519 } from "@noble/curves/ed25519"
 import { bytesToHex } from "@noble/hashes/utils"
 import { Key, Node } from "@canvas-js/okra"
 
-import { encodeId } from "@canvas-js/gossiplog"
-import { GossipLog } from "@canvas-js/gossiplog/memory"
+import { AbstractGossipLog, GossipLogInit, MessageSigner, encodeId } from "@canvas-js/gossiplog"
+import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
+import { GossipLog as GossipLogBrowser } from "@canvas-js/gossiplog/browser"
+import { GossipLog as GossipLogMemory } from "@canvas-js/gossiplog/memory"
 
-import { createSignature } from "@canvas-js/signed-cid"
+import { Signature, createSignature } from "@canvas-js/signed-cid"
 import { Message } from "@canvas-js/interfaces"
+
+// @ts-expect-error
+globalThis.navigator = { locks }
+
+// @ts-expect-error
+globalThis.AbortController = AbortController
+
+export const testPlatforms = (
+	name: string,
+	run: (
+		t: ExecutionContext<unknown>,
+		openGossipLog: <Payload, Results>(
+			t: ExecutionContext,
+			init: GossipLogInit<Payload, Results>
+		) => Promise<AbstractGossipLog<Payload, Results>>
+	) => void
+) => {
+	const macro = test.macro(run)
+	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
+	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogBrowser.open(nanoid(), init))
+	test(`Browser - ${name}`, macro, (t, init) => GossipLogNode.open(getDirectory(t), init))
+}
 
 export class Ed25519Signer<T = unknown> {
 	private readonly privateKey = ed25519.utils.randomPrivateKey()
@@ -64,7 +91,12 @@ export function shuffle<T>(array: T[]) {
 	}
 }
 
-export async function appendChain(log: GossipLog<string, void>, rootId: string, n: number): Promise<string[]> {
+export async function appendChain(
+	log: AbstractGossipLog<string, void>,
+	rootId: string,
+	n: number,
+	options: { signer?: MessageSigner<string> } = {}
+): Promise<string[]> {
 	const [clock] = varint.decode(encodeId(rootId))
 
 	const ids: string[] = []
@@ -76,7 +108,12 @@ export async function appendChain(log: GossipLog<string, void>, rootId: string, 
 			payload: nanoid(),
 		}
 
-		const { id } = await log.insert(null, message)
+		let signature: Signature | null = null
+		if (options.signer) {
+			signature = await options.signer.sign(message)
+		}
+
+		const { id } = await log.insert(signature, message)
 		ids.push(id)
 	}
 

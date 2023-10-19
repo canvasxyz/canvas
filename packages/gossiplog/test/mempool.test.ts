@@ -1,12 +1,11 @@
-import test from "ava"
-
 import { Message } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
 
 import { decodeId } from "@canvas-js/gossiplog"
-import { GossipLog } from "@canvas-js/gossiplog/memory"
 
-test("insert messages out-of-order", async (t) => {
+import { testPlatforms } from "./utils.js"
+
+testPlatforms("insert messages out-of-order", async (t, openGossipLog) => {
 	const results: { id: string; payload: string }[] = []
 
 	const topic = "com.example.test"
@@ -16,7 +15,7 @@ test("insert messages out-of-order", async (t) => {
 
 	const validate = (payload: unknown): payload is string => typeof payload === "string"
 
-	const log = await GossipLog.open({ topic, apply, validate, signatures: false })
+	const log = await openGossipLog(t, { topic, apply, validate, signatures: false })
 
 	const a = { topic, clock: 1, parents: [], payload: "a" }
 	const [keyA] = log.encode(null, a)

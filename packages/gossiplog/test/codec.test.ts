@@ -1,5 +1,4 @@
 import assert from "node:assert"
-import test from "ava"
 
 import * as cbor from "@ipld/dag-cbor"
 
@@ -7,8 +6,7 @@ import { Message } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
 
 import { decodeId, encodeId } from "@canvas-js/gossiplog"
-import { GossipLog } from "@canvas-js/gossiplog/memory"
-import { collect } from "./utils.js"
+import { collect, testPlatforms } from "./utils.js"
 
 const topic = "com.example.test"
 const apply = (
@@ -25,8 +23,8 @@ type Thing struct {
 } representation tuple
 `
 
-test("validate messages using an IPLD schema", async (t) => {
-	const log = await GossipLog.open({
+testPlatforms("validate messages using an IPLD schema", async (t, openGossipLog) => {
+	const log = await openGossipLog(t, {
 		topic,
 		apply,
 		validate: { schema, name: "Thing" },

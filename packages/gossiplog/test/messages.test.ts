@@ -1,12 +1,10 @@
-import test from "ava"
-
 import { nanoid } from "nanoid"
 
 import { Message } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
 
 import { GossipLog } from "@canvas-js/gossiplog/memory"
-import { Ed25519Signer, collect } from "./utils.js"
+import { Ed25519Signer, collect, testPlatforms } from "./utils.js"
 
 const topic = "com.example.test"
 const apply = (id: string, signature: Signature | null, message: Message<string>) => {}
@@ -14,8 +12,8 @@ const validate = (payload: unknown): payload is string => true
 const getPublicKey = ([id, signature, message]: [string, Signature | null, Message<string>]) =>
 	[id, signature?.publicKey ?? null, message] as const
 
-test("append signed messages", async (t) => {
-	const log = await GossipLog.open({ topic, apply, validate })
+testPlatforms("append signed messages", async (t, openGossipLog) => {
+	const log = await openGossipLog(t, { topic, apply, validate })
 
 	const signer = new Ed25519Signer()
 	const { id: idA } = await log.append("foo", { signer })
@@ -29,8 +27,8 @@ test("append signed messages", async (t) => {
 	])
 })
 
-test("append unsigned messages", async (t) => {
-	const log = await GossipLog.open({ topic, apply, validate, signatures: false })
+testPlatforms("append unsigned messages", async (t, openGossipLog) => {
+	const log = await openGossipLog(t, { topic, apply, validate, signatures: false })
 
 	const { id: idA } = await log.append("foo")
 	const { id: idB } = await log.append("bar")
@@ -43,8 +41,8 @@ test("append unsigned messages", async (t) => {
 	])
 })
 
-test("append signed messages without sequencing", async (t) => {
-	const log = await GossipLog.open({ topic, apply, validate, sequencing: false })
+testPlatforms("append signed messages without sequencing", async (t, openGossipLog) => {
+	const log = await openGossipLog(t, { topic, apply, validate, sequencing: false })
 	const signer = new Ed25519Signer()
 	const { id: idA } = await log.append("foo", { signer })
 	const { id: idB } = await log.append("bar", { signer })
@@ -61,8 +59,8 @@ test("append signed messages without sequencing", async (t) => {
 	t.deepEqual(await collect(log.iterate(), getPublicKey), entries)
 })
 
-test("append unsigned messages without sequencing", async (t) => {
-	const log = await GossipLog.open({ topic, apply, validate, signatures: false, sequencing: false })
+testPlatforms("append unsigned messages without sequencing", async (t, openGossipLog) => {
+	const log = await openGossipLog(t, { topic, apply, validate, signatures: false, sequencing: false })
 
 	const { id: idA } = await log.append("foo")
 	const { id: idB } = await log.append("bar")
@@ -79,8 +77,8 @@ test("append unsigned messages without sequencing", async (t) => {
 	t.deepEqual(await collect(log.iterate(), getPublicKey), entries)
 })
 
-test("insert concurrent messages", async (t) => {
-	const log = await GossipLog.open({ topic, apply, validate, signatures: false })
+testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
+	const log = await openGossipLog(t, { topic, apply, validate, signatures: false })
 
 	const [a, b, c] = [nanoid(), nanoid(), nanoid()]
 	const { id: idA } = await log.insert(null, { topic, clock: 1, parents: [], payload: a })
@@ -98,8 +96,8 @@ test("insert concurrent messages", async (t) => {
 	t.deepEqual(await collect(log.iterate()), entries)
 })
 
-test("append to multiple parents", async (t) => {
-	const log = await GossipLog.open({ topic, apply, validate, signatures: false })
+testPlatforms("append to multiple parents", async (t, openGossipLog) => {
+	const log = await openGossipLog(t, { topic, apply, validate, signatures: false })
 
 	const [a, b, c] = [nanoid(), nanoid(), nanoid()]
 	const { id: idA } = await log.insert(null, { topic, clock: 1, parents: [], payload: a })
