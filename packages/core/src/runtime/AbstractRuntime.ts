@@ -3,18 +3,20 @@ import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
 import { equals } from "uint8arrays"
 
-import type { Action, CBORValue, Session, SessionSigner } from "@canvas-js/interfaces"
+import type { Action, CBORValue, Message, Session, SessionSigner } from "@canvas-js/interfaces"
+import { Signature } from "@canvas-js/signed-cid"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
 import { AbstractGossipLog, GossipLogConsumer, ReadOnlyTransaction, encodeId, getClock } from "@canvas-js/gossiplog"
 
 import { MAX_MESSAGE_ID, MIN_MESSAGE_ID } from "../constants.js"
 import { assert, mapValues, signalInvalidType } from "../utils.js"
-import { varint } from "multiformats"
 
 export type ExecutionContext = {
 	txn: ReadOnlyTransaction
 	id: string
+	signature: Signature
+	message: Message<Action>
 	modelEntries: Record<string, Record<string, ModelValue | null>>
 }
 
@@ -89,7 +91,10 @@ export abstract class AbstractRuntime {
 
 				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(runtime.db.models, () => ({}))
 
-				const result = await runtime.execute({ txn: this, modelEntries, id }, message.payload)
+				const result = await runtime.execute(
+					{ txn: this, modelEntries, id, signature, message: { ...message, payload: message.payload } },
+					message.payload
+				)
 
 				const effects: Effect[] = []
 
@@ -205,14 +210,16 @@ export abstract class AbstractRuntime {
 			const [{}, {}, messageId] = effectKey.split("/")
 
 			upperBound = effectKey as string
-			const [atOrBefore] = varint.decode(encodeId(messageId))
-			const ancestors = new Set<string>()
-			await AbstractGossipLog.getAncestors(context.txn, encodeId(context.id), atOrBefore, ancestors)
-			if (ancestors.has(messageId)) {
-				return cbor.decode<null | ModelValue>(value)
-			} else {
-				upperBound = effectKey
+			const visited = new Set<string>()
+
+			for (const parent of context.message.parents) {
+				const isAncestor = await AbstractGossipLog.isAncestor(context.txn, parent, messageId, visited)
+				if (isAncestor) {
+					return cbor.decode<null | ModelValue>(value)
+				}
 			}
+
+			upperBound = effectKey
 		}
 	}
 }
