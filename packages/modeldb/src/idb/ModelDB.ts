@@ -120,10 +120,11 @@ export class ModelDB extends AbstractModelDB {
 		return await this.read((txn) => api.get(txn, key), [api.storeName])
 	}
 
-	public async query(modelName: string, query: QueryParams): Promise<ModelValue[]> {
+	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams): Promise<T[]> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, "model API not found")
-		return await this.read((txn) => api.query(txn, query), [api.storeName])
+		const result = await this.read((txn) => api.query(txn, query), [api.storeName])
+		return result as T[]
 	}
 
 	public async count(modelName: string): Promise<number> {

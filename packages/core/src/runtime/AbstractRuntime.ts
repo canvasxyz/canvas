@@ -6,10 +6,17 @@ import { equals } from "uint8arrays"
 import type { Action, CBORValue, Session, SessionSigner } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
-import { GossipLogConsumer, encodeId } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogConsumer, ReadOnlyTransaction, encodeId, getClock } from "@canvas-js/gossiplog"
 
-import { MAX_MESSAGE_ID } from "../constants.js"
+import { MAX_MESSAGE_ID, MIN_MESSAGE_ID } from "../constants.js"
 import { assert, mapValues, signalInvalidType } from "../utils.js"
+import { varint } from "multiformats"
+
+export type ExecutionContext = {
+	txn: ReadOnlyTransaction
+	id: string
+	modelEntries: Record<string, Record<string, ModelValue | null>>
+}
 
 export abstract class AbstractRuntime {
 	protected static effectsModel: ModelsInit = {
@@ -44,24 +51,23 @@ export abstract class AbstractRuntime {
 
 	protected constructor(public readonly indexHistory: boolean) {}
 
-	protected abstract execute(
-		modelEntries: Record<string, Record<string, ModelValue | null>>,
-		id: string,
-		action: Action
-	): Promise<void | CBORValue>
+	protected abstract execute(context: ExecutionContext, action: Action): Promise<void | CBORValue>
 
 	public async close() {
 		await this.db.close()
 	}
 
 	public getConsumer(): GossipLogConsumer<Action | Session, void | CBORValue> {
-		return async (id, signature, message) => {
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const runtime = this
+
+		return async function (this: ReadOnlyTransaction, id, signature, message) {
 			assert(signature !== null, "missing message signature")
 
 			if (message.payload.type === "action") {
 				const { chain, address, timestamp } = message.payload
 
-				const sessions = await this.db.query("$sessions", {
+				const sessions = await runtime.db.query("$sessions", {
 					where: {
 						// 	key: {
 						// 		gte: `${signature.type}:${bytesToHex(signature.publicKey)}:${MIN_MESSAGE_ID}`,
@@ -81,19 +87,19 @@ export abstract class AbstractRuntime {
 					)
 				}
 
-				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(this.db.models, () => ({}))
+				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(runtime.db.models, () => ({}))
 
-				const result = await this.execute(modelEntries, id, message.payload)
+				const result = await runtime.execute({ txn: this, modelEntries, id }, message.payload)
 
 				const effects: Effect[] = []
 
 				for (const [model, entries] of Object.entries(modelEntries)) {
 					for (const [key, value] of Object.entries(entries)) {
-						const keyHash = bytesToHex(blake3(key, { dkLen: 16 }))
+						const keyHash = AbstractRuntime.getKeyHash(key)
 
-						if (this.indexHistory) {
+						if (runtime.indexHistory) {
 							const effectKey = `${model}/${keyHash}/${id}`
-							const results = await this.db.query("$effects", {
+							const results = await runtime.db.query("$effects", {
 								select: { key: true },
 								where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
 								limit: 1,
@@ -110,7 +116,7 @@ export abstract class AbstractRuntime {
 							}
 						} else {
 							const versionKey = `${model}/${keyHash}`
-							const existingVersionRecord = await this.db.get("$versions", versionKey)
+							const existingVersionRecord = await runtime.db.get("$versions", versionKey)
 							const { version: existingVersion } = existingVersionRecord ?? { version: null }
 
 							assert(
@@ -139,20 +145,20 @@ export abstract class AbstractRuntime {
 				}
 
 				if (effects.length > 0) {
-					await this.db.apply(effects)
+					await runtime.db.apply(effects)
 				}
 
 				return result
 			} else if (message.payload.type === "session") {
 				const { publicKeyType, publicKey, chain, address, timestamp, duration } = message.payload
 
-				const signer = this.signers.find((signer) => signer.match(chain))
+				const signer = runtime.signers.find((signer) => signer.match(chain))
 				assert(signer !== undefined, "no signer found")
 
 				assert(publicKeyType === signature.type && equals(publicKey, signature.publicKey))
 				await signer.verifySession(message.payload)
 
-				await this.db.set("$sessions", {
+				await runtime.db.set("$sessions", {
 					// key: `${signature.type}:${bytesToHex(signature.publicKey)}:${id}`,
 					message_id: id,
 					public_key_type: signature.type,
@@ -167,22 +173,46 @@ export abstract class AbstractRuntime {
 		}
 	}
 
-	protected async getModelValue(
-		modelEntries: Record<string, Record<string, ModelValue | null>>,
-		id: string,
-		model: string,
-		key: string
-	): Promise<null | ModelValue> {
-		if (this.indexHistory) {
-			throw new Error("not implemented")
+	protected static getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
 
-			// if (modelEntries[model][key] !== undefined) {
-			// 	return modelEntries[model][key]
-			// }
-
-			// return null
-		} else {
+	protected async getModelValue(context: ExecutionContext, model: string, key: string): Promise<null | ModelValue> {
+		if (!this.indexHistory) {
 			throw new Error("cannot call .get if indexHistory is disabled")
+		}
+
+		assert(context.txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
+		if (context.modelEntries[model][key] !== undefined) {
+			return context.modelEntries[model][key]
+		}
+
+		const keyHash = AbstractRuntime.getKeyHash(key)
+		const lowerBound = `${model}/${keyHash}/${MIN_MESSAGE_ID}`
+		let upperBound = `${model}/${keyHash}/${MAX_MESSAGE_ID}`
+
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			const results = await this.db.query<{ key: string; value: Uint8Array }>("$effects", {
+				where: { key: { gte: lowerBound, lt: upperBound } },
+				orderBy: { key: "desc" },
+				limit: 1,
+			})
+
+			if (results.length === 0) {
+				return null
+			}
+
+			const [{ key: effectKey, value }] = results
+			const [{}, {}, messageId] = effectKey.split("/")
+
+			upperBound = effectKey as string
+			const [atOrBefore] = varint.decode(encodeId(messageId))
+			const ancestors = new Set<string>()
+			await AbstractGossipLog.getAncestors(context.txn, encodeId(context.id), atOrBefore, ancestors)
+			if (ancestors.has(messageId)) {
+				return cbor.decode<null | ModelValue>(value)
+			} else {
+				upperBound = effectKey
+			}
 		}
 	}
 }

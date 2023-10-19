@@ -9,7 +9,8 @@ import target from "#target"
 
 import { assert, mapValues, signalInvalidType } from "../utils.js"
 
-import { AbstractRuntime } from "./AbstractRuntime.js"
+import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+import { ReadOnlyTransaction, ReadWriteTransaction } from "@canvas-js/gossiplog"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
@@ -67,7 +68,7 @@ export class ContractRuntime extends AbstractRuntime {
 
 	readonly #databaseAPI: QuickJSHandle
 
-	#context: { id: string; modelEntries: Record<string, Record<string, ModelValue | null>> } | null = null
+	#context: ExecutionContext | null = null
 
 	constructor(
 		public readonly signers: SessionSigner[],
@@ -94,20 +95,16 @@ export class ContractRuntime extends AbstractRuntime {
 		return Object.keys(this.actionHandles)
 	}
 
-	protected async execute(
-		modelEntries: Record<string, Record<string, ModelValue | null>>,
-		id: string,
-		action: Action
-	): Promise<void | CBORValue> {
+	protected async execute(context: ExecutionContext, action: Action): Promise<void | CBORValue> {
 		const { chain, address, name, args, blockhash, timestamp } = action
 
 		const actionHandle = this.actionHandles[name]
 		assert(actionHandle !== undefined, `invalid action name: ${name}`)
 
-		this.#context = { id, modelEntries }
+		this.#context = context
 
 		const argsHandle = this.vm.wrapValue(args)
-		const ctxHandle = this.vm.wrapValue({ id, chain, address, blockhash, timestamp })
+		const ctxHandle = this.vm.wrapValue({ id: context.id, chain, address, blockhash, timestamp })
 		try {
 			const result = await this.vm.callAsync(actionHandle, actionHandle, [this.#databaseAPI, argsHandle, ctxHandle])
 
@@ -133,7 +130,7 @@ export class ContractRuntime extends AbstractRuntime {
 			get: this.vm.wrapFunction((key) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				assert(typeof key === "string")
-				return this.getModelValue(this.#context.modelEntries, this.#context.id, model.name, key)
+				return this.getModelValue(this.#context, model.name, key)
 			}),
 			set: this.vm.context.newFunction(`db.${model.name}.set`, (valueHandle) => {
 				assert(this.#context !== null, "expected this.#modelEntries !== null")
