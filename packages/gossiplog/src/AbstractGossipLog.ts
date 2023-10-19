@@ -341,29 +341,19 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 		const index = Math.floor(Math.log2(clock - ancestorClock))
 		const value = await txn.ancestors.get(key)
-		if (value === null) {
-			throw new Error(`key ${decodeId(key)} not found in ancestor index`)
-		}
+		assert(value !== null, "key not found in ancestor index")
 
 		const links = cbor.decode<Uint8Array[][]>(value)
 		for (const key of links[index]) {
-			const [clock] = varint.decode(key)
 			const id = decodeId(key)
-			if (id === ancestor) {
-				return true
-			}
-
-			if (clock <= ancestorClock) {
-				continue
-			}
 
 			if (visited.has(id)) {
-				throw new Error("I BET THIS NEVER HAPPENS")
 				continue
 			}
 
 			visited.add(id)
-			if (await this.isAncestor(txn, id, ancestor, visited)) {
+			const isAncestor = await AbstractGossipLog.isAncestor(txn, id, ancestor, visited)
+			if (isAncestor) {
 				return true
 			}
 		}
