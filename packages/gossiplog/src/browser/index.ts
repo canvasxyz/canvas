@@ -30,7 +30,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		const messages = await IDBTree.open(db, `${init.topic}/messages`)
 		const parents = new IDBStore(db, `${init.topic}/parents`)
-		const ancestors = new IDBStore(db, `${init.topic}/parents`)
+		const ancestors = new IDBStore(db, `${init.topic}/ancestors`)
 
 		const gossipLog = new GossipLog(db, messages, parents, ancestors, init)
 
