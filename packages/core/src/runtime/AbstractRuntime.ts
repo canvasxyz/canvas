@@ -2,6 +2,7 @@ import * as cbor from "@ipld/dag-cbor"
 import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
 import { equals } from "uint8arrays"
+import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
 import type { Action, CBORValue, Message, Session, SessionSigner } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
@@ -47,9 +48,30 @@ export abstract class AbstractRuntime {
 		},
 	} satisfies ModelsInit
 
+	protected static getModelSchema(modelsInit: ModelsInit, options: { indexHistory: boolean }): ModelsInit {
+		if (options.indexHistory) {
+			return {
+				...modelsInit,
+				...AbstractRuntime.sessionsModel,
+				...AbstractRuntime.effectsModel,
+			}
+		} else {
+			return {
+				...modelsInit,
+				...AbstractRuntime.sessionsModel,
+				...AbstractRuntime.versionsModel,
+			}
+		}
+	}
+
 	public abstract readonly signers: SessionSigner[]
 	public abstract readonly db: AbstractModelDB
 	public abstract readonly actionNames: string[]
+
+	protected abstract readonly actionCodecs: Record<
+		string,
+		{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+	>
 
 	protected constructor(public readonly indexHistory: boolean) {}
 

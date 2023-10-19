@@ -1,8 +1,9 @@
 import { QuickJSHandle } from "quickjs-emscripten"
+import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
 import type { Action, SessionSigner, CBORValue } from "@canvas-js/interfaces"
-import { VM } from "@canvas-js/vm"
 import { AbstractModelDB, Model, ModelValue, ModelsInit, Property, PropertyValue } from "@canvas-js/modeldb"
+import { VM } from "@canvas-js/vm"
 import { getCID } from "@canvas-js/signed-cid"
 
 import target from "#target"
@@ -10,7 +11,6 @@ import target from "#target"
 import { assert, mapValues, signalInvalidType } from "../utils.js"
 
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
-import { ReadOnlyTransaction, ReadWriteTransaction } from "@canvas-js/gossiplog"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
@@ -47,23 +47,8 @@ export class ContractRuntime extends AbstractRuntime {
 		assert(modelsHandle !== undefined, "missing `models` export")
 		const modelsInit = modelsHandle.consume(vm.context.dump) as ModelsInit
 
-		if (indexHistory) {
-			const db = await target.openDB(location, "db", {
-				...modelsInit,
-				...AbstractRuntime.sessionsModel,
-				...AbstractRuntime.effectsModel,
-			})
-
-			return new ContractRuntime(signers, db, vm, actionHandles, indexHistory)
-		} else {
-			const db = await target.openDB(location, "db", {
-				...modelsInit,
-				...AbstractRuntime.sessionsModel,
-				...AbstractRuntime.versionsModel,
-			})
-
-			return new ContractRuntime(signers, db, vm, actionHandles, indexHistory)
-		}
+		const db = await target.openDB(location, "db", AbstractRuntime.getModelSchema(modelsInit, { indexHistory }))
+		return new ContractRuntime(signers, db, {}, vm, actionHandles, indexHistory)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -73,6 +58,10 @@ export class ContractRuntime extends AbstractRuntime {
 	constructor(
 		public readonly signers: SessionSigner[],
 		public readonly db: AbstractModelDB,
+		public readonly actionCodecs: Record<
+			string,
+			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+		>,
 		private readonly vm: VM,
 		private readonly actionHandles: Record<string, QuickJSHandle>,
 		indexHistory: boolean
