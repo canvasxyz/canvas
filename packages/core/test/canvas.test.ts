@@ -140,3 +140,59 @@ test("create an app with an inline contract", async (t) => {
 	t.is(value?.content, "hello world")
 	t.is(value?.address, wallet.address)
 })
+
+test("get a value set by another action", async (t) => {
+	const wallet = ethers.Wallet.createRandom()
+
+	const app = await Canvas.initialize({
+		topic: "com.example.app",
+		signers: [new SIWESigner({ signer: wallet })],
+		location: null,
+		contract: {
+			models: {
+				user: { id: "primary", name: "string" },
+				post: { id: "primary", from: "@user", content: "string" },
+			},
+			actions: {
+				async createUser(db, { name }: { name: string }, { chain, address }) {
+					await db.user.set({ id: `${chain}:${address}`, name })
+				},
+				async createPost(db, { content }: { content: string }, { id, chain, address }) {
+					const from = `${chain}:${address}`
+					const user = await db.user.get(from)
+					assert(user !== null)
+					await db.post.set({ id, from, content })
+				},
+				async deletePost(db, { id }: { id: string }, { chain, address }) {
+					const post = await db.post.get(id)
+					if (post !== null) {
+						assert(post.from === `${chain}:${address}`, "cannot delete others' posts")
+						await db.post.delete(id)
+					}
+				},
+			},
+		},
+		offline: true,
+	})
+
+	t.teardown(() => app.close())
+
+	const { id } = await app.actions.createUser({ name: "John Doe" })
+	t.log(`${id}: created user`)
+	const { id: a } = await app.actions.createPost({ content: "foo" })
+	t.log(`${a}: created post`)
+	const { id: b } = await app.actions.createPost({ content: "bar" })
+	t.log(`${b}: created post`)
+
+	const compareIDs = ({ id: a }: { id: string }, { id: b }: { id: string }) => (a < b ? -1 : a === b ? 0 : 1)
+
+	t.deepEqual(
+		await app.db
+			.query<{ id: string; from: string; content: string }>("post", {})
+			.then((results) => results.sort(compareIDs)),
+		[
+			{ id: a, from: `eip155:1:${wallet.address}`, content: "foo" },
+			{ id: b, from: `eip155:1:${wallet.address}`, content: "bar" },
+		].sort(compareIDs)
+	)
+})

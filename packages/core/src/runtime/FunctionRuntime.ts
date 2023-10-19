@@ -1,3 +1,5 @@
+import { TypeTransformerFunction } from "@ipld/schema/typed.js"
+
 import type { Action, CBORValue, SessionSigner } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelValue, validateModelValue } from "@canvas-js/modeldb"
 
@@ -22,7 +24,7 @@ export class FunctionRuntime extends AbstractRuntime {
 				...AbstractRuntime.sessionsModel,
 				...AbstractRuntime.effectsModel,
 			})
-			return new FunctionRuntime(signers, db, contract.actions, indexHistory)
+			return new FunctionRuntime(signers, db, {}, contract.actions, indexHistory)
 		} else {
 			const db = await target.openDB(location, "models", {
 				...contract.models,
@@ -30,7 +32,7 @@ export class FunctionRuntime extends AbstractRuntime {
 				...AbstractRuntime.versionsModel,
 			})
 
-			return new FunctionRuntime(signers, db, contract.actions, indexHistory)
+			return new FunctionRuntime(signers, db, {}, contract.actions, indexHistory)
 		}
 	}
 
@@ -40,6 +42,10 @@ export class FunctionRuntime extends AbstractRuntime {
 	constructor(
 		public readonly signers: SessionSigner[],
 		public readonly db: AbstractModelDB,
+		public readonly actionCodecs: Record<
+			string,
+			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+		>,
 		public readonly actions: Record<string, ActionImplementation<CBORValue, CBORValue>>,
 		indexHistory: boolean
 	) {

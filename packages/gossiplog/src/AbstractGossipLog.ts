@@ -310,22 +310,68 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		return { id }
 	}
 
-	public async getAncestors(
-		id: string,
-		atOrBefore: number,
-		options: { txn?: ReadOnlyTransaction } = {}
-	): Promise<string[]> {
+	public async getAncestors(id: string, atOrBefore: number): Promise<string[]> {
 		const results = new Set<string>()
-		if (options.txn) {
-			AbstractGossipLog.getAncestors(options.txn, encodeId(id), atOrBefore, results)
-		} else {
-			await this.read((txn) => AbstractGossipLog.getAncestors(txn, encodeId(id), atOrBefore, results))
-		}
+		await this.read((txn) => this.#getAncestors(txn, encodeId(id), atOrBefore, results))
 		this.log("getAncestors of %s atOrBefore %d: %o", id, atOrBefore, results)
 		return Array.from(results).sort()
 	}
 
-	static async getAncestors(
+	static async isAncestor(
+		txn: ReadOnlyTransaction,
+		id: string,
+		ancestor: string,
+		visited = new Set<string>()
+	): Promise<boolean> {
+		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
+
+		if (id === ancestor) {
+			return true
+		}
+
+		const ancestorKey = encodeId(ancestor)
+		const [ancestorClock] = varint.decode(ancestorKey)
+
+		const key = encodeId(id)
+		const [clock] = varint.decode(key)
+
+		if (clock <= ancestorClock) {
+			return false
+		}
+
+		const index = Math.floor(Math.log2(clock - ancestorClock))
+		const value = await txn.ancestors.get(key)
+		if (value === null) {
+			throw new Error(`key ${decodeId(key)} not found in ancestor index`)
+		}
+
+		const links = cbor.decode<Uint8Array[][]>(value)
+		for (const key of links[index]) {
+			const [clock] = varint.decode(key)
+			const id = decodeId(key)
+			if (id === ancestor) {
+				return true
+			}
+
+			if (clock <= ancestorClock) {
+				continue
+			}
+
+			if (visited.has(id)) {
+				throw new Error("I BET THIS NEVER HAPPENS")
+				continue
+			}
+
+			visited.add(id)
+			if (await this.isAncestor(txn, id, ancestor, visited)) {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	async #getAncestors(
 		txn: ReadOnlyTransaction,
 		key: Uint8Array,
 		atOrBefore: number,
@@ -341,7 +387,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 		const index = Math.floor(Math.log2(clock - atOrBefore))
 		const value = await txn.ancestors.get(key)
-		assert(value !== null, "expected value !== null")
+		if (value === null) {
+			throw new Error(`key ${decodeId(key)} not found in ancestor index`)
+		}
 
 		const links = cbor.decode<Uint8Array[][]>(value)
 		for (const ancestorKey of links[index]) {
@@ -354,7 +402,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 				throw new Error("I BET THIS NEVER HAPPENS")
 			} else {
 				visited.add(ancestorId)
-				await AbstractGossipLog.getAncestors(txn, ancestorKey, atOrBefore, results, visited)
+				await this.#getAncestors(txn, ancestorKey, atOrBefore, results, visited)
 			}
 		}
 	}
@@ -402,7 +450,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 								links.add(decodeId(child))
 							} else {
 								assert(childClock <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
-								await AbstractGossipLog.getAncestors(txn, child, ancestorClock, links)
+								await this.#getAncestors(txn, child, ancestorClock, links)
 							}
 						}
 
