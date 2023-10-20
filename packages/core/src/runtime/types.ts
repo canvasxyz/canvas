@@ -22,7 +22,7 @@ export type ActionImplementation<Args = any, Result = any> = (
 ) => Awaitable<Result>
 
 export type ModelAPI = {
-	get: (key: string) => Promise<ModelValue | null>
+	get: <T extends ModelValue = ModelValue>(key: string) => Promise<T | null>
 	set: (value: ModelValue) => Promise<void>
 	delete: (key: string) => Promise<void>
 }

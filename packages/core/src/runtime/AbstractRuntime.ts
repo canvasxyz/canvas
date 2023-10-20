@@ -202,14 +202,18 @@ export abstract class AbstractRuntime {
 
 	protected static getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
 
-	protected async getModelValue(context: ExecutionContext, model: string, key: string): Promise<null | ModelValue> {
+	protected async getModelValue<T extends ModelValue = ModelValue>(
+		context: ExecutionContext,
+		model: string,
+		key: string
+	): Promise<null | T> {
 		if (!this.indexHistory) {
 			throw new Error("cannot call .get if indexHistory is disabled")
 		}
 
 		assert(context.txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
 		if (context.modelEntries[model][key] !== undefined) {
-			return context.modelEntries[model][key]
+			return context.modelEntries[model][key] as T
 		}
 
 		const keyHash = AbstractRuntime.getKeyHash(key)
@@ -237,7 +241,7 @@ export abstract class AbstractRuntime {
 			for (const parent of context.message.parents) {
 				const isAncestor = await AbstractGossipLog.isAncestor(context.txn, parent, messageId, visited)
 				if (isAncestor) {
-					return cbor.decode<null | ModelValue>(value)
+					return cbor.decode<null | T>(value)
 				}
 			}
 

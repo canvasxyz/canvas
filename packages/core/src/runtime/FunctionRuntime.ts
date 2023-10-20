@@ -69,9 +69,9 @@ export class FunctionRuntime extends AbstractRuntime {
 			assert(primaryKeyProperty !== undefined)
 
 			return {
-				get: async (key: string) => {
+				get: async <T extends ModelValue = ModelValue>(key: string) => {
 					assert(this.#context !== null, "expected this.#context !== null")
-					return await this.getModelValue(context, model.name, key)
+					return await this.getModelValue<T>(context, model.name, key)
 				},
 				set: async (value: ModelValue) => {
 					assert(this.#context !== null, "expected this.#context !== null")
