@@ -1,4 +1,4 @@
-import type { PeerId } from "@libp2p/interface-peer-id"
+import type { PeerId } from "@libp2p/interface/peer-id"
 import type { Source, Target, Node, Bound, KeyValueStore, Entry } from "@canvas-js/okra"
 
 import { CustomEvent, EventEmitter } from "@libp2p/interface/events"

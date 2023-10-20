@@ -27,8 +27,7 @@
     "test": "ava --concurrency 1"
   },
   "peerDependencies": {
-    "@chainsafe/libp2p-gossipsub": "^10.1.0",
-    "libp2p": "^0.46.11"
+    "@chainsafe/libp2p-gossipsub": "^10.1.0"
   },
   "dependencies": {
     "@canvas-js/interfaces": "0.6.0-alpha7",
