@@ -53,9 +53,11 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		upperBound: Bound<Uint8Array> | null = null,
 		options: { reverse?: boolean } = {}
 	): AsyncIterable<[key: Uint8Array, value: Uint8Array]> {
-		const txn = new Transaction(this.env, { readOnly: true, dbi: "messages" })
+		const txn = new Transaction(this.env, { readOnly: true })
+
 		try {
-			for await (const node of txn.nodes(0, lowerBound ?? { key: null, inclusive: false }, upperBound, options)) {
+			const tree = new Tree(txn, { dbi: "messages" })
+			for await (const node of tree.nodes(0, lowerBound ?? { key: null, inclusive: false }, upperBound, options)) {
 				assert(node.key !== null, "expected node.key !== null")
 				assert(node.value !== undefined, "expected node.value !== undefined")
 				yield [node.key, node.value]

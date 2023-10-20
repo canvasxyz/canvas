@@ -1,7 +1,7 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
 
 import pDefer from "p-defer"
-import { bytesToHex } from "@noble/hashes/utils"
+import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
@@ -30,7 +30,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		const messages = await IDBTree.open(db, `${init.topic}/messages`)
 		const parents = new IDBStore(db, `${init.topic}/parents`)
-		const ancestors = new IDBStore(db, `${init.topic}/parents`)
+		const ancestors = new IDBStore(db, `${init.topic}/ancestors`)
 
 		const gossipLog = new GossipLog(db, messages, parents, ancestors, init)
 
@@ -44,7 +44,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	private readonly incomingSyncPeers = new Set<string>()
 	private readonly outgoingSyncPeers = new Set<string>()
 	private readonly controller = new AbortController()
-	private readonly lockName = bytesToHex(crypto.getRandomValues(new Uint8Array(16)))
+	private readonly lockName = bytesToHex(randomBytes(16))
 
 	private constructor(
 		private readonly db: IDBPDatabase,

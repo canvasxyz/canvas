@@ -25,6 +25,17 @@ test("append messages (memory, linear, 100)", async (t) => {
 // 	await append(t, log, 100)
 // })
 
+// like what if it's
+// ```
+// import { Runtime } from "@canvas-js/runtime"
+
+// ```
+
+// ```
+// import { Runtime } from "@canvas-js/runtime/vm"
+
+// ```
+
 // test("append messages (node, linear, 100, indexed)", async (t) => {
 // 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate, signatures: false, indexAncestors: true })
 // 	t.teardown(() => log.close())

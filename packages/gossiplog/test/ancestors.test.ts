@@ -1,19 +1,16 @@
-import test from "ava"
-
 import { nanoid } from "nanoid"
 import { Message } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
 
 import { decodeId } from "@canvas-js/gossiplog"
-import { GossipLog } from "@canvas-js/gossiplog/memory"
-import { appendChain, collect, shuffle } from "./utils.js"
+import { appendChain, collect, shuffle, testPlatforms } from "./utils.js"
 
 const topic = "com.example.test"
 const apply = (id: string, signature: Signature | null, message: Message<string>) => {}
 const validate = (payload: unknown): payload is string => true
 
-test("append messages", async (t) => {
-	const log = await GossipLog.open({ topic, apply, validate, signatures: false, indexAncestors: true })
+testPlatforms("append messages", async (t, openGossipLog) => {
+	const log = await openGossipLog(t, { topic, apply, validate, signatures: false, indexAncestors: true })
 
 	const [a, b, c] = [nanoid(), nanoid(), nanoid()]
 	const { id: idA } = await log.append(a, {})
@@ -27,8 +24,8 @@ test("append messages", async (t) => {
 	])
 })
 
-test("get ancestors (append, linear history)", async (t) => {
-	const log = await GossipLog.open({ topic, apply, validate, signatures: false, indexAncestors: true })
+testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog) => {
+	const log = await openGossipLog(t, { topic, apply, validate, signatures: false, indexAncestors: true })
 
 	const n = 20
 	const ids: string[] = []
@@ -44,8 +41,8 @@ test("get ancestors (append, linear history)", async (t) => {
 	}
 })
 
-test("get ancestors (insert, linear history)", async (t) => {
-	const log = await GossipLog.open({ topic, apply, validate, signatures: false, indexAncestors: true })
+testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog) => {
+	const log = await openGossipLog(t, { topic, apply, validate, signatures: false, indexAncestors: true })
 
 	const n = 20
 	const ids: string[] = []
@@ -67,8 +64,8 @@ test("get ancestors (insert, linear history)", async (t) => {
 	}
 })
 
-test("get ancestors (insert, linear history, shuffled)", async (t) => {
-	const log = await GossipLog.open({ topic, apply, validate, signatures: false, indexAncestors: true })
+testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, openGossipLog) => {
+	const log = await openGossipLog(t, { topic, apply, validate, signatures: false, indexAncestors: true })
 
 	const n = 20
 	const ids: string[] = []
@@ -97,8 +94,8 @@ test("get ancestors (insert, linear history, shuffled)", async (t) => {
 	}
 })
 
-test("get ancestors (insert, concurrent history, fixed)", async (t) => {
-	const log = await GossipLog.open({ topic, apply, validate, signatures: false, indexAncestors: true })
+testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, openGossipLog) => {
+	const log = await openGossipLog(t, { topic, apply, validate, signatures: false, indexAncestors: true })
 
 	const { id: idX } = await log.append(nanoid())
 	const { id: idY } = await log.append(nanoid())
