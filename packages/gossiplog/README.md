@@ -260,7 +260,7 @@ In the example below, `await gossiplog.getAncestors(l, 6)` would return `[h, i]`
 
 ## API
 
-Topics must match `/^[a-zA-Z0-9\\.\\-]+$/`.
+Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 
 ```ts
 interface GossipLogInit<Payload = unknown, Result = void> {
