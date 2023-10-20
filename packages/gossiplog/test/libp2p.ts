@@ -19,7 +19,8 @@ import { logger } from "@libp2p/logger"
 
 import { Signature } from "@canvas-js/signed-cid"
 import { Message } from "@canvas-js/interfaces"
-import { GossipLogService, GossipLogEvents, GossipLogServiceInit, gossiplog } from "@canvas-js/gossiplog"
+import { GossipLogEvents } from "@canvas-js/gossiplog"
+import { GossipLogService, GossipLogServiceInit, gossiplog } from "@canvas-js/gossiplog/service"
 
 export type NetworkInit = Record<string, { port: number; peers: string[]; init?: GossipLogServiceInit }>
 

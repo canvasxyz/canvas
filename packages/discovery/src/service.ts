@@ -65,7 +65,7 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 	#registrarId: string | null = null
 	#queue = new PQueue({ concurrency: 1 })
 
-	constructor(public readonly components: DiscoveryServiceComponents, private readonly init: DiscoveryServiceInit) {
+	constructor(public readonly components: DiscoveryServiceComponents, init: DiscoveryServiceInit) {
 		super()
 		this.pubsub = DiscoveryService.extractGossipSub(components)
 		this.fetch = DiscoveryService.extractFetchService(components)

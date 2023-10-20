@@ -14,7 +14,7 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
-import { gossiplog } from "@canvas-js/gossiplog"
+import { gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
 
 import {

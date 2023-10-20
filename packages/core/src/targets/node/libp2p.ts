@@ -18,7 +18,7 @@ import { register } from "prom-client"
 
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
-import { gossiplog } from "@canvas-js/gossiplog"
+import { gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
 
 import {

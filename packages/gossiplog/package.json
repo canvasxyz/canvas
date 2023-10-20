@@ -16,7 +16,8 @@
     ".": "./lib/index.js",
     "./node": "./lib/node/index.js",
     "./browser": "./lib/browser/index.js",
-    "./memory": "./lib/memory/index.js"
+    "./memory": "./lib/memory/index.js",
+    "./service": "./lib/service.js"
   },
   "imports": {
     "#protocols/sync": "./lib/protocols/sync.js"
