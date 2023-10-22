@@ -49,6 +49,7 @@
     "@libp2p/peer-id": "^3.0.3",
     "@libp2p/peer-id-factory": "^3.0.5",
     "@libp2p/prometheus-metrics": "^2.0.8",
+    "@libp2p/webrtc": "^3.2.3",
     "@libp2p/websockets": "^7.0.9",
     "@multiformats/multiaddr": "^12.1.7",
     "@noble/curves": "^1.2.0",

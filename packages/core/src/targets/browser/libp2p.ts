@@ -5,11 +5,13 @@ import type { PeerId } from "@libp2p/interface/peer-id"
 import { pingService } from "libp2p/ping"
 import { identifyService } from "libp2p/identify"
 import { fetchService } from "libp2p/fetch"
+import { circuitRelayTransport } from "libp2p/circuit-relay"
 
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
+import { webRTC } from "@libp2p/webrtc"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
@@ -76,10 +78,14 @@ export function getLibp2pOptions(
 			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
 		},
 
-		transports: [webSockets({ filter: all })],
+		transports: [
+			webSockets({ filter: all }),
+			webRTC({}),
+			circuitRelayTransport({ discoverRelays: announce.length === 0 ? bootstrapList.length : 0 }),
+		],
 
 		connectionEncryption: [noise()],
-		streamMuxers: [mplex()],
+		streamMuxers: [mplex({ disconnectThreshold: 20 })],
 		peerDiscovery: bootstrapList.length === 0 ? [] : [bootstrap({ list: bootstrapList })],
 
 		services: {
