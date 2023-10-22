@@ -188,7 +188,6 @@ export class ModelAPI {
 		if (isLiteralExpression(expression)) {
 			// Here we iterate over the index using an `only` key range
 			const range = IDBKeyRange.only(encodePropertyValue(property, expression))
-			this.log("iterating over range IDBKeyRange.only(%o)", expression)
 			for (let cursor = await storeIndex.openCursor(range); cursor !== null; cursor = await cursor.continue()) {
 				yield this.decodeObject(cursor.value)
 			}
@@ -196,21 +195,18 @@ export class ModelAPI {
 			// Here we iterate over the undex using an open `upperBound` key range
 			// followed by an open `lowerBound` key range. Unnecessary if expression.neq === null.
 			if (expression.neq !== null) {
-				this.log("iterating over range IDBKeyRange.upperBound(%o, true)", expression.neq)
 				const upper = IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
 				for (let cursor = await storeIndex.openCursor(upper); cursor !== null; cursor = await cursor.continue()) {
 					yield this.decodeObject(cursor.value)
 				}
 			}
 
-			this.log("iterating over range IDBKeyRange.lowerBound(%o, true)", expression.neq)
 			const lower = IDBKeyRange.lowerBound(encodePropertyValue(property, expression.neq), true)
 			for (let cursor = await storeIndex.openCursor(lower); cursor !== null; cursor = await cursor.continue()) {
 				yield this.decodeObject(cursor.value)
 			}
 		} else if (isRangeExpression(expression)) {
 			const range = getRange(property, expression)
-			this.log("iterating over range %o", range)
 			for (let cursor = await storeIndex.openCursor(range); cursor !== null; cursor = await cursor.continue()) {
 				yield this.decodeObject(cursor.value)
 			}
