@@ -1,9 +1,9 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
 
 import type { Connection } from "@libp2p/interface/connection"
+import { Canvas } from "@canvas-js/core"
 
 import { AppContext } from "./AppContext.js"
-import { Canvas } from "@canvas-js/core"
 
 import { PeerIdView } from "./components/PeerIdView.js"
 
