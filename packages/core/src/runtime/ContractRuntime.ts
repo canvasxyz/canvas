@@ -124,7 +124,9 @@ export class ContractRuntime extends AbstractRuntime {
 			set: this.vm.context.newFunction(`db.${model.name}.set`, (valueHandle) => {
 				assert(this.#context !== null, "expected this.#modelEntries !== null")
 				const value = this.unwrapModelValue(model, valueHandle)
-				this.#context.modelEntries[model.name][primaryKeyProperty.name] = value
+				const primaryKey = value[primaryKeyProperty.name]
+				assert(typeof primaryKey === "string", "expected primary key to be a string")
+				this.#context.modelEntries[model.name][primaryKey] = value
 			}),
 			delete: this.vm.context.newFunction(`db.${model.name}.delete`, (keyHandle) => {
 				assert(this.#context !== null, "expected this.#modelEntries !== null")
