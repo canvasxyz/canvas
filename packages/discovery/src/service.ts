@@ -7,6 +7,8 @@ import type { ConnectionManager } from "@libp2p/interface-internal/connection-ma
 import { CustomEvent, EventEmitter } from "@libp2p/interface/events"
 import { PeerDiscovery, PeerDiscoveryEvents, peerDiscovery } from "@libp2p/interface/peer-discovery"
 
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+
 import { FetchService } from "libp2p/fetch"
 import { PeerRecord, RecordEnvelope } from "@libp2p/peer-record"
 import { logger } from "@libp2p/logger"
@@ -65,7 +67,7 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 	#registrarId: string | null = null
 	#queue = new PQueue({ concurrency: 1 })
 
-	constructor(public readonly components: DiscoveryServiceComponents, private readonly init: DiscoveryServiceInit) {
+	constructor(public readonly components: DiscoveryServiceComponents, init: DiscoveryServiceInit) {
 		super()
 		this.pubsub = DiscoveryService.extractGossipSub(components)
 		this.fetch = DiscoveryService.extractFetchService(components)
@@ -181,23 +183,22 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 							return
 						}
 
-						this.dispatchEvent(
-							new CustomEvent("peer", { detail: { id: peerId, multiaddrs: multiaddrs, protocols: [] } })
-						)
+						this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
 
 						this.log("adding %p to peer store with multiaddrs %o", peerId, multiaddrs)
+
 						await this.components.peerStore.merge(peerId, {
 							addresses: multiaddrs.map((multiaddr) => ({ isCertified: true, multiaddr })),
 						})
 
-						await this.connect(peerId)
+						await this.connect(peerId, multiaddrs)
 					}
 				}
 			})
 			.catch((err) => this.log.error("error handling new connection: %O", err))
 	}
 
-	private async connect(peerId: PeerId) {
+	private async connect(peerId: PeerId, multiaddrs: Multiaddr[]) {
 		const existingConnections = this.components.connectionManager.getConnections(peerId)
 
 		if (existingConnections.length > 0) {
@@ -205,9 +206,18 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 			return
 		}
 
-		this.log("connecting to peer %p", peerId)
+		const addrs = multiaddrs.flatMap((ma) => {
+			const addr = ma.toString()
+			if (addr.endsWith("/webrtc") || addr.endsWith("/ws")) {
+				return [multiaddr(`${addr}/p2p/${peerId}`)]
+			} else {
+				return []
+			}
+		})
+
+		this.log("dialing %O", addrs)
 		try {
-			await this.components.connectionManager.openConnection(peerId, { priority: this.autoDialPriority })
+			await this.components.connectionManager.openConnection(addrs, { priority: this.autoDialPriority })
 			this.log("connection opened successfully")
 		} catch (err) {
 			this.log.error("failed to open new connection to %p: %O", peerId, err)

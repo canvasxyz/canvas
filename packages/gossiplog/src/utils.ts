@@ -8,7 +8,8 @@ export type Awaitable<T> = T | Promise<T>
 
 export const cborNull: Uint8Array = cbor.encode(null)
 
-export const topicPattern = /^[a-zA-Z0-9\\.\\-]+$/
+// eslint-disable-next-line no-useless-escape
+export const topicPattern = /^[a-zA-Z0-9\.\-]+$/
 
 /** Logarithmic clock decay */
 export function* getAncestorClocks(clock: number): Iterable<number> {

@@ -2,7 +2,7 @@ import React, { useCallback, useContext, useState } from "react"
 import { deleteDB } from "idb"
 
 import { AppContext } from "./AppContext.js"
-import { location } from "./utils.js"
+import { topic } from "./utils.js"
 
 export interface ControlPanelProps {}
 
@@ -38,13 +38,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 			await app.close()
 
 			console.log("deleting model database")
-			await deleteDB(`${location}/db`, {})
-
-			console.log("deleting session database")
-			await deleteDB(`${location}/sessions`, {})
+			await deleteDB(`${topic}/db`, {})
 
 			console.log("deleting message log", app.topic)
-			await deleteDB(`${location}/topics/${app.topic}`, {})
+			await deleteDB(`${topic}/topics/${app.topic}`, {})
 
 			console.log("clearing localStorage")
 			window.localStorage.clear()

@@ -16,7 +16,8 @@
     ".": "./lib/index.js",
     "./node": "./lib/node/index.js",
     "./browser": "./lib/browser/index.js",
-    "./memory": "./lib/memory/index.js"
+    "./memory": "./lib/memory/index.js",
+    "./service": "./lib/service.js"
   },
   "imports": {
     "#protocols/sync": "./lib/protocols/sync.js"
@@ -27,8 +28,7 @@
     "test": "ava --concurrency 1"
   },
   "peerDependencies": {
-    "@chainsafe/libp2p-gossipsub": "^10.1.0",
-    "libp2p": "^0.46.11"
+    "@chainsafe/libp2p-gossipsub": "^10.1.0"
   },
   "dependencies": {
     "@canvas-js/interfaces": "0.6.0-alpha7",

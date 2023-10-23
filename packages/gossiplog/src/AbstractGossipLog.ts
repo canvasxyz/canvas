@@ -1,4 +1,4 @@
-import type { PeerId } from "@libp2p/interface-peer-id"
+import type { PeerId } from "@libp2p/interface/peer-id"
 import type { Source, Target, Node, Bound, KeyValueStore, Entry } from "@canvas-js/okra"
 
 import { CustomEvent, EventEmitter } from "@libp2p/interface/events"
@@ -17,6 +17,7 @@ import { Signature, verifySignature } from "@canvas-js/signed-cid"
 import { Driver } from "./sync/driver.js"
 import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getClock } from "./schema.js"
 import { Awaitable, assert, topicPattern, cborNull, getAncestorClocks } from "./utils.js"
+import { Mempool } from "./Mempool.js"
 
 export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
@@ -278,13 +279,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 			if (dependencies.size > 0) {
 				this.log("missing %d/%d parents", dependencies.size, message.parents.length)
-				this.log("mempool.messages.set(%s, ...)", id)
 				this.mempool.messages.set(id, { signature, message })
-				this.log("mempool.dependencies.set(%s, %o)", id, dependencies)
 				this.mempool.dependencies.set(id, dependencies)
 
 				for (const parent of dependencies) {
-					this.log("mempool.children[%s].add(%s)", parent, id)
 					const children = this.mempool.children.get(parent)
 					if (children === undefined) {
 						this.mempool.children.set(parent, new Set([id]))
@@ -515,25 +513,4 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	public async serve(targetPeerId: PeerId, callback: (source: Source) => Promise<void>) {
 		await this.read((txn) => callback(txn.messages), { target: targetPeerId })
 	}
-}
-
-class Mempool<Payload> {
-	/**
-	 * `messages` stores entries just like the message database,
-	 * with encoded message ids as keys and messages as values.
-	 */
-	readonly messages = new Map<string, { signature: Signature | null; message: Message<Payload> }>()
-
-	/**
-	 * `dependencies` stores the missing parents of the entries in `messages`.
-	 */
-	readonly dependencies = new Map<string, Set<string>>()
-
-	/**
-	 * When we apply any message, we need to look up any mempool entries that
-	 * depended on that message that are now eligible for application themselves.
-	 * `children` is a map from the parent ids of all mempool
-	 * entries to the set of children that depend on them.
-	 */
-	readonly children = new Map<string, Set<string>>()
 }

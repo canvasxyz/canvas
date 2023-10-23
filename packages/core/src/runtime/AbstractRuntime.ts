@@ -3,6 +3,7 @@ import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
 import { equals } from "uint8arrays"
 import { TypeTransformerFunction } from "@ipld/schema/typed.js"
+import { logger } from "@libp2p/logger"
 
 import type { Action, CBORValue, Message, Session, SessionSigner } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
@@ -73,6 +74,7 @@ export abstract class AbstractRuntime {
 		{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 	>
 
+	protected readonly log = logger("canvas:runtime")
 	protected constructor(public readonly indexHistory: boolean) {}
 
 	protected abstract execute(context: ExecutionContext, action: Action): Promise<void | CBORValue>
@@ -139,6 +141,7 @@ export abstract class AbstractRuntime {
 							})
 
 							if (results.length > 0) {
+								runtime.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
 								continue
 							}
 						} else {
@@ -154,13 +157,13 @@ export abstract class AbstractRuntime {
 							const currentVersion = encodeId(id)
 							if (existingVersion !== null && lessThan(currentVersion, existingVersion)) {
 								continue
-							} else {
-								effects.push({
-									model: "$versions",
-									operation: "set",
-									value: { key: versionKey, version: currentVersion },
-								})
 							}
+
+							effects.push({
+								model: "$versions",
+								operation: "set",
+								value: { key: versionKey, version: currentVersion },
+							})
 						}
 
 						if (value === null) {
@@ -171,6 +174,7 @@ export abstract class AbstractRuntime {
 					}
 				}
 
+				runtime.log("applying effects %O", effects)
 				if (effects.length > 0) {
 					await runtime.db.apply(effects)
 				}
@@ -202,14 +206,18 @@ export abstract class AbstractRuntime {
 
 	protected static getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
 
-	protected async getModelValue(context: ExecutionContext, model: string, key: string): Promise<null | ModelValue> {
+	protected async getModelValue<T extends ModelValue = ModelValue>(
+		context: ExecutionContext,
+		model: string,
+		key: string
+	): Promise<null | T> {
 		if (!this.indexHistory) {
 			throw new Error("cannot call .get if indexHistory is disabled")
 		}
 
 		assert(context.txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
 		if (context.modelEntries[model][key] !== undefined) {
-			return context.modelEntries[model][key]
+			return context.modelEntries[model][key] as T
 		}
 
 		const keyHash = AbstractRuntime.getKeyHash(key)
@@ -237,7 +245,7 @@ export abstract class AbstractRuntime {
 			for (const parent of context.message.parents) {
 				const isAncestor = await AbstractGossipLog.isAncestor(context.txn, parent, messageId, visited)
 				if (isAncestor) {
-					return cbor.decode<null | ModelValue>(value)
+					return cbor.decode<null | T>(value)
 				}
 			}
 

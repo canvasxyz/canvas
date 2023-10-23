@@ -1,6 +1,6 @@
 import { SessionStore } from "@canvas-js/interfaces"
 
-export const location = "chat"
+export const topic = "example-chat.canvas.xyz"
 
 export const sessionStore: SessionStore = {
 	get: (key) => window.localStorage.getItem(key),
