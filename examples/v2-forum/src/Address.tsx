@@ -38,7 +38,7 @@ export function Address({ address }: { address: string }) {
 			</div>
 
 			<a className="hover:underline" href="#" onClick={(e) => e.preventDefault()} title={address}>
-				{data ? data : <span>{address.slice(0, 7)}</span>}
+				{data ? data : <span>{address?.slice(0, 7)}</span>}
 			</a>
 		</span>
 	)

@@ -9,10 +9,11 @@ import { Action, Session, CBORValue } from "@canvas-js/interfaces"
 
 const BUNDLER_NODE = "https://node2.irys.xyz"
 const GATEWAY_NODE = "https://gateway.irys.xyz"
-const APP_HEADER = "App-Name"
+const APP_HEADER = "App-Name-2"
 const TOKEN_RPC = "https://mainnet.optimism.io"
 
 const APP_ID = "v2-forum-demo"
+const actionCache: Record<string, boolean> = {}
 
 export function Persister({ app }: { app?: Canvas }) {
 	const [irys, setIrys] = useState<WebIrys>()
@@ -60,9 +61,9 @@ export function Persister({ app }: { app?: Canvas }) {
 
 		type MessageEvent = GossipLogEvents<Action | Session, void | CBORValue>["message"]
 		const handleMessage = (msg: MessageEvent) => {
-			console.log("a:", msg)
-			const { signature, message, result } = msg.detail
+			const { id, signature, message } = msg.detail
 			const [_key, value] = app.messageLog.encode(signature, message)
+			if (actionCache[id]) return
 			put(value)
 		}
 		app.messageLog.addEventListener("message", handleMessage)
@@ -159,11 +160,14 @@ export function Persister({ app }: { app?: Canvas }) {
 				// for (action in isAction(item) ? [item] : item) { ... }
 				try {
 					const [msgid, signature, message] = app.messageLog.decode(new Uint8Array(txdata))
-					console.log(message)
-					await app.messageLog.insert(signature, message)
 
+					// Insert the msgid into seenActionCache before calling .insert(), so we don't
+					// push duplicate records to irys.
 					seenActions[msgid] = true
+					actionCache[msgid] = true
 					delete expectedRoots[msgid]
+
+					await app.messageLog.insert(signature, message)
 
 					for (const parent of message.parents) {
 						if (seenActions[parent]) continue
