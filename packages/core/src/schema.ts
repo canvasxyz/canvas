@@ -32,7 +32,7 @@ type Payload union {
 }
 `
 
-const { toTyped, toRepresentation } = create(fromDSL(schema), "Payload")
+const { toTyped } = create(fromDSL(schema), "Payload")
 
 export function validatePayload(payload: unknown): payload is Action | Session {
 	const result = toTyped(payload) as { Action: Omit<Action, "type"> } | { Session: Omit<Session, "type"> } | undefined

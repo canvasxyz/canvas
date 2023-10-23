@@ -11,19 +11,25 @@ import { AbstractGossipLog, MessageSigner } from "@canvas-js/gossiplog"
 
 import target from "#target"
 
-import { Runtime, createRuntime, InlineContract, ActionImplementation } from "./runtime/index.js"
+import {
+	Runtime,
+	createRuntime,
+	InlineContract,
+	ActionImplementation,
+	TActions,
+	ActionImplementationFunction,
+	ActionImplementationObject,
+} from "./runtime/index.js"
 import { ServiceMap } from "./targets/interface.js"
-import { assert } from "./utils.js"
 import { validatePayload } from "./schema.js"
+import { assert } from "./utils.js"
 
-export interface CanvasConfig<
-	Actions extends Record<string, ActionImplementation> = Record<string, ActionImplementation>
-> {
+export interface CanvasConfig<Contract extends InlineContract = InlineContract> {
 	topic: string
-	contract: string | InlineContract<Actions>
+	contract: string | Contract
 
 	/**
-	 * defaults to the topic.
+	 * Defaults to the topic.
 	 * - NodeJS: data directory path
 	 * - browser: IndexedDB database namespace
 	 */
@@ -71,12 +77,10 @@ export type ApplicationData = {
 	topics: Record<string, { actions: string[] | null }>
 }
 
-export class Canvas<
-	Actions extends Record<string, ActionImplementation> = Record<string, ActionImplementation>
-> extends EventEmitter<CoreEvents> {
-	public static async initialize<Actions extends Record<string, ActionImplementation>>(
-		config: CanvasConfig<Actions>
-	): Promise<Canvas<Actions>> {
+export class Canvas<Contract extends InlineContract = InlineContract> extends EventEmitter<CoreEvents> {
+	public static async initialize<Contract extends InlineContract>(
+		config: CanvasConfig<Contract>
+	): Promise<Canvas<Contract>> {
 		const {
 			topic,
 			location = topic,
@@ -117,7 +121,12 @@ export class Canvas<
 
 	public readonly db: AbstractModelDB
 	public readonly actions = {} as {
-		[K in keyof Actions]: Actions[K] extends ActionImplementation<infer Args, infer Result>
+		[K in keyof Contract["actions"]]: Contract["actions"][K] extends ActionImplementationFunction<
+			infer Args,
+			infer Result
+		>
+			? ActionAPI<Args, Result>
+			: Contract["actions"][K] extends ActionImplementationObject<infer Args, infer Result>
 			? ActionAPI<Args, Result>
 			: never
 	}
