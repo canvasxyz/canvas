@@ -51,7 +51,27 @@ export class FunctionRuntime extends AbstractRuntime {
 	) {
 		super(indexHistory)
 
-		this.#db = {}
+		this.#db = mapValues(this.db.models, (model): ModelAPI => {
+			const primaryKeyProperty = model.properties.find((property) => property.kind === "primary")
+			assert(primaryKeyProperty !== undefined)
+
+			return {
+				get: async <T extends ModelValue = ModelValue>(key: string) => {
+					assert(this.#context !== null, "expected this.#context !== null")
+					return await this.getModelValue<T>(this.#context, model.name, key)
+				},
+				set: async (value: ModelValue) => {
+					assert(this.#context !== null, "expected this.#context !== null")
+					validateModelValue(model, value)
+					const key = value[primaryKeyProperty.name] as string
+					this.#context.modelEntries[model.name][key] = value
+				},
+				delete: async (key: string) => {
+					assert(this.#context !== null, "expected this.#context !== null")
+					this.#context.modelEntries[model.name][key] = null
+				},
+			}
+		})
 	}
 
 	public get actionNames() {
@@ -64,29 +84,18 @@ export class FunctionRuntime extends AbstractRuntime {
 
 		this.#context = context
 
-		const api = mapValues(this.db.models, (model): ModelAPI => {
-			const primaryKeyProperty = model.properties.find((property) => property.kind === "primary")
-			assert(primaryKeyProperty !== undefined)
+		try {
+			const result = await this.actions[name].apply(this.#db, args, {
+				id: context.id,
+				chain,
+				address,
+				blockhash,
+				timestamp,
+			})
 
-			return {
-				get: async <T extends ModelValue = ModelValue>(key: string) => {
-					assert(this.#context !== null, "expected this.#context !== null")
-					return await this.getModelValue<T>(context, model.name, key)
-				},
-				set: async (value: ModelValue) => {
-					assert(this.#context !== null, "expected this.#context !== null")
-					validateModelValue(model, value)
-					const key = value[primaryKeyProperty.name] as string
-					context.modelEntries[model.name][key] = value
-				},
-				delete: async (key: string) => {
-					assert(this.#context !== null, "expected this.#context !== null")
-					context.modelEntries[model.name][key] = null
-				},
-			}
-		})
-
-		const result = await this.actions[name].apply(api, args, { id: context.id, chain, address, blockhash, timestamp })
-		return result as CBORValue | void
+			return result as CBORValue | void
+		} finally {
+			this.#context = null
+		}
 	}
 }
