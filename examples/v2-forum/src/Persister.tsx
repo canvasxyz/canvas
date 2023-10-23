@@ -4,6 +4,8 @@ import { Canvas } from "@canvas-js/core"
 
 import { WebIrys } from "@irys/sdk"
 import Query from "@irys/query"
+import { GossipLogEvents } from "@canvas-js/gossiplog"
+import { Action, Session, CBORValue } from "@canvas-js/interfaces"
 
 const BUNDLER_NODE = "https://node2.irys.xyz"
 const GATEWAY_NODE = "https://gateway.irys.xyz"
@@ -12,7 +14,7 @@ const TOKEN_RPC = "https://mainnet.optimism.io"
 
 const APP_ID = "v2-forum-demo"
 
-export function Persister({ app }: { app: Canvas }) {
+export function Persister({ app }: { app?: Canvas }) {
 	const [irys, setIrys] = useState<WebIrys>()
 
 	// set up an irys instance
@@ -50,7 +52,24 @@ export function Persister({ app }: { app: Canvas }) {
 				console.error(err)
 				// alert("Error initializing application")
 			})
-	}, [])
+	}, [app?.topic])
+
+	// set up event listeners
+	useEffect(() => {
+		if (!app) return
+
+		type MessageEvent = GossipLogEvents<Action | Session, void | CBORValue>["message"]
+		const handleMessage = (msg: MessageEvent) => {
+			console.log("a:", msg)
+			const { signature, message, result } = msg.detail
+			const [_key, value] = app.messageLog.encode(signature, message)
+			put(value)
+		}
+		app.messageLog.addEventListener("message", handleMessage)
+		return () => {
+			app.messageLog.removeEventListener("message", handleMessage)
+		}
+	}, [app?.topic, (app?.messageLog as any)?.lockName])
 
 	const put = async (data: Uint8Array) => {
 		if (irys === undefined) {
@@ -78,6 +97,8 @@ export function Persister({ app }: { app: Canvas }) {
 	}
 
 	const refreshAll = async (fullSync: boolean) => {
+		if (!app) return
+
 		const myQuery = new Query({ url: BUNDLER_NODE + "/graphql" })
 
 		const seenActions: Record<string, boolean> = {}
@@ -91,9 +112,8 @@ export function Persister({ app }: { app: Canvas }) {
 			unbundledActions: Record<string, ArrayBuffer>
 			orphans: string[]
 		}) => {
-			console.log("write:")
-			console.log(unbundledActions)
-			console.log(orphans)
+			// TODO: implement rebundling
+			console.log("write:", unbundledActions, orphans)
 		}
 
 		let toTimestamp = undefined
@@ -112,7 +132,7 @@ export function Persister({ app }: { app: Canvas }) {
 			if (txs.length === 0) {
 				if (Object.values(expectedRoots).length !== 0) {
 					if (fullSync === true) {
-						write({ unbundledActions, orphans: Object.keys(expectedRoots) }) // TODO
+						write({ unbundledActions, orphans: Object.keys(expectedRoots) })
 					}
 					console.log("orphans:", expectedRoots)
 				}
