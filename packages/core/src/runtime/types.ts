@@ -2,20 +2,21 @@ import type { ModelsInit, ModelValue } from "@canvas-js/modeldb"
 
 import type { Awaitable } from "../utils.js"
 
-// /** This is type-level type; only used by generics, never values */
-// export type TSignature = { args: any; result: unknown }
+/** This is type-level type; only used by generics, never values */
+export type TActions = Record<string, { args: any; result: any }>
 
-// /** This is type-level type; only used by generics, never values */
-// export type TActions = Record<string, TSignature>
-
-export type InlineContract<
-	Actions extends Record<string, ActionImplementation> = Record<string, ActionImplementation>
-> = {
+export type InlineContract = {
 	models: ModelsInit
-	actions: Actions
+	actions: Record<string, ActionImplementation>
 }
 
-export type ActionImplementation<Args = any, Result = any> = (
+export type ActionImplementation<Args = any, Result = any> =
+	| ActionImplementationFunction<Args, Result>
+	| ActionImplementationObject<Args, Result>
+
+export type ActionImplementationObject<Args = any, Result = any> = { apply: ActionImplementationFunction<Args, Result> }
+
+export type ActionImplementationFunction<Args = any, Result = any> = (
 	db: Record<string, ModelAPI>,
 	args: Args,
 	context: ActionContext

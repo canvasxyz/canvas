@@ -69,10 +69,10 @@ export abstract class AbstractRuntime {
 	public abstract readonly db: AbstractModelDB
 	public abstract readonly actionNames: string[]
 
-	protected abstract readonly actionCodecs: Record<
-		string,
-		{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-	>
+	// protected abstract readonly actionCodecs: Record<
+	// 	string,
+	// 	{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+	// >
 
 	protected readonly log = logger("canvas:runtime")
 	protected constructor(public readonly indexHistory: boolean) {}

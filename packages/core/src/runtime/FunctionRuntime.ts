@@ -7,7 +7,7 @@ import target from "#target"
 
 import { assert, mapValues } from "../utils.js"
 
-import { ActionImplementation, InlineContract, ModelAPI } from "./types.js"
+import { ActionImplementation, ActionImplementationFunction, InlineContract, ModelAPI, TActions } from "./types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
 export class FunctionRuntime extends AbstractRuntime {
@@ -18,22 +18,20 @@ export class FunctionRuntime extends AbstractRuntime {
 		options: { indexHistory?: boolean } = {}
 	): Promise<FunctionRuntime> {
 		const { indexHistory = true } = options
-		if (indexHistory) {
-			const db = await target.openDB(location, "models", {
-				...contract.models,
-				...AbstractRuntime.sessionsModel,
-				...AbstractRuntime.effectsModel,
-			})
-			return new FunctionRuntime(signers, db, {}, contract.actions, indexHistory)
-		} else {
-			const db = await target.openDB(location, "models", {
-				...contract.models,
-				...AbstractRuntime.sessionsModel,
-				...AbstractRuntime.versionsModel,
-			})
+		const models = AbstractRuntime.getModelSchema(contract.models, { indexHistory })
+		const db = await target.openDB(location, "models", models)
+		const actions = mapValues(contract.actions, (apply) => {
+			if (typeof apply === "function") {
+				return {
+					argsType: { toTyped: (x: any) => x, toRepresentation: (x: any) => x },
+					apply: apply as ActionImplementationFunction,
+				}
+			} else {
+				return { argsType: { toTyped: (x: any) => x, toRepresentation: (x: any) => x }, ...apply }
+			}
+		})
 
-			return new FunctionRuntime(signers, db, {}, contract.actions, indexHistory)
-		}
+		return new FunctionRuntime(signers, db, actions, indexHistory)
 	}
 
 	#context: ExecutionContext | null = null
@@ -42,11 +40,13 @@ export class FunctionRuntime extends AbstractRuntime {
 	constructor(
 		public readonly signers: SessionSigner[],
 		public readonly db: AbstractModelDB,
-		public readonly actionCodecs: Record<
+		public readonly actions: Record<
 			string,
-			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+			{
+				argsType: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+				apply: ActionImplementationFunction
+			}
 		>,
-		public readonly actions: Record<string, ActionImplementation<CBORValue, CBORValue>>,
 		indexHistory: boolean
 	) {
 		super(indexHistory)
@@ -86,7 +86,7 @@ export class FunctionRuntime extends AbstractRuntime {
 			}
 		})
 
-		const result = await this.actions[name](api, args, { id: context.id, chain, address, blockhash, timestamp })
+		const result = await this.actions[name].apply(api, args, { id: context.id, chain, address, blockhash, timestamp })
 		return result as CBORValue | void
 	}
 }
