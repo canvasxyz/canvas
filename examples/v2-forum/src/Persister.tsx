@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react"
 import { ethers } from "ethers"
-// import { encode, decode } from "microcbor"
 import { Canvas } from "@canvas-js/core"
 
 import { WebIrys } from "@irys/sdk"
@@ -62,6 +61,7 @@ export function Persister({ app }: { app: Canvas }) {
 			const tags = [{ name: APP_HEADER, value: APP_ID }]
 			return irys
 				.upload(Buffer.from(dataToUpload), { tags })
+				.then(() => resolve())
 				.catch((err) => {
 					console.error(err)
 					reject()
@@ -77,50 +77,112 @@ export function Persister({ app }: { app: Canvas }) {
 		location.reload()
 	}
 
-	const refreshAll = async () => {
-		const myQuery = new Query({
-			url: BUNDLER_NODE + "/graphql",
-		})
-		myQuery
-			.search("irys:transactions")
-			.tags([{ name: APP_HEADER, values: [APP_ID] }])
-			.sort("DESC")
-			.then((txs) => {
-				return Promise.all(
-					txs.map((tx) => fetch(GATEWAY_NODE + "/" + tx.id)
-						.then((txdata) => txdata.arrayBuffer())
-						.then((buffer) => {
-							const [key, signature, message] = app.messageLog.decode(new Uint8Array(buffer))
-							return app.messageLog.insert(signature, message)
-						})
-						.catch((err) => {
-							console.error("invalid action on arweave:", err)
-							return null
-						})
-				))
-			})
+	const refreshAll = async (fullSync: boolean) => {
+		const myQuery = new Query({ url: BUNDLER_NODE + "/graphql" })
+
+		const seenActions: Record<string, boolean> = {}
+		const expectedRoots: Record<string, boolean> = {}
+		const unbundledActions: Record<string, ArrayBuffer> = {}
+
+		const write = ({
+			unbundledActions,
+			orphans,
+		}: {
+			unbundledActions: Record<string, ArrayBuffer>
+			orphans: string[]
+		}) => {
+			console.log("write:")
+			console.log(unbundledActions)
+			console.log(orphans)
+		}
+
+		let toTimestamp = undefined
+		let page = 1
+		while (true) {
+			const PAGE_SIZE = 20 // Can be as small as 100, irys defaults to 1000
+			const MIN_BUNDLE_SIZE = 50
+
+			const txs = await myQuery
+				.search("irys:transactions")
+				.tags([{ name: APP_HEADER, values: [APP_ID] }])
+				.sort("DESC")
+				.limit(PAGE_SIZE)
+				.toTimestamp(toTimestamp)
+
+			if (txs.length === 0) {
+				if (Object.values(expectedRoots).length !== 0) {
+					if (fullSync === true) {
+						write({ unbundledActions, orphans: Object.keys(expectedRoots) }) // TODO
+					}
+					console.log("orphans:", expectedRoots)
+				}
+				break
+			}
+
+			const txids = txs.map((tx: { id: string }) => tx.id)
+			const txdatas = (
+				await Promise.all(
+					txids.map((txid) =>
+						fetch(GATEWAY_NODE + "/" + txid)
+							.then((txdata) => txdata.arrayBuffer())
+							.catch((error) => {
+								console.error("Error fetching individual Arweave txes:", error)
+								return null
+							}),
+					),
+				)
+			).filter((txdataOrNull: ArrayBuffer | null) => txdataOrNull !== null) as ArrayBuffer[]
+
+			let messageDecodingErrors = []
+			for (const txdata of txdatas) {
+				// TODO: also handle bundles here; loop over everything below for bundles:
+				// for (action in isAction(item) ? [item] : item) { ... }
+				try {
+					const [msgid, signature, message] = app.messageLog.decode(new Uint8Array(txdata))
+					console.log(message)
+					await app.messageLog.insert(signature, message)
+
+					seenActions[msgid] = true
+					delete expectedRoots[msgid]
+
+					for (const parent of message.parents) {
+						if (seenActions[parent]) continue
+						expectedRoots[parent] = true
+					}
+				} catch (err) {
+					messageDecodingErrors.push(err)
+					continue
+				}
+			}
+			if (messageDecodingErrors.length > 0) {
+				console.warn("Error decoding individual messages:", messageDecodingErrors)
+			}
+
+			// light sync can abort, if expectedRoots is empty (unless we haven't seen any valid items yet)
+			if (!fullSync && Object.values(expectedRoots).length === 0 && messageDecodingErrors.length < txdatas.length) {
+				if (Object.keys(unbundledActions).length > MIN_BUNDLE_SIZE) {
+					write({ unbundledActions, orphans: [] })
+				}
+				break
+			}
+
+			toTimestamp = Math.min(...txs.map((tx: { timestamp: number }) => tx.timestamp))
+			console.log("got page", page, toTimestamp, txs.length, " txs")
+			page += 1
+		}
 	}
 
 	return (
 		<div className="fixed z-10 top-3 left-3">
-			<button
-				className="btn btn-blue mr-2"
-				onClick={async () => {
-					for await (const [id, signature, message] of app.messageLog.iterate()) {
-						const [key, value] = app.messageLog.encode(signature, message)
-						put(value)
-					}
-				}}
-			>
-				Save
-			</button>
-			<button
-				className="btn btn-blue mr-2"
-				onClick={wipe}
-			>
+			<button className="btn btn-blue mr-2" onClick={wipe}>
 				Wipe
 			</button>
-			<button className="btn btn-blue mr-2" onClick={refreshAll}>Load</button>
+			<button className="btn btn-blue mr-2" onClick={() => refreshAll(true)}>
+				Full Sync
+			</button>
+			<button className="btn btn-blue mr-2" onClick={() => refreshAll(false)}>
+				Fast Sync
+			</button>
 		</div>
 	)
 }
