@@ -138,7 +138,7 @@ export function Persister({ app }: { app?: Canvas }) {
 			let toTimestamp = undefined
 			let page = 1
 
-			// @ts-expect-error: Shouldn't this be suppressed by the lint config?
+			// @ts-ignore
 			while (true) {
 				const PAGE_SIZE = 20 // Can be as small as 100, irys defaults to 1000
 				const MIN_BUNDLE_SIZE = 50
