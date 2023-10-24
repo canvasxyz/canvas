@@ -95,6 +95,7 @@ export function Persister({ app }: { app?: Canvas }) {
 		return () => {
 			app.messageLog.removeEventListener("message", handleMessage)
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [topic, lockName])
 
 	const wipe = async () => {
