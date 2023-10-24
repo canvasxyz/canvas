@@ -7,6 +7,8 @@ import Query from "@irys/query"
 import { GossipLogEvents } from "@canvas-js/gossiplog"
 import { Action, Session, CBORValue } from "@canvas-js/interfaces"
 
+import { deleteDB } from "idb"
+
 const BUNDLER_NODE = "https://node2.irys.xyz"
 const GATEWAY_NODE = "https://gateway.irys.xyz"
 const APP_HEADER = "App-Name-2"
@@ -91,9 +93,7 @@ export function Persister({ app }: { app?: Canvas }) {
 
 	const wipe = async () => {
 		const dbs = await window.indexedDB.databases()
-		dbs.forEach((db) => {
-			window.indexedDB.deleteDatabase(db.name as string)
-		})
+		await Promise.all(dbs.map((db) => deleteDB(db.name)))
 		location.reload()
 	}
 
