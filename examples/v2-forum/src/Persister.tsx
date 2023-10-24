@@ -11,7 +11,7 @@ import { deleteDB } from "idb"
 
 const BUNDLER_NODE = "https://node2.irys.xyz"
 const GATEWAY_NODE = "https://gateway.irys.xyz"
-const APP_HEADER = "App-Name-2"
+const APP_HEADER = "App-Name-5"
 const TOKEN_RPC = "https://mainnet.optimism.io"
 
 const APP_ID = "v2-forum-demo"
