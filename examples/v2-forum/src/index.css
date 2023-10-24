@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.btn {
+	@apply py-1.5 px-4 rounded-lg;
+}
+.btn-blue {
+	@apply bg-blue-500 text-white;
+}
+.btn-blue:hover {
+	@apply bg-blue-600;
+}
+.btn-red {
+	@apply bg-red-500 text-white;
+}
+.btn-red:hover {
+	@apply bg-red-600;
+}
+
+.input {
+	@apply py-1.5 px-3 rounded border border-gray-300 rounded;
+}
