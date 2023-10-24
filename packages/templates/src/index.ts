@@ -87,7 +87,7 @@ export const Forum: InlineContract = {
 			timestamp: "integer",
 			category: "string",
 			replies: "integer",
-			$indexes: [["category"], ["address"]],
+			$indexes: [["category"], ["address"], ["timestamp"]],
 		},
 		replies: {
 			id: "primary",
@@ -118,22 +118,22 @@ export const Forum: InlineContract = {
 			db.threads.set({ id, title, message, category, address, timestamp, replies: 0 })
 		},
 		deleteMessage: async (db, { id }, { address, timestamp }) => {
-			// const message = await db.threads.get(id)
-			// if (!message || message.address !== address) throw new Error()
+			const message = await db.threads.get(id)
+			if (!message || message.address !== address) throw new Error()
 			db.threads.delete(id)
 		},
 		createReply: async (db, { threadId, reply }, { address, timestamp, id }) => {
-			// const thread = await db.threads.get(threadId)
-			// if (!thread || !threadId) throw new Error()
-			// db.threads.set({ ...thread, replies: (thread.replies as number) + 1 })
+			const thread = await db.threads.get(threadId)
+			if (!thread || !threadId) throw new Error()
+			db.threads.set({ ...thread, replies: (thread.replies as number) + 1 })
 			db.replies.set({ id, threadId, reply, address, timestamp })
 		},
 		deleteReply: async (db, { replyId }, { address, timestamp, id }) => {
-			// const reply = await db.replies.get(replyId)
-			// if (!reply) throw new Error()
-			// const thread = await db.threads.get(reply.threadId as string)
-			// if (!thread) throw new Error()
-			// db.threads.set({ ...thread, replies: (thread.replies as number) - 1 })
+			const reply = await db.replies.get(replyId)
+			if (!reply) throw new Error()
+			const thread = await db.threads.get(reply.threadId as string)
+			if (!thread) throw new Error()
+			db.threads.set({ ...thread, replies: (thread.replies as number) - 1 })
 			db.replies.delete(replyId)
 		},
 	},
