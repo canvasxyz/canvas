@@ -1,14 +1,17 @@
-import { TypeTransformerFunction } from "@ipld/schema/typed.js"
+import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
+import { fromDSL } from "@ipld/schema/from-dsl.js"
 
 import type { Action, CBORValue, SessionSigner } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelValue, validateModelValue } from "@canvas-js/modeldb"
 
 import target from "#target"
 
-import { assert, mapValues } from "../utils.js"
+import { assert, mapEntries, mapValues } from "../utils.js"
 
-import { ActionImplementation, ActionImplementationFunction, InlineContract, ModelAPI, TActions } from "./types.js"
+import { ActionImplementationFunction, InlineContract, ModelAPI } from "./types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+
+const identity = (x: any) => x
 
 export class FunctionRuntime extends AbstractRuntime {
 	public static async init(
@@ -20,18 +23,29 @@ export class FunctionRuntime extends AbstractRuntime {
 		const { indexHistory = true } = options
 		const models = AbstractRuntime.getModelSchema(contract.models, { indexHistory })
 		const db = await target.openDB(location, "models", models)
-		const actions = mapValues(contract.actions, (apply) => {
-			if (typeof apply === "function") {
-				return {
-					argsType: { toTyped: (x: any) => x, toRepresentation: (x: any) => x },
-					apply: apply as ActionImplementationFunction,
-				}
-			} else {
-				return { argsType: { toTyped: (x: any) => x, toRepresentation: (x: any) => x }, ...apply }
+
+		const argsTransformers: Record<
+			string,
+			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+		> = {}
+
+		const actions = mapEntries(contract.actions, ([actionName, action]) => {
+			if (typeof action === "function") {
+				argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
+				return action as ActionImplementationFunction
 			}
+
+			if (action.argsType !== undefined) {
+				const { schema, name } = action.argsType
+				argsTransformers[actionName] = create(fromDSL(schema), name)
+			} else {
+				argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
+			}
+
+			return action.apply
 		})
 
-		return new FunctionRuntime(signers, db, actions, indexHistory)
+		return new FunctionRuntime(signers, db, actions, argsTransformers, indexHistory)
 	}
 
 	#context: ExecutionContext | null = null
@@ -40,12 +54,10 @@ export class FunctionRuntime extends AbstractRuntime {
 	constructor(
 		public readonly signers: SessionSigner[],
 		public readonly db: AbstractModelDB,
-		public readonly actions: Record<
+		public readonly actions: Record<string, ActionImplementationFunction>,
+		public readonly argsTransformers: Record<
 			string,
-			{
-				argsType: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-				apply: ActionImplementationFunction
-			}
+			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
 		indexHistory: boolean
 	) {
@@ -78,21 +90,20 @@ export class FunctionRuntime extends AbstractRuntime {
 		return Object.keys(this.actions)
 	}
 
-	protected async execute(context: ExecutionContext, action: Action): Promise<CBORValue | void> {
-		const { chain, address, name, args, blockhash, timestamp } = action
-		assert(this.actions[name] !== undefined, `invalid action name: ${name}`)
+	protected async execute(context: ExecutionContext): Promise<CBORValue | void> {
+		const { chain, address, name, args, blockhash, timestamp } = context.message.payload
+
+		const argsTransformer = this.argsTransformers[name]
+		const action = this.actions[name]
+		assert(action !== undefined && argsTransformer !== undefined, `invalid action name: ${name}`)
+
+		const typedArgs = argsTransformer.toTyped(args)
+		assert(typedArgs !== undefined, "action args did not validate the provided schema type")
 
 		this.#context = context
 
 		try {
-			const result = await this.actions[name].apply(this.#db, args, {
-				id: context.id,
-				chain,
-				address,
-				blockhash,
-				timestamp,
-			})
-
+			const result = await action(this.#db, typedArgs, { id: context.id, chain, address, blockhash, timestamp })
 			return result as CBORValue | void
 		} finally {
 			this.#context = null
