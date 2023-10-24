@@ -38,7 +38,7 @@ export function Placeholder({ text }: { text: string }) {
 	return <div className="text-gray-400 mb-4">{text}</div>
 }
 
-export function Loading({}) {
+export function Loading() {
 	return <div className="text-gray-400 mb-4">Loading...</div>
 }
 

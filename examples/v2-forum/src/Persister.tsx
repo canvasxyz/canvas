@@ -22,7 +22,11 @@ export function Persister({ app }: { app?: Canvas }) {
 	const [fullSyncInProgress, setFullSyncInProgress] = useState(false)
 	const [fastSyncInProgress, setFastSyncInProgress] = useState(false)
 
-	// set up an irys instance
+	// @ts-expect-error: Prevent race conditions relating to multiple browser messagelogs
+	const lockName = app?.messageLog?.lockName
+	const topic = app?.topic
+
+	// Set up an irys instance
 	useEffect(() => {
 		const url = BUNDLER_NODE
 		const token = "ethereum"
@@ -37,7 +41,7 @@ export function Persister({ app }: { app?: Canvas }) {
 					signTypedData: async (
 						domain: ethers.TypedDataDomain,
 						types: Record<string, ethers.TypedDataField[]>,
-						value: Record<string, any>,
+						value: Record<string, string>,
 					) => wallet.signTypedData(domain, types, value),
 				}
 				return mock
@@ -63,6 +67,23 @@ export function Persister({ app }: { app?: Canvas }) {
 	useEffect(() => {
 		if (!app) return
 
+		const put = async (data: Uint8Array) => {
+			if (irys === undefined) {
+				throw new Error("Waiting for initialization")
+			}
+			return new Promise<void>((resolve, reject) => {
+				const dataToUpload = data
+				const tags = [{ name: APP_HEADER, value: APP_ID }]
+				return irys
+					.upload(Buffer.from(dataToUpload), { tags })
+					.then(() => resolve())
+					.catch((err) => {
+						console.error(err)
+						reject()
+					})
+			})
+		}
+
 		type MessageEvent = GossipLogEvents<Action | Session, void | CBORValue>["message"]
 		const handleMessage = (msg: MessageEvent) => {
 			const { id, signature, message } = msg.detail
@@ -74,28 +95,15 @@ export function Persister({ app }: { app?: Canvas }) {
 		return () => {
 			app.messageLog.removeEventListener("message", handleMessage)
 		}
-	}, [app?.topic, (app?.messageLog as any)?.lockName])
-
-	const put = async (data: Uint8Array) => {
-		if (irys === undefined) {
-			throw new Error("Waiting for initialization")
-		}
-		return new Promise<void>((resolve, reject) => {
-			const dataToUpload = data
-			const tags = [{ name: APP_HEADER, value: APP_ID }]
-			return irys
-				.upload(Buffer.from(dataToUpload), { tags })
-				.then(() => resolve())
-				.catch((err) => {
-					console.error(err)
-					reject()
-				})
-		})
-	}
+	}, [topic, lockName])
 
 	const wipe = async () => {
 		const dbs = await window.indexedDB.databases()
-		await Promise.all(dbs.map((db) => deleteDB(db.name)))
+		await Promise.all(
+			dbs.map((db) => {
+				if (db.name) deleteDB(db.name)
+			}),
+		)
 		location.reload()
 	}
 
@@ -128,6 +136,7 @@ export function Persister({ app }: { app?: Canvas }) {
 
 			let toTimestamp = undefined
 			let page = 1
+
 			while (true) {
 				const PAGE_SIZE = 20 // Can be as small as 100, irys defaults to 1000
 				const MIN_BUNDLE_SIZE = 50
@@ -163,7 +172,7 @@ export function Persister({ app }: { app?: Canvas }) {
 					)
 				).filter((txdataOrNull: ArrayBuffer | null) => txdataOrNull !== null) as ArrayBuffer[]
 
-				let messageDecodingErrors = []
+				const messageDecodingErrors = []
 				for (const txdata of txdatas) {
 					// TODO: also handle bundles here; loop over everything below for bundles:
 					// for (action in isAction(item) ? [item] : item) { ... }
@@ -203,8 +212,6 @@ export function Persister({ app }: { app?: Canvas }) {
 				console.log(`got page ${page} (${txs.length} txs by ${toTimestamp})`)
 				page += 1
 			}
-		} catch (error) {
-			throw error
 		} finally {
 			if (fullSync) {
 				setFullSyncInProgress(false)
