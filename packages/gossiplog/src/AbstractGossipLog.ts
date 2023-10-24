@@ -387,7 +387,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			if (ancestorClock <= atOrBefore) {
 				results.add(ancestorId)
 			} else if (visited.has(ancestorId)) {
-				throw new Error("I BET THIS NEVER HAPPENS")
+				// throw new Error("I BET THIS NEVER HAPPENS")
+				return
 			} else {
 				visited.add(ancestorId)
 				await this.#getAncestors(txn, ancestorKey, atOrBefore, results, visited)
