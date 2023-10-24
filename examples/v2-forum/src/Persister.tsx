@@ -95,7 +95,6 @@ export function Persister({ app }: { app?: Canvas }) {
 		return () => {
 			app.messageLog.removeEventListener("message", handleMessage)
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [topic, lockName])
 
 	const wipe = async () => {
@@ -138,8 +137,7 @@ export function Persister({ app }: { app?: Canvas }) {
 			let toTimestamp = undefined
 			let page = 1
 
-			// @ts-ignore
-			while (true) {
+			for (;;) {
 				const PAGE_SIZE = 20 // Can be as small as 100, irys defaults to 1000
 				const MIN_BUNDLE_SIZE = 50
 
