@@ -25,7 +25,7 @@ export class ModelAPI {
 
 	public async get<Mode extends IDBTransactionMode>(
 		txn: IDBPTransaction<any, any, Mode>,
-		key: string
+		key: string,
 	): Promise<ModelValue | null> {
 		const value: ObjectValue | undefined = await this.getStore(txn).get(key)
 		if (value === undefined) {
@@ -117,13 +117,11 @@ export class ModelAPI {
 				const results: ModelValue[] = []
 				let cursor = await storeIndex.openCursor(null, directions[direction])
 
-				if (cursor !== null && query.offset !== undefined && query.offset !== 0) {
-					cursor.advance(query.offset)
-					try {
-						await cursor.continue()
-					} catch (err) {
-						cursor = null
-					}
+				// Can't use cursor.advance(), doesn't behave as expected in chrome
+				let seen = 0
+				while (cursor !== null && query.offset !== undefined && query.offset !== 0 && seen < query.offset) {
+					cursor = await cursor.continue()
+					seen++
 				}
 
 				try {
@@ -149,13 +147,11 @@ export class ModelAPI {
 		const results: ModelValue[] = []
 		let cursor = await store.openCursor()
 
-		if (cursor !== null && query.offset !== undefined && query.offset !== 0) {
-			cursor.advance(query.offset)
-			try {
-				await cursor.continue()
-			} catch (err) {
-				cursor = null
-			}
+		// Can't use cursor.advance(), doesn't behave as expected in chrome
+		let seen = 0
+		while (cursor !== null && query.offset !== undefined && query.offset !== 0 && seen < query.offset) {
+			cursor = await cursor.continue()
+			seen++
 		}
 
 		try {
@@ -179,7 +175,7 @@ export class ModelAPI {
 	private async *queryIndex(
 		propertyName: string,
 		storeIndex: IDBPIndex<any, any, string, string, "readonly">,
-		expression: PropertyValue | NotExpression | RangeExpression
+		expression: PropertyValue | NotExpression | RangeExpression,
 	): AsyncIterable<ModelValue> {
 		const property = this.model.properties.find((property) => property.name === propertyName)
 		assert(property !== undefined, "property not found")
