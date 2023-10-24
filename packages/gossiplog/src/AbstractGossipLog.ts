@@ -14,10 +14,10 @@ import { create, TypeTransformerFunction } from "@ipld/schema/typed.js"
 import type { Message } from "@canvas-js/interfaces"
 import { Signature, verifySignature } from "@canvas-js/signed-cid"
 
+import { Mempool } from "./Mempool.js"
 import { Driver } from "./sync/driver.js"
 import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getClock } from "./schema.js"
 import { Awaitable, assert, topicPattern, cborNull, getAncestorClocks } from "./utils.js"
-import { Mempool } from "./Mempool.js"
 
 export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
@@ -95,7 +95,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	public readonly indexAncestors: boolean
 
 	protected readonly log: Logger
-	protected readonly mempool = new Mempool<Payload>()
+	protected readonly mempool = new Mempool<{ signature: Signature | null; message: Message<Payload> }>()
 
 	readonly #codec: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 
@@ -265,32 +265,21 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 			this.log("inserting message %s", id)
 
-			const dependencies = new Set<string>()
+			const missingParents = new Set<string>()
 			this.log("looking up %s parents", message.parents.length)
 			for (const parentId of message.parents) {
 				const parent = await txn.messages.get(encodeId(parentId))
 				if (parent === null) {
 					this.log("missing parent %s", parentId)
-					dependencies.add(parentId)
+					missingParents.add(parentId)
 				} else {
 					this.log("found parent %s", parentId)
 				}
 			}
 
-			if (dependencies.size > 0) {
-				this.log("missing %d/%d parents", dependencies.size, message.parents.length)
-				this.mempool.messages.set(id, { signature, message })
-				this.mempool.dependencies.set(id, dependencies)
-
-				for (const parent of dependencies) {
-					const children = this.mempool.children.get(parent)
-					if (children === undefined) {
-						this.mempool.children.set(parent, new Set([id]))
-					} else {
-						children.add(id)
-					}
-				}
-
+			if (missingParents.size > 0) {
+				this.log("missing %d/%d parents", missingParents.size, message.parents.length)
+				this.mempool.add(id, { signature, message }, missingParents)
 				return { id }
 			}
 
@@ -387,7 +376,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			if (ancestorClock <= atOrBefore) {
 				results.add(ancestorId)
 			} else if (visited.has(ancestorId)) {
-				// throw new Error("I BET THIS NEVER HAPPENS")
 				return
 			} else {
 				visited.add(ancestorId)
@@ -450,25 +438,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 				await txn.ancestors.set(key, cbor.encode(ancestorLinks))
 			}
 
-			const children = this.mempool.children.get(id)
-			this.log("%s has %d mempool children", id, children?.size ?? 0, children)
-			if (children !== undefined) {
-				for (const childId of children) {
-					const dependencies = this.mempool.dependencies.get(childId)
-					assert(dependencies !== undefined, "expected dependencies !== undefined")
-					const signedMessage = this.mempool.messages.get(childId)
-					assert(signedMessage !== undefined, "expected signedMessage !== undefined")
-
-					dependencies.delete(id)
-					if (dependencies.size === 0) {
-						this.mempool.dependencies.delete(childId)
-						this.mempool.messages.delete(childId)
-						const { signature, message } = signedMessage
-						await this.#insert(txn, childId, signature, message)
-					}
-				}
-
-				this.mempool.children.delete(id)
+			for (const [childId, signedMessage] of this.mempool.observe(id)) {
+				await this.#insert(txn, childId, signedMessage.signature, signedMessage.message)
 			}
 		}
 

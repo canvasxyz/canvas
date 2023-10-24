@@ -15,8 +15,6 @@ import {
 	Runtime,
 	createRuntime,
 	InlineContract,
-	ActionImplementation,
-	TActions,
 	ActionImplementationFunction,
 	ActionImplementationObject,
 } from "./runtime/index.js"
@@ -187,8 +185,14 @@ export class Canvas<Contract extends InlineContract = InlineContract> extends Ev
 					this.log("created session %s", sessionId)
 				}
 
+				const argsTransformer = runtime.argsTransformers[name]
+				assert(argsTransformer !== undefined, "invalid action name")
+
+				const representation = argsTransformer.toRepresentation(args)
+				assert(representation !== undefined, "action args did not validate the provided schema type")
+
 				const { id, result, recipients } = await this.append(
-					{ type: "action", chain, address, name, args, blockhash: null, timestamp },
+					{ type: "action", chain, address, name, args: representation, blockhash: null, timestamp },
 					{ signer }
 				)
 

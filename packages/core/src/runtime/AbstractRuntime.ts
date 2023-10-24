@@ -2,17 +2,17 @@ import * as cbor from "@ipld/dag-cbor"
 import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
 import { equals } from "uint8arrays"
-import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 import { logger } from "@libp2p/logger"
+import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
 import type { Action, CBORValue, Message, Session, SessionSigner } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
-import { AbstractGossipLog, GossipLogConsumer, ReadOnlyTransaction, encodeId, getClock } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogConsumer, ReadOnlyTransaction, encodeId } from "@canvas-js/gossiplog"
 
 import { MAX_MESSAGE_ID, MIN_MESSAGE_ID } from "../constants.js"
-import { assert, mapValues, signalInvalidType } from "../utils.js"
+import { assert, mapValues } from "../utils.js"
 
 export type ExecutionContext = {
 	txn: ReadOnlyTransaction
@@ -68,20 +68,25 @@ export abstract class AbstractRuntime {
 	public abstract readonly signers: SessionSigner[]
 	public abstract readonly db: AbstractModelDB
 	public abstract readonly actionNames: string[]
-
-	// protected abstract readonly actionCodecs: Record<
-	// 	string,
-	// 	{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-	// >
+	public abstract readonly argsTransformers: Record<
+		string,
+		{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+	>
 
 	protected readonly log = logger("canvas:runtime")
 	protected constructor(public readonly indexHistory: boolean) {}
 
-	protected abstract execute(context: ExecutionContext, action: Action): Promise<void | CBORValue>
+	protected abstract execute(context: ExecutionContext): Promise<void | CBORValue>
 
 	public async close() {
 		await this.db.close()
 	}
+
+	private static isAction = (message: Message<Action | Session>): message is Message<Action> =>
+		message.payload.type === "action"
+
+	private static isSession = (message: Message<Action | Session>): message is Message<Session> =>
+		message.payload.type === "session"
 
 	public getConsumer(): GossipLogConsumer<Action | Session, void | CBORValue> {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -90,15 +95,11 @@ export abstract class AbstractRuntime {
 		return async function (this: ReadOnlyTransaction, id, signature, message) {
 			assert(signature !== null, "missing message signature")
 
-			if (message.payload.type === "action") {
+			if (AbstractRuntime.isAction(message)) {
 				const { chain, address, timestamp } = message.payload
 
 				const sessions = await runtime.db.query("$sessions", {
 					where: {
-						// 	key: {
-						// 		gte: `${signature.type}:${bytesToHex(signature.publicKey)}:${MIN_MESSAGE_ID}`,
-						// 		lt: `${signature.type}:${bytesToHex(signature.publicKey)}:${id}`,
-						// 	},
 						public_key_type: signature.type,
 						public_key: signature.publicKey,
 						chain: chain,
@@ -115,10 +116,7 @@ export abstract class AbstractRuntime {
 
 				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(runtime.db.models, () => ({}))
 
-				const result = await runtime.execute(
-					{ txn: this, modelEntries, id, signature, message: { ...message, payload: message.payload } },
-					message.payload
-				)
+				const result = await runtime.execute({ txn: this, modelEntries, id, signature, message })
 
 				const effects: Effect[] = []
 
@@ -180,7 +178,7 @@ export abstract class AbstractRuntime {
 				}
 
 				return result
-			} else if (message.payload.type === "session") {
+			} else if (AbstractRuntime.isSession(message)) {
 				const { publicKeyType, publicKey, chain, address, timestamp, duration } = message.payload
 
 				const signer = runtime.signers.find((signer) => signer.match(chain))
@@ -190,7 +188,6 @@ export abstract class AbstractRuntime {
 				await signer.verifySession(message.payload)
 
 				await runtime.db.set("$sessions", {
-					// key: `${signature.type}:${bytesToHex(signature.publicKey)}:${id}`,
 					message_id: id,
 					public_key_type: signature.type,
 					public_key: signature.publicKey,
@@ -199,7 +196,7 @@ export abstract class AbstractRuntime {
 					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
 				})
 			} else {
-				signalInvalidType(message.payload)
+				throw new Error("invalid message payload type")
 			}
 		}
 	}

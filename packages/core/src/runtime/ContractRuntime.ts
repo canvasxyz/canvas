@@ -1,14 +1,15 @@
 import { QuickJSHandle } from "quickjs-emscripten"
-import { TypeTransformerFunction } from "@ipld/schema/typed.js"
+import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
+import { fromDSL } from "@ipld/schema/from-dsl.js"
 
-import type { Action, SessionSigner, CBORValue } from "@canvas-js/interfaces"
+import type { SessionSigner, CBORValue } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelValue, ModelsInit, Property, PropertyValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { getCID } from "@canvas-js/signed-cid"
 
 import target from "#target"
 
-import { assert, mapValues, signalInvalidType } from "../utils.js"
+import { assert, mapEntries, signalInvalidType } from "../utils.js"
 
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
@@ -38,9 +39,32 @@ export class ContractRuntime extends AbstractRuntime {
 		}
 
 		assert(actionsHandle !== undefined, "missing `actions` export")
-		const actionHandles = mapValues(actionsHandle.consume(vm.unwrapObject), (handle) => {
-			assert(vm.context.typeof(handle) === "function", "expected action[name] to be a function")
-			return handle.consume(vm.cache)
+
+		const argsTransformers: Record<
+			string,
+			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+		> = {}
+
+		const actions = mapEntries(actionsHandle.consume(vm.unwrapObject), ([actionName, handle]) => {
+			if (vm.context.typeof(handle) === "function") {
+				argsTransformers[actionName] = { toTyped: (x: any) => x, toRepresentation: (x: any) => x }
+				return handle.consume(vm.cache)
+			}
+
+			const { apply, argsType } = handle.consume(vm.unwrapObject)
+			assert(vm.context.typeof(apply) === "function", "expected action[name].apply to be a function")
+
+			if (argsType !== undefined) {
+				const { schema, name } = argsType.consume(vm.unwrapObject)
+				argsTransformers[actionName] = create(
+					fromDSL(schema.consume(vm.context.getString)),
+					name.consume(vm.context.getString)
+				)
+			} else {
+				argsTransformers[actionName] = { toTyped: (x: any) => x, toRepresentation: (x: any) => x }
+			}
+
+			return apply.consume(vm.cache)
 		})
 
 		// TODO: validate that models satisfies ModelsInit
@@ -48,7 +72,7 @@ export class ContractRuntime extends AbstractRuntime {
 		const modelsInit = modelsHandle.consume(vm.context.dump) as ModelsInit
 
 		const db = await target.openDB(location, "db", AbstractRuntime.getModelSchema(modelsInit, { indexHistory }))
-		return new ContractRuntime(signers, db, {}, vm, actionHandles, indexHistory)
+		return new ContractRuntime(signers, db, vm, actions, argsTransformers, indexHistory)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -58,12 +82,12 @@ export class ContractRuntime extends AbstractRuntime {
 	constructor(
 		public readonly signers: SessionSigner[],
 		public readonly db: AbstractModelDB,
-		public readonly actionCodecs: Record<
+		public readonly vm: VM,
+		public readonly actions: Record<string, QuickJSHandle>,
+		public readonly argsTransformers: Record<
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
-		private readonly vm: VM,
-		private readonly actionHandles: Record<string, QuickJSHandle>,
 		indexHistory: boolean
 	) {
 		super(indexHistory)
@@ -81,18 +105,22 @@ export class ContractRuntime extends AbstractRuntime {
 	}
 
 	public get actionNames() {
-		return Object.keys(this.actionHandles)
+		return Object.keys(this.actions)
 	}
 
-	protected async execute(context: ExecutionContext, action: Action): Promise<void | CBORValue> {
-		const { chain, address, name, args, blockhash, timestamp } = action
+	protected async execute(context: ExecutionContext): Promise<void | CBORValue> {
+		const { chain, address, name, args, blockhash, timestamp } = context.message.payload
 
-		const actionHandle = this.actionHandles[name]
-		assert(actionHandle !== undefined, `invalid action name: ${name}`)
+		const actionHandle = this.actions[name]
+		const argsTransformer = this.argsTransformers[name]
+		assert(actionHandle !== undefined && argsTransformer !== undefined, `invalid action name: ${name}`)
+
+		const typedArgs = argsTransformer.toTyped(args)
+		assert(typedArgs !== undefined, "action args did not validate the provided schema type")
 
 		this.#context = context
 
-		const argsHandle = this.vm.wrapValue(args)
+		const argsHandle = this.vm.wrapValue(typedArgs)
 		const ctxHandle = this.vm.wrapValue({ id: context.id, chain, address, blockhash, timestamp })
 		try {
 			const result = await this.vm.callAsync(actionHandle, actionHandle, [this.#databaseAPI, argsHandle, ctxHandle])
