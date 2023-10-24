@@ -19,6 +19,8 @@ const actionCache: Record<string, boolean> = {}
 
 export function Persister({ app }: { app?: Canvas }) {
 	const [irys, setIrys] = useState<WebIrys>()
+	const [fullSyncInProgress, setFullSyncInProgress] = useState(false)
+	const [fastSyncInProgress, setFastSyncInProgress] = useState(false)
 
 	// set up an irys instance
 	useEffect(() => {
@@ -100,99 +102,115 @@ export function Persister({ app }: { app?: Canvas }) {
 	const refreshAll = async (fullSync: boolean) => {
 		if (!app) return
 
-		const myQuery = new Query({ url: BUNDLER_NODE + "/graphql" })
-
-		const seenActions: Record<string, boolean> = {}
-		const expectedRoots: Record<string, boolean> = {}
-		const unbundledActions: Record<string, ArrayBuffer> = {}
-
-		const write = ({
-			unbundledActions,
-			orphans,
-		}: {
-			unbundledActions: Record<string, ArrayBuffer>
-			orphans: string[]
-		}) => {
-			// TODO: implement rebundling
-			console.log("write:", unbundledActions, orphans)
+		if (fullSync) {
+			setFullSyncInProgress(true)
+		} else {
+			setFastSyncInProgress(true)
 		}
 
-		let toTimestamp = undefined
-		let page = 1
-		while (true) {
-			const PAGE_SIZE = 20 // Can be as small as 100, irys defaults to 1000
-			const MIN_BUNDLE_SIZE = 50
+		try {
+			const myQuery = new Query({ url: BUNDLER_NODE + "/graphql" })
 
-			const txs = await myQuery
-				.search("irys:transactions")
-				.tags([{ name: APP_HEADER, values: [APP_ID] }])
-				.sort("DESC")
-				.limit(PAGE_SIZE)
-				.toTimestamp(toTimestamp)
+			const seenActions: Record<string, boolean> = {}
+			const expectedRoots: Record<string, boolean> = {}
+			const unbundledActions: Record<string, ArrayBuffer> = {}
 
-			if (txs.length === 0) {
-				if (Object.values(expectedRoots).length !== 0) {
-					if (fullSync === true) {
-						write({ unbundledActions, orphans: Object.keys(expectedRoots) })
+			const write = ({
+				unbundledActions,
+				orphans,
+			}: {
+				unbundledActions: Record<string, ArrayBuffer>
+				orphans: string[]
+			}) => {
+				// TODO: implement rebundling
+				console.log("write:", unbundledActions, orphans)
+			}
+
+			let toTimestamp = undefined
+			let page = 1
+			while (true) {
+				const PAGE_SIZE = 20 // Can be as small as 100, irys defaults to 1000
+				const MIN_BUNDLE_SIZE = 50
+
+				const txs = await myQuery
+					.search("irys:transactions")
+					.tags([{ name: APP_HEADER, values: [APP_ID] }])
+					.sort("DESC")
+					.limit(PAGE_SIZE)
+					.toTimestamp(toTimestamp)
+
+				if (txs.length === 0) {
+					if (Object.values(expectedRoots).length !== 0) {
+						if (fullSync === true) {
+							write({ unbundledActions, orphans: Object.keys(expectedRoots) })
+						}
+						console.log("orphans:", expectedRoots)
 					}
-					console.log("orphans:", expectedRoots)
+					break
 				}
-				break
-			}
 
-			const txids = txs.map((tx: { id: string }) => tx.id)
-			const txdatas = (
-				await Promise.all(
-					txids.map((txid) =>
-						fetch(GATEWAY_NODE + "/" + txid)
-							.then((txdata) => txdata.arrayBuffer())
-							.catch((error) => {
-								console.error("Error fetching individual Arweave txes:", error)
-								return null
-							}),
-					),
-				)
-			).filter((txdataOrNull: ArrayBuffer | null) => txdataOrNull !== null) as ArrayBuffer[]
+				const txids = txs.map((tx: { id: string }) => tx.id)
+				const txdatas = (
+					await Promise.all(
+						txids.map((txid) =>
+							fetch(GATEWAY_NODE + "/" + txid)
+								.then((txdata) => txdata.arrayBuffer())
+								.catch((error) => {
+									console.error("Error fetching individual Arweave txes:", error)
+									return null
+								}),
+						),
+					)
+				).filter((txdataOrNull: ArrayBuffer | null) => txdataOrNull !== null) as ArrayBuffer[]
 
-			let messageDecodingErrors = []
-			for (const txdata of txdatas) {
-				// TODO: also handle bundles here; loop over everything below for bundles:
-				// for (action in isAction(item) ? [item] : item) { ... }
-				try {
-					const [msgid, signature, message] = app.messageLog.decode(new Uint8Array(txdata))
+				let messageDecodingErrors = []
+				for (const txdata of txdatas) {
+					// TODO: also handle bundles here; loop over everything below for bundles:
+					// for (action in isAction(item) ? [item] : item) { ... }
+					try {
+						const [msgid, signature, message] = app.messageLog.decode(new Uint8Array(txdata))
 
-					// Insert the msgid into seenActionCache before calling .insert(), so we don't
-					// push duplicate records to irys.
-					seenActions[msgid] = true
-					actionCache[msgid] = true
-					delete expectedRoots[msgid]
+						// Insert the msgid into seenActionCache before calling .insert(), so we don't
+						// push duplicate records to irys.
+						seenActions[msgid] = true
+						actionCache[msgid] = true
+						delete expectedRoots[msgid]
 
-					await app.messageLog.insert(signature, message)
+						await app.messageLog.insert(signature, message)
 
-					for (const parent of message.parents) {
-						if (seenActions[parent]) continue
-						expectedRoots[parent] = true
+						for (const parent of message.parents) {
+							if (seenActions[parent]) continue
+							expectedRoots[parent] = true
+						}
+					} catch (err) {
+						messageDecodingErrors.push(err)
+						continue
 					}
-				} catch (err) {
-					messageDecodingErrors.push(err)
-					continue
 				}
-			}
-			if (messageDecodingErrors.length > 0) {
-				console.warn("Error decoding individual messages:", messageDecodingErrors)
-			}
-
-			// light sync can abort, if expectedRoots is empty (unless we haven't seen any valid items yet)
-			if (!fullSync && Object.values(expectedRoots).length === 0 && messageDecodingErrors.length < txdatas.length) {
-				if (Object.keys(unbundledActions).length > MIN_BUNDLE_SIZE) {
-					write({ unbundledActions, orphans: [] })
+				if (messageDecodingErrors.length > 0) {
+					console.warn("Error decoding individual messages:", messageDecodingErrors)
 				}
-				break
-			}
 
-			toTimestamp = Math.min(...txs.map((tx: { timestamp: number }) => tx.timestamp))
-			console.log("got page", page, toTimestamp, txs.length, " txs")
-			page += 1
+				// light sync can abort, if expectedRoots is empty (unless we haven't seen any valid items yet)
+				if (!fullSync && Object.values(expectedRoots).length === 0 && messageDecodingErrors.length < txdatas.length) {
+					if (Object.keys(unbundledActions).length > MIN_BUNDLE_SIZE) {
+						write({ unbundledActions, orphans: [] })
+					}
+					break
+				}
+
+				toTimestamp = Math.min(...txs.map((tx: { timestamp: number }) => tx.timestamp))
+				console.log(`got page ${page} (${txs.length} txs by ${toTimestamp})`)
+				page += 1
+			}
+		} catch (error) {
+			throw error
+		} finally {
+			if (fullSync) {
+				setFullSyncInProgress(false)
+			} else {
+				setFastSyncInProgress(false)
+			}
 		}
 	}
 
@@ -201,11 +219,11 @@ export function Persister({ app }: { app?: Canvas }) {
 			<button className="btn btn-blue mr-2" onClick={wipe}>
 				Wipe
 			</button>
-			<button className="btn btn-blue mr-2" onClick={() => refreshAll(true)}>
-				Full Sync
+			<button className="btn btn-blue mr-2" onClick={() => refreshAll(true)} disabled={fullSyncInProgress}>
+				{fullSyncInProgress ? "Syncing..." : "Full Sync"}
 			</button>
-			<button className="btn btn-blue mr-2" onClick={() => refreshAll(false)}>
-				Fast Sync
+			<button className="btn btn-blue mr-2" onClick={() => refreshAll(false)} disabled={fastSyncInProgress}>
+				{fastSyncInProgress ? "Syncing..." : "Fast Sync"}
 			</button>
 		</div>
 	)
