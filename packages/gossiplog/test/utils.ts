@@ -8,17 +8,16 @@ import { locks, AbortController } from "web-locks"
 
 import { nanoid } from "nanoid"
 import { varint } from "multiformats"
-import { ed25519 } from "@noble/curves/ed25519"
+
 import { bytesToHex } from "@noble/hashes/utils"
 import { Key, Node } from "@canvas-js/okra"
 
-import { AbstractGossipLog, GossipLogInit, MessageSigner, encodeId } from "@canvas-js/gossiplog"
+import type { MessageSigner, Message } from "@canvas-js/interfaces"
+import { AbstractGossipLog, GossipLogInit, encodeId, Ed25519Signer } from "@canvas-js/gossiplog"
 import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
 import { GossipLog as GossipLogBrowser } from "@canvas-js/gossiplog/browser"
 import { GossipLog as GossipLogMemory } from "@canvas-js/gossiplog/memory"
-
-import { Signature, createSignature } from "@canvas-js/signed-cid"
-import { Message } from "@canvas-js/interfaces"
+import { Signature } from "@canvas-js/signed-cid"
 
 // @ts-expect-error
 globalThis.navigator = { locks }
@@ -42,14 +41,11 @@ export const testPlatforms = (
 	test(`Browser - ${name}`, macro, (t, init) => GossipLogNode.open(getDirectory(t), init))
 }
 
-export class Ed25519Signer<T = unknown> {
-	private readonly privateKey = ed25519.utils.randomPrivateKey()
-	public readonly publicKey = ed25519.getPublicKey(this.privateKey)
-
-	sign(message: Message<T>) {
-		return createSignature("ed25519", this.privateKey, message)
-	}
-}
+export const getPublicKey = <T>([id, { publicKey }, message]: [string, Signature, Message<T>]): [
+	string,
+	Uint8Array,
+	Message<T>
+] => [id, publicKey, message]
 
 export function getDirectory(t: ExecutionContext<unknown>): string {
 	const directory = path.resolve(os.tmpdir(), nanoid())
@@ -97,6 +93,8 @@ export async function appendChain(
 	n: number,
 	options: { signer?: MessageSigner<string> } = {}
 ): Promise<string[]> {
+	const signer = options.signer ?? new Ed25519Signer()
+
 	const [clock] = varint.decode(encodeId(rootId))
 
 	const ids: string[] = []
@@ -108,11 +106,7 @@ export async function appendChain(
 			payload: nanoid(),
 		}
 
-		let signature: Signature | null = null
-		if (options.signer) {
-			signature = await options.signer.sign(message)
-		}
-
+		const signature = await signer.sign(message)
 		const { id } = await log.insert(signature, message)
 		ids.push(id)
 	}

@@ -2,30 +2,31 @@ import { nanoid } from "nanoid"
 import { Message } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
 
-import { decodeId } from "@canvas-js/gossiplog"
-import { appendChain, collect, shuffle, testPlatforms } from "./utils.js"
+import { Ed25519Signer, decodeId } from "@canvas-js/gossiplog"
+import { appendChain, collect, getPublicKey, shuffle, testPlatforms } from "./utils.js"
 
 const topic = "com.example.test"
-const apply = (id: string, signature: Signature | null, message: Message<string>) => {}
+const apply = (id: string, signature: Signature, message: Message<string>) => {}
 const validate = (payload: unknown): payload is string => true
 
 testPlatforms("append messages", async (t, openGossipLog) => {
-	const log = await openGossipLog(t, { topic, apply, validate, signatures: false, indexAncestors: true })
+	const signer = new Ed25519Signer()
+	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
 
 	const [a, b, c] = [nanoid(), nanoid(), nanoid()]
-	const { id: idA } = await log.append(a, {})
-	const { id: idB } = await log.append(b, {})
-	const { id: idC } = await log.append(c, {})
+	const { id: idA } = await log.append(a, { signer })
+	const { id: idB } = await log.append(b, { signer })
+	const { id: idC } = await log.append(c, { signer })
 
-	t.deepEqual(await collect(log.iterate()), [
-		[idA, null, { topic, clock: 1, parents: [], payload: a }],
-		[idB, null, { topic, clock: 2, parents: [idA], payload: b }],
-		[idC, null, { topic, clock: 3, parents: [idB], payload: c }],
+	t.deepEqual(await collect(log.iterate(), getPublicKey), [
+		[idA, signer.publicKey, { topic, clock: 1, parents: [], payload: a }],
+		[idB, signer.publicKey, { topic, clock: 2, parents: [idA], payload: b }],
+		[idC, signer.publicKey, { topic, clock: 3, parents: [idB], payload: c }],
 	])
 })
 
 testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog) => {
-	const log = await openGossipLog(t, { topic, apply, validate, signatures: false, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
 
 	const n = 20
 	const ids: string[] = []
@@ -42,18 +43,21 @@ testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog)
 })
 
 testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog) => {
-	const log = await openGossipLog(t, { topic, apply, validate, signatures: false, indexAncestors: true })
+	const signer = new Ed25519Signer()
+	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
 
 	const n = 20
 	const ids: string[] = []
 	for (let i = 0; i < n; i++) {
-		const { id } = await log.insert(null, {
+		const message: Message<string> = {
 			topic,
 			clock: i + 1,
 			parents: i === 0 ? [] : [ids[i - 1]],
 			payload: nanoid(),
-		})
+		}
 
+		const signature = signer.sign(message)
+		const { id } = await log.insert(signature, message)
 		ids.push(id)
 	}
 
@@ -65,26 +69,29 @@ testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog)
 })
 
 testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, openGossipLog) => {
-	const log = await openGossipLog(t, { topic, apply, validate, signatures: false, indexAncestors: true })
+	const signer = new Ed25519Signer()
+	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
 
 	const n = 20
 	const ids: string[] = []
-	const messages: Message<string>[] = []
+	const messages: [Signature, Message<string>][] = []
 	for (let i = 0; i < n; i++) {
-		messages.push({
+		const message: Message<string> = {
 			topic,
 			clock: i + 1,
 			parents: i === 0 ? [] : [ids[i - 1]],
 			payload: nanoid(),
-		})
+		}
 
-		const [key] = log.encode(null, messages[i])
+		const signature = signer.sign(message)
+		messages.push([signature, message])
+		const [key] = log.encode(signature, message)
 		ids.push(decodeId(key))
 	}
 
 	shuffle(messages)
-	for (const message of messages) {
-		const { id } = await log.insert(null, message)
+	for (const [signature, message] of messages) {
+		await log.insert(signature, message)
 	}
 
 	for (let i = 0; i < n; i++) {
@@ -95,7 +102,7 @@ testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, open
 })
 
 testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, openGossipLog) => {
-	const log = await openGossipLog(t, { topic, apply, validate, signatures: false, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
 
 	const { id: idX } = await log.append(nanoid())
 	const { id: idY } = await log.append(nanoid())

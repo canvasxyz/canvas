@@ -153,7 +153,7 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 				? { id: lte, inclusive: true }
 				: null
 
-		const results: { id: string; signature: Signature | null; message: Message }[] = []
+		const results: { id: string; signature: Signature; message: Message }[] = []
 		for await (const [id, signature, message] of core.getMessageStream(lowerBound, upperBound)) {
 			if (results.push({ id, signature, message }) >= limit) {
 				break

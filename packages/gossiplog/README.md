@@ -63,7 +63,7 @@ These string IDs can be sorted directly using the normal JavaScript string compa
 
 ### Authentication
 
-By default, GossipLog requires every message to be signed with a [`@canvas-js/signed-cid`](https://github.com/canvasxyz/canvas/tree/main/packages/signed-cid) signature.
+GossipLog requires every message to be signed with a [`@canvas-js/signed-cid`](https://github.com/canvasxyz/canvas/tree/main/packages/signed-cid) signature.
 
 ```ts
 // @canvas-js/signed-cid
@@ -79,7 +79,7 @@ type Signature = {
 
 The `cid` in a message signature is the CID of the `Message` object using the `dag-cbor` codec and `sha2-256` multihash digest. The `signature` signs the raw bytes of the CID (`cid.bytes`); the `Signature` object carries all the relevant contextual data including the signature type and the public key.
 
-Most GossipLog methods pass signatures alongside messages using a `[signature: Signature | null, message: Message<Payload>]` tuple type.
+Most GossipLog methods pass signatures alongside messages using a `[signature: Signature, message: Message<Payload>]` tuple type.
 
 Expressing an application's access control logic purely in terms of public keys and signatures can be challenging. The simplest case is one where a only a known fixed set of public keys are allowed to write to the log; at the very least, this generalizes all of Hypercore's use cases. Another simple case is for open-ended applications where end users have keypairs, and the application can access the private key and programmatically sign messages directly.
 
@@ -116,12 +116,11 @@ All three are configured with the same `init` object:
 ```ts
 interface GossipLogInit<Payload = unknown, Result = void> {
   topic: string
-  apply: (id: string, signature: Signature | null, message: Message<Payload>) => Result | Promise<Result>
+  apply: (id: string, signature: Signature, message: Message<Payload>) => Result | Promise<Result>
   validate: (payload: unknown) => payload is Payload
 
-  signatures?: boolean
-  sequencing?: boolean
   replay?: boolean
+  indexAncestors?: boolean
 }
 ```
 
@@ -135,7 +134,7 @@ The `apply` function is the main attraction. It is invoked once\* for every mess
 
 #### Authorization
 
-If signatures are enabled, the message signature will be verified **before** `apply` is called. This means that, within `apply`, `signature.publicKey` is known to have signed the `message`, but it is still `apply`'s responsibility to verify that the given public key is authorized to append the given payload to the log. If signatures are disabled, then the `signature` argument is always `null`.
+The message signature will be verified **before** `apply` is called. This means that, within `apply`, `signature.publicKey` is known to have signed the `message`, but it is still `apply`'s responsibility to verify that the given public key is authorized to append the given payload to the log.
 
 #### Semantic validation
 
@@ -147,8 +146,6 @@ Payloads may require additional application-specific validation beyond what is c
 
 #### Optional configuration values
 
-- `signatures` (default `true`): require message signatures; if set to `false` all methods will expect `signature` values to be `null`
-- `sequencing` (default `true`): enable the causal graph structure; if set to `false`, all messages will have `clock: 0` and `parents: []`
 - `replay` (default `false`): upon initializing, iterate over all existing messages and invoke the `apply` function for them all
 - `indexAncestors` (default `false`): enable [ancestor indexing](#indexing-ancestors)
 
@@ -160,7 +157,7 @@ Once you have a `GossipLog` instance, you can append a new payload to the log wi
 
 ```ts
 interface MessageSigner<Payload = unknown> {
-  sign: (message: Message<Payload>) => Awaitable<Signature | null>
+  sign: (message: Message<Payload>) => Signature
 }
 ```
 
@@ -180,7 +177,7 @@ Calling `append` executes the following steps:
 
 1. Open an exclusive read-write transaction in the underlying database.
 2. Look up the current `parents: string[]` and `clock: number` to create the message object `{ topic, clock, parents, payload }`.
-3. Sign the message using the provided `signer` to get a `signature: Signature | null`.
+3. Sign the message using the provided `signer` to get a `signature: Signature`.
 4. Serialize the signed message and compute its message ID.
 5. Call `apply(id, signature, message)` and save its return value as `result`. If `apply` throws, abort the transaction and re-throw the error.
 6. Write the serialized signed message to the database, using the message ID as the key.
@@ -192,7 +189,7 @@ In a peer-to-peer context, the `signature` and `message` can be sent to other pe
 
 ### Inserting existing messages
 
-Given an existing `signature: Signature | null` and `message: Message<Payload>`, ie a signed message received from another peer, we can insert them locally using `gossipLog.insert(signature, message)`. This executes the following steps:
+Given an existing `signature: Signature` and `message: Message<Payload>`, ie a signed message received from another peer, we can insert them locally using `gossipLog.insert(signature, message)`. This executes the following steps:
 
 1. Open an exclusive read-write transaction in the underlying database.
 2. Serialize the signed message and compute its message ID.
@@ -265,22 +262,28 @@ Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 ```ts
 interface GossipLogInit<Payload = unknown, Result = void> {
   topic: string
-  apply: (id: string, signature: Signature | null, message: Message<Payload>) => Awaitable<Result>
+  apply: GossipLogConsumer<Payload, Result>
   validate: (payload: unknown) => payload is Payload
+
+  signer?: MessageSigner<Payload>
   replay?: boolean
-  signatures?: boolean
-  sequencing?: boolean
   indexAncestors?: boolean
 }
 
+type GossipLogConsumer<Payload = unknown, Result = void> = (
+  id: string,
+  signature: Signature,
+  message: Message<Payload>
+) => Awaitable<Result>
+
 interface MessageSigner<Payload = unknown> {
-  sign: (message: Message<Payload>) => Awaitable<Signature | null>
+  sign: (message: Message<Payload>) => Signature
 }
 
 type GossipLogEvents<Payload, Result> = {
-  message: CustomEvent<{ id: string; signature: Signature | null; message: Message<Payload>; result: Result }>
-  commit: CustomEvent<{ topic: string; root: Node }>
-  sync: CustomEvent<{ topic: string; peerId: PeerId }>
+  message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload>; result: Result }>
+  commit: CustomEvent<{ root: Node }>
+  sync: CustomEvent<{ peerId: PeerId }>
 }
 
 interface AbstractGossipLog<Payload = unknown, Result = unknown>

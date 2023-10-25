@@ -3,11 +3,11 @@ import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 
-import { Action, Session, Message, SessionSigner, CBORValue } from "@canvas-js/interfaces"
+import { Action, Session, Message, MessageSigner, SessionSigner, CBORValue } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Signature } from "@canvas-js/signed-cid"
-import { AbstractGossipLog, MessageSigner } from "@canvas-js/gossiplog"
+import { AbstractGossipLog } from "@canvas-js/gossiplog"
 
 import target from "#target"
 
@@ -107,8 +107,6 @@ export class Canvas<Contract extends InlineContract = InlineContract> extends Ev
 			apply: runtime.getConsumer(),
 			replay: replay,
 			validate: validatePayload,
-			signatures: true,
-			sequencing: true,
 			indexAncestors: indexHistory,
 		})
 
@@ -239,11 +237,12 @@ export class Canvas<Contract extends InlineContract = InlineContract> extends Ev
 	 * Low-level utility method for internal and debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async insert(signature: Signature | null, message: Message<Session | Action>): Promise<{ id: string }> {
+	public async insert(signature: Signature, message: Message<Session | Action>): Promise<{ id: string }> {
+		assert(message.topic === this.topic, "invalid message topic")
 		if (this.libp2p === null) {
 			return this.messageLog.insert(signature, message)
 		} else {
-			const { id } = await this.libp2p.services.gossiplog.insert(this.topic, signature, message)
+			const { id } = await this.libp2p.services.gossiplog.insert(signature, message)
 			return { id }
 		}
 	}
@@ -266,7 +265,7 @@ export class Canvas<Contract extends InlineContract = InlineContract> extends Ev
 
 	public async getMessage(
 		id: string
-	): Promise<[signature: Signature | null, message: Message<Action | Session> | null]> {
+	): Promise<[signature: Signature, message: Message<Action | Session>] | [null, null]> {
 		return await this.messageLog.get(id)
 	}
 
@@ -274,7 +273,7 @@ export class Canvas<Contract extends InlineContract = InlineContract> extends Ev
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {}
-	): AsyncIterable<[id: string, signature: Signature | null, message: Message<Payload>]> {
+	): AsyncIterable<[id: string, signature: Signature, message: Message<Payload>]> {
 		for await (const [id, signature, message] of this.messageLog.iterate(lowerBound, upperBound, options)) {
 			yield [id, signature, message as Message<Payload>]
 		}

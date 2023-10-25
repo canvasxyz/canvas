@@ -14,7 +14,7 @@ const apply = (id: string, signature: Signature | null, message: Message<string>
 const validate = (payload: unknown): payload is string => true
 
 test("append messages (memory, linear, 100)", async (t) => {
-	const log = await MemoryGossipLog.open({ topic, apply, validate, signatures: false })
+	const log = await MemoryGossipLog.open({ topic, apply, validate })
 	t.teardown(() => log.close())
 	await append(t, log, 100)
 })
