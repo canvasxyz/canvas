@@ -9,7 +9,7 @@ testPlatforms("insert messages out-of-order", async (t, openGossipLog) => {
 	const results: { id: string; payload: string }[] = []
 
 	const topic = "com.example.test"
-	const apply = (id: string, signature: Signature | null, message: Message<string>) => {
+	const apply = (id: string, signature: Signature, message: Message<string>) => {
 		results.push({ id, payload: message.payload })
 	}
 

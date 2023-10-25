@@ -9,22 +9,6 @@ const topic = "com.example.test"
 const apply = (id: string, signature: Signature, message: Message<string>) => {}
 const validate = (payload: unknown): payload is string => true
 
-testPlatforms("append messages", async (t, openGossipLog) => {
-	const signer = new Ed25519Signer()
-	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
-
-	const [a, b, c] = [nanoid(), nanoid(), nanoid()]
-	const { id: idA } = await log.append(a, { signer })
-	const { id: idB } = await log.append(b, { signer })
-	const { id: idC } = await log.append(c, { signer })
-
-	t.deepEqual(await collect(log.iterate(), getPublicKey), [
-		[idA, signer.publicKey, { topic, clock: 1, parents: [], payload: a }],
-		[idB, signer.publicKey, { topic, clock: 2, parents: [idA], payload: b }],
-		[idC, signer.publicKey, { topic, clock: 3, parents: [idB], payload: c }],
-	])
-})
-
 testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog) => {
 	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
 

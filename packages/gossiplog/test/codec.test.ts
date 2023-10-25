@@ -9,11 +9,7 @@ import { Ed25519Signer, decodeId, encodeId } from "@canvas-js/gossiplog"
 import { collect, getPublicKey, testPlatforms } from "./utils.js"
 
 const topic = "com.example.test"
-const apply = (
-	id: string,
-	signature: Signature | null,
-	message: Message<{ a: string; b: number; c: string | null }>
-) => {}
+const apply = (id: string, signature: Signature, message: Message<{ a: string; b: number; c: string | null }>) => {}
 
 const schema = `
 type Thing struct {
