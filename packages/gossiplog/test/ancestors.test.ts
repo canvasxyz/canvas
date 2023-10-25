@@ -3,7 +3,7 @@ import { Message } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
 
 import { Ed25519Signer, decodeId } from "@canvas-js/gossiplog"
-import { appendChain, collect, getPublicKey, shuffle, testPlatforms } from "./utils.js"
+import { appendChain, shuffle, testPlatforms } from "./utils.js"
 
 const topic = "com.example.test"
 const apply = (id: string, signature: Signature, message: Message<string>) => {}
@@ -111,3 +111,16 @@ testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, ope
 	t.deepEqual(await log.getAncestors(chainA[2], 4), [chainA[0]])
 	t.deepEqual(await log.getAncestors(chainB[2], 4), [chainB[0]])
 })
+
+// testPlatforms("get ancestors", async (t, openGossipLog) => {
+// 	const logs = await Promise.all([
+// 		openGossipLog(t, { topic, apply, validate, indexAncestors: true }),
+// 		openGossipLog(t, { topic, apply, validate, indexAncestors: true }),
+// 		openGossipLog(t, { topic, apply, validate, indexAncestors: true }),
+// 		openGossipLog(t, { topic, apply, validate, indexAncestors: true }),
+// 		openGossipLog(t, { topic, apply, validate, indexAncestors: true }),
+// 	])
+
+// 	// const selectRandomPeer =
+// 	// logs[0].sync()
+// })

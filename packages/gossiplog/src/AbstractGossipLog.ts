@@ -1,4 +1,3 @@
-import type { PeerId } from "@libp2p/interface/peer-id"
 import type { Source, Target, Node, Bound, KeyValueStore, Entry } from "@canvas-js/okra"
 
 import { CustomEvent, EventEmitter } from "@libp2p/interface/events"
@@ -55,7 +54,7 @@ export type GossipLogEvents<Payload = unknown, Result = void> = {
 		result: Result
 	}>
 	commit: CustomEvent<{ root: Node }>
-	sync: CustomEvent<{ peer: PeerId }>
+	sync: CustomEvent<{ peer: string | null }>
 }
 
 export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> extends EventEmitter<
@@ -74,12 +73,12 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	protected abstract read<T>(
 		callback: (txn: ReadOnlyTransaction) => Awaitable<T>,
-		options?: { target?: PeerId }
+		options?: { targetId?: string }
 	): Promise<T>
 
 	protected abstract write<T>(
 		callback: (txn: ReadWriteTransaction) => Awaitable<T>,
-		options?: { source?: PeerId }
+		options?: { sourceId?: string }
 	): Promise<T>
 
 	public readonly topic: string
@@ -397,28 +396,25 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	/**
 	 * Sync with a remote source, applying and inserting all missing messages into the local log
 	 */
-	public async sync(sourcePeerId: PeerId, source: Source): Promise<{ root: Node }> {
-		const root = await this.write(
-			async (txn) => {
-				const driver = new Driver(this.topic, source, txn.messages)
-				for await (const [key, value] of driver.sync()) {
-					const [id, signature, message] = this.decode(value)
-					assert(id === decodeId(key), "expected id === decodeId(key)")
+	public async sync(source: Source, options: { sourceId?: string } = {}): Promise<{ root: Node }> {
+		const root = await this.write(async (txn) => {
+			const driver = new Driver(this.topic, source, txn.messages)
+			for await (const [key, value] of driver.sync()) {
+				const [id, signature, message] = this.decode(value)
+				assert(id === decodeId(key), "expected id === decodeId(key)")
 
-					verifySignature(signature, message)
+				verifySignature(signature, message)
 
-					const existingMessage = await txn.messages.get(key)
-					if (existingMessage === null) {
-						await this.#insert(txn, id, signature, message, [key, value])
-					}
+				const existingMessage = await txn.messages.get(key)
+				if (existingMessage === null) {
+					await this.#insert(txn, id, signature, message, [key, value])
 				}
+			}
 
-				return await txn.messages.getRoot()
-			},
-			{ source: sourcePeerId }
-		)
+			return await txn.messages.getRoot()
+		}, options)
 
-		this.dispatchEvent(new CustomEvent("sync", { detail: { peer: sourcePeerId } }))
+		this.dispatchEvent(new CustomEvent("sync", { detail: { peer: options.sourceId ?? null } }))
 		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
 		this.log("commited root %s", hex(root.hash))
 		return { root }
@@ -427,7 +423,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	/**
 	 * Serve a read-only snapshot of the merkle tree
 	 */
-	public async serve(targetPeerId: PeerId, callback: (source: Source) => Promise<void>) {
-		await this.read((txn) => callback(txn.messages), { target: targetPeerId })
+	public async serve(callback: (source: Source) => Promise<void>, options: { targetId?: string }) {
+		await this.read((txn) => callback(txn.messages), options)
 	}
 }

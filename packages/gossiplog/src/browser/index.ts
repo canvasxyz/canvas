@@ -1,5 +1,3 @@
-import type { PeerId } from "@libp2p/interface-peer-id"
-
 import pDefer from "p-defer"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
@@ -121,13 +119,13 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 	public async read<T>(
 		callback: (txn: ReadOnlyTransaction) => Promise<T>,
-		options: { target?: PeerId } = {}
+		options: { targetId?: string } = {}
 	): Promise<T> {
-		const targetPeerId = options.target ?? null
+		const targetId = options.targetId ?? null
 
-		if (targetPeerId !== null) {
-			if (this.outgoingSyncPeers.has(targetPeerId.toString())) {
-				throw new Error(`deadlock with peer ${targetPeerId}`)
+		if (targetId !== null) {
+			if (this.outgoingSyncPeers.has(targetId)) {
+				throw new Error(`deadlock with peer ${targetId}`)
 			}
 		}
 
@@ -142,8 +140,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 			this.log("acquired shared lock")
 
-			if (targetPeerId !== null) {
-				this.incomingSyncPeers.add(targetPeerId.toString())
+			if (targetId !== null) {
+				this.incomingSyncPeers.add(targetId)
 			}
 
 			const parents: Omit<KeyValueStore, "set" | "delete"> = {
@@ -168,8 +166,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				this.log.error("error in read-only transaction: %O", err)
 			} finally {
 				this.log("releasing shared lock")
-				if (targetPeerId !== null) {
-					this.incomingSyncPeers.delete(targetPeerId.toString())
+				if (targetId !== null) {
+					this.incomingSyncPeers.delete(targetId)
 				}
 			}
 		})
@@ -179,12 +177,12 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 	public async write<T>(
 		callback: (txn: ReadWriteTransaction) => Promise<T>,
-		options: { source?: PeerId } = {}
+		options: { sourceId?: string } = {}
 	): Promise<T> {
-		const sourcePeerId = options.source ?? null
-		if (sourcePeerId !== null) {
-			if (this.incomingSyncPeers.has(sourcePeerId.toString())) {
-				throw new Error(`deadlock with peer ${sourcePeerId}`)
+		const sourceId = options.sourceId ?? null
+		if (sourceId !== null) {
+			if (this.incomingSyncPeers.has(sourceId)) {
+				throw new Error(`deadlock with peer ${sourceId}`)
 			}
 		}
 
@@ -202,8 +200,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 				this.log("acquired exclusive lock")
 
-				if (sourcePeerId !== null) {
-					this.outgoingSyncPeers.add(sourcePeerId.toString())
+				if (sourceId !== null) {
+					this.outgoingSyncPeers.add(sourceId)
 				}
 
 				const parents: KeyValueStore = {
@@ -233,8 +231,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					throw err
 				} finally {
 					this.log("releasing exclusive lock")
-					if (sourcePeerId !== null) {
-						this.outgoingSyncPeers.delete(sourcePeerId.toString())
+					if (sourceId !== null) {
+						this.outgoingSyncPeers.delete(sourceId)
 					}
 				}
 			}

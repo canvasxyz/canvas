@@ -1,5 +1,3 @@
-import type { PeerId } from "@libp2p/interface-peer-id"
-
 import PQueue from "p-queue"
 import pDefer from "p-defer"
 
@@ -73,19 +71,19 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 	public async read<T>(
 		callback: (txn: ReadOnlyTransaction) => Promise<T>,
-		options: { target?: PeerId } = {}
+		options: { targetId?: string } = {}
 	): Promise<T> {
-		const targetPeerId = options.target ?? null
+		const targetId = options.targetId ?? null
 
-		if (targetPeerId !== null) {
-			if (this.outgoingSyncPeers.has(targetPeerId.toString())) {
-				throw new Error(`deadlock with peer ${targetPeerId}`)
+		if (targetId !== null) {
+			if (this.outgoingSyncPeers.has(targetId)) {
+				throw new Error(`deadlock with peer ${targetId}`)
 			}
 		}
 
 		const result = await this.queue.add(async () => {
-			if (targetPeerId !== null) {
-				this.incomingSyncPeers.add(targetPeerId.toString())
+			if (targetId !== null) {
+				this.incomingSyncPeers.add(targetId)
 			}
 
 			try {
@@ -93,8 +91,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
 			} finally {
-				if (targetPeerId !== null) {
-					this.incomingSyncPeers.delete(targetPeerId.toString())
+				if (targetId !== null) {
+					this.incomingSyncPeers.delete(targetId)
 				}
 			}
 		})
@@ -104,18 +102,18 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 	public async write<T>(
 		callback: (txn: ReadWriteTransaction) => Promise<T>,
-		options: { source?: PeerId } = {}
+		options: { sourceId?: string } = {}
 	): Promise<T> {
-		const sourcePeerId = options.source ?? null
-		if (sourcePeerId !== null) {
-			if (this.incomingSyncPeers.has(sourcePeerId.toString())) {
-				throw new Error(`deadlock with peer ${sourcePeerId}`)
+		const sourceId = options.sourceId ?? null
+		if (sourceId !== null) {
+			if (this.incomingSyncPeers.has(sourceId)) {
+				throw new Error(`deadlock with peer ${sourceId}`)
 			}
 		}
 
 		const result = await this.queue.add(async () => {
-			if (sourcePeerId !== null) {
-				this.outgoingSyncPeers.add(sourcePeerId.toString())
+			if (sourceId !== null) {
+				this.outgoingSyncPeers.add(sourceId)
 			}
 
 			try {
@@ -124,8 +122,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				this.log.error("error in transaction: %O", err)
 				throw err
 			} finally {
-				if (sourcePeerId !== null) {
-					this.outgoingSyncPeers.delete(sourcePeerId.toString())
+				if (sourceId !== null) {
+					this.outgoingSyncPeers.delete(sourceId)
 				}
 			}
 		})

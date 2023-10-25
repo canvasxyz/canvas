@@ -13,11 +13,12 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { Key, Node } from "@canvas-js/okra"
 
 import type { MessageSigner, Message } from "@canvas-js/interfaces"
+import type { Signature } from "@canvas-js/signed-cid"
+
 import { AbstractGossipLog, GossipLogInit, encodeId, Ed25519Signer } from "@canvas-js/gossiplog"
 import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
 import { GossipLog as GossipLogBrowser } from "@canvas-js/gossiplog/browser"
 import { GossipLog as GossipLogMemory } from "@canvas-js/gossiplog/memory"
-import { Signature } from "@canvas-js/signed-cid"
 
 // @ts-expect-error
 globalThis.navigator = { locks }
