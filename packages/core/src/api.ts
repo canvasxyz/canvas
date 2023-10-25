@@ -73,11 +73,9 @@ export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Ex
 	api.get("/", async (req, res) => res.json(core.getApplicationData()))
 
 	if (options.exposeMetrics) {
-		// TODO: What is "message" used for?
-		// @ts-ignore
-		core.addEventListener("message", ({ detail: { uri, message } }) => {
-			coreMetrics.canvas_messages.inc({ uri, type: message.type })
-		})
+		// core.addEventListener("message", ({ detail: { id, message } }) => {
+		// 	coreMetrics.canvas_messages.inc({ id, type: message.type })
+		// })
 
 		api.get("/metrics", async (req, res) => {
 			try {

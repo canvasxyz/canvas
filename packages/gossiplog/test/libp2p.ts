@@ -158,7 +158,7 @@ export async function waitForInitialSync(network: Record<string, Libp2p<ServiceM
 
 		source.services.gossiplog.addEventListener(
 			"sync",
-			({ detail: { peerId: targetId } }) => syncPromises[`${sourceId}:${targetId}`].resolve(),
+			({ detail: { peer: targetId } }) => syncPromises[`${sourceId}:${targetId}`].resolve(),
 			{ once: true }
 		)
 	}

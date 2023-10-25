@@ -49,14 +49,13 @@ export interface GossipLogInit<Payload = unknown, Result = void> {
 
 export type GossipLogEvents<Payload = unknown, Result = void> = {
 	message: CustomEvent<{
-		topic: string
 		id: string
 		signature: Signature
 		message: Message<Payload>
 		result: Result
 	}>
-	commit: CustomEvent<{ topic: string; root: Node }>
-	sync: CustomEvent<{ topic: string; peerId: PeerId }>
+	commit: CustomEvent<{ root: Node }>
+	sync: CustomEvent<{ peer: PeerId }>
 }
 
 export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> extends EventEmitter<
@@ -353,7 +352,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		this.log("applying %s %O", id, message)
 
 		const result = await this.#apply.apply(txn, [id, signature, message])
-		this.dispatchEvent(new CustomEvent("message", { detail: { topic: this.topic, id, signature, message, result } }))
+		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
 		await txn.messages.set(key, value)
 
 		await txn.parents.set(key, cborNull)
@@ -419,8 +418,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			{ source: sourcePeerId }
 		)
 
-		this.dispatchEvent(new CustomEvent("sync", { detail: { topic: this.topic, peerId: sourcePeerId } }))
-		this.dispatchEvent(new CustomEvent("commit", { detail: { topic: this.topic, root } }))
+		this.dispatchEvent(new CustomEvent("sync", { detail: { peer: sourcePeerId } }))
+		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
 		this.log("commited root %s", hex(root.hash))
 		return { root }
 	}

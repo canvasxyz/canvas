@@ -7,7 +7,7 @@ import { Action, Session, Message, MessageSigner, SessionSigner, CBORValue } fro
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Signature } from "@canvas-js/signed-cid"
-import { AbstractGossipLog } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
 
 import target from "#target"
 
@@ -57,16 +57,10 @@ export type ActionAPI<Args = any, Result = any> = (
 	options?: ActionOptions
 ) => Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }>
 
-export interface CoreEvents {
+export interface CoreEvents extends GossipLogEvents<Action | Session, unknown> {
 	close: Event
-	// TODO: should this be {signature: Signature, Message: Message} ?
-	message: CustomEvent<{}>
-	// TODO: what should this be
-	update: CustomEvent<{}>
-	// TODO: what should this be
-	sync: CustomEvent<{}>
-	connect: CustomEvent<{ peer: string }>
-	disconnect: CustomEvent<{ peer: string }>
+	connect: CustomEvent<{ peer: PeerId }>
+	disconnect: CustomEvent<{ peer: PeerId }>
 }
 
 export type ApplicationData = {
