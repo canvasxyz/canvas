@@ -208,10 +208,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 				const parents: KeyValueStore = {
 					get: (key) => this.parents.read(() => this.parents.get(key)),
-
-					// TODO: remove the extra clone when fake-indexeddb fixes this
-					// https://github.com/dumbmatter/fakeIndexedDB/issues/89
-					set: (key, value) => this.parents.write(() => this.parents.set(new Uint8Array(key), value)),
+					set: (key, value) => this.parents.write(() => this.parents.set(key, value)),
 					delete: (key) => this.parents.write(() => this.parents.delete(key)),
 					entries: (lowerBound = null, upperBound = null, options = {}) => {
 						this.parents.txn = this.db.transaction(this.parents.storeName, "readonly")

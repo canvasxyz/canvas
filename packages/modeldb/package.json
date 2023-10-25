@@ -21,7 +21,7 @@
     "./sqlite": "./lib/sqlite/index.js"
   },
   "devDependencies": {
-    "fake-indexeddb": "^5.0.0",
+    "fake-indexeddb": "^5.0.1",
     "nanoid": "^5.0.1"
   },
   "peerDependencies": {
