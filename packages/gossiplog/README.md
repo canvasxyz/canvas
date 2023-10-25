@@ -60,6 +60,8 @@ We can derive a logical clock value for each message from its depth in the graph
 GossipLog requires every message to be signed with a [`@canvas-js/signed-cid`](https://github.com/canvasxyz/canvas/tree/main/packages/signed-cid) signature.
 
 ```ts
+// defined in @canvas-js/signed-cid
+
 type Signature = {
   type: "ed25519" | "secp256k1"
   publicKey: Uint8Array
@@ -75,6 +77,8 @@ The `cid` in a message signature is the CID of the `Message` object using the `d
 Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use the `MessageSigner` interface.
 
 ```ts
+// defined in @canvas-js/interfaces
+
 interface MessageSigner<Payload = unknown> {
   sign: (message: Message<Payload>) => Signature
 }
