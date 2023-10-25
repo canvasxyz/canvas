@@ -1,14 +1,14 @@
-const N1 = 1n << 7n
-const N2 = 1n << 14n
-const N3 = 1n << 21n
-const N4 = 1n << 28n
-const N5 = 1n << 35n
-const N6 = 1n << 42n
-const N7 = 1n << 49n
-const N8 = 1n << 56n
-const N9 = 1n << 63n
+const N1 = 1 << 7
+const N2 = 1 << 14
+const N3 = 1 << 21
+const N4 = 1 << 28
+const N5 = 1 << 35
+const N6 = 1 << 42
+const N7 = 1 << 49
+const N8 = 1 << 56
+const N9 = 1 << 63
 
-export function encodingLength(value: bigint) {
+export function encodingLength(value: number) {
 	if (value < N1) return 1
 	if (value < N2) return 2
 	if (value < N3) return 3
@@ -21,16 +21,16 @@ export function encodingLength(value: bigint) {
 	return 10
 }
 
-export function encodeClock(key: Uint8Array, clock: bigint): number {
-	if (clock === 0n) {
+export function encodeClock(key: Uint8Array, clock: number): number {
+	if (clock === 0) {
 		key[0] = 0
 		return 1
 	}
 
 	const sets: number[] = []
 	while (clock > 0) {
-		sets.push(Number(clock & 0x7fn))
-		clock >>= 7n
+		sets.push(Number(clock & 0x7f))
+		clock >>= 7
 	}
 
 	for (let i = 0; i < sets.length; i++) {
@@ -45,7 +45,7 @@ export function encodeClock(key: Uint8Array, clock: bigint): number {
 	return sets.length
 }
 
-export function decodeClock(key: Uint8Array): [bigint, number] {
+export function decodeClock(key: Uint8Array): [clock: number, byteLength: number] {
 	const sets: number[] = []
 	for (const byte of key) {
 		sets.push(byte & 0x7f)
@@ -58,9 +58,9 @@ export function decodeClock(key: Uint8Array): [bigint, number] {
 
 	const num = sets.reduce((num, set, i) => {
 		const pow = 7 * (sets.length - 1 - i)
-		const val = BigInt(set) << BigInt(pow)
+		const val = set << pow
 		return num + val
-	}, 0n)
+	}, 0)
 
 	return [num, sets.length]
 }

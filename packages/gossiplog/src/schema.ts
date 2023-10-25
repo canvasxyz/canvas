@@ -45,7 +45,7 @@ export function decodeSignedMessage<Payload = unknown>(
 	assert(signedMessage !== undefined, "error decoding message (internal error)")
 
 	const { signature, topic } = signedMessage
-	const clock = getClock(signedMessage.parents)
+	const clock = getNextClock(signedMessage.parents)
 	const parents = signedMessage.parents ?? []
 
 	assert(
@@ -67,7 +67,7 @@ export function encodeSignedMessage(
 	{ toRepresentation }: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 ): [key: Uint8Array, value: Uint8Array] {
 	const parents = message.parents.sort().map(encodeId)
-	assert(getClock(parents) === message.clock, "error encoding message (invalid clock)")
+	assert(getNextClock(parents) === message.clock, "error encoding message (invalid clock)")
 
 	const payload = toRepresentation(message.payload)
 	assert(payload !== undefined, "error encoding message (invalid payload)")
@@ -87,8 +87,8 @@ export function encodeSignedMessage(
 	return [key, value]
 }
 
-export function getClock(parents: Uint8Array[]) {
-	let max = 0n
+export function getNextClock(parents: Uint8Array[]): number {
+	let max = 0
 	for (const key of parents) {
 		assert(key.byteLength === KEY_LENGTH, "expected key.byteLength === KEY_LENGTH")
 		const [clock] = decodeClock(key)
@@ -97,7 +97,7 @@ export function getClock(parents: Uint8Array[]) {
 		}
 	}
 
-	return Number(max) + 1
+	return max + 1
 }
 
 // keys are made by concatenating an unsigned varint clock with the hash
@@ -106,7 +106,7 @@ export const KEY_LENGTH = 20
 
 function getKey(clock: number, hash: Uint8Array): Uint8Array {
 	const key = new Uint8Array(KEY_LENGTH)
-	const encodingLength = encodeClock(key, BigInt(clock))
+	const encodingLength = encodeClock(key, clock)
 	key.set(hash.subarray(0, KEY_LENGTH - encodingLength), encodingLength)
 	return key
 }

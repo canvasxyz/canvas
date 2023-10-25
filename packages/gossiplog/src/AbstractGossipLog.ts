@@ -14,7 +14,7 @@ import { Signature, verifySignature } from "@canvas-js/signed-cid"
 
 import { Mempool } from "./Mempool.js"
 import { Driver } from "./sync/driver.js"
-import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getClock, KEY_LENGTH } from "./schema.js"
+import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getNextClock, KEY_LENGTH } from "./schema.js"
 import { Awaitable, assert, topicPattern, cborNull, getAncestorClocks, Ed25519Signer } from "./utils.js"
 import { decodeClock } from "./clock.js"
 
@@ -155,7 +155,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public async getClock(): Promise<[clock: number, parents: string[]]> {
 		const parents = await this.read((txn) => this.getParents(txn))
-		const clock = getClock(parents)
+		const clock = getNextClock(parents)
 		return [clock, parents.map(decodeId)]
 	}
 
@@ -196,7 +196,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 		const { id, signature, message, result, root } = await this.write(async (txn) => {
 			const parents = await this.getParents(txn)
-			const clock = getClock(parents)
+			const clock = getNextClock(parents)
 
 			const message: Message<Payload> = { topic: this.topic, clock, parents: parents.map(decodeId), payload }
 			const signature = await signer.sign(message)
