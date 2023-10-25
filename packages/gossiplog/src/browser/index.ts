@@ -147,6 +147,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			const parents: Omit<KeyValueStore, "set" | "delete"> = {
 				get: (key) => this.parents.read(() => this.parents.get(key)),
 				entries: (lowerBound = null, upperBound = null, options = {}) => {
+					console.log("GETTING PARENTS READ-ONLY", this.parents.storeName)
 					this.parents.txn = this.db.transaction([this.parents.storeName], "readonly")
 					return this.parents.entries(lowerBound, upperBound, options)
 				},
@@ -187,6 +188,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		}
 
 		let result: T | undefined = undefined
+		let error: Error | null = null
 
 		this.log("requesting exclusive lock")
 		await navigator.locks.request(
@@ -206,7 +208,10 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 				const parents: KeyValueStore = {
 					get: (key) => this.parents.read(() => this.parents.get(key)),
-					set: (key, value) => this.parents.write(() => this.parents.set(key, value)),
+
+					// TODO: remove the extra clone when fake-indexeddb fixes this
+					// https://github.com/dumbmatter/fakeIndexedDB/issues/89
+					set: (key, value) => this.parents.write(() => this.parents.set(new Uint8Array(key), value)),
 					delete: (key) => this.parents.write(() => this.parents.delete(key)),
 					entries: (lowerBound = null, upperBound = null, options = {}) => {
 						this.parents.txn = this.db.transaction(this.parents.storeName, "readonly")
@@ -228,6 +233,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					result = await callback({ messages: this.messages, parents, ancestors })
 				} catch (err) {
 					this.log.error("error in read-write transaction: %O", err)
+					error = err as Error
 					throw err
 				} finally {
 					this.log("releasing exclusive lock")
@@ -237,6 +243,11 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				}
 			}
 		)
+
+		// this is just a workaround for fake-indexeddb which doesn't throw exceptions right
+		if (error !== null) {
+			throw error
+		}
 
 		return result as T
 	}

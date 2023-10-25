@@ -20,6 +20,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		if (init.replay) {
 			await gossipLog.replay()
+		} else {
+			await gossipLog.write(async (txn) => {})
 		}
 
 		return gossipLog

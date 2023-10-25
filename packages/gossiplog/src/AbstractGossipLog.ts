@@ -3,7 +3,6 @@ import type { Source, Target, Node, Bound, KeyValueStore, Entry } from "@canvas-
 import { CustomEvent, EventEmitter } from "@libp2p/interface/events"
 import { Logger, logger } from "@libp2p/logger"
 import { equals } from "uint8arrays"
-import { varint } from "multiformats/basics"
 import { bytesToHex as hex } from "@noble/hashes/utils"
 import * as cbor from "@ipld/dag-cbor"
 import { Schema } from "@ipld/schema/schema-schema"
@@ -15,8 +14,9 @@ import { Signature, verifySignature } from "@canvas-js/signed-cid"
 
 import { Mempool } from "./Mempool.js"
 import { Driver } from "./sync/driver.js"
-import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getClock } from "./schema.js"
+import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getClock, KEY_LENGTH } from "./schema.js"
 import { Awaitable, assert, topicPattern, cborNull, getAncestorClocks, Ed25519Signer } from "./utils.js"
+import { decodeClock } from "./clock.js"
 
 export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
@@ -159,6 +159,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		return [clock, parents.map(decodeId)]
 	}
 
+	public async has(id: string): Promise<boolean> {
+		return await this.read(({ messages }) => messages.get(encodeId(id)) !== null)
+	}
+
 	public async get(id: string): Promise<[signature: Signature, message: Message<Payload>] | [null, null]> {
 		const value = await this.read(({ messages }) => messages.get(encodeId(id)))
 		if (value === null) {
@@ -171,8 +175,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	private async getParents(txn: ReadOnlyTransaction): Promise<Uint8Array[]> {
 		const parents: Uint8Array[] = []
+
 		for await (const [key, value] of txn.parents.entries()) {
-			assert(equals(value, cborNull), "internal error - unexpected parent entry value")
+			assert(key.byteLength === KEY_LENGTH, "internal error (expected key.byteLength === KEY_LENGTH)")
+			assert(equals(value, cborNull), "internal error (unexpected parent entry value)")
 			parents.push(key)
 		}
 
@@ -262,6 +268,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		return Array.from(results).sort()
 	}
 
+	public async isAncestor(id: string, ancestor: string): Promise<boolean> {
+		return await this.read((txn) => AbstractGossipLog.isAncestor(txn, id, ancestor))
+	}
+
 	static async isAncestor(
 		txn: ReadOnlyTransaction,
 		id: string,
@@ -275,16 +285,16 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		}
 
 		const ancestorKey = encodeId(ancestor)
-		const [ancestorClock] = varint.decode(ancestorKey)
+		const [ancestorClock] = decodeClock(ancestorKey)
 
 		const key = encodeId(id)
-		const [clock] = varint.decode(key)
+		const [clock] = decodeClock(key)
 
 		if (clock <= ancestorClock) {
 			return false
 		}
 
-		const index = Math.floor(Math.log2(clock - ancestorClock))
+		const index = Math.floor(Math.log2(Number(clock - ancestorClock)))
 		const value = await txn.ancestors.get(key)
 		assert(value !== null, "key not found in ancestor index")
 
@@ -316,10 +326,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
 		assert(atOrBefore > 0, "expected atOrBefore > 0")
 
-		const [clock] = varint.decode(key)
-		assert(atOrBefore < clock, "expected atOrBefore < clock")
+		const [clock] = decodeClock(key)
+		assert(atOrBefore < Number(clock), "expected atOrBefore < clock")
 
-		const index = Math.floor(Math.log2(clock - atOrBefore))
+		const index = Math.floor(Math.log2(Number(clock) - atOrBefore))
 		const value = await txn.ancestors.get(key)
 		if (value === null) {
 			throw new Error(`key ${decodeId(key)} not found in ancestor index`)
@@ -327,10 +337,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 		const links = cbor.decode<Uint8Array[][]>(value)
 		for (const ancestorKey of links[index]) {
-			const [ancestorClock] = varint.decode(ancestorKey)
+			const [ancestorClock] = decodeClock(ancestorKey)
 			const ancestorId = decodeId(ancestorKey)
 
-			if (ancestorClock <= atOrBefore) {
+			if (Number(ancestorClock) <= atOrBefore) {
 				results.add(ancestorId)
 			} else if (visited.has(ancestorId)) {
 				return
@@ -370,11 +380,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 				} else {
 					const links = new Set<string>()
 					for (const child of ancestorLinks[i - 1]) {
-						const [childClock] = varint.decode(child)
-						if (childClock <= ancestorClock) {
+						const [childClock] = decodeClock(child)
+						if (Number(childClock) <= ancestorClock) {
 							links.add(decodeId(child))
 						} else {
-							assert(childClock <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
+							assert(Number(childClock) <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
 							await this.#getAncestors(txn, child, ancestorClock, links)
 						}
 					}
@@ -400,6 +410,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		const root = await this.write(async (txn) => {
 			const driver = new Driver(this.topic, source, txn.messages)
 			for await (const [key, value] of driver.sync()) {
+				// console.log("GOT MISSING ENTRY", bytesToHex(key), bytesToHex(value))
 				const [id, signature, message] = this.decode(value)
 				assert(id === decodeId(key), "expected id === decodeId(key)")
 
@@ -407,6 +418,14 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 				const existingMessage = await txn.messages.get(key)
 				if (existingMessage === null) {
+					for (const parent of message.parents) {
+						const parentKey = encodeId(parent)
+						const parentValue = await txn.messages.get(parentKey)
+						if (parentValue === null) {
+							this.log.error("missing parent %s of message %s: %O", parent, id, message)
+						}
+					}
+
 					await this.#insert(txn, id, signature, message, [key, value])
 				}
 			}
@@ -423,7 +442,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	/**
 	 * Serve a read-only snapshot of the merkle tree
 	 */
-	public async serve(callback: (source: Source) => Promise<void>, options: { targetId?: string }) {
+	public async serve(callback: (source: Source) => Promise<void>, options: { targetId?: string } = {}) {
 		await this.read((txn) => callback(txn.messages), options)
 	}
 }

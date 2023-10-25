@@ -1,4 +1,3 @@
-import { varint } from "multiformats"
 import { base32hex } from "multiformats/bases/base32"
 import { sha256 } from "@noble/hashes/sha256"
 import * as cbor from "@ipld/dag-cbor"
@@ -10,6 +9,7 @@ import type { Message } from "@canvas-js/interfaces"
 import type { Signature } from "@canvas-js/signed-cid"
 import { lessThan } from "@canvas-js/okra"
 
+import { decodeClock, encodeClock } from "./clock.js"
 import { assert } from "./utils.js"
 
 const schema = fromDSL(`
@@ -88,16 +88,16 @@ export function encodeSignedMessage(
 }
 
 export function getClock(parents: Uint8Array[]) {
-	let max = 0
+	let max = 0n
 	for (const key of parents) {
 		assert(key.byteLength === KEY_LENGTH, "expected key.byteLength === KEY_LENGTH")
-		const [clock] = varint.decode(key)
+		const [clock] = decodeClock(key)
 		if (clock > max) {
 			max = clock
 		}
 	}
 
-	return max + 1
+	return Number(max) + 1
 }
 
 // keys are made by concatenating an unsigned varint clock with the hash
@@ -105,10 +105,9 @@ export function getClock(parents: Uint8Array[]) {
 export const KEY_LENGTH = 20
 
 function getKey(clock: number, hash: Uint8Array): Uint8Array {
-	const encodingLength = varint.encodingLength(clock)
 	const key = new Uint8Array(KEY_LENGTH)
-	varint.encodeTo(clock, key, 0)
-	key.set(hash.subarray(0, key.byteLength - encodingLength), encodingLength)
+	const encodingLength = encodeClock(key, BigInt(clock))
+	key.set(hash.subarray(0, KEY_LENGTH - encodingLength), encodingLength)
 	return key
 }
 

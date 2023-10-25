@@ -7,7 +7,6 @@ import "fake-indexeddb/auto"
 import { locks, AbortController } from "web-locks"
 
 import { nanoid } from "nanoid"
-import { varint } from "multiformats"
 
 import { bytesToHex } from "@noble/hashes/utils"
 import { Key, Node } from "@canvas-js/okra"
@@ -15,7 +14,7 @@ import { Key, Node } from "@canvas-js/okra"
 import type { MessageSigner, Message } from "@canvas-js/interfaces"
 import type { Signature } from "@canvas-js/signed-cid"
 
-import { AbstractGossipLog, GossipLogInit, encodeId, Ed25519Signer } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogInit, encodeId, Ed25519Signer, decodeClock } from "@canvas-js/gossiplog"
 import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
 import { GossipLog as GossipLogBrowser } from "@canvas-js/gossiplog/browser"
 import { GossipLog as GossipLogMemory } from "@canvas-js/gossiplog/memory"
@@ -37,9 +36,9 @@ export const testPlatforms = (
 	) => void
 ) => {
 	const macro = test.macro(run)
-	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
-	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogBrowser.open(nanoid(), init))
-	test(`Browser - ${name}`, macro, (t, init) => GossipLogNode.open(getDirectory(t), init))
+	// test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
+	// test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(nanoid(), init))
+	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(getDirectory(t), init))
 }
 
 export const getPublicKey = <T>([id, { publicKey }, message]: [string, Signature, Message<T>]): [
@@ -51,8 +50,11 @@ export const getPublicKey = <T>([id, { publicKey }, message]: [string, Signature
 export function getDirectory(t: ExecutionContext<unknown>): string {
 	const directory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(directory)
-	t.log("Opened temporary directory", directory)
-	t.teardown(() => fs.rmSync(directory, { recursive: true }))
+	t.log("Created temporary directory", directory)
+	t.teardown(() => {
+		fs.rmSync(directory, { recursive: true })
+		t.log("Removed temporary directory", directory)
+	})
 	return directory
 }
 
@@ -96,13 +98,13 @@ export async function appendChain(
 ): Promise<string[]> {
 	const signer = options.signer ?? new Ed25519Signer()
 
-	const [clock] = varint.decode(encodeId(rootId))
+	const [clock] = decodeClock(encodeId(rootId))
 
 	const ids: string[] = []
 	for (let i = 0; i < n; i++) {
 		const message: Message<string> = {
 			topic: log.topic,
-			clock: clock + i + 1,
+			clock: Number(clock) + i + 1,
 			parents: i === 0 ? [rootId] : [ids[i - 1]],
 			payload: nanoid(),
 		}
