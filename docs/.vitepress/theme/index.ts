@@ -2,6 +2,8 @@
 import { h } from "vue"
 import type { Theme } from "vitepress"
 import DefaultTheme from "vitepress/theme"
+import HeroRow from "../components/HeroRow.vue"
+import HeroAction from "../components/HeroAction.vue"
 import FeatureCard from "../components/FeatureCard.vue"
 import FeatureRow from "../components/FeatureRow.vue"
 import TextItem from "../components/TextItem.vue"
@@ -17,6 +19,8 @@ export default {
 		})
 	},
 	enhanceApp({ app, router, siteData }) {
+		app.component("HeroRow", HeroRow)
+		app.component("HeroAction", HeroAction)
 		app.component("FeatureCard", FeatureCard)
 		app.component("FeatureRow", FeatureRow)
 		app.component("TextItem", TextItem)

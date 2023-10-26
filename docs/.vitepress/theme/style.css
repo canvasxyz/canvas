@@ -4,24 +4,20 @@
   --vp-font-family-base: "Instrument Sans", Inter, sans-serif;
 }
 
-.VPHomeHero .image .image-src {
-  transform: translate(-50%, -50%) scale(1.25);
+html.dark body {
 }
-.VPHomeHero .tagline {
-  line-height: 1.5 !important;
+
+body {
+  font-size: 17px;
+  line-height: 24px;
 }
-.VPHomeHero .VPButton {
-  font-size: 16px !important;
+
+.VPSidebar .items {
+  margin-left: 24px;
 }
-@media (min-width: 960px) {
-  .VPHomeHero .tagline {
-    padding-top: 26px;
-    line-height: 1.4 !important;
-  }
-  .VPHomeHero .image .image-src {
-    transform: translate(-50%, -50%) scale(1.5);
-    margin-top: 20px;
-  }
+.VPSidebar .item h2.text,
+.VPSidebar .items .VPLink .text {
+  font-size: 16px;
 }
 
 /**
