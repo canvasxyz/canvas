@@ -2,7 +2,7 @@
 layout: home
 ---
 
-<HeroRow text="Decentralized applications at the speed of light" image="images/graphic_mainframe_4.png" tagline="Build peer-to-peer programs, that sync instantly with near unlimited throughput." v-bind:bullets="['Fast-sync using signed messages, libp2p, and CRDT+', 'Embedded relational database and compute engine', 'Supports any chain or authentication format']">
+<HeroRow text="Decentralized applications at the speed of light" image="images/graphic_mainframe_4.png" tagline="Build peer-to-peer programs, that sync instantly with nearly unlimited throughput." v-bind:bullets="['Fast-sync using signed messages, libp2p, and CRDT+', 'Embedded relational database and compute engine', 'Supports any chain or authentication format']">
   <HeroAction theme="brand big" text="Read the docs" href="/1-introduction" />
   <HeroAction theme="alt big" text="API Examples" href="/examples" />
 </HeroRow>
