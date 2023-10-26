@@ -1,0 +1,84 @@
+<script setup lang="ts">
+defineProps<{
+  title: string
+}>()
+</script>
+
+<template>
+  <div class="FeatureRow">
+    <h1 class="title">{{ title }}</h1>
+    <div class="container">
+      <div class="items">
+        <slot></slot>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+.FeatureRow {
+  position: relative;
+  padding: 30px 24px;
+}
+
+.FeatureRow h1 {
+  font-size: 32px;
+  font-weight: 700;
+  padding: 24px 0 36px;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .FeatureRow {
+    padding: 30px 48px;
+  }
+}
+
+@media (min-width: 960px) {
+  .FeatureRow {
+    padding: 30px 64px;
+  }
+}
+
+.container {
+  margin: 0 auto;
+  max-width: 1152px;
+}
+
+.items {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -8px;
+}
+
+.item {
+  padding: 8px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .item.grid-2,
+  .item.grid-4,
+  .item.grid-6 {
+    width: calc(100% / 2);
+  }
+}
+
+@media (min-width: 768px) {
+  .item.grid-2,
+  .item.grid-4 {
+    width: calc(100% / 2);
+  }
+
+  .item.grid-3,
+  .item.grid-6 {
+    width: calc(100% / 3);
+  }
+}
+
+@media (min-width: 960px) {
+  .item.grid-4 {
+    width: calc(100% / 4);
+  }
+}
+</style>
