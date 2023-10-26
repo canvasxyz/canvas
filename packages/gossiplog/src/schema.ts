@@ -1,4 +1,3 @@
-import { varint } from "multiformats"
 import { base32hex } from "multiformats/bases/base32"
 import { sha256 } from "@noble/hashes/sha256"
 import * as cbor from "@ipld/dag-cbor"
@@ -10,13 +9,14 @@ import type { Message } from "@canvas-js/interfaces"
 import type { Signature } from "@canvas-js/signed-cid"
 import { lessThan } from "@canvas-js/okra"
 
+import { decodeClock, encodeClock } from "./clock.js"
 import { assert } from "./utils.js"
 
 const schema = fromDSL(`
 type SignedMessage struct {
-	signature nullable Signature
+	signature Signature
 	topic String
-	parents nullable [Bytes]
+	parents [Bytes]
 	payload any
 } representation tuple
 
@@ -31,21 +31,21 @@ type Signature struct {
 const { toTyped: toSignedMessage, toRepresentation: fromSignedMessage } = create(schema, "SignedMessage")
 
 type SignedMessage = {
-	signature: Signature | null
+	signature: Signature
 	topic: string
-	parents: Uint8Array[] | null
+	parents: Uint8Array[]
 	payload: unknown
 }
 
 export function decodeSignedMessage<Payload = unknown>(
 	value: Uint8Array,
 	{ toTyped }: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-): [id: string, signature: Signature | null, message: Message<Payload>] {
+): [id: string, signature: Signature, message: Message<Payload>] {
 	const signedMessage = toSignedMessage(cbor.decode(value)) as SignedMessage | undefined
 	assert(signedMessage !== undefined, "error decoding message (internal error)")
 
 	const { signature, topic } = signedMessage
-	const clock = getClock(signedMessage.parents)
+	const clock = getNextClock(signedMessage.parents)
 	const parents = signedMessage.parents ?? []
 
 	assert(
@@ -62,12 +62,12 @@ export function decodeSignedMessage<Payload = unknown>(
 }
 
 export function encodeSignedMessage(
-	signature: Signature | null,
+	signature: Signature,
 	message: Message,
 	{ toRepresentation }: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 ): [key: Uint8Array, value: Uint8Array] {
-	const parents = message.clock === 0 ? null : message.parents.sort().map(encodeId)
-	assert(parents === null || getClock(parents) === message.clock, "error encoding message (invalid clock)")
+	const parents = message.parents.sort().map(encodeId)
+	assert(getNextClock(parents) === message.clock, "error encoding message (invalid clock)")
 
 	const payload = toRepresentation(message.payload)
 	assert(payload !== undefined, "error encoding message (invalid payload)")
@@ -75,7 +75,7 @@ export function encodeSignedMessage(
 	const signedMessage: SignedMessage = {
 		signature,
 		topic: message.topic,
-		parents: message.clock === 0 ? null : parents,
+		parents: parents,
 		payload: payload,
 	}
 
@@ -87,15 +87,11 @@ export function encodeSignedMessage(
 	return [key, value]
 }
 
-export function getClock(parents: null | Uint8Array[]) {
-	if (parents === null) {
-		return 0
-	}
-
+export function getNextClock(parents: Uint8Array[]): number {
 	let max = 0
 	for (const key of parents) {
 		assert(key.byteLength === KEY_LENGTH, "expected key.byteLength === KEY_LENGTH")
-		const [clock] = varint.decode(key)
+		const [clock] = decodeClock(key)
 		if (clock > max) {
 			max = clock
 		}
@@ -109,10 +105,9 @@ export function getClock(parents: null | Uint8Array[]) {
 export const KEY_LENGTH = 20
 
 function getKey(clock: number, hash: Uint8Array): Uint8Array {
-	const encodingLength = varint.encodingLength(clock)
 	const key = new Uint8Array(KEY_LENGTH)
-	varint.encodeTo(clock, key, 0)
-	key.set(hash.subarray(0, key.byteLength - encodingLength), encodingLength)
+	const encodingLength = encodeClock(key, clock)
+	key.set(hash.subarray(0, KEY_LENGTH - encodingLength), encodingLength)
 	return key
 }
 

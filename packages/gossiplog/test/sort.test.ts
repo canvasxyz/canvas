@@ -4,8 +4,8 @@ import crypto from "node:crypto"
 import { KEY_LENGTH, decodeId } from "@canvas-js/gossiplog"
 import { lessThan } from "@canvas-js/okra"
 
-test("sort 100 random keys", async (t) => {
-	const n = 100
+test("sort 10000 random keys", async (t) => {
+	const n = 10000
 	const keys = new Array(n)
 	const ids = new Array(n)
 	for (let i = 0; i < n; i++) {

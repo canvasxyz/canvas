@@ -1,5 +1,4 @@
 ---
-# https://vitepress.dev/reference/default-theme-home-page
 layout: home
 
 hero:
@@ -9,7 +8,7 @@ hero:
   actions:
     - theme: brand
       text: Read the docs
-      link: /markdown-examples
+      link: /1-introduction
     - theme: alt
       text: API Examples
       link: /api-examples

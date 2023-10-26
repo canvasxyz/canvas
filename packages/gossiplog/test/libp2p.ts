@@ -158,7 +158,7 @@ export async function waitForInitialSync(network: Record<string, Libp2p<ServiceM
 
 		source.services.gossiplog.addEventListener(
 			"sync",
-			({ detail: { peerId: targetId } }) => syncPromises[`${sourceId}:${targetId}`].resolve(),
+			({ detail: { peer: targetId } }) => syncPromises[`${sourceId}:${targetId}`].resolve(),
 			{ once: true }
 		)
 	}
@@ -166,12 +166,12 @@ export async function waitForInitialSync(network: Record<string, Libp2p<ServiceM
 	await Promise.all(Object.values(syncPromises).map((defer) => defer.promise))
 }
 
-type Result = { id: string; signature: Signature | null; message: Message }
+type Result = { id: string; signature: Signature; message: Message }
 
 export async function waitForMessageDelivery(
 	t: ExecutionContext<unknown>,
 	network: Record<string, Libp2p<ServiceMap>>,
-	match: (id: string, signature: Signature | null, message: Message) => boolean
+	match: (id: string, signature: Signature, message: Message) => boolean
 ): Promise<Result> {
 	const results = await Promise.all(
 		Object.entries(network).map(([name, libp2p]) => {

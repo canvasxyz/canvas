@@ -21,12 +21,12 @@
   ],
   "devDependencies": {
     "@ava/typescript": "^4.1.0",
-    "@types/node": "^20.8.5",
-    "@typescript-eslint/eslint-plugin": "^6.7.5",
-    "@typescript-eslint/parser": "^6.7.5",
+    "@types/node": "^20.8.9",
+    "@typescript-eslint/eslint-plugin": "^6.9.0",
+    "@typescript-eslint/parser": "^6.9.0",
     "ava": "^5.3.1",
-    "eslint": "^8.51.0",
-    "eslint-plugin-import": "^2.28.1",
+    "eslint": "^8.52.0",
+    "eslint-plugin-import": "^2.29.0",
     "typescript": "^5.2.2",
     "vitepress": "^1.0.0-rc.24",
     "vue": "^3.3.7"

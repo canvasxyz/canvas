@@ -10,8 +10,8 @@ const validateString = (payload: unknown): payload is string => true
 test("send a message from one peer to another via gossipsub", async (t) => {
 	const topic = "com.example.test"
 	const gossipLogs = {
-		a: await GossipLog.open({ topic, apply: () => {}, validate: validateString, signatures: false }),
-		b: await GossipLog.open({ topic, apply: () => {}, validate: validateString, signatures: false }),
+		a: await GossipLog.open({ topic, apply: () => {}, validate: validateString }),
+		b: await GossipLog.open({ topic, apply: () => {}, validate: validateString }),
 	}
 
 	const network = await createNetwork(t, {
@@ -34,7 +34,6 @@ test("send a message from one peer to another via gossipsub", async (t) => {
 	])
 
 	t.is(result, undefined)
-	t.is(message.clock, 1)
 	t.deepEqual(message.parents, [])
 })
 

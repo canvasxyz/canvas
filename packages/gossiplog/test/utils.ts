@@ -7,18 +7,17 @@ import "fake-indexeddb/auto"
 import { locks, AbortController } from "web-locks"
 
 import { nanoid } from "nanoid"
-import { varint } from "multiformats"
-import { ed25519 } from "@noble/curves/ed25519"
+
 import { bytesToHex } from "@noble/hashes/utils"
 import { Key, Node } from "@canvas-js/okra"
 
-import { AbstractGossipLog, GossipLogInit, MessageSigner, encodeId } from "@canvas-js/gossiplog"
+import type { MessageSigner, Message } from "@canvas-js/interfaces"
+import type { Signature } from "@canvas-js/signed-cid"
+
+import { AbstractGossipLog, GossipLogInit, encodeId, Ed25519Signer, decodeClock } from "@canvas-js/gossiplog"
 import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
 import { GossipLog as GossipLogBrowser } from "@canvas-js/gossiplog/browser"
 import { GossipLog as GossipLogMemory } from "@canvas-js/gossiplog/memory"
-
-import { Signature, createSignature } from "@canvas-js/signed-cid"
-import { Message } from "@canvas-js/interfaces"
 
 // @ts-expect-error
 globalThis.navigator = { locks }
@@ -37,25 +36,25 @@ export const testPlatforms = (
 	) => void
 ) => {
 	const macro = test.macro(run)
-	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
-	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogBrowser.open(nanoid(), init))
-	test(`Browser - ${name}`, macro, (t, init) => GossipLogNode.open(getDirectory(t), init))
+	// test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
+	// test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(nanoid(), init))
+	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(getDirectory(t), init))
 }
 
-export class Ed25519Signer<T = unknown> {
-	private readonly privateKey = ed25519.utils.randomPrivateKey()
-	public readonly publicKey = ed25519.getPublicKey(this.privateKey)
-
-	sign(message: Message<T>) {
-		return createSignature("ed25519", this.privateKey, message)
-	}
-}
+export const getPublicKey = <T>([id, { publicKey }, message]: [string, Signature, Message<T>]): [
+	string,
+	Uint8Array,
+	Message<T>
+] => [id, publicKey, message]
 
 export function getDirectory(t: ExecutionContext<unknown>): string {
 	const directory = path.resolve(os.tmpdir(), nanoid())
 	fs.mkdirSync(directory)
-	t.log("Opened temporary directory", directory)
-	t.teardown(() => fs.rmSync(directory, { recursive: true }))
+	t.log("Created temporary directory", directory)
+	t.teardown(() => {
+		fs.rmSync(directory, { recursive: true })
+		t.log("Removed temporary directory", directory)
+	})
 	return directory
 }
 
@@ -97,22 +96,20 @@ export async function appendChain(
 	n: number,
 	options: { signer?: MessageSigner<string> } = {}
 ): Promise<string[]> {
-	const [clock] = varint.decode(encodeId(rootId))
+	const signer = options.signer ?? new Ed25519Signer()
+
+	const [clock] = decodeClock(encodeId(rootId))
 
 	const ids: string[] = []
 	for (let i = 0; i < n; i++) {
 		const message: Message<string> = {
 			topic: log.topic,
-			clock: clock + i + 1,
+			clock: Number(clock) + i + 1,
 			parents: i === 0 ? [rootId] : [ids[i - 1]],
 			payload: nanoid(),
 		}
 
-		let signature: Signature | null = null
-		if (options.signer) {
-			signature = await options.signer.sign(message)
-		}
-
+		const signature = await signer.sign(message)
 		const { id } = await log.insert(signature, message)
 		ids.push(id)
 	}

@@ -1,7 +1,7 @@
 import { Message } from "@canvas-js/interfaces"
 import { Signature } from "@canvas-js/signed-cid"
 
-import { decodeId } from "@canvas-js/gossiplog"
+import { Ed25519Signer, decodeId } from "@canvas-js/gossiplog"
 
 import { testPlatforms } from "./utils.js"
 
@@ -9,33 +9,38 @@ testPlatforms("insert messages out-of-order", async (t, openGossipLog) => {
 	const results: { id: string; payload: string }[] = []
 
 	const topic = "com.example.test"
-	const apply = (id: string, signature: Signature | null, message: Message<string>) => {
+	const apply = (id: string, signature: Signature, message: Message<string>) => {
 		results.push({ id, payload: message.payload })
 	}
 
 	const validate = (payload: unknown): payload is string => typeof payload === "string"
 
-	const log = await openGossipLog(t, { topic, apply, validate, signatures: false })
+	const log = await openGossipLog(t, { topic, apply, validate })
 
-	const a = { topic, clock: 1, parents: [], payload: "a" }
-	const [keyA] = log.encode(null, a)
+	const signer = new Ed25519Signer()
+
+	const messageA = { topic, clock: 1, parents: [], payload: "foo" }
+	const signatureA = signer.sign(messageA)
+	const [keyA] = log.encode(signatureA, messageA)
 	const idA = decodeId(keyA)
 
-	const b = { topic, clock: 2, parents: [idA], payload: "b" }
-	const [keyB] = log.encode(null, b)
+	const messageB = { topic, clock: 2, parents: [idA], payload: "bar" }
+	const signatureB = signer.sign(messageB)
+	const [keyB] = log.encode(signatureB, messageB)
 	const idB = decodeId(keyB)
 
-	const c = { topic, clock: 3, parents: [idB], payload: "c" }
-	const [keyC] = log.encode(null, c)
+	const messageC = { topic, clock: 3, parents: [idB], payload: "baz" }
+	const signatureC = signer.sign(messageC)
+	const [keyC] = log.encode(signatureC, messageC)
 	const idC = decodeId(keyC)
 
-	await log.insert(null, c)
-	await log.insert(null, b)
-	await log.insert(null, a)
+	await log.insert(signatureC, messageC)
+	await log.insert(signatureB, messageB)
+	await log.insert(signatureA, messageA)
 
 	t.deepEqual(results, [
-		{ id: idA, payload: "a" },
-		{ id: idB, payload: "b" },
-		{ id: idC, payload: "c" },
+		{ id: idA, payload: "foo" },
+		{ id: idB, payload: "bar" },
+		{ id: idC, payload: "baz" },
 	])
 })

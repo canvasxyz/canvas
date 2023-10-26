@@ -10,9 +10,9 @@ import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
 
 import type { Signature } from "@canvas-js/signed-cid"
-import type { Message } from "@canvas-js/interfaces"
+import type { Message, MessageSigner } from "@canvas-js/interfaces"
 
-import { AbstractGossipLog, GossipLogEvents, MessageSigner } from "./AbstractGossipLog.js"
+import { AbstractGossipLog, GossipLogEvents } from "./AbstractGossipLog.js"
 
 import { decodeId, encodeId } from "./schema.js"
 import { SyncService, SyncOptions } from "./sync/service.js"
@@ -168,11 +168,10 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 	}
 
 	public async insert<Payload, Result = unknown>(
-		topic: string,
-		signature: Signature | null,
+		signature: Signature,
 		message: Message<Payload>
 	): Promise<{ id: string; recipients: Promise<PeerId[]> }> {
-		const messageLog = this.#messageLogs.get(topic) as AbstractGossipLog<Payload, Result> | undefined
+		const messageLog = this.#messageLogs.get(message.topic) as AbstractGossipLog<Payload, Result> | undefined
 		assert(messageLog !== undefined, "topic not found")
 
 		const { id } = await messageLog.insert(signature, message)
@@ -180,7 +179,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 		if (this.#started) {
 			const [key, value] = messageLog.encode(signature, message)
 			const id = decodeId(key)
-			const recipients = this.#pubsub.publish(topic, value).then(
+			const recipients = this.#pubsub.publish(message.topic, value).then(
 				({ recipients }) => {
 					this.log("published message %s to %d recipients %O", id, recipients.length, recipients)
 					return recipients

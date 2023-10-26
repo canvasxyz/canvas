@@ -152,18 +152,21 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 		this.log("opened incoming stream %s from peer %p", stream.id, peerId)
 
 		try {
-			await this.messages.serve(peerId, async (source) => {
-				const server = new Server(source)
-				await pipe(
-					stream.source,
-					lp.decode,
-					decodeRequests,
-					(reqs) => server.handle(reqs),
-					encodeResponses,
-					lp.encode,
-					stream.sink
-				)
-			})
+			await this.messages.serve(
+				async (source) => {
+					const server = new Server(source)
+					await pipe(
+						stream.source,
+						lp.decode,
+						decodeRequests,
+						(reqs) => server.handle(reqs),
+						encodeResponses,
+						lp.encode,
+						stream.sink
+					)
+				},
+				{ targetId: peerId.toString() }
+			)
 
 			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
 		} catch (err) {
@@ -253,7 +256,7 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 		const client = new Client(stream)
 
 		try {
-			const { root } = await this.messages.sync(peerId, client)
+			const { root } = await this.messages.sync(client, { sourceId: peerId.toString() })
 			this.log("finished sync, got root hash %s", hex(root.hash))
 		} finally {
 			client.end()

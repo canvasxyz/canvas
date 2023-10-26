@@ -1,8 +1,11 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
 import { anySignal } from "any-signal"
 import * as cbor from "@ipld/dag-cbor"
+import { ed25519 } from "@noble/curves/ed25519"
 
 import { lessThan } from "@canvas-js/okra"
+import { createSignature } from "@canvas-js/signed-cid"
+import { Message } from "@canvas-js/interfaces"
 
 export type Awaitable<T> = T | Promise<T>
 
@@ -89,5 +92,19 @@ export function shuffle<T>(array: T[]) {
 	for (let i = array.length - 1; i > 0; i--) {
 		const j = Math.floor(Math.random() * (i + 1))
 		;[array[i], array[j]] = [array[j], array[i]]
+	}
+}
+
+export class Ed25519Signer<T = unknown> {
+	public readonly publicKey: Uint8Array
+	readonly #privateKey: Uint8Array
+
+	public constructor(privateKey = ed25519.utils.randomPrivateKey()) {
+		this.#privateKey = privateKey
+		this.publicKey = ed25519.getPublicKey(this.#privateKey)
+	}
+
+	public sign(message: Message<T>) {
+		return createSignature("ed25519", this.#privateKey, message)
 	}
 }

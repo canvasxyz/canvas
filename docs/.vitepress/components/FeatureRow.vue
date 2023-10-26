@@ -40,18 +40,18 @@ defineProps<{
   }
 }
 
-.container {
+.FeatureRow .container {
   margin: 0 auto;
   max-width: 1152px;
 }
 
-.items {
+.FeatureRow .items {
   display: flex;
   flex-wrap: wrap;
   margin: -8px;
 }
 
-.item {
+.FeatureRow .item {
   padding: 8px;
   width: 100%;
 }

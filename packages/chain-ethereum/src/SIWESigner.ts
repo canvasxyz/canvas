@@ -1,4 +1,4 @@
-import { AbstractSigner, Wallet, computeAddress, verifyMessage, hexlify, getBytes } from "ethers"
+import { AbstractSigner, Wallet, verifyMessage, hexlify, getBytes } from "ethers"
 import * as siwe from "siwe"
 import * as json from "@ipld/dag-json"
 import { logger } from "@libp2p/logger"

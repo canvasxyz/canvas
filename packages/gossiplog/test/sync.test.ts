@@ -15,7 +15,7 @@ test("wait for initial sync", async (t) => {
 	})
 
 	const topic = "com.example.test"
-	const apply = async (id: string, signature: Signature | null, message: Message<string>) => {}
+	const apply = async (id: string, signature: Signature, message: Message<string>) => {}
 	const validate = (payload: unknown): payload is string => typeof payload === "string"
 
 	const messageLogs = {

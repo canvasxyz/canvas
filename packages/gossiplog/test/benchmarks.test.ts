@@ -10,40 +10,29 @@ import { GossipLog } from "@canvas-js/gossiplog/node"
 import { getDirectory } from "./utils.js"
 
 const topic = "com.example.test"
-const apply = (id: string, signature: Signature | null, message: Message<string>) => {}
+const apply = (id: string, signature: Signature, message: Message<string>) => {}
 const validate = (payload: unknown): payload is string => true
 
 test("append messages (memory, linear, 100)", async (t) => {
-	const log = await MemoryGossipLog.open({ topic, apply, validate, signatures: false })
+	const log = await MemoryGossipLog.open({ topic, apply, validate })
 	t.teardown(() => log.close())
 	await append(t, log, 100)
 })
 
 // test("append messages (node, linear, 100)", async (t) => {
-// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate, signatures: false })
+// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate })
 // 	t.teardown(() => log.close())
 // 	await append(t, log, 100)
 // })
 
-// like what if it's
-// ```
-// import { Runtime } from "@canvas-js/runtime"
-
-// ```
-
-// ```
-// import { Runtime } from "@canvas-js/runtime/vm"
-
-// ```
-
 // test("append messages (node, linear, 100, indexed)", async (t) => {
-// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate, signatures: false, indexAncestors: true })
+// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate, indexAncestors: true })
 // 	t.teardown(() => log.close())
 // 	await append(t, log, 100)
 // })
 
 // test("append messages (node, linear, 10000)", async (t) => {
-// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate, signatures: false })
+// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate })
 // 	t.teardown(() => log.close())
 // 	await append(t, log, 10_000)
 // })
