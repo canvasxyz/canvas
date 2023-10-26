@@ -4,8 +4,8 @@ import { defineConfig } from "vitepress"
 export default defineConfig({
 	title: "Canvas",
 	description: "An instant-sync engine for decentralized applications",
-	logo: "./logo.png",
 	themeConfig: {
+		logo: "/logo.png",
 		nav: [
 			{ text: "Home", link: "/" },
 			{ text: "Introduction", link: "/1-introduction" },
