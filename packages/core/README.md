@@ -10,10 +10,8 @@ A Canvas app replicates and executes a log of signed actions.
   - [Contracts](#contracts)
   - [Actions](#actions)
   - [Authenticating with sessions](#authenticating-with-sessions)
-  - [Configuration options](#configuration-options)
-  - [Applying messages](#applying-messages)
-  - [Evaluating routes](#evaluating-routes)
-  - [Get application metadata](#get-application-metadata)
+  - [Querying the database](#querying-the-database)
+  - [Subscribing to live queries](#subscribing-to-live-queries)
 - [API](#api)
 - [Development](#development)
 - [Testing](#testing)
@@ -272,6 +270,8 @@ await app.db.query("posts", {
 //   { id: '0j77pkoundspspv1dgkppvceduu8s2t1', content: 'baz' },
 // ]
 ```
+
+### Subscribing to live queries
 
 You can also subscribe to queries, which is particularly convenient in the browser using the `useLiveQuery` React hook exported from `@canvas-js/hooks`.
 
