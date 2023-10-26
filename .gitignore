@@ -20,3 +20,6 @@ examples/**/dist/
 interwallet/lib/
 interwallet/dist/
 interwallet/data/
+
+docs/.vitepress/dist
+docs/.vitepress/cache

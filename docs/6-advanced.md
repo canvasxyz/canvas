@@ -1,3 +1,7 @@
+---
+title: "Advanced Features"
+---
+
 # Advanced features
 
 ## Table of Contents

@@ -10,7 +10,10 @@
     "lint": "eslint .",
     "publish": "npm run build && npm publish --workspace=packages --access public",
     "test": "npm run test --workspace=@canvas-js/core --workspace=@canvas-js/interfaces",
-    "chain-test": "npm run test --workspace=@canvas-js/interfaces"
+    "chain-test": "npm run test --workspace=@canvas-js/interfaces",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "workspaces": [
     "packages/*",
@@ -24,6 +27,8 @@
     "ava": "^5.3.1",
     "eslint": "^8.52.0",
     "eslint-plugin-import": "^2.29.0",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "vitepress": "^1.0.0-rc.24",
+    "vue": "^3.3.7"
   }
 }
