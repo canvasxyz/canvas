@@ -1,3 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,700;1,400;1,700&display=swap');
+
+:root {
+  --vp-font-family-base: "Instrument Sans", Inter, sans-serif;
+}
+
+.VPHomeHero .image .image-src {
+  transform: translate(-50%, -50%) scale(1.25);
+}
+.VPHomeHero .tagline {
+  line-height: 1.5 !important;
+}
+.VPHomeHero .VPButton {
+  font-size: 16px !important;
+}
+@media (min-width: 960px) {
+  .VPHomeHero .tagline {
+    padding-top: 26px;
+    line-height: 1.4 !important;
+  }
+  .VPHomeHero .image .image-src {
+    transform: translate(-50%, -50%) scale(1.5);
+    margin-top: 20px;
+  }
+}
+
 /**
  * Customize default theme styling by overriding CSS variables:
  * https://github.com/vuejs/vitepress/blob/main/src/client/theme-default/styles/vars.css
@@ -8,7 +34,7 @@
  *
  * Each colors have exact same color scale system with 3 levels of solid
  * colors with different brightness, and 1 soft color.
- * 
+ *
  * - `XXX-1`: The most solid color used mainly for colored text. It must
  *   satisfy the contrast ratio against when used on top of `XXX-soft`.
  *
@@ -94,14 +120,14 @@
   --vp-home-hero-name-color: transparent;
   --vp-home-hero-name-background: -webkit-linear-gradient(
     120deg,
-    #bd34fe 30%,
+    #3b5ccc 30%,
     #41d1ff
   );
 
   --vp-home-hero-image-background-image: linear-gradient(
     -45deg,
-    #bd34fe 50%,
-    #47caff 50%
+    #d694d811 50%,
+    #afddd111 50%
   );
   --vp-home-hero-image-filter: blur(44px);
 }
@@ -136,4 +162,3 @@
 .DocSearch {
   --docsearch-primary-color: var(--vp-c-brand-1) !important;
 }
-

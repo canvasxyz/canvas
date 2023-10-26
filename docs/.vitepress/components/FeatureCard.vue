@@ -6,6 +6,7 @@ defineProps<{
   icon?: DefaultTheme.FeatureIcon
   title: string
   details?: string
+  soon?: string
   link?: string
   linkText?: string
   rel?: string
@@ -41,6 +42,11 @@ defineProps<{
             <a :href="link" target="blank">
               {{ linkText || 'Link' }} <span class="external-link">↗</span>
             </a>
+          </p>
+        </div>
+        <div v-if="soon" class="link-text">
+          <p class="soon-text-value">
+            {{ soon }}
           </p>
         </div>
       </article>
@@ -88,7 +94,7 @@ defineProps<{
 
 .title {
   line-height: 24px;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
 }
 
@@ -96,7 +102,7 @@ defineProps<{
   flex-grow: 1;
   padding-top: 8px;
   line-height: 22px;
-  font-size: 14.5px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--vp-c-text-2);
 }
@@ -108,9 +114,18 @@ defineProps<{
 .link-text-value {
   display: flex;
   align-items: center;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--vp-c-brand-1);
+}
+.link-text-value a:hover {
+  text-decoration: underline;
+}
+
+.soon-text-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--vp-c-text-3);
 }
 
 .external-link {
@@ -118,5 +133,6 @@ defineProps<{
   position: relative;
   top: 2px;
   left: -2px;
+  line-height: 1;
 }
 </style>

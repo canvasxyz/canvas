@@ -2,9 +2,9 @@
 layout: home
 
 hero:
-  name: "Canvas"
-  text: "An instant-sync engine for decentralized applications"
-  tagline: "Extend onchain applications with a peer-to-peer layer where interactions are synced instantly, with nearly unlimited throughput."
+  text: "Decentralized applications at the speed of light"
+  image: "images/graphic_mainframe_4.png"
+  tagline: "Canvas is a compute engine for complex peer-to-peer programs, that sync virtually instantly."
   actions:
     - theme: brand
       text: Read the docs
@@ -16,8 +16,8 @@ hero:
 
 <FeatureRow title="Demo">
   <FeatureCard title="MessageSync" details="Deploy simple applications like chat & presence." />
-  <FeatureCard title="CausalDB" details="Define custom backend logic in inline TypeScript." />
-  <FeatureCard title="CausalVM" details="Define immutable TypeScript contracts on IPFS." />
+  <FeatureCard title="TypeScript Contracts" details="Write complex application backends in TypeScript, without leaving your existing workflow." />
+  <FeatureCard title="IPFS Contracts" details="Make immutable decentralized applications, with code stored on IPFS."/>
 </FeatureRow>
 
 <DemoRow>
@@ -28,16 +28,15 @@ hero:
 <TextRow title="About Canvas">
   <TextItem prefix="Fast">Actions are processed as soon as they're seen.</TextItem>
   <TextItem prefix="Optimistic">Actions can arrive out-of-order, but CRDTs and distributed server reconciliation are used to resolve differences.</TextItem>
-  <TextItem prefix="Client-first">The entire state of each application is stored inside the browser. Applications can be partitioned so clients only sync the data they're interested in.</TextItem>
+  <TextItem prefix="Client-first">The entire state of each application is stored inside the browser. Applications can be partitioned so clients only sync data they're interested in.</TextItem>
   <TextItem prefix="Server-enabled">We provide a CLI for running Canvas applications on the server, and are working on a hosting service.</TextItem>
-  <TextItem prefix="Encryption-enabled">You can use helpers to generate private keys, encrypt clients' data, and use zk-proving and verification.</TextItem>
-  <TextItem prefix="Bring your own finality">The default engine doesn't implement any finality mechanisms, but you can bring your own by adding a timestamping or DA layer.</TextItem>
+  <TextItem prefix="Bring your own finality">The default engine doesn't implement a finality mechanism, but you can add your own with any timestamping or DA layers.</TextItem>
 </TextRow>
 
 <FeatureRow title="Logins">
-  <FeatureCard title="Sign in with Wallet" details="Log in with a Web3 wallet from Ethereum. Also supports other chains like Cosmos, Solana, and Polkadot." />
-  <FeatureCard title="Sign in with OpenID" details="Log in trustlessly with Google, Apple, or other SSO providers. Powered by zero-knowledge proofs." />
-  <FeatureCard title="Sign in with Bluesky" details="Log in with your decentralized identity from Bluesky." />
+  <FeatureCard title="Sign in with Wallet" details="Log in with a Web3 wallet from Ethereum. Also supports other chains like Cosmos, Solana, and Polkadot." soon="Available today" />
+  <FeatureCard title="Sign in with OpenID" details="Log in trustlessly with Google, Apple, or other SSO providers. Powered by zero-knowledge proofs." soon="Coming soon"/>
+  <FeatureCard title="Sign in with Bluesky" details="Log in with your decentralized identity from Bluesky." soon="Coming soon"/>
 </FeatureRow>
 
 <FeatureRow title="Technical Components">

@@ -6,8 +6,8 @@ defineProps<{
 
 <template>
   <div class="TextRow">
+    <h1 class="title">{{ title }}</h1>
     <div class="container">
-      <h1 class="title">{{ title }}</h1>
       <slot></slot>
     </div>
   </div>
@@ -29,5 +29,8 @@ defineProps<{
 .TextRow .container {
   margin: 0 auto;
   max-width: 640px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
 }
 </style>
