@@ -17,6 +17,6 @@
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
-    "@types/bs58": "^4.0.2"
+    "@types/bs58": "^4.0.3"
   }
 }
