@@ -132,6 +132,7 @@ Message IDs begin with the message clock, encoded as a **reverse** unsigned vari
 
 "Reverse unsigned varint" is similar to the [multiformats varint format](https://github.com/multiformats/unsigned-varint), which encodes integers in sets of 7 bits using the highest bit as a continuation bit, except here the sets are ordered most-signficiant to least-significant.
 
+```
 | value | value (binary)    | encoded bytes (binary) | encoded bytes (hex) |
 | ----- | ----------------- | ---------------------- | ------------------- |
 | 0     | 00000000          | 00000000               | 0x00                |
@@ -141,6 +142,7 @@ Message IDs begin with the message clock, encoded as a **reverse** unsigned vari
 | 255   | 11111111          | 10000001 01111111      | 0x817f              |
 | 256   | 00000001 00000000 | 10000010 00000000      | 0x8200              |
 | 1234  | 00000100 11010010 | 10001001 01010010      | 0x8952              |
+```
 
 The rationale is that prefixing message IDs with a _lexicographically sortable_ logical clock has many useful consquences. Encoded Protobuf-style unsigned varints don't sort the same as their decoded values.
 
