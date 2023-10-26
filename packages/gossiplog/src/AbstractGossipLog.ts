@@ -14,9 +14,9 @@ import { Signature, verifySignature } from "@canvas-js/signed-cid"
 
 import { Mempool } from "./Mempool.js"
 import { Driver } from "./sync/driver.js"
+import { decodeClock } from "./clock.js"
 import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getNextClock, KEY_LENGTH } from "./schema.js"
 import { Awaitable, assert, topicPattern, cborNull, getAncestorClocks, Ed25519Signer } from "./utils.js"
-import { decodeClock } from "./clock.js"
 
 export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
