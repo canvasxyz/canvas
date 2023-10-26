@@ -128,7 +128,21 @@ A more complex case is one where the application doesn't have programmatic acces
 
 ### Message IDs
 
-Message IDs begin with the message clock, encoded as an [unsigned varint](https://github.com/multiformats/unsigned-varint), followed by the sha2-256 hash of the serialized signed message, and truncated to 20 bytes total. These are encoded using the [`base32hex`](https://www.rfc-editor.org/rfc/rfc4648#section-7) alphabet to get 32-character string IDs, like `054ki1oubq8airsc9d8sbg0t7itqbdlf`.
+Message IDs begin with the message clock, encoded as a **reverse** unsigned varint, followed by the sha2-256 hash of the serialized signed message, and truncated to 20 bytes total. These are encoded using the [`base32hex`](https://www.rfc-editor.org/rfc/rfc4648#section-7) alphabet to get 32-character string IDs, like `054ki1oubq8airsc9d8sbg0t7itqbdlf`.
+
+"Reverse unsigned varint" is similar to the [multiformats varint format](https://github.com/multiformats/unsigned-varint), which encodes integers in sets of 7 bits using the highest bit as a continuation bit, except here the sets are ordered most-signficiant to least-significant.
+
+| value | value (binary)    | encoded bytes (binary) | encoded bytes (hex) |
+| ----- | ----------------- | ---------------------- | ------------------- |
+| 0     | 00000000          | 00000000               | 0x00                |
+| 1     | 00000001          | 00000001               | 0x01                |
+| 127   | 01111111          | 01111111               | 0x7f                |
+| 128   | 10000000          | 10000001 00000000      | 0x8100              |
+| 255   | 11111111          | 10000001 01111111      | 0x817f              |
+| 256   | 00000001 00000000 | 10000010 00000000      | 0x8200              |
+| 1234  | 00000100 11010010 | 10001001 01010010      | 0x8952              |
+
+The rationale is that prefixing message IDs with a _lexicographically sortable_ logical clock has many useful consquences. Encoded Protobuf-style unsigned varints don't sort the same as their decoded values.
 
 These string IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. This means that implementing a last-write-wins register for message effects is as simple as caching and comparing message IDs as versions.
 
