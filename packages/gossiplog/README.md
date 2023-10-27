@@ -34,7 +34,7 @@ GossipLog makes this all possible at the expense of two major tradeoffs:
 
 The implications of 1) are that GossipLog is best for applications where eventual consistency is acceptable, and where message delivery is commutative in effect. GossipLog messages carry a built-in logical clock that can be easily used to create last-write-wins registers and other CRDT primitives.
 
-The implications of 2) are that the access control logic - who can append what to the log - must be expressed as a pure function of the payload, message signature / public key, and any state accumulated from the message's transitive dependencies. The simplest case would be a whitelist of known "owner" public keys, although bridging these to on-chain identities like DAO memberships via session keys is also possible. See the section on [Authentication](#authentication) for more detail.
+The implications of 2) are that the access control logic - who can append what to the log - must be expressed as a pure function of the payload, message signature / public key, and any state accumulated from the message's transitive dependencies. The simplest case would be a whitelist of known "owner" public keys, although bridging these to on-chain identities like DAO memberships via session keys is also possible. See the notes on [advanced authentication use cases](#advanced-authentication-use-cases) for more detail.
 
 ## Design
 
