@@ -11,6 +11,7 @@ This package exports TypeScript types for Canvas messages and other interfaces.
   - [`Session`](#session)
   - [`MessageSigner`](#messagesigner)
   - [`SessionSigner`](#sessionsigner)
+  - [`Awaitable`](#awaitable)
 
 ## Interfaces
 
@@ -119,4 +120,10 @@ export interface SessionSigner extends MessageSigner<Action | Session> {
    */
   verifySession: (session: Session) => Awaitable<void>
 }
+```
+
+### `Awaitable`
+
+```ts
+export type Awaitable<T> = T | Promise<T>
 ```
