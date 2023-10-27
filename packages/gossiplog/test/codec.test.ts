@@ -2,8 +2,7 @@ import assert from "node:assert"
 
 import * as cbor from "@ipld/dag-cbor"
 
-import { Message } from "@canvas-js/interfaces"
-import { Signature } from "@canvas-js/signed-cid"
+import type { Signature, Message } from "@canvas-js/interfaces"
 
 import { Ed25519Signer, decodeId, encodeId } from "@canvas-js/gossiplog"
 import { collect, getPublicKey, testPlatforms } from "./utils.js"

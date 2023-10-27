@@ -1,5 +1,4 @@
-import { Message } from "@canvas-js/interfaces"
-import { Signature } from "@canvas-js/signed-cid"
+import type { Signature, Message } from "@canvas-js/interfaces"
 
 import { Ed25519Signer, decodeId } from "@canvas-js/gossiplog"
 

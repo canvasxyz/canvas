@@ -11,7 +11,6 @@ import { GossipLog as MemoryGossipLog } from "@canvas-js/gossiplog/memory"
 import { ModelDB } from "@canvas-js/modeldb/sqlite"
 
 import type { PlatformTarget } from "../interface.js"
-import { assert } from "../../utils.js"
 import { getLibp2pOptions } from "./libp2p.js"
 
 const PEER_ID_FILENAME = ".peer-id"

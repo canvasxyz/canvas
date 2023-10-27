@@ -1,7 +1,6 @@
 import test from "ava"
 
-import { Signature } from "@canvas-js/signed-cid"
-import { Message } from "@canvas-js/interfaces"
+import type { Signature, Message } from "@canvas-js/interfaces"
 
 import { GossipLog } from "@canvas-js/gossiplog/memory"
 

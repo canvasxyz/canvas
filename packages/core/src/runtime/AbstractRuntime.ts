@@ -5,8 +5,7 @@ import { equals } from "uint8arrays"
 import { logger } from "@libp2p/logger"
 import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
-import type { Action, CBORValue, Message, Session, SessionSigner } from "@canvas-js/interfaces"
-import { Signature } from "@canvas-js/signed-cid"
+import type { Signature, Action, CBORValue, Message, Session, SessionSigner } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
 import { AbstractGossipLog, GossipLogConsumer, ReadOnlyTransaction, encodeId } from "@canvas-js/gossiplog"

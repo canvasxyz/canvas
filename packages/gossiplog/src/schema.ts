@@ -4,10 +4,9 @@ import * as cbor from "@ipld/dag-cbor"
 
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
-
-import type { Message } from "@canvas-js/interfaces"
-import type { Signature } from "@canvas-js/signed-cid"
 import { lessThan } from "@canvas-js/okra"
+
+import type { Signature, Message } from "@canvas-js/interfaces"
 
 import { decodeClock, encodeClock } from "./clock.js"
 import { assert } from "./utils.js"
