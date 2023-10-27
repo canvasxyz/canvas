@@ -12,13 +12,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		const messages = await MemoryTree.open()
 		const parents = new MemoryStore()
 		const ancestors = new MemoryStore()
-		const gossipLog = new GossipLog(messages, parents, ancestors, init)
-
-		if (init.replay) {
-			await gossipLog.replay()
-		}
-
-		return gossipLog
+		return new GossipLog(messages, parents, ancestors, init)
 	}
 
 	private readonly queue = new PQueue({ concurrency: 1 })

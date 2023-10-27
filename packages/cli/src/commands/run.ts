@@ -11,7 +11,7 @@ import cors from "cors"
 
 import { multiaddr } from "@multiformats/multiaddr"
 
-import { Canvas } from "@canvas-js/core"
+import { Canvas, defaultBootstrapList, testnetBootstrapList } from "@canvas-js/core"
 import { createAPI } from "@canvas-js/core/api"
 
 import { getContractLocation } from "../utils.js"
@@ -36,14 +36,9 @@ export const builder = (yargs: Argv) =>
 			desc: "Disable libp2p",
 			default: false,
 		})
-		// .option("install", {
-		// 	type: "boolean",
-		// 	desc: "Install a local app and run it in production mode",
-		// 	default: false,
-		// })
 		.option("listen", {
 			type: "array",
-			desc: "Internal libp2p /ws multiaddr, e.g. /ip4/0.0.0.0/tcp/4444/ws",
+			desc: "Internal libp2p /ws multiaddr",
 			default: ["/ip4/0.0.0.0/tcp/4444/ws"],
 		})
 		.option("announce", {
@@ -70,27 +65,10 @@ export const builder = (yargs: Argv) =>
 			desc: "Expose internal libp2p debugging endpoints",
 			default: false,
 		})
-		.option("verbose", {
-			type: "boolean",
-			desc: "Enable verbose logging",
-			default: false,
-		})
-		// .option("chain", {
-		// 	type: "array",
-		// 	desc: "Declare chain implementations and provide RPC endpoints for reading on-chain data (format: {chain} or {chain}={URL})",
-		// })
 		.option("static", {
 			type: "string",
-			desc: "Serve a static directory from /, and API routes from /api",
+			desc: "Serve a static directory from the root path /",
 		})
-		// .option("syncModule", {
-		// 	type: "string",
-		// 	desc: "Provide an ESM module to sync actions by push/poll with an external api",
-		// })
-		// .option("noExpiration", {
-		// 	type: "boolean",
-		// 	desc: "Disable enforcing session expiration times",
-		// })
 		.option("testnet", {
 			type: "boolean",
 			desc: "Bootstrap to the private testnet (requires VPN)",
@@ -108,27 +86,6 @@ type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
 	const { contract, location, uri } = getContractLocation(args)
-
-	// // read rpcs from --chain arguments or environment variables
-	// // prompt to run in unchecked mode, if no rpcs were provided
-	// const chains = getSigners(args["chain"])
-	// if (chains.length === 0 && !args.unchecked) {
-	// 	const { confirm } = await prompts({
-	// 		type: "confirm",
-	// 		name: "confirm",
-	// 		message: chalk.yellow("No chain RPC provided. Run in unchecked mode instead?"),
-	// 		initial: true,
-	// 	})
-
-	// 	if (confirm) {
-	// 		args.unchecked = true
-	// 		args.offline = true
-	// 		chains.push(new EthereumChainImplementation())
-	// 		console.log(chalk.yellow(`✦ ${chalk.bold("Using unchecked mode.")} Actions will not require a valid block hash.`))
-	// 	} else {
-	// 		console.log(chalk.red("No chain RPC provided! New actions cannot be processed without an RPC."))
-	// 	}
-	// }
 
 	if (location === null) {
 		console.log(chalk.yellow(`✦ ${chalk.bold("Running app in-memory only.")} No data will be persisted.`))
@@ -153,10 +110,11 @@ export async function handler(args: Args) {
 		listen.push(address)
 	}
 
-	// if (args.testnet) {
-	// 	console.log(chalk.yellowBright("[canvas-cli] Using testnet bootstrap servers"), testnetBootstrapList)
-	// 	p2pConfig.bootstrapList = testnetBootstrapList
-	// }
+	let bootstrapList = defaultBootstrapList
+	if (args.testnet) {
+		console.log(chalk.yellowBright("[canvas-cli] Using testnet bootstrap servers"), testnetBootstrapList)
+		bootstrapList = testnetBootstrapList
+	}
 
 	const app = await Canvas.initialize({
 		path: location,
@@ -165,7 +123,8 @@ export async function handler(args: Args) {
 		announce,
 		minConnections: args["min-connections"],
 		maxConnections: args["max-connections"],
-		bootstrapList: [],
+		bootstrapList: bootstrapList,
+		offline: args["offline"],
 	})
 
 	if (!args.offline) {
@@ -184,17 +143,6 @@ export async function handler(args: Args) {
 		assert(fs.existsSync(args.static), "Invalid directory for static files (path not found)")
 		api.use(express.static(args.static))
 	}
-
-	// let apiSyncTimer: { timer?: ReturnType<typeof setTimeout> }
-	// if (args.syncModule) {
-	// 	const { api, apiToPeerHandler, peerToApiHandler } = await import(args.syncModule)
-
-	// 	if (!apiToPeerHandler) throw new Error("sync module must declare apiToPeerHandler")
-	// 	if (!peerToApiHandler) throw new Error("sync module must declare peerToApiHandler")
-	// 	if (!api) throw new Error("sync module must declare api url")
-
-	// 	apiSyncTimer = setupSyncModule(core, { api, apiToPeerHandler, peerToApiHandler })
-	// }
 
 	const origin = `http://localhost:${args.port}`
 

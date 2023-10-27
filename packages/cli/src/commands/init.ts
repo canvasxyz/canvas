@@ -11,18 +11,11 @@ export const command = "init <path>"
 export const desc = "Initialize a new application"
 
 export const builder = (yargs: Argv) =>
-	yargs
-		.positional("path", {
-			describe: "Path to application directory",
-			type: "string",
-			default: ".",
-		})
-		.option("topic", {
-			type: "string",
-			alias: "t",
-			desc: "Unique topic identifer (defaults to a random string)",
-			demandOption: false,
-		})
+	yargs.positional("path", {
+		describe: "Path to application directory",
+		type: "string",
+		default: ".",
+	})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 

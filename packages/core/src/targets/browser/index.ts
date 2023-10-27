@@ -28,7 +28,7 @@ export default {
 		ModelDB.initialize({ name: `canvas/${topic}/db`, models, indexHistory }),
 
 	openGossipLog: <Payload, Result>({ topic }: { topic: string }, init: GossipLogInit<Payload, Result>) =>
-		GossipLog.open(`canvas/${topic}`, init),
+		GossipLog.open(init),
 
 	createLibp2p: (peerId, options) => createLibp2p(getLibp2pOptions(peerId, options)),
 } satisfies PlatformTarget

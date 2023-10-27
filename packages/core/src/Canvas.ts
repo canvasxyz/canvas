@@ -87,7 +87,6 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			{
 				topic: runtime.topic,
 				apply: runtime.getConsumer(),
-				replay: replay,
 				validate: validatePayload,
 				indexAncestors: indexHistory,
 			}

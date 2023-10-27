@@ -9,12 +9,9 @@ import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransac
 import { assert } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
-	public static async open<Payload, Result>(
-		name: string,
-		init: GossipLogInit<Payload, Result>
-	): Promise<GossipLog<Payload, Result>> {
-		const storeNames = [`${init.topic}/messages`, `${init.topic}/parents`, `${init.topic}/ancestors`]
-		const db = await openDB(name, 2, {
+	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
+		const storeNames = ["messages", "parents", "ancestors"]
+		const db = await openDB(`canvas/${init.topic}/log`, 2, {
 			upgrade: (db, oldVersion, newVersion) => {
 				for (const storeName of storeNames) {
 					if (db.objectStoreNames.contains(storeName)) {
@@ -26,17 +23,11 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			},
 		})
 
-		const messages = await IDBTree.open(db, `${init.topic}/messages`)
-		const parents = new IDBStore(db, `${init.topic}/parents`)
-		const ancestors = new IDBStore(db, `${init.topic}/ancestors`)
+		const messages = await IDBTree.open(db, "messages")
+		const parents = new IDBStore(db, "parents")
+		const ancestors = new IDBStore(db, "ancestors")
 
-		const gossipLog = new GossipLog(db, messages, parents, ancestors, init)
-
-		if (init.replay) {
-			await gossipLog.replay()
-		}
-
-		return gossipLog
+		return new GossipLog(db, messages, parents, ancestors, init)
 	}
 
 	private readonly incomingSyncPeers = new Set<string>()
@@ -47,7 +38,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	private constructor(
 		private readonly db: IDBPDatabase,
 		private readonly messages: IDBTree,
-		private readonly parents: IDBStore,
+		private readonly heads: IDBStore,
 		private readonly ancestors: IDBStore,
 		init: GossipLogInit<Payload, Result>
 	) {
@@ -145,11 +136,11 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			}
 
 			const parents: Omit<KeyValueStore, "set" | "delete"> = {
-				get: (key) => this.parents.read(() => this.parents.get(key)),
+				get: (key) => this.heads.read(() => this.heads.get(key)),
 				entries: (lowerBound = null, upperBound = null, options = {}) => {
-					console.log("GETTING PARENTS READ-ONLY", this.parents.storeName)
-					this.parents.txn = this.db.transaction([this.parents.storeName], "readonly")
-					return this.parents.entries(lowerBound, upperBound, options)
+					console.log("GETTING PARENTS READ-ONLY", this.heads.storeName)
+					this.heads.txn = this.db.transaction([this.heads.storeName], "readonly")
+					return this.heads.entries(lowerBound, upperBound, options)
 				},
 			}
 
@@ -207,12 +198,12 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				}
 
 				const parents: KeyValueStore = {
-					get: (key) => this.parents.read(() => this.parents.get(key)),
-					set: (key, value) => this.parents.write(() => this.parents.set(key, value)),
-					delete: (key) => this.parents.write(() => this.parents.delete(key)),
+					get: (key) => this.heads.read(() => this.heads.get(key)),
+					set: (key, value) => this.heads.write(() => this.heads.set(key, value)),
+					delete: (key) => this.heads.write(() => this.heads.delete(key)),
 					entries: (lowerBound = null, upperBound = null, options = {}) => {
-						this.parents.txn = this.db.transaction(this.parents.storeName, "readonly")
-						return this.parents.entries(lowerBound, upperBound, options)
+						this.heads.txn = this.db.transaction(this.heads.storeName, "readonly")
+						return this.heads.entries(lowerBound, upperBound, options)
 					},
 				}
 

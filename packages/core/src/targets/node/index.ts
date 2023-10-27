@@ -50,7 +50,7 @@ export default {
 		if (location.path === null) {
 			return await MemoryGossipLog.open(init)
 		} else {
-			return await GossipLog.open(path.resolve(location.path, "topics", init.topic), init)
+			return await GossipLog.open(init, path.resolve(location.path, "topics", init.topic))
 		}
 	},
 

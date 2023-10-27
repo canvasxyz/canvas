@@ -37,8 +37,8 @@ export const testPlatforms = (
 ) => {
 	const macro = test.macro(run)
 	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
-	test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(nanoid(), init))
-	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(getDirectory(t), init))
+	test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(init))
+	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(init, getDirectory(t)))
 }
 
 export const getPublicKey = <T>([id, { publicKey }, message]: [string, Signature, Message<T>]): [

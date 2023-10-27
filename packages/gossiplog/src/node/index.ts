@@ -8,8 +8,8 @@ import { assert } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(
-		path: string,
-		init: GossipLogInit<Payload, Result>
+		init: GossipLogInit<Payload, Result>,
+		path: string
 	): Promise<GossipLog<Payload, Result>> {
 		if (!fs.existsSync(path)) {
 			fs.mkdirSync(path, { recursive: true })
@@ -17,12 +17,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		const env = new Environment(path, { databases: 3 })
 		const gossipLog = new GossipLog(env, init)
-
-		if (init.replay) {
-			await gossipLog.replay()
-		} else {
-			await gossipLog.write(async (txn) => {})
-		}
+		await gossipLog.write(async (txn) => {})
 
 		return gossipLog
 	}

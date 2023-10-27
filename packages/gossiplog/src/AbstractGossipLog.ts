@@ -43,7 +43,6 @@ export interface GossipLogInit<Payload = unknown, Result = void> {
 	validate: ((payload: unknown) => payload is Payload) | { schema: string | Schema; name: string }
 
 	signer?: MessageSigner<Payload>
-	replay?: boolean
 	indexAncestors?: boolean
 }
 
