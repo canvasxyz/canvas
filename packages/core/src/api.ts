@@ -174,7 +174,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 		try {
 			const [id, signature, message] = app.messageLog.decode(data)
 			await app.insert(signature, message as Message<Action | Session>)
-			return res.status(StatusCodes.CREATED).setHeader("Location", `${app.topic}/${id}`)
+			return res.status(StatusCodes.CREATED).setHeader("Location", `messages/${id}`)
 		} catch (e) {
 			console.error(e)
 			return res.status(StatusCodes.BAD_REQUEST).end()
