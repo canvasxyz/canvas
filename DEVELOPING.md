@@ -10,12 +10,6 @@ core packages in parallel with:
 npm run dev
 ```
 
-To run the example app in development mode:
-
-```
-npm run dev-example-chat
-```
-
 ### Using a development instance of Canvas
 
 To use your local development version of Canvas in the CLI:
@@ -80,21 +74,4 @@ prettier -w .
 
 ### Testing
 
-Run unit tests with `npm run test` from either the repo root or the `packages/canvas-core` directory.
-
-If you have a a `.env` file **in the repo root** with two environment variables...
-
-```
-export ETH_CHAIN_ID=1
-export ETH_CHAIN_RPC=https://mainnet.infura.io/v3/MY_API_KEY
-```
-
-... then `npm run test` will also run the contract call tests in `packages/canvas-core/test/contracts.test.ts`. If `.env` is missing these tests will be skipped.
-
-To run a specific test:
-
-```
-npm run test -- test/sync.test.ts
-```
-
-This will try to run `test/sync.test.ts` in each workspace that is configured with tests.
+Run `npm run test` to run all unit tests in all packages.
