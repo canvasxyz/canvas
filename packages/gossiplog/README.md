@@ -308,7 +308,7 @@ A more complex case is one where the application doesn't have programmatic acces
 Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 
 ```ts
-import type { MessageSigner } from "@canvas-js/interfaces"
+import type { Signature, Message, MessageSigner, Awaitable } from "@canvas-js/interfaces"
 
 interface GossipLogInit<Payload = unknown, Result = void> {
   topic: string
