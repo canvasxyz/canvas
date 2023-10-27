@@ -203,7 +203,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
 @media (min-width: 640px) {
   .tagline {
-    padding-top: 12px;
+    padding-top: 22px;
     max-width: 480px;
     font-size: 20px;
   }

@@ -2,9 +2,9 @@
 layout: home
 ---
 
-<HeroRow text="Decentralized applications at the speed of light" image="images/graphic_mainframe_4.png" tagline="Canvas is a framework for realtime, peer-to-peer decentralized applications, that you can fork, remix, and extend, no blockchains required." v-bind:bullets="['Fast-sync using signed messages, libp2p, and CRDT+', 'Embeds a relational database and compute engine', 'Any chain or authentication format', 'Simple TypeScript API']">
-  <HeroAction theme="brand big" text="Read the docs" href="/1-introduction" />
-  <HeroAction theme="alt big" text="API Examples" href="/examples" />
+<HeroRow text="Decentralized applications at the speed of light" image="images/graphic_mainframe_4.png" tagline="Canvas is a framework for realtime, peer-to-peer decentralized applications." v-bind:bullets="['Fast-sync using signed messages, libp2p, and CRDT+', 'Embedded relational database and compute engine', 'Supports any chain or authentication format', 'Works like a traditional web framework']">
+  <HeroAction theme="brand big" text="Try the tutorial" href="/1-introduction" />
+  <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>
 
 <FeatureRow title="Demo">
@@ -13,10 +13,24 @@ layout: home
   <FeatureCard title="IPFS Contracts" details="Build immutable applications, with code and data stored on IPFS data structures."/>
 </FeatureRow>
 
-<DemoRow>
-  <DemoItem title="MessageSync Demo" />
-  <DemoItem title="CausalDB Demo" />
-</DemoRow>
+```tsx preview
+// Write by creating actions
+const { app } = Canvas.initialize({
+	contract: { ...Forum, topic: "canvas-example-forum" },
+	signers: [new SIWESigner({ signer: wallet })],
+})
+
+app.actions.createThread({ title, message })
+
+// Read with live reactive queries
+const threads = useLiveQuery<Thread>(app, "threads", {
+	offset: page * 10,
+	limit: 10,
+	orderBy: { timestamp: "desc" },
+})
+
+return <div>{threads.map((thread) => <div>thread.title</div>)}</div>
+```
 
 <TextRow title="About Canvas" details="Canvas is a new TypeScript runtime for decentralized applications, that's easy to learn and resembles traditional developer frameworks.">
   <TextItem prefix="Fast">Actions are processed as soon as they're seen.</TextItem>
@@ -35,6 +49,7 @@ layout: home
   <FeatureCard title="Okra" details="A deterministic Prolly-tree that allows fast syncing between unordered sets of actions." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit" secondaryLinkText="Blog Post"/>
   <FeatureCard title="GossipLog" details="A history-preserving log that allows CRDT functions to retrieve data from the past." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog"/>
   <FeatureCard title="ModelDB" details="A database abstraction layer over IndexedDB and SQLite, that runs in both the browser and server." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb"/>
+  <FeatureCard title="Arweave Persister" details="A bundler that persists individual actions to Arweave, and rebundles them for efficient later retrieval." link="https://github.com/canvasxyz/canvas/tree/main/packages/persister-arweave"/>
 </FeatureRow>
 
 <HomepageFooter />

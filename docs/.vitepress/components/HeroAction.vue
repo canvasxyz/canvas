@@ -8,6 +8,7 @@ interface Props {
   text: string
   href?: string
 }
+
 const props = withDefaults(defineProps<Props>(), {
   size: 'medium',
   theme: 'brand'

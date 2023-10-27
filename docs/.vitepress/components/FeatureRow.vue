@@ -49,6 +49,7 @@ defineProps<{
   display: flex;
   flex-wrap: wrap;
   margin: -8px;
+  justify-content: center;
 }
 
 .FeatureRow .item {

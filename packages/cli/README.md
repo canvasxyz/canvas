@@ -1,4 +1,4 @@
-# Canvas CLI
+# @canvas-js/cli
 
 Canvas provides a command line interface for running Canvas applications. This is the primary way to run apps and join the peer-to-peer network.
 
