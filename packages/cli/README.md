@@ -38,7 +38,7 @@ In the likely case that your machine is behind a NAT layer, you have to provide 
 For example, this tells the CLI to listen on port 4444 and advertise `wss://foobar.com:8000` as the public address:
 
 ```
-$ canvas run myapp/ --listen /ip4/0.0.0.0/tcp/4444/ws --announce /dns4/foobar.com/tcp/443/wss
+$ canvas run ./myapp --listen /ip4/0.0.0.0/tcp/4444/ws --announce /dns4/foobar.com/tcp/443/wss
 ```
 
 This assumes that you've configured your server to handle incoming secure websocket connections over TLS on port `443`, do TLS termination, and proxy the connection to your internal port `4444`.
