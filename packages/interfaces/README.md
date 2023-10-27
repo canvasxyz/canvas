@@ -4,17 +4,35 @@ This package exports TypeScript types for Canvas messages and other interfaces.
 
 ## Table of Contents
 
-- [Messages](#messages)
-  - [Sessions](#sessions)
-  - [Actions](#actions)
-- [Models](#models)
+- [Interfaces](#interfaces)
+  - [`Signature`](#signature)
+  - [`Message`](#message)
+  - [`Action`](#action)
+  - [`Session`](#session)
+  - [`MessageSigner`](#messagesigner)
+  - [`SessionSigner`](#sessionsigner)
 
-## Messages
+## Interfaces
 
-A _message_ is an entry in a GossipLog log.
+### `Signature`
 
 ```ts
-export type Message<Payload> = {
+import type { CID } from "multiformats"
+
+export type SignatureType = "ed25519" | "secp256k1"
+
+export type Signature = {
+  type: SignatureType
+  publicKey: Uint8Array
+  signature: Uint8Array
+  cid: CID
+}
+```
+
+### `Message`
+
+```ts
+export type Message<Payload = unknown> = {
   topic: string
   clock: number
   parents: string[]
@@ -22,135 +40,83 @@ export type Message<Payload> = {
 }
 ```
 
-Canvas apps on two types of messages: _actions_ and _sessions_. Actions are signed function calls that are evaluated by the contract; sessions are used to authorize emphemeral keys to sign actions on behalf of users.
+### `Action`
 
 ```ts
-export type Message = Action | Session | CustomAction
-```
-
-### Sessions
-
-```ts
-/**
- * A user can sign a `Session` to authorize a delegate key to sign actions on their behalf.
- *
- * The signature, address, and blockhash formats vary by chain.
- */
-export type Session = {
-  type: "session"
-  signature: string
-  payload: {
-    // The ipfs://... URI of the app contract
-    app: string
-
-    // CAIP-2 identifier for a chain supported by the app contract
-    chain: string
-
-    // address of the user authorizing the session
-    from: string
-
-    sessionAddress: string // public address of the delegate key
-    sessionDuration: number // duration in milliseconds
-    sessionIssued: number // issue time in milliseconds since 1 January 1970 00:00:00 UTC
-
-    // Blockhash of `chain` at issue time; required by peers except in --unchecked mode.
-    // Used to validate `sessionIssued`.
-    block: string | null
-  }
-}
-
-export type SessionPayload = Session["payload"]
-```
-
-### Actions
-
-```ts
-/**
- * An `Action` is either signed directly by a user or indirectly through a session.
- * The address recovered from verifying the signature must match `action.session`
- * if `action.session !== null`, or else must match `action.payload.from`.
- *
- * The signature, address, and blockhash formats vary by chain.
- */
 export type Action = {
   type: "action"
-  signature: string
-  session: string | null
-  payload: {
-    // The ipfs://... URI of the app contract
-    app: string
 
-    // CAIP-2 identifier for a chain supported by the app contract
-    chain: string
+  /** CAIP-2 prefix, e.g. "eip155:1" */
+  chain: string
+  /** CAIP-2 address (without the prefix, e.g. "0xb94d27...") */
+  address: string
 
-    // address of the user signing the action
-    from: string
-
-    // name and arguments of the contract function to invoke.
-    // action arguments are the JSON primitives `null | boolean | number | string`
-    call: string
-    callArgs: Record<string, ActionArgument>
-
-    // Blockhash of `chain` at `timestamp`; required by peers except in --unchecked mode.
-    // Used to validate `timestamp` and call external on-chain contracts.
-    block: string | null
-
-    // milliseconds since 1 January 1970 00:00:00 UTC
-    timestamp: number
-  }
-}
-
-export type ActionPayload = Action["payload"]
-
-export type ActionArgument = null | boolean | number | string
-```
-
-### Custom actions
-
-> ⚠️ This is an advanced use case that is likely to evolve. Use with caution.
-
-Contracts can also optionally export a handler for "custom actions", which are unsigned payloads validating an application-defined JSON Schema document.
-
-```ts
-export type CustomAction = {
-  type: "customAction"
   name: string
-  payload: any
-  app: string
+  args: any
+
+  timestamp: number
+  blockhash: string | null
 }
 ```
 
-## Models
-
-Canvas contracts export a set of model types, which are schemas for the application database that the action handlers in the contract can write to.
-
-The model schemas are very simple, consisting of just
+### `Session`
 
 ```ts
-/**
- * A `ModelType` is a value-level representation of a model field type.
- * used as the TypeScript type for model field *types*.
- */
-export type ModelType = "boolean" | "string" | "integer" | "float" | "datetime"
+import type { SignatureType } from "./Signature.js"
 
-/**
- * A `ModelValue` is a type-level representation of a model field types,
- * used as the TypeScript type for model field *values*.
- */
-export type ModelValue = null | boolean | number | string
+export type Session<Data = any> = {
+  type: "session"
 
-/**
- * An `Index` defines a list of database indexes to be generated and maintained for a model.
- */
-export type Index = string | string[]
+  /** CAIP-2 prefix, e.g. "eip155:1" for mainnet Ethereum */
+  chain: string
+  /** CAIP-2 address (without the prefix, e.g. "0xb94d27...") */
+  address: string
 
-/**
- * A `Model` is a map of property names to `ModelType` types.
- * All models must have `id: "string"` and `updated_at: "datetime"` properties.
- */
-export type Model = {
-  id: "string"
-  updated_at: "datetime"
-  indexes?: Index[]
-} & Record<string, ModelType>
+  /** ephemeral session key used to sign subsequent actions */
+  publicKeyType: SignatureType
+  publicKey: Uint8Array
+
+  /** chain-specific session payload, e.g. a SIWE message & signature */
+  data: Data
+
+  timestamp: number
+  blockhash: string | null
+  duration: number | null
+}
+```
+
+### `MessageSigner`
+
+```ts
+export interface MessageSigner<Payload = unknown> {
+  sign: (message: Message<Payload>) => Signature
+}
+```
+
+### `SessionSigner`
+
+```ts
+import type { MessageSigner } from "./MessageSigner.js"
+import type { Session } from "./Session.js"
+import type { Action } from "./Action.js"
+import type { Awaitable } from "./Awaitable.js"
+
+export interface SessionSigner extends MessageSigner<Action | Session> {
+  match: (chain: string) => boolean
+
+  /**
+   * Produce an signed Session object, which authorizes `session.publicKey`
+   * to represent the user `${session.chain}:${session.address}`.
+   *
+   * The signature is stored in `session.data`, and the entire Session
+   * object is then signed using the session-key, and appended to our message log.
+   */
+  getSession: (topic: string, options?: { chain?: string; timestamp?: number }) => Awaitable<Session>
+
+  /**
+   * Verify that `session.data` authorizes `session.publicKey`
+   * to take actions on behalf of the user `${session.chain}:${session.address}`
+   */
+  verifySession: (session: Session) => Awaitable<void>
+}
 ```
