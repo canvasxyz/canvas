@@ -16,20 +16,16 @@ npm install -g @canvas-js/cli
 canvas <command>
 
 Commands:
-  canvas init <filename>  Create an example contract
-  canvas info <spec>      Show the models, views, and actions for a spec
-  canvas run <spec>       Run an app, by path or IPFS hash
-  canvas export <spec>    Export actions and sessions as JSON to stdout
-  canvas import <spec>    Import actions and sessions from stdin
-  canvas list             List all specs in the data directory
-  canvas install <spec>   Install an app in the canvas home directory
+  canvas init <path>    Initialize a new application
+  canvas info <path>    Show the model schema and action names in a contract
+  canvas run <path>     Run a Canvas application
+  canvas export <path>  Export the action log as dag-json to stdout
+  canvas import <app>   Import an action log from stdin
 
 Options:
   --version  Show version number                                       [boolean]
   --help     Show help                                                 [boolean]
 ```
-
-The Canvas CLI stores contracts and their data in the `$CANVAS_HOME` directory, which defaults to `~/.canvas` if not set.
 
 ## Running an application
 

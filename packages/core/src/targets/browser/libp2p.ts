@@ -44,11 +44,11 @@ export function getLibp2pOptions(
 	const bootstrapList = options.bootstrapList ?? []
 
 	for (const address of announce) {
-		console.log(`[canvas] [p2p] Announcing on ${address}/p2p/${peerId}`)
+		console.log(`[canvas] Announcing on ${address}/p2p/${peerId}`)
 	}
 
 	for (const address of listen) {
-		console.log(`[canvas] [p2p] Listening on ${address}`)
+		console.log(`[canvas] Listening on ${address}`)
 	}
 
 	const bootstrapPeerIds = new Set()

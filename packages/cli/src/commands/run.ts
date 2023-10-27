@@ -136,6 +136,7 @@ export async function handler(args: Args) {
 		offline: args.offline,
 	})
 
+	console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(app.topic)}`)
 	console.log(chalk.gray(`[canvas] Using PeerId ${app.peerId.toString()}`))
 
 	app.libp2p?.addEventListener("connection:open", ({ detail: connection }) => {
@@ -186,7 +187,7 @@ export async function handler(args: Args) {
 				console.log(`Serving static bundle: ${chalk.bold(origin)}`)
 			}
 
-			console.log(`Serving HTTP API for ${uri}:`)
+			console.log(`Serving HTTP API:`)
 			console.log(`└ GET  ${origin}/api`)
 
 			const { models } = app.getApplicationData()
