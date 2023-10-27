@@ -8,6 +8,5 @@
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
 		"jsx": "react"
-	},
-	"references": [{"path": "../../packages/store"}]
+	}
 }
