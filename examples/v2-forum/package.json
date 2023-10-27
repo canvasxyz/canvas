@@ -25,7 +25,7 @@
     "react-router-dom": "^6.17.0",
     "react-textarea-autosize": "^8.5.3",
     "use-hash-param": "^0.2.4",
-    "viem": "^1.17.1",
+    "viem": "^1.17.2",
     "wagmi": "^1.4.5"
   },
   "devDependencies": {
