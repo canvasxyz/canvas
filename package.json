@@ -9,8 +9,7 @@
     "clean": "tsc --build --clean",
     "lint": "eslint .",
     "publish": "npm run build && npm publish --workspace=packages --access public",
-    "test": "npm run test --workspace=@canvas-js/core --workspace=@canvas-js/interfaces",
-    "chain-test": "npm run test --workspace=@canvas-js/interfaces",
+    "test": "npm run test -w=@canvas-js/interfaces -w=@canvas-js/modeldb -w=@canvas-js/gossiplog -w=@canvas-js/core",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
