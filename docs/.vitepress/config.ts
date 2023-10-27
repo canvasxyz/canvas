@@ -2,6 +2,11 @@ import { defineConfig } from "vitepress"
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+	vite: {
+		resolve: {
+			preserveSymlinks: true,
+		},
+	},
 	title: "Canvas",
 	description: "An instant-sync engine for decentralized applications",
 	themeConfig: {
@@ -20,6 +25,17 @@ export default defineConfig({
 					{ text: "Authentication", link: "/4-authentication" },
 					{ text: "Querying", link: "/5-querying" },
 					{ text: "Advanced Features", link: "/6-advanced" },
+				],
+			},
+			{
+				text: "Reference",
+				items: [
+					{ text: "CLI", link: "/readme-cli.md" },
+					{ text: "Core", link: "/readme-core.md" },
+					{ text: "GossipLog", link: "/readme-gossiplog.md" },
+					{ text: "Hooks", link: "/readme-hooks.md" },
+					{ text: "ModelDB", link: "/readme-modeldb.md" },
+					{ text: "Signed CID", link: "/readme-signed-cid.md" },
 				],
 			},
 		],

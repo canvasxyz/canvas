@@ -9,6 +9,8 @@ defineProps<{
   soon?: string
   link?: string
   linkText?: string
+  secondaryLink?: string
+  secondaryLinkText?: string
   rel?: string
   target?: string
 }>()
@@ -42,8 +44,12 @@ defineProps<{
             <a :href="link" target="blank">
               {{ linkText || 'Link' }} <span class="external-link">↗</span>
             </a>
+            <a v-if="secondaryLink" :href="secondaryLink" target="blank">
+              {{ secondaryLinkText || 'Link' }} <span class="external-link">↗</span>
+            </a>
           </p>
         </div>
+
         <div v-if="soon" class="link-text">
           <p class="soon-text-value">
             {{ soon }}
@@ -134,5 +140,6 @@ defineProps<{
   top: 2px;
   left: -2px;
   line-height: 1;
+  margin-right: 9px;
 }
 </style>

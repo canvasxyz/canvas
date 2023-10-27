@@ -1,7 +1,23 @@
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,700;1,400;1,700&display=swap');
 
 :root {
-  --vp-font-family-base: "Instrument Sans", Inter, sans-serif;
+  --vp-font-family-base: "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
+}
+
+.VPContent {
+  font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif;
+}
+.VPContent.is-home {
+  font-family: "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
+}
+
+.VPContent h1,
+.VPContent h2,
+.VPContent h3,
+.VPContent h4,
+.VPContent h5,
+.VPContent h6 {
+  font-family: "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
 }
 
 html.dark body {
@@ -14,6 +30,9 @@ body {
 
 .VPSidebar .items {
   margin-left: 24px;
+}
+.VPSidebar .item h2.text {
+  margin-bottom: 4px;
 }
 .VPSidebar .item h2.text,
 .VPSidebar .items .VPLink .text {

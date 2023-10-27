@@ -1,6 +1,6 @@
 # Querying the database
 
-Only actions can write to the database, but it can be read from the outside at any time.
+You can only write to the database inside an action handler, but you can query it from either inside the action handler by using `app.db.get` or `app.db.query`, or outside it with `useLiveQuery`.
 
 ### Getting individual records
 

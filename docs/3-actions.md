@@ -1,6 +1,6 @@
 # Actions
 
-Canvas apps consist of an _action log_ and a _model database_. Each action in the log has:
+Canvas apps consist of an **action log** and **model database**. Each action in the log has:
 
 - a `name` (`createPost` or `deletePost` in the example)
 - an argument object `args` (`{ content: "hello world!" }`)

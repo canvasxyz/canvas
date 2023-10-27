@@ -1,6 +1,6 @@
 # Authentication
 
-We want end users to authenticate with public-key identities, but it’s not always practical to prompt the user for a wallet signature on every interaction. As a result, Canvas applications are initialized with **session signers**, which define different ways that users can authenticate themselves.
+We want end users to authenticate with public-key identities, but it’s not always practical to prompt the user for a signature on every interaction. As a result, Canvas applications are initialized with **session signers**, which define different ways that users can authenticate themselves.
 
 For example, the `SIWESigner` exported by `@canvas-js/chain-ethereum` matches actions with `eip155:*` chains, the EIP-155 identifier for Ethereum.
 
@@ -24,7 +24,7 @@ await app.createPost({ content: "can I get an uhhhh yeah??" })
 await app.createPost({ content: "uhhhh yeah!!" })
 ```
 
-Before a user can interact with a Canvas application, they must first authorize a session. Sessions consist of an ephemeral keypair and a chain-specific payload representing a user's (temporary) authorization of that keypair to sign actions on their behalf. Session signers are responsible for safely managing the ephemeral private keys, and requesting authorization of new sessions from the end user when necessary.
+Before a user can interact with an application, they must first authorize a session. Sessions consist of an ephemeral keypair and a chain-specific payload representing a user's (temporary) authorization of that keypair to sign actions on their behalf. Session signers are responsible for safely managing the ephemeral private keys, and requesting authorization of new sessions from the end user when necessary.
 
 In the example, the `SIWESigner` will do this the first time the user calls an action, and/or whenever the session expires, by requesting a signature from the `signer: ethers.AbstractSigner` it was given. If you initialize `SIWESigner` with a Metamask connection, it will pop up a message asking the user to sign a [Sign-In with Ethereum](https://eips.ethereum.org/EIPS/eip-4361) message with the ephemeral public key as the resource URI.
 

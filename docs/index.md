@@ -2,7 +2,7 @@
 layout: home
 ---
 
-<HeroRow text="Decentralized applications at the speed of light" image="images/graphic_mainframe_4.png" tagline="Build peer-to-peer programs, that sync instantly with nearly unlimited throughput." v-bind:bullets="['Fast-sync using signed messages, libp2p, and CRDT+', 'Embedded relational database and compute engine', 'Supports any chain or authentication format']">
+<HeroRow text="Decentralized applications at the speed of light" image="images/graphic_mainframe_4.png" tagline="Canvas is a framework for realtime, peer-to-peer decentralized applications, that you can fork, remix, and extend, no blockchains required." v-bind:bullets="['Fast-sync using signed messages, libp2p, and CRDT+', 'Embeds a relational database and compute engine', 'Any chain or authentication format', 'Simple TypeScript API']">
   <HeroAction theme="brand big" text="Read the docs" href="/1-introduction" />
   <HeroAction theme="alt big" text="API Examples" href="/examples" />
 </HeroRow>
@@ -28,11 +28,11 @@ layout: home
 <FeatureRow title="Logins">
   <FeatureCard title="Sign in with Wallet" details="Log in with a Web3 wallet from Ethereum. Also supports other chains like Cosmos, Solana, and Polkadot." linkText="Available today" />
   <FeatureCard title="Sign in with OpenID" details="Log in trustlessly with Google, Apple, or other SSO providers. Powered by zero-knowledge proofs." soon="Coming soon"/>
-  <FeatureCard title="Sign in with Bluesky" details="Log in with your decentralized identity from Bluesky. Reach a community of 1.5 million users." soon="Coming soon"/>
+  <FeatureCard title="Sign in with Bluesky" details="Log in with your decentralized identity from the Bluesky PLC network." soon="Coming soon"/>
 </FeatureRow>
 
 <FeatureRow title="Technical Components">
-  <FeatureCard title="Okra" details="A deterministic Prolly-tree that allows fast syncing between unordered sets of actions." link="https://github.com/canvasxyz/okra" linkText="Github" />
+  <FeatureCard title="Okra" details="A deterministic Prolly-tree that allows fast syncing between unordered sets of actions." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit" secondaryLinkText="Blog Post"/>
   <FeatureCard title="GossipLog" details="A history-preserving log that allows CRDT functions to retrieve data from the past." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog"/>
   <FeatureCard title="ModelDB" details="A database abstraction layer over IndexedDB and SQLite, that runs in both the browser and server." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb"/>
 </FeatureRow>
