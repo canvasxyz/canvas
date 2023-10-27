@@ -1,9 +1,6 @@
-import type { SignatureType } from "./signature.js"
-import type { IPLDValue } from "./values.js"
+import type { SignatureType } from "./Signature.js"
 
-export type SessionData = IPLDValue
-
-export type Session<Data = SessionData> = {
+export type Session<Data = any> = {
 	type: "session"
 
 	/** CAIP-2 prefix, e.g. "eip155:1" for mainnet Ethereum */

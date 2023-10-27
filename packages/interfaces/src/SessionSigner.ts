@@ -1,12 +1,7 @@
-import type { Signature } from "./signature.js"
-import type { Message } from "./message.js"
-import type { Session } from "./session.js"
-import type { Action } from "./action.js"
-import type { Awaitable } from "./utils.js"
-
-export interface MessageSigner<Payload = unknown> {
-	sign: (message: Message<Payload>) => Signature
-}
+import type { MessageSigner } from "./MessageSigner.js"
+import type { Session } from "./Session.js"
+import type { Action } from "./Action.js"
+import type { Awaitable } from "./Awaitable.js"
 
 export interface SessionSigner extends MessageSigner<Action | Session> {
 	match: (chain: string) => boolean

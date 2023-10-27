@@ -2,8 +2,6 @@ import { CID } from "multiformats/cid"
 import * as siwe from "siwe"
 import { computeAddress, hexlify } from "ethers"
 
-import type { IPLDValue, SessionData } from "@canvas-js/interfaces"
-
 import type { SIWESessionData, SIWEMessage } from "./types.js"
 
 export const getKey = (topic: string, chain: string, address: string) => `canvas:${topic}/${chain}:${address}`
@@ -19,7 +17,7 @@ export function signalInvalidType(type: never): never {
 	throw new TypeError("internal error: invalid type")
 }
 
-export function validateSessionData(data: SessionData): data is SIWESessionData {
+export function validateSessionData(data: unknown): data is SIWESessionData {
 	if (data === undefined || data === null) {
 		return false
 	} else if (typeof data === "boolean" || typeof data === "number" || typeof data === "string") {
@@ -32,7 +30,7 @@ export function validateSessionData(data: SessionData): data is SIWESessionData 
 		return false
 	}
 
-	const { signature, domain, nonce } = data as Record<string, IPLDValue>
+	const { signature, domain, nonce } = data as Record<string, any>
 	return signature instanceof Uint8Array && typeof domain === "string" && typeof nonce === "string"
 }
 

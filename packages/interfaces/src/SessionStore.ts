@@ -1,4 +1,4 @@
-import type { Awaitable } from "./utils.js"
+import type { Awaitable } from "./Awaitable.js"
 
 export interface SessionStore {
 	get: (key: string) => Awaitable<string | null>
