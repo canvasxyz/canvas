@@ -1,4 +1,4 @@
-export { Signature, SignatureType } from "@canvas-js/interfaces"
+export type { Signature, SignatureType } from "@canvas-js/interfaces"
 
 export * from "./signatures.js"
 export * from "./digests.js"
