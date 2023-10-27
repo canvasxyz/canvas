@@ -113,19 +113,23 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		super()
 		this.db = runtime.db
 
-		libp2p?.addEventListener("peer:discovery", ({ detail: { id, multiaddrs, protocols } }) => {
+		this.libp2p?.addEventListener("peer:discovery", ({ detail: { id, multiaddrs, protocols } }) => {
 			this.log("discovered peer %p at %o with protocols %o", id, multiaddrs, protocols)
 		})
 
-		libp2p?.addEventListener("peer:connect", ({ detail: peerId }) => {
+		this.libp2p?.addEventListener("peer:connect", ({ detail: peerId }) => {
 			this.log("connected to %p", peerId)
 			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
 		})
 
-		libp2p?.addEventListener("peer:disconnect", ({ detail: peerId }) => {
+		this.libp2p?.addEventListener("peer:disconnect", ({ detail: peerId }) => {
 			this.log("disconnected %p", peerId)
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 		})
+
+		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
+		this.messageLog.addEventListener("commit", (event) => this.safeDispatchEvent("commit", event))
+		this.messageLog.addEventListener("sync", (event) => this.safeDispatchEvent("sync", event))
 
 		for (const name of runtime.actionNames) {
 			// @ts-ignore

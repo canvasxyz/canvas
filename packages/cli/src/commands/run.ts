@@ -81,6 +81,10 @@ export const builder = (yargs: Argv) =>
 			type: "number",
 			desc: "Stop accepting connections above a limit",
 		})
+		.option("verbose", {
+			type: "boolean",
+			desc: "Log every message to stdout",
+		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
@@ -142,6 +146,18 @@ export async function handler(args: Args) {
 		console.log(`[canvas-core] Closed connection to ${peer} at ${addr}`)
 	})
 
+	app.messageLog.addEventListener("message", ({ detail: { id, message } }) => {
+		if (args["verbose"]) {
+			console.log(`[canvas-core] Applied message ${id}`, message.payload)
+		} else {
+			console.log(`[canvas-core] Applied message ${id}`)
+		}
+	})
+
+	app.messageLog.addEventListener("sync", ({ detail: { peer } }) => {
+		console.log(`[canvas-core] Completed merkle sync with peer ${peer}`)
+	})
+
 	if (!args.offline) {
 		await app.start()
 	}
@@ -170,7 +186,7 @@ export async function handler(args: Args) {
 			console.log(`Serving HTTP API for ${uri}:`)
 			console.log(`└ GET  ${origin}/api`)
 
-			const { topic, models, actions } = app.getApplicationData()
+			const { models } = app.getApplicationData()
 			for (const name of Object.keys(models)) {
 				console.log(`└ GET  ${origin}/api/models/${name}`)
 				console.log(`└ GET  ${origin}/api/models/${name}/:key`)
