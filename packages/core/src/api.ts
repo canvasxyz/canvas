@@ -2,15 +2,12 @@ import assert from "node:assert"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
 import { logger } from "@libp2p/logger"
-import * as json from "@ipld/dag-json"
-import * as cbor from "@ipld/dag-cbor"
 
 import { peerIdFromString } from "@libp2p/peer-id"
-
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
+import chalk from "chalk"
 
 import { Action, Message, Session } from "@canvas-js/interfaces"
-import { Signature } from "@canvas-js/signed-cid"
 
 import { Canvas } from "./Canvas.js"
 
@@ -23,7 +20,7 @@ export interface APIOptions {
 	exposeP2P?: boolean
 }
 
-export function createAPI(core: Canvas, options: APIOptions = {}): express.Express {
+export function createAPI(app: Canvas, options: APIOptions = {}): express.Express {
 	const coreRegister = new Registry()
 
 	const coreMetrics = {
@@ -49,8 +46,8 @@ export function createAPI(core: Canvas, options: APIOptions = {}): express.Expre
 			help: "GossipSub topic subscribers",
 			labelNames: ["topic"],
 			async collect() {
-				if (core.libp2p !== null) {
-					const { pubsub } = core.libp2p.services
+				if (app.libp2p !== null) {
+					const { pubsub } = app.libp2p.services
 					for (const topic of pubsub.getTopics() ?? []) {
 						const subscribers = pubsub.getSubscribers(topic)
 						this.set({ topic }, subscribers.length)
@@ -67,9 +64,9 @@ export function createAPI(core: Canvas, options: APIOptions = {}): express.Expre
 	api.set("query parser", "simple")
 	api.use(express.json())
 	api.use(express.text())
-	api.use(express.raw({ type: "application/cbor" }))
+	// api.use(express.raw({ type: "application/cbor" }))
 
-	api.get("/", async (req, res) => res.json(core.getApplicationData()))
+	api.get("/", async (req, res) => res.json(app.getApplicationData()))
 
 	if (options.exposeMetrics) {
 		// core.addEventListener("message", ({ detail: { id, message } }) => {
@@ -124,14 +121,11 @@ export function createAPI(core: Canvas, options: APIOptions = {}): express.Expre
 		})
 	}
 
-	// TODO: replace this with ApplicationData
-	api.get("/topics", async (req, res) => {
-		return res.status(StatusCodes.OK).json({
-			data: [core.topic],
-		})
-	})
+	api.get("/topic/:topic", async (req, res) => {
+		if (req.params.topic !== app.topic) {
+			return res.status(StatusCodes.NOT_FOUND).end()
+		}
 
-	api.get("/messages", async (req, res) => {
 		const { gt, gte, lt, lte } = req.query
 		const limit = typeof req.query.limit === "string" ? Math.min(100, parseInt(req.query.limit)) : 100
 		assert(Number.isSafeInteger(limit) && limit > 0, "invalid `limit` query parameter")
@@ -150,9 +144,10 @@ export function createAPI(core: Canvas, options: APIOptions = {}): express.Expre
 				? { id: lte, inclusive: true }
 				: null
 
-		const results: { id: string; signature: Signature; message: Message }[] = []
-		for await (const [id, signature, message] of core.getMessageStream(lowerBound, upperBound)) {
-			if (results.push({ id, signature, message }) >= limit) {
+		const results: string[] = []
+
+		for await (const [id] of app.getMessages(lowerBound, upperBound)) {
+			if (results.push(id) >= limit) {
 				break
 			}
 		}
@@ -160,43 +155,55 @@ export function createAPI(core: Canvas, options: APIOptions = {}): express.Expre
 		return res.status(StatusCodes.OK).json(results)
 	})
 
-	api.get("/clock", async (req, res) => {
-		const [clock, parents] = await core.messageLog.getClock()
-		return res.status(StatusCodes.OK).json({ clock, parents })
+	api.get("/topic/:topic/:id", async (req, res) => {
+		if (req.params.topic !== app.topic) {
+			return res.status(StatusCodes.NOT_FOUND).end()
+		}
+
+		const [signature, message] = await app.getMessage(req.params.id)
+		if (signature === null || message === null) {
+			return res.status(StatusCodes.NOT_FOUND).end()
+		}
+
+		const data = app.messageLog.encode(signature, message)
+		return res.status(StatusCodes.OK).contentType("application/cbor").end(data)
 	})
 
-	api.post("/messages", async (req, res) => {
+	api.post("/topic/:topic", async (req, res) => {
 		let data: Uint8Array | null = null
-		if (req.headers["content-type"] === "application/json") {
-			data = cbor.encode(json.parse(JSON.stringify(req.body)))
-		} else if (req.headers["content-type"] === "application/cbor") {
+		if (req.headers["content-type"] === "application/cbor") {
 			data = req.body
 		} else {
 			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
 		}
 
-		assert(data !== null)
+		assert(data !== null && data instanceof Uint8Array)
 
 		try {
-			const [id, signature, message] = core.messageLog.decode(data)
-			await core.insert(signature, message as Message<Action | Session>)
-			return res.status(StatusCodes.OK).json({ id })
+			const [id, signature, message] = app.messageLog.decode(data)
+			await app.insert(signature, message as Message<Action | Session>)
+			return res.status(StatusCodes.CREATED).setHeader("Location", `${app.topic}/${id}`)
 		} catch (e) {
 			console.error(e)
 			return res.status(StatusCodes.BAD_REQUEST).end()
 		}
 	})
 
+	api.get("/clock", async (req, res) => {
+		const [clock, parents] = await app.messageLog.getClock()
+		return res.status(StatusCodes.OK).json({ topic: app.topic, clock, parents })
+	})
+
 	if (options.exposeP2P) {
-		log("Exposing internal p2p API. This can be abused if made publicly accessible.")
+		console.warn(chalk.yellow("Exposing internal p2p API. This can be abused if made publicly accessible."))
 
 		api.get("/p2p/mesh", (req, res) => {
-			if (core.libp2p === null) {
+			if (app.libp2p === null) {
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
 				return
 			}
 
-			const { pubsub } = core.libp2p.services
+			const { pubsub } = app.libp2p.services
 			res.json({
 				peers: pubsub.getPeers(),
 				subscribers: Object.fromEntries(pubsub.getTopics().map((topic) => [topic, pubsub.getSubscribers(topic)])),
@@ -204,16 +211,16 @@ export function createAPI(core: Canvas, options: APIOptions = {}): express.Expre
 		})
 
 		api.get("/p2p/pubsub/topics", (req, res) => {
-			if (core.libp2p === null) {
+			if (app.libp2p === null) {
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
 				return
 			}
 
-			res.status(StatusCodes.OK).json(core.libp2p.services.pubsub.getTopics())
+			res.status(StatusCodes.OK).json(app.libp2p.services.pubsub.getTopics())
 		})
 
 		api.get("/p2p/pubsub/subscribers", (req, res) => {
-			if (core.libp2p === null) {
+			if (app.libp2p === null) {
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
 				return
 			}
@@ -222,27 +229,27 @@ export function createAPI(core: Canvas, options: APIOptions = {}): express.Expre
 			if (typeof topic !== "string") {
 				res.status(StatusCodes.BAD_REQUEST).end(`missing topic query param`)
 			} else {
-				res.status(StatusCodes.OK).json(core.libp2p.services.pubsub.getSubscribers(topic))
+				res.status(StatusCodes.OK).json(app.libp2p.services.pubsub.getSubscribers(topic))
 			}
 		})
 
 		api.get("/p2p/pubsub/peers", (req, res) => {
-			if (core.libp2p === null) {
+			if (app.libp2p === null) {
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
 				return
 			}
 
-			const peers = core.libp2p.services.pubsub.getPeers()
+			const peers = app.libp2p.services.pubsub.getPeers()
 			res.status(StatusCodes.OK).json(peers.map((peerId) => peerId.toString()))
 		})
 
 		api.get("/p2p/connections", (req, res) => {
-			if (core.libp2p === null) {
+			if (app.libp2p === null) {
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
 				return
 			}
 
-			const connections = core.libp2p.getConnections()
+			const connections = app.libp2p.getConnections()
 			const response = Object.fromEntries(
 				connections.map(({ id, remotePeer, remoteAddr }) => [
 					id,
@@ -254,12 +261,12 @@ export function createAPI(core: Canvas, options: APIOptions = {}): express.Expre
 		})
 
 		api.post("/p2p/ping/:peerId", async (req, res) => {
-			if (core.libp2p === null) {
+			if (app.libp2p === null) {
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
 				return
 			}
 
-			const { pingService } = core.libp2p.services
+			const { pingService } = app.libp2p.services
 			try {
 				const peerId = peerIdFromString(req.params.peerId)
 				const latency = await pingService.ping(peerId)

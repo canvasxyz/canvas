@@ -54,8 +54,9 @@ export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown>
 
 export type ApplicationData = {
 	peerId: string
+	topic: string
 	models: Record<string, Model>
-	topics: Record<string, { actions: string[] | null }>
+	actions: string[]
 }
 
 export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEvents> {
@@ -207,8 +208,9 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	public getApplicationData(): ApplicationData {
 		return {
 			peerId: this.peerId.toString(),
-			models: this.db.models,
-			topics: { [this.topic]: { actions: Object.keys(this.actions) } },
+			topic: this.topic,
+			models: Object.fromEntries(Object.entries(this.db.models).filter(([name]) => !name.startsWith("$"))),
+			actions: Object.keys(this.actions),
 		}
 	}
 
@@ -248,13 +250,11 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		return await this.messageLog.get(id)
 	}
 
-	public async *getMessageStream<Payload = Action>(
+	public async *getMessages(
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {}
-	): AsyncIterable<[id: string, signature: Signature, message: Message<Payload>]> {
-		for await (const [id, signature, message] of this.messageLog.iterate(lowerBound, upperBound, options)) {
-			yield [id, signature, message as Message<Payload>]
-		}
+	): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]> {
+		yield* this.messageLog.iterate(lowerBound, upperBound, options)
 	}
 }

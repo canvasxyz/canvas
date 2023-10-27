@@ -155,22 +155,16 @@ export async function handler(args: Args) {
 			console.log(`Serving HTTP API for ${uri}:`)
 			console.log(`└ GET  ${origin}/api`)
 
-			const { topics, models } = app.getApplicationData()
-			for (const [name, model] of Object.entries(models)) {
+			const { topic, models, actions } = app.getApplicationData()
+			for (const name of Object.keys(models)) {
 				console.log(`└ GET  ${origin}/api/models/${name}`)
 				console.log(`└ GET  ${origin}/api/models/${name}/:key`)
 			}
 
-			for (const [topic, { actions }] of Object.entries(topics)) {
-				console.log(`└ GET  ${origin}/api/messages/${topic}`)
-				console.log(`└ GET  ${origin}/api/messages/${topic}/:id`)
-				console.log(`└ GET  ${origin}/api/messages/${topic}/clock`)
-				if (actions === null) {
-					console.log(`└ POST ${origin}/api/messages/${topic}`)
-				} else {
-					console.log(`└ POST ${origin}/api/messages/${topic} (${actions.join(", ")})`)
-				}
-			}
+			console.log(`└ GET  ${origin}/api/clock`)
+			console.log(`└ GET  ${origin}/api/topic/${topic}`)
+			console.log(`└ GET  ${origin}/api/topic/${topic}/:id`)
+			console.log(`└ POST ${origin}/api/topic/${topic}`)
 		}),
 		0
 	)
