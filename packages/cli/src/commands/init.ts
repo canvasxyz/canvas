@@ -1,13 +1,11 @@
 import fs from "node:fs"
 import path from "node:path"
-import assert from "node:assert"
 import { randomUUID } from "node:crypto"
 
 import chalk from "chalk"
 import type { Argv } from "yargs"
 
-import { topicPattern } from "@canvas-js/gossiplog"
-import { CONTRACT_FILENAME, CONFIG_FILENAME } from "../utils.js"
+import { CONTRACT_FILENAME } from "../utils.js"
 
 export const command = "init <path>"
 export const desc = "Initialize a new application"
@@ -35,19 +33,7 @@ export async function handler(args: Args) {
 		console.log(chalk.gray(`Created application directory at ${location}`))
 	}
 
-	const configPath = path.resolve(location, CONFIG_FILENAME)
 	const contractPath = path.resolve(location, CONTRACT_FILENAME)
-
-	const topic = args.topic ?? randomUUID()
-	assert(topicPattern.test(topic), "expected topic to match [a-zA-Z0-9\\.\\-]")
-
-	if (fs.existsSync(configPath)) {
-		console.log(chalk.gray(`Found existing config at ${configPath}`))
-	} else {
-		fs.writeFileSync(configPath, JSON.stringify({ topic }, null, "  "))
-		console.log(chalk.gray(`Created config for topic ${topic} at ${contractPath}`))
-	}
-
 	if (fs.existsSync(contractPath)) {
 		console.log(chalk.gray(`Found existing contract at ${contractPath}`))
 		return
@@ -55,6 +41,8 @@ export async function handler(args: Args) {
 
 	const contract = `
 // A Canvas backend for a simple chat application.
+
+export const topic = "${randomUUID()}"
 
 export const models = {
 	messages: {
