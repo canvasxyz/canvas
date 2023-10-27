@@ -1,15 +1,15 @@
 {
   "name": "canvas",
   "private": true,
-  "version": "0.6.0-alpha7",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "tsc --build --watch",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
     "lint": "eslint .",
-    "publish": "npm run build && npm publish --workspace=packages --access public",
-    "test": "npm run test -w=@canvas-js/interfaces -w=@canvas-js/modeldb -w=@canvas-js/gossiplog -w=@canvas-js/core",
+    "publish": "npm run clean && npm run build && npm publish -w=packages/ --access public",
+    "test": "npm run test -w=packages/interfaces -w=packages/modeldb -w=packages/gossiplog -w=packages/core -w=packages/vm",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
