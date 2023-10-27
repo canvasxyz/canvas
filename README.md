@@ -14,15 +14,6 @@ Canvas apps are built on a programmable multi-writer relational database. They'r
 - **Self-authenticating**. Every action is signed by a session key authorized by an end user identity, using e.g. SIWE for Ethereum identities. The entire action log can be verified and replayed by anyone at any time; applications are trustless and portable.
 - **Cross-platform**. Canvas apps run in the browser or on NodeJS, persisting data with IndexedDB and SQLite/LMDB, respectively.
 
-Compared to using libp2p directly, Canvas provides:
-
-- persistence
-- efficient sync for past actions
-- a concise language for defining applications, and upgrading between different versions
-- a SQL database and customizable view functions
-- a set of hooks for reading from chains
-- support for a wide range of cryptographies/signature formats
-
 Canvas is designed to be maximally interoperable and data-agnostic. We expect to support a wide range of signed data formats, plus the ability to sync Canvas networks to non-blockchain data sources.
 
 For more information, see the [Canvas documentation](https://docs.canvas.xyz).
