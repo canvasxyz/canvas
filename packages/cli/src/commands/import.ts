@@ -10,7 +10,7 @@ import { Canvas } from "@canvas-js/core"
 
 import { getContractLocation } from "../utils.js"
 
-export const command = "import <app>"
+export const command = "import <path>"
 export const desc = "Import an action log from stdin"
 export const builder = (yargs: Argv) =>
 	yargs
@@ -53,6 +53,7 @@ export async function handler(args: Args) {
 
 		try {
 			const result = await app.insert(signature, message)
+			console.log(`[canvas] Applied message ${result.id}`, message.payload)
 			if (result.id !== id) {
 				console.log(chalk.yellow(`[canvas] Got unexpected message id (expected ${id}, got ${result.id})`))
 			}
