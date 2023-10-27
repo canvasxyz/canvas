@@ -20,7 +20,7 @@ Commands:
   canvas info <path>    Show the model schema and action names in a contract
   canvas run <path>     Run a Canvas application
   canvas export <path>  Export the action log as dag-json to stdout
-  canvas import <app>   Import an action log from stdin
+  canvas import <path>   Import an action log from stdin
 
 Options:
   --version  Show version number                                       [boolean]
