@@ -110,10 +110,13 @@ export async function handler(args: Args) {
 		listen.push(address)
 	}
 
-	let bootstrapList = defaultBootstrapList
+	let bootstrapList: string[]
 	if (args.testnet) {
 		console.log(chalk.yellowBright("[canvas-cli] Using testnet bootstrap servers"), testnetBootstrapList)
 		bootstrapList = testnetBootstrapList
+	} else {
+		console.log(chalk.gray("[canvas-cli] Using default bootstrap servers"), defaultBootstrapList)
+		bootstrapList = defaultBootstrapList
 	}
 
 	const app = await Canvas.initialize({
@@ -125,6 +128,18 @@ export async function handler(args: Args) {
 		maxConnections: args["max-connections"],
 		bootstrapList: bootstrapList,
 		offline: args["offline"],
+	})
+
+	app.libp2p?.addEventListener("connection:open", ({ detail: connection }) => {
+		const peer = connection.remotePeer.toString()
+		const addr = connection.remoteAddr.decapsulateCode(421).toString()
+		console.log(`[canvas-core] Opened connection to ${peer} at ${addr}`)
+	})
+
+	app.libp2p?.addEventListener("connection:close", ({ detail: connection }) => {
+		const peer = connection.remotePeer.toString()
+		const addr = connection.remoteAddr.decapsulateCode(421).toString()
+		console.log(`[canvas-core] Closed connection to ${peer} at ${addr}`)
 	})
 
 	if (!args.offline) {
@@ -162,9 +177,9 @@ export async function handler(args: Args) {
 			}
 
 			console.log(`└ GET  ${origin}/api/clock`)
-			console.log(`└ GET  ${origin}/api/topic/${topic}`)
-			console.log(`└ GET  ${origin}/api/topic/${topic}/:id`)
-			console.log(`└ POST ${origin}/api/topic/${topic}`)
+			console.log(`└ GET  ${origin}/api/messages`)
+			console.log(`└ GET  ${origin}/api/messages/:id`)
+			console.log(`└ POST ${origin}/api/messages`)
 		}),
 		0
 	)

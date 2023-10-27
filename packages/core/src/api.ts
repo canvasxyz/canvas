@@ -121,11 +121,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 		})
 	}
 
-	api.get("/topic/:topic", async (req, res) => {
-		if (req.params.topic !== app.topic) {
-			return res.status(StatusCodes.NOT_FOUND).end()
-		}
-
+	api.get("/messages", async (req, res) => {
 		const { gt, gte, lt, lte } = req.query
 		const limit = typeof req.query.limit === "string" ? Math.min(100, parseInt(req.query.limit)) : 100
 		assert(Number.isSafeInteger(limit) && limit > 0, "invalid `limit` query parameter")
@@ -155,11 +151,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 		return res.status(StatusCodes.OK).json(results)
 	})
 
-	api.get("/topic/:topic/:id", async (req, res) => {
-		if (req.params.topic !== app.topic) {
-			return res.status(StatusCodes.NOT_FOUND).end()
-		}
-
+	api.get("/messages/:id", async (req, res) => {
 		const [signature, message] = await app.getMessage(req.params.id)
 		if (signature === null || message === null) {
 			return res.status(StatusCodes.NOT_FOUND).end()
@@ -169,7 +161,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 		return res.status(StatusCodes.OK).contentType("application/cbor").end(data)
 	})
 
-	api.post("/topic/:topic", async (req, res) => {
+	api.post("/messages", async (req, res) => {
 		let data: Uint8Array | null = null
 		if (req.headers["content-type"] === "application/cbor") {
 			data = req.body

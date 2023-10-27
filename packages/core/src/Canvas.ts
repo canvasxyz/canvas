@@ -23,8 +23,6 @@ export interface CanvasConfig<T extends Contract = Contract> {
 	/** data directory path (NodeJS only) */
 	path?: string | null
 	signers?: SessionSigner[]
-	replay?: boolean
-	runtimeMemoryLimit?: number
 
 	// libp2p options
 	offline?: boolean
@@ -37,6 +35,7 @@ export interface CanvasConfig<T extends Contract = Contract> {
 
 	/** set to `false` to disable history indexing and db.get(..) within actions */
 	indexHistory?: boolean
+	runtimeMemoryLimit?: number
 }
 
 export type ActionOptions = { chain?: string; signer?: SessionSigner }
@@ -61,15 +60,7 @@ export type ApplicationData = {
 
 export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEvents> {
 	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {
-		const {
-			path = null,
-			contract,
-			signers = [],
-			runtimeMemoryLimit,
-			replay = false,
-			offline = false,
-			indexHistory = true,
-		} = config
+		const { path = null, contract, signers = [], runtimeMemoryLimit, offline = false, indexHistory = true } = config
 
 		if (signers.length === 0) {
 			signers.push(new SIWESigner())
