@@ -13,7 +13,12 @@ layout: home
   <FeatureCard title="IPFS Contracts" details="Build immutable applications, with code and data stored on IPFS data structures."/>
 </FeatureRow>
 
-```tsx preview
+<DemoToggle v-bind:options="['MessageSync', 'ModelDB']" defaultOption="MessageSync">
+  <DemoToggleOption option="MessageSync" />
+  <DemoToggleOption option="ModelDB" />
+</DemoToggle>
+
+```tsx:MessageSync preview
 // Write by creating actions
 const { app } = Canvas.initialize({
 	contract: { ...Forum, topic: "canvas-example-forum" },

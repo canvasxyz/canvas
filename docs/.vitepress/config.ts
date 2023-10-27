@@ -1,7 +1,13 @@
 import { defineConfig } from "vitepress"
+import namedCodeBlocks from "markdown-it-named-code-blocks"
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+	markdown: {
+		config: (md) => {
+			md.use(namedCodeBlocks)
+		},
+	},
 	vite: {
 		resolve: {
 			preserveSymlinks: true,

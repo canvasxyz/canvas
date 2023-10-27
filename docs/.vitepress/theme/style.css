@@ -5,32 +5,33 @@
   --vp-font-family-mono: "PT Mono", ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
-.VPContent.is-home .language-tsx.vp-adaptive-theme {
+.VPContent.is-home .named-fence-block {
   position: relative;
   display: block;
   border: 1px solid var(--vp-c-bg-soft);
   background-color: var(--vp-c-bg-soft);
-  padding: 10px 24px;
+  padding: 10px 24px 18px;
   max-width: 640px;
   border-radius: 13px;
   margin: 0 auto 40px;
   font-size: 14px;
   line-height: 1.5;
+  max-width: calc(100vw - 40px) !important;
+  overflow-x: scroll;
 }
 @media (max-width: 860px) {
-  .VPContent.is-home .language-tsx.vp-adaptive-theme {
+  .VPContent.is-home .named-fence-block {
     max-width: 830px;
   }
 }
-.VPContent.is-home .language-tsx.vp-adaptive-theme button.copy {
-  position: absolute;
-  top: 10px;
-  right: 40px;
+.VPContent.is-home .named-fence-block button.copy {
+  display: none;
 }
-.VPContent.is-home .language-tsx.vp-adaptive-theme .lang {
-  position: absolute;
-  top: 12px;
-  right: 19px;
+.VPContent.is-home .named-fence-block .lang {
+  display: none;
+}
+.VPContent.is-home .named-fence-block .named-fence-filename {
+  display: none;
 }
 
 .VPContent {

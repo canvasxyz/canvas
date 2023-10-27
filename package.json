@@ -26,6 +26,7 @@
     "ava": "^5.3.1",
     "eslint": "^8.52.0",
     "eslint-plugin-import": "^2.29.0",
+    "markdown-it-named-code-blocks": "^0.2.0",
     "typescript": "^5.2.2",
     "vitepress": "^1.0.0-rc.24",
     "vue": "^3.3.7"
