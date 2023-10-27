@@ -11,15 +11,14 @@ GossipLog can run in the browser using IndexedDB for persistence, on NodeJS usin
   - [Messages](#messages)
   - [Message signatures](#message-signatures)
   - [Message signers](#message-signers)
-  - [Advanced authentication use cases](#advanced-authentication-use-cases)
   - [Message IDs](#message-ids)
-  - [Authentication](#authentication)
 - [Usage](#usage)
   - [Initialization](#initialization)
   - [Appending new messagse](#appending-new-messages)
   - [Inserting existing messages](#inserting-existing-messages)
   - [Syncing with other peers](#syncing-with-other-peers)
   - [Indexing ancestors](#indexing-ancestors)
+  - [Advanced authentication use cases](#advanced-authentication-use-cases)
 - [API](#api)
 
 ## Overview
@@ -122,12 +121,6 @@ await log.append({ ...payload })
 // use signerB to sign the message
 await log.append({ ...payload }, { signer: signerB })
 ```
-
-### Advanced authentication use cases
-
-Expressing an application's access control logic purely in terms of public keys and signatures can be challenging. The simplest case is one where a only a known fixed set of public keys are allowed to write to the log; at the very least, this generalizes all of Hypercore's use cases. Another simple case is for open-ended applications where end users have keypairs, and the application can access the private key and programmatically sign messages directly.
-
-A more complex case is one where the application doesn't have programmatic access to a private key, such as web3 apps where wallets require user confirmations for every signature (and only sign messages in particular formats). One approach here is to use sessions, a designated type of message payload that registers a temporary public key and carries an additional signature authorizing the public key to take actions on behalf of some other identity, like an on-chain address. This is implemented for Canvas apps for a variety of chains via the session signer interface.
 
 ### Message IDs
 
@@ -303,6 +296,12 @@ In the example below, `await gossiplog.getAncestors(l, 6)` would return `[h, i]`
                                                                     │            │
                              └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
 ```
+
+### Advanced authentication use cases
+
+Expressing an application's access control logic purely in terms of public keys and signatures can be challenging. The simplest case is one where a only a known fixed set of public keys are allowed to write to the log; at the very least, this generalizes all of Hypercore's use cases. Another simple case is for open-ended applications where end users have keypairs, and the application can access the private key and programmatically sign messages directly.
+
+A more complex case is one where the application doesn't have programmatic access to a private key, such as web3 apps where wallets require user confirmations for every signature (and only sign messages in particular formats). One approach here is to use sessions, a designated type of message payload that registers a temporary public key and carries an additional signature authorizing the public key to take actions on behalf of some other identity, like an on-chain address. This is implemented for Canvas apps for a variety of chains via the session signer interface.
 
 ## API
 
