@@ -1,7 +1,7 @@
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 
-import type { Action, CBORValue, SessionSigner } from "@canvas-js/interfaces"
+import type { SessionSigner } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelValue, validateModelValue } from "@canvas-js/modeldb"
 
 import target from "#target"
@@ -91,7 +91,7 @@ export class FunctionRuntime extends AbstractRuntime {
 		return Object.keys(this.actions)
 	}
 
-	protected async execute(context: ExecutionContext): Promise<CBORValue | void> {
+	protected async execute(context: ExecutionContext): Promise<void | any> {
 		const { chain, address, name, args, blockhash, timestamp } = context.message.payload
 
 		const argsTransformer = this.argsTransformers[name]
@@ -104,8 +104,7 @@ export class FunctionRuntime extends AbstractRuntime {
 		this.#context = context
 
 		try {
-			const result = await action(this.#db, typedArgs, { id: context.id, chain, address, blockhash, timestamp })
-			return result as CBORValue | void
+			return await action(this.#db, typedArgs, { id: context.id, chain, address, blockhash, timestamp })
 		} finally {
 			this.#context = null
 		}

@@ -1,7 +1,3 @@
-import type { JSONValue } from "./values.js"
-
-export type CBORValue = JSONValue<null | boolean | number | string | Uint8Array>
-
 export type Action = {
 	type: "action"
 
@@ -11,7 +7,7 @@ export type Action = {
 	address: string
 
 	name: string
-	args: CBORValue
+	args: any
 
 	timestamp: number
 	blockhash: string | null

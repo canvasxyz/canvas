@@ -5,7 +5,7 @@ import { equals } from "uint8arrays"
 import { logger } from "@libp2p/logger"
 import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
-import type { Signature, Action, CBORValue, Message, Session, SessionSigner } from "@canvas-js/interfaces"
+import type { Signature, Action, Message, Session, SessionSigner } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
 import {
@@ -82,7 +82,7 @@ export abstract class AbstractRuntime {
 	protected readonly log = logger("canvas:runtime")
 	protected constructor(public readonly indexHistory: boolean) {}
 
-	protected abstract execute(context: ExecutionContext): Promise<void | CBORValue>
+	protected abstract execute(context: ExecutionContext): Promise<void | any>
 
 	public async close() {
 		await this.db.close()
@@ -94,7 +94,7 @@ export abstract class AbstractRuntime {
 	private static isSession = (message: Message<Action | Session>): message is Message<Session> =>
 		message.payload.type === "session"
 
-	public getConsumer(): GossipLogConsumer<Action | Session, void | CBORValue> {
+	public getConsumer(): GossipLogConsumer<Action | Session, void | any> {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const runtime = this
 

@@ -3,7 +3,7 @@ import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 
-import { Action, Session, Message, MessageSigner, SessionSigner, CBORValue } from "@canvas-js/interfaces"
+import { Action, Session, Message, MessageSigner, SessionSigner } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Signature } from "@canvas-js/signed-cid"
@@ -82,7 +82,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			libp2p = await target.createLibp2p(peerId, config)
 		}
 
-		const gossipLog = await target.openGossipLog<Action | Session, void | CBORValue>(
+		const gossipLog = await target.openGossipLog<Action | Session, void | any>(
 			{ path, topic: runtime.topic },
 			{
 				topic: runtime.topic,
@@ -116,7 +116,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		public readonly signers: SessionSigner[],
 		public readonly peerId: PeerId,
 		public readonly libp2p: Libp2p<ServiceMap> | null,
-		public readonly messageLog: AbstractGossipLog<Action | Session, CBORValue | void>,
+		public readonly messageLog: AbstractGossipLog<Action | Session, void | any>,
 		private readonly runtime: Runtime
 	) {
 		super()
@@ -138,7 +138,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 		for (const name of runtime.actionNames) {
 			// @ts-ignore
-			this.actions[name] = async (args: CBORValue, options: ActionOptions = {}) => {
+			this.actions[name] = async (args: any, options: ActionOptions = {}) => {
 				const signer =
 					options.signer ?? signers.find((signer) => options.chain === undefined || signer.match(options.chain))
 
@@ -234,7 +234,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	public async append(
 		payload: Session | Action,
 		options: { signer?: MessageSigner<Session | Action> }
-	): Promise<{ id: string; result: void | CBORValue; recipients: Promise<PeerId[]> }> {
+	): Promise<{ id: string; result: void | any; recipients: Promise<PeerId[]> }> {
 		if (this.libp2p === null) {
 			const { id, result } = await this.messageLog.append(payload, options)
 			return { id, result, recipients: Promise.resolve([]) }

@@ -2,7 +2,7 @@ import { QuickJSHandle } from "quickjs-emscripten"
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 
-import type { SessionSigner, CBORValue } from "@canvas-js/interfaces"
+import type { SessionSigner } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelValue, ModelsInit, Property, PropertyValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { getCID } from "@canvas-js/signed-cid"
@@ -113,7 +113,7 @@ export class ContractRuntime extends AbstractRuntime {
 		return Object.keys(this.actions)
 	}
 
-	protected async execute(context: ExecutionContext): Promise<void | CBORValue> {
+	protected async execute(context: ExecutionContext): Promise<void | any> {
 		const { chain, address, name, args, blockhash, timestamp } = context.message.payload
 
 		const actionHandle = this.actions[name]
