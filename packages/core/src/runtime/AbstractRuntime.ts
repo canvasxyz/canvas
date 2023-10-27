@@ -8,9 +8,15 @@ import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 import type { Signature, Action, CBORValue, Message, Session, SessionSigner } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
-import { AbstractGossipLog, GossipLogConsumer, ReadOnlyTransaction, encodeId } from "@canvas-js/gossiplog"
+import {
+	AbstractGossipLog,
+	GossipLogConsumer,
+	ReadOnlyTransaction,
+	encodeId,
+	MAX_MESSAGE_ID,
+	MIN_MESSAGE_ID,
+} from "@canvas-js/gossiplog"
 
-import { MAX_MESSAGE_ID, MIN_MESSAGE_ID } from "../constants.js"
 import { assert, mapValues } from "../utils.js"
 
 export type ExecutionContext = {

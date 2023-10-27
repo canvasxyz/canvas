@@ -288,43 +288,6 @@ const MyComponent = (props: {}) => {
 
 ## API
 
-### Contract types
-
-```ts
-import type { ModelsInit, ModelValue } from "@canvas-js/modeldb"
-
-export type InlineContract = {
-  topic: string
-  models: ModelsInit
-  actions: Record<string, ActionImplementationFunction | ActionImplementationObject>
-}
-
-export type ActionImplementationObject = {
-  argsType?: { schema: string; name: string }
-  apply: ActionImplementationFunction
-}
-
-export type ActionImplementationFunction = (
-  db: Record<string, ModelAPI>,
-  args: Args,
-  context: ActionContext
-) => Awaitable<Result>
-
-export type ModelAPI = {
-  get: (key: string) => Promise<ModelValue | null>
-  set: (value: ModelValue) => Promise<void>
-  delete: (key: string) => Promise<void>
-}
-
-export type ActionContext = {
-  id: string
-  chain: string
-  address: string
-  blockhash: string | null
-  timestamp: number
-}
-```
-
 ### `Message`, `Action` and `Session` types
 
 ```ts
@@ -371,21 +334,55 @@ export type Session = {
 }
 ```
 
+### Contract types
+
+```ts
+import type { ModelsInit, ModelValue } from "@canvas-js/modeldb"
+import type { Awaitable } from "@canvas-js/interfaces"
+
+export type Contract = {
+  topic: string
+  models: ModelsInit
+  actions: Record<string, ActionImplementationFunction | ActionImplementationObject>
+}
+
+export type ActionImplementationObject = {
+  argsType?: { schema: string; name: string }
+  apply: ActionImplementationFunction
+}
+
+export type ActionImplementationFunction = (
+  db: Record<string, ModelAPI>,
+  args: Args,
+  context: ActionContext
+) => Awaitable<Result>
+
+export type ModelAPI = {
+  get: (key: string) => Promise<T | null>
+  set: (value: ModelValue) => Promise<void>
+  delete: (key: string) => Promise<void>
+}
+
+export type ActionContext = {
+  id: string
+  chain: string
+  address: string
+  blockhash: string | null
+  timestamp: number
+}
+```
+
 ### `Canvas` class
 
 ```ts
 import { SessionSigner } from "@canvas-js/interfaces"
+import { AbstractModelDB } from "@canvas-js/modeldb"
 
 export interface CanvasConfig {
-  contract: string | InlineContract
+  contract: string | Contract
 
-  /**
-   * Defaults to the topic.
-   * - NodeJS: data directory path
-   * - browser: IndexedDB database namespace
-   */
-  location?: string | null
-
+  /** data directory path (NodeJS only) */
+  path?: string | null
   signers?: SessionSigner[]
   replay?: boolean
   runtimeMemoryLimit?: number

@@ -1,17 +1,16 @@
 import { SessionSigner } from "@canvas-js/interfaces"
 
-import type { InlineContract } from "./types.js"
+import type { Contract } from "../types.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 import { ContractRuntime } from "./ContractRuntime.js"
 import { FunctionRuntime } from "./FunctionRuntime.js"
 
 export { AbstractRuntime as Runtime } from "./AbstractRuntime.js"
-export * from "./types.js"
 
 export async function createRuntime(
 	location: string | null,
 	signers: SessionSigner[],
-	contract: string | InlineContract,
+	contract: string | Contract,
 	options: { runtimeMemoryLimit?: number; indexHistory?: boolean } = {}
 ): Promise<AbstractRuntime> {
 	if (typeof contract === "string") {

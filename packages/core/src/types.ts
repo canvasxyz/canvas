@@ -1,8 +1,7 @@
 import type { ModelsInit, ModelValue } from "@canvas-js/modeldb"
+import type { Awaitable } from "@canvas-js/interfaces"
 
-import type { Awaitable } from "../utils.js"
-
-export type InlineContract = {
+export type Contract = {
 	topic: string
 	models: ModelsInit
 	actions: Record<string, ActionImplementation>

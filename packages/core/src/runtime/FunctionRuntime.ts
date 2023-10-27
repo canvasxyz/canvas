@@ -8,7 +8,7 @@ import target from "#target"
 
 import { assert, mapEntries, mapValues } from "../utils.js"
 
-import { ActionImplementationFunction, InlineContract, ModelAPI } from "./types.js"
+import { ActionImplementationFunction, Contract, ModelAPI } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
 const identity = (x: any) => x
@@ -17,7 +17,7 @@ export class FunctionRuntime extends AbstractRuntime {
 	public static async init(
 		path: string | null,
 		signers: SessionSigner[],
-		contract: InlineContract,
+		contract: Contract,
 		options: { indexHistory?: boolean } = {}
 	): Promise<FunctionRuntime> {
 		const { indexHistory = true } = options

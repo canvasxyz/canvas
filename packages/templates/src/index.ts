@@ -1,6 +1,6 @@
-import type { InlineContract } from "@canvas-js/core"
+import type { Contract } from "@canvas-js/core"
 
-export type ContractTemplate = Omit<InlineContract, "topic">
+export type ContractTemplate = Omit<Contract, "topic">
 
 export const PublicChat = {
 	models: {

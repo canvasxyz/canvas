@@ -1,13 +1,14 @@
-import type { Libp2p, Libp2pOptions } from "libp2p"
+import type { Libp2p } from "libp2p"
 import type { PingService } from "libp2p/ping"
 import type { FetchService } from "libp2p/fetch"
 import type { PeerId } from "@libp2p/interface-peer-id"
 import type { PubSub } from "@libp2p/interface/pubsub"
 import type { GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
-import type { GossipLogService } from "@canvas-js/gossiplog/service"
-import type { DiscoveryService } from "@canvas-js/discovery"
+
 import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
 import type { AbstractGossipLog, GossipLogInit } from "@canvas-js/gossiplog"
+import type { GossipLogService } from "@canvas-js/gossiplog/service"
+import type { DiscoveryService } from "@canvas-js/discovery"
 
 export interface PlatformTarget {
 	getPeerId: (config: { path: string | null; topic: string }) => Promise<PeerId>

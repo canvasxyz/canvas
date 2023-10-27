@@ -102,6 +102,8 @@ export function getNextClock(parents: Uint8Array[]): number {
 // keys are made by concatenating an unsigned varint clock with the hash
 // and truncating to 20 bytes to be base32-friendly, e.g "05vj050kb09l7okead3vvi6so7c7tunn"
 export const KEY_LENGTH = 20
+export const MIN_MESSAGE_ID = "00000000000000000000000000000000"
+export const MAX_MESSAGE_ID = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 
 function getKey(clock: number, hash: Uint8Array): Uint8Array {
 	const key = new Uint8Array(KEY_LENGTH)
