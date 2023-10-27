@@ -56,6 +56,8 @@ export async function handler(args: Args) {
 			if (result.id !== id) {
 				console.log(chalk.yellow(`[canvas] Got unexpected message id (expected ${id}, got ${result.id})`))
 			}
+
+			messageCount++
 		} catch (err) {
 			if (err instanceof Error) {
 				console.log(chalk.red(`[canvas] Failed to apply message (${err.message})`))

@@ -84,7 +84,8 @@ export function Persister({ app }: { app?: Canvas }) {
 			})
 		}
 
-		type MessageEvent = GossipLogEvents<Action | Session, void | any>["message"]
+		type MessageEvent = GossipLogEvents<Action | Session, void>["message"]
+
 		const handleMessage = (msg: MessageEvent) => {
 			const { id, signature, message } = msg.detail
 			const [_key, value] = app.messageLog.encode(signature, message)
@@ -95,7 +96,7 @@ export function Persister({ app }: { app?: Canvas }) {
 		return () => {
 			app.messageLog.removeEventListener("message", handleMessage)
 		}
-	}, [topic, lockName])
+	}, [app, irys, topic, lockName])
 
 	const wipe = async () => {
 		const dbs = await window.indexedDB.databases()
