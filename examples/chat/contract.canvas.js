@@ -1,3 +1,5 @@
+export const topic = "example-chat.canvas.xyz";
+
 export const models = {
   message: {
     id: "primary",

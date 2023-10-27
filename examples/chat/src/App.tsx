@@ -12,7 +12,6 @@ import { MessageComposer } from "./MessageComposer.js"
 import { ControlPanel } from "./ControlPanel.js"
 import { SessionStatus } from "./SessionStatus.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
-import { topic } from "./utils.js"
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SIWESigner | null>(null)
@@ -27,7 +26,6 @@ export const App: React.FC<{}> = ({}) => {
 		if (initRef.current === false) {
 			initRef.current = true
 			Canvas.initialize({
-				topic,
 				contract,
 				// bootstrapList: [`/ip4/127.0.0.1/tcp/4444/ws/p2p/12D3KooWF6KJ8Sd2jZmNitimYXqA8y6uQQDT7ecqHRVYtuALKsX9`],
 				bootstrapList: [`/ip4/127.0.0.1/tcp/8080/ws/p2p/12D3KooWKEW6KAnhn7Sr4gh9nxvwCmeTY83xrfLqTJSmgvTpauCx`],
