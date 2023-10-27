@@ -1,5 +1,3 @@
-import chalk from "chalk"
-
 import type { Libp2pOptions } from "libp2p"
 import type { PeerId } from "@libp2p/interface/peer-id"
 import { pingService } from "libp2p/ping"
@@ -46,11 +44,11 @@ export function getLibp2pOptions(
 	const bootstrapList = options.bootstrapList ?? []
 
 	for (const address of announce) {
-		console.log(chalk.gray(`[canvas-core] Announcing on ${address}`))
+		console.log(`[canvas] [p2p] Announcing on ${address}/p2p/${peerId}`)
 	}
 
 	for (const address of listen) {
-		console.log(chalk.gray(`[canvas-core] Listening on ${address}`))
+		console.log(`[canvas] [p2p] Listening on ${address}`)
 	}
 
 	const bootstrapPeerIds = new Set()

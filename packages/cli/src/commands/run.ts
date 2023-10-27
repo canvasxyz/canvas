@@ -115,11 +115,13 @@ export async function handler(args: Args) {
 	}
 
 	let bootstrapList: string[]
-	if (args.testnet) {
-		console.log(chalk.yellowBright("[canvas-cli] Using testnet bootstrap servers"), testnetBootstrapList)
+	if (args.offline) {
+		bootstrapList = []
+	} else if (args.testnet) {
+		console.log(chalk.yellowBright("[canvas] Using testnet bootstrap servers"))
 		bootstrapList = testnetBootstrapList
 	} else {
-		console.log(chalk.gray("[canvas-cli] Using default bootstrap servers"), defaultBootstrapList)
+		console.log(chalk.gray("[canvas] Using default Canvas bootstrap servers"))
 		bootstrapList = defaultBootstrapList
 	}
 
@@ -131,36 +133,37 @@ export async function handler(args: Args) {
 		minConnections: args["min-connections"],
 		maxConnections: args["max-connections"],
 		bootstrapList: bootstrapList,
-		offline: args["offline"],
+		offline: args.offline,
 	})
+
+	console.log(chalk.gray(`[canvas] Using PeerId ${app.peerId.toString()}`))
 
 	app.libp2p?.addEventListener("connection:open", ({ detail: connection }) => {
 		const peer = connection.remotePeer.toString()
 		const addr = connection.remoteAddr.decapsulateCode(421).toString()
-		console.log(`[canvas-core] Opened connection to ${peer} at ${addr}`)
+		console.log(chalk.gray(`[canvas] Opened connection to ${peer} at ${addr}`))
 	})
 
 	app.libp2p?.addEventListener("connection:close", ({ detail: connection }) => {
 		const peer = connection.remotePeer.toString()
 		const addr = connection.remoteAddr.decapsulateCode(421).toString()
-		console.log(`[canvas-core] Closed connection to ${peer} at ${addr}`)
+		console.log(chalk.gray(`[canvas] Closed connection to ${peer} at ${addr}`))
 	})
 
 	app.messageLog.addEventListener("message", ({ detail: { id, message } }) => {
 		if (args["verbose"]) {
-			console.log(`[canvas-core] Applied message ${id}`, message.payload)
+			const { type, ...payload } = message.payload
+			console.log(`[canvas] Applied message ${chalk.green(id)}`, { type, ...payload })
 		} else {
-			console.log(`[canvas-core] Applied message ${id}`)
+			console.log(`[canvas] Applied message ${chalk.green(id)}`)
 		}
 	})
 
 	app.messageLog.addEventListener("sync", ({ detail: { peer } }) => {
-		console.log(`[canvas-core] Completed merkle sync with peer ${peer}`)
+		console.log(chalk.magenta(`[canvas] Completed merkle sync with peer ${peer}`))
 	})
 
-	if (!args.offline) {
-		await app.start()
-	}
+	await app.start()
 
 	const api = express()
 	api.use(cors())
@@ -214,7 +217,7 @@ export async function handler(args: Args) {
 	// 			handleWebsocketConnection(app, socket, { verbose: args.verbose })
 	// 		)
 	// 	} else {
-	// 		console.log(chalk.red("[canvas-cli] rejecting incoming WS connection at unexpected path"), url.pathname)
+	// 		console.log(chalk.red("[canvas] rejecting incoming WS connection at unexpected path"), url.pathname)
 	// 		rejectRequest(socket, StatusCodes.NOT_FOUND)
 	// 	}
 	// })
@@ -231,13 +234,13 @@ export async function handler(args: Args) {
 
 			// if (apiSyncTimer) clearTimeout(apiSyncTimer.timer)
 
-			console.log("[canvas-cli] Stopping API server...")
+			console.log("[canvas] Stopping API server...")
 			await new Promise<void>((resolve, reject) => server.stop((err) => (err ? reject(err) : resolve())))
-			console.log("[canvas-cli] API server stopped.")
+			console.log("[canvas] API server stopped.")
 
-			console.log("[canvas-cli] Closing core...")
+			console.log("[canvas] Closing core...")
 			await app.close()
-			console.log("[canvas-cli] Core closed, press Ctrl+C to terminate immediately.")
+			console.log("[canvas] Core closed, press Ctrl+C to terminate immediately.")
 		}
 	})
 }

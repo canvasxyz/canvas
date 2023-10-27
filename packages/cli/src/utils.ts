@@ -58,7 +58,7 @@ export async function confirmOrExit(message: string) {
 	const { confirm } = await prompts({ type: "confirm", name: "confirm", message: chalk.yellow(message) })
 
 	if (!confirm) {
-		console.error("[canvas-cli] Cancelled.")
+		console.error("[canvas] Cancelled.")
 		process.exit(1)
 	}
 }

@@ -54,11 +54,11 @@ export async function handler(args: Args) {
 		try {
 			const result = await app.insert(signature, message)
 			if (result.id !== id) {
-				console.log(chalk.yellow(`[canvas-cli] Got unexpected message id (expected ${id}, got ${result.id})`))
+				console.log(chalk.yellow(`[canvas] Got unexpected message id (expected ${id}, got ${result.id})`))
 			}
 		} catch (err) {
 			if (err instanceof Error) {
-				console.log(chalk.red(`[canvas-cli] Failed to apply message (${err.message})`))
+				console.log(chalk.red(`[canvas] Failed to apply message (${err.message})`))
 			} else {
 				throw err
 			}
@@ -66,6 +66,6 @@ export async function handler(args: Args) {
 	})
 
 	rl.on("close", async () => {
-		console.log(`[canvas-cli] Imported ${messageCount} messages`)
+		console.log(`[canvas] Imported ${messageCount} messages`)
 	})
 }
