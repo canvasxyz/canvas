@@ -4,18 +4,19 @@ This package exports TypeScript types for Canvas messages and other interfaces.
 
 ## Table of Contents
 
-- [Interfaces](#interfaces)
-  - [`Signature`](#signature)
-  - [`Message`](#message)
-  - [`Action`](#action)
-  - [`Session`](#session)
-  - [`MessageSigner`](#messagesigner)
-  - [`SessionSigner`](#sessionsigner)
-  - [`Awaitable`](#awaitable)
+- [API](#api)
+  - [Signatures](#signatures)
+  - [Messages](#messages)
+  - [Actions](#actions)
+  - [Sessions](#sessions)
+  - [Message signers](#message-signers)
+  - [Session signers](#session-signers)
+  - [Utility types](#utility-types)
+    - [Awaitable](#awaitable)
 
-## Interfaces
+## API
 
-### `Signature`
+### Signatures
 
 ```ts
 import type { CID } from "multiformats"
@@ -30,7 +31,7 @@ export type Signature = {
 }
 ```
 
-### `Message`
+### Messages
 
 ```ts
 export type Message<Payload = unknown> = {
@@ -41,7 +42,7 @@ export type Message<Payload = unknown> = {
 }
 ```
 
-### `Action`
+### Actions
 
 ```ts
 export type Action = {
@@ -60,7 +61,7 @@ export type Action = {
 }
 ```
 
-### `Session`
+### Sessions
 
 ```ts
 import type { SignatureType } from "./Signature.js"
@@ -86,7 +87,7 @@ export type Session<Data = any> = {
 }
 ```
 
-### `MessageSigner`
+### Message signers
 
 ```ts
 export interface MessageSigner<Payload = unknown> {
@@ -94,7 +95,7 @@ export interface MessageSigner<Payload = unknown> {
 }
 ```
 
-### `SessionSigner`
+### Session signers
 
 ```ts
 import type { MessageSigner } from "./MessageSigner.js"
@@ -122,7 +123,9 @@ export interface SessionSigner extends MessageSigner<Action | Session> {
 }
 ```
 
-### `Awaitable`
+### Utility types
+
+#### `Awaitable`
 
 ```ts
 export type Awaitable<T> = T | Promise<T>
