@@ -4,12 +4,12 @@ Hooks for using Canvas applications in React.
 
 ## Table of Contents
 
-- [useCanvas](#useCanvas)
-- [useLiveQuery](#useLiveQuery)
+- [`useCanvas`](#usecanvas)
+- [`useLiveQuery`](#uselivequery)
 
-## useCanvas
+## `useCanvas`
 
-The `useCanvas` hook maintains a Canvas application contract inside React. The syntax is identical to the [regular initialization syntax](/readme-core.html#contracts):
+The `useCanvas` hook initializes a Canvas application contract inside a React component. It accepts the same `CanvasConfig` object as `Canvas.initialize`.
 
 ```ts
 import { SIWESigner } from "@canvas-js/chain-ethereum"
@@ -17,16 +17,15 @@ import { useCanvas } from "@canvas-js/hooks"
 import { Forum } from "@canvas-js/templates"
 
 export function MyApp() {
-	const { app, error } = useCanvas({
-		contract: Forum,
-		signers: [new SIWESigner({ signer: wallet })],
-		location: "myapp",
-		topic: "com.example.forum",
-	})
+  const { app, error } = useCanvas({
+    contract: { topic: "com.example.forum", ...Forum },
+    signers: [new SIWESigner({ signer: wallet })],
+    location: "myapp",
+  })
 }
 ```
 
-## useLiveQuery
+## `useLiveQuery`
 
 The `useLiveQuery` hook maintains a reactive frontend query on top of a Canvas application.
 
@@ -38,11 +37,11 @@ Example usage:
 import { useLiveQuery } from "@canvas-js/hooks"
 
 export function MyComponent({ app }: { app?: Canvas }) {
-	const threads = useLiveQuery<Thread>(app, "threads", {
-		offset: page * 10,
-		limit: 10,
-		orderBy: { timestamp: "desc" },
-		where: category === "all" ? undefined : { category },
-	})
+  const threads = useLiveQuery<Thread>(app, "threads", {
+    offset: page * 10,
+    limit: 10,
+    orderBy: { timestamp: "desc" },
+    where: category === "all" ? undefined : { category },
+  })
 }
 ```
