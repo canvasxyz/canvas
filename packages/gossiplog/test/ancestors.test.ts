@@ -1,15 +1,20 @@
+import { randomUUID } from "node:crypto"
+
+import test from "ava"
 import { nanoid } from "nanoid"
 
 import type { Signature, Message } from "@canvas-js/interfaces"
 
 import { Ed25519Signer, decodeId } from "@canvas-js/gossiplog"
-import { appendChain, shuffle, testPlatforms } from "./utils.js"
+import { GossipLog } from "@canvas-js/gossiplog/node"
 
-const topic = "com.example.test"
+import { appendChain, getDirectory, shuffle, testPlatforms } from "./utils.js"
+
 const apply = (id: string, signature: Signature, message: Message<string>) => {}
 const validate = (payload: unknown): payload is string => true
 
 testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog) => {
+	const topic = randomUUID()
 	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
 
 	const n = 20
@@ -27,6 +32,7 @@ testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog)
 })
 
 testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog) => {
+	const topic = randomUUID()
 	const signer = new Ed25519Signer()
 	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
 
@@ -53,6 +59,7 @@ testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog)
 })
 
 testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, openGossipLog) => {
+	const topic = randomUUID()
 	const signer = new Ed25519Signer()
 	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
 
@@ -86,6 +93,7 @@ testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, open
 })
 
 testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, openGossipLog) => {
+	const topic = randomUUID()
 	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
 
 	const { id: idX } = await log.append(nanoid())
@@ -112,22 +120,22 @@ testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, ope
 	t.deepEqual(await log.getAncestors(chainB[2], 4), [chainB[0]])
 })
 
-testPlatforms("simulate a randomly partitioned network", async (t, openGossipLog) => {
+test("simulate a randomly partitioned network", async (t) => {
 	t.timeout(30 * 1000)
+	const topic = randomUUID()
+
 	const logs = await Promise.all([
-		openGossipLog(t, { topic, apply, validate, indexAncestors: true }),
-		openGossipLog(t, { topic, apply, validate, indexAncestors: true }),
-		openGossipLog(t, { topic, apply, validate, indexAncestors: true }),
-		// openGossipLog(t, { topic, apply, validate, indexAncestors: true }),
-		// openGossipLog(t, { topic, apply, validate, indexAncestors: true }),
+		GossipLog.open({ topic, apply, validate, indexAncestors: true }, getDirectory(t)),
+		GossipLog.open({ topic, apply, validate, indexAncestors: true }, getDirectory(t)),
+		GossipLog.open({ topic, apply, validate, indexAncestors: true }, getDirectory(t)),
 	])
 
 	const random = (n: number) => Math.floor(Math.random() * n)
 
 	// const MESSAGE_COUNT = 2048
 	// const MAX_CHAIN_LENGTH = 6
-	const MESSAGE_COUNT = 128
-	const MAX_CHAIN_LENGTH = 4
+	const MESSAGE_COUNT = 512
+	const MAX_CHAIN_LENGTH = 5
 
 	const messageIDs: string[] = []
 	const messageIndices = new Map<string, { index: number; map: Uint8Array }>()
