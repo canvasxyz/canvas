@@ -29,42 +29,16 @@ Options:
 
 ## Running an application
 
-The main command is `canvas run <app>`. This will start a libp2p node, SQLite database, QuickJS VM for processing actions, and an HTTP API server. Use the `--help` flag to learn more.
-
-### Installing contracts
-
-The `app` positional argument can either be a filename or the bare IPFS CIDv0 of a contract. By default, passing a filename will start the app in development mode, which runs entirely offline and in-memory. To persist data in the `$CANVAS_HOME` directory and join the libp2p mesh, you can install the app with `canvas install <filename>` and then run it by its CID.
-
-`canvas run <filename> --install` is a shortcut that does both of these in one step, initializing a new app directory inside `$CANVAS_HOME` if necessary.
-
-### Providing chain RPCs and multi-chain support
-
-Canvas applications declare which chains they support using the `export const chains: string[]` contract export, which is an array of [CAIP-2 chain identifiers](https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-2.md). For now, the CLI **only supports Ethereum chains** whose CAIP-2 identifiers are of the form `eip155:${chainId}`. `eip155:1` is mainnet, `eip155:100` is Gnosis, and so on.
-
-When you run an app from the CLI, you have to provide an RPC URL for each of these chains declared by the contract so that the runtime can validate the blockhashes in messages and call the view functions of any external on-chain contracts. This is done with the `--chain=${url}` option.
-
-```
-$ canvas run example.canvas.js --install --chain eip155:1=https://mainnet.infura.io/v3/...
-```
-
-If your app doesn't use on-chain contracts and you don't want to require blockhashes in messages, you can use the `--unchecked` flag to disable these checks and omit the RPC URL. However, you still have to pass the CAIP-2 identifiers for all of the chains in the contract.
-
-```
-$ canvas run example.canvas.js --install --chain eip155:1 --unchecked
-```
-
-In either case, you can pass multiple `--chain` options, and will have to if the contract declares more than one chain.
+The main command is `canvas run <path>`. This will start a libp2p node, SQLite database, QuickJS VM for processing actions, and an HTTP API server. Use the `--help` flag to learn more.
 
 ### Joining the libp2p mesh
 
-By default, `canvas run` assumes that you are behind a NAT layer without a public IP address. It will still automatically join the libp2p mesh using the **public Canvas relay servers** that the developers run. Relayed connections are secure, but aren't real p2p and shouldn't be used in production.
-
-To join the libp2p mesh directly, you have to provide the CLI with an internal port bind a WebSocket server using the `--listen` option, and a public external address using the `--announce` option. Both of these must be formatted as [multiaddrs](https://github.com/multiformats/multiaddr), the generic composable network address format used by libp2p.
+In the likely case that your machine is behind a NAT layer, you have to provide the CLI with both an internal port bind a WebSocket server using the `--listen` option, and a public external address using the `--announce` option. Both of these must be formatted as [multiaddrs](https://github.com/multiformats/multiaddr), the generic composable network address format used by libp2p.
 
 For example, this tells the CLI to listen on port 4444 and advertise `wss://foobar.com:8000` as the public address:
 
 ```
-$ canvas run example.canvas.js ... --listen /ip4/0.0.0.0/tcp/4444/ws --announce /dns4/foobar.com/tcp/443/wss
+$ canvas run myapp/ --listen /ip4/0.0.0.0/tcp/4444/ws --announce /dns4/foobar.com/tcp/443/wss
 ```
 
 This assumes that you've configured your server to handle incoming secure websocket connections over TLS on port `443`, do TLS termination, and proxy the connection to your internal port `4444`.
@@ -79,50 +53,18 @@ A few things to note:
 
 Almost always, `--listen` will be of the form `/ip4/0.0.0.0/tcp/${port}/ws`, and `--announce` will be of the form `/dns4/${hostname}/tcp/{port}/wss`.
 
-### Reference
-
-```
-canvas run <app>
-
-Run an app, by path or IPFS hash
-
-Positionals:
-  app  Path to app file, or IPFS hash of app                 [string] [required]
-
-Options:
-  --version       Show version number                                  [boolean]
-  --help          Show help                                            [boolean]
-  --port          Port to bind the Core API             [number] [default: 8000]
-  --offline       Disable libp2p                      [boolean] [default: false]
-  --disable-ping  Disable peer health check pings     [boolean] [default: false]
-  --install       Install a local app and run it in production mode
-                                                      [boolean] [default: false]
-  --listen        Internal libp2p /ws multiaddr, e.g. /ip4/0.0.0.0/tcp/4444/ws
-                                                                         [array]
-  --announce      Public libp2p /ws multiaddr, e.g. /dns4/myapp.com/tcp/4444/ws
-                                                                         [array]
-  --reset         Reset the message log and model databases
-                                                      [boolean] [default: false]
-  --replay        Reconstruct the model database by replying the message log
-                                                      [boolean] [default: false]
-  --unchecked     Run the node in unchecked mode, without verifying block hashes
-                                                                       [boolean]
-  --metrics       Expose Prometheus endpoint at /metrics
-                                                      [boolean] [default: false]
-  --p2p           Expose internal libp2p debugging endpoints
-                                                      [boolean] [default: false]
-  --verbose       Enable verbose logging              [boolean] [default: false]
-  --chain         Declare chain implementations and provide RPC endpoints for re
-                  ading on-chain data (format: {chain} or {chain}={URL}) [array]
-  --static        Serve a static directory from /, and API routes from /api
-                                                                        [string]
-```
-
 ## HTTP API
 
-Running a Canvas app with `canvas run` will serve an HTTP API on `http://127.0.0.1:8000` by default. You can change the port with the `--port` option.
+Running a Canvas app with `canvas run` will serve an HTTP API at `http://127.0.0.1:8000/api/` by default. You can change the port with the `--port` option.
 
 The basic routes are:
+
+- `GET /api/models/:model` - query model records
+- `GET /api/models/:model/:key` - get a model record by primary key
+- `GET /api/clock` - get the next logical clock value from the log
+- `GET /api/messages` - query ranges of log messages
+- `GET /api/messages/:id` - get a message from the log
+- `GET /api`
 
 - `POST /` - Apply an action or session. The request body must be the action or session as JSON.
 - `GET /` - Get application status and metadata. Returns an `ApplicationData` JSON object.

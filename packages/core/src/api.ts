@@ -6,8 +6,9 @@ import { logger } from "@libp2p/logger"
 import { peerIdFromString } from "@libp2p/peer-id"
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 import chalk from "chalk"
+import * as json from "@ipld/dag-json"
 
-import { Action, Message, Session } from "@canvas-js/interfaces"
+import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 
 import { Canvas } from "./Canvas.js"
 
@@ -152,29 +153,27 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 	})
 
 	api.get("/messages/:id", async (req, res) => {
-		const [signature, message] = await app.getMessage(req.params.id)
+		const { id } = req.params
+		const [signature, message] = await app.getMessage(id)
 		if (signature === null || message === null) {
 			return res.status(StatusCodes.NOT_FOUND).end()
 		}
 
-		const data = app.messageLog.encode(signature, message)
-		return res.status(StatusCodes.OK).contentType("application/cbor").end(data)
+		return res.status(StatusCodes.OK).contentType("application/json").end(json.encode({ id, signature, message }))
 	})
 
 	api.post("/messages", async (req, res) => {
-		let data: Uint8Array | null = null
-		if (req.headers["content-type"] === "application/cbor") {
-			data = req.body
+		let data: string | null = null
+		if (req.headers["content-type"] === "application/json") {
+			data = JSON.stringify(req.body)
 		} else {
 			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
 		}
 
-		assert(data !== null && data instanceof Uint8Array)
-
 		try {
-			const [id, signature, message] = app.messageLog.decode(data)
-			await app.insert(signature, message as Message<Action | Session>)
-			return res.status(StatusCodes.CREATED).setHeader("Location", `messages/${id}`)
+			const { signature, message } = json.parse<{ id: string; signature: Signature; message: Message }>(data)
+			const { id } = await app.insert(signature, message as Message<Action | Session>)
+			return res.status(StatusCodes.CREATED).setHeader("Location", `messages/${id}`).end()
 		} catch (e) {
 			console.error(e)
 			return res.status(StatusCodes.BAD_REQUEST).end()
