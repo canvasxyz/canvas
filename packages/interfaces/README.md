@@ -4,6 +4,7 @@ This package exports TypeScript types for Canvas messages and other interfaces.
 
 ## Table of Contents
 
+- [Installation](#installation)
 - [API](#api)
   - [Signatures](#signatures)
   - [Messages](#messages)
@@ -13,6 +14,12 @@ This package exports TypeScript types for Canvas messages and other interfaces.
   - [Session signers](#session-signers)
   - [Utility types](#utility-types)
     - [Awaitable](#awaitable)
+
+## Installation
+
+```
+npm i @canvas-js/chain-interfaces
+```
 
 ## API
 
