@@ -16,12 +16,11 @@
   margin: 0 auto 40px;
   font-size: 14px;
   line-height: 1.5;
-  max-width: calc(100vw - 40px) !important;
   overflow-x: scroll;
 }
-@media (max-width: 860px) {
+@media (max-width: 640px) {
   .VPContent.is-home .named-fence-block {
-    max-width: 830px;
+    max-width: calc(100vw - 40px) !important;
   }
 }
 .VPContent.is-home .named-fence-block button.copy {

@@ -2,15 +2,15 @@
 layout: home
 ---
 
-<HeroRow text="Decentralized applications at the speed of light" image="images/graphic_mainframe_4.png" tagline="Canvas is a framework for realtime, peer-to-peer decentralized applications." v-bind:bullets="['Fast-sync using signed messages, libp2p, and CRDT+', 'Embedded relational database and compute engine', 'Supports any chain or authentication format', 'Works like a traditional web framework']">
+<HeroRow text="Decentralized applications at the speed of light" image="images/graphic_mainframe_4.png" tagline="Canvas is a framework for realtime, peer-to-peer decentralized applications." v-bind:bullets="['Fast-sync using signed messages, libp2p, and CRDT+ consensus', 'Embeds a relational database and compute engine in the client', 'Supports any chain or authentication format']">
   <HeroAction theme="brand big" text="Try the tutorial" href="/1-introduction" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>
 
 <FeatureRow title="Demo">
   <FeatureCard title="MessageSync" details="Deploy simple applications like chat & copresence." />
-  <FeatureCard title="TypeScript Contracts" details="Write complex application backends in TypeScript, without leaving your workflow." />
-  <FeatureCard title="IPFS Contracts" details="Build immutable applications, with code and data stored on IPFS data structures."/>
+  <FeatureCard title="CausalDB" details="Write complex application backends in TypeScript, in your current workflow." />
+  <FeatureCard title="CausalVM" details="Build immutable applications, with code and data stored on IPFS data structures."/>
 </FeatureRow>
 
 <DemoToggle v-bind:options="['MessageSync', 'ModelDB']" defaultOption="MessageSync">
@@ -40,7 +40,7 @@ return <div>{threads.map((thread) => <div>thread.title</div>)}</div>
 <TextRow title="About Canvas" details="Canvas is a new TypeScript runtime for decentralized applications, that's easy to learn and resembles traditional developer frameworks.">
   <TextItem prefix="Fast">Actions are processed as soon as they're seen.</TextItem>
   <TextItem prefix="Optimistic">Actions can arrive out-of-order, but CRDTs and distributed server reconciliation are used to resolve differences.</TextItem>
-  <TextItem prefix="Client-first">The entire state of each application is stored inside the browser. Applications can be partitioned so clients only sync data they're interested in.</TextItem>
+  <TextItem prefix="Client-first">The running state of each application is stored in the browser.</TextItem>
   <TextItem prefix="Bring your own finality">The default engine doesn't implement a finality mechanism, but you can add your own with timestamping or DA layers.</TextItem>
 </TextRow>
 
