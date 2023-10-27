@@ -36,8 +36,8 @@ export const testPlatforms = (
 	) => void
 ) => {
 	const macro = test.macro(run)
-	// test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
-	// test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(nanoid(), init))
+	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
+	test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(nanoid(), init))
 	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(getDirectory(t), init))
 }
 

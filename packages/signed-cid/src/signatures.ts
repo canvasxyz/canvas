@@ -1,20 +1,12 @@
 import { secp256k1 } from "@noble/curves/secp256k1"
 import { ed25519 } from "@noble/curves/ed25519"
-import { CID } from "multiformats/cid"
+
+import type { Signature, SignatureType } from "@canvas-js/interfaces"
 
 import { Codec, codecs } from "./codecs.js"
 import { Digest, digests } from "./digests.js"
 import { assert, signalInvalidType } from "./utils.js"
 import { getCID } from "./cid.js"
-
-export type SignatureType = "ed25519" | "secp256k1"
-
-export type Signature = {
-	type: SignatureType
-	publicKey: Uint8Array
-	signature: Uint8Array
-	cid: CID
-}
 
 export function verifySignature(
 	{ type, publicKey, signature, cid }: Signature,

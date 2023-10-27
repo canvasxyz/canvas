@@ -10,21 +10,20 @@ import { peerIdFromString } from "@libp2p/peer-id"
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 
 import { Action, Message, Session } from "@canvas-js/interfaces"
-import { decodeSignedMessage } from "@canvas-js/gossiplog"
 import { Signature } from "@canvas-js/signed-cid"
 
 import { Canvas } from "./Canvas.js"
 
 import { getErrorMessage } from "./utils.js"
 
-interface Options {
-	exposeMetrics: boolean
-	exposeModels: boolean
-	exposeMessages: boolean
-	exposeP2P: boolean
+export interface APIOptions {
+	exposeMetrics?: boolean
+	exposeModels?: boolean
+	exposeMessages?: boolean
+	exposeP2P?: boolean
 }
 
-export function getAPI(core: Canvas, options: Partial<Options> = {}): express.Express {
+export function createAPI(core: Canvas, options: APIOptions = {}): express.Express {
 	const coreRegister = new Registry()
 
 	const coreMetrics = {

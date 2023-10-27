@@ -65,6 +65,7 @@ export abstract class AbstractRuntime {
 		}
 	}
 
+	public abstract readonly topic: string
 	public abstract readonly signers: SessionSigner[]
 	public abstract readonly db: AbstractModelDB
 	public abstract readonly actionNames: string[]

@@ -10,7 +10,7 @@ import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
 import type { AbstractGossipLog, GossipLogInit } from "@canvas-js/gossiplog"
 
 export interface PlatformTarget {
-	getPeerId: (location: string | null) => Promise<PeerId>
+	getPeerId: (config: { path: string | null; topic: string }) => Promise<PeerId>
 
 	createLibp2p: (
 		peerId: PeerId,
@@ -26,14 +26,13 @@ export interface PlatformTarget {
 	) => Promise<Libp2p<ServiceMap>>
 
 	openDB: (
-		location: string | null,
-		name: string,
+		config: { path: string | null; topic: string },
 		models: ModelsInit,
 		options?: { indexHistory?: Record<string, boolean> }
 	) => Promise<AbstractModelDB>
 
 	openGossipLog: <Payload, Result>(
-		location: string | null,
+		config: { path: string | null; topic: string },
 		init: GossipLogInit<Payload, Result>
 	) => Promise<AbstractGossipLog<Payload, Result>>
 }

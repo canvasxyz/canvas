@@ -12,8 +12,7 @@ import cors from "cors"
 import { multiaddr } from "@multiformats/multiaddr"
 
 import { Canvas } from "@canvas-js/core"
-// @ts-ignore
-import { getAPI } from "@canvas-js/core/api"
+import { createAPI } from "@canvas-js/core/api"
 
 import { getContractLocation } from "../utils.js"
 
@@ -160,8 +159,7 @@ export async function handler(args: Args) {
 	// }
 
 	const app = await Canvas.initialize({
-		topic: "jjkljkl",
-		location,
+		path: location,
 		contract,
 		listen,
 		announce,
@@ -178,7 +176,7 @@ export async function handler(args: Args) {
 	api.use(cors())
 	api.use(
 		"/api",
-		getAPI(app, { exposeMetrics: args.metrics, exposeP2P: args.p2p, exposeModels: true, exposeMessages: true })
+		createAPI(app, { exposeMetrics: args.metrics, exposeP2P: args.p2p, exposeModels: true, exposeMessages: true })
 	)
 
 	if (args.static !== undefined) {

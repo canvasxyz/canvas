@@ -7,6 +7,5 @@
     "moduleResolution": "Node16",
     "rootDir": "src",
     "outDir": "lib"
-  },
-  "references": [{ "path": "../signed-cid"}]
+  }
 }

@@ -20,7 +20,7 @@ type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	const { contract, location, uri } = getContractLocation(args)
 	try {
-		const app = await Canvas.initialize({ topic: "fdjskal", contract, location, offline: true })
+		const app = await Canvas.initialize({ path: location, contract, offline: true })
 		console.log(`name: ${uri}\n`)
 		console.log(chalk.green("===== models ====="))
 		console.log(`${JSON.stringify(app.db.models, null, "  ")}\n`)

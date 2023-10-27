@@ -11,12 +11,8 @@ import type { PlatformTarget } from "../interface.js"
 import { getLibp2pOptions } from "./libp2p.js"
 
 export default {
-	async getPeerId(location): Promise<PeerId> {
-		if (location === null) {
-			return await createEd25519PeerId()
-		}
-
-		const localStorageKey = `canvas:${location}/peer-id`
+	async getPeerId({ topic }: { topic: string }): Promise<PeerId> {
+		const localStorageKey = `canvas/${topic}/peer-id`
 		const item = localStorage.getItem(localStorageKey)
 		if (item === null) {
 			const peerId = await createEd25519PeerId()
@@ -28,11 +24,11 @@ export default {
 		}
 	},
 
-	openDB: (location, name, models, { indexHistory } = {}) =>
-		ModelDB.initialize({ name: `${location}/${name}`, models, indexHistory }),
+	openDB: ({ topic }, models, { indexHistory } = {}) =>
+		ModelDB.initialize({ name: `canvas/${topic}/db`, models, indexHistory }),
 
-	openGossipLog: <Payload, Result>(location: string | null, init: GossipLogInit<Payload, Result>) =>
-		GossipLog.open(`${location}/topics/${init.topic}`, init),
+	openGossipLog: <Payload, Result>({ topic }: { topic: string }, init: GossipLogInit<Payload, Result>) =>
+		GossipLog.open(`canvas/${topic}`, init),
 
 	createLibp2p: (peerId, options) => createLibp2p(getLibp2pOptions(peerId, options)),
 } satisfies PlatformTarget

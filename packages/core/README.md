@@ -4,7 +4,6 @@ A Canvas app replicates and executes a log of signed actions.
 
 ## Table of Contents
 
-- [Overview](#overview)
 - [Installation](#installation)
 - [Usage](#usage)
   - [Contracts](#contracts)
@@ -15,18 +14,6 @@ A Canvas app replicates and executes a log of signed actions.
 - [API](#api)
 - [Development](#development)
 - [Testing](#testing)
-- [API](#api)
-
-## Overview
-
-Canvas apps are built on a programmable multi-writer peer-to-peer CRDT relational database. They're easy to configure and automatically have several desirable properties:
-
-- **Off-chain**. No transaction fees or confirmation wait times.
-- **Real-time p2p**. Peers connect and sync directly with each other over libp2p, and use GossipSub topics to broadcast actions.
-- **Multi-writer**. Any number of peers can concurrently execute new actions, without waiting for consensus.
-- **Eventually consistent**. Actions can freely read and write to a relational database. Every peer's database state will deterministically converge regardless of the order in which the actions are received.
-- **Self-authenticating**. Every action is signed by a session key authorized by an end user identity, using e.g. SIWE for Ethereum identities. The entire action log can be verified and replayed by anyone at any time; applications are trustless and portable.
-- **Cross-platform**. Canvas apps run in the browser or on NodeJS, persisting data with IndexedDB and SQLite/LMDB, respectively.
 
 ## Installation
 

@@ -13,6 +13,6 @@ export type Action = {
 	name: string
 	args: CBORValue
 
-	blockhash: string | null
 	timestamp: number
+	blockhash: string | null
 }

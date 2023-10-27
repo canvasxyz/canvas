@@ -145,14 +145,13 @@ export function useCanvas<
 			// create application
 			const topic = `world.contract-${props.world.worldContract.address.toLowerCase()}`
 			const app = await Canvas.initialize({
-				topic,
 				contract: {
+					topic,
 					models: modelsInit,
 					actions: actionsSpec,
 				},
 				offline,
 				signers: [new SIWESigner({ signer: wallet as any })],
-				location: "sqldb",
 			})
 			setApp(app)
 		}

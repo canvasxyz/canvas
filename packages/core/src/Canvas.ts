@@ -23,16 +23,10 @@ import { validatePayload } from "./schema.js"
 import { assert } from "./utils.js"
 
 export interface CanvasConfig<Contract extends InlineContract = InlineContract> {
-	topic: string
 	contract: string | Contract
 
-	/**
-	 * Defaults to the topic.
-	 * - NodeJS: data directory path
-	 * - browser: IndexedDB database namespace
-	 */
-	location?: string | null
-
+	/** data directory path (NodeJS only) */
+	path?: string | null
 	signers?: SessionSigner[]
 	replay?: boolean
 	runtimeMemoryLimit?: number
@@ -46,7 +40,7 @@ export interface CanvasConfig<Contract extends InlineContract = InlineContract> 
 	minConnections?: number
 	maxConnections?: number
 
-	/** set to `false` to disable history indexing and db.get(..) */
+	/** set to `false` to disable history indexing and db.get(..) within actions */
 	indexHistory?: boolean
 }
 
@@ -57,7 +51,7 @@ export type ActionAPI<Args = any, Result = any> = (
 	options?: ActionOptions
 ) => Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }>
 
-export interface CoreEvents extends GossipLogEvents<Action | Session, unknown> {
+export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown> {
 	close: Event
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
@@ -69,13 +63,12 @@ export type ApplicationData = {
 	topics: Record<string, { actions: string[] | null }>
 }
 
-export class Canvas<Contract extends InlineContract = InlineContract> extends EventEmitter<CoreEvents> {
+export class Canvas<Contract extends InlineContract = InlineContract> extends EventEmitter<CanvasEvents> {
 	public static async initialize<Contract extends InlineContract>(
 		config: CanvasConfig<Contract>
 	): Promise<Canvas<Contract>> {
 		const {
-			topic,
-			location = topic,
+			path = null,
 			contract,
 			signers = [],
 			runtimeMemoryLimit,
@@ -88,21 +81,24 @@ export class Canvas<Contract extends InlineContract = InlineContract> extends Ev
 			signers.push(new SIWESigner())
 		}
 
-		const runtime = await createRuntime(location, signers, contract, { runtimeMemoryLimit })
+		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit })
 
-		const peerId = await target.getPeerId(location)
+		const peerId = await target.getPeerId({ path })
 		let libp2p: Libp2p<ServiceMap> | null = null
 		if (!offline) {
 			libp2p = await target.createLibp2p(peerId, config)
 		}
 
-		const gossipLog = await target.openGossipLog<Action | Session, void | CBORValue>(location, {
-			topic: topic,
-			apply: runtime.getConsumer(),
-			replay: replay,
-			validate: validatePayload,
-			indexAncestors: indexHistory,
-		})
+		const gossipLog = await target.openGossipLog<Action | Session, void | CBORValue>(
+			{ path, topic: runtime.topic },
+			{
+				topic: runtime.topic,
+				apply: runtime.getConsumer(),
+				replay: replay,
+				validate: validatePayload,
+				indexAncestors: indexHistory,
+			}
+		)
 
 		await libp2p?.services.gossiplog.subscribe(gossipLog, {})
 

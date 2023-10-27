@@ -15,7 +15,7 @@ import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
-		location: string | null,
+		path: string | null,
 		signers: SessionSigner[],
 		contract: string,
 		options: { runtimeMemoryLimit?: number; indexHistory?: boolean } = {}
@@ -28,6 +28,7 @@ export class ContractRuntime extends AbstractRuntime {
 		const vm = await VM.initialize({ runtimeMemoryLimit })
 
 		const {
+			topic: topicHandle,
 			models: modelsHandle,
 			actions: actionsHandle,
 			...rest
@@ -37,6 +38,9 @@ export class ContractRuntime extends AbstractRuntime {
 			console.warn(`extraneous export ${JSON.stringify(name)}`)
 			handle.dispose()
 		}
+
+		assert(topicHandle !== undefined, "missing `topic` export")
+		const topic = topicHandle.consume(vm.context.getString)
 
 		assert(actionsHandle !== undefined, "missing `actions` export")
 
@@ -71,8 +75,8 @@ export class ContractRuntime extends AbstractRuntime {
 		assert(modelsHandle !== undefined, "missing `models` export")
 		const modelsInit = modelsHandle.consume(vm.context.dump) as ModelsInit
 
-		const db = await target.openDB(location, "db", AbstractRuntime.getModelSchema(modelsInit, { indexHistory }))
-		return new ContractRuntime(signers, db, vm, actions, argsTransformers, indexHistory)
+		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelsInit, { indexHistory }))
+		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers, indexHistory)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -80,6 +84,7 @@ export class ContractRuntime extends AbstractRuntime {
 	#context: ExecutionContext | null = null
 
 	constructor(
+		public readonly topic: string,
 		public readonly signers: SessionSigner[],
 		public readonly db: AbstractModelDB,
 		public readonly vm: VM,

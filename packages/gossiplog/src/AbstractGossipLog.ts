@@ -9,14 +9,15 @@ import { Schema } from "@ipld/schema/schema-schema"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 import { create, TypeTransformerFunction } from "@ipld/schema/typed.js"
 
-import type { Message, MessageSigner } from "@canvas-js/interfaces"
+import type { Message, MessageSigner, Awaitable } from "@canvas-js/interfaces"
 import { Signature, verifySignature } from "@canvas-js/signed-cid"
 
+import { Ed25519Signer } from "./Ed25519Signer.js"
 import { Mempool } from "./Mempool.js"
 import { Driver } from "./sync/driver.js"
 import { decodeClock } from "./clock.js"
 import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getNextClock, KEY_LENGTH } from "./schema.js"
-import { Awaitable, assert, topicPattern, cborNull, getAncestorClocks, Ed25519Signer } from "./utils.js"
+import { assert, topicPattern, cborNull, getAncestorClocks } from "./utils.js"
 
 export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source

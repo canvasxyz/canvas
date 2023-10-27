@@ -3,8 +3,8 @@ import * as siwe from "siwe"
 import * as json from "@ipld/dag-json"
 import { logger } from "@libp2p/logger"
 
-import type { SessionSigner, Action, SessionStore, Message, Session } from "@canvas-js/interfaces"
-import { Signature, createSignature } from "@canvas-js/signed-cid"
+import type { Signature, SessionSigner, Action, SessionStore, Message, Session } from "@canvas-js/interfaces"
+import { createSignature } from "@canvas-js/signed-cid"
 import { secp256k1 } from "@noble/curves/secp256k1"
 
 import { getDomain } from "@canvas-js/chain-ethereum/domain"

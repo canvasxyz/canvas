@@ -15,14 +15,14 @@ const identity = (x: any) => x
 
 export class FunctionRuntime extends AbstractRuntime {
 	public static async init(
-		location: string | null,
+		path: string | null,
 		signers: SessionSigner[],
 		contract: InlineContract,
 		options: { indexHistory?: boolean } = {}
 	): Promise<FunctionRuntime> {
 		const { indexHistory = true } = options
 		const models = AbstractRuntime.getModelSchema(contract.models, { indexHistory })
-		const db = await target.openDB(location, "models", models)
+		const db = await target.openDB({ path, topic: contract.topic }, models)
 
 		const argsTransformers: Record<
 			string,
@@ -45,13 +45,14 @@ export class FunctionRuntime extends AbstractRuntime {
 			return action.apply
 		})
 
-		return new FunctionRuntime(signers, db, actions, argsTransformers, indexHistory)
+		return new FunctionRuntime(contract.topic, signers, db, actions, argsTransformers, indexHistory)
 	}
 
 	#context: ExecutionContext | null = null
 	readonly #db: Record<string, ModelAPI>
 
 	constructor(
+		public readonly topic: string,
 		public readonly signers: SessionSigner[],
 		public readonly db: AbstractModelDB,
 		public readonly actions: Record<string, ActionImplementationFunction>,

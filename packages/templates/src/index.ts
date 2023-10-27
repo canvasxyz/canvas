@@ -1,6 +1,8 @@
 import type { InlineContract } from "@canvas-js/core"
 
-export const PublicChat: InlineContract = {
+export type ContractTemplate = Omit<InlineContract, "topic">
+
+export const PublicChat = {
 	models: {
 		messages: {
 			id: "primary",
@@ -16,9 +18,9 @@ export const PublicChat: InlineContract = {
 			db.messages.set({ id, message, address, timestamp })
 		},
 	},
-} satisfies InlineContract
+} satisfies ContractTemplate
 
-export const ChannelChat: InlineContract = {
+export const ChannelChat = {
 	models: {
 		channels: {
 			name: "primary",
@@ -63,9 +65,9 @@ export const ChannelChat: InlineContract = {
 			db.messages.delete(id)
 		},
 	},
-}
+} satisfies ContractTemplate
 
-export const Forum: InlineContract = {
+export const Forum = {
 	models: {
 		categories: {
 			name: "primary",
@@ -137,4 +139,4 @@ export const Forum: InlineContract = {
 			db.replies.delete(replyId)
 		},
 	},
-} satisfies InlineContract
+} satisfies ContractTemplate

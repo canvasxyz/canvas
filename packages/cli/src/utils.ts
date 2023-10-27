@@ -9,6 +9,7 @@ import prompts from "prompts"
 import { SessionSigner } from "@canvas-js/interfaces"
 
 export const CONTRACT_FILENAME = "contract.canvas.js"
+export const CONFIG_FILENAME = "canvas.json"
 
 export function getContractLocation(args: { path: string; memory?: boolean }): {
 	contract: string

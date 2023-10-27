@@ -17,16 +17,16 @@ import { getLibp2pOptions } from "./libp2p.js"
 const PEER_ID_FILENAME = ".peer-id"
 
 export default {
-	async getPeerId(location): Promise<PeerId> {
+	async getPeerId(location: { path: string | null }): Promise<PeerId> {
 		if (process.env.PEER_ID !== undefined) {
 			return createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
 		}
 
-		if (location === null) {
+		if (location.path === null) {
 			return await createEd25519PeerId()
 		}
 
-		const peerIdPath = path.resolve(location, PEER_ID_FILENAME)
+		const peerIdPath = path.resolve(location.path, PEER_ID_FILENAME)
 		if (fs.existsSync(peerIdPath)) {
 			return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
 		}
@@ -36,20 +36,22 @@ export default {
 		return peerId
 	},
 
-	async openDB(location, name, models, { indexHistory } = {}) {
-		if (location === null) {
+	async openDB(location, models, { indexHistory } = {}) {
+		if (location.path === null) {
 			return new ModelDB({ path: null, models, indexHistory })
 		} else {
-			assert(/[a-zA-Z]+/.test(name))
-			return new ModelDB({ path: path.resolve(location, `${name}.sqlite`), models, indexHistory })
+			return new ModelDB({ path: path.resolve(location.path, "db.sqlite"), models, indexHistory })
 		}
 	},
 
-	async openGossipLog<Payload, Result>(location: string | null, init: GossipLogInit<Payload, Result>) {
-		if (location === null) {
+	async openGossipLog<Payload, Result>(
+		location: { path: string | null; topic: string },
+		init: GossipLogInit<Payload, Result>
+	) {
+		if (location.path === null) {
 			return await MemoryGossipLog.open(init)
 		} else {
-			return await GossipLog.open(path.resolve(location, "topics", init.topic), init)
+			return await GossipLog.open(path.resolve(location.path, "topics", init.topic), init)
 		}
 	},
 

@@ -1,5 +1,4 @@
-import type { SignatureType } from "@canvas-js/signed-cid"
-
+import type { SignatureType } from "./signature.js"
 import type { IPLDValue } from "./values.js"
 
 export type SessionData = IPLDValue
@@ -19,7 +18,7 @@ export type Session<Data = SessionData> = {
 	/** chain-specific session payload, e.g. a SIWE message & signature */
 	data: Data
 
-	blockhash: string | null
 	timestamp: number
+	blockhash: string | null
 	duration: number | null
 }

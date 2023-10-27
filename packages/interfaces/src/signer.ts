@@ -1,10 +1,12 @@
-import type { MessageSigner } from "./message.js"
+import type { Signature } from "./signature.js"
+import type { Message } from "./message.js"
 import type { Session } from "./session.js"
 import type { Action } from "./action.js"
+import type { Awaitable } from "./utils.js"
 
-export type Env = Record<string, string>
-
-type Awaitable<T> = T | Promise<T>
+export interface MessageSigner<Payload = unknown> {
+	sign: (message: Message<Payload>) => Signature
+}
 
 export interface SessionSigner extends MessageSigner<Action | Session> {
 	match: (chain: string) => boolean
@@ -23,10 +25,4 @@ export interface SessionSigner extends MessageSigner<Action | Session> {
 	 * to take actions on behalf of the user `${session.chain}:${session.address}`
 	 */
 	verifySession: (session: Session) => Awaitable<void>
-}
-
-export interface SessionStore {
-	get: (key: string) => Awaitable<string | null>
-	set: (key: string, value: string) => Awaitable<void>
-	delete: (key: string) => Awaitable<void>
 }
