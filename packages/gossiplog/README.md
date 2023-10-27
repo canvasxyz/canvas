@@ -352,5 +352,7 @@ interface AbstractGossipLog<Payload = unknown, Result = unknown>
   public getClock(): Promise<[clock: number, parents: string[]]>
 
   public getAncestors(id: string, ancestorClock: number): Promise<string[]>
+
+  public async replay(): Promise<void>
 }
 ```
