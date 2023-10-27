@@ -43,7 +43,7 @@ The implications of 2) are that the access control logic - who can append what t
 Log contain _messages_. Messages carry abitrary application-defined payloads. GossipLog uses the [IPLD data model](https://ipld.io/docs/data-model/), a superset of JSON that includes raw bytes and [CIDs](https://github.com/multiformats/cid) as primitive types.
 
 ```ts
-export type Message<Payload = unknown> = {
+type Message<Payload = unknown> = {
   topic: string
   clock: number
   parents: string[]
@@ -62,8 +62,6 @@ We can derive a logical clock value for each message from its depth in the graph
 GossipLog requires every message to be signed with a [`@canvas-js/signed-cid`](https://github.com/canvasxyz/canvas/tree/main/packages/signed-cid) signature.
 
 ```ts
-// defined in @canvas-js/signed-cid
-
 type Signature = {
   type: "ed25519" | "secp256k1"
   publicKey: Uint8Array
@@ -153,15 +151,15 @@ The browser/IndexedDB, NodeJS/LMDB, and in-memory GossipLog implementations are 
 ```ts
 import { GossipLog } from "@canvas-js/gossiplog/browser"
 
-// opens an IndexedDB database
-const gossipLog = await GossipLog.open("my-database-name", { ...init })
+// opens an IndexedDB database named `canvas/${init.topic}`
+const gossipLog = await GossipLog.open({ ...init })
 ```
 
 ```ts
 import { GossipLog } from "@canvas-js/gossiplog/node"
 
-// opens an LMDB environment
-const gossipLog = await GossipLog.open("path/to/data/directory", { ...init })
+// opens an LMDB environment at path/to/data/directory
+const gossipLog = await GossipLog.open({ ...init }, "path/to/data/directory",)
 ```
 
 ```ts
@@ -178,12 +176,12 @@ interface GossipLogInit<Payload = unknown, Result = void> {
   apply: (id: string, signature: Signature, message: Message<Payload>) => Result | Promise<Result>
   validate: (payload: unknown) => payload is Payload
 
-  replay?: boolean
+  signer?: MessageSigner<Payload>
   indexAncestors?: boolean
 }
 ```
 
-The `topic` is the global topic string identifying the log - we recommend using NSIDs like `com.example.app.mylog`.
+The `topic` is the global topic string identifying the log - we recommend using NSIDs like `com.example.my-app`. Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 
 Logs are generic in two parameters, `Payload` and `Result`. You must provide a `validate` method as a TypeScript type predicate that synchronously validates an `unknown` value as a `Payload` (it is only guaranteed to be an IPLD data model value). Only use `validate` for type/schema validation, not for authentication or authorization.
 
