@@ -12,7 +12,7 @@ type Channel = { name: string }
 function App() {
 	const wallet = ethers.Wallet.createRandom()
 	const { app } = useCanvas({
-		contract: { ...ChannelChat, topic: "channel-chat-example" },
+		contract: { ...ChannelChat, topic: "canvas-example-chat-channel" },
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 
@@ -22,9 +22,16 @@ function App() {
 	const inputRef = useRef<HTMLInputElement>(null)
 	const channelInputRef = useRef<HTMLInputElement>(null)
 
-	const messages = useLiveQuery(app, "messages", { offset: page * 10, limit: 10, orderBy: { timestamp: "desc" }, where: { channel } })
+	const messages = useLiveQuery(app, "messages", {
+		offset: page * 10,
+		limit: 10,
+		orderBy: { timestamp: "desc" },
+		where: { channel },
+	})
 	const channels = useLiveQuery(app, "channels", {}) || []
-	const displayedChannels = [{ name: "home" } as Channel].concat(channels.filter((channel) => channel.name !== "home") as Channel[])
+	const displayedChannels = [{ name: "home" } as Channel].concat(
+		channels.filter((channel) => channel.name !== "home") as Channel[]
+	)
 
 	const send = (e: FormEvent) => {
 		e.preventDefault()
@@ -60,10 +67,13 @@ function App() {
 				<div>Channels:</div>
 				{displayedChannels.map((c) => (
 					<div>
-						<button key={c.name} onClick={() => {
-							setChannel(c.name)
-							setPage(0)
-						}}>
+						<button
+							key={c.name}
+							onClick={() => {
+								setChannel(c.name)
+								setPage(0)
+							}}
+						>
 							{channel === c.name && "> "}
 							{c.name}
 						</button>

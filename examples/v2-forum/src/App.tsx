@@ -51,10 +51,8 @@ function App() {
 	const wallet = new ethers.Wallet(privateKey)
 
 	const { app } = useCanvas({
-		contract: Forum,
+		contract: { ...Forum, topic: "canvas-example-forum" },
 		signers: [new SIWESigner({ signer: wallet })],
-		location: "-",
-		topic: "forum-example",
 	})
 
 	const [thread, setThread] = useHashParam("thread", "")
