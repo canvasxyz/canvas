@@ -7,6 +7,7 @@ title: "Advanced Features"
 ## Table of Contents
 
 - [Creating your own session signer](#creating-your-own-session-signer)
+- [Validating action arguments using IPLD Schemas](#validating-action-arguments-using-ipld-schemas)
 
 ## Creating your own session signer
 
@@ -74,3 +75,68 @@ type Session<Data = unknown> = {
 The ephemeral session key is a regular Ed25519 or Secp256k1 keypair generated and managed by the signer, defined in the `SessionSigner` interface.
 
 The session `Data` is unique to each Signer class, and includes the particular signature format, as well as any other metadata used to generate the signature (e.g. some signers require nonces, domain identifiers, or other information).
+
+## Validating action arguments using IPLD Schemas
+
+By default, Canvas apps will accept any IPLD value as the argument to an action, and it's up to each action handler to validate its `args` and throw an error if they're invalid.
+
+```ts
+const app = await Canvas.initialize({
+  contract: {
+    topic: "com.example.my-app",
+    models: { ... },
+    actions: {
+      createPost(db, args, { id, chain, address }) {
+        assert(typeof args === "object")
+        assert(typeof args.content === "string")
+        assert(typeof args.replyTo === "string" || args.replyTo === null)
+        await db.posts.set({ id, content: args.content, replyTo: args.replyTo, ... })
+      },
+    }
+  }
+})
+```
+
+Doing runtime validation by hand like this is tedious and error-prone. Instead, contracts can define action handlers in an expanded object format, and provide a reference `argsType` to a type inside an IPLD schema alongside the action's `apply` function.
+
+In this example, Canvas will verify that the `args` value satisfies the `CreatePostArgs` type before calling `actions.createPost.apply`.
+
+```ts
+const schema = `
+type CreatePostArgs struct {
+  content String
+  replyTo nullable String
+  tags    [String]
+}
+
+type DeletePostArgs struct {
+  postId String
+}
+`
+
+const app = await Canvas.initialize({
+  contract: {
+    topic: "com.example.my-app",
+    models: {
+      posts: { id: "primary", content: "string", user: "string", timestamp: "integer" },
+    },
+    actions: {
+      createPost: {
+        argsType: { schema, name: "CreatePostArgs" },
+        apply: (db, { content, replyTo, tags }, { id }) => {
+          // content: string
+          // replyTo: string | null
+          // tags: string[]
+          // ...
+        },
+      },
+      deletePost: {
+        argsType: { schema, name: "DeletePostArgs" },
+        apply: (db, { postId }, { id }) => {
+          // postId: string
+        },
+      },
+    },
+  },
+})
+```
