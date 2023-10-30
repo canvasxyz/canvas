@@ -86,7 +86,7 @@ const app = await Canvas.initialize({
     topic: "com.example.my-app",
     models: { ... },
     actions: {
-      createPost(db, args, { id, chain, address }) {
+      async createPost(db, args, { id, chain, address }) {
         assert(typeof args === "object")
         assert(typeof args.content === "string")
         assert(typeof args.replyTo === "string" || args.replyTo === null)
@@ -117,13 +117,11 @@ type DeletePostArgs struct {
 const app = await Canvas.initialize({
   contract: {
     topic: "com.example.my-app",
-    models: {
-      posts: { id: "primary", content: "string", user: "string", timestamp: "integer" },
-    },
+    models: { ... },
     actions: {
       createPost: {
         argsType: { schema, name: "CreatePostArgs" },
-        apply: (db, { content, replyTo, tags }, { id }) => {
+        apply: async (db, { content, replyTo, tags }, { id }) => {
           // content: string
           // replyTo: string | null
           // tags: string[]
@@ -132,7 +130,7 @@ const app = await Canvas.initialize({
       },
       deletePost: {
         argsType: { schema, name: "DeletePostArgs" },
-        apply: (db, { postId }, { id }) => {
+        apply: async (db, { postId }, { id }) => {
           // postId: string
         },
       },
