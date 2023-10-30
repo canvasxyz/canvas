@@ -97,7 +97,7 @@ const app = await Canvas.initialize({
 })
 ```
 
-Doing runtime validation by hand like this is tedious and error-prone. Instead, contracts can define action handlers in an expanded object format, and provide a reference `argsType` to a type inside an IPLD schema alongside the action's `apply` function.
+Doing runtime validation by hand like this is tedious and error-prone. Instead, contracts can define action handlers in an expanded object format, and provide a reference `argsType` to a type inside an [IPLD schema](https://ipld.io/docs/schemas/) alongside the action's `apply` function.
 
 In this example, Canvas will verify that the `args` value satisfies the `CreatePostArgs` type before calling `actions.createPost.apply`.
 
