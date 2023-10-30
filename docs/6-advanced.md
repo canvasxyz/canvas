@@ -15,7 +15,7 @@ A session signer can be created for any public-key authorization format, includi
 
 The session signer interface looks like this:
 
-```jsx
+```ts
 import type { Signature, Message, Action, Session } from "@canvas-js/interfaces"
 
 interface SessionSigner {
@@ -23,17 +23,14 @@ interface SessionSigner {
 
   sign: (message: Message<Action | Session>) => Signature
 
-	/**
-	 * Produce an authenticated Session, which authorizes `session.publicKey`
-	 * to represent the user `${session.chain}:${session.address}`.
-	 *
-	 * The signature is stored in `session.data`, and the entire Session
-	 * object is then signed using the session-key and appended to our log.
-	 */
-  getSession: (
-    topic: string,
-    options?: { chain?: string; timestamp?: number },
-  ) => Promise<Session>
+  /**
+   * Produce an authenticated Session, which authorizes `session.publicKey`
+   * to represent the user `${session.chain}:${session.address}`.
+   *
+   * The signature is stored in `session.data`, and the entire Session
+   * object is then signed using the session-key and appended to our log.
+   */
+  getSession: (topic: string, options?: { chain?: string; timestamp?: number }) => Promise<Session>
 
   /**
    * Verify that `session.data` authorizes `session.publicKey`
@@ -49,7 +46,7 @@ Families of chains are expressed as `match: (chain: string) => boolean` predicat
 
 Once the user has provided the chain-specific session authorization data, it’s wrapped in a `Session` object and added to the message log, alongside actions themselves.
 
-```jsx
+```ts
 type Session = {
   type: "session"
 
