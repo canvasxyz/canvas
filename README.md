@@ -31,7 +31,7 @@ npm install -g @canvas-js/cli
 - `canvas init <path>`: Initialize a sample application
 - `canvas info <path>`: Display application metadata
 - `canvas run <path>`: Run an application
-- `canvas export <path>`: Export the action action to stdout
+- `canvas export <path>`: Export the action log as JSON to stdout
 - `canvas import <path>`: Import an action log from stdin
 
 You can run each command with --help for more detailed documentation.
