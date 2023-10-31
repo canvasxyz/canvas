@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { PublicChat } from "@canvas-js/templates"
 import { SIWESigner } from "@canvas-js/chain-ethereum"

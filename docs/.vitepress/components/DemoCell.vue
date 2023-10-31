@@ -1,8 +1,11 @@
 <script>
   import { ref } from 'vue'
-  import { applyPureReactInVue } from 'veaury'
   import MessageSyncDemo from "./MessageSyncDemo.jsx"
   import ModelDBDemo from "./ModelDBDemo.jsx"
+
+  // import { applyPureReactInVue } from "veaury"
+  import * as pkg from "veaury"
+  const { applyPureReactInVue } = pkg.default
 
   export default {
     components: {
