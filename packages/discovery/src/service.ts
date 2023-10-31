@@ -209,7 +209,7 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 
 		const addrs = multiaddrs.flatMap((ma) => {
 			const addr = ma.toString()
-			if (addr.endsWith("/webrtc") || addr.endsWith("/ws")) {
+			if (addr.endsWith("/webrtc") || addr.endsWith("/ws") || addr.endsWith("/wss")) {
 				return [multiaddr(`${addr}/p2p/${peerId}`)]
 			} else {
 				return []
