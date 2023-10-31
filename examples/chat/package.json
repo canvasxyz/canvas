@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,10 +9,10 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.5.0",
-    "@canvas-js/core": "0.5.0",
-    "@canvas-js/interfaces": "0.5.0",
-    "@canvas-js/modeldb": "0.5.0",
+    "@canvas-js/chain-ethereum": "0.5.1",
+    "@canvas-js/core": "0.5.1",
+    "@canvas-js/interfaces": "0.5.1",
+    "@canvas-js/modeldb": "0.5.1",
     "@types/react": "^18.2.33",
     "@types/react-dom": "^18.2.14",
     "ethers": "^6.8.0",
