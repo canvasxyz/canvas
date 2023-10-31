@@ -1,0 +1,32 @@
+# fly.toml file generated for canvas-chat
+
+app = "canvas-chat"
+kill_signal = "SIGINT"
+kill_timeout = 30
+processes = []
+
+[env]
+  DEBUG = "canvas:*:error"
+
+[mounts]
+  destination = "/data"
+  source = "data"
+
+[[services]]
+  internal_port = 8080
+  processes = ["app"]
+  protocol = "tcp"
+
+  [services.concurrency]
+    hard_limit = 512
+    soft_limit = 256
+    type = "connections"
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+  
+[metrics]
+  port = 8000
+  path = "/metrics"
+
