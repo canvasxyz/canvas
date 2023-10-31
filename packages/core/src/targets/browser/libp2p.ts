@@ -87,9 +87,9 @@ export function getLibp2pOptions(
 		peerDiscovery: bootstrapList.length === 0 ? [] : [bootstrap({ list: bootstrapList })],
 
 		services: {
-			identifyService: identifyService({ protocolPrefix: "canvas" }),
+			identify: identifyService({ protocolPrefix: "canvas" }),
 
-			pingService: pingService({
+			ping: pingService({
 				protocolPrefix: "canvas",
 				maxInboundStreams: 32,
 				maxOutboundStreams: 32,

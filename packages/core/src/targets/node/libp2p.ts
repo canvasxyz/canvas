@@ -97,9 +97,9 @@ export function getLibp2pOptions(
 		metrics: prometheusMetrics({ registry: register }),
 
 		services: {
-			identifyService: identifyService({ protocolPrefix: "canvas" }),
+			identify: identifyService({ protocolPrefix: "canvas" }),
 
-			pingService: pingService({
+			ping: pingService({
 				protocolPrefix: "canvas",
 				maxInboundStreams: 32,
 				maxOutboundStreams: 32,
