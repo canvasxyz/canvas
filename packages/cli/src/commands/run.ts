@@ -24,13 +24,17 @@ export const desc = "Run a Canvas application"
 export const builder = (yargs: Argv) =>
 	yargs
 		.positional("path", {
-			describe: "Path to application directory or *.canvas.js contract",
+			desc: "Path to application directory or *.canvas.js contract",
 			type: "string",
 			demandOption: true,
 		})
+		.option("init", {
+			desc: "Path to a contract to copy if the application directory does not exist",
+			type: "string",
+		})
 		.option("port", {
+			desc: "HTTP API port",
 			type: "number",
-			desc: "Port to bind the Core API",
 			default: 8000,
 		})
 		.option("offline", {
@@ -92,7 +96,7 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { contract, location, uri } = getContractLocation(args)
+	const { contract, location } = getContractLocation(args)
 
 	if (location === null) {
 		console.log(chalk.yellow(`✦ ${chalk.bold("Running app in-memory only.")} No data will be persisted.`))

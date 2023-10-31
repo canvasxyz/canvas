@@ -48,7 +48,7 @@ A few things to note:
 - You can pass as many `--announce` addresses as you want, but only one `--listen` address.
 - You don't have to use TLS, but if you don't, browsers running embedded Canvas apps won't be able to talk to your peer.
 - If you'd prefer to announce on a public static IP instead of a DNS name, announce on `/ip4/{publicIP}/tcp/{port}/wss`.
-- If your DNS name only has `AAAA` records (???), use `/dns6` instead of `/dns4`.
+- If your DNS name has IPv6 `AAAA` records, you can use `/dns6` in addition to `/dns4`.
 - You can pass a `--listen` address without an `--announce` address to delegate to libp2p's autonat and identify services, which are works in progress. It's best to provide a public address if you have one.
 
 Almost always, `--listen` will be of the form `/ip4/0.0.0.0/tcp/${port}/ws`, and `--announce` will be of the form `/dns4/${hostname}/tcp/{port}/wss`.
@@ -59,33 +59,22 @@ Running a Canvas app with `canvas run` will serve an HTTP API at `http://127.0.0
 
 The basic routes are:
 
-- `GET /api/models/:model` - query model records
-- `GET /api/models/:model/:key` - get a model record by primary key
-- `GET /api/clock` - get the next logical clock value from the log
-- `GET /api/messages` - query ranges of log messages
-- `GET /api/messages/:id` - get a message from the log
-- `GET /api`
-
-- `POST /` - Apply an action or session. The request body must be the action or session as JSON.
-- `GET /` - Get application status and metadata. Returns an `ApplicationData` JSON object.
-- `GET /some/route/path?param1=value1&param2=value2` - Evaluate a route. Returns a JSON array of SQL results. If the route has path components (declared by the spec with Express-style `/.../:name/...` names), the values of these params are bound to the query as strings. Additional params can be given in the query string as JSON values.
-
-```ts
-type ApplicationData = {
-  peerId: string
-  models: Record<string, Model>
-  topics: Record<string, { actions: string[] | null }>
-}
-```
+- `GET  /api` - get application metadata
+- `GET  /api/models/:model` - get model records
+- `GET  /api/models/:model/:key` - get a model record by primary key
+- `GET  /api/clock` - get the next logical clock value from the log
+- `GET  /api/messages` - query ranges of log messages
+- `GET  /api/messages/:id` - get a message from the log
+- `POST /api/messages` - apply a signed message
+- `GET  /api/connections` - current libp2p connections
+- `GET  /api/peers` - current libp2p pubsub peers
+- `POST /api/ping/:peerId` - ping a peer via libp2p
 
 ### Exposing optional endpoints
 
 Some optional API endpoints are disabled by default, since they should't be exposed publicly.
 
-- `--metrics` - serve Prometheus metrics at `/metrics`.
-- `--p2p` - expose internal libp2p endpoints under the `/p2p/` prefix.
-  - `GET /p2p/connections` - returns a `{ peerId: string, address: string }[]` JSON array of the current peer connections.
-  - `POST /p2p/ping/:peerId` - attempt to ping a peer by PeerId, and respond with the latency in milliseconds if successful.
+- `--metrics` - serve Prometheus metrics at `/metrics`
 
 The metrics reported to Prometheus include default NodeJS metric, internal libp2p metrics, and some additional metrics specific to Canvas `Core`.
 
@@ -93,45 +82,21 @@ The metrics reported to Prometheus include default NodeJS metric, internal libp2
 
 A histogram of MST sync times.
 
-| label name | type     | description                       |
-| ---------- | -------- | --------------------------------- |
-| `uri`      | `string` | the source `ipfs://` URI          |
-| `status`   | `string` | either `"success"` or `"failure"` |
+| label name | type     |
+| ---------- | -------- |
+| `topic`    | `string` |
+| `duration` | `number` |
+| `peer`     | `string` |
 
 #### `canvas_messages`
 
 A counter of messages applied
 
-| label name | type     | description                      |
-| ---------- | -------- | -------------------------------- |
-| `type`     | `string` | either `"action"` or `"session"` |
-| `uri`      | `string` | the source `ipfs://` URI         |
-
-#### `canvas_gossipsub_subscribers`
-
-A gauge counting GossipSub topic subscribers.
-
-| label name | type     | description              |
-| ---------- | -------- | ------------------------ |
-| `uri`      | `string` | the source `ipfs://` URI |
-
-#### `canvas_sync_peers`
-
-A gauge counting the observed active DHT application peers.
-
-| label name | type     | description              |
-| ---------- | -------- | ------------------------ |
-| `uri`      | `string` | the source `ipfs://` URI |
-
-### Subscribing to events over a WebSocket connection
-
-The HTTP API also accepts WebSocket connections at the root path `/`. The WebSocket server will respond to messages with `message.data === "ping"` with `socket.send("pong")`. Otherwise, it is used to push application _events_ to clients in real-time. Events are all of the form `{ type: string, detail: { ... } }`.
-
-- `{ type: "update", detail: { uri: string; root: string | null } }` - emitted after apply a new batch of actions and committing the effects to the model database.
-- `{ type: "sync", detail: { uri: string; peer: string; time: number; status: "success" | "failure" } }` - emitted after intiating MST sync with another peer.
-- `{ type: "connect", detail: { peer: string } }` - emitted after opening a new libp2p connection to another peer. These are low-level transport-layer connections, not application-level logical streams. This means the peers aren't necessarily running the same application, since all Canvas peers connect on the same mesh and share a DHT.
-- `{ type: "disconnect", detail: { peer: string } }` - emitted after closing a libp2p connection.
+| label name | type     | description               |
+| ---------- | -------- | ------------------------- |
+| `topic`    | `string` |                           |
+| `type`     | `string` | `"action"` or `"session"` |
 
 ### Serving static content alonside the API
 
-`--static [directory]` can be used to serve a static directory alongside the application API. This is the easiest way to bundle a frontend that uses Canvas as a backend. If the `--static` flag is provided, all of the HTTP API routes move under the `/api/` prefix, and the root path `/` serves the files in `[directory]`.
+`--static [directory]` can be used to serve a static directory alongside the application API. This is the easiest way to bundle a frontend that uses Canvas as a backend. If the `--static` flag is provided, the root path `/` serves the files in `[directory]`.
