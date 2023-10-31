@@ -175,8 +175,6 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 	})
 
 	if (options.exposeP2P) {
-		console.warn(chalk.yellow("[canvas] Exposing internal p2p API. This can be abused if made publicly accessible."))
-
 		api.get("/connections", (req, res) => {
 			if (app.libp2p === null) {
 				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
