@@ -52,6 +52,7 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 
 	private static extractFetchService(components: DiscoveryServiceComponents): FetchService {
 		assert(components.fetch !== undefined)
+		assert(components.fetch.protocol.startsWith("/canvas/fetch/"))
 		return components.fetch
 	}
 
