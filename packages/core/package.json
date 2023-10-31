@@ -8,15 +8,15 @@
   },
   "files": [
     "lib",
-    "rpc",
-    "sqlite",
     "types"
   ],
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "exports": {
     ".": "./lib/index.js",
-    "./api": "./lib/api.js"
+    "./api": "./lib/api.js",
+    "./bootstrap": "./lib/bootstrap.js",
+    "./constants": "./lib/constants.js"
   },
   "imports": {
     "#target": {
@@ -25,7 +25,6 @@
       "default": "./lib/targets/index.js"
     }
   },
-  "sideEffects": false,
   "scripts": {
     "test": "ava"
   },
