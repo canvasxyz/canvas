@@ -7,8 +7,6 @@
     "target": "es2020",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true,
-    "removeComments": true,
-    "baseUrl": "."
+    "skipLibCheck": true
   },
 }
