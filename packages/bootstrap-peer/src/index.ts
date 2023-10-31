@@ -30,7 +30,7 @@ server.listen(port, "::", () => {
 	const host = `http://localhost:${port}`
 	console.log(`[bootstrap-peer] API server listening on ${host}`)
 	console.log(`GET  ${host}/connections`)
-	console.log(`GET  ${host}/peers/:topic`)
+	console.log(`GET  ${host}/subscribers/:topic`)
 	console.log(`POST ${host}/ping/:peerId`)
 })
 

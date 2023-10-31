@@ -3,13 +3,13 @@ import http from "node:http"
 import express from "express"
 import { StatusCodes } from "http-status-codes"
 import { AbortError } from "abortable-iterator"
+import { anySignal } from "any-signal"
+
+import client from "prom-client"
 
 import type { Libp2p } from "libp2p"
 import type { PeerId } from "@libp2p/interface/peer-id"
 import { peerIdFromString } from "@libp2p/peer-id"
-import { anySignal } from "any-signal"
-
-import client from "prom-client"
 
 import { PING_TIMEOUT } from "./constants.js"
 import { ServiceMap } from "./libp2p.js"
@@ -47,7 +47,7 @@ export function getAPI(libp2p: Libp2p<ServiceMap>) {
 		return res.status(StatusCodes.OK).json(result)
 	})
 
-	api.get("/peers/:topic", async (req, res) => {
+	api.get("/subscribers/:topic", async (req, res) => {
 		const subscribers = libp2p.services.pubsub.getSubscribers(req.params.topic)
 		return res.json(subscribers.map((peer) => peer.toString()))
 	})
