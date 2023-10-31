@@ -62,11 +62,6 @@ export const builder = (yargs: Argv) =>
 			desc: "Expose Prometheus endpoint at /metrics",
 			default: false,
 		})
-		.option("p2p", {
-			type: "boolean",
-			desc: "Expose internal libp2p debugging endpoints",
-			default: false,
-		})
 		.option("static", {
 			type: "string",
 			desc: "Serve a static directory from the root path /",
@@ -182,7 +177,7 @@ export async function handler(args: Args) {
 	api.use(cors())
 	api.use(
 		"/api",
-		createAPI(app, { exposeMetrics: args.metrics, exposeP2P: args.p2p, exposeModels: true, exposeMessages: true })
+		createAPI(app, { exposeMetrics: args.metrics, exposeP2P: true, exposeModels: true, exposeMessages: true })
 	)
 
 	if (args.static !== undefined) {
@@ -213,11 +208,9 @@ export async function handler(args: Args) {
 				console.log(`└ GET  ${origin}/api/models/${name}/:key`)
 			}
 
-			if (args.p2p) {
-				console.log(`└ GET  ${origin}/api/connections`)
-				console.log(`└ GET  ${origin}/api/peers`)
-				console.log(`└ POST ${origin}/api/ping/:peerId`)
-			}
+			console.log(`└ GET  ${origin}/api/connections`)
+			console.log(`└ GET  ${origin}/api/peers`)
+			console.log(`└ POST ${origin}/api/ping/:peerId`)
 		}),
 		0
 	)
