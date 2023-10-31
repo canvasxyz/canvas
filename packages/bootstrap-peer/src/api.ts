@@ -20,6 +20,7 @@ export function getAPI(libp2p: Libp2p<ServiceMap>) {
 	api.use(express.json())
 
 	api.get("/", async (req, res) => res.json({}))
+
 	api.get("/metrics", async (req, res) => {
 		try {
 			const result = await client.register.metrics()
@@ -50,8 +51,6 @@ export function getAPI(libp2p: Libp2p<ServiceMap>) {
 		const subscribers = libp2p.services.pubsub.getSubscribers(req.params.topic)
 		return res.json(subscribers.map((peer) => peer.toString()))
 	})
-
-	// api.get("")
 
 	api.post("/ping/:peerId", async (req, res) => {
 		const requestController = new AbortController()
