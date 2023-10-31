@@ -217,8 +217,7 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 
 				for (let n = 0; n < SYNC_RETRY_LIMIT; n++) {
 					try {
-						await this.sync(peerId)
-						return
+						return await this.sync(peerId)
 					} catch (err) {
 						this.log.error("failed to sync with peer: %O", err)
 
@@ -249,8 +248,7 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 
 		const stream = await this.dial(peerId)
 		if (stream === null) {
-			this.log("failed to dial %p", peerId)
-			return
+			throw new Error("failed to open stream")
 		}
 
 		const client = new Client(stream)
