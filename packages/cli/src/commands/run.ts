@@ -11,8 +11,10 @@ import cors from "cors"
 
 import { multiaddr } from "@multiformats/multiaddr"
 
-import { Canvas, defaultBootstrapList, testnetBootstrapList } from "@canvas-js/core"
+import { Canvas } from "@canvas-js/core"
 import { createAPI } from "@canvas-js/core/api"
+import { MIN_CONNECTIONS, MAX_CONNECTIONS } from "@canvas-js/core/constants"
+import { defaultBootstrapList, testnetBootstrapList } from "@canvas-js/core/bootstrap"
 
 import { getContractLocation } from "../utils.js"
 
@@ -38,16 +40,16 @@ export const builder = (yargs: Argv) =>
 		})
 		.option("listen", {
 			type: "array",
-			desc: "Internal libp2p /ws multiaddr",
+			desc: "Internal /ws multiaddr",
 			default: ["/ip4/0.0.0.0/tcp/4444/ws"],
 		})
 		.option("announce", {
 			type: "array",
-			desc: "External libp2p /ws multiaddr, e.g. /dns4/myapp.com/tcp/4444/ws",
+			desc: "External /ws multiaddr, e.g. /dns4/myapp.com/tcp/4444/ws",
 		})
 		.option("replay", {
 			type: "boolean",
-			desc: "Rebuild the model database by replying the entire message log",
+			desc: "Erase and rebuild the database by replaying the action log",
 			default: false,
 		})
 		.option("memory", {
@@ -73,17 +75,23 @@ export const builder = (yargs: Argv) =>
 			type: "boolean",
 			desc: "Bootstrap to the private testnet (requires VPN)",
 		})
+		.option("bootstrap", {
+			type: "array",
+			desc: "Use custom bootstrap servers",
+		})
 		.option("min-connections", {
 			type: "number",
 			desc: "Auto-dial peers while below a threshold",
+			default: MIN_CONNECTIONS,
 		})
 		.option("max-connections", {
 			type: "number",
 			desc: "Stop accepting connections above a limit",
+			default: MAX_CONNECTIONS,
 		})
 		.option("verbose", {
 			type: "boolean",
-			desc: "Log every message to stdout",
+			desc: "Log messages to stdout",
 		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
