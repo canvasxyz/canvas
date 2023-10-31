@@ -101,7 +101,25 @@ export abstract class AbstractRuntime {
 		return async function (this: ReadOnlyTransaction, id, signature, message) {
 			assert(signature !== null, "missing message signature")
 
-			if (AbstractRuntime.isAction(message)) {
+			if (AbstractRuntime.isSession(message)) {
+				const { publicKeyType, publicKey, chain, address, timestamp, duration } = message.payload
+
+				const signer = runtime.signers.find((signer) => signer.match(chain))
+				assert(signer !== undefined, "no signer found")
+
+				assert(publicKeyType === signature.type && equals(publicKey, signature.publicKey))
+
+				await signer.verifySession(message.payload)
+
+				await runtime.db.set("$sessions", {
+					message_id: id,
+					public_key_type: signature.type,
+					public_key: signature.publicKey,
+					chain: chain,
+					address: address,
+					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
+				})
+			} else if (AbstractRuntime.isAction(message)) {
 				const { chain, address, timestamp } = message.payload
 
 				const sessions = await runtime.db.query("$sessions", {
@@ -184,23 +202,6 @@ export abstract class AbstractRuntime {
 				}
 
 				return result
-			} else if (AbstractRuntime.isSession(message)) {
-				const { publicKeyType, publicKey, chain, address, timestamp, duration } = message.payload
-
-				const signer = runtime.signers.find((signer) => signer.match(chain))
-				assert(signer !== undefined, "no signer found")
-
-				assert(publicKeyType === signature.type && equals(publicKey, signature.publicKey))
-				await signer.verifySession(message.payload)
-
-				await runtime.db.set("$sessions", {
-					message_id: id,
-					public_key_type: signature.type,
-					public_key: signature.publicKey,
-					chain: chain,
-					address: address,
-					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
-				})
 			} else {
 				throw new Error("invalid message payload type")
 			}
