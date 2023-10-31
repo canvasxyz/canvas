@@ -32,6 +32,7 @@ import {
 	SYNC_RETRY_LIMIT,
 } from "../constants.js"
 import { CacheMap, shuffle, sortPair, wait } from "../utils.js"
+import { Node } from "@canvas-js/okra"
 
 export interface SyncOptions {
 	minConnections?: number
@@ -217,7 +218,12 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 
 				for (let n = 0; n < SYNC_RETRY_LIMIT; n++) {
 					try {
-						return await this.sync(peerId)
+						const stream = await this.dial(peerId)
+						if (stream === null) {
+							throw new Error("failed to open stream")
+						}
+
+						return await this.sync(peerId, stream)
 					} catch (err) {
 						this.log.error("failed to sync with peer: %O", err)
 
@@ -239,21 +245,11 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 			.finally(() => this.syncQueuePeers.delete(id))
 	}
 
-	private async wait(interval: number) {
-		await wait(interval, { signal: this.#controller.signal })
-	}
-
-	private async sync(peerId: PeerId) {
-		this.log("initiating sync with peer %p", peerId)
-
-		const stream = await this.dial(peerId)
-		if (stream === null) {
-			throw new Error("failed to open stream")
-		}
-
+	private async sync(peerId: PeerId, stream: Stream): Promise<void> {
 		const client = new Client(stream)
-
 		try {
+			this.log("initiating sync with peer %p", peerId)
+
 			const { root } = await this.messages.sync(client, { sourceId: peerId.toString() })
 			this.log("finished sync, got root hash %s", hex(root.hash))
 		} finally {
@@ -290,5 +286,9 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 		}
 
 		return null
+	}
+
+	private async wait(interval: number) {
+		await wait(interval, { signal: this.#controller.signal })
 	}
 }
