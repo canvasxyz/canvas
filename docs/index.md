@@ -18,9 +18,29 @@ layout: home
   <DemoToggleOption option="ModelDB" />
 </DemoToggle>
 
+<DemoCell option="MessageSync"/>
+
 ```tsx:MessageSync preview
 // Write by creating actions
-const { app } = Canvas.initialize({
+const { app } = useCanvas({
+	contract: { ...PublicChat, topic: "canvas-example-public-chat" },
+	signers: [new SIWESigner({ signer: wallet })],
+})
+
+app.actions.sendMessage({ message })
+
+// Read with live reactive queries
+const messages = useLiveQuery<Message>(app, "messages", {
+	limit: 5,
+	orderBy: { timestamp: "desc" },
+})
+
+return <div>{messages.map((message) => <div>{message.title}</div>)}</div>
+```
+
+```tsx:ModelDB preview
+// Write by creating actions
+const { app } = useCanvas({
 	contract: { ...Forum, topic: "canvas-example-forum" },
 	signers: [new SIWESigner({ signer: wallet })],
 })
@@ -29,12 +49,11 @@ app.actions.createThread({ title, message })
 
 // Read with live reactive queries
 const threads = useLiveQuery<Thread>(app, "threads", {
-	offset: page * 10,
-	limit: 10,
+	limit: 5,
 	orderBy: { timestamp: "desc" },
 })
 
-return <div>{threads.map((thread) => <div>thread.title</div>)}</div>
+return <div>{threads.map((thread) => <div>{thread.title}</div>)}</div>
 ```
 
 <TextRow title="About Canvas" details="Canvas is a new TypeScript runtime for decentralized applications, that's easy to learn and resembles traditional developer frameworks.">
