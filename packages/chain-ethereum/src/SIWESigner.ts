@@ -36,7 +36,6 @@ export class SIWESigner implements SessionSigner {
 	#store: SessionStore | null
 	#privateKeys: Record<string, Uint8Array> = {}
 	#sessions: Record<string, Session<SIWESessionData>> = {}
-	// #chains: Record<string, { privateKey: Uint8Array; session: Session<SIWESessionData> }> = {}
 
 	public constructor(init: SIWESignerInit = {}) {
 		this.#signer = init.signer ?? Wallet.createRandom()
