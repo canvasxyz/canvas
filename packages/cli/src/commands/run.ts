@@ -168,8 +168,12 @@ export async function handler(args: Args) {
 		}
 	})
 
-	app.messageLog.addEventListener("sync", ({ detail: { peer } }) => {
-		console.log(chalk.magenta(`[canvas] Completed merkle sync with peer ${peer}`))
+	app.messageLog.addEventListener("sync", ({ detail: { peer, duration, messageCount } }) => {
+		console.log(
+			chalk.magenta(
+				`[canvas] Completed merkle sync with peer ${peer}: applied ${messageCount} messages in ${duration}ms`
+			)
+		)
 	})
 
 	await app.start()
@@ -196,7 +200,12 @@ export async function handler(args: Args) {
 			}
 
 			console.log(`Serving HTTP API:`)
-			console.log(`└ GET  ${origin}/api`)
+			console.log(`└ GET  ${origin}/api/`)
+
+			console.log(`└ GET  ${origin}/api/clock`)
+			console.log(`└ GET  ${origin}/api/messages`)
+			console.log(`└ GET  ${origin}/api/messages/:id`)
+			console.log(`└ POST ${origin}/api/messages`)
 
 			const { models } = app.getApplicationData()
 			for (const name of Object.keys(models)) {
@@ -204,10 +213,11 @@ export async function handler(args: Args) {
 				console.log(`└ GET  ${origin}/api/models/${name}/:key`)
 			}
 
-			console.log(`└ GET  ${origin}/api/clock`)
-			console.log(`└ GET  ${origin}/api/messages`)
-			console.log(`└ GET  ${origin}/api/messages/:id`)
-			console.log(`└ POST ${origin}/api/messages`)
+			if (args.p2p) {
+				console.log(`└ GET  ${origin}/api/connections`)
+				console.log(`└ GET  ${origin}/api/peers`)
+				console.log(`└ POST ${origin}/api/ping/:peerId`)
+			}
 		}),
 		0
 	)
