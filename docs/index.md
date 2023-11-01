@@ -2,7 +2,7 @@
 layout: home
 ---
 
-<HeroRow text="Decentralized applications at the speed of light" image="/graphic_mainframe_4.png" tagline="Canvas is a framework for realtime, peer-to-peer decentralized applications." v-bind:bullets="['Fast-sync using signed messages, libp2p, and CRDT+ consensus', 'Embeds a relational database and compute engine in the client', 'Supports any chain or authentication format']">
+<HeroRow text="Fast and fluid decentralized applications" image="/graphic_mainframe_4.png" tagline="Canvas is a framework for realtime, peer-to-peer decentralized applications." v-bind:bullets="['Near-instant sync, with unlimited throughput and no blockchain required', 'Embeds a relational database and compute engine in the client', 'Supports any chain or authentication format']">
   <HeroAction theme="brand big" text="Try the tutorial" href="/1-introduction" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>

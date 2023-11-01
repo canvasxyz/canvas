@@ -19,6 +19,7 @@ defineProps<{
 .TextRow {
   position: relative;
   padding: 30px 24px;
+  line-height: 1.5;
 }
 
 .TextRow h1 {
