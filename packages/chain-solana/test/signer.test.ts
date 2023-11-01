@@ -1,13 +1,54 @@
 import test from "ava"
+import assert from "assert"
 
-import { SolanaSigner } from "@canvas-js/chain-solana"
-import { createMessage } from "./utils.js"
+import { verifySignature } from "@canvas-js/signed-cid"
 
-test("create and verify action", async (t) => {
+import { SolanaSigner, validateSessionData } from "@canvas-js/chain-solana"
+import { Action } from "@canvas-js/interfaces"
+
+test("create and verify session", async (t) => {
 	const topic = "example:signer"
-	const signer = await SolanaSigner.initWithKeypair()
-	const message = await createMessage(signer, topic, "foo", { bar: 7 })
-	const signature = await signer.sign(message)
-	const { chain, address, session } = message.payload
-	await t.notThrowsAsync(async () => signer.verifySession(signature, chain, address, session))
+	const signer = new SolanaSigner()
+	const session = await signer.getSession(topic)
+	t.notThrows(() => signer.verifySession(session))
+
+	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
+	const sessionSignature = await signer.sign(sessionMessage)
+	t.notThrows(() => verifySignature(sessionSignature, sessionMessage))
+})
+
+test("create and verify session and action", async (t) => {
+	const topic = "example:signer"
+	const signer = new SolanaSigner()
+	const session = await signer.getSession(topic)
+	t.notThrows(() => signer.verifySession(session))
+
+	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
+	const sessionSignature = await signer.sign(sessionMessage)
+	t.notThrows(() => verifySignature(sessionSignature, sessionMessage))
+
+	const action: Action = {
+		type: "action",
+		chain: session.chain,
+		address: session.address,
+		name: "foo",
+		args: { bar: 7 },
+		blockhash: null,
+		timestamp: session.timestamp,
+	}
+
+	const actionMessage = { topic, clock: 1, parents: [], payload: action }
+	const actionSignature = await signer.sign(actionMessage)
+	t.notThrows(() => verifySignature(actionSignature, actionMessage))
+})
+
+test("reject corrupt session signature", async (t) => {
+	const topic = "example:signer"
+	const signer = new SolanaSigner()
+	const session = await signer.getSession(topic, {})
+	// corrupt the session signature
+	session.data.signature[0] = 1
+	assert(validateSessionData(session.data))
+	session.data.signature[3] = 1
+	await t.throwsAsync(async () => signer.verifySession(session))
 })
