@@ -5,7 +5,8 @@
 
   // import { applyPureReactInVue } from "veaury"
   import * as pkg from "veaury"
-  const { applyPureReactInVue } = pkg.default
+  const isBrowser = new Function("try {return this===window;}catch(e){ return false;}")
+  const { applyPureReactInVue } = isBrowser() ? pkg : pkg.default
 
   export default {
     components: {
