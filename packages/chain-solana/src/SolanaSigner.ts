@@ -1,7 +1,6 @@
 import solw3 from "@solana/web3.js"
 import { base58btc } from "multiformats/bases/base58"
 import { encode } from "microcbor"
-import nacl from "tweetnacl"
 import * as json from "@ipld/dag-json"
 import { logger } from "@libp2p/logger"
 
@@ -71,7 +70,7 @@ export class SolanaSigner implements SessionSigner {
 			const keypair = solw3.Keypair.generate()
 			this.#signer = {
 				address: base58btc.baseEncode(keypair.publicKey.toBytes()),
-				sign: async (msg) => nacl.sign.detached(msg, keypair.secretKey),
+				sign: async (msg) => ed25519.sign(msg, keypair.secretKey),
 			}
 		}
 
@@ -97,7 +96,7 @@ export class SolanaSigner implements SessionSigner {
 			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
 		}
 
-		const valid = nacl.sign.detached.verify(encode(message), data.signature, base58btc.baseDecode(address))
+		const valid = ed25519.verify(encode(message), data.signature, publicKey)
 		assert(valid, "invalid signature")
 	}
 
