@@ -119,7 +119,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 .text {
   max-width: 392px;
   letter-spacing: -0.4px;
-  line-height: 40px;
+  line-height: 1.25;
   font-size: 32px;
   font-weight: 700;
   white-space: pre-wrap;
@@ -144,9 +144,9 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 @media (min-width: 640px) {
   .name,
   .text {
-    max-width: 560px;
-    line-height: 56px;
-    font-size: 48px;
+    max-width: 660px;
+    line-height: 1.15;
+    font-size: 44px;
   }
 }
 
@@ -164,7 +164,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 }
 
 .tagline {
-  padding-top: 16px;
+  padding-top: 20px;
   max-width: 392px;
   line-height: 1.4;
   font-size: 18px;
@@ -174,10 +174,10 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 }
 
 .bullets {
-  padding-top: 16px;
+  padding-top: 20px;
   max-width: 450px;
   line-height: 1.52;
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 500;
   white-space: pre-wrap;
   color: var(--vp-c-text-2);
@@ -191,18 +191,25 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 }
 .bullets ul li {
   padding-left: 6px;
-  margin-bottom: 4px;
+}
+@media (min-width: 640px) {
+  .bullets {
+    font-size: 19px;
+  }
 }
 @media (min-width: 960px) {
   .bullets {
     margin: 0;
+    font-size: 19px;
+  }
+  .bullets ul li {
+    margin-bottom: 4px;
   }
 }
 
 .HeroRow.has-image .tagline {
   margin: 0 auto;
 }
-
 @media (min-width: 640px) {
   .tagline {
     padding-top: 22px;
@@ -227,7 +234,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   display: flex;
   flex-wrap: wrap;
   margin: -6px;
-  padding-top: 28px;
+  padding-top: 36px;
 }
 
 .HeroRow.has-image .actions {

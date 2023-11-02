@@ -5,6 +5,16 @@
   --vp-font-family-mono: "PT Mono", ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
+.vp-doc p {
+  line-height: inherit;
+}
+.VPContent a {
+  color: var(--vp-c-brand-1);
+}
+.VPContent a:hover {
+  text-decoration: underline;
+}
+
 .VPContent.is-home .named-fence-block {
   position: relative;
   display: block;
@@ -18,7 +28,7 @@
   line-height: 1.5;
   overflow-x: scroll;
 }
-@media (max-width: 640px) {
+@media (max-width: 720px) {
   .VPContent.is-home .named-fence-block {
     max-width: calc(100vw - 40px) !important;
   }
