@@ -14,6 +14,9 @@
   },
   "dependencies": {
     "@canvas-js/interfaces": "0.5.0",
+    "@ipld/dag-cbor": "^9.0.6",
+    "@ipld/dag-json": "^10.1.5",
+    "@libp2p/logger": "^3.0.4",
     "@noble/curves": "^1.2.0",
     "@solana/web3.js": "^1.87.3",
     "multiformats": "^12.1.3",

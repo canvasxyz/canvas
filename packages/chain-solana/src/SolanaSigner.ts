@@ -1,8 +1,9 @@
 import solw3 from "@solana/web3.js"
 import { base58btc } from "multiformats/bases/base58"
-import { encode } from "microcbor"
 import * as json from "@ipld/dag-json"
+import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
+import { ed25519 } from "@noble/curves/ed25519"
 
 import type {
 	Signature,
@@ -14,8 +15,6 @@ import type {
 	SignatureType,
 } from "@canvas-js/interfaces"
 import { createSignature } from "@canvas-js/signed-cid"
-
-import { ed25519 } from "@noble/curves/ed25519"
 
 import {
 	assert,
@@ -47,13 +46,11 @@ type GenericSigner = {
 	sign: (msg: Uint8Array) => Promise<Uint8Array>
 }
 
-const SIGNATURE_TYPE: SignatureType = "ed25519"
-
 export class SolanaSigner implements SessionSigner {
 	public readonly sessionDuration: number | null
-	// TODO: give the logger a name
-	private readonly log = logger("canvas:chain-CHAIN NAME")
+	private readonly log = logger("canvas:chain-solana")
 
+	publicKeyType: SignatureType = "ed25519"
 	#signer: GenericSigner
 	#store: SessionStore | null
 	#privateKeys: Record<string, Uint8Array> = {}
@@ -82,7 +79,7 @@ export class SolanaSigner implements SessionSigner {
 
 	public verifySession(session: Session) {
 		const { publicKeyType, publicKey, chain, address, data, timestamp, duration } = session
-		assert(publicKeyType === SIGNATURE_TYPE, `Solana sessions must use ${SIGNATURE_TYPE} keys`)
+		assert(publicKeyType === this.publicKeyType, `Solana sessions must use ${this.publicKeyType} keys`)
 
 		assert(validateSessionData(data), "invalid session")
 
@@ -96,7 +93,7 @@ export class SolanaSigner implements SessionSigner {
 			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
 		}
 
-		const valid = ed25519.verify(encode(message), data.signature, publicKey)
+		const valid = ed25519.verify(cbor.encode(message), data.signature, publicKey)
 		assert(valid, "invalid signature")
 	}
 
@@ -104,7 +101,8 @@ export class SolanaSigner implements SessionSigner {
 		topic: string,
 		options: { chain?: string; timestamp?: number } = {}
 	): Promise<Session<SolanaSessionData>> {
-		const chain = options.chain ?? "solana:mainnet"
+		// 5ey... is the solana mainnet genesis hash
+		const chain = options.chain ?? "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
 		assert(chainPattern.test(chain), "internal error - invalid chain")
 
 		const address = this.#signer.address
@@ -134,7 +132,6 @@ export class SolanaSigner implements SessionSigner {
 		if (this.#store !== null) {
 			const privateSessionData = await this.#store.get(key)
 			if (privateSessionData !== null) {
-				// TODO: parse the private session data
 				const { privateKey, session } = json.parse<{ privateKey: Uint8Array; session: Session<SolanaSessionData> }>(
 					privateSessionData
 				)
@@ -182,13 +179,13 @@ export class SolanaSigner implements SessionSigner {
 			message.expirationTime = expirationTime.toISOString()
 		}
 
-		const signature = await this.#signer.sign(encode(message))
+		const signature = await this.#signer.sign(cbor.encode(message))
 
 		const session: Session<SolanaSessionData> = {
 			type: "session",
 			chain: chain,
 			address: address,
-			publicKeyType: SIGNATURE_TYPE,
+			publicKeyType: this.publicKeyType,
 			publicKey,
 			data: { signature },
 			blockhash: null,
@@ -220,8 +217,12 @@ export class SolanaSigner implements SessionSigner {
 			assert(timestamp >= session.timestamp)
 			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
 
-			// TODO: the signature type should correspond to the one we are validating
-			return createSignature(SIGNATURE_TYPE, privateKey, { topic, clock, parents, payload } satisfies Message<Action>)
+			return createSignature(this.publicKeyType, privateKey, {
+				topic,
+				clock,
+				parents,
+				payload,
+			} satisfies Message<Action>)
 		} else if (payload.type === "session") {
 			const { chain, address } = payload
 			const key = getKey(topic, chain, address)
@@ -232,8 +233,12 @@ export class SolanaSigner implements SessionSigner {
 			// only sign our own current sessions
 			assert(payload === session)
 
-			// TODO: the signature type should correspond to the one we are validating
-			return createSignature(SIGNATURE_TYPE, privateKey, { topic, clock, parents, payload } satisfies Message<Session>)
+			return createSignature(this.publicKeyType, privateKey, {
+				topic,
+				clock,
+				parents,
+				payload,
+			} satisfies Message<Session>)
 		} else {
 			signalInvalidType(payload)
 		}
