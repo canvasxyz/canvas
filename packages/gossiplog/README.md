@@ -53,8 +53,6 @@ type Message<Payload = unknown> = {
 
 Similar to Git commits, every message has zero or more parent messages, giving the log a graph structure.
 
-![Component 1.png](Component%201.png)
-
 We can derive a logical clock value for each message from its depth in the graph, or, equivalently, by incrementing the maximum clock value of its direct parents. When a peer appends a new payload value to its local replica, it creates a message with all of its current "heads" (messages without children) as parents, and incrementing the clock.
 
 ### Message signatures

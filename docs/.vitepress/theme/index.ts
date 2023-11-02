@@ -5,7 +5,7 @@ import DefaultTheme from "vitepress/theme"
 import HeroRow from "../components/HeroRow.vue"
 import HeroAction from "../components/HeroAction.vue"
 import DemoToggle from "../components/DemoToggle.vue"
-import DemoToggleOption from "../components/DemoToggleOption.vue"
+import DemoCell from "../components/DemoCell.vue"
 import FeatureCard from "../components/FeatureCard.vue"
 import FeatureRow from "../components/FeatureRow.vue"
 import TextItem from "../components/TextItem.vue"
@@ -24,7 +24,7 @@ export default {
 		app.component("HeroRow", HeroRow)
 		app.component("HeroAction", HeroAction)
 		app.component("DemoToggle", DemoToggle)
-		app.component("DemoToggleOption", DemoToggleOption)
+		app.component("DemoCell", DemoCell)
 		app.component("FeatureCard", FeatureCard)
 		app.component("FeatureRow", FeatureRow)
 		app.component("TextItem", TextItem)

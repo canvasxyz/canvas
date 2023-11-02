@@ -16,7 +16,17 @@ import { Ed25519Signer } from "./Ed25519Signer.js"
 import { Mempool } from "./Mempool.js"
 import { Driver } from "./sync/driver.js"
 import { decodeClock } from "./clock.js"
-import { decodeId, encodeId, decodeSignedMessage, encodeSignedMessage, getNextClock, KEY_LENGTH } from "./schema.js"
+import {
+	decodeId,
+	encodeId,
+	decodeSignedMessage,
+	encodeSignedMessage,
+	getNextClock,
+	KEY_LENGTH,
+	messageIdPattern,
+	MIN_MESSAGE_ID,
+	MAX_MESSAGE_ID,
+} from "./schema.js"
 import { assert, topicPattern, cborNull, getAncestorClocks } from "./utils.js"
 
 export interface ReadOnlyTransaction {
@@ -47,22 +57,14 @@ export interface GossipLogInit<Payload = unknown, Result = void> {
 }
 
 export type GossipLogEvents<Payload = unknown, Result = void> = {
-	message: CustomEvent<{
-		id: string
-		signature: Signature
-		message: Message<Payload>
-		result: Result
-	}>
+	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload>; result: Result }>
 	commit: CustomEvent<{ root: Node }>
-	sync: CustomEvent<{ peer: string | null }>
+	sync: CustomEvent<{ peer?: string; duration: number; messageCount: number }>
 }
 
 export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> extends EventEmitter<
 	GossipLogEvents<Payload, Result>
 > {
-	private static bound = (id: string | null = null, inclusive = true) =>
-		id === null ? null : { key: encodeId(id), inclusive }
-
 	public abstract close(): Promise<void>
 
 	protected abstract entries(
@@ -131,9 +133,14 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {}
 	): AsyncIterable<[id: string, signature: Signature, message: Message<Payload>]> {
+		const { id: lowerId, inclusive: lowerInclusive } = lowerBound ?? { id: MIN_MESSAGE_ID, inclusive: true }
+		const { id: upperId, inclusive: upperInclusive } = upperBound ?? { id: MAX_MESSAGE_ID, inclusive: true }
+		assert(messageIdPattern.test(lowerId), "lowerBound.id: invalid message ID")
+		assert(messageIdPattern.test(upperId), "upperBound.id: invalid message ID")
+
 		for await (const [key, value] of this.entries(
-			AbstractGossipLog.bound(lowerBound?.id, lowerBound?.inclusive),
-			AbstractGossipLog.bound(upperBound?.id, upperBound?.inclusive),
+			{ key: encodeId(lowerId), inclusive: lowerInclusive },
+			{ key: encodeId(upperId), inclusive: upperInclusive },
 			options
 		)) {
 			const [id, signature, message] = this.decode(value)
@@ -160,10 +167,12 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	}
 
 	public async has(id: string): Promise<boolean> {
+		assert(messageIdPattern.test(id), "invalid message ID")
 		return await this.read(({ messages }) => messages.get(encodeId(id)) !== null)
 	}
 
 	public async get(id: string): Promise<[signature: Signature, message: Message<Payload>] | [null, null]> {
+		assert(messageIdPattern.test(id), "invalid message ID")
 		const value = await this.read(({ messages }) => messages.get(encodeId(id)))
 		if (value === null) {
 			return [null, null]
@@ -262,6 +271,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	}
 
 	public async getAncestors(id: string, atOrBefore: number): Promise<string[]> {
+		assert(messageIdPattern.test(id), "invalid message ID")
+
 		const results = new Set<string>()
 		await this.read((txn) => this.#getAncestors(txn, encodeId(id), atOrBefore, results))
 		this.log("getAncestors of %s atOrBefore %d: %o", id, atOrBefore, results)
@@ -269,6 +280,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	}
 
 	public async isAncestor(id: string, ancestor: string): Promise<boolean> {
+		assert(messageIdPattern.test(id), "invalid message ID")
 		return await this.read((txn) => AbstractGossipLog.isAncestor(txn, id, ancestor))
 	}
 
@@ -279,6 +291,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		visited = new Set<string>()
 	): Promise<boolean> {
 		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
+		assert(messageIdPattern.test(id), "invalid message ID (id)")
+		assert(messageIdPattern.test(ancestor), "invalid message ID (ancestor)")
 
 		if (id === ancestor) {
 			return true
@@ -407,10 +421,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	 * Sync with a remote source, applying and inserting all missing messages into the local log
 	 */
 	public async sync(source: Source, options: { sourceId?: string } = {}): Promise<{ root: Node }> {
+		let messageCount = 0
+		const start = performance.now()
 		const root = await this.write(async (txn) => {
 			const driver = new Driver(this.topic, source, txn.messages)
 			for await (const [key, value] of driver.sync()) {
-				// console.log("GOT MISSING ENTRY", bytesToHex(key), bytesToHex(value))
 				const [id, signature, message] = this.decode(value)
 				assert(id === decodeId(key), "expected id === decodeId(key)")
 
@@ -423,17 +438,22 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 						const parentValue = await txn.messages.get(parentKey)
 						if (parentValue === null) {
 							this.log.error("missing parent %s of message %s: %O", parent, id, message)
+							throw new Error(`missing parent ${parent} of message ${id}`)
 						}
 					}
 
 					await this.#insert(txn, id, signature, message, [key, value])
+					messageCount++
 				}
 			}
 
 			return await txn.messages.getRoot()
 		}, options)
 
-		this.dispatchEvent(new CustomEvent("sync", { detail: { peer: options.sourceId ?? null } }))
+		const duration = Math.ceil(performance.now() - start)
+		const peer = options.sourceId
+
+		this.dispatchEvent(new CustomEvent("sync", { detail: { peer, duration, messageCount } }))
 		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
 		this.log("commited root %s", hex(root.hash))
 		return { root }

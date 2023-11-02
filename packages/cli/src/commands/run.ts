@@ -11,8 +11,10 @@ import cors from "cors"
 
 import { multiaddr } from "@multiformats/multiaddr"
 
-import { Canvas, defaultBootstrapList, testnetBootstrapList } from "@canvas-js/core"
+import { Canvas } from "@canvas-js/core"
 import { createAPI } from "@canvas-js/core/api"
+import { MIN_CONNECTIONS, MAX_CONNECTIONS } from "@canvas-js/core/constants"
+import { defaultBootstrapList, testnetBootstrapList } from "@canvas-js/core/bootstrap"
 
 import { getContractLocation } from "../utils.js"
 
@@ -22,13 +24,17 @@ export const desc = "Run a Canvas application"
 export const builder = (yargs: Argv) =>
 	yargs
 		.positional("path", {
-			describe: "Path to application directory or *.canvas.js contract",
+			desc: "Path to application directory or *.canvas.js contract",
 			type: "string",
 			demandOption: true,
 		})
+		.option("init", {
+			desc: "Path to a contract to copy if the application directory does not exist",
+			type: "string",
+		})
 		.option("port", {
+			desc: "HTTP API port",
 			type: "number",
-			desc: "Port to bind the Core API",
 			default: 8000,
 		})
 		.option("offline", {
@@ -38,16 +44,16 @@ export const builder = (yargs: Argv) =>
 		})
 		.option("listen", {
 			type: "array",
-			desc: "Internal libp2p /ws multiaddr",
+			desc: "Internal /ws multiaddr",
 			default: ["/ip4/0.0.0.0/tcp/4444/ws"],
 		})
 		.option("announce", {
 			type: "array",
-			desc: "External libp2p /ws multiaddr, e.g. /dns4/myapp.com/tcp/4444/ws",
+			desc: "External /ws multiaddr, e.g. /dns4/myapp.com/tcp/4444/ws",
 		})
 		.option("replay", {
 			type: "boolean",
-			desc: "Rebuild the model database by replying the entire message log",
+			desc: "Erase and rebuild the database by replaying the action log",
 			default: false,
 		})
 		.option("memory", {
@@ -60,11 +66,6 @@ export const builder = (yargs: Argv) =>
 			desc: "Expose Prometheus endpoint at /metrics",
 			default: false,
 		})
-		.option("p2p", {
-			type: "boolean",
-			desc: "Expose internal libp2p debugging endpoints",
-			default: false,
-		})
 		.option("static", {
 			type: "string",
 			desc: "Serve a static directory from the root path /",
@@ -73,23 +74,29 @@ export const builder = (yargs: Argv) =>
 			type: "boolean",
 			desc: "Bootstrap to the private testnet (requires VPN)",
 		})
+		.option("bootstrap", {
+			type: "array",
+			desc: "Use custom bootstrap servers",
+		})
 		.option("min-connections", {
 			type: "number",
 			desc: "Auto-dial peers while below a threshold",
+			default: MIN_CONNECTIONS,
 		})
 		.option("max-connections", {
 			type: "number",
 			desc: "Stop accepting connections above a limit",
+			default: MAX_CONNECTIONS,
 		})
 		.option("verbose", {
 			type: "boolean",
-			desc: "Log every message to stdout",
+			desc: "Log messages to stdout",
 		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { contract, location, uri } = getContractLocation(args)
+	const { contract, location } = getContractLocation(args)
 
 	if (location === null) {
 		console.log(chalk.yellow(`✦ ${chalk.bold("Running app in-memory only.")} No data will be persisted.`))
@@ -160,8 +167,12 @@ export async function handler(args: Args) {
 		}
 	})
 
-	app.messageLog.addEventListener("sync", ({ detail: { peer } }) => {
-		console.log(chalk.magenta(`[canvas] Completed merkle sync with peer ${peer}`))
+	app.messageLog.addEventListener("sync", ({ detail: { peer, duration, messageCount } }) => {
+		console.log(
+			chalk.magenta(
+				`[canvas] Completed merkle sync with peer ${peer}: applied ${messageCount} messages in ${duration}ms`
+			)
+		)
 	})
 
 	await app.start()
@@ -170,7 +181,7 @@ export async function handler(args: Args) {
 	api.use(cors())
 	api.use(
 		"/api",
-		createAPI(app, { exposeMetrics: args.metrics, exposeP2P: args.p2p, exposeModels: true, exposeMessages: true })
+		createAPI(app, { exposeMetrics: args.metrics, exposeP2P: true, exposeModels: true, exposeMessages: true })
 	)
 
 	if (args.static !== undefined) {
@@ -188,7 +199,12 @@ export async function handler(args: Args) {
 			}
 
 			console.log(`Serving HTTP API:`)
-			console.log(`└ GET  ${origin}/api`)
+			console.log(`└ GET  ${origin}/api/`)
+
+			console.log(`└ GET  ${origin}/api/clock`)
+			console.log(`└ GET  ${origin}/api/messages`)
+			console.log(`└ GET  ${origin}/api/messages/:id`)
+			console.log(`└ POST ${origin}/api/messages`)
 
 			const { models } = app.getApplicationData()
 			for (const name of Object.keys(models)) {
@@ -196,10 +212,9 @@ export async function handler(args: Args) {
 				console.log(`└ GET  ${origin}/api/models/${name}/:key`)
 			}
 
-			console.log(`└ GET  ${origin}/api/clock`)
-			console.log(`└ GET  ${origin}/api/messages`)
-			console.log(`└ GET  ${origin}/api/messages/:id`)
-			console.log(`└ POST ${origin}/api/messages`)
+			console.log(`└ GET  ${origin}/api/connections`)
+			console.log(`└ GET  ${origin}/api/peers`)
+			console.log(`└ POST ${origin}/api/ping/:peerId`)
 		}),
 		0
 	)

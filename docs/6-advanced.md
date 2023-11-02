@@ -2,11 +2,12 @@
 title: "Advanced Features"
 ---
 
-# Advanced features
+# Advanced Features
 
 ## Table of Contents
 
 - [Creating your own session signer](#creating-your-own-session-signer)
+- [Validating action arguments using IPLD Schemas](#validating-action-arguments-using-ipld-schemas)
 
 ## Creating your own session signer
 
@@ -14,26 +15,22 @@ A session signer can be created for any public-key authorization format, includi
 
 The session signer interface looks like this:
 
-```jsx
-import type { Signature } from "@canvas-js/signed-cid"
-import type { Message, Action, Session } from "@canvas-js/interfaces"
+```ts
+import type { Signature, Message, Action, Session } from "@canvas-js/interfaces"
 
 interface SessionSigner {
   match: (chain: string) => boolean
 
   sign: (message: Message<Action | Session>) => Signature
 
-	/**
-	 * Produce an authenticated Session, which authorizes `session.publicKey`
-	 * to represent the user `${session.chain}:${session.address}`.
-	 *
-	 * The signature is stored in `session.data`, and the entire Session
-	 * object is then signed using the session-key and appended to our log.
-	 */
-  getSession: (
-    topic: string,
-    options?: { chain?: string; timestamp?: number },
-  ) => Promise<Session>
+  /**
+   * Produce an authenticated Session, which authorizes `session.publicKey`
+   * to represent the user `${session.chain}:${session.address}`.
+   *
+   * The signature is stored in `session.data`, and the entire Session
+   * object is then signed using the session-key and appended to our log.
+   */
+  getSession: (topic: string, options?: { chain?: string; timestamp?: number }) => Promise<Session>
 
   /**
    * Verify that `session.data` authorizes `session.publicKey`
@@ -47,10 +44,10 @@ To create a new session signer, you should define a `getSession` method which pr
 
 Families of chains are expressed as `match: (chain: string) => boolean` predicates over CAIP-2 prefixes. When a Canvas app receives a new session from one of its peers, it searches its available session signers to find one matching `signer.match(session.chain)`, and uses it to verify the chain-specific authorization data with `await signer.verifySession(session)`.
 
-Once the user has signed the chain-specific session authorization data, it’s wrapped in a `Session` object and added to the message log, alongside actions themselves.
+Once the user has provided the chain-specific session authorization data, it’s wrapped in a `Session` object and added to the message log, alongside actions themselves.
 
-```jsx
-type Session<Data = unknown> = {
+```ts
+type Session = {
   type: "session"
 
   /** CAIP-2 prefix, e.g. "eip155:1" for mainnet Ethereum */
@@ -63,7 +60,7 @@ type Session<Data = unknown> = {
   publicKey: Uint8Array
 
   /** chain-specific session authorization, e.g. a SIWE message & signature */
-  data: Data
+  data: any
 
   blockhash: string | null
   timestamp: number
@@ -73,4 +70,67 @@ type Session<Data = unknown> = {
 
 The ephemeral session key is a regular Ed25519 or Secp256k1 keypair generated and managed by the signer, defined in the `SessionSigner` interface.
 
-The session `Data` is unique to each Signer class, and includes the particular signature format, as well as any other metadata used to generate the signature (e.g. some signers require nonces, domain identifiers, or other information).
+The session `data` type is unique to each Signer class, and includes the particular signature format, as well as any other metadata used to generate the signature (e.g. some signers require nonces, domain identifiers, or other information).
+
+## Validating action arguments using IPLD Schemas
+
+By default, Canvas apps will accept any IPLD value as the argument to an action, and it's up to each action handler to validate its `args` and throw an error if they're invalid.
+
+```ts
+const app = await Canvas.initialize({
+  contract: {
+    topic: "com.example.my-app",
+    models: { ... },
+    actions: {
+      async createPost(db, args, { id, chain, address }) {
+        assert(typeof args === "object")
+        assert(typeof args.content === "string")
+        assert(typeof args.replyTo === "string" || args.replyTo === null)
+        await db.posts.set({ id, content: args.content, replyTo: args.replyTo, ... })
+      },
+    }
+  }
+})
+```
+
+Doing runtime validation by hand like this is tedious and error-prone. Instead, contracts can define action handlers in an expanded object format, and provide a reference `argsType` to a type inside an [IPLD schema](https://ipld.io/docs/schemas/) alongside the action's `apply` function.
+
+In this example, Canvas will verify that the `args` value satisfies the `CreatePostArgs` type before calling `actions.createPost.apply`.
+
+```ts
+const schema = `
+type CreatePostArgs struct {
+  content String
+  replyTo nullable String
+  tags    [String]
+}
+
+type DeletePostArgs struct {
+  postId String
+}
+`
+
+const app = await Canvas.initialize({
+  contract: {
+    topic: "com.example.my-app",
+    models: { ... },
+    actions: {
+      createPost: {
+        argsType: { schema, name: "CreatePostArgs" },
+        apply: async (db, { content, replyTo, tags }, { id }) => {
+          // content: string
+          // replyTo: string | null
+          // tags: string[]
+          // ...
+        },
+      },
+      deletePost: {
+        argsType: { schema, name: "DeletePostArgs" },
+        apply: async (db, { postId }, { id }) => {
+          // postId: string
+        },
+      },
+    },
+  },
+})
+```

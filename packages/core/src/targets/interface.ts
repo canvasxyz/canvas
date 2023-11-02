@@ -39,8 +39,8 @@ export interface PlatformTarget {
 }
 
 export type ServiceMap = {
-	identifyService: {}
-	pingService: PingService
+	identify: {}
+	ping: PingService
 	pubsub: PubSub<GossipsubEvents>
 	gossiplog: GossipLogService
 	fetch: FetchService

@@ -175,7 +175,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
 .bullets {
   padding-top: 16px;
-  max-width: 500px;
+  max-width: 450px;
   line-height: 1.52;
   font-size: 19px;
   font-weight: 500;
@@ -183,6 +183,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   color: var(--vp-c-text-2);
   text-align: left;
   margin: 0 auto;
+  line-height: 1.4;
 }
 .bullets ul {
   list-style-type: disc;
@@ -190,6 +191,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 }
 .bullets ul li {
   padding-left: 6px;
+  margin-bottom: 4px;
 }
 @media (min-width: 960px) {
   .bullets {

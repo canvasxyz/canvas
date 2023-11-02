@@ -44,7 +44,7 @@ export class Mempool<T> {
 	 */
 	public *observe(id: string): Iterable<[id: string, value: T]> {
 		const children = this.waitingChildren.get(id)
-		this.log("observing %s with %d children %o", id, children?.size ?? 0, children)
+		this.log("observing %s with %d children %o", id, children?.size ?? 0, children ?? [])
 
 		if (children === undefined) {
 			return []

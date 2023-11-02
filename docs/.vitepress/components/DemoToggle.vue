@@ -24,6 +24,13 @@ function setSelection(event) {
       el.parentElement.style.display = "none"
     }
   }
+
+  const demo_els = document.querySelectorAll('.DemoCell')
+  for (const el of demo_els) {
+    el.style.display = "none"
+  }
+  const el = document.querySelector('.' + selection.value + 'Demo')
+  el.style.display = "block"
 }
 
 onMounted(() => {
@@ -35,6 +42,13 @@ onMounted(() => {
       el.parentElement.style.display = "none"
     }
   }
+
+  const demo_els = document.querySelectorAll('.DemoCell')
+  for (const el of demo_els) {
+    el.style.display = "none"
+  }
+  const el = document.querySelector('.' + selection.value + 'Demo')
+  el.style.display = "block"
 })
 </script>
 

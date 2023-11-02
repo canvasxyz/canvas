@@ -8,7 +8,7 @@
     "moduleResolution": "Node16"
   },
   "references": [
-    {"path": "../core"},
-    {"path": "../modeldb"}
+    { "path": "../core" },
+    { "path": "../modeldb" }
   ]
 }

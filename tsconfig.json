@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
+    { "path": "./packages/bootstrap-peer" },
     { "path": "./packages/interfaces" },
     { "path": "./packages/interfaces/test" },
     { "path": "./packages/vm" },

@@ -201,10 +201,11 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	}
 
 	public getApplicationData(): ApplicationData {
+		const models = Object.fromEntries(Object.entries(this.db.models).filter(([name]) => !name.startsWith("$")))
 		return {
 			peerId: this.peerId.toString(),
 			topic: this.topic,
-			models: Object.fromEntries(Object.entries(this.db.models).filter(([name]) => !name.startsWith("$"))),
+			models: models,
 			actions: Object.keys(this.actions),
 		}
 	}

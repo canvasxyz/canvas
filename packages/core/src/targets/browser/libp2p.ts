@@ -17,13 +17,14 @@ import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 import { gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
 
+import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import {
 	DIAL_CONCURRENCY,
 	DIAL_CONCURRENCY_PER_PEER,
 	MAX_CONNECTIONS,
 	MIN_CONNECTIONS,
 	PING_TIMEOUT,
-} from "../../constants.js"
+} from "@canvas-js/core/constants"
 
 import type { ServiceMap } from "../interface.js"
 
@@ -41,7 +42,7 @@ export function getLibp2pOptions(
 ): Libp2pOptions<ServiceMap> {
 	const announce = options.announce ?? []
 	const listen = options.listen ?? ["/webrtc"]
-	const bootstrapList = options.bootstrapList ?? []
+	const bootstrapList = options.bootstrapList ?? defaultBootstrapList
 
 	for (const address of announce) {
 		console.log(`[canvas] Announcing on ${address}/p2p/${peerId}`)
@@ -87,9 +88,9 @@ export function getLibp2pOptions(
 		peerDiscovery: bootstrapList.length === 0 ? [] : [bootstrap({ list: bootstrapList })],
 
 		services: {
-			identifyService: identifyService({ protocolPrefix: "canvas" }),
+			identify: identifyService({ protocolPrefix: "canvas" }),
 
-			pingService: pingService({
+			ping: pingService({
 				protocolPrefix: "canvas",
 				maxInboundStreams: 32,
 				maxOutboundStreams: 32,

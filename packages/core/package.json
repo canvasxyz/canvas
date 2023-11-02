@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/core",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
@@ -8,15 +8,15 @@
   },
   "files": [
     "lib",
-    "rpc",
-    "sqlite",
     "types"
   ],
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "exports": {
     ".": "./lib/index.js",
-    "./api": "./lib/api.js"
+    "./api": "./lib/api.js",
+    "./bootstrap": "./lib/bootstrap.js",
+    "./constants": "./lib/constants.js"
   },
   "imports": {
     "#target": {
@@ -25,18 +25,17 @@
       "default": "./lib/targets/index.js"
     }
   },
-  "sideEffects": false,
   "scripts": {
     "test": "ava"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.5.0",
-    "@canvas-js/discovery": "0.5.0",
-    "@canvas-js/gossiplog": "0.5.0",
-    "@canvas-js/interfaces": "0.5.0",
-    "@canvas-js/modeldb": "0.5.0",
-    "@canvas-js/signed-cid": "0.5.0",
-    "@canvas-js/vm": "0.5.0",
+    "@canvas-js/chain-ethereum": "0.5.1",
+    "@canvas-js/discovery": "0.5.1",
+    "@canvas-js/gossiplog": "0.5.1",
+    "@canvas-js/interfaces": "0.5.1",
+    "@canvas-js/modeldb": "0.5.1",
+    "@canvas-js/signed-cid": "0.5.1",
+    "@canvas-js/vm": "0.5.1",
     "@chainsafe/libp2p-gossipsub": "^10.1.0",
     "@chainsafe/libp2p-noise": "^13.0.2",
     "@ipld/dag-cbor": "^9.0.6",
@@ -57,7 +56,9 @@
     "@types/better-sqlite3": "^7.6.6",
     "@types/express": "^4.17.20",
     "@types/ws": "^8.5.8",
+    "abortable-iterator": "^5.0.1",
     "aggregate-error": "^5.0.0",
+    "any-signal": "^4.1.1",
     "chalk": "^5.3.0",
     "ethers": "^6.8.0",
     "express": "^4.18.2",
