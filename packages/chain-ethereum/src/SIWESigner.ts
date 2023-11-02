@@ -28,7 +28,7 @@ export interface SIWESignerInit {
 	sessionDuration?: number
 }
 
-export class SIWESigner implements SessionSigner {
+export class SIWESigner implements SessionSigner<SIWESessionData> {
 	public readonly sessionDuration: number | null
 	private readonly log = logger("canvas:chain-ethereum")
 
@@ -45,7 +45,7 @@ export class SIWESigner implements SessionSigner {
 
 	public readonly match = (chain: string) => chainPattern.test(chain)
 
-	public verifySession(session: Session) {
+	public verifySession(session: Session<SIWESessionData>) {
 		const { publicKeyType, publicKey, chain, address, data, timestamp, duration } = session
 		assert(publicKeyType === "secp256k1", "SIWE sessions must use secp256k1 keys")
 
