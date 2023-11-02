@@ -11,30 +11,28 @@ declare global {
 	var ethereum: undefined | null | (Eip1193Provider & EventEmitterable<"accountsChanged" | "chainChanged">)
 }
 
-export interface ConnectProps {}
+export interface ConnectSIWEProps {}
 
-export const Connect: React.FC<ConnectProps> = ({}) => {
+export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
 
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)
-	const initialRef = useRef(false)
 
 	const connect = useCallback(async () => {
-		if (window.ethereum === undefined || window.ethereum === null) {
+		if (provider === null) {
 			setError(new Error("window.ethereum not found"))
 			return
 		}
-
-		const provider = new BrowserProvider(window.ethereum)
 
 		const signer = await provider.getSigner()
 		const address = await signer.getAddress()
 		setProvider(provider)
 		setAddress(address)
 		setSessionSigner(new SIWESigner({ signer, store: sessionStore }))
-	}, [])
+	}, [provider])
 
+	const initialRef = useRef(false)
 	useEffect(() => {
 		if (initialRef.current) {
 			return
@@ -42,11 +40,17 @@ export const Connect: React.FC<ConnectProps> = ({}) => {
 
 		initialRef.current = true
 
-		// TODO: handle these more gracefully
-		window.ethereum?.on("chainChanged", (chainId) => window.location.reload())
-		window.ethereum?.on("accountsChanged", (accounts) => window.location.reload())
+		if (window.ethereum === undefined || window.ethereum === null) {
+			setError(new Error("window.ethereum not found"))
+			return
+		}
 
-		connect()
+		// TODO: handle these more gracefully
+		window.ethereum.on("chainChanged", (chainId) => window.location.reload())
+		window.ethereum.on("accountsChanged", (accounts) => window.location.reload())
+
+		const provider = new BrowserProvider(window.ethereum)
+		setProvider(provider)
 	}, [])
 
 	const disconnect = useCallback(async () => {
@@ -66,16 +70,22 @@ export const Connect: React.FC<ConnectProps> = ({}) => {
 				<button disabled>Loading...</button>
 			</div>
 		)
+	} else if (address !== null && sessionSigner instanceof SIWESigner) {
+		return (
+			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
+				<button onClick={() => disconnect()}>Disconnect ETH wallet</button>
+			</div>
+		)
 	} else if (address === null) {
 		return (
 			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => connect()}>Connect</button>
+				<button onClick={() => connect()}>Connect ETH wallet</button>
 			</div>
 		)
 	} else {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => disconnect()}>Disconnect</button>
+			<div className="p-2 border rounded bg-gray-100 text-gray-600">
+				<button disabled>Connect ETH wallet</button>
 			</div>
 		)
 	}

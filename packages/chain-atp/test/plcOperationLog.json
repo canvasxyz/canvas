@@ -1,0 +1,74 @@
+[
+	{
+		"sig": "SKoibfK-peAE05dkPxSh0WOzdHoE_1FGNUC_4IKnK31PV4t5IBId5cDbWhv7E-oqFomIsVMmY_SMTVsM0r6-_A",
+		"prev": null,
+		"type": "create",
+		"handle": "joelg.bsky.social",
+		"service": "https://bsky.social",
+		"signingKey": "did:key:zQ3shP5TBe1sQfSttXty15FAEHV1DZgcxRZNxvEWnPfLFwLxJ",
+		"recoveryKey": "did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg"
+	},
+	{
+		"sig": "jY_eoidFsPxF8BeOr-JXlcYRSOgKO98rsSDInpByj5o7lNaJS9maidbXKO6EUmQt-c3mk175OlWH96iJzYlqNQ",
+		"prev": "bafyreiddbmy6oc77gddorz6lqb42ivw5qkoh33cmlpg3x3plyubcng4k4a",
+		"type": "plc_operation",
+		"services": {
+			"atproto_pds": {
+				"type": "AtprotoPersonalDataServer",
+				"endpoint": "https://bsky.social"
+			}
+		},
+		"alsoKnownAs": [
+			"at://joelg.bsky.social"
+		],
+		"rotationKeys": [
+			"did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg",
+			"did:key:zQ3shpKnbdPx3g3CmPf5cRVTPe1HtSwVn5ish3wSnDPQCbLJK"
+		],
+		"verificationMethods": {
+			"atproto": "did:key:zQ3shXjHeiBuRCKmM36cuYnm7YEMzhGnCmCyW92sRJ9pribSF"
+		}
+	},
+	{
+		"sig": "kzhDRnKI33Q9oS_7V_arGXUbOJza_LytJZO5n_gyU1oCzHv-4Xu6DZW9_EJ1gsrgDjzK0cCLefONR24CCKnnpQ",
+		"prev": "bafyreif5bn23g4z4umuffszqcmoj42wjxeuojzh2nfrlimzgub36wzcjoi",
+		"type": "plc_operation",
+		"services": {
+			"atproto_pds": {
+				"type": "AtprotoPersonalDataServer",
+				"endpoint": "https://bsky.social"
+			}
+		},
+		"alsoKnownAs": [
+			"at://syntacrobat.bsky.social"
+		],
+		"rotationKeys": [
+			"did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg",
+			"did:key:zQ3shpKnbdPx3g3CmPf5cRVTPe1HtSwVn5ish3wSnDPQCbLJK"
+		],
+		"verificationMethods": {
+			"atproto": "did:key:zQ3shXjHeiBuRCKmM36cuYnm7YEMzhGnCmCyW92sRJ9pribSF"
+		}
+	},
+	{
+		"sig": "16OF_lYJN8pxWqeIjZ11SB5y8yHVgYMZaQblvUCf8oR6dJrgWDBv9l9Nx07KgJ4-no1HR2tGNtQqNsm5rs87yg",
+		"prev": "bafyreifdtzbo57ulw7x3b7i24hgrccjuoqzmgvrk5i5sdwkul7nsatlawy",
+		"type": "plc_operation",
+		"services": {
+			"atproto_pds": {
+				"type": "AtprotoPersonalDataServer",
+				"endpoint": "https://bsky.social"
+			}
+		},
+		"alsoKnownAs": [
+			"at://syntacrobat.xyz"
+		],
+		"rotationKeys": [
+			"did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg",
+			"did:key:zQ3shpKnbdPx3g3CmPf5cRVTPe1HtSwVn5ish3wSnDPQCbLJK"
+		],
+		"verificationMethods": {
+			"atproto": "did:key:zQ3shXjHeiBuRCKmM36cuYnm7YEMzhGnCmCyW92sRJ9pribSF"
+		}
+	}
+]

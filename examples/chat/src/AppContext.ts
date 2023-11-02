@@ -1,14 +1,14 @@
 import { createContext } from "react"
 
+import type { SessionSigner } from "@canvas-js/interfaces"
 import { Canvas } from "@canvas-js/core"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 export type AppContext = {
 	address: string | null
 	setAddress: (address: string | null) => void
 
-	sessionSigner: SIWESigner | null
-	setSessionSigner: (signer: SIWESigner | null) => void
+	sessionSigner: SessionSigner | null
+	setSessionSigner: (signer: SessionSigner | null) => void
 
 	app: Canvas | null
 	setApp: (app: Canvas | null) => void

@@ -44,10 +44,10 @@ interface MessageHeaderProps {
 }
 
 const MessageHeader: React.FC<MessageHeaderProps> = ({ user }) => {
-	const [chain, chainId, address] = user.split(":")
+	// const [chain, chainId, address] = user.split(":")
 	return (
 		<div className="mt-2">
-			<AddressView className="text-sm text-gray-500" address={address} />
+			<code className="text-sm text-gray-500">{user}</code>
 		</div>
 	)
 }

@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState } from "react"
 
+import type { SessionSigner } from "@canvas-js/interfaces"
 import { Canvas } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { ATPSigner } from "@canvas-js/chain-atp"
 
 import contract from "../contract.canvas.js?raw"
 
 import { AppContext } from "./AppContext.js"
-import { Connect } from "./Connect.js"
+import { ConnectSIWE } from "./ConnectSIWE.js"
+import { ConnectATP } from "./ConnectATP.js"
 import { Messages } from "./Chat.js"
 import { MessageComposer } from "./MessageComposer.js"
 import { ControlPanel } from "./ControlPanel.js"
@@ -14,7 +17,7 @@ import { SessionStatus } from "./SessionStatus.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
 
 export const App: React.FC<{}> = ({}) => {
-	const [sessionSigner, setSessionSigner] = useState<SIWESigner | null>(null)
+	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
 	const [address, setAddress] = useState<string | null>(null)
 
 	const [app, setApp] = useState<Canvas | null>(null)
@@ -25,7 +28,9 @@ export const App: React.FC<{}> = ({}) => {
 	useEffect(() => {
 		if (initRef.current === false) {
 			initRef.current = true
-			Canvas.initialize({ contract }).then(setApp, (err) => console.error(err))
+			Canvas.initialize({ contract, signers: [new SIWESigner(), new ATPSigner()] }).then(setApp, (err) =>
+				console.error(err)
+			)
 		}
 	}, [])
 
@@ -39,8 +44,9 @@ export const App: React.FC<{}> = ({}) => {
 						</div>
 						<MessageComposer />
 					</div>
-					<div className="w-64 flex flex-col gap-4">
-						<Connect />
+					<div className="w-96 flex flex-col gap-4">
+						<ConnectSIWE />
+						<ConnectATP />
 						<SessionStatus />
 						<ConnectionStatus />
 						<ControlPanel />
