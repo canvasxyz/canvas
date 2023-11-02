@@ -1,5 +1,5 @@
 import solw3 from "@solana/web3.js"
-import bs58 from "bs58"
+import { base58btc } from "multiformats/bases/base58"
 import { encode } from "microcbor"
 import nacl from "tweetnacl"
 import * as json from "@ipld/dag-json"
@@ -64,13 +64,13 @@ export class SolanaSigner implements SessionSigner {
 		if (signer) {
 			if (!signer.publicKey) throw new Error("Invalid signer")
 			this.#signer = {
-				address: bs58.encode(signer.publicKey.toBytes()),
+				address: base58btc.baseEncode(signer.publicKey.toBytes()),
 				sign: async (msg) => (await signer.signMessage(msg)).signature,
 			}
 		} else {
 			const keypair = solw3.Keypair.generate()
 			this.#signer = {
-				address: bs58.encode(keypair.publicKey.toBytes()),
+				address: base58btc.baseEncode(keypair.publicKey.toBytes()),
 				sign: async (msg) => nacl.sign.detached(msg, keypair.secretKey),
 			}
 		}
@@ -97,7 +97,7 @@ export class SolanaSigner implements SessionSigner {
 			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
 		}
 
-		const valid = nacl.sign.detached.verify(encode(message), data.signature, bs58.decode(address))
+		const valid = nacl.sign.detached.verify(encode(message), data.signature, base58btc.baseDecode(address))
 		assert(valid, "invalid signature")
 	}
 
