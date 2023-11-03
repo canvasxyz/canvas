@@ -64,10 +64,11 @@ export class SolanaSigner implements SessionSigner {
 				sign: async (msg) => (await signer.signMessage(msg)).signature,
 			}
 		} else {
-			const keypair = solw3.Keypair.generate()
+			const privateKey = ed25519.utils.randomPrivateKey()
+			const publicKey = ed25519.getPublicKey(privateKey)
 			this.#signer = {
-				address: base58btc.baseEncode(keypair.publicKey.toBytes()),
-				sign: async (msg) => ed25519.sign(msg, keypair.secretKey),
+				address: base58btc.baseEncode(publicKey),
+				sign: async (msg) => ed25519.sign(msg, privateKey),
 			}
 		}
 
@@ -93,7 +94,10 @@ export class SolanaSigner implements SessionSigner {
 			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
 		}
 
-		const valid = ed25519.verify(cbor.encode(message), data.signature, publicKey)
+		const signingPublicKey = base58btc.baseDecode(address)
+
+		const valid = ed25519.verify(data.signature, cbor.encode(message), signingPublicKey)
+		// get the address who signed this, this is solana specific?
 		assert(valid, "invalid signature")
 	}
 

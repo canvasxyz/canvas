@@ -17,6 +17,7 @@ export default defineConfig({
 	description: "An instant-sync engine for decentralized applications",
 	themeConfig: {
 		logo: "/logo.png",
+		outlineTitle: "Contents",
 		nav: [
 			{ text: "Home", link: "/" },
 			{ text: "Introduction", link: "/1-introduction" },

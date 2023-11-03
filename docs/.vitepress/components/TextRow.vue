@@ -8,7 +8,7 @@ defineProps<{
 <template>
   <div class="TextRow">
     <h1 class="title">{{ title }}</h1>
-    <div v-if="details" class="details">{{ details }}</div>
+    <div v-if="details" class="details">{{ details.replace(/\\n/g, '\n') }}</div>
     <div class="container">
       <slot></slot>
     </div>
@@ -19,7 +19,7 @@ defineProps<{
 .TextRow {
   position: relative;
   padding: 30px 24px;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .TextRow h1 {
@@ -30,6 +30,7 @@ defineProps<{
 }
 
 .TextRow .details {
+  white-space: pre-line;
   padding-bottom: 34px;
   margin: 0 auto;
   max-width: 640px;

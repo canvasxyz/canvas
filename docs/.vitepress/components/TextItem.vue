@@ -1,12 +1,12 @@
 <script setup lang="ts">
 defineProps<{
-  prefix: string
+  prefix?: string
 }>()
 </script>
 
 <template>
   <div class="TextItem">
-    <strong>{{ prefix }}</strong>: <slot></slot>
+    <span v-if="prefix"><strong>{{ prefix }}</strong>: </span><slot></slot>
   </div>
 </template>
 

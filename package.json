@@ -35,6 +35,7 @@
     "typescript": "^5.2.2",
     "veaury": "^2.3.12",
     "vitepress": "^1.0.0-rc.24",
-    "vue": "^3.3.7"
+    "vue": "^3.3.7",
+    "vue-markdown-render": "^2.1.1"
   }
 }

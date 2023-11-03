@@ -1,8 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,500;0,700&family=Space+Grotesk:wght@600;700&display=swap');
 
 :root {
+  --space-font-family: "Space Grotesk", "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
   --vp-font-family-base: "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
   --vp-font-family-mono: "PT Mono", ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --vp-c-text-1: rgba(72, 72, 79);
+  --vp-c-bg: #fffbf3;
+  --vp-c-bg-soft: #f7f3eb;
+  --vp-sidebar-bg-color: #f7f3eb;
+  --vp-button-alt-bg: #ece7e0;
+  --vp-button-alt-hover-bg: #ede7dd;
+}
+.dark {
+  --vp-c-text-1: rgba(255, 255, 245, 0.86);
+  --vp-c-bg: #1d1d21;
+  --vp-c-bg-soft: #202126;
+  --vp-sidebar-bg-color: #161618;
+  --vp-button-alt-bg: #32363f;
+  --vp-button-alt-hover-bg: #414853;
+}
+
+.vp-doc p {
+  line-height: inherit;
+}
+.VPContent a {
+  color: var(--vp-c-brand-1);
+}
+.VPContent a:hover {
+  text-decoration: underline;
 }
 
 .VPContent.is-home .named-fence-block {
@@ -18,7 +43,15 @@
   line-height: 1.5;
   overflow-x: scroll;
 }
-@media (max-width: 640px) {
+@media (min-width: 960px) {
+  .VPContent.is-home .named-fence-block {
+    /* ... */
+    left: -100px;
+    top: 24px;
+    box-shadow: 1px 1px 6px rgba(0,0,0,0.2);
+  }
+}
+@media (max-width: 720px) {
   .VPContent.is-home .named-fence-block {
     max-width: calc(100vw - 40px) !important;
   }
@@ -39,6 +72,9 @@
 .VPContent.is-home {
   font-family: "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
 }
+.VPContent.is-home .text {
+  font-family: var(--space-font-family);
+}
 
 .VPContent h1,
 .VPContent h2,
@@ -46,7 +82,16 @@
 .VPContent h4,
 .VPContent h5,
 .VPContent h6 {
-  font-family: "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
+  font-family: var(--vp-font-family-base);
+}
+
+.VPContent.is-home h1,
+.VPContent.is-home h2,
+.VPContent.is-home h3,
+.VPContent.is-home h4,
+.VPContent.is-home h5,
+.VPContent.is-home h6 {
+  font-family: var(--space-font-family);
 }
 
 html.dark body {

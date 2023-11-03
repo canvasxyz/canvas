@@ -45,6 +45,10 @@ const component = computed(() => {
   white-space: nowrap;
   transition: color 0.25s, border-color 0.25s, background-color 0.25s;
   margin: 0 6px;
+  font-family: "Space Grotesk";
+}
+a.HeroAction {
+  text-decoration: none !important;
 }
 
 .HeroAction:active {

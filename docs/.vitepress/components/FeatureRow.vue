@@ -1,12 +1,14 @@
 <script setup lang="ts">
 defineProps<{
   title: string
+  detail?: string
 }>()
 </script>
 
 <template>
   <div class="FeatureRow">
     <h1 class="title">{{ title }}</h1>
+    <div v-if="detail" class="detail">{{ detail }}</div>
     <div class="container">
       <div class="items">
         <slot></slot>
@@ -23,9 +25,16 @@ defineProps<{
 
 .FeatureRow h1 {
   font-size: 32px;
+  line-height: 1.3;
   font-weight: 700;
-  padding: 24px 0 36px;
+  padding: 24px 0 26px;
   text-align: center;
+}
+
+.FeatureRow .detail {
+  margin: 0 auto 40px;
+  max-width: 640px;
+  color: var(--vp-c-text-2);
 }
 
 @media (min-width: 640px) {
@@ -42,7 +51,7 @@ defineProps<{
 
 .FeatureRow .container {
   margin: 0 auto;
-  max-width: 1152px;
+  max-width: 1020px;
 }
 
 .FeatureRow .items {
