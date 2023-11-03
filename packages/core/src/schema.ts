@@ -5,7 +5,6 @@ import { Action, Session } from "@canvas-js/interfaces"
 
 export const schema = `
 type Action struct {
-  chain String
   address String
   name String
   args any
@@ -14,7 +13,6 @@ type Action struct {
 }
 
 type Session struct {
-  chain String
   address String
   publicKeyType String
   publicKey Bytes

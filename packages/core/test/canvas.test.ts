@@ -118,9 +118,9 @@ test("create an app with an inline contract", async (t) => {
 				},
 			},
 			actions: {
-				async createPost(db, args, { id, chain, address, timestamp }) {
+				async createPost(db, args, { id, address, timestamp }) {
 					const { content } = args as { content: string }
-					const postId = [chain, address, id].join("/")
+					const postId = [address, id].join("/")
 					await db.posts.set({ id: postId, content, timestamp, address })
 					return postId
 				},
@@ -138,7 +138,7 @@ test("create an app with an inline contract", async (t) => {
 	assert(typeof postId === "string")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
-	t.is(value?.address, wallet.address)
+	t.is(value?.address, `eip155:1:${wallet.address}`)
 })
 
 test("get a value set by another action", async (t) => {
@@ -153,19 +153,18 @@ test("get a value set by another action", async (t) => {
 				post: { id: "primary", from: "@user", content: "string" },
 			},
 			actions: {
-				async createUser(db, { name }: { name: string }, { chain, address }) {
-					await db.user.set({ id: `${chain}:${address}`, name })
+				async createUser(db, { name }: { name: string }, { address }) {
+					await db.user.set({ id: address, name })
 				},
-				async createPost(db, { content }: { content: string }, { id, chain, address }) {
-					const from = `${chain}:${address}`
-					const user = await db.user.get(from)
+				async createPost(db, { content }: { content: string }, { id, address }) {
+					const user = await db.user.get(address)
 					assert(user !== null)
-					await db.post.set({ id, from, content })
+					await db.post.set({ id, from: address, content })
 				},
-				async deletePost(db, { id }: { id: string }, { chain, address }) {
+				async deletePost(db, { id }: { id: string }, { address }) {
 					const post = await db.post.get(id)
 					if (post !== null) {
-						assert(post.from === `${chain}:${address}`, "cannot delete others' posts")
+						assert(post.from === address, "cannot delete others' posts")
 						await db.post.delete(id)
 					}
 				},
@@ -222,9 +221,9 @@ test("validate action args using IPLD schemas", async (t) => {
 					apply: async (
 						db,
 						{ content, inReplyTo }: { content: string; inReplyTo: string | null },
-						{ id, chain, address, timestamp }
+						{ id, address, timestamp }
 					) => {
-						const postId = [chain, address, id].join("/")
+						const postId = [address, id].join("/")
 						await db.posts.set({ id: postId, content, timestamp, address })
 						return postId
 					},

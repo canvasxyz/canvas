@@ -1,10 +1,11 @@
 import { CID } from "multiformats/cid"
 import * as siwe from "siwe"
-import { computeAddress, hexlify } from "ethers"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
+import { computeAddress } from "ethers"
+import { hexlify } from "ethers"
 
-export const getKey = (topic: string, chain: string, address: string) => `canvas:${topic}/${chain}:${address}`
+export const getKey = (topic: string, address: string) => `canvas/${topic}/${address}`
 
 export function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
@@ -49,19 +50,14 @@ export function prepareSIWEMessage(message: SIWEMessage): string {
 	}).prepareMessage()
 }
 
-export const chainPattern = /^eip155:(\d+)$/
+export const addressPattern = /^eip155:(\d+):(0x[A-Fa-f0-9]+)$/
 
-export function parseChainId(chain: string): number {
-	const chainPatternMatch = chainPattern.exec(chain)
-	if (chainPatternMatch === null) {
-		throw new Error(`invalid chain: ${chain} did not match ${chainPattern}`)
+export function parseAddress(address: string): [chain: number, walletAddress: string] {
+	const result = addressPattern.exec(address)
+	if (result === null) {
+		throw new Error(`invalid address: ${address} did not match ${addressPattern}`)
 	}
 
-	const [_, chainId] = chainPatternMatch
-	return parseInt(chainId)
-}
-
-export function getSessionURI(chain: string, publicKey: Uint8Array) {
-	const sessionAddress = computeAddress(hexlify(publicKey))
-	return `${chain}:${sessionAddress}`
+	const [_, chain, walletAddress] = result
+	return [parseInt(chain), walletAddress]
 }

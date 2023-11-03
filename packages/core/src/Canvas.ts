@@ -143,11 +143,11 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 				const session = await signer.getSession(this.topic, { timestamp, chain: options.chain })
 
-				const { chain, address, publicKeyType: public_key_type, publicKey: public_key } = session
+				const { address, publicKeyType: public_key_type, publicKey: public_key } = session
 
 				// Check if the session has already been added to the message log
 				const results = await runtime.db.query("$sessions", {
-					where: { chain, address, public_key_type, public_key, expiration: { gt: timestamp } },
+					where: { address, public_key_type, public_key, expiration: { gt: timestamp } },
 					limit: 1,
 				})
 
@@ -165,7 +165,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				assert(representation !== undefined, "action args did not validate the provided schema type")
 
 				const { id, result, recipients } = await this.append(
-					{ type: "action", chain, address, name, args: representation, blockhash: null, timestamp },
+					{ type: "action", address, name, args: representation, blockhash: null, timestamp },
 					{ signer }
 				)
 
