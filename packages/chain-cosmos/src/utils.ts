@@ -27,24 +27,31 @@ export function signalInvalidType(type: never): never {
 	throw new TypeError("internal error: invalid type")
 }
 export function validateSessionData(data: unknown): data is CosmosSessionData {
-	if (data === undefined || data === null) {
-		return false
-	} else if (typeof data === "boolean" || typeof data === "number" || typeof data === "string") {
-		return false
-	} else if (CID.asCID(data) !== null) {
-		return false
-	} else if (data instanceof Uint8Array) {
-		return false
-	} else if (Array.isArray(data)) {
+	try {
+		const signatureType = (data as CosmosSessionData).signatureType
+		if (signatureType == "cosmos") {
+			// validate cosmos
+			const { signature, pub_key, chain_id } = (data as any).signature
+			if (typeof signature !== "string" || typeof pub_key !== "object" || typeof chain_id !== "string") {
+				return false
+			}
+			const { type, value } = pub_key
+			if (typeof type !== "string" || typeof value !== "string") {
+				return false
+			}
+		} else if (signatureType == "ethereum") {
+			// validate ethereum
+			if (typeof (data as any).signature !== "string") {
+				return false
+			}
+		} else {
+			signalInvalidType(signatureType)
+		}
+	} catch (error) {
 		return false
 	}
 
-	const { signature } = data as Record<string, any>
-	if (!signature) {
-		return false
-	}
-
-	return signature instanceof Uint8Array
+	return true
 }
 
 export function getSessionURI(prefix: string, chain: string, publicKey: Uint8Array) {

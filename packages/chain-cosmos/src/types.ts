@@ -4,7 +4,7 @@ import type { FixedExtension } from "@terra-money/wallet-controller/modules/lega
 
 type EtheremSignedSessionData = {
 	signatureType: "ethereum"
-	signature: Uint8Array
+	signature: string
 }
 
 type CosmosSignedSessionData = {

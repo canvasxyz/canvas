@@ -1,4 +1,4 @@
-import { verifyMessage } from "ethers"
+import { Wallet, verifyMessage } from "ethers"
 import { decodeSignature, pubkeyType, rawSecp256k1PubkeyToRawAddress, serializeSignDoc } from "@cosmjs/amino"
 import { Sha256 } from "@cosmjs/crypto"
 import { fromBech32, toBech32 } from "@cosmjs/encoding"
@@ -73,7 +73,7 @@ export class CosmosSigner implements SessionSigner {
 				const sign = async (msg: Uint8Array) => {
 					const address = await getAddress()
 					return {
-						signature: hexToBytes(await signer.eth.personal.sign(bytesToHex(msg), address, "")),
+						signature: await signer.eth.personal.sign(`0x${bytesToHex(msg)}`, address, ""),
 						signatureType: "ethereum" as const,
 					}
 				}
@@ -88,8 +88,9 @@ export class CosmosSigner implements SessionSigner {
 				}
 				const sign = async (msg: Uint8Array, chainId: string) => {
 					const address = await getAddress(chainId)
+					const rawSignature = await signer.signEthereum(chainId, address, bytesToHex(msg), "message")
 					return {
-						signature: await signer.signEthereum(chainId, address, bytesToHex(msg), "message"),
+						signature: `0x${bytesToHex(rawSignature)}`,
 						signatureType: "ethereum" as const,
 					}
 				}
@@ -134,14 +135,18 @@ export class CosmosSigner implements SessionSigner {
 				throw new Error("invalid signer")
 			}
 		} else {
-			const privateKey = secp256k1.utils.randomPrivateKey()
-			const publicKey = secp256k1.getPublicKey(privateKey)
+			const wallet = Wallet.createRandom()
+
 			this.#signer = {
-				getAddress: async () => toBech32(bech32Prefix_, publicKey),
-				sign: async (msg) => ({
-					signature: secp256k1.sign(msg, privateKey).toCompactRawBytes(),
-					signatureType: "ethereum" as const,
-				}),
+				getAddress: async () => toBech32(bech32Prefix_, hexToBytes(wallet.address.substring(2))),
+				sign: async (msg) => {
+					const hexMessage = `0x${bytesToHex(msg)}`
+					const signature = await wallet.signMessage(hexMessage)
+					return {
+						signature,
+						signatureType: "ethereum" as const,
+					}
+				},
 			}
 		}
 
@@ -154,7 +159,6 @@ export class CosmosSigner implements SessionSigner {
 	public async verifySession(session: Session) {
 		const { publicKeyType, publicKey, chain, address, data, timestamp, duration } = session
 		assert(publicKeyType === this.publicKeyType, `Cosmos sessions must use ${this.publicKeyType} keys`)
-
 		assert(validateSessionData(data), "invalid session")
 
 		const chainId = parseChainId(chain)
@@ -172,8 +176,8 @@ export class CosmosSigner implements SessionSigner {
 		// select verification method based on the signing method
 		if (data.signatureType == "ethereum") {
 			// validate ethereum signature
-			const recoveredAddress = verifyMessage(encodedMessage, bytesToHex(data.signature))
-			assert(toBech32(prefix, hexToBytes(recoveredAddress)) === address, "invalid signature")
+			const recoveredAddress = verifyMessage(`0x${bytesToHex(encodedMessage)}`, data.signature)
+			assert(toBech32(prefix, hexToBytes(recoveredAddress.substring(2))) === address, "invalid signature")
 		} else if (data.signatureType == "cosmos") {
 			// validate cosmos signature
 			// recreate amino thingy, do other cosmos dark magic
@@ -204,8 +208,7 @@ export class CosmosSigner implements SessionSigner {
 		topic: string,
 		options: { chain?: string; timestamp?: number } = {}
 	): Promise<Session<CosmosSessionData>> {
-		// 5ey... is the solana mainnet genesis hash
-		const chain = options.chain ?? "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+		const chain = options.chain ?? "cosmos:osmosis"
 		assert(chainPattern.test(chain), "internal error - invalid chain")
 
 		const chainId = parseChainId(chain)
