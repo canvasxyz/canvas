@@ -14,17 +14,9 @@ import type {
 	Session,
 	SignatureType,
 } from "@canvas-js/interfaces"
-import { createSignature } from "@canvas-js/signed-cid"
+import { createSignature, getPublicKeyURI } from "@canvas-js/signed-cid"
 
-import {
-	assert,
-	signalInvalidType,
-	validateSessionData,
-	parseChainId,
-	chainPattern,
-	getSessionURI,
-	getKey,
-} from "./utils.js"
+import { assert, signalInvalidType, validateSessionData, addressPattern, getKey, parseAddress } from "./utils.js"
 import { SolanaMessage, SolanaSessionData } from "./types.js"
 
 // Solana doesn't publish TypeScript signatures for injected wallets, but we can assume
@@ -36,6 +28,7 @@ interface SolanaWindowSigner {
 }
 
 export interface SolanaSignerInit {
+	chainId?: string
 	signer?: SolanaWindowSigner
 	store?: SessionStore
 	sessionDuration?: number
@@ -48,65 +41,70 @@ type GenericSigner = {
 
 export class SolanaSigner implements SessionSigner {
 	public readonly sessionDuration: number | null
+	public readonly chainId: string
+	public readonly publicKeyType: SignatureType = "ed25519"
+
 	private readonly log = logger("canvas:chain-solana")
 
-	publicKeyType: SignatureType = "ed25519"
 	#signer: GenericSigner
 	#store: SessionStore | null
 	#privateKeys: Record<string, Uint8Array> = {}
 	#sessions: Record<string, Session<SolanaSessionData>> = {}
 
-	public constructor({ signer, store, sessionDuration }: SolanaSignerInit = {}) {
+	public constructor({ signer, store, sessionDuration, chainId }: SolanaSignerInit = {}) {
 		if (signer) {
-			if (!signer.publicKey) throw new Error("Invalid signer")
+			if (!signer.publicKey) {
+				throw new Error("Invalid signer")
+			}
+
 			this.#signer = {
 				address: base58btc.baseEncode(signer.publicKey.toBytes()),
-				sign: async (msg) => (await signer.signMessage(msg)).signature,
+				sign: async (msg) => {
+					const { signature } = await signer.signMessage(msg)
+					return signature
+				},
 			}
 		} else {
 			const keypair = solw3.Keypair.generate()
 			this.#signer = {
 				address: base58btc.baseEncode(keypair.publicKey.toBytes()),
-				sign: async (msg) => ed25519.sign(msg, keypair.secretKey),
+				sign: async (msg) => ed25519.sign(msg, keypair.secretKey.subarray(0, 32)),
 			}
 		}
 
-		this.#store = store ?? null
+		// 5ey... is the solana mainnet genesis hash
+		this.chainId = chainId ?? "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
 		this.sessionDuration = sessionDuration ?? null
+		this.#store = store ?? null
 	}
 
-	public readonly match = (chain: string) => chainPattern.test(chain)
+	public readonly match = (chain: string) => addressPattern.test(chain)
 
 	public verifySession(session: Session) {
-		const { publicKeyType, publicKey, chain, address, data, timestamp, duration } = session
+		const { publicKeyType, publicKey, address, data, timestamp, duration } = session
 		assert(publicKeyType === this.publicKeyType, `Solana sessions must use ${this.publicKeyType} keys`)
 
 		assert(validateSessionData(data), "invalid session")
 
-		const chainId = parseChainId(chain)
+		const [_, walletAddress] = parseAddress(address)
 
 		const message: SolanaMessage = {
-			address,
-			chainId,
-			uri: getSessionURI(chainId, publicKey),
+			address: address,
+			signingKey: getPublicKeyURI(this.publicKeyType, publicKey),
 			issuedAt: new Date(timestamp).toISOString(),
 			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
 		}
 
-		const valid = ed25519.verify(cbor.encode(message), data.signature, publicKey)
-		assert(valid, "invalid signature")
+		assert(
+			ed25519.verify(data.signature, cbor.encode(message), base58btc.baseDecode(walletAddress)),
+			"invalid signature"
+		)
 	}
 
-	public async getSession(
-		topic: string,
-		options: { chain?: string; timestamp?: number } = {}
-	): Promise<Session<SolanaSessionData>> {
-		// 5ey... is the solana mainnet genesis hash
-		const chain = options.chain ?? "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
-		assert(chainPattern.test(chain), "internal error - invalid chain")
-
-		const address = this.#signer.address
-		const key = getKey(topic, chain, address)
+	public async getSession(topic: string, options: { timestamp?: number } = {}): Promise<Session<SolanaSessionData>> {
+		const walletAddress = this.#signer.address
+		const address = `${this.chainId}:${walletAddress}`
+		const key = getKey(topic, address)
 
 		this.log("getting session %s", key)
 
@@ -163,11 +161,9 @@ export class SolanaSigner implements SessionSigner {
 		const timestamp = options.timestamp ?? Date.now()
 		const issuedAt = new Date(timestamp)
 
-		const chainId = parseChainId(chain)
 		const message: SolanaMessage = {
-			address,
-			chainId,
-			uri: getSessionURI(chainId, publicKey),
+			address: address,
+			signingKey: getPublicKeyURI(this.publicKeyType, publicKey),
 			issuedAt: issuedAt.toISOString(),
 			expirationTime: null,
 		}
@@ -183,7 +179,6 @@ export class SolanaSigner implements SessionSigner {
 
 		const session: Session<SolanaSessionData> = {
 			type: "session",
-			chain: chain,
 			address: address,
 			publicKeyType: this.publicKeyType,
 			publicKey,
@@ -205,27 +200,23 @@ export class SolanaSigner implements SessionSigner {
 	}
 
 	// i think this method might be totally generic, maybe we could factor it out
-	public sign({ topic, clock, parents, payload }: Message<Action | Session>): Signature {
+	public sign(message: Message<Action | Session>): Signature {
+		const { topic, clock, parents, payload } = message
 		if (payload.type === "action") {
-			const { chain, address, timestamp } = payload
-			const key = getKey(topic, chain, address)
+			const { address, timestamp } = payload
+			const key = getKey(topic, address)
 			const session = this.#sessions[key]
 			const privateKey = this.#privateKeys[key]
 			assert(session !== undefined && privateKey !== undefined)
 
-			assert(chain === session.chain && address === session.address)
+			assert(address === session.address)
 			assert(timestamp >= session.timestamp)
 			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
 
-			return createSignature(this.publicKeyType, privateKey, {
-				topic,
-				clock,
-				parents,
-				payload,
-			} satisfies Message<Action>)
+			return createSignature(this.publicKeyType, privateKey, message)
 		} else if (payload.type === "session") {
-			const { chain, address } = payload
-			const key = getKey(topic, chain, address)
+			const { address } = payload
+			const key = getKey(topic, address)
 			const session = this.#sessions[key]
 			const privateKey = this.#privateKeys[key]
 			assert(session !== undefined && privateKey !== undefined)
@@ -233,12 +224,7 @@ export class SolanaSigner implements SessionSigner {
 			// only sign our own current sessions
 			assert(payload === session)
 
-			return createSignature(this.publicKeyType, privateKey, {
-				topic,
-				clock,
-				parents,
-				payload,
-			} satisfies Message<Session>)
+			return createSignature(this.publicKeyType, privateKey, message)
 		} else {
 			signalInvalidType(payload)
 		}

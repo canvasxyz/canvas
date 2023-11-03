@@ -29,7 +29,6 @@ test("create and verify session and action", async (t) => {
 
 	const action: Action = {
 		type: "action",
-		chain: session.chain,
 		address: session.address,
 		name: "foo",
 		args: { bar: 7 },
