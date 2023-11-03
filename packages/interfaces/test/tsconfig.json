@@ -8,6 +8,7 @@
   "references": [
     { "path": "../." },
     { "path": "../../interfaces" },
-    { "path": "../../chain-ethereum" }
+    { "path": "../../chain-ethereum" },
+    { "path": "../../chain-solana" }
   ]
 }

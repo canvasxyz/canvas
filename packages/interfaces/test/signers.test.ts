@@ -4,6 +4,7 @@ import { Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces
 import { verifySignature } from "@canvas-js/signed-cid"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SolanaSigner } from "@canvas-js/chain-solana"
 
 type SignerImplementation = { createSigner: () => Promise<Signer>; name: string }
 
@@ -11,6 +12,10 @@ const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 	{
 		name: "chain-ethereum",
 		createSigner: async () => new SIWESigner(),
+	},
+	{
+		name: "chain-solana",
+		createSigner: async () => new SolanaSigner(),
 	},
 ]
 

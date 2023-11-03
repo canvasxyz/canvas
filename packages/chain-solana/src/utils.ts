@@ -55,7 +55,7 @@ export function signalInvalidType(type: never): never {
 	throw new TypeError("internal error: invalid type")
 }
 
-export const chainPattern = /^solana:([a-z]+)$/
+export const chainPattern = /^solana:([a-zA-Z0-9]+)$/
 
 export function parseChainId(chain: string): string {
 	const chainPatternMatch = chainPattern.exec(chain)
