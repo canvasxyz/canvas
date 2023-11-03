@@ -21,7 +21,6 @@ test("create and verify session", async (t) => {
 		const recordArchive = fs.readFileSync(path)
 		await signer.verifySession({
 			type: "session",
-			chain: "atp",
 			address: did,
 
 			publicKeyType: "secp256k1",

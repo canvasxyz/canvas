@@ -45,7 +45,7 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 
 	public constructor(private readonly options: ATPSignerOptions = {}) {}
 
-	public match = (chain: string) => chain === "atp"
+	public match = (address: string) => address.startsWith("did:plc:")
 
 	public sign(message: Message<Action | Session<ATPSessionData>>): Signature {
 		const key = getKey(message.topic)
@@ -53,7 +53,7 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 		const privateKey = this.#privateKeys[key]
 		assert(session !== undefined && privateKey !== undefined, "internal error (missing session for topic)")
 		if (message.payload.type === "action") {
-			assert(message.payload.chain === session.chain && message.payload.address === session.address)
+			assert(message.payload.address === session.address)
 		} else if (message.payload.type === "session") {
 			assert(message.payload === session, "internal error (received foreign session object)")
 		}
@@ -155,7 +155,6 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 
 		const session: Session<ATPSessionData> = {
 			type: "session",
-			chain: "atp",
 			address: data.did,
 			publicKeyType: "secp256k1",
 			publicKey: publicKey,
