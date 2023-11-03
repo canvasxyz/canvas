@@ -1,8 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,500;0,600;0,700;1,500&family=Space+Grotesk:wght@700&display=swap');
 
 :root {
   --vp-font-family-base: "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
   --vp-font-family-mono: "PT Mono", ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --vp-c-text-1: rgba(72, 72, 79);
+}
+.dark {
+  --vp-c-text-1: rgba(255, 255, 245, 0.86);
 }
 
 .vp-doc p {
@@ -49,6 +53,9 @@
 .VPContent.is-home {
   font-family: "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
 }
+.VPContent.is-home .text {
+  font-family: "Space Grotesk", "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
+}
 
 .VPContent h1,
 .VPContent h2,
@@ -56,7 +63,7 @@
 .VPContent h4,
 .VPContent h5,
 .VPContent h6 {
-  font-family: "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
+  font-family: "Space Grotesk", "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
 }
 
 html.dark body {

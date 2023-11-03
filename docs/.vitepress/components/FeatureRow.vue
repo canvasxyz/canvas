@@ -34,6 +34,7 @@ defineProps<{
 .FeatureRow .detail {
   margin: 0 auto 40px;
   max-width: 640px;
+  color: var(--vp-c-text-2);
 }
 
 @media (min-width: 640px) {
