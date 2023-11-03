@@ -35,6 +35,7 @@ type SubstrateSignerInit = {
 	store?: SessionStore
 	sessionDuration?: number
 	extension?: InjectedExtension
+	substrateKeyType?: KeypairType
 }
 
 type AbstractSigner = {
@@ -84,17 +85,13 @@ export class SubstrateSigner implements SessionSigner {
 				},
 			}
 		} else {
-			const keyType: KeypairType = "sr25519"
+			const keyType: KeypairType = init.substrateKeyType ?? "sr25519"
 
 			// some of the cryptography methods used by polkadot require a wasm environment which is initialised
 			// asynchronously so we have to lazily create the keypair when it is needed
 			let keyring: ReturnType<Keyring["addFromMnemonic"]> | undefined
 			this.#signer = {
 				getSubstrateKeyType: async () => {
-					await cryptoWaitReady()
-					if (!keyring) {
-						keyring = randomKeypair(keyType)
-					}
 					return keyType
 				},
 				getAddress: async () => {
@@ -121,7 +118,7 @@ export class SubstrateSigner implements SessionSigner {
 
 	public readonly match = (chain: string) => chainPattern.test(chain)
 
-	public verifySession(session: Session) {
+	public async verifySession(session: Session) {
 		const { publicKeyType, publicKey, chain, address, data, timestamp, duration } = session
 		assert(publicKeyType === this.publicKeyType, `Substrate sessions must use ${this.publicKeyType} keys`)
 
@@ -140,6 +137,9 @@ export class SubstrateSigner implements SessionSigner {
 		const decodedAddress = decodeAddress(address)
 
 		const substrateKeyType = data.substrateKeyType
+		// some cryptography code used by polkadot requires a wasm environment which is initialised
+		// asynchronously so we have to wait for it to be ready
+		await cryptoWaitReady()
 		const signerKeyring = new Keyring({
 			type: substrateKeyType,
 			ss58Format: 42,
