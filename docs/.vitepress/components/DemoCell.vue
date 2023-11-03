@@ -36,17 +36,28 @@
 <style>
 .DemoCell {
   display: block;
-  margin: 20px;
-  max-width: 560px;
+  margin: 0 20px 20px;
+  max-width: 640px;
   padding: 18px 20px;
   border: 1px solid var(--vp-c-bg-soft);
   border-radius: 12px;
   height: 100%;
   background-color: var(--vp-c-bg-soft);
 }
+@media (min-width: 960px) {
+  .DemoCell {
+    display: block;
+    position: absolute;
+    left: calc(50vw + 210px / 2 + 30px);
+    height: 210px;
+    width: 320px;
+    z-index: 10;
+    box-shadow: 1px 1px 6px rgba(0,0,0,0.2);
+  }
+}
 @media (min-width: 600px) {
   .DemoCell {
-    margin: 20px auto;
+    margin: 0 auto 20px;
   }
 }
 .DemoCell input {

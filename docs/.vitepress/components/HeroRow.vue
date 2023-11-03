@@ -77,7 +77,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   display: flex;
   flex-direction: column;
   margin: 0 auto;
-  max-width: 1152px;
+  max-width: 1020px;
 }
 
 @media (min-width: 960px) {
@@ -145,8 +145,8 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   .name,
   .text {
     max-width: 660px;
-    line-height: 1.12;
-    font-size: 44px;
+    line-height: 1.18;
+    font-size: 34px;
   }
 }
 
@@ -349,7 +349,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
     max-width: 320px;
     max-height: 320px;
     transform: translate(-50%, -50%) scale(1.5);
-    margin-top: 30px;
+    margin-top: 45px;
   }
 }
 </style>

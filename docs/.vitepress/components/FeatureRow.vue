@@ -51,7 +51,7 @@ defineProps<{
 
 .FeatureRow .container {
   margin: 0 auto;
-  max-width: 1152px;
+  max-width: 1020px;
 }
 
 .FeatureRow .items {
