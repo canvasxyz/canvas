@@ -40,9 +40,10 @@ type GenericSigner = {
 }
 
 export class SolanaSigner implements SessionSigner {
+	public static publicKeyType: SignatureType = "ed25519"
+
 	public readonly sessionDuration: number | null
 	public readonly chainId: string
-	public readonly publicKeyType: SignatureType = "ed25519"
 
 	private readonly log = logger("canvas:chain-solana")
 
@@ -82,7 +83,7 @@ export class SolanaSigner implements SessionSigner {
 
 	public verifySession(session: Session) {
 		const { publicKeyType, publicKey, address, data, timestamp, duration } = session
-		assert(publicKeyType === this.publicKeyType, `Solana sessions must use ${this.publicKeyType} keys`)
+		assert(publicKeyType === SolanaSigner.publicKeyType, `Solana sessions must use ${SolanaSigner.publicKeyType} keys`)
 
 		assert(validateSessionData(data), "invalid session")
 
@@ -90,7 +91,7 @@ export class SolanaSigner implements SessionSigner {
 
 		const message: SolanaMessage = {
 			address: address,
-			signingKey: getPublicKeyURI(this.publicKeyType, publicKey),
+			signingKey: getPublicKeyURI(SolanaSigner.publicKeyType, publicKey),
 			issuedAt: new Date(timestamp).toISOString(),
 			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
 		}
@@ -163,7 +164,7 @@ export class SolanaSigner implements SessionSigner {
 
 		const message: SolanaMessage = {
 			address: address,
-			signingKey: getPublicKeyURI(this.publicKeyType, publicKey),
+			signingKey: getPublicKeyURI(SolanaSigner.publicKeyType, publicKey),
 			issuedAt: issuedAt.toISOString(),
 			expirationTime: null,
 		}
@@ -180,7 +181,7 @@ export class SolanaSigner implements SessionSigner {
 		const session: Session<SolanaSessionData> = {
 			type: "session",
 			address: address,
-			publicKeyType: this.publicKeyType,
+			publicKeyType: SolanaSigner.publicKeyType,
 			publicKey,
 			data: { signature },
 			blockhash: null,
@@ -213,7 +214,7 @@ export class SolanaSigner implements SessionSigner {
 			assert(timestamp >= session.timestamp)
 			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
 
-			return createSignature(this.publicKeyType, privateKey, message)
+			return createSignature(SolanaSigner.publicKeyType, privateKey, message)
 		} else if (payload.type === "session") {
 			const { address } = payload
 			const key = getKey(topic, address)
@@ -224,7 +225,7 @@ export class SolanaSigner implements SessionSigner {
 			// only sign our own current sessions
 			assert(payload === session)
 
-			return createSignature(this.publicKeyType, privateKey, message)
+			return createSignature(SolanaSigner.publicKeyType, privateKey, message)
 		} else {
 			signalInvalidType(payload)
 		}
