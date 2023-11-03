@@ -1,11 +1,11 @@
 import { Wallet, verifyMessage } from "ethers"
 import { decodeSignature, pubkeyType, rawSecp256k1PubkeyToRawAddress, serializeSignDoc } from "@cosmjs/amino"
-import { Sha256 } from "@cosmjs/crypto"
 import { fromBech32, toBech32 } from "@cosmjs/encoding"
-import { secp256k1 } from "@noble/curves/secp256k1"
 import * as json from "@ipld/dag-json"
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
+import { secp256k1 } from "@noble/curves/secp256k1"
+import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils"
 
 import type {
@@ -191,8 +191,8 @@ export class CosmosSigner implements SessionSigner {
 
 			// the payload can either be signed directly, or encapsulated in a SignDoc
 			const signDocPayload = await getSessionSignatureData(encodedMessage, address, launchpadChainId)
-			const signDocDigest = new Sha256(serializeSignDoc(signDocPayload)).digest()
-			const digest = new Sha256(encodedMessage).digest()
+			const signDocDigest = sha256(serializeSignDoc(signDocPayload))
+			const digest = sha256(encodedMessage)
 
 			// compare the signature against the directly signed and signdoc digests
 			let isValid = false
