@@ -39,20 +39,17 @@ defineProps<{
         <h2 class="title" v-html="title"></h2>
         <p v-if="details" class="details" v-html="details"></p>
 
-        <div v-if="link" class="link-text">
+        <div v-if="link || soon" class="link-text">
           <p class="link-text-value">
-            <a :href="link" target="blank">
+            <a v-if="link" :href="link" target="blank">
               {{ linkText || 'Link' }} <span class="external-link">↗</span>
             </a>
             <a v-if="secondaryLink" :href="secondaryLink" target="blank">
               {{ secondaryLinkText || 'Link' }} <span class="external-link">↗</span>
             </a>
-          </p>
-        </div>
-
-        <div v-if="soon" class="link-text">
-          <p class="soon-text-value">
-            {{ soon }}
+            <span v-if="soon" class="soon-text">
+              {{ soon }}
+            </span>
           </p>
         </div>
       </article>
@@ -129,7 +126,7 @@ defineProps<{
   text-decoration: underline;
 }
 
-.soon-text-value {
+.soon-text {
   font-size: 16px;
   font-weight: 600;
   color: var(--vp-c-text-3);
