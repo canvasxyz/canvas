@@ -145,7 +145,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   .name,
   .text {
     max-width: 660px;
-    line-height: 1.15;
+    line-height: 1.12;
     font-size: 44px;
   }
 }
@@ -153,7 +153,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 @media (min-width: 960px) {
   .name,
   .text {
-    font-size: 52px;
+    font-size: 40px;
   }
 
   .HeroRow.has-image .name,
@@ -193,13 +193,13 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 }
 @media (min-width: 640px) {
   .bullets {
-    font-size: 19px;
+    font-size: 18px;
   }
 }
 @media (min-width: 960px) {
   .bullets {
     margin: 0;
-    font-size: 19px;
+    font-size: 18px;
   }
   .bullets ul li {
     margin-bottom: 4px;
@@ -213,13 +213,13 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   .tagline {
     padding-top: 22px;
     max-width: 480px;
-    font-size: 20px;
+    font-size: 18px;
   }
 }
 
 @media (min-width: 960px) {
   .tagline {
-    font-size: 20px;
+    font-size: 18px;
     padding-top: 24px;
     line-height: 1.4 !important;
   }

@@ -12,6 +12,7 @@
   max-width: 400px;
   margin-top: 60px;
   color: var(--vp-c-text-3);
+  font-family: var(--space-font-family);
 }
 
 .HomepageFooter img {

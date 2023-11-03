@@ -68,6 +68,7 @@ defineProps<{
   height: 100%;
   background-color: var(--vp-c-bg-soft);
   transition: border-color 0.25s, background-color 0.25s;
+  box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.07)
 }
 
 .FeatureCard.link:hover {
