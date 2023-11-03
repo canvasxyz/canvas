@@ -20,6 +20,9 @@
   --vp-button-alt-hover-bg: #414853;
 }
 
+pre {
+  tab-size: 3;
+}
 .vp-doc p {
   line-height: inherit;
 }
