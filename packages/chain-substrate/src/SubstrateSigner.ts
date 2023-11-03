@@ -2,6 +2,7 @@ import * as cbor from "@ipld/dag-cbor"
 import * as json from "@ipld/dag-json"
 import { logger } from "@libp2p/logger"
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils"
+import { Keyring } from "@polkadot/keyring"
 import type {
 	Signature,
 	SessionSigner,
@@ -24,9 +25,11 @@ import {
 	chainPattern,
 	getSessionURI,
 	getKey,
+	randomKeypair,
 } from "./utils.js"
 import type { SubstrateMessage, SubstrateSessionData } from "./types.js"
-import { encodeAddress } from "@polkadot/util-crypto"
+import { cryptoWaitReady, decodeAddress, mnemonicGenerate } from "@polkadot/util-crypto"
+import { KeypairType } from "@polkadot/util-crypto/types.js"
 
 type SubstrateSignerInit = {
 	store?: SessionStore
@@ -35,6 +38,8 @@ type SubstrateSignerInit = {
 }
 
 type AbstractSigner = {
+	// substrate wallets support a variety of key pair types, such as sr25519, ed25519, and ecdsa
+	getSubstrateKeyType: () => Promise<KeypairType>
 	getAddress: () => Promise<string>
 	signMessage(message: Uint8Array): Promise<Uint8Array>
 }
@@ -61,6 +66,10 @@ export class SubstrateSigner implements SessionSigner {
 				throw new Error("Invalid signer - no signRaw method exists")
 			}
 			this.#signer = {
+				getSubstrateKeyType: async () => {
+					const account = await extension.accounts.get()
+					return account[0].type || "sr25519"
+				},
 				getAddress: async () => {
 					const account = await extension.accounts.get()
 					return account[0].address
@@ -75,12 +84,33 @@ export class SubstrateSigner implements SessionSigner {
 				},
 			}
 		} else {
-			const privateKey = ed25519.utils.randomPrivateKey()
-			const publicKey = ed25519.getPublicKey(privateKey)
-			const address = encodeAddress(publicKey)
+			const keyType: KeypairType = "sr25519"
+
+			// some of the cryptography methods used by polkadot require a wasm environment which is initialised
+			// asynchronously so we have to lazily create the keypair when it is needed
+			let keyring: ReturnType<Keyring["addFromMnemonic"]> | undefined
 			this.#signer = {
-				getAddress: async () => address,
-				signMessage: async (data: Uint8Array) => createSignature("ed25519", data, privateKey).signature,
+				getSubstrateKeyType: async () => {
+					await cryptoWaitReady()
+					if (!keyring) {
+						keyring = randomKeypair(keyType)
+					}
+					return keyType
+				},
+				getAddress: async () => {
+					await cryptoWaitReady()
+					if (!keyring) {
+						keyring = randomKeypair(keyType)
+					}
+					return keyring.address
+				},
+				signMessage: async (data: Uint8Array) => {
+					await cryptoWaitReady()
+					if (!keyring) {
+						keyring = randomKeypair(keyType)
+					}
+					return keyring.sign(data)
+				},
 			}
 		}
 
@@ -93,13 +123,10 @@ export class SubstrateSigner implements SessionSigner {
 
 	public verifySession(session: Session) {
 		const { publicKeyType, publicKey, chain, address, data, timestamp, duration } = session
-		// TODO: validate the publickeytype
-		assert(publicKeyType === undefined, "___ sessions must use ___ keys")
+		assert(publicKeyType === this.publicKeyType, `Substrate sessions must use ${this.publicKeyType} keys`)
 
-		// TODO: validate that the session data is well formed
 		assert(validateSessionData(data), "invalid session")
 
-		// TODO: recreate the message that was signed from the session data
 		const chainId = parseChainId(chain)
 		const issuedAt = new Date(timestamp).toISOString()
 		const message: SubstrateMessage = {
@@ -110,7 +137,16 @@ export class SubstrateSigner implements SessionSigner {
 			expirationTime: null,
 		}
 
-		const valid = ed25519.verify(cbor.encode(message), data.signature, publicKey)
+		const decodedAddress = decodeAddress(address)
+
+		const substrateKeyType = data.substrateKeyType
+		const signerKeyring = new Keyring({
+			type: substrateKeyType,
+			ss58Format: 42,
+		}).addFromAddress(decodedAddress)
+
+		const valid = signerKeyring.verify(cbor.encode(message), data.signature, decodedAddress)
+
 		assert(valid, "invalid signature")
 	}
 
@@ -192,14 +228,15 @@ export class SubstrateSigner implements SessionSigner {
 		}
 
 		const signature = await this.#signer.signMessage(cbor.encode(message))
+		const substrateKeyType = await this.#signer.getSubstrateKeyType()
 
 		const session: Session<SubstrateSessionData> = {
 			type: "session",
-			chain: chain,
-			address: address,
+			chain,
+			address,
 			publicKeyType: this.publicKeyType,
-			publicKey: publicKey,
-			data: { signature: signature, data: message },
+			publicKey,
+			data: { signature, data: message, substrateKeyType },
 			blockhash: null,
 			timestamp,
 			duration: this.sessionDuration,

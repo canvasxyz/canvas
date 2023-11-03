@@ -1,7 +1,9 @@
 import { CID } from "multiformats/cid"
 
 import type { SubstrateSessionData } from "./types"
-import { encodeAddress } from "@polkadot/util-crypto"
+import { encodeAddress, mnemonicGenerate } from "@polkadot/util-crypto"
+import { KeypairType } from "@polkadot/util-crypto/types"
+import { Keyring } from "@polkadot/keyring"
 
 export const getKey = (topic: string, chain: string, address: string) => `canvas:${topic}/${chain}:${address}`
 
@@ -52,4 +54,11 @@ export function parseChainId(chain: string): string {
 export function getSessionURI(chain: string, publicKey: Uint8Array) {
 	const sessionAddress = encodeAddress(publicKey)
 	return `${chain}:${sessionAddress}`
+}
+
+export function randomKeypair(keyType: KeypairType) {
+	const mnemonic = mnemonicGenerate()
+	return new Keyring({
+		type: keyType,
+	}).addFromMnemonic(mnemonic)
 }
