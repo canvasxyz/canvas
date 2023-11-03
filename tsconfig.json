@@ -18,6 +18,7 @@
     { "path": "./packages/modeldb/test" },
     { "path": "./packages/chain-atp" },
     { "path": "./packages/chain-atp/test" },
+    { "path": "./packages/chain-cosmos" },
     { "path": "./packages/chain-ethereum" },
     { "path": "./packages/chain-ethereum/test" },
     { "path": "./packages/chain-solana" },
