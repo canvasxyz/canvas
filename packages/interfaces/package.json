@@ -15,6 +15,8 @@
     "multiformats": "^12.1.3"
   },
   "devDependencies": {
+    "@canvas-js/signed-cid": "0.5.1",
+    "@canvas-js/interfaces": "0.5.1",
     "@canvas-js/chain-cosmos": "0.5.1",
     "@canvas-js/chain-ethereum": "0.5.1",
     "@canvas-js/chain-solana": "0.5.1"
