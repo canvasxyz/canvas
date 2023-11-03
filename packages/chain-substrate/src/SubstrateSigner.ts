@@ -186,7 +186,6 @@ export class SubstrateSigner implements SessionSigner {
 		if (this.#store !== null) {
 			const privateSessionData = await this.#store.get(key)
 			if (privateSessionData !== null) {
-				// TODO: parse the private session data
 				const { privateKey, session } = json.parse<{ privateKey: Uint8Array; session: Session<SubstrateSessionData> }>(
 					privateSessionData
 				)

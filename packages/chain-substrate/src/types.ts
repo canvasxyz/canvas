@@ -6,7 +6,6 @@ export type SubstrateSessionData = {
 	data: SubstrateMessage
 }
 
-// TODO: Which fields do we actually need?
 export type SubstrateMessage = {
 	address: string
 	chainId: string
