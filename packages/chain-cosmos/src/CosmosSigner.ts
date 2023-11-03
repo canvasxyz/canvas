@@ -1,3 +1,6 @@
+import { verifyMessage } from "ethers"
+import { decodeSignature, pubkeyType, rawSecp256k1PubkeyToRawAddress, serializeSignDoc } from "@cosmjs/amino"
+import { Sha256 } from "@cosmjs/crypto"
 import { fromBech32, toBech32 } from "@cosmjs/encoding"
 import { secp256k1 } from "@noble/curves/secp256k1"
 import * as json from "@ipld/dag-json"
@@ -34,9 +37,6 @@ import {
 	isTerraFixedExtension,
 } from "./types.js"
 import { getSessionSignatureData } from "./signatureData.js"
-import { verifyMessage } from "ethers"
-import { decodeSignature, rawSecp256k1PubkeyToRawAddress, serializeSignDoc } from "@cosmjs/amino"
-import { Sha256 } from "@cosmjs/crypto"
 
 export interface CosmosSignerInit {
 	signer?: CosmosSigner
@@ -103,7 +103,10 @@ export class CosmosSigner implements SessionSigner {
 					return {
 						signature: {
 							signature: stdSig.signature,
-							pub_key: stdSig.pub_key.value,
+							pub_key: {
+								type: pubkeyType.secp256k1,
+								value: stdSig.pub_key.value,
+							},
 							chain_id: "",
 						},
 						signatureType: "cosmos" as const,
@@ -118,7 +121,10 @@ export class CosmosSigner implements SessionSigner {
 						signature: {
 							chain_id: "",
 							signature: result.payload.result.signature,
-							pub_key: result.payload.result.public_key,
+							pub_key: {
+								type: pubkeyType.secp256k1,
+								value: result.payload.result.public_key,
+							},
 						},
 						signatureType: "cosmos" as const,
 					}
@@ -260,11 +266,11 @@ export class CosmosSigner implements SessionSigner {
 
 		const timestamp = options.timestamp ?? Date.now()
 		const issuedAt = new Date(timestamp)
-
+		const { prefix } = fromBech32(address)
 		const message: CosmosMessage = {
 			address,
 			chainId,
-			uri: getSessionURI(chainId, publicKey),
+			uri: getSessionURI(prefix, chainId, publicKey),
 			issuedAt: issuedAt.toISOString(),
 			expirationTime: null,
 		}

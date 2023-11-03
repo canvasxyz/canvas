@@ -11,7 +11,10 @@ type CosmosSignedSessionData = {
 	signatureType: "cosmos"
 	signature: {
 		signature: string
-		pub_key: string
+		pub_key: {
+			type: string
+			value: string
+		}
 		chain_id: string
 	}
 }
