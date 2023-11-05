@@ -22,7 +22,24 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
           <h1 v-if="name" class="name">
             <span v-html="name" class="clip"></span>
           </h1>
-          <p v-if="text" v-html="text" class="text"></p>
+          <p class="text">
+<span v-if="text" v-html="text"></span>
+<span
+            v-motion
+                    :style='{
+                      height: "30px",
+                      width: "19px",
+                      position: "absolute",
+                      backgroundColor: "#dfdfd7",
+                      display: "inline-block",
+                      borderRadius: "2px",
+                      marginLeft: "9px",
+                      marginTop: "10px",
+                    }'
+                    :initial='{ opacity: 0, scale: 1 }'
+                    :enter='{ to: { backgroundColor: "#fff" }, opacity: 0.9, scale: 0.98, transition: { repeat: Infinity, repeatType: "mirror", duration: 800, ease: "easeInOut" } }'
+></span>
+</p>
           <p v-if="tagline" v-html="tagline" class="tagline"></p>
           <p v-if="bullets" class="bullets">
             <ul>
@@ -144,7 +161,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 @media (min-width: 640px) {
   .name,
   .text {
-    max-width: 660px;
+    max-width: 500px;
     line-height: 1.18;
     font-size: 34px;
   }
