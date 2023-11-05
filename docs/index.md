@@ -2,7 +2,7 @@
 layout: home
 ---
 
-<HeroRow text="The general computing platform for the decentralized web" image="/graphic_mainframe_4.png" tagline="Build multiplayer applications, no blockchains required." v-bind:bullets="['Built on a realtime sync engine for libp2p and signed messages', 'Embedded SQLite + IndexedDB', 'Fully programmable in TypeScript + EVM']">
+<HeroRow text="The general computing platform for the decentralized web" image="/graphic_mainframe_4.png" tagline="Build realtime multiplayer applications, with no blockchains required." v-bind:bullets="['Built on a sync engine for libp2p and signed messages', 'Embedded SQLite + IndexedDB', 'Fully programmable in TypeScript + EVM']">
   <HeroAction theme="brand big" text="Tutorial" href="/1-introduction" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>
@@ -64,21 +64,22 @@ return <div>{threads.map((thread) => <div>{thread.title}</div>)}</div>
 
 <TextRow title="About Canvas">
   <TextItem>Canvas is a framework for writing any web application as a decentralized protocol, running over a peer-to-peer network.</TextItem>
-  <TextItem>Instead of code running on a single hosted backend, Canvas applications are defined as <strong>TypeScript contracts</strong>, which run on both the browser and server.</TextItem>
-  <TextItem>When users interact with the application, their actions are relayed between everyone on the network. They execute at the edge, where they can also access data or call external code.</TextItem>
-  <TextItem>You can use it as a peer-to-peer network with dynamic, persistent state, for applications like chat, presence, and games. Or you can add a data availability service, which turns it into a full-fledged decentralized app platform.</TextItem>
+  <TextItem>Instead of code running on a single hosted backend, Canvas applications are defined as <strong>TypeScript contracts</strong>, running on both the browser and server.</TextItem>
+  <TextItem>When users interact with the application, their actions are relayed between everyone on the network, and re-executed by each client, using the same technology that powers multiplayer software and game engines.</TextItem>
+  <TextItem>This allows you to develop and maintain complex applications while focusing on the business logic. It's like smart contracts on the blockchain, except you can get started without learning a new language, worrying about gas limits, or dealing with tokens.</TextItem>
+  <TextItem>For decentralized app developers today, you can use Canvas as a peer-to-peer network with state sync, for applications like chat, presence, and games. Or, if you add a data availability service, you can use it as a modular decentralized app platform.</TextItem>
 </TextRow>
 
-<FeatureRow title="Interoperable Everywhere" detail="Canvas supports any cryptographically verifiable authentication system, like Web3 wallets, W3C DIDs, and even Apple & Google SSO. You can write your own custom adapters to support other authorization methods.">
+<FeatureRow title="Interoperable Everywhere" detail="Canvas supports any cryptographically verifiable authentication strategy, including Web3 wallets, W3C DIDs, and even Apple & Google SSO. You can write your own custom adapters to support other authorization methods.">
   <FeatureCard title="Sign in with Wallet" details="Log in with a Web3 wallet from Ethereum. Also supports other chains like Cosmos, Solana, and Polkadot." linkText="Available today" />
   <FeatureCard title="Sign in with Bluesky" details="Log in with your decentralized identity from the Bluesky PLC network."/>
   <FeatureCard title="Sign in with OpenID" details="Log in trustlessly with Google, Apple, or other SSO providers, using zero-knowledge proofs." soon="Coming soon"/>
 </FeatureRow>
 
-<FeatureRow title="Built on Real-Time Collaboration Research" detail="We've created a set of modules that use the latest research in collaborative data structures, the same tech that powers Google Docs and Figma, to combine them with conventional databases. Learn more here:">
+<FeatureRow title="Built on Real-Time Collaboration" detail="Canvas is built on a realtime multiplayer database, that uses the same technology that powers Google Docs and Figma. We've abstracted away most of the complexity in these open-source modules below.">
   <FeatureCard title="Okra" details="A deterministic Prolly-tree that allows fast sync between ordered sets of actions." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit" secondaryLinkText="Blog Post"/>
-  <FeatureCard title="GossipLog" details="A history-preserving multiwriter log that allows functions to efficiently retrieve data from the past." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" soon="Blog post coming soon"/>
-  <FeatureCard title="ModelDB" details="A CRDT-friendly database abstraction over IndexedDB and SQLite, that runs in both the browser and server." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb"/>
+  <FeatureCard title="GossipLog" details="A decentralized, authenticated multiwriter log that allows functions to retrieve data from the past." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" soon="Blog post coming soon"/>
+  <FeatureCard title="ModelDB" details="A cross-platform relational database wrapper, supporting IndexedDB and SQLite." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb"/>
   <FeatureCard title="Persister" details="A bundler that persists individual actions to Arweave, and rebundles them for efficient later retrieval." link="https://github.com/canvasxyz/canvas/tree/main/packages/persister-arweave"/>
 </FeatureRow>
 
