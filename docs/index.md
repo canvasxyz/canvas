@@ -2,7 +2,7 @@
 layout: home
 ---
 
-<HeroRow text="The general computing platform for the decentralized web" image="/graphic_mainframe_4.png" tagline="Build realtime multiplayer applications, with no blockchains required." v-bind:bullets="['Built on a sync engine for libp2p and signed messages', 'Embedded SQLite + IndexedDB', 'Fully programmable in TypeScript + EVM']">
+<HeroRow text="The multiplayer computing platform for the decentralized web" image="/graphic_mainframe_4.png" tagline="A peer-to-peer stack for building web applications as decentralized protocols, with no blockchains required." v-bind:bullets="['Realtime sync for libp2p and signed data', 'Embedded SQLite + IndexedDB', 'Fully programmable in TypeScript + EVM']">
   <HeroAction theme="brand big" text="Tutorial" href="/1-introduction" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>
@@ -64,10 +64,10 @@ return <div>{threads.map((thread) => <div>{thread.title}</div>)}</div>
 
 <TextRow title="About Canvas">
   <TextItem>Canvas is a framework for writing any web application as a decentralized protocol, running over a peer-to-peer network.</TextItem>
-  <TextItem>Instead of code running on a single hosted backend, Canvas applications are defined as <strong>TypeScript contracts</strong>, running on both the browser and server.</TextItem>
-  <TextItem>When users interact with the application, their actions are relayed between everyone on the network, and re-executed by each client, using the same technology that powers multiplayer software and game engines.</TextItem>
-  <TextItem>This allows you to develop and maintain complex applications while focusing on the business logic. It's like smart contracts on the blockchain, except you can get started without learning a new language, worrying about gas limits, or dealing with tokens.</TextItem>
-  <TextItem>For decentralized app developers today, you can use Canvas as a peer-to-peer network with state sync, for applications like chat, presence, and games. Or, if you add a data availability service, you can use it as a modular decentralized app platform.</TextItem>
+  <TextItem>Instead of code running on a single hosted backend, Canvas applications are defined as TypeScript functions, running on both the browser and server.</TextItem>
+  <TextItem>When users interact with the application, their actions are relayed between everyone on the network and executed by each client, using the same technology that powers multiplayer game engines.</TextItem>
+  <TextItem>It's like smart contracts on the blockchain, except you can get started without learning a new language, issuing a token, or worrying about scalability.</TextItem>
+  <TextItem>For decentralized app developers today, you can use Canvas as a peer-to-peer network with state sync for applications like chat, games, and governance. Or, if you add a data availability service, you can use it as a fully-fledged decentralized app platform.</TextItem>
 </TextRow>
 
 <FeatureRow title="Interoperable Everywhere" detail="Canvas supports any cryptographically verifiable authentication strategy, including Web3 wallets, W3C DIDs, and even Apple & Google SSO. You can write your own custom adapters to support other authorization methods.">
