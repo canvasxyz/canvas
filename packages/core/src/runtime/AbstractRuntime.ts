@@ -44,10 +44,10 @@ export abstract class AbstractRuntime {
 	protected static sessionsModel = {
 		$sessions: {
 			message_id: "primary",
-			signing_key: "string",
+			public_key: "string",
 			address: "string",
 			expiration: "integer?",
-			$indexes: [["address"], ["signing_key"]],
+			$indexes: [["address"], ["public_key"]],
 		},
 	} satisfies ModelsInit
 
@@ -110,7 +110,7 @@ export abstract class AbstractRuntime {
 
 				await runtime.db.set("$sessions", {
 					message_id: id,
-					signing_key: publicKey,
+					public_key: publicKey,
 					address: address,
 					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
 				})
@@ -119,7 +119,7 @@ export abstract class AbstractRuntime {
 
 				const sessions = await runtime.db.query("$sessions", {
 					where: {
-						signing_key: signature.publicKey,
+						public_key: signature.publicKey,
 						address: address,
 						expiration: { gt: timestamp },
 					},

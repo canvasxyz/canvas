@@ -38,7 +38,7 @@ export interface CanvasConfig<T extends Contract = Contract> {
 	runtimeMemoryLimit?: number
 }
 
-export type ActionOptions = { chain?: string; signer?: SessionSigner }
+export type ActionOptions = { signer?: SessionSigner }
 
 export type ActionAPI<Args = any, Result = any> = (
 	args: Args,
@@ -134,20 +134,18 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		for (const name of runtime.actionNames) {
 			// @ts-ignore
 			this.actions[name] = async (args: any, options: ActionOptions = {}) => {
-				const signer =
-					options.signer ?? signers.find((signer) => options.chain === undefined || signer.match(options.chain))
-
+				const signer = options.signer ?? signers[0]
 				assert(signer !== undefined, "signer not found")
 
 				const timestamp = Date.now()
 
-				const session = await signer.getSession(this.topic, { timestamp, chain: options.chain })
+				const session = await signer.getSession(this.topic, { timestamp })
 
-				const { address, publicKey: signing_key } = session
+				const { address, publicKey: public_key } = session
 
 				// Check if the session has already been added to the message log
 				const results = await runtime.db.query("$sessions", {
-					where: { address, signing_key, expiration: { gt: timestamp } },
+					where: { address, public_key, expiration: { gt: timestamp } },
 					limit: 1,
 				})
 
