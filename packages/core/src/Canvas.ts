@@ -143,11 +143,11 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 				const session = await signer.getSession(this.topic, { timestamp, chain: options.chain })
 
-				const { address, publicKeyType: public_key_type, publicKey: public_key } = session
+				const { address, signingKey: signing_key } = session
 
 				// Check if the session has already been added to the message log
 				const results = await runtime.db.query("$sessions", {
-					where: { address, public_key_type, public_key, expiration: { gt: timestamp } },
+					where: { address, signing_key, expiration: { gt: timestamp } },
 					limit: 1,
 				})
 

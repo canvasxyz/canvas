@@ -1,7 +1,6 @@
 import * as cbor from "@ipld/dag-cbor"
 import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
-import { equals } from "uint8arrays"
 import { logger } from "@libp2p/logger"
 import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
@@ -45,11 +44,10 @@ export abstract class AbstractRuntime {
 	protected static sessionsModel = {
 		$sessions: {
 			message_id: "primary",
-			public_key_type: "string",
-			public_key: "bytes",
+			signing_key: "string",
 			address: "string",
 			expiration: "integer?",
-			$indexes: [["address"], ["public_key"]],
+			$indexes: [["address"], ["signing_key"]],
 		},
 	} satisfies ModelsInit
 
@@ -101,19 +99,18 @@ export abstract class AbstractRuntime {
 			assert(signature !== null, "missing message signature")
 
 			if (AbstractRuntime.isSession(message)) {
-				const { publicKeyType, publicKey, address, timestamp, duration } = message.payload
+				const { signingKey, address, timestamp, duration } = message.payload
 
 				const signer = runtime.signers.find((signer) => signer.match(address))
 				assert(signer !== undefined, "no signer found")
 
-				assert(publicKeyType === signature.type && equals(publicKey, signature.publicKey))
+				assert(signingKey === signature.publicKey)
 
 				await signer.verifySession(message.payload)
 
 				await runtime.db.set("$sessions", {
 					message_id: id,
-					public_key_type: signature.type,
-					public_key: signature.publicKey,
+					signing_key: signingKey,
 					address: address,
 					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
 				})
@@ -122,15 +119,14 @@ export abstract class AbstractRuntime {
 
 				const sessions = await runtime.db.query("$sessions", {
 					where: {
-						public_key_type: signature.type,
-						public_key: signature.publicKey,
+						signing_key: signature.publicKey,
 						address: address,
 						expiration: { gt: timestamp },
 					},
 				})
 
 				if (sessions.length === 0) {
-					throw new Error(`missing session ${signature.type}:0x${bytesToHex(signature.publicKey)} for $${address}`)
+					throw new Error(`missing session ${signature.publicKey} for $${address}`)
 				}
 
 				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(runtime.db.models, () => ({}))

@@ -1,10 +1,18 @@
-import { base32hex } from "multiformats/bases/base32"
+import { secp256k1 } from "@noble/curves/secp256k1"
+import { ed25519 } from "@noble/curves/ed25519"
 import { sha256 } from "@noble/hashes/sha256"
-import * as cbor from "@ipld/dag-cbor"
 
+import { varint } from "multiformats"
+import { base32hex } from "multiformats/bases/base32"
+import { base58btc } from "multiformats/bases/base58"
+
+import * as cbor from "@ipld/dag-cbor"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
+
 import { lessThan } from "@canvas-js/okra"
+
+import { getCID, didKeyPattern } from "@canvas-js/signed-cid"
 
 import type { Signature, Message } from "@canvas-js/interfaces"
 
@@ -13,37 +21,33 @@ import { assert } from "./utils.js"
 
 const schema = fromDSL(`
 type SignedMessage struct {
-	signature Signature
-	topic String
-	parents [Bytes]
-	payload any
-} representation tuple
-
-type Signature struct {
-	type String
 	publicKey Bytes
 	signature Bytes
-	cid &Message
+	parents  [Bytes]
+	payload   any
 } representation tuple
 `)
 
 const { toTyped: toSignedMessage, toRepresentation: fromSignedMessage } = create(schema, "SignedMessage")
 
 type SignedMessage = {
-	signature: Signature
-	topic: string
+	publicKey: Uint8Array
+	signature: Uint8Array
 	parents: Uint8Array[]
 	payload: unknown
 }
 
+export type Transformer = { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+const identity: Transformer = { toTyped: (x: any) => x, toRepresentation: (x: any) => x }
+
 export function decodeSignedMessage<Payload = unknown>(
+	topic: string,
 	value: Uint8Array,
-	{ toTyped }: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+	options: { transformer?: Transformer } = {}
 ): [id: string, signature: Signature, message: Message<Payload>] {
 	const signedMessage = toSignedMessage(cbor.decode(value)) as SignedMessage | undefined
 	assert(signedMessage !== undefined, "error decoding message (internal error)")
 
-	const { signature, topic } = signedMessage
 	const clock = getNextClock(signedMessage.parents)
 	const parents = signedMessage.parents ?? []
 
@@ -52,28 +56,39 @@ export function decodeSignedMessage<Payload = unknown>(
 		"unsorted parents array"
 	)
 
-	const payload = toTyped(signedMessage.payload)
+	const transformer = options.transformer ?? identity
+	const payload = transformer.toTyped(signedMessage.payload)
+
 	assert(payload !== undefined, "error decoding message (invalid payload)")
 
 	const id = decodeId(getKey(clock, sha256(value)))
 
-	return [id, signature, { topic, clock, parents: parents.map(decodeId), payload }]
+	const { publicKey, signature } = signedMessage
+	const message: Message<Payload> = { topic, clock, parents: parents.map(decodeId), payload }
+	const cid = getCID(message, { codec: "dag-cbor", digest: "sha2-256" })
+
+	return [id, { publicKey: `did:key:${base58btc.encode(publicKey)}`, signature, cid }, message]
 }
 
 export function encodeSignedMessage(
-	signature: Signature,
+	{ publicKey, signature }: Signature,
 	message: Message,
-	{ toRepresentation }: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+	options: { transformer?: Transformer } = {}
 ): [key: Uint8Array, value: Uint8Array] {
 	const parents = message.parents.sort().map(encodeId)
 	assert(getNextClock(parents) === message.clock, "error encoding message (invalid clock)")
 
-	const payload = toRepresentation(message.payload)
+	const transformer = options.transformer ?? identity
+	const payload = transformer.toRepresentation(message.payload)
 	assert(payload !== undefined, "error encoding message (invalid payload)")
 
+	const result = didKeyPattern.exec(publicKey)
+	assert(result !== null)
+	const [{}, bytes] = result
+
 	const signedMessage: SignedMessage = {
-		signature,
-		topic: message.topic,
+		publicKey: base58btc.decode(bytes),
+		signature: signature,
 		parents: parents,
 		payload: payload,
 	}

@@ -1,5 +1,3 @@
-import type { SignatureType } from "./Signature.js"
-
 /**
  * Sessions consist of an ephemeral keypair and some chain-specific
  * data representing a user's (temporary) authorization of that
@@ -11,14 +9,15 @@ export type Session<Data = any> = {
 	/** DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
 	address: string
 
-	/** ephemeral session key used to sign subsequent actions */
-	publicKeyType: SignatureType
-	publicKey: Uint8Array
+	/** did:key URI of the ephemeral session key used to sign subsequent actions */
+	signingKey: string
 
 	/** chain-specific session payload, e.g. a SIWE message & signature */
 	data: Data
 
 	timestamp: number
+
+	/** CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
 	blockhash: string | null
 	duration: number | null
 }

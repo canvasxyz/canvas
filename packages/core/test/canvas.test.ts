@@ -1,14 +1,12 @@
 import assert from "node:assert"
-import crypto from "node:crypto"
 import test, { ExecutionContext } from "ava"
 
 import { ethers } from "ethers"
-import { ed25519 } from "@noble/curves/ed25519"
 
+import type { Message } from "@canvas-js/interfaces"
+import { Ed25519Signer } from "@canvas-js/signed-cid"
 import { Canvas } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { createSignature } from "@canvas-js/signed-cid"
-import { Message } from "@canvas-js/interfaces"
 
 const contract = `
 export const topic = "com.example.app"
@@ -90,7 +88,7 @@ test("insert a message created by another app", async (t) => {
 test("reject an invalid message", async (t) => {
 	const app = await init(t)
 
-	const privateKey = ed25519.utils.randomPrivateKey()
+	const signer = new Ed25519Signer()
 	const invalidMessage: Message<{ type: "fjdskl" }> = {
 		topic: app.topic,
 		clock: 1,
@@ -98,7 +96,7 @@ test("reject an invalid message", async (t) => {
 		payload: { type: "fjdskl" },
 	}
 
-	const signature = createSignature("ed25519", privateKey, invalidMessage)
+	const signature = signer.sign(invalidMessage)
 	await t.throwsAsync(() => app.insert(signature, invalidMessage as any), {
 		message: "error encoding message (invalid payload)",
 	})

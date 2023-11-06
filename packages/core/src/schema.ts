@@ -5,21 +5,20 @@ import { Action, Session } from "@canvas-js/interfaces"
 
 export const schema = `
 type Action struct {
-  address String
-  name String
-  args any
-  blockhash nullable String
+  address   String
+  name      String
+  args      any
   timestamp Int
+  blockhash nullable String
 }
 
 type Session struct {
-  address String
-  publicKeyType String
-  publicKey Bytes
-  data any
-  blockhash nullable String
-  timestamp Int
-  duration nullable Int
+  address    String
+  signingKey String
+  data       any
+  timestamp  Int
+  duration   nullable Int
+  blockhash  nullable String
 }
 
 type Payload union {

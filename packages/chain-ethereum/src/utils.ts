@@ -2,8 +2,6 @@ import { CID } from "multiformats/cid"
 import * as siwe from "siwe"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
-import { computeAddress } from "ethers"
-import { hexlify } from "ethers"
 
 export const getKey = (topic: string, address: string) => `canvas/${topic}/${address}`
 

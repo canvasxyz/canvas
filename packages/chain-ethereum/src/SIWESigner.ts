@@ -3,9 +3,16 @@ import * as siwe from "siwe"
 import * as json from "@ipld/dag-json"
 import { logger } from "@libp2p/logger"
 
-import type { Signature, SessionSigner, Action, SessionStore, Message, Session } from "@canvas-js/interfaces"
-import { createSignature, getPublicKeyURI } from "@canvas-js/signed-cid"
-import { secp256k1 } from "@noble/curves/secp256k1"
+import type {
+	Signature,
+	SessionSigner,
+	Action,
+	SessionStore,
+	Message,
+	Session,
+	MessageSigner,
+} from "@canvas-js/interfaces"
+import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
 import { getDomain } from "@canvas-js/chain-ethereum/domain"
 
@@ -31,13 +38,14 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 	public readonly sessionDuration: number | null
 	private readonly log = logger("canvas:chain-ethereum")
 
-	#signer: AbstractSigner
+	#ethersSigner: AbstractSigner
 	#store: SessionStore | null
-	#privateKeys: Record<string, Uint8Array> = {}
+	#signers: Record<string, MessageSigner<Action | Session>> = {}
 	#sessions: Record<string, Session<SIWESessionData>> = {}
+	// #privateKeys: Record<string, Uint8Array> = {}
 
 	public constructor(init: SIWESignerInit = {}) {
-		this.#signer = init.signer ?? Wallet.createRandom()
+		this.#ethersSigner = init.signer ?? Wallet.createRandom()
 		this.#store = init.store ?? null
 		this.sessionDuration = init.sessionDuration ?? null
 	}
@@ -45,9 +53,9 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 	public readonly match = (address: string) => addressPattern.test(address)
 
 	public verifySession(session: Session<SIWESessionData>) {
-		const { publicKeyType, publicKey, address, data, timestamp, duration } = session
-		assert(publicKeyType === "secp256k1", "SIWE sessions must use secp256k1 keys")
+		const { signingKey, address, data, timestamp, duration } = session
 
+		assert(didKeyPattern.test(signingKey), "invalid signing key")
 		assert(validateSessionData(data), "invalid session")
 		const [chainId, walletAddress] = parseAddress(address)
 
@@ -55,22 +63,20 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 			version: SIWEMessageVersion,
 			domain: data.domain,
 			nonce: data.nonce,
-			address: walletAddress,
-			uri: getPublicKeyURI("secp256k1", publicKey),
 			chainId: chainId,
+			address: walletAddress,
+			uri: signingKey,
 			issuedAt: new Date(timestamp).toISOString(),
 			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
 		}
 
 		const recoveredAddress = verifyMessage(prepareSIWEMessage(siweMessage), hexlify(data.signature))
-		if (recoveredAddress !== walletAddress) {
-			throw new Error("invalid SIWE signature")
-		}
+		assert(recoveredAddress === walletAddress, "invalid SIWE signature")
 	}
 
 	public async getSession(topic: string, options: { timestamp?: number } = {}): Promise<Session<SIWESessionData>> {
-		const walletAddress = await this.#signer.getAddress()
-		const network = await this.#signer.provider?.getNetwork()
+		const walletAddress = await this.#ethersSigner.getAddress()
+		const network = await this.#ethersSigner.provider?.getNetwork()
 		const chainId = network?.chainId?.toString() ?? "1"
 
 		const address = `eip155:${chainId}:${walletAddress}`
@@ -100,21 +106,18 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 		if (this.#store !== null) {
 			const privateSessionData = await this.#store.get(key)
 			if (privateSessionData !== null) {
-				const { privateKey, session } = json.parse<{ privateKey: Uint8Array; session: Session<SIWESessionData> }>(
-					privateSessionData
-				)
+				const { type, privateKey, session } = json.parse<{
+					type: "secp256k1"
+					privateKey: Uint8Array
+					session: Session<SIWESessionData>
+				}>(privateSessionData)
+				assert(type === "secp256k1", "unexpected signature type")
 
-				if (options.timestamp === undefined) {
+				const { timestamp, duration } = session
+				const t = options.timestamp ?? timestamp
+				if (timestamp <= t && t <= timestamp + (duration ?? Infinity)) {
+					this.#signers[key] = new Secp256k1Signer(privateKey)
 					this.#sessions[key] = session
-					this.#privateKeys[key] = privateKey
-					this.log("found session %s in store: %o", key, session)
-					return session
-				} else if (
-					options.timestamp >= session.timestamp &&
-					options.timestamp <= session.timestamp + (session.duration ?? Infinity)
-				) {
-					this.#sessions[key] = session
-					this.#privateKeys[key] = privateKey
 					this.log("found session %s in store: %o", key, session)
 					return session
 				} else {
@@ -128,8 +131,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 		const domain = getDomain()
 		const nonce = siwe.generateNonce()
 
-		const privateKey = secp256k1.utils.randomPrivateKey()
-		const publicKey = secp256k1.getPublicKey(privateKey)
+		const signer = new Secp256k1Signer()
 
 		const timestamp = options.timestamp ?? Date.now()
 		const issuedAt = new Date(timestamp).toISOString()
@@ -139,7 +141,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 			address: walletAddress,
 			chainId: parseInt(chainId),
 			domain: domain,
-			uri: getPublicKeyURI("secp256k1", publicKey),
+			uri: signer.uri,
 			nonce: nonce,
 			issuedAt: issuedAt,
 			expirationTime: null,
@@ -149,13 +151,12 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 			siweMessage.expirationTime = new Date(timestamp + this.sessionDuration).toISOString()
 		}
 
-		const signature = await this.#signer.signMessage(prepareSIWEMessage(siweMessage))
+		const signature = await this.#ethersSigner.signMessage(prepareSIWEMessage(siweMessage))
 
 		const session: Session<SIWESessionData> = {
 			type: "session",
 			address: address,
-			publicKeyType: "secp256k1",
-			publicKey: secp256k1.getPublicKey(privateKey),
+			signingKey: signer.uri,
 			data: { signature: getBytes(signature), domain, nonce },
 			blockhash: null,
 			timestamp,
@@ -163,38 +164,39 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 		}
 
 		this.#sessions[key] = session
-		this.#privateKeys[key] = privateKey
+		this.#signers[key] = signer
 		if (this.#store !== null) {
-			await this.#store.set(key, json.stringify({ privateKey, session }))
+			const { type, privateKey } = signer.export()
+			await this.#store.set(key, json.stringify({ type, privateKey, session }))
 		}
 
 		this.log("created new session for %s: %o", key, session)
 		return session
 	}
 
-	public sign({ topic, clock, parents, payload }: Message<Action | Session>): Signature {
+	public sign(message: Message<Action | Session>): Signature {
+		const { payload } = message
 		if (payload.type === "action") {
 			const { address, timestamp } = payload
-			const key = getKey(topic, address)
+			const key = getKey(message.topic, address)
+			const signer = this.#signers[key]
 			const session = this.#sessions[key]
-			const privateKey = this.#privateKeys[key]
-			assert(session !== undefined && privateKey !== undefined)
+			assert(signer !== undefined && session !== undefined)
 
 			assert(address === session.address)
 			assert(timestamp >= session.timestamp)
 			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
 
-			return createSignature("secp256k1", privateKey, { topic, clock, parents, payload } satisfies Message<Action>)
+			return signer.sign(message)
 		} else if (payload.type === "session") {
-			const key = getKey(topic, payload.address)
+			const key = getKey(message.topic, payload.address)
 			const session = this.#sessions[key]
-			const privateKey = this.#privateKeys[key]
-			assert(session !== undefined && privateKey !== undefined)
+			const signer = this.#signers[key]
+			assert(signer !== undefined && session !== undefined)
 
 			// only sign our own current sessions
 			assert(payload === session)
-
-			return createSignature("secp256k1", privateKey, { topic, clock, parents, payload } satisfies Message<Session>)
+			return signer.sign(message)
 		} else {
 			signalInvalidType(payload)
 		}
@@ -204,7 +206,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 		for (const key of Object.keys(this.#sessions)) {
 			await this.#store?.delete(key)
 			delete this.#sessions[key]
-			delete this.#privateKeys[key]
+			delete this.#signers[key]
 		}
 	}
 }
