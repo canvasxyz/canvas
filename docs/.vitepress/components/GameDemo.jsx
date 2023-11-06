@@ -43,10 +43,10 @@ const GameDemo = () => {
 					const chess = new Chess((await db.boards.get("0"))?.fen || new Chess().fen())
 					const move = chess.move({ from, to, promotion: "q" })
 					if (move === null) throw new Error("invalid")
-					db.boards.set({ id: "0", fen: chess.fen() })
+					await db.boards.set({ id: "0", fen: chess.fen() })
 				},
 				reset: async (db, {}, { address, timestamp, id }) => {
-					db.boards.set({ id: "0", fen: new Chess().fen() })
+					await db.boards.set({ id: "0", fen: new Chess().fen() })
 				},
 			},
 			topic: "canvas-chess",

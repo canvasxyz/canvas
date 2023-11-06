@@ -55,14 +55,14 @@ const models = {
 
 const actions = {
   move: async (db, { from, to }, { address, timestamp, id }) => {
-    const board = await db.boards.get("0")
+    const board = await db.boards.get("<gameid>")
     const chess = new Chess(board.position)
     const move = chess.move({ from, to, promotion: "q" })
     if (move === null) throw new Error("invalid")
-    db.boards.set({ id: "<gameid>", position: chess.fen() })
+    await db.boards.set({ id: "<gameid>", position: chess.fen() })
   },
   reset: async (db, {}, { address, timestamp, id }) => {
-    db.boards.set({ id: "<gameid>", fen: new Chess().fen() })
+    await db.boards.set({ id: "<gameid>", fen: new Chess().fen() })
   }
 }
 
