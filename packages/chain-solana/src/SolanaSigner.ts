@@ -80,13 +80,12 @@ export class SolanaSigner implements SessionSigner {
 		const [_, walletAddress] = parseAddress(address)
 
 		const message: SolanaMessage = {
-			address: address,
 			signingKey: signingKey,
 			issuedAt: new Date(timestamp).toISOString(),
 			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
 		}
 
-		const signingPublicKey = base58btc.baseDecode(address)
+		const signingPublicKey = base58btc.baseDecode(walletAddress)
 
 		const valid = ed25519.verify(data.signature, cbor.encode(message), signingPublicKey)
 		// get the address who signed this, this is solana specific?
@@ -147,7 +146,6 @@ export class SolanaSigner implements SessionSigner {
 		const issuedAt = new Date(timestamp)
 
 		const message: SolanaMessage = {
-			address: address,
 			signingKey: signer.uri,
 			issuedAt: issuedAt.toISOString(),
 			expirationTime: null,
