@@ -12,6 +12,15 @@ const toFormattedDate = (timestamp) => {
 	return new Date(timestamp).toLocaleTimeString("en-US")
 }
 
+const squareStyling = ({ pieceSquare, history }) => {
+	// const sourceSquare = history.length && history[history.length - 1].from;
+	// const targetSquare = history.length && history[history.length - 1].to;
+
+	return {
+		[pieceSquare]: { backgroundColor: "rgba(255, 255, 0, 0.4)" },
+	}
+}
+
 const ModelDBDemo = () => {
 	let privateKey = localStorage.getItem("privatekey")
 	if (privateKey === null) {
@@ -45,11 +54,37 @@ const ModelDBDemo = () => {
 	})
 
 	const boards = useLiveQuery(app, "boards", { limit: 1 })
-	const [state, setState] = useState({ pieceSquare: "", square: "" }) // board
+	const [state, setState] = useState({ pieceSquare: "" })
 
 	const onDrop = ({ sourceSquare, targetSquare }) => {
 		app.actions.move({ from: sourceSquare, to: targetSquare })
 	}
+	const onClick = (square) => {
+		// square selection logic
+		const chess = new Chess(boards[0].fen)
+		const at = chess.get(square)
+
+		if (!state.pieceSquare) {
+			// can't select squares other than pieces that can be moved
+			if (!at || at.color !== chess.turn()) {
+				setState({ pieceSquare: "" })
+				return
+			}
+		}
+
+		setState({ pieceSquare: square, squareStyles: squareStyling({ pieceSquare: square }) })
+		app.actions
+			.move({ from: state.pieceSquare, to: square })
+			.then(() => {
+				setState({ pieceSquare: null })
+			})
+			.catch(() => {
+				if (!at || at.color !== chess.turn()) setState({ pieceSquare: null })
+			})
+	}
+
+	const chess = boards && boards[0] && new Chess(boards[0].fen)
+	console.log(chess)
 
 	return (
 		<div>
@@ -63,11 +98,25 @@ const ModelDBDemo = () => {
 					boxShadow: `0 5px 15px rgba(0, 0, 0, 0.5)`,
 				}}
 				onDrop={onDrop}
+				onSquareClick={onClick}
+				squareStyles={state.squareStyles}
 			/>
 			<div className="caption" style={{ display: "flex", maxWidth: 280, margin: "4px auto 0" }}>
 				{boards && (
 					<span style={{ marginTop: 5, flex: 1 }}>
-						{new Chess(boards[0].fen).turn() === "w" ? "White to move" : "Black to move"}
+						{chess.in_checkmate()
+							? "Checkmate"
+							: chess.in_stalemate()
+							? "Stalemate"
+							: chess.in_threefold_repetition()
+							? "Draw by repetition"
+							: chess.insufficient_material()
+							? "Draw by insufficient material"
+							: chess.game_over()
+							? "Game over" // I think we caught everything, but maybe not?
+							: chess.turn() === "w"
+							? "White to move"
+							: "Black to move"}
 					</span>
 				)}
 				<input
