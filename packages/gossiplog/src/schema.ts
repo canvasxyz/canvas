@@ -40,9 +40,9 @@ export function encodeSignedMessage(signedMessage: SignedMessage): Uint8Array {
 	return cbor.encode(representation)
 }
 
-export function getNextClock(parents: Uint8Array[]): number {
+export function getNextClock(heads: Uint8Array[]): number {
 	let max = 0
-	for (const key of parents) {
+	for (const key of heads) {
 		assert(key.byteLength === KEY_LENGTH, "expected key.byteLength === KEY_LENGTH")
 		const [clock] = decodeClock(key)
 		if (clock > max) {

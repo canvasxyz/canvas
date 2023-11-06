@@ -2,13 +2,15 @@ import type { Source, Target, Node, Bound, KeyValueStore, Entry } from "@canvas-
 
 import { CustomEvent, EventEmitter } from "@libp2p/interface/events"
 import { Logger, logger } from "@libp2p/logger"
-import { equals } from "uint8arrays"
-import { bytesToHex as hex } from "@noble/hashes/utils"
+
 import * as cbor from "@ipld/dag-cbor"
 import { Schema } from "@ipld/schema/schema-schema"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
+
+import { bytesToHex as hex } from "@noble/hashes/utils"
 import { base58btc } from "multiformats/bases/base58"
+import { equals } from "uint8arrays"
 
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 import { Ed25519Signer, didKeyPattern, getCID, verifySignature, verifySignedValue } from "@canvas-js/signed-cid"
@@ -33,13 +35,13 @@ import { assert, topicPattern, cborNull, getAncestorClocks } from "./utils.js"
 
 export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
-	parents: Omit<KeyValueStore, "set" | "delete">
+	heads: Omit<KeyValueStore, "set" | "delete">
 	ancestors?: Omit<KeyValueStore, "set" | "delete">
 }
 
 export interface ReadWriteTransaction {
 	messages: KeyValueStore & Target
-	parents: KeyValueStore
+	heads: KeyValueStore
 	ancestors?: KeyValueStore
 }
 
@@ -201,10 +203,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		return [id, signature, message]
 	}
 
-	public async getClock(): Promise<[clock: number, parents: string[]]> {
-		const parents = await this.read((txn) => this.getParents(txn))
-		const clock = getNextClock(parents)
-		return [clock, parents.map(decodeId)]
+	public async getClock(): Promise<[clock: number, heads: string[]]> {
+		const heads = await this.read((txn) => this.getHeads(txn))
+		const clock = getNextClock(heads)
+		return [clock, heads.map(decodeId)]
 	}
 
 	public async has(id: string): Promise<boolean> {
@@ -223,10 +225,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		return [signature, message]
 	}
 
-	private async getParents(txn: ReadOnlyTransaction): Promise<Uint8Array[]> {
+	private async getHeads(txn: ReadOnlyTransaction): Promise<Uint8Array[]> {
 		const parents: Uint8Array[] = []
 
-		for await (const [key, value] of txn.parents.entries()) {
+		for await (const [key, value] of txn.heads.entries()) {
 			assert(key.byteLength === KEY_LENGTH, "internal error (expected key.byteLength === KEY_LENGTH)")
 			assert(equals(value, cborNull), "internal error (unexpected parent entry value)")
 			parents.push(key)
@@ -245,10 +247,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		const signer = options.signer ?? this.signer
 
 		const { id, signature, message, result, root } = await this.write(async (txn) => {
-			const parents = await this.getParents(txn)
-			const clock = getNextClock(parents)
+			const heads = await this.getHeads(txn)
+			const clock = getNextClock(heads)
 
-			const message: Message<Payload> = { topic: this.topic, clock, parents: parents.map(decodeId), payload }
+			const parents = heads.map(decodeId)
+			const message: Message<Payload> = { topic: this.topic, clock, parents, payload }
 			const signature = await signer.sign(message)
 			const [key, value] = this.encode(signature, message)
 
@@ -419,9 +422,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
 		await txn.messages.set(key, value)
 
-		await txn.parents.set(key, cborNull)
-		for (const parentId of message.parents) {
-			await txn.parents.delete(encodeId(parentId))
+		const parents = message.parents.map(encodeId)
+
+		await txn.heads.set(key, cborNull)
+		for (const parent of parents) {
+			await txn.heads.delete(parent)
 		}
 
 		if (this.indexAncestors) {
@@ -431,7 +436,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			const ancestorLinks: Uint8Array[][] = new Array(ancestorClocks.length)
 			for (const [i, ancestorClock] of ancestorClocks.entries()) {
 				if (i === 0) {
-					ancestorLinks[i] = message.parents.map(encodeId)
+					ancestorLinks[i] = parents
 				} else {
 					const links = new Set<string>()
 					for (const child of ancestorLinks[i - 1]) {
