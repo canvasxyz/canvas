@@ -71,10 +71,10 @@ The `cid` in a message signature is the CID of the `Message` object using the `d
 
 ### Message signers
 
-Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use one of the Signer classes exported from `@canvas-js/signed-cid`.
+Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use one of the signer classes exported from `@canvas-js/signed-cid`.
 
 ```ts
-import { Ed25519Signer } from "@canvas-js/signed-cid"
+import { Ed25519Signer, Secp256k1Signer } from "@canvas-js/signed-cid"
 
 const signer = new Ed25519Signer()
 ```
@@ -83,7 +83,7 @@ Once you have a signer, you can add it `GossipLogInit` to use it by default for 
 
 ```ts
 const signerA = new Ed25519Signer()
-const signerB = new Ed25519Signer()
+const signerB = new Secp256k1Signer()
 
 const log = await GossipLog.init({ ...init, signer: signerA })
 
@@ -112,9 +112,9 @@ Message IDs begin with the message clock, encoded as a **reverse** unsigned vari
 | 1234  | 00000100 11010010 | 10001001 01010010      | 0x8952              |
 ```
 
-The rationale is that prefixing message IDs with a _lexicographically sortable_ logical clock has many useful consquences. Encoded Protobuf-style unsigned varints don't sort the same as their decoded values.
+The rationale is that prefixing message IDs with a _lexicographically sortable_ logical clock has many useful consquences. Regular Protobuf-style unsigned varints don't sort the same as their decoded values.
 
-These string IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. This means that implementing a last-write-wins register for message effects is as simple as caching and comparing message IDs as versions.
+The upshot is that these string emssage IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. For example, implementing a last-write-wins register for message effects is as simple as caching and comparing message ID strings.
 
 ## Usage
 
