@@ -4,7 +4,6 @@ import { StatusCodes } from "http-status-codes"
 import { AbortError } from "abortable-iterator"
 import { anySignal } from "any-signal"
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
-import chalk from "chalk"
 
 import type { PeerId } from "@libp2p/interface/peer-id"
 import { peerIdFromString } from "@libp2p/peer-id"

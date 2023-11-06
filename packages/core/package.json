@@ -70,8 +70,7 @@
     "prom-client": "^15.0.0",
     "quickjs-emscripten": "^0.23.0",
     "uint8arraylist": "^2.4.3",
-    "uint8arrays": "^4.0.6",
-    "ws": "^8.14.2"
+    "uint8arrays": "^4.0.6"
   },
   "devDependencies": {
     "@canvas-js/okra-node": "^0.5.6",
