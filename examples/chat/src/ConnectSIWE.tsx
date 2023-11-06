@@ -25,10 +25,11 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 			return
 		}
 
+		const network = await provider.getNetwork()
 		const signer = await provider.getSigner()
 		const address = await signer.getAddress()
 		setProvider(provider)
-		setAddress(address)
+		setAddress(`eip155:${network.chainId}:${address}`)
 		setSessionSigner(new SIWESigner({ signer, store: sessionStore }))
 	}, [provider])
 
