@@ -4,8 +4,6 @@ import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
 import type { Awaitable } from "./Awaitable.js"
 
-import { SessionStore } from "./SessionStore.js"
-
 export interface SessionSigner<SessionData = any> extends Signer<Message<Action | Session<SessionData>>> {
 	match: (chain: string) => boolean
 
@@ -30,4 +28,6 @@ export interface SessionSigner<SessionData = any> extends Signer<Message<Action 
 	 * to take actions on behalf of the user `${session.chain}:${session.address}`
 	 */
 	verifySession: (session: Session<SessionData>) => Awaitable<void>
+
+	clear?(): Awaitable<void>
 }
