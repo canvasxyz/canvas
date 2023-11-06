@@ -68,7 +68,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit })
 
-		const peerId = await target.getPeerId({ path })
+		const peerId = await target.getPeerId({ topic: runtime.topic, path })
 		let libp2p: Libp2p<ServiceMap> | null = null
 		if (!offline) {
 			libp2p = await target.createLibp2p(peerId, config)
