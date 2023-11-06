@@ -23,7 +23,7 @@
     "@canvas-js/interfaces": "0.5.1",
     "@canvas-js/signed-cid": "0.5.1",
     "@ipld/dag-json": "^10.1.5",
-    "ethers": "^6.8.0",
+    "ethers": "^6.8.1",
     "siwe": "^2.1.4"
   }
 }

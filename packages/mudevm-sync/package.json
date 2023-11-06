@@ -18,7 +18,7 @@
     "@canvas-js/modeldb": "0.5.1",
     "@canvas-js/vm": "0.5.1",
     "abitype": "^0.9.10",
-    "ethers": "^6.8.0",
+    "ethers": "^6.8.1",
     "react": "^18.2.0",
     "viem": "1.6.0"
   },
@@ -26,7 +26,7 @@
     "@latticexyz/config": "^2.0.0-next.10",
     "@latticexyz/store": "^2.0.0-next.10",
     "@latticexyz/world": "^2.0.0-next.10",
-    "@types/react": "^18.2.33",
+    "@types/react": "^18.2.36",
     "vite": "^4.5.0"
   }
 }
