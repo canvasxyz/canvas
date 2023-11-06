@@ -9,7 +9,7 @@ const toFormattedDate = (timestamp) => {
 	return new Date(timestamp).toLocaleTimeString("en-US")
 }
 
-const MessageSyncDemo = () => {
+const MessagingDemo = () => {
 	const inputRef = useRef()
 
 	let privateKey = localStorage.getItem("privatekey")
@@ -55,4 +55,4 @@ const MessageSyncDemo = () => {
 	)
 }
 
-export default MessageSyncDemo
+export default MessagingDemo

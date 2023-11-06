@@ -21,7 +21,7 @@ const squareStyling = ({ pieceSquare, history }) => {
 	}
 }
 
-const ModelDBDemo = () => {
+const GameDemo = () => {
 	let privateKey = localStorage.getItem("privatekey")
 	if (privateKey === null) {
 		privateKey = ethers.Wallet.createRandom().privateKey
@@ -63,6 +63,11 @@ const ModelDBDemo = () => {
 		// square selection logic
 		const chess = new Chess(boards[0].fen)
 		const at = chess.get(square)
+
+		if (chess.game_over()) {
+			setState({ pieceSquare: "" })
+			return
+		}
 
 		if (!state.pieceSquare) {
 			// can't select squares other than pieces that can be moved
@@ -132,4 +137,4 @@ const ModelDBDemo = () => {
 	)
 }
 
-export default ModelDBDemo
+export default GameDemo
