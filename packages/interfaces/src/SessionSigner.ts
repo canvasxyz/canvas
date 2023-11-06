@@ -31,27 +31,3 @@ export interface SessionSigner<SessionData = any> extends Signer<Message<Action 
 	 */
 	verifySession: (session: Session<SessionData>) => Awaitable<void>
 }
-
-export abstract class AbstractSessionSigner<Data> {
-	private static getKey(topic: string, address: string) {
-		return `canvas/${topic}/${address}`
-	}
-
-	#store: SessionStore | null
-	#signers: Record<string, Signer<Message<Action | Session>>> = {}
-	#sessions: Record<string, Session<Data>> = {}
-
-	protected constructor(options: { store?: SessionStore }) {
-		this.#store = options.store ?? null
-	}
-
-	protected abstract createSession(): void
-
-	// public async getSession(
-	// 	topic: string,
-	// 	address: string,
-	// 	options: { timestamp?: number } = {}
-	// ): Promise<Session<Data>> {
-	// 	throw new Error("")
-	// }
-}
