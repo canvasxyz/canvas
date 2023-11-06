@@ -97,7 +97,7 @@ const GameDemo = () => {
 				<Chessboard
 					id="humanVsHuman"
 					width={280}
-					position={boards ? boards[0]?.fen : "start"}
+					position={boards ? boards[0]?.fen || "start" : "start"}
 					boardStyle={{
 						margin: "0 auto",
 						borderRadius: "5px",
