@@ -5,8 +5,8 @@ import { ethers } from "ethers"
 
 import type { Message } from "@canvas-js/interfaces"
 import { Ed25519Signer } from "@canvas-js/signed-cid"
-import { Canvas } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { Canvas } from "@canvas-js/core"
 
 const contract = `
 export const topic = "com.example.app"
@@ -20,15 +20,14 @@ export const models = {
 };
 
 export const actions = {
-  async createPost(db, { content }, { id, chain, address, timestamp }) {
-    const postId = [chain, address, id].join("/")
+  async createPost(db, { content }, { id, address, timestamp }) {
+    const postId = [address, id].join("/")
     await db.posts.set({ id: postId, content, timestamp });
     return postId
   },
 
-  async deletePost(db, key, { chain, address }) {
-		const prefix = [chain, address, ""].join("/")
-		if (!key.startsWith(prefix)) {
+  async deletePost(db, key, { address }) {
+		if (!key.startsWith(address + "/")) {
 			throw new Error("unauthorized")
 		}
 
