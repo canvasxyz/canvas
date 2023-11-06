@@ -1,7 +1,7 @@
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 import { create } from "@ipld/schema/typed.js"
 
-import { Action, Session } from "@canvas-js/interfaces"
+import type { Action, Session } from "@canvas-js/interfaces"
 
 export const schema = `
 type Action struct {

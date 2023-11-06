@@ -7,7 +7,7 @@ import { bytesToHex as hex } from "@noble/hashes/utils"
 import * as cbor from "@ipld/dag-cbor"
 import { Schema } from "@ipld/schema/schema-schema"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
-import { create, TypeTransformerFunction } from "@ipld/schema/typed.js"
+import { create } from "@ipld/schema/typed.js"
 
 import type { Signature, Message, MessageSigner, Awaitable } from "@canvas-js/interfaces"
 import { Ed25519Signer, verifySignature, verifySignedValue } from "@canvas-js/signed-cid"
