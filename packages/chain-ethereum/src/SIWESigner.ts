@@ -80,13 +80,9 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 
 		if (this.#sessions[key] !== undefined) {
 			const session = this.#sessions[key]
-			if (options.timestamp === undefined) {
-				this.log("found session %s in cache: %o", key, session)
-				return session
-			} else if (
-				options.timestamp >= session.timestamp &&
-				options.timestamp <= session.timestamp + (session.duration ?? Infinity)
-			) {
+			const { timestamp, duration } = session
+			const t = options.timestamp ?? timestamp
+			if (timestamp <= t && t <= timestamp + (duration ?? Infinity)) {
 				this.log("found session %s in cache: %o", key, session)
 				return session
 			} else {
