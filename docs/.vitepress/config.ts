@@ -51,5 +51,8 @@ export default defineConfig({
 			{ icon: "discord", link: "https://discord.gg/2Dc7nPUz" },
 			{ icon: "twitter", link: "https://twitter.com/canvas_xyz" },
 		],
+		search: {
+			provider: "local",
+		},
 	},
 })
