@@ -37,6 +37,8 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 		return pubsub
 	}
 
+	private static topicPrefix = "canvas/"
+
 	private readonly sync: boolean
 	private readonly log = logger(`canvas:gossiplog`)
 
@@ -69,7 +71,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 		}
 
 		for (const topic of this.#messageLogs.keys()) {
-			this.#pubsub.subscribe(topic)
+			this.#pubsub.subscribe(GossipLogService.topicPrefix + topic)
 		}
 	}
 
@@ -107,7 +109,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 		}
 
 		if (this.#started) {
-			this.#pubsub.subscribe(messageLog.topic)
+			this.#pubsub.subscribe(GossipLogService.topicPrefix + messageLog.topic)
 		}
 	}
 
@@ -115,7 +117,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 		this.log("unsubscribing from %s", topic)
 
 		if (this.#started) {
-			this.#pubsub.unsubscribe(topic)
+			this.#pubsub.unsubscribe(GossipLogService.topicPrefix + topic)
 		}
 
 		const syncService = this.#syncServices.get(topic)
@@ -150,7 +152,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 			const [key, value] = messageLog.encode(signature, message)
 			assert(decodeId(key) === id)
 
-			const recipients = this.#pubsub.publish(topic, value).then(
+			const recipients = this.#pubsub.publish(GossipLogService.topicPrefix + topic, value).then(
 				({ recipients }) => {
 					this.log("published message %s to %d recipients %O", id, recipients.length, recipients)
 					return recipients
@@ -179,7 +181,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 		if (this.#started) {
 			const [key, value] = messageLog.encode(signature, message)
 			const id = decodeId(key)
-			const recipients = this.#pubsub.publish(message.topic, value).then(
+			const recipients = this.#pubsub.publish(GossipLogService.topicPrefix + message.topic, value).then(
 				({ recipients }) => {
 					this.log("published message %s to %d recipients %O", id, recipients.length, recipients)
 					return recipients
@@ -201,14 +203,17 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 	}
 
 	private handleMessage = async ({ detail: msg }: CustomEvent<PubSubMessage>) => {
-		const { topic, data } = msg
+		if (!msg.topic.startsWith(GossipLogService.topicPrefix)) {
+			return
+		}
 
+		const topic = msg.topic.slice(GossipLogService.topicPrefix.length)
 		const messageLog = this.#messageLogs.get(topic)
 		if (messageLog === undefined) {
 			return
 		}
 
-		const [id, signature, message] = messageLog.decode(data)
+		const [id, signature, message] = messageLog.decode(msg.data)
 
 		this.log("received message %s via gossipsub on %s", id, topic)
 		await messageLog.insert(signature, message)
