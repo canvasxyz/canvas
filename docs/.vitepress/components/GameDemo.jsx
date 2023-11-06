@@ -110,7 +110,7 @@ const GameDemo = () => {
 				{boards && (
 					<span style={{ marginTop: 5, flex: 1 }}>
 						{chess.in_checkmate()
-							? "Checkmate"
+							? "Checkmate!"
 							: chess.in_stalemate()
 							? "Stalemate"
 							: chess.in_threefold_repetition()

@@ -25,6 +25,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
           <p class="text">
           <span v-if="text" v-html="text"></span>
           <span
+            class="vue-motion"
             v-motion
                     :style='{
                       height: "30px",
@@ -33,8 +34,6 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
                       backgroundColor: "var(--vp-c-brand-1)",
                       display: "inline-block",
                       borderRadius: "2px",
-                      marginLeft: "9px",
-                      marginTop: "10px",
                     }'
                     :initial='{ opacity: 0, scale: 1 }'
                     :enter='{ to: { backgroundColor: "#fff" }, opacity: 0.9, scale: 0.98, transition: { repeat: Infinity, repeatType: "mirror", duration: 800, ease: "easeOut" } }'
@@ -193,7 +192,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   padding-top: 20px;
   max-width: 450px;
   line-height: 1.52;
-  font-size: 17px;
+  font-size: 17.5px;
   font-weight: 500;
   white-space: pre-wrap;
   color: var(--vp-c-text-2);
@@ -208,15 +207,9 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 .bullets ul li {
   padding-left: 6px;
 }
-@media (min-width: 640px) {
-  .bullets {
-    font-size: 18px;
-  }
-}
 @media (min-width: 960px) {
   .bullets {
     margin: 0;
-    font-size: 18px;
   }
   .bullets ul li {
     margin-bottom: 4px;
@@ -229,7 +222,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 @media (min-width: 640px) {
   .tagline {
     padding-top: 22px;
-    max-width: 480px;
+    max-width: 500px;
     font-size: 18px;
   }
 }
@@ -368,5 +361,17 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
     transform: translate(-50%, -50%) scale(1.5);
     margin-top: 45px;
   }
+}
+
+.vue-motion {
+    margin-top: 5px;
+    margin-left: 7px;
+}
+
+@media (min-width: 960px) {
+    .vue-motion {
+        margin-top: 10px;
+        margin-left: 9px;
+    }
 }
 </style>
