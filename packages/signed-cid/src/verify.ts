@@ -36,7 +36,7 @@ export function verifySignedValue(
 }
 
 /**
- * Verify that the signature is valid
+ * Verify that the signature is valid for the given CID
  */
 export function verifySignature(
 	{ publicKey: uri, signature, cid }: Signature,
