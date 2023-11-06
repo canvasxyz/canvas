@@ -49,7 +49,7 @@ const MessageSyncDemo = () => {
 				))}
 			</div>
 			<form onSubmit={onSubmit}>
-				<input type="text" ref={inputRef} />
+				<input type="text" ref={inputRef} placeholder="Type a message..." />
 			</form>
 		</div>
 	)

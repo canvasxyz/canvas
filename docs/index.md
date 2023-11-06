@@ -15,7 +15,7 @@ layout: home
 </FeatureRow>
 -->
 
-<DemoToggle v-bind:options="['Messaging', 'Gaming']" defaultOption="Messaging"></DemoToggle>
+<DemoToggle v-bind:options="['Game', 'Messaging']" defaultOption="Game"></DemoToggle>
 
 <DemoCell />
 
@@ -36,30 +36,43 @@ const actions = {
 	}
 }
 
+// Use the application in React
 const { app } = useCanvas({
 	contract: { models, actions },
 	topic: "canvas-example-public-chat"
 })
-
-await app.actions.send({ message })
+const messages = useLiveQuery(app, "messages", { limit: 10 })
+return <div>{messages.map((message) => { ... })}</div>
 ```
 
-```tsx:Gaming preview
-// Write by creating actions
+```tsx:Game preview
+const models = {
+  boards: {
+    id: "primary",
+    position: "string",
+  },
+}
+
+const actions = {
+  move: async (db, { from, to }, { address, timestamp, id }) => {
+    const board = await db.boards.get("0")
+    const chess = new Chess(board.position)
+    const move = chess.move({ from, to, promotion: "q" })
+    if (move === null) throw new Error("invalid")
+    db.boards.set({ id: "<gameid>", position: chess.fen() })
+  },
+  reset: async (db, {}, { address, timestamp, id }) => {
+    db.boards.set({ id: "<gameid>", fen: new Chess().fen() })
+  }
+}
+
+// Use the application in React
 const { app } = useCanvas({
-	contract: { ...Forum, topic: "canvas-example-forum" },
-	signers: [new SIWESigner({ signer: wallet })],
+  contract: { models, actions },
+  topic: "canvas-example-chess"
 })
-
-app.actions.createThread({ title, message })
-
-// Read with live reactive queries
-const threads = useLiveQuery<Thread>(app, "threads", {
-	limit: 5,
-	orderBy: { timestamp: "desc" },
-})
-
-return <div>{threads.map((thread) => <div>{thread.title}</div>)}</div>
+const boards = useLiveQuery(app, "boards")
+return <Chessboard position={boards[0].position} onDrop={ ... } />
 ```
 
 <TextRow title="About Canvas">

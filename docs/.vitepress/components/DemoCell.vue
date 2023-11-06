@@ -1,7 +1,7 @@
 <script>
   import { ref } from 'vue'
   import MessagingDemo from "./MessagingDemo.jsx"
-  import GamingDemo from "./GamingDemo.jsx"
+  import GameDemo from "./GameDemo.jsx"
 
   // import { applyPureReactInVue } from "veaury"
   import * as pkg from "veaury"
@@ -11,7 +11,7 @@
   export default {
     components: {
       MessagingDemo: applyPureReactInVue(MessagingDemo),
-      GamingDemo: applyPureReactInVue(GamingDemo)
+      GameDemo: applyPureReactInVue(GameDemo)
     },
     setup() {
       function onClickForReact() {
@@ -25,11 +25,11 @@
 </script>
 
 <template>
+  <div class="DemoCell GameDemo">
+    <GameDemo @click="onClickForReact"/>
+  </div>
   <div class="DemoCell MessagingDemo">
     <MessagingDemo @click="onClickForReact"/>
-  </div>
-  <div class="DemoCell GamingDemo">
-    <GamingDemo @click="onClickForReact"/>
   </div>
 </template>
 
@@ -49,7 +49,7 @@
     display: block;
     position: absolute;
     left: calc(50vw + 210px / 2 + 30px);
-    height: 210px;
+    height: 345px;
     width: 320px;
     z-index: 10;
     box-shadow: 1px 1px 6px rgba(0,0,0,0.2);
@@ -60,12 +60,33 @@
     margin: 0 auto 20px;
   }
 }
-.DemoCell input {
+.DemoCell input[type="text"] {
   background: var(--vp-c-bg);
   padding: 6px 12px;
   border-radius: 6px;
   font-family: var(--vp-font-family-base);
   font-size: 15px;
-  width: 100%;
+  width: calc(100% - 40px);
+  position: absolute;
+  bottom: 16px;
+}
+.DemoCell input[type="submit"] {
+  display: inline-block;
+  background: var(--vp-c-brand-3);
+  margin-top: 2px;
+  padding: 1px 8px;
+  margin-right: -4px;
+  border-radius: 6px;
+  font-family: var(--vp-font-family-base);
+  font-size: 14px;
+  cursor: pointer;
+}
+.DemoCell input[type="submit"]:hover {
+  transition: background 100ms ease-in-out;
+  background: var(--vp-c-brand-2);
+}
+.DemoCell .caption {
+  color: var(--vp-c-text-1);
+  font-size: 14px;
 }
 </style>
