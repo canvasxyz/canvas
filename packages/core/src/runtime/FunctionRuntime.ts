@@ -92,7 +92,7 @@ export class FunctionRuntime extends AbstractRuntime {
 	}
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
-		const { publicKey: signingKey } = context.signature
+		const { publicKey } = context.signature
 		const { address, name, args, blockhash, timestamp } = context.message.payload
 
 		const argsTransformer = this.argsTransformers[name]
@@ -105,7 +105,7 @@ export class FunctionRuntime extends AbstractRuntime {
 		this.#context = context
 
 		try {
-			return await action(this.#db, typedArgs, { id: context.id, address, signingKey, blockhash, timestamp })
+			return await action(this.#db, typedArgs, { id: context.id, publicKey, address, blockhash, timestamp })
 		} finally {
 			this.#context = null
 		}

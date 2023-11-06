@@ -99,18 +99,18 @@ export abstract class AbstractRuntime {
 			assert(signature !== null, "missing message signature")
 
 			if (AbstractRuntime.isSession(message)) {
-				const { signingKey, address, timestamp, duration } = message.payload
+				const { publicKey, address, timestamp, duration } = message.payload
 
 				const signer = runtime.signers.find((signer) => signer.match(address))
 				assert(signer !== undefined, "no signer found")
 
-				assert(signingKey === signature.publicKey)
+				assert(publicKey === signature.publicKey)
 
 				await signer.verifySession(message.payload)
 
 				await runtime.db.set("$sessions", {
 					message_id: id,
-					signing_key: signingKey,
+					signing_key: publicKey,
 					address: address,
 					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
 				})

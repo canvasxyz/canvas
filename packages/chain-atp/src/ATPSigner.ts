@@ -30,8 +30,8 @@ export interface ATPSignerOptions {
 }
 
 export class ATPSigner implements SessionSigner<ATPSessionData> {
-	public static createAuthenticationMessage(signingKey: string, address: string) {
-		return `Authorizing ${signingKey} to sign actions on Canvas on behalf of ${address}`
+	public static createAuthenticationMessage(publicKey: string, address: string) {
+		return `Authorizing ${publicKey} to sign actions on Canvas on behalf of ${address}`
 	}
 
 	private readonly log = logger("canvas:chain-ethereum")
@@ -146,7 +146,7 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 		const session: Session<ATPSessionData> = {
 			type: "session",
 			address: data.did,
-			signingKey: signer.uri,
+			publicKey: signer.uri,
 			data: {
 				verificationMethod,
 				recordArchive: result.data,
@@ -181,7 +181,7 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 		const { commit, record } = await unpackArchive<PostRecord>(recordArchive, path)
 		await verifyCommit(verificationMethod, commit)
 
-		const message = ATPSigner.createAuthenticationMessage(session.signingKey, session.address)
+		const message = ATPSigner.createAuthenticationMessage(session.publicKey, session.address)
 		assert(record.text === message, "invalid app.bsky.feed.post record text")
 	}
 }

@@ -74,13 +74,13 @@ export class SolanaSigner implements SessionSigner {
 	public readonly match = (chain: string) => addressPattern.test(chain)
 
 	public verifySession(session: Session) {
-		const { signingKey, address, data, timestamp, duration } = session
+		const { publicKey, address, data, timestamp, duration } = session
 		assert(validateSessionData(data), "invalid session")
 
 		const [_, walletAddress] = parseAddress(address)
 
 		const message: SolanaMessage = {
-			signingKey: signingKey,
+			publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
 			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
 		}
@@ -146,7 +146,7 @@ export class SolanaSigner implements SessionSigner {
 		const issuedAt = new Date(timestamp)
 
 		const message: SolanaMessage = {
-			signingKey: signer.uri,
+			publicKey: signer.uri,
 			issuedAt: issuedAt.toISOString(),
 			expirationTime: null,
 		}
@@ -163,7 +163,7 @@ export class SolanaSigner implements SessionSigner {
 		const session: Session<SolanaSessionData> = {
 			type: "session",
 			address: address,
-			signingKey: signer.uri,
+			publicKey: signer.uri,
 			data: { signature },
 			blockhash: null,
 			timestamp,

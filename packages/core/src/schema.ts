@@ -13,12 +13,12 @@ type Action struct {
 }
 
 type Session struct {
-  address    String
-  signingKey String
-  data       any
-  timestamp  Int
-  duration   nullable Int
-  blockhash  nullable String
+  address   String
+  publicKey String
+  data      any
+  timestamp Int
+  duration  nullable Int
+  blockhash nullable String
 }
 
 type Payload union {

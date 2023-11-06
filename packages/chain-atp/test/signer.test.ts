@@ -23,7 +23,7 @@ test("create and verify session", async (t) => {
 			type: "session",
 
 			address: address,
-			signingKey: signingKey,
+			publicKey: signingKey,
 
 			data: {
 				verificationMethod: verificationMethod,

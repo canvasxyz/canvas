@@ -33,5 +33,5 @@ export type ActionContext = {
 	address: string
 	blockhash: string | null
 	timestamp: number
-	signingKey: string
+	publicKey: string
 }
