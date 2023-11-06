@@ -9,10 +9,12 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@canvas-js/chain-cosmos": "0.5.1",
     "@canvas-js/chain-ethereum": "0.5.1",
     "@canvas-js/core": "0.5.1",
     "@canvas-js/interfaces": "0.5.1",
     "@canvas-js/modeldb": "0.5.1",
+    "@keplr-wallet/types": "^0.11.64",
     "@types/react": "^18.2.33",
     "@types/react-dom": "^18.2.14",
     "ethers": "^6.8.0",

@@ -31,15 +31,16 @@ import {
 import {
 	CosmosMessage,
 	CosmosSessionData,
+	ExternalCosmosSigner,
 	isEvmMetaMaskSigner,
+	isKeplrAminoSigner,
 	isKeplrEthereumSigner,
-	isOfflineAminoSigner,
 	isTerraFixedExtension,
 } from "./types.js"
 import { getSessionSignatureData } from "./signatureData.js"
 
 export interface CosmosSignerInit {
-	signer?: CosmosSigner
+	signer?: ExternalCosmosSigner
 	store?: SessionStore
 	sessionDuration?: number
 	bech32Prefix?: string
@@ -95,12 +96,13 @@ export class CosmosSigner implements SessionSigner {
 					}
 				}
 				this.#signer = { getAddress, sign }
-			} else if (isOfflineAminoSigner(signer)) {
-				const getAddress = async () => (await signer.getAccounts())[0].address
-				const sign = async (msg: Uint8Array) => {
-					const address = await getAddress()
+			} else if (isKeplrAminoSigner(signer)) {
+				const getAddress = signer.getAddress
+				const sign = async (msg: Uint8Array, chainId: string) => {
+					const address = await getAddress(chainId)
 					const signDoc = await getSessionSignatureData(msg, address)
-					const stdSig = (await signer.signAmino(address, signDoc)).signature
+					const signRes = await signer.signAmino(chainId, address, signDoc)
+					const stdSig = signRes.signature
 					return {
 						signature: {
 							signature: stdSig.signature,
@@ -108,9 +110,9 @@ export class CosmosSigner implements SessionSigner {
 								type: pubkeyType.secp256k1,
 								value: stdSig.pub_key.value,
 							},
-							chain_id: "",
+							chain_id: chainId,
 						},
-						signatureType: "cosmos" as const,
+						signatureType: "amino" as const,
 					}
 				}
 				this.#signer = { getAddress, sign }
@@ -120,7 +122,6 @@ export class CosmosSigner implements SessionSigner {
 					const result = await signer.signBytes(Buffer.from(msg))
 					return {
 						signature: {
-							chain_id: "",
 							signature: result.payload.result.signature,
 							pub_key: {
 								type: pubkeyType.secp256k1,
@@ -178,11 +179,11 @@ export class CosmosSigner implements SessionSigner {
 			// validate ethereum signature
 			const recoveredAddress = verifyMessage(`0x${bytesToHex(encodedMessage)}`, data.signature)
 			assert(toBech32(prefix, hexToBytes(recoveredAddress.substring(2))) === address, "invalid signature")
-		} else if (data.signatureType == "cosmos") {
+		} else if (data.signatureType == "amino") {
 			// validate cosmos signature
 			// recreate amino thingy, do other cosmos dark magic
 			// this decodes our serialization "{ pub_key, signature, chain_id? }" to an object with { pubkey, signature }
-			const { pub_key, signature, chain_id: launchpadChainId } = data.signature
+			const { pub_key, signature } = data.signature
 			const { pubkey, signature: decodedSignature } = decodeSignature({ pub_key, signature })
 
 			if (address !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
@@ -190,7 +191,7 @@ export class CosmosSigner implements SessionSigner {
 			}
 
 			// the payload can either be signed directly, or encapsulated in a SignDoc
-			const signDocPayload = await getSessionSignatureData(encodedMessage, address, launchpadChainId)
+			const signDocPayload = await getSessionSignatureData(encodedMessage, address)
 			const signDocDigest = sha256(serializeSignDoc(signDocPayload))
 			const digest = sha256(encodedMessage)
 
@@ -199,6 +200,8 @@ export class CosmosSigner implements SessionSigner {
 			isValid ||= secp256k1.verify(decodedSignature, signDocDigest, pubkey)
 			isValid ||= secp256k1.verify(decodedSignature, digest, pubkey)
 			assert(isValid, "invalid signature")
+		} else if (data.signatureType == "cosmos") {
+			throw new Error("Cosmos signatures are not yet supported")
 		} else {
 			signalInvalidType(data.signatureType)
 		}
@@ -208,7 +211,8 @@ export class CosmosSigner implements SessionSigner {
 		topic: string,
 		options: { chain?: string; timestamp?: number } = {}
 	): Promise<Session<CosmosSessionData>> {
-		const chain = options.chain ?? "cosmos:osmosis"
+		// TODO: where is this passed in from?
+		const chain = options.chain ?? "cosmos:osmosis-1"
 		assert(chainPattern.test(chain), "internal error - invalid chain")
 
 		const chainId = parseChainId(chain)

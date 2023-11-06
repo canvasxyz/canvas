@@ -1,4 +1,4 @@
-import type { OfflineAminoSigner } from "@keplr-wallet/types"
+import type { AminoSignResponse, OfflineAminoSigner } from "@keplr-wallet/types"
 import type { AccountData } from "@cosmjs/amino"
 import type { FixedExtension } from "@terra-money/wallet-controller/modules/legacy-extension"
 
@@ -15,11 +15,21 @@ type CosmosSignedSessionData = {
 			type: string
 			value: string
 		}
-		chain_id: string
 	}
 }
 
-export type CosmosSessionData = EtheremSignedSessionData | CosmosSignedSessionData
+type AminoSignedSessionData = {
+	signatureType: "amino"
+	signature: {
+		signature: string
+		pub_key: {
+			type: string
+			value: string
+		}
+	}
+}
+
+export type CosmosSessionData = EtheremSignedSessionData | CosmosSignedSessionData | AminoSignedSessionData
 
 export type CosmosMessage = {
 	address: string
@@ -31,6 +41,11 @@ export type CosmosMessage = {
 
 interface OfflineSigner {
 	getAccounts: () => AccountData[]
+}
+
+export interface KeplrAminoSigner {
+	getAddress: (chainId: string) => Promise<string>
+	signAmino: (chainId: string, signerAddress: string, signDoc: any) => Promise<AminoSignResponse>
 }
 
 export interface KeplrEthereumSigner {
@@ -45,7 +60,7 @@ export interface EvmMetaMaskSigner {
 	}
 }
 
-export type CosmosSigner = EvmMetaMaskSigner | KeplrEthereumSigner | OfflineAminoSigner | FixedExtension
+export type ExternalCosmosSigner = EvmMetaMaskSigner | KeplrEthereumSigner | KeplrAminoSigner | FixedExtension
 
 export function isEvmMetaMaskSigner(signer: unknown): signer is EvmMetaMaskSigner {
 	return (
@@ -72,12 +87,12 @@ export function isKeplrEthereumSigner(signer: unknown): signer is KeplrEthereumS
 	)
 }
 
-export function isOfflineAminoSigner(signer: unknown): signer is OfflineAminoSigner {
+export function isKeplrAminoSigner(signer: unknown): signer is KeplrAminoSigner {
 	return (
 		!!signer &&
 		typeof signer === "object" &&
-		"getAccounts" in signer &&
-		typeof signer.getAccounts === "function" &&
+		"getAddress" in signer &&
+		typeof signer.getAddress === "function" &&
 		"signAmino" in signer &&
 		typeof signer.signAmino === "function"
 	)

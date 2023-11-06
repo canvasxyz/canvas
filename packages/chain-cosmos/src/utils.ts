@@ -1,4 +1,3 @@
-import { CID } from "multiformats/cid"
 import { CosmosSessionData } from "./types"
 import { toBech32 } from "@cosmjs/encoding"
 
@@ -29,10 +28,20 @@ export function signalInvalidType(type: never): never {
 export function validateSessionData(data: unknown): data is CosmosSessionData {
 	try {
 		const signatureType = (data as CosmosSessionData).signatureType
-		if (signatureType == "cosmos") {
+		if (signatureType == "amino") {
+			// validate amino
+			const { signature, pub_key, chain_id } = (data as any).signature
+			if (typeof signature !== "string" || typeof pub_key !== "object") {
+				return false
+			}
+			const { type, value } = pub_key
+			if (typeof type !== "string" || typeof value !== "string") {
+				return false
+			}
+		} else if (signatureType == "cosmos") {
 			// validate cosmos
 			const { signature, pub_key, chain_id } = (data as any).signature
-			if (typeof signature !== "string" || typeof pub_key !== "object" || typeof chain_id !== "string") {
+			if (typeof signature !== "string" || typeof pub_key !== "object") {
 				return false
 			}
 			const { type, value } = pub_key
