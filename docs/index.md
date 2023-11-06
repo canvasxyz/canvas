@@ -2,7 +2,7 @@
 layout: home
 ---
 
-<HeroRow text="Multiplayer computing for the decentralized web" image="/graphic_mainframe_4.png" tagline="Canvas is a peer-to-peer stack for building web applications as decentralized protocols, with no blockchains required." v-bind:bullets="['Provides realtime sync for libp2p and signed data', 'Comes with embedded SQLite + IndexedDB', 'Fully programmable in TypeScript']">
+<HeroRow text="Multiplayer computing for the decentralized web" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a peer-to-peer stack for building web applications as decentralized protocols, with no blockchains required." v-bind:bullets="['Provides realtime sync for libp2p and signed data', 'Comes with embedded SQLite + IndexedDB', 'Fully programmable in TypeScript']">
   <HeroAction theme="brand big" text="Tutorial" href="/1-introduction" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>

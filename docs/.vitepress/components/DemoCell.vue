@@ -73,6 +73,7 @@
   padding: 1px 8px;
   margin-right: -4px;
   border-radius: 6px;
+  color: #f7f3eb;
   font-family: var(--vp-font-family-base);
   font-size: 14px;
   cursor: pointer;
