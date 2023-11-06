@@ -12,24 +12,20 @@
     components: {
       MessagingDemo: applyPureReactInVue(MessagingDemo),
       GameDemo: applyPureReactInVue(GameDemo)
-    },
-    setup() {
-      function onClickForReact() {
-        console.log('clicked!')
-      }
-      return {
-        onClickForReact,
-      }
     }
   }
 </script>
 
 <template>
   <div class="DemoCell GameDemo">
-    <GameDemo @click="onClickForReact"/>
+		<client-only>
+      <GameDemo />
+		</client-only>
   </div>
   <div class="DemoCell MessagingDemo">
-    <MessagingDemo @click="onClickForReact"/>
+		<client-only>
+      <MessagingDemo />
+		</client-only>
   </div>
 </template>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, lazy } from "react"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { PublicChat } from "@canvas-js/templates"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
@@ -6,7 +6,8 @@ import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { ethers } from "ethers"
 
 import { Chess } from "chess.js"
-import Chessboard from "chessboardjsx"
+
+const Chessboard = lazy(() => import("chessboardjsx"))
 
 const toFormattedDate = (timestamp) => {
 	return new Date(timestamp).toLocaleTimeString("en-US")
@@ -89,25 +90,26 @@ const GameDemo = () => {
 	}
 
 	const chess = boards && boards[0] && new Chess(boards[0].fen)
-	console.log(chess)
 
 	return (
 		<div>
-			<Chessboard
-				id="humanVsHuman"
-				width={280}
-				position={boards ? boards[0].fen : "start"}
-				boardStyle={{
-					margin: "0 auto",
-					borderRadius: "5px",
-					boxShadow: `0 5px 15px rgba(0, 0, 0, 0.5)`,
-				}}
-				onDrop={onDrop}
-				onSquareClick={onClick}
-				squareStyles={state.squareStyles}
-			/>
+			{Chessboard && (
+				<Chessboard
+					id="humanVsHuman"
+					width={280}
+					position={boards ? boards[0]?.fen : "start"}
+					boardStyle={{
+						margin: "0 auto",
+						borderRadius: "5px",
+						boxShadow: `0 5px 15px rgba(0, 0, 0, 0.5)`,
+					}}
+					onDrop={onDrop}
+					onSquareClick={onClick}
+					squareStyles={state.squareStyles}
+				/>
+			)}
 			<div className="caption" style={{ display: "flex", maxWidth: 280, margin: "4px auto 0" }}>
-				{boards && (
+				{boards && chess && (
 					<span style={{ marginTop: 5, flex: 1 }}>
 						{chess.in_checkmate()
 							? "Checkmate!"
