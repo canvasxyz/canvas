@@ -33,10 +33,16 @@
     "ethers": "^6.8.0",
     "markdown-it-named-code-blocks": "^0.2.0",
     "react": "^18.2.0",
+    "react-chessboard": "^4.3.1",
     "typescript": "^5.2.2",
     "veaury": "^2.3.12",
     "vitepress": "^1.0.0-rc.24",
     "vue": "^3.3.7",
     "vue-markdown-render": "^2.1.1"
+  },
+  "dependencies": {
+    "@chrisoakman/chessboardjs": "^1.0.0",
+    "chess.js": "^0.12.1",
+    "chessboardjsx": "^2.4.7"
   }
 }
