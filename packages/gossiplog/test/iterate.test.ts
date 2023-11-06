@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto"
 
 import type { Message } from "@canvas-js/interfaces"
-
-import { Ed25519Signer } from "@canvas-js/gossiplog"
+import { Ed25519Signer } from "@canvas-js/signed-cid"
 import { collect, getPublicKey, testPlatforms } from "./utils.js"
 
 const validate = (payload: unknown): payload is string => typeof payload === "string"
@@ -17,9 +16,9 @@ testPlatforms("append three messages", async (t, openGossipLog) => {
 	const { id: baz } = await log.append("baz")
 
 	t.deepEqual(await collect(log.iterate(), getPublicKey), [
-		[foo, signer.publicKey, { topic, clock: 1, parents: [], payload: "foo" }],
-		[bar, signer.publicKey, { topic, clock: 2, parents: [foo], payload: "bar" }],
-		[baz, signer.publicKey, { topic, clock: 3, parents: [bar], payload: "baz" }],
+		[foo, signer.uri, { topic, clock: 1, parents: [], payload: "foo" }],
+		[bar, signer.uri, { topic, clock: 2, parents: [foo], payload: "bar" }],
+		[baz, signer.uri, { topic, clock: 3, parents: [bar], payload: "baz" }],
 	])
 })
 
@@ -35,10 +34,10 @@ testPlatforms("insert three concurrent messages and append a fourth", async (t, 
 	const { id: idB } = await log.insert(signer.sign(b), b)
 	const { id: idC } = await log.insert(signer.sign(c), c)
 
-	const entries: [string, Uint8Array, Message<string>][] = [
-		[idA, signer.publicKey, a],
-		[idB, signer.publicKey, b],
-		[idC, signer.publicKey, c],
+	const entries: [string, string, Message<string>][] = [
+		[idA, signer.uri, a],
+		[idB, signer.uri, b],
+		[idC, signer.uri, c],
 	]
 
 	entries.sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
@@ -49,6 +48,6 @@ testPlatforms("insert three concurrent messages and append a fourth", async (t, 
 
 	t.deepEqual(await collect(log.iterate(), getPublicKey), [
 		...entries,
-		[tailId, signer.publicKey, { topic, clock: 2, parents: entries.map(([id]) => id), payload: "qux" }],
+		[tailId, signer.uri, { topic, clock: 2, parents: entries.map(([id]) => id), payload: "qux" }],
 	])
 })

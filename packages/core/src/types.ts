@@ -28,4 +28,10 @@ export type ModelAPI = {
 	delete: (key: string) => Promise<void>
 }
 
-export type ActionContext = { id: string; chain: string; address: string; blockhash: string | null; timestamp: number }
+export type ActionContext = {
+	id: string
+	address: string
+	blockhash: string | null
+	timestamp: number
+	signingKey: string
+}

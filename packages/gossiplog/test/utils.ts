@@ -11,10 +11,10 @@ import { nanoid } from "nanoid"
 import { bytesToHex } from "@noble/hashes/utils"
 import { Key, Node } from "@canvas-js/okra"
 
-import type { MessageSigner, Message } from "@canvas-js/interfaces"
-import type { Signature } from "@canvas-js/signed-cid"
+import type { Signature, Signer, Message } from "@canvas-js/interfaces"
+import { Ed25519Signer } from "@canvas-js/signed-cid"
 
-import { AbstractGossipLog, GossipLogInit, encodeId, Ed25519Signer, decodeClock } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas-js/gossiplog"
 import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
 import { GossipLog as GossipLogBrowser } from "@canvas-js/gossiplog/browser"
 import { GossipLog as GossipLogMemory } from "@canvas-js/gossiplog/memory"
@@ -42,9 +42,9 @@ export const testPlatforms = (
 }
 
 export const getPublicKey = <T>([id, { publicKey }, message]: [string, Signature, Message<T>]): [
-	string,
-	Uint8Array,
-	Message<T>
+	id: string,
+	publicKey: string,
+	message: Message<T>
 ] => [id, publicKey, message]
 
 export function getDirectory(t: ExecutionContext<unknown>): string {
@@ -94,7 +94,7 @@ export async function appendChain(
 	log: AbstractGossipLog<string, void>,
 	rootId: string,
 	n: number,
-	options: { signer?: MessageSigner<string> } = {}
+	options: { signer?: Signer<Message<string>> } = {}
 ): Promise<string[]> {
 	const signer = options.signer ?? new Ed25519Signer()
 

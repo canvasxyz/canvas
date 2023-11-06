@@ -3,7 +3,7 @@ import solw3 from "@solana/web3.js"
 
 import type { SolanaMessage, SolanaSessionData } from "./types"
 
-export const getKey = (topic: string, chain: string, address: string) => `canvas:${topic}/${chain}:${address}`
+export const getKey = (topic: string, address: string) => `canvas/${topic}/${address}`
 
 export function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
@@ -32,43 +32,20 @@ export function validateSessionData(data: unknown): data is SolanaSessionData {
 	return signature instanceof Uint8Array
 }
 
-function validateSolanaMessage(message: unknown): message is SolanaMessage {
-	try {
-		const { address, chainId, uri, issuedAt, expirationTime, ...otherValues } = message as Record<string, any>
-		if (Object.keys(otherValues).length !== 0) {
-			return false
-		}
-		return (
-			typeof address === "string" &&
-			typeof chainId === "string" &&
-			typeof uri === "string" &&
-			typeof issuedAt === "string" &&
-			(expirationTime === null || typeof expirationTime === "string")
-		)
-	} catch {
-		return false
-	}
-}
-
 export function signalInvalidType(type: never): never {
 	console.error(type)
 	throw new TypeError("internal error: invalid type")
 }
 
-export const chainPattern = /^solana:([a-zA-Z0-9]+)$/
+export const addressPattern =
+	/^(solana:[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{32}):([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)$/
 
-export function parseChainId(chain: string): string {
-	const chainPatternMatch = chainPattern.exec(chain)
-	if (chainPatternMatch === null) {
-		throw new Error(`invalid chain: ${chain} did not match ${chainPattern}`)
+export function parseAddress(address: string): [chainId: string, walletAddress: string] {
+	const result = addressPattern.exec(address)
+	if (result === null) {
+		throw new Error(`expected address to match ${addressPattern}`)
 	}
 
-	const [_, chainId] = chainPatternMatch
-	return chainId
-}
-
-export function getSessionURI(chain: string, publicKey: Uint8Array) {
-	const pk = new solw3.PublicKey(publicKey)
-	const sessionAddress = pk.toBase58()
-	return `${chain}:${sessionAddress}`
+	const [_, chainId, walletAddress] = result
+	return [chainId, walletAddress]
 }

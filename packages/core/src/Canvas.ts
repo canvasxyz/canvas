@@ -3,7 +3,7 @@ import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 
-import { Action, Session, Message, MessageSigner, SessionSigner } from "@canvas-js/interfaces"
+import { Action, Session, Message, Signer, SessionSigner } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Signature } from "@canvas-js/signed-cid"
@@ -143,11 +143,11 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 				const session = await signer.getSession(this.topic, { timestamp, chain: options.chain })
 
-				const { chain, address, publicKeyType: public_key_type, publicKey: public_key } = session
+				const { address, signingKey: signing_key } = session
 
 				// Check if the session has already been added to the message log
 				const results = await runtime.db.query("$sessions", {
-					where: { chain, address, public_key_type, public_key, expiration: { gt: timestamp } },
+					where: { address, signing_key, expiration: { gt: timestamp } },
 					limit: 1,
 				})
 
@@ -165,7 +165,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				assert(representation !== undefined, "action args did not validate the provided schema type")
 
 				const { id, result, recipients } = await this.append(
-					{ type: "action", chain, address, name, args: representation, blockhash: null, timestamp },
+					{ type: "action", address, name, args: representation, blockhash: null, timestamp },
 					{ signer }
 				)
 
@@ -230,7 +230,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	 */
 	public async append(
 		payload: Session | Action,
-		options: { signer?: MessageSigner<Session | Action> }
+		options: { signer?: Signer<Message<Session | Action>> }
 	): Promise<{ id: string; result: void | any; recipients: Promise<PeerId[]> }> {
 		if (this.libp2p === null) {
 			const { id, result } = await this.messageLog.append(payload, options)

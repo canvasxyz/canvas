@@ -9,10 +9,10 @@ const plcOperationLog = JSON.parse(fs.readFileSync("test/plcOperationLog.json", 
 test("create and verify session", async (t) => {
 	const signer = new ATPSigner()
 
-	const [_, publicKey] = parseVerificationMethod("did:key:zQ3shWHru5nd9KVhuMsNTtN4QzAq2z7R22d7UKi7dtZAuZs2k")
+	const address = "did:plc:mmftdzyl74ymn2hhzoahtjcw"
+	const signingKey = "did:key:zQ3shWHru5nd9KVhuMsNTtN4QzAq2z7R22d7UKi7dtZAuZs2k"
 
-	const did = "did:plc:mmftdzyl74ymn2hhzoahtjcw"
-	const verificationMethod = await verifyLog(did, plcOperationLog)
+	const verificationMethod = await verifyLog(address, plcOperationLog)
 	const archives = {
 		"test/archives/3kd4eokkt272u.car": "at://did:plc:mmftdzyl74ymn2hhzoahtjcw/app.bsky.feed.post/3kd4eokkt272u",
 	}
@@ -21,11 +21,9 @@ test("create and verify session", async (t) => {
 		const recordArchive = fs.readFileSync(path)
 		await signer.verifySession({
 			type: "session",
-			chain: "atp",
-			address: did,
 
-			publicKeyType: "secp256k1",
-			publicKey: publicKey,
+			address: address,
+			signingKey: signingKey,
 
 			data: {
 				verificationMethod: verificationMethod,
