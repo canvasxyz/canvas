@@ -14,10 +14,8 @@ export type Session<Data = any> = {
 
 	/** chain-specific session payload, e.g. a SIWE message & signature */
 	data: Data
+	duration: number | null
 
 	timestamp: number
-
-	/** CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
 	blockhash: string | null
-	duration: number | null
 }

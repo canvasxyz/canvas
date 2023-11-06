@@ -6,7 +6,3 @@ export type Signature = {
 	signature: Uint8Array
 	cid: CID
 }
-
-export interface Signer<T = any> {
-	sign(value: T): Signature
-}

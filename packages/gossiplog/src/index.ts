@@ -1,4 +1,4 @@
-export type { Message, MessageSigner } from "@canvas-js/interfaces"
+export type { Message } from "@canvas-js/interfaces"
 
 export * from "./AbstractGossipLog.js"
 export * from "./schema.js"

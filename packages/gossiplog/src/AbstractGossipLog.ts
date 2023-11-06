@@ -9,7 +9,7 @@ import { Schema } from "@ipld/schema/schema-schema"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 import { create } from "@ipld/schema/typed.js"
 
-import type { Signature, Message, MessageSigner, Awaitable } from "@canvas-js/interfaces"
+import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 import { Ed25519Signer, verifySignature, verifySignedValue } from "@canvas-js/signed-cid"
 
 import { Mempool } from "./Mempool.js"
@@ -52,7 +52,7 @@ export interface GossipLogInit<Payload = unknown, Result = void> {
 	apply: GossipLogConsumer<Payload, Result>
 	validate: ((payload: unknown) => payload is Payload) | { schema: string | Schema; name: string }
 
-	signer?: MessageSigner<Payload>
+	signer?: Signer<Message<Payload>>
 	indexAncestors?: boolean
 }
 
@@ -85,7 +85,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public readonly topic: string
 	public readonly indexAncestors: boolean
-	public readonly signer: MessageSigner<Payload>
+	public readonly signer: Signer<Message<Payload>>
 
 	protected readonly log: Logger
 	protected readonly mempool = new Mempool<{ signature: Signature; message: Message<Payload> }>()
@@ -198,7 +198,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	 */
 	public async append(
 		payload: Payload,
-		options: { signer?: MessageSigner<Payload> } = {}
+		options: { signer?: Signer<Message<Payload>> } = {}
 	): Promise<{ id: string; signature: Signature; message: Message<Payload>; result: Result }> {
 		const signer = options.signer ?? this.signer
 

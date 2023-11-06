@@ -3,15 +3,7 @@ import * as siwe from "siwe"
 import * as json from "@ipld/dag-json"
 import { logger } from "@libp2p/logger"
 
-import type {
-	Signature,
-	SessionSigner,
-	Action,
-	SessionStore,
-	Message,
-	Session,
-	MessageSigner,
-} from "@canvas-js/interfaces"
+import type { Signature, Signer, SessionSigner, Action, SessionStore, Message, Session } from "@canvas-js/interfaces"
 import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
 import { getDomain } from "@canvas-js/chain-ethereum/domain"
@@ -40,7 +32,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 
 	#ethersSigner: AbstractSigner
 	#store: SessionStore | null
-	#signers: Record<string, MessageSigner<Action | Session>> = {}
+	#signers: Record<string, Signer<Message<Action | Session>>> = {}
 	#sessions: Record<string, Session<SIWESessionData>> = {}
 	// #privateKeys: Record<string, Uint8Array> = {}
 

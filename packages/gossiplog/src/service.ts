@@ -10,7 +10,7 @@ import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
 
 import type { Signature } from "@canvas-js/signed-cid"
-import type { Message, MessageSigner } from "@canvas-js/interfaces"
+import type { Message, Signer } from "@canvas-js/interfaces"
 
 import { AbstractGossipLog, GossipLogEvents } from "./AbstractGossipLog.js"
 
@@ -139,7 +139,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 	public async append<Payload, Result>(
 		topic: string,
 		payload: Payload,
-		options: { signer?: MessageSigner<Payload> } = {}
+		options: { signer?: Signer<Message<Payload>> } = {}
 	): Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }> {
 		const messageLog = this.#messageLogs.get(topic) as AbstractGossipLog<Payload, Result> | undefined
 		assert(messageLog !== undefined, "no subscription for topic")

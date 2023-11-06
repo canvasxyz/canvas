@@ -6,15 +6,7 @@ import { logger } from "@libp2p/logger"
 
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type {
-	Signature,
-	SessionSigner,
-	Action,
-	SessionStore,
-	Message,
-	Session,
-	MessageSigner,
-} from "@canvas-js/interfaces"
+import type { Signature, Signer, SessionSigner, Action, SessionStore, Message, Session } from "@canvas-js/interfaces"
 import { Ed25519Signer } from "@canvas-js/signed-cid"
 
 import { assert, signalInvalidType, validateSessionData, addressPattern, getKey, parseAddress } from "./utils.js"
@@ -48,7 +40,7 @@ export class SolanaSigner implements SessionSigner {
 
 	#signer: GenericSigner
 	#store: SessionStore | null
-	#signers: Record<string, MessageSigner<Action | Session>> = {}
+	#signers: Record<string, Signer<Message<Action | Session>>> = {}
 	#sessions: Record<string, Session<SolanaSessionData>> = {}
 
 	public constructor({ signer, store, sessionDuration, chainId }: SolanaSignerInit = {}) {

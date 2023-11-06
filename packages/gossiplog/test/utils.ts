@@ -11,7 +11,7 @@ import { nanoid } from "nanoid"
 import { bytesToHex } from "@noble/hashes/utils"
 import { Key, Node } from "@canvas-js/okra"
 
-import type { Signature, MessageSigner, Message } from "@canvas-js/interfaces"
+import type { Signature, Signer, Message } from "@canvas-js/interfaces"
 import { Ed25519Signer } from "@canvas-js/signed-cid"
 
 import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas-js/gossiplog"
@@ -94,7 +94,7 @@ export async function appendChain(
 	log: AbstractGossipLog<string, void>,
 	rootId: string,
 	n: number,
-	options: { signer?: MessageSigner<string> } = {}
+	options: { signer?: Signer<Message<string>> } = {}
 ): Promise<string[]> {
 	const signer = options.signer ?? new Ed25519Signer()
 

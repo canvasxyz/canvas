@@ -1,11 +1,12 @@
-import type { MessageSigner } from "./MessageSigner.js"
+import type { Signer } from "./Signer.js"
+import type { Message } from "./Message.js"
 import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
 import type { Awaitable } from "./Awaitable.js"
 
 import { SessionStore } from "./SessionStore.js"
 
-export interface SessionSigner<SessionData = any> extends MessageSigner<Action | Session<SessionData>> {
+export interface SessionSigner<SessionData = any> extends Signer<Message<Action | Session<SessionData>>> {
 	match: (chain: string) => boolean
 
 	/**
@@ -37,7 +38,7 @@ export abstract class AbstractSessionSigner<Data> {
 	}
 
 	#store: SessionStore | null
-	#signers: Record<string, MessageSigner<Action | Session>> = {}
+	#signers: Record<string, Signer<Message<Action | Session>>> = {}
 	#sessions: Record<string, Session<Data>> = {}
 
 	protected constructor(options: { store?: SessionStore }) {

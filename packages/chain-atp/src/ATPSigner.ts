@@ -7,15 +7,7 @@ import * as ATP from "@atproto/api"
 // decides to publish ESM modules (please, it's not 2010)
 const BskyAgent = ATP.BskyAgent ?? ATP["default"].BskyAgent
 
-import type {
-	Action,
-	Message,
-	MessageSigner,
-	Session,
-	SessionSigner,
-	SessionStore,
-	Signature,
-} from "@canvas-js/interfaces"
+import type { Action, Message, Signer, Session, SessionSigner, SessionStore, Signature } from "@canvas-js/interfaces"
 import { Secp256k1Signer } from "@canvas-js/signed-cid"
 
 import { unpackArchive } from "./mst.js"
@@ -46,7 +38,7 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 
 	#agent = new BskyAgent({ service: `https://${service}` })
 	#sessions: Record<string, Session<ATPSessionData>> = {}
-	#signers: Record<string, MessageSigner<Action | Session>> = {}
+	#signers: Record<string, Signer<Message<Action | Session>>> = {}
 
 	public constructor(private readonly options: ATPSignerOptions = {}) {}
 
