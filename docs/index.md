@@ -78,9 +78,9 @@ return <Chessboard position={boards[0].position} onDrop={ ... } />
 <TextRow title="About Canvas">
   <TextItem>Canvas is a framework for writing web applications as decentralized protocols.</TextItem>
   <TextItem>Canvas applications are defined as <strong>multiplayer contracts</strong> in TypeScript, which run on both the browser and server.</TextItem>
-  <TextItem>User actions are relayed between everyone on the network, and executed by each client. They have access to a conflict-free multiwriter database, which allows interactions to be merged out-of-order.</TextItem>
-  <TextItem>This also means that unlike blockchains, they don't need to wait for consensus, and aren't limited by throughput or token requirements.</TextItem>
-  <TextItem>For developers today, you can use Canvas as a peer-to-peer network with persistent state, for applications like chat, games, and governance. Or, if you add a data availability service, you can use it as a fully-fledged decentralized app platform.</TextItem>
+  <TextItem>User actions are relayed between everyone on the network, and executed by each client. They have access to a <strong>conflict-free multiwriter database</strong>, which allows interactions to be merged as they're received.</TextItem>
+  <TextItem>This also means that unlike blockchains, interactions on Canvas applications sync instantly, without tokens or gas limits.<!-- They can also call outside code, and fetch external data, and let nodes check each others' work. --></TextItem>
+  <TextItem>Today, you can use Canvas as a peer-to-peer network with persistent state, for applications like chat, games, and governance. Or, if you add a data availability service, you can use it as a fully-fledged decentralized app platform.</TextItem>
 </TextRow>
 
 <FeatureRow title="Interoperable Everywhere" detail="Canvas supports any cryptographically verifiable authentication strategy, including Web3 wallets, W3C DIDs, and even Apple & Google SSO. You can write your own custom adapters to support other authorization methods.">
