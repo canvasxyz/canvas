@@ -7,10 +7,11 @@ import { bytesToHex as hex } from "@noble/hashes/utils"
 import * as cbor from "@ipld/dag-cbor"
 import { Schema } from "@ipld/schema/schema-schema"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
-import { create } from "@ipld/schema/typed.js"
+import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
+import { base58btc } from "multiformats/bases/base58"
 
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
-import { Ed25519Signer, verifySignature, verifySignedValue } from "@canvas-js/signed-cid"
+import { Ed25519Signer, didKeyPattern, getCID, verifySignature, verifySignedValue } from "@canvas-js/signed-cid"
 
 import { Mempool } from "./Mempool.js"
 import { Driver } from "./sync/driver.js"
@@ -18,14 +19,15 @@ import { decodeClock } from "./clock.js"
 import {
 	decodeId,
 	encodeId,
-	decodeSignedMessage,
 	encodeSignedMessage,
 	getNextClock,
 	KEY_LENGTH,
 	messageIdPattern,
 	MIN_MESSAGE_ID,
 	MAX_MESSAGE_ID,
-	Transformer,
+	SignedMessage,
+	getKey,
+	decodeSignedMessage,
 } from "./schema.js"
 import { assert, topicPattern, cborNull, getAncestorClocks } from "./utils.js"
 
@@ -90,7 +92,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	protected readonly log: Logger
 	protected readonly mempool = new Mempool<{ signature: Signature; message: Message<Payload> }>()
 
-	readonly #transformer: Transformer
+	readonly #transformer: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 	readonly #apply: GossipLogConsumer<Payload, Result>
 
 	protected constructor(init: GossipLogInit<Payload, Result>) {
@@ -150,12 +152,52 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public encode(signature: Signature, message: Message<Payload>): [key: Uint8Array, value: Uint8Array] {
 		assert(message.topic === this.topic, "invalid message topic")
-		return encodeSignedMessage(signature, message, { transformer: this.#transformer })
+		const parents = message.parents.sort().map(encodeId)
+		assert(getNextClock(parents) === message.clock, "error encoding message (invalid clock)")
+
+		const payload = this.#transformer.toRepresentation(message.payload)
+		assert(payload !== undefined, "error encoding message (invalid payload)")
+
+		const result = didKeyPattern.exec(signature.publicKey)
+		assert(result !== null)
+		const [{}, bytes] = result
+
+		const signedMessage: SignedMessage = {
+			publicKey: base58btc.decode(bytes),
+			signature: signature.signature,
+			parents: parents,
+			payload: payload,
+		}
+
+		const value = encodeSignedMessage(signedMessage)
+		const key = getKey(message.clock, value)
+		return [key, value]
 	}
 
 	public decode(value: Uint8Array): [id: string, signature: Signature, message: Message<Payload>] {
-		const [id, signature, message] = decodeSignedMessage<Payload>(this.topic, value, { transformer: this.#transformer })
-		assert(message.topic === this.topic, "invalid message topic")
+		const signedMessage = decodeSignedMessage(value)
+
+		const clock = getNextClock(signedMessage.parents)
+		const parents = signedMessage.parents.map(decodeId)
+
+		assert(
+			parents.every((id, i) => i === 0 || parents[i - 1] < id),
+			"unsorted parents array"
+		)
+
+		const payload = this.#transformer.toTyped(signedMessage.payload)
+		assert(payload !== undefined, "error decoding message (invalid payload)")
+
+		const message: Message<Payload> = { topic: this.topic, clock, parents, payload }
+
+		const signature: Signature = {
+			publicKey: `did:key:${base58btc.encode(signedMessage.publicKey)}`,
+			signature: signedMessage.signature,
+			cid: getCID(message, { codec: "dag-cbor", digest: "sha2-256" }),
+		}
+
+		const id = decodeId(getKey(clock, value))
+
 		return [id, signature, message]
 	}
 
