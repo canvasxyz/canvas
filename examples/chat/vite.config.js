@@ -13,7 +13,7 @@ export default defineConfig({
 			plugins: [
 				NodeGlobalsPolyfillPlugin({
 					buffer: true,
-					process: false,
+					process: true,
 				}),
 			],
 		},

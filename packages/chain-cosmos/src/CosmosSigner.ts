@@ -7,6 +7,7 @@ import { logger } from "@libp2p/logger"
 import { secp256k1 } from "@noble/curves/secp256k1"
 import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils"
+import { base64 } from "multiformats/bases/base64"
 
 import type {
 	Signature,
@@ -28,15 +29,7 @@ import {
 	getSessionURI,
 	getKey,
 } from "./utils.js"
-import {
-	CosmosMessage,
-	CosmosSessionData,
-	ExternalCosmosSigner,
-	isEvmMetaMaskSigner,
-	isKeplrAminoSigner,
-	isKeplrEthereumSigner,
-	isTerraFixedExtension,
-} from "./types.js"
+import { CosmosMessage, CosmosSessionData, ExternalCosmosSigner } from "./types.js"
 import { getSessionSignatureData } from "./signatureData.js"
 
 export interface CosmosSignerInit {
@@ -64,78 +57,7 @@ export class CosmosSigner implements SessionSigner {
 	public constructor({ signer, store, sessionDuration, bech32Prefix }: CosmosSignerInit = {}) {
 		const bech32Prefix_ = bech32Prefix == undefined ? "cosmos" : bech32Prefix
 
-		if (signer) {
-			if (isEvmMetaMaskSigner(signer)) {
-				const getAddress = async () => {
-					const accounts = await signer.eth.getAccounts()
-					const address = accounts[0]
-					return toBech32(bech32Prefix_, hexToBytes(address))
-				}
-				const sign = async (msg: Uint8Array) => {
-					const address = await getAddress()
-					return {
-						signature: await signer.eth.personal.sign(`0x${bytesToHex(msg)}`, address, ""),
-						signatureType: "ethereum" as const,
-					}
-				}
-				this.#signer = { getAddress, sign }
-			} else if (isKeplrEthereumSigner(signer)) {
-				const getAddress = async (chainId: string) => {
-					// should chainId be an argument here?
-					const accounts = signer.getOfflineSigner(chainId).getAccounts()
-					const address = accounts[0].address
-					// convert to cosmos address
-					return toBech32(bech32Prefix_, hexToBytes(address))
-				}
-				const sign = async (msg: Uint8Array, chainId: string) => {
-					const address = await getAddress(chainId)
-					const rawSignature = await signer.signEthereum(chainId, address, bytesToHex(msg), "message")
-					return {
-						signature: `0x${bytesToHex(rawSignature)}`,
-						signatureType: "ethereum" as const,
-					}
-				}
-				this.#signer = { getAddress, sign }
-			} else if (isKeplrAminoSigner(signer)) {
-				const getAddress = signer.getAddress
-				const sign = async (msg: Uint8Array, chainId: string) => {
-					const address = await getAddress(chainId)
-					const signDoc = await getSessionSignatureData(msg, address)
-					const signRes = await signer.signAmino(chainId, address, signDoc)
-					const stdSig = signRes.signature
-					return {
-						signature: {
-							signature: stdSig.signature,
-							pub_key: {
-								type: pubkeyType.secp256k1,
-								value: stdSig.pub_key.value,
-							},
-							chain_id: chainId,
-						},
-						signatureType: "amino" as const,
-					}
-				}
-				this.#signer = { getAddress, sign }
-			} else if (isTerraFixedExtension(signer)) {
-				const getAddress = async () => (await signer.connect()).address!
-				const sign = async (msg: Uint8Array) => {
-					const result = await signer.signBytes(Buffer.from(msg))
-					return {
-						signature: {
-							signature: result.payload.result.signature,
-							pub_key: {
-								type: pubkeyType.secp256k1,
-								value: result.payload.result.public_key,
-							},
-						},
-						signatureType: "cosmos" as const,
-					}
-				}
-				this.#signer = { getAddress, sign }
-			} else {
-				throw new Error("invalid signer")
-			}
-		} else {
+		if (signer == undefined) {
 			const wallet = Wallet.createRandom()
 
 			this.#signer = {
@@ -149,6 +71,58 @@ export class CosmosSigner implements SessionSigner {
 					}
 				},
 			}
+		} else if (signer.type == "ethereum") {
+			const getAddress = async (chainId: string) => {
+				const address = await signer.getAddress(chainId)
+				return toBech32(bech32Prefix_, hexToBytes(address))
+			}
+			const sign = async (msg: Uint8Array, chainId: string) => {
+				const address = await getAddress(chainId)
+				return {
+					signature: await signer.signEthereum(chainId, address, `0x${bytesToHex(msg)}`),
+					signatureType: "ethereum" as const,
+				}
+			}
+			this.#signer = { getAddress, sign }
+		} else if (signer.type == "amino") {
+			const getAddress = signer.getAddress
+			const sign = async (msg: Uint8Array, chainId: string) => {
+				const address = await getAddress(chainId)
+				const signDoc = await getSessionSignatureData(msg, address)
+				const signRes = await signer.signAmino(chainId, address, signDoc)
+				const stdSig = signRes.signature
+
+				return {
+					signature: {
+						signature: stdSig.signature,
+						pub_key: {
+							type: pubkeyType.secp256k1,
+							value: stdSig.pub_key.value,
+						},
+						chain_id: chainId,
+					},
+					signatureType: "amino" as const,
+				}
+			}
+			this.#signer = { getAddress, sign }
+		} else if (signer.type == "bytes") {
+			const getAddress = signer.getAddress
+			const sign = async (msg: Uint8Array) => {
+				const { public_key, signature } = await signer.signBytes(msg)
+				return {
+					signature: {
+						signature: signature,
+						pub_key: {
+							type: pubkeyType.secp256k1,
+							value: public_key,
+						},
+					},
+					signatureType: "bytes" as const,
+				}
+			}
+			this.#signer = { getAddress, sign }
+		} else {
+			throw new Error("invalid signer")
 		}
 
 		this.#store = store ?? null
@@ -200,8 +174,20 @@ export class CosmosSigner implements SessionSigner {
 			isValid ||= secp256k1.verify(decodedSignature, signDocDigest, pubkey)
 			isValid ||= secp256k1.verify(decodedSignature, digest, pubkey)
 			assert(isValid, "invalid signature")
-		} else if (data.signatureType == "cosmos") {
-			throw new Error("Cosmos signatures are not yet supported")
+		} else if (data.signatureType == "bytes") {
+			const { pub_key, signature } = data.signature
+			// cosmos supports other public key types, but for the sake of simplicity
+			// just support secp256k1
+			assert(pub_key.type == pubkeyType.secp256k1, `invalid public key type ${pub_key.type}`)
+
+			// the result of terra's signBytes is a base64 encoded string
+			const pubKeyBytes = base64.baseDecode(pub_key.value)
+			const signatureBytes = base64.baseDecode(signature)
+
+			// signBytes signs the sha256 hash of the message
+			const hash = sha256(encodedMessage)
+			const isValid = secp256k1.verify(signatureBytes, hash, pubKeyBytes)
+			assert(isValid, "invalid signature")
 		} else {
 			signalInvalidType(data.signatureType)
 		}

@@ -38,7 +38,7 @@ export function validateSessionData(data: unknown): data is CosmosSessionData {
 			if (typeof type !== "string" || typeof value !== "string") {
 				return false
 			}
-		} else if (signatureType == "cosmos") {
+		} else if (signatureType == "bytes") {
 			// validate cosmos
 			const { signature, pub_key, chain_id } = (data as any).signature
 			if (typeof signature !== "string" || typeof pub_key !== "object") {
