@@ -32,17 +32,12 @@ export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> =
 		}
 
 		const web3 = new Web3(window.ethereum)
-		// await web3.givenProvider.enable()
 		await web3.eth.requestAccounts()
-
 		const ethAccounts = await web3.eth.getAccounts()
-		// const provider = web3.currentProvider
 
 		const thisAddress = ethAccounts[0]
 
-		// setProvider(provider)
 		setAddress(thisAddress)
-
 		setSessionSigner(
 			new CosmosSigner({
 				signer: {
