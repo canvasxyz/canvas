@@ -80,7 +80,6 @@ export class CosmosSigner implements SessionSigner {
 				return toBech32(bech32Prefix_, hexToBytes(address))
 			}
 			const sign = async (cosmosMessage: CosmosMessage, chainId: string) => {
-				console.log("signing ethereum...")
 				const encodedMessage = encodeReadableEthereumMessage(cosmosMessage)
 
 				const address = await getAddress(chainId)
@@ -121,10 +120,10 @@ export class CosmosSigner implements SessionSigner {
 				const { public_key, signature } = await signer.signBytes(msg)
 				return {
 					signature: {
-						signature: signature,
+						signature: base64.baseDecode(signature),
 						pub_key: {
 							type: pubkeyType.secp256k1,
-							value: public_key,
+							value: base64.baseDecode(public_key),
 						},
 					},
 					signatureType: "bytes" as const,
@@ -191,13 +190,9 @@ export class CosmosSigner implements SessionSigner {
 			// just support secp256k1
 			assert(pub_key.type == pubkeyType.secp256k1, `invalid public key type ${pub_key.type}`)
 
-			// the result of terra's signBytes is a base64 encoded string
-			const pubKeyBytes = base64.baseDecode(pub_key.value)
-			const signatureBytes = base64.baseDecode(signature)
-
 			// signBytes signs the sha256 hash of the message
 			const hash = sha256(encodedMessage)
-			const isValid = secp256k1.verify(signatureBytes, hash, pubKeyBytes)
+			const isValid = secp256k1.verify(signature, hash, pub_key.value)
 			assert(isValid, "invalid signature")
 		} else {
 			signalInvalidType(data.signatureType)

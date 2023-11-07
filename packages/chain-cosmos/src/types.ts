@@ -8,10 +8,10 @@ type EthereumSignedSessionData = {
 type BytesSignedSessionData = {
 	signatureType: "bytes"
 	signature: {
-		signature: string
+		signature: Uint8Array
 		pub_key: {
 			type: string
-			value: string
+			value: Uint8Array
 		}
 	}
 }

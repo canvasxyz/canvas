@@ -3,7 +3,6 @@ import React, { useCallback, useContext, useState } from "react"
 import { AppContext } from "./AppContext.js"
 import { sessionStore } from "./utils.js"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
-// import { WalletController, getChainOptions } from "@terra-money/wallet-controller"
 import { Extension } from "@terra-money/feather.js"
 import { Buffer } from "buffer"
 
@@ -14,9 +13,6 @@ export const ConnectTerra: React.FC<ConnectTerraProps> = ({}) => {
 
 	// true if this signing method is being used
 	const [thisIsConnected, setThisIsConnected] = useState(false)
-
-	// const [controller, setController] = useState<WalletController | null>(null)
-	const [extension, setExtension] = useState<Extension | null>(null)
 
 	const [error, setError] = useState<Error | null>(null)
 
@@ -30,10 +26,6 @@ export const ConnectTerra: React.FC<ConnectTerraProps> = ({}) => {
 			console.log(error)
 			console.error(`Failed to enable Station ${error.message}`)
 		})
-
-		// if (accountAddr && !this._accounts.includes(accountAddr)) {
-		// 	this._accounts.push(accountAddr)
-		// }
 		if (!accountAddr) {
 			setError(new Error("address not found"))
 			return
@@ -61,56 +53,8 @@ export const ConnectTerra: React.FC<ConnectTerraProps> = ({}) => {
 				store: sessionStore,
 			})
 		)
-
-		/*
-		const chainOptions = await getChainOptions()
-		const controller = new WalletController(chainOptions)
-		await controller.connect()
-
-		setController(controller)
-
-		// get the first address
-		const wallet = controller.connectedWallet()
-		wallet.subscribe((connectedWallet) => {
-			if (connectedWallet) {
-				const accountAddr = connectedWallet.walletAddress
-
-				if (address == null) {
-					if (accountAddr) {
-						setAddress(accountAddr)
-					}
-				} else {
-					// address has already been set and must have then changed
-					if (address !== accountAddr) {
-						// reload page
-						window.location.reload()
-					}
-				}
-			}
-		})
-
-		if (address == null) {
-			setError(new Error("address not found"))
-			return
-		}
-
-		setSessionSigner(
-			new CosmosSigner({
-				signer: {
-					type: "bytes",
-					getAddress: async () => address,
-					// @ts-ignore
-					signBytes: async (signBytes: Uint8Array) => {
-						const { result } = await controller.signBytes(Buffer.from(signBytes))
-						result.public_key
-					},
-				},
-				store: sessionStore,
-			})
-		)
 		setThisIsConnected(true)
-    */
-	}, [address, extension])
+	}, [address])
 
 	const disconnect = useCallback(async () => {
 		setAddress(null)
