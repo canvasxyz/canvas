@@ -31,11 +31,11 @@ export function validateSessionData(data: unknown): data is CosmosSessionData {
 		if (signatureType == "amino") {
 			// validate amino
 			const { signature, pub_key, chain_id } = (data as any).signature
-			if (typeof signature !== "string" || typeof pub_key !== "object") {
+			if (!(signature instanceof Uint8Array) || typeof pub_key !== "object") {
 				return false
 			}
 			const { type, value } = pub_key
-			if (typeof type !== "string" || typeof value !== "string") {
+			if (typeof type !== "string" || !(value instanceof Uint8Array)) {
 				return false
 			}
 		} else if (signatureType == "bytes") {

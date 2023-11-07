@@ -102,10 +102,10 @@ export class CosmosSigner implements SessionSigner {
 
 				return {
 					signature: {
-						signature: stdSig.signature,
+						signature: hexToBytes(stdSig.signature),
 						pub_key: {
 							type: pubkeyType.secp256k1,
-							value: stdSig.pub_key.value,
+							value: hexToBytes(stdSig.pub_key.value),
 						},
 						chain_id: chainId,
 					},
@@ -168,7 +168,7 @@ export class CosmosSigner implements SessionSigner {
 			// recreate amino thingy, do other cosmos dark magic
 			// this decodes our serialization "{ pub_key, signature, chain_id? }" to an object with { pubkey, signature }
 			const { pub_key, signature } = data.signature
-			const { pubkey, signature: decodedSignature } = decodeSignature({ pub_key, signature })
+			const { pubkey, signature: decodedSignature } = decodeSignature({ pub_key, signature: bytesToHex(signature) })
 
 			if (address !== toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pubkey))) {
 				throw new Error("Session signed with a pubkey that doesn't match the session address")
