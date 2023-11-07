@@ -28,6 +28,7 @@ import {
 	chainPattern,
 	getSessionURI,
 	getKey,
+	encodeReadableEthereumMessage,
 } from "./utils.js"
 import { CosmosMessage, CosmosSessionData, ExternalCosmosSigner } from "./types.js"
 import { getSessionSignatureData } from "./signatureData.js"
@@ -41,7 +42,7 @@ export interface CosmosSignerInit {
 
 type GenericSigner = {
 	getAddress: (chainId: string) => Promise<string>
-	sign: (msg: Uint8Array, chainId: string) => Promise<CosmosSessionData>
+	sign: (msg: CosmosMessage, chainId: string) => Promise<CosmosSessionData>
 }
 
 export class CosmosSigner implements SessionSigner {
@@ -62,7 +63,8 @@ export class CosmosSigner implements SessionSigner {
 
 			this.#signer = {
 				getAddress: async () => toBech32(bech32Prefix_, hexToBytes(wallet.address.substring(2))),
-				sign: async (msg) => {
+				sign: async (cosmosMessage: CosmosMessage) => {
+					const msg = cbor.encode(cosmosMessage)
 					const hexMessage = `0x${bytesToHex(msg)}`
 					const signature = await wallet.signMessage(hexMessage)
 					return {
@@ -73,20 +75,26 @@ export class CosmosSigner implements SessionSigner {
 			}
 		} else if (signer.type == "ethereum") {
 			const getAddress = async (chainId: string) => {
-				const address = await signer.getAddress(chainId)
+				const address = (await signer.getAddress(chainId)).substring(2)
+
 				return toBech32(bech32Prefix_, hexToBytes(address))
 			}
-			const sign = async (msg: Uint8Array, chainId: string) => {
+			const sign = async (cosmosMessage: CosmosMessage, chainId: string) => {
+				console.log("signing ethereum...")
+				const encodedMessage = encodeReadableEthereumMessage(cosmosMessage)
+
 				const address = await getAddress(chainId)
+				const ethAddress = `0x${bytesToHex(fromBech32(address).data)}`
 				return {
-					signature: await signer.signEthereum(chainId, address, `0x${bytesToHex(msg)}`),
+					signature: await signer.signEthereum(chainId, ethAddress, encodedMessage),
 					signatureType: "ethereum" as const,
 				}
 			}
 			this.#signer = { getAddress, sign }
 		} else if (signer.type == "amino") {
 			const getAddress = signer.getAddress
-			const sign = async (msg: Uint8Array, chainId: string) => {
+			const sign = async (cosmosMessage: CosmosMessage, chainId: string) => {
+				const msg = cbor.encode(cosmosMessage)
 				const address = await getAddress(chainId)
 				const signDoc = await getSessionSignatureData(msg, address)
 				const signRes = await signer.signAmino(chainId, address, signDoc)
@@ -107,7 +115,8 @@ export class CosmosSigner implements SessionSigner {
 			this.#signer = { getAddress, sign }
 		} else if (signer.type == "bytes") {
 			const getAddress = signer.getAddress
-			const sign = async (msg: Uint8Array) => {
+			const sign = async (cosmosMessage: CosmosMessage) => {
+				const msg = cbor.encode(cosmosMessage)
 				const { public_key, signature } = await signer.signBytes(msg)
 				return {
 					signature: {
@@ -150,8 +159,9 @@ export class CosmosSigner implements SessionSigner {
 
 		// select verification method based on the signing method
 		if (data.signatureType == "ethereum") {
+			const encodedReadableMessage = encodeReadableEthereumMessage(message)
 			// validate ethereum signature
-			const recoveredAddress = verifyMessage(`0x${bytesToHex(encodedMessage)}`, data.signature)
+			const recoveredAddress = verifyMessage(encodedReadableMessage, data.signature)
 			assert(toBech32(prefix, hexToBytes(recoveredAddress.substring(2))) === address, "invalid signature")
 		} else if (data.signatureType == "amino") {
 			// validate cosmos signature
@@ -275,7 +285,7 @@ export class CosmosSigner implements SessionSigner {
 			message.expirationTime = expirationTime.toISOString()
 		}
 
-		const signResult = await this.#signer.sign(cbor.encode(message), chainId)
+		const signResult = await this.#signer.sign(message, chainId)
 
 		const session: Session<CosmosSessionData> = {
 			type: "session",

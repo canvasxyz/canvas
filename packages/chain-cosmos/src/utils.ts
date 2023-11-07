@@ -1,4 +1,4 @@
-import { CosmosSessionData } from "./types"
+import { CosmosMessage, CosmosSessionData } from "./types"
 import { toBech32 } from "@cosmjs/encoding"
 
 export const getKey = (topic: string, chain: string, address: string) => `canvas:${topic}/${chain}:${address}`
@@ -66,4 +66,15 @@ export function validateSessionData(data: unknown): data is CosmosSessionData {
 export function getSessionURI(prefix: string, chain: string, publicKey: Uint8Array) {
 	const sessionAddress = toBech32(prefix, publicKey)
 	return `${chain}:${sessionAddress}`
+}
+
+export function encodeReadableEthereumMessage(message: CosmosMessage): string {
+	return `
+	Authorize access?
+	address: ${message.address}
+	chainId: ${message.chainId}
+	expirationTime: ${message.expirationTime}
+	issuedAt: ${message.issuedAt}
+	uri: ${message.uri}
+	`
 }
