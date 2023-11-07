@@ -2,7 +2,7 @@ import { Keplr } from "@keplr-wallet/types"
 
 type EthereumSignedSessionData = {
 	signatureType: "ethereum"
-	signature: string
+	signature: Uint8Array
 }
 
 type BytesSignedSessionData = {

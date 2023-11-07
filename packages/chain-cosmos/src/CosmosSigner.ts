@@ -66,9 +66,9 @@ export class CosmosSigner implements SessionSigner {
 				sign: async (cosmosMessage: CosmosMessage) => {
 					const msg = cbor.encode(cosmosMessage)
 					const hexMessage = `0x${bytesToHex(msg)}`
-					const signature = await wallet.signMessage(hexMessage)
+					const hexSignature = await wallet.signMessage(hexMessage)
 					return {
-						signature,
+						signature: hexToBytes(hexSignature),
 						signatureType: "ethereum" as const,
 					}
 				},
@@ -85,8 +85,9 @@ export class CosmosSigner implements SessionSigner {
 
 				const address = await getAddress(chainId)
 				const ethAddress = `0x${bytesToHex(fromBech32(address).data)}`
+				const hexSignature = await signer.signEthereum(chainId, ethAddress, encodedMessage)
 				return {
-					signature: await signer.signEthereum(chainId, ethAddress, encodedMessage),
+					signature: hexToBytes(hexSignature),
 					signatureType: "ethereum" as const,
 				}
 			}
@@ -161,7 +162,7 @@ export class CosmosSigner implements SessionSigner {
 		if (data.signatureType == "ethereum") {
 			const encodedReadableMessage = encodeReadableEthereumMessage(message)
 			// validate ethereum signature
-			const recoveredAddress = verifyMessage(encodedReadableMessage, data.signature)
+			const recoveredAddress = verifyMessage(encodedReadableMessage, `0x${bytesToHex(data.signature)}`)
 			assert(toBech32(prefix, hexToBytes(recoveredAddress.substring(2))) === address, "invalid signature")
 		} else if (data.signatureType == "amino") {
 			// validate cosmos signature
