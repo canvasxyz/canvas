@@ -1,8 +1,6 @@
 import { Keplr } from "@keplr-wallet/types"
-// import { PublicKey } from "@terra-money/feather.js"
-// import { ConnectedWallet } from "@terra-money/wallet-controller"
 
-type EtheremSignedSessionData = {
+type EthereumSignedSessionData = {
 	signatureType: "ethereum"
 	signature: string
 }
@@ -29,7 +27,7 @@ type AminoSignedSessionData = {
 	}
 }
 
-export type CosmosSessionData = EtheremSignedSessionData | BytesSignedSessionData | AminoSignedSessionData
+export type CosmosSessionData = EthereumSignedSessionData | BytesSignedSessionData | AminoSignedSessionData
 
 export type CosmosMessage = {
 	address: string
