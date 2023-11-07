@@ -18,6 +18,7 @@ import { ConnectionStatus } from "./ConnectionStatus.js"
 import { ConnectCosmosKeplr } from "./ConnectCosmosKeplr.js"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { ConnectTerra } from "./ConnectTerra.js"
+import { ConnectCosmosEvmMetamask } from "./ConnectCosmosEVMMetamask.js"
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
@@ -53,6 +54,7 @@ export const App: React.FC<{}> = ({}) => {
 						<ConnectATP />
 						<ConnectCosmosKeplr chainId="osmosis-1" />
 						<ConnectTerra />
+						<ConnectCosmosEvmMetamask chainId="osmosis-1" />
 						<SessionStatus />
 						<ConnectionStatus />
 						<ControlPanel />

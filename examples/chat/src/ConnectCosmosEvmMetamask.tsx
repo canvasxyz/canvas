@@ -1,5 +1,6 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
-import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
+import { Web3 } from "web3"
+import { MetaMaskInpageProvider } from "@metamask/providers"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 
@@ -7,8 +8,9 @@ import { AppContext } from "./AppContext.js"
 import { sessionStore } from "./utils.js"
 
 declare global {
-	// eslint-disable-next-line no-var
-	var ethereum: undefined | null | (Eip1193Provider & EventEmitterable<"accountsChanged" | "chainChanged">)
+	interface Window {
+		ethereum: MetaMaskInpageProvider
+	}
 }
 
 export interface ConnectCosmosEvmMetamaskProps {
@@ -20,53 +22,39 @@ export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> =
 
 	// true if this signing method is being used
 	const [thisIsConnected, setThisIsConnected] = useState(false)
-	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 
 	const [error, setError] = useState<Error | null>(null)
 
 	const connect = useCallback(async () => {
-		if (!provider) {
+		if (!window.ethereum) {
 			setError(new Error("window.ethereum not found"))
 			return
 		}
 
-		const signer = await provider.getSigner()
-		const address = await signer.getAddress()
-		setProvider(provider)
-		setAddress(address)
+		const web3 = new Web3(window.ethereum)
+		// await web3.givenProvider.enable()
+		await web3.eth.requestAccounts()
+
+		const ethAccounts = await web3.eth.getAccounts()
+		// const provider = web3.currentProvider
+
+		const thisAddress = ethAccounts[0]
+
+		// setProvider(provider)
+		setAddress(thisAddress)
 
 		setSessionSigner(
 			new CosmosSigner({
 				signer: {
-					type: "siwe",
-					signSIWE: signer.signMessage,
-					getAddress: signer.getAddress,
+					type: "ethereum",
+					signEthereum: (chainId: string, signerAddress: string, message: string) =>
+						web3.eth.personal.sign(message, signerAddress, ""),
+					getAddress: async () => thisAddress,
 				},
 				store: sessionStore,
 			})
 		)
 		setThisIsConnected(true)
-	}, [provider])
-
-	const initialRef = useRef(false)
-	useEffect(() => {
-		if (initialRef.current) {
-			return
-		}
-
-		initialRef.current = true
-
-		if (window.ethereum === undefined || window.ethereum === null) {
-			setError(new Error("window.ethereum not found"))
-			return
-		}
-
-		// TODO: handle these more gracefully
-		window.ethereum.on("chainChanged", (chainId) => window.location.reload())
-		window.ethereum.on("accountsChanged", (accounts) => window.location.reload())
-
-		const provider = new BrowserProvider(window.ethereum)
-		setProvider(provider)
 	}, [])
 
 	const disconnect = useCallback(async () => {
