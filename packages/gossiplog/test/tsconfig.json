@@ -9,6 +9,7 @@
   },
   "references": [
     { "path": "../." },
+    { "path": "../../signed-cid"},
     { "path": "../../interfaces"}
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@canvas-js/example-global-chat",
+  "name": "@canvas-js/example-channel-chat",
   "private": true,
   "version": "0.5.1",
   "type": "module",
@@ -13,19 +13,19 @@
     "@canvas-js/chain-ethereum": "0.5.1",
     "@canvas-js/hooks": "0.5.1",
     "@canvas-js/templates": "0.5.1",
-    "ethers": "^6.8.0",
+    "ethers": "^6.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@types/react": "^18.2.33",
+    "@types/react": "^18.2.36",
     "@types/react-dom": "^18.2.14",
-    "@typescript-eslint/eslint-plugin": "^6.9.0",
-    "@typescript-eslint/parser": "^6.9.0",
-    "@vitejs/plugin-react": "^4.1.0",
-    "eslint": "^8.52.0",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "@vitejs/plugin-react": "^4.1.1",
+    "eslint": "^8.53.0",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.3",
+    "eslint-plugin-react-refresh": "^0.4.4",
     "typescript": "^5.2.2",
     "vite": "^4.5.0",
     "vite-plugin-node-polyfills": "^0.15.0"

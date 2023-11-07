@@ -12,7 +12,7 @@ defineProps<{
 
 <style>
 .TextItem {
-  margin-bottom: 9px;
+  margin-bottom: 11px;
 }
 .TextItem strong {
   color: var(--vp-c-text-1);

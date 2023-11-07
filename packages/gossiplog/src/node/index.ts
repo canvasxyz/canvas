@@ -67,16 +67,16 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	public async read<T>(callback: (txn: ReadOnlyTransaction) => Promise<T>): Promise<T> {
 		this.log("opening read-only transaction")
 		return await this.env.read(async (txn) => {
-			const parentsDBI = txn.openDatabase("parents")
+			const headsDBI = txn.openDatabase("heads")
 			const messagesDBI = txn.openDatabase("messages")
 			const messages = new Tree(txn, { dbi: messagesDBI })
 			return await callback({
 				ancestors: this.indexAncestors ? GossipLog.getReadOnlyAPI(txn, txn.openDatabase("ancestors")) : undefined,
 				messages,
-				parents: {
-					get: (key) => txn.get(key, { dbi: parentsDBI }),
+				heads: {
+					get: (key) => txn.get(key, { dbi: headsDBI }),
 					entries: (lowerBound = null, upperBound = null, options = {}) =>
-						txn.entries(lowerBound, upperBound, { ...options, dbi: parentsDBI }),
+						txn.entries(lowerBound, upperBound, { ...options, dbi: headsDBI }),
 				},
 			})
 		})
@@ -88,7 +88,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			const messages = new Tree(txn, { dbi: txn.openDatabase("messages") })
 			return await callback({
 				messages,
-				parents: GossipLog.getReadWriteAPI(txn, txn.openDatabase("parents")),
+				heads: GossipLog.getReadWriteAPI(txn, txn.openDatabase("heads")),
 				ancestors: this.indexAncestors ? GossipLog.getReadWriteAPI(txn, txn.openDatabase("ancestors")) : undefined,
 			})
 		})

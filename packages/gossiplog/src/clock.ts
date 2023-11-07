@@ -64,19 +64,3 @@ export function decodeClock(key: Uint8Array): [clock: number, byteLength: number
 
 	return [num, sets.length]
 }
-
-// const b = (v) => v.toString(2).padStart(8, "0");
-// const h = (v) => v.toString(16).padStart(4, "0");
-// function e(v) {
-//   const buf = encode(v);
-//   console.log(
-//     `${h(v)} => [ ${Array.from(buf).map(b).join(", ")} ] (${decode(buf)})`,
-//   );
-// }
-
-// e(0);
-// e(255);
-// e(256);
-
-// // console.log(255, encode(255));
-// // console.log(256, encode(256));

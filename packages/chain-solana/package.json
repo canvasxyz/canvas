@@ -16,9 +16,9 @@
     "@canvas-js/interfaces": "0.5.1",
     "@ipld/dag-cbor": "^9.0.6",
     "@ipld/dag-json": "^10.1.5",
-    "@libp2p/logger": "^3.0.4",
+    "@libp2p/logger": "^3.0.5",
     "@noble/curves": "^1.2.0",
-    "@solana/web3.js": "^1.87.3",
+    "@solana/web3.js": "^1.87.4",
     "multiformats": "^12.1.3",
     "safe-stable-stringify": "^2.4.3"
   }

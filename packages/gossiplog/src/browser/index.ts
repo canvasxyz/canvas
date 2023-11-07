@@ -10,7 +10,7 @@ import { assert } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
-		const storeNames = ["messages", "parents", "ancestors"]
+		const storeNames = ["messages", "heads", "ancestors"]
 		const db = await openDB(`canvas/${init.topic}/log`, 2, {
 			upgrade: (db, oldVersion, newVersion) => {
 				for (const storeName of storeNames) {
@@ -24,10 +24,10 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		})
 
 		const messages = await IDBTree.open(db, "messages")
-		const parents = new IDBStore(db, "parents")
+		const heads = new IDBStore(db, "heads")
 		const ancestors = new IDBStore(db, "ancestors")
 
-		return new GossipLog(db, messages, parents, ancestors, init)
+		return new GossipLog(db, messages, heads, ancestors, init)
 	}
 
 	private readonly incomingSyncPeers = new Set<string>()
@@ -135,7 +135,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				this.incomingSyncPeers.add(targetId)
 			}
 
-			const parents: Omit<KeyValueStore, "set" | "delete"> = {
+			const heads: Omit<KeyValueStore, "set" | "delete"> = {
 				get: (key) => this.heads.read(() => this.heads.get(key)),
 				entries: (lowerBound = null, upperBound = null, options = {}) => {
 					console.log("GETTING PARENTS READ-ONLY", this.heads.storeName)
@@ -153,7 +153,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			}
 
 			try {
-				result = await callback({ messages: this.messages, parents, ancestors })
+				result = await callback({ messages: this.messages, heads, ancestors })
 			} catch (err) {
 				this.log.error("error in read-only transaction: %O", err)
 			} finally {
@@ -197,7 +197,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					this.outgoingSyncPeers.add(sourceId)
 				}
 
-				const parents: KeyValueStore = {
+				const heads: KeyValueStore = {
 					get: (key) => this.heads.read(() => this.heads.get(key)),
 					set: (key, value) => this.heads.write(() => this.heads.set(key, value)),
 					delete: (key) => this.heads.write(() => this.heads.delete(key)),
@@ -218,7 +218,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				}
 
 				try {
-					result = await callback({ messages: this.messages, parents, ancestors })
+					result = await callback({ messages: this.messages, heads, ancestors })
 				} catch (err) {
 					this.log.error("error in read-write transaction: %O", err)
 					error = err as Error

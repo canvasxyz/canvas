@@ -7,10 +7,10 @@ This package exports TypeScript types for Canvas messages and other interfaces.
 - [Installation](#installation)
 - [API](#api)
   - [Signatures](#signatures)
+  - [Signers](#signers)
   - [Messages](#messages)
   - [Actions](#actions)
   - [Sessions](#sessions)
-  - [Message signers](#message-signers)
   - [Session signers](#session-signers)
   - [Utility types](#utility-types)
     - [Awaitable](#awaitable)
@@ -28,13 +28,20 @@ npm i @canvas-js/chain-interfaces
 ```ts
 import type { CID } from "multiformats"
 
-export type SignatureType = "ed25519" | "secp256k1"
-
 export type Signature = {
-  type: SignatureType
-  publicKey: Uint8Array
+  publicKey: string
   signature: Uint8Array
   cid: CID
+}
+```
+
+### Signers
+
+```ts
+import type { Signature } from "./Signature.js"
+
+export interface Signer<T = any> {
+  sign(value: T): Signature
 }
 ```
 
@@ -55,9 +62,7 @@ export type Message<Payload = unknown> = {
 export type Action = {
   type: "action"
 
-  /** CAIP-2 prefix, e.g. "eip155:1" */
-  chain: string
-  /** CAIP-2 address (without the prefix, e.g. "0xb94d27...") */
+  /** DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
   address: string
 
   name: string
@@ -71,46 +76,34 @@ export type Action = {
 ### Sessions
 
 ```ts
-import type { SignatureType } from "./Signature.js"
-
 export type Session<Data = any> = {
   type: "session"
 
-  /** CAIP-2 prefix, e.g. "eip155:1" for mainnet Ethereum */
-  chain: string
-  /** CAIP-2 address (without the prefix, e.g. "0xb94d27...") */
+  /** DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
   address: string
 
-  /** ephemeral session key used to sign subsequent actions */
-  publicKeyType: SignatureType
-  publicKey: Uint8Array
+  /** did:key URI of the ephemeral session key used to sign subsequent actions */
+  publicKey: string
 
   /** chain-specific session payload, e.g. a SIWE message & signature */
   data: Data
+  duration: number | null
 
   timestamp: number
   blockhash: string | null
-  duration: number | null
-}
-```
-
-### Message signers
-
-```ts
-export interface MessageSigner<Payload = unknown> {
-  sign: (message: Message<Payload>) => Signature
 }
 ```
 
 ### Session signers
 
 ```ts
-import type { MessageSigner } from "./MessageSigner.js"
+import type { Signer } from "./Signer.js"
+import type { Message } from "./Message.js"
 import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
 import type { Awaitable } from "./Awaitable.js"
 
-export interface SessionSigner extends MessageSigner<Action | Session> {
+export interface SessionSigner extends Signer<Message<Action | Session>> {
   match: (chain: string) => boolean
 
   /**

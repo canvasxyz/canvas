@@ -2,8 +2,6 @@ import { varint } from "multiformats"
 
 import { base58btc } from "multiformats/bases/base58"
 
-import type { SignatureType } from "@canvas-js/interfaces"
-
 export const service = "bsky.social"
 export const getKey = (topic: string) => `canvas/${topic}/atp/${service}`
 
@@ -27,17 +25,6 @@ export function parseVerificationMethod(
 	} else {
 		throw new Error("invalid key codec")
 	}
-}
-
-export function formatSessionURI(publicKeyType: SignatureType, publicKey: Uint8Array): string {
-	assert(publicKeyType === "secp256k1", "only secp256k1 sessions are supported")
-	assert(publicKey.byteLength === 33, "expected publicKey.byteLength === 33")
-
-	const encodingLength = varint.encodingLength(k256)
-	const buffer = new Uint8Array(encodingLength + publicKey.byteLength)
-	varint.encodeTo(k256, buffer, 0)
-	buffer.set(publicKey, encodingLength)
-	return `did:key:${base58btc.encode(buffer)}`
 }
 
 export function assert(condition: boolean, message?: string): asserts condition {

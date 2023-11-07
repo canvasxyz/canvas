@@ -50,7 +50,7 @@ export const App: React.FC<{}> = ({}) => {
 						</div>
 						<MessageComposer />
 					</div>
-					<div className="w-96 flex flex-col gap-4">
+					<div className="flex flex-col gap-4">
 						<ConnectSIWE />
 						<ConnectATP />
 						<ConnectCosmosKeplr chainId="osmosis-1" />

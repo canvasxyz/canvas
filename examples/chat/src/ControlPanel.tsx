@@ -6,7 +6,7 @@ import { AppContext } from "./AppContext.js"
 export interface ControlPanelProps {}
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
-	const { app } = useContext(AppContext)
+	const { app, sessionSigner } = useContext(AppContext)
 
 	const [isStarted, setIsStarted] = useState(false)
 
@@ -41,10 +41,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 
 			console.log("deleting message log", app.topic)
 			await deleteDB(`canvas/${app.topic}/log`, {})
-
+			console.log("clearing session signer data", sessionSigner)
+			await sessionSigner?.clear?.()
 			window.location.reload()
 		}
-	}, [app])
+	}, [app, sessionSigner])
 
 	const button = `p-2 border rounded flex`
 	const disabled = `bg-gray-100 text-gray-500 hover:cursor-not-allowed`

@@ -3,7 +3,7 @@ import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 
-import { Action, Session, Message, MessageSigner, SessionSigner } from "@canvas-js/interfaces"
+import { Action, Session, Message, Signer, SessionSigner } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Signature } from "@canvas-js/signed-cid"
@@ -38,7 +38,7 @@ export interface CanvasConfig<T extends Contract = Contract> {
 	runtimeMemoryLimit?: number
 }
 
-export type ActionOptions = { chain?: string; signer?: SessionSigner }
+export type ActionOptions = { signer?: SessionSigner }
 
 export type ActionAPI<Args = any, Result = any> = (
 	args: Args,
@@ -68,7 +68,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit })
 
-		const peerId = await target.getPeerId({ path })
+		const peerId = await target.getPeerId({ topic: runtime.topic, path })
 		let libp2p: Libp2p<ServiceMap> | null = null
 		if (!offline) {
 			libp2p = await target.createLibp2p(peerId, config)
@@ -134,20 +134,18 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		for (const name of runtime.actionNames) {
 			// @ts-ignore
 			this.actions[name] = async (args: any, options: ActionOptions = {}) => {
-				const signer =
-					options.signer ?? signers.find((signer) => options.chain === undefined || signer.match(options.chain))
-
+				const signer = options.signer ?? signers[0]
 				assert(signer !== undefined, "signer not found")
 
 				const timestamp = Date.now()
 
-				const session = await signer.getSession(this.topic, { timestamp, chain: options.chain })
+				const session = await signer.getSession(this.topic, { timestamp })
 
-				const { chain, address, publicKeyType: public_key_type, publicKey: public_key } = session
+				const { address, publicKey: public_key } = session
 
 				// Check if the session has already been added to the message log
 				const results = await runtime.db.query("$sessions", {
-					where: { chain, address, public_key_type, public_key, expiration: { gt: timestamp } },
+					where: { address, public_key, expiration: { gt: timestamp } },
 					limit: 1,
 				})
 
@@ -165,7 +163,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				assert(representation !== undefined, "action args did not validate the provided schema type")
 
 				const { id, result, recipients } = await this.append(
-					{ type: "action", chain, address, name, args: representation, blockhash: null, timestamp },
+					{ type: "action", address, name, args: representation, blockhash: null, timestamp },
 					{ signer }
 				)
 
@@ -230,7 +228,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	 */
 	public async append(
 		payload: Session | Action,
-		options: { signer?: MessageSigner<Session | Action> }
+		options: { signer?: Signer<Message<Session | Action>> }
 	): Promise<{ id: string; result: void | any; recipients: Promise<PeerId[]> }> {
 		if (this.libp2p === null) {
 			const { id, result } = await this.messageLog.append(payload, options)

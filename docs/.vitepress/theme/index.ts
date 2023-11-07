@@ -11,6 +11,7 @@ import FeatureRow from "../components/FeatureRow.vue"
 import TextItem from "../components/TextItem.vue"
 import TextRow from "../components/TextRow.vue"
 import HomepageFooter from "../components/HomepageFooter.vue"
+import { MotionPlugin } from "@vueuse/motion"
 import "./style.css"
 
 export default {
@@ -21,6 +22,7 @@ export default {
 		})
 	},
 	enhanceApp({ app, router, siteData }) {
+		app.use(MotionPlugin)
 		app.component("HeroRow", HeroRow)
 		app.component("HeroAction", HeroAction)
 		app.component("DemoToggle", DemoToggle)

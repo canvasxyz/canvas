@@ -16,7 +16,7 @@ import { getLibp2pOptions } from "./libp2p.js"
 const PEER_ID_FILENAME = ".peer-id"
 
 export default {
-	async getPeerId(location: { path: string | null }): Promise<PeerId> {
+	async getPeerId(location: { topic: string; path: string | null }): Promise<PeerId> {
 		if (process.env.PEER_ID !== undefined) {
 			return createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
 		}

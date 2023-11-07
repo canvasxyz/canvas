@@ -10,9 +10,9 @@ import { assert } from "../utils.js"
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
 		const messages = await MemoryTree.open()
-		const parents = new MemoryStore()
+		const heads = new MemoryStore()
 		const ancestors = new MemoryStore()
-		return new GossipLog(messages, parents, ancestors, init)
+		return new GossipLog(messages, heads, ancestors, init)
 	}
 
 	private readonly queue = new PQueue({ concurrency: 1 })
@@ -21,7 +21,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 	private constructor(
 		private readonly messages: MemoryTree,
-		private readonly parents: MemoryStore,
+		private readonly heads: MemoryStore,
 		private readonly ancestors: MemoryStore,
 		init: GossipLogInit<Payload, Result>
 	) {
@@ -33,7 +33,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		this.queue.clear()
 		await this.queue.onIdle()
 		await this.messages.store.close()
-		await this.parents.close()
+		await this.heads.close()
 	}
 
 	public async *entries(
@@ -81,7 +81,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			}
 
 			try {
-				return await callback({ messages: this.messages, parents: this.parents, ancestors: this.ancestors })
+				return await callback({ messages: this.messages, heads: this.heads, ancestors: this.ancestors })
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
 			} finally {
@@ -111,7 +111,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			}
 
 			try {
-				return await callback({ messages: this.messages, parents: this.parents, ancestors: this.ancestors })
+				return await callback({ messages: this.messages, heads: this.heads, ancestors: this.ancestors })
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
 				throw err

@@ -25,26 +25,23 @@ export const SessionStatus: React.FC<SessionStatusProps> = ({}) => {
 			<div>
 				<span className="text-sm">Sessions</span>
 			</div>
-			<SessionList chain="eip155:1" address={address} />
+			<SessionList address={address} />
 		</div>
 	)
 }
 
 interface SessionListProps {
-	chain: string
 	address: string
 }
 
-const SessionList: React.FC<SessionListProps> = ({ chain, address }) => {
+const SessionList: React.FC<SessionListProps> = ({ address }) => {
 	const { app } = useContext(AppContext)
 
 	const timestamp = useMemo(() => Date.now(), [])
 
-	const results = useLiveQuery<{ public_key_type: string; public_key: Uint8Array; expiration: number }>(
-		app,
-		"$sessions",
-		{ where: { chain: "eip155:1", address, expiration: { gt: timestamp } } }
-	)
+	const results = useLiveQuery<{ public_key: string; expiration: number }>(app, "$sessions", {
+		where: { address, expiration: { gt: timestamp } },
+	})
 
 	if (results === null) {
 		return null
@@ -54,15 +51,18 @@ const SessionList: React.FC<SessionListProps> = ({ chain, address }) => {
 		return (
 			<ul className="list-disc pl-4">
 				{results.map((session) => {
-					const address = computeAddress(hexlify(session.public_key))
 					return (
 						<li key={address}>
 							<div>
-								<AddressView address={address} />
+								<code className="text-sm">{session.public_key}</code>
 							</div>
-							{session.expiration < Number.MAX_SAFE_INTEGER && (
+							{session.expiration < Number.MAX_SAFE_INTEGER ? (
 								<div>
 									<span className="text-sm">Expires {new Date(session.expiration).toLocaleString()}</span>
+								</div>
+							) : (
+								<div>
+									<span className="text-sm">No expiration</span>
 								</div>
 							)}
 						</li>

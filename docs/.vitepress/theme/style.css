@@ -7,6 +7,7 @@
   --vp-c-text-1: rgba(72, 72, 79);
   --vp-c-bg: #fffbf3;
   --vp-c-bg-soft: #f7f3eb;
+  --vp-c-bg-alt: #f7f3eb;
   --vp-sidebar-bg-color: #f7f3eb;
   --vp-button-alt-bg: #ece7e0;
   --vp-button-alt-hover-bg: #ede7dd;
@@ -15,11 +16,15 @@
   --vp-c-text-1: rgba(255, 255, 245, 0.86);
   --vp-c-bg: #1d1d21;
   --vp-c-bg-soft: #202126;
+  --vp-c-bg-alt: #202126;
   --vp-sidebar-bg-color: #161618;
   --vp-button-alt-bg: #32363f;
   --vp-button-alt-hover-bg: #414853;
 }
 
+pre {
+  tab-size: 2;
+}
 .vp-doc p {
   line-height: inherit;
 }

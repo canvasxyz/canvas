@@ -1,27 +1,24 @@
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 import { create } from "@ipld/schema/typed.js"
 
-import { Action, Session } from "@canvas-js/interfaces"
+import type { Action, Session } from "@canvas-js/interfaces"
 
 export const schema = `
 type Action struct {
-  chain String
-  address String
-  name String
-  args any
-  blockhash nullable String
+  address   String
+  name      String
+  args      any
   timestamp Int
+  blockhash nullable String
 }
 
 type Session struct {
-  chain String
-  address String
-  publicKeyType String
-  publicKey Bytes
-  data any
-  blockhash nullable String
+  address   String
+  publicKey String
+  data      any
   timestamp Int
-  duration nullable Int
+  duration  nullable Int
+  blockhash nullable String
 }
 
 type Payload union {
