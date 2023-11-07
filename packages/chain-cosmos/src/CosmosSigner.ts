@@ -208,6 +208,7 @@ export class CosmosSigner implements SessionSigner {
 		options: { chain?: string; timestamp?: number } = {}
 	): Promise<Session<CosmosSessionData>> {
 		// TODO: where is this passed in from?
+		// we need to be able to dynamically set this depending on the signer we are using
 		const chain = options.chain ?? "cosmos:osmosis-1"
 		assert(chainPattern.test(chain), "internal error - invalid chain")
 

@@ -19,6 +19,7 @@ import { ConnectCosmosKeplr } from "./ConnectCosmosKeplr.js"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { ConnectTerra } from "./ConnectTerra.js"
 import { ConnectCosmosEvmMetamask } from "./ConnectCosmosEVMMetamask.js"
+import { ConnectEthereumKeplr } from "./ConnectEthereumKeplr.js"
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
@@ -53,6 +54,7 @@ export const App: React.FC<{}> = ({}) => {
 						<ConnectSIWE />
 						<ConnectATP />
 						<ConnectCosmosKeplr chainId="osmosis-1" />
+						<ConnectEthereumKeplr chainId="evmos_9001-2" />
 						<ConnectTerra />
 						<ConnectCosmosEvmMetamask chainId="osmosis-1" />
 						<SessionStatus />
