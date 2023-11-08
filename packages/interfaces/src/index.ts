@@ -1,6 +1,6 @@
 export * from "./Signature.js"
+export * from "./Signer.js"
 export * from "./Action.js"
-export * from "./MessageSigner.js"
 export * from "./SessionSigner.js"
 export * from "./Message.js"
 export * from "./Session.js"

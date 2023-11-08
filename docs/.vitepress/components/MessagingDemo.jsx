@@ -9,7 +9,7 @@ const toFormattedDate = (timestamp) => {
 	return new Date(timestamp).toLocaleTimeString("en-US")
 }
 
-const MessageSyncDemo = () => {
+const MessagingDemo = () => {
 	const inputRef = useRef()
 
 	let privateKey = localStorage.getItem("privatekey")
@@ -41,6 +41,7 @@ const MessageSyncDemo = () => {
 	return (
 		<div>
 			<div style={{ marginBottom: 12 }}>
+				{threads?.length === 0 && <div style={{ opacity: 0.6 }}>No messages yet</div>}
 				{threads?.map((thread) => (
 					<div style={{ display: "flex" }} key={thread.id}>
 						<div style={{ flex: 1 }}>{thread.message}</div>
@@ -49,10 +50,10 @@ const MessageSyncDemo = () => {
 				))}
 			</div>
 			<form onSubmit={onSubmit}>
-				<input type="text" ref={inputRef} />
+				<input type="text" ref={inputRef} placeholder="Type a message..." />
 			</form>
 		</div>
 	)
 }
 
-export default MessageSyncDemo
+export default MessagingDemo

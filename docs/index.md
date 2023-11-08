@@ -2,7 +2,7 @@
 layout: home
 ---
 
-<HeroRow text="The framework for realtime decentralized applications" image="/graphic_mainframe_4.png" tagline="Build multiplayer applications where interactions sync instantly, no blockchains required." v-bind:bullets="['Realtime sync engine using libp2p and signed messages', 'Reactive views on SQLite + IndexedDB', 'Programmable in EVM + TypeScript']">
+<HeroRow text="Multiplayer computing for the decentralized web" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a peer-to-peer stack for building web applications as decentralized protocols, with no blockchains required." v-bind:bullets="['Provides realtime sync for libp2p and signed data', 'Comes with embedded SQLite + IndexedDB', 'Fully programmable in TypeScript']">
   <HeroAction theme="brand big" text="Tutorial" href="/1-introduction" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>
@@ -15,64 +15,84 @@ layout: home
 </FeatureRow>
 -->
 
-<DemoToggle v-bind:options="['Messaging', 'Gaming']" defaultOption="Messaging"></DemoToggle>
+<DemoToggle v-bind:options="['Game', 'Messaging']" defaultOption="Game"></DemoToggle>
 
 <DemoCell />
 
 ```tsx:Messaging preview
-// Write by creating actions
+const models = {
+	messages: {
+		id: "primary",
+		message: "string",
+		timestamp: "integer",
+		$indexes: [["timestamp"]],
+	}
+}
+
+const actions = {
+	send: (db, { message }, { address, timestamp, id }) => {
+		if (!message || !message.trim()) throw new Error()
+		db.messages.set({ id, message, timestamp })
+	}
+}
+
+// Use the application in React
 const { app } = useCanvas({
-	contract: { ...PublicChat, topic: "canvas-example-public-chat" },
-	signers: [new SIWESigner({ signer: wallet })],
+	contract: { models, actions },
+	topic: "canvas-example-public-chat"
 })
-
-app.actions.sendMessage({ message })
-
-// Read with live reactive queries
-const messages = useLiveQuery<Message>(app, "messages", {
-	limit: 5,
-	orderBy: { timestamp: "desc" },
-})
-
-return <div>{messages.map((message) => <div>{message.title}</div>)}</div>
+const messages = useLiveQuery(app, "messages", { limit: 10 })
+return <div>{messages.map((message) => { ... })}</div>
 ```
 
-```tsx:Gaming preview
-// Write by creating actions
+```tsx:Game preview
+const models = {
+  boards: {
+    id: "primary",
+    position: "string",
+  },
+}
+
+const actions = {
+  move: async (db, { from, to }, { address, timestamp, id }) => {
+    const board = await db.boards.get("<gameid>")
+    const chess = new Chess(board.position)
+    const move = chess.move({ from, to, promotion: "q" })
+    if (move === null) throw new Error("invalid")
+    await db.boards.set({ id: "<gameid>", position: chess.fen() })
+  },
+  reset: async (db, {}, { address, timestamp, id }) => {
+    await db.boards.set({ id: "<gameid>", fen: new Chess().fen() })
+  }
+}
+
+// Use the application in React
 const { app } = useCanvas({
-	contract: { ...Forum, topic: "canvas-example-forum" },
-	signers: [new SIWESigner({ signer: wallet })],
+  contract: { models, actions },
+  topic: "canvas-example-chess"
 })
-
-app.actions.createThread({ title, message })
-
-// Read with live reactive queries
-const threads = useLiveQuery<Thread>(app, "threads", {
-	limit: 5,
-	orderBy: { timestamp: "desc" },
-})
-
-return <div>{threads.map((thread) => <div>{thread.title}</div>)}</div>
+const boards = useLiveQuery(app, "boards")
+return <Chessboard position={boards[0].position} onDrop={ ... } />
 ```
 
 <TextRow title="About Canvas">
-  <TextItem>Canvas is a new architecture for multiplayer applications, that combines modern web technology with high-performance decentralized infrastructure.</TextItem>
-  <TextItem>Instead of bundles of code that run on a server, applications are defined as <em>multiplayer contracts</em>, which can run in the browser or on the server.</TextItem>
-  <TextItem>Contracts are written in TypeScript, and have a access to an embedded multi-writer relational database, built on SQLite and IndexedDB. They can also access external data or call external code, and are easy to upgrade.</TextItem>
-  <TextItem>Since they run on peer-to-peer networking without a blockchain for consensus, actions can be applied as soon as they're received.</TextItem>
-  <TextItem>If you add a storage or data availability network, like Arweave, Celestia, or Filecoin, you can use Canvas as a scalable decentralized app platform. Or, you can use it as a dynamic peer-to-peer network, to build applications like chat, state channels, and minigames with persistent state.</TextItem>
+  <TextItem>Canvas is a framework for writing web applications as decentralized protocols.</TextItem>
+  <TextItem>Canvas applications are defined as <strong>multiplayer contracts</strong> in TypeScript, which run on both the browser and server.</TextItem>
+  <TextItem>User actions are relayed between everyone on the network, and executed by each client. They have access to a <strong>conflict-free multiwriter database</strong>, which allows interactions to be merged as they're received.</TextItem>
+  <TextItem>This also means that unlike blockchains, interactions on Canvas applications sync instantly, without tokens or gas limits.<!-- They can also call outside code, and fetch external data, and let nodes check each others' work. --></TextItem>
+  <TextItem>Today, you can use Canvas as a peer-to-peer network with persistent state, for applications like chat, games, and governance. Or, if you add a data availability service, you can use it as a fully-fledged decentralized app platform.</TextItem>
 </TextRow>
 
-<FeatureRow title="Interoperable Everywhere" detail="Canvas supports any cryptographically verifiable authentication system, like Web3 wallets, W3C DIDs, and even Apple & Google SSO.">
+<FeatureRow title="Interoperable Everywhere" detail="Canvas supports any cryptographically verifiable authentication strategy, including Web3 wallets, W3C DIDs, and even Apple & Google SSO. You can write your own custom adapters to support other authorization methods.">
   <FeatureCard title="Sign in with Wallet" details="Log in with a Web3 wallet from Ethereum. Also supports other chains like Cosmos, Solana, and Polkadot." linkText="Available today" />
   <FeatureCard title="Sign in with Bluesky" details="Log in with your decentralized identity from the Bluesky PLC network."/>
-  <FeatureCard title="Sign in with OpenID" details="Log in trustlessly with Google, Apple, or other SSO providers. Powered by zero-knowledge proofs." soon="Coming soon"/>
+  <FeatureCard title="Sign in with OpenID" details="Log in trustlessly with Google, Apple, or other SSO providers, using zero-knowledge proofs." soon="Coming soon"/>
 </FeatureRow>
 
-<FeatureRow title="Built on Real-Time Collaboration Research" detail="We've created a set of modules that abstract away the complex parts of conflict-free data structures, the same ones that power Google Docs and Figma, so they can be used like a conventional database. You can check them out here:">
+<FeatureRow title="Built on Real-Time Collaboration" detail="Canvas is built on a realtime multiplayer database, that uses the same technology that powers Google Docs and Figma. We've abstracted away most of the complexity in these open-source modules below.">
   <FeatureCard title="Okra" details="A deterministic Prolly-tree that allows fast sync between ordered sets of actions." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit" secondaryLinkText="Blog Post"/>
-  <FeatureCard title="GossipLog" details="A history-preserving multiwriter log that allows functions to efficiently retrieve data from the past." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" soon="Blog post coming soon"/>
-  <FeatureCard title="ModelDB" details="A CRDT-friendly database abstraction over IndexedDB and SQLite, that runs in both the browser and server." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb"/>
+  <FeatureCard title="GossipLog" details="A decentralized, authenticated multiwriter log that allows functions to retrieve data from the past." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" soon="Blog post coming soon"/>
+  <FeatureCard title="ModelDB" details="A cross-platform relational database wrapper, supporting IndexedDB and SQLite." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb"/>
   <FeatureCard title="Persister" details="A bundler that persists individual actions to Arweave, and rebundles them for efficient later retrieval." link="https://github.com/canvasxyz/canvas/tree/main/packages/persister-arweave"/>
 </FeatureRow>
 

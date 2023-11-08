@@ -1,15 +1,21 @@
 import test from "ava"
 
 import { Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
-import { verifySignature } from "@canvas-js/signed-cid"
+import { verifySignedValue } from "@canvas-js/signed-cid"
 
+import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
+// import { ATPSigner } from "@canvas-js/chain-atp"
 
 type SignerImplementation = { createSigner: () => Promise<Signer>; name: string }
 
 const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
+	{
+		name: "chain-cosmos",
+		createSigner: async () => new CosmosSigner(),
+	},
 	{
 		name: "chain-ethereum",
 		createSigner: async () => new SIWESigner(),
@@ -53,7 +59,7 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 
 		const message: Message<Session> = { topic, clock: 0, parents: [], payload: session }
 		const sessionSignature = await signer.sign(message)
-		t.notThrows(() => verifySignature(sessionSignature, message))
+		t.notThrows(() => verifySignedValue(sessionSignature, message))
 	})
 
 	test(`${name} - refuse to sign foreign sessions`, async (t) => {

@@ -1,9 +1,7 @@
 export type Action = {
 	type: "action"
 
-	/** CAIP-2 prefix, e.g. "eip155:1" */
-	chain: string
-	/** CAIP-2 address (without the prefix, e.g. "0xb94d27...") */
+	/** DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
 	address: string
 
 	name: string

@@ -3,11 +3,10 @@ import React, { useContext } from "react"
 import { useLiveQuery } from "@canvas-js/hooks"
 
 import { AppContext } from "./AppContext.js"
-import { AddressView } from "./components/AddressView.js"
 
 export interface MessagesProps {}
 
-type Message = { user: string; content: string; timestamp: number }
+type Message = { id: string; address: string; content: string; timestamp: number }
 
 export const Messages: React.FC<MessagesProps> = ({}) => {
 	const { app } = useContext(AppContext)
@@ -19,7 +18,7 @@ export const Messages: React.FC<MessagesProps> = ({}) => {
 	return (
 		<div className="flex-1">
 			{messages?.map((message, i) => (
-				<MessageView key={i} message={message} previous={i === 0 ? null : messages[i - 1]} />
+				<MessageView key={message.id} message={message} previous={i === 0 ? null : messages[i - 1]} />
 			))}
 		</div>
 	)
@@ -33,21 +32,20 @@ interface MessageViewProps {
 const MessageView: React.FC<MessageViewProps> = ({ message, previous }) => {
 	return (
 		<div>
-			{previous?.user === message.user ? null : <MessageHeader user={message.user} />}
+			{previous?.address === message.address ? null : <MessageHeader address={message.address} />}
 			<div>{message.content}</div>
 		</div>
 	)
 }
 
 interface MessageHeaderProps {
-	user: string
+	address: string
 }
 
-const MessageHeader: React.FC<MessageHeaderProps> = ({ user }) => {
-	// const [chain, chainId, address] = user.split(":")
+const MessageHeader: React.FC<MessageHeaderProps> = ({ address }) => {
 	return (
 		<div className="mt-2">
-			<code className="text-sm text-gray-500">{user}</code>
+			<code className="text-sm text-gray-500">{address}</code>
 		</div>
 	)
 }

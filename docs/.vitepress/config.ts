@@ -16,7 +16,10 @@ export default defineConfig({
 	title: "Canvas",
 	description: "An instant-sync engine for decentralized applications",
 	themeConfig: {
-		logo: "/logo.png",
+		logo: {
+			light: "/icon_logo.png",
+			dark: "/icon_logo_dark.png",
+		},
 		outlineTitle: "Contents",
 		nav: [
 			{ text: "Home", link: "/" },
@@ -45,11 +48,21 @@ export default defineConfig({
 					{ text: "Signed CID", link: "/readme-signed-cid.md" },
 				],
 			},
+			{
+				text: "Examples",
+				items: [
+					{ text: "Chat", link: "/examples-chat.md" },
+					{ text: "Forum", link: "/examples-forum.md" },
+				],
+			},
 		],
 		socialLinks: [
 			{ icon: "github", link: "https://github.com/canvasxyz/canvas" },
 			{ icon: "discord", link: "https://discord.gg/2Dc7nPUz" },
 			{ icon: "twitter", link: "https://twitter.com/canvas_xyz" },
 		],
+		search: {
+			provider: "local",
+		},
 	},
 })

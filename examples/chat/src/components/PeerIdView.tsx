@@ -12,7 +12,8 @@ export const PeerIdView: React.FC<PeerIdViewProps> = (props) => {
 	const id = props.peerId.toString()
 	return (
 		<code className={className}>
-			{id.slice(0, 12)}…{id.slice(-4)}
+			{/* {id.slice(0, 12)}…{id.slice(-4)} */}
+			{id}
 		</code>
 	)
 }

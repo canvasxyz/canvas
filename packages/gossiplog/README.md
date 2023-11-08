@@ -61,8 +61,7 @@ GossipLog requires every message to be signed with a [`@canvas-js/signed-cid`](h
 
 ```ts
 type Signature = {
-  type: "ed25519" | "secp256k1"
-  publicKey: Uint8Array
+  publicKey: string /** did:key URI */
   signature: Uint8Array
   cid: CID
 }
@@ -72,42 +71,19 @@ The `cid` in a message signature is the CID of the `Message` object using the `d
 
 ### Message signers
 
-Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use the `MessageSigner` interface.
+Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use one of the signer classes exported from `@canvas-js/signed-cid`.
 
 ```ts
-// defined in @canvas-js/interfaces
+import { Ed25519Signer, Secp256k1Signer } from "@canvas-js/signed-cid"
 
-interface MessageSigner<Payload = unknown> {
-  sign: (message: Message<Payload>) => Signature
-}
+const signer = new Ed25519Signer()
 ```
 
-In the simplest case, message signers are a simple wrapper around private keys and the `createSignature` method from `@canvas-js/signed-cid`. `Ed25519Signer` is one such class exported from `@canvas-js/gossiplog`.
-
-```ts
-import { ed25519 } from "@noble/curves/ed25519"
-import { createSignature } from "@canvas-js/signed-cid"
-
-export class Ed25519Signer<T = unknown> {
-  public readonly publicKey: Uint8Array
-  readonly #privateKey: Uint8Array
-
-  public constructor(privateKey = ed25519.utils.randomPrivateKey()) {
-    this.#privateKey = privateKey
-    this.publicKey = ed25519.getPublicKey(this.#privateKey)
-  }
-
-  public sign(message: Message<T>) {
-    return createSignature("ed25519", this.#privateKey, message)
-  }
-}
-```
-
-Once you have a `MessageSigner`, you can add it `GossipLogInit` to use it by default for all appends, or pass a specific signer into each call to `append` individually.
+Once you have a signer, you can add it `GossipLogInit` to use it by default for all appends, or pass a specific signer into each call to `append` individually.
 
 ```ts
 const signerA = new Ed25519Signer()
-const signerB = new Ed25519Signer()
+const signerB = new Secp256k1Signer()
 
 const log = await GossipLog.init({ ...init, signer: signerA })
 
@@ -136,9 +112,9 @@ Message IDs begin with the message clock, encoded as a **reverse** unsigned vari
 | 1234  | 00000100 11010010 | 10001001 01010010      | 0x8952              |
 ```
 
-The rationale is that prefixing message IDs with a _lexicographically sortable_ logical clock has many useful consquences. Encoded Protobuf-style unsigned varints don't sort the same as their decoded values.
+The rationale is that prefixing message IDs with a _lexicographically sortable_ logical clock has many useful consquences. Regular Protobuf-style unsigned varints don't sort the same as their decoded values.
 
-These string IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. This means that implementing a last-write-wins register for message effects is as simple as caching and comparing message IDs as versions.
+The upshot is that these string emssage IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. For example, implementing a last-write-wins register for message effects is as simple as caching and comparing message ID strings.
 
 ## Usage
 
@@ -157,7 +133,7 @@ const gossipLog = await GossipLog.open({ ...init })
 import { GossipLog } from "@canvas-js/gossiplog/node"
 
 // opens an LMDB environment at path/to/data/directory
-const gossipLog = await GossipLog.open({ ...init }, "path/to/data/directory",)
+const gossipLog = await GossipLog.open({ ...init }, "path/to/data/directory")
 ```
 
 ```ts
@@ -169,12 +145,14 @@ const gossipLog = await GossipLog.open({ ...init })
 All three are configured with the same `init` object:
 
 ```ts
+import type { Signature, Signer, Message } from "@canvas-js/interfaces"
+
 interface GossipLogInit<Payload = unknown, Result = void> {
   topic: string
   apply: (id: string, signature: Signature, message: Message<Payload>) => Result | Promise<Result>
   validate: (payload: unknown) => payload is Payload
 
-  signer?: MessageSigner<Payload>
+  signer?: Signer<Message<Payload>>>
   indexAncestors?: boolean
 }
 ```
@@ -304,14 +282,14 @@ A more complex case is one where the application doesn't have programmatic acces
 Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 
 ```ts
-import type { Signature, Message, MessageSigner, Awaitable } from "@canvas-js/interfaces"
+import type { Signature, Signer Message, Awaitable } from "@canvas-js/interfaces"
 
 interface GossipLogInit<Payload = unknown, Result = void> {
   topic: string
   apply: (id: string, signature: Signature, message: Message<Payload>) => Awaitable<Result>
   validate: (payload: unknown) => payload is Payload
 
-  signer?: MessageSigner<Payload>
+  signer?: Signer<Message<Payload>>
   replay?: boolean
   indexAncestors?: boolean
 }
@@ -330,7 +308,7 @@ interface AbstractGossipLog<Payload = unknown, Result = unknown>
 
   public append(
     payload: Payload,
-    options?: { signer?: MessageSigner<Payload> }
+    options?: { signer?: Signer<Message<Payload>> }
   ): Promise<{ id: string; signature: Signature; message: Message<Payload>; result: Result }>
 
   public insert(signature: Signature, message: Message<Payload>): Promise<{ id: string }>
@@ -351,6 +329,6 @@ interface AbstractGossipLog<Payload = unknown, Result = unknown>
 
   public getAncestors(id: string, ancestorClock: number): Promise<string[]>
 
-  public async replay(): Promise<void>
+  public replay(): Promise<void>
 }
 ```

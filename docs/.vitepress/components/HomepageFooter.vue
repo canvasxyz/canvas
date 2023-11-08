@@ -20,6 +20,14 @@
   margin-bottom: 20px;
 }
 
+.dark .HomepageFooter img {
+  padding: 64px 64px 0 0;
+  background-image: url('./icon_logo_dark.png');
+  background-size: cover;
+  width:0px;
+  height: 0px;
+}
+
 .VPHome {
   padding-bottom: 40px !important;
 }
