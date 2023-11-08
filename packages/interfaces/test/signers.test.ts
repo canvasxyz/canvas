@@ -3,6 +3,7 @@ import test from "ava"
 import { Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
 import { verifySignedValue } from "@canvas-js/signed-cid"
 
+import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 // import { ATPSigner } from "@canvas-js/chain-atp"
@@ -10,6 +11,10 @@ import { SolanaSigner } from "@canvas-js/chain-solana"
 type SignerImplementation = { createSigner: () => Promise<Signer>; name: string }
 
 const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
+	{
+		name: "chain-cosmos",
+		createSigner: async () => new CosmosSigner(),
+	},
 	{
 		name: "chain-ethereum",
 		createSigner: async () => new SIWESigner(),

@@ -150,7 +150,6 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				})
 
 				this.log("got %d matching sessions: %o", results.length, results)
-
 				if (results.length === 0) {
 					const { id: sessionId } = await this.append(session, { signer })
 					this.log("created session %s", sessionId)

@@ -15,6 +15,11 @@ import { MessageComposer } from "./MessageComposer.js"
 import { ControlPanel } from "./ControlPanel.js"
 import { SessionStatus } from "./SessionStatus.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
+import { ConnectCosmosKeplr } from "./ConnectCosmosKeplr.js"
+import { CosmosSigner } from "@canvas-js/chain-cosmos"
+import { ConnectTerra } from "./ConnectTerra.js"
+import { ConnectCosmosEvmMetamask } from "./ConnectCosmosEVMMetamask.js"
+import { ConnectEthereumKeplr } from "./ConnectEthereumKeplr.js"
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
@@ -28,8 +33,9 @@ export const App: React.FC<{}> = ({}) => {
 	useEffect(() => {
 		if (initRef.current === false) {
 			initRef.current = true
-			Canvas.initialize({ contract, signers: [new SIWESigner(), new ATPSigner()] }).then(setApp, (err) =>
-				console.error(err)
+			Canvas.initialize({ contract, signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner()] }).then(
+				setApp,
+				(err) => console.error(err)
 			)
 		}
 	}, [])
@@ -47,6 +53,10 @@ export const App: React.FC<{}> = ({}) => {
 					<div className="flex flex-col gap-4">
 						<ConnectSIWE />
 						<ConnectATP />
+						<ConnectCosmosKeplr chainId="osmosis-1" />
+						<ConnectEthereumKeplr chainId="evmos_9001-2" />
+						<ConnectTerra />
+						<ConnectCosmosEvmMetamask chainId="osmosis-1" />
 						<SessionStatus />
 						<ConnectionStatus />
 						<ControlPanel />
