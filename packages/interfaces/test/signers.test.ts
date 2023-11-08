@@ -6,6 +6,7 @@ import { verifySignedValue } from "@canvas-js/signed-cid"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { SolanaSigner } from "@canvas-js/chain-solana"
+import { SubstrateSigner } from "@canvas-js/chain-substrate"
 // import { ATPSigner } from "@canvas-js/chain-atp"
 
 type SignerImplementation = { createSigner: () => Promise<Signer>; name: string }
@@ -22,6 +23,22 @@ const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 	{
 		name: "chain-solana",
 		createSigner: async () => new SolanaSigner(),
+	},
+	{
+		name: "chain-substrate-sr25519",
+		createSigner: async () => new SubstrateSigner({ substrateKeyType: "sr25519" }),
+	},
+	{
+		name: "chain-substrate-ed25519",
+		createSigner: async () => new SubstrateSigner({ substrateKeyType: "ed25519" }),
+	},
+	{
+		name: "chain-substrate-ecdsa",
+		createSigner: async () => new SubstrateSigner({ substrateKeyType: "ecdsa" }),
+	},
+	{
+		name: "chain-substrate-ethereum",
+		createSigner: async () => new SubstrateSigner({ substrateKeyType: "ethereum" }),
 	},
 ]
 
