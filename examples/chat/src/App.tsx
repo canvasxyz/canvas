@@ -22,6 +22,8 @@ import { ConnectCosmosEvmMetamask } from "./ConnectCosmosEvmMetamask.js"
 import { ConnectEthereumKeplr } from "./ConnectEthereumKeplr.js"
 import { ConnectPolkadot } from "./ConnectPolkadot.js"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
+import { ConnectSolana } from "./ConnectSolana.js"
+import { SolanaSigner } from "@canvas-js/chain-solana"
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
@@ -37,7 +39,7 @@ export const App: React.FC<{}> = ({}) => {
 			initRef.current = true
 			Canvas.initialize({
 				contract,
-				signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({})],
+				signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
 			}).then(setApp, (err) => console.error(err))
 		}
 	}, [])
@@ -56,6 +58,7 @@ export const App: React.FC<{}> = ({}) => {
 						<ConnectSIWE />
 						<ConnectATP />
 						<ConnectPolkadot />
+						<ConnectSolana />
 						<ConnectCosmosKeplr chainId="osmosis-1" />
 						<ConnectEthereumKeplr chainId="evmos_9001-2" />
 						<ConnectTerra />
