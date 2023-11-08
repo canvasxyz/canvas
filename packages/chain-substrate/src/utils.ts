@@ -5,7 +5,7 @@ import { encodeAddress, mnemonicGenerate } from "@polkadot/util-crypto"
 import { KeypairType } from "@polkadot/util-crypto/types"
 import { Keyring } from "@polkadot/keyring"
 
-export const getKey = (topic: string, chain: string, address: string) => `canvas:${topic}/${chain}:${address}`
+export const getKey = (topic: string, address: string) => `canvas/${topic}/${address}`
 
 export function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
@@ -82,17 +82,7 @@ export function signalInvalidType(type: never): never {
 	throw new TypeError("internal error: invalid type")
 }
 
-export const chainPattern = /^polkadot:([a-f0-9]+)$/
-
-export function parseChainId(chain: string): string {
-	const chainPatternMatch = chainPattern.exec(chain)
-	if (chainPatternMatch === null) {
-		throw new Error(`invalid chain: ${chain} did not match ${chainPattern}`)
-	}
-
-	const [_, chainId] = chainPatternMatch
-	return chainId
-}
+export const addressPattern = /^polkadot:([a-f0-9]+):([a-zA-Za-z0-9]+)$/
 
 export function getSessionURI(chain: string, publicKey: Uint8Array) {
 	const sessionAddress = encodeAddress(publicKey)
@@ -104,4 +94,14 @@ export function randomKeypair(keyType: KeypairType) {
 	return new Keyring({
 		type: keyType,
 	}).addFromMnemonic(mnemonic)
+}
+
+export function parseAddress(address: string): [chain: string, walletAddress: string] {
+	const result = addressPattern.exec(address)
+	if (result === null) {
+		throw new Error(`invalid address: ${address} did not match ${addressPattern}`)
+	}
+
+	const [_, chain, walletAddress] = result
+	return [chain, walletAddress]
 }
