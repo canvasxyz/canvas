@@ -1,33 +1,6 @@
-import { Keplr } from "@keplr-wallet/types"
-
-type EthereumSignedSessionData = {
-	signatureType: "ethereum"
-	signature: Uint8Array
-}
-
-type BytesSignedSessionData = {
-	signatureType: "bytes"
-	signature: {
-		signature: Uint8Array
-		pub_key: {
-			type: string
-			value: Uint8Array
-		}
-	}
-}
-
-type AminoSignedSessionData = {
-	signatureType: "amino"
-	signature: {
-		signature: Uint8Array
-		pub_key: {
-			type: string
-			value: Uint8Array
-		}
-	}
-}
-
-export type CosmosSessionData = EthereumSignedSessionData | BytesSignedSessionData | AminoSignedSessionData
+import type { EthereumSignedSessionData, EthereumSigner } from "./external_signers/ethereum.js"
+import type { BytesSignedSessionData, BytesSigner } from "./external_signers/bytes.js"
+import type { AminoSignedSessionData, AminoSigner } from "./external_signers/amino.js"
 
 export type CosmosMessage = {
 	address: string
@@ -37,22 +10,6 @@ export type CosmosMessage = {
 	expirationTime: string | null
 }
 
-type CommonMethods = {
-	getAddress: (chainId: string) => Promise<string>
-	getChainId: () => Promise<string>
-}
+export type CosmosSessionData = EthereumSignedSessionData | BytesSignedSessionData | AminoSignedSessionData
 
-type EthereumSigner = { type: "ethereum" } & CommonMethods & {
-		signEthereum: (chainId: string, signerAddress: string, message: string) => Promise<string>
-	}
-type AminoSigner = { type: "amino" } & CommonMethods & Pick<Keplr, "signAmino">
-type BytesSigner = { type: "bytes" } & CommonMethods & {
-		signBytes: (msg: Uint8Array) => Promise<{
-			public_key: string
-			signature: string
-		}>
-	}
-type DirectSigner = { type: "direct" } & CommonMethods & Pick<Keplr, "signDirect">
-type ArbitrarySigner = { type: "arbitrary" } & CommonMethods & Pick<Keplr, "signArbitrary">
-
-export type ExternalCosmosSigner = EthereumSigner | AminoSigner | BytesSigner | DirectSigner | ArbitrarySigner
+export type ExternalCosmosSigner = EthereumSigner | AminoSigner | BytesSigner
