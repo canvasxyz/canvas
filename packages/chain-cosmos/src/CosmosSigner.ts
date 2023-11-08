@@ -34,7 +34,7 @@ export interface CosmosSignerInit {
 type GenericSigner = {
 	getChainId: () => Promise<string>
 	getAddress: (chainId: string) => Promise<string>
-	sign: (msg: CosmosMessage, chainId: string) => Promise<CosmosSessionData>
+	sign: (msg: CosmosMessage, signerAddress: string, chainId: string) => Promise<CosmosSessionData>
 }
 
 export class CosmosSigner implements SessionSigner {
@@ -66,62 +66,66 @@ export class CosmosSigner implements SessionSigner {
 				},
 			}
 		} else if (signer.type == "ethereum") {
-			const getAddress = async (chainId: string) => {
-				const address = (await signer.getAddress(chainId)).substring(2)
+			this.#signer = {
+				getAddress: async (chainId: string) => {
+					const address = (await signer.getAddress(chainId)).substring(2)
 
-				return toBech32(bech32Prefix_, hexToBytes(address))
-			}
-			const sign = async (cosmosMessage: CosmosMessage, chainId: string) => {
-				const encodedMessage = encodeReadableEthereumMessage(cosmosMessage)
+					return toBech32(bech32Prefix_, hexToBytes(address))
+				},
+				getChainId: signer.getChainId,
+				sign: async (cosmosMessage: CosmosMessage, signerAddress: string, chainId: string) => {
+					const encodedMessage = encodeReadableEthereumMessage(cosmosMessage)
 
-				const address = await getAddress(chainId)
-				const ethAddress = `0x${bytesToHex(fromBech32(address).data)}`
-				const hexSignature = await signer.signEthereum(chainId, ethAddress, encodedMessage)
-				return {
-					signature: hexToBytes(hexSignature.substring(2)),
-					signatureType: "ethereum" as const,
-				}
+					const ethAddress = `0x${bytesToHex(fromBech32(signerAddress).data)}`
+					const hexSignature = await signer.signEthereum(chainId, ethAddress, encodedMessage)
+					return {
+						signature: hexToBytes(hexSignature.substring(2)),
+						signatureType: "ethereum" as const,
+					}
+				},
 			}
-			this.#signer = { getAddress, getChainId: signer.getChainId, sign }
 		} else if (signer.type == "amino") {
-			const getAddress = signer.getAddress
-			const sign = async (cosmosMessage: CosmosMessage, chainId: string) => {
-				const msg = cbor.encode(cosmosMessage)
-				const address = await getAddress(chainId)
-				const signDoc = await getSessionSignatureData(msg, address)
-				const signRes = await signer.signAmino(chainId, address, signDoc)
-				const stdSig = signRes.signature
+			this.#signer = {
+				getAddress: signer.getAddress,
+				getChainId: signer.getChainId,
+				sign: async (cosmosMessage: CosmosMessage, address: string, chainId: string) => {
+					const msg = cbor.encode(cosmosMessage)
+					const signDoc = await getSessionSignatureData(msg, address)
+					const signRes = await signer.signAmino(chainId, address, signDoc)
+					const stdSig = signRes.signature
 
-				return {
-					signature: {
-						signature: base64.baseDecode(stdSig.signature),
-						pub_key: {
-							type: pubkeyType.secp256k1,
-							value: base64.baseDecode(stdSig.pub_key.value),
+					return {
+						signature: {
+							signature: base64.baseDecode(stdSig.signature),
+							pub_key: {
+								type: pubkeyType.secp256k1,
+								value: base64.baseDecode(stdSig.pub_key.value),
+							},
+							chain_id: chainId,
 						},
-						chain_id: chainId,
-					},
-					signatureType: "amino" as const,
-				}
+						signatureType: "amino" as const,
+					}
+				},
 			}
-			this.#signer = { getAddress, getChainId: signer.getChainId, sign }
 		} else if (signer.type == "bytes") {
-			const getAddress = signer.getAddress
-			const sign = async (cosmosMessage: CosmosMessage) => {
-				const msg = cbor.encode(cosmosMessage)
-				const { public_key, signature } = await signer.signBytes(msg)
-				return {
-					signature: {
-						signature: base64.baseDecode(signature),
-						pub_key: {
-							type: pubkeyType.secp256k1,
-							value: base64.baseDecode(public_key),
+			this.#signer = {
+				getAddress: signer.getAddress,
+				getChainId: signer.getChainId,
+				sign: async (cosmosMessage: CosmosMessage) => {
+					const msg = cbor.encode(cosmosMessage)
+					const { public_key, signature } = await signer.signBytes(msg)
+					return {
+						signature: {
+							signature: base64.baseDecode(signature),
+							pub_key: {
+								type: pubkeyType.secp256k1,
+								value: base64.baseDecode(public_key),
+							},
 						},
-					},
-					signatureType: "bytes" as const,
-				}
+						signatureType: "bytes" as const,
+					}
+				},
 			}
-			this.#signer = { getAddress, getChainId: signer.getChainId, sign }
 		} else {
 			throw new Error("invalid signer")
 		}
@@ -195,7 +199,6 @@ export class CosmosSigner implements SessionSigner {
 	}
 
 	public async getSession(topic: string, options: { timestamp?: number } = {}): Promise<Session<CosmosSessionData>> {
-		// TODO: the #signer should be able to return the chainId
 		const chainId = await this.#signer.getChainId()
 		const walletAddress = await this.#signer.getAddress(chainId)
 		const address = `cosmos:${chainId}:${walletAddress}`
@@ -261,7 +264,7 @@ export class CosmosSigner implements SessionSigner {
 			message.expirationTime = new Date(timestamp + this.sessionDuration).toISOString()
 		}
 
-		const signResult = await this.#signer.sign(message, chainId)
+		const signResult = await this.#signer.sign(message, walletAddress, chainId)
 
 		const session: Session<CosmosSessionData> = {
 			type: "session",
