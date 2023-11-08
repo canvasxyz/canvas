@@ -1,5 +1,5 @@
 import { Wallet, verifyMessage } from "ethers"
-import { decodeSignature, pubkeyType, rawSecp256k1PubkeyToRawAddress, serializeSignDoc } from "@cosmjs/amino"
+import { pubkeyType, rawSecp256k1PubkeyToRawAddress, serializeSignDoc } from "@cosmjs/amino"
 import { fromBech32, toBech32 } from "@cosmjs/encoding"
 import * as json from "@ipld/dag-json"
 import * as cbor from "@ipld/dag-cbor"
