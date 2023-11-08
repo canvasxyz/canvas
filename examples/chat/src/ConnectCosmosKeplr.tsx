@@ -42,6 +42,7 @@ export const ConnectCosmosKeplr: React.FC<ConnectCosmosKeplrProps> = ({ chainId 
 					type: "amino",
 					signAmino: keplr.signAmino,
 					getAddress: async () => address,
+					getChainId: async () => chainId,
 				},
 				store: sessionStore,
 			})

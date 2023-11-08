@@ -45,6 +45,7 @@ export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> =
 					signEthereum: (chainId: string, signerAddress: string, message: string) =>
 						web3.eth.personal.sign(message, signerAddress, ""),
 					getAddress: async () => thisAddress,
+					getChainId: async () => chainId,
 				},
 				store: sessionStore,
 			})

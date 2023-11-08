@@ -37,21 +37,22 @@ export type CosmosMessage = {
 	expirationTime: string | null
 }
 
-type GetAddressMethod = {
+type CommonMethods = {
 	getAddress: (chainId: string) => Promise<string>
+	getChainId: () => Promise<string>
 }
 
-type EthereumSigner = { type: "ethereum" } & GetAddressMethod & {
+type EthereumSigner = { type: "ethereum" } & CommonMethods & {
 		signEthereum: (chainId: string, signerAddress: string, message: string) => Promise<string>
 	}
-type AminoSigner = { type: "amino" } & GetAddressMethod & Pick<Keplr, "signAmino">
-type BytesSigner = { type: "bytes" } & GetAddressMethod & {
+type AminoSigner = { type: "amino" } & CommonMethods & Pick<Keplr, "signAmino">
+type BytesSigner = { type: "bytes" } & CommonMethods & {
 		signBytes: (msg: Uint8Array) => Promise<{
 			public_key: string
 			signature: string
 		}>
 	}
-type DirectSigner = { type: "direct" } & GetAddressMethod & Pick<Keplr, "signDirect">
-type ArbitrarySigner = { type: "arbitrary" } & GetAddressMethod & Pick<Keplr, "signArbitrary">
+type DirectSigner = { type: "direct" } & CommonMethods & Pick<Keplr, "signDirect">
+type ArbitrarySigner = { type: "arbitrary" } & CommonMethods & Pick<Keplr, "signArbitrary">
 
 export type ExternalCosmosSigner = EthereumSigner | AminoSigner | BytesSigner | DirectSigner | ArbitrarySigner

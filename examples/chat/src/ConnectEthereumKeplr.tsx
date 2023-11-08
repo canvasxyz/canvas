@@ -49,6 +49,7 @@ export const ConnectEthereumKeplr: React.FC<ConnectEthereumKeplrProps> = ({ chai
 						return `0x${bytesToHex(signatureBytes)}`
 					},
 					getAddress: async () => ethAddress,
+					getChainId: async () => chainId,
 				},
 				store: sessionStore,
 			})

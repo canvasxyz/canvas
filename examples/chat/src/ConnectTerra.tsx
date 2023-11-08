@@ -19,24 +19,25 @@ export const ConnectTerra: React.FC<ConnectTerraProps> = ({}) => {
 	const connect = useCallback(async () => {
 		const extension = new Extension()
 
-		const accountAddr = await new Promise<string>((resolve) => {
-			extension.once("onConnect", ({ address }) => resolve(address))
+		const accountData = await new Promise<{ address: string; network: string }>((resolve) => {
+			extension.once("onConnect", ({ address, network }) => resolve({ address, network }))
 			extension.connect()
 		}).catch((error) => {
 			console.log(error)
 			console.error(`Failed to enable Station ${error.message}`)
 		})
-		if (!accountAddr) {
+		if (!accountData) {
 			setError(new Error("address not found"))
 			return
 		}
 
-		setAddress(accountAddr)
+		setAddress(accountData.address)
 		setSessionSigner(
 			new CosmosSigner({
 				signer: {
 					type: "bytes",
-					getAddress: async () => accountAddr,
+					getAddress: async () => accountData.address,
+					getChainId: async () => accountData.network,
 					signBytes: async (signBytes: Uint8Array) =>
 						new Promise((resolve, reject) => {
 							extension.on("onSign", (payload) => {

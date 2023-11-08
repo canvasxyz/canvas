@@ -1,7 +1,7 @@
 import { CosmosMessage, CosmosSessionData } from "./types"
 import { toBech32 } from "@cosmjs/encoding"
 
-export const getKey = (topic: string, chain: string, address: string) => `canvas:${topic}/${chain}:${address}`
+export const getKey = (topic: string, address: string) => `canvas/${topic}/${address}`
 
 export function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
@@ -9,17 +9,7 @@ export function assert(condition: boolean, message?: string): asserts condition 
 	}
 }
 
-export const chainPattern = /^cosmos:([-a-zA-Z0-9_]{1,32})$/
-
-export function parseChainId(chain: string): string {
-	const chainPatternMatch = chainPattern.exec(chain)
-	if (chainPatternMatch === null) {
-		throw new Error(`invalid chain: ${chain} did not match ${chainPattern}`)
-	}
-
-	const [_, chainId] = chainPatternMatch
-	return chainId
-}
+export const addressPattern = /^cosmos:([0-9a-z\-_]+):([a-zA-Fa-f0-9]+)$/
 
 export function signalInvalidType(type: never): never {
 	console.error(type)
@@ -63,11 +53,6 @@ export function validateSessionData(data: unknown): data is CosmosSessionData {
 	return true
 }
 
-export function getSessionURI(prefix: string, chain: string, publicKey: Uint8Array) {
-	const sessionAddress = toBech32(prefix, publicKey)
-	return `${chain}:${sessionAddress}`
-}
-
 export function encodeReadableEthereumMessage(message: CosmosMessage): string {
 	return `
 	Authorize access?
@@ -77,4 +62,14 @@ export function encodeReadableEthereumMessage(message: CosmosMessage): string {
 	issuedAt: ${message.issuedAt}
 	uri: ${message.uri}
 	`
+}
+
+export function parseAddress(address: string): [chain: string, walletAddress: string] {
+	const result = addressPattern.exec(address)
+	if (result === null) {
+		throw new Error(`invalid address: ${address} did not match ${addressPattern}`)
+	}
+
+	const [_, chain, walletAddress] = result
+	return [chain, walletAddress]
 }
