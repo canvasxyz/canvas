@@ -39,7 +39,7 @@ const SessionList: React.FC<SessionListProps> = ({ address }) => {
 
 	const timestamp = useMemo(() => Date.now(), [])
 
-	const results = useLiveQuery<{ public_key: string; expiration: number }>(app, "$sessions", {
+	const results = useLiveQuery<{ public_key: string; expiration: number; message_id: string }>(app, "$sessions", {
 		where: { address, expiration: { gt: timestamp } },
 	})
 
@@ -52,9 +52,9 @@ const SessionList: React.FC<SessionListProps> = ({ address }) => {
 			<ul className="list-disc pl-4">
 				{results.map((session) => {
 					return (
-						<li key={address}>
+						<li key={`${address}-${session.message_id}`}>
 							<div>
-								<code className="text-sm">{session.public_key}</code>
+								<code className="text-sm">{session.public_key.slice(20)}...</code>
 							</div>
 							{session.expiration < Number.MAX_SAFE_INTEGER ? (
 								<div>
