@@ -46,8 +46,8 @@ test("reject corrupt session signature", async (t) => {
 	const signer = new SIWESigner()
 	const session = await signer.getSession(topic, {})
 	// corrupt the session signature
-	session.data.signature[0] = 1
-	assert(validateSessionData(session.data))
-	session.data.signature[3] = 1
+	session.authorizationData.signature[0] = 1
+	assert(validateSessionData(session.authorizationData))
+	session.authorizationData.signature[3] = 1
 	await t.throwsAsync(async () => signer.verifySession(session))
 })

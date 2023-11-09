@@ -4,7 +4,7 @@ import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
 import type { Awaitable } from "./Awaitable.js"
 
-export interface SessionSigner<SessionData = any> extends Signer<Message<Action | Session<SessionData>>> {
+export interface SessionSigner<AuthorizationData = any> extends Signer<Message<Action | Session<AuthorizationData>>> {
 	match: (chain: string) => boolean
 
 	/**
@@ -21,13 +21,13 @@ export interface SessionSigner<SessionData = any> extends Signer<Message<Action 
 	 * a `Session` authorized for that topic, that specific chain (if provided), and that
 	 * is valid for the given timestamp (if provided).
 	 */
-	getSession: (topic: string, options?: { chain?: string; timestamp?: number }) => Awaitable<Session<SessionData>>
+	getSession: (topic: string, options?: { chain?: string; timestamp?: number }) => Awaitable<Session<AuthorizationData>>
 
 	/**
 	 * Verify that `session.data` authorizes `session.publicKey`
 	 * to take actions on behalf of the user `${session.chain}:${session.address}`
 	 */
-	verifySession: (session: Session<SessionData>) => Awaitable<void>
+	verifySession: (session: Session<AuthorizationData>) => Awaitable<void>
 
 	clear?(): Awaitable<void>
 }

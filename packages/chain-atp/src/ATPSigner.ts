@@ -147,7 +147,7 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 			type: "session",
 			address: data.did,
 			publicKey: signer.uri,
-			data: {
+			authorizationData: {
 				verificationMethod,
 				recordArchive: result.data,
 				recordURI: uri,
@@ -170,7 +170,7 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 	}
 
 	public async verifySession(session: Session<ATPSessionData>): Promise<void> {
-		const { verificationMethod, recordArchive, recordURI, plcOperationLog } = session.data
+		const { verificationMethod, recordArchive, recordURI, plcOperationLog } = session.authorizationData
 		await verifyLog(session.address, plcOperationLog).then((key) =>
 			assert(key === verificationMethod, "invalid verification method")
 		)

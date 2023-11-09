@@ -44,7 +44,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 	public readonly match = (address: string) => addressPattern.test(address)
 
 	public verifySession(session: Session<SIWESessionData>) {
-		const { publicKey, address, data, timestamp, duration } = session
+		const { publicKey, address, authorizationData: data, timestamp, duration } = session
 
 		assert(didKeyPattern.test(publicKey), "invalid signing key")
 		assert(validateSessionData(data), "invalid session")
@@ -144,7 +144,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 			type: "session",
 			address: address,
 			publicKey: signer.uri,
-			data: { signature: getBytes(signature), domain, nonce },
+			authorizationData: { signature: getBytes(signature), domain, nonce },
 			blockhash: null,
 			timestamp,
 			duration: this.sessionDuration,

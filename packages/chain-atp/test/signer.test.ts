@@ -25,7 +25,7 @@ test("create and verify session", async (t) => {
 			address: address,
 			publicKey: signingKey,
 
-			data: {
+			authorizationData: {
 				verificationMethod: verificationMethod,
 				recordArchive,
 				recordURI: uri,

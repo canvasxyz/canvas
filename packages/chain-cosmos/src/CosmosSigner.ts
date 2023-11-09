@@ -55,7 +55,7 @@ export class CosmosSigner implements SessionSigner {
 	public readonly match = (address: string) => addressPattern.test(address)
 
 	public async verifySession(session: Session) {
-		const { publicKey, address, data, timestamp, duration } = session
+		const { publicKey, address, authorizationData: data, timestamp, duration } = session
 
 		assert(didKeyPattern.test(publicKey), "invalid signing key")
 		assert(validateSessionData(data), "invalid session")
@@ -153,7 +153,7 @@ export class CosmosSigner implements SessionSigner {
 			type: "session",
 			address: address,
 			publicKey: signer.uri,
-			data: signResult,
+			authorizationData: signResult,
 			blockhash: null,
 			timestamp,
 			duration: this.sessionDuration,

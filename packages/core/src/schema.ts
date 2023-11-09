@@ -15,7 +15,7 @@ type Action struct {
 type Session struct {
   address   String
   publicKey String
-  data      any
+  authorizationData any
   timestamp Int
   duration  nullable Int
   blockhash nullable String

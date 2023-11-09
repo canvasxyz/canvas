@@ -118,7 +118,7 @@ export class SubstrateSigner implements SessionSigner {
 	public readonly match = (address: string) => addressPattern.test(address)
 
 	public async verifySession(session: Session) {
-		const { publicKey, address, data, timestamp, duration } = session
+		const { publicKey, address, authorizationData: data, timestamp, duration } = session
 
 		assert(didKeyPattern.test(publicKey), "invalid signing key")
 		assert(validateSessionData(data), "invalid session")
@@ -232,7 +232,7 @@ export class SubstrateSigner implements SessionSigner {
 			type: "session",
 			address,
 			publicKey: signer.uri,
-			data: { signature, data: message, substrateKeyType },
+			authorizationData: { signature, data: message, substrateKeyType },
 			blockhash: null,
 			timestamp,
 			duration: this.sessionDuration,
