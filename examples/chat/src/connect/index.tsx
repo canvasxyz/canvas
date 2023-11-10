@@ -23,8 +23,8 @@ export const Connect: React.FC<{}> = ({}) => {
 				<option value="ethereum">Ethereum</option>
 				<option value="polkadot">Polkadot</option>
 				<option value="solana">Solana</option>
-				<option value="cosmos-kepler">Cosmos/Kepler</option>
-				<option value="ethereum-kepler">Ethereum/Kepler</option>
+				<option value="cosmos-keplr">Cosmos/Keplr</option>
+				<option value="ethereum-keplr">Ethereum/Keplr</option>
 				<option value="near">NEAR</option>
 				<option value="terra">Terra</option>
 				<option value="cosmos-evm">Cosmos/EVM</option>
@@ -43,9 +43,9 @@ const Method: React.FC<{ method: string }> = (props) => {
 			return <ConnectPolkadot />
 		case "solana":
 			return <ConnectSolana />
-		case "cosmos-kepler":
+		case "cosmos-keplr":
 			return <ConnectCosmosKeplr chainId="osmosis-1" />
-		case "ethereum-kepler":
+		case "ethereum-keplr":
 			return <ConnectEthereumKeplr chainId="evmos_9001-2" />
 		case "near":
 			return <ConnectNEAR contractId="something.near" network="mainnet" recipient="somebody" />
