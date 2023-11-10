@@ -25,7 +25,7 @@ export type Signature = {
 }
 ```
 
-Signature sign the **bytes of the CID**, which carries metadata about the encoding format and hashing algorithm in addition to the hash of the encoded value itself. This allows values and their signatures to be re-encoded with different codecs without breaking validation.
+Signatures sign the **bytes of the CID**, which carries metadata about the encoding format and hashing algorithm in addition to the hash of the encoded value itself. This allows values and their signatures to be re-encoded with different codecs without breaking validation.
 
 [`did:key` URIs](https://w3c-ccg.github.io/did-method-key/) are used to encode public keys.
 
