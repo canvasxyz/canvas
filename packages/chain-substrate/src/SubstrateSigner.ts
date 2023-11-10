@@ -38,7 +38,7 @@ export class SubstrateSigner implements SessionSigner {
 	#signer: AbstractSigner
 	#store = target.getSessionStore()
 
-	public constructor(init: SubstrateSignerInit) {
+	public constructor(init: SubstrateSignerInit = {}) {
 		if (init.extension) {
 			const { extension } = init
 
