@@ -11,12 +11,15 @@
   ],
   "dependencies": {
     "@canvas-js/interfaces": "0.5.1",
+    "@canvas-js/signed-cid": "^0.5.1",
+    "@ipld/dag-cbor": "^9.0.6",
+    "@ipld/dag-json": "^10.1.5",
+    "@libp2p/logger": "^3.1.0",
     "@near-js/crypto": "^0.0.5",
+    "@noble/curves": "^1.2.0",
     "bs58": "^5.0.0",
     "multiformats": "^12.1.3",
-    "near-api-js": "^2.1.4",
-    "safe-stable-stringify": "^2.4.3",
-    "tweetnacl": "^1.0.3"
+    "near-api-js": "^2.1.4"
   },
   "devDependencies": {
     "@types/bs58": "^4.0.3"

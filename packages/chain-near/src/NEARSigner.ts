@@ -1,16 +1,15 @@
 import * as json from "@ipld/dag-json"
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
-
+import { KeyPair } from "near-api-js"
+import { PublicKey } from "@near-js/crypto"
 import { ed25519 } from "@noble/curves/ed25519"
 
 import type { Signature, Signer, SessionSigner, Action, SessionStore, Message, Session } from "@canvas-js/interfaces"
 import { Ed25519Signer } from "@canvas-js/signed-cid"
 
-import { assert, signalInvalidType, validateSessionData, addressPattern, getKey, parseAddress } from "./utils.js"
 import { NEARMessage, NEARSessionData } from "./types.js"
-import { KeyPair } from "near-api-js"
-import { PublicKey } from "@near-js/crypto"
+import { assert, signalInvalidType, validateSessionData, addressPattern, getKey, parseAddress } from "./utils.js"
 
 export interface NEARSignerInit {
 	chainId?: string

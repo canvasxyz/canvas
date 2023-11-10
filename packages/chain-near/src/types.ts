@@ -1,5 +1,3 @@
-import { PublicKey } from "near-api-js/lib/utils"
-
 export type NEARMessage = {
 	publicKey: string
 	issuedAt: string
