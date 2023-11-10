@@ -1,114 +1,78 @@
 import React, { useCallback, useContext, useEffect, useState } from "react"
 
-import { Buffer } from "buffer"
-import { setupWalletSelector } from "@near-wallet-selector/core"
-import { setupModal } from "@near-wallet-selector/modal-ui"
-// import { setupNearWallet } from "@near-wallet-selector/near-wallet"
-import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet"
+import { connect as nearConnect, keyStores, WalletConnection } from "near-api-js"
 
 import { NEARSigner } from "@canvas-js/chain-near"
 
 import { AppContext } from "./AppContext.js"
-import { sessionStore } from "./utils.js"
-
-import "@near-wallet-selector/modal-ui/styles.css"
-import { assert } from "@canvas-js/signed-cid/src/utils.js"
 
 export interface ConnectNEARProps {
+	contractId: string
 	network: string
 	recipient: string
 }
 
-export const ConnectNEAR: React.FC<ConnectNEARProps> = ({ network, recipient }) => {
+export const ConnectNEAR: React.FC<ConnectNEARProps> = ({ contractId, network, recipient }) => {
 	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
-	// const [nearConnection, setNearConnection] = useState<Near | null>(null)
 
 	const [error, setError] = useState<Error | null>(null)
-	const [handle, setHandle] = useState("")
+
+	const [walletConnection, setWalletConnection] = useState<WalletConnection | null>(null)
 
 	useEffect(() => {
-		console.log(window.location)
-		console.log(window.location.search)
+		async function doSetup() {
+			const keyStore = new keyStores.BrowserLocalStorageKeyStore()
+			const connectionConfig = {
+				networkId: network,
+				keyStore,
+				nodeUrl: `https://rpc.${network}.near.org`,
+				walletUrl: `https://wallet.${network}.near.org`,
+				helperUrl: `https://helper.${network}.near.org`,
+				explorerUrl: `https://explorer.${network}.near.org`,
+			}
 
-		// the signed data is in the url hash fragment
+			const nearConnection = await nearConnect(connectionConfig)
+			const walletConnection = new WalletConnection(nearConnection, "canvas")
 
-		const urlParams = new URLSearchParams(window.location.search)
+			const accountId = walletConnection._authData.accountId
+			if (accountId) {
+				const address = `near:${network}:${accountId}`
 
-		if (urlParams.get("finishNearLogin") === "true") {
-			console.log("finishNearLogin")
-			const hashData = window.location.hash.replace(/^#/g, "")
-			const hashParams = new URLSearchParams(hashData)
+				const keyPair = await keyStore.getKey(network, accountId)
+				console.log(keyPair)
+				if (keyPair == null) {
+					// no keypair found
+				} else {
+					const signer = new NEARSigner({ keyPair })
+					setSessionSigner(signer)
+					setAddress(address)
+				}
+			}
 
-			const signature = hashParams.get("signature")
-			assert(signature !== null, `signature is null`)
-			const publicKey = hashParams.get("publicKey")
-			assert(publicKey !== null, `publicKey is null`)
-
-			const walletAddress = urlParams.get("walletAddress")
-			assert(walletAddress !== null, `walletAddress is null`)
-			const chainId = urlParams.get("chainId")
-			assert(chainId !== null, `chainId is null`)
-			const uri = urlParams.get("uri")
-			assert(uri !== null, `uri is null`)
-			const issuedAt = urlParams.get("issuedAt")
-			assert(issuedAt !== null, `issuedAt is null`)
-			let expirationTime = urlParams.get("expirationTime")
-			expirationTime = expirationTime == "null" ? null : expirationTime
-			const recipient = urlParams.get("recipient")
-			assert(recipient !== null, `recipient is null`)
-			const nonce = urlParams.get("nonce")
-			assert(nonce !== null, `nonce is null`)
-			const message = { walletAddress, chainId, uri, issuedAt, expirationTime, recipient, nonce }
-
-			const timestamp = Date.parse(issuedAt)
-			const topic = urlParams.get("topic")
-			assert(topic !== null, `topic is null`)
-			;(async () => {
-				console.log("setting up wallet selector")
-				const selector = await setupWalletSelector({
-					network: network,
-					modules: [setupMyNearWallet()],
-				})
-
-				console.log("getting wallet")
-				const wallet = await selector.wallet()
-
-				console.log("creating session signer")
-				const sessionSigner = new NEARSigner({ network, wallet, store: sessionStore, recipient: message.recipient })
-				console.log("saving session")
-				await sessionSigner.saveSession(message, signature, publicKey, { timestamp, topic })
-				console.log("setting address")
-				setAddress(`near:${network}:${walletAddress}`)
-				setSessionSigner(sessionSigner)
-			})()
+			setWalletConnection(walletConnection)
 		}
+		doSetup()
 	}, [])
 
-	const connect = useCallback(async () => {
-		const selector = await setupWalletSelector({
-			network: network,
-			modules: [setupMyNearWallet()],
+	const signIn = useCallback(async () => {
+		if (!walletConnection) {
+			return
+		}
+		await walletConnection.requestSignIn({
+			contractId,
 		})
+	}, [walletConnection])
 
-		const modal = setupModal(selector, {
-			contractId: "bob-canvas.near",
-		})
-		modal.show()
-
-		const wallet = await selector.wallet()
-		const accounts = await wallet.getAccounts()
-		const walletAddress = accounts[0].accountId
-
-		const signer = new NEARSigner({ network, wallet, store: sessionStore, recipient })
-
-		setAddress(walletAddress)
-		setSessionSigner(signer)
-	}, [])
-
-	const disconnect = useCallback(async () => {
-		setAddress(null)
+	const signOut = useCallback(async () => {
+		if (!walletConnection) {
+			return
+		}
 		setSessionSigner(null)
-	}, [sessionSigner])
+		walletConnection.signOut()
+		const accountId = walletConnection._authData.accountId
+		const address = accountId ? `near:${network}:${accountId}` : null
+		setAddress(address)
+	}, [walletConnection])
 
 	if (error !== null) {
 		return (
@@ -116,10 +80,10 @@ export const ConnectNEAR: React.FC<ConnectNEARProps> = ({ network, recipient }) 
 				<code>{error.message}</code>
 			</div>
 		)
-	} else if (address !== null /*&& sessionSigner instanceof SubstrateSigner */) {
+	} else if (address !== null && sessionSigner instanceof NEARSigner) {
 		return (
 			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => disconnect()}>Disconnect NEAR wallet</button>
+				<button onClick={() => signOut()}>Disconnect NEAR wallet</button>
 			</div>
 		)
 	} else if (address === null) {
@@ -129,24 +93,13 @@ export const ConnectNEAR: React.FC<ConnectNEARProps> = ({ network, recipient }) 
 		return (
 			<div className="border rounded">
 				<div className="p-2 border-b">Connect NEAR</div>
-				{/* <form className="p-2 flex flex-col items-stretch">
-					<label className="block" htmlFor="bsky-identifier">
-						Handle
-					</label>
-					<input
-						className="px-1 block border"
-						id="bsky-identifier"
-						type="text"
-						value={handle}
-						onChange={(e) => setHandle(e.target.value)}
-					/>
-				</form> */}
+
 				<button
 					className={disabled ? buttonDisabledClassName : buttonEnabledClassName}
 					disabled={disabled}
 					onClick={(e) => {
 						e.preventDefault()
-						connect()
+						signIn()
 					}}
 				>
 					Log in

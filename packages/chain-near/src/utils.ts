@@ -8,13 +8,21 @@ export function assert(condition: boolean, message?: string): asserts condition 
 	}
 }
 
-export const addressPattern = /^near:([0-9a-z-_]+):([a-zA-Fa-f0-9]+)$/
+export const addressPattern = /^near:([0-9a-z-_]+):([a-zA-Z0-9]+)$/
+
+export function parseAddress(address: string): [chain: string, walletAddress: string] {
+	const result = addressPattern.exec(address)
+	if (result === null) {
+		throw new Error(`invalid address: ${address} did not match ${addressPattern}`)
+	}
+
+	const [_, chain, walletAddress] = result
+	return [chain, walletAddress]
+}
 
 export const generateHumanReadableNearMessage = (message: NEARMessage): string =>
 	`Authorize:
-  - Wallet Address: ${message.walletAddress}
-  - Chain ID: ${message.chainId}
-  - URI: ${message.uri}
+  - PublicKey: ${message.publicKey}
   - Issued At: ${message.issuedAt}
   - Expiration Time: ${message.expirationTime}
   `
@@ -25,6 +33,12 @@ export function signalInvalidType(type: never): never {
 }
 
 export function validateSessionData(data: any): data is NEARSessionData {
-	// TODO: implement
+	if (!(data.signature instanceof Uint8Array)) {
+		return false
+	}
+	if (!(data.publicKey instanceof Uint8Array)) {
+		return false
+	}
+
 	return true
 }

@@ -50,7 +50,7 @@ export const ConnectSolana: React.FC<ConnectSolanaProps> = ({}) => {
 		)
 	}
 
-	if (address !== null) {
+	if (address !== null && sessionSigner instanceof SolanaSigner) {
 		// is logged in
 		return (
 			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">

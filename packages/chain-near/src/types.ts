@@ -1,16 +1,12 @@
+import { PublicKey } from "near-api-js/lib/utils"
+
 export type NEARMessage = {
-	walletAddress: string
-	chainId: string
-	uri: string
+	publicKey: string
 	issuedAt: string
 	expirationTime: string | null
-	recipient: string
-	nonce: string
 }
 
 export type NEARSessionData = {
 	signature: Uint8Array
-	nonce: string
-	data: NEARMessage
-	publicKey: string
+	publicKey: Uint8Array
 }

@@ -19,6 +19,7 @@
     "@canvas-js/interfaces": "0.5.1",
     "@canvas-js/chain-cosmos": "0.5.1",
     "@canvas-js/chain-ethereum": "0.5.1",
+    "@canvas-js/chain-near": "0.5.1",
     "@canvas-js/chain-solana": "0.5.1",
     "@canvas-js/chain-substrate": "0.5.1"
   }
