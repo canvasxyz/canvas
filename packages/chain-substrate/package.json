@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/chain-substrate",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -17,7 +17,7 @@
     }
   },
   "dependencies": {
-    "@canvas-js/interfaces": "0.5.1",
+    "@canvas-js/interfaces": "0.6.0",
     "@ipld/dag-cbor": "^9.0.6",
     "@ipld/dag-json": "^10.1.5",
     "@noble/curves": "^1.2.0",
