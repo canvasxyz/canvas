@@ -157,11 +157,19 @@ export declare function verifySignature(signature: Signature, options?: { types:
 #### Digest
 
 ```ts
-type Digest = { name: string; code: number; digest: (iter: Iterable<Uint8Array>) => Uint8Array }
+interface Digest {
+  name: string
+  code: number
+  digest: (iter: Iterable<Uint8Array>) => Uint8Array
+}
 ```
 
 #### Codec
 
 ```ts
-type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint8Array> }
+interface Codec {
+  name: string
+  code: number
+  encode: (value: any) => Iterable<Uint8Array>
+}
 ```
