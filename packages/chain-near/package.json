@@ -11,7 +11,7 @@
   ],
   "dependencies": {
     "@canvas-js/interfaces": "0.5.1",
-    "borsh": "^1.0.0",
+    "@near-js/crypto": "^0.0.5",
     "bs58": "^5.0.0",
     "multiformats": "^12.1.3",
     "near-api-js": "^2.1.4",

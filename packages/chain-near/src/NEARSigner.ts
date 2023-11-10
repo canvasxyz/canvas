@@ -10,6 +10,7 @@ import { Ed25519Signer } from "@canvas-js/signed-cid"
 import { assert, signalInvalidType, validateSessionData, addressPattern, getKey, parseAddress } from "./utils.js"
 import { NEARMessage, NEARSessionData } from "./types.js"
 import { KeyPair } from "near-api-js"
+import { PublicKey } from "@near-js/crypto"
 
 export interface NEARSignerInit {
 	chainId?: string
@@ -39,14 +40,15 @@ export class NEARSigner implements SessionSigner {
 		this.#store = store ?? null
 	}
 
-	public readonly match = (chain: string) => {
-		console.log(`matching on ${chain}`)
-		return addressPattern.test(chain)
-	}
+	public readonly match = (chain: string) => addressPattern.test(chain)
 
 	public verifySession(session: Session) {
 		const { publicKey, address, data, timestamp, duration } = session
 		assert(validateSessionData(data), "invalid session")
+		const [chain, walletAddress] = parseAddress(address)
+
+		const walletAddressFromPublicKey = new PublicKey({ keyType: 0, data: data.publicKey }).toString().split(":")[1]
+		assert(walletAddress == walletAddressFromPublicKey, "the wallet address does not match the public key")
 
 		const message: NEARMessage = {
 			publicKey,
