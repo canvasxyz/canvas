@@ -21,6 +21,7 @@ import {
 } from "./utils.js"
 
 export interface SIWESignerInit {
+	chainId?: number
 	signer?: AbstractSigner
 	store?: SessionStore
 	sessionDuration?: number
@@ -28,6 +29,8 @@ export interface SIWESignerInit {
 
 export class SIWESigner implements SessionSigner<SIWESessionData> {
 	public readonly sessionDuration: number | null
+	public readonly chainId: number
+
 	private readonly log = logger("canvas:chain-ethereum")
 
 	#ethersSigner: AbstractSigner
@@ -39,6 +42,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 		this.#ethersSigner = init.signer ?? Wallet.createRandom()
 		this.#store = init.store ?? null
 		this.sessionDuration = init.sessionDuration ?? null
+		this.chainId = init.chainId ?? 1
 	}
 
 	public readonly match = (address: string) => addressPattern.test(address)
@@ -67,10 +71,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 
 	public async getSession(topic: string, options: { timestamp?: number } = {}): Promise<Session<SIWESessionData>> {
 		const walletAddress = await this.#ethersSigner.getAddress()
-		const network = await this.#ethersSigner.provider?.getNetwork()
-		const chainId = network?.chainId?.toString() ?? "1"
-
-		const address = `eip155:${chainId}:${walletAddress}`
+		const address = `eip155:${this.chainId}:${walletAddress}`
 		const key = getKey(topic, address)
 
 		this.log("getting session %s", key)
@@ -126,7 +127,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 		const siweMessage: SIWEMessage = {
 			version: SIWEMessageVersion,
 			address: walletAddress,
-			chainId: parseInt(chainId),
+			chainId: this.chainId,
 			domain: domain,
 			uri: signer.uri,
 			nonce: nonce,
