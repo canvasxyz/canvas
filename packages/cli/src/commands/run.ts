@@ -16,6 +16,12 @@ import { createAPI } from "@canvas-js/core/api"
 import { MIN_CONNECTIONS, MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { defaultBootstrapList, testnetBootstrapList } from "@canvas-js/core/bootstrap"
 
+import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { ATPSigner } from "@canvas-js/chain-atp"
+import { CosmosSigner } from "@canvas-js/chain-cosmos"
+import { SubstrateSigner } from "@canvas-js/chain-substrate"
+import { SolanaSigner } from "@canvas-js/chain-solana"
+
 import { getContractLocation } from "../utils.js"
 
 export const command = "run <path>"
@@ -135,6 +141,7 @@ export async function handler(args: Args) {
 	const app = await Canvas.initialize({
 		path: location,
 		contract,
+		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner(), new SolanaSigner()],
 		listen,
 		announce,
 		minConnections: args["min-connections"],
