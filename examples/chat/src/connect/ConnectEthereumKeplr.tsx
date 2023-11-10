@@ -5,8 +5,7 @@ import { fromBech32 } from "@cosmjs/encoding"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 
-import { AppContext } from "./AppContext.js"
-import { sessionStore } from "./utils.js"
+import { AppContext } from "../AppContext.js"
 
 declare global {
 	// eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -51,7 +50,6 @@ export const ConnectEthereumKeplr: React.FC<ConnectEthereumKeplrProps> = ({ chai
 					getAddress: async () => ethAddress,
 					getChainId: async () => chainId,
 				},
-				store: sessionStore,
 			})
 		)
 		setThisIsConnected(true)
@@ -75,16 +73,10 @@ export const ConnectEthereumKeplr: React.FC<ConnectEthereumKeplrProps> = ({ chai
 				<button onClick={() => disconnect()}>Disconnect Keplr (Ethereum) wallet</button>
 			</div>
 		)
-	} else if (address === null) {
+	} else {
 		return (
 			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
 				<button onClick={() => connect()}>Connect Keplr (Ethereum) wallet</button>
-			</div>
-		)
-	} else {
-		return (
-			<div className="p-2 border rounded bg-gray-100 text-gray-600">
-				<button disabled>Connect Keplr (Ethereum) wallet</button>
 			</div>
 		)
 	}

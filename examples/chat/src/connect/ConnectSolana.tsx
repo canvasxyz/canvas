@@ -1,10 +1,9 @@
 declare let window: any
-import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
+import React, { useCallback, useContext, useState } from "react"
 
 import { SolanaSigner } from "@canvas-js/chain-solana"
 
-import { AppContext } from "./AppContext.js"
-import { sessionStore } from "./utils.js"
+import { AppContext } from "../AppContext.js"
 
 export interface ConnectSolanaProps {}
 
@@ -34,7 +33,7 @@ export const ConnectSolana: React.FC<ConnectSolanaProps> = ({}) => {
 		const chainId = "mainnet"
 		setAddress(`solana:${chainId}:${publicKey}`)
 		const provider = getProvider()
-		setSessionSigner(new SolanaSigner({ signer: provider, store: sessionStore }))
+		setSessionSigner(new SolanaSigner({ signer: provider }))
 	}, [provider])
 
 	const disconnect = useCallback(async () => {

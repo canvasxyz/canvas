@@ -3,8 +3,7 @@ import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
-import { AppContext } from "./AppContext.js"
-import { sessionStore } from "./utils.js"
+import { AppContext } from "../AppContext.js"
 
 declare global {
 	// eslint-disable-next-line no-var
@@ -20,18 +19,27 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 	const [error, setError] = useState<Error | null>(null)
 
 	const connect = useCallback(async () => {
+		if (app === null) {
+			setError(new Error("app not initialized"))
+			return
+		}
+
 		if (provider === null) {
 			setError(new Error("window.ethereum not found"))
 			return
 		}
 
-		const network = await provider.getNetwork()
-		const signer = await provider.getSigner()
-		const address = await signer.getAddress()
 		setProvider(provider)
-		setAddress(`eip155:${network.chainId}:${address}`)
-		setSessionSigner(new SIWESigner({ signer, store: sessionStore }))
-	}, [provider])
+
+		const network = await provider.getNetwork()
+		const signer = await provider
+			.getSigner()
+			.then((signer) => new SIWESigner({ signer, chainId: Number(network.chainId) }))
+
+		const { address } = await signer.getSession(app.topic)
+		setAddress(address)
+		setSessionSigner(signer)
+	}, [app, provider])
 
 	const initialRef = useRef(false)
 	useEffect(() => {
@@ -77,16 +85,10 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 				<button onClick={() => disconnect()}>Disconnect ETH wallet</button>
 			</div>
 		)
-	} else if (address === null) {
+	} else {
 		return (
 			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
 				<button onClick={() => connect()}>Connect ETH wallet</button>
-			</div>
-		)
-	} else {
-		return (
-			<div className="p-2 border rounded bg-gray-100 text-gray-600">
-				<button disabled>Connect ETH wallet</button>
 			</div>
 		)
 	}

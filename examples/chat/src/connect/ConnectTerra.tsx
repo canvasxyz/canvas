@@ -1,9 +1,9 @@
 import React, { useCallback, useContext, useState } from "react"
 
-import { AppContext } from "./AppContext.js"
-import { sessionStore } from "./utils.js"
-import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { Extension } from "@terra-money/feather.js"
+import { CosmosSigner } from "@canvas-js/chain-cosmos"
+
+import { AppContext } from "../AppContext.js"
 import { Buffer } from "buffer"
 
 export interface ConnectTerraProps {}
@@ -51,7 +51,6 @@ export const ConnectTerra: React.FC<ConnectTerraProps> = ({}) => {
 							}
 						}),
 				},
-				store: sessionStore,
 			})
 		)
 		setThisIsConnected(true)
@@ -75,16 +74,10 @@ export const ConnectTerra: React.FC<ConnectTerraProps> = ({}) => {
 				<button onClick={() => disconnect()}>Disconnect Terra wallet</button>
 			</div>
 		)
-	} else if (address === null) {
+	} else {
 		return (
 			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
 				<button onClick={() => connect()}>Connect Terra wallet</button>
-			</div>
-		)
-	} else {
-		return (
-			<div className="p-2 border rounded bg-gray-100 text-gray-600">
-				<button disabled>Connect Terra wallet</button>
 			</div>
 		)
 	}

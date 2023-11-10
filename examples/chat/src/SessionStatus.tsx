@@ -1,5 +1,4 @@
 import React, { useContext, useMemo } from "react"
-import { computeAddress, hexlify } from "ethers"
 import { useLiveQuery } from "@canvas-js/hooks"
 
 import { AppContext } from "./AppContext.js"

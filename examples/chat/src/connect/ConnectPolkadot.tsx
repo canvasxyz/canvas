@@ -3,8 +3,7 @@ import { web3Enable, web3Accounts, web3FromAddress } from "@polkadot/extension-d
 
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
 
-import { AppContext } from "./AppContext.js"
-import { sessionStore } from "./utils.js"
+import { AppContext } from "../AppContext.js"
 
 export interface ConnectPolkadotProps {}
 
@@ -21,12 +20,7 @@ export const ConnectPolkadot: React.FC<ConnectPolkadotProps> = ({}) => {
 		const extension = await web3FromAddress(address)
 
 		setAddress(`polkadot:${chainId}:${address}`)
-		setSessionSigner(
-			new SubstrateSigner({
-				extension,
-				store: sessionStore,
-			})
-		)
+		setSessionSigner(new SubstrateSigner({ extension }))
 	}, [])
 
 	const disconnect = useCallback(async () => {
@@ -46,16 +40,10 @@ export const ConnectPolkadot: React.FC<ConnectPolkadotProps> = ({}) => {
 				<button onClick={() => disconnect()}>Disconnect Polkadot wallet</button>
 			</div>
 		)
-	} else if (address === null) {
+	} else {
 		return (
 			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
 				<button onClick={() => connect()}>Connect Polkadot wallet</button>
-			</div>
-		)
-	} else {
-		return (
-			<div className="p-2 border rounded bg-gray-100 text-gray-600">
-				<button disabled>Connect Polkadot wallet</button>
 			</div>
 		)
 	}

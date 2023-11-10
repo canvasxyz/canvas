@@ -4,8 +4,7 @@ import { MetaMaskInpageProvider } from "@metamask/providers"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 
-import { AppContext } from "./AppContext.js"
-import { sessionStore } from "./utils.js"
+import { AppContext } from "../AppContext.js"
 
 declare global {
 	interface Window {
@@ -47,7 +46,6 @@ export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> =
 					getAddress: async () => thisAddress,
 					getChainId: async () => chainId,
 				},
-				store: sessionStore,
 			})
 		)
 		setThisIsConnected(true)
@@ -71,16 +69,10 @@ export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> =
 				<button onClick={() => disconnect()}>Disconnect Cosmos EVM Metamask wallet</button>
 			</div>
 		)
-	} else if (address === null) {
+	} else {
 		return (
 			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
 				<button onClick={() => connect()}>Connect Cosmos EVM Metamask wallet</button>
-			</div>
-		)
-	} else {
-		return (
-			<div className="p-2 border rounded bg-gray-100 text-gray-600">
-				<button disabled>Connect Cosmos EVM Metamask wallet</button>
 			</div>
 		)
 	}
