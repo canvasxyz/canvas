@@ -10,7 +10,7 @@ test("create and verify session", async (t) => {
 	const topic = "example:signer"
 	const signer = new SIWESigner()
 	const session = await signer.getSession(topic)
-	t.notThrows(() => signer.verifySession(session))
+	t.notThrows(() => signer.verifySession(topic, session))
 
 	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 	const sessionSignature = await signer.sign(sessionMessage)
@@ -21,7 +21,7 @@ test("create and verify session and action", async (t) => {
 	const topic = "example:signer"
 	const signer = new SIWESigner()
 	const session = await signer.getSession(topic)
-	t.notThrows(() => signer.verifySession(session))
+	t.notThrows(() => signer.verifySession(topic, session))
 
 	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 	const sessionSignature = await signer.sign(sessionMessage)
@@ -49,5 +49,5 @@ test("reject corrupt session signature", async (t) => {
 	session.authorizationData.signature[0] = 1
 	assert(validateSessionData(session.authorizationData))
 	session.authorizationData.signature[3] = 1
-	await t.throwsAsync(async () => signer.verifySession(session))
+	await t.throwsAsync(async () => signer.verifySession(topic, session))
 })

@@ -13,4 +13,5 @@ export type SIWEMessage = {
 	nonce: string
 	issuedAt: string
 	expirationTime: string | null
+	resources: string[]
 }

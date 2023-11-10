@@ -1,12 +1,11 @@
 import { AbstractSigner, Wallet, verifyMessage, hexlify, getBytes } from "ethers"
 import * as siwe from "siwe"
-import * as json from "@ipld/dag-json"
 import { logger } from "@libp2p/logger"
 
-import type { Signature, Signer, SessionSigner, Action, SessionStore, Message, Session } from "@canvas-js/interfaces"
+import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
 import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
-import { getDomain } from "@canvas-js/chain-ethereum/domain"
+import target from "#target"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
 import {
@@ -17,13 +16,11 @@ import {
 	parseAddress,
 	addressPattern,
 	prepareSIWEMessage,
-	getKey,
 } from "./utils.js"
 
 export interface SIWESignerInit {
 	chainId?: number
 	signer?: AbstractSigner
-	store?: SessionStore
 	sessionDuration?: number
 }
 
@@ -33,90 +30,63 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 
 	private readonly log = logger("canvas:chain-ethereum")
 
+	#store = target.getSessionStore()
 	#ethersSigner: AbstractSigner
-	#store: SessionStore | null
-	#signers: Record<string, Signer<Message<Action | Session>>> = {}
-	#sessions: Record<string, Session<SIWESessionData>> = {}
 
 	public constructor(init: SIWESignerInit = {}) {
 		this.#ethersSigner = init.signer ?? Wallet.createRandom()
-		this.#store = init.store ?? null
 		this.sessionDuration = init.sessionDuration ?? null
 		this.chainId = init.chainId ?? 1
 	}
 
 	public readonly match = (address: string) => addressPattern.test(address)
 
-	public verifySession(session: Session<SIWESessionData>) {
-		const { publicKey, address, authorizationData: data, timestamp, duration } = session
+	public verifySession(topic: string, session: Session<SIWESessionData>) {
+		const { publicKey, address, authorizationData, timestamp, duration } = session
 
 		assert(didKeyPattern.test(publicKey), "invalid signing key")
-		assert(validateSessionData(data), "invalid session")
+		assert(validateSessionData(authorizationData), "invalid session")
 		const [chainId, walletAddress] = parseAddress(address)
 
 		const siweMessage: SIWEMessage = {
 			version: SIWEMessageVersion,
-			domain: data.domain,
-			nonce: data.nonce,
+			domain: authorizationData.domain,
+			nonce: authorizationData.nonce,
 			chainId: chainId,
 			address: walletAddress,
 			uri: publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
 			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
+			resources: [`canvas://${topic}`],
 		}
 
-		const recoveredAddress = verifyMessage(prepareSIWEMessage(siweMessage), hexlify(data.signature))
+		const recoveredAddress = verifyMessage(prepareSIWEMessage(siweMessage), hexlify(authorizationData.signature))
 		assert(recoveredAddress === walletAddress, "invalid SIWE signature")
 	}
 
 	public async getSession(topic: string, options: { timestamp?: number } = {}): Promise<Session<SIWESessionData>> {
 		const walletAddress = await this.#ethersSigner.getAddress()
 		const address = `eip155:${this.chainId}:${walletAddress}`
-		const key = getKey(topic, address)
 
-		this.log("getting session %s", key)
+		this.log("getting session for %s", address)
 
-		// First check the in-memory cache
-
-		if (this.#sessions[key] !== undefined) {
-			const session = this.#sessions[key]
-			const { timestamp, duration } = session
-			const t = options.timestamp ?? timestamp
-			if (timestamp <= t && t <= timestamp + (duration ?? Infinity)) {
-				this.log("found session %s in cache: %o", key, session)
-				return session
-			} else {
-				this.log("cached session %s has expired", key)
-			}
-		}
-
-		// Then check the persistent store
-		if (this.#store !== null) {
-			const privateSessionData = await this.#store.get(key)
-			if (privateSessionData !== null) {
-				const { type, privateKey, session } = json.parse<{
-					type: "secp256k1"
-					privateKey: Uint8Array
-					session: Session<SIWESessionData>
-				}>(privateSessionData)
-				assert(type === "secp256k1", "unexpected signature type")
-
+		{
+			const { session, signer } = this.#store.get(topic, address) ?? {}
+			if (session !== undefined && signer !== undefined) {
 				const { timestamp, duration } = session
 				const t = options.timestamp ?? timestamp
 				if (timestamp <= t && t <= timestamp + (duration ?? Infinity)) {
-					this.#signers[key] = new Secp256k1Signer(privateKey)
-					this.#sessions[key] = session
-					this.log("found session %s in store: %o", key, session)
+					this.log("found session for %s in store: %o", address, session)
 					return session
 				} else {
-					this.log("stored session %s has expired", key)
+					this.log("stored session for %s has expired", address)
 				}
 			}
 		}
 
-		this.log("creating new session for %s", key)
+		this.log("creating new session for %s", address)
 
-		const domain = getDomain()
+		const domain = target.getDomain()
 		const nonce = siwe.generateNonce()
 
 		const signer = new Secp256k1Signer()
@@ -133,6 +103,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 			nonce: nonce,
 			issuedAt: issuedAt,
 			expirationTime: null,
+			resources: [`canvas://${topic}`],
 		}
 
 		if (this.sessionDuration !== null) {
@@ -146,29 +117,21 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 			address: address,
 			publicKey: signer.uri,
 			authorizationData: { signature: getBytes(signature), domain, nonce },
-			blockhash: null,
-			timestamp,
 			duration: this.sessionDuration,
+			timestamp: timestamp,
+			blockhash: null,
 		}
 
-		this.#sessions[key] = session
-		this.#signers[key] = signer
-		if (this.#store !== null) {
-			const { type, privateKey } = signer.export()
-			await this.#store.set(key, json.stringify({ type, privateKey, session }))
-		}
+		await this.#store.set(topic, address, session, signer)
 
-		this.log("created new session for %s: %o", key, session)
+		this.log("created new session for %s: %o", address, session)
 		return session
 	}
 
 	public sign(message: Message<Action | Session>): Signature {
-		const { payload } = message
-		if (payload.type === "action") {
-			const { address, timestamp } = payload
-			const key = getKey(message.topic, address)
-			const signer = this.#signers[key]
-			const session = this.#sessions[key]
+		if (message.payload.type === "action") {
+			const { address, timestamp } = message.payload
+			const { signer, session } = this.#store.get(message.topic, address) ?? {}
 			assert(signer !== undefined && session !== undefined)
 
 			assert(address === session.address)
@@ -176,25 +139,19 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
 
 			return signer.sign(message)
-		} else if (payload.type === "session") {
-			const key = getKey(message.topic, payload.address)
-			const session = this.#sessions[key]
-			const signer = this.#signers[key]
+		} else if (message.payload.type === "session") {
+			const { signer, session } = this.#store.get(message.topic, message.payload.address) ?? {}
 			assert(signer !== undefined && session !== undefined)
 
 			// only sign our own current sessions
-			assert(payload === session)
+			assert(message.payload === session)
 			return signer.sign(message)
 		} else {
-			signalInvalidType(payload)
+			signalInvalidType(message.payload)
 		}
 	}
 
-	public async clear() {
-		for (const key of Object.keys(this.#sessions)) {
-			await this.#store?.delete(key)
-			delete this.#sessions[key]
-			delete this.#signers[key]
-		}
+	public async clear(topic: string) {
+		this.#store.clear(topic)
 	}
 }

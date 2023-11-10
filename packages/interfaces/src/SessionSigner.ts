@@ -27,7 +27,7 @@ export interface SessionSigner<AuthorizationData = any> extends Signer<Message<A
 	 * Verify that `session.data` authorizes `session.publicKey`
 	 * to take actions on behalf of the user `${session.chain}:${session.address}`
 	 */
-	verifySession: (session: Session<AuthorizationData>) => Awaitable<void>
+	verifySession: (topic: string, session: Session<AuthorizationData>) => Awaitable<void>
 
-	clear?(): Awaitable<void>
+	clear(topic: string): Awaitable<void>
 }

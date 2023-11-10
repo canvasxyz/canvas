@@ -106,7 +106,7 @@ export abstract class AbstractRuntime {
 
 				assert(publicKey === signature.publicKey)
 
-				await signer.verifySession(message.payload)
+				await signer.verifySession(runtime.topic, message.payload)
 
 				await runtime.db.set("$sessions", {
 					message_id: id,
