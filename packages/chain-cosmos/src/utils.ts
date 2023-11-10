@@ -1,6 +1,4 @@
-import { CosmosSessionData } from "./types.js"
-
-export const getKey = (topic: string, address: string) => `canvas/${topic}/${address}`
+import type { CosmosSessionData } from "./types.js"
 
 export function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
@@ -8,11 +6,31 @@ export function assert(condition: boolean, message?: string): asserts condition 
 	}
 }
 
-export const addressPattern = /^cosmos:([0-9a-z\-_]+):([a-zA-Fa-f0-9]+)$/
-
 export function signalInvalidType(type: never): never {
 	console.error(type)
 	throw new TypeError("internal error: invalid type")
+}
+
+export const addressPattern = /^cosmos:([0-9a-z\-_]+):([a-zA-Fa-f0-9]+)$/
+
+export function parseAddress(address: string): [chain: string, walletAddress: string] {
+	const result = addressPattern.exec(address)
+	if (result === null) {
+		throw new Error(`invalid address: ${address} did not match ${addressPattern}`)
+	}
+
+	const [_, chain, walletAddress] = result
+	return [chain, walletAddress]
+}
+
+export function validateSessionData(data: unknown): data is CosmosSessionData {
+	try {
+		extractSessionData(data)
+	} catch (error) {
+		return false
+	}
+
+	return true
 }
 
 function extractSessionData(data: any): CosmosSessionData {
@@ -68,24 +86,4 @@ function extractSessionData(data: any): CosmosSessionData {
 		}
 	}
 	throw Error(`invalid session data`)
-}
-
-export function validateSessionData(data: unknown): data is CosmosSessionData {
-	try {
-		extractSessionData(data)
-	} catch (error) {
-		return false
-	}
-
-	return true
-}
-
-export function parseAddress(address: string): [chain: string, walletAddress: string] {
-	const result = addressPattern.exec(address)
-	if (result === null) {
-		throw new Error(`invalid address: ${address} did not match ${addressPattern}`)
-	}
-
-	const [_, chain, walletAddress] = result
-	return [chain, walletAddress]
 }

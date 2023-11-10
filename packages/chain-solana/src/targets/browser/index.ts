@@ -1,12 +1,12 @@
 import * as json from "@ipld/dag-json"
 
 import type { Session } from "@canvas-js/interfaces"
-import { Secp256k1Signer } from "@canvas-js/signed-cid"
+import { Ed25519Signer } from "@canvas-js/signed-cid"
 
 import type { PlatformTarget } from "../index.js"
 
 class SignerStore {
-	#cache = new Map<string, { session: Session; signer: Secp256k1Signer }>()
+	#cache = new Map<string, { session: Session; signer: Ed25519Signer }>()
 
 	constructor() {}
 
@@ -15,10 +15,10 @@ class SignerStore {
 	}
 
 	public create() {
-		return new Secp256k1Signer()
+		return new Ed25519Signer()
 	}
 
-	public get(topic: string, address: string): { session: Session; signer: Secp256k1Signer } | null {
+	public get(topic: string, address: string): { session: Session; signer: Ed25519Signer } | null {
 		if (this.#cache.has(address)) {
 			return this.#cache.get(address) ?? null
 		}
@@ -30,16 +30,16 @@ class SignerStore {
 		}
 
 		const { type, privateKey, session } = json.parse<{ session: Session; type: string; privateKey: Uint8Array }>(value)
-		if (type !== Secp256k1Signer.type) {
+		if (type !== Ed25519Signer.type) {
 			throw new Error("invalid session signer type")
 		}
 
-		const signer = new Secp256k1Signer(privateKey)
+		const signer = new Ed25519Signer(privateKey)
 		this.#cache.set(address, { session, signer })
 		return { session, signer }
 	}
 
-	public set(topic: string, address: string, session: Session, signer: Secp256k1Signer): void {
+	public set(topic: string, address: string, session: Session, signer: Ed25519Signer): void {
 		this.#cache.set(address, { session, signer })
 		const key = this.getKey(topic, address)
 		const value = json.stringify({ session, ...signer.export() })
@@ -63,16 +63,5 @@ class SignerStore {
 export default {
 	getSessionStore() {
 		return new SignerStore()
-	},
-	saveJWTSession(data) {
-		window.localStorage.setItem("canvas-chain-atp", JSON.stringify(data))
-	},
-	loadJWTSession() {
-		const value = window.localStorage.getItem("canvas-chain-atp")
-		if (value === null) {
-			return null
-		} else {
-			return JSON.parse(value)
-		}
 	},
 } satisfies PlatformTarget

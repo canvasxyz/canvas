@@ -3,6 +3,7 @@ import type { BytesSignedSessionData, BytesSigner } from "./external_signers/byt
 import type { AminoSignedSessionData, AminoSigner } from "./external_signers/amino.js"
 
 export type CosmosMessage = {
+	topic: string
 	address: string
 	chainId: string
 	uri: string

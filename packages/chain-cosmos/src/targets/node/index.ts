@@ -1,5 +1,3 @@
-import type * as ATP from "@atproto/api"
-
 import type { Session } from "@canvas-js/interfaces"
 import { Secp256k1Signer } from "@canvas-js/signed-cid"
 
@@ -40,9 +38,5 @@ class SessionStore {
 export default {
 	getSessionStore() {
 		return new SessionStore()
-	},
-	saveJWTSession(data: ATP.AtpSessionData) {},
-	loadJWTSession(): ATP.AtpSessionData | null {
-		return null
 	},
 } satisfies PlatformTarget

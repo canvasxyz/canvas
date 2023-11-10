@@ -64,15 +64,4 @@ export default {
 	getSessionStore() {
 		return new SignerStore()
 	},
-	saveJWTSession(data) {
-		window.localStorage.setItem("canvas-chain-atp", JSON.stringify(data))
-	},
-	loadJWTSession() {
-		const value = window.localStorage.getItem("canvas-chain-atp")
-		if (value === null) {
-			return null
-		} else {
-			return JSON.parse(value)
-		}
-	},
 } satisfies PlatformTarget

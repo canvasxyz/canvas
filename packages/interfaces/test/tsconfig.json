@@ -8,9 +8,9 @@
   "references": [
     { "path": "../." },
     { "path": "../../interfaces" },
-    // { "path": "../../chain-cosmos" },
+    { "path": "../../chain-cosmos" },
     { "path": "../../chain-ethereum" },
-    // { "path": "../../chain-solana" },
-    // { "path": "../../chain-substrate" }
+    { "path": "../../chain-solana" },
+    { "path": "../../chain-substrate" }
   ]
 }

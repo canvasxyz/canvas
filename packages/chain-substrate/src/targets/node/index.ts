@@ -1,12 +1,10 @@
-import type * as ATP from "@atproto/api"
-
 import type { Session } from "@canvas-js/interfaces"
-import { Secp256k1Signer } from "@canvas-js/signed-cid"
+import { Ed25519Signer } from "@canvas-js/signed-cid"
 
 import type { PlatformTarget } from "../index.js"
 
 class SessionStore {
-	#cache = new Map<string, { session: Session; signer: Secp256k1Signer }>()
+	#cache = new Map<string, { session: Session; signer: Ed25519Signer }>()
 
 	constructor() {}
 
@@ -15,15 +13,15 @@ class SessionStore {
 	}
 
 	public create() {
-		return new Secp256k1Signer()
+		return new Ed25519Signer()
 	}
 
-	public get(topic: string, address: string): { session: Session; signer: Secp256k1Signer } | null {
+	public get(topic: string, address: string): { session: Session; signer: Ed25519Signer } | null {
 		const key = this.getKey(topic, address)
 		return this.#cache.get(key) ?? null
 	}
 
-	public set(topic: string, address: string, session: Session, signer: Secp256k1Signer): void {
+	public set(topic: string, address: string, session: Session, signer: Ed25519Signer): void {
 		const key = this.getKey(topic, address)
 		this.#cache.set(key, { session, signer })
 	}
@@ -40,9 +38,5 @@ class SessionStore {
 export default {
 	getSessionStore() {
 		return new SessionStore()
-	},
-	saveJWTSession(data: ATP.AtpSessionData) {},
-	loadJWTSession(): ATP.AtpSessionData | null {
-		return null
 	},
 } satisfies PlatformTarget

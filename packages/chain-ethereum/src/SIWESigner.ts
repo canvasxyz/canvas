@@ -122,7 +122,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 			blockhash: null,
 		}
 
-		await this.#store.set(topic, address, session, signer)
+		this.#store.set(topic, address, session, signer)
 
 		this.log("created new session for %s: %o", address, session)
 		return session

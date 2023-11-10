@@ -34,7 +34,7 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 		return `Authorizing ${publicKey} to sign actions for ${topic} on behalf of ${address}`
 	}
 
-	private readonly log = logger("canvas:chain-ethereum")
+	private readonly log = logger("canvas:chain-atp")
 
 	#store = target.getSessionStore()
 	#agent = new BskyAgent({ service: `https://${service}` })
@@ -60,24 +60,38 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 		assert(record.text === message, "invalid app.bsky.feed.post record text")
 	}
 
+	private async getAddress(): Promise<string> {
+		if (this.#session !== null) {
+			return this.#session.did
+		}
+
+		const sessionData = target.loadJWTSession()
+		if (sessionData !== null) {
+			this.#session = sessionData
+			await this.#agent.resumeSession(sessionData)
+			return this.#session.did
+		}
+
+		assert(this.options.login !== undefined, "options.login must be provided")
+		const { identifier, password } = await this.options.login()
+		const { success } = await this.#agent.login({ identifier, password })
+		assert(success, "login failed")
+		assert(this.#agent.session !== undefined, "internal error (session not found)")
+		this.#session = this.#agent.session
+		target.saveJWTSession(this.#session)
+
+		return this.#session.did
+	}
+
 	public async getSession(
 		topic: string,
 		options: { chain?: string; timestamp?: number } = {}
 	): Promise<Session<ATPSessionData>> {
 		this.log("getting session %s")
 
-		if (this.#session === null) {
-			assert(this.options.login !== undefined, "options.login must be provided")
+		const address = await this.getAddress()
+		assert(address.startsWith("did:plc:"), "only plc DIDs are supported")
 
-			const { identifier, password } = await this.options.login()
-			const { success, data } = await this.#agent.login({ identifier, password })
-			assert(success, "login failed")
-			assert(this.#agent.session !== undefined, "internal error (session not found)")
-			assert(data.did.startsWith("did:plc:"), "only plc DIDs are supported")
-			this.#session = this.#agent.session ?? null
-		}
-
-		const address = this.#session.did
 		{
 			const { signer, session } = this.#store.get(topic, address) ?? {}
 			if (signer !== undefined && session !== undefined) {

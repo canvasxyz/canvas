@@ -53,7 +53,7 @@ const SessionList: React.FC<SessionListProps> = ({ address }) => {
 					return (
 						<li key={`${address}-${session.message_id}`}>
 							<div>
-								<code className="text-sm">{session.public_key.slice(20)}...</code>
+								<code className="text-sm">{session.public_key}...</code>
 							</div>
 							{session.expiration < Number.MAX_SAFE_INTEGER ? (
 								<div>
