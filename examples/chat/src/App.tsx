@@ -24,6 +24,8 @@ import { ConnectPolkadot } from "./ConnectPolkadot.js"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
 import { ConnectSolana } from "./ConnectSolana.js"
 import { SolanaSigner } from "@canvas-js/chain-solana"
+import { ConnectNEAR } from "./ConnectNEAR.js"
+import { NEARSigner } from "@canvas-js/chain-near"
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
@@ -39,7 +41,14 @@ export const App: React.FC<{}> = ({}) => {
 			initRef.current = true
 			Canvas.initialize({
 				contract,
-				signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
+				signers: [
+					new SIWESigner(),
+					new ATPSigner(),
+					new CosmosSigner(),
+					new SubstrateSigner({}),
+					new SolanaSigner(),
+					new NEARSigner({}),
+				],
 			}).then(setApp, (err) => console.error(err))
 		}
 	}, [])
@@ -57,6 +66,7 @@ export const App: React.FC<{}> = ({}) => {
 					<div className="flex flex-col gap-4">
 						<ConnectSIWE />
 						<ConnectATP />
+						<ConnectNEAR network="mainnet" recipient="somebody" />
 						<ConnectPolkadot />
 						<ConnectSolana />
 						<ConnectCosmosKeplr chainId="osmosis-1" />

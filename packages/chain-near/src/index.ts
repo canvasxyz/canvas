@@ -1,2 +1,1 @@
-export * from "./implementation.js"
-export * from "./createMockSigner.js"
+export { NEARSigner } from "./NEARSigner.js"
