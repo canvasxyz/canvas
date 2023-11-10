@@ -15,6 +15,7 @@ export const useCanvas = (config: CanvasConfig) => {
 				setApp(app)
 			})
 			.catch((error) => {
+				console.error(error)
 				setError(error)
 			})
 	}, [])
@@ -25,7 +26,7 @@ export const useCanvas = (config: CanvasConfig) => {
 export function useLiveQuery<T extends ModelValue = ModelValue>(
 	app: Canvas | null | undefined,
 	modelName: string,
-	query: QueryParams = {}
+	query: QueryParams = {},
 ) {
 	return _useLiveQuery<T>(app?.db, modelName, query)
 }
