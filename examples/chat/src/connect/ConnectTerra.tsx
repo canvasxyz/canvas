@@ -70,15 +70,21 @@ export const ConnectTerra: React.FC<ConnectTerraProps> = ({}) => {
 		)
 	} else if (address !== null && thisIsConnected) {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => disconnect()}>Disconnect Terra wallet</button>
-			</div>
+			<button
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+				onClick={() => disconnect()}
+			>
+				Disconnect Terra wallet
+			</button>
 		)
 	} else {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => connect()}>Connect Terra wallet</button>
-			</div>
+			<button
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+				onClick={() => connect()}
+			>
+				Connect Terra wallet
+			</button>
 		)
 	}
 }

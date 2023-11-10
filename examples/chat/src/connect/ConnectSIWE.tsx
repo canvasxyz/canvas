@@ -81,15 +81,21 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 		)
 	} else if (address !== null && sessionSigner instanceof SIWESigner) {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => disconnect()}>Disconnect ETH wallet</button>
-			</div>
+			<button
+				onClick={() => disconnect()}
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+			>
+				Disconnect ETH wallet
+			</button>
 		)
 	} else {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => connect()}>Connect ETH wallet</button>
-			</div>
+			<button
+				onClick={() => connect()}
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+			>
+				Connect ETH wallet
+			</button>
 		)
 	}
 }

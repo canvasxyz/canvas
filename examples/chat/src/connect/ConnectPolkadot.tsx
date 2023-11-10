@@ -36,15 +36,21 @@ export const ConnectPolkadot: React.FC<ConnectPolkadotProps> = ({}) => {
 		)
 	} else if (address !== null && sessionSigner instanceof SubstrateSigner) {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => disconnect()}>Disconnect Polkadot wallet</button>
-			</div>
+			<button
+				onClick={() => disconnect()}
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+			>
+				Disconnect Polkadot wallet
+			</button>
 		)
 	} else {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => connect()}>Connect Polkadot wallet</button>
-			</div>
+			<button
+				onClick={() => connect()}
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+			>
+				Connect Polkadot wallet
+			</button>
 		)
 	}
 }

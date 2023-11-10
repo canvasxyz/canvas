@@ -62,15 +62,21 @@ export const ConnectCosmosKeplr: React.FC<ConnectCosmosKeplrProps> = ({ chainId 
 		)
 	} else if (address !== null && thisIsConnected) {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => disconnect()}>Disconnect Keplr (Cosmos) wallet</button>
-			</div>
+			<button
+				onClick={() => disconnect()}
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+			>
+				Disconnect Keplr (Cosmos) wallet
+			</button>
 		)
 	} else {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => connect()}>Connect Keplr (Cosmos) wallet</button>
-			</div>
+			<button
+				onClick={() => connect()}
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+			>
+				Connect Keplr (Cosmos) wallet
+			</button>
 		)
 	}
 }

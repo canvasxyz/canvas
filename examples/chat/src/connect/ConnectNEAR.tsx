@@ -82,35 +82,27 @@ export const ConnectNEAR: React.FC<ConnectNEARProps> = ({ contractId, network, r
 		)
 	} else if (address !== null && sessionSigner instanceof NEARSigner) {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => signOut()}>Disconnect NEAR wallet</button>
-			</div>
+			<button
+				onClick={() => signOut()}
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+			>
+				Disconnect NEAR wallet
+			</button>
 		)
 	} else if (address === null) {
-		const buttonEnabledClassName = `p-2 block w-full border-t hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200`
-		const buttonDisabledClassName = `p-2 block w-full border-t bg-gray-100 text-gray-600`
-		const disabled = false // handle === ""
 		return (
-			<div className="border rounded">
-				<div className="p-2 border-b">Connect NEAR</div>
-
-				<button
-					className={disabled ? buttonDisabledClassName : buttonEnabledClassName}
-					disabled={disabled}
-					onClick={(e) => {
-						e.preventDefault()
-						signIn()
-					}}
-				>
-					Log in
-				</button>
-			</div>
+			<button
+				onClick={() => signIn()}
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+			>
+				Connect NEAR wallet
+			</button>
 		)
 	} else {
 		return (
-			<div className="p-2 border rounded bg-gray-100 text-gray-600">
-				<button disabled>Connect NEAR wallet</button>
-			</div>
+			<button disabled className="p-2 border rounded bg-gray-100 text-gray-600">
+				Connect NEAR wallet
+			</button>
 		)
 	}
 }

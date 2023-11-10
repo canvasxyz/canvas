@@ -65,15 +65,21 @@ export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> =
 		)
 	} else if (address !== null && thisIsConnected) {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => disconnect()}>Disconnect Cosmos EVM Metamask wallet</button>
-			</div>
+			<button
+				onClick={() => disconnect()}
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+			>
+				Disconnect Cosmos/EVM Metamask wallet
+			</button>
 		)
 	} else {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => connect()}>Connect Cosmos EVM Metamask wallet</button>
-			</div>
+			<button
+				onClick={() => connect()}
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+			>
+				Connect Cosmos/EVM Metamask wallet
+			</button>
 		)
 	}
 }

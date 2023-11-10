@@ -52,9 +52,12 @@ export const ConnectSolana: React.FC<ConnectSolanaProps> = ({}) => {
 	if (address !== null && sessionSigner instanceof SolanaSigner) {
 		// is logged in
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => disconnect()}>Disconnect Solana wallet</button>
-			</div>
+			<button
+				onClick={() => disconnect()}
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+			>
+				Disconnect Solana wallet
+			</button>
 		)
 	}
 
@@ -63,15 +66,18 @@ export const ConnectSolana: React.FC<ConnectSolanaProps> = ({}) => {
 	// is not logged in
 	if (solanaIsAvailable) {
 		return (
-			<div className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200">
-				<button onClick={() => connect()}>Connect Solana wallet</button>
-			</div>
+			<button
+				onClick={() => connect()}
+				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+			>
+				Connect Solana wallet
+			</button>
 		)
 	} else {
 		return (
-			<div className="p-2 border rounded bg-gray-100 text-gray-600">
-				<button disabled>Connect Solana wallet</button>
-			</div>
+			<button className="p-2 border rounded bg-gray-100 text-gray-600" disabled>
+				Connect Solana wallet
+			</button>
 		)
 	}
 }
