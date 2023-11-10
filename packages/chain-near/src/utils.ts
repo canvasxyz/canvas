@@ -1,4 +1,4 @@
-import { NEARMessage, NEARSessionData } from "./types"
+import { NEARMessage, NEARSessionData } from "./types.js"
 
 export const getKey = (topic: string, address: string) => `canvas/${topic}/${address}`
 

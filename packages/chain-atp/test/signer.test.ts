@@ -1,12 +1,14 @@
 import fs from "node:fs"
+import { randomUUID } from "node:crypto"
 
-import { ATPSigner, parseVerificationMethod, verifyLog } from "@canvas-js/chain-atp"
+import { ATPSigner, verifyLog } from "@canvas-js/chain-atp"
 
 import test from "ava"
 
 const plcOperationLog = JSON.parse(fs.readFileSync("test/plcOperationLog.json", "utf-8"))
 
 test("create and verify session", async (t) => {
+	const topic = randomUUID()
 	const signer = new ATPSigner()
 
 	const address = "did:plc:mmftdzyl74ymn2hhzoahtjcw"
@@ -19,13 +21,13 @@ test("create and verify session", async (t) => {
 
 	for (const [path, uri] of Object.entries(archives)) {
 		const recordArchive = fs.readFileSync(path)
-		await signer.verifySession({
+		await signer.verifySession(topic, {
 			type: "session",
 
 			address: address,
 			publicKey: signingKey,
 
-			data: {
+			authorizationData: {
 				verificationMethod: verificationMethod,
 				recordArchive,
 				recordURI: uri,

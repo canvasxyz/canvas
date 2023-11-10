@@ -128,7 +128,7 @@ const GameDemo = () => {
 				)}
 				<input
 					type="submit"
-					value="Reset"
+					value={boards && boards[0] ? "Reset" : "New game"}
 					onClick={(e) => {
 						e.preventDefault()
 						app.actions.reset({})

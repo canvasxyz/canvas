@@ -1,20 +1,20 @@
-import * as json from "@ipld/dag-json"
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
 import { KeyPair } from "near-api-js"
 import { PublicKey } from "@near-js/crypto"
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type { Signature, Signer, SessionSigner, Action, SessionStore, Message, Session } from "@canvas-js/interfaces"
+import type { Signature, Signer, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
 import { Ed25519Signer } from "@canvas-js/signed-cid"
 
 import { NEARMessage, NEARSessionData } from "./types.js"
 import { assert, signalInvalidType, validateSessionData, addressPattern, getKey, parseAddress } from "./utils.js"
 
+import target from "#target"
+
 export interface NEARSignerInit {
 	chainId?: string
 	keyPair?: KeyPair
-	store?: SessionStore
 	sessionDuration?: number
 }
 
@@ -26,23 +26,22 @@ export class NEARSigner implements SessionSigner {
 
 	#address: string
 	#keyPair: KeyPair
-	#store: SessionStore | null
+	#store = target.getSessionStore()
 	#signers: Record<string, Signer<Message<Action | Session>>> = {}
 	#sessions: Record<string, Session<NEARSessionData>> = {}
 
-	public constructor({ keyPair, store, sessionDuration, chainId }: NEARSignerInit = {}) {
+	public constructor({ keyPair, sessionDuration, chainId }: NEARSignerInit = {}) {
 		this.#keyPair = keyPair ?? KeyPair.fromRandom("ed25519")
 		this.#address = this.#keyPair.getPublicKey().toString().split(":")[1]
 
 		this.chainId = chainId ?? "near:mainnet"
 		this.sessionDuration = sessionDuration ?? null
-		this.#store = store ?? null
 	}
 
 	public readonly match = (chain: string) => addressPattern.test(chain)
 
-	public verifySession(session: Session) {
-		const { publicKey, address, data, timestamp, duration } = session
+	public verifySession(topic: string, session: Session) {
+		const { publicKey, address, authorizationData: data, timestamp, duration } = session
 		assert(validateSessionData(data), "invalid session")
 		const [chain, walletAddress] = parseAddress(address)
 
@@ -50,6 +49,7 @@ export class NEARSigner implements SessionSigner {
 		assert(walletAddress == walletAddressFromPublicKey, "the wallet address does not match the public key")
 
 		const message: NEARMessage = {
+			topic,
 			publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
 			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
@@ -62,50 +62,25 @@ export class NEARSigner implements SessionSigner {
 	public async getSession(topic: string, options: { timestamp?: number } = {}): Promise<Session<NEARSessionData>> {
 		const walletAddress = this.#address
 		const address = `${this.chainId}:${walletAddress}`
-		const key = getKey(topic, address)
 
-		this.log("getting session %s", key)
+		this.log("getting session for %s", address)
 
 		// First check the in-memory cache
-
-		if (this.#sessions[key] !== undefined) {
-			const session = this.#sessions[key]
-			const { timestamp, duration } = session
-			const t = options.timestamp ?? timestamp
-			if (t >= timestamp && t <= timestamp + (duration ?? Infinity)) {
-				this.log("found session %s in cache: %o", key, session)
-				return session
-			} else {
-				this.log("cached session %s has expired", key)
-			}
-		}
-
-		// Then check the persistent store
-		if (this.#store !== null) {
-			const privateSessionData = await this.#store.get(key)
-			if (privateSessionData !== null) {
-				const { type, privateKey, session } = json.parse<{
-					type: "ed25519"
-					privateKey: Uint8Array
-					session: Session<NEARSessionData>
-				}>(privateSessionData)
-
-				assert(type === "ed25519", "invalid signature type")
-
+		{
+			const { session, signer } = this.#store.get(topic, address) ?? {}
+			if (session !== undefined && signer !== undefined) {
 				const { timestamp, duration } = session
 				const t = options.timestamp ?? timestamp
 				if (timestamp <= t && t <= timestamp + (duration ?? Infinity)) {
-					this.#sessions[key] = session
-					this.#signers[key] = new Ed25519Signer(privateKey)
-					this.log("found session %s in store: %o", key, session)
+					this.log("found session for %s in store: %o", address, session)
 					return session
 				} else {
-					this.log("stored session %s has expired", key)
+					this.log("stored session for %s has expired", address)
 				}
 			}
 		}
 
-		this.log("creating new session for %s", key)
+		this.log("creating new session for %s", address)
 
 		const signer = new Ed25519Signer()
 
@@ -113,6 +88,7 @@ export class NEARSigner implements SessionSigner {
 		const issuedAt = new Date(timestamp)
 
 		const message: NEARMessage = {
+			topic,
 			publicKey: signer.uri,
 			issuedAt: issuedAt.toISOString(),
 			expirationTime: null,
@@ -131,7 +107,7 @@ export class NEARSigner implements SessionSigner {
 			type: "session",
 			address: address,
 			publicKey: signer.uri,
-			data: {
+			authorizationData: {
 				signature,
 				publicKey: publicKey.data,
 			},
@@ -140,26 +116,17 @@ export class NEARSigner implements SessionSigner {
 			duration: this.sessionDuration,
 		}
 
-		// save the session and private key in the cache and the store
-		this.#sessions[key] = session
-		this.#signers[key] = signer
-		if (this.#store !== null) {
-			const { type, privateKey } = signer.export()
-			await this.#store.set(key, json.stringify({ type, privateKey, session }))
-		}
+		this.#store.set(topic, address, session, signer)
 
-		this.log("created new session for %s: %o", key, session)
+		this.log("created new session for %s: %o", address, session)
 		return session
 	}
 
-	// i think this method might be totally generic, maybe we could factor it out
 	public sign(message: Message<Action | Session>): Signature {
 		if (message.payload.type === "action") {
 			const { address, timestamp } = message.payload
-			const key = getKey(message.topic, address)
-			const session = this.#sessions[key]
-			const signer = this.#signers[key]
-			assert(session !== undefined && signer !== undefined)
+			const { signer, session } = this.#store.get(message.topic, address) ?? {}
+			assert(signer !== undefined && session !== undefined)
 
 			assert(address === session.address)
 			assert(timestamp >= session.timestamp)
@@ -167,25 +134,18 @@ export class NEARSigner implements SessionSigner {
 
 			return signer.sign(message)
 		} else if (message.payload.type === "session") {
-			const key = getKey(message.topic, message.payload.address)
-			const session = this.#sessions[key]
-			const signer = this.#signers[key]
-			assert(session !== undefined && signer !== undefined)
+			const { signer, session } = this.#store.get(message.topic, message.payload.address) ?? {}
+			assert(signer !== undefined && session !== undefined)
 
 			// only sign our own current sessions
 			assert(message.payload === session)
-
 			return signer.sign(message)
 		} else {
 			signalInvalidType(message.payload)
 		}
 	}
 
-	public async clear() {
-		for (const key of Object.keys(this.#sessions)) {
-			await this.#store?.delete(key)
-			delete this.#sessions[key]
-			delete this.#signers[key]
-		}
+	public async clear(topic: string) {
+		this.#store.clear(topic)
 	}
 }

@@ -1,7 +1,7 @@
 {
   "name": "canvas",
   "private": true,
-  "version": "0.5.1",
+  "version": "0.6.1",
   "type": "module",
   "scripts": {
     "dev": "tsc --build --watch",
@@ -23,7 +23,7 @@
     "@canvas-js/chain-ethereum": "^0.5.1",
     "@canvas-js/hooks": "^0.5.1",
     "@canvas-js/templates": "^0.5.1",
-    "@types/node": "^20.8.10",
+    "@types/node": "^20.9.0",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
     "@typescript-eslint/parser": "^6.10.0",
     "@vueuse/motion": "^2.0.0",
@@ -33,7 +33,7 @@
     "ethers": "^6.8.1",
     "markdown-it-named-code-blocks": "^0.2.0",
     "react": "^18.2.0",
-    "react-chessboard": "^4.3.1",
+    "react-chessboard": "^4.3.2",
     "typescript": "^5.2.2",
     "veaury": "^2.3.12",
     "vitepress": "^1.0.0-rc.24",

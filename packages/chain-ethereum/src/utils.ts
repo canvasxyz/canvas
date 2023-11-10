@@ -3,8 +3,6 @@ import * as siwe from "siwe"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
 
-export const getKey = (topic: string, address: string) => `canvas/${topic}/${address}`
-
 export function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
 		throw new Error(message ?? "assertion failed")
@@ -16,20 +14,24 @@ export function signalInvalidType(type: never): never {
 	throw new TypeError("internal error: invalid type")
 }
 
-export function validateSessionData(data: unknown): data is SIWESessionData {
-	if (data === undefined || data === null) {
+export function validateSessionData(authorizationData: unknown): authorizationData is SIWESessionData {
+	if (authorizationData === undefined || authorizationData === null) {
 		return false
-	} else if (typeof data === "boolean" || typeof data === "number" || typeof data === "string") {
+	} else if (
+		typeof authorizationData === "boolean" ||
+		typeof authorizationData === "number" ||
+		typeof authorizationData === "string"
+	) {
 		return false
-	} else if (CID.asCID(data) !== null) {
+	} else if (CID.asCID(authorizationData) !== null) {
 		return false
-	} else if (data instanceof Uint8Array) {
+	} else if (authorizationData instanceof Uint8Array) {
 		return false
-	} else if (Array.isArray(data)) {
+	} else if (Array.isArray(authorizationData)) {
 		return false
 	}
 
-	const { signature, domain, nonce } = data as Record<string, any>
+	const { signature, domain, nonce } = authorizationData as Record<string, any>
 	return signature instanceof Uint8Array && typeof domain === "string" && typeof nonce === "string"
 }
 

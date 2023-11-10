@@ -1,4 +1,5 @@
 export type NEARMessage = {
+	topic: string
 	publicKey: string
 	issuedAt: string
 	expirationTime: string | null

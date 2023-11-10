@@ -132,8 +132,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		this.messageLog.addEventListener("sync", (event) => this.safeDispatchEvent("sync", event))
 
 		for (const name of runtime.actionNames) {
-			// @ts-ignore
-			this.actions[name] = async (args: any, options: ActionOptions = {}) => {
+			const action: ActionAPI = async (args: any, options: ActionOptions = {}) => {
 				const signer = options.signer ?? signers[0]
 				assert(signer !== undefined, "signer not found")
 
@@ -170,6 +169,8 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 				return { id, result, recipients }
 			}
+
+			Object.assign(this.actions, { [name]: action })
 		}
 	}
 

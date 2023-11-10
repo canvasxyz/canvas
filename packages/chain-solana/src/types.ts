@@ -3,6 +3,7 @@ export type SolanaSessionData = {
 }
 
 export type SolanaMessage = {
+	topic: string
 	publicKey: string
 	issuedAt: string
 	expirationTime: string | null

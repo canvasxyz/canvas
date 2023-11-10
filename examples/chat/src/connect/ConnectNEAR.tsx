@@ -4,7 +4,7 @@ import { connect as nearConnect, keyStores, WalletConnection } from "near-api-js
 
 import { NEARSigner } from "@canvas-js/chain-near"
 
-import { AppContext } from "./AppContext.js"
+import { AppContext } from "../AppContext.js"
 
 export interface ConnectNEARProps {
 	contractId: string

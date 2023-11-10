@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-notes",
-  "version": "0.5.1",
+  "version": "0.6.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -13,8 +13,8 @@
     "dev": "concurrently --kill-others -n backend,frontend 'npm run dev:backend' 'npm run dev:frontend'"
   },
   "dependencies": {
-    "@types/react": "^18.2.36",
-    "@types/react-dom": "^18.2.14",
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "toastify-js": "^1.12.0",
@@ -22,8 +22,8 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@types/toastify-js": "^1.12.2",
-    "@types/uuid": "^9.0.6",
+    "@types/toastify-js": "^1.12.3",
+    "@types/uuid": "^9.0.7",
     "autoprefixer": "^10.4.16",
     "concurrently": "^8.2.2",
     "copy-webpack-plugin": "^11.0.0",

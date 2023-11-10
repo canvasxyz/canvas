@@ -4,28 +4,20 @@ import type { SessionSigner } from "@canvas-js/interfaces"
 import { Canvas } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { ATPSigner } from "@canvas-js/chain-atp"
-
-import contract from "../contract.canvas.js?raw"
+import { CosmosSigner } from "@canvas-js/chain-cosmos"
+import { NEARSigner } from "@canvas-js/chain-near"
+import { SubstrateSigner } from "@canvas-js/chain-substrate"
+import { SolanaSigner } from "@canvas-js/chain-solana"
 
 import { AppContext } from "./AppContext.js"
-import { ConnectSIWE } from "./ConnectSIWE.js"
-import { ConnectATP } from "./ConnectATP.js"
 import { Messages } from "./Chat.js"
 import { MessageComposer } from "./MessageComposer.js"
 import { ControlPanel } from "./ControlPanel.js"
 import { SessionStatus } from "./SessionStatus.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
-import { ConnectCosmosKeplr } from "./ConnectCosmosKeplr.js"
-import { CosmosSigner } from "@canvas-js/chain-cosmos"
-import { ConnectTerra } from "./ConnectTerra.js"
-import { ConnectCosmosEvmMetamask } from "./ConnectCosmosEvmMetamask.js"
-import { ConnectEthereumKeplr } from "./ConnectEthereumKeplr.js"
-import { ConnectPolkadot } from "./ConnectPolkadot.js"
-import { SubstrateSigner } from "@canvas-js/chain-substrate"
-import { ConnectSolana } from "./ConnectSolana.js"
-import { SolanaSigner } from "@canvas-js/chain-solana"
-import { ConnectNEAR } from "./ConnectNEAR.js"
-import { NEARSigner } from "@canvas-js/chain-near"
+import { Connect } from "./connect/index.js"
+
+import contract from "../contract.canvas.js?raw"
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
@@ -64,15 +56,7 @@ export const App: React.FC<{}> = ({}) => {
 						<MessageComposer />
 					</div>
 					<div className="flex flex-col gap-4">
-						<ConnectSIWE />
-						<ConnectATP />
-						<ConnectNEAR network="mainnet" recipient="somebody" />
-						<ConnectPolkadot />
-						<ConnectSolana />
-						<ConnectCosmosKeplr chainId="osmosis-1" />
-						<ConnectEthereumKeplr chainId="evmos_9001-2" />
-						<ConnectTerra />
-						<ConnectCosmosEvmMetamask chainId="osmosis-1" />
+						<Connect />
 						<SessionStatus />
 						<ConnectionStatus />
 						<ControlPanel />

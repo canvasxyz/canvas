@@ -1,5 +1,4 @@
 import React, { useContext, useMemo } from "react"
-import { computeAddress, hexlify } from "ethers"
 import { useLiveQuery } from "@canvas-js/hooks"
 
 import { AppContext } from "./AppContext.js"
@@ -54,7 +53,7 @@ const SessionList: React.FC<SessionListProps> = ({ address }) => {
 					return (
 						<li key={`${address}-${session.message_id}`}>
 							<div>
-								<code className="text-sm">{session.public_key.slice(20)}...</code>
+								<code className="text-sm">{session.public_key}...</code>
 							</div>
 							{session.expiration < Number.MAX_SAFE_INTEGER ? (
 								<div>

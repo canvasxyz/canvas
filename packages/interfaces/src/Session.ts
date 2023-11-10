@@ -3,7 +3,7 @@
  * data representing a user's (temporary) authorization of that
  * keypair to sign actions on their behalf.
  */
-export type Session<Data = any> = {
+export type Session<AuthorizationData = any> = {
 	type: "session"
 
 	/** DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
@@ -13,7 +13,7 @@ export type Session<Data = any> = {
 	publicKey: string
 
 	/** chain-specific session payload, e.g. a SIWE message & signature */
-	data: Data
+	authorizationData: AuthorizationData
 	duration: number | null
 
 	timestamp: number
