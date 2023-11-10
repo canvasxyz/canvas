@@ -11,8 +11,12 @@
   "scripts": {
     "test": "ava"
   },
-  "exports": {
-    ".": "./lib/index.js"
+  "imports": {
+    "#target": {
+      "node": "./lib/targets/node/index.js",
+      "browser": "./lib/targets/browser/index.js",
+      "default": "./lib/targets/default/index.js"
+    }
   },
   "dependencies": {
     "@atproto/api": "^0.6.23",

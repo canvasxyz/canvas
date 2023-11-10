@@ -1,14 +1,29 @@
 import { CID } from "multiformats/cid"
-import solw3 from "@solana/web3.js"
 
-import type { SolanaMessage, SolanaSessionData } from "./types"
-
-export const getKey = (topic: string, address: string) => `canvas/${topic}/${address}`
+import type { SolanaSessionData } from "./types.js"
 
 export function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
 		throw new Error(message ?? "assertion failed")
 	}
+}
+
+export function signalInvalidType(type: never): never {
+	console.error(type)
+	throw new TypeError("internal error: invalid type")
+}
+
+export const addressPattern =
+	/^(solana:[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{32}):([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)$/
+
+export function parseAddress(address: string): [chainId: string, walletAddress: string] {
+	const result = addressPattern.exec(address)
+	if (result === null) {
+		throw new Error(`expected address to match ${addressPattern}`)
+	}
+
+	const [_, chainId, walletAddress] = result
+	return [chainId, walletAddress]
 }
 
 export function validateSessionData(data: unknown): data is SolanaSessionData {
@@ -30,22 +45,4 @@ export function validateSessionData(data: unknown): data is SolanaSessionData {
 	}
 
 	return signature instanceof Uint8Array
-}
-
-export function signalInvalidType(type: never): never {
-	console.error(type)
-	throw new TypeError("internal error: invalid type")
-}
-
-export const addressPattern =
-	/^(solana:[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{32}):([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)$/
-
-export function parseAddress(address: string): [chainId: string, walletAddress: string] {
-	const result = addressPattern.exec(address)
-	if (result === null) {
-		throw new Error(`expected address to match ${addressPattern}`)
-	}
-
-	const [_, chainId, walletAddress] = result
-	return [chainId, walletAddress]
 }

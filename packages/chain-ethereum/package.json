@@ -11,12 +11,11 @@
   "scripts": {
     "test": "ava"
   },
-  "exports": {
-    ".": "./lib/index.js",
-    "./domain": {
-      "node": "./lib/domain/index.node.js",
-      "browser": "./lib/domain/index.browser.js",
-      "default": "./lib/domain/index.js"
+  "imports": {
+    "#target": {
+      "node": "./lib/targets/node/index.js",
+      "browser": "./lib/targets/browser/index.js",
+      "default": "./lib/targets/default/index.js"
     }
   },
   "dependencies": {

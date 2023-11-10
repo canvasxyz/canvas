@@ -48,7 +48,7 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 		const signer = await createSigner()
 
 		const session = await signer.getSession(topic)
-		await t.notThrowsAsync(() => Promise.resolve(signer.verifySession(session)))
+		await t.notThrowsAsync(() => Promise.resolve(signer.verifySession(topic, session)))
 	})
 
 	test(`${name} - sign session and verify session signature`, async (t) => {
@@ -82,8 +82,8 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 		const sessionA = await a.getSession(topic)
 		const sessionB = await b.getSession(topic)
 
-		await t.notThrowsAsync(async () => a.verifySession(sessionB))
-		await t.notThrowsAsync(async () => b.verifySession(sessionA))
+		await t.notThrowsAsync(async () => a.verifySession(topic, sessionB))
+		await t.notThrowsAsync(async () => b.verifySession(topic, sessionA))
 	})
 }
 

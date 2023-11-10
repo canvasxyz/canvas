@@ -7,6 +7,7 @@ export type SubstrateSessionData = {
 }
 
 export type SubstrateMessage = {
+	topic: string
 	address: string
 	chainId: string
 	uri: string
