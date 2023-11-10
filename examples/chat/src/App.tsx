@@ -5,6 +5,7 @@ import { Canvas } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { ATPSigner } from "@canvas-js/chain-atp"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
+import { NEARSigner } from "@canvas-js/chain-near"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 
@@ -32,7 +33,14 @@ export const App: React.FC<{}> = ({}) => {
 			initRef.current = true
 			Canvas.initialize({
 				contract,
-				signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
+				signers: [
+					new SIWESigner(),
+					new ATPSigner(),
+					new CosmosSigner(),
+					new SubstrateSigner({}),
+					new SolanaSigner(),
+					new NEARSigner({}),
+				],
 			}).then(setApp, (err) => console.error(err))
 		}
 	}, [])

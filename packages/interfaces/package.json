@@ -17,6 +17,7 @@
   "devDependencies": {
     "@canvas-js/chain-cosmos": "0.6.1",
     "@canvas-js/chain-ethereum": "0.6.1",
+    "@canvas-js/chain-near": "0.6.1",
     "@canvas-js/chain-solana": "0.6.1",
     "@canvas-js/chain-substrate": "0.6.1",
     "@canvas-js/interfaces": "0.6.1",

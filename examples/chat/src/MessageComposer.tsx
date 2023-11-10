@@ -16,6 +16,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({}) => {
 					const { id, result, recipients } = await app.actions.createMessage({ content: value }, { signer })
 					setValue("")
 				} catch (err) {
+					console.log(err)
 					console.error(err)
 				}
 			}

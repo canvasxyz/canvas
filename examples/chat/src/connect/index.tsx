@@ -8,6 +8,7 @@ import { ConnectCosmosEvmMetamask } from "./ConnectCosmosEvmMetamask.js"
 import { ConnectEthereumKeplr } from "./ConnectEthereumKeplr.js"
 import { ConnectPolkadot } from "./ConnectPolkadot.js"
 import { ConnectSolana } from "./ConnectSolana.js"
+import { ConnectNEAR } from "./ConnectNEAR.js"
 
 export const Connect: React.FC<{}> = ({}) => {
 	const [method, setMethod] = useState("ethereum")
@@ -24,6 +25,7 @@ export const Connect: React.FC<{}> = ({}) => {
 				<option value="solana">Solana</option>
 				<option value="cosmos-kepler">Cosmos/Kepler</option>
 				<option value="ethereum-kepler">Ethereum/Kepler</option>
+				<option value="near">NEAR</option>
 				<option value="terra">Terra</option>
 				<option value="cosmos-evm">Cosmos/EVM</option>
 				<option value="bluesky">BlueSky</option>
@@ -45,6 +47,8 @@ const Method: React.FC<{ method: string }> = (props) => {
 			return <ConnectCosmosKeplr chainId="osmosis-1" />
 		case "ethereum-kepler":
 			return <ConnectEthereumKeplr chainId="evmos_9001-2" />
+		case "near":
+			return <ConnectNEAR contractId="something.near" network="mainnet" recipient="somebody" />
 		case "terra":
 			return <ConnectTerra />
 		case "cosmos-evm":
