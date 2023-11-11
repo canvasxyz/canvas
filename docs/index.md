@@ -2,7 +2,7 @@
 layout: home
 ---
 
-<HeroRow text="Multiplayer computing for the decentralized web" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a peer-to-peer stack for building web applications as decentralized protocols, with no blockchains required." v-bind:bullets="['Provides realtime sync for libp2p and signed data', 'Comes with embedded SQLite + IndexedDB', 'Fully programmable in TypeScript']">
+<HeroRow text="The peer-to-peer TypeScript application runtime" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a stack for building any web application as a protocol running over peer-to-peer networking, with no blockchains required." v-bind:bullets="['Embed core application logic in a realtime, multiwriter database', 'Fast sync using p2p data structures', 'Fully programmable in TypeScript']">
   <HeroAction theme="brand big" text="Tutorial" href="/1-introduction" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>
@@ -14,6 +14,12 @@ layout: home
   <FeatureCard title="CausalVM" details="Build immutable applications, with code and data stored on IPFS data structures."/>
 </FeatureRow>
 -->
+
+<TextRow title="How it Works">
+  <TextItem>Canvas allows you to write fast, data-heavy decentralized applications by expressing the core logic of your application as a series of functions, which have access to a relational database.</TextItem>
+  <TextItem>Applications run entirely over libp2p, with data stored on each node, using an invisible CRDT layer that reconciles input from different actors.</TextItem>
+  <TextItem>It's like smart contracts, but without the blockchain. And you don't need to learn a new language, or new data structures - it just works, like writing a web application in Rails or Next.js.</TextItem>
+</TextRow>
 
 <DemoToggle v-bind:options="['Game', 'Messaging']" defaultOption="Game"></DemoToggle>
 
@@ -75,13 +81,15 @@ const boards = useLiveQuery(app, "boards")
 return <Chessboard position={boards[0].position} onDrop={ ... } />
 ```
 
+<!--
 <TextRow title="About Canvas">
-  <TextItem>Canvas is a framework for writing web applications as decentralized protocols.</TextItem>
-  <TextItem>Canvas applications are defined as <strong>multiplayer contracts</strong> in TypeScript, which run on both the browser and server.</TextItem>
-  <TextItem>User actions are relayed between everyone on the network, and executed by each client. They have access to a <strong>conflict-free multiwriter database</strong>, which allows interactions to be merged as they're received.</TextItem>
-  <TextItem>This also means that unlike blockchains, interactions on Canvas applications sync instantly, without tokens or gas limits.<!-- They can also call outside code, and fetch external data, and let nodes check each others' work. --></TextItem>
-  <TextItem>Today, you can use Canvas as a peer-to-peer network with persistent state, for applications like chat, games, and governance. Or, if you add a data availability service, you can use it as a fully-fledged decentralized app platform.</TextItem>
+  <TextItem>Canvas applications are defined as multiplayer contracts, which run on both the browser and server.</TextItem>
+  <TextItem>User actions are relayed between everyone on the network, and executed by each client. They read and write from a multi-writer, <a href="https://crdt.tech" target="_blank">conflict-free</a> database, which allows interactions to be merged as they're received.</TextItem>
+  <TextItem>This means that unlike blockchains, interactions on Canvas applications sync instantly, without tokens or gas limits.</TextItem>
+  <TextItem>They can also call outside code, fetch external data, or process data that would be difficult or unwieldy to put onchain.</TextItem>
+  <TextItem>Today, you can use Canvas as a peer-to-peer network with persistent state, for applications like chat, games, governance, and decentralized compute. Or, if you add a data availability service, you can also use it as a full-fledged decentralized apps platform.</TextItem>
 </TextRow>
+-->
 
 <FeatureRow title="Interoperable Everywhere" detail="Canvas supports any cryptographically verifiable authentication strategy, including Web3 wallets, W3C DIDs, and even Apple & Google SSO. You can write your own custom adapters to support other authorization methods.">
   <FeatureCard title="Sign in with Wallet" details="Log in with a Web3 wallet from Ethereum. Also supports other chains like Cosmos, Solana, and Polkadot." linkText="Available today" />
