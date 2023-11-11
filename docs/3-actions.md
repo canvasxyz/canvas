@@ -43,3 +43,9 @@ async function deletePost(db, { postId }, { chain, address }) {
   await db.posts.delete(postId)
 }
 ```
+
+## Consistent reads inside actions
+
+When actions with `db.get()` are propagated to other machines or replayed later, the `db.get()` operation always returns the same value that it saw at the time of execution.
+
+We achieve this by doing extra bookkeeping inside the database, and storing an automatically compacted history of the database inside the action log.
