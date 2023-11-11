@@ -6,7 +6,7 @@
 export type Session<AuthorizationData = any> = {
 	type: "session"
 
-	/** DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
+	/** DID or CAIP-2 address that authorized the session (e.g. "eip155:1:0xb94d27...") */
 	address: string
 
 	/** did:key URI of the ephemeral session key used to sign subsequent actions */
@@ -14,8 +14,8 @@ export type Session<AuthorizationData = any> = {
 
 	/** chain-specific session payload, e.g. a SIWE message & signature */
 	authorizationData: AuthorizationData
-	duration: number | null
 
-	timestamp: number
 	blockhash: string | null
+	timestamp: number
+	duration: number | null
 }

@@ -21,28 +21,39 @@ import type { Signature, Message, Action, Session } from "@canvas-js/interfaces"
 interface SessionSigner {
   match: (chain: string) => boolean
 
-  sign: (message: Message<Action | Session>) => Signature
-
   /**
-   * Produce an authenticated Session, which authorizes `session.publicKey`
-   * to represent the user `${session.chain}:${session.address}`.
+   * `getSession` is called by the Canvas runtime for every new action appended
+   * to the log (ie for new actions taken by local users, not existing messages
+   * received from other peers via merkle sync or GossipSub).
    *
-   * The signature is stored in `session.data`, and the entire Session
-   * object is then signed using the session-key and appended to our log.
+   * It's responsible for returning a `Session` that matches the given parameters,
+   * either by looking up a cached session, or by getting user authorization to create
+   * a new one (and then caching it).
+   *
+   * "Matching the given parameters" means that the caller passes a `topic: string`
+   * and an optional `chain?: string; timestamp?: number`, and `getSession` must return
+   * a `Session` authorized for that topic, that specific chain (if provided), and that
+   * is valid for the given timestamp (if provided).
    */
-  getSession: (topic: string, options?: { chain?: string; timestamp?: number }) => Promise<Session>
+  getSession: (topic: string, options?: { chain?: string; timestamp?: number }) => Awaitable<Session<AuthorizationData>>
 
   /**
    * Verify that `session.data` authorizes `session.publicKey`
    * to take actions on behalf of the user `${session.chain}:${session.address}`
    */
-  verifySession: (session: Session) => Promise<void>
+  verifySession: (topic: string, session: Session<AuthorizationData>) => Awaitable<void>
+
+  clear(topic: string): Awaitable<void>
 }
 ```
 
-To create a new session signer, you should define a `getSession` method which produces a new `Session` object with the appropriate authorization data (e.g. a signed SIWE message, EIP-712 message, etc.), and define a `verifySession` method which verifies that the provided session data was correctly signed.
+To create a new session signer, you should define a `getSession` method which produces a new `Session` object with the appropriate authorization data (e.g. a signed SIWE message, EIP-712 message, etc.).
 
-Families of chains are expressed as `match: (chain: string) => boolean` predicates over CAIP-2 prefixes. When an app receives a new session from one of its peers, it searches its available session signers to find one matching `signer.match(session.chain)`, and uses it to verify the chain-specific authorization data with `await signer.verifySession(session)`.
+Also define a `verifySession` method which verifies that the provided session data was correctly signed.
+
+To define which chains or authorization strategies your signer works with, you should supply an implementation of the `match: (chain: string) => boolean` method.
+
+When an app receives a new session from one of its peers, it searches its available session signers to find one matching `signer.match(session.chain)`, and uses it to verify the chain-specific authorization data with `await signer.verifySession(session)`.
 
 Once the user has provided the chain-specific session authorization data, it’s wrapped in a `Session` object and added to the message log, alongside actions themselves.
 
@@ -50,17 +61,14 @@ Once the user has provided the chain-specific session authorization data, it’s
 type Session = {
   type: "session"
 
-  /** CAIP-2 prefix, e.g. "eip155:1" for mainnet Ethereum */
-  chain: string
-  /** CAIP-2 address (without the prefix, e.g. "0xb94d27...") */
+  /** DID or CAIP-2 address that authorized the session (e.g. "eip155:1:0xb94d27...") */
   address: string
 
-  /** ephemeral session key used to sign subsequent actions */
-  publicKeyType: "ed25519" | "secp256k1"
-  publicKey: Uint8Array
+  /** did:key URI of the ephemeral session key used to sign subsequent actions */
+  publicKey: string
 
-  /** chain-specific session authorization, e.g. a SIWE message & signature */
-  data: any
+  /** chain-specific session payload, e.g. a SIWE message & signature */
+  authorizationData: any
 
   blockhash: string | null
   timestamp: number
@@ -68,15 +76,13 @@ type Session = {
 }
 ```
 
-The ephemeral session key is a regular Ed25519 or Secp256k1 keypair generated and managed by the signer, defined in the `SessionSigner` interface.
+The ephemeral session key is a regular Ed25519 or Secp256k1 keypair generated and managed by the signer, defined in the `SessionSigner` interface. Its public key is included in the session, as a `did:key` URI. (We may add a couple of other formats for ephemeral session keys in the future, that can be verified on-chain.)
 
-We may add a couple of other types of keypairs here in the future, to make on-chain verification of Canvas actions easier.
-
-The session `data` type is unique to each Signer class, and includes the particular signature format, as well as any other metadata used to generate the signature (e.g. some signers require nonces, domain identifiers, or other information).
+The session `data` type is unique to each Signer class, and includes the particular signature format, as well as any other metadata used to generate the signature - e.g. some signers require nonces, domain identifiers, or other information.
 
 ## Validating custom action schemas using IPLD
 
-By default, Canvas apps will accept any IPLD value as the argument to an action (this includes valid JSON and CBOR values).
+By default, Canvas apps will accept any IPLD value as the argument to an action (this includes valid JSON and CBOR values, as those are subsets of IPLD).
 
 It's up to each action handler to validate its `args` and throw an error if they're invalid.
 
