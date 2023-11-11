@@ -1,6 +1,11 @@
 # Querying the database
 
-You can only write to the database inside an action handler, but you can query it from either inside the action handler by using `app.db.get` or `app.db.query`, or outside it with `useLiveQuery`.
+You can write to the database inside an action handler, but you can query it either inside or outside the action handler.
+
+- Inside the action handler, use `await db.table.get(pk)` or `await db.table.query(pk)`.
+- Outside the action handler, use `await app.db.get("table", pk)`, `await app.db.query("table", pk)`, or `useLiveQuery` for a live-updating subscription to the query.
+
+The database implements a conflict-free history for past data. Reads are guaranteed to return the same value, even if they are merged on a node that has processed other actions in the meantime.
 
 ### Getting individual records
 
