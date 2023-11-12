@@ -22,19 +22,21 @@ export const useTick = (app: Canvas<TickingContract>, condition: string | null, 
 		}
 
 		let queryNot: boolean
-		let queryModel: string
-		let queryField: string
+		let queryTable: string
+		let queryRow: string
+		let queryPath: string
 
 		if (condition) {
-			const matches = condition.match(/^(!)?(\w+)\.(\w+)$/)
+			const matches = condition.match(/^(!)?(\w+)\.(\w+).(\w+)$/)
 
 			if (!matches) {
 				throw new Error("useTick: invalid condition, must match model.field or !model.field")
 			}
 
-			queryNot = matches[0] === "!"
-			queryModel = matches[1]
-			queryField = matches[2]
+			queryNot = matches[1] === "!"
+			queryTable = matches[2]
+			queryRow = matches[3]
+			queryPath = matches[4]
 		}
 
 		const tickListener = async (event: CanvasLogEvent) => {
@@ -65,8 +67,11 @@ export const useTick = (app: Canvas<TickingContract>, condition: string | null, 
 
 			// don't tick if the condition isn't satisfied
 			if (condition) {
-				const result = await app.db.get(queryModel, queryField)
-				if (queryNot ? !result : result) {
+				const result = await app.db.get(queryTable, queryRow)
+				if (!result) {
+					throw new Error(`No model found at ${queryTable}.${queryRow}`)
+				}
+				if (queryNot ? !result[queryPath] : result[queryPath]) {
 					app.actions.tick({})
 				}
 			} else {
