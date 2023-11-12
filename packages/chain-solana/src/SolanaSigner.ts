@@ -52,14 +52,14 @@ export class SolanaSigner implements SessionSigner {
 				sign: async (msg) => {
 					const { signature } = await signer.signMessage(msg)
 					return signature
-				},
+				}
 			}
 		} else {
 			const privateKey = ed25519.utils.randomPrivateKey()
 			const publicKey = ed25519.getPublicKey(privateKey)
 			this.#signer = {
 				address: base58btc.baseEncode(publicKey),
-				sign: async (msg) => ed25519.sign(msg, privateKey),
+				sign: async (msg) => ed25519.sign(msg, privateKey)
 			}
 		}
 
@@ -80,7 +80,7 @@ export class SolanaSigner implements SessionSigner {
 			topic,
 			publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
+			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString()
 		}
 
 		const signingPublicKey = base58btc.baseDecode(walletAddress)
@@ -90,7 +90,10 @@ export class SolanaSigner implements SessionSigner {
 		assert(valid, "invalid signature")
 	}
 
-	public async getSession(topic: string, options: { timestamp?: number } = {}): Promise<Session<SolanaSessionData>> {
+	public async getSession(
+		topic: string,
+		options: { timestamp?: number; fromCache?: boolean } = {}
+	): Promise<Session<SolanaSessionData>> {
 		const walletAddress = this.#signer.address
 		const address = `${this.chainId}:${walletAddress}`
 
@@ -110,6 +113,8 @@ export class SolanaSigner implements SessionSigner {
 			}
 		}
 
+		if (options.fromCache) return Promise.reject()
+
 		this.log("creating new session for %s", address)
 
 		const signer = new Ed25519Signer()
@@ -121,7 +126,7 @@ export class SolanaSigner implements SessionSigner {
 			topic,
 			publicKey: signer.uri,
 			issuedAt: issuedAt.toISOString(),
-			expirationTime: null,
+			expirationTime: null
 		}
 
 		if (this.sessionDuration !== null) {
@@ -140,7 +145,7 @@ export class SolanaSigner implements SessionSigner {
 			authorizationData: { signature },
 			blockhash: null,
 			timestamp,
-			duration: this.sessionDuration,
+			duration: this.sessionDuration
 		}
 
 		this.#store.set(topic, address, session, signer)

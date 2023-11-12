@@ -21,7 +21,10 @@ export interface SessionSigner<AuthorizationData = any> extends Signer<Message<A
 	 * a `Session` authorized for that topic, that specific chain (if provided), and that
 	 * is valid for the given timestamp (if provided).
 	 */
-	getSession: (topic: string, options?: { chain?: string; timestamp?: number }) => Awaitable<Session<AuthorizationData>>
+	getSession: (
+		topic: string,
+		options?: { chain?: string; timestamp?: number; fromCache?: boolean }
+	) => Awaitable<Session<AuthorizationData>>
 
 	/**
 	 * Verify that `session.data` authorizes `session.publicKey`

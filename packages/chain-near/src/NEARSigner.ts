@@ -52,14 +52,17 @@ export class NEARSigner implements SessionSigner {
 			topic,
 			publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
+			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString()
 		}
 
 		const valid = ed25519.verify(data.signature, cbor.encode(message), data.publicKey)
 		assert(valid, "invalid signature")
 	}
 
-	public async getSession(topic: string, options: { timestamp?: number } = {}): Promise<Session<NEARSessionData>> {
+	public async getSession(
+		topic: string,
+		options: { timestamp?: number; fromCache?: boolean } = {}
+	): Promise<Session<NEARSessionData>> {
 		const walletAddress = this.#address
 		const address = `${this.chainId}:${walletAddress}`
 
@@ -80,6 +83,8 @@ export class NEARSigner implements SessionSigner {
 			}
 		}
 
+		if (options.fromCache) return Promise.reject()
+
 		this.log("creating new session for %s", address)
 
 		const signer = new Ed25519Signer()
@@ -91,7 +96,7 @@ export class NEARSigner implements SessionSigner {
 			topic,
 			publicKey: signer.uri,
 			issuedAt: issuedAt.toISOString(),
-			expirationTime: null,
+			expirationTime: null
 		}
 
 		if (this.sessionDuration !== null) {
@@ -109,11 +114,11 @@ export class NEARSigner implements SessionSigner {
 			publicKey: signer.uri,
 			authorizationData: {
 				signature,
-				publicKey: publicKey.data,
+				publicKey: publicKey.data
 			},
 			blockhash: null,
 			timestamp,
-			duration: this.sessionDuration,
+			duration: this.sessionDuration
 		}
 
 		this.#store.set(topic, address, session, signer)

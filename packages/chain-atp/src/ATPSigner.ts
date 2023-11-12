@@ -85,7 +85,7 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 
 	public async getSession(
 		topic: string,
-		options: { chain?: string; timestamp?: number } = {}
+		options: { chain?: string; timestamp?: number; fromCache?: boolean } = {}
 	): Promise<Session<ATPSessionData>> {
 		this.log("getting session %s")
 
@@ -105,6 +105,8 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 				}
 			}
 		}
+
+		if (options.fromCache) return Promise.reject()
 
 		this.log("creating new session for %s", address)
 
@@ -144,11 +146,11 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 				verificationMethod,
 				recordArchive: result.data,
 				recordURI: uri,
-				plcOperationLog,
+				plcOperationLog
 			},
 			blockhash: null,
 			duration: null,
-			timestamp: options.timestamp ?? Date.now(),
+			timestamp: options.timestamp ?? Date.now()
 		}
 
 		this.#store.set(topic, address, session, signer)
