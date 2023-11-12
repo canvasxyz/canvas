@@ -8,6 +8,7 @@ title: "Advanced Features"
 
 - [Creating your own session signer](#creating-your-own-session-signer)
 - [Validating custom action schemas using IPLD](#validating-custom-action-schemas-using-ipld)
+- [Debugging](#debugging)
 
 ## Creating your own session signer
 
@@ -144,3 +145,13 @@ const app = await Canvas.initialize({
   },
 })
 ```
+
+## Debugging
+
+To enable debugging output, you can set a filter in localStorage:
+
+`localStorage.setItem("debug", "canvas:*")`
+
+When using the command line, set an environment variable instead:
+
+`DEBUG="canvas:*"`
