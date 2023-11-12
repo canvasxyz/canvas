@@ -6,7 +6,7 @@ import { parseConfig } from "../config.js"
 import { Awaitable, assert, signalInvalidType } from "../utils.js"
 
 import { ModelAPI } from "./api.js"
-import { getIndexName } from "./utils.js"
+import { getIndexName, checkForMissingObjectStores } from "./utils.js"
 
 export interface ModelDBOptions {
 	name: string
@@ -82,6 +82,7 @@ export class ModelDB extends AbstractModelDB {
 		fn: (txn: IDBPTransaction<any, any, "readonly">) => Awaitable<T>,
 		objectStoreNames: string[] = [...this.db.objectStoreNames]
 	) {
+		checkForMissingObjectStores(this.db, objectStoreNames)
 		const txn = this.db.transaction(objectStoreNames, "readonly")
 		return await fn(txn)
 	}
@@ -110,6 +111,7 @@ export class ModelDB extends AbstractModelDB {
 		assert(api !== undefined, `model ${modelName} not found`)
 
 		// TODO: re-open the transaction if the caller awaits on other promises between yields
+		checkForMissingObjectStores(this.db, [api.storeName])
 		const txn = this.db.transaction([api.storeName], "readonly", {})
 		yield* api.iterate(txn)
 	}
@@ -130,6 +132,7 @@ export class ModelDB extends AbstractModelDB {
 	public async count(modelName: string): Promise<number> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
+		checkForMissingObjectStores(this.db, [api.storeName])
 		return await this.db.count(api.storeName)
 	}
 
