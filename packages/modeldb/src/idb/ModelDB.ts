@@ -36,7 +36,7 @@ export class ModelDB extends AbstractModelDB {
 						recordObjectStore.createIndex(getIndexName(index), property)
 					}
 				}
-			},
+			}
 		})
 
 		return new ModelDB(db, config, { indexHistory })
@@ -107,7 +107,7 @@ export class ModelDB extends AbstractModelDB {
 
 	public async *iterate(modelName: string): AsyncIterable<ModelValue> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, "model not found")
+		assert(api !== undefined, `model ${modelName} not found`)
 
 		// TODO: re-open the transaction if the caller awaits on other promises between yields
 		const txn = this.db.transaction([api.storeName], "readonly", {})
@@ -116,20 +116,20 @@ export class ModelDB extends AbstractModelDB {
 
 	public async get(modelName: string, key: string): Promise<ModelValue | null> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, "model API not found")
+		assert(api !== undefined, `model ${modelName} not found`)
 		return await this.read((txn) => api.get(txn, key), [api.storeName])
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, "model API not found")
+		assert(api !== undefined, `model ${modelName} not found`)
 		const result = await this.read((txn) => api.query(txn, query), [api.storeName])
 		return result as T[]
 	}
 
 	public async count(modelName: string): Promise<number> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, "model API not found")
+		assert(api !== undefined, `model ${modelName} not found`)
 		return await this.db.count(api.storeName)
 	}
 
@@ -137,7 +137,7 @@ export class ModelDB extends AbstractModelDB {
 		await this.write(async (txn) => {
 			for (const effect of effects) {
 				const api = this.#models[effect.model]
-				assert(api !== undefined, "model API not found")
+				assert(api !== undefined, `model ${effect.model} not found`)
 				if (effect.operation === "set") {
 					await api.set(txn, effect.value)
 				} else if (effect.operation === "delete") {
@@ -150,7 +150,7 @@ export class ModelDB extends AbstractModelDB {
 			await Promise.all(
 				[...this.subscriptions.values()].map(async ({ model, query, filter, callback }) => {
 					const api = this.#models[model]
-					assert(api !== undefined, "model API not found")
+					assert(api !== undefined, `model ${model} not found`)
 					if (effects.some((effect) => filter(effect))) {
 						try {
 							const results = await api.query(txn, query)

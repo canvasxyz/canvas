@@ -53,7 +53,7 @@ export class ModelDB extends AbstractModelDB {
 		for (const { model, query, filter, callback } of this.subscriptions.values()) {
 			if (effects.some(filter)) {
 				const api = this.#models[model]
-				assert(api !== undefined, `model API not found`)
+				assert(api !== undefined, `model ${model} not found`)
 				try {
 					callback(api.query(query))
 				} catch (err) {
