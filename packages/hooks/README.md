@@ -6,6 +6,7 @@ Hooks for using Canvas applications in React.
 
 - [`useCanvas`](#usecanvas)
 - [`useLiveQuery`](#uselivequery)
+- [`useTick`](#usetick)
 
 ## `useCanvas`
 
@@ -27,7 +28,7 @@ export function MyApp() {
 
 ## `useLiveQuery`
 
-The `useLiveQuery` hook maintains a reactive frontend query on top of a Canvas application.
+The `useLiveQuery` hook maintains a live-updated frontend query on top of a Canvas application.
 
 You can see a more [complete example here](/readme-core.html#subscribing-to-live-queries).
 
@@ -44,4 +45,54 @@ export function MyComponent({ app }: { app?: Canvas }) {
     where: category === "all" ? undefined : { category },
   })
 }
+```
+
+## `useTick`
+
+`useTick(app: Canvas, condition: string | null, interval: number)`
+
+The `useTick` hook calls a `tick()` action on a contract at a regular interval.
+
+* Ticking will only run if the user has started a session.
+* If any other user on the log has called tick() within the last `interval`, the tick
+  will be skipped.
+* Since ticking is purely client-side, contracts will stop ticking if no
+  appropriately configured clients are present.
+
+Note that useTick() does not do any special accounting for networking -
+it is possible that if two users start their timers at around the same time, their
+clocks will be synchronized and each will emit tick() events around the same time.
+
+Ticking can be configured to only run when a certain condition in the database is true.
+
+```
+const models = {
+  state: {
+    gameOver: "boolean"
+  }
+}
+
+const actions = {
+  toggleGameStart: (db) => {
+    const { gameOver } = await db.state.get()
+    db.state.set({ gameOver: !gameOver })
+  }
+  tick: (db} => {
+    // ...
+  }
+}
+
+const { app } = useCanvas({
+  contract: { models, actions }
+})
+
+useTick(app, '!state.gameOver', 1000)
+```
+
+The condition can be any query of the form `model.field` or `!model.field`.
+
+If would prefer not to use a condition, you can also leave it null.
+
+```
+useTick(app, null, 1000)
 ```

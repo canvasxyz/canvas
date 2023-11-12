@@ -51,6 +51,13 @@ export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown>
 	disconnect: CustomEvent<{ peer: PeerId }>
 }
 
+export type CanvasLogEvent = CustomEvent<{
+	id: string
+	signature: unknown
+	message: Message<Action | Session>
+	result: unknown
+}>
+
 export type ApplicationData = {
 	peerId: string
 	topic: string
@@ -80,7 +87,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				topic: runtime.topic,
 				apply: runtime.getConsumer(),
 				validate: validatePayload,
-				indexAncestors: indexHistory,
+				indexAncestors: indexHistory
 			}
 		)
 
@@ -145,7 +152,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				// Check if the session has already been added to the message log
 				const results = await runtime.db.query("$sessions", {
 					where: { address, public_key, expiration: { gt: timestamp } },
-					limit: 1,
+					limit: 1
 				})
 
 				this.log("got %d matching sessions: %o", results.length, results)
@@ -204,7 +211,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			peerId: this.peerId.toString(),
 			topic: this.topic,
 			models: models,
-			actions: Object.keys(this.actions),
+			actions: Object.keys(this.actions)
 		}
 	}
 
