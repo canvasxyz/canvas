@@ -121,7 +121,7 @@ export abstract class AbstractRuntime {
 					where: {
 						public_key: signature.publicKey,
 						address: address,
-						expiration: { gt: timestamp },
+						expiration: { gte: timestamp },
 					},
 				})
 
