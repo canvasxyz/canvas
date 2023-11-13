@@ -1,5 +1,5 @@
-const maxX = 30
-const maxY = 30
+export const maxX = 30
+export const maxY = 30
 
 const models = {
 	state: {
@@ -32,7 +32,15 @@ const actions = {
 		if (["n", "e", "w", "s"].indexOf(direction) === -1) {
 			throw new Error()
 		}
-		const { tickCount, tiles, gameOver } = await db.state.get("0") // redundant
+		const { direction: currentDirection, tickCount, tiles, gameOver } = await db.state.get("0")
+		if (
+			(direction === "n" && currentDirection === "s") ||
+			(direction === "s" && currentDirection === "n") ||
+			(direction === "e" && currentDirection === "w") ||
+			(direction === "w" && currentDirection === "e")
+		) {
+			throw new Error()
+		}
 		await db.state.set({ key: "0", direction, tickCount, tiles, gameOver })
 	},
 	tick: async (db) => {

@@ -4,7 +4,7 @@ import "./App.css"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { useCanvas, useLiveQuery, useTick } from "@canvas-js/hooks"
 
-import { contract } from "./contract.js"
+import { contract, maxX, maxY } from "./contract.js"
 
 function App() {
 	const wallet = ethers.Wallet.createRandom()
@@ -13,8 +13,10 @@ function App() {
 		signers: [new SIWESigner({ signer: wallet })]
 	})
 
-	const state = useLiveQuery(app, "state")
-	useTick(app, "!state.0.gameOver", 1000)
+	const stateQuery = useLiveQuery(app, "state")
+	const state = stateQuery && stateQuery[0]
+	const tiles = state?.tiles && JSON.parse(state.tiles)
+	useTick(app, "!state.0.gameOver", 200)
 
 	const send = (e) => {
 		e.preventDefault()
@@ -27,14 +29,39 @@ function App() {
 
 	return (
 		<div>
-			<form onSubmit={send}>
-				<button type="submit">Reset</button>
-			</form>
 			<button onClick={turn.bind(this, "n")}>{"^"}</button>
 			<button onClick={turn.bind(this, "w")}>{"<"}</button>
 			<button onClick={turn.bind(this, "e")}>{">"}</button>
 			<button onClick={turn.bind(this, "s")}>{"v"}</button>
-			<div>{state && JSON.stringify(state)}</div>
+			<button onClick={send}>Reset</button>
+			<div>
+				<span>Score: {Math.floor(state?.tickCount / 5)}</span> <span>{state?.gameOver && "Game Over"}</span>
+			</div>
+			{state && (
+				<div style={{ lineHeight: 1 }}>
+					{new Array(maxY).fill(0).map((unused, yinv) => (
+						<div key={maxY - yinv}>
+							{new Array(maxX).fill(0).map((unused, x) => (
+								<div
+									key={x}
+									style={{
+										width: 18,
+										height: 18,
+										margin: "1px 2px",
+										background: tiles.find(([tileX, tileY]) => {
+											const y = maxY - yinv
+											return x === tileX && y === tileY
+										})
+											? "#fff"
+											: "#333",
+										display: "inline-block"
+									}}
+								></div>
+							))}
+						</div>
+					))}
+				</div>
+			)}
 		</div>
 	)
 }
