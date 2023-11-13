@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { encryptSafely, decryptSafely, getEncryptionPublicKey } from "@metamask/eth-sig-util"
 import { ethers } from "ethers"
+
+import type { Canvas } from "@canvas-js/core"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
@@ -31,7 +33,6 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 				},
 				encryptionGroups: {
 					id: "primary",
-					members: "string",
 					groupKeys: "string",
 					key: "string"
 				},
@@ -55,13 +56,12 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 					db.encryptionKeys.set({ address, key })
 				},
 				createEncryptionGroup: (db, { members, groupKeys, groupPublicKey }, { address }) => {
-					// TODO: enforce the encryption group is valid
+					// TODO: enforce the encryption group is sorted correctly, and each groupKey is registered correctly
 					if (members.indexOf(fromCAIP(address)) === -1) throw new Error()
 					const id = members.join()
 
 					db.encryptionGroups.set({
 						id,
-						members: JSON.stringify(members),
 						groupKeys: JSON.stringify(groupKeys),
 						key: groupPublicKey
 					})
@@ -131,10 +131,7 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 				data: message,
 				version: "x25519-xsalsa20-poly1305"
 			})
-			console.log(encryptedData)
 			const ciphertext = JSON.stringify(encryptedData)
-			console.log(ciphertext)
-
 			return app.actions.sendPrivateMessage({ group, ciphertext })
 		}
 	}
@@ -167,25 +164,17 @@ function Wrapper() {
 }
 
 function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wallet }) {
-	const { app, people, registerEncryptionKey, createEncryptionGroup, /*sendLobbyMessage,*/ sendPrivateMessage } =
-		useChat("example-topic", wallet1)
+	const { app, people, registerEncryptionKey, createEncryptionGroup, sendPrivateMessage } = useChat(
+		"example-topic",
+		wallet1
+	)
 
 	const { registerEncryptionKey: registerEncryptionKey2 } = useChat("example-topic", wallet2)
 
 	const registration1 = useLiveQuery(app, "encryptionKeys", { where: { address: toCAIP(wallet1?.address) } })
 	const registration2 = useLiveQuery(app, "encryptionKeys", { where: { address: toCAIP(wallet2?.address) } })
 
-	const groups = useLiveQuery(app, "encryptionGroups", {
-		where: { id: getGroupId(wallet1.address, wallet2.address) }
-	})
-
-	const messages = useLiveQuery(app, "privateMessages", {
-		where: { group: getGroupId(wallet1.address, wallet2.address) }
-	})
-
-	// TODO: const [conversation, setConversation] = useState<string>()
-
-	const inputRef = useRef<HTMLInputElement>(null)
+	const [conversationAddress, setConversationAddress] = useState<string>()
 
 	return (
 		<div style={{ height: "100vh" }}>
@@ -195,7 +184,11 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 					<h3>Conversations</h3>
 					<div>
 						{people?.map((person) => (
-							<button key={person.address as string} style={{ width: "100%", textAlign: "left" }}>
+							<button
+								key={person.address as string}
+								style={{ width: "100%", textAlign: "left" }}
+								onClick={(e) => setConversationAddress(person.address)}
+							>
 								{formatAddress(fromCAIP(person.address))} <span title={person.key}>🔐</span>{" "}
 								{fromCAIP(person.address) === wallet1?.address && <span>[You]</span>}
 								{fromCAIP(person.address) === wallet2?.address && <span>[Guest]</span>}
@@ -208,34 +201,14 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 				<div style={{ flex: 1 }}>
 					<h3>Chatbox</h3>
 					<div>
-						{groups && groups?.length > 0 ? (
-							<div>
-								<div>{messages?.length} messages</div>
-								{messages?.map((message) => (
-									<Message wallet={wallet1} key={message.id as string} message={message} groups={groups} />
-								))}
-								<form
-									onSubmit={(e) => {
-										e.preventDefault()
-										if (!inputRef.current) return
-										sendPrivateMessage(wallet2.address, inputRef.current.value).then(() => {
-											if (inputRef.current === null) return
-											inputRef.current.value = ""
-										})
-									}}
-								>
-									<input ref={inputRef} type="text" placeholder="Type a message..." />
-								</form>
-							</div>
-						) : (
-							<button
-								onClick={() => {
-									if (!wallet2) return
-									createEncryptionGroup(wallet2.address)
-								}}
-							>
-								Create encryption group
-							</button>
+						{app && conversationAddress && (
+							<Conversation
+								app={app}
+								wallet={wallet1}
+								conversationAddress={fromCAIP(conversationAddress)}
+								sendPrivateMessage={sendPrivateMessage}
+								createEncryptionGroup={createEncryptionGroup}
+							/>
 						)}
 					</div>
 				</div>
@@ -265,7 +238,7 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 					<button
 						onClick={async () => {
 							const dbs = await window.indexedDB.databases()
-							dbs.forEach((db) => window.indexedDB.deleteDatabase(db.name))
+							dbs.forEach((db) => db.name && window.indexedDB.deleteDatabase(db.name))
 							location.reload()
 						}}
 					>
@@ -277,8 +250,66 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 	)
 }
 
-const Message = ({ wallet, message, groups }) => {
+const Conversation = ({
+	app,
+	wallet,
+	conversationAddress,
+	createEncryptionGroup,
+	sendPrivateMessage
+}: {
+	app: Canvas
+	wallet: ethers.Wallet
+	conversationAddress: string
+	createEncryptionGroup: (recipient: string) => Promise<{ id: string; result: any; recipients: unknown }>
+	sendPrivateMessage: (recipient: string, message: string) => Promise<void>
+}) => {
+	const groups = useLiveQuery(app, "encryptionGroups", {
+		where: { id: getGroupId(wallet.address, conversationAddress) }
+	})
+
+	const messages = useLiveQuery(app, "privateMessages", {
+		where: { group: getGroupId(wallet.address, conversationAddress) }
+	})
+
+	const inputRef = useRef<HTMLInputElement>(null)
+
+	return (
+		<div>
+			<div>You and {formatAddress(conversationAddress)}</div>
+			<div>{messages?.length} messages</div>
+			{groups?.length === 0 && (
+				<button
+					onClick={async () => {
+						await createEncryptionGroup(conversationAddress)
+					}}
+				>
+					Create encryption group
+				</button>
+			)}
+			{messages?.map((message) => (
+				<Message wallet={wallet} key={message.id as string} message={message} groups={groups} />
+			))}
+			{groups?.length !== 0 && (
+				<form
+					onSubmit={(e) => {
+						e.preventDefault()
+						if (!inputRef.current) return
+						sendPrivateMessage(conversationAddress, inputRef.current.value).then(() => {
+							if (inputRef.current === null) return
+							inputRef.current.value = ""
+						})
+					}}
+				>
+					<input ref={inputRef} type="text" placeholder="Type a message..." />
+				</form>
+			)}
+		</div>
+	)
+}
+
+const Message = ({ wallet, message, groups }: { wallet: ethers.Wallet; message: any; groups: any }) => {
 	const [decryptedMessage, setDecryptedMessage] = useState<string>()
+	const [decryptedFromAddress, setDecryptedFromAddress] = useState<string>()
 
 	const privateKey = wallet.privateKey
 	const { group, ciphertext } = message
@@ -286,11 +317,13 @@ const Message = ({ wallet, message, groups }) => {
 	useEffect(() => {
 		const groupObj = groups.find((g) => g.id === group)
 		const groupKeys = groupObj && JSON.parse(groupObj?.groupKeys)
+		const groupAddresses = groupObj?.id.split(",")
 
 		const decrypted = groupKeys
-			?.map((encryptedData) => {
+			?.map((encryptedData, index) => {
 				try {
-					return decryptSafely({ encryptedData, privateKey: privateKey.slice(2) })
+					const decryptionKey = decryptSafely({ encryptedData, privateKey: privateKey.slice(2) })
+					return [decryptionKey, groupAddresses[index]]
 				} catch (err) {
 					return null
 				}
@@ -298,13 +331,22 @@ const Message = ({ wallet, message, groups }) => {
 			.filter((value: string | null) => value)
 		if (!decrypted) return
 
-		const decryptionKey = decrypted[0]
+		const [decryptionKey, fromAddress] = decrypted[0]
 		const encryptedData = JSON.parse(ciphertext)
-		const decryptedMessage = decryptSafely({ encryptedData, privateKey: decryptionKey.slice(2) })
-		setDecryptedMessage(decryptedMessage)
+		try {
+			const decryptedMessage = decryptSafely({ encryptedData, privateKey: decryptionKey.slice(2) })
+			setDecryptedFromAddress(fromAddress)
+			setDecryptedMessage(decryptedMessage)
+		} catch (err) {
+			setDecryptedMessage("Message could not be decrypted.")
+		}
 	}, [privateKey, group, ciphertext, groups])
 
-	return <div>message: {decryptedMessage}</div>
+	return (
+		<div>
+			{formatAddress(decryptedFromAddress)}: {decryptedMessage}
+		</div>
+	)
 }
 
 export default Wrapper
