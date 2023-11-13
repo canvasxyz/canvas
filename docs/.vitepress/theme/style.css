@@ -111,15 +111,16 @@ body {
 .VPSidebar {
   padding-bottom: 20px !important; /* override default padding-bottom: 128px */
 }
-.VPSidebar .items {
-  margin-left: 24px;
-}
 .VPSidebar .item h2.text {
   margin-bottom: 4px;
 }
 .VPSidebar .item h2.text,
 .VPSidebar .items .VPLink .text {
   font-size: 16px;
+}
+
+#VPSidebarNav {
+  padding-top: 4px;
 }
 
 /**
