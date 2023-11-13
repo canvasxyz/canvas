@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.6.1] - 2023-11-11
+
+- Add new signers
+- Update signer internals
+- Update libp2p to address some WebRTC peering issues
+
+New packages:
+
+- @canvas-js/chain-cosmos
+- @canvas-js/chain-atp
+- @canvas-js/chain-solana
+- @canvas-js/chain-substrate
+
+
 ## [0.5.0] - 2023-10-27
 
 ### Changed
@@ -31,3 +45,4 @@ New packages:
 
 [unreleased]: https://github.com/canvasxyz/canvas/compare/v0.5.0...HEAD
 [0.5.0]: https://github.com/canvasxyz/canvas/compare/v0.5.0
+[0.6.1]: https://github.com/canvasxyz/canvas/compare/v0.6.1
