@@ -9,6 +9,7 @@ import { ConnectEthereumKeplr } from "./ConnectEthereumKeplr.js"
 import { ConnectPolkadot } from "./ConnectPolkadot.js"
 import { ConnectSolana } from "./ConnectSolana.js"
 import { ConnectNEAR } from "./ConnectNEAR.js"
+import { ConnectMagic } from "./ConnectMagic.js"
 
 export const Connect: React.FC<{}> = ({}) => {
 	const [method, setMethod] = useState("ethereum")
@@ -29,6 +30,7 @@ export const Connect: React.FC<{}> = ({}) => {
 				<option value="terra">Terra</option>
 				<option value="cosmos-evm">Cosmos/EVM</option>
 				<option value="bluesky">BlueSky</option>
+				<option value="magic">Magic</option>
 			</select>
 			<Method method={method} />
 		</>
@@ -55,6 +57,14 @@ const Method: React.FC<{ method: string }> = (props) => {
 			return <ConnectCosmosEvmMetamask chainId="osmosis-1" />
 		case "bluesky":
 			return <ConnectATP />
+		case "magic":
+			return (
+				<ConnectMagic
+					chainId={1}
+					rpcUrl="https://eth-mainnet.g.alchemy.com/v2/fYFybLQFR9Zr2GCRcgALmAktStFKr0i0"
+					publicMagicApiKey={import.meta.env.VITE_PUBLIC_MAGIC_API_KEY}
+				/>
+			)
 		default:
 			throw new Error("invalid login method")
 	}
