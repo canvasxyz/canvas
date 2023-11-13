@@ -109,8 +109,14 @@ export const ConnectMagic = ({ publicMagicApiKey, rpcUrl, chainId }: ConnectMagi
 	} else {
 		return (
 			<div className="border rounded">
-				<form className="p-2 flex flex-col items-stretch gap-2">
-					<div className="flex flex-col items-stretch">
+				<form
+					className="flex flex-col items-stretch gap-2"
+					onSubmit={async (e) => {
+						e.preventDefault()
+						await connect()
+					}}
+				>
+					<div className="p-2 flex flex-col items-stretch">
 						<label className="block" htmlFor="bsky-identifier">
 							Email address
 						</label>
@@ -122,14 +128,13 @@ export const ConnectMagic = ({ publicMagicApiKey, rpcUrl, chainId }: ConnectMagi
 							onChange={(e) => setEmail(e.target.value)}
 						/>
 					</div>
+					<button
+						className="p-2 block w-full border-t hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+						type="submit"
+					>
+						Log in
+					</button>
 				</form>
-
-				<button
-					className="p-2 block w-full border-t hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
-					onClick={() => connect()}
-				>
-					Log in
-				</button>
 			</div>
 		)
 	}
