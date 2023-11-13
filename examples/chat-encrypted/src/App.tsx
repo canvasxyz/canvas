@@ -6,6 +6,9 @@ import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { usePrivkey } from "./components/privkeys"
 
+const formatAddress = (address: string | null | undefined) => {
+	return address?.slice(0, 6)
+}
 const toCAIP = (address: string) => {
 	return "eip155:1:" + address
 }
@@ -24,28 +27,28 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 			models: {
 				encryptionKeys: {
 					address: "primary",
-					key: "string",
+					key: "string"
 				},
 				encryptionGroups: {
 					id: "primary",
 					members: "string",
 					groupKeys: "string",
-					key: "string",
+					key: "string"
 				},
 				messages: {
 					id: "primary",
 					address: "string",
 					text: "string",
 					timestamp: "string",
-					$indexes: [["timestamp"] /*["address", "timestamp"]*/],
+					$indexes: [["timestamp"] /*["address", "timestamp"]*/]
 				},
 				privateMessages: {
 					id: "primary",
 					ciphertext: "string",
 					group: "string",
 					timestamp: "integer",
-					$indexes: [["timestamp"]],
-				},
+					$indexes: [["timestamp"]]
+				}
 			},
 			actions: {
 				registerEncryptionKey: (db, { key }, { address }) => {
@@ -60,7 +63,7 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 						id,
 						members: JSON.stringify(members),
 						groupKeys: JSON.stringify(groupKeys),
-						key: groupPublicKey,
+						key: groupPublicKey
 					})
 				},
 				sendLobbyMessage: (db, { text }, { address, timestamp, id }) => {
@@ -69,9 +72,9 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 				sendPrivateMessage: (db, { group, ciphertext }, { timestamp, id }) => {
 					// TODO: check address is in group
 					db.privateMessages.set({ id, ciphertext, group, timestamp })
-				},
-			},
-		},
+				}
+			}
+		}
 	})
 
 	const people = useLiveQuery(app, "encryptionKeys", { orderBy: { address: "desc" } })
@@ -126,14 +129,14 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 			const encryptedData = encryptSafely({
 				publicKey: encryptionGroup.key as string,
 				data: message,
-				version: "x25519-xsalsa20-poly1305",
+				version: "x25519-xsalsa20-poly1305"
 			})
 			console.log(encryptedData)
 			const ciphertext = JSON.stringify(encryptedData)
 			console.log(ciphertext)
 
 			return app.actions.sendPrivateMessage({ group, ciphertext })
-		},
+		}
 	}
 }
 
@@ -173,11 +176,11 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 	const registration2 = useLiveQuery(app, "encryptionKeys", { where: { address: toCAIP(wallet2?.address) } })
 
 	const groups = useLiveQuery(app, "encryptionGroups", {
-		where: { id: getGroupId(wallet1.address, wallet2.address) },
+		where: { id: getGroupId(wallet1.address, wallet2.address) }
 	})
 
 	const messages = useLiveQuery(app, "privateMessages", {
-		where: { group: getGroupId(wallet1.address, wallet2.address) },
+		where: { group: getGroupId(wallet1.address, wallet2.address) }
 	})
 
 	// TODO: const [conversation, setConversation] = useState<string>()
@@ -185,91 +188,92 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 	const inputRef = useRef<HTMLInputElement>(null)
 
 	return (
-		<>
-			<div style={{ display: "flex", height: "100vh" }}>
+		<div style={{ height: "100vh" }}>
+			<div style={{ display: "flex", height: "calc(100vh - 120px)" }}>
+				{/* conversation selector */}
 				<div style={{ width: 200 }}>
 					<h3>Conversations</h3>
 					<div>
-						<div>Lobby</div>
-						<div>DM Guest1</div>
-						<div>DM Guest2</div>
-						<div>DM Guest3</div>
-						<br />
 						{people?.map((person) => (
-							<div key={person.address as string}>
-								{person.address} {person.key}
-							</div>
+							<button key={person.address as string} style={{ width: "100%", textAlign: "left" }}>
+								{formatAddress(fromCAIP(person.address))} <span title={person.key}>🔐</span>{" "}
+								{fromCAIP(person.address) === wallet1?.address && <span>[You]</span>}
+								{fromCAIP(person.address) === wallet2?.address && <span>[Guest]</span>}
+							</button>
 						))}
 						<br />
 					</div>
-					<div style={{ marginTop: 40 }}>
-						<div>
-							My address: {wallet1?.address}{" "}
-							{registration1?.length === 0 && (
-								<button
-									onClick={() => {
-										if (!wallet1) return
-										registerEncryptionKey(wallet1.privateKey)
-									}}
-								>
-									Register
-								</button>
-							)}
-						</div>
-						<div>
-							Their address: {wallet2?.address}{" "}
-							{registration2?.length === 0 && (
-								<button
-									onClick={() => {
-										if (!wallet2) return
-										registerEncryptionKey2(wallet2.privateKey)
-									}}
-								>
-									Register
-								</button>
-							)}
-						</div>
-						<div>
-							{groups && groups?.length > 0 ? (
-								<div>
-									<div>{messages?.length} messages</div>
-									{messages?.map((message) => (
-										<Message wallet={wallet1} key={message.id as string} message={message} groups={groups} />
-									))}
-									<form
-										onSubmit={(e) => {
-											e.preventDefault()
-											if (!inputRef.current) return
-											sendPrivateMessage(wallet2.address, inputRef.current.value).then(() => {
-												if (inputRef.current === null) return
-												inputRef.current.value = ""
-											})
-										}}
-									>
-										<input ref={inputRef} type="text" placeholder="Type a message..." />
-									</form>
-								</div>
-							) : (
-								<button
-									onClick={() => {
-										if (!wallet2) return
-										createEncryptionGroup(wallet2.address)
-										// TODO: page won't refresh until the first core gets updated
-										// we might be missing a refresh trigger
-									}}
-								>
-									Create encryption group
-								</button>
-							)}
-						</div>
-					</div>
 				</div>
+				{/* conversation content */}
 				<div style={{ flex: 1 }}>
 					<h3>Chatbox</h3>
-					<div>hello world</div>
+					<div>
+						{groups && groups?.length > 0 ? (
+							<div>
+								<div>{messages?.length} messages</div>
+								{messages?.map((message) => (
+									<Message wallet={wallet1} key={message.id as string} message={message} groups={groups} />
+								))}
+								<form
+									onSubmit={(e) => {
+										e.preventDefault()
+										if (!inputRef.current) return
+										sendPrivateMessage(wallet2.address, inputRef.current.value).then(() => {
+											if (inputRef.current === null) return
+											inputRef.current.value = ""
+										})
+									}}
+								>
+									<input ref={inputRef} type="text" placeholder="Type a message..." />
+								</form>
+							</div>
+						) : (
+							<button
+								onClick={() => {
+									if (!wallet2) return
+									createEncryptionGroup(wallet2.address)
+								}}
+							>
+								Create encryption group
+							</button>
+						)}
+					</div>
 				</div>
 			</div>
-		</>
+			<div style={{ marginTop: 40 }}>
+				{/* login and reset buttons */}
+				<div>
+					<button
+						disabled={registration1?.length !== 0}
+						onClick={async () => {
+							if (!wallet1) return
+							await registerEncryptionKey(wallet1.privateKey)
+						}}
+					>
+						{registration1?.length === 0 ? "Register [You]" : "Logged in [You]"}
+					</button>
+					<button
+						disabled={registration2?.length !== 0}
+						onClick={async () => {
+							if (!wallet2) return
+							await registerEncryptionKey2(wallet2.privateKey)
+							window.location.reload() // TODO: two apps should talk to each other
+						}}
+					>
+						{registration2?.length === 0 ? "Register [Guest]" : "Logged in [Guest]"}
+					</button>
+					<button
+						onClick={async () => {
+							const dbs = await window.indexedDB.databases()
+							dbs.forEach((db) => window.indexedDB.deleteDatabase(db.name))
+							location.reload()
+						}}
+					>
+						Reset
+					</button>
+				</div>
+			</div>
+		</div>
 	)
 }
 
@@ -299,9 +303,6 @@ const Message = ({ wallet, message, groups }) => {
 		const decryptedMessage = decryptSafely({ encryptedData, privateKey: decryptionKey.slice(2) })
 		setDecryptedMessage(decryptedMessage)
 	}, [privateKey, group, ciphertext, groups])
-
-	// console.log(groupKeys, encryptionKey)
-	// decryptSafely(
 
 	return <div>message: {decryptedMessage}</div>
 }
