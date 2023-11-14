@@ -1,6 +1,6 @@
 # Merklizing the key/value store for fun and profit
 
-_Joel Gustafson - May 4, 2023_
+_[Joel Gustafson](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit) - May 4, 2023_
 
 <style>
 span.anchor {

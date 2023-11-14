@@ -30,10 +30,16 @@ function getSidebarItems(
 			} else if (e.endsWith(".md") && e[0] !== "_") {
 				// Assume the file starts with an <h1> and use that as the sidebar title
 				const file = fs.readFileSync(childDir, { encoding: "utf8", flag: "r" })
-				const matches = file.match(/^\#.*/)
-				const text = matches[0]
-					? matches[0].replace(/# /, "")
+				const titleMatches = file.match(/^\#.*/)
+				const title = titleMatches[0]
+					? titleMatches[0].replace(/# /, "")
 					: (e.charAt(0).toUpperCase() + e.slice(1)).slice(0, -3).replaceAll("-", " ")
+
+				const lines = file.slice(0, 10000).trim().split(/\n/g)
+				const dateLine = (lines[1] || lines[2]).replace(/[\#_\*]/g, "").split(" - ")
+				const dateString = dateLine[dateLine.length - 1]
+
+				const text = `${title} <br/> <small>${dateString}</small>`
 
 				return {
 					text,
