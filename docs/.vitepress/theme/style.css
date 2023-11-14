@@ -23,6 +23,11 @@
   --vp-button-alt-hover-bg: #414853;
 }
 
+body {
+  font-size: 17px;
+  line-height: 24px;
+}
+
 pre {
   tab-size: 2;
 }
@@ -100,12 +105,8 @@ pre {
   font-family: var(--space-font-family);
 }
 
-html.dark body {
-}
-
-body {
-  font-size: 17px;
-  line-height: 24px;
+.VPContent .outline-title {
+  letter-spacing: 0 !important;
 }
 
 .VPSidebar {

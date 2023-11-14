@@ -66,7 +66,7 @@ export default defineConfig({
 		},
 		socialLinks: [
 			{ icon: "github", link: "https://github.com/canvasxyz/canvas" },
-			{ icon: "discord", link: "https://discord.gg/2Dc7nPUz" },
+			{ icon: "discord", link: "https://discord.gg/EjczssxKpR" },
 			{ icon: "twitter", link: "https://twitter.com/canvas_xyz" }
 		],
 		search: {
