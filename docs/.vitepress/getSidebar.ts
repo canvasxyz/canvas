@@ -19,6 +19,7 @@ function getSidebarItems(
 			const childDir = path.resolve(currentRoot ?? "/", e)
 			if (fs.statSync(childDir).isDirectory()) {
 				const items = getSidebarItems(fs.readdirSync(childDir), childDir, root, options)
+				items.reverse()
 				const fileName = e.split("/").pop() ?? ""
 
 				return items.length
@@ -39,7 +40,7 @@ function getSidebarItems(
 				const dateLine = (lines[1] || lines[2]).replace(/[\#_\*]/g, "").split(" - ")
 				const dateString = dateLine[dateLine.length - 1]
 
-				const text = `${title} <br/> <small>${dateString}</small>`
+				const text = `<div class="VPSidebarBlogItem"><div class="VPSidebarBlogItemTitle">${title}</div><small class="VPSidebarBlogItemDate">${dateString}</small></div>`
 
 				return {
 					text,

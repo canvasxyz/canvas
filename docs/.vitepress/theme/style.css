@@ -124,6 +124,12 @@ pre {
   padding-top: 4px;
 }
 
+.VPSidebarBlogItem {
+  line-height: 1.35;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
 /**
  * Customize default theme styling by overriding CSS variables:
  * https://github.com/vuejs/vitepress/blob/main/src/client/theme-default/styles/vars.css
