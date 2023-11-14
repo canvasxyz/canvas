@@ -1,10 +1,7 @@
 # @canvas-js/core
 
-A Canvas app replicates and executes a log of signed actions,
-retrieving them from GossipLog, and executing them in JS/TS functions.
-
-Each app comes with an embedded ModelDB instance, which functions can
-read or write from.
+A Canvas app replicates and executes a log of signed actions, running them
+in a set of JavaScript/TypeScript functions with access to ModelDB.
 
 ## Table of Contents
 

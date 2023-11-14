@@ -2,9 +2,10 @@
 layout: home
 ---
 
-<HeroRow text="The peer-to-peer TypeScript application runtime" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a stack for building any web application as a protocol running over peer-to-peer networking, with no blockchains required." v-bind:bullets="['Embed core application logic in a realtime, multiwriter database', 'Fast sync using p2p data structures', 'Fully programmable in TypeScript']">
+<HeroRow text="The peer-to-peer TypeScript application runtime" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a stack for building any web application as a protocol running over peer-to-peer networking, with no blockchains required." v-bind:bullets="['Embeds core application logic in a realtime, multiwriter database', 'Fast sync using p2p data structures', 'Fully programmable in TypeScript']">
   <HeroAction theme="brand big" text="Tutorial" href="/1-introduction" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
+  <HeroAction theme="alt big" text="Blog" href="/blog" />
 </HeroRow>
 
 <!--
@@ -16,9 +17,9 @@ layout: home
 -->
 
 <TextRow title="How it Works">
-  <TextItem>Canvas allows you to write fast, data-heavy decentralized applications by expressing the core logic of your application as a series of functions, which have access to a relational database.</TextItem>
+  <TextItem>Canvas allows you to write fast, data-intensive, realtime decentralized applications, by expressing the core logic of your application as a set of functions, with access to a relational embedded database.</TextItem>
   <TextItem>Applications run entirely over libp2p, with data stored on each node, using an invisible CRDT layer that reconciles input from different actors.</TextItem>
-  <TextItem>It's like smart contracts, but without the blockchain. And you don't need to learn a new language, or new data structures - it just works, like writing a web application in Rails or Next.js.</TextItem>
+  <TextItem>It's like smart contracts, but without the blockchain. And you don't need to learn a new language, or new data structures - it just works, like writing a web application in Rails or Node.js.</TextItem>
 </TextRow>
 
 <DemoToggle v-bind:options="['Game', 'Messaging']" defaultOption="Game"></DemoToggle>
