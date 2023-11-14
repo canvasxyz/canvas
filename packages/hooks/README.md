@@ -53,19 +53,24 @@ export function MyComponent({ app }: { app?: Canvas }) {
 
 The `useTick` hook calls a `tick()` action on a contract at a regular interval.
 
+Ticking happens client-side. Here are a few considerations:
+
 * Ticking will only run if the user has started a session.
-* If any other user on the log has called tick() within the last `interval`, the tick
-  will be skipped.
-* Since ticking is purely client-side, contracts will stop ticking if no
-  appropriately configured clients are present.
+* If a client observes that any other user on the log has called tick()
+  within the last `interval`, their tick will be skipped.
+* Contracts will stop ticking if no clients are online.
 
 Note that useTick() does not do any special accounting for networking -
 it is possible that if two users start their timers at around the same time, their
 clocks will be synchronized and each will emit tick() events around the same time.
 
+You should account for this in your application logic.
+
+### Conditional Ticking
+
 Ticking can be configured to only run when a certain condition in the database is true.
 
-```
+```ts
 const models = {
   state: {
     gameOver: "boolean"
@@ -93,6 +98,6 @@ The condition can be any query of the form `model.field` or `!model.field`.
 
 If would prefer not to use a condition, you can also leave it null.
 
-```
+```ts
 useTick(app, null, 1000)
 ```

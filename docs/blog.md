@@ -6,7 +6,7 @@
       document.location = firstBlogPost
       clearInterval(timer)
     } catch {}
-  }, 100)
+  }, 10)
 </script>
 
 <style>

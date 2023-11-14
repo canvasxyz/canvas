@@ -2,7 +2,7 @@
 
 You can only write to the database inside an action handler, but you can query it outside action handlers by using `app.db.get("model")`, `app.db.query("model")`, or `useLiveQuery` for live-updating data.
 
-(See the "Actions" section to learn about reading the database inside action handlers.)
+(See the "Actions" section to learn about reading from the database inside action handlers.)
 
 ## Getting individual records
 
