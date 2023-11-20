@@ -1,33 +1,25 @@
 # Canvas - Notes, Webpack Version
 
-This is an example web app using Canvas for a backend and Webpack on
-the front-end.
-
-### Setting up
+Installation:
 
 ```
 npm i
 ```
 
-### Run in offline development mode
+Running:
 
 ```
 npm run dev
 ```
 
-Open the app at http://localhost:3000/. The API will run at
-http://localhost:8000.
-
-### Run in online production mode
+Running in production with peering:
 
 ```
 npm run build
 npm run start
 ```
 
-This will enable peering.
-
-### Deploying to Fly.io
+Deploying to Fly.io:
 
 First, install [flyctl](https://fly.io/docs/speedrun/) and make sure
 you are logged in.
