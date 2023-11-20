@@ -16,6 +16,7 @@ export default defineConfig({
 			preserveSymlinks: true
 		}
 	},
+	ignoreDeadLinks: [(url) => url.match(/^\.\/[0-9]+$/)], // ignore footnote links
 	title: "Canvas",
 	description: "A peer-to-peer runtime for decentralized applications",
 	themeConfig: {
