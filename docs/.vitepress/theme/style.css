@@ -31,9 +31,17 @@ body {
 pre {
   tab-size: 2;
 }
+
 .vp-doc p {
   line-height: inherit;
 }
+.vp-doc sup.footnote-ref {
+  line-height: 1;
+}
+.vp-doc .footnotes-sep {
+  margin-top: 60px;
+}
+
 .VPContent a {
   color: var(--vp-c-brand-1);
 }

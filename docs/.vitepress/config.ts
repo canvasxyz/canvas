@@ -1,11 +1,13 @@
 import { defineConfig } from "vitepress"
 import namedCodeBlocks from "markdown-it-named-code-blocks"
+import footnote from "markdown-it-footnote"
 import { getSidebar } from "./getSidebar.js"
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
 	markdown: {
 		config: (md) => {
+			md.use(footnote)
 			md.use(namedCodeBlocks)
 		}
 	},
@@ -59,7 +61,10 @@ export default defineConfig({
 					text: "Examples",
 					items: [
 						{ text: "Chat", link: "/examples-chat.md" },
+						{ text: "Encrypted Chat", link: "/examples-encrypted-chat.md" },
+						{ text: "Snake", link: "/examples-snake.md" },
 						{ text: "Forum", link: "/examples-forum.md" }
+						// { text: "Notes", link: "/examples-notes.md" }
 					]
 				}
 			]
