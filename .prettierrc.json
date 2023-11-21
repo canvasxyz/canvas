@@ -1,15 +1,15 @@
 {
 	"useTabs": true,
 	"semi": false,
-	"trailingComma": "none",
 	"printWidth": 120,
+	"trailingComma": "all",
 	"overrides": [
-			{
-					"files": "*.md",
-					"options": {
-							"useTabs": false,
-							"tabWidth": 2
-					}
+		{
+			"files": "*.md",
+			"options": {
+				"useTabs": false,
+				"tabWidth": 2
 			}
+		}
 	]
 }
