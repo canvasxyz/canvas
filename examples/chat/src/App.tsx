@@ -50,7 +50,7 @@ export const App: React.FC<{}> = ({}) => {
 			<main>
 				<div className="flex flex-row gap-4 h-full">
 					<div className="flex-1 flex flex-col justify-stretch gap-2">
-						<div className="flex-1 border rounded px-2">
+						<div className="flex-1 border rounded px-2 overflow-y-scroll">
 							<Messages />
 						</div>
 						<MessageComposer />
