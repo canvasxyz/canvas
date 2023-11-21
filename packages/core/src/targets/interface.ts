@@ -23,18 +23,18 @@ export interface PlatformTarget {
 			bootstrapList?: string[]
 			minConnections?: number
 			maxConnections?: number
-		}
+		},
 	) => Promise<Libp2p<ServiceMap>>
 
 	openDB: (
 		config: { path: string | null; topic: string },
 		models: ModelsInit,
-		options?: { indexHistory?: Record<string, boolean> }
+		options?: { indexHistory?: Record<string, boolean> },
 	) => Promise<AbstractModelDB>
 
 	openGossipLog: <Payload, Result>(
 		config: { path: string | null; topic: string },
-		init: GossipLogInit<Payload, Result>
+		init: GossipLogInit<Payload, Result>,
 	) => Promise<AbstractGossipLog<Payload, Result>>
 }
 

@@ -121,7 +121,7 @@ export class ModelAPI {
 		const insertParams = columnParams.join(", ")
 		this.#insert = new Method<Params>(
 			db,
-			`INSERT OR IGNORE INTO "${this.#table}" (${insertNames}) VALUES (${insertParams})`
+			`INSERT OR IGNORE INTO "${this.#table}" (${insertNames}) VALUES (${insertParams})`,
 		)
 
 		const where = `WHERE "${this.#primaryKeyName}" = :${this.#primaryKeyParam}`
@@ -135,7 +135,7 @@ export class ModelAPI {
 		this.#count = new Query<{}, { count: number }>(this.db, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
 		this.#select = new Query<Record<string, `p${string}`>, RecordValue>(
 			this.db,
-			`SELECT ${columnNames.join(", ")} FROM "${this.#table}" ${where}`
+			`SELECT ${columnNames.join(", ")} FROM "${this.#table}" ${where}`,
 		)
 
 		this.#selectAll = new Query<{}, RecordValue>(this.db, `SELECT ${columnNames.join(", ")} FROM "${this.#table}"`)
@@ -229,7 +229,7 @@ export class ModelAPI {
 			assert(property !== undefined, "property not found")
 			assert(
 				property.kind === "primary" || property.kind === "primitive" || property.kind === "reference",
-				"cannot order by relation properties"
+				"cannot order by relation properties",
 			)
 
 			if (direction === "asc") {
@@ -283,7 +283,7 @@ export class ModelAPI {
 	}
 
 	private getSelectExpression(
-		select: Record<string, boolean> = mapValues(this.#properties, () => true)
+		select: Record<string, boolean> = mapValues(this.#properties, () => true),
 	): [select: string, relations: Relation[]] {
 		const relations: Relation[] = []
 		const columns = []
@@ -315,7 +315,7 @@ export class ModelAPI {
 	}
 
 	private getWhereExpression(
-		where: WhereCondition = {}
+		where: WhereCondition = {},
 	): [where: string | null, params: Record<string, null | number | string | Buffer>] {
 		const params: Record<string, null | number | string | Buffer> = {}
 		const filters = Object.entries(where).flatMap(([name, expression], i) => {
@@ -462,7 +462,7 @@ export class ModelAPI {
 						const p = `p${i}q${j}`
 						params[p] = reference
 						targets.push(
-							`"${this.#primaryKeyName}" IN (SELECT _source FROM "${relationTable}" WHERE (_target = :${p}))`
+							`"${this.#primaryKeyName}" IN (SELECT _source FROM "${relationTable}" WHERE (_target = :${p}))`,
 						)
 					}
 					return targets.length > 0 ? [targets.join(" AND ")] : []
@@ -475,7 +475,7 @@ export class ModelAPI {
 						const p = `p${i}q${j}`
 						params[p] = reference
 						targets.push(
-							`"${this.#primaryKeyName}" NOT IN (SELECT _source FROM "${relationTable}" WHERE (_target = :${p}))`
+							`"${this.#primaryKeyName}" NOT IN (SELECT _source FROM "${relationTable}" WHERE (_target = :${p}))`,
 						)
 					}
 					return targets.length > 0 ? [targets.join(" AND ")] : []
@@ -519,7 +519,7 @@ export class RelationAPI {
 		// Prepare methods
 		this.#insert = new Method<{ _source: string; _target: string }>(
 			this.db,
-			`INSERT INTO "${this.table}" (_source, _target) VALUES (:_source, :_target)`
+			`INSERT INTO "${this.table}" (_source, _target) VALUES (:_source, :_target)`,
 		)
 
 		this.#delete = new Method<{ _source: string }>(this.db, `DELETE FROM "${this.table}" WHERE _source = :_source`)
@@ -527,7 +527,7 @@ export class RelationAPI {
 		// Prepare queries
 		this.#select = new Query<{ _source: string }, { _target: string }>(
 			this.db,
-			`SELECT _target FROM "${this.table}" WHERE _source = :_source`
+			`SELECT _target FROM "${this.table}" WHERE _source = :_source`,
 		)
 	}
 

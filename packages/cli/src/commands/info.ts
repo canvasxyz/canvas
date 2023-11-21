@@ -29,7 +29,7 @@ export async function handler(args: Args) {
 		console.log(
 			Object.keys(app.actions)
 				.map((name) => `- ${name}({ ...args })\n`)
-				.join("")
+				.join(""),
 		)
 
 		console.log("")

@@ -91,7 +91,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 
 	public async subscribe<Payload, Result>(
 		messageLog: AbstractGossipLog<Payload, Result>,
-		options: SyncOptions = {}
+		options: SyncOptions = {},
 	): Promise<void> {
 		this.log("subscribing to %s", messageLog.topic)
 		this.#messageLogs.set(messageLog.topic, messageLog as AbstractGossipLog<unknown, unknown>)
@@ -141,7 +141,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 	public async append<Payload, Result>(
 		topic: string,
 		payload: Payload,
-		options: { signer?: Signer<Message<Payload>> } = {}
+		options: { signer?: Signer<Message<Payload>> } = {},
 	): Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }> {
 		const messageLog = this.#messageLogs.get(topic) as AbstractGossipLog<Payload, Result> | undefined
 		assert(messageLog !== undefined, "no subscription for topic")
@@ -160,7 +160,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 				(err) => {
 					this.log.error("failed to publish event: %O", err)
 					return []
-				}
+				},
 			)
 
 			return { id, result, recipients }
@@ -171,7 +171,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 
 	public async insert<Payload, Result = unknown>(
 		signature: Signature,
-		message: Message<Payload>
+		message: Message<Payload>,
 	): Promise<{ id: string; recipients: Promise<PeerId[]> }> {
 		const messageLog = this.#messageLogs.get(message.topic) as AbstractGossipLog<Payload, Result> | undefined
 		assert(messageLog !== undefined, "topic not found")
@@ -189,7 +189,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 				(err) => {
 					this.log.error("failed to publish event: %O", err)
 					return []
-				}
+				},
 			)
 
 			return { id, recipients }

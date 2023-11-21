@@ -18,10 +18,7 @@ export abstract class AbstractModelDB {
 	protected readonly subscriptions = new Map<number, Subscription>()
 	#subscriptionId = 0
 
-	protected constructor(
-		public readonly config: Config,
-		options: { indexHistory?: Record<string, boolean> } = {}
-	) {
+	protected constructor(public readonly config: Config, options: { indexHistory?: Record<string, boolean> } = {}) {
 		this.models = {}
 		for (const model of config.models) {
 			this.models[model.name] = model
@@ -55,7 +52,7 @@ export abstract class AbstractModelDB {
 	public subscribe(
 		modelName: string,
 		query: QueryParams,
-		callback: (results: ModelValue[]) => Awaitable<void>
+		callback: (results: ModelValue[]) => Awaitable<void>,
 	): { id: number; results: Promise<ModelValue[]> } {
 		const model = this.models[modelName]
 		assert(model !== undefined, `model ${modelName} not found`)
@@ -72,9 +69,9 @@ export abstract class AbstractModelDB {
 					(err) => {
 						this.log.error(err)
 						return results
-					}
-				)
-			)
+					},
+				),
+			),
 		}
 	}
 

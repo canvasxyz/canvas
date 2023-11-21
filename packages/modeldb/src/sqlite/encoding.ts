@@ -13,7 +13,7 @@ import { assert, signalInvalidType } from "../utils.js"
 export function encodeRecordParams(
 	model: Model,
 	value: ModelValue,
-	params: Record<string, `p${string}`>
+	params: Record<string, `p${string}`>,
 ): Record<`p${string}`, string | number | Buffer | null> {
 	const values: Record<`p${string}`, string | number | Buffer | null> = {}
 
@@ -52,7 +52,7 @@ function encodePrimaryKeyValue(modelName: string, property: PrimaryKeyProperty, 
 function encodePrimitiveValue(
 	modelName: string,
 	property: PrimitiveProperty,
-	value: PropertyValue
+	value: PropertyValue,
 ): string | number | Buffer | null {
 	if (value === null) {
 		if (property.optional) {
@@ -126,7 +126,7 @@ export function decodeRecord(model: Model, record: Record<string, string | numbe
 export function decodePrimaryKeyValue(
 	modelName: string,
 	property: PrimaryKeyProperty,
-	value: string | number | Buffer | null
+	value: string | number | Buffer | null,
 ): PrimaryKeyValue {
 	if (typeof value !== "string") {
 		throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
@@ -138,7 +138,7 @@ export function decodePrimaryKeyValue(
 export function decodePrimitiveValue(
 	modelName: string,
 	property: PrimitiveProperty,
-	value: string | number | Buffer | null
+	value: string | number | Buffer | null,
 ) {
 	if (value === null) {
 		if (property.optional) {
@@ -184,7 +184,7 @@ export function decodePrimitiveValue(
 export function decodeReferenceValue(
 	modelName: string,
 	property: ReferenceProperty,
-	value: string | number | Uint8Array | null
+	value: string | number | Uint8Array | null,
 ): string | null {
 	if (value === null) {
 		if (property.optional) {

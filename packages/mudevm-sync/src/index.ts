@@ -19,7 +19,7 @@ export function useCanvas<
 	TAbi extends Abi,
 	TPublicClient extends Partial<PublicClient>,
 	TWalletClient extends Partial<WalletClient>,
-	TAddress extends Address
+	TAddress extends Address,
 >(props: {
 	world: {
 		mudConfig: WorldUserConfig
@@ -38,14 +38,14 @@ export function useCanvas<
 			const { offline, world } = props
 
 			const models = Object.entries(mudConfig.tables).filter(
-				([tableName, params]) => params.offchainOnly === true /* && params.offchainSync === true */
+				([tableName, params]) => params.offchainOnly === true /* && params.offchainSync === true */,
 			)
 			if (models.length === 0) {
 				throw new Error("No offchain-synced tables defined")
 			}
 
 			const systems = Object.entries(mudConfig.systems).filter(
-				([systemName, params]) => true /* params.offchainSync === true */
+				([systemName, params]) => true /* params.offchainSync === true */,
 			)
 			if (models.length === 0) {
 				throw new Error("No offchain-synced systems defined")
@@ -55,7 +55,7 @@ export function useCanvas<
 			const modelsInit: ModelsInit = {}
 			for (const [name, params] of models) {
 				modelsInit[name] = Object.fromEntries(
-					Object.entries(params.valueSchema).map(([field, type]) => [field, abiTypeToModelType(type)])
+					Object.entries(params.valueSchema).map(([field, type]) => [field, abiTypeToModelType(type)]),
 				)
 
 				modelsInit[name]._key = "string"
@@ -68,7 +68,7 @@ export function useCanvas<
 				Object.entries(world.systemAbis).map(([key, value]) => {
 					const filename = key.match(/\w+\.abi\.json$/)![0]
 					return [filename, value]
-				})
+				}),
 			)
 
 			for (const [name] of systems) {
@@ -77,7 +77,7 @@ export function useCanvas<
 
 				const calls = systemAbi.filter(
 					(entry: AbiItem) =>
-						entry.type === "function" && !entry.name.startsWith("_") && entry.name !== "supportsInterface"
+						entry.type === "function" && !entry.name.startsWith("_") && entry.name !== "supportsInterface",
 				)
 
 				const actions = Object.fromEntries(
@@ -115,13 +115,13 @@ export function useCanvas<
 													name,
 													encode(
 														value as string | bigint,
-														outputs.components.find((c) => c.name === name)?.type as AbiType
+														outputs.components.find((c) => c.name === name)?.type as AbiType,
 													),
 												])
 												.concat([
 													["_key", context.id],
 													["_timestamp", context.timestamp],
-												])
+												]),
 										)
 										db[tableName].set(modelValue)
 										resolve(modelValue)
@@ -133,7 +133,7 @@ export function useCanvas<
 						}
 
 						return [abiParams.name, actionHandler]
-					})
+					}),
 				)
 				Object.assign(actionsSpec, actions)
 			}

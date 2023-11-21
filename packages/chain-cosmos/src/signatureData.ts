@@ -5,7 +5,7 @@ import { toBase64 } from "@cosmjs/encoding"
 export const getSessionSignatureData = async (
 	sessionPayload: Uint8Array,
 	address: string,
-	chain_id?: string
+	chain_id?: string,
 ): Promise<StdSignDoc> => {
 	const accountNumber = 0
 	const sequence = 0

@@ -30,7 +30,7 @@ export class VM {
 	private constructor(
 		public readonly runtime: QuickJSRuntime,
 		public readonly context: QuickJSContext,
-		options: VMOptions
+		options: VMOptions,
 	) {
 		this.runtime.setMemoryLimit(options.runtimeMemoryLimit ?? VM.RUNTIME_MEMORY_LIMIT)
 
@@ -84,7 +84,7 @@ export class VM {
 
 		try {
 			const promiseHandle = this.unwrapResult(
-				this.context.evalCode(`import("${filename}")`, undefined, { type: "global", strict: true })
+				this.context.evalCode(`import("${filename}")`, undefined, { type: "global", strict: true }),
 			)
 
 			const exportsHandle = await promiseHandle.consume(this.resolvePromise)
@@ -134,7 +134,7 @@ export class VM {
 		const result = this.context.callFunction(
 			typeof fn === "string" ? this.get(fn) : fn,
 			typeof thisArg === "string" ? this.get(thisArg) : thisArg,
-			...args
+			...args,
 		)
 
 		return this.unwrapResult(result)
@@ -143,7 +143,7 @@ export class VM {
 	public callAsync = async (
 		fn: string | QuickJSHandle,
 		thisArg: string | QuickJSHandle,
-		args: QuickJSHandle[]
+		args: QuickJSHandle[],
 	): Promise<QuickJSHandle> => {
 		const resultHandle = this.call(fn, thisArg, args)
 		if (this.isInstanceOf(resultHandle, this.get("Promise"))) {
@@ -259,7 +259,7 @@ export class VM {
 	 */
 	public unwrapObject = <T = QuickJSHandle>(
 		handle: QuickJSHandle,
-		map?: (propertyHandle: QuickJSHandle) => T
+		map?: (propertyHandle: QuickJSHandle) => T,
 	): Record<string, T> => {
 		const object: Record<string, T> = {}
 		const keys = this.call("Object.keys", this.context.null, [handle]).consume(this.unwrapArray)
@@ -357,7 +357,7 @@ export class VM {
 					(err) => {
 						this.log("rejecting deferred promise")
 						deferred.reject(this.wrapError(err))
-					}
+					},
 				)
 
 				deferred.settled.finally(() => this.runtime.executePendingJobs())

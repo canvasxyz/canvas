@@ -33,7 +33,7 @@ async function unpackNode<T>(car: CarReader, path: string, cid: CID, decoder = n
 
 export async function unpackArchive<T extends { $type: string }>(
 	archive: Uint8Array,
-	path: string
+	path: string,
 ): Promise<{ commit: Commit; record: T }> {
 	const car = await CarReader.fromBytes(archive)
 	const [root] = await car.getRoots()

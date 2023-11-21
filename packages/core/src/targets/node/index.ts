@@ -45,7 +45,7 @@ export default {
 
 	async openGossipLog<Payload, Result>(
 		location: { path: string | null; topic: string },
-		init: GossipLogInit<Payload, Result>
+		init: GossipLogInit<Payload, Result>,
 	) {
 		if (location.path === null) {
 			return await MemoryGossipLog.open(init)

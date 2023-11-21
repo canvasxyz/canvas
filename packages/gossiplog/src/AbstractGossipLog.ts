@@ -48,7 +48,7 @@ export interface ReadWriteTransaction {
 export type GossipLogConsumer<Payload = unknown, Result = void> = (
 	id: string,
 	signature: Signature,
-	message: Message<Payload>
+	message: Message<Payload>,
 ) => Awaitable<Result>
 
 export interface GossipLogInit<Payload = unknown, Result = void> {
@@ -74,17 +74,17 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	protected abstract entries(
 		lowerBound?: Bound<Uint8Array> | null,
 		upperBound?: Bound<Uint8Array> | null,
-		options?: { reverse?: boolean }
+		options?: { reverse?: boolean },
 	): AsyncIterable<[key: Uint8Array, value: Uint8Array]>
 
 	protected abstract read<T>(
 		callback: (txn: ReadOnlyTransaction) => Awaitable<T>,
-		options?: { targetId?: string }
+		options?: { targetId?: string },
 	): Promise<T>
 
 	protected abstract write<T>(
 		callback: (txn: ReadWriteTransaction) => Awaitable<T>,
-		options?: { sourceId?: string }
+		options?: { sourceId?: string },
 	): Promise<T>
 
 	public readonly topic: string
@@ -134,7 +134,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	public async *iterate(
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
-		options: { reverse?: boolean } = {}
+		options: { reverse?: boolean } = {},
 	): AsyncIterable<[id: string, signature: Signature, message: Message<Payload>]> {
 		const { id: lowerId, inclusive: lowerInclusive } = lowerBound ?? { id: MIN_MESSAGE_ID, inclusive: true }
 		const { id: upperId, inclusive: upperInclusive } = upperBound ?? { id: MAX_MESSAGE_ID, inclusive: true }
@@ -144,7 +144,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		for await (const [key, value] of this.entries(
 			{ key: encodeId(lowerId), inclusive: lowerInclusive },
 			{ key: encodeId(upperId), inclusive: upperInclusive },
-			options
+			options,
 		)) {
 			const [id, signature, message] = this.decode(value)
 			assert(id === decodeId(key), "expected id === decodeId(key)")
@@ -184,7 +184,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 		assert(
 			parents.every((id, i) => i === 0 || parents[i - 1] < id),
-			"unsorted parents array"
+			"unsorted parents array",
 		)
 
 		const payload = this.#transformer.toTyped(signedMessage.payload)
@@ -242,7 +242,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	 */
 	public async append(
 		payload: Payload,
-		options: { signer?: Signer<Message<Payload>> } = {}
+		options: { signer?: Signer<Message<Payload>> } = {},
 	): Promise<{ id: string; signature: Signature; message: Message<Payload>; result: Result }> {
 		const signer = options.signer ?? this.signer
 
@@ -332,7 +332,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		txn: ReadOnlyTransaction,
 		id: string,
 		ancestor: string,
-		visited = new Set<string>()
+		visited = new Set<string>(),
 	): Promise<boolean> {
 		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
 		assert(messageIdPattern.test(id), "invalid message ID (id)")
@@ -379,7 +379,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		key: Uint8Array,
 		atOrBefore: number,
 		results: Set<string>,
-		visited = new Set<string>()
+		visited = new Set<string>(),
 	): Promise<void> {
 		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
 		assert(atOrBefore > 0, "expected atOrBefore > 0")
@@ -414,7 +414,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		id: string,
 		signature: Signature,
 		message: Message<Payload>,
-		[key, value]: Entry = this.encode(signature, message)
+		[key, value]: Entry = this.encode(signature, message),
 	): Promise<Result> {
 		this.log("applying %s %O", id, message)
 

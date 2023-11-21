@@ -42,7 +42,7 @@ export type ActionOptions = { signer?: SessionSigner }
 
 export type ActionAPI<Args = any, Result = any> = (
 	args: Args,
-	options?: ActionOptions
+	options?: ActionOptions,
 ) => Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }>
 
 export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown> {
@@ -87,8 +87,8 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				topic: runtime.topic,
 				apply: runtime.getConsumer(),
 				validate: validatePayload,
-				indexAncestors: indexHistory
-			}
+				indexAncestors: indexHistory,
+			},
 		)
 
 		await libp2p?.services.gossiplog.subscribe(gossipLog, {})
@@ -115,7 +115,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		public readonly peerId: PeerId,
 		public readonly libp2p: Libp2p<ServiceMap> | null,
 		public readonly messageLog: AbstractGossipLog<Action | Session, void | any>,
-		private readonly runtime: Runtime
+		private readonly runtime: Runtime,
 	) {
 		super()
 		this.db = runtime.db
@@ -152,7 +152,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				// Check if the session has already been added to the message log
 				const results = await runtime.db.query("$sessions", {
 					where: { address, public_key, expiration: { gt: timestamp } },
-					limit: 1
+					limit: 1,
 				})
 
 				this.log("got %d matching sessions: %o", results.length, results)
@@ -169,7 +169,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 				const { id, result, recipients } = await this.append(
 					{ type: "action", address, name, args: representation, blockhash: null, timestamp },
-					{ signer }
+					{ signer },
 				)
 
 				this.log("applied action %s and got result %o", id, result)
@@ -211,7 +211,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			peerId: this.peerId.toString(),
 			topic: this.topic,
 			models: models,
-			actions: Object.keys(this.actions)
+			actions: Object.keys(this.actions),
 		}
 	}
 
@@ -235,7 +235,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	 */
 	public async append(
 		payload: Session | Action,
-		options: { signer?: Signer<Message<Session | Action>> }
+		options: { signer?: Signer<Message<Session | Action>> },
 	): Promise<{ id: string; result: void | any; recipients: Promise<PeerId[]> }> {
 		if (this.libp2p === null) {
 			const { id, result } = await this.messageLog.append(payload, options)
@@ -246,7 +246,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	}
 
 	public async getMessage(
-		id: string
+		id: string,
 	): Promise<[signature: Signature, message: Message<Action | Session>] | [null, null]> {
 		return await this.messageLog.get(id)
 	}
@@ -254,7 +254,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	public async *getMessages(
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
-		options: { reverse?: boolean } = {}
+		options: { reverse?: boolean } = {},
 	): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]> {
 		yield* this.messageLog.iterate(lowerBound, upperBound, options)
 	}

@@ -16,7 +16,7 @@ export async function* encodeResponses(responses: AsyncIterable<Sync.Response>):
 }
 
 export async function* decodeRequests(
-	requests: AsyncIterable<Uint8ArrayList | Uint8Array>
+	requests: AsyncIterable<Uint8ArrayList | Uint8Array>,
 ): AsyncIterable<Sync.Request> {
 	for await (const msg of requests) {
 		const res = Sync.Request.decode(msg.subarray())

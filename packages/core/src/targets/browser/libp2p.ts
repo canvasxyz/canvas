@@ -38,7 +38,7 @@ export function getLibp2pOptions(
 		bootstrapList?: string[]
 		minConnections?: number
 		maxConnections?: number
-	}
+	},
 ): Libp2pOptions<ServiceMap> {
 	const announce = options.announce ?? []
 	const listen = options.listen ?? ["/webrtc"]

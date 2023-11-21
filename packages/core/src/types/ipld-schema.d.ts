@@ -7,7 +7,7 @@ declare module "@ipld/schema/typed.js" {
 	import { Schema } from "@ipld/schema/schema-schema"
 	export function create(
 		schema: Schema,
-		root: string
+		root: string,
 	): { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 
 	export type TypeTransformerFunction = (obj: any) => undefined | any

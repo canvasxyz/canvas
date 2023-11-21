@@ -9,7 +9,7 @@ import { assert } from "../utils.js"
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(
 		init: GossipLogInit<Payload, Result>,
-		path: string
+		path: string,
 	): Promise<GossipLog<Payload, Result>> {
 		if (!fs.existsSync(path)) {
 			fs.mkdirSync(path, { recursive: true })
@@ -48,7 +48,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	public async *entries(
 		lowerBound: Bound<Uint8Array> | null = null,
 		upperBound: Bound<Uint8Array> | null = null,
-		options: { reverse?: boolean } = {}
+		options: { reverse?: boolean } = {},
 	): AsyncIterable<[key: Uint8Array, value: Uint8Array]> {
 		const txn = new Transaction(this.env, { readOnly: true })
 

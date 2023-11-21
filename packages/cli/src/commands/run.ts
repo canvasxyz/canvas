@@ -177,8 +177,8 @@ export async function handler(args: Args) {
 	app.messageLog.addEventListener("sync", ({ detail: { peer, duration, messageCount } }) => {
 		console.log(
 			chalk.magenta(
-				`[canvas] Completed merkle sync with peer ${peer}: applied ${messageCount} messages in ${duration}ms`
-			)
+				`[canvas] Completed merkle sync with peer ${peer}: applied ${messageCount} messages in ${duration}ms`,
+			),
 		)
 	})
 
@@ -188,7 +188,7 @@ export async function handler(args: Args) {
 	api.use(cors())
 	api.use(
 		"/api",
-		createAPI(app, { exposeMetrics: args.metrics, exposeP2P: true, exposeModels: true, exposeMessages: true })
+		createAPI(app, { exposeMetrics: args.metrics, exposeP2P: true, exposeModels: true, exposeMessages: true }),
 	)
 
 	if (args.static !== undefined) {
@@ -223,7 +223,7 @@ export async function handler(args: Args) {
 			console.log(`└ GET  ${origin}/api/peers`)
 			console.log(`└ POST ${origin}/api/ping/:peerId`)
 		}),
-		0
+		0,
 	)
 
 	// const wss = new WebSocketServer({ noServer: true })
@@ -252,7 +252,7 @@ export async function handler(args: Args) {
 		} else {
 			stopping = true
 			process.stdout.write(
-				`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`
+				`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`,
 			)
 
 			// if (apiSyncTimer) clearTimeout(apiSyncTimer.timer)

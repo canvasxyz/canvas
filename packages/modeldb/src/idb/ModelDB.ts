@@ -36,7 +36,7 @@ export class ModelDB extends AbstractModelDB {
 						recordObjectStore.createIndex(getIndexName(index), property)
 					}
 				}
-			}
+			},
 		})
 
 		return new ModelDB(db, config, { indexHistory })
@@ -47,7 +47,7 @@ export class ModelDB extends AbstractModelDB {
 	private constructor(
 		public readonly db: IDBPDatabase,
 		config: Config,
-		options: { indexHistory?: Record<string, boolean> }
+		options: { indexHistory?: Record<string, boolean> },
 	) {
 		super(config, options)
 
@@ -80,7 +80,7 @@ export class ModelDB extends AbstractModelDB {
 
 	private async read<T>(
 		fn: (txn: IDBPTransaction<any, any, "readonly">) => Awaitable<T>,
-		objectStoreNames: string[] = [...this.db.objectStoreNames]
+		objectStoreNames: string[] = [...this.db.objectStoreNames],
 	) {
 		checkForMissingObjectStores(this.db, objectStoreNames)
 		const txn = this.db.transaction(objectStoreNames, "readonly")
@@ -162,7 +162,7 @@ export class ModelDB extends AbstractModelDB {
 							this.log.error(err)
 						}
 					}
-				})
+				}),
 			)
 		})
 	}
