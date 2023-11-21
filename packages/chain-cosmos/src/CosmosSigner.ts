@@ -65,7 +65,7 @@ export class CosmosSigner implements SessionSigner {
 			chainId,
 			uri: publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString()
+			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
 		}
 
 		// select verification method based on the signing method
@@ -82,7 +82,7 @@ export class CosmosSigner implements SessionSigner {
 
 	public async getSession(
 		topic: string,
-		options: { timestamp?: number; fromCache?: boolean } = {}
+		options: { timestamp?: number; fromCache?: boolean } = {},
 	): Promise<Session<CosmosSessionData>> {
 		const chainId = await this.#signer.getChainId()
 		const walletAddress = await this.#signer.getAddress(chainId)
@@ -118,7 +118,7 @@ export class CosmosSigner implements SessionSigner {
 			chainId,
 			uri: signer.uri,
 			issuedAt: issuedAt.toISOString(),
-			expirationTime: null
+			expirationTime: null,
 		}
 
 		if (this.sessionDuration !== null) {
@@ -134,7 +134,7 @@ export class CosmosSigner implements SessionSigner {
 			authorizationData: signResult,
 			blockhash: null,
 			timestamp,
-			duration: this.sessionDuration
+			duration: this.sessionDuration,
 		}
 
 		// save the session and private key in the cache and the store

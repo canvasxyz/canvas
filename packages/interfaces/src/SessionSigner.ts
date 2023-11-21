@@ -23,7 +23,7 @@ export interface SessionSigner<AuthorizationData = any> extends Signer<Message<A
 	 */
 	getSession: (
 		topic: string,
-		options?: { chain?: string; timestamp?: number; fromCache?: boolean }
+		options?: { chain?: string; timestamp?: number; fromCache?: boolean },
 	) => Awaitable<Session<AuthorizationData>>
 
 	/**

@@ -84,7 +84,7 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 	constructor(
 		private readonly components: SyncServiceComponents,
 		private readonly messages: AbstractGossipLog<Payload, Result>,
-		options: SyncOptions
+		options: SyncOptions,
 	) {
 		this.log = logger(`canvas:gossiplog:[${this.topic}]:sync`)
 		this.protocol = `/gossiplog/sync/v1/${messages.topic}`
@@ -163,10 +163,10 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 						(reqs) => server.handle(reqs),
 						encodeResponses,
 						lp.encode,
-						stream.sink
+						stream.sink,
 					)
 				},
-				{ targetId: peerId.toString() }
+				{ targetId: peerId.toString() },
 			)
 
 			this.log("closed incoming stream %s from peer %p", stream.id, peerId)

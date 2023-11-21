@@ -68,7 +68,7 @@ export class SubstrateSigner implements SessionSigner {
 					const signature = signerResult.signature
 					// signerResult.signature is encoded as 0x{hex}, just get the hex part
 					return hexToBytes(signature.slice(2))
-				}
+				},
 			}
 		} else {
 			const keyType: KeypairType = init.substrateKeyType ?? "sr25519"
@@ -97,7 +97,7 @@ export class SubstrateSigner implements SessionSigner {
 						keyring = randomKeypair(keyType)
 					}
 					return keyring.sign(bytesToHex(data))
-				}
+				},
 			}
 		}
 
@@ -121,7 +121,7 @@ export class SubstrateSigner implements SessionSigner {
 			chainId,
 			uri: publicKey,
 			issuedAt,
-			expirationTime: null
+			expirationTime: null,
 		}
 
 		const decodedAddress = decodeAddress(walletAddress)
@@ -132,7 +132,7 @@ export class SubstrateSigner implements SessionSigner {
 		await cryptoWaitReady()
 		const signerKeyring = new Keyring({
 			type: substrateKeyType,
-			ss58Format: 42
+			ss58Format: 42,
 		}).addFromAddress(decodedAddress)
 
 		const valid = signerKeyring.verify(bytesToHex(json.encode(message)), data.signature, decodedAddress)
@@ -142,7 +142,7 @@ export class SubstrateSigner implements SessionSigner {
 
 	public async getSession(
 		topic: string,
-		options: { chain?: string; timestamp?: number; fromCache?: boolean } = {}
+		options: { chain?: string; timestamp?: number; fromCache?: boolean } = {},
 	): Promise<Session<SubstrateSessionData>> {
 		const chainId = await this.#signer.getChainId()
 		const walletAddress = await this.#signer.getAddress()
@@ -180,7 +180,7 @@ export class SubstrateSigner implements SessionSigner {
 			chainId,
 			uri: signer.uri,
 			issuedAt,
-			expirationTime: null
+			expirationTime: null,
 		}
 
 		const signature = await this.#signer.signMessage(json.encode(message))
@@ -193,7 +193,7 @@ export class SubstrateSigner implements SessionSigner {
 			authorizationData: { signature, data: message, substrateKeyType },
 			blockhash: null,
 			timestamp,
-			duration: this.sessionDuration
+			duration: this.sessionDuration,
 		}
 
 		// save the session and private key in the cache and the store

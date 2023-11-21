@@ -139,7 +139,7 @@ export const referenceOrder = stringOrder
 
 export function getCompare(
 	model: Model,
-	orderBy: Record<string, "asc" | "desc">
+	orderBy: Record<string, "asc" | "desc">,
 ): (a: ModelValue, b: ModelValue) => -1 | 0 | 1 {
 	const entries = Object.entries(orderBy)
 	assert(entries.length === 1, "orderBy must have exactly one entry")
@@ -196,7 +196,7 @@ export function getFilter(model: Model, where: WhereCondition = {}): (value: Mod
 function getPropertyFilter(
 	model: Model,
 	propertyName: string,
-	expression: PropertyValue | NotExpression | RangeExpression
+	expression: PropertyValue | NotExpression | RangeExpression,
 ): (value: PropertyValue) => boolean {
 	const property = model.properties.find((property) => property.name === propertyName)
 	assert(property !== undefined)
@@ -205,7 +205,7 @@ function getPropertyFilter(
 		return getPrimitiveFilter(
 			model.name,
 			{ name: propertyName, kind: "primitive", type: "string", optional: false },
-			expression
+			expression,
 		)
 	} else if (property.kind === "primitive") {
 		return getPrimitiveFilter(model.name, property, expression)
@@ -221,7 +221,7 @@ function getPropertyFilter(
 function getReferenceFilter(
 	modelName: string,
 	property: ReferenceProperty,
-	expression: PropertyValue | NotExpression | RangeExpression
+	expression: PropertyValue | NotExpression | RangeExpression,
 ): (value: PropertyValue) => boolean {
 	if (isLiteralExpression(expression)) {
 		const reference = expression
@@ -242,20 +242,20 @@ function getReferenceFilter(
 function getRelationFilter(
 	modelName: string,
 	property: RelationProperty,
-	expression: PropertyValue | NotExpression | RangeExpression
+	expression: PropertyValue | NotExpression | RangeExpression,
 ): (value: PropertyValue) => boolean {
 	if (isLiteralExpression(expression)) {
 		const reference = expression
 		assert(
 			Array.isArray(reference) && reference.every((value) => typeof value === "string"),
-			"invalid relation expression (expected string[])"
+			"invalid relation expression (expected string[])",
 		)
 		return (value) => reference.every((target) => Array.isArray(value) && value.includes(target))
 	} else if (isNotExpression(expression)) {
 		const reference = expression.neq
 		assert(
 			Array.isArray(reference) && reference.every((value) => typeof value === "string"),
-			"invalid relation expression (expected string[])"
+			"invalid relation expression (expected string[])",
 		)
 		return (value) => reference.every((target) => Array.isArray(value) && !value.includes(target))
 	} else if (isRangeExpression(expression)) {
@@ -268,7 +268,7 @@ function getRelationFilter(
 function getPrimitiveFilter(
 	modelName: string,
 	property: PrimitiveProperty,
-	expression: PropertyValue | NotExpression | RangeExpression
+	expression: PropertyValue | NotExpression | RangeExpression,
 ): (value: PropertyValue) => boolean {
 	const order = primitiveTypeOrders[property.type]
 

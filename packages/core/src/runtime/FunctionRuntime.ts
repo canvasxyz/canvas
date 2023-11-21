@@ -18,7 +18,7 @@ export class FunctionRuntime extends AbstractRuntime {
 		path: string | null,
 		signers: SessionSigner[],
 		contract: Contract,
-		options: { indexHistory?: boolean } = {}
+		options: { indexHistory?: boolean } = {},
 	): Promise<FunctionRuntime> {
 		const { indexHistory = true } = options
 		const models = AbstractRuntime.getModelSchema(contract.models, { indexHistory })
@@ -60,7 +60,7 @@ export class FunctionRuntime extends AbstractRuntime {
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
-		indexHistory: boolean
+		indexHistory: boolean,
 	) {
 		super(indexHistory)
 

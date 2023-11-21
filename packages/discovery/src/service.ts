@@ -227,7 +227,7 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 }
 
 export function discovery(
-	init: DiscoveryServiceInit = {}
+	init: DiscoveryServiceInit = {},
 ): (components: DiscoveryServiceComponents) => DiscoveryService {
 	return (components) => new DiscoveryService(components, init)
 }

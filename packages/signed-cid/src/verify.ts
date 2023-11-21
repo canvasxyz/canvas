@@ -23,7 +23,7 @@ export type SignatureType = (typeof Ed25519Signer)["type"] | (typeof Secp256k1Si
 export function verifySignedValue(
 	signature: Signature,
 	value: any,
-	options: { types?: SignatureType[]; codecs?: Codec[]; digests?: Digest[] } = {}
+	options: { types?: SignatureType[]; codecs?: Codec[]; digests?: Digest[] } = {},
 ) {
 	const codec = (options.codecs ?? codecs).find((codec) => codec.code === signature.cid.code)
 	assert(codec !== undefined, "unsupported codec")
@@ -40,7 +40,7 @@ export function verifySignedValue(
  */
 export function verifySignature(
 	{ publicKey: uri, signature, cid }: Signature,
-	options: { types?: SignatureType[] } = {}
+	options: { types?: SignatureType[] } = {},
 ) {
 	const types = options.types ?? ["ed25519", "secp256k1"]
 	const result = didKeyPattern.exec(uri)
@@ -53,7 +53,7 @@ export function verifySignature(
 	} else if (keyCodec === Secp256k1Signer.code && types.includes(Secp256k1Signer.type)) {
 		assert(
 			secp256k1.verify(secp256k1.Signature.fromCompact(signature), cid.bytes, publicKey),
-			"invalid secp256k1 signature"
+			"invalid secp256k1 signature",
 		)
 	} else {
 		throw new Error("unsupported key codec")

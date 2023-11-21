@@ -19,7 +19,7 @@ await libp2p.start()
 console.log("[bootstrap-peer] started libp2p with PeerId", libp2p.peerId.toString())
 console.log(
 	"[bootstrap-peer] listening on",
-	libp2p.getMultiaddrs().map((addr) => addr.toString())
+	libp2p.getMultiaddrs().map((addr) => addr.toString()),
 )
 
 const controller = new AbortController()

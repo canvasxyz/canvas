@@ -15,7 +15,7 @@ import {
 	validateSessionData,
 	parseAddress,
 	addressPattern,
-	prepareSIWEMessage
+	prepareSIWEMessage,
 } from "./utils.js"
 
 export interface SIWESignerInit {
@@ -57,7 +57,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 			uri: publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
 			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
-			resources: [`canvas://${topic}`]
+			resources: [`canvas://${topic}`],
 		}
 
 		const recoveredAddress = verifyMessage(prepareSIWEMessage(siweMessage), hexlify(authorizationData.signature))
@@ -66,7 +66,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 
 	public async getSession(
 		topic: string,
-		options: { timestamp?: number; fromCache?: boolean } = {}
+		options: { timestamp?: number; fromCache?: boolean } = {},
 	): Promise<Session<SIWESessionData>> {
 		const walletAddress = await this.#ethersSigner.getAddress()
 		const address = `eip155:${this.chainId}:${walletAddress}`
@@ -108,7 +108,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 			nonce: nonce,
 			issuedAt: issuedAt,
 			expirationTime: null,
-			resources: [`canvas://${topic}`]
+			resources: [`canvas://${topic}`],
 		}
 
 		if (this.sessionDuration !== null) {
@@ -124,7 +124,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 			authorizationData: { signature: getBytes(signature), domain, nonce },
 			duration: this.sessionDuration,
 			timestamp: timestamp,
-			blockhash: null
+			blockhash: null,
 		}
 
 		this.#store.set(topic, address, session, signer)

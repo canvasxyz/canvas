@@ -18,7 +18,7 @@ export class ContractRuntime extends AbstractRuntime {
 		path: string | null,
 		signers: SessionSigner[],
 		contract: string,
-		options: { runtimeMemoryLimit?: number; indexHistory?: boolean } = {}
+		options: { runtimeMemoryLimit?: number; indexHistory?: boolean } = {},
 	): Promise<ContractRuntime> {
 		const { runtimeMemoryLimit, indexHistory = true } = options
 
@@ -62,7 +62,7 @@ export class ContractRuntime extends AbstractRuntime {
 				const { schema, name } = argsType.consume(vm.unwrapObject)
 				argsTransformers[actionName] = create(
 					fromDSL(schema.consume(vm.context.getString)),
-					name.consume(vm.context.getString)
+					name.consume(vm.context.getString),
 				)
 			} else {
 				argsTransformers[actionName] = { toTyped: (x: any) => x, toRepresentation: (x: any) => x }
@@ -93,7 +93,7 @@ export class ContractRuntime extends AbstractRuntime {
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
-		indexHistory: boolean
+		indexHistory: boolean,
 	) {
 		super(indexHistory)
 		this.#databaseAPI = vm

@@ -47,7 +47,7 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 	public async verifySession(topic: string, session: Session<ATPSessionData>): Promise<void> {
 		const { verificationMethod, recordArchive, recordURI, plcOperationLog } = session.authorizationData
 		await verifyLog(session.address, plcOperationLog).then((key) =>
-			assert(key === verificationMethod, "invalid verification method")
+			assert(key === verificationMethod, "invalid verification method"),
 		)
 
 		const prefix = `at://${session.address}/`
@@ -85,7 +85,7 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 
 	public async getSession(
 		topic: string,
-		options: { chain?: string; timestamp?: number; fromCache?: boolean } = {}
+		options: { chain?: string; timestamp?: number; fromCache?: boolean } = {},
 	): Promise<Session<ATPSessionData>> {
 		this.log("getting session %s")
 
@@ -146,11 +146,11 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 				verificationMethod,
 				recordArchive: result.data,
 				recordURI: uri,
-				plcOperationLog
+				plcOperationLog,
 			},
 			blockhash: null,
 			duration: null,
-			timestamp: options.timestamp ?? Date.now()
+			timestamp: options.timestamp ?? Date.now(),
 		}
 
 		this.#store.set(topic, address, session, signer)

@@ -40,7 +40,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		private readonly messages: IDBTree,
 		private readonly heads: IDBStore,
 		private readonly ancestors: IDBStore,
-		init: GossipLogInit<Payload, Result>
+		init: GossipLogInit<Payload, Result>,
 	) {
 		super(init)
 
@@ -71,7 +71,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	public async *entries(
 		lowerBound: Bound<Uint8Array> | null = null,
 		upperBound: Bound<Uint8Array> | null = null,
-		options: { reverse?: boolean } = {}
+		options: { reverse?: boolean } = {},
 	): AsyncIterable<[key: Uint8Array, value: Uint8Array]> {
 		this.log("requesting shared lock")
 		const deferred = pDefer()
@@ -95,7 +95,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				0,
 				lowerBound ?? { key: null, inclusive: false },
 				upperBound,
-				options
+				options,
 			)) {
 				assert(node.key !== null, "expected node.key !== null")
 				assert(node.value !== undefined, "expected node.value !== undefined")
@@ -110,7 +110,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 	public async read<T>(
 		callback: (txn: ReadOnlyTransaction) => Promise<T>,
-		options: { targetId?: string } = {}
+		options: { targetId?: string } = {},
 	): Promise<T> {
 		const targetId = options.targetId ?? null
 
@@ -169,7 +169,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 	public async write<T>(
 		callback: (txn: ReadWriteTransaction) => Promise<T>,
-		options: { sourceId?: string } = {}
+		options: { sourceId?: string } = {},
 	): Promise<T> {
 		const sourceId = options.sourceId ?? null
 		if (sourceId !== null) {
@@ -229,7 +229,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 						this.outgoingSyncPeers.delete(sourceId)
 					}
 				}
-			}
+			},
 		)
 
 		// this is just a workaround for fake-indexeddb which doesn't throw exceptions right

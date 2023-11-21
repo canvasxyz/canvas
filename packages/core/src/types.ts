@@ -19,7 +19,7 @@ export type ActionImplementationObject<Args = any, Result = any> = {
 export type ActionImplementationFunction<Args = any, Result = any> = (
 	db: Record<string, ModelAPI>,
 	args: Args,
-	context: ActionContext
+	context: ActionContext,
 ) => Awaitable<Result>
 
 export type ModelAPI = {

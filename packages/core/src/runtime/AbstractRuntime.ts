@@ -164,7 +164,7 @@ export abstract class AbstractRuntime {
 
 							assert(
 								existingVersion === null || existingVersion instanceof Uint8Array,
-								"expected version === null || version instanceof Uint8Array"
+								"expected version === null || version instanceof Uint8Array",
 							)
 
 							const currentVersion = encodeId(id)
@@ -204,7 +204,7 @@ export abstract class AbstractRuntime {
 	protected async getModelValue<T extends ModelValue = ModelValue>(
 		context: ExecutionContext,
 		model: string,
-		key: string
+		key: string,
 	): Promise<null | T> {
 		if (!this.indexHistory) {
 			throw new Error("cannot call .get if indexHistory is disabled")

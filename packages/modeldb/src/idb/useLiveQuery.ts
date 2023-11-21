@@ -7,7 +7,7 @@ import { AbstractModelDB } from "../AbstractModelDB.js"
 export function useLiveQuery<T extends ModelValue = ModelValue>(
 	db: AbstractModelDB | null | undefined,
 	modelName: string | null | undefined,
-	query: QueryParams | null | undefined
+	query: QueryParams | null | undefined,
 ): T[] | null {
 	const dbRef = useRef<AbstractModelDB | null>(db ?? null)
 	const modelRef = useRef<string | null>(modelName ?? null)
