@@ -10,6 +10,7 @@ import { ConnectPolkadot } from "./ConnectPolkadot.js"
 import { ConnectSolana } from "./ConnectSolana.js"
 import { ConnectNEAR } from "./ConnectNEAR.js"
 import { ConnectMagic } from "./ConnectMagic.js"
+import { ConnectMagicCosmos } from "./ConnectMagicCosmos.js"
 
 export const Connect: React.FC<{}> = ({}) => {
 	const [method, setMethod] = useState("ethereum")
@@ -31,6 +32,7 @@ export const Connect: React.FC<{}> = ({}) => {
 				<option value="cosmos-evm">Cosmos/EVM</option>
 				<option value="bluesky">BlueSky</option>
 				<option value="magic">Magic</option>
+				<option value="magic-cosmos">Magic (Cosmos)</option>
 			</select>
 			<Method method={method} />
 		</>
@@ -65,6 +67,8 @@ const Method: React.FC<{ method: string }> = (props) => {
 					publicMagicApiKey={import.meta.env.VITE_PUBLIC_MAGIC_API_KEY}
 				/>
 			)
+		case "magic-cosmos":
+			return <ConnectMagicCosmos rpcUrl="" publicMagicApiKey={import.meta.env.VITE_PUBLIC_MAGIC_API_KEY} />
 		default:
 			throw new Error("invalid login method")
 	}
