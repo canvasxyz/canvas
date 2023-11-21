@@ -12,24 +12,27 @@ type ConnectMagicProps = {
 	rpcUrl: string
 }
 
+// this is in a function so that we can use ReturnType
+function createMagic(publicMagicApiKey: string, cosmosRpcUrl: string) {
+	return new Magic(publicMagicApiKey, {
+		extensions: [
+			new CosmosExtension({
+				rpcUrl: cosmosRpcUrl
+			}),
+			new AuthExtension()
+		]
+	})
+}
+
 export const ConnectMagicCosmos = ({ publicMagicApiKey, rpcUrl }: ConnectMagicProps) => {
 	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
-	const [magic, setMagic] = useState<MagicBase<CosmosExtension> | null>(null)
+	const [magic, setMagic] = useState<ReturnType<typeof createMagic> | null>(null)
 	const [email, setEmail] = useState("")
 	const [error, setError] = useState<Error | null>(null)
 	const [loginInProgress, setLoginInProgress] = useState(false)
 
 	useEffect(() => {
-		const magic = new Magic(publicMagicApiKey, {
-			extensions: [
-				new CosmosExtension({
-					rpcUrl
-				}),
-				new AuthExtension()
-			]
-		})
-
-		setMagic(magic as MagicBase<CosmosExtension>)
+		setMagic(createMagic(publicMagicApiKey, rpcUrl))
 	}, [])
 
 	const connect = useCallback(async () => {

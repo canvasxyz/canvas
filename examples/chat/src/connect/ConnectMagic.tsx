@@ -13,23 +13,26 @@ type ConnectMagicProps = {
 	chainId: number
 }
 
+// this is in a function so that we can use ReturnType
+function createMagic(publicMagicApiKey: string, rpcUrl: string, chainId: number) {
+	return new MagicBase(publicMagicApiKey, {
+		network: {
+			rpcUrl,
+			chainId
+		},
+		extensions: [new AuthExtension()]
+	})
+}
+
 export const ConnectMagic = ({ publicMagicApiKey, rpcUrl, chainId }: ConnectMagicProps) => {
 	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
-	const [magic, setMagic] = useState<MagicBase | null>(null)
+	const [magic, setMagic] = useState<ReturnType<typeof createMagic> | null>(null)
 	const [email, setEmail] = useState("")
 	const [error, setError] = useState<Error | null>(null)
 	const [loginInProgress, setLoginInProgress] = useState(false)
 
 	useEffect(() => {
-		const magic = new MagicBase(publicMagicApiKey, {
-			network: {
-				rpcUrl,
-				chainId
-			},
-			extensions: [new AuthExtension()]
-		})
-
-		setMagic(magic)
+		setMagic(createMagic(publicMagicApiKey, rpcUrl, chainId))
 	}, [])
 
 	const connect = useCallback(async () => {
