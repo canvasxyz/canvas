@@ -1,7 +1,7 @@
 // These are "init types" for the `models` value used to initialize the database.
 
 export type PrimaryKeyType = "primary"
-export type PrimitiveType = "integer" | "float" | "string" | "bytes"
+export type PrimitiveType = "integer" | "float" | "string" | "bytes" | "boolean"
 export type OptionalPrimitiveType = `${PrimitiveType}?`
 export type ReferenceType = `@${string}`
 export type OptionalReferenceType = `@${string}?`
@@ -48,7 +48,7 @@ export type Config = {
 // These are types for the runtime model record values
 
 export type PrimaryKeyValue = string
-export type PrimitiveValue = number | string | Uint8Array | null
+export type PrimitiveValue = number | string | Uint8Array | null | boolean
 export type ReferenceValue = string | null
 export type RelationValue = string[]
 

@@ -33,6 +33,7 @@ const primitiveColumnTypes = {
 	float: "FLOAT",
 	string: "TEXT",
 	bytes: "BLOB",
+	boolean: "INTEGER",
 } satisfies Record<PrimitiveType, string>
 
 function getPropertyColumnType(property: Property): string {
@@ -316,8 +317,8 @@ export class ModelAPI {
 
 	private getWhereExpression(
 		where: WhereCondition = {},
-	): [where: string | null, params: Record<string, null | number | string | Buffer>] {
-		const params: Record<string, null | number | string | Buffer> = {}
+	): [where: string | null, params: Record<string, null | number | string | Buffer | boolean>] {
+		const params: Record<string, null | number | string | Buffer | boolean> = {}
 		const filters = Object.entries(where).flatMap(([name, expression], i) => {
 			const property = this.#properties[name]
 			assert(property !== undefined, "property not found")
