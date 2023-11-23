@@ -128,11 +128,37 @@ const byteOrder: Order = {
 	},
 }
 
+const booleanOrder: Order = {
+	equals: (a, b) => {
+		if (a === null && b === null) {
+			return true
+		} else if (typeof a === "boolean" && typeof b === "boolean") {
+			return a === b
+		} else {
+			return false
+		}
+	},
+	lessThan: (a, b) => {
+		if (a === null && b === null) {
+			return false
+		} else if (a === null) {
+			return true
+		} else if (b === null) {
+			return false
+		} else if (typeof a === "boolean" && typeof b === "boolean") {
+			return a === false && b === true
+		} else {
+			return false
+		}
+	},
+}
+
 export const primitiveTypeOrders: Record<PrimitiveType, Order> = {
 	integer: numberOrder,
 	float: numberOrder,
 	string: stringOrder,
 	bytes: byteOrder,
+	boolean: booleanOrder,
 }
 
 export const referenceOrder = stringOrder

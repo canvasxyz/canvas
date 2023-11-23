@@ -10,6 +10,12 @@ import type {
 
 import { assert, signalInvalidType } from "../utils.js"
 
+// this is the type of a primitive value as stored in sqlite
+// this may not match onto the types in the model
+// because sqlite does not natively support all of the types we might want
+// for example, sqlite does not have a boolean or a json type
+type SqlitePrimitiveValue = string | number | Buffer | null
+
 export function encodeRecordParams(
 	model: Model,
 	value: ModelValue,
@@ -53,7 +59,7 @@ function encodePrimitiveValue(
 	modelName: string,
 	property: PrimitiveProperty,
 	value: PropertyValue,
-): string | number | Buffer | null {
+): SqlitePrimitiveValue {
 	if (value === null) {
 		if (property.optional) {
 			return null
@@ -84,7 +90,14 @@ function encodePrimitiveValue(
 		} else {
 			throw new TypeError(`${modelName}/${property.name} must be a Uint8Array`)
 		}
+	} else if (property.type === "boolean") {
+		if (typeof value === "boolean") {
+			return value ? 1 : 0
+		} else {
+			throw new TypeError(`${modelName}/${property.name} must be a boolean`)
+		}
 	} else {
+		const _: never = property.type
 		throw new Error(`internal error - unknown primitive type ${JSON.stringify(property.type)}`)
 	}
 }
@@ -135,11 +148,7 @@ export function decodePrimaryKeyValue(
 	return value
 }
 
-export function decodePrimitiveValue(
-	modelName: string,
-	property: PrimitiveProperty,
-	value: string | number | Buffer | null,
-) {
+export function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: SqlitePrimitiveValue) {
 	if (value === null) {
 		if (property.optional) {
 			return null
@@ -176,7 +185,15 @@ export function decodePrimitiveValue(
 			console.error("expected Uint8Array, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected Uint8Array)`)
 		}
+	} else if (property.type == "boolean") {
+		if (typeof value === "number") {
+			return value === 1
+		} else {
+			console.error("expected boolean, got", value)
+			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected boolean)`)
+		}
 	} else {
+		const _: never = property.type
 		throw new Error(`internal error - unknown primitive type ${JSON.stringify(property.type)}`)
 	}
 }

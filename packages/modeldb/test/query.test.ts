@@ -4,23 +4,23 @@ import { testOnModelDB } from "./utils.js"
 
 testOnModelDB("query (select)", async (t, openDB) => {
 	const db = await openDB({
-		user: { id: "primary", name: "string?" },
+		user: { id: "primary", isModerator: "boolean", name: "string?" },
 	})
 
 	const [a, b] = ["a", "b"]
-	await db.set("user", { id: a, name: "John Doe" })
-	await db.set("user", { id: b, name: null })
+	await db.set("user", { id: a, isModerator: true, name: "John Doe" })
+	await db.set("user", { id: b, isModerator: false, name: null })
 
 	t.deepEqual(await db.query("user", {}), [
-		{ id: a, name: "John Doe" },
-		{ id: b, name: null },
+		{ id: a, isModerator: true, name: "John Doe" },
+		{ id: b, isModerator: false, name: null },
 	])
 
 	t.deepEqual(await db.query("user", { select: { id: true } }), [{ id: a }, { id: b }])
 	t.deepEqual(await db.query("user", { select: { id: true, name: false } }), [{ id: a }, { id: b }])
-	t.deepEqual(await db.query("user", { select: { id: true, name: true } }), [
-		{ id: a, name: "John Doe" },
-		{ id: b, name: null },
+	t.deepEqual(await db.query("user", { select: { id: true, isModerator: true, name: true } }), [
+		{ id: a, isModerator: true, name: "John Doe" },
+		{ id: b, isModerator: false, name: null },
 	])
 	t.deepEqual(await db.query("user", { select: { id: true, name: true } }), [
 		{ id: a, name: "John Doe" },

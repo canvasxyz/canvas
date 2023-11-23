@@ -71,6 +71,10 @@ export function validatePropertyValue(modelName: string, property: Property, val
 			} else {
 				throw new TypeError(`${modelName}/${property.name} must be a Uint8Array`)
 			}
+		} else if (property.type === "boolean") {
+			if (typeof value !== "boolean") {
+				throw new TypeError(`${modelName}/${property.name} must be a boolean`)
+			}
 		} else {
 			signalInvalidType(property.type)
 		}

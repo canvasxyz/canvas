@@ -11,6 +11,7 @@ testOnModelDB("create modeldb with a model with valid fields", async (t, openDB)
 		room: {
 			id: "primary",
 			name: "string",
+			isModerator: "boolean",
 			creator: "@user",
 			members: "@user[]",
 		},

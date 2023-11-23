@@ -4,14 +4,14 @@ import { testOnModelDB } from "./utils.js"
 
 testOnModelDB("update a value", async (t, openDB) => {
 	const db = await openDB({
-		user: { id: "primary", name: "string" },
+		user: { id: "primary", name: "string", isModerator: "boolean" },
 	})
 
 	const id = nanoid()
 
-	await db.set("user", { id, name: "John" })
-	await db.set("user", { id, name: "John Doe" })
-	t.deepEqual(await db.get("user", id), { id, name: "John Doe" })
+	await db.set("user", { id, name: "John", isModerator: false })
+	await db.set("user", { id, name: "John Doe", isModerator: true })
+	t.deepEqual(await db.get("user", id), { id, isModerator: true, name: "John Doe" })
 })
 
 testOnModelDB("delete a value ", async (t, openDB) => {
