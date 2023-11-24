@@ -13,16 +13,17 @@ export const topic = "com.example.app"
 
 export const models = {
   posts: {
-		id: "primary",
+    id: "primary",
     content: "string",
     timestamp: "integer",
+    isVisible: "boolean"
   },
 };
 
 export const actions = {
-  async createPost(db, { content }, { id, address, timestamp }) {
+  async createPost(db, { content, isVisible }, { id, address, timestamp }) {
     const postId = [address, id].join("/")
-    await db.posts.set({ id: postId, content, timestamp });
+    await db.posts.set({ id: postId, content, isVisible, timestamp });
     return postId
   },
 
@@ -188,7 +189,7 @@ test("get a value set by another action", async (t) => {
 		[
 			{ id: a, from: `eip155:1:${wallet.address}`, content: "foo" },
 			{ id: b, from: `eip155:1:${wallet.address}`, content: "bar" },
-		].sort(compareIDs)
+		].sort(compareIDs),
 	)
 })
 
@@ -219,7 +220,7 @@ test("validate action args using IPLD schemas", async (t) => {
 					apply: async (
 						db,
 						{ content, inReplyTo }: { content: string; inReplyTo: string | null },
-						{ id, address, timestamp }
+						{ id, address, timestamp },
 					) => {
 						const postId = [address, id].join("/")
 						await db.posts.set({ id: postId, content, timestamp, address })

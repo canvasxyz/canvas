@@ -194,8 +194,7 @@ export class ContractRuntime extends AbstractRuntime {
 			} else if (property.type === "bytes") {
 				return this.vm.getUint8Array(handle)
 			} else if (property.type === "boolean") {
-				const value = this.vm.context.getNumber(handle)
-				return value === 1
+				return this.vm.getBoolean(handle)
 			} else {
 				signalInvalidType(property.type)
 			}
