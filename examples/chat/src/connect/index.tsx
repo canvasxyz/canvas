@@ -1,5 +1,6 @@
 import React, { useState } from "react"
 
+import { ConnectSIWEBurner } from "./ConnectSIWEBurner.js"
 import { ConnectSIWE } from "./ConnectSIWE.js"
 import { ConnectATP } from "./ConnectATP.js"
 import { ConnectCosmosKeplr } from "./ConnectCosmosKeplr.js"
@@ -12,7 +13,7 @@ import { ConnectNEAR } from "./ConnectNEAR.js"
 import { ConnectMagic } from "./ConnectMagic.js"
 
 export const Connect: React.FC<{}> = ({}) => {
-	const [method, setMethod] = useState("ethereum")
+	const [method, setMethod] = useState("burner")
 
 	return (
 		<>
@@ -21,6 +22,7 @@ export const Connect: React.FC<{}> = ({}) => {
 				value={method}
 				onChange={(e) => setMethod(e.target.value)}
 			>
+				<option value="burner">Burner Wallet</option>
 				<option value="ethereum">Ethereum</option>
 				<option value="polkadot">Polkadot</option>
 				<option value="solana">Solana</option>
@@ -39,6 +41,8 @@ export const Connect: React.FC<{}> = ({}) => {
 
 const Method: React.FC<{ method: string }> = (props) => {
 	switch (props.method) {
+		case "burner":
+			return <ConnectSIWEBurner />
 		case "ethereum":
 			return <ConnectSIWE />
 		case "polkadot":
