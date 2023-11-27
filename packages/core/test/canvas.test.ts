@@ -79,6 +79,7 @@ test("create and delete a post", async (t) => {
 	assert(typeof postId === "string")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
+	// TODO: better type inference for the result of db.get
 	t.is((value?.metadata as any).author, "me")
 
 	await app.actions.deletePost(postId)
