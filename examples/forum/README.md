@@ -10,69 +10,69 @@ persister which loads past posts from an Irys endpoint.
 
 ```ts
 const models = {
-	categories: {
-		name: "primary",
-	},
-	tags: {
-		name: "primary",
-	},
-	threads: {
-		id: "primary",
-		title: "string",
-		message: "string",
-		address: "string",
-		timestamp: "integer",
-		category: "string",
-		replies: "integer",
-		$indexes: [["category"], ["address"], ["timestamp"]],
-	},
-	replies: {
-		id: "primary",
-		threadId: "@threads",
-		reply: "string",
-		address: "string",
-		timestamp: "integer",
-		$indexes: [["threadId"]],
-	},
+  categories: {
+    name: "primary",
+  },
+  tags: {
+    name: "primary",
+  },
+  threads: {
+    id: "primary",
+    title: "string",
+    message: "string",
+    address: "string",
+    timestamp: "integer",
+    category: "string",
+    replies: "integer",
+    $indexes: [["category"], ["address"], ["timestamp"]],
+  },
+  replies: {
+    id: "primary",
+    threadId: "@threads",
+    reply: "string",
+    address: "string",
+    timestamp: "integer",
+    $indexes: [["threadId"]],
+  },
 }
 
 const actions = {
-	createTag: (db, { tag }, { address, timestamp, id }) => {
-		if (!tag || !tag.trim()) throw new Error()
-		db.tags.set({ name: tag })
-	},
-	deleteTag: (db, { tag }, { address, timestamp, id }) => {
-		db.tags.delete(tag)
-	},
-	createCategory: (db, { category }, { address, timestamp, id }) => {
-		if (!category || !category.trim()) throw new Error()
-		db.categories.set({ name: category })
-	},
-	deleteCategory: (db, { category }, { address, timestamp, id }) => {
-		db.categories.delete(category)
-	},
-	createThread: (db, { title, message, category }, { address, timestamp, id }) => {
-		if (!message || !category || !title || !message.trim() || !category.trim() || !title.trim()) throw new Error()
-		db.threads.set({ id, title, message, category, address, timestamp, replies: 0 })
-	},
-	deleteMessage: async (db, { id }, { address, timestamp }) => {
-		const message = await db.threads.get(id)
-		if (!message || message.address !== address) throw new Error()
-		db.threads.delete(id)
-	},
-	createReply: async (db, { threadId, reply }, { address, timestamp, id }) => {
-		const thread = await db.threads.get(threadId)
-		if (!thread || !threadId) throw new Error()
-		db.threads.set({ ...thread, replies: (thread.replies as number) + 1 })
-		db.replies.set({ id, threadId, reply, address, timestamp })
-	},
-	deleteReply: async (db, { replyId }, { address, timestamp, id }) => {
-		const reply = await db.replies.get(replyId)
-		if (!reply) throw new Error()
-		const thread = await db.threads.get(reply.threadId as string)
-		if (!thread) throw new Error()
-		db.threads.set({ ...thread, replies: (thread.replies as number) - 1 })
-		db.replies.delete(replyId)
-	},
+  createTag: (db, { tag }, { address, timestamp, id }) => {
+    if (!tag || !tag.trim()) throw new Error()
+    db.set("tags", { name: tag })
+  },
+  deleteTag: (db, { tag }, { address, timestamp, id }) => {
+    db.delete("tags", tag)
+  },
+  createCategory: (db, { category }, { address, timestamp, id }) => {
+    if (!category || !category.trim()) throw new Error()
+    db.set("categories", { name: category })
+  },
+  deleteCategory: (db, { category }, { address, timestamp, id }) => {
+    db.delete("categories", category)
+  },
+  createThread: (db, { title, message, category }, { address, timestamp, id }) => {
+    if (!message || !category || !title || !message.trim() || !category.trim() || !title.trim()) throw new Error()
+    db.set("threads", { id, title, message, category, address, timestamp, replies: 0 })
+  },
+  deleteMessage: async (db, { id }, { address, timestamp }) => {
+    const message = await db.get("threads", id)
+    if (!message || message.address !== address) throw new Error()
+    db.delete("threads", id)
+  },
+  createReply: async (db, { threadId, reply }, { address, timestamp, id }) => {
+    const thread = await db.get("threads", threadId)
+    if (!thread || !threadId) throw new Error()
+    db.set("threads", { ...thread, replies: (thread.replies as number) + 1 })
+    db.set("replies", { id, threadId, reply, address, timestamp })
+  },
+  deleteReply: async (db, { replyId }, { address, timestamp, id }) => {
+    const reply = await db.get("replies", replyId)
+    if (!reply) throw new Error()
+    const thread = await db.get("threads", reply.threadId as string)
+    if (!thread) throw new Error()
+    db.set("threads", { ...thread, replies: (thread.replies as number) - 1 })
+    db.delete("replies", replyId)
+  },
 }
 ```
