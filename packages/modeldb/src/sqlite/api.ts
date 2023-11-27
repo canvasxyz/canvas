@@ -34,6 +34,7 @@ const primitiveColumnTypes = {
 	string: "TEXT",
 	bytes: "BLOB",
 	boolean: "INTEGER",
+	json: "TEXT",
 } satisfies Record<PrimitiveType, string>
 
 function getPropertyColumnType(property: Property): string {

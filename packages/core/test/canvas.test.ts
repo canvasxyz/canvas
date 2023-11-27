@@ -17,14 +17,14 @@ export const models = {
     content: "string",
     timestamp: "integer",
     isVisible: "boolean",
-		something: "string?"
+		metadata: "json?"
   },
 };
 
 export const actions = {
-  async createPost(db, { content, isVisible, something }, { id, address, timestamp }) {
+  async createPost(db, { content, isVisible, metadata }, { id, address, timestamp }) {
     const postId = [address, id].join("/")
-    await db.posts.set({ id: postId, content, isVisible, timestamp, something });
+    await db.posts.set({ id: postId, content, isVisible, timestamp, metadata: metadata || null });
     return postId
   },
 
@@ -71,10 +71,15 @@ test("apply an action and read a record from the database", async (t) => {
 test("create and delete a post", async (t) => {
 	const app = await init(t)
 
-	const { result: postId } = await app.actions.createPost({ content: "hello world", isVisible: true, something: "foo" })
+	const { result: postId } = await app.actions.createPost({
+		content: "hello world",
+		isVisible: true,
+		metadata: { author: "me" },
+	})
 	assert(typeof postId === "string")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
+	t.is(value?.metadata?.author, "me")
 
 	await app.actions.deletePost(postId)
 	t.is(await app.db.get("posts", postId), null)

@@ -3,7 +3,9 @@ import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
+
 import { AbstractModelDB, Model, ModelValue, ModelsInit, validateModelValue } from "@canvas-js/modeldb"
+
 import { VM } from "@canvas-js/vm"
 import { getCID } from "@canvas-js/signed-cid"
 
