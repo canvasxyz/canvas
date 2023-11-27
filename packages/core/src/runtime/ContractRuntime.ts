@@ -3,13 +3,13 @@ import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
-import { AbstractModelDB, Model, ModelValue, ModelsInit, Property, PropertyValue } from "@canvas-js/modeldb"
+import { AbstractModelDB, Model, ModelValue, ModelsInit, validateModelValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { getCID } from "@canvas-js/signed-cid"
 
 import target from "#target"
 
-import { assert, mapEntries, signalInvalidType } from "../utils.js"
+import { assert, mapEntries } from "../utils.js"
 
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
@@ -108,9 +108,10 @@ export class ContractRuntime extends AbstractRuntime {
 					assert(this.#context !== null, "expected this.#modelEntries !== null")
 					const model = vm.context.getString(modelHandle)
 					assert(this.db.models[model] !== undefined, "model not found")
-					const value = this.unwrapModelValue(this.db.models[model], valueHandle)
+					const value = this.vm.unwrapValue(valueHandle) as ModelValue
+					validateModelValue(this.db.models[model], value)
 					const { primaryKey } = this.db.models[model]
-					const key = value[primaryKey]
+					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 					this.#context.modelEntries[model][key] = value
 				}),
@@ -123,10 +124,6 @@ export class ContractRuntime extends AbstractRuntime {
 				}),
 			})
 			.consume(vm.cache)
-
-		// this.#databaseAPI = vm
-		// 	.wrapObject(Object.fromEntries(db.config.models.map((model) => [model.name, this.createAPI(model)])))
-		// 	.consume(vm.cache)
 	}
 
 	public async close() {
@@ -169,72 +166,6 @@ export class ContractRuntime extends AbstractRuntime {
 			argsHandle.dispose()
 			ctxHandle.dispose()
 			this.#context = null
-		}
-	}
-
-	// private createAPI(model: Model): QuickJSHandle {
-	// 	return this.vm.wrapObject({
-	// 		get: this.vm.wrapFunction((key) => {
-	// 			assert(this.#context !== null, "expected this.#context !== null")
-	// 			assert(typeof key === "string")
-	// 			return this.getModelValue(this.#context, model.name, key)
-	// 		}),
-	// 		set: this.vm.context.newFunction(`db.${model.name}.set`, (valueHandle) => {
-	// 			assert(this.#context !== null, "expected this.#modelEntries !== null")
-	// 			const value = this.unwrapModelValue(model, valueHandle)
-	// 			const primaryKey = value[model.primaryKey]
-	// 			assert(typeof primaryKey === "string", "expected primary key to be a string")
-	// 			this.#context.modelEntries[model.name][primaryKey] = value
-	// 		}),
-	// 		delete: this.vm.context.newFunction(`db.${model.name}.delete`, (keyHandle) => {
-	// 			assert(this.#context !== null, "expected this.#modelEntries !== null")
-	// 			const key = this.vm.context.getString(keyHandle)
-	// 			this.#context.modelEntries[model.name][key] = null
-	// 		}),
-	// 	})
-	// }
-
-	private unwrapModelValue(model: Model, handle: QuickJSHandle): ModelValue {
-		const values = model.properties.map<[string, PropertyValue]>((property) => {
-			const propertyHandle = this.vm.context.getProp(handle, property.name)
-			const propertyValue = propertyHandle.consume((handle) => this.unwrapPropertyValue(property, handle))
-			return [property.name, propertyValue]
-		})
-
-		return Object.fromEntries(values)
-	}
-
-	private unwrapPropertyValue(property: Property, handle: QuickJSHandle): PropertyValue {
-		if (property.kind === "primary") {
-			return this.vm.context.getString(handle)
-		} else if (property.kind === "primitive") {
-			if (property.type === "integer") {
-				const value = this.vm.context.getNumber(handle)
-				assert(Number.isSafeInteger(value), "property value must be a safe integer")
-				return value
-			} else if (property.type === "float") {
-				return this.vm.context.getNumber(handle)
-			} else if (property.type === "string") {
-				return this.vm.context.getString(handle)
-			} else if (property.type === "bytes") {
-				return this.vm.getUint8Array(handle)
-			} else if (property.type === "boolean") {
-				return this.vm.getBoolean(handle)
-			} else {
-				signalInvalidType(property.type)
-			}
-		} else if (property.kind === "reference") {
-			if (this.vm.is(handle, this.vm.context.null)) {
-				return null
-			} else {
-				return this.vm.context.getString(handle)
-			}
-		} else if (property.kind === "relation") {
-			// // TODO: this might need to be consumed...
-			// return this.vm.unwrapArray(handle, (elementHandle) => this.vm.context.getString(elementHandle))
-			return this.vm.unwrapArray(handle, (elementHandle) => elementHandle.consume(this.vm.context.getString))
-		} else {
-			signalInvalidType(property)
 		}
 	}
 }

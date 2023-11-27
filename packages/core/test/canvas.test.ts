@@ -16,14 +16,15 @@ export const models = {
     id: "primary",
     content: "string",
     timestamp: "integer",
-    isVisible: "boolean"
+    isVisible: "boolean",
+		something: "string?"
   },
 };
 
 export const actions = {
-  async createPost(db, { content, isVisible }, { id, address, timestamp }) {
+  async createPost(db, { content, isVisible, something }, { id, address, timestamp }) {
     const postId = [address, id].join("/")
-    await db.set("posts", { id: postId, content, isVisible, timestamp });
+    await db.set("posts", { id: postId, content, isVisible, timestamp, something });
     return postId
   },
 
@@ -55,7 +56,11 @@ test("open and close an app", async (t) => {
 test("apply an action and read a record from the database", async (t) => {
 	const app = await init(t)
 
-	const { id, result: postId } = await app.actions.createPost({ content: "hello world" })
+	const { id, result: postId } = await app.actions.createPost({
+		content: "hello world",
+		isVisible: true,
+		something: null,
+	})
 
 	t.log(`applied action ${id} and got result`, postId)
 	assert(typeof postId === "string")
@@ -66,7 +71,7 @@ test("apply an action and read a record from the database", async (t) => {
 test("create and delete a post", async (t) => {
 	const app = await init(t)
 
-	const { result: postId } = await app.actions.createPost({ content: "hello world" })
+	const { result: postId } = await app.actions.createPost({ content: "hello world", isVisible: true, something: "foo" })
 	assert(typeof postId === "string")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
@@ -78,7 +83,7 @@ test("create and delete a post", async (t) => {
 test("insert a message created by another app", async (t) => {
 	const [a, b] = await Promise.all([init(t), init(t)])
 
-	const { id } = await a.actions.createPost({ content: "hello world" })
+	const { id } = await a.actions.createPost({ content: "hello world", isVisible: true, something: "bar" })
 	const [signature, message] = await a.messageLog.get(id)
 	assert(signature !== null && message !== null)
 
