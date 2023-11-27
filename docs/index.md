@@ -39,7 +39,7 @@ const models = {
 const actions = {
 	send: (db, { message }, { address, timestamp, id }) => {
 		if (!message || !message.trim()) throw new Error()
-		db.messages.set({ id, message, timestamp })
+		db.set("messages", { id, message, timestamp })
 	}
 }
 
@@ -62,14 +62,14 @@ const models = {
 
 const actions = {
   move: async (db, { from, to }, { address, timestamp, id }) => {
-    const board = await db.boards.get("<gameid>")
+    const board = await db.get("boards", "<gameid>")
     const chess = new Chess(board.position)
     const move = chess.move({ from, to, promotion: "q" })
     if (move === null) throw new Error("invalid")
-    await db.boards.set({ id: "<gameid>", position: chess.fen() })
+    await db.set("boards", { id: "<gameid>", position: chess.fen() })
   },
   reset: async (db, {}, { address, timestamp, id }) => {
-    await db.boards.set({ id: "<gameid>", fen: new Chess().fen() })
+    await db.set("boards", { id: "<gameid>", fen: new Chess().fen() })
   }
 }
 

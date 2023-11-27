@@ -25,10 +25,10 @@ t0 ->- t1a ->- t2a ->- t3
 	|			  	|
 	-- t1b ->- t2b --
 
-// t1a: db.table.set({ foo: 'foo' })
-// t1b: db.table.set({ foo: 'baz' })
-// t2a: db.table.set({ bar: 'qux' })
-// t2b: db.table.set({ bar: 'qax' })
+// t1a: db.set(table, { foo: 'foo' })
+// t1b: db.set(table, { foo: 'baz' })
+// t2a: db.set(table, { bar: 'qux' })
+// t2b: db.set(table, { bar: 'qax' })
 ```
 
 The value of `foo` might be `bar` or `baz` after executing these actions. The tiebreak comes down to whichever one has an action hash that is lexicographically greater, which, in practice, is randomly determined at the time of creation.
@@ -182,7 +182,7 @@ const app = await Canvas.initialize({
         assert(typeof args === "object")
         assert(typeof args.content === "string")
         assert(typeof args.replyTo === "string" || args.replyTo === null)
-        await db.posts.set({ id, content: args.content, replyTo: args.replyTo, ... })
+        await db.set("posts", { id, content: args.content, replyTo: args.replyTo, ... })
       },
     }
   }

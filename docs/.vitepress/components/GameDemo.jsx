@@ -40,13 +40,13 @@ const GameDemo = () => {
 			},
 			actions: {
 				move: async (db, { from, to }, { address, timestamp, id }) => {
-					const chess = new Chess((await db.boards.get("0"))?.fen || new Chess().fen())
+					const chess = new Chess((await db.get("boards", "0"))?.fen || new Chess().fen())
 					const move = chess.move({ from, to, promotion: "q" })
 					if (move === null) throw new Error("invalid")
-					await db.boards.set({ id: "0", fen: chess.fen() })
+					await db.set("boards", { id: "0", fen: chess.fen() })
 				},
 				reset: async (db, {}, { address, timestamp, id }) => {
-					await db.boards.set({ id: "0", fen: new Chess().fen() })
+					await db.set("boards", { id: "0", fen: new Chess().fen() })
 				},
 			},
 			topic: "canvas-chess",
@@ -90,6 +90,10 @@ const GameDemo = () => {
 		app.actions.move({ from: sourceSquare, to: targetSquare })
 	}
 	const onClick = (square) => {
+		if (!boards || boards.length === 0) {
+			setState({ pieceSquare: "" })
+			return
+		}
 		// square selection logic
 		const chess = new Chess(boards[0].fen)
 		const at = chess.get(square)
@@ -137,9 +141,17 @@ const GameDemo = () => {
 					squareStyles={state.squareStyles}
 				/>
 			)}
-			<div className="caption" style={{ display: "flex", maxWidth: 280, margin: "4px auto 0" }}>
+			<div className="caption" style={{ maxWidth: 280, margin: "4px auto 0" }}>
+				<input
+					type="submit"
+					value={boards && boards[0] ? "Reset" : "New game"}
+					onClick={(e) => {
+						e.preventDefault()
+						app.actions.reset({})
+					}}
+				/>
 				{boards && chess && (
-					<span style={{ marginTop: 5, flex: 1 }}>
+					<span style={{ marginTop: 5, marginLeft: 12 }}>
 						{chess.in_checkmate()
 							? "Checkmate!"
 							: chess.in_stalemate()
@@ -155,14 +167,6 @@ const GameDemo = () => {
 							: "Black to move"}
 					</span>
 				)}
-				<input
-					type="submit"
-					value={boards && boards[0] ? "Reset" : "New game"}
-					onClick={(e) => {
-						e.preventDefault()
-						app.actions.reset({})
-					}}
-				/>
 			</div>
 			<div className="peers">
 				{connections.length} peer{connections.length === 1 ? "" : "s"}

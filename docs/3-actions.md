@@ -28,7 +28,7 @@ Actions must also handle authorization and access control. In the example's `del
 
 ```ts
 async function deletePost(db, { postId }, { chain, address }) {
-  const post = await db.posts.get(postId)
+  const post = await db.get("posts", postId)
   if (post === null) {
     return
   }
@@ -38,7 +38,7 @@ async function deletePost(db, { postId }, { chain, address }) {
     throw new Error("not authorized")
   }
 
-  await db.posts.delete(postId)
+  await db.delete("posts", postId)
 }
 ```
 
