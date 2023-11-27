@@ -9,6 +9,7 @@
   },
   "references": [
     { "path": "../." },
+    { "path": "../../bootstrap-peer" },
     { "path": "../../interfaces" }
   ]
 }

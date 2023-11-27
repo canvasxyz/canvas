@@ -17,15 +17,15 @@ export type ActionImplementationObject<Args = any, Result = any> = {
 }
 
 export type ActionImplementationFunction<Args = any, Result = any> = (
-	db: Record<string, ModelAPI>,
+	db: ModelAPI,
 	args: Args,
 	context: ActionContext,
 ) => Awaitable<Result>
 
 export type ModelAPI = {
-	get: <T extends ModelValue = ModelValue>(key: string) => Promise<T | null>
-	set: (value: ModelValue) => Promise<void>
-	delete: (key: string) => Promise<void>
+	get: <T extends ModelValue = ModelValue>(model: string, key: string) => Promise<T | null>
+	set: (model: string, value: ModelValue) => Promise<void>
+	delete: (model: string, key: string) => Promise<void>
 }
 
 export type ActionContext = {
