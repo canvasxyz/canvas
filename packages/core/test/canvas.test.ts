@@ -79,7 +79,7 @@ test("create and delete a post", async (t) => {
 	assert(typeof postId === "string")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
-	t.is(value?.metadata?.author, "me")
+	t.is((value?.metadata as any).author, "me")
 
 	await app.actions.deletePost(postId)
 	t.is(await app.db.get("posts", postId), null)
