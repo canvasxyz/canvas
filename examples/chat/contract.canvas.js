@@ -12,6 +12,6 @@ export const models = {
 
 export const actions = {
   async createMessage(db, { content }, { id, address, timestamp }) {
-    await db.message.set({ id, address, content, timestamp });
+    await db.set("message", { id, address, content, timestamp });
   },
 };
