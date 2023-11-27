@@ -36,6 +36,7 @@ export type Relation = { source: string; property: string; target: string; index
 
 export type Model = {
 	name: string
+	primaryKey: string
 	properties: Property[]
 	indexes: string[][]
 }

@@ -32,6 +32,7 @@ test("parse config", (t) => {
 			{
 				name: "user",
 				indexes: [],
+				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },
 					{ name: "address", kind: "primitive", type: "string", optional: false },
@@ -42,6 +43,7 @@ test("parse config", (t) => {
 			{
 				name: "room",
 				indexes: [],
+				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },
 					{ name: "creator", kind: "reference", target: "user", optional: false },
@@ -51,6 +53,7 @@ test("parse config", (t) => {
 			{
 				name: "message",
 				indexes: [],
+				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },
 					{ name: "room", kind: "reference", target: "room", optional: false },

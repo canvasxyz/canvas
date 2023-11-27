@@ -29,6 +29,7 @@ export function parseConfig(init: ModelsInit): Config {
 
 		const primaryProperties = properties.filter((property) => property.kind === "primary")
 		assert(primaryProperties.length === 1, "models must have exactly one `primary` property")
+		const [{ name: primaryKey }] = primaryProperties
 
 		if ($indexes !== undefined) {
 			for (const index of $indexes) {
@@ -40,7 +41,7 @@ export function parseConfig(init: ModelsInit): Config {
 			}
 		}
 
-		models.push({ name: modelName, properties, indexes })
+		models.push({ name: modelName, primaryKey, properties, indexes })
 	}
 
 	return { relations, models }
