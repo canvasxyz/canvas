@@ -3,13 +3,13 @@ import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
-import { AbstractModelDB, Model, ModelValue, ModelsInit, Property, PropertyValue } from "@canvas-js/modeldb"
+import { AbstractModelDB, Model, ModelValue, ModelsInit, validateModelValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { getCID } from "@canvas-js/signed-cid"
 
 import target from "#target"
 
-import { assert, mapEntries, signalInvalidType } from "../utils.js"
+import { assert, mapEntries } from "../utils.js"
 
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
@@ -156,7 +156,8 @@ export class ContractRuntime extends AbstractRuntime {
 			}),
 			set: this.vm.context.newFunction(`db.${model.name}.set`, (valueHandle) => {
 				assert(this.#context !== null, "expected this.#modelEntries !== null")
-				const value = this.unwrapModelValue(model, valueHandle)
+				const value = this.vm.unwrapValue(valueHandle) as ModelValue
+				validateModelValue(model, value)
 				const primaryKey = value[primaryKeyProperty.name]
 				assert(typeof primaryKey === "string", "expected primary key to be a string")
 				this.#context.modelEntries[model.name][primaryKey] = value
@@ -167,49 +168,5 @@ export class ContractRuntime extends AbstractRuntime {
 				this.#context.modelEntries[model.name][key] = null
 			}),
 		})
-	}
-
-	private unwrapModelValue(model: Model, handle: QuickJSHandle): ModelValue {
-		const values = model.properties.map<[string, PropertyValue]>((property) => {
-			const propertyHandle = this.vm.context.getProp(handle, property.name)
-			const propertyValue = propertyHandle.consume((handle) => this.unwrapPropertyValue(property, handle))
-			return [property.name, propertyValue]
-		})
-
-		return Object.fromEntries(values)
-	}
-
-	private unwrapPropertyValue(property: Property, handle: QuickJSHandle): PropertyValue {
-		if (property.kind === "primary") {
-			return this.vm.context.getString(handle)
-		} else if (property.kind === "primitive") {
-			if (property.type === "integer") {
-				const value = this.vm.context.getNumber(handle)
-				assert(Number.isSafeInteger(value), "property value must be a safe integer")
-				return value
-			} else if (property.type === "float") {
-				return this.vm.context.getNumber(handle)
-			} else if (property.type === "string") {
-				return this.vm.context.getString(handle)
-			} else if (property.type === "bytes") {
-				return this.vm.getUint8Array(handle)
-			} else if (property.type === "boolean") {
-				return this.vm.getBoolean(handle)
-			} else {
-				signalInvalidType(property.type)
-			}
-		} else if (property.kind === "reference") {
-			if (this.vm.is(handle, this.vm.context.null)) {
-				return null
-			} else {
-				return this.vm.context.getString(handle)
-			}
-		} else if (property.kind === "relation") {
-			// // TODO: this might need to be consumed...
-			// return this.vm.unwrapArray(handle, (elementHandle) => this.vm.context.getString(elementHandle))
-			return this.vm.unwrapArray(handle, (elementHandle) => elementHandle.consume(this.vm.context.getString))
-		} else {
-			signalInvalidType(property)
-		}
 	}
 }
