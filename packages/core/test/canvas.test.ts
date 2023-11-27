@@ -23,7 +23,7 @@ export const models = {
 export const actions = {
   async createPost(db, { content, isVisible }, { id, address, timestamp }) {
     const postId = [address, id].join("/")
-    await db.posts.set({ id: postId, content, isVisible, timestamp });
+    await db.set("posts", { id: postId, content, isVisible, timestamp });
     return postId
   },
 
@@ -32,7 +32,7 @@ export const actions = {
 			throw new Error("unauthorized")
 		}
 
-		await db.posts.delete(key)
+		await db.delete("posts", key)
   },
 
 	async hello() {

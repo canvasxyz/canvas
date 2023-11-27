@@ -97,8 +97,36 @@ export class ContractRuntime extends AbstractRuntime {
 	) {
 		super(indexHistory)
 		this.#databaseAPI = vm
-			.wrapObject(Object.fromEntries(db.config.models.map((model) => [model.name, this.createAPI(model)])))
+			.wrapObject({
+				get: vm.wrapFunction((model, key) => {
+					assert(this.#context !== null, "expected this.#context !== null")
+					assert(typeof model === "string", 'expected typeof model === "string"')
+					assert(typeof key === "string", 'expected typeof key === "string"')
+					return this.getModelValue(this.#context, model, key)
+				}),
+				set: vm.context.newFunction("set", (modelHandle, valueHandle) => {
+					assert(this.#context !== null, "expected this.#modelEntries !== null")
+					const model = vm.context.getString(modelHandle)
+					assert(this.db.models[model] !== undefined, "model not found")
+					const value = this.unwrapModelValue(this.db.models[model], valueHandle)
+					const { primaryKey } = this.db.models[model]
+					const key = value[primaryKey]
+					assert(typeof key === "string", "expected value[primaryKey] to be a string")
+					this.#context.modelEntries[model][key] = value
+				}),
+				delete: vm.context.newFunction("delete", (modelHandle, keyHandle) => {
+					assert(this.#context !== null, "expected this.#modelEntries !== null")
+					const model = vm.context.getString(modelHandle)
+					assert(this.db.models[model] !== undefined, "model not found")
+					const key = vm.context.getString(keyHandle)
+					this.#context.modelEntries[model][key] = null
+				}),
+			})
 			.consume(vm.cache)
+
+		// this.#databaseAPI = vm
+		// 	.wrapObject(Object.fromEntries(db.config.models.map((model) => [model.name, this.createAPI(model)])))
+		// 	.consume(vm.cache)
 	}
 
 	public async close() {
@@ -144,27 +172,27 @@ export class ContractRuntime extends AbstractRuntime {
 		}
 	}
 
-	private createAPI(model: Model): QuickJSHandle {
-		return this.vm.wrapObject({
-			get: this.vm.wrapFunction((key) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				assert(typeof key === "string")
-				return this.getModelValue(this.#context, model.name, key)
-			}),
-			set: this.vm.context.newFunction(`db.${model.name}.set`, (valueHandle) => {
-				assert(this.#context !== null, "expected this.#modelEntries !== null")
-				const value = this.unwrapModelValue(model, valueHandle)
-				const primaryKey = value[model.primaryKey]
-				assert(typeof primaryKey === "string", "expected primary key to be a string")
-				this.#context.modelEntries[model.name][primaryKey] = value
-			}),
-			delete: this.vm.context.newFunction(`db.${model.name}.delete`, (keyHandle) => {
-				assert(this.#context !== null, "expected this.#modelEntries !== null")
-				const key = this.vm.context.getString(keyHandle)
-				this.#context.modelEntries[model.name][key] = null
-			}),
-		})
-	}
+	// private createAPI(model: Model): QuickJSHandle {
+	// 	return this.vm.wrapObject({
+	// 		get: this.vm.wrapFunction((key) => {
+	// 			assert(this.#context !== null, "expected this.#context !== null")
+	// 			assert(typeof key === "string")
+	// 			return this.getModelValue(this.#context, model.name, key)
+	// 		}),
+	// 		set: this.vm.context.newFunction(`db.${model.name}.set`, (valueHandle) => {
+	// 			assert(this.#context !== null, "expected this.#modelEntries !== null")
+	// 			const value = this.unwrapModelValue(model, valueHandle)
+	// 			const primaryKey = value[model.primaryKey]
+	// 			assert(typeof primaryKey === "string", "expected primary key to be a string")
+	// 			this.#context.modelEntries[model.name][primaryKey] = value
+	// 		}),
+	// 		delete: this.vm.context.newFunction(`db.${model.name}.delete`, (keyHandle) => {
+	// 			assert(this.#context !== null, "expected this.#modelEntries !== null")
+	// 			const key = this.vm.context.getString(keyHandle)
+	// 			this.#context.modelEntries[model.name][key] = null
+	// 		}),
+	// 	})
+	// }
 
 	private unwrapModelValue(model: Model, handle: QuickJSHandle): ModelValue {
 		const values = model.properties.map<[string, PropertyValue]>((property) => {
