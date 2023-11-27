@@ -98,7 +98,7 @@ export function useCanvas<
 										args: abiParams.inputs.map((item) => (args as JSObject)[item.name as string]),
 										gasPrice: 0n,
 									})
-									.then((data) => {
+									.then(async (data) => {
 										const result = data.result as { [s: string]: unknown }
 
 										// Gather and execute effects, one effect at a time for now
@@ -123,7 +123,7 @@ export function useCanvas<
 													["_timestamp", context.timestamp],
 												]),
 										)
-										db[tableName].set(modelValue)
+										await db.set(tableName, modelValue)
 										resolve(modelValue)
 									})
 									.catch((err: Error) => {
