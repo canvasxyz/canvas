@@ -1,5 +1,5 @@
 {
-  "include": ["src"],
+  "include": ["src", "types"],
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "module": "Node16",
@@ -14,6 +14,6 @@
     { "path": "../modeldb" },
     { "path": "../gossiplog" },
     { "path": "../vm" },
-    { "path": "../discovery" },
+    { "path": "../discovery" }
   ]
 }
