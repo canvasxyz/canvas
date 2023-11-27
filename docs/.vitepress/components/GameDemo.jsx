@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy } from "react"
+import React, { useCallback, useState, useEffect, useRef, lazy } from "react"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { PublicChat } from "@canvas-js/templates"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
@@ -55,6 +55,35 @@ const GameDemo = () => {
 	})
 
 	const boards = useLiveQuery(app, "boards", { limit: 1 })
+
+	const [connections, setConnections] = useState([])
+	const connectionsRef = useRef(connections)
+
+	const handleConnectionOpen = useCallback(({ detail: connection }) => {
+		const connections = [...connectionsRef.current, connection]
+		setConnections(connections)
+		connectionsRef.current = connections
+	}, [])
+
+	const handleConnectionClose = useCallback(({ detail: connection }) => {
+		const connections = connectionsRef.current.filter(({ id }) => id !== connection.id)
+		setConnections(connections)
+		connectionsRef.current = connections
+	}, [])
+
+	useEffect(() => {
+		if (!app) return () => {}
+		app.start()
+
+		app.libp2p?.addEventListener("connection:open", handleConnectionOpen)
+		app.libp2p?.addEventListener("connection:close", handleConnectionClose)
+		return () => {
+			app.libp2p?.removeEventListener("connection:open", handleConnectionOpen)
+			app.libp2p?.removeEventListener("connection:close", handleConnectionClose)
+			app.stop()
+		}
+	}, [app])
+
 	const [state, setState] = useState({ pieceSquare: "" })
 
 	const onDrop = ({ sourceSquare, targetSquare }) => {
@@ -134,6 +163,9 @@ const GameDemo = () => {
 						app.actions.reset({})
 					}}
 				/>
+			</div>
+			<div className="peers">
+				{connections.length} peer{connections.length === 1 ? "" : "s"}
 			</div>
 		</div>
 	)

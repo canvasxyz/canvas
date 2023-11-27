@@ -32,6 +32,8 @@
 <style>
 .DemoCell {
   display: block;
+  position: relative;
+  min-height: 220px;
   margin: 0 20px 20px;
   max-width: 640px;
   padding: 18px 20px;
@@ -40,23 +42,23 @@
   height: 100%;
   background-color: var(--vp-c-bg-soft);
 }
-@media (min-width: 960px) {
-  .DemoCell {
-    display: block;
-    position: absolute;
-    left: calc(50vw + 210px / 2 + 30px);
-    height: 345px;
-    width: 320px;
-    z-index: 10;
-    box-shadow: 1px 1px 6px rgba(0,0,0,0.2);
-  }
-}
 @media (min-width: 600px) {
   .DemoCell {
     margin: 0 auto 20px;
   }
 }
-.DemoCell input[type="text"] {
+@media (min-width: 960px) {
+  .DemoCell {
+    display: block;
+    position: absolute !important;
+    left: calc(50vw + 210px / 2 + 30px);
+    height: 348px;
+    width: 320px;
+    z-index: 10;
+    box-shadow: 1px 1px 6px rgba(0,0,0,0.2);
+  }
+}
+.DemoCell.MessagingDemo input[type="text"] {
   background: var(--vp-c-bg);
   padding: 6px 12px;
   border-radius: 6px;
@@ -64,12 +66,12 @@
   font-size: 15px;
   width: calc(100% - 40px);
   position: absolute;
-  bottom: 16px;
+  bottom: 12px;
 }
 .DemoCell input[type="submit"] {
   display: inline-block;
   background: var(--vp-c-brand-3);
-  margin-top: 2px;
+  margin-top: 6px;
   padding: 1px 8px;
   margin-right: -4px;
   border-radius: 6px;
@@ -85,5 +87,18 @@
 .DemoCell .caption {
   color: var(--vp-c-text-1);
   font-size: 14px;
+}
+.DemoCell .peers {
+  position: absolute;
+  right: 34px;
+  bottom: 18px;
+  font-size: 14px;
+  opacity: 0.33;
+}
+@media (min-width: 960px) {
+  .DemoCell.GameDemo .peers {
+    bottom: 13px;
+    right: 20px;
+  }
 }
 </style>
