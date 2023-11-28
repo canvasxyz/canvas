@@ -10,7 +10,6 @@
   "types": "./lib/index.d.ts",
   "sideEffects": false,
   "dependencies": {
-    "@canvas-js/interfaces": "0.6.1",
     "@ipld/dag-cbor": "^9.0.6",
     "@libp2p/interface": "^0.1.6",
     "@libp2p/interface-internal": "^0.1.9",
