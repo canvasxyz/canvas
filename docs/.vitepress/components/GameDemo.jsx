@@ -57,6 +57,7 @@ const GameDemo = () => {
 
 	const boards = useLiveQuery(app, "boards", { limit: 1 })
 
+	const [synced, setSynced] = useState(false)
 	const [connections, setConnections] = useState([])
 	const connectionsRef = useRef(connections)
 
@@ -78,6 +79,11 @@ const GameDemo = () => {
 		connectionsRef.current = connections
 	}, [])
 
+	const handleSync = useCallback(({ detail: { messageCount, peer } }) => {
+		setSynced(true)
+		console.log(`synced with ${peer} (${messageCount} messages)`)
+	}, [])
+
 	useEffect(() => {
 		if (!app) return () => {}
 		setTimeout(() => {
@@ -86,9 +92,11 @@ const GameDemo = () => {
 
 		app.libp2p?.addEventListener("connection:open", handleConnectionOpen)
 		app.libp2p?.addEventListener("connection:close", handleConnectionClose)
+		app.messageLog?.addEventListener("sync", handleSync)
 		return () => {
 			app.libp2p?.removeEventListener("connection:open", handleConnectionOpen)
 			app.libp2p?.removeEventListener("connection:close", handleConnectionClose)
+			app.messageLog?.removeEventListener("sync", handleSync)
 			app.stop()
 		}
 	}, [app])
@@ -178,6 +186,7 @@ const GameDemo = () => {
 				)}
 				<div className="peers">
 					{connections.length} peer{connections.length === 1 ? "" : "s"}
+					{synced ? "" : connections.length === 0 ? ", waiting..." : ", syncing..."}
 				</div>
 			</div>
 		</div>
