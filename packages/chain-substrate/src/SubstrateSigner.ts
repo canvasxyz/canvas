@@ -106,10 +106,29 @@ export class SubstrateSigner implements SessionSigner {
 					if (!keyring) {
 						keyring = randomKeypair(keyType)
 					}
-					const nonce = randomBytes(16)
-					const data = bytesToHex(nonce) + bytesToHex(message)
-					const signature = keyring.sign(data)
-					return { nonce, signature }
+					const decodedAddress = decodeAddress(keyring.address)
+
+					// there is a bug in polkadot's ECDSA implementation which means that sometimes
+					// it produces a signature that is not valid, this happens in about 1 in 200 times
+					// since sign and verify are deterministic, we can check that the signature is valid
+					// before returning it. If it is not valid, we try again with a new nonce
+					let attemptsRemaining = 3
+					while (attemptsRemaining > 0) {
+						const nonce = randomBytes(16)
+						const data = bytesToHex(nonce) + bytesToHex(message)
+						const signature = keyring.sign(data)
+
+						// check the signature is valid before returning it
+						if (keyring.verify(data, signature, decodedAddress)) {
+							return {
+								signature,
+								nonce,
+							}
+						} else {
+							attemptsRemaining--
+						}
+					}
+					throw new Error("Failed to generate a valid signature")
 				},
 			}
 		}
