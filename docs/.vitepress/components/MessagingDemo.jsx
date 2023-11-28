@@ -2,6 +2,7 @@ import React, { useCallback, useState, useEffect, useRef } from "react"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { PublicChat } from "@canvas-js/templates"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { defaultBootstrapList } from "@canvas-js/core"
 
 import { ethers } from "ethers"
 
@@ -29,19 +30,31 @@ const MessagingDemo = () => {
 		orderBy: { timestamp: "desc" },
 	})
 
+	const [synced, setSynced] = useState(false)
 	const [connections, setConnections] = useState([])
 	const connectionsRef = useRef(connections)
 
 	const handleConnectionOpen = useCallback(({ detail: connection }) => {
+		if (defaultBootstrapList.indexOf(connection.remoteAddr.toString()) !== 0) {
+			return
+		} // skip bootstrap nodes
 		const connections = [...connectionsRef.current, connection]
 		setConnections(connections)
 		connectionsRef.current = connections
 	}, [])
 
 	const handleConnectionClose = useCallback(({ detail: connection }) => {
+		if (defaultBootstrapList.indexOf(connection.remoteAddr.toString()) !== 0) {
+			return
+		} // skip bootstrap nodes
 		const connections = connectionsRef.current.filter(({ id }) => id !== connection.id)
 		setConnections(connections)
 		connectionsRef.current = connections
+	}, [])
+
+	const handleSync = useCallback(({ detail: { messageCount, peer } }) => {
+		setSynced(true)
+		console.log(`synced with ${peer} (${messageCount} messages)`)
 	}, [])
 
 	useEffect(() => {
@@ -52,9 +65,11 @@ const MessagingDemo = () => {
 
 		app.libp2p?.addEventListener("connection:open", handleConnectionOpen)
 		app.libp2p?.addEventListener("connection:close", handleConnectionClose)
+		app.messageLog?.addEventListener("sync", handleSync)
 		return () => {
 			app.libp2p?.removeEventListener("connection:open", handleConnectionOpen)
 			app.libp2p?.removeEventListener("connection:close", handleConnectionClose)
+			app.messageLog?.removeEventListener("sync", handleSync)
 			app.stop()
 		}
 	}, [app])
