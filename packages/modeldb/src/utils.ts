@@ -79,7 +79,11 @@ export function validatePropertyValue(modelName: string, property: Property, val
 			if (value === null) {
 				throw new TypeError(`${modelName}/${property.name} must not be null`)
 			}
-			// value must be JSON-serializable
+			try {
+				JSON.stringify(value)
+			} catch (e) {
+				throw new TypeError(`${modelName}/${property.name} must be JSON-serializable`)
+			}
 		} else {
 			signalInvalidType(property.type)
 		}
