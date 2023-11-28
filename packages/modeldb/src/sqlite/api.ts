@@ -367,6 +367,9 @@ export class ModelAPI {
 					signalInvalidType(expression)
 				}
 			} else if (property.kind === "primitive") {
+				if (property.type === "json") {
+					throw new Error("json properties are not supported in where clauses")
+				}
 				if (isLiteralExpression(expression)) {
 					if (expression === null) {
 						return [`"${name}" ISNULL`]
