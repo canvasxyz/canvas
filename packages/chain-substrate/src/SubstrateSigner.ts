@@ -1,6 +1,6 @@
 import * as json from "@ipld/dag-json"
 import { logger } from "@libp2p/logger"
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils"
+import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils"
 import { Keyring } from "@polkadot/keyring"
 import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
 import { InjectedExtension } from "@polkadot/extension-inject/types"
@@ -26,7 +26,10 @@ type AbstractSigner = {
 	getSubstrateKeyType: () => Promise<KeypairType>
 	getAddress: () => Promise<string>
 	getChainId: () => Promise<string>
-	signMessage(message: Uint8Array): Promise<Uint8Array>
+	signMessage(message: Uint8Array): Promise<{
+		signature: Uint8Array
+		nonce: Uint8Array
+	}>
 }
 
 export class SubstrateSigner implements SessionSigner {
@@ -64,10 +67,17 @@ export class SubstrateSigner implements SessionSigner {
 				signMessage: async (message: Uint8Array) => {
 					const account = await extension.accounts.get()
 					const address = account[0].address
-					const signerResult = await signRaw({ address, data: bytesToHex(message), type: "bytes" })
+
+					const nonce = randomBytes(16)
+					const data = bytesToHex(nonce) + bytesToHex(message)
+
+					const signerResult = await signRaw({ address, data, type: "bytes" })
 					const signature = signerResult.signature
 					// signerResult.signature is encoded as 0x{hex}, just get the hex part
-					return hexToBytes(signature.slice(2))
+					return {
+						signature: hexToBytes(signature.slice(2)),
+						nonce,
+					}
 				},
 			}
 		} else {
@@ -91,12 +101,34 @@ export class SubstrateSigner implements SessionSigner {
 					const genesisHash = "0x91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3"
 					return genesisHash.slice(2, 34)
 				},
-				signMessage: async (data: Uint8Array) => {
+				signMessage: async (message: Uint8Array) => {
 					await cryptoWaitReady()
 					if (!keyring) {
 						keyring = randomKeypair(keyType)
 					}
-					return keyring.sign(bytesToHex(data))
+					const decodedAddress = decodeAddress(keyring.address)
+
+					// there is a bug in polkadot's ECDSA implementation which means that sometimes
+					// it produces a signature that is not valid, this happens in about 1 in 200 times
+					// since sign and verify are deterministic, we can check that the signature is valid
+					// before returning it. If it is not valid, we try again with a new nonce
+					let attemptsRemaining = 3
+					while (attemptsRemaining > 0) {
+						const nonce = randomBytes(16)
+						const data = bytesToHex(nonce) + bytesToHex(message)
+						const signature = keyring.sign(data)
+
+						// check the signature is valid before returning it
+						if (keyring.verify(data, signature, decodedAddress)) {
+							return {
+								signature,
+								nonce,
+							}
+						} else {
+							attemptsRemaining--
+						}
+					}
+					throw new Error("Failed to generate a valid signature")
 				},
 			}
 		}
@@ -108,10 +140,10 @@ export class SubstrateSigner implements SessionSigner {
 	public readonly match = (address: string) => addressPattern.test(address)
 
 	public async verifySession(topic: string, session: Session) {
-		const { publicKey, address, authorizationData: data, timestamp, duration } = session
+		const { publicKey, address, authorizationData, timestamp, duration } = session
 
 		assert(didKeyPattern.test(publicKey), "invalid signing key")
-		assert(validateSessionData(data), "invalid session")
+		assert(validateSessionData(authorizationData), "invalid session")
 		const [chainId, walletAddress] = parseAddress(address)
 
 		const issuedAt = new Date(timestamp).toISOString()
@@ -126,7 +158,7 @@ export class SubstrateSigner implements SessionSigner {
 
 		const decodedAddress = decodeAddress(walletAddress)
 
-		const substrateKeyType = data.substrateKeyType
+		const substrateKeyType = authorizationData.substrateKeyType
 		// some cryptography code used by polkadot requires a wasm environment which is initialised
 		// asynchronously so we have to wait for it to be ready
 		await cryptoWaitReady()
@@ -135,7 +167,10 @@ export class SubstrateSigner implements SessionSigner {
 			ss58Format: 42,
 		}).addFromAddress(decodedAddress)
 
-		const valid = signerKeyring.verify(bytesToHex(json.encode(message)), data.signature, decodedAddress)
+		const { nonce, signature } = authorizationData.signatureResult
+		const signedData = bytesToHex(nonce) + bytesToHex(json.encode(message))
+
+		const valid = signerKeyring.verify(signedData, signature, decodedAddress)
 
 		assert(valid, "invalid signature")
 	}
@@ -183,14 +218,14 @@ export class SubstrateSigner implements SessionSigner {
 			expirationTime: null,
 		}
 
-		const signature = await this.#signer.signMessage(json.encode(message))
+		const signatureResult = await this.#signer.signMessage(json.encode(message))
 		const substrateKeyType = await this.#signer.getSubstrateKeyType()
 
 		const session: Session<SubstrateSessionData> = {
 			type: "session",
 			address,
 			publicKey: signer.uri,
-			authorizationData: { signature, data: message, substrateKeyType },
+			authorizationData: { signatureResult, data: message, substrateKeyType },
 			blockhash: null,
 			timestamp,
 			duration: this.sessionDuration,
