@@ -32,7 +32,6 @@ import {
 	SYNC_RETRY_LIMIT,
 } from "../constants.js"
 import { CacheMap, shuffle, sortPair, wait } from "../utils.js"
-import { Node } from "@canvas-js/okra"
 
 export interface SyncOptions {
 	minConnections?: number
