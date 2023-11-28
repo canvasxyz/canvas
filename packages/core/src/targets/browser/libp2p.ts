@@ -14,7 +14,7 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
-import { gossiplog } from "@canvas-js/gossiplog/service"
+import { GossipLogService, gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
@@ -38,6 +38,7 @@ export function getLibp2pOptions(
 		bootstrapList?: string[]
 		minConnections?: number
 		maxConnections?: number
+		discoveryTopic?: string
 	},
 ): Libp2pOptions<ServiceMap> {
 	const announce = options.announce ?? []
@@ -106,7 +107,10 @@ export function getLibp2pOptions(
 
 			gossiplog: gossiplog({}),
 			fetch: fetchService({ protocolPrefix: "canvas" }),
-			discovery: discovery({}),
+			discovery: discovery({
+				discoveryTopic: options.discoveryTopic,
+				topicFilter: (topic) => topic.startsWith(GossipLogService.topicPrefix),
+			}),
 		},
 	}
 }

@@ -23,6 +23,7 @@ export interface PlatformTarget {
 			bootstrapList?: string[]
 			minConnections?: number
 			maxConnections?: number
+			discoveryTopic?: string
 		},
 	) => Promise<Libp2p<ServiceMap>>
 

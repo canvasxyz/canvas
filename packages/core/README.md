@@ -87,7 +87,7 @@ export type ActionImplementationObject = {
 export type ActionImplementationFunction = (
   db: Record<string, ModelAPI>,
   args: Args,
-  context: ActionContext
+  context: ActionContext,
 ) => Awaitable<Result>
 
 export type ModelAPI = {
@@ -126,6 +126,7 @@ export interface CanvasConfig {
   bootstrapList?: string[]
   minConnections?: number
   maxConnections?: number
+  discoveryTopic?: string
 
   /** set to `false` to disable history indexing and db.get(..) within actions */
   indexHistory?: boolean
@@ -155,7 +156,7 @@ export declare class Canvas extends EventEmitter<CanvasEvents> {
     string,
     (
       args: any,
-      options: { chain?: string; signer?: SessionSigner }
+      options: { chain?: string; signer?: SessionSigner },
     ) => Promise<{ id: string; recipients: Promise<PeerId[]> }>
   >
 
@@ -167,7 +168,7 @@ export declare class Canvas extends EventEmitter<CanvasEvents> {
   public getMessageStream(
     lowerBound?: { id: string; inclusive: boolean } | null,
     upperBound?: { id: string; inclusive: boolean } | null,
-    options?: { reverse?: boolean }
+    options?: { reverse?: boolean },
   ): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]>
 }
 ```
