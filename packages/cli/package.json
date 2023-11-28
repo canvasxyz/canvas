@@ -23,7 +23,7 @@
     "@types/websocket": "^1.0.9",
     "chalk": "^5.3.0",
     "cors": "^2.8.5",
-    "ethers": "^6.8.1",
+    "ethers": "^6.9.0",
     "express": "^4.18.2",
     "express-winston": "^4.2.0",
     "http-status-codes": "^2.3.0",
