@@ -32,6 +32,7 @@ export interface CanvasConfig<T extends Contract = Contract> {
 	bootstrapList?: string[]
 	minConnections?: number
 	maxConnections?: number
+	discoveryTopic?: string
 
 	/** set to `false` to disable history indexing and db.get(..) within actions */
 	indexHistory?: boolean

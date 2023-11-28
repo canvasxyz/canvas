@@ -18,7 +18,7 @@ import { register } from "prom-client"
 
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
-import { gossiplog } from "@canvas-js/gossiplog/service"
+import { GossipLogService, gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
@@ -42,6 +42,7 @@ export function getLibp2pOptions(
 		bootstrapList?: string[]
 		minConnections?: number
 		maxConnections?: number
+		discoveryTopic?: string
 	},
 ): Libp2pOptions<ServiceMap> {
 	const announce = options.announce ?? []
@@ -117,7 +118,10 @@ export function getLibp2pOptions(
 			gossiplog: gossiplog({ sync: true }),
 
 			fetch: fetchService({ protocolPrefix: "canvas" }),
-			discovery: discovery({}),
+			discovery: discovery({
+				discoveryTopic: options.discoveryTopic,
+				topicFilter: (topic) => topic.startsWith(GossipLogService.topicPrefix),
+			}),
 		},
 	}
 }

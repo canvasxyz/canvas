@@ -14,7 +14,7 @@ import type { Message, Signer } from "@canvas-js/interfaces"
 
 import { AbstractGossipLog, GossipLogEvents } from "./AbstractGossipLog.js"
 
-import { decodeId, encodeId } from "./schema.js"
+import { decodeId } from "./schema.js"
 import { SyncService, SyncOptions } from "./sync/service.js"
 import { assert } from "./utils.js"
 
@@ -37,7 +37,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 		return pubsub
 	}
 
-	private static topicPrefix = "canvas/"
+	public static topicPrefix = "canvas/" as const
 
 	private readonly sync: boolean
 	private readonly log = logger(`canvas:gossiplog`)
