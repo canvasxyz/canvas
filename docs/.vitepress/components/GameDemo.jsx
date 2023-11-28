@@ -2,6 +2,7 @@ import React, { useCallback, useState, useEffect, useRef, lazy } from "react"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { PublicChat } from "@canvas-js/templates"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { defaultBootstrapList } from "@canvas-js/core"
 
 import { ethers } from "ethers"
 
@@ -60,12 +61,18 @@ const GameDemo = () => {
 	const connectionsRef = useRef(connections)
 
 	const handleConnectionOpen = useCallback(({ detail: connection }) => {
+		if (defaultBootstrapList.indexOf(connection.remoteAddr.toString()) !== 0) {
+			return
+		} // skip bootstrap nodes
 		const connections = [...connectionsRef.current, connection]
 		setConnections(connections)
 		connectionsRef.current = connections
 	}, [])
 
 	const handleConnectionClose = useCallback(({ detail: connection }) => {
+		if (defaultBootstrapList.indexOf(connection.remoteAddr.toString()) !== 0) {
+			return
+		} // skip bootstrap nodes
 		const connections = connectionsRef.current.filter(({ id }) => id !== connection.id)
 		setConnections(connections)
 		connectionsRef.current = connections
@@ -73,7 +80,9 @@ const GameDemo = () => {
 
 	useEffect(() => {
 		if (!app) return () => {}
-		app.start()
+		setTimeout(() => {
+			app.start()
+		}, 1000)
 
 		app.libp2p?.addEventListener("connection:open", handleConnectionOpen)
 		app.libp2p?.addEventListener("connection:close", handleConnectionClose)
@@ -167,9 +176,9 @@ const GameDemo = () => {
 							: "Black to move"}
 					</span>
 				)}
-			</div>
-			<div className="peers">
-				{connections.length} peer{connections.length === 1 ? "" : "s"}
+				<div className="peers">
+					{connections.length} peer{connections.length === 1 ? "" : "s"}
+				</div>
 			</div>
 		</div>
 	)

@@ -35,7 +35,7 @@ export type ServiceMap = {
 export async function createNetwork(
 	t: ExecutionContext<unknown>,
 	networkInit: NetworkInit,
-	options: { start?: boolean; minConnections?: number; maxConnections?: number } = {}
+	options: { start?: boolean; minConnections?: number; maxConnections?: number } = {},
 ): Promise<Record<string, Libp2p<ServiceMap>>> {
 	const names = Object.keys(networkInit)
 
@@ -43,7 +43,7 @@ export async function createNetwork(
 		names.map<Promise<[string, PeerId]>>(async (name) => {
 			const peerId = await createEd25519PeerId()
 			return [name, peerId]
-		})
+		}),
 	).then((entries) => Object.fromEntries(entries))
 
 	const log = logger("canvas:gossiplog:test")
@@ -53,7 +53,7 @@ export async function createNetwork(
 			const peerId = peerIds[name]
 			const address = getAddress(port)
 			const bootstrapList = peers.map(
-				(peerName) => `${getAddress(networkInit[peerName].port)}/p2p/${peerIds[peerName]}`
+				(peerName) => `${getAddress(networkInit[peerName].port)}/p2p/${peerIds[peerName]}`,
 			)
 
 			const minConnections = options.minConnections ?? peers.length
@@ -91,7 +91,7 @@ export async function createNetwork(
 			})
 
 			libp2p.addEventListener("peer:discovery", ({ detail: peerInfo }) =>
-				log("[%p] discovered peer %p", peerId, peerInfo.id)
+				log("[%p] discovered peer %p", peerId, peerInfo.id),
 			)
 
 			libp2p.addEventListener("peer:connect", ({ detail }) => {
@@ -99,7 +99,7 @@ export async function createNetwork(
 			})
 
 			return [name, libp2p]
-		})
+		}),
 	).then((entries) => Object.fromEntries(entries))
 
 	if (options.start ?? true) {
@@ -115,7 +115,7 @@ export async function createNetwork(
  */
 export async function waitForInitialConnections(
 	network: Record<string, Libp2p<ServiceMap>>,
-	options: { minConnections?: number } = {}
+	options: { minConnections?: number } = {},
 ): Promise<void> {
 	const minConnections = options.minConnections ?? Object.keys(network).length - 1
 
@@ -159,7 +159,7 @@ export async function waitForInitialSync(network: Record<string, Libp2p<ServiceM
 		source.services.gossiplog.addEventListener(
 			"sync",
 			({ detail: { peer: targetId } }) => syncPromises[`${sourceId}:${targetId}`].resolve(),
-			{ once: true }
+			{ once: true },
 		)
 	}
 
@@ -171,7 +171,7 @@ type Result = { id: string; signature: Signature; message: Message }
 export async function waitForMessageDelivery(
 	t: ExecutionContext<unknown>,
 	network: Record<string, Libp2p<ServiceMap>>,
-	match: (id: string, signature: Signature, message: Message) => boolean
+	match: (id: string, signature: Signature, message: Message) => boolean,
 ): Promise<Result> {
 	const results = await Promise.all(
 		Object.entries(network).map(([name, libp2p]) => {
@@ -188,12 +188,12 @@ export async function waitForMessageDelivery(
 
 			libp2p.services.gossiplog.addEventListener("message", handler)
 			return deferred.promise.finally(() => libp2p.services.gossiplog.removeEventListener("message", handler))
-		})
+		}),
 	)
 
 	t.true(
 		results.every(({ id }) => id === results[0].id),
-		"expected all ids to be equal"
+		"expected all ids to be equal",
 	)
 
 	t.log(`delivered ${results[0].id} to all peers`)

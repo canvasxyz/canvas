@@ -21,25 +21,6 @@ export function signalInvalidType(type: never): never {
 	throw new TypeError("internal error: invalid type")
 }
 
-// add elements with CacheMap.add(key, value) and they'll
-// get shifted out in the order they were added.
-export class CacheMap<K, V> extends Map<K, V> {
-	constructor(public readonly capacity: number) {
-		super()
-	}
-
-	add(key: K, value: V) {
-		this.set(key, value)
-		for (const key of this.keys()) {
-			if (this.size > this.capacity) {
-				this.delete(key)
-			} else {
-				break
-			}
-		}
-	}
-}
-
 export function getErrorMessage(err: unknown): string {
 	if (err instanceof Error && err.name === "AggregateError") {
 		const { errors } = err as AggregateError
