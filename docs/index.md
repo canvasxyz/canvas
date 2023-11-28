@@ -2,7 +2,7 @@
 layout: home
 ---
 
-<HeroRow text="The peer-to-peer application runtime" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a stack for building any web application as a protocol running over peer-to-peer networking, with no blockchains required." v-bind:bullets="['Embeds core application logic in a realtime, multiwriter database', 'Fast sync using libp2p and Prolly-trees', 'Fully programmable in TypeScript']">
+<HeroRow text="The peer-to-peer application runtime" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a stack for building any web application as a protocol that runs over peer-to-peer networking, with no blockchain required." v-bind:bullets="['Executes core application logic in a realtime, multiwriter database', 'Fast sync using libp2p and Prolly-trees', 'Fully programmable in TypeScript']">
   <HeroAction theme="brand big" text="Tutorial" href="/1-introduction" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
   <HeroAction theme="alt big" text="Blog" href="/blog" />
@@ -17,9 +17,8 @@ layout: home
 -->
 
 <TextRow title="How it Works">
-  <TextItem>Canvas allows you to write fast, data-intensive, realtime decentralized applications, by expressing the core logic of your application as a set of functions, with access to a relational embedded database.</TextItem>
-  <TextItem>Applications run entirely over libp2p, with data stored on each node, using an invisible CRDT layer that reconciles input from different actors.</TextItem>
-  <TextItem>It's like smart contracts, but without the blockchain. And you don't need to learn a new language, or new data structures - it just works, like writing a web application in Rails or Node.js.</TextItem>
+  <TextItem>Canvas allows you to write realtime multiplayer applications, by expressing the core logic of your application as a set of functions running over libp2p.</TextItem>
+  <TextItem>User interactions are signed using a blockchain address or DID, relayed over libp2p, and executed in a CRDT VM that transparently merges actions from different users.</TextItem>
 </TextRow>
 
 <DemoToggle v-bind:options="['Game', 'Messaging']" defaultOption="Game"></DemoToggle>
@@ -92,17 +91,16 @@ return <Chessboard position={boards[0].position} onDrop={ ... } />
 </TextRow>
 -->
 
-<FeatureRow title="Interoperable Everywhere" detail="Canvas supports any cryptographically verifiable authentication strategy, including Web3 wallets, W3C DIDs, and even Apple & Google SSO. You can write your own custom adapters to support other authorization methods.">
-  <FeatureCard title="Sign in with Wallet" details="Log in with a Web3 wallet from Ethereum. Also supports other chains like Cosmos, Solana, and Polkadot." linkText="Available today" />
-  <FeatureCard title="Sign in with Bluesky" details="Log in with your decentralized identity from the Bluesky PLC network."/>
-  <FeatureCard title="Sign in with OpenID" details="Log in trustlessly with Google, Apple, or other SSO providers, using zero-knowledge proofs." soon="Coming soon"/>
+<FeatureRow title="Interoperable Everywhere" detail="Canvas supports any cryptographically verifiable authentication strategy, including DIDs, Web3 wallets, and even Apple & Google SSO. You can write your own custom adapters to support other authorization methods.">
+  <FeatureCard title="Sign in with Wallet" details="Log in with a Web3 wallet from Ethereum. Also supports other chains like Cosmos, Solana, and Polkadot." linkText="Demo" link="https://canvas-chat.pages.dev/"/>
+  <FeatureCard title="Sign in with Bluesky" details="Log in with your decentralized identity from the Bluesky PLC network." linkText="Demo" link="https://canvas-chat.pages.dev/"/>
+  <FeatureCard title="Sign in with OpenID" details="Log in trustlessly with Google, Apple, or other SSO providers." soon="Coming soon"/>
 </FeatureRow>
 
-<FeatureRow title="Built on Real-Time Collaboration" detail="Canvas is built on a realtime multiplayer database, that uses the same technology that powers Google Docs and Figma. We've abstracted away most of the complexity in these open-source modules below.">
-  <FeatureCard title="Okra" details="A deterministic Prolly-tree that allows fast sync between ordered sets of actions." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit" secondaryLinkText="Blog Post"/>
-  <FeatureCard title="GossipLog" details="A decentralized, authenticated multiwriter log that allows functions to retrieve data from the past." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" soon="Blog post coming soon"/>
+<FeatureRow title="Built on libp2p & CRDT Research" detail="Canvas applications are powered by a realtime multiplayer database, built on decades of CRDT research, plus original work we did to make them usable for general-purpose computing.">
+  <FeatureCard title="Okra" details="A deterministic Prolly-tree that allows fast sync between ordered sets of actions." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog Post"/>
+  <FeatureCard title="GossipLog" details="An authenticated multiwriter log that allows functions to retrieve data from multiple causal histories." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" secondaryLinkText="Presentation" secondaryLink="https://www.youtube.com/watch?v=X8nAdx1G-Cs"/>
   <FeatureCard title="ModelDB" details="A cross-platform relational database wrapper, supporting IndexedDB and SQLite." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb"/>
-  <FeatureCard title="Persister" details="A bundler that persists individual actions to Arweave, and rebundles them for efficient later retrieval." link="https://github.com/canvasxyz/canvas/tree/main/packages/persister-arweave"/>
 </FeatureRow>
 
 <HomepageFooter />
