@@ -96,6 +96,12 @@ function encodePrimitiveValue(
 		} else {
 			throw new TypeError(`${modelName}/${property.name} must be a boolean`)
 		}
+	} else if (property.type == "json") {
+		try {
+			return JSON.stringify(value)
+		} catch (e) {
+			throw new TypeError(`${modelName}/${property.name} must be serializable to JSON`)
+		}
 	} else {
 		const _: never = property.type
 		throw new Error(`internal error - unknown primitive type ${JSON.stringify(property.type)}`)
@@ -191,6 +197,13 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 		} else {
 			console.error("expected boolean, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected boolean)`)
+		}
+	} else if (property.type == "json") {
+		try {
+			return JSON.parse(value as string)
+		} catch (e) {
+			console.error("expected JSON, got", value)
+			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected JSON)`)
 		}
 	} else {
 		const _: never = property.type

@@ -39,7 +39,7 @@ const db = await ModelDB.init({
 
 ### Schemas
 
-Databases are configured with a `models` schema, provided as a JSON DSL. The data model supports nullable and non-nullable `integer`, `float`, `string`, and `bytes` datatypes, and a mandatory string primary key.
+Databases are configured with a `models` schema, provided as a JSON DSL. Every model has a mandatory string primary key and supports nullable and non-nullable `integer`, `float`, `string` and `bytes` datatypes. It also supports a non-nullable `json` datatype.
 
 ```ts
 const db = await ModelDB.init({
@@ -51,13 +51,15 @@ const db = await ModelDB.init({
       name: "string",
       // declare nullable properties using `?`
       birthday: "string?",
+      // json data is also supported
+      metadata: "json",
     },
   },
 })
 
-await db.set("user", { id: "xxx", name: "John", birthday: "1990-01-01" })
-await db.set("user", { id: "xxx", name: "John Doe", birthday: "1990-01-01" })
-await db.get("user", "xxx") // { id: "xxx", name: "John Doe", birthday: "1990-01-01" }
+await db.set("user", { id: "xxx", name: "John", birthday: "1990-01-01", metadata: {} })
+await db.set("user", { id: "xxx", name: "John Doe", birthday: "1990-01-01", metadata: { home: "New York" } })
+await db.get("user", "xxx") // { id: "xxx", name: "John Doe", birthday: "1990-01-01", metadata: { home: "New York" } }
 ```
 
 Reference properties (`@user` with `string` values), nullable reference properties (`@user?` with `string | null` values), and relation properties (`@user[]` with `string[]` values) are also supported, although the foreign key constraint is **not enforced**.

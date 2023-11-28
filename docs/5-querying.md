@@ -39,7 +39,7 @@ await app.db.get("posts", idA)
 
 ## Queries
 
-The `app.db.query` method supports more expressive queries, including `select`, `where`, `orderBy`, `limit`, and `offset` clauses.
+The `app.db.query` method supports more expressive queries, including `select`, `where`, `orderBy`, `limit`, and `offset` clauses. `json` fields cannot be referenced in `where` or `orderBy` clauses.
 
 ```ts
 type QueryParams = {

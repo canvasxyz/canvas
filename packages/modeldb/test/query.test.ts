@@ -130,3 +130,12 @@ testOnModelDB("query (order by)", async (t, openDB) => {
 		{ address: "b", name: null },
 	])
 })
+
+testOnModelDB("query should not be able to query on json fields", async (t, openDB) => {
+	const db = await openDB({
+		user: { address: "primary", metadata: "json" },
+	})
+	await t.throwsAsync(async () => {
+		await db.query("user", { where: { metadata: "something" } })
+	})
+})
