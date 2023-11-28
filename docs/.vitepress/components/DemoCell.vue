@@ -94,6 +94,7 @@
   bottom: 18px;
   font-size: 14px;
   opacity: 0.33;
+  display: none;
 }
 @media (min-width: 960px) {
   .DemoCell.GameDemo .peers {
