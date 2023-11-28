@@ -97,7 +97,7 @@ return <Chessboard position={boards[0].position} onDrop={ ... } />
   <FeatureCard title="Sign in with OpenID" details="Log in trustlessly with Google, Apple, or other SSO providers." soon="Coming soon"/>
 </FeatureRow>
 
-<FeatureRow title="Built on libp2p & CRDT Research" detail="Canvas applications are powered by a realtime multiplayer database, built on decades of CRDT research, plus original work we did to make them usable for general-purpose computing.">
+<FeatureRow title="Built on libp2p & CRDT Research" detail="Canvas applications are powered by a realtime multiplayer database, built on decades of research on CRDTs, plus original work we did to make them usable for general-purpose application programming.">
   <FeatureCard title="Okra" details="A deterministic Prolly-tree that allows fast sync between ordered sets of actions." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog Post"/>
   <FeatureCard title="GossipLog" details="An authenticated multiwriter log that allows functions to retrieve data from multiple causal histories." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" secondaryLinkText="Presentation" secondaryLink="https://www.youtube.com/watch?v=X8nAdx1G-Cs"/>
   <FeatureCard title="ModelDB" details="A cross-platform relational database wrapper, supporting IndexedDB and SQLite." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb"/>
