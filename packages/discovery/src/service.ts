@@ -18,7 +18,7 @@ import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import * as cbor from "@ipld/dag-cbor"
 import PQueue from "p-queue"
 
-import { assert, minute, second, topicPattern } from "./utils.js"
+import { assert, minute, second } from "./utils.js"
 import { TopicCache } from "./cache/interface.js"
 import { MemoryCache } from "./cache/MemoryCache.js"
 
@@ -31,7 +31,6 @@ export interface DiscoveryServiceComponents {
 
 	pubsub?: GossipSub
 	fetch?: FetchService
-	identify?: IdentifyService
 }
 
 export interface DiscoveryServiceInit {
@@ -65,14 +64,8 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 		return components.fetch
 	}
 
-	private static extractIdentifyService(components: DiscoveryServiceComponents): IdentifyService {
-		assert(components.identify !== undefined)
-		return components.identify
-	}
-
 	private readonly pubsub: GossipSub
 	private readonly fetch: FetchService
-	private readonly identify: IdentifyService
 
 	private readonly log = logger("canvas:discovery")
 	private readonly cache: TopicCache
@@ -89,7 +82,6 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 		super()
 		this.pubsub = DiscoveryService.extractGossipSub(components)
 		this.fetch = DiscoveryService.extractFetchService(components)
-		this.identify = DiscoveryService.extractIdentifyService(components)
 
 		this.minPeersPerTopic = init.minPeersPerTopic ?? DiscoveryService.MIN_PEERS_PER_TOPIC
 		this.autoDialPriority = init.autoDialPriority ?? DiscoveryService.AUTO_DIAL_PRIORITY

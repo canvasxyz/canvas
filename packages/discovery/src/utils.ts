@@ -1,9 +1,6 @@
 export const second = 1000
 export const minute = 60 * second
 
-// eslint-disable-next-line no-useless-escape
-export const topicPattern = /^[a-zA-Z0-9\.\-]+$/
-
 export function assert(condition: unknown, message?: string): asserts condition {
 	if (!condition) {
 		throw new Error(message ?? "assertion failed")
