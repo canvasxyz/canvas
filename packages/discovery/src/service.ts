@@ -21,6 +21,8 @@ import PQueue from "p-queue"
 import { assert, minute, second } from "./utils.js"
 import { TopicCache } from "./cache/interface.js"
 import { MemoryCache } from "./cache/MemoryCache.js"
+import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
+import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 
 export interface DiscoveryServiceComponents {
 	peerId: PeerId
@@ -81,7 +83,6 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 
 	readonly #queue = new PQueue({ concurrency: 1 })
 	#registrarId: string | null = null
-	// #peerRecordEnvelope: Uint8Array | null = null
 	#discoveryTimer: NodeJS.Timeout | null = null
 
 	constructor(public readonly components: DiscoveryServiceComponents, init: DiscoveryServiceInit) {
@@ -126,14 +127,6 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 			},
 		})
 
-		// this.components.events.addEventListener("self:peer:update", ({ detail: { peer, previous } }) => {
-		// 	this.log("self:peer:update: %o, %o", peer, previous)
-		// 	if (peer.peerRecordEnvelope !== undefined && previous?.peerRecordEnvelope === undefined) {
-		// 		this.log("updated self record")
-		// 		this.#peerRecordEnvelope = peer.peerRecordEnvelope
-		// 	}
-		// })
-
 		this.components.events.addEventListener("peer:update", ({ detail: { peer, previous } }) => {
 			if (peer.peerRecordEnvelope !== undefined && previous?.peerRecordEnvelope === undefined) {
 				this.log("received peer record from %s", peer.id)
@@ -177,11 +170,6 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 
 					this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
 
-					// this.log("adding %p to peer store with multiaddrs %o", peerId, multiaddrs)
-					// await this.components.peerStore.merge(peerId, {
-					// 	addresses: multiaddrs.map((multiaddr) => ({ isCertified: true, multiaddr })),
-					// })
-
 					const selfTopics = this.pubsub.getTopics()
 					for (const topic of topics) {
 						if (!selfTopics.includes(topic)) {
@@ -212,10 +200,16 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 
 		const topics = this.pubsub.getTopics().filter((topic) => this.topicFilter(topic))
 
-		const multiaddrs = this.components.addressManager.getAddresses()
+		const multiaddrs = this.components.addressManager
+			.getAddresses()
+			.filter((addr) => !isLoopback(addr) && !isPrivate(addr))
+
+		if (multiaddrs.length === 0) {
+			this.log.error("no multiaddrs to publish")
+		}
+
 		const peerRecord = new PeerRecord({ multiaddrs, peerId: this.components.peerId })
 		const envelope = await RecordEnvelope.seal(peerRecord, this.components.peerId)
-		envelope.marshal()
 
 		const payload = { topics, peerRecordEnvelope: envelope.marshal() }
 		this.pubsub.publish(this.discoveryTopic, cbor.encode(payload)).then(
