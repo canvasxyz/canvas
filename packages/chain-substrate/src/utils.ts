@@ -42,9 +42,8 @@ export function validateSessionData(data: unknown): data is SubstrateSessionData
 		return false
 	}
 
-	const { signature, substrateKeyType, data: messageData } = data as Record<string, any>
-	if (!signature) {
-		console.log("a")
+	const { signatureResult, substrateKeyType, data: messageData } = data as Record<string, any>
+	if (!signatureResult) {
 		return false
 	}
 
@@ -56,7 +55,11 @@ export function validateSessionData(data: unknown): data is SubstrateSessionData
 		return false
 	}
 
-	if (!(signature instanceof Uint8Array)) {
+	if (!(signatureResult.signature instanceof Uint8Array)) {
+		return false
+	}
+
+	if (!(signatureResult.nonce instanceof Uint8Array)) {
 		return false
 	}
 

@@ -1,7 +1,10 @@
 import { KeypairType } from "@polkadot/util-crypto/types"
 
 export type SubstrateSessionData = {
-	signature: Uint8Array
+	signatureResult: {
+		signature: Uint8Array
+		nonce: Uint8Array
+	}
 	substrateKeyType: KeypairType
 	data: SubstrateMessage
 }
