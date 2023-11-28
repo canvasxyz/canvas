@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - docs/**
+      - packages/*/README.md
+      - examples/*/README.md
   workflow_dispatch:
 
 permissions:
