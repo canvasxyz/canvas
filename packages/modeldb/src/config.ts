@@ -61,6 +61,12 @@ export function parseProperty(propertyName: string, propertyType: PropertyType):
 	const primitiveResult = primitivePropertyPattern.exec(propertyType)
 	if (primitiveResult !== null) {
 		const [_, type, optional] = primitiveResult
+
+		// json field cannot be optional
+		if (type === "json" && optional === "?") {
+			throw new Error(`field "${propertyName}" is invalid - json fields cannot be optional`)
+		}
+
 		return { name: propertyName, kind: "primitive", type: type as PrimitiveType, optional: optional === "?" }
 	}
 
