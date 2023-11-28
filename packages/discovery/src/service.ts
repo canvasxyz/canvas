@@ -4,34 +4,43 @@ import type { Startable } from "@libp2p/interface/startable"
 import type { PeerId } from "@libp2p/interface/peer-id"
 import type { Registrar } from "@libp2p/interface-internal/registrar"
 import type { ConnectionManager } from "@libp2p/interface-internal/connection-manager"
-import { CustomEvent, EventEmitter } from "@libp2p/interface/events"
+import { CustomEvent, EventEmitter, TypedEventTarget } from "@libp2p/interface/events"
+import { Libp2pEvents } from "@libp2p/interface"
 import { PeerDiscovery, PeerDiscoveryEvents, peerDiscovery } from "@libp2p/interface/peer-discovery"
 
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { FetchService } from "libp2p/fetch"
+import { IdentifyService } from "libp2p/identify"
 import { PeerRecord, RecordEnvelope } from "@libp2p/peer-record"
 import { logger } from "@libp2p/logger"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import * as cbor from "@ipld/dag-cbor"
 import PQueue from "p-queue"
 
-import { assert, minute, second } from "./utils.js"
+import { assert, minute, second, topicPattern } from "./utils.js"
+import { TopicCache } from "./cache/interface.js"
+import { MemoryCache } from "./cache/MemoryCache.js"
 
 export interface DiscoveryServiceComponents {
 	peerId: PeerId
 	peerStore: PeerStore
 	registrar: Registrar
 	connectionManager: ConnectionManager
+	events: TypedEventTarget<Libp2pEvents>
 
 	pubsub?: GossipSub
 	fetch?: FetchService
+	identify?: IdentifyService
 }
 
 export interface DiscoveryServiceInit {
-	filterTopics?: (topic: string) => boolean
+	discoveryTopic?: string
+	topicFilter?: (topic: string) => boolean
+
 	minPeersPerTopic?: number
 	autoDialPriority?: number
+	cache?: TopicCache
 }
 
 export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implements PeerDiscovery, Startable {
@@ -56,12 +65,20 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 		return components.fetch
 	}
 
+	private static extractIdentifyService(components: DiscoveryServiceComponents): IdentifyService {
+		assert(components.identify !== undefined)
+		return components.identify
+	}
+
 	private readonly pubsub: GossipSub
 	private readonly fetch: FetchService
+	private readonly identify: IdentifyService
+
 	private readonly log = logger("canvas:discovery")
+	private readonly cache: TopicCache
 	private readonly minPeersPerTopic: number
 	private readonly autoDialPriority: number
-	private readonly filterTopics: (topic: string) => boolean
+	private readonly topicFilter: (topic: string) => boolean
 
 	private readonly topologyPeers = new Set<string>()
 
@@ -72,10 +89,12 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 		super()
 		this.pubsub = DiscoveryService.extractGossipSub(components)
 		this.fetch = DiscoveryService.extractFetchService(components)
+		this.identify = DiscoveryService.extractIdentifyService(components)
 
 		this.minPeersPerTopic = init.minPeersPerTopic ?? DiscoveryService.MIN_PEERS_PER_TOPIC
 		this.autoDialPriority = init.autoDialPriority ?? DiscoveryService.AUTO_DIAL_PRIORITY
-		this.filterTopics = init.filterTopics ?? ((topic) => true)
+		this.topicFilter = init.topicFilter ?? ((topic) => true)
+		this.cache = init.cache ?? new MemoryCache()
 	}
 
 	get [peerDiscovery](): PeerDiscovery {
@@ -106,6 +125,22 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 				this.topologyPeers.delete(peerId.toString())
 			},
 		})
+
+		this.components.events.addEventListener("peer:update", ({ detail: { peer, previous } }) => {
+			if (peer.peerRecordEnvelope !== undefined && previous?.peerRecordEnvelope === undefined) {
+				this.log("received peer record from %s", peer.id)
+				this.cache.identify(peer.id, peer.peerRecordEnvelope)
+			}
+		})
+
+		this.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
+			this.log("subscription change: %s %o", peerId, subscriptions)
+			for (const { subscribe, topic } of subscriptions) {
+				if (subscribe && this.topicFilter(topic)) {
+					this.cache.observe(topic, peerId)
+				}
+			}
+		})
 	}
 
 	public async beforeStop(): Promise<void> {
@@ -126,24 +161,9 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 			return null
 		}
 
-		const [_, ...topic] = key.split("/")
-		const records: Uint8Array[] = []
-		for (const peerId of this.pubsub.getSubscribers(topic.join("/"))) {
-			try {
-				const { peerRecordEnvelope } = await this.components.peerStore.get(peerId)
-				if (peerRecordEnvelope !== undefined) {
-					records.push(peerRecordEnvelope)
-				}
-			} catch (err) {
-				this.log.error("failed to get peer info from peer store: %O", err)
-			}
-		}
-
-		if (records.length === 0) {
-			return null
-		} else {
-			return cbor.encode(records)
-		}
+		const topic = key.slice(DiscoveryService.FETCH_KEY_PREFIX.length)
+		const results = await this.cache.query(topic)
+		return cbor.encode(results.map(({ peerRecordEnvelope }) => peerRecordEnvelope))
 	}
 
 	private handleConnect(connection: Connection) {
@@ -151,7 +171,7 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 
 		this.#queue
 			.add(async () => {
-				for (const topic of this.pubsub.getTopics().filter(this.filterTopics)) {
+				for (const topic of this.pubsub.getTopics().filter(this.topicFilter)) {
 					const meshPeers = this.pubsub.getMeshPeers(topic)
 					if (meshPeers.length >= this.minPeersPerTopic) {
 						continue
@@ -160,7 +180,7 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 					this.log("want more peers for topic %s", topic)
 
 					const key = DiscoveryService.FETCH_KEY_PREFIX + topic
-					this.log("fetching %p %s", connection.remotePeer, key)
+					this.log("fetching key %s from %p", key, connection.remotePeer)
 					const result = await this.fetch.fetch(connection.remotePeer, key)
 					if (result === null) {
 						this.log("got null result")
@@ -168,21 +188,27 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 					}
 
 					const records = cbor.decode<Uint8Array[]>(result)
-					assert(Array.isArray(records))
+					assert(Array.isArray(records), "expected Array.isArray(records)")
 
 					this.log("got %d results", records.length)
 
-					for (const record of records) {
-						assert(record instanceof Uint8Array)
-						const envelope = await RecordEnvelope.openAndCertify(record, PeerRecord.DOMAIN)
+					for (const peerRecordEnvelope of records) {
+						assert(peerRecordEnvelope instanceof Uint8Array, "expected record instanceof Uint8Array")
+
+						// TODO: consider using components.peerStore.consumePeerRecord instead
+
+						const envelope = await RecordEnvelope.openAndCertify(peerRecordEnvelope, PeerRecord.DOMAIN)
 						const { peerId, multiaddrs } = PeerRecord.createFromProtobuf(envelope.payload)
-						assert(envelope.peerId.equals(peerId))
+						assert(envelope.peerId.equals(peerId), "expected envelope.peerId.equals(peerId)")
 
 						if (peerId.equals(this.components.peerId)) {
 							return
 						} else if (meshPeers.includes(peerId.toString())) {
 							return
 						}
+
+						this.cache.observe(topic, peerId)
+						this.cache.identify(peerId, peerRecordEnvelope)
 
 						this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
 
