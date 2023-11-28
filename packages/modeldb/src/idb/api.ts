@@ -117,7 +117,6 @@ export class ModelAPI {
 			const index = this.model.indexes.find((index) => index[0] === property)
 			if (index !== undefined) {
 				const storeIndex = store.index(getIndexName(index))
-				this.log("querying index %s with direction %s", storeIndex.name, direction)
 
 				const results: ModelValue[] = []
 				let cursor = await storeIndex.openCursor(null, directions[direction])
@@ -185,7 +184,6 @@ export class ModelAPI {
 		const property = this.model.properties.find((property) => property.name === propertyName)
 		assert(property !== undefined, "property not found")
 
-		this.log("querying index %s with expression %o", storeIndex.name, expression)
 		if (isLiteralExpression(expression)) {
 			// Here we iterate over the index using an `only` key range
 			const range = IDBKeyRange.only(encodePropertyValue(property, expression))
