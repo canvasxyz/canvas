@@ -121,6 +121,8 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		super()
 		this.db = runtime.db
 
+		this.log("initialized with peerId %p", peerId)
+
 		this.libp2p?.addEventListener("peer:discovery", ({ detail: { id, multiaddrs, protocols } }) => {
 			this.log("discovered peer %p at %o with protocols %o", id, multiaddrs, protocols)
 		})
