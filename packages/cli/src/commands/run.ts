@@ -94,6 +94,10 @@ export const builder = (yargs: Argv) =>
 			desc: "Stop accepting connections above a limit",
 			default: MAX_CONNECTIONS,
 		})
+		.option("discovery-topic", {
+			type: "string",
+			desc: "Enable active peer discovery via GossipSub",
+		})
 		.option("verbose", {
 			type: "boolean",
 			desc: "Log messages to stdout",
@@ -148,6 +152,7 @@ export async function handler(args: Args) {
 		maxConnections: args["max-connections"],
 		bootstrapList: bootstrapList,
 		offline: args.offline,
+		discoveryTopic: args["discovery-topic"],
 	})
 
 	console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(app.topic)}`)
