@@ -1,6 +1,6 @@
 # Chat Example
 
-LINK TBD
+[Github Link](https://github.com/canvasxyz/canvas/tree/main/examples/chat) (`npm i && npm run dev` to run, hosted demo coming soon)
 
 The simple chat example implements a public messaging room
 with persistence over libp2p.

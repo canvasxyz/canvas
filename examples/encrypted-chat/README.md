@@ -1,6 +1,6 @@
 # Encrypted Chat Example
 
-LINK TBD
+[Github Link](https://github.com/canvasxyz/canvas/tree/main/examples/encrypted-chat) (`npm i && npm run dev` to run, hosted demo coming soon)
 
 The encrypted chat example implements simple private messaging for
 up to 2 people, and can be easily extended to groups of up to ~100 people.
