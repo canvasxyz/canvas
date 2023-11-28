@@ -9,11 +9,17 @@ import { contract, maxX, maxY } from "./contract.js"
 function App() {
 	const wallet = ethers.Wallet.createRandom()
 	const { app } = useCanvas({
-		contract: { ...contract, topic: "canvas-example-chat-global" },
-		signers: [new SIWESigner({ signer: wallet })]
+		contract,
+		signers: [new SIWESigner({ signer: wallet })],
 	})
 
-	const stateQuery = useLiveQuery(app, "state")
+	const stateQuery = useLiveQuery<{
+		key: string
+		direction: string
+		tickCount: number
+		tiles: string
+		gameOver: string
+	}>(app, "state")
 	const state = stateQuery && stateQuery[0]
 	const tiles = state?.tiles && JSON.parse(state.tiles)
 	useTick(app, "!state.0.gameOver", 200)
@@ -54,7 +60,7 @@ function App() {
 										})
 											? "#fff"
 											: "#333",
-										display: "inline-block"
+										display: "inline-block",
 									}}
 								></div>
 							))}

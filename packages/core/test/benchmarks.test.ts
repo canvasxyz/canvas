@@ -1,167 +1,114 @@
-// import os from "node:os"
-// import fs from "node:fs"
-// import path from "node:path"
+import test from "ava"
 
-// import test from "ava"
+import { createLibp2p } from "libp2p"
+import { nanoid } from "nanoid"
+import pDefer, { DeferredPromise } from "p-defer"
 
-// import chalk from "chalk"
-// import { nanoid } from "nanoid"
+// import { options as bootstrapPeerOptions } from "@canvas-js/bootstrap-peer/lib/libp2p.js"
 
-// import { PeerId } from "@libp2p/interface-peer-id"
-// import { createEd25519PeerId, exportToProtobuf } from "@libp2p/peer-id-factory"
+import { Canvas, Contract } from "@canvas-js/core"
 
-// import { UpdateEventDetail } from "@canvas-js/interfaces"
-// import { Core } from "@canvas-js/core"
-// import { PEER_ID_FILENAME } from "@canvas-js/core/constants"
+import { getDirectory } from "./utils.js"
 
-// import { compileSpec, TestSigner } from "./utils.js"
+test("no-op", (t) => t.pass())
 
-// const { app, spec } = await compileSpec({
-// 	models: {},
-// 	actions: { log: ({ message }, {}) => {} },
-// })
+// test("test network throughput", async (t) => {
+// 	// const bootstrapPeer = await createLibp2p(bootstrapPeerOptions)
+// 	// await bootstrapPeer.start()
 
-// const signer = new TestSigner(app)
+// 	// const bootstrapList = bootstrapPeer
+// 	// 	.getMultiaddrs()
+// 	// 	.map((addr) => addr.decapsulateCode(421).toString() + "/p2p/" + bootstrapPeer.peerId)
 
-// const log = (message: string) => console.log(chalk.blueBright(`[benchmark] ${message}`))
+// 	// console.log("bootstrapList", bootstrapList)
 
-// async function initializeTestCores(parentDirectory: string, ports: number[]): Promise<Core[]> {
-// 	const peerIds = await Promise.all(ports.map(() => createEd25519PeerId()))
-// 	const bootstrapAddresses = ports.map((port, i) => `/ip4/127.0.0.1/tcp/${port}/ws/p2p/${peerIds[i]}`)
+// 	const contract = {
+// 		topic: "com.example.app",
+// 		models: {
+// 			message: {
+// 				id: "primary",
+// 				address: "string",
+// 				content: "string",
+// 				timestamp: "integer",
+// 			},
+// 		},
+// 		actions: {
+// 			async createMessage(db, { content }, { id, address, timestamp }) {
+// 				await db.set("message", { id, address, content, timestamp })
+// 			},
+// 		},
+// 	} satisfies Contract
 
-// 	return Promise.all(
-// 		ports.map((port, i) => {
-// 			const peerId = peerIds[i]
-// 			const directory = path.resolve(parentDirectory, nanoid())
-// 			fs.mkdirSync(directory)
-// 			fs.writeFileSync(path.resolve(directory, PEER_ID_FILENAME), exportToProtobuf(peerId))
+// 	const messageCount = 10
+// 	const networkSize = 3
 
-// 			const bootstrapList = bootstrapAddresses.filter((_, j) => j !== i)
-// 			return Core.initialize({
-// 				directory,
-// 				contract: spec,
-// 				listen: [`/ip4/127.0.0.1/tcp/${port}/ws`],
-// 				announce: [`/ip4/127.0.0.1/tcp/${port}/ws/p2p/${peerId}`],
-// 				bootstrapList,
-// 			})
+// 	const initialDegree = 2
+
+// 	const nodes: {
+// 		app: Canvas
+// 		peerId: string
+// 		listen: string
+// 		bootstrapList: string[]
+// 		count: number
+// 		deferred: DeferredPromise<void>
+// 	}[] = []
+
+// 	for (let i = 0; i < networkSize; i++) {
+// 		const bootstrapList: string[] = []
+// 		const listen = `/ip4/127.0.0.1/tcp/${9000 + i}/ws`
+// 		const app = await Canvas.initialize({
+// 			contract,
+// 			path: getDirectory(t),
+// 			bootstrapList,
+// 			listen: [listen],
 // 		})
-// 	)
-// }
 
-// function connect(core: Core, id: PeerId | undefined, app: string): Promise<void> {
-// 	return new Promise((resolve, reject) => {
-// 		core.libp2p?.services.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
-// 			if (id?.equals(peerId)) {
-// 				for (const { subscribe, topic } of subscriptions) {
-// 					if (subscribe && topic === app) {
-// 						return resolve()
-// 					}
+// 		const node = { app, peerId: app.peerId.toString(), deferred: pDefer<void>(), count: 0, bootstrapList, listen }
+
+// 		app.libp2p?.addEventListener("connection:open", ({ detail: connection }) => {
+// 			console.log(`[${app.peerId}] opened connection to ${connection.remotePeer}`)
+// 		})
+
+// 		app.addEventListener("message", ({ detail: { id, message } }) => {
+// 			if (message.payload.type === "action") {
+// 				node.count++
+// 				console.log(`[${app.peerId}] received  ${id} (${node.count}/${messageCount})`)
+// 				if (node.count === messageCount) {
+// 					node.deferred.resolve()
+// 					console.log("peer", app.peerId.toString(), "finished")
 // 				}
 // 			}
 // 		})
-// 	})
-// }
 
-// async function waitForMerkleRoot(core: Core, uri: string, merkleRoot: string) {
-// 	const merkleRoots = core.messageStore.getMerkleRoots()
-// 	if (merkleRoots[uri] === merkleRoot) {
-// 		return
+// 		nodes.push(node)
 // 	}
 
-// 	await new Promise<void>((resolve, reject) => {
-// 		const listener = ({ detail: { uri, root } }: CustomEvent<UpdateEventDetail>) => {
-// 			if (uri === app && root === merkleRoot) {
-// 				core.removeEventListener("update", listener)
-// 				resolve()
+// 	const selectRandomPeer = (i: number) => {
+// 		const index = Math.floor(Math.random() * (networkSize - 1))
+// 		return index < i ? nodes[index] : nodes[index + 1]
+// 	}
+
+// 	await Promise.all(
+// 		nodes.map(({ app, bootstrapList }, i) => {
+// 			const peers = new Set<string>()
+// 			for (let j = 0; j < initialDegree; j++) {
+// 				const { peerId, listen } = selectRandomPeer(i)
+// 				peers.add(`${listen}/p2p/${peerId}`)
 // 			}
-// 		}
+// 			bootstrapList.push(...peers)
+// 			console.log(`[${app.peerId}] bootstrap list`, bootstrapList)
+// 			return app.start()
+// 		}),
+// 	)
 
-// 		core.addEventListener("update", listener)
-// 	})
-// }
+// 	await new Promise((resolve) => setTimeout(resolve, 5000))
 
-// // AVA requires that all test files have at least one test
-// test("no-op", (t) => t.pass())
+// 	console.log("publishing messages...")
+// 	for (let i = 0; i < messageCount; i++) {
+// 		const { app } = nodes[Math.floor(Math.random() * nodes.length)]
+// 		const { id } = await app.actions.createMessage({ content: nanoid() })
+// 		console.log(`[${app.peerId}] published ${id}`)
+// 	}
 
-// if (process.env["RUN_BENCHMARKS"]) {
-// 	test("time sending an action", async (t) => {
-// 		t.timeout(50000)
-
-// 		const nInitial = 1000
-
-// 		const parentDirectory = path.resolve(os.tmpdir(), nanoid())
-// 		log(`creating tmp directory ${parentDirectory}`)
-// 		fs.mkdirSync(parentDirectory)
-
-// 		t.teardown(() => {
-// 			log(`removing tmp directory ${parentDirectory}`)
-// 			fs.rmSync(parentDirectory, { recursive: true })
-// 		})
-
-// 		const [source, target] = await initializeTestCores(parentDirectory, [8001, 8002])
-// 		log(`source: ${source.libp2p?.peerId}`)
-// 		log(`target: ${target.libp2p?.peerId}`)
-
-// 		log("waiting for peers to find each other...")
-
-// 		await Promise.all([connect(source, target.libp2p?.peerId, app), connect(target, source.libp2p?.peerId, app)])
-
-// 		log("peers connected")
-
-// 		// Generate a first batch of messages
-// 		log("sending and executing a first batch of messages")
-// 		const initialSyncStart = performance.now()
-
-// 		const messages = await Promise.all(
-// 			[...Array(nInitial).keys()].map((i) => signer.sign("log", { message: i.toString() }))
-// 		)
-
-// 		log(`generating ${nInitial} messages: ${(performance.now() - initialSyncStart) / 1000} seconds`)
-
-// 		// Send messages (synchronous for now)
-// 		const sent = new Set<string>()
-// 		for (const message of messages) {
-// 			try {
-// 				const { hash } = await source.apply(message)
-// 				sent.add(hash)
-// 			} catch (err) {
-// 				log(`error: ${err}`)
-// 			}
-// 		}
-
-// 		log(`applying ${nInitial} messages on source: ${(performance.now() - initialSyncStart) / 1000} seconds`)
-
-// 		const { [app]: sourceMerkleRoot } = source.messageStore.getMerkleRoots()
-
-// 		await waitForMerkleRoot(target, app, sourceMerkleRoot)
-
-// 		log(`received ${nInitial} messages: ${(performance.now() - initialSyncStart) / 1000} seconds`)
-
-// 		const timings: number[] = []
-
-// 		// Send a second batch of messages, and wait for nodes to sync
-// 		// TODO: make asynchronous
-// 		log("sending and awaiting 100 messages one-by-one")
-// 		for (let i = 0; i < 100; i++) {
-// 			const actionStart = performance.now()
-// 			const action = await signer.sign("log", { message: "a2" })
-// 			await source.apply(action)
-// 			const { [app]: sourceMerkleRoot } = source.messageStore.getMerkleRoots()
-// 			await waitForMerkleRoot(target, app, sourceMerkleRoot)
-// 			const actionTimeSeconds = (performance.now() - actionStart) / 1000
-// 			timings.push(actionTimeSeconds)
-// 		}
-
-// 		const mean = timings.reduce((x, y) => x + y, 0) / timings.length
-// 		log(`average latency: ${mean.toFixed(3)}s`)
-
-// 		t.pass()
-
-// 		await source.close()
-// 		await target.close()
-// 	})
-// }
-
-import test from "ava"
-
-test("no-op", (t) => t.pass())
+// 	await Promise.all(nodes.map(({ deferred }) => deferred.promise))
+// })

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useCallback, useState, useEffect, useRef } from "react"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { PublicChat } from "@canvas-js/templates"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
@@ -29,6 +29,34 @@ const MessagingDemo = () => {
 		orderBy: { timestamp: "desc" },
 	})
 
+	const [connections, setConnections] = useState([])
+	const connectionsRef = useRef(connections)
+
+	const handleConnectionOpen = useCallback(({ detail: connection }) => {
+		const connections = [...connectionsRef.current, connection]
+		setConnections(connections)
+		connectionsRef.current = connections
+	}, [])
+
+	const handleConnectionClose = useCallback(({ detail: connection }) => {
+		const connections = connectionsRef.current.filter(({ id }) => id !== connection.id)
+		setConnections(connections)
+		connectionsRef.current = connections
+	}, [])
+
+	useEffect(() => {
+		if (!app) return () => {}
+		app.start()
+
+		app.libp2p?.addEventListener("connection:open", handleConnectionOpen)
+		app.libp2p?.addEventListener("connection:close", handleConnectionClose)
+		return () => {
+			app.libp2p?.removeEventListener("connection:open", handleConnectionOpen)
+			app.libp2p?.removeEventListener("connection:close", handleConnectionClose)
+			app.stop()
+		}
+	}, [app])
+
 	const onSubmit = async (e) => {
 		e.preventDefault()
 
@@ -52,6 +80,9 @@ const MessagingDemo = () => {
 			<form onSubmit={onSubmit}>
 				<input type="text" ref={inputRef} placeholder="Type a message..." />
 			</form>
+			<div className="peers">
+				{connections.length} peer{connections.length === 1 ? "" : "s"}
+			</div>
 		</div>
 	)
 }

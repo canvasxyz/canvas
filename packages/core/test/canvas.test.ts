@@ -24,7 +24,7 @@ export const models = {
 export const actions = {
   async createPost(db, { content, isVisible, metadata }, { id, address, timestamp }) {
     const postId = [address, id].join("/")
-    await db.posts.set({ id: postId, content, isVisible, timestamp, metadata });
+    await db.set("posts", { id: postId, content, isVisible, timestamp, metadata });
     return postId
   },
 
@@ -33,7 +33,7 @@ export const actions = {
 			throw new Error("unauthorized")
 		}
 
-		await db.posts.delete(key)
+		await db.delete("posts", key)
   },
 
 	async hello() {
@@ -131,7 +131,7 @@ test("create an app with an inline contract", async (t) => {
 				async createPost(db, args, { id, address, timestamp }) {
 					const { content } = args as { content: string }
 					const postId = [address, id].join("/")
-					await db.posts.set({ id: postId, content, timestamp, address })
+					await db.set("posts", { id: postId, content, timestamp, address })
 					return postId
 				},
 			},
@@ -164,18 +164,18 @@ test("get a value set by another action", async (t) => {
 			},
 			actions: {
 				async createUser(db, { name }: { name: string }, { address }) {
-					await db.user.set({ id: address, name })
+					await db.set("user", { id: address, name })
 				},
 				async createPost(db, { content }: { content: string }, { id, address }) {
-					const user = await db.user.get(address)
+					const user = await db.get("user", address)
 					assert(user !== null)
-					await db.post.set({ id, from: address, content })
+					await db.set("post", { id, from: address, content })
 				},
 				async deletePost(db, { id }: { id: string }, { address }) {
-					const post = await db.post.get(id)
+					const post = await db.get("post", id)
 					if (post !== null) {
 						assert(post.from === address, "cannot delete others' posts")
-						await db.post.delete(id)
+						await db.delete("post", id)
 					}
 				},
 			},
@@ -235,7 +235,7 @@ test("validate action args using IPLD schemas", async (t) => {
 						{ id, address, timestamp },
 					) => {
 						const postId = [address, id].join("/")
-						await db.posts.set({ id: postId, content, timestamp, address })
+						await db.set("posts", { id: postId, content, timestamp, address })
 						return postId
 					},
 				},

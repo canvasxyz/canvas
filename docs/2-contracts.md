@@ -27,10 +27,10 @@ const app = await Canvas.initialize({
     actions: {
       async createPost(db, { content }, { id, chain, address, timestamp }) {
         const user = [chain, address].join(":")
-        await db.posts.set({ id, user, content, updated_at: timestamp })
+        await db.set("posts", { id, user, content, updated_at: timestamp })
       },
       async deletePost(db, { postId }, { chain, address }) {
-        const post = await db.posts.get(postId)
+        const post = await db.get("posts", postId)
         if (post === null) {
           return
         }
@@ -40,7 +40,7 @@ const app = await Canvas.initialize({
           throw new Error("not authorized")
         }
 
-        await db.posts.delete(postId)
+        await db.delete("posts", postId)
       },
     },
   },
@@ -76,10 +76,10 @@ export const models = {
 export const actions = {
   async createPost(db, { content }, { id, chain, address, timestamp }) {
     const user = [chain, address].join(":")
-    await db.posts.set({ id, user, content, updated_at: timestamp })
+    await db.set("posts", { id, user, content, updated_at: timestamp })
   },
   async deletePost(db, { postId }, { chain, address }) {
-    const post = await db.posts.get(postId)
+    const post = await db.get("posts", postId)
     if (post === null) {
       return
     }
@@ -89,7 +89,7 @@ export const actions = {
       throw new Error("not authorized")
     }
 
-    await db.posts.delete(postId)
+    await db.delete("posts", postId)
   },
 }
 `

@@ -15,7 +15,7 @@ export const PublicChat = {
 	actions: {
 		sendMessage: (db, { message }: { message: string }, { address, timestamp, id }) => {
 			if (!message || !message.trim()) throw new Error()
-			db.messages.set({ id, message, address, timestamp })
+			db.set("messages", { id, message, address, timestamp })
 		},
 	},
 } satisfies ContractTemplate
@@ -41,28 +41,28 @@ export const ChannelChat = {
 		},
 	},
 	actions: {
-		leaveChannel: (db, { channel }, { address, timestamp, id }) => {
-			db.memberships.delete(address + channel)
+		async leaveChannel(db, { channel }, { address, timestamp, id }) {
+			await db.delete("memberships", address + channel)
 		},
-		joinChannel: (db, { channel }, { address, timestamp, id }) => {
+		async joinChannel(db, { channel }, { address, timestamp, id }) {
 			if (!channel || !channel.trim()) {
 				throw new Error()
 			}
 
-			db.channels.set({ name: channel })
-			db.memberships.set({ id: `${address}/${channel}`, user: address, channel, timestamp })
+			await db.set("channels", { name: channel })
+			await db.set("memberships", { id: `${address}/${channel}`, user: address, channel, timestamp })
 		},
-		sendMessage: (db, { message, channel }, { address, timestamp, id }) => {
+		async sendMessage(db, { message, channel }, { address, timestamp, id }) {
 			if (!message || !channel || !message.trim() || !channel.trim()) {
 				throw new Error()
 			}
 
-			db.messages.set({ id, message, address, channel, timestamp })
+			await db.set("messages", { id, message, address, channel, timestamp })
 		},
-		deleteMessage: async (db, { id }, { address, timestamp }) => {
-			const message = await db.messages.get(id)
+		async deleteMessage(db, { id }, { address, timestamp }) {
+			const message = await db.get("messages", id)
 			if (!message || message.address !== address) throw new Error()
-			db.messages.delete(id)
+			await db.delete("messages", id)
 		},
 	},
 } satisfies ContractTemplate
@@ -101,42 +101,42 @@ export const Forum = {
 		},
 	},
 	actions: {
-		createTag: (db, { tag }, { address, timestamp, id }) => {
+		async createTag(db, { tag }, { address, timestamp, id }) {
 			if (!tag || !tag.trim()) throw new Error()
-			db.tags.set({ name: tag })
+			await db.set("tags", { name: tag })
 		},
-		deleteTag: (db, { tag }, { address, timestamp, id }) => {
-			db.tags.delete(tag)
+		async deleteTag(db, { tag }, { address, timestamp, id }) {
+			await db.delete("tags", tag)
 		},
-		createCategory: (db, { category }, { address, timestamp, id }) => {
+		async createCategory(db, { category }, { address, timestamp, id }) {
 			if (!category || !category.trim()) throw new Error()
-			db.categories.set({ name: category })
+			await db.set("categories", { name: category })
 		},
-		deleteCategory: (db, { category }, { address, timestamp, id }) => {
-			db.categories.delete(category)
+		async deleteCategory(db, { category }, { address, timestamp, id }) {
+			await db.delete("categories", category)
 		},
-		createThread: (db, { title, message, category }, { address, timestamp, id }) => {
+		async createThread(db, { title, message, category }, { address, timestamp, id }) {
 			if (!message || !category || !title || !message.trim() || !category.trim() || !title.trim()) throw new Error()
-			db.threads.set({ id, title, message, category, address, timestamp, replies: 0 })
+			await db.set("threads", { id, title, message, category, address, timestamp, replies: 0 })
 		},
-		deleteMessage: async (db, { id }, { address, timestamp }) => {
-			const message = await db.threads.get(id)
+		async deleteMessage(db, { id }, { address, timestamp }) {
+			const message = await db.get("threads", id)
 			if (!message || message.address !== address) throw new Error()
-			db.threads.delete(id)
+			await db.delete("threads", id)
 		},
-		createReply: async (db, { threadId, reply }, { address, timestamp, id }) => {
-			const thread = await db.threads.get(threadId)
+		async createReply(db, { threadId, reply }, { address, timestamp, id }) {
+			const thread = await db.get("threads", threadId)
 			if (!thread || !threadId) throw new Error()
-			db.threads.set({ ...thread, replies: (thread.replies as number) + 1 })
-			db.replies.set({ id, threadId, reply, address, timestamp })
+			await db.set("threads", { ...thread, replies: (thread.replies as number) + 1 })
+			await db.set("replies", { id, threadId, reply, address, timestamp })
 		},
-		deleteReply: async (db, { replyId }, { address, timestamp, id }) => {
-			const reply = await db.replies.get(replyId)
+		async deleteReply(db, { replyId }, { address, timestamp, id }) {
+			const reply = await db.get("replies", replyId)
 			if (!reply) throw new Error()
-			const thread = await db.threads.get(reply.threadId as string)
+			const thread = await db.get("threads", reply.threadId as string)
 			if (!thread) throw new Error()
-			db.threads.set({ ...thread, replies: (thread.replies as number) - 1 })
-			db.replies.delete(replyId)
+			await db.set("threads", { ...thread, replies: (thread.replies as number) - 1 })
+			await db.delete("replies", replyId)
 		},
 	},
 } satisfies ContractTemplate

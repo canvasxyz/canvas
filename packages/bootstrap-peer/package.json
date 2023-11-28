@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@canvas-js/discovery": "0.6.1",
-    "@chainsafe/libp2p-gossipsub": "^10.1.0",
-    "@chainsafe/libp2p-noise": "^13.0.3",
+    "@chainsafe/libp2p-gossipsub": "^10.1.1",
+    "@chainsafe/libp2p-noise": "^13.0.5",
     "@libp2p/bootstrap": "^9.0.12",
     "@libp2p/interface": "^0.1.6",
     "@libp2p/mplex": "^9.0.12",

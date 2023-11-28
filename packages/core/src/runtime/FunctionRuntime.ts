@@ -49,7 +49,7 @@ export class FunctionRuntime extends AbstractRuntime {
 	}
 
 	#context: ExecutionContext | null = null
-	readonly #db: Record<string, ModelAPI>
+	readonly #db: ModelAPI
 
 	constructor(
 		public readonly topic: string,
@@ -64,27 +64,23 @@ export class FunctionRuntime extends AbstractRuntime {
 	) {
 		super(indexHistory)
 
-		this.#db = mapValues(this.db.models, (model): ModelAPI => {
-			const primaryKeyProperty = model.properties.find((property) => property.kind === "primary")
-			assert(primaryKeyProperty !== undefined)
-
-			return {
-				get: async <T extends ModelValue = ModelValue>(key: string) => {
-					assert(this.#context !== null, "expected this.#context !== null")
-					return await this.getModelValue<T>(this.#context, model.name, key)
-				},
-				set: async (value: ModelValue) => {
-					assert(this.#context !== null, "expected this.#context !== null")
-					validateModelValue(model, value)
-					const key = value[primaryKeyProperty.name] as string
-					this.#context.modelEntries[model.name][key] = value
-				},
-				delete: async (key: string) => {
-					assert(this.#context !== null, "expected this.#context !== null")
-					this.#context.modelEntries[model.name][key] = null
-				},
-			}
-		})
+		this.#db = {
+			get: async <T extends ModelValue = ModelValue>(model: string, key: string) => {
+				assert(this.#context !== null, "expected this.#context !== null")
+				return await this.getModelValue<T>(this.#context, model, key)
+			},
+			set: async (model: string, value: ModelValue) => {
+				assert(this.#context !== null, "expected this.#context !== null")
+				validateModelValue(this.db.models[model], value)
+				const { primaryKey } = this.db.models[model]
+				const key = value[primaryKey] as string
+				this.#context.modelEntries[model][key] = value
+			},
+			delete: async (model: string, key: string) => {
+				assert(this.#context !== null, "expected this.#context !== null")
+				this.#context.modelEntries[model][key] = null
+			},
+		}
 	}
 
 	public get actionNames() {
