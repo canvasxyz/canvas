@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/vm",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
