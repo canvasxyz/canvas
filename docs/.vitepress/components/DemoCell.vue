@@ -85,6 +85,7 @@
   background: var(--vp-c-brand-2);
 }
 .DemoCell .caption {
+  position: relative;
   color: var(--vp-c-text-1);
   font-size: 14px;
 }
@@ -94,12 +95,15 @@
   bottom: 18px;
   font-size: 14px;
   opacity: 0.33;
-  display: none;
 }
 @media (min-width: 960px) {
   .DemoCell.GameDemo .peers {
     bottom: 13px;
     right: 20px;
   }
+}
+.DemoCell .caption .peers {
+  right: 0;
+  bottom: 1px;
 }
 </style>

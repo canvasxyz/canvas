@@ -46,7 +46,9 @@ const MessagingDemo = () => {
 
 	useEffect(() => {
 		if (!app) return () => {}
-		app.start()
+		setTimeout(() => {
+			app.start()
+		}, 700)
 
 		app.libp2p?.addEventListener("connection:open", handleConnectionOpen)
 		app.libp2p?.addEventListener("connection:close", handleConnectionClose)
