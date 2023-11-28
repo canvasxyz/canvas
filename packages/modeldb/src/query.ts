@@ -159,6 +159,7 @@ export const primitiveTypeOrders: Record<PrimitiveType, Order> = {
 	string: stringOrder,
 	bytes: byteOrder,
 	boolean: booleanOrder,
+	json: stringOrder,
 }
 
 export const referenceOrder = stringOrder

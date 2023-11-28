@@ -74,6 +74,11 @@ export class ModelAPI {
 			// TODO: support multi-property indexes
 			// TODO: use heuristics to select the "best" index
 			for (const [property, expression] of Object.entries(query.where)) {
+				const modelProperty = this.model.properties.find((modelProperty) => modelProperty.name === property)
+				if (modelProperty && modelProperty.kind === "primitive" && modelProperty.type === "json") {
+					throw new Error("json properties are not supported in where clauses")
+				}
+
 				const index = this.model.indexes.find((index) => index[0] === property)
 				if (index === undefined) {
 					continue

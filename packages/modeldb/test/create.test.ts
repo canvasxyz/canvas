@@ -33,6 +33,17 @@ testOnModelDB("create modeldb with a model with invalid fields should fail", asy
 	await t.throwsAsync(() => openDB(models), { message: `invalid property "unsupported"` })
 })
 
+testOnModelDB("create modeldb with a model with an optional json field should fail", async (t, openDB) => {
+	// @ts-ignore
+	const models = {
+		room: {
+			name: "json?",
+		},
+	} as ModelsInit
+
+	await t.throwsAsync(() => openDB(models), { message: `field "name" is invalid - json fields cannot be optional` })
+})
+
 testOnModelDB("create a model without a primary key", async (t, openDB) => {
 	const models = {
 		room: {
