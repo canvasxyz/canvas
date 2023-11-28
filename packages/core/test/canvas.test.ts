@@ -17,14 +17,14 @@ export const models = {
     content: "string",
     timestamp: "integer",
     isVisible: "boolean",
-		metadata: "json?"
+		metadata: "json"
   },
 };
 
 export const actions = {
   async createPost(db, { content, isVisible, metadata }, { id, address, timestamp }) {
     const postId = [address, id].join("/")
-    await db.posts.set({ id: postId, content, isVisible, timestamp, metadata: metadata || null });
+    await db.posts.set({ id: postId, content, isVisible, timestamp, metadata });
     return postId
   },
 
@@ -60,6 +60,7 @@ test("apply an action and read a record from the database", async (t) => {
 		content: "hello world",
 		isVisible: true,
 		something: null,
+		metadata: {},
 	})
 
 	t.log(`applied action ${id} and got result`, postId)
@@ -89,7 +90,7 @@ test("create and delete a post", async (t) => {
 test("insert a message created by another app", async (t) => {
 	const [a, b] = await Promise.all([init(t), init(t)])
 
-	const { id } = await a.actions.createPost({ content: "hello world", isVisible: true, something: "bar" })
+	const { id } = await a.actions.createPost({ content: "hello world", isVisible: true, something: "bar", metadata: {} })
 	const [signature, message] = await a.messageLog.get(id)
 	assert(signature !== null && message !== null)
 
