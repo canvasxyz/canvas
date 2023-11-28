@@ -179,6 +179,14 @@ export async function handler(args: Args) {
 		}
 	})
 
+	app.messageLog.addEventListener("error", ({ detail: { error } }) => {
+		if (args["verbose"]) {
+			console.log(`[canvas] ${error.name}:`, error.stack)
+		} else {
+			console.log(`[canvas] ${error.name}: ${error.message}`)
+		}
+	})
+
 	app.messageLog.addEventListener("sync", ({ detail: { peer, duration, messageCount } }) => {
 		console.log(
 			chalk.magenta(

@@ -64,6 +64,7 @@ export type GossipLogEvents<Payload = unknown, Result = void> = {
 	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload>; result: Result }>
 	commit: CustomEvent<{ root: Node }>
 	sync: CustomEvent<{ peer?: string; duration: number; messageCount: number }>
+	error: CustomEvent<{ error: Error }>
 }
 
 export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> extends EventEmitter<
@@ -417,8 +418,13 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		[key, value]: Entry = this.encode(signature, message),
 	): Promise<Result> {
 		this.log("applying %s %O", id, message)
-
-		const result = await this.#apply.apply(txn, [id, signature, message])
+		let result
+		try {
+			result = await this.#apply.apply(txn, [id, signature, message])
+		} catch (error) {
+			this.dispatchEvent(new CustomEvent("error", { detail: { error } }))
+			throw error
+		}
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
 		await txn.messages.set(key, value)
 
