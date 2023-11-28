@@ -67,7 +67,7 @@
     "fake-indexeddb": "^5.0.1",
     "libp2p": "^0.46.21",
     "p-defer": "^4.0.0",
-    "protons": "^7.3.0",
+    "protons": "^7.3.1",
     "web-locks": "^0.0.8"
   }
 }
