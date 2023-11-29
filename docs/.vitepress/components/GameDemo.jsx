@@ -56,24 +56,20 @@ const GameDemo = () => {
 	})
 
 	const boards = useLiveQuery(app, "boards", { limit: 1 })
+	const [showPeers, setShowPeers] = useState()
+	const statusTextRef = useRef()
 
 	const [synced, setSynced] = useState(false)
 	const [connections, setConnections] = useState([])
 	const connectionsRef = useRef(connections)
 
 	const handleConnectionOpen = useCallback(({ detail: connection }) => {
-		if (defaultBootstrapList.indexOf(connection.remoteAddr.toString()) !== 0) {
-			return
-		} // skip bootstrap nodes
 		const connections = [...connectionsRef.current, connection]
 		setConnections(connections)
 		connectionsRef.current = connections
 	}, [])
 
 	const handleConnectionClose = useCallback(({ detail: connection }) => {
-		if (defaultBootstrapList.indexOf(connection.remoteAddr.toString()) !== 0) {
-			return
-		} // skip bootstrap nodes
 		const connections = connectionsRef.current.filter(({ id }) => id !== connection.id)
 		setConnections(connections)
 		connectionsRef.current = connections
@@ -88,7 +84,7 @@ const GameDemo = () => {
 		if (!app) return () => {}
 		setTimeout(() => {
 			app.start()
-		}, 1000)
+		}, 200)
 
 		app.libp2p?.addEventListener("connection:open", handleConnectionOpen)
 		app.libp2p?.addEventListener("connection:close", handleConnectionClose)
@@ -104,7 +100,21 @@ const GameDemo = () => {
 	const [state, setState] = useState({ pieceSquare: "" })
 
 	const onDrop = ({ sourceSquare, targetSquare }) => {
-		app.actions.move({ from: sourceSquare, to: targetSquare })
+		app.actions.move({ from: sourceSquare, to: targetSquare }).catch(() => {
+			const board = boards[0]
+			if (!board) return
+			const chess = new Chess(board.fen)
+			const colorAtSquare = chess.get(sourceSquare).color
+			const colorToMove = chess.turn()
+
+			// flash the color to move
+			if (colorToMove !== colorAtSquare) {
+				statusTextRef.current.style.color = "#fff"
+				setTimeout(() => {
+					statusTextRef.current.style.color = "inherit"
+				}, 250)
+			}
+		})
 	}
 	const onClick = (square) => {
 		if (!boards || boards.length === 0) {
@@ -168,7 +178,7 @@ const GameDemo = () => {
 					}}
 				/>
 				{boards && chess && (
-					<span style={{ marginTop: 5, marginLeft: 12 }}>
+					<span ref={statusTextRef} style={{ marginTop: 5, marginLeft: 12 }}>
 						{chess.in_checkmate()
 							? "Checkmate!"
 							: chess.in_stalemate()
@@ -184,11 +194,23 @@ const GameDemo = () => {
 							: "Black to move"}
 					</span>
 				)}
-				<div className="peers">
-					{connections.length} peer{connections.length === 1 ? "" : "s"}
+				<div className="peers" onClick={() => setShowPeers(!showPeers)}>
+					{connections.filter((conn) => defaultBootstrapList.indexOf(conn.remoteAddr.toString()) === -1).length} peers
 					{synced ? "" : connections.length === 0 ? ", waiting..." : ", syncing..."}
 				</div>
 			</div>
+			{showPeers && (
+				<div className="peer-details">
+					{connections.map((conn) => (
+						<div>
+							{defaultBootstrapList.indexOf(conn.remoteAddr.toString()) !== -1
+								? "[bootstrap] "
+								: `[${conn?.direction}] `}
+							{conn?.remoteAddr.toString()}
+						</div>
+					))}
+				</div>
+			)}
 		</div>
 	)
 }

@@ -57,6 +57,9 @@
     z-index: 10;
     box-shadow: 1px 1px 6px rgba(0,0,0,0.2);
   }
+  .democell-internal {
+    min-height: 324px;
+  }
 }
 .DemoCell.MessagingDemo input[type="text"] {
   background: var(--vp-c-bg);
@@ -93,17 +96,37 @@
   position: absolute;
   right: 34px;
   bottom: 18px;
+}
+.DemoCell .peers, .DemoCell .peer-details {
   font-size: 14px;
-  opacity: 0.33;
+  opacity: 0.6;
+}
+.DemoCell .peer-details {
+  margin-top: 20px;
+  line-height: 1.25;
+  word-break: break-word;
 }
 @media (min-width: 960px) {
   .DemoCell.GameDemo .peers {
     bottom: 13px;
     right: 20px;
   }
+  .DemoCell .peer-details {
+    max-width: 300px;
+    word-break: break-word;
+    background-color: var(--vp-c-bg-soft);
+  }
 }
 .DemoCell .caption .peers {
   right: 0;
   bottom: 1px;
+}
+.DemoCell .text-pop {
+  animation: text-pop 0.25s ease-in-out;
+}
+@keyframes text-pop {
+  50%  {
+    transform: scale(1.25);
+  }
 }
 </style>

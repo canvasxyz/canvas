@@ -12,6 +12,7 @@ const toFormattedDate = (timestamp) => {
 
 const MessagingDemo = () => {
 	const inputRef = useRef()
+	const [showPeers, setShowPeers] = useState()
 
 	let privateKey = localStorage.getItem("privatekey")
 	if (privateKey === null) {
@@ -35,18 +36,12 @@ const MessagingDemo = () => {
 	const connectionsRef = useRef(connections)
 
 	const handleConnectionOpen = useCallback(({ detail: connection }) => {
-		if (defaultBootstrapList.indexOf(connection.remoteAddr.toString()) !== 0) {
-			return
-		} // skip bootstrap nodes
 		const connections = [...connectionsRef.current, connection]
 		setConnections(connections)
 		connectionsRef.current = connections
 	}, [])
 
 	const handleConnectionClose = useCallback(({ detail: connection }) => {
-		if (defaultBootstrapList.indexOf(connection.remoteAddr.toString()) !== 0) {
-			return
-		} // skip bootstrap nodes
 		const connections = connectionsRef.current.filter(({ id }) => id !== connection.id)
 		setConnections(connections)
 		connectionsRef.current = connections
@@ -85,21 +80,36 @@ const MessagingDemo = () => {
 
 	return (
 		<div>
-			<div style={{ marginBottom: 12 }}>
-				{threads?.length === 0 && <div style={{ opacity: 0.6 }}>No messages yet</div>}
-				{threads?.map((thread) => (
-					<div style={{ display: "flex" }} key={thread.id}>
-						<div style={{ flex: 1 }}>{thread.message}</div>
-						<div style={{ opacity: 0.4 }}>{toFormattedDate(thread.timestamp)}</div>
-					</div>
-				))}
+			<div class="democell-internal">
+				<div style={{ marginBottom: 12 }}>
+					{threads?.length === 0 && <div style={{ opacity: 0.6 }}>No messages yet</div>}
+					{threads?.map((thread) => (
+						<div style={{ display: "flex" }} key={thread.id}>
+							<div style={{ flex: 1 }}>{thread.message}</div>
+							<div style={{ opacity: 0.4 }}>{toFormattedDate(thread.timestamp)}</div>
+						</div>
+					))}
+				</div>
+				<form onSubmit={onSubmit}>
+					<input type="text" ref={inputRef} placeholder="Type a message..." />
+				</form>
+				<div className="peers" onClick={() => setShowPeers(!showPeers)}>
+					{connections.filter((conn) => defaultBootstrapList.indexOf(conn.remoteAddr.toString()) === -1).length} peers
+					{synced ? "" : connections.length === 0 ? ", waiting..." : ", syncing..."}
+				</div>
 			</div>
-			<form onSubmit={onSubmit}>
-				<input type="text" ref={inputRef} placeholder="Type a message..." />
-			</form>
-			<div className="peers">
-				{connections.length} peer{connections.length === 1 ? "" : "s"}
-			</div>
+			{showPeers && (
+				<div className="peer-details">
+					{connections.map((conn) => (
+						<div>
+							{defaultBootstrapList.indexOf(conn.remoteAddr.toString()) !== -1
+								? "[bootstrap] "
+								: `[${conn?.direction}] `}
+							{conn?.remoteAddr.toString()}
+						</div>
+					))}
+				</div>
+			)}
 		</div>
 	)
 }
