@@ -80,7 +80,7 @@ const MessagingDemo = () => {
 
 	return (
 		<div>
-			<div class="democell-internal">
+			<div className="democell-internal">
 				<div style={{ marginBottom: 12 }}>
 					{threads?.length === 0 && <div style={{ opacity: 0.6 }}>No messages yet</div>}
 					{threads?.map((thread) => (
