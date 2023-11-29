@@ -42,6 +42,10 @@
   height: 100%;
   background-color: var(--vp-c-bg-soft);
 }
+.democell-internal {
+  min-height: 324px;
+  position: relative;
+}
 @media (min-width: 600px) {
   .DemoCell {
     margin: 0 auto 20px;
@@ -56,9 +60,6 @@
     width: 320px;
     z-index: 10;
     box-shadow: 1px 1px 6px rgba(0,0,0,0.2);
-  }
-  .democell-internal {
-    min-height: 324px;
   }
 }
 .DemoCell.MessagingDemo input[type="text"] {
