@@ -49,16 +49,16 @@ jobs:
         run: pnpm run build
 
       # - name: Run @canvas-js/gossiplog tests
-      #   run: pnpm run test --workspace=@canvas-js/gossiplog
+      #   run: pnpm --filter @canvas-js/gossiplog test
 
       - name: Run @canvas-js/modeldb tests
-        run: pnpm run test --workspace=@canvas-js/modeldb
+        run: pnpm --filter @canvas-js/modeldb test
 
       - name: Run @canvas-js/core tests
-        run: pnpm run test --workspace=@canvas-js/core
+        run: pnpm --filter @canvas-js/core test
 
       - name: Run @canvas-js/vm tests
-        run: pnpm run test --workspace=@canvas-js/vm
+        run: pnpm --filter @canvas-js/vm test
 
       - name: Run @canvas-js/interfaces interface tests
-        run: pnpm run test --workspace=@canvas-js/interfaces
+        run: pnpm --filter @canvas-js/interfaces test
