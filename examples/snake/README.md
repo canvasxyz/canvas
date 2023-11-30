@@ -1,6 +1,6 @@
 # Snake Example
 
-[Github Link](https://github.com/canvasxyz/canvas/tree/main/examples/snake) (`npm i && npm run dev` to run, hosted demo coming soon)
+[Github Link](https://github.com/canvasxyz/canvas/tree/main/examples/snake) (`pnpm i && pnpm run dev` to run, hosted demo coming soon)
 
 The Snake example implements a game, using the `useTick()` hook. There are three actions:
 

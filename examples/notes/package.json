@@ -10,7 +10,7 @@
     "start": "canvas run spec.canvas.js --install --unchecked --static dist",
     "dev:backend": "canvas run spec.canvas.js --unchecked --offline",
     "dev:frontend": "HOST='http://localhost:8000' webpack server --port 3000",
-    "dev": "concurrently --kill-others -n backend,frontend 'npm run dev:backend' 'npm run dev:frontend'"
+    "dev": "concurrently --kill-others -n backend,frontend 'pnpm run dev:backend' 'pnpm run dev:frontend'"
   },
   "dependencies": {
     "@types/react": "^18.2.39",

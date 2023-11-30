@@ -7,11 +7,11 @@ COPY ./package.json .
 
 # We can't use `npm ci` because it requires a package-lock.json file,
 # which we don't have because we're hoisting everything via workspaces
-RUN npm install
+RUN pnpm install
 
 COPY ./lib ./lib
 
-# RUN npm run build
+# RUN pnpm run build
 
 # Production image, copy all the files and run next
 FROM node:18-alpine AS runner
@@ -22,4 +22,4 @@ ENV DATA_DIRECTORY /data
 
 COPY --from=builder /app ./
 
-CMD [ "npm", "run", "start:server" ]
+CMD [ "pnpm", "run", "start:server" ]

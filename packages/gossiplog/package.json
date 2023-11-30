@@ -23,7 +23,7 @@
     "#protocols/sync": "./lib/protocols/sync.js"
   },
   "scripts": {
-    "generate": "npm run generate-sync",
+    "generate": "pnpm run generate-sync",
     "generate-sync": "protons ./src/protocols/sync.proto",
     "test": "ava --concurrency 1"
   },

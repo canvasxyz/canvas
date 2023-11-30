@@ -4,20 +4,17 @@
   "version": "0.7.0",
   "type": "module",
   "scripts": {
+    "preinstall": "npx only-allow pnpm",
     "dev": "tsc --build --watch",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
     "lint": "eslint .",
-    "publish": "npm run clean && npm run build && npm publish -w=packages/ --access public",
-    "test": "npm run test -w=packages/interfaces -w=packages/modeldb -w=packages/gossiplog -w=packages/core -w=packages/vm",
+    "publish": "pnpm run clean && pnpm run build && pnpm publish -w=packages/ --access public",
+    "test": "pnpm run test -w=packages/interfaces -w=packages/modeldb -w=packages/gossiplog -w=packages/core -w=packages/vm",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },
-  "workspaces": [
-    "packages/*",
-    "examples/*"
-  ],
   "devDependencies": {
     "@ava/typescript": "^4.1.0",
     "@canvas-js/chain-ethereum": "^0.7.0",
