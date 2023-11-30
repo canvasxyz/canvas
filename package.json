@@ -10,7 +10,7 @@
     "clean": "tsc --build --clean",
     "lint": "eslint .",
     "publish": "pnpm run clean && pnpm run build && pnpm publish -w=packages/ --access public",
-    "test": "pnpm run test -w=packages/interfaces -w=packages/modeldb -w=packages/gossiplog -w=packages/core -w=packages/vm",
+    "test": "pnpm recursive run test",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
