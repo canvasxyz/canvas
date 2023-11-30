@@ -23,7 +23,7 @@
     "@libp2p/prometheus-metrics": "^2.0.12",
     "@libp2p/utils": "^4.0.7",
     "@libp2p/websockets": "^7.0.13",
-    "@multiformats/multiaddr": "^12.1.10",
+    "@multiformats/multiaddr": "12.1.10",
     "@types/express": "^4.17.21",
     "abortable-iterator": "^5.0.1",
     "any-signal": "^4.1.1",
