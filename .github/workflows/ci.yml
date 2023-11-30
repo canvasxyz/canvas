@@ -21,6 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+        shell: bash
 
       - name: Run eslint
         run: pnpm run lint

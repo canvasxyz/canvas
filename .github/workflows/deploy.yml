@@ -39,6 +39,7 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --include=dev
+        shell: bash
 
       - name: Build
         run: pnpm run build
