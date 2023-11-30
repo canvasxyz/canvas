@@ -20,10 +20,15 @@ import { GossipLog as GossipLogBrowser } from "@canvas-js/gossiplog/browser"
 import { GossipLog as GossipLogMemory } from "@canvas-js/gossiplog/memory"
 
 // @ts-expect-error
-globalThis.navigator = { locks }
-
-// @ts-expect-error
 globalThis.AbortController = AbortController
+
+if (globalThis.navigator === undefined) {
+	// @ts-expect-error
+	globalThis.navigator = { locks }
+} else {
+	// @ts-expect-error
+	globalThis.navigator.locks = locks
+}
 
 export const testPlatforms = (
 	name: string,
@@ -31,9 +36,9 @@ export const testPlatforms = (
 		t: ExecutionContext<unknown>,
 		openGossipLog: <Payload, Results>(
 			t: ExecutionContext,
-			init: GossipLogInit<Payload, Results>
-		) => Promise<AbstractGossipLog<Payload, Results>>
-	) => void
+			init: GossipLogInit<Payload, Results>,
+		) => Promise<AbstractGossipLog<Payload, Results>>,
+	) => void,
 ) => {
 	const macro = test.macro(run)
 	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
@@ -44,7 +49,7 @@ export const testPlatforms = (
 export const getPublicKey = <T>([id, { publicKey }, message]: [string, Signature, Message<T>]): [
 	id: string,
 	publicKey: string,
-	message: Message<T>
+	message: Message<T>,
 ] => [id, publicKey, message]
 
 export function getDirectory(t: ExecutionContext<unknown>): string {
@@ -94,7 +99,7 @@ export async function appendChain(
 	log: AbstractGossipLog<string, void>,
 	rootId: string,
 	n: number,
-	options: { signer?: Signer<Message<string>> } = {}
+	options: { signer?: Signer<Message<string>> } = {},
 ): Promise<string[]> {
 	const signer = options.signer ?? new Ed25519Signer()
 
