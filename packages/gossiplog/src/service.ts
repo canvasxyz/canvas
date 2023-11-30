@@ -1,6 +1,7 @@
 import type { PeerId } from "@libp2p/interface-peer-id"
 
-import type { ConnectionManager, Registrar } from "@libp2p/interface-internal"
+import type { Registrar } from "@libp2p/interface-internal/registrar"
+import type { ConnectionManager } from "@libp2p/interface-internal/connection-manager"
 import type { PubSub, Message as PubSubMessage } from "@libp2p/interface/pubsub"
 import type { Startable } from "@libp2p/interface/startable"
 import { EventEmitter } from "@libp2p/interface/events"
