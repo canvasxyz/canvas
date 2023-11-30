@@ -41,8 +41,14 @@ export const App: React.FC<{}> = ({}) => {
 					new SolanaSigner(),
 					new NEARSigner({}),
 				],
-				bootstrapList: ["/ip4/127.0.0.1/tcp/8080/ws/p2p/12D3KooWREzJTUJbgFahTMzetkDnQzLQ6Rp5jZccxFuz36EgoTQY"],
-			}).then(setApp, (err) => console.error(err))
+			}).then(
+				(app) => {
+					setApp(app)
+					app.addEventListener("join", ({ detail: { address } }) => console.log(`JOIN ${address}`))
+					app.addEventListener("leave", ({ detail: { address } }) => console.log(`LEAVE ${address}`))
+				},
+				(err) => console.error(err),
+			)
 		}
 	}, [])
 
