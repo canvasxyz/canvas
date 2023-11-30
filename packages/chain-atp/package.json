@@ -30,5 +30,8 @@
     "@noble/curves": "^1.2.0",
     "@noble/hashes": "^1.3.2",
     "multiformats": "^12.1.3"
+  },
+  "devDependencies": {
+    "@canvas-js/chain-atp": "0.7.0"
   }
 }

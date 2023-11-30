@@ -20,6 +20,7 @@
     "@canvas-js/chain-near": "0.7.0",
     "@canvas-js/chain-solana": "0.7.0",
     "@canvas-js/chain-substrate": "0.7.0",
+    "@canvas-js/interfaces": "0.7.0",
     "@canvas-js/signed-cid": "0.7.0"
   }
 }
