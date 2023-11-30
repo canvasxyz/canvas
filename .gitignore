@@ -16,6 +16,7 @@ packages/**/dist/
 examples/**/out/
 examples/**/lib/
 examples/**/dist/
+examples/**/.vscode
 
 interwallet/lib/
 interwallet/dist/
