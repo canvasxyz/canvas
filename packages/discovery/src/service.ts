@@ -2,9 +2,7 @@ import type { PeerStore } from "@libp2p/interface/peer-store"
 import type { Connection } from "@libp2p/interface/connection"
 import type { Startable } from "@libp2p/interface/startable"
 import type { PeerId } from "@libp2p/interface/peer-id"
-import type { Registrar } from "@libp2p/interface-internal/registrar"
-import type { ConnectionManager } from "@libp2p/interface-internal/connection-manager"
-import type { AddressManager } from "@libp2p/interface-internal/address-manager"
+import type { Registrar, ConnectionManager, AddressManager } from "@libp2p/interface-internal"
 import { CustomEvent, EventEmitter, TypedEventTarget } from "@libp2p/interface/events"
 import { Libp2pEvents } from "@libp2p/interface"
 import { PeerDiscovery, PeerDiscoveryEvents, peerDiscovery } from "@libp2p/interface/peer-discovery"
@@ -85,7 +83,10 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 	#registrarId: string | null = null
 	#discoveryTimer: NodeJS.Timeout | null = null
 
-	constructor(public readonly components: DiscoveryServiceComponents, init: DiscoveryServiceInit) {
+	constructor(
+		public readonly components: DiscoveryServiceComponents,
+		init: DiscoveryServiceInit,
+	) {
 		super()
 		this.pubsub = DiscoveryService.extractGossipSub(components)
 		this.fetch = DiscoveryService.extractFetchService(components)

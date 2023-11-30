@@ -1,3 +1,4 @@
+import { PeerId } from "@libp2p/interface/peer-id"
 import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { multiaddr } from "@multiformats/multiaddr"
 
@@ -15,7 +16,7 @@ async function getPeerId() {
 	}
 }
 
-export const peerId = await getPeerId()
+export const peerId: PeerId = await getPeerId()
 
 export const bootstrapList = BOOTSTRAP_LIST === undefined ? [] : BOOTSTRAP_LIST.split(" ")
 
