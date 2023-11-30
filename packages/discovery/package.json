@@ -14,8 +14,10 @@
     "@libp2p/interface": "^0.1.6",
     "@libp2p/interface-internal": "0.1.9",
     "@libp2p/logger": "^3.1.0",
+    "@libp2p/peer-id": "^3.0.6",
     "@libp2p/peer-record": "^6.0.9",
     "@libp2p/utils": "^4.0.7",
+    "@multiformats/multiaddr": "^12.1.10",
     "libp2p": "^0.46.21",
     "p-queue": "^7.4.1"
   },
