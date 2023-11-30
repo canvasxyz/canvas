@@ -978,6 +978,9 @@ importers:
       '@canvas-js/interfaces':
         specifier: 0.7.0
         version: link:../interfaces
+      '@ipld/dag-json':
+        specifier: ^10.1.5
+        version: 10.1.5
       '@libp2p/peer-id':
         specifier: ^3.0.6
         version: 3.0.6
@@ -1353,12 +1356,19 @@ importers:
       '@canvas-js/core':
         specifier: 0.7.0
         version: link:../core
+      '@canvas-js/interfaces':
+        specifier: 0.7.0
+        version: link:../interfaces
       '@canvas-js/modeldb':
         specifier: 0.7.0
         version: link:../modeldb
       react:
         specifier: ^18.2.0
         version: 18.2.0
+    devDependencies:
+      '@types/react':
+        specifier: ^18.2.39
+        version: 18.2.39
 
   packages/interfaces:
     dependencies:

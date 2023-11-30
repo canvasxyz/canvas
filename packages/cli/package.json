@@ -18,6 +18,7 @@
     "@canvas-js/chain-substrate": "0.7.0",
     "@canvas-js/core": "0.7.0",
     "@canvas-js/interfaces": "0.7.0",
+    "@ipld/dag-json": "^10.1.5",
     "@libp2p/peer-id": "^3.0.6",
     "@multiformats/multiaddr": "^12.1.10",
     "@types/websocket": "^1.0.10",
