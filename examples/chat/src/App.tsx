@@ -41,6 +41,7 @@ export const App: React.FC<{}> = ({}) => {
 					new SolanaSigner(),
 					new NEARSigner({}),
 				],
+				bootstrapList: ["/ip4/127.0.0.1/tcp/8080/ws/p2p/12D3KooWREzJTUJbgFahTMzetkDnQzLQ6Rp5jZccxFuz36EgoTQY"],
 			}).then(setApp, (err) => console.error(err))
 		}
 	}, [])
@@ -49,13 +50,13 @@ export const App: React.FC<{}> = ({}) => {
 		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app, setApp }}>
 			<main>
 				<div className="flex flex-row gap-4 h-full">
-					<div className="flex-1 flex flex-col justify-stretch gap-2">
+					<div className="min-w-[480px] flex-1 flex flex-col justify-stretch gap-2">
 						<div className="flex-1 border rounded px-2 overflow-y-scroll">
 							<Messages />
 						</div>
 						<MessageComposer />
 					</div>
-					<div className="flex flex-col gap-4">
+					<div className="min-w-[480px] flex flex-col gap-4">
 						<Connect />
 						<SessionStatus />
 						<ConnectionStatus />
