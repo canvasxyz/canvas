@@ -46,7 +46,7 @@ export class ModelAPI {
 	}
 
 	async query(txn: IDBPTransaction<any, any, IDBTransactionMode>, query: QueryParams): Promise<ModelValue[]> {
-		this.log("query %o", query)
+		// this.log("query %o", query)
 
 		// We can use indexes in two ways: to sort for `orderBy`,
 		// or also to filter `where` clauses on indexed properties.
