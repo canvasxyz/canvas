@@ -10,6 +10,8 @@ import { Libp2pEvents } from "@libp2p/interface"
 import { PeerDiscovery, PeerDiscoveryEvents, peerDiscovery } from "@libp2p/interface/peer-discovery"
 
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
+import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 
 import { FetchService } from "libp2p/fetch"
 import { PeerRecord, RecordEnvelope } from "@libp2p/peer-record"
@@ -19,10 +21,6 @@ import * as cbor from "@ipld/dag-cbor"
 import PQueue from "p-queue"
 
 import { assert, minute, second } from "./utils.js"
-import { TopicCache } from "./cache/interface.js"
-import { MemoryCache } from "./cache/MemoryCache.js"
-import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
-import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 
 export interface DiscoveryServiceComponents {
 	peerId: PeerId
@@ -43,7 +41,6 @@ export interface DiscoveryServiceInit {
 
 	minPeersPerTopic?: number
 	autoDialPriority?: number
-	cache?: TopicCache
 }
 
 export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implements PeerDiscovery, Startable {
@@ -72,18 +69,16 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 	private readonly fetch: FetchService
 
 	private readonly log = logger("canvas:discovery")
-	private readonly cache: TopicCache
 	private readonly minPeersPerTopic: number
 	private readonly autoDialPriority: number
 	private readonly topicFilter: (topic: string) => boolean
 	private readonly discoveryTopic: string | null
 	private readonly discoveryInterval: number
-
 	private readonly topologyPeers = new Set<string>()
 
 	readonly #queue = new PQueue({ concurrency: 1 })
 	#registrarId: string | null = null
-	#discoveryTimer: NodeJS.Timeout | null = null
+	#heartbeat: NodeJS.Timeout | null = null
 
 	constructor(public readonly components: DiscoveryServiceComponents, init: DiscoveryServiceInit) {
 		super()
@@ -93,7 +88,6 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 		this.minPeersPerTopic = init.minPeersPerTopic ?? DiscoveryService.MIN_PEERS_PER_TOPIC
 		this.autoDialPriority = init.autoDialPriority ?? DiscoveryService.AUTO_DIAL_PRIORITY
 		this.topicFilter = init.topicFilter ?? ((topic) => true)
-		this.cache = init.cache ?? new MemoryCache()
 		this.discoveryTopic = init.discoveryTopic ?? null
 		this.discoveryInterval = init.discoveryInterval ?? 1 * 60 * 1000 // default to publishing once every minute
 	}
@@ -126,28 +120,14 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 				this.topologyPeers.delete(peerId.toString())
 			},
 		})
-
-		this.components.events.addEventListener("peer:update", ({ detail: { peer, previous } }) => {
-			if (peer.peerRecordEnvelope !== undefined && previous?.peerRecordEnvelope === undefined) {
-				this.log("received peer record from %s", peer.id)
-				this.cache.identify(peer.id, peer.peerRecordEnvelope)
-			}
-		})
-
-		this.pubsub.addEventListener("subscription-change", ({ detail: { peerId, subscriptions } }) => {
-			this.log("subscription change: %s %o", peerId, subscriptions)
-			for (const { subscribe, topic } of subscriptions) {
-				if (subscribe && this.topicFilter(topic)) {
-					this.cache.observe(topic, peerId)
-				}
-			}
-		})
 	}
 
 	public async afterStart(): Promise<void> {
 		this.log("afterStart", this.discoveryTopic)
+
 		if (this.discoveryTopic !== null) {
 			this.pubsub.subscribe(this.discoveryTopic)
+
 			this.pubsub.addEventListener("message", async ({ detail: message }) => {
 				if (message.topic !== this.discoveryTopic) {
 					return
@@ -160,41 +140,34 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 				assert(Array.isArray(topics), "expected Array.isArray(topics)")
 				assert(peerRecordEnvelope instanceof Uint8Array, "expected peerRecordEnvelope instanceof Uint8Array")
 
-				try {
-					const { peerId, multiaddrs } = await this.parsePeerRecord(peerRecordEnvelope)
-					this.log("received heartbeat from %s with topics %o", peerId, topics)
-					this.cache.identify(peerId, peerRecordEnvelope)
-					for (const topic of topics) {
-						this.cache.observe(topic, peerId)
+				const topicIntersection = this.pubsub.getTopics().filter((topic) => topics.includes(topic))
+				if (topicIntersection.length === 0) {
+					return
+				}
+
+				const { peerId, multiaddrs } = await this.openPeerRecord(peerRecordEnvelope)
+				this.log("received heartbeat from %s with topics %o", peerId, topics)
+
+				await this.components.peerStore.consumePeerRecord(peerRecordEnvelope, peerId)
+				this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
+
+				for (const topic of topicIntersection) {
+					const meshPeers = this.pubsub.getMeshPeers(topic)
+					if (meshPeers.length >= this.minPeersPerTopic) {
+						continue
 					}
 
-					this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
-
-					const selfTopics = this.pubsub.getTopics()
-					for (const topic of topics) {
-						if (!selfTopics.includes(topic)) {
-							continue
-						}
-
-						const meshPeers = this.pubsub.getMeshPeers(topic)
-						if (meshPeers.length >= this.minPeersPerTopic) {
-							continue
-						}
-
-						await this.connect(peerId, multiaddrs)
-					}
-				} catch (err) {
-					this.log.error("failed to parse peer record: %o", err)
+					await this.connect(peerId, multiaddrs)
 				}
 			})
 
-			this.#discoveryTimer = setInterval(() => this.publishHeartbeat(), this.discoveryInterval)
+			this.#heartbeat = setInterval(() => this.publishHeartbeat(), this.discoveryInterval)
 			setTimeout(() => this.publishHeartbeat(), 3 * 1000)
 		}
 	}
 
 	private async publishHeartbeat() {
-		if (this.discoveryTopic === null || this.#discoveryTimer === null) {
+		if (this.discoveryTopic === null || this.#heartbeat === null) {
 			return
 		}
 
@@ -219,8 +192,8 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 	}
 
 	public async beforeStop(): Promise<void> {
-		if (this.#discoveryTimer !== null) {
-			clearInterval(this.#discoveryTimer)
+		if (this.#heartbeat !== null) {
+			clearInterval(this.#heartbeat)
 		}
 
 		this.fetch.unregisterLookupFunction(DiscoveryService.FETCH_KEY_PREFIX, this.handleFetch)
@@ -241,8 +214,15 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 		}
 
 		const topic = key.slice(DiscoveryService.FETCH_KEY_PREFIX.length)
-		const results = await this.cache.query(topic)
-		return cbor.encode(results.map(({ peerRecordEnvelope }) => peerRecordEnvelope))
+		const results: Uint8Array[] = []
+		for (const peerId of this.pubsub.getSubscribers(topic)) {
+			const { peerRecordEnvelope } = await this.components.peerStore.get(peerId)
+			if (peerRecordEnvelope !== undefined) {
+				results.push(peerRecordEnvelope)
+			}
+		}
+
+		return cbor.encode(results)
 	}
 
 	private handleConnect(connection: Connection) {
@@ -274,26 +254,15 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 					for (const peerRecordEnvelope of records) {
 						assert(peerRecordEnvelope instanceof Uint8Array, "expected record instanceof Uint8Array")
 
-						// TODO: consider using components.peerStore.consumePeerRecord instead
-
-						const { peerId, multiaddrs } = await this.parsePeerRecord(peerRecordEnvelope)
-
+						const { peerId, multiaddrs } = await this.openPeerRecord(peerRecordEnvelope)
 						if (peerId.equals(this.components.peerId)) {
 							return
 						} else if (meshPeers.includes(peerId.toString())) {
 							return
 						}
 
-						this.cache.observe(topic, peerId)
-						this.cache.identify(peerId, peerRecordEnvelope)
-
 						this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
-
-						this.log("adding %p to peer store with multiaddrs %o", peerId, multiaddrs)
-						await this.components.peerStore.merge(peerId, {
-							addresses: multiaddrs.map((multiaddr) => ({ isCertified: true, multiaddr })),
-						})
-
+						await this.components.peerStore.consumePeerRecord(peerRecordEnvelope, peerId)
 						await this.connect(peerId, multiaddrs)
 					}
 				}
@@ -301,7 +270,7 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 			.catch((err) => this.log.error("error handling new connection: %O", err))
 	}
 
-	private async parsePeerRecord(envelope: Uint8Array): Promise<{ peerId: PeerId; multiaddrs: Multiaddr[] }> {
+	private async openPeerRecord(envelope: Uint8Array): Promise<{ peerId: PeerId; multiaddrs: Multiaddr[] }> {
 		const record = await RecordEnvelope.openAndCertify(envelope, PeerRecord.DOMAIN)
 		const { peerId, multiaddrs } = PeerRecord.createFromProtobuf(record.payload)
 		assert(record.peerId.equals(peerId), "expected envelope.peerId.equals(peerId)")
