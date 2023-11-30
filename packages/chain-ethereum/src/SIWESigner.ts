@@ -2,7 +2,7 @@ import { AbstractSigner, Wallet, verifyMessage, hexlify, getBytes } from "ethers
 import * as siwe from "siwe"
 import { logger } from "@libp2p/logger"
 
-import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
+import type { Signature, SessionSigner, Action, Message, Session, Heartbeat } from "@canvas-js/interfaces"
 import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
 import target from "#target"
@@ -133,7 +133,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 		return session
 	}
 
-	public sign(message: Message<Action | Session>): Signature {
+	public sign(message: Message<Action | Session | Heartbeat>): Signature {
 		if (message.payload.type === "action") {
 			const { address, timestamp } = message.payload
 			const { signer, session } = this.#store.get(message.topic, address) ?? {}
@@ -150,6 +150,16 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 
 			// only sign our own current sessions
 			assert(message.payload === session)
+			return signer.sign(message)
+		} else if (message.payload.type === "heartbeat") {
+			const { address, timestamp } = message.payload
+			const { signer, session } = this.#store.get(message.topic, address) ?? {}
+			assert(signer !== undefined && session !== undefined)
+
+			assert(address === session.address)
+			assert(timestamp >= session.timestamp)
+			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
+
 			return signer.sign(message)
 		} else {
 			signalInvalidType(message.payload)

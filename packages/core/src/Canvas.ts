@@ -3,7 +3,7 @@ import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 
-import { Action, Session, Message, Signer, SessionSigner } from "@canvas-js/interfaces"
+import { Action, Session, Message, Signer, SessionSigner, Heartbeat } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Signature } from "@canvas-js/signed-cid"
@@ -16,6 +16,7 @@ import type { ServiceMap } from "./targets/interface.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
 import { assert } from "./utils.js"
+import { HEARTBEAT_INTERVAL, HEARTBEAT_TIMEOUT, minute, second } from "./constants.js"
 
 export interface CanvasConfig<T extends Contract = Contract> {
 	contract: string | T
@@ -46,16 +47,20 @@ export type ActionAPI<Args = any, Result = any> = (
 	options?: ActionOptions,
 ) => Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }>
 
-export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown> {
+export interface CanvasEvents extends GossipLogEvents<Action | Session | Heartbeat, unknown> {
 	close: Event
+
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
+
+	join: CustomEvent<{ address: string }>
+	leave: CustomEvent<{ address: string }>
 }
 
 export type CanvasLogEvent = CustomEvent<{
 	id: string
 	signature: unknown
-	message: Message<Action | Session>
+	message: Message<Action | Session | Heartbeat>
 	result: unknown
 }>
 
@@ -82,7 +87,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			libp2p = await target.createLibp2p(peerId, config)
 		}
 
-		const gossipLog = await target.openGossipLog<Action | Session, void | any>(
+		const gossipLog = await target.openGossipLog<Action | Session | Heartbeat, void | any>(
 			{ path, topic: runtime.topic },
 			{
 				topic: runtime.topic,
@@ -92,7 +97,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			},
 		)
 
-		await libp2p?.services.gossiplog.subscribe(gossipLog, {})
+		await libp2p?.services.gossiplog.subscribe(gossipLog)
 
 		return new Canvas(signers, peerId, libp2p, gossipLog, runtime)
 	}
@@ -108,14 +113,17 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
+	private readonly presenceCache = new Map<string, number>()
 
 	#open = true
+	#heartbeat: NodeJS.Timeout | null = null
+	#mostRecentSigner: SessionSigner | null = null
 
 	private constructor(
 		public readonly signers: SessionSigner[],
 		public readonly peerId: PeerId,
 		public readonly libp2p: Libp2p<ServiceMap> | null,
-		public readonly messageLog: AbstractGossipLog<Action | Session, void | any>,
+		public readonly messageLog: AbstractGossipLog<Action | Session | Heartbeat, void | any>,
 		private readonly runtime: Runtime,
 	) {
 		super()
@@ -137,7 +145,19 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 		})
 
-		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
+		this.messageLog.addEventListener("message", (event) => {
+			if (event.detail.message.payload.type === "heartbeat") {
+				const { address } = event.detail.message.payload
+				if (!this.presenceCache.has(address)) {
+					this.dispatchEvent(new CustomEvent("join", { detail: { address } }))
+				}
+
+				this.presenceCache.set(address, performance.now())
+			}
+
+			this.safeDispatchEvent("message", event)
+		})
+
 		this.messageLog.addEventListener("commit", (event) => this.safeDispatchEvent("commit", event))
 		this.messageLog.addEventListener("sync", (event) => this.safeDispatchEvent("sync", event))
 
@@ -145,6 +165,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			const action: ActionAPI = async (args: any, options: ActionOptions = {}) => {
 				const signer = options.signer ?? signers[0]
 				assert(signer !== undefined, "signer not found")
+				this.#mostRecentSigner = signer
 
 				const timestamp = Date.now()
 
@@ -189,10 +210,17 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	}
 
 	public async start() {
-		await this.libp2p?.start()
+		if (this.libp2p !== null) {
+			await this.libp2p.start()
+			this.#heartbeat = setInterval(() => this.heartbeat(), HEARTBEAT_INTERVAL)
+		}
 	}
 
 	public async stop() {
+		if (this.#heartbeat !== null) {
+			clearInterval(this.#heartbeat)
+		}
+
 		await this.libp2p?.stop()
 	}
 
@@ -222,7 +250,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	 * Low-level utility method for internal and debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async insert(signature: Signature, message: Message<Session | Action>): Promise<{ id: string }> {
+	public async insert(signature: Signature, message: Message<Session | Action | Heartbeat>): Promise<{ id: string }> {
 		assert(message.topic === this.topic, "invalid message topic")
 		if (this.libp2p === null) {
 			return this.messageLog.insert(signature, message)
@@ -238,7 +266,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	 */
 	public async append(
 		payload: Session | Action,
-		options: { signer?: Signer<Message<Session | Action>> },
+		options: { signer?: Signer<Message<Session | Action | Heartbeat>> },
 	): Promise<{ id: string; result: void | any; recipients: Promise<PeerId[]> }> {
 		if (this.libp2p === null) {
 			const { id, result } = await this.messageLog.append(payload, options)
@@ -250,7 +278,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 	public async getMessage(
 		id: string,
-	): Promise<[signature: Signature, message: Message<Action | Session>] | [null, null]> {
+	): Promise<[signature: Signature, message: Message<Action | Session | Heartbeat>] | [null, null]> {
 		return await this.messageLog.get(id)
 	}
 
@@ -258,7 +286,41 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {},
-	): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]> {
+	): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session | Heartbeat>]> {
 		yield* this.messageLog.iterate(lowerBound, upperBound, options)
+	}
+
+	private async heartbeat() {
+		if (this.libp2p === null) {
+			return
+		}
+
+		// Remove stale peers
+		const expiration = performance.now() - HEARTBEAT_TIMEOUT
+		for (const [address, timestamp] of this.presenceCache) {
+			if (timestamp < expiration) {
+				this.log("removing %s from presence cache")
+				this.presenceCache.delete(address)
+				this.dispatchEvent(new CustomEvent("leave", { detail: { address } }))
+			}
+		}
+
+		const signer = this.#mostRecentSigner ?? this.signers[0]
+		const timestamp = Date.now()
+
+		let address: string
+		try {
+			const session = await signer.getSession(this.topic, { timestamp, fromCache: true })
+			address = session.address
+		} catch (err) {
+			this.log("no session, skipping heartbeat broadcast")
+			return
+		}
+
+		const { id, recipients } = await this.libp2p.services.gossiplog.broadcast<Heartbeat, void>(
+			this.topic,
+			{ type: "heartbeat", address, timestamp, data: {} },
+			{ signer },
+		)
 	}
 }

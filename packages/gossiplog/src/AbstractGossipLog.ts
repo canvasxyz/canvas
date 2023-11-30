@@ -22,7 +22,7 @@ import {
 	decodeId,
 	encodeId,
 	encodeSignedMessage,
-	getNextClock,
+	getClock,
 	KEY_LENGTH,
 	messageIdPattern,
 	MIN_MESSAGE_ID,
@@ -49,6 +49,7 @@ export type GossipLogConsumer<Payload = unknown, Result = void> = (
 	id: string,
 	signature: Signature,
 	message: Message<Payload>,
+	context: { txn?: ReadOnlyTransaction },
 ) => Awaitable<Result>
 
 export interface GossipLogInit<Payload = unknown, Result = void> {
@@ -91,19 +92,19 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	public readonly topic: string
 	public readonly indexAncestors: boolean
 	public readonly signer: Signer<Message<Payload>>
+	public readonly consumer: GossipLogConsumer<Payload, Result>
 
 	protected readonly log: Logger
 	protected readonly mempool = new Mempool<{ signature: Signature; message: Message<Payload> }>()
 
 	readonly #transformer: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-	readonly #apply: GossipLogConsumer<Payload, Result>
 
 	protected constructor(init: GossipLogInit<Payload, Result>) {
 		super()
 		assert(topicPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
 
 		this.topic = init.topic
-		this.#apply = init.apply
+		this.consumer = init.apply
 
 		if (typeof init.validate === "function") {
 			const { validate } = init
@@ -127,7 +128,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			for await (const [key, value] of txn.messages.entries()) {
 				const [id, signature, message] = this.decode(value)
 				assert(id === decodeId(key), "expected id === decodeId(key)")
-				await this.#apply.apply(txn, [id, signature, message])
+				await this.consumer(id, signature, message, { txn })
 			}
 		})
 	}
@@ -155,18 +156,18 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public encode(signature: Signature, message: Message<Payload>): [key: Uint8Array, value: Uint8Array] {
 		assert(message.topic === this.topic, "invalid message topic")
-		const parents = message.parents.sort().map(encodeId)
-		assert(getNextClock(parents) === message.clock, "error encoding message (invalid clock)")
+		const parents = message.clock === 0 ? null : message.parents.sort().map(encodeId)
+		assert(getClock(parents) === message.clock, "error encoding message (invalid clock)")
 
 		const payload = this.#transformer.toRepresentation(message.payload)
 		assert(payload !== undefined, "error encoding message (invalid payload)")
 
 		const result = didKeyPattern.exec(signature.publicKey)
 		assert(result !== null)
-		const [{}, bytes] = result
+		const [{}, publicKeyBytes] = result
 
 		const signedMessage: SignedMessage = {
-			publicKey: base58btc.decode(bytes),
+			publicKey: base58btc.decode(publicKeyBytes),
 			signature: signature.signature,
 			parents: parents,
 			payload: payload,
@@ -180,8 +181,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	public decode(value: Uint8Array): [id: string, signature: Signature, message: Message<Payload>] {
 		const signedMessage = decodeSignedMessage(value)
 
-		const clock = getNextClock(signedMessage.parents)
-		const parents = signedMessage.parents.map(decodeId)
+		const clock = getClock(signedMessage.parents)
+		const parents = signedMessage.parents?.map(decodeId) ?? []
 
 		assert(
 			parents.every((id, i) => i === 0 || parents[i - 1] < id),
@@ -206,7 +207,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public async getClock(): Promise<[clock: number, heads: string[]]> {
 		const heads = await this.read((txn) => this.getHeads(txn))
-		const clock = getNextClock(heads)
+		const clock = getClock(heads)
 		return [clock, heads.map(decodeId)]
 	}
 
@@ -249,11 +250,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 		const { id, signature, message, result, root } = await this.write(async (txn) => {
 			const heads = await this.getHeads(txn)
-			const clock = getNextClock(heads)
+			const clock = getClock(heads)
 
 			const parents = heads.map(decodeId)
 			const message: Message<Payload> = { topic: this.topic, clock, parents, payload }
-			const signature = await signer.sign(message)
+			const signature = signer.sign(message)
 			const [key, value] = this.encode(signature, message)
 
 			const id = decodeId(key)
@@ -420,7 +421,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		this.log("applying %s %O", id, message)
 		let result
 		try {
-			result = await this.#apply.apply(txn, [id, signature, message])
+			result = await this.consumer(id, signature, message, { txn })
 		} catch (error) {
 			this.dispatchEvent(new CustomEvent("error", { detail: { error } }))
 			throw error

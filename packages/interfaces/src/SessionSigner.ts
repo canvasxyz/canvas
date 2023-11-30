@@ -3,8 +3,10 @@ import type { Message } from "./Message.js"
 import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
 import type { Awaitable } from "./Awaitable.js"
+import { Heartbeat } from "./Heartbeat.js"
 
-export interface SessionSigner<AuthorizationData = any> extends Signer<Message<Action | Session<AuthorizationData>>> {
+export interface SessionSigner<AuthorizationData = any>
+	extends Signer<Message<Action | Session<AuthorizationData> | Heartbeat>> {
 	match: (chain: string) => boolean
 
 	/**

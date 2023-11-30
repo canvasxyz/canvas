@@ -9,7 +9,7 @@ import { EventEmitter } from "@libp2p/interface/events"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
 
-import type { Signature } from "@canvas-js/signed-cid"
+import { verifySignedValue, type Signature } from "@canvas-js/signed-cid"
 import type { Message, Signer } from "@canvas-js/interfaces"
 
 import { AbstractGossipLog, GossipLogEvents } from "./AbstractGossipLog.js"
@@ -44,14 +44,11 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 
 	#started = false
 
-	#messageLogs = new Map<string, AbstractGossipLog<unknown, unknown>>()
+	#topics = new Map<string, AbstractGossipLog<unknown, unknown>>()
 	#syncServices = new Map<string, SyncService<unknown, unknown>>()
 	#pubsub: GossipSub
 
-	constructor(
-		private readonly components: GossipLogServiceComponents,
-		init: GossipLogServiceInit,
-	) {
+	constructor(private readonly components: GossipLogServiceComponents, init: GossipLogServiceInit) {
 		super()
 		this.sync = init.sync ?? true
 		this.#pubsub = GossipLogService.extractGossipSub(components)
@@ -73,7 +70,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 			await syncService.start()
 		}
 
-		for (const topic of this.#messageLogs.keys()) {
+		for (const topic of this.#topics.keys()) {
 			this.#pubsub.subscribe(GossipLogService.topicPrefix + topic)
 		}
 	}
@@ -87,24 +84,24 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 	public async stop() {
 		this.log("stop")
 		this.#pubsub.removeEventListener("message", this.handleMessage)
-		this.#messageLogs.clear()
+		this.#topics.clear()
 		this.#syncServices.clear()
 		this.#started = false
 	}
 
 	public async subscribe<Payload, Result>(
-		messageLog: AbstractGossipLog<Payload, Result>,
+		gossipLog: AbstractGossipLog<Payload, Result>,
 		options: SyncOptions = {},
 	): Promise<void> {
-		this.log("subscribing to %s", messageLog.topic)
-		this.#messageLogs.set(messageLog.topic, messageLog as AbstractGossipLog<unknown, unknown>)
-		messageLog.addEventListener("sync", this.forwardEvent)
-		messageLog.addEventListener("commit", this.forwardEvent)
-		messageLog.addEventListener("message", this.forwardEvent)
+		this.log("subscribing to %s", gossipLog.topic)
+		this.#topics.set(gossipLog.topic, gossipLog as AbstractGossipLog<unknown, unknown>)
+		gossipLog.addEventListener("sync", this.forwardEvent)
+		gossipLog.addEventListener("commit", this.forwardEvent)
+		gossipLog.addEventListener("message", this.forwardEvent)
 
 		if (this.sync) {
-			const syncService = new SyncService(this.components, messageLog, options)
-			this.#syncServices.set(messageLog.topic, syncService as SyncService<unknown, unknown>)
+			const syncService = new SyncService(this.components, gossipLog, options)
+			this.#syncServices.set(gossipLog.topic, syncService as SyncService<unknown, unknown>)
 
 			if (this.#started) {
 				await syncService.start()
@@ -112,7 +109,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 		}
 
 		if (this.#started) {
-			this.#pubsub.subscribe(GossipLogService.topicPrefix + messageLog.topic)
+			this.#pubsub.subscribe(GossipLogService.topicPrefix + gossipLog.topic)
 		}
 	}
 
@@ -129,12 +126,12 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 			this.#syncServices.delete(topic)
 		}
 
-		const messageLog = this.#messageLogs.get(topic)
-		if (messageLog !== undefined) {
-			messageLog.removeEventListener("sync", this.forwardEvent)
-			messageLog.removeEventListener("commit", this.forwardEvent)
-			messageLog.removeEventListener("message", this.forwardEvent)
-			this.#messageLogs.delete(topic)
+		const gossipLog = this.#topics.get(topic)
+		if (gossipLog !== undefined) {
+			gossipLog.removeEventListener("sync", this.forwardEvent)
+			gossipLog.removeEventListener("commit", this.forwardEvent)
+			gossipLog.removeEventListener("message", this.forwardEvent)
+			this.#topics.delete(topic)
 		}
 	}
 
@@ -146,13 +143,13 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 		payload: Payload,
 		options: { signer?: Signer<Message<Payload>> } = {},
 	): Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }> {
-		const messageLog = this.#messageLogs.get(topic) as AbstractGossipLog<Payload, Result> | undefined
-		assert(messageLog !== undefined, "no subscription for topic")
+		const gossipLog = this.#topics.get(topic) as AbstractGossipLog<Payload, Result> | undefined
+		assert(gossipLog !== undefined, "no subscription for topic")
 
-		const { id, signature, message, result } = await messageLog.append(payload, options)
+		const { id, signature, message, result } = await gossipLog.append(payload, options)
 
 		if (this.#started) {
-			const [key, value] = messageLog.encode(signature, message)
+			const [key, value] = gossipLog.encode(signature, message)
 			assert(decodeId(key) === id)
 
 			const recipients = this.#pubsub.publish(GossipLogService.topicPrefix + topic, value).then(
@@ -172,17 +169,54 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 		}
 	}
 
+	public async broadcast<Payload, Result>(
+		topic: string,
+		payload: Payload,
+		options: { signer?: Signer<Message<Payload>> } = {},
+	): Promise<{ id: string; recipients: Promise<PeerId[]> }> {
+		const gossipLog = this.#topics.get(topic) as AbstractGossipLog<Payload, Result> | undefined
+		assert(gossipLog !== undefined, "no subscription for topic")
+
+		const message: Message<Payload> = { topic, clock: 0, parents: [], payload }
+		const signer = options.signer ?? gossipLog.signer
+		const signature = signer.sign(message)
+		const [key, value] = gossipLog.encode(signature, message)
+
+		const id = decodeId(key)
+		this.log("broadcasting message %s: %O", id, message)
+
+		const result = await gossipLog.consumer(id, signature, message, {})
+		gossipLog.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
+
+		if (this.#started) {
+			const recipients = this.#pubsub.publish(GossipLogService.topicPrefix + message.topic, value).then(
+				({ recipients }) => {
+					this.log("published message %s to %d recipients %O", id, recipients.length, recipients)
+					return recipients
+				},
+				(err) => {
+					this.log.error("failed to publish message: %O", err)
+					return []
+				},
+			)
+
+			return { id, recipients }
+		} else {
+			return { id, recipients: Promise.resolve([]) }
+		}
+	}
+
 	public async insert<Payload, Result = unknown>(
 		signature: Signature,
 		message: Message<Payload>,
 	): Promise<{ id: string; recipients: Promise<PeerId[]> }> {
-		const messageLog = this.#messageLogs.get(message.topic) as AbstractGossipLog<Payload, Result> | undefined
-		assert(messageLog !== undefined, "topic not found")
+		const gossipLog = this.#topics.get(message.topic) as AbstractGossipLog<Payload, Result> | undefined
+		assert(gossipLog !== undefined, "topic not found")
 
-		const { id } = await messageLog.insert(signature, message)
+		const { id } = await gossipLog.insert(signature, message)
 
 		if (this.#started) {
-			const [key, value] = messageLog.encode(signature, message)
+			const [key, value] = gossipLog.encode(signature, message)
 			const id = decodeId(key)
 			const recipients = this.#pubsub.publish(GossipLogService.topicPrefix + message.topic, value).then(
 				({ recipients }) => {
@@ -190,7 +224,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 					return recipients
 				},
 				(err) => {
-					this.log.error("failed to publish event: %O", err)
+					this.log.error("failed to publish message: %O", err)
 					return []
 				},
 			)
@@ -202,7 +236,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 	}
 
 	public getTopics() {
-		return [...this.#messageLogs.keys()]
+		return [...this.#topics.keys()]
 	}
 
 	private handleMessage = async ({ detail: msg }: CustomEvent<PubSubMessage>) => {
@@ -211,15 +245,21 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 		}
 
 		const topic = msg.topic.slice(GossipLogService.topicPrefix.length)
-		const messageLog = this.#messageLogs.get(topic)
-		if (messageLog === undefined) {
+		const gossipLog = this.#topics.get(topic)
+		if (gossipLog === undefined) {
 			return
 		}
 
-		const [id, signature, message] = messageLog.decode(msg.data)
+		const [id, signature, message] = gossipLog.decode(msg.data)
 
-		this.log("received message %s via gossipsub on %s", id, topic)
-		await messageLog.insert(signature, message)
+		this.log("received message %s via gossipsub on %s", id, topic, message)
+		if (message.clock === 0) {
+			verifySignedValue(signature, message)
+			const result = await gossipLog.consumer(id, signature, message, {})
+			gossipLog.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
+		} else {
+			await gossipLog.insert(signature, message)
+		}
 	}
 }
 

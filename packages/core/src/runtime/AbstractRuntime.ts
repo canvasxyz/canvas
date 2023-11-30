@@ -4,7 +4,7 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { logger } from "@libp2p/logger"
 import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
-import type { Signature, Action, Message, Session, SessionSigner } from "@canvas-js/interfaces"
+import type { Signature, Action, Message, Session, SessionSigner, Heartbeat } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
 import {
@@ -16,7 +16,7 @@ import {
 	MIN_MESSAGE_ID,
 } from "@canvas-js/gossiplog"
 
-import { assert, mapValues } from "../utils.js"
+import { assert, mapValues, signalInvalidType } from "../utils.js"
 
 export type ExecutionContext = {
 	txn: ReadOnlyTransaction
@@ -85,39 +85,37 @@ export abstract class AbstractRuntime {
 		await this.db.close()
 	}
 
-	private static isAction = (message: Message<Action | Session>): message is Message<Action> =>
-		message.payload.type === "action"
+	public getConsumer(): GossipLogConsumer<Action | Session | Heartbeat, void | any> {
+		return async (id, signature, message, { txn }) => {
+			if (message.payload.type === "heartbeat") {
+				assert(message.clock === 0, "expected message.clock === 0 for heartbeats")
+				assert(txn === undefined, "expected txn === undefined for heartbeats")
+			} else if (message.payload.type === "session") {
+				assert(message.clock > 0, "expected message.clock !== 0 for sessions")
+				assert(txn !== undefined, "expected txn !== undefined for sessions")
 
-	private static isSession = (message: Message<Action | Session>): message is Message<Session> =>
-		message.payload.type === "session"
-
-	public getConsumer(): GossipLogConsumer<Action | Session, void | any> {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const runtime = this
-
-		return async function (this: ReadOnlyTransaction, id, signature, message) {
-			assert(signature !== null, "missing message signature")
-
-			if (AbstractRuntime.isSession(message)) {
 				const { publicKey, address, timestamp, duration } = message.payload
 
-				const signer = runtime.signers.find((signer) => signer.match(address))
+				const signer = this.signers.find((signer) => signer.match(address))
 				assert(signer !== undefined, "no signer found")
 
 				assert(publicKey === signature.publicKey)
 
-				await signer.verifySession(runtime.topic, message.payload)
+				await signer.verifySession(this.topic, message.payload)
 
-				await runtime.db.set("$sessions", {
+				await this.db.set("$sessions", {
 					message_id: id,
 					public_key: publicKey,
 					address: address,
 					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
 				})
-			} else if (AbstractRuntime.isAction(message)) {
+			} else if (message.payload.type === "action") {
+				assert(message.clock > 0, "expected message.clock !== 0 for actions")
+				assert(txn !== undefined, "expected txn !== undefined for actions")
+
 				const { address, timestamp } = message.payload
 
-				const sessions = await runtime.db.query("$sessions", {
+				const sessions = await this.db.query("$sessions", {
 					where: {
 						public_key: signature.publicKey,
 						address: address,
@@ -129,9 +127,9 @@ export abstract class AbstractRuntime {
 					throw new Error(`missing session ${signature.publicKey} for $${address}`)
 				}
 
-				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(runtime.db.models, () => ({}))
+				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(this.db.models, () => ({}))
 
-				const result = await runtime.execute({ txn: this, modelEntries, id, signature, message })
+				const result = await this.execute({ txn, modelEntries, id, signature, message: message as Message<Action> })
 
 				const effects: Effect[] = []
 
@@ -139,9 +137,9 @@ export abstract class AbstractRuntime {
 					for (const [key, value] of Object.entries(entries)) {
 						const keyHash = AbstractRuntime.getKeyHash(key)
 
-						if (runtime.indexHistory) {
+						if (this.indexHistory) {
 							const effectKey = `${model}/${keyHash}/${id}`
-							const results = await runtime.db.query("$effects", {
+							const results = await this.db.query("$effects", {
 								select: { key: true },
 								where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
 								limit: 1,
@@ -154,12 +152,12 @@ export abstract class AbstractRuntime {
 							})
 
 							if (results.length > 0) {
-								runtime.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
+								this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
 								continue
 							}
 						} else {
 							const versionKey = `${model}/${keyHash}`
-							const existingVersionRecord = await runtime.db.get("$versions", versionKey)
+							const existingVersionRecord = await this.db.get("$versions", versionKey)
 							const { version: existingVersion } = existingVersionRecord ?? { version: null }
 
 							assert(
@@ -187,14 +185,14 @@ export abstract class AbstractRuntime {
 					}
 				}
 
-				runtime.log("applying effects %O", effects)
+				this.log("applying effects %O", effects)
 				if (effects.length > 0) {
-					await runtime.db.apply(effects)
+					await this.db.apply(effects)
 				}
 
 				return result
 			} else {
-				throw new Error("invalid message payload type")
+				signalInvalidType(message.payload)
 			}
 		}
 	}

@@ -21,9 +21,16 @@ type Session struct {
   blockhash nullable String
 }
 
+type Heartbeat struct {
+  address   String
+  data      any
+  timestamp Int
+}
+
 type Payload union {
   | Action "action"
   | Session "session"
+  | Heartbeat "heartbeat"
 } representation inline {
   discriminantKey "type"
 }

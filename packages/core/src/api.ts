@@ -142,7 +142,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 				continue
 			}
 
-			if (results.push([id, signature, message]) >= limit) {
+			if (results.push([id, signature, message as Message<Action | Session>]) >= limit) {
 				break
 			}
 		}

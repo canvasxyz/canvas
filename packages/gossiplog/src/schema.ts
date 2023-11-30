@@ -13,7 +13,7 @@ const schema = fromDSL(`
 type SignedMessage struct {
 	publicKey Bytes
 	signature Bytes
-	parents  [Bytes]
+	parents   nullable [Bytes]
 	payload   any
 } representation tuple
 `)
@@ -23,7 +23,7 @@ const { toTyped: toSignedMessage, toRepresentation: fromSignedMessage } = create
 export type SignedMessage = {
 	publicKey: Uint8Array
 	signature: Uint8Array
-	parents: Uint8Array[]
+	parents: Uint8Array[] | null
 	payload: unknown
 }
 
@@ -40,9 +40,13 @@ export function encodeSignedMessage(signedMessage: SignedMessage): Uint8Array {
 	return cbor.encode(representation)
 }
 
-export function getNextClock(heads: Uint8Array[]): number {
+export function getClock(parents: Uint8Array[] | null): number {
+	if (parents === null) {
+		return 0
+	}
+
 	let max = 0
-	for (const key of heads) {
+	for (const key of parents) {
 		assert(key.byteLength === KEY_LENGTH, "expected key.byteLength === KEY_LENGTH")
 		const [clock] = decodeClock(key)
 		if (clock > max) {
