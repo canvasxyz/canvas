@@ -1052,9 +1052,6 @@ importers:
       '@libp2p/interface':
         specifier: ^0.1.6
         version: 0.1.6
-      '@libp2p/interface-internal':
-        specifier: ^0.1.9
-        version: 0.1.10
       '@libp2p/logger':
         specifier: ^3.1.0
         version: 3.1.0
@@ -1171,8 +1168,8 @@ importers:
         specifier: ^0.1.6
         version: 0.1.6
       '@libp2p/interface-internal':
-        specifier: ^0.1.9
-        version: 0.1.10
+        specifier: 0.1.9
+        version: 0.1.9
       '@libp2p/logger':
         specifier: ^3.1.0
         version: 3.1.0
@@ -1219,8 +1216,8 @@ importers:
         specifier: ^0.1.6
         version: 0.1.6
       '@libp2p/interface-internal':
-        specifier: ^0.1.9
-        version: 0.1.10
+        specifier: 0.1.9
+        version: 0.1.9
       '@libp2p/logger':
         specifier: ^3.1.0
         version: 3.1.0
@@ -3501,6 +3498,17 @@ packages:
       uint8arraylist: 2.4.7
     transitivePeerDependencies:
       - supports-color
+
+  /@libp2p/interface-internal@0.1.9:
+    resolution: {integrity: sha512-0HoY3ojG773VqE/m5vw9XtpKzuTqlCNqbOcwh2JvQvrLIiQgwu1zbn6t+T6cKK49eTBGfUqj3uWN7YQgX8rdGA==}
+    dependencies:
+      '@libp2p/interface': 0.1.6
+      '@libp2p/peer-collections': 4.0.9
+      '@multiformats/multiaddr': 12.1.11
+      uint8arraylist: 2.4.7
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
 
   /@libp2p/interface-peer-id@2.0.2:
     resolution: {integrity: sha512-9pZp9zhTDoVwzRmp0Wtxw0Yfa//Yc0GqBCJi3EznBDE6HGIAVvppR91wSh2knt/0eYg0AQj7Y35VSesUTzMCUg==}
