@@ -9,6 +9,10 @@ src = "src"
 test = "test"
 out = "out"
 allow_paths = [
+  # support submodules
+  "node_modules/forge-std",
+  "node_modules/@latticexyz/world",
+  "node_modules/@latticexyz/store",
   # pnpm symlinks to the project root's node_modules
   "../../node_modules",
   # template uses linked mud packages from within the mud monorepo
