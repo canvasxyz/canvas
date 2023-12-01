@@ -35,7 +35,7 @@ export const contract = {
 			if (["n", "e", "w", "s"].indexOf(direction) === -1) {
 				throw new Error()
 			}
-			const { direction: currentDirection, tickCount, tiles, gameOver } = await db.state.get("0")
+			const { direction: currentDirection, tickCount, tiles, gameOver } = await db.get("state", "0")
 			if (
 				(direction === "n" && currentDirection === "s") ||
 				(direction === "s" && currentDirection === "n") ||
@@ -71,7 +71,7 @@ export const contract = {
 				next[1] > maxY ||
 				tilesList.some(([tx, ty]) => tx === next[0] && ty === next[1])
 			) {
-				await db.state.set({ key: "0", gameOver: "true", direction, tickCount, tiles })
+				await db.set("state", { key: "0", gameOver: "true", direction, tickCount, tiles })
 				return
 			}
 
