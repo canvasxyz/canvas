@@ -7,10 +7,10 @@ import { getBurnerPrivateKey } from "@latticexyz/common"
 import { ethers } from "ethers"
 
 type Message = {
-	id: 'string',
-	message: 'string',
-	address: 'string',
-	timestamp: 'number'
+	id: "string"
+	message: "string"
+	address: "string"
+	timestamp: "number"
 }
 
 export const Chat = () => {
@@ -96,11 +96,11 @@ export const Chat = () => {
 						style={{ padding: 10, height: 250, overflowY: "scroll" }}
 						data={messages || []}
 						followOutput="auto"
-						itemContent={(index, message) => 
+						itemContent={(index, message) => (
 							<div key={message.id as string}>
-								{message.address.slice(0, 15)}: {message.message}
+								{message.address.slice(9, 15)}: {message.message}
 							</div>
-						}
+						)}
 					/>
 					<form
 						style={{ padding: 10 }}
