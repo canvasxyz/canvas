@@ -17,7 +17,7 @@ export const SessionStatus: React.FC<SessionStatusProps> = ({}) => {
 			<div>
 				<span className="text-sm">Address</span>
 			</div>
-			<div>
+			<div className="break-words">
 				<AddressView address={address} />
 			</div>
 			<hr />
