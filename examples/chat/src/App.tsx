@@ -44,8 +44,8 @@ export const App: React.FC<{}> = ({}) => {
 			}).then(
 				(app) => {
 					setApp(app)
-					app.addEventListener("join", ({ detail: { address } }) => console.log(`JOIN ${address}`))
-					app.addEventListener("leave", ({ detail: { address } }) => console.log(`LEAVE ${address}`))
+					// app.addEventListener("join", ({ detail: { address } }) => console.log(`JOIN ${address}`))
+					// app.addEventListener("leave", ({ detail: { address } }) => console.log(`LEAVE ${address}`))
 				},
 				(err) => console.error(err),
 			)
