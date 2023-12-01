@@ -15,7 +15,7 @@ npm i @canvas-js/chain-ethereum
 
 ```ts
 import type { AbstractSigner } from "ethers"
-import type { Signature, SessionSigner, Action, SessionStore, Message, Session } from "@canvas-js/interfaces"
+import type { Signature, SessionSigner, Action, SessionStore, Message, Session, Heartbeat } from "@canvas-js/interfaces"
 
 export type SIWESessionData = {
   signature: Uint8Array
@@ -29,13 +29,13 @@ export interface SIWESignerInit {
   sessionDuration?: number
 }
 
-export declare class SIWESigner implements SessionSigner {
+export declare class SIWESigner implements SessionSigner<SIWESessionData> {
   constructor(init?: SIWESignerInit)
 
   public match(chain: string): boolean
   public verifySession(session: Session): void
   public getSession(topic: string, options?: { chain?: string; timestamp?: number }): Promise<Session<SIWESessionData>>
-  public sign(message: Message<Action | Session>): Signature
+  public sign(message: Message<Action | Session<SIWESessionData> | Heartbeat>): Signature
   public clear(): Promise<void>
 }
 ```

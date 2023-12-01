@@ -5,7 +5,7 @@ import { Canvas } from "@canvas-js/core"
 import { WebIrys } from "@irys/sdk"
 import Query from "@irys/query"
 import { GossipLogEvents } from "@canvas-js/gossiplog"
-import { Action, Session } from "@canvas-js/interfaces"
+import { Action, Heartbeat, Session } from "@canvas-js/interfaces"
 
 import { deleteDB } from "idb"
 
@@ -41,7 +41,7 @@ export function Persister({ app }: { app?: Canvas }) {
 					signTypedData: async (
 						domain: ethers.TypedDataDomain,
 						types: Record<string, ethers.TypedDataField[]>,
-						value: Record<string, string>
+						value: Record<string, string>,
 					) => wallet.signTypedData(domain, types, value),
 				}
 				return mock
@@ -84,7 +84,7 @@ export function Persister({ app }: { app?: Canvas }) {
 			})
 		}
 
-		type MessageEvent = GossipLogEvents<Action | Session, void>["message"]
+		type MessageEvent = GossipLogEvents<Action | Session | Heartbeat, void>["message"]
 
 		const handleMessage = (msg: MessageEvent) => {
 			const { id, signature, message } = msg.detail
@@ -103,7 +103,7 @@ export function Persister({ app }: { app?: Canvas }) {
 		await Promise.all(
 			dbs.map((db) => {
 				if (db.name) deleteDB(db.name)
-			})
+			}),
 		)
 		location.reload()
 	}
@@ -168,8 +168,8 @@ export function Persister({ app }: { app?: Canvas }) {
 								.catch((error) => {
 									console.error("Error fetching individual Arweave txes:", error)
 									return null
-								})
-						)
+								}),
+						),
 					)
 				).filter((txdataOrNull: ArrayBuffer | null) => txdataOrNull !== null) as ArrayBuffer[]
 

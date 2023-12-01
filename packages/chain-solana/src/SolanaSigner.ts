@@ -5,7 +5,7 @@ import { logger } from "@libp2p/logger"
 
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
+import type { Signature, SessionSigner, Action, Message, Session, Heartbeat } from "@canvas-js/interfaces"
 import { Ed25519Signer } from "@canvas-js/signed-cid"
 
 import target from "#target"
@@ -32,7 +32,7 @@ type GenericSigner = {
 	sign: (msg: Uint8Array) => Promise<Uint8Array>
 }
 
-export class SolanaSigner implements SessionSigner {
+export class SolanaSigner implements SessionSigner<SolanaSessionData> {
 	public readonly sessionDuration: number | null
 	public readonly chainId: string
 
@@ -154,8 +154,18 @@ export class SolanaSigner implements SessionSigner {
 		return session
 	}
 
-	public sign(message: Message<Action | Session>): Signature {
-		if (message.payload.type === "action") {
+	public sign(message: Message<Action | Session<SolanaSessionData> | Heartbeat>): Signature {
+		if (message.payload.type === "heartbeat") {
+			const { address, timestamp } = message.payload
+			const { signer, session } = this.#store.get(message.topic, address) ?? {}
+			assert(signer !== undefined && session !== undefined)
+
+			assert(address === session.address)
+			assert(timestamp >= session.timestamp)
+			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
+
+			return signer.sign(message)
+		} else if (message.payload.type === "action") {
 			const { address, timestamp } = message.payload
 			const { signer, session } = this.#store.get(message.topic, address) ?? {}
 			assert(signer !== undefined && session !== undefined)

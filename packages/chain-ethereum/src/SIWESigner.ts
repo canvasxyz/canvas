@@ -134,7 +134,17 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 	}
 
 	public sign(message: Message<Action | Session | Heartbeat>): Signature {
-		if (message.payload.type === "action") {
+		if (message.payload.type === "heartbeat") {
+			const { address, timestamp } = message.payload
+			const { signer, session } = this.#store.get(message.topic, address) ?? {}
+			assert(signer !== undefined && session !== undefined)
+
+			assert(address === session.address)
+			assert(timestamp >= session.timestamp)
+			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
+
+			return signer.sign(message)
+		} else if (message.payload.type === "action") {
 			const { address, timestamp } = message.payload
 			const { signer, session } = this.#store.get(message.topic, address) ?? {}
 			assert(signer !== undefined && session !== undefined)
@@ -150,16 +160,6 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 
 			// only sign our own current sessions
 			assert(message.payload === session)
-			return signer.sign(message)
-		} else if (message.payload.type === "heartbeat") {
-			const { address, timestamp } = message.payload
-			const { signer, session } = this.#store.get(message.topic, address) ?? {}
-			assert(signer !== undefined && session !== undefined)
-
-			assert(address === session.address)
-			assert(timestamp >= session.timestamp)
-			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
-
 			return signer.sign(message)
 		} else {
 			signalInvalidType(message.payload)

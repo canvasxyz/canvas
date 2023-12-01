@@ -6,7 +6,7 @@ import * as ATP from "@atproto/api"
 // decides to publish ESM modules (please, it's not 2010)
 const BskyAgent = ATP.BskyAgent ?? ATP["default"].BskyAgent
 
-import type { Action, Message, Session, SessionSigner, Signature } from "@canvas-js/interfaces"
+import type { Action, Heartbeat, Message, Session, SessionSigner, Signature } from "@canvas-js/interfaces"
 import { Secp256k1Signer } from "@canvas-js/signed-cid"
 
 import target from "#target"
@@ -158,8 +158,18 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 		return session
 	}
 
-	public sign(message: Message<Action | Session>): Signature {
-		if (message.payload.type === "action") {
+	public sign(message: Message<Action | Session<ATPSessionData> | Heartbeat>): Signature {
+		if (message.payload.type === "heartbeat") {
+			const { address, timestamp } = message.payload
+			const { signer, session } = this.#store.get(message.topic, address) ?? {}
+			assert(signer !== undefined && session !== undefined)
+
+			assert(address === session.address)
+			assert(timestamp >= session.timestamp)
+			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
+
+			return signer.sign(message)
+		} else if (message.payload.type === "action") {
 			const { address, timestamp } = message.payload
 			const { signer, session } = this.#store.get(message.topic, address) ?? {}
 			assert(signer !== undefined && session !== undefined)

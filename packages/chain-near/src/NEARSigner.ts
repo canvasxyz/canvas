@@ -4,7 +4,7 @@ import { KeyPair } from "near-api-js"
 import { PublicKey } from "@near-js/crypto"
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type { Signature, Signer, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
+import type { Signature, Signer, SessionSigner, Action, Message, Session, Heartbeat } from "@canvas-js/interfaces"
 import { Ed25519Signer } from "@canvas-js/signed-cid"
 
 import { NEARMessage, NEARSessionData } from "./types.js"
@@ -18,7 +18,7 @@ export interface NEARSignerInit {
 	sessionDuration?: number
 }
 
-export class NEARSigner implements SessionSigner {
+export class NEARSigner implements SessionSigner<NEARSessionData> {
 	public readonly sessionDuration: number | null
 	public readonly chainId: string
 
@@ -27,8 +27,6 @@ export class NEARSigner implements SessionSigner {
 	#address: string
 	#keyPair: KeyPair
 	#store = target.getSessionStore()
-	#signers: Record<string, Signer<Message<Action | Session>>> = {}
-	#sessions: Record<string, Session<NEARSessionData>> = {}
 
 	public constructor({ keyPair, sessionDuration, chainId }: NEARSignerInit = {}) {
 		this.#keyPair = keyPair ?? KeyPair.fromRandom("ed25519")
@@ -127,8 +125,18 @@ export class NEARSigner implements SessionSigner {
 		return session
 	}
 
-	public sign(message: Message<Action | Session>): Signature {
-		if (message.payload.type === "action") {
+	public sign(message: Message<Action | Session<NEARSessionData> | Heartbeat>): Signature {
+		if (message.payload.type === "heartbeat") {
+			const { address, timestamp } = message.payload
+			const { signer, session } = this.#store.get(message.topic, address) ?? {}
+			assert(signer !== undefined && session !== undefined)
+
+			assert(address === session.address)
+			assert(timestamp >= session.timestamp)
+			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
+
+			return signer.sign(message)
+		} else if (message.payload.type === "action") {
 			const { address, timestamp } = message.payload
 			const { signer, session } = this.#store.get(message.topic, address) ?? {}
 			assert(signer !== undefined && session !== undefined)

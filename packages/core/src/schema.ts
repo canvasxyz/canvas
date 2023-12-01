@@ -1,7 +1,7 @@
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 import { create } from "@ipld/schema/typed.js"
 
-import type { Action, Session } from "@canvas-js/interfaces"
+import type { Action, Heartbeat, Session } from "@canvas-js/interfaces"
 
 export const schema = `
 type Action struct {
@@ -38,7 +38,11 @@ type Payload union {
 
 const { toTyped } = create(fromDSL(schema), "Payload")
 
-export function validatePayload(payload: unknown): payload is Action | Session {
-	const result = toTyped(payload) as { Action: Omit<Action, "type"> } | { Session: Omit<Session, "type"> } | undefined
+export function validatePayload(payload: unknown): payload is Action | Session | Heartbeat {
+	const result = toTyped(payload) as
+		| { Action: Omit<Action, "type"> }
+		| { Session: Omit<Session, "type"> }
+		| { Heartbeat: Omit<Heartbeat, "type"> }
+		| undefined
 	return result !== undefined
 }

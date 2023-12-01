@@ -138,7 +138,7 @@ export interface CanvasEvents {
   connect: CustomEvent<{ peer: PeerId }>
   disconnect: CustomEvent<{ peer: PeerId }>
 
-  message: CustomEvent<{ id: string; signature: Signature; message: Message<Action | Session> }>
+  message: CustomEvent<{ id: string; signature: Signature; message: Message<Action | Session | Heartbeat> }>
   commit: CustomEvent<{ root: Node }>
   sync: CustomEvent<{ peer: string | null }>
 }

@@ -1,7 +1,7 @@
 import * as json from "@ipld/dag-json"
 import { logger } from "@libp2p/logger"
 
-import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
+import type { Signature, SessionSigner, Action, Message, Session, Heartbeat } from "@canvas-js/interfaces"
 import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
 import { assert, signalInvalidType, validateSessionData, addressPattern, parseAddress } from "./utils.js"
@@ -25,7 +25,7 @@ type GenericSigner = {
 	sign: (msg: CosmosMessage, signerAddress: string, chainId: string) => Promise<CosmosSessionData>
 }
 
-export class CosmosSigner implements SessionSigner {
+export class CosmosSigner implements SessionSigner<CosmosSessionData> {
 	public readonly sessionDuration: number | null
 	private readonly log = logger("canvas:chain-cosmos")
 
@@ -144,8 +144,18 @@ export class CosmosSigner implements SessionSigner {
 		return session
 	}
 
-	public sign(message: Message<Action | Session>): Signature {
-		if (message.payload.type === "action") {
+	public sign(message: Message<Action | Session<CosmosSessionData> | Heartbeat>): Signature {
+		if (message.payload.type === "heartbeat") {
+			const { address, timestamp } = message.payload
+			const { signer, session } = this.#store.get(message.topic, address) ?? {}
+			assert(signer !== undefined && session !== undefined)
+
+			assert(address === session.address)
+			assert(timestamp >= session.timestamp)
+			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
+
+			return signer.sign(message)
+		} else if (message.payload.type === "action") {
 			const { address, timestamp } = message.payload
 			const { signer, session } = this.#store.get(message.topic, address) ?? {}
 			assert(signer !== undefined && session !== undefined)

@@ -99,11 +99,12 @@ export type Session<Data = any> = {
 ```ts
 import type { Signer } from "./Signer.js"
 import type { Message } from "./Message.js"
-import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
+import type { Session } from "./Session.js"
+import type { Heartbeat } from "./Heartbeat.js"
 import type { Awaitable } from "./Awaitable.js"
 
-export interface SessionSigner extends Signer<Message<Action | Session>> {
+export interface SessionSigner extends Signer<Message<Action | Session | Heartbeat>> {
   match: (chain: string) => boolean
 
   /**

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import type { Canvas, Contract, CanvasLogEvent, ActionImplementation } from "@canvas-js/core"
+import type { Canvas, Contract, CanvasEvents, ActionImplementation } from "@canvas-js/core"
 import type { Action } from "@canvas-js/interfaces"
 
 type TickingContract = Contract & {
@@ -39,7 +39,7 @@ export const useTick = (app: Canvas<TickingContract>, condition: string | null, 
 			queryPath = matches[4]
 		}
 
-		const tickListener = async (event: CanvasLogEvent) => {
+		const tickListener = async (event: CanvasEvents["message"]) => {
 			const payload = event.detail.message.payload
 
 			if (payload.type === "action") {

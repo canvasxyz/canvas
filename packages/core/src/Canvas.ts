@@ -15,8 +15,8 @@ import type { Contract, ActionImplementationFunction, ActionImplementationObject
 import type { ServiceMap } from "./targets/interface.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
+import { HEARTBEAT_INTERVAL, HEARTBEAT_TIMEOUT } from "./constants.js"
 import { assert } from "./utils.js"
-import { HEARTBEAT_INTERVAL, HEARTBEAT_TIMEOUT, minute, second } from "./constants.js"
 
 export interface CanvasConfig<T extends Contract = Contract> {
 	contract: string | T
@@ -56,13 +56,6 @@ export interface CanvasEvents extends GossipLogEvents<Action | Session | Heartbe
 	join: CustomEvent<{ address: string }>
 	leave: CustomEvent<{ address: string }>
 }
-
-export type CanvasLogEvent = CustomEvent<{
-	id: string
-	signature: unknown
-	message: Message<Action | Session | Heartbeat>
-	result: unknown
-}>
 
 export type ApplicationData = {
 	peerId: string
@@ -250,7 +243,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	 * Low-level utility method for internal and debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async insert(signature: Signature, message: Message<Session | Action | Heartbeat>): Promise<{ id: string }> {
+	public async insert(signature: Signature, message: Message<Session | Action>): Promise<{ id: string }> {
 		assert(message.topic === this.topic, "invalid message topic")
 		if (this.libp2p === null) {
 			return this.messageLog.insert(signature, message)
@@ -278,16 +271,25 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 	public async getMessage(
 		id: string,
-	): Promise<[signature: Signature, message: Message<Action | Session | Heartbeat>] | [null, null]> {
-		return await this.messageLog.get(id)
+	): Promise<[signature: Signature, message: Message<Action | Session>] | [null, null]> {
+		const [signature, message] = await this.messageLog.get(id)
+		if (signature === null || message === null) {
+			return [null, null]
+		}
+
+		assert(message.payload.type !== "heartbeat")
+		return [signature, message as Message<Action | Session>]
 	}
 
 	public async *getMessages(
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {},
-	): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session | Heartbeat>]> {
-		yield* this.messageLog.iterate(lowerBound, upperBound, options)
+	): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]> {
+		for await (const [id, signature, message] of this.messageLog.iterate(lowerBound, upperBound, options)) {
+			assert(message.payload.type !== "heartbeat")
+			yield [id, signature, message as Message<Action | Session>]
+		}
 	}
 
 	private async heartbeat() {
