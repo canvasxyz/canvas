@@ -9,9 +9,10 @@ import { CustomEvent, EventEmitter, TypedEventTarget } from "@libp2p/interface/e
 import { Libp2pEvents } from "@libp2p/interface"
 import { PeerDiscovery, PeerDiscoveryEvents, peerDiscovery } from "@libp2p/interface/peer-discovery"
 
-import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+import { Multiaddr } from "@multiformats/multiaddr"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
+import { P2P, WebRTC, WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 
 import { FetchService } from "libp2p/fetch"
 import { PeerRecord, RecordEnvelope } from "@libp2p/peer-record"
@@ -76,7 +77,9 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 	private readonly discoveryInterval: number
 	private readonly topologyPeers = new Set<string>()
 
-	readonly #queue = new PQueue({ concurrency: 1 })
+	readonly #discoveryQueue = new PQueue({ concurrency: 1 })
+	readonly #dialQueue = new PQueue({ concurrency: 5 })
+
 	#registrarId: string | null = null
 	#heartbeat: NodeJS.Timeout | null = null
 
@@ -197,8 +200,8 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 		}
 
 		this.fetch.unregisterLookupFunction(DiscoveryService.FETCH_KEY_PREFIX, this.handleFetch)
-		this.#queue.clear()
-		await this.#queue.onIdle()
+		this.#discoveryQueue.clear()
+		await this.#discoveryQueue.onIdle()
 	}
 
 	public async stop(): Promise<void> {
@@ -228,7 +231,7 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 	private handleConnect(connection: Connection) {
 		this.log("new connection to peer %p", connection.remotePeer)
 
-		this.#queue
+		this.#discoveryQueue
 			.add(async () => {
 				for (const topic of this.pubsub.getTopics().filter(this.topicFilter)) {
 					const meshPeers = this.pubsub.getMeshPeers(topic)
@@ -263,7 +266,7 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 
 						this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
 						await this.components.peerStore.consumePeerRecord(peerRecordEnvelope, peerId)
-						await this.connect(peerId, multiaddrs)
+						this.#dialQueue.add(() => this.connect(peerId, multiaddrs))
 					}
 				}
 			})
@@ -277,35 +280,33 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 		return { peerId, multiaddrs }
 	}
 
-	private async connect(peerId: PeerId, multiaddrs: Multiaddr[]) {
+	private connect(peerId: PeerId, multiaddrs: Multiaddr[]): Promise<void> {
 		if (peerId.equals(this.components.peerId)) {
 			this.log("cannot connect to self")
-			return
+			return Promise.resolve()
 		}
 
 		const existingConnections = this.components.connectionManager.getConnections(peerId)
 
 		if (existingConnections.length > 0) {
 			this.log("already have connection to peer %p", peerId)
-			return
+			return Promise.resolve()
 		}
 
 		const addrs = multiaddrs.flatMap((ma) => {
-			const addr = ma.toString()
-			if (addr.endsWith("/webrtc") || addr.endsWith("/ws") || addr.endsWith("/wss")) {
-				return [multiaddr(`${addr}/p2p/${peerId}`)]
+			const addr = ma.decapsulateCode(421)
+			if (WebRTC.matches(addr) || WebSockets.matches(addr) || WebSocketsSecure.matches(addr)) {
+				return addr.encapsulate(`/p2p/${peerId}`)
 			} else {
 				return []
 			}
 		})
 
 		this.log("dialing %O", addrs)
-		try {
-			await this.components.connectionManager.openConnection(addrs, { priority: this.autoDialPriority })
-			this.log("connection opened successfully")
-		} catch (err) {
-			this.log.error("failed to open new connection to %p: %O", peerId, err)
-		}
+		return this.components.connectionManager.openConnection(addrs, { priority: this.autoDialPriority }).then(
+			() => this.log("connection opened successfully"),
+			(err) => this.log.error("failed to open new connection to %p: %O", peerId, err),
+		)
 	}
 }
 
