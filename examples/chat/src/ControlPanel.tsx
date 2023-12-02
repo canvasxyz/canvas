@@ -13,7 +13,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 	const start = useCallback(async () => {
 		if (app !== null) {
 			try {
-				await app.start()
+				await app.libp2p.start()
 				setIsStarted(true)
 			} catch (err) {
 				console.error(err)
@@ -24,7 +24,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 	const stop = useCallback(async () => {
 		if (app !== null) {
 			try {
-				await app.stop()
+				await app.libp2p.stop()
 				setIsStarted(false)
 			} catch (err) {
 				console.error(err)
@@ -42,7 +42,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 			console.log("deleting message log", app.topic)
 			await deleteDB(`canvas/${app.topic}/log`, {})
 			console.log("clearing session signer data", sessionSigner)
-			await sessionSigner?.clear?.()
+			// await sessionSigner?.clear?.()
 			window.location.reload()
 		}
 	}, [app, sessionSigner])

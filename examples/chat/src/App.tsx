@@ -30,7 +30,7 @@ export const App: React.FC<{}> = ({}) => {
 
 	useEffect(() => {
 		// set logging to make debugging in incognito windows easier
-		localStorage.setItem("debug", "libp2p:*, canvas:*")
+		localStorage.setItem("debug", "libp2p:*,canvas:*")
 
 		if (initRef.current === false) {
 			initRef.current = true
@@ -44,14 +44,8 @@ export const App: React.FC<{}> = ({}) => {
 					new SolanaSigner(),
 					new NEARSigner({}),
 				],
-			}).then(
-				(app) => {
-					setApp(app)
-					// app.addEventListener("join", ({ detail: { address } }) => console.log(`JOIN ${address}`))
-					// app.addEventListener("leave", ({ detail: { address } }) => console.log(`LEAVE ${address}`))
-				},
-				(err) => console.error(err),
-			)
+				offline: true,
+			}).then(setApp, (err) => console.error(err))
 		}
 	}, [])
 
