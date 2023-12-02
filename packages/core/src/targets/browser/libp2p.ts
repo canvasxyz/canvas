@@ -67,7 +67,11 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
 		},
 
-		transports: [webSockets({ filter: all }), webRTC({}), circuitRelayTransport({ discoverRelays: 1 })],
+		transports: [
+			webSockets({ filter: all }),
+			webRTC({}),
+			circuitRelayTransport({ discoverRelays: bootstrapList.length }),
+		],
 
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex({ disconnectThreshold: 20 })],

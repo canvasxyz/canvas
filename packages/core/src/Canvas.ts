@@ -201,7 +201,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		if (this.#open) {
 			this.#open = false
 			this.controller.abort()
-			await this.libp2p?.stop()
+			await this.libp2p.stop()
 			await this.messageLog.close()
 			await this.runtime.close()
 			this.dispatchEvent(new Event("close"))
