@@ -26,12 +26,23 @@ export default {
 async function getPeerId({ topic }: { topic: string }): Promise<PeerId> {
 	const localStorageKey = `canvas/${topic}/peer-id`
 	const item = localStorage.getItem(localStorageKey)
+	let peerId: PeerId
+
 	if (item === null) {
-		const peerId = await createEd25519PeerId()
+		peerId = await createEd25519PeerId()
 		const privateKey = exportToProtobuf(peerId)
 		localStorage.setItem(localStorageKey, base64.baseEncode(privateKey))
-		return peerId
 	} else {
-		return await createFromProtobuf(base64.baseDecode(item))
+		peerId = await createFromProtobuf(base64.baseDecode(item))
 	}
+
+	return new Promise((resolve) => {
+		navigator.locks.request(`canvas:libp2p-lock:${peerId.toString()}`, { ifAvailable: true }, async (lock) => {
+			if (!lock) {
+				peerId = await createEd25519PeerId()
+			}
+			resolve(peerId)
+			return new Promise((resolve) => {}) // automatically released when the browser tab closes
+		})
+	})
 }
