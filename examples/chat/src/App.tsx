@@ -29,6 +29,9 @@ export const App: React.FC<{}> = ({}) => {
 	const initRef = useRef(false)
 
 	useEffect(() => {
+		// set logging to make debugging in incognito windows easier
+		localStorage.setItem("debug", "libp2p:*, canvas:*")
+
 		if (initRef.current === false) {
 			initRef.current = true
 			Canvas.initialize({
