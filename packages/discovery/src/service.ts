@@ -9,10 +9,11 @@ import { CustomEvent, EventEmitter, TypedEventTarget } from "@libp2p/interface/e
 import { Libp2pEvents } from "@libp2p/interface"
 import { PeerDiscovery, PeerDiscoveryEvents, peerDiscovery } from "@libp2p/interface/peer-discovery"
 
-import { Multiaddr } from "@multiformats/multiaddr"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
-import { P2P, WebRTC, WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
+
+// import { P2P, WebRTC, WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 
 import { FetchService } from "libp2p/fetch"
 import { PeerRecord, RecordEnvelope } from "@libp2p/peer-record"
@@ -219,15 +220,16 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 		const topic = key.slice(DiscoveryService.FETCH_KEY_PREFIX.length)
 		this.log("handling fetch request for peers on topic %s", topic)
 
-		const results: Uint8Array[] = []
+		const results = new Map<PeerId, Uint8Array>()
 		for (const peerId of this.pubsub.getSubscribers(topic)) {
 			const { peerRecordEnvelope } = await this.components.peerStore.get(peerId)
 			if (peerRecordEnvelope !== undefined) {
-				results.push(peerRecordEnvelope)
+				results.set(peerId, peerRecordEnvelope)
 			}
 		}
 
-		return cbor.encode(results)
+		this.log("found %d subscribers for topic %s: %o", results.size, topic, [...results.keys()])
+		return cbor.encode([...results.values()])
 	}
 
 	private handleConnect(connection: Connection) {
@@ -296,9 +298,9 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 		}
 
 		const addrs = multiaddrs.flatMap((ma) => {
-			const addr = ma.decapsulateCode(421)
-			if (WebRTC.matches(addr) || WebSockets.matches(addr) || WebSocketsSecure.matches(addr)) {
-				return addr.encapsulate(`/p2p/${peerId}`)
+			const addr = ma.toString()
+			if (addr.endsWith("/webrtc") || addr.endsWith("/ws") || addr.endsWith("/wss")) {
+				return [multiaddr(`${addr}/p2p/${peerId}`)]
 			} else {
 				return []
 			}
