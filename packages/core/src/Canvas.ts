@@ -31,6 +31,7 @@ export interface NetworkConfig {
 	maxConnections?: number
 	discoveryTopic?: string
 	discoveryInterval?: number
+	enableWebRTC?: boolean
 }
 
 export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
