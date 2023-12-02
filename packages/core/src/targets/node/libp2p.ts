@@ -6,6 +6,8 @@ import { pingService } from "libp2p/ping"
 import { identifyService } from "libp2p/identify"
 import { fetchService } from "libp2p/fetch"
 
+import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
+
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
@@ -110,6 +112,7 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 			discovery: discovery({
 				discoveryTopic: options.discoveryTopic,
 				topicFilter: (topic) => topic.startsWith(GossipLogService.topicPrefix),
+				addressFilter: (addr) => WebSockets.matches(addr) || WebSocketsSecure.matches(addr),
 			}),
 		},
 	}

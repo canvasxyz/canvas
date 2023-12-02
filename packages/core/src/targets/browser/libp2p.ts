@@ -5,6 +5,8 @@ import { identifyService } from "libp2p/identify"
 import { fetchService } from "libp2p/fetch"
 import { circuitRelayTransport } from "libp2p/circuit-relay"
 
+import { WebRTC, WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
+
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
@@ -31,7 +33,8 @@ import type { NetworkConfig } from "../../Canvas.js"
 
 export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2pOptions<ServiceMap> {
 	const announce = options.announce ?? []
-	const listen = options.listen ?? (options.enableWebRTC ? ["/webrtc"] : [])
+	const enableWebRTC = options.enableWebRTC ?? false
+	const listen = options.listen ?? (enableWebRTC ? ["/webrtc"] : [])
 	const bootstrapList = options.bootstrapList ?? defaultBootstrapList
 
 	for (const address of announce) {
@@ -70,7 +73,7 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 		transports: [
 			webSockets({ filter: all }),
 			circuitRelayTransport({ discoverRelays: bootstrapList.length }),
-			...(options.enableWebRTC ? [webRTC({})] : []),
+			...(enableWebRTC ? [webRTC({})] : []),
 		],
 
 		connectionEncryption: [noise()],
@@ -100,6 +103,8 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 				discoveryTopic: options.discoveryTopic,
 				discoveryInterval: options.discoveryInterval,
 				topicFilter: (topic) => topic.startsWith(GossipLogService.topicPrefix),
+				addressFilter: (addr) =>
+					WebSockets.matches(addr) || WebSocketsSecure.matches(addr) || (enableWebRTC && WebRTC.matches(addr)),
 			}),
 		},
 	}

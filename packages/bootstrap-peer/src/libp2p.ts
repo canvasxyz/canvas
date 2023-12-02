@@ -6,6 +6,8 @@ import { identifyService } from "libp2p/identify"
 import { FetchService, fetchService } from "libp2p/fetch"
 import { CircuitRelayService, circuitRelayServer } from "libp2p/circuit-relay"
 
+import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
+
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
@@ -110,6 +112,8 @@ export const options: Libp2pOptions<ServiceMap> = {
 
 		fetch: fetchService({ protocolPrefix: "canvas" }),
 
-		discovery: discovery({}),
+		discovery: discovery({
+			addressFilter: (addr) => WebSockets.matches(addr) || WebSocketsSecure.matches(addr),
+		}),
 	},
 }

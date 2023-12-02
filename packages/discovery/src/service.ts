@@ -37,6 +37,7 @@ export interface DiscoveryServiceComponents {
 }
 
 export interface DiscoveryServiceInit {
+	addressFilter?: (addr: Multiaddr) => boolean
 	topicFilter?: (topic: string) => boolean
 	discoveryTopic?: string
 	discoveryInterval?: number
@@ -78,6 +79,7 @@ export class DiscoveryService extends EventEmitter<DiscoveryServiceEvents> imple
 	private readonly minPeersPerTopic: number
 	private readonly autoDialPriority: number
 	private readonly topicFilter: (topic: string) => boolean
+	private readonly addressFilter: (addr: Multiaddr) => boolean
 	private readonly discoveryTopic: string | null
 	private readonly discoveryInterval: number
 	private readonly topologyPeers = new Set<string>()
@@ -98,6 +100,7 @@ export class DiscoveryService extends EventEmitter<DiscoveryServiceEvents> imple
 		this.topicFilter = init.topicFilter ?? ((topic) => true)
 		this.discoveryTopic = init.discoveryTopic ?? null
 		this.discoveryInterval = init.discoveryInterval ?? 1 * 60 * 1000 // default to publishing once every minute
+		this.addressFilter = init.addressFilter ?? ((addr) => true)
 	}
 
 	get [peerDiscovery](): PeerDiscovery {
@@ -302,14 +305,16 @@ export class DiscoveryService extends EventEmitter<DiscoveryServiceEvents> imple
 			return Promise.resolve()
 		}
 
-		const addrs = multiaddrs.flatMap((ma) => {
-			const addr = ma.toString()
-			if (addr.endsWith("/webrtc") || addr.endsWith("/ws") || addr.endsWith("/wss")) {
-				return [multiaddr(`${addr}/p2p/${peerId}`)]
-			} else {
-				return []
-			}
-		})
+		const addrs = multiaddrs
+			.filter((addr) => this.addressFilter(addr))
+			.map((addr) => {
+				const ma = addr.toString()
+				if (ma.endsWith(`/p2p/${peerId}`)) {
+					return addr
+				} else {
+					return multiaddr(`${ma}/p2p/${peerId}`)
+				}
+			})
 
 		this.log("dialing %O", addrs)
 		return this.components.connectionManager.openConnection(addrs, { priority: this.autoDialPriority }).then(
