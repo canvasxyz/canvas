@@ -4,11 +4,13 @@ import { useLiveQuery } from "@canvas-js/hooks"
 
 import { AppContext } from "./AppContext.js"
 
-export interface MessagesProps {}
+export interface MessagesProps {
+	address: string
+}
 
 type Message = { id: string; address: string; content: string; timestamp: number }
 
-export const Messages: React.FC<MessagesProps> = ({}) => {
+export const Messages: React.FC<MessagesProps> = ({ address }) => {
 	const { app } = useContext(AppContext)
 	const scrollboxRef = useRef()
 
@@ -25,7 +27,7 @@ export const Messages: React.FC<MessagesProps> = ({}) => {
 		} else {
 			box.scrollTo({ top: box.scrollHeight, behavior: "smooth" })
 		}
-	}, [messages?.length])
+	}, [address, messages?.length])
 
 	return (
 		<div className="flex-1" ref={scrollboxRef}>

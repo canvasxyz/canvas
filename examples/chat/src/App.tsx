@@ -45,6 +45,7 @@ export const App: React.FC<{}> = ({}) => {
 					new NEARSigner({}),
 				],
 				offline: true,
+				enableWebRTC: true,
 			}).then(setApp, (err) => console.error(err))
 		}
 	}, [])
@@ -55,7 +56,7 @@ export const App: React.FC<{}> = ({}) => {
 				<div className="flex flex-row gap-4 h-full">
 					<div className="min-w-[480px] flex-1 flex flex-col justify-stretch gap-2">
 						<div className="flex-1 border rounded px-2 overflow-y-scroll">
-							<Messages />
+							<Messages address={address} />
 						</div>
 						<MessageComposer />
 					</div>
