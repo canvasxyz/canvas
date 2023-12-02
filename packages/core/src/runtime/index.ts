@@ -11,11 +11,11 @@ export async function createRuntime(
 	location: string | null,
 	signers: SessionSigner[],
 	contract: string | Contract,
-	options: { runtimeMemoryLimit?: number; indexHistory?: boolean } = {},
+	options: { runtimeMemoryLimit?: number; indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
 ): Promise<AbstractRuntime> {
 	if (typeof contract === "string") {
 		return ContractRuntime.init(location, signers, contract, options)
 	} else {
-		return FunctionRuntime.init(location, signers, contract)
+		return FunctionRuntime.init(location, signers, contract, options)
 	}
 }

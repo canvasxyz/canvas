@@ -30,6 +30,7 @@ export interface NetworkConfig {
 	minConnections?: number
 	maxConnections?: number
 	discoveryTopic?: string
+	discoveryInterval?: number
 }
 
 export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
@@ -45,6 +46,7 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
 	/** set to `false` to disable history indexing and db.get(..) within actions */
 	indexHistory?: boolean
 	runtimeMemoryLimit?: number
+	ignoreMissingActions?: boolean
 }
 
 export type ActionOptions = { signer?: SessionSigner }
@@ -76,13 +78,20 @@ export type ApplicationData = {
 
 export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEvents> {
 	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {
-		const { path = null, contract, signers = [], runtimeMemoryLimit, offline = false, indexHistory = true } = config
+		const {
+			path = null,
+			contract,
+			signers = [],
+			runtimeMemoryLimit,
+			indexHistory = true,
+			ignoreMissingActions = false,
+		} = config
 
 		if (signers.length === 0) {
 			signers.push(new SIWESigner())
 		}
 
-		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit })
+		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit, ignoreMissingActions })
 
 		const topic = runtime.topic
 

@@ -137,6 +137,15 @@ export async function handler(args: Args) {
 	} else if (args.testnet) {
 		console.log(chalk.yellowBright("[canvas] Using testnet bootstrap servers"))
 		bootstrapList = testnetBootstrapList
+	} else if (args.bootstrap !== undefined) {
+		console.log(chalk.yellowBright("[canvas] Using custom bootstrap servers"))
+		bootstrapList = []
+		for (const address of args.bootstrap) {
+			if (typeof address === "string") {
+				console.log(chalk.yellowBright(`[canvas] - ${address}`))
+				bootstrapList.push(address)
+			}
+		}
 	} else {
 		console.log(chalk.gray("[canvas] Using default Canvas bootstrap servers"))
 		bootstrapList = defaultBootstrapList

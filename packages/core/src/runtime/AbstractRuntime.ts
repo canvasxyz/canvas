@@ -77,7 +77,7 @@ export abstract class AbstractRuntime {
 	>
 
 	protected readonly log = logger("canvas:runtime")
-	protected constructor(public readonly indexHistory: boolean) {}
+	protected constructor(public readonly indexHistory: boolean, public readonly ignoreMissingActions: boolean) {}
 
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
 

@@ -20,9 +20,9 @@ export class ContractRuntime extends AbstractRuntime {
 		path: string | null,
 		signers: SessionSigner[],
 		contract: string,
-		options: { runtimeMemoryLimit?: number; indexHistory?: boolean } = {},
+		options: { runtimeMemoryLimit?: number; indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
 	): Promise<ContractRuntime> {
-		const { runtimeMemoryLimit, indexHistory = true } = options
+		const { runtimeMemoryLimit, indexHistory = true, ignoreMissingActions = false } = options
 
 		const cid = getCID(contract, { codec: "raw", digest: "blake3-128" })
 		const uri = `canvas:${cid.toString()}`
@@ -78,7 +78,7 @@ export class ContractRuntime extends AbstractRuntime {
 		const modelsInit = modelsHandle.consume(vm.context.dump) as ModelsInit
 
 		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelsInit, { indexHistory }))
-		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers, indexHistory)
+		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers, indexHistory, ignoreMissingActions)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -96,8 +96,9 @@ export class ContractRuntime extends AbstractRuntime {
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
 		indexHistory: boolean,
+		ignoreMissingActions: boolean,
 	) {
-		super(indexHistory)
+		super(indexHistory, ignoreMissingActions)
 		this.#databaseAPI = vm
 			.wrapObject({
 				get: vm.wrapFunction((model, key) => {
@@ -145,7 +146,14 @@ export class ContractRuntime extends AbstractRuntime {
 
 		const actionHandle = this.actions[name]
 		const argsTransformer = this.argsTransformers[name]
-		assert(actionHandle !== undefined && argsTransformer !== undefined, `invalid action name: ${name}`)
+
+		if (actionHandle === undefined || argsTransformer === undefined) {
+			if (this.ignoreMissingActions) {
+				return
+			} else {
+				throw new Error(`invalid action name: ${name}`)
+			}
+		}
 
 		const typedArgs = argsTransformer.toTyped(args)
 		assert(typedArgs !== undefined, "action args did not validate the provided schema type")

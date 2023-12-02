@@ -6,7 +6,7 @@ import { AbstractModelDB, ModelValue, validateModelValue } from "@canvas-js/mode
 
 import target from "#target"
 
-import { assert, mapEntries, mapValues } from "../utils.js"
+import { assert, mapEntries } from "../utils.js"
 
 import { ActionImplementationFunction, Contract, ModelAPI } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
@@ -18,9 +18,9 @@ export class FunctionRuntime extends AbstractRuntime {
 		path: string | null,
 		signers: SessionSigner[],
 		contract: Contract,
-		options: { indexHistory?: boolean } = {},
+		options: { indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
 	): Promise<FunctionRuntime> {
-		const { indexHistory = true } = options
+		const { indexHistory = true, ignoreMissingActions = false } = options
 		const models = AbstractRuntime.getModelSchema(contract.models, { indexHistory })
 		const db = await target.openDB({ path, topic: contract.topic }, models)
 
@@ -45,7 +45,15 @@ export class FunctionRuntime extends AbstractRuntime {
 			return action.apply
 		})
 
-		return new FunctionRuntime(contract.topic, signers, db, actions, argsTransformers, indexHistory)
+		return new FunctionRuntime(
+			contract.topic,
+			signers,
+			db,
+			actions,
+			argsTransformers,
+			indexHistory,
+			ignoreMissingActions,
+		)
 	}
 
 	#context: ExecutionContext | null = null
@@ -61,8 +69,9 @@ export class FunctionRuntime extends AbstractRuntime {
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
 		indexHistory: boolean,
+		ignoreMissingActions: boolean,
 	) {
-		super(indexHistory)
+		super(indexHistory, ignoreMissingActions)
 
 		this.#db = {
 			get: async <T extends ModelValue = ModelValue>(model: string, key: string) => {
@@ -93,7 +102,13 @@ export class FunctionRuntime extends AbstractRuntime {
 
 		const argsTransformer = this.argsTransformers[name]
 		const action = this.actions[name]
-		assert(action !== undefined && argsTransformer !== undefined, `invalid action name: ${name}`)
+		if (action === undefined || argsTransformer === undefined) {
+			if (this.ignoreMissingActions) {
+				return
+			} else {
+				throw new Error(`invalid action name: ${name}`)
+			}
+		}
 
 		const typedArgs = argsTransformer.toTyped(args)
 		assert(typedArgs !== undefined, "action args did not validate the provided schema type")

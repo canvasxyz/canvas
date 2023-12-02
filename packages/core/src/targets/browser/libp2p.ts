@@ -98,6 +98,7 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 			fetch: fetchService({ protocolPrefix: "canvas" }),
 			discovery: discovery({
 				discoveryTopic: options.discoveryTopic,
+				discoveryInterval: options.discoveryInterval,
 				topicFilter: (topic) => topic.startsWith(GossipLogService.topicPrefix),
 			}),
 		},

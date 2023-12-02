@@ -45,7 +45,11 @@ export interface DiscoveryServiceInit {
 	autoDialPriority?: number
 }
 
-export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implements PeerDiscovery, Startable {
+export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
+	"peer:topics": CustomEvent<{ peerId: PeerId; topics: string[] }>
+}
+
+export class DiscoveryService extends EventEmitter<DiscoveryServiceEvents> implements PeerDiscovery, Startable {
 	public static FETCH_KEY_PREFIX = "discovery/"
 
 	public static INTERVAL = 5 * minute
@@ -143,14 +147,15 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 				const { topics, peerRecordEnvelope } = payload
 				assert(Array.isArray(topics), "expected Array.isArray(topics)")
 				assert(peerRecordEnvelope instanceof Uint8Array, "expected peerRecordEnvelope instanceof Uint8Array")
+				const { peerId, multiaddrs } = await this.openPeerRecord(peerRecordEnvelope)
+
+				this.log("received heartbeat from %s with topics %o", peerId, topics)
+				this.dispatchEvent(new CustomEvent("peer:topics", { detail: { peerId, topics } }))
 
 				const topicIntersection = this.pubsub.getTopics().filter((topic) => topics.includes(topic))
 				if (topicIntersection.length === 0) {
 					return
 				}
-
-				const { peerId, multiaddrs } = await this.openPeerRecord(peerRecordEnvelope)
-				this.log("received heartbeat from %s with topics %o", peerId, topics)
 
 				await this.components.peerStore.consumePeerRecord(peerRecordEnvelope, peerId)
 				this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))

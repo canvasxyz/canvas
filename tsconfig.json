@@ -26,6 +26,7 @@
     { "path": "./packages/chain-solana/test" },
     { "path": "./packages/chain-substrate" },
     { "path": "./packages/mudevm-sync" },
+    { "path": "./packages/replication-server" },
     { "path": "./packages/hooks" },
     { "path": "./packages/templates" }
   ]
