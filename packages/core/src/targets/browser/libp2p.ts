@@ -31,7 +31,7 @@ import type { NetworkConfig } from "../../Canvas.js"
 
 export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2pOptions<ServiceMap> {
 	const announce = options.announce ?? []
-	const listen = options.listen ?? ["/webrtc"]
+	const listen = options.listen ?? (options.enableWebRTC ? ["/webrtc"] : [])
 	const bootstrapList = options.bootstrapList ?? defaultBootstrapList
 
 	for (const address of announce) {
