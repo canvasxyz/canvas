@@ -27,20 +27,9 @@ import {
 } from "@canvas-js/core/constants"
 
 import type { ServiceMap } from "../interface.js"
+import type { NetworkConfig } from "../../Canvas.js"
 
-export function getLibp2pOptions(
-	peerId: PeerId,
-	options: {
-		offline?: boolean
-		start?: boolean
-		listen?: string[]
-		announce?: string[]
-		bootstrapList?: string[]
-		minConnections?: number
-		maxConnections?: number
-		discoveryTopic?: string
-	},
-): Libp2pOptions<ServiceMap> {
+export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2pOptions<ServiceMap> {
 	const announce = options.announce ?? []
 	const listen = options.listen ?? ["/webrtc"]
 	const bootstrapList = options.bootstrapList ?? defaultBootstrapList
@@ -66,7 +55,7 @@ export function getLibp2pOptions(
 	}
 
 	return {
-		start: false,
+		start: !options.offline,
 		peerId: peerId,
 		addresses: { listen, announce },
 
@@ -78,11 +67,7 @@ export function getLibp2pOptions(
 			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
 		},
 
-		transports: [
-			webSockets({ filter: all }),
-			webRTC({}),
-			circuitRelayTransport({ discoverRelays: announce.length === 0 ? bootstrapList.length : 0 }),
-		],
+		transports: [webSockets({ filter: all }), webRTC({}), circuitRelayTransport({ discoverRelays: 1 })],
 
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex({ disconnectThreshold: 20 })],

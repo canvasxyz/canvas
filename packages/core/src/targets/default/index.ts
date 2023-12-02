@@ -4,10 +4,6 @@ import type { GossipLogInit } from "@canvas-js/gossiplog"
 import type { PlatformTarget, ServiceMap } from "../interface.js"
 
 export default {
-	async getPeerId(location: { topic: string; path: string | null }): Promise<PeerId> {
-		throw new Error("Unsupported platform")
-	},
-
 	async openDB(location, models, { indexHistory } = {}) {
 		throw new Error("Unsupported platform")
 	},
@@ -19,7 +15,7 @@ export default {
 		throw new Error("Unsupported platform")
 	},
 
-	async createLibp2p(peerId, options): Promise<Libp2p<ServiceMap>> {
+	async createLibp2p(location: { topic: string; path: string | null }, options): Promise<Libp2p<ServiceMap>> {
 		throw new Error("Unsupported platform")
 	},
 } satisfies PlatformTarget

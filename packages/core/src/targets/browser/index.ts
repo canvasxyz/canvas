@@ -11,24 +11,27 @@ import type { PlatformTarget } from "../interface.js"
 import { getLibp2pOptions } from "./libp2p.js"
 
 export default {
-	async getPeerId({ topic }: { topic: string }): Promise<PeerId> {
-		const localStorageKey = `canvas/${topic}/peer-id`
-		const item = localStorage.getItem(localStorageKey)
-		if (item === null) {
-			const peerId = await createEd25519PeerId()
-			const privateKey = exportToProtobuf(peerId)
-			localStorage.setItem(localStorageKey, base64.baseEncode(privateKey))
-			return peerId
-		} else {
-			return await createFromProtobuf(base64.baseDecode(item))
-		}
-	},
-
 	openDB: ({ topic }, models, { indexHistory } = {}) =>
 		ModelDB.initialize({ name: `canvas/${topic}/db`, models, indexHistory }),
 
 	openGossipLog: <Payload, Result>({ topic }: { topic: string }, init: GossipLogInit<Payload, Result>) =>
 		GossipLog.open(init),
 
-	createLibp2p: (peerId, options) => createLibp2p(getLibp2pOptions(peerId, options)),
+	async createLibp2p(location, config) {
+		const peerId = await getPeerId(location)
+		return await createLibp2p(getLibp2pOptions(peerId, config))
+	},
 } satisfies PlatformTarget
+
+async function getPeerId({ topic }: { topic: string }): Promise<PeerId> {
+	const localStorageKey = `canvas/${topic}/peer-id`
+	const item = localStorage.getItem(localStorageKey)
+	if (item === null) {
+		const peerId = await createEd25519PeerId()
+		const privateKey = exportToProtobuf(peerId)
+		localStorage.setItem(localStorageKey, base64.baseEncode(privateKey))
+		return peerId
+	} else {
+		return await createFromProtobuf(base64.baseDecode(item))
+	}
+}

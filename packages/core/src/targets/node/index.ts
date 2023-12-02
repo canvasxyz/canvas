@@ -16,25 +16,6 @@ import { getLibp2pOptions } from "./libp2p.js"
 const PEER_ID_FILENAME = ".peer-id"
 
 export default {
-	async getPeerId(location: { topic: string; path: string | null }): Promise<PeerId> {
-		if (process.env.PEER_ID !== undefined) {
-			return createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
-		}
-
-		if (location.path === null) {
-			return await createEd25519PeerId()
-		}
-
-		const peerIdPath = path.resolve(location.path, PEER_ID_FILENAME)
-		if (fs.existsSync(peerIdPath)) {
-			return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
-		}
-
-		const peerId = await createEd25519PeerId()
-		fs.writeFileSync(peerIdPath, Buffer.from(exportToProtobuf(peerId)).toString("base64"))
-		return peerId
-	},
-
 	async openDB(location, models, { indexHistory } = {}) {
 		if (location.path === null) {
 			return new ModelDB({ path: null, models, indexHistory })
@@ -54,5 +35,27 @@ export default {
 		}
 	},
 
-	createLibp2p: (peerId, options) => createLibp2p(getLibp2pOptions(peerId, options)),
+	createLibp2p: async (location, config) => {
+		const peerId = await getPeerId(location)
+		return await createLibp2p(getLibp2pOptions(peerId, config))
+	},
 } satisfies PlatformTarget
+
+async function getPeerId(location: { topic: string; path: string | null }): Promise<PeerId> {
+	if (process.env.PEER_ID !== undefined) {
+		return createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
+	}
+
+	if (location.path === null) {
+		return await createEd25519PeerId()
+	}
+
+	const peerIdPath = path.resolve(location.path, PEER_ID_FILENAME)
+	if (fs.existsSync(peerIdPath)) {
+		return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
+	}
+
+	const peerId = await createEd25519PeerId()
+	fs.writeFileSync(peerIdPath, Buffer.from(exportToProtobuf(peerId)).toString("base64"))
+	return peerId
+}

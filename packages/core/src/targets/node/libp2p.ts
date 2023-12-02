@@ -31,20 +31,9 @@ import {
 } from "@canvas-js/core/constants"
 
 import type { ServiceMap } from "../interface.js"
+import { NetworkConfig } from "../../Canvas.js"
 
-export function getLibp2pOptions(
-	peerId: PeerId,
-	options: {
-		offline?: boolean
-		start?: boolean
-		listen?: string[]
-		announce?: string[]
-		bootstrapList?: string[]
-		minConnections?: number
-		maxConnections?: number
-		discoveryTopic?: string
-	},
-): Libp2pOptions<ServiceMap> {
+export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2pOptions<ServiceMap> {
 	const announce = options.announce ?? []
 	const listen = options.listen ?? []
 	const bootstrapList = options.bootstrapList ?? defaultBootstrapList
@@ -78,7 +67,7 @@ export function getLibp2pOptions(
 	}
 
 	return {
-		start: false,
+		start: !options.offline,
 		peerId: peerId,
 		addresses: { listen, announce },
 

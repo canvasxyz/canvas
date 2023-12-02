@@ -17,22 +17,30 @@ import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
 import { assert } from "./utils.js"
 
-export interface CanvasConfig<T extends Contract = Contract> {
+export interface NetworkConfig {
+	offline?: boolean
+
+	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
+	listen?: string[]
+
+	/** array of public WebSocket multiaddrs, e.g. "/dns4/myapp.com/tcp/443/wss" */
+	announce?: string[]
+
+	bootstrapList?: string[]
+	minConnections?: number
+	maxConnections?: number
+	discoveryTopic?: string
+}
+
+export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
 	contract: string | T
 
 	/** data directory path (NodeJS only) */
 	path?: string | null
 	signers?: SessionSigner[]
 
-	// libp2p options
-	offline?: boolean
-	start?: boolean
-	listen?: string[]
-	announce?: string[]
-	bootstrapList?: string[]
-	minConnections?: number
-	maxConnections?: number
-	discoveryTopic?: string
+	/** provide an existing libp2p instance instead of creating a new one */
+	libp2p?: Libp2p<ServiceMap>
 
 	/** set to `false` to disable history indexing and db.get(..) within actions */
 	indexHistory?: boolean
@@ -76,14 +84,12 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit })
 
-		const peerId = await target.getPeerId({ topic: runtime.topic, path })
-		let libp2p: Libp2p<ServiceMap> | null = null
-		if (!offline) {
-			libp2p = await target.createLibp2p(peerId, config)
-		}
+		const topic = runtime.topic
+
+		const libp2p = await Promise.resolve(config.libp2p ?? target.createLibp2p({ topic, path }, config))
 
 		const gossipLog = await target.openGossipLog<Action | Session, void | any>(
-			{ path, topic: runtime.topic },
+			{ topic, path },
 			{
 				topic: runtime.topic,
 				apply: runtime.getConsumer(),
@@ -92,9 +98,9 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			},
 		)
 
-		await libp2p?.services.gossiplog.subscribe(gossipLog, {})
+		await libp2p.services.gossiplog.subscribe(gossipLog, {})
 
-		return new Canvas(signers, peerId, libp2p, gossipLog, runtime)
+		return new Canvas(signers, libp2p, gossipLog, runtime)
 	}
 
 	public readonly db: AbstractModelDB
@@ -113,26 +119,25 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 	private constructor(
 		public readonly signers: SessionSigner[],
-		public readonly peerId: PeerId,
-		public readonly libp2p: Libp2p<ServiceMap> | null,
+		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly messageLog: AbstractGossipLog<Action | Session, void | any>,
 		private readonly runtime: Runtime,
 	) {
 		super()
 		this.db = runtime.db
 
-		this.log("initialized with peerId %p", peerId)
+		this.log("initialized with peerId %p", libp2p.peerId)
 
-		this.libp2p?.addEventListener("peer:discovery", ({ detail: { id, multiaddrs, protocols } }) => {
+		this.libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs, protocols } }) => {
 			this.log("discovered peer %p at %o with protocols %o", id, multiaddrs, protocols)
 		})
 
-		this.libp2p?.addEventListener("peer:connect", ({ detail: peerId }) => {
+		this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
 			this.log("connected to %p", peerId)
 			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
 		})
 
-		this.libp2p?.addEventListener("peer:disconnect", ({ detail: peerId }) => {
+		this.libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
 			this.log("disconnected %p", peerId)
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 		})
@@ -184,16 +189,12 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		}
 	}
 
+	public get peerId(): PeerId {
+		return this.libp2p.peerId
+	}
+
 	public get topic(): string {
 		return this.messageLog.topic
-	}
-
-	public async start() {
-		await this.libp2p?.start()
-	}
-
-	public async stop() {
-		await this.libp2p?.stop()
 	}
 
 	public async close() {
@@ -224,12 +225,8 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	 */
 	public async insert(signature: Signature, message: Message<Session | Action>): Promise<{ id: string }> {
 		assert(message.topic === this.topic, "invalid message topic")
-		if (this.libp2p === null) {
-			return this.messageLog.insert(signature, message)
-		} else {
-			const { id } = await this.libp2p.services.gossiplog.insert(signature, message)
-			return { id }
-		}
+		const { id } = await this.libp2p.services.gossiplog.insert(signature, message)
+		return { id }
 	}
 
 	/**
@@ -240,12 +237,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		payload: Session | Action,
 		options: { signer?: Signer<Message<Session | Action>> },
 	): Promise<{ id: string; result: void | any; recipients: Promise<PeerId[]> }> {
-		if (this.libp2p === null) {
-			const { id, result } = await this.messageLog.append(payload, options)
-			return { id, result, recipients: Promise.resolve([]) }
-		} else {
-			return this.libp2p.services.gossiplog.append(this.topic, payload, options)
-		}
+		return this.libp2p.services.gossiplog.append(this.topic, payload, options)
 	}
 
 	public async getMessage(

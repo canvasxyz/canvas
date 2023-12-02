@@ -158,13 +158,13 @@ export async function handler(args: Args) {
 	console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(app.topic)}`)
 	console.log(chalk.gray(`[canvas] Using PeerId ${app.peerId.toString()}`))
 
-	app.libp2p?.addEventListener("connection:open", ({ detail: connection }) => {
+	app.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
 		const peer = connection.remotePeer.toString()
 		const addr = connection.remoteAddr.decapsulateCode(421).toString()
 		console.log(chalk.gray(`[canvas] Opened connection to ${peer} at ${addr}`))
 	})
 
-	app.libp2p?.addEventListener("connection:close", ({ detail: connection }) => {
+	app.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
 		const peer = connection.remotePeer.toString()
 		const addr = connection.remoteAddr.decapsulateCode(421).toString()
 		console.log(chalk.gray(`[canvas] Closed connection to ${peer} at ${addr}`))
@@ -195,7 +195,7 @@ export async function handler(args: Args) {
 		)
 	})
 
-	await app.start()
+	// await app.start()
 
 	const api = express()
 	api.use(cors())
@@ -239,25 +239,6 @@ export async function handler(args: Args) {
 		0,
 	)
 
-	// const wss = new WebSocketServer({ noServer: true })
-
-	// const { pathname } = new URL(apiURL)
-	// server.on("upgrade", (req: http.IncomingMessage, socket: stream.Duplex, head: Buffer) => {
-	// 	if (req.url === undefined) {
-	// 		return
-	// 	}
-
-	// 	const url = new URL(req.url, origin)
-	// 	if (url.pathname === pathname) {
-	// 		wss.handleUpgrade(req, socket, head, (socket) =>
-	// 			handleWebsocketConnection(app, socket, { verbose: args.verbose })
-	// 		)
-	// 	} else {
-	// 		console.log(chalk.red("[canvas] rejecting incoming WS connection at unexpected path"), url.pathname)
-	// 		rejectRequest(socket, StatusCodes.NOT_FOUND)
-	// 	}
-	// })
-
 	let stopping = false
 	process.on("SIGINT", async () => {
 		if (stopping) {
@@ -267,8 +248,6 @@ export async function handler(args: Args) {
 			process.stdout.write(
 				`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`,
 			)
-
-			// if (apiSyncTimer) clearTimeout(apiSyncTimer.timer)
 
 			console.log("[canvas] Stopping API server...")
 			await new Promise<void>((resolve, reject) => server.stop((err) => (err ? reject(err) : resolve())))
@@ -280,11 +259,3 @@ export async function handler(args: Args) {
 		}
 	})
 }
-
-// function rejectRequest(reqSocket: stream.Duplex, code: number) {
-// 	const date = new Date()
-// 	reqSocket.write(`HTTP/1.1 ${code} ${getReasonPhrase(code)}\r\n`)
-// 	reqSocket.write(`Date: ${date.toUTCString()}\r\n`)
-// 	reqSocket.write(`\r\n`)
-// 	reqSocket.end()
-// }

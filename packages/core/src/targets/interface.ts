@@ -10,31 +10,19 @@ import type { AbstractGossipLog, GossipLogInit } from "@canvas-js/gossiplog"
 import type { GossipLogService } from "@canvas-js/gossiplog/service"
 import type { DiscoveryService } from "@canvas-js/discovery"
 
-export interface PlatformTarget {
-	getPeerId: (config: { path: string | null; topic: string }) => Promise<PeerId>
+import type { NetworkConfig } from "../Canvas.js"
 
-	createLibp2p: (
-		peerId: PeerId,
-		options: {
-			offline?: boolean
-			start?: boolean
-			listen?: string[]
-			announce?: string[]
-			bootstrapList?: string[]
-			minConnections?: number
-			maxConnections?: number
-			discoveryTopic?: string
-		},
-	) => Promise<Libp2p<ServiceMap>>
+export interface PlatformTarget {
+	createLibp2p: (location: { path: string | null; topic: string }, config: NetworkConfig) => Promise<Libp2p<ServiceMap>>
 
 	openDB: (
-		config: { path: string | null; topic: string },
+		location: { path: string | null; topic: string },
 		models: ModelsInit,
 		options?: { indexHistory?: Record<string, boolean> },
 	) => Promise<AbstractModelDB>
 
 	openGossipLog: <Payload, Result>(
-		config: { path: string | null; topic: string },
+		location: { path: string | null; topic: string },
 		init: GossipLogInit<Payload, Result>,
 	) => Promise<AbstractGossipLog<Payload, Result>>
 }
