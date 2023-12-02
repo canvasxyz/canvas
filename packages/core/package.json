@@ -22,7 +22,7 @@
     "#target": {
       "browser": "./lib/targets/browser/index.js",
       "node": "./lib/targets/node/index.js",
-      "default": "./lib/targets/index.js"
+      "default": "./lib/targets/default/index.js"
     }
   },
   "scripts": {
