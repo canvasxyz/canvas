@@ -46,6 +46,11 @@ export const App: React.FC<{}> = ({}) => {
 				],
 				offline: true,
 				enableWebRTC: true,
+				bootstrapList: [
+					"/dns4/canvas-chat.fly.dev/tcp/443/wss/p2p/12D3KooWRrJCTFxZZPWDkZJboAHBCmhZ5MK1fcixDybM8GAjJM2Q",
+					"/dns4/canvas-chat-2.fly.dev/tcp/443/wss/p2p/12D3KooWQW2V7moLojFaScKMza3mMqrvvQm9cEgwgyRnr271Z4tX",
+					"/dns4/canvas-chat-3.fly.dev/tcp/443/wss/p2p/12D3KooWCQQz7uozb287GZCRGv7DrrZTVDuUfh2bNCd3rpUHgpes",
+				],
 			}).then(setApp, (err) => console.error(err))
 		}
 	}, [])
