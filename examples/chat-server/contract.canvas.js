@@ -1,4 +1,4 @@
-export const topic = "example-chat.canvas.xyz";
+export const topic = "chat-example.canvas.xyz";
 
 export const models = {
   message: {

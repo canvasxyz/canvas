@@ -6,7 +6,7 @@ The simple chat example implements a public messaging room
 with persistence over libp2p.
 
 ```ts
-export const topic = "example-chat.canvas.xyz"
+export const topic = "chat-example.canvas.xyz"
 
 export const models = {
   message: {
