@@ -5,14 +5,14 @@ import { useLiveQuery } from "@canvas-js/hooks"
 import { AppContext } from "./AppContext.js"
 
 export interface MessagesProps {
-	address: string
+	address: string | null
 }
 
 type Message = { id: string; address: string; content: string; timestamp: number }
 
 export const Messages: React.FC<MessagesProps> = ({ address }) => {
 	const { app } = useContext(AppContext)
-	const scrollboxRef = useRef()
+	const scrollboxRef = useRef<HTMLDivElement | null>(null)
 
 	const messages = useLiveQuery<Message>(app, "message", {
 		orderBy: { timestamp: "asc" },
