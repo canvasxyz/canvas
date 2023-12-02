@@ -10,7 +10,7 @@ processes = []
 
 [mounts]
   destination = "/data"
-  source = "data"
+  source = "canvas_chat_data"
 
 [[services]]
   internal_port = 8080
@@ -25,8 +25,7 @@ processes = []
   [[services.ports]]
     handlers = ["tls", "http"]
     port = 443
-  
+
 [metrics]
   port = 8000
   path = "/metrics"
-
