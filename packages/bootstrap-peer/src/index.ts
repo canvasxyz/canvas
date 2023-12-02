@@ -22,8 +22,6 @@ console.log(
 	libp2p.getMultiaddrs().map((addr) => addr.toString()),
 )
 
-const controller = new AbortController()
-
 const server = getAPI(libp2p)
 const port = parseInt(process.env.PORT ?? "8000")
 server.listen(port, "::", () => {
@@ -36,7 +34,6 @@ server.listen(port, "::", () => {
 
 process.on("SIGINT", () => {
 	console.log("\nReceived SIGINT. Attempting to shut down gracefully.")
-	controller.abort()
 	server.close()
 	libp2p.stop()
 })
