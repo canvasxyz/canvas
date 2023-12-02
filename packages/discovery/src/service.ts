@@ -217,6 +217,8 @@ export class DiscoveryService extends EventEmitter<PeerDiscoveryEvents> implemen
 		}
 
 		const topic = key.slice(DiscoveryService.FETCH_KEY_PREFIX.length)
+		this.log("handling fetch request for peers on topic %s", topic)
+
 		const results: Uint8Array[] = []
 		for (const peerId of this.pubsub.getSubscribers(topic)) {
 			const { peerRecordEnvelope } = await this.components.peerStore.get(peerId)
