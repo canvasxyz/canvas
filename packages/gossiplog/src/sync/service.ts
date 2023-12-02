@@ -30,8 +30,10 @@ import {
 	SYNC_COOLDOWN_PERIOD,
 	SYNC_RETRY_INTERVAL,
 	SYNC_RETRY_LIMIT,
+	second,
 } from "../constants.js"
 import { CacheMap, shuffle, sortPair, wait } from "../utils.js"
+import { anySignal } from "any-signal"
 
 export interface SyncOptions {
 	minConnections?: number
@@ -151,6 +153,13 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 		const peerId = connection.remotePeer
 		this.log("opened incoming stream %s from peer %p", stream.id, peerId)
 
+		const signal = anySignal([this.#controller.signal, AbortSignal.timeout(3 * second)])
+		signal.addEventListener("abort", (err) => {
+			if (stream.status === "open") {
+				stream.abort(new Error("TIMEOUT"))
+			}
+		})
+
 		try {
 			await this.messages.serve(
 				async (source) => {
@@ -176,6 +185,8 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 			} else {
 				stream.abort(new Error("internal error"))
 			}
+		} finally {
+			signal.clear()
 		}
 	}
 
@@ -245,13 +256,20 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 	}
 
 	private async sync(peerId: PeerId, stream: Stream): Promise<void> {
+		const signal = anySignal([this.#controller.signal, AbortSignal.timeout(3 * second)])
+		signal.addEventListener("abort", (err) => {
+			if (stream.status === "open") {
+				stream.abort(new Error("TIMEOUT"))
+			}
+		})
+
 		const client = new Client(stream)
 		try {
 			this.log("initiating sync with peer %p", peerId)
-
 			const { root } = await this.messages.sync(client, { sourceId: peerId.toString() })
 			this.log("finished sync, got root hash %s", hex(root.hash))
 		} finally {
+			signal.clear()
 			client.end()
 			this.log("closed outgoing stream %s to peer %p", stream.id, peerId)
 		}
