@@ -73,7 +73,9 @@ const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
 								<PeerIdView peerId={connection.remotePeer} />
 							</div>
 							<div>
-								<code className="text-sm break-all">{connection.remoteAddr.decapsulateCode(421).toString()}</code>
+								<code className="text-sm break-all text-gray-500">
+									{connection.remoteAddr.decapsulateCode(421).toString()}
+								</code>
 							</div>
 						</li>
 					)
