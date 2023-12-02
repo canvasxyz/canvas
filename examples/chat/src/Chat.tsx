@@ -1,4 +1,4 @@
-import React, { useContext } from "react"
+import React, { useEffect, useContext, useRef } from "react"
 
 import { useLiveQuery } from "@canvas-js/hooks"
 
@@ -10,13 +10,25 @@ type Message = { id: string; address: string; content: string; timestamp: number
 
 export const Messages: React.FC<MessagesProps> = ({}) => {
 	const { app } = useContext(AppContext)
+	const scrollboxRef = useRef()
 
 	const messages = useLiveQuery<Message>(app, "message", {
 		orderBy: { timestamp: "asc" },
 	})
 
+	// keep scrolled down
+	useEffect(() => {
+		const box = scrollboxRef.current?.parentElement
+		if (!box) return
+		if (box.scrollTop === 0) {
+			box.scrollTop = box.scrollHeight
+		} else {
+			box.scrollTo({ top: box.scrollHeight, behavior: "smooth" })
+		}
+	}, [messages?.length])
+
 	return (
-		<div className="flex-1">
+		<div className="flex-1" ref={scrollboxRef}>
 			{messages?.map((message, i) => (
 				<MessageView key={message.id} message={message} previous={i === 0 ? null : messages[i - 1]} />
 			))}
