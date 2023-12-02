@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/chain-solana",
-  "version": "0.7.2-alpha.5",
+  "version": "0.7.2-alpha.6",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -19,7 +19,7 @@
     }
   },
   "dependencies": {
-    "@canvas-js/interfaces": "0.7.2-alpha.5",
+    "@canvas-js/interfaces": "0.7.2-alpha.6",
     "@ipld/dag-json": "^10.1.5",
     "@libp2p/logger": "^3.1.0",
     "@noble/curves": "^1.2.0",
