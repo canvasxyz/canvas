@@ -80,7 +80,7 @@ export const options: Libp2pOptions<ServiceMap> = {
 				maxReservations: 1024, // how many peers are allowed to reserve relay slots on this server
 				reservationClearInterval: 1 * minute, // how often to reclaim stale reservations
 				applyDefaultLimit: true, // whether to apply default data/duration limits to each relayed connection
-				reservationTtl: 1 * minute,
+				reservationTtl: 15 * minute,
 
 				// defaultDurationLimit: 15 * minute, // the default maximum amount of time a relayed connection can be open for
 				// defaultDataLimit: 4_000_000_000n, // the default maximum number of bytes that can be transferred over a relayed connection
