@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
-import { Canvas } from "@canvas-js/core"
+import { Canvas, defaultBootstrapList } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { ATPSigner } from "@canvas-js/chain-atp"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
@@ -45,11 +45,11 @@ export const App: React.FC<{}> = ({}) => {
 					new NEARSigner({}),
 				],
 				offline: true,
-				enableWebRTC: true,
 				bootstrapList: [
 					"/dns4/canvas-chat.fly.dev/tcp/443/wss/p2p/12D3KooWRrJCTFxZZPWDkZJboAHBCmhZ5MK1fcixDybM8GAjJM2Q",
 					"/dns4/canvas-chat-2.fly.dev/tcp/443/wss/p2p/12D3KooWQW2V7moLojFaScKMza3mMqrvvQm9cEgwgyRnr271Z4tX",
 					"/dns4/canvas-chat-3.fly.dev/tcp/443/wss/p2p/12D3KooWCQQz7uozb287GZCRGv7DrrZTVDuUfh2bNCd3rpUHgpes",
+					...defaultBootstrapList,
 				],
 			}).then(setApp, (err) => console.error(err))
 		}

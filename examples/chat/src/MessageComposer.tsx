@@ -21,7 +21,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({}) => {
 				}
 			}
 		},
-		[app, signer, value]
+		[app, signer, value],
 	)
 
 	if (app === null || signer === null) {
@@ -30,6 +30,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({}) => {
 
 	return (
 		<input
+			autoFocus
 			className="my-2 px-2 py-1 border rounded"
 			type="text"
 			value={value}
