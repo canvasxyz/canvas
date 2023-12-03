@@ -297,8 +297,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 			if (missingParents.size > 0) {
 				this.log("missing %d/%d parents", missingParents.size, message.parents.length)
-				this.mempool.add(id, { signature, message }, missingParents)
-				return { id }
+				// TODO: clarify separation between indexAncestors and mempool for missing parents
+				if (this.indexAncestors) {
+					this.mempool.add(id, { signature, message }, missingParents)
+					return { id }
+				}
 			}
 
 			await this.#insert(txn, id, signature, message, [key, value])
