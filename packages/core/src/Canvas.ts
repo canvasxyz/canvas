@@ -162,6 +162,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			this.log("disconnected %p", peerId)
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 			this.peers = this.peers.filter((peer) => peer.toString() !== peerId.toString())
+			delete this.connections[peerId.toString()]
 		})
 
 		this.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
@@ -169,6 +170,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		})
 		this.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
 			this._connections = this._connections.filter(({ id }) => id !== connection.id)
+			// todo: remove from this.connections[peer] too
 		})
 
 		this.libp2p.addEventListener("start", (event) => {
