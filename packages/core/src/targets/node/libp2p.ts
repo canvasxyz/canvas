@@ -104,6 +104,15 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 				fallbackToFloodsub: false,
 				allowPublishToZeroPeers: true,
 				globalSignaturePolicy: "StrictNoSign",
+				scoreParams: {
+					behaviourPenaltyWeight: -1.0, // 1/10th of default
+					retainScore: 10 * 1000, // 10 seconds, instead of 1 hour
+				},
+				scoreThresholds: {
+					gossipThreshold: -999_999_999, // default is -10
+					publishThreshold: -999_999_999, // default is -50
+					graylistThreshold: -999_999_999, // default is -80
+				},
 			}),
 
 			gossiplog: gossiplog({ sync: true }),
