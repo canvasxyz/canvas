@@ -41,7 +41,7 @@ const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
 
 	const handleConnectionsUpdate = useCallback(
 		({ detail: { connections } }: CustomEvent<{ connections: Connections }>) => {
-			setConnections(connections)
+			setConnections({ ...connections })
 		},
 		[],
 	)
@@ -66,9 +66,9 @@ const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
 								<PeerIdView peerId={peer} />
 							</div>
 							<div>
-								{peerConnections.map((connection) => {
+								{peerConnections.map((connection, index) => {
 									return (
-										<code className="text-sm break-all text-gray-500">
+										<code className="text-sm break-all text-gray-500" key={index}>
 											{connection.remoteAddr.decapsulateCode(421).toString()}
 										</code>
 									)
