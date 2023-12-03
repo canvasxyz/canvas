@@ -300,6 +300,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	}
 
 	/**
+	 * Insert an existing signed message into the log (ie received via PubSub)
 	 * Low-level utility method for internal and debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
@@ -310,6 +311,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	}
 
 	/**
+	 * Append a new message to the end of the log (ie an action generated locally)
 	 * Low-level utility method for internal and debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
