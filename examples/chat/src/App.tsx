@@ -45,6 +45,7 @@ export const App: React.FC<{}> = ({}) => {
 					new NEARSigner({}),
 				],
 				offline: true,
+				indexHistory: false,
 				bootstrapList: [
 					"/dns4/canvas-chat.fly.dev/tcp/443/wss/p2p/12D3KooWRrJCTFxZZPWDkZJboAHBCmhZ5MK1fcixDybM8GAjJM2Q",
 					"/dns4/canvas-chat-2.fly.dev/tcp/443/wss/p2p/12D3KooWQW2V7moLojFaScKMza3mMqrvvQm9cEgwgyRnr271Z4tX",

@@ -62,6 +62,11 @@ export const builder = (yargs: Argv) =>
 			desc: "Erase and rebuild the database by replaying the action log",
 			default: false,
 		})
+		.option("disableHistoryIndexing", {
+			type: "boolean",
+			desc: "Disable history indexing and db.get()",
+			default: false,
+		})
 		.option("memory", {
 			type: "boolean",
 			desc: "Run in-memory",
@@ -157,6 +162,7 @@ export async function handler(args: Args) {
 		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner(), new SolanaSigner()],
 		listen,
 		announce,
+		indexHistory: !args.disableHistoryIndexing,
 		minConnections: args["min-connections"],
 		maxConnections: args["max-connections"],
 		bootstrapList: bootstrapList,
