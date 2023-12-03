@@ -1,7 +1,7 @@
 {
   "name": "canvas",
   "private": true,
-  "version": "0.7.2-alpha.7",
+  "version": "0.7.2",
   "type": "module",
   "scripts": {
     "dev": "tsc --build --watch",
@@ -20,9 +20,9 @@
   ],
   "devDependencies": {
     "@ava/typescript": "^4.1.0",
-    "@canvas-js/chain-ethereum": "0.7.2-alpha.7",
-    "@canvas-js/hooks": "0.7.2-alpha.7",
-    "@canvas-js/templates": "0.7.2-alpha.7",
+    "@canvas-js/chain-ethereum": "0.7.2",
+    "@canvas-js/hooks": "0.7.2",
+    "@canvas-js/templates": "0.7.2",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.13.1",
     "@typescript-eslint/parser": "^6.13.1",
