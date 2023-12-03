@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
 
 import type { Connection } from "@libp2p/interface/connection"
-import { Canvas } from "@canvas-js/core"
+import { Canvas, Connections } from "@canvas-js/core"
 
 import { AppContext } from "./AppContext.js"
 
@@ -37,45 +37,42 @@ interface ConnectionListProps {
 }
 
 const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
-	const [connections, setConnections] = useState<Connection[]>([])
-	const connectionsRef = useRef<Connection[]>(connections)
+	const [connections, setConnections] = useState<Connections>()
 
-	const handleConnectionOpen = useCallback(({ detail: connection }: CustomEvent<Connection>) => {
-		const connections = [...connectionsRef.current, connection]
-		setConnections(connections)
-		connectionsRef.current = connections
-	}, [])
-
-	const handleConnectionClose = useCallback(({ detail: connection }: CustomEvent<Connection>) => {
-		const connections = connectionsRef.current.filter(({ id }) => id !== connection.id)
-		setConnections(connections)
-		connectionsRef.current = connections
-	}, [])
+	const handleConnectionsUpdate = useCallback(
+		({ detail: { connections } }: CustomEvent<{ connections: Connections }>) => {
+			setConnections(connections)
+		},
+		[],
+	)
 
 	useEffect(() => {
-		app.libp2p?.addEventListener("connection:open", handleConnectionOpen)
-		app.libp2p?.addEventListener("connection:close", handleConnectionClose)
+		app.addEventListener("connections:updated", handleConnectionsUpdate)
 		return () => {
-			app.libp2p?.removeEventListener("connection:open", handleConnectionOpen)
-			app.libp2p?.removeEventListener("connection:close", handleConnectionClose)
+			app.removeEventListener("connections:updated", handleConnectionsUpdate)
 		}
 	}, [])
 
-	if (connections.length === 0) {
+	if (!connections || Object.entries(connections).length === 0) {
 		return <div className="italic">No connections</div>
 	} else {
 		return (
 			<ul className="list-disc pl-4">
-				{connections.map((connection) => {
+				{Object.entries(connections).map(([peerId, { peer, status, connections: peerConnections }]) => {
 					return (
-						<li key={connection.id}>
+						<li key={peer.toString()}>
 							<div>
-								<PeerIdView peerId={connection.remotePeer} />
+								{status === "online" ? "🟢" : "🔴"}&nbsp;
+								<PeerIdView peerId={peer} />
 							</div>
 							<div>
-								<code className="text-sm break-all text-gray-500">
-									{connection.remoteAddr.decapsulateCode(421).toString()}
-								</code>
+								{peerConnections.map((connection) => {
+									return (
+										<code className="text-sm break-all text-gray-500">
+											{connection.remoteAddr.decapsulateCode(421).toString()}
+										</code>
+									)
+								})}
 							</div>
 						</li>
 					)

@@ -1,4 +1,5 @@
 import { PeerId } from "@libp2p/interface-peer-id"
+import type { Connection } from "@libp2p/interface/connection"
 import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
@@ -61,6 +62,7 @@ export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown>
 	close: Event
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
+	"connections:updated": CustomEvent<{ connections: Connections }>
 }
 
 export type CanvasLogEvent = CustomEvent<{
@@ -76,6 +78,9 @@ export type ApplicationData = {
 	models: Record<string, Model>
 	actions: string[]
 }
+
+export type ConnectionStatus = "online" | "offline"
+export type Connections = Record<string, { peer: PeerId; status: ConnectionStatus; connections: Connection[] }>
 
 export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEvents> {
 	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {
@@ -122,6 +127,11 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			: never
 	}
 
+	private pingTimer: ReturnType<typeof setTimeout> | undefined
+	private peers: PeerId[] = []
+	private _connections: Connection[] = []
+	public readonly connections: Connections = {}
+
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
 
@@ -145,11 +155,49 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
 			this.log("connected to %p", peerId)
 			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
+			this.peers = [...this.peers, peerId]
 		})
 
 		this.libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
 			this.log("disconnected %p", peerId)
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
+			this.peers = this.peers.filter((peer) => peer.toString() !== peerId.toString())
+		})
+
+		this.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
+			this._connections = [...this._connections, connection]
+		})
+		this.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
+			this._connections = this._connections.filter(({ id }) => id !== connection.id)
+		})
+
+		this.libp2p.addEventListener("start", (event) => {
+			this.pingTimer = setInterval(() => {
+				const pings = this.peers.map((peer) =>
+					this.libp2p.services.ping
+						.ping(peer)
+						.then((msec) => {
+							this.connections[peer.toString()] = {
+								peer,
+								status: "online",
+								connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
+							}
+						})
+						.catch((err) => {
+							this.connections[peer.toString()] = {
+								peer,
+								status: "offline",
+								connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
+							}
+						}),
+				)
+				Promise.allSettled(pings).then(() => {
+					this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: this.connections } }))
+				})
+			}, 3000)
+		})
+		this.libp2p.addEventListener("stop", (event) => {
+			clearInterval(this.pingTimer)
 		})
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
