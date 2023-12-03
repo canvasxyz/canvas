@@ -79,7 +79,7 @@ export type ApplicationData = {
 	actions: string[]
 }
 
-export type ConnectionStatus = "connecting" | "online" | "offline"
+export type ConnectionStatus = "connecting" | "online" | "offline" | "waiting"
 export type Connections = Record<string, { peer: PeerId; status: ConnectionStatus; connections: Connection[] }>
 
 export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEvents> {
@@ -174,25 +174,33 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				this.connections[remotePeerId] = {
 					peer,
 					status: "connecting",
-					connections: [connection]
+					connections: [connection],
 				}
 				this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: this.connections } }))
 			}
 		})
 		this.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
 			this._connections = this._connections.filter(({ id }) => id !== connection.id)
-			// todo: remove from this.connections[peer] too
+			const remotePeerId = connection.remoteAddr.getPeerId()?.toString()
+			if (remotePeerId && this.connections[remotePeerId]) {
+				this.connections[remotePeerId].connections = this.connections[remotePeerId].connections.filter(
+					({ id }) => id !== connection.id,
+				)
+			}
 		})
 
 		this.libp2p.addEventListener("start", (event) => {
 			this.pingTimer = setInterval(() => {
+				// topic is canvas/{app.topic}
+				const topics = this.libp2p.services.pubsub.getTopics()
+				const subscribers = this.libp2p.services.pubsub.getSubscribers(topics[0])
 				const pings = this.peers.map((peer) =>
 					this.libp2p.services.ping
 						.ping(peer)
 						.then((msec) => {
 							this.connections[peer.toString()] = {
 								peer,
-								status: "online",
+								status: subscribers.find((p) => p.toString() === peer.toString()) ? "online" : "waiting",
 								connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
 							}
 						})
@@ -275,6 +283,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			await this.libp2p.stop()
 			await this.messageLog.close()
 			await this.runtime.close()
+			this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: {} } }))
 			this.dispatchEvent(new Event("close"))
 			this.log("closed")
 		}

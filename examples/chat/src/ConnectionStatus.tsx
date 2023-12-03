@@ -62,7 +62,7 @@ const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
 					return (
 						<li key={peer.toString()}>
 							<div>
-								{status === "connecting" ? "🟡" : status === "online" ? "🟢" : "🔴"}&nbsp;
+								{status === "connecting" ? "🟡" : status === "online" ? "🟢" : status === "waiting" ? "⚪️" : "🔴"}&nbsp;
 								<PeerIdView peerId={peer} />
 							</div>
 							<div>
