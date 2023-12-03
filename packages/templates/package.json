@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/templates",
-  "version": "0.7.2-alpha.6",
+  "version": "0.7.2-alpha.7",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -12,6 +12,6 @@
     ".": "./lib/index.js"
   },
   "devDependencies": {
-    "@canvas-js/core": "0.7.2-alpha.6"
+    "@canvas-js/core": "0.7.2-alpha.7"
   }
 }
