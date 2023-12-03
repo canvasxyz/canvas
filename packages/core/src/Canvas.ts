@@ -79,7 +79,7 @@ export type ApplicationData = {
 	actions: string[]
 }
 
-export type ConnectionStatus = "online" | "offline"
+export type ConnectionStatus = "connecting" | "online" | "offline"
 export type Connections = Record<string, { peer: PeerId; status: ConnectionStatus; connections: Connection[] }>
 
 export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEvents> {
@@ -167,6 +167,17 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 		this.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
 			this._connections = [...this._connections, connection]
+			const remotePeerId = connection.remoteAddr.getPeerId()?.toString()
+			if (remotePeerId && !this.connections[remotePeerId]) {
+				const peer = this.peers.find((peer) => peer.toString() === remotePeerId)
+				if (!peer) return
+				this.connections[remotePeerId] = {
+					peer,
+					status: "connecting",
+					connections: [connection]
+				}
+				this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: this.connections } }))
+			}
 		})
 		this.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
 			this._connections = this._connections.filter(({ id }) => id !== connection.id)
