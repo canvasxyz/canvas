@@ -224,7 +224,9 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				)
 				Promise.allSettled(pings).then(() => {
 					this.updateStatus()
-					this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: this.connections } }))
+					this.dispatchEvent(
+						new CustomEvent("connections:updated", { detail: { connections: this.connections, status: this.status } }),
+					)
 				})
 			}, 3000)
 		}
@@ -301,7 +303,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		const newStatus = hasAnyOnline ? "connected" : "disconnected"
 		if (this.status !== newStatus) {
 			this.dispatchEvent(
-				new CustomEvent("connections:updated", { detail: { connections: this.connections, status: this.status } }),
+				new CustomEvent("connections:updated", { detail: { connections: this.connections, status: newStatus } }),
 			)
 		}
 		this.status = newStatus
