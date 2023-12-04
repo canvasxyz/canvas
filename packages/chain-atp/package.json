@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/chain-atp",
-  "version": "0.7.3",
+  "version": "0.8.0",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -21,8 +21,8 @@
   "dependencies": {
     "@atproto/api": "^0.6.23",
     "@atproto/crypto": "^0.2.3",
-    "@canvas-js/interfaces": "0.7.3",
-    "@canvas-js/signed-cid": "0.7.3",
+    "@canvas-js/interfaces": "0.8.0",
+    "@canvas-js/signed-cid": "0.8.0",
     "@ipld/car": "^5.2.4",
     "@ipld/dag-cbor": "^9.0.6",
     "@ipld/dag-json": "^10.1.5",
