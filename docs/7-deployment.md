@@ -1,20 +1,26 @@
 ---
-title: "Deploying"
+title: "Deployment Recommendations"
 ---
 
-# Deployment Tips
+# Deployment Recommendations
 
-Here are some recommendations for deploying applications to a production environment:
+## Table of Contents
 
-## Ensure realtime delivery of actions
+- [Turn sequencing off for realtime delivery](#turn-sequencing-off-for-realtime-delivery)
+- [Block user inputs & show the connection status](#block-user-inputs-show-the-connection-status)
+- [Keep WebRTC transports off](#keep-webrtc-transports-off)
+- [Universal replication servers](#universal-replication-servers)
+- [Stability improvements](#upgrades)
+
+## Turn sequencing off for realtime delivery
 
 By default, applications are configured with sequencing ("history indexing") on, which ensures that actions are delivered in exact, causal order.
 
-For realtime applications, we recommend turning it off. While it's useful for applications with structured data, for applications like chat and presence, it can cause peers to block and appear offline for 30+ seconds at a time, if someone sends a message while their internet connection is transient or flaky.
+For high-volume realtime applications, we recommend turning it off. While it's useful when actions must be executed in exact order (e.g. games), for applications like chat and presence, it can cause peers to block and appear offline for 30 seconds or more, if they send a message on a transient or flaky internet connection.
 
-You can do this by setting `indexHistory: false` when configuring your application. [See the canvas-chat example here.](https://github.com/canvasxyz/canvas/blob/46bef2263d6e7ec9b746ced2c47da52cb7d8190b/examples/chat/src/App.tsx#L48)
+You can do this by setting `indexHistory: false` when configuring your application. This causes all actions to be executed in realtime as they are received. ([Example](https://github.com/canvasxyz/canvas/blob/46bef2263d6e7ec9b746ced2c47da52cb7d8190b/examples/chat/src/App.tsx#L48))
 
-## Show the connection status
+## Block user inputs & show the connection status
 
 For realtime applications, you should also keep track of the user's connection status, and use it to block user inputs whenever the application is offline.
 
@@ -22,13 +28,15 @@ Use `app.status` to detect when your app has an online connection, which will be
 
 To subscribe to changes to the connection status, listen for a `connections:updated` event with `app.addEventListener("connections:updated")`.
 
-This event will also provide you with a `connections` object, which can be used to [list all the peers](https://canvas-chat.pages.dev/) that your application is connected to, and their individual connection status. Only peers that are actively sending and receiving actions for this application will be shown as `connected` (🟢), while other peers passively participating in the mesh will be shown as `waiting` (⚪️).
+This event will also provide you with a `connections` object, which can be used to [list all peers](https://canvas-chat.pages.dev/) that your application is connected to, and their individual connection status. Only peers that are actively sending and receiving actions for this application will be shown as `connected` (🟢), while other peers passively participating in the mesh will be shown as `waiting` (⚪️).  ([Example](https://github.com/canvasxyz/canvas/blob/46bef2263d6e7ec9b746ced2c47da52cb7d8190b/examples/chat/src/ConnectionStatus.tsx#L65))
 
 ## Keep WebRTC transports off
 
-Canvas applications can run over both WebSockets and browser-to-browser WebRTC, but for production applications, we recommend using only WebSockets for reliability. WebRTC is now disabled by default, unless you set `enableWebRTC: true`.
+Canvas applications can run over both WebSockets and browser-to-browser WebRTC, but for production applications, we recommend using only WebSockets for reliability.
 
-This means that your application will need a WebSocket server, e.g. an instance of your application running in Node.js or the Canvas CLI, or a server hosted by someone else.
+WebRTC is now disabled by default, unless you set `enableWebRTC: true`.
+
+This means that your application will need a WebSocket server, e.g. an instance of your application running in Node.js or the Canvas CLI, or on a server hosted by someone else.
 
 ## Universal replication servers
 
@@ -72,3 +80,7 @@ const { app } = useCanvas({
   ]
 })
 ```
+
+## Upgrades
+
+Stay up to date with the latest upgrades on our [Changelog](https://github.com/canvasxyz/canvas/releases).
