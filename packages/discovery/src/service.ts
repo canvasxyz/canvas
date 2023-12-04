@@ -163,7 +163,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 				}
 
 				await this.components.peerStore.consumePeerRecord(peerRecordEnvelope, peerId)
-				this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
+				this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs } }))
 
 				for (const topic of topicIntersection) {
 					const meshPeers = this.pubsub.getMeshPeers(topic)
