@@ -19,6 +19,7 @@ import type { ServiceMap } from "./targets/interface.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
 import { assert } from "./utils.js"
+import { GossipLogService } from "@canvas-js/gossiplog/service"
 
 export interface NetworkConfig {
 	offline?: boolean
@@ -201,9 +202,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 		const startPingTimer = () => {
 			this.pingTimer = setInterval(() => {
-				// topic is canvas/{app.topic}
-				const topics = this.libp2p.services.pubsub.getTopics()
-				const subscribers = this.libp2p.services.pubsub.getSubscribers(topics[0])
+				const subscribers = this.libp2p.services.pubsub.getSubscribers(GossipLogService.topicPrefix + this.topic)
 				const pings = this.peers.map((peer) =>
 					this.libp2p.services.ping
 						.ping(peer)
