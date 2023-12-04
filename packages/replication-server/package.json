@@ -1,7 +1,7 @@
 {
   "name": "@canvas-js/replication-server",
   "private": true,
-  "version": "0.8.0",
+  "version": "0.8.1",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "lib/index.js",
@@ -12,9 +12,9 @@
     "start": "node lib/index.js"
   },
   "dependencies": {
-    "@canvas-js/core": "0.8.0",
-    "@canvas-js/chain-ethereum": "0.8.0",
-    "@canvas-js/gossiplog": "0.8.0",
+    "@canvas-js/core": "0.8.1",
+    "@canvas-js/chain-ethereum": "0.8.1",
+    "@canvas-js/gossiplog": "0.8.1",
     "@chainsafe/libp2p-gossipsub": "^10.1.1",
     "@chainsafe/libp2p-noise": "^13.0.5",
     "@libp2p/bootstrap": "^9.0.12",
