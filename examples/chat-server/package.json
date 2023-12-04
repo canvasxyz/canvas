@@ -1,12 +1,12 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat-server",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "type": "module",
   "scripts": {
     "start": "canvas run /data/app --init contract.canvas.js --verbose --metrics --listen /ip6/::/tcp/8080/ws --announce /dns4/canvas-chat.fly.dev/tcp/443/wss"
   },
   "dependencies": {
-    "@canvas-js/cli": "0.8.2"
+    "@canvas-js/cli": "0.8.3"
   }
 }
