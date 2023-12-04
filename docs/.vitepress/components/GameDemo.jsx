@@ -82,9 +82,6 @@ const GameDemo = () => {
 
 	useEffect(() => {
 		if (!app) return () => {}
-		setTimeout(() => {
-			app.start()
-		}, 200)
 
 		app.libp2p?.addEventListener("connection:open", handleConnectionOpen)
 		app.libp2p?.addEventListener("connection:close", handleConnectionClose)
@@ -93,7 +90,6 @@ const GameDemo = () => {
 			app.libp2p?.removeEventListener("connection:open", handleConnectionOpen)
 			app.libp2p?.removeEventListener("connection:close", handleConnectionClose)
 			app.messageLog?.removeEventListener("sync", handleSync)
-			app.stop()
 		}
 	}, [app])
 
