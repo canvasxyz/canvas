@@ -94,6 +94,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			runtimeMemoryLimit,
 			indexHistory = true,
 			ignoreMissingActions = false,
+			offline,
 		} = config
 
 		if (signers.length === 0) {
@@ -118,7 +119,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 		await libp2p.services.gossiplog.subscribe(gossipLog, {})
 
-		return new Canvas(signers, libp2p, gossipLog, runtime)
+		return new Canvas(signers, libp2p, gossipLog, runtime, offline)
 	}
 
 	public readonly db: AbstractModelDB
@@ -146,6 +147,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly messageLog: AbstractGossipLog<Action | Session, void | any>,
 		private readonly runtime: Runtime,
+		offline?: boolean,
 	) {
 		super()
 		this.db = runtime.db
@@ -197,7 +199,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			}
 		})
 
-		this.libp2p.addEventListener("start", (event) => {
+		const startPingTimer = () => {
 			this.pingTimer = setInterval(() => {
 				// topic is canvas/{app.topic}
 				const topics = this.libp2p.services.pubsub.getTopics()
@@ -225,7 +227,15 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 					this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: this.connections } }))
 				})
 			}, 3000)
-		})
+		}
+
+		if (offline) {
+			this.libp2p.addEventListener("start", (event) => {
+				startPingTimer()
+			})
+		} else {
+			startPingTimer()
+		}
 		this.libp2p.addEventListener("stop", (event) => {
 			clearInterval(this.pingTimer)
 		})
