@@ -1,5 +1,4 @@
-import type { Libp2p } from "libp2p"
-import type { PeerId } from "@libp2p/interface/peer-id"
+import type { Libp2p, PeerId } from "@libp2p/interface"
 import type { GossipLogInit } from "@canvas-js/gossiplog"
 import type { PlatformTarget, ServiceMap } from "../interface.js"
 

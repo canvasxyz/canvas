@@ -143,7 +143,7 @@ export interface CanvasEvents {
   sync: CustomEvent<{ peer: string | null }>
 }
 
-export declare class Canvas extends EventEmitter<CanvasEvents> {
+export declare class Canvas extends TypedEventEmitter<CanvasEvents> {
   public static initialize(config: CanvasConfig): Promise<Canvas>
 
   public readonly topic: string

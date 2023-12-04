@@ -301,7 +301,7 @@ type GossipLogEvents<Payload, Result> = {
 }
 
 interface AbstractGossipLog<Payload = unknown, Result = unknown>
-  extends EventEmitter<GossipLogEvents<Payload, Result>> {
+  extends TypedEventEmitter<GossipLogEvents<Payload, Result>> {
   readonly topic: string
 
   public close(): Promise<void>

@@ -1,24 +1,27 @@
-import type { PeerStore } from "@libp2p/interface/peer-store"
-import type { Connection } from "@libp2p/interface/connection"
-import type { Startable } from "@libp2p/interface/startable"
-import type { PeerId } from "@libp2p/interface/peer-id"
-import type { Registrar } from "@libp2p/interface-internal/registrar"
-import type { ConnectionManager } from "@libp2p/interface-internal/connection-manager"
-import type { AddressManager } from "@libp2p/interface-internal/address-manager"
-import { CustomEvent, EventEmitter, TypedEventTarget } from "@libp2p/interface/events"
-import { Libp2pEvents } from "@libp2p/interface"
-import { PeerDiscovery, PeerDiscoveryEvents, peerDiscovery } from "@libp2p/interface/peer-discovery"
+import type { Libp2pEvents } from "@libp2p/interface"
+import type { AddressManager, ConnectionManager, Registrar } from "@libp2p/interface-internal"
+import {
+	TypedEventEmitter,
+	CustomEvent,
+	TypedEventTarget,
+	PeerDiscovery,
+	PeerDiscoveryEvents,
+	peerDiscoverySymbol,
+	PeerStore,
+	Connection,
+	Startable,
+	PeerId,
+} from "@libp2p/interface"
+
+import { Fetch as FetchService } from "@libp2p/fetch"
+import { PeerRecord, RecordEnvelope } from "@libp2p/peer-record"
+import { logger } from "@libp2p/logger"
 
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 
-// import { P2P, WebRTC, WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
-
-import { FetchService } from "libp2p/fetch"
-import { PeerRecord, RecordEnvelope } from "@libp2p/peer-record"
-import { logger } from "@libp2p/logger"
-import { GossipSub } from "@chainsafe/libp2p-gossipsub"
+import { GossipSub, multicodec as GossipsubIDv11 } from "@chainsafe/libp2p-gossipsub"
 import * as cbor from "@ipld/dag-cbor"
 import PQueue from "p-queue"
 
@@ -50,7 +53,7 @@ export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
 	"peer:topics": CustomEvent<{ peerId: PeerId; topics: string[] }>
 }
 
-export class DiscoveryService extends EventEmitter<DiscoveryServiceEvents> implements PeerDiscovery, Startable {
+export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> implements PeerDiscovery, Startable {
 	public static FETCH_KEY_PREFIX = "discovery/"
 
 	public static INTERVAL = 5 * minute
@@ -68,7 +71,6 @@ export class DiscoveryService extends EventEmitter<DiscoveryServiceEvents> imple
 
 	private static extractFetchService(components: DiscoveryServiceComponents): FetchService {
 		assert(components.fetch !== undefined)
-		assert(components.fetch.protocol.startsWith("/canvas/fetch/"))
 		return components.fetch
 	}
 
@@ -103,7 +105,7 @@ export class DiscoveryService extends EventEmitter<DiscoveryServiceEvents> imple
 		this.addressFilter = init.addressFilter ?? ((addr) => true)
 	}
 
-	get [peerDiscovery](): PeerDiscovery {
+	get [peerDiscoverySymbol](): PeerDiscovery {
 		return this
 	}
 
@@ -118,7 +120,7 @@ export class DiscoveryService extends EventEmitter<DiscoveryServiceEvents> imple
 	public async start() {
 		this.fetch.registerLookupFunction(DiscoveryService.FETCH_KEY_PREFIX, this.handleFetch)
 
-		this.#registrarId = await this.components.registrar.register(this.fetch.protocol, {
+		this.#registrarId = await this.components.registrar.register(GossipsubIDv11, {
 			onConnect: (peerId: PeerId, connection: Connection) => {
 				if (connection.transient) {
 					return
@@ -220,9 +222,9 @@ export class DiscoveryService extends EventEmitter<DiscoveryServiceEvents> imple
 		}
 	}
 
-	private handleFetch = async (key: string): Promise<Uint8Array | null> => {
+	private handleFetch = async (key: string): Promise<Uint8Array | undefined> => {
 		if (!key.startsWith(DiscoveryService.FETCH_KEY_PREFIX)) {
-			return null
+			return undefined
 		}
 
 		const topic = key.slice(DiscoveryService.FETCH_KEY_PREFIX.length)
@@ -256,8 +258,8 @@ export class DiscoveryService extends EventEmitter<DiscoveryServiceEvents> imple
 					const key = DiscoveryService.FETCH_KEY_PREFIX + topic
 					this.log("fetching key %s from %p", key, connection.remotePeer)
 					const result = await this.fetch.fetch(connection.remotePeer, key)
-					if (result === null) {
-						this.log("got null result")
+					if (result === undefined) {
+						this.log("got undefined result")
 						continue
 					}
 

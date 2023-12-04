@@ -1,12 +1,9 @@
 import type { Libp2pOptions } from "libp2p"
-import type { PeerId } from "@libp2p/interface/peer-id"
-import { pingService } from "libp2p/ping"
-import { identifyService } from "libp2p/identify"
-import { fetchService } from "libp2p/fetch"
-import { circuitRelayTransport } from "libp2p/circuit-relay"
-
-import { WebRTC, WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
-
+import type { PeerId } from "@libp2p/interface"
+import { ping as pingService } from "@libp2p/ping"
+import { identify as identifyService } from "@libp2p/identify"
+import { fetch as fetchService } from "@libp2p/fetch"
+import { circuitRelayTransport } from "@libp2p/circuit-relay-v2"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
@@ -15,18 +12,13 @@ import { webRTC } from "@libp2p/webrtc"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+import { WebRTC, WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 
 import { GossipLogService, gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
-import {
-	DIAL_CONCURRENCY,
-	DIAL_CONCURRENCY_PER_PEER,
-	MAX_CONNECTIONS,
-	MIN_CONNECTIONS,
-	PING_TIMEOUT,
-} from "@canvas-js/core/constants"
+import { DIAL_CONCURRENCY, MAX_CONNECTIONS, MIN_CONNECTIONS, PING_TIMEOUT } from "@canvas-js/core/constants"
 
 import type { ServiceMap } from "../interface.js"
 import type { NetworkConfig } from "../../Canvas.js"
@@ -67,7 +59,6 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 			minConnections: options.minConnections ?? MIN_CONNECTIONS,
 			maxConnections: options.maxConnections ?? MAX_CONNECTIONS,
 			autoDialConcurrency: DIAL_CONCURRENCY,
-			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
 		},
 
 		transports: [

@@ -2,20 +2,16 @@ import type { ExecutionContext } from "ava"
 
 import pDefer, { DeferredPromise } from "p-defer"
 
-import type { PeerId } from "@libp2p/interface/peer-id"
-import type { EventHandler } from "@libp2p/interface/events"
-import type { PubSub } from "@libp2p/interface/pubsub"
-
-import { Libp2p, createLibp2p } from "libp2p"
-import { identifyService } from "libp2p/identify"
-import { plaintext } from "libp2p/insecure"
+import type { PeerId, EventHandler, PubSub, Libp2p } from "@libp2p/interface"
+import { createLibp2p } from "libp2p"
+import { identify as identifyService } from "@libp2p/identify"
+import { plaintext } from "@libp2p/plaintext"
 import { tcp } from "@libp2p/tcp"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
-import { gossipsub } from "@chainsafe/libp2p-gossipsub"
-
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { logger } from "@libp2p/logger"
+import { createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 
 import { Signature } from "@canvas-js/signed-cid"
 import { Message } from "@canvas-js/interfaces"

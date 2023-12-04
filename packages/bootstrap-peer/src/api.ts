@@ -7,8 +7,7 @@ import { anySignal } from "any-signal"
 
 import client from "prom-client"
 
-import type { Libp2p } from "libp2p"
-import type { PeerId } from "@libp2p/interface/peer-id"
+import type { Libp2p, PeerId } from "@libp2p/interface"
 import { peerIdFromString } from "@libp2p/peer-id"
 
 import { PING_TIMEOUT } from "./constants.js"

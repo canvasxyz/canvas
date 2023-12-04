@@ -1,4 +1,4 @@
-import type { PeerId } from "@libp2p/interface-peer-id"
+import type { PeerId } from "@libp2p/interface"
 import { anySignal } from "any-signal"
 import * as cbor from "@ipld/dag-cbor"
 

@@ -1,7 +1,4 @@
-import type { PeerId } from "@libp2p/interface/peer-id"
-import type { Connection, Stream } from "@libp2p/interface/connection"
-import type { StreamHandler, StreamHandlerOptions } from "@libp2p/interface/stream-handler"
-import type { Startable } from "@libp2p/interface/startable"
+import type { Startable, PeerId, Connection, Stream, StreamHandler, StreamHandlerOptions } from "@libp2p/interface"
 
 import { Logger, logger } from "@libp2p/logger"
 

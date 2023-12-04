@@ -1,10 +1,10 @@
 import chalk from "chalk"
 
 import type { Libp2pOptions } from "libp2p"
-import type { PeerId } from "@libp2p/interface/peer-id"
-import { pingService } from "libp2p/ping"
-import { identifyService } from "libp2p/identify"
-import { fetchService } from "libp2p/fetch"
+import type { PeerId } from "@libp2p/interface"
+import { ping as pingService } from "@libp2p/ping"
+import { fetch as fetchService } from "@libp2p/fetch"
+import { identify as identifyService } from "@libp2p/identify"
 
 import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 
@@ -24,13 +24,7 @@ import { GossipLogService, gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
-import {
-	DIAL_CONCURRENCY,
-	DIAL_CONCURRENCY_PER_PEER,
-	MAX_CONNECTIONS,
-	MIN_CONNECTIONS,
-	PING_TIMEOUT,
-} from "@canvas-js/core/constants"
+import { DIAL_CONCURRENCY, MAX_CONNECTIONS, MIN_CONNECTIONS, PING_TIMEOUT } from "@canvas-js/core/constants"
 
 import type { ServiceMap } from "../interface.js"
 import { NetworkConfig } from "../../Canvas.js"
@@ -78,7 +72,6 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 			minConnections: options.minConnections ?? MIN_CONNECTIONS,
 			maxConnections: options.maxConnections ?? MAX_CONNECTIONS,
 			autoDialConcurrency: DIAL_CONCURRENCY,
-			maxParallelDialsPerPeer: DIAL_CONCURRENCY_PER_PEER,
 		},
 
 		transports: [webSockets({ filter: all })],
