@@ -1,7 +1,7 @@
 {
   "name": "@canvas-js/example-forum",
   "private": true,
-  "version": "0.8.2-patch.1",
+  "version": "0.8.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.8.2-patch.1",
-    "@canvas-js/hooks": "0.8.2-patch.1",
-    "@canvas-js/templates": "0.8.2-patch.1",
+    "@canvas-js/chain-ethereum": "0.8.2",
+    "@canvas-js/hooks": "0.8.2",
+    "@canvas-js/templates": "0.8.2",
     "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",
     "@irys/query": "^0.0.2",
