@@ -3,6 +3,7 @@ import type { Connection } from "@libp2p/interface/connection"
 import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
+import * as cbor from "@ipld/dag-cbor"
 
 import { Action, Session, Message, Signer, SessionSigner } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
@@ -246,6 +247,15 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				if (results.length === 0) {
 					const { id: sessionId } = await this.append(session, { signer })
 					this.log("created session %s", sessionId)
+				} else {
+					try {
+						const row = results[0]
+						const signature = cbor.decode<Signature>(Buffer.from(row.rawSignature as string, 'hex'))
+						const message = cbor.decode<Message<Session>>(Buffer.from(row.rawMessage as string, 'hex'))
+						this.insert(signature, message)
+					} catch (err) {
+						this.log("failed to rebroadcast session for action")
+					}
 				}
 
 				const argsTransformer = runtime.argsTransformers[name]

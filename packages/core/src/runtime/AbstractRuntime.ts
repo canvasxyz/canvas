@@ -47,6 +47,8 @@ export abstract class AbstractRuntime {
 			public_key: "string",
 			address: "string",
 			expiration: "integer?",
+			rawMessage: "string",
+			rawSignature: "string",
 			$indexes: [["address"], ["public_key"]],
 		},
 	} satisfies ModelsInit
@@ -77,7 +79,10 @@ export abstract class AbstractRuntime {
 	>
 
 	protected readonly log = logger("canvas:runtime")
-	protected constructor(public readonly indexHistory: boolean, public readonly ignoreMissingActions: boolean) {}
+	protected constructor(
+		public readonly indexHistory: boolean,
+		public readonly ignoreMissingActions: boolean,
+	) {}
 
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
 
@@ -113,6 +118,8 @@ export abstract class AbstractRuntime {
 					public_key: publicKey,
 					address: address,
 					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
+					rawMessage: Buffer.from(cbor.encode(message)).toString("hex"),
+					rawSignature: Buffer.from(cbor.encode(signature)).toString("hex"),
 				})
 			} else if (AbstractRuntime.isAction(message)) {
 				const { address, timestamp } = message.payload
