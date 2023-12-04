@@ -63,7 +63,7 @@ export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown>
 	close: Event
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
-	"connections:updated": CustomEvent<{ connections: Connections }>
+	"connections:updated": CustomEvent<{ connections: Connections; status: AppConnectionStatus }>
 }
 
 export type CanvasLogEvent = CustomEvent<{
@@ -80,6 +80,7 @@ export type ApplicationData = {
 	actions: string[]
 }
 
+export type AppConnectionStatus = "connected" | "disconnected"
 export type ConnectionStatus = "connecting" | "online" | "offline" | "waiting"
 export type Connections = Record<string, { peer: PeerId; status: ConnectionStatus; connections: Connection[] }>
 
@@ -132,6 +133,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 	private peers: PeerId[] = []
 	private _connections: Connection[] = []
 	public readonly connections: Connections = {}
+	public status: AppConnectionStatus = "disconnected"
 
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
@@ -164,6 +166,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 			this.peers = this.peers.filter((peer) => peer.toString() !== peerId.toString())
 			delete this.connections[peerId.toString()]
+			this.updateStatus()
 		})
 
 		this.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
@@ -177,7 +180,9 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 					status: "connecting",
 					connections: [connection],
 				}
-				this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: this.connections } }))
+				this.dispatchEvent(
+					new CustomEvent("connections:updated", { detail: { connections: this.connections, status: this.status } }),
+				)
 			}
 		})
 		this.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
@@ -187,6 +192,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				this.connections[remotePeerId].connections = this.connections[remotePeerId].connections.filter(
 					({ id }) => id !== connection.id,
 				)
+				this.updateStatus()
 			}
 		})
 
@@ -214,6 +220,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 						}),
 				)
 				Promise.allSettled(pings).then(() => {
+					this.updateStatus()
 					this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: this.connections } }))
 				})
 			}, 3000)
@@ -250,8 +257,8 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				} else {
 					try {
 						const row = results[0]
-						const signature = cbor.decode<Signature>(Buffer.from(row.rawSignature as string, 'hex'))
-						const message = cbor.decode<Message<Session>>(Buffer.from(row.rawMessage as string, 'hex'))
+						const signature = cbor.decode<Signature>(Buffer.from(row.rawSignature as string, "hex"))
+						const message = cbor.decode<Message<Session>>(Buffer.from(row.rawMessage as string, "hex"))
 						this.insert(signature, message)
 					} catch (err) {
 						this.log("failed to rebroadcast session for action")
@@ -276,6 +283,17 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 			Object.assign(this.actions, { [name]: action })
 		}
+	}
+
+	private updateStatus() {
+		const hasAnyOnline = Object.entries(this.connections).some(([peerId, conn]) => conn.status === "online")
+		const newStatus = hasAnyOnline ? "connected" : "disconnected"
+		if (this.status !== newStatus) {
+			this.dispatchEvent(
+				new CustomEvent("connections:updated", { detail: { connections: this.connections, status: this.status } }),
+			)
+		}
+		this.status = newStatus
 	}
 
 	public get peerId(): PeerId {

@@ -11,6 +11,12 @@ export interface ConnectionStatusProps {}
 
 export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
 	const { app } = useContext(AppContext)
+
+	const [status, setStatus] = useState("--")
+	useEffect(() => {
+		app?.addEventListener("connections:updated", () => setStatus(app.status))
+	}, [app])
+
 	if (app === null) {
 		return null
 	}
@@ -25,7 +31,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
 			</div>
 			<hr />
 			<div>
-				<span className="text-sm">Connections</span>
+				<span className="text-sm">Connections (Status: {status})</span>
 			</div>
 			<ConnectionList app={app} />
 		</div>
