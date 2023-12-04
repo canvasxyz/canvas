@@ -237,6 +237,10 @@ To enable debugging output, you can set a filter in localStorage:
 
 `localStorage.setItem("debug", "canvas:*")`
 
+To enable debugging for libp2p, you can set a similar filter:
+
+`localStorage.setItem("debug", "canvas:*, libp2p:*")`
+
 When using the command line, set an environment variable instead:
 
 `DEBUG="canvas:*"`

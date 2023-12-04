@@ -45,6 +45,7 @@ export default defineConfig({
 						{ text: "Authentication", link: "/4-authentication" },
 						{ text: "Querying", link: "/5-querying" },
 						{ text: "Advanced Features", link: "/6-advanced" },
+						{ text: "Deployment Tips", link: "/7-production" },
 					],
 				},
 				{
