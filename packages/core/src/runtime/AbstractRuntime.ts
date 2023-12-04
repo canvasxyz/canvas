@@ -118,8 +118,8 @@ export abstract class AbstractRuntime {
 					public_key: publicKey,
 					address: address,
 					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
-					rawMessage: Buffer.from(cbor.encode(message)).toString("hex"),
-					rawSignature: Buffer.from(cbor.encode(signature)).toString("hex"),
+					rawMessage: bytesToHex(cbor.encode(message)),
+					rawSignature: bytesToHex(cbor.encode(signature)),
 				})
 			} else if (AbstractRuntime.isAction(message)) {
 				const { address, timestamp } = message.payload

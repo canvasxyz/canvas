@@ -4,6 +4,7 @@ import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils"
 
 import { Action, Session, Message, Signer, SessionSigner } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
@@ -257,8 +258,8 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 				} else {
 					try {
 						const row = results[0]
-						const signature = cbor.decode<Signature>(Buffer.from(row.rawSignature as string, "hex"))
-						const message = cbor.decode<Message<Session>>(Buffer.from(row.rawMessage as string, "hex"))
+						const signature = cbor.decode<Signature>(hexToBytes(row.rawSignature as string))
+						const message = cbor.decode<Message<Session>>(hexToBytes(row.rawMessage as string))
 						this.insert(signature, message)
 					} catch (err) {
 						this.log("failed to rebroadcast session for action")
