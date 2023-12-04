@@ -244,3 +244,13 @@ To enable debugging for libp2p, you can set a similar filter:
 When using the command line, set an environment variable instead:
 
 `DEBUG="canvas:*"`
+
+Finally, there are times when past data in IndexedDB may interfere
+with an application's operation. We try to detect and recover from
+this scenario, but if you encounter it, you can run this in the
+console to clear any past data:
+
+```ts
+const dbs = await window.indexedDB.databases()
+dbs.forEach(db => { window.indexedDB.deleteDatabase(db.name) })
+```
