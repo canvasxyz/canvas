@@ -122,7 +122,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 		await libp2p.services.gossiplog.subscribe(gossipLog, {})
 
-		return new Canvas(signers, libp2p, gossipLog, runtime, offline)
+		return new Canvas(signers, libp2p, gossipLog, runtime, offline, disablePing)
 	}
 
 	public readonly db: AbstractModelDB
