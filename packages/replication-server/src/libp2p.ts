@@ -73,7 +73,7 @@ export const options: Libp2pOptions<ServiceMap> = {
 
 	peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
 
-	streamMuxers: [mplex()],
+	streamMuxers: [mplex({ disconnectThreshold: 500 })],
 	connectionEncryption: [noise()],
 	metrics: prometheusMetrics(),
 	services: {
