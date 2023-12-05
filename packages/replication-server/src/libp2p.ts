@@ -115,9 +115,9 @@ export const options: Libp2pOptions<ServiceMap> = {
 				retainScore: 10 * 1000, // 10 seconds, instead of 1 hour
 			},
 			scoreThresholds: {
-				gossipThreshold: -999_999_999, // default is -10
-				publishThreshold: -999_999_999, // default is -50
-				graylistThreshold: -999_999_999, // default is -80
+				gossipThreshold: -10, // default is -10
+				publishThreshold: -50, // default is -50
+				graylistThreshold: -80, // default is -80
 			},
 		}),
 
