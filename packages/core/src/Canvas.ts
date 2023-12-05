@@ -23,6 +23,7 @@ import { GossipLogService } from "@canvas-js/gossiplog/service"
 
 export interface NetworkConfig {
 	offline?: boolean
+	disablePing?: boolean
 
 	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
 	listen?: string[]
@@ -96,6 +97,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			indexHistory = true,
 			ignoreMissingActions = false,
 			offline,
+			disablePing,
 		} = config
 
 		if (signers.length === 0) {
@@ -149,6 +151,7 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 		public readonly messageLog: AbstractGossipLog<Action | Session, void | any>,
 		private readonly runtime: Runtime,
 		offline?: boolean,
+		disablePing?: boolean,
 	) {
 		super()
 		this.db = runtime.db
@@ -230,11 +233,11 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 			}, 3000)
 		}
 
-		if (offline) {
+		if (offline && !disablePing) {
 			this.libp2p.addEventListener("start", (event) => {
 				startPingTimer()
 			})
-		} else {
+		} else if (!disablePing) {
 			startPingTimer()
 		}
 		this.libp2p.addEventListener("stop", (event) => {

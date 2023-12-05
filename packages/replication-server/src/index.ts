@@ -57,6 +57,7 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics } 
 				libp2p,
 				indexHistory: false,
 				ignoreMissingActions: true,
+				disablePing: true,
 			})
 
 			apps.set(appTopic, app)
