@@ -1,4 +1,4 @@
-import type { PeerId } from "@libp2p/interface-peer-id"
+import type { PeerId } from "@libp2p/interface/peer-id"
 
 import type { Registrar } from "@libp2p/interface-internal/registrar"
 import type { ConnectionManager } from "@libp2p/interface-internal/connection-manager"
@@ -48,10 +48,7 @@ export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unkn
 	#syncServices = new Map<string, SyncService<unknown, unknown>>()
 	#pubsub: GossipSub
 
-	constructor(
-		private readonly components: GossipLogServiceComponents,
-		init: GossipLogServiceInit,
-	) {
+	constructor(private readonly components: GossipLogServiceComponents, init: GossipLogServiceInit) {
 		super()
 		this.sync = init.sync ?? true
 		this.#pubsub = GossipLogService.extractGossipSub(components)
