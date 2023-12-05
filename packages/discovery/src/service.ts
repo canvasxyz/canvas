@@ -316,6 +316,11 @@ export class DiscoveryService extends EventEmitter<DiscoveryServiceEvents> imple
 				}
 			})
 
+		if (addrs.length === 0) {
+			this.log("no dialable addresses")
+			return Promise.resolve()
+		}
+
 		this.log("dialing %O", addrs)
 		return this.components.connectionManager.openConnection(addrs, { priority: this.autoDialPriority }).then(
 			() => this.log("connection opened successfully"),
