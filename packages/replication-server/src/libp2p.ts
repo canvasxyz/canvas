@@ -38,15 +38,6 @@ async function denyDialMultiaddr(addr: Multiaddr) {
 		return true
 	}
 
-	if (
-		bootstrapList
-			.map(multiaddr)
-			.map((addr) => addr.getPeerId()?.toString())
-			.indexOf(peerId.toString())
-	) {
-		return true
-	}
-
 	return false
 }
 
@@ -114,11 +105,11 @@ export const options: Libp2pOptions<ServiceMap> = {
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictNoSign",
-			// directPeers: bootstrapList.map(multiaddr).map((addr) => {
-			// 	const id = addr.getPeerId()
-			// 	assert(id !== null)
-			// 	return { id: peerIdFromString(id), addrs: [addr] }
-			// }),
+			directPeers: bootstrapList.map(multiaddr).map((addr) => {
+				const id = addr.getPeerId()
+				assert(id !== null)
+				return { id: peerIdFromString(id), addrs: [addr] }
+			}),
 			scoreParams: {
 				behaviourPenaltyWeight: -1.0, // 1/10th of default
 				retainScore: 10 * 1000, // 10 seconds, instead of 1 hour
