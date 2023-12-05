@@ -72,8 +72,7 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 
 		transports: [
 			webSockets({ filter: all }),
-			circuitRelayTransport({ discoverRelays: bootstrapList.length }),
-			...(enableWebRTC ? [webRTC({})] : []),
+			...(enableWebRTC ? [circuitRelayTransport({ discoverRelays: bootstrapList.length }), webRTC({})] : []),
 		],
 
 		connectionEncryption: [noise()],
