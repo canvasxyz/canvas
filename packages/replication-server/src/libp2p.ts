@@ -110,6 +110,15 @@ export const options: Libp2pOptions<ServiceMap> = {
 				assert(id !== null)
 				return { id: peerIdFromString(id), addrs: [addr] }
 			}),
+			scoreParams: {
+				behaviourPenaltyWeight: -1.0, // 1/10th of default
+				retainScore: 10 * 1000, // 10 seconds, instead of 1 hour
+			},
+			scoreThresholds: {
+				gossipThreshold: -999_999_999, // default is -10
+				publishThreshold: -999_999_999, // default is -50
+				graylistThreshold: -999_999_999, // default is -80
+			},
 		}),
 
 		fetch: fetchService({ protocolPrefix: "canvas" }),
