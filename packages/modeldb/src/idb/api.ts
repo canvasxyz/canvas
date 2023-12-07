@@ -84,7 +84,7 @@ export class ModelAPI {
 					continue
 				}
 
-				this.log("using index %o", index)
+				// this.log("using index %o", index)
 
 				const storeIndex = store.index(getIndexName(index))
 
