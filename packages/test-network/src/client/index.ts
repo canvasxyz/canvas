@@ -23,9 +23,8 @@ app.libp2p.addEventListener("connection:close", ({ detail: connection }) =>
 
 await new Promise((resolve) => setTimeout(resolve, 5 * 1000))
 
-let i = 0
-while (true) {
+for (let i = 0; i < Infinity; i++) {
 	await new Promise((resolve) => setTimeout(resolve, Math.random() * 10000))
 	console.log("boop")
-	await app.actions.boop(i++)
+	await app.actions.boop(i)
 }
