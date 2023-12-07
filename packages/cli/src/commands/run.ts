@@ -107,6 +107,10 @@ export const builder = (yargs: Argv) =>
 			type: "boolean",
 			desc: "Log messages to stdout",
 		})
+		.option("disable-http-api", {
+			type: "boolean",
+			desc: "Disable HTTP API server",
+		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
@@ -210,6 +214,14 @@ export async function handler(args: Args) {
 		)
 	})
 
+	const controller = new AbortController()
+
+	controller.signal.addEventListener("abort", async () => {
+		console.log("[canvas] Closing application...")
+		await app.close()
+		console.log("[canvas] Application closed.")
+	})
+
 	// await app.start()
 
 	const api = express()
@@ -225,34 +237,47 @@ export async function handler(args: Args) {
 		api.use(express.static(args.static))
 	}
 
-	const origin = `http://localhost:${args.port}`
+	if (!args["disable-http-api"]) {
+		const origin = `http://localhost:${args.port}`
 
-	const server = stoppable(
-		http.createServer(api).listen(args.port, () => {
-			if (args.static) {
-				console.log(`Serving static bundle: ${chalk.bold(origin)}`)
-			}
+		const server = stoppable(
+			http.createServer(api).listen(args.port, () => {
+				if (args.static) {
+					console.log(`Serving static bundle: ${chalk.bold(origin)}`)
+				}
 
-			console.log(`Serving HTTP API:`)
-			console.log(`└ GET  ${origin}/api/`)
+				console.log(`Serving HTTP API:`)
+				console.log(`└ GET  ${origin}/api/`)
 
-			console.log(`└ GET  ${origin}/api/clock`)
-			console.log(`└ GET  ${origin}/api/messages`)
-			console.log(`└ GET  ${origin}/api/messages/:id`)
-			console.log(`└ POST ${origin}/api/messages`)
+				console.log(`└ GET  ${origin}/api/clock`)
+				console.log(`└ GET  ${origin}/api/messages`)
+				console.log(`└ GET  ${origin}/api/messages/:id`)
+				console.log(`└ POST ${origin}/api/messages`)
 
-			const { models } = app.getApplicationData()
-			for (const name of Object.keys(models)) {
-				console.log(`└ GET  ${origin}/api/models/${name}`)
-				console.log(`└ GET  ${origin}/api/models/${name}/:key`)
-			}
+				const { models } = app.getApplicationData()
+				for (const name of Object.keys(models)) {
+					console.log(`└ GET  ${origin}/api/models/${name}`)
+					console.log(`└ GET  ${origin}/api/models/${name}/:key`)
+				}
 
-			console.log(`└ GET  ${origin}/api/connections`)
-			console.log(`└ GET  ${origin}/api/peers`)
-			console.log(`└ POST ${origin}/api/ping/:peerId`)
-		}),
-		0,
-	)
+				console.log(`└ GET  ${origin}/api/connections`)
+				console.log(`└ GET  ${origin}/api/peers`)
+				console.log(`└ POST ${origin}/api/ping/:peerId`)
+			}),
+			0,
+		)
+
+		controller.signal.addEventListener("abort", () => {
+			console.log("[canvas] Stopping HTTP API server...")
+			server.stop((err) => {
+				if (err !== undefined) {
+					throw err
+				} else {
+					console.log("[canvas] HTTP API server stopped.")
+				}
+			})
+		})
+	}
 
 	let stopping = false
 	process.on("SIGINT", async () => {
@@ -263,14 +288,7 @@ export async function handler(args: Args) {
 			process.stdout.write(
 				`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`,
 			)
-
-			console.log("[canvas] Stopping API server...")
-			await new Promise<void>((resolve, reject) => server.stop((err) => (err ? reject(err) : resolve())))
-			console.log("[canvas] API server stopped.")
-
-			console.log("[canvas] Closing core...")
-			await app.close()
-			console.log("[canvas] Core closed, press Ctrl+C to terminate immediately.")
+			controller.abort()
 		}
 	})
 }
