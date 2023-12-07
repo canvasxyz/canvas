@@ -2,6 +2,7 @@ import { createLibp2p } from "libp2p"
 
 import { options } from "./libp2p.js"
 import { getAPI } from "./api.js"
+import { port } from "./config.js"
 
 const libp2p = await createLibp2p(options)
 
@@ -23,7 +24,7 @@ console.log(
 )
 
 const server = getAPI(libp2p)
-const port = parseInt(process.env.PORT ?? "8000")
+
 server.listen(port, "::", () => {
 	const host = `http://localhost:${port}`
 	console.log(`[bootstrap-peer] API server listening on ${host}`)

@@ -6,7 +6,9 @@ import dotenv from "dotenv"
 
 dotenv.config()
 
-const { PEER_ID, BOOTSTRAP_LIST, LISTEN, ANNOUNCE } = process.env
+const { PEER_ID, BOOTSTRAP_LIST, LISTEN, ANNOUNCE, PORT } = process.env
+
+export const port = parseInt(PORT ?? "8000")
 
 async function getPeerId() {
 	if (typeof PEER_ID === "string") {
