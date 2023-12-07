@@ -12,6 +12,9 @@
   "exports": {
     ".": "./lib/index.js"
   },
+  "scripts": {
+    "start": "node lib/index.js"
+  },
   "devDependencies": {
     "@canvas-js/core": "0.8.12"
   },
