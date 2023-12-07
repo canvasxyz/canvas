@@ -66,7 +66,7 @@ await Promise.all(
 			"--listen",
 			`/ip4/127.0.0.1/tcp/${9000 + i}/ws`,
 			...bootstrapList.flatMap((address) => ["--bootstrap", address]),
-			"--verbose",
+			"--disable-http-api",
 		]
 
 		console.log("args", args.join(" "))
@@ -109,7 +109,7 @@ await Promise.all(
 		throw new Error("compilation failed")
 	}
 
-	console.log("Compiled client bundle", result.outputFiles)
+	console.log("Compiled client bundle", result)
 }
 
 // Start HTTP server
