@@ -27,6 +27,7 @@
     { "path": "./packages/chain-substrate" },
     { "path": "./packages/mudevm-sync" },
     { "path": "./packages/replication-server" },
+    { "path": "./packages/replication-daemon" },
     { "path": "./packages/hooks" },
     { "path": "./packages/templates" }
   ]

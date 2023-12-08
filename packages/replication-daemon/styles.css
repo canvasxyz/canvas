@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+	margin: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.cm-scroller,
+.cm-editor {
+	width: 600px;
+	height: 600px;
+}
