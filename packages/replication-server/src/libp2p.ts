@@ -4,7 +4,6 @@ import { Libp2pOptions } from "libp2p"
 import { PingService, pingService } from "libp2p/ping"
 import { identifyService } from "libp2p/identify"
 import { FetchService, fetchService } from "libp2p/fetch"
-import { CircuitRelayService, circuitRelayServer } from "libp2p/circuit-relay"
 
 import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 
@@ -44,7 +43,6 @@ async function denyDialMultiaddr(addr: Multiaddr) {
 export type ServiceMap = {
 	identify: {}
 	ping: PingService
-	relay: CircuitRelayService
 	pubsub: PubSub<GossipsubEvents>
 	fetch: FetchService
 	discovery: DiscoveryService
@@ -75,28 +73,6 @@ export const options: Libp2pOptions<ServiceMap> = {
 			maxInboundStreams: 256,
 			maxOutboundStreams: 64,
 			timeout: 20 * second,
-		}),
-
-		relay: circuitRelayServer({
-			hopTimeout: 10 * second, // incoming relay requests must be resolved within this time limit
-			advertise: false,
-			reservations: {
-				maxReservations: 1024, // how many peers are allowed to reserve relay slots on this server
-				reservationClearInterval: 1 * minute, // how often to reclaim stale reservations
-				applyDefaultLimit: true, // whether to apply default data/duration limits to each relayed connection
-				reservationTtl: 15 * minute,
-
-				// defaultDurationLimit: 15 * minute, // the default maximum amount of time a relayed connection can be open for
-				// defaultDataLimit: 4_000_000_000n, // the default maximum number of bytes that can be transferred over a relayed connection
-				// defaultDurationLimit: 1 * minute, // the default maximum amount of time a relayed connection can be open for
-				// defaultDataLimit: 1_000_000n, // the default maximum number of bytes that can be transferred over a relayed connection
-			},
-
-			// how many inbound HOP streams are allow simultaneously
-			maxInboundHopStreams: 1024,
-
-			// how many outbound HOP streams are allow simultaneously
-			maxOutboundHopStreams: 1024,
 		}),
 
 		pubsub: gossipsub({
