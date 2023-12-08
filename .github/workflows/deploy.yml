@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
     paths:
+      - package.json
       - docs/**
       - packages/*/README.md
       - examples/*/README.md

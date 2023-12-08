@@ -12,4 +12,3 @@ export const MAX_CONNECTIONS = 300
 export const MIN_MESH_PEERS = 5
 
 export const DIAL_CONCURRENCY = 10
-export const DIAL_CONCURRENCY_PER_PEER = 1

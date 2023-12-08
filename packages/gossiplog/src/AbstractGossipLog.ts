@@ -1,6 +1,6 @@
 import type { Source, Target, Node, Bound, KeyValueStore, Entry } from "@canvas-js/okra"
 
-import { CustomEvent, EventEmitter } from "@libp2p/interface/events"
+import { TypedEventEmitter, CustomEvent } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
 
 import * as cbor from "@ipld/dag-cbor"
@@ -67,7 +67,7 @@ export type GossipLogEvents<Payload = unknown, Result = void> = {
 	error: CustomEvent<{ error: Error }>
 }
 
-export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> extends EventEmitter<
+export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> extends TypedEventEmitter<
 	GossipLogEvents<Payload, Result>
 > {
 	public abstract close(): Promise<void>

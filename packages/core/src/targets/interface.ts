@@ -1,8 +1,7 @@
 import type { Libp2p } from "libp2p"
-import type { PingService } from "libp2p/ping"
-import type { FetchService } from "libp2p/fetch"
-import type { PeerId } from "@libp2p/interface-peer-id"
-import type { PubSub } from "@libp2p/interface/pubsub"
+import type { PingService } from "@libp2p/ping"
+import type { Fetch as FetchService } from "@libp2p/fetch"
+import type { PubSub } from "@libp2p/interface"
 import type { GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 
 import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"

@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat",
-  "version": "0.8.12",
+  "version": "0.8.14",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,14 +9,14 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@canvas-js/chain-cosmos": "0.8.12",
-    "@canvas-js/chain-ethereum": "0.8.12",
-    "@canvas-js/chain-near": "0.8.12",
-    "@canvas-js/chain-solana": "0.8.12",
-    "@canvas-js/chain-substrate": "0.8.12",
-    "@canvas-js/core": "0.8.12",
-    "@canvas-js/interfaces": "0.8.12",
-    "@canvas-js/modeldb": "0.8.12",
+    "@canvas-js/chain-cosmos": "0.8.14",
+    "@canvas-js/chain-ethereum": "0.8.14",
+    "@canvas-js/chain-near": "0.8.14",
+    "@canvas-js/chain-solana": "0.8.14",
+    "@canvas-js/chain-substrate": "0.8.14",
+    "@canvas-js/core": "0.8.14",
+    "@canvas-js/interfaces": "0.8.14",
+    "@canvas-js/modeldb": "0.8.14",
     "@keplr-wallet/types": "^0.11.64",
     "@magic-ext/auth": "^4.3.1",
     "@metamask/providers": "^14.0.2",
