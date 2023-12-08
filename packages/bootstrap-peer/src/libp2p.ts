@@ -24,7 +24,7 @@ import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 import { DiscoveryService, discovery } from "@canvas-js/discovery"
 
 import { second, minute, MIN_CONNECTIONS, MAX_CONNECTIONS } from "./constants.js"
-import { peerId, bootstrapList, listen, announce } from "./config.js"
+import { peerId, bootstrapList, listen, announce, discoveryTopic } from "./config.js"
 
 async function denyDialMultiaddr(addr: Multiaddr) {
 	const transportRoot = addr.decapsulate("/ws")
@@ -113,6 +113,7 @@ export const options: Libp2pOptions<ServiceMap> = {
 		fetch: fetchService({ protocolPrefix: "canvas" }),
 
 		discovery: discovery({
+			discoveryTopic: discoveryTopic ?? undefined,
 			addressFilter: (addr) => WebSockets.matches(addr) || WebSocketsSecure.matches(addr),
 		}),
 	},
