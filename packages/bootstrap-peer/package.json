@@ -1,7 +1,7 @@
 {
   "name": "@canvas-js/bootstrap-peer",
   "private": true,
-  "version": "0.8.13",
+  "version": "0.8.14-alpha.1",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "main": "lib/index.js",
@@ -12,7 +12,7 @@
     "start": "node lib/index.js"
   },
   "dependencies": {
-    "@canvas-js/discovery": "0.8.13",
+    "@canvas-js/discovery": "0.8.14-alpha.1",
     "@chainsafe/libp2p-gossipsub": "^11.0.1",
     "@chainsafe/libp2p-noise": "^14.0.0",
     "@libp2p/bootstrap": "^10.0.6",

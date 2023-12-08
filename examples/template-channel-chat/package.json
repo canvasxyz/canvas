@@ -1,7 +1,7 @@
 {
   "name": "@canvas-js/example-channel-chat",
   "private": true,
-  "version": "0.8.13",
+  "version": "0.8.14-alpha.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.8.13",
-    "@canvas-js/hooks": "0.8.13",
-    "@canvas-js/templates": "0.8.13",
+    "@canvas-js/chain-ethereum": "0.8.14-alpha.1",
+    "@canvas-js/hooks": "0.8.14-alpha.1",
+    "@canvas-js/templates": "0.8.14-alpha.1",
     "ethers": "^6.9.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
