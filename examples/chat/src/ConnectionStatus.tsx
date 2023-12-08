@@ -1,6 +1,5 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
 
-import type { Connection } from "@libp2p/interface/connection"
 import { Canvas, Connections } from "@canvas-js/core"
 
 import { AppContext } from "./AppContext.js"
@@ -68,7 +67,8 @@ const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
 					return (
 						<li key={peer.toString()}>
 							<div>
-								{status === "connecting" ? "🟡" : status === "online" ? "🟢" : status === "waiting" ? "⚪️" : "🔴"}&nbsp;
+								{status === "connecting" ? "🟡" : status === "online" ? "🟢" : status === "waiting" ? "⚪️" : "🔴"}
+								&nbsp;
 								<PeerIdView peerId={peer} />
 							</div>
 							<div>

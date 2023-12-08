@@ -1,4 +1,4 @@
-import { Stream } from "@libp2p/interface/connection"
+import { Stream } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"

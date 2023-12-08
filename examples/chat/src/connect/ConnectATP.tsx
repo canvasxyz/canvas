@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useMemo, useState } from "react"
-import { EventEmitter } from "@libp2p/interface/events"
+import { TypedEventEmitter } from "@libp2p/interface"
 import { ATPSigner } from "@canvas-js/chain-atp"
 
 import { AppContext } from "../AppContext.js"
@@ -16,8 +16,8 @@ export const ConnectATP: React.FC<ConnectATPProps> = ({}) => {
 	const [showLoginForm, setShowLoginForm] = useState(false)
 
 	const eventEmitter = useMemo(
-		() => new EventEmitter<{ login: CustomEvent<{ identifier: string; password: string }> }>(),
-		[]
+		() => new TypedEventEmitter<{ login: CustomEvent<{ identifier: string; password: string }> }>(),
+		[],
 	)
 
 	const signer = useMemo(
@@ -29,12 +29,12 @@ export const ConnectATP: React.FC<ConnectATPProps> = ({}) => {
 						eventEmitter.addEventListener(
 							"login",
 							({ detail: { identifier, password } }) => resolve({ identifier, password }),
-							{ once: true }
-						)
+							{ once: true },
+						),
 					)
 				},
 			}),
-		[]
+		[],
 	)
 
 	const connect = useCallback(async () => {
