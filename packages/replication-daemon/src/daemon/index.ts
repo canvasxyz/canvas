@@ -8,6 +8,7 @@ import chalk from "chalk"
 import { register } from "prom-client"
 import PQueue from "p-queue"
 import { createLibp2p } from "libp2p"
+import { Connection } from "@libp2p/interface"
 
 import { Canvas } from "@canvas-js/core"
 import { topicPattern } from "@canvas-js/gossiplog"
@@ -15,7 +16,6 @@ import { VM } from "@canvas-js/vm"
 
 import { options } from "./libp2p.js"
 import { dataDirectory } from "./config.js"
-import { Connection } from "@libp2p/interface/connection"
 
 const controller = new AbortController()
 
@@ -152,13 +152,6 @@ app.post("/api/apps/:topic/start", async (req, res) => {
 
 		const { indexHistory = "true" } = req.query
 		assert(indexHistory === "true" || indexHistory === "false")
-
-		console.log("Canvas.initialize:", {
-			path: directory,
-			contract,
-			libp2p,
-			indexHistory: indexHistory === "true",
-		})
 
 		const app = await Canvas.initialize({
 			path: directory,

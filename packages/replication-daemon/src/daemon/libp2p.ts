@@ -1,7 +1,7 @@
-import { Libp2pOptions, createLibp2p } from "libp2p"
-import { PingService, pingService } from "libp2p/ping"
-import { identifyService } from "libp2p/identify"
-import { FetchService, fetchService } from "libp2p/fetch"
+import { Libp2pOptions } from "libp2p"
+import { PingService, ping as pingService } from "@libp2p/ping"
+import { identify as identifyService } from "@libp2p/identify"
+import { Fetch as FetchService, fetch as fetchService } from "@libp2p/fetch"
 
 import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 
@@ -13,8 +13,7 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
-import type { PubSub } from "@libp2p/interface/pubsub"
-import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
+import type { PubSub } from "@libp2p/interface"
 import { Multiaddr } from "@multiformats/multiaddr"
 
 import { DiscoveryService, discovery } from "@canvas-js/discovery"
