@@ -160,6 +160,10 @@ export async function handler(args: Args) {
 		bootstrapList = defaultBootstrapList
 	}
 
+	if (args["discovery-topic"]) {
+		console.log("[canvas] Using discovery topic", args["discovery-topic"])
+	}
+
 	const app = await Canvas.initialize({
 		path: location,
 		contract,
