@@ -20,6 +20,7 @@
     "p-queue": "^7.4.1"
   },
   "peerDependencies": {
+    "@libp2p/multistream-select": "4.0.6",
     "@chainsafe/libp2p-gossipsub": "^10.1.1"
   }
 }
