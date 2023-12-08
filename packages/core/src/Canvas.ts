@@ -1,6 +1,5 @@
 import { PeerId } from "@libp2p/interface-peer-id"
-import type { Connection } from "@libp2p/interface/connection"
-import { EventEmitter, CustomEvent } from "@libp2p/interface/events"
+import { TypedEventEmitter, CustomEvent, Connection } from "@libp2p/interface"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
@@ -87,7 +86,7 @@ export type AppConnectionStatus = "connected" | "disconnected"
 export type ConnectionStatus = "connecting" | "online" | "offline" | "waiting"
 export type Connections = Record<string, { peer: PeerId; status: ConnectionStatus; connections: Connection[] }>
 
-export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEvents> {
+export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
 	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {
 		const {
 			path = null,
@@ -158,8 +157,8 @@ export class Canvas<T extends Contract = Contract> extends EventEmitter<CanvasEv
 
 		this.log("initialized with peerId %p", libp2p.peerId)
 
-		this.libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs, protocols } }) => {
-			this.log("discovered peer %p at %o with protocols %o", id, multiaddrs, protocols)
+		this.libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
+			this.log("discovered peer %p with addresses %o", id, multiaddrs)
 		})
 
 		this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {

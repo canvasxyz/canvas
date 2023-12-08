@@ -1,10 +1,6 @@
-import type { PeerId } from "@libp2p/interface/peer-id"
+import { PeerId, Startable, TypedEventEmitter, PubSub, Message as PubSubMessage } from "@libp2p/interface"
 
-import type { Registrar } from "@libp2p/interface-internal/registrar"
-import type { ConnectionManager } from "@libp2p/interface-internal/connection-manager"
-import type { PubSub, Message as PubSubMessage } from "@libp2p/interface/pubsub"
-import type { Startable } from "@libp2p/interface/startable"
-import { EventEmitter } from "@libp2p/interface/events"
+import { Registrar, ConnectionManager } from "@libp2p/interface-internal"
 
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
@@ -29,7 +25,7 @@ export interface GossipLogServiceInit {
 	sync?: boolean
 }
 
-export class GossipLogService extends EventEmitter<GossipLogEvents<unknown, unknown>> implements Startable {
+export class GossipLogService extends TypedEventEmitter<GossipLogEvents<unknown, unknown>> implements Startable {
 	private static extractGossipSub(components: GossipLogServiceComponents): GossipSub {
 		const { pubsub } = components
 		assert(pubsub !== undefined, "pubsub service not found")

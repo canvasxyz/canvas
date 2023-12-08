@@ -5,7 +5,7 @@ import { AbortError } from "abortable-iterator"
 import { anySignal } from "any-signal"
 import { register, Counter, Gauge, Summary, Registry } from "prom-client"
 
-import type { PeerId } from "@libp2p/interface/peer-id"
+import type { PeerId } from "@libp2p/interface"
 import { peerIdFromString } from "@libp2p/peer-id"
 import * as json from "@ipld/dag-json"
 

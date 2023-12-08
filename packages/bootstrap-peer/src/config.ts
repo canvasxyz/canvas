@@ -1,4 +1,4 @@
-import { PeerId } from "@libp2p/interface/peer-id"
+import { PeerId } from "@libp2p/interface"
 import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { multiaddr } from "@multiformats/multiaddr"
 

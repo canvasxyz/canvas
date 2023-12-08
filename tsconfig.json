@@ -29,6 +29,7 @@
     { "path": "./packages/replication-server" },
     { "path": "./packages/replication-daemon" },
     { "path": "./packages/hooks" },
-    { "path": "./packages/templates" }
+    { "path": "./packages/templates" },
+    { "path": "./packages/test-network" }
   ]
 }

@@ -1,0 +1,29 @@
+{
+  "private": true,
+  "name": "@canvas-js/test-network",
+  "version": "0.8.14",
+  "type": "module",
+  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "exports": {
+    ".": "./lib/index.js"
+  },
+  "scripts": {
+    "start": "node lib/index.js"
+  },
+  "devDependencies": {
+    "@canvas-js/core": "0.8.14"
+  },
+  "dependencies": {
+    "@libp2p/peer-id-factory": "^4.0.0",
+    "debug": "^4.3.4",
+    "dotenv": "^16.3.1",
+    "esbuild": "^0.19.8",
+    "express": "^4.18.2",
+    "puppeteer": "^21.6.0"
+  }
+}

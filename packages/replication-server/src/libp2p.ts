@@ -1,9 +1,9 @@
 import assert from "node:assert"
 
 import { Libp2pOptions } from "libp2p"
-import { PingService, pingService } from "libp2p/ping"
-import { identifyService } from "libp2p/identify"
-import { FetchService, fetchService } from "libp2p/fetch"
+import { PingService, ping as pingService } from "@libp2p/ping"
+import { Identify as IdentifyService, identify as identifyService } from "@libp2p/identify"
+import { Fetch as FetchService, fetch as fetchService } from "@libp2p/fetch"
 
 import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 
@@ -15,7 +15,7 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
-import type { PubSub } from "@libp2p/interface/pubsub"
+import type { PubSub } from "@libp2p/interface"
 import { peerIdFromString } from "@libp2p/peer-id"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
@@ -41,7 +41,7 @@ async function denyDialMultiaddr(addr: Multiaddr) {
 }
 
 export type ServiceMap = {
-	identify: {}
+	identify: IdentifyService
 	ping: PingService
 	pubsub: PubSub<GossipsubEvents>
 	fetch: FetchService

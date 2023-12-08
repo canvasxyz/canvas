@@ -11,6 +11,7 @@ tsconfig.tsbuildinfo
 
 packages/**/lib/
 packages/**/dist/
+packages/**/.cache/
 
 examples/**/out/
 examples/**/lib/

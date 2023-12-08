@@ -2,13 +2,11 @@ import type { ExecutionContext } from "ava"
 
 import pDefer, { DeferredPromise } from "p-defer"
 
-import type { PeerId } from "@libp2p/interface/peer-id"
-import type { EventHandler } from "@libp2p/interface/events"
-import type { PubSub } from "@libp2p/interface/pubsub"
+import type { PeerId, PubSub, EventHandler } from "@libp2p/interface"
 
 import { Libp2p, createLibp2p } from "libp2p"
-import { identifyService } from "libp2p/identify"
-import { plaintext } from "libp2p/insecure"
+import { identify as identifyService } from "@libp2p/identify"
+import { plaintext } from "@libp2p/plaintext"
 import { tcp } from "@libp2p/tcp"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
