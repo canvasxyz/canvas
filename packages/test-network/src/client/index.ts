@@ -5,10 +5,12 @@ import debug from "debug"
 const contract = await fetch("/contract.canvas.js").then((res) => res.text())
 
 const bootstrapList = JSON.parse(localStorage.getItem("bootstrapList")!)
+const discoveryTopic = localStorage.getItem("discoveryTopic")!
 
 const app = await Canvas.initialize({
 	contract: contract,
 	bootstrapList,
+	discoveryTopic,
 })
 
 app.addEventListener("message", ({ detail: { id, message } }) => console.log("message", id, message.payload.type))

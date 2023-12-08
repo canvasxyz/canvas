@@ -11,6 +11,7 @@ import { createEd25519PeerId, exportToProtobuf } from "@libp2p/peer-id-factory"
 
 const { SERVER_COUNT, CLIENT_COUNT } = process.env
 
+const discoveryTopic = "canvas-discovery"
 const serverCount = parseInt(SERVER_COUNT ?? "1")
 const clientCount = parseInt(CLIENT_COUNT ?? "3")
 
@@ -41,6 +42,7 @@ const bootstrapPeerId = await createEd25519PeerId()
 			PEER_ID: Buffer.from(exportToProtobuf(bootstrapPeerId)).toString("base64"),
 			LISTEN: bootstrapListenAddress,
 			PORT: bootstrapAPIPort.toString(),
+			DISCOVERY_TOPIC: discoveryTopic,
 		},
 		signal: controller.signal,
 		killSignal: "SIGINT",
@@ -53,11 +55,11 @@ const bootstrapPeerId = await createEd25519PeerId()
 const bootstrapList = [`${bootstrapListenAddress}/p2p/${bootstrapPeerId.toString()}`]
 
 // Start replication servers
-await Promise.all(
-	Array.from({ length: serverCount }, async (_, i) => {
-		const { pathname: cliPath } = new URL(import.meta.resolve("@canvas-js/cli"))
-
-		const args = [
+const { pathname: cliPath } = new URL(import.meta.resolve("@canvas-js/cli"))
+for (let i = 0; i < serverCount; i++) {
+	const server = spawn(
+		"node",
+		[
 			cliPath,
 			"run",
 			path.resolve(cacheDirectory, `server-${i}`),
@@ -66,26 +68,25 @@ await Promise.all(
 			"--listen",
 			`/ip4/127.0.0.1/tcp/${9000 + i}/ws`,
 			...bootstrapList.flatMap((address) => ["--bootstrap", address]),
+			"--discovery-topic",
+			discoveryTopic,
 			"--disable-http-api",
-		]
+		],
+		{ signal: controller.signal, killSignal: "SIGINT" },
+	)
 
-		console.log("args", args.join(" "))
+	server.on("error", (err) => console.error(`[server-${i}]`, err))
 
-		const server = spawn("node", args, { signal: controller.signal, killSignal: "SIGINT" })
-
-		server.on("error", (err) => console.error(`[server-${i}]`, err))
-
-		server.stdout.on("data", (chunk: Buffer) => {
-			const [first, ...rest] = chunk.toString("utf-8").split("\n")
-			process.stdout.write(`[server-${i}] ${first}\n`)
-			for (const line of rest) {
-				if (line.length > 0) {
-					process.stdout.write(`[server-${i}] ${line}\n`)
-				}
+	server.stdout.on("data", (chunk: Buffer) => {
+		const [first, ...rest] = chunk.toString("utf-8").split("\n")
+		process.stdout.write(`[server-${i}] ${first}\n`)
+		for (const line of rest) {
+			if (line.length > 0) {
+				process.stdout.write(`[server-${i}] ${line}\n`)
 			}
-		})
-	}),
-)
+		}
+	})
+}
 
 {
 	const result = await esbuild.build({
@@ -109,7 +110,7 @@ await Promise.all(
 		throw new Error("compilation failed")
 	}
 
-	console.log("Compiled client bundle", result)
+	console.log("Compiled client bundle")
 }
 
 // Start HTTP server
@@ -151,6 +152,7 @@ await Promise.all(
 
 		await page.evaluateOnNewDocument(`
             localStorage.setItem("bootstrapList", JSON.stringify(${JSON.stringify(bootstrapList)}));
+            localStorage.setItem("discoveryTopic", "${discoveryTopic}");
         `)
 
 		await page.goto("http://localhost:3000/")
