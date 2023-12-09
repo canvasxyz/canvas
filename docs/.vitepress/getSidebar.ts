@@ -11,7 +11,7 @@ function getSidebarItems(
 	dir: string[],
 	currentRoot: string | undefined,
 	root: string | undefined,
-	options: Options
+	options: Options,
 ): object[] {
 	return dir
 		.filter((e) => e.endsWith(".md") || fs.statSync(path.resolve(currentRoot ?? "/", e)).isDirectory())
@@ -25,7 +25,7 @@ function getSidebarItems(
 				return items.length
 					? {
 							text: (fileName.charAt(0).toUpperCase() + fileName.slice(1)).replaceAll("-", " "),
-							items
+							items,
 					  }
 					: null!
 			} else if (e.endsWith(".md") && e[0] !== "_") {
@@ -40,11 +40,11 @@ function getSidebarItems(
 				const dateLine = (lines[1] || lines[2]).replace(/[\#_\*]/g, "").split(" - ")
 				const dateString = dateLine[dateLine.length - 1]
 
-				const text = `<div class="VPSidebarBlogItem"><div class="VPSidebarBlogItemTitle">${title}</div><small class="VPSidebarBlogItemDate">${dateString}</small></div>`
+				const text = `<span class="VPSidebarBlogItem"><span class="VPSidebarBlogItemTitle">${title}</span><br/><small class="VPSidebarBlogItemDate">${dateString}</small></span>`
 
 				return {
 					text,
-					link: childDir.replace(root ?? "", "")
+					link: childDir.replace(root ?? "", ""),
 				}
 			}
 			return null!
