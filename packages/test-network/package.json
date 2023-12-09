@@ -17,7 +17,8 @@
   },
   "devDependencies": {
     "@canvas-js/core": "0.8.14",
-    "@types/debug": "^4.1.12"
+    "@types/debug": "^4.1.12",
+    "@types/express": "^4.17.21"
   },
   "dependencies": {
     "@libp2p/peer-id-factory": "^4.0.0",
