@@ -15,11 +15,15 @@ jobs:
         with:
           node-version: 18.x
 
+      - uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install
 
       - name: Run eslint
-        run: npm run lint
+        run: pnpm run lint
 
   test:
     name: Unit Tests
@@ -34,23 +38,27 @@ jobs:
         with:
           node-version: 18.x
 
+      - uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
       # - name: Run @canvas-js/gossiplog tests
-      #   run: npm run test --workspace=@canvas-js/gossiplog
+      #   run: pnpm --filter @canvas-js/gossiplog test
 
       - name: Run @canvas-js/modeldb tests
-        run: npm run test --workspace=@canvas-js/modeldb
+        run: pnpm --filter @canvas-js/modeldb test
 
       - name: Run @canvas-js/core tests
-        run: npm run test --workspace=@canvas-js/core
+        run: pnpm --filter @canvas-js/core test
 
       - name: Run @canvas-js/vm tests
-        run: npm run test --workspace=@canvas-js/vm
+        run: pnpm --filter @canvas-js/vm test
 
       - name: Run @canvas-js/interfaces interface tests
-        run: npm run test --workspace=@canvas-js/interfaces
+        run: pnpm --filter @canvas-js/interfaces test

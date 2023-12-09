@@ -9,8 +9,8 @@ npm create vite@latest
 Inside package.json, the example should be called `@canvas-js/example-[name]`.
 
 ```
-npm install @canvas-js/chain-ethereum @canvas-js/hooks @canvas-js/templates ethers
-npm install --save-dev vite-plugin-node-polyfills
+pnpm install @canvas-js/chain-ethereum @canvas-js/hooks @canvas-js/templates ethers
+pnpm install --save-dev vite-plugin-node-polyfills
 ```
 
 Polyfills are required to use packages in the browser. Edit the Vite configuration file:

@@ -12,7 +12,7 @@ in a set of JavaScript/TypeScript functions with access to ModelDB.
 ## Installation
 
 ```
-$ npm i @canvas-js/core
+$ pnpm i @canvas-js/core
 ```
 
 ## Usage

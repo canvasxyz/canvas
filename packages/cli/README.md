@@ -7,7 +7,7 @@ Canvas provides a command line interface for running Canvas applications. This i
 To install the CLI, run:
 
 ```
-npm install -g @canvas-js/cli
+pnpm install -g @canvas-js/cli
 ```
 
 ## Usage
