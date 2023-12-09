@@ -44,8 +44,8 @@ export default defineConfig({
 						{ text: "Actions", link: "/3-actions" },
 						{ text: "Authentication", link: "/4-authentication" },
 						{ text: "Querying", link: "/5-querying" },
-						{ text: "Advanced Features", link: "/6-advanced" },
-						{ text: "Deployments", link: "/7-deployment" },
+						{ text: "Deploying", link: "/6-deploying" },
+						{ text: "Advanced Features", link: "/7-advanced" },
 					],
 				},
 				{
