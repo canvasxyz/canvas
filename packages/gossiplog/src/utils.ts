@@ -1,4 +1,4 @@
-import type { PeerId } from "@libp2p/interface-peer-id"
+import type { PeerId } from "@libp2p/interface"
 import { anySignal } from "any-signal"
 import * as cbor from "@ipld/dag-cbor"
 
@@ -68,7 +68,10 @@ export async function wait(interval: number, options: { signal: AbortSignal }) {
 // get shifted out in the order they were added.
 
 export class CacheMap<K, V> extends Map<K, V> {
-	constructor(public readonly capacity: number, entries?: Iterable<[K, V]>) {
+	constructor(
+		public readonly capacity: number,
+		entries?: Iterable<[K, V]>,
+	) {
 		super()
 
 		for (const [key, value] of entries ?? []) {

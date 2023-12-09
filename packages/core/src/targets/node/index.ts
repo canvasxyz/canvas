@@ -2,7 +2,7 @@ import path from "node:path"
 import fs from "node:fs"
 
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
-import { PeerId } from "@libp2p/interface-peer-id"
+import { PeerId } from "@libp2p/interface"
 import { createLibp2p } from "libp2p"
 
 import { GossipLogInit } from "@canvas-js/gossiplog"

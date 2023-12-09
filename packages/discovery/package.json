@@ -11,6 +11,7 @@
   "sideEffects": false,
   "dependencies": {
     "@ipld/dag-cbor": "^9.0.6",
+    "@libp2p/fetch": "^1.0.4",
     "@libp2p/interface": "^1.0.1",
     "@libp2p/interface-internal": "^1.0.2",
     "@libp2p/logger": "^4.0.1",

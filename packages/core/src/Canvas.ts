@@ -1,5 +1,4 @@
-import { PeerId } from "@libp2p/interface-peer-id"
-import { TypedEventEmitter, CustomEvent, Connection } from "@libp2p/interface"
+import { PeerId, TypedEventEmitter, CustomEvent, Connection } from "@libp2p/interface"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
