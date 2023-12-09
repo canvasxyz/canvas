@@ -39,6 +39,7 @@
     "@chainsafe/libp2p-gossipsub": "^11.0.1",
     "@chainsafe/libp2p-noise": "^14.0.0",
     "@ipld/dag-cbor": "^9.0.6",
+    "@ipld/dag-json": "^10.1.5",
     "@ipld/schema": "^4.2.5",
     "@libp2p/bootstrap": "^10.0.6",
     "@libp2p/circuit-relay-v2": "^1.0.6",
