@@ -100,3 +100,21 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 for (const implementation of SIGNER_IMPLEMENTATIONS) {
 	runTestSuite(implementation)
 }
+
+test(`ethereum - ethers signer can verify ethereum viem signed data`, async (t) => {
+	const topic = "example:signer"
+	const signingSigner = new SIWESignerViem()
+	const verifyingSigner = new SIWESigner()
+
+	const session = await signingSigner.getSession(topic)
+	await t.notThrowsAsync(() => Promise.resolve(verifyingSigner.verifySession(topic, session)))
+})
+
+test(`ethereum - viem signer can verify ethers signed data`, async (t) => {
+	const topic = "example:signer"
+	const signingSigner = new SIWESigner()
+	const verifyingSigner = new SIWESignerViem()
+
+	const session = await signingSigner.getSession(topic)
+	await t.notThrowsAsync(() => Promise.resolve(verifyingSigner.verifySession(topic, session)))
+})
