@@ -30,7 +30,7 @@ export class SIWESignerViem implements SessionSigner<SIWESessionData> {
 	public readonly sessionDuration: number | null
 	public readonly chainId: number
 
-	private readonly log = logger("canvas:chain-ethereum")
+	private readonly log = logger("canvas:chain-ethereum-viem")
 
 	#store = target.getSessionStore()
 	#account: {
