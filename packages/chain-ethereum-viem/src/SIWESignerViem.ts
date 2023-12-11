@@ -20,7 +20,7 @@ import {
 	prepareSIWEMessage,
 } from "./utils.js"
 
-export interface SIWESignerInit {
+export interface SIWESignerViemInit {
 	chainId?: number
 	signer?: WalletClient
 	sessionDuration?: number
@@ -38,7 +38,7 @@ export class SIWESignerViem implements SessionSigner<SIWESessionData> {
 		sign: (message: string) => Promise<`0x${string}`>
 	}
 
-	public constructor(init: SIWESignerInit = {}) {
+	public constructor(init: SIWESignerViemInit = {}) {
 		if (init.signer) {
 			// use the passed signer
 			const walletClient = init.signer

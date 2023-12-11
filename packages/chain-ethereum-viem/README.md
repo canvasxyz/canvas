@@ -1,4 +1,4 @@
-# @canvas-js/chain-ethereum
+# @canvas-js/chain-ethereum-viem
 
 ## Table of Contents
 
@@ -8,7 +8,7 @@
 ## Installation
 
 ```
-npm i @canvas-js/chain-ethereum
+npm i @canvas-js/chain-ethereum-viem
 ```
 
 ## API
@@ -23,14 +23,14 @@ export type SIWESessionData = {
   nonce: string
 }
 
-export interface SIWESignerInit {
+export interface SIWESignerViemInit {
   signer?: AbstractSigner
   store?: SessionStore
   sessionDuration?: number
 }
 
-export declare class SIWESigner implements SessionSigner {
-  constructor(init?: SIWESignerInit)
+export declare class SIWESignerViem implements SessionSigner {
+  constructor(init?: SIWESignerViemInit)
 
   public match(chain: string): boolean
   public verifySession(session: Session): void
