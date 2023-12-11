@@ -11,11 +11,14 @@
   "sideEffects": false,
   "dependencies": {
     "@ipld/dag-cbor": "^9.0.6",
+    "@libp2p/fetch": "^1.0.4",
     "@libp2p/interface": "^1.0.1",
     "@libp2p/interface-internal": "^1.0.2",
     "@libp2p/logger": "^4.0.1",
     "@libp2p/peer-record": "^7.0.0",
     "@libp2p/utils": "^5.0.2",
+    "@multiformats/multiaddr": "^12.1.11",
+    "libp2p": "^1.0.9",
     "p-queue": "^7.4.1"
   },
   "peerDependencies": {

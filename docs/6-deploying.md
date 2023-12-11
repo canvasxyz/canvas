@@ -1,34 +1,29 @@
----
-title: "Deployment Recommendations"
----
-
-# Deployment Recommendations
+# Deployment Considerations
 
 ## Table of Contents
 
-- [Turn sequencing off for realtime delivery](#turn-sequencing-off-for-realtime-delivery)
-- [Block user inputs & show the connection status](#block-user-inputs-show-the-connection-status)
+- [Show the connection status](#show-the-connection-status)
+- [Consider turning sequencing off](#consider-turning-sequencing-off)
 - [Keep WebRTC transports off](#keep-webrtc-transports-off)
 - [Universal replication servers](#universal-replication-servers)
-- [Stability improvements](#upgrades)
 
-## Turn sequencing off for realtime delivery
+## Show the connection status
 
-By default, applications are configured with sequencing ("history indexing") on, which ensures that actions are delivered in exact, causal order.
-
-For high-volume realtime applications, we recommend turning it off. While it's useful when actions must be executed in exact order (e.g. games), for applications like chat and presence, it can cause peers to block and appear offline for 30 seconds or more, if they send a message on a transient or flaky internet connection.
-
-You can do this by setting `indexHistory: false` when configuring your application. This causes all actions to be executed in realtime as they are received. ([Example](https://github.com/canvasxyz/canvas/blob/46bef2263d6e7ec9b746ced2c47da52cb7d8190b/examples/chat/src/App.tsx#L48))
-
-## Block user inputs & show the connection status
-
-For realtime applications, you should also keep track of the user's connection status, and use it to block user inputs whenever the application is offline.
-
-Use `app.status` to detect when your app has an online connection, which will be either `"connected"` or `"disconnected"`.
+Keep track of `app.status` to detect whether the application has a reliable connection to the internet. It will show as `connected` when the application is able to ping at least one online peer, and `disconnected` otherwise.
 
 To subscribe to changes to the connection status, listen for a `connections:updated` event with `app.addEventListener("connections:updated")`.
 
-This event will also provide you with a `connections` object, which can be used to [list all peers](https://canvas-chat.pages.dev/) that your application is connected to, and their individual connection status. Only peers that are actively sending and receiving actions for this application will be shown as `connected` (🟢), while other peers passively participating in the mesh will be shown as `waiting` (⚪️).  ([Example](https://github.com/canvasxyz/canvas/blob/46bef2263d6e7ec9b746ced2c47da52cb7d8190b/examples/chat/src/ConnectionStatus.tsx#L65))
+This event is also emitted with a `connections` object, which can be used to [list all peers](https://canvas-chat.pages.dev/) your application is connected to. Only peers that are actively sending and receiving actions for this application will be shown as `connected` (🟢), while peers passively participating in the mesh will be shown as `waiting` (⚪️)., and unresponsive peers will be shown as `disconnected` (🔴). ([Example](https://github.com/canvasxyz/canvas/blob/46bef2263d6e7ec9b746ced2c47da52cb7d8190b/examples/chat/src/ConnectionStatus.tsx#L65))
+
+## Consider turning sequencing off
+
+By default, applications are configured with sequencing ("history indexing") on, which ensures that actions are delivered in exact causal order.
+
+When there is no risk of conflicts from clients executing actions in different order, you can turn this off for better performance. This prevents applications from stalling if a user sends a message while they're on a transient or flaky internet connection.
+
+You can do this by setting `indexHistory: false` when configuring your application. This causes all actions to be executed in realtime as they are received. ([Example](https://github.com/canvasxyz/canvas/blob/46bef2263d6e7ec9b746ced2c47da52cb7d8190b/examples/chat/src/App.tsx#L48))
+
+Note that doing this also disables `db.get()` getters inside the database, because database getters require consistent order of delivery.
 
 ## Keep WebRTC transports off
 
@@ -80,7 +75,3 @@ const { app } = useCanvas({
   ]
 })
 ```
-
-## Upgrades
-
-Stay up to date with the latest upgrades on our [Changelog](https://github.com/canvasxyz/canvas/releases).

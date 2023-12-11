@@ -16,7 +16,8 @@
     "start": "node lib/index.js"
   },
   "devDependencies": {
-    "@canvas-js/core": "0.8.14"
+    "@canvas-js/core": "0.8.14",
+    "@types/debug": "^4.1.12"
   },
   "dependencies": {
     "@libp2p/peer-id-factory": "^4.0.0",

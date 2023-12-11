@@ -16,6 +16,7 @@
     "test": "ava"
   },
   "devDependencies": {
+    "@canvas-js/signed-cid": "0.8.14",
     "ava": "^5.3.1"
   },
   "dependencies": {
