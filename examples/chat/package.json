@@ -11,6 +11,7 @@
   "dependencies": {
     "@canvas-js/chain-cosmos": "0.8.14",
     "@canvas-js/chain-ethereum": "0.8.14",
+    "@canvas-js/chain-ethereum-viem": "0.8.14",
     "@canvas-js/chain-near": "0.8.14",
     "@canvas-js/chain-solana": "0.8.14",
     "@canvas-js/chain-substrate": "0.8.14",
@@ -33,6 +34,7 @@
     "process": "^0.11.10",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "viem": "^1.19.13",
     "web3": "^4.2.2"
   },
   "devDependencies": {
