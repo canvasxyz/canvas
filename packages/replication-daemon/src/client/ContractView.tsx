@@ -2,6 +2,7 @@ import React, { useCallback, useContext, useEffect } from "react"
 
 import { AppContext } from "./AppContext.js"
 import { Editor } from "./Editor.js"
+import { EditorState } from "@codemirror/state"
 
 export const ContractView: React.FC<{ topic: string; contract: string }> = ({ topic, contract }) => {
 	const { state } = useContext(AppContext)
@@ -30,12 +31,16 @@ export const ContractView: React.FC<{ topic: string; contract: string }> = ({ to
 	const startButtonStyle =
 		status === "started"
 			? "bg-gray-100 cursor-not-allowed"
-			: "bg-green-100 hover:border-gray-400 active:bg-white cursor-pointer"
+			: "bg-green-100 hover:border-gray-300 active:bg-white cursor-pointer"
 
 	// const stopButtonStyle =
 	// 	status === "stopped"
 	// 		? "bg-gray-100 cursor-not-allowed"
 	// 		: "bg-red-200 hover:bg-red-100 active:bg-white cursor-pointer"
+
+	const handleChange = useCallback((state: EditorState) => {
+		//
+	}, [])
 
 	return (
 		<div className="h-full p-2 flex flex-col gap-2">
@@ -45,7 +50,7 @@ export const ContractView: React.FC<{ topic: string; contract: string }> = ({ to
 			<div className="flex gap-2">
 				<button
 					key="start"
-					className={`p-2 border rounded ${startButtonStyle}`}
+					className={`py-2 px-8 border rounded ${startButtonStyle}`}
 					onClick={() => start()}
 					disabled={status === "started"}
 				>
@@ -54,7 +59,7 @@ export const ContractView: React.FC<{ topic: string; contract: string }> = ({ to
 
 				{/* <button
 					key="stop"
-					className={`p-2 border rounded ${stopButtonStyle}`}
+					className={`py-2 px-8 border rounded ${stopButtonStyle}`}
 					onClick={() => stop()}
 					// disabled={status === "stopped"}
 					disabled={true}
@@ -63,7 +68,12 @@ export const ContractView: React.FC<{ topic: string; contract: string }> = ({ to
 				</button> */}
 			</div>
 			<div className="flex-1">
-				<Editor key={`${topic}/${status}`} initialValue={contract} readOnly={status === "started"} />
+				<Editor
+					key={`${topic}/${status}`}
+					initialValue={contract}
+					readOnly={status === "started"}
+					onChange={handleChange}
+				/>
 			</div>
 		</div>
 	)

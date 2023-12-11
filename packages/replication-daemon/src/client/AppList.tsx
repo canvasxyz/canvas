@@ -15,9 +15,9 @@ export const AppList: React.FC<{}> = ({}) => {
 
 	return state.apps.map(({ topic, status }) => {
 		const style =
-			selected?.topic === topic ? "bg-stone-200" : "bg-stone-300 hover:bg-stone-200 active:bg-white cursor-pointer"
+			selected?.topic === topic ? "bg-stone-100" : "bg-stone-200 hover:bg-stone-100 active:bg-white cursor-pointer"
 		return (
-			<div key={topic} className={`p-2 border-b border-stone-400 ${style} select-none`} onClick={() => select(topic)}>
+			<div key={topic} className={`p-2 border-b border-stone-300 ${style} select-none`} onClick={() => select(topic)}>
 				<div>
 					<code className="text-sm break-all">{topic}</code>
 				</div>

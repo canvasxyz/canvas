@@ -7,10 +7,26 @@ import { AppContext } from "./AppContext.js"
 import { ContractView } from "./ContractView.js"
 import { NewContract } from "./NewContract.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
+import { contractTemplate } from "./contract.js"
 
 export const App: React.FC<{}> = ({}) => {
 	const [state, setState] = useState<null | API["/api/state"]>(null)
+	// const [state, setState] = useState<null | API["/api/state"]>({
+	// 	apps: [
+	// 		{ topic: "fjdksaljfkdslajfkdsla1", status: "stopped" },
+	// 		{ topic: "fjdksaljfkdslajfkdsla2", status: "stopped" },
+	// 		{ topic: "fjdksaljfkdslajfkdsla3", status: "stopped" },
+	// 		{ topic: "fjdksaljfkdslajfkdsla4", status: "stopped" },
+	// 	],
+	// 	peerId: "12D3KooWP5bKU7vZK4GwZtnN9NrVrn7g5PrFR9CAkX5Ugqx4FAfQ",
+	// 	connections: [],
+	// })
+
 	const [selected, setSelected] = useState<null | { topic: string; contract: string }>(null)
+	// const [selected, setSelected] = useState<null | { topic: string; contract: string }>({
+	// 	topic: "fjdksaljfkdslajfkdsla1",
+	// 	contract: contractTemplate("fjdksaljfkdslajfkdsla1"),
+	// })
 
 	const select = useCallback(async (topic: string) => {
 		const contract = await fetch(`/api/apps/${topic}`).then((res) => res.text())
@@ -41,9 +57,9 @@ export const App: React.FC<{}> = ({}) => {
 		<AppContext.Provider value={{ state, selected, select }}>
 			<div className="w-full h-full bg-stone-100 overflow-x-scroll">
 				<div className="h-full flex items-stretch">
-					<div className="w-[18rem] min-w-[18rem] overflow-y-scroll border-r border-stone-400 bg-stone-200">
+					<div className="w-[18rem] min-w-[18rem] overflow-y-scroll border-r border-stone-200">
 						<div
-							className="p-2 select-none border-b border-t border-stone-400 bg-violet-200 cursor-pointer hover:bg-violet-100 active:bg-white"
+							className="p-2 select-none border-b border-t border-stone-300 bg-violet-200 cursor-pointer hover:bg-violet-100 active:bg-white"
 							onClick={() => setSelected(null)}
 						>
 							New app
@@ -51,7 +67,7 @@ export const App: React.FC<{}> = ({}) => {
 						<AppList />
 					</div>
 					<div>{selected === null ? <NewContract /> : <ContractView {...selected} />}</div>
-					<div className="w-[512px] p-2 border-l border-stone-400">
+					<div className="w-[512px] p-2 border-l border-stone-300">
 						<ConnectionStatus />
 					</div>
 				</div>
