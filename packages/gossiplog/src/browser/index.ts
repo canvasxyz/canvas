@@ -87,7 +87,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		})
 
 		if (this.messages.store.txn === null) {
-			this.messages.store.txn = this.db.transaction([this.messages.store.storeName], "readonly")
+			this.messages.store.txn = this.db.transaction(this.messages.store.storeName, "readonly")
 		}
 
 		try {
@@ -139,7 +139,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				get: (key) => this.heads.read(() => this.heads.get(key)),
 				entries: (lowerBound = null, upperBound = null, options = {}) => {
 					console.log("GETTING PARENTS READ-ONLY", this.heads.storeName)
-					this.heads.txn = this.db.transaction([this.heads.storeName], "readonly")
+					this.heads.txn = this.db.transaction(this.heads.storeName, "readonly")
 					return this.heads.entries(lowerBound, upperBound, options)
 				},
 			}
@@ -147,7 +147,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			const ancestors: Omit<KeyValueStore, "set" | "delete"> = {
 				get: (key) => this.ancestors.read(() => this.ancestors.get(key)),
 				entries: (lowerBound = null, upperBound = null, options = {}) => {
-					this.ancestors.txn = this.db.transaction([this.ancestors.storeName], "readonly")
+					this.ancestors.txn = this.db.transaction(this.ancestors.storeName, "readonly")
 					return this.ancestors.entries(lowerBound, upperBound, options)
 				},
 			}
