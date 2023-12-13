@@ -138,7 +138,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			const heads: Omit<KeyValueStore, "set" | "delete"> = {
 				get: (key) => this.heads.read(() => this.heads.get(key)),
 				entries: (lowerBound = null, upperBound = null, options = {}) => {
-					console.log("GETTING PARENTS READ-ONLY", this.heads.storeName)
 					this.heads.txn = this.db.transaction(this.heads.storeName, "readonly")
 					return this.heads.entries(lowerBound, upperBound, options)
 				},
