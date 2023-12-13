@@ -21,6 +21,8 @@
     { "path": "./packages/chain-cosmos" },
     { "path": "./packages/chain-ethereum" },
     { "path": "./packages/chain-ethereum/test" },
+    { "path": "./packages/chain-ethereum-viem" },
+    { "path": "./packages/chain-ethereum-viem/test" },
     { "path": "./packages/chain-near" },
     { "path": "./packages/chain-solana" },
     { "path": "./packages/chain-solana/test" },

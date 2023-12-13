@@ -11,6 +11,7 @@ import { ConnectPolkadot } from "./ConnectPolkadot.js"
 import { ConnectSolana } from "./ConnectSolana.js"
 import { ConnectNEAR } from "./ConnectNEAR.js"
 import { ConnectMagic } from "./ConnectMagic.js"
+import { ConnectSIWEViem } from "./ConnectSIWEViem.js"
 
 export const Connect: React.FC<{}> = ({}) => {
 	const [method, setMethod] = useState("burner")
@@ -24,6 +25,7 @@ export const Connect: React.FC<{}> = ({}) => {
 			>
 				<option value="burner">Burner Wallet</option>
 				<option value="ethereum">Ethereum</option>
+				<option value="ethereum-viem">Ethereum (Viem)</option>
 				<option value="polkadot">Polkadot</option>
 				<option value="solana">Solana</option>
 				<option value="cosmos-keplr">Cosmos/Keplr</option>
@@ -45,6 +47,8 @@ const Method: React.FC<{ method: string }> = (props) => {
 			return <ConnectSIWEBurner />
 		case "ethereum":
 			return <ConnectSIWE />
+		case "ethereum-viem":
+			return <ConnectSIWEViem />
 		case "polkadot":
 			return <ConnectPolkadot />
 		case "solana":
