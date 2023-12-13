@@ -18,7 +18,7 @@
     "@libp2p/peer-record": "^7.0.0",
     "@libp2p/utils": "^5.0.3",
     "@multiformats/multiaddr": "^12.1.11",
-    "p-queue": "^7.4.1"
+    "p-queue": "^8.0.0"
   },
   "peerDependencies": {
     "@chainsafe/libp2p-gossipsub": "^11.0.1"
