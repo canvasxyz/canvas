@@ -1,19 +1,40 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
-
-import { Canvas, Connections } from "@canvas-js/core"
+import { Libp2pEvents, Connection } from "@libp2p/interface"
 
 import { AppContext } from "./AppContext.js"
-
-import { PeerIdView } from "./components/PeerIdView.js"
 
 export interface ConnectionStatusProps {}
 
 export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
 	const { app } = useContext(AppContext)
 
-	const [status, setStatus] = useState("--")
+	const [connections, setConnections] = useState<Connection[]>([])
+	const connectionsRef = useRef(connections)
+
+	const handleConnectionOpen = useCallback(({ detail: connection }: Libp2pEvents["connection:open"]) => {
+		const connections = connectionsRef.current.concat(connection)
+		connectionsRef.current = connections
+		setConnections(connections)
+	}, [])
+
+	const handleConnectionClose = useCallback(({ detail: connection }: Libp2pEvents["connection:close"]) => {
+		const connections = connectionsRef.current.filter(({ id }) => id !== connection.id)
+		connectionsRef.current = connections
+		setConnections(connections)
+	}, [])
+
 	useEffect(() => {
-		app?.addEventListener("connections:updated", () => setStatus(app.status))
+		if (app === null) {
+			return
+		}
+
+		app.libp2p.addEventListener("connection:open", handleConnectionOpen)
+		app.libp2p.addEventListener("connection:close", handleConnectionClose)
+
+		return () => {
+			app.libp2p.removeEventListener("connection:open", handleConnectionOpen)
+			app.libp2p.removeEventListener("connection:close", handleConnectionClose)
+		}
 	}, [app])
 
 	if (app === null) {
@@ -21,69 +42,55 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
 	}
 
 	return (
-		<div className="p-2 border rounded flex flex-col gap-2">
+		<div className="p-2 border rounded flex flex-col gap-2 bg-white">
 			<div>
 				<span className="text-sm">Peer Id</span>
 			</div>
 			<div>
-				<PeerIdView peerId={app.peerId} />
+				<code className="text-sm">{app.peerId.toString()}</code>
 			</div>
 			<hr />
 			<div>
-				<span className="text-sm">Connections (Status: {status})</span>
+				<span className="text-sm">Connections</span>
 			</div>
-			<ConnectionList app={app} />
+			<ConnectionList connections={connections} />
 		</div>
 	)
 }
 
 interface ConnectionListProps {
-	app: Canvas
+	connections: Connection[]
 }
 
-const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
-	const [connections, setConnections] = useState<Connections>()
-
-	const handleConnectionsUpdate = useCallback(
-		({ detail: { connections } }: CustomEvent<{ connections: Connections }>) => {
-			setConnections({ ...connections })
-		},
-		[],
-	)
-
-	useEffect(() => {
-		app.addEventListener("connections:updated", handleConnectionsUpdate)
-		return () => {
-			app.removeEventListener("connections:updated", handleConnectionsUpdate)
-		}
-	}, [])
-
-	if (!connections || Object.entries(connections).length === 0) {
+const ConnectionList: React.FC<ConnectionListProps> = ({ connections }) => {
+	if (connections.length === 0) {
 		return <div className="italic">No connections</div>
 	} else {
 		return (
 			<ul className="list-disc pl-4">
-				{Object.entries(connections).map(([peerId, { peer, status, connections: peerConnections }]) => {
-					return (
-						<li key={peer.toString()}>
-							<div>
-								{status === "connecting" ? "🟡" : status === "online" ? "🟢" : status === "waiting" ? "⚪️" : "🔴"}
-								&nbsp;
-								<PeerIdView peerId={peer} />
-							</div>
-							<div>
-								{peerConnections.map((connection, index) => {
-									return (
-										<code className="text-sm break-all text-gray-500" key={index}>
-											{connection.remoteAddr.decapsulateCode(421).toString()}
-										</code>
-									)
-								})}
-							</div>
-						</li>
-					)
-				})}
+				{connections.map((connection) => (
+					<ConnectionListItem key={connection.id} connection={connection} />
+				))}
 			</ul>
 		)
 	}
+}
+
+interface ConnectionListItemProps {
+	connection: Connection
+}
+
+const ConnectionListItem: React.FC<ConnectionListItemProps> = ({ connection }) => {
+	const peer = connection.remotePeer.toString()
+	const addr = connection.remoteAddr.decapsulateCode(421).toString()
+	return (
+		<li key={connection.id}>
+			<div>
+				<code className="text-sm">{peer}</code>
+			</div>
+			<div>
+				<code className="text-sm break-all text-gray-500">{addr}</code>
+			</div>
+		</li>
+	)
 }
