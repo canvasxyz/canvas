@@ -21,7 +21,7 @@
     "@canvas-js/signed-cid": "0.8.14",
     "@ipld/dag-cbor": "^9.0.6",
     "@ipld/dag-json": "^10.1.5",
-    "@libp2p/logger": "^4.0.1",
+    "@libp2p/logger": "^4.0.2",
     "@near-js/crypto": "^0.0.5",
     "@noble/curves": "^1.2.0",
     "bs58": "^5.0.0",
