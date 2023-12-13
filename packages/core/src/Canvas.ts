@@ -1,14 +1,16 @@
-import { PeerId, TypedEventEmitter, CustomEvent, Connection } from "@libp2p/interface"
+import { PeerId, TypedEventEmitter, CustomEvent, Connection, Libp2pEvents } from "@libp2p/interface"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils"
+import { hexToBytes } from "@noble/hashes/utils"
+import { GossipSub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 
 import { Action, Session, Message, Signer, SessionSigner } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Signature } from "@canvas-js/signed-cid"
 import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
+import { GossipLogService } from "@canvas-js/gossiplog/service"
 
 import target from "#target"
 
@@ -17,11 +19,11 @@ import type { ServiceMap } from "./targets/interface.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
 import { assert } from "./utils.js"
-import { GossipLogService } from "@canvas-js/gossiplog/service"
+import { startPingService } from "./ping.js"
+import { second } from "./constants.js"
 
 export interface NetworkConfig {
 	offline?: boolean
-	disablePing?: boolean
 
 	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
 	listen?: string[]
@@ -35,6 +37,9 @@ export interface NetworkConfig {
 	discoveryTopic?: string
 	discoveryInterval?: number
 	enableWebRTC?: boolean
+
+	disablePing?: boolean
+	pingInterval?: number
 }
 
 export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
@@ -94,8 +99,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			runtimeMemoryLimit,
 			indexHistory = true,
 			ignoreMissingActions = false,
-			offline,
-			disablePing,
+			disablePing = false,
+			pingInterval = 3 * second,
 		} = config
 
 		if (signers.length === 0) {
@@ -106,7 +111,17 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		const topic = runtime.topic
 
-		const libp2p = await Promise.resolve(config.libp2p ?? target.createLibp2p({ topic, path }, config))
+		const controller = new AbortController()
+
+		let libp2p = config.libp2p
+		if (libp2p === undefined) {
+			libp2p = await target.createLibp2p({ topic, path }, config)
+			controller.signal.addEventListener("abort", () => libp2p?.stop())
+
+			if (!disablePing) {
+				startPingService(libp2p, controller.signal, pingInterval)
+			}
+		}
 
 		const gossipLog = await target.openGossipLog<Action | Session, void | any>(
 			{ topic, path },
@@ -120,7 +135,13 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		await libp2p.services.gossiplog.subscribe(gossipLog, {})
 
-		return new Canvas(signers, libp2p, gossipLog, runtime, offline, disablePing)
+		const app = new Canvas<T>(controller, runtime, signers, libp2p, gossipLog)
+
+		if (config.libp2p === undefined) {
+			app.addEventListener("close", (event) => app.libp2p.stop(), { once: true })
+		}
+
+		return app
 	}
 
 	public readonly db: AbstractModelDB
@@ -132,115 +153,46 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			: never
 	}
 
-	private pingTimer: ReturnType<typeof setTimeout> | undefined
+	private pubsub: GossipSub
 	private peers: PeerId[] = []
 	private _connections: Connection[] = []
 	public readonly connections: Connections = {}
+
 	public status: AppConnectionStatus = "disconnected"
 
-	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
 
 	#open = true
 
+	/**
+	 * These are our current direct GossipSub peers, not just open connections.
+	 * Peers are added to the set in response to a GossipSub subscription-change event,
+	 * and are removed in response to a subscription-change event, or a peer:disconnect event.
+	 */
+	#peers = new Map<string, PeerId>()
+
 	private constructor(
+		private readonly controller: AbortController,
+		private readonly runtime: Runtime,
+
 		public readonly signers: SessionSigner[],
 		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly messageLog: AbstractGossipLog<Action | Session, void | any>,
-		private readonly runtime: Runtime,
-		offline?: boolean,
-		disablePing?: boolean,
 	) {
 		super()
 		this.db = runtime.db
 
-		this.log("initialized with peerId %p", libp2p.peerId)
+		assert(libp2p.services.pubsub !== undefined, "pubsub service not found")
+		assert(libp2p.services.pubsub instanceof GossipSub, "expected pubsub instanceof GossipSub")
+		this.pubsub = libp2p.services.pubsub
 
-		this.libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
-			this.log("discovered peer %p with addresses %o", id, multiaddrs)
-		})
+		this.log("using peerId %p", libp2p.peerId)
 
-		this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
-			this.log("connected to %p", peerId)
-			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
-			this.peers = [...this.peers, peerId]
-		})
-
-		this.libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
-			this.log("disconnected %p", peerId)
-			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
-			this.peers = this.peers.filter((peer) => peer.toString() !== peerId.toString())
-			delete this.connections[peerId.toString()]
-			this.updateStatus()
-		})
-
-		this.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
-			this._connections = [...this._connections, connection]
-			const remotePeerId = connection.remoteAddr.getPeerId()?.toString()
-			if (remotePeerId && !this.connections[remotePeerId]) {
-				const peer = this.peers.find((peer) => peer.toString() === remotePeerId)
-				if (!peer) return
-				this.connections[remotePeerId] = {
-					peer,
-					status: "connecting",
-					connections: [connection],
-				}
-				this.dispatchEvent(
-					new CustomEvent("connections:updated", { detail: { connections: this.connections, status: this.status } }),
-				)
-			}
-		})
-		this.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
-			this._connections = this._connections.filter(({ id }) => id !== connection.id)
-			const remotePeerId = connection.remoteAddr.getPeerId()?.toString()
-			if (remotePeerId && this.connections[remotePeerId]) {
-				this.connections[remotePeerId].connections = this.connections[remotePeerId].connections.filter(
-					({ id }) => id !== connection.id,
-				)
-				this.updateStatus()
-			}
-		})
-
-		const startPingTimer = () => {
-			this.pingTimer = setInterval(() => {
-				const subscribers = this.libp2p.services.pubsub.getSubscribers(GossipLogService.topicPrefix + this.topic)
-				const pings = this.peers.map((peer) =>
-					this.libp2p.services.ping
-						.ping(peer)
-						.then((msec) => {
-							this.connections[peer.toString()] = {
-								peer,
-								status: subscribers.find((p) => p.toString() === peer.toString()) ? "online" : "waiting",
-								connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
-							}
-						})
-						.catch((err) => {
-							this.connections[peer.toString()] = {
-								peer,
-								status: "offline",
-								connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
-							}
-						}),
-				)
-				Promise.allSettled(pings).then(() => {
-					this.updateStatus()
-					this.dispatchEvent(
-						new CustomEvent("connections:updated", { detail: { connections: this.connections, status: this.status } }),
-					)
-				})
-			}, 3000)
-		}
-
-		if (offline && !disablePing) {
-			this.libp2p.addEventListener("start", (event) => {
-				startPingTimer()
-			})
-		} else if (!disablePing) {
-			startPingTimer()
-		}
-		this.libp2p.addEventListener("stop", (event) => {
-			clearInterval(this.pingTimer)
-		})
+		this.libp2p.addEventListener("peer:connect", this.handlePeerConnect)
+		this.libp2p.addEventListener("peer:disconnect", this.handlePeerDisconnect)
+		this.libp2p.addEventListener("connection:open", this.handleConnectionOpen)
+		this.libp2p.addEventListener("connection:close", this.handleConnectionClose)
+		this.pubsub.addEventListener("subscription-change", this.handleSubscriptionChange)
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
 		this.messageLog.addEventListener("commit", (event) => this.safeDispatchEvent("commit", event))
@@ -298,15 +250,61 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		}
 	}
 
-	private updateStatus() {
-		const hasAnyOnline = Object.entries(this.connections).some(([peerId, conn]) => conn.status === "online")
-		const newStatus = hasAnyOnline ? "connected" : "disconnected"
-		if (this.status !== newStatus) {
+	private handlePeerConnect = ({ detail: peerId }: Libp2pEvents["peer:connect"]) => {
+		this.log("peer:connect %p", peerId)
+	}
+
+	private handlePeerDisconnect = ({ detail: peerId }: Libp2pEvents["peer:disconnect"]) => {
+		this.log("peer:disconnect %p", peerId)
+
+		if (this.#peers.delete(peerId.toString())) {
+			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId } }))
+		}
+	}
+
+	private handleConnectionOpen = ({ detail: connection }: Libp2pEvents["connection:open"]) => {
+		this.log("connection:open %s %p %a", connection.id, connection.remotePeer, connection.remoteAddr)
+
+		this._connections = [...this._connections, connection]
+		const remotePeerId = connection.remotePeer.toString()
+		if (!this.connections[remotePeerId]) {
+			const peer = this.peers.find((peer) => peer.toString() === remotePeerId)
+			if (!peer) return
+			this.connections[remotePeerId] = {
+				peer,
+				status: "connecting",
+				connections: [connection],
+			}
 			this.dispatchEvent(
-				new CustomEvent("connections:updated", { detail: { connections: this.connections, status: newStatus } }),
+				new CustomEvent("connections:updated", { detail: { connections: this.connections, status: this.status } }),
 			)
 		}
-		this.status = newStatus
+	}
+
+	private handleConnectionClose = ({ detail: connection }: Libp2pEvents["connection:close"]) => {
+		this.log("connection:close %s %p %a", connection.id, connection.remotePeer, connection.remoteAddr)
+	}
+
+	private handleSubscriptionChange = ({
+		detail: { peerId, subscriptions },
+	}: GossipsubEvents["subscription-change"]) => {
+		const topic = GossipLogService.topicPrefix + this.topic
+		const subscription = subscriptions.find((subscription) => subscription.topic === topic)
+		if (subscription === undefined) {
+			return
+		}
+
+		const id = peerId.toString()
+		if (subscription.subscribe) {
+			if (this.#peers.get(id) === undefined) {
+				this.#peers.set(id, peerId)
+				this.dispatchEvent(new CustomEvent("connect", { detail: { peerId } }))
+			}
+		} else {
+			if (this.#peers.delete(id)) {
+				this.dispatchEvent(new CustomEvent("disconnect", { detail: { peerId } }))
+			}
+		}
 	}
 
 	public get peerId(): PeerId {
@@ -320,11 +318,22 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	public async close() {
 		if (this.#open) {
 			this.#open = false
-			this.controller.abort()
-			await this.libp2p.stop()
+
+			this.libp2p.removeEventListener("peer:connect", this.handlePeerConnect)
+			this.libp2p.removeEventListener("peer:disconnect", this.handlePeerDisconnect)
+			this.libp2p.removeEventListener("connection:open", this.handleConnectionOpen)
+			this.libp2p.removeEventListener("connection:close", this.handleConnectionClose)
+			this.pubsub.removeEventListener("subscription-change", this.handleSubscriptionChange)
+
+			this.#peers.forEach((peerId) => this.dispatchEvent(new CustomEvent("disconnect", { detail: { peerId } })))
+			this.#peers.clear()
+
+			await this.libp2p.services.gossiplog.unsubscribe(this.topic)
 			await this.messageLog.close()
 			await this.runtime.close()
-			this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: {} } }))
+
+			this.controller.abort()
+
 			this.dispatchEvent(new Event("close"))
 			this.log("closed")
 		}
