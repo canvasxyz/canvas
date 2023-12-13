@@ -1,5 +1,6 @@
 import AggregateError from "aggregate-error"
 import { CodeError } from "@libp2p/interface"
+import { anySignal } from "any-signal"
 
 export function assert(condition: unknown, message?: string): asserts condition {
 	if (!condition) {
@@ -32,4 +33,15 @@ export function getErrorMessage(err: unknown): string {
 	} else {
 		throw err
 	}
+}
+
+export async function wait(interval: number, options: { signal: AbortSignal }) {
+	if (options.signal.aborted) {
+		return
+	}
+
+	const signal = anySignal([AbortSignal.timeout(interval), options.signal])
+	await new Promise<Event>((resolve) => {
+		signal.addEventListener("abort", resolve, { once: true })
+	}).finally(() => signal.clear())
 }
