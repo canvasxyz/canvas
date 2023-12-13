@@ -90,6 +90,7 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 				maxInboundStreams: 32,
 				maxOutboundStreams: 32,
 				timeout: PING_TIMEOUT,
+				runOnTransientConnection: false,
 			}),
 
 			pubsub: gossipsub({
