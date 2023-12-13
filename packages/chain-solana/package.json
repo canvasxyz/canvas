@@ -23,7 +23,7 @@
     "@canvas-js/signed-cid": "0.8.14",
     "@ipld/dag-json": "^10.1.5",
     "@libp2p/logger": "^4.0.2",
-    "@noble/curves": "^1.2.0",
+    "@noble/curves": "^1.3.0",
     "@solana/web3.js": "^1.87.6",
     "multiformats": "^12.1.3"
   },
