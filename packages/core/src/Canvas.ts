@@ -18,9 +18,9 @@ import type { Contract, ActionImplementationFunction, ActionImplementationObject
 import type { ServiceMap } from "./targets/interface.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
-import { assert } from "./utils.js"
 import { startPingService } from "./ping.js"
 import { second } from "./constants.js"
+import { assert } from "./utils.js"
 
 export interface NetworkConfig {
 	offline?: boolean
@@ -69,7 +69,6 @@ export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown>
 	close: Event
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
-	"connections:updated": CustomEvent<{ connections: Connections; status: AppConnectionStatus }>
 }
 
 export type CanvasLogEvent = CustomEvent<{
@@ -87,8 +86,6 @@ export type ApplicationData = {
 }
 
 export type AppConnectionStatus = "connected" | "disconnected"
-export type ConnectionStatus = "connecting" | "online" | "offline" | "waiting"
-export type Connections = Record<string, { peer: PeerId; status: ConnectionStatus; connections: Connection[] }>
 
 export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
 	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {
@@ -153,13 +150,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			: never
 	}
 
-	private pubsub: GossipSub
-	private peers: PeerId[] = []
-	private _connections: Connection[] = []
-	public readonly connections: Connections = {}
-
-	public status: AppConnectionStatus = "disconnected"
-
+	private readonly pubsub: GossipSub
 	private readonly log = logger("canvas:core")
 
 	#open = true
@@ -190,8 +181,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		this.libp2p.addEventListener("peer:connect", this.handlePeerConnect)
 		this.libp2p.addEventListener("peer:disconnect", this.handlePeerDisconnect)
-		this.libp2p.addEventListener("connection:open", this.handleConnectionOpen)
-		this.libp2p.addEventListener("connection:close", this.handleConnectionClose)
 		this.pubsub.addEventListener("subscription-change", this.handleSubscriptionChange)
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
@@ -262,29 +251,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		}
 	}
 
-	private handleConnectionOpen = ({ detail: connection }: Libp2pEvents["connection:open"]) => {
-		this.log("connection:open %s %p %a", connection.id, connection.remotePeer, connection.remoteAddr)
-
-		this._connections = [...this._connections, connection]
-		const remotePeerId = connection.remotePeer.toString()
-		if (!this.connections[remotePeerId]) {
-			const peer = this.peers.find((peer) => peer.toString() === remotePeerId)
-			if (!peer) return
-			this.connections[remotePeerId] = {
-				peer,
-				status: "connecting",
-				connections: [connection],
-			}
-			this.dispatchEvent(
-				new CustomEvent("connections:updated", { detail: { connections: this.connections, status: this.status } }),
-			)
-		}
-	}
-
-	private handleConnectionClose = ({ detail: connection }: Libp2pEvents["connection:close"]) => {
-		this.log("connection:close %s %p %a", connection.id, connection.remotePeer, connection.remoteAddr)
-	}
-
 	private handleSubscriptionChange = ({
 		detail: { peerId, subscriptions },
 	}: GossipsubEvents["subscription-change"]) => {
@@ -321,8 +287,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 			this.libp2p.removeEventListener("peer:connect", this.handlePeerConnect)
 			this.libp2p.removeEventListener("peer:disconnect", this.handlePeerDisconnect)
-			this.libp2p.removeEventListener("connection:open", this.handleConnectionOpen)
-			this.libp2p.removeEventListener("connection:close", this.handleConnectionClose)
 			this.pubsub.removeEventListener("subscription-change", this.handleSubscriptionChange)
 
 			this.#peers.forEach((peerId) => this.dispatchEvent(new CustomEvent("disconnect", { detail: { peerId } })))

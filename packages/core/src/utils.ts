@@ -1,6 +1,5 @@
 import AggregateError from "aggregate-error"
 import { CodeError } from "@libp2p/interface"
-import { anySignal } from "any-signal"
 
 export function assert(condition: unknown, message?: string): asserts condition {
 	if (!condition) {
