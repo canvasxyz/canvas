@@ -73,6 +73,7 @@ export const options: Libp2pOptions<ServiceMap> = {
 			maxInboundStreams: 256,
 			maxOutboundStreams: 64,
 			timeout: 20 * second,
+			runOnTransientConnection: false,
 		}),
 
 		relay: circuitRelayServer({
