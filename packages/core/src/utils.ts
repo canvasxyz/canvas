@@ -34,14 +34,3 @@ export function getErrorMessage(err: unknown): string {
 		throw err
 	}
 }
-
-export async function wait(interval: number, options: { signal: AbortSignal }) {
-	if (options.signal.aborted) {
-		return
-	}
-
-	const signal = anySignal([AbortSignal.timeout(interval), options.signal])
-	await new Promise<Event>((resolve) => {
-		signal.addEventListener("abort", resolve, { once: true })
-	}).finally(() => signal.clear())
-}

@@ -119,7 +119,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			controller.signal.addEventListener("abort", () => libp2p?.stop())
 
 			if (!disablePing) {
-				startPingService(libp2p, controller.signal, pingInterval)
+				startPingService(libp2p, pingInterval, { signal: controller.signal })
 			}
 		}
 
