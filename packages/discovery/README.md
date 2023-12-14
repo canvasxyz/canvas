@@ -1,6 +1,6 @@
 # @canvas-js/discovery
 
-This is a general-purpose discovery service for Canvas peers. Bootstrap peers, replication servers, and browser peers all use `@canvas-js/discovery` to find each other.
+This is a general-purpose discovery and presence service for Canvas peers. Bootstrap peers, replication servers, and browser peers all use `@canvas-js/discovery` to find each other.
 
 There are two forms of discovery: active and passive.
 

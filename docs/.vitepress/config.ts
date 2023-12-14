@@ -61,6 +61,8 @@ export default defineConfig({
 								{ text: "GossipLog", link: "/readme-gossiplog.md" },
 								{ text: "ModelDB", link: "/readme-modeldb.md" },
 								{ text: "Signed CID", link: "/readme-signed-cid.md" },
+								{ text: "Interfaces", link: "/readme-interfaces.md" },
+								{ text: "Discovery Service", link: "/readme-discovery.md" },
 							],
 						},
 						{

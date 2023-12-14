@@ -3,11 +3,14 @@
 A Canvas app replicates and executes a log of signed actions, sourced from
 GossipLog, with read/write access to a ModelDB database.
 
-This is the module that you should be using if you are writing an application
-and want fine-grained control over how it's started/stopped.
+The "core" is the primary way to run application *clients* that join
+the peer-to-peer network. It's also used as a dependency by other
+packages like the Canvas CLI.
 
-Alternatively, you can use the `useCanvas` hook in `@canvas-js/hooks`,
-which has the same API, but handles initialization for you.
+Use this package directly if you want fine-grained control over when the
+application is started/stopped. Otherwise, you can use `useCanvas` in
+`@canvas-js/hooks`, which has the same API, but handles initialization
+inside React for you.
 
 
 ## Table of Contents
