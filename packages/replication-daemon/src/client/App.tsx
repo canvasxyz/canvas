@@ -1,41 +1,26 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"
 
-import type { API } from "./API.js"
+import { host, type API } from "./API.js"
 
 import { AppList } from "./AppList.js"
 import { AppContext } from "./AppContext.js"
 import { ContractView } from "./ContractView.js"
 import { NewContract } from "./NewContract.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
-import { contractTemplate } from "./contract.js"
 
 export const App: React.FC<{}> = ({}) => {
 	const [state, setState] = useState<null | API["/api/state"]>(null)
-	// const [state, setState] = useState<null | API["/api/state"]>({
-	// 	apps: [
-	// 		{ topic: "fjdksaljfkdslajfkdsla1", status: "stopped" },
-	// 		{ topic: "fjdksaljfkdslajfkdsla2", status: "stopped" },
-	// 		{ topic: "fjdksaljfkdslajfkdsla3", status: "stopped" },
-	// 		{ topic: "fjdksaljfkdslajfkdsla4", status: "stopped" },
-	// 	],
-	// 	peerId: "12D3KooWP5bKU7vZK4GwZtnN9NrVrn7g5PrFR9CAkX5Ugqx4FAfQ",
-	// 	connections: [],
-	// })
 
 	const [selected, setSelected] = useState<null | { topic: string; contract: string }>(null)
-	// const [selected, setSelected] = useState<null | { topic: string; contract: string }>({
-	// 	topic: "fjdksaljfkdslajfkdsla1",
-	// 	contract: contractTemplate("fjdksaljfkdslajfkdsla1"),
-	// })
 
 	const select = useCallback(async (topic: string) => {
-		const contract = await fetch(`/api/apps/${topic}`).then((res) => res.text())
+		const contract = await fetch(`${host}/api/apps/${topic}`).then((res) => res.text())
 		setSelected({ topic, contract })
 	}, [])
 
 	const refresh = useCallback(async () => {
 		try {
-			const state: API["/api/state"] = await fetch("/api/state").then((res) => res.json())
+			const state: API["/api/state"] = await fetch(`${host}/api/state`).then((res) => res.json())
 			state.apps.sort(({ topic: a }, { topic: b }) => (a < b ? -1 : a === b ? 0 : 1))
 			setState(state)
 		} catch (err) {

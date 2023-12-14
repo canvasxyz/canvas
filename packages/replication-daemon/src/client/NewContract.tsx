@@ -1,8 +1,9 @@
-import React, { useCallback, useContext, useMemo, useState } from "react"
+import React, { useCallback, useContext, useState } from "react"
 
 import { AppContext } from "./AppContext.js"
 import { Editor } from "./Editor.js"
 import { contractTemplate } from "./contract.js"
+import { host } from "./API.js"
 
 const initialValue = contractTemplate()
 
@@ -13,21 +14,15 @@ export const NewContract: React.FC<{}> = ({}) => {
 
 	const submit = useCallback(
 		async (contract: string) => {
-			const res = await fetch("/api/apps", { method: "post", body: contract })
+			const res = await fetch(`${host}/api/apps`, { method: "post", body: contract })
 			if (res.status !== 200) {
 				const message = await res.text()
 				alert(`failed to start app (${res.status} ${res.statusText}) ${message}`)
 			}
 
 			const location = res.headers.get("location")
-			console.log("Got location", location)
 			if (location !== null && location.startsWith("#")) {
 				const topic = location.slice(1)
-				// setApps(
-				// 	apps
-				// 		.concat([{ topic, status: "stopped" }])
-				// 		.sort(({ topic: a }, { topic: b }) => (a < b ? -1 : a === b ? 0 : 1)),
-				// )
 				select(topic)
 			}
 		},

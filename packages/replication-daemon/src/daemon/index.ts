@@ -3,19 +3,20 @@ import path from "node:path"
 import fs from "node:fs"
 
 import express from "express"
+import cors from "cors"
 import chalk from "chalk"
 
-import { register } from "prom-client"
 import PQueue from "p-queue"
 import { createLibp2p } from "libp2p"
 import { Connection } from "@libp2p/interface"
+import { register } from "prom-client"
 
 import { Canvas } from "@canvas-js/core"
 import { topicPattern } from "@canvas-js/gossiplog"
 import { VM } from "@canvas-js/vm"
 
 import { options } from "./libp2p.js"
-import { dataDirectory } from "./config.js"
+import { dataDirectory, listen } from "./config.js"
 
 const controller = new AbortController()
 
@@ -23,7 +24,14 @@ const libp2p = await createLibp2p(options)
 console.log("using PeerId", libp2p.peerId.toString())
 
 controller.signal.addEventListener("abort", () => libp2p.stop())
-libp2p.addEventListener("start", () => console.log("started libp2p"))
+libp2p.addEventListener("start", () => {
+	console.log("started libp2p")
+	console.log(
+		"listening on",
+		listen.map((address) => `${address}/p2p/${libp2p.peerId}`),
+	)
+})
+
 libp2p.addEventListener("stop", () => console.log("stopped libp2p"))
 
 const connections = new Map<string, Connection>()
@@ -51,6 +59,7 @@ const port = 3000
 
 // Step 2: start an HTTP server
 const app = express()
+app.use(cors())
 app.use(express.text())
 app.use(express.json())
 app.use("/", express.static("dist"))
@@ -166,29 +175,27 @@ app.post("/api/apps/:topic/start", async (req, res) => {
 		}
 
 		apps.set(app.topic, app)
-		console.log("started app", app)
+		console.log("started app", app.topic)
 	})
 
 	return res.status(200).end()
 })
 
-// TODO: need to support closing a canvas app without stopping the libp2p instance
+app.post("/api/apps/:topic/stop", async (req, res) => {
+	assert(topicPattern.test(req.params.topic))
 
-// app.post("/api/apps/:topic/stop", async (req, res) => {
-// 	assert(topicPattern.test(req.params.topic))
+	await queue.add(async () => {
+		console.log("stopping", req.params.topic)
 
-// 	await queue.add(async () => {
-// 		console.log("stopping", req.params.topic)
+		const app = apps.get(req.params.topic)
+		assert(app !== undefined, "application is not running")
 
-// 		const app = apps.get(req.params.topic)
-// 		assert(app !== undefined, "application is not running")
+		await app.close()
+		apps.delete(req.params.topic)
+	})
 
-// 		await app.close()
-// 		apps.delete(req.params.topic)
-// 	})
-
-// 	return res.status(200)
-// })
+	return res.status(200)
+})
 
 const server = app.listen(port, () => {
 	console.log(chalk.whiteBright(`Open the dashboard: http://localhost:${port}`))

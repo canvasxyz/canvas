@@ -9,7 +9,9 @@
     "lib"
   ],
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"npm:dev-client\" \"npm:dev-daemon\"",
+    "dev-client": "VITE_API_URL=http://localhost:3000 vite",
+    "dev-daemon": "node lib/daemon/index.js",
     "build": "vite build",
     "start": "node lib/daemon/index.js"
   },
@@ -48,6 +50,7 @@
     "any-signal": "^4.1.1",
     "chalk": "^5.3.0",
     "codemirror": "^6.0.1",
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "http-status-codes": "^2.3.0",
@@ -56,6 +59,7 @@
     "prom-client": "^15.0.0"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "vite": "^5.0.6"
   }
 }
