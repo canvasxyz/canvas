@@ -10,7 +10,7 @@ Hooks for using Canvas applications in React.
 
 ## `useCanvas`
 
-The `useCanvas` hook initializes a Canvas application contract inside a React component. It accepts the same `CanvasConfig` object as `Canvas.initialize`.
+The `useCanvas` hook initializes a Canvas application contract inside a React component. It accepts the same `CanvasConfig` object as `Canvas.initialize` in `@canvas-js/core`.
 
 ```ts
 import { SIWESigner } from "@canvas-js/chain-ethereum"
@@ -21,10 +21,12 @@ export function MyApp() {
   const { app, error } = useCanvas({
     contract: { topic: "com.example.forum", ...Forum },
     signers: [new SIWESigner({ signer: wallet })],
-    location: "myapp",
+    topic: "myapp",
   })
 }
 ```
+
+Note that `app` might be null the first time the hook runs.
 
 ## `useLiveQuery`
 

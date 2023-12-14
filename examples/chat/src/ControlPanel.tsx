@@ -1,35 +1,54 @@
-import React, { useCallback, useContext, useState } from "react"
+import React, { useCallback, useContext, useEffect, useState } from "react"
 import { deleteDB } from "idb"
 
 import { AppContext } from "./AppContext.js"
+
+const styles = {
+	button: `p-2 border rounded flex`,
+	disabled: `bg-gray-100 text-gray-500 hover:cursor-not-allowed`,
+	enabledGreen: `bg-green-100 hover:cursor-pointer hover:bg-green-200 active:bg-green-300`,
+	enabledRed: `bg-red-100 hover:cursor-pointer hover:bg-red-200 active:bg-red-300`,
+}
 
 export interface ControlPanelProps {}
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 	const { app, sessionSigner } = useContext(AppContext)
 
-	const [isStarted, setIsStarted] = useState(false)
+	const [status, setStatus] = useState<"stopped" | "starting" | "started" | "stopping">("stopped")
+	const handleLibp2pStart = useCallback(() => setStatus("started"), [])
+	const handleLibp2pStop = useCallback(() => setStatus("stopped"), [])
 
-	const start = useCallback(async () => {
-		if (app !== null) {
-			try {
-				await app.libp2p.start()
-				setIsStarted(true)
-			} catch (err) {
-				console.error(err)
-			}
+	useEffect(() => {
+		if (app === null) {
+			return
+		}
+
+		app.libp2p.addEventListener("start", handleLibp2pStart)
+		app.libp2p.addEventListener("stop", handleLibp2pStop)
+
+		return () => {
+			app.libp2p.removeEventListener("start", handleLibp2pStart)
+			app.libp2p.removeEventListener("stop", handleLibp2pStop)
 		}
 	}, [app])
 
-	const stop = useCallback(async () => {
-		if (app !== null) {
-			try {
-				await app.libp2p.stop()
-				setIsStarted(false)
-			} catch (err) {
-				console.error(err)
-			}
+	const start = useCallback(() => {
+		if (app === null) {
+			return
 		}
+
+		setStatus("starting")
+		app.libp2p.start()
+	}, [app])
+
+	const stop = useCallback(() => {
+		if (app === null) {
+			return
+		}
+
+		setStatus("stopping")
+		app.libp2p.stop()
 	}, [app])
 
 	const clear = useCallback(async () => {
@@ -47,43 +66,62 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 		}
 	}, [app, sessionSigner])
 
-	const button = `p-2 border rounded flex`
-	const disabled = `bg-gray-100 text-gray-500 hover:cursor-not-allowed`
-	const enabledGreen = `bg-green-100 hover:cursor-pointer hover:bg-green-200 active:bg-green-300`
-	const enabledRed = `bg-red-100 hover:cursor-pointer hover:bg-red-200 active:bg-red-300`
-
 	if (app === null) {
 		return (
 			<div className="flex flex-row gap-4">
-				<button disabled className={`flex-1 ${button} ${disabled}`}>
+				<button disabled className={`flex-1 ${styles.button} ${styles.disabled}`}>
 					Start libp2p
 				</button>
-				<button disabled className={`${button} ${disabled}`}>
+				<button disabled className={`${styles.button} ${styles.disabled}`}>
 					Clear data
 				</button>
 			</div>
 		)
-	} else if (isStarted) {
+	} else if (status === "stopped") {
 		return (
 			<div className="flex flex-row gap-4">
-				<button onClick={() => stop()} className={`flex-1 ${button} ${enabledRed}`}>
+				<button onClick={start} className={`flex-1 ${styles.button} ${styles.enabledGreen}`}>
+					Start libp2p
+				</button>
+				<button onClick={() => clear()} className={`${styles.button} ${styles.enabledRed}`}>
+					Clear data
+				</button>
+			</div>
+		)
+	} else if (status === "starting") {
+		return (
+			<div className="flex flex-row gap-4">
+				<button disabled className={`flex-1 ${styles.button} ${styles.disabled}`}>
+					Starting
+				</button>
+				<button disabled className={`${styles.button} ${styles.disabled}`}>
+					Clear data
+				</button>
+			</div>
+		)
+	} else if (status === "started") {
+		return (
+			<div className="flex flex-row gap-4">
+				<button onClick={stop} className={`flex-1 ${styles.button} ${styles.enabledRed}`}>
 					Stop libp2p
 				</button>
-				<button disabled className={`${button} ${disabled}`}>
+				<button disabled className={`${styles.button} ${styles.disabled}`}>
+					Clear data
+				</button>
+			</div>
+		)
+	} else if (status === "stopping") {
+		return (
+			<div className="flex flex-row gap-4">
+				<button disabled className={`flex-1 ${styles.button} ${styles.disabled}`}>
+					Stopping
+				</button>
+				<button disabled className={`${styles.button} ${styles.disabled}`}>
 					Clear data
 				</button>
 			</div>
 		)
 	} else {
-		return (
-			<div className="flex flex-row gap-4">
-				<button onClick={() => start()} className={`flex-1 ${button} ${enabledGreen}`}>
-					Start libp2p
-				</button>
-				<button onClick={() => clear()} className={`${button} ${enabledRed}`}>
-					Clear data
-				</button>
-			</div>
-		)
+		return null
 	}
 }
