@@ -1,7 +1,14 @@
 # @canvas-js/core
 
-A Canvas app replicates and executes a log of signed actions, running them
-in a set of JavaScript/TypeScript functions with access to ModelDB.
+A Canvas app replicates and executes a log of signed actions, sourced from
+GossipLog, with read/write access to a ModelDB database.
+
+This is the module that you should be using if you are writing an application
+and want fine-grained control over how it's started/stopped.
+
+Alternatively, you can use the `useCanvas` hook in `@canvas-js/hooks`,
+which has the same API, but handles initialization for you.
+
 
 ## Table of Contents
 

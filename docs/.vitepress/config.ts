@@ -53,10 +53,28 @@ export default defineConfig({
 					items: [
 						{ text: "CLI", link: "/readme-cli.md" },
 						{ text: "Core", link: "/readme-core.md" },
-						{ text: "GossipLog", link: "/readme-gossiplog.md" },
 						{ text: "Hooks", link: "/readme-hooks.md" },
-						{ text: "ModelDB", link: "/readme-modeldb.md" },
-						{ text: "Signed CID", link: "/readme-signed-cid.md" },
+						{
+							text: "Components",
+							collapsed: true,
+							items: [
+								{ text: "GossipLog", link: "/readme-gossiplog.md" },
+								{ text: "ModelDB", link: "/readme-modeldb.md" },
+								{ text: "Signed CID", link: "/readme-signed-cid.md" },
+							],
+						},
+						{
+							text: "Signers",
+							collapsed: true,
+							items: [
+								{ text: "Ethereum", link: "/readme-chain-ethereum.md" },
+								{ text: "Ethereum (Viem)", link: "/readme-chain-ethereum-viem.md" },
+								{ text: "Bluesky/ATP", link: "/readme-chain-atp.md" },
+								{ text: "Substrate", link: "/readme-chain-substrate.md" },
+								{ text: "Solana", link: "/readme-chain-solana.md" },
+								{ text: "Cosmos", link: "/readme-chain-cosmos.md" },
+							],
+						},
 					],
 				},
 				{
