@@ -1,4 +1,4 @@
-import { PeerId, TypedEventEmitter, CustomEvent, Connection, Libp2pEvents } from "@libp2p/interface"
+import { PeerId, TypedEventEmitter, CustomEvent, Libp2pEvents, Connection } from "@libp2p/interface"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
@@ -69,6 +69,7 @@ export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown>
 	close: Event
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
+	"connections:updated": CustomEvent<{ connections: Connections; status: AppConnectionStatus }>
 }
 
 export type CanvasLogEvent = CustomEvent<{
@@ -86,6 +87,7 @@ export type ApplicationData = {
 }
 
 export type AppConnectionStatus = "connected" | "disconnected"
+export type Connections = Record<string, { peer: PeerId; connections: Connection[] }>
 
 export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
 	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {
@@ -239,6 +241,28 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		}
 	}
 
+	public get status(): AppConnectionStatus {
+		return this.#peers.size > 0 ? "connected" : "disconnected"
+	}
+
+	public get peers(): { peerId: PeerId; connections: Connection[] }[] {
+		return Array.from(this.#peers.values()).map((peerId) => ({
+			peerId,
+			connections: this.libp2p.getConnections(peerId),
+		}))
+	}
+
+	private updateConnections() {
+		const connections = Object.fromEntries(
+			Array.from(this.#peers).map(([key, peerId]) => {
+				const connections = this.libp2p.getConnections(peerId)
+				return [key, { peerId, connections }]
+			}),
+		)
+
+		this.dispatchEvent(new CustomEvent("connections:updated", { detail: { status: this.status, connections } }))
+	}
+
 	private handlePeerConnect = ({ detail: peerId }: Libp2pEvents["peer:connect"]) => {
 		this.log("peer:connect %p", peerId)
 	}
@@ -248,6 +272,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		if (this.#peers.delete(peerId.toString())) {
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId } }))
+			this.updateConnections()
 		}
 	}
 
@@ -265,10 +290,12 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			if (this.#peers.get(id) === undefined) {
 				this.#peers.set(id, peerId)
 				this.dispatchEvent(new CustomEvent("connect", { detail: { peerId } }))
+				this.updateConnections()
 			}
 		} else {
 			if (this.#peers.delete(id)) {
 				this.dispatchEvent(new CustomEvent("disconnect", { detail: { peerId } }))
+				this.updateConnections()
 			}
 		}
 	}
