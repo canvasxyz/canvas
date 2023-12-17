@@ -46,6 +46,8 @@ export interface DiscoveryServiceInit {
 	topicFilter?: (topic: string) => boolean
 	discoveryTopic?: string
 	discoveryInterval?: number
+	presenceTimeoutInterval?: number
+	presenceTimeout?: number
 
 	minPeersPerTopic?: number
 	autoDialPriority?: number
@@ -57,9 +59,6 @@ export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
 
 export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> implements PeerDiscovery, Startable {
 	public static FETCH_KEY_PREFIX = "discovery/"
-
-	public static INTERVAL = 5 * minute
-	public static DELAY = 10 * second
 
 	public static MIN_PEERS_PER_TOPIC = 5
 	public static NEW_CONNECTION_TIMEOUT = 20 * second
@@ -86,15 +85,22 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 	private readonly addressFilter: (addr: Multiaddr) => boolean
 	private readonly discoveryTopic: string | null
 	private readonly discoveryInterval: number
-	private readonly topologyPeers = new Set<string>()
+	private readonly presenceTimeout: number
+	private readonly presenceTimeoutInterval: number
+	private readonly topologyPeers = new Set<string>() // peers we are directly connected to
+	private readonly presencePeers: Record<string, number> = {} // all known peers
 
 	readonly #discoveryQueue = new PQueue({ concurrency: 1 })
 	readonly #dialQueue = new PQueue({ concurrency: 5 })
 
 	#registrarId: string | null = null
 	#heartbeat: NodeJS.Timeout | null = null
+	#presenceTimer: NodeJS.Timeout | null = null
 
-	constructor(public readonly components: DiscoveryServiceComponents, init: DiscoveryServiceInit) {
+	constructor(
+		public readonly components: DiscoveryServiceComponents,
+		init: DiscoveryServiceInit,
+	) {
 		super()
 		this.pubsub = DiscoveryService.extractGossipSub(components)
 		this.fetch = DiscoveryService.extractFetchService(components)
@@ -104,6 +110,8 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		this.topicFilter = init.topicFilter ?? ((topic) => true)
 		this.discoveryTopic = init.discoveryTopic ?? null
 		this.discoveryInterval = init.discoveryInterval ?? 1 * 60 * 1000 // default to publishing once every minute
+		this.presenceTimeoutInterval = init.presenceTimeoutInterval ?? 2.5 * 60 * 1000 // try to evict presence peers every 2m 30s
+		this.presenceTimeout = init.presenceTimeout ?? 1.5 * 60 * 1000 // only evict if they haven't published in 1m 30s
 		this.addressFilter = init.addressFilter ?? ((addr) => true)
 	}
 
@@ -133,6 +141,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 			},
 			onDisconnect: (peerId: PeerId) => {
 				this.topologyPeers.delete(peerId.toString())
+				delete this.presencePeers[peerId.toString()]
 			},
 		})
 	}
@@ -143,6 +152,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		if (this.discoveryTopic !== null) {
 			this.pubsub.subscribe(this.discoveryTopic)
 
+			// active discovery
 			this.pubsub.addEventListener("message", async ({ detail: message }) => {
 				if (message.topic !== this.discoveryTopic) {
 					return
@@ -156,6 +166,8 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 				assert(peerRecordEnvelope instanceof Uint8Array, "expected peerRecordEnvelope instanceof Uint8Array")
 				const { peerId, multiaddrs } = await this.openPeerRecord(peerRecordEnvelope)
 
+				// emit an active discovery event for peers on other topics
+				// TODO: also manage a presence set for peers on other topics
 				this.log("received heartbeat from %s with topics %o", peerId, topics)
 				this.dispatchEvent(new CustomEvent("peer:topics", { detail: { peerId, topics } }))
 
@@ -164,8 +176,10 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 					return
 				}
 
+				// found a peer via active discovery
 				await this.components.peerStore.consumePeerRecord(peerRecordEnvelope, peerId)
 				this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
+				this.handlePeerJoined(peerId)
 
 				for (const topic of topicIntersection) {
 					const meshPeers = this.pubsub.getMeshPeers(topic)
@@ -178,7 +192,15 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 			})
 
 			this.#heartbeat = setInterval(() => this.publishHeartbeat(), this.discoveryInterval)
-			setTimeout(() => this.publishHeartbeat(), 3 * 1000)
+
+			this.#presenceTimer = setInterval(() => {
+				Object.entries(this.presencePeers).forEach((peerId, lastSeen) => {
+					if (lastSeen < new Date().getTime() - this.presenceTimeout) {
+						delete this.presencePeers[peerId.toString()]
+						this.dispatchEvent(new CustomEvent("presence:leave", { detail: { peerId } }))
+					}
+				})
+			}, this.presenceTimeoutInterval)
 		}
 	}
 
@@ -257,6 +279,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 					this.log("want more peers for topic %s", topic)
 
+					// passive discovery
 					const key = DiscoveryService.FETCH_KEY_PREFIX + topic
 					this.log("fetching key %s from %p", key, connection.remotePeer)
 					const result = await this.fetch.fetch(connection.remotePeer, key)
@@ -280,7 +303,9 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 							return
 						}
 
+						// found a peer via passive discovery
 						this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
+						this.handlePeerJoined(peerId)
 						await this.components.peerStore.consumePeerRecord(peerRecordEnvelope, peerId)
 						this.#dialQueue.add(() => this.connect(peerId, multiaddrs))
 					}
@@ -330,6 +355,11 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 			() => this.log("connection opened successfully"),
 			(err) => this.log.error("failed to open new connection to %p: %O", peerId, err),
 		)
+	}
+
+	private async handlePeerJoined(peerId: PeerId) {
+		this.presencePeers[peerId.toString()] = new Date().getTime()
+		this.dispatchEvent(new CustomEvent("presence:join", { detail: { peerId } }))
 	}
 }
 
