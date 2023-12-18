@@ -40,26 +40,33 @@ type TombstoneOperation = {
 export type Operation = CreateOperation | UpdateOperation | TombstoneOperation
 
 export async function verifyLog(did: string, plcOperationLog: Operation[]): Promise<string> {
-	let rotationKeys: string[] = []
 	let verificationMethod: string | null = null
+
 	for (const [i, operation] of plcOperationLog.entries()) {
-		await verifyOperation(operation, rotationKeys)
 		if (i === 0) {
 			const hash = sha256(cbor.encode(operation))
 			assert(did === `did:plc:${base32.baseEncode(hash).slice(0, 24)}`)
 		}
 
+		const { sig, ...unsignedOperation } = operation
+		const signature = base64url.baseDecode(sig)
+		const data = cbor.encode(unsignedOperation)
+
+		let keysToCheck: string[]
 		if (operation.type === "create") {
-			assert(i === 0, "expected i === 0")
-			verificationMethod = operation.signingKey
-			rotationKeys = [operation.signingKey]
+			verificationMethod == operation.signingKey
+			keysToCheck = [operation.signingKey]
 		} else if (operation.type === "plc_operation") {
-			rotationKeys = operation.rotationKeys
 			verificationMethod = operation.verificationMethods.atproto
+			keysToCheck = operation.rotationKeys
 		} else if (operation.type === "plc_tombstone") {
 			throw new Error("invalid operation type")
 		} else {
 			throw new Error("invalid operation type")
+		}
+
+		if (!(await verifySignatureAnyMatch(keysToCheck, data, signature))) {
+			throw new Error("invalid operation signature")
 		}
 	}
 
@@ -67,21 +74,11 @@ export async function verifyLog(did: string, plcOperationLog: Operation[]): Prom
 	return verificationMethod
 }
 
-async function verifyOperation(operation: Operation, rotationKeys: string[]) {
-	const { sig, ...unsignedOperation } = operation
-	const signature = base64url.baseDecode(sig)
-	const data = cbor.encode(unsignedOperation)
-	if (operation.type === "create") {
-		const result = await verifySignature(operation.signingKey, data, signature)
-		assert(result, "invalid operation signature")
-	} else if (operation.type === "plc_operation") {
-		for (const rotationKey of rotationKeys) {
-			const result = await verifySignature(rotationKey, data, signature)
-			if (result) {
-				return
-			}
+async function verifySignatureAnyMatch(keys: string[], data: any, signature: Uint8Array) {
+	for (const key of keys) {
+		if (await verifySignature(key, data, signature)) {
+			return true
 		}
-
-		throw new Error("invalid operation signature")
 	}
+	return false
 }
