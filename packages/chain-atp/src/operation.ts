@@ -72,7 +72,7 @@ export async function verifyLog(did: string, plcOperationLog: Operation[]): Prom
 	return verificationMethod
 }
 
-async function verifySignatureAnyMatch(keys: string[], data: any, signature: Uint8Array) {
+async function verifySignatureAnyMatch(keys: string[], data: Uint8Array, signature: Uint8Array) {
 	for (const key of keys) {
 		const valid = await verifySignature(key, data, signature)
 		if (valid) {
