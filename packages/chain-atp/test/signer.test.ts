@@ -8,15 +8,15 @@ import test from "ava"
 const plcOperationLog = JSON.parse(fs.readFileSync("test/plcOperationLog.json", "utf-8"))
 
 test("create and verify session", async (t) => {
-	const topic = randomUUID()
+	const topic = "foobar"
 	const signer = new ATPSigner()
 
-	const address = "did:plc:mmftdzyl74ymn2hhzoahtjcw"
-	const signingKey = "did:key:zQ3shWHru5nd9KVhuMsNTtN4QzAq2z7R22d7UKi7dtZAuZs2k"
+	const address = "did:plc:uh3qgppih5ocj6hsvtlsg5v7"
+	const signingKey = "did:key:zQ3shu1MQC5zxCcq67nDqyoCzkNyjzEWcy3D3sSkjyKL8ce9z"
 
 	const verificationMethod = await verifyLog(address, plcOperationLog)
 	const archives = {
-		"test/archives/3kd4eokkt272u.car": "at://did:plc:mmftdzyl74ymn2hhzoahtjcw/app.bsky.feed.post/3kd4eokkt272u",
+		"test/archives/3kgtoieljuk2a.car": "at://did:plc:uh3qgppih5ocj6hsvtlsg5v7/app.bsky.feed.post/3kgtoieljuk2a",
 	}
 
 	for (const [path, uri] of Object.entries(archives)) {
