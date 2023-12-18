@@ -47,7 +47,7 @@ jobs:
         run: npm run test --workspace=@canvas-js/modeldb
 
       - name: Run @canvas-js/chain-atp tests
-        run: npm run test --workspace=@canvas-js/modeldb
+        run: npm run test --workspace=@canvas-js/chain-atp
 
       - name: Run @canvas-js/core tests
         run: npm run test --workspace=@canvas-js/core
