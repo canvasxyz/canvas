@@ -65,9 +65,7 @@ export async function verifyLog(did: string, plcOperationLog: Operation[]): Prom
 			throw new Error("invalid operation type")
 		}
 
-		if (!(await verifySignatureAnyMatch(keysToCheck, data, signature))) {
-			throw new Error("invalid operation signature")
-		}
+		await verifySignatureAnyMatch(keysToCheck, data, signature)
 	}
 
 	assert(verificationMethod !== null)
@@ -76,9 +74,11 @@ export async function verifyLog(did: string, plcOperationLog: Operation[]): Prom
 
 async function verifySignatureAnyMatch(keys: string[], data: any, signature: Uint8Array) {
 	for (const key of keys) {
-		if (await verifySignature(key, data, signature)) {
-			return true
+		const valid = await verifySignature(key, data, signature)
+		if (valid) {
+			return
 		}
 	}
-	return false
+
+	throw new Error("invalid operation signature")
 }
