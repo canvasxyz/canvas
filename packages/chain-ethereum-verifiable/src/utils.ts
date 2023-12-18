@@ -1,7 +1,8 @@
 import { CID } from "multiformats/cid"
 import * as siwe from "siwe"
 
-import type { SIWESessionData, SIWEMessage } from "./types.js"
+import type { SIWESessionData, SIWEMessage, EIP712VerifiableSessionMessage } from "./types.js"
+import { Session } from "@canvas-js/interfaces"
 
 export function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
@@ -48,6 +49,40 @@ export function prepareSIWEMessage(message: SIWEMessage): string {
 		issuedAt: message.issuedAt,
 		expirationTime: message.expirationTime ?? undefined,
 	}).prepareMessage()
+}
+
+export function prepareEIP712SessionMessage(message: Session) {
+	// ???
+
+	return {
+		types: {
+			EIP712Domain: [
+				{ name: "name", type: "string" }, // name should be exactly equal to the topic of the session
+				{ name: "version", type: "string" },
+				{ name: "chainId", type: "uint256" },
+				{ name: "verifyingContract", type: "address" },
+				{ name: "salt", type: "bytes32" },
+			],
+			Session: [
+				{ name: "address", type: "address" }, // the address that is delegated-signing the action
+				{ name: "publicKey", type: "address" }, // the burner address that is being authorized to sign actions
+				{ name: "blockhash", type: "string" }, // may be "" if no blockhash
+				{ name: "timestamp", type: "uint256" }, // this is actually overkill at uint24 is enough, but we can revisit during code review
+				{ name: "duration", type: "uint256" },
+			],
+		},
+		primaryType: "Session",
+		domain: {
+			// these are the signer fields
+		},
+		message: {
+			address: message.address,
+			publicKey: message.publicKey,
+			blockhash: message.blockhash,
+			timestamp: message.timestamp,
+			duration: message.duration,
+		},
+	}
 }
 
 export const addressPattern = /^eip155:(\d+):(0x[A-Fa-f0-9]+)$/
