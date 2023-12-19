@@ -1,0 +1,8 @@
+{
+  "topic": "foobar",
+  "address": "did:plc:uh3qgppih5ocj6hsvtlsg5v7",
+  "signingKey": "did:key:zQ3shu1MQC5zxCcq67nDqyoCzkNyjzEWcy3D3sSkjyKL8ce9z",
+  "archives": {
+    "test/archives/3kgtoieljuk2a.car": "at://did:plc:uh3qgppih5ocj6hsvtlsg5v7/app.bsky.feed.post/3kgtoieljuk2a"
+  }
+}
