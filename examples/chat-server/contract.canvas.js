@@ -1,18 +1,18 @@
-export const topic = "chat-example.canvas.xyz";
+export const topic = "chat-example.canvas.xyz"
 
 export const models = {
-  message: {
-    id: "primary",
-    user: "string",
-    content: "string",
-    timestamp: "integer",
-    $indexes: ["user", "timestamp"],
-  },
-};
+	message: {
+		id: "primary",
+		address: "string",
+		content: "string",
+		timestamp: "integer",
+		$indexes: ["address", "timestamp"],
+	},
+}
 
 export const actions = {
-  async createMessage(db, { content }, { id, chain, address, timestamp }) {
-    const user = `${chain}:${address}`;
-    await db.set("message", { id, user, content, timestamp });
-  },
-};
+	async createMessage(db, { content }, { id, address, timestamp }) {
+		console.log("received message:", content)
+		await db.set("message", { id, address, content, timestamp })
+	},
+}
