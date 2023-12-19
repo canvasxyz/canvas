@@ -46,11 +46,11 @@ const testFixture = {
 
 const plcOperationLog = await fetch(`https://plc.directory/${address}/log`).then((res) => res.json())
 const plcOperationLogPath = "./test/plcOperationLog.json"
-await writeFile(plcOperationLogPath, JSON.stringify(plcOperationLog, null, 4))
+await writeFile(plcOperationLogPath, JSON.stringify(plcOperationLog, null, "\t"))
 console.log(`Updated ${plcOperationLogPath}`)
 
 const fixturePath = `./test/fixture.json`
-await writeFile(fixturePath, JSON.stringify(testFixture, null, 4))
+await writeFile(fixturePath, JSON.stringify(testFixture, null, "\t"))
 console.log(`Updated ${fixturePath}`)
 
 const archivePath = `./test/archives/${rkey}.car`

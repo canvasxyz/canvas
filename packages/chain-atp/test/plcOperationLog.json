@@ -1,23 +1,23 @@
 [
-    {
-        "sig": "5DaCy05m4TO2ENm2I0yUTHLMXfFQyJnKILFgo7P6rcxzhH8DdzZcH6T4XwRTBuxZTttOb7vTiUvOSOqhJO0GIQ",
-        "prev": null,
-        "type": "plc_operation",
-        "services": {
-            "atproto_pds": {
-                "type": "AtprotoPersonalDataServer",
-                "endpoint": "https://morel.us-east.host.bsky.network"
-            }
-        },
-        "alsoKnownAs": [
-            "at://canvastest.bsky.social"
-        ],
-        "rotationKeys": [
-            "did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg",
-            "did:key:zQ3shpKnbdPx3g3CmPf5cRVTPe1HtSwVn5ish3wSnDPQCbLJK"
-        ],
-        "verificationMethods": {
-            "atproto": "did:key:zQ3shRNshw8JrhfbVKiBML9aDvysaSRbzHwiVTtUycN8YcqWd"
-        }
-    }
+	{
+		"sig": "5DaCy05m4TO2ENm2I0yUTHLMXfFQyJnKILFgo7P6rcxzhH8DdzZcH6T4XwRTBuxZTttOb7vTiUvOSOqhJO0GIQ",
+		"prev": null,
+		"type": "plc_operation",
+		"services": {
+			"atproto_pds": {
+				"type": "AtprotoPersonalDataServer",
+				"endpoint": "https://morel.us-east.host.bsky.network"
+			}
+		},
+		"alsoKnownAs": [
+			"at://canvastest.bsky.social"
+		],
+		"rotationKeys": [
+			"did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg",
+			"did:key:zQ3shpKnbdPx3g3CmPf5cRVTPe1HtSwVn5ish3wSnDPQCbLJK"
+		],
+		"verificationMethods": {
+			"atproto": "did:key:zQ3shRNshw8JrhfbVKiBML9aDvysaSRbzHwiVTtUycN8YcqWd"
+		}
+	}
 ]

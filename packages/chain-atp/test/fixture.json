@@ -1,8 +1,8 @@
 {
-    "address": "did:plc:uh3qgppih5ocj6hsvtlsg5v7",
-    "signingKey": "did:key:zQ3shMzpRQdfTvjcmqegujbb99uewti5s5DkK4KeWszZk2yo9",
-    "topic": "43650173-ea11-478c-86d0-2cd369f04946",
-    "archives": {
-        "test/archives/3kgvagt6c2t2j.car": "at://did:plc:uh3qgppih5ocj6hsvtlsg5v7/app.bsky.feed.post/3kgvagt6c2t2j"
-    }
+	"address": "did:plc:uh3qgppih5ocj6hsvtlsg5v7",
+	"signingKey": "did:key:zQ3shkEorJBU14FH9L1eLfU6QdE1FBhA7zC75XbrDLYWETEeJ",
+	"topic": "a7fbe055-2139-4f26-9868-ebbd7ed80a64",
+	"archives": {
+		"test/archives/3kgvb53cuh22l.car": "at://did:plc:uh3qgppih5ocj6hsvtlsg5v7/app.bsky.feed.post/3kgvb53cuh22l"
+	}
 }
