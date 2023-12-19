@@ -10,9 +10,14 @@ import express from "express"
 import cors from "cors"
 
 import { multiaddr } from "@multiformats/multiaddr"
+import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
+
+import dotenv from "dotenv"
+
+dotenv.config()
 
 import { Canvas } from "@canvas-js/core"
-import { createAPI } from "@canvas-js/core/api"
+import { createAPI, createMetricsAPI } from "@canvas-js/core/api"
 import { MIN_CONNECTIONS, MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { defaultBootstrapList, testnetBootstrapList } from "@canvas-js/core/bootstrap"
 
@@ -26,6 +31,8 @@ import { getContractLocation } from "../utils.js"
 
 export const command = "run <path>"
 export const desc = "Run a Canvas application"
+
+const { ANNOUNCE, LISTEN, BOOTSTRAP_LIST, PORT } = process.env
 
 export const builder = (yargs: Argv) =>
 	yargs
@@ -41,7 +48,7 @@ export const builder = (yargs: Argv) =>
 		.option("port", {
 			desc: "HTTP API port",
 			type: "number",
-			default: 8000,
+			default: parseInt(PORT ?? "8000"),
 		})
 		.option("offline", {
 			type: "boolean",
@@ -51,11 +58,12 @@ export const builder = (yargs: Argv) =>
 		.option("listen", {
 			type: "array",
 			desc: "Internal /ws multiaddr",
-			default: ["/ip4/0.0.0.0/tcp/4444/ws"],
+			default: LISTEN?.split(" ") ?? ["/ip4/0.0.0.0/tcp/4444/ws"],
 		})
 		.option("announce", {
 			type: "array",
 			desc: "External /ws multiaddr, e.g. /dns4/myapp.com/tcp/4444/ws",
+			default: ANNOUNCE?.split(" ") ?? [],
 		})
 		.option("replay", {
 			type: "boolean",
@@ -123,20 +131,26 @@ export async function handler(args: Args) {
 	}
 
 	const announce: string[] = []
-	for (const address of args.announce ?? []) {
-		assert(typeof address === "string", "--announce address must be a string")
+	for (const address of args.announce) {
+		assert(typeof address === "string", "announce address must be a string")
 		const addr = multiaddr(address)
-		const lastProtoName = addr.protoNames().pop()
-		assert(lastProtoName === "ws" || lastProtoName === "wss", "--announce address must be a /ws or /wss multiaddr")
+		assert(
+			WebSockets.exactMatch(addr) || WebSocketsSecure.exactMatch(addr),
+			"announce address must be a /ws or /wss multiaddr",
+		)
+
 		announce.push(address)
 	}
 
 	const listen: string[] = []
-	for (const address of args.listen ?? []) {
-		assert(typeof address === "string", "--listen address must be a string")
+	for (const address of args.listen) {
+		assert(typeof address === "string", "listen address must be a string")
 		const addr = multiaddr(address)
-		const lastProtoName = addr.protoNames().pop()
-		assert(lastProtoName === "ws" || lastProtoName === "wss", "--listen address must be a /ws or /wss multiaddr")
+		assert(
+			WebSockets.exactMatch(addr) || WebSocketsSecure.exactMatch(addr),
+			"listen address must be a /ws or /wss multiaddr",
+		)
+
 		listen.push(address)
 	}
 
@@ -150,10 +164,15 @@ export async function handler(args: Args) {
 		console.log(chalk.yellowBright("[canvas] Using custom bootstrap servers"))
 		bootstrapList = []
 		for (const address of args.bootstrap) {
-			if (typeof address === "string") {
-				console.log(chalk.yellowBright(`[canvas] - ${address}`))
-				bootstrapList.push(address)
-			}
+			assert(typeof address === "string", "bootstrap address must be a string")
+			console.log(chalk.yellowBright(`[canvas] - ${address}`))
+			bootstrapList.push(address)
+		}
+	} else if (BOOTSTRAP_LIST !== undefined) {
+		bootstrapList = BOOTSTRAP_LIST.split(" ")
+		console.log(chalk.yellowBright("[canvas] Using custom bootstrap servers"))
+		for (const address of bootstrapList) {
+			console.log(chalk.yellowBright(`[canvas] - ${address}`))
 		}
 	} else {
 		console.log(chalk.gray("[canvas] Using default Canvas bootstrap servers"))
@@ -193,7 +212,7 @@ export async function handler(args: Args) {
 		console.log(chalk.gray(`[canvas] Closed connection to ${peer} at ${addr}`))
 	})
 
-	app.messageLog.addEventListener("message", ({ detail: { id, message } }) => {
+	app.addEventListener("message", ({ detail: { id, message } }) => {
 		if (args["verbose"]) {
 			const { type, ...payload } = message.payload
 			console.log(`[canvas] Applied message ${chalk.green(id)}`, { type, ...payload })
@@ -210,7 +229,7 @@ export async function handler(args: Args) {
 		}
 	})
 
-	app.messageLog.addEventListener("sync", ({ detail: { peer, duration, messageCount } }) => {
+	app.addEventListener("sync", ({ detail: { peer, duration, messageCount } }) => {
 		console.log(
 			chalk.magenta(
 				`[canvas] Completed merkle sync with peer ${peer}: applied ${messageCount} messages in ${duration}ms`,
@@ -230,10 +249,11 @@ export async function handler(args: Args) {
 
 	const api = express()
 	api.use(cors())
-	api.use(
-		"/api",
-		createAPI(app, { exposeMetrics: args.metrics, exposeP2P: true, exposeModels: true, exposeMessages: true }),
-	)
+	api.use("/api", createAPI(app, { exposeP2P: true, exposeModels: true, exposeMessages: true }))
+
+	if (args.metrics) {
+		api.use("/metrics", createMetricsAPI(app))
+	}
 
 	if (args.static !== undefined) {
 		assert(/^(.\/)?\w[\w/]*$/.test(args.static), "Invalid directory for static files")
