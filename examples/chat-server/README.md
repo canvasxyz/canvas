@@ -1,6 +1,6 @@
 # @canvas-js/example-chat-server
 
-This is an example of a replication server for a the `chat-example.canvas.xyz` chat application.
+This is an example of a replication server for the `chat-example.canvas.xyz` chat application.
 
 ## Local development
 
