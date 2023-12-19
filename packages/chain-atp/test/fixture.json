@@ -1,8 +1,8 @@
 {
-  "topic": "foobar",
-  "address": "did:plc:uh3qgppih5ocj6hsvtlsg5v7",
-  "signingKey": "did:key:zQ3shu1MQC5zxCcq67nDqyoCzkNyjzEWcy3D3sSkjyKL8ce9z",
-  "archives": {
-    "test/archives/3kgtoieljuk2a.car": "at://did:plc:uh3qgppih5ocj6hsvtlsg5v7/app.bsky.feed.post/3kgtoieljuk2a"
-  }
+    "address": "did:plc:uh3qgppih5ocj6hsvtlsg5v7",
+    "signingKey": "did:key:zQ3shMzpRQdfTvjcmqegujbb99uewti5s5DkK4KeWszZk2yo9",
+    "topic": "43650173-ea11-478c-86d0-2cd369f04946",
+    "archives": {
+        "test/archives/3kgvagt6c2t2j.car": "at://did:plc:uh3qgppih5ocj6hsvtlsg5v7/app.bsky.feed.post/3kgvagt6c2t2j"
+    }
 }

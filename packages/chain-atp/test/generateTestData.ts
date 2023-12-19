@@ -1,6 +1,7 @@
 import * as ATP from "@atproto/api"
 import { ATPSigner } from "@canvas-js/chain-atp"
 import { Secp256k1Signer } from "@canvas-js/signed-cid"
+import { randomUUID } from "crypto"
 import { writeFile } from "fs/promises"
 import { stdin, stdout } from "process"
 import { createInterface } from "readline/promises"
@@ -19,16 +20,12 @@ await agent.login({
 	password,
 })
 
-const address = agent.session.did
+const address = agent.session!.did
 
-const plcOperationLog = await fetch(`https://plc.directory/${address}/log`).then((res) => res.json())
-console.log(JSON.stringify(plcOperationLog))
-
-const topic = "foobar"
+const topic = randomUUID()
 
 const signer = new Secp256k1Signer()
 const message = ATPSigner.createAuthenticationMessage(topic, signer.uri, address)
-console.log(message)
 const { uri, cid } = await agent.post({ text: message })
 
 const prefix = `at://${address}/`
@@ -38,9 +35,24 @@ const result = await agent.com.atproto.sync.getRecord({ did: address, collection
 
 await agent.deletePost(uri)
 
-console.log(`address: ${address}`)
-console.log(`signingKey: ${signer.uri}`)
-console.log(`uri: ${uri}`)
-console.log(`rkey: ${rkey}`)
+const testFixture = {
+	address,
+	signingKey: signer.uri,
+	topic,
+	archives: {
+		[`test/archives/${rkey}.car`]: uri,
+	},
+}
 
-await writeFile(`./archives/${rkey}.car`, result.data, "binary")
+const plcOperationLog = await fetch(`https://plc.directory/${address}/log`).then((res) => res.json())
+const plcOperationLogPath = "./test/plcOperationLog.json"
+await writeFile(plcOperationLogPath, JSON.stringify(plcOperationLog, null, 4))
+console.log(`Updated ${plcOperationLogPath}`)
+
+const fixturePath = `./test/fixture.json`
+await writeFile(fixturePath, JSON.stringify(testFixture, null, 4))
+console.log(`Updated ${fixturePath}`)
+
+const archivePath = `./test/archives/${rkey}.car`
+await writeFile(archivePath, result.data, "binary")
+console.log(`Written record archive to ${archivePath}`)

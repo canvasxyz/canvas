@@ -9,7 +9,8 @@
     "lib"
   ],
   "scripts": {
-    "test": "ava"
+    "test": "ava",
+    "generate-test-data": "node test/lib/generateTestData.js"
   },
   "imports": {
     "#target": {
