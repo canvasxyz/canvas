@@ -67,4 +67,7 @@ export default {
 	getSessionStore() {
 		return new SignerStore()
 	},
+	getRandomValues(arr) {
+		return window.crypto.getRandomValues(arr)
+	},
 } satisfies PlatformTarget

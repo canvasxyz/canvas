@@ -6,30 +6,29 @@ import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
 import target from "#target"
 
-import type { EIP712VerifiableSessionData, EIP712VerifiableSessionMessage } from "./types.js"
 import {
-	assert,
-	signalInvalidType,
-	SIWEMessageVersion,
-	validateSessionData,
-	parseAddress,
-	addressPattern,
-	prepareSIWEMessage,
-} from "./utils.js"
+	eip712TypeDefinitionsForAction,
+	eip712TypeDefinitionsForSession,
+	type EIP712VerifiableSessionData,
+	type EIP712VerifiableSessionMessage,
+} from "./types.js"
+import { assert, signalInvalidType, validateSessionData, parseAddress, addressPattern, generateSalt } from "./utils.js"
 
 export interface EIP712VerifiableSignerInit {
 	signer?: AbstractSigner
-	// what should the default values be here?
 	sessionDuration?: number
 	chainId?: number // used in the eip712 domain, but optional; no chainid if none is specified (don't default to mainnet)
 	verifyingContract?: string // used in the eip712 domain
 	salt?: string // used in the eip712 domain separator
-	version?: number // version in the eip712 domain. by default 1, but later versions of this signer could increment it
+	version?: string // version in the eip712 domain. by default 1, but later versions of this signer could increment it
 }
 
 export class EIP712VerifiableSigner implements SessionSigner<EIP712VerifiableSessionData> {
 	public readonly sessionDuration: number | null
 	public readonly chainId: number
+	public readonly verifyingContract: string
+	public readonly salt: string
+	public readonly version: string
 
 	private readonly log = logger("canvas:chain-ethereum-verifiable")
 
@@ -40,33 +39,32 @@ export class EIP712VerifiableSigner implements SessionSigner<EIP712VerifiableSes
 		this.#ethersSigner = init.signer ?? Wallet.createRandom()
 		this.sessionDuration = init.sessionDuration ?? null
 		this.chainId = init.chainId ?? 1
+		this.verifyingContract = init.verifyingContract ?? "0x1c56346cd2a2bf3202f771f50d3d14a367b48070"
+		this.salt = init.salt ?? generateSalt()
+		this.version = init.version ?? "1"
 	}
 
 	public readonly match = (address: string) => addressPattern.test(address)
 
 	public verifySession(topic: string, session: Session<EIP712VerifiableSessionData>) {
-		const { publicKey, address, authorizationData, timestamp, duration } = session
+		const { publicKey, address, authorizationData, timestamp, blockhash, duration } = session
 
 		assert(didKeyPattern.test(publicKey), "invalid signing key")
 		assert(validateSessionData(authorizationData), "invalid session")
 		const [chainId, walletAddress] = parseAddress(address)
 
-		const eip712VerifiableSessionMessage: EIP712VerifiableSessionMessage = {
-			version: SIWEMessageVersion,
-			// domain: authorizationData.domain,  // TODO: what is this?
-			// nonce: authorizationData.nonce,
-			// chainId: chainId,
+		const message: EIP712VerifiableSessionMessage = {
 			address: walletAddress,
-			// uri: publicKey,
-			// issuedAt: new Date(timestamp).toISOString(),
-			// expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
-			// resources: [`canvas://${topic}`],
+			publicKey,
+			blockhash,
+			timestamp,
+			duration,
 		}
 
-		const recoveredAddress = verifyMessage(
-			prepareSIWEMessage(eip712VerifiableSessionMessage),
-			hexlify(authorizationData.signature),
-		)
+		const { domain, signature } = authorizationData
+
+		const recoveredAddress = verifyTypedData(domain, eip712TypeDefinitionsForSession, message, hexlify(signature))
+
 		assert(recoveredAddress === walletAddress, "invalid SIWE signature")
 	}
 
@@ -97,40 +95,36 @@ export class EIP712VerifiableSigner implements SessionSigner<EIP712VerifiableSes
 
 		this.log("creating new session for %s", address)
 
-		const domain = target.getDomain()
-		const nonce = siwe.generateNonce()
-
 		const signer = new Secp256k1Signer()
 
 		const timestamp = options.timestamp ?? Date.now()
-		const issuedAt = new Date(timestamp).toISOString()
 
 		const message: EIP712VerifiableSessionMessage = {
-			version: SIWEMessageVersion,
 			address: walletAddress,
-			// chainId: this.chainId,
-			// domain: domain,
-			// uri: signer.uri,
-			// nonce: nonce,
-			// issuedAt: issuedAt,
-			// expirationTime: null,
-			// resources: [`canvas://${topic}`],
+			publicKey: signer.uri,
+			blockhash: "",
+			timestamp,
+			duration: this.sessionDuration ?? 0,
 		}
 
-		if (this.sessionDuration !== null) {
-			siweMessage.expirationTime = new Date(timestamp + this.sessionDuration).toISOString()
+		const domain = {
+			name: topic,
+			version: this.version,
+			chainId: this.chainId,
+			verifyingContract: this.verifyingContract,
+			salt: this.salt,
 		}
 
-		const signature = await this.#ethersSigner.signMessage(prepareSIWEMessage(siweMessage))
+		const signature = await this.#ethersSigner.signTypedData(domain, eip712TypeDefinitionsForSession, message)
 
 		const session: Session<EIP712VerifiableSessionData> = {
 			type: "session",
 			address: address,
 			publicKey: signer.uri,
-			authorizationData: { signature: getBytes(signature), domain, nonce },
-			duration: this.sessionDuration,
+			authorizationData: { signature: getBytes(signature), domain },
+			duration: this.sessionDuration || 0,
 			timestamp: timestamp,
-			blockhash: null,
+			blockhash: "",
 		}
 
 		this.#store.set(topic, address, session, signer)
@@ -140,6 +134,14 @@ export class EIP712VerifiableSigner implements SessionSigner<EIP712VerifiableSes
 	}
 
 	public sign(message: Message<Action | Session>): Signature {
+		const domain = {
+			name: message.topic,
+			version: this.version,
+			chainId: this.chainId,
+			verifyingContract: this.verifyingContract,
+			salt: this.salt,
+		}
+		console.log(domain)
 		if (message.payload.type === "action") {
 			const { address, timestamp } = message.payload
 			const { signer, session } = this.#store.get(message.topic, address) ?? {}
@@ -149,14 +151,32 @@ export class EIP712VerifiableSigner implements SessionSigner<EIP712VerifiableSes
 			assert(timestamp >= session.timestamp)
 			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
 
-			return signer.sign(message)
+			console.log("signing an action")
+			return signer.sign(
+				{
+					domain,
+					types: eip712TypeDefinitionsForAction,
+					value: {},
+				},
+				{ codec: "eip712", digest: "none" },
+			)
 		} else if (message.payload.type === "session") {
 			const { signer, session } = this.#store.get(message.topic, message.payload.address) ?? {}
 			assert(signer !== undefined && session !== undefined)
 
 			// only sign our own current sessions
 			assert(message.payload === session)
-			return signer.sign(message)
+
+			const { address, publicKey, blockhash, timestamp, duration } = message.payload
+			const [_, walletAddress] = parseAddress(address)
+			return signer.sign(
+				{
+					domain,
+					types: eip712TypeDefinitionsForSession,
+					value: { address: walletAddress, publicKey, blockhash, timestamp, duration },
+				},
+				{ codec: "eip712", digest: "none" },
+			)
 		} else {
 			signalInvalidType(message.payload)
 		}

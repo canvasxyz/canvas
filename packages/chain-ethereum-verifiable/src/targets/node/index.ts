@@ -1,3 +1,4 @@
+import crypto from "crypto"
 import os from "node:os"
 
 import type { Session } from "@canvas-js/interfaces"
@@ -43,5 +44,8 @@ export default {
 	},
 	getSessionStore() {
 		return new SessionStore()
+	},
+	getRandomValues(arr) {
+		return crypto.getRandomValues(arr)
 	},
 } satisfies PlatformTarget

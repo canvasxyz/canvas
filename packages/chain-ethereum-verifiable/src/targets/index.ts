@@ -8,4 +8,5 @@ export interface PlatformTarget {
 		set(topic: string, address: string, sesion: Session, signer: Secp256k1Signer): void
 		clear(topic: string): void
 	}
+	getRandomValues: (arr: Uint8Array) => Uint8Array
 }
