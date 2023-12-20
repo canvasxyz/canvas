@@ -42,6 +42,19 @@ export const digests: Digest[] = [
 			return hash.digest()
 		},
 	},
+	{
+		name: "none",
+		code: 0xff,
+		digest: (iter: Iterable<Uint8Array>) => {
+			const parts = []
+			for (const chunk of iter) {
+				for (const char of chunk) {
+					parts.push(char)
+				}
+			}
+			return new Uint8Array(parts)
+		},
+	},
 ]
 
 export const defaultDigest = "sha2-256"
