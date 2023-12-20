@@ -1,5 +1,4 @@
-import { AbstractSigner, Wallet, verifyMessage, hexlify, getBytes } from "ethers"
-import * as siwe from "siwe"
+import { AbstractSigner, Wallet, verifyMessage, hexlify, getBytes, verifyTypedData } from "ethers"
 import { logger } from "@libp2p/logger"
 
 import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
