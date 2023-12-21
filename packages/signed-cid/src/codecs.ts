@@ -1,10 +1,9 @@
 import * as cbor from "@ipld/dag-cbor"
 import * as json from "@ipld/dag-json"
 import * as raw from "multiformats/codecs/raw"
-import { getBytes } from "ethers"
-import { TypedDataEncoder } from "ethers/hash"
 
 import { assert } from "./utils.js"
+import { eip712Codec } from "./eip712Codec.js"
 
 export type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint8Array> }
 
@@ -37,18 +36,7 @@ export const codecs: Codec[] = [
 			}
 		},
 	},
-	{
-		name: "eip712",
-		code: 712,
-		encode: (rawValue) => {
-			try {
-				const { domain, types, value } = rawValue
-				return [getBytes(TypedDataEncoder.hash(domain, types, value))]
-			} catch (e) {
-				throw new TypeError("the value must be an EIP-712 serializable object")
-			}
-		},
-	},
+	eip712Codec,
 ]
 
 export const defaultCodec = "dag-cbor"

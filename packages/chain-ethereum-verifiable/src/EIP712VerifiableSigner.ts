@@ -1,4 +1,4 @@
-import { AbstractSigner, Wallet, verifyMessage, hexlify, getBytes, verifyTypedData } from "ethers"
+import { AbstractSigner, Wallet, hexlify, getBytes, verifyTypedData } from "ethers"
 import { logger } from "@libp2p/logger"
 
 import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
@@ -7,7 +7,6 @@ import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 import target from "#target"
 
 import {
-	eip712TypeDefinitionsForAction,
 	eip712TypeDefinitionsForSession,
 	type EIP712VerifiableSessionData,
 	type EIP712VerifiableSessionMessage,
@@ -151,32 +150,14 @@ export class EIP712VerifiableSigner implements SessionSigner<EIP712VerifiableSes
 			assert(timestamp >= session.timestamp)
 			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
 
-			console.log("signing an action")
-			return signer.sign(
-				{
-					domain,
-					types: eip712TypeDefinitionsForAction,
-					value: {},
-				},
-				{ codec: "eip712", digest: "none" },
-			)
+			return signer.sign(message, { codec: "eip712", digest: "none" })
 		} else if (message.payload.type === "session") {
 			const { signer, session } = this.#store.get(message.topic, message.payload.address) ?? {}
 			assert(signer !== undefined && session !== undefined)
 
 			// only sign our own current sessions
 			assert(message.payload === session)
-
-			const { address, publicKey, blockhash, timestamp, duration } = message.payload
-			const [_, walletAddress] = parseAddress(address)
-			return signer.sign(
-				{
-					domain,
-					types: eip712TypeDefinitionsForSession,
-					value: { address: walletAddress, publicKey, blockhash, timestamp, duration },
-				},
-				{ codec: "eip712", digest: "none" },
-			)
+			return signer.sign(message, { codec: "eip712", digest: "none" })
 		} else {
 			signalInvalidType(message.payload)
 		}
