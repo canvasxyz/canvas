@@ -133,14 +133,15 @@ export class EIP712VerifiableSigner implements SessionSigner<EIP712VerifiableSes
 	}
 
 	public sign(message: Message<Action | Session>): Signature {
-		const domain = {
-			name: message.topic,
-			version: this.version,
-			chainId: this.chainId,
-			verifyingContract: this.verifyingContract,
-			salt: this.salt,
-		}
-		console.log(domain)
+		// TODO: how do we pass this into `sign`?
+		// const domain = {
+		// 	name: message.topic,
+		// 	version: this.version,
+		// 	chainId: this.chainId,
+		// 	verifyingContract: this.verifyingContract,
+		// 	salt: this.salt,
+		// }
+
 		if (message.payload.type === "action") {
 			const { address, timestamp } = message.payload
 			const { signer, session } = this.#store.get(message.topic, address) ?? {}
