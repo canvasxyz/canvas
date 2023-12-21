@@ -1,4 +1,4 @@
-# @canvas-js/chain-ethereum
+# @canvas-js/chain-ethereum-verifiable
 
 ## Table of Contents
 
@@ -8,7 +8,7 @@
 ## Installation
 
 ```
-npm i @canvas-js/chain-ethereum
+npm i @canvas-js/chain-ethereum-verifiable
 ```
 
 ## API
