@@ -22,7 +22,7 @@ export interface EIP712VerifiableSignerInit {
 	version?: string // version in the eip712 domain. by default 1, but later versions of this signer could increment it
 }
 
-export class EIP712VerifiableSigner implements SessionSigner<EIP712VerifiableSessionData> {
+export class EIP712Signer implements SessionSigner<EIP712VerifiableSessionData> {
 	public readonly sessionDuration: number | null
 	public readonly chainId: number
 	public readonly verifyingContract: string

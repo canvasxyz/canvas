@@ -7,7 +7,7 @@ import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { NEARSigner } from "@canvas-js/chain-near"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { SIWESignerViem } from "@canvas-js/chain-ethereum-viem"
-import { EIP712VerifiableSigner } from "@canvas-js/chain-ethereum-eip712"
+import { EIP712Signer } from "@canvas-js/chain-ethereum-eip712"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
 // import { ATPSigner } from "@canvas-js/chain-atp"
@@ -33,7 +33,7 @@ const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 	},
 	{
 		name: "chain-ethereum-eip712",
-		createSigner: async () => new EIP712VerifiableSigner(),
+		createSigner: async () => new EIP712Signer(),
 	},
 	{
 		name: "chain-solana",
