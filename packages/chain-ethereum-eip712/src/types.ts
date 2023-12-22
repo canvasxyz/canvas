@@ -19,7 +19,7 @@ export type EIP712VerifiableSessionMessage = {
 	duration: number | null
 }
 
-export const eip712TypeDefinitionsForSession = {
+export const eip712TypeDefinitions = {
 	Session: [
 		{ name: "address", type: "address" }, // the address that is delegated-signing the action
 		{ name: "publicKey", type: "string" }, // the burner address that is being authorized to sign actions

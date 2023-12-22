@@ -7,7 +7,7 @@ import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 import target from "#target"
 
 import {
-	eip712TypeDefinitionsForSession,
+	eip712TypeDefinitions,
 	type EIP712VerifiableSessionData,
 	type EIP712VerifiableSessionMessage,
 } from "./types.js"
@@ -62,7 +62,7 @@ export class EIP712Signer implements SessionSigner<EIP712VerifiableSessionData> 
 
 		const { domain, signature } = authorizationData
 
-		const recoveredAddress = verifyTypedData(domain, eip712TypeDefinitionsForSession, message, hexlify(signature))
+		const recoveredAddress = verifyTypedData(domain, eip712TypeDefinitions, message, hexlify(signature))
 
 		assert(recoveredAddress === walletAddress, "invalid SIWE signature")
 	}
@@ -114,7 +114,7 @@ export class EIP712Signer implements SessionSigner<EIP712VerifiableSessionData> 
 			salt: this.salt,
 		}
 
-		const signature = await this.#ethersSigner.signTypedData(domain, eip712TypeDefinitionsForSession, message)
+		const signature = await this.#ethersSigner.signTypedData(domain, eip712TypeDefinitions, message)
 
 		const session: Session<EIP712VerifiableSessionData> = {
 			type: "session",
