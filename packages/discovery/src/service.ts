@@ -27,7 +27,9 @@ import { GossipSub, multicodec as gossipSubProtocol } from "@chainsafe/libp2p-go
 import * as cbor from "@ipld/dag-cbor"
 import PQueue from "p-queue"
 
-import { assert, minute, second } from "./utils.js"
+import type { SignerCache } from "@canvas-js/interfaces"
+
+import { assert, second } from "./utils.js"
 
 export interface DiscoveryServiceComponents {
 	peerId: PeerId
@@ -51,12 +53,15 @@ export interface DiscoveryServiceInit {
 
 	minPeersPerTopic?: number
 	autoDialPriority?: number
+
+	signers?: SignerCache
+	appTopic?: string
 }
 
 export type PeerEnv = "browser" | "server"
-export type PresenceStore = Record<string, { lastSeen: number; env: PeerEnv }>
+export type PresenceStore = Record<string, { lastSeen: number; env: PeerEnv; address: string | null }>
 
-export const defaultHeartbeatInterval = 1 * 60 * 1000 // publish heartbeat once every minute
+export const defaultHeartbeatInterval = 60 * 1000 // publish heartbeat once every minute
 
 export const defaultEvictionInterval = 0.5 * 60 * 1000 // run a timer to evict peers from the presence list every 30s
 export const defaultEvictionThreshold = 1.5 * 60 * 1000 // evict peers from presence list if they haven't been seen in 1m 30s
@@ -100,6 +105,9 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 	private readonly topologyPeers = new Set<string>() // peers we are directly connected to
 	private readonly presencePeers: PresenceStore = {}
 
+	private readonly signers: SignerCache | null
+	private readonly appTopic: string | null
+
 	readonly #discoveryQueue = new PQueue({ concurrency: 1 })
 	readonly #dialQueue = new PQueue({ concurrency: 5 })
 
@@ -123,6 +131,8 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		this.evictionInterval = init.evictionInterval ?? defaultEvictionInterval
 		this.evictionThreshold = init.evictionThreshold ?? defaultEvictionThreshold
 		this.addressFilter = init.addressFilter ?? ((addr) => true)
+		this.signers = init.signers ?? null
+		this.appTopic = init.appTopic ?? null
 	}
 
 	get [peerDiscoverySymbol](): PeerDiscovery {
@@ -168,10 +178,12 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 					return
 				}
 
-				const payload = cbor.decode<{ topics: string[]; peerRecordEnvelope: Uint8Array }>(message.data)
+				const payload = cbor.decode<{ topics: string[]; address: string | null; peerRecordEnvelope: Uint8Array }>(
+					message.data,
+				)
 				assert(typeof payload === "object", 'typeof payload === "object"')
 
-				const { topics, peerRecordEnvelope } = payload
+				const { topics, address, peerRecordEnvelope } = payload
 				assert(Array.isArray(topics), "expected Array.isArray(topics)")
 				assert(peerRecordEnvelope instanceof Uint8Array, "expected peerRecordEnvelope instanceof Uint8Array")
 				const { peerId, multiaddrs } = await this.openPeerRecord(peerRecordEnvelope)
@@ -189,7 +201,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 				// found a peer via active discovery
 				await this.components.peerStore.consumePeerRecord(peerRecordEnvelope, peerId)
 				this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
-				this.handlePeerSeen(peerId, multiaddrs)
+				this.handlePeerSeen(peerId, multiaddrs, address)
 
 				for (const topic of topicIntersection) {
 					const meshPeers = this.pubsub.getMeshPeers(topic)
@@ -238,10 +250,25 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 			this.log.error("no multiaddrs to publish")
 		}
 
+		// include the logged-in address, if we have one
+		let address = null
+		if (this.appTopic !== null && this.signers !== null) {
+			let session
+			for (const signer of this.signers.getAll()) {
+				try {
+					const timestamp = Date.now()
+					const session = await signer.getSession(this.appTopic, { timestamp, fromCache: true })
+					address = session.address
+				} catch (err) {
+					continue // no session
+				}
+			}
+		}
+
 		const peerRecord = new PeerRecord({ multiaddrs, peerId: this.components.peerId })
 		const envelope = await RecordEnvelope.seal(peerRecord, this.components.peerId)
 
-		const payload = { topics, peerRecordEnvelope: envelope.marshal() }
+		const payload = { topics, address, peerRecordEnvelope: envelope.marshal() }
 		this.pubsub.publish(this.discoveryTopic, cbor.encode(payload)).then(
 			({ recipients }) => this.log("published heartbeat to %d recipients", recipients.length),
 			(err) => this.log.error("failed to publish heartbeat: %o", err),
@@ -381,14 +408,15 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		)
 	}
 
-	private async handlePeerSeen(peerId: PeerId, multiaddrs: Multiaddr[]) {
+	private async handlePeerSeen(peerId: PeerId, multiaddrs: Multiaddr[], address?: string | null) {
 		const existed = this.presencePeers[peerId.toString()] !== undefined
 		this.presencePeers[peerId.toString()] = {
 			lastSeen: new Date().getTime(),
 			env: multiaddrs.length === 0 ? "browser" : "server",
+			address: address ?? null,
 		}
 		if (!existed) {
-			this.dispatchEvent(new CustomEvent("presence:join", { detail: { peerId, peers: this.presencePeers } }))
+			this.dispatchEvent(new CustomEvent("presence:join", { detail: { peerId, peers: this.presencePeers, address } }))
 		}
 	}
 }

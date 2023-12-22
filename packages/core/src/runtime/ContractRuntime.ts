@@ -2,7 +2,7 @@ import { QuickJSHandle } from "quickjs-emscripten"
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 
-import type { SessionSigner } from "@canvas-js/interfaces"
+import type { SessionSigner, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Model, ModelValue, ModelsInit, validateModelValue } from "@canvas-js/modeldb"
 
@@ -18,7 +18,7 @@ import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
 		path: string | null,
-		signers: SessionSigner[],
+		signers: SignerCache,
 		contract: string,
 		options: { runtimeMemoryLimit?: number; indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
 	): Promise<ContractRuntime> {
@@ -87,7 +87,7 @@ export class ContractRuntime extends AbstractRuntime {
 
 	constructor(
 		public readonly topic: string,
-		public readonly signers: SessionSigner[],
+		public readonly signers: SignerCache,
 		public readonly db: AbstractModelDB,
 		public readonly vm: VM,
 		public readonly actions: Record<string, QuickJSHandle>,

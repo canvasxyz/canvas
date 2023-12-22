@@ -8,11 +8,15 @@ import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
 import type { AbstractGossipLog, GossipLogInit } from "@canvas-js/gossiplog"
 import type { GossipLogService } from "@canvas-js/gossiplog/service"
 import type { DiscoveryService } from "@canvas-js/discovery"
+import type { SignerCache } from "@canvas-js/interfaces"
 
 import type { NetworkConfig } from "../Canvas.js"
 
 export interface PlatformTarget {
-	createLibp2p: (location: { path: string | null; topic: string }, config: NetworkConfig) => Promise<Libp2p<ServiceMap>>
+	createLibp2p: (
+		location: { path: string | null; topic: string },
+		config: NetworkConfig & { signers: SignerCache },
+	) => Promise<Libp2p<ServiceMap>>
 
 	openDB: (
 		location: { path: string | null; topic: string },

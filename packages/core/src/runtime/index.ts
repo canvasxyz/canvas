@@ -1,4 +1,4 @@
-import { SessionSigner } from "@canvas-js/interfaces"
+import { SignerCache } from "@canvas-js/interfaces"
 
 import type { Contract } from "../types.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
@@ -9,7 +9,7 @@ export { AbstractRuntime as Runtime } from "./AbstractRuntime.js"
 
 export async function createRuntime(
 	location: string | null,
-	signers: SessionSigner[],
+	signers: SignerCache,
 	contract: string | Contract,
 	options: { runtimeMemoryLimit?: number; indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
 ): Promise<AbstractRuntime> {
