@@ -1,1 +1,8 @@
-export { discovery, DiscoveryService, DiscoveryServiceInit, DiscoveryServiceComponents } from "./service.js"
+export {
+	discovery,
+	DiscoveryService,
+	DiscoveryServiceInit,
+	DiscoveryServiceComponents,
+	PresenceStore,
+	PeerEnv,
+} from "./service.js"

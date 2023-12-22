@@ -18,6 +18,7 @@ import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
 import { assert } from "./utils.js"
 import { GossipLogService } from "@canvas-js/gossiplog/service"
+import type { PresenceStore, PeerEnv } from "@canvas-js/discovery"
 
 export interface NetworkConfig {
 	offline?: boolean
@@ -65,6 +66,8 @@ export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown>
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
 	"connections:updated": CustomEvent<{ connections: Connections; status: AppConnectionStatus }>
+	"presence:join": CustomEvent<{ peer: PeerId; peers: PresenceStore }>
+	"presence:leave": CustomEvent<{ peer: PeerId; peers: PresenceStore }>
 }
 
 export type CanvasLogEvent = CustomEvent<{
@@ -174,6 +177,16 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			this.updateStatus()
 		})
 
+		this.libp2p.services.discovery.addEventListener("presence:join", ({ detail: { peerId, peers } }) => {
+			this.log("discovered peer %p with addresses %o", peerId)
+			this.dispatchEvent(new CustomEvent("presence:join", { detail: { peerId, peers: { ...peers } } }))
+		})
+
+		this.libp2p.services.discovery.addEventListener("presence:leave", ({ detail: { peerId, peers } }) => {
+			this.log("discovered peer %p with addresses %o", peerId)
+			this.dispatchEvent(new CustomEvent("presence:leave", { detail: { peerId, peers: { ...peers } } }))
+		})
+
 		this.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
 			this._connections = [...this._connections, connection]
 			const remotePeerId = connection.remoteAddr.getPeerId()?.toString()
@@ -225,7 +238,9 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				Promise.allSettled(pings).then(() => {
 					this.updateStatus()
 					this.dispatchEvent(
-						new CustomEvent("connections:updated", { detail: { connections: this.connections, status: this.status } }),
+						new CustomEvent("connections:updated", {
+							detail: { connections: { ...this.connections }, status: this.status },
+						}),
 					)
 				})
 			}, 3000)
@@ -303,7 +318,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		const newStatus = hasAnyOnline ? "connected" : "disconnected"
 		if (this.status !== newStatus) {
 			this.dispatchEvent(
-				new CustomEvent("connections:updated", { detail: { connections: this.connections, status: newStatus } }),
+				new CustomEvent("connections:updated", { detail: { connections: { ...this.connections }, status: newStatus } }),
 			)
 		}
 		this.status = newStatus
