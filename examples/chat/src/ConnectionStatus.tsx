@@ -52,9 +52,17 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
 
 const OnlineList = ({ onlinePeers }: { onlinePeers: PresenceList }) => {
 	const browserPeers = Object.entries(onlinePeers).filter(([peerId, { lastSeen, env }]) => env === "browser")
+	const [time, setTime] = useState()
+
+	useEffect(() => {
+		const timer = setInterval(() => {
+			setTime(new Date().getTime())
+		}, 1000)
+		return () => clearInterval(timer)
+	}, [])
 
 	if (browserPeers.length === 0) {
-		return <div className="italic">No online peers</div>
+		return <div className="italic">No online clients</div>
 	} else {
 		return (
 			<ul className="list-disc pl-4">
@@ -62,6 +70,9 @@ const OnlineList = ({ onlinePeers }: { onlinePeers: PresenceList }) => {
 					return (
 						<li key={peerId}>
 							<PeerIdView peerId={peerId} />
+							<div>
+								<code className="text-sm break-all text-gray-500">{Math.ceil((time - lastSeen) / 1000)}sec</code>
+							</div>
 						</li>
 					)
 				})}

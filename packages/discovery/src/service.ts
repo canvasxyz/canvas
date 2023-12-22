@@ -46,8 +46,8 @@ export interface DiscoveryServiceInit {
 	topicFilter?: (topic: string) => boolean
 	discoveryTopic?: string
 	discoveryInterval?: number
-	presenceTimeoutInterval?: number
-	presenceTimeout?: number
+	evictionInterval?: number
+	evictionThreshold?: number
 
 	minPeersPerTopic?: number
 	autoDialPriority?: number
@@ -55,6 +55,11 @@ export interface DiscoveryServiceInit {
 
 export type PeerEnv = "browser" | "server"
 export type PresenceStore = Record<string, { lastSeen: number; env: PeerEnv }>
+
+export const defaultHeartbeatInterval = 1 * 60 * 1000 // publish heartbeat once every minute
+
+export const defaultEvictionInterval = 0.5 * 60 * 1000 // run a timer to evict peers from the presence list every 30s
+export const defaultEvictionThreshold = 1.5 * 60 * 1000 // evict peers from presence list if they haven't been seen in 1m 30s
 
 export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
 	"peer:topics": CustomEvent<{ peerId: PeerId; topics: string[] }>
@@ -90,8 +95,8 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 	private readonly addressFilter: (addr: Multiaddr) => boolean
 	private readonly discoveryTopic: string | null
 	private readonly discoveryInterval: number
-	private readonly presenceTimeout: number
-	private readonly presenceTimeoutInterval: number
+	private readonly evictionThreshold: number
+	private readonly evictionInterval: number
 	private readonly topologyPeers = new Set<string>() // peers we are directly connected to
 	private readonly presencePeers: PresenceStore = {}
 
@@ -114,9 +119,9 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		this.autoDialPriority = init.autoDialPriority ?? DiscoveryService.AUTO_DIAL_PRIORITY
 		this.topicFilter = init.topicFilter ?? ((topic) => true)
 		this.discoveryTopic = init.discoveryTopic ?? null
-		this.discoveryInterval = init.discoveryInterval ?? 1 * 60 * 1000 // default to publishing once every minute
-		this.presenceTimeoutInterval = init.presenceTimeoutInterval ?? 2.5 * 60 * 1000 // try to evict presence peers every 2m 30s
-		this.presenceTimeout = init.presenceTimeout ?? 1.5 * 60 * 1000 // only evict if they haven't published in 1m 30s
+		this.discoveryInterval = init.discoveryInterval ?? defaultHeartbeatInterval
+		this.evictionInterval = init.evictionInterval ?? defaultEvictionInterval
+		this.evictionThreshold = init.evictionThreshold ?? defaultEvictionThreshold
 		this.addressFilter = init.addressFilter ?? ((addr) => true)
 	}
 
@@ -208,12 +213,12 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 			this.#presenceTimer = setInterval(() => {
 				Object.entries(this.presencePeers).forEach((peerId, lastSeen) => {
-					if (lastSeen < new Date().getTime() - this.presenceTimeout) {
+					if (lastSeen < new Date().getTime() - this.evictionThreshold) {
 						delete this.presencePeers[peerId.toString()]
 						this.dispatchEvent(new CustomEvent("presence:leave", { detail: { peerId, peers: this.presencePeers } }))
 					}
 				})
-			}, this.presenceTimeoutInterval)
+			}, this.evictionInterval)
 		}
 	}
 
