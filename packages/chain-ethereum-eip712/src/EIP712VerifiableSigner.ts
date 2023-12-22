@@ -29,7 +29,7 @@ export class EIP712VerifiableSigner implements SessionSigner<EIP712VerifiableSes
 	public readonly salt: string
 	public readonly version: string
 
-	private readonly log = logger("canvas:chain-ethereum-verifiable")
+	private readonly log = logger("canvas:chain-ethereum-eip712")
 
 	#store = target.getSessionStore()
 	#ethersSigner: AbstractSigner

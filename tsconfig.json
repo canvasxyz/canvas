@@ -21,7 +21,7 @@
     { "path": "./packages/chain-cosmos" },
     { "path": "./packages/chain-ethereum" },
     { "path": "./packages/chain-ethereum/test" },
-    { "path": "./packages/chain-ethereum-verifiable" },
+    { "path": "./packages/chain-ethereum-eip712" },
     { "path": "./packages/chain-ethereum-viem" },
     { "path": "./packages/chain-ethereum-viem/test" },
     { "path": "./packages/chain-near" },

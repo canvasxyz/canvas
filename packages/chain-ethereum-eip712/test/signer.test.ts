@@ -3,7 +3,7 @@ import assert from "assert"
 
 import { verifySignedValue } from "@canvas-js/signed-cid"
 
-import { EIP712VerifiableSigner, validateSessionData } from "@canvas-js/chain-ethereum-verifiable"
+import { EIP712VerifiableSigner, validateSessionData } from "@canvas-js/chain-ethereum-eip712"
 import { Action } from "@canvas-js/interfaces"
 
 test("create and verify session", async (t) => {

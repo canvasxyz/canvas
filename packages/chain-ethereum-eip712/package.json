@@ -1,5 +1,5 @@
 {
-  "name": "@canvas-js/chain-ethereum-verifiable",
+  "name": "@canvas-js/chain-ethereum-eip712",
   "version": "0.8.15",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
