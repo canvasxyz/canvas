@@ -12,8 +12,16 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
 	const { app } = useContext(AppContext)
 
 	const [status, setStatus] = useState("--")
+	const [onlinePeers, setOnlinePeers] = useState({})
+
+	const updatePeers = ({ detail: { peerId, peers } }) => {
+		setOnlinePeers({ ...peers })
+	}
+
 	useEffect(() => {
 		app?.addEventListener("connections:updated", () => setStatus(app.status))
+		app?.addEventListener("presence:join", updatePeers)
+		app?.addEventListener("presence:leave", updatePeers)
 	}, [app])
 
 	if (app === null) {
@@ -30,11 +38,36 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
 			</div>
 			<hr />
 			<div>
+				<span className="text-sm">Online</span>
+			</div>
+			<OnlineList onlinePeers={onlinePeers} />
+			<hr />
+			<div>
 				<span className="text-sm">Connections (Status: {status})</span>
 			</div>
 			<ConnectionList app={app} />
 		</div>
 	)
+}
+
+const OnlineList = ({ onlinePeers }: { onlinePeers: PresenceList }) => {
+	const browserPeers = Object.entries(onlinePeers).filter(([peerId, { lastSeen, env }]) => env === "browser")
+
+	if (browserPeers.length === 0) {
+		return <div className="italic">No online peers</div>
+	} else {
+		return (
+			<ul className="list-disc pl-4">
+				{browserPeers.map(([peerId, { lastSeen, env }]) => {
+					return (
+						<li key={peerId}>
+							<PeerIdView peerId={peerId} />
+						</li>
+					)
+				})}
+			</ul>
+		)
+	}
 }
 
 interface ConnectionListProps {
