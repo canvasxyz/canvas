@@ -6,7 +6,7 @@ export type EIP712Domain = {
 	salt: string
 }
 
-export type EIP712VerifiableSessionData = {
+export type EIP712SessionData = {
 	signature: Uint8Array
 	domain: EIP712Domain
 }

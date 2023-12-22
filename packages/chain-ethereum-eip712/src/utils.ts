@@ -1,4 +1,4 @@
-import type { EIP712VerifiableSessionData } from "./types.js"
+import type { EIP712SessionData } from "./types.js"
 import { hexlify } from "ethers"
 import target from "#target"
 
@@ -13,7 +13,7 @@ export function signalInvalidType(type: never): never {
 	throw new TypeError("internal error: invalid type")
 }
 
-export function validateSessionData(authorizationData: unknown): authorizationData is EIP712VerifiableSessionData {
+export function validateSessionData(authorizationData: unknown): authorizationData is EIP712SessionData {
 	try {
 		const {
 			domain: { name, version, chainId, verifyingContract, salt },
