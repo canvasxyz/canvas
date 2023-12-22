@@ -32,15 +32,13 @@ export const eip712Codec: Codec = {
 	name: "eip712",
 	code: 712,
 	encode: (message: Message<Action | Session>) => {
-		// TODO: how do we pass the domain into encode?
-
 		let hashedPayload: string
 		if (message.payload.type === "session") {
 			const sessionType = [
-				{ name: "address", type: "address" }, // the address that is delegated-signing the action
-				{ name: "publicKey", type: "string" }, // the burner address that is being authorized to sign actions
-				{ name: "blockhash", type: "string" }, // may be "" if no blockhash
-				{ name: "timestamp", type: "uint256" }, // this is actually overkill at uint24 is enough, but we can revisit during code review
+				{ name: "address", type: "address" },
+				{ name: "publicKey", type: "string" },
+				{ name: "blockhash", type: "string" },
+				{ name: "timestamp", type: "uint256" },
 				{ name: "duration", type: "uint256" },
 			]
 			const { address, publicKey, blockhash, timestamp, duration } = message.payload
@@ -53,13 +51,9 @@ export const eip712Codec: Codec = {
 			const actionType = [
 				{ name: "name", type: "string" },
 				{ name: "args", type: "bytes" },
-				{ name: "address", type: "address" }, // the address that is delegated-signing the action
-				// TODO: how is this passed into encode?
-				// { name: "session", type: "address" }, // the burner address that is directly signing the action. this could be omitted in the future, but let's include and then revisit during code review
-				{ name: "blockhash", type: "string" }, // may be "" if no blockhash
-				{ name: "timestamp", type: "uint256" }, // this is actually overkill at uint24 is enough, but we can revisit during code review
-				// TODO: how is this passed into encode?
-				// { name: "duration", type: "uint256" },
+				{ name: "address", type: "address" },
+				{ name: "blockhash", type: "string" },
+				{ name: "timestamp", type: "uint256" },
 			]
 			const { name, args, address, blockhash, timestamp } = message.payload
 			const encodedArgs = dynamicAbiEncodeArgs(args)
