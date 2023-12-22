@@ -20,11 +20,14 @@ export function validateSessionData(authorizationData: unknown): authorizationDa
 			signature,
 		} = authorizationData as any
 		assert(signature instanceof Uint8Array, "signature must be a Uint8Array")
-		assert(typeof name === "string", "name must be a string")
-		assert(typeof version === "string", "version must be a string")
-		assert(typeof chainId === "number", "chainId must be a number")
-		assert(typeof verifyingContract === "string", "verifyingContract must be a string")
-		assert(typeof salt === "string", "salt must be a string")
+		assert(typeof name === "string" || name === null, "name must be a string or null")
+		assert(typeof version === "string" || version === null, "version must be a string or null")
+		assert(typeof chainId === "number" || chainId === null, "chainId must be a number or null")
+		assert(
+			typeof verifyingContract === "string" || verifyingContract === null,
+			"verifyingContract must be a string or null",
+		)
+		assert(typeof salt === "string", "salt must be a string or null")
 
 		return true
 	} catch (e) {

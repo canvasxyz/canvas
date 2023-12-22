@@ -21,9 +21,9 @@ export interface EIP712VerifiableSignerInit {
 export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 	public readonly sessionDuration: number | null
 	public readonly chainId: number
-	public readonly verifyingContract: string
-	public readonly salt: string
-	public readonly version: string
+	public readonly verifyingContract: string | null
+	public readonly salt: string | null
+	public readonly version: string | null
 
 	private readonly log = logger("canvas:chain-ethereum-eip712")
 
@@ -34,9 +34,9 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 		this.#ethersSigner = init.signer ?? Wallet.createRandom()
 		this.sessionDuration = init.sessionDuration ?? null
 		this.chainId = init.chainId ?? 1
-		this.verifyingContract = init.verifyingContract ?? "0x1c56346cd2a2bf3202f771f50d3d14a367b48070"
+		this.verifyingContract = init.verifyingContract ?? null
 		this.salt = init.salt ?? generateSalt()
-		this.version = init.version ?? "1"
+		this.version = init.version ?? null
 	}
 
 	public readonly match = (address: string) => addressPattern.test(address)

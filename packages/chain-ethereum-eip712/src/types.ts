@@ -1,9 +1,9 @@
 export type EIP712Domain = {
-	name: string
-	version: string
-	chainId: number
-	verifyingContract: string
-	salt: string
+	name: string | null
+	version: string | null
+	chainId: number | null
+	verifyingContract: string | null
+	salt: string | null
 }
 
 export type EIP712SessionData = {
