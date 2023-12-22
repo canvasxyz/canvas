@@ -12,7 +12,7 @@ function dynamicAbiEncodeArgs(args: Record<string, any>): string {
 		types.push("string")
 		values.push(key)
 		if (typeof args[key] === "string") {
-			if (args[key].match(/^0x[0-9a-fA-F]*$/)) {
+			if (args[key].match(/^0x[0-9a-fA-F]{40}$/)) {
 				types.push("address")
 			} else {
 				types.push("string")
