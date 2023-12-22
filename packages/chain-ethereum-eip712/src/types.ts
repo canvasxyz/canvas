@@ -11,7 +11,7 @@ export type EIP712SessionData = {
 	domain: EIP712Domain
 }
 
-export type EIP712VerifiableSessionMessage = {
+export type EIP712SessionMessage = {
 	address: string
 	publicKey: string
 	blockhash: string | null
