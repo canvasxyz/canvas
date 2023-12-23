@@ -9,9 +9,6 @@ export type AppContext = {
 
 	sessionSigner: SessionSigner | null
 	setSessionSigner: (signer: SessionSigner | null) => void
-
-	app: Canvas | null
-	setApp: (app: Canvas | null) => void
 }
 
 export const AppContext = createContext<AppContext>({
@@ -22,11 +19,6 @@ export const AppContext = createContext<AppContext>({
 
 	sessionSigner: null,
 	setSessionSigner: (signer) => {
-		throw new Error("AppContext.Provider not found")
-	},
-
-	app: null,
-	setApp: (app) => {
 		throw new Error("AppContext.Provider not found")
 	},
 })
