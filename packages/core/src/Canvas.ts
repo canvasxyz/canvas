@@ -4,7 +4,7 @@ import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils"
 
-import { Action, Session, Message, Signer, SessionSigner } from "@canvas-js/interfaces"
+import { Action, Session, Message, Signer, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Signature } from "@canvas-js/signed-cid"
@@ -40,10 +40,10 @@ export interface NetworkConfig {
 
 export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
 	contract: string | T
+	signers?: SessionSigner[]
 
 	/** data directory path (NodeJS only) */
 	path?: string | null
-	signers?: SessionSigner[]
 
 	/** provide an existing libp2p instance instead of creating a new one */
 	libp2p?: Libp2p<ServiceMap>
@@ -93,7 +93,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		const {
 			path = null,
 			contract,
-			signers = [],
+			signers: initSigners = [],
 			runtimeMemoryLimit,
 			indexHistory = true,
 			ignoreMissingActions = false,
@@ -101,15 +101,13 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			disablePing,
 		} = config
 
-		if (signers.length === 0) {
-			signers.push(new SIWESigner())
-		}
+		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 
 		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit, ignoreMissingActions })
 
 		const topic = runtime.topic
 
-		const libp2p = await Promise.resolve(config.libp2p ?? target.createLibp2p({ topic, path }, config))
+		const libp2p = await Promise.resolve(config.libp2p ?? target.createLibp2p({ topic, path }, { ...config, signers }))
 
 		const gossipLog = await target.openGossipLog<Action | Session, void | any>(
 			{ topic, path },
@@ -147,7 +145,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	#open = true
 
 	private constructor(
-		public readonly signers: SessionSigner[],
+		public readonly signers: SignerCache,
 		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly messageLog: AbstractGossipLog<Action | Session, void | any>,
 		private readonly runtime: Runtime,
@@ -263,13 +261,12 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		for (const name of runtime.actionNames) {
 			const action: ActionAPI = async (args: any, options: ActionOptions = {}) => {
-				const signer = options.signer ?? signers[0]
+				const signer = options.signer ?? signers.getFirst()
 				assert(signer !== undefined, "signer not found")
 
 				const timestamp = Date.now()
 
 				const session = await signer.getSession(this.topic, { timestamp })
-
 				const { address, publicKey: public_key } = session
 
 				// Check if the session has already been added to the message log
@@ -311,6 +308,10 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 			Object.assign(this.actions, { [name]: action })
 		}
+	}
+
+	public updateSigners(signers: SessionSigner[]) {
+		this.signers.updateSigners(signers)
 	}
 
 	private updateStatus() {

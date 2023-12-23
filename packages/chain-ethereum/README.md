@@ -34,7 +34,7 @@ export declare class SIWESigner implements SessionSigner {
 
   public match(chain: string): boolean
   public verifySession(session: Session): void
-  public getSession(topic: string, options?: { chain?: string; timestamp?: number }): Promise<Session<SIWESessionData>>
+  public getSession(topic: string, options?: { chain?: string; timestamp?: number, fromCache?: boolean }): Promise<Session<SIWESessionData>>
   public sign(message: Message<Action | Session>): Signature
   public clear(): Promise<void>
 }

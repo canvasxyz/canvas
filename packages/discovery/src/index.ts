@@ -3,6 +3,6 @@ export {
 	DiscoveryService,
 	DiscoveryServiceInit,
 	DiscoveryServiceComponents,
-	PresenceStore,
-	PeerEnv,
+	type PresenceStore,
+	type PeerEnv,
 } from "./service.js"
