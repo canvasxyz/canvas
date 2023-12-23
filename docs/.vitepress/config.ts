@@ -44,8 +44,17 @@ export default defineConfig({
 						{ text: "Actions", link: "/3-actions" },
 						{ text: "Authentication", link: "/4-authentication" },
 						{ text: "Querying", link: "/5-querying" },
-						{ text: "Connectivity", link: "/6-connectivity" },
-						{ text: "Advanced Features", link: "/7-advanced" },
+						{ text: "Networking", link: "/6-networking" },
+						{
+							text: "Advanced Features",
+							link: "/7-advanced",
+							collapsed: true,
+							items: [
+								{ text: "Conflict Resolution", link: "/7-advanced#handling-conflicting-offline-edits" },
+								{ text: "Custom Signers", link: "/7-advanced#creating-your-own-session-signer" },
+								{ text: "Custom Actions", link: "/7-advanced#validating-custom-action-schemas-using-ipld" },
+							],
+						},
 					],
 				},
 				{

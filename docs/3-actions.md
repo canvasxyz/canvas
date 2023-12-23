@@ -42,7 +42,7 @@ async function deletePost(db, { postId }, { chain, address }) {
 }
 ```
 
-## Consistent reads inside actions
+Actions are atomic transactions, so you can combine multiple `db.get()` or `db.set()` calls, and they will always be executed together.
 
 When actions with `db.get()` are propagated to other machines or replayed later, the `db.get()` operation always returns the same value that it saw at the time of execution.
 
