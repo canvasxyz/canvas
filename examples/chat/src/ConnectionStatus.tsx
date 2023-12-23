@@ -74,7 +74,7 @@ const OnlineList = ({ onlinePeers }: { onlinePeers: PresenceList }) => {
 	} else {
 		return (
 			<ul className="list-disc pl-4">
-				{browserPeers.map(([peerId, { lastSeen, env, address }]) => {
+				{browserPeers.map(([peerId, { lastSeen, env, address, topics }]) => {
 					return (
 						<li key={peerId}>
 							<PeerIdView peerId={peerId} />

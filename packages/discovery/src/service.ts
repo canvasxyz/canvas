@@ -59,7 +59,7 @@ export interface DiscoveryServiceInit {
 }
 
 export type PeerEnv = "browser" | "server"
-export type PresenceStore = Record<string, { lastSeen: number; env: PeerEnv; address: string | null }>
+export type PresenceStore = Record<string, { lastSeen: number; env: PeerEnv; address: string | null; topics: string[] }>
 
 export const defaultHeartbeatInterval = 60 * 1000 // publish heartbeat once every minute
 
@@ -201,7 +201,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 				// found a peer via active discovery
 				await this.components.peerStore.consumePeerRecord(peerRecordEnvelope, peerId)
 				this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
-				this.handlePeerSeen(peerId, multiaddrs, address)
+				this.handlePeerSeen(peerId, multiaddrs, address, topics)
 
 				for (const topic of topicIntersection) {
 					const meshPeers = this.pubsub.getMeshPeers(topic)
@@ -408,15 +408,18 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		)
 	}
 
-	private async handlePeerSeen(peerId: PeerId, multiaddrs: Multiaddr[], address?: string | null) {
+	private async handlePeerSeen(peerId: PeerId, multiaddrs: Multiaddr[], address?: string | null, topics?: string[]) {
 		const existed = this.presencePeers[peerId.toString()] !== undefined
 		this.presencePeers[peerId.toString()] = {
 			lastSeen: new Date().getTime(),
 			env: multiaddrs.length === 0 ? "browser" : "server",
 			address: address ?? null,
+			topics: topics ?? [],
 		}
 		if (!existed) {
-			this.dispatchEvent(new CustomEvent("presence:join", { detail: { peerId, peers: this.presencePeers, address } }))
+			this.dispatchEvent(
+				new CustomEvent("presence:join", { detail: { peerId, peers: this.presencePeers, address, topics } }),
+			)
 		}
 	}
 }
