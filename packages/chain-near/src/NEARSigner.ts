@@ -19,6 +19,7 @@ export interface NEARSignerInit {
 }
 
 export class NEARSigner implements SessionSigner {
+	public readonly key: string
 	public readonly sessionDuration: number | null
 	public readonly chainId: string
 
@@ -36,6 +37,7 @@ export class NEARSigner implements SessionSigner {
 
 		this.chainId = chainId ?? "near:mainnet"
 		this.sessionDuration = sessionDuration ?? null
+		this.key = `NearSigner-${keyPair ? "keypair" : "burner"}`
 	}
 
 	public readonly match = (chain: string) => addressPattern.test(chain)

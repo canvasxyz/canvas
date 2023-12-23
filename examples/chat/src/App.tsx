@@ -60,7 +60,6 @@ export const App: React.FC<{}> = ({}) => {
 							<ConnectionStatus />
 							<ControlPanel />
 						</div>
-						<MessageComposer />
 					</div>
 				</main>
 			) : (

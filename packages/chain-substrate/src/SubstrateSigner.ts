@@ -33,6 +33,7 @@ type AbstractSigner = {
 }
 
 export class SubstrateSigner implements SessionSigner {
+	public readonly key: string
 	public readonly sessionDuration: number | null
 	private readonly log = logger("canvas:chain-substrate")
 
@@ -133,7 +134,7 @@ export class SubstrateSigner implements SessionSigner {
 			}
 		}
 
-		// this.#signer =
+		this.key = `SubstrateSigner-${init.extension ? "extension" : "burner"}`
 		this.sessionDuration = init.sessionDuration ?? null
 	}
 

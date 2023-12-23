@@ -5,7 +5,6 @@ export const useCanvas = (config: CanvasConfig) => {
 	const [app, setApp] = useState<Canvas>()
 	const [error, setError] = useState<Error>()
 
-	// TODO: ensure effect hook re-runs on param changes
 	useEffect(() => {
 		Canvas.initialize(config)
 			.then((app) => {
@@ -16,6 +15,14 @@ export const useCanvas = (config: CanvasConfig) => {
 				setError(error)
 			})
 	}, [])
+
+	// TODO: ensure effect hook re-runs on all other param changes
+	const signers = config.signers ?? []
+	const signerKeys = signers.map((signer) => signer.key).join("+")
+	useEffect(() => {
+		if (!app) return
+		app.updateSigners(signers)
+	}, [signerKeys])
 
 	return { app, error }
 }

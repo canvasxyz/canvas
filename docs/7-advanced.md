@@ -130,6 +130,15 @@ interface SessionSigner {
   verifySession: (topic: string, session: Session<AuthorizationData>) => Awaitable<void>
 
   clear(topic: string): Awaitable<void>
+
+	/**
+	 * A unique identifier based on the signer's arguments, used to trigger React effects.
+	 * This should not change unless user-provided arguments to the signers change.
+   *
+	 * For example, the key for `new SIWESigner()` should always remain the same, even if
+   * a different burner wallet is generated on every call.
+	 */
+	key: string
 }
 ```
 
