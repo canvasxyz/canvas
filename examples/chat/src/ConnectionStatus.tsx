@@ -70,7 +70,7 @@ const OnlineList = ({ onlinePeers }: { onlinePeers: PresenceList }) => {
 	}, [])
 
 	if (browserPeers.length === 0) {
-		return <div className="italic">No online clients</div>
+		return <div className="italic">No other clients online</div>
 	} else {
 		return (
 			<ul className="list-disc pl-4">
@@ -85,7 +85,7 @@ const OnlineList = ({ onlinePeers }: { onlinePeers: PresenceList }) => {
 							)}
 							<div>
 								<code className="text-sm break-all text-gray-500">
-									Last seen {Math.ceil((time - lastSeen) / 1000)}sec
+									{env} - last seen {Math.ceil((time - lastSeen) / 1000)}s
 								</code>
 							</div>
 						</li>

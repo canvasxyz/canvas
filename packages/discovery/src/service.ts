@@ -178,12 +178,18 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 					return
 				}
 
-				const payload = cbor.decode<{ topics: string[]; address: string | null; peerRecordEnvelope: Uint8Array }>(
-					message.data,
-				)
+				const payload = cbor.decode<{
+					topics: string[]
+					address: string | null
+					env: "browser" | "server"
+					peerRecordEnvelope: Uint8Array
+				}>(message.data)
 				assert(typeof payload === "object", 'typeof payload === "object"')
 
-				const { topics, address, peerRecordEnvelope } = payload
+				if (payload instanceof Uint8Array) return // ignore legacy discovery payloads
+
+				const { topics, address, env, peerRecordEnvelope } = payload
+
 				assert(Array.isArray(topics), "expected Array.isArray(topics)")
 				assert(peerRecordEnvelope instanceof Uint8Array, "expected peerRecordEnvelope instanceof Uint8Array")
 				const { peerId, multiaddrs } = await this.openPeerRecord(peerRecordEnvelope)
@@ -201,7 +207,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 				// found a peer via active discovery
 				await this.components.peerStore.consumePeerRecord(peerRecordEnvelope, peerId)
 				this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
-				this.handlePeerSeen(peerId, multiaddrs, address, topics)
+				this.handlePeerSeen(peerId, multiaddrs, env, address, topics)
 
 				for (const topic of topicIntersection) {
 					const meshPeers = this.pubsub.getMeshPeers(topic)
@@ -268,7 +274,9 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		const peerRecord = new PeerRecord({ multiaddrs, peerId: this.components.peerId })
 		const envelope = await RecordEnvelope.seal(peerRecord, this.components.peerId)
 
-		const payload = { topics, address, peerRecordEnvelope: envelope.marshal() }
+		const env = typeof window === "object" ? "browser" : "server"
+
+		const payload = { topics, address, env, peerRecordEnvelope: envelope.marshal() }
 		this.pubsub.publish(this.discoveryTopic, cbor.encode(payload)).then(
 			({ recipients }) => this.log("published heartbeat to %d recipients", recipients.length),
 			(err) => this.log.error("failed to publish heartbeat: %o", err),
@@ -300,11 +308,19 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		const topic = key.slice(DiscoveryService.FETCH_KEY_PREFIX.length)
 		this.log("handling fetch request for peers on topic %s", topic)
 
-		const results = new Map<PeerId, Uint8Array>()
+		const results = new Map<
+			PeerId,
+			{ topics: string[]; address: string | null; env: "browser" | "server"; peerRecordEnvelope: Uint8Array }
+		>()
 		for (const peerId of this.pubsub.getSubscribers(topic)) {
 			const { peerRecordEnvelope } = await this.components.peerStore.get(peerId)
 			if (peerRecordEnvelope !== undefined) {
-				results.set(peerId, peerRecordEnvelope)
+				results.set(peerId, {
+					topics: this.presencePeers[peerId.toString()].topics ?? [],
+					address: this.presencePeers[peerId.toString()].address ?? null,
+					env: this.presencePeers[peerId.toString()].env ?? null,
+					peerRecordEnvelope,
+				})
 			}
 		}
 
@@ -334,12 +350,21 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 						continue
 					}
 
-					const records = cbor.decode<Uint8Array[]>(result)
-					assert(Array.isArray(records), "expected Array.isArray(records)")
+					type Peer = {
+						topics: string[]
+						address: string | null
+						env: "browser" | "server"
+						peerRecordEnvelope: Uint8Array
+					}
+					const peers = cbor.decode<Peer[]>(result)
+					assert(Array.isArray(peers), "expected Array.isArray(peers)")
 
-					this.log("got %d peers via fetch from %p", records.length, connection.remotePeer)
+					this.log("got %d peers via fetch from %p", peers.length, connection.remotePeer)
 
-					for (const peerRecordEnvelope of records) {
+					if (peers[0] instanceof Uint8Array) return // ignore legacy fetch payloads
+
+					for (const { topics, address, env, peerRecordEnvelope } of peers) {
+						assert(Array.isArray(topics), "expected Array.isArray(topics)")
 						assert(peerRecordEnvelope instanceof Uint8Array, "expected record instanceof Uint8Array")
 
 						const { peerId, multiaddrs } = await this.openPeerRecord(peerRecordEnvelope)
@@ -351,7 +376,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 						// found a peer via passive discovery
 						this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
-						this.handlePeerSeen(peerId, multiaddrs)
+						this.handlePeerSeen(peerId, multiaddrs, env, address, topics)
 						await this.components.peerStore.consumePeerRecord(peerRecordEnvelope, peerId)
 						this.#dialQueue.add(() => this.connect(peerId, multiaddrs))
 					}
@@ -408,11 +433,17 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		)
 	}
 
-	private async handlePeerSeen(peerId: PeerId, multiaddrs: Multiaddr[], address?: string | null, topics?: string[]) {
+	private async handlePeerSeen(
+		peerId: PeerId,
+		multiaddrs: Multiaddr[],
+		env: "browser" | "server",
+		address?: string | null,
+		topics?: string[],
+	) {
 		const existed = this.presencePeers[peerId.toString()] !== undefined
 		this.presencePeers[peerId.toString()] = {
 			lastSeen: new Date().getTime(),
-			env: multiaddrs.length === 0 ? "browser" : "server",
+			env,
 			address: address ?? null,
 			topics: topics ?? [],
 		}
