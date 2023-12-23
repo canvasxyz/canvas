@@ -9,9 +9,9 @@
 
 ## Show the connection status
 
-Keep track of `app.status` to detect whether the application has a reliable connection to the internet. It will show as `connected` when the application is able to ping at least one online peer, and `disconnected` otherwise.
+Keep track of `app.status` to detect whether the application has a reliable connection to its peers. It will show as `connected` when the application is able to ping at least one online peer, and `disconnected` otherwise.
 
-To subscribe to changes to the connection status, listen for a `connections:updated` event with `app.addEventListener("connections:updated")`.
+To subscribe to changes to the connection status, you can listen for a `connections:updated` event with `app.addEventListener("connections:updated")`.
 
 This event is also emitted with a `connections` object, which can be used to [list all peers](https://canvas-chat.pages.dev/) your application is connected to. Only peers that are actively sending and receiving actions for this application will be shown as `connected` (🟢), while peers passively participating in the mesh will be shown as `waiting` (⚪️)., and unresponsive peers will be shown as `disconnected` (🔴). ([Example](https://github.com/canvasxyz/canvas/blob/46bef2263d6e7ec9b746ced2c47da52cb7d8190b/examples/chat/src/ConnectionStatus.tsx#L65))
 
@@ -19,11 +19,11 @@ This event is also emitted with a `connections` object, which can be used to [li
 
 By default, applications are configured with sequencing ("history indexing") on, which ensures that actions are delivered in exact causal order.
 
-When there is no risk of conflicts from clients executing actions in different order, you can turn this off for better performance. This prevents applications from stalling if a user sends a message while they're on a transient or flaky internet connection.
+When your application doesn't depend on actions executing in exact order, you can turn this off for better performance. This prevents applications from stalling if a user sends a message while they're on a transient or flaky internet connection.
 
 You can do this by setting `indexHistory: false` when configuring your application. This causes all actions to be executed in realtime as they are received. ([Example](https://github.com/canvasxyz/canvas/blob/46bef2263d6e7ec9b746ced2c47da52cb7d8190b/examples/chat/src/App.tsx#L48))
 
-Note that doing this also disables `db.get()` getters inside the database, because database getters require consistent order of delivery.
+Note that doing this also disables `db.get()` getters inside actions, because atomic transactions require consistent order of delivery.
 
 ## Keep WebRTC transports off
 
