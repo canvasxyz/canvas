@@ -93,7 +93,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		const {
 			path = null,
 			contract,
-			signers: initSigners,
+			signers: initSigners = [],
 			runtimeMemoryLimit,
 			indexHistory = true,
 			ignoreMissingActions = false,
@@ -101,7 +101,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			disablePing,
 		} = config
 
-		const signers = new SignerCache(initSigners)
+		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 
 		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit, ignoreMissingActions })
 
