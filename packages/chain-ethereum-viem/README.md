@@ -1,5 +1,11 @@
 # @canvas-js/chain-ethereum-viem
 
+The Viem Ethereum signer takes a Viem `WalletClient`, or generates a random WalletClient,
+and uses it to sign a SIWE message authenticating a new session.
+
+It also handles verification of messages matching this standard, and can be used in
+conjuction with `@canvas-js/chain-ethereum`.
+
 ## Table of Contents
 
 - [Installation](#installation)

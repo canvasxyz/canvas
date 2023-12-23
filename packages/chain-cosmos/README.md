@@ -1,5 +1,9 @@
 # @canvas-js/chain-cosmos
 
+The Cosmos session signer takes an injected Cosmos signer, which may be an `EthereumSigner`, `AminoSigner`, or `BytesSigner`, and uses it to authenticate a new session.
+
+It also handles verification of messages matching any of these authentication methods.
+
 ## Table of Contents
 
 - [Installation](#installation)

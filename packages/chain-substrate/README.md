@@ -1,5 +1,10 @@
 # @canvas-js/chain-substrate
 
+The Substrate session signer takes an injected `polkadot-js` extension, or generates a random Substrate keypair,
+and uses it to authenticate a new session.
+
+It also handles verification of messages matching this authentication method.
+
 ## Table of Contents
 
 - [Installation](#installation)

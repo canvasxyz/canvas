@@ -11,10 +11,9 @@ and who else is running the same application.
 
 ## Checking connection status
 
-For realtime applications, you can check `app.status` to see if your application is connected to other peers.
+Unless configured otherwise, apps start with libp2p enabled, so they will try to connect to the network immediately.
 
-By default, apps start with libp2p enabled, so they will try to connect to the network immediately.
-You can set `offline: true` in the config to start libp2p manually instead.
+For realtime applications, you can check `app.status` to see if your application is connected to other peers.
 
 The app's status will show `connected` as soon as libp2p has a connection to at least one peer running the
 same application on the network.
@@ -44,7 +43,7 @@ useEffect(() => {
 }, [app])
 ```
 
-The `connections` object provided with the event lists all peers that you are directly connected to. Peers that are actively sending and receiving actions for the application will be shown as `online` (🟢). Peers passively participating in the mesh will be shown as `waiting` (⚪️), those still connecting will be shown as `connecting` (🟡), and unresponsive peers will be shown as `disconnected` (🔴). As long as at least one peer is `online`, the application will show as connected.
+The `connections` object lists all peers that you are directly connected to. Peers that are actively sending and receiving actions for the application will be shown as `online` (🟢). Peers passively participating in the mesh will be `waiting` (⚪️), those still connecting will be `connecting` (🟡), and unresponsive peers will be shown as `disconnected` (🔴). As long as at least one peer is `online`, the application will show as connected.
 
 You can see an example [here](https://github.com/canvasxyz/canvas/blob/main/examples/chat/src/ConnectionStatus.tsx#L129).
 

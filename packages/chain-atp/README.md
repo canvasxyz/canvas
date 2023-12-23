@@ -1,5 +1,9 @@
 # @canvas-js/chain-atp
 
+The Bluesky/AT Protocol session signer prompts the user for an app password, and uses it to generate a new signed post on Bluesky, authenticating a new session. The posted authentication message is then immediately deleted.
+
+It also handles verification of messages matching this authentication method.
+
 ## Table of Contents
 
 - [Installation](#installation)

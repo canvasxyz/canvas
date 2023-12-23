@@ -1,5 +1,11 @@
 # @canvas-js/chain-ethereum
 
+The Ethers (v6) Ethereum signer takes an `ethers` signer, or generates a random `ethers.Wallet`,
+and uses it to sign a SIWE message authenticating a new session.
+
+It also handles verification of messages matching this standard, and can be used in
+conjuction with `@canvas-js/chain-ethereum-viem`.
+
 ## Table of Contents
 
 - [Installation](#installation)

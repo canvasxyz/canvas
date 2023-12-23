@@ -1,5 +1,10 @@
 # @canvas-js/chain-solana
 
+The Solana session signer takes an injected `SolanaWindowSigner`, provided by Solana wallets like Phantom,
+and uses it to authenticate a new session.
+
+It also handles verification of messages matching this authentication method.
+
 ## Table of Contents
 
 - [Installation](#installation)
