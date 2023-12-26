@@ -3,6 +3,8 @@
 Once you've deployed your application, you can also use libp2p to check who your application is connected to,
 and who else is running the same application.
 
+Unless configured otherwise, apps start with libp2p enabled, so they will try to connect to the network immediately.
+
 ## Table of contents
 
 - [Checking connection status](#checking-connection-status)
@@ -10,8 +12,6 @@ and who else is running the same application.
 - [Getting the list of online peers](#listing-online-peers)
 
 ## Checking connection status
-
-Unless configured otherwise, apps start with libp2p enabled, so they will try to connect to the network immediately.
 
 For realtime applications, you can check `app.status` to see if your application is connected to other peers.
 
@@ -49,14 +49,9 @@ You can see an example [here](https://github.com/canvasxyz/canvas/blob/main/exam
 
 ## Configuring realtime presence
 
-We also maintain a libp2p service that keeps track of the entire set of peers for a given application that are online,
-including peers that you aren't connected to.
+We also maintain a libp2p discovery/presence service that keeps track of the entire set of peers for a given application that are online, including peers that you aren't directly connected to.
 
-To use the presence, first set a discovery topic in your application configuration.
-
-You can think of each contract as an individual room or partition of an application; the discovery topic is a meta-topic that coordinates all of them. (You can configure the discovery topic to be the same as the contract topic, if your application has just one partition.)
-
-With `discoveryTopic` configured, your applications will automatically broadcast presence events to each other:
+To use realtime presence, first set a `discoveryTopic` in your application configuration.
 
 ```ts
 
@@ -70,7 +65,9 @@ const { app } = useCanvas({
 })
 ```
 
-Listen for the `presence:join` and `presence:leave` events to see when peers join or leave:
+You can think of each contract as an individual room or partition of an application; the discovery topic is a meta-topic that coordinates all of them. (You can configure the discovery topic to be the same as the contract topic, if your application has just one partition.)
+
+With `discoveryTopic` configured, your applications will automatically broadcast presence events across the submesh. Listen for the `presence:join` and `presence:leave` events to see when peers join:
 
 ```ts
 const handlePresenceListUpdated = ({ detail: { peerId, peers } }) => {
@@ -95,6 +92,9 @@ useEffect(() => {
 Join events will be broadcast whenever someone new joins the network, and leave events
 will be triggered after that peer goes offline, after about a minute of inactivity.
 
+Detecting when a peer has left is more difficult, so we recommend filtering out peers
+that have a `lastSeen` value older than some inactivity threshold (e.g. 15 minutes).
+
 ## Listing online peers
 
 The event also provides a `peers` list, which shows a list of online peers:
@@ -106,5 +106,6 @@ The event also provides a `peers` list, which shows a list of online peers:
 - `lastSeen` is the milliseconds since the last heartbeat from this peer.
 - `topics` is the list of topics the peer is subscribed to.
 
-You may wish to filter the list of peers down to those 1) running in the browser,
-and 2) subscribed to the same application topic(s) that you are running.
+You may wish to filter the list of peers down to those running in the browser
+`peer.env === 'browser'`, and subscribed to the same application topic(s) that you
+care about (if the discovery topic is shared across applications).
