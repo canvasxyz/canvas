@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/test-network",
-  "version": "0.8.15",
+  "version": "0.8.16",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -16,7 +16,7 @@
     "start": "node lib/index.js"
   },
   "devDependencies": {
-    "@canvas-js/core": "0.8.15",
+    "@canvas-js/core": "0.8.16",
     "@types/debug": "^4.1.12"
   },
   "dependencies": {
