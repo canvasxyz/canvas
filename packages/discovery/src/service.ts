@@ -50,6 +50,7 @@ export interface DiscoveryServiceInit {
 	discoveryInterval?: number
 	evictionInterval?: number
 	evictionThreshold?: number
+	responseHeartbeatThreshold?: number
 
 	minPeersPerTopic?: number
 	autoDialPriority?: number
@@ -68,6 +69,8 @@ export const defaultHeartbeatInterval = 60 * 1000 // publish heartbeat once ever
 
 export const defaultEvictionInterval = 0.5 * 60 * 1000 // run a timer to evict peers from the presence list every 30s
 export const defaultEvictionThreshold = 1.5 * 60 * 1000 // evict peers from presence list if they haven't been seen in 1m 30s
+
+export const defaultResponseHeartbeatThreshold = 15 * 60 * 1000 // send heartbeat upon new peers joining the mesh, up to every 15 seconds
 
 export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
 	"peer:topics": CustomEvent<{ peerId: PeerId; topics: string[] }>
@@ -105,8 +108,10 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 	private readonly discoveryInterval: number
 	private readonly evictionThreshold: number
 	private readonly evictionInterval: number
+	private readonly responseHeartbeatThreshold: number
 	private readonly topologyPeers = new Set<string>() // peers we are directly connected to
 	private readonly presencePeers: PresenceStore = {}
+	private lastResponseHeartbeat: number = new Date().getTime()
 
 	private readonly signers: SignerCache | null
 	private readonly appTopic: string | null
@@ -133,6 +138,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		this.discoveryInterval = init.discoveryInterval ?? defaultHeartbeatInterval
 		this.evictionInterval = init.evictionInterval ?? defaultEvictionInterval
 		this.evictionThreshold = init.evictionThreshold ?? defaultEvictionThreshold
+		this.responseHeartbeatThreshold = init.responseHeartbeatThreshold ?? defaultResponseHeartbeatThreshold
 		this.addressFilter = init.addressFilter ?? ((addr) => true)
 		this.signers = init.signers ?? null
 		this.appTopic = init.appTopic ?? null
@@ -222,7 +228,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 				}
 			})
 
-			// publish the heartbeat after the first connection to a peer, and at the heartbeat interval
+			// publish the heartbeat 1) after the first connection to a peer, 2) at the heartbeat interval, and 3) after new peers joining the network
 			this.#heartbeat = setInterval(() => this.publishHeartbeat(), this.discoveryInterval)
 			this.components.events.addEventListener(
 				"connection:open",
@@ -240,6 +246,12 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 					}
 				})
 			}, this.evictionInterval)
+
+			this.addEventListener("presence:join", ({ detail: { peerId } }) => {
+				if (this.lastResponseHeartbeat > new Date().getTime() + this.responseHeartbeatThreshold) return
+				this.lastResponseHeartbeat = new Date().getTime()
+				this.publishHeartbeat()
+			})
 		}
 	}
 
