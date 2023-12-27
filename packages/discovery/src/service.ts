@@ -382,7 +382,9 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 					}
 				}
 			})
-			.catch((err) => this.log.error("error handling new connection: %O", err))
+			.catch((err) => {
+				this.log.error("error handling new connection to %p: %O", connection.remoteAddr.toString(), err)
+			})
 	}
 
 	private async openPeerRecord(envelope: Uint8Array): Promise<{ peerId: PeerId; multiaddrs: Multiaddr[] }> {
