@@ -59,7 +59,10 @@ export interface DiscoveryServiceInit {
 }
 
 export type PeerEnv = "browser" | "server"
-export type PresenceStore = Record<string, { lastSeen: number; env: PeerEnv; address: string | null; topics: string[] }>
+export type PresenceStore = Record<
+	string,
+	{ lastSeen: number | null; env: PeerEnv; address: string | null; topics: string[] }
+>
 
 export const defaultHeartbeatInterval = 60 * 1000 // publish heartbeat once every minute
 
@@ -376,7 +379,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 						// found a peer via passive discovery
 						this.dispatchEvent(new CustomEvent("peer", { detail: { id: peerId, multiaddrs, protocols: [] } }))
-						this.handlePeerSeen(peerId, multiaddrs, env, address, topics)
+						this.handlePeerSeen(peerId, multiaddrs, env, address, topics, true)
 						await this.components.peerStore.consumePeerRecord(peerRecordEnvelope, peerId)
 						this.#dialQueue.add(() => this.connect(peerId, multiaddrs))
 					}
@@ -441,10 +444,19 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		env: "browser" | "server",
 		address?: string | null,
 		topics?: string[],
+		fromPassiveDiscovery?: boolean,
 	) {
 		const existed = this.presencePeers[peerId.toString()] !== undefined
+
+		// passive discovery shouldn't set lastSeen
+		const lastSeen = fromPassiveDiscovery
+			? this.presencePeers[peerId.toString()]
+				? this.presencePeers[peerId.toString()].lastSeen
+				: null
+			: new Date().getTime()
+
 		this.presencePeers[peerId.toString()] = {
-			lastSeen: new Date().getTime(),
+			lastSeen,
 			env,
 			address: address ?? null,
 			topics: topics ?? [],
