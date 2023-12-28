@@ -22,6 +22,7 @@
     "@canvas-js/chain-solana": "0.8.17",
     "@canvas-js/chain-substrate": "0.8.17",
     "@canvas-js/interfaces": "0.8.17",
-    "@canvas-js/signed-cid": "0.8.17"
+    "@canvas-js/signed-cid": "0.8.17",
+    "ava": "^6.0.1"
   }
 }

@@ -18,6 +18,9 @@
       "default": "./lib/targets/default/index.js"
     }
   },
+  "devDependencies": {
+    "@canvas-js/chain-ethereum-viem": "0.8.17"
+  },
   "dependencies": {
     "@canvas-js/interfaces": "0.8.17",
     "@canvas-js/signed-cid": "0.8.17",
