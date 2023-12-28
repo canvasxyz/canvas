@@ -9,7 +9,7 @@
     "lib"
   ],
   "scripts": {
-    "start": "node lib/index.js"
+    "start": "pm2-runtime lib/index.js"
   },
   "dependencies": {
     "@canvas-js/chain-ethereum": "0.8.17",
@@ -41,5 +41,8 @@
     "libp2p": "^1.0.10",
     "p-queue": "^8.0.0",
     "prom-client": "^15.0.0"
+  },
+  "devDependencies": {
+    "pm2": "^5.3.0"
   }
 }
