@@ -1446,6 +1446,9 @@ importers:
       '@canvas-js/chain-ethereum':
         specifier: 0.8.17
         version: link:../chain-ethereum
+      '@canvas-js/chain-ethereum-viem':
+        specifier: 0.8.17
+        version: link:../chain-ethereum-viem
       '@canvas-js/chain-near':
         specifier: 0.8.17
         version: link:../chain-near
@@ -2000,7 +2003,7 @@ packages:
       '@babel/core': ^7.4.0 || ^8.0.0-0 <8.0.0
     dependencies:
       '@babel/core': 7.23.5
-      '@babel/helper-compilation-targets': 7.22.15
+      '@babel/helper-compilation-targets': 7.23.6
       '@babel/helper-plugin-utils': 7.22.5
       debug: 4.3.4
       lodash.debounce: 4.0.8
@@ -2267,7 +2270,7 @@ packages:
     dependencies:
       '@babel/compat-data': 7.23.5
       '@babel/core': 7.23.5
-      '@babel/helper-compilation-targets': 7.22.15
+      '@babel/helper-compilation-targets': 7.23.6
       '@babel/helper-plugin-utils': 7.22.5
       '@babel/plugin-syntax-object-rest-spread': 7.8.3(@babel/core@7.23.5)
       '@babel/plugin-transform-parameters': 7.23.3(@babel/core@7.23.5)
@@ -2602,7 +2605,7 @@ packages:
     dependencies:
       '@babel/core': 7.23.5
       '@babel/helper-annotate-as-pure': 7.22.5
-      '@babel/helper-compilation-targets': 7.22.15
+      '@babel/helper-compilation-targets': 7.23.6
       '@babel/helper-environment-visitor': 7.22.20
       '@babel/helper-function-name': 7.23.0
       '@babel/helper-optimise-call-expression': 7.22.5
@@ -2716,7 +2719,7 @@ packages:
       '@babel/core': ^7.0.0-0
     dependencies:
       '@babel/core': 7.23.5
-      '@babel/helper-compilation-targets': 7.22.15
+      '@babel/helper-compilation-targets': 7.23.6
       '@babel/helper-function-name': 7.23.0
       '@babel/helper-plugin-utils': 7.22.5
     dev: false
@@ -4691,6 +4694,8 @@ packages:
       protons-runtime: 5.2.0
       uint8arraylist: 2.4.7
       uint8arrays: 5.0.1
+    transitivePeerDependencies:
+      - supports-color
 
   /@libp2p/fetch@1.0.5:
     resolution: {integrity: sha512-bL1NodP7Lm5YqXq3gpw63aQiGBnTPD5O2BJRJ7n8WtCLPwlhGWrVPZj2EIjGdFEo+aTNQiyzSasKkBLs4w6dkw==}
@@ -4836,18 +4841,24 @@ packages:
       uint8-varint: 2.0.2
       uint8arraylist: 2.4.7
       uint8arrays: 5.0.1
+    transitivePeerDependencies:
+      - supports-color
 
   /@libp2p/peer-collections@5.1.0:
     resolution: {integrity: sha512-JWXbzAmXxiB4ioK5J4SX41XxOaXReqcn5p705mWhrLt63Mwwu6CCkCOH1/CstydeKetU8yMz+vDOnPpXLk2W9w==}
     dependencies:
       '@libp2p/interface': 1.0.2
       '@libp2p/peer-id': 4.0.2
+    transitivePeerDependencies:
+      - supports-color
 
   /@libp2p/peer-collections@5.1.1:
     resolution: {integrity: sha512-IzFAlA/1+8NH9MAKEVY5w37+VxMKjuYQ22FwT4sf1RCLFy5SOtmcv1ccjYipYGKwhDkBQwXmEc13XPoq5MiUJQ==}
     dependencies:
       '@libp2p/interface': 1.0.2
       '@libp2p/peer-id': 4.0.2
+    transitivePeerDependencies:
+      - supports-color
 
   /@libp2p/peer-id-factory@4.0.1:
     resolution: {integrity: sha512-Z1JSpB/vjE1B2W+sJGJXKKZ5aUave4sK4UYWauge6dFSpQvkUaJDzHLKwO6Tg0l7gekpHF8sdcIpk70GSKkA8g==}
@@ -4859,6 +4870,8 @@ packages:
       protons-runtime: 5.2.0
       uint8arraylist: 2.4.7
       uint8arrays: 5.0.1
+    transitivePeerDependencies:
+      - supports-color
 
   /@libp2p/peer-id@4.0.2:
     resolution: {integrity: sha512-TkUA6MjLJ3CE82yyFOfGpH18eUkxouQC7FZcW4vMB1C6F1Y90sf0nPTcXPVZSabEcQxLeOzNk2oEqLgZw47E9w==}
@@ -4866,6 +4879,8 @@ packages:
       '@libp2p/interface': 1.0.2
       multiformats: 12.1.3
       uint8arrays: 5.0.1
+    transitivePeerDependencies:
+      - supports-color
 
   /@libp2p/peer-record@7.0.2:
     resolution: {integrity: sha512-vsbOgWIyGEGZ0l2eSf+SFrv0bxuRG3tMN7OS1Xs8Qz/Ed1GtEbPtpC2ndSrl8Ngjxfxj8Ph/GJDXhYZz5faXHQ==}
@@ -4938,6 +4953,8 @@ packages:
       it-stream-types: 2.0.1
       prom-client: 15.0.0
       uint8arraylist: 2.4.7
+    transitivePeerDependencies:
+      - supports-color
     dev: false
 
   /@libp2p/pubsub@9.0.1:
@@ -10254,7 +10271,6 @@ packages:
       electron-to-chromium: 1.4.616
       node-releases: 2.0.14
       update-browserslist-db: 1.0.13(browserslist@4.22.2)
-    dev: false
 
   /bs58@4.0.1:
     resolution: {integrity: sha512-Ok3Wdf5vOIlBrgCvTq96gBkJw+JUEzdBgyaza5HLtPm7yTHkjRy8+JzNyHF7BHa0bNWOQIp3m5YF0nnFcOIKLw==}
@@ -11598,7 +11614,6 @@ packages:
 
   /electron-to-chromium@1.4.616:
     resolution: {integrity: sha512-1n7zWYh8eS0L9Uy+GskE0lkBUNK83cXTVJI0pU3mGprFsbfSdAc15VTFbo+A+Bq4pwstmL30AVcEU3Fo463lNg==}
-    dev: false
 
   /elliptic@6.5.4:
     resolution: {integrity: sha512-iLhC6ULemrljPZb+QutR5TQGB+pdW6KGD5RSegS+8sorOZT+rdQFbsQFJgvN3eRqNALqJer4oQ16YvJHlU8hzQ==}
@@ -15707,7 +15722,6 @@ packages:
 
   /node-releases@2.0.14:
     resolution: {integrity: sha512-y10wOWt8yZpqXmOgRo77WaHEmhYQYGNA6y421PKsKYWEK8aW+cqAphborZDhqfyKrbZEN92CN1X2KbafY2s7Yw==}
-    dev: false
 
   /node-stdlib-browser@1.2.0:
     resolution: {integrity: sha512-VSjFxUhRhkyed8AtLwSCkMrJRfQ3e2lGtG3sP6FEgaLKBBbxM/dLfjRe1+iLhjvyLFW3tBQ8+c0pcOtXGbAZJg==}
@@ -17303,7 +17317,7 @@ packages:
     dependencies:
       object-assign: 4.1.1
       react: 18.2.0
-      react-is: 16.13.1
+      react-is: 18.2.0
     dev: false
 
   /react-textarea-autosize@8.5.3(@types/react@18.2.45)(react@18.2.0):
@@ -19229,13 +19243,13 @@ packages:
   /update-browserslist-db@1.0.13(browserslist@4.22.2):
     resolution: {integrity: sha512-xebP81SNcPuNpPP3uzeW1NYXxI3rxyJzF3pD6sH4jE7o/IX+WtSpwnVU+qIsDPyk0d3hmFQ7mjqc6AtV604hbg==}
     hasBin: true
+    requiresBuild: true
     peerDependencies:
       browserslist: '>= 4.21.0'
     dependencies:
       browserslist: 4.22.2
       escalade: 3.1.1
       picocolors: 1.0.0
-    dev: false
 
   /uqr@0.1.2:
     resolution: {integrity: sha512-MJu7ypHq6QasgF5YRTjqscSzQp/W11zoUk6kvmlH+fmWEs63Y0Eib13hYFwAzagRJcVY8WVnlV+eBDUGMJ5IbA==}
@@ -20278,7 +20292,7 @@ packages:
       '@webassemblyjs/wasm-parser': 1.11.6
       acorn: 8.11.2
       acorn-import-assertions: 1.9.0(acorn@8.11.2)
-      browserslist: 4.22.1
+      browserslist: 4.22.2
       chrome-trace-event: 1.0.3
       enhanced-resolve: 5.15.0
       es-module-lexer: 1.4.1
