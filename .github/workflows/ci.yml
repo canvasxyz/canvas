@@ -65,3 +65,22 @@ jobs:
 
       - name: Run @canvas-js/interfaces interface tests
         run: pnpm --filter @canvas-js/interfaces test
+
+  test-build:
+    name: Build test (npm)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 18.x
+
+      - name: "Install dependencies"
+        run: npm ci
+
+      - name: Build
+        run: npm run build
