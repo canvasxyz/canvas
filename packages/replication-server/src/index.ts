@@ -80,4 +80,5 @@ process.on("SIGINT", async () => {
 	await libp2p.stop()
 	await Promise.all(Array.from(apps.values()).map((app) => app.close()))
 	apps.clear()
+	process.exit(0)
 })
