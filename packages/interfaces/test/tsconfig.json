@@ -10,6 +10,7 @@
     { "path": "../../interfaces" },
     { "path": "../../chain-cosmos" },
     { "path": "../../chain-ethereum" },
+    { "path": "../../chain-ethereum-viem" },
     { "path": "../../chain-near" },
     { "path": "../../chain-solana" },
     { "path": "../../chain-substrate" }

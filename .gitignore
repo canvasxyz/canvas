@@ -12,13 +12,9 @@ packages/**/lib/
 packages/**/dist/
 packages/**/.cache/
 
-examples/**/out/
 examples/**/lib/
 examples/**/dist/
-
-interwallet/lib/
-interwallet/dist/
-interwallet/data/
+examples/**/.cache/
 
 docs/.vitepress/dist
 docs/.vitepress/cache

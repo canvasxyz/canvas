@@ -3,7 +3,7 @@ import express from "express"
 import { StatusCodes } from "http-status-codes"
 import { AbortError } from "abortable-iterator"
 import { anySignal } from "any-signal"
-import { register, Counter, Gauge, Summary, Registry } from "prom-client"
+import { Counter, Gauge, Summary, Registry, register } from "prom-client"
 
 import type { PeerId } from "@libp2p/interface"
 import { peerIdFromString } from "@libp2p/peer-id"
@@ -16,49 +16,12 @@ import { Canvas } from "./Canvas.js"
 import { PING_TIMEOUT } from "./constants.js"
 
 export interface APIOptions {
-	exposeMetrics?: boolean
 	exposeModels?: boolean
 	exposeMessages?: boolean
 	exposeP2P?: boolean
 }
 
 export function createAPI(app: Canvas, options: APIOptions = {}): express.Express {
-	const canvasRegister = new Registry()
-
-	const canvasMetrics = {
-		canvas_messages: new Counter({
-			registers: [canvasRegister],
-			name: "canvas_messages",
-			help: "number of messages processed",
-			labelNames: ["topic", "type"],
-		}),
-
-		canvas_sync_time: new Summary({
-			registers: [canvasRegister],
-			name: "canvas_sync_time",
-			help: "merkle sync times",
-			labelNames: ["topic", "peer"],
-			maxAgeSeconds: 60 * 60,
-			ageBuckets: 24,
-		}),
-
-		canvas_gossipsub_subscribers: new Gauge({
-			registers: [canvasRegister],
-			name: "canvas_gossipsub_subscribers",
-			help: "GossipSub topic subscribers",
-			labelNames: ["topic"],
-			async collect() {
-				if (app.libp2p !== null) {
-					const { pubsub } = app.libp2p.services
-					for (const topic of pubsub.getTopics() ?? []) {
-						const subscribers = pubsub.getSubscribers(topic)
-						this.set({ topic }, subscribers.length)
-					}
-				}
-			},
-		}),
-	}
-
 	const api = express()
 
 	api.set("query parser", "simple")
@@ -66,25 +29,6 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 	api.use(express.text())
 
 	api.get("/", (req, res) => res.json(app.getApplicationData()))
-
-	if (options.exposeMetrics) {
-		app.messageLog.addEventListener("message", ({ detail: { message } }) => {
-			canvasMetrics.canvas_messages.inc({ topic: message.topic, type: message.payload.type })
-		})
-
-		app.messageLog.addEventListener("sync", ({ detail: { peer, duration } }) => {
-			canvasMetrics.canvas_sync_time.observe({ topic: app.messageLog.topic, peer }, duration)
-		})
-
-		api.get("/metrics", async (req, res) => {
-			const appMetrics = await canvasRegister.metrics()
-			const libp2pMetrics = await register.metrics()
-			res.header("Content-Type", register.contentType)
-			res.write(appMetrics + "\n")
-			res.write(libp2pMetrics + "\n")
-			res.end()
-		})
-	}
 
 	if (options.exposeModels) {
 		api.get("/models/:model/:key", async (req, res) => {
@@ -235,6 +179,65 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			}
 		})
 	}
+
+	return api
+}
+
+export function createMetricsAPI(app: Canvas): express.Express {
+	const canvasRegister = new Registry()
+
+	const canvasMetrics = {
+		canvas_messages: new Counter({
+			registers: [canvasRegister],
+			name: "canvas_messages",
+			help: "number of messages processed",
+			labelNames: ["topic", "type"],
+		}),
+
+		canvas_sync_time: new Summary({
+			registers: [canvasRegister],
+			name: "canvas_sync_time",
+			help: "merkle sync times",
+			labelNames: ["topic", "peer"],
+			maxAgeSeconds: 60 * 60,
+			ageBuckets: 24,
+		}),
+
+		canvas_gossipsub_subscribers: new Gauge({
+			registers: [canvasRegister],
+			name: "canvas_gossipsub_subscribers",
+			help: "GossipSub topic subscribers",
+			labelNames: ["topic"],
+			async collect() {
+				if (app.libp2p !== null) {
+					const { pubsub } = app.libp2p.services
+					for (const topic of pubsub.getTopics() ?? []) {
+						const subscribers = pubsub.getSubscribers(topic)
+						this.set({ topic }, subscribers.length)
+					}
+				}
+			},
+		}),
+	}
+
+	app.messageLog.addEventListener("message", ({ detail: { message } }) => {
+		canvasMetrics.canvas_messages.inc({ topic: message.topic, type: message.payload.type })
+	})
+
+	app.messageLog.addEventListener("sync", ({ detail: { peer, duration } }) => {
+		canvasMetrics.canvas_sync_time.observe({ topic: app.messageLog.topic, peer }, duration)
+	})
+
+	const api = express()
+
+	api.get("/", async (req, res) => {
+		const appMetrics = await canvasRegister.metrics()
+		const libp2pMetrics = await register.metrics()
+		res.header("Content-Type", register.contentType)
+		res.write(appMetrics + "\n")
+		res.write(libp2pMetrics + "\n")
+		res.end()
+	})
 
 	return api
 }

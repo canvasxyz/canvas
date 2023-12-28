@@ -54,6 +54,9 @@ jobs:
       - name: Run @canvas-js/modeldb tests
         run: pnpm --filter @canvas-js/modeldb test
 
+      - name: Run @canvas-js/chain-atp tests
+        run: npm run test --workspace=@canvas-js/chain-atp
+
       - name: Run @canvas-js/core tests
         run: pnpm --filter @canvas-js/core test
 

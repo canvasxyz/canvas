@@ -124,7 +124,8 @@ pre {
   margin-bottom: 4px;
 }
 .VPSidebar .item h2.text,
-.VPSidebar .items .VPLink .text {
+.VPSidebar .items .VPLink .text,
+.VPSidebar h3.text {
   font-size: 16px;
 }
 

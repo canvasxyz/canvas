@@ -10,7 +10,9 @@ import dotenv from "dotenv"
 
 dotenv.config()
 
-const { PEER_ID, BOOTSTRAP_LIST, LISTEN, ANNOUNCE, DISCOVERY_TOPIC, DATA_DIRECTORY } = process.env
+const { PEER_ID, BOOTSTRAP_LIST, LISTEN, ANNOUNCE, DISCOVERY_TOPIC, DATA_DIRECTORY, RESTART_AT } = process.env
+
+export const restartAt = RESTART_AT ?? null
 
 export const dataDirectory = DATA_DIRECTORY ?? path.resolve(process.cwd(), "data")
 if (!fs.existsSync(dataDirectory)) {

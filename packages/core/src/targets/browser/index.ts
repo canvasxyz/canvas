@@ -19,7 +19,7 @@ export default {
 
 	async createLibp2p(location, config) {
 		const peerId = await getPeerId(location)
-		return await createLibp2p(getLibp2pOptions(peerId, config))
+		return await createLibp2p(getLibp2pOptions(peerId, location.topic, config))
 	},
 } satisfies PlatformTarget
 

@@ -26,6 +26,7 @@ type GenericSigner = {
 }
 
 export class CosmosSigner implements SessionSigner {
+	public readonly key: string
 	public readonly sessionDuration: number | null
 	private readonly log = logger("canvas:chain-cosmos")
 
@@ -48,6 +49,7 @@ export class CosmosSigner implements SessionSigner {
 		}
 
 		this.sessionDuration = sessionDuration ?? null
+		this.key = `CosmosSigner-${signer ? "signer-" + signer.type : "burner"}`
 	}
 
 	public readonly match = (address: string) => addressPattern.test(address)

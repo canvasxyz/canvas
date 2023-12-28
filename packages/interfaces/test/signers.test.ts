@@ -6,6 +6,7 @@ import { verifySignedValue } from "@canvas-js/signed-cid"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { NEARSigner } from "@canvas-js/chain-near"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESignerViem } from "@canvas-js/chain-ethereum-viem"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
 // import { ATPSigner } from "@canvas-js/chain-atp"
@@ -24,6 +25,10 @@ const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 	{
 		name: "chain-ethereum",
 		createSigner: async () => new SIWESigner(),
+	},
+	{
+		name: "chain-ethereum-viem",
+		createSigner: async () => new SIWESignerViem(),
 	},
 	{
 		name: "chain-solana",
@@ -95,3 +100,21 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 for (const implementation of SIGNER_IMPLEMENTATIONS) {
 	runTestSuite(implementation)
 }
+
+test(`ethereum - ethers signer can verify ethereum viem signed data`, async (t) => {
+	const topic = "example:signer"
+	const signingSigner = new SIWESignerViem()
+	const verifyingSigner = new SIWESigner()
+
+	const session = await signingSigner.getSession(topic)
+	await t.notThrowsAsync(() => Promise.resolve(verifyingSigner.verifySession(topic, session)))
+})
+
+test(`ethereum - viem signer can verify ethers signed data`, async (t) => {
+	const topic = "example:signer"
+	const signingSigner = new SIWESigner()
+	const verifyingSigner = new SIWESignerViem()
+
+	const session = await signingSigner.getSession(topic)
+	await t.notThrowsAsync(() => Promise.resolve(verifyingSigner.verifySession(topic, session)))
+})

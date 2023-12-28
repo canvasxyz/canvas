@@ -45,7 +45,7 @@ export const useTick = (app: Canvas<TickingContract>, condition: string | null, 
 			if (payload.type === "action") {
 				const action = payload as Action
 
-				for (const signer of app.signers) {
+				for (const signer of app.signers.getAll()) {
 					const session = await signer.getSession(app.topic, { fromCache: true })
 					if (action.address === session.address) {
 						return

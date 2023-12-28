@@ -44,8 +44,17 @@ export default defineConfig({
 						{ text: "Actions", link: "/3-actions" },
 						{ text: "Authentication", link: "/4-authentication" },
 						{ text: "Querying", link: "/5-querying" },
-						{ text: "Deploying", link: "/6-deploying" },
-						{ text: "Advanced Features", link: "/7-advanced" },
+						{ text: "Networking", link: "/6-networking" },
+						{
+							text: "Advanced Features",
+							link: "/7-advanced",
+							collapsed: true,
+							items: [
+								{ text: "Conflict Resolution", link: "/7-advanced#handling-conflicting-offline-edits" },
+								{ text: "Custom Signers", link: "/7-advanced#creating-your-own-session-signer" },
+								{ text: "Custom Actions", link: "/7-advanced#validating-custom-action-schemas-using-ipld" },
+							],
+						},
 					],
 				},
 				{
@@ -53,10 +62,31 @@ export default defineConfig({
 					items: [
 						{ text: "CLI", link: "/readme-cli.md" },
 						{ text: "Core", link: "/readme-core.md" },
-						{ text: "GossipLog", link: "/readme-gossiplog.md" },
 						{ text: "Hooks", link: "/readme-hooks.md" },
-						{ text: "ModelDB", link: "/readme-modeldb.md" },
-						{ text: "Signed CID", link: "/readme-signed-cid.md" },
+						{
+							text: "Components",
+							collapsed: true,
+							items: [
+								{ text: "GossipLog", link: "/readme-gossiplog.md" },
+								{ text: "ModelDB", link: "/readme-modeldb.md" },
+								{ text: "Signed CID", link: "/readme-signed-cid.md" },
+								{ text: "Interfaces", link: "/readme-interfaces.md" },
+								{ text: "Discovery Service", link: "/readme-discovery.md" },
+							],
+						},
+						{
+							text: "Signers",
+							collapsed: true,
+							items: [
+								{ text: "Ethereum", link: "/readme-chain-ethereum.md" },
+								{ text: "Ethereum (Viem)", link: "/readme-chain-ethereum-viem.md" },
+								{ text: "Bluesky/ATP", link: "/readme-chain-atp.md" },
+								{ text: "Solana", link: "/readme-chain-solana.md" },
+								{ text: "Cosmos", link: "/readme-chain-cosmos.md" },
+								{ text: "Substrate", link: "/readme-chain-substrate.md" },
+								{ text: "Near", link: "/readme-chain-near.md" },
+							],
+						},
 					],
 				},
 				{

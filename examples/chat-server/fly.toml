@@ -7,6 +7,8 @@ processes = []
 
 [env]
   DEBUG = "canvas:*:error"
+  LISTEN=/ip6/::/tcp/8080/ws
+  ANNOUNCE=/dns4/canvas-chat.fly.dev/tcp/443/wss
 
 [mounts]
   destination = "/data"

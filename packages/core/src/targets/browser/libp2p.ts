@@ -18,6 +18,7 @@ import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { GossipLogService, gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
+import { SignerCache } from "@canvas-js/interfaces"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import { DIAL_CONCURRENCY, MAX_CONNECTIONS, MIN_CONNECTIONS, PING_TIMEOUT } from "@canvas-js/core/constants"
@@ -25,7 +26,11 @@ import { DIAL_CONCURRENCY, MAX_CONNECTIONS, MIN_CONNECTIONS, PING_TIMEOUT } from
 import type { ServiceMap } from "../interface.js"
 import type { NetworkConfig } from "../../Canvas.js"
 
-export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2pOptions<ServiceMap> {
+export function getLibp2pOptions(
+	peerId: PeerId,
+	appTopic: string,
+	options: NetworkConfig & { signers: SignerCache },
+): Libp2pOptions<ServiceMap> {
 	const announce = options.announce ?? []
 	const enableWebRTC = options.enableWebRTC ?? false
 	const listen = options.listen ?? (enableWebRTC ? ["/webrtc"] : [])
@@ -80,6 +85,7 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 				maxInboundStreams: 32,
 				maxOutboundStreams: 32,
 				timeout: PING_TIMEOUT,
+				runOnTransientConnection: false,
 			}),
 
 			pubsub: gossipsub({
@@ -106,6 +112,8 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 				topicFilter: (topic) => topic.startsWith(GossipLogService.topicPrefix),
 				addressFilter: (addr) =>
 					WebSockets.matches(addr) || WebSocketsSecure.matches(addr) || (enableWebRTC && WebRTC.matches(addr)),
+				signers: options.signers,
+				appTopic,
 			}),
 		},
 	}

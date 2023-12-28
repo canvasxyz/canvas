@@ -2,8 +2,6 @@
 
 You can only write to the database inside an action handler, but you can query it outside action handlers by using `app.db.get("model")`, `app.db.query("model")`, or `useLiveQuery` for live-updating data.
 
-(See the "Actions" section to learn about reading from the database inside action handlers.)
-
 ## Getting individual records
 
 All database models have a primary key, defined in the model schema using the `"primary"` type. You can look up individual records by primary key using `app.db.get`.
@@ -37,7 +35,7 @@ await app.db.get("posts", idA)
 // }
 ```
 
-## Queries
+## More expressive queries
 
 The `app.db.query` method supports more expressive queries, including `select`, `where`, `orderBy`, `limit`, and `offset` clauses. `json` fields cannot be referenced in `where` or `orderBy` clauses.
 
