@@ -1,31 +1,36 @@
-import test from "ava"
 import assert from "assert"
+import { expect } from "chai"
 
 import { verifySignedValue } from "@canvas-js/signed-cid"
 
 import { EIP712Signer, validateSessionData } from "@canvas-js/chain-ethereum-eip712"
 import { Action } from "@canvas-js/interfaces"
 
-test("create and verify session", async (t) => {
+it("should create and verify session", async (t) => {
 	const topic = "example:signer"
 	const signer = new EIP712Signer()
 	const session = await signer.getSession(topic)
-	t.notThrows(() => signer.verifySession(topic, session))
+	expect(() => {
+		signer.verifySession(topic, session)
+	}).to.not.throw()
 
 	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 	const sessionSignature = await signer.sign(sessionMessage)
-	t.notThrows(() => verifySignedValue(sessionSignature, sessionMessage))
+	// t.notThrows(() => verifySignedValue(sessionSignature, sessionMessage))
+	expect(() => {
+		verifySignedValue(sessionSignature, sessionMessage)
+	}).to.not.throw()
 })
 
-test("create and verify session and action", async (t) => {
+it("should create and verify session and action", async (t) => {
 	const topic = "example:signer"
 	const signer = new EIP712Signer()
 	const session = await signer.getSession(topic)
-	t.notThrows(() => signer.verifySession(topic, session))
+	expect(() => signer.verifySession(topic, session)).to.not.throw()
 
 	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 	const sessionSignature = await signer.sign(sessionMessage)
-	t.notThrows(() => verifySignedValue(sessionSignature, sessionMessage))
+	expect(() => verifySignedValue(sessionSignature, sessionMessage)).to.not.throw()
 
 	const action: Action = {
 		type: "action",
@@ -38,10 +43,10 @@ test("create and verify session and action", async (t) => {
 
 	const actionMessage = { topic, clock: 1, parents: [], payload: action }
 	const actionSignature = await signer.sign(actionMessage)
-	t.notThrows(() => verifySignedValue(actionSignature, actionMessage))
+	expect(() => verifySignedValue(actionSignature, actionMessage)).to.not.throw()
 })
 
-test("reject corrupt session signature", async (t) => {
+it("should reject corrupt session signature", async (t) => {
 	const topic = "example:signer"
 	const signer = new EIP712Signer()
 	const session = await signer.getSession(topic, {})
@@ -49,5 +54,5 @@ test("reject corrupt session signature", async (t) => {
 	session.authorizationData.signature[0] = 1
 	assert(validateSessionData(session.authorizationData))
 	session.authorizationData.signature[3] = 1
-	await t.throwsAsync(async () => signer.verifySession(topic, session))
+	expect(async () => signer.verifySession(topic, session)).to.throw()
 })

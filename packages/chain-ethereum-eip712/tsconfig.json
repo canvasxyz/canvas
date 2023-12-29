@@ -5,10 +5,15 @@
     "rootDir": "src",
     "outDir": "lib",
     "module": "Node16",
-    "moduleResolution": "Node16"
+    "moduleResolution": "Node16",
+    "esModuleInterop": true
   },
   "references": [
     {"path": "../interfaces"},
     {"path": "../signed-cid"}
-  ]
+  ],
+  "ts-node": {
+    "experimentalResolver": true,
+    "files": true
+  }
 }
