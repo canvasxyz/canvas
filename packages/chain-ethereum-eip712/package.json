@@ -25,5 +25,9 @@
     "@libp2p/logger": "^4.0.2",
     "ethers": "^6.9.0",
     "multiformats": "^12.1.3"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.19.4"
   }
 }
