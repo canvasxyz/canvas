@@ -29,6 +29,7 @@ export default defineConfig({
 			{ text: "Home", link: "/" },
 			{ text: "API", link: "/readme-core" },
 			{ text: "Blog", link: "/blog" },
+			{ text: "Changelog", link: "https://github.com/canvasxyz/canvas/releases" },
 		],
 		sidebar: {
 			"/blog": getSidebar({
