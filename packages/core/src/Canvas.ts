@@ -2,7 +2,7 @@ import { PeerId, TypedEventEmitter, CustomEvent, Connection } from "@libp2p/inte
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils"
+import { hexToBytes } from "@noble/hashes/utils"
 
 import { Action, Session, Message, Signer, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
@@ -18,7 +18,7 @@ import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
 import { assert } from "./utils.js"
 import { GossipLogService } from "@canvas-js/gossiplog/service"
-import type { PresenceStore, PeerEnv } from "@canvas-js/discovery"
+import type { PresenceStore } from "@canvas-js/discovery"
 
 export interface NetworkConfig {
 	offline?: boolean
@@ -61,13 +61,16 @@ export type ActionAPI<Args = any, Result = any> = (
 	options?: ActionOptions,
 ) => Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }>
 
+export type ConnectionsInfo = { connections: Connections; status: AppConnectionStatus }
+export type PresenceInfo = { peer: PeerId; peers: PresenceStore }
+
 export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown> {
 	close: Event
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
-	"connections:updated": CustomEvent<{ connections: Connections; status: AppConnectionStatus }>
-	"presence:join": CustomEvent<{ peer: PeerId; peers: PresenceStore }>
-	"presence:leave": CustomEvent<{ peer: PeerId; peers: PresenceStore }>
+	"connections:updated": CustomEvent<ConnectionsInfo>
+	"presence:join": CustomEvent<PresenceInfo>
+	"presence:leave": CustomEvent<PresenceInfo>
 }
 
 export type CanvasLogEvent = CustomEvent<{

@@ -62,7 +62,7 @@ export interface DiscoveryServiceInit {
 export type PeerEnv = "browser" | "server"
 export type PresenceStore = Record<
 	string,
-	{ lastSeen: number | null; env: PeerEnv; address: string | null; topics: string[] }
+	{ peerId: PeerId; lastSeen: number | null; env: PeerEnv; address: string | null; topics: string[] }
 >
 
 export const defaultHeartbeatInterval = 60 * 1000 // publish heartbeat once every minute
@@ -468,6 +468,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 			: new Date().getTime()
 
 		this.presencePeers[peerId.toString()] = {
+			peerId,
 			lastSeen,
 			env,
 			address: address ?? null,
