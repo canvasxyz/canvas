@@ -1310,8 +1310,8 @@ importers:
         specifier: ^0.2.0
         version: 0.2.0
       '@canvas-js/okra-idb':
-        specifier: ^0.2.3
-        version: 0.2.3(idb@8.0.0)
+        specifier: ^0.2.4
+        version: 0.2.4(idb@8.0.0)
       '@canvas-js/okra-memory':
         specifier: ^0.2.1
         version: 0.2.1
@@ -3360,10 +3360,10 @@ packages:
     dependencies:
       multiformats: 12.1.3
 
-  /@canvas-js/okra-idb@0.2.3(idb@8.0.0):
-    resolution: {integrity: sha512-e89hi3W7riy+8f5s8n3hHu6NuOpw9OqbIBMYXU2ylKbn2XMWkGFXLgCcFGnbF+KIsaMNO39MNe+X5YeCOZ73eA==}
+  /@canvas-js/okra-idb@0.2.4(idb@8.0.0):
+    resolution: {integrity: sha512-XLtz4fFInY4nuE28pASSOMKwdxJ/ZQqXslzJG2lLoBgRTDcwaPdkFAwq9gZNHKb6Tsxiy1+XUOcahc+F9+tR/g==}
     peerDependencies:
-      idb: ^7.1.1
+      idb: ^8.0.0
     dependencies:
       '@canvas-js/okra': 0.2.0
       debug: 4.3.4
