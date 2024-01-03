@@ -10,5 +10,8 @@
     "strict": true,
     "skipLibCheck": true,
     "outDir": "lib"
-  }
+  },
+  "references": [
+    { "path": "../chain-ethereum-eip712" }
+  ]
 }

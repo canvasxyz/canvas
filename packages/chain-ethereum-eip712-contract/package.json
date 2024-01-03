@@ -1,6 +1,6 @@
 {
   "name": "eip712-canvas",
-  "version": "1.0.0",
+  "version": "0.8.15",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -15,6 +15,7 @@
     "hardhat": "^2.12.7"
   },
   "dependencies": {
+    "@canvas-js/chain-ethereum-eip712": "0.8.15",
     "@openzeppelin/contracts": "^4.8.1"
   }
 }
