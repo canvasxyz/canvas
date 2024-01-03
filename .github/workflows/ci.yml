@@ -71,11 +71,8 @@ jobs:
         with:
           node-version: 18.x
 
-      - name: Install pnpm
-        run: npm i pnpm
-
-      - name: "Install dependencies with pnpm"
-        run: pnpm i
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2.4.0
 
       - name: Build
         run: pnpm run build
