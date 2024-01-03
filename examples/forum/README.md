@@ -1,6 +1,6 @@
 # Forum/Arweave Example
 
-[Github Link](https://github.com/canvasxyz/canvas/tree/main/examples/forum) (`npm i && npm run dev` to run, hosted demo coming soon)
+[Github Link](https://github.com/canvasxyz/canvas/tree/main/examples/forum) (`pnpm i && pnpm run dev` to run, hosted demo coming soon)
 
 The forum example implements a forum, with categories, tags,
 threads/replies, and likes/upvotes.

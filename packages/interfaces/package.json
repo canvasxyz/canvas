@@ -17,10 +17,12 @@
   "devDependencies": {
     "@canvas-js/chain-cosmos": "0.8.19",
     "@canvas-js/chain-ethereum": "0.8.19",
+    "@canvas-js/chain-ethereum-viem": "0.8.19",
     "@canvas-js/chain-near": "0.8.19",
     "@canvas-js/chain-solana": "0.8.19",
     "@canvas-js/chain-substrate": "0.8.19",
     "@canvas-js/interfaces": "0.8.19",
-    "@canvas-js/signed-cid": "0.8.19"
+    "@canvas-js/signed-cid": "0.8.19",
+    "ava": "^6.0.1"
   }
 }

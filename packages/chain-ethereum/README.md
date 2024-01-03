@@ -14,7 +14,7 @@ conjuction with `@canvas-js/chain-ethereum-viem`.
 ## Installation
 
 ```
-npm i @canvas-js/chain-ethereum
+pnpm i @canvas-js/chain-ethereum
 ```
 
 ## API

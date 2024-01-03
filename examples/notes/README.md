@@ -3,20 +3,20 @@
 Installation:
 
 ```
-npm i
+pnpm i
 ```
 
 Running:
 
 ```
-npm run dev
+pnpm run dev
 ```
 
 Running in production with peering:
 
 ```
-npm run build
-npm run start
+pnpm run build
+pnpm run start
 ```
 
 Deploying to Fly.io:
@@ -42,6 +42,6 @@ fly volumes create canvas_notes_data
 Build and deploy the application:
 
 ```
-npm run build
+pnpm run build
 fly deploy
 ```

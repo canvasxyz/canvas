@@ -6,11 +6,11 @@ WORKDIR /app
 COPY ./package.json .
 
 # We should use `npm ci` but need to double-check that it's available on Fly
-RUN npm install
+RUN pnpm install
 
 COPY . .
 
-RUN npm run build
+RUN pnpm run build
 
 # Production image, copy all the files and run next
 FROM node:18-alpine AS runner
@@ -21,4 +21,4 @@ ENV CANVAS_HOME /data
 
 COPY --from=builder /app ./
 
-CMD [ "npm", "run", "start", "--", "--listen", "/ip4/0.0.0.0/tcp/4044/ws", "--announce", "/dns4/canvas-notes.fly.dev/tcp/4044/ws" ]
+CMD [ "pnpm", "run", "start", "--", "--listen", "/ip4/0.0.0.0/tcp/4044/ws", "--announce", "/dns4/canvas-notes.fly.dev/tcp/4044/ws" ]

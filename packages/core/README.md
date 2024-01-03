@@ -22,7 +22,7 @@ inside React for you.
 ## Installation
 
 ```
-$ npm i @canvas-js/core
+$ pnpm i @canvas-js/core
 ```
 
 ## Usage

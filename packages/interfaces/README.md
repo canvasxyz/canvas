@@ -18,7 +18,7 @@ This package exports TypeScript types for Canvas messages and other interfaces.
 ## Installation
 
 ```
-npm i @canvas-js/chain-interfaces
+pnpm i @canvas-js/chain-interfaces
 ```
 
 ## API

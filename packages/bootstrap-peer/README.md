@@ -15,13 +15,13 @@ First create a local PeerID and save it in a `.env` file:
 Then start a local bootstrap server with
 
 ```
-npm run start
+pnpm run start
 ```
 
 The bootstrap peer's full multiaddr will appear in stdout, which you can copy and add to another app's `bootstrapList` array.
 
 ```
-% npm run start
+% pnpm run start
 
 > @canvas-js/bootstrap-peer@0.5.0 start
 > node lib/index.js

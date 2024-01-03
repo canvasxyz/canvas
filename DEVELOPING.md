@@ -7,7 +7,7 @@ references and must be compiled with build mode turned on. Build all
 core packages in parallel with:
 
 ```
-npm run dev
+pnpm run dev
 ```
 
 ### Using a development instance of Canvas
@@ -31,9 +31,9 @@ default Node with `nvm alias default v18`.
 Before publishing, make sure the project is in a clean state and passes tests:
 
 ```
-$ npm run clean
-$ npm run build
-$ npm run test
+$ pnpm run clean
+$ pnpm run build
+$ pnpm run test
 ```
 
 Make sure you've commited your changes:
@@ -55,7 +55,7 @@ Then make a manual commit just for the version bump, and publish the packages to
 ```
 $ git add .
 $ git commit -m "v0.0.X"
-$ npm run publish
+$ pnpm run publish
 ```
 
 When the bug is fixed, we should be able to replace the `version.sh` script with `npm version --git-tag-version=false --workspaces=true --include-workspace-root=true --workspaces-update=true --save --save-exact`.
@@ -74,4 +74,4 @@ prettier -w .
 
 ### Testing
 
-Run `npm run test` to run all unit tests in all packages.
+Run `pnpm run test` to run all unit tests in all packages.

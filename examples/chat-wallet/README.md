@@ -13,7 +13,7 @@ Create an env file `.env.development` (inside `interwallet/`) exporting the mult
 VITE_BOOTSTRAP_LIST="/ip4/127.0.0.1/tcp/8080/ws/p2p/12D..."
 ```
 
-Then run `npm run client:dev` to start the development server with hot reloading.
+Then run `pnpm run client:dev` to start the development server with hot reloading.
 
 ### Replication server
 
@@ -26,4 +26,4 @@ DEBUG="canvas:*"
 DATA_DIRECTORY="./data/"
 ```
 
-Then run `npm run server:start` to start the replication server.
+Then run `pnpm run server:start` to start the replication server.

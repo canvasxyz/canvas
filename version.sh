@@ -44,4 +44,4 @@ for f in ./examples/*/package.json; do
 done
 
 rm package-lock.json
-npm i
+pnpm i
