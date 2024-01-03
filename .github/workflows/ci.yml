@@ -57,3 +57,22 @@ jobs:
 
       - name: Run @canvas-js/interfaces interface tests
         run: npm run test --workspace=@canvas-js/interfaces
+
+  test-build:
+    name: Build test (npm)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 18.x
+
+      - name: "Install dependencies"
+        run: npm i
+
+      - name: Build
+        run: npm run build
