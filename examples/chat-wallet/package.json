@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/interwallet-messaging",
-  "version": "0.8.17",
+  "version": "0.8.19",
   "type": "module",
   "scripts": {
     "client:dev": "vite",
