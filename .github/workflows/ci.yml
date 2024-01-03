@@ -76,5 +76,8 @@ jobs:
         with:
           version: 8
 
+      - name: Install modules
+        run: pnpm i
+
       - name: Build
         run: pnpm run build
