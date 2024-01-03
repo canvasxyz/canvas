@@ -59,7 +59,7 @@ jobs:
         run: npm run test --workspace=@canvas-js/interfaces
 
   test-build:
-    name: Build test (npm)
+    name: Build test (pnpm)
     runs-on: ubuntu-latest
 
     steps:
@@ -71,8 +71,11 @@ jobs:
         with:
           node-version: 18.x
 
-      - name: "Install dependencies"
-        run: npm i
+      - name: Install pnpm
+        run: npm i pnpm
+
+      - name: "Install dependencies with pnpm"
+        run: pnpm i
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
