@@ -26,13 +26,13 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
       '@canvas-js/chain-ethereum':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:packages/chain-ethereum
       '@canvas-js/hooks':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:packages/hooks
       '@canvas-js/templates':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:packages/templates
       '@types/node':
         specifier: ^20.10.4
@@ -89,31 +89,31 @@ importers:
   examples/chat:
     dependencies:
       '@canvas-js/chain-cosmos':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/chain-cosmos
       '@canvas-js/chain-ethereum':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/chain-ethereum
       '@canvas-js/chain-ethereum-viem':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/chain-ethereum-viem
       '@canvas-js/chain-near':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/chain-near
       '@canvas-js/chain-solana':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/chain-solana
       '@canvas-js/chain-substrate':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/chain-substrate
       '@canvas-js/core':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/core
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/interfaces
       '@canvas-js/modeldb':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/modeldb
       '@keplr-wallet/types':
         specifier: ^0.11.64
@@ -192,7 +192,7 @@ importers:
   examples/chat-server:
     dependencies:
       '@canvas-js/cli':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/cli
 
   examples/chat-wallet:
@@ -304,19 +304,19 @@ importers:
   examples/chess-server:
     dependencies:
       '@canvas-js/cli':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/cli
 
   examples/encrypted-chat:
     dependencies:
       '@canvas-js/chain-ethereum':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/chain-ethereum
       '@canvas-js/core':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/core
       '@canvas-js/hooks':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/hooks
       '@metamask/eth-sig-util':
         specifier: ^7.0.1
@@ -368,13 +368,13 @@ importers:
   examples/forum:
     dependencies:
       '@canvas-js/chain-ethereum':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/chain-ethereum
       '@canvas-js/hooks':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/hooks
       '@canvas-js/templates':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/templates
       '@headlessui/react':
         specifier: ^1.7.17
@@ -529,13 +529,13 @@ importers:
   examples/snake:
     dependencies:
       '@canvas-js/chain-ethereum':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/chain-ethereum
       '@canvas-js/hooks':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/hooks
       '@canvas-js/templates':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/templates
       ethers:
         specifier: ^6.9.0
@@ -584,13 +584,13 @@ importers:
   examples/template-channel-chat:
     dependencies:
       '@canvas-js/chain-ethereum':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/chain-ethereum
       '@canvas-js/hooks':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/hooks
       '@canvas-js/templates':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/templates
       ethers:
         specifier: ^6.9.0
@@ -639,13 +639,13 @@ importers:
   examples/template-global-chat:
     dependencies:
       '@canvas-js/chain-ethereum':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/chain-ethereum
       '@canvas-js/hooks':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/hooks
       '@canvas-js/templates':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../../packages/templates
       ethers:
         specifier: ^6.9.0
@@ -694,7 +694,7 @@ importers:
   packages/bootstrap-peer:
     dependencies:
       '@canvas-js/discovery':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../discovery
       '@chainsafe/libp2p-gossipsub':
         specifier: ^11.0.1
@@ -781,10 +781,10 @@ importers:
         specifier: ^0.2.3
         version: 0.2.3
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../interfaces
       '@canvas-js/signed-cid':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../signed-cid
       '@ipld/car':
         specifier: ^5.2.4
@@ -806,16 +806,16 @@ importers:
         version: 12.1.3
     devDependencies:
       '@canvas-js/chain-atp':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: 'link:'
 
   packages/chain-cosmos:
     dependencies:
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../interfaces
       '@canvas-js/signed-cid':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../signed-cid
       '@cosmjs/amino':
         specifier: ^0.30.1
@@ -851,10 +851,10 @@ importers:
   packages/chain-ethereum:
     dependencies:
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../interfaces
       '@canvas-js/signed-cid':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../signed-cid
       '@ipld/dag-json':
         specifier: ^10.1.5
@@ -875,10 +875,10 @@ importers:
   packages/chain-ethereum-viem:
     dependencies:
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../interfaces
       '@canvas-js/signed-cid':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../signed-cid
       '@ipld/dag-json':
         specifier: ^10.1.5
@@ -893,20 +893,20 @@ importers:
         specifier: ^2.1.4
         version: 2.1.4(ethers@6.9.0)
       viem:
-        specifier: ^1.19.13
+        specifier: '>=1.14.0'
         version: 1.21.1(typescript@5.3.3)
     devDependencies:
       '@canvas-js/chain-ethereum-viem':
         specifier: 0.8.17
-        version: 'link:'
+        version: 0.8.17(ethers@6.9.0)(typescript@5.3.3)
 
   packages/chain-near:
     dependencies:
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../interfaces
       '@canvas-js/signed-cid':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../signed-cid
       '@ipld/dag-cbor':
         specifier: ^9.0.6
@@ -940,10 +940,10 @@ importers:
   packages/chain-solana:
     dependencies:
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../interfaces
       '@canvas-js/signed-cid':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../signed-cid
       '@ipld/dag-json':
         specifier: ^10.1.5
@@ -962,16 +962,16 @@ importers:
         version: 12.1.3
     devDependencies:
       '@canvas-js/chain-solana':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: 'link:'
 
   packages/chain-substrate:
     dependencies:
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../interfaces
       '@canvas-js/signed-cid':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../signed-cid
       '@ipld/dag-cbor':
         specifier: ^9.0.6
@@ -1008,25 +1008,25 @@ importers:
   packages/cli:
     dependencies:
       '@canvas-js/chain-atp':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-atp
       '@canvas-js/chain-cosmos':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-cosmos
       '@canvas-js/chain-ethereum':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-ethereum
       '@canvas-js/chain-solana':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-solana
       '@canvas-js/chain-substrate':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-substrate
       '@canvas-js/core':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../core
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../interfaces
       '@ipld/dag-json':
         specifier: ^10.1.5
@@ -1108,25 +1108,25 @@ importers:
   packages/core:
     dependencies:
       '@canvas-js/chain-ethereum':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-ethereum
       '@canvas-js/discovery':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../discovery
       '@canvas-js/gossiplog':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../gossiplog
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../interfaces
       '@canvas-js/modeldb':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../modeldb
       '@canvas-js/signed-cid':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../signed-cid
       '@canvas-js/vm':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../vm
       '@chainsafe/libp2p-gossipsub':
         specifier: ^11.0.1
@@ -1268,7 +1268,7 @@ importers:
   packages/discovery:
     dependencies:
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../interfaces
       '@chainsafe/libp2p-gossipsub':
         specifier: ^11.0.1
@@ -1304,7 +1304,7 @@ importers:
   packages/gossiplog:
     dependencies:
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../interfaces
       '@canvas-js/okra':
         specifier: ^0.2.0
@@ -1319,7 +1319,7 @@ importers:
         specifier: ^0.5.6
         version: 0.5.6
       '@canvas-js/signed-cid':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../signed-cid
       '@ipld/dag-cbor':
         specifier: ^9.0.6
@@ -1422,13 +1422,13 @@ importers:
   packages/hooks:
     dependencies:
       '@canvas-js/core':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../core
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../interfaces
       '@canvas-js/modeldb':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../modeldb
       react:
         specifier: ^18.2.0
@@ -1445,28 +1445,28 @@ importers:
         version: 12.1.3
     devDependencies:
       '@canvas-js/chain-cosmos':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-cosmos
       '@canvas-js/chain-ethereum':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-ethereum
       '@canvas-js/chain-ethereum-viem':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-ethereum-viem
       '@canvas-js/chain-near':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-near
       '@canvas-js/chain-solana':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-solana
       '@canvas-js/chain-substrate':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-substrate
       '@canvas-js/interfaces':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: 'link:'
       '@canvas-js/signed-cid':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../signed-cid
       ava:
         specifier: ^6.0.1
@@ -1509,16 +1509,16 @@ importers:
   packages/replication-server:
     dependencies:
       '@canvas-js/chain-ethereum':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../chain-ethereum
       '@canvas-js/core':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../core
       '@canvas-js/discovery':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../discovery
       '@canvas-js/gossiplog':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../gossiplog
       '@chainsafe/libp2p-gossipsub':
         specifier: ^11.0.1
@@ -1604,7 +1604,7 @@ importers:
     dependencies:
       '@canvas-js/interfaces':
         specifier: 0.8.17
-        version: link:../interfaces
+        version: 0.8.17
       '@ipld/dag-cbor':
         specifier: ^9.0.6
         version: 9.0.6
@@ -1622,13 +1622,13 @@ importers:
         version: 12.1.3
     devDependencies:
       '@canvas-js/signed-cid':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: 'link:'
 
   packages/templates:
     devDependencies:
       '@canvas-js/core':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../core
 
   packages/test-network:
@@ -1653,7 +1653,7 @@ importers:
         version: 21.6.0(typescript@5.3.3)
     devDependencies:
       '@canvas-js/core':
-        specifier: 0.8.17
+        specifier: 0.8.19
         version: link:../core
       '@types/debug':
         specifier: ^4.1.12
@@ -3336,6 +3336,30 @@ packages:
       '@babel/helper-validator-identifier': 7.22.20
       to-fast-properties: 2.0.0
 
+  /@canvas-js/chain-ethereum-viem@0.8.17(ethers@6.9.0)(typescript@5.3.3):
+    resolution: {integrity: sha512-2lK/80VJsgT43nlaYlCe7wN9W6UMckGCOtzZdsdKvho1MCrmv18wHv+RXr6raFbw+JkBuqi907b1yVk9XToClQ==}
+    dependencies:
+      '@canvas-js/interfaces': 0.8.17
+      '@canvas-js/signed-cid': 0.8.17
+      '@ipld/dag-json': 10.1.5
+      '@libp2p/logger': 4.0.2
+      multiformats: 12.1.3
+      siwe: 2.1.4(ethers@6.9.0)
+      viem: 1.21.1(typescript@5.3.3)
+    transitivePeerDependencies:
+      - bufferutil
+      - ethers
+      - supports-color
+      - typescript
+      - utf-8-validate
+      - zod
+    dev: true
+
+  /@canvas-js/interfaces@0.8.17:
+    resolution: {integrity: sha512-CfksJYOCCiqitoTFVUjQfVSri/VFuByc1T5cklveTnOw0HkdZeLScadZwIaWMMsovXJAwnroDP5ulOsQ60Pe6Q==}
+    dependencies:
+      multiformats: 12.1.3
+
   /@canvas-js/okra-idb@0.2.2(idb@8.0.0):
     resolution: {integrity: sha512-UNK9OtQwTTmG9zlaTcCXGR3RMSAG8DWKOEavWc8aK1WuRDDuUvNNerTf0KstIpDwgcX7fPlcLm4WZyX9Ncn0fQ==}
     peerDependencies:
@@ -3384,6 +3408,17 @@ packages:
       debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
+
+  /@canvas-js/signed-cid@0.8.17:
+    resolution: {integrity: sha512-Gvm3fZ6xA35RfIj4o78A4le5lpqKugZIOwo6TDtD1eTuj5aCrxpazF8ArAVCYak/MyIwBPYjX4vNkbB3pptPYQ==}
+    engines: {node: '>=18.0.0'}
+    dependencies:
+      '@ipld/dag-cbor': 9.0.6
+      '@ipld/dag-json': 10.1.5
+      '@noble/curves': 1.3.0
+      '@noble/hashes': 1.3.3
+      multiformats: 12.1.3
+    dev: true
 
   /@chainsafe/as-chacha20poly1305@0.1.0:
     resolution: {integrity: sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==}
@@ -4429,7 +4464,6 @@ packages:
     dependencies:
       cborg: 4.0.5
       multiformats: 12.1.3
-    dev: false
 
   /@ipld/dag-json@10.1.5:
     resolution: {integrity: sha512-AIIDRGPgIqVG2K1O42dPDzNOfP0YWV/suGApzpF+YWZLwkwdGVsxjmXcJ/+rwOhRGdjpuq/xQBKPCu1Ao6rdOQ==}
@@ -4437,7 +4471,6 @@ packages:
     dependencies:
       cborg: 4.0.5
       multiformats: 12.1.3
-    dev: false
 
   /@ipld/schema@4.2.5:
     resolution: {integrity: sha512-RUifsMVhWfhhH3p7tzpjHU3Cc15nib6VCyC3lKSIwsvR+z/DQYekvVUbCo1Hztrxy/9R4rehInEh3m2btnH34A==}
@@ -6985,7 +7018,6 @@ packages:
       '@noble/curves': 1.2.0
       '@noble/hashes': 1.3.3
       '@scure/base': 1.1.3
-    dev: false
 
   /@scure/bip39@1.1.0:
     resolution: {integrity: sha512-pwrPOS16VeTKg98dYXQyIjJEcWfz7/1YJIwxUEPFfQPtc86Ym/1sVgQ2RLoD43AazMk2l/unK4ITySSpW2+82w==}
@@ -6999,7 +7031,6 @@ packages:
     dependencies:
       '@noble/hashes': 1.3.3
       '@scure/base': 1.1.3
-    dev: false
 
   /@sideway/address@4.1.4:
     resolution: {integrity: sha512-7vwq+rOHVWjyXxVlR76Agnvhy8I9rpzjosTESvmhNeXOXdZZB15Fl+TI9x1SiHZH5Jv2wTGduSxFDIaq0m3DUw==}
@@ -7075,7 +7106,6 @@ packages:
       apg-js: 4.3.0
       uri-js: 4.4.1
       valid-url: 1.0.9
-    dev: false
 
   /@stablelib/aead@1.0.1:
     resolution: {integrity: sha512-q39ik6sxGHewqtO0nP4BuSe3db5G1fEJE8ukvngS2gLkBXyy6E7pLubhbYgnkDFv6V8cWaxcE4Xn0t6LWcJkyg==}
@@ -7085,7 +7115,6 @@ packages:
     resolution: {integrity: sha512-ClJWvmL6UBM/wjkvv/7m5VP3GMr9t0osr4yVgLZsLCOz4hGN9gIAFEqnJ0TsSMAN+n840nf2cHZnA5/KFqHC7Q==}
     dependencies:
       '@stablelib/int': 1.0.1
-    dev: false
 
   /@stablelib/bytes@1.0.1:
     resolution: {integrity: sha512-Kre4Y4kdwuqL8BR2E9hV/R5sOrUj6NanZaZis0V6lX5yzqC3hBuVSDXUIBqQv/sCpmuWRiHLwqiT1pqqjuBXoQ==}
@@ -7143,7 +7172,6 @@ packages:
 
   /@stablelib/int@1.0.1:
     resolution: {integrity: sha512-byr69X/sDtDiIjIV6m4roLVWnNNlRGzsvxw+agj8CIEazqWGOQp2dTYgQhtyVXV9wpO6WyXRQUzLV/JRNumT2w==}
-    dev: false
 
   /@stablelib/keyagreement@1.0.1:
     resolution: {integrity: sha512-VKL6xBwgJnI6l1jKrBAfn265cspaWBPAPEc62VBQrWHLqVgNRE09gQ/AnOEyKUWrrqfD+xSQ3u42gJjLDdMDQg==}
@@ -7163,7 +7191,6 @@ packages:
     dependencies:
       '@stablelib/binary': 1.0.1
       '@stablelib/wipe': 1.0.1
-    dev: false
 
   /@stablelib/sha256@1.0.1:
     resolution: {integrity: sha512-GIIH3e6KH+91FqGV42Kcj71Uefd/QEe7Dy42sBTeqppXV95ggCcxLTk39bEr+lZfJmp+ghsR07J++ORkRELsBQ==}
@@ -7183,7 +7210,6 @@ packages:
 
   /@stablelib/wipe@1.0.1:
     resolution: {integrity: sha512-WfqfX/eXGiAd3RJe4VU2snh/ZPwtSjLG4ynQ/vYzvghTh7dHFcI1wl+nrkWG6lGhukOxOsUHfv8dUXr58D0ayg==}
-    dev: false
 
   /@stablelib/x25519@1.0.3:
     resolution: {integrity: sha512-KnTbKmUhPhHavzobclVJQG5kuivH+qDLpe84iRqX3CLrKp881cF160JvXJ+hjn1aMyCwYOKeIZefIH/P5cJoRw==}
@@ -9215,7 +9241,6 @@ packages:
         optional: true
     dependencies:
       typescript: 5.3.3
-    dev: false
 
   /abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -9500,7 +9525,6 @@ packages:
 
   /apg-js@4.3.0:
     resolution: {integrity: sha512-8U8MULS+JocCnm11bfrVS4zxtAcE3uOiCAI21SnjDrV9LNhMSGwTGGeko3QfyK1JLWwT7KebFqJMB2puzfdFMQ==}
-    dev: false
 
   /appdirsjs@1.2.7:
     resolution: {integrity: sha512-Quji6+8kLBC3NnBeo14nPDq0+2jUs5s3/xEye+udFHumHhRk4M7aAMXp/PBJqkKYGuuyR9M/6Dq7d2AViiGmhw==}
@@ -10448,7 +10472,6 @@ packages:
   /cborg@4.0.5:
     resolution: {integrity: sha512-q8TAjprr8pn9Fp53rOIGp/UFDdFY6os2Nq62YogPSIzczJD9M6g2b6igxMkpCiZZKJ0kn/KzDLDvG+EqBIEeCg==}
     hasBin: true
-    dev: false
 
   /ccount@2.0.1:
     resolution: {integrity: sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg==}
@@ -13942,7 +13965,6 @@ packages:
       ws: '*'
     dependencies:
       ws: 8.13.0
-    dev: false
 
   /it-all@3.0.4:
     resolution: {integrity: sha512-UMiy0i9DqCHBdWvMbzdYvVGa5/w4t1cc4nchpbnjdLhklglv8mQeEYnii0gvKESJuL1zV32Cqdb33R6/GPfxpQ==}
@@ -17994,7 +18016,6 @@ packages:
       ethers: 6.9.0
       uri-js: 4.4.1
       valid-url: 1.0.9
-    dev: false
 
   /slash@3.0.0:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
@@ -19377,7 +19398,6 @@ packages:
 
   /valid-url@1.0.9:
     resolution: {integrity: sha512-QQDsV8OnSf5Uc30CKSwG9lnhMPe6exHtTXLRYX8uMwKENy640pU+2BgBL0LRbDh/eYRahNCS7aewCx0wf3NYVA==}
-    dev: false
 
   /valtio@1.11.2(@types/react@18.2.45)(react@18.2.0):
     resolution: {integrity: sha512-1XfIxnUXzyswPAPXo1P3Pdx2mq/pIqZICkWN60Hby0d9Iqb+MEIpqgYVlbflvHdrp2YR/q3jyKWRPJJ100yxaw==}
@@ -19462,7 +19482,6 @@ packages:
       - bufferutil
       - utf-8-validate
       - zod
-    dev: false
 
   /vite-plugin-node-polyfills@0.15.0(vite@4.5.0):
     resolution: {integrity: sha512-IF9aTSPV9zebrcC6ezJA3Ym4r4U1C3jKUAnG16Sq7+UPtisNEOcNOAu3p5wcgFFOuuUwAUjQlIeJHMcnSXXemQ==}
@@ -20541,7 +20560,6 @@ packages:
         optional: true
       utf-8-validate:
         optional: true
-    dev: false
 
   /ws@8.14.2(bufferutil@4.0.8)(utf-8-validate@5.0.10):
     resolution: {integrity: sha512-wEBG1ftX4jcglPxgFCMJmZ2PLtSbJ2Peg6TmpJFTbe9GZYOQCDPdMYu/Tm0/bGZkw8paZnJY45J4K2PZrLYq8g==}
