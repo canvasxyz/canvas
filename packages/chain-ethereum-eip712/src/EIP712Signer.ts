@@ -19,6 +19,7 @@ export interface EIP712VerifiableSignerInit {
 }
 
 export class EIP712Signer implements SessionSigner<EIP712SessionData> {
+	public readonly key: string
 	public readonly sessionDuration: number | null
 	public readonly chainId: number
 	public readonly verifyingContract: string | null
@@ -37,6 +38,7 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 		this.verifyingContract = init.verifyingContract ?? null
 		this.salt = init.salt ?? generateSalt()
 		this.version = init.version ?? null
+		this.key = `EIP712Signer-${init.signer ? "signer" : "burner"}`
 	}
 
 	public readonly match = (address: string) => addressPattern.test(address)
