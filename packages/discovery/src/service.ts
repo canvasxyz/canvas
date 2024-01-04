@@ -341,7 +341,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		}
 
 		// for fetch_all, return the union of peers in the discovery cache, and the currently subscribed peers
-		let peers = this.pubsub.getSubscribers(topic)
+		const peers = this.pubsub.getSubscribers(topic)
 		if (fetchAll) {
 			const peerIds = peers.map((p) => p.toString())
 			for (const peerId of Object.values(this.discoveryPeers).map((p) => p.peerId)) {
