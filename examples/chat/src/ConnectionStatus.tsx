@@ -85,7 +85,7 @@ const OnlineList = ({ onlinePeers }: { onlinePeers: PresenceList }) => {
 							)}
 							<div>
 								<code className="text-sm break-all text-gray-500">
-									{env} - last seen {Math.ceil((time - lastSeen) / 1000)}s
+									{env} - last seen {lastSeen === null ? "awhile ago" : Math.ceil((time - lastSeen) / 1000) + "s"}
 								</code>
 							</div>
 						</li>
