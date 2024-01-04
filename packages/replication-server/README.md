@@ -8,6 +8,12 @@ The universal replication server discovers peers through a discovery topic, and 
 npm run start
 ```
 
+or
+
+```
+PEER_ID=... npm run start
+```
+
 Configure the replication server using environment variables:
 
 - DISCOVERY_TOPIC: A discovery topic to serve, by default `canvas-discovery`.
