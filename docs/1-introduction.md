@@ -1,6 +1,6 @@
 # Introduction
 
-Canvas is a framework for making real-time decentralized applications.
+Canvas is a framework and sync engine for real-time decentralized applications.
 
 Canvas apps are built on a programmable multi-writer relational database. They're easy to configure and automatically have several useful properties:
 

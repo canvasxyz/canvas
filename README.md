@@ -4,7 +4,7 @@
 [![node](https://img.shields.io/node/v/@canvas-js/core.svg)](https://www.npmjs.com/package/@canvas-js/core)
 [![npm](https://img.shields.io/npm/v/@canvas-js/core?color=33cd56&logo=npm)](https://www.npmjs.com/package/@canvas-js/core)
 
-Canvas is a framework for making real-time decentralized applications.
+Canvas is a framework and sync engine for real-time decentralized applications.
 
 Canvas apps are built on a programmable multi-writer relational database. They're easy to configure and automatically have several useful properties:
 
