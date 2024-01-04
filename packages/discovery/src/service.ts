@@ -58,7 +58,7 @@ export interface DiscoveryServiceInit {
 	signers?: SignerCache
 	appTopic?: string
 
-	fetchAllPeers?: boolean
+	trackAllPeers?: boolean
 }
 
 export type PeerEnv = "browser" | "server"
@@ -114,11 +114,12 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 	private readonly responseHeartbeatThreshold: number
 	private readonly topologyPeers = new Set<string>() // peers we are directly connected to
 	private readonly discoveryPeers: PresenceStore = {} // peers on the same discovery topic (may be on different app topics)
+
 	private lastResponseHeartbeat: number = new Date().getTime()
 
 	private readonly signers: SignerCache | null
 	private readonly appTopic: string | null
-	private readonly fetchAllPeers: boolean
+	private readonly trackAllPeers: boolean // fetch and emit presence events for all peers on the discovery topic
 
 	readonly #discoveryQueue = new PQueue({ concurrency: 1 })
 	readonly #dialQueue = new PQueue({ concurrency: 5 })
@@ -146,7 +147,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		this.addressFilter = init.addressFilter ?? ((addr) => true)
 		this.signers = init.signers ?? null
 		this.appTopic = init.appTopic ?? null
-		this.fetchAllPeers = init.fetchAllPeers ?? false
+		this.trackAllPeers = init.trackAllPeers ?? false
 	}
 
 	get [peerDiscoverySymbol](): PeerDiscovery {
@@ -390,7 +391,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 					// passive discovery
 					const key =
-						(this.fetchAllPeers ? DiscoveryService.FETCH_ALL_KEY_PREFIX : DiscoveryService.FETCH_KEY_PREFIX) + topic
+						(this.trackAllPeers ? DiscoveryService.FETCH_ALL_KEY_PREFIX : DiscoveryService.FETCH_KEY_PREFIX) + topic
 					this.log("fetching new peers from %p", key, connection.remotePeer)
 					const result = await this.fetch.fetch(connection.remotePeer, key)
 					if (result === undefined) {
@@ -509,7 +510,8 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		}
 
 		const topicIntersection = this.pubsub.getTopics().filter((topic) => topics.includes(topic))
-		if (!existed && topicIntersection.length > 0) {
+		const shouldEmitPresence = topicIntersection.length > 0 || this.trackAllPeers
+		if (!existed && shouldEmitPresence) {
 			this.dispatchEvent(
 				new CustomEvent("presence:join", { detail: { peerId, peers: this.discoveryPeers, address, topics } }),
 			)
