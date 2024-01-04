@@ -1,9 +1,9 @@
 export type EIP712Domain = {
 	name: string | null
 	version: string | null
-	chainId: number | null
-	verifyingContract: string | null
-	salt: string | null
+	// chainId: number | null
+	// verifyingContract: string | null
+	// salt: string | null
 }
 
 export type EIP712SessionData = {
@@ -22,9 +22,9 @@ export type EIP712SessionMessage = {
 export const eip712TypeDefinitions = {
 	Session: [
 		{ name: "address", type: "address" }, // the address that is delegated-signing the action
-		{ name: "publicKey", type: "string" }, // the burner address that is being authorized to sign actions
 		{ name: "blockhash", type: "string" }, // may be "" if no blockhash
-		{ name: "timestamp", type: "uint256" }, // this is actually overkill at uint24 is enough, but we can revisit during code review
 		{ name: "duration", type: "uint256" },
+		{ name: "publicKey", type: "string" }, // the burner address that is being authorized to sign actions
+		{ name: "timestamp", type: "uint256" }, // this is actually overkill at uint24 is enough, but we can revisit during code review
 	],
 }

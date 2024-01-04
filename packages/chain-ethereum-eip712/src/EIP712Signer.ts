@@ -1,4 +1,4 @@
-import { AbstractSigner, Wallet, hexlify, getBytes, verifyTypedData } from "ethers"
+import { AbstractSigner, Wallet, hexlify, getBytes, verifyTypedData, zeroPadValue, getAddress } from "ethers"
 import { logger } from "@libp2p/logger"
 
 import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
@@ -52,16 +52,16 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 
 		const message: EIP712SessionMessage = {
 			address: walletAddress,
-			publicKey,
 			blockhash,
-			timestamp,
 			duration,
+			publicKey,
+			timestamp,
 		}
 
 		const { domain, signature } = authorizationData
 
 		const recoveredAddress = verifyTypedData(domain, eip712TypeDefinitions, message, hexlify(signature))
-
+		console.log(`from verifySession: ${recoveredAddress}`)
 		assert(recoveredAddress === walletAddress, "invalid SIWE signature")
 	}
 
@@ -96,7 +96,7 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 
 		const timestamp = options.timestamp ?? Date.now()
 
-		const message: EIP712SessionMessage = {
+		const message = {
 			address: walletAddress,
 			publicKey: signer.uri,
 			blockhash: "",
@@ -107,9 +107,9 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 		const domain = {
 			name: topic,
 			version: this.version,
-			chainId: this.chainId,
-			verifyingContract: this.verifyingContract,
-			salt: this.salt,
+			// chainId: this.chainId,
+			// verifyingContract: this.verifyingContract,
+			// salt: this.salt,
 		}
 
 		const signature = await this.#ethersSigner.signTypedData(domain, eip712TypeDefinitions, message)
