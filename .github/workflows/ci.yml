@@ -58,6 +58,12 @@ jobs:
       - name: Run @canvas-js/interfaces interface tests
         run: npm run test --workspace=@canvas-js/interfaces
 
+      - name: Compile @canvas-js/chain-ethereum-eip712-contract contracts
+        run: npm run compile --workspace=@canvas-js/chain-ethereum-eip712-contract
+
+      - name: Run @canvas-js/chain-ethereum-eip712-contract tests
+        run: npm run test --workspace=@canvas-js/chain-ethereum-eip712-contract
+
   test-build:
     name: Build test (pnpm)
     runs-on: ubuntu-latest
