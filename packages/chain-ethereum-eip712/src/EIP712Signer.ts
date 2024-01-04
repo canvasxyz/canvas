@@ -58,7 +58,6 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 		const { domain, signature } = authorizationData
 
 		const recoveredAddress = verifyTypedData(domain, eip712TypeDefinitions, message, hexlify(signature))
-		console.log(`from verifySession: ${recoveredAddress}`)
 		assert(recoveredAddress === walletAddress, "invalid SIWE signature")
 	}
 
