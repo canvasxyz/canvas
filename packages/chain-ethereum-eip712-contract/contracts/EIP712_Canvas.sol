@@ -37,6 +37,14 @@ contract EIP712_Canvas is EIP712{
 
     constructor(string memory domainName, string memory signatureVersion) EIP712(domainName,signatureVersion) {}
 
+    function getChainId() public view returns (uint256){
+        uint256 id;
+        assembly {
+            id := chainid()
+        }
+        return id;
+    }
+
     function getSignerFromDigest(bytes32 eip712body, bytes calldata signature) public pure returns (address){
         return ECDSA.recover(eip712body, signature);
     }
@@ -78,7 +86,7 @@ contract EIP712_Canvas is EIP712{
         );
     }
 
-    function getSignerForSession(
+    function verifySession(
         address address_,
         string memory blockhash_,
         uint256 duration,
@@ -86,16 +94,6 @@ contract EIP712_Canvas is EIP712{
         uint256 timestamp,
         bytes memory signature
     ) public view returns (address){
-        // bytes32 eip712body = keccak256(
-        //     abi.encode(
-        //         sessionTypedDataHash, // keccak hash of typed data
-        //         address_,
-        //         keccak256(bytes(blockhash_)),
-        //         duration,
-        //         keccak256(bytes(publicKey)),
-        //         timestamp
-        //     )
-        // );
         bytes32 digest = getDigestForSession(address_, blockhash_, duration, publicKey, timestamp);
 
         return ECDSA.recover(digest, signature);

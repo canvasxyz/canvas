@@ -49,8 +49,8 @@ export type EIP712TypeDefinition = {
 export type EIP712Domain = {
 	name: string
 	version: string
-	// verifyingContract: string
-	// chainId: number
+	verifyingContract: string
+	chainId: number
 }
 
 export type HardhatSignerType = Awaited<Promise<PromiseLike<ReturnType<typeof ethers.getSigner>>>>

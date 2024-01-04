@@ -7,14 +7,13 @@ import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 import target from "#target"
 
 import { eip712TypeDefinitions, type EIP712SessionData, type EIP712SessionMessage } from "./types.js"
-import { assert, signalInvalidType, validateSessionData, parseAddress, addressPattern, generateSalt } from "./utils.js"
+import { assert, signalInvalidType, validateSessionData, parseAddress, addressPattern } from "./utils.js"
 
 export interface EIP712VerifiableSignerInit {
 	signer?: AbstractSigner
 	sessionDuration?: number
 	chainId?: number // used in the eip712 domain, but optional; no chainid if none is specified (don't default to mainnet)
 	verifyingContract?: string // used in the eip712 domain
-	salt?: string // used in the eip712 domain separator
 	version?: string // version in the eip712 domain. by default 1, but later versions of this signer could increment it
 }
 
@@ -23,7 +22,6 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 	public readonly sessionDuration: number | null
 	public readonly chainId: number
 	public readonly verifyingContract: string | null
-	public readonly salt: string | null
 	public readonly version: string | null
 
 	private readonly log = logger("canvas:chain-ethereum-eip712")
@@ -36,7 +34,6 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 		this.sessionDuration = init.sessionDuration ?? null
 		this.chainId = init.chainId ?? 1
 		this.verifyingContract = init.verifyingContract ?? null
-		this.salt = init.salt ?? generateSalt()
 		this.version = init.version ?? null
 		this.key = `EIP712Signer-${init.signer ? "signer" : "burner"}`
 	}
@@ -107,9 +104,8 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 		const domain = {
 			name: topic,
 			version: this.version,
-			// chainId: this.chainId,
-			// verifyingContract: this.verifyingContract,
-			// salt: this.salt,
+			chainId: this.chainId,
+			verifyingContract: this.verifyingContract,
 		}
 
 		const signature = await this.#ethersSigner.signTypedData(domain, eip712TypeDefinitions, message)
@@ -137,7 +133,6 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 		// 	version: this.version,
 		// 	chainId: this.chainId,
 		// 	verifyingContract: this.verifyingContract,
-		// 	salt: this.salt,
 		// }
 
 		if (message.payload.type === "action") {
