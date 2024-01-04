@@ -86,7 +86,7 @@ contract EIP712_Canvas is EIP712{
         );
     }
 
-    function verifySession(
+    function recoverAddressFromSession(
         address address_,
         string memory blockhash_,
         uint256 duration,

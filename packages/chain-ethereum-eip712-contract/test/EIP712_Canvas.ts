@@ -39,7 +39,7 @@ describe("EIP712_Canvas", function () {
 
 			const walletAddress = session.address.split(":")[2]
 
-			const recoveredAddress = await contract.verifySession(
+			const recoveredAddress = await contract.recoverAddressFromSession(
 				walletAddress,
 				session.blockhash || "",
 				session.duration || 0,
