@@ -12,8 +12,24 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
 	const { app } = useContext(AppContext)
 
 	const [status, setStatus] = useState("--")
+	const [onlinePeers, setOnlinePeers] = useState({})
+
+	const updateConnectionStatus = () => {
+		if (app) setStatus(app.status)
+	}
+	const updateOnlinePeers = ({ detail: { peerId, peers } }) => {
+		setOnlinePeers({ ...peers })
+	}
+
 	useEffect(() => {
-		app?.addEventListener("connections:updated", () => setStatus(app.status))
+		app?.addEventListener("connections:updated", updateConnectionStatus)
+		app?.addEventListener("presence:join", updateOnlinePeers)
+		app?.addEventListener("presence:leave", updateOnlinePeers)
+		return () => {
+			app?.removeEventListener("connections:updated", updateConnectionStatus)
+			app?.removeEventListener("presence:join", updateOnlinePeers)
+			app?.removeEventListener("presence:leave", updateOnlinePeers)
+		}
 	}, [app])
 
 	if (app === null) {
@@ -30,11 +46,54 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
 			</div>
 			<hr />
 			<div>
+				<span className="text-sm">Online</span>
+			</div>
+			<OnlineList onlinePeers={onlinePeers} />
+			<hr />
+			<div>
 				<span className="text-sm">Connections (Status: {status})</span>
 			</div>
 			<ConnectionList app={app} />
 		</div>
 	)
+}
+
+const OnlineList = ({ onlinePeers }: { onlinePeers: PresenceList }) => {
+	const browserPeers = Object.entries(onlinePeers).filter(([peerId, { lastSeen, env }]) => env === "browser")
+	const [time, setTime] = useState()
+
+	useEffect(() => {
+		const timer = setInterval(() => {
+			setTime(new Date().getTime())
+		}, 1000)
+		return () => clearInterval(timer)
+	}, [])
+
+	if (browserPeers.length === 0) {
+		return <div className="italic">No other clients online</div>
+	} else {
+		return (
+			<ul className="list-disc pl-4">
+				{browserPeers.map(([peerId, { lastSeen, env, address, topics }]) => {
+					return (
+						<li key={peerId}>
+							<PeerIdView peerId={peerId} />
+							{address && (
+								<div>
+									<code className="text-sm break-all text-gray-500">{address}</code>
+								</div>
+							)}
+							<div>
+								<code className="text-sm break-all text-gray-500">
+									{env} - last seen {Math.ceil((time - lastSeen) / 1000)}s
+								</code>
+							</div>
+						</li>
+					)
+				})}
+			</ul>
+		)
+	}
 }
 
 interface ConnectionListProps {
@@ -52,11 +111,11 @@ const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
 	)
 
 	useEffect(() => {
-		app.addEventListener("connections:updated", handleConnectionsUpdate)
+		app?.addEventListener("connections:updated", handleConnectionsUpdate)
 		return () => {
-			app.removeEventListener("connections:updated", handleConnectionsUpdate)
+			app?.removeEventListener("connections:updated", handleConnectionsUpdate)
 		}
-	}, [])
+	}, [app])
 
 	if (!connections || Object.entries(connections).length === 0) {
 		return <div className="italic">No connections</div>

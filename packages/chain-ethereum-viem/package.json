@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/chain-ethereum-viem",
-  "version": "0.8.15",
+  "version": "0.8.19",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -18,13 +18,16 @@
       "default": "./lib/targets/default/index.js"
     }
   },
+  "devDependencies": {
+    "@canvas-js/chain-ethereum-viem": "0.8.17"
+  },
   "dependencies": {
-    "@canvas-js/interfaces": "0.8.15",
-    "@canvas-js/signed-cid": "0.8.15",
+    "@canvas-js/interfaces": "0.8.19",
+    "@canvas-js/signed-cid": "0.8.19",
     "@ipld/dag-json": "^10.1.5",
     "@libp2p/logger": "^4.0.2",
     "multiformats": "^12.1.3",
     "siwe": "^2.1.4",
-    "viem": "^1.19.13"
+    "viem": ">=1.14.0"
   }
 }

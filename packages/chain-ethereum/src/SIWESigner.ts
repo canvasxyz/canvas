@@ -25,6 +25,7 @@ export interface SIWESignerInit {
 }
 
 export class SIWESigner implements SessionSigner<SIWESessionData> {
+	public readonly key: string
 	public readonly sessionDuration: number | null
 	public readonly chainId: number
 
@@ -37,6 +38,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 		this.#ethersSigner = init.signer ?? Wallet.createRandom()
 		this.sessionDuration = init.sessionDuration ?? null
 		this.chainId = init.chainId ?? 1
+		this.key = `SIWESigner-${init.signer ? "signer" : "burner"}`
 	}
 
 	public readonly match = (address: string) => addressPattern.test(address)

@@ -27,6 +27,7 @@ export interface SIWESignerViemInit {
 }
 
 export class SIWESignerViem implements SessionSigner<SIWESessionData> {
+	public readonly key: string
 	public readonly sessionDuration: number | null
 	public readonly chainId: number
 
@@ -68,6 +69,7 @@ export class SIWESignerViem implements SessionSigner<SIWESessionData> {
 
 		this.sessionDuration = init.sessionDuration ?? null
 		this.chainId = init.chainId ?? 1
+		this.key = `SIWESignerViem-${init.signer ? "signer" : "burner"}`
 	}
 
 	public readonly match = (address: string) => addressPattern.test(address)

@@ -1,7 +1,7 @@
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 
-import type { SessionSigner } from "@canvas-js/interfaces"
+import type { SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelValue, validateModelValue } from "@canvas-js/modeldb"
 
 import target from "#target"
@@ -16,7 +16,7 @@ const identity = (x: any) => x
 export class FunctionRuntime extends AbstractRuntime {
 	public static async init(
 		path: string | null,
-		signers: SessionSigner[],
+		signers: SignerCache,
 		contract: Contract,
 		options: { indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
 	): Promise<FunctionRuntime> {
@@ -61,7 +61,7 @@ export class FunctionRuntime extends AbstractRuntime {
 
 	constructor(
 		public readonly topic: string,
-		public readonly signers: SessionSigner[],
+		public readonly signers: SignerCache,
 		public readonly db: AbstractModelDB,
 		public readonly actions: Record<string, ActionImplementationFunction>,
 		public readonly argsTransformers: Record<

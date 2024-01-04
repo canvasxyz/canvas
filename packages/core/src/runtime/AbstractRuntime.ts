@@ -4,7 +4,7 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { logger } from "@libp2p/logger"
 import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
-import type { Signature, Action, Message, Session, SessionSigner } from "@canvas-js/interfaces"
+import type { Signature, Action, Message, Session, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
 import {
@@ -70,7 +70,7 @@ export abstract class AbstractRuntime {
 	}
 
 	public abstract readonly topic: string
-	public abstract readonly signers: SessionSigner[]
+	public abstract readonly signers: SignerCache
 	public abstract readonly db: AbstractModelDB
 	public abstract readonly actionNames: string[]
 	public abstract readonly argsTransformers: Record<
@@ -106,7 +106,7 @@ export abstract class AbstractRuntime {
 			if (AbstractRuntime.isSession(message)) {
 				const { publicKey, address, timestamp, duration } = message.payload
 
-				const signer = runtime.signers.find((signer) => signer.match(address))
+				const signer = runtime.signers.getAll().find((signer) => signer.match(address))
 				assert(signer !== undefined, "no signer found")
 
 				assert(publicKey === signature.publicKey)

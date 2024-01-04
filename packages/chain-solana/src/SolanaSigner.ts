@@ -33,6 +33,7 @@ type GenericSigner = {
 }
 
 export class SolanaSigner implements SessionSigner {
+	public readonly key: string
 	public readonly sessionDuration: number | null
 	public readonly chainId: string
 
@@ -66,6 +67,7 @@ export class SolanaSigner implements SessionSigner {
 		// 5ey... is the solana mainnet genesis hash
 		this.chainId = chainId ?? "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
 		this.sessionDuration = sessionDuration ?? null
+		this.key = `SolanaSigner-${signer ? "extension" : "burner"}`
 	}
 
 	public readonly match = (chain: string) => addressPattern.test(chain)

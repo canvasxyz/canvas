@@ -30,6 +30,8 @@ export interface ATPSignerOptions {
 }
 
 export class ATPSigner implements SessionSigner<ATPSessionData> {
+	public readonly key: string = "ATPSigner"
+
 	public static createAuthenticationMessage(topic: string, publicKey: string, address: string) {
 		return `Authorizing ${publicKey} to sign actions for ${topic} on behalf of ${address}`
 	}

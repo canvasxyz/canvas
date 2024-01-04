@@ -1,5 +1,11 @@
 # @canvas-js/chain-ethereum
 
+The Ethers (v6) Ethereum signer takes an `ethers` signer, or generates a random `ethers.Wallet`,
+and uses it to sign a SIWE message authenticating a new session.
+
+It also handles verification of messages matching this standard, and can be used in
+conjuction with `@canvas-js/chain-ethereum-viem`.
+
 ## Table of Contents
 
 - [Installation](#installation)
@@ -14,28 +20,23 @@ npm i @canvas-js/chain-ethereum
 ## API
 
 ```ts
-import type { AbstractSigner } from "ethers"
-import type { Signature, SessionSigner, Action, SessionStore, Message, Session } from "@canvas-js/interfaces"
-
-export type SIWESessionData = {
-  signature: Uint8Array
-  domain: string
-  nonce: string
-}
-
+import { AbstractSigner } from "ethers";
+import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces";
+import type { SIWESessionData } from "./types.js";
 export interface SIWESignerInit {
-  signer?: AbstractSigner
-  store?: SessionStore
-  sessionDuration?: number
+    chainId?: number;
+    signer?: AbstractSigner;
+    sessionDuration?: number;
 }
-
-export declare class SIWESigner implements SessionSigner {
-  constructor(init?: SIWESignerInit)
-
-  public match(chain: string): boolean
-  public verifySession(session: Session): void
-  public getSession(topic: string, options?: { chain?: string; timestamp?: number }): Promise<Session<SIWESessionData>>
-  public sign(message: Message<Action | Session>): Signature
-  public clear(): Promise<void>
+export declare class SIWESigner implements SessionSigner<SIWESessionData> {
+    constructor(init?: SIWESignerInit);
+    readonly match: (address: string) => boolean;
+    verifySession(topic: string, session: Session<SIWESessionData>): void;
+    getSession(topic: string, options?: {
+        timestamp?: number;
+        fromCache?: boolean;
+    }): Promise<Session<SIWESessionData>>;
+    sign(message: Message<Action | Session>): Signature;
+    clear(topic: string): Promise<void>;
 }
 ```

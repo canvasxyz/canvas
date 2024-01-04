@@ -29,6 +29,7 @@ export default defineConfig({
 			{ text: "Home", link: "/" },
 			{ text: "API", link: "/readme-core" },
 			{ text: "Blog", link: "/blog" },
+			{ text: "Changelog", link: "https://github.com/canvasxyz/canvas/releases" },
 		],
 		sidebar: {
 			"/blog": getSidebar({
@@ -44,8 +45,17 @@ export default defineConfig({
 						{ text: "Actions", link: "/3-actions" },
 						{ text: "Authentication", link: "/4-authentication" },
 						{ text: "Querying", link: "/5-querying" },
-						{ text: "Deploying", link: "/6-deploying" },
-						{ text: "Advanced Features", link: "/7-advanced" },
+						{ text: "Networking", link: "/6-networking" },
+						{
+							text: "Advanced Features",
+							link: "/7-advanced",
+							collapsed: true,
+							items: [
+								{ text: "Conflict Resolution", link: "/7-advanced#handling-conflicting-offline-edits" },
+								{ text: "Custom Signers", link: "/7-advanced#creating-your-own-session-signer" },
+								{ text: "Custom Actions", link: "/7-advanced#validating-custom-action-schemas-using-ipld" },
+							],
+						},
 					],
 				},
 				{
@@ -72,9 +82,10 @@ export default defineConfig({
 								{ text: "Ethereum", link: "/readme-chain-ethereum.md" },
 								{ text: "Ethereum (Viem)", link: "/readme-chain-ethereum-viem.md" },
 								{ text: "Bluesky/ATP", link: "/readme-chain-atp.md" },
-								{ text: "Substrate", link: "/readme-chain-substrate.md" },
 								{ text: "Solana", link: "/readme-chain-solana.md" },
 								{ text: "Cosmos", link: "/readme-chain-cosmos.md" },
+								{ text: "Substrate", link: "/readme-chain-substrate.md" },
+								{ text: "Near", link: "/readme-chain-near.md" },
 							],
 						},
 					],
