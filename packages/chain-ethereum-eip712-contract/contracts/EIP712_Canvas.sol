@@ -35,16 +35,19 @@ bytes32 constant emptyDomainSeparator = keccak256(abi.encode(keccak256("EIP712Do
 
 contract EIP712_Canvas{
 
-    function getChainId() public view returns (uint256){
-        uint256 id;
+    function toTypedDataHash(bytes32 domainSeparator, bytes32 structHash) internal pure returns (bytes32 digest) {
+        /// @solidity memory-safe-assembly
         assembly {
-            id := chainid()
+            let ptr := mload(0x40)
+            mstore(ptr, hex"19_01")
+            mstore(add(ptr, 0x02), domainSeparator)
+            mstore(add(ptr, 0x22), structHash)
+            digest := keccak256(ptr, 0x42)
         }
-        return id;
     }
 
-    function getSignerFromDigest(bytes32 eip712body, bytes calldata signature) public pure returns (address){
-        return ECDSA.recover(eip712body, signature);
+    function _hashTypedDataV4(bytes32 structHash) internal pure returns (bytes32 digest) {
+        return toTypedDataHash(emptyDomainSeparator, structHash);
     }
 
     function getStructHashForSession(address address_,
@@ -62,39 +65,6 @@ contract EIP712_Canvas{
         ));
     }
 
-    function toTypedDataHash(bytes32 domainSeparator, bytes32 structHash) internal pure returns (bytes32 digest) {
-        /// @solidity memory-safe-assembly
-        assembly {
-            let ptr := mload(0x40)
-            mstore(ptr, hex"19_01")
-            mstore(add(ptr, 0x02), domainSeparator)
-            mstore(add(ptr, 0x22), structHash)
-            digest := keccak256(ptr, 0x42)
-        }
-    }
-
-    function _hashTypedDataV4(bytes32 structHash) internal pure returns (bytes32 digest) {
-        return toTypedDataHash(emptyDomainSeparator, structHash);
-    }
-
-    function getDigestForSession(
-        address address_,
-        string memory blockhash_,
-        uint256 duration,
-        string memory publicKey,
-        uint256 timestamp
-    ) public pure returns (bytes32){
-        return _hashTypedDataV4(
-            getStructHashForSession(
-                address_,
-                blockhash_,
-                duration,
-                publicKey,
-                timestamp
-            )
-        );
-    }
-
     function recoverAddressFromSession(
         address address_,
         string memory blockhash_,
@@ -103,7 +73,7 @@ contract EIP712_Canvas{
         uint256 timestamp,
         bytes memory signature
     ) public pure returns (address){
-        bytes32 digest = getDigestForSession(address_, blockhash_, duration, publicKey, timestamp);
+        bytes32 digest = _hashTypedDataV4(getStructHashForSession(address_, blockhash_, duration, publicKey, timestamp));
 
         return ECDSA.recover(digest, signature);
     }
