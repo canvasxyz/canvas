@@ -9,7 +9,8 @@ Unless configured otherwise, apps start with libp2p enabled, so they will try to
 
 - [Checking connection status](#checking-connection-status)
 - [Configuring realtime presence](#configuring-realtime-presence)
-- [Getting the list of online peers](#listing-online-peers)
+- [Listing online peers](#listing-online-peers)
+- [Listing online peers across applications](#listing-online-peers-across-applications)
 
 ## Checking connection status
 
@@ -20,7 +21,7 @@ same application on the network.
 
 Listen to the `connections:updated` event to detect when this happens:
 
-```ts
+```ts{7}
 import { useCanvas } from "@canvas-js/hooks"
 import type { Connections } from "@canvas-js/core"
 
@@ -53,8 +54,7 @@ We also maintain a libp2p discovery/presence service that keeps track of the ent
 
 To use realtime presence, first set a `discoveryTopic` in your application configuration.
 
-```ts
-
+```ts{7}
 const { app } = useCanvas({
   contract: {
     topic: "my-app-room-x",
@@ -65,11 +65,11 @@ const { app } = useCanvas({
 })
 ```
 
-You can think of each contract as an individual room or partition of an application; the discovery topic is a meta-topic that coordinates all of them. (You can configure the discovery topic to be the same as the contract topic, if your application has just one partition.)
+You can think of each contract as an individual room in an application; the discovery topic is a meta-topic that coordinates all of them. (You can configure the discovery topic to be the same as the contract topic, if your application has just one partition.)
 
 With `discoveryTopic` configured, your applications will automatically broadcast presence events across the submesh. Listen for the `presence:join` and `presence:leave` events to see when peers join:
 
-```ts
+```ts{16}
 const handlePresenceListUpdated = ({ detail: { peerId, peers } }) => {
   console.log(peerId)
   // '12D3KooWCQQz7uozb287GZCRGv7DrrZTVDuUfh2bNCd3rpUHgpes'
@@ -79,7 +79,8 @@ const handlePresenceListUpdated = ({ detail: { peerId, peers } }) => {
   //   12D3KooWCQQz7uozb287GZCRGv7DrrZTVDuUfh2bNCd3rpUHgpes: {
   //     address: null,
   //     env: "server",
-  //     lastSeen: 1703317637626
+  //     lastSeen: 1703317637626,
+  //     topics: ["my-app-room-1"]
   // }
 }
 
@@ -89,11 +90,8 @@ useEffect(() => {
 })
 ```
 
-Join events will be broadcast whenever someone new joins the network, and leave events
+Join events will be triggered whenever someone new joins the network, and leave events
 will be triggered after that peer goes offline, after about a minute of inactivity.
-
-Detecting when a peer has left is more difficult, so we recommend filtering out peers
-that have a `lastSeen` value older than some inactivity threshold (e.g. 15 minutes).
 
 ## Listing online peers
 
@@ -106,6 +104,33 @@ The event also provides a `peers` list, which shows a list of online peers:
 - `lastSeen` is the milliseconds since the last heartbeat from this peer.
 - `topics` is the list of topics the peer is subscribed to.
 
-You may wish to filter the list of peers down to those running in the browser
-`peer.env === 'browser'`, and subscribed to the same application topic(s) that you
-care about (if the discovery topic is shared across applications).
+To get a list of other online users, you should filter the list of peers down to those where
+`peer.env === 'browser'`.
+
+To only show peers when they have proactively sent a heartbeat, filter the list with
+`peer.lastSeen !== null`. This will cause your list of online peers to fill from scratch
+when you start the application, as if you were starting a BitTorrent client or P2P node.
+
+By default, we try to load peers from other peers' presence cache, so that you can see a
+list of recently active peers.
+
+## Listing online peers across applications
+
+To track presence status across apps on a discovery topic, configure the application
+with `trackAllPeers: true`.
+
+```ts{8}
+const { app } = useCanvas({
+  contract: {
+    topic: "my-app-room-x",
+    // models: ...
+    // actions: ...
+  },
+  discoveryTopic: 'my-app-discovery',
+  trackAllPeers: true,
+})
+```
+
+This will cause `presence:join` events to be emitted for all peers that join the discovery
+topic, even if they have a different app topic. Check the event's `topics` list to see
+which application(s) the peer is running.

@@ -20,6 +20,10 @@ export class FunctionRuntime extends AbstractRuntime {
 		contract: Contract,
 		options: { indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
 	): Promise<FunctionRuntime> {
+		assert(contract.actions !== undefined, "contract initialized without actions")
+		assert(contract.models !== undefined, "contract initialized without models")
+		assert(contract.topic !== undefined, "contract initialized without topic")
+
 		const { indexHistory = true, ignoreMissingActions = false } = options
 		const models = AbstractRuntime.getModelSchema(contract.models, { indexHistory })
 		const db = await target.openDB({ path, topic: contract.topic }, models)

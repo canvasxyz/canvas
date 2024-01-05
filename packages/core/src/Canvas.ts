@@ -35,6 +35,7 @@ export interface NetworkConfig {
 	maxConnections?: number
 	discoveryTopic?: string
 	discoveryInterval?: number
+	trackAllPeers?: boolean
 	enableWebRTC?: boolean
 }
 
