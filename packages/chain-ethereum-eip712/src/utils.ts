@@ -15,26 +15,8 @@ export function signalInvalidType(type: never): never {
 
 export function validateSessionData(authorizationData: unknown): authorizationData is EIP712SessionData {
 	try {
-		const {
-			domain: { name, version, chainId, verifyingContract, salt },
-			signature,
-		} = authorizationData as any
+		const { signature } = authorizationData as any
 		assert(signature instanceof Uint8Array, "signature must be a Uint8Array")
-		if (name) {
-			assert(typeof name === "string", "name must be a string or null")
-		}
-		if (version) {
-			assert(typeof version === "string", "version must be a string or null")
-		}
-		if (chainId) {
-			assert(typeof chainId === "number", "chainId must be a number or null")
-		}
-		if (verifyingContract) {
-			assert(typeof verifyingContract === "string", "verifyingContract must be a string or null")
-		}
-		if (salt) {
-			assert(typeof salt === "string", "salt must be a string or null")
-		}
 
 		return true
 	} catch (e) {

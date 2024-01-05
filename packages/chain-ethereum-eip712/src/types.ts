@@ -8,7 +8,6 @@ export type EIP712Domain = {
 
 export type EIP712SessionData = {
 	signature: Uint8Array
-	domain: EIP712Domain
 }
 
 export type EIP712SessionMessage = {

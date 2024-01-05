@@ -55,9 +55,9 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 			timestamp,
 		}
 
-		const { domain, signature } = authorizationData
+		const { signature } = authorizationData
 
-		const recoveredAddress = verifyTypedData(domain, eip712TypeDefinitions, message, hexlify(signature))
+		const recoveredAddress = verifyTypedData({}, eip712TypeDefinitions, message, hexlify(signature))
 		assert(recoveredAddress === walletAddress, "invalid SIWE signature")
 	}
 
@@ -100,20 +100,13 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 			duration: this.sessionDuration ?? 0,
 		}
 
-		const domain = {
-			name: topic,
-			version: this.version,
-			chainId: this.chainId,
-			verifyingContract: this.verifyingContract,
-		}
-
-		const signature = await this.#ethersSigner.signTypedData(domain, eip712TypeDefinitions, message)
+		const signature = await this.#ethersSigner.signTypedData({}, eip712TypeDefinitions, message)
 
 		const session: Session<EIP712SessionData> = {
 			type: "session",
 			address: address,
 			publicKey: signer.uri,
-			authorizationData: { signature: getBytes(signature), domain },
+			authorizationData: { signature: getBytes(signature) },
 			duration: this.sessionDuration || 0,
 			timestamp: timestamp,
 			blockhash: "",

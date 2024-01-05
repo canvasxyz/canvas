@@ -2,8 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-
 
 /*
     struct Action {
@@ -33,9 +31,9 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
 bytes32 constant sessionTypedDataHash = keccak256("Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)");
 
-contract EIP712_Canvas is EIP712{
+bytes32 constant emptyDomainSeparator = keccak256(abi.encode(keccak256("EIP712Domain()")));
 
-    constructor(string memory domainName, string memory signatureVersion) EIP712(domainName,signatureVersion) {}
+contract EIP712_Canvas{
 
     function getChainId() public view returns (uint256){
         uint256 id;
@@ -64,8 +62,19 @@ contract EIP712_Canvas is EIP712{
         ));
     }
 
-    function getDomainSeparator() public view returns (bytes32){
-        return _domainSeparatorV4();
+    function toTypedDataHash(bytes32 domainSeparator, bytes32 structHash) internal pure returns (bytes32 digest) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, hex"19_01")
+            mstore(add(ptr, 0x02), domainSeparator)
+            mstore(add(ptr, 0x22), structHash)
+            digest := keccak256(ptr, 0x42)
+        }
+    }
+
+    function _hashTypedDataV4(bytes32 structHash) internal pure returns (bytes32 digest) {
+        return toTypedDataHash(emptyDomainSeparator, structHash);
     }
 
     function getDigestForSession(
@@ -74,7 +83,7 @@ contract EIP712_Canvas is EIP712{
         uint256 duration,
         string memory publicKey,
         uint256 timestamp
-    ) public view returns (bytes32){
+    ) public pure returns (bytes32){
         return _hashTypedDataV4(
             getStructHashForSession(
                 address_,
@@ -93,7 +102,7 @@ contract EIP712_Canvas is EIP712{
         string memory publicKey,
         uint256 timestamp,
         bytes memory signature
-    ) public view returns (address){
+    ) public pure returns (address){
         bytes32 digest = getDigestForSession(address_, blockhash_, duration, publicKey, timestamp);
 
         return ECDSA.recover(digest, signature);

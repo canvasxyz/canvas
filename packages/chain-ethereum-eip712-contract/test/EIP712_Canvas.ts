@@ -10,14 +10,9 @@ describe("EIP712_Canvas", function () {
 	async function deployFixture() {
 		const EIP712_Canvas = await ethers.getContractFactory("EIP712_Canvas")
 
-		const contract = await EIP712_Canvas.deploy(domainName, signatureVersion)
+		const contract = await EIP712_Canvas.deploy()
 
-		const domain: EIP712Domain = {
-			name: domainName,
-			chainId: (await contract.getChainId()).toNumber(),
-			verifyingContract: contract.address,
-			version: signatureVersion,
-		}
+		const domain = {}
 
 		return { contract, domain }
 	}
@@ -28,11 +23,7 @@ describe("EIP712_Canvas", function () {
 
 			const { contract, domain } = await loadFixture(deployFixture)
 
-			const signer = new EIP712Signer({
-				chainId: domain.chainId,
-				verifyingContract: domain.verifyingContract,
-				version: domain.version,
-			})
+			const signer = new EIP712Signer({})
 
 			const session = await signer.getSession(domainName)
 			signer.verifySession(domainName, session)
