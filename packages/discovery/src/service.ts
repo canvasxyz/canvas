@@ -242,7 +242,12 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 			this.components.events.addEventListener(
 				"connection:open",
 				({ detail: connection }) => {
-					setTimeout(() => this.publishHeartbeat(), 1000)
+					setTimeout(() => {
+						this.publishHeartbeat()
+						this.lastResponseHeartbeat = 0
+						// reset response heartbeat, so we send it again on the next incoming connection
+						// this helps ensure we get an actual `lastSeen` value for very small meshes
+					}, 1000)
 				},
 				{ once: true },
 			)
@@ -257,7 +262,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 			}, this.evictionInterval)
 
 			this.addEventListener("presence:join", ({ detail: { peerId } }) => {
-				if (this.lastResponseHeartbeat > new Date().getTime() + this.responseHeartbeatThreshold) return
+				if (this.lastResponseHeartbeat > new Date().getTime() - this.responseHeartbeatThreshold) return
 				this.lastResponseHeartbeat = new Date().getTime()
 				this.publishHeartbeat()
 			})
