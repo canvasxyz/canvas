@@ -1,25 +1,23 @@
 # Networking
 
-Once you've deployed your application, you can also use libp2p to check who your application is connected to,
-and who else is running the same application.
-
-Unless configured otherwise, apps start with libp2p enabled, so they will try to connect to the network immediately.
+For browser-first applications, we provide APIs for checking the connectivity and online status
+of other users connected to your app.
 
 ## Table of contents
 
-- [Checking connection status](#checking-connection-status)
+- [Checking online status](#checking-online-status)
 - [Configuring realtime presence](#configuring-realtime-presence)
 - [Listing online peers](#listing-online-peers)
 - [Listing online peers across applications](#listing-online-peers-across-applications)
 
-## Checking connection status
+## Checking online status
 
-For realtime applications, you can check `app.status` to see if your application is connected to other peers.
+For connectivity status, check `app.status` to see if you're online.
 
 The app's status will show `connected` as soon as libp2p has a connection to at least one peer running the
 same application on the network.
 
-Listen to the `connections:updated` event to detect when this happens:
+You can listen to the `connections:updated` event to keep track of a list of connections:
 
 ```ts{7}
 import { useCanvas } from "@canvas-js/hooks"
@@ -44,15 +42,21 @@ useEffect(() => {
 }, [app])
 ```
 
-The `connections` object lists all peers that you are directly connected to. Peers that are actively sending and receiving actions for the application will be shown as `online` (🟢). Peers passively participating in the mesh will be `waiting` (⚪️), those still connecting will be `connecting` (🟡), and unresponsive peers will be shown as `disconnected` (🔴). As long as at least one peer is `online`, the application will show as connected.
+The `connections` object lists peers that you are directly connected to.
 
-You can see an example [here](https://github.com/canvasxyz/canvas/blob/main/examples/chat/src/ConnectionStatus.tsx#L129).
+Peers that are actively sending and receiving actions for the application will be shown as `online` (🟢). Peers passively participating in the mesh will be `waiting` (⚪️), those still connecting will be `connecting` (🟡), and unresponsive peers will be shown as `disconnected` (🔴).
+
+As long as at least one peer is `online`, your application will show as connected. You can see an example [here](https://github.com/canvasxyz/canvas/blob/main/examples/chat/src/ConnectionStatus.tsx#L129).
 
 ## Configuring realtime presence
 
-We also maintain a libp2p discovery/presence service that keeps track of the entire set of peers for a given application that are online, including peers that you aren't directly connected to.
+By default, libp2p doesn't maintain connections to every other peer running your application
+at the same time, since this could be hundreds of peers or more.
 
-To use realtime presence, first set a `discoveryTopic` in your application configuration.
+Instead, we maintain a libp2p discovery/presence service, which tracks peers that you aren't
+directly connected to.
+
+To use this service, set a `discoveryTopic` in your application configuration:
 
 ```ts{7}
 const { app } = useCanvas({
@@ -65,9 +69,16 @@ const { app } = useCanvas({
 })
 ```
 
-You can think of each contract as an individual room in an application; the discovery topic is a meta-topic that coordinates all of them. (You can configure the discovery topic to be the same as the contract topic, if your application has just one partition.)
+The **discovery topic** is separate from your **application topic**. Discovery topics are used
+to coordinate presence and peer discovery across people running many different applications -
+each application can be a different contract, or a copy of the same contract.
 
-With `discoveryTopic` configured, your applications will automatically broadcast presence events across the submesh. Listen for the `presence:join` and `presence:leave` events to see when peers join:
+You can use this to implement sharded applications, where someone can move between different
+rooms as they use the application, and each room will sync separately. (For applications with
+just one partition, you can configure the discovery topic to the same as the contract topic.)
+
+With `discoveryTopic` configured, your applications will automatically broadcast presence events.
+Listen for the `presence:join` and `presence:leave` events to see when peers join:
 
 ```ts{16}
 const handlePresenceListUpdated = ({ detail: { peerId, peers } }) => {
@@ -93,6 +104,10 @@ useEffect(() => {
 Join events will be triggered whenever someone new joins the network, and leave events
 will be triggered after that peer goes offline, after about a minute of inactivity.
 
+
+You can configure the threshold by setting `presenceTimeout` in your app config.
+(see an example [here](https://github.com/canvasxyz/canvas/blob/main/examples/chat/src/App.tsx#L45)).
+
 ## Listing online peers
 
 The event also provides a `peers` list, which shows a list of online peers:
@@ -104,15 +119,13 @@ The event also provides a `peers` list, which shows a list of online peers:
 - `lastSeen` is the milliseconds since the last heartbeat from this peer.
 - `topics` is the list of topics the peer is subscribed to.
 
-To get a list of other online users, you should filter the list of peers down to those where
+To get a list of other online users, filter the list of peers down to those where
 `peer.env === 'browser'`.
 
 To only show peers when they have proactively sent a heartbeat, filter the list with
 `peer.lastSeen !== null`. This will cause your list of online peers to fill from scratch
-when you start the application, as if you were starting a BitTorrent client or P2P node.
-
-By default, we try to load peers from other peers' presence cache, so that you can see a
-list of recently active peers.
+when you start the application. (By default, we try to load peers from other peers'
+presence cache, so that you can see a list of recently active peers immediately.)
 
 ## Listing online peers across applications
 
@@ -134,3 +147,7 @@ const { app } = useCanvas({
 This will cause `presence:join` events to be emitted for all peers that join the discovery
 topic, even if they have a different app topic. Check the event's `topics` list to see
 which application(s) the peer is running.
+
+You can also see this on our [chat app](https://canvas-chat.pages.dev). Try opening a few
+rooms on [this client](https://mud-example.vercel.app/), and those rooms will show up in the
+chat app's presence list.
