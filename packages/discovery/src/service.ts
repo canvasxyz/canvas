@@ -515,21 +515,31 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 	) {
 		const existed = this.discoveryPeers[peerId.toString()] !== undefined
 
+		// update lastSeen, unless we're preloading a peer from passive discovery
 		let lastSeen = null
 		if (discoveryType === "passive" && this.discoveryPeers[peerId.toString()]) {
-			lastSeen = this.discoveryPeers[peerId.toString()].lastSeen // passive discovery shouldn't update lastSeen
+			lastSeen = this.discoveryPeers[peerId.toString()].lastSeen
 		} else if (discoveryType === "active") {
 			lastSeen = new Date().getTime()
 		}
 
-		this.discoveryPeers[peerId.toString()] = {
-			peerId,
-			lastSeen,
-			env,
-			address,
-			topics,
+		// update the peerinfo object in-place because clients may have stored a reference to it
+		if (this.discoveryPeers[peerId.toString()]) {
+			this.discoveryPeers[peerId.toString()].lastSeen = lastSeen
+			this.discoveryPeers[peerId.toString()].env = env
+			this.discoveryPeers[peerId.toString()].address = address
+			this.discoveryPeers[peerId.toString()].topics = topics
+		} else {
+			this.discoveryPeers[peerId.toString()] = {
+				peerId,
+				lastSeen,
+				env,
+				address,
+				topics,
+			}
 		}
 
+		// dispatch presence:join if we're tracking all topics, or this peer is on our app topic
 		const topicIntersection = this.pubsub.getTopics().filter((topic) => topics.includes(topic))
 		const shouldEmitPresence = topicIntersection.length > 0 || this.trackAllPeers
 		if (!existed && shouldEmitPresence) {
