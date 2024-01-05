@@ -110,6 +110,7 @@ export function getLibp2pOptions(
 				discoveryTopic: options.discoveryTopic,
 				discoveryInterval: options.discoveryInterval,
 				trackAllPeers: options.trackAllPeers,
+				evictionThreshold: options.presenceTimeout,
 				topicFilter: (topic) => topic.startsWith(GossipLogService.topicPrefix),
 				addressFilter: (addr) =>
 					WebSockets.matches(addr) || WebSocketsSecure.matches(addr) || (enableWebRTC && WebRTC.matches(addr)),

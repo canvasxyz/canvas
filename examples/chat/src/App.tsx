@@ -48,6 +48,7 @@ export const App: React.FC<{}> = ({}) => {
 		indexHistory: false,
 		discoveryTopic: "canvas-discovery",
 		trackAllPeers: true,
+		presenceTimeout: 12 * 60 * 60 * 1000, // keep up to 12 hours of offline peers
 		bootstrapList: [
 			"/ip4/127.0.0.1/tcp/8080/ws/p2p/12D3KooWJ838UjmaNUEsy9dPwHdM8sYkPzVJKdFdou4zenZhevut",
 			"/dns4/canvas-chat-discovery-p0.fly.dev/tcp/443/wss/p2p/12D3KooWG1zzEepzv5ib5Rz16Z4PXVfNRffXBGwf7wM8xoNAbJW7",

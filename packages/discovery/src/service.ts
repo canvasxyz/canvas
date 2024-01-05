@@ -69,10 +69,10 @@ export type PresenceStore = Record<
 
 export const defaultHeartbeatInterval = 60 * 1000 // publish heartbeat once every minute
 
-export const defaultEvictionInterval = 10 * 1000 // evict peers from the presence cache every 10s
-export const defaultEvictionThreshold = 90 * 1000 //only if they haven't been seen in 1m 30s
+export const defaultEvictionInterval = 5 * 1000 // run a timer to evict peers from the presence cache every 5s
+export const defaultEvictionThreshold = 90 * 1000 // only if they haven't been seen in 1m 30s
 
-export const defaultResponseHeartbeatThreshold = 60 * 1000 // send response heartbeat upon new peers joining the mesh, up to once every 60 seconds
+export const defaultResponseHeartbeatThreshold = 15 * 1000 // send response heartbeat upon new peers joining the mesh, up to once every 60 seconds
 
 export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
 	"peer:topics": CustomEvent<{ peerId: PeerId; topics: string[] }>

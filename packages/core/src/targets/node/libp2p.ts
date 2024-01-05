@@ -116,6 +116,7 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 				discoveryTopic: options.discoveryTopic,
 				discoveryInterval: options.discoveryInterval,
 				trackAllPeers: options.trackAllPeers,
+				evictionThreshold: options.presenceTimeout,
 				topicFilter: (topic) => topic.startsWith(GossipLogService.topicPrefix),
 				addressFilter: (addr) => WebSockets.matches(addr) || WebSocketsSecure.matches(addr),
 			}),

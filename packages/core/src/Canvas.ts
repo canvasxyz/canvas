@@ -33,9 +33,12 @@ export interface NetworkConfig {
 	bootstrapList?: string[]
 	minConnections?: number
 	maxConnections?: number
+
 	discoveryTopic?: string
 	discoveryInterval?: number
 	trackAllPeers?: boolean
+	presenceTimeout?: number
+
 	enableWebRTC?: boolean
 }
 
