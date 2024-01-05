@@ -69,10 +69,10 @@ export type PresenceStore = Record<
 
 export const defaultHeartbeatInterval = 60 * 1000 // publish heartbeat once every minute
 
-export const defaultEvictionInterval = 0.5 * 60 * 1000 // run a timer to evict peers from the presence list every 30s
-export const defaultEvictionThreshold = 1.5 * 60 * 1000 // evict peers from presence list if they haven't been seen in 1m 30s
+export const defaultEvictionInterval = 10 * 1000 // evict peers from the presence cache every 10s
+export const defaultEvictionThreshold = 90 * 1000 //only if they haven't been seen in 1m 30s
 
-export const defaultResponseHeartbeatThreshold = 15 * 60 * 1000 // send heartbeat upon new peers joining the mesh, up to every 15 seconds
+export const defaultResponseHeartbeatThreshold = 60 * 1000 // send response heartbeat upon new peers joining the mesh, up to once every 60 seconds
 
 export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
 	"peer:topics": CustomEvent<{ peerId: PeerId; topics: string[] }>
@@ -125,8 +125,8 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 	readonly #dialQueue = new PQueue({ concurrency: 5 })
 
 	#registrarId: string | null = null
-	#heartbeat: NodeJS.Timeout | null = null
-	#presenceTimer: NodeJS.Timeout | null = null
+	#heartbeatTimer: NodeJS.Timeout | null = null
+	#evictionTimer: NodeJS.Timeout | null = null
 
 	constructor(
 		public readonly components: DiscoveryServiceComponents,
@@ -238,7 +238,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 			// 1) after the first connection to a peer
 			// 2) at the heartbeat interval
 			// 3) after new peers joining this specific topic
-			this.#heartbeat = setInterval(() => this.publishHeartbeat(), this.discoveryInterval)
+			this.#heartbeatTimer = setInterval(() => this.publishHeartbeat(), this.discoveryInterval)
 			this.components.events.addEventListener(
 				"connection:open",
 				({ detail: connection }) => {
@@ -251,27 +251,38 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 				},
 				{ once: true },
 			)
-
-			this.#presenceTimer = setInterval(() => {
-				Object.entries(this.discoveryPeers).forEach((peerId, lastSeen) => {
-					if (lastSeen < new Date().getTime() - this.evictionThreshold) {
-						delete this.discoveryPeers[peerId.toString()]
-						this.dispatchEvent(new CustomEvent("presence:leave", { detail: { peerId, peers: this.discoveryPeers } }))
-					}
-				})
-			}, this.evictionInterval)
-
 			this.addEventListener("presence:join", ({ detail: { peerId } }) => {
 				if (this.lastResponseHeartbeat > new Date().getTime() - this.responseHeartbeatThreshold) return
 				this.lastResponseHeartbeat = new Date().getTime()
 				this.publishHeartbeat()
 			})
+
+			// we preload recently seen peers using passive discovery, but if those peers haven't
+			// sent a heartbeat within ~one heartbeat interval, flush them from the cache
+			setTimeout(() => {
+				Object.entries(this.discoveryPeers).forEach(([peerId, { lastSeen }]) => {
+					if (lastSeen === null) {
+						delete this.discoveryPeers[peerId.toString()]
+						this.dispatchEvent(new CustomEvent("presence:leave", { detail: { peerId, peers: this.discoveryPeers } }))
+					}
+				})
+			}, this.discoveryInterval + this.evictionInterval)
+
+			// evict peers when they've been offline
+			this.#evictionTimer = setInterval(() => {
+				Object.entries(this.discoveryPeers).forEach(([peerId, { lastSeen }]) => {
+					if (lastSeen !== null && lastSeen < new Date().getTime() - this.evictionThreshold) {
+						delete this.discoveryPeers[peerId.toString()]
+						this.dispatchEvent(new CustomEvent("presence:leave", { detail: { peerId, peers: this.discoveryPeers } }))
+					}
+				})
+			}, this.evictionInterval)
 		}
 	}
 
 	private async publishHeartbeat() {
 		this.log("publishing heartbeat")
-		if (this.discoveryTopic === null || this.#heartbeat === null) {
+		if (this.discoveryTopic === null || this.#heartbeatTimer === null) {
 			return
 		}
 
@@ -313,8 +324,13 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 	}
 
 	public async beforeStop(): Promise<void> {
-		if (this.#heartbeat !== null) {
-			clearInterval(this.#heartbeat)
+		if (this.#heartbeatTimer !== null) {
+			clearInterval(this.#heartbeatTimer)
+			this.#heartbeatTimer = null
+		}
+		if (this.#evictionTimer !== null) {
+			clearInterval(this.#evictionTimer)
+			this.#evictionTimer = null
 		}
 
 		this.fetch.unregisterLookupFunction(DiscoveryService.FETCH_KEY_PREFIX, this.handleFetch)
