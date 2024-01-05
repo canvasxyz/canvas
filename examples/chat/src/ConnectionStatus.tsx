@@ -6,9 +6,11 @@ import { AppContext } from "./AppContext.js"
 
 import { PeerIdView } from "./components/PeerIdView.js"
 
-export interface ConnectionStatusProps {}
+export interface ConnectionStatusProps {
+	topic: string
+}
 
-export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
+export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ topic }) => {
 	const { app } = useContext(AppContext)
 
 	const [status, setStatus] = useState("--")
@@ -39,6 +41,12 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
 	return (
 		<div className="p-2 border rounded flex flex-col gap-2">
 			<div>
+				<span className="text-sm">Topic</span>
+			</div>
+			<div>
+				<code className="text-sm">{topic}</code>
+			</div>
+			<div>
 				<span className="text-sm">Peer Id</span>
 			</div>
 			<div>
@@ -48,7 +56,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
 			<div>
 				<span className="text-sm">Online</span>
 			</div>
-			<OnlineList onlinePeers={onlinePeers} />
+			<OnlineList onlinePeers={onlinePeers} topic={topic} />
 			<hr />
 			<div>
 				<span className="text-sm">Connections (Status: {status})</span>
@@ -58,7 +66,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({}) => {
 	)
 }
 
-const OnlineList = ({ onlinePeers }: { onlinePeers: PresenceList }) => {
+const OnlineList = ({ onlinePeers, topic }: { onlinePeers: PresenceList; topic: string }) => {
 	const browserPeers = Object.entries(onlinePeers).filter(([peerId, { lastSeen, env }]) => env === "browser")
 	const [time, setTime] = useState()
 
@@ -85,7 +93,8 @@ const OnlineList = ({ onlinePeers }: { onlinePeers: PresenceList }) => {
 							)}
 							<div>
 								<code className="text-sm break-all text-gray-500">
-									{env} - last seen {lastSeen === null ? "awhile ago" : Math.ceil((time - lastSeen) / 1000) + "s"}
+									{env} - last seen {lastSeen === null ? "awhile ago" : Math.ceil((time - lastSeen) / 1000) + "s"}{" "}
+									{!topics.includes(topic) && `[${topics.join(", ")}]`}
 								</code>
 							</div>
 						</li>
