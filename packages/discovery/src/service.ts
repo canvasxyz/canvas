@@ -76,7 +76,13 @@ export const defaultResponseHeartbeatThreshold = 15 * 1000 // send response hear
 
 export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
 	"peer:topics": CustomEvent<{ peerId: PeerId; topics: string[] }>
-	"presence:join": CustomEvent<{ peerId: PeerId; peers: PresenceStore }>
+	"presence:join": CustomEvent<{
+		peerId: PeerId
+		env: PeerEnv
+		address: string | null
+		topics: string[]
+		peers: PresenceStore
+	}>
 	"presence:leave": CustomEvent<{ peerId: PeerId; peers: PresenceStore }>
 }
 
@@ -544,7 +550,9 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		const shouldEmitPresence = topicIntersection.length > 0 || this.trackAllPeers
 		if (!existed && shouldEmitPresence) {
 			this.dispatchEvent(
-				new CustomEvent("presence:join", { detail: { peerId, peers: this.discoveryPeers, address, topics } }),
+				new CustomEvent("presence:join", {
+					detail: { peerId, env, address, topics, peers: this.discoveryPeers },
+				}),
 			)
 		}
 	}
