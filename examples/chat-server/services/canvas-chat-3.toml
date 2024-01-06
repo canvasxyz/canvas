@@ -1,0 +1,30 @@
+app = "canvas-chat-3"
+kill_signal = "SIGINT"
+kill_timeout = 30
+processes = []
+
+[env]
+  ANNOUNCE = "/dns4/canvas-chat-3.fly.dev/tcp/443/wss"
+  DEBUG    = "canvas:*:error"
+
+[mounts]
+  destination = "/data"
+  source = "canvas_chat_data_3"
+
+[[services]]
+  internal_port = 8081
+  processes = ["app"]
+  protocol = "tcp"
+
+  [services.concurrency]
+    hard_limit = 1000
+    soft_limit = 1000
+    type = "connections"
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+[metrics]
+  port = 8000
+  path = "/metrics"
