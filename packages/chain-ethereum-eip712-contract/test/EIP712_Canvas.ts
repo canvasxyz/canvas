@@ -1,10 +1,8 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
 import { expect } from "chai"
 import { ethers } from "hardhat"
-import { EIP712Domain } from "../helpers/EIP712.types"
 
 const domainName = "example:signer"
-const signatureVersion = "1"
 
 describe("EIP712_Canvas", function () {
 	async function deployFixture() {
@@ -12,16 +10,14 @@ describe("EIP712_Canvas", function () {
 
 		const contract = await EIP712_Canvas.deploy()
 
-		const domain = {}
-
-		return { contract, domain }
+		return { contract }
 	}
 
 	describe("Signing data", function () {
-		it("Should verify that a ticket has been signed by the proper address", async function () {
+		it("Should verify that a session has been signed by the proper address with getSession", async function () {
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
 
-			const { contract, domain } = await loadFixture(deployFixture)
+			const { contract } = await loadFixture(deployFixture)
 
 			const signer = new EIP712Signer({})
 
