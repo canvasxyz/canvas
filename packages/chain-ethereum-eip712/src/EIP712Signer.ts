@@ -136,14 +136,15 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 			assert(timestamp >= session.timestamp)
 			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
 
-			return signer.sign(message, { codec: "eip712", digest: "none" })
+			return signer.sign(message, { codec: "eip712", digest: "sha2-256" })
 		} else if (message.payload.type === "session") {
 			const { signer, session } = this.#store.get(message.topic, message.payload.address) ?? {}
 			assert(signer !== undefined && session !== undefined)
 
 			// only sign our own current sessions
 			assert(message.payload === session)
-			return signer.sign(message, { codec: "eip712", digest: "none" })
+			console.log(signer.uri)
+			return signer.sign(message, { codec: "eip712", digest: "sha2-256" })
 		} else {
 			signalInvalidType(message.payload)
 		}

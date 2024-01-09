@@ -77,4 +77,64 @@ contract EIP712_Canvas{
 
         return ECDSA.recover(digest, signature);
     }
+
+    function validateAddressFromCidSignature(
+        bytes32 cidHash,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public pure returns (address){
+
+        address signer;
+        (signer,) = ECDSA.tryRecover(cidHash, v, r, s);
+
+        return signer;
+    }
+
+
+    function validateAddressFromCidSignature2(
+        bytes32 cidHash,
+        bytes memory signature
+    ) public pure returns (address){
+
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        // ecrecover takes the signature parameters, and the only way to get them
+        // currently is to use assembly.
+        /// @solidity memory-safe-assembly
+        assembly {
+            r := mload(add(signature, 0x20))
+            s := mload(add(signature, 0x40))
+            v := byte(0, mload(add(signature, 0x60)))
+        }
+
+        address signer;
+        // (signer,) = ECDSA.tryRecover(cidHash, signature);
+        signer = ecrecover(cidHash, v, r, s);
+
+        return signer;
+    }
+
+    // get CID for action message
+
+    // get CID for session message
+
+
+    /*
+    export function verifySignedValue(
+        signature: Signature,
+        value: any,
+        options: { types?: SignatureType[]; codecs?: Codec[]; digests?: Digest[] } = {},
+    ) {
+        const codec = (options.codecs ?? codecs).find((codec) => codec.code === signature.cid.code)
+        assert(codec !== undefined, "unsupported codec")
+
+        const digest = (options.digests ?? digests).find((digest) => digest.code === signature.cid.multihash.code)
+        assert(digest !== undefined, "unsupported digest")
+        assert(getCID(value, { codec, digest }).equals(signature.cid), "signed CID does not match value")
+
+        verifySignature(signature, { types: options.types })
+    }
+    */
 }
