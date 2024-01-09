@@ -151,3 +151,6 @@ which application(s) the peer is running.
 You can also see this on our [chat app](https://canvas-chat.pages.dev). Try opening a few
 rooms on [this client](https://mud-example.vercel.app/), and those rooms will show up in the
 chat app's presence list.
+
+For more details, the main chat app's source code is [here](https://github.com/canvasxyz/canvas/blob/main/examples/chat),
+while the multi-room client's source is [here](https://github.com/canvasxyz/mud-example).

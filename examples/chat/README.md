@@ -24,3 +24,11 @@ export const actions = {
   },
 }
 ```
+
+## Multiple Topics
+
+You can also run this application across multiple topics. This allows
+each instance of the application to sync separately.
+
+Try playing with [this example](https://mud-example.vercel.app), with source code
+[available here](https://github.com/canvasxyz/mud-example).
