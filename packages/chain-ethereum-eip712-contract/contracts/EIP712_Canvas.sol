@@ -97,21 +97,9 @@ contract EIP712_Canvas{
         bytes memory signature
     ) public pure returns (address){
 
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-        // ecrecover takes the signature parameters, and the only way to get them
-        // currently is to use assembly.
-        /// @solidity memory-safe-assembly
-        assembly {
-            r := mload(add(signature, 0x20))
-            s := mload(add(signature, 0x40))
-            v := byte(0, mload(add(signature, 0x60)))
-        }
-
+        // this is basically the same thing as calling ecrecover on the r, s and v values
         address signer;
-        // (signer,) = ECDSA.tryRecover(cidHash, signature);
-        signer = ecrecover(cidHash, v, r, s);
+        (signer,) = ECDSA.tryRecover(cidHash, signature);
 
         return signer;
     }
