@@ -75,3 +75,17 @@ prettier -w .
 ### Testing
 
 Run `npm run test` to run all unit tests in all packages.
+
+Run e.g. `npx ava packages/core` to run unit tests in one module.
+
+To run unit tests in one file:
+
+```
+npx ava packages/core/test/lib/canvas.test.js
+```
+
+To run an individual test:
+
+```
+npx ava packages/core/test/lib/canvas.test.js -m "reject an invalid message"
+```

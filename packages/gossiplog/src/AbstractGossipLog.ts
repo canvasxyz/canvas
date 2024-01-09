@@ -239,7 +239,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	}
 
 	/**
-	 * Append a new message to the end of the log
+	 * Sign and append a new *unsigned* message to the end of the log.
+	 * The currently unmerged heads of the local log are used as parents.
 	 */
 	public async append(
 		payload: Payload,
@@ -270,7 +271,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	}
 
 	/**
-	 * Insert an existing signed message into the log (ie received via PubSub)
+	 * Insert an existing signed message into the log (ie received via PubSub).
 	 * If any of the parents are not present, insert the message into the mempool instead.
 	 */
 	public async insert(signature: Signature, message: Message<Payload>): Promise<{ id: string }> {
