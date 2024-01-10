@@ -84,11 +84,7 @@ contract EIP712_Canvas{
         bytes32 r,
         bytes32 s
     ) public pure returns (address){
-
-        address signer;
-        (signer,) = ECDSA.tryRecover(cidHash, v, r, s);
-
-        return signer;
+        return ecrecover(cidHash, v, r, s);
     }
 
 
