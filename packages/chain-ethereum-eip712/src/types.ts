@@ -1,11 +1,3 @@
-export type EIP712Domain = {
-	name: string | null
-	version: string | null
-	// chainId: number | null
-	// verifyingContract: string | null
-	// salt: string | null
-}
-
 export type EIP712SessionData = {
 	signature: Uint8Array
 }
