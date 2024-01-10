@@ -61,9 +61,6 @@ class SignerStore {
 }
 
 export default {
-	getDomain() {
-		return window.location.host
-	},
 	getSessionStore() {
 		return new SignerStore()
 	},

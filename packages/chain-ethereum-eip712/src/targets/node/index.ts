@@ -39,9 +39,6 @@ class SessionStore {
 }
 
 export default {
-	getDomain() {
-		return os.hostname()
-	},
 	getSessionStore() {
 		return new SessionStore()
 	},
