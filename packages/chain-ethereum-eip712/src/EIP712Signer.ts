@@ -119,14 +119,6 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 	}
 
 	public sign(message: Message<Action | Session>): Signature {
-		// TODO: how do we pass this into `sign`?
-		// const domain = {
-		// 	name: message.topic,
-		// 	version: this.version,
-		// 	chainId: this.chainId,
-		// 	verifyingContract: this.verifyingContract,
-		// }
-
 		if (message.payload.type === "action") {
 			const { address, timestamp } = message.payload
 			const { signer, session } = this.#store.get(message.topic, address) ?? {}
