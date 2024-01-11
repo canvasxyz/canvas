@@ -78,17 +78,8 @@ contract EIP712_Canvas{
         return ECDSA.recover(digest, signature);
     }
 
-    function validateAddressFromCidSignature(
-        bytes32 cidHash,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public pure returns (address){
-        return ecrecover(cidHash, v, r, s);
-    }
 
-
-    function validateAddressFromCidSignature2(
+    function recoverAddressFromHash(
         bytes32 cidHash,
         bytes memory signature
     ) public pure returns (address){

@@ -64,7 +64,7 @@ describe("EIP712_Canvas", function () {
 			// and then just ignore it if we are verifying using a method that doesn't need it
 			for (const v of [27, 28]) {
 				const signatureWithRecoveryParam = [...sessionSignature.signature, v]
-				const b = await contract.validateAddressFromCidSignature2(signedValue, signatureWithRecoveryParam)
+				const b = await contract.recoverAddressFromHash(signedValue, signatureWithRecoveryParam)
 				console.log(`.sol recovered address when v = ${v}: ${b}`)
 				if (b === expectedAddress) {
 					matchingAddressFound = true
