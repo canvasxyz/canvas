@@ -95,10 +95,10 @@ describe("EIP712_Canvas", function () {
 
 			const [digestSize, contractDigest] = await contract.createDigest(0, sha256("hello world"))
 			const contractCid = await contract.encodeCID(1, 712, contractDigest)
-			console.log(contractCid)
 
 			const mfCid = CID.createV1(712, createDigest(3, sha256("hello world")))
-			console.log(`0x${Buffer.from(mfCid.bytes).toString("hex")}`)
+
+			expect(contractCid).to.equal(`0x${Buffer.from(mfCid.bytes).toString("hex")}`)
 		})
 	})
 })
