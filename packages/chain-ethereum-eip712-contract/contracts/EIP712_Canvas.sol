@@ -91,25 +91,58 @@ contract EIP712_Canvas{
         return signer;
     }
 
-    // get CID for action message
-
-    // get CID for session message
-
-
-    /*
-    export function verifySignedValue(
-        signature: Signature,
-        value: any,
-        options: { types?: SignatureType[]; codecs?: Codec[]; digests?: Digest[] } = {},
-    ) {
-        const codec = (options.codecs ?? codecs).find((codec) => codec.code === signature.cid.code)
-        assert(codec !== undefined, "unsupported codec")
-
-        const digest = (options.digests ?? digests).find((digest) => digest.code === signature.cid.multihash.code)
-        assert(digest !== undefined, "unsupported digest")
-        assert(getCID(value, { codec, digest }).equals(signature.cid), "signed CID does not match value")
-
-        verifySignature(signature, { types: options.types })
+    function get_varint_length(uint256 n) pure internal returns (uint256) {
+        uint256 tmp = n;
+        uint256 num_bytes = 1;
+        while (tmp > 0x7F) {
+            tmp = tmp >> 7;
+            num_bytes += 1;
+        }
+        return num_bytes;
     }
-    */
+
+    function encode_varint(uint256 n) internal pure returns (bytes memory) {
+        // Count the number of groups of 7 bits
+        // We need this pre-processing step since Solidity doesn't allow dynamic memory resizing
+        uint256 num_bytes = get_varint_length(n);
+
+        bytes memory buf = new bytes(num_bytes);
+
+        uint256 tmp = n;
+        for (uint256 i = 0; i < num_bytes; i++) {
+            // Set the first bit in the byte for each group of 7 bits
+            buf[i] = bytes1(0x80 | uint8(tmp & 0x7F));
+            tmp = tmp >> 7;
+        }
+        // Unset the first bit of the last byte
+        buf[num_bytes - 1] &= 0x7F;
+
+        return buf;
+    }
+
+    function createDigest(uint64 code, bytes memory digest) pure external returns (uint256, bytes memory) {
+        uint256 size = digest.length;
+        uint256 sizeOffset = get_varint_length(code);
+        uint256 digestOffset = sizeOffset + get_varint_length(size);
+
+        bytes memory data = new bytes(digestOffset + size);
+
+        bytes memory codeVarint = encode_varint(code);
+        bytes memory sizeVarint = encode_varint(size);
+
+        // we can't just use slices because they are not supported by bytes memory
+        for(uint256 i = 0; i < codeVarint.length;i++) {
+            data[i] = codeVarint[i];
+        }
+
+        for(uint256 i = 0;i < sizeVarint.length;i++) {
+            data[sizeOffset+i] = sizeVarint[i];
+        }
+
+        for(uint256 i = 0;i<digest.length;i++) {
+            data[digestOffset + i] = digest[i];
+        }
+
+        return (digestOffset + size, data);
+    }
 }
