@@ -131,18 +131,41 @@ contract EIP712_Canvas{
         bytes memory sizeVarint = encode_varint(size);
 
         // we can't just use slices because they are not supported by bytes memory
-        for(uint256 i = 0; i < codeVarint.length;i++) {
+        for(uint256 i = 0; i < codeVarint.length; i++) {
             data[i] = codeVarint[i];
         }
 
-        for(uint256 i = 0;i < sizeVarint.length;i++) {
+        for(uint256 i = 0; i < sizeVarint.length; i++) {
             data[sizeOffset+i] = sizeVarint[i];
         }
 
-        for(uint256 i = 0;i<digest.length;i++) {
+        for(uint256 i = 0; i<digest.length; i++) {
             data[digestOffset + i] = digest[i];
         }
 
         return (digestOffset + size, data);
+    }
+
+    function encodeCID(uint256 version, uint256 code, bytes memory multihash) pure external returns (bytes memory)  {
+        uint256 codeOffset = get_varint_length(version);
+        uint256 hashOffset = codeOffset + get_varint_length(code);
+        bytes memory data = new bytes(hashOffset + multihash.length);
+
+        bytes memory versionVarint = encode_varint(version);
+        bytes memory codeVarint = encode_varint(code);
+
+        for(uint256 i = 0; i < versionVarint.length; i++) {
+            data[i] = versionVarint[i];
+        }
+
+        for(uint256 i = 0; i < codeVarint.length; i++) {
+            data[codeOffset + i] = codeVarint[i];
+        }
+
+        for(uint256 i = 0; i < multihash.length; i++) {
+            data[hashOffset + i] = multihash[i];
+        }
+
+        return data;
     }
 }
