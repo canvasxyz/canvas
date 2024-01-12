@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.19;
 
 library Varint {
     function get_length(uint256 n) internal pure returns (uint256) {
