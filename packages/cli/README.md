@@ -1,6 +1,10 @@
 # @canvas-js/cli
 
-Canvas provides a command line interface for running Canvas applications. This is the primary way to run application _servers_ that join the peer-to-peer network.
+Canvas provides a command line interface for running applications inside
+Node.js.
+
+This package lets you run individual application servers that join the
+peer-to-peer network.
 
 ## Installation
 

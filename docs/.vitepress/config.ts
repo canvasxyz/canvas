@@ -61,8 +61,8 @@ export default defineConfig({
 				{
 					text: "Reference",
 					items: [
-						{ text: "CLI", link: "/readme-cli.md" },
 						{ text: "Core", link: "/readme-core.md" },
+						{ text: "CLI", link: "/readme-cli.md" },
 						{ text: "Hooks", link: "/readme-hooks.md" },
 						{
 							text: "Components",
