@@ -93,7 +93,7 @@ contract EIP712_Canvas{
     }
 
 
-    function createDigest_(uint64 code, bytes memory digest) internal pure returns (uint256, bytes memory) {
+    function createDigest(uint64 code, bytes memory digest) public pure returns (uint256, bytes memory) {
         uint256 size = digest.length;
         uint256 sizeOffset = Varint.get_length(code);
         uint256 digestOffset = sizeOffset + Varint.get_length(size);
@@ -119,7 +119,7 @@ contract EIP712_Canvas{
         return (digestOffset + size, data);
     }
 
-    function encodeCID_(uint256 version, uint256 code, bytes memory multihash) internal pure returns (bytes memory)  {
+    function encodeCID(uint256 version, uint256 code, bytes memory multihash) public pure returns (bytes memory)  {
         uint256 codeOffset = Varint.get_length(version);
         uint256 hashOffset = codeOffset + Varint.get_length(code);
         bytes memory data = new bytes(hashOffset + multihash.length);
@@ -142,19 +142,11 @@ contract EIP712_Canvas{
         return data;
     }
 
-    function createDigest(uint64 code, bytes memory digest) external pure returns (uint256, bytes memory) {
-        return createDigest_(code, digest);
-    }
-
-    function encodeCID(uint256 version, uint256 code, bytes memory multihash) external pure returns (bytes memory)  {
-        return encodeCID_(version, code, multihash);
-    }
-
     function createCIDEip712CodecNoneDigest(bytes memory multihash) pure external returns (bytes memory) {
         uint256 digestSize;
         bytes memory digest;
-        (digestSize,digest) = createDigest_(0, multihash);
+        (digestSize,digest) = createDigest(0, multihash);
 
-        return encodeCID_(1, 712, digest);
+        return encodeCID(1, 712, digest);
     }
 }
