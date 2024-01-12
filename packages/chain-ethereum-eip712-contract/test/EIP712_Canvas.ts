@@ -14,12 +14,13 @@ describe("EIP712_Canvas", function () {
 	}
 
 	describe("Signing data", function () {
-		xit("Should verify that a session has been signed by the proper address with getSession", async function () {
+		it("Should verify that a session has been signed by the proper address with getSession", async function () {
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
 			const { base58btc } = await import("multiformats/bases/base58")
 			const { varint } = await import("multiformats")
 			const { verifySignedValue, didKeyPattern } = await import("@canvas-js/signed-cid")
 			const { publicKeyToAddress } = await import("viem/utils")
+			const { sha256 } = await import("@noble/hashes/sha256")
 
 			const { contract } = await loadFixture(deployFixture)
 
@@ -42,7 +43,9 @@ describe("EIP712_Canvas", function () {
 			expect(recoveredWalletAddress).to.equal(walletAddress)
 
 			const topic = "example:signer"
-			const sessionMessage = { topic, clock: 1, parents: [], payload: session }
+			const clock = 1
+			const parents = ["parent1", "parent2"]
+			const sessionMessage = { topic, clock, parents, payload: session }
 			const sessionSignature = signer.sign(sessionMessage)
 
 			verifySignedValue(sessionSignature, sessionMessage)
@@ -56,7 +59,7 @@ describe("EIP712_Canvas", function () {
 
 			const expectedAddress = publicKeyToAddress(`0x${publicKeyHex}`)
 
-			const signedValue = sessionSignature.cid.bytes.slice(0, 32)
+			const signedValue = sha256(sessionSignature.cid.bytes)
 
 			// we don't return the recovery parameter currently, so we need to try both of them
 			let matchingAddressFound = false
@@ -64,17 +67,26 @@ describe("EIP712_Canvas", function () {
 			// and then just ignore it if we are verifying using a method that doesn't need it
 			for (const v of [27, 28]) {
 				const signatureWithRecoveryParam = [...sessionSignature.signature, v]
-				const b = await contract.recoverAddressFromHash(signedValue, signatureWithRecoveryParam)
-				console.log(`.sol recovered address when v = ${v}: ${b}`)
-				if (b === expectedAddress) {
+				const addressFromContractHash = await contract.recoverAddressFromHash(signedValue, signatureWithRecoveryParam)
+				console.log(`.sol recovered address when v = ${v}: ${addressFromContractHash}`)
+				if (addressFromContractHash === expectedAddress) {
 					matchingAddressFound = true
 				}
+
+				const addressFromContractCid = await contract.recoverAddressFromMessageSession(
+					clock,
+					parents,
+					topic,
+					walletAddress,
+					session.blockhash || "",
+					session.duration || 0,
+					session.publicKey,
+					session.timestamp,
+					signatureWithRecoveryParam,
+				)
+				expect(addressFromContractCid).to.equal(addressFromContractHash)
 			}
 			expect(matchingAddressFound).to.equal(true)
-		})
-
-		it("test creating and verifying CID for Message<Session>", async () => {
-			const { contract } = await loadFixture(deployFixture)
 		})
 	})
 })

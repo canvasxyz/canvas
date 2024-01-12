@@ -52,43 +52,64 @@ export const eip712Codec: Codec = {
 	encode: (message: Message<Action | Session>) => {
 		let hashedPayload: string
 		if (message.payload.type === "session") {
-			const sessionType = [
-				{ name: "address", type: "address" },
-				{ name: "publicKey", type: "string" },
-				{ name: "blockhash", type: "string" },
-				{ name: "timestamp", type: "uint256" },
-				{ name: "duration", type: "uint256" },
-			]
-			const { address, publicKey, blockhash, timestamp, duration } = message.payload
-			hashedPayload = TypedDataEncoder.hash(
-				{},
-				{ Session: sessionType },
-				{ address: address.split(":")[2], publicKey, blockhash, timestamp, duration },
-			)
+			const types = {
+				Message: [
+					{ name: "clock", type: "uint256" },
+					{ name: "parents", type: "string[]" },
+					{ name: "payload", type: "Session" },
+					{ name: "topic", type: "string" },
+				],
+				Session: [
+					{ name: "address", type: "address" },
+					{ name: "blockhash", type: "string" },
+					{ name: "duration", type: "uint256" },
+					{ name: "publicKey", type: "string" },
+					{ name: "timestamp", type: "uint256" },
+				],
+			}
+			hashedPayload = TypedDataEncoder.hash({}, types, {
+				clock: message.clock,
+				parents: message.parents,
+				payload: {
+					address: message.payload.address.split(":")[2],
+					publicKey: message.payload.publicKey,
+					blockhash: message.payload.blockhash,
+					timestamp: message.payload.timestamp,
+					duration: message.payload.duration,
+				},
+				topic: message.topic,
+			})
 		} else if (message.payload.type === "action") {
-			const actionType = [
-				{ name: "name", type: "string" },
-				{ name: "args", type: "bytes" },
-				{ name: "address", type: "address" },
-				{ name: "blockhash", type: "string" },
-				{ name: "timestamp", type: "uint256" },
-			]
-			const { name, args, address, blockhash, timestamp } = message.payload
-			const encodedArgs = dynamicAbiEncodeArgs(args)
-			hashedPayload = TypedDataEncoder.hash(
-				{},
-				{ Action: actionType },
-				{ name, args: encodedArgs, address: address.split(":")[2], blockhash: blockhash || "", timestamp },
-			)
+			const types = {
+				Message: [
+					{ name: "clock", type: "uint256" },
+					{ name: "parents", type: "string[]" },
+					{ name: "payload", type: "Action" },
+					{ name: "topic", type: "string" },
+				],
+				Action: [
+					{ name: "address", type: "address" },
+					{ name: "args", type: "bytes" },
+					{ name: "blockhash", type: "string" },
+					{ name: "name", type: "string" },
+					{ name: "timestamp", type: "uint256" },
+				],
+			}
+			hashedPayload = TypedDataEncoder.hash({}, types, {
+				clock: message.clock,
+				parents: message.parents,
+				payload: {
+					name: message.payload.name,
+					args: dynamicAbiEncodeArgs(message.payload.args),
+					address: message.payload.address.split(":")[2],
+					blockhash: message.payload.blockhash || "",
+					timestamp: message.payload.timestamp,
+				},
+				topic: message.topic,
+			})
 		} else {
 			throw new TypeError("invalid payload type")
 		}
-
-		// encode outer message object
-		const encodedMessage = web3.eth.abi.encodeParameters(
-			["uint8", "string[]", "bytes32", "string"],
-			[message.clock, message.parents, hashedPayload, message.topic],
-		)
-		return [getBytes(encodedMessage)]
+		return [getBytes(hashedPayload)]
 	},
 }
