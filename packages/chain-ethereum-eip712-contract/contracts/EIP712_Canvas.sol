@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "./Varint.sol";
 
 /*
     struct Action {
@@ -91,44 +92,16 @@ contract EIP712_Canvas{
         return signer;
     }
 
-    function get_varint_length(uint256 n) internal pure returns (uint256) {
-        uint256 tmp = n;
-        uint256 num_bytes = 1;
-        while (tmp > 0x7F) {
-            tmp = tmp >> 7;
-            num_bytes += 1;
-        }
-        return num_bytes;
-    }
-
-    function encode_varint(uint256 n) internal pure returns (bytes memory) {
-        // Count the number of groups of 7 bits
-        // We need this pre-processing step since Solidity doesn't allow dynamic memory resizing
-        uint256 num_bytes = get_varint_length(n);
-
-        bytes memory buf = new bytes(num_bytes);
-
-        uint256 tmp = n;
-        for (uint256 i = 0; i < num_bytes; i++) {
-            // Set the first bit in the byte for each group of 7 bits
-            buf[i] = bytes1(0x80 | uint8(tmp & 0x7F));
-            tmp = tmp >> 7;
-        }
-        // Unset the first bit of the last byte
-        buf[num_bytes - 1] &= 0x7F;
-
-        return buf;
-    }
 
     function createDigest_(uint64 code, bytes memory digest) internal pure returns (uint256, bytes memory) {
         uint256 size = digest.length;
-        uint256 sizeOffset = get_varint_length(code);
-        uint256 digestOffset = sizeOffset + get_varint_length(size);
+        uint256 sizeOffset = Varint.get_length(code);
+        uint256 digestOffset = sizeOffset + Varint.get_length(size);
 
         bytes memory data = new bytes(digestOffset + size);
 
-        bytes memory codeVarint = encode_varint(code);
-        bytes memory sizeVarint = encode_varint(size);
+        bytes memory codeVarint = Varint.encode(code);
+        bytes memory sizeVarint = Varint.encode(size);
 
         // we can't just use slices because they are not supported by bytes memory
         for(uint256 i = 0; i < codeVarint.length; i++) {
@@ -147,12 +120,12 @@ contract EIP712_Canvas{
     }
 
     function encodeCID_(uint256 version, uint256 code, bytes memory multihash) internal pure returns (bytes memory)  {
-        uint256 codeOffset = get_varint_length(version);
-        uint256 hashOffset = codeOffset + get_varint_length(code);
+        uint256 codeOffset = Varint.get_length(version);
+        uint256 hashOffset = codeOffset + Varint.get_length(code);
         bytes memory data = new bytes(hashOffset + multihash.length);
 
-        bytes memory versionVarint = encode_varint(version);
-        bytes memory codeVarint = encode_varint(code);
+        bytes memory versionVarint = Varint.encode(version);
+        bytes memory codeVarint = Varint.encode(code);
 
         for(uint256 i = 0; i < versionVarint.length; i++) {
             data[i] = versionVarint[i];
