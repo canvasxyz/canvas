@@ -52,7 +52,7 @@ export function verifySignature(
 		assert(ed25519.verify(signature, cid.bytes, publicKey), "invalid ed25519 signature")
 	} else if (keyCodec === Secp256k1Signer.code && types.includes(Secp256k1Signer.type)) {
 		assert(
-			secp256k1.verify(secp256k1.Signature.fromCompact(signature), cid.bytes, publicKey),
+			secp256k1.verify(secp256k1.Signature.fromCompact(signature), cid.bytes, publicKey, { prehash: true }),
 			"invalid secp256k1 signature",
 		)
 	} else {
