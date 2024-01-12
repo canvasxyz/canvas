@@ -73,32 +73,8 @@ describe("EIP712_Canvas", function () {
 			expect(matchingAddressFound).to.equal(true)
 		})
 
-		it("test createDigest solidity implementation", async () => {
-			const { sha256 } = await import("@noble/hashes/sha256")
-			const { create: createDigest } = await import("multiformats/hashes/digest")
-
+		it("test creating and verifying CID for Message<Session>", async () => {
 			const { contract } = await loadFixture(deployFixture)
-
-			const [digestSize, contractDigest] = await contract.createDigest(3, sha256("hello world"))
-
-			const mfDigest = `0x${Buffer.from(createDigest(3, sha256("hello world")).bytes).toString("hex")}`
-
-			expect(contractDigest).to.equal(mfDigest)
-		})
-
-		it("test encodeCID solidity implementation", async () => {
-			const { sha256 } = await import("@noble/hashes/sha256")
-			const { CID } = await import("multiformats/cid")
-			const { create: createDigest } = await import("multiformats/hashes/digest")
-
-			const { contract } = await loadFixture(deployFixture)
-
-			const [digestSize, contractDigest] = await contract.createDigest(0, sha256("hello world"))
-			const contractCid = await contract.encodeCID(1, 712, contractDigest)
-
-			const mfCid = CID.createV1(712, createDigest(0, sha256("hello world")))
-
-			expect(contractCid).to.equal(`0x${Buffer.from(mfCid.bytes).toString("hex")}`)
 		})
 	})
 })

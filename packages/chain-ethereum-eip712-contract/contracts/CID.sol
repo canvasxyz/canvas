@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./Varint.sol";
 
 library CID {
-  function createDigest(uint64 code, bytes memory digest) public pure returns (uint256, bytes memory) {
+  function createDigest(uint64 code, bytes memory digest) internal pure returns (uint256, bytes memory) {
       uint256 size = digest.length;
       uint256 sizeOffset = Varint.get_length(code);
       uint256 digestOffset = sizeOffset + Varint.get_length(size);
@@ -30,7 +30,7 @@ library CID {
       return (digestOffset + size, data);
   }
 
-  function encodeCID(uint256 version, uint256 code, bytes memory multihash) public pure returns (bytes memory)  {
+  function encodeCID(uint256 version, uint256 code, bytes memory multihash) internal pure returns (bytes memory)  {
       uint256 codeOffset = Varint.get_length(version);
       uint256 hashOffset = codeOffset + Varint.get_length(code);
       bytes memory data = new bytes(hashOffset + multihash.length);
