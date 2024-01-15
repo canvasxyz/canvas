@@ -1,5 +1,5 @@
 {
-  "name": "@canvas-js/chain-ethereum-eip712-contract",
+  "name": "@canvas-js/ethereum-contract",
   "version": "0.8.21",
   "description": "",
   "main": "index.js",

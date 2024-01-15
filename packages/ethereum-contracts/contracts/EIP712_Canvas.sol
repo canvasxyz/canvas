@@ -19,7 +19,7 @@ bytes32 constant messageActionTypedDataHash = keccak256(bytes(messageActionType)
 
 bytes32 constant emptyDomainSeparator = keccak256(abi.encode(keccak256("EIP712Domain()")));
 
-contract EIP712_Canvas{
+contract EIP712_Canvas {
 
     struct Session {
         address address_;
@@ -118,7 +118,7 @@ contract EIP712_Canvas{
     function recoverAddressFromSession(
         Session memory session,
         bytes memory signature
-    ) public pure returns (address){
+    ) public pure returns (address) {
         bytes32 digest = _hashTypedDataV4(getStructHashForSession(session));
 
         return ECDSA.recover(digest, signature);
@@ -158,7 +158,7 @@ contract EIP712_Canvas{
         MessageSession memory messageSession,
         bytes memory signature,
         address expectedAddress
-    ) public pure returns (bool){
+    ) public pure returns (bool) {
         bytes32 digest = _hashTypedDataV4(getStructHashForMessageSession(messageSession));
         bytes memory cid = createCIDEip712CodecNoneDigest(bytes.concat(digest));
 
@@ -169,7 +169,7 @@ contract EIP712_Canvas{
         MessageAction memory messageAction,
         bytes memory signature,
         address expectedAddress
-    ) public pure returns (bool){
+    ) public pure returns (bool) {
         bytes32 digest = _hashTypedDataV4(getStructHashForMessageAction(messageAction));
         bytes memory cid = createCIDEip712CodecNoneDigest(bytes.concat(digest));
 
