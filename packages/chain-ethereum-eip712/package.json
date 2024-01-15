@@ -16,8 +16,8 @@
     }
   },
   "dependencies": {
-    "@canvas-js/interfaces": "0.8.19",
-    "@canvas-js/signed-cid": "0.8.19",
+    "@canvas-js/interfaces": "0.8.21",
+    "@canvas-js/signed-cid": "0.8.21",
     "@ipld/dag-json": "^10.1.5",
     "@libp2p/logger": "^4.0.2",
     "multiformats": "^12.1.3"
