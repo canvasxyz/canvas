@@ -7,7 +7,7 @@ type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint
 
 export function dynamicAbiEncodeArgs(args: Record<string, any>): string {
 	const { types, values } = getAbiEncodeParametersArguments(args)
-	return keccak256(web3.eth.abi.encodeParameters(types, values))
+	return web3.eth.abi.encodeParameters(types, values)
 }
 
 function getAbiTypeForValue(value: any) {

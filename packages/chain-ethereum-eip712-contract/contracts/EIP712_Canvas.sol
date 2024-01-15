@@ -40,6 +40,9 @@ bytes32 constant actionTypedDataHash = keccak256(bytes(actionType));
 string constant messageSessionType = "Message(uint256 clock,string[] parents,Session payload,string topic)Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
 bytes32 constant messageSessionTypedDataHash = keccak256(bytes(messageSessionType));
 
+string constant messageActionType = "Message(uint256 clock,string[] parents,Action payload,string topic)Action(address address,bytes args,string blockhash,string name,uint256 timestamp)";
+bytes32 constant messageActionTypedDataHash = keccak256(bytes(messageActionType));
+
 bytes32 constant emptyDomainSeparator = keccak256(abi.encode(keccak256("EIP712Domain()")));
 
 contract EIP712_Canvas{
@@ -92,7 +95,7 @@ contract EIP712_Canvas{
 
     function getStructHashForAction(
         address address_,
-        bytes32 args,
+        bytes memory args,
         string memory blockhash_,
         string memory name,
         uint256 timestamp
@@ -100,7 +103,7 @@ contract EIP712_Canvas{
         return keccak256(abi.encode(
             actionTypedDataHash,
             address_,
-            args,
+            keccak256(args),
             keccak256(bytes(blockhash_)),
             keccak256(bytes(name)),
             timestamp
@@ -154,7 +157,7 @@ contract EIP712_Canvas{
         string[] memory parents,
         string memory topic,
         address address_,
-        bytes32 args,
+        bytes memory args,
         string memory blockhash_,
         string memory name,
         uint256 timestamp
@@ -162,7 +165,7 @@ contract EIP712_Canvas{
         return
         keccak256(
             abi.encode(
-                messageSessionTypedDataHash, // keccak hash of typed data
+                messageActionTypedDataHash, // keccak hash of typed data
                 clock,
                 hashArrayOfStrings(parents),
                 getStructHashForAction(
@@ -234,7 +237,7 @@ contract EIP712_Canvas{
         string[] memory parents,
         string memory topic,
         address address_,
-        bytes32 args,
+        bytes memory args,
         string memory blockhash_,
         string memory name,
         uint256 timestamp,
