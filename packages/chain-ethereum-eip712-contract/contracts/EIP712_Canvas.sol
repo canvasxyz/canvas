@@ -5,32 +5,6 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./CID.sol";
 import "./ECDSA_Verify.sol";
 
-/*
-    struct Action {
-        string _type;
-        address _address;
-        string name;
-        bytes args; // ABI encoded args
-        uint256 timestamp;
-        address _blockhash;
-    }
-
-    struct MessageWithAction {
-        string topic;
-        uint256 clock;
-        string[] parents;
-        Action payload;
-    }
-
-    struct Session {
-        address address_;
-	    address blockhash;
-        uint256 duration;
-	    bytes publicKey;
-        uint256 timestamp;
-    }
-*/
-
 string constant sessionType = "Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
 bytes32 constant sessionTypedDataHash = keccak256(bytes(sessionType));
 
