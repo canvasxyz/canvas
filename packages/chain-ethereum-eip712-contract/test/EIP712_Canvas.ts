@@ -56,7 +56,6 @@ describe("EIP712_Canvas", function () {
 
 		it("Should verify that a session has been signed by the proper address with sign", async function () {
 			const { verifySignedValue } = await import("@canvas-js/signed-cid")
-			const ethers = await import("ethers")
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
 
 			const { contract } = await loadFixture(deployFixture)
@@ -100,7 +99,6 @@ describe("EIP712_Canvas", function () {
 
 		it("Should verify that an action has been signed by the proper address with sign", async function () {
 			const { verifySignedValue, dynamicAbiEncodeArgs } = await import("@canvas-js/signed-cid")
-			const ethers = await import("ethers")
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
 
 			const { contract } = await loadFixture(deployFixture)
