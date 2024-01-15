@@ -162,18 +162,6 @@ contract EIP712_Canvas{
         return CID.encodeCID(1, 712, digest);
     }
 
-    function recoverAddressFromHash(
-        bytes32 cidHash,
-        bytes memory signature
-    ) public pure returns (address){
-
-        // this is basically the same thing as calling ecrecover on the r, s and v values
-        address signer;
-        (signer,) = ECDSA.tryRecover(cidHash, signature);
-
-        return signer;
-    }
-
     function verifyAddressForMessageSession(
         uint256 clock,
         string[] memory parents,
