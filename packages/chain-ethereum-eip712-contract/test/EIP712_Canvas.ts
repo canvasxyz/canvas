@@ -56,7 +56,7 @@ describe("EIP712_Canvas", function () {
 
 		it("Should verify that a session has been signed by the proper address with sign", async function () {
 			const { verifySignedValue } = await import("@canvas-js/signed-cid")
-			const { publicKeyToAddress } = await import("viem/utils")
+			const ethers = await import("ethers")
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
 
 			const { contract } = await loadFixture(deployFixture)
@@ -77,7 +77,7 @@ describe("EIP712_Canvas", function () {
 			const publicKey = getPublicKeyFromSignature(sessionSignature)
 			const publicKeyHex = Buffer.from(publicKey).toString("hex")
 
-			const expectedAddress = publicKeyToAddress(`0x${publicKeyHex}`)
+			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
 
 			const verified = await contract.verifyAddressForMessageSession(
 				{
@@ -100,7 +100,7 @@ describe("EIP712_Canvas", function () {
 
 		it("Should verify that an action has been signed by the proper address with sign", async function () {
 			const { verifySignedValue, dynamicAbiEncodeArgs } = await import("@canvas-js/signed-cid")
-			const { publicKeyToAddress } = await import("viem/utils")
+			const ethers = await import("ethers")
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
 
 			const { contract } = await loadFixture(deployFixture)
@@ -131,7 +131,7 @@ describe("EIP712_Canvas", function () {
 			const publicKey = getPublicKeyFromSignature(actionSignature)
 			const publicKeyHex = Buffer.from(publicKey).toString("hex")
 
-			const expectedAddress = publicKeyToAddress(`0x${publicKeyHex}`)
+			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
 
 			// we should include the recovery parameter as part of the signature
 			// and then just ignore it if we are verifying using a method that doesn't need it
