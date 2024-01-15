@@ -69,6 +69,7 @@ describe("EIP712_Canvas", function () {
 			let matchingAddressFound = false
 			// we should include the recovery parameter as part of the signature
 			// and then just ignore it if we are verifying using a method that doesn't need it
+			// this could be implemented inside the contract
 			for (const v of [27, 28]) {
 				const signatureWithRecoveryParam = [...sessionSignature.signature, v]
 				const addressFromContractHash = await contract.recoverAddressFromHash(signedValue, signatureWithRecoveryParam)
