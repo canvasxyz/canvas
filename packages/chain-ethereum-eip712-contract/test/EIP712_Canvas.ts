@@ -13,22 +13,24 @@ describe("EIP712_Canvas", function () {
 		return { contract }
 	}
 
+	async function getPublicKeyFromSignatureFixture() {
+		const { base58btc } = await import("multiformats/bases/base58")
+		const { varint } = await import("multiformats")
+		const { didKeyPattern } = await import("@canvas-js/signed-cid")
+
+		function getPublicKeyFromSignature(signature: any) {
+			const result = didKeyPattern.exec(signature.publicKey)
+			const bytes = base58btc.decode(result![1])
+			const [keyCodec, keyCodecLength] = varint.decode(bytes)
+			return bytes.subarray(keyCodecLength)
+		}
+
+		return { getPublicKeyFromSignature }
+	}
+
 	describe("Signing data", function () {
 		it("Should verify that a session has been signed by the proper address with getSession", async function () {
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
-			const { base58btc } = await import("multiformats/bases/base58")
-			const { varint } = await import("multiformats")
-			const { verifySignedValue, didKeyPattern } = await import("@canvas-js/signed-cid")
-			const { publicKeyToAddress } = await import("viem/utils")
-			const { sha256 } = await import("@noble/hashes/sha256")
-
-			function extractPublicKeyFromSessionSignature(sessionSignature: any) {
-				const result = didKeyPattern.exec(sessionSignature.publicKey)
-				const bytes = base58btc.decode(result![1])
-				const [keyCodec, keyCodecLength] = varint.decode(bytes)
-				return bytes.subarray(keyCodecLength)
-			}
-
 			const { contract } = await loadFixture(deployFixture)
 
 			const signer = new EIP712Signer({})
@@ -48,6 +50,19 @@ describe("EIP712_Canvas", function () {
 			)
 
 			expect(recoveredWalletAddress).to.equal(walletAddress)
+		})
+
+		it("Should verify that a session has been signed by the proper address with sign", async function () {
+			const { verifySignedValue } = await import("@canvas-js/signed-cid")
+			const { publicKeyToAddress } = await import("viem/utils")
+			const { sha256 } = await import("@noble/hashes/sha256")
+			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
+
+			const { contract } = await loadFixture(deployFixture)
+			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
+
+			const signer = new EIP712Signer({})
+			const session = await signer.getSession(domainName)
 
 			const topic = "example:signer"
 			const clock = 1
@@ -58,7 +73,7 @@ describe("EIP712_Canvas", function () {
 			verifySignedValue(sessionSignature, sessionMessage)
 
 			// extract the public key from the URI
-			const publicKey = extractPublicKeyFromSessionSignature(sessionSignature)
+			const publicKey = getPublicKeyFromSignature(sessionSignature)
 			const publicKeyHex = Buffer.from(publicKey).toString("hex")
 
 			const expectedAddress = publicKeyToAddress(`0x${publicKeyHex}`)
@@ -73,7 +88,6 @@ describe("EIP712_Canvas", function () {
 			for (const v of [27, 28]) {
 				const signatureWithRecoveryParam = [...sessionSignature.signature, v]
 				const addressFromContractHash = await contract.recoverAddressFromHash(signedValue, signatureWithRecoveryParam)
-				console.log(`.sol recovered address when v = ${v}: ${addressFromContractHash}`)
 				if (addressFromContractHash === expectedAddress) {
 					matchingAddressFound = true
 				}
@@ -82,7 +96,7 @@ describe("EIP712_Canvas", function () {
 					clock,
 					parents,
 					topic,
-					walletAddress,
+					session.address.split(":")[2],
 					session.blockhash || "",
 					session.duration || 0,
 					session.publicKey,
