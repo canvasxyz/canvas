@@ -22,6 +22,13 @@ describe("EIP712_Canvas", function () {
 			const { publicKeyToAddress } = await import("viem/utils")
 			const { sha256 } = await import("@noble/hashes/sha256")
 
+			function extractPublicKeyFromSessionSignature(sessionSignature: any) {
+				const result = didKeyPattern.exec(sessionSignature.publicKey)
+				const bytes = base58btc.decode(result![1])
+				const [keyCodec, keyCodecLength] = varint.decode(bytes)
+				return bytes.subarray(keyCodecLength)
+			}
+
 			const { contract } = await loadFixture(deployFixture)
 
 			const signer = new EIP712Signer({})
@@ -51,10 +58,7 @@ describe("EIP712_Canvas", function () {
 			verifySignedValue(sessionSignature, sessionMessage)
 
 			// extract the public key from the URI
-			const result = didKeyPattern.exec(sessionSignature.publicKey)
-			const bytes = base58btc.decode(result![1])
-			const [keyCodec, keyCodecLength] = varint.decode(bytes)
-			const publicKey = bytes.subarray(keyCodecLength)
+			const publicKey = extractPublicKeyFromSessionSignature(sessionSignature)
 			const publicKeyHex = Buffer.from(publicKey).toString("hex")
 
 			const expectedAddress = publicKeyToAddress(`0x${publicKeyHex}`)
