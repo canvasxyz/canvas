@@ -21,6 +21,36 @@ bytes32 constant emptyDomainSeparator = keccak256(abi.encode(keccak256("EIP712Do
 
 contract EIP712_Canvas{
 
+    struct Session {
+        address address_;
+        string blockhash_;
+        uint256 duration;
+        string publicKey;
+        uint256 timestamp;
+    }
+
+    struct Action {
+        address address_;
+        bytes args;
+        string blockhash_;
+        string name;
+        uint256 timestamp;
+    }
+
+    struct MessageSession {
+        uint256 clock;
+        string[] parents;
+        Session payload;
+        string topic;
+    }
+
+    struct MessageAction {
+        uint256 clock;
+        string[] parents;
+        Action payload;
+        string topic;
+    }
+
     function hashArrayOfStrings(string[] memory values) internal pure returns (bytes32) {
         bytes memory concatenatedHashes = new bytes(values.length * 32);
 
@@ -50,110 +80,6 @@ contract EIP712_Canvas{
         return toTypedDataHash(emptyDomainSeparator, structHash);
     }
 
-    function getStructHashForSession(
-        address address_,
-        string memory blockhash_,
-        uint256 duration,
-        string memory publicKey,
-        uint256 timestamp
-    ) public pure returns (bytes32) {
-        return keccak256(abi.encode(
-            sessionTypedDataHash, // keccak hash of typed data
-            address_,
-            keccak256(bytes(blockhash_)),
-            duration,
-            keccak256(bytes(publicKey)),
-            timestamp
-        ));
-    }
-
-    function getStructHashForAction(
-        address address_,
-        bytes memory args,
-        string memory blockhash_,
-        string memory name,
-        uint256 timestamp
-    ) public pure returns (bytes32) {
-        return keccak256(abi.encode(
-            actionTypedDataHash,
-            address_,
-            keccak256(args),
-            keccak256(bytes(blockhash_)),
-            keccak256(bytes(name)),
-            timestamp
-        ));
-    }
-
-    function recoverAddressFromSession(
-        address address_,
-        string memory blockhash_,
-        uint256 duration,
-        string memory publicKey,
-        uint256 timestamp,
-        bytes memory signature
-    ) public pure returns (address){
-        bytes32 digest = _hashTypedDataV4(getStructHashForSession(address_, blockhash_, duration, publicKey, timestamp));
-
-        return ECDSA.recover(digest, signature);
-    }
-
-    function getStructHashForMessageSession(
-        uint256 clock,
-        string[] memory parents,
-        string memory topic,
-        address address_,
-        string memory blockhash_,
-        uint256 duration,
-        string memory publicKey,
-        uint256 timestamp
-    ) public pure returns (bytes32) {
-        return
-        keccak256(
-            abi.encode(
-                messageSessionTypedDataHash, // keccak hash of typed data
-                clock,
-                hashArrayOfStrings(parents),
-                getStructHashForSession(
-                    address_,
-                    blockhash_,
-                    duration,
-                    publicKey,
-                    timestamp
-                ),
-                keccak256(bytes(topic))
-            )
-        );
-    }
-
-
-    function getStructHashForMessageAction(
-        uint256 clock,
-        string[] memory parents,
-        string memory topic,
-        address address_,
-        bytes memory args,
-        string memory blockhash_,
-        string memory name,
-        uint256 timestamp
-    ) public pure returns (bytes32) {
-        return
-        keccak256(
-            abi.encode(
-                messageActionTypedDataHash, // keccak hash of typed data
-                clock,
-                hashArrayOfStrings(parents),
-                getStructHashForAction(
-                    address_,
-                    args,
-                    blockhash_,
-                    name,
-                    timestamp
-                ),
-                keccak256(bytes(topic))
-            )
-        );
-    }
-
     function createCIDEip712CodecNoneDigest(bytes memory multihash) pure internal returns (bytes memory) {
         uint256 digestSize;
         bytes memory digest;
@@ -162,37 +88,89 @@ contract EIP712_Canvas{
         return CID.encodeCID(1, 712, digest);
     }
 
+
+    function getStructHashForSession(
+        Session memory session
+    ) public pure returns (bytes32) {
+        return keccak256(abi.encode(
+            sessionTypedDataHash, // keccak hash of typed data
+            session.address_,
+            keccak256(bytes(session.blockhash_)),
+            session.duration,
+            keccak256(bytes(session.publicKey)),
+            session.timestamp
+        ));
+    }
+
+    function getStructHashForAction(
+        Action memory action
+    ) public pure returns (bytes32) {
+        return keccak256(abi.encode(
+            actionTypedDataHash,
+            action.address_,
+            keccak256(action.args),
+            keccak256(bytes(action.blockhash_)),
+            keccak256(bytes(action.name)),
+            action.timestamp
+        ));
+    }
+
+    function recoverAddressFromSession(
+        Session memory session,
+        bytes memory signature
+    ) public pure returns (address){
+        bytes32 digest = _hashTypedDataV4(getStructHashForSession(session));
+
+        return ECDSA.recover(digest, signature);
+    }
+
+    function getStructHashForMessageSession(
+        MessageSession memory messageSession
+    ) public pure returns (bytes32) {
+        return
+        keccak256(
+            abi.encode(
+                messageSessionTypedDataHash, // keccak hash of typed data
+                messageSession.clock,
+                hashArrayOfStrings(messageSession.parents),
+                getStructHashForSession(messageSession.payload),
+                keccak256(bytes(messageSession.topic))
+            )
+        );
+    }
+
+    function getStructHashForMessageAction(
+        MessageAction memory messageAction
+    ) public pure returns (bytes32) {
+        return
+        keccak256(
+            abi.encode(
+                messageActionTypedDataHash, // keccak hash of typed data
+                messageAction.clock,
+                hashArrayOfStrings(messageAction.parents),
+                getStructHashForAction(messageAction.payload),
+                keccak256(bytes(messageAction.topic))
+            )
+        );
+    }
+
     function verifyAddressForMessageSession(
-        uint256 clock,
-        string[] memory parents,
-        string memory topic,
-        address address_,
-        string memory blockhash_,
-        uint256 duration,
-        string memory publicKey,
-        uint256 timestamp,
+        MessageSession memory messageSession,
         bytes memory signature,
         address expectedAddress
     ) public pure returns (bool){
-        bytes32 digest = _hashTypedDataV4(getStructHashForMessageSession(clock, parents, topic, address_, blockhash_, duration, publicKey, timestamp));
+        bytes32 digest = _hashTypedDataV4(getStructHashForMessageSession(messageSession));
         bytes memory cid = createCIDEip712CodecNoneDigest(bytes.concat(digest));
 
         return ECDSA_Verify.verify(sha256(cid), signature, expectedAddress);
     }
 
     function verifyAddressForMessageAction(
-        uint256 clock,
-        string[] memory parents,
-        string memory topic,
-        address address_,
-        bytes memory args,
-        string memory blockhash_,
-        string memory name,
-        uint256 timestamp,
+        MessageAction memory messageAction,
         bytes memory signature,
         address expectedAddress
     ) public pure returns (bool){
-        bytes32 digest = _hashTypedDataV4(getStructHashForMessageAction(clock, parents, topic, address_, args, blockhash_, name, timestamp));
+        bytes32 digest = _hashTypedDataV4(getStructHashForMessageAction(messageAction));
         bytes memory cid = createCIDEip712CodecNoneDigest(bytes.concat(digest));
 
         return ECDSA_Verify.verify(sha256(cid), signature, expectedAddress);

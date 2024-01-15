@@ -41,11 +41,13 @@ describe("EIP712_Canvas", function () {
 			const walletAddress = session.address.split(":")[2]
 
 			const recoveredWalletAddress = await contract.recoverAddressFromSession(
-				walletAddress,
-				session.blockhash || "",
-				session.duration || 0,
-				session.publicKey,
-				session.timestamp,
+				{
+					address_: walletAddress,
+					blockhash_: session.blockhash || "",
+					duration: session.duration || 0,
+					publicKey: session.publicKey,
+					timestamp: session.timestamp,
+				},
 				session.authorizationData.signature,
 			)
 
@@ -78,14 +80,18 @@ describe("EIP712_Canvas", function () {
 			const expectedAddress = publicKeyToAddress(`0x${publicKeyHex}`)
 
 			const verified = await contract.verifyAddressForMessageSession(
-				clock,
-				parents,
-				topic,
-				session.address.split(":")[2],
-				session.blockhash || "",
-				session.duration || 0,
-				session.publicKey,
-				session.timestamp,
+				{
+					clock,
+					parents,
+					topic,
+					payload: {
+						address_: session.address.split(":")[2],
+						blockhash_: session.blockhash || "",
+						duration: session.duration || 0,
+						publicKey: session.publicKey,
+						timestamp: session.timestamp,
+					},
+				},
 				sessionSignature.signature,
 				expectedAddress,
 			)
@@ -131,15 +137,19 @@ describe("EIP712_Canvas", function () {
 			// and then just ignore it if we are verifying using a method that doesn't need it
 			// this could be implemented inside the contract
 			const verified = await contract.verifyAddressForMessageAction(
-				clock,
-				parents,
-				topic,
-				// action fields
-				action.address.split(":")[2],
-				dynamicAbiEncodeArgs(action.args),
-				action.blockhash || "",
-				action.name,
-				action.timestamp,
+				{
+					clock,
+					parents,
+					topic,
+					// action fields
+					payload: {
+						address_: action.address.split(":")[2],
+						args: dynamicAbiEncodeArgs(action.args),
+						blockhash_: action.blockhash || "",
+						name: action.name,
+						timestamp: action.timestamp,
+					},
+				},
 				actionSignature.signature,
 				expectedAddress,
 			)
