@@ -1,5 +1,5 @@
 import * as web3 from "web3"
-import { getBytes } from "ethers"
+import { getBytes, keccak256 } from "ethers"
 import { TypedDataEncoder } from "ethers/hash"
 
 import { Action, Message, Session } from "@canvas-js/interfaces"
@@ -7,7 +7,7 @@ type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint
 
 export function dynamicAbiEncodeArgs(args: Record<string, any>): string {
 	const { types, values } = getAbiEncodeParametersArguments(args)
-	return web3.eth.abi.encodeParameters(types, values)
+	return keccak256(web3.eth.abi.encodeParameters(types, values))
 }
 
 function getAbiTypeForValue(value: any) {

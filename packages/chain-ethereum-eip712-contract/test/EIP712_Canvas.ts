@@ -91,5 +91,59 @@ describe("EIP712_Canvas", function () {
 			)
 			expect(verified).to.equal(true)
 		})
+
+		it("Should verify that an action has been signed by the proper address with sign", async function () {
+			const { verifySignedValue, dynamicAbiEncodeArgs } = await import("@canvas-js/signed-cid")
+			const { publicKeyToAddress } = await import("viem/utils")
+			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
+
+			const { contract } = await loadFixture(deployFixture)
+			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
+
+			const signer = new EIP712Signer({})
+			const session = await signer.getSession(domainName)
+
+			const topic = "example:signer"
+			const clock = 1
+			const parents = ["parent1", "parent2"]
+
+			const action = {
+				type: "action" as const,
+				address: session.address,
+				name: "foo",
+				args: { bar: 7 },
+				blockhash: null,
+				timestamp: session.timestamp,
+			}
+
+			const actionMessage = { topic, clock, parents, payload: action }
+			const actionSignature = signer.sign(actionMessage)
+
+			verifySignedValue(actionSignature, actionMessage)
+
+			// extract the public key from the URI
+			const publicKey = getPublicKeyFromSignature(actionSignature)
+			const publicKeyHex = Buffer.from(publicKey).toString("hex")
+
+			const expectedAddress = publicKeyToAddress(`0x${publicKeyHex}`)
+
+			// we should include the recovery parameter as part of the signature
+			// and then just ignore it if we are verifying using a method that doesn't need it
+			// this could be implemented inside the contract
+			const verified = await contract.verifyAddressForMessageAction(
+				clock,
+				parents,
+				topic,
+				// action fields
+				action.address.split(":")[2],
+				dynamicAbiEncodeArgs(action.args),
+				action.blockhash || "",
+				action.name,
+				action.timestamp,
+				actionSignature.signature,
+				expectedAddress,
+			)
+			expect(verified).to.equal(true)
+		})
 	})
 })
