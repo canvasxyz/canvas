@@ -2,7 +2,7 @@
 layout: home
 ---
 
-<HeroRow text="The peer-to-peer application runtime" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a stack for building any web application as a protocol that runs over peer-to-peer networking, with no blockchain required." v-bind:bullets="['Executes core application logic in a realtime, multiwriter database', 'Fast sync using libp2p and Prolly-trees', 'Fully programmable in TypeScript']">
+<HeroRow text="The peer-to-peer application runtime" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a stack for building any web application as a protocol that runs over peer-to-peer networking, with no blockchain required." v-bind:bullets="['Executes core application logic in a realtime, multiwriter database', 'Built on a sync engine, with libp2p and Prolly-trees', 'Fully programmable in TypeScript']">
   <HeroAction theme="brand big" text="Tutorial" href="/1-introduction" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
   <HeroAction theme="alt big" text="Blog" href="/blog" />
