@@ -174,20 +174,6 @@ contract EIP712_Canvas{
         return signer;
     }
 
-    function getCIDForMessageSession(
-        uint256 clock,
-        string[] memory parents,
-        string memory topic,
-        address address_,
-        string memory blockhash_,
-        uint256 duration,
-        string memory publicKey,
-        uint256 timestamp
-    ) public pure returns (bytes memory) {
-        bytes32 digest = _hashTypedDataV4(getStructHashForMessageSession(clock, parents, topic, address_, blockhash_, duration, publicKey, timestamp));
-        return createCIDEip712CodecNoneDigest(bytes.concat(digest));
-    }
-
     function verifyAddressForMessageSession(
         uint256 clock,
         string[] memory parents,
