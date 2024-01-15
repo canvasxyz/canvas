@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./CID.sol";
+import "./ECDSA_Verify.sol";
 
 /*
     struct Action {
@@ -159,7 +160,7 @@ contract EIP712_Canvas{
         return createCIDEip712CodecNoneDigest(bytes.concat(digest));
     }
 
-    function recoverAddressFromMessageSession(
+    function verifyAddressForMessageSession(
         uint256 clock,
         string[] memory parents,
         string memory topic,
@@ -168,11 +169,12 @@ contract EIP712_Canvas{
         uint256 duration,
         string memory publicKey,
         uint256 timestamp,
-        bytes memory signature
-    ) public pure returns (address){
+        bytes memory signature,
+        address expectedAddress
+    ) public pure returns (bool){
         bytes32 digest = _hashTypedDataV4(getStructHashForMessageSession(clock, parents, topic, address_, blockhash_, duration, publicKey, timestamp));
         bytes memory cid = createCIDEip712CodecNoneDigest(bytes.concat(digest));
 
-        return ECDSA.recover(sha256(cid), signature);
+        return ECDSA_Verify.verify(sha256(cid), signature, expectedAddress);
     }
 }

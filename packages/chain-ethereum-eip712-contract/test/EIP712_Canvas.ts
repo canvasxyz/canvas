@@ -55,7 +55,6 @@ describe("EIP712_Canvas", function () {
 		it("Should verify that a session has been signed by the proper address with sign", async function () {
 			const { verifySignedValue } = await import("@canvas-js/signed-cid")
 			const { publicKeyToAddress } = await import("viem/utils")
-			const { sha256 } = await import("@noble/hashes/sha256")
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
 
 			const { contract } = await loadFixture(deployFixture)
@@ -78,34 +77,19 @@ describe("EIP712_Canvas", function () {
 
 			const expectedAddress = publicKeyToAddress(`0x${publicKeyHex}`)
 
-			const signedValue = sha256(sessionSignature.cid.bytes)
-
-			// we don't return the recovery parameter currently, so we need to try both of them
-			let matchingAddressFound = false
-			// we should include the recovery parameter as part of the signature
-			// and then just ignore it if we are verifying using a method that doesn't need it
-			// this could be implemented inside the contract
-			for (const v of [27, 28]) {
-				const signatureWithRecoveryParam = [...sessionSignature.signature, v]
-				const addressFromContractHash = await contract.recoverAddressFromHash(signedValue, signatureWithRecoveryParam)
-				if (addressFromContractHash === expectedAddress) {
-					matchingAddressFound = true
-				}
-
-				const addressFromContractCid = await contract.recoverAddressFromMessageSession(
-					clock,
-					parents,
-					topic,
-					session.address.split(":")[2],
-					session.blockhash || "",
-					session.duration || 0,
-					session.publicKey,
-					session.timestamp,
-					signatureWithRecoveryParam,
-				)
-				expect(addressFromContractCid).to.equal(addressFromContractHash)
-			}
-			expect(matchingAddressFound).to.equal(true)
+			const verified = await contract.verifyAddressForMessageSession(
+				clock,
+				parents,
+				topic,
+				session.address.split(":")[2],
+				session.blockhash || "",
+				session.duration || 0,
+				session.publicKey,
+				session.timestamp,
+				sessionSignature.signature,
+				expectedAddress,
+			)
+			expect(verified).to.equal(true)
 		})
 	})
 })
