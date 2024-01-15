@@ -9,12 +9,14 @@ import target from "#target"
 import { eip712TypeDefinitions, type EIP712SessionData, type EIP712SessionMessage } from "./types.js"
 import { assert, signalInvalidType, validateSessionData, parseAddress, addressPattern } from "./utils.js"
 
-export interface EIP712VerifiableSignerInit {
+export interface EIP712SignerInit {
 	signer?: AbstractSigner
 	sessionDuration?: number
-	chainId?: number // used in the eip712 domain, but optional; no chainid if none is specified (don't default to mainnet)
-	verifyingContract?: string // used in the eip712 domain
-	version?: string // version in the eip712 domain. by default 1, but later versions of this signer could increment it
+	// If provided, chainId, verifyingContract, and version are used in the EIP712 domain:
+	// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md#definition-of-domainseparator
+	chainId?: number
+	verifyingContract?: string
+	version?: string
 }
 
 export class EIP712Signer implements SessionSigner<EIP712SessionData> {
@@ -29,7 +31,7 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 	#store = target.getSessionStore()
 	#ethersSigner: AbstractSigner
 
-	public constructor(init: EIP712VerifiableSignerInit = {}) {
+	public constructor(init: EIP712SignerInit = {}) {
 		this.#ethersSigner = init.signer ?? Wallet.createRandom()
 		this.sessionDuration = init.sessionDuration ?? null
 		this.chainId = init.chainId ?? 1
