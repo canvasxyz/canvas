@@ -45,15 +45,16 @@ export default defineConfig({
 						{ text: "Actions", link: "/3-actions" },
 						{ text: "Authentication", link: "/4-authentication" },
 						{ text: "Querying", link: "/5-querying" },
-						{ text: "Networking", link: "/6-networking" },
+						{ text: "🚧 &nbsp;Deployment", link: "/6-deployment" },
+						{ text: "Networking", link: "/7-networking" },
 						{
 							text: "Advanced Features",
-							link: "/7-advanced",
+							link: "/8-advanced",
 							collapsed: true,
 							items: [
-								{ text: "Conflict Resolution", link: "/7-advanced#handling-conflicting-offline-edits" },
-								{ text: "Custom Signers", link: "/7-advanced#creating-your-own-session-signer" },
-								{ text: "Custom Actions", link: "/7-advanced#validating-custom-action-schemas-using-ipld" },
+								{ text: "Conflict Resolution", link: "/8-advanced#handling-conflicting-offline-edits" },
+								{ text: "Custom Signers", link: "/8-advanced#creating-your-own-session-signer" },
+								{ text: "Custom Actions", link: "/8-advanced#validating-custom-action-schemas-using-ipld" },
 							],
 						},
 					],
@@ -61,8 +62,8 @@ export default defineConfig({
 				{
 					text: "Reference",
 					items: [
-						{ text: "CLI", link: "/readme-cli.md" },
 						{ text: "Core", link: "/readme-core.md" },
+						{ text: "CLI", link: "/readme-cli.md" },
 						{ text: "Hooks", link: "/readme-hooks.md" },
 						{
 							text: "Components",
@@ -86,6 +87,14 @@ export default defineConfig({
 								{ text: "Cosmos", link: "/readme-chain-cosmos.md" },
 								{ text: "Substrate", link: "/readme-chain-substrate.md" },
 								{ text: "Near", link: "/readme-chain-near.md" },
+							],
+						},
+						{
+							text: "Integrations",
+							collapsed: true,
+							items: [
+								{ text: "🚧 &nbsp;Next.js", link: "/readme-next.md" },
+								{ text: "🚧 &nbsp;ATSync", link: "/readme-atsync.md" },
 							],
 						},
 					],

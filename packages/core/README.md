@@ -3,11 +3,7 @@
 A Canvas app replicates and executes a log of signed actions, sourced from
 GossipLog, with read/write access to a ModelDB database.
 
-The "core" is the primary way to run application *clients* that join
-the peer-to-peer network. It's also used as a dependency by other
-packages like the Canvas CLI.
-
-Use this package directly if you want fine-grained control over when the
+Use this package directly if you want fine-grained control over when an
 application is started/stopped. Otherwise, you can use `useCanvas` in
 `@canvas-js/hooks`, which has the same API, but handles initialization
 inside React for you.
@@ -121,36 +117,45 @@ export type ActionContext = {
 import { Signature, Action, Session, SessionSigner } from "@canvas-js/interfaces"
 import { AbstractModelDB } from "@canvas-js/modeldb"
 
-export interface CanvasConfig {
-  contract: string | Contract
-
-  /** data directory path (NodeJS only) */
-  path?: string | null
-  signers?: SessionSigner[]
-
-  // libp2p options
-  offline?: boolean
-  start?: boolean
-  listen?: string[]
-  announce?: string[]
-  bootstrapList?: string[]
-  minConnections?: number
-  maxConnections?: number
-  discoveryTopic?: string
-
-  /** set to `false` to disable history indexing and db.get(..) within actions */
-  indexHistory?: boolean
-  runtimeMemoryLimit?: number
+export interface NetworkConfig {
+    offline?: boolean;
+    disablePing?: boolean;
+    /** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
+    listen?: string[];
+    /** array of public WebSocket multiaddrs, e.g. "/dns4/myapp.com/tcp/443/wss" */
+    announce?: string[];
+    bootstrapList?: string[];
+    minConnections?: number;
+    maxConnections?: number;
+    discoveryTopic?: string;
+    discoveryInterval?: number;
+    trackAllPeers?: boolean;
+    enableWebRTC?: boolean;
+}
+export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
+    contract: string | T;
+    signers?: SessionSigner[];
+    /** data directory path (NodeJS only) */
+    path?: string | null;
+    /** provide an existing libp2p instance instead of creating a new one */
+    libp2p?: Libp2p<ServiceMap>;
+    /** set to `false` to disable history indexing and db.get(..) within actions */
+    indexHistory?: boolean;
+    runtimeMemoryLimit?: number;
+    ignoreMissingActions?: boolean;
 }
 
-export interface CanvasEvents {
-  close: Event
-  connect: CustomEvent<{ peer: PeerId }>
-  disconnect: CustomEvent<{ peer: PeerId }>
-
-  message: CustomEvent<{ id: string; signature: Signature; message: Message<Action | Session> }>
-  commit: CustomEvent<{ root: Node }>
-  sync: CustomEvent<{ peer: string | null }>
+export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown> {
+    close: Event;
+    connect: CustomEvent<{
+        peer: PeerId;
+    }>;
+    disconnect: CustomEvent<{
+        peer: PeerId;
+    }>;
+    "connections:updated": CustomEvent<ConnectionsInfo>;
+    "presence:join": CustomEvent<PresenceInfo>;
+    "presence:leave": CustomEvent<PresenceInfo>;
 }
 
 export declare class Canvas extends EventEmitter<CanvasEvents> {

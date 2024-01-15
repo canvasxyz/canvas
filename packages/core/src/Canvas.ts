@@ -33,8 +33,12 @@ export interface NetworkConfig {
 	bootstrapList?: string[]
 	minConnections?: number
 	maxConnections?: number
+
 	discoveryTopic?: string
 	discoveryInterval?: number
+	trackAllPeers?: boolean
+	presenceTimeout?: number
+
 	enableWebRTC?: boolean
 }
 
@@ -69,7 +73,7 @@ export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown>
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
 	"connections:updated": CustomEvent<ConnectionsInfo>
-	"presence:join": CustomEvent<PresenceInfo>
+	"presence:join": CustomEvent<PresenceInfo & { peerId: PeerId, env: "browser" | "server"; address: string | null; topics: string[] }>
 	"presence:leave": CustomEvent<PresenceInfo>
 }
 
@@ -178,9 +182,9 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			this.updateStatus()
 		})
 
-		this.libp2p.services.discovery.addEventListener("presence:join", ({ detail: { peerId, peers } }) => {
+		this.libp2p.services.discovery.addEventListener("presence:join", ({ detail: { peerId, env, address, topics, peers } }) => {
 			this.log("discovered peer %p with addresses %o", peerId)
-			this.dispatchEvent(new CustomEvent("presence:join", { detail: { peerId, peers: { ...peers } } }))
+			this.dispatchEvent(new CustomEvent("presence:join", { detail: { peerId, env, address, topics, peers: { ...peers } } }))
 		})
 
 		this.libp2p.services.discovery.addEventListener("presence:leave", ({ detail: { peerId, peers } }) => {

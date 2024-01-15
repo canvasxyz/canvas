@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/chain-ethereum-eip712",
-  "version": "0.8.19",
+  "version": "0.8.21",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",

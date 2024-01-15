@@ -113,6 +113,13 @@ pre {
   font-family: var(--space-font-family);
 }
 
+.vp-doc h1 > .VPBadge {
+  margin-top: 12px;
+  margin-left: 4px;
+  vertical-align: top;
+  letter-spacing: -0.1px;
+}
+
 .VPContent .outline-title {
   letter-spacing: 0 !important;
 }

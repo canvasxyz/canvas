@@ -18,18 +18,37 @@ import { SessionStatus } from "./SessionStatus.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
 import { Connect } from "./connect/index.js"
 
-import contract from "../contract.canvas.js?raw"
+export const contract = {
+	models: {
+		message: {
+			id: "primary",
+			address: "string",
+			content: "string",
+			timestamp: "integer",
+			$indexes: ["address", "timestamp"],
+		},
+	},
+	actions: {
+		async createMessage(db, { content }, { id, address, timestamp }) {
+			console.log("received message:", content)
+			await db.set("message", { id, address, content, timestamp })
+		},
+	},
+}
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
 	const [address, setAddress] = useState<string | null>(null)
 
+	const topicRef = useRef("chat-example.canvas.xyz")
+
 	const { app } = useCanvas({
-		contract,
+		contract: { ...contract, topic: topicRef.current },
 		signers: sessionSigner ? [sessionSigner] : undefined,
 		indexHistory: false,
-		offline: true,
 		discoveryTopic: "canvas-discovery",
+		trackAllPeers: true,
+		presenceTimeout: 12 * 60 * 60 * 1000, // keep up to 12 hours of offline peers
 		bootstrapList: [
 			"/dns4/canvas-chat-discovery-p0.fly.dev/tcp/443/wss/p2p/12D3KooWG1zzEepzv5ib5Rz16Z4PXVfNRffXBGwf7wM8xoNAbJW7",
 			"/dns4/canvas-chat-discovery-p1.fly.dev/tcp/443/wss/p2p/12D3KooWNfH4Z4ayppVFyTKv8BBYLLvkR1nfWkjcSTqYdS4gTueq",
@@ -40,8 +59,6 @@ export const App: React.FC<{}> = ({}) => {
 			...defaultBootstrapList,
 		],
 	})
-
-	;(window as any).app = app
 
 	return (
 		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app }}>
@@ -57,7 +74,7 @@ export const App: React.FC<{}> = ({}) => {
 						<div className="min-w-[480px] flex flex-col gap-4">
 							<Connect />
 							<SessionStatus />
-							<ConnectionStatus />
+							<ConnectionStatus topic={topicRef.current} />
 							<ControlPanel />
 						</div>
 					</div>

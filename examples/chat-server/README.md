@@ -20,6 +20,12 @@ Then deploy with
 fly deploy
 ```
 
+## Deploy multiple nodes
+
+```
+./deploy-chat-server.sh
+```
+
 ## Running the Docker container locally
 
 Mount a volume to `/data`. Set the `PORT`, `LISTEN`, `ANNOUNCE`, and `BOOTSTRAP_LIST` environment variables if appropriate.
