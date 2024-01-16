@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.19;
 
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
 /**
  * This library is adapted from OpenZeppelin's ECDSA recovery implementation
  * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v5.0.1/contracts/utils/cryptography/ECDSA.sol
@@ -16,97 +18,28 @@ pragma solidity ^0.8.19;
 
 
 library ECDSA_Verify {
-    enum VerifyError {
-      NoError,
-      InvalidSignature,
-      InvalidSignatureLength,
-      InvalidSignatureS
-    }
 
-    /**
-     * @dev The signature derives the `address(0)`.
-     */
-    error ECDSAInvalidSignature();
-
-    /**
-     * @dev The signature has an invalid length.
-     */
-    error ECDSAInvalidSignatureLength(uint256 length);
-
-    /**
-     * @dev The signature has an S value that is in the upper half order.
-     */
-    error ECDSAInvalidSignatureS(bytes32 s);
-
-    function tryVerify(bytes32 hash, bytes memory signature, address expectedAddress) internal pure returns (bool, VerifyError, bytes32) {
-      if (signature.length != 64) {
-        return (false, VerifyError.InvalidSignatureLength, bytes32(signature.length));
-      }
-
+    function verify(bytes32 hash, bytes memory signature, address expectedAddress) internal pure returns (bool) {
       bytes32 r;
       bytes32 s;
-      // ecrecover takes the signature parameters, and the only way to get them
-      // currently is to use assembly.
+      // we need to pass v, r and s in separately
+      // so the signature has to be split into r and s components
       /// @solidity memory-safe-assembly
       assembly {
           r := mload(add(signature, 0x20))
           s := mload(add(signature, 0x40))
       }
 
-      // don't accept signatures where s is in the upper end
-      // see: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v5.0.1/contracts/utils/cryptography/ECDSA.sol#L128
-      if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
-          return (false, VerifyError.InvalidSignatureS, s);
-      }
-
-
-      // If the signature is valid (and not malleable), return the signer address
-
-      // the 64 byte signature does not encode the "v" recovery value, which can be either 27 or 28
-      // therefore try to recover the address using both possible values
-      // and return true if one of the recovered addresses matches
-
-      address signerV27 = ecrecover(hash, 27, r, s);
-
-      if (signerV27 == address(0)) {
-          return (false, VerifyError.InvalidSignature, bytes32(0));
-      }
-
+      address signerV27 = ECDSA.recover(hash, 27, r, s);
       if(signerV27 == expectedAddress) {
-        return (true, VerifyError.NoError, bytes32(0));
+        return true;
       }
 
-      address signerV28 = ecrecover(hash, 28, r, s);
-
-      if (signerV28 == address(0)) {
-          return (false, VerifyError.InvalidSignature, bytes32(0));
-      }
-
+      address signerV28 = ECDSA.recover(hash, 28, r, s);
       if(signerV28 == expectedAddress) {
-        return (true, VerifyError.NoError, bytes32(0));
+        return true;
       }
 
-      return (false, VerifyError.NoError, bytes32(0));
+      return false;
   }
-
-  function verify(bytes32 hash, bytes memory signature, address expectedAddress) internal pure returns (bool) {
-    (bool isVerified, VerifyError error, bytes32 errorArg) = tryVerify(hash, signature, expectedAddress);
-    _throwError(error, errorArg);
-    return isVerified;
-  }
-
-    /**
-    * @dev Optionally reverts with the corresponding custom error according to the `error` argument provided.
-    */
-  function _throwError(VerifyError error, bytes32 errorArg) private pure {
-      if (error == VerifyError.NoError) {
-          return; // no error: do nothing
-      } else if (error == VerifyError.InvalidSignature) {
-          revert ECDSAInvalidSignature();
-      } else if (error == VerifyError.InvalidSignatureLength) {
-          revert ECDSAInvalidSignatureLength(uint256(errorArg));
-      } else if (error == VerifyError.InvalidSignatureS) {
-          revert ECDSAInvalidSignatureS(errorArg);
-      }
-    }
 }
