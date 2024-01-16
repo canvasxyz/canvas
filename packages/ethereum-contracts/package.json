@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@canvas-js/chain-ethereum-eip712": "0.8.21",
+    "@lazyledger/protobuf3-solidity-lib": "^0.6.0",
     "@openzeppelin/contracts": "^4.8.1"
   }
 }
