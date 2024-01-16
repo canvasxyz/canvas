@@ -12,7 +12,7 @@
     "outDir": "lib"
   },
   "references": [
-    { "path": "../chain-ethereum-eip712" },
+    { "path": "../chain-ethereum" },
     { "path": "../signed-cid" }
   ]
 }

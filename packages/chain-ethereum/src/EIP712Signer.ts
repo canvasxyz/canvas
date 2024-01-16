@@ -6,8 +6,13 @@ import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
 import target from "#target"
 
-import { eip712TypeDefinitions, type EIP712SessionData, type EIP712SessionMessage } from "./types.js"
-import { assert, signalInvalidType, validateSessionData, parseAddress, addressPattern } from "./utils.js"
+import {
+	eip712TypeDefinitions,
+	type EIP712SessionData,
+	type EIP712SessionMessage,
+	validateEIP712SessionData,
+} from "./eip712types.js"
+import { assert, signalInvalidType, parseAddress, addressPattern } from "./utils.js"
 
 export interface EIP712SignerInit {
 	signer?: AbstractSigner
@@ -46,7 +51,7 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 		const { publicKey, address, authorizationData, timestamp, blockhash, duration } = session
 
 		assert(didKeyPattern.test(publicKey), "invalid signing key")
-		assert(validateSessionData(authorizationData), "invalid session")
+		assert(validateEIP712SessionData(authorizationData), "invalid session")
 		const [chainId, walletAddress] = parseAddress(address)
 
 		const message: EIP712SessionMessage = {

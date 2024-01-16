@@ -30,7 +30,7 @@ describe("EIP712_Canvas", function () {
 
 	describe("Signing data", function () {
 		it("Should verify that a session has been signed by the proper address with getSession", async function () {
-			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
+			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
 			const { contract } = await loadFixture(deployFixture)
 
 			const signer = new EIP712Signer({})
@@ -56,7 +56,7 @@ describe("EIP712_Canvas", function () {
 
 		it("Should verify that a session has been signed by the proper address with sign", async function () {
 			const { verifySignedValue } = await import("@canvas-js/signed-cid")
-			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
+			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
 
 			const { contract } = await loadFixture(deployFixture)
 			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
@@ -99,7 +99,7 @@ describe("EIP712_Canvas", function () {
 
 		it("Should verify that an action has been signed by the proper address with sign", async function () {
 			const { verifySignedValue, dynamicAbiEncodeArgs } = await import("@canvas-js/signed-cid")
-			const { EIP712Signer } = await import("@canvas-js/chain-ethereum-eip712")
+			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
 
 			const { contract } = await loadFixture(deployFixture)
 			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)

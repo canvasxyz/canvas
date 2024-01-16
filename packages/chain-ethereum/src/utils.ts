@@ -14,7 +14,7 @@ export function signalInvalidType(type: never): never {
 	throw new TypeError("internal error: invalid type")
 }
 
-export function validateSessionData(authorizationData: unknown): authorizationData is SIWESessionData {
+export function validateSIWESessionData(authorizationData: unknown): authorizationData is SIWESessionData {
 	if (authorizationData === undefined || authorizationData === null) {
 		return false
 	} else if (

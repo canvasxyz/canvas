@@ -1,5 +1,22 @@
+export function assert(condition: boolean, message?: string): asserts condition {
+	if (!condition) {
+		throw new Error(message ?? "assertion failed")
+	}
+}
+
 export type EIP712SessionData = {
 	signature: Uint8Array
+}
+
+export function validateEIP712SessionData(authorizationData: unknown): authorizationData is EIP712SessionData {
+	try {
+		const { signature } = authorizationData as any
+		assert(signature instanceof Uint8Array, "signature must be a Uint8Array")
+
+		return true
+	} catch (e) {
+		return false
+	}
 }
 
 export type EIP712SessionMessage = {

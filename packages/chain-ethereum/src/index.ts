@@ -1,2 +1,3 @@
 export * from "./SIWESigner.js"
-export { validateSessionData } from "./utils.js"
+export * from "./EIP712Signer.js"
+export { validateSIWESessionData } from "./utils.js"
