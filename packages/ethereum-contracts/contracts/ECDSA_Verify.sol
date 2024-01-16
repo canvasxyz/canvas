@@ -3,20 +3,6 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-/**
- * This library is adapted from OpenZeppelin's ECDSA recovery implementation
- * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v5.0.1/contracts/utils/cryptography/ECDSA.sol
- *
- * An ECDSA signature consists of two parts r and s, and an optional third part v (in the set {27,28}) which is used
- * when recovering an address/publicKey from a signature and signed value.
- *
- * If we just want to verify signatures, (i.e. check that for a given signature, signed value and expected
- * address that the expected address could have signed the value), then we don't need the third v part.
- * This can be done by attempting to recover the address with both possible values of v and checking
- * the recovered address against the expected address.
- */
-
-
 library ECDSA_Verify {
 
     function verify(bytes32 hash, bytes memory signature, address expectedAddress) internal pure returns (bool) {
