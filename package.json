@@ -42,7 +42,7 @@
     "vue-markdown-render": "^2.1.1"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "4.6.1"
+    "@rollup/rollup-linux-x64-gnu": "4.9.5"
   },
   "dependencies": {
     "@chrisoakman/chessboardjs": "^1.0.0",
