@@ -24,10 +24,10 @@
   "dependencies": {
     "@canvas-js/interfaces": "0.8.24",
     "@canvas-js/signed-cid": "0.8.24",
-    "@ipld/dag-json": "^10.1.5",
-    "@libp2p/logger": "^4.0.2",
+    "@ipld/dag-json": "^10.1.7",
+    "@libp2p/logger": "^4.0.5",
     "multiformats": "^13.0.1",
     "siwe": "^2.1.4",
-    "viem": ">=1.14.0"
+    "viem": "^2.3.1"
   }
 }
