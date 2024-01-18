@@ -263,8 +263,8 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 		const client = new Client(stream)
 		try {
 			this.log("initiating sync with peer %p", peerId)
-			const { root } = await this.messages.sync(client, { sourceId: peerId.toString() })
-			this.log("finished sync, got root hash %s", hex(root.hash))
+			const { root, messageCount } = await this.messages.sync(client, { sourceId: peerId.toString() })
+			this.log("finished sync with peer %p, got root hash %s (%s messages)", peerId, hex(root.hash), messageCount)
 		} finally {
 			signal.clear()
 			client.end()
