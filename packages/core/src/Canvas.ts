@@ -73,7 +73,9 @@ export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown>
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
 	"connections:updated": CustomEvent<ConnectionsInfo>
-	"presence:join": CustomEvent<PresenceInfo & { peerId: PeerId, env: "browser" | "server"; address: string | null; topics: string[] }>
+	"presence:join": CustomEvent<
+		PresenceInfo & { peerId: PeerId; env: "browser" | "server"; address: string | null; topics: string[] }
+	>
 	"presence:leave": CustomEvent<PresenceInfo>
 }
 
@@ -90,10 +92,12 @@ export type ApplicationData = {
 	models: Record<string, Model>
 	actions: string[]
 }
+export { Model } from "@canvas-js/modeldb"
 
 export type AppConnectionStatus = "connected" | "disconnected"
 export type ConnectionStatus = "connecting" | "online" | "offline" | "waiting"
 export type Connections = Record<string, { peer: PeerId; status: ConnectionStatus; connections: Connection[] }>
+export { PeerId, Connection } from "@libp2p/interface"
 
 export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
 	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {
@@ -182,10 +186,15 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			this.updateStatus()
 		})
 
-		this.libp2p.services.discovery.addEventListener("presence:join", ({ detail: { peerId, env, address, topics, peers } }) => {
-			this.log("discovered peer %p with addresses %o", peerId)
-			this.dispatchEvent(new CustomEvent("presence:join", { detail: { peerId, env, address, topics, peers: { ...peers } } }))
-		})
+		this.libp2p.services.discovery.addEventListener(
+			"presence:join",
+			({ detail: { peerId, env, address, topics, peers } }) => {
+				this.log("discovered peer %p with addresses %o", peerId)
+				this.dispatchEvent(
+					new CustomEvent("presence:join", { detail: { peerId, env, address, topics, peers: { ...peers } } }),
+				)
+			},
+		)
 
 		this.libp2p.services.discovery.addEventListener("presence:leave", ({ detail: { peerId, peers } }) => {
 			this.log("discovered peer %p with addresses %o", peerId)
