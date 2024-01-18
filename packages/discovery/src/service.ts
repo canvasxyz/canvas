@@ -420,7 +420,8 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 					const key =
 						(this.trackAllPeers ? DiscoveryService.FETCH_ALL_KEY_PREFIX : DiscoveryService.FETCH_KEY_PREFIX) + topic
 					this.log("fetching new peers from %p", key, connection.remotePeer)
-					const result = await this.fetch.fetch(connection.remotePeer, key)
+					// sometimes fetch will throw an error when asking for FETCH_ALL_KEY_PREFIX
+					const result = await this.fetch.fetch(connection.remotePeer, key).catch((err) => undefined)
 					if (result === undefined) {
 						this.log("no response from %p", connection.remotePeer)
 						continue
