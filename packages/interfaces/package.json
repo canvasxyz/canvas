@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/interfaces",
-  "version": "0.8.21",
+  "version": "0.8.22",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -15,13 +15,13 @@
     "multiformats": "^12.1.3"
   },
   "devDependencies": {
-    "@canvas-js/chain-cosmos": "0.8.21",
-    "@canvas-js/chain-ethereum": "0.8.21",
-    "@canvas-js/chain-ethereum-viem": "0.8.21",
-    "@canvas-js/chain-near": "0.8.21",
-    "@canvas-js/chain-solana": "0.8.21",
-    "@canvas-js/chain-substrate": "0.8.21",
-    "@canvas-js/interfaces": "0.8.21",
-    "@canvas-js/signed-cid": "0.8.21"
+    "@canvas-js/chain-cosmos": "0.8.22",
+    "@canvas-js/chain-ethereum": "0.8.22",
+    "@canvas-js/chain-ethereum-viem": "0.8.22",
+    "@canvas-js/chain-near": "0.8.22",
+    "@canvas-js/chain-solana": "0.8.22",
+    "@canvas-js/chain-substrate": "0.8.22",
+    "@canvas-js/interfaces": "0.8.22",
+    "@canvas-js/signed-cid": "0.8.22"
   }
 }
