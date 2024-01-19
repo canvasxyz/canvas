@@ -1,13 +1,13 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat-server",
-  "version": "0.8.25",
+  "version": "0.8.26-alpha.1",
   "type": "module",
   "scripts": {
     "dev": "canvas run --disableHistoryIndexing contract.canvas.js",
     "start": "canvas run .cache --disableHistoryIndexing --init contract.canvas.js"
   },
   "dependencies": {
-    "@canvas-js/cli": "0.8.25"
+    "@canvas-js/cli": "0.8.26-alpha.1"
   }
 }
