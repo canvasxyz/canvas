@@ -22,27 +22,27 @@
     "@magic-ext/auth": "^4.3.2",
     "@metamask/providers": "^14.0.2",
     "@polkadot/extension-dapp": "^0.46.6",
-    "@terra-money/feather.js": "^2.0.0",
-    "@types/react": "^18.2.48",
-    "@types/react-dom": "^18.2.18",
+    "@terra-money/feather.js": "^2.0.0-beta.7",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.17",
     "buffer": "^6.0.3",
-    "ethers": "^6.10.0",
+    "ethers": "^6.9.0",
     "idb": "^8.0.0",
-    "magic-sdk": "^21.5.0",
+    "magic-sdk": "^21.3.1",
     "multiformats": "^13.0.1",
     "near-api-js": "^2.1.4",
     "process": "^0.11.10",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "viem": "^2.3.1",
-    "web3": "^4.4.0"
+    "web3": "^4.3.0"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.17",
-    "postcss": "^8.4.33",
-    "tailwindcss": "^3.4.1",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6",
     "typescript": "^5.3.3",
-    "vite": "^4.5.1",
+    "vite": "^4.5.0",
     "vite-plugin-node-polyfills": "^0.16.0"
   }
 }
