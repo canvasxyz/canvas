@@ -12,7 +12,6 @@ processes = []
   source = "canvas_chat_data_2"
 
 [[services]]
-  internal_port = 8081
   processes = ["app"]
   protocol = "tcp"
 

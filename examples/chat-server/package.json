@@ -4,8 +4,7 @@
   "version": "0.8.26-alpha.1",
   "type": "module",
   "scripts": {
-    "dev": "canvas run --port 8081 --disableHistoryIndexing contract.canvas.js",
-    "start": "canvas run .cache --port 8081 --disableHistoryIndexing --init contract.canvas.js"
+    "dev": "canvas run --port 8080 --disableHistoryIndexing contract.canvas.js"
   },
   "dependencies": {
     "@canvas-js/cli": "0.8.26-alpha.1"
