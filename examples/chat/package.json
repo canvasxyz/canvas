@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat",
-  "version": "0.8.26-alpha.1",
+  "version": "0.8.26-alpha.2",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,15 +9,15 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@canvas-js/chain-cosmos": "0.8.26-alpha.1",
-    "@canvas-js/chain-ethereum": "0.8.26-alpha.1",
-    "@canvas-js/chain-ethereum-viem": "0.8.26-alpha.1",
-    "@canvas-js/chain-near": "0.8.26-alpha.1",
-    "@canvas-js/chain-solana": "0.8.26-alpha.1",
-    "@canvas-js/chain-substrate": "0.8.26-alpha.1",
-    "@canvas-js/core": "0.8.26-alpha.1",
-    "@canvas-js/interfaces": "0.8.26-alpha.1",
-    "@canvas-js/modeldb": "0.8.26-alpha.1",
+    "@canvas-js/chain-cosmos": "0.8.26-alpha.2",
+    "@canvas-js/chain-ethereum": "0.8.26-alpha.2",
+    "@canvas-js/chain-ethereum-viem": "0.8.26-alpha.2",
+    "@canvas-js/chain-near": "0.8.26-alpha.2",
+    "@canvas-js/chain-solana": "0.8.26-alpha.2",
+    "@canvas-js/chain-substrate": "0.8.26-alpha.2",
+    "@canvas-js/core": "0.8.26-alpha.2",
+    "@canvas-js/interfaces": "0.8.26-alpha.2",
+    "@canvas-js/modeldb": "0.8.26-alpha.2",
     "@keplr-wallet/types": "^0.11.64",
     "@magic-ext/auth": "^4.3.2",
     "@metamask/providers": "^14.0.2",
