@@ -8,6 +8,7 @@ processes = []
   LISTEN         = "/ip6/::/tcp/8080/ws"
   ANNOUNCE       = "/dns4/canvas-chat-discovery-p2.fly.dev/tcp/443/wss"
   DEBUG          = "libp2p:*,canvas:*,libp2p:gossipsub:trace"
+  RESTART_AT     = "00:30"
 
 [[services]]
   internal_port = 8080
