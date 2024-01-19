@@ -64,6 +64,28 @@ export async function wait(interval: number, options: { signal: AbortSignal }) {
 	}).finally(() => signal.clear())
 }
 
+export class DelayableController {
+	#interval: number
+	#controller: AbortController
+	#timer: ReturnType<typeof setTimeout>
+	signal: AbortSignal
+
+	constructor(interval: number) {
+		this.#interval = interval
+		this.#controller = new AbortController()
+		this.signal = this.#controller.signal
+		this.#timer = setTimeout(() => {
+			this.#controller.abort()
+		}, this.#interval)
+	}
+	delay() {
+		clearTimeout(this.#timer)
+		this.#timer = setTimeout(() => {
+			this.#controller.abort()
+		}, this.#interval)
+	}
+}
+
 // add elements with CacheMap.add(key, value) and they'll
 // get shifted out in the order they were added.
 
