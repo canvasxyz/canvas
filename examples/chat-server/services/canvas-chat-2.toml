@@ -5,11 +5,11 @@ processes = []
 
 [env]
   ANNOUNCE = "/dns4/canvas-chat-2.fly.dev/tcp/443/wss"
-  DEBUG    = "canvas:*:error,canvas:gossiplog:*"
+  DEBUG    = "canvas:*"
 
 [mounts]
   destination = "/data"
-  source = "canvas_chat_data_2"
+  source = "data"
 
 [[services]]
   processes = ["app"]
