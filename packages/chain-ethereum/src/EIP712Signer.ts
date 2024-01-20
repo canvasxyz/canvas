@@ -31,7 +31,7 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 	public readonly verifyingContract: string | null
 	public readonly version: string | null
 
-	private readonly log = logger("canvas:chain-ethereum-eip712")
+	private readonly log = logger("canvas:chain-ethereum")
 
 	#store = target.getSessionStore()
 	#ethersSigner: AbstractSigner
