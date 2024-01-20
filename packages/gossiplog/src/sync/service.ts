@@ -29,7 +29,15 @@ import {
 	SYNC_RETRY_LIMIT,
 	second,
 } from "../constants.js"
-import { CacheMap, shuffle, sortPair, wait, DelayableController } from "../utils.js"
+import {
+	CacheMap,
+	shuffle,
+	sortPair,
+	wait,
+	DelayableController,
+	SyncDeadlockError,
+	SyncTimeoutError,
+} from "../utils.js"
 import { anySignal } from "any-signal"
 
 export interface SyncOptions {
@@ -236,7 +244,13 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 
 						return await this.sync(peerId, stream)
 					} catch (err) {
-						this.log.error("failed to sync with peer: %O", err)
+						if (err instanceof SyncTimeoutError) {
+							this.log("merkle sync timed out with %p, waiting to continue", peerId)
+						} else if (err instanceof SyncDeadlockError) {
+							this.log("started merkle sync concurrently with %p, retrying to break deadlock", peerId)
+						} else {
+							this.log.error("failed to sync with peer: %O", err)
+						}
 
 						if (this.#controller.signal.aborted) {
 							break
@@ -268,7 +282,10 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 		const client = new Client(stream)
 		try {
 			this.log("initiating sync with peer %p", peerId)
-			const { root, messageCount } = await this.messages.sync(client, { sourceId: peerId.toString(), timeoutController })
+			const { root, messageCount } = await this.messages.sync(client, {
+				sourceId: peerId.toString(),
+				timeoutController,
+			})
 			this.log("finished sync with peer %p, got root hash %s (%s messages)", peerId, hex(root.hash), messageCount)
 		} finally {
 			signal.clear()

@@ -4,6 +4,10 @@ import * as cbor from "@ipld/dag-cbor"
 
 import { lessThan } from "@canvas-js/okra"
 
+export class SyncDeadlockError extends Error {}
+export class SyncTimeoutError extends Error {}
+export class SyncResourceError extends Error {}
+
 export const cborNull: Uint8Array = cbor.encode(null)
 
 // eslint-disable-next-line no-useless-escape

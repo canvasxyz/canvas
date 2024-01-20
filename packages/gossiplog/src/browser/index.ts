@@ -6,7 +6,7 @@ import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
 import { IDBPDatabase, openDB } from "idb"
 
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
-import { assert } from "../utils.js"
+import { assert, SyncDeadlockError, SyncResourceError } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
@@ -79,7 +79,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		navigator.locks.request(this.lockName, { mode: "shared", signal: this.controller.signal }, (lock) => {
 			if (lock === null) {
 				this.log.error("failed to acquire shared lock")
-				throw new Error(`failed to acquire shared lock ${this.lockName}`)
+				throw new SyncResourceError(`failed to acquire shared lock ${this.lockName}`)
 			}
 
 			this.log("acquired shared lock")
@@ -116,7 +116,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		if (targetId !== null) {
 			if (this.outgoingSyncPeers.has(targetId)) {
-				throw new Error(`deadlock with peer ${targetId}`)
+				throw new SyncDeadlockError(`deadlock with peer ${targetId}`)
 			}
 		}
 
@@ -126,7 +126,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		await navigator.locks.request(this.lockName, { mode: "shared", signal: this.controller.signal }, async (lock) => {
 			if (lock === null) {
 				this.log.error("failed to acquire shared lock")
-				throw new Error(`failed to acquire shared lock ${this.lockName}`)
+				throw new SyncResourceError(`failed to acquire shared lock ${this.lockName}`)
 			}
 
 			this.log("acquired shared lock")
@@ -154,7 +154,13 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			try {
 				result = await callback({ messages: this.messages, heads, ancestors })
 			} catch (err) {
-				this.log.error("error in read-only transaction: %O", err)
+				if (err instanceof Error && err.name === "TransactionInactiveError") {
+					this.log.error("incoming merkle sync attempted, but transaction was invalid") // TODO: better txn handling
+				} else if (err instanceof Error && err.name === "Error" && err.message === "TIMEOUT") {
+					this.log.error("incoming merkle sync reached timeout") // TODO: this should be happening less
+				} else {
+					this.log.error("error in read-only transaction: %O", err)
+				}
 			} finally {
 				this.log("releasing shared lock")
 				if (targetId !== null) {
@@ -173,7 +179,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		const sourceId = options.sourceId ?? null
 		if (sourceId !== null) {
 			if (this.incomingSyncPeers.has(sourceId)) {
-				throw new Error(`deadlock with peer ${sourceId}`)
+				throw new SyncDeadlockError(`deadlock with peer ${sourceId}`)
 			}
 		}
 
@@ -187,7 +193,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			async (lock) => {
 				if (lock === null) {
 					this.log.error("failed to exclusive lock")
-					throw new Error(`failed to acquire exclusive lock ${this.lockName}`)
+					throw new SyncResourceError(`failed to acquire exclusive lock ${this.lockName}`)
 				}
 
 				this.log("acquired exclusive lock")
