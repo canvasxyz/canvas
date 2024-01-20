@@ -29,7 +29,7 @@ import {
 	SYNC_RETRY_LIMIT,
 	second,
 } from "../constants.js"
-import { CacheMap, shuffle, sortPair, wait, DelayableController } from "../utils.js"
+import { CacheMap, shuffle, sortPair, wait } from "../utils.js"
 import { anySignal } from "any-signal"
 
 export interface SyncOptions {
@@ -150,8 +150,7 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 		const peerId = connection.remotePeer
 		this.log("opened incoming stream %s from peer %p", stream.id, peerId)
 
-		const timeoutController = new DelayableController(3 * second)
-		const signal = anySignal([this.#controller.signal, timeoutController.signal])
+		const signal = anySignal([this.#controller.signal, AbortSignal.timeout(3 * second)])
 		signal.addEventListener("abort", (err) => {
 			if (stream.status === "open") {
 				stream.abort(new Error("TIMEOUT"))
@@ -170,7 +169,6 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 						encodeResponses,
 						lp.encode,
 						stream.sink,
-						() => timeoutController.delay()
 					)
 				},
 				{ targetId: peerId.toString() },
@@ -255,8 +253,7 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 	}
 
 	private async sync(peerId: PeerId, stream: Stream): Promise<void> {
-		const timeoutController = new DelayableController(3 * second)
-		const signal = anySignal([this.#controller.signal, timeoutController.signal])
+		const signal = anySignal([this.#controller.signal, AbortSignal.timeout(3 * second)])
 		signal.addEventListener("abort", (err) => {
 			if (stream.status === "open") {
 				stream.abort(new Error("TIMEOUT"))
@@ -266,7 +263,7 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 		const client = new Client(stream)
 		try {
 			this.log("initiating sync with peer %p", peerId)
-			const { root, messageCount } = await this.messages.sync(client, { sourceId: peerId.toString(), timeoutController })
+			const { root, messageCount } = await this.messages.sync(client, { sourceId: peerId.toString() })
 			this.log("finished sync with peer %p, got root hash %s (%s messages)", peerId, hex(root.hash), messageCount)
 		} finally {
 			signal.clear()
