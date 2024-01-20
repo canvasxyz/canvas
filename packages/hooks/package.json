@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/hooks",
-  "version": "0.8.26-alpha.4",
+  "version": "0.8.26",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -12,9 +12,9 @@
     ".": "./lib/index.js"
   },
   "dependencies": {
-    "@canvas-js/core": "0.8.26-alpha.4",
-    "@canvas-js/interfaces": "0.8.26-alpha.4",
-    "@canvas-js/modeldb": "0.8.26-alpha.4",
+    "@canvas-js/core": "0.8.26",
+    "@canvas-js/interfaces": "0.8.26",
+    "@canvas-js/modeldb": "0.8.26",
     "react": "^18.2.0"
   },
   "devDependencies": {
