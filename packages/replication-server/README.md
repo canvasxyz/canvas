@@ -30,3 +30,19 @@ Configure the replication server using environment variables:
     "/dns4/canvas-chat-discovery-p2.fly.dev/tcp/443/wss/p2p/12D3KooWRBdFp5T1fgjWdPSCf9cDqcCASMBgcLqjzzBvptjAfAxN",
 ]
 ```
+
+## Troubleshooting
+
+To connect to a running replication server, you can use the Fly console, e.g.:
+
+```
+fly ssh console --app=canvas-chat-discovery-p0
+```
+
+Then, you can install sqlite:
+
+```
+apt update
+apt install sqlite3
+sqlite3 data/my-example-app/db.sqlite
+```

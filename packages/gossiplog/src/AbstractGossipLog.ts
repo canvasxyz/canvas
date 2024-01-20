@@ -31,7 +31,7 @@ import {
 	getKey,
 	decodeSignedMessage,
 } from "./schema.js"
-import { assert, topicPattern, cborNull, getAncestorClocks } from "./utils.js"
+import { assert, topicPattern, cborNull, getAncestorClocks, DelayableController } from "./utils.js"
 
 export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
@@ -477,7 +477,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	/**
 	 * Sync with a remote source, applying and inserting all missing messages into the local log
 	 */
-	public async sync(source: Source, options: { sourceId?: string } = {}): Promise<{ root: Node }> {
+	public async sync(source: Source, options: { sourceId?: string, timeoutController?: DelayableController } = {}): Promise<{ root: Node, messageCount: number }> {
 		let messageCount = 0
 		const start = performance.now()
 		const root = await this.write(async (txn) => {
@@ -494,11 +494,16 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 						const parentValue = await txn.messages.get(parentKey)
 						if (parentValue === null) {
 							this.log.error("missing parent %s of message %s: %O", parent, id, message)
-							throw new Error(`missing parent ${parent} of message ${id}`)
+							if (this.indexAncestors) {
+								throw new Error(`missing parent ${parent} of message ${id}`)
+							} else {
+								continue // don't try to insert, just skip and try to get the message on the next sync
+							}
 						}
 					}
 
 					await this.#insert(txn, id, signature, message, [key, value])
+					if (options.timeoutController) options.timeoutController.delay()
 					messageCount++
 				}
 			}
@@ -512,7 +517,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		this.dispatchEvent(new CustomEvent("sync", { detail: { peer, duration, messageCount } }))
 		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
 		this.log("commited root %s", hex(root.hash))
-		return { root }
+		return { root, messageCount }
 	}
 
 	/**

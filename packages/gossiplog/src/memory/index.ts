@@ -5,7 +5,7 @@ import { Bound } from "@canvas-js/okra"
 import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"
 
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
-import { assert } from "../utils.js"
+import { assert, SyncDeadlockError } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
@@ -71,7 +71,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		if (targetId !== null) {
 			if (this.outgoingSyncPeers.has(targetId)) {
-				throw new Error(`deadlock with peer ${targetId}`)
+				throw new SyncDeadlockError(`deadlock with peer ${targetId}`)
 			}
 		}
 
@@ -101,7 +101,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		const sourceId = options.sourceId ?? null
 		if (sourceId !== null) {
 			if (this.incomingSyncPeers.has(sourceId)) {
-				throw new Error(`deadlock with peer ${sourceId}`)
+				throw new SyncDeadlockError(`deadlock with peer ${sourceId}`)
 			}
 		}
 

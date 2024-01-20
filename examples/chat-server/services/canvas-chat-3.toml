@@ -5,14 +5,13 @@ processes = []
 
 [env]
   ANNOUNCE = "/dns4/canvas-chat-3.fly.dev/tcp/443/wss"
-  DEBUG    = "canvas:*:error"
+  DEBUG    = "canvas:*:error,canvas:gossiplog:*"
 
 [mounts]
   destination = "/data"
   source = "canvas_chat_data_3"
 
 [[services]]
-  internal_port = 8081
   processes = ["app"]
   protocol = "tcp"
 

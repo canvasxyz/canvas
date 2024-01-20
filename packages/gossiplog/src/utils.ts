@@ -4,6 +4,10 @@ import * as cbor from "@ipld/dag-cbor"
 
 import { lessThan } from "@canvas-js/okra"
 
+export class SyncDeadlockError extends Error {}
+export class SyncTimeoutError extends Error {}
+export class SyncResourceError extends Error {}
+
 export const cborNull: Uint8Array = cbor.encode(null)
 
 // eslint-disable-next-line no-useless-escape
@@ -62,6 +66,28 @@ export async function wait(interval: number, options: { signal: AbortSignal }) {
 	await new Promise<void>((resolve) => {
 		signal.addEventListener("abort", () => resolve())
 	}).finally(() => signal.clear())
+}
+
+export class DelayableController {
+	#interval: number
+	#controller: AbortController
+	#timer: ReturnType<typeof setTimeout>
+	signal: AbortSignal
+
+	constructor(interval: number) {
+		this.#interval = interval
+		this.#controller = new AbortController()
+		this.signal = this.#controller.signal
+		this.#timer = setTimeout(() => {
+			this.#controller.abort()
+		}, this.#interval)
+	}
+	delay() {
+		clearTimeout(this.#timer)
+		this.#timer = setTimeout(() => {
+			this.#controller.abort()
+		}, this.#interval)
+	}
 }
 
 // add elements with CacheMap.add(key, value) and they'll

@@ -22,8 +22,12 @@ import {
 
 export interface SIWESignerViemInit {
 	chainId?: number
-	signer?: WalletClient
+	signer?: WalletClient | PrivateKeyAccount
 	sessionDuration?: number
+}
+
+function isPrivateKeyAccount(signer: WalletClient | PrivateKeyAccount): signer is PrivateKeyAccount {
+	return (signer as PrivateKeyAccount).source === "privateKey"
 }
 
 export class SIWESignerViem implements SessionSigner<SIWESessionData> {
@@ -40,8 +44,17 @@ export class SIWESignerViem implements SessionSigner<SIWESessionData> {
 	}
 
 	public constructor(init: SIWESignerViemInit = {}) {
-		if (init.signer) {
-			// use the passed signer
+		if (init.signer && isPrivateKeyAccount(init.signer)) {
+			// use passed PrivateKeyAccount
+			const pka = init.signer
+			this.#account = {
+				getAddress: async () => {
+					return pka.address
+				},
+				sign: async (message) => await pka.signMessage({ message }),
+			}
+		} else if (init.signer) {
+			// use passed WalletClient
 			const walletClient = init.signer
 			this.#account = {
 				getAddress: async () => {
