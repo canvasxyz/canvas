@@ -12,21 +12,21 @@ import {
 	type EIP712SessionMessage,
 	validateEIP712SessionData,
 } from "./eip712types.js"
-import { assert, signalInvalidType, parseAddress, addressPattern } from "./utils.js"
+import { assert, signalInvalidType, parseAddress, addressPattern, DAYS } from "./utils.js"
 
+// If provided, chainId, verifyingContract, and version are used in the EIP712 domain:
+// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md#definition-of-domainseparator
 export interface EIP712SignerInit {
 	signer?: AbstractSigner
 	sessionDuration?: number
-	// If provided, chainId, verifyingContract, and version are used in the EIP712 domain:
-	// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md#definition-of-domainseparator
-	chainId?: number
-	verifyingContract?: string
-	version?: string
+	chainId?: number // optional
+	verifyingContract?: string // optional
+	version?: string // optional
 }
 
 export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 	public readonly key: string
-	public readonly sessionDuration: number | null
+	public readonly sessionDuration: number
 	public readonly chainId: number
 
 	private readonly log = logger("canvas:chain-ethereum")
@@ -36,7 +36,7 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 
 	public constructor(init: EIP712SignerInit = {}) {
 		this.#ethersSigner = init.signer ?? Wallet.createRandom()
-		this.sessionDuration = init.sessionDuration ?? null
+		this.sessionDuration = init.sessionDuration ?? 14 * DAYS
 		this.chainId = init.chainId ?? 1
 		this.key = `EIP712Signer-${init.signer ? "signer" : "burner"}`
 	}
@@ -100,7 +100,7 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 			publicKey: signer.uri,
 			blockhash: "",
 			timestamp,
-			duration: this.sessionDuration ?? 0,
+			duration: this.sessionDuration,
 		}
 
 		const signature = await this.#ethersSigner.signTypedData({}, eip712TypeDefinitions, message)
@@ -110,7 +110,7 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 			address: address,
 			publicKey: signer.uri,
 			authorizationData: { signature: getBytes(signature) },
-			duration: this.sessionDuration || 0,
+			duration: this.sessionDuration,
 			timestamp: timestamp,
 			blockhash: "",
 		}
