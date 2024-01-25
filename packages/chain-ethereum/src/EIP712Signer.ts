@@ -6,13 +6,8 @@ import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
 import target from "#target"
 
-import {
-	eip712TypeDefinitions,
-	type EIP712SessionData,
-	type EIP712SessionMessage,
-	validateEIP712SessionData,
-} from "./eip712types.js"
-import { assert, signalInvalidType, parseAddress, addressPattern, DAYS } from "./utils.js"
+import type { EIP712SessionData, EIP712SessionMessage } from "./types.js"
+import { assert, signalInvalidType, parseAddress, addressPattern, validateEIP712SessionData, DAYS } from "./utils.js"
 
 // If provided, chainId, verifyingContract, and version are used in the EIP712 domain:
 // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md#definition-of-domainseparator
@@ -22,6 +17,16 @@ export interface EIP712SignerInit {
 	chainId?: number // optional
 	verifyingContract?: string // optional
 	version?: string // optional
+}
+
+export const eip712TypeDefinitions = {
+	Session: [
+		{ name: "address", type: "address" }, // TODO: the address that delegating permissions
+		{ name: "blockhash", type: "string" }, // optional
+		{ name: "duration", type: "uint256" },
+		{ name: "publicKey", type: "string" }, // TODO: the delegatee that is being authorized to sign actions
+		{ name: "timestamp", type: "uint256" },
+	],
 }
 
 export class EIP712Signer implements SessionSigner<EIP712SessionData> {

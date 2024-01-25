@@ -1,7 +1,7 @@
 import { CID } from "multiformats/cid"
 import * as siwe from "siwe"
 
-import type { SIWESessionData, SIWEMessage } from "./types.js"
+import type { SIWESessionData, SIWEMessage, EIP712SessionData, EIP712SessionMessage } from "./types.js"
 
 export const SECONDS = 1000
 export const MINUTES = 60 * SECONDS
@@ -38,6 +38,16 @@ export function validateSIWESessionData(authorizationData: unknown): authorizati
 
 	const { signature, domain, nonce } = authorizationData as Record<string, any>
 	return signature instanceof Uint8Array && typeof domain === "string" && typeof nonce === "string"
+}
+
+export function validateEIP712SessionData(authorizationData: unknown): authorizationData is EIP712SessionData {
+	try {
+		const { signature } = authorizationData as any
+		assert(signature instanceof Uint8Array, "signature must be a Uint8Array")
+		return true
+	} catch (e) {
+		return false
+	}
 }
 
 export const SIWEMessageVersion = "1"
