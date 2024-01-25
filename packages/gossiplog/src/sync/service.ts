@@ -188,10 +188,14 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 
 			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
 		} catch (err) {
-			this.log.error("aborting incoming stream %s from peer %p: %O", stream.id, peerId, err)
-			if (err instanceof Error) {
+			if (err instanceof Error && err.message === "TIMEOUT") {
+				this.log.error("timed out incoming stream %s from peer %p", stream.id, peerId)
+				stream.abort(err)
+			} else if (err instanceof Error) {
+				this.log.error("aborting incoming stream %s from peer %p: %O", stream.id, peerId, err)
 				stream.abort(err)
 			} else {
+				this.log.error("aborting incoming stream %s from peer %p: %O", stream.id, peerId, err)
 				stream.abort(new Error("internal error"))
 			}
 		} finally {
