@@ -12,12 +12,24 @@ test(`empty argument`, (t) => {
 test(`argument with a variety of valid fields`, (t) => {
 	const { types, values } = getAbiEncodeParametersArguments({
 		a: 1,
-		b: "2",
-		c: true,
-		d: "0x0000000000000000000000000000000000000000",
+		b: -1,
+		c: "2",
+		d: true,
+		e: "0x0000000000000000000000000000000000000000",
 	})
-	t.deepEqual(types, ["string", "int256", "string", "string", "string", "bool", "string", "address"])
-	t.deepEqual(values, ["a", 1, "b", "2", "c", true, "d", "0x0000000000000000000000000000000000000000"])
+	t.deepEqual(types, [
+		"string",
+		"int256",
+		"string",
+		"int256",
+		"string",
+		"string",
+		"string",
+		"bool",
+		"string",
+		"address",
+	])
+	t.deepEqual(values, ["a", 1, "b", -1, "c", "2", "d", true, "e", "0x0000000000000000000000000000000000000000"])
 	web3.eth.abi.encodeParameters(types, values)
 })
 
