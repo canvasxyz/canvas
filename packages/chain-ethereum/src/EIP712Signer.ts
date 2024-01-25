@@ -28,8 +28,6 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 	public readonly key: string
 	public readonly sessionDuration: number | null
 	public readonly chainId: number
-	public readonly verifyingContract: string | null
-	public readonly version: string | null
 
 	private readonly log = logger("canvas:chain-ethereum")
 
@@ -40,8 +38,6 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 		this.#ethersSigner = init.signer ?? Wallet.createRandom()
 		this.sessionDuration = init.sessionDuration ?? null
 		this.chainId = init.chainId ?? 1
-		this.verifyingContract = init.verifyingContract ?? null
-		this.version = init.version ?? null
 		this.key = `EIP712Signer-${init.signer ? "signer" : "burner"}`
 	}
 
