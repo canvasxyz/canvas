@@ -3,7 +3,6 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./CID.sol";
-import "./ECDSA_Verify.sol";
 
 string constant sessionType = "Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
 bytes32 constant sessionTypedDataHash = keccak256(bytes(sessionType));
@@ -161,8 +160,26 @@ contract EIP712_Canvas {
     ) public pure returns (bool) {
         bytes32 digest = _hashTypedDataV4(getStructHashForMessageSession(messageSession));
         bytes memory cid = createCIDEip712CodecNoneDigest(bytes.concat(digest));
+        bytes32 hash = sha256(cid);
 
-        return ECDSA_Verify.verify(sha256(cid), signature, expectedAddress);
+        bytes32 r;
+        bytes32 s;
+        assembly {
+          r := mload(add(signature, 0x20))
+          s := mload(add(signature, 0x40))
+        }
+
+        address signerV27 = ECDSA.recover(hash, 27, r, s);
+        if (signerV27 == expectedAddress) {
+            return true;
+        }
+
+        address signerV28 = ECDSA.recover(hash, 28, r, s);
+        if (signerV28 == expectedAddress) {
+            return true;
+        }
+
+        return false;
     }
 
     function verifyAddressForMessageAction(
@@ -172,7 +189,25 @@ contract EIP712_Canvas {
     ) public pure returns (bool) {
         bytes32 digest = _hashTypedDataV4(getStructHashForMessageAction(messageAction));
         bytes memory cid = createCIDEip712CodecNoneDigest(bytes.concat(digest));
+        bytes32 hash = sha256(cid);
 
-        return ECDSA_Verify.verify(sha256(cid), signature, expectedAddress);
+        bytes32 r;
+        bytes32 s;
+        assembly {
+          r := mload(add(signature, 0x20))
+          s := mload(add(signature, 0x40))
+        }
+
+        address signerV27 = ECDSA.recover(hash, 27, r, s);
+        if (signerV27 == expectedAddress) {
+            return true;
+        }
+
+        address signerV28 = ECDSA.recover(hash, 28, r, s);
+        if (signerV28 == expectedAddress) {
+            return true;
+        }
+
+        return false;
     }
 }

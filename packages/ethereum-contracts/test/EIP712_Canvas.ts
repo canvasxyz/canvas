@@ -7,9 +7,7 @@ const domainName = "example:signer"
 describe("EIP712_Canvas", function () {
 	async function deployFixture() {
 		const EIP712_Canvas = await ethers.getContractFactory("EIP712_Canvas")
-
 		const contract = await EIP712_Canvas.deploy()
-
 		return { contract }
 	}
 
@@ -28,7 +26,7 @@ describe("EIP712_Canvas", function () {
 		return { getPublicKeyFromSignature }
 	}
 
-	describe("Signing data", function () {
+	describe("contract.recoverAddressFromSession", function () {
 		it("Should verify that a session has been signed by the proper address with getSession", async function () {
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
 			const { contract } = await loadFixture(deployFixture)
@@ -53,7 +51,9 @@ describe("EIP712_Canvas", function () {
 
 			expect(recoveredWalletAddress).to.equal(walletAddress)
 		})
+	})
 
+	describe("contract.verifyAddressForMessageSession", function () {
 		it("Should verify that a session has been signed by the proper address with sign", async function () {
 			const { verifySignedValue } = await import("@canvas-js/signed-cid")
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
@@ -62,7 +62,7 @@ describe("EIP712_Canvas", function () {
 			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
 
 			const signer = new EIP712Signer({})
-			const session = await signer.getSession(domainName)
+			const session = await signer.getSession(domainName, { fromCache: false })
 
 			const topic = "example:signer"
 			const clock = 1
@@ -96,7 +96,9 @@ describe("EIP712_Canvas", function () {
 			)
 			expect(verified).to.equal(true)
 		})
+	})
 
+	describe("contract.verifyAddressForMessageAction", function () {
 		it("Should verify that an action has been signed by the proper address with sign", async function () {
 			const { verifySignedValue, dynamicAbiEncodeArgs } = await import("@canvas-js/signed-cid")
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
@@ -105,12 +107,12 @@ describe("EIP712_Canvas", function () {
 			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
 
 			const signer = new EIP712Signer({})
-			const session = await signer.getSession(domainName)
+			const session = await signer.getSession(domainName, { fromCache: false })
 
+			// sign an action
 			const topic = "example:signer"
 			const clock = 1
 			const parents = ["parent1", "parent2"]
-
 			const action = {
 				type: "action" as const,
 				address: session.address,
@@ -119,10 +121,10 @@ describe("EIP712_Canvas", function () {
 				blockhash: null,
 				timestamp: session.timestamp,
 			}
-
 			const actionMessage = { topic, clock, parents, payload: action }
 			const actionSignature = signer.sign(actionMessage)
 
+			// verify the action offchain
 			verifySignedValue(actionSignature, actionMessage)
 
 			// extract the public key from the URI
