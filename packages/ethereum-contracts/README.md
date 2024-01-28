@@ -16,7 +16,7 @@ import "@canvas-js/ethereum-contracts/EIP712_Canvas.sol";
 contract EIP712_Canvas {
     struct Session {
         address address_;
-        string blockhash_;
+        string blockhash;
         uint256 duration;
         string publicKey;
         uint256 timestamp;
@@ -25,7 +25,7 @@ contract EIP712_Canvas {
     struct Action {
         address address_;
         bytes args;
-        string blockhash_;
+        string blockhash;
         string name;
         uint256 timestamp;
     }

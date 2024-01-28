@@ -43,7 +43,7 @@ describe("EIP712_Canvas", function () {
 			const recoveredWalletAddress = await contract.recoverAddressFromSession(
 				{
 					address_: walletAddress,
-					blockhash_: session.blockhash || "",
+					blockhash: session.blockhash || "",
 					duration: session.duration || 0,
 					publicKey: session.publicKey,
 					timestamp: session.timestamp,
@@ -85,7 +85,7 @@ describe("EIP712_Canvas", function () {
 					topic,
 					payload: {
 						address_: session.address.split(":")[2],
-						blockhash_: session.blockhash || "",
+						blockhash: session.blockhash || "",
 						duration: session.duration || 0,
 						publicKey: session.publicKey,
 						timestamp: session.timestamp,
@@ -143,7 +143,7 @@ describe("EIP712_Canvas", function () {
 					payload: {
 						address_: action.address.split(":")[2],
 						args: dynamicAbiEncodeArgs(action.args),
-						blockhash_: action.blockhash || "",
+						blockhash: action.blockhash || "",
 						name: action.name,
 						timestamp: action.timestamp,
 					},

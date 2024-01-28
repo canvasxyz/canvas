@@ -23,7 +23,7 @@ contract EIP712_Canvas {
 
     struct Session {
         address address_;
-        string blockhash_;
+        string blockhash;
         uint256 duration;
         string publicKey;
         uint256 timestamp;
@@ -32,7 +32,7 @@ contract EIP712_Canvas {
     struct Action {
         address address_;
         bytes args;
-        string blockhash_;
+        string blockhash;
         string name;
         uint256 timestamp;
     }
@@ -95,7 +95,7 @@ contract EIP712_Canvas {
         return keccak256(abi.encode(
             sessionTypedDataHash, // keccak hash of typed data
             session.address_,
-            keccak256(bytes(session.blockhash_)),
+            keccak256(bytes(session.blockhash)),
             session.duration,
             keccak256(bytes(session.publicKey)),
             session.timestamp
@@ -109,7 +109,7 @@ contract EIP712_Canvas {
             actionTypedDataHash,
             action.address_,
             keccak256(action.args),
-            keccak256(bytes(action.blockhash_)),
+            keccak256(bytes(action.blockhash)),
             keccak256(bytes(action.name)),
             action.timestamp
         ));
