@@ -4,18 +4,13 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./CID.sol";
 
+// These EIP712 typed data hashes *must* exactly match those at @canvas-js/chain-ethereum in `src/EIP712Signer.ts`.
 string constant sessionType = "Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
-bytes32 constant sessionTypedDataHash = keccak256(bytes(sessionType));
-
 string constant actionType = "Action(address address,bytes args,string blockhash,string name,uint256 timestamp)";
-bytes32 constant actionTypedDataHash = keccak256(bytes(actionType));
-
 string constant messageSessionType = "Message(uint256 clock,string[] parents,Session payload,string topic)Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
-bytes32 constant messageSessionTypedDataHash = keccak256(bytes(messageSessionType));
-
 string constant messageActionType = "Message(uint256 clock,string[] parents,Action payload,string topic)Action(address address,bytes args,string blockhash,string name,uint256 timestamp)";
-bytes32 constant messageActionTypedDataHash = keccak256(bytes(messageActionType));
 
+// TODO: Handle the case where the signer is initialized with a `uint256 chainId`, `address verifyingContract`, `string version`, or `string name`.
 bytes32 constant emptyDomainSeparator = keccak256(abi.encode(keccak256("EIP712Domain()")));
 
 contract EIP712_Canvas {
@@ -92,7 +87,7 @@ contract EIP712_Canvas {
         Session memory session
     ) public pure returns (bytes32) {
         return keccak256(abi.encode(
-            sessionTypedDataHash, // keccak hash of typed data
+            keccak256(bytes(sessionType)),
             session.address_,
             keccak256(bytes(session.blockhash)),
             session.duration,
@@ -105,7 +100,7 @@ contract EIP712_Canvas {
         Action memory action
     ) public pure returns (bytes32) {
         return keccak256(abi.encode(
-            actionTypedDataHash,
+            keccak256(bytes(actionType)),
             action.address_,
             keccak256(action.args),
             keccak256(bytes(action.blockhash)),
@@ -129,7 +124,7 @@ contract EIP712_Canvas {
         return
         keccak256(
             abi.encode(
-                messageSessionTypedDataHash, // keccak hash of typed data
+                keccak256(bytes(messageSessionType)),
                 messageSession.clock,
                 hashArrayOfStrings(messageSession.parents),
                 getStructHashForSession(messageSession.payload),
@@ -144,7 +139,7 @@ contract EIP712_Canvas {
         return
         keccak256(
             abi.encode(
-                messageActionTypedDataHash, // keccak hash of typed data
+                keccak256(bytes(messageActionType)),
                 messageAction.clock,
                 hashArrayOfStrings(messageAction.parents),
                 getStructHashForAction(messageAction.payload),
