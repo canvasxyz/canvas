@@ -5,47 +5,22 @@ import { TypedDataEncoder } from "ethers/hash"
 import { Action, Message, Session } from "@canvas-js/interfaces"
 type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint8Array> }
 
-export function dynamicAbiEncodeArgs(args: Record<string, any>): string {
-	const { types, values } = getAbiEncodeParametersArguments(args)
-	return web3.eth.abi.encodeParameters(types, values)
-}
-
-function getAbiTypeForValue(value: any) {
-	if (typeof value === "string") {
-		if (value.match(/^0x[0-9a-fA-F]{40}$/)) {
-			return "address"
-		} else {
-			return "string"
-		}
-	} else if (typeof value === "number") {
-		// if is integer
-		if (Number.isInteger(value)) {
-			return "int256"
-		} else {
-			throw new TypeError(`non-integer numbers are not yet supported`)
-		}
-	} else if (typeof value === "boolean") {
-		return "bool"
-	}
-	throw new TypeError(`invalid type ${typeof value}`)
-}
-
-export function getAbiEncodeParametersArguments(args: Record<string, any>) {
-	const sortedArgs = Object.keys(args).sort()
-
-	const types: string[] = []
-	const values: any[] = []
-
-	for (const key of sortedArgs) {
-		types.push("string")
-		values.push(key)
-
-		types.push(getAbiTypeForValue(args[key]))
-		values.push(args[key])
-	}
-	return { types, values }
-}
-
+/**
+ * This codec returns CID for (a subset of) JSON objects using ABI encoding
+ * and TypedDataEncoder.
+ *
+ * Objects may contain nested objects, address strings, strings, numbers,
+ * or booleans, which are mapped to `bytes`, `address`, `string`, `int256`,
+ * or `bool` respectively.
+ *
+ * We enforce that numbers are integers, and 40-byte-long strings beginning
+ * with "0x" are always encoded as addresses.
+ *
+ * While the codec is implemented for dynamically typed data, if you are
+ * writing an onchain verifier for offchain signed data, it must still be
+ * statically typed to a specific action schema beforehand. See the
+ * `@canvas-js/ethereum-contracts` package for an example.
+ */
 export const eip712Codec: Codec = {
 	name: "eip712",
 	code: 712,
@@ -112,4 +87,59 @@ export const eip712Codec: Codec = {
 		}
 		return [getBytes(hashedPayload)]
 	},
+}
+
+/**
+ * Encode an argument object of type `Record<string, any>` as an
+ * ABI-encoded bytestring.
+ */
+export function dynamicAbiEncodeArgs(args: Record<string, any>): string {
+	const { types, values } = getAbiEncodeParametersArguments(args)
+	return web3.eth.abi.encodeParameters(types, values)
+}
+
+/**
+ * Identify types for an argument `Record<string, any>`.
+ *
+ * This is exposed separately from `dynamicAbiEncodeArgs` so both are
+ * available for tests.
+ */
+export function getAbiEncodeParametersArguments(args: Record<string, any>) {
+	const sortedArgs = Object.keys(args).sort()
+
+	const types: string[] = []
+	const values: any[] = []
+
+	for (const key of sortedArgs) {
+		types.push("string")
+		values.push(key)
+
+		types.push(getAbiTypeForValue(args[key]))
+		values.push(args[key])
+	}
+	return { types, values }
+}
+
+/**
+ * Get the type of a dynamically typed JS argument for typehash
+ * generation.
+ */
+function getAbiTypeForValue(value: any) {
+	if (typeof value === "string") {
+		if (value.match(/^0x[0-9a-fA-F]{40}$/)) {
+			return "address"
+		} else {
+			return "string"
+		}
+	} else if (typeof value === "number") {
+		// if is integer
+		if (Number.isInteger(value)) {
+			return "int256"
+		} else {
+			throw new TypeError(`non-integer numbers are not yet supported`)
+		}
+	} else if (typeof value === "boolean") {
+		return "bool"
+	}
+	throw new TypeError(`invalid type ${typeof value}`)
 }

@@ -14,7 +14,6 @@ string constant messageActionType = "Message(uint256 clock,string[] parents,Acti
 bytes32 constant emptyDomainSeparator = keccak256(abi.encode(keccak256("EIP712Domain()")));
 
 contract EIP712_Canvas {
-
     struct Session {
         address address_;
         string blockhash;
