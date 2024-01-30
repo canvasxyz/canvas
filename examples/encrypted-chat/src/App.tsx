@@ -4,6 +4,7 @@ import { ethers } from "ethers"
 
 import type { Canvas } from "@canvas-js/core"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
+import { usePrivateChat } from "@canvas-js/hooks/ethers"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { usePrivkey } from "./components/privkeys"
@@ -20,128 +21,6 @@ const fromCAIP = (address: string) => {
 const getGroupId = (address1: string, address2: string) => {
 	return address1 < address2 ? `${address1},${address2}` : `${address1},${address2}`
 }
-
-const useChat = (topic: string, wallet: ethers.Wallet) => {
-	const { app } = useCanvas({
-		signers: [new SIWESigner({ signer: wallet })],
-		contract: {
-			topic,
-			models: {
-				encryptionKeys: {
-					address: "primary",
-					key: "string",
-				},
-				encryptionGroups: {
-					id: "primary",
-					groupKeys: "string",
-					key: "string",
-				},
-				messages: {
-					id: "primary",
-					address: "string",
-					text: "string",
-					timestamp: "string",
-					$indexes: [["timestamp"] /*["address", "timestamp"]*/],
-				},
-				privateMessages: {
-					id: "primary",
-					ciphertext: "string",
-					group: "string",
-					timestamp: "integer",
-					$indexes: [["timestamp"]],
-				},
-			},
-			actions: {
-				registerEncryptionKey: (db, { key }, { address }) => {
-					db.set("encryptionKeys", { address, key })
-				},
-				createEncryptionGroup: (db, { members, groupKeys, groupPublicKey }, { address }) => {
-					// TODO: enforce the encryption group is sorted correctly, and each groupKey is registered correctly
-					if (members.indexOf(fromCAIP(address)) === -1) throw new Error()
-					const id = members.join()
-
-					db.set("encryptionGroups", {
-						id,
-						groupKeys: JSON.stringify(groupKeys),
-						key: groupPublicKey,
-					})
-				},
-				sendLobbyMessage: (db, { text }, { address, timestamp, id }) => {
-					db.set("messages", { msgid: id, address: address, text, timestamp })
-				},
-				sendPrivateMessage: (db, { group, ciphertext }, { timestamp, id }) => {
-					// TODO: check address is in group
-					db.set("privateMessages", { id, ciphertext, group, timestamp })
-				},
-			},
-		},
-	})
-
-	const people = useLiveQuery(app, "encryptionKeys", { orderBy: { address: "desc" } })
-	// const lobby = useLiveQuery(app, "messages", { orderBy: { timestamp: "desc" } })
-
-	return {
-		wallet,
-		app,
-		people,
-		sendLobbyMessage: async (message: string) => {
-			if (!app) throw new Error()
-			return app.actions.sendLobbyMessage(message)
-		},
-		registerEncryptionKey: async (privateKey: string) => {
-			if (!app) throw new Error()
-			const key = getEncryptionPublicKey(privateKey.slice(2))
-			return app.actions.registerEncryptionKey({ key })
-		},
-		createEncryptionGroup: async (recipient: string) => {
-			if (!app) throw new Error()
-			if (!wallet) throw new Error()
-
-			const myKey = await app.db.get("encryptionKeys", toCAIP(wallet.address))
-			if (!myKey) throw new Error("Wallet has not registered an encryption key")
-
-			const recipientKey = await app.db.get("encryptionKeys", toCAIP(recipient))
-			if (!recipientKey) throw new Error("Recipient has not registered an encryption key")
-
-			const members = [wallet.address, recipient]
-			const group = getGroupId(wallet.address, recipient)
-
-			const groupPrivateKey = ethers.Wallet.createRandom().privateKey
-			const groupPublicKey = getEncryptionPublicKey(groupPrivateKey.slice(2))
-			const groupKeys = (await Promise.all(members.map((member) => app.db.get("encryptionKeys", toCAIP(member)))))
-				.map((result) => result?.key)
-				.map((key) => {
-					return encryptSafely({ publicKey: key as string, data: groupPrivateKey, version: "x25519-xsalsa20-poly1305" })
-				})
-
-			await app.actions.createEncryptionGroup({ id: group, members, groupKeys, groupPublicKey })
-		},
-		sendPrivateMessage: async (recipient: string, message: string) => {
-			if (!app) throw new Error()
-			if (!wallet?.address) throw new Error()
-
-			const address = wallet?.address
-			const group = getGroupId(address, recipient)
-			const encryptionGroup = await app.db.get("encryptionGroups", group)
-
-			if (!encryptionGroup) throw new Error("Invalid group")
-
-			const encryptedData = encryptSafely({
-				publicKey: encryptionGroup.key as string,
-				data: message,
-				version: "x25519-xsalsa20-poly1305",
-			})
-			const ciphertext = JSON.stringify(encryptedData)
-			await app.actions.sendPrivateMessage({ group, ciphertext })
-		},
-	}
-}
-
-// const chat = useChat('my-app', mud.burnerWallet.privateKey)
-// chat.sendLobbyMessage('hi')
-// chat.sendPrivateMessage('hey whats going on', theirAddress)
-// const messages = useLobby() // useLobbyConversation?
-// const privateMessages = usePrivateMessages() // does this need separate hooks for DMSelector, DMConversation?
 
 function Wrapper() {
 	const privkey1 = usePrivkey("wallet-privkey1")
@@ -164,12 +43,19 @@ function Wrapper() {
 }
 
 function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wallet }) {
-	const { app, people, registerEncryptionKey, createEncryptionGroup, sendPrivateMessage } = useChat(
-		"example-topic",
-		wallet1,
-	)
+	const { app, people, registerEncryptionKey, createEncryptionGroup, sendPrivateMessage } = usePrivateChat({
+			topic: "xyz.canvas.example-topic",
+			discoveryTopic: "xyz.canvas.encrypted-chat-discovery",
+			signers: [new SIWESigner({ signer: wallet1 })],
+			wallet: wallet1
+	})
 
-	const { registerEncryptionKey: registerEncryptionKey2 } = useChat("example-topic", wallet2)
+	const { registerEncryptionKey: registerEncryptionKey2 } = usePrivateChat({ 
+		topic: "xyz.canvas.example-topic",
+		discoveryTopic: "xyz.canvas.encrypted-chat",
+		signers: [new SIWESigner({ signer: wallet2 })],
+		wallet: wallet2,
+	})
 
 	const registration1 = useLiveQuery(app, "encryptionKeys", { where: { address: toCAIP(wallet1?.address) } })
 	const registration2 = useLiveQuery(app, "encryptionKeys", { where: { address: toCAIP(wallet2?.address) } })

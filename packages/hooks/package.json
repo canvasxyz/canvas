@@ -9,12 +9,17 @@
     "lib"
   ],
   "exports": {
-    ".": "./lib/index.js"
+    ".": "./lib/index.js",
+    "./ethers": "./lib/ethers/index.js",
+    "./viem": "./lib/viem/index.js"
   },
   "dependencies": {
     "@canvas-js/core": "0.8.26",
     "@canvas-js/interfaces": "0.8.26",
     "@canvas-js/modeldb": "0.8.26",
+    "@metamask/eth-sig-util": "^7.0.1",
+    "ethers": "^6.9.0",
+    "viem": ">1.14.0",
     "react": "^18.2.0"
   },
   "devDependencies": {
