@@ -53,7 +53,7 @@ describe("EIP712_Canvas", function () {
 		})
 	})
 
-	describe("contract.verifyAddressForMessageSession", function () {
+	describe("contract.verifySessionMessage", function () {
 		it("Should verify that a session has been signed by the proper address with sign", async function () {
 			const { verifySignedValue } = await import("@canvas-js/signed-cid")
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
@@ -78,7 +78,7 @@ describe("EIP712_Canvas", function () {
 
 			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
 
-			const verified = await contract.verifyAddressForMessageSession(
+			const verified = await contract.verifySessionMessage(
 				{
 					clock,
 					parents,
@@ -98,7 +98,7 @@ describe("EIP712_Canvas", function () {
 		})
 	})
 
-	describe("contract.verifyAddressForMessageAction", function () {
+	describe("contract.verifyActionMessage", function () {
 		it("Should verify that an action has been signed by the proper address with sign", async function () {
 			const { verifySignedValue, dynamicAbiEncodeArgs } = await import("@canvas-js/signed-cid")
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
@@ -136,7 +136,7 @@ describe("EIP712_Canvas", function () {
 			// we should include the recovery parameter as part of the signature
 			// and then just ignore it if we are verifying using a method that doesn't need it
 			// this could be implemented inside the contract
-			const verified = await contract.verifyAddressForMessageAction(
+			const verified = await contract.verifyActionMessage(
 				{
 					clock,
 					parents,

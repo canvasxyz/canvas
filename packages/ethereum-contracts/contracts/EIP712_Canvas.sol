@@ -6,7 +6,7 @@
  * Typed data signatures for Sessions and Actions should exactly match those at:
  *
  * - @canvas-js/chain-ethereum `src/EIP712Signer.ts` (Session)
- * - @canvas-js/signed-cid `src/eip712codec.ts` (MessageSession, MessageAction)
+ * - @canvas-js/signed-cid `src/eip712codec.ts` (SessionMessage, ActionMessage)
  *
  * Canonically, the chain-ethereum signer asks the user's wallet to sign an
  * EIP712 serialized Session. The session key that was just authorized is then
@@ -14,7 +14,7 @@
  * and appended to the execution log.
  *
  * This is why we have we have EIP712 typedefs inside `@canvas-js/chain-ethereum`
- * for Session, and typedefs for MessageSession and MessageAction in
+ * for Session, and typedefs for SessionMessage and ActionMessage in
  * @canvas-js/signed-cid, but no typedefs for Action.
  */
 
@@ -25,8 +25,8 @@ import "./CID.sol";
 
 string constant sessionType = "Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
 string constant actionType = "Action(address address,bytes args,string blockhash,string name,uint256 timestamp)";
-string constant messageSessionType = "Message(uint256 clock,string[] parents,Session payload,string topic)Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
-string constant messageActionType = "Message(uint256 clock,string[] parents,Action payload,string topic)Action(address address,bytes args,string blockhash,string name,uint256 timestamp)";
+string constant sessionMessageType = "Message(uint256 clock,string[] parents,Session payload,string topic)Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
+string constant actionMessageType = "Message(uint256 clock,string[] parents,Action payload,string topic)Action(address address,bytes args,string blockhash,string name,uint256 timestamp)";
 
 // TODO: Handle the case where the signer is initialized with a `uint256 chainId`, `address verifyingContract`, `string version`, or `string name`.
 bytes32 constant emptyDomainSeparator = keccak256(abi.encode(keccak256("EIP712Domain()")));
@@ -48,14 +48,14 @@ contract EIP712_Canvas {
         uint256 timestamp;
     }
 
-    struct MessageSession {
+    struct SessionMessage {
         uint256 clock;
         string[] parents;
         Session payload;
         string topic;
     }
 
-    struct MessageAction {
+    struct ActionMessage {
         uint256 clock;
         string[] parents;
         Action payload;
@@ -75,10 +75,7 @@ contract EIP712_Canvas {
     }
 
     function _hashTypedDataV4(bytes32 structHash) internal pure returns (bytes32 digest) {
-        return _toTypedDataHash(emptyDomainSeparator, structHash);
-    }
-
-    function _toTypedDataHash(bytes32 domainSeparator, bytes32 structHash) internal pure returns (bytes32 digest) {
+        bytes32 domainSeparator = emptyDomainSeparator;
         /// @solidity memory-safe-assembly
         assembly {
             let ptr := mload(0x40)
@@ -89,7 +86,10 @@ contract EIP712_Canvas {
         }
     }
 
-    function createCIDEip712CodecNoneDigest(bytes memory multihash) pure internal returns (bytes memory) {
+    /**
+     * Create a CID from a multihash.
+     */
+    function _createCID(bytes memory multihash) pure internal returns (bytes memory) {
         uint256 digestSize;
         bytes memory digest;
         (digestSize,digest) = CID.createDigest(0xff, multihash);
@@ -97,7 +97,9 @@ contract EIP712_Canvas {
         return CID.encodeCID(1, 712, digest);
     }
 
-
+    /**
+     * Hash a Session.
+     */
     function hashSession(
         Session memory session
     ) public pure returns (bytes32) {
@@ -111,6 +113,9 @@ contract EIP712_Canvas {
         ));
     }
 
+    /**
+     * Hash an Action. It is expected that the action's `args` have already been hashed.
+     */
     function hashAction(
         Action memory action
     ) public pure returns (bytes32) {
@@ -124,6 +129,45 @@ contract EIP712_Canvas {
         ));
     }
 
+    /**
+     * Hash a Message<Session>.
+     */
+    function hashSessionMessage(
+        SessionMessage memory sessionMessage
+    ) public pure returns (bytes32) {
+        return
+        keccak256(
+            abi.encode(
+                keccak256(bytes(sessionMessageType)),
+                sessionMessage.clock,
+                _hashStringArray(sessionMessage.parents),
+                hashSession(sessionMessage.payload),
+                keccak256(bytes(sessionMessage.topic))
+            )
+        );
+    }
+
+    /**
+     * Hash a Message<Action>.
+     */
+    function hashActionMessage(
+        ActionMessage memory actionMessage
+    ) public pure returns (bytes32) {
+        return
+        keccak256(
+            abi.encode(
+                keccak256(bytes(actionMessageType)),
+                actionMessage.clock,
+                _hashStringArray(actionMessage.parents),
+                hashAction(actionMessage.payload),
+                keccak256(bytes(actionMessage.topic))
+            )
+        );
+    }
+
+    /**
+     * Recover the address that signed a Session.
+     */
     function recoverAddressFromSession(
         Session memory session,
         bytes memory signature
@@ -133,44 +177,35 @@ contract EIP712_Canvas {
         return ECDSA.recover(digest, signature);
     }
 
-    function hashMessageSession(
-        MessageSession memory messageSession
-    ) public pure returns (bytes32) {
-        return
-        keccak256(
-            abi.encode(
-                keccak256(bytes(messageSessionType)),
-                messageSession.clock,
-                _hashStringArray(messageSession.parents),
-                hashSession(messageSession.payload),
-                keccak256(bytes(messageSession.topic))
-            )
-        );
-    }
-
-    function hashMessageAction(
-        MessageAction memory messageAction
-    ) public pure returns (bytes32) {
-        return
-        keccak256(
-            abi.encode(
-                keccak256(bytes(messageActionType)),
-                messageAction.clock,
-                _hashStringArray(messageAction.parents),
-                hashAction(messageAction.payload),
-                keccak256(bytes(messageAction.topic))
-            )
-        );
-    }
-
-    function verifyAddressForMessageSession(
-        MessageSession memory messageSession,
+    /**
+     * Verify a Session.
+     */
+    function verifySession(
+        Session memory session,
         bytes memory signature,
         address expectedAddress
     ) public pure returns (bool) {
-        bytes32 digest = _hashTypedDataV4(hashMessageSession(messageSession));
-        bytes memory cid = createCIDEip712CodecNoneDigest(bytes.concat(digest));
-        bytes32 hash = sha256(cid);
+        bytes32 digest = _hashTypedDataV4(hashSession(session));
+
+        return ECDSA.recover(digest, signature) == expectedAddress;
+    }
+
+    /**
+     * Verify a Message<Session>.
+     *
+     * Note that Message<Session> is just an envelope for the actual signed Session. To verify that the signing user
+     * actually delegated signing authority to the session key, use `recoverAddressFromSession` or `verifySession`.
+     *
+     * See: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/ECDSA.sol
+     */
+    function verifySessionMessage(
+        SessionMessage memory sessionMessage,
+        bytes memory signature,
+        address expectedAddress
+    ) public pure returns (bool) {
+        bytes32 digest = _hashTypedDataV4(hashSessionMessage(sessionMessage));
+        bytes memory cid = _createCID(bytes.concat(digest));
+        bytes32 hash = sha256(cid); // We already hashed our data to produce the CID, but we have to hash it again as part of ECDSA signing
 
         bytes32 r;
         bytes32 s;
@@ -192,14 +227,18 @@ contract EIP712_Canvas {
         return false;
     }
 
-    function verifyAddressForMessageAction(
-        MessageAction memory messageAction,
+    /**
+     * Verify a Message<Action>.
+     * See: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/ECDSA.sol
+     */
+    function verifyActionMessage(
+        ActionMessage memory actionMessage,
         bytes memory signature,
         address expectedAddress
     ) public pure returns (bool) {
-        bytes32 digest = _hashTypedDataV4(hashMessageAction(messageAction));
-        bytes memory cid = createCIDEip712CodecNoneDigest(bytes.concat(digest));
-        bytes32 hash = sha256(cid);
+        bytes32 digest = _hashTypedDataV4(hashActionMessage(actionMessage));
+        bytes memory cid = _createCID(bytes.concat(digest));
+        bytes32 hash = sha256(cid); // We already hashed our data to produce the CID, but we have to hash it again as part of ECDSA signing
 
         bytes32 r;
         bytes32 s;
