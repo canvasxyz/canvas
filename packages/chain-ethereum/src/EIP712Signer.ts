@@ -19,12 +19,17 @@ export interface EIP712SignerInit {
 	version?: string // optional
 }
 
+// The `address` delegates authority to the `publicKey` to sign individual actions.
+//
+// Because it's still unclear which ETH DID URIs we should use, the public key is
+// encoded as an ECDSA did:key pubkey, which can be translated into an Ethereum
+// address without too much difficulty.
 export const eip712TypeDefinitions = {
 	Session: [
-		{ name: "address", type: "address" }, // TODO: the address that delegating permissions
+		{ name: "address", type: "address" },
 		{ name: "blockhash", type: "string" }, // optional
 		{ name: "duration", type: "uint256" },
-		{ name: "publicKey", type: "string" }, // TODO: the delegatee that is being authorized to sign actions
+		{ name: "publicKey", type: "string" },
 		{ name: "timestamp", type: "uint256" },
 	],
 }
