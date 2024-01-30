@@ -1,10 +1,28 @@
-//SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: MIT
+
+/**
+ * Onchain verification library for Canvas actions and sessions.
+ *
+ * Typed data signatures for Sessions and Actions should exactly match those at:
+ *
+ * - @canvas-js/chain-ethereum `src/EIP712Signer.ts` (Session)
+ * - @canvas-js/signed-cid `src/eip712codec.ts` (MessageSession, MessageAction)
+ *
+ * Canonically, the chain-ethereum signer asks the user's wallet to sign an
+ * EIP712 serialized Session. The session key that was just authorized is then
+ * used to sign a Payload<Session>, which is included in a Message<Session>
+ * and appended to the execution log.
+ *
+ * This is why we have we have EIP712 typedefs inside `@canvas-js/chain-ethereum`
+ * for Session, and typedefs for MessageSession and MessageAction in
+ * @canvas-js/signed-cid, but no typedefs for Action.
+ */
+
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./CID.sol";
 
-// These EIP712 typed data hashes *must* exactly match those at @canvas-js/chain-ethereum in `src/EIP712Signer.ts`.
 string constant sessionType = "Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
 string constant actionType = "Action(address address,bytes args,string blockhash,string name,uint256 timestamp)";
 string constant messageSessionType = "Message(uint256 clock,string[] parents,Session payload,string topic)Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
@@ -44,13 +62,11 @@ contract EIP712_Canvas {
         string topic;
     }
 
-    function hashArrayOfStrings(string[] memory values) internal pure returns (bytes32) {
+    function _hashStringArray(string[] memory values) internal pure returns (bytes32) {
         bytes memory concatenatedHashes = new bytes(values.length * 32);
 
         for(uint256 i = 0; i < values.length; i++) {
-            // generate the hash of the value
-            bytes32 valueHash = keccak256(bytes(values[i]));
-            // add it to the concatenated hashes
+            bytes32 valueHash = keccak256(bytes(values[i])); // hash each value and concatenate into the array
             for(uint256 j = 0; j < 32; j++) {
                 concatenatedHashes[i * 32 + j] = valueHash[j];
             }
@@ -58,7 +74,11 @@ contract EIP712_Canvas {
         return keccak256(concatenatedHashes);
     }
 
-    function toTypedDataHash(bytes32 domainSeparator, bytes32 structHash) internal pure returns (bytes32 digest) {
+    function _hashTypedDataV4(bytes32 structHash) internal pure returns (bytes32 digest) {
+        return _toTypedDataHash(emptyDomainSeparator, structHash);
+    }
+
+    function _toTypedDataHash(bytes32 domainSeparator, bytes32 structHash) internal pure returns (bytes32 digest) {
         /// @solidity memory-safe-assembly
         assembly {
             let ptr := mload(0x40)
@@ -67,10 +87,6 @@ contract EIP712_Canvas {
             mstore(add(ptr, 0x22), structHash)
             digest := keccak256(ptr, 0x42)
         }
-    }
-
-    function _hashTypedDataV4(bytes32 structHash) internal pure returns (bytes32 digest) {
-        return toTypedDataHash(emptyDomainSeparator, structHash);
     }
 
     function createCIDEip712CodecNoneDigest(bytes memory multihash) pure internal returns (bytes memory) {
@@ -82,7 +98,7 @@ contract EIP712_Canvas {
     }
 
 
-    function getStructHashForSession(
+    function hashSession(
         Session memory session
     ) public pure returns (bytes32) {
         return keccak256(abi.encode(
@@ -95,7 +111,7 @@ contract EIP712_Canvas {
         ));
     }
 
-    function getStructHashForAction(
+    function hashAction(
         Action memory action
     ) public pure returns (bytes32) {
         return keccak256(abi.encode(
@@ -112,12 +128,12 @@ contract EIP712_Canvas {
         Session memory session,
         bytes memory signature
     ) public pure returns (address) {
-        bytes32 digest = _hashTypedDataV4(getStructHashForSession(session));
+        bytes32 digest = _hashTypedDataV4(hashSession(session));
 
         return ECDSA.recover(digest, signature);
     }
 
-    function getStructHashForMessageSession(
+    function hashMessageSession(
         MessageSession memory messageSession
     ) public pure returns (bytes32) {
         return
@@ -125,14 +141,14 @@ contract EIP712_Canvas {
             abi.encode(
                 keccak256(bytes(messageSessionType)),
                 messageSession.clock,
-                hashArrayOfStrings(messageSession.parents),
-                getStructHashForSession(messageSession.payload),
+                _hashStringArray(messageSession.parents),
+                hashSession(messageSession.payload),
                 keccak256(bytes(messageSession.topic))
             )
         );
     }
 
-    function getStructHashForMessageAction(
+    function hashMessageAction(
         MessageAction memory messageAction
     ) public pure returns (bytes32) {
         return
@@ -140,8 +156,8 @@ contract EIP712_Canvas {
             abi.encode(
                 keccak256(bytes(messageActionType)),
                 messageAction.clock,
-                hashArrayOfStrings(messageAction.parents),
-                getStructHashForAction(messageAction.payload),
+                _hashStringArray(messageAction.parents),
+                hashAction(messageAction.payload),
                 keccak256(bytes(messageAction.topic))
             )
         );
@@ -152,7 +168,7 @@ contract EIP712_Canvas {
         bytes memory signature,
         address expectedAddress
     ) public pure returns (bool) {
-        bytes32 digest = _hashTypedDataV4(getStructHashForMessageSession(messageSession));
+        bytes32 digest = _hashTypedDataV4(hashMessageSession(messageSession));
         bytes memory cid = createCIDEip712CodecNoneDigest(bytes.concat(digest));
         bytes32 hash = sha256(cid);
 
@@ -181,7 +197,7 @@ contract EIP712_Canvas {
         bytes memory signature,
         address expectedAddress
     ) public pure returns (bool) {
-        bytes32 digest = _hashTypedDataV4(getStructHashForMessageAction(messageAction));
+        bytes32 digest = _hashTypedDataV4(hashMessageAction(messageAction));
         bytes memory cid = createCIDEip712CodecNoneDigest(bytes.concat(digest));
         bytes32 hash = sha256(cid);
 

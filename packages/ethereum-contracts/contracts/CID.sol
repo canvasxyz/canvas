@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
 import "@lazyledger/protobuf3-solidity-lib/contracts/ProtobufLib.sol";
