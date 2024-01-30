@@ -6,8 +6,8 @@ import { Action, Message, Session } from "@canvas-js/interfaces"
 type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint8Array> }
 
 /**
- * This codec returns CID for (a subset of) JSON objects using ABI encoding
- * and TypedDataEncoder.
+ * This codec generates CIDs for (a subset of) JSON objects using
+ * ABI encoding, and TypedDataEncoder for hashing.
  *
  * Objects may contain nested objects, address strings, strings, numbers,
  * or booleans, which are mapped to `bytes`, `address`, `string`, `int256`,
@@ -18,8 +18,8 @@ type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint
  *
  * While the codec is implemented for dynamically typed data, if you are
  * writing an onchain verifier for offchain signed data, it must still be
- * statically typed to a specific action schema beforehand. See the
- * `@canvas-js/ethereum-contracts` package for an example.
+ * statically typed to a specific action schema beforehand. See
+ * @canvas-js/ethereum-contracts for examples.
  */
 export const eip712Codec: Codec = {
 	name: "eip712",
