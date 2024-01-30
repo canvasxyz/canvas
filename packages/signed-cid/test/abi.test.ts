@@ -1,16 +1,16 @@
 import * as web3 from "web3"
 import test from "ava"
-import { dynamicAbiEncodeArgs, getAbiEncodeParametersArguments } from "@canvas-js/signed-cid"
+import { getEIP712Args } from "@canvas-js/signed-cid"
 
 test(`empty argument`, (t) => {
-	const { types, values } = getAbiEncodeParametersArguments({})
+	const { types, values } = getEIP712Args({})
 	t.deepEqual(types, [])
 	t.deepEqual(values, [])
 	web3.eth.abi.encodeParameters(types, values)
 })
 
 test(`argument with a variety of valid fields`, (t) => {
-	const { types, values } = getAbiEncodeParametersArguments({
+	const { types, values } = getEIP712Args({
 		a: 1,
 		b: -1,
 		c: "2",
@@ -45,7 +45,7 @@ const unsupportedCases = [
 for (const { name, value } of unsupportedCases) {
 	test(`throws error if passed unsupported values - ${name}`, (t) => {
 		t.throws(() => {
-			getAbiEncodeParametersArguments({
+			getEIP712Args({
 				a: value,
 			})
 		})
@@ -59,7 +59,7 @@ test("encoded abi keys are sorted lexicographically", (t) => {
 		b: 2,
 		a: 1,
 	}
-	const { types, values } = getAbiEncodeParametersArguments(input)
+	const { types, values } = getEIP712Args(input)
 	t.deepEqual(types, ["string", "int256", "string", "int256", "string", "int256", "string", "int256"])
 	t.deepEqual(values, ["a", 1, "b", 2, "c", 3, "d", 4])
 	web3.eth.abi.encodeParameters(types, values)

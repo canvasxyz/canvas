@@ -100,7 +100,7 @@ describe("EIP712_Canvas", function () {
 
 	describe("contract.verifyActionMessage", function () {
 		it("Should verify that an action has been signed by the proper address with sign", async function () {
-			const { verifySignedValue, dynamicAbiEncodeArgs } = await import("@canvas-js/signed-cid")
+			const { verifySignedValue, getAbiString } = await import("@canvas-js/signed-cid")
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
 
 			const { contract } = await loadFixture(deployFixture)
@@ -144,7 +144,7 @@ describe("EIP712_Canvas", function () {
 					// action fields
 					payload: {
 						address_: action.address.split(":")[2],
-						args: dynamicAbiEncodeArgs(action.args),
+						args: getAbiString(action.args),
 						blockhash: action.blockhash || "",
 						name: action.name,
 						timestamp: action.timestamp,

@@ -1,5 +1,5 @@
 import * as web3 from "web3"
-import { getBytes, keccak256 } from "ethers"
+import { getBytes } from "ethers"
 import { TypedDataEncoder } from "ethers/hash"
 
 import { Action, Message, Session } from "@canvas-js/interfaces"
@@ -15,6 +15,7 @@ type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint
  *
  * We enforce that numbers are integers, and 40-byte-long strings beginning
  * with "0x" are always encoded as addresses.
+ *
  *
  * While the codec is implemented for dynamically typed data, if you are
  * writing an onchain verifier for offchain signed data, it must still be
@@ -75,7 +76,7 @@ export const eip712Codec: Codec = {
 				parents: message.parents,
 				payload: {
 					name: message.payload.name,
-					args: dynamicAbiEncodeArgs(message.payload.args),
+					args: getAbiString(message.payload.args),
 					address: message.payload.address.split(":")[2],
 					blockhash: message.payload.blockhash || "",
 					timestamp: message.payload.timestamp,
@@ -90,21 +91,22 @@ export const eip712Codec: Codec = {
 }
 
 /**
- * Encode an argument object of type `Record<string, any>` as an
+ * Encode an argument object `Record<string, any>` as an
  * ABI-encoded bytestring.
  */
-export function dynamicAbiEncodeArgs(args: Record<string, any>): string {
-	const { types, values } = getAbiEncodeParametersArguments(args)
+export function getAbiString(args: Record<string, any>): string {
+	const { types, values } = getEIP712Args(args)
 	return web3.eth.abi.encodeParameters(types, values)
 }
 
 /**
- * Identify types for an argument `Record<string, any>`.
+ * Convert an argument object `Record<string, any>` to a
+ * set of EIP712-compatible types.
  *
- * This is exposed separately from `dynamicAbiEncodeArgs` so both are
+ * This is exposed separately from `abiEncodeArgs` so both are
  * available for tests.
  */
-export function getAbiEncodeParametersArguments(args: Record<string, any>) {
+export function getEIP712Args(args: Record<string, any>) {
 	const sortedArgs = Object.keys(args).sort()
 
 	const types: string[] = []
