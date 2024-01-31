@@ -20,7 +20,7 @@ export class Secp256k1Signer<T = any> implements Signer<T> {
 	 */
 	public constructor(privateKey = secp256k1.utils.randomPrivateKey()) {
 		const encodingLength = varint.encodingLength(Secp256k1Signer.code)
-		const publicKey = secp256k1.getPublicKey(privateKey)
+		const publicKey = secp256k1.getPublicKey(privateKey, false)
 		const bytes = new Uint8Array(encodingLength + publicKey.byteLength)
 		varint.encodeTo(Secp256k1Signer.code, bytes, 0)
 		bytes.set(publicKey, encodingLength)
@@ -31,7 +31,7 @@ export class Secp256k1Signer<T = any> implements Signer<T> {
 
 	public sign(value: T, options: { codec?: string | Codec; digest?: string | Digest } = {}): Signature {
 		const cid = getCID(value, options)
-		const signature = secp256k1.sign(cid.bytes, this.#privateKey).toCompactRawBytes()
+		const signature = secp256k1.sign(cid.bytes, this.#privateKey, { prehash: true }).toCompactRawBytes()
 		return { publicKey: this.uri, signature, cid }
 	}
 
