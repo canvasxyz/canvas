@@ -29,15 +29,15 @@ contract Contract_Example {
 
     // verify the signatures
     require(
-      EIP712_Canvas.verifySession(sessionMessage.payload, sessionSignature, sessionMessage.payload.address_),
+      EIP712_Canvas.verifySession(sessionMessage.payload, sessionSignature, sessionMessage.payload.address_, topic),
       "Session must be signed by wallet address"
     );
     require(
-      EIP712_Canvas.verifySessionMessage(sessionMessage, sessionMessageSignature, expectedAddress),
+      EIP712_Canvas.verifySessionMessage(sessionMessage, sessionMessageSignature, expectedAddress, topic),
       "Session message must be signed by session address"
     );
     require(
-      EIP712_Canvas.verifyActionMessage(actionMessage, actionMessageSignature, expectedAddress),
+      EIP712_Canvas.verifyActionMessage(actionMessage, actionMessageSignature, expectedAddress, topic),
       "Action message must be signed by session address"
     );
 

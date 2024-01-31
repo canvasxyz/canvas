@@ -26,7 +26,6 @@ describe("Contract_Example", function () {
 		const { didKeyPattern } = await import("@canvas-js/signed-cid")
 
 		function getPublicKeyFromSignature(signature: any) {
-			console.log(signature.publicKey)
 			const result = didKeyPattern.exec(signature.publicKey)
 			const bytes = base58btc.decode(result![1])
 			const [keyCodec, keyCodecLength] = varint.decode(bytes)

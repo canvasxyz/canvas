@@ -2,7 +2,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
 import { expect } from "chai"
 import { ethers } from "hardhat"
 
-const domainName = "example:signer"
+const topic = "example:signer"
 
 describe("EIP712_Canvas", function () {
 	async function deployFixture() {
@@ -41,8 +41,8 @@ describe("EIP712_Canvas", function () {
 
 			const signer = new EIP712Signer({})
 
-			const session = await signer.getSession(domainName)
-			signer.verifySession(domainName, session)
+			const session = await signer.getSession(topic)
+			signer.verifySession(topic, session)
 
 			const walletAddress = session.address.split(":")[2]
 
@@ -55,6 +55,7 @@ describe("EIP712_Canvas", function () {
 					timestamp: session.timestamp,
 				},
 				session.authorizationData.signature,
+				topic,
 			)
 
 			expect(recoveredWalletAddress).to.equal(walletAddress)
@@ -70,9 +71,8 @@ describe("EIP712_Canvas", function () {
 			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
 
 			const signer = new EIP712Signer({})
-			const session = await signer.getSession(domainName, { fromCache: false })
+			const session = await signer.getSession(topic, { fromCache: false })
 
-			const topic = "example:signer"
 			const clock = 1
 			const parents = ["parent1", "parent2"]
 			const sessionMessage = { topic, clock, parents, payload: session }
@@ -101,6 +101,7 @@ describe("EIP712_Canvas", function () {
 				},
 				sessionSignature.signature,
 				expectedAddress,
+				topic,
 			)
 			expect(verified).to.equal(true)
 		})
@@ -115,10 +116,9 @@ describe("EIP712_Canvas", function () {
 			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
 
 			const signer = new EIP712Signer({})
-			const session = await signer.getSession(domainName, { fromCache: false })
+			const session = await signer.getSession(topic, { fromCache: false })
 
 			// sign an action
-			const topic = "example:signer"
 			const clock = 1
 			const parents = ["parent1", "parent2"]
 			const action = {
@@ -160,6 +160,7 @@ describe("EIP712_Canvas", function () {
 				},
 				actionSignature.signature,
 				expectedAddress,
+				topic,
 			)
 			expect(verified).to.equal(true)
 		})

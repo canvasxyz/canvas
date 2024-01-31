@@ -12,24 +12,27 @@ import "./EIP712_Canvas.sol";
 contract EIP712_Canvas_External {
     function recoverAddressFromSession(
         EIP712_Canvas.Session memory session,
-        bytes memory signature
+        bytes memory signature,
+        string memory name
     ) public pure returns (address) {
-        return EIP712_Canvas.recoverAddressFromSession(session, signature);
+        return EIP712_Canvas.recoverAddressFromSession(session, signature, name);
     }
 
     function verifySessionMessage(
         EIP712_Canvas.SessionMessage memory sessionMessage,
         bytes memory signature,
-        address expectedAddress
+        address expectedAddress,
+        string memory name
     ) public pure returns (bool) {
-        return EIP712_Canvas.verifySessionMessage(sessionMessage, signature, expectedAddress);
+        return EIP712_Canvas.verifySessionMessage(sessionMessage, signature, expectedAddress, name);
     }
 
     function verifyActionMessage(
         EIP712_Canvas.ActionMessage memory actionMessage,
         bytes memory signature,
-        address expectedAddress
+        address expectedAddress,
+        string memory name
     ) public pure returns (bool) {
-        return EIP712_Canvas.verifyActionMessage(actionMessage, signature, expectedAddress);
+        return EIP712_Canvas.verifyActionMessage(actionMessage, signature, expectedAddress, name);
     }
 }

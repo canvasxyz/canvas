@@ -28,8 +28,7 @@ string constant actionType = "Action(address address,bytes args,string blockhash
 string constant sessionMessageType = "Message(uint256 clock,string[] parents,Session payload,string topic)Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
 string constant actionMessageType = "Message(uint256 clock,string[] parents,Action payload,string topic)Action(address address,bytes args,string blockhash,string name,uint256 timestamp)";
 
-// TODO: Handle the case where the signer is initialized with a `uint256 chainId`, `address verifyingContract`, `string version`, or `string name`.
-bytes32 constant emptyDomainSeparator = keccak256(abi.encode(keccak256("EIP712Domain()")));
+bytes32 constant DOMAIN_TYPE_HASH = keccak256("EIP712Domain(string name)");
 
 library EIP712_Canvas {
     struct Session {
@@ -74,8 +73,12 @@ library EIP712_Canvas {
         return keccak256(concatenatedHashes);
     }
 
-    function _hashTypedDataV4(bytes32 structHash) internal pure returns (bytes32 digest) {
-        bytes32 domainSeparator = emptyDomainSeparator;
+    function _hashTypedDataV4(bytes32 structHash, string memory name) internal pure returns (bytes32 digest) {
+        // TODO: Handle the case where the signer is initialized with a `uint256 chainId`, `address verifyingContract`, `string version`, or `string name`.
+        bytes32 domainSeparator = keccak256(abi.encode(
+            DOMAIN_TYPE_HASH,
+            keccak256(bytes(name))
+        ));
         /// @solidity memory-safe-assembly
         assembly {
             let ptr := mload(0x40)
@@ -170,9 +173,10 @@ library EIP712_Canvas {
      */
     function recoverAddressFromSession(
         Session memory session,
-        bytes memory signature
+        bytes memory signature,
+        string memory name
     ) public pure returns (address) {
-        bytes32 digest = _hashTypedDataV4(hashSession(session));
+        bytes32 digest = _hashTypedDataV4(hashSession(session), name);
 
         return ECDSA.recover(digest, signature);
     }
@@ -183,9 +187,10 @@ library EIP712_Canvas {
     function verifySession(
         Session memory session,
         bytes memory signature,
-        address expectedAddress
+        address expectedAddress,
+        string memory name
     ) public pure returns (bool) {
-        bytes32 digest = _hashTypedDataV4(hashSession(session));
+        bytes32 digest = _hashTypedDataV4(hashSession(session), name);
 
         return ECDSA.recover(digest, signature) == expectedAddress;
     }
@@ -201,9 +206,10 @@ library EIP712_Canvas {
     function verifySessionMessage(
         SessionMessage memory sessionMessage,
         bytes memory signature,
-        address expectedAddress
+        address expectedAddress,
+        string memory name
     ) public pure returns (bool) {
-        bytes32 digest = _hashTypedDataV4(hashSessionMessage(sessionMessage));
+        bytes32 digest = _hashTypedDataV4(hashSessionMessage(sessionMessage), name);
         bytes memory cid = _createCID(bytes.concat(digest));
         bytes32 hash = sha256(cid); // We already hashed our data to produce the CID, but we have to hash it again as part of ECDSA signing
 
@@ -234,9 +240,10 @@ library EIP712_Canvas {
     function verifyActionMessage(
         ActionMessage memory actionMessage,
         bytes memory signature,
-        address expectedAddress
+        address expectedAddress,
+        string memory name
     ) public pure returns (bool) {
-        bytes32 digest = _hashTypedDataV4(hashActionMessage(actionMessage));
+        bytes32 digest = _hashTypedDataV4(hashActionMessage(actionMessage), name);
         bytes memory cid = _createCID(bytes.concat(digest));
         bytes32 hash = sha256(cid); // We already hashed our data to produce the CID, but we have to hash it again as part of ECDSA signing
 

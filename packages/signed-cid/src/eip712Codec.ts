@@ -43,18 +43,24 @@ export const eip712Codec: Codec = {
 					{ name: "timestamp", type: "uint256" },
 				],
 			}
-			hashedPayload = TypedDataEncoder.hash({}, types, {
-				clock: message.clock,
-				parents: message.parents,
-				payload: {
-					address: message.payload.address.split(":")[2],
-					publicKey: message.payload.publicKey,
-					blockhash: message.payload.blockhash,
-					timestamp: message.payload.timestamp,
-					duration: message.payload.duration,
+			hashedPayload = TypedDataEncoder.hash(
+				{
+					name: message.topic,
 				},
-				topic: message.topic,
-			})
+				types,
+				{
+					clock: message.clock,
+					parents: message.parents,
+					payload: {
+						address: message.payload.address.split(":")[2],
+						publicKey: message.payload.publicKey,
+						blockhash: message.payload.blockhash,
+						timestamp: message.payload.timestamp,
+						duration: message.payload.duration,
+					},
+					topic: message.topic,
+				},
+			)
 		} else if (message.payload.type === "action") {
 			const types = {
 				Message: [
@@ -71,18 +77,24 @@ export const eip712Codec: Codec = {
 					{ name: "timestamp", type: "uint256" },
 				],
 			}
-			hashedPayload = TypedDataEncoder.hash({}, types, {
-				clock: message.clock,
-				parents: message.parents,
-				payload: {
-					name: message.payload.name,
-					args: getAbiString(message.payload.args),
-					address: message.payload.address.split(":")[2],
-					blockhash: message.payload.blockhash || "",
-					timestamp: message.payload.timestamp,
+			hashedPayload = TypedDataEncoder.hash(
+				{
+					name: message.topic,
 				},
-				topic: message.topic,
-			})
+				types,
+				{
+					clock: message.clock,
+					parents: message.parents,
+					payload: {
+						name: message.payload.name,
+						args: getAbiString(message.payload.args),
+						address: message.payload.address.split(":")[2],
+						blockhash: message.payload.blockhash || "",
+						timestamp: message.payload.timestamp,
+					},
+					topic: message.topic,
+				},
+			)
 		} else {
 			throw new TypeError("invalid payload type")
 		}
