@@ -31,7 +31,7 @@ string constant actionMessageType = "Message(uint256 clock,string[] parents,Acti
 // TODO: Handle the case where the signer is initialized with a `uint256 chainId`, `address verifyingContract`, `string version`, or `string name`.
 bytes32 constant emptyDomainSeparator = keccak256(abi.encode(keccak256("EIP712Domain()")));
 
-contract EIP712_Canvas {
+library EIP712_Canvas {
     struct Session {
         address address_;
         string blockhash;

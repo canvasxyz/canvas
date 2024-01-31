@@ -7,7 +7,15 @@ const domainName = "example:signer"
 describe("EIP712_Canvas", function () {
 	async function deployFixture() {
 		const EIP712_Canvas = await ethers.getContractFactory("EIP712_Canvas")
-		const contract = await EIP712_Canvas.deploy()
+		const eip712_Canvas = await EIP712_Canvas.deploy()
+
+		const EIP712_Canvas_External = await ethers.getContractFactory("EIP712_Canvas_External", {
+			libraries: {
+				EIP712_Canvas: eip712_Canvas.address,
+			},
+		})
+		const contract = await EIP712_Canvas_External.deploy()
+		await contract.deployed()
 		return { contract }
 	}
 
