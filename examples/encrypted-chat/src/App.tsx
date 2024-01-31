@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react"
-import { encryptSafely, decryptSafely, getEncryptionPublicKey, EthEncryptedData } from "@metamask/eth-sig-util"
+import { decryptSafely, EthEncryptedData } from "@metamask/eth-sig-util"
 import { ethers } from "ethers"
 
 import type { Canvas } from "@canvas-js/core"
-import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
+import { useLiveQuery } from "@canvas-js/hooks"
 import { usePrivateChat } from "@canvas-js/hooks/ethers"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
@@ -43,24 +43,19 @@ function Wrapper() {
 }
 
 function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wallet }) {
-	const { app, people, registerEncryptionKey, createEncryptionGroup, sendPrivateMessage } = usePrivateChat({
-			topic: "xyz.canvas.example-topic",
-			discoveryTopic: "xyz.canvas.encrypted-chat-discovery",
-			signers: [new SIWESigner({ signer: wallet1 })],
-			wallet: wallet1
+	const { app, people, sendPrivateMessage, selectConversation, conversationAddress } = usePrivateChat({
+		topic: "xyz.canvas.example-topic",
+		discoveryTopic: "xyz.canvas.encrypted-chat-discovery",
+		signers: [new SIWESigner({ signer: wallet1 })],
+		wallet: wallet1,
 	})
 
-	const { registerEncryptionKey: registerEncryptionKey2 } = usePrivateChat({ 
+	const {} = usePrivateChat({
 		topic: "xyz.canvas.example-topic",
 		discoveryTopic: "xyz.canvas.encrypted-chat",
 		signers: [new SIWESigner({ signer: wallet2 })],
 		wallet: wallet2,
 	})
-
-	const registration1 = useLiveQuery(app, "encryptionKeys", { where: { address: toCAIP(wallet1?.address) } })
-	const registration2 = useLiveQuery(app, "encryptionKeys", { where: { address: toCAIP(wallet2?.address) } })
-
-	const [conversationAddress, setConversationAddress] = useState<string>()
 
 	return (
 		<div style={{ height: "100vh" }}>
@@ -76,7 +71,7 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 								<button
 									key={person.address as string}
 									style={{ width: "100%", textAlign: "left" }}
-									onClick={() => setConversationAddress(address)}
+									onClick={() => selectConversation(address)}
 								>
 									{formatAddress(fromCAIP(address))} <span title={key}>🔐</span>{" "}
 									{fromCAIP(address) === wallet1?.address && <span>[You]</span>}
@@ -97,7 +92,6 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 								wallet={wallet1}
 								conversationAddress={fromCAIP(conversationAddress)}
 								sendPrivateMessage={sendPrivateMessage}
-								createEncryptionGroup={createEncryptionGroup}
 							/>
 						)}
 					</div>
@@ -106,25 +100,6 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 			<div style={{ marginTop: 40 }}>
 				{/* login and reset buttons */}
 				<div>
-					<button
-						disabled={registration1?.length !== 0}
-						onClick={async () => {
-							if (!wallet1) return
-							await registerEncryptionKey(wallet1.privateKey)
-						}}
-					>
-						{registration1?.length === 0 ? "Register [You]" : "Logged in [You]"}
-					</button>
-					<button
-						disabled={registration2?.length !== 0}
-						onClick={async () => {
-							if (!wallet2) return
-							await registerEncryptionKey2(wallet2.privateKey)
-							window.location.reload() // TODO: two apps should talk to each other
-						}}
-					>
-						{registration2?.length === 0 ? "Register [Guest]" : "Logged in [Guest]"}
-					</button>
 					<button
 						onClick={async () => {
 							const dbs = await window.indexedDB.databases()
@@ -144,13 +119,11 @@ const Conversation = ({
 	app,
 	wallet,
 	conversationAddress,
-	createEncryptionGroup,
 	sendPrivateMessage,
 }: {
 	app: Canvas
 	wallet: ethers.Wallet
 	conversationAddress: string
-	createEncryptionGroup: (recipient: string) => Promise<void>
 	sendPrivateMessage: (recipient: string, message: string) => Promise<void>
 }) => {
 	const groups = useLiveQuery(app, "encryptionGroups", {
@@ -167,15 +140,6 @@ const Conversation = ({
 		<div>
 			<div>You and {formatAddress(conversationAddress)}</div>
 			<div>{messages?.length} messages</div>
-			{groups?.length === 0 && (
-				<button
-					onClick={async () => {
-						await createEncryptionGroup(conversationAddress)
-					}}
-				>
-					Create encryption group
-				</button>
-			)}
 			{messages?.map((message) => (
 				<Message
 					wallet={wallet}

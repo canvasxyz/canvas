@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import type { ActionImplementationFunction } from "@canvas-js/core"
 import type { SessionSigner } from "@canvas-js/interfaces"
 import { getEncryptionPublicKey, encryptSafely } from "@metamask/eth-sig-util"
@@ -51,6 +52,8 @@ const actions: Record<string, ActionImplementationFunction> = {
 }
 
 export const usePrivateChat = ({ topic, discoveryTopic, signers, wallet }: PrivateChatConfig) => {
+	const [conversationAddress, setConversationAddress] = useState<string>()
+
 	const { app } = useCanvas({
 		signers,
 		discoveryTopic,
@@ -61,25 +64,41 @@ export const usePrivateChat = ({ topic, discoveryTopic, signers, wallet }: Priva
 		},
 	})
 
+	// list of all conversations
 	const people = useLiveQuery(app, "encryptionKeys", { orderBy: { address: "desc" } })
 
-	return {
-		wallet,
-		app,
-		people,
-		registerEncryptionKey: async (privateKey: string) => {
-			if (!app) throw new Error()
-			const key = getEncryptionPublicKey(privateKey.slice(2))
-			return app.actions.registerEncryptionKey({ key })
-		},
-		createEncryptionGroup: async (recipient: string) => {
+	// active conversation
+	const groups = useLiveQuery(app, "encryptionGroups", {
+		where: { id: conversationAddress ? getGroupId(wallet.address, conversationAddress) : "" },
+	})
+
+	const messages = useLiveQuery(app, "privateMessages", {
+		where: { group: conversationAddress ? getGroupId(wallet.address, conversationAddress) : "" },
+	})
+
+	useEffect(() => {
+		if (!app) return
+		// create a new registration key for the local user
+		const createEncryptionKey = async () => {
+			if (!wallet.privateKey) return
+			const myKey = await app.db.get("encryptionKeys", ethAddressToCAIP(wallet.address))
+			if (myKey) return
+			const key = getEncryptionPublicKey(wallet.privateKey.slice(2))
+			app.actions.registerEncryptionKey({ key })
+			location.reload()
+		}
+		createEncryptionKey()
+
+		// create a new encryption group with `conversationAddress`
+		if (!conversationAddress || !groups || groups.length > 0) return
+		const createEncryptionGroup = async (recipient: string) => {
 			if (!app) throw new Error()
 			if (!wallet) throw new Error()
 
 			const myKey = await app.db.get("encryptionKeys", ethAddressToCAIP(wallet.address))
 			if (!myKey) throw new Error("Wallet has not registered an encryption key")
 
-			const recipientKey = await app.db.get("encryptionKeys", ethAddressToCAIP(recipient))
+			const recipientKey = await app.db.get("encryptionKeys", recipient)
 			if (!recipientKey) throw new Error("Recipient has not registered an encryption key")
 
 			const members = [wallet.address, recipient]
@@ -91,12 +110,23 @@ export const usePrivateChat = ({ topic, discoveryTopic, signers, wallet }: Priva
 				await Promise.all(members.map((member) => app.db.get("encryptionKeys", ethAddressToCAIP(member))))
 			)
 				.map((result) => result?.key)
-				.map((key) => {
-					return encryptSafely({ publicKey: key as string, data: groupPrivateKey, version: "x25519-xsalsa20-poly1305" })
-				})
+			const encryptedGroupKeys = groupKeys.map((key) => {
+				return encryptSafely({ publicKey: key as string, data: groupPrivateKey, version: "x25519-xsalsa20-poly1305" })
+			})
 
-			await app.actions.createEncryptionGroup({ id: group, members, groupKeys, groupPublicKey })
-		},
+			await app.actions.createEncryptionGroup({ id: group, members, groupKeys: encryptedGroupKeys, groupPublicKey })
+		}
+
+		createEncryptionGroup(conversationAddress)
+	}, [wallet.privateKey, conversationAddress, (groups || []).length])
+
+	return {
+		wallet,
+		app,
+		people,
+		selectConversation: setConversationAddress,
+		conversationAddress,
+		conversationMessages: messages,
 		sendPrivateMessage: async (recipient: string, message: string) => {
 			if (!app) throw new Error()
 			if (!wallet?.address) throw new Error()
