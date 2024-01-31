@@ -1,12 +1,12 @@
-import * as web3 from "web3"
 import test from "ava"
+import { AbiCoder } from "ethers/abi"
 import { getEIP712Args } from "@canvas-js/signed-cid"
 
 test(`empty argument`, (t) => {
 	const { types, values } = getEIP712Args({})
 	t.deepEqual(types, [])
 	t.deepEqual(values, [])
-	web3.eth.abi.encodeParameters(types, values)
+	new AbiCoder().encode(types, values)
 })
 
 test(`argument with a variety of valid fields`, (t) => {
@@ -30,7 +30,7 @@ test(`argument with a variety of valid fields`, (t) => {
 		"address",
 	])
 	t.deepEqual(values, ["a", 1, "b", -1, "c", "2", "d", true, "e", "0x0000000000000000000000000000000000000000"])
-	web3.eth.abi.encodeParameters(types, values)
+	new AbiCoder().encode(types, values)
 })
 
 const unsupportedCases = [
@@ -62,5 +62,5 @@ test("encoded abi keys are sorted lexicographically", (t) => {
 	const { types, values } = getEIP712Args(input)
 	t.deepEqual(types, ["string", "int256", "string", "int256", "string", "int256", "string", "int256"])
 	t.deepEqual(values, ["a", 1, "b", 2, "c", 3, "d", 4])
-	web3.eth.abi.encodeParameters(types, values)
+	new AbiCoder().encode(types, values)
 })

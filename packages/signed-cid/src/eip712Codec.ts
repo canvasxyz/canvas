@@ -1,5 +1,5 @@
-import * as web3 from "web3"
 import { getBytes } from "ethers"
+import { AbiCoder } from "ethers/abi"
 import { TypedDataEncoder } from "ethers/hash"
 
 import { Action, Message, Session } from "@canvas-js/interfaces"
@@ -96,7 +96,7 @@ export const eip712Codec: Codec = {
  */
 export function getAbiString(args: Record<string, any>): string {
 	const { types, values } = getEIP712Args(args)
-	return web3.eth.abi.encodeParameters(types, values)
+	return new AbiCoder().encode(types, values)
 }
 
 /**
