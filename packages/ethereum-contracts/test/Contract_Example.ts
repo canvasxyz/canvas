@@ -1,6 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
 import { expect } from "chai"
 import { ethers } from "hardhat"
+import { serializeActionForContract, serializeSessionForContract } from "./utils.ts"
 
 const topic = "example:contract"
 
@@ -37,7 +38,6 @@ describe("Contract_Example", function () {
 
 	describe("Contract_Example.claimUpvoted", function () {
 		it("try to call claimUpvoted with a valid session and action", async () => {
-			const { getAbiString } = await import("@canvas-js/signed-cid")
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
 
 			const { contract } = await loadFixture(deployFixture)
@@ -62,16 +62,7 @@ describe("Contract_Example", function () {
 				clock,
 				parents,
 				topic,
-				payload: {
-					address_: session.address.split(":")[2],
-					authorizationData: {
-						signature: session.authorizationData.signature,
-					},
-					blockhash: session.blockhash || "",
-					duration: session.duration || 0,
-					publicKey: session.publicKey,
-					timestamp: session.timestamp,
-				},
+				payload: serializeSessionForContract(session),
 			}
 
 			const action = {
@@ -89,13 +80,7 @@ describe("Contract_Example", function () {
 				parents,
 				topic,
 				// action fields
-				payload: {
-					address_: action.address.split(":")[2],
-					args: getAbiString(action.args),
-					blockhash: action.blockhash || "",
-					name: action.name,
-					timestamp: action.timestamp,
-				},
+				payload: await serializeActionForContract(action),
 			}
 
 			// submit the upvote action

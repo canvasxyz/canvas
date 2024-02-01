@@ -1,6 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
 import { expect } from "chai"
 import { ethers } from "hardhat"
+import { serializeActionForContract, serializeSessionForContract } from "./utils.ts"
 
 const topic = "example:signer"
 
@@ -93,16 +94,7 @@ describe("EIP712_Canvas", function () {
 					clock,
 					parents,
 					topic,
-					payload: {
-						address_: session.address.split(":")[2],
-						authorizationData: {
-							signature: session.authorizationData.signature,
-						},
-						blockhash: session.blockhash || "",
-						duration: session.duration || 0,
-						publicKey: session.publicKey,
-						timestamp: session.timestamp,
-					},
+					payload: serializeSessionForContract(session),
 				},
 				sessionSignature.signature,
 				expectedAddress,
@@ -155,13 +147,7 @@ describe("EIP712_Canvas", function () {
 					parents,
 					topic,
 					// action fields
-					payload: {
-						address_: action.address.split(":")[2],
-						args: getAbiString(action.args),
-						blockhash: action.blockhash || "",
-						name: action.name,
-						timestamp: action.timestamp,
-					},
+					payload: await serializeActionForContract(action),
 				},
 				actionSignature.signature,
 				expectedAddress,
