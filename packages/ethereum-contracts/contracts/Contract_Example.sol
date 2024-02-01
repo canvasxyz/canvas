@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import "./EIP712_Canvas.sol";
 
-string constant topic = "xyz.canvas.myapp";
+string constant topic = "example:contract";
 
 contract Contract_Example {
 

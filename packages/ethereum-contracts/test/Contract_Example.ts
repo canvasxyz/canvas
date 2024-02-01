@@ -2,7 +2,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
 import { expect } from "chai"
 import { ethers } from "hardhat"
 
-const topic = "xyz.canvas.myapp"
+const topic = "example:contract"
 
 describe("Contract_Example", function () {
 	async function deployFixture() {
