@@ -49,12 +49,14 @@ describe("EIP712_Canvas", function () {
 			const recoveredWalletAddress = await contract.recoverAddressFromSession(
 				{
 					address_: walletAddress,
+					authorizationData: {
+						signature: session.authorizationData.signature,
+					},
 					blockhash: session.blockhash || "",
 					duration: session.duration || 0,
 					publicKey: session.publicKey,
 					timestamp: session.timestamp,
 				},
-				session.authorizationData.signature,
 				topic,
 			)
 
@@ -93,6 +95,9 @@ describe("EIP712_Canvas", function () {
 					topic,
 					payload: {
 						address_: session.address.split(":")[2],
+						authorizationData: {
+							signature: session.authorizationData.signature,
+						},
 						blockhash: session.blockhash || "",
 						duration: session.duration || 0,
 						publicKey: session.publicKey,

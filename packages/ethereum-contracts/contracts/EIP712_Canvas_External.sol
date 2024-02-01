@@ -12,10 +12,9 @@ import "./EIP712_Canvas.sol";
 contract EIP712_Canvas_External {
     function recoverAddressFromSession(
         EIP712_Canvas.Session memory session,
-        bytes memory signature,
         string memory name
     ) public pure returns (address) {
-        return EIP712_Canvas.recoverAddressFromSession(session, signature, name);
+        return EIP712_Canvas.recoverAddressFromSession(session, name);
     }
 
     function verifySessionMessage(

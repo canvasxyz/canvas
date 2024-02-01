@@ -31,9 +31,14 @@ string constant actionMessageType = "Message(uint256 clock,string[] parents,Acti
 bytes32 constant DOMAIN_TYPE_HASH = keccak256("EIP712Domain(string name)");
 
 library EIP712_Canvas {
+    struct AuthorizationData {
+        bytes signature;
+    }
+
     struct Session {
         address address_;
         string blockhash;
+        AuthorizationData authorizationData;
         uint256 duration;
         string publicKey;
         uint256 timestamp;
@@ -173,12 +178,11 @@ library EIP712_Canvas {
      */
     function recoverAddressFromSession(
         Session memory session,
-        bytes memory signature,
         string memory name
     ) public pure returns (address) {
         bytes32 digest = _hashTypedDataV4(hashSession(session), name);
 
-        return ECDSA.recover(digest, signature);
+        return ECDSA.recover(digest, session.authorizationData.signature);
     }
 
     /**
@@ -186,13 +190,12 @@ library EIP712_Canvas {
      */
     function verifySession(
         Session memory session,
-        bytes memory signature,
         address expectedAddress,
         string memory name
     ) public pure returns (bool) {
         bytes32 digest = _hashTypedDataV4(hashSession(session), name);
 
-        return ECDSA.recover(digest, signature) == expectedAddress;
+        return ECDSA.recover(digest, session.authorizationData.signature) == expectedAddress;
     }
 
     /**

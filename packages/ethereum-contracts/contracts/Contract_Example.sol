@@ -13,7 +13,6 @@ contract Contract_Example {
 
   function claimUpvoted(
     address expectedAddress,
-    bytes memory sessionSignature,
     EIP712_Canvas.SessionMessage memory sessionMessage,
     bytes memory sessionMessageSignature,
     EIP712_Canvas.ActionMessage memory actionMessage,
@@ -29,7 +28,7 @@ contract Contract_Example {
 
     // verify the signatures
     require(
-      EIP712_Canvas.verifySession(sessionMessage.payload, sessionSignature, sessionMessage.payload.address_, topic),
+      EIP712_Canvas.verifySession(sessionMessage.payload, sessionMessage.payload.address_, topic),
       "Session must be signed by wallet address"
     );
     require(

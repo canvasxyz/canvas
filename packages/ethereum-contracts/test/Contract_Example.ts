@@ -64,6 +64,9 @@ describe("Contract_Example", function () {
 				topic,
 				payload: {
 					address_: session.address.split(":")[2],
+					authorizationData: {
+						signature: session.authorizationData.signature,
+					},
 					blockhash: session.blockhash || "",
 					duration: session.duration || 0,
 					publicKey: session.publicKey,
@@ -98,7 +101,6 @@ describe("Contract_Example", function () {
 			// submit the upvote action
 			await contract.claimUpvoted(
 				expectedAddress,
-				session.authorizationData.signature,
 				sessionMessageForContract,
 				sessionMessageSignature.signature,
 				actionMessageForContract,
@@ -112,7 +114,6 @@ describe("Contract_Example", function () {
 			expect(
 				contract.claimUpvoted(
 					expectedAddress,
-					session.authorizationData.signature,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
