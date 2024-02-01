@@ -6,8 +6,15 @@ import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
 import target from "#target"
 
-import type { EIP712SessionData, EIP712SessionMessage } from "./types.js"
-import { assert, signalInvalidType, parseAddress, addressPattern, validateEIP712SessionData, DAYS } from "./utils.js"
+import type { EIP712AuthorizationData, EIP712SessionMessage } from "./types.js"
+import {
+	assert,
+	signalInvalidType,
+	parseAddress,
+	addressPattern,
+	validateEIP712AuthorizationData,
+	DAYS,
+} from "./utils.js"
 
 // If provided, chainId, verifyingContract, and version are used in the EIP712 domain:
 // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md#definition-of-domainseparator
@@ -34,7 +41,7 @@ export const eip712TypeDefinitions = {
 	],
 }
 
-export class EIP712Signer implements SessionSigner<EIP712SessionData> {
+export class EIP712Signer implements SessionSigner<EIP712AuthorizationData> {
 	public readonly key: string
 	public readonly sessionDuration: number
 	public readonly chainId: number
@@ -53,11 +60,11 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 
 	public readonly match = (address: string) => addressPattern.test(address)
 
-	public verifySession(topic: string, session: Session<EIP712SessionData>) {
+	public verifySession(topic: string, session: Session<EIP712AuthorizationData>) {
 		const { publicKey, address, authorizationData, timestamp, blockhash, duration } = session
 
 		assert(didKeyPattern.test(publicKey), "invalid signing key")
-		assert(validateEIP712SessionData(authorizationData), "invalid session")
+		assert(validateEIP712AuthorizationData(authorizationData), "invalid session")
 		const [chainId, walletAddress] = parseAddress(address)
 
 		const message: EIP712SessionMessage = {
@@ -77,7 +84,7 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 	public async getSession(
 		topic: string,
 		options: { timestamp?: number; fromCache?: boolean } = {},
-	): Promise<Session<EIP712SessionData>> {
+	): Promise<Session<EIP712AuthorizationData>> {
 		const walletAddress = await this.#ethersSigner.getAddress()
 		const address = `eip155:${this.chainId}:${walletAddress}`
 
@@ -115,7 +122,7 @@ export class EIP712Signer implements SessionSigner<EIP712SessionData> {
 
 		const signature = await this.#ethersSigner.signTypedData({ name: topic }, eip712TypeDefinitions, message)
 
-		const session: Session<EIP712SessionData> = {
+		const session: Session<EIP712AuthorizationData> = {
 			type: "session",
 			address: address,
 			publicKey: signer.uri,

@@ -3,7 +3,7 @@ import assert from "assert"
 
 import { verifySignedValue } from "@canvas-js/signed-cid"
 
-import { EIP712Signer, validateEIP712SessionData } from "@canvas-js/chain-ethereum"
+import { EIP712Signer, validateEIP712AuthorizationData } from "@canvas-js/chain-ethereum"
 import { Action } from "@canvas-js/interfaces"
 
 test("create and verify session", async (t) => {
@@ -47,7 +47,7 @@ test("reject corrupt session signature", async (t) => {
 	const session = await signer.getSession(topic, {})
 	// corrupt the session signature
 	session.authorizationData.signature[0] = 1
-	assert(validateEIP712SessionData(session.authorizationData))
+	assert(validateEIP712AuthorizationData(session.authorizationData))
 	session.authorizationData.signature[3] = 1
 	await t.throwsAsync(async () => signer.verifySession(topic, session))
 })

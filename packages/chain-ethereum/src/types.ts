@@ -16,7 +16,7 @@ export type SIWEMessage = {
 	resources: string[]
 }
 
-export type EIP712SessionData = {
+export type EIP712AuthorizationData = {
 	signature: Uint8Array
 }
 
