@@ -46,6 +46,10 @@ contract Contract_Test {
     );
 
     // validate the action name
+    require(
+      keccak256(abi.encodePacked(actionMessage.payload.name)) == keccak256(abi.encodePacked("upvote")),
+      "Action name must be 'upvote'"
+    );
 
     // validate the action args
     // TODO: how do we do this?

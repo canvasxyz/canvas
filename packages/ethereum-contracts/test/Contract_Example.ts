@@ -68,7 +68,7 @@ describe("Contract_Example", function () {
 			const action = {
 				type: "action" as const,
 				address: session.address,
-				name: "foo",
+				name: "upvote",
 				args: { bar: 7 },
 				blockhash: null,
 				timestamp: session.timestamp,
