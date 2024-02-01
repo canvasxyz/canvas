@@ -100,7 +100,9 @@ library EIP712_Canvas {
     function _createCID(bytes memory multihash) pure internal returns (bytes memory) {
         uint256 digestSize;
         bytes memory digest;
-        (digestSize,digest) = CID.createDigest(0xff, multihash);
+        // this corresponds to the "raw" digest in the multicodec spec
+        // https://github.com/multiformats/multicodec/blob/696e701b6cb61f54b67a33b002201450d021f312/table.csv#L41
+        (digestSize,digest) = CID.createDigest(0x55, multihash);
 
         return CID.encodeCID(1, 712, digest);
     }
