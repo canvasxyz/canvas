@@ -5,8 +5,7 @@ import "./EIP712_Canvas.sol";
 
 string constant topic = "example:contract";
 
-contract Contract_Example {
-
+contract Contract_Test {
 
   mapping(bytes32 => bool) public appliedActionHashes;
   uint256 public upvotes;

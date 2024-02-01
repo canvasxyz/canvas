@@ -4,7 +4,7 @@ import { ethers } from "hardhat"
 
 describe("CID", function () {
 	async function deployFixture() {
-		const CID = await ethers.getContractFactory("CID_External")
+		const CID = await ethers.getContractFactory("CID_Test")
 
 		const contract = await CID.deploy()
 		await contract.deployed()

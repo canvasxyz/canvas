@@ -10,7 +10,7 @@ describe("EIP712_Canvas", function () {
 		const EIP712_Canvas = await ethers.getContractFactory("EIP712_Canvas")
 		const eip712_Canvas = await EIP712_Canvas.deploy()
 
-		const EIP712_Canvas_External = await ethers.getContractFactory("EIP712_Canvas_External", {
+		const EIP712_Canvas_External = await ethers.getContractFactory("EIP712_Canvas_Test", {
 			libraries: {
 				EIP712_Canvas: eip712_Canvas.address,
 			},

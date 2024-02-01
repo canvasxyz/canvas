@@ -10,7 +10,7 @@ describe("Contract_Example", function () {
 		const EIP712_Canvas = await ethers.getContractFactory("EIP712_Canvas")
 		const eip712_Canvas = await EIP712_Canvas.deploy()
 
-		const Contract_Example = await ethers.getContractFactory("Contract_Example", {
+		const Contract_Example = await ethers.getContractFactory("Contract_Test", {
 			libraries: {
 				EIP712_Canvas: eip712_Canvas.address,
 			},

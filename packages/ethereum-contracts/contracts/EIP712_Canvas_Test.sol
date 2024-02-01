@@ -9,7 +9,7 @@ import "./EIP712_Canvas.sol";
  * from the automated tests
  */
 
-contract EIP712_Canvas_External {
+contract EIP712_Canvas_Test {
     function recoverAddressFromSession(
         EIP712_Canvas.Session memory session,
         string memory name
