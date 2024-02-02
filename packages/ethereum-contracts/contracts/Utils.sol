@@ -29,4 +29,10 @@ library Utils {
 
       return Utils.bytesSlice(publicKeyBytes, varintLength, publicKeyBytes.length);
   }
+
+  function computeAddressFromPublicKey(
+    bytes memory publicKey
+  ) internal pure returns (address) {
+    return address(keccak256(publicKey));
+  }
 }
