@@ -26,5 +26,8 @@
     "ethers": "^6.9.0",
     "multiformats": "^13.0.1",
     "siwe": "^2.1.4"
+  },
+  "devDependencies": {
+    "base58-solidity": "^1.0.2"
   }
 }
