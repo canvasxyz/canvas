@@ -17,19 +17,8 @@ test(`argument with a variety of valid fields`, (t) => {
 		d: true,
 		e: "0x0000000000000000000000000000000000000000",
 	})
-	t.deepEqual(types, [
-		"string",
-		"int256",
-		"string",
-		"int256",
-		"string",
-		"string",
-		"string",
-		"bool",
-		"string",
-		"address",
-	])
-	t.deepEqual(values, ["a", 1, "b", -1, "c", "2", "d", true, "e", "0x0000000000000000000000000000000000000000"])
+	t.deepEqual(types, ["int256", "int256", "string", "bool", "address"])
+	t.deepEqual(values, [1, -1, "2", true, "0x0000000000000000000000000000000000000000"])
 	new AbiCoder().encode(types, values)
 })
 
@@ -60,7 +49,7 @@ test("encoded abi keys are sorted lexicographically", (t) => {
 		a: 1,
 	}
 	const { types, values } = getEIP712Args(input)
-	t.deepEqual(types, ["string", "int256", "string", "int256", "string", "int256", "string", "int256"])
-	t.deepEqual(values, ["a", 1, "b", 2, "c", 3, "d", 4])
+	t.deepEqual(types, ["int256", "int256", "int256", "int256"])
+	t.deepEqual(values, [1, 2, 3, 4])
 	new AbiCoder().encode(types, values)
 })

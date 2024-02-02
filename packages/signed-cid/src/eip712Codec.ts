@@ -108,7 +108,8 @@ export const eip712Codec: Codec = {
  */
 export function getAbiString(args: Record<string, any>): string {
 	const { types, values } = getEIP712Args(args)
-	return new AbiCoder().encode(types, values)
+	// we want to pass in the args as a solidity struct, which is a tuple in the ABI
+	return new AbiCoder().encode([`tuple(${types.join(", ")})`], [values])
 }
 
 /**
@@ -125,9 +126,6 @@ export function getEIP712Args(args: Record<string, any>) {
 	const values: any[] = []
 
 	for (const key of sortedArgs) {
-		types.push("string")
-		values.push(key)
-
 		types.push(getAbiTypeForValue(args[key]))
 		values.push(args[key])
 	}

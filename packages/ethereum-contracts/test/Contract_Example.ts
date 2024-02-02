@@ -41,7 +41,7 @@ describe("Contract_Example", function () {
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
 
 			const { contract } = await loadFixture(deployFixture)
-			expect(await contract.upvotes()).to.equal(0)
+			expect(await contract.upvotes("123456")).to.equal(0)
 
 			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
 
@@ -69,7 +69,7 @@ describe("Contract_Example", function () {
 				type: "action" as const,
 				address: session.address,
 				name: "upvote",
-				args: { bar: 7 },
+				args: { post_id: "123456" },
 				blockhash: null,
 				timestamp: session.timestamp,
 			}
@@ -93,7 +93,7 @@ describe("Contract_Example", function () {
 			)
 
 			// Expect the upvote to have been applied
-			expect(await contract.upvotes()).to.equal(1)
+			expect(await contract.upvotes("123456")).to.equal(1)
 
 			// If we submit the action again, it should be rejected
 			expect(
@@ -109,7 +109,7 @@ describe("Contract_Example", function () {
 			)
 
 			// Expect the upvote to still be 1
-			expect(await contract.upvotes()).to.equal(1)
+			expect(await contract.upvotes("123456")).to.equal(1)
 		})
 	})
 })

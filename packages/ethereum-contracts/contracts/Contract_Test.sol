@@ -8,7 +8,11 @@ string constant topic = "example:contract";
 contract Contract_Test {
 
   mapping(bytes32 => bool) public appliedActionHashes;
-  uint256 public upvotes;
+  mapping(string => uint256) public upvotes;
+
+  struct UpvoteArgs {
+    string post_id;
+  }
 
   function claimUpvoted(
     address expectedAddress,
@@ -52,13 +56,14 @@ contract Contract_Test {
     );
 
     // validate the action args
-    // TODO: how do we do this?
+    // ABI decode
+    UpvoteArgs memory decodedArgs = abi.decode(actionMessage.payload.args, (UpvoteArgs));
 
     // Now, increase a counter stored on this contract by +1, and
     // save the hash of the action in a mapping on the contract's storage,
     // so someone can't submit the same action twice.
     appliedActionHashes[actionHash] = true;
-    upvotes += 1;
+    upvotes[decodedArgs.post_id] += 1;
 
     return true;
   }
