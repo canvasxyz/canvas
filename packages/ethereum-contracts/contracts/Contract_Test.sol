@@ -29,6 +29,12 @@ contract Contract_Test {
       "Each action can only be applied once"
     );
 
+    uint256 sessionExpirationTime = sessionMessage.payload.timestamp + sessionMessage.payload.duration;
+    require(
+      actionMessage.payload.timestamp < sessionExpirationTime,
+      "Action must have been signed by a session that has not expired"
+    );
+
     // verify the signatures
     require(
       EIP712_Canvas.verifySession(sessionMessage.payload, sessionMessage.payload.address_, topic),
@@ -41,12 +47,6 @@ contract Contract_Test {
     require(
       EIP712_Canvas.verifyActionMessage(actionMessage, actionMessageSignature, expectedAddress, topic),
       "Action message must be signed by session address"
-    );
-
-    uint256 sessionExpirationTime = sessionMessage.payload.timestamp + sessionMessage.payload.duration;
-    require(
-      actionMessage.payload.timestamp < sessionExpirationTime,
-      "Action must have been signed by a session that has not expired"
     );
 
     // validate the action name
