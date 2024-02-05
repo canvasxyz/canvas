@@ -18,6 +18,7 @@ import { useCanvas } from "@canvas-js/hooks"
 import { Forum } from "@canvas-js/templates"
 
 export function MyApp() {
+  const wallet = ethers.Wallet.createRandom()
   const { app, error } = useCanvas({
     contract: { topic: "com.example.forum", ...Forum },
     signers: [new SIWESigner({ signer: wallet })],
