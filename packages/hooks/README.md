@@ -19,9 +19,9 @@ import { Forum } from "@canvas-js/templates"
 import { useMemo } from "react"
 
 export function MyApp() {
-	const wallet = useMemo(() => {
-		return ethers.Wallet.createRandom();
-	}, [])
+  const wallet = useMemo(() => {
+    return ethers.Wallet.createRandom();
+  }, [])
   const { app, error } = useCanvas({
     contract: { topic: "com.example.forum", ...Forum },
     signers: [new SIWESigner({ signer: wallet })],
