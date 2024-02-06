@@ -161,7 +161,7 @@ describe("Contract_Example", function () {
 				)
 			}
 
-			// Expect the upvote to have been applied
+			// Expect the upvote to have not been applied
 			expect(await contract.upvotes("123456")).to.equal(0)
 		})
 
@@ -222,7 +222,7 @@ describe("Contract_Example", function () {
 				)
 			}
 
-			// Expect the upvote to have been applied
+			// Expect the upvote to have not been applied
 			expect(await contract.upvotes("123456")).to.equal(0)
 		})
 
@@ -291,7 +291,7 @@ describe("Contract_Example", function () {
 				)
 			}
 
-			// Expect the upvote to have been applied
+			// Expect the upvote to have not been applied
 			expect(await contract.upvotes("123456")).to.equal(0)
 		})
 
@@ -349,7 +349,7 @@ describe("Contract_Example", function () {
 				)
 			}
 
-			// Expect the upvote to have been applied
+			// Expect the upvote to have not been applied
 			expect(await contract.upvotes("123456")).to.equal(0)
 		})
 
@@ -405,11 +405,68 @@ describe("Contract_Example", function () {
 				)
 			}
 
-			// Expect the upvote to have been applied
+			// Expect the upvote to have not been applied
 			expect(await contract.upvotes("123456")).to.equal(0)
 		})
 
-		it("claimUpvoted must be called with an action message with the correct typed args", async () => {
+		it("claimUpvoted must be called with an action message with the correct arg name", async () => {
+			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
+
+			const { contract } = await loadFixture(deployFixture)
+			expect(await contract.upvotes("123456")).to.equal(0)
+
+			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
+
+			const signer = new EIP712Signer({})
+
+			const session = await signer.getSession(topic)
+
+			const clock = 1
+			const parents = ["parent1", "parent2"]
+			const sessionMessage = { topic, clock, parents, payload: session }
+			const sessionMessageSignature = signer.sign(sessionMessage)
+
+			const publicKey = getPublicKeyFromSignature(sessionMessageSignature)
+			const publicKeyHex = Buffer.from(publicKey).toString("hex")
+			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
+
+			const sessionMessageForContract = { ...sessionMessage, payload: serializeSessionForContract(session) }
+
+			const action = {
+				type: "action" as const,
+				address: session.address,
+				name: "upvote",
+				// arg name should be "post_id"
+				args: { something: "123456" },
+				blockhash: null,
+				timestamp: session.timestamp,
+			}
+			const actionMessage = { topic, clock, parents, payload: action }
+			const actionMessageSignature = signer.sign(actionMessage)
+
+			const actionMessageForContract = { ...actionMessage, payload: await serializeActionForContract(action) }
+
+			// submit the upvote action
+			try {
+				await contract.claimUpvoted(
+					expectedAddress,
+					sessionMessageForContract,
+					sessionMessageSignature.signature,
+					actionMessageForContract,
+					actionMessageSignature.signature,
+				)
+				expect.fail()
+			} catch (e: any) {
+				expect(e.message).to.equal(
+					"VM Exception while processing transaction: reverted with reason string 'Action argument name must be 'post_id''",
+				)
+			}
+
+			// Expect the upvote to have not been applied
+			expect(await contract.upvotes("123456")).to.equal(0)
+		})
+
+		it("claimUpvoted must be called with an action message with the correct arg type", async () => {
 			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
 
 			const { contract } = await loadFixture(deployFixture)
@@ -437,7 +494,7 @@ describe("Contract_Example", function () {
 				address: session.address,
 				name: "upvote",
 				// post_id should be a string
-				args: { something: "123456" },
+				args: { post_id: 42 },
 				blockhash: null,
 				timestamp: session.timestamp,
 			}
@@ -458,15 +515,12 @@ describe("Contract_Example", function () {
 				expect.fail()
 			} catch (e: any) {
 				expect(e.message).to.equal(
-					"VM Exception while processing transaction: reverted with reason string 'Action argument name must be 'post_id''",
+					"VM Exception while processing transaction: reverted with panic code 0x41 (Too much memory was allocated, or an array was created that is too large)",
 				)
 			}
 
-			// Expect the upvote to have been applied
+			// Expect the upvote to have not been applied
 			expect(await contract.upvotes("123456")).to.equal(0)
 		})
-
-		// - action args must be valid
-		// - any specific validation/logic for the action itself
 	})
 })
