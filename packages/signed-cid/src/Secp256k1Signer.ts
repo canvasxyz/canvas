@@ -20,7 +20,9 @@ export class Secp256k1Signer<T = any> implements Signer<T> {
 	 */
 	public constructor(privateKey = secp256k1.utils.randomPrivateKey()) {
 		const encodingLength = varint.encodingLength(Secp256k1Signer.code)
-		const publicKey = secp256k1.getPublicKey(privateKey)
+		// must return the uncompressed public key so that we can compute the corresponding ethereum
+		// address
+		const publicKey = secp256k1.getPublicKey(privateKey, false)
 		const bytes = new Uint8Array(encodingLength + publicKey.byteLength)
 		varint.encodeTo(Secp256k1Signer.code, bytes, 0)
 		bytes.set(publicKey, encodingLength)

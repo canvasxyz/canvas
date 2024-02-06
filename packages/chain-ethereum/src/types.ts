@@ -15,3 +15,15 @@ export type SIWEMessage = {
 	expirationTime: string | null
 	resources: string[]
 }
+
+export type EIP712AuthorizationData = {
+	signature: Uint8Array
+}
+
+export type EIP712SessionMessage = {
+	address: string
+	publicKey: string
+	blockhash: string | null
+	timestamp: number
+	duration: number | null
+}

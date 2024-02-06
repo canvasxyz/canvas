@@ -42,6 +42,21 @@ export const digests: Digest[] = [
 			return hash.digest()
 		},
 	},
+	{
+		// this corresponds to the "raw" digest in the multicodec spec
+		// https://github.com/multiformats/multicodec/blob/696e701b6cb61f54b67a33b002201450d021f312/table.csv#L41
+		name: "raw",
+		code: 0x55,
+		digest: (iter: Iterable<Uint8Array>) => {
+			const parts = []
+			for (const chunk of iter) {
+				for (const char of chunk) {
+					parts.push(char)
+				}
+			}
+			return new Uint8Array(parts)
+		},
+	},
 ]
 
 export const defaultDigest = "sha2-256"
