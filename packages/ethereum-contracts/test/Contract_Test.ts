@@ -5,7 +5,7 @@ import { serializeActionForContract, serializeSessionForContract } from "./utils
 
 const topic = "example:contract"
 
-describe("Contract_Example", function () {
+describe("Contract_Test", function () {
 	async function deployFixture() {
 		const EIP712_Canvas = await ethers.getContractFactory("EIP712_Canvas")
 		const eip712_Canvas = await EIP712_Canvas.deploy()
