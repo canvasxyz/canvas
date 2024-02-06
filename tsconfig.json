@@ -1,6 +1,17 @@
 {
   "files": [],
+  "exclude": ["**/vite.config.ts"],
   "references": [
+    { "path": "./examples/chat"},
+    { "path": "./examples/chat-server"},
+    { "path": "./examples/chat-wallet"},
+    { "path": "./examples/chess-server"},
+    { "path": "./examples/encrypted-chat"},
+    { "path": "./examples/forum"},
+    { "path": "./examples/notes"},
+    { "path": "./examples/snake"},
+    { "path": "./examples/template-channel-chat"},
+    { "path": "./examples/template-global-chat"},
     { "path": "./packages/bootstrap-peer" },
     { "path": "./packages/interfaces" },
     { "path": "./packages/interfaces/test" },
