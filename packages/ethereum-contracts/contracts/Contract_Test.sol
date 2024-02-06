@@ -10,10 +10,6 @@ contract Contract_Test {
   mapping(bytes32 => bool) public appliedActionHashes;
   mapping(string => uint256) public upvotes;
 
-  struct UpvoteArgs {
-    string post_id;
-  }
-
   function claimUpvoted(
     address expectedAddress,
     EIP712_Canvas.SessionMessage memory sessionMessage,
@@ -56,14 +52,18 @@ contract Contract_Test {
     );
 
     // validate the action args
-    // ABI decode
-    UpvoteArgs memory decodedArgs = abi.decode(actionMessage.payload.args, (UpvoteArgs));
+    (string memory arg1name, string memory postId) = abi.decode(actionMessage.payload.args, (string, string));
+
+    require(
+      keccak256(abi.encodePacked(arg1name)) == keccak256((abi.encodePacked("post_id"))),
+      "Action argument name must be 'post_id'"
+    );
 
     // Now, increase a counter stored on this contract by +1, and
     // save the hash of the action in a mapping on the contract's storage,
     // so someone can't submit the same action twice.
+    upvotes[postId] += 1;
     appliedActionHashes[actionHash] = true;
-    upvotes[decodedArgs.post_id] += 1;
 
     return true;
   }
