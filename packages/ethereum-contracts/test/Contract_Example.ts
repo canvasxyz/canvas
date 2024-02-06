@@ -36,18 +36,16 @@ describe("Contract_Example", function () {
 		return { getPublicKeyFromSignature }
 	}
 
-	describe("Contract_Example.claimUpvoted", function () {
-		it("try to call claimUpvoted with a valid session and action, should only be applied once", async () => {
-			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
+	async function getArgumentsFixture() {
+		// This function returns a function that returns the arguments needed to call `contract.claimUpvoted`
 
-			const { contract } = await loadFixture(deployFixture)
-			expect(await contract.upvotes("123456")).to.equal(0)
+		const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
+		const { getPublicKeyFromSignature } = await getPublicKeyFromSignatureFixture()
 
-			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
-
+		async function getArguments(args?: any) {
 			const signer = new EIP712Signer({})
 
-			const session = await signer.getSession(topic)
+			const session = (args && args.session) || (await signer.getSession(topic))
 
 			const clock = 1
 			const parents = ["parent1", "parent2"]
@@ -63,14 +61,44 @@ describe("Contract_Example", function () {
 			const action = {
 				type: "action" as const,
 				address: session.address,
-				name: "upvote",
-				args: { post_id: "123456" },
+				name: (args && args.action && args.action.name) || "upvote",
+				args: (args && args.action && args.action.args) || { post_id: "123456" },
 				blockhash: null,
 				timestamp: session.timestamp,
 			}
 			const actionMessage = { topic, clock, parents, payload: action }
 			const actionMessageSignature = signer.sign(actionMessage)
 			const actionMessageForContract = { ...actionMessage, payload: await serializeActionForContract(action) }
+
+			return {
+				signer,
+				expectedAddress,
+				session,
+				sessionMessage,
+				sessionMessageSignature,
+				sessionMessageForContract,
+				actionMessage,
+				actionMessageSignature,
+				actionMessageForContract,
+			}
+		}
+		return { getArguments }
+	}
+
+	describe("Contract_Example.claimUpvoted", function () {
+		it("try to call claimUpvoted with a valid session and action, should only be applied once", async () => {
+			const { contract } = await loadFixture(deployFixture)
+			const { getArguments } = await loadFixture(getArgumentsFixture)
+
+			expect(await contract.upvotes("123456")).to.equal(0)
+
+			const {
+				expectedAddress,
+				sessionMessageForContract,
+				sessionMessageSignature,
+				actionMessageForContract,
+				actionMessageSignature,
+			} = await getArguments()
 
 			// submit the upvote action
 			await contract.claimUpvoted(
@@ -105,45 +133,22 @@ describe("Contract_Example", function () {
 		})
 
 		it("claimUpvoted must be called with a session signed by the wallet address", async () => {
-			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
-
 			const { contract } = await loadFixture(deployFixture)
+			const { getArguments } = await loadFixture(getArgumentsFixture)
 			expect(await contract.upvotes("123456")).to.equal(0)
 
-			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
+			const {
+				expectedAddress,
+				sessionMessageForContract,
+				sessionMessageSignature,
+				actionMessageForContract,
+				actionMessageSignature,
+			} = await getArguments()
 
-			const signer = new EIP712Signer({})
-			const signer2 = new EIP712Signer({})
+			const { sessionMessageForContract: sessionMessageForContract2 } = await getArguments()
 
-			const session = await signer.getSession(topic)
-			const session2 = await signer2.getSession(topic)
-
-			const clock = 1
-			const parents = ["parent1", "parent2"]
-			const sessionMessage = { topic, clock, parents, payload: session }
-			const sessionMessageSignature = signer.sign(sessionMessage)
-
-			const publicKey = getPublicKeyFromSignature(sessionMessageSignature)
-			const publicKeyHex = Buffer.from(publicKey).toString("hex")
-			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
-
-			const sessionMessageForContract = {
-				...sessionMessage,
-				// replace the session address with an incorrect one
-				payload: serializeSessionForContract({ ...session, address: session2.address }),
-			}
-
-			const action = {
-				type: "action" as const,
-				address: session.address,
-				name: "upvote",
-				args: { post_id: "123456" },
-				blockhash: null,
-				timestamp: session.timestamp,
-			}
-			const actionMessage = { topic, clock, parents, payload: action }
-			const actionMessageSignature = signer.sign(actionMessage)
-			const actionMessageForContract = { ...actionMessage, payload: await serializeActionForContract(action) }
+			// replace the session address with an incorrect one
+			sessionMessageForContract.payload.address_ = sessionMessageForContract2.payload.address_
 
 			// submit the upvote action
 			try {
@@ -166,44 +171,14 @@ describe("Contract_Example", function () {
 		})
 
 		it("claimUpvoted must be called with a session message signed by the session address", async () => {
-			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
-
+			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
 			expect(await contract.upvotes("123456")).to.equal(0)
 
-			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
+			const { expectedAddress, sessionMessageForContract, actionMessageForContract, actionMessageSignature } =
+				await getArguments()
 
-			const signer = new EIP712Signer({})
-			const signer2 = new EIP712Signer({})
-
-			const session = await signer.getSession(topic)
-			const session2 = await signer2.getSession(topic)
-
-			const clock = 1
-			const parents = ["parent1", "parent2"]
-			const sessionMessage = { topic, clock, parents, payload: session }
-			const sessionMessageSignature = signer.sign(sessionMessage)
-
-			const sessionMessage2 = { topic, clock, parents, payload: session2 }
-			const sessionMessageSignature2 = signer2.sign(sessionMessage2)
-
-			const publicKey = getPublicKeyFromSignature(sessionMessageSignature)
-			const publicKeyHex = Buffer.from(publicKey).toString("hex")
-			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
-
-			const sessionMessageForContract = { ...sessionMessage, payload: serializeSessionForContract(session) }
-
-			const action = {
-				type: "action" as const,
-				address: session.address,
-				name: "upvote",
-				args: { post_id: "123456" },
-				blockhash: null,
-				timestamp: session.timestamp,
-			}
-			const actionMessage = { topic, clock, parents, payload: action }
-			const actionMessageSignature = signer.sign(actionMessage)
-			const actionMessageForContract = { ...actionMessage, payload: await serializeActionForContract(action) }
+			const { sessionMessageSignature: sessionMessageSignature2 } = await getArguments()
 
 			// submit the upvote action
 			try {
@@ -227,52 +202,14 @@ describe("Contract_Example", function () {
 		})
 
 		it("claimUpvoted must be called with an action message signed by the session address", async () => {
-			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
-
+			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
+
+			const { expectedAddress, sessionMessageForContract, sessionMessageSignature, actionMessageForContract } =
+				await getArguments()
+			const { actionMessageSignature: actionMessageSignature2 } = await getArguments()
+
 			expect(await contract.upvotes("123456")).to.equal(0)
-
-			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
-
-			const signer = new EIP712Signer({})
-			const signer2 = new EIP712Signer({})
-
-			const session = await signer.getSession(topic)
-			const session2 = await signer2.getSession(topic)
-
-			const clock = 1
-			const parents = ["parent1", "parent2"]
-			const sessionMessage = { topic, clock, parents, payload: session }
-			const sessionMessageSignature = signer.sign(sessionMessage)
-
-			const publicKey = getPublicKeyFromSignature(sessionMessageSignature)
-			const publicKeyHex = Buffer.from(publicKey).toString("hex")
-			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
-
-			const sessionMessageForContract = { ...sessionMessage, payload: serializeSessionForContract(session) }
-
-			const action = {
-				type: "action" as const,
-				address: session.address,
-				name: "upvote",
-				args: { post_id: "123456" },
-				blockhash: null,
-				timestamp: session.timestamp,
-			}
-			const actionMessage = { topic, clock, parents, payload: action }
-
-			const action2 = {
-				type: "action" as const,
-				address: session2.address,
-				name: "upvote",
-				args: { post_id: "123456" },
-				blockhash: null,
-				timestamp: session2.timestamp,
-			}
-			const actionMessage2 = { topic, clock, parents, payload: action2 }
-			const actionMessageSignature2 = signer2.sign(actionMessage2)
-
-			const actionMessageForContract = { ...actionMessage, payload: await serializeActionForContract(action) }
 
 			// submit the upvote action
 			try {
@@ -296,42 +233,21 @@ describe("Contract_Example", function () {
 		})
 
 		it("claimUpvoted must be called with an action message that has not expired", async () => {
-			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
-
+			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
+
+			const {
+				expectedAddress,
+				session,
+				sessionMessageForContract,
+				sessionMessageSignature,
+				actionMessageForContract,
+				actionMessageSignature,
+			} = await getArguments()
 			expect(await contract.upvotes("123456")).to.equal(0)
 
-			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
-
-			const signer = new EIP712Signer({})
-
-			const session = await signer.getSession(topic)
-
-			const clock = 1
-			const parents = ["parent1", "parent2"]
-			const sessionMessage = { topic, clock, parents, payload: session }
-			const sessionMessageSignature = signer.sign(sessionMessage)
-
-			const publicKey = getPublicKeyFromSignature(sessionMessageSignature)
-			const publicKeyHex = Buffer.from(publicKey).toString("hex")
-			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
-
-			const sessionMessageForContract = { ...sessionMessage, payload: serializeSessionForContract(session) }
-
-			const action = {
-				type: "action" as const,
-				address: session.address,
-				name: "upvote",
-				args: { post_id: "123456" },
-				blockhash: null,
-				timestamp: session.timestamp,
-			}
-			const actionMessage = { topic, clock, parents, payload: action }
-			const actionMessageSignature = signer.sign(actionMessage)
-
 			// set the action timestamp to be after the expiry period
-			action.timestamp = session.timestamp + session.duration! + 1
-			const actionMessageForContract = { ...actionMessage, payload: await serializeActionForContract(action) }
+			actionMessageForContract.payload.timestamp = session.timestamp + session.duration! + 1
 
 			// submit the upvote action
 			try {
@@ -354,40 +270,20 @@ describe("Contract_Example", function () {
 		})
 
 		it("claimUpvoted must be called with an action message with the correct name", async () => {
-			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
-
+			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
 			expect(await contract.upvotes("123456")).to.equal(0)
 
-			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
+			// change the action name to an invalid value
+			const actionOverride = { action: { name: "downvote" } }
 
-			const signer = new EIP712Signer({})
-
-			const session = await signer.getSession(topic)
-
-			const clock = 1
-			const parents = ["parent1", "parent2"]
-			const sessionMessage = { topic, clock, parents, payload: session }
-			const sessionMessageSignature = signer.sign(sessionMessage)
-
-			const publicKey = getPublicKeyFromSignature(sessionMessageSignature)
-			const publicKeyHex = Buffer.from(publicKey).toString("hex")
-			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
-
-			const sessionMessageForContract = { ...sessionMessage, payload: serializeSessionForContract(session) }
-
-			const action = {
-				type: "action" as const,
-				address: session.address,
-				name: "downvote",
-				args: { post_id: "123456" },
-				blockhash: null,
-				timestamp: session.timestamp,
-			}
-			const actionMessage = { topic, clock, parents, payload: action }
-			const actionMessageSignature = signer.sign(actionMessage)
-
-			const actionMessageForContract = { ...actionMessage, payload: await serializeActionForContract(action) }
+			const {
+				expectedAddress,
+				sessionMessageForContract,
+				sessionMessageSignature,
+				actionMessageForContract,
+				actionMessageSignature,
+			} = await getArguments(actionOverride)
 
 			// submit the upvote action
 			try {
@@ -410,41 +306,21 @@ describe("Contract_Example", function () {
 		})
 
 		it("claimUpvoted must be called with an action message with the correct arg name", async () => {
-			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
-
+			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
+
+			// change the action args field name to an invalid value
+			const actionOverride = { action: { args: { something: "123456" } } }
+
+			const {
+				expectedAddress,
+				sessionMessageForContract,
+				sessionMessageSignature,
+				actionMessageForContract,
+				actionMessageSignature,
+			} = await getArguments(actionOverride)
+
 			expect(await contract.upvotes("123456")).to.equal(0)
-
-			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
-
-			const signer = new EIP712Signer({})
-
-			const session = await signer.getSession(topic)
-
-			const clock = 1
-			const parents = ["parent1", "parent2"]
-			const sessionMessage = { topic, clock, parents, payload: session }
-			const sessionMessageSignature = signer.sign(sessionMessage)
-
-			const publicKey = getPublicKeyFromSignature(sessionMessageSignature)
-			const publicKeyHex = Buffer.from(publicKey).toString("hex")
-			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
-
-			const sessionMessageForContract = { ...sessionMessage, payload: serializeSessionForContract(session) }
-
-			const action = {
-				type: "action" as const,
-				address: session.address,
-				name: "upvote",
-				// arg name should be "post_id"
-				args: { something: "123456" },
-				blockhash: null,
-				timestamp: session.timestamp,
-			}
-			const actionMessage = { topic, clock, parents, payload: action }
-			const actionMessageSignature = signer.sign(actionMessage)
-
-			const actionMessageForContract = { ...actionMessage, payload: await serializeActionForContract(action) }
 
 			// submit the upvote action
 			try {
@@ -467,41 +343,21 @@ describe("Contract_Example", function () {
 		})
 
 		it("claimUpvoted must be called with an action message with the correct arg type", async () => {
-			const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
-
+			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
+
+			// change the action args value to an invalid value
+			const actionOverride = { action: { args: { post_id: 42 } } }
+
+			const {
+				expectedAddress,
+				sessionMessageForContract,
+				sessionMessageSignature,
+				actionMessageForContract,
+				actionMessageSignature,
+			} = await getArguments(actionOverride)
+
 			expect(await contract.upvotes("123456")).to.equal(0)
-
-			const { getPublicKeyFromSignature } = await loadFixture(getPublicKeyFromSignatureFixture)
-
-			const signer = new EIP712Signer({})
-
-			const session = await signer.getSession(topic)
-
-			const clock = 1
-			const parents = ["parent1", "parent2"]
-			const sessionMessage = { topic, clock, parents, payload: session }
-			const sessionMessageSignature = signer.sign(sessionMessage)
-
-			const publicKey = getPublicKeyFromSignature(sessionMessageSignature)
-			const publicKeyHex = Buffer.from(publicKey).toString("hex")
-			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
-
-			const sessionMessageForContract = { ...sessionMessage, payload: serializeSessionForContract(session) }
-
-			const action = {
-				type: "action" as const,
-				address: session.address,
-				name: "upvote",
-				// post_id should be a string
-				args: { post_id: 42 },
-				blockhash: null,
-				timestamp: session.timestamp,
-			}
-			const actionMessage = { topic, clock, parents, payload: action }
-			const actionMessageSignature = signer.sign(actionMessage)
-
-			const actionMessageForContract = { ...actionMessage, payload: await serializeActionForContract(action) }
 
 			// submit the upvote action
 			try {
