@@ -16,14 +16,11 @@ import {
 	DAYS,
 } from "./utils.js"
 
-// If provided, chainId, verifyingContract, and version are used in the EIP712 domain:
-// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md#definition-of-domainseparator
 export interface EIP712SignerInit {
 	signer?: AbstractSigner
 	sessionDuration?: number
+	// chainId is not currently used in the domain separator
 	chainId?: number // optional
-	verifyingContract?: string // optional
-	version?: string // optional
 }
 
 // The `address` delegates authority to the `publicKey` to sign individual actions.
