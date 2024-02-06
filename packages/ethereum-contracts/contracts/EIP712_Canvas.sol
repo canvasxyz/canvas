@@ -216,7 +216,14 @@ library EIP712_Canvas {
     ) public pure returns (bool) {
         bytes32 digest = _hashTypedDataV4(hashSessionMessage(sessionMessage), name);
         bytes memory cid = _createCID(bytes.concat(digest));
-        bytes32 hash = sha256(cid); // We already hashed our data to produce the CID, but we have to hash it again as part of ECDSA signing
+
+        // truncate cid to 32 bytes
+        bytes memory truncatedCid = new bytes(32);
+        for(uint256 i = 0; i < 32 && i < cid.length; i++) {
+            truncatedCid[i] = cid[i];
+        }
+
+        bytes32 truncatedCid32 = bytes32(truncatedCid);
 
         bytes32 r;
         bytes32 s;
@@ -225,12 +232,12 @@ library EIP712_Canvas {
           s := mload(add(signature, 0x40))
         }
 
-        address signerV27 = ECDSA.recover(hash, 27, r, s);
+        address signerV27 = ECDSA.recover(truncatedCid32, 27, r, s);
         if (signerV27 == expectedAddress) {
             return true;
         }
 
-        address signerV28 = ECDSA.recover(hash, 28, r, s);
+        address signerV28 = ECDSA.recover(truncatedCid32, 28, r, s);
         if (signerV28 == expectedAddress) {
             return true;
         }
@@ -250,7 +257,14 @@ library EIP712_Canvas {
     ) public pure returns (bool) {
         bytes32 digest = _hashTypedDataV4(hashActionMessage(actionMessage), name);
         bytes memory cid = _createCID(bytes.concat(digest));
-        bytes32 hash = sha256(cid); // We already hashed our data to produce the CID, but we have to hash it again as part of ECDSA signing
+
+        // truncate cid to 32 bytes
+        bytes memory truncatedCid = new bytes(32);
+        for(uint256 i = 0; i < 32 && i < cid.length; i++) {
+            truncatedCid[i] = cid[i];
+        }
+        bytes32 truncatedCid32 = bytes32(truncatedCid);
+
 
         bytes32 r;
         bytes32 s;
@@ -259,12 +273,12 @@ library EIP712_Canvas {
           s := mload(add(signature, 0x40))
         }
 
-        address signerV27 = ECDSA.recover(hash, 27, r, s);
+        address signerV27 = ECDSA.recover(truncatedCid32, 27, r, s);
         if (signerV27 == expectedAddress) {
             return true;
         }
 
-        address signerV28 = ECDSA.recover(hash, 28, r, s);
+        address signerV28 = ECDSA.recover(truncatedCid32, 28, r, s);
         if (signerV28 == expectedAddress) {
             return true;
         }

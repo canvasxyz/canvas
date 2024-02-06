@@ -33,7 +33,7 @@ export class Secp256k1Signer<T = any> implements Signer<T> {
 
 	public sign(value: T, options: { codec?: string | Codec; digest?: string | Digest } = {}): Signature {
 		const cid = getCID(value, options)
-		const signature = secp256k1.sign(cid.bytes, this.#privateKey, { prehash: true }).toCompactRawBytes()
+		const signature = secp256k1.sign(cid.bytes, this.#privateKey).toCompactRawBytes()
 		return { publicKey: this.uri, signature, cid }
 	}
 
