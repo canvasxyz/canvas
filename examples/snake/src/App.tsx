@@ -3,11 +3,14 @@ import "./App.css"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { useCanvas, useLiveQuery, useTick } from "@canvas-js/hooks"
+import { useMemo } from "react"
 
 import { contract, maxX, maxY } from "./contract.js"
 
 function App() {
-	const wallet = ethers.Wallet.createRandom()
+	const wallet = useMemo(() => {
+		return ethers.Wallet.createRandom();
+	}, []);
 	const { app } = useCanvas({
 		contract,
 		signers: [new SIWESigner({ signer: wallet })],

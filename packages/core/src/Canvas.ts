@@ -144,14 +144,16 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			: never
 	}
 
-	private pingTimer: ReturnType<typeof setTimeout> | undefined
-	private peers: PeerId[] = []
-	private _connections: Connection[] = []
 	public readonly connections: Connections = {}
 	public status: AppConnectionStatus = "disconnected"
 
-	private readonly controller = new AbortController()
-	private readonly log = logger("canvas:core")
+	// TODO: encapsulate internal stores for peers and connections
+	private _peers: PeerId[] = []
+	private _connections: Connection[] = []
+	private _pingTimer: ReturnType<typeof setTimeout> | undefined
+
+	private readonly _abortController = new AbortController()
+	private readonly _log = logger("canvas:core")
 
 	#open = true
 
@@ -166,22 +168,22 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		super()
 		this.db = runtime.db
 
-		this.log("initialized with peerId %p", libp2p.peerId)
+		this._log("initialized with peerId %p", libp2p.peerId)
 
 		this.libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
-			this.log("discovered peer %p with addresses %o", id, multiaddrs)
+			this._log("discovered peer %p with addresses %o", id, multiaddrs)
 		})
 
 		this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
-			this.log("connected to %p", peerId)
+			this._log("connected to %p", peerId)
 			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
-			this.peers = [...this.peers, peerId]
+			this._peers = [...this._peers, peerId]
 		})
 
 		this.libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
-			this.log("disconnected %p", peerId)
+			this._log("disconnected %p", peerId)
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
-			this.peers = this.peers.filter((peer) => peer.toString() !== peerId.toString())
+			this._peers = this._peers.filter((peer) => peer.toString() !== peerId.toString())
 			delete this.connections[peerId.toString()]
 			this.updateStatus()
 		})
@@ -189,7 +191,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		this.libp2p.services.discovery.addEventListener(
 			"presence:join",
 			({ detail: { peerId, env, address, topics, peers } }) => {
-				this.log("discovered peer %p with addresses %o", peerId)
+				this._log("discovered peer %p with addresses %o", peerId)
 				this.dispatchEvent(
 					new CustomEvent("presence:join", { detail: { peerId, env, address, topics, peers: { ...peers } } }),
 				)
@@ -197,7 +199,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		)
 
 		this.libp2p.services.discovery.addEventListener("presence:leave", ({ detail: { peerId, peers } }) => {
-			this.log("discovered peer %p with addresses %o", peerId)
+			this._log("discovered peer %p with addresses %o", peerId)
 			this.dispatchEvent(new CustomEvent("presence:leave", { detail: { peerId, peers: { ...peers } } }))
 		})
 
@@ -205,7 +207,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			this._connections = [...this._connections, connection]
 			const remotePeerId = connection.remoteAddr.getPeerId()?.toString()
 			if (remotePeerId && !this.connections[remotePeerId]) {
-				const peer = this.peers.find((peer) => peer.toString() === remotePeerId)
+				const peer = this._peers.find((peer) => peer.toString() === remotePeerId)
 				if (!peer) return
 				this.connections[remotePeerId] = {
 					peer,
@@ -229,9 +231,9 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		})
 
 		const startPingTimer = () => {
-			this.pingTimer = setInterval(() => {
+			this._pingTimer = setInterval(() => {
 				const subscribers = this.libp2p.services.pubsub.getSubscribers(GossipLogService.topicPrefix + this.topic)
-				const pings = this.peers.map((peer) =>
+				const pings = this._peers.map((peer) =>
 					this.libp2p.services.ping
 						.ping(peer)
 						.then((msec) => {
@@ -268,7 +270,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			startPingTimer()
 		}
 		this.libp2p.addEventListener("stop", (event) => {
-			clearInterval(this.pingTimer)
+			clearInterval(this._pingTimer)
 		})
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
@@ -291,10 +293,10 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 					limit: 1,
 				})
 
-				this.log("got %d matching sessions: %o", results.length, results)
+				this._log("got %d matching sessions: %o", results.length, results)
 				if (results.length === 0) {
 					const { id: sessionId } = await this.append(session, { signer })
-					this.log("created session %s", sessionId)
+					this._log("created session %s", sessionId)
 				} else {
 					try {
 						const row = results[0]
@@ -302,7 +304,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 						const message = cbor.decode<Message<Session>>(hexToBytes(row.rawMessage as string))
 						this.insert(signature, message)
 					} catch (err) {
-						this.log("failed to rebroadcast session for action")
+						this._log("failed to rebroadcast session for action")
 					}
 				}
 
@@ -317,7 +319,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 					{ signer },
 				)
 
-				this.log("applied action %s and got result %o", id, result)
+				this._log("applied action %s and got result %o", id, result)
 
 				return { id, result, recipients }
 			}
@@ -352,13 +354,13 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	public async close() {
 		if (this.#open) {
 			this.#open = false
-			this.controller.abort()
+			this._abortController.abort()
 			await this.libp2p.stop()
 			await this.messageLog.close()
 			await this.runtime.close()
 			this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: {} } }))
 			this.dispatchEvent(new Event("close"))
-			this.log("closed")
+			this._log("closed")
 		}
 	}
 
