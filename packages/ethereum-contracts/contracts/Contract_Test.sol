@@ -10,6 +10,10 @@ contract Contract_Test {
   mapping(bytes32 => bool) public appliedActionHashes;
   mapping(string => uint256) public upvotes;
 
+  /**
+   * Verify that an offchain interaction was taken by `expectedAddress`,
+   * with a valid session, session message, action, and action message.
+   */
   function claimUpvoted(
     address expectedAddress,
     EIP712_Canvas.SessionMessage memory sessionMessage,
@@ -22,16 +26,10 @@ contract Contract_Test {
 
     require(
       !appliedActionHashes[actionHash],
-      "Each action can only be applied once"
+      "Action has already been processed"
     );
 
-    uint256 sessionExpirationTime = sessionMessage.payload.timestamp + sessionMessage.payload.duration;
-    require(
-      actionMessage.payload.timestamp < sessionExpirationTime,
-      "Action must have been signed by a session that has not expired"
-    );
-
-    // verify the signatures
+    // verify signatures:
     require(
       EIP712_Canvas.verifySession(sessionMessage.payload, sessionMessage.payload.address_, topic),
       "Session must be signed by wallet address"
@@ -45,15 +43,23 @@ contract Contract_Test {
       "Action message must be signed by session address"
     );
 
-    // validate the action name
+    // invariants:
+    uint256 sessionExpirationTime = sessionMessage.payload.timestamp + sessionMessage.payload.duration;
+    require(
+      actionMessage.payload.timestamp < sessionExpirationTime,
+      "Invalid action: Signed by a session that was expired at the time of action"
+    );
+    require(
+        actionMessage.payload.timestamp >= sessionMessage.payload.timestamp,
+      "Invalid action: Signed by a session after the action"
+    );
+
+    // action validation:
+    (string memory arg1name, string memory postId) = abi.decode(actionMessage.payload.args, (string, string));
     require(
       keccak256(abi.encodePacked(actionMessage.payload.name)) == keccak256(abi.encodePacked("upvote")),
       "Action name must be 'upvote'"
     );
-
-    // validate the action args
-    (string memory arg1name, string memory postId) = abi.decode(actionMessage.payload.args, (string, string));
-
     require(
       keccak256(abi.encodePacked(arg1name)) == keccak256((abi.encodePacked("post_id"))),
       "Action argument name must be 'post_id'"

@@ -124,7 +124,7 @@ describe("Contract_Test", function () {
 					expect.fail()
 			} catch (e: any) {
 				expect(e.message).to.equal(
-					"VM Exception while processing transaction: reverted with reason string 'Each action can only be applied once'",
+					"VM Exception while processing transaction: reverted with reason string 'Action has already been processed'",
 				)
 			}
 
@@ -261,7 +261,7 @@ describe("Contract_Test", function () {
 				expect.fail()
 			} catch (e: any) {
 				expect(e.message).to.equal(
-					"VM Exception while processing transaction: reverted with reason string 'Action must have been signed by a session that has not expired'",
+					"VM Exception while processing transaction: reverted with reason string 'Action message must be signed by session address'",
 				)
 			}
 
