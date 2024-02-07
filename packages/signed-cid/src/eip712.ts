@@ -19,7 +19,7 @@ type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint
  * statically typed to a specific action schema beforehand. See
  * @canvas-js/ethereum-contracts for examples.
  */
-export const encode = (message: Message<Action | Session>) => {
+export const encode = (message: Message<Action | Session>): Uint8Array => {
 	let hashedPayload: string
 	if (message.payload.type === "session") {
 		const types = {
@@ -92,7 +92,7 @@ export const encode = (message: Message<Action | Session>) => {
 	} else {
 		throw new TypeError("invalid payload type")
 	}
-	return [getBytes(hashedPayload)]
+	return getBytes(hashedPayload)
 }
 
 /**
