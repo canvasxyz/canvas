@@ -3,7 +3,7 @@ import * as json from "@ipld/dag-json"
 import * as raw from "multiformats/codecs/raw"
 
 import { assert } from "./utils.js"
-import { eip712Codec } from "./eip712Codec.js"
+import { encode as eip712Encode } from "./eip712Codec.js"
 
 export type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint8Array> }
 
@@ -25,18 +25,11 @@ export const codecs: Codec[] = [
 	{
 		name: "raw",
 		code: raw.code,
-		encode: (value) => {
-			if (typeof value === "string") {
-				const encoder = new TextEncoder()
-				return [encoder.encode(value)]
-			} else if (value instanceof Uint8Array) {
-				return [value]
-			} else {
-				throw new TypeError("raw values must be strings or Uint8Arrays")
-			}
-		},
+
+		// TODO: define Canvas action/session messages as multicodecs
+		// https://github.com/multiformats/multicodec/blob/master/table.csv
+		encode: eip712Encode,
 	},
-	eip712Codec,
 ]
 
 export const defaultCodec = "dag-cbor"
