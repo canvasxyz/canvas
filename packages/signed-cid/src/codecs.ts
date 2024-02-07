@@ -25,8 +25,10 @@ export const codecs: Codec[] = [
 		name: "raw",
 		code: raw.code,
 
-		// TODO: add Canvas action/session messages to multicodecs table
+		// TODO: add codes for Canvas eip712 messages to the multicodecs table
 		// https://github.com/multiformats/multicodec/blob/master/table.csv
+		//
+		// right now, we assume messages with a `raw` codec are eip712 encoded data
 		encode: (value) => {
 			if (typeof value === "string") {
 				const encoder = new TextEncoder()
