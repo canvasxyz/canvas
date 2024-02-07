@@ -15,7 +15,7 @@ type ConnectMagicProps = {
 
 export const ConnectMagic = ({ publicMagicApiKey, rpcUrl, chainId }: ConnectMagicProps) => {
 	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
-	const [magic, setMagic] = useState<MagicBase | null>(null)
+	const [magic, setMagic] = useState<MagicBase<[AuthExtension]> | null>(null)
 	const [email, setEmail] = useState("")
 	const [error, setError] = useState<Error | null>(null)
 	const [loginInProgress, setLoginInProgress] = useState(false)
@@ -24,9 +24,9 @@ export const ConnectMagic = ({ publicMagicApiKey, rpcUrl, chainId }: ConnectMagi
 		const magic = new MagicBase(publicMagicApiKey, {
 			network: {
 				rpcUrl,
-				chainId
+				chainId,
 			},
-			extensions: [new AuthExtension()]
+			extensions: [new AuthExtension()],
 		})
 
 		setMagic(magic)

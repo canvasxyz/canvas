@@ -1,14 +1,10 @@
-import React, { useEffect, useRef, useState } from "react"
+import React, { useRef, useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
-import { Canvas, defaultBootstrapList } from "@canvas-js/core"
+import { defaultBootstrapList } from "@canvas-js/core"
+import type { Contract } from "@canvas-js/core"
+
 import { useCanvas } from "@canvas-js/hooks"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { ATPSigner } from "@canvas-js/chain-atp"
-import { CosmosSigner } from "@canvas-js/chain-cosmos"
-import { NEARSigner } from "@canvas-js/chain-near"
-import { SubstrateSigner } from "@canvas-js/chain-substrate"
-import { SolanaSigner } from "@canvas-js/chain-solana"
 
 import { AppContext } from "./AppContext.js"
 import { Messages } from "./Chat.js"
@@ -18,7 +14,10 @@ import { SessionStatus } from "./SessionStatus.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
 import { Connect } from "./connect/index.js"
 
+const topic = "chat-example.canvas.xyz"
+
 export const contract = {
+	topic,
 	models: {
 		message: {
 			id: "primary",
@@ -34,13 +33,13 @@ export const contract = {
 			await db.set("message", { id, address, content, timestamp })
 		},
 	},
-}
+} satisfies Contract
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
 	const [address, setAddress] = useState<string | null>(null)
 
-	const topicRef = useRef("chat-example.canvas.xyz")
+	const topicRef = useRef(topic)
 
 	const { app } = useCanvas({
 		contract: { ...contract, topic: topicRef.current },
@@ -61,7 +60,7 @@ export const App: React.FC<{}> = ({}) => {
 	})
 
 	return (
-		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app }}>
+		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app || null }}>
 			{app ? (
 				<main>
 					<div className="flex flex-row gap-4 h-full">
