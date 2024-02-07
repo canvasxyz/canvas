@@ -3,7 +3,6 @@ import * as json from "@ipld/dag-json"
 import * as raw from "multiformats/codecs/raw"
 
 import { assert } from "./utils.js"
-import { eip712Codec } from "./eip712Codec.js"
 
 export type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint8Array> }
 
@@ -36,7 +35,6 @@ export const codecs: Codec[] = [
 			}
 		},
 	},
-	eip712Codec,
 ]
 
 export const defaultCodec = "dag-cbor"

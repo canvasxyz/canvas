@@ -104,7 +104,7 @@ library EIP712_Canvas {
         // https://github.com/multiformats/multicodec/blob/696e701b6cb61f54b67a33b002201450d021f312/table.csv#L41
         (digestSize,digest) = CID.createDigest(0x55, multihash);
 
-        return CID.encodeCID(1, 712, digest);
+        return CID.encodeCID(1, 0x55, digest);
     }
 
     /**
