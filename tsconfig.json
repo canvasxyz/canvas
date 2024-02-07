@@ -3,9 +3,7 @@
   "exclude": ["**/vite.config.ts"],
   "references": [
     { "path": "./examples/chat"},
-    { "path": "./examples/chat-server"},
     { "path": "./examples/chat-wallet"},
-    { "path": "./examples/chess-server"},
     { "path": "./examples/encrypted-chat"},
     { "path": "./examples/forum"},
     { "path": "./examples/notes"},
