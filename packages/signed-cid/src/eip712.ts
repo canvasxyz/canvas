@@ -3,7 +3,6 @@ import { AbiCoder } from "ethers/abi"
 import { TypedDataEncoder } from "ethers/hash"
 
 import { Action, Message, Session } from "@canvas-js/interfaces"
-type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint8Array> }
 
 /**
  * Encode `Message<Action | Session>` using Ethereum typed data encoding.

@@ -34,9 +34,9 @@ describe("CID", function () {
 			const { contract } = await loadFixture(deployFixture)
 
 			const [digestSize, contractDigest] = await contract.createDigest(0, sha256("hello world"))
-			const contractCid = await contract.encodeCID(1, 712, contractDigest)
+			const contractCid = await contract.encodeCID(1, 0x55, contractDigest)
 
-			const multiformatsCid = CID.createV1(712, createDigest(0, sha256("hello world")))
+			const multiformatsCid = CID.createV1(0x55, createDigest(0, sha256("hello world")))
 
 			expect(contractCid).to.equal(`0x${Buffer.from(multiformatsCid.bytes).toString("hex")}`)
 		})
