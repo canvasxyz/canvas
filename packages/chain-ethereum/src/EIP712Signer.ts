@@ -2,7 +2,7 @@ import { AbstractSigner, Wallet, hexlify, getBytes, verifyTypedData, zeroPadValu
 import { logger } from "@libp2p/logger"
 
 import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
-import { Secp256k1Signer, didKeyPattern, eip712Encode } from "@canvas-js/signed-cid"
+import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
 import target from "#target"
 
@@ -145,14 +145,14 @@ export class EIP712Signer implements SessionSigner<EIP712AuthorizationData> {
 			assert(timestamp >= session.timestamp)
 			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
 
-			return signer.sign(eip712Encode(message), { codec: "raw", digest: "raw" })
+			return signer.sign(message, { codec: "raw", digest: "raw" })
 		} else if (message.payload.type === "session") {
 			const { signer, session } = this.#store.get(message.topic, message.payload.address) ?? {}
 			assert(signer !== undefined && session !== undefined)
 
 			// only sign our own current sessions
 			assert(message.payload === session)
-			return signer.sign(eip712Encode(message), { codec: "raw", digest: "raw" })
+			return signer.sign(message, { codec: "raw", digest: "raw" })
 		} else {
 			signalInvalidType(message.payload)
 		}
