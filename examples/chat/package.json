@@ -9,6 +9,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@canvas-js/chain-atp": "0.8.26",
     "@canvas-js/chain-cosmos": "0.8.26",
     "@canvas-js/chain-ethereum": "0.8.26",
     "@canvas-js/chain-ethereum-viem": "0.8.26",
