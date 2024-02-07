@@ -24,7 +24,10 @@
   "references": [
     { "path": "./tsconfig.node.json" },
     { "path": "../../packages/chain-ethereum" },
+    { "path": "../../packages/core" },
+    { "path": "../../packages/gossiplog" },
     { "path": "../../packages/hooks" },
+    { "path": "../../packages/interfaces" },
     { "path": "../../packages/templates" }
   ]
 }

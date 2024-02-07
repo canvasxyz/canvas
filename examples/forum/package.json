@@ -10,7 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@canvas-js/core": "0.8.26",
     "@canvas-js/chain-ethereum": "0.8.26",
+    "@canvas-js/gossiplog": "0.8.26",
+    "@canvas-js/interfaces": "0.8.26",
     "@canvas-js/hooks": "0.8.26",
     "@canvas-js/templates": "0.8.26",
     "@headlessui/react": "^1.7.17",
@@ -19,6 +22,7 @@
     "@irys/sdk": "^0.0.4",
     "@metamask/jazzicon": "^2.0.0",
     "ethers": "^6.9.0",
+    "idb": "^8.0.0",
     "moment": "^2.29.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
