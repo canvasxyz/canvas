@@ -9,10 +9,13 @@ type Codec = { name: string; code: number; encode: (value: any) => Iterable<Uint
  * Encode `Message<Action | Session>` using Ethereum typed data encoding.
  *
  * Messages may contain dynamically typed data:
- * - Objects may contain nested objects, strings, numbers, or booleans.
- *   These are encoded as `bytes`, `string`, `int256`, and `bool`.
+ * - Objects may contain strings, numbers, or booleans.
+ *   These are encoded as `string`, `int256`, and `bool`.
  * - Numbers must be integers.
  * - 40-byte-long hex strings (starting with "0x") are encoded as `address`.
+ *
+ * TODO: Objects encoded as `bytes` as `getBytes(AbiCoder().encode(types, values))`.
+ * TODO: Null encoded as `bytes` with length zero.
  *
  * While the codec is implemented for dynamically typed data, if you are
  * writing an onchain verifier for offchain signed data, it must still be
@@ -123,7 +126,7 @@ export function getEIP712Args(args: Record<string, any>) {
 }
 
 /**
- * Convert a JS type to an EIP712-compatible type.
+ * Convert a JS primitive type to an EIP712-compatible type.
  */
 function getAbiTypeForValue(value: any) {
 	if (typeof value === "string") {
@@ -141,5 +144,5 @@ function getAbiTypeForValue(value: any) {
 	} else if (typeof value === "boolean") {
 		return "bool"
 	}
-	throw new TypeError(`invalid type ${typeof value}`)
+	throw new TypeError(`invalid type ${typeof value}: ${JSON.stringify(value)}`)
 }

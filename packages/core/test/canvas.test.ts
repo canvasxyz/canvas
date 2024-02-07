@@ -5,7 +5,7 @@ import { ethers } from "ethers"
 
 import type { Message } from "@canvas-js/interfaces"
 import { Ed25519Signer } from "@canvas-js/signed-cid"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner, EIP712Signer } from "@canvas-js/chain-ethereum"
 import { Canvas } from "@canvas-js/core"
 
 const contract = `
@@ -44,6 +44,12 @@ export const actions = {
 
 const init = async (t: ExecutionContext) => {
 	const app = await Canvas.initialize({ contract, offline: true })
+	t.teardown(() => app.close())
+	return app
+}
+
+const initEIP712 = async (t: ExecutionContext) => {
+	const app = await Canvas.initialize({ contract, offline: true, signers: [new EIP712Signer({})] })
 	t.teardown(() => app.close())
 	return app
 }
@@ -259,4 +265,32 @@ test("validate action args using IPLD schemas", async (t) => {
 	})
 
 	t.is(await app.db.count("posts"), 1)
+})
+
+test("apply an action and read a record from the database using eip712", async (t) => {
+	const app = await initEIP712(t)
+
+	const { id, result: postId } = await app.actions.createPost({
+		content: "hello world",
+		isVisible: true,
+		something: -1,
+		metadata: 0,
+	})
+
+	t.log(`applied action ${id} and got result`, postId)
+	assert(typeof postId === "string")
+	const value = await app.db.get("posts", postId)
+	t.is(value?.content, "hello world")
+
+	const { id: id2, result: postId2 } = await app.actions.createPost({
+		content: "foo bar",
+		isVisible: true,
+		something: -1,
+		metadata: 0,
+	})
+
+	t.log(`applied action ${id2} and got result`, postId)
+	assert(typeof postId2 === "string")
+	const value2 = await app.db.get("posts", postId2)
+	t.is(value2?.content, "foo bar")
 })
