@@ -4,12 +4,12 @@ import { ethers } from "ethers"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { useCanvas } from "@canvas-js/hooks"
 import { Forum } from "@canvas-js/templates"
-import useHashParam from "use-hash-param"
+import { default as useHashParam } from "use-hash-param"
 
-import { Persister } from "./Persister"
-import { Sidebar } from "./Sidebar"
-import { RepliesPage } from "./RepliesPage"
-import { ThreadsPage } from "./ThreadsPage"
+import { Persister } from "./Persister.js"
+import { Sidebar } from "./Sidebar.js"
+import { RepliesPage } from "./RepliesPage.js"
+import { ThreadsPage } from "./ThreadsPage.js"
 
 export type Tag = {
 	name: string

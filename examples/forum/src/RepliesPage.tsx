@@ -5,9 +5,9 @@ import moment from "moment"
 import { useLiveQuery } from "@canvas-js/hooks"
 import { Canvas } from "@canvas-js/core"
 
-import { Thread, Reply, Placeholder, Loading } from "./App"
-import { Composer } from "./Composer"
-import { Address } from "./Address"
+import { Thread, Reply, Placeholder, Loading } from "./App.js"
+import { Composer } from "./Composer.js"
+import { Address } from "./Address.js"
 
 export function RepliesPage({
 	wallet,
