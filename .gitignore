@@ -7,6 +7,10 @@
 node_modules/
 
 tsconfig.tsbuildinfo
+tsconfig.node.tsbuildinfo
+
+vite.config.d.ts
+vite.config.js
 
 packages/**/lib/
 packages/**/dist/
