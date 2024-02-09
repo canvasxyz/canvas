@@ -2,6 +2,32 @@ import { defineConfig } from "vitepress"
 import namedCodeBlocks from "markdown-it-named-code-blocks"
 import footnote from "markdown-it-footnote"
 import { getSidebar } from "./getSidebar.js"
+import apiCoreSidebar from "../../docs/api/canvas-js/core/typedoc-sidebar.json"
+
+function fixApiLinks(sidebar, topLevel = false) {
+	const fixedSidebar: any[] = []
+	for (const entry of sidebar) {
+		const newEntry = { ...entry }
+
+		if (entry.items) {
+			newEntry.items = fixApiLinks(entry.items)
+		}
+
+		console.log(entry.link)
+		if (entry.link) {
+			newEntry.link = entry.link.slice(11)
+			console.log(newEntry.link)
+		}
+
+		if (topLevel) {
+			console.log(entry)
+		}
+
+		fixedSidebar.push(newEntry)
+	}
+
+	return fixedSidebar
+}
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -107,6 +133,16 @@ export default defineConfig({
 						{ text: "Snake", link: "/examples-snake.md" },
 						{ text: "Forum", link: "/examples-forum.md" },
 						// { text: "Notes", link: "/examples-notes.md" }
+					],
+				},
+				{
+					text: "API",
+					items: [
+						{
+							text: "@canvas-js/core",
+							items: fixApiLinks(apiCoreSidebar, true),
+							link: "/api/canvas-js/core/",
+						},
 					],
 				},
 			],
