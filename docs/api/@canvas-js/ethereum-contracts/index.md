@@ -1,3 +1,5 @@
+[Documentation](../../index.md) / @canvas-js/ethereum-contracts
+
 # @canvas-js/ethereum-contracts
 
 Contracts for onchain verification of Canvas messages created by the `EIP712Signer` verifiable signer.

@@ -2,7 +2,7 @@ import { defineConfig } from "vitepress"
 import namedCodeBlocks from "markdown-it-named-code-blocks"
 import footnote from "markdown-it-footnote"
 import { getSidebar } from "./getSidebar.js"
-import apiCoreSidebar from "../../docs/api/canvas-js/core/typedoc-sidebar.json"
+import apiCoreSidebar from "../../docs/api/typedoc-sidebar.json"
 
 function fixApiLinks(sidebar, topLevel = false) {
 	const fixedSidebar: any[] = []
@@ -15,7 +15,7 @@ function fixApiLinks(sidebar, topLevel = false) {
 
 		console.log(entry.link)
 		if (entry.link) {
-			newEntry.link = entry.link.slice(11)
+			newEntry.link = entry.link.slice(5)
 			console.log(newEntry.link)
 		}
 
@@ -137,13 +137,7 @@ export default defineConfig({
 				},
 				{
 					text: "API",
-					items: [
-						{
-							text: "@canvas-js/core",
-							items: fixApiLinks(apiCoreSidebar, true),
-							link: "/api/canvas-js/core/",
-						},
-					],
+					items: fixApiLinks(apiCoreSidebar, true),
 				},
 			],
 		},
