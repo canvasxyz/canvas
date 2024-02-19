@@ -34,6 +34,7 @@
     { "path": "./packages/chain-solana" },
     { "path": "./packages/chain-solana/test" },
     { "path": "./packages/chain-substrate" },
+    { "path": "./packages/ethereum-contracts" },
     { "path": "./packages/replication-server" },
     { "path": "./packages/hooks" },
     { "path": "./packages/templates" },

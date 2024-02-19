@@ -1,7 +1,12 @@
 import { CID } from "multiformats/cid"
 import * as siwe from "siwe"
 
-import type { SIWESessionData, SIWEMessage } from "./types.js"
+import type { SIWESessionData, SIWEMessage, EIP712AuthorizationData, EIP712SessionMessage } from "./types.js"
+
+export const SECONDS = 1000
+export const MINUTES = 60 * SECONDS
+export const HOURS = 60 * MINUTES
+export const DAYS = 24 * HOURS
 
 export function assert(condition: boolean, message?: string): asserts condition {
 	if (!condition) {
@@ -14,7 +19,7 @@ export function signalInvalidType(type: never): never {
 	throw new TypeError("internal error: invalid type")
 }
 
-export function validateSessionData(authorizationData: unknown): authorizationData is SIWESessionData {
+export function validateSIWESessionData(authorizationData: unknown): authorizationData is SIWESessionData {
 	if (authorizationData === undefined || authorizationData === null) {
 		return false
 	} else if (
@@ -33,6 +38,18 @@ export function validateSessionData(authorizationData: unknown): authorizationDa
 
 	const { signature, domain, nonce } = authorizationData as Record<string, any>
 	return signature instanceof Uint8Array && typeof domain === "string" && typeof nonce === "string"
+}
+
+export function validateEIP712AuthorizationData(
+	authorizationData: unknown,
+): authorizationData is EIP712AuthorizationData {
+	try {
+		const { signature } = authorizationData as any
+		assert(signature instanceof Uint8Array, "signature must be a Uint8Array")
+		return true
+	} catch (e) {
+		return false
+	}
 }
 
 export const SIWEMessageVersion = "1"

@@ -1,5 +1,4 @@
-import { AbstractSigner, Wallet, verifyMessage, hexlify, getBytes } from "ethers"
-import * as siwe from "siwe"
+import { AbstractSigner, Wallet, hexlify, getBytes, verifyTypedData, zeroPadValue, getAddress } from "ethers"
 import { logger } from "@libp2p/logger"
 
 import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
@@ -7,26 +6,41 @@ import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
 import target from "#target"
 
-import type { SIWESessionData, SIWEMessage } from "./types.js"
+import type { EIP712AuthorizationData, EIP712SessionMessage } from "./types.js"
 import {
 	assert,
 	signalInvalidType,
-	SIWEMessageVersion,
-	validateSIWESessionData,
 	parseAddress,
 	addressPattern,
-	prepareSIWEMessage,
+	validateEIP712AuthorizationData,
+	DAYS,
 } from "./utils.js"
 
-export interface SIWESignerInit {
-	chainId?: number
+export interface EIP712SignerInit {
 	signer?: AbstractSigner
 	sessionDuration?: number
+	// chainId is not currently used in the domain separator
+	chainId?: number // optional
 }
 
-export class SIWESigner implements SessionSigner<SIWESessionData> {
+// The `address` delegates authority to the `publicKey` to sign individual actions.
+//
+// Because it's still unclear which ETH DID URIs we should use, the public key is
+// encoded as an ECDSA did:key pubkey, which can be translated into an Ethereum
+// address without too much difficulty.
+export const eip712TypeDefinitions = {
+	Session: [
+		{ name: "address", type: "address" },
+		{ name: "blockhash", type: "string" }, // optional
+		{ name: "duration", type: "uint256" },
+		{ name: "publicKey", type: "string" },
+		{ name: "timestamp", type: "uint256" },
+	],
+}
+
+export class EIP712Signer implements SessionSigner<EIP712AuthorizationData> {
 	public readonly key: string
-	public readonly sessionDuration: number | null
+	public readonly sessionDuration: number
 	public readonly chainId: number
 
 	private readonly log = logger("canvas:chain-ethereum")
@@ -34,42 +48,40 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 	#store = target.getSessionStore()
 	#ethersSigner: AbstractSigner
 
-	public constructor(init: SIWESignerInit = {}) {
+	public constructor(init: EIP712SignerInit = {}) {
 		this.#ethersSigner = init.signer ?? Wallet.createRandom()
-		this.sessionDuration = init.sessionDuration ?? null
+		this.sessionDuration = init.sessionDuration ?? 14 * DAYS
 		this.chainId = init.chainId ?? 1
-		this.key = `SIWESigner-${init.signer ? "signer" : "burner"}`
+		this.key = `EIP712Signer-${init.signer ? "signer" : "burner"}`
 	}
 
 	public readonly match = (address: string) => addressPattern.test(address)
 
-	public verifySession(topic: string, session: Session<SIWESessionData>) {
-		const { publicKey, address, authorizationData, timestamp, duration } = session
+	public verifySession(topic: string, session: Session<EIP712AuthorizationData>) {
+		const { publicKey, address, authorizationData, timestamp, blockhash, duration } = session
 
 		assert(didKeyPattern.test(publicKey), "invalid signing key")
-		assert(validateSIWESessionData(authorizationData), "invalid session")
+		assert(validateEIP712AuthorizationData(authorizationData), "invalid session")
 		const [chainId, walletAddress] = parseAddress(address)
 
-		const siweMessage: SIWEMessage = {
-			version: SIWEMessageVersion,
-			domain: authorizationData.domain,
-			nonce: authorizationData.nonce,
-			chainId: chainId,
+		const message: EIP712SessionMessage = {
 			address: walletAddress,
-			uri: publicKey,
-			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
-			resources: [`canvas://${topic}`],
+			blockhash,
+			duration,
+			publicKey,
+			timestamp,
 		}
 
-		const recoveredAddress = verifyMessage(prepareSIWEMessage(siweMessage), hexlify(authorizationData.signature))
+		const { signature } = authorizationData
+
+		const recoveredAddress = verifyTypedData({ name: topic }, eip712TypeDefinitions, message, hexlify(signature))
 		assert(recoveredAddress === walletAddress, "invalid SIWE signature")
 	}
 
 	public async getSession(
 		topic: string,
 		options: { timestamp?: number; fromCache?: boolean } = {},
-	): Promise<Session<SIWESessionData>> {
+	): Promise<Session<EIP712AuthorizationData>> {
 		const walletAddress = await this.#ethersSigner.getAddress()
 		const address = `eip155:${this.chainId}:${walletAddress}`
 
@@ -93,40 +105,28 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 
 		this.log("creating new session for %s", address)
 
-		const domain = target.getDomain()
-		const nonce = siwe.generateNonce()
-
 		const signer = new Secp256k1Signer()
 
 		const timestamp = options.timestamp ?? Date.now()
-		const issuedAt = new Date(timestamp).toISOString()
 
-		const siweMessage: SIWEMessage = {
-			version: SIWEMessageVersion,
+		const message = {
 			address: walletAddress,
-			chainId: this.chainId,
-			domain: domain,
-			uri: signer.uri,
-			nonce: nonce,
-			issuedAt: issuedAt,
-			expirationTime: null,
-			resources: [`canvas://${topic}`],
+			publicKey: signer.uri,
+			blockhash: "",
+			timestamp,
+			duration: this.sessionDuration,
 		}
 
-		if (this.sessionDuration !== null) {
-			siweMessage.expirationTime = new Date(timestamp + this.sessionDuration).toISOString()
-		}
+		const signature = await this.#ethersSigner.signTypedData({ name: topic }, eip712TypeDefinitions, message)
 
-		const signature = await this.#ethersSigner.signMessage(prepareSIWEMessage(siweMessage))
-
-		const session: Session<SIWESessionData> = {
+		const session: Session<EIP712AuthorizationData> = {
 			type: "session",
 			address: address,
 			publicKey: signer.uri,
-			authorizationData: { signature: getBytes(signature), domain, nonce },
+			authorizationData: { signature: getBytes(signature) },
 			duration: this.sessionDuration,
 			timestamp: timestamp,
-			blockhash: null,
+			blockhash: "",
 		}
 
 		this.#store.set(topic, address, session, signer)
@@ -145,14 +145,14 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 			assert(timestamp >= session.timestamp)
 			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
 
-			return signer.sign(message)
+			return signer.sign(message, { codec: "raw", digest: "raw" })
 		} else if (message.payload.type === "session") {
 			const { signer, session } = this.#store.get(message.topic, message.payload.address) ?? {}
 			assert(signer !== undefined && session !== undefined)
 
 			// only sign our own current sessions
 			assert(message.payload === session)
-			return signer.sign(message)
+			return signer.sign(message, { codec: "raw", digest: "raw" })
 		} else {
 			signalInvalidType(message.payload)
 		}

@@ -1,11 +1,11 @@
 import test from "ava"
 
-import { Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
+import { Action, Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
 import { verifySignedValue } from "@canvas-js/signed-cid"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { NEARSigner } from "@canvas-js/chain-near"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner, EIP712Signer } from "@canvas-js/chain-ethereum"
 import { SIWESignerViem } from "@canvas-js/chain-ethereum-viem"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
@@ -29,6 +29,10 @@ const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 	{
 		name: "chain-ethereum-viem",
 		createSigner: async () => new SIWESignerViem(),
+	},
+	{
+		name: "chain-ethereum-eip712",
+		createSigner: async () => new EIP712Signer(),
 	},
 	{
 		name: "chain-solana",
@@ -94,6 +98,30 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 
 		await t.notThrowsAsync(async () => a.verifySession(topic, sessionB))
 		await t.notThrowsAsync(async () => b.verifySession(topic, sessionA))
+	})
+
+	test(`${name} - create and verify session and action`, async (t) => {
+		const topic = "example:signer"
+		const signer = await createSigner()
+		const session = await signer.getSession(topic)
+		t.notThrows(() => signer.verifySession(topic, session))
+
+		const sessionMessage = { topic, clock: 1, parents: [], payload: session }
+		const sessionSignature = await signer.sign(sessionMessage)
+		t.notThrows(() => verifySignedValue(sessionSignature, sessionMessage))
+
+		const action: Action = {
+			type: "action",
+			address: session.address,
+			name: "foo",
+			args: { bar: 7 },
+			blockhash: null,
+			timestamp: session.timestamp,
+		}
+
+		const actionMessage = { topic, clock: 1, parents: [], payload: action }
+		const actionSignature = await signer.sign(actionMessage)
+		t.notThrows(() => verifySignedValue(actionSignature, actionMessage))
 	})
 }
 
