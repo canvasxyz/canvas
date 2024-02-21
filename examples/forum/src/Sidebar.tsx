@@ -3,7 +3,7 @@ import { ethers } from "ethers"
 import { Canvas } from "@canvas-js/core"
 import { useLiveQuery } from "@canvas-js/hooks"
 
-import { Category, Tag } from "./App"
+import { Category, Tag } from "./App.js"
 
 import { Disclosure, Dialog, Menu } from "@headlessui/react"
 import { ChevronRightIcon, ChevronDownIcon } from "@heroicons/react/20/solid"
