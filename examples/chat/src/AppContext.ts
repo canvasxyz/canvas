@@ -4,6 +4,8 @@ import type { SessionSigner } from "@canvas-js/interfaces"
 import { Canvas } from "@canvas-js/core"
 
 export type AppContext = {
+	app: Canvas | null
+
 	address: string | null
 	setAddress: (address: string | null) => void
 
@@ -12,6 +14,8 @@ export type AppContext = {
 }
 
 export const AppContext = createContext<AppContext>({
+	app: null,
+
 	address: null,
 	setAddress: (address: string | null) => {
 		throw new Error("AppContext.Provider not found")

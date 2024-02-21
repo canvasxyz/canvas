@@ -85,12 +85,12 @@ export type Session<Data = any> = {
   /** did:key URI of the ephemeral session key used to sign subsequent actions */
   publicKey: string
 
-  /** chain-specific session payload, e.g. a SIWE message & signature */
-  data: Data
-  duration: number | null
+	/** chain-specific session payload, e.g. a SIWE message & signature */
+	authorizationData: AuthorizationData
 
-  timestamp: number
-  blockhash: string | null
+	blockhash: string | null
+	timestamp: number
+	duration: number | null
 }
 ```
 

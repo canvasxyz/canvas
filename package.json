@@ -12,7 +12,10 @@
     "test": "npm run test -w=packages/interfaces -w=packages/modeldb -w=packages/gossiplog -w=packages/core -w=packages/vm",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "contracts:build": "npm run build -w packages/ethereum-contracts",
+    "contracts:clean": "npm run clean -w packages/ethereum-contracts",
+    "contracts:test": "npm run test -w packages/ethereum-contracts"
   },
   "workspaces": [
     "packages/*",

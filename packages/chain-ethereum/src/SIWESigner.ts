@@ -12,7 +12,7 @@ import {
 	assert,
 	signalInvalidType,
 	SIWEMessageVersion,
-	validateSessionData,
+	validateSIWESessionData,
 	parseAddress,
 	addressPattern,
 	prepareSIWEMessage,
@@ -47,7 +47,7 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 		const { publicKey, address, authorizationData, timestamp, duration } = session
 
 		assert(didKeyPattern.test(publicKey), "invalid signing key")
-		assert(validateSessionData(authorizationData), "invalid session")
+		assert(validateSIWESessionData(authorizationData), "invalid session")
 		const [chainId, walletAddress] = parseAddress(address)
 
 		const siweMessage: SIWEMessage = {

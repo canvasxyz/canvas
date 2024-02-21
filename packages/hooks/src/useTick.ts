@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import type { Canvas, Contract, CanvasLogEvent, ActionImplementation } from "@canvas-js/core"
 import type { Action } from "@canvas-js/interfaces"
 
-type TickingContract = Contract & {
+export type TickingContract = Contract & {
 	actions: {
 		tick: ActionImplementation
 	}
@@ -10,7 +10,7 @@ type TickingContract = Contract & {
 
 const tickState = { last: 0 }
 
-export const useTick = (app: Canvas<TickingContract>, condition: string | null, interval: number) => {
+export const useTick = (app: Canvas<TickingContract> | undefined, condition: string | null, interval: number) => {
 	useEffect(() => {
 		if (!app) return
 
