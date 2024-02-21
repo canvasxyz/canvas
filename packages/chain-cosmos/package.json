@@ -16,6 +16,7 @@
     }
   },
   "dependencies": {
+    "ethers": "^6.9.0",
     "@canvas-js/interfaces": "0.8.26",
     "@canvas-js/signed-cid": "0.8.26",
     "@cosmjs/amino": "^0.30.1",

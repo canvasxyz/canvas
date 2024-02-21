@@ -5,6 +5,7 @@ import { Canvas, Connections } from "@canvas-js/core"
 import { AppContext } from "./AppContext.js"
 
 import { PeerIdView } from "./components/PeerIdView.js"
+import { PresenceStore } from "@canvas-js/discovery"
 
 export interface ConnectionStatusProps {
 	topic: string
@@ -19,7 +20,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ topic }) => 
 	const updateConnectionStatus = () => {
 		if (app) setStatus(app.status)
 	}
-	const updateOnlinePeers = ({ detail: { peerId, peers } }) => {
+	const updateOnlinePeers = ({ detail: { peers } }: { detail: { peers: PresenceStore } }) => {
 		setOnlinePeers({ ...peers })
 	}
 
@@ -66,9 +67,9 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ topic }) => 
 	)
 }
 
-const OnlineList = ({ onlinePeers, topic }: { onlinePeers: PresenceList; topic: string }) => {
+const OnlineList = ({ onlinePeers, topic }: { onlinePeers: PresenceStore; topic: string }) => {
 	const browserPeers = Object.entries(onlinePeers).filter(([peerId, { lastSeen, env }]) => env === "browser")
-	const [time, setTime] = useState()
+	const [time, setTime] = useState<number>()
 
 	useEffect(() => {
 		const timer = setInterval(() => {
@@ -82,9 +83,9 @@ const OnlineList = ({ onlinePeers, topic }: { onlinePeers: PresenceList; topic: 
 	} else {
 		return (
 			<ul className="list-disc pl-4">
-				{browserPeers.map(([peerId, { lastSeen, env, address, topics }]) => {
+				{browserPeers.map(([peerIdString, { peerId, lastSeen, env, address, topics }]) => {
 					return (
-						<li key={peerId}>
+						<li key={peerIdString}>
 							<PeerIdView peerId={peerId} />
 							{address && (
 								<div>
@@ -93,7 +94,8 @@ const OnlineList = ({ onlinePeers, topic }: { onlinePeers: PresenceList; topic: 
 							)}
 							<div>
 								<code className="text-sm break-all text-gray-500">
-									{env} - last seen {lastSeen === null ? "awhile ago" : Math.ceil((time - lastSeen) / 1000) + "s"}{" "}
+									{env} - last seen{" "}
+									{lastSeen === null || !time ? "awhile ago" : Math.ceil((time - lastSeen) / 1000) + "s"}{" "}
 									{!topics.includes(topic) && `[${topics.join(", ")}]`}
 								</code>
 							</div>

@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from "react"
-import { Canvas, type CanvasConfig } from "@canvas-js/core"
+import { Canvas, Contract, type CanvasConfig } from "@canvas-js/core"
 
-export const useCanvas = (config: CanvasConfig) => {
-	const [app, setApp] = useState<Canvas>()
+export const useCanvas = <T extends Contract = Contract>(config: CanvasConfig<T>) => {
+	const [app, setApp] = useState<Canvas<T>>()
 	const [error, setError] = useState<Error>()
 	const renderedRef = useRef(false) // skip second render in React.StrictMode
 
 	useEffect(() => {
 		if (renderedRef.current) return
 		renderedRef.current = true
-		Canvas.initialize(config)
+		Canvas.initialize<T>(config)
 			.then((app) => {
 				setApp(app)
 			})

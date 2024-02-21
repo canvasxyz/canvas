@@ -3,10 +3,10 @@ import moment from "moment"
 
 import { useLiveQuery } from "@canvas-js/hooks"
 import { Canvas } from "@canvas-js/core"
-import { Composer } from "./Composer"
+import { Composer } from "./Composer.js"
 
-import { Thread, Placeholder, Loading } from "./App"
-import { Address } from "./Address"
+import { Thread, Placeholder, Loading } from "./App.js"
+import { Address } from "./Address.js"
 
 export function ThreadsPage({
 	wallet,

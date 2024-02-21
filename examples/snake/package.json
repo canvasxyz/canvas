@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@canvas-js/chain-ethereum": "0.8.26",
+    "@canvas-js/core": "0.8.26",
     "@canvas-js/hooks": "0.8.26",
     "@canvas-js/templates": "0.8.26",
     "ethers": "^6.9.0",

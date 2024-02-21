@@ -3,6 +3,17 @@ import type { Contract } from "@canvas-js/core"
 export const maxX = 30
 export const maxY = 30
 
+export type Direction = "n" | "w" | "e" | "s"
+export type TilesList = [number, number][]
+
+type State = {
+	key: number
+	direction: Direction
+	tickCount: number
+	tiles: string
+	gameOver: "true" | ""
+}
+
 export const contract = {
 	topic: "canvas-example-chat-global",
 	models: {
@@ -35,7 +46,12 @@ export const contract = {
 			if (["n", "e", "w", "s"].indexOf(direction) === -1) {
 				throw new Error()
 			}
-			const { direction: currentDirection, tickCount, tiles, gameOver } = await db.get("state", "0")
+			const state = (await db.get("state", "0")) as State | null
+			if (state == null) {
+				return
+			}
+			const { direction: currentDirection, tickCount, tiles, gameOver } = state
+
 			if (
 				(direction === "n" && currentDirection === "s") ||
 				(direction === "s" && currentDirection === "n") ||
@@ -47,10 +63,14 @@ export const contract = {
 			await db.set("state", { key: "0", direction, tickCount, tiles, gameOver })
 		},
 		tick: async (db) => {
-			const { direction, tickCount, tiles, gameOver } = await db.get("state", "0")
+			const state = (await db.get("state", "0")) as State | null
+			if (state == null) {
+				return
+			}
+			const { direction, tickCount, tiles, gameOver } = state
 			if (gameOver) throw new Error()
 
-			const tilesList = JSON.parse(tiles)
+			const tilesList = JSON.parse(tiles) as TilesList
 			const [headX, headY] = tilesList[tilesList.length - 1]
 
 			let next: [number, number]
@@ -62,6 +82,8 @@ export const contract = {
 				next = [headX, headY - 1]
 			} else if (direction === "w") {
 				next = [headX - 1, headY]
+			} else {
+				throw new Error(`invalid value for 'direction' given: ${direction}`)
 			}
 
 			if (
