@@ -17,6 +17,7 @@
     "./node": "./lib/node/index.js",
     "./browser": "./lib/browser/index.js",
     "./memory": "./lib/memory/index.js",
+    "./pg": "./lib/pg/index.js",
     "./service": "./lib/service.js"
   },
   "imports": {
@@ -54,6 +55,8 @@
     "multiformats": "^13.0.1",
     "nanoid": "^5.0.4",
     "p-queue": "^8.0.0",
+    "pg": "^8.11.3",
+    "pg-cursor": "^2.10.3",
     "protons-runtime": "^5.2.0",
     "uint8arraylist": "^2.4.7",
     "uint8arrays": "^5.0.0"
@@ -66,6 +69,8 @@
     "@libp2p/peer-id-factory": "^4.0.1",
     "@libp2p/plaintext": "^1.0.7",
     "@libp2p/tcp": "^9.0.7",
+    "@types/pg": "^8.11.0",
+    "@types/pg-cursor": "^2.7.2",
     "fake-indexeddb": "^5.0.1",
     "libp2p": "^1.0.10",
     "p-defer": "^4.0.0",
