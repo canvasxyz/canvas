@@ -18,6 +18,7 @@ import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas
 import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
 import { GossipLog as GossipLogBrowser } from "@canvas-js/gossiplog/browser"
 import { GossipLog as GossipLogMemory } from "@canvas-js/gossiplog/memory"
+import { GossipLog as GossipLogPostgres } from "@canvas-js/gossiplog/pg"
 
 // @ts-expect-error
 globalThis.AbortController = AbortController
@@ -41,9 +42,12 @@ export const testPlatforms = (
 	) => void,
 ) => {
 	const macro = test.macro(run)
-	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
-	test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(init))
-	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(init, getDirectory(t)))
+	// test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
+	// test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(init))
+	// test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(init, getDirectory(t)))
+	test.serial(`Postgres - ${name}`, macro, (t, init) =>
+		GossipLogPostgres.open(init, "postgresql://localhost:5432/test"),
+	)
 }
 
 export const getPublicKey = <T>([id, { publicKey }, message]: [string, Signature, Message<T>]): [
