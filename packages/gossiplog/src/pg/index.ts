@@ -2,7 +2,7 @@ import PQueue from "p-queue"
 import pDefer from "p-defer"
 
 import { Bound, KeyValueStore } from "@canvas-js/okra"
-import { PostgresTree } from "@canvas-js/okra-pg"
+import { PostgresTree, PostgresStore } from "@canvas-js/okra-pg"
 import pg from "pg"
 
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
@@ -16,8 +16,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	private readonly queue = new PQueue({ concurrency: 1 })
 
 	private messages: PostgresTree
-	private heads: PostgresTree
-	private ancestors: PostgresTree
+	private heads: PostgresStore
+	private ancestors: PostgresStore
 
 	public static async open<Payload, Result>(
 		init: GossipLogInit<Payload, Result>,
@@ -34,8 +34,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		})
 
 		const messages = await PostgresTree.initialize(messagesClient, { prefix: "messages", clear: true })
-		const heads = await PostgresTree.initialize(headsClient, { prefix: "heads", clear: true })
-		const ancestors = await PostgresTree.initialize(ancestorsClient, { prefix: "ancestors", clear: true })
+		const heads = await PostgresStore.initialize(headsClient, { table: "heads", clear: true })
+		const ancestors = await PostgresStore.initialize(ancestorsClient, { table: "ancestors", clear: true })
 
 		const gossipLog = new GossipLog(
 			{
@@ -70,8 +70,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			headsClient: pg.PoolClient
 			ancestorsClient: pg.PoolClient
 			messages: PostgresTree
-			heads: PostgresTree
-			ancestors: PostgresTree
+			heads: PostgresStore
+			ancestors: PostgresStore
 		},
 		init: GossipLogInit<Payload, Result>,
 	) {
