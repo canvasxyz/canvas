@@ -4,8 +4,8 @@ import test, { ExecutionContext } from "ava"
 import { ethers } from "ethers"
 
 import type { Message } from "@canvas-js/interfaces"
-import { Ed25519Signer, Eip712Signer } from "@canvas-js/signatures"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { Ed25519Signer } from "@canvas-js/signatures"
+import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { Canvas } from "@canvas-js/core"
 
 const contract = `

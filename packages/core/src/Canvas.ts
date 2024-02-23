@@ -8,6 +8,8 @@ import { Signature, Action, Session, Message, Signer, SessionSigner, SignerCache
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
+import { GossipLogService } from "@canvas-js/gossiplog/service"
+import type { PresenceStore } from "@canvas-js/discovery"
 
 import target from "#target"
 
@@ -16,8 +18,6 @@ import type { ServiceMap } from "./targets/interface.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
 import { assert } from "./utils.js"
-import { GossipLogService } from "@canvas-js/gossiplog/service"
-import type { PresenceStore } from "@canvas-js/discovery"
 
 export interface NetworkConfig {
 	offline?: boolean
@@ -112,6 +112,11 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		} = config
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
+		const verifySignature = (signature: Signature, message: Message<Action | Session>) => {
+			const signer = signers.signers.find((signer) => signer.match(message.payload.address))
+			assert(signer !== undefined)
+			signer.verify(signature, message)
+		}
 
 		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit, ignoreMissingActions })
 
@@ -124,7 +129,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			{
 				topic: runtime.topic,
 				apply: runtime.getConsumer(),
-				validate: validatePayload,
+				validatePayload: validatePayload,
+				verifySignature: verifySignature,
 				indexAncestors: indexHistory,
 			},
 		)
