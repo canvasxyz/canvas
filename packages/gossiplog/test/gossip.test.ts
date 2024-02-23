@@ -5,13 +5,11 @@ import { GossipLog } from "@canvas-js/gossiplog/memory"
 
 import { createNetwork, waitForInitialConnections, waitForMessageDelivery } from "./libp2p.js"
 
-const validateString = (payload: unknown): payload is string => true
-
 test("send a message from one peer to another via gossipsub", async (t) => {
 	const topic = "com.example.test"
 	const gossipLogs = {
-		a: await GossipLog.open({ topic, apply: () => {}, validate: validateString }),
-		b: await GossipLog.open({ topic, apply: () => {}, validate: validateString }),
+		a: await GossipLog.open({ topic, apply: () => {} }),
+		b: await GossipLog.open({ topic, apply: () => {} }),
 	}
 
 	const network = await createNetwork(t, {

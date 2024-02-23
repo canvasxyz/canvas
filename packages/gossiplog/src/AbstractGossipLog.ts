@@ -49,7 +49,8 @@ export type GossipLogConsumer<Payload = unknown, Result = void> = (
 export interface GossipLogInit<Payload = unknown, Result = void> {
 	topic: string
 	apply: GossipLogConsumer<Payload, Result>
-	validate: (payload: unknown) => payload is Payload
+	validatePayload?: (payload: unknown) => payload is Payload
+	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
 	signer?: Pick<Signer<Payload>, "sign" | "verify">
 	indexAncestors?: boolean
@@ -90,7 +91,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	protected readonly log: Logger
 	protected readonly mempool = new Mempool<{ signature: Signature; message: Message<Payload> }>()
 
-	readonly #validate: (payload: unknown) => payload is Payload
+	readonly #validatePayload: (payload: unknown) => payload is Payload
+	readonly #verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 	readonly #apply: GossipLogConsumer<Payload, Result>
 
 	protected constructor(init: GossipLogInit<Payload, Result>) {
@@ -98,11 +100,12 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		assert(topicPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
 
 		this.topic = init.topic
-		this.#apply = init.apply
-		this.#validate = init.validate
-
 		this.indexAncestors = init.indexAncestors ?? false
 		this.signer = init.signer ?? new Ed25519Signer<Payload>()
+
+		this.#apply = init.apply
+		this.#validatePayload = init.validatePayload ?? ((payload: unknown): payload is Payload => true)
+		this.#verifySignature = init.verifySignature ?? this.signer.verify
 
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 	}
@@ -140,14 +143,14 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public encode(signature: Signature, message: Message<Payload>): [key: Uint8Array, value: Uint8Array] {
 		assert(this.topic === message.topic, "expected this.topic === topic")
-		assert(this.#validate(message.payload))
+		assert(this.#validatePayload(message.payload), "error encoding message (invalid payload)")
 		return encodeSignedMessage(signature, message)
 	}
 
 	public decode(value: Uint8Array): [id: string, signature: Signature, message: Message<Payload>] {
 		const [id, signature, { topic, clock, parents, payload }] = decodeSignedMessage(value)
 		assert(this.topic === topic, "expected this.topic === topic")
-		assert(this.#validate(payload))
+		assert(this.#validatePayload(payload), "error decoding message (invalid payload)")
 		return [id, signature, { topic, clock, parents, payload }]
 	}
 
@@ -222,7 +225,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	 * If any of the parents are not present, insert the message into the mempool instead.
 	 */
 	public async insert(signature: Signature, message: Message<Payload>): Promise<{ id: string }> {
-		this.signer.verify(signature, message)
+		await this.#verifySignature(signature, message)
 
 		const { id, root } = await this.write(async (txn) => {
 			const [key, value] = this.encode(signature, message)
@@ -431,7 +434,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			for await (const [key, value] of driver.sync()) {
 				const [id, signature, message] = this.decode(value)
 				assert(id === decodeId(key), "expected id === decodeId(key)")
-				this.signer.verify(signature, message)
+				await this.#verifySignature(signature, message)
 
 				const existingMessage = await txn.messages.get(key)
 				if (existingMessage === null) {

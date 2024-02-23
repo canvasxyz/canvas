@@ -10,10 +10,9 @@ import { getDirectory } from "./utils.js"
 
 const topic = "com.example.test"
 const apply = (id: string, signature: Signature, message: Message<string>) => {}
-const validate = (payload: unknown): payload is string => true
 
 test("append messages (memory, linear, 100)", async (t) => {
-	const log = await MemoryGossipLog.open({ topic, apply, validate })
+	const log = await MemoryGossipLog.open({ topic, apply })
 	t.teardown(() => log.close())
 	await append(t, log, 100)
 })

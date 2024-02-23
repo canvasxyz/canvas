@@ -11,11 +11,10 @@ import { GossipLog } from "@canvas-js/gossiplog/node"
 import { appendChain, getDirectory, shuffle, testPlatforms } from "./utils.js"
 
 const apply = (id: string, signature: Signature, message: Message<string>) => {}
-const validate = (payload: unknown): payload is string => true
 
 testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	const n = 20
 	const ids: string[] = []
@@ -34,7 +33,7 @@ testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog)
 testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog) => {
 	const topic = randomUUID()
 	const signer = new Ed25519Signer()
-	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	const n = 20
 	const ids: string[] = []
@@ -61,7 +60,7 @@ testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog)
 testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, openGossipLog) => {
 	const topic = randomUUID()
 	const signer = new Ed25519Signer()
-	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	const n = 20
 	const ids: string[] = []
@@ -94,7 +93,7 @@ testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, open
 
 testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	const { id: idX } = await log.append(nanoid())
 	const { id: idY } = await log.append(nanoid())
@@ -125,9 +124,9 @@ test("simulate a randomly partitioned network", async (t) => {
 	const topic = randomUUID()
 
 	const logs = await Promise.all([
-		GossipLog.open({ topic, apply, validate, indexAncestors: true }, getDirectory(t)),
-		GossipLog.open({ topic, apply, validate, indexAncestors: true }, getDirectory(t)),
-		GossipLog.open({ topic, apply, validate, indexAncestors: true }, getDirectory(t)),
+		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
+		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
+		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
 	])
 
 	const random = (n: number) => Math.floor(Math.random() * n)

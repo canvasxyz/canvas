@@ -4,12 +4,10 @@ import type { Message } from "@canvas-js/interfaces"
 import { Ed25519Signer } from "@canvas-js/signatures"
 import { collect, getPublicKey, testPlatforms } from "./utils.js"
 
-const validate = (payload: unknown): payload is string => typeof payload === "string"
-
 testPlatforms("append three messages", async (t, openGossipLog) => {
 	const topic = randomUUID()
 	const signer = new Ed25519Signer()
-	const log = await openGossipLog(t, { topic, apply: () => {}, validate, signer })
+	const log = await openGossipLog(t, { topic, apply: () => {}, signer })
 
 	const { id: foo } = await log.append("foo")
 	const { id: bar } = await log.append("bar")
@@ -25,7 +23,7 @@ testPlatforms("append three messages", async (t, openGossipLog) => {
 testPlatforms("insert three concurrent messages and append a fourth", async (t, openGossipLog) => {
 	const topic = randomUUID()
 	const signer = new Ed25519Signer()
-	const log = await openGossipLog(t, { topic, apply: () => {}, validate, signer })
+	const log = await openGossipLog(t, { topic, apply: () => {}, signer })
 
 	const a = { topic, clock: 1, parents: [], payload: "foo" }
 	const b = { topic, clock: 1, parents: [], payload: "bar" }

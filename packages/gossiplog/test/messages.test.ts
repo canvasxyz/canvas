@@ -7,11 +7,10 @@ import { Ed25519Signer } from "@canvas-js/signatures"
 import { collect, getPublicKey, testPlatforms } from "./utils.js"
 
 const apply = (id: string, signature: Signature, message: Message<string>) => {}
-const validate = (payload: unknown): payload is string => true
 
 testPlatforms("append messages", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, validate })
+	const log = await openGossipLog(t, { topic, apply })
 
 	const signer = new Ed25519Signer()
 	const { id: idA } = await log.append("foo", { signer })
@@ -27,7 +26,7 @@ testPlatforms("append messages", async (t, openGossipLog) => {
 
 testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, validate })
+	const log = await openGossipLog(t, { topic, apply })
 
 	const signer = new Ed25519Signer()
 	const a = { topic, clock: 1, parents: [], payload: nanoid() }
@@ -51,7 +50,7 @@ testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
 
 testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, validate })
+	const log = await openGossipLog(t, { topic, apply })
 
 	const signer = new Ed25519Signer()
 	const a = { topic, clock: 1, parents: [], payload: nanoid() }

@@ -44,17 +44,11 @@ testPlatforms("insert messages out-of-order, with ancestor indexing", async (t, 
 	const topic = randomUUID()
 	const results: { id: string; payload: string }[] = []
 
-	const validate = (payload: unknown): payload is string => typeof payload === "string"
 	const apply = (id: string, signature: Signature, message: Message<string>) => {
 		results.push({ id, payload: message.payload })
 	}
 
-	const log = await openGossipLog(t, {
-		topic,
-		indexAncestors: true,
-		apply,
-		validate,
-	})
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	await mempoolTest(t, results, topic, log)
 })
@@ -63,17 +57,11 @@ testPlatforms("insert messages out-of-order, without ancestor indexing", async (
 	const topic = randomUUID()
 	const results: { id: string; payload: string }[] = []
 
-	const validate = (payload: unknown): payload is string => typeof payload === "string"
 	const apply = (id: string, signature: Signature, message: Message<string>) => {
 		results.push({ id, payload: message.payload })
 	}
 
-	const log = await openGossipLog(t, {
-		topic,
-		indexAncestors: false,
-		apply,
-		validate,
-	})
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: false })
 
 	await mempoolTest(t, results, topic, log)
 })
