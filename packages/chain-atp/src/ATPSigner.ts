@@ -1,20 +1,18 @@
-import { logger } from "@libp2p/logger"
-
 import * as ATP from "@atproto/api"
 
-// Unfortunately this is necessary until the BlueSky team
-// decides to publish ESM modules (please, it's not 2010)
+// Unfortunately this is necessary until the BlueSky team decides
+// to publish ESM modules (please, it's been ten years since ES6)
 const BskyAgent = ATP.BskyAgent ?? ATP["default"].BskyAgent
 
-import type { Action, Message, Session, SessionSigner, Signature } from "@canvas-js/interfaces"
-import { Secp256k1Signer } from "@canvas-js/signed-cid"
-
-import target from "#target"
+import type { Session } from "@canvas-js/interfaces"
+import { AbstractSessionData, AbstractSessionSigner, Ed25519Signer } from "@canvas-js/signatures"
+import { assert } from "@canvas-js/utils"
 
 import { unpackArchive } from "./mst.js"
 import { verifyCommit } from "./commit.js"
 import { Operation, verifyLog } from "./operation.js"
-import { assert, service, signalInvalidType } from "./utils.js"
+
+const service = "bsky.social"
 
 type PostRecord = { $type: "app.bsky.feed.post"; text: string; createdAt: string }
 
@@ -29,22 +27,20 @@ export interface ATPSignerOptions {
 	login?: () => Promise<{ identifier: string; password: string }>
 }
 
-export class ATPSigner implements SessionSigner<ATPSessionData> {
-	public readonly key: string = "ATPSigner"
-
+export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 	public static createAuthenticationMessage(topic: string, publicKey: string, address: string) {
 		return `Authorizing ${publicKey} to sign actions for ${topic} on behalf of ${address}`
 	}
 
-	private readonly log = logger("canvas:chain-atp")
-
-	#store = target.getSessionStore()
 	#agent = new BskyAgent({ service: `https://${service}` })
 	#session: ATP.AtpSessionData | null = null
 
-	public constructor(private readonly options: ATPSignerOptions = {}) {}
+	public constructor(private readonly options: ATPSignerOptions = {}) {
+		super("chain-atp", { createSigner: (init) => new Ed25519Signer(init) })
+	}
 
-	public match = (address: string) => address.startsWith("did:plc:")
+	public readonly match = (address: string) => address.startsWith("did:plc:") || address.startsWith("did:web:")
+	public readonly verify = Ed25519Signer.verify
 
 	public async verifySession(topic: string, session: Session<ATPSessionData>): Promise<void> {
 		const { verificationMethod, recordArchive, recordURI, plcOperationLog } = session.authorizationData
@@ -62,12 +58,12 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 		assert(record.text === message, "invalid app.bsky.feed.post record text")
 	}
 
-	private async getAddress(): Promise<string> {
+	protected async getAddress(): Promise<string> {
 		if (this.#session !== null) {
 			return this.#session.did
 		}
 
-		const sessionData = target.loadJWTSession()
+		const sessionData = this.loadJWTSession()
 		if (sessionData !== null) {
 			this.#session = sessionData
 			await this.#agent.resumeSession(sessionData)
@@ -80,45 +76,32 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 		assert(success, "login failed")
 		assert(this.#agent.session !== undefined, "internal error (session not found)")
 		this.#session = this.#agent.session
-		target.saveJWTSession(this.#session)
+		this.saveJWTSession(this.#session)
 
 		return this.#session.did
 	}
 
-	public async getSession(
-		topic: string,
-		options: { chain?: string; timestamp?: number; fromCache?: boolean } = {},
-	): Promise<Session<ATPSessionData>> {
-		this.log("getting session %s")
-
-		const address = await this.getAddress()
-		assert(address.startsWith("did:plc:"), "only plc DIDs are supported")
-
-		{
-			const { signer, session } = this.#store.get(topic, address) ?? {}
-			if (signer !== undefined && session !== undefined) {
-				const { timestamp, duration } = session
-				const t = options.timestamp ?? timestamp
-				if (timestamp <= t && t <= timestamp + (duration ?? Infinity)) {
-					this.log("found session for %s in cache: %o", address, session)
-					return session
-				} else {
-					this.log("cached session for %s has expired", address)
-				}
-			}
+	private loadJWTSession(): ATP.AtpSessionData | null {
+		const value = this.target.get("canvas-chain-atp/jwt")
+		if (value === null) {
+			return null
+		} else {
+			return JSON.parse(value)
 		}
+	}
 
-		if (options.fromCache) return Promise.reject()
+	private saveJWTSession(data: ATP.AtpSessionData) {
+		this.target.set("canvas-chain-atp/jwt", JSON.stringify(data))
+	}
 
-		this.log("creating new session for %s", address)
-
+	protected async newSession(data: AbstractSessionData): Promise<Session<ATPSessionData>> {
+		const { topic, address, publicKey, timestamp, duration } = data
 		this.log("fetching plc operation log for %s", address)
 		const plcOperationLog = await fetch(`https://plc.directory/${address}/log`).then((res) => res.json())
 		const verificationMethod = await verifyLog(address, plcOperationLog)
 		this.log("got plc operation log with verification method %s", verificationMethod)
 
-		const signer = new Secp256k1Signer()
-		const message = ATPSigner.createAuthenticationMessage(topic, signer.uri, address)
+		const message = ATPSigner.createAuthenticationMessage(topic, publicKey, address)
 
 		this.log("posting authentication record for %s", address)
 		const { uri, cid } = await this.#agent.post({ text: message })
@@ -140,10 +123,10 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 		await this.#agent.deletePost(uri)
 		this.log("deleted authenticion record")
 
-		const session: Session<ATPSessionData> = {
+		return {
 			type: "session",
 			address: address,
-			publicKey: signer.uri,
+			publicKey: publicKey,
 			authorizationData: {
 				verificationMethod,
 				recordArchive: result.data,
@@ -151,39 +134,8 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 				plcOperationLog,
 			},
 			blockhash: null,
-			duration: null,
-			timestamp: options.timestamp ?? Date.now(),
+			duration: duration,
+			timestamp: timestamp,
 		}
-
-		this.#store.set(topic, address, session, signer)
-
-		return session
-	}
-
-	public sign(message: Message<Action | Session>): Signature {
-		if (message.payload.type === "action") {
-			const { address, timestamp } = message.payload
-			const { signer, session } = this.#store.get(message.topic, address) ?? {}
-			assert(signer !== undefined && session !== undefined)
-
-			assert(address === session.address)
-			assert(timestamp >= session.timestamp)
-			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
-
-			return signer.sign(message)
-		} else if (message.payload.type === "session") {
-			const { signer, session } = this.#store.get(message.topic, message.payload.address) ?? {}
-			assert(signer !== undefined && session !== undefined)
-
-			// only sign our own current sessions
-			assert(message.payload === session)
-			return signer.sign(message)
-		} else {
-			signalInvalidType(message.payload)
-		}
-	}
-
-	public clear(topic: string) {
-		this.#store.clear(topic)
 	}
 }

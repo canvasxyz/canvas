@@ -2,7 +2,7 @@ import test from "ava"
 import assert from "assert"
 
 import type { Action } from "@canvas-js/interfaces"
-import { verifySignedValue } from "@canvas-js/signed-cid"
+import { Ed25519Signer } from "@canvas-js/signatures"
 
 import { SolanaSigner, validateSessionData } from "@canvas-js/chain-solana"
 
@@ -14,7 +14,7 @@ test("create and verify session", async (t) => {
 
 	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 	const sessionSignature = await signer.sign(sessionMessage)
-	t.notThrows(() => verifySignedValue(sessionSignature, sessionMessage))
+	t.notThrows(() => Ed25519Signer.verify(sessionSignature, sessionMessage))
 })
 
 test("create and verify session and action", async (t) => {
@@ -25,7 +25,7 @@ test("create and verify session and action", async (t) => {
 
 	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 	const sessionSignature = await signer.sign(sessionMessage)
-	t.notThrows(() => verifySignedValue(sessionSignature, sessionMessage))
+	t.notThrows(() => Ed25519Signer.verify(sessionSignature, sessionMessage))
 
 	const action: Action = {
 		type: "action",
@@ -38,7 +38,7 @@ test("create and verify session and action", async (t) => {
 
 	const actionMessage = { topic, clock: 1, parents: [], payload: action }
 	const actionSignature = await signer.sign(actionMessage)
-	t.notThrows(() => verifySignedValue(actionSignature, actionMessage))
+	t.notThrows(() => Ed25519Signer.verify(actionSignature, actionMessage))
 })
 
 test("reject corrupt session signature", async (t) => {

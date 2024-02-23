@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
 
 import type { Message } from "@canvas-js/interfaces"
-import { Ed25519Signer } from "@canvas-js/signed-cid"
+import { Ed25519Signer } from "@canvas-js/signatures"
 import { collect, getPublicKey, testPlatforms } from "./utils.js"
 
 const validate = (payload: unknown): payload is string => typeof payload === "string"

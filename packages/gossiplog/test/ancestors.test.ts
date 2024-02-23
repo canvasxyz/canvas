@@ -4,7 +4,7 @@ import test from "ava"
 import { nanoid } from "nanoid"
 
 import type { Signature, Message } from "@canvas-js/interfaces"
-import { Ed25519Signer } from "@canvas-js/signed-cid"
+import { Ed25519Signer } from "@canvas-js/signatures"
 import { decodeId } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/node"
 

@@ -10,7 +10,7 @@ export function encodeReadableEthereumMessage(message: CosmosMessage): string {
 	chainId: ${message.chainId}
 	expirationTime: ${message.expirationTime}
 	issuedAt: ${message.issuedAt}
-	uri: ${message.uri}
+	uri: ${message.publicKey}
 	`
 }
 

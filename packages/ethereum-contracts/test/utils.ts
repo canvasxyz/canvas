@@ -18,7 +18,7 @@ export const serializeSessionForContract = (session: any) => {
 export const serializeActionForContract = async (action: any) => {
 	// This file is being built using CommonJS, so we need to use await import to import
 	// from ESM modules
-	const { getAbiString } = await import("@canvas-js/signed-cid")
+	const { getAbiString } = await import("@canvas-js/signatures")
 	return {
 		address_: action.address.split(":")[2],
 		args: getAbiString(action.args),

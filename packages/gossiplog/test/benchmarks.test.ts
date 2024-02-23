@@ -1,7 +1,6 @@
 import test, { ExecutionContext } from "ava"
 
-import { Message } from "@canvas-js/interfaces"
-import { Signature } from "@canvas-js/signed-cid"
+import { Message, Signature } from "@canvas-js/interfaces"
 
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { GossipLog as MemoryGossipLog } from "@canvas-js/gossiplog/memory"

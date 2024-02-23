@@ -12,8 +12,7 @@
     { "path": "./packages/cli" },
     { "path": "./packages/core" },
     { "path": "./packages/core/test" },
-    { "path": "./packages/signed-cid" },
-    { "path": "./packages/signed-cid/test" },
+    { "path": "./packages/signatures" },
     { "path": "./packages/modeldb" },
     { "path": "./packages/modeldb/test" },
     { "path": "./packages/chain-atp" },
@@ -31,6 +30,7 @@
     { "path": "./packages/replication-server" },
     { "path": "./packages/hooks" },
     { "path": "./packages/templates" },
-    { "path": "./packages/test-network" }
+    { "path": "./packages/test-network" },
+    { "path": "./packages/utils" }
   ]
 }

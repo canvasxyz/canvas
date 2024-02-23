@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { nanoid } from "nanoid"
 
 import { Signature, Message } from "@canvas-js/interfaces"
-import { Ed25519Signer } from "@canvas-js/signed-cid"
+import { Ed25519Signer } from "@canvas-js/signatures"
 
 import { collect, getPublicKey, testPlatforms } from "./utils.js"
 

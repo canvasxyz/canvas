@@ -1,0 +1,15 @@
+{
+  "name": "@canvas-js/utils",
+  "version": "0.8.26",
+  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "lib"
+  ],
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "sideEffects": false
+}

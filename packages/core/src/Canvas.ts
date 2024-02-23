@@ -4,10 +4,9 @@ import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
 import { hexToBytes } from "@noble/hashes/utils"
 
-import { Action, Session, Message, Signer, SessionSigner, SignerCache } from "@canvas-js/interfaces"
+import { Signature, Action, Session, Message, Signer, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { Signature } from "@canvas-js/signed-cid"
 import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
 
 import target from "#target"
@@ -392,7 +391,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 */
 	public async append(
 		payload: Session | Action,
-		options: { signer?: Signer<Message<Session | Action>> },
+		options: { signer?: Pick<Signer<Session | Action>, "sign" | "verify"> },
 	): Promise<{ id: string; result: void | any; recipients: Promise<PeerId[]> }> {
 		return this.libp2p.services.gossiplog.append(this.topic, payload, options)
 	}
