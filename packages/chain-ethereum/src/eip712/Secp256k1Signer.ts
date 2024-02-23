@@ -43,7 +43,7 @@ export class Secp256k1Signer implements Signer<Action | Session<Eip712SessionDat
 		],
 		Session: [
 			{ name: "address", type: "address" },
-			{ name: "identity", type: "string" },
+			{ name: "publicKey", type: "string" },
 			{ name: "authorizationData", type: "AuthorizationData" },
 			{ name: "duration", type: "uint64" },
 			{ name: "timestamp", type: "uint64" },

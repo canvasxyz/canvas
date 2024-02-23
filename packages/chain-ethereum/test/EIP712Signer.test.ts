@@ -13,6 +13,8 @@ test("create and verify session", async (t) => {
 	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 	const sessionSignature = await signer.sign(sessionMessage)
 	t.notThrows(() => signer.verify(sessionSignature, sessionMessage))
+
+	t.pass()
 })
 
 test("create and verify session and action", async (t) => {
