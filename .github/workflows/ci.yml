@@ -40,8 +40,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      # - name: Run @canvas-js/gossiplog tests
-      #   run: npm run test --workspace=@canvas-js/gossiplog
+      - name: Run @canvas-js/gossiplog tests
+        run: npm run test --workspace=@canvas-js/gossiplog --match="\!simulate a randomly partitioned network"
 
       - name: Run @canvas-js/modeldb tests
         run: npm run test --workspace=@canvas-js/modeldb
