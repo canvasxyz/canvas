@@ -24,7 +24,8 @@ describe("Contract_Test", function () {
 	async function getArgumentsFixture() {
 		// This function returns a function that returns the arguments needed to call `contract.claimUpvoted`
 
-		const { Eip712Signer, decodeURI } = await import("@canvas-js/signatures")
+		const { decodeURI } = await import("@canvas-js/signatures")
+		const { Eip712Signer } = await import("@canvas-js/chain-ethereum")
 
 		async function getArguments(args?: any) {
 			const signer = new Eip712Signer()

@@ -49,7 +49,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 
 		const issuedAt = new Date(timestamp).toISOString()
 
-		const [chainId, walletAddress] = parseAddress(address)
+		const { chainId, address: walletAddress } = parseAddress(address)
 
 		const domain = this.target.getDomain()
 
@@ -86,7 +86,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 		const { publicKey, address, authorizationData, timestamp, duration } = session
 
 		assert(validateSIWESessionData(authorizationData), "invalid session")
-		const [chainId, walletAddress] = parseAddress(address)
+		const { chainId, address: walletAddress } = parseAddress(address)
 
 		const siweMessage: SIWEMessage = {
 			version: SIWEMessageVersion,

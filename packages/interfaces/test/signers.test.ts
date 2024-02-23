@@ -2,11 +2,10 @@ import test from "ava"
 
 import { Action, Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
 import { Ed25519Signer } from "@canvas-js/signatures"
-import { Eip712Signer } from "@canvas-js/signatures"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { NEARSigner } from "@canvas-js/chain-near"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { SIWESignerViem } from "@canvas-js/chain-ethereum-viem"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"

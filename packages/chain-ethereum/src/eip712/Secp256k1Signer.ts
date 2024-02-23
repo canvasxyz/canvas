@@ -2,18 +2,18 @@ import { BaseWallet, Wallet, getBytes, hexlify, TypedDataField, verifyTypedData,
 import { AbiCoder } from "ethers/abi"
 
 import type { Action, Message, Session, Signature, Signer } from "@canvas-js/interfaces"
+import { decodeURI, encodeURI } from "@canvas-js/signatures"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
-import { decodeURI, encodeURI } from "../utils.js"
-import { Eip712AuthorizationData } from "./types.js"
-import { parseEip155Address } from "./utils.js"
+import { Eip712SessionData } from "./types.js"
+import { parseAddress } from "./utils.js"
 
 /**
  * Secp256k1Signer ONLY supports the following codecs:
  * - canvas-action-eip712
  * - canvas-session-eip712
  */
-export class Secp256k1Signer implements Signer<Action | Session<Eip712AuthorizationData>> {
+export class Secp256k1Signer implements Signer<Action | Session<Eip712SessionData>> {
 	public static type = "secp256k1" as const
 	public static eip712ActionCodec = "canvas-action-eip712" as const
 	public static eip712SessionCodec = "canvas-session-eip712" as const
@@ -52,7 +52,7 @@ export class Secp256k1Signer implements Signer<Action | Session<Eip712Authorizat
 		AuthorizationData: [{ name: "signature", type: "bytes" }],
 	} satisfies Record<string, TypedDataField[]>
 
-	public static verify(signature: Signature, message: Message<Action | Session<Eip712AuthorizationData>>) {
+	public static verify(signature: Signature, message: Message<Action | Session<Eip712SessionData>>) {
 		const { type, publicKey } = decodeURI(signature.publicKey)
 		assert(type === Secp256k1Signer.type)
 
@@ -62,7 +62,7 @@ export class Secp256k1Signer implements Signer<Action | Session<Eip712Authorizat
 		if (payload.type === "action") {
 			assert(signature.codec === Secp256k1Signer.eip712ActionCodec)
 
-			const { address } = parseEip155Address(payload.address)
+			const { address } = parseAddress(payload.address)
 			const recoveredAddress = verifyTypedData(
 				{ name: message.topic },
 				Secp256k1Signer.eip712ActionTypes,
@@ -85,7 +85,7 @@ export class Secp256k1Signer implements Signer<Action | Session<Eip712Authorizat
 		} else if (payload.type === "session") {
 			assert(signature.codec === Secp256k1Signer.eip712SessionCodec)
 
-			const { address } = parseEip155Address(payload.address)
+			const { address } = parseAddress(payload.address)
 			const recoveredAddress = verifyTypedData(
 				{ name: message.topic },
 				Secp256k1Signer.eip712SessionTypes,
@@ -127,10 +127,10 @@ export class Secp256k1Signer implements Signer<Action | Session<Eip712Authorizat
 		this.uri = encodeURI(Secp256k1Signer.type, publicKey)
 	}
 
-	public async sign(message: Message<Action | Session<Eip712AuthorizationData>>): Promise<Signature> {
+	public async sign(message: Message<Action | Session<Eip712SessionData>>): Promise<Signature> {
 		const { topic, clock, parents, payload } = message
 		if (payload.type === "action") {
-			const { address } = parseEip155Address(payload.address)
+			const { address } = parseAddress(payload.address)
 
 			const signature = await this.#wallet.signTypedData({ name: message.topic }, Secp256k1Signer.eip712ActionTypes, {
 				topic: topic,
@@ -147,7 +147,7 @@ export class Secp256k1Signer implements Signer<Action | Session<Eip712Authorizat
 
 			return { codec: Secp256k1Signer.eip712ActionCodec, publicKey: this.uri, signature: getBytes(signature) }
 		} else if (payload.type === "session") {
-			const { address } = parseEip155Address(payload.address)
+			const { address } = parseAddress(payload.address)
 
 			const signature = await this.#wallet.signTypedData({ name: topic }, Secp256k1Signer.eip712SessionTypes, {
 				topic: topic,
@@ -168,7 +168,7 @@ export class Secp256k1Signer implements Signer<Action | Session<Eip712Authorizat
 		}
 	}
 
-	public verify(signature: Signature, message: Message<Action | Session<Eip712AuthorizationData>>) {
+	public verify(signature: Signature, message: Message<Action | Session<Eip712SessionData>>) {
 		Secp256k1Signer.verify(signature, message)
 	}
 

@@ -30,18 +30,6 @@ export function validateSIWESessionData(authorizationData: unknown): authorizati
 	return signature instanceof Uint8Array && typeof domain === "string" && typeof nonce === "string"
 }
 
-export function validateEIP712AuthorizationData(
-	authorizationData: unknown,
-): authorizationData is EIP712AuthorizationData {
-	try {
-		const { signature } = authorizationData as any
-		assert(signature instanceof Uint8Array, "signature must be a Uint8Array")
-		return true
-	} catch (e) {
-		return false
-	}
-}
-
 export const SIWEMessageVersion = "1"
 
 export function prepareSIWEMessage(message: SIWEMessage): string {
@@ -57,14 +45,11 @@ export function prepareSIWEMessage(message: SIWEMessage): string {
 	}).prepareMessage()
 }
 
-export const addressPattern = /^eip155:(\d+):(0x[A-Fa-f0-9]+)$/
+export const addressPattern = /^eip155:(\d+):(0x[a-fA-F0-9]+)$/
 
-export function parseAddress(address: string): [chain: number, walletAddress: string] {
+export function parseAddress(address: string): { chainId: number; address: `0x${string}` } {
 	const result = addressPattern.exec(address)
-	if (result === null) {
-		throw new Error(`invalid address: ${address} did not match ${addressPattern}`)
-	}
-
-	const [_, chain, walletAddress] = result
-	return [parseInt(chain), walletAddress]
+	assert(result !== null)
+	const [_, chainIdResult, addressResult] = result
+	return { chainId: parseInt(chainIdResult), address: addressResult as `0x${string}` }
 }

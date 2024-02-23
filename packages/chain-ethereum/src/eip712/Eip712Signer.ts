@@ -2,14 +2,13 @@ import { AbstractSigner, Wallet, computeAddress, getBytes, hexlify, TypedDataFie
 import { Session } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
-import { AbstractSessionData, AbstractSessionSigner } from "../AbstractSessionSigner.js"
-import { decodeURI } from "../utils.js"
+import { AbstractSessionData, AbstractSessionSigner, decodeURI } from "@canvas-js/signatures"
 
+import { Eip712SessionData } from "./types.js"
 import { Secp256k1Signer } from "./Secp256k1Signer.js"
-import { Eip712AuthorizationData } from "./types.js"
-import { eip155AddressPattern, parseEip155Address } from "./utils.js"
+import { validateEip712SessionData, addressPattern, parseAddress } from "./utils.js"
 
-export class Eip712Signer extends AbstractSessionSigner<Eip712AuthorizationData> {
+export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 	// This is the EIP-712 type actually signed by the end user to authorize a new session.
 	// Like the other "session data" objects, is never saved itself, only re-constructed
 	// from existing fields in the message and session objects.
@@ -32,7 +31,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712AuthorizationData>
 		this.chainId = init.chainId ?? 1
 	}
 
-	public readonly match = (address: string) => eip155AddressPattern.test(address)
+	public readonly match = (address: string) => addressPattern.test(address)
 	public readonly verify = Secp256k1Signer.verify
 
 	protected async getAddress(): Promise<string> {
@@ -40,7 +39,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712AuthorizationData>
 		return `eip155:${this.chainId}:${walletAddress}`
 	}
 
-	protected async newSession(sessionData: AbstractSessionData): Promise<Session<Eip712AuthorizationData>> {
+	protected async newSession(sessionData: AbstractSessionData): Promise<Session<Eip712SessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = sessionData
 
 		const { type, publicKey: publicKeyBytes } = decodeURI(publicKey)
@@ -67,8 +66,9 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712AuthorizationData>
 		}
 	}
 
-	public verifySession(topic: string, session: Session<Eip712AuthorizationData>) {
-		const { address: expectedAddress } = parseEip155Address(session.address)
+	public verifySession(topic: string, session: Session<Eip712SessionData>) {
+		assert(validateEip712SessionData(session.authorizationData), "invalid session")
+		const { address: expectedAddress } = parseAddress(session.address)
 
 		const { type, publicKey } = decodeURI(session.publicKey)
 		assert(type === Secp256k1Signer.type)
