@@ -99,7 +99,7 @@ export type Connections = Record<string, { peer: PeerId; status: ConnectionStatu
 export { PeerId, Connection } from "@libp2p/interface"
 
 export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
-	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {
+	public static async initialize<T_ extends Contract>(config: CanvasConfig<T_>): Promise<Canvas<T_>> {
 		const {
 			path = null,
 			contract,

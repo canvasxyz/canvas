@@ -245,12 +245,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			if (missingParents.size > 0) {
 				this.log("missing %d/%d parents", missingParents.size, message.parents.length)
 				this.mempool.add(id, { signature, message }, missingParents)
-				// If indexAncestors = false, execute the action, but add into the mempool in case
-				// execution fails, e.g. it's an action with a session that has not been broadcast yet.
-				// TODO: Clarify separation between indexAncestors and mempool for missing parents.
-				if (this.indexAncestors) {
-					return { id }
-				}
+				return { id }
 			}
 
 			await this.#insert(txn, id, signature, message, [key, value])

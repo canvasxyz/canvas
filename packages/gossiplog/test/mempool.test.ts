@@ -1,22 +1,17 @@
 import { randomUUID } from "node:crypto"
 import type { Signature, Message } from "@canvas-js/interfaces"
 import { Ed25519Signer } from "@canvas-js/signatures"
-import { decodeId } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, decodeId } from "@canvas-js/gossiplog"
 
 import { testPlatforms } from "./utils.js"
+import { ExecutionContext } from "ava"
 
-testPlatforms("insert messages out-of-order", async (t, openGossipLog) => {
-	const results: { id: string; payload: string }[] = []
-
-	const topic = randomUUID()
-	const apply = (id: string, signature: Signature, message: Message<string>) => {
-		results.push({ id, payload: message.payload })
-	}
-
-	const validate = (payload: unknown): payload is string => typeof payload === "string"
-
-	const log = await openGossipLog(t, { topic, apply, validate })
-
+const mempoolTest = async (
+	t: ExecutionContext<unknown>,
+	results: { id: string; payload: string }[],
+	topic: string,
+	log: AbstractGossipLog<string, void>,
+) => {
 	const signer = new Ed25519Signer()
 
 	const messageA = { topic, clock: 1, parents: [], payload: "foo" }
@@ -43,4 +38,42 @@ testPlatforms("insert messages out-of-order", async (t, openGossipLog) => {
 		{ id: idB, payload: "bar" },
 		{ id: idC, payload: "baz" },
 	])
+}
+
+testPlatforms("insert messages out-of-order, with ancestor indexing", async (t, openGossipLog) => {
+	const topic = randomUUID()
+	const results: { id: string; payload: string }[] = []
+
+	const validate = (payload: unknown): payload is string => typeof payload === "string"
+	const apply = (id: string, signature: Signature, message: Message<string>) => {
+		results.push({ id, payload: message.payload })
+	}
+
+	const log = await openGossipLog(t, {
+		topic,
+		indexAncestors: true,
+		apply,
+		validate,
+	})
+
+	await mempoolTest(t, results, topic, log)
+})
+
+testPlatforms("insert messages out-of-order, without ancestor indexing", async (t, openGossipLog) => {
+	const topic = randomUUID()
+	const results: { id: string; payload: string }[] = []
+
+	const validate = (payload: unknown): payload is string => typeof payload === "string"
+	const apply = (id: string, signature: Signature, message: Message<string>) => {
+		results.push({ id, payload: message.payload })
+	}
+
+	const log = await openGossipLog(t, {
+		topic,
+		indexAncestors: false,
+		apply,
+		validate,
+	})
+
+	await mempoolTest(t, results, topic, log)
 })
