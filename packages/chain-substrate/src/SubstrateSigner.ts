@@ -139,7 +139,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 		const issuedAt = new Date(timestamp).toISOString()
 		const message: SubstrateMessage = {
 			topic: topic,
-			address,
+			address: walletAddress,
 			chainId,
 			uri: publicKey,
 			issuedAt,
