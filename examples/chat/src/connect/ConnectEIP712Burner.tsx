@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
 
-import { EIP712Signer } from "@canvas-js/chain-ethereum"
+import { Eip712Signer } from "@canvas-js/signatures"
 
 import { AppContext } from "../AppContext.js"
 
@@ -24,7 +24,7 @@ export const ConnectEIP712Burner: React.FC<ConnectEIP712BurnerProps> = ({}) => {
 			return
 		}
 
-		const signer = new EIP712Signer({ chainId: 1 })
+		const signer = new Eip712Signer()
 		const { address } = await signer.getSession(app.topic)
 		setAddress(address)
 		setSessionSigner(signer)
@@ -41,7 +41,7 @@ export const ConnectEIP712Burner: React.FC<ConnectEIP712BurnerProps> = ({}) => {
 				<code>{error.message}</code>
 			</div>
 		)
-	} else if (address !== null && sessionSigner instanceof EIP712Signer) {
+	} else if (address !== null && sessionSigner instanceof Eip712Signer) {
 		return (
 			<button
 				onClick={() => disconnect()}

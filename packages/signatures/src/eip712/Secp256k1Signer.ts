@@ -1,4 +1,4 @@
-import { Wallet, getBytes, hexlify, TypedDataField, verifyTypedData, computeAddress } from "ethers"
+import { BaseWallet, Wallet, getBytes, hexlify, TypedDataField, verifyTypedData, computeAddress } from "ethers"
 import { AbiCoder } from "ethers/abi"
 
 import type { Action, Message, Session, Signature, Signer } from "@canvas-js/interfaces"
@@ -7,7 +7,6 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 import { decodeURI, encodeURI } from "../utils.js"
 import { Eip712AuthorizationData } from "./types.js"
 import { parseEip155Address } from "./utils.js"
-import { BaseWallet } from "ethers"
 
 /**
  * Secp256k1Signer ONLY supports the following codecs:

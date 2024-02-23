@@ -71,7 +71,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 
 		const signature = await this.#signer.signMessage(prepareSIWEMessage(siweMessage))
 
-		const session: Session<SIWESessionData> = {
+		return {
 			type: "session",
 			address: address,
 			publicKey: publicKey,
@@ -80,8 +80,6 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 			timestamp: timestamp,
 			blockhash: null,
 		}
-
-		return session
 	}
 
 	public verifySession(topic: string, session: Session<SIWESessionData>) {
