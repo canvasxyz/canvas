@@ -1,7 +1,6 @@
 import test from "ava"
 
 import { Action, Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
-import { Ed25519Signer } from "@canvas-js/signatures"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { NEARSigner } from "@canvas-js/chain-near"
@@ -108,7 +107,7 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 
 		const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 		const sessionSignature = await signer.sign(sessionMessage)
-		t.notThrows(() => Ed25519Signer.verify(sessionSignature, sessionMessage))
+		t.notThrows(() => signer.verify(sessionSignature, sessionMessage))
 
 		const action: Action = {
 			type: "action",
@@ -121,7 +120,7 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 
 		const actionMessage = { topic, clock: 1, parents: [], payload: action }
 		const actionSignature = await signer.sign(actionMessage)
-		t.notThrows(() => Ed25519Signer.verify(actionSignature, actionMessage))
+		t.notThrows(() => signer.verify(actionSignature, actionMessage))
 	})
 }
 
