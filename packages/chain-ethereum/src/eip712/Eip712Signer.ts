@@ -22,17 +22,18 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 		],
 	} satisfies Record<string, TypedDataField[]>
 
-	#signer: AbstractSigner
+	public readonly codecs = [Secp256k1Signer.eip712ActionCodec, Secp256k1Signer.eip712SessionCodec]
+	public readonly match = (address: string) => addressPattern.test(address)
+	public readonly verify = Secp256k1Signer.verify
+
 	public readonly chainId: number
+	#signer: AbstractSigner
 
 	constructor(init: { signer?: AbstractSigner; chainId?: number } = {}) {
 		super("chain-ethereum-eip712", { createSigner: (init) => new Secp256k1Signer(init) })
 		this.#signer = init.signer ?? Wallet.createRandom()
 		this.chainId = init.chainId ?? 1
 	}
-
-	public readonly match = (address: string) => addressPattern.test(address)
-	public readonly verify = Secp256k1Signer.verify
 
 	protected async getAddress(): Promise<string> {
 		const walletAddress = await this.#signer.getAddress()

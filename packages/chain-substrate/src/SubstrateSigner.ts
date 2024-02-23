@@ -31,6 +31,10 @@ type AbstractSigner = {
 }
 
 export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData> {
+	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+	public readonly match = (address: string) => addressPattern.test(address)
+	public readonly verify = Ed25519Signer.verify
+
 	// some type that overlaps with the injected extension and
 	// a generated wallet
 	#signer: AbstractSigner
@@ -126,9 +130,6 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 			}
 		}
 	}
-
-	public readonly match = (address: string) => addressPattern.test(address)
-	public readonly verify = Ed25519Signer.verify
 
 	public async verifySession(topic: string, session: Session) {
 		const { publicKey, address, authorizationData, timestamp, duration } = session

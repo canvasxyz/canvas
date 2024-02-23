@@ -32,6 +32,8 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		return `Authorizing ${publicKey} to sign actions for ${topic} on behalf of ${address}`
 	}
 
+	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+
 	#agent = new BskyAgent({ service: `https://${service}` })
 	#session: ATP.AtpSessionData | null = null
 

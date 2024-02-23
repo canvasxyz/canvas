@@ -4,7 +4,7 @@ import type { Action } from "./Action.js"
 import type { Awaitable } from "./Awaitable.js"
 
 export interface SessionSigner<AuthorizationData = any>
-	extends Pick<Signer<Action | Session<AuthorizationData>>, "sign" | "verify"> {
+	extends Pick<Signer<Action | Session<AuthorizationData>>, "codecs" | "sign" | "verify"> {
 	match: (address: string) => boolean
 
 	/**

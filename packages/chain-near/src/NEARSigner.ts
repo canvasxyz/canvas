@@ -17,6 +17,10 @@ export interface NEARSignerInit {
 }
 
 export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
+	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+	public readonly match = (chain: string) => addressPattern.test(chain)
+	public readonly verify = Ed25519Signer.verify
+
 	public readonly chainId: string
 
 	#address: string
@@ -30,9 +34,6 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 
 		this.chainId = chainId ?? "near:mainnet"
 	}
-
-	public readonly match = (chain: string) => addressPattern.test(chain)
-	public readonly verify = Ed25519Signer.verify
 
 	public verifySession(topic: string, session: Session) {
 		const { publicKey, address, authorizationData: data, timestamp, duration } = session

@@ -21,6 +21,10 @@ export interface SIWESignerInit {
 }
 
 export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
+	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+	public readonly match = (address: string) => addressPattern.test(address)
+	public readonly verify = Ed25519Signer.verify
+
 	public readonly key: string
 	public readonly chainId: number
 
@@ -33,9 +37,6 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 		this.chainId = init.chainId ?? 1
 		this.key = `SIWESigner-${init.signer ? "signer" : "burner"}`
 	}
-
-	public readonly match = (address: string) => addressPattern.test(address)
-	public readonly verify = Ed25519Signer.verify
 
 	protected async getAddress(): Promise<string> {
 		const walletAddress = await this.#signer.getAddress()

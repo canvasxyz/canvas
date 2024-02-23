@@ -10,6 +10,7 @@ import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
 import { GossipLogService } from "@canvas-js/gossiplog/service"
 import type { PresenceStore } from "@canvas-js/discovery"
+import { assert } from "@canvas-js/utils"
 
 import target from "#target"
 
@@ -17,7 +18,6 @@ import type { Contract, ActionImplementationFunction, ActionImplementationObject
 import type { ServiceMap } from "./targets/interface.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
-import { assert } from "./utils.js"
 
 export interface NetworkConfig {
 	offline?: boolean
@@ -113,9 +113,9 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 		const verifySignature = (signature: Signature, message: Message<Action | Session>) => {
-			const signer = signers.signers.find((signer) => signer.match(message.payload.address))
-			assert(signer !== undefined)
-			signer.verify(signature, message)
+			const signer = signers.getAll().find((signer) => signer.codecs.includes(signature.codec))
+			assert(signer !== undefined, "no matching signer found")
+			return signer.verify(signature, message)
 		}
 
 		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit, ignoreMissingActions })

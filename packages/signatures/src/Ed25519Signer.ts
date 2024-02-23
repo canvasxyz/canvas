@@ -18,6 +18,8 @@ export class Ed25519Signer<Payload = unknown> implements Signer<Payload> {
 	public static jsonCodec = "dag-json" as const
 
 	public readonly uri: string
+	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+
 	readonly #privateKey: Uint8Array
 
 	public static verify<Payload = unknown>(signature: Signature, message: Message<Payload>) {

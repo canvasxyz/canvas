@@ -21,6 +21,10 @@ function isPrivateKeyAccount(signer: WalletClient | PrivateKeyAccount): signer i
 }
 
 export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
+	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+	public readonly match = (address: string) => addressPattern.test(address)
+	public readonly verify = Ed25519Signer.verify
+
 	public readonly key: string
 	public readonly sessionDuration: number | null
 	public readonly chainId: number
@@ -72,9 +76,6 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 		this.chainId = init.chainId ?? 1
 		this.key = `SIWESignerViem-${init.signer ? "signer" : "burner"}`
 	}
-
-	public readonly match = (address: string) => addressPattern.test(address)
-	public readonly verify = Ed25519Signer.verify
 
 	public async verifySession(topic: string, session: Session<SIWESessionData>) {
 		const { address, publicKey, authorizationData, timestamp, duration } = session

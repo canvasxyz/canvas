@@ -31,6 +31,10 @@ type GenericSigner = {
 }
 
 export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
+	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+	public readonly match = (chain: string) => addressPattern.test(chain)
+	public readonly verify = Ed25519Signer.verify
+
 	public readonly key: string
 	public readonly sessionDuration: number | null
 	public readonly chainId: string
@@ -66,9 +70,6 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		this.sessionDuration = sessionDuration ?? null
 		this.key = `SolanaSigner-${signer ? "extension" : "burner"}`
 	}
-
-	public readonly match = (chain: string) => addressPattern.test(chain)
-	public readonly verify = Ed25519Signer.verify
 
 	public verifySession(topic: string, session: Session) {
 		const { publicKey, address, authorizationData: data, timestamp, duration } = session

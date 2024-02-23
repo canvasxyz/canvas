@@ -22,6 +22,8 @@ type GenericSigner = {
 }
 
 export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
+	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+
 	#signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, bech32Prefix }: CosmosSignerInit = {}) {

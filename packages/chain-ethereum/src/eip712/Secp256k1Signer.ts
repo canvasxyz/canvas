@@ -111,6 +111,7 @@ export class Secp256k1Signer implements Signer<Action | Session<Eip712SessionDat
 		}
 	}
 
+	public readonly codecs = [Secp256k1Signer.eip712ActionCodec, Secp256k1Signer.eip712SessionCodec]
 	public readonly uri: string
 
 	readonly #wallet: BaseWallet

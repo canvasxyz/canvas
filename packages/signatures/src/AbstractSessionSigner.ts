@@ -33,6 +33,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 		this.#defaultDuration = config.defaultDuration ?? null
 	}
 
+	public abstract codecs: string[]
 	public abstract match: (address: string) => boolean
 	public abstract verify: (signature: Signature, message: Message<Action | Session<AuthorizationData>>) => void
 	public abstract verifySession(topic: string, session: Session<AuthorizationData>): Awaitable<void>
