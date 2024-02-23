@@ -27,6 +27,7 @@
 		"@canvas-js/utils": "0.8.26",
 		"@ipld/dag-cbor": "^9.0.6",
 		"@ipld/dag-json": "^10.2.0",
+		"@libp2p/logger": "^4.0.6",
 		"@noble/curves": "^1.3.0",
 		"@noble/hashes": "^1.3.1",
 		"ethers": "^6.9.1",
