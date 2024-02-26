@@ -4,9 +4,9 @@
   "version": "0.8.26",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "vite build",
     "dev": "vite",
-    "build": "vite build"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@canvas-js/chain-atp": "0.8.26",
