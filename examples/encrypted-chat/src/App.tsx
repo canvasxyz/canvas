@@ -4,8 +4,8 @@ import { Select } from './Select';
 
 const ChatApp: React.FC = () => {
   return (
-    <div>
-      <h1>Hello world!</h1>
+    <div className="w-96">
+      <h1>Sign in to continue:</h1>
   
       <Select></Select>
     </div>
