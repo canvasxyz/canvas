@@ -2,7 +2,7 @@ import { AbstractSigner, Wallet, verifyMessage, hexlify, getBytes } from "ethers
 import * as siwe from "siwe"
 import { logger } from "@libp2p/logger"
 
-import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
+import type { Signature, SessionSigner, Action, Message, Session, Awaitable } from "@canvas-js/interfaces"
 import { Secp256k1Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
 import target from "#target"
@@ -133,6 +133,14 @@ export class SIWESigner implements SessionSigner<SIWESessionData> {
 
 		this.log("created new session for %s: %o", address, session)
 		return session
+	}
+
+	public hasSession(topic: string, address: string): boolean {
+		const session = this.#store.get(topic, address)
+		if (!session) return false
+		const { timestamp, duration } = session.session
+		if (duration === null) return true
+		return timestamp + duration > Date.now()
 	}
 
 	public sign(message: Message<Action | Session>): Signature {

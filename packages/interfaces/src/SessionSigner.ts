@@ -32,6 +32,11 @@ export interface SessionSigner<AuthorizationData = any> extends Signer<Message<A
 	 */
 	verifySession: (topic: string, session: Session<AuthorizationData>) => Awaitable<void>
 
+	/**
+	 * Returns true if there is a valid session for the given `topic` and `address`.
+	 */
+	hasSession: (topic: string, address: string) => boolean
+
 	clear(topic: string): Awaitable<void>
 
 	/**

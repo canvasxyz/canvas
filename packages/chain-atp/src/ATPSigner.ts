@@ -160,6 +160,14 @@ export class ATPSigner implements SessionSigner<ATPSessionData> {
 		return session
 	}
 
+	public hasSession(topic: string, address: string): boolean {
+		const session = this.#store.get(topic, address)
+		if (!session) return false
+		const { timestamp, duration } = session.session
+		if (duration === null) return true
+		return timestamp + duration > Date.now()
+	}
+
 	public sign(message: Message<Action | Session>): Signature {
 		if (message.payload.type === "action") {
 			const { address, timestamp } = message.payload
