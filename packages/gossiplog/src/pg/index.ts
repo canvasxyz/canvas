@@ -3,21 +3,39 @@ import pDefer from "p-defer"
 
 import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { PostgresTree, PostgresStore } from "@canvas-js/okra-pg"
+import { Awaitable } from "@canvas-js/interfaces"
 import pg from "pg"
 
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { assert } from "../utils.js"
+import { encodeId, decodeId } from "../schema.js"
+import { bytesToHex as hex } from "@noble/hashes/utils"
+
+async function getAncestors<Payload, Result>(
+	log: GossipLog<Payload, Result>,
+	key: Uint8Array,
+	atOrBefore: number,
+): Promise<Uint8Array[]> {
+	const { rows } = await log.ancestorsClient.query(`SELECT get_ancestors($1, $2);`, [key, atOrBefore])
+	const row = rows[0] as { get_ancestors: Uint8Array[] }
+	const ancestors = row.get_ancestors
+	return ancestors
+}
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	private pool: pg.Pool
 	private messagesClient: pg.PoolClient
 	private headsClient: pg.PoolClient
-	private ancestorsClient: pg.PoolClient
+	public ancestorsClient: pg.PoolClient
 	private readonly queue = new PQueue({ concurrency: 1 })
 
 	private messages: PostgresTree
 	private heads: PostgresStore
 	private ancestors: PostgresStore
+
+	private static MESSAGES_TABLE_PREFIX = "messages"
+	private static HEADS_TABLE = "heads"
+	private static ANCESTORS_TABLE = "ancestors"
 
 	public static async open<Payload, Result>(
 		init: GossipLogInit<Payload, Result>,
@@ -33,9 +51,9 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			console.error("Unexpected error on idle client", err)
 		})
 
-		const messages = await PostgresTree.initialize(messagesClient, { prefix: "messages", clear: true })
-		const heads = await PostgresStore.initialize(headsClient, { table: "heads", clear: true })
-		const ancestors = await PostgresStore.initialize(ancestorsClient, { table: "ancestors", clear: true })
+		const messages = await PostgresTree.initialize(messagesClient, { prefix: this.MESSAGES_TABLE_PREFIX, clear: true })
+		const heads = await PostgresStore.initialize(headsClient, { table: this.HEADS_TABLE, clear: true })
+		const ancestors = await PostgresStore.initialize(ancestorsClient, { table: this.ANCESTORS_TABLE, clear: true })
 
 		const gossipLog = new GossipLog(
 			{
@@ -128,6 +146,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				messages: this.messages,
 				heads: this.heads,
 				ancestors: this.indexAncestors ? this.ancestors : undefined,
+				getAncestors: (key: Uint8Array, atOrBefore: number): Promise<Uint8Array[]> =>
+					getAncestors(this, key, atOrBefore),
 			})
 			// console.log("end read tx")
 			return result
@@ -144,6 +164,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				messages: this.messages,
 				heads: this.heads,
 				ancestors: this.indexAncestors ? this.ancestors : undefined,
+				getAncestors: (key: Uint8Array, atOrBefore: number): Promise<Uint8Array[]> =>
+					getAncestors(this, key, atOrBefore),
 			})
 			// console.log("end write tx")
 			return result

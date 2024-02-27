@@ -37,12 +37,14 @@ export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
 	heads: Omit<KeyValueStore, "set" | "delete">
 	ancestors?: Omit<KeyValueStore, "set" | "delete">
+	getAncestors?: (key: Uint8Array, atOrBefore: number) => Awaitable<Uint8Array[]>
 }
 
 export interface ReadWriteTransaction {
 	messages: KeyValueStore & Target
 	heads: KeyValueStore
 	ancestors?: KeyValueStore
+	getAncestors?: (key: Uint8Array, atOrBefore: number) => Awaitable<Uint8Array[]>
 }
 
 export type GossipLogConsumer<Payload = unknown, Result = void> = (
@@ -286,6 +288,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			const missingParents = new Set<string>()
 			this.log("looking up %s parents", message.parents.length)
 			for (const parentId of message.parents) {
+				// TODO: txn.messages.getMany
 				const parent = await txn.messages.get(encodeId(parentId))
 				if (parent === null) {
 					this.log("missing parent %s", parentId)
@@ -319,7 +322,13 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		assert(messageIdPattern.test(id), "invalid message ID")
 
 		const results = new Set<string>()
-		await this.read((txn) => this.#getAncestors(txn, encodeId(id), atOrBefore, results))
+		await this.read((txn) => {
+			if (txn.getAncestors !== undefined) {
+				return this.#getAncestorsByTxn(txn, encodeId(id), atOrBefore, results)
+			} else {
+				return this.#getAncestors(txn, encodeId(id), atOrBefore, results)
+			}
+		})
 		this.log("getAncestors of %s atOrBefore %d: %o", id, atOrBefore, results)
 		return Array.from(results).sort()
 	}
@@ -373,6 +382,26 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		}
 
 		return false
+	}
+
+	async #getAncestorsByTxn(
+		txn: ReadOnlyTransaction | ReadWriteTransaction,
+		key: Uint8Array,
+		atOrBefore: number,
+		results: Set<string>,
+	) {
+		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
+		assert(txn.getAncestors !== undefined, "expected txn.getAncestors !== undefined")
+
+		const links = await txn.getAncestors(key, atOrBefore)
+
+		for (const ancestorKey of links) {
+			const [ancestorClock] = decodeClock(ancestorKey)
+			const ancestorId = decodeId(ancestorKey)
+			if (Number(ancestorClock) <= atOrBefore) {
+				results.add(ancestorId)
+			}
+		}
 	}
 
 	async #getAncestors(
@@ -432,6 +461,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 		await txn.heads.set(key, cborNull)
 		for (const parent of parents) {
+			// TODO: txn.heads.deleteMany
 			await txn.heads.delete(parent)
 		}
 
@@ -451,7 +481,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 							links.add(decodeId(child))
 						} else {
 							assert(Number(childClock) <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
-							await this.#getAncestors(txn, child, ancestorClock, links)
+							if (txn.getAncestors !== undefined) {
+								await this.#getAncestorsByTxn(txn, child, ancestorClock, links)
+							} else {
+								await this.#getAncestors(txn, child, ancestorClock, links)
+							}
 						}
 					}
 
@@ -488,6 +522,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 				const existingMessage = await txn.messages.get(key)
 				if (existingMessage === null) {
 					for (const parent of message.parents) {
+						// TODO: txn.messages.getMany
 						const parentKey = encodeId(parent)
 						const parentValue = await txn.messages.get(parentKey)
 						if (parentValue === null) {

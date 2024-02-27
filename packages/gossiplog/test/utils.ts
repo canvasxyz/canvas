@@ -42,12 +42,11 @@ export const testPlatforms = (
 	) => void,
 ) => {
 	const macro = test.macro(run)
-	// test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
-	// test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(init))
-	// test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(init, getDirectory(t)))
-	test.serial(`Postgres - ${name}`, macro, (t, init) =>
-		GossipLogPostgres.open(init, "postgresql://localhost:5432/test"),
-	)
+	const pgUrl = "postgresql://localhost:5432/test"
+	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
+	test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(init))
+	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(init, getDirectory(t)))
+	test(`Postgres - ${name}`, macro, (t, init) => GossipLogPostgres.open(init, pgUrl))
 }
 
 export const getPublicKey = <T>([id, { publicKey }, message]: [string, Signature, Message<T>]): [
