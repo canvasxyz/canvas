@@ -4,12 +4,16 @@ import pDefer from "p-defer"
 import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { PostgresTree, PostgresStore } from "@canvas-js/okra-pg"
 import { Awaitable } from "@canvas-js/interfaces"
+
 import pg from "pg"
 
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { assert } from "../utils.js"
 import { encodeId, decodeId } from "../schema.js"
-import { bytesToHex as hex } from "@noble/hashes/utils"
+
+import { getAncestorsSql } from "./get_ancestors.sql.js"
+import { decodeClockSql } from "./decode_clock.sql.js"
+import { pgCborSql } from "./pg_cbor.sql.js"
 
 async function getAncestors<Payload, Result>(
 	log: GossipLog<Payload, Result>,
@@ -54,6 +58,10 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		const messages = await PostgresTree.initialize(messagesClient, { prefix: this.MESSAGES_TABLE_PREFIX, clear: true })
 		const heads = await PostgresStore.initialize(headsClient, { table: this.HEADS_TABLE, clear: true })
 		const ancestors = await PostgresStore.initialize(ancestorsClient, { table: this.ANCESTORS_TABLE, clear: true })
+
+		await ancestorsClient.query(getAncestorsSql)
+		await ancestorsClient.query(decodeClockSql)
+		await ancestorsClient.query(pgCborSql)
 
 		const gossipLog = new GossipLog(
 			{

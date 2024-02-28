@@ -1,3 +1,4 @@
+export const pgCborSql = String.raw`
 CREATE TYPE pgcbor_next_state AS (remainder bytea, item jsonb);
 CREATE OR REPLACE FUNCTION pgcbor_raise(message text, debug json, dummy_return_value anyelement)
 RETURNS anyelement
@@ -804,4 +805,4 @@ SELECT
   END
 $$;
 COMMENT ON COLUMN pgcbor_next_state.remainder IS 'The remainder after decoding a CBOR item';
-COMMENT ON COLUMN pgcbor_next_state.item IS 'A single decoded CBOR item';
+COMMENT ON COLUMN pgcbor_next_state.item IS 'A single decoded CBOR item';`

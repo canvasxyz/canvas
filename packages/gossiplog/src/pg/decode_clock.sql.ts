@@ -1,3 +1,4 @@
+export const decodeClockSql = String.raw`
 DROP FUNCTION IF EXISTS decode_clock(k bytea);
 
 CREATE OR REPLACE FUNCTION decode_clock(k bytea) RETURNS integer AS
@@ -24,4 +25,4 @@ BEGIN
 
 	RETURN final;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;`

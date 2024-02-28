@@ -1,3 +1,4 @@
+export const getAncestorsSql = String.raw`
 DROP FUNCTION IF EXISTS get_ancestors(key_ BYTEA, at_or_before INTEGER, recursing BOOLEAN);
 CREATE OR REPLACE FUNCTION get_ancestors(key_ BYTEA, at_or_before INTEGER, recursing BOOLEAN DEFAULT false) RETURNS bytea[] AS $$
 DECLARE
@@ -45,4 +46,4 @@ BEGIN
   END LOOP;
   RETURN results;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;`
