@@ -1,5 +1,10 @@
 export const pgCborSql = String.raw`
-CREATE TYPE pgcbor_next_state AS (remainder bytea, item jsonb);
+DO $$ BEGIN
+  CREATE TYPE pgcbor_next_state AS (remainder bytea, item jsonb);
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION pgcbor_raise(message text, debug json, dummy_return_value anyelement)
 RETURNS anyelement
 LANGUAGE plpgsql
