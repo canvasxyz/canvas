@@ -1,4 +1,3 @@
-import * as json from "@ipld/dag-json"
 import { logger } from "@libp2p/logger"
 
 import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
@@ -10,7 +9,6 @@ import { createDefaultSigner } from "./external_signers/default.js"
 import { createEthereumSigner, verifyEthereum } from "./external_signers/ethereum.js"
 import { createAminoSigner, verifyAmino } from "./external_signers/amino.js"
 import { createBytesSigner, verifyBytes } from "./external_signers/bytes.js"
-import { createAdr036Signer, verifyAdr036 } from "./external_signers/adr036.js"
 
 import target from "#target"
 
@@ -45,8 +43,6 @@ export class CosmosSigner implements SessionSigner {
 			this.#signer = createAminoSigner(signer)
 		} else if (signer.type == "bytes") {
 			this.#signer = createBytesSigner(signer)
-		} else if (signer.type == "adr036") {
-			this.#signer = createAdr036Signer(signer)
 		} else {
 			throw new Error("invalid signer")
 		}
@@ -80,8 +76,6 @@ export class CosmosSigner implements SessionSigner {
 			await verifyAmino(message, data)
 		} else if (data.signatureType == "bytes") {
 			verifyBytes(message, data)
-		} else if (data.signatureType == "adr036") {
-			verifyAdr036(message, data)
 		} else {
 			signalInvalidType(data.signatureType)
 		}

@@ -35,24 +35,11 @@ export function validateSessionData(data: unknown): data is CosmosSessionData {
 
 function extractSessionData(data: any): CosmosSessionData {
 	if (data.signatureType == "amino") {
-		const signature = data.signature.signature
-		const pub_key_value = data.signature.pub_key.value
-		const pub_key_type = data.signature.pub_key.type
-		if (
-			signature instanceof Uint8Array &&
-			pub_key_value instanceof Uint8Array &&
-			typeof pub_key_type === "string" &&
-			pub_key_type == "tendermint/PubKeySecp256k1"
-		) {
+		const signature = data.signature
+		if (signature instanceof Uint8Array) {
 			return {
 				signatureType: "amino",
-				signature: {
-					signature: signature,
-					pub_key: {
-						type: pub_key_type,
-						value: pub_key_value,
-					},
-				},
+				signature,
 			}
 		}
 	} else if (data.signatureType == "bytes") {
