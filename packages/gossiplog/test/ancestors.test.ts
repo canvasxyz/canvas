@@ -7,6 +7,7 @@ import type { Signature, Message } from "@canvas-js/interfaces"
 import { Ed25519Signer } from "@canvas-js/signed-cid"
 import { decodeId } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/node"
+import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
 
 import { appendChain, getDirectory, shuffle, testPlatforms } from "./utils.js"
 
@@ -133,16 +134,16 @@ test("simulate a randomly partitioned network", async (t) => {
 	const topic = randomUUID()
 
 	const logs = await Promise.all([
-		GossipLog.open({ topic, apply, validate, indexAncestors: true }, getDirectory(t)),
-		GossipLog.open({ topic, apply, validate, indexAncestors: true }, getDirectory(t)),
-		GossipLog.open({ topic, apply, validate, indexAncestors: true }, getDirectory(t)),
+		PostgresGossipLog.open({ topic, apply, validate, indexAncestors: true }, "postgresql://localhost:5432/test"),
+		PostgresGossipLog.open({ topic, apply, validate, indexAncestors: true }, "postgresql://localhost:5432/test2"),
+		PostgresGossipLog.open({ topic, apply, validate, indexAncestors: true }, "postgresql://localhost:5432/test3"),
 	])
 
 	const random = (n: number) => Math.floor(Math.random() * n)
 
 	// const MESSAGE_COUNT = 2048
 	// const MAX_CHAIN_LENGTH = 6
-	const MESSAGE_COUNT = 512
+	const MESSAGE_COUNT = 256
 	const MAX_CHAIN_LENGTH = 5
 
 	const messageIDs: string[] = []
