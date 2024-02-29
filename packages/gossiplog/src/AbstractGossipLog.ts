@@ -47,6 +47,12 @@ export interface ReadWriteTransaction {
 	ancestors?: KeyValueStore
 	getAncestors?: (key: Uint8Array, atOrBefore: number) => Awaitable<Uint8Array[]>
 	isAncestor?: (key: Uint8Array, ancestorKey: Uint8Array) => Awaitable<boolean>
+	insertUpdatingAncestors?: (
+		key: Uint8Array,
+		value: Uint8Array,
+		parents: Uint8Array[],
+		ancestorClocks: number[],
+	) => Awaitable<Uint8Array[][]>
 }
 
 export type GossipLogConsumer<Payload = unknown, Result = void> = (
@@ -493,30 +499,36 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 			const ancestorClocks = Array.from(getAncestorClocks(message.clock))
 			const ancestorLinks: Uint8Array[][] = new Array(ancestorClocks.length)
-			for (const [i, ancestorClock] of ancestorClocks.entries()) {
-				if (i === 0) {
-					ancestorLinks[i] = parents
-				} else {
-					const links = new Set<string>()
-					for (const child of ancestorLinks[i - 1]) {
-						const [childClock] = decodeClock(child)
-						if (Number(childClock) <= ancestorClock) {
-							links.add(decodeId(child))
-						} else {
-							assert(Number(childClock) <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
-							if (txn.getAncestors !== undefined) {
-								await this.#getAncestorsByTxn(txn, child, ancestorClock, links)
+
+			if (txn.insertUpdatingAncestors) {
+				const ancestorLinks = await txn.insertUpdatingAncestors(key, value, parents, ancestorClocks)
+				await txn.ancestors.set(key, cbor.encode(ancestorLinks))
+			} else {
+				for (const [i, ancestorClock] of ancestorClocks.entries()) {
+					if (i === 0) {
+						ancestorLinks[i] = parents
+					} else {
+						const links = new Set<string>()
+						for (const child of ancestorLinks[i - 1]) {
+							const [childClock] = decodeClock(child)
+							if (Number(childClock) <= ancestorClock) {
+								links.add(decodeId(child))
 							} else {
-								await this.#getAncestors(txn, child, ancestorClock, links)
+								assert(Number(childClock) <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
+								if (txn.getAncestors !== undefined) {
+									await this.#getAncestorsByTxn(txn, child, ancestorClock, links)
+								} else {
+									await this.#getAncestors(txn, child, ancestorClock, links)
+								}
 							}
 						}
+
+						ancestorLinks[i] = Array.from(links).map(encodeId)
 					}
-
-					ancestorLinks[i] = Array.from(links).map(encodeId)
 				}
-			}
 
-			await txn.ancestors.set(key, cbor.encode(ancestorLinks))
+				await txn.ancestors.set(key, cbor.encode(ancestorLinks))
+			}
 		}
 
 		for (const [childId, signedMessage] of this.mempool.observe(id)) {

@@ -6,6 +6,7 @@ import { PostgresTree, PostgresStore } from "@canvas-js/okra-pg"
 import { Awaitable } from "@canvas-js/interfaces"
 
 import pg from "pg"
+import { hexToBytes, bytesToHex as hex } from "@noble/hashes/utils"
 
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { assert } from "../utils.js"
@@ -15,6 +16,7 @@ import { getAncestorsSql } from "./get_ancestors.sql.js"
 import { isAncestorSql } from "./is_ancestor.sql.js"
 import { decodeClockSql } from "./decode_clock.sql.js"
 import { pgCborSql } from "./pg_cbor.sql.js"
+import { insertSql } from "./insert_updating_ancestors.sql.js"
 
 async function getAncestors<Payload, Result>(
 	log: GossipLog<Payload, Result>,
@@ -34,6 +36,22 @@ async function isAncestor<Payload, Result>(
 	const { rows } = await log.ancestorsClient.query(`SELECT is_ancestor($1, $2);`, [key, ancestorKey])
 	const row = rows[0] as { is_ancestor: boolean }
 	return row.is_ancestor
+}
+
+async function insertUpdatingAncestors<Payload, Result>(
+	log: GossipLog<Payload, Result>,
+	key: Uint8Array,
+	value: Uint8Array,
+	parents: Uint8Array[],
+	ancestorClocks: number[],
+): Promise<Uint8Array[][]> {
+	const { rows } = await log.ancestorsClient.query(
+		`SELECT insert_updating_ancestors($1, $2, $3::bytea[], $4::integer[]);`,
+		[key, value, parents.map(Buffer.from), ancestorClocks],
+	)
+	const row = rows[0] as { insert_updating_ancestors: string[][] }
+	const ancestors = row.insert_updating_ancestors.map((arr) => arr.map((id) => hexToBytes(id.replace("\\x", ""))))
+	return ancestors
 }
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
@@ -73,6 +91,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		await ancestorsClient.query(isAncestorSql)
 		await ancestorsClient.query(decodeClockSql)
 		await ancestorsClient.query(pgCborSql)
+		await ancestorsClient.query(insertSql)
 
 		const gossipLog = new GossipLog(
 			{
@@ -187,6 +206,12 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				getAncestors: (key: Uint8Array, atOrBefore: number): Promise<Uint8Array[]> =>
 					getAncestors(this, key, atOrBefore),
 				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
+				insertUpdatingAncestors: (
+					key: Uint8Array,
+					value: Uint8Array,
+					parents: Uint8Array[],
+					ancestorClocks: number[],
+				): Promise<Uint8Array[][]> => insertUpdatingAncestors(this, key, value, parents, ancestorClocks),
 			})
 			// console.log("end write tx")
 			return result

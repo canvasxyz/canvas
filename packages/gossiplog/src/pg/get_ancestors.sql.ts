@@ -8,7 +8,7 @@ DECLARE
   links jsonb;
   link bytea;
   link_clock integer;
-  results bytea[];
+  results bytea[] = '{}';
   tmp bytea[];
 BEGIN
   IF NOT recursing THEN
