@@ -9,7 +9,6 @@ DECLARE
   link bytea;
   link_clock integer;
   results bytea[];
-    visited bytea[];
   tmp bytea[];
 BEGIN
   IF NOT recursing THEN
@@ -30,7 +29,7 @@ BEGIN
   SELECT pgcbor_to_jsonb(value) INTO links FROM ancestors WHERE key = key_;
 
   FOR i in SELECT * FROM jsonb_array_elements(links[index]) LOOP
-    link := decode((i->>0), 'hex'); -- TODO: base32
+    link := decode((i->>0), 'hex');
     link_clock := decode_clock(link);
 
     IF link_clock <= at_or_before THEN

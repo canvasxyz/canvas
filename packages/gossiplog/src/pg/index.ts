@@ -12,6 +12,7 @@ import { assert } from "../utils.js"
 import { encodeId, decodeId } from "../schema.js"
 
 import { getAncestorsSql } from "./get_ancestors.sql.js"
+import { isAncestorSql } from "./is_ancestor.sql.js"
 import { decodeClockSql } from "./decode_clock.sql.js"
 import { pgCborSql } from "./pg_cbor.sql.js"
 
@@ -22,8 +23,17 @@ async function getAncestors<Payload, Result>(
 ): Promise<Uint8Array[]> {
 	const { rows } = await log.ancestorsClient.query(`SELECT get_ancestors($1, $2);`, [key, atOrBefore])
 	const row = rows[0] as { get_ancestors: Uint8Array[] }
-	const ancestors = row.get_ancestors
-	return ancestors
+	return row.get_ancestors
+}
+
+async function isAncestor<Payload, Result>(
+	log: GossipLog<Payload, Result>,
+	key: Uint8Array,
+	ancestorKey: Uint8Array,
+): Promise<boolean> {
+	const { rows } = await log.ancestorsClient.query(`SELECT is_ancestor($1, $2);`, [key, ancestorKey])
+	const row = rows[0] as { is_ancestor: boolean }
+	return row.is_ancestor
 }
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
@@ -60,6 +70,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		const ancestors = await PostgresStore.initialize(ancestorsClient, { table: this.ANCESTORS_TABLE, clear: true })
 
 		await ancestorsClient.query(getAncestorsSql)
+		await ancestorsClient.query(isAncestorSql)
 		await ancestorsClient.query(decodeClockSql)
 		await ancestorsClient.query(pgCborSql)
 
@@ -156,6 +167,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				ancestors: this.indexAncestors ? this.ancestors : undefined,
 				getAncestors: (key: Uint8Array, atOrBefore: number): Promise<Uint8Array[]> =>
 					getAncestors(this, key, atOrBefore),
+				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
 			})
 			// console.log("end read tx")
 			return result
@@ -174,6 +186,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				ancestors: this.indexAncestors ? this.ancestors : undefined,
 				getAncestors: (key: Uint8Array, atOrBefore: number): Promise<Uint8Array[]> =>
 					getAncestors(this, key, atOrBefore),
+				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
 			})
 			// console.log("end write tx")
 			return result

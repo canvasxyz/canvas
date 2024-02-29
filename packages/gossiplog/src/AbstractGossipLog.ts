@@ -38,6 +38,7 @@ export interface ReadOnlyTransaction {
 	heads: Omit<KeyValueStore, "set" | "delete">
 	ancestors?: Omit<KeyValueStore, "set" | "delete">
 	getAncestors?: (key: Uint8Array, atOrBefore: number) => Awaitable<Uint8Array[]>
+	isAncestor?: (key: Uint8Array, ancestorKey: Uint8Array) => Awaitable<boolean>
 }
 
 export interface ReadWriteTransaction {
@@ -45,6 +46,7 @@ export interface ReadWriteTransaction {
 	heads: KeyValueStore
 	ancestors?: KeyValueStore
 	getAncestors?: (key: Uint8Array, atOrBefore: number) => Awaitable<Uint8Array[]>
+	isAncestor?: (key: Uint8Array, ancestorKey: Uint8Array) => Awaitable<boolean>
 }
 
 export type GossipLogConsumer<Payload = unknown, Result = void> = (
@@ -335,7 +337,28 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public async isAncestor(id: string, ancestor: string): Promise<boolean> {
 		assert(messageIdPattern.test(id), "invalid message ID")
-		return await this.read((txn) => AbstractGossipLog.isAncestor(txn, id, ancestor))
+		return await this.read((txn) =>
+			txn.isAncestor
+				? AbstractGossipLog.isAncestorByTxn(txn, id, ancestor)
+				: AbstractGossipLog.isAncestor(txn, id, ancestor),
+		)
+	}
+
+	static async isAncestorByTxn(txn: ReadOnlyTransaction, id: string, ancestor: string): Promise<boolean> {
+		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
+		assert(txn.isAncestor !== undefined, "expected txn.isAncestor !== undefined")
+		assert(messageIdPattern.test(id), "invalid message ID (id)")
+		assert(messageIdPattern.test(ancestor), "invalid message ID (ancestor)")
+
+		if (id === ancestor) {
+			return true
+		}
+
+		const key = encodeId(id)
+		const ancestorKey = encodeId(ancestor)
+		const result = await txn.isAncestor(key, ancestorKey)
+
+		return result
 	}
 
 	static async isAncestor(
