@@ -12,6 +12,8 @@ const ChatApp: React.FC = () => {
   
   const { view } = useView();
 
+  console.log('view = ', view)
+
   return (
     <div>
       <div className="fixed top-0 p-4">

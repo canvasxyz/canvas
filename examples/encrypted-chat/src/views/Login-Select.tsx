@@ -8,20 +8,29 @@ const classNames = (...classes: any) => {
   return classes.filter(Boolean).join(' ')
 }
 
+export enum LOGIN_TYPES {
+  Burner = 'burner',
+  Metamask = 'metamask',
+  None = 'none'
+}
+
 export const LoginOptions = [
   {
     id: 'select',
     name: '-- Select login option --',
+    type: LOGIN_TYPES.None,
     avatar: null,
   },
   {
     id: 'burner',
     name: 'Burner wallet',
+    type: LOGIN_TYPES.Burner,
     avatar: IconFire,
   },
   {
     id: 'ethereum',
     name: 'Ethereum (metamask)',
+    type: LOGIN_TYPES.Metamask,
     avatar: IconMetamask,
   },
 ]

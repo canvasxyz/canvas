@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { contract } from '../contract';
 
 export const useChat = () => {
-  const [wallet, setWallet] = useState<ethers.Wallet | null>(null);
+  const [wallet, setWallet] = useState<ethers.HDNodeWallet | null>(null);
 
   const signers = useMemo(() => {
     if (wallet) {

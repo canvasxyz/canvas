@@ -8,5 +8,7 @@ export enum VIEWS {
 export const useView = () => {
   const [view, setView] = useState(VIEWS.Login);
 
+  console.log('using view!', view)
+
   return {view, setView};
 };
