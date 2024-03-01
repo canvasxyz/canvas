@@ -8,12 +8,17 @@ import { contract } from '../contract';
 export const useChat = () => {
   const [wallet, setWallet] = useState<ethers.Wallet | null>(null);
 
-  const dummySignerKey = ethers.Wallet.createRandom().privateKey;
-  const dummySignerWallet = new ethers.Wallet(dummySignerKey);
+  const signers = useMemo(() => {
+    if (wallet) {
+      return [new SIWESigner({signer: wallet})];
+    }
+
+    return [];
+  }, [wallet]);
 
   const app = useCanvas({
     contract, 
-    signers: [new SIWESigner({ signer: dummySignerWallet })],
+    signers: signers,
   });
 
   return { app, wallet, setWallet };

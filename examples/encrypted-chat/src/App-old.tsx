@@ -6,7 +6,7 @@ import type { Canvas } from "@canvas-js/core"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
-import { usePrivkey } from "./components/privkeys"
+import { usePrivkey } from "./hooks/usePrivkeys"
 
 const formatAddress = (address: string | null | undefined) => {
 	return address?.slice(0, 6)

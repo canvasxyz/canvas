@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ethers } from "ethers";
-import { LoginSelect, LoginOptions } from './components/Select-Login';
+import { LoginSelect, LoginOptions } from './views/Login-Select';
 import { LoginView } from './views/Login';
 import { DashboardView } from './views/Dashboard';
 import { useChat } from './hooks/useChat';
