@@ -1,6 +1,8 @@
 import { ethers } from "ethers";
 import { useState } from "react";
 import { LoginOptions, LoginSelect } from "../components/Select-Login";
+import { useChat } from "../hooks/useChat";
+import { useView, VIEWS } from "../hooks/useView";
 
 interface LoginFormProps {
   selected: any,
@@ -8,13 +10,18 @@ interface LoginFormProps {
   setWallet: Function,
 };
 
-const LoginForm: React.FC<LoginFormProps> = ({ selected, wallet, setWallet }) => {
+const LoginForm: React.FC<LoginFormProps> = ({ selected }) => {
+  const { setWallet } = useChat();
+  const { setView } = useView();
+  const [ burnerWallet, setBurnerWallet ] = useState<ethers.Wallet | null>(null);
+
   const generateBurnerWallet = () => {
-    setWallet(ethers.Wallet.createRandom())
+    setBurnerWallet(new ethers.Wallet(ethers.Wallet.createRandom().privateKey));
   }
 
   const loginWithBurner = () => {
-
+    setWallet(burnerWallet);
+    setView(VIEWS.Dashboard);
   }
 
   if (selected.id === 'burner') {
@@ -24,14 +31,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ selected, wallet, setWallet }) =>
           Generate wallet
         </button>
 
-        { wallet && 
+        { burnerWallet && 
           <>
             <div className="text-xs mt-4">
               <div>Private key: &lt;hidden&gt;</div>
-              <div>Public key: ${wallet.publicKey}</div>
+              <div>Public key: ${burnerWallet?.publicKey}</div>
             </div>
             <button className="bg-blue-400 hover:bg-blue-400 text-white py-1 px-2 mt-4 text-xs rounded" onClick={loginWithBurner}>
-              Login with {wallet.publicKey.slice(0, 10)}...
+              Login with {burnerWallet?.publicKey.slice(0, 10)}...
             </button>
           </>
         }
@@ -50,7 +57,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ selected, wallet, setWallet }) =>
 
 export const LoginView: React.FC = () => {
   const [selected, setSelected] = useState(LoginOptions[0])
-  const [wallet, setWallet] = useState(null);
+  // const [wallet, setWallet] = useState(null);
+
+  const { wallet, setWallet } = useChat();
 
   return (
     <>

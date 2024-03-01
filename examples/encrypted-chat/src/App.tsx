@@ -4,20 +4,13 @@ import { LoginSelect, LoginOptions } from './components/Select-Login';
 import { LoginView } from './views/Login';
 import { DashboardView } from './views/Dashboard';
 import { useChat } from './hooks/useChat';
-
-export enum VIEWS {
-  Login = "LOGIN",
-  Dashboard = "DASHBOARD"
-}
+import { useView, VIEWS } from './hooks/useView';
 
 const ChatApp: React.FC = () => {
-  // const [selected, setSelected] = useState(LoginOptions[0])
-  // const [wallet, setWallet] = useState(null);
-
-  const [view, setView] = useState(VIEWS.Login);
-
-  // Initialize everything
+  // Initialize the contract
   useChat();
+  
+  const { view } = useView();
 
   return (
     <div>
