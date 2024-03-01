@@ -77,6 +77,8 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 		},
 	})
 
+	// app?.updateSigners
+
 	const people = useLiveQuery(app, "encryptionKeys", { orderBy: { address: "desc" } })
 	// const lobby = useLiveQuery(app, "messages", { orderBy: { timestamp: "desc" } })
 

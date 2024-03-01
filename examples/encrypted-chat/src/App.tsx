@@ -1,46 +1,23 @@
 import React, { useState } from 'react';
 import { ethers } from "ethers";
-import { LoginSelect, LoginOptions } from './Select-Login';
+import { LoginSelect, LoginOptions } from './components/Select-Login';
+import { LoginView } from './views/Login';
+import { DashboardView } from './views/Dashboard';
+import { useChat } from './hooks/useChat';
 
-interface LoginFormProps {
-  selected: any,
-  wallet: ethers.HDNodeWallet,
-  setWallet: Function,
-};
-
-const LoginForm: React.FC<LoginFormProps> = ({ selected, wallet, setWallet }) => {
-
-  const generateBurnerWallet = () => {
-    setWallet(ethers.Wallet.createRandom())
-  }
-
-  if (selected.id === 'burner') {
-    return (
-      <div>
-        <button className="bg-blue-400 hover:bg-blue-400 text-white py-2 px-4 mt-4" onClick={generateBurnerWallet}>Generate wallet</button>
-
-        {wallet && 
-          <div className="text-sm mt-4">
-            <div>Private key: &lt;hidden&gt;</div>
-            <div>Public key: ${wallet.publicKey.slice(0, 10)}...</div>
-          </div>
-        }
-      </div>
-    )
-  }
-
-  if (selected.id === 'ethereum') {
-    return (
-      <h3>Ethereum login form</h3>
-    )
-  }
-
-  return null;
-};
+export enum VIEWS {
+  Login = "LOGIN",
+  Dashboard = "DASHBOARD"
+}
 
 const ChatApp: React.FC = () => {
-  const [selected, setSelected] = useState(LoginOptions[0])
-  const [wallet, setWallet] = useState(null);
+  // const [selected, setSelected] = useState(LoginOptions[0])
+  // const [wallet, setWallet] = useState(null);
+
+  const [view, setView] = useState(VIEWS.Login);
+
+  // Initialize everything
+  useChat();
 
   return (
     <div>
@@ -50,8 +27,13 @@ const ChatApp: React.FC = () => {
       </div>
 
       <div className="w-96 my-0 mx-auto pt-24">
-        <LoginSelect selected={selected} setSelected={setSelected} />
-        <LoginForm wallet={wallet} setWallet={setWallet} selected={selected} />
+        {view === VIEWS.Login && 
+          <LoginView />
+        }
+
+        {view === VIEWS.Dashboard && 
+          <DashboardView />
+        }
       </div>
     </div>
   )
