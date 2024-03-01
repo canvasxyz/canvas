@@ -1,8 +1,8 @@
 import { Fragment } from 'react'
 import { Listbox, Transition } from '@headlessui/react'
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid'
-import IconFire from './img/icons8-fire-48.png';
-import IconMetamask from './img/metamask-logo-512.png';
+import IconFire from '../img/icons8-fire-48.png';
+import IconMetamask from '../img/metamask-logo-512.png';
 
 const classNames = (...classes: any) => {
   return classes.filter(Boolean).join(' ')

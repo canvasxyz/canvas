@@ -8,16 +8,13 @@ import { contract } from '../contract';
 export const useChat = () => {
   const [wallet, setWallet] = useState<ethers.Wallet | null>(null);
 
-  // TODO: Do we need to memoize the contract? We probably want to instantiate it once per app...?
-  const app  = useMemo(() => {
-    const dummySignerKey = ethers.Wallet.createRandom().privateKey;
-    const dummySignerWallet = new ethers.Wallet(dummySignerKey);
+  const dummySignerKey = ethers.Wallet.createRandom().privateKey;
+  const dummySignerWallet = new ethers.Wallet(dummySignerKey);
 
-    return useCanvas({
-      contract, 
-      signers: [new SIWESigner({ signer: dummySignerWallet })],
-    });
-  }, []);
+  const app = useCanvas({
+    contract, 
+    signers: [new SIWESigner({ signer: dummySignerWallet })],
+  });
 
   return { app, wallet, setWallet };
 }
