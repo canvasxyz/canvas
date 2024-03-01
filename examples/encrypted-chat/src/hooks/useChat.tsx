@@ -21,5 +21,5 @@ export const useChat = () => {
     signers: signers,
   });
 
-  return { app, wallet, setWallet };
+  return { app, topic: contract.topic, wallet, setWallet };
 }
