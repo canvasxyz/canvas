@@ -59,6 +59,7 @@ export interface ReadWriteTransaction {
 		cborNull: Uint8Array,
 		heads: Uint8Array[],
 	) => Awaitable<void>
+	getHeads?: () => Awaitable<Uint8Array[]>
 }
 
 export type GossipLogConsumer<Payload = unknown, Result = void> = (
@@ -265,7 +266,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		const signer = options.signer ?? this.signer
 
 		const { id, signature, message, result, root } = await this.write(async (txn) => {
-			const heads = await this.getHeads(txn)
+			const heads = txn.getHeads ? await txn.getHeads() : await this.getHeads(txn)
+
 			const clock = getNextClock(heads)
 
 			const parents = heads.map(decodeId)

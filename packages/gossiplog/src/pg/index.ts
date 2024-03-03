@@ -7,10 +7,11 @@ import { Awaitable } from "@canvas-js/interfaces"
 
 import pg from "pg"
 import { hexToBytes, bytesToHex as hex } from "@noble/hashes/utils"
+import { equals } from "uint8arrays"
 
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
-import { assert } from "../utils.js"
-import { encodeId, decodeId } from "../schema.js"
+import { assert, cborNull } from "../utils.js"
+import { encodeId, decodeId, KEY_LENGTH } from "../schema.js"
 
 import { getAncestorsSql } from "./get_ancestors.sql.js"
 import { isAncestorSql } from "./is_ancestor.sql.js"
@@ -67,10 +68,19 @@ async function insertMessageRemovingHeads<Payload, Result>(
 	await log.ancestorsClient.query(`CALL insert_message_removing_heads($1, $2, $3, $4, $5::bytea[]);`, args)
 }
 
+async function getHeads<Payload, Result>(log: GossipLog<Payload, Result>): Promise<Uint8Array[]> {
+	const { rows } = await log.headsClient.query(`SELECT * FROM heads`)
+	return rows.map(({ key, value }: { key: Uint8Array; value: Uint8Array }) => {
+		assert(key.byteLength === KEY_LENGTH, "internal error (expected key.byteLength === KEY_LENGTH)")
+		assert(equals(value, cborNull), "internal error (unexpected parent entry value)")
+		return key
+	})
+}
+
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	private pool: pg.Pool
-	private messagesClient: pg.PoolClient
-	private headsClient: pg.PoolClient
+	public messagesClient: pg.PoolClient
+	public headsClient: pg.PoolClient
 	public ancestorsClient: pg.PoolClient
 	private readonly queue = new PQueue({ concurrency: 1 })
 
@@ -235,6 +245,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					const hash = this.messages.hashEntry(key, value)
 					return insertMessageRemovingHeads(this, key, value, hash, cborNull, parents)
 				},
+				getHeads: async (): Promise<Uint8Array[]> => getHeads(this),
 			})
 			// console.log("end write tx")
 			return result
