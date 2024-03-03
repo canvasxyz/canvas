@@ -17,6 +17,7 @@ import { isAncestorSql } from "./is_ancestor.sql.js"
 import { decodeClockSql } from "./decode_clock.sql.js"
 import { pgCborSql } from "./pg_cbor.sql.js"
 import { insertSql } from "./insert_updating_ancestors.sql.js"
+import { insertMessageRemovingHeadsSql } from "./insert_message_removing_heads.sql.js"
 
 async function getAncestors<Payload, Result>(
 	log: GossipLog<Payload, Result>,
@@ -52,6 +53,18 @@ async function insertUpdatingAncestors<Payload, Result>(
 	const row = rows[0] as { insert_updating_ancestors: string[][] }
 	const ancestors = row.insert_updating_ancestors.map((arr) => arr.map((id) => hexToBytes(id.replace("\\x", ""))))
 	return ancestors
+}
+
+async function insertMessageRemovingHeads<Payload, Result>(
+	log: GossipLog<Payload, Result>,
+	key: Uint8Array,
+	value: Uint8Array,
+	hash: Uint8Array,
+	cborNull: Uint8Array,
+	heads: Uint8Array[],
+): Promise<void> {
+	const args = [key, value, hash, cborNull, heads.map(Buffer.from)]
+	await log.ancestorsClient.query(`CALL insert_message_removing_heads($1, $2, $3, $4, $5::bytea[]);`, args)
 }
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
@@ -92,6 +105,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		await ancestorsClient.query(decodeClockSql)
 		await ancestorsClient.query(pgCborSql)
 		await ancestorsClient.query(insertSql)
+		await ancestorsClient.query(insertMessageRemovingHeadsSql)
 
 		const gossipLog = new GossipLog(
 			{
@@ -212,6 +226,15 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					parents: Uint8Array[],
 					ancestorClocks: number[],
 				): Promise<Uint8Array[][]> => insertUpdatingAncestors(this, key, value, parents, ancestorClocks),
+				insertMessageRemovingHeads: (
+					key: Uint8Array,
+					value: Uint8Array,
+					cborNull: Uint8Array,
+					parents: Uint8Array[],
+				): Promise<void> => {
+					const hash = this.messages.hashEntry(key, value)
+					return insertMessageRemovingHeads(this, key, value, hash, cborNull, parents)
+				},
 			})
 			// console.log("end write tx")
 			return result

@@ -53,6 +53,12 @@ export interface ReadWriteTransaction {
 		parents: Uint8Array[],
 		ancestorClocks: number[],
 	) => Awaitable<Uint8Array[][]>
+	insertMessageRemovingHeads?: (
+		key: Uint8Array,
+		value: Uint8Array,
+		cborNull: Uint8Array,
+		heads: Uint8Array[],
+	) => Awaitable<void>
 }
 
 export type GossipLogConsumer<Payload = unknown, Result = void> = (
@@ -331,11 +337,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 		const results = new Set<string>()
 		await this.read((txn) => {
-			if (txn.getAncestors !== undefined) {
-				return this.#getAncestorsByTxn(txn, encodeId(id), atOrBefore, results)
-			} else {
-				return this.#getAncestors(txn, encodeId(id), atOrBefore, results)
-			}
+			return txn.getAncestors
+				? this.#getAncestorsByTxn(txn, encodeId(id), atOrBefore, results)
+				: this.#getAncestors(txn, encodeId(id), atOrBefore, results)
 		})
 		this.log("getAncestors of %s atOrBefore %d: %o", id, atOrBefore, results)
 		return Array.from(results).sort()
@@ -484,14 +488,16 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			throw error
 		}
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
-		await txn.messages.set(key, value)
 
 		const parents = message.parents.map(encodeId)
-
-		await txn.heads.set(key, cborNull)
-		for (const parent of parents) {
-			// TODO: txn.heads.deleteMany
-			await txn.heads.delete(parent)
+		if (txn.insertMessageRemovingHeads) {
+			await txn.insertMessageRemovingHeads(key, value, cborNull, message.parents.map(encodeId))
+		} else {
+			await txn.messages.set(key, value)
+			await txn.heads.set(key, cborNull)
+			for (const parent of parents) {
+				await txn.heads.delete(parent)
+			}
 		}
 
 		if (this.indexAncestors) {
