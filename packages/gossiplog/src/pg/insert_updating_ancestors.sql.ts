@@ -9,6 +9,7 @@ DECLARE
   tmp jsonb;
   ancestor_clock integer;
   ancestor_links jsonb := '[]';
+  ancestor_links_length integer;
   ancestor_key bytea;
   child bytea;
   child_clock integer;
@@ -27,7 +28,8 @@ BEGIN
       j := 0;
       links := '{}'::bytea[];
       -- i is one-indexed, [i-1] is implemented as [i-2]
-      WHILE j < jsonb_array_length(ancestor_links[i-2]) LOOP
+      ancestor_links_length := jsonb_array_length(ancestor_links[i-2]);
+      WHILE j < ancestor_links_length LOOP
         child := decode(ancestor_links[i-2][j] #>> '{}', 'hex');
         child_clock := decode_clock(child);
         IF child_clock <= ancestor_clock THEN
