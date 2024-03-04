@@ -1,6 +1,6 @@
 export const isAncestorSql = String.raw`
-DROP FUNCTION IF EXISTS is_ancestor(key_ BYTEA, ancestor_key BYTEA, recursing BOOLEAN);
-CREATE OR REPLACE FUNCTION is_ancestor(key_ BYTEA, ancestor_key BYTEA, recursing BOOLEAN DEFAULT false) RETURNS boolean AS $$
+DROP FUNCTION IF EXISTS is_ancestor(BYTEA, BYTEA, BYTEA[]);
+CREATE OR REPLACE FUNCTION is_ancestor(key_ BYTEA, ancestor_key BYTEA, visited BYTEA[] DEFAULT '{}'::BYTEA[]) RETURNS TABLE (ret_result boolean, ret_visited bytea[]) AS $$
 DECLARE
   i jsonb;
   clock INTEGER;
@@ -8,21 +8,21 @@ DECLARE
   index INTEGER;
   links jsonb;
   link bytea;
+  newly_visited bytea[] = '{}';
+  tmp_is_ancestor boolean;
+  tmp_visited bytea[];
 BEGIN
-  IF NOT recursing THEN
-    DROP TABLE IF EXISTS is_ancestor_visited;
-  CREATE TEMP TABLE is_ancestor_visited (key BYTEA);
-  END IF;
-
   IF key_ = ancestor_key THEN
-    RETURN true;
+    RETURN QUERY SELECT true, newly_visited;
+    RETURN;
   END IF;
 
   clock := decode_clock(key_);
   ancestor_clock := decode_clock(ancestor_key);
 
   IF clock <= ancestor_clock THEN
-    RETURN false;
+    RETURN QUERY SELECT false, newly_visited;
+    RETURN;
   END IF;
 
   index := FLOOR(LOG(2, clock - ancestor_clock));
@@ -31,14 +31,19 @@ BEGIN
   FOR i in SELECT * FROM jsonb_array_elements(links[index]) LOOP
     link := decode((i->>0), 'hex');
 
-    IF ((SELECT COUNT(*) FROM is_ancestor_visited WHERE key = link) = 0) THEN
-      INSERT INTO is_ancestor_visited (key) VALUES (link);
-      IF is_ancestor(link, ancestor_key) THEN
-        RETURN true;
+    IF array_position(visited, link) IS NULL THEN
+      visited := visited || link;
+
+      SELECT * FROM is_ancestor(link, ancestor_key, visited) INTO tmp_is_ancestor, tmp_visited;
+      SELECT array_agg(DISTINCT v) FROM unnest(newly_visited || tmp_visited) v INTO newly_visited;
+
+      IF tmp_is_ancestor THEN
+        RETURN QUERY SELECT true, newly_visited;
+        RETURN;
       END IF;
     END IF;
   END LOOP;
-  RETURN false;
+  RETURN QUERY SELECT false, newly_visited;
 END;
 $$ LANGUAGE plpgsql;
 `

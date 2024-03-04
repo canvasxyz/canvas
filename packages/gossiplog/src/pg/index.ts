@@ -34,9 +34,9 @@ async function getAncestors<Payload, Result>(
 	key: Uint8Array,
 	atOrBefore: number,
 ): Promise<Uint8Array[]> {
-	const { rows } = await log.ancestorsClient.query(`SELECT get_ancestors($1, $2);`, [key, atOrBefore])
-	const row = rows[0] as { get_ancestors: Uint8Array[] }
-	return row.get_ancestors
+	const { rows } = await log.ancestorsClient.query(`SELECT ret_results FROM get_ancestors($1, $2);`, [key, atOrBefore])
+	const row = rows[0] as { ret_results: Uint8Array[] }
+	return row.ret_results
 }
 
 async function isAncestor<Payload, Result>(
@@ -44,9 +44,9 @@ async function isAncestor<Payload, Result>(
 	key: Uint8Array,
 	ancestorKey: Uint8Array,
 ): Promise<boolean> {
-	const { rows } = await log.ancestorsClient.query(`SELECT is_ancestor($1, $2);`, [key, ancestorKey])
-	const row = rows[0] as { is_ancestor: boolean }
-	return row.is_ancestor
+	const { rows } = await log.ancestorsClient.query(`SELECT ret_result FROM is_ancestor($1, $2);`, [key, ancestorKey])
+	const row = rows[0] as { ret_result: boolean }
+	return row.ret_result
 }
 
 async function insertUpdatingAncestors<Payload, Result>(
