@@ -20,6 +20,15 @@ import { pgCborSql } from "./pg_cbor.sql.js"
 import { insertSql } from "./insert_updating_ancestors.sql.js"
 import { insertMessageRemovingHeadsSql } from "./insert_message_removing_heads.sql.js"
 
+const initSql = [
+	getAncestorsSql,
+	isAncestorSql,
+	decodeClockSql,
+	pgCborSql,
+	insertSql,
+	insertMessageRemovingHeadsSql,
+].join("\n")
+
 async function getAncestors<Payload, Result>(
 	log: GossipLog<Payload, Result>,
 	key: Uint8Array,
@@ -110,12 +119,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		const heads = await PostgresStore.initialize(headsClient, { table: this.HEADS_TABLE, clear: true })
 		const ancestors = await PostgresStore.initialize(ancestorsClient, { table: this.ANCESTORS_TABLE, clear: true })
 
-		await ancestorsClient.query(getAncestorsSql)
-		await ancestorsClient.query(isAncestorSql)
-		await ancestorsClient.query(decodeClockSql)
-		await ancestorsClient.query(pgCborSql)
-		await ancestorsClient.query(insertSql)
-		await ancestorsClient.query(insertMessageRemovingHeadsSql)
+		await ancestorsClient.query(initSql)
 
 		const gossipLog = new GossipLog(
 			{
