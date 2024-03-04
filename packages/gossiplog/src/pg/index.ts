@@ -69,7 +69,7 @@ async function insertMessageRemovingHeads<Payload, Result>(
 }
 
 async function getHeads<Payload, Result>(log: GossipLog<Payload, Result>): Promise<Uint8Array[]> {
-	const { rows } = await log.headsClient.query(`SELECT * FROM heads`)
+	const { rows } = await log.headsClient.query(`SELECT * FROM heads ORDER BY key`)
 	return rows.map(({ key, value }: { key: Uint8Array; value: Uint8Array }) => {
 		assert(key.byteLength === KEY_LENGTH, "internal error (expected key.byteLength === KEY_LENGTH)")
 		assert(equals(value, cborNull), "internal error (unexpected parent entry value)")
