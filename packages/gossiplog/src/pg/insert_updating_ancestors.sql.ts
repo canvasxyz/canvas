@@ -16,6 +16,7 @@ DECLARE
   new_clock integer;
   new_ancestors bytea[];
   links bytea[];
+  tmp_ancestors_visited bytea[];
 BEGIN
   WHILE i <= array_length(ancestor_clocks, 1) LOOP
     ancestor_clock := ancestor_clocks[i];
@@ -39,7 +40,7 @@ BEGIN
             RAISE EXCEPTION 'expected child_clock <= ancestor_clocks[i-1]';
           END IF;
 
-          new_ancestors := get_ancestors(child, ancestor_clock);
+          SELECT ret_results, ret_newly_visited FROM get_ancestors(child, ancestor_clock) INTO new_ancestors, tmp_ancestors_visited;
           k := 1;
           WHILE k <= array_length(new_ancestors, 1) LOOP
             IF decode_clock(new_ancestors[k]) <= ancestor_clock THEN

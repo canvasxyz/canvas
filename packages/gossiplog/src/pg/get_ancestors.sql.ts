@@ -1,6 +1,6 @@
 export const getAncestorsSql = String.raw`
-DROP FUNCTION IF EXISTS get_ancestors(key_ BYTEA, at_or_before INTEGER, recursing BOOLEAN);
-CREATE OR REPLACE FUNCTION get_ancestors(key_ BYTEA, at_or_before INTEGER, recursing BOOLEAN DEFAULT false) RETURNS bytea[] AS $$
+DROP FUNCTION IF EXISTS get_ancestors(BYTEA, INTEGER, BYTEA[]);
+CREATE OR REPLACE FUNCTION get_ancestors(key_ BYTEA, at_or_before INTEGER, ancestors_visited BYTEA[] DEFAULT ARRAY[]::BYTEA[]) RETURNS TABLE (ret_results bytea[], ret_newly_visited bytea[]) AS $$
 DECLARE
   i jsonb;
   clock integer;
@@ -9,13 +9,10 @@ DECLARE
   link bytea;
   link_clock integer;
   results bytea[] = '{}';
+  newly_visited bytea[] = '{}';
   tmp bytea[];
+  tmp_visited bytea[];
 BEGIN
-  IF NOT recursing THEN
-    DROP TABLE IF EXISTS get_ancestors_visited;
-  CREATE TEMP TABLE get_ancestors_visited (key BYTEA);
-  END IF;
-
   IF at_or_before <= 0 THEN
     RAISE EXCEPTION 'expected at_or_before > 0';
   END IF;
@@ -34,15 +31,17 @@ BEGIN
 
     IF link_clock <= at_or_before THEN
         results := results || link;
-    ELSIF ((SELECT COUNT(*) FROM get_ancestors_visited WHERE key = link) = 0) THEN
-      INSERT INTO get_ancestors_visited (key) VALUES (link);
-      tmp := get_ancestors(link, at_or_before, TRUE);
-
-      IF tmp IS NOT NULL THEN
+    ELSIF array_position(ancestors_visited, link) IS NULL THEN
+      ancestors_visited := ancestors_visited || link;
+      SELECT * FROM get_ancestors(link, at_or_before, ancestors_visited) INTO tmp, tmp_visited;
+       IF tmp IS NOT NULL THEN
         results := results || tmp;
+      END IF;
+      IF tmp_visited IS NOT NULL THEN
+        newly_visited := newly_visited || tmp_visited;
       END IF;
     END IF;
   END LOOP;
-  RETURN results;
+  RETURN QUERY SELECT results, array_agg(DISTINCT v) FROM unnest(newly_visited) v;
 END;
 $$ LANGUAGE plpgsql;`
