@@ -49,7 +49,7 @@ BEGIN
         j := j + 1;
       END LOOP;
 
-      SELECT array_to_json(array_agg(encode(tbl, 'hex')))::jsonb FROM unnest(links) AS tbl INTO tmp;
+      SELECT array_to_json(array_agg(DISTINCT encode(tbl, 'hex')))::jsonb FROM unnest(links) AS tbl INTO tmp;
       ancestor_links[i-1] := tmp;
     END IF;
 
