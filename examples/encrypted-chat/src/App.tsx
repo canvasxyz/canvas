@@ -14,7 +14,11 @@ const ChatWrapper: React.FC = () => {
 };
 
 const ChatApp: React.FC = () => {  
-  const { view, signer } = useChat();
+  const { view, setView, signerAddress } = useChat();
+
+  const goToLogin = () => {
+    setView(VIEWS.Login);
+  }
 
   return (
     <ChatProvider>
@@ -25,11 +29,11 @@ const ChatApp: React.FC = () => {
             <span className="text-xs"> with Canvas</span>
           </div>
           <div>
-            {signer && 
-              <div>User: &lt;addr&gt;</div>
+            {signerAddress && 
+              <div>User: {signerAddress.slice(0, 10)}</div>
             }
-            {!signer &&
-              <div>User: none (login)</div>
+            {!signerAddress &&
+              <div>User: none (<a href="#" onClick={goToLogin}>login</a>)</div>
             }
           </div>
         </div>

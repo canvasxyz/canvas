@@ -1,9 +1,10 @@
 import { SIWESigner } from '@canvas-js/chain-ethereum';
 import { useCanvas } from '@canvas-js/hooks';
-import React, { createContext, ReactNode, useMemo, useState } from 'react';
+import React, { createContext, ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { contract } from '../contract';
 import { VIEWS } from '../types/views';
+import { fromCAIP } from '../utils/converters';
 
 export interface ChatContextType {
   /* Represents the full Canvas object */
@@ -17,6 +18,12 @@ export interface ChatContextType {
   */
   signer: SIWESigner;
   setSigner: (value: SIWESigner) => void;
+
+  /* The ethereum address associated with this user's session.
+  Derived from `signer`
+  */
+  signerAddress: string | undefined;
+  setSignerAddress: (value: string) => void;
 
   /* Represents the current active route the user is on */
   view: VIEWS;
@@ -32,18 +39,19 @@ interface ChatProviderProps {
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const [view, setView] = useState<VIEWS>(VIEWS.Login);
   const [signer, setSigner] = useState<SIWESigner>(new SIWESigner());
+  const [signerAddress, setSignerAddress] = useState<string | undefined>(undefined);
 
   const app = useCanvas({
     contract,
     signers: [signer],
   });
 
-  // signer.key
-  
-
-  const session = signer.getSession(contract.topic).then(signerSession => {
-    // debugger
-  });
+  // update signerAddress when signer changes
+  useEffect(() => {
+    signer.getSession(contract.topic).then(signerSession => {
+      setSignerAddress(fromCAIP(signerSession.address));
+    });
+  }, [signer]);
 
   // The value that will be supplied to any descendants of this provider
   const value: ChatContextType = { 
@@ -51,6 +59,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     contract,
     signer, 
     setSigner,
+    signerAddress,
+    setSignerAddress,
     view,
     setView };
 

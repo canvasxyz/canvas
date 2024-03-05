@@ -24,7 +24,7 @@ export const LoginMetamask: React.FC = () => {
       console.log('window.ethereum: accountsChanged');
       const signer = await provider.getSigner();
   
-      debugger
+      // debugger
     });
   }, [window.ethereum]);
 
@@ -64,7 +64,7 @@ export const LoginMetamask: React.FC = () => {
     const network = await provider.getNetwork();
     const signer = await provider.getSigner();
 
-    debugger
+    // debugger
 
     setProvider(provider);
 
@@ -72,7 +72,10 @@ export const LoginMetamask: React.FC = () => {
     const siweSigner = new SIWESigner({ signer, chainId: Number(network.chainId) })
 
     console.log('siweSigner = ', siweSigner)
-    const { address } = await siweSigner.getSession(topic);
+    // debugger
+    
+    setSigner(siweSigner);
+    // const { address } = await siweSigner.getSession(topic);
   }
 
   const loginWithMetamask = () => {
