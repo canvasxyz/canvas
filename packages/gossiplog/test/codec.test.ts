@@ -53,4 +53,6 @@ testPlatforms("validate messages using an IPLD schema", async (t, openGossipLog)
 
 		t.deepEqual(cbor.decode(value), [publicKey, signature.signature, [encodeId(idA)], ["bar", 2, "hi"]])
 	}
+
+	await log.close()
 })
