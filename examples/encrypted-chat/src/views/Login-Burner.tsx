@@ -1,22 +1,30 @@
 import { ethers } from "ethers";
 import { useChat } from "../hooks/useChat";
-import { VIEWS, useView } from "../hooks/useView";
 import { useState } from "react"
+import { VIEWS } from "../types/views";
+import { SIWESigner } from "@canvas-js/chain-ethereum";
+import { contract } from "../contract";
 
 export const LoginBurner: React.FC = () => {
-  const { setWallet } = useChat();
-  const { setView } = useView();
-  const [ burnerWallet, setBurnerWallet ] = useState<ethers.HDNodeWallet | null>(null);
+  const { setSigner, setView } = useChat();
+  const [ burnerWallet, setBurnerWallet ] = useState<ethers.HDNodeWallet>(ethers.Wallet.createRandom());
 
   const generateBurnerWallet = () => {
     setBurnerWallet(ethers.Wallet.createRandom());
   }
 
   const loginWithBurner = () => {
-    setWallet(burnerWallet);
-    setView(VIEWS.Dashboard);
+    const getSigner = async () => {
+      const signer = new SIWESigner({ signer: burnerWallet });
+      const session = await signer.getSession(contract.topic);
 
-    console.log('logged in!')
+      debugger
+      setSigner(signer);
+      setView(VIEWS.Dashboard);
+      console.log('logged in!')
+    }
+
+    getSigner();
   }
 
   return (

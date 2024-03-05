@@ -1,25 +1,30 @@
-import { SIWESigner } from "@canvas-js/chain-ethereum";
-import { useCanvas } from "@canvas-js/hooks";
-import { ethers } from "ethers";
-import { useMemo, useState } from "react";
+import { useContext } from "react";
+import { ChatContext, ChatContextType } from "../contexts/chatProvider";
 
-import { contract } from '../contract';
+export const useChat = (): ChatContextType => {
+  const context = useContext(ChatContext);
+  if (context === undefined) {
+    throw new Error('useChat must be used within a ChatProvider');
+  }
+  return context;
+};
 
-export const useChat = () => {
-  const [wallet, setWallet] = useState<ethers.HDNodeWallet | null>(null);
+// export const useChatOld = () => {
+//   const [signer, setSigner] = useState<SIWESigner>();
+//   const [word, setWord] = useState<string>('');
 
-  const signers = useMemo(() => {
-    if (wallet) {
-      return [new SIWESigner({signer: wallet})];
-    }
+//   const signers = useMemo(() => {
+//     if (signer) {
+//       return [new SIWESigner({signer: ethers.Wallet.createRandom()})];
+//     }
 
-    return [];
-  }, [wallet]);
+//     return [];
+//   }, [signer]);
 
-  const app = useCanvas({
-    contract, 
-    signers: signers,
-  });
+//   const app = useCanvas({
+//     contract, 
+//     signers: signers,
+//   });
 
-  return { app, topic: contract.topic, wallet, setWallet };
-}
+//   return { app, topic: contract.topic, signer, setSigner, word, setWord };
+// }

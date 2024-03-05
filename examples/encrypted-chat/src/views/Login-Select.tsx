@@ -4,14 +4,10 @@ import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid'
 import IconFire from '../img/icons8-fire-48.png';
 import IconMetamask from '../img/metamask-logo-512.png';
 
+import { LOGIN_TYPES } from '../types/login';
+
 const classNames = (...classes: any) => {
   return classes.filter(Boolean).join(' ')
-}
-
-export enum LOGIN_TYPES {
-  Burner = 'burner',
-  Metamask = 'metamask',
-  None = 'none'
 }
 
 export const LoginOptions = [

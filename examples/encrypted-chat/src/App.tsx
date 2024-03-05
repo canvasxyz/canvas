@@ -1,37 +1,51 @@
-import React, { useState } from 'react';
-import { ethers } from "ethers";
-import { LoginSelect, LoginOptions } from './views/Login-Select';
+import React from 'react';
 import { LoginView } from './views/Login';
 import { DashboardView } from './views/Dashboard';
 import { useChat } from './hooks/useChat';
-import { useView, VIEWS } from './hooks/useView';
+import { ChatProvider } from './contexts/chatProvider';
+import { VIEWS } from './types/views';
 
-const ChatApp: React.FC = () => {
-  // Initialize the contract
-  useChat();
-  
-  const { view } = useView();
-
-  console.log('view = ', view)
-
+const ChatWrapper: React.FC = () => {
   return (
-    <div>
-      <div className="fixed top-0 p-4">
-        <span>Chat</span>
-        <span className="text-xs"> with Canvas</span>
-      </div>
-
-      <div className="w-96 my-0 mx-auto pt-24">
-        {view === VIEWS.Login && 
-          <LoginView />
-        }
-
-        {view === VIEWS.Dashboard && 
-          <DashboardView />
-        }
-      </div>
-    </div>
+    <ChatProvider>
+      <ChatApp />
+    </ChatProvider>
   )
 };
 
-export default ChatApp;
+const ChatApp: React.FC = () => {  
+  const { view, signer } = useChat();
+
+  return (
+    <ChatProvider>
+      <div>
+        <div className="fixed flex justify-between top-0 p-4 w-full">
+          <div>
+            <span>Chat</span>
+            <span className="text-xs"> with Canvas</span>
+          </div>
+          <div>
+            {signer && 
+              <div>User: &lt;addr&gt;</div>
+            }
+            {!signer &&
+              <div>User: none (login)</div>
+            }
+          </div>
+        </div>
+
+        <div className="w-96 my-0 mx-auto pt-24">
+          {view === VIEWS.Login && 
+            <LoginView />
+          }
+
+          {view === VIEWS.Dashboard && 
+            <DashboardView />
+          }
+        </div>
+      </div>
+    </ChatProvider>
+  )
+};
+
+export default ChatWrapper;

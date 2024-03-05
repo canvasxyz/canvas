@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { LOGIN_TYPES, LoginOptions, LoginSelect } from "./Login-Select";
+import { LoginOptions, LoginSelect } from "./Login-Select";
 import { LoginBurner } from "./Login-Burner";
 import { LoginMetamask } from "./Login-Metamask";
+
+import { LOGIN_TYPES } from '../types/login';
 
 export const LoginView: React.FC = () => {
   const [selected, setSelected] = useState(LoginOptions[0])
