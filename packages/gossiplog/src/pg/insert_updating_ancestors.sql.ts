@@ -40,7 +40,7 @@ BEGIN
             RAISE EXCEPTION 'expected child_clock <= ancestor_clocks[i-1]';
           END IF;
 
-          SELECT ret_results, ret_newly_visited FROM get_ancestors(child, ancestor_clock) INTO new_ancestors, tmp_ancestors_visited;
+          SELECT ret_results, ret_newly_visited FROM get_ancestors(child, ancestor_clock, '{}'::bytea[]) INTO new_ancestors, tmp_ancestors_visited;
           k := 1;
           WHILE k <= array_length(new_ancestors, 1) LOOP
             IF decode_clock(new_ancestors[k]) <= ancestor_clock THEN

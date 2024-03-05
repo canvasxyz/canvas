@@ -1,6 +1,6 @@
 export const isAncestorSql = String.raw`
 DROP FUNCTION IF EXISTS is_ancestor(BYTEA, BYTEA, BYTEA[]);
-CREATE OR REPLACE FUNCTION is_ancestor(key_ BYTEA, ancestor_key BYTEA, visited BYTEA[] DEFAULT '{}'::BYTEA[]) RETURNS TABLE (ret_result boolean, ret_visited bytea[]) AS $$
+CREATE OR REPLACE FUNCTION is_ancestor(key_ BYTEA, ancestor_key BYTEA, visited BYTEA[]) RETURNS TABLE (ret_result boolean, ret_visited bytea[]) AS $$
 DECLARE
   i jsonb;
   clock INTEGER;
