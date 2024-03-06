@@ -15,6 +15,7 @@ test("append messages (memory, linear, 100)", async (t) => {
 	const log = await MemoryGossipLog.open({ topic, apply })
 	t.teardown(() => log.close())
 	await append(t, log, 100)
+	await log.close()
 })
 
 // test("append messages (node, linear, 100)", async (t) => {

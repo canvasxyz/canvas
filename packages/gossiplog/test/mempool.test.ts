@@ -51,6 +51,7 @@ testPlatforms("insert messages out-of-order, with ancestor indexing", async (t, 
 	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	await mempoolTest(t, results, topic, log)
+	await log.close()
 })
 
 testPlatforms("insert messages out-of-order, without ancestor indexing", async (t, openGossipLog) => {
@@ -64,4 +65,5 @@ testPlatforms("insert messages out-of-order, without ancestor indexing", async (
 	const log = await openGossipLog(t, { topic, apply, indexAncestors: false })
 
 	await mempoolTest(t, results, topic, log)
+	await log.close()
 })

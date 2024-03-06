@@ -28,6 +28,8 @@ testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog)
 			t.deepEqual(await log.getAncestors(ids[i], j + 1), [ids[j]], `i=${i} j=${j}`)
 		}
 	}
+
+	await log.close()
 })
 
 testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog) => {
@@ -55,6 +57,8 @@ testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog)
 			t.deepEqual(await log.getAncestors(ids[i], j + 1), [ids[j]], `i=${i} j=${j}`)
 		}
 	}
+
+	await log.close()
 })
 
 testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, openGossipLog) => {
@@ -89,6 +93,8 @@ testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, open
 			t.deepEqual(await log.getAncestors(ids[i], j + 1), [ids[j]], `i=${i} j=${j}`)
 		}
 	}
+
+	await log.close()
 })
 
 testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, openGossipLog) => {
@@ -117,6 +123,8 @@ testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, ope
 
 	t.deepEqual(await log.getAncestors(chainA[2], 4), [chainA[0]])
 	t.deepEqual(await log.getAncestors(chainB[2], 4), [chainB[0]])
+
+	await log.close()
 })
 
 test("simulate a randomly partitioned network", async (t) => {
@@ -239,4 +247,8 @@ test("simulate a randomly partitioned network", async (t) => {
 	}
 
 	t.log("completed", n, "isAncestor queries with an average of", (sum / n).toPrecision(3), "ms per query")
+
+	for (const log of logs) {
+		await log.close()
+	}
 })
