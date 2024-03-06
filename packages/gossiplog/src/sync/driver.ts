@@ -2,8 +2,7 @@ import { Logger, logger } from "@libp2p/logger"
 import { bytesToHex as hex } from "@noble/hashes/utils"
 
 import { Node, Source, Target, equalArrays, equalNodes } from "@canvas-js/okra"
-
-import { assert } from "../utils.js"
+import { assert } from "@canvas-js/utils"
 
 export class Driver {
 	private readonly log: Logger

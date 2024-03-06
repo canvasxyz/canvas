@@ -4,11 +4,13 @@ import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
 import { hexToBytes } from "@noble/hashes/utils"
 
-import { Action, Session, Message, Signer, SessionSigner, SignerCache } from "@canvas-js/interfaces"
+import { Signature, Action, Session, Message, Signer, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { Signature } from "@canvas-js/signed-cid"
 import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
+import { GossipLogService } from "@canvas-js/gossiplog/service"
+import type { PresenceStore } from "@canvas-js/discovery"
+import { assert } from "@canvas-js/utils"
 
 import target from "#target"
 
@@ -16,9 +18,6 @@ import type { Contract, ActionImplementationFunction, ActionImplementationObject
 import type { ServiceMap } from "./targets/interface.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
-import { assert } from "./utils.js"
-import { GossipLogService } from "@canvas-js/gossiplog/service"
-import type { PresenceStore } from "@canvas-js/discovery"
 
 export interface NetworkConfig {
 	offline?: boolean
@@ -113,6 +112,11 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		} = config
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
+		const verifySignature = (signature: Signature, message: Message<Action | Session>) => {
+			const signer = signers.getAll().find((signer) => signer.codecs.includes(signature.codec))
+			assert(signer !== undefined, "no matching signer found")
+			return signer.verify(signature, message)
+		}
 
 		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit, ignoreMissingActions })
 
@@ -125,7 +129,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			{
 				topic: runtime.topic,
 				apply: runtime.getConsumer(),
-				validate: validatePayload,
+				validatePayload: validatePayload,
+				verifySignature: verifySignature,
 				indexAncestors: indexHistory,
 			},
 		)
@@ -392,7 +397,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 */
 	public async append(
 		payload: Session | Action,
-		options: { signer?: Signer<Message<Session | Action>> },
+		options: { signer?: Pick<Signer<Session | Action>, "sign" | "verify"> },
 	): Promise<{ id: string; result: void | any; recipients: Promise<PeerId[]> }> {
 		return this.libp2p.services.gossiplog.append(this.topic, payload, options)
 	}

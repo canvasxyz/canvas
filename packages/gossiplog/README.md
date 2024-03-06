@@ -71,10 +71,10 @@ The `cid` in a message signature is the CID of the `Message` object using the `d
 
 ### Message signers
 
-Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use one of the signer classes exported from `@canvas-js/signed-cid`.
+Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use one the signer class exported from `@canvas-js/signatures`.
 
 ```ts
-import { Ed25519Signer, Secp256k1Signer } from "@canvas-js/signed-cid"
+import { Ed25519Signer } from "@canvas-js/signatures"
 
 const signer = new Ed25519Signer()
 ```
@@ -83,7 +83,7 @@ Once you have a signer, you can add it `GossipLogInit` to use it by default for 
 
 ```ts
 const signerA = new Ed25519Signer()
-const signerB = new Secp256k1Signer()
+const signerB = new Ed25519Signer()
 
 const log = await GossipLog.init({ ...init, signer: signerA })
 
@@ -152,7 +152,7 @@ interface GossipLogInit<Payload = unknown, Result = void> {
   apply: (id: string, signature: Signature, message: Message<Payload>) => Result | Promise<Result>
   validate: (payload: unknown) => payload is Payload
 
-  signer?: Signer<Message<Payload>>>
+  signer?: Signer<Payload>
   indexAncestors?: boolean
 }
 ```
@@ -289,7 +289,7 @@ interface GossipLogInit<Payload = unknown, Result = void> {
   apply: (id: string, signature: Signature, message: Message<Payload>) => Awaitable<Result>
   validate: (payload: unknown) => payload is Payload
 
-  signer?: Signer<Message<Payload>>
+  signer?: Signer<Payload>
   replay?: boolean
   indexAncestors?: boolean
 }
@@ -308,7 +308,7 @@ interface AbstractGossipLog<Payload = unknown, Result = unknown>
 
   public append(
     payload: Payload,
-    options?: { signer?: Signer<Message<Payload>> }
+    options?: { signer?: Signer<Payload> }
   ): Promise<{ id: string; signature: Signature; message: Message<Payload>; result: Result }>
 
   public insert(signature: Signature, message: Message<Payload>): Promise<{ id: string }>

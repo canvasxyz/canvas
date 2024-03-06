@@ -4,16 +4,13 @@ import { TypedEventEmitter, CustomEvent } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
 
 import * as cbor from "@ipld/dag-cbor"
-import { Schema } from "@ipld/schema/schema-schema"
-import { fromDSL } from "@ipld/schema/from-dsl.js"
-import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 
 import { bytesToHex as hex } from "@noble/hashes/utils"
-import { base58btc } from "multiformats/bases/base58"
 import { equals } from "uint8arrays"
 
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
-import { Ed25519Signer, didKeyPattern, getCID, verifySignature, verifySignedValue } from "@canvas-js/signed-cid"
+import { Ed25519Signer } from "@canvas-js/signatures"
+import { assert } from "@canvas-js/utils"
 
 import { Mempool } from "./Mempool.js"
 import { Driver } from "./sync/driver.js"
@@ -27,11 +24,9 @@ import {
 	messageIdPattern,
 	MIN_MESSAGE_ID,
 	MAX_MESSAGE_ID,
-	SignedMessage,
-	getKey,
 	decodeSignedMessage,
 } from "./schema.js"
-import { assert, topicPattern, cborNull, getAncestorClocks, DelayableController } from "./utils.js"
+import { topicPattern, cborNull, getAncestorClocks, DelayableController } from "./utils.js"
 
 export interface ReadOnlyTransaction {
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
@@ -54,9 +49,10 @@ export type GossipLogConsumer<Payload = unknown, Result = void> = (
 export interface GossipLogInit<Payload = unknown, Result = void> {
 	topic: string
 	apply: GossipLogConsumer<Payload, Result>
-	validate: ((payload: unknown) => payload is Payload) | { schema: string | Schema; name: string }
+	validatePayload?: (payload: unknown) => payload is Payload
+	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
-	signer?: Signer<Message<Payload>>
+	signer?: Pick<Signer<Payload>, "sign" | "verify">
 	indexAncestors?: boolean
 }
 
@@ -90,12 +86,13 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public readonly topic: string
 	public readonly indexAncestors: boolean
-	public readonly signer: Signer<Message<Payload>>
+	public readonly signer: Pick<Signer<Payload>, "sign" | "verify">
 
 	protected readonly log: Logger
 	protected readonly mempool = new Mempool<{ signature: Signature; message: Message<Payload> }>()
 
-	readonly #transformer: { toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
+	readonly #validatePayload: (payload: unknown) => payload is Payload
+	readonly #verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 	readonly #apply: GossipLogConsumer<Payload, Result>
 
 	protected constructor(init: GossipLogInit<Payload, Result>) {
@@ -103,21 +100,12 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		assert(topicPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
 
 		this.topic = init.topic
-		this.#apply = init.apply
-
-		if (typeof init.validate === "function") {
-			const { validate } = init
-			this.#transformer = {
-				toTyped: (obj) => (validate(obj) ? obj : undefined),
-				toRepresentation: (obj) => (validate(obj) ? obj : undefined),
-			}
-		} else {
-			const { schema, name } = init.validate
-			this.#transformer = create(typeof schema === "string" ? fromDSL(schema) : schema, name)
-		}
-
 		this.indexAncestors = init.indexAncestors ?? false
-		this.signer = init.signer ?? new Ed25519Signer()
+		this.signer = init.signer ?? new Ed25519Signer<Payload>()
+
+		this.#apply = init.apply
+		this.#validatePayload = init.validatePayload ?? ((payload: unknown): payload is Payload => true)
+		this.#verifySignature = init.verifySignature ?? this.signer.verify
 
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 	}
@@ -154,54 +142,16 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	}
 
 	public encode(signature: Signature, message: Message<Payload>): [key: Uint8Array, value: Uint8Array] {
-		assert(message.topic === this.topic, "invalid message topic")
-		const parents = message.parents.sort().map(encodeId)
-		assert(getNextClock(parents) === message.clock, "error encoding message (invalid clock)")
-
-		const payload = this.#transformer.toRepresentation(message.payload)
-		assert(payload !== undefined, "error encoding message (invalid payload)")
-
-		const result = didKeyPattern.exec(signature.publicKey)
-		assert(result !== null)
-		const [{}, bytes] = result
-
-		const signedMessage: SignedMessage = {
-			publicKey: base58btc.decode(bytes),
-			signature: signature.signature,
-			parents: parents,
-			payload: payload,
-		}
-
-		const value = encodeSignedMessage(signedMessage)
-		const key = getKey(message.clock, value)
-		return [key, value]
+		assert(this.topic === message.topic, "expected this.topic === topic")
+		assert(this.#validatePayload(message.payload), "error encoding message (invalid payload)")
+		return encodeSignedMessage(signature, message)
 	}
 
 	public decode(value: Uint8Array): [id: string, signature: Signature, message: Message<Payload>] {
-		const signedMessage = decodeSignedMessage(value)
-
-		const clock = getNextClock(signedMessage.parents)
-		const parents = signedMessage.parents.map(decodeId)
-
-		assert(
-			parents.every((id, i) => i === 0 || parents[i - 1] < id),
-			"unsorted parents array",
-		)
-
-		const payload = this.#transformer.toTyped(signedMessage.payload)
-		assert(payload !== undefined, "error decoding message (invalid payload)")
-
-		const message: Message<Payload> = { topic: this.topic, clock, parents, payload }
-
-		const signature: Signature = {
-			publicKey: `did:key:${base58btc.encode(signedMessage.publicKey)}`,
-			signature: signedMessage.signature,
-			cid: getCID(message, { codec: "dag-cbor", digest: "sha2-256" }),
-		}
-
-		const id = decodeId(getKey(clock, value))
-
-		return [id, signature, message]
+		const [id, signature, { topic, clock, parents, payload }] = decodeSignedMessage(value)
+		assert(this.topic === topic, "expected this.topic === topic")
+		assert(this.#validatePayload(payload), "error decoding message (invalid payload)")
+		return [id, signature, { topic, clock, parents, payload }]
 	}
 
 	public async getClock(): Promise<[clock: number, heads: string[]]> {
@@ -244,7 +194,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	 */
 	public async append(
 		payload: Payload,
-		options: { signer?: Signer<Message<Payload>> } = {},
+		options: { signer?: Pick<Signer<Payload>, "sign" | "verify"> } = {},
 	): Promise<{ id: string; signature: Signature; message: Message<Payload>; result: Result }> {
 		const signer = options.signer ?? this.signer
 
@@ -275,7 +225,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	 * If any of the parents are not present, insert the message into the mempool instead.
 	 */
 	public async insert(signature: Signature, message: Message<Payload>): Promise<{ id: string }> {
-		verifySignedValue(signature, message)
+		await this.#verifySignature(signature, message)
 
 		const { id, root } = await this.write(async (txn) => {
 			const [key, value] = this.encode(signature, message)
@@ -425,14 +375,15 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			this.dispatchEvent(new CustomEvent("error", { detail: { error } }))
 			throw error
 		}
+
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
 		await txn.messages.set(key, value)
 
-		const parents = message.parents.map(encodeId)
+		const parentKeys = message.parents.map(encodeId)
 
 		await txn.heads.set(key, cborNull)
-		for (const parent of parents) {
-			await txn.heads.delete(parent)
+		for (const parentKey of parentKeys) {
+			await txn.heads.delete(parentKey)
 		}
 
 		if (this.indexAncestors) {
@@ -442,7 +393,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			const ancestorLinks: Uint8Array[][] = new Array(ancestorClocks.length)
 			for (const [i, ancestorClock] of ancestorClocks.entries()) {
 				if (i === 0) {
-					ancestorLinks[i] = parents
+					ancestorLinks[i] = parentKeys
 				} else {
 					const links = new Set<string>()
 					for (const child of ancestorLinks[i - 1]) {
@@ -483,7 +434,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			for await (const [key, value] of driver.sync()) {
 				const [id, signature, message] = this.decode(value)
 				assert(id === decodeId(key), "expected id === decodeId(key)")
-				verifySignature(signature)
+				await this.#verifySignature(signature, message)
 
 				const existingMessage = await txn.messages.get(key)
 				if (existingMessage === null) {

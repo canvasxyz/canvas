@@ -1,5 +1,4 @@
 # Config files
-*.json
 .env
 .next/
 node_modules/

@@ -6,7 +6,7 @@ export type CosmosMessage = {
 	topic: string
 	address: string
 	chainId: string
-	uri: string
+	publicKey: string
 	issuedAt: string
 	expirationTime: string | null
 }

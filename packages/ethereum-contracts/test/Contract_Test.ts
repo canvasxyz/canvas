@@ -21,38 +21,23 @@ describe("Contract_Test", function () {
 		return { contract }
 	}
 
-	async function getPublicKeyFromSignatureFixture() {
-		const { base58btc } = await import("multiformats/bases/base58")
-		const { varint } = await import("multiformats")
-		const { didKeyPattern } = await import("@canvas-js/signed-cid")
-
-		function getPublicKeyFromSignature(signature: any) {
-			const result = didKeyPattern.exec(signature.publicKey)
-			const bytes = base58btc.decode(result![1])
-			const [keyCodec, keyCodecLength] = varint.decode(bytes)
-			return bytes.subarray(keyCodecLength)
-		}
-
-		return { getPublicKeyFromSignature }
-	}
-
 	async function getArgumentsFixture() {
 		// This function returns a function that returns the arguments needed to call `contract.claimUpvoted`
 
-		const { EIP712Signer } = await import("@canvas-js/chain-ethereum")
-		const { getPublicKeyFromSignature } = await getPublicKeyFromSignatureFixture()
+		const { decodeURI } = await import("@canvas-js/signatures")
+		const { Eip712Signer } = await import("@canvas-js/chain-ethereum")
 
 		async function getArguments(args?: any) {
-			const signer = new EIP712Signer({})
+			const signer = new Eip712Signer()
 
 			const session = (args && args.session) || (await signer.getSession(topic))
 
 			const clock = 1
 			const parents = ["parent1", "parent2"]
 			const sessionMessage = { topic, clock, parents, payload: session }
-			const sessionMessageSignature = signer.sign(sessionMessage)
+			const sessionMessageSignature = await signer.sign(sessionMessage)
 
-			const publicKey = getPublicKeyFromSignature(sessionMessageSignature)
+			const { publicKey } = decodeURI(sessionMessageSignature.publicKey)
 			const publicKeyHex = Buffer.from(publicKey).toString("hex")
 			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
 
@@ -67,7 +52,7 @@ describe("Contract_Test", function () {
 				timestamp: session.timestamp,
 			}
 			const actionMessage = { topic, clock, parents, payload: action }
-			const actionMessageSignature = signer.sign(actionMessage)
+			const actionMessageSignature = await signer.sign(actionMessage)
 			const actionMessageForContract = { ...actionMessage, payload: await serializeActionForContract(action) }
 
 			return {

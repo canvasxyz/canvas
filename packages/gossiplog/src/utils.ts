@@ -34,17 +34,6 @@ export function sortPair(a: PeerId, b: PeerId): [x: PeerId, y: PeerId] {
 	}
 }
 
-export function assert(condition: unknown, message?: string): asserts condition {
-	if (!condition) {
-		throw new Error(message ?? "assertion failed")
-	}
-}
-
-export function signalInvalidType(type: never): never {
-	console.error(type)
-	throw new TypeError("internal error: invalid type")
-}
-
 export async function collect<I, O = I>(iter: AsyncIterable<I>, map?: (value: I) => O): Promise<O[]> {
 	const values: O[] = []
 	for await (const value of iter) {
@@ -87,35 +76,6 @@ export class DelayableController {
 		this.#timer = setTimeout(() => {
 			this.#controller.abort()
 		}, this.#interval)
-	}
-}
-
-// add elements with CacheMap.add(key, value) and they'll
-// get shifted out in the order they were added.
-
-export class CacheMap<K, V> extends Map<K, V> {
-	constructor(
-		public readonly capacity: number,
-		entries?: Iterable<[K, V]>,
-	) {
-		super()
-
-		for (const [key, value] of entries ?? []) {
-			this.set(key, value)
-		}
-	}
-
-	set(key: K, value: V) {
-		super.set(key, value)
-		for (const key of this.keys()) {
-			if (this.size > this.capacity) {
-				this.delete(key)
-			} else {
-				break
-			}
-		}
-
-		return this
 	}
 }
 

@@ -1,0 +1,36 @@
+{
+	"name": "@canvas-js/signatures",
+	"version": "0.8.26",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"type": "module",
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"files": [
+		"lib"
+	],
+	"main": "./lib/index.js",
+	"types": "./lib/index.d.ts",
+	"imports": {
+		"#target": {
+			"node": "./lib/targets/node/index.js",
+			"browser": "./lib/targets/browser/index.js",
+			"default": "./lib/targets/default/index.js"
+		}
+	},
+	"sideEffects": false,
+	"scripts": {
+		"test": "ava"
+	},
+	"dependencies": {
+		"@canvas-js/interfaces": "0.8.26",
+		"@canvas-js/utils": "0.8.26",
+		"@ipld/dag-cbor": "^9.0.6",
+		"@ipld/dag-json": "^10.2.0",
+		"@libp2p/logger": "^4.0.6",
+		"@noble/curves": "^1.3.0",
+		"@noble/hashes": "^1.3.1",
+		"ethers": "^6.9.1",
+		"multiformats": "^13.0.1"
+	}
+}

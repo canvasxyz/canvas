@@ -1,13 +1,5 @@
 import { NEARMessage, NEARSessionData } from "./types.js"
 
-export const getKey = (topic: string, address: string) => `canvas/${topic}/${address}`
-
-export function assert(condition: boolean, message?: string): asserts condition {
-	if (!condition) {
-		throw new Error(message ?? "assertion failed")
-	}
-}
-
 export const addressPattern = /^near:([0-9a-z-_]+):([a-zA-Z0-9]+)$/
 
 export function parseAddress(address: string): [chain: string, walletAddress: string] {
