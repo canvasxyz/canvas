@@ -71,8 +71,64 @@ export type MessageTuple = [
 ]
 ```
 
-This format is also used to derive message ids. From the GossipLog documentation:
+This format is also used to derive message IDs. From the GossipLog documentation:
 
 > Message IDs begin with the message clock, encoded as a **reverse** unsigned varint, followed by the sha2-256 hash of the serialized signed message, and truncated to 20 bytes total. These are encoded using the [`base32hex`](https://www.rfc-editor.org/rfc/rfc4648#section-7) alphabet to get 32-character string IDs, like `054ki1oubq8airsc9d8sbg0t7itqbdlf`.
 
 The hash is the sha2-256 of the cbor-encoded message tuple.
+
+## Signers
+
+GossipLog uses the `Signer` interface to manage signing and verifying messages.
+
+```ts
+interface Signer<Payload = unknown> {
+  uri: string // did:key URI
+  codecs: string[]
+
+  sign(message: Message<Payload>, options?: { codec?: string }): Awaitable<Signature>
+  verify(signature: Signature, message: Message<Payload>): Awaitable<void>
+  export(): { type: string; privateKey: Uint8Array }
+}
+```
+
+The primary signer implementation is `Ed25519Signer`, exported here in `@canvas-js/signatures`. It uses the Ed25519 signature scheme and supports both `dag-json` and `dag-cbor` signature codecs.
+
+```ts
+// create a new random keypair
+const signer = new Ed25519Signer()
+console.log(signer.codecs) // ["dag-cbor", "dag-json"]
+console.log(signer.uri)    // "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"
+
+// import an existing private key
+const signer = new Ed25519Signer({ type: "ed25519", privateKey: new Uint8Array([ ... ])})
+```
+
+Every GossipLog instance has one "primary" signer it uses to sign new messages by default; if one is not provided in the initial config object then a random `Ed25519Signer` is created. This primary signer is also used to verify incoming messages.
+
+These behaviors can be overriden by providing a `verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>` function in the initial GossipLog config object, and passing an explicit signer in the options argument of the `append` method.
+
+## Session signers
+
+GossipLog and the `Signer` interface are designed to be relatively generic; "actions" and "sessions" are specific to Canvas apps.
+
+Canvas apps use signers implementing the `SessionSigner` interface:
+
+```ts
+interface SessionSigner<AuthorizationData = any> {
+  codecs: string[]
+  key: string
+  match: (address: string) => boolean
+  verify: (signature: Signature, message: Message<Action | Session<AuthorizationData>>) => Awaitable<void>
+  verifySession: (topic: string, session: Session<AuthorizationData>) => Awaitable<void>
+
+  sign(message: Message<Action | Session<AuthorizationData>>, options?: { codec?: string }): Awaitable<Signature>
+  getSession: (
+    topic: string,
+    options?: { timestamp?: number; fromCache?: boolean },
+  ) => Awaitable<Session<AuthorizationData>>
+  clear(topic: string): Awaitable<void>
+}
+```
+
+This looks complicated but it essentially extends a `Signer<Action | Session<AuthorizationData>>` interface with methods to authorize and verify sessions.
