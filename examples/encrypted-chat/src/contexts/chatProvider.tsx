@@ -5,6 +5,7 @@ import React, { createContext, ReactNode, useEffect, useMemo, useState } from 'r
 import { contract } from '../contract';
 import { VIEWS } from '../types/views';
 import { fromCAIP } from '../utils/converters';
+import { ethers } from 'ethers';
 
 export interface ChatContextType {
   /* Represents the full Canvas object */
@@ -30,7 +31,16 @@ export interface ChatContextType {
   setView: (value: VIEWS) => void;
 }
 
-export const ChatContext = createContext<ChatContextType | undefined>(undefined);
+export const ChatContext = createContext<ChatContextType>({
+  app: null,
+  contract: null,
+  signer: new SIWESigner({ signer: ethers.Wallet.createRandom() }),
+  setSigner: () => null,
+  signerAddress: '',
+  setSignerAddress: () => null,
+  view: VIEWS.Login,
+  setView: () => null,
+});
 
 interface ChatProviderProps {
   children: ReactNode;
@@ -48,8 +58,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
   // update signerAddress when signer changes
   useEffect(() => {
+    console.log('signer updating--');
+
     signer.getSession(contract.topic).then(signerSession => {
       setSignerAddress(fromCAIP(signerSession.address));
+      console.log('signer updating-- new address: ', signerSession.address);
     });
   }, [signer]);
 
@@ -63,6 +76,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     setSignerAddress,
     view,
     setView };
+
+  console.log('provider address = ', signerAddress)
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
