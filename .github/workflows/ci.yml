@@ -62,7 +62,7 @@ jobs:
       #   run: npm run test --workspace=@canvas-js/ethereum-contracts
 
   test-build:
-    name: Build test
+    name: Build test (pnpm)
     runs-on: ubuntu-latest
 
     steps:
@@ -74,8 +74,16 @@ jobs:
         with:
           node-version: 18.x
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2.4.0
+        with:
+          version: 8
+
       - name: Install modules
-        run: npm install --install-strategy=linked
+        run: pnpm i
+
+      - name: Fix utf8 file
+        run: iconv -c -f utf-8 -t ascii node_modules/.pnpm/@cosmjs+encoding@0.30.1/node_modules/@cosmjs/encoding/build/utf8.d.ts > node_modules/.pnpm/@cosmjs+encoding@0.30.1/node_modules/@cosmjs/encoding/build/utf8.d.ts
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
