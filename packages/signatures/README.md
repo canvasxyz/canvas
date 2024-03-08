@@ -4,9 +4,9 @@ Signature utilities for the Canvas data structures.
 
 ## Table of Contents
 
-- [Summary](#summary)
-- [Messages and signatures](#messages-and-signatures)
-- [Signature and encoding schemes](#signature-and-encoding-schemes)
+- [Overview](#overview)
+- [Message format](#message-format)
+- [Signature schemes and codecs](#signature-schemes-and-codecs)
 - [Signed message tuples](#signed-message-tuples)
 - [Session signers](#session-signers)
 
@@ -21,10 +21,11 @@ Each Canvas application is built around a log of signed messages:
  | clock: 0                |        | clock: 1                |        | clock: 2                |
  | parents: [Message]      |        | parents: [Message]      |        | parents: [Message]      |
  | payload:                |  --->  | payload:                |  --->  | payload:                |
- |  type: "session"        |        |   type: "action"        |        |   type: "action"        |
- |  address: ...           |        |   address: ...          |        |   address: ...          |
- |  publicKey: ...         |        |   name: ...             |        |   name: ...             |
- |  authorizationData: ... |        |   args: ...             |        |   args: ...             |
+ |   type: "session"       |        |   type: "action"        |        |   type: "action"        |
+ |   address: ...          |        |   address: ...          |        |   address: ...          |
+ |   publicKey: ...        |        |   name: ...             |        |   name: ...             |
+ |   authorizationData:    |        |   args: ...             |        |   args: ...             |
+ |     signature: ...      |        |   timestamp: ...        |        |   timestamp: ...        |
  |-------------------------|        |-------------------------|        |-------------------------|
 
  |-------------------------|        |-------------------------|        |-------------------------|
@@ -35,7 +36,32 @@ Each Canvas application is built around a log of signed messages:
  |-------------------------|        |-------------------------|        |-------------------------|
 ```
 
-### Messages and Signatures
+Each Message is paired with a Signature that cryptographically
+authenticates the message as coming from the expected user. To
+accomplish this, the message is signed by the publicKey on the
+signature, which you can think of as the user's session key.
+
+To authorize a session key, the first time it is used on the log,
+it must be used to sign a Message<Session> which authorizes itself
+(`publicKey`) to be used by the user (`address`).
+
+This authorization is stored in an `AuthorizationData` object
+inside the Session, and checked by the signer package(s) provided
+to the log, e.g. SIWESigner, Eip712Signer, ATPSigner.
+
+The AuthorizationData can just be a simple `{ signature }`, but
+some wallets or DIDs may use other data to generate a signature.
+For example, Sign In With Ethereum expects an issuance time,
+expiry time, and URI to generate a sign-in popup.
+
+Under the hood, signer packages use the Ed25519Delegate and
+Secp256k1Delegate classes which provide `sign()` and `verify()`
+to create/verify session-key signatures for the message.
+
+Session signers also expose `newSession()` and `verifySession()`
+methods, to create/verify Sessions and initialize new session keys.
+
+### Message format
 
 Messages are implemented as a generic class that accepts different
 Payloads, which may be actions or sessions.
@@ -71,7 +97,7 @@ For applications that may need to be verified onchain, `canvas-action-eip712`
 and `canvas-session-eip712` codecs are used to encode Actions and Sessions
 respectively.
 
-## Signature schemes
+## Signature schemes and codecs
 
 Only Secp256k1 and Ed25519 signature schemes are supported. Each
 did:key URI identifies its signature scheme using a multicodec varint
