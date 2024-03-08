@@ -38,7 +38,7 @@ export const ChatContext = createContext<ChatContextType>({
   setSigner: () => null,
   signerAddress: '',
   setSignerAddress: () => null,
-  view: VIEWS.Login,
+  view: VIEWS.Welcome,
   setView: () => null,
 });
 
@@ -47,7 +47,7 @@ interface ChatProviderProps {
 }
 
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
-  const [view, setView] = useState<VIEWS>(VIEWS.Login);
+  const [view, setView] = useState<VIEWS>(VIEWS.Welcome);
   const [signer, setSigner] = useState<SIWESigner>(new SIWESigner());
   const [signerAddress, setSignerAddress] = useState<string | undefined>(undefined);
 

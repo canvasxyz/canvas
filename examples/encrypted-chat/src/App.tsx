@@ -4,6 +4,7 @@ import { DashboardView } from './views/Dashboard';
 import { useChat } from './hooks/useChat';
 import { ChatProvider } from './contexts/chatProvider';
 import { VIEWS } from './types/views';
+import { WelcomeView } from './views/Welcome';
 
 const ChatWrapper: React.FC = () => {
   return (
@@ -25,10 +26,14 @@ const ChatApp: React.FC = () => {
     setSignerAddress(undefined);
   }
 
+  const goToWelcome = () => {
+    setView(VIEWS.Welcome);
+  }
+
   return (
     <div>
       <div className="fixed flex justify-between top-0 p-4 w-full">
-        <div>
+        <div className="cursor-pointer" onClick={goToWelcome}>
           <span>Chat</span>
           <span className="text-xs"> with Canvas</span>
         </div>
@@ -49,6 +54,10 @@ const ChatApp: React.FC = () => {
 
         {view === VIEWS.Dashboard && 
           <DashboardView />
+        }
+
+        {view === VIEWS.Welcome && 
+          <WelcomeView />
         }
       </div>
     </div>

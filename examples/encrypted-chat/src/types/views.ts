@@ -1,4 +1,5 @@
 export enum VIEWS {
   Login = "LOGIN",
-  Dashboard = "DASHBOARD"
+  Dashboard = "DASHBOARD",
+  Welcome = "WELCOME"
 }
