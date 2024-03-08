@@ -1,31 +1,11 @@
 import { ethers } from "ethers";
-import { useChat } from "../hooks/useChat";
 import { useContext, useState } from "react"
 import { VIEWS } from "../types/views";
 import { SIWESigner } from "@canvas-js/chain-ethereum";
-import { contract } from "../contract";
 import { ChatContext } from "../contexts/chatProvider";
 
-// export const LoginBurner: React.FC = () => {
-//   const { setSigner, setView, setSignerAddress } = useChat();
-
-//   const loginWithBurner = () => {
-//     const getSigner = async () => {
-//       setSignerAddress("0x1234578");
-//     };
-
-//     getSigner();
-//   }
-
-//   return (
-//     <button onClick={loginWithBurner}>Login</button>
-//   )
-// }
-
 export const LoginBurner: React.FC = () => {
-  // const { setSigner, setView, signerAddress, setSignerAddress } = useChat();
-
-  const { setSigner, setView, signerAddress, setSignerAddress } = useContext(ChatContext);
+  const { setSigner, setView, setSignerAddress } = useContext(ChatContext);
 
   const [ burnerWallet, setBurnerWallet ] = useState<ethers.HDNodeWallet>(ethers.Wallet.createRandom());
 
@@ -33,20 +13,13 @@ export const LoginBurner: React.FC = () => {
     setBurnerWallet(ethers.Wallet.createRandom());
   }
 
-  // const loginWithBurner = () => {
-  //   setSignerAddress('0x12345');
-  // }
-
   const loginWithBurner = () => {
     const getSigner = async () => {
       const signer = new SIWESigner({ signer: burnerWallet });
-      const session = await signer.getSession(contract.topic);
 
-      // debugger
       setSigner(signer);
       setSignerAddress(burnerWallet.address);
       setView(VIEWS.Dashboard);
-      console.log('logged in!')
     }
 
     getSigner();
@@ -70,10 +43,6 @@ export const LoginBurner: React.FC = () => {
           </button>
         </>
       }
-
-      <div>
-        Signer address?: {signerAddress}
-      </div>
     </div>
   )
 };

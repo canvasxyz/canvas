@@ -13,22 +13,17 @@ const ChatWrapper: React.FC = () => {
   )
 };
 
-// const ChatApp: React.FC = () => {  
-//   const { signerAddress } = useChat();
-
-//   return (
-//     <div>{signerAddress}</div>
-//   )
-// };
-
-const ChatApp: React.FC = () => {  
-  const { view, setView, signerAddress } = useChat();
+const ChatApp: React.FC = () => {
+  const { view, setView, signerAddress, setSignerAddress } = useChat();
 
   const goToLogin = () => {
     setView(VIEWS.Login);
   }
 
-  console.log('header signer address: ', signerAddress);
+  const goToLogout = () => {
+    setView(VIEWS.Login);
+    setSignerAddress(undefined);
+  }
 
   return (
     <div>
@@ -39,10 +34,10 @@ const ChatApp: React.FC = () => {
         </div>
         <div>
           {signerAddress && 
-            <div>User: {signerAddress.slice(0, 10)}</div>
+            <div>User: {signerAddress.slice(0, 10)} (<a className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline" href="#" onClick={goToLogout}>logout</a>)</div>
           }
           {!signerAddress &&
-            <div>User: none (<a href="#" onClick={goToLogin}>login</a>)</div>
+            <div>User: none (<a className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline" href="#" onClick={goToLogin}>login</a>)</div>
           }
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { SIWESigner } from '@canvas-js/chain-ethereum';
 import { useCanvas } from '@canvas-js/hooks';
-import React, { createContext, ReactNode, useEffect, useMemo, useState } from 'react';
+import React, { createContext, ReactNode, useEffect, useState } from 'react';
 
 import { contract } from '../contract';
 import { VIEWS } from '../types/views';
@@ -24,7 +24,7 @@ export interface ChatContextType {
   Derived from `signer`
   */
   signerAddress: string | undefined;
-  setSignerAddress: (value: string) => void;
+  setSignerAddress: (value: string | undefined) => void;
 
   /* Represents the current active route the user is on */
   view: VIEWS;
