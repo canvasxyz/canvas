@@ -4,13 +4,41 @@ Signature utilities for the Canvas data structures.
 
 ## Table of Contents
 
-- [Signatures](#signatures)
+- [Summary](#summary)
+- [Messages and signatures](#messages-and-signatures)
+- [Signature and encoding schemes](#signature-and-encoding-schemes)
 - [Signed message tuples](#signed-message-tuples)
 - [Session signers](#session-signers)
 
-## Signatures
+## Summary
 
-At the center of every Canvas app is a log of signed messages. The data in each message, before signing, looks like this:
+Each Canvas application is built around a log of signed messages:
+
+```
+ |-------------------------|        |-------------------------|        |-------------------------|
+ | Message<Session>        |        | Message<Action>         |        | Message<Action>         |
+ | topic: ...              |        | topic: ...              |        | topic: ...              |
+ | clock: 0                |        | clock: 1                |        | clock: 2                |
+ | parents: [Message]      |        | parents: [Message]      |        | parents: [Message]      |
+ | payload:                |  --->  | payload:                |  --->  | payload:                |
+ |  type: "session"        |        |   type: "action"        |        |   type: "action"        |
+ |  address: ...           |        |   address: ...          |        |   address: ...          |
+ |  publicKey: ...         |        |   name: ...             |        |   name: ...             |
+ |  authorizationData: ... |        |   args: ...             |        |   args: ...             |
+ |-------------------------|        |-------------------------|        |-------------------------|
+
+ |-------------------------|        |-------------------------|        |-------------------------|
+ | Signature               |        | Signature               |        | Signature               |
+ |   codec: ...            |        |   codec: ...            |        |   codec: ...            |
+ |   publicKey: ...        |        |   publicKey: ...        |        |   publicKey: ...        |
+ |   signature: ...        |        |   signature: ...        |        |   signature: ...        |
+ |-------------------------|        |-------------------------|        |-------------------------|
+```
+
+### Messages and Signatures
+
+Messages are implemented as a generic class that accepts different
+Payloads, which may be actions or sessions.
 
 ```ts
 type Message<Payload = unknown> = {
@@ -21,21 +49,33 @@ type Message<Payload = unknown> = {
 }
 ```
 
-A message signature has three components:
+Each `Message` is stored alongside a `Signature` in the log as a
+`[Message, Signature]` tuple, that includes:
 
-- a `codec` string that identifies how to encode the message to bytes-to-be-signed.
+- a `codec` string that identifies how to encode the message to bytes for signing
 - a `publicKey` [did:key URI](https://w3c-ccg.github.io/did-method-key/)
 - a `signature` byte array containing the raw signature bytes
 
 ```ts
 type Signature = {
-  codec: string // "dag-cbor" | "dag-json" | "canvas-action-eip712" | "canvas-session-eip712"
+  codec: "dag-cbor" | "dag-json" | "canvas-action-eip712" | "canvas-session-eip712"
   publicKey: string // did:key URI
   signature: Uint8Array
 }
 ```
 
-Only Secp256k1 and Ed25519 signature schemes are supported. Each did:key URI identifies its signature scheme using a multicodec varint in addition to encoding its public key.
+For ordinary offchain applications, `dag-cbor` is used to encode all types
+of messages, both Actions and Sessions.
+
+For applications that may need to be verified onchain, `canvas-action-eip712`
+and `canvas-session-eip712` codecs are used to encode Actions and Sessions
+respectively.
+
+## Signature schemes
+
+Only Secp256k1 and Ed25519 signature schemes are supported. Each
+did:key URI identifies its signature scheme using a multicodec varint
+in addition to encoding its public key.
 
 The four supported `codec` values are
 
