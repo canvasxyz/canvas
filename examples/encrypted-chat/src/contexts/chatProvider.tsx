@@ -61,14 +61,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     console.log('signer updating--');
 
     signer.getSession(contract.topic).then(signerSession => {
-      setSignerAddress(fromCAIP(signerSession.address));
+      // setSignerAddress(fromCAIP(signerSession.address));
       console.log('signer updating-- new address: ', signerSession.address);
     });
   }, [signer]);
 
   // The value that will be supplied to any descendants of this provider
   const value: ChatContextType = { 
-    app,
+    app: app.app,
     contract,
     signer, 
     setSigner,

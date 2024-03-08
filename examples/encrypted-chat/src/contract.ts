@@ -6,18 +6,17 @@ const DISCOVERY_TOPIC = 'canvas-discovery';
 export const contract = {
   topic: APP_TOPIC,
   models: {
-    message: {
+    messages: {
       id: "primary",
       address: "string",
       content: "string",
       timestamp: "integer",
-      $indexes: ["address", "timestamp"],
+      $indexes: ["timestamp"],
     },
   },
   actions: {
-    async createMessage(db: any, { content }: {content: any}, { id, address, timestamp } : {id: any, address: any, timestamp: any}) {
-      console.log("received message:", content)
-      await db.set("message", { id, address, content, timestamp })
+    async sendMessage(db: any, { content }: {content: any}, { id, address, timestamp } : {id: any, address: any, timestamp: any}) {
+      await db.set("messages", { id, address, content, timestamp })
     },
   },
 } satisfies Contract
