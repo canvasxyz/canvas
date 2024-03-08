@@ -74,16 +74,16 @@ The `cid` in a message signature is the CID of the `Message` object using the `d
 Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use one the signer class exported from `@canvas-js/signatures`.
 
 ```ts
-import { Ed25519Signer } from "@canvas-js/signatures"
+import { Ed25519DelegateSigner } from "@canvas-js/signatures"
 
-const signer = new Ed25519Signer()
+const signer = new Ed25519DelegateSigner()
 ```
 
 Once you have a signer, you can add it `GossipLogInit` to use it by default for all appends, or pass a specific signer into each call to `append` individually.
 
 ```ts
-const signerA = new Ed25519Signer()
-const signerB = new Ed25519Signer()
+const signerA = new Ed25519DelegateSigner()
+const signerB = new Ed25519DelegateSigner()
 
 const log = await GossipLog.init({ ...init, signer: signerA })
 

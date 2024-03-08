@@ -7,7 +7,7 @@ import { cryptoWaitReady, decodeAddress } from "@polkadot/util-crypto"
 import { KeypairType } from "@polkadot/util-crypto/types"
 
 import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519Signer } from "@canvas-js/signatures"
+import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import type { SubstrateMessage, SubstrateSessionData } from "./types.js"
@@ -31,16 +31,16 @@ type AbstractSigner = {
 }
 
 export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData> {
-	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
 	public readonly match = (address: string) => addressPattern.test(address)
-	public readonly verify = Ed25519Signer.verify
+	public readonly verify = Ed25519DelegateSigner.verify
 
 	// some type that overlaps with the injected extension and
 	// a generated wallet
 	#signer: AbstractSigner
 
 	public constructor({ sessionDuration, substrateKeyType, extension }: SubstrateSignerInit = {}) {
-		super("chain-substrate", { createSigner: (init) => new Ed25519Signer(init), defaultDuration: sessionDuration })
+		super("chain-substrate", { createSigner: (init) => new Ed25519DelegateSigner(init), defaultDuration: sessionDuration })
 		if (extension) {
 			const signRaw = extension.signer.signRaw
 			if (signRaw === undefined) {

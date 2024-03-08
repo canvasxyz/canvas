@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto"
 
 import type { Message } from "@canvas-js/interfaces"
-import { Ed25519Signer } from "@canvas-js/signatures"
+import { Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { collect, getPublicKey, testPlatforms } from "./utils.js"
 
 testPlatforms("append three messages", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const signer = new Ed25519Signer()
+	const signer = new Ed25519DelegateSigner()
 	const log = await openGossipLog(t, { topic, apply: () => {}, signer })
 
 	const { id: foo } = await log.append("foo")
@@ -24,7 +24,7 @@ testPlatforms("append three messages", async (t, openGossipLog) => {
 
 testPlatforms("insert three concurrent messages and append a fourth", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const signer = new Ed25519Signer()
+	const signer = new Ed25519DelegateSigner()
 	const log = await openGossipLog(t, { topic, apply: () => {}, signer })
 
 	const a = { topic, clock: 1, parents: [], payload: "foo" }

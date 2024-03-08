@@ -54,8 +54,8 @@ some wallets or DIDs may use other data to generate a signature.
 For example, Sign In With Ethereum expects an issuance time,
 expiry time, and URI to generate a sign-in popup.
 
-Under the hood, signer packages use the Ed25519Delegate and
-Secp256k1Delegate classes which provide `sign()` and `verify()`
+Under the hood, signer packages use the Ed25519DelegateSigner and
+Secp256k1DelegateSigner classes which provide `sign()` and `verify()`
 to create/verify session-key signatures for the message.
 
 Session signers also expose `newSession()` and `verifySession()`
@@ -159,19 +159,19 @@ interface Signer<Payload = unknown> {
 }
 ```
 
-The primary signer implementation is `Ed25519Signer`, exported here in `@canvas-js/signatures`. It uses the Ed25519 signature scheme and supports both `dag-json` and `dag-cbor` signature codecs.
+The primary signer implementation is `Ed25519Delegate`, exported here in `@canvas-js/signatures`. It uses the Ed25519 signature scheme and supports both `dag-json` and `dag-cbor` signature codecs.
 
 ```ts
 // create a new random keypair
-const signer = new Ed25519Signer()
+const signer = new Ed25519Delegate()
 console.log(signer.codecs) // ["dag-cbor", "dag-json"]
 console.log(signer.uri)    // "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"
 
 // import an existing private key
-const signer = new Ed25519Signer({ type: "ed25519", privateKey: new Uint8Array([ ... ])})
+const signer = new Ed25519Delegate({ type: "ed25519", privateKey: new Uint8Array([ ... ])})
 ```
 
-Every GossipLog instance has one "primary" signer it uses to sign new messages by default; if one is not provided in the initial config object then a random `Ed25519Signer` is created. This primary signer is also used to verify incoming messages.
+Every GossipLog instance has one "primary" signer it uses to sign new messages by default; if one is not provided in the initial config object then a random `Ed25519Delegate` is created. This primary signer is also used to verify incoming messages.
 
 These behaviors can be overriden by providing a `verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>` function in the initial GossipLog config object, and passing an explicit signer in the options argument of the `append` method.
 

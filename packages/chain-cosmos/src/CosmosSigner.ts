@@ -1,5 +1,5 @@
 import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519Signer } from "@canvas-js/signatures"
+import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import { validateSessionData, addressPattern, parseAddress } from "./utils.js"
@@ -22,12 +22,12 @@ type GenericSigner = {
 }
 
 export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
-	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
 
 	#signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, bech32Prefix }: CosmosSignerInit = {}) {
-		super("chain-cosmos", { createSigner: (init) => new Ed25519Signer(init), defaultDuration: sessionDuration })
+		super("chain-cosmos", { createSigner: (init) => new Ed25519DelegateSigner(init), defaultDuration: sessionDuration })
 
 		const bech32Prefix_ = bech32Prefix == undefined ? "cosmos" : bech32Prefix
 
@@ -45,7 +45,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	}
 
 	public readonly match = (address: string) => addressPattern.test(address)
-	public readonly verify = Ed25519Signer.verify
+	public readonly verify = Ed25519DelegateSigner.verify
 
 	public async verifySession(topic: string, session: Session) {
 		const { publicKey, address, authorizationData: data, timestamp, duration } = session

@@ -4,7 +4,7 @@ import { toHex, toBytes, WalletClient, PrivateKeyAccount, verifyMessage } from "
 import * as siwe from "siwe"
 
 import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519Signer } from "@canvas-js/signatures"
+import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
@@ -21,9 +21,9 @@ function isPrivateKeyAccount(signer: WalletClient | PrivateKeyAccount): signer i
 }
 
 export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
-	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
 	public readonly match = (address: string) => addressPattern.test(address)
-	public readonly verify = Ed25519Signer.verify
+	public readonly verify = Ed25519DelegateSigner.verify
 
 	public readonly key: string
 	public readonly sessionDuration: number | null
@@ -35,7 +35,7 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 	}
 
 	public constructor(init: SIWESignerViemInit = {}) {
-		super("chain-ethereum-viem", { createSigner: (init) => new Ed25519Signer(init) })
+		super("chain-ethereum-viem", { createSigner: (init) => new Ed25519DelegateSigner(init) })
 		if (init.signer && isPrivateKeyAccount(init.signer)) {
 			// use passed PrivateKeyAccount
 			const pka = init.signer

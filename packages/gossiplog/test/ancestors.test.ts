@@ -4,7 +4,7 @@ import test from "ava"
 import { nanoid } from "nanoid"
 
 import type { Signature, Message } from "@canvas-js/interfaces"
-import { Ed25519Signer } from "@canvas-js/signatures"
+import { Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { decodeId } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/node"
 
@@ -34,7 +34,7 @@ testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog)
 
 testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const signer = new Ed25519Signer()
+	const signer = new Ed25519DelegateSigner()
 	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	const n = 20
@@ -63,7 +63,7 @@ testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog)
 
 testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const signer = new Ed25519Signer()
+	const signer = new Ed25519DelegateSigner()
 	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	const n = 20

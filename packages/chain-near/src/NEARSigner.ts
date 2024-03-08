@@ -4,7 +4,7 @@ import { PublicKey } from "@near-js/crypto"
 import { ed25519 } from "@noble/curves/ed25519"
 
 import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519Signer } from "@canvas-js/signatures"
+import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { NEARMessage, NEARSessionData } from "./types.js"
@@ -17,9 +17,9 @@ export interface NEARSignerInit {
 }
 
 export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
-	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
 	public readonly match = (chain: string) => addressPattern.test(chain)
-	public readonly verify = Ed25519Signer.verify
+	public readonly verify = Ed25519DelegateSigner.verify
 
 	public readonly chainId: string
 
@@ -27,7 +27,7 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 	#keyPair: KeyPair
 
 	public constructor({ keyPair, sessionDuration, chainId }: NEARSignerInit = {}) {
-		super("chain-near", { createSigner: (init) => new Ed25519Signer(init), defaultDuration: sessionDuration })
+		super("chain-near", { createSigner: (init) => new Ed25519DelegateSigner(init), defaultDuration: sessionDuration })
 
 		this.#keyPair = keyPair ?? KeyPair.fromRandom("ed25519")
 		this.#address = this.#keyPair.getPublicKey().toString().split(":")[1]

@@ -5,7 +5,7 @@ import * as ATP from "@atproto/api"
 const BskyAgent = ATP.BskyAgent ?? ATP["default"].BskyAgent
 
 import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519Signer } from "@canvas-js/signatures"
+import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { unpackArchive } from "./mst.js"
@@ -32,17 +32,17 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		return `Authorizing ${publicKey} to sign actions for ${topic} on behalf of ${address}`
 	}
 
-	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
 
 	#agent = new BskyAgent({ service: `https://${service}` })
 	#session: ATP.AtpSessionData | null = null
 
 	public constructor(private readonly options: ATPSignerOptions = {}) {
-		super("chain-atp", { createSigner: (init) => new Ed25519Signer(init) })
+		super("chain-atp", { createSigner: (init) => new Ed25519DelegateSigner(init) })
 	}
 
 	public readonly match = (address: string) => address.startsWith("did:plc:") || address.startsWith("did:web:")
-	public readonly verify = Ed25519Signer.verify
+	public readonly verify = Ed25519DelegateSigner.verify
 
 	public async verifySession(topic: string, session: Session<ATPSessionData>): Promise<void> {
 		const { verificationMethod, recordArchive, recordURI, plcOperationLog } = session.authorizationData

@@ -5,7 +5,7 @@ import * as json from "@ipld/dag-json"
 import { ed25519 } from "@noble/curves/ed25519"
 
 import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519Signer } from "@canvas-js/signatures"
+import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { validateSessionData, addressPattern, parseAddress } from "./utils.js"
@@ -31,9 +31,9 @@ type GenericSigner = {
 }
 
 export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
-	public readonly codecs = [Ed25519Signer.cborCodec, Ed25519Signer.jsonCodec]
+	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
 	public readonly match = (chain: string) => addressPattern.test(chain)
-	public readonly verify = Ed25519Signer.verify
+	public readonly verify = Ed25519DelegateSigner.verify
 
 	public readonly key: string
 	public readonly sessionDuration: number | null
@@ -42,7 +42,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 	#signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, chainId }: SolanaSignerInit = {}) {
-		super("chain-solana", { createSigner: (init) => new Ed25519Signer(init), defaultDuration: sessionDuration })
+		super("chain-solana", { createSigner: (init) => new Ed25519DelegateSigner(init), defaultDuration: sessionDuration })
 
 		if (signer) {
 			if (!signer.publicKey) {
