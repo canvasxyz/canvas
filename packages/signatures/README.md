@@ -6,6 +6,7 @@ Signature utilities for the Canvas data structures.
 
 - [Signatures](#signatures)
 - [Signed message tuples](#signed-message-tuples)
+- [Session signers](#session-signers)
 
 ## Signatures
 
