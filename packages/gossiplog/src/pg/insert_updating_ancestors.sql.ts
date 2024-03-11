@@ -24,14 +24,14 @@ BEGIN
     IF i = 1 THEN
       -- ancestor_links is zero-indexed, [i] is implemented as [i-1], also encode bytea as hex
       SELECT array_to_json(array_agg(encode(tbl, 'hex')))::jsonb FROM unnest(parents) AS tbl INTO tmp;
-      ancestor_links[i-1] := tmp;
+      ancestor_links := jsonb_set(ancestor_links, array[i-1]::text[], tmp);
     ELSE
       j := 0;
       links := '{}'::bytea[];
       -- i is one-indexed, [i-1] is implemented as [i-2]
-      ancestor_links_length := jsonb_array_length(ancestor_links[i-2]);
+      ancestor_links_length := jsonb_array_length(ancestor_links->i-2);
       WHILE j < ancestor_links_length LOOP
-        child := decode(ancestor_links[i-2][j] #>> '{}', 'hex');
+        child := decode(ancestor_links->i-2->j #>> '{}', 'hex');
         child_clock := decode_clock(child);
         IF child_clock <= ancestor_clock THEN
           links := links || child;
@@ -53,7 +53,7 @@ BEGIN
       END LOOP;
 
       SELECT array_to_json(array_agg(DISTINCT encode(tbl, 'hex')))::jsonb FROM unnest(links) AS tbl INTO tmp;
-      ancestor_links[i-1] := tmp;
+      ancestor_links := jsonb_set(ancestor_links, array[i-1]::text[], tmp);
     END IF;
 
     i := i + 1;

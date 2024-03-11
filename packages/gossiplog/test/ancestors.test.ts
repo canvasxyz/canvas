@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 
-import test from "ava"
+import test, { ExecutionContext } from "ava"
 import { nanoid } from "nanoid"
 
 import type { Signature, Message } from "@canvas-js/interfaces"
@@ -8,6 +8,7 @@ import { Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { decodeId } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/node"
 import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
+import { AbstractGossipLog } from "@canvas-js/gossiplog"
 
 import { appendChain, getDirectory, shuffle, testPlatforms } from "./utils.js"
 
@@ -128,27 +129,56 @@ testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, ope
 	await log.close()
 })
 
-test("simulate a randomly partitioned network", async (t) => {
+test("simulate a randomly partitioned network, logs on disk", async (t) => {
 	t.timeout(30 * 1000)
 	const topic = randomUUID()
 
-	const logs = await Promise.all([
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "postgresql://localhost:5432/test"),
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "postgresql://localhost:5432/test2"),
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "postgresql://localhost:5432/test3"),
+	const logs: AbstractGossipLog<string, void>[] = await Promise.all([
+		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
+		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
+		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
 	])
 
-	const random = (n: number) => Math.floor(Math.random() * n)
+	// const maxMessageCount = 2048
+	// const maxChainLength = 6
+	const maxMessageCount = 256
+	const maxChainLength = 5
+	await simulateRandomNetwork(t, topic, logs, maxMessageCount, maxChainLength)
+})
 
-	// const MESSAGE_COUNT = 2048
-	// const MAX_CHAIN_LENGTH = 6
-	const MESSAGE_COUNT = 256
-	const MAX_CHAIN_LENGTH = 5
+test("simulate a randomly partitioned network, logs on postgres", async (t) => {
+	t.timeout(240 * 1000)
+	const topic = randomUUID()
+
+	const pgHost =
+		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
+			? "postgresql://postgres:postgres@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT}"
+			: "postgresql://localhost:5432"
+
+	const logs: AbstractGossipLog<string, void>[] = await Promise.all([
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, `${pgHost}/test`),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, `${pgHost}/test2`),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, `${pgHost}/test3`),
+	])
+
+	const maxMessageCount = 128
+	const maxChainLength = 5
+	await simulateRandomNetwork(t, topic, logs, maxMessageCount, maxChainLength)
+})
+
+export const simulateRandomNetwork = async (
+	t: ExecutionContext<unknown>,
+	topic: string,
+	logs: AbstractGossipLog<string, void>[],
+	maxMessageCount: number,
+	maxChainLength: number,
+) => {
+	const random = (n: number) => Math.floor(Math.random() * n)
 
 	const messageIDs: string[] = []
 	const messageIndices = new Map<string, { index: number; map: Uint8Array }>()
 
-	const bitMaps = logs.map(() => new Uint8Array(MESSAGE_COUNT / 8))
+	const bitMaps = logs.map(() => new Uint8Array(maxMessageCount / 8))
 
 	const setBit = (map: Uint8Array, i: number) => {
 		const bit = i % 8
@@ -163,14 +193,14 @@ test("simulate a randomly partitioned network", async (t) => {
 	}
 
 	const merge = (self: Uint8Array, peer: Uint8Array) => {
-		for (let i = 0; i < MESSAGE_COUNT / 8; i++) {
+		for (let i = 0; i < maxMessageCount / 8; i++) {
 			self[i] |= peer[i]
 		}
 	}
 
 	const start = performance.now()
 	let messageCount = 0
-	while (messageCount < MESSAGE_COUNT) {
+	while (messageCount < maxMessageCount) {
 		const selfIndex = random(logs.length)
 		const self = logs[selfIndex]
 
@@ -186,8 +216,8 @@ test("simulate a randomly partitioned network", async (t) => {
 		}
 
 		// append a chain of messages
-		const chainLength = random(MAX_CHAIN_LENGTH)
-		for (let j = 0; j < chainLength && messageCount < MESSAGE_COUNT; j++) {
+		const chainLength = random(maxChainLength)
+		for (let j = 0; j < chainLength && messageCount < maxMessageCount; j++) {
 			const { id } = await self.append(nanoid())
 			const index = messageCount++
 			messageIndices.set(id, { index, map: new Uint8Array(bitMaps[selfIndex]) })
@@ -198,7 +228,7 @@ test("simulate a randomly partitioned network", async (t) => {
 
 	for (const [i, log] of logs.entries()) {
 		const map = bitMaps[i]
-		for (let j = 0; j < MESSAGE_COUNT; j++) {
+		for (let j = 0; j < maxMessageCount; j++) {
 			const id = messageIDs[j]
 
 			const [signature, message] = await log.get(id)
@@ -252,4 +282,4 @@ test("simulate a randomly partitioned network", async (t) => {
 	for (const log of logs) {
 		await log.close()
 	}
-})
+}

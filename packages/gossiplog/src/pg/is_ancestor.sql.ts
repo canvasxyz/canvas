@@ -28,7 +28,7 @@ BEGIN
   index := FLOOR(LOG(2, clock - ancestor_clock));
   SELECT pgcbor_to_jsonb(value) INTO links FROM ancestors WHERE key = key_;
 
-  FOR i in SELECT * FROM jsonb_array_elements(links[index]) LOOP
+  FOR i in SELECT * FROM jsonb_array_elements(links->index) LOOP
     link := decode((i->>0), 'hex');
 
     IF array_position(visited, link) IS NULL THEN

@@ -25,6 +25,20 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        options:
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps tcp port 5432 on service container to the host
+          - 5432:5432
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -39,6 +53,12 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Set up Postgres
+        run: node scripts/setupPostgresTestEnv.cjs
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
 
       - name: Run @canvas-js/gossiplog tests
         run: npm run test --workspace=@canvas-js/gossiplog --match="\!simulate a randomly partitioned network"
