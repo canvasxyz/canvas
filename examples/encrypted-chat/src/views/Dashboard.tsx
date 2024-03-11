@@ -17,8 +17,6 @@ export const DashboardView = () => {
   }
 
   const getMessages = () => {
-    console.log('messages = ', lobby);
-
     return (
       <ul className="h-100">
         {lobby?.map((message) => (

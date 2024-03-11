@@ -58,11 +58,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
   // update signerAddress when signer changes
   useEffect(() => {
-    console.log('signer updating--');
-
     signer.getSession(contract.topic).then(signerSession => {
       // setSignerAddress(fromCAIP(signerSession.address));
-      console.log('signer updating-- new address: ', signerSession.address);
     });
   }, [signer]);
 
@@ -76,8 +73,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     setSignerAddress,
     view,
     setView };
-
-  console.log('provider address = ', signerAddress)
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
