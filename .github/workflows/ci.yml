@@ -48,6 +48,9 @@ jobs:
         with:
           node-version: 18.x
 
+      - name: Set up Postgres deps
+        run: npm install pg
+
       - name: Set up Postgres
         run: node client.cjs
         env:
