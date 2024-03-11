@@ -3,10 +3,10 @@ import type { Uint8ArrayList } from "uint8arraylist"
 import { logger } from "@libp2p/logger"
 
 import type { Source } from "@canvas-js/okra"
+import { assert } from "@canvas-js/utils"
 
 import * as Sync from "#protocols/sync"
 
-import { assert } from "../utils.js"
 import { encodeNode } from "./utils.js"
 
 export async function* encodeResponses(responses: AsyncIterable<Sync.Response>): AsyncIterable<Uint8Array> {

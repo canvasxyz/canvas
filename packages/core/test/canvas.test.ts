@@ -4,8 +4,8 @@ import test, { ExecutionContext } from "ava"
 import { ethers } from "ethers"
 
 import type { Message } from "@canvas-js/interfaces"
-import { Ed25519Signer } from "@canvas-js/signed-cid"
-import { SIWESigner, EIP712Signer } from "@canvas-js/chain-ethereum"
+import { Ed25519DelegateSigner } from "@canvas-js/signatures"
+import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { Canvas } from "@canvas-js/core"
 
 const contract = `
@@ -49,7 +49,7 @@ const init = async (t: ExecutionContext) => {
 }
 
 const initEIP712 = async (t: ExecutionContext) => {
-	const app = await Canvas.initialize({ contract, offline: true, signers: [new EIP712Signer({})] })
+	const app = await Canvas.initialize({ contract, offline: true, signers: [new Eip712Signer()] })
 	t.teardown(() => app.close())
 	return app
 }
@@ -106,7 +106,7 @@ test("insert a message created by another app", async (t) => {
 test("reject an invalid message", async (t) => {
 	const app = await init(t)
 
-	const signer = new Ed25519Signer()
+	const signer = new Ed25519DelegateSigner()
 	const invalidMessage: Message<{ type: "fjdskl" }> = {
 		topic: app.topic,
 		clock: 1,

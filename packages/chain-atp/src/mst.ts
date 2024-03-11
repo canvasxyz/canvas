@@ -2,7 +2,7 @@ import { CID } from "multiformats"
 import { CarReader } from "@ipld/car"
 import * as cbor from "@ipld/dag-cbor"
 
-import { assert } from "./utils.js"
+import { assert } from "@canvas-js/utils"
 import { Commit } from "./commit.js"
 
 type Node = { l: CID; e: Entry[] }

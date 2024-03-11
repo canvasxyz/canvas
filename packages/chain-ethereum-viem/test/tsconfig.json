@@ -1,12 +1,9 @@
 {
-  "exclude": ["lib"],
-  "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "lib",
-  },
-  "references": [
-    { "path": "../." },
-    { "path": "../../interfaces" },
-  ]
+	"exclude": ["lib"],
+	"extends": "../../../tsconfig.base.json",
+	"compilerOptions": {
+		"rootDir": ".",
+		"outDir": "lib"
+	},
+	"references": [{ "path": "../." }, { "path": "../../interfaces" }, { "path": "../../signatures" }]
 }

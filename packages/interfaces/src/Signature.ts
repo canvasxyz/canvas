@@ -1,8 +1,5 @@
-import type { CID } from "multiformats"
-
 export type Signature = {
-	/** did:key URI */
-	publicKey: string
+	codec: string // "dag-cbor" | "dag-json" | "canvas-action-eip712" | "canvas-session-eip712"
+	publicKey: string // did:key URI
 	signature: Uint8Array
-	cid: CID
 }

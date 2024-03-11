@@ -4,7 +4,7 @@ import test from "ava"
 import { nanoid } from "nanoid"
 
 import type { Signature, Message } from "@canvas-js/interfaces"
-import { Ed25519Signer } from "@canvas-js/signed-cid"
+import { Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { decodeId } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/node"
 import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
@@ -12,11 +12,10 @@ import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
 import { appendChain, getDirectory, shuffle, testPlatforms } from "./utils.js"
 
 const apply = (id: string, signature: Signature, message: Message<string>) => {}
-const validate = (payload: unknown): payload is string => true
 
 testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	const n = 20
 	const ids: string[] = []
@@ -36,8 +35,8 @@ testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog)
 
 testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const signer = new Ed25519Signer()
-	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
+	const signer = new Ed25519DelegateSigner()
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	const n = 20
 	const ids: string[] = []
@@ -65,8 +64,8 @@ testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog)
 
 testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const signer = new Ed25519Signer()
-	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
+	const signer = new Ed25519DelegateSigner()
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	const n = 20
 	const ids: string[] = []
@@ -101,7 +100,7 @@ testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, open
 
 testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, validate, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	const { id: idX } = await log.append(nanoid())
 	const { id: idY } = await log.append(nanoid())
