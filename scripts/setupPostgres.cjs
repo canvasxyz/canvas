@@ -12,7 +12,13 @@ const pgclient = new Client({
 
 pgclient.connect()
 
-pgclient.query("CREATE DATABASE test; CREATE DATABASE test2; CREATE DATABASE test3", (err, res) => {
+pgclient.query("CREATE DATABASE test", (err, res) => {
 	if (err) throw err
-	pgclient.end()
+	pgclient.query("CREATE DATABASE test2", (err2, res2) => {
+		if (err2) throw err2
+		pgclient.query("CREATE DATABASE test3", (err3, res3) => {
+			if (err3) throw err3
+			pgclient.end()
+		})
+	})
 })
