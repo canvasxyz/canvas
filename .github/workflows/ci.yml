@@ -49,7 +49,10 @@ jobs:
           node-version: 18.x
 
       - name: Set up Postgres
-        run: createdb -p 5432 test && createdb -p 5432 test2 && createdb -p 5432 test3
+        run: node client.js
+          env:
+            POSTGRES_HOST: localhost
+            POSTGRES_PORT: 5432
 
       - name: Install dependencies
         run: npm ci
