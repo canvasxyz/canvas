@@ -17,14 +17,10 @@ export const LoginMetamask: React.FC = () => {
     window.ethereum?.on("chainChanged", async (chainId) => {
       console.log('window.ethereum: chainChanged');
       const signer = await provider.getSigner();
-  
-      // debugger 
     });
     window.ethereum?.on("accountsChanged", async (accounts) => {
       console.log('window.ethereum: accountsChanged');
       const signer = await provider.getSigner();
-  
-      // debugger
     });
   }, [window.ethereum]);
 
@@ -33,11 +29,6 @@ export const LoginMetamask: React.FC = () => {
   useEffect(() => {
     if (window.ethereum) {
       const provider = new BrowserProvider(window.ethereum);
-
-      // const signer = provider.getSigner().then(signer => {
-      //   setProvider(provider);
-      //   setAddr(signer.address);
-      // });
     }
   }, []);
 
@@ -60,26 +51,17 @@ export const LoginMetamask: React.FC = () => {
     }
 
     const provider = new BrowserProvider(window.ethereum);
-    // const accounts = await provider.send('eth_requestAccounts', []);
     const network = await provider.getNetwork();
     const signer = await provider.getSigner();
 
-    // debugger
-
     setProvider(provider);
 
-    console.log('signer :>> ', signer);
     const siweSigner = new SIWESigner({ signer, chainId: Number(network.chainId) })
-
-    console.log('siweSigner = ', siweSigner)
-    // debugger
     
     setSigner(siweSigner);
-    // const { address } = await siweSigner.getSession(topic);
   }
 
   const loginWithMetamask = () => {
-    // setWallet();
     setView(VIEWS.Dashboard);
   }
 
