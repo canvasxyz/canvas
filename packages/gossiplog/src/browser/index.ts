@@ -65,7 +65,15 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 	public async close() {
 		this.log("closing")
-		this.controller.abort()
+
+		// wait up to 500ms for the lock to free up
+		if (this.controller.signal) {
+			await new Promise((resolve) => setTimeout(resolve, 500))
+			this.controller.abort()
+		} else {
+			this.controller.abort()
+		}
+
 		this.db.close()
 	}
 
