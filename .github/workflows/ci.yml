@@ -50,9 +50,9 @@ jobs:
 
       - name: Set up Postgres
         run: node client.js
-          env:
-            POSTGRES_HOST: localhost
-            POSTGRES_PORT: 5432
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
 
       - name: Install dependencies
         run: npm ci
