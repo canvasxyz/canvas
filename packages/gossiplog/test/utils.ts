@@ -51,7 +51,7 @@ export const testPlatforms = (
 					password: "postgres",
 					port: parseInt(process.env.POSTGRES_PORT, 10),
 					host: process.env.POSTGRES_HOST,
-			  }
+				}
 			: `postgresql://localhost:5432/test`
 
 	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
