@@ -448,8 +448,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		} else {
 			await txn.messages.set(key, value)
 			await txn.heads.set(key, cborNull)
-			for (const parentKeys of parentKeys) {
-				await txn.heads.delete(parent)
+			for (const parentKey of parentKeys) {
+				await txn.heads.delete(parentKey)
 			}
 		}
 
@@ -460,12 +460,12 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			const ancestorLinks: Uint8Array[][] = new Array(ancestorClocks.length)
 
 			if (txn.insertUpdatingAncestors) {
-				const ancestorLinks = await txn.insertUpdatingAncestors(key, value, parents, ancestorClocks)
+				const ancestorLinks = await txn.insertUpdatingAncestors(key, value, parentKeys, ancestorClocks)
 				await txn.ancestors.set(key, cbor.encode(ancestorLinks))
 			} else {
 				for (const [i, ancestorClock] of ancestorClocks.entries()) {
 					if (i === 0) {
-						ancestorLinks[i] = parents
+						ancestorLinks[i] = parentKeys
 					} else {
 						const links = new Set<string>()
 						for (const child of ancestorLinks[i - 1]) {

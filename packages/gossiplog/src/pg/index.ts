@@ -4,13 +4,14 @@ import pDefer from "p-defer"
 import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { PostgresTree, PostgresStore } from "@canvas-js/okra-pg"
 import { Awaitable } from "@canvas-js/interfaces"
+import { assert } from "@canvas-js/utils"
 
 import pg from "pg"
 import { hexToBytes, bytesToHex as hex } from "@noble/hashes/utils"
 import { equals } from "uint8arrays"
 
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
-import { assert, cborNull } from "../utils.js"
+import { cborNull } from "../utils.js"
 import { encodeId, decodeId, KEY_LENGTH } from "../schema.js"
 
 import { getAncestorsSql } from "./get_ancestors.sql.js"
