@@ -154,9 +154,9 @@ test("simulate a randomly partitioned network, logs on postgres", async (t) => {
 		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
 			? {
 					user: "postgres",
-					database: "postgres",
+					database: db,
 					password: "postgres",
-					port: process.env.POSTGRES_PORT,
+					port: parseInt(process.env.POSTGRES_PORT, 10),
 					host: process.env.POSTGRES_HOST,
 			  }
 			: `postgresql://localhost:5432/${db}`

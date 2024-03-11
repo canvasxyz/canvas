@@ -42,7 +42,18 @@ export const testPlatforms = (
 	) => void,
 ) => {
 	const macro = test.macro(run)
-	const pgUrl = "postgresql://localhost:5432/test"
+
+	const pgUrl =
+		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
+			? {
+					user: "postgres",
+					database: "test",
+					password: "postgres",
+					port: parseInt(process.env.POSTGRES_PORT, 10),
+					host: process.env.POSTGRES_HOST,
+			  }
+			: `postgresql://localhost:5432/test`
+
 	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
 	test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(init))
 	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(init, getDirectory(t)))
