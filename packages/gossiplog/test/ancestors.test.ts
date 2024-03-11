@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 
-import test from "ava"
+import test, { ExecutionContext } from "ava"
 import { nanoid } from "nanoid"
 
 import type { Signature, Message } from "@canvas-js/interfaces"
@@ -8,6 +8,7 @@ import { Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { decodeId } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/node"
 import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
+import { AbstractGossipLog } from "@canvas-js/gossiplog"
 
 import { appendChain, getDirectory, shuffle, testPlatforms } from "./utils.js"
 
@@ -128,16 +129,37 @@ testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, ope
 	await log.close()
 })
 
-test("simulate a randomly partitioned network", async (t) => {
+test("simulate a randomly partitioned network, logs on disk", async (t) => {
 	t.timeout(30 * 1000)
 	const topic = randomUUID()
 
-	const logs = await Promise.all([
+	const logs: AbstractGossipLog<string, void>[] = await Promise.all([
+		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
+		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
+		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
+	])
+
+	await simulateRandomNetwork(t, topic, logs)
+})
+
+test("simulate a randomly partitioned network, logs on pg", async (t) => {
+	t.timeout(240 * 1000)
+	const topic = randomUUID()
+
+	const logs: AbstractGossipLog<string, void>[] = await Promise.all([
 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "postgresql://localhost:5432/test"),
 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "postgresql://localhost:5432/test2"),
 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "postgresql://localhost:5432/test3"),
 	])
 
+	await simulateRandomNetwork(t, topic, logs)
+})
+
+export const simulateRandomNetwork = async (
+	t: ExecutionContext<unknown>,
+	topic: string,
+	logs: AbstractGossipLog<string, void>[],
+) => {
 	const random = (n: number) => Math.floor(Math.random() * n)
 
 	// const MESSAGE_COUNT = 2048
@@ -252,4 +274,4 @@ test("simulate a randomly partitioned network", async (t) => {
 	for (const log of logs) {
 		await log.close()
 	}
-})
+}
