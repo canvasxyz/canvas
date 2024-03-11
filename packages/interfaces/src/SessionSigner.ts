@@ -1,11 +1,11 @@
 import type { Signer } from "./Signer.js"
-import type { Message } from "./Message.js"
 import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
 import type { Awaitable } from "./Awaitable.js"
 
-export interface SessionSigner<AuthorizationData = any> extends Signer<Message<Action | Session<AuthorizationData>>> {
-	match: (chain: string) => boolean
+export interface SessionSigner<AuthorizationData = any>
+	extends Pick<Signer<Action | Session<AuthorizationData>>, "codecs" | "sign" | "verify"> {
+	match: (address: string) => boolean
 
 	/**
 	 * `getSession` is called by the Canvas runtime for every new action appended
@@ -17,13 +17,12 @@ export interface SessionSigner<AuthorizationData = any> extends Signer<Message<A
 	 * a new one (and then caching it).
 	 *
 	 * "Matching the given parameters" means that the caller passes a `topic: string`
-	 * and an optional `chain?: string; timestamp?: number`, and `getSession` must return
-	 * a `Session` authorized for that topic, that specific chain (if provided), and that
-	 * is valid for the given timestamp (if provided).
+	 * and an optional `timestamp?: number`, and `getSession` must return a `Session`
+	 * authorized for that topic, and that is valid for the given timestamp.
 	 */
 	getSession: (
 		topic: string,
-		options?: { chain?: string; timestamp?: number; fromCache?: boolean },
+		options?: { timestamp?: number; fromCache?: boolean },
 	) => Awaitable<Session<AuthorizationData>>
 
 	/**

@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
 
-import { EIP712Signer } from "@canvas-js/chain-ethereum"
+import { Eip712Signer } from "@canvas-js/chain-ethereum"
 
 import { AppContext } from "../AppContext.js"
 
@@ -34,7 +34,7 @@ export const ConnectEIP712: React.FC<ConnectEIP712Props> = ({}) => {
 		const network = await provider.getNetwork()
 		const signer = await provider
 			.getSigner()
-			.then((signer) => new EIP712Signer({ signer, chainId: Number(network.chainId) }))
+			.then((signer) => new Eip712Signer({ signer, chainId: Number(network.chainId) }))
 
 		const { address } = await signer.getSession(app.topic)
 		setAddress(address)
@@ -79,7 +79,7 @@ export const ConnectEIP712: React.FC<ConnectEIP712Props> = ({}) => {
 				<button disabled>Loading...</button>
 			</div>
 		)
-	} else if (address !== null && sessionSigner instanceof EIP712Signer) {
+	} else if (address !== null && sessionSigner instanceof Eip712Signer) {
 		return (
 			<button
 				onClick={() => disconnect()}

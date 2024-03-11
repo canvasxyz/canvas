@@ -1,16 +1,5 @@
 import type { CosmosSessionData } from "./types.js"
 
-export function assert(condition: boolean, message?: string): asserts condition {
-	if (!condition) {
-		throw new Error(message ?? "assertion failed")
-	}
-}
-
-export function signalInvalidType(type: never): never {
-	console.error(type)
-	throw new TypeError("internal error: invalid type")
-}
-
 export const addressPattern = /^cosmos:([0-9a-z\-_]+):([a-zA-Fa-f0-9]+)$/
 
 export function parseAddress(address: string): [chain: string, walletAddress: string] {

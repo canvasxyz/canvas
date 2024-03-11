@@ -1,7 +1,7 @@
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 
-import type { SessionSigner, SignerCache } from "@canvas-js/interfaces"
+import type { SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelValue, validateModelValue } from "@canvas-js/modeldb"
 
 import target from "#target"

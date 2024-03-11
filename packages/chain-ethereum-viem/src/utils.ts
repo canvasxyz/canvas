@@ -3,17 +3,6 @@ import * as siwe from "siwe"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
 
-export function assert(condition: boolean, message?: string): asserts condition {
-	if (!condition) {
-		throw new Error(message ?? "assertion failed")
-	}
-}
-
-export function signalInvalidType(type: never): never {
-	console.error(type)
-	throw new TypeError("internal error: invalid type")
-}
-
 export function validateSessionData(authorizationData: unknown): authorizationData is SIWESessionData {
 	if (authorizationData === undefined || authorizationData === null) {
 		return false

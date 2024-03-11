@@ -2,17 +2,6 @@ import { CID } from "multiformats/cid"
 
 import type { SolanaSessionData } from "./types.js"
 
-export function assert(condition: boolean, message?: string): asserts condition {
-	if (!condition) {
-		throw new Error(message ?? "assertion failed")
-	}
-}
-
-export function signalInvalidType(type: never): never {
-	console.error(type)
-	throw new TypeError("internal error: invalid type")
-}
-
 export const addressPattern =
 	/^(solana:[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{32}):([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)$/
 

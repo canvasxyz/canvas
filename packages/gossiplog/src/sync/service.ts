@@ -7,6 +7,8 @@ import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 import { bytesToHex as hex } from "@noble/hashes/utils"
 
+import { CacheMap } from "@canvas-js/utils"
+
 import { Client, Server, decodeRequests, encodeResponses } from "./index.js"
 import { AbstractGossipLog } from "../AbstractGossipLog.js"
 
@@ -29,15 +31,7 @@ import {
 	SYNC_RETRY_LIMIT,
 	second,
 } from "../constants.js"
-import {
-	CacheMap,
-	shuffle,
-	sortPair,
-	wait,
-	DelayableController,
-	SyncDeadlockError,
-	SyncTimeoutError,
-} from "../utils.js"
+import { shuffle, sortPair, wait, DelayableController, SyncDeadlockError, SyncTimeoutError } from "../utils.js"
 import { anySignal } from "any-signal"
 
 export interface SyncOptions {

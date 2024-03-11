@@ -3,6 +3,7 @@
 .DS_Store
 .next/
 .vscode/
+pnpm-lock.yaml
 
 node_modules/
 

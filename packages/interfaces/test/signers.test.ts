@@ -4,11 +4,10 @@ import { Secp256k1Wallet, StdSignDoc } from "@cosmjs/amino"
 import * as secp from "@noble/secp256k1"
 
 import { Action, Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
-import { verifySignedValue } from "@canvas-js/signed-cid"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { NEARSigner } from "@canvas-js/chain-near"
-import { SIWESigner, EIP712Signer } from "@canvas-js/chain-ethereum"
+import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { SIWESignerViem } from "@canvas-js/chain-ethereum-viem"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
@@ -52,7 +51,7 @@ const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 	},
 	{
 		name: "chain-ethereum-eip712",
-		createSigner: async () => new EIP712Signer(),
+		createSigner: async () => new Eip712Signer(),
 	},
 	{
 		name: "chain-solana",
@@ -108,7 +107,7 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 
 		const message: Message<Session> = { topic, clock: 0, parents: [], payload: session }
 		const sessionSignature = await signer.sign(message)
-		t.notThrows(() => verifySignedValue(sessionSignature, message))
+		t.notThrows(() => signer.verify(sessionSignature, message))
 	})
 
 	test(`${name} - refuse to sign foreign sessions`, async (t) => {
@@ -143,7 +142,7 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 
 		const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 		const sessionSignature = await signer.sign(sessionMessage)
-		t.notThrows(() => verifySignedValue(sessionSignature, sessionMessage))
+		t.notThrows(() => signer.verify(sessionSignature, sessionMessage))
 
 		const action: Action = {
 			type: "action",
@@ -156,7 +155,7 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 
 		const actionMessage = { topic, clock: 1, parents: [], payload: action }
 		const actionSignature = await signer.sign(actionMessage)
-		t.notThrows(() => verifySignedValue(actionSignature, actionMessage))
+		t.notThrows(() => signer.verify(actionSignature, actionMessage))
 	})
 }
 

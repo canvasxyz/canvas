@@ -5,7 +5,7 @@ import { base64url } from "multiformats/bases/base64"
 import { base32 } from "multiformats/bases/base32"
 import { verifySignature } from "@atproto/crypto"
 
-import { assert } from "./utils.js"
+import { assert } from "@canvas-js/utils"
 
 type CreateOperation = {
 	sig: string

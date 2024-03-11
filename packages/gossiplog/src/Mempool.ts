@@ -1,6 +1,6 @@
 import { logger } from "@libp2p/logger"
 
-import { assert } from "./utils.js"
+import { assert } from "@canvas-js/utils"
 
 export class Mempool<T> {
 	// TODO: add capacity

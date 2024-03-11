@@ -5,14 +5,13 @@ import { Registrar, ConnectionManager } from "@libp2p/interface-internal"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
 
-import type { Signature } from "@canvas-js/signed-cid"
-import type { Message, Signer } from "@canvas-js/interfaces"
+import type { Signature, Message, Signer } from "@canvas-js/interfaces"
+import { assert } from "@canvas-js/utils"
 
 import { AbstractGossipLog, GossipLogEvents } from "./AbstractGossipLog.js"
 
 import { decodeId } from "./schema.js"
 import { SyncService, SyncOptions } from "./sync/service.js"
-import { assert } from "./utils.js"
 
 export type GossipLogServiceComponents = {
 	peerId: PeerId
@@ -137,7 +136,7 @@ export class GossipLogService extends TypedEventEmitter<GossipLogEvents<unknown,
 	public async append<Payload, Result>(
 		topic: string,
 		payload: Payload,
-		options: { signer?: Signer<Message<Payload>> } = {},
+		options: { signer?: Pick<Signer<Payload>, "sign" | "verify"> } = {},
 	): Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }> {
 		const messageLog = this.#messageLogs.get(topic) as AbstractGossipLog<Payload, Result> | undefined
 		assert(messageLog !== undefined, "no subscription for topic")

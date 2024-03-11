@@ -1,19 +1,17 @@
 import * as json from "@ipld/dag-json"
-import { logger } from "@libp2p/logger"
 import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils"
 import { Keyring } from "@polkadot/keyring"
-import type { Signature, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
 import { InjectedExtension } from "@polkadot/extension-inject/types"
-
-import { Ed25519Signer, didKeyPattern } from "@canvas-js/signed-cid"
 
 import { cryptoWaitReady, decodeAddress } from "@polkadot/util-crypto"
 import { KeypairType } from "@polkadot/util-crypto/types"
 
-import target from "#target"
+import type { Session } from "@canvas-js/interfaces"
+import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
+import { assert } from "@canvas-js/utils"
 
 import type { SubstrateMessage, SubstrateSessionData } from "./types.js"
-import { assert, signalInvalidType, validateSessionData, randomKeypair, parseAddress, addressPattern } from "./utils.js"
+import { validateSessionData, randomKeypair, parseAddress, addressPattern } from "./utils.js"
 
 type SubstrateSignerInit = {
 	sessionDuration?: number
@@ -32,20 +30,18 @@ type AbstractSigner = {
 	}>
 }
 
-export class SubstrateSigner implements SessionSigner {
-	public readonly key: string
-	public readonly sessionDuration: number | null
-	private readonly log = logger("canvas:chain-substrate")
+export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData> {
+	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
+	public readonly match = (address: string) => addressPattern.test(address)
+	public readonly verify = Ed25519DelegateSigner.verify
 
 	// some type that overlaps with the injected extension and
 	// a generated wallet
 	#signer: AbstractSigner
-	#store = target.getSessionStore()
 
-	public constructor(init: SubstrateSignerInit = {}) {
-		if (init.extension) {
-			const { extension } = init
-
+	public constructor({ sessionDuration, substrateKeyType, extension }: SubstrateSignerInit = {}) {
+		super("chain-substrate", { createSigner: (init) => new Ed25519DelegateSigner(init), defaultDuration: sessionDuration })
+		if (extension) {
 			const signRaw = extension.signer.signRaw
 			if (signRaw === undefined) {
 				throw new Error("Invalid signer - no signRaw method exists")
@@ -82,7 +78,7 @@ export class SubstrateSigner implements SessionSigner {
 				},
 			}
 		} else {
-			const keyType: KeypairType = init.substrateKeyType ?? "sr25519"
+			const keyType: KeypairType = substrateKeyType ?? "sr25519"
 
 			// some of the cryptography methods used by polkadot require a wasm environment which is initialised
 			// asynchronously so we have to lazily create the keypair when it is needed
@@ -133,24 +129,18 @@ export class SubstrateSigner implements SessionSigner {
 				},
 			}
 		}
-
-		this.key = `SubstrateSigner-${init.extension ? "extension" : "burner"}`
-		this.sessionDuration = init.sessionDuration ?? null
 	}
-
-	public readonly match = (address: string) => addressPattern.test(address)
 
 	public async verifySession(topic: string, session: Session) {
 		const { publicKey, address, authorizationData, timestamp, duration } = session
 
-		assert(didKeyPattern.test(publicKey), "invalid signing key")
 		assert(validateSessionData(authorizationData), "invalid session")
 		const [chainId, walletAddress] = parseAddress(address)
 
 		const issuedAt = new Date(timestamp).toISOString()
 		const message: SubstrateMessage = {
 			topic: topic,
-			address,
+			address: walletAddress,
 			chainId,
 			uri: publicKey,
 			issuedAt,
@@ -176,45 +166,23 @@ export class SubstrateSigner implements SessionSigner {
 		assert(valid, "invalid signature")
 	}
 
-	public async getSession(
-		topic: string,
-		options: { chain?: string; timestamp?: number; fromCache?: boolean } = {},
-	): Promise<Session<SubstrateSessionData>> {
+	protected async getAddress(): Promise<string> {
 		const chainId = await this.#signer.getChainId()
 		const walletAddress = await this.#signer.getAddress()
-		const address = `polkadot:${chainId}:${walletAddress}`
+		return `polkadot:${chainId}:${walletAddress}`
+	}
 
-		this.log("getting session for %s", address)
-
-		{
-			const { session, signer } = this.#store.get(topic, address) ?? {}
-			if (session !== undefined && signer !== undefined) {
-				const { timestamp, duration } = session
-				const t = options.timestamp ?? timestamp
-				if (timestamp <= t && t <= timestamp + (duration ?? Infinity)) {
-					this.log("found session for %s in store: %o", address, session)
-					return session
-				} else {
-					this.log("stored session for %s has expired", address)
-				}
-			}
-		}
-
-		if (options.fromCache) return Promise.reject()
-
-		this.log("creating new session for %s", address)
-
-		// create a keypair
-		const signer = new Ed25519Signer()
-
-		const timestamp = options.timestamp ?? Date.now()
+	protected async newSession(data: AbstractSessionData): Promise<Session<SubstrateSessionData>> {
+		const { topic, address, publicKey, timestamp, duration } = data
 		const issuedAt = new Date(timestamp).toISOString()
+
+		const [chainId, walletAddress] = parseAddress(address)
 
 		const message: SubstrateMessage = {
 			topic,
-			address,
+			address: walletAddress,
 			chainId,
-			uri: signer.uri,
+			uri: publicKey,
 			issuedAt,
 			expirationTime: null,
 		}
@@ -222,47 +190,14 @@ export class SubstrateSigner implements SessionSigner {
 		const signatureResult = await this.#signer.signMessage(json.encode(message))
 		const substrateKeyType = await this.#signer.getSubstrateKeyType()
 
-		const session: Session<SubstrateSessionData> = {
+		return {
 			type: "session",
 			address,
-			publicKey: signer.uri,
+			publicKey: publicKey,
 			authorizationData: { signatureResult, data: message, substrateKeyType },
 			blockhash: null,
-			timestamp,
-			duration: this.sessionDuration,
+			timestamp: timestamp,
+			duration: duration,
 		}
-
-		// save the session and private key in the cache and the store
-		this.#store.set(topic, address, session, signer)
-
-		this.log("created new session for %s: %o", address, session)
-		return session
-	}
-
-	public sign(message: Message<Action | Session>): Signature {
-		if (message.payload.type === "action") {
-			const { address, timestamp } = message.payload
-			const { signer, session } = this.#store.get(message.topic, address) ?? {}
-			assert(signer !== undefined && session !== undefined)
-
-			assert(address === session.address)
-			assert(timestamp >= session.timestamp)
-			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
-
-			return signer.sign(message)
-		} else if (message.payload.type === "session") {
-			const { signer, session } = this.#store.get(message.topic, message.payload.address) ?? {}
-			assert(signer !== undefined && session !== undefined)
-
-			// only sign our own current sessions
-			assert(message.payload === session)
-			return signer.sign(message)
-		} else {
-			signalInvalidType(message.payload)
-		}
-	}
-
-	public async clear(topic: string) {
-		this.#store.clear(topic)
 	}
 }

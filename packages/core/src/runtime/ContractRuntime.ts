@@ -2,18 +2,19 @@ import { QuickJSHandle } from "quickjs-emscripten"
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 
-import type { SessionSigner, SignerCache } from "@canvas-js/interfaces"
+import type { SignerCache } from "@canvas-js/interfaces"
 
-import { AbstractModelDB, Model, ModelValue, ModelsInit, validateModelValue } from "@canvas-js/modeldb"
+import { AbstractModelDB, ModelValue, ModelsInit, validateModelValue } from "@canvas-js/modeldb"
 
 import { VM } from "@canvas-js/vm"
-import { getCID } from "@canvas-js/signed-cid"
 
 import target from "#target"
 
 import { assert, mapEntries } from "../utils.js"
 
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+import { sha256 } from "@noble/hashes/sha256"
+import { bytesToHex } from "@noble/hashes/utils"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
@@ -24,8 +25,7 @@ export class ContractRuntime extends AbstractRuntime {
 	): Promise<ContractRuntime> {
 		const { runtimeMemoryLimit, indexHistory = true, ignoreMissingActions = false } = options
 
-		const cid = getCID(contract, { codec: "raw", digest: "blake3-128" })
-		const uri = `canvas:${cid.toString()}`
+		const uri = `canvas:${bytesToHex(sha256(contract))}`
 
 		const vm = await VM.initialize({ runtimeMemoryLimit })
 

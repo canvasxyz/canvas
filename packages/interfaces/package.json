@@ -22,7 +22,6 @@
     "@canvas-js/chain-solana": "0.8.26",
     "@canvas-js/chain-substrate": "0.8.26",
     "@canvas-js/interfaces": "0.8.26",
-    "@canvas-js/signed-cid": "0.8.26",
-    "@cosmjs/amino": "^0.32.2"
+    "@canvas-js/signatures": "0.8.26"
   }
 }

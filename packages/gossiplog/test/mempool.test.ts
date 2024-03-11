@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 import type { Signature, Message } from "@canvas-js/interfaces"
-import { Ed25519Signer } from "@canvas-js/signed-cid"
+import { Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { AbstractGossipLog, decodeId } from "@canvas-js/gossiplog"
 
 import { testPlatforms } from "./utils.js"
@@ -12,7 +12,7 @@ const mempoolTest = async (
 	topic: string,
 	log: AbstractGossipLog<string, void>,
 ) => {
-	const signer = new Ed25519Signer()
+	const signer = new Ed25519DelegateSigner()
 
 	const messageA = { topic, clock: 1, parents: [], payload: "foo" }
 	const signatureA = signer.sign(messageA)
@@ -44,36 +44,26 @@ testPlatforms("insert messages out-of-order, with ancestor indexing", async (t, 
 	const topic = randomUUID()
 	const results: { id: string; payload: string }[] = []
 
-	const validate = (payload: unknown): payload is string => typeof payload === "string"
 	const apply = (id: string, signature: Signature, message: Message<string>) => {
 		results.push({ id, payload: message.payload })
 	}
 
-	const log = await openGossipLog(t, {
-		topic,
-		indexAncestors: true,
-		apply,
-		validate,
-	})
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	await mempoolTest(t, results, topic, log)
+	await log.close()
 })
 
 testPlatforms("insert messages out-of-order, without ancestor indexing", async (t, openGossipLog) => {
 	const topic = randomUUID()
 	const results: { id: string; payload: string }[] = []
 
-	const validate = (payload: unknown): payload is string => typeof payload === "string"
 	const apply = (id: string, signature: Signature, message: Message<string>) => {
 		results.push({ id, payload: message.payload })
 	}
 
-	const log = await openGossipLog(t, {
-		topic,
-		indexAncestors: false,
-		apply,
-		validate,
-	})
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: false })
 
 	await mempoolTest(t, results, topic, log)
+	await log.close()
 })

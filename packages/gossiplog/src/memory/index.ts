@@ -3,9 +3,10 @@ import pDefer from "p-defer"
 
 import { Bound } from "@canvas-js/okra"
 import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"
+import { assert } from "@canvas-js/utils"
 
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
-import { assert, SyncDeadlockError } from "../utils.js"
+import { SyncDeadlockError } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {

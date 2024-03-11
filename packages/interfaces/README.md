@@ -85,12 +85,12 @@ export type Session<Data = any> = {
   /** did:key URI of the ephemeral session key used to sign subsequent actions */
   publicKey: string
 
-	/** chain-specific session payload, e.g. a SIWE message & signature */
-	authorizationData: AuthorizationData
+  /** chain-specific session payload, e.g. a SIWE message & signature */
+  authorizationData: AuthorizationData
 
-	blockhash: string | null
-	timestamp: number
-	duration: number | null
+  blockhash: string | null
+  timestamp: number
+  duration: number | null
 }
 ```
 
@@ -103,7 +103,7 @@ import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
 import type { Awaitable } from "./Awaitable.js"
 
-export interface SessionSigner extends Signer<Message<Action | Session>> {
+export interface SessionSigner extends Signer<Action | Session> {
   match: (chain: string) => boolean
 
   /**
