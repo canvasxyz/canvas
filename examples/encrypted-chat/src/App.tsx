@@ -30,6 +30,15 @@ const ChatApp: React.FC = () => {
     setView(VIEWS.Welcome);
   }
 
+	const clearIndexDB = async () => {
+		const dbs = await window.indexedDB.databases()
+		dbs.forEach(db => { 
+			if (db.name) {
+				window.indexedDB.deleteDatabase(db.name);
+			}
+		});
+	}
+
   return (
     <div>
       <div className="fixed flex justify-between top-0 p-4 w-full">
@@ -60,6 +69,10 @@ const ChatApp: React.FC = () => {
           <WelcomeView />
         }
       </div>
+
+			<button className="fixed bottom-4 left-4 bg-red-400 hover:bg-red-400 text-white py-1 px-2 mt-4 text-xs rounded" onClick={clearIndexDB}>
+				Clear cache
+			</button>
     </div>
   )
 };
