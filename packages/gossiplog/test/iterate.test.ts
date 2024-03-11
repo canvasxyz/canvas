@@ -18,8 +18,6 @@ testPlatforms("append three messages", async (t, openGossipLog) => {
 		[bar, signer.uri, { topic, clock: 2, parents: [foo], payload: "bar" }],
 		[baz, signer.uri, { topic, clock: 3, parents: [bar], payload: "baz" }],
 	])
-
-	await log.close()
 })
 
 testPlatforms("insert three concurrent messages and append a fourth", async (t, openGossipLog) => {
@@ -50,6 +48,4 @@ testPlatforms("insert three concurrent messages and append a fourth", async (t, 
 		...entries,
 		[tailId, signer.uri, { topic, clock: 2, parents: entries.map(([id]) => id), payload: "qux" }],
 	])
-
-	await log.close()
 })

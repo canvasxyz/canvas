@@ -54,10 +54,26 @@ export const testPlatforms = (
 				}
 			: `postgresql://localhost:5432/test`
 
-	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
-	test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(init))
-	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(init, getDirectory(t)))
-	test(`Postgres - ${name}`, macro, (t, init) => GossipLogPostgres.open(init, pgUrl))
+	test(`Memory - ${name}`, macro, async (t, init) => {
+		const log = await GossipLogMemory.open(init)
+		t.teardown(() => log.close())
+		return log
+	})
+	test(`Browser - ${name}`, macro, async (t, init) => {
+		const log = await GossipLogBrowser.open(init)
+		t.teardown(() => log.close())
+		return log
+	})
+	test(`NodeJS - ${name}`, macro, async (t, init) => {
+		const log = await GossipLogNode.open(init, getDirectory(t))
+		t.teardown(() => log.close())
+		return log
+	})
+	test(`Postgres - ${name}`, macro, async (t, init) => {
+		const log = await GossipLogPostgres.open(init, pgUrl)
+		t.teardown(() => log.close())
+		return log
+	})
 }
 
 export const getPublicKey = <T>([id, { publicKey }, message]: [string, Signature, Message<T>]): [

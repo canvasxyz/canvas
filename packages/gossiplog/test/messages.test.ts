@@ -22,8 +22,6 @@ testPlatforms("append messages", async (t, openGossipLog) => {
 		[idB, signer.uri, { topic, clock: 2, parents: [idA], payload: "bar" }],
 		[idC, signer.uri, { topic, clock: 3, parents: [idB], payload: "baz" }],
 	])
-
-	await log.close()
 })
 
 testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
@@ -48,8 +46,6 @@ testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
 	entries.sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
 
 	t.deepEqual(await collect(log.iterate(), ([id, { publicKey }, message]) => [id, publicKey, message]), entries)
-
-	await log.close()
 })
 
 testPlatforms("append to multiple parents", async (t, openGossipLog) => {
@@ -78,6 +74,4 @@ testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 	const [_, message] = await log.get(id)
 	t.deepEqual(message, { topic, clock: 2, parents: entries.map(([id]) => id), payload })
 	t.deepEqual(await collect(log.iterate(), getPublicKey), [...entries, [id, signer.uri, message]])
-
-	await log.close()
 })
