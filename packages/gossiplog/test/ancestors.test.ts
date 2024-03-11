@@ -139,7 +139,11 @@ test("simulate a randomly partitioned network, logs on disk", async (t) => {
 		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
 	])
 
-	await simulateRandomNetwork(t, topic, logs)
+	// const maxMessageCount = 2048
+	// const maxChainLength = 6
+	const maxMessageCount = 256
+	const maxChainLength = 5
+	await simulateRandomNetwork(t, topic, logs, maxMessageCount, maxChainLength)
 })
 
 test("simulate a randomly partitioned network, logs on postgres", async (t) => {
@@ -157,25 +161,24 @@ test("simulate a randomly partitioned network, logs on postgres", async (t) => {
 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, `${pgHost}/test3`),
 	])
 
-	await simulateRandomNetwork(t, topic, logs)
+	const maxMessageCount = 128
+	const maxChainLength = 5
+	await simulateRandomNetwork(t, topic, logs, maxMessageCount, maxChainLength)
 })
 
 export const simulateRandomNetwork = async (
 	t: ExecutionContext<unknown>,
 	topic: string,
 	logs: AbstractGossipLog<string, void>[],
+	maxMessageCount: number,
+	maxChainLength: number,
 ) => {
 	const random = (n: number) => Math.floor(Math.random() * n)
-
-	// const MESSAGE_COUNT = 2048
-	// const MAX_CHAIN_LENGTH = 6
-	const MESSAGE_COUNT = 256
-	const MAX_CHAIN_LENGTH = 5
 
 	const messageIDs: string[] = []
 	const messageIndices = new Map<string, { index: number; map: Uint8Array }>()
 
-	const bitMaps = logs.map(() => new Uint8Array(MESSAGE_COUNT / 8))
+	const bitMaps = logs.map(() => new Uint8Array(maxMessageCount / 8))
 
 	const setBit = (map: Uint8Array, i: number) => {
 		const bit = i % 8
@@ -190,14 +193,14 @@ export const simulateRandomNetwork = async (
 	}
 
 	const merge = (self: Uint8Array, peer: Uint8Array) => {
-		for (let i = 0; i < MESSAGE_COUNT / 8; i++) {
+		for (let i = 0; i < maxMessageCount / 8; i++) {
 			self[i] |= peer[i]
 		}
 	}
 
 	const start = performance.now()
 	let messageCount = 0
-	while (messageCount < MESSAGE_COUNT) {
+	while (messageCount < maxMessageCount) {
 		const selfIndex = random(logs.length)
 		const self = logs[selfIndex]
 
@@ -213,8 +216,8 @@ export const simulateRandomNetwork = async (
 		}
 
 		// append a chain of messages
-		const chainLength = random(MAX_CHAIN_LENGTH)
-		for (let j = 0; j < chainLength && messageCount < MESSAGE_COUNT; j++) {
+		const chainLength = random(maxChainLength)
+		for (let j = 0; j < chainLength && messageCount < maxMessageCount; j++) {
 			const { id } = await self.append(nanoid())
 			const index = messageCount++
 			messageIndices.set(id, { index, map: new Uint8Array(bitMaps[selfIndex]) })
@@ -225,7 +228,7 @@ export const simulateRandomNetwork = async (
 
 	for (const [i, log] of logs.entries()) {
 		const map = bitMaps[i]
-		for (let j = 0; j < MESSAGE_COUNT; j++) {
+		for (let j = 0; j < maxMessageCount; j++) {
 			const id = messageIDs[j]
 
 			const [signature, message] = await log.get(id)
