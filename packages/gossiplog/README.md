@@ -57,21 +57,21 @@ We can derive a logical clock value for each message from its depth in the graph
 
 ### Message signatures
 
-GossipLog requires every message to be signed with a [`@canvas-js/signed-cid`](https://github.com/canvasxyz/canvas/tree/main/packages/signed-cid) signature.
+GossipLog requires every message to be signed with a `Signature` object.
 
 ```ts
 type Signature = {
+  codec: string /** "dag-cbor" | "dag-json" */
   publicKey: string /** did:key URI */
   signature: Uint8Array
-  cid: CID
 }
 ```
 
-The `cid` in a message signature is the CID of the `Message` object using the `dag-cbor` codec and `sha2-256` multihash digest. The `signature` signs the raw bytes of the CID (`cid.bytes`); the `Signature` object carries all the relevant contextual data including the signature type and the public key. Most GossipLog methods pass signatures alongside messages using tuple types like `[signature: Signature, message: Message<Payload>]`.
+The `codec` identifies how the message was serialized to bytes for signing. `dag-cbor` and `dag-json` are the two codecs supported by default. Only Ed25519 did:key URIs are supported by default. These can be extended by providing a custom signer implementation and providing a custom `verifySignature` method to the init object.
 
 ### Message signers
 
-Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use one the signer class exported from `@canvas-js/signatures`.
+Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use the signer class exported from `@canvas-js/signatures`.
 
 ```ts
 import { Ed25519DelegateSigner } from "@canvas-js/signatures"
@@ -79,7 +79,7 @@ import { Ed25519DelegateSigner } from "@canvas-js/signatures"
 const signer = new Ed25519DelegateSigner()
 ```
 
-Once you have a signer, you can add it `GossipLogInit` to use it by default for all appends, or pass a specific signer into each call to `append` individually.
+Once you have a signer, you can add it to `GossipLogInit` to use it by default for all appends, or pass a specific signer into each call to `append` individually.
 
 ```ts
 const signerA = new Ed25519DelegateSigner()
