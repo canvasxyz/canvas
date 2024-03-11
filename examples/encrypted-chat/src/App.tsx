@@ -71,7 +71,7 @@ const ChatApp: React.FC = () => {
       </div>
 
 			<button className="fixed bottom-4 left-4 bg-red-400 hover:bg-red-400 text-white py-1 px-2 mt-4 text-xs rounded" onClick={clearIndexDB}>
-				Clear cache
+				Clear data
 			</button>
     </div>
   )
