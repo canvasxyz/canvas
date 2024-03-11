@@ -133,9 +133,9 @@ test("simulate a randomly partitioned network", async (t) => {
 	const topic = randomUUID()
 
 	const logs = await Promise.all([
-		PostgresGossipLog.open({ topic, apply, validate, indexAncestors: true }, "postgresql://localhost:5432/test"),
-		PostgresGossipLog.open({ topic, apply, validate, indexAncestors: true }, "postgresql://localhost:5432/test2"),
-		PostgresGossipLog.open({ topic, apply, validate, indexAncestors: true }, "postgresql://localhost:5432/test3"),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "postgresql://localhost:5432/test"),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "postgresql://localhost:5432/test2"),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "postgresql://localhost:5432/test3"),
 	])
 
 	const random = (n: number) => Math.floor(Math.random() * n)
