@@ -150,15 +150,21 @@ test("simulate a randomly partitioned network, logs on postgres", async (t) => {
 	t.timeout(240 * 1000)
 	const topic = randomUUID()
 
-	const pgHost =
+	const getPgConfig = (db: string) =>
 		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
-			? "postgresql://postgres:postgres@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT}"
-			: "postgresql://localhost:5432"
+			? {
+					user: "postgres",
+					database: "postgres",
+					password: "postgres",
+					port: process.env.POSTGRES_PORT,
+					host: process.env.POSTGRES_HOST,
+			  }
+			: `postgresql://localhost:5432/${db}`
 
 	const logs: AbstractGossipLog<string, void>[] = await Promise.all([
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, `${pgHost}/test`),
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, `${pgHost}/test2`),
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, `${pgHost}/test3`),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "test"),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "test2"),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "test3"),
 	])
 
 	const maxMessageCount = 128

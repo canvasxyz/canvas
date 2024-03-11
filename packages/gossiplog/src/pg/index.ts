@@ -3,7 +3,6 @@ import pDefer from "p-defer"
 
 import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { PostgresTree, PostgresStore } from "@canvas-js/okra-pg"
-import { Awaitable } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 import pg from "pg"
@@ -110,9 +109,12 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 	public static async open<Payload, Result>(
 		init: GossipLogInit<Payload, Result>,
-		connectionString: string,
+		connectionConfig: string | pg.PoolConfig,
 	): Promise<GossipLog<Payload, Result>> {
-		const pool = new pg.Pool({ connectionString })
+		const pool =
+			typeof connectionConfig === "string"
+				? new pg.Pool({ connectionString: connectionConfig })
+				: new pg.Pool(connectionConfig)
 
 		const messagesClient = await pool.connect()
 		const headsClient = await pool.connect()
