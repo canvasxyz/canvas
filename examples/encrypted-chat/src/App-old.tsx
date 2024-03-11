@@ -6,7 +6,7 @@ import type { Canvas } from "@canvas-js/core"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
-import { usePrivkey } from "./hooks/usePrivkeys"
+import { usePrivkey } from "./hooks/privkeys"
 
 const formatAddress = (address: string | null | undefined) => {
 	return address?.slice(0, 6)
@@ -36,13 +36,6 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 					groupKeys: "string",
 					key: "string",
 				},
-				messages: {
-					id: "primary",
-					address: "string",
-					text: "string",
-					timestamp: "string",
-					$indexes: [["timestamp"] /*["address", "timestamp"]*/],
-				},
 				privateMessages: {
 					id: "primary",
 					ciphertext: "string",
@@ -66,9 +59,6 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 						key: groupPublicKey,
 					})
 				},
-				sendLobbyMessage: (db, { text }, { address, timestamp, id }) => {
-					db.set("messages", { msgid: id, address: address, text, timestamp })
-				},
 				sendPrivateMessage: (db, { group, ciphertext }, { timestamp, id }) => {
 					// TODO: check address is in group
 					db.set("privateMessages", { id, ciphertext, group, timestamp })
@@ -77,19 +67,12 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 		},
 	})
 
-	// app?.updateSigners
-
 	const people = useLiveQuery(app, "encryptionKeys", { orderBy: { address: "desc" } })
-	// const lobby = useLiveQuery(app, "messages", { orderBy: { timestamp: "desc" } })
 
 	return {
 		wallet,
 		app,
 		people,
-		sendLobbyMessage: async (message: string) => {
-			if (!app) throw new Error()
-			return app.actions.sendLobbyMessage(message)
-		},
 		registerEncryptionKey: async (privateKey: string) => {
 			if (!app) throw new Error()
 			const key = getEncryptionPublicKey(privateKey.slice(2))
@@ -138,12 +121,6 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 		},
 	}
 }
-
-// const chat = useChat('my-app', mud.burnerWallet.privateKey)
-// chat.sendLobbyMessage('hi')
-// chat.sendPrivateMessage('hey whats going on', theirAddress)
-// const messages = useLobby() // useLobbyConversation?
-// const privateMessages = usePrivateMessages() // does this need separate hooks for DMSelector, DMConversation?
 
 function Wrapper() {
 	const privkey1 = usePrivkey("wallet-privkey1")
