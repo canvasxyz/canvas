@@ -12,6 +12,7 @@ const pgclient = new Client({
 
 pgclient.connect()
 
+// we have to nest each query because otherwise pg.Client treats them as a transaction
 pgclient.query("CREATE DATABASE test", (err, res) => {
 	if (err) throw err
 	pgclient.query("CREATE DATABASE test2", (err2, res2) => {

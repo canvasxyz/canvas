@@ -48,20 +48,17 @@ jobs:
         with:
           node-version: 18.x
 
-      - name: Set up Postgres deps
-        run: npm install pg
-
-      - name: Set up Postgres
-        run: node scripts/setupPostgres.cjs
-        env:
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-
       - name: Install dependencies
         run: npm ci
 
       - name: Build
         run: npm run build
+
+      - name: Set up Postgres
+        run: node scripts/setupPostgresTestEnv.cjs
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
 
       - name: Run @canvas-js/gossiplog tests
         run: npm run test --workspace=@canvas-js/gossiplog --match="\!simulate a randomly partitioned network"

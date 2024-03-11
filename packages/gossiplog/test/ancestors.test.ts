@@ -142,7 +142,7 @@ test("simulate a randomly partitioned network, logs on disk", async (t) => {
 	await simulateRandomNetwork(t, topic, logs)
 })
 
-test("simulate a randomly partitioned network, logs on pg", async (t) => {
+test("simulate a randomly partitioned network, logs on postgres", async (t) => {
 	t.timeout(240 * 1000)
 	const topic = randomUUID()
 
