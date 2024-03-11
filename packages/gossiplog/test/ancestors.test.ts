@@ -146,10 +146,15 @@ test("simulate a randomly partitioned network, logs on pg", async (t) => {
 	t.timeout(240 * 1000)
 	const topic = randomUUID()
 
+	const pgHost =
+		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
+			? "postgresql://postgres:postgres@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT}"
+			: "postgresql://localhost:5432"
+
 	const logs: AbstractGossipLog<string, void>[] = await Promise.all([
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "postgresql://localhost:5432/test"),
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "postgresql://localhost:5432/test2"),
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, "postgresql://localhost:5432/test3"),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, `${pgHost}/test`),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, `${pgHost}/test2`),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, `${pgHost}/test3`),
 	])
 
 	await simulateRandomNetwork(t, topic, logs)

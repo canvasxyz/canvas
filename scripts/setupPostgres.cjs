@@ -1,3 +1,5 @@
+// set up postgres databases for tests
+
 const { Client } = require("pg")
 
 const pgclient = new Client({
