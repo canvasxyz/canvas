@@ -1,27 +1,27 @@
 {
-  "name": "@canvas-js/interfaces",
-  "version": "0.8.26",
-  "type": "module",
-  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
-  "files": [
-    "lib"
-  ],
-  "scripts": {
-    "test": "ava"
-  },
-  "dependencies": {
-    "multiformats": "^13.0.1"
-  },
-  "devDependencies": {
-    "@canvas-js/chain-cosmos": "0.8.26",
-    "@canvas-js/chain-ethereum": "0.8.26",
-    "@canvas-js/chain-ethereum-viem": "0.8.26",
-    "@canvas-js/chain-near": "0.8.26",
-    "@canvas-js/chain-solana": "0.8.26",
-    "@canvas-js/chain-substrate": "0.8.26",
-    "@canvas-js/interfaces": "0.8.26",
-    "@canvas-js/signatures": "0.8.26"
-  }
+	"name": "@canvas-js/interfaces",
+	"version": "0.8.26",
+	"type": "module",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"files": [
+		"lib"
+	],
+	"scripts": {
+		"test": "ava"
+	},
+	"dependencies": {
+		"multiformats": "^13.0.1"
+	},
+	"devDependencies": {
+		"@canvas-js/chain-cosmos": "0.8.26",
+		"@canvas-js/chain-ethereum": "0.8.26",
+		"@canvas-js/chain-ethereum-viem": "0.8.26",
+		"@canvas-js/chain-near": "0.8.26",
+		"@canvas-js/chain-solana": "0.8.26",
+		"@canvas-js/chain-substrate": "0.8.26",
+		"@canvas-js/interfaces": "0.8.26",
+		"@canvas-js/signatures": "0.8.26"
+	}
 }
