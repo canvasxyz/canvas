@@ -26,7 +26,7 @@
 	"scripts": {
 		"generate": "npm run generate-sync",
 		"generate-sync": "protons ./src/protocols/sync.proto",
-		"test": "ava --concurrency 1"
+		"test": "ava --serial"
 	},
 	"peerDependencies": {
 		"@chainsafe/libp2p-gossipsub": "^11.0.1"
