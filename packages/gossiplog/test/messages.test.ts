@@ -2,18 +2,17 @@ import { randomUUID } from "node:crypto"
 import { nanoid } from "nanoid"
 
 import { Signature, Message } from "@canvas-js/interfaces"
-import { Ed25519Signer } from "@canvas-js/signed-cid"
+import { Ed25519DelegateSigner } from "@canvas-js/signatures"
 
 import { collect, getPublicKey, testPlatforms } from "./utils.js"
 
 const apply = (id: string, signature: Signature, message: Message<string>) => {}
-const validate = (payload: unknown): payload is string => true
 
 testPlatforms("append messages", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, validate })
+	const log = await openGossipLog(t, { topic, apply })
 
-	const signer = new Ed25519Signer()
+	const signer = new Ed25519DelegateSigner()
 	const { id: idA } = await log.append("foo", { signer })
 	const { id: idB } = await log.append("bar", { signer })
 	const { id: idC } = await log.append("baz", { signer })
@@ -23,13 +22,15 @@ testPlatforms("append messages", async (t, openGossipLog) => {
 		[idB, signer.uri, { topic, clock: 2, parents: [idA], payload: "bar" }],
 		[idC, signer.uri, { topic, clock: 3, parents: [idB], payload: "baz" }],
 	])
+
+	await log.close()
 })
 
 testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, validate })
+	const log = await openGossipLog(t, { topic, apply })
 
-	const signer = new Ed25519Signer()
+	const signer = new Ed25519DelegateSigner()
 	const a = { topic, clock: 1, parents: [], payload: nanoid() }
 	const b = { topic, clock: 1, parents: [], payload: nanoid() }
 	const c = { topic, clock: 1, parents: [], payload: nanoid() }
@@ -47,13 +48,15 @@ testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
 	entries.sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
 
 	t.deepEqual(await collect(log.iterate(), ([id, { publicKey }, message]) => [id, publicKey, message]), entries)
+
+	await log.close()
 })
 
 testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, validate })
+	const log = await openGossipLog(t, { topic, apply })
 
-	const signer = new Ed25519Signer()
+	const signer = new Ed25519DelegateSigner()
 	const a = { topic, clock: 1, parents: [], payload: nanoid() }
 	const b = { topic, clock: 1, parents: [], payload: nanoid() }
 	const c = { topic, clock: 1, parents: [], payload: nanoid() }
@@ -75,4 +78,6 @@ testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 	const [_, message] = await log.get(id)
 	t.deepEqual(message, { topic, clock: 2, parents: entries.map(([id]) => id), payload })
 	t.deepEqual(await collect(log.iterate(), getPublicKey), [...entries, [id, signer.uri, message]])
+
+	await log.close()
 })

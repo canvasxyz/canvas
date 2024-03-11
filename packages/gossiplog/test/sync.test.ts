@@ -18,8 +18,8 @@ test("wait for initial sync", async (t) => {
 	const validate = (payload: unknown): payload is string => typeof payload === "string"
 
 	const messageLogs = {
-		a: await GossipLog.open({ topic, apply, validate }),
-		b: await GossipLog.open({ topic, apply, validate }),
+		a: await GossipLog.open({ topic, apply }),
+		b: await GossipLog.open({ topic, apply }),
 	}
 
 	await Promise.all([

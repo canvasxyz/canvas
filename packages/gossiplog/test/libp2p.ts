@@ -15,8 +15,7 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { logger } from "@libp2p/logger"
 
-import { Signature } from "@canvas-js/signed-cid"
-import { Message } from "@canvas-js/interfaces"
+import { Message, Signature } from "@canvas-js/interfaces"
 import { GossipLogEvents } from "@canvas-js/gossiplog"
 import { GossipLogService, GossipLogServiceInit, gossiplog } from "@canvas-js/gossiplog/service"
 

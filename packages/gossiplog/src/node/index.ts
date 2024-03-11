@@ -2,9 +2,9 @@ import fs from "node:fs"
 
 import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { Environment, Transaction, Tree } from "@canvas-js/okra-node"
+import { assert } from "@canvas-js/utils"
 
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
-import { assert } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(

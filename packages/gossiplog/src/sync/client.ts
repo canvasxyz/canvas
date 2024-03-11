@@ -6,10 +6,10 @@ import { pushable, Pushable } from "it-pushable"
 import { Uint8ArrayList } from "uint8arraylist"
 
 import type { Key, Node, Source } from "@canvas-js/okra"
+import { assert } from "@canvas-js/utils"
 
 import * as Sync from "#protocols/sync"
 
-import { assert } from "../utils.js"
 import { encodeKey, decodeNode } from "./utils.js"
 
 export async function* decodeResponses(source: AsyncIterable<Uint8ArrayList>) {

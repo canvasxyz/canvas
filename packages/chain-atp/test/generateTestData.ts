@@ -1,6 +1,6 @@
 import * as ATP from "@atproto/api"
 import { ATPSigner } from "@canvas-js/chain-atp"
-import { Secp256k1Signer } from "@canvas-js/signed-cid"
+import { Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { randomUUID } from "crypto"
 import { writeFile } from "fs/promises"
 import { stdin, stdout } from "process"
@@ -15,16 +15,13 @@ const identifier = await rl.question("Enter identifier: ")
 const password = await rl.question("Enter app password: ")
 rl.close()
 
-await agent.login({
-	identifier,
-	password,
-})
+await agent.login({ identifier, password })
 
 const address = agent.session!.did
 
 const topic = randomUUID()
 
-const signer = new Secp256k1Signer()
+const signer = new Ed25519DelegateSigner()
 const message = ATPSigner.createAuthenticationMessage(topic, signer.uri, address)
 const { uri, cid } = await agent.post({ text: message })
 

@@ -1,14 +1,11 @@
 {
-  "include": ["src"],
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "module": "Node16",
-    "moduleResolution": "Node16",
-    "rootDir": "src",
-    "outDir": "lib"
-  },
-  "references": [
-    { "path": "../core" },
-    { "path": "../chain-ethereum" }
-  ]
+	"include": ["src"],
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"module": "Node16",
+		"moduleResolution": "Node16",
+		"rootDir": "src",
+		"outDir": "lib"
+	},
+	"references": [{ "path": "../core" }, { "path": "../signatures" }, { "path": "../chain-ethereum" }]
 }

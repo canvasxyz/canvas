@@ -2,7 +2,7 @@ import { CID } from "multiformats"
 import * as cbor from "@ipld/dag-cbor"
 import { verifySignature } from "@atproto/crypto"
 
-import { assert } from "./utils.js"
+import { assert } from "@canvas-js/utils"
 
 export type Commit = {
 	did: string
