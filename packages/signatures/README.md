@@ -42,7 +42,7 @@ accomplish this, the message is signed by the publicKey on the
 signature, which you can think of as the user's session key.
 
 To authorize a session key, the first time it is used on the log,
-it must be used to sign a Message<Session> which authorizes itself
+it must be used to sign a `Message<Session>` which authorizes itself
 (`publicKey`) to be used by the user (`address`).
 
 This authorization is stored in an `AuthorizationData` object
