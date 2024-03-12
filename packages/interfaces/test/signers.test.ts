@@ -1,7 +1,7 @@
 import test from "ava"
 
 import { Secp256k1Wallet, StdSignDoc } from "@cosmjs/amino"
-import * as secp from "@noble/secp256k1"
+import { secp256k1 } from "@noble/curves/secp256k1"
 
 import { Action, Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
 
@@ -23,7 +23,7 @@ const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 	{
 		name: "chain-cosmos-amino",
 		createSigner: async () => {
-			const wallet = await Secp256k1Wallet.fromKey(secp.utils.randomPrivateKey())
+			const wallet = await Secp256k1Wallet.fromKey(secp256k1.utils.randomPrivateKey())
 
 			return new CosmosSigner({
 				signer: {
