@@ -116,7 +116,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 
 	private getSessionKey = (topic: string, address: string) => `canvas/${topic}/${address}`
 
-	private getCachedSession(
+	public getCachedSession(
 		topic: string,
 		address: string,
 	): { session: Session; signer: Signer<Action | Session<AuthorizationData>> } | null {
