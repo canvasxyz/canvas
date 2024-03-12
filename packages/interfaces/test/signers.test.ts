@@ -1,5 +1,8 @@
 import test from "ava"
 
+import { Secp256k1Wallet, StdSignDoc } from "@cosmjs/amino"
+import { secp256k1 } from "@noble/curves/secp256k1"
+
 import { Action, Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
@@ -16,6 +19,23 @@ const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 	{
 		name: "chain-cosmos",
 		createSigner: async () => new CosmosSigner(),
+	},
+	{
+		name: "chain-cosmos-amino",
+		createSigner: async () => {
+			const wallet = await Secp256k1Wallet.fromKey(secp256k1.utils.randomPrivateKey())
+
+			return new CosmosSigner({
+				signer: {
+					type: "amino",
+					getAddress: async () => (await wallet.getAccounts())[0].address,
+					getChainId: async () => "cosmos",
+					signAmino: async (chainId: string, signer: string, signDoc: StdSignDoc) => {
+						return wallet.signAmino(signer, signDoc)
+					},
+				},
+			})
+		},
 	},
 	{
 		name: "chain-near",
@@ -62,6 +82,21 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 
 		const session = await signer.getSession(topic)
 		await t.notThrowsAsync(() => Promise.resolve(signer.verifySession(topic, session)))
+	})
+
+	test(`${name} - create and verify session fails on incorrect signature`, async (t) => {
+		const topic = "example:signer"
+		const signer = await createSigner()
+
+		const session = await signer.getSession(topic)
+		// tamper with the session
+		session.timestamp = 0
+		try {
+			await signer.verifySession(topic, session)
+			t.fail("expected verifySession to throw")
+		} catch (e) {
+			t.pass()
+		}
 	})
 
 	test(`${name} - sign session and verify session signature`, async (t) => {
