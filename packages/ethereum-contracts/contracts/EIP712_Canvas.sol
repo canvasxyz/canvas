@@ -21,7 +21,6 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "./CID.sol";
 
 string constant sessionType = "Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
 string constant actionType = "Action(address address,bytes args,string blockhash,string name,uint256 timestamp)";
@@ -92,19 +91,6 @@ library EIP712_Canvas {
             mstore(add(ptr, 0x22), structHash)
             digest := keccak256(ptr, 0x42)
         }
-    }
-
-    /**
-     * Create a CID from a multihash.
-     */
-    function _createCID(bytes memory multihash) pure internal returns (bytes memory) {
-        uint256 digestSize;
-        bytes memory digest;
-        // this corresponds to the "raw" digest in the multicodec spec
-        // https://github.com/multiformats/multicodec/blob/696e701b6cb61f54b67a33b002201450d021f312/table.csv#L41
-        (digestSize,digest) = CID.createDigest(0x55, multihash);
-
-        return CID.encodeCID(1, 0x55, digest);
     }
 
     /**
@@ -215,15 +201,6 @@ library EIP712_Canvas {
         string memory name
     ) public pure returns (bool) {
         bytes32 digest = _hashTypedDataV4(hashSessionMessage(sessionMessage), name);
-        bytes memory cid = _createCID(bytes.concat(digest));
-
-        // truncate cid to 32 bytes
-        bytes memory truncatedCid = new bytes(32);
-        for(uint256 i = 0; i < 32 && i < cid.length; i++) {
-            truncatedCid[i] = cid[i];
-        }
-
-        bytes32 truncatedCid32 = bytes32(truncatedCid);
 
         bytes32 r;
         bytes32 s;
@@ -232,12 +209,12 @@ library EIP712_Canvas {
           s := mload(add(signature, 0x40))
         }
 
-        address signerV27 = ECDSA.recover(truncatedCid32, 27, r, s);
+        address signerV27 = ECDSA.recover(digest, 27, r, s);
         if (signerV27 == expectedAddress) {
             return true;
         }
 
-        address signerV28 = ECDSA.recover(truncatedCid32, 28, r, s);
+        address signerV28 = ECDSA.recover(digest, 28, r, s);
         if (signerV28 == expectedAddress) {
             return true;
         }
@@ -256,15 +233,6 @@ library EIP712_Canvas {
         string memory name
     ) public pure returns (bool) {
         bytes32 digest = _hashTypedDataV4(hashActionMessage(actionMessage), name);
-        bytes memory cid = _createCID(bytes.concat(digest));
-
-        // truncate cid to 32 bytes
-        bytes memory truncatedCid = new bytes(32);
-        for(uint256 i = 0; i < 32 && i < cid.length; i++) {
-            truncatedCid[i] = cid[i];
-        }
-        bytes32 truncatedCid32 = bytes32(truncatedCid);
-
 
         bytes32 r;
         bytes32 s;
@@ -273,12 +241,12 @@ library EIP712_Canvas {
           s := mload(add(signature, 0x40))
         }
 
-        address signerV27 = ECDSA.recover(truncatedCid32, 27, r, s);
+        address signerV27 = ECDSA.recover(digest, 27, r, s);
         if (signerV27 == expectedAddress) {
             return true;
         }
 
-        address signerV28 = ECDSA.recover(truncatedCid32, 28, r, s);
+        address signerV28 = ECDSA.recover(digest, 28, r, s);
         if (signerV28 == expectedAddress) {
             return true;
         }
