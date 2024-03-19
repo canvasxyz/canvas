@@ -23,6 +23,7 @@ describe("EIP712_Canvas", function () {
 		it("Should verify that a session has been signed by the proper address with getSession", async function () {
 			const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
 			const { decodeURI } = await import("@canvas-js/signatures")
+			// @ts-ignore TS2339
 			const { ethers, utils } = await import("ethers")
 
 			const { contract } = await loadFixture(deployFixture)
@@ -60,6 +61,7 @@ describe("EIP712_Canvas", function () {
 		it("Should verify that a session has been signed by the proper address with sign", async function () {
 			const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
 			const { decodeURI } = await import("@canvas-js/signatures")
+			// @ts-ignore TS2339
 			const { ethers, utils } = await import("ethers")
 
 			const { contract } = await loadFixture(deployFixture)
@@ -106,6 +108,7 @@ describe("EIP712_Canvas", function () {
 
 	describe("contract.verifyActionMessage", function () {
 		it("Should verify that an action has been signed by the proper address with sign", async function () {
+			// @ts-ignore TS2339
 			const { utils } = await import("ethers")
 			const { decodeURI } = await import("@canvas-js/signatures")
 			const { Eip712Signer, Secp256k1DelegateSigner, getAbiString } = await import("@canvas-js/chain-ethereum")
