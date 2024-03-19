@@ -1,367 +1,396 @@
-// import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
-// import { expect } from "chai"
-// import { ethers } from "hardhat"
-// import { serializeActionForContract, serializeSessionForContract } from "./utils.ts"
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
+import { expect } from "chai"
+import { ethers } from "hardhat"
 
-// const topic = "example:contract"
+const topic = "example:contract"
 
-// describe("Contract_Test", function () {
-// 	async function deployFixture() {
-// 		const EIP712_Canvas = await ethers.getContractFactory("EIP712_Canvas")
-// 		const eip712_Canvas = await EIP712_Canvas.deploy()
+describe("Contract_Test", function () {
+	async function deployFixture() {
+		const EIP712_Canvas = await ethers.getContractFactory("EIP712_Canvas")
+		const eip712_Canvas = await EIP712_Canvas.deploy()
 
-// 		const Contract_Example = await ethers.getContractFactory("Contract_Test", {
-// 			libraries: {
-// 				EIP712_Canvas: eip712_Canvas.address,
-// 			},
-// 		})
+		const Contract_Example = await ethers.getContractFactory("Contract_Test", {
+			libraries: {
+				EIP712_Canvas: eip712_Canvas.address,
+			},
+		})
 
-// 		const contract = await Contract_Example.deploy()
-// 		await contract.deployed()
-// 		return { contract }
-// 	}
+		const contract = await Contract_Example.deploy()
+		await contract.deployed()
+		return { contract }
+	}
 
-// 	async function getArgumentsFixture() {
-// 		// This function returns a function that returns the arguments needed to call `contract.claimUpvoted`
+	async function getArgumentsFixture() {
+		// This function returns a function that returns the arguments needed to call `contract.claimUpvoted`
 
-// 		const { decodeURI } = await import("@canvas-js/signatures")
-// 		const { Eip712Signer } = await import("@canvas-js/chain-ethereum")
+		const { decodeURI } = await import("@canvas-js/signatures")
+		const { Eip712Signer, Secp256k1DelegateSigner, getAbiString } = await import("@canvas-js/chain-ethereum")
 
-// 		async function getArguments(args?: any) {
-// 			const signer = new Eip712Signer()
+		async function getArguments(args?: any) {
+			const signer = new Eip712Signer()
 
-// 			const session = (args && args.session) || (await signer.getSession(topic))
+			const session = (args && args.session) || (await signer.getSession(topic))
 
-// 			const clock = 1
-// 			const parents = ["parent1", "parent2"]
-// 			const sessionMessage = { topic, clock, parents, payload: session }
-// 			const sessionMessageSignature = await signer.sign(sessionMessage)
+			const clock = 1
+			const parents = ["parent1", "parent2"]
+			const sessionMessage = { topic, clock, parents, payload: session }
+			const sessionMessageSignature = await signer.sign(sessionMessage)
 
-// 			const { publicKey } = decodeURI(sessionMessageSignature.publicKey)
-// 			const publicKeyHex = Buffer.from(publicKey).toString("hex")
-// 			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
+			// TODO
+			const { publicKey } = decodeURI(sessionMessageSignature.publicKey)
+			const publicKeyHex = Buffer.from(publicKey).toString("hex")
+			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
 
-// 			const sessionMessageForContract = { ...sessionMessage, payload: serializeSessionForContract(session) }
+			const userAddress = session.address.split(":")[2]
+			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
+			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
+			const sessionAddress = ethers.utils.computeAddress(ethers.utils.hexlify(publicKeyBytes))
 
-// 			const action = {
-// 				type: "action" as const,
-// 				address: session.address,
-// 				name: (args && args.action && args.action.name) || "upvote",
-// 				args: (args && args.action && args.action.args) || { post_id: "123456" },
-// 				blockhash: null,
-// 				timestamp: session.timestamp,
-// 			}
-// 			const actionMessage = { topic, clock, parents, payload: action }
-// 			const actionMessageSignature = await signer.sign(actionMessage)
-// 			const actionMessageForContract = { ...actionMessage, payload: await serializeActionForContract(action) }
+			const sessionMessageForContract = {
+				...sessionMessage,
+				payload: {
+					userAddress,
+					sessionAddress,
+					authorizationData: {
+						signature: session.authorizationData.signature,
+					},
+					blockhash: session.blockhash || "",
+					duration: session.duration || 0,
+					publicKey: session.publicKey, // TODO: check against sessionAddress
+					timestamp: session.timestamp,
+				},
+			}
 
-// 			return {
-// 				signer,
-// 				expectedAddress,
-// 				session,
-// 				sessionMessage,
-// 				sessionMessageSignature,
-// 				sessionMessageForContract,
-// 				actionMessage,
-// 				actionMessageSignature,
-// 				actionMessageForContract,
-// 			}
-// 		}
-// 		return { getArguments }
-// 	}
+			const action = {
+				type: "action" as const,
+				address: session.address,
+				name: (args && args.action && args.action.name) || "upvote",
+				args: (args && args.action && args.action.args) || { post_id: "123456" },
+				blockhash: null,
+				timestamp: session.timestamp,
+			}
+			const actionMessage = { topic, clock, parents, payload: action }
+			const actionMessageSignature = await signer.sign(actionMessage)
+			const actionMessageForContract = {
+				...actionMessage,
+				payload: {
+					userAddress,
+					sessionAddress,
+					args: getAbiString(action.args),
+					blockhash: action.blockhash || "",
+					publicKey: session.publicKey, // TODO: check against sessionAddress
+					name: action.name,
+					timestamp: action.timestamp,
+				},
+			}
 
-// 	describe("Contract_Example.claimUpvoted", function () {
-// 		it("try to call claimUpvoted with a valid session and action, should only be applied once", async () => {
-// 			const { contract } = await loadFixture(deployFixture)
-// 			const { getArguments } = await loadFixture(getArgumentsFixture)
+			return {
+				signer,
+				expectedAddress,
+				session,
+				sessionMessage,
+				sessionMessageSignature,
+				sessionMessageForContract,
+				actionMessage,
+				actionMessageSignature,
+				actionMessageForContract,
+			}
+		}
+		return { getArguments }
+	}
 
-// 			expect(await contract.upvotes("123456")).to.equal(0)
+	describe("Contract_Example.claimUpvoted", function () {
+		it("try to call claimUpvoted with a valid session and action, should only be applied once", async () => {
+			const { contract } = await loadFixture(deployFixture)
+			const { getArguments } = await loadFixture(getArgumentsFixture)
 
-// 			const {
-// 				expectedAddress,
-// 				sessionMessageForContract,
-// 				sessionMessageSignature,
-// 				actionMessageForContract,
-// 				actionMessageSignature,
-// 			} = await getArguments()
+			expect(await contract.upvotes("123456")).to.equal(0)
 
-// 			// submit the upvote action
-// 			await contract.claimUpvoted(
-// 				expectedAddress,
-// 				sessionMessageForContract,
-// 				sessionMessageSignature.signature,
-// 				actionMessageForContract,
-// 				actionMessageSignature.signature,
-// 			)
+			const {
+				expectedAddress,
+				sessionMessageForContract,
+				sessionMessageSignature,
+				actionMessageForContract,
+				actionMessageSignature,
+			} = await getArguments()
 
-// 			// Expect the upvote to have been applied
-// 			expect(await contract.upvotes("123456")).to.equal(1)
+			// submit the upvote action
+			await contract.claimUpvoted(
+				expectedAddress,
+				sessionMessageForContract,
+				sessionMessageSignature.signature,
+				actionMessageForContract,
+				actionMessageSignature.signature,
+			)
 
-// 			// If we submit the action again, it should be rejected
-// 			try {
-// 				await contract.claimUpvoted(
-// 					expectedAddress,
-// 					sessionMessageForContract,
-// 					sessionMessageSignature.signature,
-// 					actionMessageForContract,
-// 					actionMessageSignature.signature,
-// 				),
-// 					expect.fail()
-// 			} catch (e: any) {
-// 				expect(e.message).to.equal(
-// 					"VM Exception while processing transaction: reverted with reason string 'Action has already been processed'",
-// 				)
-// 			}
+			// Expect the upvote to have been applied
+			expect(await contract.upvotes("123456")).to.equal(1)
 
-// 			// Expect the upvote to still be 1
-// 			expect(await contract.upvotes("123456")).to.equal(1)
-// 		})
+			// If we submit the action again, it should be rejected
+			try {
+				await contract.claimUpvoted(
+					expectedAddress,
+					sessionMessageForContract,
+					sessionMessageSignature.signature,
+					actionMessageForContract,
+					actionMessageSignature.signature,
+				),
+					expect.fail()
+			} catch (e: any) {
+				expect(e.message).to.equal(
+					"VM Exception while processing transaction: reverted with reason string 'Action has already been processed'",
+				)
+			}
 
-// 		it("claimUpvoted must be called with a session signed by the wallet address", async () => {
-// 			const { contract } = await loadFixture(deployFixture)
-// 			const { getArguments } = await loadFixture(getArgumentsFixture)
-// 			expect(await contract.upvotes("123456")).to.equal(0)
+			// Expect the upvote to still be 1
+			expect(await contract.upvotes("123456")).to.equal(1)
+		})
 
-// 			const {
-// 				expectedAddress,
-// 				sessionMessageForContract,
-// 				sessionMessageSignature,
-// 				actionMessageForContract,
-// 				actionMessageSignature,
-// 			} = await getArguments()
+		it("claimUpvoted must be called with a session signed by the wallet address", async () => {
+			const { contract } = await loadFixture(deployFixture)
+			const { getArguments } = await loadFixture(getArgumentsFixture)
+			expect(await contract.upvotes("123456")).to.equal(0)
 
-// 			const { sessionMessageForContract: sessionMessageForContract2 } = await getArguments()
+			const {
+				expectedAddress,
+				sessionMessageForContract,
+				sessionMessageSignature,
+				actionMessageForContract,
+				actionMessageSignature,
+			} = await getArguments()
 
-// 			// replace the session address with an incorrect one
-// 			sessionMessageForContract.payload.address_ = sessionMessageForContract2.payload.address_
+			const { sessionMessageForContract: sessionMessageForContract2 } = await getArguments()
 
-// 			// submit the upvote action
-// 			try {
-// 				await contract.claimUpvoted(
-// 					expectedAddress,
-// 					sessionMessageForContract,
-// 					sessionMessageSignature.signature,
-// 					actionMessageForContract,
-// 					actionMessageSignature.signature,
-// 				)
-// 				expect.fail()
-// 			} catch (e: any) {
-// 				expect(e.message).to.equal(
-// 					"VM Exception while processing transaction: reverted with reason string 'Session must be signed by wallet address'",
-// 				)
-// 			}
+			// replace the session address with an incorrect one
+			sessionMessageForContract.payload.sessionAddress = sessionMessageForContract2.payload.sessionAddress
 
-// 			// Expect the upvote to have not been applied
-// 			expect(await contract.upvotes("123456")).to.equal(0)
-// 		})
+			// submit the upvote action
+			try {
+				await contract.claimUpvoted(
+					expectedAddress,
+					sessionMessageForContract,
+					sessionMessageSignature.signature,
+					actionMessageForContract,
+					actionMessageSignature.signature,
+				)
+				expect.fail()
+			} catch (e: any) {
+				expect(e.message).to.equal(
+					"VM Exception while processing transaction: reverted with reason string 'Session must be signed by wallet address'",
+				)
+			}
 
-// 		it("claimUpvoted must be called with a session message signed by the session address", async () => {
-// 			const { getArguments } = await loadFixture(getArgumentsFixture)
-// 			const { contract } = await loadFixture(deployFixture)
-// 			expect(await contract.upvotes("123456")).to.equal(0)
+			// Expect the upvote to have not been applied
+			expect(await contract.upvotes("123456")).to.equal(0)
+		})
 
-// 			const { expectedAddress, sessionMessageForContract, actionMessageForContract, actionMessageSignature } =
-// 				await getArguments()
+		it("claimUpvoted must be called with a session message signed by the session address", async () => {
+			const { getArguments } = await loadFixture(getArgumentsFixture)
+			const { contract } = await loadFixture(deployFixture)
+			expect(await contract.upvotes("123456")).to.equal(0)
 
-// 			const { sessionMessageSignature: sessionMessageSignature2 } = await getArguments()
+			const { expectedAddress, sessionMessageForContract, actionMessageForContract, actionMessageSignature } =
+				await getArguments()
 
-// 			// submit the upvote action
-// 			try {
-// 				await contract.claimUpvoted(
-// 					expectedAddress,
-// 					sessionMessageForContract,
-// 					// use the wrong session message signature
-// 					sessionMessageSignature2.signature,
-// 					actionMessageForContract,
-// 					actionMessageSignature.signature,
-// 				)
-// 				expect.fail()
-// 			} catch (e: any) {
-// 				expect(e.message).to.equal(
-// 					"VM Exception while processing transaction: reverted with reason string 'Session message must be signed by session address'",
-// 				)
-// 			}
+			const { sessionMessageSignature: sessionMessageSignature2 } = await getArguments()
 
-// 			// Expect the upvote to have not been applied
-// 			expect(await contract.upvotes("123456")).to.equal(0)
-// 		})
+			// submit the upvote action
+			try {
+				await contract.claimUpvoted(
+					expectedAddress,
+					sessionMessageForContract,
+					// use the wrong session message signature
+					sessionMessageSignature2.signature,
+					actionMessageForContract,
+					actionMessageSignature.signature,
+				)
+				expect.fail()
+			} catch (e: any) {
+				expect(e.message).to.equal(
+					"VM Exception while processing transaction: reverted with reason string 'Session message must be signed by session address'",
+				)
+			}
 
-// 		it("claimUpvoted must be called with an action message signed by the session address", async () => {
-// 			const { getArguments } = await loadFixture(getArgumentsFixture)
-// 			const { contract } = await loadFixture(deployFixture)
+			// Expect the upvote to have not been applied
+			expect(await contract.upvotes("123456")).to.equal(0)
+		})
 
-// 			const { expectedAddress, sessionMessageForContract, sessionMessageSignature, actionMessageForContract } =
-// 				await getArguments()
-// 			const { actionMessageSignature: actionMessageSignature2 } = await getArguments()
+		it("claimUpvoted must be called with an action message signed by the session address", async () => {
+			const { getArguments } = await loadFixture(getArgumentsFixture)
+			const { contract } = await loadFixture(deployFixture)
 
-// 			expect(await contract.upvotes("123456")).to.equal(0)
+			const { expectedAddress, sessionMessageForContract, sessionMessageSignature, actionMessageForContract } =
+				await getArguments()
+			const { actionMessageSignature: actionMessageSignature2 } = await getArguments()
 
-// 			// submit the upvote action
-// 			try {
-// 				await contract.claimUpvoted(
-// 					expectedAddress,
-// 					sessionMessageForContract,
-// 					sessionMessageSignature.signature,
-// 					actionMessageForContract,
-// 					// use the wrong action message signature
-// 					actionMessageSignature2.signature,
-// 				)
-// 				expect.fail()
-// 			} catch (e: any) {
-// 				expect(e.message).to.equal(
-// 					"VM Exception while processing transaction: reverted with reason string 'Action message must be signed by session address'",
-// 				)
-// 			}
+			expect(await contract.upvotes("123456")).to.equal(0)
 
-// 			// Expect the upvote to have not been applied
-// 			expect(await contract.upvotes("123456")).to.equal(0)
-// 		})
+			// submit the upvote action
+			try {
+				await contract.claimUpvoted(
+					expectedAddress,
+					sessionMessageForContract,
+					sessionMessageSignature.signature,
+					actionMessageForContract,
+					// use the wrong action message signature
+					actionMessageSignature2.signature,
+				)
+				expect.fail()
+			} catch (e: any) {
+				expect(e.message).to.equal(
+					"VM Exception while processing transaction: reverted with reason string 'Action message must be signed by session address'",
+				)
+			}
 
-// 		it("claimUpvoted must be called with an action message that has not expired", async () => {
-// 			const { getArguments } = await loadFixture(getArgumentsFixture)
-// 			const { contract } = await loadFixture(deployFixture)
+			// Expect the upvote to have not been applied
+			expect(await contract.upvotes("123456")).to.equal(0)
+		})
 
-// 			const {
-// 				expectedAddress,
-// 				session,
-// 				sessionMessageForContract,
-// 				sessionMessageSignature,
-// 				actionMessageForContract,
-// 				actionMessageSignature,
-// 			} = await getArguments()
-// 			expect(await contract.upvotes("123456")).to.equal(0)
+		it("claimUpvoted must be called with an action message that has not expired", async () => {
+			const { getArguments } = await loadFixture(getArgumentsFixture)
+			const { contract } = await loadFixture(deployFixture)
 
-// 			// set the action timestamp to be after the expiry period
-// 			actionMessageForContract.payload.timestamp = session.timestamp + session.duration! + 1
+			const {
+				expectedAddress,
+				session,
+				sessionMessageForContract,
+				sessionMessageSignature,
+				actionMessageForContract,
+				actionMessageSignature,
+			} = await getArguments()
+			expect(await contract.upvotes("123456")).to.equal(0)
 
-// 			// submit the upvote action
-// 			try {
-// 				await contract.claimUpvoted(
-// 					expectedAddress,
-// 					sessionMessageForContract,
-// 					sessionMessageSignature.signature,
-// 					actionMessageForContract,
-// 					actionMessageSignature.signature,
-// 				)
-// 				expect.fail()
-// 			} catch (e: any) {
-// 				expect(e.message).to.equal(
-// 					"VM Exception while processing transaction: reverted with reason string 'Action message must be signed by session address'",
-// 				)
-// 			}
+			// set the action timestamp to be after the expiry period
+			actionMessageForContract.payload.timestamp = session.timestamp + session.duration! + 1
 
-// 			// Expect the upvote to have not been applied
-// 			expect(await contract.upvotes("123456")).to.equal(0)
-// 		})
+			// submit the upvote action
+			try {
+				await contract.claimUpvoted(
+					expectedAddress,
+					sessionMessageForContract,
+					sessionMessageSignature.signature,
+					actionMessageForContract,
+					actionMessageSignature.signature,
+				)
+				expect.fail()
+			} catch (e: any) {
+				expect(e.message).to.equal(
+					"VM Exception while processing transaction: reverted with reason string 'Action message must be signed by session address'",
+				)
+			}
 
-// 		it("claimUpvoted must be called with an action message with the correct name", async () => {
-// 			const { getArguments } = await loadFixture(getArgumentsFixture)
-// 			const { contract } = await loadFixture(deployFixture)
-// 			expect(await contract.upvotes("123456")).to.equal(0)
+			// Expect the upvote to have not been applied
+			expect(await contract.upvotes("123456")).to.equal(0)
+		})
 
-// 			// change the action name to an invalid value
-// 			const actionOverride = { action: { name: "downvote" } }
+		it("claimUpvoted must be called with an action message with the correct name", async () => {
+			const { getArguments } = await loadFixture(getArgumentsFixture)
+			const { contract } = await loadFixture(deployFixture)
+			expect(await contract.upvotes("123456")).to.equal(0)
 
-// 			const {
-// 				expectedAddress,
-// 				sessionMessageForContract,
-// 				sessionMessageSignature,
-// 				actionMessageForContract,
-// 				actionMessageSignature,
-// 			} = await getArguments(actionOverride)
+			// change the action name to an invalid value
+			const actionOverride = { action: { name: "downvote" } }
 
-// 			// submit the upvote action
-// 			try {
-// 				await contract.claimUpvoted(
-// 					expectedAddress,
-// 					sessionMessageForContract,
-// 					sessionMessageSignature.signature,
-// 					actionMessageForContract,
-// 					actionMessageSignature.signature,
-// 				)
-// 				expect.fail()
-// 			} catch (e: any) {
-// 				expect(e.message).to.equal(
-// 					"VM Exception while processing transaction: reverted with reason string 'Action name must be 'upvote''",
-// 				)
-// 			}
+			const {
+				expectedAddress,
+				sessionMessageForContract,
+				sessionMessageSignature,
+				actionMessageForContract,
+				actionMessageSignature,
+			} = await getArguments(actionOverride)
 
-// 			// Expect the upvote to have not been applied
-// 			expect(await contract.upvotes("123456")).to.equal(0)
-// 		})
+			// submit the upvote action
+			try {
+				await contract.claimUpvoted(
+					expectedAddress,
+					sessionMessageForContract,
+					sessionMessageSignature.signature,
+					actionMessageForContract,
+					actionMessageSignature.signature,
+				)
+				expect.fail()
+			} catch (e: any) {
+				expect(e.message).to.equal(
+					"VM Exception while processing transaction: reverted with reason string 'Action name must be 'upvote''",
+				)
+			}
 
-// 		it("claimUpvoted must be called with an action message with the correct arg name", async () => {
-// 			const { getArguments } = await loadFixture(getArgumentsFixture)
-// 			const { contract } = await loadFixture(deployFixture)
+			// Expect the upvote to have not been applied
+			expect(await contract.upvotes("123456")).to.equal(0)
+		})
 
-// 			// change the action args field name to an invalid value
-// 			const actionOverride = { action: { args: { something: "123456" } } }
+		it("claimUpvoted must be called with an action message with the correct arg name", async () => {
+			const { getArguments } = await loadFixture(getArgumentsFixture)
+			const { contract } = await loadFixture(deployFixture)
 
-// 			const {
-// 				expectedAddress,
-// 				sessionMessageForContract,
-// 				sessionMessageSignature,
-// 				actionMessageForContract,
-// 				actionMessageSignature,
-// 			} = await getArguments(actionOverride)
+			// change the action args field name to an invalid value
+			const actionOverride = { action: { args: { something: "123456" } } }
 
-// 			expect(await contract.upvotes("123456")).to.equal(0)
+			const {
+				expectedAddress,
+				sessionMessageForContract,
+				sessionMessageSignature,
+				actionMessageForContract,
+				actionMessageSignature,
+			} = await getArguments(actionOverride)
 
-// 			// submit the upvote action
-// 			try {
-// 				await contract.claimUpvoted(
-// 					expectedAddress,
-// 					sessionMessageForContract,
-// 					sessionMessageSignature.signature,
-// 					actionMessageForContract,
-// 					actionMessageSignature.signature,
-// 				)
-// 				expect.fail()
-// 			} catch (e: any) {
-// 				expect(e.message).to.equal(
-// 					"VM Exception while processing transaction: reverted with reason string 'Action argument name must be 'post_id''",
-// 				)
-// 			}
+			expect(await contract.upvotes("123456")).to.equal(0)
 
-// 			// Expect the upvote to have not been applied
-// 			expect(await contract.upvotes("123456")).to.equal(0)
-// 		})
+			// submit the upvote action
+			try {
+				await contract.claimUpvoted(
+					expectedAddress,
+					sessionMessageForContract,
+					sessionMessageSignature.signature,
+					actionMessageForContract,
+					actionMessageSignature.signature,
+				)
+				expect.fail()
+			} catch (e: any) {
+				expect(e.message).to.equal(
+					"VM Exception while processing transaction: reverted with reason string 'Action argument name must be 'post_id''",
+				)
+			}
 
-// 		it("claimUpvoted must be called with an action message with the correct arg type", async () => {
-// 			const { getArguments } = await loadFixture(getArgumentsFixture)
-// 			const { contract } = await loadFixture(deployFixture)
+			// Expect the upvote to have not been applied
+			expect(await contract.upvotes("123456")).to.equal(0)
+		})
 
-// 			// change the action args value to an invalid value
-// 			const actionOverride = { action: { args: { post_id: 42 } } }
+		it("claimUpvoted must be called with an action message with the correct arg type", async () => {
+			const { getArguments } = await loadFixture(getArgumentsFixture)
+			const { contract } = await loadFixture(deployFixture)
 
-// 			const {
-// 				expectedAddress,
-// 				sessionMessageForContract,
-// 				sessionMessageSignature,
-// 				actionMessageForContract,
-// 				actionMessageSignature,
-// 			} = await getArguments(actionOverride)
+			// change the action args value to an invalid value
+			const actionOverride = { action: { args: { post_id: 42 } } }
 
-// 			expect(await contract.upvotes("123456")).to.equal(0)
+			const {
+				expectedAddress,
+				sessionMessageForContract,
+				sessionMessageSignature,
+				actionMessageForContract,
+				actionMessageSignature,
+			} = await getArguments(actionOverride)
 
-// 			// submit the upvote action
-// 			try {
-// 				await contract.claimUpvoted(
-// 					expectedAddress,
-// 					sessionMessageForContract,
-// 					sessionMessageSignature.signature,
-// 					actionMessageForContract,
-// 					actionMessageSignature.signature,
-// 				)
-// 				expect.fail()
-// 			} catch (e: any) {
-// 				expect(e.message).to.equal(
-// 					"VM Exception while processing transaction: reverted with panic code 0x41 (Too much memory was allocated, or an array was created that is too large)",
-// 				)
-// 			}
+			expect(await contract.upvotes("123456")).to.equal(0)
 
-// 			// Expect the upvote to have not been applied
-// 			expect(await contract.upvotes("123456")).to.equal(0)
-// 		})
-// 	})
-// })
+			// submit the upvote action
+			try {
+				await contract.claimUpvoted(
+					expectedAddress,
+					sessionMessageForContract,
+					sessionMessageSignature.signature,
+					actionMessageForContract,
+					actionMessageSignature.signature,
+				)
+				expect.fail()
+			} catch (e: any) {
+				expect(e.message).to.equal(
+					"VM Exception while processing transaction: reverted with panic code 0x41 (Too much memory was allocated, or an array was created that is too large)",
+				)
+			}
+
+			// Expect the upvote to have not been applied
+			expect(await contract.upvotes("123456")).to.equal(0)
+		})
+	})
+})

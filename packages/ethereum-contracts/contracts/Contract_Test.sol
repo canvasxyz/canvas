@@ -23,12 +23,19 @@ contract Contract_Test {
   ) public returns (bool)  {
 
     // TODO: reimplement hashAction for getting unique hashes of just `Action`
-    /* bytes32 actionHash = EIP712_Canvas.hashAction(actionMessage.payload); */
+    bytes32 actionHash = keccak256(abi.encode(
+        keccak256(abi.encodePacked(actionType)),
+        actionMessage.payload.userAddress,
+        keccak256(actionMessage.payload.args),
+        keccak256(bytes(actionMessage.payload.name)),
+        actionMessage.payload.timestamp,
+        keccak256(bytes(actionMessage.payload.blockhash))
+    ));
 
-    /* require( */
-    /*   !appliedActionHashes[actionHash], */
-    /*   "Action has already been processed" */
-    /* ); */
+    require(
+      !appliedActionHashes[actionHash],
+      "Action has already been processed"
+    );
 
     // verify signatures:
     require(
@@ -45,33 +52,32 @@ contract Contract_Test {
     );
 
     // invariants:
-    /* uint256 sessionExpirationTime = sessionMessage.payload.timestamp + sessionMessage.payload.duration; */
-    /* require( */
-    /*   actionMessage.payload.timestamp < sessionExpirationTime, */
-    /*   "Invalid action: Signed by a session that was expired at the time of action" */
-    /* ); */
-    /* require( */
-    /*     actionMessage.payload.timestamp >= sessionMessage.payload.timestamp, */
-    /*   "Invalid action: Signed by a session after the action" */
-    /* ); */
+    uint256 sessionExpirationTime = sessionMessage.payload.timestamp + sessionMessage.payload.duration;
+    require(
+      actionMessage.payload.timestamp <= sessionExpirationTime,
+      "Invalid action: Signed by a session that was expired at the time of action"
+    );
+    require(
+        actionMessage.payload.timestamp >= sessionMessage.payload.timestamp,
+      "Invalid action: Signed by a session after the action"
+    );
 
     // action validation:
-    /* (string memory arg1name, string memory postId) = abi.decode(actionMessage.payload.args, (string, string)); */
-    /* require( */
-    /*   keccak256(abi.encodePacked(actionMessage.payload.name)) == keccak256(abi.encodePacked("upvote")), */
-    /*   "Action name must be 'upvote'" */
-    /* ); */
-    /* require( */
-    /*   keccak256(abi.encodePacked(arg1name)) == keccak256((abi.encodePacked("post_id"))), */
-    /*   "Action argument name must be 'post_id'" */
-    /* ); */
+    (string memory arg1name, string memory postId) = abi.decode(actionMessage.payload.args, (string, string));
+    require(
+      keccak256(abi.encodePacked(actionMessage.payload.name)) == keccak256(abi.encodePacked("upvote")),
+      "Action name must be 'upvote'"
+    );
+    require(
+      keccak256(abi.encodePacked(arg1name)) == keccak256((abi.encodePacked("post_id"))),
+      "Action argument name must be 'post_id'"
+    );
 
     // Now, increase a counter stored on this contract by +1, and
     // save the hash of the action in a mapping on the contract's storage,
     // so someone can't submit the same action twice.
-    // upvotes[postId] += 1;
-    // TODO:
-    // appliedActionHashes[actionHash] = true;
+    upvotes[postId] += 1;
+    appliedActionHashes[actionHash] = true;
 
     return true;
   }
