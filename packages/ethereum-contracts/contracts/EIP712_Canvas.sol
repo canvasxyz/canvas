@@ -8,16 +8,15 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 // and Secp256k1DelegateSigner action-signer class, which ask users
 // to sign flattened versions of the EIP712_Canvas data structures.
 //
-// These *do not* match the structs defined later in this library.
-//
-// See packages/chain-ethereum/src/eip712/Eip712Signer.ts
-// for the exact implementation.
+// These *do not* match the structs defined in this library, and
+// are maintained to match Eip712Signer and Secp256k1DelegateSigner
+// in packages/chain-ethereum.
 
 string constant sessionDataType = "SessionData(string topic,address sessionAddress,uint64 duration,uint64 timestamp,string blockhash)";
 
 string constant authorizationDataType = "AuthorizationData(bytes signature)";
 string constant sessionType = "Session(address address,string publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)AuthorizationData(bytes signature)";
-string constant sessionMessageType = "Message(string topic,uint64 clock,string[] parents,Session payload)Session(address address,string publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)AuthorizationData(bytes signature)";
+string constant sessionMessageType = "Message(string topic,uint64 clock,string[] parents,Session payload)AuthorizationData(bytes signature)Session(address address,string publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)";
 
 string constant actionType = "Action(address address,bytes args,string name,uint64 timestamp,string blockhash)";
 string constant actionMessageType = "Message(string topic,uint64 clock,string[] parents,Action payload)Action(address address,bytes args,string name,uint64 timestamp,string blockhash)";
@@ -95,11 +94,11 @@ library EIP712_Canvas {
                 _hashStringArray(sessionMessage.parents),
                 keccak256(abi.encode(
                     keccak256(abi.encodePacked(sessionType)),
-                    sessionMessage.payload.sessionAddress, //?
-                    sessionMessage.payload.publicKey,
+                    sessionMessage.payload.userAddress,
+                    keccak256(bytes(sessionMessage.payload.publicKey)),
                     keccak256(abi.encode(
                         keccak256(abi.encodePacked(authorizationDataType)),
-                        sessionMessage.payload.authorizationData.signature
+                        keccak256(sessionMessage.payload.authorizationData.signature)
                     )),
                     sessionMessage.payload.duration,
                     sessionMessage.payload.timestamp,
@@ -107,7 +106,6 @@ library EIP712_Canvas {
                 ))
             )
         );
-        //Session(address address,string publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)AuthorizationData(bytes signature)";
 
         /// @solidity memory-safe-assembly
         assembly {
@@ -132,7 +130,6 @@ library EIP712_Canvas {
             keccak256(bytes(topic))
         ));
 
-        bytes32[] memory arr;
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(abi.encodePacked(actionMessageType)),
@@ -164,7 +161,7 @@ library EIP712_Canvas {
     /**
      * Recover the address that signed a Session.
      */
-    function encodeDataFromSession(
+    function hashSession(
         Session memory session,
         string memory topic
     ) public pure returns (bytes32 digest) {
@@ -199,7 +196,7 @@ library EIP712_Canvas {
         Session memory session,
         string memory topic
     ) public pure returns (address) {
-        bytes32 digest = encodeDataFromSession(session, topic);
+        bytes32 digest = hashSession(session, topic);
         return ECDSA.recover(digest, session.authorizationData.signature);
     }
 
@@ -208,26 +205,24 @@ library EIP712_Canvas {
      */
     function verifySession(
         Session memory session,
-        address expectedAddress,
+        address userAddress,
         string memory name
     ) public pure returns (bool) {
-        bytes32 digest = encodeDataFromSession(session, name);
-
-        return ECDSA.recover(digest, session.authorizationData.signature) == expectedAddress;
+        bytes32 digest = hashSession(session, name);
+        return ECDSA.recover(digest, session.authorizationData.signature) == userAddress;
     }
 
     /**
      * Verify a Message<Session>.
      *
-     * Note that Message<Session> is just an envelope for the actual signed Session. To verify that the signing user
-     * actually delegated signing authority to the session key, use `recoverAddressFromSession` or `verifySession`.
-     *
-     * See: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/ECDSA.sol
+     * Note that Message<Session> is just an envelope for the actual signed Session.
+     * You should still verify that the signing user actually delegated authority
+     * to the session key, using `recoverAddressFromSession` or `verifySession`.
      */
     function verifySessionMessage(
         SessionMessage memory sessionMessage,
         bytes memory signature,
-        address expectedAddress,
+        address sessionAddress,
         string memory name
     ) public pure returns (bool) {
         bytes32 digest = hashSessionMessage(sessionMessage, name);
@@ -240,12 +235,12 @@ library EIP712_Canvas {
         }
 
         address signerV27 = ECDSA.recover(digest, 27, r, s);
-        if (signerV27 == expectedAddress) {
+        if (signerV27 == sessionAddress) {
             return true;
         }
 
         address signerV28 = ECDSA.recover(digest, 28, r, s);
-        if (signerV28 == expectedAddress) {
+        if (signerV28 == sessionAddress) {
             return true;
         }
 
@@ -254,12 +249,11 @@ library EIP712_Canvas {
 
     /**
      * Verify a Message<Action>.
-     * See: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/ECDSA.sol
      */
     function verifyActionMessage(
         ActionMessage memory actionMessage,
         bytes memory signature,
-        address expectedAddress,
+        address sessionAddress,
         string memory name
     ) public pure returns (bool) {
         bytes32 digest = hashActionMessage(actionMessage, name);
@@ -272,12 +266,12 @@ library EIP712_Canvas {
         }
 
         address signerV27 = ECDSA.recover(digest, 27, r, s);
-        if (signerV27 == expectedAddress) {
+        if (signerV27 == sessionAddress) {
             return true;
         }
 
         address signerV28 = ECDSA.recover(digest, 28, r, s);
-        if (signerV28 == expectedAddress) {
+        if (signerV28 == sessionAddress) {
             return true;
         }
 

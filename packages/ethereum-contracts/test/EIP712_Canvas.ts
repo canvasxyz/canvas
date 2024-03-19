@@ -43,7 +43,7 @@ describe("EIP712_Canvas", function () {
 					authorizationData: {
 						signature: session.authorizationData.signature,
 					},
-					publicKey: session.publicKey,
+					publicKey: session.publicKey, // TODO: check against sessionAddress
 					blockhash: session.blockhash || "",
 					duration: session.duration || 0,
 					timestamp: session.timestamp,
@@ -55,53 +55,53 @@ describe("EIP712_Canvas", function () {
 		})
 	})
 
-	// describe("contract.verifySessionMessage", function () {
-	// 	it("Should verify that a session has been signed by the proper address with sign", async function () {
-	// 		const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
-	// 		const { decodeURI } = await import("@canvas-js/signatures")
-	// 		const { ethers } = await import("ethers")
+	describe("contract.verifySessionMessage", function () {
+		it("Should verify that a session has been signed by the proper address with sign", async function () {
+			const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
+			const { decodeURI } = await import("@canvas-js/signatures")
+			const { ethers } = await import("ethers")
 
-	// 		const { contract } = await loadFixture(deployFixture)
+			const { contract } = await loadFixture(deployFixture)
 
-	// 		const signer = new Eip712Signer()
-	// 		const session = await signer.getSession(topic, { fromCache: false })
+			const signer = new Eip712Signer()
+			const session = await signer.getSession(topic, { fromCache: false })
 
-	// 		const clock = 1
-	// 		const parents = ["parent1", "parent2"]
-	// 		const sessionMessage = { topic, clock, parents, payload: session }
-	// 		const sessionSignature = await signer.sign(sessionMessage)
+			const clock = 1
+			const parents = ["parent1", "parent2"]
+			const sessionMessage = { topic, clock, parents, payload: session }
+			const sessionSignature = await signer.sign(sessionMessage)
 
-	// 		signer.verify(sessionSignature, sessionMessage)
+			signer.verify(sessionSignature, sessionMessage)
 
-	// 		const userAddress = session.address.split(":")[2]
-	// 		const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
-	// 		expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
-	// 		const sessionAddress = ethers.utils.computeAddress(ethers.utils.hexlify(publicKeyBytes))
+			const userAddress = session.address.split(":")[2]
+			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
+			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
+			const sessionAddress = ethers.utils.computeAddress(ethers.utils.hexlify(publicKeyBytes))
 
-	// 		const verified = await contract.verifySessionMessage(
-	// 			{
-	// 				clock,
-	// 				parents,
-	// 				topic,
-	// 				payload: {
-	// 					userAddress,
-	// 					sessionAddress,
-	// 					authorizationData: {
-	// 						signature: session.authorizationData.signature,
-	// 					},
-	// 					blockhash: session.blockhash || "",
-	// 					duration: session.duration || 0,
-	// 					publicKey: session.publicKey,
-	// 					timestamp: session.timestamp,
-	// 				},
-	// 			},
-	// 			sessionSignature.signature,
-	// 			userAddress,
-	// 			topic,
-	// 		)
-	// 		expect(verified).to.equal(true)
-	// 	})
-	// })
+			const verified = await contract.verifySessionMessage(
+				{
+					clock,
+					parents,
+					topic,
+					payload: {
+						userAddress,
+						sessionAddress,
+						authorizationData: {
+							signature: session.authorizationData.signature,
+						},
+						blockhash: session.blockhash || "",
+						duration: session.duration || 0,
+						publicKey: session.publicKey, // TODO: check against sessionAddress
+						timestamp: session.timestamp,
+					},
+				},
+				sessionSignature.signature,
+				sessionAddress,
+				topic,
+			)
+			expect(verified).to.equal(true)
+		})
+	})
 
 	describe("contract.verifyActionMessage", function () {
 		it("Should verify that an action has been signed by the proper address with sign", async function () {
@@ -135,27 +135,6 @@ describe("EIP712_Canvas", function () {
 			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
 			const sessionAddress = ethers.utils.computeAddress(ethers.utils.hexlify(publicKeyBytes))
 
-			const digest = await contract.hashActionMessage(
-				{
-					clock,
-					parents,
-					topic,
-					payload: {
-						userAddress,
-						sessionAddress,
-						args: getAbiString(action.args),
-						blockhash: action.blockhash || "",
-						publicKey: session.publicKey, // why session.
-						name: action.name,
-						timestamp: action.timestamp,
-					},
-				},
-				topic,
-			)
-
-			// we should include the recovery parameter as part of the signature
-			// and then just ignore it if we are verifying using a method that doesn't need it
-			// this could be implemented inside the contract
 			const verified = await contract.verifyActionMessage(
 				{
 					clock,
@@ -166,7 +145,7 @@ describe("EIP712_Canvas", function () {
 						sessionAddress,
 						args: getAbiString(action.args),
 						blockhash: action.blockhash || "",
-						publicKey: session.publicKey, // why session.
+						publicKey: session.publicKey, // TODO: check against sessionAddress
 						name: action.name,
 						timestamp: action.timestamp,
 					},
