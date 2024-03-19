@@ -133,18 +133,22 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 		if (payload.type === "action") {
 			const { address } = parseAddress(payload.address)
 
-			const signature = await this.#wallet.signTypedData({ name: message.topic }, Secp256k1DelegateSigner.eip712ActionTypes, {
-				topic: topic,
-				clock: clock,
-				parents: parents,
-				payload: {
-					name: payload.name,
-					args: getAbiString(payload.args),
-					address: address,
-					blockhash: payload.blockhash || "", // TODO: consider making blockhash mandatory for EIP-712?
-					timestamp: payload.timestamp,
+			const signature = await this.#wallet.signTypedData(
+				{ name: message.topic },
+				Secp256k1DelegateSigner.eip712ActionTypes,
+				{
+					topic: topic,
+					clock: clock,
+					parents: parents,
+					payload: {
+						name: payload.name,
+						args: getAbiString(payload.args),
+						address: address,
+						blockhash: payload.blockhash || "", // TODO: consider making blockhash mandatory for EIP-712?
+						timestamp: payload.timestamp,
+					},
 				},
-			})
+			)
 
 			return { codec: Secp256k1DelegateSigner.eip712ActionCodec, publicKey: this.uri, signature: getBytes(signature) }
 		} else if (payload.type === "session") {

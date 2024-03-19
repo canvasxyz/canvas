@@ -1,31 +1,22 @@
 // SPDX-License-Identifier: MIT
 
-/**
- * Onchain verification library for Canvas actions and sessions.
- *
- * Typed data signatures for Sessions and Actions should exactly match those at:
- *
- * - @canvas-js/chain-ethereum `src/EIP712Signer.ts` (Session)
- * - @canvas-js/signed-cid `src/eip712codec.ts` (SessionMessage, ActionMessage)
- *
- * Canonically, the chain-ethereum signer asks the user's wallet to sign an
- * EIP712 serialized Session. The session key that was just authorized is then
- * used to sign a Payload<Session>, which is included in a Message<Session>
- * and appended to the execution log.
- *
- * This is why we have we have EIP712 typedefs inside `@canvas-js/chain-ethereum`
- * for Session, and typedefs for SessionMessage and ActionMessage in
- * @canvas-js/signed-cid, but no typedefs for Action.
- */
-
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-string constant sessionType = "Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
-string constant actionType = "Action(address address,bytes args,string blockhash,string name,uint256 timestamp)";
-string constant sessionMessageType = "Message(uint256 clock,string[] parents,Session payload,string topic)Session(address address,string blockhash,uint256 duration,string publicKey,uint256 timestamp)";
-string constant actionMessageType = "Message(uint256 clock,string[] parents,Action payload,string topic)Action(address address,bytes args,string blockhash,string name,uint256 timestamp)";
+// EIP712 formats defined by the Eip712Signer session-signer class
+// and Secp256k1DelegateSigner action-signer class, which ask users
+// to sign flattened versions of the EIP712_Canvas data structures.
+//
+// These *do not* match the structs defined later in this library.
+//
+// See packages/chain-ethereum/src/eip712/Eip712Signer.ts
+// for the exact implementation.
+string constant sessionDataType = "SessionData(string topic,address sessionAddress,uint64 duration,uint64 timestamp,string blockhash)";
+string constant sessionType = "Session(address address,string publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)AuthorizationData(bytes signature)";
+string constant actionType = "Action(address address,bytes args,string name,uint64 timestamp,string blockhash)";
+string constant sessionMessageType = "Message(string topic,uint64 clock,string[] parents,Session payload)Session(address address,string publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)AuthorizationData(bytes signature)";
+string constant actionMessageType = "Message(string topic,uint64 clock,string[] parents,Action payload)Action(address address,bytes args,string name,uint64 timestamp,string blockhash)";
 
 bytes32 constant DOMAIN_TYPE_HASH = keccak256("EIP712Domain(string name)");
 
@@ -36,11 +27,12 @@ library EIP712_Canvas {
 
     struct Session {
         address address_;
-        string blockhash;
+        address sessionAddress;
         AuthorizationData authorizationData;
-        uint256 duration;
+        string blockhash;
+        uint64 duration;
         string publicKey;
-        uint256 timestamp;
+        uint64 timestamp;
     }
 
     struct Action {
@@ -48,18 +40,18 @@ library EIP712_Canvas {
         bytes args;
         string blockhash;
         string name;
-        uint256 timestamp;
+        uint64 timestamp;
     }
 
     struct SessionMessage {
-        uint256 clock;
+        uint64 clock;
         string[] parents;
         Session payload;
         string topic;
     }
 
     struct ActionMessage {
-        uint256 clock;
+        uint64 clock;
         string[] parents;
         Action payload;
         string topic;
@@ -164,12 +156,43 @@ library EIP712_Canvas {
     /**
      * Recover the address that signed a Session.
      */
+    function encodeDataFromSession(
+        Session memory session,
+        string memory topic
+    ) public pure returns (bytes32 digest) {
+        // bytes32 digest = _hashTypedDataV4(hashSession(session), name);
+        bytes32 domainSeparator = keccak256(abi.encode(
+            DOMAIN_TYPE_HASH,
+            keccak256(bytes(topic))
+        ));
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(abi.encodePacked(sessionDataType)),
+                keccak256(bytes(topic)),
+                session.sessionAddress,
+                session.duration,
+                session.timestamp,
+                keccak256(bytes(session.blockhash))
+            )
+        );
+
+        /// @solidity memory-safe-assembly
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, hex"19_01")
+            mstore(add(ptr, 0x02), domainSeparator)
+            mstore(add(ptr, 0x22), structHash)
+            digest := keccak256(ptr, 0x42)
+        }
+        return digest;
+    }
+
+
     function recoverAddressFromSession(
         Session memory session,
-        string memory name
+        string memory topic
     ) public pure returns (address) {
-        bytes32 digest = _hashTypedDataV4(hashSession(session), name);
-
+        bytes32 digest = encodeDataFromSession(session, topic);
         return ECDSA.recover(digest, session.authorizationData.signature);
     }
 
