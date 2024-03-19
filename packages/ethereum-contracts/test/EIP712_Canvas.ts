@@ -23,7 +23,8 @@ describe("EIP712_Canvas", function () {
 		it("Should verify that a session has been signed by the proper address with getSession", async function () {
 			const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
 			const { decodeURI } = await import("@canvas-js/signatures")
-			const { ethers } = await import("ethers")
+			const { ethers, utils } = await import("ethers")
+
 			const { contract } = await loadFixture(deployFixture)
 
 			const signer = new Eip712Signer()
@@ -34,7 +35,7 @@ describe("EIP712_Canvas", function () {
 			const userAddress = session.address.split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
-			const sessionAddress = ethers.utils.computeAddress(ethers.utils.hexlify(publicKeyBytes))
+			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
 
 			const recoveredWalletAddress = await contract.recoverAddressFromSession(
 				{
@@ -59,7 +60,7 @@ describe("EIP712_Canvas", function () {
 		it("Should verify that a session has been signed by the proper address with sign", async function () {
 			const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
 			const { decodeURI } = await import("@canvas-js/signatures")
-			const { ethers } = await import("ethers")
+			const { ethers, utils } = await import("ethers")
 
 			const { contract } = await loadFixture(deployFixture)
 
@@ -76,7 +77,7 @@ describe("EIP712_Canvas", function () {
 			const userAddress = session.address.split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
-			const sessionAddress = ethers.utils.computeAddress(ethers.utils.hexlify(publicKeyBytes))
+			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
 
 			const verified = await contract.verifySessionMessage(
 				{
@@ -105,6 +106,7 @@ describe("EIP712_Canvas", function () {
 
 	describe("contract.verifyActionMessage", function () {
 		it("Should verify that an action has been signed by the proper address with sign", async function () {
+			const { utils } = await import("ethers")
 			const { decodeURI } = await import("@canvas-js/signatures")
 			const { Eip712Signer, Secp256k1DelegateSigner, getAbiString } = await import("@canvas-js/chain-ethereum")
 
@@ -133,7 +135,7 @@ describe("EIP712_Canvas", function () {
 			const userAddress = session.address.split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
-			const sessionAddress = ethers.utils.computeAddress(ethers.utils.hexlify(publicKeyBytes))
+			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
 
 			const verified = await contract.verifyActionMessage(
 				{
