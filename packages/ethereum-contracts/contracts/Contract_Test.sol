@@ -22,7 +22,15 @@ contract Contract_Test {
     bytes memory actionMessageSignature
   ) public returns (bool)  {
 
-    bytes32 actionHash = EIP712_Canvas.hashAction(actionMessage.payload);
+    // TODO: reimplement hashAction for getting unique hashes of just `Action`
+    bytes32 actionHash = keccak256(abi.encode(
+        keccak256(abi.encodePacked(actionType)),
+        actionMessage.payload.userAddress,
+        keccak256(actionMessage.payload.args),
+        keccak256(bytes(actionMessage.payload.name)),
+        actionMessage.payload.timestamp,
+        keccak256(bytes(actionMessage.payload.blockhash))
+    ));
 
     require(
       !appliedActionHashes[actionHash],
@@ -31,7 +39,7 @@ contract Contract_Test {
 
     // verify signatures:
     require(
-      EIP712_Canvas.verifySession(sessionMessage.payload, sessionMessage.payload.address_, topic),
+      EIP712_Canvas.verifySession(sessionMessage.payload, sessionMessage.payload.userAddress, topic),
       "Session must be signed by wallet address"
     );
     require(
@@ -46,7 +54,7 @@ contract Contract_Test {
     // invariants:
     uint256 sessionExpirationTime = sessionMessage.payload.timestamp + sessionMessage.payload.duration;
     require(
-      actionMessage.payload.timestamp < sessionExpirationTime,
+      actionMessage.payload.timestamp <= sessionExpirationTime,
       "Invalid action: Signed by a session that was expired at the time of action"
     );
     require(
