@@ -6,16 +6,23 @@ const topic = "example:contract"
 
 describe("Contract_Test", function () {
 	async function deployFixture() {
-		const EIP712_Canvas = await ethers.getContractFactory("EIP712_Canvas")
-		const eip712_Canvas = await EIP712_Canvas.deploy()
+		const Hashers = await ethers.getContractFactory("Hashers")
+		const hashers = await Hashers.deploy()
 
-		const Contract_Example = await ethers.getContractFactory("Contract_Test", {
+		const Verifiers = await ethers.getContractFactory("Verifiers", {
 			libraries: {
-				EIP712_Canvas: eip712_Canvas.address,
+				Hashers: hashers.address,
 			},
 		})
+		const verifiers = await Verifiers.deploy()
 
-		const contract = await Contract_Example.deploy()
+		const Test = await ethers.getContractFactory("Test", {
+			libraries: {
+				Verifiers: verifiers.address,
+			},
+		})
+		const contract = await Test.deploy()
+
 		await contract.deployed()
 		return { contract }
 	}
@@ -93,7 +100,148 @@ describe("Contract_Test", function () {
 		return { getArguments }
 	}
 
-	describe("Contract_Example.claimUpvoted", function () {
+	describe("contract.recoverAddressFromSession", function () {
+		it("Should verify that a session has been signed by the proper address with getSession", async function () {
+			const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
+			const { decodeURI } = await import("@canvas-js/signatures")
+			// @ts-ignore TS2339
+			const { ethers, utils } = await import("ethers")
+
+			const { contract } = await loadFixture(deployFixture)
+
+			const signer = new Eip712Signer()
+
+			const session = await signer.getSession(topic)
+			signer.verifySession(topic, session)
+
+			const userAddress = session.address.split(":")[2]
+			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
+			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
+			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
+
+			const recoveredWalletAddress = await contract.recoverAddressFromSession(
+				{
+					userAddress: userAddress,
+					sessionAddress: sessionAddress,
+					authorizationData: {
+						signature: session.authorizationData.signature,
+					},
+					publicKey: session.publicKey, // TODO: check against sessionAddress
+					blockhash: session.blockhash || "",
+					duration: session.duration || 0,
+					timestamp: session.timestamp,
+				},
+				topic,
+			)
+
+			expect(recoveredWalletAddress).to.equal(userAddress)
+		})
+	})
+
+	describe("contract.verifySessionMessageSignature", function () {
+		it("Should verify that a session has been signed by the proper address with sign", async function () {
+			const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
+			const { decodeURI } = await import("@canvas-js/signatures")
+			// @ts-ignore TS2339
+			const { ethers, utils } = await import("ethers")
+
+			const { contract } = await loadFixture(deployFixture)
+
+			const signer = new Eip712Signer()
+			const session = await signer.getSession(topic, { fromCache: false })
+
+			const clock = 1
+			const parents = ["parent1", "parent2"]
+			const sessionMessage = { topic, clock, parents, payload: session }
+			const sessionSignature = await signer.sign(sessionMessage)
+
+			signer.verify(sessionSignature, sessionMessage)
+
+			const userAddress = session.address.split(":")[2]
+			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
+			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
+			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
+
+			const verified = await contract.verifySessionMessageSignature(
+				{
+					clock,
+					parents,
+					topic,
+					payload: {
+						userAddress,
+						sessionAddress,
+						authorizationData: {
+							signature: session.authorizationData.signature,
+						},
+						blockhash: session.blockhash || "",
+						duration: session.duration || 0,
+						publicKey: session.publicKey, // TODO: check against sessionAddress
+						timestamp: session.timestamp,
+					},
+				},
+				sessionSignature.signature,
+			)
+			expect(verified).to.equal(true)
+		})
+	})
+
+	describe("contract.verifyActionMessageSignature", function () {
+		it("Should verify that an action has been signed by the proper address with sign", async function () {
+			// @ts-ignore TS2339
+			const { utils } = await import("ethers")
+			const { decodeURI } = await import("@canvas-js/signatures")
+			const { Eip712Signer, Secp256k1DelegateSigner, getAbiString } = await import("@canvas-js/chain-ethereum")
+
+			const { contract } = await loadFixture(deployFixture)
+
+			const signer = new Eip712Signer()
+			const session = await signer.getSession(topic, { fromCache: false })
+
+			// sign an action
+			const clock = 1
+			const parents = ["parent1", "parent2"]
+			const action = {
+				type: "action" as const,
+				address: session.address,
+				name: "foo",
+				args: { bar: 7 },
+				blockhash: null,
+				timestamp: session.timestamp,
+			}
+			const actionMessage = { topic, clock, parents, payload: action }
+			const actionSignature = await signer.sign(actionMessage)
+
+			// verify the action offchain
+			signer.verify(actionSignature, actionMessage)
+
+			const userAddress = session.address.split(":")[2]
+			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
+			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
+			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
+
+			const verified = await contract.verifyActionMessageSignature(
+				{
+					clock,
+					parents,
+					topic,
+					payload: {
+						userAddress,
+						sessionAddress,
+						args: getAbiString(action.args),
+						blockhash: action.blockhash || "",
+						publicKey: session.publicKey, // TODO: check against sessionAddress
+						name: action.name,
+						timestamp: action.timestamp,
+					},
+				},
+				actionSignature.signature,
+				sessionAddress,
+			)
+			expect(verified).to.equal(true)
+		})
+	})
+
+	describe("claimUpvoted", function () {
 		it("try to call claimUpvoted with a valid session and action, should only be applied once", async () => {
 			const { contract } = await loadFixture(deployFixture)
 			const { getArguments } = await loadFixture(getArgumentsFixture)
@@ -133,7 +281,7 @@ describe("Contract_Test", function () {
 			expect(await contract.upvotes("123456")).to.equal(1)
 		})
 
-		it("claimUpvoted must be called with a session signed by the wallet address", async () => {
+		it("claimUpvoted fails if called with the wrong session address", async () => {
 			const { contract } = await loadFixture(deployFixture)
 			const { getArguments } = await loadFixture(getArgumentsFixture)
 			expect(await contract.upvotes("123456")).to.equal(0)
@@ -165,7 +313,7 @@ describe("Contract_Test", function () {
 			expect(await contract.upvotes("123456")).to.equal(0)
 		})
 
-		it("claimUpvoted must be called with a session message signed by the session address", async () => {
+		it("claimUpvoted fails if called with an incorrect session message signature", async () => {
 			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
 			expect(await contract.upvotes("123456")).to.equal(0)
@@ -193,7 +341,7 @@ describe("Contract_Test", function () {
 			expect(await contract.upvotes("123456")).to.equal(0)
 		})
 
-		it("claimUpvoted must be called with an action message signed by the session address", async () => {
+		it("claimUpvoted fails if called with an incorrect action message signature", async () => {
 			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
 
@@ -221,7 +369,7 @@ describe("Contract_Test", function () {
 			expect(await contract.upvotes("123456")).to.equal(0)
 		})
 
-		it("claimUpvoted must be called with an action message that has not expired", async () => {
+		it("claimUpvoted fails if called with an expired session for the action message", async () => {
 			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
 
@@ -256,7 +404,7 @@ describe("Contract_Test", function () {
 			expect(await contract.upvotes("123456")).to.equal(0)
 		})
 
-		it("claimUpvoted must be called with an action message with the correct name", async () => {
+		it("claimUpvoted fails if called with an action message with the wrong action name", async () => {
 			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
 			expect(await contract.upvotes("123456")).to.equal(0)
@@ -286,7 +434,7 @@ describe("Contract_Test", function () {
 			expect(await contract.upvotes("123456")).to.equal(0)
 		})
 
-		it("claimUpvoted must be called with an action message with the correct arg name", async () => {
+		it("claimUpvoted fails if called with an action message with the wrong args", async () => {
 			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
 
@@ -317,7 +465,7 @@ describe("Contract_Test", function () {
 			expect(await contract.upvotes("123456")).to.equal(0)
 		})
 
-		it("claimUpvoted must be called with an action message with the correct arg type", async () => {
+		it("claimUpvoted fails if called with an action message with the wrong arg type", async () => {
 			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
 
