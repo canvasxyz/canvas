@@ -81,7 +81,6 @@ describe("Contract_Test", function () {
 
 			return {
 				signer,
-				sessionAddress,
 				session,
 				sessionMessage,
 				sessionMessageSignature,
@@ -101,17 +100,11 @@ describe("Contract_Test", function () {
 
 			expect(await contract.upvotes("123456")).to.equal(0)
 
-			const {
-				sessionAddress,
-				sessionMessageForContract,
-				sessionMessageSignature,
-				actionMessageForContract,
-				actionMessageSignature,
-			} = await getArguments()
+			const { sessionMessageForContract, sessionMessageSignature, actionMessageForContract, actionMessageSignature } =
+				await getArguments()
 
 			// submit the upvote action
 			await contract.claimUpvoted(
-				sessionAddress,
 				sessionMessageForContract,
 				sessionMessageSignature.signature,
 				actionMessageForContract,
@@ -124,7 +117,6 @@ describe("Contract_Test", function () {
 			// If we submit the action again, it should be rejected
 			try {
 				await contract.claimUpvoted(
-					sessionAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
@@ -146,13 +138,8 @@ describe("Contract_Test", function () {
 			const { getArguments } = await loadFixture(getArgumentsFixture)
 			expect(await contract.upvotes("123456")).to.equal(0)
 
-			const {
-				sessionAddress,
-				sessionMessageForContract,
-				sessionMessageSignature,
-				actionMessageForContract,
-				actionMessageSignature,
-			} = await getArguments()
+			const { sessionMessageForContract, sessionMessageSignature, actionMessageForContract, actionMessageSignature } =
+				await getArguments()
 
 			const { sessionMessageForContract: sessionMessageForContract2 } = await getArguments()
 
@@ -162,7 +149,6 @@ describe("Contract_Test", function () {
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					sessionAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
@@ -184,18 +170,15 @@ describe("Contract_Test", function () {
 			const { contract } = await loadFixture(deployFixture)
 			expect(await contract.upvotes("123456")).to.equal(0)
 
-			const { sessionAddress, sessionMessageForContract, actionMessageForContract, actionMessageSignature } =
-				await getArguments()
+			const { sessionMessageForContract, actionMessageForContract, actionMessageSignature } = await getArguments()
 
 			const { sessionMessageSignature: sessionMessageSignature2 } = await getArguments()
 
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					sessionAddress,
 					sessionMessageForContract,
-					// use the wrong session message signature
-					sessionMessageSignature2.signature,
+					sessionMessageSignature2.signature, // use the wrong session message signature
 					actionMessageForContract,
 					actionMessageSignature.signature,
 				)
@@ -214,8 +197,7 @@ describe("Contract_Test", function () {
 			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
 
-			const { sessionAddress, sessionMessageForContract, sessionMessageSignature, actionMessageForContract } =
-				await getArguments()
+			const { sessionMessageForContract, sessionMessageSignature, actionMessageForContract } = await getArguments()
 			const { actionMessageSignature: actionMessageSignature2 } = await getArguments()
 
 			expect(await contract.upvotes("123456")).to.equal(0)
@@ -223,12 +205,10 @@ describe("Contract_Test", function () {
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					sessionAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
-					// use the wrong action message signature
-					actionMessageSignature2.signature,
+					actionMessageSignature2.signature, // use the wrong action message signature
 				)
 				expect.fail()
 			} catch (e: any) {
@@ -246,7 +226,6 @@ describe("Contract_Test", function () {
 			const { contract } = await loadFixture(deployFixture)
 
 			const {
-				sessionAddress,
 				session,
 				sessionMessageForContract,
 				sessionMessageSignature,
@@ -261,7 +240,6 @@ describe("Contract_Test", function () {
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					sessionAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
@@ -286,18 +264,12 @@ describe("Contract_Test", function () {
 			// change the action name to an invalid value
 			const actionOverride = { action: { name: "downvote" } }
 
-			const {
-				sessionAddress,
-				sessionMessageForContract,
-				sessionMessageSignature,
-				actionMessageForContract,
-				actionMessageSignature,
-			} = await getArguments(actionOverride)
+			const { sessionMessageForContract, sessionMessageSignature, actionMessageForContract, actionMessageSignature } =
+				await getArguments(actionOverride)
 
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					sessionAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
@@ -321,20 +293,14 @@ describe("Contract_Test", function () {
 			// change the action args field name to an invalid value
 			const actionOverride = { action: { args: { something: "123456" } } }
 
-			const {
-				sessionAddress,
-				sessionMessageForContract,
-				sessionMessageSignature,
-				actionMessageForContract,
-				actionMessageSignature,
-			} = await getArguments(actionOverride)
+			const { sessionMessageForContract, sessionMessageSignature, actionMessageForContract, actionMessageSignature } =
+				await getArguments(actionOverride)
 
 			expect(await contract.upvotes("123456")).to.equal(0)
 
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					sessionAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
@@ -358,20 +324,14 @@ describe("Contract_Test", function () {
 			// change the action args value to an invalid value
 			const actionOverride = { action: { args: { post_id: 42 } } }
 
-			const {
-				sessionAddress,
-				sessionMessageForContract,
-				sessionMessageSignature,
-				actionMessageForContract,
-				actionMessageSignature,
-			} = await getArguments(actionOverride)
+			const { sessionMessageForContract, sessionMessageSignature, actionMessageForContract, actionMessageSignature } =
+				await getArguments(actionOverride)
 
 			expect(await contract.upvotes("123456")).to.equal(0)
 
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					sessionAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,

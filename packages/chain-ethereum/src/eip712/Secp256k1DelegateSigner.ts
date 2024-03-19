@@ -56,7 +56,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 		const { type, publicKey } = decodeURI(signature.publicKey)
 		assert(type === Secp256k1DelegateSigner.type)
 
-		const expectedAddress = computeAddress(hexlify(publicKey))
+		const sessionAddress = computeAddress(hexlify(publicKey))
 
 		const { topic, clock, parents, payload } = message
 		if (payload.type === "action") {
@@ -81,7 +81,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 				hexlify(signature.signature),
 			)
 
-			assert(recoveredAddress === expectedAddress, "invalid EIP-712 action signature")
+			assert(recoveredAddress === sessionAddress, "invalid EIP-712 action signature")
 		} else if (payload.type === "session") {
 			assert(signature.codec === Secp256k1DelegateSigner.eip712SessionCodec)
 
@@ -105,7 +105,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 				hexlify(signature.signature),
 			)
 
-			assert(recoveredAddress === expectedAddress, "invalid EIP-712 session signature")
+			assert(recoveredAddress === sessionAddress, "invalid EIP-712 session signature")
 		} else {
 			signalInvalidType(payload)
 		}

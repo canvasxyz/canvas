@@ -11,18 +11,21 @@ contract Contract_Test {
   mapping(string => uint256) public upvotes;
 
   /**
-   * Verify that an offchain interaction was taken by `expectedAddress`,
-   * with a valid session, session message, action, and action message.
+   * Verify that an offchain interaction was taken with a valid `Session`,
+   * `[Message<Session>, Signature]` pair, and `[Message<Action>, Signature]`
+   * pair. Enforces that the `Session` pubkey must have been used to create
+   * both `Signature` objects.
    */
   function claimUpvoted(
-    address expectedAddress,
     EIP712_Canvas.SessionMessage memory sessionMessage,
     bytes memory sessionMessageSignature,
     EIP712_Canvas.ActionMessage memory actionMessage,
     bytes memory actionMessageSignature
   ) public returns (bool)  {
 
-    // TODO: reimplement hashAction for getting unique hashes of just `Action`
+    // Use the `encodeData` typehash of just the `Action` object to identify
+    // each action. This is just used to uniquely identify actions, and has
+    // nothing to do with the cryptographic verification we're doing.
     bytes32 actionHash = keccak256(abi.encode(
         keccak256(abi.encodePacked(actionType)),
         actionMessage.payload.userAddress,
@@ -43,11 +46,11 @@ contract Contract_Test {
       "Session must be signed by wallet address"
     );
     require(
-      EIP712_Canvas.verifySessionMessage(sessionMessage, sessionMessageSignature, expectedAddress, topic),
+      EIP712_Canvas.verifySessionMessage(sessionMessage, sessionMessageSignature, sessionMessage.payload.sessionAddress, topic),
       "Session message must be signed by session address"
     );
     require(
-      EIP712_Canvas.verifyActionMessage(actionMessage, actionMessageSignature, expectedAddress, topic),
+      EIP712_Canvas.verifyActionMessage(actionMessage, actionMessageSignature, sessionMessage.payload.sessionAddress, topic),
       "Action message must be signed by session address"
     );
 

@@ -24,6 +24,7 @@ string constant actionMessageType = "Message(string topic,uint64 clock,string[] 
 bytes32 constant DOMAIN_TYPE_HASH = keccak256("EIP712Domain(string name)");
 
 library EIP712_Canvas {
+
     struct AuthorizationData {
         bytes signature;
     }
